@@ -1,0 +1,58 @@
+# SpeedFog Configuration
+# Copy this file to config.toml and edit as needed
+
+[run]
+# Seed for randomization. Set to 0 for random seed.
+# Share this seed with friends for identical runs!
+seed = 0
+
+[budget]
+# Target total "weight" for each path through the game.
+# Weight roughly corresponds to minutes (weight 30 ≈ 30-40 min of zones)
+total_weight = 30
+
+# Allowed variance from target weight.
+# With total=30 and tolerance=5, paths can be 25-35 weight.
+tolerance = 5
+
+[requirements]
+# Minimum number of legacy dungeons (Stormveil, Raya Lucaria, etc.)
+# that must appear on every possible path.
+legacy_dungeons = 1
+
+# Minimum number of boss fights before reaching Radagon.
+bosses = 5
+
+# Minimum number of mini-dungeons (caves, catacombs, tunnels).
+mini_dungeons = 5
+
+[structure]
+# Maximum number of parallel paths at any point.
+# Higher = more choices, but harder to balance.
+max_parallel_paths = 3
+
+# Minimum number of "layers" (zones in sequence).
+min_layers = 6
+
+# Maximum number of layers.
+max_layers = 10
+
+# Probability that a zone will split into two paths (0.0 - 1.0).
+split_probability = 0.4
+
+# Probability that multiple paths will merge (0.0 - 1.0).
+merge_probability = 0.3
+
+[paths]
+# Path to Elden Ring installation.
+game_dir = "C:/Program Files/Steam/steamapps/common/ELDEN RING/Game"
+
+# Output directory for generated mod files.
+output_dir = "./output"
+
+# Path to zone definitions file.
+zones_file = "./zones.toml"
+
+# Optional: Path to Enemy/Item Randomizer output.
+# If set, SpeedFog will apply on top of this mod.
+# enemy_randomizer_dir = "./mods/randomizer"
