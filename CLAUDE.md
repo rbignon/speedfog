@@ -107,3 +107,13 @@ dotnet run -- graph.json "/path/to/ELDEN RING/Game" ./output
 - One-way paths (coffins, drops) excluded in v1
 - Key items given at start to prevent softlocks
 - Enemy scaling uses tiers 1-28 (subset of vanilla's 1-34)
+
+## Data Sources
+
+| Data | Source | Format |
+|------|--------|--------|
+| Key item IDs | `reference/fogrando-data/fog.txt` L3258-3358 | `ID: 3:XXXX` |
+| Zone definitions | `reference/fogrando-data/fog.txt` Areas section | YAML |
+| Warp positions | `reference/fogrando-data/fog.txt` Entrances section | YAML |
+| EMEVD instructions | `reference/fogrando-data/er-common.emedf.json` | JSON |
+| Scaling params | `reference/fogrando-src/EldenScaling.cs` | C# |
