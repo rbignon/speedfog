@@ -40,18 +40,28 @@ Data files that define Elden Ring zones and events:
 
 ## lib/
 
-DLL dependencies for the C# writer:
+DLL dependencies for the C# writer (extracted from FogRando):
 
 | DLL | Purpose |
 |-----|---------|
 | `SoulsFormats.dll` | Read/write FromSoft file formats |
+| `SoulsIds.dll` | Helper library by thefifthmatt (GameEditor, ParamDictionary) |
 | `YamlDotNet.dll` | YAML parsing |
 | `Newtonsoft.Json.dll` | JSON parsing |
 | `ZstdNet.dll` | Compression |
 | `BouncyCastle.Cryptography.dll` | Encryption |
 
-**Note**: For actual development, prefer downloading fresh DLLs from:
-- [SoulsFormatsNEXT](https://github.com/soulsmods/SoulsFormatsNEXT/releases) (more up-to-date)
+### SoulsIds Key Classes
+
+| Class | Purpose |
+|-------|---------|
+| `GameEditor` | Load/save game data, param utilities (AddRow, CopyRow) |
+| `ParamDictionary` | Wrapper around game params with indexer access |
+| `GameSpec` | Game-specific configuration (paths, IDs) |
+
+**Note**: For updates, download fresh DLLs from:
+- [SoulsFormatsNEXT](https://github.com/soulsmods/SoulsFormatsNEXT/releases)
+- [SoulsIds](https://github.com/thefifthmatt/SoulsIds)
 
 ## Usage Notes
 

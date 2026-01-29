@@ -12,8 +12,10 @@ Create the C# component that reads `graph.json` and generates Elden Ring mod fil
 
 - Phase 2 completed (working `graph.json` output)
 - .NET 8.0 SDK
-- SoulsFormats library (via NuGet or local reference)
-- Access to FogRando decompiled source at `/home/rom1/src/games/ER/fog/src-decompiled/`
+- Libraries from `reference/lib/`:
+  - `SoulsFormats.dll` - FromSoft file format I/O
+  - `SoulsIds.dll` - Helper library (GameEditor, ParamDictionary)
+  - `YamlDotNet.dll`, `Newtonsoft.Json.dll`, `ZstdNet.dll`, `BouncyCastle.Cryptography.dll`
 
 ## Deliverables
 
@@ -65,30 +67,38 @@ speedfog/writer/
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Reference SoulsFormats - adjust path as needed -->
+    <!-- Libraries from reference/lib/ (extracted from FogRando) -->
     <Reference Include="SoulsFormats">
-      <HintPath>../lib/SoulsFormats.dll</HintPath>
+      <HintPath>../../reference/lib/SoulsFormats.dll</HintPath>
     </Reference>
     <Reference Include="SoulsIds">
-      <HintPath>../lib/SoulsIds.dll</HintPath>
+      <HintPath>../../reference/lib/SoulsIds.dll</HintPath>
+    </Reference>
+    <Reference Include="YamlDotNet">
+      <HintPath>../../reference/lib/YamlDotNet.dll</HintPath>
     </Reference>
   </ItemGroup>
 
 </Project>
 ```
 
-### Directory Structure for Libraries
+### Directory Structure
 
 ```
-speedfog/writer/
-├── lib/
-│   ├── SoulsFormats.dll      # From SoulsFormatsNEXT
-│   ├── SoulsIds.dll          # Game constants
-│   └── ... (other dependencies)
-└── SpeedFogWriter/
+speedfog/
+├── reference/
+│   └── lib/                  # DLLs extracted from FogRando
+│       ├── SoulsFormats.dll  # FromSoft file format I/O
+│       ├── SoulsIds.dll      # GameEditor, ParamDictionary helpers
+│       ├── YamlDotNet.dll    # YAML parsing
+│       ├── Newtonsoft.Json.dll
+│       ├── ZstdNet.dll
+│       └── BouncyCastle.Cryptography.dll
+└── writer/
+    └── SpeedFogWriter/
 ```
 
-**Note**: Download SoulsFormats from [soulsmods/SoulsFormatsNEXT](https://github.com/soulsmods/SoulsFormatsNEXT) releases.
+**Note**: DLLs already available in `reference/lib/` (extracted from FogRando). For updates, download from [soulsmods/SoulsFormatsNEXT](https://github.com/soulsmods/SoulsFormatsNEXT).
 
 ---
 
