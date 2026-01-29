@@ -890,11 +890,265 @@ class Program
 
 ---
 
+## FogRando Reference: GameDataWriterE.cs
+
+The decompiled `GameDataWriterE.cs` (5639 lines) is the main reference for mod generation. Below are key sections relevant to SpeedFog.
+
+### File Structure Overview
+
+```
+GameDataWriterE.cs
+├── L1-19:     Imports and class declaration
+├── L20-4974:  Main Write() method (single massive function)
+│   ├── L37-70:      "Reading game data" - loads MSBs, EMEVDs, params
+│   ├── L109+:       "Modifying game data" - main logic
+│   ├── L190-202:    Fog model definitions
+│   ├── L262-4736:   Fog gate creation (multiple call sites)
+│   ├── L1781-1852:  EMEVD event processing and creation
+│   ├── L1964-1966:  EldenScaling integration
+│   └── L4977-5030:  "Writing game data" - output files
+├── L5205-5570:  Helper functions (local/nested)
+│   ├── L5213:   parseFloats
+│   ├── L5221:   addAssetModel
+│   ├── L5243:   addEnemyModel
+│   ├── L5263:   setNameIdent
+│   ├── L5274:   setAssetName
+│   ├── L5311:   setBoxRegion
+│   ├── L5326:   moveInDirection
+│   └── L5343+:  parseMap, formatMap, parentMap, etc.
+└── L5570-5637:  Static data (dupeMsbs list)
+```
+
+### Key Sections
+
+#### 1. Loading Game Data (L37-70)
+
+```csharp
+// L37-44: Load MSBs and EMEVDs
+notify("Reading game data");
+CS$<>8__locals1.msbs = CS$<>8__locals1.<Write>g__loadDir|2<MSBE>(
+    ..., "map\\mapstudio", (path) => SoulsFile<MSBE>.Read(path), "*.msb.dcx");
+CS$<>8__locals1.emevds = CS$<>8__locals1.<Write>g__loadDir|2<EMEVD>(
+    ..., "event", (path) => SoulsFile<EMEVD>.Read(path), "*.emevd.dcx");
+
+// L65-68: Load params
+CS$<>8__locals1.Params = new ParamDictionary {
+    Defs = CS$<>8__locals1.editor.LoadDefs(),
+    Inner = CS$<>8__locals1.editor.LoadParams(text5, null)
+};
+```
+
+#### 2. Fog Model IDs (L190-194)
+
+```csharp
+CS$<>8__locals1.mfogModels = new HashSet<string> {
+    "AEG099_230",  // Standard fog wall
+    "AEG099_231",  // Standard fog wall (alternate)
+    "AEG099_232"   // Standard fog wall (alternate)
+};
+```
+
+Other fog/door models used throughout the file:
+- `AEG099_001`, `AEG099_002`, `AEG099_003` - Boss fog
+- `AEG099_060`, `AEG099_065`, `AEG099_090` - Special gates
+- `AEG099_630` - Overworld barrier
+- `AEG250_007`, `AEG030_925` - Door assets
+
+#### 3. Fog Gate Creation (L262, L363, L640, etc.)
+
+The `addFakeGate` helper is a closure within Write(). Usage pattern:
+
+```csharp
+// L262: Create fog gate with position and name
+MSBE.Part.Asset asset3 = CS$<>8__locals1.<Write>g__addFakeGate|25(
+    e.Area,           // Map ID (e.g., "m10_01_00_00")
+    array3[0],        // Model name (e.g., "AEG099_231")
+    array3[1],        // Base asset name (for cloning)
+    pos,              // Vector3 position
+    rot,              // Vector3 rotation
+    e.Name            // Optional entity name
+);
+asset3.EntityID = (uint)e.ID;
+```
+
+Key call sites:
+- **L262**: Standard fog gate creation
+- **L363, L367**: Multi-height fog walls (stacked vertically)
+- **L640**: Exit fog gates with regions
+- **L1420**: Dungeon destination fog
+- **L2643, L2717**: Boss fog gates
+- **L4230-4244**: Custom barrier fog walls (triple-stacked)
+- **L4736**: Barrier fog with entity ID
+
+#### 4. EMEVD Event Creation (L1781-1852)
+
+```csharp
+// L1781-1803: Process existing events
+foreach (KeyValuePair<string, EMEVD> keyValuePair2 in CS$<>8__locals1.emevds) {
+    foreach (EMEVD.Event @event in keyValuePair2.Value.Events) {
+        foreach (EMEVD.Instruction instruction in @event.Instructions) {
+            // Check instruction bank/ID and modify as needed
+        }
+    }
+}
+
+// L1804-1828: Create new events from EventConfig
+foreach (EventConfig.NewEvent newEvent in eventConfig.NewEvents) {
+    event2 = new EMEVD.Event((long)newEvent.ID, flag11 ? 1 : 0);
+    // Parse commands and add instructions
+    for (int m2 = 0; m2 < list19.Count; m2++) {
+        var valueTuple2 = CS$<>8__locals1.events.ParseAddArg(list19[m2], m2);
+        event2.Instructions.Add(valueTuple2.Item1);
+        event2.Parameters.AddRange(valueTuple2.Item2);
+    }
+    CS$<>8__locals1.emevds["common"].Events.Add(event2);
+}
+```
+
+#### 5. Scaling Integration (L1964-1966)
+
+```csharp
+EldenScaling eldenScaling = new EldenScaling(CS$<>8__locals1.Params);
+Dictionary<int, int> dictionary14 = eldenScaling.InitializeEldenScaling();
+EldenScaling.SpEffectValues spEffectValues = eldenScaling.EditScalingSpEffects();
+```
+
+#### 6. Warp Point Structure (L462-493, L767-773)
+
+```csharp
+// L462-477: Create warp point from entrance data
+side11.Warp = new Graph.WarpPoint {
+    Region = (int)region.EntityID,
+    Retry = (int)region.EntityID  // Optional
+};
+
+// L767-773: Create return warp
+e.ASide.Warp = new Graph.WarpPoint {
+    Region = (int)num11++,
+    SitFlag = ...,   // Site of Grace flag
+    WarpFlag = ...   // Warp activation flag
+};
+```
+
+#### 7. Writing Output (L4977-5030)
+
+```csharp
+// L4977
+notify("Writing game data");
+
+// L4980-4990: Write params
+Console.WriteLine("Writing params");
+string text38 = CS$<>8__locals1.outDir + "\\regulation.bin";
+CS$<>8__locals1.editor.OverrideBndRel<PARAM>(text5, text38,
+    CS$<>8__locals1.Params.Inner, (f) => f.Write(), null, type);
+
+// L4996-5029: Write EMEVDs
+Console.WriteLine($"Writing {CS$<>8__locals1.writeEmevds.Count} emevds");
+foreach (KeyValuePair<string, EMEVD> entry in CS$<>8__locals1.emevds) {
+    // Process and write each EMEVD file
+}
+```
+
+### Helper Functions
+
+| Helper | Line | Purpose |
+|--------|------|---------|
+| `parseFloats` | L5213 | Parse space-separated floats |
+| `addAssetModel` | L5221 | Add asset model to MSB |
+| `addEnemyModel` | L5243 | Add enemy model to MSB |
+| `setNameIdent` | L5263 | Set entity name identifier |
+| `setAssetName` | L5274 | Rename asset and update references |
+| `setBoxRegion` | L5311 | Create box-shaped region from spec |
+| `moveInDirection` | L5326 | Move point in rotation direction |
+| `oppositeRotation` | L5334 | Flip rotation 180° |
+| `parseMap` | L5343 | Parse map ID to bytes |
+| `formatMap` | L5350 | Format map bytes to string |
+
+---
+
+## FogRando Reference: EldenScaling.cs
+
+The `EldenScaling.cs` (269 lines) handles enemy stat scaling.
+
+### Structure Overview
+
+```
+EldenScaling.cs
+├── L11-26:    ScalingData class
+├── L28-42:    SpEffectValues/AreaScalingValue classes
+├── L46-63:    eldenScaling config
+│   ├── ScalingBase = 7000
+│   ├── NewScalingBase = 7800000
+│   └── MaxTier = 34
+├── L53-62:    ScalingFields (health, damage, defense, etc.)
+├── L65-71:    eldenExps (34 tier XP values)
+├── L73:       EldenSoulScaling computed from eldenExps
+├── L80-179:   InitializeEldenScaling()
+└── L181-269:  EditScalingSpEffects()
+```
+
+### Key Constants (L46-71)
+
+```csharp
+private readonly ScalingData eldenScaling = new ScalingData {
+    ScalingBase = 7000,        // Vanilla scaling SpEffect base
+    NewScalingBase = 7800000,  // Custom SpEffect ID range
+    MaxTier = 34,              // Maximum scaling tier
+    ScalingFields = new Dictionary<string, List<string>> {
+        ["health"] = new List<string> { "maxHpRate" },
+        ["stamina"] = new List<string> { "maxStaminaRate" },
+        ["staminadamage"] = new List<string> { "staminaAttackRate" },
+        ["damage"] = new List<string> {
+            "physicsAttackPowerRate", "magicAttackPowerRate",
+            "fireAttackPowerRate", "thunderAttackPowerRate",
+            "darkAttackPowerRate"
+        },
+        ["defense"] = new List<string> {
+            "physicsDiffenceRate", "magicDiffenceRate",
+            "fireDiffenceRate", "thunderDiffenceRate",
+            "darkDiffenceRate"
+        },
+        ["buildup"] = new List<string> { /* status effect rates */ },
+        ["xp"] = new List<string> { "haveSoulRate" }
+    }
+};
+
+// L65-71: XP scaling exponents (powers of 10)
+private static readonly List<double> eldenExps = new List<double> {
+    0.0, 23.0, 43.0, 188.0, 233.0, 285.0, 487.0, 743.0, 769.0, 925.0,
+    970.0, 1091.0, 1107.0, 1192.0, 1277.0, 1430.0, 1438.0, 1458.0, ...
+};
+```
+
+### Scaling Matrix Generation (L165-179)
+
+```csharp
+// Creates ratio matrix for tier transitions
+Dictionary<string, List<double>> makeScalingMatrix(
+    Dictionary<string, List<double>> scalingMult) {
+    foreach (var item2 in scalingMult) {
+        List<double> list = new List<double>();
+        foreach (var (fromTier, toTier) in eldenScaling.SectionPairs) {
+            list.Add(value[toTier - 1] / value[fromTier - 1]);
+        }
+        dictionary4[item2.Key] = list;
+    }
+    return dictionary4;
+}
+```
+
+---
+
 ## Key Challenges & Notes
 
 ### 1. EMEVD Generation
 
 The hardest part is generating valid EMEVD instructions. FogRando uses a template-based approach (`EventConfig.cs`) where event "shapes" are defined and filled in with specific values.
+
+**Key references**:
+- `GameDataWriterE.cs:L1804-1852` - Event creation from templates
+- `EventConfig.cs` - Event template definitions
+- `fogevents.txt` - Template command strings
 
 **Recommendation**:
 - Study FogRando's `EventConfig.cs` and `fogevents.txt` carefully
@@ -905,11 +1159,28 @@ The hardest part is generating valid EMEVD instructions. FogRando uses a templat
 
 We need entrance/exit positions for every zone. This data exists in FogRando's YAML files but needs to be extracted and mapped to our zone IDs.
 
+**Key references**:
+- `GameDataWriterE.cs:L462-493` - WarpPoint structure
+- `fog.txt` Entrances/Warps sections
+
 **Recommendation**:
 - Create a `zone_warps.json` file that maps zone IDs to warp coordinates
 - Extract this data from FogRando's `fog.txt` Entrances/Warps sections
 
-### 3. SoulsFormats Compatibility
+### 3. Fog Gate Asset Creation
+
+The `addFakeGate` helper in FogRando (closure, not standalone) creates fog wall assets by:
+1. Cloning an existing asset as template
+2. Setting model name (e.g., `AEG099_231`)
+3. Setting position and rotation
+4. Optionally setting EntityID and SfxParamRelativeID
+
+**Key references**:
+- `GameDataWriterE.cs:L262` - Basic usage
+- `GameDataWriterE.cs:L363-367` - Multi-height stacking
+- `GameDataWriterE.cs:L5221-5243` - `addAssetModel` helper
+
+### 4. SoulsFormats Compatibility
 
 Ensure you're using a SoulsFormats version that supports Elden Ring. SoulsFormatsNEXT is recommended.
 
