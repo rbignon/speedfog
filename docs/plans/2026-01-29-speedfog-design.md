@@ -92,7 +92,10 @@ speedfog/
 
 ```toml
 [run]
-seed = 12345
+# Seed for randomization. Behavior:
+# - seed = 0 or omitted: auto-reroll until valid DAG found, display used seed
+# - seed = 12345: force this seed, error if DAG generation fails
+seed = 0
 
 [budget]
 total_weight = 30              # Target total weight per path
@@ -111,7 +114,11 @@ max_layers = 10                # Maximum layers
 [paths]
 game_dir = "C:/Program Files/Steam/steamapps/common/ELDEN RING/Game"
 output_dir = "./output"
-enemy_randomizer_dir = "./mods/randomizer"
+
+# Optional: merge with Item/Enemy Randomizer output
+# If specified, SpeedFog loads EMEVD from this mod as base
+# If omitted, uses vanilla game files
+# randomizer_dir = "./mods/randomizer"
 ```
 
 ## Zone Data
@@ -393,6 +400,58 @@ public static int LayerToTier(int layerIndex, int totalLayers)
 }
 ```
 
+### Starting Items
+
+All key items are given at game start to prevent softlocks. The complete list:
+
+| Item | Purpose |
+|------|---------|
+| Academy Glintstone Key | Raya Lucaria access |
+| Carian Inverted Statue | Carian Study Hall |
+| Cursemark of Death | Ranni quest |
+| Dark Moon Ring | Ranni quest |
+| Dectus Medallion (Left + Right) | Grand Lift of Dectus |
+| Discarded Palace Key | Raya Lucaria locked area |
+| Drawing-Room Key | Volcano Manor |
+| Gaol Lower/Upper Level Key | Gaol access |
+| Haligtree Secret Medallion (Left + Right) | Consecrated Snowfield |
+| Hole-Laden Necklace | Quest item |
+| Imbued Sword Key | Four Belfries |
+| Irina's Letter | Irina quest |
+| Larval Tear | Respec |
+| Letter from Volcano Manor | Volcano Manor quest |
+| Messmer's Kindling | DLC |
+| O Mother | Quest item |
+| Prayer Room Key | Volcano Manor |
+| Pureblood Knight's Medal | Mohgwyn teleport |
+| Rold Medallion | Grand Lift of Rold |
+| Rusty Key | Stormveil |
+| Rya's Necklace | Rya quest |
+| Sellian Sealbreaker | Sellia |
+| Serpent's Amnion | Quest item |
+| Sewer-Gaol Key | Leyndell sewers |
+| Stonesword Key (x10) | Imp statues |
+| Storeroom Key | Stormveil |
+| Volcano Manor Invitation | Volcano Manor |
+| Well Depths Key | Quest item |
+| Ash of War: Kick | Utility |
+
+### Randomizer Merge (Optional)
+
+SpeedFog can merge with Item/Enemy Randomizer output:
+
+```
+Input:
+├── Vanilla game files (always loaded)
+└── Randomizer mod files (if randomizer_dir specified)
+         ↓
+    SpeedFog merges EMEVD + adds fog gate events
+         ↓
+Output: Combined mod files
+```
+
+If `randomizer_dir` is not specified, SpeedFog uses vanilla game files as base.
+
 ## Key Decisions
 
 | Aspect | Decision |
@@ -401,11 +460,13 @@ public static int LayerToTier(int layerIndex, int totalLayers)
 | **Architecture** | Python (core) + C# (writer) |
 | **Config format** | TOML |
 | **Zone data** | Converted once from FogRando |
-| **DAG structure** | Layers with free splits/merges |
+| **DAG structure** | Uniform layers (same zone type per layer) |
 | **Balancing** | Budget per path with tolerance |
 | **Scaling** | Adapted from FogRando (simplified tiers) |
 | **One-ways** | Excluded for v1 |
-| **Key items** | All given at start |
+| **Key items** | All 32 items given at start |
+| **Seed behavior** | `seed=0`: auto-reroll; `seed=N`: force or error |
+| **Enemy Randomizer** | Optional merge via `randomizer_dir` |
 | **Target duration** | ~1h (configurable) |
 | **Start point** | Chapel of Anticipation |
 | **End point** | Radagon/Elden Beast |

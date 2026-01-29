@@ -1010,43 +1010,95 @@ def export_json(dag: DAG, seed: int, output_path: Path) -> None:
 
 
 def export_spoiler_log(dag: DAG, seed: int, output_path: Path) -> None:
-    """Export human-readable spoiler log."""
+    """
+    Export human-readable spoiler log with ASCII graph visualization.
+
+    Output format shows branches visually:
+
+        === SPEEDFOG SPOILER (seed: 12345) ===
+
+                  Chapel of Anticipation
+                            │
+                       ┌────┴────┐
+                       │         │
+                  Murkwater   Tombsward
+                  Catacombs   Catacombs
+                   (w:4)       (w:4)
+                       │         │
+                      ...       ...
+                       │
+                 Elden Throne
+                  [Radagon]
+    """
     lines = [
         "=" * 60,
-        "SPEEDFOG SPOILER LOG",
+        f"SPEEDFOG SPOILER (seed: {seed})",
         "=" * 60,
-        f"Seed: {seed}",
         f"Total zones: {dag.total_zones()}",
         f"Total paths: {len(dag.enumerate_paths())}",
         "",
-        "LAYER STRUCTURE:",
-        "-" * 40,
     ]
 
+    # Build ASCII graph visualization
     for layer in dag.layers:
-        lines.append(f"\nLayer {layer.index} (Tier {layer.tier}):")
-        for node in layer.nodes:
-            boss_str = f" [BOSS: {node.zone.boss}]" if node.zone.boss else ""
-            lines.append(f"  - {node.id}: {node.zone.name}{boss_str}")
-            if node.entries:
-                entries = ", ".join(n.id for n in node.entries)
-                lines.append(f"      ← from: {entries}")
-            if node.exits:
-                exits = ", ".join(n.id for n in node.exits)
-                lines.append(f"      → to: {exits}")
+        nodes = layer.nodes
+        n_nodes = len(nodes)
+
+        # Calculate column width based on longest zone name
+        col_width = max(len(n.zone.name) for n in nodes) + 4 if nodes else 20
+        col_width = max(col_width, 16)  # Minimum width
+
+        # Draw connection lines from previous layer
+        if layer.index > 0:
+            # Determine merge/split structure
+            prev_layer = dag.layers[layer.index - 1]
+            if len(prev_layer.nodes) < n_nodes:
+                # Split: draw branching lines
+                lines.append(_center_text("┌────┴────┐", col_width * n_nodes))
+            elif len(prev_layer.nodes) > n_nodes:
+                # Merge: draw converging lines
+                lines.append(_center_text("└────┬────┘", col_width * n_nodes))
+            else:
+                # Continue: straight lines
+                pipe_line = "│".center(col_width) * n_nodes
+                lines.append(pipe_line)
+
+        # Draw zone names
+        name_parts = []
+        for node in nodes:
+            name_parts.append(node.zone.name.center(col_width))
+        lines.append("".join(name_parts))
+
+        # Draw weights and boss info
+        info_parts = []
+        for node in nodes:
+            boss_str = f"[{node.zone.boss}]" if node.zone.boss else ""
+            info = f"(w:{node.zone.weight}) {boss_str}".strip()
+            info_parts.append(info.center(col_width))
+        lines.append("".join(info_parts))
+
+        # Draw vertical lines to next layer (except for last layer)
+        if layer.index < len(dag.layers) - 1:
+            pipe_line = "│".center(col_width) * n_nodes
+            lines.append(pipe_line)
 
     lines.append("")
-    lines.append("ALL PATHS:")
-    lines.append("-" * 40)
+    lines.append("=" * 60)
+    lines.append("PATH SUMMARY")
+    lines.append("=" * 60)
 
     for i, path in enumerate(dag.enumerate_paths()):
         weight = dag.path_weight(path)
-        path_str = " → ".join(n.zone.name[:20] for n in path)
-        lines.append(f"\nPath {i+1} (weight {weight}):")
-        lines.append(f"  {path_str}")
+        path_str = " → ".join(n.zone.name[:15] for n in path)
+        lines.append(f"Path {i+1} (weight {weight}): {path_str}")
 
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write("\n".join(lines))
+
+
+def _center_text(text: str, width: int) -> str:
+    """Center text within given width."""
+    return text.center(width)
 ```
 
 ---

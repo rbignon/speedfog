@@ -499,7 +499,7 @@ class PathsConfig:
     game_dir: Path = field(default_factory=lambda: Path("."))
     output_dir: Path = field(default_factory=lambda: Path("./output"))
     zones_file: Path = field(default_factory=lambda: Path("./zones.toml"))
-    enemy_randomizer_dir: Path | None = None
+    randomizer_dir: Path | None = None
 
 
 @dataclass
@@ -547,7 +547,7 @@ class Config:
                 game_dir=Path(paths.get('game_dir', '.')),
                 output_dir=Path(paths.get('output_dir', './output')),
                 zones_file=Path(paths.get('zones_file', './zones.toml')),
-                enemy_randomizer_dir=Path(paths['enemy_randomizer_dir']) if paths.get('enemy_randomizer_dir') else None,
+                randomizer_dir=Path(paths['randomizer_dir']) if paths.get('randomizer_dir') else None,
             ),
         )
 
@@ -583,7 +583,7 @@ max_layers = 10
 game_dir = "C:/Program Files/Steam/steamapps/common/ELDEN RING/Game"
 output_dir = "./output"
 zones_file = "./zones.toml"
-# enemy_randomizer_dir = "./mods/randomizer"  # Optional
+# randomizer_dir = "./mods/randomizer"  # Optional
 ```
 
 ---

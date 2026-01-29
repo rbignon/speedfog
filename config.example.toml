@@ -2,8 +2,10 @@
 # Copy this file to config.toml and edit as needed
 
 [run]
-# Seed for randomization. Set to 0 for random seed.
-# Share this seed with friends for identical runs!
+# Seed for randomization. Behavior:
+# - seed = 0 or omitted: auto-reroll until valid DAG found, display used seed
+# - seed = 12345: force this seed, error if DAG generation fails
+# Share a specific seed with friends for identical runs!
 seed = 0
 
 [budget]
@@ -47,6 +49,7 @@ output_dir = "./output"
 # Path to zone definitions file.
 zones_file = "./zones.toml"
 
-# Optional: Path to Enemy/Item Randomizer output.
-# If set, SpeedFog will apply on top of this mod.
-# enemy_randomizer_dir = "./mods/randomizer"
+# Optional: Path to Enemy/Item Randomizer mod output.
+# If set, SpeedFog merges with this mod's EMEVD files as base.
+# If omitted, SpeedFog uses vanilla game files.
+# randomizer_dir = "./mods/randomizer"

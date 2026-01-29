@@ -658,20 +658,57 @@ namespace SpeedFogWriter.Writers;
 
 /// <summary>
 /// Adds key items to player's starting inventory.
+/// All items given at start to prevent softlocks.
 /// </summary>
 public class StartingItemsWriter
 {
     // Item IDs for key items (from SoulsIds or manual research)
+    // TODO: Verify all item IDs against game data
     private static readonly Dictionary<string, int> KeyItems = new()
     {
-        ["rusty_key"] = 8109,           // Rusty Key (Stormveil)
-        ["stonesword_key"] = 8100,      // Stonesword Key
-        ["academy_glintstone_key"] = 8110,  // Academy key
-        ["discarded_palace_key"] = 8102,    // Raya Lucaria locked area
-        ["carian_inverted_statue"] = 8115,  // Carian Study Hall
-        ["haligtree_secret_medallion_l"] = 8186,
-        ["haligtree_secret_medallion_r"] = 8187,
-        // Add more as needed
+        // Dungeon access keys
+        ["academy_glintstone_key"] = 8110,      // Raya Lucaria
+        ["rusty_key"] = 8109,                   // Stormveil
+        ["stonesword_key"] = 8100,              // Imp statues (give x10)
+        ["discarded_palace_key"] = 8102,        // Raya Lucaria locked area
+        ["drawing_room_key"] = 0,               // Volcano Manor (TODO: find ID)
+        ["prayer_room_key"] = 0,                // Volcano Manor (TODO: find ID)
+        ["sewer_gaol_key"] = 0,                 // Leyndell sewers (TODO: find ID)
+        ["gaol_lower_level_key"] = 0,           // (TODO: find ID)
+        ["gaol_upper_level_key"] = 0,           // (TODO: find ID)
+        ["storeroom_key"] = 0,                  // Stormveil (TODO: find ID)
+        ["well_depths_key"] = 0,                // (TODO: find ID)
+
+        // Medallions for lifts
+        ["dectus_medallion_left"] = 0,          // Grand Lift of Dectus (TODO: find ID)
+        ["dectus_medallion_right"] = 0,         // Grand Lift of Dectus (TODO: find ID)
+        ["rold_medallion"] = 0,                 // Grand Lift of Rold (TODO: find ID)
+        ["haligtree_secret_medallion_left"] = 8186,   // Consecrated Snowfield
+        ["haligtree_secret_medallion_right"] = 8187,  // Consecrated Snowfield
+
+        // Quest/progression items
+        ["carian_inverted_statue"] = 8115,      // Carian Study Hall
+        ["cursemark_of_death"] = 0,             // Ranni quest (TODO: find ID)
+        ["dark_moon_ring"] = 0,                 // Ranni quest (TODO: find ID)
+        ["imbued_sword_key"] = 0,               // Four Belfries (TODO: find ID)
+        ["sellian_sealbreaker"] = 0,            // Sellia (TODO: find ID)
+        ["pureblood_knights_medal"] = 0,        // Mohgwyn teleport (TODO: find ID)
+        ["volcano_manor_invitation"] = 0,       // Volcano Manor (TODO: find ID)
+
+        // Quest items (give to avoid softlocks in related areas)
+        ["irinas_letter"] = 0,                  // (TODO: find ID)
+        ["ryas_necklace"] = 0,                  // (TODO: find ID)
+        ["letter_from_volcano_manor"] = 0,      // (TODO: find ID)
+        ["hole_laden_necklace"] = 0,            // (TODO: find ID)
+        ["serpents_amnion"] = 0,                // (TODO: find ID)
+        ["o_mother"] = 0,                       // (TODO: find ID)
+
+        // Utility
+        ["larval_tear"] = 0,                    // Respec (TODO: find ID)
+        ["ash_of_war_kick"] = 0,                // Utility (TODO: find ID)
+
+        // DLC
+        ["messmers_kindling"] = 0,              // DLC (TODO: find ID)
     };
 
     private readonly ParamDictionary _params;
