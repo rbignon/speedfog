@@ -1,0 +1,22 @@
+[project]
+name = "speedfog-core"
+version = "0.1.0"
+description = "SpeedFog DAG generator for Elden Ring zone randomization"
+requires-python = ">=3.10"
+dependencies = [
+    "tomli>=2.0.0;python_version<'3.11'",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[project.scripts]
+speedfog = "speedfog_core.main:main"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
