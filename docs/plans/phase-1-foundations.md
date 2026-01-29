@@ -26,11 +26,18 @@ speedfog/
 │   │   └── zones.py           # Task 1.5
 │   ├── config.toml            # Task 1.4 (example)
 │   └── zones.toml             # Task 1.3
+├── data/
+│   └── zone_warps.json        # Task 1.6 (fog gate positions)
 ├── tools/
-│   └── convert_fogrando.py    # Task 1.2
+│   ├── convert_fogrando.py    # Task 1.2
+│   └── extract_warps.py       # Task 1.6 (extract from FogRando)
 ├── pyproject.toml             # Task 1.1
 └── README.md                  # Task 1.1
 ```
+
+**Note**: Zone data is split into two files:
+- `zones.toml`: Gameplay metadata (type, weight, fog_count) - manually edited
+- `data/zone_warps.json`: Technical warp data (positions, entity IDs) - extracted from FogRando
 
 ---
 
@@ -121,7 +128,7 @@ Generate `zones.toml` with this structure:
 
 ```toml
 # Auto-generated from FogRando fog.txt
-# Manual review required for weights and categorization
+# Manual review required for weights and fog_count
 
 [[zones]]
 id = "stormveil"
@@ -129,8 +136,7 @@ map = "m10_00_00_00"
 name = "Stormveil Castle"
 type = "legacy_dungeon"    # Derived from tags
 weight = 0                 # MANUAL: set after testing
-entrances = []             # MANUAL: fill from Entrances section
-exits = []                 # MANUAL: fill from Entrances section
+fog_count = 0              # MANUAL: count fog gates (2=linear, 3=split/merge)
 boss = "godrick"           # Derived from DefeatFlag presence
 tags = ["legacy"]
 
@@ -140,8 +146,7 @@ map = "m30_00_00_00"
 name = "Murkwater Catacombs"
 type = "catacomb"          # Derived from map prefix m30
 weight = 0                 # MANUAL: estimate ~4-5
-entrances = []
-exits = []
+fog_count = 0              # MANUAL: typically 2 for mini-dungeons
 boss = ""
 tags = ["minidungeon"]
 ```
@@ -196,8 +201,7 @@ class Zone:
     name: str
     type: str
     weight: int
-    entrances: list[str]
-    exits: list[str]
+    fog_count: int  # 2=linear, 3=can split/merge
     boss: str
     tags: list[str]
 
@@ -279,8 +283,7 @@ def convert_area_to_zone(area: dict) -> Optional[Zone]:
         name=area.get('Text', ''),
         type=zone_type,
         weight=0,  # Manual assignment required
-        entrances=[],  # Manual assignment required
-        exits=[],  # Manual assignment required
+        fog_count=0,  # Manual assignment required (2=linear, 3=split/merge)
         boss=extract_boss_name(area),
         tags=tags,
     )
@@ -294,7 +297,7 @@ def zones_to_toml(zones: list[Zone]) -> str:
         "# ",
         "# MANUAL REVIEW REQUIRED:",
         "# - Set weight for each zone (estimated minutes to complete)",
-        "# - Fill entrances/exits from FogRando Entrances section",
+        "# - Set fog_count (2=linear passage, 3=can split/merge)",
         "# - Verify type categorization",
         "# - Add duration suffix to mini-dungeons (_short, _medium, _long)",
         "",
@@ -326,8 +329,7 @@ def zones_to_toml(zones: list[Zone]) -> str:
             lines.append(f'name = "{zone.name}"')
             lines.append(f'type = "{zone.type}"')
             lines.append(f'weight = {zone.weight}  # TODO: estimate minutes')
-            lines.append(f'entrances = []  # TODO: fill from Entrances')
-            lines.append(f'exits = []  # TODO: fill from Entrances')
+            lines.append(f'fog_count = {zone.fog_count}  # TODO: 2=linear, 3=split/merge')
             if zone.boss:
                 lines.append(f'boss = "{zone.boss}"')
             if zone.tags:
@@ -489,8 +491,6 @@ class StructureConfig:
     max_parallel_paths: int = 3
     min_layers: int = 6
     max_layers: int = 10
-    split_probability: float = 0.4
-    merge_probability: float = 0.3
 
 
 @dataclass
@@ -542,8 +542,6 @@ class Config:
                 max_parallel_paths=structure.get('max_parallel_paths', 3),
                 min_layers=structure.get('min_layers', 6),
                 max_layers=structure.get('max_layers', 10),
-                split_probability=structure.get('split_probability', 0.4),
-                merge_probability=structure.get('merge_probability', 0.3),
             ),
             paths=PathsConfig(
                 game_dir=Path(paths.get('game_dir', '.')),
@@ -580,8 +578,6 @@ mini_dungeons = 5
 max_parallel_paths = 3
 min_layers = 6
 max_layers = 10
-split_probability = 0.4
-merge_probability = 0.3
 
 [paths]
 game_dir = "C:/Program Files/Steam/steamapps/common/ELDEN RING/Game"
@@ -673,8 +669,7 @@ class Zone:
     name: str
     type: ZoneType
     weight: int
-    entrance_count: int = 1
-    exit_count: int = 1
+    fog_count: int = 2  # Number of fog gates (2=linear, 3=can split/merge)
     boss: str = ""
     tags: list[str] = field(default_factory=list)
     min_tier: int = 1
@@ -689,21 +684,16 @@ class Zone:
             name=data.get('name', data['id']),
             type=ZoneType.from_string(data.get('type', 'boss_arena')),
             weight=data.get('weight', 5),
-            entrance_count=data.get('entrance_count', len(data.get('entrances', []))),
-            exit_count=data.get('exit_count', len(data.get('exits', []))),
+            fog_count=data.get('fog_count', 2),
             boss=data.get('boss', ''),
             tags=data.get('tags', []),
             min_tier=data.get('min_tier', 1),
             max_tier=data.get('max_tier', 34),
         )
 
-    def can_split(self) -> bool:
-        """Check if this zone can be a split point (2+ exits)."""
-        return self.exit_count >= 2
-
-    def can_merge(self) -> bool:
-        """Check if this zone can be a merge point (2+ entrances)."""
-        return self.entrance_count >= 2
+    def can_split_or_merge(self) -> bool:
+        """Check if this zone can be a split or merge point (3+ fogs)."""
+        return self.fog_count >= 3
 
 
 @dataclass
@@ -786,10 +776,12 @@ def load_zones(path: Path) -> ZonePool:
 
 ### Task 1.3
 - [ ] `zones.toml` has weights assigned to all zones
+- [ ] `zones.toml` has fog_count assigned to all zones (2 or 3)
 - [ ] Mini-dungeons have duration suffixes
 - [ ] At least 5 legacy dungeons available
 - [ ] At least 15 mini-dungeons available
 - [ ] At least 10 boss arenas available
+- [ ] At least some zones with fog_count=3 (for splits/merges)
 
 ### Task 1.4
 - [ ] `Config.from_toml()` parses example config correctly
@@ -800,6 +792,194 @@ def load_zones(path: Path) -> ZonePool:
 - [ ] `ZonePool.from_toml()` loads zones correctly
 - [ ] `ZoneType.from_string()` handles all expected types
 - [ ] Filter methods (`by_type`, `filter_by_tier`) work correctly
+
+### Task 1.6
+- [ ] `extract_warps.py` extracts fog positions from FogRando's fog.txt
+- [ ] `zone_warps.json` contains all zones from `zones.toml`
+- [ ] Validation script confirms zones.toml and zone_warps.json are in sync
+
+---
+
+## Task 1.6: extract_warps.py
+
+Extract fog gate positions from FogRando's data files to create `zone_warps.json`.
+
+### Input
+
+FogRando's `fog.txt` contains an `Entrances:` section with fog gate data:
+
+```yaml
+Entrances:
+- Name: stormveil_main_gate
+  Area: stormveil
+  Text: Stormveil Main Gate
+  Pos: 123.4 56.7 89.0
+  Rot: 0 180 0
+  ID: 10001800
+  # ...
+```
+
+### Output
+
+`data/zone_warps.json`:
+
+```json
+{
+  "stormveil": {
+    "map": "m10_00_00_00",
+    "fogs": [
+      {
+        "id": "stormveil_main_gate",
+        "position": [123.4, 56.7, 89.0],
+        "rotation": [0, 180, 0],
+        "entity_id": 10001800
+      }
+    ]
+  }
+}
+```
+
+### Script Structure
+
+```python
+#!/usr/bin/env python3
+"""
+Extract fog gate warp data from FogRando fog.txt.
+
+Usage:
+    python extract_warps.py <fog.txt> <output.json>
+"""
+
+import sys
+import json
+import yaml
+from pathlib import Path
+
+
+def extract_warps(fog_path: Path) -> dict:
+    """Extract warp data from FogRando fog.txt."""
+    with open(fog_path, 'r', encoding='utf-8') as f:
+        data = yaml.safe_load(f)
+
+    warps = {}
+    areas = {a['Name']: a for a in data.get('Areas', [])}
+
+    for entrance in data.get('Entrances', []):
+        area_id = entrance.get('Area', '')
+        if area_id not in warps:
+            area_data = areas.get(area_id, {})
+            warps[area_id] = {
+                'map': area_data.get('Maps', '').split()[0] if area_data.get('Maps') else '',
+                'fogs': []
+            }
+
+        pos = entrance.get('Pos', '0 0 0').split()
+        rot = entrance.get('Rot', '0 0 0').split()
+
+        warps[area_id]['fogs'].append({
+            'id': entrance.get('Name', ''),
+            'position': [float(x) for x in pos],
+            'rotation': [float(x) for x in rot],
+            'entity_id': entrance.get('ID', 0),
+        })
+
+    return warps
+
+
+def main():
+    if len(sys.argv) != 3:
+        print(__doc__)
+        sys.exit(1)
+
+    fog_path = Path(sys.argv[1])
+    output_path = Path(sys.argv[2])
+
+    warps = extract_warps(fog_path)
+
+    with open(output_path, 'w', encoding='utf-8') as f:
+        json.dump(warps, f, indent=2)
+
+    print(f"Extracted warps for {len(warps)} zones to {output_path}")
+
+
+if __name__ == '__main__':
+    main()
+```
+
+### Validation Script
+
+Add to `tools/validate_zones.py`:
+
+```python
+#!/usr/bin/env python3
+"""Validate zones.toml and zone_warps.json are in sync."""
+
+import sys
+import json
+from pathlib import Path
+
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
+
+
+def validate(zones_path: Path, warps_path: Path) -> list[str]:
+    """Return list of validation errors."""
+    errors = []
+
+    with open(zones_path, 'rb') as f:
+        zones_data = tomllib.load(f)
+
+    with open(warps_path, 'r') as f:
+        warps = json.load(f)
+
+    zones_list = zones_data.get('zones', [])
+    zone_ids = {z['id'] for z in zones_list}
+    warp_ids = set(warps.keys())
+
+    # Zones without warp data
+    missing_warps = zone_ids - warp_ids
+    for z in missing_warps:
+        errors.append(f"Zone '{z}' has no warp data in zone_warps.json")
+
+    # Warps without zone data
+    extra_warps = warp_ids - zone_ids
+    for w in extra_warps:
+        errors.append(f"Warp data '{w}' has no zone in zones.toml")
+
+    # Validate fog_count matches actual fog count in zone_warps.json
+    for zone in zones_list:
+        zone_id = zone['id']
+        expected_fogs = zone.get('fog_count', 2)
+        if zone_id in warps:
+            actual_fogs = len(warps[zone_id].get('fogs', []))
+            if actual_fogs != expected_fogs:
+                errors.append(
+                    f"Zone '{zone_id}': fog_count={expected_fogs} "
+                    f"but {actual_fogs} fogs in zone_warps.json"
+                )
+
+    # Validate zone weights are positive
+    for zone in zones_list:
+        if zone.get('weight', 0) <= 0:
+            errors.append(f"Zone '{zone['id']}' has invalid weight: {zone.get('weight')}")
+
+    return errors
+
+
+if __name__ == '__main__':
+    zones_path = Path('core/zones.toml')
+    warps_path = Path('data/zone_warps.json')
+
+    errors = validate(zones_path, warps_path)
+    if errors:
+        for e in errors:
+            print(f"ERROR: {e}", file=sys.stderr)
+        sys.exit(1)
+    else:
+        print("Validation passed: zones.toml and zone_warps.json are in sync")
+```
 
 ---
 
@@ -848,14 +1028,14 @@ def test_zone_type_from_string():
     assert ZoneType.from_string("catacomb_short") == ZoneType.CATACOMB_SHORT
     assert ZoneType.from_string("catacomb") == ZoneType.CATACOMB_MEDIUM
 
-def test_zone_can_split():
+def test_zone_can_split_or_merge():
     zone = Zone(id="test", map="m10", name="Test", type=ZoneType.LEGACY_DUNGEON,
-                weight=10, exit_count=2)
-    assert zone.can_split() is True
+                weight=10, fog_count=3)
+    assert zone.can_split_or_merge() is True
 
     zone2 = Zone(id="test2", map="m10", name="Test2", type=ZoneType.BOSS_ARENA,
-                 weight=3, exit_count=1)
-    assert zone2.can_split() is False
+                 weight=3, fog_count=2)
+    assert zone2.can_split_or_merge() is False
 
 def test_zone_pool_by_type(tmp_path):
     zones_file = tmp_path / "zones.toml"

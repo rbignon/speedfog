@@ -18,7 +18,8 @@ Implement the DAG (Directed Acyclic Graph) generation algorithm that creates bal
 ```
 speedfog/core/speedfog_core/
 ├── dag.py          # Task 2.1: DAG data structures
-├── generator.py    # Task 2.2-2.3: Generation algorithm
+├── planner.py      # Task 2.2: Layer planning
+├── generator.py    # Task 2.3: Generation algorithm
 ├── balance.py      # Task 2.4: Path balancing
 ├── validator.py    # Task 2.5: Constraint validation
 ├── output.py       # Task 2.6: JSON export
@@ -247,30 +248,192 @@ class DAG:
 
 ---
 
-## Task 2.2-2.3: Generation Algorithm (generator.py)
+## Task 2.2: Layer Planning (planner.py)
+
+The generation uses a **uniform layer** approach: each layer has a single zone type, ensuring competitive fairness.
+
+### Layer Spec
+
+```python
+"""
+Layer planning for SpeedFog DAG generation.
+"""
+
+from dataclasses import dataclass
+from enum import Enum, auto
+import random
+
+from speedfog_core.config import Config
+from speedfog_core.zones import ZoneType
+
+
+class LayerStructure(Enum):
+    """Structure of a layer (how branches flow through it)."""
+    CONTINUE = auto()  # Each branch continues independently (N → N)
+    SPLIT = auto()      # A branch splits into two (N → N+1), requires 3-fog zone
+    MERGE = auto()      # Multiple branches merge (N → N-1), requires 3-fog zone
+
+
+@dataclass
+class LayerSpec:
+    """Specification for a single layer."""
+    zone_type: ZoneType       # Type of zone for this layer
+    structure: LayerStructure  # How branches flow
+    target_weight: int         # Target weight for zones in this layer
+
+
+def plan_layers(config: Config, rng: random.Random) -> list[LayerSpec]:
+    """
+    Plan the sequence of layers to satisfy requirements.
+
+    Returns:
+        List of LayerSpec from start to end (excluding start/end nodes)
+    """
+    req = config.requirements
+    struct = config.structure
+
+    # Determine total layers (excluding start/end)
+    total_layers = rng.randint(struct.min_layers, struct.max_layers)
+
+    # Build layer type sequence to satisfy requirements
+    layer_types: list[ZoneType] = []
+
+    # Must include: legacy_dungeons, bosses, mini_dungeons
+    for _ in range(req.legacy_dungeons):
+        layer_types.append(ZoneType.LEGACY_DUNGEON)
+    for _ in range(req.bosses):
+        layer_types.append(ZoneType.BOSS_ARENA)
+    for _ in range(req.mini_dungeons):
+        # Distribute among mini-dungeon types
+        mini_type = rng.choice([
+            ZoneType.CATACOMB_MEDIUM,
+            ZoneType.CAVE_MEDIUM,
+            ZoneType.TUNNEL,
+            ZoneType.GAOL,
+        ])
+        layer_types.append(mini_type)
+
+    # Pad to total_layers if needed
+    while len(layer_types) < total_layers:
+        filler = rng.choice([
+            ZoneType.CATACOMB_SHORT,
+            ZoneType.CAVE_SHORT,
+            ZoneType.BOSS_ARENA,
+        ])
+        layer_types.append(filler)
+
+    # Trim if too many
+    layer_types = layer_types[:total_layers]
+
+    # Shuffle to randomize order
+    rng.shuffle(layer_types)
+
+    # Plan structure (splits/merges)
+    specs: list[LayerSpec] = []
+    current_branches = 1
+
+    for i, zone_type in enumerate(layer_types):
+        # Decide structure based on current branch count and limits
+        structure = _decide_structure(
+            rng, current_branches, struct.max_parallel_paths,
+            is_near_end=(i >= len(layer_types) - 2)
+        )
+
+        # Update branch count
+        if structure == LayerStructure.SPLIT:
+            current_branches += 1
+        elif structure == LayerStructure.MERGE and current_branches > 1:
+            current_branches -= 1
+
+        # Estimate target weight for this zone type
+        target_weight = _estimate_weight(zone_type)
+
+        specs.append(LayerSpec(
+            zone_type=zone_type,
+            structure=structure,
+            target_weight=target_weight,
+        ))
+
+    return specs
+
+
+def _decide_structure(
+    rng: random.Random,
+    current_branches: int,
+    max_branches: int,
+    is_near_end: bool,
+) -> LayerStructure:
+    """
+    Decide layer structure based on current state.
+
+    Note: Probabilities are intentionally hardcoded for v1 simplicity.
+    The uniform layer design already ensures fairness - the exact
+    split/merge frequency is a tuning parameter that can be exposed
+    in config later if needed.
+    """
+    # Near the end, prefer merging to converge
+    if is_near_end and current_branches > 1:
+        return LayerStructure.MERGE
+
+    # At max branches, can only continue or merge
+    if current_branches >= max_branches:
+        if current_branches > 1 and rng.random() < 0.3:
+            return LayerStructure.MERGE
+        return LayerStructure.CONTINUE
+
+    # Single branch - consider splitting
+    if current_branches == 1:
+        if rng.random() < 0.4:
+            return LayerStructure.SPLIT
+        return LayerStructure.CONTINUE
+
+    # Multiple branches - can split, continue, or merge
+    roll = rng.random()
+    if roll < 0.2:
+        return LayerStructure.SPLIT
+    elif roll < 0.4:
+        return LayerStructure.MERGE
+    return LayerStructure.CONTINUE
+
+
+def _estimate_weight(zone_type: ZoneType) -> int:
+    """Estimate typical weight for a zone type."""
+    estimates = {
+        ZoneType.LEGACY_DUNGEON: 15,
+        ZoneType.CATACOMB_SHORT: 4,
+        ZoneType.CATACOMB_MEDIUM: 6,
+        ZoneType.CATACOMB_LONG: 9,
+        ZoneType.CAVE_SHORT: 4,
+        ZoneType.CAVE_MEDIUM: 6,
+        ZoneType.CAVE_LONG: 9,
+        ZoneType.TUNNEL: 5,
+        ZoneType.GAOL: 3,
+        ZoneType.BOSS_ARENA: 4,
+    }
+    return estimates.get(zone_type, 5)
+```
+
+---
+
+## Task 2.3: Generation Algorithm (generator.py)
 
 ### Generator Class
 
 ```python
 """
 DAG generation algorithm for SpeedFog.
+
+Uses uniform layer design: each layer has a single zone type,
+ensuring all paths face the same type of challenge.
 """
 
 import random
 from dataclasses import dataclass
-from enum import Enum, auto
-from typing import Callable
 
 from speedfog_core.config import Config
 from speedfog_core.zones import Zone, ZonePool, ZoneType
-from speedfog_core.dag import DAG, Node, Layer
-
-
-class Action(Enum):
-    """Actions that can be taken at each node."""
-    CONTINUE = auto()   # Single exit to next layer
-    SPLIT = auto()      # Two exits (branch)
-    # MERGE is handled separately (multiple nodes converge)
+from speedfog_core.dag import DAG, Node
+from speedfog_core.planner import plan_layers, LayerSpec, LayerStructure
 
 
 @dataclass
@@ -282,11 +445,6 @@ class GenerationContext:
     dag: DAG
     used_zones: set[str]  # Zone IDs already used (no repeats)
 
-    # Tracking requirements
-    legacy_count: int = 0
-    boss_count: int = 0
-    mini_dungeon_count: int = 0
-
     def zone_available(self, zone: Zone) -> bool:
         """Check if a zone can be used."""
         return zone.id not in self.used_zones
@@ -294,30 +452,6 @@ class GenerationContext:
     def mark_used(self, zone: Zone) -> None:
         """Mark a zone as used."""
         self.used_zones.add(zone.id)
-        if zone.type == ZoneType.LEGACY_DUNGEON:
-            self.legacy_count += 1
-        if zone.boss:
-            self.boss_count += 1
-        if zone.type.is_mini_dungeon():
-            self.mini_dungeon_count += 1
-
-    def requirements_met(self) -> bool:
-        """Check if minimum requirements are satisfied."""
-        req = self.config.requirements
-        return (
-            self.legacy_count >= req.legacy_dungeons and
-            self.boss_count >= req.bosses and
-            self.mini_dungeon_count >= req.mini_dungeons
-        )
-
-    def remaining_requirements(self) -> dict[str, int]:
-        """Get remaining requirements to fulfill."""
-        req = self.config.requirements
-        return {
-            'legacy_dungeons': max(0, req.legacy_dungeons - self.legacy_count),
-            'bosses': max(0, req.bosses - self.boss_count),
-            'mini_dungeons': max(0, req.mini_dungeons - self.mini_dungeon_count),
-        }
 
 
 def layer_to_tier(layer_index: int, total_layers: int) -> int:
@@ -330,26 +464,25 @@ def layer_to_tier(layer_index: int, total_layers: int) -> int:
         return 1
 
     progress = layer_index / (total_layers - 1)
-    # Tiers 1-28 (avoiding 29+ which are late DLC)
     return int(1 + progress * 27)
 
 
 def select_zone(
     ctx: GenerationContext,
-    layer_index: int,
-    tier: int,
-    prefer_type: ZoneType | None = None,
-    require_split: bool = False,
+    zone_type: ZoneType,
+    target_weight: int,
+    weight_tolerance: int = 2,
+    require_3_fogs: bool = False,
 ) -> Zone | None:
     """
-    Select a zone for a node.
+    Select a zone matching criteria.
 
     Args:
         ctx: Generation context
-        layer_index: Current layer
-        tier: Difficulty tier
-        prefer_type: Preferred zone type (for requirements)
-        require_split: If True, zone must have 2+ exits
+        zone_type: Required zone type
+        target_weight: Target weight
+        weight_tolerance: Allowed deviation from target
+        require_3_fogs: If True, zone must have 3 fog gates (for split/merge)
 
     Returns:
         Selected zone or None if no valid zone found
@@ -361,12 +494,16 @@ def select_zone(
         if not ctx.zone_available(zone):
             continue
 
-        # Skip if tier out of range
-        if not (zone.min_tier <= tier <= zone.max_tier):
+        # Must match type
+        if zone.type != zone_type:
             continue
 
-        # Skip if split required but zone can't split
-        if require_split and not zone.can_split():
+        # Check weight is within tolerance
+        if abs(zone.weight - target_weight) > weight_tolerance:
+            continue
+
+        # Check fog count if required
+        if require_3_fogs and zone.fog_count < 3:
             continue
 
         # Skip start/final zones
@@ -376,92 +513,38 @@ def select_zone(
         candidates.append(zone)
 
     if not candidates:
+        # Relax weight tolerance and try again
+        candidates = []  # Clear for fresh search without weight constraint
+        for zone in ctx.zones.all_zones():
+            if not ctx.zone_available(zone):
+                continue
+            if zone.type != zone_type:
+                continue
+            if require_3_fogs and zone.fog_count < 3:
+                continue
+            if zone.type in {ZoneType.START, ZoneType.FINAL_BOSS}:
+                continue
+            candidates.append(zone)
+
+    if not candidates:
         return None
 
-    # Weighting
-    weights = []
-    for zone in candidates:
-        weight = 1.0
-
-        # Prefer requested type
-        if prefer_type and zone.type == prefer_type:
-            weight *= 3.0
-
-        # Prefer zones with bosses if boss count is low
-        remaining = ctx.remaining_requirements()
-        if remaining['bosses'] > 0 and zone.boss:
-            weight *= 2.0
-
-        # Prefer mini-dungeons if count is low
-        if remaining['mini_dungeons'] > 0 and zone.type.is_mini_dungeon():
-            weight *= 1.5
-
-        # Prefer legacy dungeons if count is low
-        if remaining['legacy_dungeons'] > 0 and zone.type == ZoneType.LEGACY_DUNGEON:
-            weight *= 2.5
-
-        weights.append(weight)
-
-    return ctx.rng.choices(candidates, weights=weights, k=1)[0]
-
-
-def decide_action(
-    ctx: GenerationContext,
-    current_layer: list[Node],
-    layer_index: int,
-    total_layers: int,
-) -> list[Action]:
-    """
-    Decide actions for each node in current layer.
-
-    Returns list of actions, one per node.
-    """
-    actions = []
-    current_paths = len(current_layer)
-    max_paths = ctx.config.structure.max_parallel_paths
-
-    for node in current_layer:
-        # Near the end, prefer continuing to allow convergence
-        if layer_index >= total_layers - 2:
-            actions.append(Action.CONTINUE)
-            continue
-
-        # Can this node split?
-        can_split = node.zone.can_split() and current_paths < max_paths
-
-        if can_split and ctx.rng.random() < ctx.config.structure.split_probability:
-            actions.append(Action.SPLIT)
-            current_paths += 1  # Track for max_paths limit
-        else:
-            actions.append(Action.CONTINUE)
-
-    return actions
-
-
-def should_merge(
-    ctx: GenerationContext,
-    layer_index: int,
-    current_path_count: int,
-) -> bool:
-    """Decide if paths should merge at this layer."""
-    if current_path_count <= 1:
-        return False
-
-    return ctx.rng.random() < ctx.config.structure.merge_probability
+    return ctx.rng.choice(candidates)
 
 
 def generate_dag(config: Config, zones: ZonePool) -> DAG:
     """
-    Generate a randomized DAG.
+    Generate a randomized DAG with uniform layers.
 
     Algorithm:
-    1. Create start node (Chapel of Anticipation)
-    2. For each layer:
-       a. Decide split/continue/merge actions
-       b. Select zones for new nodes
-       c. Connect edges
-    3. Converge all paths to end node (Radagon)
-    4. Validate structure
+    1. Plan layer sequence (types and structure)
+    2. Create start node (Chapel of Anticipation)
+    3. For each layer:
+       a. Select zones of the planned type
+       b. Handle splits/merges based on structure
+       c. Ensure all branches have similar-weight zones
+    4. Converge all paths to end node (Radagon)
+    5. Validate structure
 
     Returns:
         Generated DAG
@@ -477,88 +560,96 @@ def generate_dag(config: Config, zones: ZonePool) -> DAG:
         used_zones=set(),
     )
 
-    # Determine total layers
-    total_layers = rng.randint(
-        config.structure.min_layers,
-        config.structure.max_layers
-    )
+    # 1. Plan layers
+    layer_specs = plan_layers(config, rng)
+    total_layers = len(layer_specs) + 2  # +2 for start and end
 
-    # --- Layer 0: Start ---
+    # 2. Create start node
     start_zone = zones.get("chapel_of_anticipation")
     if start_zone is None:
-        # Fallback: create a minimal start zone
         start_zone = Zone(
             id="chapel_of_anticipation",
             map="m10_01_00_00",
             name="Chapel of Anticipation",
             type=ZoneType.START,
             weight=0,
+            fog_count=2,
         )
 
     start_node = dag.add_node(start_zone, layer_index=0, tier=1, node_id="start")
     dag.start_node = start_node
     ctx.mark_used(start_zone)
 
-    current_layer_nodes = [start_node]
+    current_branches: list[Node] = [start_node]
 
-    # --- Layers 1 to N-1: Generation ---
-    for layer_index in range(1, total_layers):
+    # 3. Build each layer
+    #
+    # Key insight: SPLIT and MERGE affect the NUMBER of branches, not the zones themselves.
+    # - CONTINUE: N branches → N branches (each branch gets 1 zone)
+    # - SPLIT: N branches → N+1 branches (one zone has 3 fogs, connects to 2 children)
+    # - MERGE: N branches → N-1 branches (multiple branches connect to 1 zone with 3 fogs)
+    #
+    # We track "pending splits" - nodes that need to spawn 2 children instead of 1.
+
+    pending_splits: set[Node] = set()  # Nodes that will branch into 2 in next layer
+
+    for layer_index, spec in enumerate(layer_specs, start=1):
         tier = layer_to_tier(layer_index, total_layers)
-        next_layer_nodes: list[Node] = []
+        next_branches: list[Node] = []
+        next_pending_splits: set[Node] = set()
 
-        # Check for merge opportunity
-        if should_merge(ctx, layer_index, len(current_layer_nodes)):
-            # Merge: all current nodes connect to a single new node
-            merge_zone = select_zone(ctx, layer_index, tier)
+        if spec.structure == LayerStructure.MERGE and len(current_branches) > 1:
+            # MERGE: all current branches converge to one node (3-fog zone)
+            merge_zone = select_zone(
+                ctx, spec.zone_type, spec.target_weight,
+                require_3_fogs=True
+            )
             if merge_zone:
                 merge_node = dag.add_node(merge_zone, layer_index, tier)
                 ctx.mark_used(merge_zone)
+                for branch in current_branches:
+                    dag.connect(branch, merge_node)
+                next_branches = [merge_node]
 
-                for prev_node in current_layer_nodes:
-                    dag.connect(prev_node, merge_node)
+        else:
+            # CONTINUE or SPLIT: create zones for each branch
+            # Handle pending splits from previous layer first
+            branches_to_process = []
+            for branch in current_branches:
+                if branch in pending_splits:
+                    # This branch spawns 2 children (it was a split point)
+                    branches_to_process.append(branch)
+                    branches_to_process.append(branch)  # Add twice for 2 children
+                else:
+                    branches_to_process.append(branch)
 
-                next_layer_nodes = [merge_node]
-                current_layer_nodes = next_layer_nodes
-                continue
+            # Now create zones for all branches
+            for i, branch in enumerate(branches_to_process):
+                # For SPLIT structure, one zone needs 3 fogs to become next split point
+                need_split_zone = (spec.structure == LayerStructure.SPLIT and i == 0)
 
-        # Decide actions for each node
-        actions = decide_action(ctx, current_layer_nodes, layer_index, total_layers)
-
-        for node, action in zip(current_layer_nodes, actions):
-            if action == Action.SPLIT:
-                # Create two child nodes
-                # Determine if we need specific types
-                remaining = ctx.remaining_requirements()
-
-                zone1 = select_zone(ctx, layer_index, tier)
-                if zone1:
-                    node1 = dag.add_node(zone1, layer_index, tier)
-                    ctx.mark_used(zone1)
-                    dag.connect(node, node1)
-                    next_layer_nodes.append(node1)
-
-                zone2 = select_zone(ctx, layer_index, tier)
-                if zone2:
-                    node2 = dag.add_node(zone2, layer_index, tier)
-                    ctx.mark_used(zone2)
-                    dag.connect(node, node2)
-                    next_layer_nodes.append(node2)
-
-            else:  # CONTINUE
-                zone = select_zone(ctx, layer_index, tier)
+                zone = select_zone(
+                    ctx, spec.zone_type, spec.target_weight,
+                    require_3_fogs=need_split_zone
+                )
                 if zone:
-                    new_node = dag.add_node(zone, layer_index, tier)
+                    node = dag.add_node(zone, layer_index, tier)
                     ctx.mark_used(zone)
-                    dag.connect(node, new_node)
-                    next_layer_nodes.append(new_node)
+                    dag.connect(branch, node)
+                    next_branches.append(node)
 
-        # Fallback if no nodes created (shouldn't happen with proper zone pool)
-        if not next_layer_nodes:
+                    # Mark as split point for next layer
+                    if need_split_zone and zone.fog_count >= 3:
+                        next_pending_splits.add(node)
+
+        if not next_branches:
             raise RuntimeError(f"Failed to create nodes for layer {layer_index}")
 
-        current_layer_nodes = next_layer_nodes
+        pending_splits = next_pending_splits
 
-    # --- Final Layer: End (Radagon) ---
+        current_branches = next_branches
+
+    # 4. Create end node (Radagon)
     end_zone = zones.get("radagon_arena")
     if end_zone is None:
         end_zone = Zone(
@@ -567,15 +658,17 @@ def generate_dag(config: Config, zones: ZonePool) -> DAG:
             name="Elden Throne",
             type=ZoneType.FINAL_BOSS,
             weight=5,
+            fog_count=2,
             boss="Radagon / Elden Beast",
         )
 
-    end_node = dag.add_node(end_zone, layer_index=total_layers, tier=28, node_id="radagon")
+    end_node = dag.add_node(end_zone, layer_index=total_layers-1, tier=28, node_id="radagon")
     dag.end_node = end_node
 
-    # Connect all remaining nodes to end
-    for node in current_layer_nodes:
-        dag.connect(node, end_node)
+    # Connect all remaining branches to end
+    # Use set() to avoid duplicate connections from split nodes
+    for branch in set(current_branches):
+        dag.connect(branch, end_node)
 
     return dag
 ```
@@ -1082,11 +1175,18 @@ if __name__ == "__main__":
 - [ ] `dag.enumerate_paths()` correctly finds all paths
 - [ ] `dag.validate_structure()` detects dead ends and unreachable nodes
 
-### Task 2.2-2.3 (Generation)
+### Task 2.2 (Layer Planning)
+- [ ] `plan_layers()` generates valid layer sequence
+- [ ] Layer sequence satisfies requirements (legacy dungeons, bosses, mini-dungeons)
+- [ ] Split/merge points are planned within max_parallel_paths limit
+
+### Task 2.3 (Generation)
 - [ ] `generate_dag()` produces valid DAGs
 - [ ] Start node is Chapel of Anticipation
 - [ ] End node is Radagon
-- [ ] Split probability is respected
+- [ ] Each layer has uniform zone type (same type for all branches)
+- [ ] Zones in same layer have similar weights
+- [ ] Splits/merges only use zones with fog_count >= 3
 - [ ] No zone is used twice
 
 ### Task 2.4 (Balancing)

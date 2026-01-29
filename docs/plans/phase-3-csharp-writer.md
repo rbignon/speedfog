@@ -538,15 +538,51 @@ public class FogGateEvent
 
 /// <summary>
 /// Warp position data for a zone.
+/// Matches data/zone_warps.json format.
 /// </summary>
 public class ZoneWarpData
 {
-    public string ZoneId { get; set; } = "";
-    public string MapId { get; set; } = "";
-    public Vector3 EntrancePosition { get; set; }
-    public Vector3 ExitPosition { get; set; }
-    public int EntranceRegion { get; set; }
-    public int ExitRegion { get; set; }
+    [JsonPropertyName("map")]
+    public string Map { get; set; } = "";
+
+    [JsonPropertyName("fogs")]
+    public List<FogGateData> Fogs { get; set; } = new();
+
+    /// <summary>
+    /// Get fog gate by ID.
+    /// </summary>
+    public FogGateData? GetFog(string id) => Fogs.FirstOrDefault(f => f.Id == id);
+
+    /// <summary>
+    /// Get first fog (typically entrance).
+    /// </summary>
+    public FogGateData? Entrance => Fogs.FirstOrDefault();
+
+    /// <summary>
+    /// Get last fog (typically exit for 2-fog zones).
+    /// </summary>
+    public FogGateData? Exit => Fogs.Count > 1 ? Fogs[^1] : Fogs.FirstOrDefault();
+}
+
+/// <summary>
+/// Individual fog gate data within a zone.
+/// </summary>
+public class FogGateData
+{
+    [JsonPropertyName("id")]
+    public string Id { get; set; } = "";
+
+    [JsonPropertyName("position")]
+    public float[] Position { get; set; } = new float[3];
+
+    [JsonPropertyName("rotation")]
+    public float[] Rotation { get; set; } = new float[3];
+
+    [JsonPropertyName("entity_id")]
+    public int EntityId { get; set; }
+
+    public Vector3 PositionVec => new(Position[0], Position[1], Position[2]);
+    public Vector3 RotationVec => new(Rotation[0], Rotation[1], Rotation[2]);
 }
 
 /// <summary>
@@ -768,14 +804,14 @@ public class ModWriter
 
     private void LoadZoneWarps()
     {
-        // Load warp position data for each zone
-        // This data needs to be extracted from FogRando's fog.txt
-        // or created manually
+        // Load warp position data from data/zone_warps.json
+        // This file contains fog gate positions extracted from game files
+        // See design doc for format specification
 
-        _zoneWarps = new Dictionary<string, ZoneWarpData>();
-
-        // TODO: Load from zones_warps.json or similar
-        // This requires mapping each zone to its entrance/exit positions
+        var warpPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "data", "zone_warps.json");
+        var json = File.ReadAllText(warpPath);
+        _zoneWarps = JsonSerializer.Deserialize<Dictionary<string, ZoneWarpData>>(json)
+            ?? throw new InvalidOperationException("Failed to parse zone_warps.json");
     }
 
     private void GenerateScaling()

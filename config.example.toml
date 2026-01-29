@@ -37,12 +37,6 @@ min_layers = 6
 # Maximum number of layers.
 max_layers = 10
 
-# Probability that a zone will split into two paths (0.0 - 1.0).
-split_probability = 0.4
-
-# Probability that multiple paths will merge (0.0 - 1.0).
-merge_probability = 0.3
-
 [paths]
 # Path to Elden Ring installation.
 game_dir = "C:/Program Files/Steam/steamapps/common/ELDEN RING/Game"

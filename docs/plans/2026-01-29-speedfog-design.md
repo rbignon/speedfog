@@ -53,12 +53,17 @@ speedfog/
 │   │   ├── __init__.py
 │   │   ├── config.py              # Parse config.toml
 │   │   ├── zones.py               # Parse zones.toml
-│   │   ├── dag.py                 # DAG generation
+│   │   ├── planner.py             # Layer planning
+│   │   ├── dag.py                 # DAG data structures
+│   │   ├── generator.py           # DAG generation
 │   │   ├── balance.py             # Path balancing
 │   │   └── output.py              # Generate graph.json
 │   ├── config.toml                # User config
-│   ├── zones.toml                 # Zone data
+│   ├── zones.toml                 # Zone gameplay data
 │   └── main.py                    # CLI entry point
+│
+├── data/                          # Static game data
+│   └── zone_warps.json            # Fog gate positions (extracted from game)
 │
 ├── writer/                        # C#
 │   ├── SpeedFogWriter/
@@ -102,8 +107,6 @@ mini_dungeons = 5              # Minimum mini-dungeons total
 max_parallel_paths = 3         # Max parallel branches
 min_layers = 6                 # Minimum layers
 max_layers = 10                # Maximum layers
-split_probability = 0.4        # Split probability per layer
-merge_probability = 0.3        # Merge probability
 
 [paths]
 game_dir = "C:/Program Files/Steam/steamapps/common/ELDEN RING/Game"
@@ -137,8 +140,7 @@ map = "m10_00_00_00"
 name = "Stormveil Castle"
 type = "legacy_dungeon"
 weight = 15
-entrances = ["stormveil_main_gate", "stormveil_cliffside"]
-exits = ["stormveil_godrick_arena", "stormveil_to_liurnia"]
+fog_count = 3                # Can be used for split/merge
 boss = "godrick"
 
 [[zones]]
@@ -147,9 +149,61 @@ map = "m30_00_00_00"
 name = "Murkwater Catacombs"
 type = "catacomb_short"
 weight = 4
-entrances = ["murkwater_entrance"]
-exits = ["murkwater_boss"]
+fog_count = 2                # Linear passage only
 boss = "grave_warden_duelist"
+```
+
+Key fields:
+- `fog_count`: Number of fog gates in the zone (2 = linear, 3 = can split/merge)
+
+### Data Separation: zones.toml vs zone_warps.json
+
+Zone data is split into two files with different purposes:
+
+| File | Purpose | Edited by | Content |
+|------|---------|-----------|---------|
+| `zones.toml` | Gameplay metadata | Human (manual) | type, weight, fog_count |
+| `data/zone_warps.json` | Technical warp data | Script (extracted) | fog positions, entity IDs |
+
+**zones.toml** contains data that requires human judgment:
+- Zone type classification
+- Weight estimation (gameplay duration/difficulty)
+- Fog count (how many fog gates)
+
+**zone_warps.json** contains technical data extracted from game files:
+- Fog gate positions (Vector3)
+- Entity IDs for EMEVD events
+- Warp destination coordinates
+
+This separation ensures:
+1. `zones.toml` stays readable and manually editable
+2. Technical data can be regenerated from game files
+3. Clear ownership: gameplay decisions vs extracted data
+
+**Validation**: A script verifies that every zone in `zones.toml` has corresponding warp data in `zone_warps.json`.
+
+### zone_warps.json Format
+
+```json
+{
+  "stormveil_castle": {
+    "map": "m10_00_00_00",
+    "fogs": [
+      {
+        "id": "stormveil_main_gate",
+        "position": [123.4, 56.7, 89.0],
+        "rotation": [0, 180, 0],
+        "entity_id": 10001800
+      },
+      {
+        "id": "stormveil_to_liurnia",
+        "position": [234.5, 67.8, 90.1],
+        "rotation": [0, 90, 0],
+        "entity_id": 10001801
+      }
+    ]
+  }
+}
 ```
 
 ### Excluded Zones (v1)
@@ -168,21 +222,33 @@ zones = ["subterranean_shunning_grounds", "leyndell_sewers"]
 
 ## DAG Generation Algorithm
 
-### Layer-Based Construction with Budget
+### Uniform Layer Design
+
+Each layer has a **uniform zone type** across all branches. This ensures competitive fairness: all players face the same type of challenge at each step, regardless of which branch they chose.
 
 ```
 Layer 0 (Start)     : Chapel of Anticipation
                               │
-Layer 1             :    ┌───┴───┐
-                         A       B          (initial split)
-                         │       │
-Layer 2             :    C   ┌───┤
-                         │   D   E          (free splits/merges)
-                         └───┼───┘
-Layer 3             :        F              (merge)
-                             │
-Layer N (End)       :    Radagon
+Layer 1 [mini]      :    ┌────┴────┐
+                     Catacomb_A  Catacomb_B    (same type, similar weight)
+                         │           │
+Layer 2 [legacy]    :    ├───────────┤
+                      Stormveil   Raya Lucaria  (same type, similar weight)
+                         │           │
+Layer 3 [boss]      :    └─────┬─────┘
+                            Boss_Arena          (merge via 3-fog zone)
+                               │
+Layer N (End)       :      Radagon
 ```
+
+### Zone Fog Geometry
+
+Splits and merges are determined by zone geometry (number of fog gates):
+
+| Fog Count | Behavior |
+|-----------|----------|
+| 2 fogs | Linear passage (1 entrance, 1 exit) |
+| 3 fogs | Can be split (1→2) or merge (2→1) |
 
 ### Algorithm (Pseudo-code)
 
@@ -191,59 +257,68 @@ def generate_dag(config, zones):
     dag = DAG()
     rng = Random(config.seed)
 
-    # 1. Initialize with starting point
+    # 1. Plan layer sequence (types and structure)
+    layer_plan = plan_layers(config, rng)
+    # Example: [START, MINI, LEGACY, BOSS, MINI, MERGE, BOSS, END]
+
+    # 2. Initialize with starting point
     start = dag.add_node(layer=0, zone=zones.get("chapel_of_anticipation"))
+    current_branches = [start]
 
-    # 2. Build layer by layer
-    current_layer = [start]
-    layer_index = 1
+    # 3. Build layer by layer
+    for layer_index, layer_spec in enumerate(layer_plan[1:-1], start=1):
+        zone_type = layer_spec.type
+        structure = layer_spec.structure  # CONTINUE, SPLIT, or MERGE
 
-    while not should_end(dag, config):
-        next_layer = []
+        if structure == SPLIT:
+            # Select a 3-fog zone for the split point
+            # Then create 2 branches with zones of same type/weight
+            ...
+        elif structure == MERGE:
+            # Select a 3-fog zone as merge destination
+            # Connect all current branches to it
+            ...
+        else:  # CONTINUE
+            # For each branch, select a zone of the required type
+            # All zones in this layer must have similar weights
+            next_branches = []
+            target_weight = select_target_weight(zone_type, rng)
+            for branch in current_branches:
+                zone = select_zone(zones, zone_type, target_weight, tolerance=2)
+                node = dag.add_node(layer=layer_index, zone=zone)
+                dag.connect(branch, node)
+                next_branches.append(node)
+            current_branches = next_branches
 
-        for node in current_layer:
-            action = decide_action(rng, dag, config)
-
-            if action == SPLIT:
-                child1 = create_node(rng, zones, layer_index)
-                child2 = create_node(rng, zones, layer_index)
-                dag.connect(node, child1)
-                dag.connect(node, child2)
-                next_layer.extend([child1, child2])
-
-            elif action == CONTINUE:
-                child = create_node(rng, zones, layer_index)
-                dag.connect(node, child)
-                next_layer.append(child)
-
-            elif action == MERGE:
-                node.pending_merge = True
-                next_layer.append(node)
-
-        resolve_merges(next_layer)
-        current_layer = next_layer
-        layer_index += 1
-
-    # 3. Converge to Radagon
+    # 4. Converge to Radagon
     radagon = dag.add_node(zone=zones.get("radagon_arena"))
-    for node in current_layer:
+    for node in current_branches:
         dag.connect(node, radagon)
 
-    # 4. Validate and balance
+    # 5. Validate
     validate_requirements(dag, config)
-    balance_paths(dag, config.budget)
+    validate_balance(dag, config.budget)
 
     return dag
 ```
 
+### Layer Planning
+
+The layer sequence is planned upfront to ensure requirements are met:
+
+1. Determine total layers (between `min_layers` and `max_layers`)
+2. Distribute required zone types (legacy dungeons, bosses, mini-dungeons)
+3. Plan split/merge points based on `max_parallel_paths`
+4. Verify total weight budget is achievable
+
 ### Path Balancing
 
-Each possible path from start to end must have a total weight within `[budget - tolerance, budget + tolerance]`. The algorithm:
+With uniform layers, balancing is simpler:
+- All branches in a layer have the same zone type
+- Zones are selected with similar weights (within small tolerance)
+- Total path weights naturally converge
 
-1. Enumerate all paths
-2. For paths below budget: insert intermediate zones or swap for heavier ones
-3. For paths above budget: swap heavy zones for lighter ones
-4. Re-validate after balancing
+Post-generation validation ensures all paths are within `[budget - tolerance, budget + tolerance]`.
 
 ## Intermediate Format (graph.json)
 
