@@ -662,53 +662,37 @@ namespace SpeedFogWriter.Writers;
 /// </summary>
 public class StartingItemsWriter
 {
-    // Item IDs for key items (from SoulsIds or manual research)
-    // TODO: Verify all item IDs against game data
+    // Item IDs from FogRando fog.txt (format: type 3 = goods/key items)
+    // Source: reference/fogrando-data/fog.txt lines 3258-3358
     private static readonly Dictionary<string, int> KeyItems = new()
     {
         // Dungeon access keys
-        ["academy_glintstone_key"] = 8110,      // Raya Lucaria
-        ["rusty_key"] = 8109,                   // Stormveil
-        ["stonesword_key"] = 8100,              // Imp statues (give x10)
-        ["discarded_palace_key"] = 8102,        // Raya Lucaria locked area
-        ["drawing_room_key"] = 0,               // Volcano Manor (TODO: find ID)
-        ["prayer_room_key"] = 0,                // Volcano Manor (TODO: find ID)
-        ["sewer_gaol_key"] = 0,                 // Leyndell sewers (TODO: find ID)
-        ["gaol_lower_level_key"] = 0,           // (TODO: find ID)
-        ["gaol_upper_level_key"] = 0,           // (TODO: find ID)
-        ["storeroom_key"] = 0,                  // Stormveil (TODO: find ID)
-        ["well_depths_key"] = 0,                // (TODO: find ID)
+        ["academy_glintstone_key"] = 8109,      // Raya Lucaria
+        ["rusty_key"] = 8010,                   // Stormveil
+        ["discarded_palace_key"] = 8199,        // Raya Lucaria locked area
+        ["drawing_room_key"] = 8134,            // Volcano Manor
 
         // Medallions for lifts
-        ["dectus_medallion_left"] = 0,          // Grand Lift of Dectus (TODO: find ID)
-        ["dectus_medallion_right"] = 0,         // Grand Lift of Dectus (TODO: find ID)
-        ["rold_medallion"] = 0,                 // Grand Lift of Rold (TODO: find ID)
-        ["haligtree_secret_medallion_left"] = 8186,   // Consecrated Snowfield
-        ["haligtree_secret_medallion_right"] = 8187,  // Consecrated Snowfield
+        ["dectus_medallion_left"] = 8105,       // Grand Lift of Dectus
+        ["dectus_medallion_right"] = 8106,      // Grand Lift of Dectus
+        ["rold_medallion"] = 8107,              // Grand Lift of Rold
+        ["haligtree_secret_medallion_left"] = 8175,   // Consecrated Snowfield
+        ["haligtree_secret_medallion_right"] = 8176,  // Consecrated Snowfield
 
         // Quest/progression items
-        ["carian_inverted_statue"] = 8115,      // Carian Study Hall
-        ["cursemark_of_death"] = 0,             // Ranni quest (TODO: find ID)
-        ["dark_moon_ring"] = 0,                 // Ranni quest (TODO: find ID)
-        ["imbued_sword_key"] = 0,               // Four Belfries (TODO: find ID)
-        ["sellian_sealbreaker"] = 0,            // Sellia (TODO: find ID)
-        ["pureblood_knights_medal"] = 0,        // Mohgwyn teleport (TODO: find ID)
-        ["volcano_manor_invitation"] = 0,       // Volcano Manor (TODO: find ID)
+        ["carian_inverted_statue"] = 8111,      // Carian Study Hall
+        ["cursemark_of_death"] = 8191,          // Ranni quest
+        ["dark_moon_ring"] = 8121,              // Ranni quest
+        ["imbued_sword_key"] = 8186,            // Four Belfries
+        ["pureblood_knights_medal"] = 2160,     // Mohgwyn teleport
 
-        // Quest items (give to avoid softlocks in related areas)
-        ["irinas_letter"] = 0,                  // (TODO: find ID)
-        ["ryas_necklace"] = 0,                  // (TODO: find ID)
-        ["letter_from_volcano_manor"] = 0,      // (TODO: find ID)
-        ["hole_laden_necklace"] = 0,            // (TODO: find ID)
-        ["serpents_amnion"] = 0,                // (TODO: find ID)
-        ["o_mother"] = 0,                       // (TODO: find ID)
-
-        // Utility
-        ["larval_tear"] = 0,                    // Respec (TODO: find ID)
-        ["ash_of_war_kick"] = 0,                // Utility (TODO: find ID)
-
-        // DLC
-        ["messmers_kindling"] = 0,              // DLC (TODO: find ID)
+        // DLC keys (v2)
+        ["messmers_kindling"] = 2008021,        // DLC
+        ["o_mother"] = 2009004,                 // DLC
+        ["well_depths_key"] = 2008004,          // DLC - Belurat
+        ["gaol_upper_level_key"] = 2008005,     // DLC - Charo's Gaol
+        ["gaol_lower_level_key"] = 2008006,     // DLC - Charo's Gaol
+        ["hole_laden_necklace"] = 2008008,      // DLC
     };
 
     private readonly ParamDictionary _params;
