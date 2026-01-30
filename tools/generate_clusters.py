@@ -300,7 +300,9 @@ class WorldGraph:
     """Directed graph of world connections between areas."""
 
     # edges[from_area] = list of (to_area, is_bidirectional)
-    edges: dict[str, list[tuple[str, bool]]] = field(default_factory=lambda: defaultdict(list))
+    edges: dict[str, list[tuple[str, bool]]] = field(
+        default_factory=lambda: defaultdict(list)
+    )
 
     def add_edge(self, from_area: str, to_area: str, bidirectional: bool) -> None:
         """Add an edge to the graph."""
@@ -559,10 +561,12 @@ def compute_cluster_fogs(
         for fog in zone_fogs[zone].entry_fogs:
             if fog.fog_id not in seen_fog_ids:
                 seen_fog_ids.add(fog.fog_id)
-                cluster.entry_fogs.append({
-                    "fog_id": str(fog.name),  # Always string for consistency
-                    "zone": zone,
-                })
+                cluster.entry_fogs.append(
+                    {
+                        "fog_id": str(fog.name),  # Always string for consistency
+                        "zone": zone,
+                    }
+                )
 
     # Collect exit fogs from all zones
     seen_fog_ids = set()
@@ -588,7 +592,9 @@ def compute_cluster_fogs(
 # =============================================================================
 
 
-def should_exclude_area(area: AreaData, exclude_dlc: bool, exclude_overworld: bool) -> bool:
+def should_exclude_area(
+    area: AreaData, exclude_dlc: bool, exclude_overworld: bool
+) -> bool:
     """Check if an area should be excluded from cluster generation."""
     tags_lower = {t.lower() for t in area.tags}
 

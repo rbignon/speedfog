@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 
 from speedfog_core.clusters import load_clusters
-from speedfog_core.config import load_config, Config
-from speedfog_core.generator import generate_with_retry, GenerationError
+from speedfog_core.config import Config, load_config
+from speedfog_core.generator import GenerationError, generate_with_retry
 
 
 def main() -> int:

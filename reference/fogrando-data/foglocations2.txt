@@ -96747,4 +96747,3 @@ Enemies:
   ID: c5410_9006
   DebugText: c5410_9006 (Deer) in m61_54_48_00 (Scaduview - Fingerstone Hill Far East Cliffside)
   AArea: hinterland
-

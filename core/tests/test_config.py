@@ -1,6 +1,5 @@
 """Tests for config parsing."""
 
-import pytest
 from speedfog_core.config import BudgetConfig, Config, load_config
 
 

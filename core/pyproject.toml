@@ -12,6 +12,9 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
+    "ruff>=0.4.0",
+    "mypy>=1.10",
+    "pre-commit>=3.0",
 ]
 
 [project.scripts]
@@ -20,3 +23,39 @@ speedfog = "speedfog_core.main:main"
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["speedfog_core*"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["speedfog_core"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+check_untyped_defs = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*", "core.tests.*"]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false

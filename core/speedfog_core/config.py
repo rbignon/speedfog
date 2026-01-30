@@ -103,7 +103,9 @@ class Config:
             paths=PathsConfig(
                 game_dir=paths_section.get("game_dir", ""),
                 output_dir=paths_section.get("output_dir", "./output"),
-                clusters_file=paths_section.get("clusters_file", "./data/clusters.json"),
+                clusters_file=paths_section.get(
+                    "clusters_file", "./data/clusters.json"
+                ),
                 randomizer_dir=paths_section.get("randomizer_dir"),
             ),
         )

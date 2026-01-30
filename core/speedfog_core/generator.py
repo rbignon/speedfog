@@ -200,7 +200,7 @@ def pick_entry_fog_with_exits(cluster: ClusterData, rng: random.Random) -> str |
 
     Returns the fog_id of a valid entry, or None if no valid entry exists.
     """
-    valid_entries = []
+    valid_entries: list[str] = []
     for entry in cluster.entry_fogs:
         entry_fog_id = entry["fog_id"]
         remaining_exits = [e for e in cluster.exit_fogs if e["fog_id"] != entry_fog_id]
@@ -372,9 +372,13 @@ def generate_dag(
         entry_fog_b = pick_entry_fog_with_exits(cluster_b, rng)
 
         if entry_fog_a is None:
-            raise GenerationError(f"Cluster {cluster_a.id} has no valid entry fog with exits")
+            raise GenerationError(
+                f"Cluster {cluster_a.id} has no valid entry fog with exits"
+            )
         if entry_fog_b is None:
-            raise GenerationError(f"Cluster {cluster_b.id} has no valid entry fog with exits")
+            raise GenerationError(
+                f"Cluster {cluster_b.id} has no valid entry fog with exits"
+            )
 
         # Create nodes
         node_a = DagNode(
@@ -421,7 +425,9 @@ def generate_dag(
     if end_cluster is None:
         raise GenerationError("Could not pick final_boss cluster")
 
-    entry_fog_end = rng.choice(end_cluster.entry_fogs)["fog_id"] if end_cluster.entry_fogs else None
+    entry_fog_end = (
+        rng.choice(end_cluster.entry_fogs)["fog_id"] if end_cluster.entry_fogs else None
+    )
 
     end_node = DagNode(
         id="end",
@@ -436,9 +442,13 @@ def generate_dag(
 
     # Connect both branches to end
     if not prev_node_a.exit_fogs:
-        raise GenerationError(f"Node {prev_node_a.id} has no exit fogs for final connection")
+        raise GenerationError(
+            f"Node {prev_node_a.id} has no exit fogs for final connection"
+        )
     if not prev_node_b.exit_fogs:
-        raise GenerationError(f"Node {prev_node_b.id} has no exit fogs for final connection")
+        raise GenerationError(
+            f"Node {prev_node_b.id} has no exit fogs for final connection"
+        )
     exit_fog_a = rng.choice(prev_node_a.exit_fogs)
     exit_fog_b = rng.choice(prev_node_b.exit_fogs)
 

@@ -5,7 +5,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import pytest
 
 # Add tools directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "tools"))
@@ -21,7 +20,6 @@ from generate_clusters import (
     build_world_graph,
     classify_fogs,
     compute_cluster_fogs,
-    filter_and_enrich_clusters,
     generate_cluster_id,
     generate_clusters,
     get_zone_type,
@@ -355,8 +353,14 @@ class TestClassifyFogs:
         )
         zone_fogs = classify_fogs([fog], [])
 
-        assert "zone_a" not in zone_fogs or fog not in zone_fogs.get("zone_a", ZoneFogs()).entry_fogs
-        assert "zone_b" not in zone_fogs or fog not in zone_fogs.get("zone_b", ZoneFogs()).entry_fogs
+        assert (
+            "zone_a" not in zone_fogs
+            or fog not in zone_fogs.get("zone_a", ZoneFogs()).entry_fogs
+        )
+        assert (
+            "zone_b" not in zone_fogs
+            or fog not in zone_fogs.get("zone_b", ZoneFogs()).entry_fogs
+        )
 
     def test_uniquegate_pair_coupled(self):
         """Uniquegate fogs connecting same zones are coupled as one bidirectional."""
@@ -443,20 +447,12 @@ class TestComputeClusterFogs:
 
         zone_fogs = {
             "a": ZoneFogs(
-                entry_fogs=[
-                    FogData("f1", 1, FogSide("a", ""), FogSide("x", ""), [])
-                ],
-                exit_fogs=[
-                    FogData("f1", 1, FogSide("a", ""), FogSide("x", ""), [])
-                ],
+                entry_fogs=[FogData("f1", 1, FogSide("a", ""), FogSide("x", ""), [])],
+                exit_fogs=[FogData("f1", 1, FogSide("a", ""), FogSide("x", ""), [])],
             ),
             "b": ZoneFogs(
-                entry_fogs=[
-                    FogData("f2", 2, FogSide("b", ""), FogSide("y", ""), [])
-                ],
-                exit_fogs=[
-                    FogData("f2", 2, FogSide("b", ""), FogSide("y", ""), [])
-                ],
+                entry_fogs=[FogData("f2", 2, FogSide("b", ""), FogSide("y", ""), [])],
+                exit_fogs=[FogData("f2", 2, FogSide("b", ""), FogSide("y", ""), [])],
             ),
         }
 
@@ -515,19 +511,32 @@ class TestShouldExcludeArea:
     def test_exclude_dlc(self):
         """DLC areas excluded when exclude_dlc=True."""
         area = AreaData(name="dlc_area", text="", maps=[], tags=["dlc"])
-        assert should_exclude_area(area, exclude_dlc=True, exclude_overworld=False) is True
-        assert should_exclude_area(area, exclude_dlc=False, exclude_overworld=False) is False
+        assert (
+            should_exclude_area(area, exclude_dlc=True, exclude_overworld=False) is True
+        )
+        assert (
+            should_exclude_area(area, exclude_dlc=False, exclude_overworld=False)
+            is False
+        )
 
     def test_exclude_overworld(self):
         """Overworld areas excluded when exclude_overworld=True."""
         area = AreaData(name="limgrave", text="", maps=[], tags=["overworld"])
-        assert should_exclude_area(area, exclude_dlc=False, exclude_overworld=True) is True
-        assert should_exclude_area(area, exclude_dlc=False, exclude_overworld=False) is False
+        assert (
+            should_exclude_area(area, exclude_dlc=False, exclude_overworld=True) is True
+        )
+        assert (
+            should_exclude_area(area, exclude_dlc=False, exclude_overworld=False)
+            is False
+        )
 
     def test_exclude_unused(self):
         """Unused areas always excluded."""
         area = AreaData(name="unused_area", text="", maps=[], tags=["unused"])
-        assert should_exclude_area(area, exclude_dlc=False, exclude_overworld=False) is True
+        assert (
+            should_exclude_area(area, exclude_dlc=False, exclude_overworld=False)
+            is True
+        )
 
 
 class TestGetZoneType:
@@ -535,7 +544,9 @@ class TestGetZoneType:
 
     def test_start_zone(self):
         """Zone with start tag."""
-        area = AreaData(name="chapel_start", text="", maps=["m10_01_00_00"], tags=["start"])
+        area = AreaData(
+            name="chapel_start", text="", maps=["m10_01_00_00"], tags=["start"]
+        )
         assert get_zone_type(area) == "start"
 
     def test_legacy_dungeon(self):
