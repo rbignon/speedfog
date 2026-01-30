@@ -1,0 +1,5714 @@
+{
+  "stormveil": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 10001800,
+        "map": "m10_00_00_00",
+        "text": "Godrick front",
+        "side": "ASide",
+        "connects_to": "stormveil_godrick"
+      },
+      {
+        "id": "AEG099_230_9001",
+        "entity_id": 755894001,
+        "map": "m10_00_00_00",
+        "text": "Limgrave Divine Tower boundary",
+        "side": "ASide",
+        "connects_to": "limgrave_tower"
+      }
+    ]
+  },
+  "stormveil_godrick": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 10001800,
+        "map": "m10_00_00_00",
+        "text": "Godrick front",
+        "side": "BSide",
+        "connects_to": "stormveil"
+      }
+    ]
+  },
+  "stormhill": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9001",
+        "entity_id": 10001850,
+        "map": "m10_00_00_00",
+        "text": "Margit front",
+        "side": "ASide",
+        "connects_to": "stormveil_margit"
+      },
+      {
+        "id": "AEG099_231_9500",
+        "entity_id": 755894085,
+        "map": "m60_40_39_00",
+        "text": "Stormhill to Liurnia new gate",
+        "side": "ASide",
+        "connects_to": "liurnia"
+      },
+      {
+        "id": "AEG099_231_9000",
+        "entity_id": 755894090,
+        "map": "m60_42_40_00",
+        "text": "Limgrave Colosseum entrance",
+        "side": "ASide",
+        "connects_to": "stormhill_colosseum"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894096,
+        "map": "m60_43_39_00",
+        "text": "Deathtouched Catacombs entrance",
+        "side": "ASide",
+        "connects_to": "stormhill_catacombs"
+      }
+    ]
+  },
+  "stormveil_margit": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9001",
+        "entity_id": 10001850,
+        "map": "m10_00_00_00",
+        "text": "Margit front",
+        "side": "BSide",
+        "connects_to": "stormhill"
+      },
+      {
+        "id": "AEG099_002_9002",
+        "entity_id": 10001851,
+        "map": "m10_00_00_00",
+        "text": "Margit back",
+        "side": "ASide",
+        "connects_to": "stormveil_start"
+      }
+    ]
+  },
+  "stormveil_start": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9002",
+        "entity_id": 10001851,
+        "map": "m10_00_00_00",
+        "text": "Margit back",
+        "side": "BSide",
+        "connects_to": "stormveil_margit"
+      }
+    ]
+  },
+  "stormveil_throne": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894000,
+        "map": "m10_00_00_00",
+        "text": "Stormveil-Liurnia boundary",
+        "side": "ASide",
+        "connects_to": "liurnia"
+      }
+    ]
+  },
+  "liurnia": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894000,
+        "map": "m10_00_00_00",
+        "text": "Stormveil-Liurnia boundary",
+        "side": "BSide",
+        "connects_to": "stormveil_throne"
+      },
+      {
+        "id": "AEG099_231_9001",
+        "entity_id": 39201695,
+        "map": "m39_20_00_00",
+        "text": "Precipice-Liurnia boundary",
+        "side": "BSide",
+        "connects_to": "precipice"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894071,
+        "map": "m60_33_43_00",
+        "text": "Road's End Catacombs entrance",
+        "side": "BSide",
+        "connects_to": "liurnia_roadsendcatacombs"
+      },
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 1034481800,
+        "map": "m60_34_48_00",
+        "text": "Royal Revenant front",
+        "side": "ASide",
+        "connects_to": "liurnia_kingsrealm_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894080,
+        "map": "m60_38_46_00",
+        "text": "Liurnia-Ainsel boundary",
+        "side": "ASide",
+        "connects_to": "ainsel_start"
+      },
+      {
+        "id": "AEG099_231_9500",
+        "entity_id": 755894085,
+        "map": "m60_40_39_00",
+        "text": "Stormhill to Liurnia new gate",
+        "side": "BSide",
+        "connects_to": "stormhill"
+      }
+    ]
+  },
+  "limgrave_tower": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9001",
+        "entity_id": 755894001,
+        "map": "m10_00_00_00",
+        "text": "Limgrave Divine Tower boundary",
+        "side": "BSide",
+        "connects_to": "stormveil"
+      }
+    ]
+  },
+  "chapel_start": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 10011800,
+        "map": "m10_01_00_00",
+        "text": "Grafted Scion front",
+        "side": "ASide",
+        "connects_to": "chapel_boss"
+      }
+    ]
+  },
+  "chapel_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 10011800,
+        "map": "m10_01_00_00",
+        "text": "Grafted Scion front",
+        "side": "BSide",
+        "connects_to": "chapel_start"
+      },
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 10011801,
+        "map": "m10_01_00_00",
+        "text": "Grafted Scion side exit",
+        "side": "BSide",
+        "connects_to": "chapel_postboss"
+      }
+    ]
+  },
+  "chapel_postboss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 10011801,
+        "map": "m10_01_00_00",
+        "text": "Grafted Scion side exit",
+        "side": "ASide",
+        "connects_to": "chapel_boss"
+      }
+    ]
+  },
+  "leyndell_bedchamber": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 11001800,
+        "map": "m11_00_00_00",
+        "text": "Morgott front",
+        "side": "ASide",
+        "connects_to": "leyndell_throne"
+      },
+      {
+        "id": "AEG099_001_9007",
+        "entity_id": 11001857,
+        "map": "m11_00_00_00",
+        "text": "Godfrey front right",
+        "side": "BSide",
+        "connects_to": "leyndell_sanctuary"
+      }
+    ]
+  },
+  "leyndell_throne": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 11001800,
+        "map": "m11_00_00_00",
+        "text": "Morgott front",
+        "side": "BSide",
+        "connects_to": "leyndell_bedchamber"
+      },
+      {
+        "id": "AEG099_002_9001",
+        "entity_id": 11001801,
+        "map": "m11_00_00_00",
+        "text": "Morgott back",
+        "side": "ASide",
+        "connects_to": "leyndell_erdtree"
+      }
+    ]
+  },
+  "leyndell": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9003",
+        "entity_id": 11001850,
+        "map": "m11_00_00_00",
+        "text": "Godfrey side",
+        "side": "ASide",
+        "connects_to": "leyndell_sanctuary"
+      },
+      {
+        "id": "AEG099_231_9001",
+        "entity_id": 755894004,
+        "map": "m11_00_00_00",
+        "text": "Royal Colosseum entrance",
+        "side": "ASide",
+        "connects_to": "leyndell_colosseum"
+      },
+      {
+        "id": "AEG099_230_9500",
+        "entity_id": 755894005,
+        "map": "m11_00_00_00",
+        "text": "Moved Capital Outskirts Leyndell Capital boundary",
+        "side": "BSide",
+        "connects_to": "leyndell_start"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894057,
+        "map": "m35_00_00_00",
+        "text": "Leyndell-Sewers boundary",
+        "side": "ASide",
+        "connects_to": "sewer_royal"
+      }
+    ]
+  },
+  "leyndell_sanctuary": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9003",
+        "entity_id": 11001850,
+        "map": "m11_00_00_00",
+        "text": "Godfrey side",
+        "side": "BSide",
+        "connects_to": "leyndell"
+      },
+      {
+        "id": "AEG099_001_9004",
+        "entity_id": 11001851,
+        "map": "m11_00_00_00",
+        "text": "Godfrey front",
+        "side": "ASide",
+        "connects_to": "leyndell_sanctuaryfront"
+      },
+      {
+        "id": "AEG099_001_9005",
+        "entity_id": 11001852,
+        "map": "m11_00_00_00",
+        "text": "Godfrey back right",
+        "side": "BSide",
+        "connects_to": "leyndell_sanctuaryback"
+      },
+      {
+        "id": "AEG099_001_9006",
+        "entity_id": 11001853,
+        "map": "m11_00_00_00",
+        "text": "Godfrey back left",
+        "side": "ASide",
+        "connects_to": "leyndell_sanctuaryback"
+      },
+      {
+        "id": "AEG099_001_9007",
+        "entity_id": 11001857,
+        "map": "m11_00_00_00",
+        "text": "Godfrey front right",
+        "side": "ASide",
+        "connects_to": "leyndell_bedchamber"
+      },
+      {
+        "id": "AEG099_001_9008",
+        "entity_id": 11001858,
+        "map": "m11_00_00_00",
+        "text": "Godfrey front left",
+        "side": "ASide",
+        "connects_to": "leyndell_sanctuaryleft"
+      },
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 11001854,
+        "map": "m11_00_00_00",
+        "text": "Godfrey back center",
+        "side": "BSide",
+        "connects_to": "leyndell_sanctuaryback"
+      }
+    ]
+  },
+  "leyndell_sanctuaryfront": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9004",
+        "entity_id": 11001851,
+        "map": "m11_00_00_00",
+        "text": "Godfrey front",
+        "side": "BSide",
+        "connects_to": "leyndell_sanctuary"
+      }
+    ]
+  },
+  "leyndell_sanctuaryback": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9005",
+        "entity_id": 11001852,
+        "map": "m11_00_00_00",
+        "text": "Godfrey back right",
+        "side": "ASide",
+        "connects_to": "leyndell_sanctuary"
+      },
+      {
+        "id": "AEG099_001_9006",
+        "entity_id": 11001853,
+        "map": "m11_00_00_00",
+        "text": "Godfrey back left",
+        "side": "BSide",
+        "connects_to": "leyndell_sanctuary"
+      },
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 11001854,
+        "map": "m11_00_00_00",
+        "text": "Godfrey back center",
+        "side": "ASide",
+        "connects_to": "leyndell_sanctuary"
+      }
+    ]
+  },
+  "leyndell_sanctuaryleft": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9008",
+        "entity_id": 11001858,
+        "map": "m11_00_00_00",
+        "text": "Godfrey front left",
+        "side": "BSide",
+        "connects_to": "leyndell_sanctuary"
+      },
+      {
+        "id": "AEG099_001_9008",
+        "entity_id": 11051856,
+        "map": "m11_05_00_00",
+        "text": "Gideon front left",
+        "side": "ASide",
+        "connects_to": "leyndell2_sanctuary"
+      }
+    ]
+  },
+  "leyndell_erdtree": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9001",
+        "entity_id": 11001801,
+        "map": "m11_00_00_00",
+        "text": "Morgott back",
+        "side": "BSide",
+        "connects_to": "leyndell_throne"
+      }
+    ]
+  },
+  "leyndell_tower_start": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9000",
+        "entity_id": 755894003,
+        "map": "m11_00_00_00",
+        "text": "Leyndell-East Altus Divine Tower boundary",
+        "side": "ASide",
+        "connects_to": "leyndell_pretower"
+      },
+      {
+        "id": "AEG099_231_9500",
+        "entity_id": 755894009,
+        "map": "m11_05_00_00",
+        "text": "Ashen Leyndell-East Altus Divine Tower boundary",
+        "side": "ASide",
+        "connects_to": "leyndell2_pretower"
+      },
+      {
+        "id": "AEG099_239_9000",
+        "entity_id": 34141550,
+        "map": "m34_14_00_00",
+        "text": "Morgott gate in Divine Tower",
+        "side": "ASide",
+        "connects_to": "leyndell_tower"
+      }
+    ]
+  },
+  "leyndell_pretower": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9000",
+        "entity_id": 755894003,
+        "map": "m11_00_00_00",
+        "text": "Leyndell-East Altus Divine Tower boundary",
+        "side": "BSide",
+        "connects_to": "leyndell_tower_start"
+      }
+    ]
+  },
+  "leyndell_colosseum": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9001",
+        "entity_id": 755894004,
+        "map": "m11_00_00_00",
+        "text": "Royal Colosseum entrance",
+        "side": "BSide",
+        "connects_to": "leyndell"
+      }
+    ]
+  },
+  "leyndell_start": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9500",
+        "entity_id": 755894005,
+        "map": "m11_00_00_00",
+        "text": "Moved Capital Outskirts Leyndell Capital boundary",
+        "side": "ASide",
+        "connects_to": "leyndell"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894006,
+        "map": "m11_05_00_00",
+        "text": "Capital Outskirts Ashen Capital boundary",
+        "side": "ASide",
+        "connects_to": "leyndell2"
+      },
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 1045521500,
+        "map": "m60_45_52_00",
+        "text": "Morgott barrier in Leyndell",
+        "side": "BSide",
+        "connects_to": "outskirts_rampart"
+      },
+      {
+        "id": "AEG099_002_9501",
+        "entity_id": 755894106,
+        "map": "m60_45_52_10",
+        "text": "Morgott barrier in Ashen Leyndell",
+        "side": "BSide",
+        "connects_to": "outskirts_rampart"
+      }
+    ]
+  },
+  "leyndell2_bedchamber": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 11051800,
+        "map": "m11_05_00_00",
+        "text": "Hoarah Loux front",
+        "side": "ASide",
+        "connects_to": "leyndell2_throne"
+      },
+      {
+        "id": "AEG099_001_9007",
+        "entity_id": 11051855,
+        "map": "m11_05_00_00",
+        "text": "Gideon front right",
+        "side": "ASide",
+        "connects_to": "leyndell2_sanctuary"
+      }
+    ]
+  },
+  "leyndell2_throne": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 11051800,
+        "map": "m11_05_00_00",
+        "text": "Hoarah Loux front",
+        "side": "BSide",
+        "connects_to": "leyndell2_bedchamber"
+      },
+      {
+        "id": "AEG099_001_9002",
+        "entity_id": 11051801,
+        "map": "m11_05_00_00",
+        "text": "Hoarah Loux back",
+        "side": "ASide",
+        "connects_to": "leyndell2_erdtree"
+      }
+    ]
+  },
+  "leyndell2_erdtree": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9002",
+        "entity_id": 11051801,
+        "map": "m11_05_00_00",
+        "text": "Hoarah Loux back",
+        "side": "BSide",
+        "connects_to": "leyndell2_throne"
+      }
+    ]
+  },
+  "leyndell2": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9003",
+        "entity_id": 11051850,
+        "map": "m11_05_00_00",
+        "text": "Gideon front",
+        "side": "ASide",
+        "connects_to": "leyndell2_sanctuary"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894006,
+        "map": "m11_05_00_00",
+        "text": "Capital Outskirts Ashen Capital boundary",
+        "side": "BSide",
+        "connects_to": "leyndell_start"
+      },
+      {
+        "id": "AEG099_231_9000",
+        "entity_id": 755894008,
+        "map": "m11_05_00_00",
+        "text": "Ashen Royal Colosseum entrance",
+        "side": "ASide",
+        "connects_to": "leyndell2_colosseum"
+      }
+    ]
+  },
+  "leyndell2_sanctuary": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9003",
+        "entity_id": 11051850,
+        "map": "m11_05_00_00",
+        "text": "Gideon front",
+        "side": "BSide",
+        "connects_to": "leyndell2"
+      },
+      {
+        "id": "AEG099_001_9004",
+        "entity_id": 11051851,
+        "map": "m11_05_00_00",
+        "text": "Gideon side",
+        "side": "BSide",
+        "connects_to": "leyndell2_sanctuaryside"
+      },
+      {
+        "id": "AEG099_001_9005",
+        "entity_id": 11051852,
+        "map": "m11_05_00_00",
+        "text": "Gideon back right",
+        "side": "BSide",
+        "connects_to": "leyndell2_sanctuaryback"
+      },
+      {
+        "id": "AEG099_001_9006",
+        "entity_id": 11051854,
+        "map": "m11_05_00_00",
+        "text": "Gideon back left",
+        "side": "BSide",
+        "connects_to": "leyndell2_sanctuaryback"
+      },
+      {
+        "id": "AEG099_001_9007",
+        "entity_id": 11051855,
+        "map": "m11_05_00_00",
+        "text": "Gideon front right",
+        "side": "BSide",
+        "connects_to": "leyndell2_bedchamber"
+      },
+      {
+        "id": "AEG099_001_9008",
+        "entity_id": 11051856,
+        "map": "m11_05_00_00",
+        "text": "Gideon front left",
+        "side": "BSide",
+        "connects_to": "leyndell_sanctuaryleft"
+      },
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 11051853,
+        "map": "m11_05_00_00",
+        "text": "Gideon back center",
+        "side": "BSide",
+        "connects_to": "leyndell2_sanctuaryback"
+      }
+    ]
+  },
+  "leyndell2_sanctuaryside": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9004",
+        "entity_id": 11051851,
+        "map": "m11_05_00_00",
+        "text": "Gideon side",
+        "side": "ASide",
+        "connects_to": "leyndell2_sanctuary"
+      }
+    ]
+  },
+  "leyndell2_sanctuaryback": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9005",
+        "entity_id": 11051852,
+        "map": "m11_05_00_00",
+        "text": "Gideon back right",
+        "side": "ASide",
+        "connects_to": "leyndell2_sanctuary"
+      },
+      {
+        "id": "AEG099_001_9006",
+        "entity_id": 11051854,
+        "map": "m11_05_00_00",
+        "text": "Gideon back left",
+        "side": "ASide",
+        "connects_to": "leyndell2_sanctuary"
+      },
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 11051853,
+        "map": "m11_05_00_00",
+        "text": "Gideon back center",
+        "side": "ASide",
+        "connects_to": "leyndell2_sanctuary"
+      }
+    ]
+  },
+  "leyndell2_colosseum": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9000",
+        "entity_id": 755894008,
+        "map": "m11_05_00_00",
+        "text": "Ashen Royal Colosseum entrance",
+        "side": "BSide",
+        "connects_to": "leyndell2"
+      }
+    ]
+  },
+  "leyndell2_pretower": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9500",
+        "entity_id": 755894009,
+        "map": "m11_05_00_00",
+        "text": "Ashen Leyndell-East Altus Divine Tower boundary",
+        "side": "BSide",
+        "connects_to": "leyndell_tower_start"
+      }
+    ]
+  },
+  "roundtable_balcony": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9000",
+        "entity_id": 755894010,
+        "map": "m11_10_00_00",
+        "text": "Roundtable Hold gate before balcony",
+        "side": "ASide",
+        "connects_to": "roundtable"
+      }
+    ]
+  },
+  "roundtable": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9000",
+        "entity_id": 755894010,
+        "map": "m11_10_00_00",
+        "text": "Roundtable Hold gate before balcony",
+        "side": "BSide",
+        "connects_to": "roundtable_balcony"
+      }
+    ]
+  },
+  "ainsel_start": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 12011800,
+        "map": "m12_01_00_00",
+        "text": "Dragonkin of Nokstella front",
+        "side": "ASide",
+        "connects_to": "ainsel_dragonkin"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894080,
+        "map": "m60_38_46_00",
+        "text": "Liurnia-Ainsel boundary",
+        "side": "BSide",
+        "connects_to": "liurnia"
+      }
+    ]
+  },
+  "ainsel_dragonkin": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 12011800,
+        "map": "m12_01_00_00",
+        "text": "Dragonkin of Nokstella front",
+        "side": "BSide",
+        "connects_to": "ainsel_start"
+      },
+      {
+        "id": "AEG099_002_9001",
+        "entity_id": 12011801,
+        "map": "m12_01_00_00",
+        "text": "Dragonkin of Nokstella back",
+        "side": "ASide",
+        "connects_to": "ainsel_postdragonkin"
+      }
+    ]
+  },
+  "ainsel_postdragonkin": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9001",
+        "entity_id": 12011801,
+        "map": "m12_01_00_00",
+        "text": "Dragonkin of Nokstella back",
+        "side": "BSide",
+        "connects_to": "ainsel_dragonkin"
+      }
+    ]
+  },
+  "ainsel_abovestart": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9002",
+        "entity_id": 755894011,
+        "map": "m12_01_00_00",
+        "text": "Ainsel boundary",
+        "side": "ASide",
+        "connects_to": "ainsel"
+      }
+    ]
+  },
+  "ainsel": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9002",
+        "entity_id": 755894011,
+        "map": "m12_01_00_00",
+        "text": "Ainsel boundary",
+        "side": "BSide",
+        "connects_to": "ainsel_abovestart"
+      }
+    ]
+  },
+  "siofrabank_nokron": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 12021850,
+        "map": "m12_02_00_00",
+        "text": "Mimic Tear front",
+        "side": "ASide",
+        "connects_to": "siofra_nokron_mimic"
+      }
+    ]
+  },
+  "siofra_nokron_mimic": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 12021850,
+        "map": "m12_02_00_00",
+        "text": "Mimic Tear front",
+        "side": "BSide",
+        "connects_to": "siofrabank_nokron"
+      },
+      {
+        "id": "AEG099_002_9001",
+        "entity_id": 12021851,
+        "map": "m12_02_00_00",
+        "text": "Mimic Tear back",
+        "side": "BSide",
+        "connects_to": "siofra_nokron"
+      }
+    ]
+  },
+  "siofra_nokron": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9001",
+        "entity_id": 12021851,
+        "map": "m12_02_00_00",
+        "text": "Mimic Tear back",
+        "side": "ASide",
+        "connects_to": "siofra_nokron_mimic"
+      }
+    ]
+  },
+  "siofra_nokron_aqueduct": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9002",
+        "entity_id": 12021800,
+        "map": "m12_02_00_00",
+        "text": "Valiant Gargoyles front",
+        "side": "ASide",
+        "connects_to": "siofra_nokron_gargoyles"
+      }
+    ]
+  },
+  "siofra_nokron_gargoyles": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9002",
+        "entity_id": 12021800,
+        "map": "m12_02_00_00",
+        "text": "Valiant Gargoyles front",
+        "side": "BSide",
+        "connects_to": "siofra_nokron_aqueduct"
+      },
+      {
+        "id": "AEG099_002_9003",
+        "entity_id": 12021801,
+        "map": "m12_02_00_00",
+        "text": "Valiant Gargoyles side entrance",
+        "side": "BSide",
+        "connects_to": "siofra_nokron_aboveaqueduct"
+      }
+    ]
+  },
+  "siofra_nokron_aboveaqueduct": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9003",
+        "entity_id": 12021801,
+        "map": "m12_02_00_00",
+        "text": "Valiant Gargoyles side entrance",
+        "side": "ASide",
+        "connects_to": "siofra_nokron_gargoyles"
+      }
+    ]
+  },
+  "deeproot": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 12031800,
+        "map": "m12_03_00_00",
+        "text": "Deeproot boss front",
+        "side": "ASide",
+        "connects_to": "deeproot_boss"
+      }
+    ]
+  },
+  "deeproot_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 12031800,
+        "map": "m12_03_00_00",
+        "text": "Deeproot boss front",
+        "side": "BSide",
+        "connects_to": "deeproot"
+      }
+    ]
+  },
+  "ainsel_preboss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 12041800,
+        "map": "m12_04_00_00",
+        "text": "Astel front",
+        "side": "ASide",
+        "connects_to": "ainsel_boss"
+      }
+    ]
+  },
+  "ainsel_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 12041800,
+        "map": "m12_04_00_00",
+        "text": "Astel front",
+        "side": "BSide",
+        "connects_to": "ainsel_preboss"
+      },
+      {
+        "id": "AEG099_002_9001",
+        "entity_id": 12041801,
+        "map": "m12_04_00_00",
+        "text": "Astel back",
+        "side": "BSide",
+        "connects_to": "ainsel_postboss"
+      }
+    ]
+  },
+  "ainsel_postboss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9001",
+        "entity_id": 12041801,
+        "map": "m12_04_00_00",
+        "text": "Astel back",
+        "side": "ASide",
+        "connects_to": "ainsel_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894072,
+        "map": "m60_34_41_00",
+        "text": "Ainsel-Moonlight boundary",
+        "side": "BSide",
+        "connects_to": "moonlight"
+      }
+    ]
+  },
+  "limgrave": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9000",
+        "entity_id": 755894012,
+        "map": "m12_07_00_00",
+        "text": "Limgrave-Nokron boundary",
+        "side": "ASide",
+        "connects_to": "siofrabank_prenokron"
+      },
+      {
+        "id": "AEG099_230_9001",
+        "entity_id": 18001696,
+        "map": "m18_00_00_00",
+        "text": "Stranded Graveyard-Limgrave boundary",
+        "side": "ASide",
+        "connects_to": "graveyard"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894047,
+        "map": "m31_03_00_00",
+        "text": "Groveside Cave entrance",
+        "side": "BSide",
+        "connects_to": "limgrave_grovesidecave"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894049,
+        "map": "m31_15_00_00",
+        "text": "Coastal Cave entrance",
+        "side": "ASide",
+        "connects_to": "limgrave_coastalcave"
+      },
+      {
+        "id": "AEG099_230_9001",
+        "entity_id": 755894054,
+        "map": "m32_07_00_00",
+        "text": "Rear Gael Tunnel exit",
+        "side": "BSide",
+        "connects_to": "caelid_gaeltunnel_rear"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894086,
+        "map": "m60_41_37_00",
+        "text": "Stormfoot Catacombs entrance",
+        "side": "ASide",
+        "connects_to": "limgrave_stormfootcatacombs"
+      },
+      {
+        "id": "AEG099_231_9000",
+        "entity_id": 755894089,
+        "map": "m60_42_35_00",
+        "text": "Stranded Graveyard back entrance",
+        "side": "BSide",
+        "connects_to": "graveyard_cave_back"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894094,
+        "map": "m60_43_37_00",
+        "text": "Murkwater Cave entrance",
+        "side": "BSide",
+        "connects_to": "limgrave_murkwatercave"
+      },
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 1044361800,
+        "map": "m60_44_36_00",
+        "text": "Mad Pumpkin Head front",
+        "side": "ASide",
+        "connects_to": "limgrave_waypoint_boss"
+      }
+    ]
+  },
+  "siofrabank_prenokron": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9000",
+        "entity_id": 755894012,
+        "map": "m12_07_00_00",
+        "text": "Limgrave-Nokron boundary",
+        "side": "BSide",
+        "connects_to": "limgrave"
+      }
+    ]
+  },
+  "siofra_preboss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 12081800,
+        "map": "m12_08_00_00",
+        "text": "Ancestor Spirit front",
+        "side": "ASide",
+        "connects_to": "siofra_boss"
+      }
+    ]
+  },
+  "siofra_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 12081800,
+        "map": "m12_08_00_00",
+        "text": "Ancestor Spirit front",
+        "side": "BSide",
+        "connects_to": "siofra_preboss"
+      }
+    ]
+  },
+  "siofra_nokron_preboss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 12091800,
+        "map": "m12_09_00_00",
+        "text": "Regal Ancestor Spirit front",
+        "side": "ASide",
+        "connects_to": "siofra_nokron_boss"
+      }
+    ]
+  },
+  "siofra_nokron_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 12091800,
+        "map": "m12_09_00_00",
+        "text": "Regal Ancestor Spirit front",
+        "side": "BSide",
+        "connects_to": "siofra_nokron_preboss"
+      }
+    ]
+  },
+  "farumazula_temple": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 13001850,
+        "map": "m13_00_00_00",
+        "text": "Godskin Duo back right",
+        "side": "ASide",
+        "connects_to": "farumazula_godskinduo"
+      },
+      {
+        "id": "AEG099_001_9003",
+        "entity_id": 13001852,
+        "map": "m13_00_00_00",
+        "text": "Godskin Duo back left",
+        "side": "ASide",
+        "connects_to": "farumazula_godskinduo"
+      },
+      {
+        "id": "AEG099_001_9004",
+        "entity_id": 13001855,
+        "map": "m13_00_00_00",
+        "text": "Godskin Duo balcony",
+        "side": "BSide",
+        "connects_to": "farumazula_balcony"
+      }
+    ]
+  },
+  "farumazula_godskinduo": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 13001850,
+        "map": "m13_00_00_00",
+        "text": "Godskin Duo back right",
+        "side": "BSide",
+        "connects_to": "farumazula_temple"
+      },
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 13001854,
+        "map": "m13_00_00_00",
+        "text": "Godskin duo front left",
+        "side": "BSide",
+        "connects_to": "farumazula"
+      },
+      {
+        "id": "AEG099_001_9002",
+        "entity_id": 13001853,
+        "map": "m13_00_00_00",
+        "text": "Godskin Duo front right",
+        "side": "BSide",
+        "connects_to": "farumazula_transept"
+      },
+      {
+        "id": "AEG099_001_9003",
+        "entity_id": 13001852,
+        "map": "m13_00_00_00",
+        "text": "Godskin Duo back left",
+        "side": "BSide",
+        "connects_to": "farumazula_temple"
+      }
+    ]
+  },
+  "farumazula": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 13001854,
+        "map": "m13_00_00_00",
+        "text": "Godskin duo front left",
+        "side": "ASide",
+        "connects_to": "farumazula_godskinduo"
+      },
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 13001800,
+        "map": "m13_00_00_00",
+        "text": "Maliketh front",
+        "side": "ASide",
+        "connects_to": "farumazula_maliketh"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894013,
+        "map": "m13_00_00_00",
+        "text": "Before elevator to Dragon Temple Lift",
+        "side": "BSide",
+        "connects_to": "farumazula_lift"
+      }
+    ]
+  },
+  "farumazula_transept": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9002",
+        "entity_id": 13001853,
+        "map": "m13_00_00_00",
+        "text": "Godskin Duo front right",
+        "side": "ASide",
+        "connects_to": "farumazula_godskinduo"
+      }
+    ]
+  },
+  "farumazula_balcony": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9004",
+        "entity_id": 13001855,
+        "map": "m13_00_00_00",
+        "text": "Godskin Duo balcony",
+        "side": "ASide",
+        "connects_to": "farumazula_temple"
+      }
+    ]
+  },
+  "farumazula_maliketh": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 13001800,
+        "map": "m13_00_00_00",
+        "text": "Maliketh front",
+        "side": "BSide",
+        "connects_to": "farumazula"
+      }
+    ]
+  },
+  "farumazula_lift": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894013,
+        "map": "m13_00_00_00",
+        "text": "Before elevator to Dragon Temple Lift",
+        "side": "ASide",
+        "connects_to": "farumazula"
+      }
+    ]
+  },
+  "academy_courtyard": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 14001800,
+        "map": "m14_00_00_00",
+        "text": "Rennala front",
+        "side": "ASide",
+        "connects_to": "academy_library"
+      },
+      {
+        "id": "AEG099_003_9001",
+        "entity_id": 14001851,
+        "map": "m14_00_00_00",
+        "text": "Red Wolf back",
+        "side": "BSide",
+        "connects_to": "academy_redwolf"
+      },
+      {
+        "id": "AEG099_231_9000",
+        "entity_id": 755894014,
+        "map": "m14_00_00_00",
+        "text": "Before Raya Lucaria rooftops",
+        "side": "ASide",
+        "connects_to": "academy_rooftops"
+      }
+    ]
+  },
+  "academy_library": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 14001800,
+        "map": "m14_00_00_00",
+        "text": "Rennala front",
+        "side": "BSide",
+        "connects_to": "academy_courtyard"
+      }
+    ]
+  },
+  "academy": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 14001850,
+        "map": "m14_00_00_00",
+        "text": "Red Wolf front",
+        "side": "ASide",
+        "connects_to": "academy_redwolf"
+      }
+    ]
+  },
+  "academy_redwolf": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 14001850,
+        "map": "m14_00_00_00",
+        "text": "Red Wolf front",
+        "side": "BSide",
+        "connects_to": "academy"
+      },
+      {
+        "id": "AEG099_003_9001",
+        "entity_id": 14001851,
+        "map": "m14_00_00_00",
+        "text": "Red Wolf back",
+        "side": "ASide",
+        "connects_to": "academy_courtyard"
+      }
+    ]
+  },
+  "academy_rooftops": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9000",
+        "entity_id": 755894014,
+        "map": "m14_00_00_00",
+        "text": "Before Raya Lucaria rooftops",
+        "side": "BSide",
+        "connects_to": "academy_courtyard"
+      }
+    ]
+  },
+  "haligtree_elphael": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 15001800,
+        "map": "m15_00_00_00",
+        "text": "Malenia front",
+        "side": "ASide",
+        "connects_to": "haligtree_malenia"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894015,
+        "map": "m15_00_00_00",
+        "text": "Before Elphael",
+        "side": "ASide",
+        "connects_to": "haligtree_postloretta"
+      }
+    ]
+  },
+  "haligtree_malenia": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 15001800,
+        "map": "m15_00_00_00",
+        "text": "Malenia front",
+        "side": "BSide",
+        "connects_to": "haligtree_elphael"
+      }
+    ]
+  },
+  "haligtree": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9001",
+        "entity_id": 15001850,
+        "map": "m15_00_00_00",
+        "text": "Loretta front",
+        "side": "ASide",
+        "connects_to": "haligtree_loretta"
+      }
+    ]
+  },
+  "haligtree_loretta": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9001",
+        "entity_id": 15001850,
+        "map": "m15_00_00_00",
+        "text": "Loretta front",
+        "side": "BSide",
+        "connects_to": "haligtree"
+      },
+      {
+        "id": "AEG099_003_9002",
+        "entity_id": 15001851,
+        "map": "m15_00_00_00",
+        "text": "Loretta back",
+        "side": "BSide",
+        "connects_to": "haligtree_postloretta"
+      }
+    ]
+  },
+  "haligtree_postloretta": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9002",
+        "entity_id": 15001851,
+        "map": "m15_00_00_00",
+        "text": "Loretta back",
+        "side": "ASide",
+        "connects_to": "haligtree_loretta"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894015,
+        "map": "m15_00_00_00",
+        "text": "Before Elphael",
+        "side": "BSide",
+        "connects_to": "haligtree_elphael"
+      }
+    ]
+  },
+  "volcano_town": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 16001860,
+        "map": "m16_00_00_00",
+        "text": "Abductor Virgins front",
+        "side": "ASide",
+        "connects_to": "volcano_abductors"
+      },
+      {
+        "id": "AEG099_003_0500",
+        "entity_id": 16001850,
+        "map": "m16_00_00_00",
+        "text": "Godskin Noble front",
+        "side": "ASide",
+        "connects_to": "volcano_temple"
+      }
+    ]
+  },
+  "volcano_abductors": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 16001860,
+        "map": "m16_00_00_00",
+        "text": "Abductor Virgins front",
+        "side": "BSide",
+        "connects_to": "volcano_town"
+      },
+      {
+        "id": "AEG099_002_9001",
+        "entity_id": 16001861,
+        "map": "m16_00_00_00",
+        "text": "Abductor Virgins back",
+        "side": "ASide",
+        "connects_to": "volcano_postabductors"
+      }
+    ]
+  },
+  "volcano_postabductors": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9001",
+        "entity_id": 16001861,
+        "map": "m16_00_00_00",
+        "text": "Abductor Virgins back",
+        "side": "BSide",
+        "connects_to": "volcano_abductors"
+      }
+    ]
+  },
+  "volcano_temple": {
+    "fogs": [
+      {
+        "id": "AEG099_003_0500",
+        "entity_id": 16001850,
+        "map": "m16_00_00_00",
+        "text": "Godskin Noble front",
+        "side": "BSide",
+        "connects_to": "volcano_town"
+      },
+      {
+        "id": "AEG099_003_0501",
+        "entity_id": 16001851,
+        "map": "m16_00_00_00",
+        "text": "Godskin Noble back left",
+        "side": "ASide",
+        "connects_to": "volcano_posttemple_elevator"
+      }
+    ]
+  },
+  "volcano_posttemple_elevator": {
+    "fogs": [
+      {
+        "id": "AEG099_003_0501",
+        "entity_id": 16001851,
+        "map": "m16_00_00_00",
+        "text": "Godskin Noble back left",
+        "side": "BSide",
+        "connects_to": "volcano_temple"
+      }
+    ]
+  },
+  "volcano_pathway": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 16001801,
+        "map": "m16_00_00_00",
+        "text": "Rykard entrance",
+        "side": "ASide",
+        "connects_to": "volcano_rykard"
+      }
+    ]
+  },
+  "volcano_rykard": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 16001801,
+        "map": "m16_00_00_00",
+        "text": "Rykard entrance",
+        "side": "BSide",
+        "connects_to": "volcano_pathway"
+      }
+    ]
+  },
+  "volcano_predoor": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 16001655,
+        "map": "m16_00_00_00",
+        "text": "Gelmir-Volcano Manor boundary",
+        "side": "ASide",
+        "connects_to": "gelmir"
+      }
+    ]
+  },
+  "gelmir": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 16001655,
+        "map": "m16_00_00_00",
+        "text": "Gelmir-Volcano Manor boundary",
+        "side": "BSide",
+        "connects_to": "volcano_predoor"
+      },
+      {
+        "id": "AEG099_230_9001",
+        "entity_id": 755894031,
+        "map": "m30_07_00_00",
+        "text": "Wyndham Catacombs entrance",
+        "side": "BSide",
+        "connects_to": "gelmir_wyndhamcatacombs"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894033,
+        "map": "m30_09_00_00",
+        "text": "Gelmir Hero's Grave entrance",
+        "side": "ASide",
+        "connects_to": "gelmir_grave"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894078,
+        "map": "m60_37_54_00",
+        "text": "Seethewater Cave entrance",
+        "side": "BSide",
+        "connects_to": "gelmir_seethewatercave"
+      }
+    ]
+  },
+  "volcano_sendinggate": {
+    "fogs": [
+      {
+        "id": "AEG099_232_9004",
+        "entity_id": 16001659,
+        "map": "m16_00_00_00",
+        "text": "Hallway to imp seal",
+        "side": "ASide",
+        "connects_to": "volcano_hallway"
+      }
+    ]
+  },
+  "volcano_hallway": {
+    "fogs": [
+      {
+        "id": "AEG099_232_9004",
+        "entity_id": 16001659,
+        "map": "m16_00_00_00",
+        "text": "Hallway to imp seal",
+        "side": "BSide",
+        "connects_to": "volcano_sendinggate"
+      }
+    ]
+  },
+  "volcano_drawingroom": {
+    "fogs": [
+      {
+        "id": "AEG099_232_9005",
+        "entity_id": 16001654,
+        "map": "m16_00_00_00",
+        "text": "Before Volcano Prison Town Church grace",
+        "side": "ASide",
+        "connects_to": "volcano_pretown"
+      }
+    ]
+  },
+  "volcano_pretown": {
+    "fogs": [
+      {
+        "id": "AEG099_232_9005",
+        "entity_id": 16001654,
+        "map": "m16_00_00_00",
+        "text": "Before Volcano Prison Town Church grace",
+        "side": "BSide",
+        "connects_to": "volcano_drawingroom"
+      }
+    ]
+  },
+  "graveyard_grave": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 18001800,
+        "map": "m18_00_00_00",
+        "text": "Fringefolk boss front",
+        "side": "ASide",
+        "connects_to": "graveyard_grave_boss"
+      }
+    ]
+  },
+  "graveyard_grave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 18001800,
+        "map": "m18_00_00_00",
+        "text": "Fringefolk boss front",
+        "side": "BSide",
+        "connects_to": "graveyard_grave"
+      }
+    ]
+  },
+  "graveyard_cave": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9010",
+        "entity_id": 18001850,
+        "map": "m18_00_00_00",
+        "text": "Soldier of Godrick front",
+        "side": "ASide",
+        "connects_to": "graveyard_cave_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 18001695,
+        "map": "m18_00_00_00",
+        "text": "Stranded Graveyard first door",
+        "side": "ASide",
+        "connects_to": "graveyard"
+      }
+    ]
+  },
+  "graveyard_cave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9010",
+        "entity_id": 18001850,
+        "map": "m18_00_00_00",
+        "text": "Soldier of Godrick front",
+        "side": "BSide",
+        "connects_to": "graveyard_cave"
+      },
+      {
+        "id": "AEG099_001_9011",
+        "entity_id": 18001851,
+        "map": "m18_00_00_00",
+        "text": "Soldier of Godrick back",
+        "side": "ASide",
+        "connects_to": "graveyard_cave_postboss"
+      }
+    ]
+  },
+  "graveyard_cave_postboss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9011",
+        "entity_id": 18001851,
+        "map": "m18_00_00_00",
+        "text": "Soldier of Godrick back",
+        "side": "BSide",
+        "connects_to": "graveyard_cave_boss"
+      }
+    ]
+  },
+  "graveyard": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 18001695,
+        "map": "m18_00_00_00",
+        "text": "Stranded Graveyard first door",
+        "side": "BSide",
+        "connects_to": "graveyard_cave"
+      },
+      {
+        "id": "AEG099_230_9001",
+        "entity_id": 18001696,
+        "map": "m18_00_00_00",
+        "text": "Stranded Graveyard-Limgrave boundary",
+        "side": "BSide",
+        "connects_to": "limgrave"
+      }
+    ]
+  },
+  "belurat_postboss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9002",
+        "entity_id": 20001801,
+        "map": "m20_00_00_00",
+        "text": "Dancing Lion back",
+        "side": "ASide",
+        "connects_to": "belurat_boss"
+      }
+    ]
+  },
+  "belurat_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9002",
+        "entity_id": 20001801,
+        "map": "m20_00_00_00",
+        "text": "Dancing Lion back",
+        "side": "BSide",
+        "connects_to": "belurat_postboss"
+      },
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 20001800,
+        "map": "m20_00_00_00",
+        "text": "Dancing Lion front",
+        "side": "BSide",
+        "connects_to": "belurat"
+      }
+    ]
+  },
+  "belurat": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 20001800,
+        "map": "m20_00_00_00",
+        "text": "Dancing Lion front",
+        "side": "ASide",
+        "connects_to": "belurat_boss"
+      },
+      {
+        "id": "AEG099_231_9004",
+        "entity_id": 755894020,
+        "map": "m20_00_00_00",
+        "text": "Belurat entrance",
+        "side": "BSide",
+        "connects_to": "gravesite"
+      }
+    ]
+  },
+  "gravesite": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9004",
+        "entity_id": 755894020,
+        "map": "m20_00_00_00",
+        "text": "Belurat entrance",
+        "side": "ASide",
+        "connects_to": "belurat"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894059,
+        "map": "m40_00_00_00",
+        "text": "Fog Rift Catacombs entrance",
+        "side": "ASide",
+        "connects_to": "gravesite_catacombs"
+      },
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 2046411800,
+        "map": "m61_46_41_00",
+        "text": "Knight of the Solitary Gaol front",
+        "side": "ASide",
+        "connects_to": "gravesite_mausoleum_boss"
+      },
+      {
+        "id": "AEG099_231_9500",
+        "entity_id": 755894131,
+        "map": "m61_47_43_00",
+        "text": "Gravesite Plains to Ellac River new gate",
+        "side": "BSide",
+        "connects_to": "ellac"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894132,
+        "map": "m61_47_44_00",
+        "text": "Ensis talisman room",
+        "side": "ASide",
+        "connects_to": "ensis_room"
+      },
+      {
+        "id": "AEG099_231_9500",
+        "entity_id": 755894133,
+        "map": "m61_47_44_00",
+        "text": "Gravesite Plain to Castle Ensis new gate",
+        "side": "ASide",
+        "connects_to": "ensis"
+      }
+    ]
+  },
+  "enirilim_stairs": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 20011800,
+        "map": "m20_01_00_00",
+        "text": "PCR front",
+        "side": "ASide",
+        "connects_to": "enirilim_radahn"
+      }
+    ]
+  },
+  "enirilim_radahn": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 20011800,
+        "map": "m20_01_00_00",
+        "text": "PCR front",
+        "side": "BSide",
+        "connects_to": "enirilim_stairs"
+      }
+    ]
+  },
+  "shadowkeep_preboss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 21001850,
+        "map": "m21_00_00_00",
+        "text": "Golden Hippopotamus front",
+        "side": "ASide",
+        "connects_to": "shadowkeep_boss"
+      }
+    ]
+  },
+  "shadowkeep_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 21001850,
+        "map": "m21_00_00_00",
+        "text": "Golden Hippopotamus front",
+        "side": "BSide",
+        "connects_to": "shadowkeep_preboss"
+      },
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 21001851,
+        "map": "m21_00_00_00",
+        "text": "Golden Hippopotamus left",
+        "side": "ASide",
+        "connects_to": "shadowkeep"
+      },
+      {
+        "id": "AEG099_003_9001",
+        "entity_id": 21001852,
+        "map": "m21_00_00_00",
+        "text": "Golden Hippopotamus right",
+        "side": "BSide",
+        "connects_to": "shadowkeep"
+      }
+    ]
+  },
+  "shadowkeep": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 21001851,
+        "map": "m21_00_00_00",
+        "text": "Golden Hippopotamus left",
+        "side": "BSide",
+        "connects_to": "shadowkeep_boss"
+      },
+      {
+        "id": "AEG099_003_9001",
+        "entity_id": 21001852,
+        "map": "m21_00_00_00",
+        "text": "Golden Hippopotamus right",
+        "side": "ASide",
+        "connects_to": "shadowkeep_boss"
+      },
+      {
+        "id": "AEG099_230_9500",
+        "entity_id": 755894026,
+        "map": "m21_01_00_00",
+        "text": "Shadow Keep to Storehouse new gate",
+        "side": "BSide",
+        "connects_to": "storehouse"
+      }
+    ]
+  },
+  "scadualtus_lower": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894022,
+        "map": "m21_00_00_00",
+        "text": "Shadow Keep Church District entrance",
+        "side": "ASide",
+        "connects_to": "shadowkeep_church"
+      },
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 2051451800,
+        "map": "m61_51_45_00",
+        "text": "Manus Metyr north gate on west side",
+        "side": "ASide",
+        "connects_to": "scadualtus_ymir"
+      },
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 2051451801,
+        "map": "m61_51_45_00",
+        "text": "Manus Metyr south gate on west side",
+        "side": "ASide",
+        "connects_to": "scadualtus_ymir"
+      },
+      {
+        "id": "AEG099_001_9002",
+        "entity_id": 2051451802,
+        "map": "m61_51_45_00",
+        "text": "Manus Metyr main gate from north",
+        "side": "ASide",
+        "connects_to": "scadualtus_ymir"
+      }
+    ]
+  },
+  "shadowkeep_church": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894022,
+        "map": "m21_00_00_00",
+        "text": "Shadow Keep Church District entrance",
+        "side": "BSide",
+        "connects_to": "scadualtus_lower"
+      },
+      {
+        "id": "AEG099_230_9501",
+        "entity_id": 755894027,
+        "map": "m21_01_00_00",
+        "text": "Church Distrinct to Storehouse new gate",
+        "side": "BSide",
+        "connects_to": "storehouse_back"
+      }
+    ]
+  },
+  "storehouse_premessmer": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 21011800,
+        "map": "m21_01_00_00",
+        "text": "Messmer entrance",
+        "side": "ASide",
+        "connects_to": "storehouse_messmer"
+      }
+    ]
+  },
+  "storehouse_messmer": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 21011800,
+        "map": "m21_01_00_00",
+        "text": "Messmer entrance",
+        "side": "BSide",
+        "connects_to": "storehouse_premessmer"
+      }
+    ]
+  },
+  "westrampart": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894025,
+        "map": "m21_01_00_00",
+        "text": "West Rampart entrance",
+        "side": "ASide",
+        "connects_to": "storehouse"
+      },
+      {
+        "id": "AEG099_230_9500",
+        "entity_id": 755894028,
+        "map": "m21_02_00_00",
+        "text": "West Rampart to Rauh Ruins new gate",
+        "side": "ASide",
+        "connects_to": "rauhruins_east"
+      }
+    ]
+  },
+  "storehouse": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894025,
+        "map": "m21_01_00_00",
+        "text": "West Rampart entrance",
+        "side": "BSide",
+        "connects_to": "westrampart"
+      },
+      {
+        "id": "AEG099_230_9500",
+        "entity_id": 755894026,
+        "map": "m21_01_00_00",
+        "text": "Shadow Keep to Storehouse new gate",
+        "side": "ASide",
+        "connects_to": "shadowkeep"
+      }
+    ]
+  },
+  "storehouse_back": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9501",
+        "entity_id": 755894027,
+        "map": "m21_01_00_00",
+        "text": "Church Distrinct to Storehouse new gate",
+        "side": "ASide",
+        "connects_to": "shadowkeep_church"
+      },
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 2049481800,
+        "map": "m61_49_48_00",
+        "text": "Gaius front",
+        "side": "ASide",
+        "connects_to": "scaduview_gaius"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894138,
+        "map": "m61_49_48_00",
+        "text": "Hinterland entrance",
+        "side": "BSide",
+        "connects_to": "hinterland"
+      }
+    ]
+  },
+  "rauhruins_east": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9500",
+        "entity_id": 755894028,
+        "map": "m21_02_00_00",
+        "text": "West Rampart to Rauh Ruins new gate",
+        "side": "BSide",
+        "connects_to": "westrampart"
+      }
+    ]
+  },
+  "fissure_postboss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_3000",
+        "entity_id": 22001801,
+        "map": "m22_00_00_00",
+        "text": "Putrescent Knight back",
+        "side": "ASide",
+        "connects_to": "fissure_boss"
+      }
+    ]
+  },
+  "fissure_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_3000",
+        "entity_id": 22001801,
+        "map": "m22_00_00_00",
+        "text": "Putrescent Knight back",
+        "side": "BSide",
+        "connects_to": "fissure_postboss"
+      }
+    ]
+  },
+  "fissure_depths": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 22001800,
+        "map": "m22_00_00_00",
+        "text": "Putrescent Knight front",
+        "side": "ASide",
+        "connects_to": "fissure_preboss"
+      }
+    ]
+  },
+  "fissure_preboss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 22001800,
+        "map": "m22_00_00_00",
+        "text": "Putrescent Knight front",
+        "side": "BSide",
+        "connects_to": "fissure_depths"
+      }
+    ]
+  },
+  "fissure": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9500",
+        "entity_id": 755894029,
+        "map": "m22_00_00_00",
+        "text": "Stone Coffin Fissure entrance new gate",
+        "side": "ASide",
+        "connects_to": "cerulean"
+      }
+    ]
+  },
+  "cerulean": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9500",
+        "entity_id": 755894029,
+        "map": "m22_00_00_00",
+        "text": "Stone Coffin Fissure entrance new gate",
+        "side": "BSide",
+        "connects_to": "fissure"
+      },
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 2046381800,
+        "map": "m61_46_38_00",
+        "text": "Dancer of Ranah front",
+        "side": "ASide",
+        "connects_to": "cerulean_mausoleum_boss"
+      },
+      {
+        "id": "AEG099_231_9500",
+        "entity_id": 755894134,
+        "map": "m61_48_39_00",
+        "text": "Ellac River to Cerulean Coast new gate",
+        "side": "ASide",
+        "connects_to": "ellac"
+      }
+    ]
+  },
+  "abyssal": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9500",
+        "entity_id": 755894030,
+        "map": "m28_00_00_00",
+        "text": "Abyssal Woods to Midra's Manse new gate",
+        "side": "BSide",
+        "connects_to": "midramanse"
+      },
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 2052431801,
+        "map": "m61_52_43_00",
+        "text": "Darklight Catacombs exit",
+        "side": "ASide",
+        "connects_to": "scadualtus_catacombs_boss"
+      }
+    ]
+  },
+  "peninsula_tombswardcatacombs": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30001800,
+        "map": "m30_00_00_00",
+        "text": "Cemetery Shade front",
+        "side": "ASide",
+        "connects_to": "peninsula_tombswardcatacombs_boss"
+      },
+      {
+        "id": "AEG099_230_9001",
+        "entity_id": 755894093,
+        "map": "m60_43_33_00",
+        "text": "Tombsward Catacombs entrance",
+        "side": "ASide",
+        "connects_to": "peninsula"
+      }
+    ]
+  },
+  "peninsula_tombswardcatacombs_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30001800,
+        "map": "m30_00_00_00",
+        "text": "Cemetery Shade front",
+        "side": "BSide",
+        "connects_to": "peninsula_tombswardcatacombs"
+      }
+    ]
+  },
+  "peninsula_impalerscatacombs": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30011800,
+        "map": "m30_01_00_00",
+        "text": "Erdtree Burial Watchdog front",
+        "side": "ASide",
+        "connects_to": "peninsula_impalerscatacombs_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894101,
+        "map": "m60_45_34_00",
+        "text": "Impaler's Catacombs entrance",
+        "side": "ASide",
+        "connects_to": "peninsula"
+      }
+    ]
+  },
+  "peninsula_impalerscatacombs_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30011800,
+        "map": "m30_01_00_00",
+        "text": "Erdtree Burial Watchdog front",
+        "side": "BSide",
+        "connects_to": "peninsula_impalerscatacombs"
+      }
+    ]
+  },
+  "limgrave_stormfootcatacombs": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30021800,
+        "map": "m30_02_00_00",
+        "text": "Erdtree Burial Watchdog front",
+        "side": "ASide",
+        "connects_to": "limgrave_stormfootcatacombs_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894086,
+        "map": "m60_41_37_00",
+        "text": "Stormfoot Catacombs entrance",
+        "side": "BSide",
+        "connects_to": "limgrave"
+      }
+    ]
+  },
+  "limgrave_stormfootcatacombs_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30021800,
+        "map": "m30_02_00_00",
+        "text": "Erdtree Burial Watchdog front",
+        "side": "BSide",
+        "connects_to": "limgrave_stormfootcatacombs"
+      }
+    ]
+  },
+  "liurnia_roadsendcatacombs": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30031800,
+        "map": "m30_03_00_00",
+        "text": "Spiritcaller Snail front",
+        "side": "ASide",
+        "connects_to": "liurnia_roadsendcatacombs_boss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894071,
+        "map": "m60_33_43_00",
+        "text": "Road's End Catacombs entrance",
+        "side": "ASide",
+        "connects_to": "liurnia"
+      }
+    ]
+  },
+  "liurnia_roadsendcatacombs_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30031800,
+        "map": "m30_03_00_00",
+        "text": "Spiritcaller Snail front",
+        "side": "BSide",
+        "connects_to": "liurnia_roadsendcatacombs"
+      }
+    ]
+  },
+  "limgrave_murkwatercatacombs": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30041800,
+        "map": "m30_04_00_00",
+        "text": "Grave Warden Duelist front",
+        "side": "ASide",
+        "connects_to": "limgrave_murkwatercatacombs_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894095,
+        "map": "m60_43_38_00",
+        "text": "Murkwater Catacombs entrance",
+        "side": "BSide",
+        "connects_to": "limgrave"
+      }
+    ]
+  },
+  "limgrave_murkwatercatacombs_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30041800,
+        "map": "m30_04_00_00",
+        "text": "Grave Warden Duelist front",
+        "side": "BSide",
+        "connects_to": "limgrave_murkwatercatacombs"
+      }
+    ]
+  },
+  "liurnia_blackknifecatacombs": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30051800,
+        "map": "m30_05_00_00",
+        "text": "Cemetery Shade front",
+        "side": "ASide",
+        "connects_to": "liurnia_blackknifecatacombs_boss"
+      },
+      {
+        "id": "AEG099_001_9002",
+        "entity_id": 30051850,
+        "map": "m30_05_00_00",
+        "text": "Black Knife Assassin",
+        "side": "ASide",
+        "connects_to": "liurnia_blackknifecatacombs_boss2"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894083,
+        "map": "m60_39_48_00",
+        "text": "Black Knife Catacombs entrance",
+        "side": "ASide",
+        "connects_to": "liurnia"
+      }
+    ]
+  },
+  "liurnia_blackknifecatacombs_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30051800,
+        "map": "m30_05_00_00",
+        "text": "Cemetery Shade front",
+        "side": "BSide",
+        "connects_to": "liurnia_blackknifecatacombs"
+      }
+    ]
+  },
+  "liurnia_blackknifecatacombs_boss2": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9002",
+        "entity_id": 30051850,
+        "map": "m30_05_00_00",
+        "text": "Black Knife Assassin",
+        "side": "BSide",
+        "connects_to": "liurnia_blackknifecatacombs"
+      }
+    ]
+  },
+  "liurnia_cliffbottomcatacombs": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30061800,
+        "map": "m30_06_00_00",
+        "text": "Erdtree Burial Watchdog front",
+        "side": "ASide",
+        "connects_to": "liurnia_cliffbottomcatacombs_boss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894082,
+        "map": "m60_39_41_00",
+        "text": "Cliffbottom Catacombs entrance",
+        "side": "ASide",
+        "connects_to": "liurnia"
+      }
+    ]
+  },
+  "liurnia_cliffbottomcatacombs_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30061800,
+        "map": "m30_06_00_00",
+        "text": "Erdtree Burial Watchdog front",
+        "side": "BSide",
+        "connects_to": "liurnia_cliffbottomcatacombs"
+      }
+    ]
+  },
+  "gelmir_wyndhamcatacombs": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30071800,
+        "map": "m30_07_00_00",
+        "text": "Erdtree Burial Watchdog front",
+        "side": "ASide",
+        "connects_to": "gelmir_wyndhamcatacombs_boss"
+      },
+      {
+        "id": "AEG099_230_9001",
+        "entity_id": 755894031,
+        "map": "m30_07_00_00",
+        "text": "Wyndham Catacombs entrance",
+        "side": "ASide",
+        "connects_to": "gelmir"
+      }
+    ]
+  },
+  "gelmir_wyndhamcatacombs_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30071800,
+        "map": "m30_07_00_00",
+        "text": "Erdtree Burial Watchdog front",
+        "side": "BSide",
+        "connects_to": "gelmir_wyndhamcatacombs"
+      }
+    ]
+  },
+  "altus_grave": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30081800,
+        "map": "m30_08_00_00",
+        "text": "Ancient Hero of Zamor front",
+        "side": "ASide",
+        "connects_to": "altus_grave_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894032,
+        "map": "m30_08_00_00",
+        "text": "Sainted Hero's Grave entrance",
+        "side": "BSide",
+        "connects_to": "altus"
+      }
+    ]
+  },
+  "altus_grave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30081800,
+        "map": "m30_08_00_00",
+        "text": "Ancient Hero of Zamor front",
+        "side": "BSide",
+        "connects_to": "altus_grave"
+      }
+    ]
+  },
+  "altus": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894032,
+        "map": "m30_08_00_00",
+        "text": "Sainted Hero's Grave entrance",
+        "side": "ASide",
+        "connects_to": "altus_grave"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894052,
+        "map": "m32_04_00_00",
+        "text": "Old Altus Tunnel entrance",
+        "side": "BSide",
+        "connects_to": "altus_oldtunnel"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894077,
+        "map": "m60_37_52_00",
+        "text": "Sage's Cave entrance",
+        "side": "BSide",
+        "connects_to": "altus_sagescave"
+      },
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 1038511800,
+        "map": "m60_38_51_00",
+        "text": "Demi-Human Queen Gilika front",
+        "side": "ASide",
+        "connects_to": "altus_lux_boss"
+      }
+    ]
+  },
+  "gelmir_grave": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30091800,
+        "map": "m30_09_00_00",
+        "text": "Red Wolf of the Champion front",
+        "side": "ASide",
+        "connects_to": "gelmir_grave_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894033,
+        "map": "m30_09_00_00",
+        "text": "Gelmir Hero's Grave entrance",
+        "side": "BSide",
+        "connects_to": "gelmir"
+      }
+    ]
+  },
+  "gelmir_grave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30091800,
+        "map": "m30_09_00_00",
+        "text": "Red Wolf of the Champion front",
+        "side": "BSide",
+        "connects_to": "gelmir_grave"
+      }
+    ]
+  },
+  "outskirts_grave": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30101800,
+        "map": "m30_10_00_00",
+        "text": "Crucible Knight Ordovis front",
+        "side": "ASide",
+        "connects_to": "outskirts_grave_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894034,
+        "map": "m30_10_00_00",
+        "text": "Auriza Hero's Grave entrance",
+        "side": "BSide",
+        "connects_to": "outskirts"
+      }
+    ]
+  },
+  "outskirts_grave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30101800,
+        "map": "m30_10_00_00",
+        "text": "Crucible Knight Ordovis front",
+        "side": "BSide",
+        "connects_to": "outskirts_grave"
+      }
+    ]
+  },
+  "outskirts": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894034,
+        "map": "m30_10_00_00",
+        "text": "Auriza Hero's Grave entrance",
+        "side": "ASide",
+        "connects_to": "outskirts_grave"
+      },
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 1045521800,
+        "map": "m60_45_52_00",
+        "text": "Draconic back",
+        "side": "BSide",
+        "connects_to": "outskirts_rampart"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894103,
+        "map": "m60_45_52_00",
+        "text": "Auriza entrance",
+        "side": "BSide",
+        "connects_to": "outskirts_sidetomb"
+      },
+      {
+        "id": "AEG099_001_9500",
+        "entity_id": 755894105,
+        "map": "m60_45_52_10",
+        "text": "Draconic back",
+        "side": "BSide",
+        "connects_to": "outskirts_rampart"
+      },
+      {
+        "id": "AEG099_230_9502",
+        "entity_id": 755894107,
+        "map": "m60_45_52_10",
+        "text": "Ashen Auriza entrance",
+        "side": "BSide",
+        "connects_to": "outskirts_sidetomb"
+      }
+    ]
+  },
+  "stormhill_catacombs": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30111800,
+        "map": "m30_11_00_00",
+        "text": "Black Knife Assassin front",
+        "side": "ASide",
+        "connects_to": "stormhill_catacombs_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894096,
+        "map": "m60_43_39_00",
+        "text": "Deathtouched Catacombs entrance",
+        "side": "BSide",
+        "connects_to": "stormhill"
+      }
+    ]
+  },
+  "stormhill_catacombs_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30111800,
+        "map": "m30_11_00_00",
+        "text": "Black Knife Assassin front",
+        "side": "BSide",
+        "connects_to": "stormhill_catacombs"
+      }
+    ]
+  },
+  "altus_catacombs": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 30121800,
+        "map": "m30_12_00_00",
+        "text": "Perfumer Tricia and Misbegotten Warrior front",
+        "side": "ASide",
+        "connects_to": "altus_catacombs_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894035,
+        "map": "m30_12_00_00",
+        "text": "Unsightly Catacombs entrance",
+        "side": "BSide",
+        "connects_to": "altus"
+      }
+    ]
+  },
+  "altus_catacombs_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 30121800,
+        "map": "m30_12_00_00",
+        "text": "Perfumer Tricia and Misbegotten Warrior front",
+        "side": "BSide",
+        "connects_to": "altus_catacombs"
+      }
+    ]
+  },
+  "outskirts_sidetomb": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30131800,
+        "map": "m30_13_00_00",
+        "text": "Grave Warden Duelist front",
+        "side": "ASide",
+        "connects_to": "outskirts_sidetomb_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894103,
+        "map": "m60_45_52_00",
+        "text": "Auriza entrance",
+        "side": "ASide",
+        "connects_to": "outskirts"
+      },
+      {
+        "id": "AEG099_230_9502",
+        "entity_id": 755894107,
+        "map": "m60_45_52_10",
+        "text": "Ashen Auriza entrance",
+        "side": "ASide",
+        "connects_to": "outskirts"
+      }
+    ]
+  },
+  "outskirts_sidetomb_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30131800,
+        "map": "m30_13_00_00",
+        "text": "Grave Warden Duelist front",
+        "side": "BSide",
+        "connects_to": "outskirts_sidetomb"
+      }
+    ]
+  },
+  "caelid_erdtreecatacombs": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30141800,
+        "map": "m30_14_00_00",
+        "text": "Erdtree Burial Watchdogs front",
+        "side": "ASide",
+        "connects_to": "caelid_erdtreecatacombs_boss"
+      },
+      {
+        "id": "AEG099_230_9001",
+        "entity_id": 755894036,
+        "map": "m30_14_00_00",
+        "text": "Minor Erdtree Catacombs entrance",
+        "side": "BSide",
+        "connects_to": "caelid"
+      }
+    ]
+  },
+  "caelid_erdtreecatacombs_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30141800,
+        "map": "m30_14_00_00",
+        "text": "Erdtree Burial Watchdogs front",
+        "side": "BSide",
+        "connects_to": "caelid_erdtreecatacombs"
+      }
+    ]
+  },
+  "caelid": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9001",
+        "entity_id": 755894036,
+        "map": "m30_14_00_00",
+        "text": "Minor Erdtree Catacombs entrance",
+        "side": "ASide",
+        "connects_to": "caelid_erdtreecatacombs"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894037,
+        "map": "m30_15_00_00",
+        "text": "Caelid Catacombs entrance",
+        "side": "ASide",
+        "connects_to": "caelid_catacombs"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894108,
+        "map": "m60_47_38_00",
+        "text": "Gaol Cave entrance",
+        "side": "BSide",
+        "connects_to": "caelid_gaolcave"
+      },
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 1048401800,
+        "map": "m60_48_40_00",
+        "text": "Mad Pumpkin Heads front",
+        "side": "ASide",
+        "connects_to": "caelid_caelem_boss"
+      },
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 1049391800,
+        "map": "m60_49_39_00",
+        "text": "Nox Duo front",
+        "side": "ASide",
+        "connects_to": "caelid_crypt_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894113,
+        "map": "m60_49_39_00",
+        "text": "Sellia Crystal Tunnel entrance",
+        "side": "BSide",
+        "connects_to": "caelid_selliatunnel"
+      }
+    ]
+  },
+  "caelid_catacombs": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30151800,
+        "map": "m30_15_00_00",
+        "text": "Cemetery Shade front",
+        "side": "ASide",
+        "connects_to": "caelid_catacombs_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894037,
+        "map": "m30_15_00_00",
+        "text": "Caelid Catacombs entrance",
+        "side": "BSide",
+        "connects_to": "caelid"
+      }
+    ]
+  },
+  "caelid_catacombs_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30151800,
+        "map": "m30_15_00_00",
+        "text": "Cemetery Shade front",
+        "side": "BSide",
+        "connects_to": "caelid_catacombs"
+      }
+    ]
+  },
+  "caelid_wardead": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30161800,
+        "map": "m30_16_00_00",
+        "text": "Putrid Tree Spirit front",
+        "side": "ASide",
+        "connects_to": "caelid_wardead_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894038,
+        "map": "m30_16_00_00",
+        "text": "War-Dead Catacombs entrance",
+        "side": "BSide",
+        "connects_to": "caelid_radahn"
+      }
+    ]
+  },
+  "caelid_wardead_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30161800,
+        "map": "m30_16_00_00",
+        "text": "Putrid Tree Spirit front",
+        "side": "BSide",
+        "connects_to": "caelid_wardead"
+      }
+    ]
+  },
+  "caelid_radahn": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894038,
+        "map": "m30_16_00_00",
+        "text": "War-Dead Catacombs entrance",
+        "side": "ASide",
+        "connects_to": "caelid_wardead"
+      }
+    ]
+  },
+  "flamepeak_grave": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30171800,
+        "map": "m30_17_00_00",
+        "text": "Ancient Hero of Zamor front",
+        "side": "ASide",
+        "connects_to": "flamepeak_grave_boss"
+      },
+      {
+        "id": "AEG099_230_9001",
+        "entity_id": 755894040,
+        "map": "m30_17_00_00",
+        "text": "Giant-Conquering Hero's Grave entrance",
+        "side": "ASide",
+        "connects_to": "flamepeak"
+      }
+    ]
+  },
+  "flamepeak_grave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30171800,
+        "map": "m30_17_00_00",
+        "text": "Ancient Hero of Zamor front",
+        "side": "BSide",
+        "connects_to": "flamepeak_grave"
+      }
+    ]
+  },
+  "flamepeak": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9001",
+        "entity_id": 755894040,
+        "map": "m30_17_00_00",
+        "text": "Giant-Conquering Hero's Grave entrance",
+        "side": "BSide",
+        "connects_to": "flamepeak_grave"
+      },
+      {
+        "id": "m60_52_53_00-AEG099_002_9000",
+        "entity_id": 1052531800,
+        "map": "m60_13_13_02",
+        "text": "Fire Giant left front",
+        "side": "ASide",
+        "connects_to": "flamepeak_firegiant"
+      },
+      {
+        "id": "m60_52_53_00-AEG099_003_9001",
+        "entity_id": 1052531801,
+        "map": "m60_13_13_02",
+        "text": "Fire Giant right front",
+        "side": "ASide",
+        "connects_to": "flamepeak_firegiant"
+      }
+    ]
+  },
+  "snowfield_catacombs": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30191800,
+        "map": "m30_19_00_00",
+        "text": "Putrid Grave Warden Duelist front",
+        "side": "ASide",
+        "connects_to": "snowfield_catacombs_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894042,
+        "map": "m30_19_00_00",
+        "text": "Consecrated Snowfield Catacombs entrance",
+        "side": "BSide",
+        "connects_to": "snowfield"
+      }
+    ]
+  },
+  "snowfield_catacombs_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30191800,
+        "map": "m30_19_00_00",
+        "text": "Putrid Grave Warden Duelist front",
+        "side": "BSide",
+        "connects_to": "snowfield_catacombs"
+      }
+    ]
+  },
+  "snowfield": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894042,
+        "map": "m30_19_00_00",
+        "text": "Consecrated Snowfield Catacombs entrance",
+        "side": "ASide",
+        "connects_to": "snowfield_catacombs"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894044,
+        "map": "m30_20_00_00",
+        "text": "Hidden Path to Haligtree entrance",
+        "side": "ASide",
+        "connects_to": "snowfield_hiddenpath"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894120,
+        "map": "m60_50_56_00",
+        "text": "Cave of the Forlorn entrance",
+        "side": "BSide",
+        "connects_to": "snowfield_cave"
+      }
+    ]
+  },
+  "snowfield_hiddenpath": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30201800,
+        "map": "m30_20_00_00",
+        "text": "Stray Mimic Tear front",
+        "side": "ASide",
+        "connects_to": "snowfield_hiddenpath_boss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894044,
+        "map": "m30_20_00_00",
+        "text": "Hidden Path to Haligtree entrance",
+        "side": "BSide",
+        "connects_to": "snowfield"
+      }
+    ]
+  },
+  "snowfield_hiddenpath_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 30201800,
+        "map": "m30_20_00_00",
+        "text": "Stray Mimic Tear front",
+        "side": "BSide",
+        "connects_to": "snowfield_hiddenpath"
+      }
+    ]
+  },
+  "snowfield_rold": {
+    "fogs": [
+      {
+        "id": "AEG099_232_9001",
+        "entity_id": 755894045,
+        "map": "m30_20_00_00",
+        "text": "Snowfield Rold destination",
+        "side": "ASide",
+        "connects_to": "snowfield_prehiddenpath"
+      }
+    ]
+  },
+  "snowfield_prehiddenpath": {
+    "fogs": [
+      {
+        "id": "AEG099_232_9001",
+        "entity_id": 755894045,
+        "map": "m30_20_00_00",
+        "text": "Snowfield Rold destination",
+        "side": "BSide",
+        "connects_to": "snowfield_rold"
+      }
+    ]
+  },
+  "limgrave_murkwatercave": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31001800,
+        "map": "m31_00_00_00",
+        "text": "Patches front",
+        "side": "ASide",
+        "connects_to": "limgrave_murkwatercave_boss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894094,
+        "map": "m60_43_37_00",
+        "text": "Murkwater Cave entrance",
+        "side": "ASide",
+        "connects_to": "limgrave"
+      }
+    ]
+  },
+  "limgrave_murkwatercave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31001800,
+        "map": "m31_00_00_00",
+        "text": "Patches front",
+        "side": "BSide",
+        "connects_to": "limgrave_murkwatercave"
+      }
+    ]
+  },
+  "peninsula_earthborecave": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31011800,
+        "map": "m31_01_00_00",
+        "text": "Runebear front",
+        "side": "ASide",
+        "connects_to": "peninsula_earthborecave_boss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894100,
+        "map": "m60_44_34_00",
+        "text": "Earthbore Cave entrance",
+        "side": "ASide",
+        "connects_to": "peninsula"
+      }
+    ]
+  },
+  "peninsula_earthborecave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31011800,
+        "map": "m31_01_00_00",
+        "text": "Runebear front",
+        "side": "BSide",
+        "connects_to": "peninsula_earthborecave"
+      }
+    ]
+  },
+  "peninsula_tombswardcave": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 31021800,
+        "map": "m31_02_00_00",
+        "text": "Miranda Blossom front",
+        "side": "ASide",
+        "connects_to": "peninsula_tombswardcave_boss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894046,
+        "map": "m31_02_00_00",
+        "text": "Tombsward Cave entrance",
+        "side": "BSide",
+        "connects_to": "peninsula"
+      }
+    ]
+  },
+  "peninsula_tombswardcave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 31021800,
+        "map": "m31_02_00_00",
+        "text": "Miranda Blossom front",
+        "side": "BSide",
+        "connects_to": "peninsula_tombswardcave"
+      }
+    ]
+  },
+  "peninsula": {
+    "fogs": [
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894046,
+        "map": "m31_02_00_00",
+        "text": "Tombsward Cave entrance",
+        "side": "ASide",
+        "connects_to": "peninsula_tombswardcave"
+      },
+      {
+        "id": "AEG099_230_9500",
+        "entity_id": 755894091,
+        "map": "m60_43_31_00",
+        "text": "New Castle Morne entrance",
+        "side": "ASide",
+        "connects_to": "peninsula_morne"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894092,
+        "map": "m60_43_33_00",
+        "text": "Morne Tunnel entrance",
+        "side": "ASide",
+        "connects_to": "peninsula_tunnel"
+      },
+      {
+        "id": "AEG099_230_9001",
+        "entity_id": 755894093,
+        "map": "m60_43_33_00",
+        "text": "Tombsward Catacombs entrance",
+        "side": "BSide",
+        "connects_to": "peninsula_tombswardcatacombs"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894100,
+        "map": "m60_44_34_00",
+        "text": "Earthbore Cave entrance",
+        "side": "BSide",
+        "connects_to": "peninsula_earthborecave"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894101,
+        "map": "m60_45_34_00",
+        "text": "Impaler's Catacombs entrance",
+        "side": "BSide",
+        "connects_to": "peninsula_impalerscatacombs"
+      }
+    ]
+  },
+  "limgrave_grovesidecave": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31031800,
+        "map": "m31_03_00_00",
+        "text": "Beastman of Farum Azula front",
+        "side": "ASide",
+        "connects_to": "limgrave_grovesidecave_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894047,
+        "map": "m31_03_00_00",
+        "text": "Groveside Cave entrance",
+        "side": "ASide",
+        "connects_to": "limgrave"
+      }
+    ]
+  },
+  "limgrave_grovesidecave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31031800,
+        "map": "m31_03_00_00",
+        "text": "Beastman of Farum Azula front",
+        "side": "BSide",
+        "connects_to": "limgrave_grovesidecave"
+      }
+    ]
+  },
+  "liurnia_stillwatercave": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 31041800,
+        "map": "m31_04_00_00",
+        "text": "Cleanrot Knight front",
+        "side": "ASide",
+        "connects_to": "liurnia_stillwatercave_boss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894081,
+        "map": "m60_39_40_00",
+        "text": "Stillwater Cave entrance",
+        "side": "ASide",
+        "connects_to": "liurnia"
+      }
+    ]
+  },
+  "liurnia_stillwatercave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 31041800,
+        "map": "m31_04_00_00",
+        "text": "Cleanrot Knight front",
+        "side": "BSide",
+        "connects_to": "liurnia_stillwatercave"
+      }
+    ]
+  },
+  "liurnia_slumbering": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31051801,
+        "map": "m31_05_00_00",
+        "text": "Bloodhound Knight back",
+        "side": "ASide",
+        "connects_to": "liurnia_lakesidecave_boss"
+      }
+    ]
+  },
+  "liurnia_lakesidecave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31051801,
+        "map": "m31_05_00_00",
+        "text": "Bloodhound Knight back",
+        "side": "BSide",
+        "connects_to": "liurnia_slumbering"
+      },
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 31051800,
+        "map": "m31_05_00_00",
+        "text": "Bloodhound Knight front",
+        "side": "BSide",
+        "connects_to": "liurnia_lakesidecave"
+      }
+    ]
+  },
+  "liurnia_lakesidecave": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 31051800,
+        "map": "m31_05_00_00",
+        "text": "Bloodhound Knight front",
+        "side": "ASide",
+        "connects_to": "liurnia_lakesidecave_boss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894074,
+        "map": "m60_37_41_00",
+        "text": "Lakeside Crystal Cave entrance",
+        "side": "ASide",
+        "connects_to": "liurnia"
+      }
+    ]
+  },
+  "liurnia_academycave": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31061800,
+        "map": "m31_06_00_00",
+        "text": "Crystallians front",
+        "side": "ASide",
+        "connects_to": "liurnia_academycave_boss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894073,
+        "map": "m60_34_45_00",
+        "text": "Academy Crystal Cave entrance",
+        "side": "ASide",
+        "connects_to": "liurnia"
+      }
+    ]
+  },
+  "liurnia_academycave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31061800,
+        "map": "m31_06_00_00",
+        "text": "Crystallians front",
+        "side": "BSide",
+        "connects_to": "liurnia_academycave"
+      },
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 31061801,
+        "map": "m31_06_00_00",
+        "text": "Crystallians back",
+        "side": "BSide",
+        "connects_to": "academy_cavetower"
+      }
+    ]
+  },
+  "academy_cavetower": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 31061801,
+        "map": "m31_06_00_00",
+        "text": "Crystallians back",
+        "side": "ASide",
+        "connects_to": "liurnia_academycave_boss"
+      }
+    ]
+  },
+  "gelmir_seethewatercave": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31071800,
+        "map": "m31_07_00_00",
+        "text": "Kindred of Rot Duo front",
+        "side": "ASide",
+        "connects_to": "gelmir_seethewatercave_boss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894078,
+        "map": "m60_37_54_00",
+        "text": "Seethewater Cave entrance",
+        "side": "ASide",
+        "connects_to": "gelmir"
+      }
+    ]
+  },
+  "gelmir_seethewatercave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31071800,
+        "map": "m31_07_00_00",
+        "text": "Kindred of Rot Duo front",
+        "side": "BSide",
+        "connects_to": "gelmir_seethewatercave"
+      }
+    ]
+  },
+  "gelmir_volcanocave": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 31091800,
+        "map": "m31_09_00_00",
+        "text": "Demi-Human Queen Margot front",
+        "side": "ASide",
+        "connects_to": "gelmir_volcanocave_boss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894079,
+        "map": "m60_37_55_00",
+        "text": "Volcano Cave entrance",
+        "side": "ASide",
+        "connects_to": "gelmir"
+      }
+    ]
+  },
+  "gelmir_volcanocave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 31091800,
+        "map": "m31_09_00_00",
+        "text": "Demi-Human Queen Margot front",
+        "side": "BSide",
+        "connects_to": "gelmir_volcanocave"
+      }
+    ]
+  },
+  "dragonbarrow_cave": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31101800,
+        "map": "m31_10_00_00",
+        "text": "Beastmen of Farum Azula front",
+        "side": "ASide",
+        "connects_to": "dragonbarrow_cave_preboss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894123,
+        "map": "m60_51_40_00",
+        "text": "Dragonbarrow Cave entrance",
+        "side": "ASide",
+        "connects_to": "dragonbarrow"
+      }
+    ]
+  },
+  "dragonbarrow_cave_preboss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31101800,
+        "map": "m31_10_00_00",
+        "text": "Beastmen of Farum Azula front",
+        "side": "BSide",
+        "connects_to": "dragonbarrow_cave"
+      }
+    ]
+  },
+  "dragonbarrow_selliahideaway": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 31111800,
+        "map": "m31_11_00_00",
+        "text": "Putrid Crystalians front",
+        "side": "ASide",
+        "connects_to": "dragonbarrow_selliahideaway_boss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894119,
+        "map": "m60_50_39_00",
+        "text": "Sellia Hideaway entrance",
+        "side": "ASide",
+        "connects_to": "dragonbarrow"
+      }
+    ]
+  },
+  "dragonbarrow_selliahideaway_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 31111800,
+        "map": "m31_11_00_00",
+        "text": "Putrid Crystalians front",
+        "side": "BSide",
+        "connects_to": "dragonbarrow_selliahideaway"
+      }
+    ]
+  },
+  "snowfield_cave": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31121800,
+        "map": "m31_12_00_00",
+        "text": "Misbegotten Crusader front",
+        "side": "ASide",
+        "connects_to": "snowfield_cave_boss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894120,
+        "map": "m60_50_56_00",
+        "text": "Cave of the Forlorn entrance",
+        "side": "ASide",
+        "connects_to": "snowfield"
+      }
+    ]
+  },
+  "snowfield_cave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31121800,
+        "map": "m31_12_00_00",
+        "text": "Misbegotten Crusader front",
+        "side": "BSide",
+        "connects_to": "snowfield_cave"
+      }
+    ]
+  },
+  "limgrave_dragonchurch": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31151801,
+        "map": "m31_15_00_00",
+        "text": "Demi-Human Chiefs back",
+        "side": "ASide",
+        "connects_to": "limgrave_coastalcave_boss"
+      }
+    ]
+  },
+  "limgrave_coastalcave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31151801,
+        "map": "m31_15_00_00",
+        "text": "Demi-Human Chiefs back",
+        "side": "BSide",
+        "connects_to": "limgrave_dragonchurch"
+      },
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 31151800,
+        "map": "m31_15_00_00",
+        "text": "Demi-Human Chiefs front",
+        "side": "BSide",
+        "connects_to": "limgrave_coastalcave"
+      }
+    ]
+  },
+  "limgrave_coastalcave": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 31151800,
+        "map": "m31_15_00_00",
+        "text": "Demi-Human Chiefs front",
+        "side": "ASide",
+        "connects_to": "limgrave_coastalcave_boss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894049,
+        "map": "m31_15_00_00",
+        "text": "Coastal Cave entrance",
+        "side": "BSide",
+        "connects_to": "limgrave"
+      }
+    ]
+  },
+  "limgrave_highroadcave": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 31171800,
+        "map": "m31_17_00_00",
+        "text": "Guardian Golem front",
+        "side": "ASide",
+        "connects_to": "limgrave_highroadcave_boss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894097,
+        "map": "m60_43_39_00",
+        "text": "Highroad Cave entrance",
+        "side": "ASide",
+        "connects_to": "limgrave"
+      }
+    ]
+  },
+  "limgrave_highroadcave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 31171800,
+        "map": "m31_17_00_00",
+        "text": "Guardian Golem front",
+        "side": "BSide",
+        "connects_to": "limgrave_highroadcave"
+      }
+    ]
+  },
+  "altus_grotto": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 31181800,
+        "map": "m31_18_00_00",
+        "text": "Omenkiller and Miranda the Blighted Bloom front",
+        "side": "ASide",
+        "connects_to": "altus_grotto_boss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894087,
+        "map": "m60_41_51_00",
+        "text": "Perfumer's Grotto entrance",
+        "side": "ASide",
+        "connects_to": "altus"
+      }
+    ]
+  },
+  "altus_grotto_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 31181800,
+        "map": "m31_18_00_00",
+        "text": "Omenkiller and Miranda the Blighted Bloom front",
+        "side": "BSide",
+        "connects_to": "altus_grotto"
+      }
+    ]
+  },
+  "altus_sagescave": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31191800,
+        "map": "m31_19_00_00",
+        "text": "Black Knife Assassin front",
+        "side": "ASide",
+        "connects_to": "altus_sagescave_boss"
+      },
+      {
+        "id": "AEG099_001_9002",
+        "entity_id": 31191850,
+        "map": "m31_19_00_00",
+        "text": "Necromancer Garris front",
+        "side": "ASide",
+        "connects_to": "altus_sagescave_boss2"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894077,
+        "map": "m60_37_52_00",
+        "text": "Sage's Cave entrance",
+        "side": "ASide",
+        "connects_to": "altus"
+      }
+    ]
+  },
+  "altus_sagescave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31191800,
+        "map": "m31_19_00_00",
+        "text": "Black Knife Assassin front",
+        "side": "BSide",
+        "connects_to": "altus_sagescave"
+      }
+    ]
+  },
+  "altus_sagescave_boss2": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9002",
+        "entity_id": 31191850,
+        "map": "m31_19_00_00",
+        "text": "Necromancer Garris front",
+        "side": "BSide",
+        "connects_to": "altus_sagescave"
+      }
+    ]
+  },
+  "caelid_abandonedcave": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31201800,
+        "map": "m31_20_00_00",
+        "text": "Cleanrot Knights front",
+        "side": "ASide",
+        "connects_to": "caelid_abandonedcave_boss"
+      }
+    ]
+  },
+  "caelid_abandonedcave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31201800,
+        "map": "m31_20_00_00",
+        "text": "Cleanrot Knights front",
+        "side": "BSide",
+        "connects_to": "caelid_abandonedcave"
+      }
+    ]
+  },
+  "caelid_gaolcave": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31211800,
+        "map": "m31_21_00_00",
+        "text": "Frenzied Duelist front",
+        "side": "ASide",
+        "connects_to": "caelid_gaolcave_preboss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894108,
+        "map": "m60_47_38_00",
+        "text": "Gaol Cave entrance",
+        "side": "ASide",
+        "connects_to": "caelid"
+      }
+    ]
+  },
+  "caelid_gaolcave_preboss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 31211800,
+        "map": "m31_21_00_00",
+        "text": "Frenzied Duelist front",
+        "side": "BSide",
+        "connects_to": "caelid_gaolcave"
+      }
+    ]
+  },
+  "caelid_gaolcave_postboss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 31211801,
+        "map": "m31_21_00_00",
+        "text": "Frenzied Duelist back",
+        "side": "ASide",
+        "connects_to": "caelid_gaolcave_boss"
+      }
+    ]
+  },
+  "caelid_gaolcave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 31211801,
+        "map": "m31_21_00_00",
+        "text": "Frenzied Duelist back",
+        "side": "BSide",
+        "connects_to": "caelid_gaolcave_postboss"
+      }
+    ]
+  },
+  "peninsula_tunnel": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 32001800,
+        "map": "m32_00_00_00",
+        "text": "Scaly Misbegotten front",
+        "side": "ASide",
+        "connects_to": "peninsula_tunnel_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894092,
+        "map": "m60_43_33_00",
+        "text": "Morne Tunnel entrance",
+        "side": "BSide",
+        "connects_to": "peninsula"
+      }
+    ]
+  },
+  "peninsula_tunnel_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 32001800,
+        "map": "m32_00_00_00",
+        "text": "Scaly Misbegotten front",
+        "side": "BSide",
+        "connects_to": "peninsula_tunnel"
+      }
+    ]
+  },
+  "limgrave_tunnels": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 32011800,
+        "map": "m32_01_00_00",
+        "text": "Stonedigger Troll front",
+        "side": "ASide",
+        "connects_to": "limgrave_tunnels_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894050,
+        "map": "m32_01_00_00",
+        "text": "Limgrave Tunnels entrance",
+        "side": "ASide",
+        "connects_to": "limgrave"
+      }
+    ]
+  },
+  "limgrave_tunnels_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 32011800,
+        "map": "m32_01_00_00",
+        "text": "Stonedigger Troll front",
+        "side": "BSide",
+        "connects_to": "limgrave_tunnels"
+      }
+    ]
+  },
+  "liurnia_tunnel": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 32021800,
+        "map": "m32_02_00_00",
+        "text": "Crystalian front",
+        "side": "ASide",
+        "connects_to": "liurnia_tunnel_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894051,
+        "map": "m32_02_00_00",
+        "text": "Raya Lucaria Crystal Tunnel entrance",
+        "side": "ASide",
+        "connects_to": "liurnia"
+      }
+    ]
+  },
+  "liurnia_tunnel_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 32021800,
+        "map": "m32_02_00_00",
+        "text": "Crystalian front",
+        "side": "BSide",
+        "connects_to": "liurnia_tunnel"
+      }
+    ]
+  },
+  "altus_oldtunnel": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 32041800,
+        "map": "m32_04_00_00",
+        "text": "Stonedigger Troll front",
+        "side": "ASide",
+        "connects_to": "altus_oldtunnel_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894052,
+        "map": "m32_04_00_00",
+        "text": "Old Altus Tunnel entrance",
+        "side": "ASide",
+        "connects_to": "altus"
+      }
+    ]
+  },
+  "altus_oldtunnel_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 32041800,
+        "map": "m32_04_00_00",
+        "text": "Stonedigger Troll front",
+        "side": "BSide",
+        "connects_to": "altus_oldtunnel"
+      }
+    ]
+  },
+  "altus_tunnel": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 32051800,
+        "map": "m32_05_00_00",
+        "text": "Crystalian Duo front",
+        "side": "ASide",
+        "connects_to": "altus_tunnel_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894088,
+        "map": "m60_41_52_00",
+        "text": "Altus Tunnel entrance",
+        "side": "ASide",
+        "connects_to": "altus"
+      }
+    ]
+  },
+  "altus_tunnel_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 32051800,
+        "map": "m32_05_00_00",
+        "text": "Crystalian Duo front",
+        "side": "BSide",
+        "connects_to": "altus_tunnel"
+      }
+    ]
+  },
+  "caelid_gaeltunnel": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 32071800,
+        "map": "m32_07_00_00",
+        "text": "Magma Wyrm front",
+        "side": "ASide",
+        "connects_to": "caelid_gaeltunnel_boss"
+      }
+    ]
+  },
+  "caelid_gaeltunnel_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 32071800,
+        "map": "m32_07_00_00",
+        "text": "Magma Wyrm front",
+        "side": "BSide",
+        "connects_to": "caelid_gaeltunnel"
+      }
+    ]
+  },
+  "caelid_gaeltunnel_start": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894053,
+        "map": "m32_07_00_00",
+        "text": "Gael Tunnel Start entrance",
+        "side": "BSide",
+        "connects_to": "caelid"
+      }
+    ]
+  },
+  "caelid_gaeltunnel_rear": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9001",
+        "entity_id": 755894054,
+        "map": "m32_07_00_00",
+        "text": "Rear Gael Tunnel exit",
+        "side": "ASide",
+        "connects_to": "limgrave"
+      }
+    ]
+  },
+  "caelid_selliatunnel": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 32081800,
+        "map": "m32_08_00_00",
+        "text": "Fallingstar Beast front",
+        "side": "ASide",
+        "connects_to": "caelid_selliatunnel_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894113,
+        "map": "m60_49_39_00",
+        "text": "Sellia Crystal Tunnel entrance",
+        "side": "ASide",
+        "connects_to": "caelid"
+      }
+    ]
+  },
+  "caelid_selliatunnel_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 32081800,
+        "map": "m32_08_00_00",
+        "text": "Fallingstar Beast front",
+        "side": "BSide",
+        "connects_to": "caelid_selliatunnel"
+      }
+    ]
+  },
+  "snowfield_tunnel": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 32111800,
+        "map": "m32_11_00_00",
+        "text": "Astel, Stars of Darkness front",
+        "side": "ASide",
+        "connects_to": "snowfield_tunnel_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894055,
+        "map": "m32_11_00_00",
+        "text": "Yelough Anix Tunnel entrance",
+        "side": "BSide",
+        "connects_to": "snowfield"
+      }
+    ]
+  },
+  "snowfield_tunnel_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 32111800,
+        "map": "m32_11_00_00",
+        "text": "Astel, Stars of Darkness front",
+        "side": "BSide",
+        "connects_to": "snowfield_tunnel"
+      }
+    ]
+  },
+  "liurnia_studyhall": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 34111690,
+        "map": "m34_11_00_00",
+        "text": "Study Hall-Liurnia boundary",
+        "side": "ASide",
+        "connects_to": "liurnia"
+      }
+    ]
+  },
+  "outskirts_sealedtunnel_preboss": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 34121800,
+        "map": "m34_12_00_00",
+        "text": "Onyx Lord front",
+        "side": "ASide",
+        "connects_to": "outskirts_sealedtunnel_boss"
+      }
+    ]
+  },
+  "outskirts_sealedtunnel_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 34121800,
+        "map": "m34_12_00_00",
+        "text": "Onyx Lord front",
+        "side": "BSide",
+        "connects_to": "outskirts_sealedtunnel_preboss"
+      },
+      {
+        "id": "AEG099_003_9001",
+        "entity_id": 34121801,
+        "map": "m34_12_00_00",
+        "text": "Onyx Lord back",
+        "side": "ASide",
+        "connects_to": "altus_tower"
+      }
+    ]
+  },
+  "altus_tower": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9001",
+        "entity_id": 34121801,
+        "map": "m34_12_00_00",
+        "text": "Onyx Lord back",
+        "side": "BSide",
+        "connects_to": "outskirts_sealedtunnel_boss"
+      }
+    ]
+  },
+  "caelid_tower": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 34131800,
+        "map": "m34_13_00_00",
+        "text": "Godskin Apostle front",
+        "side": "ASide",
+        "connects_to": "caelid_tower_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894056,
+        "map": "m34_13_00_00",
+        "text": "Before elevator to Two Fingers",
+        "side": "BSide",
+        "connects_to": "caelid_tower_inner"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894116,
+        "map": "m60_49_41_00",
+        "text": "Caelid Divine Tower right entrance",
+        "side": "ASide",
+        "connects_to": "dragonbarrow"
+      },
+      {
+        "id": "AEG099_230_9001",
+        "entity_id": 755894117,
+        "map": "m60_49_41_00",
+        "text": "Caelid Divine Tower middle entrance",
+        "side": "ASide",
+        "connects_to": "dragonbarrow"
+      },
+      {
+        "id": "AEG099_230_9002",
+        "entity_id": 755894118,
+        "map": "m60_49_41_00",
+        "text": "Caelid Divine Tower left entrance",
+        "side": "ASide",
+        "connects_to": "dragonbarrow"
+      }
+    ]
+  },
+  "caelid_tower_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 34131800,
+        "map": "m34_13_00_00",
+        "text": "Godskin Apostle front",
+        "side": "BSide",
+        "connects_to": "caelid_tower"
+      },
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 34131801,
+        "map": "m34_13_00_00",
+        "text": "Godskin Apostle back",
+        "side": "ASide",
+        "connects_to": "caelid_tower_postboss"
+      }
+    ]
+  },
+  "caelid_tower_postboss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 34131801,
+        "map": "m34_13_00_00",
+        "text": "Godskin Apostle back",
+        "side": "BSide",
+        "connects_to": "caelid_tower_boss"
+      }
+    ]
+  },
+  "caelid_tower_inner": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894056,
+        "map": "m34_13_00_00",
+        "text": "Before elevator to Two Fingers",
+        "side": "ASide",
+        "connects_to": "caelid_tower"
+      }
+    ]
+  },
+  "leyndell_tower": {
+    "fogs": [
+      {
+        "id": "AEG099_239_9000",
+        "entity_id": 34141550,
+        "map": "m34_14_00_00",
+        "text": "Morgott gate in Divine Tower",
+        "side": "BSide",
+        "connects_to": "leyndell_tower_start"
+      },
+      {
+        "id": "AEG099_231_9000",
+        "entity_id": 755894110,
+        "map": "m60_47_51_00",
+        "text": "Leyndell-Mountaintops boundary",
+        "side": "ASide",
+        "connects_to": "mountaintops_start"
+      }
+    ]
+  },
+  "sewer": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 35001800,
+        "map": "m35_00_00_00",
+        "text": "Mohg front",
+        "side": "ASide",
+        "connects_to": "sewer_mohg"
+      },
+      {
+        "id": "AEG099_230_9003",
+        "entity_id": 755894058,
+        "map": "m35_00_00_00",
+        "text": "Leyndell Catacombs boundary",
+        "side": "ASide",
+        "connects_to": "sewer_catacombs"
+      }
+    ]
+  },
+  "sewer_mohg": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 35001800,
+        "map": "m35_00_00_00",
+        "text": "Mohg front",
+        "side": "BSide",
+        "connects_to": "sewer"
+      },
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 35001504,
+        "map": "m35_00_00_00",
+        "text": "Morgott barrier in sewers",
+        "side": "ASide",
+        "connects_to": "sewer_preflame"
+      }
+    ]
+  },
+  "sewer_preflame": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 35001504,
+        "map": "m35_00_00_00",
+        "text": "Morgott barrier in sewers",
+        "side": "BSide",
+        "connects_to": "sewer_mohg"
+      }
+    ]
+  },
+  "sewer_catacombs": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9100",
+        "entity_id": 35001850,
+        "map": "m35_00_00_00",
+        "text": "Leyndell Catacombs boss",
+        "side": "ASide",
+        "connects_to": "sewer_catacombs_boss"
+      },
+      {
+        "id": "AEG099_230_9003",
+        "entity_id": 755894058,
+        "map": "m35_00_00_00",
+        "text": "Leyndell Catacombs boundary",
+        "side": "BSide",
+        "connects_to": "sewer"
+      }
+    ]
+  },
+  "sewer_catacombs_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9100",
+        "entity_id": 35001850,
+        "map": "m35_00_00_00",
+        "text": "Leyndell Catacombs boss",
+        "side": "BSide",
+        "connects_to": "sewer_catacombs"
+      }
+    ]
+  },
+  "sewer_royal": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894057,
+        "map": "m35_00_00_00",
+        "text": "Leyndell-Sewers boundary",
+        "side": "BSide",
+        "connects_to": "leyndell"
+      }
+    ]
+  },
+  "precipice": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 39201800,
+        "map": "m39_20_00_00",
+        "text": "Makar front",
+        "side": "ASide",
+        "connects_to": "precipice_boss"
+      },
+      {
+        "id": "AEG099_231_9001",
+        "entity_id": 39201695,
+        "map": "m39_20_00_00",
+        "text": "Precipice-Liurnia boundary",
+        "side": "ASide",
+        "connects_to": "liurnia"
+      }
+    ]
+  },
+  "precipice_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 39201800,
+        "map": "m39_20_00_00",
+        "text": "Makar front",
+        "side": "BSide",
+        "connects_to": "precipice"
+      },
+      {
+        "id": "AEG099_002_9001",
+        "entity_id": 39201801,
+        "map": "m39_20_00_00",
+        "text": "Makar back",
+        "side": "BSide",
+        "connects_to": "precipice_postboss"
+      }
+    ]
+  },
+  "precipice_postboss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9001",
+        "entity_id": 39201801,
+        "map": "m39_20_00_00",
+        "text": "Makar back",
+        "side": "ASide",
+        "connects_to": "precipice_boss"
+      }
+    ]
+  },
+  "gravesite_catacombs": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 40001800,
+        "map": "m40_00_00_00",
+        "text": "Death Knight front",
+        "side": "ASide",
+        "connects_to": "gravesite_catacombs_boss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894059,
+        "map": "m40_00_00_00",
+        "text": "Fog Rift Catacombs entrance",
+        "side": "BSide",
+        "connects_to": "gravesite"
+      }
+    ]
+  },
+  "gravesite_catacombs_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 40001800,
+        "map": "m40_00_00_00",
+        "text": "Death Knight front",
+        "side": "BSide",
+        "connects_to": "gravesite_catacombs"
+      }
+    ]
+  },
+  "rauhbase_catacombs": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 40011800,
+        "map": "m40_01_00_00",
+        "text": "Death Knight front",
+        "side": "ASide",
+        "connects_to": "rauhbase_catacombs_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894060,
+        "map": "m40_01_00_00",
+        "text": "Scorpion River Catacombs entrance",
+        "side": "BSide",
+        "connects_to": "rauhbase"
+      }
+    ]
+  },
+  "rauhbase_catacombs_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 40011800,
+        "map": "m40_01_00_00",
+        "text": "Death Knight front",
+        "side": "BSide",
+        "connects_to": "rauhbase_catacombs"
+      }
+    ]
+  },
+  "rauhbase": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894060,
+        "map": "m40_01_00_00",
+        "text": "Scorpion River Catacombs entrance",
+        "side": "ASide",
+        "connects_to": "rauhbase_catacombs"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894067,
+        "map": "m42_03_00_00",
+        "text": "Taylew's Ruined Forge entrance",
+        "side": "ASide",
+        "connects_to": "rauhbase_forge"
+      },
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 2046451800,
+        "map": "m61_46_45_00",
+        "text": "Red Bear front",
+        "side": "ASide",
+        "connects_to": "rauhbase_mausoleum_boss"
+      }
+    ]
+  },
+  "scadualtus_catacombs": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894061,
+        "map": "m40_02_00_00",
+        "text": "Darklight Catacombs entrance",
+        "side": "ASide",
+        "connects_to": "scadualtus_recluse_lower"
+      },
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 2052431800,
+        "map": "m61_52_43_00",
+        "text": "Jori front",
+        "side": "ASide",
+        "connects_to": "scadualtus_catacombs_boss"
+      }
+    ]
+  },
+  "scadualtus_recluse_lower": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894061,
+        "map": "m40_02_00_00",
+        "text": "Darklight Catacombs entrance",
+        "side": "BSide",
+        "connects_to": "scadualtus_catacombs"
+      }
+    ]
+  },
+  "gravesite_gaol": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 41001800,
+        "map": "m41_00_00_00",
+        "text": "Demi-Human Swordmaster Onze front",
+        "side": "ASide",
+        "connects_to": "gravesite_gaol_boss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894062,
+        "map": "m41_00_00_00",
+        "text": "Belurat Gaol entrance",
+        "side": "BSide",
+        "connects_to": "gravesite"
+      }
+    ]
+  },
+  "gravesite_gaol_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 41001800,
+        "map": "m41_00_00_00",
+        "text": "Demi-Human Swordmaster Onze front",
+        "side": "BSide",
+        "connects_to": "gravesite_gaol"
+      }
+    ]
+  },
+  "scadualtus_gaol": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 41011800,
+        "map": "m41_01_00_00",
+        "text": "Curseblade Labirith front",
+        "side": "ASide",
+        "connects_to": "scadualtus_gaol_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894063,
+        "map": "m41_01_00_00",
+        "text": "Bonny Gaol entrance",
+        "side": "BSide",
+        "connects_to": "scadualtus_lower"
+      }
+    ]
+  },
+  "scadualtus_gaol_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 41011800,
+        "map": "m41_01_00_00",
+        "text": "Curseblade Labirith front",
+        "side": "BSide",
+        "connects_to": "scadualtus_gaol"
+      }
+    ]
+  },
+  "charo_gaol_preboss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 41021800,
+        "map": "m41_02_00_00",
+        "text": "Lamenter's Gaol front",
+        "side": "ASide",
+        "connects_to": "charo_gaol_boss"
+      }
+    ]
+  },
+  "charo_gaol_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 41021800,
+        "map": "m41_02_00_00",
+        "text": "Lamenter's Gaol front",
+        "side": "BSide",
+        "connects_to": "charo_gaol_preboss"
+      }
+    ]
+  },
+  "charo": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894064,
+        "map": "m41_02_00_00",
+        "text": "Lamenter's Gaol entrance",
+        "side": "ASide",
+        "connects_to": "charo_gaol"
+      },
+      {
+        "id": "AEG099_231_9008",
+        "entity_id": 755894136,
+        "map": "m61_49_38_00",
+        "text": "Charo entrance",
+        "side": "ASide",
+        "connects_to": "jaggedpeak_foot"
+      }
+    ]
+  },
+  "charo_gaol": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894064,
+        "map": "m41_02_00_00",
+        "text": "Lamenter's Gaol entrance",
+        "side": "BSide",
+        "connects_to": "charo"
+      }
+    ]
+  },
+  "gravesite_forge": {
+    "fogs": [
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894065,
+        "map": "m42_00_00_00",
+        "text": "Ruined Forge Lava Intake entrance",
+        "side": "BSide",
+        "connects_to": "gravesite"
+      }
+    ]
+  },
+  "scadualtus": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894066,
+        "map": "m42_02_00_00",
+        "text": "Ruined Forge of Starfall Past entrance",
+        "side": "ASide",
+        "connects_to": "scadualtus_forge"
+      },
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 2048441801,
+        "map": "m61_48_44_00",
+        "text": "Rellana back",
+        "side": "ASide",
+        "connects_to": "ensis_boss"
+      }
+    ]
+  },
+  "scadualtus_forge": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894066,
+        "map": "m42_02_00_00",
+        "text": "Ruined Forge of Starfall Past entrance",
+        "side": "BSide",
+        "connects_to": "scadualtus"
+      }
+    ]
+  },
+  "rauhbase_forge": {
+    "fogs": [
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894067,
+        "map": "m42_03_00_00",
+        "text": "Taylew's Ruined Forge entrance",
+        "side": "BSide",
+        "connects_to": "rauhbase"
+      }
+    ]
+  },
+  "ellac_cave": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 43001800,
+        "map": "m43_00_00_00",
+        "text": "Chief Bloodfiend front",
+        "side": "ASide",
+        "connects_to": "ellac_cave_boss"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894068,
+        "map": "m43_00_00_00",
+        "text": "Rivermouth Cave entrance",
+        "side": "BSide",
+        "connects_to": "ellac"
+      }
+    ]
+  },
+  "ellac_cave_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 43001800,
+        "map": "m43_00_00_00",
+        "text": "Chief Bloodfiend front",
+        "side": "BSide",
+        "connects_to": "ellac_cave"
+      }
+    ]
+  },
+  "ellac": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894068,
+        "map": "m43_00_00_00",
+        "text": "Rivermouth Cave entrance",
+        "side": "ASide",
+        "connects_to": "ellac_cave"
+      },
+      {
+        "id": "AEG099_231_9500",
+        "entity_id": 755894131,
+        "map": "m61_47_43_00",
+        "text": "Gravesite Plains to Ellac River new gate",
+        "side": "ASide",
+        "connects_to": "gravesite"
+      },
+      {
+        "id": "AEG099_231_9500",
+        "entity_id": 755894134,
+        "map": "m61_48_39_00",
+        "text": "Ellac River to Cerulean Coast new gate",
+        "side": "BSide",
+        "connects_to": "cerulean"
+      }
+    ]
+  },
+  "gravesite_dragonpit_preboss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 43011800,
+        "map": "m43_01_00_00",
+        "text": "Ancient Dragon-Man front",
+        "side": "ASide",
+        "connects_to": "gravesite_dragonpit_boss"
+      }
+    ]
+  },
+  "gravesite_dragonpit_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 43011800,
+        "map": "m43_01_00_00",
+        "text": "Ancient Dragon-Man front",
+        "side": "BSide",
+        "connects_to": "gravesite_dragonpit_preboss"
+      }
+    ]
+  },
+  "gravesite_dragonpit": {
+    "fogs": [
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894069,
+        "map": "m43_01_00_00",
+        "text": "Dragon's Pit entrance",
+        "side": "BSide",
+        "connects_to": "gravesite"
+      }
+    ]
+  },
+  "jaggedpeak_foot": {
+    "fogs": [
+      {
+        "id": "AEG099_232_9001",
+        "entity_id": 755894070,
+        "map": "m43_01_00_00",
+        "text": "Dragon's Pit exit",
+        "side": "ASide",
+        "connects_to": "gravesite_dragonpit_postboss"
+      },
+      {
+        "id": "AEG099_231_9008",
+        "entity_id": 755894136,
+        "map": "m61_49_38_00",
+        "text": "Charo entrance",
+        "side": "BSide",
+        "connects_to": "charo"
+      }
+    ]
+  },
+  "gravesite_dragonpit_postboss": {
+    "fogs": [
+      {
+        "id": "AEG099_232_9001",
+        "entity_id": 755894070,
+        "map": "m43_01_00_00",
+        "text": "Dragon's Pit exit",
+        "side": "BSide",
+        "connects_to": "jaggedpeak_foot"
+      }
+    ]
+  },
+  "flamepeak_firegiant": {
+    "fogs": [
+      {
+        "id": "m60_52_53_00-AEG099_002_9000",
+        "entity_id": 1052531800,
+        "map": "m60_13_13_02",
+        "text": "Fire Giant left front",
+        "side": "BSide",
+        "connects_to": "flamepeak"
+      },
+      {
+        "id": "m60_52_53_00-AEG099_003_9001",
+        "entity_id": 1052531801,
+        "map": "m60_13_13_02",
+        "text": "Fire Giant right front",
+        "side": "BSide",
+        "connects_to": "flamepeak"
+      }
+    ]
+  },
+  "liurnia_kingsrealm_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 1034481800,
+        "map": "m60_34_48_00",
+        "text": "Royal Revenant front",
+        "side": "BSide",
+        "connects_to": "liurnia"
+      },
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 1034481801,
+        "map": "m60_34_48_00",
+        "text": "Royal Revenant back",
+        "side": "BSide",
+        "connects_to": "liurnia_kingsrealm_chest"
+      }
+    ]
+  },
+  "liurnia_kingsrealm_chest": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 1034481801,
+        "map": "m60_34_48_00",
+        "text": "Royal Revenant back",
+        "side": "ASide",
+        "connects_to": "liurnia_kingsrealm_boss"
+      }
+    ]
+  },
+  "liurnia_manor": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 1035501800,
+        "map": "m60_35_50_00",
+        "text": "Royal Loretta front",
+        "side": "ASide",
+        "connects_to": "liurnia_loretta"
+      }
+    ]
+  },
+  "liurnia_loretta": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 1035501800,
+        "map": "m60_35_50_00",
+        "text": "Royal Loretta front",
+        "side": "BSide",
+        "connects_to": "liurnia_manor"
+      },
+      {
+        "id": "AEG099_003_9001",
+        "entity_id": 1035501801,
+        "map": "m60_35_50_00",
+        "text": "Royal Loretta back",
+        "side": "BSide",
+        "connects_to": "liurnia_postmanor"
+      }
+    ]
+  },
+  "liurnia_postmanor": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9001",
+        "entity_id": 1035501801,
+        "map": "m60_35_50_00",
+        "text": "Royal Loretta back",
+        "side": "ASide",
+        "connects_to": "liurnia_loretta"
+      }
+    ]
+  },
+  "altus_lux_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 1038511800,
+        "map": "m60_38_51_00",
+        "text": "Demi-Human Queen Gilika front",
+        "side": "BSide",
+        "connects_to": "altus"
+      },
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 1038511801,
+        "map": "m60_38_51_00",
+        "text": "Demi-Human Queen Gilika back",
+        "side": "BSide",
+        "connects_to": "altus_lux_chest"
+      }
+    ]
+  },
+  "altus_lux_chest": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 1038511801,
+        "map": "m60_38_51_00",
+        "text": "Demi-Human Queen Gilika back",
+        "side": "ASide",
+        "connects_to": "altus_lux_boss"
+      }
+    ]
+  },
+  "altus_shaded": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 1039541800,
+        "map": "m60_39_54_00",
+        "text": "Elemer front",
+        "side": "ASide",
+        "connects_to": "altus_elemer"
+      }
+    ]
+  },
+  "altus_elemer": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 1039541800,
+        "map": "m60_39_54_00",
+        "text": "Elemer front",
+        "side": "BSide",
+        "connects_to": "altus_shaded"
+      }
+    ]
+  },
+  "altus_writheblood_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 1040531800,
+        "map": "m60_40_53_00",
+        "text": "Sanguine Noble front",
+        "side": "BSide",
+        "connects_to": "altus"
+      },
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 1040531801,
+        "map": "m60_40_53_00",
+        "text": "Sanguine Noble back",
+        "side": "ASide",
+        "connects_to": "altus_writheblood_chest"
+      }
+    ]
+  },
+  "altus_writheblood_chest": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 1040531801,
+        "map": "m60_40_53_00",
+        "text": "Sanguine Noble back",
+        "side": "BSide",
+        "connects_to": "altus_writheblood_boss"
+      }
+    ]
+  },
+  "graveyard_cave_back": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9000",
+        "entity_id": 755894089,
+        "map": "m60_42_35_00",
+        "text": "Stranded Graveyard back entrance",
+        "side": "ASide",
+        "connects_to": "limgrave"
+      }
+    ]
+  },
+  "stormhill_colosseum": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9000",
+        "entity_id": 755894090,
+        "map": "m60_42_40_00",
+        "text": "Limgrave Colosseum entrance",
+        "side": "BSide",
+        "connects_to": "stormhill"
+      }
+    ]
+  },
+  "peninsula_postmorne": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 1043301800,
+        "map": "m60_43_30_00",
+        "text": "Leonine Misbegotten front",
+        "side": "ASide",
+        "connects_to": "peninsula_leonine"
+      }
+    ]
+  },
+  "peninsula_leonine": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 1043301800,
+        "map": "m60_43_30_00",
+        "text": "Leonine Misbegotten front",
+        "side": "BSide",
+        "connects_to": "peninsula_postmorne"
+      }
+    ]
+  },
+  "peninsula_morne": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9500",
+        "entity_id": 755894091,
+        "map": "m60_43_31_00",
+        "text": "New Castle Morne entrance",
+        "side": "BSide",
+        "connects_to": "peninsula"
+      }
+    ]
+  },
+  "outskirts_sealedtunnel": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894098,
+        "map": "m60_43_50_00",
+        "text": "Sealed Tunnel entrance",
+        "side": "BSide",
+        "connects_to": "outskirts"
+      }
+    ]
+  },
+  "limgrave_waypoint_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 1044361800,
+        "map": "m60_44_36_00",
+        "text": "Mad Pumpkin Head front",
+        "side": "BSide",
+        "connects_to": "limgrave"
+      },
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 1044361801,
+        "map": "m60_44_36_00",
+        "text": "Mad Pumpkin Head back",
+        "side": "ASide",
+        "connects_to": "limgrave_waypoint_sellen"
+      }
+    ]
+  },
+  "limgrave_waypoint_sellen": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 1044361801,
+        "map": "m60_44_36_00",
+        "text": "Mad Pumpkin Head back",
+        "side": "BSide",
+        "connects_to": "limgrave_waypoint_boss"
+      }
+    ]
+  },
+  "siofra": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9001",
+        "entity_id": 755894102,
+        "map": "m60_45_37_00",
+        "text": "Siofra-Limgrave boundary",
+        "side": "ASide",
+        "connects_to": "limgrave"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894115,
+        "map": "m60_49_40_00",
+        "text": "Siofra-Caelid boundary",
+        "side": "BSide",
+        "connects_to": "caelid_greatjar"
+      }
+    ]
+  },
+  "outskirts_rampart": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 1045521800,
+        "map": "m60_45_52_00",
+        "text": "Draconic back",
+        "side": "ASide",
+        "connects_to": "outskirts"
+      },
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 1045521500,
+        "map": "m60_45_52_00",
+        "text": "Morgott barrier in Leyndell",
+        "side": "ASide",
+        "connects_to": "leyndell_start"
+      },
+      {
+        "id": "AEG099_001_9500",
+        "entity_id": 755894105,
+        "map": "m60_45_52_10",
+        "text": "Draconic back",
+        "side": "ASide",
+        "connects_to": "outskirts"
+      },
+      {
+        "id": "AEG099_002_9501",
+        "entity_id": 755894106,
+        "map": "m60_45_52_10",
+        "text": "Morgott barrier in Ashen Leyndell",
+        "side": "ASide",
+        "connects_to": "leyndell_start"
+      }
+    ]
+  },
+  "caelid_greatjar": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9000",
+        "entity_id": 755894109,
+        "map": "m60_47_42_00",
+        "text": "Caelid Colosseum entrance",
+        "side": "ASide",
+        "connects_to": "caelid_colosseum"
+      },
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894115,
+        "map": "m60_49_40_00",
+        "text": "Siofra-Caelid boundary",
+        "side": "ASide",
+        "connects_to": "siofra"
+      }
+    ]
+  },
+  "caelid_colosseum": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9000",
+        "entity_id": 755894109,
+        "map": "m60_47_42_00",
+        "text": "Caelid Colosseum entrance",
+        "side": "BSide",
+        "connects_to": "caelid_greatjar"
+      }
+    ]
+  },
+  "caelid_caelem_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 1048401800,
+        "map": "m60_48_40_00",
+        "text": "Mad Pumpkin Heads front",
+        "side": "BSide",
+        "connects_to": "caelid"
+      },
+      {
+        "id": "AEG099_003_9001",
+        "entity_id": 1048401801,
+        "map": "m60_48_40_00",
+        "text": "Mad Pumpkin Heads back",
+        "side": "BSide",
+        "connects_to": "caelid_caelem_chest"
+      }
+    ]
+  },
+  "caelid_caelem_chest": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9001",
+        "entity_id": 1048401801,
+        "map": "m60_48_40_00",
+        "text": "Mad Pumpkin Heads back",
+        "side": "ASide",
+        "connects_to": "caelid_caelem_boss"
+      }
+    ]
+  },
+  "caelid_crypt_chest": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 1049391801,
+        "map": "m60_49_39_00",
+        "text": "Nox Duo back",
+        "side": "ASide",
+        "connects_to": "caelid_crypt_boss"
+      }
+    ]
+  },
+  "caelid_crypt_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 1049391801,
+        "map": "m60_49_39_00",
+        "text": "Nox Duo back",
+        "side": "BSide",
+        "connects_to": "caelid_crypt_chest"
+      },
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 1049391800,
+        "map": "m60_49_39_00",
+        "text": "Nox Duo front",
+        "side": "BSide",
+        "connects_to": "caelid"
+      }
+    ]
+  },
+  "caelid_abandonedcave_start": {
+    "fogs": [
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894114,
+        "map": "m60_49_39_00",
+        "text": "Abandoned Cave entrance",
+        "side": "ASide",
+        "connects_to": "caelid"
+      }
+    ]
+  },
+  "dragonbarrow": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894116,
+        "map": "m60_49_41_00",
+        "text": "Caelid Divine Tower right entrance",
+        "side": "BSide",
+        "connects_to": "caelid_tower"
+      },
+      {
+        "id": "AEG099_230_9001",
+        "entity_id": 755894117,
+        "map": "m60_49_41_00",
+        "text": "Caelid Divine Tower middle entrance",
+        "side": "BSide",
+        "connects_to": "caelid_tower"
+      },
+      {
+        "id": "AEG099_230_9002",
+        "entity_id": 755894118,
+        "map": "m60_49_41_00",
+        "text": "Caelid Divine Tower left entrance",
+        "side": "BSide",
+        "connects_to": "caelid_tower"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894119,
+        "map": "m60_50_39_00",
+        "text": "Sellia Hideaway entrance",
+        "side": "BSide",
+        "connects_to": "dragonbarrow_selliahideaway"
+      }
+    ]
+  },
+  "caelid_redmane": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 1051361800,
+        "map": "m60_51_36_00",
+        "text": "Redmane Castle Plaza front",
+        "side": "ASide",
+        "connects_to": "caelid_redmane_boss"
+      }
+    ]
+  },
+  "caelid_redmane_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 1051361800,
+        "map": "m60_51_36_00",
+        "text": "Redmane Castle Plaza front",
+        "side": "BSide",
+        "connects_to": "caelid_redmane"
+      },
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 1051361801,
+        "map": "m60_51_36_00",
+        "text": "Redmane Castle Plaza back",
+        "side": "BSide",
+        "connects_to": "caelid_redmane_postboss"
+      }
+    ]
+  },
+  "caelid_redmane_postboss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 1051361801,
+        "map": "m60_51_36_00",
+        "text": "Redmane Castle Plaza back",
+        "side": "ASide",
+        "connects_to": "caelid_redmane_boss"
+      },
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894122,
+        "map": "m60_51_36_00",
+        "text": "Bottom of elevator before Radahn",
+        "side": "BSide",
+        "connects_to": "caelid_preradahn"
+      }
+    ]
+  },
+  "caelid_preradahn": {
+    "fogs": [
+      {
+        "id": "AEG099_232_9000",
+        "entity_id": 755894122,
+        "map": "m60_51_36_00",
+        "text": "Bottom of elevator before Radahn",
+        "side": "ASide",
+        "connects_to": "caelid_redmane_postboss"
+      }
+    ]
+  },
+  "rauhruins_west": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 2044451800,
+        "map": "m61_44_45_00",
+        "text": "Romina front",
+        "side": "ASide",
+        "connects_to": "rauhruins_romina"
+      },
+      {
+        "id": "AEG099_002_9500",
+        "entity_id": 755894125,
+        "map": "m61_44_45_10",
+        "text": "Unsealed Romina front",
+        "side": "ASide",
+        "connects_to": "rauhruins_romina"
+      }
+    ]
+  },
+  "rauhruins_romina": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 2044451800,
+        "map": "m61_44_45_00",
+        "text": "Romina front",
+        "side": "BSide",
+        "connects_to": "rauhruins_west"
+      },
+      {
+        "id": "AEG099_002_9001",
+        "entity_id": 2044451801,
+        "map": "m61_44_45_00",
+        "text": "Romina back",
+        "side": "BSide",
+        "connects_to": "rauhruins_postromina"
+      },
+      {
+        "id": "AEG099_002_9500",
+        "entity_id": 755894125,
+        "map": "m61_44_45_10",
+        "text": "Unsealed Romina front",
+        "side": "BSide",
+        "connects_to": "rauhruins_west"
+      },
+      {
+        "id": "AEG099_002_9501",
+        "entity_id": 755894126,
+        "map": "m61_44_45_10",
+        "text": "Unsealed Romina back",
+        "side": "BSide",
+        "connects_to": "rauhruins_postromina"
+      }
+    ]
+  },
+  "rauhruins_postromina": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9001",
+        "entity_id": 2044451801,
+        "map": "m61_44_45_00",
+        "text": "Romina back",
+        "side": "ASide",
+        "connects_to": "rauhruins_romina"
+      },
+      {
+        "id": "AEG099_002_9501",
+        "entity_id": 755894126,
+        "map": "m61_44_45_10",
+        "text": "Unsealed Romina back",
+        "side": "ASide",
+        "connects_to": "rauhruins_romina"
+      }
+    ]
+  },
+  "cerulean_mausoleum_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 2046381800,
+        "map": "m61_46_38_00",
+        "text": "Dancer of Ranah front",
+        "side": "BSide",
+        "connects_to": "cerulean"
+      }
+    ]
+  },
+  "gravesite_mausoleum_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 2046411800,
+        "map": "m61_46_41_00",
+        "text": "Knight of the Solitary Gaol front",
+        "side": "BSide",
+        "connects_to": "gravesite"
+      }
+    ]
+  },
+  "rauhbase_mausoleum_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_003_9000",
+        "entity_id": 2046451800,
+        "map": "m61_46_45_00",
+        "text": "Red Bear front",
+        "side": "BSide",
+        "connects_to": "rauhbase"
+      }
+    ]
+  },
+  "ensis_room": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894132,
+        "map": "m61_47_44_00",
+        "text": "Ensis talisman room",
+        "side": "BSide",
+        "connects_to": "gravesite"
+      }
+    ]
+  },
+  "ensis": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9500",
+        "entity_id": 755894133,
+        "map": "m61_47_44_00",
+        "text": "Gravesite Plain to Castle Ensis new gate",
+        "side": "BSide",
+        "connects_to": "gravesite"
+      },
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 2048441800,
+        "map": "m61_48_44_00",
+        "text": "Rellana front",
+        "side": "ASide",
+        "connects_to": "ensis_boss"
+      }
+    ]
+  },
+  "ensis_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 2048441800,
+        "map": "m61_48_44_00",
+        "text": "Rellana front",
+        "side": "BSide",
+        "connects_to": "ensis"
+      },
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 2048441801,
+        "map": "m61_48_44_00",
+        "text": "Rellana back",
+        "side": "BSide",
+        "connects_to": "scadualtus"
+      }
+    ]
+  },
+  "scaduview_gaius": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 2049481800,
+        "map": "m61_49_48_00",
+        "text": "Gaius front",
+        "side": "BSide",
+        "connects_to": "storehouse_back"
+      },
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 2049481801,
+        "map": "m61_49_48_00",
+        "text": "Gaius back",
+        "side": "BSide",
+        "connects_to": "scaduview_chalice"
+      }
+    ]
+  },
+  "scaduview_chalice": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 2049481801,
+        "map": "m61_49_48_00",
+        "text": "Gaius back",
+        "side": "ASide",
+        "connects_to": "scaduview_gaius"
+      }
+    ]
+  },
+  "hinterland": {
+    "fogs": [
+      {
+        "id": "AEG099_230_9000",
+        "entity_id": 755894138,
+        "map": "m61_49_48_00",
+        "text": "Hinterland entrance",
+        "side": "ASide",
+        "connects_to": "storehouse_back"
+      }
+    ]
+  },
+  "cerulean_rhia": {
+    "fogs": [
+      {
+        "id": "AEG099_231_9500",
+        "entity_id": 755894139,
+        "map": "m61_50_38_00",
+        "text": "Cerulean Coast to Finger Ruins new gate",
+        "side": "BSide",
+        "connects_to": "cerulean"
+      }
+    ]
+  },
+  "shadowkeep_sanctum": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 2050481800,
+        "map": "m61_50_48_00",
+        "text": "Scadutree Avatar entrance",
+        "side": "ASide",
+        "connects_to": "scadutree_base"
+      }
+    ]
+  },
+  "scadutree_base": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 2050481800,
+        "map": "m61_50_48_00",
+        "text": "Scadutree Avatar entrance",
+        "side": "BSide",
+        "connects_to": "shadowkeep_sanctum"
+      }
+    ]
+  },
+  "scadualtus_recluse": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 2051441800,
+        "map": "m61_51_44_00",
+        "text": "Rakshasa front",
+        "side": "ASide",
+        "connects_to": "scadualtus_mausoleum_boss"
+      }
+    ]
+  },
+  "scadualtus_mausoleum_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 2051441800,
+        "map": "m61_51_44_00",
+        "text": "Rakshasa front",
+        "side": "BSide",
+        "connects_to": "scadualtus_recluse"
+      }
+    ]
+  },
+  "scadualtus_ymir": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 2051451800,
+        "map": "m61_51_45_00",
+        "text": "Manus Metyr north gate on west side",
+        "side": "BSide",
+        "connects_to": "scadualtus_lower"
+      },
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 2051451801,
+        "map": "m61_51_45_00",
+        "text": "Manus Metyr south gate on west side",
+        "side": "BSide",
+        "connects_to": "scadualtus_lower"
+      },
+      {
+        "id": "AEG099_001_9002",
+        "entity_id": 2051451802,
+        "map": "m61_51_45_00",
+        "text": "Manus Metyr main gate from north",
+        "side": "BSide",
+        "connects_to": "scadualtus_lower"
+      }
+    ]
+  },
+  "scadualtus_catacombs_boss": {
+    "fogs": [
+      {
+        "id": "AEG099_001_9000",
+        "entity_id": 2052431801,
+        "map": "m61_52_43_00",
+        "text": "Darklight Catacombs exit",
+        "side": "BSide",
+        "connects_to": "abyssal"
+      },
+      {
+        "id": "AEG099_001_9001",
+        "entity_id": 2052431800,
+        "map": "m61_52_43_00",
+        "text": "Jori front",
+        "side": "BSide",
+        "connects_to": "scadualtus_catacombs"
+      }
+    ]
+  },
+  "jaggedpeak": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 2054391800,
+        "map": "m61_54_39_00",
+        "text": "Bayle front",
+        "side": "ASide",
+        "connects_to": "jaggedpeak_bayle"
+      }
+    ]
+  },
+  "jaggedpeak_bayle": {
+    "fogs": [
+      {
+        "id": "AEG099_002_9000",
+        "entity_id": 2054391800,
+        "map": "m61_54_39_00",
+        "text": "Bayle front",
+        "side": "BSide",
+        "connects_to": "jaggedpeak"
+      }
+    ]
+  }
+}
