@@ -1,12 +1,23 @@
 # Phase 3: C# Writer - Detailed Implementation Spec
 
 **Parent document**: [SpeedFog Design](./2026-01-29-speedfog-design.md)
-**Prerequisite**: [Phase 2: DAG Generation](./phase-2-dag-generation.md)
+**Prerequisite**: [Phase 2: DAG Generation](./phase-2-dag-generation.md), [Cluster Generation](./generate-clusters-spec.md)
 **Status**: Ready for implementation
+**Last updated**: 2026-01-30 (aligned with cluster-based architecture from Phase 1-2)
 
 ## Objective
 
 Create the C# component that reads `graph.json` and generates Elden Ring mod files using SoulsFormats. This involves adapting code from FogRando for fog gate creation, warp events, and enemy scaling.
+
+## Key Architecture Note: Clusters, Not Zones
+
+SpeedFog uses **clusters** as the atomic unit, not individual zones. A cluster is a group of zones connected by world connections. The C# writer must handle:
+
+- Multiple zones per node (e.g., `["stormveil_start", "stormveil"]`)
+- Fog IDs that reference specific fogs within cluster zones
+- Edge connections via fog gates between clusters
+
+See [generate-clusters-spec.md](./generate-clusters-spec.md) for cluster details.
 
 ## Prerequisites
 
@@ -16,22 +27,25 @@ Create the C# component that reads `graph.json` and generates Elden Ring mod fil
   - `SoulsFormats.dll` - FromSoft file format I/O
   - `SoulsIds.dll` - Helper library (GameEditor, ParamDictionary)
   - `YamlDotNet.dll`, `Newtonsoft.Json.dll`, `ZstdNet.dll`, `BouncyCastle.Cryptography.dll`
+- **New**: `fog_positions.json` with fog gate coordinates (see Task 3.2.1)
 
 ## Deliverables
 
 ```
 speedfog/writer/
 ├── data/
-│   └── speedfog-events.yaml       # Event templates (readable, not hardcoded)
+│   ├── speedfog-events.yaml       # Event templates (readable, not hardcoded)
+│   └── fog_positions.json         # Fog gate positions extracted from fog.txt
 │
 ├── SpeedFogWriter/
 │   ├── SpeedFogWriter.csproj
 │   ├── Program.cs                 # CLI entry point
 │   │
 │   ├── Models/
-│   │   ├── SpeedFogGraph.cs       # JSON deserialization
-│   │   ├── NodeData.cs
-│   │   ├── LayerData.cs
+│   │   ├── SpeedFogGraph.cs       # JSON deserialization (graph.json)
+│   │   ├── NodeData.cs            # Cluster-based node
+│   │   ├── EdgeData.cs            # Edge between nodes
+│   │   ├── FogPositionData.cs     # Fog gate positions (fog_positions.json)
 │   │   └── EventTemplate.cs       # YAML event template model
 │   │
 │   ├── Writers/
@@ -109,6 +123,48 @@ speedfog/
 
 ## Task 3.2: JSON Models (Models/)
 
+### graph.json Format (from Phase 2)
+
+The Python core outputs `graph.json` in this format:
+
+```json
+{
+  "seed": 123456789,
+  "total_layers": 8,
+  "total_nodes": 15,
+  "total_paths": 2,
+  "path_weights": [42, 45],
+  "nodes": {
+    "start": {
+      "cluster_id": "chapel_start_a1b2",
+      "zones": ["chapel_start"],
+      "type": "start",
+      "weight": 2,
+      "layer": 0,
+      "tier": 1,
+      "entry_fog": null,
+      "exit_fogs": ["1034432500", "1034432501"]
+    },
+    "node_1a": {
+      "cluster_id": "stormveil_c3d4",
+      "zones": ["stormveil_start", "stormveil"],
+      "type": "legacy_dungeon",
+      "weight": 20,
+      "layer": 1,
+      "tier": 5,
+      "entry_fog": "1034432500",
+      "exit_fogs": ["1034432502", "1034432503"]
+    }
+  },
+  "edges": [
+    {"source": "start", "target": "node_1a", "fog_id": "1034432500"},
+    {"source": "start", "target": "node_1b", "fog_id": "1034432501"}
+  ],
+  "start_id": "start",
+  "end_id": "end"
+}
+```
+
 ### SpeedFogGraph.cs
 
 ```csharp
@@ -118,7 +174,7 @@ using System.Text.Json.Serialization;
 namespace SpeedFogWriter.Models;
 
 /// <summary>
-/// Root structure of graph.json
+/// Root structure of graph.json (matches Phase 2 Python output).
 /// </summary>
 public class SpeedFogGraph
 {
@@ -134,14 +190,20 @@ public class SpeedFogGraph
     [JsonPropertyName("total_paths")]
     public int TotalPaths { get; set; }
 
-    [JsonPropertyName("layers")]
-    public List<LayerData> Layers { get; set; } = new();
+    [JsonPropertyName("path_weights")]
+    public List<int> PathWeights { get; set; } = new();
 
-    [JsonPropertyName("start")]
-    public string? StartNodeId { get; set; }
+    [JsonPropertyName("nodes")]
+    public Dictionary<string, NodeData> Nodes { get; set; } = new();
 
-    [JsonPropertyName("end")]
-    public string? EndNodeId { get; set; }
+    [JsonPropertyName("edges")]
+    public List<EdgeData> Edges { get; set; } = new();
+
+    [JsonPropertyName("start_id")]
+    public string StartId { get; set; } = "";
+
+    [JsonPropertyName("end_id")]
+    public string EndId { get; set; } = "";
 
     /// <summary>
     /// Load graph from JSON file.
@@ -149,63 +211,79 @@ public class SpeedFogGraph
     public static SpeedFogGraph Load(string path)
     {
         var json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<SpeedFogGraph>(json)
+        var graph = JsonSerializer.Deserialize<SpeedFogGraph>(json)
             ?? throw new InvalidOperationException("Failed to parse graph.json");
+
+        // Set node IDs from dictionary keys
+        foreach (var (id, node) in graph.Nodes)
+        {
+            node.Id = id;
+        }
+
+        return graph;
     }
 
     /// <summary>
     /// Get all nodes in the graph.
     /// </summary>
-    public IEnumerable<NodeData> AllNodes()
-    {
-        return Layers.SelectMany(l => l.Nodes);
-    }
+    public IEnumerable<NodeData> AllNodes() => Nodes.Values;
 
     /// <summary>
     /// Get node by ID.
     /// </summary>
-    public NodeData? GetNode(string id)
-    {
-        return AllNodes().FirstOrDefault(n => n.Id == id);
-    }
+    public NodeData? GetNode(string id) => Nodes.GetValueOrDefault(id);
 
     /// <summary>
-    /// Get all edges (connections between nodes).
+    /// Get start node.
     /// </summary>
-    public IEnumerable<(NodeData Source, NodeData Target)> AllEdges()
+    public NodeData? StartNode => GetNode(StartId);
+
+    /// <summary>
+    /// Get end node.
+    /// </summary>
+    public NodeData? EndNode => GetNode(EndId);
+
+    /// <summary>
+    /// Get all edges with resolved node references.
+    /// </summary>
+    public IEnumerable<(NodeData Source, NodeData Target, string FogId)> AllEdgesResolved()
     {
-        foreach (var node in AllNodes())
+        foreach (var edge in Edges)
         {
-            foreach (var exitId in node.Exits)
+            var source = GetNode(edge.Source);
+            var target = GetNode(edge.Target);
+            if (source != null && target != null)
             {
-                var target = GetNode(exitId);
-                if (target != null)
-                {
-                    yield return (node, target);
-                }
+                yield return (source, target, edge.FogId);
             }
         }
     }
-}
-```
 
-### LayerData.cs
+    /// <summary>
+    /// Get outgoing edges from a node.
+    /// </summary>
+    public IEnumerable<EdgeData> GetOutgoingEdges(string nodeId)
+    {
+        return Edges.Where(e => e.Source == nodeId);
+    }
 
-```csharp
-using System.Text.Json.Serialization;
+    /// <summary>
+    /// Get incoming edges to a node.
+    /// </summary>
+    public IEnumerable<EdgeData> GetIncomingEdges(string nodeId)
+    {
+        return Edges.Where(e => e.Target == nodeId);
+    }
 
-namespace SpeedFogWriter.Models;
-
-public class LayerData
-{
-    [JsonPropertyName("index")]
-    public int Index { get; set; }
-
-    [JsonPropertyName("tier")]
-    public int Tier { get; set; }
-
-    [JsonPropertyName("nodes")]
-    public List<NodeData> Nodes { get; set; } = new();
+    /// <summary>
+    /// Group nodes by layer for iteration.
+    /// </summary>
+    public Dictionary<int, List<NodeData>> NodesByLayer()
+    {
+        return Nodes.Values
+            .GroupBy(n => n.Layer)
+            .ToDictionary(g => g.Key, g => g.ToList());
+    }
 }
 ```
 
@@ -216,52 +294,275 @@ using System.Text.Json.Serialization;
 
 namespace SpeedFogWriter.Models;
 
+/// <summary>
+/// A node in the DAG representing a cluster (group of zones).
+/// </summary>
 public class NodeData
 {
-    [JsonPropertyName("id")]
+    /// <summary>
+    /// Node ID (e.g., "start", "node_1a", "end").
+    /// Set from dictionary key during loading.
+    /// </summary>
+    [JsonIgnore]
     public string Id { get; set; } = "";
 
-    [JsonPropertyName("zone")]
-    public string ZoneId { get; set; } = "";
+    /// <summary>
+    /// Cluster ID from clusters.json (e.g., "stormveil_c3d4").
+    /// </summary>
+    [JsonPropertyName("cluster_id")]
+    public string ClusterId { get; set; } = "";
 
-    [JsonPropertyName("zone_name")]
-    public string ZoneName { get; set; } = "";
+    /// <summary>
+    /// List of zone IDs in this cluster.
+    /// A cluster may contain multiple zones connected by world connections.
+    /// </summary>
+    [JsonPropertyName("zones")]
+    public List<string> Zones { get; set; } = new();
 
-    [JsonPropertyName("zone_map")]
-    public string ZoneMap { get; set; } = "";
+    /// <summary>
+    /// Cluster type: start, final_boss, legacy_dungeon, mini_dungeon, boss_arena.
+    /// </summary>
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "";
 
-    [JsonPropertyName("zone_type")]
-    public string ZoneType { get; set; } = "";
-
+    /// <summary>
+    /// Total weight of the cluster (sum of zone weights).
+    /// </summary>
     [JsonPropertyName("weight")]
     public int Weight { get; set; }
 
-    [JsonPropertyName("boss")]
-    public string? Boss { get; set; }
-
-    [JsonPropertyName("entries")]
-    public List<string> Entries { get; set; } = new();
-
-    [JsonPropertyName("exits")]
-    public List<string> Exits { get; set; } = new();
-
     /// <summary>
-    /// The layer this node belongs to (set during processing).
+    /// Layer index in the DAG (0 = start, N = end).
     /// </summary>
-    [JsonIgnore]
+    [JsonPropertyName("layer")]
     public int Layer { get; set; }
 
     /// <summary>
-    /// The tier for scaling (set during processing).
+    /// Difficulty tier for enemy scaling (1-28).
     /// </summary>
-    [JsonIgnore]
+    [JsonPropertyName("tier")]
     public int Tier { get; set; }
 
-    public bool HasBoss => !string.IsNullOrEmpty(Boss);
-    public bool IsStart => ZoneType == "start";
-    public bool IsFinalBoss => ZoneType == "final_boss";
+    /// <summary>
+    /// Fog ID used to enter this cluster (null for start node).
+    /// This is the fog gate the player passed through to reach this cluster.
+    /// </summary>
+    [JsonPropertyName("entry_fog")]
+    public string? EntryFog { get; set; }
+
+    /// <summary>
+    /// Available exit fog IDs from this cluster.
+    /// These are fogs that can lead to the next layer.
+    /// Note: The entry_fog is excluded if it was bidirectional.
+    /// </summary>
+    [JsonPropertyName("exit_fogs")]
+    public List<string> ExitFogs { get; set; } = new();
+
+    // Convenience properties
+    public bool IsStart => Type == "start";
+    public bool IsFinalBoss => Type == "final_boss";
+    public bool IsLegacyDungeon => Type == "legacy_dungeon";
+    public bool IsMiniDungeon => Type == "mini_dungeon";
+    public bool IsBossArena => Type == "boss_arena";
+
+    /// <summary>
+    /// Get the primary zone (first zone in the cluster).
+    /// </summary>
+    public string PrimaryZone => Zones.FirstOrDefault() ?? "";
 }
 ```
+
+### EdgeData.cs
+
+```csharp
+using System.Text.Json.Serialization;
+
+namespace SpeedFogWriter.Models;
+
+/// <summary>
+/// A directed edge between two nodes in the DAG.
+/// </summary>
+public class EdgeData
+{
+    /// <summary>
+    /// Source node ID.
+    /// </summary>
+    [JsonPropertyName("source")]
+    public string Source { get; set; } = "";
+
+    /// <summary>
+    /// Target node ID.
+    /// </summary>
+    [JsonPropertyName("target")]
+    public string Target { get; set; } = "";
+
+    /// <summary>
+    /// Fog gate ID used for this connection.
+    /// This fog gate should be placed at the exit of the source cluster
+    /// and warp to the entrance of the target cluster.
+    /// </summary>
+    [JsonPropertyName("fog_id")]
+    public string FogId { get; set; } = "";
+}
+```
+
+---
+
+## Task 3.2.1: Fog Position Data (fog_positions.json)
+
+The C# writer needs fog gate positions (coordinates, rotations) that are not in `graph.json`. This data must be extracted from `fog.txt` and stored in `fog_positions.json`.
+
+### fog_positions.json Format
+
+```json
+{
+  "version": "1.0",
+  "fogs": {
+    "1034432500": {
+      "zone": "chapel_start",
+      "map": "m10_00_00_00",
+      "position": [123.5, 45.2, -78.9],
+      "rotation": [0.0, 180.0, 0.0],
+      "entity_id": 1034432500,
+      "model": "AEG099_231",
+      "warp_region": 1034432500
+    },
+    "AEG099_003_9000": {
+      "zone": "academy",
+      "map": "m14_00_00_00",
+      "position": [456.7, 12.3, -234.5],
+      "rotation": [0.0, 90.0, 0.0],
+      "entity_id": 14002100,
+      "model": "AEG099_003",
+      "warp_region": 14002100
+    }
+  }
+}
+```
+
+### FogPositionData.cs
+
+```csharp
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace SpeedFogWriter.Models;
+
+/// <summary>
+/// Fog position data loaded from fog_positions.json.
+/// </summary>
+public class FogPositionsFile
+{
+    [JsonPropertyName("version")]
+    public string Version { get; set; } = "1.0";
+
+    [JsonPropertyName("fogs")]
+    public Dictionary<string, FogPositionData> Fogs { get; set; } = new();
+
+    public static FogPositionsFile Load(string path)
+    {
+        var json = File.ReadAllText(path);
+        return JsonSerializer.Deserialize<FogPositionsFile>(json)
+            ?? throw new InvalidOperationException("Failed to parse fog_positions.json");
+    }
+
+    public FogPositionData? GetFog(string fogId) => Fogs.GetValueOrDefault(fogId);
+}
+
+/// <summary>
+/// Position and metadata for a single fog gate.
+/// </summary>
+public class FogPositionData
+{
+    /// <summary>
+    /// Zone this fog gate belongs to.
+    /// </summary>
+    [JsonPropertyName("zone")]
+    public string Zone { get; set; } = "";
+
+    /// <summary>
+    /// Map ID (e.g., "m10_00_00_00").
+    /// </summary>
+    [JsonPropertyName("map")]
+    public string Map { get; set; } = "";
+
+    /// <summary>
+    /// Position [x, y, z] in world coordinates.
+    /// </summary>
+    [JsonPropertyName("position")]
+    public float[] Position { get; set; } = new float[3];
+
+    /// <summary>
+    /// Rotation [x, y, z] in degrees.
+    /// </summary>
+    [JsonPropertyName("rotation")]
+    public float[] Rotation { get; set; } = new float[3];
+
+    /// <summary>
+    /// Entity ID for this fog gate.
+    /// </summary>
+    [JsonPropertyName("entity_id")]
+    public int EntityId { get; set; }
+
+    /// <summary>
+    /// Model name (e.g., "AEG099_231").
+    /// </summary>
+    [JsonPropertyName("model")]
+    public string Model { get; set; } = "";
+
+    /// <summary>
+    /// Warp destination region ID.
+    /// </summary>
+    [JsonPropertyName("warp_region")]
+    public int WarpRegion { get; set; }
+
+    // Convenience properties
+    public System.Numerics.Vector3 PositionVec =>
+        new(Position[0], Position[1], Position[2]);
+
+    public System.Numerics.Vector3 RotationVec =>
+        new(Rotation[0], Rotation[1], Rotation[2]);
+
+    /// <summary>
+    /// Parse map ID to bytes (for EMEVD warp instructions).
+    /// Example: "m10_01_00_00" -> [10, 1, 0, 0]
+    /// </summary>
+    public byte[] MapBytes
+    {
+        get
+        {
+            // Parse m{AA}_{BB}_{CC}_{DD}
+            var parts = Map.TrimStart('m').Split('_');
+            if (parts.Length != 4)
+                throw new FormatException($"Invalid map ID: {Map}");
+
+            return new byte[]
+            {
+                byte.Parse(parts[0]),
+                byte.Parse(parts[1]),
+                byte.Parse(parts[2]),
+                byte.Parse(parts[3])
+            };
+        }
+    }
+}
+```
+
+### Extracting fog_positions.json
+
+Create a Python script `tools/extract_fog_positions.py` to extract positions from `fog.txt`:
+
+```python
+"""Extract fog gate positions from fog.txt for the C# writer."""
+
+# Key sections in fog.txt:
+# - Entrances: Contains fog gate definitions with positions
+# - Warps: Contains warp point definitions
+
+# Output: writer/data/fog_positions.json
+```
+
+**Note**: This is a one-time extraction task. The positions don't change between runs.
 
 ---
 
@@ -611,17 +912,31 @@ Creates fog wall events using EMEVD. Adapted from FogRando's event creation logi
 - **EMEVD**: Event script format used by FromSoft games
 - **Fog Wall**: Visual barrier that triggers warp on contact
 - **Event Flag**: Persistent game state (used to track fog traversal)
+- **Cluster**: A node contains multiple zones; fogs are identified by fog_id
+
+### Architecture Note
+
+The DAG uses edges with `fog_id` to connect clusters. Each edge represents:
+1. **Source**: A cluster (may contain multiple zones)
+2. **Target**: Another cluster
+3. **fog_id**: The specific fog gate used for this connection
+
+The `fog_id` is looked up in `fog_positions.json` to get:
+- Position and rotation for spawning the fog wall
+- Map ID for the EMEVD
+- Warp region for teleportation
 
 ### FogGateWriter.cs
 
 ```csharp
 using SoulsFormats;
 using SpeedFogWriter.Models;
+using System.Numerics;
 
 namespace SpeedFogWriter.Writers;
 
 /// <summary>
-/// Creates fog gate events between zones.
+/// Creates fog gate events between clusters.
 /// Adapted from FogRando's GameDataWriterE.cs
 /// </summary>
 public class FogGateWriter
@@ -632,11 +947,13 @@ public class FogGateWriter
     // Custom flag ID range
     private const int CustomFlagBase = 79000000;
 
+    private readonly FogPositionsFile _fogPositions;
     private int _nextEventId;
     private int _nextFlagId;
 
-    public FogGateWriter()
+    public FogGateWriter(FogPositionsFile fogPositions)
     {
+        _fogPositions = fogPositions;
         _nextEventId = CustomEventBase;
         _nextFlagId = CustomFlagBase;
     }
@@ -644,21 +961,40 @@ public class FogGateWriter
     /// <summary>
     /// Create fog gate events for all edges in the graph.
     /// </summary>
-    public List<FogGateEvent> CreateFogGates(SpeedFogGraph graph, Dictionary<string, ZoneWarpData> zoneWarps)
+    public List<FogGateEvent> CreateFogGates(SpeedFogGraph graph)
     {
         var events = new List<FogGateEvent>();
 
-        foreach (var (source, target) in graph.AllEdges())
+        foreach (var edge in graph.Edges)
         {
-            // Skip if we don't have warp data for these zones
-            if (!zoneWarps.TryGetValue(source.ZoneId, out var sourceWarp) ||
-                !zoneWarps.TryGetValue(target.ZoneId, out var targetWarp))
+            var source = graph.GetNode(edge.Source);
+            var target = graph.GetNode(edge.Target);
+
+            if (source == null || target == null)
             {
-                Console.WriteLine($"Warning: Missing warp data for {source.ZoneId} -> {target.ZoneId}");
+                Console.WriteLine($"Warning: Invalid edge {edge.Source} -> {edge.Target}");
                 continue;
             }
 
-            var fogEvent = CreateFogGate(source, target, sourceWarp, targetWarp);
+            // Look up fog position data
+            var exitFogData = _fogPositions.GetFog(edge.FogId);
+            if (exitFogData == null)
+            {
+                Console.WriteLine($"Warning: Missing fog position for {edge.FogId}");
+                continue;
+            }
+
+            // Find the entry fog of the target cluster
+            var entryFogData = target.EntryFog != null
+                ? _fogPositions.GetFog(target.EntryFog)
+                : null;
+
+            if (entryFogData == null && target.EntryFog != null)
+            {
+                Console.WriteLine($"Warning: Missing fog position for target entry {target.EntryFog}");
+            }
+
+            var fogEvent = CreateFogGate(source, target, edge, exitFogData, entryFogData);
             events.Add(fogEvent);
         }
 
@@ -668,8 +1004,9 @@ public class FogGateWriter
     private FogGateEvent CreateFogGate(
         NodeData source,
         NodeData target,
-        ZoneWarpData sourceWarp,
-        ZoneWarpData targetWarp)
+        EdgeData edge,
+        FogPositionData exitFog,
+        FogPositionData? entryFog)
     {
         var eventId = _nextEventId++;
         var flagId = _nextFlagId++;
@@ -678,15 +1015,26 @@ public class FogGateWriter
         {
             EventId = eventId,
             FlagId = flagId,
+            EdgeFogId = edge.FogId,
             SourceNodeId = source.Id,
             TargetNodeId = target.Id,
-            SourceMap = source.ZoneMap,
-            TargetMap = target.ZoneMap,
-            // Position where fog wall spawns (exit of source zone)
-            FogPosition = sourceWarp.ExitPosition,
-            // Position where player arrives (entrance of target zone)
-            WarpDestination = targetWarp.EntrancePosition,
-            // Scaling tier of target zone
+            SourceClusterId = source.ClusterId,
+            TargetClusterId = target.ClusterId,
+
+            // Fog gate position (exit of source cluster)
+            SourceMap = exitFog.Map,
+            FogPosition = exitFog.PositionVec,
+            FogRotation = exitFog.RotationVec,
+            FogEntityId = exitFog.EntityId,
+            FogModel = exitFog.Model,
+
+            // Warp destination (entrance of target cluster)
+            TargetMap = entryFog?.Map ?? exitFog.Map,
+            WarpRegion = entryFog?.WarpRegion ?? exitFog.WarpRegion,
+            WarpPosition = entryFog?.PositionVec ?? exitFog.PositionVec,
+
+            // Scaling
+            SourceTier = source.Tier,
             TargetTier = target.Tier,
         };
     }
@@ -696,21 +1044,18 @@ public class FogGateWriter
     /// </summary>
     public void WriteToEmevd(EMEVD emevd, FogGateEvent fogGate, int scalingSpEffect)
     {
-        // This is a simplified version - actual implementation needs
-        // proper EMEVD instruction building based on FogRando's approach
-
         // Key instructions needed:
-        // 1. Spawn fog wall asset at FogPosition
-        // 2. Create region trigger around fog wall
-        // 3. On player entering region:
+        // 1. Spawn fog wall asset at FogPosition (if not already present)
+        // 2. Create button interaction region
+        // 3. On player pressing button near fog:
         //    a. Set event flag (for tracking)
-        //    b. Apply scaling SpEffect
-        //    c. Warp player to WarpDestination
-        //    d. Despawn fog wall
+        //    b. Play warp animation
+        //    c. WarpPlayer to TargetMap at WarpRegion
+        //    d. Apply scaling SpEffect to enemies in new area
 
         // The actual EMEVD instruction format is complex and requires
         // understanding of the event scripting system.
-        // See FogRando's EventConfig.cs for template-based approach.
+        // See speedfog-events.yaml for template-based approach.
 
         throw new NotImplementedException(
             "EMEVD generation requires adapting FogRando's EventConfig system. " +
@@ -721,79 +1066,54 @@ public class FogGateWriter
 
 /// <summary>
 /// Data for a single fog gate event.
+/// Contains all information needed to create the fog wall and warp event.
 /// </summary>
 public class FogGateEvent
 {
+    // Identification
     public int EventId { get; set; }
     public int FlagId { get; set; }
+    public string EdgeFogId { get; set; } = "";  // fog_id from edge
     public string SourceNodeId { get; set; } = "";
     public string TargetNodeId { get; set; } = "";
+    public string SourceClusterId { get; set; } = "";
+    public string TargetClusterId { get; set; } = "";
+
+    // Fog gate spawn (exit of source cluster)
     public string SourceMap { get; set; } = "";
-    public string TargetMap { get; set; } = "";
     public Vector3 FogPosition { get; set; }
-    public Vector3 WarpDestination { get; set; }
+    public Vector3 FogRotation { get; set; }
+    public int FogEntityId { get; set; }
+    public string FogModel { get; set; } = "";
+
+    // Warp destination (entrance of target cluster)
+    public string TargetMap { get; set; } = "";
+    public int WarpRegion { get; set; }
+    public Vector3 WarpPosition { get; set; }
+
+    // Scaling
+    public int SourceTier { get; set; }
     public int TargetTier { get; set; }
-}
-
-/// <summary>
-/// Warp position data for a zone.
-/// Matches data/zone_warps.json format.
-/// </summary>
-public class ZoneWarpData
-{
-    [JsonPropertyName("map")]
-    public string Map { get; set; } = "";
-
-    [JsonPropertyName("fogs")]
-    public List<FogGateData> Fogs { get; set; } = new();
 
     /// <summary>
-    /// Get fog gate by ID.
+    /// Parse target map to bytes for EMEVD warp instruction.
     /// </summary>
-    public FogGateData? GetFog(string id) => Fogs.FirstOrDefault(f => f.Id == id);
-
-    /// <summary>
-    /// Get first fog (typically entrance).
-    /// </summary>
-    public FogGateData? Entrance => Fogs.FirstOrDefault();
-
-    /// <summary>
-    /// Get last fog (typically exit for 2-fog zones).
-    /// </summary>
-    public FogGateData? Exit => Fogs.Count > 1 ? Fogs[^1] : Fogs.FirstOrDefault();
-}
-
-/// <summary>
-/// Individual fog gate data within a zone.
-/// </summary>
-public class FogGateData
-{
-    [JsonPropertyName("id")]
-    public string Id { get; set; } = "";
-
-    [JsonPropertyName("position")]
-    public float[] Position { get; set; } = new float[3];
-
-    [JsonPropertyName("rotation")]
-    public float[] Rotation { get; set; } = new float[3];
-
-    [JsonPropertyName("entity_id")]
-    public int EntityId { get; set; }
-
-    public Vector3 PositionVec => new(Position[0], Position[1], Position[2]);
-    public Vector3 RotationVec => new(Rotation[0], Rotation[1], Rotation[2]);
-}
-
-/// <summary>
-/// Simple 3D vector (matches System.Numerics.Vector3)
-/// </summary>
-public struct Vector3
-{
-    public float X, Y, Z;
-
-    public Vector3(float x, float y, float z)
+    public byte[] TargetMapBytes
     {
-        X = x; Y = y; Z = z;
+        get
+        {
+            var parts = TargetMap.TrimStart('m').Split('_');
+            if (parts.Length != 4)
+                throw new FormatException($"Invalid map ID: {TargetMap}");
+
+            return new byte[]
+            {
+                byte.Parse(parts[0]),
+                byte.Parse(parts[1]),
+                byte.Parse(parts[2]),
+                byte.Parse(parts[3])
+            };
+        }
     }
 }
 ```
@@ -959,8 +1279,10 @@ Main class that coordinates all writers.
 
 ```csharp
 using SoulsFormats;
+using SoulsIds;
 using SpeedFogWriter.Models;
 using SpeedFogWriter.Helpers;
+using System.Text.Json;
 
 namespace SpeedFogWriter.Writers;
 
@@ -971,16 +1293,20 @@ public class ModWriter
 {
     private readonly string _gameDir;
     private readonly string _outputDir;
+    private readonly string _dataDir;
     private readonly SpeedFogGraph _graph;
 
     private ParamDictionary? _params;
     private Dictionary<string, EMEVD>? _emevds;
-    private Dictionary<string, ZoneWarpData>? _zoneWarps;
+    private FogPositionsFile? _fogPositions;
+    private ScalingWriter? _scalingWriter;
+    private List<FogGateEvent>? _fogGates;
 
-    public ModWriter(string gameDir, string outputDir, SpeedFogGraph graph)
+    public ModWriter(string gameDir, string outputDir, string dataDir, SpeedFogGraph graph)
     {
         _gameDir = gameDir;
         _outputDir = outputDir;
+        _dataDir = dataDir;
         _graph = graph;
     }
 
@@ -992,8 +1318,8 @@ public class ModWriter
         Console.WriteLine("Loading game data...");
         LoadGameData();
 
-        Console.WriteLine("Loading zone warp data...");
-        LoadZoneWarps();
+        Console.WriteLine("Loading fog position data...");
+        LoadFogPositions();
 
         Console.WriteLine("Generating scaling effects...");
         GenerateScaling();
@@ -1008,51 +1334,111 @@ public class ModWriter
         WriteOutput();
 
         Console.WriteLine("Done!");
+        PrintSummary();
     }
 
     private void LoadGameData()
     {
-        // Load game params
+        // Load game params using SoulsIds GameEditor
         var regulationPath = Path.Combine(_gameDir, "regulation.bin");
-        _params = new ParamDictionary();
-        // ... load params using SoulsFormats
+        if (!File.Exists(regulationPath))
+            throw new FileNotFoundException($"regulation.bin not found: {regulationPath}");
+
+        var editor = new GameEditor(GameSpec.FromGame.ER);
+        _params = new ParamDictionary
+        {
+            Defs = editor.LoadDefs(),
+            Inner = editor.LoadParams(regulationPath, null)
+        };
 
         // Load EMEVD files
         _emevds = new Dictionary<string, EMEVD>();
-        // ... load common.emevd and relevant map emevds
+        var eventDir = Path.Combine(_gameDir, "event");
+
+        // Load common.emevd (always needed)
+        var commonPath = Path.Combine(eventDir, "common.emevd.dcx");
+        if (File.Exists(commonPath))
+        {
+            _emevds["common"] = SoulsFile<EMEVD>.Read(commonPath);
+        }
+
+        // Load map EMEVDs for each unique map in the graph
+        var maps = _graph.AllNodes()
+            .SelectMany(n => n.Zones)
+            .Select(z => GetMapForZone(z))
+            .Where(m => m != null)
+            .Distinct()
+            .ToList();
+
+        foreach (var map in maps)
+        {
+            var mapEventPath = Path.Combine(eventDir, $"{map}.emevd.dcx");
+            if (File.Exists(mapEventPath))
+            {
+                _emevds[map!] = SoulsFile<EMEVD>.Read(mapEventPath);
+            }
+        }
+
+        Console.WriteLine($"  Loaded {_emevds.Count} EMEVD files");
     }
 
-    private void LoadZoneWarps()
+    private string? GetMapForZone(string zoneId)
     {
-        // Load warp position data from data/zone_warps.json
-        // This file contains fog gate positions extracted from game files
-        // See design doc for format specification
+        // This needs zone→map mapping
+        // For now, lookup in fog_positions.json when loaded
+        return _fogPositions?.Fogs.Values
+            .FirstOrDefault(f => f.Zone == zoneId)?.Map;
+    }
 
-        var warpPath = Path.Combine(AppContext.BaseDirectory, "..", "..", "data", "zone_warps.json");
-        var json = File.ReadAllText(warpPath);
-        _zoneWarps = JsonSerializer.Deserialize<Dictionary<string, ZoneWarpData>>(json)
-            ?? throw new InvalidOperationException("Failed to parse zone_warps.json");
+    private void LoadFogPositions()
+    {
+        var fogPosPath = Path.Combine(_dataDir, "fog_positions.json");
+        if (!File.Exists(fogPosPath))
+            throw new FileNotFoundException($"fog_positions.json not found: {fogPosPath}");
+
+        _fogPositions = FogPositionsFile.Load(fogPosPath);
+        Console.WriteLine($"  Loaded {_fogPositions.Fogs.Count} fog positions");
     }
 
     private void GenerateScaling()
     {
         if (_params == null) throw new InvalidOperationException("Params not loaded");
 
-        var scalingWriter = new ScalingWriter(_params);
-        scalingWriter.GenerateScalingEffects();
+        _scalingWriter = new ScalingWriter(_params);
+        _scalingWriter.GenerateScalingEffects();
 
-        // Store for use in fog gate generation
-        // _scalingEffects = scalingWriter.TierTransitions;
+        Console.WriteLine($"  Generated {_scalingWriter.TierTransitions.Count} scaling effects");
     }
 
     private void GenerateFogGates()
     {
-        if (_zoneWarps == null) throw new InvalidOperationException("Zone warps not loaded");
+        if (_fogPositions == null) throw new InvalidOperationException("Fog positions not loaded");
 
-        var fogWriter = new FogGateWriter();
-        var fogGates = fogWriter.CreateFogGates(_graph, _zoneWarps);
+        var fogWriter = new FogGateWriter(_fogPositions);
+        _fogGates = fogWriter.CreateFogGates(_graph);
 
-        // TODO: Write fog gates to EMEVD
+        Console.WriteLine($"  Created {_fogGates.Count} fog gate events");
+
+        // Write to EMEVD
+        if (_emevds == null || _scalingWriter == null)
+            throw new InvalidOperationException("EMEVD or scaling not initialized");
+
+        foreach (var fogGate in _fogGates)
+        {
+            var scalingEffect = _scalingWriter.GetTransitionEffect(
+                fogGate.SourceTier,
+                fogGate.TargetTier
+            );
+
+            // Add event to appropriate map EMEVD
+            var mapEmevd = _emevds.GetValueOrDefault(fogGate.SourceMap)
+                ?? _emevds.GetValueOrDefault("common");
+
+            if (mapEmevd != null)
+            {
+                fogWriter.WriteToEmevd(mapEmevd, fogGate, scalingEffect);
+            }
+        }
     }
 
     private void AddStartingItems()
@@ -1061,25 +1447,56 @@ public class ModWriter
 
         var itemWriter = new StartingItemsWriter(_params);
         itemWriter.AddStoneswordKeys(10);
-        // Add other key items as needed
+        // Add other key items as needed based on which clusters are in the graph
     }
 
     private void WriteOutput()
     {
+        if (_params == null || _emevds == null)
+            throw new InvalidOperationException("Data not loaded");
+
         var modDir = Path.Combine(_outputDir, "mods", "speedfog");
         Directory.CreateDirectory(modDir);
 
-        // Write params
+        // Write params (regulation.bin)
         var paramDir = Path.Combine(modDir, "param", "gameparam");
         Directory.CreateDirectory(paramDir);
-        // ... write modified params
+
+        var editor = new GameEditor(GameSpec.FromGame.ER);
+        var regulationOut = Path.Combine(paramDir, "regulation.bin");
+        editor.OverrideBndRel<PARAM>(
+            Path.Combine(_gameDir, "regulation.bin"),
+            regulationOut,
+            _params.Inner,
+            f => f.Write(),
+            null,
+            DCX.Type.DCX_DFLT_11000_44_9
+        );
+        Console.WriteLine($"  Written: {regulationOut}");
 
         // Write EMEVDs
         var eventDir = Path.Combine(modDir, "event");
         Directory.CreateDirectory(eventDir);
-        // ... write modified EMEVDs
 
-        Console.WriteLine($"Output written to: {modDir}");
+        foreach (var (name, emevd) in _emevds)
+        {
+            var emevdOut = Path.Combine(eventDir, $"{name}.emevd.dcx");
+            emevd.Write(emevdOut, DCX.Type.DCX_DFLT_11000_44_9);
+            Console.WriteLine($"  Written: {emevdOut}");
+        }
+
+        Console.WriteLine($"\nOutput written to: {modDir}");
+    }
+
+    private void PrintSummary()
+    {
+        Console.WriteLine("\n=== SpeedFog Mod Summary ===");
+        Console.WriteLine($"Seed: {_graph.Seed}");
+        Console.WriteLine($"Layers: {_graph.TotalLayers}");
+        Console.WriteLine($"Nodes: {_graph.TotalNodes}");
+        Console.WriteLine($"Paths: {_graph.TotalPaths}");
+        Console.WriteLine($"Path weights: [{string.Join(", ", _graph.PathWeights)}]");
+        Console.WriteLine($"Fog gates: {_fogGates?.Count ?? 0}");
     }
 }
 ```
@@ -1100,18 +1517,31 @@ class Program
     {
         if (args.Length < 3)
         {
-            Console.WriteLine("Usage: SpeedFogWriter <graph.json> <game_dir> <output_dir>");
+            Console.WriteLine("Usage: SpeedFogWriter <graph.json> <game_dir> <output_dir> [--data-dir <path>]");
             Console.WriteLine();
             Console.WriteLine("Arguments:");
             Console.WriteLine("  graph.json  - Path to generated graph from speedfog-core");
             Console.WriteLine("  game_dir    - Path to Elden Ring Game folder");
             Console.WriteLine("  output_dir  - Output directory for mod files");
+            Console.WriteLine();
+            Console.WriteLine("Options:");
+            Console.WriteLine("  --data-dir  - Path to data directory (default: ../data relative to exe)");
             return 1;
         }
 
         var graphPath = args[0];
         var gameDir = args[1];
         var outputDir = args[2];
+
+        // Parse optional data-dir
+        var dataDir = Path.Combine(AppContext.BaseDirectory, "..", "data");
+        for (int i = 3; i < args.Length - 1; i++)
+        {
+            if (args[i] == "--data-dir")
+            {
+                dataDir = args[i + 1];
+            }
+        }
 
         // Validate paths
         if (!File.Exists(graphPath))
@@ -1126,6 +1556,13 @@ class Program
             return 1;
         }
 
+        if (!Directory.Exists(dataDir))
+        {
+            Console.Error.WriteLine($"Error: Data directory not found: {dataDir}");
+            Console.Error.WriteLine("  Expected to find fog_positions.json and speedfog-events.yaml");
+            return 1;
+        }
+
         try
         {
             // Load graph
@@ -1134,9 +1571,23 @@ class Program
             Console.WriteLine($"  Seed: {graph.Seed}");
             Console.WriteLine($"  Nodes: {graph.TotalNodes}");
             Console.WriteLine($"  Paths: {graph.TotalPaths}");
+            Console.WriteLine($"  Path weights: [{string.Join(", ", graph.PathWeights)}]");
+
+            // Validate graph structure
+            if (graph.StartNode == null)
+            {
+                Console.Error.WriteLine("Error: Graph has no start node");
+                return 1;
+            }
+            if (graph.EndNode == null)
+            {
+                Console.Error.WriteLine("Error: Graph has no end node");
+                return 1;
+            }
 
             // Generate mod
-            var writer = new ModWriter(gameDir, outputDir, graph);
+            Console.WriteLine();
+            var writer = new ModWriter(gameDir, outputDir, dataDir, graph);
             writer.Generate();
 
             return 0;
@@ -1426,19 +1877,45 @@ SpeedFog uses a **YAML-based template approach** (Task 3.3) for EMEVD generation
 - Start with a single hardcoded fog gate to verify EMEVD format
 - Then validate the YAML template system works correctly
 
-### 2. Zone Warp Data
+### 2. Fog Position Data (NEW)
 
-We need entrance/exit positions for every zone. This data exists in FogRando's YAML files but needs to be extracted and mapped to our zone IDs.
+**Critical dependency**: The C# writer needs `fog_positions.json` with fog gate coordinates.
 
-**Key references**:
-- `GameDataWriterE.cs:L462-493` - WarpPoint structure
-- `fog.txt` Entrances/Warps sections
+This data must be extracted from `fog.txt` before Phase 3 implementation begins. Create a Python script `tools/extract_fog_positions.py` that:
 
-**Recommendation**:
-- Create a `zone_warps.json` file that maps zone IDs to warp coordinates
-- Extract this data from FogRando's `fog.txt` Entrances/Warps sections
+1. Parses `fog.txt` Entrances and Warps sections
+2. Extracts position, rotation, entity_id, map, model for each fog
+3. Outputs `writer/data/fog_positions.json`
 
-### 3. Fog Gate Asset Creation
+**Key sections in fog.txt to parse**:
+```yaml
+Entrances:
+  - Name: stormveil_front
+    ID: 1034432500
+    Area: stormveil_start
+    ...
+    Pos: "123.5 45.2 -78.9"
+    Rot: "0 180 0"
+```
+
+**Note**: The fog_id in clusters.json matches the ID or Name from fog.txt Entrances section.
+
+### 3. Cluster-Based Architecture
+
+The Phase 3 spec was updated to match the cluster-based architecture from Phase 1-2:
+
+| Old (zone-based) | New (cluster-based) |
+|------------------|---------------------|
+| `zone_id` (single) | `zones` (list) |
+| `ZoneMap` | Lookup in `fog_positions.json` |
+| `entries`/`exits` (node IDs) | `entry_fog`/`exit_fogs` (fog IDs) |
+| No explicit edges | `edges` array with fog_id |
+
+The C# writer uses edges and fog_positions to determine:
+- Where to place fog walls (source cluster exit fog position)
+- Where to warp (target cluster entry fog position)
+
+### 4. Fog Gate Asset Creation
 
 The `addFakeGate` helper in FogRando (closure, not standalone) creates fog wall assets by:
 1. Cloning an existing asset as template
@@ -1459,6 +1936,12 @@ Ensure you're using a SoulsFormats version that supports Elden Ring. SoulsFormat
 
 ## Acceptance Criteria
 
+### Task 3.0 (Prerequisite: fog_positions.json)
+- [ ] Python script `tools/extract_fog_positions.py` exists
+- [ ] Script parses fog.txt Entrances section
+- [ ] Script outputs `writer/data/fog_positions.json`
+- [ ] All fog_ids from clusters.json are present in fog_positions.json
+
 ### Task 3.1 (Setup)
 - [ ] Project builds with `dotnet build`
 - [ ] SoulsFormats loads correctly
@@ -1466,6 +1949,8 @@ Ensure you're using a SoulsFormats version that supports Elden Ring. SoulsFormat
 ### Task 3.2 (Models)
 - [ ] `SpeedFogGraph.Load()` parses graph.json correctly
 - [ ] All nodes and edges accessible
+- [ ] `FogPositionsFile.Load()` parses fog_positions.json correctly
+- [ ] Nodes contain correct cluster data (zones list, entry_fog, exit_fogs)
 
 ### Task 3.3 (Event Templates)
 - [ ] `speedfog-events.yaml` loads correctly
@@ -1477,7 +1962,8 @@ Ensure you're using a SoulsFormats version that supports Elden Ring. SoulsFormat
 - [ ] Scaling factors are reasonable (no 100x damage)
 
 ### Task 3.5-3.6 (Fog Gates & Warps)
-- [ ] Fog gate events created for all edges
+- [ ] Fog gate events created for all edges in the graph
+- [ ] Each edge's fog_id is found in fog_positions.json
 - [ ] Events compile without EMEVD errors
 
 ### Task 3.7 (Starting Items)
@@ -1485,8 +1971,9 @@ Ensure you're using a SoulsFormats version that supports Elden Ring. SoulsFormat
 - [ ] Player doesn't get softlocked by missing keys
 
 ### Task 3.8-3.9 (Integration)
-- [ ] Full pipeline works: graph.json → mod files
+- [ ] Full pipeline works: graph.json + fog_positions.json → mod files
 - [ ] Output directory structure matches ModEngine 2 expectations
+- [ ] Summary output shows correct seed, nodes, paths, weights
 
 ---
 
@@ -1496,19 +1983,62 @@ Ensure you're using a SoulsFormats version that supports Elden Ring. SoulsFormat
 
 Test JSON parsing, scaling calculations, etc.
 
+```csharp
+// Example test cases
+[Test]
+public void SpeedFogGraph_Load_ParsesNodesCorrectly()
+{
+    var graph = SpeedFogGraph.Load("test/sample_graph.json");
+    Assert.That(graph.Nodes.Count, Is.EqualTo(15));
+    Assert.That(graph.StartNode?.Type, Is.EqualTo("start"));
+    Assert.That(graph.EndNode?.Type, Is.EqualTo("final_boss"));
+}
+
+[Test]
+public void NodeData_HasMultipleZones()
+{
+    var graph = SpeedFogGraph.Load("test/sample_graph.json");
+    var stormveil = graph.AllNodes().First(n => n.ClusterId.Contains("stormveil"));
+    Assert.That(stormveil.Zones, Has.Count.GreaterThan(1));
+}
+
+[Test]
+public void FogPositions_AllEdgeFogsExist()
+{
+    var graph = SpeedFogGraph.Load("test/sample_graph.json");
+    var fogPos = FogPositionsFile.Load("data/fog_positions.json");
+
+    foreach (var edge in graph.Edges)
+    {
+        Assert.That(fogPos.GetFog(edge.FogId), Is.Not.Null,
+            $"Missing fog position for {edge.FogId}");
+    }
+}
+```
+
 ### Integration Test
 
 ```bash
-# Generate graph (Phase 2)
-cd speedfog/core
-speedfog config.toml -o ../writer/test/graph.json
+# 1. Extract fog positions (prerequisite)
+cd speedfog
+python tools/extract_fog_positions.py \
+    reference/fogrando-data/fog.txt \
+    writer/data/fog_positions.json
 
-# Generate mod files (Phase 3)
+# 2. Generate graph (Phase 2)
+cd core
+python -m speedfog_core.main config.toml -o ../writer/test/graph.json -v
+
+# 3. Generate mod files (Phase 3)
 cd ../writer
-dotnet run -- test/graph.json "C:/Games/ELDEN RING/Game" ./output
+dotnet run -- test/graph.json "C:/Games/ELDEN RING/Game" ./output --data-dir ./data
 
-# Verify output structure
+# 4. Verify output structure
 ls -la output/mods/speedfog/
+# Should contain:
+#   param/gameparam/regulation.bin
+#   event/common.emevd.dcx
+#   event/m10_*.emevd.dcx (map-specific events)
 ```
 
 ### In-Game Test
@@ -1516,10 +2046,11 @@ ls -la output/mods/speedfog/
 1. Copy output to ModEngine mod folder
 2. Launch game with ModEngine
 3. Start new game, verify:
-   - Starting items present
-   - First fog gate appears
-   - Warp works
-   - Enemy scaling feels appropriate
+   - Starting items present (keys, medallions)
+   - First fog gate appears at Chapel exit
+   - Warp works (player teleports to first cluster)
+   - Enemy scaling feels appropriate (tier-based)
+   - Both paths are playable to final boss
 
 ---
 
