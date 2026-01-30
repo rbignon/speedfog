@@ -1,0 +1,564 @@
+"""Tests for generate_clusters.py"""
+
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import pytest
+
+# Add tools directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent / "tools"))
+
+from generate_clusters import (
+    AreaData,
+    Cluster,
+    FogData,
+    FogSide,
+    WorldConnection,
+    WorldGraph,
+    ZoneFogs,
+    build_world_graph,
+    classify_fogs,
+    compute_cluster_fogs,
+    filter_and_enrich_clusters,
+    generate_cluster_id,
+    generate_clusters,
+    get_zone_type,
+    is_condition_guaranteed,
+    parse_area,
+    parse_fog,
+    parse_tags,
+    should_exclude_area,
+)
+
+
+# =============================================================================
+# Parser Tests
+# =============================================================================
+
+
+class TestParseTags:
+    """Tests for parse_tags function."""
+
+    def test_parse_string_tags(self):
+        """Tags as space-separated string."""
+        assert parse_tags("legacy major") == ["legacy", "major"]
+
+    def test_parse_list_tags(self):
+        """Tags as list."""
+        assert parse_tags(["legacy", "major"]) == ["legacy", "major"]
+
+    def test_parse_empty_tags(self):
+        """Empty or None tags."""
+        assert parse_tags(None) == []
+        assert parse_tags("") == []
+        assert parse_tags([]) == []
+
+
+class TestParseArea:
+    """Tests for parse_area function."""
+
+    def test_parse_basic_area(self):
+        """Parse a basic area entry."""
+        area_data = {
+            "Name": "stormveil_start",
+            "Text": "Stormveil Castle before Gate",
+            "Maps": "m10_00_00_00",
+            "Tags": "legacy_dungeon",
+        }
+        area = parse_area(area_data)
+
+        assert area.name == "stormveil_start"
+        assert area.text == "Stormveil Castle before Gate"
+        assert area.maps == ["m10_00_00_00"]
+        assert area.tags == ["legacy_dungeon"]
+
+    def test_parse_area_with_to_connections(self):
+        """Parse area with To: connections."""
+        area_data = {
+            "Name": "stormveil_start",
+            "Text": "Stormveil Castle before Gate",
+            "Maps": "m10_00_00_00",
+            "To": [
+                {
+                    "Area": "stormveil",
+                    "Text": "with Rusty Key",
+                    "Cond": "OR scalepass rustykey",
+                    "Tags": "noscalecond",
+                }
+            ],
+        }
+        area = parse_area(area_data)
+
+        assert len(area.to_connections) == 1
+        conn = area.to_connections[0]
+        assert conn.target_area == "stormveil"
+        assert conn.cond == "OR scalepass rustykey"
+        assert "noscalecond" in conn.tags
+
+    def test_parse_area_with_drop(self):
+        """Parse area with drop connection."""
+        area_data = {
+            "Name": "academy_courtyard",
+            "Text": "Academy Courtyard",
+            "Maps": "m14_00_00_00",
+            "To": [
+                {
+                    "Area": "academy_redwolf",
+                    "Text": "dropping down",
+                    "Tags": "drop",
+                }
+            ],
+        }
+        area = parse_area(area_data)
+
+        conn = area.to_connections[0]
+        assert conn.is_drop is True
+
+
+class TestParseFog:
+    """Tests for parse_fog function."""
+
+    def test_parse_basic_entrance(self):
+        """Parse a basic entrance."""
+        fog_data = {
+            "Name": "AEG099_002_9000",
+            "ID": 10001800,
+            "ASide": {
+                "Area": "stormveil",
+                "Text": "before Godrick's arena",
+            },
+            "BSide": {
+                "Area": "stormveil_godrick",
+                "Text": "at the front of Godrick's arena",
+                "Tags": "main",
+            },
+            "Tags": "major",
+        }
+        fog = parse_fog(fog_data)
+
+        assert fog.name == "AEG099_002_9000"
+        assert fog.fog_id == 10001800
+        assert fog.aside.area == "stormveil"
+        assert fog.bside.area == "stormveil_godrick"
+        assert fog.tags == ["major"]
+        assert fog.is_unique is False
+
+    def test_parse_unique_fog(self):
+        """Parse a unique (one-way) fog."""
+        fog_data = {
+            "Name": "11002697",
+            "ID": 11002697,
+            "ASide": {"Area": "peninsula", "Text": "Tower of Return"},
+            "BSide": {"Area": "leyndell_divinebridge", "Text": "arriving"},
+            "Tags": "unique legacy",
+        }
+        fog = parse_fog(fog_data)
+
+        assert fog.is_unique is True
+        assert fog.is_norandom is False
+
+    def test_parse_norandom_fog(self):
+        """Parse a non-randomizable fog."""
+        fog_data = {
+            "Name": "test",
+            "ID": 12345,
+            "ASide": {"Area": "a"},
+            "BSide": {"Area": "b"},
+            "Tags": "norandom",
+        }
+        fog = parse_fog(fog_data)
+
+        assert fog.is_norandom is True
+
+
+# =============================================================================
+# World Graph Tests
+# =============================================================================
+
+
+class TestIsConditionGuaranteed:
+    """Tests for is_condition_guaranteed function."""
+
+    def test_no_condition(self):
+        """No condition is always guaranteed."""
+        assert is_condition_guaranteed(None, set()) is True
+
+    def test_single_key_item(self):
+        """Single key item condition is guaranteed."""
+        key_items = {"rustykey", "academyglintstonekey"}
+        assert is_condition_guaranteed("rustykey", key_items) is True
+
+    def test_or_key_items(self):
+        """OR condition with key items is guaranteed."""
+        key_items = {"scalepass", "rustykey"}
+        assert is_condition_guaranteed("OR scalepass rustykey", key_items) is True
+
+    def test_complex_condition_with_items(self):
+        """Complex nested condition with items is guaranteed."""
+        key_items = {"scalepass", "logicpass", "imbued_base", "imbued_base_any"}
+        cond = "OR ( AND scalepass imbued_base ) ( AND logicpass imbued_base_any )"
+        assert is_condition_guaranteed(cond, key_items) is True
+
+    def test_zone_condition_not_guaranteed(self):
+        """Zone condition is NOT guaranteed."""
+        key_items = {"rustykey"}
+        # "academy_entrance" is a zone, not a key item
+        assert is_condition_guaranteed("academy_entrance", key_items) is False
+
+
+class TestWorldGraph:
+    """Tests for WorldGraph class."""
+
+    def test_add_bidirectional_edge(self):
+        """Bidirectional edge adds both directions."""
+        graph = WorldGraph()
+        graph.add_edge("a", "b", bidirectional=True)
+
+        assert ("b", True) in graph.edges["a"]
+        assert ("a", True) in graph.edges["b"]
+
+    def test_add_unidirectional_edge(self):
+        """Unidirectional edge only adds one direction."""
+        graph = WorldGraph()
+        graph.add_edge("a", "b", bidirectional=False)
+
+        assert ("b", False) in graph.edges["a"]
+        assert "b" not in graph.edges or ("a", False) not in graph.edges["b"]
+
+    def test_has_unidirectional_edge(self):
+        """Check unidirectional edge detection."""
+        graph = WorldGraph()
+        graph.add_edge("a", "b", bidirectional=False)
+        graph.add_edge("c", "d", bidirectional=True)
+
+        assert graph.has_unidirectional_edge("a", "b") is True
+        assert graph.has_unidirectional_edge("b", "a") is False
+        assert graph.has_unidirectional_edge("c", "d") is False
+
+    def test_get_reachable(self):
+        """Test flood-fill reachability."""
+        graph = WorldGraph()
+        # a -> b (drop)
+        # b <-> c (bidirectional)
+        graph.add_edge("a", "b", bidirectional=False)
+        graph.add_edge("b", "c", bidirectional=True)
+
+        # From a: can reach b and c
+        assert graph.get_reachable("a") == {"b", "c"}
+
+        # From b: can reach c (and back from c)
+        assert graph.get_reachable("b") == {"c"}
+
+        # From c: can reach b
+        assert graph.get_reachable("c") == {"b"}
+
+
+class TestBuildWorldGraph:
+    """Tests for build_world_graph function."""
+
+    def test_bidirectional_connection(self):
+        """Two areas with mutual connections are bidirectional."""
+        areas = {
+            "a": AreaData(
+                name="a",
+                text="Area A",
+                maps=[],
+                tags=[],
+                to_connections=[WorldConnection(target_area="b", text="", tags=[])],
+            ),
+            "b": AreaData(
+                name="b",
+                text="Area B",
+                maps=[],
+                tags=[],
+                to_connections=[WorldConnection(target_area="a", text="", tags=[])],
+            ),
+        }
+        graph = build_world_graph(areas, set())
+
+        # Both directions should exist and be bidirectional
+        assert ("b", True) in graph.edges["a"]
+        assert ("a", True) in graph.edges["b"]
+
+    def test_drop_connection(self):
+        """Drop tag creates unidirectional connection."""
+        areas = {
+            "top": AreaData(
+                name="top",
+                text="Top",
+                maps=[],
+                tags=[],
+                to_connections=[
+                    WorldConnection(target_area="bottom", text="", tags=["drop"])
+                ],
+            ),
+            "bottom": AreaData(name="bottom", text="Bottom", maps=[], tags=[]),
+        }
+        graph = build_world_graph(areas, set())
+
+        assert graph.has_unidirectional_edge("top", "bottom") is True
+
+
+# =============================================================================
+# Fog Classification Tests
+# =============================================================================
+
+
+class TestClassifyFogs:
+    """Tests for classify_fogs function."""
+
+    def test_bidirectional_fog(self):
+        """Normal fog is entry+exit on both sides."""
+        fog = FogData(
+            name="test",
+            fog_id=1,
+            aside=FogSide(area="zone_a", text=""),
+            bside=FogSide(area="zone_b", text=""),
+            tags=[],
+        )
+        zone_fogs = classify_fogs([fog], [])
+
+        assert fog in zone_fogs["zone_a"].entry_fogs
+        assert fog in zone_fogs["zone_a"].exit_fogs
+        assert fog in zone_fogs["zone_b"].entry_fogs
+        assert fog in zone_fogs["zone_b"].exit_fogs
+
+    def test_unique_fog(self):
+        """Unique fog: ASide=exit only, BSide=entry only."""
+        fog = FogData(
+            name="test",
+            fog_id=1,
+            aside=FogSide(area="zone_a", text=""),
+            bside=FogSide(area="zone_b", text=""),
+            tags=["unique"],
+        )
+        zone_fogs = classify_fogs([fog], [])
+
+        # ASide is exit only
+        assert fog not in zone_fogs["zone_a"].entry_fogs
+        assert fog in zone_fogs["zone_a"].exit_fogs
+
+        # BSide is entry only
+        assert fog in zone_fogs["zone_b"].entry_fogs
+        assert fog not in zone_fogs["zone_b"].exit_fogs
+
+    def test_norandom_fog_excluded(self):
+        """Norandom fogs are excluded entirely."""
+        fog = FogData(
+            name="test",
+            fog_id=1,
+            aside=FogSide(area="zone_a", text=""),
+            bside=FogSide(area="zone_b", text=""),
+            tags=["norandom"],
+        )
+        zone_fogs = classify_fogs([fog], [])
+
+        assert "zone_a" not in zone_fogs or fog not in zone_fogs.get("zone_a", ZoneFogs()).entry_fogs
+        assert "zone_b" not in zone_fogs or fog not in zone_fogs.get("zone_b", ZoneFogs()).entry_fogs
+
+
+# =============================================================================
+# Cluster Generation Tests
+# =============================================================================
+
+
+class TestGenerateClusters:
+    """Tests for generate_clusters function."""
+
+    def test_single_zone_cluster(self):
+        """Zone with no connections forms singleton cluster."""
+        graph = WorldGraph()
+        zones = {"lonely"}
+
+        clusters = generate_clusters(zones, graph)
+
+        assert len(clusters) == 1
+        assert clusters[0].zones == frozenset({"lonely"})
+
+    def test_connected_zones_same_cluster(self):
+        """Connected zones form one cluster."""
+        graph = WorldGraph()
+        graph.add_edge("a", "b", bidirectional=True)
+        zones = {"a", "b"}
+
+        clusters = generate_clusters(zones, graph)
+
+        # Both starting from a or b should give same cluster
+        assert len(clusters) == 1
+        assert clusters[0].zones == frozenset({"a", "b"})
+
+    def test_drop_creates_multiple_clusters(self):
+        """Drop connection creates multiple entry points = multiple clusters."""
+        graph = WorldGraph()
+        graph.add_edge("top", "bottom", bidirectional=False)
+        zones = {"top", "bottom"}
+
+        clusters = generate_clusters(zones, graph)
+
+        # Starting from top: reaches bottom -> cluster {top, bottom}
+        # Starting from bottom: no reachable -> cluster {bottom}
+        cluster_sets = {c.zones for c in clusters}
+        assert frozenset({"top", "bottom"}) in cluster_sets
+        assert frozenset({"bottom"}) in cluster_sets
+
+
+class TestComputeClusterFogs:
+    """Tests for compute_cluster_fogs function."""
+
+    def test_entry_zones_all_bidirectional(self):
+        """All zones are entry zones when all connections bidirectional."""
+        graph = WorldGraph()
+        graph.add_edge("a", "b", bidirectional=True)
+
+        zone_fogs = {
+            "a": ZoneFogs(
+                entry_fogs=[
+                    FogData("f1", 1, FogSide("a", ""), FogSide("x", ""), [])
+                ],
+                exit_fogs=[
+                    FogData("f1", 1, FogSide("a", ""), FogSide("x", ""), [])
+                ],
+            ),
+            "b": ZoneFogs(
+                entry_fogs=[
+                    FogData("f2", 2, FogSide("b", ""), FogSide("y", ""), [])
+                ],
+                exit_fogs=[
+                    FogData("f2", 2, FogSide("b", ""), FogSide("y", ""), [])
+                ],
+            ),
+        }
+
+        cluster = Cluster(zones=frozenset({"a", "b"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        # Both zones are entry zones, so entry_fogs from both
+        assert len(cluster.entry_fogs) == 2
+
+    def test_entry_zones_with_drop(self):
+        """Only top zone is entry zone when drop exists."""
+        graph = WorldGraph()
+        graph.add_edge("top", "bottom", bidirectional=False)
+
+        zone_fogs = {
+            "top": ZoneFogs(
+                entry_fogs=[
+                    FogData("f_top", 1, FogSide("top", ""), FogSide("x", ""), [])
+                ],
+                exit_fogs=[
+                    FogData("f_top", 1, FogSide("top", ""), FogSide("x", ""), [])
+                ],
+            ),
+            "bottom": ZoneFogs(
+                entry_fogs=[
+                    FogData("f_bot", 2, FogSide("bottom", ""), FogSide("y", ""), [])
+                ],
+                exit_fogs=[
+                    FogData("f_bot", 2, FogSide("bottom", ""), FogSide("y", ""), [])
+                ],
+            ),
+        }
+
+        cluster = Cluster(zones=frozenset({"top", "bottom"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        # Only top is entry zone
+        entry_zones = {f["zone"] for f in cluster.entry_fogs}
+        assert "top" in entry_zones
+        assert "bottom" not in entry_zones
+
+        # Both are in exit_fogs
+        exit_zones = {f["zone"] for f in cluster.exit_fogs}
+        assert "top" in exit_zones
+        assert "bottom" in exit_zones
+
+
+# =============================================================================
+# Filter Tests
+# =============================================================================
+
+
+class TestShouldExcludeArea:
+    """Tests for should_exclude_area function."""
+
+    def test_exclude_dlc(self):
+        """DLC areas excluded when exclude_dlc=True."""
+        area = AreaData(name="dlc_area", text="", maps=[], tags=["dlc"])
+        assert should_exclude_area(area, exclude_dlc=True, exclude_overworld=False) is True
+        assert should_exclude_area(area, exclude_dlc=False, exclude_overworld=False) is False
+
+    def test_exclude_overworld(self):
+        """Overworld areas excluded when exclude_overworld=True."""
+        area = AreaData(name="limgrave", text="", maps=[], tags=["overworld"])
+        assert should_exclude_area(area, exclude_dlc=False, exclude_overworld=True) is True
+        assert should_exclude_area(area, exclude_dlc=False, exclude_overworld=False) is False
+
+    def test_exclude_unused(self):
+        """Unused areas always excluded."""
+        area = AreaData(name="unused_area", text="", maps=[], tags=["unused"])
+        assert should_exclude_area(area, exclude_dlc=False, exclude_overworld=False) is True
+
+
+class TestGetZoneType:
+    """Tests for get_zone_type function."""
+
+    def test_start_zone(self):
+        """Zone with start tag."""
+        area = AreaData(name="chapel_start", text="", maps=["m10_01_00_00"], tags=["start"])
+        assert get_zone_type(area) == "start"
+
+    def test_legacy_dungeon(self):
+        """Zone on legacy dungeon map."""
+        area = AreaData(name="stormveil", text="", maps=["m10_00_00_00"], tags=[])
+        assert get_zone_type(area) == "legacy_dungeon"
+
+    def test_catacomb(self):
+        """Zone on catacomb map."""
+        area = AreaData(name="test_catacomb", text="", maps=["m30_01_00_00"], tags=[])
+        assert get_zone_type(area) == "catacomb"
+
+    def test_cave(self):
+        """Zone on cave map."""
+        area = AreaData(name="test_cave", text="", maps=["m31_01_00_00"], tags=[])
+        assert get_zone_type(area) == "cave"
+
+    def test_tunnel(self):
+        """Zone on tunnel map."""
+        area = AreaData(name="test_tunnel", text="", maps=["m32_01_00_00"], tags=[])
+        assert get_zone_type(area) == "tunnel"
+
+    def test_gaol(self):
+        """Zone on gaol map."""
+        area = AreaData(name="test_gaol", text="", maps=["m39_01_00_00"], tags=[])
+        assert get_zone_type(area) == "gaol"
+
+
+class TestGenerateClusterId:
+    """Tests for generate_cluster_id function."""
+
+    def test_deterministic(self):
+        """Same zones produce same ID."""
+        zones1 = frozenset({"a", "b", "c"})
+        zones2 = frozenset({"c", "a", "b"})  # Different order
+
+        assert generate_cluster_id(zones1) == generate_cluster_id(zones2)
+
+    def test_different_zones_different_id(self):
+        """Different zones produce different IDs."""
+        zones1 = frozenset({"a", "b"})
+        zones2 = frozenset({"a", "c"})
+
+        assert generate_cluster_id(zones1) != generate_cluster_id(zones2)
+
+    def test_id_format(self):
+        """ID has expected format: primary_zone_hash."""
+        zones = frozenset({"zebra", "apple"})
+        cluster_id = generate_cluster_id(zones)
+
+        # Should start with first zone alphabetically
+        assert cluster_id.startswith("apple_")
+        # Should have 4-char hash suffix
+        parts = cluster_id.split("_")
+        assert len(parts[-1]) == 4

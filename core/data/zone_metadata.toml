@@ -1,0 +1,90 @@
+# Zone Metadata for SpeedFog Cluster Generation
+#
+# This file defines default weights per zone type and optional
+# zone-specific overrides for cluster weight calculations.
+#
+# weight = approximate duration in minutes
+
+[defaults]
+# Default weights by zone type
+legacy_dungeon = 10
+catacomb = 4
+cave = 4
+tunnel = 4
+gaol = 4
+boss_arena = 2
+mini_dungeon = 4
+start = 1
+unknown = 4
+
+# Zone-specific overrides
+# Format: [zones.zone_name]
+#         weight = X
+
+[zones.stormveil]
+weight = 15
+
+[zones.stormveil_start]
+weight = 8
+
+[zones.academy]
+weight = 12
+
+[zones.academy_entrance]
+weight = 5
+
+[zones.academy_rooftops]
+weight = 8
+
+[zones.academy_courtyard]
+weight = 6
+
+[zones.leyndell]
+weight = 20
+
+[zones.leyndell_sanctuary]
+weight = 5
+
+[zones.volcano]
+weight = 12
+
+[zones.volcano_manor]
+weight = 8
+
+[zones.haligtree]
+weight = 15
+
+[zones.haligtree_town]
+weight = 10
+
+[zones.farumazula]
+weight = 15
+
+[zones.farumazula_dragon]
+weight = 8
+
+# Large catacombs
+[zones.gelmir_hero_grave]
+weight = 6
+
+[zones.giant_conquering_hero_grave]
+weight = 6
+
+# Boss arenas with longer fights
+[zones.stormveil_godrick]
+weight = 4
+
+[zones.academy_library]
+weight = 3
+
+[zones.leyndell_throne]
+weight = 4
+
+[zones.volcano_rykard]
+weight = 4
+
+[zones.haligtree_malenia]
+weight = 5
+
+[zones.farumazula_maliketh]
+weight = 4
