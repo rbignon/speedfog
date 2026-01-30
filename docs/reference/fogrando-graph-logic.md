@@ -774,32 +774,145 @@ With backportals enabled, mini-dungeons are **eligible** for DAG structures beca
 
 ## 11. Implications for SpeedFog
 
-### 11.1 Parsing Requirements
+### 11.1 SpeedFog Option Equivalences
+
+SpeedFog needs to decide which FogRando options to "virtually enable" for parsing fog.txt.
+
+**Goal:** Maximize zones with 2-3 bidirectional connection points for DAG generation.
+
+#### Recommended Option Settings
+
+| FogRando Option | SpeedFog Setting | Rationale |
+|-----------------|------------------|-----------|
+| `crawl` | **false** | We want all connection types, not just dungeon-focused |
+| `req_backportal` | **true** | Boss rooms need 2nd connection point |
+| `req_cave` | **true** | Include cave connections |
+| `req_catacomb` | **true** | Include catacomb connections |
+| `req_gaol` | **true** | Include gaol connections |
+| `req_tunnel` | **true** | Include tunnel connections |
+| `coupledwarp` | **true** | Make sending gates bidirectional where possible |
+| `coupledminor` | **true** | Make minor warps bidirectional |
+| `dlc` | **false** | Base game only for v1 |
+| `Feature.Segmented` | **false** | Standard mode |
+
+#### Resulting Tag Processing
+
+With these settings, SpeedFog should:
+
+| Tag | Action |
+|-----|--------|
+| `unused` | **Exclude** |
+| `crawlonly` | **Exclude** (crawl=false) |
+| `dlc`, `dlc1`, `dlc2` | **Exclude** |
+| `norandom`, `door` | **Include as fixed** (not randomizable but traversable) |
+| `trivial` | **Include** (needed for world connections) |
+| `backportal` | **Convert to bidirectional** (like selfwarp) |
+| `unique` (inherent) | **Include as unidirectional** |
+| `uniquegate` | **Convert to bidirectional** (coupledwarp=true) |
+| `uniqueminor` | **Convert to bidirectional** (coupledminor=true) |
+| `*only` (caveonly, etc.) | **Include** (req_*=true) |
+
+### 11.2 Inherently Unidirectional Connections
+
+Some connections **cannot be made bidirectional** regardless of options:
+
+#### Event-Triggered Warps
+
+| Connection | From | To | Tag | Notes |
+|------------|------|-----|-----|-------|
+| Burn Erdtree | `flamepeak_firegiant` | `farumazula_prestart` | `unique major` | Story progression, irreversible |
+| After Maliketh | `farumazula_maliketh` | `leyndell2` | `unique major` | Triggers Ashen Capital |
+
+#### Coffin Rides
+
+| Connection | From | To | Tag |
+|------------|------|-----|-----|
+| Deeproot → Ainsel | `deeproot` | `ainsel` | `unique underground` |
+
+#### Belfry Teleporters
+
+| Connection | From | To | Tag |
+|------------|------|-----|-----|
+| Belfry → Chapel | `liurnia` | `chapel_postboss` | `unique belfries` |
+| Belfry → Nokron | `liurnia` | `siofra_limited` | `unique belfries` |
+| Belfry → Farum | `liurnia` | `farumazula_belfries` | `unique belfries` |
+
+#### Trap Chests
+
+| Connection | From | To | Tag |
+|------------|------|-----|-----|
+| Tower of Return | `peninsula` | `leyndell_divinebridge` | `unique legacy opensplit` |
+| (Several in Caelid) | Various | Various | `unique` |
+
+#### Sending Gates (Inherently One-Way)
+
+| Connection | From | To | Tag |
+|------------|------|-----|-----|
+| Deeproot → Leyndell | `deeproot_boss` | `leyndell` | `unique underground` |
+| Siofra → Dragonkin | `siofra` | `siofra_dragonkin` | `unique underground minorwarp` |
+
+### 11.3 Parsing Requirements
 
 1. **Parse Areas section** for zone definitions and tags
 2. **Parse Entrances section** for fog gate definitions
-3. **Filter based on desired mode:**
-   - Exclude `crawlonly` if not using crawl-like logic
-   - Exclude `unused` entries
-   - Include `backportal` as bidirectional connections
+3. **Apply SpeedFog option logic:**
+   - Exclude `crawlonly`, `dlc*`, `unused`
+   - Include all `*only` tags (treating req_*=true)
+   - Convert `backportal` to bidirectional selfwarp
+   - Convert `uniquegate`/`uniqueminor` to bidirectional
+   - Keep inherent `unique` as unidirectional
 
-### 11.2 Connection Counting
+### 11.4 Connection Counting
 
-For each zone, count:
-- Entrances where `ASide.Area == zone` (gives 1 exit + 1 entrance)
-- Entrances where `BSide.Area == zone` (gives 1 exit + 1 entrance)
-- Backportals where `ASide.Area == zone` (boss rooms gain connections)
+For each zone, count bidirectional connection points:
 
-### 11.3 Eligible Zones for DAG
+**From Entrances (fog gates):**
+- Where `ASide.Area == zone` AND not `unique` → +1 bidirectional
+- Where `BSide.Area == zone` AND not `unique` → +1 bidirectional
+
+**From Warps:**
+- `backportal` where `ASide.Area == zone` → +1 bidirectional (selfwarp)
+- `uniquegate`/`uniqueminor` → +1 bidirectional (if coupled)
+- Pure `unique` → +1 unidirectional only
+
+**Total for DAG eligibility:**
+- Need ≥2 bidirectional connections
+- Unidirectional connections can serve as extra exits but not entries
+
+### 11.5 Eligible Zones for DAG
 
 A zone is eligible for DAG inclusion if:
-- It has **at least 2 connection points**
-- It is not tagged `trivial`, `unused`, or similar exclusion tags
-- Its connections are not all `unique` (one-way only)
+- It has **at least 2 bidirectional connection points**
+- OR it has **1 bidirectional + 1 unidirectional exit** (can be end of branch)
+- It is not tagged `unused`
+- It is not purely `trivial` with no connections
 
-### 11.4 Zone Grouping
+### 11.6 Zone Grouping Strategy
 
-Consider merging:
-- Zones connected via `To:` world connections
+**Merge candidates:**
 - `*_start` zones with their parent (e.g., `stormveil_start` + `stormveil`)
-- Boss arenas with their dungeon (if treating as single logical unit)
+- Zones connected only via `To:` world connections
+- Boss arenas that have no external connections except through parent dungeon
+
+**Keep separate:**
+- Boss rooms with backportals (they have 2 connections)
+- Zones with multiple external fog gates
+
+### 11.7 Summary: SpeedFog Simplifications
+
+Compared to FogRando's full complexity, SpeedFog can simplify:
+
+| FogRando Feature | SpeedFog Approach |
+|------------------|-------------------|
+| Multiple modes (crawl, shuffle, etc.) | Single "DAG mode" |
+| Dynamic option processing | Fixed option equivalences |
+| Silo-based affinity matching | Not needed (DAG determines connections) |
+| IsCore calculation | All included zones are "core" |
+| Tier-based scaling | Pre-assigned tiers per zone |
+| Runtime graph validation | Build-time DAG validation |
+
+**Key insight:** SpeedFog doesn't need to replicate FogRando's randomization algorithm. It only needs to:
+1. Parse fog.txt to understand zone connectivity
+2. Filter zones by connection count (≥2 bidirectional)
+3. Generate a valid DAG structure
+4. Output connection data for the C# writer
