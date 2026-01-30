@@ -58,6 +58,7 @@ class AreaData:
     maps: list[str]
     tags: list[str]
     to_connections: list[WorldConnection] = field(default_factory=list)
+    has_boss: bool = False  # True if zone has BossTrigger (boss fight zone)
 
 
 @dataclass
@@ -207,12 +208,16 @@ def parse_area(area_data: dict) -> AreaData:
     for conn in area_data.get("To", []) or []:
         to_connections.append(parse_world_connection(conn))
 
+    # Check if zone has a boss (BossTrigger field present)
+    has_boss = "BossTrigger" in area_data
+
     return AreaData(
         name=area_data.get("Name", ""),
         text=area_data.get("Text", ""),
         maps=maps,
         tags=parse_tags(area_data.get("Tags")),
         to_connections=to_connections,
+        has_boss=has_boss,
     )
 
 
@@ -622,6 +627,10 @@ def get_zone_type(area: AreaData) -> str:
 
     if name_lower in ("leyndell_erdtree", "leyndell2_erdtree"):
         return "final_boss"
+
+    # Boss zones (have BossTrigger in fog.txt) are boss_arena
+    if area.has_boss:
+        return "boss_arena"
 
     if not area.maps:
         return "boss_arena"  # Default for zones without maps

@@ -175,17 +175,69 @@ def compute_tier(layer_idx: int, total_layers: int) -> int:
     return max(1, min(28, int(1 + progress * 27)))
 
 
+def cluster_has_usable_exits(cluster: ClusterData) -> bool:
+    """Check if cluster will have at least 1 exit after using any entry fog.
+
+    A cluster is usable if for at least one entry_fog, there remains
+    at least one exit_fog after removing the bidirectional entry.
+    """
+    if not cluster.entry_fogs:
+        return False
+
+    for entry in cluster.entry_fogs:
+        entry_fog_id = entry["fog_id"]
+        # Count exits that would remain after using this entry
+        remaining_exits = [e for e in cluster.exit_fogs if e["fog_id"] != entry_fog_id]
+        if remaining_exits:
+            return True
+
+    # No entry fog leaves any exits - cluster is a dead end
+    return False
+
+
+def pick_entry_fog_with_exits(cluster: ClusterData, rng: random.Random) -> str | None:
+    """Pick an entry fog that leaves at least one exit available.
+
+    Returns the fog_id of a valid entry, or None if no valid entry exists.
+    """
+    valid_entries = []
+    for entry in cluster.entry_fogs:
+        entry_fog_id = entry["fog_id"]
+        remaining_exits = [e for e in cluster.exit_fogs if e["fog_id"] != entry_fog_id]
+        if remaining_exits:
+            valid_entries.append(entry_fog_id)
+
+    if not valid_entries:
+        return None
+
+    return rng.choice(valid_entries)
+
+
 def pick_cluster(
     candidates: list[ClusterData],
     used_zones: set[str],
     rng: random.Random,
+    require_exits: bool = True,
 ) -> ClusterData | None:
-    """Pick a cluster whose zones don't overlap with used_zones."""
+    """Pick a cluster whose zones don't overlap with used_zones.
+
+    Args:
+        candidates: List of candidate clusters
+        used_zones: Set of zone IDs already used
+        rng: Random number generator
+        require_exits: If True, only pick clusters with usable exits
+    """
     available = []
     for cluster in candidates:
         # Check no zone overlap
-        if not any(z in used_zones for z in cluster.zones):
-            available.append(cluster)
+        if any(z in used_zones for z in cluster.zones):
+            continue
+
+        # Check cluster has usable exits (unless it's the final node)
+        if require_exits and not cluster_has_usable_exits(cluster):
+            continue
+
+        available.append(cluster)
 
     if not available:
         return None
@@ -315,8 +367,14 @@ def generate_dag(
         used_zones.update(cluster_b.zones)
 
         # Determine entry fogs (pick randomly from available)
-        entry_fog_a = rng.choice(cluster_a.entry_fogs)["fog_id"] if cluster_a.entry_fogs else None
-        entry_fog_b = rng.choice(cluster_b.entry_fogs)["fog_id"] if cluster_b.entry_fogs else None
+        # Pick entry fogs that leave exits available
+        entry_fog_a = pick_entry_fog_with_exits(cluster_a, rng)
+        entry_fog_b = pick_entry_fog_with_exits(cluster_b, rng)
+
+        if entry_fog_a is None:
+            raise GenerationError(f"Cluster {cluster_a.id} has no valid entry fog with exits")
+        if entry_fog_b is None:
+            raise GenerationError(f"Cluster {cluster_b.id} has no valid entry fog with exits")
 
         # Create nodes
         node_a = DagNode(
@@ -359,7 +417,7 @@ def generate_dag(
     if not end_candidates:
         raise GenerationError("No final_boss cluster found")
 
-    end_cluster = pick_cluster(end_candidates, used_zones, rng)
+    end_cluster = pick_cluster(end_candidates, used_zones, rng, require_exits=False)
     if end_cluster is None:
         raise GenerationError("Could not pick final_boss cluster")
 
