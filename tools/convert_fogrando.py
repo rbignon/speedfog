@@ -47,6 +47,35 @@ EXCLUDE_NAME_PATTERNS = [
     "sewer",
 ]
 
+# Areas that are overworld even when connected by legacy entrances
+# (these appear in legacy-tagged entrances but are not legacy dungeons themselves)
+OVERWORLD_AREAS = {
+    "liurnia",
+    "gelmir",
+    "gravesite",
+    "scadualtus",
+    "scadualtus_lower",
+    "cerulean",
+    "rauhruins_east",
+}
+
+# Map prefixes for legacy dungeons (excluding overworld areas on the same map)
+# These are used to identify zones within legacy dungeons
+LEGACY_MAP_PREFIXES = [
+    "m10_00",  # Stormveil Castle
+    "m11_00",  # Leyndell, Royal Capital
+    "m11_05",  # Leyndell, Ashen Capital
+    "m13_00",  # Crumbling Farum Azula
+    "m14_00",  # Academy of Raya Lucaria
+    "m15_00",  # Haligtree
+    "m16_00",  # Volcano Manor
+]
+
+# Area names that are on legacy dungeon maps but are actually overworld
+LEGACY_MAP_OVERWORLD_EXCEPTIONS = {
+    "stormhill",  # m10_00 but overworld
+}
+
 # Zone type output order
 ZONE_TYPE_ORDER = [
     "start",
@@ -64,6 +93,50 @@ def load_fog_txt(path: Path) -> dict:
     """Load and parse FogRando's fog.txt YAML file."""
     with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f)
+
+
+def parse_entrances(data: dict) -> tuple[set[str], dict[str, int]]:
+    """
+    Parse Entrances section to extract legacy zones and fog counts.
+
+    Returns:
+        legacy_zones: Set of area names connected by legacy-tagged entrances
+        fog_counts: Dict mapping area name to number of fog gates (entrances)
+    """
+    legacy_zones: set[str] = set()
+    fog_counts: dict[str, int] = {}
+
+    entrances = data.get("Entrances", [])
+
+    for entrance in entrances:
+        # Skip unused entrances
+        tags = entrance.get("Tags", "")
+        tags_list = tags.split() if isinstance(tags, str) else tags or []
+        tags_lower = [t.lower() for t in tags_list]
+
+        if "unused" in tags_lower or "remove" in tags_lower:
+            continue
+
+        # Get connected areas
+        a_side = entrance.get("ASide", {})
+        b_side = entrance.get("BSide", {})
+        a_area = a_side.get("Area", "")
+        b_area = b_side.get("Area", "")
+
+        # Count fog gates for each area
+        if a_area:
+            fog_counts[a_area] = fog_counts.get(a_area, 0) + 1
+        if b_area:
+            fog_counts[b_area] = fog_counts.get(b_area, 0) + 1
+
+        # Collect legacy zones (excluding known overworld areas)
+        if "legacy" in tags_lower:
+            if a_area and a_area not in OVERWORLD_AREAS:
+                legacy_zones.add(a_area)
+            if b_area and b_area not in OVERWORLD_AREAS:
+                legacy_zones.add(b_area)
+
+    return legacy_zones, fog_counts
 
 
 def should_exclude_by_name(name: str) -> bool:
@@ -89,21 +162,21 @@ def get_primary_map(area: dict) -> str:
     return maps.split()[0]
 
 
-def derive_zone_type(area: dict) -> str | None:
+def derive_zone_type(area: dict, legacy_zones: set[str]) -> str | None:
     """
     Derive zone type from area data.
 
     Returns None if zone should be excluded.
 
-    Type derivation rules:
-    - Tag contains 'legacy' -> legacy_dungeon
-    - Tag contains 'start' -> start
-    - Map starts with m30 -> catacomb
-    - Map starts with m31 -> cave
-    - Map starts with m32 -> tunnel
-    - Map starts with m39 -> gaol
-    - Has DefeatFlag and not minidungeon -> boss_arena
-    - Tag contains 'minidungeon' -> mini_dungeon
+    Type derivation rules (in priority order):
+    1. Tag contains 'start' -> start
+    2. Area name in legacy_zones (from Entrances) OR map prefix is legacy -> legacy_dungeon
+    3. Map starts with m30 -> catacomb
+    4. Map starts with m31 -> cave
+    5. Map starts with m32 -> tunnel
+    6. Map starts with m39 -> gaol
+    7. Has DefeatFlag and not minidungeon -> boss_arena
+    8. Tag contains 'minidungeon' -> mini_dungeon
     """
     name = area.get("Name", "")
     tags = area.get("Tags", "")
@@ -116,16 +189,26 @@ def derive_zone_type(area: dict) -> str | None:
     if should_exclude_by_tags(tags_list):
         return None
 
-    # Check for start tag
+    # Check for start tag (highest priority)
     if "start" in tags_lower:
         return "start"
 
-    # Check for legacy dungeon tag
-    if "legacy" in tags_lower:
+    # Get the primary map early - needed for legacy check
+    primary_map = get_primary_map(area)
+
+    # Check if area is identified as legacy dungeon:
+    # 1. From Entrances section (legacy_zones set)
+    # 2. From map prefix (LEGACY_MAP_PREFIXES)
+    is_legacy_from_entrances = name in legacy_zones
+    is_legacy_from_map = (
+        primary_map
+        and any(primary_map.startswith(prefix) for prefix in LEGACY_MAP_PREFIXES)
+        and name not in LEGACY_MAP_OVERWORLD_EXCEPTIONS
+    )
+
+    if is_legacy_from_entrances or is_legacy_from_map:
         return "legacy_dungeon"
 
-    # Get the primary map
-    primary_map = get_primary_map(area)
     if not primary_map:
         return None
 
@@ -171,13 +254,15 @@ def extract_boss_name(area: dict) -> str:
     return ""
 
 
-def convert_area_to_zone(area: dict) -> Zone | None:
+def convert_area_to_zone(
+    area: dict, legacy_zones: set[str], fog_counts: dict[str, int]
+) -> Zone | None:
     """Convert a FogRando area to a SpeedFog zone."""
     name = area.get("Name", "")
     if not name:
         return None
 
-    zone_type = derive_zone_type(area)
+    zone_type = derive_zone_type(area, legacy_zones)
     if zone_type is None:
         return None
 
@@ -193,7 +278,7 @@ def convert_area_to_zone(area: dict) -> Zone | None:
         name=text,
         type=zone_type,
         weight=0,  # To be filled manually
-        fog_count=0,  # To be filled manually
+        fog_count=fog_counts.get(name, 0),
         boss=boss,
         tags=tags,
     )
@@ -219,7 +304,7 @@ def zones_to_toml(zones: list[Zone]) -> str:
         "# Generated from FogRando fog.txt",
         "#",
         "# weight: approximate duration in minutes (fill manually)",
-        "# fog_count: number of fog gates (fill manually)",
+        "# fog_count: number of fog gates (calculated from Entrances)",
         "",
     ]
 
@@ -284,12 +369,17 @@ def main() -> int:
 
     print(f"Found {len(areas)} total areas")
 
+    # Parse Entrances to get legacy zones and fog counts
+    legacy_zones, fog_counts = parse_entrances(data)
+    print(f"Found {len(legacy_zones)} legacy dungeon areas from Entrances")
+    print(f"Found fog counts for {len(fog_counts)} areas")
+
     # Convert areas to zones
     zones: list[Zone] = []
     excluded_count = 0
 
     for area in areas:
-        zone = convert_area_to_zone(area)
+        zone = convert_area_to_zone(area, legacy_zones, fog_counts)
         if zone is not None:
             zones.append(zone)
         else:
