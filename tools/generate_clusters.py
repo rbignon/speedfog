@@ -359,6 +359,7 @@ def is_condition_guaranteed(cond: str | None, key_items: set[str]) -> bool:
 def build_world_graph(
     areas: dict[str, AreaData],
     key_items: set[str],
+    allowed_zones: set[str] | None = None,
 ) -> WorldGraph:
     """
     Build a directed graph of world connections.
@@ -368,6 +369,7 @@ def build_world_graph(
     - Cond with zone -> skip (not relevant for clusters)
     - Cond with items only -> bidirectional (items are given)
     - No cond -> check if reverse connection exists
+    - Only include edges where both zones are in allowed_zones (if specified)
     """
     graph = WorldGraph()
 
@@ -375,8 +377,16 @@ def build_world_graph(
     connections: list[tuple[str, str, bool]] = []  # (from, to, is_drop)
 
     for area_name, area in areas.items():
+        # Skip if source zone not in allowed set
+        if allowed_zones is not None and area_name not in allowed_zones:
+            continue
+
         for conn in area.to_connections:
             if not conn.target_area:
+                continue
+
+            # Skip if target zone not in allowed set
+            if allowed_zones is not None and conn.target_area not in allowed_zones:
                 continue
 
             # Skip connections with crawlonly tag
@@ -593,36 +603,49 @@ def should_exclude_area(area: AreaData, exclude_dlc: bool, exclude_overworld: bo
 
 
 def get_zone_type(area: AreaData) -> str:
-    """Derive zone type from area data."""
-    tags_lower = {t.lower() for t in area.tags}
+    """
+    Derive zone type from area data.
 
-    if "start" in tags_lower:
+    Returns one of 5 types:
+    - "start": Starting zone (chapel_start)
+    - "final_boss": End zone (leyndell_erdtree, leyndell2_erdtree)
+    - "legacy_dungeon": Large dungeons (Stormveil, Academy, etc.)
+    - "mini_dungeon": Catacombs, caves, tunnels, gaols
+    - "boss_arena": Standalone boss arenas, evergaols, underground areas
+    """
+    tags_lower = {t.lower() for t in area.tags}
+    name_lower = area.name.lower()
+
+    # Special zones
+    if "start" in tags_lower or name_lower == "chapel_start":
         return "start"
 
+    if name_lower in ("leyndell_erdtree", "leyndell2_erdtree"):
+        return "final_boss"
+
     if not area.maps:
-        return "unknown"
+        return "boss_arena"  # Default for zones without maps
 
     primary_map = area.maps[0]
 
-    # Legacy dungeon map prefixes
+    # Legacy dungeon map prefixes (m10=Stormveil, m11=Academy, etc.)
     legacy_prefixes = ["m10_", "m11_", "m13_", "m14_", "m15_", "m16_"]
     if any(primary_map.startswith(p) for p in legacy_prefixes):
         return "legacy_dungeon"
 
-    # Mini-dungeon types by map prefix
-    if primary_map.startswith("m30"):
-        return "catacomb"
-    if primary_map.startswith("m31"):
-        return "cave"
-    if primary_map.startswith("m32"):
-        return "tunnel"
-    if primary_map.startswith("m39"):
-        return "gaol"
+    # Mini-dungeons: catacombs, caves, tunnels, gaols, sewers
+    # m30=catacombs, m31=caves, m32=tunnels, m35=sewers, m39=gaols
+    mini_dungeon_prefixes = ["m30", "m31", "m32", "m35", "m39"]
+    if any(primary_map.startswith(p) for p in mini_dungeon_prefixes):
+        return "mini_dungeon"
 
+    # Check minidungeon tag as fallback
     if "minidungeon" in tags_lower:
         return "mini_dungeon"
 
-    return "unknown"
+    # Underground areas (m12) and other areas -> boss_arena
+    # This includes: Ainsel, Siofra, Deeproot, evergaols, hero graves, etc.
+    return "boss_arena"
 
 
 def load_metadata(path: Path | None) -> dict:
@@ -631,14 +654,10 @@ def load_metadata(path: Path | None) -> dict:
         return {
             "defaults": {
                 "legacy_dungeon": 10,
-                "catacomb": 4,
-                "cave": 4,
-                "tunnel": 4,
-                "gaol": 4,
-                "boss_arena": 2,
                 "mini_dungeon": 4,
+                "boss_arena": 2,
                 "start": 1,
-                "unknown": 4,
+                "final_boss": 4,
             },
             "zones": {},
         }
@@ -854,9 +873,9 @@ def main() -> int:
 
     print(f"Zones to process: {len(zones_to_process)}")
 
-    # Build world graph
+    # Build world graph (only include edges between allowed zones)
     print("Building world graph...")
-    world_graph = build_world_graph(areas, key_items)
+    world_graph = build_world_graph(areas, key_items, allowed_zones=zones_to_process)
 
     if args.verbose:
         edge_count = sum(len(edges) for edges in world_graph.edges.values())

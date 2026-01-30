@@ -6,16 +6,12 @@
 # weight = approximate duration in minutes
 
 [defaults]
-# Default weights by zone type
+# Default weights by zone type (5 types)
 legacy_dungeon = 10
-catacomb = 4
-cave = 4
-tunnel = 4
-gaol = 4
-boss_arena = 2
 mini_dungeon = 4
+boss_arena = 2
 start = 1
-unknown = 4
+final_boss = 4
 
 # Zone-specific overrides
 # Format: [zones.zone_name]

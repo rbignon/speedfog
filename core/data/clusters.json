@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "generated_from": "fog.txt",
-  "cluster_count": 266,
+  "cluster_count": 275,
   "clusters": [
     {
       "id": "academy_2a8a",
@@ -232,8 +232,8 @@
         "ainsel",
         "lakeofrot"
       ],
-      "type": "unknown",
-      "weight": 8,
+      "type": "boss_arena",
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_231_9002",
@@ -262,8 +262,8 @@
         "ainsel_abovestart",
         "ainsel_start"
       ],
-      "type": "unknown",
-      "weight": 8,
+      "type": "boss_arena",
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_231_9002",
@@ -290,8 +290,8 @@
       "zones": [
         "ainsel_boss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -318,8 +318,8 @@
       "zones": [
         "ainsel_dragonkin"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -346,8 +346,8 @@
       "zones": [
         "ainsel_postboss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9001",
@@ -374,8 +374,8 @@
       "zones": [
         "ainsel_postdragonkin"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9001",
@@ -394,8 +394,8 @@
       "zones": [
         "ainsel_preboss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -418,8 +418,8 @@
       "zones": [
         "ainsel_start"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -446,7 +446,7 @@
       "zones": [
         "altus_catacombs"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -490,7 +490,7 @@
       "zones": [
         "altus_catacombs_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -518,8 +518,8 @@
       "zones": [
         "altus_elemer"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -538,8 +538,8 @@
       "zones": [
         "altus_evergaol"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "1039502805",
@@ -566,7 +566,7 @@
       "zones": [
         "altus_grave"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -602,7 +602,7 @@
       "zones": [
         "altus_grave_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -630,7 +630,7 @@
       "zones": [
         "altus_grotto"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -666,7 +666,7 @@
       "zones": [
         "altus_grotto_boss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -694,8 +694,8 @@
       "zones": [
         "altus_lux_boss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -722,8 +722,8 @@
       "zones": [
         "altus_lux_chest"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9001",
@@ -742,7 +742,7 @@
       "zones": [
         "altus_oldtunnel"
       ],
-      "type": "tunnel",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -778,7 +778,7 @@
       "zones": [
         "altus_oldtunnel_boss"
       ],
-      "type": "tunnel",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -806,7 +806,7 @@
       "zones": [
         "altus_sagescave"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -850,7 +850,7 @@
       "zones": [
         "altus_sagescave_boss2"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -878,7 +878,7 @@
       "zones": [
         "altus_sagescave_boss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -902,13 +902,41 @@
       ]
     },
     {
+      "id": "altus_shaded_ec7b",
+      "zones": [
+        "altus_shaded"
+      ],
+      "type": "boss_arena",
+      "weight": 2,
+      "entry_fogs": [
+        {
+          "fog_id": "AEG099_002_9000",
+          "zone": "altus_shaded"
+        },
+        {
+          "fog_id": "755894502",
+          "zone": "altus_shaded"
+        }
+      ],
+      "exit_fogs": [
+        {
+          "fog_id": "AEG099_002_9000",
+          "zone": "altus_shaded"
+        },
+        {
+          "fog_id": "755894502",
+          "zone": "altus_shaded"
+        }
+      ]
+    },
+    {
       "id": "altus_tower_2320",
       "zones": [
         "altus_tower",
         "altus_tower_inner"
       ],
-      "type": "unknown",
-      "weight": 8,
+      "type": "boss_arena",
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_003_9001",
@@ -927,7 +955,7 @@
       "zones": [
         "altus_tunnel_boss"
       ],
-      "type": "tunnel",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -955,7 +983,7 @@
       "zones": [
         "altus_tunnel"
       ],
-      "type": "tunnel",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -991,8 +1019,8 @@
       "zones": [
         "altus_writheblood_boss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -1019,8 +1047,8 @@
       "zones": [
         "altus_writheblood_chest"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9001",
@@ -1039,7 +1067,7 @@
       "zones": [
         "caelid_abandonedcave"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -1060,7 +1088,7 @@
         "caelid_abandonedcave",
         "caelid_abandonedcave_start"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 8,
       "entry_fogs": [
         {
@@ -1092,7 +1120,7 @@
       "zones": [
         "caelid_abandonedcave_boss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -1120,8 +1148,8 @@
       "zones": [
         "caelid_caelem_boss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_003_9000",
@@ -1148,8 +1176,8 @@
       "zones": [
         "caelid_caelem_chest"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_003_9001",
@@ -1168,7 +1196,7 @@
       "zones": [
         "caelid_catacombs_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -1196,7 +1224,7 @@
       "zones": [
         "caelid_catacombs"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -1232,8 +1260,8 @@
       "zones": [
         "caelid_colosseum"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_231_9000",
@@ -1252,8 +1280,8 @@
       "zones": [
         "caelid_crypt_boss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -1280,8 +1308,8 @@
       "zones": [
         "caelid_crypt_chest"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -1300,7 +1328,7 @@
       "zones": [
         "caelid_erdtreecatacombs"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -1336,7 +1364,7 @@
       "zones": [
         "caelid_erdtreecatacombs_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -1366,7 +1394,7 @@
         "caelid_gaeltunnel_rear",
         "caelid_gaeltunnel_start"
       ],
-      "type": "tunnel",
+      "type": "mini_dungeon",
       "weight": 12,
       "entry_fogs": [
         {
@@ -1403,7 +1431,7 @@
         "caelid_gaeltunnel",
         "caelid_gaeltunnel_rear"
       ],
-      "type": "tunnel",
+      "type": "mini_dungeon",
       "weight": 8,
       "entry_fogs": [
         {
@@ -1427,7 +1455,7 @@
       "zones": [
         "caelid_gaeltunnel_boss"
       ],
-      "type": "tunnel",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -1455,7 +1483,7 @@
       "zones": [
         "caelid_gaeltunnel_rear"
       ],
-      "type": "tunnel",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -1475,7 +1503,7 @@
       "zones": [
         "caelid_gaolcave"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -1511,7 +1539,7 @@
       "zones": [
         "caelid_gaolcave_boss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -1540,7 +1568,7 @@
         "caelid_gaolcave_boss",
         "caelid_gaolcave_preboss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 8,
       "entry_fogs": [
         {
@@ -1564,12 +1592,32 @@
       ]
     },
     {
+      "id": "caelid_gaolcave_postboss_acef",
+      "zones": [
+        "caelid_gaolcave_postboss"
+      ],
+      "type": "mini_dungeon",
+      "weight": 4,
+      "entry_fogs": [
+        {
+          "fog_id": "AEG099_001_9001",
+          "zone": "caelid_gaolcave_postboss"
+        }
+      ],
+      "exit_fogs": [
+        {
+          "fog_id": "AEG099_001_9001",
+          "zone": "caelid_gaolcave_postboss"
+        }
+      ]
+    },
+    {
       "id": "caelid_preradahn_4b3f",
       "zones": [
         "caelid_preradahn"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_232_9000",
@@ -1593,8 +1641,8 @@
       "zones": [
         "caelid_radahn"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_230_9000",
@@ -1621,12 +1669,56 @@
       ]
     },
     {
+      "id": "caelid_redmane_a51c",
+      "zones": [
+        "caelid_redmane"
+      ],
+      "type": "boss_arena",
+      "weight": 2,
+      "entry_fogs": [
+        {
+          "fog_id": "AEG099_001_9000",
+          "zone": "caelid_redmane"
+        },
+        {
+          "fog_id": "1050360600",
+          "zone": "caelid_redmane"
+        },
+        {
+          "fog_id": "755894501",
+          "zone": "caelid_redmane"
+        },
+        {
+          "fog_id": "1051360600",
+          "zone": "caelid_redmane"
+        }
+      ],
+      "exit_fogs": [
+        {
+          "fog_id": "AEG099_001_9000",
+          "zone": "caelid_redmane"
+        },
+        {
+          "fog_id": "1050360600",
+          "zone": "caelid_redmane"
+        },
+        {
+          "fog_id": "755894501",
+          "zone": "caelid_redmane"
+        },
+        {
+          "fog_id": "1051360600",
+          "zone": "caelid_redmane"
+        }
+      ]
+    },
+    {
       "id": "caelid_redmane_boss_28f0",
       "zones": [
         "caelid_redmane_boss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -1654,8 +1746,8 @@
         "caelid_redmane_boss",
         "caelid_redmane_postboss"
       ],
-      "type": "unknown",
-      "weight": 8,
+      "type": "boss_arena",
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9001",
@@ -1686,7 +1778,7 @@
       "zones": [
         "caelid_selliatunnel"
       ],
-      "type": "tunnel",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -1726,7 +1818,7 @@
       "zones": [
         "caelid_selliatunnel_boss"
       ],
-      "type": "tunnel",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -1754,8 +1846,8 @@
       "zones": [
         "caelid_tower"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -1806,8 +1898,8 @@
       "zones": [
         "caelid_tower_boss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -1834,8 +1926,8 @@
       "zones": [
         "caelid_tower_inner"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_230_9000",
@@ -1854,8 +1946,8 @@
       "zones": [
         "caelid_tower_postboss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9001",
@@ -1882,7 +1974,7 @@
       "zones": [
         "caelid_wardead"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -1918,7 +2010,7 @@
       "zones": [
         "caelid_wardead_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -1994,6 +2086,31 @@
       ]
     },
     {
+      "id": "chapel_start_4f96",
+      "zones": [
+        "chapel_start"
+      ],
+      "type": "start",
+      "weight": 1,
+      "entry_fogs": [
+        {
+          "fog_id": "AEG099_001_9000",
+          "zone": "chapel_start"
+        }
+      ],
+      "exit_fogs": [
+        {
+          "fog_id": "AEG099_001_9000",
+          "zone": "chapel_start"
+        },
+        {
+          "fog_id": "12052021",
+          "zone": "chapel_start",
+          "unique": true
+        }
+      ]
+    },
+    {
       "id": "deeproot_6a71",
       "zones": [
         "deeproot",
@@ -2001,8 +2118,8 @@
         "sewer_flame",
         "sewer_preflame"
       ],
-      "type": "unknown",
-      "weight": 16,
+      "type": "boss_arena",
+      "weight": 12,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -2030,8 +2147,8 @@
       "zones": [
         "deeproot"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -2059,8 +2176,8 @@
       "zones": [
         "deeproot_boss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -2100,8 +2217,8 @@
       "zones": [
         "deeproot_dream"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "12032858",
@@ -2128,7 +2245,7 @@
       "zones": [
         "dragonbarrow_cave"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -2173,7 +2290,7 @@
         "dragonbarrow_cave_boss",
         "dragonbarrow_cave_preboss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 8,
       "entry_fogs": [
         {
@@ -2197,7 +2314,7 @@
       "zones": [
         "dragonbarrow_cave_boss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -2217,8 +2334,8 @@
       "zones": [
         "dragonbarrow_evergaol"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "1049392855",
@@ -2245,7 +2362,7 @@
       "zones": [
         "dragonbarrow_selliahideaway"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -2289,7 +2406,7 @@
       "zones": [
         "dragonbarrow_selliahideaway_boss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -2599,8 +2716,8 @@
       "zones": [
         "flamepeak_firegiant"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "m60_52_53_00-AEG099_002_9000",
@@ -2632,7 +2749,7 @@
       "zones": [
         "flamepeak_grave"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -2668,7 +2785,7 @@
       "zones": [
         "flamepeak_grave_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -2696,7 +2813,7 @@
       "zones": [
         "gelmir_grave"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -2732,7 +2849,7 @@
       "zones": [
         "gelmir_grave_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -2760,7 +2877,7 @@
       "zones": [
         "gelmir_seethewatercave"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -2796,7 +2913,7 @@
       "zones": [
         "gelmir_seethewatercave_boss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -2824,7 +2941,7 @@
       "zones": [
         "gelmir_volcanocave"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -2860,7 +2977,7 @@
       "zones": [
         "gelmir_volcanocave_boss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -2888,7 +3005,7 @@
       "zones": [
         "gelmir_wyndhamcatacombs"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -2924,7 +3041,7 @@
       "zones": [
         "gelmir_wyndhamcatacombs_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -3361,8 +3478,8 @@
       "zones": [
         "leyndell2_colosseum"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_231_9000",
@@ -3436,8 +3553,8 @@
       "zones": [
         "leyndell2_erdtree"
       ],
-      "type": "legacy_dungeon",
-      "weight": 10,
+      "type": "final_boss",
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9002",
@@ -3814,8 +3931,8 @@
       "zones": [
         "leyndell_colosseum"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_231_9001",
@@ -3859,8 +3976,8 @@
       "zones": [
         "leyndell_erdtree"
       ],
-      "type": "legacy_dungeon",
-      "weight": 10,
+      "type": "final_boss",
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9001",
@@ -4104,8 +4221,8 @@
         "leyndell_tower",
         "leyndell_tower_inner"
       ],
-      "type": "unknown",
-      "weight": 8,
+      "type": "boss_arena",
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_239_9000",
@@ -4148,8 +4265,8 @@
       "zones": [
         "leyndell_tower_boss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "34142852",
@@ -4176,8 +4293,8 @@
       "zones": [
         "leyndell_tower_start"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_231_9000",
@@ -4212,7 +4329,7 @@
       "zones": [
         "limgrave_coastalcave"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -4248,7 +4365,7 @@
       "zones": [
         "limgrave_coastalcave_boss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -4284,8 +4401,8 @@
       "zones": [
         "limgrave_dragonchurch"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -4304,8 +4421,8 @@
       "zones": [
         "limgrave_evergaol"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "1044352805",
@@ -4332,7 +4449,7 @@
       "zones": [
         "limgrave_grovesidecave"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -4376,7 +4493,7 @@
       "zones": [
         "limgrave_grovesidecave_boss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -4404,7 +4521,7 @@
       "zones": [
         "limgrave_highroadcave"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -4448,7 +4565,7 @@
       "zones": [
         "limgrave_highroadcave_boss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -4476,7 +4593,7 @@
       "zones": [
         "limgrave_murkwatercatacombs"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -4520,7 +4637,7 @@
       "zones": [
         "limgrave_murkwatercatacombs_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -4548,7 +4665,7 @@
       "zones": [
         "limgrave_murkwatercave_boss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -4581,7 +4698,7 @@
       "zones": [
         "limgrave_murkwatercave"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -4625,7 +4742,7 @@
       "zones": [
         "limgrave_stormfootcatacombs"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -4669,7 +4786,7 @@
       "zones": [
         "limgrave_stormfootcatacombs_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -4697,8 +4814,8 @@
       "zones": [
         "limgrave_tower"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_230_9001",
@@ -4722,7 +4839,7 @@
       "zones": [
         "limgrave_tunnels"
       ],
-      "type": "tunnel",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -4758,7 +4875,7 @@
       "zones": [
         "limgrave_tunnels_boss"
       ],
-      "type": "tunnel",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -4786,8 +4903,8 @@
       "zones": [
         "limgrave_waypoint_boss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -4814,8 +4931,8 @@
       "zones": [
         "limgrave_waypoint_sellen"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9001",
@@ -4834,7 +4951,7 @@
       "zones": [
         "liurnia_academycave"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -4878,7 +4995,7 @@
       "zones": [
         "liurnia_academycave_boss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -4914,7 +5031,7 @@
       "zones": [
         "liurnia_blackknifecatacombs"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -4958,7 +5075,7 @@
       "zones": [
         "liurnia_blackknifecatacombs_boss2"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -4986,7 +5103,7 @@
       "zones": [
         "liurnia_blackknifecatacombs_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -5014,7 +5131,7 @@
       "zones": [
         "liurnia_cliffbottomcatacombs"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -5058,7 +5175,7 @@
       "zones": [
         "liurnia_cliffbottomcatacombs_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -5086,8 +5203,8 @@
       "zones": [
         "liurnia_evergaol_adan"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "1038412805",
@@ -5114,8 +5231,8 @@
       "zones": [
         "liurnia_evergaol_bols"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "1033452805",
@@ -5142,8 +5259,8 @@
       "zones": [
         "liurnia_kingsrealm_boss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -5170,8 +5287,8 @@
       "zones": [
         "liurnia_kingsrealm_chest"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9001",
@@ -5190,7 +5307,7 @@
       "zones": [
         "liurnia_lakesidecave_boss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -5218,7 +5335,7 @@
       "zones": [
         "liurnia_lakesidecave"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -5254,8 +5371,8 @@
       "zones": [
         "liurnia_loretta"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_003_9000",
@@ -5278,12 +5395,40 @@
       ]
     },
     {
+      "id": "liurnia_manor_9103",
+      "zones": [
+        "liurnia_manor"
+      ],
+      "type": "boss_arena",
+      "weight": 2,
+      "entry_fogs": [
+        {
+          "fog_id": "AEG099_003_9000",
+          "zone": "liurnia_manor"
+        },
+        {
+          "fog_id": "755894500",
+          "zone": "liurnia_manor"
+        }
+      ],
+      "exit_fogs": [
+        {
+          "fog_id": "AEG099_003_9000",
+          "zone": "liurnia_manor"
+        },
+        {
+          "fog_id": "755894500",
+          "zone": "liurnia_manor"
+        }
+      ]
+    },
+    {
       "id": "liurnia_postmanor_evergaol_b6d2",
       "zones": [
         "liurnia_postmanor_evergaol"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "1036502805",
@@ -5310,7 +5455,7 @@
       "zones": [
         "liurnia_roadsendcatacombs"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -5346,7 +5491,7 @@
       "zones": [
         "liurnia_roadsendcatacombs_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -5374,8 +5519,8 @@
       "zones": [
         "liurnia_slumbering"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -5394,7 +5539,7 @@
       "zones": [
         "liurnia_stillwatercave"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -5438,7 +5583,7 @@
       "zones": [
         "liurnia_stillwatercave_boss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -5467,8 +5612,8 @@
         "liurnia_studyhall",
         "liurnia_tower"
       ],
-      "type": "unknown",
-      "weight": 8,
+      "type": "boss_arena",
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_230_9000",
@@ -5492,7 +5637,7 @@
       "zones": [
         "liurnia_tunnel"
       ],
-      "type": "tunnel",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -5528,7 +5673,7 @@
       "zones": [
         "liurnia_tunnel_boss"
       ],
-      "type": "tunnel",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -5556,8 +5701,8 @@
       "zones": [
         "mohgwyn"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -5584,8 +5729,8 @@
       "zones": [
         "mohgwyn_boss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -5625,8 +5770,8 @@
       "zones": [
         "mohgwyn_postboss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -5653,8 +5798,8 @@
       "zones": [
         "moonlight_evergaol"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "1033422805",
@@ -5681,7 +5826,7 @@
       "zones": [
         "mountaintops_catacombs"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -5725,7 +5870,7 @@
       "zones": [
         "mountaintops_catacombs_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -5753,7 +5898,7 @@
       "zones": [
         "mountaintops_cave"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -5789,7 +5934,7 @@
       "zones": [
         "mountaintops_cave_boss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -5817,8 +5962,8 @@
       "zones": [
         "mountaintops_evergaol"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "1053562805",
@@ -5841,12 +5986,40 @@
       ]
     },
     {
+      "id": "mountaintops_sol_30e9",
+      "zones": [
+        "mountaintops_sol"
+      ],
+      "type": "boss_arena",
+      "weight": 2,
+      "entry_fogs": [
+        {
+          "fog_id": "AEG099_002_9000",
+          "zone": "mountaintops_sol"
+        },
+        {
+          "fog_id": "755894503",
+          "zone": "mountaintops_sol"
+        }
+      ],
+      "exit_fogs": [
+        {
+          "fog_id": "AEG099_002_9000",
+          "zone": "mountaintops_sol"
+        },
+        {
+          "fog_id": "755894503",
+          "zone": "mountaintops_sol"
+        }
+      ]
+    },
+    {
       "id": "mountaintops_sol_boss_01d9",
       "zones": [
         "mountaintops_sol_boss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -5873,8 +6046,8 @@
       "zones": [
         "mountaintops_sol_postboss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9001",
@@ -5893,8 +6066,8 @@
       "zones": [
         "mountaintops_start"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_231_9000",
@@ -5929,7 +6102,7 @@
       "zones": [
         "outskirts_grave_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -5957,7 +6130,7 @@
       "zones": [
         "outskirts_grave"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -6083,7 +6256,7 @@
         "outskirts_sidetomb",
         "outskirts_sidetomb_hallway"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 8,
       "entry_fogs": [
         {
@@ -6159,7 +6332,7 @@
       "zones": [
         "outskirts_sidetomb_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -6188,7 +6361,7 @@
         "outskirts_sidetomb_dupeentrance",
         "outskirts_sidetomb_dupehallway"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 8,
       "entry_fogs": [
         {
@@ -6232,7 +6405,7 @@
       "zones": [
         "outskirts_sidetomb_dupehallway"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -6277,7 +6450,7 @@
         "outskirts_sidetomb_dupehallway",
         "outskirts_sidetomb_dupeupper"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 8,
       "entry_fogs": [
         {
@@ -6322,7 +6495,7 @@
         "outskirts_sidetomb_dupejail",
         "outskirts_sidetomb_hallway"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 8,
       "entry_fogs": [
         {
@@ -6374,7 +6547,7 @@
       "zones": [
         "outskirts_sidetomb_hallway"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -6435,7 +6608,7 @@
         "outskirts_sidetomb_hallway",
         "outskirts_sidetomb_upper"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 8,
       "entry_fogs": [
         {
@@ -6503,7 +6676,7 @@
       "zones": [
         "outskirts_sidetomb_jail"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -6531,7 +6704,7 @@
       "zones": [
         "peninsula_earthborecave"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -6567,7 +6740,7 @@
       "zones": [
         "peninsula_earthborecave_boss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -6595,8 +6768,8 @@
       "zones": [
         "peninsula_evergaol"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "1042332805",
@@ -6623,7 +6796,7 @@
       "zones": [
         "peninsula_impalerscatacombs"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -6667,7 +6840,7 @@
       "zones": [
         "peninsula_impalerscatacombs_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -6695,8 +6868,8 @@
       "zones": [
         "peninsula_leonine"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -6711,12 +6884,37 @@
       ]
     },
     {
+      "id": "peninsula_morne_9e1d",
+      "zones": [
+        "peninsula_morne",
+        "peninsula_postmorne"
+      ],
+      "type": "boss_arena",
+      "weight": 4,
+      "entry_fogs": [
+        {
+          "fog_id": "AEG099_230_9500",
+          "zone": "peninsula_morne"
+        }
+      ],
+      "exit_fogs": [
+        {
+          "fog_id": "AEG099_230_9500",
+          "zone": "peninsula_morne"
+        },
+        {
+          "fog_id": "AEG099_002_9000",
+          "zone": "peninsula_postmorne"
+        }
+      ]
+    },
+    {
       "id": "peninsula_postmorne_b39c",
       "zones": [
         "peninsula_postmorne"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -6735,7 +6933,7 @@
       "zones": [
         "peninsula_tombswardcatacombs"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -6779,7 +6977,7 @@
       "zones": [
         "peninsula_tombswardcatacombs_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -6807,7 +7005,7 @@
       "zones": [
         "peninsula_tombswardcave_boss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -6835,7 +7033,7 @@
       "zones": [
         "peninsula_tombswardcave"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -6871,7 +7069,7 @@
       "zones": [
         "peninsula_tunnel"
       ],
-      "type": "tunnel",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -6907,7 +7105,7 @@
       "zones": [
         "peninsula_tunnel_boss"
       ],
-      "type": "tunnel",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -6935,7 +7133,7 @@
       "zones": [
         "precipice"
       ],
-      "type": "gaol",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -6963,7 +7161,7 @@
       "zones": [
         "precipice_boss"
       ],
-      "type": "gaol",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -6983,6 +7181,26 @@
         {
           "fog_id": "AEG099_002_9001",
           "zone": "precipice_boss"
+        }
+      ]
+    },
+    {
+      "id": "precipice_postboss_189f",
+      "zones": [
+        "precipice_postboss"
+      ],
+      "type": "mini_dungeon",
+      "weight": 4,
+      "entry_fogs": [
+        {
+          "fog_id": "AEG099_002_9001",
+          "zone": "precipice_postboss"
+        }
+      ],
+      "exit_fogs": [
+        {
+          "fog_id": "AEG099_002_9001",
+          "zone": "precipice_postboss"
         }
       ]
     },
@@ -7032,7 +7250,7 @@
         "sewer",
         "sewer_royal"
       ],
-      "type": "unknown",
+      "type": "mini_dungeon",
       "weight": 8,
       "entry_fogs": [
         {
@@ -7060,7 +7278,7 @@
       "zones": [
         "sewer"
       ],
-      "type": "unknown",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -7152,7 +7370,7 @@
       "zones": [
         "sewer_mohg"
       ],
-      "type": "unknown",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -7181,8 +7399,8 @@
         "siofra",
         "siofra_dragonkin"
       ],
-      "type": "unknown",
-      "weight": 8,
+      "type": "boss_arena",
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "12022205",
@@ -7227,8 +7445,8 @@
       "zones": [
         "siofra"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_230_9001",
@@ -7293,8 +7511,8 @@
         "siofra_nokron_aqueduct",
         "siofra_nokron_grounds"
       ],
-      "type": "unknown",
-      "weight": 20,
+      "type": "boss_arena",
+      "weight": 10,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9001",
@@ -7369,8 +7587,8 @@
       "zones": [
         "siofra_boss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -7398,8 +7616,8 @@
         "siofra_nokron_aboveaqueduct",
         "siofra_nokron_aqueduct"
       ],
-      "type": "unknown",
-      "weight": 8,
+      "type": "boss_arena",
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9003",
@@ -7422,8 +7640,8 @@
       "zones": [
         "siofra_nokron_aqueduct"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9002",
@@ -7442,8 +7660,8 @@
       "zones": [
         "siofra_nokron_boss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -7470,8 +7688,8 @@
       "zones": [
         "siofra_nokron_gargoyles"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9002",
@@ -7503,8 +7721,8 @@
       "zones": [
         "siofra_nokron_mimic"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -7531,8 +7749,8 @@
       "zones": [
         "siofra_nokron_preboss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -7555,8 +7773,8 @@
       "zones": [
         "siofra_preboss"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -7579,8 +7797,8 @@
       "zones": [
         "siofrabank_nokron"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -7600,8 +7818,8 @@
         "siofrabank_nokron",
         "siofrabank_prenokron"
       ],
-      "type": "unknown",
-      "weight": 8,
+      "type": "boss_arena",
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_231_9000",
@@ -7624,7 +7842,7 @@
       "zones": [
         "snowfield_catacombs"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -7668,7 +7886,7 @@
       "zones": [
         "snowfield_catacombs_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -7696,7 +7914,7 @@
       "zones": [
         "snowfield_cave"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -7732,7 +7950,7 @@
       "zones": [
         "snowfield_cave_boss"
       ],
-      "type": "cave",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -7760,8 +7978,8 @@
       "zones": [
         "snowfield_evergaol"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "1048572301",
@@ -7788,7 +8006,7 @@
       "zones": [
         "snowfield_hiddenpath"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -7825,7 +8043,7 @@
         "snowfield_hiddenpath",
         "snowfield_prehiddenpath"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 8,
       "entry_fogs": [
         {
@@ -7857,7 +8075,7 @@
       "zones": [
         "snowfield_hiddenpath_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -7885,8 +8103,8 @@
       "zones": [
         "snowfield_rold"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_232_9001",
@@ -7913,7 +8131,7 @@
       "zones": [
         "snowfield_tunnel"
       ],
-      "type": "tunnel",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -7949,7 +8167,7 @@
       "zones": [
         "snowfield_tunnel_boss"
       ],
-      "type": "tunnel",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -7977,7 +8195,7 @@
       "zones": [
         "stormhill_catacombs_boss"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -8005,7 +8223,7 @@
       "zones": [
         "stormhill_catacombs"
       ],
-      "type": "catacomb",
+      "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
         {
@@ -8041,8 +8259,8 @@
       "zones": [
         "stormhill_colosseum"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "AEG099_231_9000",
@@ -8061,8 +8279,8 @@
       "zones": [
         "stormhill_evergaol"
       ],
-      "type": "unknown",
-      "weight": 4,
+      "type": "boss_arena",
+      "weight": 2,
       "entry_fogs": [
         {
           "fog_id": "1042372805",
@@ -8336,6 +8554,26 @@
         {
           "fog_id": "AEG099_003_9000",
           "zone": "volcano_pathway"
+        }
+      ]
+    },
+    {
+      "id": "volcano_postabductors_829c",
+      "zones": [
+        "volcano_postabductors"
+      ],
+      "type": "legacy_dungeon",
+      "weight": 10,
+      "entry_fogs": [
+        {
+          "fog_id": "AEG099_002_9001",
+          "zone": "volcano_postabductors"
+        }
+      ],
+      "exit_fogs": [
+        {
+          "fog_id": "AEG099_002_9001",
+          "zone": "volcano_postabductors"
         }
       ]
     },
