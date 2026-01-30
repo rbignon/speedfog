@@ -95,46 +95,53 @@ def load_fog_txt(path: Path) -> dict:
         return yaml.safe_load(f)
 
 
-def parse_entrances(data: dict) -> tuple[set[str], dict[str, int]]:
+def parse_entrances_and_warps(data: dict) -> tuple[set[str], dict[str, int]]:
     """
-    Parse Entrances section to extract legacy zones and fog counts.
+    Parse Entrances AND Warps sections to extract legacy zones and fog counts.
+
+    Both sections contribute to fog_count because:
+    - Entrances: fog gates between zones
+    - Warps: teleporters including backportals (return to entrance after boss)
 
     Returns:
         legacy_zones: Set of area names connected by legacy-tagged entrances
-        fog_counts: Dict mapping area name to number of fog gates (entrances)
+        fog_counts: Dict mapping area name to number of connections (entrances + warps)
     """
     legacy_zones: set[str] = set()
     fog_counts: dict[str, int] = {}
 
-    entrances = data.get("Entrances", [])
+    # Parse BOTH sections
+    for section_name in ["Entrances", "Warps"]:
+        entries = data.get(section_name, [])
 
-    for entrance in entrances:
-        # Skip unused entrances
-        tags = entrance.get("Tags", "")
-        tags_list = tags.split() if isinstance(tags, str) else tags or []
-        tags_lower = [t.lower() for t in tags_list]
+        for entry in entries:
+            # Skip unused entries
+            tags = entry.get("Tags", "")
+            tags_list = tags.split() if isinstance(tags, str) else tags or []
+            tags_lower = [t.lower() for t in tags_list]
 
-        if "unused" in tags_lower or "remove" in tags_lower:
-            continue
+            if "unused" in tags_lower or "remove" in tags_lower:
+                continue
 
-        # Get connected areas
-        a_side = entrance.get("ASide", {})
-        b_side = entrance.get("BSide", {})
-        a_area = a_side.get("Area", "")
-        b_area = b_side.get("Area", "")
+            # Get connected areas
+            a_side = entry.get("ASide", {})
+            b_side = entry.get("BSide", {})
+            a_area = a_side.get("Area", "")
+            b_area = b_side.get("Area", "")
 
-        # Count fog gates for each area
-        if a_area:
-            fog_counts[a_area] = fog_counts.get(a_area, 0) + 1
-        if b_area:
-            fog_counts[b_area] = fog_counts.get(b_area, 0) + 1
+            # Count connections for each area
+            if a_area:
+                fog_counts[a_area] = fog_counts.get(a_area, 0) + 1
+            if b_area:
+                fog_counts[b_area] = fog_counts.get(b_area, 0) + 1
 
-        # Collect legacy zones (excluding known overworld areas)
-        if "legacy" in tags_lower:
-            if a_area and a_area not in OVERWORLD_AREAS:
-                legacy_zones.add(a_area)
-            if b_area and b_area not in OVERWORLD_AREAS:
-                legacy_zones.add(b_area)
+            # Collect legacy zones (excluding known overworld areas)
+            # Only from Entrances section (warps don't define legacy status)
+            if section_name == "Entrances" and "legacy" in tags_lower:
+                if a_area and a_area not in OVERWORLD_AREAS:
+                    legacy_zones.add(a_area)
+                if b_area and b_area not in OVERWORLD_AREAS:
+                    legacy_zones.add(b_area)
 
     return legacy_zones, fog_counts
 
@@ -304,7 +311,7 @@ def zones_to_toml(zones: list[Zone]) -> str:
         "# Generated from FogRando fog.txt",
         "#",
         "# weight: approximate duration in minutes (fill manually)",
-        "# fog_count: number of fog gates (calculated from Entrances)",
+        "# fog_count: number of connections (from Entrances + Warps)",
         "",
     ]
 
@@ -369,10 +376,10 @@ def main() -> int:
 
     print(f"Found {len(areas)} total areas")
 
-    # Parse Entrances to get legacy zones and fog counts
-    legacy_zones, fog_counts = parse_entrances(data)
+    # Parse Entrances and Warps to get legacy zones and fog counts
+    legacy_zones, fog_counts = parse_entrances_and_warps(data)
     print(f"Found {len(legacy_zones)} legacy dungeon areas from Entrances")
-    print(f"Found fog counts for {len(fog_counts)} areas")
+    print(f"Found fog counts for {len(fog_counts)} areas (from Entrances + Warps)")
 
     # Convert areas to zones
     zones: list[Zone] = []
