@@ -297,7 +297,7 @@ def convert_area_to_zone(
         name=text,
         type=zone_type,
         weight=DEFAULT_WEIGHTS.get(zone_type, 5),
-        fog_count=fog_counts.get(name, 0),
+        fog_count=max(2, fog_counts.get(name, 0)),  # Minimum 2 for DAG (entry + exit)
         boss=boss,
         tags=tags,
     )
@@ -323,7 +323,7 @@ def zones_to_toml(zones: list[Zone]) -> str:
         "# Generated from FogRando fog.txt",
         "#",
         "# weight: approximate duration in minutes (defaults set by zone type)",
-        "# fog_count: number of connections (from Entrances + Warps)",
+        "# fog_count: number of connections (from Entrances + Warps, minimum 2 for DAG)",
         "",
     ]
 

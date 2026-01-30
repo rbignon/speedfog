@@ -2,7 +2,7 @@
 # Generated from FogRando fog.txt
 #
 # weight: approximate duration in minutes (defaults set by zone type)
-# fog_count: number of connections (from Entrances + Warps)
+# fog_count: number of connections (from Entrances + Warps, minimum 2 for DAG)
 
 # START (1 zones)
 
@@ -31,7 +31,7 @@ map = "m10_00_00_00"
 name = "Stormveil Castle before Gate"
 type = "legacy_dungeon"
 weight = 15
-fog_count = 1
+fog_count = 2
 
 [[zones]]
 id = "stormveil"
@@ -47,7 +47,7 @@ map = "m10_00_00_00"
 name = "Godrick the Grafted"
 type = "legacy_dungeon"
 weight = 15
-fog_count = 1
+fog_count = 2
 boss = "Godrick the Grafted"
 
 [[zones]]
@@ -56,7 +56,7 @@ map = "m60_43_31_00"
 name = "Weeping Peninsula - Castle Morne"
 type = "legacy_dungeon"
 weight = 15
-fog_count = 1
+fog_count = 2
 
 [[zones]]
 id = "academy_entrance"
@@ -97,7 +97,7 @@ map = "m14_00_00_00"
 name = "Academy of Raya Lucaria Rooftops"
 type = "legacy_dungeon"
 weight = 15
-fog_count = 1
+fog_count = 2
 
 [[zones]]
 id = "academy_library"
@@ -105,7 +105,7 @@ map = "m14_00_00_00"
 name = "Academy of Raya Lucaria - Grand Library"
 type = "legacy_dungeon"
 weight = 15
-fog_count = 1
+fog_count = 2
 boss = "Rennala, Queen of the Full Moon"
 
 [[zones]]
@@ -140,7 +140,7 @@ map = "m11_00_00_00"
 name = "Leyndell - before Divine Tower"
 type = "legacy_dungeon"
 weight = 15
-fog_count = 1
+fog_count = 2
 
 [[zones]]
 id = "volcano"
@@ -148,7 +148,7 @@ map = "m16_00_00_00"
 name = "Volcano Manor Entrance"
 type = "legacy_dungeon"
 weight = 15
-fog_count = 0
+fog_count = 2
 
 [[zones]]
 id = "volcano_town"
@@ -173,7 +173,7 @@ map = "m16_00_00_00"
 name = "Volcano Manor after Temple of Eiglay"
 type = "legacy_dungeon"
 weight = 15
-fog_count = 0
+fog_count = 2
 
 [[zones]]
 id = "volcano_rykard"
@@ -181,7 +181,7 @@ map = "m16_00_00_00"
 name = "Rykard, Lord of Blasphemy"
 type = "legacy_dungeon"
 weight = 15
-fog_count = 1
+fog_count = 2
 boss = "Rykard, Lord of Blasphemy"
 
 [[zones]]
@@ -199,7 +199,7 @@ map = "m13_00_00_00"
 name = "Farum Azula - Crumbling Beast Grave Depths"
 type = "legacy_dungeon"
 weight = 15
-fog_count = 0
+fog_count = 2
 
 [[zones]]
 id = "farumazula_temple"
@@ -232,7 +232,7 @@ map = "m13_00_00_00"
 name = "Farum Azula - Dragon Temple Lift"
 type = "legacy_dungeon"
 weight = 15
-fog_count = 1
+fog_count = 2
 
 [[zones]]
 id = "farumazula_maliketh"
@@ -249,7 +249,7 @@ map = "m13_00_00_00"
 name = "Dragonlord Placidusax"
 type = "legacy_dungeon"
 weight = 15
-fog_count = 1
+fog_count = 2
 boss = "Dragonlord Placidusax"
 
 [[zones]]
@@ -283,7 +283,7 @@ map = "m15_00_00_00"
 name = "Malenia, Blade of Miquella"
 type = "legacy_dungeon"
 weight = 15
-fog_count = 1
+fog_count = 2
 boss = "Malenia, Goddess of Rot"
 
 [[zones]]
@@ -300,7 +300,7 @@ map = "m11_05_00_00"
 name = "Ashen Leyndell - before Divine Tower"
 type = "legacy_dungeon"
 weight = 15
-fog_count = 1
+fog_count = 2
 
 [[zones]]
 id = "leyndell2_divinebridge"
@@ -308,7 +308,7 @@ map = "m11_05_00_00"
 name = "Ashen Leyndell - Divine Bridge"
 type = "legacy_dungeon"
 weight = 15
-fog_count = 0
+fog_count = 2
 
 [[zones]]
 id = "leyndell2_sanctuary"
@@ -345,7 +345,7 @@ map = "m60_43_37_00"
 name = "Limgrave - Night's Cavalry"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Night's Cavalry"
 
 [[zones]]
@@ -362,7 +362,7 @@ map = "m60_42_36_00"
 name = "Limgrave - Tree Sentinel"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Tree Sentinel"
 
 [[zones]]
@@ -371,7 +371,7 @@ map = "m60_43_36_00"
 name = "Limgrave - Flying Dragon Agheel"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Flying Dragon Agheel"
 
 [[zones]]
@@ -380,7 +380,7 @@ map = "m60_45_39_00"
 name = "Limgrave - Tibia Mariner"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Tibia Mariner"
 
 [[zones]]
@@ -398,7 +398,7 @@ map = "m60_42_38_00"
 name = "Stormhill - Deathbird"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Deathbird"
 
 [[zones]]
@@ -407,7 +407,7 @@ map = "m60_42_38_00"
 name = "Stormhill - Bell Bearing Hunter"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Bell Bearing Hunter"
 
 [[zones]]
@@ -434,7 +434,7 @@ map = "m60_43_33_00"
 name = "Weeping Peninsula - Erdtree Avatar"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Erdtree Avatar"
 
 [[zones]]
@@ -443,7 +443,7 @@ map = "m60_44_32_00"
 name = "Weeping Peninsula - Night's Cavalry"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Night's Cavalry"
 
 [[zones]]
@@ -452,7 +452,7 @@ map = "m60_44_32_00"
 name = "Weeping Peninsula - Deathbird"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Deathbird"
 
 [[zones]]
@@ -461,7 +461,7 @@ map = "m60_43_30_00"
 name = "Leonine Misbegotten"
 type = "boss_arena"
 weight = 3
-fog_count = 1
+fog_count = 2
 boss = "Leonine Misbegotten"
 
 [[zones]]
@@ -488,7 +488,7 @@ map = "m60_33_43_00"
 name = "Liurnia - Erdtree Avatar"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Erdtree Avatar"
 
 [[zones]]
@@ -497,7 +497,7 @@ map = "m60_37_46_00"
 name = "Liurnia - Bell Bearing Hunter"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Bell Bearing Hunter"
 
 [[zones]]
@@ -506,7 +506,7 @@ map = "m60_39_43_00"
 name = "Liurnia - Night's Cavalry"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Night's Cavalry"
 
 [[zones]]
@@ -515,7 +515,7 @@ map = "m60_37_42_00"
 name = "Liurnia - Deathbird"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Deathbird"
 
 [[zones]]
@@ -524,7 +524,7 @@ map = "m60_36_45_00"
 name = "Liurnia - Death Rite Bird"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Death Rite Bird"
 
 [[zones]]
@@ -533,7 +533,7 @@ map = "m60_34_45_00"
 name = "Liurnia - Glintstone Dragon Smarag"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Glintstone Dragon Smarag"
 
 [[zones]]
@@ -542,7 +542,7 @@ map = "m60_35_42_00"
 name = "Liurnia - Omenkiller"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Omenkiller"
 
 [[zones]]
@@ -551,7 +551,7 @@ map = "m60_39_44_00"
 name = "Liurnia - Tibia Mariner"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Tibia Mariner"
 
 [[zones]]
@@ -569,7 +569,7 @@ map = "m60_38_48_00"
 name = "Bellum Highway - Erdtree Avatar"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Erdtree Avatar"
 
 [[zones]]
@@ -578,7 +578,7 @@ map = "m60_36_48_00"
 name = "Bellum Highway - Night's Cavalry"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Night's Cavalry"
 
 [[zones]]
@@ -587,7 +587,7 @@ map = "m12_02_00_00"
 name = "Siofra River - Dragonkin Soldier"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Dragonkin Soldier"
 
 [[zones]]
@@ -605,7 +605,7 @@ map = "m60_47_40_00"
 name = "Caelid - Putrid Avatar"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Putrid Avatar"
 
 [[zones]]
@@ -614,7 +614,7 @@ map = "m60_48_37_00"
 name = "Caelid - Decaying Ekzykes"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Decaying Ekzykes"
 
 [[zones]]
@@ -623,7 +623,7 @@ map = "m60_49_37_00"
 name = "Caelid - Night's Cavalry"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Night's Cavalry"
 
 [[zones]]
@@ -632,7 +632,7 @@ map = "m60_49_37_00"
 name = "Caelid - Death Rite Bird"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Death Rite Bird"
 
 [[zones]]
@@ -641,7 +641,7 @@ map = "m60_49_38_00"
 name = "Caelid - Commander O'Neil"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Commander O'Neil"
 
 [[zones]]
@@ -668,7 +668,7 @@ map = "m60_48_41_00"
 name = "Dragonbarrow - Bell Bearing Hunter"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Bell Bearing Hunter"
 
 [[zones]]
@@ -686,7 +686,7 @@ map = "m60_51_40_00"
 name = "Dragonbarrow - Putrid Avatar"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Putrid Avatar"
 
 [[zones]]
@@ -695,7 +695,7 @@ map = "m60_52_41_00"
 name = "Dragonbarrow - Flying Dragon Greyll"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Flying Dragon Greyll"
 
 [[zones]]
@@ -704,7 +704,7 @@ map = "m60_52_41_00"
 name = "Dragonbarrow - Night's Cavalry"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Night's Cavalry"
 
 [[zones]]
@@ -713,7 +713,7 @@ map = "m60_51_43_00"
 name = "Dragonbarrow - Black Blade Kindred"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Black Blade Kindred"
 
 [[zones]]
@@ -722,7 +722,7 @@ map = "m60_37_51_00"
 name = "Altus Plateau - Ancient Dragon Lansseax First Encounter"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Ancient Dragon Lansseax"
 
 [[zones]]
@@ -731,7 +731,7 @@ map = "m60_39_51_00"
 name = "Altus Plateau - Night's Cavalry"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Night's Cavalry"
 
 [[zones]]
@@ -740,7 +740,7 @@ map = "m60_41_52_00"
 name = "Altus Plateau - Ancient Dragon Lansseax"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Ancient Dragon Lansseax"
 
 [[zones]]
@@ -749,7 +749,7 @@ map = "m60_41_50_00"
 name = "Altus Plateau - Fallingstar Beast"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Fallingstar Beast"
 
 [[zones]]
@@ -758,7 +758,7 @@ map = "m60_41_51_00"
 name = "Altus Plateau - Tree Sentinel Duo"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Tree Sentinel + Tree Sentinel"
 
 [[zones]]
@@ -767,7 +767,7 @@ map = "m60_42_55_00"
 name = "Altus Plateau - Godskin Apostle"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Godskin Apostle"
 
 [[zones]]
@@ -776,7 +776,7 @@ map = "m60_40_52_00"
 name = "Altus Plateau - Black Knife Assassin"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Black Knife Assassin"
 
 [[zones]]
@@ -794,7 +794,7 @@ map = "m60_41_53_00"
 name = "Altus Plateau - Wormface"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Wormface"
 
 [[zones]]
@@ -803,7 +803,7 @@ map = "m60_38_52_00"
 name = "Altus Plateau - Tibia Mariner"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Tibia Mariner"
 
 [[zones]]
@@ -830,7 +830,7 @@ map = "m60_39_54_00"
 name = "Shaded Castle - Elemer of the Briar"
 type = "boss_arena"
 weight = 3
-fog_count = 1
+fog_count = 2
 boss = "Elemer of the Briar"
 
 [[zones]]
@@ -839,7 +839,7 @@ map = "m60_44_53_00"
 name = "Capital Outskirts - Deathbird"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Deathbird"
 
 [[zones]]
@@ -848,7 +848,7 @@ map = "m60_45_52_00"
 name = "Capital Outskirts - Draconic Tree Sentinel"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Draconic Tree Sentinel"
 
 [[zones]]
@@ -857,7 +857,7 @@ map = "m60_43_53_00"
 name = "Capital Outskirts - Bell Bearing Hunter"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Bell Bearing Hunter"
 
 [[zones]]
@@ -893,7 +893,7 @@ map = "m60_34_50_00"
 name = "Liurnia Behind Caria Manor - Glintstone Dragon Adula Fist Encounter"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Glintstone Dragon Adula"
 
 [[zones]]
@@ -956,7 +956,7 @@ map = "m60_37_53_00"
 name = "Mt. Gelmir - Demi-Human Queen Maggie"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Demi-Human Queen Maggie"
 
 [[zones]]
@@ -965,7 +965,7 @@ map = "m60_35_53_00"
 name = "Mt. Gelmir - Magma Wyrm"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Magma Wyrm"
 
 [[zones]]
@@ -974,7 +974,7 @@ map = "m60_36_54_00"
 name = "Mt. Gelmir - Full-Grown Fallingstar Beast"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Full-Grown Fallingstar Beast"
 
 [[zones]]
@@ -983,7 +983,7 @@ map = "m60_37_54_00"
 name = "Mt. Gelmir - Ulcerated Tree Spirit"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Ulcerated Tree Spirit"
 
 [[zones]]
@@ -1001,7 +1001,7 @@ map = "m60_34_42_00"
 name = "Moonlight Altar - Glintstone Dragon Adula"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Glintstone Dragon Adula"
 
 [[zones]]
@@ -1010,7 +1010,7 @@ map = "m60_48_51_00"
 name = "Forbidden Lands - Night's Cavalry"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Night's Cavalry"
 
 [[zones]]
@@ -1019,7 +1019,7 @@ map = "m60_49_52_00"
 name = "Forbidden Lands - Black Blade Kindred"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Black Blade Kindred"
 
 [[zones]]
@@ -1028,7 +1028,7 @@ map = "m60_54_56_00"
 name = "Mountaintops of the Giants - Borealis the Freezing Fog"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Borealis the Freezing Fog"
 
 [[zones]]
@@ -1046,7 +1046,7 @@ map = "m60_52_56_00"
 name = "Mountaintops of the Giants - Erdtree Avatar"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Erdtree Avatar"
 
 [[zones]]
@@ -1055,7 +1055,7 @@ map = "m60_50_57_00"
 name = "Mountaintops of the Giants - Death Rite Bird"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Death Rite Bird"
 
 [[zones]]
@@ -1082,7 +1082,7 @@ map = "m60_50_57_00"
 name = "Consecrated Snowfield - Putrid Avatar"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Putrid Avatar"
 
 [[zones]]
@@ -1091,7 +1091,7 @@ map = "m60_50_56_00"
 name = "Consecrated Snowfield - Great Wyrm Theodorix"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Great Wyrm Theodorix"
 
 [[zones]]
@@ -1100,7 +1100,7 @@ map = "m60_48_55_00"
 name = "Consecrated Snowfield - Night's Cavalry Duo"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Night's Cavalry (Glaive) + Night's Cavalry (Flail)"
 
 [[zones]]
@@ -1109,7 +1109,7 @@ map = "m60_48_57_00"
 name = "Consecrated Snowfield - Death Rite Bird"
 type = "boss_arena"
 weight = 3
-fog_count = 0
+fog_count = 2
 boss = "Death Rite Bird"
 
 [[zones]]
@@ -1127,7 +1127,7 @@ map = "m19_00_00_00"
 name = "Stone Platform"
 type = "boss_arena"
 weight = 3
-fog_count = 1
+fog_count = 2
 boss = "Elden Beast"
 
 # CATACOMB (50 zones)
@@ -1740,7 +1740,7 @@ map = "m31_10_00_00"
 name = "Dragonbarrow Cave - Beastmen of Farum Azula"
 type = "cave"
 weight = 5
-fog_count = 1
+fog_count = 2
 boss = "Beastman of Farum Azula (Cleaver)"
 
 [[zones]]
@@ -1851,7 +1851,7 @@ map = "m31_20_00_00"
 name = "Caelid - Abandoned Cave"
 type = "cave"
 weight = 5
-fog_count = 1
+fog_count = 2
 
 [[zones]]
 id = "caelid_abandonedcave_boss"
@@ -1989,7 +1989,7 @@ map = "m32_07_00_00"
 name = "Caelid - Gael Tunnel"
 type = "tunnel"
 weight = 4
-fog_count = 1
+fog_count = 2
 
 [[zones]]
 id = "caelid_gaeltunnel_boss"
