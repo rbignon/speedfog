@@ -66,13 +66,15 @@ speedfog/
 │   └── zone_warps.json            # Fog gate positions (extracted from game)
 │
 ├── writer/                        # C#
+│   ├── data/
+│   │   └── speedfog-events.yaml   # Event templates (readable YAML)
 │   ├── SpeedFogWriter/
 │   │   ├── Program.cs             # Entry point
 │   │   ├── GraphReader.cs         # Read graph.json
+│   │   ├── EventBuilder.cs        # Build EMEVD from YAML templates
 │   │   ├── FogGateWriter.cs       # Adapted from FogRando
 │   │   ├── WarpWriter.cs          # Adapted from FogRando
-│   │   ├── ScalingWriter.cs       # Adapted from EldenScaling.cs
-│   │   └── EventBuilder.cs        # Adapted from EventConfig.cs
+│   │   └── ScalingWriter.cs       # Adapted from EldenScaling.cs
 │   └── SpeedFogWriter.csproj
 │
 ├── tools/
@@ -382,12 +384,15 @@ Post-generation validation ensures all paths are within `[budget - tolerance, bu
 
 ### Files Adapted from FogRando
 
-| FogRando Source | SpeedFog Target |
-|-----------------|-----------------|
-| `EldenScaling.cs` | `ScalingWriter.cs` |
-| `GameDataWriterE.cs` | `FogGateWriter.cs`, `WarpWriter.cs` |
-| `EventConfig.cs` | `EventBuilder.cs` |
-| `AnnotationData.cs` | `GraphReader.cs` |
+| FogRando Source | SpeedFog Target | Notes |
+|-----------------|-----------------|-------|
+| `EldenScaling.cs` | `ScalingWriter.cs` | Enemy stat scaling |
+| `GameDataWriterE.cs` | `FogGateWriter.cs`, `WarpWriter.cs` | Fog gate creation |
+| `fogevents.txt` | `speedfog-events.yaml` | Simplified YAML templates |
+| `EventConfig.cs` | `EventBuilder.cs` | Parses YAML, builds EMEVD |
+| `AnnotationData.cs` | `GraphReader.cs` | Graph deserialization |
+
+**Note**: Event templates are stored in `speedfog-events.yaml` (not hardcoded in C#) for readability and maintainability.
 
 ### Simplified Scaling
 

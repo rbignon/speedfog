@@ -21,6 +21,9 @@ Create the C# component that reads `graph.json` and generates Elden Ring mod fil
 
 ```
 speedfog/writer/
+├── data/
+│   └── speedfog-events.yaml       # Event templates (readable, not hardcoded)
+│
 ├── SpeedFogWriter/
 │   ├── SpeedFogWriter.csproj
 │   ├── Program.cs                 # CLI entry point
@@ -28,10 +31,12 @@ speedfog/writer/
 │   ├── Models/
 │   │   ├── SpeedFogGraph.cs       # JSON deserialization
 │   │   ├── NodeData.cs
-│   │   └── LayerData.cs
+│   │   ├── LayerData.cs
+│   │   └── EventTemplate.cs       # YAML event template model
 │   │
 │   ├── Writers/
 │   │   ├── ModWriter.cs           # Main orchestrator
+│   │   ├── EventBuilder.cs        # Builds EMEVD from templates
 │   │   ├── FogGateWriter.cs       # Creates fog wall events
 │   │   ├── WarpWriter.cs          # Creates warp teleportations
 │   │   ├── ScalingWriter.cs       # Enemy stat scaling
@@ -260,7 +265,201 @@ public class NodeData
 
 ---
 
-## Task 3.3: ScalingWriter.cs
+## Task 3.3: Event Templates (speedfog-events.yaml)
+
+Event scripting is defined in a YAML file rather than hardcoded in C#, for readability and maintainability.
+
+### Why YAML instead of hardcoded C#?
+
+| Aspect | Hardcoded C# | YAML File |
+|--------|--------------|-----------|
+| Readability | Mixed with code logic | Clear, self-documenting |
+| Modification | Requires recompilation | Edit and reload |
+| Debugging | Difficult to inspect | Easy to trace |
+| Extensibility | Rigid | Add new templates easily |
+
+### speedfog-events.yaml
+
+```yaml
+# SpeedFog Event Templates
+# Simplified from FogRando's fogevents.txt
+#
+# Parameter notation: X{offset}_{size}
+#   - offset: byte offset in the event parameter block
+#   - size: parameter size in bytes (1 or 4)
+#   - Example: X0_4 = 4-byte param at offset 0, X12_1 = 1-byte param at offset 12
+
+templates:
+  # Apply scaling to an enemy when loaded
+  scale:
+    id: 79000001
+    restart: true
+    params:
+      entity_id: X0_4
+      speffect: X4_4
+    commands:
+      - IfCharacterBackreadStatus(MAIN, $entity_id, true, ComparisonType.Equal, 1)
+      - SetSpEffect($entity_id, $speffect)
+      - IfCharacterBackreadStatus(MAIN, $entity_id, false, ComparisonType.Equal, 1)
+      - WaitFixedTimeSeconds(1)
+      - EndUnconditionally(EventEndType.Restart)
+
+  # Show fog gate visual effect
+  show_fog:
+    id: 79000002
+    params:
+      fog_gate: X0_4
+      sfx_id: X4_4
+    commands:
+      - ChangeAssetEnableState($fog_gate, Enabled)
+      - CreateAssetFollowingSFX($fog_gate, 101, $sfx_id)
+
+  # Warp player through fog gate (simplified from FogRando's fogwarp)
+  # Note: Map bytes are 4 separate 1-byte params (m, area, block, sub) for mAA_BB_CC_00
+  fog_warp:
+    id: 79000003
+    restart: true
+    params:
+      fog_gate: X0_4
+      button_param: X4_4
+      warp_region: X8_4
+      map_m: X12_1          # Map type (e.g., 10 for m10_xx_xx_xx)
+      map_area: X13_1       # Area (e.g., 01)
+      map_block: X14_1      # Block (e.g., 00)
+      map_sub: X15_1        # Sub (e.g., 00)
+      rotate_target: X16_4
+    commands:
+      - IfActionButtonInArea(AND_01, $button_param, $fog_gate)
+      - IfConditionGroup(MAIN, PASS, AND_01)
+      - RotateCharacter(10000, $rotate_target, 60060, false)
+      - WaitFixedTimeSeconds(0.5)
+      - ShowTextOnLoadingScreen(Disabled)
+      - WarpPlayer($map_m, $map_area, $map_block, $map_sub, $warp_region, 0)
+      - WaitFixedTimeFrames(1)
+      - EndUnconditionally(EventEndType.Restart)
+
+  # Give starting items on trigger flag
+  starting_items:
+    id: 79000004
+    params:
+      trigger_flag: X0_4
+      item_lot: X4_4
+    commands:
+      - IfEventFlag(MAIN, ON, TargetEventFlagType.EventFlag, $trigger_flag)
+      - AwardItemLot($item_lot)
+
+defaults:
+  button_param: 63000      # "Traverse the mist"
+  fog_sfx: 8011            # Standard fog visual effect
+  trigger_flag: 79900000   # SpeedFog start flag
+```
+
+### EventTemplate.cs (Model)
+
+```csharp
+using YamlDotNet.Serialization;
+
+namespace SpeedFogWriter.Models;
+
+public class EventTemplate
+{
+    public int Id { get; set; }
+    public bool Restart { get; set; }
+    public Dictionary<string, string> Params { get; set; } = new();
+    public List<string> Commands { get; set; } = new();
+}
+
+public class SpeedFogEventConfig
+{
+    public Dictionary<string, EventTemplate> Templates { get; set; } = new();
+    public Dictionary<string, object> Defaults { get; set; } = new();
+
+    public static SpeedFogEventConfig Load(string path)
+    {
+        var yaml = File.ReadAllText(path);
+        var deserializer = new DeserializerBuilder().Build();
+        return deserializer.Deserialize<SpeedFogEventConfig>(yaml);
+    }
+}
+```
+
+### EventBuilder.cs
+
+Converts YAML templates to EMEVD instructions using SoulsIds' `Events.ParseAddArg()`.
+
+```csharp
+using SoulsFormats;
+using SoulsIds;
+using SpeedFogWriter.Models;
+
+namespace SpeedFogWriter.Writers;
+
+/// <summary>
+/// Builds EMEVD events from YAML templates.
+/// Uses SoulsIds Events class for instruction parsing.
+/// </summary>
+public class EventBuilder
+{
+    private readonly SpeedFogEventConfig _config;
+    private readonly Events _events;
+
+    public EventBuilder(SpeedFogEventConfig config, Events events)
+    {
+        _config = config;
+        _events = events;
+    }
+
+    /// <summary>
+    /// Create an EMEVD event from a template with substituted parameters.
+    /// </summary>
+    public EMEVD.Event BuildEvent(string templateName, int eventId, Dictionary<string, object> args)
+    {
+        if (!_config.Templates.TryGetValue(templateName, out var template))
+            throw new ArgumentException($"Unknown template: {templateName}");
+
+        var restartType = template.Restart
+            ? EMEVD.Event.RestBehaviorType.Restart
+            : EMEVD.Event.RestBehaviorType.Default;
+
+        var evt = new EMEVD.Event(eventId, restartType);
+
+        foreach (var commandStr in template.Commands)
+        {
+            // Substitute $param placeholders with actual values
+            var resolved = ResolveCommand(commandStr, template.Params, args);
+
+            // Parse using SoulsIds
+            var (instruction, parameters) = _events.ParseAddArg(resolved, evt.Instructions.Count);
+            evt.Instructions.Add(instruction);
+            evt.Parameters.AddRange(parameters);
+        }
+
+        return evt;
+    }
+
+    private string ResolveCommand(string command, Dictionary<string, string> paramDefs, Dictionary<string, object> args)
+    {
+        var result = command;
+        foreach (var (paramName, paramPos) in paramDefs)
+        {
+            if (args.TryGetValue(paramName, out var value))
+            {
+                result = result.Replace($"${paramName}", value.ToString());
+            }
+            else
+            {
+                // Keep X0_4 style for EMEVD parameter substitution
+                result = result.Replace($"${paramName}", paramPos);
+            }
+        }
+        return result;
+    }
+}
+```
+
+---
+
+## Task 3.4: ScalingWriter.cs
 
 Adapted from FogRando's `EldenScaling.cs`. This creates SpEffect entries for enemy stat scaling.
 
@@ -403,7 +602,7 @@ public class ScalingWriter
 
 ---
 
-## Task 3.4: FogGateWriter.cs
+## Task 3.5: FogGateWriter.cs
 
 Creates fog wall events using EMEVD. Adapted from FogRando's event creation logic.
 
@@ -601,7 +800,7 @@ public struct Vector3
 
 ---
 
-## Task 3.5: WarpWriter.cs
+## Task 3.6: WarpWriter.cs
 
 Handles the actual warp teleportation logic.
 
@@ -647,7 +846,7 @@ public class WarpWriter
 
 ---
 
-## Task 3.6: StartingItemsWriter.cs
+## Task 3.7: StartingItemsWriter.cs
 
 Gives key items to player at game start.
 
@@ -754,7 +953,7 @@ public class StartingItemsWriter
 
 ---
 
-## Task 3.7: ModWriter.cs (Orchestrator)
+## Task 3.8: ModWriter.cs (Orchestrator)
 
 Main class that coordinates all writers.
 
@@ -887,7 +1086,7 @@ public class ModWriter
 
 ---
 
-## Task 3.8: Program.cs (CLI)
+## Task 3.9: Program.cs (CLI)
 
 ```csharp
 using SpeedFogWriter.Models;
@@ -1210,17 +1409,22 @@ Dictionary<string, List<double>> makeScalingMatrix(
 
 ### 1. EMEVD Generation
 
-The hardest part is generating valid EMEVD instructions. FogRando uses a template-based approach (`EventConfig.cs`) where event "shapes" are defined and filled in with specific values.
+SpeedFog uses a **YAML-based template approach** (Task 3.3) for EMEVD generation, inspired by FogRando but simplified:
 
-**Key references**:
-- `GameDataWriterE.cs:L1804-1852` - Event creation from templates
-- `EventConfig.cs` - Event template definitions
-- `fogevents.txt` - Template command strings
+- Event templates are defined in `writer/data/speedfog-events.yaml`
+- `EventBuilder.cs` parses templates and builds EMEVD using SoulsIds' `Events.ParseAddArg()`
+- This keeps event logic readable and separate from C# code
 
-**Recommendation**:
-- Study FogRando's `EventConfig.cs` and `fogevents.txt` carefully
-- Start with a single hardcoded fog gate to verify the approach works
-- Then generalize to template-based generation
+**Key templates needed** (from FogRando's `fogevents.txt`):
+| Template | FogRando ID | Purpose |
+|----------|-------------|---------|
+| `scale` | 9005770 | Apply scaling SpEffect to enemies |
+| `showsfx` | 9005775 | Display fog gate visual effect |
+| `fogwarp` | 9005777 | Warp on fog gate interaction (simplified) |
+
+**Testing approach**:
+- Start with a single hardcoded fog gate to verify EMEVD format
+- Then validate the YAML template system works correctly
 
 ### 2. Zone Warp Data
 
@@ -1263,19 +1467,24 @@ Ensure you're using a SoulsFormats version that supports Elden Ring. SoulsFormat
 - [ ] `SpeedFogGraph.Load()` parses graph.json correctly
 - [ ] All nodes and edges accessible
 
-### Task 3.3 (Scaling)
+### Task 3.3 (Event Templates)
+- [ ] `speedfog-events.yaml` loads correctly
+- [ ] `EventBuilder` can parse template commands
+- [ ] Generated EMEVD instructions are valid
+
+### Task 3.4 (Scaling)
 - [ ] SpEffect entries created for tier transitions
 - [ ] Scaling factors are reasonable (no 100x damage)
 
-### Task 3.4-3.5 (Fog Gates & Warps)
+### Task 3.5-3.6 (Fog Gates & Warps)
 - [ ] Fog gate events created for all edges
 - [ ] Events compile without EMEVD errors
 
-### Task 3.6 (Starting Items)
+### Task 3.7 (Starting Items)
 - [ ] Key items added to starting inventory
 - [ ] Player doesn't get softlocked by missing keys
 
-### Task 3.7-3.8 (Integration)
+### Task 3.8-3.9 (Integration)
 - [ ] Full pipeline works: graph.json → mod files
 - [ ] Output directory structure matches ModEngine 2 expectations
 
@@ -1316,4 +1525,4 @@ ls -la output/mods/speedfog/
 
 ## Next Phase
 
-After completing Phase 3, proceed to [Phase 4: Integration & Testing](./phase-4-integration.md).
+After completing Phase 3, proceed to Phase 4: Integration & Testing (spec to be created).
