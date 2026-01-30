@@ -88,6 +88,18 @@ ZONE_TYPE_ORDER = [
     "mini_dungeon",
 ]
 
+# Default weights by zone type (approximate duration in minutes)
+DEFAULT_WEIGHTS = {
+    "start": 1,
+    "legacy_dungeon": 15,
+    "boss_arena": 3,
+    "catacomb": 5,
+    "cave": 5,
+    "tunnel": 4,
+    "gaol": 3,
+    "mini_dungeon": 5,
+}
+
 
 def load_fog_txt(path: Path) -> dict:
     """Load and parse FogRando's fog.txt YAML file."""
@@ -284,7 +296,7 @@ def convert_area_to_zone(
         map=primary_map,
         name=text,
         type=zone_type,
-        weight=0,  # To be filled manually
+        weight=DEFAULT_WEIGHTS.get(zone_type, 5),
         fog_count=fog_counts.get(name, 0),
         boss=boss,
         tags=tags,
@@ -310,7 +322,7 @@ def zones_to_toml(zones: list[Zone]) -> str:
         "# SpeedFog Zone Definitions",
         "# Generated from FogRando fog.txt",
         "#",
-        "# weight: approximate duration in minutes (fill manually)",
+        "# weight: approximate duration in minutes (defaults set by zone type)",
         "# fog_count: number of connections (from Entrances + Warps)",
         "",
     ]
