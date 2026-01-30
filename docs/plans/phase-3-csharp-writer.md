@@ -27,7 +27,7 @@ See [generate-clusters-spec.md](./generate-clusters-spec.md) for cluster details
   - `SoulsFormats.dll` - FromSoft file format I/O
   - `SoulsIds.dll` - Helper library (GameEditor, ParamDictionary)
   - `YamlDotNet.dll`, `Newtonsoft.Json.dll`, `ZstdNet.dll`, `BouncyCastle.Cryptography.dll`
-- **New**: `fog_positions.json` with fog gate coordinates (see Task 3.2.1)
+- **New**: `fog_data.json` with fog gate coordinates (see Task 3.2.1)
 
 ## Deliverables
 
@@ -35,7 +35,7 @@ See [generate-clusters-spec.md](./generate-clusters-spec.md) for cluster details
 speedfog/writer/
 ├── data/
 │   ├── speedfog-events.yaml       # Event templates (readable, not hardcoded)
-│   └── fog_positions.json         # Fog gate positions extracted from fog.txt
+│   └── fog_data.json         # Fog gate positions extracted from fog.txt
 │
 ├── SpeedFogWriter/
 │   ├── SpeedFogWriter.csproj
@@ -45,7 +45,7 @@ speedfog/writer/
 │   │   ├── SpeedFogGraph.cs       # JSON deserialization (graph.json)
 │   │   ├── NodeData.cs            # Cluster-based node
 │   │   ├── EdgeData.cs            # Edge between nodes
-│   │   ├── FogPositionData.cs     # Fog gate positions (fog_positions.json)
+│   │   ├── FogEntryData.cs     # Fog gate positions (fog_data.json)
 │   │   └── EventTemplate.cs       # YAML event template model
 │   │
 │   ├── Writers/
@@ -408,39 +408,79 @@ public class EdgeData
 
 ---
 
-## Task 3.2.1: Fog Position Data (fog_positions.json)
+## Task 3.2.1: Fog Data (fog_data.json) - COMPLETE
 
-The C# writer needs fog gate positions (coordinates, rotations) that are not in `graph.json`. This data must be extracted from `fog.txt` and stored in `fog_positions.json`.
+The C# writer needs fog gate metadata from `fog.txt`. **Positions are NOT stored in fog.txt** for most fogs - they're in MSB (map) files. This task uses a **hybrid approach**:
 
-### fog_positions.json Format
+- **Python** extracts metadata (type, zones, map, entity_id, model, lookup method)
+- **C#** resolves positions at runtime from MSB files (which it already loads via SoulsFormats)
+- **MakeFrom fogs** are special - they have inline positions which ARE extracted
+
+### fog_data.json Format
 
 ```json
 {
   "version": "1.0",
+  "duplicate_names_handled": 304,
   "fogs": {
-    "1034432500": {
-      "zone": "chapel_start",
+    "AEG099_002_9000": {
+      "type": "entrance",
+      "zones": ["stormveil", "stormveil_godrick"],
       "map": "m10_00_00_00",
-      "position": [123.5, 45.2, -78.9],
-      "rotation": [0.0, 180.0, 0.0],
-      "entity_id": 1034432500,
-      "model": "AEG099_231",
-      "warp_region": 1034432500
+      "entity_id": 10001800,
+      "model": "AEG099_002",
+      "lookup_by": "name",
+      "position": null,
+      "rotation": null
     },
-    "AEG099_003_9000": {
-      "zone": "academy",
-      "map": "m14_00_00_00",
-      "position": [456.7, 12.3, -234.5],
-      "rotation": [0.0, 90.0, 0.0],
-      "entity_id": 14002100,
-      "model": "AEG099_003",
-      "warp_region": 14002100
+    "m10_00_00_00_AEG099_002_9000": {
+      "type": "entrance",
+      "zones": ["stormveil", "stormveil_godrick"],
+      "map": "m10_00_00_00",
+      "entity_id": 10001800,
+      "model": "AEG099_002",
+      "lookup_by": "name",
+      "position": null,
+      "rotation": null
+    },
+    "755894520": {
+      "type": "makefrom",
+      "zones": ["peninsula_tombswardcatacombs"],
+      "map": "m30_00_00_00",
+      "entity_id": 755894520,
+      "model": "AEG099_170",
+      "lookup_by": null,
+      "position": [-63.656, 51.250, 68.100],
+      "rotation": [0, -90.0, 0]
     }
   }
 }
 ```
 
-### FogPositionData.cs
+### Key Fields
+
+| Field | Description |
+|-------|-------------|
+| `type` | "entrance", "warp", or "makefrom" |
+| `zones` | List of zones this fog connects (both ASide and BSide) |
+| `map` | Map ID where fog is defined (e.g., "m10_00_00_00") |
+| `entity_id` | Entity ID for MSB lookup |
+| `model` | Fog model name (e.g., "AEG099_002") |
+| `lookup_by` | "name" (AEG fogs) or "entity_id" (numeric fogs), null for makefrom |
+| `position` | `[x, y, z]` for makefrom fogs, `null` otherwise |
+| `rotation` | `[rx, ry, rz]` for makefrom fogs, `null` otherwise |
+
+### Duplicate Fog Names
+
+Fog names like `AEG099_002_9000` appear in multiple maps. The script handles this by:
+1. First occurrence uses plain name as key: `"AEG099_002_9000"`
+2. All occurrences also have map-prefixed key: `"m10_00_00_00_AEG099_002_9000"`
+
+At runtime, the C# writer should:
+1. Try plain fog_id first, check if zone matches
+2. If zone doesn't match, iterate map-prefixed keys to find matching zone
+
+### FogEntryData.cs
 
 ```csharp
 using System.Text.Json;
@@ -449,36 +489,60 @@ using System.Text.Json.Serialization;
 namespace SpeedFogWriter.Models;
 
 /// <summary>
-/// Fog position data loaded from fog_positions.json.
+/// Fog metadata loaded from fog_data.json.
 /// </summary>
-public class FogPositionsFile
+public class FogDataFile
 {
     [JsonPropertyName("version")]
     public string Version { get; set; } = "1.0";
 
     [JsonPropertyName("fogs")]
-    public Dictionary<string, FogPositionData> Fogs { get; set; } = new();
+    public Dictionary<string, FogEntryData> Fogs { get; set; } = new();
 
-    public static FogPositionsFile Load(string path)
+    public static FogDataFile Load(string path)
     {
         var json = File.ReadAllText(path);
-        return JsonSerializer.Deserialize<FogPositionsFile>(json)
-            ?? throw new InvalidOperationException("Failed to parse fog_positions.json");
+        return JsonSerializer.Deserialize<FogDataFile>(json)
+            ?? throw new InvalidOperationException("Failed to parse fog_data.json");
     }
 
-    public FogPositionData? GetFog(string fogId) => Fogs.GetValueOrDefault(fogId);
+    /// <summary>
+    /// Get fog entry by fog_id and zone.
+    /// Tries plain key first, then map-prefixed keys.
+    /// </summary>
+    public FogEntryData? GetFog(string fogId, string? zone = null)
+    {
+        // Try plain key first
+        if (Fogs.TryGetValue(fogId, out var fog))
+        {
+            if (zone == null || fog.Zones.Contains(zone))
+                return fog;
+        }
+
+        // Try all map-prefixed keys
+        foreach (var (key, data) in Fogs)
+        {
+            if (key.EndsWith($"_{fogId}") && (zone == null || data.Zones.Contains(zone)))
+                return data;
+        }
+
+        return null;
+    }
 }
 
 /// <summary>
-/// Position and metadata for a single fog gate.
+/// Metadata for a single fog gate.
 /// </summary>
-public class FogPositionData
+public class FogEntryData
 {
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "";
+
     /// <summary>
-    /// Zone this fog gate belongs to.
+    /// List of zones this fog connects.
     /// </summary>
-    [JsonPropertyName("zone")]
-    public string Zone { get; set; } = "";
+    [JsonPropertyName("zones")]
+    public List<string> Zones { get; set; } = new();
 
     /// <summary>
     /// Map ID (e.g., "m10_00_00_00").
@@ -487,19 +551,7 @@ public class FogPositionData
     public string Map { get; set; } = "";
 
     /// <summary>
-    /// Position [x, y, z] in world coordinates.
-    /// </summary>
-    [JsonPropertyName("position")]
-    public float[] Position { get; set; } = new float[3];
-
-    /// <summary>
-    /// Rotation [x, y, z] in degrees.
-    /// </summary>
-    [JsonPropertyName("rotation")]
-    public float[] Rotation { get; set; } = new float[3];
-
-    /// <summary>
-    /// Entity ID for this fog gate.
+    /// Entity ID for MSB lookup.
     /// </summary>
     [JsonPropertyName("entity_id")]
     public int EntityId { get; set; }
@@ -511,17 +563,32 @@ public class FogPositionData
     public string Model { get; set; } = "";
 
     /// <summary>
-    /// Warp destination region ID.
+    /// How to look up in MSB: "name" or "entity_id", null for makefrom.
     /// </summary>
-    [JsonPropertyName("warp_region")]
-    public int WarpRegion { get; set; }
+    [JsonPropertyName("lookup_by")]
+    public string? LookupBy { get; set; }
+
+    /// <summary>
+    /// Position [x, y, z] - only for makefrom fogs.
+    /// </summary>
+    [JsonPropertyName("position")]
+    public float[]? Position { get; set; }
+
+    /// <summary>
+    /// Rotation [x, y, z] in degrees - only for makefrom fogs.
+    /// </summary>
+    [JsonPropertyName("rotation")]
+    public float[]? Rotation { get; set; }
 
     // Convenience properties
+    public bool HasPosition => Position != null && Position.Length == 3;
+    public bool IsMakeFrom => Type == "makefrom";
+
     public System.Numerics.Vector3 PositionVec =>
-        new(Position[0], Position[1], Position[2]);
+        Position != null ? new(Position[0], Position[1], Position[2]) : default;
 
     public System.Numerics.Vector3 RotationVec =>
-        new(Rotation[0], Rotation[1], Rotation[2]);
+        Rotation != null ? new(Rotation[0], Rotation[1], Rotation[2]) : default;
 
     /// <summary>
     /// Parse map ID to bytes (for EMEVD warp instructions).
@@ -531,7 +598,6 @@ public class FogPositionData
     {
         get
         {
-            // Parse m{AA}_{BB}_{CC}_{DD}
             var parts = Map.TrimStart('m').Split('_');
             if (parts.Length != 4)
                 throw new FormatException($"Invalid map ID: {Map}");
@@ -548,21 +614,53 @@ public class FogPositionData
 }
 ```
 
-### Extracting fog_positions.json
+### Resolving Positions at Runtime (C#)
 
-Create a Python script `tools/extract_fog_positions.py` to extract positions from `fog.txt`:
+For non-makefrom fogs, the C# writer must resolve positions from MSB files:
 
-```python
-"""Extract fog gate positions from fog.txt for the C# writer."""
+```csharp
+public Vector3 GetFogPosition(FogEntryData fog, Dictionary<string, MSBE> msbs)
+{
+    // MakeFrom fogs have inline positions
+    if (fog.IsMakeFrom && fog.HasPosition)
+        return fog.PositionVec;
 
-# Key sections in fog.txt:
-# - Entrances: Contains fog gate definitions with positions
-# - Warps: Contains warp point definitions
+    // Look up in MSB
+    var msb = msbs[fog.Map];
+    MSBE.Part.Asset? asset = fog.LookupBy switch
+    {
+        "name" => msb.Parts.Assets.FirstOrDefault(a => a.Name == fog.Model),
+        "entity_id" => msb.Parts.Assets.FirstOrDefault(a => a.EntityID == fog.EntityId),
+        _ => null
+    };
 
-# Output: writer/data/fog_positions.json
+    if (asset != null)
+        return asset.Position;
+
+    throw new Exception($"Could not find fog asset in {fog.Map}");
+}
 ```
 
-**Note**: This is a one-time extraction task. The positions don't change between runs.
+### Extraction Script - COMPLETE
+
+The Python script `tools/extract_fog_data.py` has been implemented:
+
+```bash
+# Generate fog_data.json
+python tools/extract_fog_data.py \
+    reference/fogrando-data/fog.txt \
+    writer/data/fog_data.json \
+    --validate-clusters core/data/clusters.json
+
+# Output:
+# Parsed 547 fog entries
+#   entrance: 351
+#   makefrom: 36
+#   warp: 160
+# All cluster fog_ids found in fog_data!
+```
+
+**Note**: This is a one-time extraction task. The metadata doesn't change between runs.
 
 ---
 
@@ -921,7 +1019,7 @@ The DAG uses edges with `fog_id` to connect clusters. Each edge represents:
 2. **Target**: Another cluster
 3. **fog_id**: The specific fog gate used for this connection
 
-The `fog_id` is looked up in `fog_positions.json` to get:
+The `fog_id` is looked up in `fog_data.json` to get:
 - Position and rotation for spawning the fog wall
 - Map ID for the EMEVD
 - Warp region for teleportation
@@ -947,11 +1045,11 @@ public class FogGateWriter
     // Custom flag ID range
     private const int CustomFlagBase = 79000000;
 
-    private readonly FogPositionsFile _fogPositions;
+    private readonly FogDataFile _fogPositions;
     private int _nextEventId;
     private int _nextFlagId;
 
-    public FogGateWriter(FogPositionsFile fogPositions)
+    public FogGateWriter(FogDataFile fogPositions)
     {
         _fogPositions = fogPositions;
         _nextEventId = CustomEventBase;
@@ -1005,8 +1103,8 @@ public class FogGateWriter
         NodeData source,
         NodeData target,
         EdgeData edge,
-        FogPositionData exitFog,
-        FogPositionData? entryFog)
+        FogEntryData exitFog,
+        FogEntryData? entryFog)
     {
         var eventId = _nextEventId++;
         var flagId = _nextFlagId++;
@@ -1023,7 +1121,7 @@ public class FogGateWriter
 
             // Fog gate position (exit of source cluster)
             SourceMap = exitFog.Map,
-            FogPosition = exitFog.PositionVec,
+            FogEntry = exitFog.PositionVec,
             FogRotation = exitFog.RotationVec,
             FogEntityId = exitFog.EntityId,
             FogModel = exitFog.Model,
@@ -1045,7 +1143,7 @@ public class FogGateWriter
     public void WriteToEmevd(EMEVD emevd, FogGateEvent fogGate, int scalingSpEffect)
     {
         // Key instructions needed:
-        // 1. Spawn fog wall asset at FogPosition (if not already present)
+        // 1. Spawn fog wall asset at FogEntry (if not already present)
         // 2. Create button interaction region
         // 3. On player pressing button near fog:
         //    a. Set event flag (for tracking)
@@ -1081,7 +1179,7 @@ public class FogGateEvent
 
     // Fog gate spawn (exit of source cluster)
     public string SourceMap { get; set; } = "";
-    public Vector3 FogPosition { get; set; }
+    public Vector3 FogEntry { get; set; }
     public Vector3 FogRotation { get; set; }
     public int FogEntityId { get; set; }
     public string FogModel { get; set; } = "";
@@ -1298,7 +1396,7 @@ public class ModWriter
 
     private ParamDictionary? _params;
     private Dictionary<string, EMEVD>? _emevds;
-    private FogPositionsFile? _fogPositions;
+    private FogDataFile? _fogPositions;
     private ScalingWriter? _scalingWriter;
     private List<FogGateEvent>? _fogGates;
 
@@ -1319,7 +1417,7 @@ public class ModWriter
         LoadGameData();
 
         Console.WriteLine("Loading fog position data...");
-        LoadFogPositions();
+        LoadFogData();
 
         Console.WriteLine("Generating scaling effects...");
         GenerateScaling();
@@ -1385,18 +1483,18 @@ public class ModWriter
     private string? GetMapForZone(string zoneId)
     {
         // This needs zone→map mapping
-        // For now, lookup in fog_positions.json when loaded
+        // For now, lookup in fog_data.json when loaded
         return _fogPositions?.Fogs.Values
             .FirstOrDefault(f => f.Zone == zoneId)?.Map;
     }
 
-    private void LoadFogPositions()
+    private void LoadFogData()
     {
-        var fogPosPath = Path.Combine(_dataDir, "fog_positions.json");
+        var fogPosPath = Path.Combine(_dataDir, "fog_data.json");
         if (!File.Exists(fogPosPath))
-            throw new FileNotFoundException($"fog_positions.json not found: {fogPosPath}");
+            throw new FileNotFoundException($"fog_data.json not found: {fogPosPath}");
 
-        _fogPositions = FogPositionsFile.Load(fogPosPath);
+        _fogPositions = FogDataFile.Load(fogPosPath);
         Console.WriteLine($"  Loaded {_fogPositions.Fogs.Count} fog positions");
     }
 
@@ -1559,7 +1657,7 @@ class Program
         if (!Directory.Exists(dataDir))
         {
             Console.Error.WriteLine($"Error: Data directory not found: {dataDir}");
-            Console.Error.WriteLine("  Expected to find fog_positions.json and speedfog-events.yaml");
+            Console.Error.WriteLine("  Expected to find fog_data.json and speedfog-events.yaml");
             return 1;
         }
 
@@ -1879,13 +1977,13 @@ SpeedFog uses a **YAML-based template approach** (Task 3.3) for EMEVD generation
 
 ### 2. Fog Position Data (NEW)
 
-**Critical dependency**: The C# writer needs `fog_positions.json` with fog gate coordinates.
+**Critical dependency**: The C# writer needs `fog_data.json` with fog gate coordinates.
 
-This data must be extracted from `fog.txt` before Phase 3 implementation begins. Create a Python script `tools/extract_fog_positions.py` that:
+This data must be extracted from `fog.txt` before Phase 3 implementation begins. Create a Python script `tools/extract_fog_data.py` that:
 
 1. Parses `fog.txt` Entrances and Warps sections
 2. Extracts position, rotation, entity_id, map, model for each fog
-3. Outputs `writer/data/fog_positions.json`
+3. Outputs `writer/data/fog_data.json`
 
 **Key sections in fog.txt to parse**:
 ```yaml
@@ -1907,11 +2005,11 @@ The Phase 3 spec was updated to match the cluster-based architecture from Phase 
 | Old (zone-based) | New (cluster-based) |
 |------------------|---------------------|
 | `zone_id` (single) | `zones` (list) |
-| `ZoneMap` | Lookup in `fog_positions.json` |
+| `ZoneMap` | Lookup in `fog_data.json` |
 | `entries`/`exits` (node IDs) | `entry_fog`/`exit_fogs` (fog IDs) |
 | No explicit edges | `edges` array with fog_id |
 
-The C# writer uses edges and fog_positions to determine:
+The C# writer uses edges and fog_data to determine:
 - Where to place fog walls (source cluster exit fog position)
 - Where to warp (target cluster entry fog position)
 
@@ -1936,11 +2034,11 @@ Ensure you're using a SoulsFormats version that supports Elden Ring. SoulsFormat
 
 ## Acceptance Criteria
 
-### Task 3.0 (Prerequisite: fog_positions.json)
-- [ ] Python script `tools/extract_fog_positions.py` exists
+### Task 3.0 (Prerequisite: fog_data.json)
+- [ ] Python script `tools/extract_fog_data.py` exists
 - [ ] Script parses fog.txt Entrances section
-- [ ] Script outputs `writer/data/fog_positions.json`
-- [ ] All fog_ids from clusters.json are present in fog_positions.json
+- [ ] Script outputs `writer/data/fog_data.json`
+- [ ] All fog_ids from clusters.json are present in fog_data.json
 
 ### Task 3.1 (Setup)
 - [ ] Project builds with `dotnet build`
@@ -1949,7 +2047,7 @@ Ensure you're using a SoulsFormats version that supports Elden Ring. SoulsFormat
 ### Task 3.2 (Models)
 - [ ] `SpeedFogGraph.Load()` parses graph.json correctly
 - [ ] All nodes and edges accessible
-- [ ] `FogPositionsFile.Load()` parses fog_positions.json correctly
+- [ ] `FogDataFile.Load()` parses fog_data.json correctly
 - [ ] Nodes contain correct cluster data (zones list, entry_fog, exit_fogs)
 
 ### Task 3.3 (Event Templates)
@@ -1963,7 +2061,7 @@ Ensure you're using a SoulsFormats version that supports Elden Ring. SoulsFormat
 
 ### Task 3.5-3.6 (Fog Gates & Warps)
 - [ ] Fog gate events created for all edges in the graph
-- [ ] Each edge's fog_id is found in fog_positions.json
+- [ ] Each edge's fog_id is found in fog_data.json
 - [ ] Events compile without EMEVD errors
 
 ### Task 3.7 (Starting Items)
@@ -1971,7 +2069,7 @@ Ensure you're using a SoulsFormats version that supports Elden Ring. SoulsFormat
 - [ ] Player doesn't get softlocked by missing keys
 
 ### Task 3.8-3.9 (Integration)
-- [ ] Full pipeline works: graph.json + fog_positions.json → mod files
+- [ ] Full pipeline works: graph.json + fog_data.json → mod files
 - [ ] Output directory structure matches ModEngine 2 expectations
 - [ ] Summary output shows correct seed, nodes, paths, weights
 
@@ -2003,10 +2101,10 @@ public void NodeData_HasMultipleZones()
 }
 
 [Test]
-public void FogPositions_AllEdgeFogsExist()
+public void FogData_AllEdgeFogsExist()
 {
     var graph = SpeedFogGraph.Load("test/sample_graph.json");
-    var fogPos = FogPositionsFile.Load("data/fog_positions.json");
+    var fogPos = FogDataFile.Load("data/fog_data.json");
 
     foreach (var edge in graph.Edges)
     {
@@ -2021,9 +2119,9 @@ public void FogPositions_AllEdgeFogsExist()
 ```bash
 # 1. Extract fog positions (prerequisite)
 cd speedfog
-python tools/extract_fog_positions.py \
+python tools/extract_fog_data.py \
     reference/fogrando-data/fog.txt \
-    writer/data/fog_positions.json
+    writer/data/fog_data.json
 
 # 2. Generate graph (Phase 2)
 cd core
