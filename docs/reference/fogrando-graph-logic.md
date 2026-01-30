@@ -916,3 +916,1033 @@ Compared to FogRando's full complexity, SpeedFog can simplify:
 2. Filter zones by connection count (≥2 bidirectional)
 3. Generate a valid DAG structure
 4. Output connection data for the C# writer
+
+---
+
+## 12. Complete Tag Reference
+
+This section provides a comprehensive reference for every tag used in FogRando, organized by category. Each tag's precise effect on graph construction is documented with code references.
+
+### 12.1 Core State Tags
+
+These tags control whether an entrance/warp is included in the graph at all.
+
+#### `unused`
+
+**Meaning:** The entrance/warp should be completely excluded from the graph.
+
+**Processing:**
+- Entrances: Skipped immediately at L872-874
+- Warps: Skipped immediately at L1008-1010
+
+**Effect:** No edges created. The connection does not exist in the randomization graph.
+
+**When applied:**
+- Explicitly in fog.txt
+- Dynamically added by various condition checks (crawl mode, DLC filtering, etc.)
+
+---
+
+#### `norandom`
+
+**Meaning:** The connection exists but should never be randomized.
+
+**Processing:** `entrance.IsFixed = true` (L973 for entrances, L1012-1014 for warps)
+
+**Effect:**
+- Edges are created
+- Connection is fixed to its vanilla destination
+- Traversable but not part of randomization pool
+
+**Use cases:**
+- Critical progression paths
+- Tutorial connections
+- Connections that would break if randomized
+
+---
+
+#### `door`
+
+**Meaning:** An internal door connection (not a fog gate).
+
+**Processing:**
+- `entrance.IsFixed = true` (L973)
+- Creates bidirectional world-style connection (L1449-1475)
+- Only one edge pair per area-pair (deduplication via hashSet)
+
+**Effect:**
+- Fixed bidirectional passage
+- May have conditions (`DoorCond`)
+- Treated as world connection for traversal
+
+**Example:** Locked doors requiring keys
+
+---
+
+### 12.2 Mode Toggle Tags
+
+These tags control inclusion based on game mode (crawl, segmented, etc.).
+
+#### `crawlonly`
+
+**Meaning:** Include ONLY in Dungeon Crawler mode.
+
+**Processing:**
+- Entrances: `!opt["crawl"]` → `unused` (L981-987)
+- Warps: `!opt["crawl"]` → `unused` (L1048-1050)
+
+**Effect:** Excluded from World Shuffle mode, included in Crawl mode.
+
+**Use cases:**
+- Artificial dungeon connections for crawler mode
+- Tier-gated overworld access points
+
+---
+
+#### `nocrawl`
+
+**Meaning:** EXCLUDE from Dungeon Crawler mode.
+
+**Processing:**
+- Entrances: `opt["crawl"]` → `unused` (L981)
+- World connections: `opt["crawl"]` → skipped (L1319)
+
+**Effect:** Included in World Shuffle, excluded from Crawl mode.
+
+**Use cases:**
+- Open-world connections that don't fit dungeon crawler
+
+---
+
+#### `fortressonly`
+
+**Meaning:** Include ONLY in Fortress Segmented mode.
+
+**Processing:** `!opt[Feature.SegmentFortresses]` → `unused` (L989-991, L1052-1055)
+
+**Effect:** Only exists when fortress segments are enabled.
+
+**Use cases:**
+- Special selfwarp exits for fortress segments
+- Fortress-specific routing
+
+---
+
+#### `nofortress`
+
+**Meaning:** EXCLUDE from Fortress Segmented mode.
+
+**Processing:** `opt[Feature.SegmentFortresses]` → `unused` (L989-991, L1052-1055)
+
+**Effect:** Excluded when fortress segments are enabled.
+
+**Use cases:**
+- World connections incompatible with fortress segmentation
+- Dropped connections in fortress mode
+
+---
+
+#### `segmentonly`
+
+**Meaning:** Include ONLY in Segmented modes (Boss Rush, Endless).
+
+**Processing:** `!opt[Feature.Segmented]` → `unused` (L1056-1058)
+
+**Effect:** Only exists in segmented game modes.
+
+**Use cases:**
+- Return warps for segment completion
+- Segment-specific routing
+
+---
+
+#### `nosegment`
+
+**Meaning:** EXCLUDE from Segmented modes.
+
+**Processing:** `opt[Feature.Segmented]` → `unused` (L1056-1058)
+
+**Effect:** Excluded from Boss Rush/Endless modes.
+
+**Use cases:**
+- Standard warps that don't work with segmentation
+
+---
+
+### 12.3 Dungeon Type Tags
+
+These tags categorize connections by dungeon type and control inclusion via `req_*` options.
+
+#### `dungeon`
+
+**Meaning:** Connection is inside a dungeon (any type).
+
+**Processing:**
+- Used for `IsCore` calculation (L1127)
+- Special handling for specific dungeons (L1101-1104)
+
+**Effect:** General dungeon categorization. Affects core status in non-crawl mode.
+
+---
+
+#### `cave`
+
+**Meaning:** Connection related to a cave-type dungeon.
+
+**Processing:** Affects `IsCore` calculation when `opt["crawl"]` (L1123)
+
+**Effect:** In crawl mode, `IsCore = opt["req_cave"] || opt["req_all"]`
+
+---
+
+#### `caveonly`
+
+**Meaning:** Include only when caves are enabled in crawl mode.
+
+**Processing:** `!opt["req_cave"] || opt["req_backportal"]` → `unused` (L1069-1076)
+
+**Effect:** Excluded if caves disabled or backportals enabled (since backportals change dungeon topology).
+
+---
+
+#### `catacomb`
+
+**Meaning:** Connection related to a catacomb-type dungeon.
+
+**Processing:** Same as `cave` but for catacombs.
+
+**Effect:** In crawl mode, `IsCore = opt["req_catacomb"] || opt["req_all"]`
+
+---
+
+#### `catacombonly`
+
+**Meaning:** Include only when catacombs are enabled in crawl mode.
+
+**Processing:** Same as `caveonly` but checks `req_catacomb`.
+
+---
+
+#### `tunnel`
+
+**Meaning:** Connection related to a tunnel/mine dungeon.
+
+**Processing:** Affects `IsCore` calculation in crawl mode (L1123).
+
+**Effect:** In crawl mode, `IsCore = opt["req_tunnel"] || opt["req_all"]`
+
+**Note:** Unlike other dungeon types, there is no `tunnelonly` tag - tunnels are not conditionally excluded via the `*only` loop.
+
+---
+
+#### `gaol`
+
+**Meaning:** Connection related to a gaol (evergaol prison).
+
+**Processing:** Affects `IsCore` calculation in crawl mode.
+
+**Effect:** In crawl mode, `IsCore = opt["req_gaol"] || opt["req_all"]`
+
+---
+
+#### `gaolonly`
+
+**Meaning:** Include only when gaols are enabled in crawl mode.
+
+**Processing:** Same pattern as `caveonly`.
+
+---
+
+#### `forge`
+
+**Meaning:** Connection related to a forge dungeon.
+
+**Processing:**
+- Affects `IsCore` calculation
+- Special backportal handling: `opt["crawl"] && warp.HasTag("forge")` → convert to selfwarp (L1081)
+
+**Effect:** Forges get selfwarps in crawl mode even without `req_backportal`.
+
+---
+
+#### `forgeonly`
+
+**Meaning:** Include only when forges are enabled.
+
+**Processing:** Same pattern as `caveonly` but checks `req_forge`.
+
+---
+
+#### `grave`
+
+**Meaning:** Connection related to a grave-type dungeon (Hero's Graves).
+
+**Processing:** Affects `IsCore` calculation in crawl mode (L1123).
+
+**Effect:** In crawl mode, `IsCore = opt["req_grave"] || opt["req_all"]`
+
+---
+
+#### `cellar`
+
+**Meaning:** Connection related to a cellar-type dungeon.
+
+**Processing:** Affects `IsCore` calculation in crawl mode (L1123).
+
+**Effect:** In crawl mode, `IsCore = opt["req_cellar"] || opt["req_all"]`
+
+---
+
+### 12.4 Warp Directionality Tags
+
+These tags control whether warps are one-way or bidirectional.
+
+#### `unique`
+
+**Meaning:** Inherently one-way warp (cannot be made bidirectional).
+
+**Processing:**
+- Creates EXIT from ASide and ENTRANCE to BSide (L1371-1375), same as all warps
+- No Pair relationship established (unlike bidirectional warps)
+- **Key difference:** If one side is ignored (in `Ignore` set), unique warps are silently skipped (L1379-1383), while non-unique warps throw an exception
+
+**Effect:**
+- Strictly unidirectional
+- Cannot be used as entry point from BSide
+- Allows partial inclusion when one side's area is excluded
+
+**Examples:**
+- Coffin rides
+- Story-progression teleports (Burning Erdtree)
+- Belfry portals
+- Trap chests
+
+---
+
+#### `uniquegate`
+
+**Meaning:** One-way sending gate that CAN be made bidirectional.
+
+**Processing:**
+- If `!opt["coupledwarp"] && !opt[Feature.Segmented]` → add `unique` tag (L1036-1038)
+- Otherwise: treated as bidirectional
+
+**Effect:**
+- With `coupledwarp=false`: unidirectional
+- With `coupledwarp=true`: bidirectional (paired with return)
+
+**Examples:** Sending gates between legacy dungeons
+
+---
+
+#### `uniqueminor`
+
+**Meaning:** Minor one-way warp that CAN be made bidirectional.
+
+**Processing:**
+- If `!opt["coupledminor"] && !opt[Feature.Segmented]` → add `unique` (L1040-1042)
+- If `opt["crawl"] && !opt["req_minorwarp"]` → add `unique` (L1044-1046)
+
+**Effect:**
+- With `coupledminor=false`: unidirectional
+- With `coupledminor=true`: bidirectional
+- In crawl without `req_minorwarp`: unidirectional
+
+**Examples:** Minor warps between underground areas
+
+---
+
+#### `selfwarp`
+
+**Meaning:** Both ends of the warp are in the SAME zone.
+
+**Processing:**
+- Edges are paired: `edge.Pair = edge2; edge2.Pair = edge` (L1391-1394)
+- Both edges belong to same area
+
+**Effect:** Creates a bidirectional connection point within a single zone. Essential for boss rooms to have 2 connection points.
+
+**Created by:**
+- `backportal` conversion when `req_backportal=true`
+- Explicit `selfwarp` tag in fog.txt
+- Artificial evergaol creation in crawl mode
+
+---
+
+### 12.5 Backportal System
+
+#### `backportal`
+
+**Meaning:** Return warp after defeating a boss.
+
+**Processing (L1079-1099):**
+```
+if opt[Feature.Segmented]:
+    warp.HasTag("unique")  // Note: appears to be a no-op (return value unused)
+else if opt["req_backportal"] || (opt["crawl"] && HasTag("forge")):
+    BSide.Area = ASide.Area  // Convert to selfwarp
+    AddTag("selfwarp")
+else:
+    AddTag("unused")
+```
+
+**Effect:**
+| Mode | Result |
+|------|--------|
+| Segmented | No action (L1084 appears to be a no-op in source) |
+| Crawl + forge | Convert to selfwarp |
+| `req_backportal=true` | Convert to selfwarp |
+| Otherwise | Marked unused |
+
+**Importance for SpeedFog:** Setting `req_backportal=true` gives boss rooms a second bidirectional connection point, making them eligible for DAG inclusion.
+
+---
+
+### 12.6 Core Status Tags
+
+These tags affect whether a connection is part of the main randomization "core".
+
+#### `open`
+
+**Meaning:** Open-world (overworld) connection.
+
+**Processing:**
+- In crawl mode: `IsCore = false` (L1169-1171)
+- Adds to category list for IsCore calculation (L1122)
+
+**Effect:** Overworld connections are not core in crawl mode.
+
+---
+
+#### `neveropen`
+
+**Meaning:** Force core status even in crawl mode.
+
+**Processing:** In crawl mode: `IsCore = true` (L1173-1175)
+
+**Effect:** Overrides `open` exclusion. Connection is always core.
+
+**Use cases:** Critical dungeon entrances that happen to be in overworld
+
+---
+
+#### `openonly`
+
+**Meaning:** Connection only exists in overworld context.
+
+**Processing:** World connections with `openonly` excluded from core propagation (L670)
+
+**Effect:** Not propagated during core marking.
+
+**Use cases:** Tier-gated overworld access in crawl mode
+
+---
+
+#### `opensplit`
+
+**Meaning:** Unique warp that can split core/non-core.
+
+**Processing (L1251-1277):**
+- In crawl with `unique`: if one side is core and one isn't
+- If `opensplit`: keep core side, mark non-core as `unused` + `remove`
+- Otherwise: mark entire warp as `unused` + `remove`
+
+**Effect:** Allows one-way warps to work partially in crawl mode.
+
+**Examples:** Tower of Return chest (overworld → Leyndell)
+
+---
+
+#### `openremove`
+
+**Meaning:** Remove entirely in crawl mode.
+
+**Processing:** `opt["crawl"]` → `unused` + `remove` (L1062-1066)
+
+**Effect:** Completely removed from crawl mode, including physical asset.
+
+**Use cases:** Sending gates that would break crawl progression
+
+---
+
+### 12.7 Location Category Tags
+
+These tags categorize connections for `IsCore` calculation and silo matching.
+
+#### `underground`
+
+**Meaning:** Underground area connection.
+
+**Processing:** Category tag for `IsCore` calculation (L1119)
+
+**Effect:** `IsCore = opt["req_underground"] || opt["req_all"]`
+
+---
+
+#### `belfries`
+
+**Meaning:** Four Belfries teleporter connection.
+
+**Processing:** Category tag for `IsCore` calculation (L1119)
+
+**Effect:** `IsCore = opt["req_belfries"] || opt["req_all"]`
+
+---
+
+#### `colosseum`
+
+**Meaning:** Colosseum arena connection.
+
+**Processing:** Category tag for `IsCore` calculation (L1119)
+
+**Effect:** `IsCore = opt["req_colosseum"] || opt["req_all"]`
+
+---
+
+#### `divine`
+
+**Meaning:** Divine Tower connection.
+
+**Processing:** Category tag for `IsCore` calculation (L1119)
+
+**Effect:** `IsCore = opt["req_divine"] || opt["req_all"]`
+
+---
+
+#### `graveyard`
+
+**Meaning:** Stranded Graveyard connection.
+
+**Processing:** Category tag for `IsCore` calculation (L1119)
+
+**Effect:** `IsCore = opt["req_graveyard"] || opt["req_all"]`
+
+---
+
+#### `evergaol`
+
+**Meaning:** Evergaol connection.
+
+**Processing:** Category tag for `IsCore` calculation (L1119)
+
+**Effect:** `IsCore = opt["req_evergaol"] || opt["req_all"]`
+
+---
+
+#### `minorwarp`
+
+**Meaning:** Minor inter-area warp.
+
+**Processing (L1159-1162):**
+```
+if hasTag("minorwarp"):
+    isCore = tagIsCore("minorwarp") AND (!hasListTag OR hasListCoreTag)
+```
+
+**Effect:** Requires both `req_minorwarp` AND any applicable category tag.
+
+---
+
+#### `rauhruins`
+
+**Meaning:** Rauh Ruins connection (DLC).
+
+**Processing:**
+- In crawl: `!opt["req_rauhruins"]` → `IsCore = false` (L1177-1180)
+- Dungeon items with `rauhruins` excluded if `req_rauhruins` (L1290-1293)
+
+**Effect:** Rauh Ruins optionally included in crawl mode.
+
+---
+
+### 12.8 Area Classification Tags
+
+#### `overworld`
+
+**Meaning:** Area is an overworld/open-world zone.
+
+**Processing:**
+- Adds `overworld_adjacent` to connected non-overworld areas (L650-660)
+- In crawl mode: `openonly` items become `optional` (L782-784)
+
+**Effect:** Classification for world structure and crawl mode filtering.
+
+---
+
+#### `minidungeon`
+
+**Meaning:** Area is a mini-dungeon (cave, catacomb, etc.).
+
+**Processing:**
+- Area cost = 1 (L1525-1527)
+- Excluded from major scaling bosses (L680-684)
+
+**Effect:** Lower traversal cost, not counted as major boss for scaling.
+
+---
+
+#### `trivial`
+
+**Meaning:** Transition/trivial area with no significant content.
+
+**Processing:**
+- Entrances: `IsFixed = true` unless Segmented (L977-979)
+- Area cost = 0 (L1519-1520)
+- `avoidstart` calculation considers trivial chains (L725)
+
+**Effect:** Fixed connections, zero cost, not a starting point.
+
+---
+
+#### `start`
+
+**Meaning:** Starting area (Chapel of Anticipation).
+
+**Processing:** Sets `area.Mode = AreaMode.Both` (L786)
+
+**Effect:** Available in both base game and DLC modes.
+
+---
+
+#### `final`
+
+**Meaning:** Final boss area.
+
+**Processing:** Excluded from major scaling bosses (L680)
+
+**Effect:** Not used for tier interpolation.
+
+---
+
+#### `optional`
+
+**Meaning:** Optional content.
+
+**Processing:**
+- Applied when area is excluded by DLC mode (L790-791)
+- Applied in crawl mode for `openonly` areas (L782-784)
+
+**Effect:** Area can be skipped without blocking progression.
+
+---
+
+#### `escape`
+
+**Meaning:** Boss arena with escape possibility.
+
+**Processing:** Used in `TagOpenStart()` for valid starting points.
+
+**Effect:** Marks boss rooms that have a way out.
+
+---
+
+#### `minor`
+
+**Meaning:** Minor boss area.
+
+**Processing:**
+- Area cost = 1 (L1525-1527)
+- Excluded from major scaling bosses (L682)
+
+**Effect:** Lower scaling tier, smaller area.
+
+---
+
+### 12.9 DLC Tags
+
+#### `dlc`
+
+**Meaning:** DLC content.
+
+**Processing:**
+- Sets `area.Mode = AreaMode.DLC` (L786)
+- `area.IsExcluded = true` when `ExcludeMode == DLC` (L787)
+
+**Effect:** Excluded when DLC is disabled.
+
+---
+
+#### `dlc1` / `dlc2`
+
+**Meaning:** Specific DLC content (DS3/ER DLC packs).
+
+**Processing:** `!opt["dlc1"]` or `!opt["dlc2"]` → `IsFixed = true` (L1028-1034)
+
+**Effect:** Fixed (not randomized) when specific DLC disabled.
+
+---
+
+#### `dlconly`
+
+**Meaning:** Only include when NOT in DLC-only mode.
+
+**Processing:** `ExcludeMode == AreaMode.Base` → skip (L1319)
+
+**Effect:** Excluded in DLC-only playthrough.
+
+---
+
+#### `dlcend`
+
+**Meaning:** DLC ending connection.
+
+**Processing:** `IsFixed = true` (L973)
+
+**Effect:** Never randomized, preserves DLC ending.
+
+---
+
+#### `dlchack`
+
+**Meaning:** DLC compatibility hack.
+
+**Processing:** Special handling for DLC-base game transitions.
+
+**Effect:** Technical workaround for DLC integration.
+
+---
+
+### 12.10 Pairing and Routing Tags
+
+#### `return` / `returnpair`
+
+**Meaning:** Return warp pair for evergaols and divine towers.
+
+**Processing:** Used for `PairWith` matching in bidirectional warp creation (L1402-1424)
+
+**Effect:** Links two warps as bidirectional pair.
+
+**Pattern:** `return` ASide pairs with `returnpair` BSide.
+
+---
+
+#### `main`
+
+**Meaning:** Main/primary connection point.
+
+**Processing:** Used for side identification and labeling.
+
+**Effect:** Marks the "main" side of a multi-sided entrance.
+
+---
+
+#### `major`
+
+**Meaning:** Major connection/boss.
+
+**Processing:**
+- Filtering: `!opt["major"]` → fixed (DS1/DS3)
+- Scaling: Included in major boss list for tier calculation
+
+**Effect:** Higher priority, affects scaling.
+
+---
+
+#### `legacy`
+
+**Meaning:** Legacy dungeon connection.
+
+**Processing:** Often combined with `opensplit`, `uniquegate`.
+
+**Effect:** Categorization for legacy dungeon handling.
+
+---
+
+#### `critical`
+
+**Meaning:** Critical progression connection.
+
+**Processing:** Combined with other tags for importance.
+
+**Effect:** Cannot be removed without breaking progression.
+
+---
+
+### 12.11 Special Behavior Tags
+
+#### `avoidstart`
+
+**Meaning:** Area should not be a random starting point.
+
+**Processing:**
+- Calculated in `TagOpenStart()` (L709-765)
+- Propagated to sides of entrances (L732-745)
+
+**Effect:** Area/entrance not eligible for random start placement.
+
+---
+
+#### `afterstart`
+
+**Meaning:** Connection only valid after start.
+
+**Processing:** `ExcludeMode == AreaMode.Base && HasTag("afterstart")` → Ignore (L1193-1195)
+
+**Effect:** Side ignored in base-only mode.
+
+---
+
+#### `newgate`
+
+**Meaning:** Newly created fog gate (not vanilla).
+
+**Processing:** Required for `crawlonly` entrances (L983-986)
+
+**Effect:** Artificial gate added by randomizer.
+
+---
+
+#### `temp`
+
+**Meaning:** Temporary/placeholder connection.
+
+**Processing:** Skipped in construction (L1319, L1363)
+
+**Effect:** Not included in final graph.
+
+---
+
+#### `hard`
+
+**Meaning:** Requires hard/difficult skip.
+
+**Processing:**
+- Skipped unless `opt["hard"]` (L1319)
+- Text defaults to "hard skip" (L323)
+
+**Effect:** Only included with hard mode enabled.
+
+---
+
+#### `drop`
+
+**Meaning:** One-way drop (fall/slide).
+
+**Processing:** Used in world connections for area-to-area drops.
+
+**Effect:** Unidirectional world connection.
+
+---
+
+#### `shortcut`
+
+**Meaning:** Bidirectional shortcut.
+
+**Processing (L1340-1350):**
+- Creates paired edges
+- Adds condition requiring source area access
+
+**Effect:** Bidirectional passage with origin condition.
+
+---
+
+#### `remove`
+
+**Meaning:** Physically remove the asset.
+
+**Processing:** Added alongside `unused` for removal.
+
+**Effect:** Asset deleted from game, not just disabled.
+
+---
+
+#### `randomonly`
+
+**Meaning:** Only exists when randomization is active.
+
+**Processing:** Standard inclusion, meant for documentation.
+
+**Effect:** Connection wouldn't exist in vanilla game.
+
+---
+
+#### `baseonly`
+
+**Meaning:** Only include in base game (not DLC-only).
+
+**Processing:** `ExcludeMode == AreaMode.Base` → `unused` + `remove` (L1279-1283)
+
+**Effect:** Removed in DLC-only playthrough.
+
+---
+
+#### `highwall`
+
+**Meaning:** High Wall teleporter (DS3-style).
+
+**Processing (L997-1006):**
+```
+if !opt["pvp"] && !opt["boss"]:
+    AddTag("norandom")
+else:
+    AddTag("unused")
+```
+
+**Effect:** Fixed when no PvP/boss, unused otherwise.
+
+---
+
+#### `ownstart`
+
+**Meaning:** Area can be its own starting point.
+
+**Processing:** Affects starting position selection.
+
+**Effect:** Eligible as custom start location.
+
+---
+
+#### `remembrance`
+
+**Meaning:** Remembrance boss area.
+
+**Processing:** Classification for boss categorization.
+
+**Effect:** Major boss with remembrance drop.
+
+---
+
+#### `altlogic`
+
+**Meaning:** Alternative logic for segmented mode.
+
+**Processing (L1219-1222):**
+```csharp
+if (side.HasTag("altlogic") && opt[Feature.Segmented])
+{
+    return false;  // Do not ignore the alternate side
+}
+```
+
+**Effect:** In segmented mode, prevents alternate sides from being ignored. Changes how `AlternateOf` sides are handled.
+
+**Use case:** Allows alternate routing paths in segmented boss rush modes.
+
+---
+
+### 12.12 Condition-Related Tags
+
+#### `dnofts`
+
+**Meaning:** "Do not offer the shortcut" - requires reaching from other side.
+
+**Processing (L1462-1471):**
+```
+if side.HasTag("dnofts"):
+    side.Expr = combine(doorCond, Named(otherSide.Area))
+```
+
+**Effect:** Door requires reaching the other area first.
+
+---
+
+#### `noscalecond`
+
+**Meaning:** No scaling condition required.
+
+**Processing:** Affects enemy scaling logic.
+
+**Effect:** Enemies don't use tier-based scaling.
+
+---
+
+#### `treeskip` / `instawarp`
+
+**Meaning:** Special skip conditions.
+
+**Processing:**
+- `treeskip`: `!opt["treeskip"]` → skip (L1319)
+- `instawarp`: `!opt["instawarp"]` → skip (L1319)
+
+**Effect:** Conditional inclusion based on skip settings.
+
+---
+
+### 12.13 Silo Tags
+
+Silos control affinity-based matching during randomization.
+
+#### Silo Values
+
+| Silo | Partner | Description |
+|------|---------|-------------|
+| `toopen` | `fromopen` | Open-world connections |
+| `tominor` | `fromminor` | Minor dungeon/evergaol |
+| `tomini` | `frommini` | Mini-dungeon entrance |
+| `toroom` | `fromroom` | Small room connection |
+
+**Processing (L831-856):**
+- `Silo` field sets `side.Silo` and `side.LinkedSilo`
+- `to*` silos get `from*` partner and vice versa
+- Both sides get appropriate silo assignments
+
+**Effect:** Affinity matching connects compatible entrance types.
+
+---
+
+### 12.14 Tag Processing Summary
+
+#### Order of Processing
+
+1. **Area tags**: Applied to areas during loading
+2. **Entrance tags**: Applied to entrances, mark `IsFixed`
+3. **Warp tags**: Applied to warps, handle coupling/backportal
+4. **Side tags**: Applied during side processing, affect `IsCore`
+5. **Dynamic tags**: Added during construction (`unused`, `selfwarp`, etc.)
+
+#### Tag Inheritance
+
+- Entrance-level tags apply to all sides
+- Side-level tags are side-specific
+- `hasTag()` checks both entrance AND side: `e.HasTag(tag) || side.HasTag(tag)`
+
+#### Tag Combinations
+
+Common combinations and their meanings:
+
+| Combination | Meaning |
+|-------------|---------|
+| `unique belfries` | One-way Belfry portal |
+| `unique legacy opensplit` | One-way legacy dungeon warp, can split in crawl |
+| `uniquegate legacy opensplit` | Coupled sending gate between legacy dungeons |
+| `backportal dungeon catacomb` | Boss return in catacomb |
+| `crawlonly selfwarp` | Artificial evergaol for crawl mode |
+| `fortressonly selfwarp legacy` | Fortress segment exit from legacy dungeon |
+| `evergaol return` | Evergaol exit portal |
+| `evergaol returnpair` | Evergaol entry portal (paired with return) |
+
+#### Game-Specific Tags Not Documented
+
+The following tags exist in Graph.cs but are specific to Dark Souls 1 or Dark Souls 3 and not relevant to Elden Ring:
+
+| Tag | Game | Description |
+|-----|------|-------------|
+| `kiln` | DS1/DS3 | Kiln of the First Flame connections |
+| `lordvessel` | DS1 | Lordvessel-gated connections |
+| `world` | DS1 | World warp option |
+| `boss` | DS1/DS3 | Boss fog gates (different handling in ER) |
+| `pvp` | DS3 | PvP area connections |
+| `small` | DS1/DS3 | Small area cost calculation |
+
+---
+
+### 12.15 SpeedFog Tag Filtering Summary
+
+For SpeedFog's DAG generation with recommended options:
+
+| Tag | Action | Reason |
+|-----|--------|--------|
+| `unused` | **Exclude** | No connection exists |
+| `norandom` | **Include as fixed** | Traversable, not randomizable |
+| `door` | **Include as fixed** | Internal passage |
+| `trivial` | **Include** | Needed for world connections |
+| `crawlonly` | **Exclude** | `crawl=false` |
+| `nocrawl` | **Include** | `crawl=false` |
+| `dlc`, `dlc1`, `dlc2` | **Exclude** | DLC disabled |
+| `backportal` | **Convert to selfwarp** | `req_backportal=true` |
+| `unique` (inherent) | **Include as unidirectional** | Cannot be bidirectional |
+| `uniquegate` | **Convert to bidirectional** | `coupledwarp=true` |
+| `uniqueminor` | **Convert to bidirectional** | `coupledminor=true` |
+| `selfwarp` | **Include as bidirectional** | Two edges in same zone |
+| `caveonly`, `catacombonly`, etc. | **Include** | `req_*=true` |
+| `fortressonly`, `segmentonly` | **Exclude** | Non-segmented mode |
