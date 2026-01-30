@@ -24,7 +24,7 @@ def validate(zones_path: Path, warps_path: Path) -> list[str]:
     with open(zones_path, "rb") as f:
         zones_data = tomllib.load(f)
 
-    with open(warps_path, "r") as f:
+    with open(warps_path, "r", encoding="utf-8") as f:
         warps = json.load(f)
 
     zones_list = zones_data.get("zones", [])
@@ -35,6 +35,11 @@ def validate(zones_path: Path, warps_path: Path) -> list[str]:
     missing_warps = zone_ids - warp_ids
     for z in sorted(missing_warps):
         errors.append(f"WARNING: Zone '{z}' has no warp data in zone_warps.json")
+
+    # Orphaned warps (in zone_warps.json but not in zones.toml)
+    orphaned_warps = warp_ids - zone_ids
+    for z in sorted(orphaned_warps):
+        errors.append(f"WARNING: Warp zone '{z}' not defined in zones.toml")
 
     # Validate zone weights are set (not zero)
     for zone in zones_list:
