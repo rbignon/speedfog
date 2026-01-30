@@ -1946,3 +1946,532 @@ For SpeedFog's DAG generation with recommended options:
 | `selfwarp` | **Include as bidirectional** | Two edges in same zone |
 | `caveonly`, `catacombonly`, etc. | **Include** | `req_*=true` |
 | `fortressonly`, `segmentonly` | **Exclude** | Non-segmented mode |
+
+---
+
+## 13. Runtime Attributes Reference
+
+This section documents the runtime attributes (properties) that are computed during graph construction. Unlike tags which are parsed from fog.txt, these attributes are set programmatically based on options and tag processing.
+
+### 13.1 Edge Attributes (Graph.Edge)
+
+Edges represent directional connections in the graph. Each fog gate/warp creates multiple edges.
+
+#### `Type` (EdgeType)
+
+**Values:** `Exit`, `Entrance`, `Unknown`
+
+**Meaning:** Direction of travel this edge represents.
+
+**Set by:** `AddEdge()` method based on `isExit` parameter (L333-342)
+
+**Effect:**
+- `Exit`: Edge goes FROM the side's area (can leave via this connection)
+- `Entrance`: Edge goes TO the side's area (can enter via this connection)
+
+**Example:** A bidirectional fog gate creates 4 edges:
+- Side A: Exit + Entrance
+- Side B: Exit + Entrance
+
+---
+
+#### `IsFixed`
+
+**Type:** `bool`
+
+**Meaning:** Connection cannot be randomized; remains at vanilla destination.
+
+**Set by:** Inherited from `Entrance.IsFixed` at edge creation (L324)
+
+**Triggers:**
+- Tags: `norandom`, `door`, `dlcend`, `trivial` (non-segmented)
+- DLC filtering: `dlc1`, `dlc2` when disabled
+- Game-specific: `boss`, `pvp`, `kiln`, etc.
+
+**Effect:**
+- Fixed edges are connected immediately during construction (L1497-1499)
+- Not included in randomization pool
+- Still traversable for routing
+
+**Code reference:** `Graph.cs:324`
+```csharp
+bool isFixed = e?.IsFixed ?? true;
+```
+
+---
+
+#### `IsWorld`
+
+**Type:** `bool` (computed from `Side.IsWorld`)
+
+**Meaning:** This is a world connection (area-to-area), not a physical fog gate.
+
+**Set by:** World connections created from `Area.To` section (L1338-1339)
+
+**Effect:**
+- No physical fog gate asset
+- Used for area connectivity (shortcuts, drops)
+- Affects core propagation logic
+
+---
+
+#### `Pair`
+
+**Type:** `Edge` (reference)
+
+**Meaning:** The opposite-direction edge at the same connection point.
+
+**Set by:**
+- Bidirectional fog gates: automatic pairing (L1420-1423)
+- Selfwarps: `edge.Pair = edge2` (L1393-1394)
+
+**Effect:**
+- When one edge is connected, its Pair is also updated (L437-446)
+- Enables bidirectional traversal
+- `null` for unique (one-way) warps
+
+**Constraint:** Exit pairs with Entrance, never same type (L131-133)
+
+---
+
+#### `Link`
+
+**Type:** `Edge` (reference)
+
+**Meaning:** The edge this one connects TO after randomization.
+
+**Set by:** `Connect()` method during graph linking (L423-424)
+
+**Effect:**
+- Exit.Link → Entrance it connects to
+- Entrance.Link → Exit that connects to it
+- Forms the actual traversal path
+
+**Code reference:** `Graph.cs:423-424`
+```csharp
+entrance.Link = exit;
+exit.Link = entrance;
+```
+
+---
+
+#### `FixedLink`
+
+**Type:** `Edge` (reference)
+
+**Meaning:** The original/vanilla connection target (before randomization).
+
+**Set by:** During edge creation for non-unique warps (L1385-1386, L1493-1496)
+
+**Effect:**
+- Preserved even after randomization
+- Used for validation and debugging
+- Allows restoration to vanilla state
+
+---
+
+#### `LinkedExpr`
+
+**Type:** `Expr`
+
+**Meaning:** Combined condition expression after linking two edges.
+
+**Set by:** `Connect()` method (L425-426)
+
+**Calculation:**
+```csharp
+LinkedExpr = combineExprs(entrance.Expr, exit.Expr)
+// If both non-null and different: AND them together
+// Otherwise: return the non-null one
+```
+
+**Effect:** Represents full requirement to traverse this path.
+
+---
+
+#### `From` / `To`
+
+**Type:** `string` (area name)
+
+**Meaning:**
+- `From`: Source area (set for Exit edges)
+- `To`: Destination area (set for Entrance edges)
+
+**Set by:**
+- Initially: from `Side.Area` at creation
+- After linking: filled in by `Connect()` (L421-422)
+
+**Effect:** Defines the actual connection in the graph.
+
+---
+
+### 13.2 Side Attributes (AnnotationData.Side)
+
+Sides represent one end of an entrance/warp definition.
+
+#### `IsCore`
+
+**Type:** `bool`
+
+**Meaning:** This side is part of the main randomization "core".
+
+**Set by:** Complex calculation at L1154-1182
+
+**Calculation:**
+```
+Default: isCore = true
+
+If has category tag (underground, belfries, etc.):
+    isCore = opt["req_" + tag] || opt["req_all"]
+
+Crawl mode overrides:
+    open → isCore = false
+    neveropen → isCore = true
+    rauhruins (without req_rauhruins) → isCore = false
+```
+
+**Effect:**
+- Core sides are prioritized in connection algorithm
+- Non-core sides may be fixed to periphery
+- Affects `Area.IsCore` propagation
+
+**Code reference:** `Graph.cs:1156-1182`
+
+---
+
+#### `IsPseudoCore`
+
+**Type:** `bool`
+
+**Meaning:** Connected to core area via world connection but not itself core.
+
+**Set by:** `MarkCoreAreas()` method (L643)
+
+**Effect:**
+- Treated similarly to core for routing
+- Merged with parent core area in logic
+
+**Example:** `stormveil_start` is pseudo-core because it has `To: stormveil` (which is core).
+
+---
+
+#### `IsWorld`
+
+**Type:** `bool`
+
+**Meaning:** This side represents a world connection, not a fog gate.
+
+**Set by:** Explicitly for `Area.To` connections (L1338-1339)
+
+**Effect:**
+- No physical asset manipulation
+- Affects edge creation pattern
+- Different handling in connector
+
+---
+
+#### `IsExcluded`
+
+**Type:** `bool`
+
+**Meaning:** This side's area is excluded by DLC mode.
+
+**Set by:** Inherited from `Area.IsExcluded` (L1188)
+
+**Effect:**
+- Side may be ignored or have special handling
+- Affects `AlternateOf` processing
+- May prevent edge creation
+
+---
+
+#### `Expr`
+
+**Type:** `Expr`
+
+**Meaning:** Condition required to use this connection.
+
+**Set by:** Parsed from `Cond` field (L1153)
+
+**Format:** Boolean expression with area/item names
+- `AND area1 area2` - requires both
+- `OR area1 area2` - requires either
+- `OR3 a b c d e` - requires 3 of 5
+
+**Effect:** Edges inherit this; combined in `LinkedExpr` after linking.
+
+---
+
+#### `Silo` / `LinkedSilo`
+
+**Type:** `string`
+
+**Meaning:** Grouping for affinity-based matching.
+
+**Set by:** From entrance `Silo` field, split to both sides (L831-855)
+
+**Values:** `toopen`/`fromopen`, `tominor`/`fromminor`, `tomini`/`frommini`, `toroom`/`fromroom`
+
+**Effect:** When affinity enabled, connections match within silo groups.
+
+---
+
+#### `SegmentIndex`
+
+**Type:** `int` (default: -1)
+
+**Meaning:** Index of segment this side belongs to (segmented modes only).
+
+**Set by:** Segment processing in connector
+
+**Effect:** Used for Boss Rush / Endless mode routing.
+
+---
+
+### 13.3 Entrance Attributes (AnnotationData.Entrance)
+
+Entrances represent fog gates and warps as defined in fog.txt.
+
+#### `IsFixed`
+
+**Type:** `bool`
+
+**Meaning:** This entrance should not be randomized.
+
+**Set by:** Tag processing in `Construct()` (L973-979, L1012-1014)
+
+**Triggers:**
+- `norandom`, `door`, `dlcend` tags
+- `trivial` tag (non-segmented mode)
+- DLC content when DLC disabled
+- Game-specific options (boss, pvp, etc.)
+
+**Effect:**
+- Edges created with `IsFixed = true`
+- Connected immediately to vanilla destination
+- Not part of randomization pool
+
+---
+
+#### `FullName`
+
+**Type:** `string`
+
+**Meaning:** Unique identifier for this entrance.
+
+**Set by:** Constructed during parsing (L808-824)
+
+**Format by game:**
+- DS1: `Name` or `ID.ToString()`
+- DS3: `Area_ID`
+- ER: `Area_Name`
+
+**Effect:** Used as dictionary key and for debugging.
+
+---
+
+### 13.4 Area Attributes (AnnotationData.Area)
+
+Areas represent zones/locations in the game world.
+
+#### `IsCore`
+
+**Type:** `bool`
+
+**Meaning:** Area is part of the main randomization graph.
+
+**Set by:** `MarkCoreAreas()` method (L631)
+
+**Determination:**
+1. Has any edge with `Side.IsCore = true`
+2. Connected to core area via world connection (propagated)
+
+**Effect:**
+- Core areas are central to randomization
+- Non-core areas are peripheral (evergaols, etc.)
+
+---
+
+#### `IsExcluded`
+
+**Type:** `bool`
+
+**Meaning:** Area is excluded by DLC mode setting.
+
+**Set by:** Mode comparison (L787-791)
+
+**Calculation:**
+```csharp
+area.IsExcluded = area.Mode == ExcludeMode;
+// If ExcludeMode is DLC, areas with Mode=DLC are excluded
+// If ExcludeMode is Base, areas with Mode=Base are excluded
+```
+
+**Effect:**
+- Excluded areas get `optional` tag
+- Sides in excluded areas get `IsExcluded = true`
+- May affect alternate handling
+
+---
+
+#### `Mode` (AreaMode)
+
+**Type:** `enum` - `None`, `Base`, `DLC`, `Both`
+
+**Meaning:** Which game content this area belongs to.
+
+**Set by:** Tag-based calculation (L786)
+
+**Calculation:**
+```csharp
+Mode = HasTag("dlc") ? DLC : (HasTag("start") ? Both : Base)
+```
+
+**Effect:** Compared against `ExcludeMode` to determine `IsExcluded`.
+
+---
+
+#### `IsBoss`
+
+**Type:** `bool` (computed property)
+
+**Meaning:** Area contains a boss fight.
+
+**Calculation:** `DefeatFlag > 0 || HasTag("boss")` (L138-148)
+
+**Effect:**
+- Affects scaling calculations
+- Used in segment type determination
+- Influences area cost
+
+---
+
+### 13.5 Graph-Level Attributes
+
+#### `ExcludeMode` (AreaMode)
+
+**Type:** `enum`
+
+**Meaning:** Which content category to exclude from randomization.
+
+**Set by:** Option processing (L769-776)
+
+**Values:**
+- `None`: Include all content
+- `Base`: Exclude base game (DLC-only run)
+- `DLC`: Exclude DLC (base game only)
+
+**Effect:** Areas matching this mode are excluded.
+
+---
+
+#### `Ignore` (HashSet<(string, string)>)
+
+**Type:** `HashSet<(entranceFullName, areaName)>`
+
+**Meaning:** Specific entrance-side combinations to skip.
+
+**Populated by:** Various conditions (L1189-1204)
+
+**Triggers:**
+- `ExcludeIfRandomized` when that entrance is randomized
+- `afterstart` in base-only mode
+- `AlternateOf` handling
+- Explicit `unused` on side
+
+**Effect:** Sides in Ignore set don't create edges.
+
+---
+
+#### `AreaTiers` (Dictionary<string, int>)
+
+**Type:** `Dictionary<areaName, tierNumber>`
+
+**Meaning:** Scaling tier assigned to each area.
+
+**Set by:** `GraphConnector` after connection (L1616-1701 in GraphConnector.cs)
+
+**Range:** 1-34 (vanilla), subset for SpeedFog
+
+**Effect:** Determines enemy scaling level for each area.
+
+---
+
+### 13.6 Attribute Relationships
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        PARSING PHASE                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  fog.txt                                                        │
+│     │                                                           │
+│     ├─→ Area ──→ Mode, IsBoss, IsExcluded                       │
+│     │              └─→ propagates to Side.IsExcluded            │
+│     │                                                           │
+│     ├─→ Entrance ──→ IsFixed (from tags)                        │
+│     │      │           └─→ propagates to Edge.IsFixed           │
+│     │      │                                                    │
+│     │      └─→ Side ──→ IsCore, Expr, Silo                      │
+│     │                    └─→ propagates to Edge properties      │
+│     │                                                           │
+│     └─→ Warp (same as Entrance)                                 │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                     CONSTRUCTION PHASE                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  For each Entrance/Warp:                                        │
+│     │                                                           │
+│     ├─→ Create Edges (Exit + Entrance per side)                 │
+│     │     └─→ Edge.Type, Edge.From/To (partial)                 │
+│     │                                                           │
+│     ├─→ Set Edge.Pair (for bidirectional)                       │
+│     │                                                           │
+│     ├─→ Set Edge.FixedLink (original connection)                │
+│     │                                                           │
+│     └─→ If IsFixed: Connect immediately                         │
+│           └─→ Edge.Link, Edge.From/To (complete)                │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│                     CONNECTION PHASE                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  MarkCoreAreas():                                               │
+│     └─→ Area.IsCore, Side.IsPseudoCore                          │
+│                                                                 │
+│  Connect (randomization):                                       │
+│     └─→ Edge.Link (randomized connections)                      │
+│         └─→ Edge.LinkedExpr (combined conditions)               │
+│                                                                 │
+│  CalculateTiers():                                              │
+│     └─→ Graph.AreaTiers                                         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 13.7 SpeedFog Relevant Attributes
+
+For SpeedFog's DAG generation, the most important attributes are:
+
+| Attribute | Class | Importance |
+|-----------|-------|------------|
+| `IsFixed` | Edge/Entrance | Determines if connection can be rerouted |
+| `IsCore` | Side/Area | Identifies main graph components |
+| `Pair` | Edge | Enables bidirectional connection counting |
+| `Type` | Edge | Distinguishes exits from entrances |
+| `From`/`To` | Edge | Defines connection endpoints |
+| `IsWorld` | Edge/Side | Identifies non-fog-gate connections |
+| `Expr` | Side | Conditions for traversal |
+
+**Key insight for SpeedFog:**
+- Count edges where `Pair != null` for bidirectional connections
+- `IsFixed` edges are traversable but not reassignable
+- `IsCore` identifies the "interesting" parts of the graph
+- `IsWorld` edges don't have physical fog gates
