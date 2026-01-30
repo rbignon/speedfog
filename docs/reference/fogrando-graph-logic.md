@@ -310,7 +310,254 @@ foreach (string item8 in new List<string> { "cave", "catacomb", "forge", "gaol" 
 
 ---
 
-## 5. Silo System
+## 5. Option → Tag Effect Matrix (Elden Ring)
+
+This section provides the complete mapping between options and their effects on tags during graph generation.
+
+### 5.1 Entrance Processing (Fog Gates)
+
+**Code reference:** `Graph.cs:967-993`
+
+#### Always Applied (No Option Required)
+
+| Tag | Effect | Code |
+|-----|--------|------|
+| `unused` | Skip entirely | `continue` at L872-874 |
+| `norandom` | `IsFixed = true` | L973 |
+| `door` | `IsFixed = true` | L973 |
+| `dlcend` | `IsFixed = true` | L973 |
+| `trivial` | `IsFixed = true` (unless Segmented) | L977-979 |
+
+#### Crawl Mode Toggle
+
+| Condition | Tag | Effect | Code |
+|-----------|-----|--------|------|
+| `opt["crawl"] = true` | `nocrawl` | `unused` | L981 |
+| `opt["crawl"] = false` | `crawlonly` | `unused` | L981 |
+
+#### Fortress Mode Toggle
+
+| Condition | Tag | Effect | Code |
+|-----------|-----|--------|------|
+| `opt[Feature.SegmentFortresses] = true` | `nofortress` | `unused` | L989 |
+| `opt[Feature.SegmentFortresses] = false` | `fortressonly` | `unused` | L989 |
+
+### 5.2 Warp Processing (Teleporters, Backportals)
+
+**Code reference:** `Graph.cs:995-1104`
+
+#### Highwall Special Case
+
+| Condition | Effect | Code |
+|-----------|--------|------|
+| `!opt["pvp"] && !opt["boss"]` | Add `norandom` tag | L997-1001 |
+| `opt["pvp"] \|\| opt["boss"]` | Add `unused` tag | L1003-1005 |
+
+#### Always Applied
+
+| Tag | Effect | Code |
+|-----|--------|------|
+| `unused` | Skip entirely | L1008-1010 |
+| `norandom` | `IsFixed = true` | L1012-1014 |
+
+#### DLC Filtering
+
+| Condition | Tag | Effect | Code |
+|-----------|-----|--------|------|
+| `!opt["dlc1"]` | `dlc1` | `IsFixed = true` | L1028-1031 |
+| `!opt["dlc2"]` | `dlc2` | `IsFixed = true` | L1032-1035 |
+
+#### Unique Warp Handling
+
+| Condition | Tag | New Tag Added | Code |
+|-----------|-----|---------------|------|
+| `!opt["coupledwarp"] && !opt[Feature.Segmented]` | `uniquegate` | `unique` | L1036-1039 |
+| `!opt["coupledminor"] && !opt[Feature.Segmented]` | `uniqueminor` | `unique` | L1040-1043 |
+| `opt["crawl"] && !opt["req_minorwarp"]` | `uniqueminor` | `unique` | L1044-1047 |
+
+#### Crawl-Only / Fortress-Only
+
+| Condition | Tag | Effect | Code |
+|-----------|-----|--------|------|
+| `!opt["crawl"]` | `crawlonly` | `unused` | L1048-1051 |
+| `!opt[Feature.SegmentFortresses]` | `fortressonly` | `unused` | L1052-1055 |
+| `opt[Feature.SegmentFortresses]` | `nofortress` | `unused` | L1052-1055 |
+| `!opt[Feature.Segmented]` | `segmentonly` | `unused` | L1056-1059 |
+| `opt[Feature.Segmented]` | `nosegment` | `unused` | L1056-1059 |
+
+#### Dungeon Type Filtering (Crawl Mode Only)
+
+**Code reference:** `Graph.cs:1060-1078`
+
+When `opt["crawl"] = true`:
+
+| Condition | Tag | Effect |
+|-----------|-----|--------|
+| `!opt["req_cave"] \|\| opt["req_backportal"]` | `caveonly` | `unused` |
+| `!opt["req_catacomb"] \|\| opt["req_backportal"]` | `catacombonly` | `unused` |
+| `!opt["req_forge"] \|\| opt["req_backportal"]` | `forgeonly` | `unused` |
+| `!opt["req_gaol"] \|\| opt["req_backportal"]` | `gaolonly` | `unused` |
+
+Special case: `openremove` tag → `unused` + `remove` (L1062-1066)
+
+#### Backportal Handling
+
+**Code reference:** `Graph.cs:1079-1100`
+
+| Condition | Effect | Code |
+|-----------|--------|------|
+| `opt[Feature.Segmented]` | Check for `unique` tag | L1082-1084 |
+| `opt["req_backportal"]` | Convert to selfwarp (BSide.Area = ASide.Area) | L1086-1095 |
+| `opt["crawl"] && HasTag("forge")` | Convert to selfwarp | L1081 |
+| Otherwise | `unused` | L1096-1099 |
+
+### 5.3 IsCore Determination
+
+**Code reference:** `Graph.cs:1154-1240`
+
+The `IsCore` flag determines if a connection is part of the main randomization graph.
+
+#### Base Calculation
+
+```
+isCore = true (default)
+
+if HasTag("minorwarp"):
+    isCore = tagIsCore("minorwarp") AND (!hasListTag OR hasListCoreTag)
+else if hasListTag:
+    isCore = hasListCoreTag
+```
+
+Where:
+- `list` = `["underground", "colosseum", "divine", "belfries", "graveyard", "evergaol"]`
+- In crawl mode, `list` also includes: `["open", "cave", "tunnel", "catacomb", "grave", "cellar", "gaol", "forge"]`
+- `tagIsCore(tag)` = `hasTag(tag) AND (opt["req_" + tag] OR opt["req_all"])`
+
+#### Crawl Mode Overrides
+
+| Condition | Tag | IsCore | Code |
+|-----------|-----|--------|------|
+| `opt["crawl"]` | `open` | `false` | L1169-1171 |
+| `opt["crawl"]` | `neveropen` | `true` | L1173-1175 |
+| `opt["crawl"] && !opt["req_rauhruins"]` | `rauhruins` | `false` | L1177-1180 |
+
+### 5.4 Complete Decision Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                        ENTRANCE PROCESSING                          │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  HasTag("unused")? ──YES──> SKIP                                    │
+│         │                                                           │
+│         NO                                                          │
+│         ↓                                                           │
+│  HasTag("norandom" | "door" | "dlcend")? ──YES──> IsFixed = true    │
+│         │                                                           │
+│         NO                                                          │
+│         ↓                                                           │
+│  HasTag("trivial") && !Segmented? ──YES──> IsFixed = true           │
+│         │                                                           │
+│         NO                                                          │
+│         ↓                                                           │
+│  ┌──────────────────────────────────────┐                           │
+│  │ opt["crawl"]?                        │                           │
+│  │   YES: HasTag("nocrawl")? → unused   │                           │
+│  │   NO:  HasTag("crawlonly")? → unused │                           │
+│  └──────────────────────────────────────┘                           │
+│         │                                                           │
+│         ↓                                                           │
+│  ┌──────────────────────────────────────┐                           │
+│  │ SegmentFortresses?                   │                           │
+│  │   YES: HasTag("nofortress")? → unused│                           │
+│  │   NO:  HasTag("fortressonly")? →     │                           │
+│  │        unused                        │                           │
+│  └──────────────────────────────────────┘                           │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                          WARP PROCESSING                            │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  HasTag("unused")? ──YES──> SKIP                                    │
+│         │                                                           │
+│         NO                                                          │
+│         ↓                                                           │
+│  HasTag("uniquegate") && !coupledwarp && !Segmented?                │
+│         │──YES──> AddTag("unique")                                  │
+│         │                                                           │
+│  HasTag("uniqueminor") && !coupledminor && !Segmented?              │
+│         │──YES──> AddTag("unique")                                  │
+│         │                                                           │
+│  HasTag("uniqueminor") && crawl && !req_minorwarp?                  │
+│         │──YES──> AddTag("unique")                                  │
+│         │                                                           │
+│         ↓                                                           │
+│  ┌──────────────────────────────────────┐                           │
+│  │ crawl mode dungeon filtering:        │                           │
+│  │                                      │                           │
+│  │ For each type in [cave, catacomb,    │                           │
+│  │                   forge, gaol]:      │                           │
+│  │   HasTag(type+"only") &&             │                           │
+│  │   (!req_{type} || req_backportal)?   │                           │
+│  │     → unused                         │                           │
+│  └──────────────────────────────────────┘                           │
+│         │                                                           │
+│         ↓                                                           │
+│  ┌──────────────────────────────────────┐                           │
+│  │ HasTag("backportal")?                │                           │
+│  │   Segmented? → check unique          │                           │
+│  │   req_backportal || (crawl && forge)?│                           │
+│  │     → Convert to selfwarp            │                           │
+│  │   Otherwise → unused                 │                           │
+│  └──────────────────────────────────────┘                           │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                       IsCore DETERMINATION                          │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  Default: isCore = true                                             │
+│                                                                     │
+│  Category tags: [underground, colosseum, divine, belfries,          │
+│                  graveyard, evergaol]                               │
+│  + In crawl mode: [open, cave, tunnel, catacomb, grave,             │
+│                    cellar, gaol, forge]                             │
+│                                                                     │
+│  For each category tag the entrance has:                            │
+│    isCore = opt["req_{tag}"] OR opt["req_all"]                      │
+│                                                                     │
+│  Crawl mode overrides:                                              │
+│    HasTag("open")? → isCore = false                                 │
+│    HasTag("neveropen")? → isCore = true                             │
+│    HasTag("rauhruins") && !req_rauhruins? → isCore = false          │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 5.5 Summary: Options That Affect Graph Content
+
+| Option | Tags Affected | Inclusion Effect |
+|--------|---------------|------------------|
+| `crawl` | `crawlonly`, `nocrawl`, `open`, category tags | Mode switch |
+| `req_cave` | `caveonly`, `cave` (IsCore) | Include/exclude caves |
+| `req_catacomb` | `catacombonly`, `catacomb` (IsCore) | Include/exclude catacombs |
+| `req_gaol` | `gaolonly`, `gaol` (IsCore) | Include/exclude gaols |
+| `req_backportal` | `backportal` | Enable boss return warps |
+| `req_minorwarp` | `uniqueminor` | Minor warp coupling |
+| `req_rauhruins` | `rauhruins` (IsCore) | Rauh Ruins in crawl |
+| `req_all` | All category tags | Override for IsCore |
+| `coupledwarp` | `uniquegate` | Sending gate directionality |
+| `coupledminor` | `uniqueminor` | Minor warp directionality |
+| `dlc1`, `dlc2` | `dlc1`, `dlc2` | DLC content inclusion |
+| `Feature.Segmented` | `segmentonly`, `nosegment`, `trivial` | Segmented mode |
+| `Feature.SegmentFortresses` | `fortressonly`, `nofortress` | Fortress segmentation |
+
+---
+
+## 6. Silo System
 
 Silos group entrances by type for balanced distribution during randomization.
 
@@ -344,7 +591,7 @@ This ensures:
 
 ---
 
-## 6. Zone Grouping (Core/Pseudo-Core)
+## 7. Zone Grouping (Core/Pseudo-Core)
 
 ### 6.1 Core Areas
 
@@ -391,7 +638,7 @@ list.AddRange(new string[] { "cave", "tunnel", "catacomb", "grave", "cellar", "g
 
 ---
 
-## 7. Graph Construction Process
+## 8. Graph Construction Process
 
 ### 7.1 Phase 1: Load and Filter
 
@@ -466,7 +713,7 @@ g.AreaTiers["erdtree"] = 17;
 
 ---
 
-## 8. Mini-Dungeon Connection Model
+## 9. Mini-Dungeon Connection Model
 
 ### 8.1 Standard Mini-Dungeon Structure
 
@@ -504,13 +751,17 @@ With backportals enabled, mini-dungeons are **eligible** for DAG structures beca
 
 ---
 
-## 9. Key Code References
+## 10. Key Code References
 
 | Feature | File | Lines | Function |
 |---------|------|-------|----------|
 | Mode selection | GraphConnector.cs | 42-47 | `Connect()` |
-| Tag filtering | Graph.cs | 878-1104 | Entrance processing loop |
+| Entrance tag filtering | Graph.cs | 967-993 | Entrance processing (ER) |
+| Warp tag filtering | Graph.cs | 995-1104 | Warp processing loop |
+| Unique warp handling | Graph.cs | 1036-1047 | `uniquegate`/`uniqueminor` |
+| Dungeon type filtering | Graph.cs | 1060-1078 | `*only` tag handling |
 | Backportal handling | Graph.cs | 1079-1099 | Backportal → selfwarp conversion |
+| IsCore determination | Graph.cs | 1154-1240 | Core status calculation |
 | Core area marking | Graph.cs | 607-676 | `MarkCoreAreas()` |
 | Edge creation | Graph.cs | 320-345 | `AddEdge()` |
 | Bidirectional pairing | Graph.cs | 1402-1424 | Dictionary-based pairing |
@@ -521,9 +772,9 @@ With backportals enabled, mini-dungeons are **eligible** for DAG structures beca
 
 ---
 
-## 10. Implications for SpeedFog
+## 11. Implications for SpeedFog
 
-### 10.1 Parsing Requirements
+### 11.1 Parsing Requirements
 
 1. **Parse Areas section** for zone definitions and tags
 2. **Parse Entrances section** for fog gate definitions
@@ -532,21 +783,21 @@ With backportals enabled, mini-dungeons are **eligible** for DAG structures beca
    - Exclude `unused` entries
    - Include `backportal` as bidirectional connections
 
-### 10.2 Connection Counting
+### 11.2 Connection Counting
 
 For each zone, count:
 - Entrances where `ASide.Area == zone` (gives 1 exit + 1 entrance)
 - Entrances where `BSide.Area == zone` (gives 1 exit + 1 entrance)
 - Backportals where `ASide.Area == zone` (boss rooms gain connections)
 
-### 10.3 Eligible Zones for DAG
+### 11.3 Eligible Zones for DAG
 
 A zone is eligible for DAG inclusion if:
 - It has **at least 2 connection points**
 - It is not tagged `trivial`, `unused`, or similar exclusion tags
 - Its connections are not all `unique` (one-way only)
 
-### 10.4 Zone Grouping
+### 11.4 Zone Grouping
 
 Consider merging:
 - Zones connected via `To:` world connections
