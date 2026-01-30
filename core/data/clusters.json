@@ -17,15 +17,7 @@
           "zone": "academy_entrance"
         },
         {
-          "fog_id": "1035462610",
-          "zone": "academy_entrance"
-        },
-        {
           "fog_id": "1035462611",
-          "zone": "academy_entrance"
-        },
-        {
-          "fog_id": "1036472610",
           "zone": "academy_entrance"
         }
       ],
@@ -44,15 +36,7 @@
           "zone": "academy_entrance"
         },
         {
-          "fog_id": "1035462610",
-          "zone": "academy_entrance"
-        },
-        {
           "fog_id": "1035462611",
-          "zone": "academy_entrance"
-        },
-        {
-          "fog_id": "1036472610",
           "zone": "academy_entrance"
         }
       ]
@@ -5921,15 +5905,7 @@
           "zone": "mountaintops_start"
         },
         {
-          "fog_id": "1049532502",
-          "zone": "mountaintops_start"
-        },
-        {
           "fog_id": "1049532504",
-          "zone": "mountaintops_start"
-        },
-        {
-          "fog_id": "1049532506",
           "zone": "mountaintops_start"
         }
       ],
@@ -5943,15 +5919,7 @@
           "zone": "mountaintops_start"
         },
         {
-          "fog_id": "1049532502",
-          "zone": "mountaintops_start"
-        },
-        {
           "fog_id": "1049532504",
-          "zone": "mountaintops_start"
-        },
-        {
-          "fog_id": "1049532506",
           "zone": "mountaintops_start"
         }
       ]
@@ -7927,10 +7895,6 @@
         {
           "fog_id": "1049532504",
           "zone": "snowfield_rold"
-        },
-        {
-          "fog_id": "1049532506",
-          "zone": "snowfield_rold"
         }
       ],
       "exit_fogs": [
@@ -7940,10 +7904,6 @@
         },
         {
           "fog_id": "1049532504",
-          "zone": "snowfield_rold"
-        },
-        {
-          "fog_id": "1049532506",
           "zone": "snowfield_rold"
         }
       ]

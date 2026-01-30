@@ -85,10 +85,20 @@ class FogData:
         return "unique" in [t.lower() for t in self.tags]
 
     @property
+    def is_uniquegate(self) -> bool:
+        """Uniquegate fogs are sending gates that can be coupled bidirectionally."""
+        return "uniquegate" in [t.lower() for t in self.tags]
+
+    @property
     def is_norandom(self) -> bool:
         """Non-randomizable fogs should be excluded."""
         tags_lower = [t.lower() for t in self.tags]
         return "norandom" in tags_lower or "unused" in tags_lower
+
+    @property
+    def zone_pair(self) -> frozenset[str]:
+        """Return the pair of zones this fog connects (for grouping)."""
+        return frozenset({self.aside.area, self.bside.area})
 
 
 @dataclass
@@ -415,11 +425,24 @@ def classify_fogs(
     Rules:
     - Skip norandom fogs
     - Unique fogs: ASide = exit only, BSide = entry only
+    - Uniquegate pairs: coupled as single bidirectional connection
     - Normal fogs: both sides are entry + exit
     """
     zone_fogs: dict[str, ZoneFogs] = defaultdict(ZoneFogs)
 
     all_fogs = entrances + warps
+
+    # Group uniquegate fogs by zone pair to detect coupled sending gates
+    # Each pair of zones should only produce ONE bidirectional connection
+    uniquegate_by_zones: dict[frozenset[str], list[FogData]] = defaultdict(list)
+    processed_uniquegate_pairs: set[frozenset[str]] = set()
+
+    for fog in all_fogs:
+        if fog.is_norandom:
+            continue
+        if fog.is_uniquegate and not fog.is_unique:
+            # Collect uniquegate fogs for pairing
+            uniquegate_by_zones[fog.zone_pair].append(fog)
 
     for fog in all_fogs:
         if fog.is_norandom:
@@ -435,6 +458,21 @@ def classify_fogs(
             # Unique: ASide is exit only, BSide is entry only
             zone_fogs[aside_area].exit_fogs.append(fog)
             zone_fogs[bside_area].entry_fogs.append(fog)
+        elif fog.is_uniquegate:
+            # Uniquegate: check if this pair was already processed
+            zone_pair = fog.zone_pair
+            if zone_pair in processed_uniquegate_pairs:
+                continue  # Already added as part of the pair
+
+            # Mark as processed and add as single bidirectional connection
+            processed_uniquegate_pairs.add(zone_pair)
+
+            # Use the first fog of the pair as representative
+            representative = uniquegate_by_zones[zone_pair][0]
+            zone_fogs[aside_area].entry_fogs.append(representative)
+            zone_fogs[aside_area].exit_fogs.append(representative)
+            zone_fogs[bside_area].entry_fogs.append(representative)
+            zone_fogs[bside_area].exit_fogs.append(representative)
         else:
             # Bidirectional: both sides are entry + exit
             zone_fogs[aside_area].entry_fogs.append(fog)

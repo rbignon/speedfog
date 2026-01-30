@@ -358,6 +358,35 @@ class TestClassifyFogs:
         assert "zone_a" not in zone_fogs or fog not in zone_fogs.get("zone_a", ZoneFogs()).entry_fogs
         assert "zone_b" not in zone_fogs or fog not in zone_fogs.get("zone_b", ZoneFogs()).entry_fogs
 
+    def test_uniquegate_pair_coupled(self):
+        """Uniquegate fogs connecting same zones are coupled as one bidirectional."""
+        # Two uniquegate warps connecting the same zones (like academy gates)
+        fog1 = FogData(
+            name="gate_a_to_b",
+            fog_id=1,
+            aside=FogSide(area="zone_a", text=""),
+            bside=FogSide(area="zone_b", text=""),
+            tags=["uniquegate"],
+        )
+        fog2 = FogData(
+            name="gate_b_to_a",
+            fog_id=2,
+            aside=FogSide(area="zone_b", text=""),
+            bside=FogSide(area="zone_a", text=""),
+            tags=["uniquegate"],
+        )
+        zone_fogs = classify_fogs([], [fog1, fog2])
+
+        # Should be coupled as ONE bidirectional connection, not two
+        # Only the first fog should be added as representative
+        assert len(zone_fogs["zone_a"].entry_fogs) == 1
+        assert len(zone_fogs["zone_a"].exit_fogs) == 1
+        assert len(zone_fogs["zone_b"].entry_fogs) == 1
+        assert len(zone_fogs["zone_b"].exit_fogs) == 1
+
+        # The representative fog should be the first one
+        assert zone_fogs["zone_a"].entry_fogs[0] == fog1
+
 
 # =============================================================================
 # Cluster Generation Tests
