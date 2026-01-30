@@ -332,7 +332,7 @@ def zones_to_toml(zones: list[Zone]) -> str:
         lines.append("")
 
         for zone in type_zones:
-            lines.append(f"[[zone]]")
+            lines.append(f"[[zones]]")
             lines.append(f"id = {escape_toml_string(zone.id)}")
             lines.append(f"map = {escape_toml_string(zone.map)}")
             lines.append(f"name = {escape_toml_string(zone.name)}")

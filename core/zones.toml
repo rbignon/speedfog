@@ -6,7 +6,7 @@
 
 # START (1 zones)
 
-[[zone]]
+[[zones]]
 id = "chapel_start"
 map = "m10_01_00_00"
 name = "Chapel of Anticipation"
@@ -16,7 +16,7 @@ fog_count = 2
 
 # LEGACY DUNGEON (37 zones)
 
-[[zone]]
+[[zones]]
 id = "stormveil_margit"
 map = "m10_00_00_00"
 name = "Margit, the Fell Omen"
@@ -25,7 +25,7 @@ weight = 0
 fog_count = 2
 boss = "Margit, the Fell Omen"
 
-[[zone]]
+[[zones]]
 id = "stormveil_start"
 map = "m10_00_00_00"
 name = "Stormveil Castle before Gate"
@@ -33,7 +33,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 1
 
-[[zone]]
+[[zones]]
 id = "stormveil"
 map = "m10_00_00_00"
 name = "Stormveil Castle after Gate"
@@ -41,7 +41,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 2
 
-[[zone]]
+[[zones]]
 id = "stormveil_godrick"
 map = "m10_00_00_00"
 name = "Godrick the Grafted"
@@ -50,7 +50,7 @@ weight = 0
 fog_count = 1
 boss = "Godrick the Grafted"
 
-[[zone]]
+[[zones]]
 id = "peninsula_morne"
 map = "m60_43_31_00"
 name = "Weeping Peninsula - Castle Morne"
@@ -58,7 +58,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 1
 
-[[zone]]
+[[zones]]
 id = "academy_entrance"
 map = "m14_00_00_00"
 name = "Academy of Raya Lucaria Main Entrance"
@@ -66,7 +66,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 4
 
-[[zone]]
+[[zones]]
 id = "academy"
 map = "m14_00_00_00"
 name = "Academy of Raya Lucaria"
@@ -74,7 +74,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 2
 
-[[zone]]
+[[zones]]
 id = "academy_redwolf"
 map = "m14_00_00_00"
 name = "Red Wolf of Radagon"
@@ -83,7 +83,7 @@ weight = 0
 fog_count = 2
 boss = "Red Wolf of Radagon"
 
-[[zone]]
+[[zones]]
 id = "academy_courtyard"
 map = "m14_00_00_00"
 name = "Academy of Raya Lucaria after Red Wolf"
@@ -91,7 +91,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 4
 
-[[zone]]
+[[zones]]
 id = "academy_rooftops"
 map = "m14_00_00_00"
 name = "Academy of Raya Lucaria Rooftops"
@@ -99,7 +99,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 1
 
-[[zone]]
+[[zones]]
 id = "academy_library"
 map = "m14_00_00_00"
 name = "Academy of Raya Lucaria - Grand Library"
@@ -108,7 +108,7 @@ weight = 0
 fog_count = 1
 boss = "Rennala, Queen of the Full Moon"
 
-[[zone]]
+[[zones]]
 id = "leyndell"
 map = "m11_00_00_00"
 name = "Leyndell"
@@ -116,7 +116,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 5
 
-[[zone]]
+[[zones]]
 id = "leyndell_sanctuary"
 map = "m11_00_00_00"
 name = "Leyndell - Erdtree Sanctuary"
@@ -125,7 +125,7 @@ weight = 0
 fog_count = 7
 boss = "Godfrey, First Elden Lord"
 
-[[zone]]
+[[zones]]
 id = "leyndell_throne"
 map = "m11_00_00_00"
 name = "Leyndell - Elden Throne"
@@ -134,7 +134,7 @@ weight = 0
 fog_count = 2
 boss = "Morgott, the Omen King"
 
-[[zone]]
+[[zones]]
 id = "leyndell_pretower"
 map = "m11_00_00_00"
 name = "Leyndell - before Divine Tower"
@@ -142,7 +142,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 1
 
-[[zone]]
+[[zones]]
 id = "volcano"
 map = "m16_00_00_00"
 name = "Volcano Manor Entrance"
@@ -150,7 +150,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 0
 
-[[zone]]
+[[zones]]
 id = "volcano_town"
 map = "m16_00_00_00"
 name = "Volcano Manor Prison Town"
@@ -158,7 +158,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "volcano_temple"
 map = "m16_00_00_00"
 name = "Volcano Manor - Temple of Eiglay"
@@ -167,7 +167,7 @@ weight = 0
 fog_count = 2
 boss = "Godskin Noble"
 
-[[zone]]
+[[zones]]
 id = "volcano_posttemple"
 map = "m16_00_00_00"
 name = "Volcano Manor after Temple of Eiglay"
@@ -175,7 +175,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 0
 
-[[zone]]
+[[zones]]
 id = "volcano_rykard"
 map = "m16_00_00_00"
 name = "Rykard, Lord of Blasphemy"
@@ -184,7 +184,7 @@ weight = 0
 fog_count = 1
 boss = "Rykard, Lord of Blasphemy"
 
-[[zone]]
+[[zones]]
 id = "volcano_abductors"
 map = "m16_00_00_00"
 name = "Volcano Manor - Abductor Virgins"
@@ -193,7 +193,7 @@ weight = 0
 fog_count = 2
 boss = "Abductor Virgin (Swinging Sickle)"
 
-[[zone]]
+[[zones]]
 id = "farumazula_start"
 map = "m13_00_00_00"
 name = "Farum Azula - Crumbling Beast Grave Depths"
@@ -201,7 +201,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 0
 
-[[zone]]
+[[zones]]
 id = "farumazula_temple"
 map = "m13_00_00_00"
 name = "Farum Azula - Dragon Temple"
@@ -209,7 +209,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "farumazula_godskinduo"
 map = "m13_00_00_00"
 name = "Godskin Duo"
@@ -218,7 +218,7 @@ weight = 0
 fog_count = 4
 boss = "Godskin Duo"
 
-[[zone]]
+[[zones]]
 id = "farumazula"
 map = "m13_00_00_00"
 name = "Farum Azula Rooftop and Bridge"
@@ -226,7 +226,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 4
 
-[[zone]]
+[[zones]]
 id = "farumazula_lift"
 map = "m13_00_00_00"
 name = "Farum Azula - Dragon Temple Lift"
@@ -234,7 +234,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 1
 
-[[zone]]
+[[zones]]
 id = "farumazula_maliketh"
 map = "m13_00_00_00"
 name = "Maliketh the Black Blade"
@@ -243,7 +243,7 @@ weight = 0
 fog_count = 2
 boss = "Maliketh, the Black Blade"
 
-[[zone]]
+[[zones]]
 id = "farumazula_placidusax"
 map = "m13_00_00_00"
 name = "Dragonlord Placidusax"
@@ -252,7 +252,7 @@ weight = 0
 fog_count = 1
 boss = "Dragonlord Placidusax"
 
-[[zone]]
+[[zones]]
 id = "haligtree"
 map = "m15_00_00_00"
 name = "Haligtree Town"
@@ -260,7 +260,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 2
 
-[[zone]]
+[[zones]]
 id = "haligtree_loretta"
 map = "m15_00_00_00"
 name = "Loretta, Knight of the Haligtree"
@@ -269,7 +269,7 @@ weight = 0
 fog_count = 2
 boss = "Loretta, Knight of the Haligtree"
 
-[[zone]]
+[[zones]]
 id = "haligtree_elphael"
 map = "m15_00_00_00"
 name = "Elphael, Brace of the Haligtree"
@@ -277,7 +277,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 2
 
-[[zone]]
+[[zones]]
 id = "haligtree_malenia"
 map = "m15_00_00_00"
 name = "Malenia, Blade of Miquella"
@@ -286,7 +286,7 @@ weight = 0
 fog_count = 1
 boss = "Malenia, Goddess of Rot"
 
-[[zone]]
+[[zones]]
 id = "leyndell2"
 map = "m11_05_00_00"
 name = "Ashen Leyndell"
@@ -294,7 +294,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 4
 
-[[zone]]
+[[zones]]
 id = "leyndell2_pretower"
 map = "m11_05_00_00"
 name = "Ashen Leyndell - before Divine Tower"
@@ -302,7 +302,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 1
 
-[[zone]]
+[[zones]]
 id = "leyndell2_divinebridge"
 map = "m11_05_00_00"
 name = "Ashen Leyndell - Divine Bridge"
@@ -310,7 +310,7 @@ type = "legacy_dungeon"
 weight = 0
 fog_count = 0
 
-[[zone]]
+[[zones]]
 id = "leyndell2_sanctuary"
 map = "m11_05_00_00"
 name = "Ashen Leyndell - Erdtree Sanctuary"
@@ -319,7 +319,7 @@ weight = 0
 fog_count = 7
 boss = "Sir Gideon Ofnir, the All-Knowing"
 
-[[zone]]
+[[zones]]
 id = "leyndell2_throne"
 map = "m11_05_00_00"
 name = "Ashen Leyndell - Elden Throne"
@@ -330,7 +330,7 @@ boss = "Hoarah Loux, Warrior"
 
 # BOSS ARENA (89 zones)
 
-[[zone]]
+[[zones]]
 id = "chapel_boss"
 map = "m10_01_00_00"
 name = "Chapel of Anticipation - Grafted Scion"
@@ -339,7 +339,7 @@ weight = 0
 fog_count = 2
 boss = "Grafted Scion"
 
-[[zone]]
+[[zones]]
 id = "limgrave_cavalry_boss"
 map = "m60_43_37_00"
 name = "Limgrave - Night's Cavalry"
@@ -348,7 +348,7 @@ weight = 0
 fog_count = 0
 boss = "Night's Cavalry"
 
-[[zone]]
+[[zones]]
 id = "limgrave_evergaol"
 map = "m60_44_35_00"
 name = "Limgrave - Forlorn Hound Evergaol - Bloodhound Knight Darriwil"
@@ -356,7 +356,7 @@ type = "boss_arena"
 weight = 0
 fog_count = 2
 
-[[zone]]
+[[zones]]
 id = "limgrave_treesentinel_boss"
 map = "m60_42_36_00"
 name = "Limgrave - Tree Sentinel"
@@ -365,7 +365,7 @@ weight = 0
 fog_count = 0
 boss = "Tree Sentinel"
 
-[[zone]]
+[[zones]]
 id = "limgrave_dragon_boss"
 map = "m60_43_36_00"
 name = "Limgrave - Flying Dragon Agheel"
@@ -374,7 +374,7 @@ weight = 0
 fog_count = 0
 boss = "Flying Dragon Agheel"
 
-[[zone]]
+[[zones]]
 id = "limgrave_mariner_boss"
 map = "m60_45_39_00"
 name = "Limgrave - Tibia Mariner"
@@ -383,7 +383,7 @@ weight = 0
 fog_count = 0
 boss = "Tibia Mariner"
 
-[[zone]]
+[[zones]]
 id = "limgrave_waypoint_boss"
 map = "m60_44_36_00"
 name = "Limgrave - Waypoint Ruins - Mad Pumpkin Head"
@@ -392,7 +392,7 @@ weight = 0
 fog_count = 2
 boss = "Mad Pumpkin Head"
 
-[[zone]]
+[[zones]]
 id = "stormhill_deathbird_boss"
 map = "m60_42_38_00"
 name = "Stormhill - Deathbird"
@@ -401,7 +401,7 @@ weight = 0
 fog_count = 0
 boss = "Deathbird"
 
-[[zone]]
+[[zones]]
 id = "stormhill_bellbearinghunter_boss"
 map = "m60_42_38_00"
 name = "Stormhill - Bell Bearing Hunter"
@@ -410,7 +410,7 @@ weight = 0
 fog_count = 0
 boss = "Bell Bearing Hunter"
 
-[[zone]]
+[[zones]]
 id = "stormhill_evergaol"
 map = "m60_42_37_00"
 name = "Stormhill - Stormhill Evergaol - Crucible Knight"
@@ -419,7 +419,7 @@ weight = 0
 fog_count = 2
 boss = "Crucible Knight"
 
-[[zone]]
+[[zones]]
 id = "peninsula_evergaol"
 map = "m60_42_33_00"
 name = "Weeping Peninsula - Weeping Evergaol - Ancient Hero of Zamor"
@@ -428,7 +428,7 @@ weight = 0
 fog_count = 2
 boss = "Ancient Hero of Zamor"
 
-[[zone]]
+[[zones]]
 id = "peninsula_avatar_boss"
 map = "m60_43_33_00"
 name = "Weeping Peninsula - Erdtree Avatar"
@@ -437,7 +437,7 @@ weight = 0
 fog_count = 0
 boss = "Erdtree Avatar"
 
-[[zone]]
+[[zones]]
 id = "peninsula_cavalry_boss"
 map = "m60_44_32_00"
 name = "Weeping Peninsula - Night's Cavalry"
@@ -446,7 +446,7 @@ weight = 0
 fog_count = 0
 boss = "Night's Cavalry"
 
-[[zone]]
+[[zones]]
 id = "peninsula_deathbird_boss"
 map = "m60_44_32_00"
 name = "Weeping Peninsula - Deathbird"
@@ -455,7 +455,7 @@ weight = 0
 fog_count = 0
 boss = "Deathbird"
 
-[[zone]]
+[[zones]]
 id = "peninsula_leonine"
 map = "m60_43_30_00"
 name = "Leonine Misbegotten"
@@ -464,7 +464,7 @@ weight = 0
 fog_count = 1
 boss = "Leonine Misbegotten"
 
-[[zone]]
+[[zones]]
 id = "liurnia_evergaol_adan"
 map = "m60_38_41_00"
 name = "Liurnia - Malefactor's Evergaol - Adan, Thief of Fire"
@@ -473,7 +473,7 @@ weight = 0
 fog_count = 2
 boss = "Adan, Thief of Fire"
 
-[[zone]]
+[[zones]]
 id = "liurnia_evergaol_bols"
 map = "m60_33_45_00"
 name = "Liurnia - Cuckoo's Evergaol - Bols, Carian Knight"
@@ -482,7 +482,7 @@ weight = 0
 fog_count = 2
 boss = "Bols, Carian Knight"
 
-[[zone]]
+[[zones]]
 id = "liurnia_avatar_boss"
 map = "m60_33_43_00"
 name = "Liurnia - Erdtree Avatar"
@@ -491,7 +491,7 @@ weight = 0
 fog_count = 0
 boss = "Erdtree Avatar"
 
-[[zone]]
+[[zones]]
 id = "liurnia_bellbearinghunter_boss"
 map = "m60_37_46_00"
 name = "Liurnia - Bell Bearing Hunter"
@@ -500,7 +500,7 @@ weight = 0
 fog_count = 0
 boss = "Bell Bearing Hunter"
 
-[[zone]]
+[[zones]]
 id = "liurnia_cavalry_boss"
 map = "m60_39_43_00"
 name = "Liurnia - Night's Cavalry"
@@ -509,7 +509,7 @@ weight = 0
 fog_count = 0
 boss = "Night's Cavalry"
 
-[[zone]]
+[[zones]]
 id = "liurnia_deathbird_boss"
 map = "m60_37_42_00"
 name = "Liurnia - Deathbird"
@@ -518,7 +518,7 @@ weight = 0
 fog_count = 0
 boss = "Deathbird"
 
-[[zone]]
+[[zones]]
 id = "liurnia_deathritebird_boss"
 map = "m60_36_45_00"
 name = "Liurnia - Death Rite Bird"
@@ -527,7 +527,7 @@ weight = 0
 fog_count = 0
 boss = "Death Rite Bird"
 
-[[zone]]
+[[zones]]
 id = "liurnia_dragon_boss"
 map = "m60_34_45_00"
 name = "Liurnia - Glintstone Dragon Smarag"
@@ -536,7 +536,7 @@ weight = 0
 fog_count = 0
 boss = "Glintstone Dragon Smarag"
 
-[[zone]]
+[[zones]]
 id = "liurnia_omenkiller_boss"
 map = "m60_35_42_00"
 name = "Liurnia - Omenkiller"
@@ -545,7 +545,7 @@ weight = 0
 fog_count = 0
 boss = "Omenkiller"
 
-[[zone]]
+[[zones]]
 id = "liurnia_mariner_boss"
 map = "m60_39_44_00"
 name = "Liurnia - Tibia Mariner"
@@ -554,7 +554,7 @@ weight = 0
 fog_count = 0
 boss = "Tibia Mariner"
 
-[[zone]]
+[[zones]]
 id = "liurnia_kingsrealm_boss"
 map = "m60_34_48_00"
 name = "Liurnia - Kingsrealm Ruins - Royal Revenant"
@@ -563,7 +563,7 @@ weight = 0
 fog_count = 2
 boss = "Royal Revenant"
 
-[[zone]]
+[[zones]]
 id = "bellum_avatar_boss"
 map = "m60_38_48_00"
 name = "Bellum Highway - Erdtree Avatar"
@@ -572,7 +572,7 @@ weight = 0
 fog_count = 0
 boss = "Erdtree Avatar"
 
-[[zone]]
+[[zones]]
 id = "bellum_cavalry_boss"
 map = "m60_36_48_00"
 name = "Bellum Highway - Night's Cavalry"
@@ -581,7 +581,7 @@ weight = 0
 fog_count = 0
 boss = "Night's Cavalry"
 
-[[zone]]
+[[zones]]
 id = "siofra_dragonkin_boss"
 map = "m12_02_00_00"
 name = "Siofra River - Dragonkin Soldier"
@@ -590,7 +590,7 @@ weight = 0
 fog_count = 0
 boss = "Dragonkin Soldier"
 
-[[zone]]
+[[zones]]
 id = "siofra_boss"
 map = "m12_08_00_00"
 name = "Ancestor Spirit"
@@ -599,7 +599,7 @@ weight = 0
 fog_count = 2
 boss = "Ancestor Spirit"
 
-[[zone]]
+[[zones]]
 id = "caelid_avatar_boss"
 map = "m60_47_40_00"
 name = "Caelid - Putrid Avatar"
@@ -608,7 +608,7 @@ weight = 0
 fog_count = 0
 boss = "Putrid Avatar"
 
-[[zone]]
+[[zones]]
 id = "caelid_dragon_boss"
 map = "m60_48_37_00"
 name = "Caelid - Decaying Ekzykes"
@@ -617,7 +617,7 @@ weight = 0
 fog_count = 0
 boss = "Decaying Ekzykes"
 
-[[zone]]
+[[zones]]
 id = "caelid_cavalry_boss"
 map = "m60_49_37_00"
 name = "Caelid - Night's Cavalry"
@@ -626,7 +626,7 @@ weight = 0
 fog_count = 0
 boss = "Night's Cavalry"
 
-[[zone]]
+[[zones]]
 id = "caelid_deathritebird_boss"
 map = "m60_49_37_00"
 name = "Caelid - Death Rite Bird"
@@ -635,7 +635,7 @@ weight = 0
 fog_count = 0
 boss = "Death Rite Bird"
 
-[[zone]]
+[[zones]]
 id = "caelid_oneil_boss"
 map = "m60_49_38_00"
 name = "Caelid - Commander O'Neil"
@@ -644,7 +644,7 @@ weight = 0
 fog_count = 0
 boss = "Commander O'Neil"
 
-[[zone]]
+[[zones]]
 id = "caelid_crypt_boss"
 map = "m60_49_39_00"
 name = "Caelid - Sellia Chair-Crypt - Nox Duo"
@@ -653,7 +653,7 @@ weight = 0
 fog_count = 2
 boss = "Nox Monk"
 
-[[zone]]
+[[zones]]
 id = "caelid_caelem_boss"
 map = "m60_48_40_00"
 name = "Caelid - Caelem Ruins - Mad Pumpkin Heads"
@@ -662,7 +662,7 @@ weight = 0
 fog_count = 2
 boss = "Mad Pumpkin Head (Hammer)"
 
-[[zone]]
+[[zones]]
 id = "dragonbarrow_bellbearinghunter_boss"
 map = "m60_48_41_00"
 name = "Dragonbarrow - Bell Bearing Hunter"
@@ -671,7 +671,7 @@ weight = 0
 fog_count = 0
 boss = "Bell Bearing Hunter"
 
-[[zone]]
+[[zones]]
 id = "dragonbarrow_evergaol"
 map = "m60_49_39_00"
 name = "Dragonbarrow - Sellia Evergaol - Battlemage Hugues"
@@ -680,7 +680,7 @@ weight = 0
 fog_count = 2
 boss = "Battlemage Hugues"
 
-[[zone]]
+[[zones]]
 id = "dragonbarrow_avatar_boss"
 map = "m60_51_40_00"
 name = "Dragonbarrow - Putrid Avatar"
@@ -689,7 +689,7 @@ weight = 0
 fog_count = 0
 boss = "Putrid Avatar"
 
-[[zone]]
+[[zones]]
 id = "dragonbarrow_dragon_boss"
 map = "m60_52_41_00"
 name = "Dragonbarrow - Flying Dragon Greyll"
@@ -698,7 +698,7 @@ weight = 0
 fog_count = 0
 boss = "Flying Dragon Greyll"
 
-[[zone]]
+[[zones]]
 id = "dragonbarrow_cavalry_boss"
 map = "m60_52_41_00"
 name = "Dragonbarrow - Night's Cavalry"
@@ -707,7 +707,7 @@ weight = 0
 fog_count = 0
 boss = "Night's Cavalry"
 
-[[zone]]
+[[zones]]
 id = "dragonbarrow_kindred_boss"
 map = "m60_51_43_00"
 name = "Dragonbarrow - Black Blade Kindred"
@@ -716,7 +716,7 @@ weight = 0
 fog_count = 0
 boss = "Black Blade Kindred"
 
-[[zone]]
+[[zones]]
 id = "altus_dragon_tempboss"
 map = "m60_37_51_00"
 name = "Altus Plateau - Ancient Dragon Lansseax First Encounter"
@@ -725,7 +725,7 @@ weight = 0
 fog_count = 0
 boss = "Ancient Dragon Lansseax"
 
-[[zone]]
+[[zones]]
 id = "altus_cavalry_boss"
 map = "m60_39_51_00"
 name = "Altus Plateau - Night's Cavalry"
@@ -734,7 +734,7 @@ weight = 0
 fog_count = 0
 boss = "Night's Cavalry"
 
-[[zone]]
+[[zones]]
 id = "altus_dragon_boss"
 map = "m60_41_52_00"
 name = "Altus Plateau - Ancient Dragon Lansseax"
@@ -743,7 +743,7 @@ weight = 0
 fog_count = 0
 boss = "Ancient Dragon Lansseax"
 
-[[zone]]
+[[zones]]
 id = "altus_fallingstarbeast_boss"
 map = "m60_41_50_00"
 name = "Altus Plateau - Fallingstar Beast"
@@ -752,7 +752,7 @@ weight = 0
 fog_count = 0
 boss = "Fallingstar Beast"
 
-[[zone]]
+[[zones]]
 id = "altus_sentinels_boss"
 map = "m60_41_51_00"
 name = "Altus Plateau - Tree Sentinel Duo"
@@ -761,7 +761,7 @@ weight = 0
 fog_count = 0
 boss = "Tree Sentinel + Tree Sentinel"
 
-[[zone]]
+[[zones]]
 id = "altus_godskinapostle_boss"
 map = "m60_42_55_00"
 name = "Altus Plateau - Godskin Apostle"
@@ -770,7 +770,7 @@ weight = 0
 fog_count = 0
 boss = "Godskin Apostle"
 
-[[zone]]
+[[zones]]
 id = "altus_blackknifeassassin_boss"
 map = "m60_40_52_00"
 name = "Altus Plateau - Black Knife Assassin"
@@ -779,7 +779,7 @@ weight = 0
 fog_count = 0
 boss = "Black Knife Assassin"
 
-[[zone]]
+[[zones]]
 id = "altus_evergaol"
 map = "m60_39_50_00"
 name = "Altus Plateau - Golden Lineage Evergaol - Godefroy the Grafted"
@@ -788,7 +788,7 @@ weight = 0
 fog_count = 2
 boss = "Godefroy the Grafted"
 
-[[zone]]
+[[zones]]
 id = "altus_wormface_boss"
 map = "m60_41_53_00"
 name = "Altus Plateau - Wormface"
@@ -797,7 +797,7 @@ weight = 0
 fog_count = 0
 boss = "Wormface"
 
-[[zone]]
+[[zones]]
 id = "altus_mariner_boss"
 map = "m60_38_52_00"
 name = "Altus Plateau - Tibia Mariner"
@@ -806,7 +806,7 @@ weight = 0
 fog_count = 0
 boss = "Tibia Mariner"
 
-[[zone]]
+[[zones]]
 id = "altus_lux_boss"
 map = "m60_38_51_00"
 name = "Altus Plateau - Lux Ruins - Demi-Human Queen Gilika"
@@ -815,7 +815,7 @@ weight = 0
 fog_count = 2
 boss = "Demi-Human Queen Gilika"
 
-[[zone]]
+[[zones]]
 id = "altus_writheblood_boss"
 map = "m60_40_53_00"
 name = "Altus Plateau - Writheblood Ruins - Sanguine Noble"
@@ -824,7 +824,7 @@ weight = 0
 fog_count = 2
 boss = "Sanguine Noble"
 
-[[zone]]
+[[zones]]
 id = "altus_elemer"
 map = "m60_39_54_00"
 name = "Shaded Castle - Elemer of the Briar"
@@ -833,7 +833,7 @@ weight = 0
 fog_count = 1
 boss = "Elemer of the Briar"
 
-[[zone]]
+[[zones]]
 id = "outskirts_deathbird_boss"
 map = "m60_44_53_00"
 name = "Capital Outskirts - Deathbird"
@@ -842,7 +842,7 @@ weight = 0
 fog_count = 0
 boss = "Deathbird"
 
-[[zone]]
+[[zones]]
 id = "outskirts_sentinel_boss"
 map = "m60_45_52_00"
 name = "Capital Outskirts - Draconic Tree Sentinel"
@@ -851,7 +851,7 @@ weight = 0
 fog_count = 0
 boss = "Draconic Tree Sentinel"
 
-[[zone]]
+[[zones]]
 id = "outskirts_bellbearinghunter_boss"
 map = "m60_43_53_00"
 name = "Capital Outskirts - Bell Bearing Hunter"
@@ -860,7 +860,7 @@ weight = 0
 fog_count = 0
 boss = "Bell Bearing Hunter"
 
-[[zone]]
+[[zones]]
 id = "leyndell_tower_boss"
 map = "m34_14_00_00"
 name = "Divine Tower of East Altus - Fell Twins"
@@ -869,7 +869,7 @@ weight = 0
 fog_count = 2
 boss = "Fell Twin"
 
-[[zone]]
+[[zones]]
 id = "liurnia_loretta"
 map = "m60_35_50_00"
 name = "Royal Knight Loretta"
@@ -878,7 +878,7 @@ weight = 0
 fog_count = 2
 boss = "Royal Knight Loretta"
 
-[[zone]]
+[[zones]]
 id = "liurnia_postmanor_evergaol"
 map = "m60_36_50_00"
 name = "Liurnia Behind Caria Manor - Royal Grave Evergaol - Onyx Lord"
@@ -887,7 +887,7 @@ weight = 0
 fog_count = 2
 boss = "Onyx Lord"
 
-[[zone]]
+[[zones]]
 id = "liurnia_postmanor_dragon_tempboss"
 map = "m60_34_50_00"
 name = "Liurnia Behind Caria Manor - Glintstone Dragon Adula Fist Encounter"
@@ -896,7 +896,7 @@ weight = 0
 fog_count = 0
 boss = "Glintstone Dragon Adula"
 
-[[zone]]
+[[zones]]
 id = "caelid_redmane_boss"
 map = "m60_51_36_00"
 name = "Redmane Castle Boss"
@@ -905,7 +905,7 @@ weight = 0
 fog_count = 2
 boss = "Crucible Knight"
 
-[[zone]]
+[[zones]]
 id = "caelid_radahn"
 map = "m60_50_37_00"
 name = "Starscourge Radahn"
@@ -914,7 +914,7 @@ weight = 0
 fog_count = 3
 boss = "Starscourge Radahn"
 
-[[zone]]
+[[zones]]
 id = "caelid_tower_boss"
 map = "m34_13_00_00"
 name = "Divine Tower of Caelid - Godskin Apostle"
@@ -923,7 +923,7 @@ weight = 0
 fog_count = 2
 boss = "Godskin Apostle"
 
-[[zone]]
+[[zones]]
 id = "siofra_nokron_mimic"
 map = "m12_02_00_00"
 name = "Mimic Tear"
@@ -932,7 +932,7 @@ weight = 0
 fog_count = 2
 boss = "Mimic Tear"
 
-[[zone]]
+[[zones]]
 id = "siofra_nokron_gargoyles"
 map = "m12_02_00_00"
 name = "Valiant Gargoyles"
@@ -941,7 +941,7 @@ weight = 0
 fog_count = 3
 boss = "Valiant Gargoyle"
 
-[[zone]]
+[[zones]]
 id = "siofra_nokron_boss"
 map = "m12_09_00_00"
 name = "Regal Ancestor Spirit"
@@ -950,7 +950,7 @@ weight = 0
 fog_count = 2
 boss = "Regal Ancestor Spirit"
 
-[[zone]]
+[[zones]]
 id = "gelmir_maggie_boss"
 map = "m60_37_53_00"
 name = "Mt. Gelmir - Demi-Human Queen Maggie"
@@ -959,7 +959,7 @@ weight = 0
 fog_count = 0
 boss = "Demi-Human Queen Maggie"
 
-[[zone]]
+[[zones]]
 id = "gelmir_magmawyrm_boss"
 map = "m60_35_53_00"
 name = "Mt. Gelmir - Magma Wyrm"
@@ -968,7 +968,7 @@ weight = 0
 fog_count = 0
 boss = "Magma Wyrm"
 
-[[zone]]
+[[zones]]
 id = "gelmir_fallingstarbeast_boss"
 map = "m60_36_54_00"
 name = "Mt. Gelmir - Full-Grown Fallingstar Beast"
@@ -977,7 +977,7 @@ weight = 0
 fog_count = 0
 boss = "Full-Grown Fallingstar Beast"
 
-[[zone]]
+[[zones]]
 id = "gelmir_treespirit_boss"
 map = "m60_37_54_00"
 name = "Mt. Gelmir - Ulcerated Tree Spirit"
@@ -986,7 +986,7 @@ weight = 0
 fog_count = 0
 boss = "Ulcerated Tree Spirit"
 
-[[zone]]
+[[zones]]
 id = "moonlight_evergaol"
 map = "m60_33_42_00"
 name = "Moonlight Altar - Ringleader's Evergaol - Alecto, Black Knife Ringleader"
@@ -995,7 +995,7 @@ weight = 0
 fog_count = 2
 boss = "Alecto, Black Knife Ringleader"
 
-[[zone]]
+[[zones]]
 id = "moonlight_dragon_boss"
 map = "m60_34_42_00"
 name = "Moonlight Altar - Glintstone Dragon Adula"
@@ -1004,7 +1004,7 @@ weight = 0
 fog_count = 0
 boss = "Glintstone Dragon Adula"
 
-[[zone]]
+[[zones]]
 id = "mountaintops_start_cavalry_boss"
 map = "m60_48_51_00"
 name = "Forbidden Lands - Night's Cavalry"
@@ -1013,7 +1013,7 @@ weight = 0
 fog_count = 0
 boss = "Night's Cavalry"
 
-[[zone]]
+[[zones]]
 id = "mountaintops_start_kindred_boss"
 map = "m60_49_52_00"
 name = "Forbidden Lands - Black Blade Kindred"
@@ -1022,7 +1022,7 @@ weight = 0
 fog_count = 0
 boss = "Black Blade Kindred"
 
-[[zone]]
+[[zones]]
 id = "mountaintops_dragon_boss"
 map = "m60_54_56_00"
 name = "Mountaintops of the Giants - Borealis the Freezing Fog"
@@ -1031,7 +1031,7 @@ weight = 0
 fog_count = 0
 boss = "Borealis the Freezing Fog"
 
-[[zone]]
+[[zones]]
 id = "mountaintops_evergaol"
 map = "m60_53_56_00"
 name = "Mountaintops of the Giants - Lord Contender's Evergaol - Roundtable Knight Vyke"
@@ -1040,7 +1040,7 @@ weight = 0
 fog_count = 2
 boss = "Roundtable Knight Vyke"
 
-[[zone]]
+[[zones]]
 id = "mountaintops_avatar_boss"
 map = "m60_52_56_00"
 name = "Mountaintops of the Giants - Erdtree Avatar"
@@ -1049,7 +1049,7 @@ weight = 0
 fog_count = 0
 boss = "Erdtree Avatar"
 
-[[zone]]
+[[zones]]
 id = "mountaintops_deathritebird_boss"
 map = "m60_50_57_00"
 name = "Mountaintops of the Giants - Death Rite Bird"
@@ -1058,7 +1058,7 @@ weight = 0
 fog_count = 0
 boss = "Death Rite Bird"
 
-[[zone]]
+[[zones]]
 id = "mountaintops_sol_boss"
 map = "m60_51_57_00"
 name = "Commander Niall"
@@ -1067,7 +1067,7 @@ weight = 0
 fog_count = 2
 boss = "Commander Niall"
 
-[[zone]]
+[[zones]]
 id = "flamepeak_firegiant"
 map = "m60_52_52_00"
 name = "Fire Giant"
@@ -1076,7 +1076,7 @@ weight = 0
 fog_count = 3
 boss = "Fire Giant"
 
-[[zone]]
+[[zones]]
 id = "snowfield_avatar_boss"
 map = "m60_50_57_00"
 name = "Consecrated Snowfield - Putrid Avatar"
@@ -1085,7 +1085,7 @@ weight = 0
 fog_count = 0
 boss = "Putrid Avatar"
 
-[[zone]]
+[[zones]]
 id = "snowfield_magmawyrm_boss"
 map = "m60_50_56_00"
 name = "Consecrated Snowfield - Great Wyrm Theodorix"
@@ -1094,7 +1094,7 @@ weight = 0
 fog_count = 0
 boss = "Great Wyrm Theodorix"
 
-[[zone]]
+[[zones]]
 id = "snowfield_cavalry_boss"
 map = "m60_48_55_00"
 name = "Consecrated Snowfield - Night's Cavalry Duo"
@@ -1103,7 +1103,7 @@ weight = 0
 fog_count = 0
 boss = "Night's Cavalry (Glaive) + Night's Cavalry (Flail)"
 
-[[zone]]
+[[zones]]
 id = "snowfield_deathritebird_boss"
 map = "m60_48_57_00"
 name = "Consecrated Snowfield - Death Rite Bird"
@@ -1112,7 +1112,7 @@ weight = 0
 fog_count = 0
 boss = "Death Rite Bird"
 
-[[zone]]
+[[zones]]
 id = "mohgwyn_boss"
 map = "m12_05_00_00"
 name = "Mohg, Lord of Blood"
@@ -1121,7 +1121,7 @@ weight = 0
 fog_count = 4
 boss = "Mohg, Lord of Blood"
 
-[[zone]]
+[[zones]]
 id = "erdtree"
 map = "m19_00_00_00"
 name = "Stone Platform"
@@ -1132,7 +1132,7 @@ boss = "Elden Beast"
 
 # CATACOMB (50 zones)
 
-[[zone]]
+[[zones]]
 id = "snowfield_hiddenpath"
 map = "m30_20_00_00"
 name = "Hidden Path to the Haligtree"
@@ -1140,7 +1140,7 @@ type = "catacomb"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "snowfield_hiddenpath_boss"
 map = "m30_20_00_00"
 name = "Hidden Path to the Haligtree - Stray Mimic Tear"
@@ -1149,7 +1149,7 @@ weight = 0
 fog_count = 2
 boss = "Stray Mimic Tear"
 
-[[zone]]
+[[zones]]
 id = "peninsula_tombswardcatacombs"
 map = "m30_00_00_00"
 name = "Weeping Peninsula - Tombsward Catacombs"
@@ -1157,7 +1157,7 @@ type = "catacomb"
 weight = 0
 fog_count = 5
 
-[[zone]]
+[[zones]]
 id = "peninsula_tombswardcatacombs_boss"
 map = "m30_00_00_00"
 name = "Weeping Peninsula - Tombsward Catacombs - Cemetery Shade"
@@ -1166,7 +1166,7 @@ weight = 0
 fog_count = 2
 boss = "Cemetery Shade"
 
-[[zone]]
+[[zones]]
 id = "peninsula_impalerscatacombs"
 map = "m30_01_00_00"
 name = "Weeping Peninsula - Impaler's Catacombs"
@@ -1174,7 +1174,7 @@ type = "catacomb"
 weight = 0
 fog_count = 5
 
-[[zone]]
+[[zones]]
 id = "peninsula_impalerscatacombs_boss"
 map = "m30_01_00_00"
 name = "Weeping Peninsula - Impaler's Catacombs - Erdtree Burial Watchdog"
@@ -1183,7 +1183,7 @@ weight = 0
 fog_count = 2
 boss = "Erdtree Burial Watchdog"
 
-[[zone]]
+[[zones]]
 id = "limgrave_stormfootcatacombs"
 map = "m30_02_00_00"
 name = "Limgrave - Stormfoot Catacombs"
@@ -1191,7 +1191,7 @@ type = "catacomb"
 weight = 0
 fog_count = 5
 
-[[zone]]
+[[zones]]
 id = "limgrave_stormfootcatacombs_boss"
 map = "m30_02_00_00"
 name = "Limgrave - Stormfoot Catacombs - Erdtree Burial Watchdog"
@@ -1200,7 +1200,7 @@ weight = 0
 fog_count = 2
 boss = "Erdtree Burial Watchdog"
 
-[[zone]]
+[[zones]]
 id = "liurnia_roadsendcatacombs"
 map = "m30_03_00_00"
 name = "Liurnia - Road's End Catacombs"
@@ -1208,7 +1208,7 @@ type = "catacomb"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "liurnia_roadsendcatacombs_boss"
 map = "m30_03_00_00"
 name = "Liurnia - Road's End Catacombs - Spiritcaller Snail"
@@ -1217,7 +1217,7 @@ weight = 0
 fog_count = 2
 boss = "Spiritcaller Snail"
 
-[[zone]]
+[[zones]]
 id = "limgrave_murkwatercatacombs"
 map = "m30_04_00_00"
 name = "Limgrave - Murkwater Catacombs"
@@ -1225,7 +1225,7 @@ type = "catacomb"
 weight = 0
 fog_count = 5
 
-[[zone]]
+[[zones]]
 id = "limgrave_murkwatercatacombs_boss"
 map = "m30_04_00_00"
 name = "Limgrave - Murkwater Catacombs - Grave Warden Duelist"
@@ -1234,7 +1234,7 @@ weight = 0
 fog_count = 2
 boss = "Grave Warden Duelist"
 
-[[zone]]
+[[zones]]
 id = "liurnia_blackknifecatacombs"
 map = "m30_05_00_00"
 name = "Liurnia - Black Knife Catacombs"
@@ -1242,7 +1242,7 @@ type = "catacomb"
 weight = 0
 fog_count = 5
 
-[[zone]]
+[[zones]]
 id = "liurnia_blackknifecatacombs_boss"
 map = "m30_05_00_00"
 name = "Liurnia - Black Knife Catacombs - Cemetery Shade"
@@ -1251,7 +1251,7 @@ weight = 0
 fog_count = 2
 boss = "Cemetery Shade"
 
-[[zone]]
+[[zones]]
 id = "liurnia_blackknifecatacombs_boss2"
 map = "m30_05_00_00"
 name = "Liurnia - Black Knife Catacombs - Black Knife Assassin"
@@ -1260,7 +1260,7 @@ weight = 0
 fog_count = 2
 boss = "Black Knife Assassin"
 
-[[zone]]
+[[zones]]
 id = "liurnia_cliffbottomcatacombs"
 map = "m30_06_00_00"
 name = "Liurnia - Cliffbottom Catacombs"
@@ -1268,7 +1268,7 @@ type = "catacomb"
 weight = 0
 fog_count = 5
 
-[[zone]]
+[[zones]]
 id = "liurnia_cliffbottomcatacombs_boss"
 map = "m30_06_00_00"
 name = "Liurnia - Cliffbottom Catacombs - Erdtree Burial Watchdog"
@@ -1277,7 +1277,7 @@ weight = 0
 fog_count = 2
 boss = "Erdtree Burial Watchdog"
 
-[[zone]]
+[[zones]]
 id = "gelmir_wyndhamcatacombs"
 map = "m30_07_00_00"
 name = "Mt. Gelmir - Wyndham Catacombs"
@@ -1285,7 +1285,7 @@ type = "catacomb"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "gelmir_wyndhamcatacombs_boss"
 map = "m30_07_00_00"
 name = "Mt. Gelmir - Wyndham Catacombs - Erdtree Burial Watchdog"
@@ -1294,7 +1294,7 @@ weight = 0
 fog_count = 2
 boss = "Erdtree Burial Watchdog"
 
-[[zone]]
+[[zones]]
 id = "altus_grave"
 map = "m30_08_00_00"
 name = "Altus Plateau - Sainted Hero's Grave"
@@ -1302,7 +1302,7 @@ type = "catacomb"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "altus_grave_boss"
 map = "m30_08_00_00"
 name = "Altus Plateau - Sainted Hero's Grave - Ancient Hero of Zamor"
@@ -1311,7 +1311,7 @@ weight = 0
 fog_count = 2
 boss = "Ancient Hero of Zamor"
 
-[[zone]]
+[[zones]]
 id = "gelmir_grave"
 map = "m30_09_00_00"
 name = "Mt. Gelmir - Gelmir Hero's Grave"
@@ -1319,7 +1319,7 @@ type = "catacomb"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "gelmir_grave_boss"
 map = "m30_09_00_00"
 name = "Mt. Gelmir - Gelmir Hero's Grave - Red Wolf of the Champion"
@@ -1328,7 +1328,7 @@ weight = 0
 fog_count = 2
 boss = "Red Wolf of the Champion"
 
-[[zone]]
+[[zones]]
 id = "outskirts_grave"
 map = "m30_10_00_00"
 name = "Capital Outskirts - Auriza Hero's Grave"
@@ -1336,7 +1336,7 @@ type = "catacomb"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "outskirts_grave_boss"
 map = "m30_10_00_00"
 name = "Capital Outskirts - Auriza Hero's Grave - Crucible Knight Ordovis"
@@ -1345,7 +1345,7 @@ weight = 0
 fog_count = 2
 boss = "Crucible Knight Ordovis"
 
-[[zone]]
+[[zones]]
 id = "stormhill_catacombs"
 map = "m30_11_00_00"
 name = "Stormhill - Deathtouched Catacombs"
@@ -1353,7 +1353,7 @@ type = "catacomb"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "stormhill_catacombs_boss"
 map = "m30_11_00_00"
 name = "Stormhill - Deathtouched Catacombs - Black Knife Assassin"
@@ -1362,7 +1362,7 @@ weight = 0
 fog_count = 2
 boss = "Black Knife Assassin"
 
-[[zone]]
+[[zones]]
 id = "altus_catacombs"
 map = "m30_12_00_00"
 name = "Altus Plateau - Unsightly Catacombs"
@@ -1370,7 +1370,7 @@ type = "catacomb"
 weight = 0
 fog_count = 5
 
-[[zone]]
+[[zones]]
 id = "altus_catacombs_boss"
 map = "m30_12_00_00"
 name = "Altus Plateau - Unsightly Catacombs - Perfumer Tricia and Misbegotten Warrior"
@@ -1379,7 +1379,7 @@ weight = 0
 fog_count = 2
 boss = "Misbegotten Warrior"
 
-[[zone]]
+[[zones]]
 id = "outskirts_sidetomb"
 map = "m30_13_00_00"
 name = "Capital Outskirts - Auriza Side Tomb"
@@ -1387,7 +1387,7 @@ type = "catacomb"
 weight = 0
 fog_count = 6
 
-[[zone]]
+[[zones]]
 id = "outskirts_sidetomb_hallway"
 map = "m30_13_00_00"
 name = "Capital Outskirts - Auriza Side Tomb - Main First Floor"
@@ -1395,7 +1395,7 @@ type = "catacomb"
 weight = 0
 fog_count = 6
 
-[[zone]]
+[[zones]]
 id = "outskirts_sidetomb_upper"
 map = "m30_13_00_00"
 name = "Capital Outskirts - Auriza Side Tomb - Main Second Floor"
@@ -1403,7 +1403,7 @@ type = "catacomb"
 weight = 0
 fog_count = 4
 
-[[zone]]
+[[zones]]
 id = "outskirts_sidetomb_jail"
 map = "m30_13_00_00"
 name = "Capital Outskirts - Auriza Side Tomb - Main Jail"
@@ -1411,7 +1411,7 @@ type = "catacomb"
 weight = 0
 fog_count = 2
 
-[[zone]]
+[[zones]]
 id = "outskirts_sidetomb_dupeentrance"
 map = "m30_13_00_00"
 name = "Capital Outskirts - Auriza Side Tomb - Dupe Entrance"
@@ -1419,7 +1419,7 @@ type = "catacomb"
 weight = 0
 fog_count = 2
 
-[[zone]]
+[[zones]]
 id = "outskirts_sidetomb_dupehallway"
 map = "m30_13_00_00"
 name = "Capital Outskirts - Auriza Side Tomb - Dupe First Floor"
@@ -1427,7 +1427,7 @@ type = "catacomb"
 weight = 0
 fog_count = 4
 
-[[zone]]
+[[zones]]
 id = "outskirts_sidetomb_dupeupper"
 map = "m30_13_00_00"
 name = "Capital Outskirts - Auriza Side Tomb - Dupe Second Floor"
@@ -1435,7 +1435,7 @@ type = "catacomb"
 weight = 0
 fog_count = 2
 
-[[zone]]
+[[zones]]
 id = "outskirts_sidetomb_dupejail"
 map = "m30_13_00_00"
 name = "Capital Outskirts - Auriza Side Tomb - Dupe Jail and Lever"
@@ -1443,7 +1443,7 @@ type = "catacomb"
 weight = 0
 fog_count = 2
 
-[[zone]]
+[[zones]]
 id = "outskirts_sidetomb_boss"
 map = "m30_13_00_00"
 name = "Capital Outskirts - Auriza Side Tomb - Grave Warden Duelist"
@@ -1452,7 +1452,7 @@ weight = 0
 fog_count = 2
 boss = "Grave Warden Duelist"
 
-[[zone]]
+[[zones]]
 id = "caelid_erdtreecatacombs"
 map = "m30_14_00_00"
 name = "Caelid - Minor Erdtree Catacombs"
@@ -1460,7 +1460,7 @@ type = "catacomb"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "caelid_erdtreecatacombs_boss"
 map = "m30_14_00_00"
 name = "Caelid - Minor Erdtree Catacombs - Erdtree Burial Watchdogs"
@@ -1469,7 +1469,7 @@ weight = 0
 fog_count = 2
 boss = "Erdtree Burial Watchdog (Sword)"
 
-[[zone]]
+[[zones]]
 id = "caelid_catacombs"
 map = "m30_15_00_00"
 name = "Caelid Catacombs"
@@ -1477,7 +1477,7 @@ type = "catacomb"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "caelid_catacombs_boss"
 map = "m30_15_00_00"
 name = "Caelid Catacombs - Cemetery Shade"
@@ -1486,7 +1486,7 @@ weight = 0
 fog_count = 2
 boss = "Cemetery Shade"
 
-[[zone]]
+[[zones]]
 id = "caelid_wardead"
 map = "m30_16_00_00"
 name = "Caelid - War-Dead Catacombs"
@@ -1494,7 +1494,7 @@ type = "catacomb"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "caelid_wardead_boss"
 map = "m30_16_00_00"
 name = "Caelid - War-Dead Catacombs - Putrid Tree Spirit"
@@ -1503,7 +1503,7 @@ weight = 0
 fog_count = 2
 boss = "Putrid Tree Spirit"
 
-[[zone]]
+[[zones]]
 id = "flamepeak_grave"
 map = "m30_17_00_00"
 name = "Flame Peak - Giant-Conquering Hero's Grave"
@@ -1511,7 +1511,7 @@ type = "catacomb"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "flamepeak_grave_boss"
 map = "m30_17_00_00"
 name = "Flame Peak - Giant-Conquering Hero's Grave - Ancient Hero of Zamor"
@@ -1520,7 +1520,7 @@ weight = 0
 fog_count = 2
 boss = "Ancient Hero of Zamor"
 
-[[zone]]
+[[zones]]
 id = "mountaintops_catacombs"
 map = "m30_18_00_00"
 name = "Flame Peak - Giants' Mountaintop Catacombs"
@@ -1528,7 +1528,7 @@ type = "catacomb"
 weight = 0
 fog_count = 5
 
-[[zone]]
+[[zones]]
 id = "mountaintops_catacombs_boss"
 map = "m30_18_00_00"
 name = "Flame Peak - Giants' Mountaintop Catacombs - Ulcerated Tree Spirit"
@@ -1537,7 +1537,7 @@ weight = 0
 fog_count = 2
 boss = "Ulcerated Tree Spirit"
 
-[[zone]]
+[[zones]]
 id = "snowfield_catacombs"
 map = "m30_19_00_00"
 name = "Consecrated Snowfield Catacombs"
@@ -1545,7 +1545,7 @@ type = "catacomb"
 weight = 0
 fog_count = 5
 
-[[zone]]
+[[zones]]
 id = "snowfield_catacombs_boss"
 map = "m30_19_00_00"
 name = "Consecrated Snowfield Catacombs - Putrid Grave Warden Duelist"
@@ -1556,7 +1556,7 @@ boss = "Putrid Grave Warden Duelist"
 
 # CAVE (40 zones)
 
-[[zone]]
+[[zones]]
 id = "limgrave_coastalcave"
 map = "m31_15_00_00"
 name = "Limgrave - Coastal Cave"
@@ -1564,7 +1564,7 @@ type = "cave"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "limgrave_coastalcave_boss"
 map = "m31_15_00_00"
 name = "Limgrave - Coastal Cave - Demi-Human Chiefs"
@@ -1573,7 +1573,7 @@ weight = 0
 fog_count = 3
 boss = "Demi-Human Chief"
 
-[[zone]]
+[[zones]]
 id = "limgrave_murkwatercave"
 map = "m31_00_00_00"
 name = "Limgrave - Murkwater Cave"
@@ -1581,7 +1581,7 @@ type = "cave"
 weight = 0
 fog_count = 5
 
-[[zone]]
+[[zones]]
 id = "limgrave_murkwatercave_boss"
 map = "m31_00_00_00"
 name = "Limgrave - Murkwater Cave - Patches"
@@ -1590,7 +1590,7 @@ weight = 0
 fog_count = 3
 boss = "Patches"
 
-[[zone]]
+[[zones]]
 id = "peninsula_earthborecave"
 map = "m31_01_00_00"
 name = "Weeping Peninsula - Earthbore Cave"
@@ -1598,7 +1598,7 @@ type = "cave"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "peninsula_earthborecave_boss"
 map = "m31_01_00_00"
 name = "Weeping Peninsula - Earthbore Cave - Runebear"
@@ -1607,7 +1607,7 @@ weight = 0
 fog_count = 2
 boss = "Runebear"
 
-[[zone]]
+[[zones]]
 id = "peninsula_tombswardcave"
 map = "m31_02_00_00"
 name = "Weeping Peninsula - Tombsward Cave"
@@ -1615,7 +1615,7 @@ type = "cave"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "peninsula_tombswardcave_boss"
 map = "m31_02_00_00"
 name = "Weeping Peninsula - Tombsward Cave - Miranda Blossom"
@@ -1624,7 +1624,7 @@ weight = 0
 fog_count = 2
 boss = "Miranda Blossom"
 
-[[zone]]
+[[zones]]
 id = "limgrave_grovesidecave"
 map = "m31_03_00_00"
 name = "Limgrave - Groveside Cave"
@@ -1632,7 +1632,7 @@ type = "cave"
 weight = 0
 fog_count = 5
 
-[[zone]]
+[[zones]]
 id = "limgrave_grovesidecave_boss"
 map = "m31_03_00_00"
 name = "Limgrave - Groveside Cave - Beastman of Farum Azula"
@@ -1641,7 +1641,7 @@ weight = 0
 fog_count = 2
 boss = "Beastman of Farum Azula"
 
-[[zone]]
+[[zones]]
 id = "liurnia_stillwatercave"
 map = "m31_04_00_00"
 name = "Liurnia - Stillwater Cave"
@@ -1649,7 +1649,7 @@ type = "cave"
 weight = 0
 fog_count = 5
 
-[[zone]]
+[[zones]]
 id = "liurnia_stillwatercave_boss"
 map = "m31_04_00_00"
 name = "Liurnia - Stillwater Cave - Cleanrot Knight"
@@ -1658,7 +1658,7 @@ weight = 0
 fog_count = 2
 boss = "Cleanrot Knight"
 
-[[zone]]
+[[zones]]
 id = "liurnia_lakesidecave"
 map = "m31_05_00_00"
 name = "Liurnia - Lakeside Crystal Cave"
@@ -1666,7 +1666,7 @@ type = "cave"
 weight = 0
 fog_count = 4
 
-[[zone]]
+[[zones]]
 id = "liurnia_lakesidecave_boss"
 map = "m31_05_00_00"
 name = "Liurnia - Lakeside Crystal Cave - Bloodhound Knight"
@@ -1675,7 +1675,7 @@ weight = 0
 fog_count = 2
 boss = "Bloodhound Knight"
 
-[[zone]]
+[[zones]]
 id = "liurnia_academycave"
 map = "m31_06_00_00"
 name = "Liurnia - Academy Crystal Cave"
@@ -1683,7 +1683,7 @@ type = "cave"
 weight = 0
 fog_count = 5
 
-[[zone]]
+[[zones]]
 id = "liurnia_academycave_boss"
 map = "m31_06_00_00"
 name = "Liurnia - Academy Crystal Cave - Crystalian Duo"
@@ -1692,7 +1692,7 @@ weight = 0
 fog_count = 3
 boss = "Crystalian (Staff)"
 
-[[zone]]
+[[zones]]
 id = "gelmir_seethewatercave"
 map = "m31_07_00_00"
 name = "Mt. Gelmir - Seethewater Cave"
@@ -1700,7 +1700,7 @@ type = "cave"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "gelmir_seethewatercave_boss"
 map = "m31_07_00_00"
 name = "Mt. Gelmir - Seethewater Cave - Kindred of Rot Duo"
@@ -1709,7 +1709,7 @@ weight = 0
 fog_count = 2
 boss = "Kindred of Rot"
 
-[[zone]]
+[[zones]]
 id = "gelmir_volcanocave"
 map = "m31_09_00_00"
 name = "Mt. Gelmir - Volcano Cave"
@@ -1717,7 +1717,7 @@ type = "cave"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "gelmir_volcanocave_boss"
 map = "m31_09_00_00"
 name = "Mt. Gelmir - Volcano Cave - Demi-Human Queen Margot"
@@ -1726,7 +1726,7 @@ weight = 0
 fog_count = 2
 boss = "Demi-Human Queen Margot"
 
-[[zone]]
+[[zones]]
 id = "dragonbarrow_cave"
 map = "m31_10_00_00"
 name = "Dragonbarrow Cave"
@@ -1734,7 +1734,7 @@ type = "cave"
 weight = 0
 fog_count = 5
 
-[[zone]]
+[[zones]]
 id = "dragonbarrow_cave_boss"
 map = "m31_10_00_00"
 name = "Dragonbarrow Cave - Beastmen of Farum Azula"
@@ -1743,7 +1743,7 @@ weight = 0
 fog_count = 1
 boss = "Beastman of Farum Azula (Cleaver)"
 
-[[zone]]
+[[zones]]
 id = "dragonbarrow_selliahideaway"
 map = "m31_11_00_00"
 name = "Dragonbarrow - Sellia Hideaway"
@@ -1751,7 +1751,7 @@ type = "cave"
 weight = 0
 fog_count = 5
 
-[[zone]]
+[[zones]]
 id = "dragonbarrow_selliahideaway_boss"
 map = "m31_11_00_00"
 name = "Dragonbarrow - Sellia Hideaway - Putrid Crystalians"
@@ -1760,7 +1760,7 @@ weight = 0
 fog_count = 2
 boss = "Putrid Crystalian (Spear)"
 
-[[zone]]
+[[zones]]
 id = "snowfield_cave"
 map = "m31_12_00_00"
 name = "Consecrated Snowfield - Cave of the Forlorn"
@@ -1768,7 +1768,7 @@ type = "cave"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "snowfield_cave_boss"
 map = "m31_12_00_00"
 name = "Consecrated Snowfield - Cave of the Forlorn - Misbegotten Crusader"
@@ -1777,7 +1777,7 @@ weight = 0
 fog_count = 2
 boss = "Misbegotten Crusader"
 
-[[zone]]
+[[zones]]
 id = "limgrave_highroadcave"
 map = "m31_17_00_00"
 name = "Limgrave - Highroad Cave"
@@ -1785,7 +1785,7 @@ type = "cave"
 weight = 0
 fog_count = 5
 
-[[zone]]
+[[zones]]
 id = "limgrave_highroadcave_boss"
 map = "m31_17_00_00"
 name = "Limgrave - Highroad Cave - Guardian Golem"
@@ -1794,7 +1794,7 @@ weight = 0
 fog_count = 2
 boss = "Guardian Golem"
 
-[[zone]]
+[[zones]]
 id = "altus_grotto"
 map = "m31_18_00_00"
 name = "Altus Plateau - Perfumer's Grotto"
@@ -1802,7 +1802,7 @@ type = "cave"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "altus_grotto_boss"
 map = "m31_18_00_00"
 name = "Altus Plateau - Perfumer's Grotto - Omenkiller and Miranda the Blighted Bloom"
@@ -1811,7 +1811,7 @@ weight = 0
 fog_count = 2
 boss = "Miranda the Blighted Bloom"
 
-[[zone]]
+[[zones]]
 id = "altus_sagescave"
 map = "m31_19_00_00"
 name = "Altus Plateau - Sage's Cave"
@@ -1819,7 +1819,7 @@ type = "cave"
 weight = 0
 fog_count = 5
 
-[[zone]]
+[[zones]]
 id = "altus_sagescave_boss"
 map = "m31_19_00_00"
 name = "Altus Plateau - Sage's Cave - Black Knife Assassin"
@@ -1828,7 +1828,7 @@ weight = 0
 fog_count = 2
 boss = "Black Knife Assassin"
 
-[[zone]]
+[[zones]]
 id = "altus_sagescave_boss2"
 map = "m31_19_00_00"
 name = "Altus Plateau - Sage's Cave - Necromancer Garris"
@@ -1837,7 +1837,7 @@ weight = 0
 fog_count = 2
 boss = "Necromancer Garris"
 
-[[zone]]
+[[zones]]
 id = "caelid_abandonedcave_start"
 map = "m31_20_00_00"
 name = "Caelid - Abandoned Cave Start"
@@ -1845,7 +1845,7 @@ type = "cave"
 weight = 0
 fog_count = 2
 
-[[zone]]
+[[zones]]
 id = "caelid_abandonedcave"
 map = "m31_20_00_00"
 name = "Caelid - Abandoned Cave"
@@ -1853,7 +1853,7 @@ type = "cave"
 weight = 0
 fog_count = 1
 
-[[zone]]
+[[zones]]
 id = "caelid_abandonedcave_boss"
 map = "m31_20_00_00"
 name = "Caelid - Abandoned Cave - Cleanrot Knights"
@@ -1862,7 +1862,7 @@ weight = 0
 fog_count = 2
 boss = "Cleanrot Knight (Spear)"
 
-[[zone]]
+[[zones]]
 id = "caelid_gaolcave"
 map = "m31_21_00_00"
 name = "Caelid - Gaol Cave"
@@ -1870,7 +1870,7 @@ type = "cave"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "caelid_gaolcave_boss"
 map = "m31_21_00_00"
 name = "Caelid - Gaol Cave - Frenzied Duelist"
@@ -1879,7 +1879,7 @@ weight = 0
 fog_count = 2
 boss = "Frenzied Duelist"
 
-[[zone]]
+[[zones]]
 id = "mountaintops_cave"
 map = "m31_22_00_00"
 name = "Mountaintops - Spiritcaller Cave"
@@ -1887,7 +1887,7 @@ type = "cave"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "mountaintops_cave_boss"
 map = "m31_22_00_00"
 name = "Mountaintops - Spiritcaller Cave - Spiritcaller Snail"
@@ -1898,7 +1898,7 @@ boss = "Spiritcaller Snail"
 
 # TUNNEL (16 zones)
 
-[[zone]]
+[[zones]]
 id = "peninsula_tunnel"
 map = "m32_00_00_00"
 name = "Weeping Peninsula - Morne Tunnel"
@@ -1906,7 +1906,7 @@ type = "tunnel"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "peninsula_tunnel_boss"
 map = "m32_00_00_00"
 name = "Weeping Peninsula - Morne Tunnel - Scaly Misbegotten"
@@ -1915,7 +1915,7 @@ weight = 0
 fog_count = 2
 boss = "Scaly Misbegotten"
 
-[[zone]]
+[[zones]]
 id = "limgrave_tunnels"
 map = "m32_01_00_00"
 name = "Limgrave Tunnels"
@@ -1923,7 +1923,7 @@ type = "tunnel"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "limgrave_tunnels_boss"
 map = "m32_01_00_00"
 name = "Limgrave Tunnels - Stonedigger Troll"
@@ -1932,7 +1932,7 @@ weight = 0
 fog_count = 2
 boss = "Stonedigger Troll"
 
-[[zone]]
+[[zones]]
 id = "liurnia_tunnel"
 map = "m32_02_00_00"
 name = "Liurnia - Raya Lucaria Crystal Tunnel"
@@ -1940,7 +1940,7 @@ type = "tunnel"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "liurnia_tunnel_boss"
 map = "m32_02_00_00"
 name = "Liurnia - Raya Lucaria Crystal Tunnel - Crystalian"
@@ -1949,7 +1949,7 @@ weight = 0
 fog_count = 2
 boss = "Crystalian"
 
-[[zone]]
+[[zones]]
 id = "altus_oldtunnel"
 map = "m32_04_00_00"
 name = "Old Altus Tunnel"
@@ -1957,7 +1957,7 @@ type = "tunnel"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "altus_oldtunnel_boss"
 map = "m32_04_00_00"
 name = "Old Altus Tunnel - Stonedigger Troll"
@@ -1966,7 +1966,7 @@ weight = 0
 fog_count = 2
 boss = "Stonedigger Troll"
 
-[[zone]]
+[[zones]]
 id = "altus_tunnel"
 map = "m32_05_00_00"
 name = "Altus Tunnel"
@@ -1974,7 +1974,7 @@ type = "tunnel"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "altus_tunnel_boss"
 map = "m32_05_00_00"
 name = "Altus Tunnel - Crystalian Duo"
@@ -1983,7 +1983,7 @@ weight = 0
 fog_count = 2
 boss = "Crystalian (Ringblade)"
 
-[[zone]]
+[[zones]]
 id = "caelid_gaeltunnel"
 map = "m32_07_00_00"
 name = "Caelid - Gael Tunnel"
@@ -1991,7 +1991,7 @@ type = "tunnel"
 weight = 0
 fog_count = 1
 
-[[zone]]
+[[zones]]
 id = "caelid_gaeltunnel_boss"
 map = "m32_07_00_00"
 name = "Caelid - Gael Tunnel - Magma Wyrm"
@@ -2000,7 +2000,7 @@ weight = 0
 fog_count = 2
 boss = "Magma Wyrm"
 
-[[zone]]
+[[zones]]
 id = "caelid_selliatunnel"
 map = "m32_08_00_00"
 name = "Caelid - Sellia Crystal Tunnel"
@@ -2008,7 +2008,7 @@ type = "tunnel"
 weight = 0
 fog_count = 4
 
-[[zone]]
+[[zones]]
 id = "caelid_selliatunnel_boss"
 map = "m32_08_00_00"
 name = "Caelid - Sellia Crystal Tunnel - Fallingstar Beast"
@@ -2017,7 +2017,7 @@ weight = 0
 fog_count = 2
 boss = "Fallingstar Beast"
 
-[[zone]]
+[[zones]]
 id = "snowfield_tunnel"
 map = "m32_11_00_00"
 name = "Consecrated Snowfield - Yelough Anix Tunnel"
@@ -2025,7 +2025,7 @@ type = "tunnel"
 weight = 0
 fog_count = 3
 
-[[zone]]
+[[zones]]
 id = "snowfield_tunnel_boss"
 map = "m32_11_00_00"
 name = "Consecrated Snowfield - Yelough Anix Tunnel - Astel, Stars of Darkness"
@@ -2036,7 +2036,7 @@ boss = "Astel, Stars of Darkness"
 
 # GAOL (2 zones)
 
-[[zone]]
+[[zones]]
 id = "precipice"
 map = "m39_20_00_00"
 name = "Ruin-Strewn Precipice"
@@ -2044,7 +2044,7 @@ type = "gaol"
 weight = 0
 fog_count = 2
 
-[[zone]]
+[[zones]]
 id = "precipice_boss"
 map = "m39_20_00_00"
 name = "Magma Wrym Makar"
@@ -2055,7 +2055,7 @@ boss = "Magma Wyrm Makar"
 
 # MINI DUNGEON (6 zones)
 
-[[zone]]
+[[zones]]
 id = "graveyard_cave"
 map = "m18_00_00_00"
 name = "Cave of Knowledge"
@@ -2063,7 +2063,7 @@ type = "mini_dungeon"
 weight = 0
 fog_count = 2
 
-[[zone]]
+[[zones]]
 id = "graveyard_cave_boss"
 map = "m18_00_00_00"
 name = "Cave of Knowledge - Soldier of Godrick"
@@ -2072,7 +2072,7 @@ weight = 0
 fog_count = 2
 boss = "Soldier of Godrick"
 
-[[zone]]
+[[zones]]
 id = "graveyard_grave"
 map = "m18_00_00_00"
 name = "Limgrave - Fringefolk Hero's Grave"
@@ -2080,7 +2080,7 @@ type = "mini_dungeon"
 weight = 0
 fog_count = 2
 
-[[zone]]
+[[zones]]
 id = "graveyard_grave_boss"
 map = "m18_00_00_00"
 name = "Limgrave - Fringefolk Hero's Grave - Ulcerated Tree Spirit"
@@ -2089,7 +2089,7 @@ weight = 0
 fog_count = 2
 boss = "Ulcerated Tree Spirit"
 
-[[zone]]
+[[zones]]
 id = "outskirts_sealedtunnel"
 map = "m34_12_00_00"
 name = "Capital Outskirts - Sealed Tunnel"
@@ -2097,7 +2097,7 @@ type = "mini_dungeon"
 weight = 0
 fog_count = 2
 
-[[zone]]
+[[zones]]
 id = "outskirts_sealedtunnel_boss"
 map = "m34_12_00_00"
 name = "Capital Outskirts - Sealed Tunnel - Onyx Lord"
