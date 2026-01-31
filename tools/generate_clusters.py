@@ -97,6 +97,11 @@ class FogData:
         return "norandom" in tags_lower or "unused" in tags_lower
 
     @property
+    def is_major(self) -> bool:
+        """Major fogs are significant boss fog gates (Godrick, Margit, etc.)."""
+        return "major" in [t.lower() for t in self.tags]
+
+    @property
     def zone_pair(self) -> frozenset[str]:
         """Return the pair of zones this fog connects (for grouping)."""
         return frozenset({self.aside.area, self.bside.area})
@@ -627,17 +632,44 @@ def should_exclude_area(
     return False
 
 
-def get_zone_type(area: AreaData) -> str:
+def get_major_zones(
+    entrances: list[FogData],
+    warps: list[FogData],
+) -> set[str]:
+    """
+    Get zones connected to fog gates with the 'major' tag.
+
+    These are significant boss fights (Godrick, Margit, Radahn, etc.).
+    """
+    major_zones: set[str] = set()
+
+    for fog in entrances + warps:
+        if fog.is_major:
+            if fog.aside.area:
+                major_zones.add(fog.aside.area)
+            if fog.bside.area:
+                major_zones.add(fog.bside.area)
+
+    return major_zones
+
+
+def get_zone_type(area: AreaData, major_zones: set[str] | None = None) -> str:
     """
     Derive zone type from area data.
 
-    Returns one of 5 types:
+    Returns one of these types:
     - "start": Starting zone (chapel_start)
     - "final_boss": End zone (leyndell_erdtree, leyndell2_erdtree)
+    - "major_boss": Boss arena with major fog gate (Godrick, Margit, etc.)
+    - "boss_arena": Boss arena without major fog gate (evergaols, minidungeon bosses)
     - "legacy_dungeon": Large dungeons (Stormveil, Academy, etc.)
     - "mini_dungeon": Catacombs, caves, tunnels, gaols
-    - "boss_arena": Standalone boss arenas, evergaols, underground areas
+    - "underground": Underground areas (Siofra, Ainsel, Deeproot, Mohgwyn)
+    - "other": Unclassified (divine towers, overworld tiles, colosseums)
     """
+    if major_zones is None:
+        major_zones = set()
+
     tags_lower = {t.lower() for t in area.tags}
     name_lower = area.name.lower()
 
@@ -648,12 +680,14 @@ def get_zone_type(area: AreaData) -> str:
     if name_lower in ("leyndell_erdtree", "leyndell2_erdtree"):
         return "final_boss"
 
-    # Boss zones (have BossTrigger in fog.txt) are boss_arena
+    # Boss zones (have BossTrigger in fog.txt)
     if area.has_boss:
+        if area.name in major_zones:
+            return "major_boss"
         return "boss_arena"
 
     if not area.maps:
-        return "boss_arena"  # Default for zones without maps
+        return "other"  # No maps = unknown
 
     primary_map = area.maps[0]
 
@@ -661,6 +695,10 @@ def get_zone_type(area: AreaData) -> str:
     legacy_prefixes = ["m10_", "m11_", "m13_", "m14_", "m15_", "m16_"]
     if any(primary_map.startswith(p) for p in legacy_prefixes):
         return "legacy_dungeon"
+
+    # Underground areas (m12): Siofra, Ainsel, Deeproot, Mohgwyn, Lake of Rot
+    if primary_map.startswith("m12"):
+        return "underground"
 
     # Mini-dungeons: catacombs, caves, tunnels, gaols, sewers
     # m30=catacombs, m31=caves, m32=tunnels, m35=sewers, m39=gaols
@@ -672,9 +710,8 @@ def get_zone_type(area: AreaData) -> str:
     if "minidungeon" in tags_lower:
         return "mini_dungeon"
 
-    # Underground areas (m12) and other areas -> boss_arena
-    # This includes: Ainsel, Siofra, Deeproot, evergaols, hero graves, etc.
-    return "boss_arena"
+    # Everything else: divine towers (m34), colosseums (m45), overworld tiles (m60), etc.
+    return "other"
 
 
 def load_metadata(path: Path | None) -> dict:
@@ -684,9 +721,12 @@ def load_metadata(path: Path | None) -> dict:
             "defaults": {
                 "legacy_dungeon": 10,
                 "mini_dungeon": 4,
+                "major_boss": 3,
                 "boss_arena": 2,
+                "underground": 6,
                 "start": 1,
                 "final_boss": 4,
+                "other": 2,
             },
             "zones": {},
         }
@@ -732,6 +772,7 @@ def filter_and_enrich_clusters(
     clusters: list[Cluster],
     areas: dict[str, AreaData],
     metadata: dict,
+    major_zones: set[str],
     exclude_dlc: bool,
     exclude_overworld: bool,
 ) -> list[Cluster]:
@@ -765,7 +806,7 @@ def filter_and_enrich_clusters(
         # Determine cluster type (from primary zone)
         primary_zone = sorted(cluster.zones)[0]
         if primary_zone in areas:
-            cluster.cluster_type = get_zone_type(areas[primary_zone])
+            cluster.cluster_type = get_zone_type(areas[primary_zone], major_zones)
         else:
             cluster.cluster_type = "unknown"
 
@@ -773,7 +814,7 @@ def filter_and_enrich_clusters(
         total_weight = 0
         for zone_name in cluster.zones:
             if zone_name in areas:
-                zone_type = get_zone_type(areas[zone_name])
+                zone_type = get_zone_type(areas[zone_name], major_zones)
                 total_weight += get_zone_weight(zone_name, zone_type, metadata)
             else:
                 total_weight += 4  # Default weight
@@ -915,6 +956,11 @@ def main() -> int:
     zone_fogs = classify_fogs(entrances, warps)
     print(f"  Found fogs for {len(zone_fogs)} zones")
 
+    # Identify major boss zones (connected to fog gates with 'major' tag)
+    major_zones = get_major_zones(entrances, warps)
+    if args.verbose:
+        print(f"  Major boss zones: {len(major_zones)}")
+
     # Generate clusters
     print("Generating clusters...")
     clusters = generate_clusters(zones_to_process, world_graph)
@@ -930,7 +976,7 @@ def main() -> int:
     # Filter and enrich
     print("Filtering and enriching clusters...")
     clusters = filter_and_enrich_clusters(
-        clusters, areas, metadata, exclude_dlc, exclude_overworld
+        clusters, areas, metadata, major_zones, exclude_dlc, exclude_overworld
     )
     print(f"  Final cluster count: {len(clusters)}")
 
