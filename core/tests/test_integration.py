@@ -76,10 +76,11 @@ class TestFullPipeline:
 
         # Verify spoiler log contains expected sections
         spoiler_content = spoiler_path.read_text()
-        assert "SPEEDFOG SPOILER LOG" in spoiler_content
-        assert f"Seed: {seed}" in spoiler_content
-        assert "LAYERS" in spoiler_content
-        assert "PATHS" in spoiler_content
+        assert "SPEEDFOG SPOILER" in spoiler_content
+        assert f"seed: {seed}" in spoiler_content
+        assert "PATH SUMMARY" in spoiler_content
+        # ASCII graph should have box-drawing characters
+        assert "│" in spoiler_content
 
     def test_auto_reroll_finds_valid_seed(self, real_clusters, relaxed_config):
         """seed=0 finds a working seed automatically."""

@@ -95,13 +95,7 @@ def export_json(dag: Dag, output_path: Path) -> None:
 
 
 def export_spoiler_log(dag: Dag, output_path: Path) -> None:
-    """Export a human-readable spoiler log.
-
-    The spoiler log contains:
-    - Header with seed
-    - Totals (nodes, zones, paths)
-    - Layers section (nodes grouped by layer)
-    - Paths section (all paths with weights)
+    """Export human-readable spoiler log with ASCII graph visualization.
 
     Args:
         dag: The DAG to export
@@ -111,26 +105,12 @@ def export_spoiler_log(dag: Dag, output_path: Path) -> None:
 
     # Header
     lines.append("=" * 60)
-    lines.append("SPEEDFOG SPOILER LOG")
+    lines.append(f"SPEEDFOG SPOILER (seed: {dag.seed})")
     lines.append("=" * 60)
-    lines.append("")
-    lines.append(f"Seed: {dag.seed}")
-    lines.append("")
-
-    # Totals
-    lines.append("-" * 40)
-    lines.append("TOTALS")
-    lines.append("-" * 40)
-    lines.append(f"Total nodes: {dag.total_nodes()}")
     lines.append(f"Total zones: {dag.total_zones()}")
     paths = dag.enumerate_paths()
     lines.append(f"Total paths: {len(paths)}")
     lines.append("")
-
-    # Layers section
-    lines.append("-" * 40)
-    lines.append("LAYERS")
-    lines.append("-" * 40)
 
     # Group nodes by layer
     nodes_by_layer: dict[int, list[str]] = {}
@@ -140,36 +120,94 @@ def export_spoiler_log(dag: Dag, output_path: Path) -> None:
             nodes_by_layer[layer] = []
         nodes_by_layer[layer].append(node_id)
 
-    # Output nodes by layer in order
-    for layer in sorted(nodes_by_layer.keys()):
-        lines.append(f"\nLayer {layer}:")
-        for node_id in sorted(nodes_by_layer[layer]):
+    # Sort layers
+    sorted_layers = sorted(nodes_by_layer.keys())
+
+    # Fixed column width and name truncation for consistent alignment
+    col_width = 24
+    max_name_len = col_width - 2  # Leave some padding
+
+    # Find max branches across all layers for consistent total width
+    max_branches = max(len(nodes_by_layer[layer]) for layer in sorted_layers)
+    total_width = col_width * max_branches
+
+    # Build ASCII graph visualization
+    for layer_idx, layer in enumerate(sorted_layers):
+        node_ids = sorted(nodes_by_layer[layer])
+        n_nodes = len(node_ids)
+
+        # Draw connection lines from previous layer
+        if layer_idx > 0:
+            prev_layer = sorted_layers[layer_idx - 1]
+            prev_count = len(nodes_by_layer[prev_layer])
+
+            if prev_count < n_nodes:
+                # Split: draw branching lines
+                split_sym = (
+                    "┌"
+                    + "─" * (col_width // 2 - 1)
+                    + "┴"
+                    + "─" * (col_width // 2 - 1)
+                    + "┐"
+                )
+                lines.append(split_sym.center(total_width))
+            elif prev_count > n_nodes:
+                # Merge: draw converging lines
+                merge_sym = (
+                    "└"
+                    + "─" * (col_width // 2 - 1)
+                    + "┬"
+                    + "─" * (col_width // 2 - 1)
+                    + "┘"
+                )
+                lines.append(merge_sym.center(total_width))
+            else:
+                # Continue: straight lines for each branch
+                pipe_line = "".join("│".center(col_width) for _ in range(n_nodes))
+                lines.append(pipe_line.center(total_width))
+
+        # Draw cluster names (truncated)
+        name_parts = []
+        for node_id in node_ids:
             node = dag.nodes[node_id]
-            lines.append(
-                f"  [{node_id}] {node.cluster.id} "
-                f"({node.cluster.type}, weight={node.cluster.weight}, tier={node.tier})"
-            )
-            lines.append(f"    Zones: {', '.join(node.cluster.zones)}")
-            if node.entry_fog:
-                lines.append(f"    Entry fog: {node.entry_fog}")
-            if node.exit_fogs:
-                lines.append(f"    Exit fogs: {', '.join(node.exit_fogs)}")
+            name = node.cluster.id[:max_name_len]
+            name_parts.append(name.center(col_width))
+        lines.append("".join(name_parts).center(total_width))
 
-    lines.append("")
+        # Draw cluster type
+        type_parts = []
+        for node_id in node_ids:
+            node = dag.nodes[node_id]
+            type_str = f"[{node.cluster.type}]"
+            type_parts.append(type_str.center(col_width))
+        lines.append("".join(type_parts).center(total_width))
 
-    # Paths section
-    lines.append("-" * 40)
-    lines.append("PATHS")
-    lines.append("-" * 40)
+        # Draw weights and tier info
+        info_parts = []
+        for node_id in node_ids:
+            node = dag.nodes[node_id]
+            info = f"(w:{node.cluster.weight} t:{node.tier})"
+            info_parts.append(info.center(col_width))
+        lines.append("".join(info_parts).center(total_width))
 
-    for i, path in enumerate(paths, 1):
-        weight = dag.path_weight(path)
-        path_str = " -> ".join(path)
-        lines.append(f"\nPath {i} (weight={weight}):")
-        lines.append(f"  {path_str}")
+        # Draw vertical lines to next layer (except for last layer)
+        if layer_idx < len(sorted_layers) - 1:
+            pipe_line = "".join("│".center(col_width) for _ in range(n_nodes))
+            lines.append(pipe_line.center(total_width))
 
     lines.append("")
     lines.append("=" * 60)
+    lines.append("PATH SUMMARY")
+    lines.append("=" * 60)
+
+    for i, path in enumerate(paths, 1):
+        weight = dag.path_weight(path)
+        # Use cluster IDs, truncated to same length as graph
+        path_str = " → ".join(
+            dag.nodes[nid].cluster.id[:max_name_len] if nid in dag.nodes else nid
+            for nid in path
+        )
+        lines.append(f"Path {i} (weight {weight}): {path_str}")
 
     # Write to file
     with open(output_path, "w", encoding="utf-8") as f:

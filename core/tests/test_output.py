@@ -284,18 +284,21 @@ class TestExportSpoilerLog:
         assert "42" in content
         assert "seed" in content.lower()
 
-    def test_contains_layers_section(self, tmp_path: Path):
-        """export_spoiler_log output contains layers section."""
+    def test_contains_ascii_graph(self, tmp_path: Path):
+        """export_spoiler_log output contains ASCII graph visualization."""
         dag = make_test_dag()
         output_file = tmp_path / "spoiler.txt"
 
         export_spoiler_log(dag, output_file)
 
         content = output_file.read_text(encoding="utf-8")
-        # Should have layer information
-        assert "layer" in content.lower()
-        # Should mention specific nodes
-        assert "start" in content.lower() or "c_start" in content.lower()
+        # Should have ASCII graph elements (box-drawing characters)
+        assert "│" in content  # Vertical lines for connections
+        # Should mention specific clusters
+        assert "c_start" in content
+        assert "c_a" in content or "c_b" in content
+        # Should have weight annotations
+        assert "(w:" in content
 
     def test_contains_paths_section(self, tmp_path: Path):
         """export_spoiler_log output contains paths section."""
