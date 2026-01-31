@@ -466,8 +466,8 @@ class TestGenerateDag:
             )
         )
 
-        # Add merge-compatible clusters (2 entries, 2 exits)
-        for i in range(10):
+        # Add merge-compatible clusters (2 entries, 1 net exit after merge)
+        for i in range(5):
             pool.add(
                 make_cluster(
                     f"merge_{i}",
@@ -479,8 +479,28 @@ class TestGenerateDag:
                         {"fog_id": f"merge_{i}_entry_b", "zone": f"merge_{i}_zone"},
                     ],
                     exit_fogs=[
-                        {"fog_id": f"merge_{i}_exit_a", "zone": f"merge_{i}_zone"},
-                        {"fog_id": f"merge_{i}_exit_b", "zone": f"merge_{i}_zone"},
+                        # 2 entries (bidir) + 1 pure exit = 1 net exit after consuming 2
+                        {"fog_id": f"merge_{i}_entry_a", "zone": f"merge_{i}_zone"},
+                        {"fog_id": f"merge_{i}_entry_b", "zone": f"merge_{i}_zone"},
+                        {"fog_id": f"merge_{i}_exit", "zone": f"merge_{i}_zone"},
+                    ],
+                )
+            )
+
+        # Add passant-compatible clusters (1 entry bidir + 1 pure exit = 1 net exit)
+        for i in range(10):
+            pool.add(
+                make_cluster(
+                    f"passant_{i}",
+                    zones=[f"passant_{i}_zone"],
+                    cluster_type="mini_dungeon",
+                    weight=5,
+                    entry_fogs=[
+                        {"fog_id": f"passant_{i}_entry", "zone": f"passant_{i}_zone"},
+                    ],
+                    exit_fogs=[
+                        {"fog_id": f"passant_{i}_entry", "zone": f"passant_{i}_zone"},
+                        {"fog_id": f"passant_{i}_exit", "zone": f"passant_{i}_zone"},
                     ],
                 )
             )

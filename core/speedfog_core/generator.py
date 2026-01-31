@@ -109,39 +109,45 @@ def count_net_exits(cluster: ClusterData, num_entries: int) -> int:
 def can_be_split_node(cluster: ClusterData, num_out: int) -> bool:
     """Check if cluster can be a split node (1 entry -> num_out exits).
 
+    All fogs must be mapped: 1 entry consumed + num_out exits used.
+
     Args:
         cluster: The cluster to check.
         num_out: Number of required exits after using 1 entry.
 
     Returns:
-        True if cluster has enough net exits after using 1 entry.
+        True if cluster has exactly num_out net exits after using 1 entry.
     """
-    return count_net_exits(cluster, 1) >= num_out
+    return count_net_exits(cluster, 1) == num_out
 
 
 def can_be_merge_node(cluster: ClusterData, num_in: int) -> bool:
     """Check if cluster can be a merge node (num_in entries -> 1 exit).
+
+    All fogs must be mapped: num_in entries consumed + 1 exit used.
 
     Args:
         cluster: The cluster to check.
         num_in: Number of entry fogs to consume.
 
     Returns:
-        True if cluster has enough entries and at least 1 net exit.
+        True if cluster has enough entries and exactly 1 net exit.
     """
-    return len(cluster.entry_fogs) >= num_in and count_net_exits(cluster, num_in) >= 1
+    return len(cluster.entry_fogs) >= num_in and count_net_exits(cluster, num_in) == 1
 
 
 def can_be_passant_node(cluster: ClusterData) -> bool:
     """Check if cluster can be a passant node (1 entry -> 1 exit).
 
+    All fogs must be mapped: 1 entry consumed + 1 exit used.
+
     Args:
         cluster: The cluster to check.
 
     Returns:
-        True if cluster has at least 1 net exit after using 1 entry.
+        True if cluster has exactly 1 net exit after using 1 entry.
     """
-    return count_net_exits(cluster, 1) >= 1
+    return count_net_exits(cluster, 1) == 1
 
 
 def select_entries_for_merge(

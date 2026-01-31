@@ -465,10 +465,24 @@ def classify_fogs(
         if fog.is_norandom:
             continue
 
+        tags_lower = [t.lower() for t in fog.tags]
+
+        # Skip crawlonly fogs (we're not in crawl mode)
+        if "crawlonly" in tags_lower:
+            continue
+
         aside_area = fog.aside.area
         bside_area = fog.bside.area
 
         if not aside_area or not bside_area:
+            continue
+
+        # Backportals become selfwarps in the boss room only
+        # With req_backportal=true, BSide.Area = ASide.Area
+        if "backportal" in tags_lower:
+            # Selfwarp: only add to ASide (the boss room)
+            zone_fogs[aside_area].entry_fogs.append(fog)
+            zone_fogs[aside_area].exit_fogs.append(fog)
             continue
 
         if fog.is_unique:

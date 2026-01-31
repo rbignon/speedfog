@@ -456,14 +456,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "altus_catacombs"
-        },
-        {
-          "fog_id": "30122840",
-          "zone": "altus_catacombs"
-        },
-        {
-          "fog_id": "755894525",
-          "zone": "altus_catacombs"
         }
       ],
       "exit_fogs": [
@@ -473,14 +465,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "altus_catacombs"
-        },
-        {
-          "fog_id": "30122840",
-          "zone": "altus_catacombs"
-        },
-        {
-          "fog_id": "755894525",
           "zone": "altus_catacombs"
         }
       ]
@@ -576,10 +560,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "altus_grave"
-        },
-        {
-          "fog_id": "30082840",
-          "zone": "altus_grave"
         }
       ],
       "exit_fogs": [
@@ -589,10 +569,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "altus_grave"
-        },
-        {
-          "fog_id": "30082840",
           "zone": "altus_grave"
         }
       ]
@@ -640,10 +616,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "altus_grotto"
-        },
-        {
-          "fog_id": "31182840",
-          "zone": "altus_grotto"
         }
       ],
       "exit_fogs": [
@@ -653,10 +625,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "altus_grotto"
-        },
-        {
-          "fog_id": "31182840",
           "zone": "altus_grotto"
         }
       ]
@@ -752,10 +720,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "altus_oldtunnel"
-        },
-        {
-          "fog_id": "32042840",
-          "zone": "altus_oldtunnel"
         }
       ],
       "exit_fogs": [
@@ -765,10 +729,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "altus_oldtunnel"
-        },
-        {
-          "fog_id": "32042840",
           "zone": "altus_oldtunnel"
         }
       ]
@@ -820,10 +780,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "altus_sagescave"
-        },
-        {
-          "fog_id": "3119284031191840",
-          "zone": "altus_sagescave"
         }
       ],
       "exit_fogs": [
@@ -837,10 +793,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "altus_sagescave"
-        },
-        {
-          "fog_id": "3119284031191840",
           "zone": "altus_sagescave"
         }
       ]
@@ -993,10 +945,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "altus_tunnel"
-        },
-        {
-          "fog_id": "32052840",
-          "zone": "altus_tunnel"
         }
       ],
       "exit_fogs": [
@@ -1006,10 +954,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "altus_tunnel"
-        },
-        {
-          "fog_id": "32052840",
           "zone": "altus_tunnel"
         }
       ]
@@ -1094,10 +1038,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "caelid_abandonedcave_start"
-        },
-        {
-          "fog_id": "31202840",
-          "zone": "caelid_abandonedcave_start"
         }
       ],
       "exit_fogs": [
@@ -1107,10 +1047,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "caelid_abandonedcave_start"
-        },
-        {
-          "fog_id": "31202840",
           "zone": "caelid_abandonedcave_start"
         }
       ]
@@ -1234,10 +1170,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "caelid_catacombs"
-        },
-        {
-          "fog_id": "30152840",
-          "zone": "caelid_catacombs"
         }
       ],
       "exit_fogs": [
@@ -1247,10 +1179,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "caelid_catacombs"
-        },
-        {
-          "fog_id": "30152840",
           "zone": "caelid_catacombs"
         }
       ]
@@ -1338,10 +1266,6 @@
         {
           "fog_id": "AEG099_230_9001",
           "zone": "caelid_erdtreecatacombs"
-        },
-        {
-          "fog_id": "30142840",
-          "zone": "caelid_erdtreecatacombs"
         }
       ],
       "exit_fogs": [
@@ -1351,10 +1275,6 @@
         },
         {
           "fog_id": "AEG099_230_9001",
-          "zone": "caelid_erdtreecatacombs"
-        },
-        {
-          "fog_id": "30142840",
           "zone": "caelid_erdtreecatacombs"
         }
       ]
@@ -1400,10 +1320,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "caelid_gaeltunnel_start"
-        },
-        {
-          "fog_id": "32072840",
-          "zone": "caelid_gaeltunnel_start"
         }
       ],
       "exit_fogs": [
@@ -1417,10 +1333,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "caelid_gaeltunnel_start"
-        },
-        {
-          "fog_id": "32072840",
           "zone": "caelid_gaeltunnel_start"
         }
       ]
@@ -1513,10 +1425,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "caelid_gaolcave"
-        },
-        {
-          "fog_id": "31212840",
-          "zone": "caelid_gaolcave"
         }
       ],
       "exit_fogs": [
@@ -1526,10 +1434,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "caelid_gaolcave"
-        },
-        {
-          "fog_id": "31212840",
           "zone": "caelid_gaolcave"
         }
       ]
@@ -1792,10 +1696,6 @@
         {
           "fog_id": "32082650",
           "zone": "caelid_selliatunnel"
-        },
-        {
-          "fog_id": "32082840",
-          "zone": "caelid_selliatunnel"
         }
       ],
       "exit_fogs": [
@@ -1805,10 +1705,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "caelid_selliatunnel"
-        },
-        {
-          "fog_id": "32082840",
           "zone": "caelid_selliatunnel"
         }
       ]
@@ -1984,10 +1880,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "caelid_wardead"
-        },
-        {
-          "fog_id": "30162840",
-          "zone": "caelid_wardead"
         }
       ],
       "exit_fogs": [
@@ -1997,10 +1889,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "caelid_wardead"
-        },
-        {
-          "fog_id": "30162840",
           "zone": "caelid_wardead"
         }
       ]
@@ -2255,14 +2143,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "dragonbarrow_cave"
-        },
-        {
-          "fog_id": "31102840",
-          "zone": "dragonbarrow_cave"
-        },
-        {
-          "fog_id": "755894515",
-          "zone": "dragonbarrow_cave"
         }
       ],
       "exit_fogs": [
@@ -2272,14 +2152,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "dragonbarrow_cave"
-        },
-        {
-          "fog_id": "31102840",
-          "zone": "dragonbarrow_cave"
-        },
-        {
-          "fog_id": "755894515",
           "zone": "dragonbarrow_cave"
         }
       ]
@@ -2372,14 +2244,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "dragonbarrow_selliahideaway"
-        },
-        {
-          "fog_id": "31112840",
-          "zone": "dragonbarrow_selliahideaway"
-        },
-        {
-          "fog_id": "755894516",
-          "zone": "dragonbarrow_selliahideaway"
         }
       ],
       "exit_fogs": [
@@ -2389,14 +2253,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "dragonbarrow_selliahideaway"
-        },
-        {
-          "fog_id": "31112840",
-          "zone": "dragonbarrow_selliahideaway"
-        },
-        {
-          "fog_id": "755894516",
           "zone": "dragonbarrow_selliahideaway"
         }
       ]
@@ -2759,10 +2615,6 @@
         {
           "fog_id": "AEG099_230_9001",
           "zone": "flamepeak_grave"
-        },
-        {
-          "fog_id": "30172840",
-          "zone": "flamepeak_grave"
         }
       ],
       "exit_fogs": [
@@ -2772,10 +2624,6 @@
         },
         {
           "fog_id": "AEG099_230_9001",
-          "zone": "flamepeak_grave"
-        },
-        {
-          "fog_id": "30172840",
           "zone": "flamepeak_grave"
         }
       ]
@@ -2823,10 +2671,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "gelmir_grave"
-        },
-        {
-          "fog_id": "30092840",
-          "zone": "gelmir_grave"
         }
       ],
       "exit_fogs": [
@@ -2836,10 +2680,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "gelmir_grave"
-        },
-        {
-          "fog_id": "30092840",
           "zone": "gelmir_grave"
         }
       ]
@@ -2887,10 +2727,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "gelmir_seethewatercave"
-        },
-        {
-          "fog_id": "31072840",
-          "zone": "gelmir_seethewatercave"
         }
       ],
       "exit_fogs": [
@@ -2900,10 +2736,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "gelmir_seethewatercave"
-        },
-        {
-          "fog_id": "31072840",
           "zone": "gelmir_seethewatercave"
         }
       ]
@@ -2951,10 +2783,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "gelmir_volcanocave"
-        },
-        {
-          "fog_id": "31092840",
-          "zone": "gelmir_volcanocave"
         }
       ],
       "exit_fogs": [
@@ -2964,10 +2792,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "gelmir_volcanocave"
-        },
-        {
-          "fog_id": "31092840",
           "zone": "gelmir_volcanocave"
         }
       ]
@@ -3015,10 +2839,6 @@
         {
           "fog_id": "AEG099_230_9001",
           "zone": "gelmir_wyndhamcatacombs"
-        },
-        {
-          "fog_id": "30072840",
-          "zone": "gelmir_wyndhamcatacombs"
         }
       ],
       "exit_fogs": [
@@ -3028,10 +2848,6 @@
         },
         {
           "fog_id": "AEG099_230_9001",
-          "zone": "gelmir_wyndhamcatacombs"
-        },
-        {
-          "fog_id": "30072840",
           "zone": "gelmir_wyndhamcatacombs"
         }
       ]
@@ -3093,10 +2909,6 @@
         },
         {
           "fog_id": "AEG099_001_9000",
-          "zone": "graveyard_grave"
-        },
-        {
-          "fog_id": "18002840",
           "zone": "graveyard_grave"
         }
       ]
@@ -3226,19 +3038,11 @@
         {
           "fog_id": "AEG099_001_9000",
           "zone": "graveyard_grave"
-        },
-        {
-          "fog_id": "18002840",
-          "zone": "graveyard_grave"
         }
       ],
       "exit_fogs": [
         {
           "fog_id": "AEG099_001_9000",
-          "zone": "graveyard_grave"
-        },
-        {
-          "fog_id": "18002840",
           "zone": "graveyard_grave"
         }
       ]
@@ -4339,10 +4143,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "limgrave_coastalcave"
-        },
-        {
-          "fog_id": "31152840",
-          "zone": "limgrave_coastalcave"
         }
       ],
       "exit_fogs": [
@@ -4352,10 +4152,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "limgrave_coastalcave"
-        },
-        {
-          "fog_id": "31152840",
           "zone": "limgrave_coastalcave"
         }
       ]
@@ -4459,14 +4255,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "limgrave_grovesidecave"
-        },
-        {
-          "fog_id": "31032840",
-          "zone": "limgrave_grovesidecave"
-        },
-        {
-          "fog_id": "755894511",
-          "zone": "limgrave_grovesidecave"
         }
       ],
       "exit_fogs": [
@@ -4476,14 +4264,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "limgrave_grovesidecave"
-        },
-        {
-          "fog_id": "31032840",
-          "zone": "limgrave_grovesidecave"
-        },
-        {
-          "fog_id": "755894511",
           "zone": "limgrave_grovesidecave"
         }
       ]
@@ -4531,14 +4311,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "limgrave_highroadcave"
-        },
-        {
-          "fog_id": "31172840",
-          "zone": "limgrave_highroadcave"
-        },
-        {
-          "fog_id": "755894517",
-          "zone": "limgrave_highroadcave"
         }
       ],
       "exit_fogs": [
@@ -4548,14 +4320,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "limgrave_highroadcave"
-        },
-        {
-          "fog_id": "31172840",
-          "zone": "limgrave_highroadcave"
-        },
-        {
-          "fog_id": "755894517",
           "zone": "limgrave_highroadcave"
         }
       ]
@@ -4603,14 +4367,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "limgrave_murkwatercatacombs"
-        },
-        {
-          "fog_id": "30042840",
-          "zone": "limgrave_murkwatercatacombs"
-        },
-        {
-          "fog_id": "755894523",
-          "zone": "limgrave_murkwatercatacombs"
         }
       ],
       "exit_fogs": [
@@ -4620,14 +4376,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "limgrave_murkwatercatacombs"
-        },
-        {
-          "fog_id": "30042840",
-          "zone": "limgrave_murkwatercatacombs"
-        },
-        {
-          "fog_id": "755894523",
           "zone": "limgrave_murkwatercatacombs"
         }
       ]
@@ -4708,14 +4456,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "limgrave_murkwatercave"
-        },
-        {
-          "fog_id": "31002840",
-          "zone": "limgrave_murkwatercave"
-        },
-        {
-          "fog_id": "755894510",
-          "zone": "limgrave_murkwatercave"
         }
       ],
       "exit_fogs": [
@@ -4725,14 +4465,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "limgrave_murkwatercave"
-        },
-        {
-          "fog_id": "31002840",
-          "zone": "limgrave_murkwatercave"
-        },
-        {
-          "fog_id": "755894510",
           "zone": "limgrave_murkwatercave"
         }
       ]
@@ -4752,14 +4484,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "limgrave_stormfootcatacombs"
-        },
-        {
-          "fog_id": "30022840",
-          "zone": "limgrave_stormfootcatacombs"
-        },
-        {
-          "fog_id": "755894522",
-          "zone": "limgrave_stormfootcatacombs"
         }
       ],
       "exit_fogs": [
@@ -4769,14 +4493,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "limgrave_stormfootcatacombs"
-        },
-        {
-          "fog_id": "30022840",
-          "zone": "limgrave_stormfootcatacombs"
-        },
-        {
-          "fog_id": "755894522",
           "zone": "limgrave_stormfootcatacombs"
         }
       ]
@@ -4849,10 +4565,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "limgrave_tunnels"
-        },
-        {
-          "fog_id": "32012840",
-          "zone": "limgrave_tunnels"
         }
       ],
       "exit_fogs": [
@@ -4862,10 +4574,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "limgrave_tunnels"
-        },
-        {
-          "fog_id": "32012840",
           "zone": "limgrave_tunnels"
         }
       ]
@@ -4961,14 +4669,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "liurnia_academycave"
-        },
-        {
-          "fog_id": "31062840",
-          "zone": "liurnia_academycave"
-        },
-        {
-          "fog_id": "755894514",
-          "zone": "liurnia_academycave"
         }
       ],
       "exit_fogs": [
@@ -4978,14 +4678,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "liurnia_academycave"
-        },
-        {
-          "fog_id": "31062840",
-          "zone": "liurnia_academycave"
-        },
-        {
-          "fog_id": "755894514",
           "zone": "liurnia_academycave"
         }
       ]
@@ -5045,10 +4737,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "liurnia_blackknifecatacombs"
-        },
-        {
-          "fog_id": "3005284030051840",
-          "zone": "liurnia_blackknifecatacombs"
         }
       ],
       "exit_fogs": [
@@ -5062,10 +4750,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "liurnia_blackknifecatacombs"
-        },
-        {
-          "fog_id": "3005284030051840",
           "zone": "liurnia_blackknifecatacombs"
         }
       ]
@@ -5141,14 +4825,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "liurnia_cliffbottomcatacombs"
-        },
-        {
-          "fog_id": "30062840",
-          "zone": "liurnia_cliffbottomcatacombs"
-        },
-        {
-          "fog_id": "755894524",
-          "zone": "liurnia_cliffbottomcatacombs"
         }
       ],
       "exit_fogs": [
@@ -5158,14 +4834,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "liurnia_cliffbottomcatacombs"
-        },
-        {
-          "fog_id": "30062840",
-          "zone": "liurnia_cliffbottomcatacombs"
-        },
-        {
-          "fog_id": "755894524",
           "zone": "liurnia_cliffbottomcatacombs"
         }
       ]
@@ -5345,10 +5013,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "liurnia_lakesidecave"
-        },
-        {
-          "fog_id": "755894513",
-          "zone": "liurnia_lakesidecave"
         }
       ],
       "exit_fogs": [
@@ -5358,10 +5022,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "liurnia_lakesidecave"
-        },
-        {
-          "fog_id": "755894513",
           "zone": "liurnia_lakesidecave"
         }
       ]
@@ -5465,10 +5125,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "liurnia_roadsendcatacombs"
-        },
-        {
-          "fog_id": "30032840",
-          "zone": "liurnia_roadsendcatacombs"
         }
       ],
       "exit_fogs": [
@@ -5478,10 +5134,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "liurnia_roadsendcatacombs"
-        },
-        {
-          "fog_id": "30032840",
           "zone": "liurnia_roadsendcatacombs"
         }
       ]
@@ -5549,14 +5201,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "liurnia_stillwatercave"
-        },
-        {
-          "fog_id": "31042840",
-          "zone": "liurnia_stillwatercave"
-        },
-        {
-          "fog_id": "755894512",
-          "zone": "liurnia_stillwatercave"
         }
       ],
       "exit_fogs": [
@@ -5566,14 +5210,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "liurnia_stillwatercave"
-        },
-        {
-          "fog_id": "31042840",
-          "zone": "liurnia_stillwatercave"
-        },
-        {
-          "fog_id": "755894512",
           "zone": "liurnia_stillwatercave"
         }
       ]
@@ -5647,10 +5283,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "liurnia_tunnel"
-        },
-        {
-          "fog_id": "32022840",
-          "zone": "liurnia_tunnel"
         }
       ],
       "exit_fogs": [
@@ -5660,10 +5292,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "liurnia_tunnel"
-        },
-        {
-          "fog_id": "32022840",
           "zone": "liurnia_tunnel"
         }
       ]
@@ -5836,14 +5464,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "mountaintops_catacombs"
-        },
-        {
-          "fog_id": "30182840",
-          "zone": "mountaintops_catacombs"
-        },
-        {
-          "fog_id": "755894526",
-          "zone": "mountaintops_catacombs"
         }
       ],
       "exit_fogs": [
@@ -5853,14 +5473,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "mountaintops_catacombs"
-        },
-        {
-          "fog_id": "30182840",
-          "zone": "mountaintops_catacombs"
-        },
-        {
-          "fog_id": "755894526",
           "zone": "mountaintops_catacombs"
         }
       ]
@@ -5908,10 +5520,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "mountaintops_cave"
-        },
-        {
-          "fog_id": "31222840",
-          "zone": "mountaintops_cave"
         }
       ],
       "exit_fogs": [
@@ -5921,10 +5529,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "mountaintops_cave"
-        },
-        {
-          "fog_id": "31222840",
           "zone": "mountaintops_cave"
         }
       ]
@@ -6140,10 +5744,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "outskirts_grave"
-        },
-        {
-          "fog_id": "30102840",
-          "zone": "outskirts_grave"
         }
       ],
       "exit_fogs": [
@@ -6153,10 +5753,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "outskirts_grave"
-        },
-        {
-          "fog_id": "30102840",
           "zone": "outskirts_grave"
         }
       ]
@@ -6173,19 +5769,11 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "outskirts_sealedtunnel"
-        },
-        {
-          "fog_id": "34122840",
-          "zone": "outskirts_sealedtunnel"
         }
       ],
       "exit_fogs": [
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "outskirts_sealedtunnel"
-        },
-        {
-          "fog_id": "34122840",
           "zone": "outskirts_sealedtunnel"
         },
         {
@@ -6272,10 +5860,6 @@
           "zone": "outskirts_sidetomb"
         },
         {
-          "fog_id": "30132840",
-          "zone": "outskirts_sidetomb"
-        },
-        {
           "fog_id": "30132210",
           "zone": "outskirts_sidetomb"
         },
@@ -6295,10 +5879,6 @@
         },
         {
           "fog_id": "AEG099_230_9502",
-          "zone": "outskirts_sidetomb"
-        },
-        {
-          "fog_id": "30132840",
           "zone": "outskirts_sidetomb"
         },
         {
@@ -6714,10 +6294,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "peninsula_earthborecave"
-        },
-        {
-          "fog_id": "31012840",
-          "zone": "peninsula_earthborecave"
         }
       ],
       "exit_fogs": [
@@ -6727,10 +6303,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "peninsula_earthborecave"
-        },
-        {
-          "fog_id": "31012840",
           "zone": "peninsula_earthborecave"
         }
       ]
@@ -6806,14 +6378,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "peninsula_impalerscatacombs"
-        },
-        {
-          "fog_id": "30012840",
-          "zone": "peninsula_impalerscatacombs"
-        },
-        {
-          "fog_id": "755894521",
-          "zone": "peninsula_impalerscatacombs"
         }
       ],
       "exit_fogs": [
@@ -6823,14 +6387,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "peninsula_impalerscatacombs"
-        },
-        {
-          "fog_id": "30012840",
-          "zone": "peninsula_impalerscatacombs"
-        },
-        {
-          "fog_id": "755894521",
           "zone": "peninsula_impalerscatacombs"
         }
       ]
@@ -6943,14 +6499,6 @@
         {
           "fog_id": "AEG099_230_9001",
           "zone": "peninsula_tombswardcatacombs"
-        },
-        {
-          "fog_id": "30002840",
-          "zone": "peninsula_tombswardcatacombs"
-        },
-        {
-          "fog_id": "755894520",
-          "zone": "peninsula_tombswardcatacombs"
         }
       ],
       "exit_fogs": [
@@ -6960,14 +6508,6 @@
         },
         {
           "fog_id": "AEG099_230_9001",
-          "zone": "peninsula_tombswardcatacombs"
-        },
-        {
-          "fog_id": "30002840",
-          "zone": "peninsula_tombswardcatacombs"
-        },
-        {
-          "fog_id": "755894520",
           "zone": "peninsula_tombswardcatacombs"
         }
       ]
@@ -7043,10 +6583,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "peninsula_tombswardcave"
-        },
-        {
-          "fog_id": "31022840",
-          "zone": "peninsula_tombswardcave"
         }
       ],
       "exit_fogs": [
@@ -7056,10 +6592,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "peninsula_tombswardcave"
-        },
-        {
-          "fog_id": "31022840",
           "zone": "peninsula_tombswardcave"
         }
       ]
@@ -7079,10 +6611,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "peninsula_tunnel"
-        },
-        {
-          "fog_id": "32002840",
-          "zone": "peninsula_tunnel"
         }
       ],
       "exit_fogs": [
@@ -7092,10 +6620,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "peninsula_tunnel"
-        },
-        {
-          "fog_id": "32002840",
           "zone": "peninsula_tunnel"
         }
       ]
@@ -7316,10 +6840,6 @@
         {
           "fog_id": "AEG099_230_9003",
           "zone": "sewer_catacombs"
-        },
-        {
-          "fog_id": "35002840",
-          "zone": "sewer_catacombs"
         }
       ],
       "exit_fogs": [
@@ -7329,10 +6849,6 @@
         },
         {
           "fog_id": "AEG099_230_9003",
-          "zone": "sewer_catacombs"
-        },
-        {
-          "fog_id": "35002840",
           "zone": "sewer_catacombs"
         }
       ]
@@ -7430,10 +6946,6 @@
           "unique": true
         },
         {
-          "fog_id": "12022200",
-          "zone": "siofra"
-        },
-        {
           "fog_id": "12082400",
           "zone": "siofra",
           "unique": true
@@ -7463,10 +6975,6 @@
         {
           "fog_id": "12022204",
           "zone": "siofra"
-        },
-        {
-          "fog_id": "12022200",
-          "zone": "siofra"
         }
       ],
       "exit_fogs": [
@@ -7492,10 +7000,6 @@
           "unique": true
         },
         {
-          "fog_id": "12022200",
-          "zone": "siofra"
-        },
-        {
           "fog_id": "12082400",
           "zone": "siofra",
           "unique": true
@@ -7516,10 +7020,6 @@
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9001",
-          "zone": "siofra_nokron"
-        },
-        {
-          "fog_id": "12022201",
           "zone": "siofra_nokron"
         },
         {
@@ -7550,20 +7050,12 @@
           "unique": true
         },
         {
-          "fog_id": "12022200",
-          "zone": "siofra"
-        },
-        {
           "fog_id": "12082400",
           "zone": "siofra",
           "unique": true
         },
         {
           "fog_id": "AEG099_002_9001",
-          "zone": "siofra_nokron"
-        },
-        {
-          "fog_id": "12022201",
           "zone": "siofra_nokron"
         },
         {
@@ -7852,14 +7344,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "snowfield_catacombs"
-        },
-        {
-          "fog_id": "755894527",
-          "zone": "snowfield_catacombs"
-        },
-        {
-          "fog_id": "30192840",
-          "zone": "snowfield_catacombs"
         }
       ],
       "exit_fogs": [
@@ -7869,14 +7353,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "snowfield_catacombs"
-        },
-        {
-          "fog_id": "755894527",
-          "zone": "snowfield_catacombs"
-        },
-        {
-          "fog_id": "30192840",
           "zone": "snowfield_catacombs"
         }
       ]
@@ -7924,10 +7400,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "snowfield_cave"
-        },
-        {
-          "fog_id": "31122840",
-          "zone": "snowfield_cave"
         }
       ],
       "exit_fogs": [
@@ -7937,10 +7409,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "snowfield_cave"
-        },
-        {
-          "fog_id": "31122840",
           "zone": "snowfield_cave"
         }
       ]
@@ -8016,10 +7484,6 @@
         {
           "fog_id": "AEG099_232_9000",
           "zone": "snowfield_hiddenpath"
-        },
-        {
-          "fog_id": "30202840",
-          "zone": "snowfield_hiddenpath"
         }
       ],
       "exit_fogs": [
@@ -8029,10 +7493,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "snowfield_hiddenpath"
-        },
-        {
-          "fog_id": "30202840",
           "zone": "snowfield_hiddenpath"
         }
       ]
@@ -8058,10 +7518,6 @@
         },
         {
           "fog_id": "AEG099_232_9000",
-          "zone": "snowfield_hiddenpath"
-        },
-        {
-          "fog_id": "30202840",
           "zone": "snowfield_hiddenpath"
         },
         {
@@ -8141,10 +7597,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "snowfield_tunnel"
-        },
-        {
-          "fog_id": "32112840",
-          "zone": "snowfield_tunnel"
         }
       ],
       "exit_fogs": [
@@ -8154,10 +7606,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "snowfield_tunnel"
-        },
-        {
-          "fog_id": "32112840",
           "zone": "snowfield_tunnel"
         }
       ]
@@ -8233,10 +7681,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "stormhill_catacombs"
-        },
-        {
-          "fog_id": "30112840",
-          "zone": "stormhill_catacombs"
         }
       ],
       "exit_fogs": [
@@ -8246,10 +7690,6 @@
         },
         {
           "fog_id": "AEG099_230_9000",
-          "zone": "stormhill_catacombs"
-        },
-        {
-          "fog_id": "30112840",
           "zone": "stormhill_catacombs"
         }
       ]
