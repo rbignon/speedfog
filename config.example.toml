@@ -39,6 +39,15 @@ min_layers = 6
 # Maximum number of layers.
 max_layers = 10
 
+# Probability of splitting into parallel branches at each layer.
+split_probability = 0.3
+
+# Probability of merging parallel branches back together.
+merge_probability = 0.3
+
+# Maximum number of branches when splitting.
+max_branches = 3
+
 [paths]
 # Path to Elden Ring installation.
 game_dir = "C:/Program Files/Steam/steamapps/common/ELDEN RING/Game"
@@ -46,8 +55,8 @@ game_dir = "C:/Program Files/Steam/steamapps/common/ELDEN RING/Game"
 # Output directory for generated mod files.
 output_dir = "./output"
 
-# Path to zone definitions file.
-zones_file = "./zones.toml"
+# Path to cluster definitions file.
+clusters_file = "./data/clusters.json"
 
 # Optional: Path to Enemy/Item Randomizer mod output.
 # If set, SpeedFog merges with this mod's EMEVD files as base.
