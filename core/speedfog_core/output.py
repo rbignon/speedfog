@@ -103,7 +103,14 @@ def _build_connection_lines(
 ) -> list[str]:
     """Build ASCII lines showing connections between two layers.
 
-    Uses actual DAG edges to determine which nodes connect.
+    Uses diagonal characters (╲ ╱) and box-drawing to show cross-connections.
+
+    Visual style for cross-connections (e.g., snowfield → both flamepeak and siofra):
+        caelid_gaolcave    snowfield_catacombs
+             │                  │ ╲
+             │    ╭─────────────╯  │
+             │    │                │
+        flamepeak_firegiant  siofra_nokron_mimic
 
     Args:
         dag: The DAG with edges
@@ -115,103 +122,230 @@ def _build_connection_lines(
     Returns:
         List of strings representing the connection lines
     """
-    # Build connection map: for each current node, which previous nodes connect to it
-    connections: dict[int, list[int]] = {i: [] for i in range(len(curr_node_ids))}
-
+    # Build edge list as (src_idx, tgt_idx) pairs
+    edges: list[tuple[int, int]] = []
     for edge in dag.edges:
         if edge.source_id in prev_node_ids and edge.target_id in curr_node_ids:
             src_idx = prev_node_ids.index(edge.source_id)
             tgt_idx = curr_node_ids.index(edge.target_id)
-            if src_idx not in connections[tgt_idx]:
-                connections[tgt_idx].append(src_idx)
+            if (src_idx, tgt_idx) not in edges:
+                edges.append((src_idx, tgt_idx))
 
-    # Sort connections for each target
-    for tgt_idx in connections:
-        connections[tgt_idx].sort()
-
-    # Build the connection lines
-    lines: list[str] = []
     n_prev = len(prev_node_ids)
     n_curr = len(curr_node_ids)
 
     # Calculate center positions for each column
     def col_center(idx: int, n_cols: int) -> int:
-        """Get the center position of a column."""
         cols_width = col_width * n_cols
         offset = (total_width - cols_width) // 2
         return offset + idx * col_width + col_width // 2
 
-    # Draw vertical lines from previous layer
-    line1_chars = [" "] * total_width
-    for i in range(n_prev):
-        pos = col_center(i, n_prev)
-        if 0 <= pos < total_width:
-            line1_chars[pos] = "│"
-    lines.append("".join(line1_chars))
+    prev_centers = [col_center(i, n_prev) for i in range(n_prev)]
+    curr_centers = [col_center(i, n_curr) for i in range(n_curr)]
 
-    # Determine connection pattern and draw appropriate symbols
-    # Check if this is a pure split, merge, or mixed
-    sources_used: set[int] = set()
-    for src_indices in connections.values():
-        sources_used.update(src_indices)
+    # Build maps for analysis
+    src_targets: dict[int, list[int]] = {i: [] for i in range(n_prev)}
+    tgt_sources: dict[int, list[int]] = {i: [] for i in range(n_curr)}
+    for src, tgt in edges:
+        src_targets[src].append(tgt)
+        tgt_sources[tgt].append(src)
 
-    # Draw horizontal connection line if needed
-    if n_prev != n_curr or any(len(srcs) > 1 for srcs in connections.values()):
-        # Need horizontal lines for splits/merges
-        line2_chars = [" "] * total_width
+    # Check if all connections are simple 1:1 at same positions
+    is_simple = (
+        n_prev == n_curr
+        and all(len(targets) == 1 for targets in src_targets.values())
+        and all(len(sources) == 1 for sources in tgt_sources.values())
+        and all(
+            prev_centers[src] == curr_centers[targets[0]]
+            for src, targets in src_targets.items()
+            if targets
+        )
+    )
 
-        # Find the range of horizontal connections needed
-        all_positions: list[int] = []
+    lines: list[str] = []
+
+    if is_simple:
+        # Simple case: just vertical lines
+        line_chars = [" "] * total_width
         for i in range(n_prev):
-            all_positions.append(col_center(i, n_prev))
-        for i in range(n_curr):
-            all_positions.append(col_center(i, n_curr))
-
-        min_pos = min(all_positions) if all_positions else 0
-        max_pos = max(all_positions) if all_positions else 0
-
-        # Draw horizontal line spanning all connections
-        for pos in range(min_pos, max_pos + 1):
-            line2_chars[pos] = "─"
-
-        # Place junction characters at source positions
-        for i in range(n_prev):
-            pos = col_center(i, n_prev)
+            pos = prev_centers[i]
             if 0 <= pos < total_width:
-                # Check if this source has multiple targets or is part of a merge
-                targets_from_src = sum(
-                    1 for tgt, srcs in connections.items() if i in srcs
-                )
-                if targets_from_src > 0:
-                    if pos == min_pos:
-                        line2_chars[pos] = "└"
-                    elif pos == max_pos:
-                        line2_chars[pos] = "┘"
-                    else:
-                        line2_chars[pos] = "┴"
+                line_chars[pos] = "│"
+        lines.append("".join(line_chars))
+        return lines
 
-        # Place junction characters at target positions
-        for i in range(n_curr):
-            pos = col_center(i, n_curr)
-            if 0 <= pos < total_width:
-                num_sources = len(connections[i])
-                if num_sources > 0:
-                    if pos == min_pos:
-                        line2_chars[pos] = "┌"
-                    elif pos == max_pos:
-                        line2_chars[pos] = "┐"
-                    else:
-                        line2_chars[pos] = "┬"
+    # Complex case with cross-connections
+    # Identify diagonal connections (source goes to target in different column)
+    diagonals: list[
+        tuple[int, int, int, int]
+    ] = []  # (src_idx, tgt_idx, src_pos, tgt_pos)
+    for src_idx, targets in src_targets.items():
+        src_pos = prev_centers[src_idx]
+        for tgt_idx in targets:
+            tgt_pos = curr_centers[tgt_idx]
+            if src_pos != tgt_pos:
+                diagonals.append((src_idx, tgt_idx, src_pos, tgt_pos))
 
-        lines.append("".join(line2_chars))
+    # Row 1: Vertical lines from sources
+    # Always show │ at source position if it goes anywhere
+    # If source splits (goes to multiple targets), show extra │ at offset for diagonals
+    row1 = [" "] * total_width
+    for src_idx in range(n_prev):
+        src_pos = prev_centers[src_idx]
+        targets = src_targets[src_idx]
+        if not targets:
+            continue
 
-    # Draw vertical lines to current layer
-    line3_chars = [" "] * total_width
-    for i in range(n_curr):
-        pos = col_center(i, n_curr)
-        if 0 <= pos < total_width:
-            line3_chars[pos] = "│"
-    lines.append("".join(line3_chars))
+        has_straight = any(curr_centers[t] == src_pos for t in targets)
+        has_diagonal = any(curr_centers[t] != src_pos for t in targets)
+        is_split = len(targets) > 1  # Source goes to multiple targets
+
+        # Show │ at source position if straight connection
+        if has_straight and 0 <= src_pos < total_width:
+            row1[src_pos] = "│"
+
+        if has_diagonal:
+            if is_split:
+                # Split: show extra │ at offset for diagonal paths
+                for tgt_idx in targets:
+                    tgt_pos = curr_centers[tgt_idx]
+                    if tgt_pos < src_pos:
+                        extra_pos = src_pos - 2
+                        if 0 <= extra_pos < total_width and row1[extra_pos] == " ":
+                            row1[extra_pos] = "│"
+                    elif tgt_pos > src_pos:
+                        extra_pos = src_pos + 2
+                        if 0 <= extra_pos < total_width and row1[extra_pos] == " ":
+                            row1[extra_pos] = "│"
+            else:
+                # Single diagonal (merge or 1:1 diagonal): show │ at source position
+                if 0 <= src_pos < total_width and row1[src_pos] == " ":
+                    row1[src_pos] = "│"
+
+    lines.append("".join(row1))
+
+    # Row 2: Horizontal routing with corners
+    row2 = [" "] * total_width
+
+    # For each diagonal, draw the horizontal portion with corners
+    for src_idx, tgt_idx, src_pos, tgt_pos in diagonals:
+        is_split = len(src_targets[src_idx]) > 1  # Source splits to multiple targets
+        is_merge = (
+            len(tgt_sources[tgt_idx]) > 1
+        )  # Target receives from multiple sources
+
+        if is_split:
+            # Split case: source has offset │ in row1, corner lands at offset
+            if tgt_pos < src_pos:
+                # Goes left: ╭ at target, ─── horizontal, ╯ at offset
+                landing_pos = src_pos - 2
+                if 0 <= landing_pos < total_width:
+                    row2[landing_pos] = "╯"
+                # Horizontal bar from target+1 to landing
+                for p in range(tgt_pos + 1, landing_pos):
+                    if 0 <= p < total_width and row2[p] == " ":
+                        row2[p] = "─"
+            else:
+                # Goes right: ╰ at offset, ─── horizontal, ╮ at target
+                landing_pos = src_pos + 2
+                if 0 <= landing_pos < total_width:
+                    row2[landing_pos] = "╰"
+                # Horizontal bar from landing+1 to target
+                for p in range(landing_pos + 1, tgt_pos):
+                    if 0 <= p < total_width and row2[p] == " ":
+                        row2[p] = "─"
+        else:
+            # Non-split (merge or 1:1): corner at source position
+            if tgt_pos < src_pos:
+                # Goes left: ╯ at source
+                if 0 <= src_pos < total_width:
+                    row2[src_pos] = "╯"
+                for p in range(tgt_pos + 1, src_pos):
+                    if 0 <= p < total_width and row2[p] == " ":
+                        row2[p] = "─"
+            else:
+                # Goes right: ╰ at source
+                if 0 <= src_pos < total_width:
+                    row2[src_pos] = "╰"
+                for p in range(src_pos + 1, tgt_pos):
+                    if 0 <= p < total_width and row2[p] == " ":
+                        row2[p] = "─"
+
+        # Handle target position corner/junction
+        if 0 <= tgt_pos < total_width:
+            has_straight_incoming = any(
+                prev_centers[s] == tgt_pos for s in tgt_sources[tgt_idx]
+            )
+            from_left = tgt_pos > src_pos
+            from_right = tgt_pos < src_pos
+
+            # Check existing character and merge appropriately
+            existing = row2[tgt_pos]
+            if has_straight_incoming:
+                if from_right and existing in [" ", "│"]:
+                    row2[tgt_pos] = "├"
+                elif from_left and existing in [" ", "│"]:
+                    row2[tgt_pos] = "┤"
+                elif existing == "─":
+                    row2[tgt_pos] = "┬"
+            elif is_merge and not is_split:
+                # Pure merge (no straight incoming)
+                if existing == "─":
+                    row2[tgt_pos] = "┬"
+                elif existing == " ":
+                    row2[tgt_pos] = "┬"
+            else:
+                # Single diagonal incoming
+                if existing == " ":
+                    row2[tgt_pos] = "╭" if from_right else "╮"
+
+    # Add vertical lines for straight-down connections
+    for tgt_idx in range(n_curr):
+        tgt_pos = curr_centers[tgt_idx]
+        sources = tgt_sources[tgt_idx]
+        if not sources:
+            continue
+
+        has_straight = any(prev_centers[s] == tgt_pos for s in sources)
+        has_diagonal = any(prev_centers[s] != tgt_pos for s in sources)
+
+        if 0 <= tgt_pos < total_width:
+            if has_straight and has_diagonal:
+                if row2[tgt_pos] == "╭":
+                    row2[tgt_pos] = "├"
+                elif row2[tgt_pos] == "╮":
+                    row2[tgt_pos] = "┤"
+                elif row2[tgt_pos] == "─":
+                    row2[tgt_pos] = "┬"
+                elif row2[tgt_pos] == " ":
+                    row2[tgt_pos] = "│"
+            elif has_straight:
+                if row2[tgt_pos] == " ":
+                    row2[tgt_pos] = "│"
+                elif row2[tgt_pos] == "─":
+                    row2[tgt_pos] = "┬"
+
+    # Also add verticals for sources that go straight down
+    for src_idx in range(n_prev):
+        src_pos = prev_centers[src_idx]
+        targets = src_targets[src_idx]
+        has_straight = any(curr_centers[t] == src_pos for t in targets)
+        if has_straight and 0 <= src_pos < total_width:
+            if row2[src_pos] == " ":
+                row2[src_pos] = "│"
+            elif row2[src_pos] == "─":
+                row2[src_pos] = "┼"
+
+    lines.append("".join(row2))
+
+    # Row 3: Vertical lines going down to targets
+    row3 = [" "] * total_width
+    for tgt_idx in range(n_curr):
+        tgt_pos = curr_centers[tgt_idx]
+        if tgt_sources[tgt_idx]:
+            if 0 <= tgt_pos < total_width:
+                row3[tgt_pos] = "│"
+    lines.append("".join(row3))
 
     return lines
 
