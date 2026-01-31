@@ -115,7 +115,11 @@ class Dag:
         return [e for e in self.edges if e.target_id == node_id]
 
     def enumerate_paths(self) -> list[list[str]]:
-        """Enumerate all paths from start to end.
+        """Enumerate all unique paths from start to end.
+
+        A path is a sequence of node IDs. Multiple edges between the same
+        pair of nodes (different fog gates) are treated as a single connection
+        for path enumeration purposes.
 
         Returns:
             List of paths, where each path is a list of node IDs.
@@ -131,8 +135,10 @@ class Dag:
             if node_id == self.end_id:
                 paths.append(current_path)
                 return
-            for edge in self.get_outgoing_edges(node_id):
-                dfs(edge.target_id, current_path)
+            # Get unique target nodes (ignore multiple edges to same target)
+            targets = {edge.target_id for edge in self.get_outgoing_edges(node_id)}
+            for target_id in sorted(targets):
+                dfs(target_id, current_path)
 
         dfs(self.start_id, [])
         return paths
