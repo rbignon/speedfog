@@ -653,7 +653,34 @@ def get_major_zones(
     return major_zones
 
 
-def get_zone_type(area: AreaData, major_zones: set[str] | None = None) -> str:
+def get_fortress_zones(warps: list[FogData]) -> set[str]:
+    """
+    Get zones with 'fortressonly legacy' warps.
+
+    These are mini-fortresses that should be treated as legacy dungeons:
+    - Caria Manor (liurnia_manor)
+    - Shaded Castle (altus_shaded)
+    - Castle Redmane (caelid_redmane)
+    - Castle Sol (mountaintops_sol)
+    """
+    fortress_zones: set[str] = set()
+
+    for fog in warps:
+        tags_lower = [t.lower() for t in fog.tags]
+        if "fortressonly" in tags_lower and "legacy" in tags_lower:
+            if fog.aside.area:
+                fortress_zones.add(fog.aside.area)
+            if fog.bside.area:
+                fortress_zones.add(fog.bside.area)
+
+    return fortress_zones
+
+
+def get_zone_type(
+    area: AreaData,
+    major_zones: set[str] | None = None,
+    fortress_zones: set[str] | None = None,
+) -> str:
     """
     Derive zone type from area data.
 
@@ -662,13 +689,15 @@ def get_zone_type(area: AreaData, major_zones: set[str] | None = None) -> str:
     - "final_boss": End zone (leyndell_erdtree, leyndell2_erdtree)
     - "major_boss": Boss arena with major fog gate (Godrick, Margit, etc.)
     - "boss_arena": Boss arena without major fog gate (evergaols, minidungeon bosses)
-    - "legacy_dungeon": Large dungeons (Stormveil, Academy, etc.)
+    - "legacy_dungeon": Large dungeons (Stormveil, Academy, mini-fortresses)
     - "mini_dungeon": Catacombs, caves, tunnels, gaols
-    - "underground": Underground areas (Siofra, Ainsel, Deeproot, Mohgwyn)
+    - "underground": Underground areas (Siofra, Ainsel, Deeproot, Mohgwyn) - filtered out
     - "other": Unclassified (divine towers, overworld tiles, colosseums)
     """
     if major_zones is None:
         major_zones = set()
+    if fortress_zones is None:
+        fortress_zones = set()
 
     tags_lower = {t.lower() for t in area.tags}
     name_lower = area.name.lower()
@@ -685,6 +714,10 @@ def get_zone_type(area: AreaData, major_zones: set[str] | None = None) -> str:
         if area.name in major_zones:
             return "major_boss"
         return "boss_arena"
+
+    # Mini-fortresses (Caria Manor, Shaded Castle, Castle Redmane, Castle Sol)
+    if area.name in fortress_zones:
+        return "legacy_dungeon"
 
     if not area.maps:
         return "other"  # No maps = unknown
@@ -773,6 +806,7 @@ def filter_and_enrich_clusters(
     areas: dict[str, AreaData],
     metadata: dict,
     major_zones: set[str],
+    fortress_zones: set[str],
     exclude_dlc: bool,
     exclude_overworld: bool,
 ) -> list[Cluster]:
@@ -783,6 +817,7 @@ def filter_and_enrich_clusters(
     - Clusters with DLC zones (if exclude_dlc)
     - Clusters with overworld zones (if exclude_overworld)
     - Clusters with no entry_fogs or no exit_fogs
+    - Underground clusters (large empty exploration areas)
     """
     filtered: list[Cluster] = []
 
@@ -806,15 +841,21 @@ def filter_and_enrich_clusters(
         # Determine cluster type (from primary zone)
         primary_zone = sorted(cluster.zones)[0]
         if primary_zone in areas:
-            cluster.cluster_type = get_zone_type(areas[primary_zone], major_zones)
+            cluster.cluster_type = get_zone_type(
+                areas[primary_zone], major_zones, fortress_zones
+            )
         else:
             cluster.cluster_type = "unknown"
+
+        # Skip underground clusters (large empty exploration areas)
+        if cluster.cluster_type == "underground":
+            continue
 
         # Calculate total weight
         total_weight = 0
         for zone_name in cluster.zones:
             if zone_name in areas:
-                zone_type = get_zone_type(areas[zone_name], major_zones)
+                zone_type = get_zone_type(areas[zone_name], major_zones, fortress_zones)
                 total_weight += get_zone_weight(zone_name, zone_type, metadata)
             else:
                 total_weight += 4  # Default weight
@@ -961,6 +1002,11 @@ def main() -> int:
     if args.verbose:
         print(f"  Major boss zones: {len(major_zones)}")
 
+    # Identify fortress zones (mini-fortresses with fortressonly legacy warps)
+    fortress_zones = get_fortress_zones(warps)
+    if args.verbose:
+        print(f"  Fortress zones: {len(fortress_zones)}")
+
     # Generate clusters
     print("Generating clusters...")
     clusters = generate_clusters(zones_to_process, world_graph)
@@ -976,7 +1022,13 @@ def main() -> int:
     # Filter and enrich
     print("Filtering and enriching clusters...")
     clusters = filter_and_enrich_clusters(
-        clusters, areas, metadata, major_zones, exclude_dlc, exclude_overworld
+        clusters,
+        areas,
+        metadata,
+        major_zones,
+        fortress_zones,
+        exclude_dlc,
+        exclude_overworld,
     )
     print(f"  Final cluster count: {len(clusters)}")
 

@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "generated_from": "fog.txt",
-  "cluster_count": 275,
+  "cluster_count": 256,
   "clusters": [
     {
       "id": "academy_2a8a",
@@ -227,65 +227,6 @@
       ]
     },
     {
-      "id": "ainsel_253f",
-      "zones": [
-        "ainsel",
-        "lakeofrot"
-      ],
-      "type": "underground",
-      "weight": 12,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_231_9002",
-          "zone": "ainsel"
-        },
-        {
-          "fog_id": "12012504",
-          "zone": "ainsel"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_231_9002",
-          "zone": "ainsel"
-        },
-        {
-          "fog_id": "12042506",
-          "zone": "lakeofrot",
-          "unique": true
-        }
-      ]
-    },
-    {
-      "id": "ainsel_abovestart_fccd",
-      "zones": [
-        "ainsel_abovestart",
-        "ainsel_start"
-      ],
-      "type": "underground",
-      "weight": 12,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_231_9002",
-          "zone": "ainsel_abovestart"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_231_9002",
-          "zone": "ainsel_abovestart"
-        },
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "ainsel_start"
-        },
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "ainsel_start"
-        }
-      ]
-    },
-    {
       "id": "ainsel_boss_6bdb",
       "zones": [
         "ainsel_boss"
@@ -338,106 +279,6 @@
         {
           "fog_id": "AEG099_002_9001",
           "zone": "ainsel_dragonkin"
-        }
-      ]
-    },
-    {
-      "id": "ainsel_postboss_2520",
-      "zones": [
-        "ainsel_postboss"
-      ],
-      "type": "underground",
-      "weight": 6,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9001",
-          "zone": "ainsel_postboss"
-        },
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "ainsel_postboss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9001",
-          "zone": "ainsel_postboss"
-        },
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "ainsel_postboss"
-        }
-      ]
-    },
-    {
-      "id": "ainsel_postdragonkin_1dd6",
-      "zones": [
-        "ainsel_postdragonkin"
-      ],
-      "type": "underground",
-      "weight": 6,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9001",
-          "zone": "ainsel_postdragonkin"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9001",
-          "zone": "ainsel_postdragonkin"
-        }
-      ]
-    },
-    {
-      "id": "ainsel_preboss_68ed",
-      "zones": [
-        "ainsel_preboss"
-      ],
-      "type": "underground",
-      "weight": 6,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "ainsel_preboss"
-        },
-        {
-          "fog_id": "12042506",
-          "zone": "ainsel_preboss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "ainsel_preboss"
-        }
-      ]
-    },
-    {
-      "id": "ainsel_start_3de5",
-      "zones": [
-        "ainsel_start"
-      ],
-      "type": "underground",
-      "weight": 6,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "ainsel_start"
-        },
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "ainsel_start"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "ainsel_start"
-        },
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "ainsel_start"
         }
       ]
     },
@@ -858,8 +699,8 @@
       "zones": [
         "altus_shaded"
       ],
-      "type": "other",
-      "weight": 2,
+      "type": "legacy_dungeon",
+      "weight": 10,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -1577,8 +1418,8 @@
       "zones": [
         "caelid_redmane"
       ],
-      "type": "other",
-      "weight": 2,
+      "type": "legacy_dungeon",
+      "weight": 10,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -1994,67 +1835,6 @@
         {
           "fog_id": "12052021",
           "zone": "chapel_start",
-          "unique": true
-        }
-      ]
-    },
-    {
-      "id": "deeproot_6a71",
-      "zones": [
-        "deeproot",
-        "deeproot_start",
-        "sewer_flame",
-        "sewer_preflame"
-      ],
-      "type": "underground",
-      "weight": 20,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "sewer_preflame"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "deeproot"
-        },
-        {
-          "fog_id": "12012504",
-          "zone": "deeproot",
-          "unique": true
-        },
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "sewer_preflame"
-        }
-      ]
-    },
-    {
-      "id": "deeproot_bd58",
-      "zones": [
-        "deeproot"
-      ],
-      "type": "underground",
-      "weight": 6,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "deeproot"
-        },
-        {
-          "fog_id": "12032502",
-          "zone": "deeproot"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "deeproot"
-        },
-        {
-          "fog_id": "12012504",
-          "zone": "deeproot",
           "unique": true
         }
       ]
@@ -5059,8 +4839,8 @@
       "zones": [
         "liurnia_manor"
       ],
-      "type": "other",
-      "weight": 2,
+      "type": "legacy_dungeon",
+      "weight": 10,
       "entry_fogs": [
         {
           "fog_id": "AEG099_003_9000",
@@ -5325,34 +5105,6 @@
       ]
     },
     {
-      "id": "mohgwyn_9ac0",
-      "zones": [
-        "mohgwyn"
-      ],
-      "type": "underground",
-      "weight": 6,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "mohgwyn"
-        },
-        {
-          "fog_id": "12052020",
-          "zone": "mohgwyn"
-        },
-        {
-          "fog_id": "12052021",
-          "zone": "mohgwyn"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "mohgwyn"
-        }
-      ]
-    },
-    {
       "id": "mohgwyn_boss_e1a8",
       "zones": [
         "mohgwyn_boss"
@@ -5390,34 +5142,6 @@
           "fog_id": "2046402020",
           "zone": "mohgwyn_boss",
           "unique": true
-        }
-      ]
-    },
-    {
-      "id": "mohgwyn_postboss_f6fa",
-      "zones": [
-        "mohgwyn_postboss"
-      ],
-      "type": "underground",
-      "weight": 6,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "mohgwyn_postboss"
-        },
-        {
-          "fog_id": "AEG099_001_9001",
-          "zone": "mohgwyn_postboss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "mohgwyn_postboss"
-        },
-        {
-          "fog_id": "AEG099_001_9001",
-          "zone": "mohgwyn_postboss"
         }
       ]
     },
@@ -5594,8 +5318,8 @@
       "zones": [
         "mountaintops_sol"
       ],
-      "type": "other",
-      "weight": 2,
+      "type": "legacy_dungeon",
+      "weight": 10,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -6910,171 +6634,6 @@
       ]
     },
     {
-      "id": "siofra_7595",
-      "zones": [
-        "siofra",
-        "siofra_dragonkin"
-      ],
-      "type": "underground",
-      "weight": 12,
-      "entry_fogs": [
-        {
-          "fog_id": "12022205",
-          "zone": "siofra_dragonkin"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_230_9001",
-          "zone": "siofra"
-        },
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "siofra"
-        },
-        {
-          "fog_id": "12022203",
-          "zone": "siofra"
-        },
-        {
-          "fog_id": "12022204",
-          "zone": "siofra"
-        },
-        {
-          "fog_id": "12022205",
-          "zone": "siofra",
-          "unique": true
-        },
-        {
-          "fog_id": "12082400",
-          "zone": "siofra",
-          "unique": true
-        }
-      ]
-    },
-    {
-      "id": "siofra_8368",
-      "zones": [
-        "siofra"
-      ],
-      "type": "underground",
-      "weight": 6,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_230_9001",
-          "zone": "siofra"
-        },
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "siofra"
-        },
-        {
-          "fog_id": "12022203",
-          "zone": "siofra"
-        },
-        {
-          "fog_id": "12022204",
-          "zone": "siofra"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_230_9001",
-          "zone": "siofra"
-        },
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "siofra"
-        },
-        {
-          "fog_id": "12022203",
-          "zone": "siofra"
-        },
-        {
-          "fog_id": "12022204",
-          "zone": "siofra"
-        },
-        {
-          "fog_id": "12022205",
-          "zone": "siofra",
-          "unique": true
-        },
-        {
-          "fog_id": "12082400",
-          "zone": "siofra",
-          "unique": true
-        }
-      ]
-    },
-    {
-      "id": "siofra_8a39",
-      "zones": [
-        "siofra",
-        "siofra_dragonkin",
-        "siofra_nokron",
-        "siofra_nokron_aqueduct",
-        "siofra_nokron_grounds"
-      ],
-      "type": "underground",
-      "weight": 30,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9001",
-          "zone": "siofra_nokron"
-        },
-        {
-          "fog_id": "12022670",
-          "zone": "siofra_nokron"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_230_9001",
-          "zone": "siofra"
-        },
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "siofra"
-        },
-        {
-          "fog_id": "12022203",
-          "zone": "siofra"
-        },
-        {
-          "fog_id": "12022204",
-          "zone": "siofra"
-        },
-        {
-          "fog_id": "12022205",
-          "zone": "siofra",
-          "unique": true
-        },
-        {
-          "fog_id": "12082400",
-          "zone": "siofra",
-          "unique": true
-        },
-        {
-          "fog_id": "AEG099_002_9001",
-          "zone": "siofra_nokron"
-        },
-        {
-          "fog_id": "12092400",
-          "zone": "siofra_nokron",
-          "unique": true
-        },
-        {
-          "fog_id": "AEG099_002_9002",
-          "zone": "siofra_nokron_aqueduct"
-        },
-        {
-          "fog_id": "12022670",
-          "zone": "siofra_nokron_grounds",
-          "unique": true
-        }
-      ]
-    },
-    {
       "id": "siofra_boss_c9b0",
       "zones": [
         "siofra_boss"
@@ -7099,51 +6658,6 @@
         {
           "fog_id": "12022200",
           "zone": "siofra_boss"
-        }
-      ]
-    },
-    {
-      "id": "siofra_nokron_aboveaqueduct_96cb",
-      "zones": [
-        "siofra_nokron_aboveaqueduct",
-        "siofra_nokron_aqueduct"
-      ],
-      "type": "underground",
-      "weight": 12,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9003",
-          "zone": "siofra_nokron_aboveaqueduct"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9003",
-          "zone": "siofra_nokron_aboveaqueduct"
-        },
-        {
-          "fog_id": "AEG099_002_9002",
-          "zone": "siofra_nokron_aqueduct"
-        }
-      ]
-    },
-    {
-      "id": "siofra_nokron_aqueduct_f646",
-      "zones": [
-        "siofra_nokron_aqueduct"
-      ],
-      "type": "underground",
-      "weight": 6,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9002",
-          "zone": "siofra_nokron_aqueduct"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9002",
-          "zone": "siofra_nokron_aqueduct"
         }
       ]
     },
@@ -7233,99 +6747,6 @@
         {
           "fog_id": "AEG099_002_9001",
           "zone": "siofra_nokron_mimic"
-        }
-      ]
-    },
-    {
-      "id": "siofra_nokron_preboss_4086",
-      "zones": [
-        "siofra_nokron_preboss"
-      ],
-      "type": "underground",
-      "weight": 6,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "siofra_nokron_preboss"
-        },
-        {
-          "fog_id": "12092400",
-          "zone": "siofra_nokron_preboss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "siofra_nokron_preboss"
-        }
-      ]
-    },
-    {
-      "id": "siofra_preboss_11c4",
-      "zones": [
-        "siofra_preboss"
-      ],
-      "type": "underground",
-      "weight": 6,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "siofra_preboss"
-        },
-        {
-          "fog_id": "12082400",
-          "zone": "siofra_preboss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "siofra_preboss"
-        }
-      ]
-    },
-    {
-      "id": "siofrabank_nokron_8ec9",
-      "zones": [
-        "siofrabank_nokron"
-      ],
-      "type": "underground",
-      "weight": 6,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "siofrabank_nokron"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "siofrabank_nokron"
-        }
-      ]
-    },
-    {
-      "id": "siofrabank_nokron_e3f3",
-      "zones": [
-        "siofrabank_nokron",
-        "siofrabank_prenokron"
-      ],
-      "type": "underground",
-      "weight": 12,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_231_9000",
-          "zone": "siofrabank_prenokron"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "siofrabank_nokron"
-        },
-        {
-          "fog_id": "AEG099_231_9000",
-          "zone": "siofrabank_prenokron"
         }
       ]
     },
