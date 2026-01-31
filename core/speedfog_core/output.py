@@ -94,6 +94,128 @@ def export_json(dag: Dag, output_path: Path) -> None:
         json.dump(data, f, indent=2)
 
 
+def _build_connection_lines(
+    dag: Dag,
+    prev_node_ids: list[str],
+    curr_node_ids: list[str],
+    col_width: int,
+    total_width: int,
+) -> list[str]:
+    """Build ASCII lines showing connections between two layers.
+
+    Uses actual DAG edges to determine which nodes connect.
+
+    Args:
+        dag: The DAG with edges
+        prev_node_ids: Sorted node IDs in the previous layer
+        curr_node_ids: Sorted node IDs in the current layer
+        col_width: Width of each column
+        total_width: Total width of the output
+
+    Returns:
+        List of strings representing the connection lines
+    """
+    # Build connection map: for each current node, which previous nodes connect to it
+    connections: dict[int, list[int]] = {i: [] for i in range(len(curr_node_ids))}
+
+    for edge in dag.edges:
+        if edge.source_id in prev_node_ids and edge.target_id in curr_node_ids:
+            src_idx = prev_node_ids.index(edge.source_id)
+            tgt_idx = curr_node_ids.index(edge.target_id)
+            if src_idx not in connections[tgt_idx]:
+                connections[tgt_idx].append(src_idx)
+
+    # Sort connections for each target
+    for tgt_idx in connections:
+        connections[tgt_idx].sort()
+
+    # Build the connection lines
+    lines: list[str] = []
+    n_prev = len(prev_node_ids)
+    n_curr = len(curr_node_ids)
+
+    # Calculate center positions for each column
+    def col_center(idx: int, n_cols: int) -> int:
+        """Get the center position of a column."""
+        cols_width = col_width * n_cols
+        offset = (total_width - cols_width) // 2
+        return offset + idx * col_width + col_width // 2
+
+    # Draw vertical lines from previous layer
+    line1_chars = [" "] * total_width
+    for i in range(n_prev):
+        pos = col_center(i, n_prev)
+        if 0 <= pos < total_width:
+            line1_chars[pos] = "│"
+    lines.append("".join(line1_chars))
+
+    # Determine connection pattern and draw appropriate symbols
+    # Check if this is a pure split, merge, or mixed
+    sources_used: set[int] = set()
+    for src_indices in connections.values():
+        sources_used.update(src_indices)
+
+    # Draw horizontal connection line if needed
+    if n_prev != n_curr or any(len(srcs) > 1 for srcs in connections.values()):
+        # Need horizontal lines for splits/merges
+        line2_chars = [" "] * total_width
+
+        # Find the range of horizontal connections needed
+        all_positions: list[int] = []
+        for i in range(n_prev):
+            all_positions.append(col_center(i, n_prev))
+        for i in range(n_curr):
+            all_positions.append(col_center(i, n_curr))
+
+        min_pos = min(all_positions) if all_positions else 0
+        max_pos = max(all_positions) if all_positions else 0
+
+        # Draw horizontal line spanning all connections
+        for pos in range(min_pos, max_pos + 1):
+            line2_chars[pos] = "─"
+
+        # Place junction characters at source positions
+        for i in range(n_prev):
+            pos = col_center(i, n_prev)
+            if 0 <= pos < total_width:
+                # Check if this source has multiple targets or is part of a merge
+                targets_from_src = sum(
+                    1 for tgt, srcs in connections.items() if i in srcs
+                )
+                if targets_from_src > 0:
+                    if pos == min_pos:
+                        line2_chars[pos] = "└"
+                    elif pos == max_pos:
+                        line2_chars[pos] = "┘"
+                    else:
+                        line2_chars[pos] = "┴"
+
+        # Place junction characters at target positions
+        for i in range(n_curr):
+            pos = col_center(i, n_curr)
+            if 0 <= pos < total_width:
+                num_sources = len(connections[i])
+                if num_sources > 0:
+                    if pos == min_pos:
+                        line2_chars[pos] = "┌"
+                    elif pos == max_pos:
+                        line2_chars[pos] = "┐"
+                    else:
+                        line2_chars[pos] = "┬"
+
+        lines.append("".join(line2_chars))
+
+    # Draw vertical lines to current layer
+    line3_chars = [" "] * total_width
+    for i in range(n_curr):
+        pos = col_center(i, n_curr)
+        if 0 <= pos < total_width:
+            line3_chars[pos] = "│"
+    lines.append("".join(line3_chars))
+
+    return lines
+
+
 def export_spoiler_log(dag: Dag, output_path: Path) -> None:
     """Export human-readable spoiler log with ASCII graph visualization.
 
@@ -120,8 +242,10 @@ def export_spoiler_log(dag: Dag, output_path: Path) -> None:
             nodes_by_layer[layer] = []
         nodes_by_layer[layer].append(node_id)
 
-    # Sort layers
+    # Sort layers and node IDs within each layer
     sorted_layers = sorted(nodes_by_layer.keys())
+    for layer in sorted_layers:
+        nodes_by_layer[layer] = sorted(nodes_by_layer[layer])
 
     # Fixed column width and name truncation for consistent alignment
     col_width = 24
@@ -133,38 +257,21 @@ def export_spoiler_log(dag: Dag, output_path: Path) -> None:
 
     # Build ASCII graph visualization
     for layer_idx, layer in enumerate(sorted_layers):
-        node_ids = sorted(nodes_by_layer[layer])
+        node_ids = nodes_by_layer[layer]
         n_nodes = len(node_ids)
 
-        # Draw connection lines from previous layer
+        # Calculate offset to center this layer's columns
+        layer_width = col_width * n_nodes
+        offset = (total_width - layer_width) // 2
+
+        # Draw connection lines from previous layer using actual edges
         if layer_idx > 0:
             prev_layer = sorted_layers[layer_idx - 1]
-            prev_count = len(nodes_by_layer[prev_layer])
-
-            if prev_count < n_nodes:
-                # Split: draw branching lines
-                split_sym = (
-                    "┌"
-                    + "─" * (col_width // 2 - 1)
-                    + "┴"
-                    + "─" * (col_width // 2 - 1)
-                    + "┐"
-                )
-                lines.append(split_sym.center(total_width))
-            elif prev_count > n_nodes:
-                # Merge: draw converging lines
-                merge_sym = (
-                    "└"
-                    + "─" * (col_width // 2 - 1)
-                    + "┬"
-                    + "─" * (col_width // 2 - 1)
-                    + "┘"
-                )
-                lines.append(merge_sym.center(total_width))
-            else:
-                # Continue: straight lines for each branch
-                pipe_line = "".join("│".center(col_width) for _ in range(n_nodes))
-                lines.append(pipe_line.center(total_width))
+            prev_node_ids = nodes_by_layer[prev_layer]
+            connection_lines = _build_connection_lines(
+                dag, prev_node_ids, node_ids, col_width, total_width
+            )
+            lines.extend(connection_lines)
 
         # Draw cluster names (truncated)
         name_parts = []
@@ -172,7 +279,8 @@ def export_spoiler_log(dag: Dag, output_path: Path) -> None:
             node = dag.nodes[node_id]
             name = node.cluster.id[:max_name_len]
             name_parts.append(name.center(col_width))
-        lines.append("".join(name_parts).center(total_width))
+        name_line = " " * offset + "".join(name_parts)
+        lines.append(name_line)
 
         # Draw cluster type
         type_parts = []
@@ -180,7 +288,8 @@ def export_spoiler_log(dag: Dag, output_path: Path) -> None:
             node = dag.nodes[node_id]
             type_str = f"[{node.cluster.type}]"
             type_parts.append(type_str.center(col_width))
-        lines.append("".join(type_parts).center(total_width))
+        type_line = " " * offset + "".join(type_parts)
+        lines.append(type_line)
 
         # Draw weights and tier info
         info_parts = []
@@ -188,12 +297,8 @@ def export_spoiler_log(dag: Dag, output_path: Path) -> None:
             node = dag.nodes[node_id]
             info = f"(w:{node.cluster.weight} t:{node.tier})"
             info_parts.append(info.center(col_width))
-        lines.append("".join(info_parts).center(total_width))
-
-        # Draw vertical lines to next layer (except for last layer)
-        if layer_idx < len(sorted_layers) - 1:
-            pipe_line = "".join("│".center(col_width) for _ in range(n_nodes))
-            lines.append(pipe_line.center(total_width))
+        info_line = " " * offset + "".join(info_parts)
+        lines.append(info_line)
 
     lines.append("")
     lines.append("=" * 60)
