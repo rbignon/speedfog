@@ -8,6 +8,7 @@ This module provides functions to export the generated DAG to:
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -150,6 +151,19 @@ def _build_connection_lines(
         src_targets[src].append(tgt)
         tgt_sources[tgt].append(src)
 
+    # For merges: count sources from each side and track landing positions
+    # This allows spacing multiple sources from the same side
+    merge_left_count: dict[int, int] = {i: 0 for i in range(n_curr)}
+    merge_right_count: dict[int, int] = {i: 0 for i in range(n_curr)}
+    for tgt_idx in range(n_curr):
+        tgt_pos = curr_centers[tgt_idx]
+        for src_idx in tgt_sources[tgt_idx]:
+            src_pos = prev_centers[src_idx]
+            if src_pos < tgt_pos:
+                merge_left_count[tgt_idx] += 1
+            elif src_pos > tgt_pos:
+                merge_right_count[tgt_idx] += 1
+
     # Check if all connections are simple 1:1 at same positions
     is_simple = (
         n_prev == n_curr
@@ -185,6 +199,11 @@ def _build_connection_lines(
             tgt_pos = curr_centers[tgt_idx]
             if src_pos != tgt_pos:
                 diagonals.append((src_idx, tgt_idx, src_pos, tgt_pos))
+
+    # Track how many sources from each side we've already processed per target
+    # Used to space landing positions for merges with multiple sources from same side
+    merge_left_placed: dict[int, int] = {i: 0 for i in range(n_curr)}
+    merge_right_placed: dict[int, int] = {i: 0 for i in range(n_curr)}
 
     # Row 1: Vertical lines from sources
     # Always show │ at source position if it goes anywhere
@@ -236,26 +255,67 @@ def _build_connection_lines(
 
         if is_split:
             # Split case: source has offset │ in row1, corner lands at offset
+            # If target is also a merge, offset the arrival corner to avoid collision
             if tgt_pos < src_pos:
-                # Goes left: ╭ at target, ─── horizontal, ╯ at offset
+                # Goes left: ╭ near target, ─── horizontal, ╯ at offset
                 landing_pos = src_pos - 2
                 if 0 <= landing_pos < total_width:
                     row2[landing_pos] = "╯"
-                # Horizontal bar from target+1 to landing
-                for p in range(tgt_pos + 1, landing_pos):
+                # Corner near target - offset if target is also a merge
+                corner_pos = tgt_pos + 2 if is_merge else tgt_pos
+                if 0 <= corner_pos < total_width and row2[corner_pos] == " ":
+                    row2[corner_pos] = "╭"
+                # Horizontal bar from corner+1 to landing
+                for p in range(corner_pos + 1, landing_pos):
                     if 0 <= p < total_width and row2[p] == " ":
                         row2[p] = "─"
             else:
-                # Goes right: ╰ at offset, ─── horizontal, ╮ at target
+                # Goes right: ╰ at offset, ─── horizontal, ╮ near target
                 landing_pos = src_pos + 2
                 if 0 <= landing_pos < total_width:
                     row2[landing_pos] = "╰"
-                # Horizontal bar from landing+1 to target
-                for p in range(landing_pos + 1, tgt_pos):
+                # Corner near target - offset if target is also a merge
+                corner_pos = tgt_pos - 2 if is_merge else tgt_pos
+                if 0 <= corner_pos < total_width and row2[corner_pos] == " ":
+                    row2[corner_pos] = "╮"
+                # Horizontal bar from landing+1 to corner
+                for p in range(landing_pos + 1, corner_pos):
+                    if 0 <= p < total_width and row2[p] == " ":
+                        row2[p] = "─"
+        elif is_merge:
+            # Merge case: mirror of split - corners land at offset positions near target
+            # Pattern: sources → ╯/╰ at source, ─── horizontal, ╮/╭ at offset near target
+            # Space landing positions when multiple sources come from the same side
+            if tgt_pos < src_pos:
+                # Source is to the right, goes left toward target
+                # Offset landing position based on how many from right already placed
+                offset = 2 + merge_right_placed[tgt_idx] * 2
+                landing_pos = tgt_pos + offset
+                merge_right_placed[tgt_idx] += 1
+                if 0 <= src_pos < total_width:
+                    row2[src_pos] = "╯"
+                if 0 <= landing_pos < total_width:
+                    row2[landing_pos] = "╭"
+                # Horizontal bar from landing+1 to source
+                for p in range(landing_pos + 1, src_pos):
+                    if 0 <= p < total_width and row2[p] == " ":
+                        row2[p] = "─"
+            else:
+                # Source is to the left, goes right toward target
+                # Offset landing position based on how many from left already placed
+                offset = 2 + merge_left_placed[tgt_idx] * 2
+                landing_pos = tgt_pos - offset
+                merge_left_placed[tgt_idx] += 1
+                if 0 <= src_pos < total_width:
+                    row2[src_pos] = "╰"
+                if 0 <= landing_pos < total_width:
+                    row2[landing_pos] = "╮"
+                # Horizontal bar from source+1 to landing
+                for p in range(src_pos + 1, landing_pos):
                     if 0 <= p < total_width and row2[p] == " ":
                         row2[p] = "─"
         else:
-            # Non-split (merge or 1:1): corner at source position
+            # 1:1 diagonal (no split, no merge): corner at source position
             if tgt_pos < src_pos:
                 # Goes left: ╯ at source
                 if 0 <= src_pos < total_width:
@@ -271,8 +331,8 @@ def _build_connection_lines(
                     if 0 <= p < total_width and row2[p] == " ":
                         row2[p] = "─"
 
-        # Handle target position corner/junction
-        if 0 <= tgt_pos < total_width:
+        # Handle target position corner/junction for non-merge cases
+        if not is_merge and 0 <= tgt_pos < total_width:
             has_straight_incoming = any(
                 prev_centers[s] == tgt_pos for s in tgt_sources[tgt_idx]
             )
@@ -287,12 +347,6 @@ def _build_connection_lines(
                 elif from_left and existing in [" ", "│"]:
                     row2[tgt_pos] = "┤"
                 elif existing == "─":
-                    row2[tgt_pos] = "┬"
-            elif is_merge and not is_split:
-                # Pure merge (no straight incoming)
-                if existing == "─":
-                    row2[tgt_pos] = "┬"
-                elif existing == " ":
                     row2[tgt_pos] = "┬"
             else:
                 # Single diagonal incoming
@@ -339,12 +393,48 @@ def _build_connection_lines(
     lines.append("".join(row2))
 
     # Row 3: Vertical lines going down to targets
+    # Mirror the split logic: if target receives from multiple sources (merge),
+    # show extra │ at offset positions
     row3 = [" "] * total_width
     for tgt_idx in range(n_curr):
         tgt_pos = curr_centers[tgt_idx]
-        if tgt_sources[tgt_idx]:
+        sources = tgt_sources[tgt_idx]
+        if not sources:
+            continue
+
+        is_merge = len(sources) > 1  # Target receives from multiple sources
+
+        if is_merge:
+            # Merge: show │ for each incoming branch
+            # Bars align with the corners in row2
+            has_straight_source = any(prev_centers[s] == tgt_pos for s in sources)
+
+            if has_straight_source:
+                if 0 <= tgt_pos < total_width:
+                    row3[tgt_pos] = "│"
+
+            # Count sources from each side and place bars at spaced positions
+            left_sources = [s for s in sources if prev_centers[s] < tgt_pos]
+            right_sources = [s for s in sources if prev_centers[s] > tgt_pos]
+
+            # Place bars for sources from the left (at tgt_pos - 2, -4, -6, ...)
+            for i in range(len(left_sources)):
+                offset = 2 + i * 2
+                bar_pos = tgt_pos - offset
+                if 0 <= bar_pos < total_width and row3[bar_pos] == " ":
+                    row3[bar_pos] = "│"
+
+            # Place bars for sources from the right (at tgt_pos + 2, +4, +6, ...)
+            for i in range(len(right_sources)):
+                offset = 2 + i * 2
+                bar_pos = tgt_pos + offset
+                if 0 <= bar_pos < total_width and row3[bar_pos] == " ":
+                    row3[bar_pos] = "│"
+        else:
+            # Single source: just one vertical line
             if 0 <= tgt_pos < total_width:
                 row3[tgt_pos] = "│"
+
     lines.append("".join(row3))
 
     return lines
@@ -376,10 +466,50 @@ def export_spoiler_log(dag: Dag, output_path: Path) -> None:
             nodes_by_layer[layer] = []
         nodes_by_layer[layer].append(node_id)
 
-    # Sort layers and node IDs within each layer
+    # Sort layers and node IDs within each layer using barycentric ordering
+    # This minimizes edge crossings by placing nodes near their parents/children
     sorted_layers = sorted(nodes_by_layer.keys())
-    for layer in sorted_layers:
-        nodes_by_layer[layer] = sorted(nodes_by_layer[layer])
+
+    # Build parent map: node_id -> list of parent node_ids
+    parents: dict[str, list[str]] = {nid: [] for nid in dag.nodes}
+    for edge in dag.edges:
+        if edge.target_id in parents:
+            parents[edge.target_id].append(edge.source_id)
+
+    # First pass: sort first layer alphabetically (no parents to reference)
+    if sorted_layers:
+        nodes_by_layer[sorted_layers[0]] = sorted(nodes_by_layer[sorted_layers[0]])
+
+    # Subsequent layers: sort by average position of parents in previous layer
+    for i in range(1, len(sorted_layers)):
+        layer = sorted_layers[i]
+        prev_layer = sorted_layers[i - 1]
+        prev_nodes = nodes_by_layer[prev_layer]
+
+        # Map parent node_id to its position in previous layer
+        prev_pos = {nid: idx for idx, nid in enumerate(prev_nodes)}
+
+        def make_sort_key(
+            prev_pos: dict[str, int],
+        ) -> Callable[[str], tuple[float, str]]:
+            """Create sort key function that captures prev_pos."""
+
+            def sort_key(node_id: str) -> tuple[float, str]:
+                node_parents = [p for p in parents[node_id] if p in prev_pos]
+                if not node_parents:
+                    barycenter = float("inf")
+                else:
+                    barycenter = sum(prev_pos[p] for p in node_parents) / len(
+                        node_parents
+                    )
+                return (barycenter, node_id)
+
+            return sort_key
+
+        # Sort by barycenter, then by node_id for stability
+        nodes_by_layer[layer] = sorted(
+            nodes_by_layer[layer], key=make_sort_key(prev_pos)
+        )
 
     # Fixed column width and name truncation for consistent alignment
     col_width = 24
