@@ -6,9 +6,12 @@ import argparse
 import sys
 from pathlib import Path
 
+from speedfog_core.balance import report_balance
 from speedfog_core.clusters import load_clusters
 from speedfog_core.config import Config, load_config
 from speedfog_core.generator import GenerationError, generate_with_retry
+from speedfog_core.output import export_json, export_spoiler_log
+from speedfog_core.validator import validate_dag
 
 
 def main() -> int:
@@ -121,9 +124,23 @@ def main() -> int:
         print(f"Error: Generation failed: {e}", file=sys.stderr)
         return 1
 
+    # Validate the generated DAG
+    validation = validate_dag(dag, config)
+    if not validation.is_valid:
+        print("Error: Generated DAG failed validation:", file=sys.stderr)
+        for error in validation.errors:
+            print(f"  - {error}", file=sys.stderr)
+        return 1
+
+    if args.verbose and validation.warnings:
+        print("Validation warnings:")
+        for warning in validation.warnings:
+            print(f"  - {warning}")
+
+    # Print summary
     if args.verbose or config.seed == 0:
         print(f"Generated DAG with seed {actual_seed}")
-        paths = dag.get_paths()
+        paths = dag.enumerate_paths()
         print(f"  Layers: {max((n.layer for n in dag.nodes.values()), default=0) + 1}")
         print(f"  Nodes: {len(dag.nodes)}")
         print(f"  Paths: {len(paths)}")
@@ -131,13 +148,18 @@ def main() -> int:
             weights = [dag.path_weight(p) for p in paths]
             print(f"  Path weights: {weights}")
 
-    # Export JSON
-    dag.export_json(args.output)
+    # Print balance report in verbose mode
+    if args.verbose:
+        print()
+        print(report_balance(dag, config.budget))
+
+    # Export JSON using output module
+    export_json(dag, args.output)
     print(f"Written: {args.output}")
 
-    # Export spoiler if requested
+    # Export spoiler if requested using output module
     if args.spoiler:
-        dag.export_spoiler(args.spoiler)
+        export_spoiler_log(dag, args.spoiler)
         print(f"Written: {args.spoiler}")
 
     return 0

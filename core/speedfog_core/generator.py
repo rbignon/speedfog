@@ -8,171 +8,18 @@ Generates a randomized DAG with:
 
 from __future__ import annotations
 
-import json
 import random
-from dataclasses import dataclass, field
-from pathlib import Path
 
 from speedfog_core.clusters import ClusterData, ClusterPool
 from speedfog_core.config import Config
-
-
-@dataclass
-class DagNode:
-    """A node in the DAG representing a cluster instance."""
-
-    id: str
-    cluster: ClusterData
-    layer: int
-    tier: int  # Difficulty scaling (1-28)
-    entry_fog: str | None  # fog_id used to enter (None for start)
-    exit_fogs: list[str] = field(default_factory=list)  # Available exits
-
-
-@dataclass
-class DagEdge:
-    """A directed edge between two nodes."""
-
-    source_id: str
-    target_id: str
-    fog_id: str  # The fog gate connecting them
-
-
-@dataclass
-class Dag:
-    """The complete DAG structure."""
-
-    seed: int
-    nodes: dict[str, DagNode] = field(default_factory=dict)
-    edges: list[DagEdge] = field(default_factory=list)
-    start_id: str = ""
-    end_id: str = ""
-
-    def add_node(self, node: DagNode) -> None:
-        """Add a node to the DAG."""
-        self.nodes[node.id] = node
-
-    def add_edge(self, source_id: str, target_id: str, fog_id: str) -> None:
-        """Add an edge to the DAG."""
-        self.edges.append(DagEdge(source_id, target_id, fog_id))
-
-    def get_paths(self) -> list[list[str]]:
-        """Enumerate all paths from start to end (returns node IDs)."""
-        if not self.start_id or not self.end_id:
-            return []
-
-        paths: list[list[str]] = []
-
-        def dfs(node_id: str, current_path: list[str]) -> None:
-            current_path = current_path + [node_id]
-            if node_id == self.end_id:
-                paths.append(current_path)
-                return
-            # Find outgoing edges
-            for edge in self.edges:
-                if edge.source_id == node_id:
-                    dfs(edge.target_id, current_path)
-
-        dfs(self.start_id, [])
-        return paths
-
-    def path_weight(self, path: list[str]) -> int:
-        """Calculate total weight of a path."""
-        return sum(self.nodes[nid].cluster.weight for nid in path)
-
-    def to_dict(self) -> dict:
-        """Convert to JSON-serializable dictionary."""
-        nodes_dict = {}
-        for nid, node in self.nodes.items():
-            nodes_dict[nid] = {
-                "cluster_id": node.cluster.id,
-                "zones": node.cluster.zones,
-                "type": node.cluster.type,
-                "weight": node.cluster.weight,
-                "layer": node.layer,
-                "tier": node.tier,
-                "entry_fog": node.entry_fog,
-                "exit_fogs": node.exit_fogs,
-            }
-
-        edges_list = [
-            {"source": e.source_id, "target": e.target_id, "fog_id": e.fog_id}
-            for e in self.edges
-        ]
-
-        paths = self.get_paths()
-
-        return {
-            "seed": self.seed,
-            "total_layers": max((n.layer for n in self.nodes.values()), default=0) + 1,
-            "total_nodes": len(self.nodes),
-            "total_paths": len(paths),
-            "path_weights": [self.path_weight(p) for p in paths],
-            "nodes": nodes_dict,
-            "edges": edges_list,
-            "start_id": self.start_id,
-            "end_id": self.end_id,
-        }
-
-    def export_json(self, path: Path) -> None:
-        """Export DAG to JSON file."""
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(self.to_dict(), f, indent=2)
-
-    def export_spoiler(self, path: Path) -> None:
-        """Export human-readable spoiler log."""
-        lines = [
-            "=" * 60,
-            f"SPEEDFOG SPOILER LOG (seed: {self.seed})",
-            "=" * 60,
-            "",
-        ]
-
-        # Group nodes by layer
-        by_layer: dict[int, list[DagNode]] = {}
-        for node in self.nodes.values():
-            if node.layer not in by_layer:
-                by_layer[node.layer] = []
-            by_layer[node.layer].append(node)
-
-        for layer_idx in sorted(by_layer.keys()):
-            nodes = by_layer[layer_idx]
-            lines.append(f"--- Layer {layer_idx} (tier {nodes[0].tier}) ---")
-            for node in nodes:
-                zones_str = ", ".join(node.cluster.zones)
-                lines.append(
-                    f"  [{node.id}] {node.cluster.type}: {zones_str} (w:{node.cluster.weight})"
-                )
-            lines.append("")
-
-        lines.append("=" * 60)
-        lines.append("PATHS")
-        lines.append("=" * 60)
-
-        all_paths = self.get_paths()
-        for i, node_path in enumerate(all_paths):
-            weight = self.path_weight(node_path)
-            path_str = " -> ".join(node_path)
-            lines.append(f"Path {i + 1} (weight {weight}): {path_str}")
-
-        lines.append("")
-
-        with open(path, "w", encoding="utf-8") as f:
-            f.write("\n".join(lines))
+from speedfog_core.dag import Dag, DagNode
+from speedfog_core.planner import compute_tier, plan_layer_types
 
 
 class GenerationError(Exception):
     """Error during DAG generation."""
 
     pass
-
-
-def compute_tier(layer_idx: int, total_layers: int) -> int:
-    """Map layer index to difficulty tier (1-28)."""
-    if total_layers <= 1:
-        return 1
-    progress = layer_idx / (total_layers - 1)
-    return max(1, min(28, int(1 + progress * 27)))
 
 
 def cluster_has_usable_exits(cluster: ClusterData) -> bool:
@@ -245,43 +92,6 @@ def pick_cluster(
     return rng.choice(available)
 
 
-def plan_layer_types(
-    requirements,  # RequirementsConfig
-    total_layers: int,
-    rng: random.Random,
-) -> list[str]:
-    """Plan the sequence of cluster types for intermediate layers.
-
-    Ensures requirements are met:
-    - At least N legacy_dungeons
-    - At least M mini_dungeons
-    - At least K bosses (boss_arena)
-    """
-    types: list[str] = []
-
-    # Add required types
-    for _ in range(requirements.legacy_dungeons):
-        types.append("legacy_dungeon")
-
-    for _ in range(requirements.mini_dungeons):
-        types.append("mini_dungeon")
-
-    for _ in range(requirements.bosses):
-        types.append("boss_arena")
-
-    # Pad with mini_dungeons if needed (most common filler)
-    while len(types) < total_layers:
-        types.append("mini_dungeon")
-
-    # Trim if too many
-    types = types[:total_layers]
-
-    # Shuffle
-    rng.shuffle(types)
-
-    return types
-
-
 def generate_dag(
     config: Config,
     clusters: ClusterPool,
@@ -318,7 +128,8 @@ def generate_dag(
     if not start_candidates:
         raise GenerationError("No start cluster found")
 
-    start_cluster = pick_cluster(start_candidates, used_zones, rng)
+    # Start cluster doesn't need require_exits=True since we spawn there
+    start_cluster = pick_cluster(start_candidates, used_zones, rng, require_exits=False)
     if start_cluster is None:
         raise GenerationError("Could not pick start cluster")
 
