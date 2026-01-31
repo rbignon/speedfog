@@ -30,13 +30,13 @@ def main() -> int:
         "-o",
         "--output",
         type=Path,
-        default=Path("graph.json"),
-        help="Output JSON file (default: graph.json)",
+        default=Path("."),
+        help="Output directory (default: current directory). Files are written to <output>/<seed>/",
     )
     parser.add_argument(
         "--spoiler",
-        type=Path,
-        help="Output spoiler log file",
+        action="store_true",
+        help="Generate spoiler log file",
     )
     parser.add_argument(
         "--clusters",
@@ -153,14 +153,20 @@ def main() -> int:
         print()
         print(report_balance(dag, config.budget))
 
+    # Create output directory: <output>/<seed>/
+    seed_dir = args.output / str(actual_seed)
+    seed_dir.mkdir(parents=True, exist_ok=True)
+
     # Export JSON using output module
-    export_json(dag, args.output)
-    print(f"Written: {args.output}")
+    json_path = seed_dir / "graph.json"
+    export_json(dag, json_path)
+    print(f"Written: {json_path}")
 
     # Export spoiler if requested using output module
     if args.spoiler:
-        export_spoiler_log(dag, args.spoiler)
-        print(f"Written: {args.spoiler}")
+        spoiler_path = seed_dir / "spoiler.txt"
+        export_spoiler_log(dag, spoiler_path)
+        print(f"Written: {spoiler_path}")
 
     return 0
 
