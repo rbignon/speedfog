@@ -32,10 +32,9 @@ class TestComputeTier:
         for total_layers in range(1, 20):
             for layer_idx in range(total_layers):
                 tier = compute_tier(layer_idx, total_layers)
-                assert 1 <= tier <= 28, (
-                    f"Tier {tier} out of bounds for "
-                    f"layer {layer_idx}/{total_layers}"
-                )
+                assert (
+                    1 <= tier <= 28
+                ), f"Tier {tier} out of bounds for layer {layer_idx}/{total_layers}"
 
     def test_two_layers_first_and_last(self):
         """Two layers should have tier 1 and tier 28."""
