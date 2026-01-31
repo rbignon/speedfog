@@ -53,7 +53,7 @@ def make_test_dag() -> Dag:
             ),
             layer=0,
             tier=1,
-            entry_fog=None,
+            entry_fogs=[],
             exit_fogs=["fog_1", "fog_2"],
         )
     )
@@ -67,7 +67,7 @@ def make_test_dag() -> Dag:
             ),
             layer=1,
             tier=5,
-            entry_fog="fog_1",
+            entry_fogs=["fog_1"],
             exit_fogs=["fog_3"],
         )
     )
@@ -81,12 +81,12 @@ def make_test_dag() -> Dag:
             ),
             layer=1,
             tier=5,
-            entry_fog="fog_2",
+            entry_fogs=["fog_2"],
             exit_fogs=["fog_4"],
         )
     )
 
-    # Add end node
+    # Add end node (merge node with 2 incoming edges)
     dag.add_node(
         DagNode(
             id="end",
@@ -95,7 +95,7 @@ def make_test_dag() -> Dag:
             ),
             layer=2,
             tier=10,
-            entry_fog="fog_3",  # Can enter from either fog_3 or fog_4
+            entry_fogs=["fog_3", "fog_4"],  # Both branches merge here
             exit_fogs=[],
         )
     )
@@ -156,8 +156,8 @@ class TestDagToDict:
         assert node_a["layer"] == 1
         assert "tier" in node_a
         assert node_a["tier"] == 5
-        assert "entry_fog" in node_a
-        assert node_a["entry_fog"] == "fog_1"
+        assert "entry_fogs" in node_a
+        assert node_a["entry_fogs"] == ["fog_1"]
         assert "exit_fogs" in node_a
         assert node_a["exit_fogs"] == ["fog_3"]
 

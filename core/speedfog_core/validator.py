@@ -32,6 +32,7 @@ def validate_dag(dag: Dag, config: Config) -> ValidationResult:
 
     Checks:
     - Structural validity (uses dag.validate_structure())
+    - Entry fog consistency (incoming edges match entry_fogs count)
     - Minimum requirements (bosses, legacy_dungeons, mini_dungeons)
     - Path count (no paths = error, single path = warning)
     - Weight balance (underweight/overweight = warnings)
@@ -52,6 +53,11 @@ def validate_dag(dag: Dag, config: Config) -> ValidationResult:
     if structural_errors:
         errors.extend(structural_errors)
 
+    # Check entry fog consistency
+    entry_fog_errors = _check_entry_fog_consistency(dag)
+    if entry_fog_errors:
+        errors.extend(entry_fog_errors)
+
     # Check minimum requirements
     _check_requirements(dag, config, errors)
 
@@ -66,6 +72,29 @@ def validate_dag(dag: Dag, config: Config) -> ValidationResult:
         errors=errors,
         warnings=warnings,
     )
+
+
+def _check_entry_fog_consistency(dag: Dag) -> list[str]:
+    """Check that entry_fogs count matches incoming edge count.
+
+    Args:
+        dag: The DAG to check.
+
+    Returns:
+        List of error messages.
+    """
+    errors: list[str] = []
+    for node_id, node in dag.nodes.items():
+        if node_id == dag.start_id:
+            # Start node has no incoming edges
+            continue
+        incoming = dag.get_incoming_edges(node_id)
+        if len(incoming) != len(node.entry_fogs):
+            errors.append(
+                f"Node {node_id}: {len(incoming)} incoming edges "
+                f"but {len(node.entry_fogs)} entry_fogs"
+            )
+    return errors
 
 
 def _check_requirements(dag: Dag, config: Config, errors: list[str]) -> None:

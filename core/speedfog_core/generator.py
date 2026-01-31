@@ -1,19 +1,21 @@
 """DAG generation algorithm for SpeedFog.
 
-Generates a randomized DAG with:
-- Start: chapel_start cluster
-- 2 parallel branches with uniform layer types
-- End: final_boss cluster (leyndell_erdtree)
+Generates a randomized DAG with dynamic topology:
+- Start: chapel_start cluster (natural split via multiple exits)
+- Split/Merge/Passant operations for dynamic branching
+- End: final_boss cluster (force merge before reaching)
 """
 
 from __future__ import annotations
 
 import random
+from collections.abc import Callable
 from dataclasses import dataclass
+from enum import Enum, auto
 
 from speedfog_core.clusters import ClusterData, ClusterPool
 from speedfog_core.config import Config
-from speedfog_core.dag import Dag, DagNode
+from speedfog_core.dag import Branch, Dag, DagNode
 from speedfog_core.planner import compute_tier, plan_layer_types
 from speedfog_core.validator import ValidationResult, validate_dag
 
@@ -22,6 +24,14 @@ class GenerationError(Exception):
     """Error during DAG generation."""
 
     pass
+
+
+class LayerOperation(Enum):
+    """Type of operation to perform on a layer."""
+
+    PASSANT = auto()  # 1 branch -> 1 branch
+    SPLIT = auto()  # 1 branch -> 2 branches
+    MERGE = auto()  # 2 branches -> 1 branch
 
 
 @dataclass
@@ -41,6 +51,199 @@ class GenerationResult:
     attempts: int
 
 
+# =============================================================================
+# Cluster Compatibility Helpers
+# =============================================================================
+
+
+def compute_net_exits(cluster: ClusterData, consumed_entries: list[str]) -> list[dict]:
+    """Return exits remaining after consuming given entry fogs.
+
+    Bidirectional fogs (appearing in both entry and exit) are removed
+    from available exits when their entry side is consumed.
+
+    Args:
+        cluster: The cluster to check.
+        consumed_entries: List of entry fog_ids that are being used.
+
+    Returns:
+        List of exit fog dicts remaining after consuming entries.
+    """
+    consumed_set = set(consumed_entries)
+    return [f for f in cluster.exit_fogs if f["fog_id"] not in consumed_set]
+
+
+def count_net_exits(cluster: ClusterData, num_entries: int) -> int:
+    """Minimum net exits when consuming num_entries (greedy: prefer non-bidirectional).
+
+    This calculates the worst-case net exits by greedily selecting entries
+    that cost the least (non-bidirectional entries have zero cost).
+
+    Args:
+        cluster: The cluster to check.
+        num_entries: Number of entry fogs to consume.
+
+    Returns:
+        Minimum number of exits remaining after consuming num_entries.
+    """
+    if num_entries > len(cluster.entry_fogs):
+        return 0
+
+    # Build set of exit fog IDs for checking bidirectionality
+    exit_ids = {f["fog_id"] for f in cluster.exit_fogs}
+
+    # Calculate cost for each entry (1 if bidirectional, 0 otherwise)
+    entry_costs: list[tuple[str, int]] = []
+    for entry in cluster.entry_fogs:
+        fog_id = entry["fog_id"]
+        cost = 1 if fog_id in exit_ids else 0
+        entry_costs.append((fog_id, cost))
+
+    # Sort by cost (cheapest first) and take num_entries
+    entry_costs.sort(key=lambda x: x[1])
+    consumed = [fog_id for fog_id, _ in entry_costs[:num_entries]]
+
+    return len(compute_net_exits(cluster, consumed))
+
+
+def can_be_split_node(cluster: ClusterData, num_out: int) -> bool:
+    """Check if cluster can be a split node (1 entry -> num_out exits).
+
+    Args:
+        cluster: The cluster to check.
+        num_out: Number of required exits after using 1 entry.
+
+    Returns:
+        True if cluster has enough net exits after using 1 entry.
+    """
+    return count_net_exits(cluster, 1) >= num_out
+
+
+def can_be_merge_node(cluster: ClusterData, num_in: int) -> bool:
+    """Check if cluster can be a merge node (num_in entries -> 1 exit).
+
+    Args:
+        cluster: The cluster to check.
+        num_in: Number of entry fogs to consume.
+
+    Returns:
+        True if cluster has enough entries and at least 1 net exit.
+    """
+    return len(cluster.entry_fogs) >= num_in and count_net_exits(cluster, num_in) >= 1
+
+
+def can_be_passant_node(cluster: ClusterData) -> bool:
+    """Check if cluster can be a passant node (1 entry -> 1 exit).
+
+    Args:
+        cluster: The cluster to check.
+
+    Returns:
+        True if cluster has at least 1 net exit after using 1 entry.
+    """
+    return count_net_exits(cluster, 1) >= 1
+
+
+def select_entries_for_merge(
+    cluster: ClusterData, num: int, rng: random.Random
+) -> list[str]:
+    """Select entry fogs that maximize remaining exits.
+
+    Prefers non-bidirectional entries to preserve more exits.
+
+    Args:
+        cluster: The cluster to select entries from.
+        num: Number of entries to select.
+        rng: Random number generator.
+
+    Returns:
+        List of selected entry fog_ids.
+    """
+    exit_ids = {f["fog_id"] for f in cluster.exit_fogs}
+
+    # Separate entries by cost
+    non_bidir = [e["fog_id"] for e in cluster.entry_fogs if e["fog_id"] not in exit_ids]
+    bidir = [e["fog_id"] for e in cluster.entry_fogs if e["fog_id"] in exit_ids]
+
+    # Shuffle each group
+    rng.shuffle(non_bidir)
+    rng.shuffle(bidir)
+
+    # Take from non-bidir first, then bidir
+    result = non_bidir[:num]
+    remaining = num - len(result)
+    if remaining > 0:
+        result.extend(bidir[:remaining])
+
+    return result
+
+
+def pick_entry_with_max_exits(
+    cluster: ClusterData, min_exits: int, rng: random.Random
+) -> str | None:
+    """Pick an entry fog that leaves at least min_exits available.
+
+    Args:
+        cluster: The cluster to pick from.
+        min_exits: Minimum required exits after using the entry.
+        rng: Random number generator.
+
+    Returns:
+        The fog_id of a valid entry, or None if no valid entry exists.
+    """
+    valid_entries: list[str] = []
+    for entry in cluster.entry_fogs:
+        entry_fog_id = entry["fog_id"]
+        remaining = compute_net_exits(cluster, [entry_fog_id])
+        if len(remaining) >= min_exits:
+            valid_entries.append(entry_fog_id)
+
+    if not valid_entries:
+        return None
+
+    return rng.choice(valid_entries)
+
+
+def pick_cluster_with_filter(
+    candidates: list[ClusterData],
+    used_zones: set[str],
+    rng: random.Random,
+    filter_fn: Callable[[ClusterData], bool],
+) -> ClusterData | None:
+    """Pick a cluster that passes the filter function.
+
+    Args:
+        candidates: List of candidate clusters.
+        used_zones: Set of zone IDs already used.
+        rng: Random number generator.
+        filter_fn: Function that takes a ClusterData and returns bool.
+
+    Returns:
+        A cluster that passes the filter, or None if none available.
+    """
+    available = []
+    for cluster in candidates:
+        # Check no zone overlap
+        if any(z in used_zones for z in cluster.zones):
+            continue
+
+        # Check filter
+        if not filter_fn(cluster):
+            continue
+
+        available.append(cluster)
+
+    if not available:
+        return None
+
+    return rng.choice(available)
+
+
+# =============================================================================
+# Legacy Helper Functions (kept for compatibility)
+# =============================================================================
+
+
 def cluster_has_usable_exits(cluster: ClusterData) -> bool:
     """Check if cluster will have at least 1 exit after using any entry fog.
 
@@ -52,12 +255,10 @@ def cluster_has_usable_exits(cluster: ClusterData) -> bool:
 
     for entry in cluster.entry_fogs:
         entry_fog_id = entry["fog_id"]
-        # Count exits that would remain after using this entry
         remaining_exits = [e for e in cluster.exit_fogs if e["fog_id"] != entry_fog_id]
         if remaining_exits:
             return True
 
-    # No entry fog leaves any exits - cluster is a dead end
     return False
 
 
@@ -111,18 +312,404 @@ def pick_cluster(
     return rng.choice(available)
 
 
+# =============================================================================
+# Layer Operation Logic
+# =============================================================================
+
+
+def decide_operation(
+    num_branches: int, config: Config, rng: random.Random
+) -> LayerOperation:
+    """Decide which operation to perform based on current branch count.
+
+    Args:
+        num_branches: Current number of parallel branches.
+        config: Configuration with probabilities.
+        rng: Random number generator.
+
+    Returns:
+        The operation to perform.
+    """
+    max_branches = config.structure.max_branches
+    split_prob = config.structure.split_probability
+    merge_prob = config.structure.merge_probability
+
+    if num_branches >= max_branches:
+        # At max: can only merge or passant
+        return (
+            LayerOperation.MERGE
+            if rng.random() < merge_prob
+            else LayerOperation.PASSANT
+        )
+    elif num_branches == 1:
+        # At min: can only split or passant
+        return (
+            LayerOperation.SPLIT
+            if rng.random() < split_prob
+            else LayerOperation.PASSANT
+        )
+    else:
+        # Can do any operation
+        roll = rng.random()
+        if roll < split_prob:
+            return LayerOperation.SPLIT
+        elif roll < split_prob + merge_prob:
+            return LayerOperation.MERGE
+        else:
+            return LayerOperation.PASSANT
+
+
+def execute_passant_layer(
+    dag: Dag,
+    branches: list[Branch],
+    layer_idx: int,
+    tier: int,
+    layer_type: str,
+    clusters: ClusterPool,
+    used_zones: set[str],
+    rng: random.Random,
+) -> list[Branch]:
+    """Execute a passant layer where each branch advances to its own new node.
+
+    Args:
+        dag: The DAG being built.
+        branches: Current branches.
+        layer_idx: Current layer index.
+        tier: Difficulty tier for this layer.
+        layer_type: Type of cluster to pick.
+        clusters: Pool of available clusters.
+        used_zones: Set of already used zones.
+        rng: Random number generator.
+
+    Returns:
+        Updated list of branches.
+
+    Raises:
+        GenerationError: If no suitable cluster found.
+    """
+    new_branches: list[Branch] = []
+    candidates = clusters.get_by_type(layer_type)
+
+    for i, branch in enumerate(branches):
+        cluster = pick_cluster_with_filter(
+            candidates, used_zones, rng, can_be_passant_node
+        )
+        if cluster is None:
+            raise GenerationError(
+                f"No passant-compatible cluster for layer {layer_idx} branch {i} (type: {layer_type})"
+            )
+        used_zones.update(cluster.zones)
+
+        # Pick entry that leaves at least 1 exit
+        entry = pick_entry_with_max_exits(cluster, 1, rng)
+        if entry is None:
+            raise GenerationError(
+                f"Cluster {cluster.id} has no valid entry fog with exits"
+            )
+
+        exits = compute_net_exits(cluster, [entry])
+        exit_fogs = [f["fog_id"] for f in exits]
+
+        node_id = f"node_{layer_idx}_{chr(97 + i)}"
+        node = DagNode(
+            id=node_id,
+            cluster=cluster,
+            layer=layer_idx,
+            tier=tier,
+            entry_fogs=[entry],
+            exit_fogs=exit_fogs,
+        )
+        dag.add_node(node)
+        dag.add_edge(branch.current_node_id, node_id, branch.available_exit)
+
+        new_branches.append(Branch(branch.id, node_id, rng.choice(exit_fogs)))
+
+    return new_branches
+
+
+def execute_split_layer(
+    dag: Dag,
+    branches: list[Branch],
+    layer_idx: int,
+    tier: int,
+    layer_type: str,
+    clusters: ClusterPool,
+    used_zones: set[str],
+    rng: random.Random,
+) -> list[Branch]:
+    """Execute a split layer where one branch splits into two.
+
+    Args:
+        dag: The DAG being built.
+        branches: Current branches.
+        layer_idx: Current layer index.
+        tier: Difficulty tier for this layer.
+        layer_type: Type of cluster to pick.
+        clusters: Pool of available clusters.
+        used_zones: Set of already used zones.
+        rng: Random number generator.
+
+    Returns:
+        Updated list of branches (with one extra).
+
+    Raises:
+        GenerationError: If no suitable cluster found.
+    """
+    split_idx = rng.randrange(len(branches))
+    new_branches: list[Branch] = []
+    candidates = clusters.get_by_type(layer_type)
+    letter_offset = 0
+
+    for i, branch in enumerate(branches):
+        if i == split_idx:
+            # This branch splits into two
+            cluster = pick_cluster_with_filter(
+                candidates, used_zones, rng, lambda c: can_be_split_node(c, 2)
+            )
+            if cluster is None:
+                raise GenerationError(
+                    f"No split-compatible cluster for layer {layer_idx} (type: {layer_type})"
+                )
+            used_zones.update(cluster.zones)
+
+            # Pick entry that leaves at least 2 exits
+            entry = pick_entry_with_max_exits(cluster, 2, rng)
+            if entry is None:
+                raise GenerationError(
+                    f"Cluster {cluster.id} has no valid entry fog with 2+ exits"
+                )
+
+            exits = compute_net_exits(cluster, [entry])
+            exit_fogs = [f["fog_id"] for f in exits]
+
+            node_id = f"node_{layer_idx}_{chr(97 + letter_offset)}"
+            node = DagNode(
+                id=node_id,
+                cluster=cluster,
+                layer=layer_idx,
+                tier=tier,
+                entry_fogs=[entry],
+                exit_fogs=exit_fogs,
+            )
+            dag.add_node(node)
+            dag.add_edge(branch.current_node_id, node_id, branch.available_exit)
+
+            # Create two new branches
+            rng.shuffle(exit_fogs)
+            new_branches.append(Branch(f"{branch.id}_a", node_id, exit_fogs[0]))
+            new_branches.append(Branch(f"{branch.id}_b", node_id, exit_fogs[1]))
+            letter_offset += 1
+        else:
+            # Regular passant for this branch
+            cluster = pick_cluster_with_filter(
+                candidates, used_zones, rng, can_be_passant_node
+            )
+            if cluster is None:
+                raise GenerationError(
+                    f"No passant-compatible cluster for layer {layer_idx} branch {i} (type: {layer_type})"
+                )
+            used_zones.update(cluster.zones)
+
+            entry = pick_entry_with_max_exits(cluster, 1, rng)
+            if entry is None:
+                raise GenerationError(
+                    f"Cluster {cluster.id} has no valid entry fog with exits"
+                )
+
+            exits = compute_net_exits(cluster, [entry])
+            exit_fogs = [f["fog_id"] for f in exits]
+
+            node_id = f"node_{layer_idx}_{chr(97 + letter_offset)}"
+            node = DagNode(
+                id=node_id,
+                cluster=cluster,
+                layer=layer_idx,
+                tier=tier,
+                entry_fogs=[entry],
+                exit_fogs=exit_fogs,
+            )
+            dag.add_node(node)
+            dag.add_edge(branch.current_node_id, node_id, branch.available_exit)
+
+            new_branches.append(Branch(branch.id, node_id, rng.choice(exit_fogs)))
+            letter_offset += 1
+
+    return new_branches
+
+
+def execute_merge_layer(
+    dag: Dag,
+    branches: list[Branch],
+    layer_idx: int,
+    tier: int,
+    layer_type: str,
+    clusters: ClusterPool,
+    used_zones: set[str],
+    rng: random.Random,
+) -> list[Branch]:
+    """Execute a merge layer where two branches merge into one.
+
+    Args:
+        dag: The DAG being built.
+        branches: Current branches (must have at least 2).
+        layer_idx: Current layer index.
+        tier: Difficulty tier for this layer.
+        layer_type: Type of cluster to pick.
+        clusters: Pool of available clusters.
+        used_zones: Set of already used zones.
+        rng: Random number generator.
+
+    Returns:
+        Updated list of branches (with one fewer).
+
+    Raises:
+        GenerationError: If no suitable cluster found.
+    """
+    if len(branches) < 2:
+        raise GenerationError("Cannot merge with fewer than 2 branches")
+
+    merge_indices = rng.sample(range(len(branches)), 2)
+    merge_branches = [branches[i] for i in merge_indices]
+
+    candidates = clusters.get_by_type(layer_type)
+    new_branches: list[Branch] = []
+    letter_offset = 0
+
+    # Create merge node first
+    cluster = pick_cluster_with_filter(
+        candidates, used_zones, rng, lambda c: can_be_merge_node(c, 2)
+    )
+    if cluster is None:
+        raise GenerationError(
+            f"No merge-compatible cluster for layer {layer_idx} (type: {layer_type})"
+        )
+    used_zones.update(cluster.zones)
+
+    entries = select_entries_for_merge(cluster, 2, rng)
+    exits = compute_net_exits(cluster, entries)
+    exit_fogs = [f["fog_id"] for f in exits]
+
+    merge_node_id = f"node_{layer_idx}_{chr(97 + letter_offset)}"
+    merge_node = DagNode(
+        id=merge_node_id,
+        cluster=cluster,
+        layer=layer_idx,
+        tier=tier,
+        entry_fogs=entries,
+        exit_fogs=exit_fogs,
+    )
+    dag.add_node(merge_node)
+    letter_offset += 1
+
+    # Connect both merging branches to the merge node
+    for branch in merge_branches:
+        dag.add_edge(branch.current_node_id, merge_node_id, branch.available_exit)
+
+    # Create single branch for merged path
+    new_branches.append(
+        Branch(f"merged_{layer_idx}", merge_node_id, rng.choice(exit_fogs))
+    )
+
+    # Handle non-merged branches as passant
+    for i, branch in enumerate(branches):
+        if i in merge_indices:
+            continue
+
+        cluster = pick_cluster_with_filter(
+            candidates, used_zones, rng, can_be_passant_node
+        )
+        if cluster is None:
+            raise GenerationError(
+                f"No passant-compatible cluster for layer {layer_idx} branch {i} (type: {layer_type})"
+            )
+        used_zones.update(cluster.zones)
+
+        entry = pick_entry_with_max_exits(cluster, 1, rng)
+        if entry is None:
+            raise GenerationError(
+                f"Cluster {cluster.id} has no valid entry fog with exits"
+            )
+
+        exits = compute_net_exits(cluster, [entry])
+        exit_fogs = [f["fog_id"] for f in exits]
+
+        node_id = f"node_{layer_idx}_{chr(97 + letter_offset)}"
+        node = DagNode(
+            id=node_id,
+            cluster=cluster,
+            layer=layer_idx,
+            tier=tier,
+            entry_fogs=[entry],
+            exit_fogs=exit_fogs,
+        )
+        dag.add_node(node)
+        dag.add_edge(branch.current_node_id, node_id, branch.available_exit)
+
+        new_branches.append(Branch(branch.id, node_id, rng.choice(exit_fogs)))
+        letter_offset += 1
+
+    return new_branches
+
+
+def execute_forced_merge(
+    dag: Dag,
+    branches: list[Branch],
+    layer_idx: int,
+    tier: int,
+    layer_type: str,
+    clusters: ClusterPool,
+    used_zones: set[str],
+    rng: random.Random,
+) -> tuple[list[Branch], int]:
+    """Force all branches to merge into one.
+
+    Repeatedly merges until only 1 branch remains.
+
+    Args:
+        dag: The DAG being built.
+        branches: Current branches.
+        layer_idx: Starting layer index.
+        tier: Difficulty tier.
+        layer_type: Type of cluster to pick.
+        clusters: Pool of available clusters.
+        used_zones: Set of already used zones.
+        rng: Random number generator.
+
+    Returns:
+        Tuple of (list with single branch, final layer index used).
+
+    Raises:
+        GenerationError: If merging fails.
+    """
+    current_layer = layer_idx
+    while len(branches) > 1:
+        branches = execute_merge_layer(
+            dag, branches, current_layer, tier, layer_type, clusters, used_zones, rng
+        )
+        current_layer += 1
+
+    return branches, current_layer
+
+
+# =============================================================================
+# Main DAG Generation
+# =============================================================================
+
+
 def generate_dag(
     config: Config,
     clusters: ClusterPool,
     seed: int | None = None,
 ) -> Dag:
-    """Generate a randomized DAG with 2 parallel branches.
+    """Generate a randomized DAG with dynamic split/merge/passant topology.
 
     Algorithm:
-    1. Pick start cluster (type: start)
-    2. Plan layer types to satisfy requirements
-    3. For each layer, pick 2 clusters of the planned type (one per branch)
-    4. Connect all to final_boss cluster
+    1. Create start node (no entry consumed, all exits available)
+    2. Initialize branches from start exits
+    3. Plan layer types based on requirements
+    4. Execute layers with dynamic topology operations
+    5. Force merge if multiple branches before final boss
+    6. Connect to final boss
 
     Args:
         config: Configuration with requirements and structure
@@ -147,106 +734,121 @@ def generate_dag(
     if not start_candidates:
         raise GenerationError("No start cluster found")
 
-    # Start cluster doesn't need require_exits=True since we spawn there
     start_cluster = pick_cluster(start_candidates, used_zones, rng, require_exits=False)
     if start_cluster is None:
         raise GenerationError("Could not pick start cluster")
 
+    # Start node: no entry consumed, all exits available
     start_node = DagNode(
         id="start",
         cluster=start_cluster,
         layer=0,
         tier=1,
-        entry_fog=None,
+        entry_fogs=[],  # Player spawns here, no entry fog consumed
         exit_fogs=[f["fog_id"] for f in start_cluster.exit_fogs],
     )
     dag.add_node(start_node)
     dag.start_id = "start"
     used_zones.update(start_cluster.zones)
 
-    # 2. Plan layer types
+    # 2. Initialize branches from start exits
+    # Natural split at start based on available exits
+    start_exits = start_node.exit_fogs
+    num_initial_branches = min(len(start_exits), config.structure.max_branches)
+
+    if num_initial_branches == 0:
+        raise GenerationError("Start cluster has no exits")
+
+    # Shuffle exits for randomness
+    rng.shuffle(start_exits)
+    branches = [
+        Branch(f"b{i}", "start", start_exits[i]) for i in range(num_initial_branches)
+    ]
+
+    # 3. Plan layer types
     num_intermediate_layers = rng.randint(
         config.structure.min_layers, config.structure.max_layers
     )
     layer_types = plan_layer_types(config.requirements, num_intermediate_layers, rng)
 
-    total_layers = len(layer_types) + 2  # +1 for start, +1 for end
+    # Calculate total layers for tier computation
+    # We might add extra layers for forced merges
+    estimated_total = len(layer_types) + 2  # +1 for start, +1 for end
 
-    # 3. Build intermediate layers (2 parallel branches)
-    prev_node_a: DagNode = start_node
-    prev_node_b: DagNode = start_node
+    # 4. Execute layers with dynamic topology
+    current_layer = 1
+    for layer_idx, layer_type in enumerate(layer_types):
+        is_near_end = layer_idx >= len(layer_types) - 2
+        tier = compute_tier(current_layer, estimated_total)
 
-    for layer_idx, layer_type in enumerate(layer_types, start=1):
-        tier = compute_tier(layer_idx, total_layers)
-
-        # Pick cluster for branch A
-        candidates = clusters.get_by_type(layer_type)
-        cluster_a = pick_cluster(candidates, used_zones, rng)
-        if cluster_a is None:
-            raise GenerationError(
-                f"No available cluster for layer {layer_idx} branch A (type: {layer_type})"
+        # Force merge if near end and multiple branches
+        if is_near_end and len(branches) > 1:
+            branches, current_layer = execute_forced_merge(
+                dag,
+                branches,
+                current_layer,
+                tier,
+                layer_type,
+                clusters,
+                used_zones,
+                rng,
             )
-        used_zones.update(cluster_a.zones)
+        else:
+            # Decide operation based on current state
+            operation = decide_operation(len(branches), config, rng)
 
-        # Pick cluster for branch B (different from A)
-        cluster_b = pick_cluster(candidates, used_zones, rng)
-        if cluster_b is None:
-            raise GenerationError(
-                f"No available cluster for layer {layer_idx} branch B (type: {layer_type})"
-            )
-        used_zones.update(cluster_b.zones)
+            if operation == LayerOperation.PASSANT:
+                branches = execute_passant_layer(
+                    dag,
+                    branches,
+                    current_layer,
+                    tier,
+                    layer_type,
+                    clusters,
+                    used_zones,
+                    rng,
+                )
+            elif operation == LayerOperation.SPLIT:
+                branches = execute_split_layer(
+                    dag,
+                    branches,
+                    current_layer,
+                    tier,
+                    layer_type,
+                    clusters,
+                    used_zones,
+                    rng,
+                )
+            elif operation == LayerOperation.MERGE:
+                branches = execute_merge_layer(
+                    dag,
+                    branches,
+                    current_layer,
+                    tier,
+                    layer_type,
+                    clusters,
+                    used_zones,
+                    rng,
+                )
+            current_layer += 1
 
-        # Determine entry fogs (pick randomly from available)
-        # Pick entry fogs that leave exits available
-        entry_fog_a = pick_entry_fog_with_exits(cluster_a, rng)
-        entry_fog_b = pick_entry_fog_with_exits(cluster_b, rng)
-
-        if entry_fog_a is None:
-            raise GenerationError(
-                f"Cluster {cluster_a.id} has no valid entry fog with exits"
-            )
-        if entry_fog_b is None:
-            raise GenerationError(
-                f"Cluster {cluster_b.id} has no valid entry fog with exits"
-            )
-
-        # Create nodes
-        node_a = DagNode(
-            id=f"node_{layer_idx}a",
-            cluster=cluster_a,
-            layer=layer_idx,
-            tier=tier,
-            entry_fog=entry_fog_a,
-            exit_fogs=[f["fog_id"] for f in cluster_a.available_exits(entry_fog_a)],
+    # 5. Final merge if still multiple branches
+    if len(branches) > 1:
+        # Use the last layer type for final merge operations
+        last_layer_type = layer_types[-1] if layer_types else "mini_dungeon"
+        tier = compute_tier(current_layer, estimated_total)
+        branches, current_layer = execute_forced_merge(
+            dag,
+            branches,
+            current_layer,
+            tier,
+            last_layer_type,
+            clusters,
+            used_zones,
+            rng,
         )
-        node_b = DagNode(
-            id=f"node_{layer_idx}b",
-            cluster=cluster_b,
-            layer=layer_idx,
-            tier=tier,
-            entry_fog=entry_fog_b,
-            exit_fogs=[f["fog_id"] for f in cluster_b.available_exits(entry_fog_b)],
-        )
 
-        dag.add_node(node_a)
-        dag.add_node(node_b)
-
-        # Connect from previous layer
-        # Pick an exit fog from the previous node
-        if not prev_node_a.exit_fogs:
-            raise GenerationError(f"Node {prev_node_a.id} has no exit fogs")
-        if not prev_node_b.exit_fogs:
-            raise GenerationError(f"Node {prev_node_b.id} has no exit fogs")
-        exit_fog_a = rng.choice(prev_node_a.exit_fogs)
-        exit_fog_b = rng.choice(prev_node_b.exit_fogs)
-
-        dag.add_edge(prev_node_a.id, node_a.id, exit_fog_a)
-        dag.add_edge(prev_node_b.id, node_b.id, exit_fog_b)
-
-        prev_node_a = node_a
-        prev_node_b = node_b
-
-    # 4. Create end node (final_boss)
+    # 6. Create end node (final_boss)
     end_candidates = clusters.get_by_type("final_boss")
     if not end_candidates:
         raise GenerationError("No final_boss cluster found")
@@ -255,35 +857,29 @@ def generate_dag(
     if end_cluster is None:
         raise GenerationError("Could not pick final_boss cluster")
 
+    # Final boss has exactly 1 entry (from the single remaining branch)
     entry_fog_end = (
         rng.choice(end_cluster.entry_fogs)["fog_id"] if end_cluster.entry_fogs else None
     )
+    entry_fogs_end = [entry_fog_end] if entry_fog_end else []
 
     end_node = DagNode(
         id="end",
         cluster=end_cluster,
-        layer=len(layer_types) + 1,
+        layer=current_layer,
         tier=28,
-        entry_fog=entry_fog_end,
+        entry_fogs=entry_fogs_end,
         exit_fogs=[],  # No exits from final boss
     )
     dag.add_node(end_node)
     dag.end_id = "end"
 
-    # Connect both branches to end
-    if not prev_node_a.exit_fogs:
-        raise GenerationError(
-            f"Node {prev_node_a.id} has no exit fogs for final connection"
-        )
-    if not prev_node_b.exit_fogs:
-        raise GenerationError(
-            f"Node {prev_node_b.id} has no exit fogs for final connection"
-        )
-    exit_fog_a = rng.choice(prev_node_a.exit_fogs)
-    exit_fog_b = rng.choice(prev_node_b.exit_fogs)
+    # Connect the single remaining branch to end
+    if not branches:
+        raise GenerationError("No branches remaining to connect to end")
 
-    dag.add_edge(prev_node_a.id, end_node.id, exit_fog_a)
-    dag.add_edge(prev_node_b.id, end_node.id, exit_fog_b)
+    branch = branches[0]
+    dag.add_edge(branch.current_node_id, end_node.id, branch.available_exit)
 
     return dag
 

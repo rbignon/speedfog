@@ -40,7 +40,7 @@ class TestDagNode:
             cluster=cluster,
             layer=0,
             tier=1,
-            entry_fog=None,
+            entry_fogs=[],
             exit_fogs=["fog_a"],
         )
         node2 = DagNode(
@@ -48,7 +48,7 @@ class TestDagNode:
             cluster=cluster,
             layer=1,  # Different layer
             tier=5,  # Different tier
-            entry_fog="different",
+            entry_fogs=["different"],
             exit_fogs=["fog_b"],
         )
         assert hash(node1) == hash(node2)
@@ -62,7 +62,7 @@ class TestDagNode:
             cluster=cluster1,
             layer=0,
             tier=1,
-            entry_fog=None,
+            entry_fogs=[],
             exit_fogs=[],
         )
         node2 = DagNode(
@@ -70,7 +70,7 @@ class TestDagNode:
             cluster=cluster2,  # Different cluster
             layer=5,  # Different layer
             tier=10,  # Different tier
-            entry_fog="entry",
+            entry_fogs=["entry"],
             exit_fogs=["exit"],
         )
         assert node1 == node2
@@ -83,7 +83,7 @@ class TestDagNode:
             cluster=cluster,
             layer=0,
             tier=1,
-            entry_fog=None,
+            entry_fogs=[],
             exit_fogs=[],
         )
         node2 = DagNode(
@@ -91,7 +91,7 @@ class TestDagNode:
             cluster=cluster,
             layer=0,
             tier=1,
-            entry_fog=None,
+            entry_fogs=[],
             exit_fogs=[],
         )
         assert node1 != node2
@@ -100,13 +100,18 @@ class TestDagNode:
         """DagNode can be used in sets (hashable)."""
         cluster = make_cluster("c1")
         node1 = DagNode(
-            id="n1", cluster=cluster, layer=0, tier=1, entry_fog=None, exit_fogs=[]
+            id="n1", cluster=cluster, layer=0, tier=1, entry_fogs=[], exit_fogs=[]
         )
         node2 = DagNode(
-            id="n2", cluster=cluster, layer=0, tier=1, entry_fog=None, exit_fogs=[]
+            id="n2", cluster=cluster, layer=0, tier=1, entry_fogs=[], exit_fogs=[]
         )
         node1_dup = DagNode(
-            id="n1", cluster=cluster, layer=5, tier=10, entry_fog="x", exit_fogs=["y"]
+            id="n1",
+            cluster=cluster,
+            layer=5,
+            tier=10,
+            entry_fogs=["x"],
+            exit_fogs=["y"],
         )
 
         node_set = {node1, node2, node1_dup}
@@ -174,7 +179,7 @@ class TestDagBasicOperations:
         dag = Dag(seed=42)
         cluster = make_cluster("c1")
         node = DagNode(
-            id="n1", cluster=cluster, layer=0, tier=1, entry_fog=None, exit_fogs=[]
+            id="n1", cluster=cluster, layer=0, tier=1, entry_fogs=[], exit_fogs=[]
         )
 
         dag.add_node(node)
@@ -198,7 +203,7 @@ class TestDagBasicOperations:
         dag = Dag(seed=42)
         cluster = make_cluster("c1")
         node = DagNode(
-            id="n1", cluster=cluster, layer=0, tier=1, entry_fog=None, exit_fogs=[]
+            id="n1", cluster=cluster, layer=0, tier=1, entry_fogs=[], exit_fogs=[]
         )
         dag.add_node(node)
 
@@ -278,7 +283,7 @@ class TestDagPathEnumeration:
                     cluster=cluster,
                     layer=i,
                     tier=1,
-                    entry_fog=None,
+                    entry_fogs=[],
                     exit_fogs=[],
                 )
             )
@@ -307,7 +312,7 @@ class TestDagPathEnumeration:
                 cluster=make_cluster("c0"),
                 layer=0,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -317,7 +322,7 @@ class TestDagPathEnumeration:
                 cluster=make_cluster("c1"),
                 layer=1,
                 tier=5,
-                entry_fog="e1",
+                entry_fogs=["e1"],
                 exit_fogs=[],
             )
         )
@@ -327,7 +332,7 @@ class TestDagPathEnumeration:
                 cluster=make_cluster("c2"),
                 layer=1,
                 tier=5,
-                entry_fog="e2",
+                entry_fogs=["e2"],
                 exit_fogs=[],
             )
         )
@@ -337,7 +342,7 @@ class TestDagPathEnumeration:
                 cluster=make_cluster("c3"),
                 layer=2,
                 tier=10,
-                entry_fog="e3",
+                entry_fogs=["e3"],
                 exit_fogs=[],
             )
         )
@@ -364,7 +369,7 @@ class TestDagPathEnumeration:
                 cluster=make_cluster("c1"),
                 layer=0,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -383,7 +388,7 @@ class TestDagPathEnumeration:
                 cluster=make_cluster("c1"),
                 layer=0,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -402,7 +407,7 @@ class TestDagPathEnumeration:
                 cluster=make_cluster("c1", weight=10),
                 layer=0,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -412,7 +417,7 @@ class TestDagPathEnumeration:
                 cluster=make_cluster("c2", weight=15),
                 layer=1,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -422,7 +427,7 @@ class TestDagPathEnumeration:
                 cluster=make_cluster("c3", weight=20),
                 layer=2,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -457,7 +462,7 @@ class TestDagStatistics:
                 cluster=make_cluster("c1"),
                 layer=0,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -467,7 +472,7 @@ class TestDagStatistics:
                 cluster=make_cluster("c2"),
                 layer=1,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -477,7 +482,7 @@ class TestDagStatistics:
                 cluster=make_cluster("c3"),
                 layer=2,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -499,7 +504,7 @@ class TestDagStatistics:
                 cluster=make_cluster("c1", zones=["z1", "z2"]),
                 layer=0,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -509,7 +514,7 @@ class TestDagStatistics:
                 cluster=make_cluster("c2", zones=["z2", "z3"]),
                 layer=1,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -519,7 +524,7 @@ class TestDagStatistics:
                 cluster=make_cluster("c3", zones=["z4"]),
                 layer=2,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -541,7 +546,7 @@ class TestDagStatistics:
                 cluster=make_cluster("c1", cluster_type="legacy_dungeon"),
                 layer=0,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -551,7 +556,7 @@ class TestDagStatistics:
                 cluster=make_cluster("c2", cluster_type="mini_dungeon"),
                 layer=1,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -561,7 +566,7 @@ class TestDagStatistics:
                 cluster=make_cluster("c3", cluster_type="legacy_dungeon"),
                 layer=2,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -571,7 +576,7 @@ class TestDagStatistics:
                 cluster=make_cluster("c4", cluster_type="boss_arena"),
                 layer=3,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -599,7 +604,7 @@ class TestDagValidation:
                 cluster=make_cluster("c1"),
                 layer=0,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -618,7 +623,7 @@ class TestDagValidation:
                 cluster=make_cluster("c1"),
                 layer=0,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -637,7 +642,7 @@ class TestDagValidation:
                 cluster=make_cluster("c1"),
                 layer=0,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -657,7 +662,7 @@ class TestDagValidation:
                 cluster=make_cluster("c1"),
                 layer=0,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -677,7 +682,7 @@ class TestDagValidation:
                 cluster=make_cluster("c1"),
                 layer=0,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -687,7 +692,7 @@ class TestDagValidation:
                 cluster=make_cluster("c2"),
                 layer=1,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -697,7 +702,7 @@ class TestDagValidation:
                 cluster=make_cluster("c3"),
                 layer=1,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -718,7 +723,7 @@ class TestDagValidation:
                 cluster=make_cluster("c1"),
                 layer=0,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -728,7 +733,7 @@ class TestDagValidation:
                 cluster=make_cluster("c2"),
                 layer=1,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -738,7 +743,7 @@ class TestDagValidation:
                 cluster=make_cluster("c3"),
                 layer=2,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -760,7 +765,7 @@ class TestDagValidation:
                 cluster=make_cluster("c1"),
                 layer=0,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -770,7 +775,7 @@ class TestDagValidation:
                 cluster=make_cluster("c2"),
                 layer=1,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -780,7 +785,7 @@ class TestDagValidation:
                 cluster=make_cluster("c3"),
                 layer=2,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -803,7 +808,7 @@ class TestDagValidation:
                 cluster=make_cluster("c1"),
                 layer=0,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -813,7 +818,7 @@ class TestDagValidation:
                 cluster=make_cluster("c2"),
                 layer=1,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -823,7 +828,7 @@ class TestDagValidation:
                 cluster=make_cluster("c3"),
                 layer=1,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -833,7 +838,7 @@ class TestDagValidation:
                 cluster=make_cluster("c4"),
                 layer=2,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -857,7 +862,7 @@ class TestDagValidation:
                 cluster=make_cluster("c1"),
                 layer=0,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -867,7 +872,7 @@ class TestDagValidation:
                 cluster=make_cluster("c2"),
                 layer=1,
                 tier=5,
-                entry_fog="e1",
+                entry_fogs=["e1"],
                 exit_fogs=[],
             )
         )
@@ -877,7 +882,7 @@ class TestDagValidation:
                 cluster=make_cluster("c3"),
                 layer=1,
                 tier=5,
-                entry_fog="e2",
+                entry_fogs=["e2"],
                 exit_fogs=[],
             )
         )
@@ -887,7 +892,7 @@ class TestDagValidation:
                 cluster=make_cluster("c4"),
                 layer=2,
                 tier=10,
-                entry_fog="e3",
+                entry_fogs=["e3"],
                 exit_fogs=[],
             )
         )
@@ -911,7 +916,7 @@ class TestDagValidation:
                 cluster=make_cluster("c1"),
                 layer=0,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -921,7 +926,7 @@ class TestDagValidation:
                 cluster=make_cluster("c2"),
                 layer=1,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -943,7 +948,7 @@ class TestDagValidation:
                 cluster=make_cluster("c1"),
                 layer=0,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -953,7 +958,7 @@ class TestDagValidation:
                 cluster=make_cluster("c2"),
                 layer=1,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )

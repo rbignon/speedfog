@@ -13,6 +13,18 @@ from speedfog_core.clusters import ClusterData
 
 
 @dataclass
+class Branch:
+    """A branch in the DAG during generation.
+
+    Tracks the current position and available exit fog for a parallel path.
+    """
+
+    id: str
+    current_node_id: str
+    available_exit: str
+
+
+@dataclass
 class DagNode:
     """A node in the DAG representing a cluster instance.
 
@@ -24,7 +36,9 @@ class DagNode:
     cluster: ClusterData
     layer: int
     tier: int  # Difficulty scaling (1-28)
-    entry_fog: str | None  # fog_id used to enter (None for start)
+    entry_fogs: list[str] = field(
+        default_factory=list
+    )  # fog_ids used to enter (empty for start)
     exit_fogs: list[str] = field(default_factory=list)  # Available exits
 
     def __hash__(self) -> int:

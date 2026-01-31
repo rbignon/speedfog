@@ -43,7 +43,7 @@ def dag_to_dict(dag: Dag) -> dict[str, Any]:
             "weight": node.cluster.weight,
             "layer": node.layer,
             "tier": node.tier,
-            "entry_fog": node.entry_fog,
+            "entry_fogs": node.entry_fogs,
             "exit_fogs": node.exit_fogs,
         }
 

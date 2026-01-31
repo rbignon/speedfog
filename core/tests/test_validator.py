@@ -35,7 +35,7 @@ def make_simple_dag(seed: int = 42) -> Dag:
             cluster=make_cluster("start_cluster", cluster_type="start", weight=0),
             layer=0,
             tier=1,
-            entry_fog=None,
+            entry_fogs=[],
             exit_fogs=["fog_1"],
         )
     )
@@ -45,7 +45,7 @@ def make_simple_dag(seed: int = 42) -> Dag:
             cluster=make_cluster("end_cluster", cluster_type="final_boss", weight=5),
             layer=1,
             tier=1,
-            entry_fog="fog_1",
+            entry_fogs=["fog_1"],
             exit_fogs=[],
         )
     )
@@ -76,7 +76,7 @@ def make_dag_with_content(
             cluster=make_cluster("start_cluster", cluster_type="start", weight=0),
             layer=current_layer,
             tier=1,
-            entry_fog=None,
+            entry_fogs=[],
             exit_fogs=["fog_start_0"],
         )
     )
@@ -104,7 +104,7 @@ def make_dag_with_content(
                 ),
                 layer=current_layer,
                 tier=1,
-                entry_fog=f"fog_{edge_idx}",
+                entry_fogs=[f"fog_{edge_idx}"],
                 exit_fogs=[f"fog_{edge_idx + 1}"],
             )
         )
@@ -126,7 +126,7 @@ def make_dag_with_content(
                 ),
                 layer=current_layer,
                 tier=1,
-                entry_fog=f"fog_{edge_idx}",
+                entry_fogs=[f"fog_{edge_idx}"],
                 exit_fogs=[f"fog_{edge_idx + 1}"],
             )
         )
@@ -148,7 +148,7 @@ def make_dag_with_content(
                 ),
                 layer=current_layer,
                 tier=1,
-                entry_fog=f"fog_{edge_idx}",
+                entry_fogs=[f"fog_{edge_idx}"],
                 exit_fogs=[f"fog_{edge_idx + 1}"],
             )
         )
@@ -170,7 +170,7 @@ def make_dag_with_content(
                 ),
                 layer=current_layer,
                 tier=1,
-                entry_fog=f"fog_{edge_idx}",
+                entry_fogs=[f"fog_{edge_idx}"],
                 exit_fogs=[f"fog_{edge_idx + 1}"],
             )
         )
@@ -186,7 +186,7 @@ def make_dag_with_content(
             cluster=make_cluster("end_cluster", cluster_type="final_boss", weight=5),
             layer=current_layer,
             tier=1,
-            entry_fog=f"fog_{edge_idx}",
+            entry_fogs=[f"fog_{edge_idx}"],
             exit_fogs=[],
         )
     )
@@ -356,7 +356,7 @@ class TestPathValidation:
                 cluster=make_cluster("s", cluster_type="start"),
                 layer=0,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )
@@ -366,7 +366,7 @@ class TestPathValidation:
                 cluster=make_cluster("e", cluster_type="final_boss"),
                 layer=1,
                 tier=1,
-                entry_fog=None,
+                entry_fogs=[],
                 exit_fogs=[],
             )
         )

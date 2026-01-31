@@ -53,6 +53,9 @@ class StructureConfig:
     max_parallel_paths: int = 3
     min_layers: int = 6
     max_layers: int = 10
+    split_probability: float = 0.3
+    merge_probability: float = 0.3
+    max_branches: int = 3
 
 
 @dataclass
@@ -99,6 +102,9 @@ class Config:
                 max_parallel_paths=structure_section.get("max_parallel_paths", 3),
                 min_layers=structure_section.get("min_layers", 6),
                 max_layers=structure_section.get("max_layers", 10),
+                split_probability=structure_section.get("split_probability", 0.3),
+                merge_probability=structure_section.get("merge_probability", 0.3),
+                max_branches=structure_section.get("max_branches", 3),
             ),
             paths=PathsConfig(
                 game_dir=paths_section.get("game_dir", ""),

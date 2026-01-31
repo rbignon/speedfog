@@ -388,6 +388,9 @@ class TestGenerateDag:
         config.seed = 12345
         config.structure.min_layers = 3
         config.structure.max_layers = 5
+        config.structure.max_branches = 1  # Single branch avoids merge requirement
+        config.structure.split_probability = 0.0
+        config.structure.merge_probability = 0.0
 
         dag1 = generate_dag(config, pool, seed=12345)
         dag2 = generate_dag(config, pool, seed=12345)
@@ -402,6 +405,9 @@ class TestGenerateDag:
         config = Config()
         config.structure.min_layers = 3
         config.structure.max_layers = 3
+        config.structure.max_branches = 1  # Single branch avoids merge requirement
+        config.structure.split_probability = 0.0
+        config.structure.merge_probability = 0.0
 
         dag = generate_dag(config, pool, seed=42)
 
@@ -416,6 +422,9 @@ class TestGenerateDag:
         config = Config()
         config.structure.min_layers = 3
         config.structure.max_layers = 5
+        config.structure.max_branches = 1  # Single branch avoids merge requirement
+        config.structure.split_probability = 0.0
+        config.structure.merge_probability = 0.0
 
         dag = generate_dag(config, pool, seed=42)
         paths = dag.enumerate_paths()
@@ -425,13 +434,66 @@ class TestGenerateDag:
             assert path[0] == "start"
             assert path[-1] == "end"
 
-    def test_respects_max_parallel_paths(self):
-        """DAG does not exceed max_parallel_paths branches."""
-        pool = make_cluster_pool()
+    def test_respects_max_branches(self):
+        """DAG does not exceed max_branches at any layer."""
+        # Create pool with merge-compatible clusters (2+ entries)
+        pool = ClusterPool()
+
+        # Start cluster with 2 exits
+        pool.add(
+            make_cluster(
+                "chapel_start",
+                zones=["chapel"],
+                cluster_type="start",
+                weight=1,
+                entry_fogs=[],
+                exit_fogs=[
+                    {"fog_id": "start_exit_1", "zone": "chapel"},
+                    {"fog_id": "start_exit_2", "zone": "chapel"},
+                ],
+            )
+        )
+
+        # Final boss
+        pool.add(
+            make_cluster(
+                "erdtree_boss",
+                zones=["erdtree_throne"],
+                cluster_type="final_boss",
+                weight=5,
+                entry_fogs=[{"fog_id": "final_entry", "zone": "erdtree_throne"}],
+                exit_fogs=[],
+            )
+        )
+
+        # Add merge-compatible clusters (2 entries, 2 exits)
+        for i in range(10):
+            pool.add(
+                make_cluster(
+                    f"merge_{i}",
+                    zones=[f"merge_{i}_zone"],
+                    cluster_type="mini_dungeon",
+                    weight=5,
+                    entry_fogs=[
+                        {"fog_id": f"merge_{i}_entry_a", "zone": f"merge_{i}_zone"},
+                        {"fog_id": f"merge_{i}_entry_b", "zone": f"merge_{i}_zone"},
+                    ],
+                    exit_fogs=[
+                        {"fog_id": f"merge_{i}_exit_a", "zone": f"merge_{i}_zone"},
+                        {"fog_id": f"merge_{i}_exit_b", "zone": f"merge_{i}_zone"},
+                    ],
+                )
+            )
+
         config = Config()
-        config.structure.max_parallel_paths = 2
+        config.structure.max_branches = 2
         config.structure.min_layers = 4
         config.structure.max_layers = 4
+        config.structure.split_probability = 0.2
+        config.structure.merge_probability = 0.2
+        config.requirements.legacy_dungeons = 0
+        config.requirements.bosses = 0
+        config.requirements.mini_dungeons = 0
 
         dag = generate_dag(config, pool, seed=42)
 
@@ -441,10 +503,11 @@ class TestGenerateDag:
             layer = node.layer
             nodes_by_layer[layer] = nodes_by_layer.get(layer, 0) + 1
 
-        # Each intermediate layer should have at most max_parallel_paths nodes
-        max_layer = max(nodes_by_layer.keys())
-        for layer in range(1, max_layer):  # Exclude start (0) and end (max)
-            assert nodes_by_layer.get(layer, 0) <= config.structure.max_parallel_paths
+        # Each layer should have at most max_branches nodes
+        for layer, count in nodes_by_layer.items():
+            assert (
+                count <= config.structure.max_branches
+            ), f"Layer {layer} has {count} nodes > max_branches {config.structure.max_branches}"
 
     def test_no_zone_overlap(self):
         """Each zone appears in exactly one node."""
@@ -452,6 +515,9 @@ class TestGenerateDag:
         config = Config()
         config.structure.min_layers = 4
         config.structure.max_layers = 6
+        config.structure.max_branches = 1  # Single branch avoids merge requirement
+        config.structure.split_probability = 0.0
+        config.structure.merge_probability = 0.0
 
         dag = generate_dag(config, pool, seed=42)
 
@@ -542,6 +608,9 @@ class TestGenerateDag:
         config = Config()
         config.structure.min_layers = 3
         config.structure.max_layers = 3
+        config.structure.max_branches = 1  # Single branch avoids merge requirement
+        config.structure.split_probability = 0.0
+        config.structure.merge_probability = 0.0
         config.requirements.legacy_dungeons = 1
         config.requirements.mini_dungeons = 1
         config.requirements.bosses = 1
@@ -555,6 +624,9 @@ class TestGenerateDag:
         config = Config()
         config.structure.min_layers = 4
         config.structure.max_layers = 4
+        config.structure.max_branches = 1  # Single branch avoids merge requirement
+        config.structure.split_probability = 0.0
+        config.structure.merge_probability = 0.0
 
         dag = generate_dag(config, pool, seed=42)
 
@@ -593,6 +665,9 @@ class TestGenerateWithRetry:
         config.seed = 99999
         config.structure.min_layers = 3
         config.structure.max_layers = 3
+        config.structure.max_branches = 1  # Single branch avoids merge requirement
+        config.structure.split_probability = 0.0
+        config.structure.merge_probability = 0.0
         # Relax requirements so test pool can satisfy them
         config.requirements.legacy_dungeons = 0
         config.requirements.bosses = 0
@@ -612,6 +687,9 @@ class TestGenerateWithRetry:
         config.seed = 0  # Auto-reroll mode
         config.structure.min_layers = 3
         config.structure.max_layers = 3
+        config.structure.max_branches = 1  # Single branch avoids merge requirement
+        config.structure.split_probability = 0.0
+        config.structure.merge_probability = 0.0
         # Relax requirements so test pool can satisfy them
         config.requirements.legacy_dungeons = 0
         config.requirements.bosses = 0

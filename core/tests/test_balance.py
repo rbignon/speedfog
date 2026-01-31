@@ -38,7 +38,7 @@ def make_linear_dag(weights: list[int]) -> Dag:
             cluster=make_cluster(f"c{i}", weight=weight),
             layer=i,
             tier=1,
-            entry_fog=f"fog_{i}" if i > 0 else None,
+            entry_fogs=[f"fog_{i}"] if i > 0 else [],
             exit_fogs=[],
         )
         dag.add_node(node)
@@ -79,7 +79,7 @@ def make_forked_dag(
         cluster=make_cluster("c_start", weight=start_weight),
         layer=0,
         tier=1,
-        entry_fog=None,
+        entry_fogs=[],
         exit_fogs=[],
     )
     dag.add_node(start)
@@ -93,7 +93,7 @@ def make_forked_dag(
         cluster=make_cluster("c_end", weight=end_weight),
         layer=end_layer,
         tier=10,
-        entry_fog="fog_end",
+        entry_fogs=["fog_end"],
         exit_fogs=[],
     )
     dag.add_node(end)
@@ -111,7 +111,7 @@ def make_forked_dag(
                 cluster=make_cluster(f"c_{node_id}", weight=weight),
                 layer=node_idx + 1,
                 tier=node_idx + 1,
-                entry_fog=f"fog_{node_id}",
+                entry_fogs=[f"fog_{node_id}"],
                 exit_fogs=[],
             )
             dag.add_node(node)

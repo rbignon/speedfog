@@ -164,7 +164,7 @@ class TestFullPipeline:
             assert "weight" in node
             assert "layer" in node
             assert "tier" in node
-            assert "entry_fog" in node
+            assert "entry_fogs" in node
             assert "exit_fogs" in node
 
         # Edges structure
