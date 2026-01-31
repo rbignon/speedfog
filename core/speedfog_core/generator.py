@@ -9,17 +9,36 @@ Generates a randomized DAG with:
 from __future__ import annotations
 
 import random
+from dataclasses import dataclass
 
 from speedfog_core.clusters import ClusterData, ClusterPool
 from speedfog_core.config import Config
 from speedfog_core.dag import Dag, DagNode
 from speedfog_core.planner import compute_tier, plan_layer_types
+from speedfog_core.validator import ValidationResult, validate_dag
 
 
 class GenerationError(Exception):
     """Error during DAG generation."""
 
     pass
+
+
+@dataclass
+class GenerationResult:
+    """Result of DAG generation.
+
+    Attributes:
+        dag: The generated DAG.
+        seed: The actual seed used for generation.
+        validation: Validation result (with any warnings).
+        attempts: Number of generation attempts made.
+    """
+
+    dag: Dag
+    seed: int
+    validation: ValidationResult
+    attempts: int
 
 
 def cluster_has_usable_exits(cluster: ClusterData) -> bool:
@@ -273,11 +292,11 @@ def generate_with_retry(
     config: Config,
     clusters: ClusterPool,
     max_attempts: int = 100,
-) -> tuple[Dag, int]:
+) -> GenerationResult:
     """Generate DAG with automatic retry on failure.
 
-    If config.seed is 0, tries random seeds until success.
-    If config.seed is non-zero, uses that seed (fails if generation fails).
+    If config.seed is 0, tries random seeds until success (generation + validation).
+    If config.seed is non-zero, uses that seed (fails if generation or validation fails).
 
     Args:
         config: Configuration
@@ -285,7 +304,7 @@ def generate_with_retry(
         max_attempts: Maximum retry attempts (only for seed=0)
 
     Returns:
-        Tuple of (generated DAG, actual seed used)
+        GenerationResult with DAG, seed, validation, and attempt count.
 
     Raises:
         GenerationError: If generation fails after max_attempts
@@ -293,7 +312,16 @@ def generate_with_retry(
     if config.seed != 0:
         # Fixed seed - single attempt
         dag = generate_dag(config, clusters, config.seed)
-        return dag, config.seed
+        validation = validate_dag(dag, config)
+        if not validation.is_valid:
+            errors = "; ".join(validation.errors)
+            raise GenerationError(f"Validation failed: {errors}")
+        return GenerationResult(
+            dag=dag,
+            seed=config.seed,
+            validation=validation,
+            attempts=1,
+        )
 
     # Auto-reroll mode
     base_rng = random.Random()
@@ -302,7 +330,16 @@ def generate_with_retry(
         seed = base_rng.randint(1, 999999999)
         try:
             dag = generate_dag(config, clusters, seed)
-            return dag, seed
+            validation = validate_dag(dag, config)
+            if not validation.is_valid:
+                errors = "; ".join(validation.errors)
+                raise GenerationError(f"Validation failed: {errors}")
+            return GenerationResult(
+                dag=dag,
+                seed=seed,
+                validation=validation,
+                attempts=attempt + 1,
+            )
         except GenerationError as e:
             print(f"Attempt {attempt + 1}: seed {seed} failed - {e}")
             continue

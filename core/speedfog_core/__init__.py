@@ -13,7 +13,12 @@ from speedfog_core.config import (
     load_config,
 )
 from speedfog_core.dag import Dag, DagEdge, DagNode
-from speedfog_core.generator import GenerationError, generate_dag, generate_with_retry
+from speedfog_core.generator import (
+    GenerationError,
+    GenerationResult,
+    generate_dag,
+    generate_with_retry,
+)
 from speedfog_core.output import dag_to_dict, export_json, export_spoiler_log
 from speedfog_core.planner import compute_tier, plan_layer_types
 from speedfog_core.validator import ValidationResult, validate_dag
@@ -39,6 +44,7 @@ __all__ = [
     "plan_layer_types",
     # Generator
     "GenerationError",
+    "GenerationResult",
     "generate_dag",
     "generate_with_retry",
     # Balance

@@ -15,7 +15,6 @@ from speedfog_core import (
     export_spoiler_log,
     generate_with_retry,
     load_clusters,
-    validate_dag,
 )
 
 
@@ -57,12 +56,13 @@ class TestFullPipeline:
         """Full pipeline: generate -> validate -> export."""
         config = relaxed_config
 
-        dag, seed = generate_with_retry(config, real_clusters, max_attempts=50)
-        assert seed == 42
+        result = generate_with_retry(config, real_clusters, max_attempts=50)
+        assert result.seed == 42
+        assert (
+            result.validation.is_valid
+        ), f"Validation failed: {result.validation.errors}"
 
-        result = validate_dag(dag, config)
-        assert result.is_valid, f"Validation failed: {result.errors}"
-
+        dag = result.dag
         json_path = tmp_path / "graph.json"
         export_json(dag, json_path)
         assert json_path.exists()
@@ -77,7 +77,7 @@ class TestFullPipeline:
         # Verify spoiler log contains expected sections
         spoiler_content = spoiler_path.read_text()
         assert "SPEEDFOG SPOILER" in spoiler_content
-        assert f"seed: {seed}" in spoiler_content
+        assert f"seed: {result.seed}" in spoiler_content
         assert "PATH SUMMARY" in spoiler_content
         # ASCII graph should have box-drawing characters
         assert "│" in spoiler_content
@@ -86,10 +86,9 @@ class TestFullPipeline:
         """seed=0 finds a working seed automatically."""
         config = relaxed_config
         config.seed = 0  # Auto-reroll mode
-        dag, seed = generate_with_retry(config, real_clusters, max_attempts=100)
-        assert seed != 0
-        result = validate_dag(dag, config)
-        assert result.is_valid
+        result = generate_with_retry(config, real_clusters, max_attempts=100)
+        assert result.seed != 0
+        assert result.validation.is_valid
 
     def test_multiple_seeds_produce_different_dags(self, real_clusters, relaxed_config):
         """Different seeds produce different DAGs."""
@@ -101,38 +100,42 @@ class TestFullPipeline:
             requirements=relaxed_config.requirements,
             structure=relaxed_config.structure,
         )
-        dag1, _ = generate_with_retry(config1, real_clusters)
-        dag2, _ = generate_with_retry(config2, real_clusters)
-        nodes1 = {n.cluster.id for n in dag1.nodes.values()}
-        nodes2 = {n.cluster.id for n in dag2.nodes.values()}
+        result1 = generate_with_retry(config1, real_clusters)
+        result2 = generate_with_retry(config2, real_clusters)
+        nodes1 = {n.cluster.id for n in result1.dag.nodes.values()}
+        nodes2 = {n.cluster.id for n in result2.dag.nodes.values()}
         assert nodes1 != nodes2
 
     def test_same_seed_produces_identical_dag(self, real_clusters, relaxed_config):
         """Same seed produces identical DAG (determinism)."""
         config = relaxed_config
         config.seed = 12345
-        dag1, seed1 = generate_with_retry(config, real_clusters)
-        dag2, seed2 = generate_with_retry(config, real_clusters)
+        result1 = generate_with_retry(config, real_clusters)
+        result2 = generate_with_retry(config, real_clusters)
 
-        assert seed1 == seed2 == 12345
-        assert dag1.seed == dag2.seed
+        assert result1.seed == result2.seed == 12345
+        assert result1.dag.seed == result2.dag.seed
 
         # Same nodes
-        assert set(dag1.nodes.keys()) == set(dag2.nodes.keys())
+        assert set(result1.dag.nodes.keys()) == set(result2.dag.nodes.keys())
 
         # Same clusters in each node
-        for node_id in dag1.nodes:
-            assert dag1.nodes[node_id].cluster.id == dag2.nodes[node_id].cluster.id
+        for node_id in result1.dag.nodes:
+            assert (
+                result1.dag.nodes[node_id].cluster.id
+                == result2.dag.nodes[node_id].cluster.id
+            )
 
         # Same edges
-        edges1 = {(e.source_id, e.target_id) for e in dag1.edges}
-        edges2 = {(e.source_id, e.target_id) for e in dag2.edges}
+        edges1 = {(e.source_id, e.target_id) for e in result1.dag.edges}
+        edges2 = {(e.source_id, e.target_id) for e in result2.dag.edges}
         assert edges1 == edges2
 
     def test_exported_json_structure(self, real_clusters, relaxed_config, tmp_path):
         """Verify exported JSON has correct structure for C# writer."""
         config = relaxed_config
-        dag, _ = generate_with_retry(config, real_clusters)
+        result = generate_with_retry(config, real_clusters)
+        dag = result.dag
 
         json_path = tmp_path / "graph.json"
         export_json(dag, json_path)
@@ -174,11 +177,11 @@ class TestFullPipeline:
     def test_validation_result_structure(self, real_clusters, relaxed_config):
         """Verify validation returns properly structured result."""
         config = relaxed_config
-        dag, _ = generate_with_retry(config, real_clusters)
+        gen_result = generate_with_retry(config, real_clusters)
 
-        result = validate_dag(dag, config)
+        validation = gen_result.validation
 
-        assert isinstance(result, ValidationResult)
-        assert isinstance(result.is_valid, bool)
-        assert isinstance(result.errors, list)
-        assert isinstance(result.warnings, list)
+        assert isinstance(validation, ValidationResult)
+        assert isinstance(validation.is_valid, bool)
+        assert isinstance(validation.errors, list)
+        assert isinstance(validation.warnings, list)

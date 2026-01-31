@@ -593,11 +593,17 @@ class TestGenerateWithRetry:
         config.seed = 99999
         config.structure.min_layers = 3
         config.structure.max_layers = 3
+        # Relax requirements so test pool can satisfy them
+        config.requirements.legacy_dungeons = 0
+        config.requirements.bosses = 0
+        config.requirements.mini_dungeons = 0
 
-        dag, seed = generate_with_retry(config, pool)
+        result = generate_with_retry(config, pool)
 
-        assert seed == 99999
-        assert dag.seed == 99999
+        assert result.seed == 99999
+        assert result.dag.seed == 99999
+        assert result.attempts == 1
+        assert result.validation.is_valid
 
     def test_auto_reroll_finds_valid_seed(self):
         """With seed=0, tries random seeds until success."""
@@ -606,12 +612,17 @@ class TestGenerateWithRetry:
         config.seed = 0  # Auto-reroll mode
         config.structure.min_layers = 3
         config.structure.max_layers = 3
+        # Relax requirements so test pool can satisfy them
+        config.requirements.legacy_dungeons = 0
+        config.requirements.bosses = 0
+        config.requirements.mini_dungeons = 0
 
-        dag, seed = generate_with_retry(config, pool, max_attempts=100)
+        result = generate_with_retry(config, pool, max_attempts=100)
 
-        assert seed != 0  # Should have found a random seed
-        assert dag.seed == seed
-        assert len(dag.nodes) > 0
+        assert result.seed != 0  # Should have found a random seed
+        assert result.dag.seed == result.seed
+        assert len(result.dag.nodes) > 0
+        assert result.validation.is_valid
 
     def test_raises_after_max_attempts(self):
         """Raises GenerationError after max_attempts failures."""

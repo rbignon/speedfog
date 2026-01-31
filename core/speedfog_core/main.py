@@ -11,7 +11,6 @@ from speedfog_core.clusters import load_clusters
 from speedfog_core.config import Config, load_config
 from speedfog_core.generator import GenerationError, generate_with_retry
 from speedfog_core.output import export_json, export_spoiler_log
-from speedfog_core.validator import validate_dag
 
 
 def main() -> int:
@@ -117,24 +116,17 @@ def main() -> int:
         print(f"Generating DAG ({mode})...")
 
     try:
-        dag, actual_seed = generate_with_retry(
-            config, clusters, max_attempts=args.max_attempts
-        )
+        result = generate_with_retry(config, clusters, max_attempts=args.max_attempts)
     except GenerationError as e:
         print(f"Error: Generation failed: {e}", file=sys.stderr)
         return 1
 
-    # Validate the generated DAG
-    validation = validate_dag(dag, config)
-    if not validation.is_valid:
-        print("Error: Generated DAG failed validation:", file=sys.stderr)
-        for error in validation.errors:
-            print(f"  - {error}", file=sys.stderr)
-        return 1
+    dag = result.dag
+    actual_seed = result.seed
 
-    if args.verbose and validation.warnings:
+    if args.verbose and result.validation.warnings:
         print("Validation warnings:")
-        for warning in validation.warnings:
+        for warning in result.validation.warnings:
             print(f"  - {warning}")
 
     # Print summary
