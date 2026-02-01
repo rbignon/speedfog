@@ -175,7 +175,7 @@ DLC_TAGS = {"dlc", "dlc1", "dlc2", "dlconly"}
 OVERWORLD_TAG = "overworld"
 
 # Tags to exclude areas
-EXCLUDE_TAGS = {"unused", "crawlonly"}
+EXCLUDE_TAGS = {"unused", "crawlonly", "evergaol"}  # evergaols need special handling
 
 # Zone name prefixes to exclude (these use alternative fog gates that FogMod ignores)
 EXCLUDE_ZONE_PREFIXES = {"leyndell2_"}  # Ashen Leyndell - use pre-ashen instead
@@ -496,7 +496,9 @@ def classify_fogs(
         if fog.is_unique:
             # Unique: ASide is exit only, BSide is entry only
             zone_fogs[aside_area].exit_fogs.append(fog)
-            zone_fogs[bside_area].entry_fogs.append(fog)
+            # Skip minorwarps as entry_fogs - they're transporter chests from fixed locations
+            if "minorwarp" not in tags_lower:
+                zone_fogs[bside_area].entry_fogs.append(fog)
         elif fog.is_uniquegate:
             # Uniquegate: check if this pair was already processed
             zone_pair = fog.zone_pair

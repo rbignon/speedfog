@@ -104,7 +104,6 @@ Example:
         // 2. Build FogMod options
         var opt = new RandomizerOptions(GameSpec.FromGame.ER);
         opt.Seed = graphData.Seed;
-        opt.InitFeatures();
 
         // Apply options from graph.json
         foreach (var (key, value) in graphData.Options)
@@ -112,12 +111,21 @@ Example:
             opt[key] = value;
         }
 
+        // Initialize features first (creates internal structures)
+        opt.InitFeatures();
+
         // Required options for SpeedFog
-        opt["shuffle"] = true;  // World shuffle mode
+        opt["crawl"] = true;  // Dungeon crawler mode - enables AllowUnlinked, tier progression
+        opt["unconnected"] = true;  // Allow unconnected edges in the graph
         opt["req_backportal"] = true;  // Enable backportals so boss rooms have return warps as edges
         opt["req_all"] = true;  // Make all dungeon tags "core" so backportals aren't marked unused
 
-        Console.WriteLine($"Options: seed={opt.Seed}, shuffle={opt["shuffle"]}, scale={opt["scale"]}");
+        // Configure features that depend on crawl mode (normally done by Randomizer)
+        opt[Feature.AllowUnlinked] = true;  // Allow edges without connections
+        opt[Feature.ForceUnlinked] = true;  // Force unlinked mode
+        opt[Feature.SegmentFortresses] = true;  // Treat fortresses as segments
+
+        Console.WriteLine($"Options: seed={opt.Seed}, crawl={opt["crawl"]}, scale={opt["scale"]}");
 
         // 3. Load FogMod data files
         var fogPath = Path.Combine(config.DataDir, "fog.txt");

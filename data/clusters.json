@@ -1903,10 +1903,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "caelid_selliatunnel"
-        },
-        {
-          "fog_id": "32082650",
-          "zone": "caelid_selliatunnel"
         }
       ],
       "exit_fogs": [
