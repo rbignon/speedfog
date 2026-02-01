@@ -1,0 +1,82 @@
+// writer/SpeedFogWriter/Writers/FogGateWriter.cs
+using SpeedFogWriter.Models;
+using SpeedFogWriter.Helpers;
+
+namespace SpeedFogWriter.Writers;
+
+public class FogGateWriter
+{
+    private readonly FogDataFile _fogData;
+    private readonly ClusterFile _clusterData;
+    private readonly EntityIdAllocator _idAllocator;
+
+    public FogGateWriter(FogDataFile fogData, ClusterFile clusterData, EntityIdAllocator idAllocator)
+    {
+        _fogData = fogData;
+        _clusterData = clusterData;
+        _idAllocator = idAllocator;
+    }
+
+    public List<FogGateEvent> CreateFogGates(SpeedFogGraph graph)
+    {
+        var events = new List<FogGateEvent>();
+
+        foreach (var edge in graph.Edges)
+        {
+            var source = graph.GetNode(edge.Source);
+            var target = graph.GetNode(edge.Target);
+
+            if (source == null || target == null)
+            {
+                Console.WriteLine($"  Warning: Invalid edge {edge.Source} -> {edge.Target}");
+                continue;
+            }
+
+            var exitFogData = _fogData.GetFog(edge.FogId);
+            if (exitFogData == null)
+            {
+                Console.WriteLine($"  Warning: Missing fog data for {edge.FogId}");
+                continue;
+            }
+
+            var targetMap = _clusterData.GetMapForCluster(target.Zones);
+            if (targetMap == null)
+            {
+                Console.WriteLine($"  Warning: Cannot determine map for cluster {target.ClusterId}");
+                continue;
+            }
+
+            var primaryEntryFog = target.PrimaryEntryFog;
+            var entryFogData = primaryEntryFog != null ? _fogData.GetFog(primaryEntryFog) : null;
+
+            var fogEvent = new FogGateEvent
+            {
+                EventId = _idAllocator.AllocateEventId(),
+                FlagId = _idAllocator.AllocateFlagId(),
+                EdgeFogId = edge.FogId,
+                SourceNodeId = source.Id,
+                TargetNodeId = target.Id,
+                SourceClusterId = source.ClusterId,
+                TargetClusterId = target.ClusterId,
+                TargetZones = target.Zones,
+
+                SourceMap = exitFogData.Map,
+                FogEntityId = exitFogData.EntityId,
+                FogModel = exitFogData.Model,
+                FogAssetName = exitFogData.AssetName,
+                FogLookupBy = exitFogData.LookupBy,
+
+                TargetMap = targetMap,
+                WarpRegionId = _idAllocator.AllocateRegionId(),
+                EntryFogData = entryFogData,
+
+                SourceTier = source.Tier,
+                TargetTier = target.Tier,
+            };
+
+            events.Add(fogEvent);
+        }
+
+        return events;
+    }
+}
