@@ -94,7 +94,10 @@ templates:
 
   # Item-triggered warp (e.g., Pureblood Knight's Medal)
   # Source: FogRando fogevents.txt ID 922
-  # Detects when player has a specific SpEffect and warps them
+  # NOTE: This template is NOT USED. Following FogRando's approach, we now MODIFY
+  # the vanilla event's WarpPlayer instruction directly instead of creating a new event.
+  # The vanilla event already has all the SpEffect detection and world type checks.
+  # Kept here for reference only.
   itemwarp:
     id: 79000011
     restart: true

@@ -353,9 +353,10 @@ public class ModWriter
 
     /// <summary>
     /// Generate events for item-triggered warps (e.g., Pureblood Knight's Medal).
-    /// These events detect when a SpEffect is applied and warp the player.
-    /// They must go in common.emevd since they can trigger from anywhere.
-    /// Reference: FogRando fogevents.txt event 922
+    /// Following FogRando's approach: modify the vanilla WarpPlayer destination instead of
+    /// creating a new event. This keeps all the vanilla logic (SpEffect check, world type check)
+    /// and just changes where the player warps to.
+    /// Reference: FogRando fogevents.txt event 922 with Template WarpID
     /// </summary>
     private void GenerateItemWarpEvent(FogGateEvent fogGate)
     {
@@ -366,73 +367,61 @@ public class ModWriter
             return;
         }
 
-        var event0 = commonEmevd.Events.FirstOrDefault(e => e.ID == 0);
-        if (event0 == null)
+        // The vanilla warp destination region ID is the same as the fog ID for item warps
+        // e.g., fog ID "12052021" = region 12052021 in Mohgwyn Palace
+        if (!int.TryParse(fogGate.EdgeFogId, out var vanillaRegionId))
         {
-            Console.WriteLine($"    WARNING: Event 0 not found in common.emevd");
+            Console.WriteLine($"    WARNING: Cannot parse fog ID {fogGate.EdgeFogId} as region ID");
             return;
         }
 
-        // The vanilla warp destination region ID is the same as the fog ID for item warps
-        // e.g., fog ID "12052021" = region 12052021 in Mohgwyn Palace
-        if (int.TryParse(fogGate.EdgeFogId, out var vanillaRegionId))
+        // Modify the vanilla WarpPlayer instruction to point to our new destination
+        // This keeps all the vanilla event logic (SpEffect detection, world type check, etc.)
+        var mapBytes = fogGate.TargetMapBytes;
+        var modifyCount = ModifyVanillaItemWarp(
+            commonEmevd,
+            vanillaRegionId,
+            (int)fogGate.WarpRegionId,
+            mapBytes
+        );
+
+        if (modifyCount > 0)
         {
-            // NOP the vanilla WarpPlayer instruction that warps to this region
-            // This prevents the vanilla event from executing alongside our custom event
-            var nopCount = NopVanillaItemWarp(commonEmevd, vanillaRegionId);
-            if (nopCount > 0)
+            Console.WriteLine($"    [DEBUG] common: Modified {modifyCount} WarpPlayer from region {vanillaRegionId} to {fogGate.WarpRegionId} in {fogGate.TargetMap}");
+            if (modifyCount > 1)
             {
-                Console.WriteLine($"    [DEBUG] common: NOPed {nopCount} vanilla WarpPlayer to region {vanillaRegionId}");
-                if (nopCount > 1)
-                {
-                    Console.WriteLine($"    WARNING: Multiple WarpPlayer instructions found for region {vanillaRegionId}, this is unexpected");
-                }
-            }
-            else
-            {
-                Console.WriteLine($"    WARNING: Could not find vanilla WarpPlayer to region {vanillaRegionId} in common.emevd");
+                Console.WriteLine($"    WARNING: Multiple WarpPlayer instructions found for region {vanillaRegionId}, this is unexpected");
             }
         }
-
-        // Pack target map bytes
-        var mapBytes = fogGate.TargetMapBytes;
-        int packedMapBytes = mapBytes[0] | (mapBytes[1] << 8) | (mapBytes[2] << 16) | (mapBytes[3] << 24);
-
-        // Add InitializeEvent for itemwarp template
-        // itemwarp(speffect, warp_region, map_bytes)
-        var itemWarpInit = _eventBuilder!.BuildInitializeEvent(
-            "itemwarp",
-            0,
-            fogGate.TriggerSpEffect!.Value,   // X0_4 = speffect
-            (int)fogGate.WarpRegionId,         // X4_4 = warp_region
-            packedMapBytes                     // X8_4 = packed map bytes
-        );
-        event0.Instructions.Add(itemWarpInit);
-
-        Console.WriteLine($"    [DEBUG] common event0: InitializeCommonEvent itemwarp({fogGate.TriggerSpEffect}, {fogGate.WarpRegionId}, {fogGate.TargetMap})");
+        else
+        {
+            Console.WriteLine($"    WARNING: Could not find vanilla WarpPlayer to region {vanillaRegionId} in common.emevd");
+        }
 
         // Mark common.emevd for writing
         _writeEmevds.Add("common");
     }
 
     /// <summary>
-    /// Find and NOP vanilla WarpPlayer instructions that warp to a specific region.
-    /// Used for item-triggered warps (e.g., Pureblood Knight's Medal) where we need
-    /// to disable the vanilla warp and replace it with our custom destination.
+    /// Find and MODIFY vanilla WarpPlayer instructions that warp to a specific region.
+    /// FogRando approach: instead of NOPing and creating a new event, we modify the
+    /// existing WarpPlayer to point to our new destination.
     /// WarpPlayer is Bank 2003, ID 14.
     /// Arguments: AreaID(1), BlockID(1), Sub1(1), Sub2(1), SpawnPoint(4), Unknown(4)
     /// </summary>
     /// <param name="emevd">The common.emevd file</param>
-    /// <param name="vanillaRegionId">The vanilla spawn point region ID to find and NOP</param>
-    /// <returns>Number of instructions NOPed</returns>
-    private int NopVanillaItemWarp(EMEVD emevd, int vanillaRegionId)
+    /// <param name="vanillaRegionId">The vanilla spawn point region ID to find</param>
+    /// <param name="newRegionId">The new spawn point region ID</param>
+    /// <param name="newMapBytes">The new map bytes [m, area, block, sub]</param>
+    /// <returns>Number of instructions modified</returns>
+    private int ModifyVanillaItemWarp(EMEVD emevd, int vanillaRegionId, int newRegionId, byte[] newMapBytes)
     {
         const int WarpPlayerBank = 2003;
         const int WarpPlayerId = 14;
-        // SpawnPoint argument is at byte offset 4 (after 4 single-byte args: Area, Block, Sub1, Sub2)
+        // WarpPlayer args layout: Area(1), Block(1), Sub1(1), Sub2(1), SpawnPoint(4), Unknown(4)
         const int SpawnPointOffset = 4;
 
-        int nopCount = 0;
+        int modifyCount = 0;
 
         foreach (var evt in emevd.Events)
         {
@@ -454,15 +443,33 @@ public class ModWriter
 
                 if (spawnPoint == vanillaRegionId)
                 {
-                    // Replace with NOP instruction (1014, 69) - same as FogRando
-                    evt.Instructions[i] = new EMEVD.Instruction(1014, 69);
-                    nopCount++;
-                    Console.WriteLine($"    [DEBUG] NOPed WarpPlayer in event {evt.ID} (was warping to {spawnPoint})");
+                    // Modify the instruction's arguments to point to new destination
+                    // Create new args array with modified values
+                    var newArgs = new byte[args.Length];
+                    Array.Copy(args, newArgs, args.Length);
+
+                    // Update map bytes (first 4 bytes): Area, Block, Sub1, Sub2
+                    // Note: WarpPlayer uses Area, Block, Sub1, Sub2 in that order
+                    // But our mapBytes are [m, area, block, sub]
+                    // Based on FogRando fogevents.txt: WarpPlayer(12, 5, 0, 0, 12052021*, 0)
+                    // This means Area=12, Block=5, Sub1=0, Sub2=0 for m12_05_00_00
+                    newArgs[0] = newMapBytes[0];  // m -> Area
+                    newArgs[1] = newMapBytes[1];  // area -> Block
+                    newArgs[2] = newMapBytes[2];  // block -> Sub1
+                    newArgs[3] = newMapBytes[3];  // sub -> Sub2
+
+                    // Update SpawnPoint (int32 at offset 4)
+                    BitConverter.GetBytes(newRegionId).CopyTo(newArgs, SpawnPointOffset);
+
+                    // Create new instruction with modified args
+                    evt.Instructions[i] = new EMEVD.Instruction(WarpPlayerBank, WarpPlayerId, newArgs);
+                    modifyCount++;
+                    Console.WriteLine($"    [DEBUG] Modified WarpPlayer in event {evt.ID}: region {spawnPoint} -> {newRegionId}, map {newMapBytes[0]}_{newMapBytes[1]}_{newMapBytes[2]}_{newMapBytes[3]}");
                 }
             }
         }
 
-        return nopCount;
+        return modifyCount;
     }
 
     /// <summary>
