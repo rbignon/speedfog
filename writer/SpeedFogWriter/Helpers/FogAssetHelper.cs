@@ -145,6 +145,14 @@ public class FogAssetHelper
         // Log current state
         Console.WriteLine($"    [DEBUG] Found asset {asset.Name} in {mapId}, EntityID={asset.EntityID}");
 
+        // Update entity ID if found by name but has wrong ID
+        // This ensures EMEVD events can reference the correct entity
+        if (asset.EntityID != entityId && entityId != 0)
+        {
+            Console.WriteLine($"    [DEBUG] Updating EntityID from {asset.EntityID} to {entityId}");
+            asset.EntityID = entityId;
+        }
+
         // Enable the asset for SFX display
         if (FogWallModels.Any(m => asset.ModelName?.StartsWith(m) == true))
         {

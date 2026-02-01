@@ -180,11 +180,11 @@ public class ModWriter
     {
         // Modify ActionButtonParam for fog gates (same as FogRando)
         // This makes the action prompt appear at the correct height on fog gates
-        var buttonParam = _loader!.Params!["ActionButtonParam"];
-        if (buttonParam[10000] != null)
+        var actionButtonParamTable = _loader!.Params!["ActionButtonParam"];
+        if (actionButtonParamTable[10000] != null)
         {
-            buttonParam[10000]["height"].Value = 2f;
-            buttonParam[10000]["baseHeightOffset"].Value = -1f;
+            actionButtonParamTable[10000]["height"].Value = 2f;
+            actionButtonParamTable[10000]["baseHeightOffset"].Value = -1f;
         }
 
         var fogWriter = new FogGateWriter(_fogData!, _clusterData!, _idAllocator);
