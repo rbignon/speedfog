@@ -78,7 +78,7 @@ merge_probability = 0.3         # Chance of paths merging
 [paths]
 game_dir = "C:/Program Files/Steam/steamapps/common/ELDEN RING/Game"
 output_dir = "./output"
-zones_file = "./zones.toml"
+clusters_file = "./core/data/clusters.json"
 ```
 
 ## How It Works
@@ -121,9 +121,10 @@ All key items (Rusty Key, Stonesword Keys, etc.) are given at the start to preve
 ```
 speedfog/
 ├── core/                   # Python - DAG generation
-│   ├── speedfog_core/
-│   ├── config.toml
-│   └── zones.toml
+│   ├── speedfog_core/      # Python package
+│   └── data/
+│       ├── clusters.json   # Zone clusters with zone→map mapping
+│       └── zone_metadata.toml  # Weight defaults and overrides
 ├── writer/                 # C# - Mod file generation
 │   └── SpeedFogWriter/
 ├── reference/              # FogRando source for reference
@@ -187,7 +188,7 @@ A: v1 focuses on base game zones. DLC support planned for v2.
 A: SpeedFog gives all key items at start, so softlocks should be rare. If stuck, check the spoiler log for the correct path.
 
 **Q: Can I customize which zones appear?**
-A: Edit `zones.toml` to exclude or weight zones differently.
+A: Edit `core/data/zone_metadata.toml` to adjust zone weights, or modify `clusters.json` to exclude specific clusters.
 
 ## Credits
 

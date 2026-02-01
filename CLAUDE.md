@@ -19,11 +19,11 @@ Unlike FogRando which randomizes the entire world, SpeedFog generates a smaller,
 Python (core/)          C# (writer/)
 ─────────────────       ─────────────────
 config.toml        →
-zones.toml         →    graph.json → SpeedFogWriter → mod files
+clusters.json      →    graph.json → SpeedFogWriter → mod files
 DAG generation     →
 ```
 
-- **Python**: Configuration, zone data, DAG generation algorithm
+- **Python**: Configuration, cluster/zone data, DAG generation algorithm
 - **C#**: SoulsFormats I/O, EMEVD events, param modifications
 
 ## Directory Structure
@@ -72,8 +72,10 @@ speedfog/
 - Follow FogRando patterns for EMEVD/param manipulation
 
 ### Zone Data
-- Zone definitions in `zones.toml` (converted from FogRando's fog.txt)
-- Zone types: `legacy_dungeon`, `catacomb`, `cave`, `tunnel`, `gaol`, `overworld`, `boss_arena`
+- Zone definitions extracted from FogRando's `fog.txt` into `clusters.json`
+- Zone→map mapping stored in `clusters.json` under `zone_maps`
+- Zone types: `legacy_dungeon`, `mini_dungeon`, `boss_arena`, `major_boss`, `start`, `final_boss`
+- Weight defaults in `core/data/zone_metadata.toml`, overrides per zone
 - Weight = approximate duration in minutes
 
 ## FogRando Reference Points
