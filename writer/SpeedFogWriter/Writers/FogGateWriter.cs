@@ -58,7 +58,19 @@ public class FogGateWriter
             }
 
             var primaryEntryFog = target.PrimaryEntryFog;
-            var entryFogData = primaryEntryFog != null ? _fogData.GetFog(primaryEntryFog) : null;
+            // Use target zone context to disambiguate fog lookup
+            // Many fogs share the same asset name across different maps (e.g., AEG099_230_9001)
+            FogEntryData? entryFogData = null;
+            if (primaryEntryFog != null)
+            {
+                foreach (var zone in target.Zones)
+                {
+                    entryFogData = _fogData.GetFog(primaryEntryFog, zone);
+                    if (entryFogData != null) break;
+                }
+                // Fallback: try without zone context
+                entryFogData ??= _fogData.GetFog(primaryEntryFog);
+            }
 
             // Determine if this is an item-triggered warp
             var fogType = exitFogData.Type;
