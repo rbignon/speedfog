@@ -66,6 +66,7 @@ speedfog/
 | `docs/plans/phase-4-packaging.md` | ModEngine download, launcher scripts |
 | `reference/fogrando-src/GameDataWriterE.cs` | Main FogRando writer (5639 lines) |
 | `reference/fogrando-src/EldenScaling.cs` | Enemy scaling logic |
+| `docs/reference/fogrando-graph-logic.md` | FogRando graph generation analysis |
 | `config.example.toml` | Example configuration |
 
 ## Development Guidelines
@@ -74,6 +75,12 @@ speedfog/
 - Files in `reference/` are **read-only** - extracted from FogRando for study
 - When adapting FogRando code, document the source line numbers
 - Key classes from SoulsIds: `GameEditor`, `ParamDictionary`
+- **For in-game bugs**: Always consult FogRando sources first - we aim to match its behavior exactly
+
+### Event Templates
+- Prefer editing `data/speedfog-events.yaml` over custom C# code
+- Templates are easier to audit against FogRando's `fogevents.txt`
+- Only add C# logic when YAML templates cannot express the behavior
 
 ### Python (core/)
 - Python 3.10+
@@ -84,6 +91,18 @@ speedfog/
 - .NET 8.0
 - Reference DLLs from `writer/lib/`
 - Follow FogRando patterns for EMEVD/param manipulation
+
+**Writer classes** (in `Writers/`):
+| Class | Purpose |
+|-------|---------|
+| `ModWriter` | Orchestrator - calls all writers in sequence |
+| `FogGateWriter` | Creates fog gate assets (AEG099 models) |
+| `WarpWriter` | Creates warp triggers via EMEVD events |
+| `ScalingWriter` | Applies enemy scaling via SpEffect params |
+| `EnemyScalingApplicator` | Attaches SpEffect to enemies per tier |
+| `StartingItemsWriter` | Adds key items to initial inventory |
+| `EventBuilder` | Compiles YAML templates → EMEVD instructions |
+| `FogGateEvent` | Helper for fog gate event generation |
 
 ### Zone Data
 - Zone definitions extracted from FogRando's `fog.txt` into `clusters.json`
@@ -108,19 +127,81 @@ When implementing features, refer to these sections in `GameDataWriterE.cs`:
 ## Commands
 
 ```bash
-# Python core (after Phase 1-2 implementation)
-cd core && pip install -e .
+# Python core
+cd core && uv pip install -e ".[dev]"
 speedfog config.toml --spoiler -o /tmp/speedfog
 # Creates /tmp/speedfog/<seed>/graph.json and spoiler.txt
 
-# C# writer (after Phase 3-4 implementation)
-cd writer && dotnet build
-dotnet run -- /tmp/speedfog/<seed> "/path/to/ELDEN RING/Game" ./output
+# Python tests
+cd core && pytest -v
+
+# C# writer - build and publish
+cd writer/SpeedFogWriter
+dotnet build
+dotnet publish -c Release -r win-x64 --self-contained -o publish/win-x64
+
+# C# writer - run (Linux with Wine)
+wine publish/win-x64/SpeedFogWriter.exe \
+  <seed_dir> \
+  <game_dir> \
+  output \
+  --data-dir ../../data \
+  --vanilla-dir <vanilla_dir>
+
+# Example paths:
+#   seed_dir: ../../seeds/212559448
+#   game_dir: /data/thewall/Game (ELDEN RING/Game folder)
+#   vanilla_dir: /home/rom1/src/games/ER/fog/eldendata/Vanilla
 
 # Play! (output is self-contained with ModEngine + launcher)
 ./output/launch_speedfog.bat   # Windows
 ./output/launch_speedfog.sh    # Linux/Proton
 ```
+
+## Testing
+
+```bash
+# Python - all tests
+cd core && pytest -v
+
+# Python - with coverage
+pytest --cov=speedfog_core
+
+# Python - specific module
+pytest tests/test_generator.py
+
+# C# - integration test
+cd writer/test && ./run_integration.sh
+```
+
+## Debugging
+
+### Philosophy
+
+1. **Match FogRando behavior**: SpeedFog aims to closely replicate FogRando's in-game behavior. When investigating issues, always consult `reference/fogrando-src/` first.
+
+2. **Prefer data over code**: Fix issues by editing `data/speedfog-events.yaml` rather than inserting custom code in the C# writer. Event templates are easier to maintain and audit against FogRando.
+
+3. **Reference-driven debugging**: For any in-game problem (fog gates not working, warps failing, scaling issues), first find the equivalent FogRando implementation in `reference/`.
+
+### Common Issues
+
+**EMEVD events not triggering:**
+- Check event templates in `speedfog-events.yaml` against FogRando's `fogevents.txt`
+- Verify event IDs are in the 79000000+ range
+- Confirm entity IDs exist in the target MSB
+
+**Fog gates not visible:**
+- Compare `fog_data.json` entries with FogRando's gate creation in `GameDataWriterE.cs:L262+`
+- Check model names (AEG099_230/231/232)
+
+**Warp destinations wrong:**
+- Verify warp positions in `fog_data.json` against `fog.txt` Entrances section
+- Check map coordinate encoding (m, area, block, sub bytes)
+
+**Enemy scaling incorrect:**
+- Compare with `EldenScaling.cs` tier definitions
+- Verify SpEffect IDs match game params
 
 ## Important Notes
 
@@ -139,3 +220,32 @@ dotnet run -- /tmp/speedfog/<seed> "/path/to/ELDEN RING/Game" ./output
 | Enemy scaling tiers | `data/foglocations2.txt` EnemyAreas section | YAML |
 | EMEVD instructions | `data/er-common.emedf.json` | JSON |
 | Scaling logic | `reference/fogrando-src/EldenScaling.cs` | C# |
+
+## Data Formats
+
+### graph.json (Python → C# interface)
+
+```json
+{
+  "seed": 212559448,
+  "total_layers": 5,
+  "nodes": {"node_id": {"cluster_id", "zones", "type", "weight", "layer", "tier", "entry_fogs", "exit_fogs"}},
+  "edges": [{"source", "target", "fog_id"}],
+  "start_id": "...",
+  "end_id": "..."
+}
+```
+
+### speedfog-events.yaml
+
+EMEVD event templates with parameter notation `X{offset}_{size}`:
+- `X0_4` = 4-byte int at offset 0
+- `X12_1` = 1-byte value at offset 12
+
+Templates: `scale`, `showsfx`, `fogwarp`, `fogwarp_simple`, `itemwarp`
+
+### fog_data.json
+
+Fog gate metadata: `{fog_id: {type, zones[], map, entity_id, model, position[], rotation[]}}`
+
+Duplicate fog IDs handled by prefixing with map ID (e.g., `m10_00_00_00_AEG099_002_9000`)
