@@ -29,6 +29,7 @@ This matches how generate_clusters.py uses fog names - the zone context disambig
             "map": "m10_00_00_00",
             "entity_id": 10001800,
             "model": "AEG099_002",
+            "asset_name": "AEG099_002_9000",
             "lookup_by": "name",
             "position": null,
             "rotation": null
@@ -44,12 +45,16 @@ This matches how generate_clusters.py uses fog names - the zone context disambig
             "map": "m60_34_47_00",
             "entity_id": 1034471610,
             "model": "AEG099_510",
+            "asset_name": "AEG099_510_9000",
             "lookup_by": "entity_id",
             "position": null,
             "rotation": null
         }
     }
 }
+
+Note: `model` is the model name shared by many assets (e.g., "AEG099_002").
+      `asset_name` is the unique instance name in the MSB file (e.g., "AEG099_002_9000").
 
 Usage:
     python extract_fog_data.py fog.txt fog_data.json [--validate-clusters clusters.json]
@@ -84,6 +89,7 @@ class FogEntry:
     map_id: str  # Area field (e.g., "m10_00_00_00")
     entity_id: int  # ID or Location field
     model: str  # Model name (e.g., "AEG099_002")
+    asset_name: str  # Full asset name in MSB (e.g., "AEG099_002_9000")
     lookup_by: str | None  # "name" or "entity_id" or None
     position: list[float] | None = None  # [x, y, z] if MakeFrom
     rotation: list[float] | None = None  # [x, y, z] if MakeFrom
@@ -120,35 +126,39 @@ def extract_model_from_name(name: str) -> str:
     return ""
 
 
-def extract_model_from_debug_info(debug_info: str | list[str]) -> str:
+def extract_from_debug_info(debug_info: str | list[str]) -> tuple[str, str]:
     """
-    Extract model name from DebugInfo field.
+    Extract model name and full asset name from DebugInfo field.
 
     Examples:
         "asset 10001800 (m10_00_00_00 (Stormveil Castle) AEG099_002_9000)"
-        -> "AEG099_002"
+        -> ("AEG099_002", "AEG099_002_9000")
 
         "asset 1034471610 (m60_34_47_00 (...) AEG099_510_9000)"
-        -> "AEG099_510"
+        -> ("AEG099_510", "AEG099_510_9000")
+
+    Returns:
+        Tuple of (model, asset_name). Both may be empty strings if not found.
     """
     if isinstance(debug_info, list):
-        # Use first entry
         debug_info = debug_info[0] if debug_info else ""
 
     if not debug_info:
-        return ""
+        return "", ""
 
-    # Look for AEG pattern in debug info
-    match = re.search(r"\b(AEG\d{3}_\d{3})_\d+\b", debug_info)
+    # Look for full AEG pattern with suffix (e.g., AEG099_002_9000)
+    match = re.search(r"\b(AEG\d{3}_\d{3})_(\d+)\b", debug_info)
     if match:
-        return match.group(1)
+        model = match.group(1)
+        asset_name = f"{match.group(1)}_{match.group(2)}"
+        return model, asset_name
 
     # Also check for AEG pattern without suffix
     match = re.search(r"\b(AEG\d{3}_\d{3})\b", debug_info)
     if match:
-        return match.group(1)
+        return match.group(1), ""
 
-    return ""
+    return "", ""
 
 
 def parse_makefrom(makefrom: str) -> tuple[str, list[float], list[float]]:
@@ -206,6 +216,7 @@ def parse_fog_entry(fog_data: dict[str, Any], section: str) -> FogEntry | None:
     if makefrom:
         model, position, rotation = parse_makefrom(makefrom)
         entity_id = fog_data.get("ID", 0)
+        # MakeFrom fogs create new assets, use name as asset_name
         return FogEntry(
             fog_id=name,
             fog_type="makefrom",
@@ -214,6 +225,7 @@ def parse_fog_entry(fog_data: dict[str, Any], section: str) -> FogEntry | None:
             map_id=fog_data.get("Area", ""),
             entity_id=int(entity_id),
             model=model,
+            asset_name=name,  # Full asset name from Name field
             lookup_by=None,  # Position is inline
             position=position,
             rotation=rotation,
@@ -227,19 +239,23 @@ def parse_fog_entry(fog_data: dict[str, Any], section: str) -> FogEntry | None:
     if location:
         entity_id = location
 
-    # Extract model from name or debug info
+    # Extract model and asset_name
+    # For named fogs (AEG...), model comes from name, asset_name is the name itself
+    # For numeric fogs, both come from DebugInfo
     model = extract_model_from_name(name)
-    if not model:
-        debug_info = fog_data.get("DebugInfo") or fog_data.get("DebugInfos", [])
-        model = extract_model_from_debug_info(debug_info)
+    asset_name = name
 
-    # Determine lookup method
-    # Named fogs (AEG...) are looked up by name in MSB
-    # Numeric fogs are looked up by entity_id
     if name.startswith("AEG"):
         lookup_by = "name"
     else:
         lookup_by = "entity_id"
+        # For numeric fogs, extract both model and asset_name from DebugInfo
+        debug_info = fog_data.get("DebugInfo") or fog_data.get("DebugInfos", [])
+        debug_model, debug_asset = extract_from_debug_info(debug_info)
+        if debug_model:
+            model = debug_model
+        if debug_asset:
+            asset_name = debug_asset
 
     fog_type = "entrance" if section == "Entrances" else "warp"
 
@@ -251,6 +267,7 @@ def parse_fog_entry(fog_data: dict[str, Any], section: str) -> FogEntry | None:
         map_id=fog_data.get("Area", ""),
         entity_id=int(entity_id),
         model=model,
+        asset_name=asset_name,  # Full asset name for MSB lookup
         lookup_by=lookup_by,
         position=None,
         rotation=None,
@@ -358,6 +375,7 @@ def entries_to_json(entries: list[FogEntry]) -> dict[str, Any]:
             "map": entry.map_id,
             "entity_id": entry.entity_id,
             "model": entry.model,
+            "asset_name": entry.asset_name,  # Full asset name for MSB lookup
             "lookup_by": entry.lookup_by,
             "position": entry.position,
             "rotation": entry.rotation,

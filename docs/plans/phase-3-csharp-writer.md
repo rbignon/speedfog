@@ -3163,13 +3163,13 @@ Ensure you're using a SoulsFormats version that supports Elden Ring. SoulsFormat
 - [x] Script parses fog.txt Entrances and Warps sections
 - [x] Script outputs `writer/data/fog_data.json`
 - [x] All fog_ids from clusters.json are present in fog_data.json
-- [ ] **NEW**: Script includes `asset_name` field (not just `model`)
+- [x] Script includes `asset_name` field (not just `model`)
 
-### Task 3.2.2 (zones_data.json) - TODO
-- [ ] Python script `tools/extract_zones_data.py` exists
-- [ ] Script parses `core/zones.toml`
-- [ ] Script outputs `writer/data/zones_data.json` with zone→map mapping
-- [ ] All zones from clusters are present in zones_data.json
+### Task 3.2.2 (zones_data.json) - PARTIAL
+- [x] Python script `tools/extract_zones_data.py` exists
+- [x] Script parses `core/zones.toml`
+- [x] Script outputs `writer/data/zones_data.json` with zone→map mapping
+- [ ] All zones from clusters are present in zones_data.json (97 missing - zones.toml needs sync with fog.txt)
 
 ### Task 3.1 (Setup)
 - [ ] Project builds with `dotnet build`

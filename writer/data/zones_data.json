@@ -1,0 +1,969 @@
+{
+  "version": "1.0",
+  "zones": {
+    "chapel_start": {
+      "map": "m10_01_00_00",
+      "name": "Chapel of Anticipation"
+    },
+    "stormveil_margit": {
+      "map": "m10_00_00_00",
+      "name": "Margit, the Fell Omen"
+    },
+    "stormveil_start": {
+      "map": "m10_00_00_00",
+      "name": "Stormveil Castle before Gate"
+    },
+    "stormveil": {
+      "map": "m10_00_00_00",
+      "name": "Stormveil Castle after Gate"
+    },
+    "stormveil_godrick": {
+      "map": "m10_00_00_00",
+      "name": "Godrick the Grafted"
+    },
+    "peninsula_morne": {
+      "map": "m60_43_31_00",
+      "name": "Weeping Peninsula - Castle Morne"
+    },
+    "academy_entrance": {
+      "map": "m14_00_00_00",
+      "name": "Academy of Raya Lucaria Main Entrance"
+    },
+    "academy": {
+      "map": "m14_00_00_00",
+      "name": "Academy of Raya Lucaria"
+    },
+    "academy_redwolf": {
+      "map": "m14_00_00_00",
+      "name": "Red Wolf of Radagon"
+    },
+    "academy_courtyard": {
+      "map": "m14_00_00_00",
+      "name": "Academy of Raya Lucaria after Red Wolf"
+    },
+    "academy_rooftops": {
+      "map": "m14_00_00_00",
+      "name": "Academy of Raya Lucaria Rooftops"
+    },
+    "academy_library": {
+      "map": "m14_00_00_00",
+      "name": "Academy of Raya Lucaria - Grand Library"
+    },
+    "leyndell": {
+      "map": "m11_00_00_00",
+      "name": "Leyndell"
+    },
+    "leyndell_sanctuary": {
+      "map": "m11_00_00_00",
+      "name": "Leyndell - Erdtree Sanctuary"
+    },
+    "leyndell_throne": {
+      "map": "m11_00_00_00",
+      "name": "Leyndell - Elden Throne"
+    },
+    "leyndell_pretower": {
+      "map": "m11_00_00_00",
+      "name": "Leyndell - before Divine Tower"
+    },
+    "volcano": {
+      "map": "m16_00_00_00",
+      "name": "Volcano Manor Entrance"
+    },
+    "volcano_town": {
+      "map": "m16_00_00_00",
+      "name": "Volcano Manor Prison Town"
+    },
+    "volcano_temple": {
+      "map": "m16_00_00_00",
+      "name": "Volcano Manor - Temple of Eiglay"
+    },
+    "volcano_posttemple": {
+      "map": "m16_00_00_00",
+      "name": "Volcano Manor after Temple of Eiglay"
+    },
+    "volcano_rykard": {
+      "map": "m16_00_00_00",
+      "name": "Rykard, Lord of Blasphemy"
+    },
+    "volcano_abductors": {
+      "map": "m16_00_00_00",
+      "name": "Volcano Manor - Abductor Virgins"
+    },
+    "farumazula_start": {
+      "map": "m13_00_00_00",
+      "name": "Farum Azula - Crumbling Beast Grave Depths"
+    },
+    "farumazula_temple": {
+      "map": "m13_00_00_00",
+      "name": "Farum Azula - Dragon Temple"
+    },
+    "farumazula_godskinduo": {
+      "map": "m13_00_00_00",
+      "name": "Godskin Duo"
+    },
+    "farumazula": {
+      "map": "m13_00_00_00",
+      "name": "Farum Azula Rooftop and Bridge"
+    },
+    "farumazula_lift": {
+      "map": "m13_00_00_00",
+      "name": "Farum Azula - Dragon Temple Lift"
+    },
+    "farumazula_maliketh": {
+      "map": "m13_00_00_00",
+      "name": "Maliketh the Black Blade"
+    },
+    "farumazula_placidusax": {
+      "map": "m13_00_00_00",
+      "name": "Dragonlord Placidusax"
+    },
+    "haligtree": {
+      "map": "m15_00_00_00",
+      "name": "Haligtree Town"
+    },
+    "haligtree_loretta": {
+      "map": "m15_00_00_00",
+      "name": "Loretta, Knight of the Haligtree"
+    },
+    "haligtree_elphael": {
+      "map": "m15_00_00_00",
+      "name": "Elphael, Brace of the Haligtree"
+    },
+    "haligtree_malenia": {
+      "map": "m15_00_00_00",
+      "name": "Malenia, Blade of Miquella"
+    },
+    "leyndell2": {
+      "map": "m11_05_00_00",
+      "name": "Ashen Leyndell"
+    },
+    "leyndell2_pretower": {
+      "map": "m11_05_00_00",
+      "name": "Ashen Leyndell - before Divine Tower"
+    },
+    "leyndell2_divinebridge": {
+      "map": "m11_05_00_00",
+      "name": "Ashen Leyndell - Divine Bridge"
+    },
+    "leyndell2_sanctuary": {
+      "map": "m11_05_00_00",
+      "name": "Ashen Leyndell - Erdtree Sanctuary"
+    },
+    "leyndell2_throne": {
+      "map": "m11_05_00_00",
+      "name": "Ashen Leyndell - Elden Throne"
+    },
+    "chapel_boss": {
+      "map": "m10_01_00_00",
+      "name": "Chapel of Anticipation - Grafted Scion"
+    },
+    "limgrave_cavalry_boss": {
+      "map": "m60_43_37_00",
+      "name": "Limgrave - Night's Cavalry"
+    },
+    "limgrave_evergaol": {
+      "map": "m60_44_35_00",
+      "name": "Limgrave - Forlorn Hound Evergaol - Bloodhound Knight Darriwil"
+    },
+    "limgrave_treesentinel_boss": {
+      "map": "m60_42_36_00",
+      "name": "Limgrave - Tree Sentinel"
+    },
+    "limgrave_dragon_boss": {
+      "map": "m60_43_36_00",
+      "name": "Limgrave - Flying Dragon Agheel"
+    },
+    "limgrave_mariner_boss": {
+      "map": "m60_45_39_00",
+      "name": "Limgrave - Tibia Mariner"
+    },
+    "limgrave_waypoint_boss": {
+      "map": "m60_44_36_00",
+      "name": "Limgrave - Waypoint Ruins - Mad Pumpkin Head"
+    },
+    "stormhill_deathbird_boss": {
+      "map": "m60_42_38_00",
+      "name": "Stormhill - Deathbird"
+    },
+    "stormhill_bellbearinghunter_boss": {
+      "map": "m60_42_38_00",
+      "name": "Stormhill - Bell Bearing Hunter"
+    },
+    "stormhill_evergaol": {
+      "map": "m60_42_37_00",
+      "name": "Stormhill - Stormhill Evergaol - Crucible Knight"
+    },
+    "peninsula_evergaol": {
+      "map": "m60_42_33_00",
+      "name": "Weeping Peninsula - Weeping Evergaol - Ancient Hero of Zamor"
+    },
+    "peninsula_avatar_boss": {
+      "map": "m60_43_33_00",
+      "name": "Weeping Peninsula - Erdtree Avatar"
+    },
+    "peninsula_cavalry_boss": {
+      "map": "m60_44_32_00",
+      "name": "Weeping Peninsula - Night's Cavalry"
+    },
+    "peninsula_deathbird_boss": {
+      "map": "m60_44_32_00",
+      "name": "Weeping Peninsula - Deathbird"
+    },
+    "peninsula_leonine": {
+      "map": "m60_43_30_00",
+      "name": "Leonine Misbegotten"
+    },
+    "liurnia_evergaol_adan": {
+      "map": "m60_38_41_00",
+      "name": "Liurnia - Malefactor's Evergaol - Adan, Thief of Fire"
+    },
+    "liurnia_evergaol_bols": {
+      "map": "m60_33_45_00",
+      "name": "Liurnia - Cuckoo's Evergaol - Bols, Carian Knight"
+    },
+    "liurnia_avatar_boss": {
+      "map": "m60_33_43_00",
+      "name": "Liurnia - Erdtree Avatar"
+    },
+    "liurnia_bellbearinghunter_boss": {
+      "map": "m60_37_46_00",
+      "name": "Liurnia - Bell Bearing Hunter"
+    },
+    "liurnia_cavalry_boss": {
+      "map": "m60_39_43_00",
+      "name": "Liurnia - Night's Cavalry"
+    },
+    "liurnia_deathbird_boss": {
+      "map": "m60_37_42_00",
+      "name": "Liurnia - Deathbird"
+    },
+    "liurnia_deathritebird_boss": {
+      "map": "m60_36_45_00",
+      "name": "Liurnia - Death Rite Bird"
+    },
+    "liurnia_dragon_boss": {
+      "map": "m60_34_45_00",
+      "name": "Liurnia - Glintstone Dragon Smarag"
+    },
+    "liurnia_omenkiller_boss": {
+      "map": "m60_35_42_00",
+      "name": "Liurnia - Omenkiller"
+    },
+    "liurnia_mariner_boss": {
+      "map": "m60_39_44_00",
+      "name": "Liurnia - Tibia Mariner"
+    },
+    "liurnia_kingsrealm_boss": {
+      "map": "m60_34_48_00",
+      "name": "Liurnia - Kingsrealm Ruins - Royal Revenant"
+    },
+    "bellum_avatar_boss": {
+      "map": "m60_38_48_00",
+      "name": "Bellum Highway - Erdtree Avatar"
+    },
+    "bellum_cavalry_boss": {
+      "map": "m60_36_48_00",
+      "name": "Bellum Highway - Night's Cavalry"
+    },
+    "siofra_dragonkin_boss": {
+      "map": "m12_02_00_00",
+      "name": "Siofra River - Dragonkin Soldier"
+    },
+    "siofra_boss": {
+      "map": "m12_08_00_00",
+      "name": "Ancestor Spirit"
+    },
+    "caelid_avatar_boss": {
+      "map": "m60_47_40_00",
+      "name": "Caelid - Putrid Avatar"
+    },
+    "caelid_dragon_boss": {
+      "map": "m60_48_37_00",
+      "name": "Caelid - Decaying Ekzykes"
+    },
+    "caelid_cavalry_boss": {
+      "map": "m60_49_37_00",
+      "name": "Caelid - Night's Cavalry"
+    },
+    "caelid_deathritebird_boss": {
+      "map": "m60_49_37_00",
+      "name": "Caelid - Death Rite Bird"
+    },
+    "caelid_oneil_boss": {
+      "map": "m60_49_38_00",
+      "name": "Caelid - Commander O'Neil"
+    },
+    "caelid_crypt_boss": {
+      "map": "m60_49_39_00",
+      "name": "Caelid - Sellia Chair-Crypt - Nox Duo"
+    },
+    "caelid_caelem_boss": {
+      "map": "m60_48_40_00",
+      "name": "Caelid - Caelem Ruins - Mad Pumpkin Heads"
+    },
+    "dragonbarrow_bellbearinghunter_boss": {
+      "map": "m60_48_41_00",
+      "name": "Dragonbarrow - Bell Bearing Hunter"
+    },
+    "dragonbarrow_evergaol": {
+      "map": "m60_49_39_00",
+      "name": "Dragonbarrow - Sellia Evergaol - Battlemage Hugues"
+    },
+    "dragonbarrow_avatar_boss": {
+      "map": "m60_51_40_00",
+      "name": "Dragonbarrow - Putrid Avatar"
+    },
+    "dragonbarrow_dragon_boss": {
+      "map": "m60_52_41_00",
+      "name": "Dragonbarrow - Flying Dragon Greyll"
+    },
+    "dragonbarrow_cavalry_boss": {
+      "map": "m60_52_41_00",
+      "name": "Dragonbarrow - Night's Cavalry"
+    },
+    "dragonbarrow_kindred_boss": {
+      "map": "m60_51_43_00",
+      "name": "Dragonbarrow - Black Blade Kindred"
+    },
+    "altus_dragon_tempboss": {
+      "map": "m60_37_51_00",
+      "name": "Altus Plateau - Ancient Dragon Lansseax First Encounter"
+    },
+    "altus_cavalry_boss": {
+      "map": "m60_39_51_00",
+      "name": "Altus Plateau - Night's Cavalry"
+    },
+    "altus_dragon_boss": {
+      "map": "m60_41_52_00",
+      "name": "Altus Plateau - Ancient Dragon Lansseax"
+    },
+    "altus_fallingstarbeast_boss": {
+      "map": "m60_41_50_00",
+      "name": "Altus Plateau - Fallingstar Beast"
+    },
+    "altus_sentinels_boss": {
+      "map": "m60_41_51_00",
+      "name": "Altus Plateau - Tree Sentinel Duo"
+    },
+    "altus_godskinapostle_boss": {
+      "map": "m60_42_55_00",
+      "name": "Altus Plateau - Godskin Apostle"
+    },
+    "altus_blackknifeassassin_boss": {
+      "map": "m60_40_52_00",
+      "name": "Altus Plateau - Black Knife Assassin"
+    },
+    "altus_evergaol": {
+      "map": "m60_39_50_00",
+      "name": "Altus Plateau - Golden Lineage Evergaol - Godefroy the Grafted"
+    },
+    "altus_wormface_boss": {
+      "map": "m60_41_53_00",
+      "name": "Altus Plateau - Wormface"
+    },
+    "altus_mariner_boss": {
+      "map": "m60_38_52_00",
+      "name": "Altus Plateau - Tibia Mariner"
+    },
+    "altus_lux_boss": {
+      "map": "m60_38_51_00",
+      "name": "Altus Plateau - Lux Ruins - Demi-Human Queen Gilika"
+    },
+    "altus_writheblood_boss": {
+      "map": "m60_40_53_00",
+      "name": "Altus Plateau - Writheblood Ruins - Sanguine Noble"
+    },
+    "altus_elemer": {
+      "map": "m60_39_54_00",
+      "name": "Shaded Castle - Elemer of the Briar"
+    },
+    "outskirts_deathbird_boss": {
+      "map": "m60_44_53_00",
+      "name": "Capital Outskirts - Deathbird"
+    },
+    "outskirts_sentinel_boss": {
+      "map": "m60_45_52_00",
+      "name": "Capital Outskirts - Draconic Tree Sentinel"
+    },
+    "outskirts_bellbearinghunter_boss": {
+      "map": "m60_43_53_00",
+      "name": "Capital Outskirts - Bell Bearing Hunter"
+    },
+    "leyndell_tower_boss": {
+      "map": "m34_14_00_00",
+      "name": "Divine Tower of East Altus - Fell Twins"
+    },
+    "liurnia_loretta": {
+      "map": "m60_35_50_00",
+      "name": "Royal Knight Loretta"
+    },
+    "liurnia_postmanor_evergaol": {
+      "map": "m60_36_50_00",
+      "name": "Liurnia Behind Caria Manor - Royal Grave Evergaol - Onyx Lord"
+    },
+    "liurnia_postmanor_dragon_tempboss": {
+      "map": "m60_34_50_00",
+      "name": "Liurnia Behind Caria Manor - Glintstone Dragon Adula Fist Encounter"
+    },
+    "caelid_redmane_boss": {
+      "map": "m60_51_36_00",
+      "name": "Redmane Castle Boss"
+    },
+    "caelid_radahn": {
+      "map": "m60_50_37_00",
+      "name": "Starscourge Radahn"
+    },
+    "caelid_tower_boss": {
+      "map": "m34_13_00_00",
+      "name": "Divine Tower of Caelid - Godskin Apostle"
+    },
+    "siofra_nokron_mimic": {
+      "map": "m12_02_00_00",
+      "name": "Mimic Tear"
+    },
+    "siofra_nokron_gargoyles": {
+      "map": "m12_02_00_00",
+      "name": "Valiant Gargoyles"
+    },
+    "siofra_nokron_boss": {
+      "map": "m12_09_00_00",
+      "name": "Regal Ancestor Spirit"
+    },
+    "gelmir_maggie_boss": {
+      "map": "m60_37_53_00",
+      "name": "Mt. Gelmir - Demi-Human Queen Maggie"
+    },
+    "gelmir_magmawyrm_boss": {
+      "map": "m60_35_53_00",
+      "name": "Mt. Gelmir - Magma Wyrm"
+    },
+    "gelmir_fallingstarbeast_boss": {
+      "map": "m60_36_54_00",
+      "name": "Mt. Gelmir - Full-Grown Fallingstar Beast"
+    },
+    "gelmir_treespirit_boss": {
+      "map": "m60_37_54_00",
+      "name": "Mt. Gelmir - Ulcerated Tree Spirit"
+    },
+    "moonlight_evergaol": {
+      "map": "m60_33_42_00",
+      "name": "Moonlight Altar - Ringleader's Evergaol - Alecto, Black Knife Ringleader"
+    },
+    "moonlight_dragon_boss": {
+      "map": "m60_34_42_00",
+      "name": "Moonlight Altar - Glintstone Dragon Adula"
+    },
+    "mountaintops_start_cavalry_boss": {
+      "map": "m60_48_51_00",
+      "name": "Forbidden Lands - Night's Cavalry"
+    },
+    "mountaintops_start_kindred_boss": {
+      "map": "m60_49_52_00",
+      "name": "Forbidden Lands - Black Blade Kindred"
+    },
+    "mountaintops_dragon_boss": {
+      "map": "m60_54_56_00",
+      "name": "Mountaintops of the Giants - Borealis the Freezing Fog"
+    },
+    "mountaintops_evergaol": {
+      "map": "m60_53_56_00",
+      "name": "Mountaintops of the Giants - Lord Contender's Evergaol - Roundtable Knight Vyke"
+    },
+    "mountaintops_avatar_boss": {
+      "map": "m60_52_56_00",
+      "name": "Mountaintops of the Giants - Erdtree Avatar"
+    },
+    "mountaintops_deathritebird_boss": {
+      "map": "m60_50_57_00",
+      "name": "Mountaintops of the Giants - Death Rite Bird"
+    },
+    "mountaintops_sol_boss": {
+      "map": "m60_51_57_00",
+      "name": "Commander Niall"
+    },
+    "flamepeak_firegiant": {
+      "map": "m60_52_52_00",
+      "name": "Fire Giant"
+    },
+    "snowfield_avatar_boss": {
+      "map": "m60_50_57_00",
+      "name": "Consecrated Snowfield - Putrid Avatar"
+    },
+    "snowfield_magmawyrm_boss": {
+      "map": "m60_50_56_00",
+      "name": "Consecrated Snowfield - Great Wyrm Theodorix"
+    },
+    "snowfield_cavalry_boss": {
+      "map": "m60_48_55_00",
+      "name": "Consecrated Snowfield - Night's Cavalry Duo"
+    },
+    "snowfield_deathritebird_boss": {
+      "map": "m60_48_57_00",
+      "name": "Consecrated Snowfield - Death Rite Bird"
+    },
+    "mohgwyn_boss": {
+      "map": "m12_05_00_00",
+      "name": "Mohg, Lord of Blood"
+    },
+    "erdtree": {
+      "map": "m19_00_00_00",
+      "name": "Stone Platform"
+    },
+    "snowfield_hiddenpath": {
+      "map": "m30_20_00_00",
+      "name": "Hidden Path to the Haligtree"
+    },
+    "snowfield_hiddenpath_boss": {
+      "map": "m30_20_00_00",
+      "name": "Hidden Path to the Haligtree - Stray Mimic Tear"
+    },
+    "peninsula_tombswardcatacombs": {
+      "map": "m30_00_00_00",
+      "name": "Weeping Peninsula - Tombsward Catacombs"
+    },
+    "peninsula_tombswardcatacombs_boss": {
+      "map": "m30_00_00_00",
+      "name": "Weeping Peninsula - Tombsward Catacombs - Cemetery Shade"
+    },
+    "peninsula_impalerscatacombs": {
+      "map": "m30_01_00_00",
+      "name": "Weeping Peninsula - Impaler's Catacombs"
+    },
+    "peninsula_impalerscatacombs_boss": {
+      "map": "m30_01_00_00",
+      "name": "Weeping Peninsula - Impaler's Catacombs - Erdtree Burial Watchdog"
+    },
+    "limgrave_stormfootcatacombs": {
+      "map": "m30_02_00_00",
+      "name": "Limgrave - Stormfoot Catacombs"
+    },
+    "limgrave_stormfootcatacombs_boss": {
+      "map": "m30_02_00_00",
+      "name": "Limgrave - Stormfoot Catacombs - Erdtree Burial Watchdog"
+    },
+    "liurnia_roadsendcatacombs": {
+      "map": "m30_03_00_00",
+      "name": "Liurnia - Road's End Catacombs"
+    },
+    "liurnia_roadsendcatacombs_boss": {
+      "map": "m30_03_00_00",
+      "name": "Liurnia - Road's End Catacombs - Spiritcaller Snail"
+    },
+    "limgrave_murkwatercatacombs": {
+      "map": "m30_04_00_00",
+      "name": "Limgrave - Murkwater Catacombs"
+    },
+    "limgrave_murkwatercatacombs_boss": {
+      "map": "m30_04_00_00",
+      "name": "Limgrave - Murkwater Catacombs - Grave Warden Duelist"
+    },
+    "liurnia_blackknifecatacombs": {
+      "map": "m30_05_00_00",
+      "name": "Liurnia - Black Knife Catacombs"
+    },
+    "liurnia_blackknifecatacombs_boss": {
+      "map": "m30_05_00_00",
+      "name": "Liurnia - Black Knife Catacombs - Cemetery Shade"
+    },
+    "liurnia_blackknifecatacombs_boss2": {
+      "map": "m30_05_00_00",
+      "name": "Liurnia - Black Knife Catacombs - Black Knife Assassin"
+    },
+    "liurnia_cliffbottomcatacombs": {
+      "map": "m30_06_00_00",
+      "name": "Liurnia - Cliffbottom Catacombs"
+    },
+    "liurnia_cliffbottomcatacombs_boss": {
+      "map": "m30_06_00_00",
+      "name": "Liurnia - Cliffbottom Catacombs - Erdtree Burial Watchdog"
+    },
+    "gelmir_wyndhamcatacombs": {
+      "map": "m30_07_00_00",
+      "name": "Mt. Gelmir - Wyndham Catacombs"
+    },
+    "gelmir_wyndhamcatacombs_boss": {
+      "map": "m30_07_00_00",
+      "name": "Mt. Gelmir - Wyndham Catacombs - Erdtree Burial Watchdog"
+    },
+    "altus_grave": {
+      "map": "m30_08_00_00",
+      "name": "Altus Plateau - Sainted Hero's Grave"
+    },
+    "altus_grave_boss": {
+      "map": "m30_08_00_00",
+      "name": "Altus Plateau - Sainted Hero's Grave - Ancient Hero of Zamor"
+    },
+    "gelmir_grave": {
+      "map": "m30_09_00_00",
+      "name": "Mt. Gelmir - Gelmir Hero's Grave"
+    },
+    "gelmir_grave_boss": {
+      "map": "m30_09_00_00",
+      "name": "Mt. Gelmir - Gelmir Hero's Grave - Red Wolf of the Champion"
+    },
+    "outskirts_grave": {
+      "map": "m30_10_00_00",
+      "name": "Capital Outskirts - Auriza Hero's Grave"
+    },
+    "outskirts_grave_boss": {
+      "map": "m30_10_00_00",
+      "name": "Capital Outskirts - Auriza Hero's Grave - Crucible Knight Ordovis"
+    },
+    "stormhill_catacombs": {
+      "map": "m30_11_00_00",
+      "name": "Stormhill - Deathtouched Catacombs"
+    },
+    "stormhill_catacombs_boss": {
+      "map": "m30_11_00_00",
+      "name": "Stormhill - Deathtouched Catacombs - Black Knife Assassin"
+    },
+    "altus_catacombs": {
+      "map": "m30_12_00_00",
+      "name": "Altus Plateau - Unsightly Catacombs"
+    },
+    "altus_catacombs_boss": {
+      "map": "m30_12_00_00",
+      "name": "Altus Plateau - Unsightly Catacombs - Perfumer Tricia and Misbegotten Warrior"
+    },
+    "outskirts_sidetomb": {
+      "map": "m30_13_00_00",
+      "name": "Capital Outskirts - Auriza Side Tomb"
+    },
+    "outskirts_sidetomb_hallway": {
+      "map": "m30_13_00_00",
+      "name": "Capital Outskirts - Auriza Side Tomb - Main First Floor"
+    },
+    "outskirts_sidetomb_upper": {
+      "map": "m30_13_00_00",
+      "name": "Capital Outskirts - Auriza Side Tomb - Main Second Floor"
+    },
+    "outskirts_sidetomb_jail": {
+      "map": "m30_13_00_00",
+      "name": "Capital Outskirts - Auriza Side Tomb - Main Jail"
+    },
+    "outskirts_sidetomb_dupeentrance": {
+      "map": "m30_13_00_00",
+      "name": "Capital Outskirts - Auriza Side Tomb - Dupe Entrance"
+    },
+    "outskirts_sidetomb_dupehallway": {
+      "map": "m30_13_00_00",
+      "name": "Capital Outskirts - Auriza Side Tomb - Dupe First Floor"
+    },
+    "outskirts_sidetomb_dupeupper": {
+      "map": "m30_13_00_00",
+      "name": "Capital Outskirts - Auriza Side Tomb - Dupe Second Floor"
+    },
+    "outskirts_sidetomb_dupejail": {
+      "map": "m30_13_00_00",
+      "name": "Capital Outskirts - Auriza Side Tomb - Dupe Jail and Lever"
+    },
+    "outskirts_sidetomb_boss": {
+      "map": "m30_13_00_00",
+      "name": "Capital Outskirts - Auriza Side Tomb - Grave Warden Duelist"
+    },
+    "caelid_erdtreecatacombs": {
+      "map": "m30_14_00_00",
+      "name": "Caelid - Minor Erdtree Catacombs"
+    },
+    "caelid_erdtreecatacombs_boss": {
+      "map": "m30_14_00_00",
+      "name": "Caelid - Minor Erdtree Catacombs - Erdtree Burial Watchdogs"
+    },
+    "caelid_catacombs": {
+      "map": "m30_15_00_00",
+      "name": "Caelid Catacombs"
+    },
+    "caelid_catacombs_boss": {
+      "map": "m30_15_00_00",
+      "name": "Caelid Catacombs - Cemetery Shade"
+    },
+    "caelid_wardead": {
+      "map": "m30_16_00_00",
+      "name": "Caelid - War-Dead Catacombs"
+    },
+    "caelid_wardead_boss": {
+      "map": "m30_16_00_00",
+      "name": "Caelid - War-Dead Catacombs - Putrid Tree Spirit"
+    },
+    "flamepeak_grave": {
+      "map": "m30_17_00_00",
+      "name": "Flame Peak - Giant-Conquering Hero's Grave"
+    },
+    "flamepeak_grave_boss": {
+      "map": "m30_17_00_00",
+      "name": "Flame Peak - Giant-Conquering Hero's Grave - Ancient Hero of Zamor"
+    },
+    "mountaintops_catacombs": {
+      "map": "m30_18_00_00",
+      "name": "Flame Peak - Giants' Mountaintop Catacombs"
+    },
+    "mountaintops_catacombs_boss": {
+      "map": "m30_18_00_00",
+      "name": "Flame Peak - Giants' Mountaintop Catacombs - Ulcerated Tree Spirit"
+    },
+    "snowfield_catacombs": {
+      "map": "m30_19_00_00",
+      "name": "Consecrated Snowfield Catacombs"
+    },
+    "snowfield_catacombs_boss": {
+      "map": "m30_19_00_00",
+      "name": "Consecrated Snowfield Catacombs - Putrid Grave Warden Duelist"
+    },
+    "limgrave_coastalcave": {
+      "map": "m31_15_00_00",
+      "name": "Limgrave - Coastal Cave"
+    },
+    "limgrave_coastalcave_boss": {
+      "map": "m31_15_00_00",
+      "name": "Limgrave - Coastal Cave - Demi-Human Chiefs"
+    },
+    "limgrave_murkwatercave": {
+      "map": "m31_00_00_00",
+      "name": "Limgrave - Murkwater Cave"
+    },
+    "limgrave_murkwatercave_boss": {
+      "map": "m31_00_00_00",
+      "name": "Limgrave - Murkwater Cave - Patches"
+    },
+    "peninsula_earthborecave": {
+      "map": "m31_01_00_00",
+      "name": "Weeping Peninsula - Earthbore Cave"
+    },
+    "peninsula_earthborecave_boss": {
+      "map": "m31_01_00_00",
+      "name": "Weeping Peninsula - Earthbore Cave - Runebear"
+    },
+    "peninsula_tombswardcave": {
+      "map": "m31_02_00_00",
+      "name": "Weeping Peninsula - Tombsward Cave"
+    },
+    "peninsula_tombswardcave_boss": {
+      "map": "m31_02_00_00",
+      "name": "Weeping Peninsula - Tombsward Cave - Miranda Blossom"
+    },
+    "limgrave_grovesidecave": {
+      "map": "m31_03_00_00",
+      "name": "Limgrave - Groveside Cave"
+    },
+    "limgrave_grovesidecave_boss": {
+      "map": "m31_03_00_00",
+      "name": "Limgrave - Groveside Cave - Beastman of Farum Azula"
+    },
+    "liurnia_stillwatercave": {
+      "map": "m31_04_00_00",
+      "name": "Liurnia - Stillwater Cave"
+    },
+    "liurnia_stillwatercave_boss": {
+      "map": "m31_04_00_00",
+      "name": "Liurnia - Stillwater Cave - Cleanrot Knight"
+    },
+    "liurnia_lakesidecave": {
+      "map": "m31_05_00_00",
+      "name": "Liurnia - Lakeside Crystal Cave"
+    },
+    "liurnia_lakesidecave_boss": {
+      "map": "m31_05_00_00",
+      "name": "Liurnia - Lakeside Crystal Cave - Bloodhound Knight"
+    },
+    "liurnia_academycave": {
+      "map": "m31_06_00_00",
+      "name": "Liurnia - Academy Crystal Cave"
+    },
+    "liurnia_academycave_boss": {
+      "map": "m31_06_00_00",
+      "name": "Liurnia - Academy Crystal Cave - Crystalian Duo"
+    },
+    "gelmir_seethewatercave": {
+      "map": "m31_07_00_00",
+      "name": "Mt. Gelmir - Seethewater Cave"
+    },
+    "gelmir_seethewatercave_boss": {
+      "map": "m31_07_00_00",
+      "name": "Mt. Gelmir - Seethewater Cave - Kindred of Rot Duo"
+    },
+    "gelmir_volcanocave": {
+      "map": "m31_09_00_00",
+      "name": "Mt. Gelmir - Volcano Cave"
+    },
+    "gelmir_volcanocave_boss": {
+      "map": "m31_09_00_00",
+      "name": "Mt. Gelmir - Volcano Cave - Demi-Human Queen Margot"
+    },
+    "dragonbarrow_cave": {
+      "map": "m31_10_00_00",
+      "name": "Dragonbarrow Cave"
+    },
+    "dragonbarrow_cave_boss": {
+      "map": "m31_10_00_00",
+      "name": "Dragonbarrow Cave - Beastmen of Farum Azula"
+    },
+    "dragonbarrow_selliahideaway": {
+      "map": "m31_11_00_00",
+      "name": "Dragonbarrow - Sellia Hideaway"
+    },
+    "dragonbarrow_selliahideaway_boss": {
+      "map": "m31_11_00_00",
+      "name": "Dragonbarrow - Sellia Hideaway - Putrid Crystalians"
+    },
+    "snowfield_cave": {
+      "map": "m31_12_00_00",
+      "name": "Consecrated Snowfield - Cave of the Forlorn"
+    },
+    "snowfield_cave_boss": {
+      "map": "m31_12_00_00",
+      "name": "Consecrated Snowfield - Cave of the Forlorn - Misbegotten Crusader"
+    },
+    "limgrave_highroadcave": {
+      "map": "m31_17_00_00",
+      "name": "Limgrave - Highroad Cave"
+    },
+    "limgrave_highroadcave_boss": {
+      "map": "m31_17_00_00",
+      "name": "Limgrave - Highroad Cave - Guardian Golem"
+    },
+    "altus_grotto": {
+      "map": "m31_18_00_00",
+      "name": "Altus Plateau - Perfumer's Grotto"
+    },
+    "altus_grotto_boss": {
+      "map": "m31_18_00_00",
+      "name": "Altus Plateau - Perfumer's Grotto - Omenkiller and Miranda the Blighted Bloom"
+    },
+    "altus_sagescave": {
+      "map": "m31_19_00_00",
+      "name": "Altus Plateau - Sage's Cave"
+    },
+    "altus_sagescave_boss": {
+      "map": "m31_19_00_00",
+      "name": "Altus Plateau - Sage's Cave - Black Knife Assassin"
+    },
+    "altus_sagescave_boss2": {
+      "map": "m31_19_00_00",
+      "name": "Altus Plateau - Sage's Cave - Necromancer Garris"
+    },
+    "caelid_abandonedcave_start": {
+      "map": "m31_20_00_00",
+      "name": "Caelid - Abandoned Cave Start"
+    },
+    "caelid_abandonedcave": {
+      "map": "m31_20_00_00",
+      "name": "Caelid - Abandoned Cave"
+    },
+    "caelid_abandonedcave_boss": {
+      "map": "m31_20_00_00",
+      "name": "Caelid - Abandoned Cave - Cleanrot Knights"
+    },
+    "caelid_gaolcave": {
+      "map": "m31_21_00_00",
+      "name": "Caelid - Gaol Cave"
+    },
+    "caelid_gaolcave_boss": {
+      "map": "m31_21_00_00",
+      "name": "Caelid - Gaol Cave - Frenzied Duelist"
+    },
+    "mountaintops_cave": {
+      "map": "m31_22_00_00",
+      "name": "Mountaintops - Spiritcaller Cave"
+    },
+    "mountaintops_cave_boss": {
+      "map": "m31_22_00_00",
+      "name": "Mountaintops - Spiritcaller Cave - Spiritcaller Snail"
+    },
+    "peninsula_tunnel": {
+      "map": "m32_00_00_00",
+      "name": "Weeping Peninsula - Morne Tunnel"
+    },
+    "peninsula_tunnel_boss": {
+      "map": "m32_00_00_00",
+      "name": "Weeping Peninsula - Morne Tunnel - Scaly Misbegotten"
+    },
+    "limgrave_tunnels": {
+      "map": "m32_01_00_00",
+      "name": "Limgrave Tunnels"
+    },
+    "limgrave_tunnels_boss": {
+      "map": "m32_01_00_00",
+      "name": "Limgrave Tunnels - Stonedigger Troll"
+    },
+    "liurnia_tunnel": {
+      "map": "m32_02_00_00",
+      "name": "Liurnia - Raya Lucaria Crystal Tunnel"
+    },
+    "liurnia_tunnel_boss": {
+      "map": "m32_02_00_00",
+      "name": "Liurnia - Raya Lucaria Crystal Tunnel - Crystalian"
+    },
+    "altus_oldtunnel": {
+      "map": "m32_04_00_00",
+      "name": "Old Altus Tunnel"
+    },
+    "altus_oldtunnel_boss": {
+      "map": "m32_04_00_00",
+      "name": "Old Altus Tunnel - Stonedigger Troll"
+    },
+    "altus_tunnel": {
+      "map": "m32_05_00_00",
+      "name": "Altus Tunnel"
+    },
+    "altus_tunnel_boss": {
+      "map": "m32_05_00_00",
+      "name": "Altus Tunnel - Crystalian Duo"
+    },
+    "caelid_gaeltunnel": {
+      "map": "m32_07_00_00",
+      "name": "Caelid - Gael Tunnel"
+    },
+    "caelid_gaeltunnel_boss": {
+      "map": "m32_07_00_00",
+      "name": "Caelid - Gael Tunnel - Magma Wyrm"
+    },
+    "caelid_selliatunnel": {
+      "map": "m32_08_00_00",
+      "name": "Caelid - Sellia Crystal Tunnel"
+    },
+    "caelid_selliatunnel_boss": {
+      "map": "m32_08_00_00",
+      "name": "Caelid - Sellia Crystal Tunnel - Fallingstar Beast"
+    },
+    "snowfield_tunnel": {
+      "map": "m32_11_00_00",
+      "name": "Consecrated Snowfield - Yelough Anix Tunnel"
+    },
+    "snowfield_tunnel_boss": {
+      "map": "m32_11_00_00",
+      "name": "Consecrated Snowfield - Yelough Anix Tunnel - Astel, Stars of Darkness"
+    },
+    "precipice": {
+      "map": "m39_20_00_00",
+      "name": "Ruin-Strewn Precipice"
+    },
+    "precipice_boss": {
+      "map": "m39_20_00_00",
+      "name": "Magma Wrym Makar"
+    },
+    "graveyard_cave": {
+      "map": "m18_00_00_00",
+      "name": "Cave of Knowledge"
+    },
+    "graveyard_cave_boss": {
+      "map": "m18_00_00_00",
+      "name": "Cave of Knowledge - Soldier of Godrick"
+    },
+    "graveyard_grave": {
+      "map": "m18_00_00_00",
+      "name": "Limgrave - Fringefolk Hero's Grave"
+    },
+    "graveyard_grave_boss": {
+      "map": "m18_00_00_00",
+      "name": "Limgrave - Fringefolk Hero's Grave - Ulcerated Tree Spirit"
+    },
+    "outskirts_sealedtunnel": {
+      "map": "m34_12_00_00",
+      "name": "Capital Outskirts - Sealed Tunnel"
+    },
+    "outskirts_sealedtunnel_boss": {
+      "map": "m34_12_00_00",
+      "name": "Capital Outskirts - Sealed Tunnel - Onyx Lord"
+    }
+  }
+}

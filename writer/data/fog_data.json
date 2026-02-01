@@ -11,6 +11,7 @@
       "map": "m10_00_00_00",
       "entity_id": 10001800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -24,6 +25,7 @@
       "map": "m10_00_00_00",
       "entity_id": 10001800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -37,6 +39,7 @@
       "map": "m10_00_00_00",
       "entity_id": 10001850,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -50,6 +53,7 @@
       "map": "m10_00_00_00",
       "entity_id": 10001850,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -63,6 +67,7 @@
       "map": "m10_00_00_00",
       "entity_id": 10001851,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -76,6 +81,7 @@
       "map": "m10_00_00_00",
       "entity_id": 10001851,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -88,6 +94,7 @@
       "map": "m10_00_00_00",
       "entity_id": 10001710,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -100,6 +107,7 @@
       "map": "m10_00_00_00",
       "entity_id": 10001710,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -113,6 +121,7 @@
       "map": "m10_00_00_00",
       "entity_id": 755894000,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -126,6 +135,7 @@
       "map": "m10_00_00_00",
       "entity_id": 755894000,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -139,6 +149,7 @@
       "map": "m10_00_00_00",
       "entity_id": 755894001,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -152,6 +163,7 @@
       "map": "m10_00_00_00",
       "entity_id": 755894001,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -165,6 +177,7 @@
       "map": "m10_01_00_00",
       "entity_id": 10011800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -178,6 +191,7 @@
       "map": "m10_01_00_00",
       "entity_id": 10011800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -191,6 +205,7 @@
       "map": "m10_01_00_00",
       "entity_id": 10011801,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -204,6 +219,7 @@
       "map": "m10_01_00_00",
       "entity_id": 10011801,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -217,6 +233,7 @@
       "map": "m11_00_00_00",
       "entity_id": 11001800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -230,6 +247,7 @@
       "map": "m11_00_00_00",
       "entity_id": 11001850,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9003",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -243,6 +261,7 @@
       "map": "m11_00_00_00",
       "entity_id": 11001850,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9003",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -256,6 +275,7 @@
       "map": "m11_00_00_00",
       "entity_id": 11001851,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9004",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -269,6 +289,7 @@
       "map": "m11_00_00_00",
       "entity_id": 11001851,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9004",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -282,6 +303,7 @@
       "map": "m11_00_00_00",
       "entity_id": 11001852,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9005",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -295,6 +317,7 @@
       "map": "m11_00_00_00",
       "entity_id": 11001852,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9005",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -308,6 +331,7 @@
       "map": "m11_00_00_00",
       "entity_id": 11001853,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9006",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -321,6 +345,7 @@
       "map": "m11_00_00_00",
       "entity_id": 11001853,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9006",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -334,6 +359,7 @@
       "map": "m11_00_00_00",
       "entity_id": 11001857,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9007",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -347,6 +373,7 @@
       "map": "m11_00_00_00",
       "entity_id": 11001857,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9007",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -360,6 +387,7 @@
       "map": "m11_00_00_00",
       "entity_id": 11001858,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9008",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -373,6 +401,7 @@
       "map": "m11_00_00_00",
       "entity_id": 11001858,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9008",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -386,6 +415,7 @@
       "map": "m11_00_00_00",
       "entity_id": 11001854,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -399,6 +429,7 @@
       "map": "m11_00_00_00",
       "entity_id": 11001801,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -411,6 +442,7 @@
       "map": "m11_00_00_00",
       "entity_id": 755894002,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -424,6 +456,7 @@
       "map": "m11_00_00_00",
       "entity_id": 755894003,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -437,6 +470,7 @@
       "map": "m11_00_00_00",
       "entity_id": 755894003,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -450,6 +484,7 @@
       "map": "m11_00_00_00",
       "entity_id": 755894004,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -463,6 +498,7 @@
       "map": "m11_00_00_00",
       "entity_id": 755894004,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -476,6 +512,7 @@
       "map": "m11_00_00_00",
       "entity_id": 755894005,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9500",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -489,6 +526,7 @@
       "map": "m11_00_00_00",
       "entity_id": 755894005,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9500",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -502,6 +540,7 @@
       "map": "m11_05_00_00",
       "entity_id": 11051800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -515,6 +554,7 @@
       "map": "m11_05_00_00",
       "entity_id": 11051801,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -528,6 +568,7 @@
       "map": "m11_05_00_00",
       "entity_id": 11051801,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -541,6 +582,7 @@
       "map": "m11_05_00_00",
       "entity_id": 11051850,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9003",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -554,6 +596,7 @@
       "map": "m11_05_00_00",
       "entity_id": 11051851,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9004",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -567,6 +610,7 @@
       "map": "m11_05_00_00",
       "entity_id": 11051852,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9005",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -580,6 +624,7 @@
       "map": "m11_05_00_00",
       "entity_id": 11051854,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9006",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -593,6 +638,7 @@
       "map": "m11_05_00_00",
       "entity_id": 11051855,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9007",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -606,6 +652,7 @@
       "map": "m11_05_00_00",
       "entity_id": 11051856,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9008",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -619,6 +666,7 @@
       "map": "m11_05_00_00",
       "entity_id": 11051853,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -632,6 +680,7 @@
       "map": "m11_05_00_00",
       "entity_id": 755894006,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -644,6 +693,7 @@
       "map": "m11_05_00_00",
       "entity_id": 755894007,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -657,6 +707,7 @@
       "map": "m11_05_00_00",
       "entity_id": 755894008,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -670,6 +721,7 @@
       "map": "m11_05_00_00",
       "entity_id": 755894009,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9500",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -683,6 +735,7 @@
       "map": "m11_05_00_00",
       "entity_id": 755894009,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9500",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -696,6 +749,7 @@
       "map": "m11_10_00_00",
       "entity_id": 755894010,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -709,6 +763,7 @@
       "map": "m12_01_00_00",
       "entity_id": 12011800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -722,6 +777,7 @@
       "map": "m12_01_00_00",
       "entity_id": 12011801,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -735,6 +791,7 @@
       "map": "m12_01_00_00",
       "entity_id": 755894011,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -748,6 +805,7 @@
       "map": "m12_01_00_00",
       "entity_id": 755894011,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -761,6 +819,7 @@
       "map": "m12_02_00_00",
       "entity_id": 12021850,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -774,6 +833,7 @@
       "map": "m12_02_00_00",
       "entity_id": 12021851,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -787,6 +847,7 @@
       "map": "m12_02_00_00",
       "entity_id": 12021800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -800,6 +861,7 @@
       "map": "m12_02_00_00",
       "entity_id": 12021801,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9003",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -813,6 +875,7 @@
       "map": "m12_02_00_00",
       "entity_id": 12021801,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9003",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -826,6 +889,7 @@
       "map": "m12_03_00_00",
       "entity_id": 12031800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -839,6 +903,7 @@
       "map": "m12_03_00_00",
       "entity_id": 12031850,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -852,6 +917,7 @@
       "map": "m12_04_00_00",
       "entity_id": 12041800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -865,6 +931,7 @@
       "map": "m12_04_00_00",
       "entity_id": 12041801,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -877,6 +944,7 @@
       "map": "m12_04_00_00",
       "entity_id": 12041400,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -890,6 +958,7 @@
       "map": "m12_05_00_00",
       "entity_id": 12051801,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -903,6 +972,7 @@
       "map": "m12_05_00_00",
       "entity_id": 12051802,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -916,6 +986,7 @@
       "map": "m12_05_00_00",
       "entity_id": 12051800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -929,6 +1000,7 @@
       "map": "m12_07_00_00",
       "entity_id": 755894012,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -942,6 +1014,7 @@
       "map": "m12_08_00_00",
       "entity_id": 12081800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -955,6 +1028,7 @@
       "map": "m12_09_00_00",
       "entity_id": 12091800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -968,6 +1042,7 @@
       "map": "m13_00_00_00",
       "entity_id": 13001850,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -981,6 +1056,7 @@
       "map": "m13_00_00_00",
       "entity_id": 13001854,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -994,6 +1070,7 @@
       "map": "m13_00_00_00",
       "entity_id": 13001853,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1007,6 +1084,7 @@
       "map": "m13_00_00_00",
       "entity_id": 13001852,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9003",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1020,6 +1098,7 @@
       "map": "m13_00_00_00",
       "entity_id": 13001855,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9004",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1033,6 +1112,7 @@
       "map": "m13_00_00_00",
       "entity_id": 13001800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1046,6 +1126,7 @@
       "map": "m13_00_00_00",
       "entity_id": 755894013,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1059,6 +1140,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1072,6 +1154,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001850,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1085,6 +1168,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001851,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1098,6 +1182,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001851,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1108,6 +1193,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001652,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1121,6 +1207,7 @@
       "map": "m14_00_00_00",
       "entity_id": 755894014,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1131,6 +1218,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001640,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1141,6 +1229,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001640,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1151,6 +1240,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001641,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1161,6 +1251,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001641,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1171,6 +1262,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001642,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1181,6 +1273,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001642,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1191,6 +1284,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001643,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9003",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1201,6 +1295,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001643,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9003",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1211,6 +1306,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001644,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9004",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1221,6 +1317,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001644,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9004",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1231,6 +1328,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001645,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9005",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1241,6 +1339,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001645,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9005",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1251,6 +1350,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001646,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9006",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1261,6 +1361,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001646,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9006",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1271,6 +1372,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001647,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9007",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1281,6 +1383,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001647,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9007",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1291,6 +1394,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001648,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9008",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1301,6 +1405,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001648,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9008",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1311,6 +1416,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001649,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9009",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1321,6 +1427,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001649,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9009",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1331,6 +1438,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001650,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9010",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1341,6 +1449,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001650,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9010",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1351,6 +1460,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001651,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9011",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1361,6 +1471,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001651,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9011",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1374,6 +1485,7 @@
       "map": "m15_00_00_00",
       "entity_id": 15001800,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1387,6 +1499,7 @@
       "map": "m15_00_00_00",
       "entity_id": 15001850,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1400,6 +1513,7 @@
       "map": "m15_00_00_00",
       "entity_id": 15001851,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1413,6 +1527,7 @@
       "map": "m15_00_00_00",
       "entity_id": 15001851,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1426,6 +1541,7 @@
       "map": "m15_00_00_00",
       "entity_id": 755894015,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1439,6 +1555,7 @@
       "map": "m16_00_00_00",
       "entity_id": 16001860,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1452,6 +1569,7 @@
       "map": "m16_00_00_00",
       "entity_id": 16001861,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1465,6 +1583,7 @@
       "map": "m16_00_00_00",
       "entity_id": 16001850,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_0500",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1478,6 +1597,7 @@
       "map": "m16_00_00_00",
       "entity_id": 16001850,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_0500",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1491,6 +1611,7 @@
       "map": "m16_00_00_00",
       "entity_id": 16001851,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_0501",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1504,6 +1625,7 @@
       "map": "m16_00_00_00",
       "entity_id": 16001851,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_0501",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1517,6 +1639,7 @@
       "map": "m16_00_00_00",
       "entity_id": 16001801,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1530,6 +1653,7 @@
       "map": "m16_00_00_00",
       "entity_id": 16001655,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1540,6 +1664,7 @@
       "map": "m16_00_00_00",
       "entity_id": 16001656,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1550,6 +1675,7 @@
       "map": "m16_00_00_00",
       "entity_id": 16001657,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1560,6 +1686,7 @@
       "map": "m16_00_00_00",
       "entity_id": 16001658,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9003",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1573,6 +1700,7 @@
       "map": "m16_00_00_00",
       "entity_id": 16001659,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9004",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1586,6 +1714,7 @@
       "map": "m16_00_00_00",
       "entity_id": 16001654,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9005",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1599,6 +1728,7 @@
       "map": "m18_00_00_00",
       "entity_id": 18001800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1612,6 +1742,7 @@
       "map": "m18_00_00_00",
       "entity_id": 18001850,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9010",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1625,6 +1756,7 @@
       "map": "m18_00_00_00",
       "entity_id": 18001850,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9010",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1638,6 +1770,7 @@
       "map": "m18_00_00_00",
       "entity_id": 18001851,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9011",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1651,6 +1784,7 @@
       "map": "m18_00_00_00",
       "entity_id": 18001851,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9011",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1664,6 +1798,7 @@
       "map": "m18_00_00_00",
       "entity_id": 18001695,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1677,6 +1812,7 @@
       "map": "m18_00_00_00",
       "entity_id": 18001696,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1687,6 +1823,7 @@
       "map": "m19_00_00_00",
       "entity_id": 19001800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1697,6 +1834,7 @@
       "map": "m19_00_00_00",
       "entity_id": 19001500,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1707,6 +1845,7 @@
       "map": "m19_00_00_00",
       "entity_id": 19001501,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1720,6 +1859,7 @@
       "map": "m20_00_00_00",
       "entity_id": 20001801,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1733,6 +1873,7 @@
       "map": "m20_00_00_00",
       "entity_id": 20001800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1743,6 +1884,7 @@
       "map": "m20_00_00_00",
       "entity_id": 755894016,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1753,6 +1895,7 @@
       "map": "m20_00_00_00",
       "entity_id": 755894017,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1763,6 +1906,7 @@
       "map": "m20_00_00_00",
       "entity_id": 755894018,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1773,6 +1917,7 @@
       "map": "m20_00_00_00",
       "entity_id": 755894019,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9003",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1783,6 +1928,7 @@
       "map": "m20_00_00_00",
       "entity_id": 755894019,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9003",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1796,6 +1942,7 @@
       "map": "m20_00_00_00",
       "entity_id": 755894020,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9004",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1809,6 +1956,7 @@
       "map": "m20_00_00_00",
       "entity_id": 755894020,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9004",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1819,6 +1967,7 @@
       "map": "m20_00_00_00",
       "entity_id": 755894021,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9005",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1829,6 +1978,7 @@
       "map": "m20_00_00_00",
       "entity_id": 755894021,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9005",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1842,6 +1992,7 @@
       "map": "m20_01_00_00",
       "entity_id": 20011800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1855,6 +2006,7 @@
       "map": "m20_01_00_00",
       "entity_id": 20011148,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1868,6 +2020,7 @@
       "map": "m21_00_00_00",
       "entity_id": 21001850,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1881,6 +2034,7 @@
       "map": "m21_00_00_00",
       "entity_id": 21001851,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1894,6 +2048,7 @@
       "map": "m21_00_00_00",
       "entity_id": 21001852,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1907,6 +2062,7 @@
       "map": "m21_00_00_00",
       "entity_id": 755894022,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1917,6 +2073,7 @@
       "map": "m21_00_00_00",
       "entity_id": 755894023,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1927,6 +2084,7 @@
       "map": "m21_00_00_00",
       "entity_id": 755894024,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1940,6 +2098,7 @@
       "map": "m21_01_00_00",
       "entity_id": 21011800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1953,6 +2112,7 @@
       "map": "m21_01_00_00",
       "entity_id": 755894025,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -1966,6 +2126,7 @@
       "map": "m21_01_00_00",
       "entity_id": 755894026,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9500",
       "lookup_by": null,
       "position": [
         183.488,
@@ -1987,6 +2148,7 @@
       "map": "m21_01_00_00",
       "entity_id": 755894027,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9501",
       "lookup_by": null,
       "position": [
         244.416,
@@ -2008,6 +2170,7 @@
       "map": "m21_01_00_00",
       "entity_id": 755894027,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9501",
       "lookup_by": null,
       "position": [
         244.416,
@@ -2029,6 +2192,7 @@
       "map": "m21_02_00_00",
       "entity_id": 755894028,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9500",
       "lookup_by": null,
       "position": [
         -402.589,
@@ -2050,6 +2214,7 @@
       "map": "m22_00_00_00",
       "entity_id": 22001801,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_3000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2063,6 +2228,7 @@
       "map": "m22_00_00_00",
       "entity_id": 22001801,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_3000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2076,6 +2242,7 @@
       "map": "m22_00_00_00",
       "entity_id": 22001800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2089,6 +2256,7 @@
       "map": "m22_00_00_00",
       "entity_id": 755894029,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9500",
       "lookup_by": null,
       "position": [
         -450.062,
@@ -2110,6 +2278,7 @@
       "map": "m28_00_00_00",
       "entity_id": 28001800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2123,6 +2292,7 @@
       "map": "m28_00_00_00",
       "entity_id": 755894030,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9500",
       "lookup_by": null,
       "position": [
         0.009,
@@ -2144,6 +2314,7 @@
       "map": "m30_00_00_00",
       "entity_id": 30001800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2157,6 +2328,7 @@
       "map": "m30_01_00_00",
       "entity_id": 30011800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2170,6 +2342,7 @@
       "map": "m30_02_00_00",
       "entity_id": 30021800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2183,6 +2356,7 @@
       "map": "m30_03_00_00",
       "entity_id": 30031800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2196,6 +2370,7 @@
       "map": "m30_04_00_00",
       "entity_id": 30041800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2209,6 +2384,7 @@
       "map": "m30_05_00_00",
       "entity_id": 30051800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2222,6 +2398,7 @@
       "map": "m30_05_00_00",
       "entity_id": 30051850,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2235,6 +2412,7 @@
       "map": "m30_06_00_00",
       "entity_id": 30061800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2248,6 +2426,7 @@
       "map": "m30_07_00_00",
       "entity_id": 30071800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2261,6 +2440,7 @@
       "map": "m30_07_00_00",
       "entity_id": 755894031,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2274,6 +2454,7 @@
       "map": "m30_08_00_00",
       "entity_id": 30081800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2287,6 +2468,7 @@
       "map": "m30_08_00_00",
       "entity_id": 755894032,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2300,6 +2482,7 @@
       "map": "m30_09_00_00",
       "entity_id": 30091800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2313,6 +2496,7 @@
       "map": "m30_09_00_00",
       "entity_id": 755894033,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2326,6 +2510,7 @@
       "map": "m30_10_00_00",
       "entity_id": 30101800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2339,6 +2524,7 @@
       "map": "m30_10_00_00",
       "entity_id": 755894034,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2352,6 +2538,7 @@
       "map": "m30_11_00_00",
       "entity_id": 30111800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2365,6 +2552,7 @@
       "map": "m30_12_00_00",
       "entity_id": 30121800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2378,6 +2566,7 @@
       "map": "m30_12_00_00",
       "entity_id": 755894035,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2391,6 +2580,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2404,6 +2594,7 @@
       "map": "m30_14_00_00",
       "entity_id": 30141800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2417,6 +2608,7 @@
       "map": "m30_14_00_00",
       "entity_id": 755894036,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2430,6 +2622,7 @@
       "map": "m30_15_00_00",
       "entity_id": 30151800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2443,6 +2636,7 @@
       "map": "m30_15_00_00",
       "entity_id": 755894037,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2456,6 +2650,7 @@
       "map": "m30_16_00_00",
       "entity_id": 30161800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2469,6 +2664,7 @@
       "map": "m30_16_00_00",
       "entity_id": 755894038,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2482,6 +2678,7 @@
       "map": "m30_17_00_00",
       "entity_id": 30171800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2492,6 +2689,7 @@
       "map": "m30_17_00_00",
       "entity_id": 755894039,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2505,6 +2703,7 @@
       "map": "m30_17_00_00",
       "entity_id": 755894040,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2518,6 +2717,7 @@
       "map": "m30_18_00_00",
       "entity_id": 30181800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2531,6 +2731,7 @@
       "map": "m30_18_00_00",
       "entity_id": 755894041,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2544,6 +2745,7 @@
       "map": "m30_19_00_00",
       "entity_id": 30191800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2554,6 +2756,7 @@
       "map": "m30_19_00_00",
       "entity_id": 30191695,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2567,6 +2770,7 @@
       "map": "m30_19_00_00",
       "entity_id": 755894042,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2577,6 +2781,7 @@
       "map": "m30_19_00_00",
       "entity_id": 755894043,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2590,6 +2795,7 @@
       "map": "m30_20_00_00",
       "entity_id": 30201800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2603,6 +2809,7 @@
       "map": "m30_20_00_00",
       "entity_id": 755894044,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2616,6 +2823,7 @@
       "map": "m30_20_00_00",
       "entity_id": 755894045,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2629,6 +2837,7 @@
       "map": "m31_00_00_00",
       "entity_id": 31001800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2642,6 +2851,7 @@
       "map": "m31_01_00_00",
       "entity_id": 31011800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2655,6 +2865,7 @@
       "map": "m31_02_00_00",
       "entity_id": 31021800,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2668,6 +2879,7 @@
       "map": "m31_02_00_00",
       "entity_id": 755894046,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2681,6 +2893,7 @@
       "map": "m31_03_00_00",
       "entity_id": 31031800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2694,6 +2907,7 @@
       "map": "m31_03_00_00",
       "entity_id": 755894047,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2707,6 +2921,7 @@
       "map": "m31_04_00_00",
       "entity_id": 31041800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2720,6 +2935,7 @@
       "map": "m31_05_00_00",
       "entity_id": 31051801,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2733,6 +2949,7 @@
       "map": "m31_05_00_00",
       "entity_id": 31051800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2746,6 +2963,7 @@
       "map": "m31_06_00_00",
       "entity_id": 31061800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2759,6 +2977,7 @@
       "map": "m31_06_00_00",
       "entity_id": 31061801,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2769,6 +2988,7 @@
       "map": "m31_06_00_00",
       "entity_id": 31061695,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2782,6 +3002,7 @@
       "map": "m31_07_00_00",
       "entity_id": 31071800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2795,6 +3016,7 @@
       "map": "m31_09_00_00",
       "entity_id": 31091800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2808,6 +3030,7 @@
       "map": "m31_10_00_00",
       "entity_id": 31101800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2821,6 +3044,7 @@
       "map": "m31_11_00_00",
       "entity_id": 31111800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2834,6 +3058,7 @@
       "map": "m31_12_00_00",
       "entity_id": 31121800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2847,6 +3072,7 @@
       "map": "m31_15_00_00",
       "entity_id": 31151801,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2860,6 +3086,7 @@
       "map": "m31_15_00_00",
       "entity_id": 31151800,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2870,6 +3097,7 @@
       "map": "m31_15_00_00",
       "entity_id": 755894048,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2883,6 +3111,7 @@
       "map": "m31_15_00_00",
       "entity_id": 755894049,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2896,6 +3125,7 @@
       "map": "m31_17_00_00",
       "entity_id": 31171800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2909,6 +3139,7 @@
       "map": "m31_18_00_00",
       "entity_id": 31181800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2922,6 +3153,7 @@
       "map": "m31_19_00_00",
       "entity_id": 31191800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2935,6 +3167,7 @@
       "map": "m31_19_00_00",
       "entity_id": 31191850,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2948,6 +3181,7 @@
       "map": "m31_20_00_00",
       "entity_id": 31201800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2961,6 +3195,7 @@
       "map": "m31_21_00_00",
       "entity_id": 31211800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2974,6 +3209,7 @@
       "map": "m31_21_00_00",
       "entity_id": 31211801,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -2987,6 +3223,7 @@
       "map": "m31_22_00_00",
       "entity_id": 31221800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3000,6 +3237,7 @@
       "map": "m32_00_00_00",
       "entity_id": 32001800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3013,6 +3251,7 @@
       "map": "m32_01_00_00",
       "entity_id": 32011800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3026,6 +3265,7 @@
       "map": "m32_01_00_00",
       "entity_id": 755894050,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3039,6 +3279,7 @@
       "map": "m32_02_00_00",
       "entity_id": 32021800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3052,6 +3293,7 @@
       "map": "m32_02_00_00",
       "entity_id": 755894051,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3065,6 +3307,7 @@
       "map": "m32_04_00_00",
       "entity_id": 32041800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3078,6 +3321,7 @@
       "map": "m32_04_00_00",
       "entity_id": 755894052,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3091,6 +3335,7 @@
       "map": "m32_05_00_00",
       "entity_id": 32051800,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3104,6 +3349,7 @@
       "map": "m32_07_00_00",
       "entity_id": 32071800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3117,6 +3363,7 @@
       "map": "m32_07_00_00",
       "entity_id": 755894053,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3130,6 +3377,7 @@
       "map": "m32_07_00_00",
       "entity_id": 755894054,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3143,6 +3391,7 @@
       "map": "m32_08_00_00",
       "entity_id": 32081800,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3156,6 +3405,7 @@
       "map": "m32_11_00_00",
       "entity_id": 32111800,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3169,6 +3419,7 @@
       "map": "m32_11_00_00",
       "entity_id": 755894055,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3182,6 +3433,7 @@
       "map": "m34_11_00_00",
       "entity_id": 34111690,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3192,6 +3444,7 @@
       "map": "m34_11_00_00",
       "entity_id": 34111691,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3205,6 +3458,7 @@
       "map": "m34_12_00_00",
       "entity_id": 34121800,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3218,6 +3472,7 @@
       "map": "m34_12_00_00",
       "entity_id": 34121801,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3231,6 +3486,7 @@
       "map": "m34_13_00_00",
       "entity_id": 34131800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3244,6 +3500,7 @@
       "map": "m34_13_00_00",
       "entity_id": 34131801,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3257,6 +3514,7 @@
       "map": "m34_13_00_00",
       "entity_id": 755894056,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3270,6 +3528,7 @@
       "map": "m34_14_00_00",
       "entity_id": 34141550,
       "model": "AEG099_239",
+      "asset_name": "AEG099_239_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3283,6 +3542,7 @@
       "map": "m34_14_00_00",
       "entity_id": 34141550,
       "model": "AEG099_239",
+      "asset_name": "AEG099_239_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3296,6 +3556,7 @@
       "map": "m35_00_00_00",
       "entity_id": 35001800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3306,6 +3567,7 @@
       "map": "m35_00_00_00",
       "entity_id": 35001801,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3319,6 +3581,7 @@
       "map": "m35_00_00_00",
       "entity_id": 35001504,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3332,6 +3595,7 @@
       "map": "m35_00_00_00",
       "entity_id": 35001850,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9100",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3345,6 +3609,7 @@
       "map": "m35_00_00_00",
       "entity_id": 35001850,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9100",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3358,6 +3623,7 @@
       "map": "m35_00_00_00",
       "entity_id": 755894057,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3371,6 +3637,7 @@
       "map": "m35_00_00_00",
       "entity_id": 755894058,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9003",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3384,6 +3651,7 @@
       "map": "m35_00_00_00",
       "entity_id": 755894058,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9003",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3397,6 +3665,7 @@
       "map": "m39_20_00_00",
       "entity_id": 39201800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3410,6 +3679,7 @@
       "map": "m39_20_00_00",
       "entity_id": 39201801,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3423,6 +3693,7 @@
       "map": "m39_20_00_00",
       "entity_id": 39201695,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3436,6 +3707,7 @@
       "map": "m40_00_00_00",
       "entity_id": 40001800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3449,6 +3721,7 @@
       "map": "m40_00_00_00",
       "entity_id": 755894059,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3462,6 +3735,7 @@
       "map": "m40_01_00_00",
       "entity_id": 40011800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3475,6 +3749,7 @@
       "map": "m40_01_00_00",
       "entity_id": 755894060,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3488,6 +3763,7 @@
       "map": "m40_02_00_00",
       "entity_id": 755894061,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3501,6 +3777,7 @@
       "map": "m41_00_00_00",
       "entity_id": 41001800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3514,6 +3791,7 @@
       "map": "m41_00_00_00",
       "entity_id": 755894062,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3527,6 +3805,7 @@
       "map": "m41_01_00_00",
       "entity_id": 41011800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3540,6 +3819,7 @@
       "map": "m41_01_00_00",
       "entity_id": 755894063,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3553,6 +3833,7 @@
       "map": "m41_02_00_00",
       "entity_id": 41021800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3566,6 +3847,7 @@
       "map": "m41_02_00_00",
       "entity_id": 755894064,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3579,6 +3861,7 @@
       "map": "m42_00_00_00",
       "entity_id": 755894065,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3592,6 +3875,7 @@
       "map": "m42_02_00_00",
       "entity_id": 755894066,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3605,6 +3889,7 @@
       "map": "m42_03_00_00",
       "entity_id": 755894067,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3618,6 +3903,7 @@
       "map": "m43_00_00_00",
       "entity_id": 43001800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3631,6 +3917,7 @@
       "map": "m43_00_00_00",
       "entity_id": 755894068,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3644,6 +3931,7 @@
       "map": "m43_01_00_00",
       "entity_id": 43011800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3657,6 +3945,7 @@
       "map": "m43_01_00_00",
       "entity_id": 755894069,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3670,6 +3959,7 @@
       "map": "m43_01_00_00",
       "entity_id": 755894070,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3680,6 +3970,7 @@
       "map": "m60_13_13_02",
       "entity_id": 1052521800,
       "model": "AEG099_019",
+      "asset_name": "AEG099_019_1000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -3690,6 +3981,7 @@
       "map": "m60_13_13_02",
       "entity_id": 1052521800,
       "model": "AEG099_019",
+      "asset_name": "AEG099_019_1000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -3703,6 +3995,7 @@
       "map": "m60_13_13_02",
       "entity_id": 1052531800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -3716,6 +4009,7 @@
       "map": "m60_13_13_02",
       "entity_id": 1052531800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -3729,6 +4023,7 @@
       "map": "m60_13_13_02",
       "entity_id": 1052531801,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -3742,6 +4037,7 @@
       "map": "m60_13_13_02",
       "entity_id": 1052531801,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -3752,6 +4048,7 @@
       "map": "m60_13_13_02",
       "entity_id": 1052531802,
       "model": "AEG099_017",
+      "asset_name": "AEG099_017_1000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -3762,6 +4059,7 @@
       "map": "m60_13_13_02",
       "entity_id": 1052531802,
       "model": "AEG099_017",
+      "asset_name": "AEG099_017_1000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -3775,6 +4073,7 @@
       "map": "m60_33_43_00",
       "entity_id": 755894071,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3788,6 +4087,7 @@
       "map": "m60_34_41_00",
       "entity_id": 755894072,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3801,6 +4101,7 @@
       "map": "m60_34_45_00",
       "entity_id": 755894073,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3814,6 +4115,7 @@
       "map": "m60_34_48_00",
       "entity_id": 1034481800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3827,6 +4129,7 @@
       "map": "m60_34_48_00",
       "entity_id": 1034481801,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3840,6 +4143,7 @@
       "map": "m60_35_50_00",
       "entity_id": 1035501800,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3853,6 +4157,7 @@
       "map": "m60_35_50_00",
       "entity_id": 1035501801,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3866,6 +4171,7 @@
       "map": "m60_37_41_00",
       "entity_id": 755894074,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3876,6 +4182,7 @@
       "map": "m60_37_51_00",
       "entity_id": 755894075,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3886,6 +4193,7 @@
       "map": "m60_37_51_00",
       "entity_id": 755894076,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3899,6 +4207,7 @@
       "map": "m60_37_52_00",
       "entity_id": 755894077,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3912,6 +4221,7 @@
       "map": "m60_37_54_00",
       "entity_id": 755894078,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3925,6 +4235,7 @@
       "map": "m60_37_55_00",
       "entity_id": 755894079,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3938,6 +4249,7 @@
       "map": "m60_38_46_00",
       "entity_id": 755894080,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3951,6 +4263,7 @@
       "map": "m60_38_51_00",
       "entity_id": 1038511800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3964,6 +4277,7 @@
       "map": "m60_38_51_00",
       "entity_id": 1038511801,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3977,6 +4291,7 @@
       "map": "m60_39_40_00",
       "entity_id": 755894081,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -3990,6 +4305,7 @@
       "map": "m60_39_41_00",
       "entity_id": 755894082,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4003,6 +4319,7 @@
       "map": "m60_39_48_00",
       "entity_id": 755894083,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4013,6 +4330,7 @@
       "map": "m60_39_53_00",
       "entity_id": 755894084,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4026,6 +4344,7 @@
       "map": "m60_39_54_00",
       "entity_id": 1039541800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4039,6 +4358,7 @@
       "map": "m60_40_39_00",
       "entity_id": 755894085,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9500",
       "lookup_by": null,
       "position": [
         -9.655,
@@ -4060,6 +4380,7 @@
       "map": "m60_40_53_00",
       "entity_id": 1040531800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4073,6 +4394,7 @@
       "map": "m60_40_53_00",
       "entity_id": 1040531801,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4086,6 +4408,7 @@
       "map": "m60_41_37_00",
       "entity_id": 755894086,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4099,6 +4422,7 @@
       "map": "m60_41_51_00",
       "entity_id": 755894087,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4112,6 +4436,7 @@
       "map": "m60_41_52_00",
       "entity_id": 755894088,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4125,6 +4450,7 @@
       "map": "m60_42_35_00",
       "entity_id": 755894089,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4138,6 +4464,7 @@
       "map": "m60_42_40_00",
       "entity_id": 755894090,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4151,6 +4478,7 @@
       "map": "m60_43_30_00",
       "entity_id": 1043301800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4164,6 +4492,7 @@
       "map": "m60_43_31_00",
       "entity_id": 755894091,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9500",
       "lookup_by": null,
       "position": [
         120.285,
@@ -4185,6 +4514,7 @@
       "map": "m60_43_33_00",
       "entity_id": 755894092,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4198,6 +4528,7 @@
       "map": "m60_43_33_00",
       "entity_id": 755894093,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4211,6 +4542,7 @@
       "map": "m60_43_37_00",
       "entity_id": 755894094,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4224,6 +4556,7 @@
       "map": "m60_43_38_00",
       "entity_id": 755894095,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4237,6 +4570,7 @@
       "map": "m60_43_39_00",
       "entity_id": 755894096,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4250,6 +4584,7 @@
       "map": "m60_43_39_00",
       "entity_id": 755894097,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4263,6 +4598,7 @@
       "map": "m60_43_50_00",
       "entity_id": 755894098,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4273,6 +4609,7 @@
       "map": "m60_43_53_00",
       "entity_id": 755894099,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4286,6 +4623,7 @@
       "map": "m60_44_34_00",
       "entity_id": 755894100,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4299,6 +4637,7 @@
       "map": "m60_44_36_00",
       "entity_id": 1044361800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4312,6 +4651,7 @@
       "map": "m60_44_36_00",
       "entity_id": 1044361801,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4325,6 +4665,7 @@
       "map": "m60_45_34_00",
       "entity_id": 755894101,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4338,6 +4679,7 @@
       "map": "m60_45_37_00",
       "entity_id": 755894102,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4351,6 +4693,7 @@
       "map": "m60_45_52_00",
       "entity_id": 1045521800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4364,6 +4707,7 @@
       "map": "m60_45_52_00",
       "entity_id": 1045521500,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4377,6 +4721,7 @@
       "map": "m60_45_52_00",
       "entity_id": 755894103,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4390,6 +4735,7 @@
       "map": "m60_45_52_00",
       "entity_id": 755894104,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4403,6 +4749,7 @@
       "map": "m60_45_52_10",
       "entity_id": 755894105,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9500",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4416,6 +4763,7 @@
       "map": "m60_45_52_10",
       "entity_id": 755894105,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9500",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4429,6 +4777,7 @@
       "map": "m60_45_52_10",
       "entity_id": 755894106,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9501",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4442,6 +4791,7 @@
       "map": "m60_45_52_10",
       "entity_id": 755894106,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9501",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4455,6 +4805,7 @@
       "map": "m60_45_52_10",
       "entity_id": 755894107,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9502",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4468,6 +4819,7 @@
       "map": "m60_45_52_10",
       "entity_id": 755894107,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9502",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4481,6 +4833,7 @@
       "map": "m60_47_38_00",
       "entity_id": 755894108,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4494,6 +4847,7 @@
       "map": "m60_47_42_00",
       "entity_id": 755894109,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4507,6 +4861,7 @@
       "map": "m60_47_51_00",
       "entity_id": 755894110,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4520,6 +4875,7 @@
       "map": "m60_48_40_00",
       "entity_id": 1048401800,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4533,6 +4889,7 @@
       "map": "m60_48_40_00",
       "entity_id": 1048401801,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4543,6 +4900,7 @@
       "map": "m60_48_40_00",
       "entity_id": 755894111,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4553,6 +4911,7 @@
       "map": "m60_48_40_00",
       "entity_id": 755894112,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4566,6 +4925,7 @@
       "map": "m60_49_39_00",
       "entity_id": 1049391801,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4579,6 +4939,7 @@
       "map": "m60_49_39_00",
       "entity_id": 1049391800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4592,6 +4953,7 @@
       "map": "m60_49_39_00",
       "entity_id": 755894113,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4605,6 +4967,7 @@
       "map": "m60_49_39_00",
       "entity_id": 755894114,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4618,6 +4981,7 @@
       "map": "m60_49_40_00",
       "entity_id": 755894115,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4631,6 +4995,7 @@
       "map": "m60_49_41_00",
       "entity_id": 755894116,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4644,6 +5009,7 @@
       "map": "m60_49_41_00",
       "entity_id": 755894117,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4657,6 +5023,7 @@
       "map": "m60_49_41_00",
       "entity_id": 755894118,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4670,6 +5037,7 @@
       "map": "m60_49_41_00",
       "entity_id": 755894118,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4683,6 +5051,7 @@
       "map": "m60_50_39_00",
       "entity_id": 755894119,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4696,6 +5065,7 @@
       "map": "m60_50_56_00",
       "entity_id": 755894120,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4709,6 +5079,7 @@
       "map": "m60_51_36_00",
       "entity_id": 1051361800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4722,6 +5093,7 @@
       "map": "m60_51_36_00",
       "entity_id": 1051361801,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4732,6 +5104,7 @@
       "map": "m60_51_36_00",
       "entity_id": 1051361690,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4742,6 +5115,7 @@
       "map": "m60_51_36_00",
       "entity_id": 755894121,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4755,6 +5129,7 @@
       "map": "m60_51_36_00",
       "entity_id": 755894122,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4768,6 +5143,7 @@
       "map": "m60_51_40_00",
       "entity_id": 755894123,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4781,6 +5157,7 @@
       "map": "m60_51_57_00",
       "entity_id": 1051571800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4794,6 +5171,7 @@
       "map": "m60_51_57_00",
       "entity_id": 1051571801,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4804,6 +5182,7 @@
       "map": "m60_52_40_00",
       "entity_id": 1052401800,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4817,6 +5196,7 @@
       "map": "m60_53_56_00",
       "entity_id": 755894124,
       "model": "AEG099_232",
+      "asset_name": "AEG099_232_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4830,6 +5210,7 @@
       "map": "m61_44_45_00",
       "entity_id": 2044451800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4843,6 +5224,7 @@
       "map": "m61_44_45_00",
       "entity_id": 2044451801,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4856,6 +5238,7 @@
       "map": "m61_44_45_10",
       "entity_id": 755894125,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9500",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4869,6 +5252,7 @@
       "map": "m61_44_45_10",
       "entity_id": 755894125,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9500",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4882,6 +5266,7 @@
       "map": "m61_44_45_10",
       "entity_id": 755894126,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9501",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4895,6 +5280,7 @@
       "map": "m61_46_38_00",
       "entity_id": 2046381800,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4908,6 +5294,7 @@
       "map": "m61_46_41_00",
       "entity_id": 2046411800,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4921,6 +5308,7 @@
       "map": "m61_46_45_00",
       "entity_id": 2046451800,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4934,6 +5322,7 @@
       "map": "m61_47_35_00",
       "entity_id": 2047351500,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4944,6 +5333,7 @@
       "map": "m61_47_42_00",
       "entity_id": 755894127,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4954,6 +5344,7 @@
       "map": "m61_47_42_00",
       "entity_id": 755894128,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4964,6 +5355,7 @@
       "map": "m61_47_42_00",
       "entity_id": 755894129,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4974,6 +5366,7 @@
       "map": "m61_47_43_00",
       "entity_id": 755894130,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -4987,6 +5380,7 @@
       "map": "m61_47_43_00",
       "entity_id": 755894131,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9500",
       "lookup_by": null,
       "position": [
         94.502,
@@ -5008,6 +5402,7 @@
       "map": "m61_47_44_00",
       "entity_id": 755894132,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5021,6 +5416,7 @@
       "map": "m61_47_44_00",
       "entity_id": 755894133,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9500",
       "lookup_by": null,
       "position": [
         -11.253,
@@ -5042,6 +5438,7 @@
       "map": "m61_48_39_00",
       "entity_id": 755894134,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9500",
       "lookup_by": null,
       "position": [
         -88.559,
@@ -5063,6 +5460,7 @@
       "map": "m61_48_44_00",
       "entity_id": 2048441800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5076,6 +5474,7 @@
       "map": "m61_48_44_00",
       "entity_id": 2048441801,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5086,6 +5485,7 @@
       "map": "m61_48_44_00",
       "entity_id": 755894135,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5099,6 +5499,7 @@
       "map": "m61_49_38_00",
       "entity_id": 755894136,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9008",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5112,6 +5513,7 @@
       "map": "m61_49_38_00",
       "entity_id": 755894136,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9008",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5122,6 +5524,7 @@
       "map": "m61_49_38_00",
       "entity_id": 755894137,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9009",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5132,6 +5535,7 @@
       "map": "m61_49_38_00",
       "entity_id": 755894137,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9009",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5145,6 +5549,7 @@
       "map": "m61_49_48_00",
       "entity_id": 2049481800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5158,6 +5563,7 @@
       "map": "m61_49_48_00",
       "entity_id": 2049481801,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5171,6 +5577,7 @@
       "map": "m61_49_48_00",
       "entity_id": 755894138,
       "model": "AEG099_230",
+      "asset_name": "AEG099_230_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5184,6 +5591,7 @@
       "map": "m61_50_38_00",
       "entity_id": 755894139,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9500",
       "lookup_by": null,
       "position": [
         -14.628,
@@ -5202,6 +5610,7 @@
       "map": "m61_50_43_00",
       "entity_id": 755894140,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5212,6 +5621,7 @@
       "map": "m61_50_43_00",
       "entity_id": 755894141,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5225,6 +5635,7 @@
       "map": "m61_50_48_00",
       "entity_id": 2050481800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5238,6 +5649,7 @@
       "map": "m61_51_44_00",
       "entity_id": 2051441800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5251,6 +5663,7 @@
       "map": "m61_51_45_00",
       "entity_id": 2051451800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5264,6 +5677,7 @@
       "map": "m61_51_45_00",
       "entity_id": 2051451801,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5277,6 +5691,7 @@
       "map": "m61_51_45_00",
       "entity_id": 2051451802,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9002",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5287,6 +5702,7 @@
       "map": "m61_51_45_00",
       "entity_id": 755894142,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5297,6 +5713,7 @@
       "map": "m61_51_45_00",
       "entity_id": 755894143,
       "model": "AEG099_231",
+      "asset_name": "AEG099_231_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5310,6 +5727,7 @@
       "map": "m61_52_43_00",
       "entity_id": 2052431801,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5323,6 +5741,7 @@
       "map": "m61_52_43_00",
       "entity_id": 2052431800,
       "model": "AEG099_001",
+      "asset_name": "AEG099_001_9001",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5336,6 +5755,7 @@
       "map": "m61_54_39_00",
       "entity_id": 2054391800,
       "model": "AEG099_002",
+      "asset_name": "AEG099_002_9000",
       "lookup_by": "name",
       "position": null,
       "rotation": null
@@ -5349,6 +5769,7 @@
       "map": "m60_34_47_00",
       "entity_id": 1034471610,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5362,6 +5783,7 @@
       "map": "m60_34_47_00",
       "entity_id": 1034471610,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5375,6 +5797,7 @@
       "map": "m60_42_32_00",
       "entity_id": 1042321510,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5388,6 +5811,7 @@
       "map": "m60_42_32_00",
       "entity_id": 1042321510,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5401,6 +5825,7 @@
       "map": "m12_03_00_00",
       "entity_id": 12031500,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5414,6 +5839,7 @@
       "map": "m12_03_00_00",
       "entity_id": 12031500,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5427,6 +5853,7 @@
       "map": "m60_42_32_00",
       "entity_id": 1042321510,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5440,6 +5867,7 @@
       "map": "m60_42_32_00",
       "entity_id": 1042321510,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5453,6 +5881,7 @@
       "map": "m13_00_00_00",
       "entity_id": 13001950,
       "model": "AEG099_060",
+      "asset_name": "AEG099_060_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5466,6 +5895,7 @@
       "map": "m13_00_00_00",
       "entity_id": 13001950,
       "model": "AEG099_060",
+      "asset_name": "AEG099_060_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5479,6 +5909,7 @@
       "map": "m60_34_51_00",
       "entity_id": 1034511620,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5492,6 +5923,7 @@
       "map": "m60_34_51_00",
       "entity_id": 1034511620,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5505,6 +5937,7 @@
       "map": "m12_03_00_00",
       "entity_id": 12031504,
       "model": "AEG237_018",
+      "asset_name": "AEG237_018_0500",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5518,6 +5951,7 @@
       "map": "m12_03_00_00",
       "entity_id": 12031504,
       "model": "AEG237_018",
+      "asset_name": "AEG237_018_0500",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5531,6 +5965,7 @@
       "map": "m60_33_47_00",
       "entity_id": 1033471610,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5544,6 +5979,7 @@
       "map": "m60_33_47_00",
       "entity_id": 1033471610,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5556,6 +5992,7 @@
       "map": "m12_02_00_00",
       "entity_id": 12021203,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5568,6 +6005,7 @@
       "map": "m12_02_00_00",
       "entity_id": 12021203,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5580,6 +6018,7 @@
       "map": "m12_02_00_00",
       "entity_id": 12021204,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9002",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5592,6 +6031,7 @@
       "map": "m12_02_00_00",
       "entity_id": 12021204,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9002",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5605,6 +6045,7 @@
       "map": "m12_02_00_00",
       "entity_id": 12021205,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9003",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5618,6 +6059,7 @@
       "map": "m12_02_00_00",
       "entity_id": 12021205,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9003",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5631,6 +6073,7 @@
       "map": "m12_08_00_00",
       "entity_id": 12081848,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5644,6 +6087,7 @@
       "map": "m12_08_00_00",
       "entity_id": 12081848,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5657,6 +6101,7 @@
       "map": "m12_09_00_00",
       "entity_id": 12091848,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5670,6 +6115,7 @@
       "map": "m12_09_00_00",
       "entity_id": 12091848,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5683,6 +6129,7 @@
       "map": "m12_02_00_00",
       "entity_id": 12021670,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5696,6 +6143,7 @@
       "map": "m12_02_00_00",
       "entity_id": 12021670,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5709,6 +6157,7 @@
       "map": "m12_03_00_00",
       "entity_id": 12031710,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9002",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5722,6 +6171,7 @@
       "map": "m12_03_00_00",
       "entity_id": 12031710,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9002",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5735,6 +6185,7 @@
       "map": "m12_03_00_00",
       "entity_id": 12031710,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9002",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5748,6 +6199,7 @@
       "map": "m12_03_00_00",
       "entity_id": 12031710,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9002",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5761,6 +6213,7 @@
       "map": "m12_02_00_00",
       "entity_id": 12021502,
       "model": "AEG237_018",
+      "asset_name": "AEG237_018_5000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5774,6 +6227,7 @@
       "map": "m12_02_00_00",
       "entity_id": 12021502,
       "model": "AEG237_018",
+      "asset_name": "AEG237_018_5000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5787,6 +6241,7 @@
       "map": "m12_01_00_00",
       "entity_id": 12011506,
       "model": "AEG237_018",
+      "asset_name": "AEG237_018_2000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5800,6 +6255,7 @@
       "map": "m12_01_00_00",
       "entity_id": 12011506,
       "model": "AEG237_018",
+      "asset_name": "AEG237_018_2000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5813,6 +6269,7 @@
       "map": "m60_47_56_00",
       "entity_id": 1047561500,
       "model": "AEG099_511",
+      "asset_name": "AEG099_511_1000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5826,6 +6283,7 @@
       "map": "m60_47_56_00",
       "entity_id": 1047561500,
       "model": "AEG099_511",
+      "asset_name": "AEG099_511_1000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5839,6 +6297,7 @@
       "map": "m12_05_00_00",
       "entity_id": 12051952,
       "model": "AEG099_060",
+      "asset_name": "AEG099_060_9002",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5852,6 +6311,7 @@
       "map": "m12_05_00_00",
       "entity_id": 12051952,
       "model": "AEG099_060",
+      "asset_name": "AEG099_060_9002",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5865,6 +6325,7 @@
       "map": "m12_02_00_00",
       "entity_id": 12021609,
       "model": "AEG237_062",
+      "asset_name": "AEG237_062_1000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5878,6 +6339,7 @@
       "map": "m12_02_00_00",
       "entity_id": 12021609,
       "model": "AEG237_062",
+      "asset_name": "AEG237_062_1000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5891,6 +6353,7 @@
       "map": "m12_02_00_00",
       "entity_id": 12021629,
       "model": "AEG237_062",
+      "asset_name": "AEG237_062_3000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5904,6 +6367,7 @@
       "map": "m12_02_00_00",
       "entity_id": 12021629,
       "model": "AEG237_062",
+      "asset_name": "AEG237_062_3000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5917,6 +6381,7 @@
       "map": "m13_00_00_00",
       "entity_id": 13001505,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9006",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5930,6 +6395,7 @@
       "map": "m13_00_00_00",
       "entity_id": 13001505,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9006",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5943,6 +6409,7 @@
       "map": "m60_33_46_00",
       "entity_id": 1033461610,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5956,6 +6423,7 @@
       "map": "m60_33_46_00",
       "entity_id": 1033461610,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5969,6 +6437,7 @@
       "map": "m60_54_53_00",
       "entity_id": 1054531950,
       "model": "",
+      "asset_name": "13002500",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5982,6 +6451,7 @@
       "map": "m60_54_53_00",
       "entity_id": 1054531950,
       "model": "",
+      "asset_name": "13002500",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -5995,6 +6465,7 @@
       "map": "m60_48_57_00",
       "entity_id": 1048571500,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6008,6 +6479,7 @@
       "map": "m60_48_57_00",
       "entity_id": 1048571500,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6021,6 +6493,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001720,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9004",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6034,6 +6507,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001720,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9004",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6047,6 +6521,7 @@
       "map": "m16_00_00_00",
       "entity_id": 16001570,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6060,6 +6535,7 @@
       "map": "m16_00_00_00",
       "entity_id": 16001570,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6073,6 +6549,7 @@
       "map": "m18_00_00_00",
       "entity_id": 18001840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6086,6 +6563,7 @@
       "map": "m18_00_00_00",
       "entity_id": 18001840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6099,6 +6577,7 @@
       "map": "m19_00_00_00",
       "entity_id": 19001500,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6112,6 +6591,7 @@
       "map": "m19_00_00_00",
       "entity_id": 19001500,
       "model": "AEG099_003",
+      "asset_name": "AEG099_003_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6125,6 +6605,7 @@
       "map": "m61_44_45_00",
       "entity_id": 2044451500,
       "model": "AEG464_028",
+      "asset_name": "AEG464_028_3000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6138,6 +6619,7 @@
       "map": "m61_44_45_00",
       "entity_id": 2044451500,
       "model": "AEG464_028",
+      "asset_name": "AEG464_028_3000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6151,6 +6633,7 @@
       "map": "m61_51_45_00",
       "entity_id": 2051451600,
       "model": "AEG052_407",
+      "asset_name": "AEG052_407_1000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6164,6 +6647,7 @@
       "map": "m61_51_45_00",
       "entity_id": 2051451600,
       "model": "AEG052_407",
+      "asset_name": "AEG052_407_1000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6177,6 +6661,7 @@
       "map": "m30_00_00_00",
       "entity_id": 30001840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6190,6 +6675,7 @@
       "map": "m30_00_00_00",
       "entity_id": 30001840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6202,6 +6688,7 @@
       "map": "m30_00_00_00",
       "entity_id": 755894520,
       "model": "AEG099_170",
+      "asset_name": "755894520",
       "lookup_by": null,
       "position": [
         -63.656,
@@ -6222,6 +6709,7 @@
       "map": "m30_00_00_00",
       "entity_id": 755894520,
       "model": "AEG099_170",
+      "asset_name": "755894520",
       "lookup_by": null,
       "position": [
         -63.656,
@@ -6243,6 +6731,7 @@
       "map": "m30_01_00_00",
       "entity_id": 30011840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6256,6 +6745,7 @@
       "map": "m30_01_00_00",
       "entity_id": 30011840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6268,6 +6758,7 @@
       "map": "m30_01_00_00",
       "entity_id": 755894521,
       "model": "AEG099_170",
+      "asset_name": "755894521",
       "lookup_by": null,
       "position": [
         -63.877,
@@ -6288,6 +6779,7 @@
       "map": "m30_01_00_00",
       "entity_id": 755894521,
       "model": "AEG099_170",
+      "asset_name": "755894521",
       "lookup_by": null,
       "position": [
         -63.877,
@@ -6309,6 +6801,7 @@
       "map": "m30_02_00_00",
       "entity_id": 30021840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6322,6 +6815,7 @@
       "map": "m30_02_00_00",
       "entity_id": 30021840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6334,6 +6828,7 @@
       "map": "m30_02_00_00",
       "entity_id": 755894522,
       "model": "AEG099_170",
+      "asset_name": "755894522",
       "lookup_by": null,
       "position": [
         48.931,
@@ -6354,6 +6849,7 @@
       "map": "m30_02_00_00",
       "entity_id": 755894522,
       "model": "AEG099_170",
+      "asset_name": "755894522",
       "lookup_by": null,
       "position": [
         48.931,
@@ -6375,6 +6871,7 @@
       "map": "m30_03_00_00",
       "entity_id": 30031840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6388,6 +6885,7 @@
       "map": "m30_03_00_00",
       "entity_id": 30031840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6401,6 +6899,7 @@
       "map": "m30_04_00_00",
       "entity_id": 30041840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6414,6 +6913,7 @@
       "map": "m30_04_00_00",
       "entity_id": 30041840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6426,6 +6926,7 @@
       "map": "m30_04_00_00",
       "entity_id": 755894523,
       "model": "AEG099_170",
+      "asset_name": "755894523",
       "lookup_by": null,
       "position": [
         18.239,
@@ -6446,6 +6947,7 @@
       "map": "m30_04_00_00",
       "entity_id": 755894523,
       "model": "AEG099_170",
+      "asset_name": "755894523",
       "lookup_by": null,
       "position": [
         18.239,
@@ -6467,6 +6969,7 @@
       "map": "m30_05_00_00",
       "entity_id": 30051840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6480,6 +6983,7 @@
       "map": "m30_05_00_00",
       "entity_id": 30051840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6493,6 +6997,7 @@
       "map": "m30_05_00_00",
       "entity_id": 30051890,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6506,6 +7011,7 @@
       "map": "m30_05_00_00",
       "entity_id": 30051890,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6519,6 +7025,7 @@
       "map": "m30_06_00_00",
       "entity_id": 30061840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6532,6 +7039,7 @@
       "map": "m30_06_00_00",
       "entity_id": 30061840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6544,6 +7052,7 @@
       "map": "m30_06_00_00",
       "entity_id": 755894524,
       "model": "AEG099_170",
+      "asset_name": "755894524",
       "lookup_by": null,
       "position": [
         15.975,
@@ -6564,6 +7073,7 @@
       "map": "m30_06_00_00",
       "entity_id": 755894524,
       "model": "AEG099_170",
+      "asset_name": "755894524",
       "lookup_by": null,
       "position": [
         15.975,
@@ -6585,6 +7095,7 @@
       "map": "m30_07_00_00",
       "entity_id": 30071840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6598,6 +7109,7 @@
       "map": "m30_07_00_00",
       "entity_id": 30071840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6611,6 +7123,7 @@
       "map": "m30_08_00_00",
       "entity_id": 30081840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6624,6 +7137,7 @@
       "map": "m30_08_00_00",
       "entity_id": 30081840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6637,6 +7151,7 @@
       "map": "m30_09_00_00",
       "entity_id": 30091840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6650,6 +7165,7 @@
       "map": "m30_09_00_00",
       "entity_id": 30091840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6663,6 +7179,7 @@
       "map": "m30_10_00_00",
       "entity_id": 30101840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6676,6 +7193,7 @@
       "map": "m30_10_00_00",
       "entity_id": 30101840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6689,6 +7207,7 @@
       "map": "m30_11_00_00",
       "entity_id": 30111840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6702,6 +7221,7 @@
       "map": "m30_11_00_00",
       "entity_id": 30111840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6715,6 +7235,7 @@
       "map": "m30_12_00_00",
       "entity_id": 30121840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6728,6 +7249,7 @@
       "map": "m30_12_00_00",
       "entity_id": 30121840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6740,6 +7262,7 @@
       "map": "m30_12_00_00",
       "entity_id": 755894525,
       "model": "AEG099_170",
+      "asset_name": "755894525",
       "lookup_by": null,
       "position": [
         -0.007,
@@ -6760,6 +7283,7 @@
       "map": "m30_12_00_00",
       "entity_id": 755894525,
       "model": "AEG099_170",
+      "asset_name": "755894525",
       "lookup_by": null,
       "position": [
         -0.007,
@@ -6781,6 +7305,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6794,6 +7319,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6807,6 +7333,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131201,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9002",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6820,6 +7347,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131201,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9002",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6833,6 +7361,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131200,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6846,6 +7375,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131200,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6859,6 +7389,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131203,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9004",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6872,6 +7403,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131203,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9004",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6885,6 +7417,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131202,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9003",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6898,6 +7431,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131202,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9003",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6911,6 +7445,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131205,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9006",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6924,6 +7459,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131205,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9006",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6937,6 +7473,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131204,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9005",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6950,6 +7487,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131204,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9005",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6963,6 +7501,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131207,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9008",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6976,6 +7515,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131207,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9008",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -6989,6 +7529,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131206,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9007",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7002,6 +7543,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131206,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9007",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7015,6 +7557,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131209,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9010",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7028,6 +7571,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131209,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9010",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7041,6 +7585,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131208,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9009",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7054,6 +7599,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131208,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9009",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7067,6 +7613,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131221,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9012",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7080,6 +7627,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131221,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9012",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7093,6 +7641,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131220,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9011",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7106,6 +7655,7 @@
       "map": "m30_13_00_00",
       "entity_id": 30131220,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9011",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7119,6 +7669,7 @@
       "map": "m30_14_00_00",
       "entity_id": 30141840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7132,6 +7683,7 @@
       "map": "m30_14_00_00",
       "entity_id": 30141840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7145,6 +7697,7 @@
       "map": "m30_15_00_00",
       "entity_id": 30151840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7158,6 +7711,7 @@
       "map": "m30_15_00_00",
       "entity_id": 30151840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7171,6 +7725,7 @@
       "map": "m30_16_00_00",
       "entity_id": 30161840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7184,6 +7739,7 @@
       "map": "m30_16_00_00",
       "entity_id": 30161840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7197,6 +7753,7 @@
       "map": "m30_17_00_00",
       "entity_id": 30171840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7210,6 +7767,7 @@
       "map": "m30_17_00_00",
       "entity_id": 30171840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7223,6 +7781,7 @@
       "map": "m30_18_00_00",
       "entity_id": 30181840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7236,6 +7795,7 @@
       "map": "m30_18_00_00",
       "entity_id": 30181840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7248,6 +7808,7 @@
       "map": "m30_18_00_00",
       "entity_id": 755894526,
       "model": "AEG099_170",
+      "asset_name": "755894526",
       "lookup_by": null,
       "position": [
         -70.123,
@@ -7268,6 +7829,7 @@
       "map": "m30_18_00_00",
       "entity_id": 755894526,
       "model": "AEG099_170",
+      "asset_name": "755894526",
       "lookup_by": null,
       "position": [
         -70.123,
@@ -7288,6 +7850,7 @@
       "map": "m30_19_00_00",
       "entity_id": 755894527,
       "model": "AEG099_170",
+      "asset_name": "755894527",
       "lookup_by": null,
       "position": [
         13.794,
@@ -7308,6 +7871,7 @@
       "map": "m30_19_00_00",
       "entity_id": 755894527,
       "model": "AEG099_170",
+      "asset_name": "755894527",
       "lookup_by": null,
       "position": [
         13.794,
@@ -7329,6 +7893,7 @@
       "map": "m30_19_00_00",
       "entity_id": 30191840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7342,6 +7907,7 @@
       "map": "m30_19_00_00",
       "entity_id": 30191840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7355,6 +7921,7 @@
       "map": "m30_20_00_00",
       "entity_id": 30201840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7368,6 +7935,7 @@
       "map": "m30_20_00_00",
       "entity_id": 30201840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7381,6 +7949,7 @@
       "map": "m31_00_00_00",
       "entity_id": 31001840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7394,6 +7963,7 @@
       "map": "m31_00_00_00",
       "entity_id": 31001840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7406,6 +7976,7 @@
       "map": "m31_00_00_00",
       "entity_id": 755894510,
       "model": "AEG099_170",
+      "asset_name": "755894510",
       "lookup_by": null,
       "position": [
         20.163,
@@ -7426,6 +7997,7 @@
       "map": "m31_00_00_00",
       "entity_id": 755894510,
       "model": "AEG099_170",
+      "asset_name": "755894510",
       "lookup_by": null,
       "position": [
         20.163,
@@ -7447,6 +8019,7 @@
       "map": "m31_01_00_00",
       "entity_id": 31011840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7460,6 +8033,7 @@
       "map": "m31_01_00_00",
       "entity_id": 31011840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7473,6 +8047,7 @@
       "map": "m31_02_00_00",
       "entity_id": 31021840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7486,6 +8061,7 @@
       "map": "m31_02_00_00",
       "entity_id": 31021840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7499,6 +8075,7 @@
       "map": "m31_03_00_00",
       "entity_id": 31031840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7512,6 +8089,7 @@
       "map": "m31_03_00_00",
       "entity_id": 31031840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7524,6 +8102,7 @@
       "map": "m31_03_00_00",
       "entity_id": 755894511,
       "model": "AEG099_170",
+      "asset_name": "755894511",
       "lookup_by": null,
       "position": [
         -107.907,
@@ -7544,6 +8123,7 @@
       "map": "m31_03_00_00",
       "entity_id": 755894511,
       "model": "AEG099_170",
+      "asset_name": "755894511",
       "lookup_by": null,
       "position": [
         -107.907,
@@ -7565,6 +8145,7 @@
       "map": "m31_04_00_00",
       "entity_id": 31041840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7578,6 +8159,7 @@
       "map": "m31_04_00_00",
       "entity_id": 31041840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7590,6 +8172,7 @@
       "map": "m31_04_00_00",
       "entity_id": 755894512,
       "model": "AEG099_170",
+      "asset_name": "755894512",
       "lookup_by": null,
       "position": [
         13.78,
@@ -7610,6 +8193,7 @@
       "map": "m31_04_00_00",
       "entity_id": 755894512,
       "model": "AEG099_170",
+      "asset_name": "755894512",
       "lookup_by": null,
       "position": [
         13.78,
@@ -7630,6 +8214,7 @@
       "map": "m31_05_00_00",
       "entity_id": 755894513,
       "model": "AEG099_170",
+      "asset_name": "755894513",
       "lookup_by": null,
       "position": [
         -128.463,
@@ -7650,6 +8235,7 @@
       "map": "m31_05_00_00",
       "entity_id": 755894513,
       "model": "AEG099_170",
+      "asset_name": "755894513",
       "lookup_by": null,
       "position": [
         -128.463,
@@ -7671,6 +8257,7 @@
       "map": "m31_06_00_00",
       "entity_id": 31061840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7684,6 +8271,7 @@
       "map": "m31_06_00_00",
       "entity_id": 31061840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7696,6 +8284,7 @@
       "map": "m31_06_00_00",
       "entity_id": 755894514,
       "model": "AEG099_170",
+      "asset_name": "755894514",
       "lookup_by": null,
       "position": [
         115.878,
@@ -7716,6 +8305,7 @@
       "map": "m31_06_00_00",
       "entity_id": 755894514,
       "model": "AEG099_170",
+      "asset_name": "755894514",
       "lookup_by": null,
       "position": [
         115.878,
@@ -7737,6 +8327,7 @@
       "map": "m31_07_00_00",
       "entity_id": 31071840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7750,6 +8341,7 @@
       "map": "m31_07_00_00",
       "entity_id": 31071840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7763,6 +8355,7 @@
       "map": "m31_09_00_00",
       "entity_id": 31091840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7776,6 +8369,7 @@
       "map": "m31_09_00_00",
       "entity_id": 31091840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7789,6 +8383,7 @@
       "map": "m31_10_00_00",
       "entity_id": 31101840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7802,6 +8397,7 @@
       "map": "m31_10_00_00",
       "entity_id": 31101840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7814,6 +8410,7 @@
       "map": "m31_10_00_00",
       "entity_id": 755894515,
       "model": "AEG099_170",
+      "asset_name": "755894515",
       "lookup_by": null,
       "position": [
         -0.909,
@@ -7834,6 +8431,7 @@
       "map": "m31_10_00_00",
       "entity_id": 755894515,
       "model": "AEG099_170",
+      "asset_name": "755894515",
       "lookup_by": null,
       "position": [
         -0.909,
@@ -7855,6 +8453,7 @@
       "map": "m31_11_00_00",
       "entity_id": 31111840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7868,6 +8467,7 @@
       "map": "m31_11_00_00",
       "entity_id": 31111840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7880,6 +8480,7 @@
       "map": "m31_11_00_00",
       "entity_id": 755894516,
       "model": "AEG099_170",
+      "asset_name": "755894516",
       "lookup_by": null,
       "position": [
         34.279,
@@ -7900,6 +8501,7 @@
       "map": "m31_11_00_00",
       "entity_id": 755894516,
       "model": "AEG099_170",
+      "asset_name": "755894516",
       "lookup_by": null,
       "position": [
         34.279,
@@ -7921,6 +8523,7 @@
       "map": "m31_12_00_00",
       "entity_id": 31121840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7934,6 +8537,7 @@
       "map": "m31_12_00_00",
       "entity_id": 31121840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7947,6 +8551,7 @@
       "map": "m31_15_00_00",
       "entity_id": 31151840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7960,6 +8565,7 @@
       "map": "m31_15_00_00",
       "entity_id": 31151840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7973,6 +8579,7 @@
       "map": "m31_17_00_00",
       "entity_id": 31171840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7986,6 +8593,7 @@
       "map": "m31_17_00_00",
       "entity_id": 31171840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -7998,6 +8606,7 @@
       "map": "m31_17_00_00",
       "entity_id": 755894517,
       "model": "AEG099_170",
+      "asset_name": "755894517",
       "lookup_by": null,
       "position": [
         56.095,
@@ -8018,6 +8627,7 @@
       "map": "m31_17_00_00",
       "entity_id": 755894517,
       "model": "AEG099_170",
+      "asset_name": "755894517",
       "lookup_by": null,
       "position": [
         56.095,
@@ -8039,6 +8649,7 @@
       "map": "m31_18_00_00",
       "entity_id": 31181840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8052,6 +8663,7 @@
       "map": "m31_18_00_00",
       "entity_id": 31181840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8065,6 +8677,7 @@
       "map": "m31_19_00_00",
       "entity_id": 31191840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8078,6 +8691,7 @@
       "map": "m31_19_00_00",
       "entity_id": 31191840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8091,6 +8705,7 @@
       "map": "m31_19_00_00",
       "entity_id": 31191890,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8104,6 +8719,7 @@
       "map": "m31_19_00_00",
       "entity_id": 31191890,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8117,6 +8733,7 @@
       "map": "m31_20_00_00",
       "entity_id": 31201840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8130,6 +8747,7 @@
       "map": "m31_20_00_00",
       "entity_id": 31201840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8143,6 +8761,7 @@
       "map": "m31_21_00_00",
       "entity_id": 31211840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8156,6 +8775,7 @@
       "map": "m31_21_00_00",
       "entity_id": 31211840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8169,6 +8789,7 @@
       "map": "m31_22_00_00",
       "entity_id": 31221840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8182,6 +8803,7 @@
       "map": "m31_22_00_00",
       "entity_id": 31221840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8195,6 +8817,7 @@
       "map": "m32_00_00_00",
       "entity_id": 32001840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8208,6 +8831,7 @@
       "map": "m32_00_00_00",
       "entity_id": 32001840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8221,6 +8845,7 @@
       "map": "m32_01_00_00",
       "entity_id": 32011840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8234,6 +8859,7 @@
       "map": "m32_01_00_00",
       "entity_id": 32011840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8247,6 +8873,7 @@
       "map": "m32_02_00_00",
       "entity_id": 32021840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8260,6 +8887,7 @@
       "map": "m32_02_00_00",
       "entity_id": 32021840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8273,6 +8901,7 @@
       "map": "m32_04_00_00",
       "entity_id": 32041840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8286,6 +8915,7 @@
       "map": "m32_04_00_00",
       "entity_id": 32041840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8299,6 +8929,7 @@
       "map": "m32_05_00_00",
       "entity_id": 32051840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8312,6 +8943,7 @@
       "map": "m32_05_00_00",
       "entity_id": 32051840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8325,6 +8957,7 @@
       "map": "m32_07_00_00",
       "entity_id": 32071840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8338,6 +8971,7 @@
       "map": "m32_07_00_00",
       "entity_id": 32071840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8351,6 +8985,7 @@
       "map": "m60_43_36_00",
       "entity_id": 1043361510,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8364,6 +8999,7 @@
       "map": "m60_43_36_00",
       "entity_id": 1043361510,
       "model": "AEG099_290",
+      "asset_name": "AEG099_290_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8377,6 +9013,7 @@
       "map": "m32_08_00_00",
       "entity_id": 32081840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8390,6 +9027,7 @@
       "map": "m32_08_00_00",
       "entity_id": 32081840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8403,6 +9041,7 @@
       "map": "m32_11_00_00",
       "entity_id": 32111840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8416,6 +9055,7 @@
       "map": "m32_11_00_00",
       "entity_id": 32111840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8429,6 +9069,7 @@
       "map": "m34_10_00_00",
       "entity_id": 34101600,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8442,6 +9083,7 @@
       "map": "m34_10_00_00",
       "entity_id": 34101600,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8455,6 +9097,7 @@
       "map": "m34_11_00_00",
       "entity_id": 34111160,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8468,6 +9111,7 @@
       "map": "m34_11_00_00",
       "entity_id": 34111160,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8481,6 +9125,7 @@
       "map": "m34_12_00_00",
       "entity_id": 34121840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8494,6 +9139,7 @@
       "map": "m34_12_00_00",
       "entity_id": 34121840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8507,6 +9153,7 @@
       "map": "m34_14_00_00",
       "entity_id": 34141950,
       "model": "AEG099_060",
+      "asset_name": "AEG099_060_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8520,6 +9167,7 @@
       "map": "m34_14_00_00",
       "entity_id": 34141950,
       "model": "AEG099_060",
+      "asset_name": "AEG099_060_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8533,6 +9181,7 @@
       "map": "m34_14_00_00",
       "entity_id": 34141950,
       "model": "AEG099_060",
+      "asset_name": "AEG099_060_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8546,6 +9195,7 @@
       "map": "m34_14_00_00",
       "entity_id": 34141950,
       "model": "AEG099_060",
+      "asset_name": "AEG099_060_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8559,6 +9209,7 @@
       "map": "m11_05_00_00",
       "entity_id": 11051680,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8572,6 +9223,7 @@
       "map": "m11_05_00_00",
       "entity_id": 11051680,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8585,6 +9237,7 @@
       "map": "m35_00_00_00",
       "entity_id": 35001840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8598,6 +9251,7 @@
       "map": "m35_00_00_00",
       "entity_id": 35001840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8611,6 +9265,7 @@
       "map": "m40_00_00_00",
       "entity_id": 40001840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8624,6 +9279,7 @@
       "map": "m40_00_00_00",
       "entity_id": 40001840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8636,6 +9292,7 @@
       "map": "m40_00_00_00",
       "entity_id": 755894528,
       "model": "AEG099_170",
+      "asset_name": "755894528",
       "lookup_by": null,
       "position": [
         -366.0,
@@ -8656,6 +9313,7 @@
       "map": "m40_00_00_00",
       "entity_id": 755894528,
       "model": "AEG099_170",
+      "asset_name": "755894528",
       "lookup_by": null,
       "position": [
         -366.0,
@@ -8677,6 +9335,7 @@
       "map": "m40_01_00_00",
       "entity_id": 40011840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8690,6 +9349,7 @@
       "map": "m40_01_00_00",
       "entity_id": 40011840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8702,6 +9362,7 @@
       "map": "m40_01_00_00",
       "entity_id": 755894529,
       "model": "AEG099_170",
+      "asset_name": "755894529",
       "lookup_by": null,
       "position": [
         147.736,
@@ -8722,6 +9383,7 @@
       "map": "m40_01_00_00",
       "entity_id": 755894529,
       "model": "AEG099_170",
+      "asset_name": "755894529",
       "lookup_by": null,
       "position": [
         147.736,
@@ -8743,6 +9405,7 @@
       "map": "m41_00_00_00",
       "entity_id": 41001840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8756,6 +9419,7 @@
       "map": "m41_00_00_00",
       "entity_id": 41001840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8768,6 +9432,7 @@
       "map": "m41_00_00_00",
       "entity_id": 755894530,
       "model": "AEG099_170",
+      "asset_name": "755894530",
       "lookup_by": null,
       "position": [
         -182.787,
@@ -8788,6 +9453,7 @@
       "map": "m41_00_00_00",
       "entity_id": 755894530,
       "model": "AEG099_170",
+      "asset_name": "755894530",
       "lookup_by": null,
       "position": [
         -182.787,
@@ -8809,6 +9475,7 @@
       "map": "m41_01_00_00",
       "entity_id": 41011840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8822,6 +9489,7 @@
       "map": "m41_01_00_00",
       "entity_id": 41011840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8834,6 +9502,7 @@
       "map": "m41_01_00_00",
       "entity_id": 755894531,
       "model": "AEG099_170",
+      "asset_name": "755894531",
       "lookup_by": null,
       "position": [
         -111.483,
@@ -8854,6 +9523,7 @@
       "map": "m41_01_00_00",
       "entity_id": 755894531,
       "model": "AEG099_170",
+      "asset_name": "755894531",
       "lookup_by": null,
       "position": [
         -111.483,
@@ -8875,6 +9545,7 @@
       "map": "m41_02_00_00",
       "entity_id": 41021890,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8888,6 +9559,7 @@
       "map": "m41_02_00_00",
       "entity_id": 41021890,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8900,6 +9572,7 @@
       "map": "m41_02_00_00",
       "entity_id": 755894532,
       "model": "AEG099_170",
+      "asset_name": "755894532",
       "lookup_by": null,
       "position": [
         134.047,
@@ -8920,6 +9593,7 @@
       "map": "m41_02_00_00",
       "entity_id": 755894532,
       "model": "AEG099_170",
+      "asset_name": "755894532",
       "lookup_by": null,
       "position": [
         134.047,
@@ -8940,6 +9614,7 @@
       "map": "m42_00_00_00",
       "entity_id": 42001840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8952,6 +9627,7 @@
       "map": "m42_00_00_00",
       "entity_id": 42001840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8964,6 +9640,7 @@
       "map": "m42_02_00_00",
       "entity_id": 42021840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8976,6 +9653,7 @@
       "map": "m42_02_00_00",
       "entity_id": 42021840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -8988,6 +9666,7 @@
       "map": "m42_03_00_00",
       "entity_id": 42031840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9000,6 +9679,7 @@
       "map": "m42_03_00_00",
       "entity_id": 42031840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9013,6 +9693,7 @@
       "map": "m43_00_00_00",
       "entity_id": 43001840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9026,6 +9707,7 @@
       "map": "m43_00_00_00",
       "entity_id": 43001840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9039,6 +9721,7 @@
       "map": "m43_01_00_00",
       "entity_id": 43011840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9052,6 +9735,7 @@
       "map": "m43_01_00_00",
       "entity_id": 43011840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9065,6 +9749,7 @@
       "map": "m60_33_42_00",
       "entity_id": 1033421805,
       "model": "",
+      "asset_name": "1033422805",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9078,6 +9763,7 @@
       "map": "m60_33_42_00",
       "entity_id": 1033421805,
       "model": "",
+      "asset_name": "1033422805",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9091,6 +9777,7 @@
       "map": "m60_33_42_00",
       "entity_id": 1033421805,
       "model": "",
+      "asset_name": "1033422806",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9104,6 +9791,7 @@
       "map": "m60_33_42_00",
       "entity_id": 1033421805,
       "model": "",
+      "asset_name": "1033422806",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9117,6 +9805,7 @@
       "map": "m60_33_45_00",
       "entity_id": 1033451805,
       "model": "",
+      "asset_name": "1033452805",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9130,6 +9819,7 @@
       "map": "m60_33_45_00",
       "entity_id": 1033451805,
       "model": "",
+      "asset_name": "1033452805",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9143,6 +9833,7 @@
       "map": "m60_33_45_00",
       "entity_id": 1033451805,
       "model": "",
+      "asset_name": "1033452806",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9156,6 +9847,7 @@
       "map": "m60_33_45_00",
       "entity_id": 1033451805,
       "model": "",
+      "asset_name": "1033452806",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9168,6 +9860,7 @@
       "map": "m60_36_45_00",
       "entity_id": 1036451620,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9180,6 +9873,7 @@
       "map": "m60_36_45_00",
       "entity_id": 1036451620,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9192,6 +9886,7 @@
       "map": "m60_37_42_00",
       "entity_id": 1037421610,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9204,6 +9899,7 @@
       "map": "m60_37_42_00",
       "entity_id": 1037421610,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9216,6 +9912,7 @@
       "map": "m60_39_42_00",
       "entity_id": 1039421610,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9228,6 +9925,7 @@
       "map": "m60_39_42_00",
       "entity_id": 1039421610,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9241,6 +9939,7 @@
       "map": "m60_35_46_00",
       "entity_id": 1035461600,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9254,6 +9953,7 @@
       "map": "m60_35_46_00",
       "entity_id": 1035461600,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9267,6 +9967,7 @@
       "map": "m60_35_45_00",
       "entity_id": 1035451600,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9280,6 +9981,7 @@
       "map": "m60_35_45_00",
       "entity_id": 1035451600,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9293,6 +9995,7 @@
       "map": "m60_36_47_00",
       "entity_id": 1036471600,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9306,6 +10009,7 @@
       "map": "m60_36_47_00",
       "entity_id": 1036471600,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9318,6 +10022,7 @@
       "map": "m60_35_49_00",
       "entity_id": 755894500,
       "model": "AEG099_510",
+      "asset_name": "755894500",
       "lookup_by": null,
       "position": [
         -28.323,
@@ -9338,6 +10043,7 @@
       "map": "m60_35_49_00",
       "entity_id": 755894500,
       "model": "AEG099_510",
+      "asset_name": "755894500",
       "lookup_by": null,
       "position": [
         -28.323,
@@ -9359,6 +10065,7 @@
       "map": "m60_35_46_00",
       "entity_id": 1035461601,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9372,6 +10079,7 @@
       "map": "m60_35_46_00",
       "entity_id": 1035461601,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9385,6 +10093,7 @@
       "map": "m60_36_50_00",
       "entity_id": 1036501805,
       "model": "",
+      "asset_name": "1036502805",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9398,6 +10107,7 @@
       "map": "m60_36_50_00",
       "entity_id": 1036501805,
       "model": "",
+      "asset_name": "1036502805",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9411,6 +10121,7 @@
       "map": "m60_36_50_00",
       "entity_id": 1036501805,
       "model": "",
+      "asset_name": "1036502806",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9424,6 +10135,7 @@
       "map": "m60_36_50_00",
       "entity_id": 1036501805,
       "model": "",
+      "asset_name": "1036502806",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9437,6 +10149,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001660,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9450,6 +10163,7 @@
       "map": "m14_00_00_00",
       "entity_id": 14001660,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9463,6 +10177,7 @@
       "map": "m60_38_41_00",
       "entity_id": 1038411805,
       "model": "",
+      "asset_name": "1038412805",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9476,6 +10191,7 @@
       "map": "m60_38_41_00",
       "entity_id": 1038411805,
       "model": "",
+      "asset_name": "1038412805",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9489,6 +10205,7 @@
       "map": "m60_38_41_00",
       "entity_id": 1038411805,
       "model": "",
+      "asset_name": "1038412806",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9502,6 +10219,7 @@
       "map": "m60_38_41_00",
       "entity_id": 1038411805,
       "model": "",
+      "asset_name": "1038412806",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9515,6 +10233,7 @@
       "map": "m60_38_50_00",
       "entity_id": 1038501500,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9528,6 +10247,7 @@
       "map": "m60_38_50_00",
       "entity_id": 1038501500,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9541,6 +10261,7 @@
       "map": "m60_38_50_00",
       "entity_id": 1038501502,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9554,6 +10275,7 @@
       "map": "m60_38_50_00",
       "entity_id": 1038501502,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9567,6 +10289,7 @@
       "map": "m60_39_50_00",
       "entity_id": 1039501805,
       "model": "",
+      "asset_name": "1039502805",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9580,6 +10303,7 @@
       "map": "m60_39_50_00",
       "entity_id": 1039501805,
       "model": "",
+      "asset_name": "1039502805",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9593,6 +10317,7 @@
       "map": "m60_39_50_00",
       "entity_id": 1039501805,
       "model": "",
+      "asset_name": "1039502806",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9606,6 +10331,7 @@
       "map": "m60_39_50_00",
       "entity_id": 1039501805,
       "model": "",
+      "asset_name": "1039502806",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9618,6 +10344,7 @@
       "map": "m60_39_53_00",
       "entity_id": 755894502,
       "model": "AEG099_510",
+      "asset_name": "755894502",
       "lookup_by": null,
       "position": [
         -52.643,
@@ -9638,6 +10365,7 @@
       "map": "m60_39_53_00",
       "entity_id": 755894502,
       "model": "AEG099_510",
+      "asset_name": "755894502",
       "lookup_by": null,
       "position": [
         -52.643,
@@ -9658,6 +10386,7 @@
       "map": "m60_40_52_00",
       "entity_id": 1040521640,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9670,6 +10399,7 @@
       "map": "m60_40_52_00",
       "entity_id": 1040521640,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9683,6 +10413,7 @@
       "map": "m60_42_33_00",
       "entity_id": 1042331805,
       "model": "",
+      "asset_name": "1042332805",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9696,6 +10427,7 @@
       "map": "m60_42_33_00",
       "entity_id": 1042331805,
       "model": "",
+      "asset_name": "1042332805",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9709,6 +10441,7 @@
       "map": "m60_42_33_00",
       "entity_id": 1042331805,
       "model": "",
+      "asset_name": "1042332806",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9722,6 +10455,7 @@
       "map": "m60_42_33_00",
       "entity_id": 1042331805,
       "model": "",
+      "asset_name": "1042332806",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9735,6 +10469,7 @@
       "map": "m60_42_37_00",
       "entity_id": 1042371805,
       "model": "",
+      "asset_name": "1042372805",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9748,6 +10483,7 @@
       "map": "m60_42_37_00",
       "entity_id": 1042371805,
       "model": "",
+      "asset_name": "1042372805",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9761,6 +10497,7 @@
       "map": "m60_42_37_00",
       "entity_id": 1042371805,
       "model": "",
+      "asset_name": "1042372806",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9774,6 +10511,7 @@
       "map": "m60_42_37_00",
       "entity_id": 1042371805,
       "model": "",
+      "asset_name": "1042372806",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9787,6 +10525,7 @@
       "map": "m60_44_35_00",
       "entity_id": 1044351805,
       "model": "",
+      "asset_name": "1044352805",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9800,6 +10539,7 @@
       "map": "m60_44_35_00",
       "entity_id": 1044351805,
       "model": "",
+      "asset_name": "1044352805",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9813,6 +10553,7 @@
       "map": "m60_44_35_00",
       "entity_id": 1044351805,
       "model": "",
+      "asset_name": "1044352806",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9826,6 +10567,7 @@
       "map": "m60_44_35_00",
       "entity_id": 1044351805,
       "model": "",
+      "asset_name": "1044352806",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9839,6 +10581,7 @@
       "map": "m31_00_00_00",
       "entity_id": 31001700,
       "model": "AEG099_520",
+      "asset_name": "AEG099_520_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9852,6 +10595,7 @@
       "map": "m31_00_00_00",
       "entity_id": 31001700,
       "model": "AEG099_520",
+      "asset_name": "AEG099_520_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9865,6 +10609,7 @@
       "map": "m60_48_57_00",
       "entity_id": 1048571300,
       "model": "",
+      "asset_name": "1048572301",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9878,6 +10623,7 @@
       "map": "m60_48_57_00",
       "entity_id": 1048571300,
       "model": "",
+      "asset_name": "1048572301",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9891,6 +10637,7 @@
       "map": "m60_48_57_00",
       "entity_id": 1048571300,
       "model": "",
+      "asset_name": "1048572300",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9904,6 +10651,7 @@
       "map": "m60_48_57_00",
       "entity_id": 1048571300,
       "model": "",
+      "asset_name": "1048572300",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9917,6 +10665,7 @@
       "map": "m60_49_39_00",
       "entity_id": 1049391855,
       "model": "",
+      "asset_name": "1049392855",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9930,6 +10679,7 @@
       "map": "m60_49_39_00",
       "entity_id": 1049391855,
       "model": "",
+      "asset_name": "1049392855",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9943,6 +10693,7 @@
       "map": "m60_49_39_00",
       "entity_id": 1049391855,
       "model": "",
+      "asset_name": "1049392856",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9956,6 +10707,7 @@
       "map": "m60_49_39_00",
       "entity_id": 1049391855,
       "model": "",
+      "asset_name": "1049392856",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9969,6 +10721,7 @@
       "map": "m34_13_00_00",
       "entity_id": 34131840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9982,6 +10735,7 @@
       "map": "m34_13_00_00",
       "entity_id": 34131840,
       "model": "AEG099_065",
+      "asset_name": "AEG099_065_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -9995,6 +10749,7 @@
       "map": "m60_49_53_00",
       "entity_id": 1049531500,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10008,6 +10763,7 @@
       "map": "m60_49_53_00",
       "entity_id": 1049531500,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10021,6 +10777,7 @@
       "map": "m60_49_53_00",
       "entity_id": 1049531502,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10034,6 +10791,7 @@
       "map": "m60_49_53_00",
       "entity_id": 1049531502,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10047,6 +10805,7 @@
       "map": "m60_49_53_00",
       "entity_id": 1049531500,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10060,6 +10819,7 @@
       "map": "m60_49_53_00",
       "entity_id": 1049531500,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10073,6 +10833,7 @@
       "map": "m60_49_53_00",
       "entity_id": 1049531506,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9003",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10086,6 +10847,7 @@
       "map": "m60_49_53_00",
       "entity_id": 1049531506,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9003",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10099,6 +10861,7 @@
       "map": "m60_52_38_00",
       "entity_id": 1052381690,
       "model": "",
+      "asset_name": "1050362690",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10112,6 +10875,7 @@
       "map": "m60_52_38_00",
       "entity_id": 1052381690,
       "model": "",
+      "asset_name": "1050362690",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10125,6 +10889,7 @@
       "map": "m60_51_36_00",
       "entity_id": 1051361600,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10138,6 +10903,7 @@
       "map": "m60_51_36_00",
       "entity_id": 1051361600,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10150,6 +10916,7 @@
       "map": "m60_47_38_00",
       "entity_id": 1047381610,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10162,6 +10929,7 @@
       "map": "m60_47_38_00",
       "entity_id": 1047381610,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10174,6 +10942,7 @@
       "map": "m60_50_56_00",
       "entity_id": 1050561510,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10186,6 +10955,7 @@
       "map": "m60_50_56_00",
       "entity_id": 1050561510,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10198,6 +10968,7 @@
       "map": "m60_51_36_00",
       "entity_id": 755894501,
       "model": "AEG099_510",
+      "asset_name": "755894501",
       "lookup_by": null,
       "position": [
         -2.051,
@@ -10218,6 +10989,7 @@
       "map": "m60_51_36_00",
       "entity_id": 755894501,
       "model": "AEG099_510",
+      "asset_name": "755894501",
       "lookup_by": null,
       "position": [
         -2.051,
@@ -10239,6 +11011,7 @@
       "map": "m60_50_36_00",
       "entity_id": 1050361612,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10252,6 +11025,7 @@
       "map": "m60_50_36_00",
       "entity_id": 1050361612,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9001",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10265,6 +11039,7 @@
       "map": "m60_51_37_00",
       "entity_id": 1051371600,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10278,6 +11053,7 @@
       "map": "m60_51_37_00",
       "entity_id": 1051371600,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10291,6 +11067,7 @@
       "map": "m60_46_39_00",
       "entity_id": 1046391600,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10304,6 +11081,7 @@
       "map": "m60_46_39_00",
       "entity_id": 1046391600,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10316,6 +11094,7 @@
       "map": "m60_51_57_00",
       "entity_id": 755894503,
       "model": "AEG099_510",
+      "asset_name": "755894503",
       "lookup_by": null,
       "position": [
         -20.365,
@@ -10336,6 +11115,7 @@
       "map": "m60_51_57_00",
       "entity_id": 755894503,
       "model": "AEG099_510",
+      "asset_name": "755894503",
       "lookup_by": null,
       "position": [
         -20.365,
@@ -10357,6 +11137,7 @@
       "map": "m60_53_56_00",
       "entity_id": 1053561805,
       "model": "",
+      "asset_name": "1053562805",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10370,6 +11151,7 @@
       "map": "m60_53_56_00",
       "entity_id": 1053561805,
       "model": "",
+      "asset_name": "1053562805",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10383,6 +11165,7 @@
       "map": "m60_53_56_00",
       "entity_id": 1053561805,
       "model": "",
+      "asset_name": "1053562806",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10396,6 +11179,7 @@
       "map": "m60_53_56_00",
       "entity_id": 1053561805,
       "model": "",
+      "asset_name": "1053562806",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10409,6 +11193,7 @@
       "map": "m12_05_00_00",
       "entity_id": 12051500,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9010",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10422,6 +11207,7 @@
       "map": "m12_05_00_00",
       "entity_id": 12051500,
       "model": "AEG099_090",
+      "asset_name": "AEG099_090_9010",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10435,6 +11221,7 @@
       "map": "m61_47_44_00",
       "entity_id": 2047441610,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10448,6 +11235,7 @@
       "map": "m61_47_44_00",
       "entity_id": 2047441610,
       "model": "AEG099_510",
+      "asset_name": "AEG099_510_9000",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10461,6 +11249,7 @@
       "map": "m21_00_00_00",
       "entity_id": 21001576,
       "model": "AEG427_016",
+      "asset_name": "AEG427_016_0501",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
@@ -10474,6 +11263,7 @@
       "map": "m21_00_00_00",
       "entity_id": 21001576,
       "model": "AEG427_016",
+      "asset_name": "AEG427_016_0501",
       "lookup_by": "entity_id",
       "position": null,
       "rotation": null
