@@ -47,6 +47,8 @@ config.toml
 graph.json
 spoiler.txt
 *.log
+writer/*/publish/
+writer/*/run.txt
 
 # Keep example config
 !config.example.toml
