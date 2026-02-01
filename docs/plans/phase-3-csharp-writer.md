@@ -3,7 +3,7 @@
 **Parent document**: [SpeedFog Design](./2026-01-29-speedfog-design.md)
 **Prerequisite**: [Phase 2: DAG Generation](./phase-2-dag-generation.md), [Cluster Generation](./generate-clusters-spec.md)
 **Status**: Ready for implementation
-**Last updated**: 2026-01-30 (aligned with cluster-based architecture from Phase 1-2)
+**Last updated**: 2026-02-01 (review corrections: entry_fogs as list, zones_data.json, dynamic warp regions)
 
 ## Objective
 
@@ -27,7 +27,8 @@ See [generate-clusters-spec.md](./generate-clusters-spec.md) for cluster details
   - `SoulsFormats.dll` - FromSoft file format I/O
   - `SoulsIds.dll` - Helper library (GameEditor, ParamDictionary)
   - `YamlDotNet.dll`, `Newtonsoft.Json.dll`, `ZstdNet.dll`, `BouncyCastle.Cryptography.dll`
-- **New**: `fog_data.json` with fog gate coordinates (see Task 3.2.1)
+- **Data**: `fog_data.json` with fog gate metadata (see Task 3.2.1)
+- **Data**: `zones_data.json` with zone→map mapping (see Task 3.2.2)
 
 ## Deliverables
 
@@ -35,7 +36,8 @@ See [generate-clusters-spec.md](./generate-clusters-spec.md) for cluster details
 speedfog/writer/
 ├── data/
 │   ├── speedfog-events.yaml       # Event templates (readable, not hardcoded)
-│   └── fog_data.json         # Fog gate positions extracted from fog.txt
+│   ├── fog_data.json              # Fog gate metadata extracted from fog.txt
+│   └── zones_data.json            # Zone→map mapping extracted from zones.toml
 │
 ├── SpeedFogWriter/
 │   ├── SpeedFogWriter.csproj
@@ -45,7 +47,8 @@ speedfog/writer/
 │   │   ├── SpeedFogGraph.cs       # JSON deserialization (graph.json)
 │   │   ├── NodeData.cs            # Cluster-based node
 │   │   ├── EdgeData.cs            # Edge between nodes
-│   │   ├── FogEntryData.cs     # Fog gate positions (fog_data.json)
+│   │   ├── FogEntryData.cs        # Fog gate metadata (fog_data.json)
+│   │   ├── ZoneData.cs            # Zone→map mapping (zones_data.json)
 │   │   └── EventTemplate.cs       # YAML event template model
 │   │
 │   ├── Writers/
@@ -132,6 +135,7 @@ The Python core outputs `graph.json` in this format:
   "seed": 123456789,
   "total_layers": 8,
   "total_nodes": 15,
+  "total_zones": 20,
   "total_paths": 2,
   "path_weights": [42, 45],
   "nodes": {
@@ -142,7 +146,7 @@ The Python core outputs `graph.json` in this format:
       "weight": 2,
       "layer": 0,
       "tier": 1,
-      "entry_fog": null,
+      "entry_fogs": [],
       "exit_fogs": ["1034432500", "1034432501"]
     },
     "node_1a": {
@@ -152,8 +156,18 @@ The Python core outputs `graph.json` in this format:
       "weight": 20,
       "layer": 1,
       "tier": 5,
-      "entry_fog": "1034432500",
+      "entry_fogs": ["1034432500"],
       "exit_fogs": ["1034432502", "1034432503"]
+    },
+    "node_merge": {
+      "cluster_id": "boss_arena_x1y2",
+      "zones": ["some_boss_arena"],
+      "type": "boss_arena",
+      "weight": 5,
+      "layer": 3,
+      "tier": 10,
+      "entry_fogs": ["1034432502", "1034432510"],
+      "exit_fogs": ["1034432520"]
     }
   },
   "edges": [
@@ -164,6 +178,8 @@ The Python core outputs `graph.json` in this format:
   "end_id": "end"
 }
 ```
+
+**Note**: `entry_fogs` is a **list** (not a single string). A node can have multiple entry fogs when it's a merge point in the DAG (multiple paths converge). The start node has an empty list.
 
 ### SpeedFogGraph.cs
 
@@ -344,16 +360,15 @@ public class NodeData
     public int Tier { get; set; }
 
     /// <summary>
-    /// Fog ID used to enter this cluster (null for start node).
-    /// This is the fog gate the player passed through to reach this cluster.
+    /// Fog IDs used to enter this cluster (empty list for start node).
+    /// A node can have multiple entry fogs when it's a merge point (multiple paths converge).
     /// </summary>
-    [JsonPropertyName("entry_fog")]
-    public string? EntryFog { get; set; }
+    [JsonPropertyName("entry_fogs")]
+    public List<string> EntryFogs { get; set; } = new();
 
     /// <summary>
     /// Available exit fog IDs from this cluster.
     /// These are fogs that can lead to the next layer.
-    /// Note: The entry_fog is excluded if it was bidirectional.
     /// </summary>
     [JsonPropertyName("exit_fogs")]
     public List<string> ExitFogs { get; set; } = new();
@@ -364,11 +379,17 @@ public class NodeData
     public bool IsLegacyDungeon => Type == "legacy_dungeon";
     public bool IsMiniDungeon => Type == "mini_dungeon";
     public bool IsBossArena => Type == "boss_arena";
+    public bool IsMergePoint => EntryFogs.Count > 1;
 
     /// <summary>
     /// Get the primary zone (first zone in the cluster).
     /// </summary>
     public string PrimaryZone => Zones.FirstOrDefault() ?? "";
+
+    /// <summary>
+    /// Get the primary entry fog (first in the list, or null if none).
+    /// </summary>
+    public string? PrimaryEntryFog => EntryFogs.FirstOrDefault();
 }
 ```
 
@@ -661,6 +682,136 @@ python tools/extract_fog_data.py \
 ```
 
 **Note**: This is a one-time extraction task. The metadata doesn't change between runs.
+
+---
+
+## Task 3.2.2: Zone Data (zones_data.json) - NEW
+
+The C# writer needs zone→map mapping to determine where to teleport players. This data is extracted from `zones.toml`.
+
+### zones_data.json Format
+
+```json
+{
+  "version": "1.0",
+  "zones": {
+    "chapel_start": {
+      "map": "m10_01_00_00",
+      "name": "Chapel of Anticipation"
+    },
+    "stormveil": {
+      "map": "m10_00_00_00",
+      "name": "Stormveil Castle after Gate"
+    },
+    "limgrave": {
+      "map": "m60_42_36_00",
+      "name": "Limgrave"
+    }
+  }
+}
+```
+
+**Note**: Some zones span multiple maps (e.g., `limgrave` covers many overworld tiles). For these, we use the **primary map** (first in the list from fog.txt). The exact spawn position is determined by the entry fog's location in that map.
+
+### ZoneData.cs
+
+```csharp
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
+namespace SpeedFogWriter.Models;
+
+/// <summary>
+/// Zone metadata loaded from zones_data.json.
+/// </summary>
+public class ZoneDataFile
+{
+    [JsonPropertyName("version")]
+    public string Version { get; set; } = "1.0";
+
+    [JsonPropertyName("zones")]
+    public Dictionary<string, ZoneEntry> Zones { get; set; } = new();
+
+    public static ZoneDataFile Load(string path)
+    {
+        var json = File.ReadAllText(path);
+        return JsonSerializer.Deserialize<ZoneDataFile>(json)
+            ?? throw new InvalidOperationException("Failed to parse zones_data.json");
+    }
+
+    /// <summary>
+    /// Get the map ID for a zone.
+    /// </summary>
+    public string? GetMap(string zoneId)
+    {
+        return Zones.TryGetValue(zoneId, out var zone) ? zone.Map : null;
+    }
+
+    /// <summary>
+    /// Get map for a cluster (uses primary zone).
+    /// </summary>
+    public string? GetMapForCluster(List<string> zones)
+    {
+        foreach (var zone in zones)
+        {
+            var map = GetMap(zone);
+            if (map != null) return map;
+        }
+        return null;
+    }
+}
+
+/// <summary>
+/// Metadata for a single zone.
+/// </summary>
+public class ZoneEntry
+{
+    [JsonPropertyName("map")]
+    public string Map { get; set; } = "";
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = "";
+
+    /// <summary>
+    /// Parse map ID to bytes (for EMEVD warp instructions).
+    /// Example: "m10_01_00_00" -> [10, 1, 0, 0]
+    /// </summary>
+    public byte[] MapBytes
+    {
+        get
+        {
+            var parts = Map.TrimStart('m').Split('_');
+            if (parts.Length != 4)
+                throw new FormatException($"Invalid map ID: {Map}");
+
+            return new byte[]
+            {
+                byte.Parse(parts[0]),
+                byte.Parse(parts[1]),
+                byte.Parse(parts[2]),
+                byte.Parse(parts[3])
+            };
+        }
+    }
+}
+```
+
+### Extraction Script
+
+Create `tools/extract_zones_data.py`:
+
+```bash
+# Generate zones_data.json from zones.toml
+python tools/extract_zones_data.py \
+    core/zones.toml \
+    writer/data/zones_data.json
+
+# Output:
+# Parsed 150 zones
+# Written writer/data/zones_data.json
+```
+
+The script reads TOML and outputs JSON with zone→map mapping.
 
 ---
 
@@ -1019,10 +1170,16 @@ The DAG uses edges with `fog_id` to connect clusters. Each edge represents:
 2. **Target**: Another cluster
 3. **fog_id**: The specific fog gate used for this connection
 
+**Important**: The fog_id identifies which fog gate VISUAL to use, but the DESTINATION is determined by the target cluster, not the fog's original connection. This is how fog randomization works.
+
 The `fog_id` is looked up in `fog_data.json` to get:
-- Position and rotation for spawning the fog wall
-- Map ID for the EMEVD
-- Warp region for teleportation
+- Model name and entity_id for the fog wall asset
+- Source map ID where the fog is located
+- Position lookup method (via MSB at runtime)
+
+The **destination** is determined by:
+- Target cluster's zones → `zones_data.json` → destination map
+- SpawnPoint region created dynamically near entry fog position
 
 ### FogGateWriter.cs
 
@@ -1045,15 +1202,22 @@ public class FogGateWriter
     // Custom flag ID range
     private const int CustomFlagBase = 79000000;
 
-    private readonly FogDataFile _fogPositions;
+    // Custom region ID range (for dynamically created spawn points)
+    private const int CustomRegionBase = 79000000;
+
+    private readonly FogDataFile _fogData;
+    private readonly ZoneDataFile _zoneData;
     private int _nextEventId;
     private int _nextFlagId;
+    private int _nextRegionId;
 
-    public FogGateWriter(FogDataFile fogPositions)
+    public FogGateWriter(FogDataFile fogData, ZoneDataFile zoneData)
     {
-        _fogPositions = fogPositions;
+        _fogData = fogData;
+        _zoneData = zoneData;
         _nextEventId = CustomEventBase;
         _nextFlagId = CustomFlagBase;
+        _nextRegionId = CustomRegionBase;
     }
 
     /// <summary>
@@ -1074,25 +1238,27 @@ public class FogGateWriter
                 continue;
             }
 
-            // Look up fog position data
-            var exitFogData = _fogPositions.GetFog(edge.FogId);
+            // Look up fog metadata for the edge's fog gate
+            var exitFogData = _fogData.GetFog(edge.FogId);
             if (exitFogData == null)
             {
-                Console.WriteLine($"Warning: Missing fog position for {edge.FogId}");
+                Console.WriteLine($"Warning: Missing fog data for {edge.FogId}");
                 continue;
             }
 
-            // Find the entry fog of the target cluster
-            var entryFogData = target.EntryFog != null
-                ? _fogPositions.GetFog(target.EntryFog)
-                : null;
-
-            if (entryFogData == null && target.EntryFog != null)
+            // Determine target map from zones_data
+            var targetMap = _zoneData.GetMapForCluster(target.Zones);
+            if (targetMap == null)
             {
-                Console.WriteLine($"Warning: Missing fog position for target entry {target.EntryFog}");
+                Console.WriteLine($"Warning: Cannot determine map for target cluster {target.ClusterId}");
+                continue;
             }
 
-            var fogEvent = CreateFogGate(source, target, edge, exitFogData, entryFogData);
+            // Get entry fog for spawn position (use first entry fog if available)
+            var primaryEntryFog = target.PrimaryEntryFog;
+            var entryFogData = primaryEntryFog != null ? _fogData.GetFog(primaryEntryFog) : null;
+
+            var fogEvent = CreateFogGate(source, target, edge, exitFogData, targetMap, entryFogData);
             events.Add(fogEvent);
         }
 
@@ -1104,10 +1270,12 @@ public class FogGateWriter
         NodeData target,
         EdgeData edge,
         FogEntryData exitFog,
+        string targetMap,
         FogEntryData? entryFog)
     {
         var eventId = _nextEventId++;
         var flagId = _nextFlagId++;
+        var warpRegionId = _nextRegionId++;  // Dynamic region to be created
 
         return new FogGateEvent
         {
@@ -1118,18 +1286,18 @@ public class FogGateWriter
             TargetNodeId = target.Id,
             SourceClusterId = source.ClusterId,
             TargetClusterId = target.ClusterId,
+            TargetZones = target.Zones,
 
-            // Fog gate position (exit of source cluster)
+            // Fog gate source (where the fog wall is displayed)
             SourceMap = exitFog.Map,
-            FogEntry = exitFog.PositionVec,
-            FogRotation = exitFog.RotationVec,
             FogEntityId = exitFog.EntityId,
             FogModel = exitFog.Model,
+            FogLookupBy = exitFog.LookupBy,
 
-            // Warp destination (entrance of target cluster)
-            TargetMap = entryFog?.Map ?? exitFog.Map,
-            WarpRegion = entryFog?.WarpRegion ?? exitFog.WarpRegion,
-            WarpPosition = entryFog?.PositionVec ?? exitFog.PositionVec,
+            // Warp destination (dynamically determined)
+            TargetMap = targetMap,
+            WarpRegionId = warpRegionId,  // Will be created as SpawnPoint in target map
+            EntryFogData = entryFog,      // Used to determine spawn position
 
             // Scaling
             SourceTier = source.Tier,
@@ -1176,18 +1344,18 @@ public class FogGateEvent
     public string TargetNodeId { get; set; } = "";
     public string SourceClusterId { get; set; } = "";
     public string TargetClusterId { get; set; } = "";
+    public List<string> TargetZones { get; set; } = new();
 
-    // Fog gate spawn (exit of source cluster)
+    // Fog gate source (where the fog wall is displayed)
     public string SourceMap { get; set; } = "";
-    public Vector3 FogEntry { get; set; }
-    public Vector3 FogRotation { get; set; }
     public int FogEntityId { get; set; }
     public string FogModel { get; set; } = "";
+    public string? FogLookupBy { get; set; }  // "name" or "entity_id"
 
-    // Warp destination (entrance of target cluster)
+    // Warp destination
     public string TargetMap { get; set; } = "";
-    public int WarpRegion { get; set; }
-    public Vector3 WarpPosition { get; set; }
+    public int WarpRegionId { get; set; }  // Dynamically created SpawnPoint region
+    public FogEntryData? EntryFogData { get; set; }  // For position lookup
 
     // Scaling
     public int SourceTier { get; set; }
@@ -1195,6 +1363,7 @@ public class FogGateEvent
 
     /// <summary>
     /// Parse target map to bytes for EMEVD warp instruction.
+    /// Example: "m10_00_00_00" -> [10, 0, 0, 0]
     /// </summary>
     public byte[] TargetMapBytes
     {
@@ -1220,44 +1389,107 @@ public class FogGateEvent
 
 ## Task 3.6: WarpWriter.cs
 
-Handles the actual warp teleportation logic.
+Handles warp teleportation and **dynamic spawn region creation**.
+
+### Key Insight: Dynamic Spawn Regions
+
+Unlike FogRando which uses existing warp regions, SpeedFog creates **new SpawnPoint regions** for each fog gate destination. This is necessary because:
+1. The fog's original destination doesn't match our randomized target
+2. We need consistent spawn points near entry fogs
+
+The process:
+1. Get entry fog position from MSB (or fog_data for makefrom)
+2. Create a new `MSBE.Region.SpawnPoint` at that position
+3. Add it to the target map's MSB
+4. Use its entity ID in the WarpPlayer instruction
+
+### WarpWriter.cs
 
 ```csharp
 using SoulsFormats;
 using SpeedFogWriter.Models;
+using System.Numerics;
 
 namespace SpeedFogWriter.Writers;
 
 /// <summary>
-/// Creates warp teleportation events.
-/// Works in conjunction with FogGateWriter.
+/// Creates warp teleportation events and spawn regions.
 /// </summary>
 public class WarpWriter
 {
-    /// <summary>
-    /// Generate warp instructions for EMEVD.
-    /// </summary>
-    public void WriteWarpEvent(
-        EMEVD emevd,
-        FogGateEvent fogGate,
-        int scalingSpEffect)
-    {
-        // Warp event structure (pseudocode):
-        //
-        // Event {eventId}:
-        //   IF PlayerInRegion(fogGate.FogRegion)
-        //   THEN
-        //     SetEventFlag(fogGate.FlagId, ON)
-        //     ApplySpEffect(Player, scalingSpEffect)  // Scaling
-        //     WarpPlayer(fogGate.TargetMap, fogGate.WarpDestination)
-        //     EndEvent()
-        //
-        // See FogRando's EMEVD templates for actual instruction format.
+    private readonly Dictionary<string, MSBE> _msbs;
+    private readonly FogDataFile _fogData;
 
-        throw new NotImplementedException(
-            "Warp event generation requires EMEVD instruction building. " +
-            "Adapt from FogRando's event templates."
-        );
+    public WarpWriter(Dictionary<string, MSBE> msbs, FogDataFile fogData)
+    {
+        _msbs = msbs;
+        _fogData = fogData;
+    }
+
+    /// <summary>
+    /// Create a SpawnPoint region in the target map for warping.
+    /// </summary>
+    public void CreateSpawnRegion(FogGateEvent fogGate)
+    {
+        if (!_msbs.TryGetValue(fogGate.TargetMap, out var msb))
+        {
+            Console.WriteLine($"Warning: MSB not loaded for {fogGate.TargetMap}");
+            return;
+        }
+
+        // Determine spawn position from entry fog
+        Vector3 position;
+        Vector3 rotation = Vector3.Zero;
+
+        if (fogGate.EntryFogData != null)
+        {
+            if (fogGate.EntryFogData.HasPosition)
+            {
+                // MakeFrom fog: use inline position
+                position = fogGate.EntryFogData.PositionVec;
+                rotation = fogGate.EntryFogData.RotationVec;
+            }
+            else
+            {
+                // Lookup position from MSB asset
+                position = GetFogPositionFromMsb(fogGate.EntryFogData, msb);
+            }
+        }
+        else
+        {
+            // Fallback: use origin (shouldn't happen in practice)
+            Console.WriteLine($"Warning: No entry fog for {fogGate.TargetClusterId}, using origin");
+            position = Vector3.Zero;
+        }
+
+        // Create SpawnPoint region
+        var spawnRegion = new MSBE.Region.SpawnPoint
+        {
+            Name = $"SpeedFog_Spawn_{fogGate.WarpRegionId}",
+            EntityID = (uint)fogGate.WarpRegionId,
+            Position = position,
+            Rotation = rotation
+        };
+
+        msb.Regions.Add(spawnRegion);
+    }
+
+    private Vector3 GetFogPositionFromMsb(FogEntryData fog, MSBE msb)
+    {
+        // Find asset by name or entity_id
+        MSBE.Part.Asset? asset = fog.LookupBy switch
+        {
+            "name" => msb.Parts.Assets.FirstOrDefault(a => a.Name.Contains(fog.Model)),
+            "entity_id" => msb.Parts.Assets.FirstOrDefault(a => a.EntityID == fog.EntityId),
+            _ => null
+        };
+
+        if (asset != null)
+            return asset.Position;
+
+        // Fallback: search in other part types or use default
+        Console.WriteLine($"Warning: Could not find fog asset {fog.Model} in MSB");
+        return Vector3.Zero;
     }
 }
 ```
@@ -2005,13 +2237,13 @@ The Phase 3 spec was updated to match the cluster-based architecture from Phase 
 | Old (zone-based) | New (cluster-based) |
 |------------------|---------------------|
 | `zone_id` (single) | `zones` (list) |
-| `ZoneMap` | Lookup in `fog_data.json` |
-| `entries`/`exits` (node IDs) | `entry_fog`/`exit_fogs` (fog IDs) |
+| `ZoneMap` | Lookup via `zones_data.json` |
+| `entries`/`exits` (node IDs) | `entry_fogs`/`exit_fogs` (fog ID lists) |
 | No explicit edges | `edges` array with fog_id |
 
-The C# writer uses edges and fog_data to determine:
-- Where to place fog walls (source cluster exit fog position)
-- Where to warp (target cluster entry fog position)
+The C# writer uses edges, fog_data, and zones_data to determine:
+- Where to place fog walls (source cluster exit fog position from fog_data)
+- Where to warp (target cluster map from zones_data, position from entry fog)
 
 ### 4. Fog Gate Asset Creation
 
@@ -2034,11 +2266,17 @@ Ensure you're using a SoulsFormats version that supports Elden Ring. SoulsFormat
 
 ## Acceptance Criteria
 
-### Task 3.0 (Prerequisite: fog_data.json)
-- [ ] Python script `tools/extract_fog_data.py` exists
-- [ ] Script parses fog.txt Entrances section
-- [ ] Script outputs `writer/data/fog_data.json`
-- [ ] All fog_ids from clusters.json are present in fog_data.json
+### Task 3.2.1 (fog_data.json) - COMPLETE
+- [x] Python script `tools/extract_fog_data.py` exists
+- [x] Script parses fog.txt Entrances and Warps sections
+- [x] Script outputs `writer/data/fog_data.json`
+- [x] All fog_ids from clusters.json are present in fog_data.json
+
+### Task 3.2.2 (zones_data.json) - NEW
+- [ ] Python script `tools/extract_zones_data.py` exists
+- [ ] Script parses `core/zones.toml`
+- [ ] Script outputs `writer/data/zones_data.json` with zone→map mapping
+- [ ] All zones from clusters are present in zones_data.json
 
 ### Task 3.1 (Setup)
 - [ ] Project builds with `dotnet build`
@@ -2048,7 +2286,8 @@ Ensure you're using a SoulsFormats version that supports Elden Ring. SoulsFormat
 - [ ] `SpeedFogGraph.Load()` parses graph.json correctly
 - [ ] All nodes and edges accessible
 - [ ] `FogDataFile.Load()` parses fog_data.json correctly
-- [ ] Nodes contain correct cluster data (zones list, entry_fog, exit_fogs)
+- [ ] `ZoneDataFile.Load()` parses zones_data.json correctly
+- [ ] Nodes contain correct cluster data (zones list, **entry_fogs** list, exit_fogs)
 
 ### Task 3.3 (Event Templates)
 - [ ] `speedfog-events.yaml` loads correctly
@@ -2062,6 +2301,8 @@ Ensure you're using a SoulsFormats version that supports Elden Ring. SoulsFormat
 ### Task 3.5-3.6 (Fog Gates & Warps)
 - [ ] Fog gate events created for all edges in the graph
 - [ ] Each edge's fog_id is found in fog_data.json
+- [ ] Target map determined via zones_data.json
+- [ ] SpawnPoint regions created dynamically for warp destinations
 - [ ] Events compile without EMEVD errors
 
 ### Task 3.7 (Starting Items)
@@ -2069,7 +2310,7 @@ Ensure you're using a SoulsFormats version that supports Elden Ring. SoulsFormat
 - [ ] Player doesn't get softlocked by missing keys
 
 ### Task 3.8-3.9 (Integration)
-- [ ] Full pipeline works: graph.json + fog_data.json → mod files
+- [ ] Full pipeline works: graph.json + fog_data.json + zones_data.json → mod files
 - [ ] Output directory structure matches ModEngine 2 expectations
 - [ ] Summary output shows correct seed, nodes, paths, weights
 
