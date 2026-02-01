@@ -309,8 +309,11 @@ public class ModWriter
             }
         }
 
-        // Parse target map bytes for warp instruction
+        // Pack target map bytes into a single int for warp instruction
+        // WarpPlayer reads bytes at X12_1, X13_1, X14_1, X15_1 from a 4-byte value at X12_4
+        // Little-endian: mapBytes[0] is at lowest address (X12_1)
         var mapBytes = fogGate.TargetMapBytes;
+        int packedMapBytes = mapBytes[0] | (mapBytes[1] << 8) | (mapBytes[2] << 16) | (mapBytes[3] << 24);
 
         // Add InitializeEvent for showsfx template
         // showsfx(fog_gate, sfx_id)
@@ -324,17 +327,14 @@ public class ModWriter
         Console.WriteLine($"    [DEBUG] {fogGate.SourceMap} event0: InitializeCommonEvent showsfx({fogGate.FogEntityId}, {fogSfx})");
 
         // Add InitializeEvent for fogwarp_simple template
-        // fogwarp_simple(fog_gate, button_param, warp_region, map_m, map_area, map_block, map_sub, rotate_target)
+        // fogwarp_simple(fog_gate, button_param, warp_region, map_bytes, rotate_target)
         var fogWarpInit = _eventBuilder.BuildInitializeEvent(
             "fogwarp_simple",
             0,
             fogGate.FogEntityId,         // X0_4 = fog_gate
             buttonParam,                  // X4_4 = button_param
             (int)fogGate.WarpRegionId,   // X8_4 = warp_region
-            (int)mapBytes[0],            // X12_1 = map_m
-            (int)mapBytes[1],            // X13_1 = map_area
-            (int)mapBytes[2],            // X14_1 = map_block
-            (int)mapBytes[3],            // X15_1 = map_sub
+            packedMapBytes,              // X12_4 = packed map bytes [m, area, block, sub]
             (int)fogGate.WarpRegionId    // X16_4 = rotate_target (face spawn point)
         );
         event0.Instructions.Add(fogWarpInit);

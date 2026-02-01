@@ -72,6 +72,7 @@ templates:
 
   # Simplified fog warp for SpeedFog (no trap check, always allowed)
   # Use this for v1 implementation
+  # Note: map_bytes is a packed 4-byte int [m, area, block, sub] that WarpPlayer reads as X12_1-X15_1
   fogwarp_simple:
     id: 79000010
     restart: true
@@ -79,10 +80,7 @@ templates:
       fog_gate: X0_4
       button_param: X4_4
       warp_region: X8_4
-      map_m: X12_1
-      map_area: X13_1
-      map_block: X14_1
-      map_sub: X15_1
+      map_bytes: X12_4       # Packed 4 bytes: [m, area, block, sub] read as X12_1, X13_1, X14_1, X15_1
       rotate_target: X16_4
     commands:
       - IfActionButtonInArea(AND_01, X4_4, X0_4)
