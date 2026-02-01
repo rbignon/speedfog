@@ -1,7 +1,283 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "generated_from": "fog.txt",
-  "cluster_count": 323,
+  "cluster_count": 264,
+  "zone_maps": {
+    "academy": "m14_00_00_00",
+    "academy_cavetower": "m14_00_00_00",
+    "academy_chest": "m14_00_00_00",
+    "academy_courtyard": "m14_00_00_00",
+    "academy_entrance": "m14_00_00_00",
+    "academy_library": "m14_00_00_00",
+    "academy_redwolf": "m14_00_00_00",
+    "academy_rooftops": "m14_00_00_00",
+    "ainsel_abovestart": "m12_01_00_00",
+    "ainsel_boss": "m12_04_00_00",
+    "ainsel_dragonkin": "m12_01_00_00",
+    "ainsel_postboss": "m12_04_00_00",
+    "ainsel_postdragonkin": "m12_01_00_00",
+    "ainsel_preboss": "m12_04_00_00",
+    "ainsel_start": "m12_01_00_00",
+    "altus_catacombs": "m30_12_00_00",
+    "altus_catacombs_boss": "m30_12_00_00",
+    "altus_elemer": "m60_39_54_00",
+    "altus_evergaol": "m60_39_50_00",
+    "altus_grave": "m30_08_00_00",
+    "altus_grave_boss": "m30_08_00_00",
+    "altus_grotto": "m31_18_00_00",
+    "altus_grotto_boss": "m31_18_00_00",
+    "altus_lux_boss": "m60_38_51_00",
+    "altus_lux_chest": "m60_38_51_00",
+    "altus_oldtunnel": "m32_04_00_00",
+    "altus_oldtunnel_boss": "m32_04_00_00",
+    "altus_sagescave": "m31_19_00_00",
+    "altus_sagescave_boss": "m31_19_00_00",
+    "altus_sagescave_boss2": "m31_19_00_00",
+    "altus_shaded": "m60_39_54_00",
+    "altus_tower": "m34_12_00_00",
+    "altus_tower_inner": "m34_12_00_00",
+    "altus_tunnel": "m32_05_00_00",
+    "altus_tunnel_boss": "m32_05_00_00",
+    "altus_writheblood_boss": "m60_40_53_00",
+    "altus_writheblood_chest": "m60_40_53_00",
+    "caelid_abandonedcave": "m31_20_00_00",
+    "caelid_abandonedcave_boss": "m31_20_00_00",
+    "caelid_abandonedcave_start": "m31_20_00_00",
+    "caelid_caelem_boss": "m60_48_40_00",
+    "caelid_caelem_chest": "m60_48_40_00",
+    "caelid_catacombs": "m30_15_00_00",
+    "caelid_catacombs_boss": "m30_15_00_00",
+    "caelid_colosseum": "m45_01_00_00",
+    "caelid_crypt_boss": "m60_49_39_00",
+    "caelid_crypt_chest": "m60_49_39_00",
+    "caelid_erdtreecatacombs": "m30_14_00_00",
+    "caelid_erdtreecatacombs_boss": "m30_14_00_00",
+    "caelid_gaeltunnel": "m32_07_00_00",
+    "caelid_gaeltunnel_boss": "m32_07_00_00",
+    "caelid_gaeltunnel_rear": "m32_07_00_00",
+    "caelid_gaeltunnel_start": "m32_07_00_00",
+    "caelid_gaolcave": "m31_21_00_00",
+    "caelid_gaolcave_boss": "m31_21_00_00",
+    "caelid_gaolcave_postboss": "m31_21_00_00",
+    "caelid_gaolcave_preboss": "m31_21_00_00",
+    "caelid_preradahn": "m60_51_36_00",
+    "caelid_radahn": "m60_50_37_00",
+    "caelid_redmane": "m60_51_35_00",
+    "caelid_redmane_boss": "m60_51_36_00",
+    "caelid_redmane_postboss": "m60_51_36_00",
+    "caelid_selliatunnel": "m32_08_00_00",
+    "caelid_selliatunnel_boss": "m32_08_00_00",
+    "caelid_tower": "m34_13_00_00",
+    "caelid_tower_boss": "m34_13_00_00",
+    "caelid_tower_inner": "m34_13_00_00",
+    "caelid_tower_postboss": "m34_13_00_00",
+    "caelid_wardead": "m30_16_00_00",
+    "caelid_wardead_boss": "m30_16_00_00",
+    "chapel_boss": "m10_01_00_00",
+    "chapel_postboss": "m10_01_00_00",
+    "chapel_start": "m10_01_00_00",
+    "deeproot_boss": "m12_03_00_00",
+    "deeproot_dream": "m12_03_00_00",
+    "dragonbarrow_cave": "m31_10_00_00",
+    "dragonbarrow_cave_boss": "m31_10_00_00",
+    "dragonbarrow_cave_preboss": "m31_10_00_00",
+    "dragonbarrow_evergaol": "m60_49_39_00",
+    "dragonbarrow_selliahideaway": "m31_11_00_00",
+    "dragonbarrow_selliahideaway_boss": "m31_11_00_00",
+    "farumazula": "m13_00_00_00",
+    "farumazula_balcony": "m13_00_00_00",
+    "farumazula_godskinduo": "m13_00_00_00",
+    "farumazula_lift": "m13_00_00_00",
+    "farumazula_maliketh": "m13_00_00_00",
+    "farumazula_prestart": "m13_00_00_00",
+    "farumazula_start": "m13_00_00_00",
+    "farumazula_temple": "m13_00_00_00",
+    "farumazula_transept": "m13_00_00_00",
+    "flamepeak_firegiant": "m60_52_52_00",
+    "flamepeak_grave": "m30_17_00_00",
+    "flamepeak_grave_boss": "m30_17_00_00",
+    "gelmir_grave": "m30_09_00_00",
+    "gelmir_grave_boss": "m30_09_00_00",
+    "gelmir_seethewatercave": "m31_07_00_00",
+    "gelmir_seethewatercave_boss": "m31_07_00_00",
+    "gelmir_volcanocave": "m31_09_00_00",
+    "gelmir_volcanocave_boss": "m31_09_00_00",
+    "gelmir_wyndhamcatacombs": "m30_07_00_00",
+    "gelmir_wyndhamcatacombs_boss": "m30_07_00_00",
+    "graveyard": "m18_00_00_00",
+    "graveyard_cave": "m18_00_00_00",
+    "graveyard_cave_back": "m18_00_00_00",
+    "graveyard_cave_boss": "m18_00_00_00",
+    "graveyard_cave_postboss": "m18_00_00_00",
+    "graveyard_grave": "m18_00_00_00",
+    "graveyard_grave_boss": "m18_00_00_00",
+    "haligtree": "m15_00_00_00",
+    "haligtree_elphael": "m15_00_00_00",
+    "haligtree_loretta": "m15_00_00_00",
+    "haligtree_malenia": "m15_00_00_00",
+    "haligtree_postloretta": "m15_00_00_00",
+    "leyndell": "m11_00_00_00",
+    "leyndell2": "m11_05_00_00",
+    "leyndell2_bedchamber": "m11_05_00_00",
+    "leyndell2_erdtree": "m11_05_00_00",
+    "leyndell2_pretower": "m11_05_00_00",
+    "leyndell2_sanctuary": "m11_05_00_00",
+    "leyndell2_sanctuaryback": "m11_05_00_00",
+    "leyndell2_sanctuaryside": "m11_05_00_00",
+    "leyndell2_throne": "m11_05_00_00",
+    "leyndell_bedchamber": "m11_00_00_00",
+    "leyndell_colosseum": "m45_00_00_00",
+    "leyndell_divinebridge": "m11_00_00_00",
+    "leyndell_erdtree": "m11_00_00_00",
+    "leyndell_pretower": "m11_00_00_00",
+    "leyndell_sanctuary": "m11_00_00_00",
+    "leyndell_sanctuaryback": "m11_00_00_00",
+    "leyndell_sanctuaryfront": "m11_00_00_00",
+    "leyndell_sanctuaryleft": "m11_00_00_00",
+    "leyndell_start": "m11_00_00_00",
+    "leyndell_throne": "m11_00_00_00",
+    "leyndell_tower": "m34_14_00_00",
+    "leyndell_tower_boss": "m34_14_00_00",
+    "leyndell_tower_inner": "m34_14_00_00",
+    "leyndell_tower_start": "m34_14_00_00",
+    "limgrave_coastalcave": "m31_15_00_00",
+    "limgrave_coastalcave_boss": "m31_15_00_00",
+    "limgrave_dragonchurch": "m60_41_35_00",
+    "limgrave_evergaol": "m60_44_35_00",
+    "limgrave_grovesidecave": "m31_03_00_00",
+    "limgrave_grovesidecave_boss": "m31_03_00_00",
+    "limgrave_highroadcave": "m31_17_00_00",
+    "limgrave_highroadcave_boss": "m31_17_00_00",
+    "limgrave_murkwatercatacombs": "m30_04_00_00",
+    "limgrave_murkwatercatacombs_boss": "m30_04_00_00",
+    "limgrave_murkwatercave": "m31_00_00_00",
+    "limgrave_murkwatercave_boss": "m31_00_00_00",
+    "limgrave_stormfootcatacombs": "m30_02_00_00",
+    "limgrave_stormfootcatacombs_boss": "m30_02_00_00",
+    "limgrave_tower": "m34_10_00_00",
+    "limgrave_tunnels": "m32_01_00_00",
+    "limgrave_tunnels_boss": "m32_01_00_00",
+    "limgrave_waypoint_boss": "m60_44_36_00",
+    "limgrave_waypoint_sellen": "m60_44_36_00",
+    "liurnia_academycave": "m31_06_00_00",
+    "liurnia_academycave_boss": "m31_06_00_00",
+    "liurnia_blackknifecatacombs": "m30_05_00_00",
+    "liurnia_blackknifecatacombs_boss": "m30_05_00_00",
+    "liurnia_blackknifecatacombs_boss2": "m30_05_00_00",
+    "liurnia_cliffbottomcatacombs": "m30_06_00_00",
+    "liurnia_cliffbottomcatacombs_boss": "m30_06_00_00",
+    "liurnia_evergaol_adan": "m60_38_41_00",
+    "liurnia_evergaol_bols": "m60_33_45_00",
+    "liurnia_kingsrealm_boss": "m60_34_48_00",
+    "liurnia_kingsrealm_chest": "m60_34_48_00",
+    "liurnia_lakesidecave": "m31_05_00_00",
+    "liurnia_lakesidecave_boss": "m31_05_00_00",
+    "liurnia_loretta": "m60_35_50_00",
+    "liurnia_manor": "m60_35_50_00",
+    "liurnia_postmanor_evergaol": "m60_36_50_00",
+    "liurnia_roadsendcatacombs": "m30_03_00_00",
+    "liurnia_roadsendcatacombs_boss": "m30_03_00_00",
+    "liurnia_slumbering": "m60_36_41_00",
+    "liurnia_stillwatercave": "m31_04_00_00",
+    "liurnia_stillwatercave_boss": "m31_04_00_00",
+    "liurnia_studyhall": "m34_11_00_00",
+    "liurnia_tower": "m34_11_00_00",
+    "liurnia_tunnel": "m32_02_00_00",
+    "liurnia_tunnel_boss": "m32_02_00_00",
+    "mohgwyn_boss": "m12_05_00_00",
+    "mohgwyn_postboss": "m12_05_00_00",
+    "moonlight_evergaol": "m60_33_42_00",
+    "mountaintops_catacombs": "m30_18_00_00",
+    "mountaintops_catacombs_boss": "m30_18_00_00",
+    "mountaintops_cave": "m31_22_00_00",
+    "mountaintops_cave_boss": "m31_22_00_00",
+    "mountaintops_evergaol": "m60_53_56_00",
+    "mountaintops_sol": "m60_51_57_00",
+    "mountaintops_sol_boss": "m60_51_57_00",
+    "mountaintops_sol_postboss": "m60_51_57_00",
+    "mountaintops_start": "m60_47_51_00",
+    "outskirts_grave": "m30_10_00_00",
+    "outskirts_grave_boss": "m30_10_00_00",
+    "outskirts_sealedtunnel": "m34_12_00_00",
+    "outskirts_sealedtunnel_boss": "m34_12_00_00",
+    "outskirts_sealedtunnel_preboss": "m34_12_00_00",
+    "outskirts_sidetomb": "m30_13_00_00",
+    "outskirts_sidetomb_boss": "m30_13_00_00",
+    "outskirts_sidetomb_dupeentrance": "m30_13_00_00",
+    "outskirts_sidetomb_dupehallway": "m30_13_00_00",
+    "outskirts_sidetomb_dupejail": "m30_13_00_00",
+    "outskirts_sidetomb_dupeupper": "m30_13_00_00",
+    "outskirts_sidetomb_hallway": "m30_13_00_00",
+    "outskirts_sidetomb_jail": "m30_13_00_00",
+    "outskirts_sidetomb_upper": "m30_13_00_00",
+    "peninsula_earthborecave": "m31_01_00_00",
+    "peninsula_earthborecave_boss": "m31_01_00_00",
+    "peninsula_evergaol": "m60_42_33_00",
+    "peninsula_impalerscatacombs": "m30_01_00_00",
+    "peninsula_impalerscatacombs_boss": "m30_01_00_00",
+    "peninsula_leonine": "m60_43_30_00",
+    "peninsula_morne": "m60_43_31_00",
+    "peninsula_postmorne": "m60_43_30_00",
+    "peninsula_tombswardcatacombs": "m30_00_00_00",
+    "peninsula_tombswardcatacombs_boss": "m30_00_00_00",
+    "peninsula_tombswardcave": "m31_02_00_00",
+    "peninsula_tombswardcave_boss": "m31_02_00_00",
+    "peninsula_tunnel": "m32_00_00_00",
+    "peninsula_tunnel_boss": "m32_00_00_00",
+    "precipice": "m39_20_00_00",
+    "precipice_boss": "m39_20_00_00",
+    "precipice_postboss": "m39_20_00_00",
+    "roundtable": "m11_10_00_00",
+    "roundtable_balcony": "m11_10_00_00",
+    "sewer": "m35_00_00_00",
+    "sewer_ashen": "m35_00_00_00",
+    "sewer_catacombs": "m35_00_00_00",
+    "sewer_catacombs_boss": "m35_00_00_00",
+    "sewer_mohg": "m35_00_00_00",
+    "sewer_royal": "m35_00_00_00",
+    "siofra_boss": "m12_08_00_00",
+    "siofra_nokron_aboveaqueduct": "m12_02_00_00",
+    "siofra_nokron_aqueduct": "m12_02_00_00",
+    "siofra_nokron_boss": "m12_09_00_00",
+    "siofra_nokron_gargoyles": "m12_02_00_00",
+    "siofra_nokron_mimic": "m12_02_00_00",
+    "siofra_nokron_preboss": "m12_09_00_00",
+    "siofra_preboss": "m12_08_00_00",
+    "snowfield_catacombs": "m30_19_00_00",
+    "snowfield_catacombs_boss": "m30_19_00_00",
+    "snowfield_cave": "m31_12_00_00",
+    "snowfield_cave_boss": "m31_12_00_00",
+    "snowfield_evergaol": "m60_48_57_00",
+    "snowfield_hiddenpath": "m30_20_00_00",
+    "snowfield_hiddenpath_boss": "m30_20_00_00",
+    "snowfield_prehiddenpath": "m30_20_00_00",
+    "snowfield_rold": "m60_49_53_00",
+    "snowfield_tunnel": "m32_11_00_00",
+    "snowfield_tunnel_boss": "m32_11_00_00",
+    "stormhill_catacombs": "m30_11_00_00",
+    "stormhill_catacombs_boss": "m30_11_00_00",
+    "stormhill_colosseum": "m45_02_00_00",
+    "stormhill_evergaol": "m60_42_37_00",
+    "stormveil": "m10_00_00_00",
+    "stormveil_godrick": "m10_00_00_00",
+    "stormveil_margit": "m10_00_00_00",
+    "stormveil_start": "m10_00_00_00",
+    "stormveil_throne": "m10_00_00_00",
+    "volcano": "m16_00_00_00",
+    "volcano_abductors": "m16_00_00_00",
+    "volcano_drawingroom": "m16_00_00_00",
+    "volcano_hallway": "m16_00_00_00",
+    "volcano_pathway": "m16_00_00_00",
+    "volcano_postabductors": "m16_00_00_00",
+    "volcano_posttemple": "m16_00_00_00",
+    "volcano_posttemple_elevator": "m16_00_00_00",
+    "volcano_predoor": "m16_00_00_00",
+    "volcano_pretown": "m16_00_00_00",
+    "volcano_rykard": "m16_00_00_00",
+    "volcano_sendinggate": "m16_00_00_00",
+    "volcano_temple": "m16_00_00_00",
+    "volcano_town": "m16_00_00_00"
+  },
   "clusters": [
     {
       "id": "academy_2a8a",
@@ -10,7 +286,7 @@
         "academy_entrance"
       ],
       "type": "legacy_dungeon",
-      "weight": 20,
+      "weight": 17,
       "entry_fogs": [
         {
           "fog_id": "1035452610",
@@ -50,7 +326,7 @@
         "academy_rooftops"
       ],
       "type": "legacy_dungeon",
-      "weight": 33,
+      "weight": 30,
       "entry_fogs": [
         {
           "fog_id": "AEG099_231_9000",
@@ -92,7 +368,7 @@
         "academy_cavetower"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9001",
@@ -113,7 +389,7 @@
         "academy_library"
       ],
       "type": "other",
-      "weight": 5,
+      "weight": 7,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -134,7 +410,7 @@
         "academy_redwolf"
       ],
       "type": "legacy_dungeon",
-      "weight": 13,
+      "weight": 10,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -179,7 +455,7 @@
         "academy"
       ],
       "type": "legacy_dungeon",
-      "weight": 10,
+      "weight": 12,
       "entry_fogs": [
         {
           "fog_id": "AEG099_003_9000",
@@ -204,7 +480,7 @@
         "academy_redwolf"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_003_9000",
@@ -317,7 +593,7 @@
         "ainsel_postboss"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9001",
@@ -345,7 +621,7 @@
         "ainsel_postdragonkin"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9001",
@@ -365,7 +641,7 @@
         "ainsel_preboss"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -445,7 +721,7 @@
         "altus_elemer"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -633,7 +909,7 @@
         "altus_lux_chest"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9001",
@@ -830,7 +1106,7 @@
         "altus_tower_inner"
       ],
       "type": "other",
-      "weight": 4,
+      "weight": 8,
       "entry_fogs": [
         {
           "fog_id": "AEG099_003_9001",
@@ -934,7 +1210,7 @@
         "altus_writheblood_chest"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9001",
@@ -945,154 +1221,6 @@
         {
           "fog_id": "AEG099_001_9001",
           "zone": "altus_writheblood_chest"
-        }
-      ]
-    },
-    {
-      "id": "belurat_2c41",
-      "zones": [
-        "belurat",
-        "belurat_enirilim",
-        "belurat_swamp",
-        "enirilim",
-        "enirilim_stairs"
-      ],
-      "type": "other",
-      "weight": 10,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "belurat"
-        },
-        {
-          "fog_id": "AEG099_231_9004",
-          "zone": "belurat"
-        },
-        {
-          "fog_id": "20012020",
-          "zone": "enirilim"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "belurat"
-        },
-        {
-          "fog_id": "AEG099_231_9004",
-          "zone": "belurat"
-        },
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "enirilim_stairs"
-        }
-      ]
-    },
-    {
-      "id": "belurat_7106",
-      "zones": [
-        "belurat",
-        "belurat_enirilim",
-        "belurat_swamp"
-      ],
-      "type": "other",
-      "weight": 6,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "belurat"
-        },
-        {
-          "fog_id": "AEG099_231_9004",
-          "zone": "belurat"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "belurat"
-        },
-        {
-          "fog_id": "AEG099_231_9004",
-          "zone": "belurat"
-        }
-      ]
-    },
-    {
-      "id": "belurat_boss_0000",
-      "zones": [
-        "belurat_boss"
-      ],
-      "type": "major_boss",
-      "weight": 3,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9002",
-          "zone": "belurat_boss"
-        },
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "belurat_boss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9002",
-          "zone": "belurat_boss"
-        },
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "belurat_boss"
-        }
-      ]
-    },
-    {
-      "id": "belurat_d88b",
-      "zones": [
-        "belurat",
-        "belurat_swamp"
-      ],
-      "type": "other",
-      "weight": 4,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "belurat"
-        },
-        {
-          "fog_id": "AEG099_231_9004",
-          "zone": "belurat"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "belurat"
-        },
-        {
-          "fog_id": "AEG099_231_9004",
-          "zone": "belurat"
-        }
-      ]
-    },
-    {
-      "id": "belurat_postboss_17a8",
-      "zones": [
-        "belurat_postboss",
-        "belurat_stairs"
-      ],
-      "type": "other",
-      "weight": 4,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9002",
-          "zone": "belurat_postboss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9002",
-          "zone": "belurat_postboss"
         }
       ]
     },
@@ -1203,7 +1331,7 @@
         "caelid_caelem_chest"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_003_9001",
@@ -1279,7 +1407,7 @@
         "caelid_colosseum"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_231_9000",
@@ -1327,7 +1455,7 @@
         "caelid_crypt_chest"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -1405,7 +1533,7 @@
         "caelid_gaeltunnel_start"
       ],
       "type": "mini_dungeon",
-      "weight": 8,
+      "weight": 12,
       "entry_fogs": [
         {
           "fog_id": "AEG099_230_9000",
@@ -1434,7 +1562,7 @@
         "caelid_gaeltunnel_rear"
       ],
       "type": "mini_dungeon",
-      "weight": 6,
+      "weight": 8,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -1486,7 +1614,7 @@
         "caelid_gaeltunnel_rear"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_230_9001",
@@ -1563,7 +1691,7 @@
         "caelid_gaolcave_preboss"
       ],
       "type": "boss_arena",
-      "weight": 4,
+      "weight": 6,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -1591,7 +1719,7 @@
         "caelid_gaolcave_postboss"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9001",
@@ -1611,7 +1739,7 @@
         "caelid_preradahn"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_232_9000",
@@ -1636,7 +1764,7 @@
         "caelid_radahn"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_230_9000",
@@ -1741,7 +1869,7 @@
         "caelid_redmane_postboss"
       ],
       "type": "boss_arena",
-      "weight": 4,
+      "weight": 6,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9001",
@@ -1833,7 +1961,7 @@
         "caelid_tower"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -1913,7 +2041,7 @@
         "caelid_tower_inner"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_230_9000",
@@ -1933,7 +2061,7 @@
         "caelid_tower_postboss"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9001",
@@ -2012,26 +2140,6 @@
       ]
     },
     {
-      "id": "cerulean_mausoleum_boss_0d19",
-      "zones": [
-        "cerulean_mausoleum_boss"
-      ],
-      "type": "boss_arena",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_003_9000",
-          "zone": "cerulean_mausoleum_boss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_003_9000",
-          "zone": "cerulean_mausoleum_boss"
-        }
-      ]
-    },
-    {
       "id": "chapel_boss_57ee",
       "zones": [
         "chapel_boss"
@@ -2065,7 +2173,7 @@
         "chapel_postboss"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9001",
@@ -2105,80 +2213,6 @@
           "fog_id": "12052021",
           "zone": "chapel_start",
           "unique": true
-        }
-      ]
-    },
-    {
-      "id": "charo_gaol_5c86",
-      "zones": [
-        "charo_gaol",
-        "charo_gaol_lower",
-        "charo_gaol_preboss"
-      ],
-      "type": "mini_dungeon",
-      "weight": 10,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "charo_gaol"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "charo_gaol"
-        },
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "charo_gaol_preboss"
-        }
-      ]
-    },
-    {
-      "id": "charo_gaol_boss_c119",
-      "zones": [
-        "charo_gaol_boss"
-      ],
-      "type": "boss_arena",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "charo_gaol_boss"
-        },
-        {
-          "fog_id": "41022890",
-          "zone": "charo_gaol_boss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "charo_gaol_boss"
-        },
-        {
-          "fog_id": "41022890",
-          "zone": "charo_gaol_boss"
-        }
-      ]
-    },
-    {
-      "id": "charo_gaol_preboss_0882",
-      "zones": [
-        "charo_gaol_preboss"
-      ],
-      "type": "other",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "charo_gaol_preboss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "charo_gaol_preboss"
         }
       ]
     },
@@ -2286,7 +2320,7 @@
         "dragonbarrow_cave_preboss"
       ],
       "type": "boss_arena",
-      "weight": 4,
+      "weight": 6,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -2409,184 +2443,12 @@
       ]
     },
     {
-      "id": "ellac_cave_9935",
-      "zones": [
-        "ellac_cave"
-      ],
-      "type": "mini_dungeon",
-      "weight": 4,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "ellac_cave"
-        },
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "ellac_cave"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "ellac_cave"
-        },
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "ellac_cave"
-        }
-      ]
-    },
-    {
-      "id": "ellac_cave_boss_c418",
-      "zones": [
-        "ellac_cave_boss"
-      ],
-      "type": "boss_arena",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "ellac_cave_boss"
-        },
-        {
-          "fog_id": "43002840",
-          "zone": "ellac_cave_boss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "ellac_cave_boss"
-        },
-        {
-          "fog_id": "43002840",
-          "zone": "ellac_cave_boss"
-        }
-      ]
-    },
-    {
-      "id": "enirilim_radahn_e1df",
-      "zones": [
-        "enirilim_radahn"
-      ],
-      "type": "major_boss",
-      "weight": 3,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "enirilim_radahn"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "enirilim_radahn"
-        }
-      ]
-    },
-    {
-      "id": "enirilim_stairs_26c2",
-      "zones": [
-        "enirilim_stairs"
-      ],
-      "type": "other",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "enirilim_stairs"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "enirilim_stairs"
-        }
-      ]
-    },
-    {
-      "id": "ensis_boss_e309",
-      "zones": [
-        "ensis_boss"
-      ],
-      "type": "major_boss",
-      "weight": 3,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "ensis_boss"
-        },
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "ensis_boss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "ensis_boss"
-        },
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "ensis_boss"
-        }
-      ]
-    },
-    {
-      "id": "ensis_d67c",
-      "zones": [
-        "ensis"
-      ],
-      "type": "other",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_231_9500",
-          "zone": "ensis"
-        },
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "ensis"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_231_9500",
-          "zone": "ensis"
-        },
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "ensis"
-        }
-      ]
-    },
-    {
-      "id": "ensis_room_cc4a",
-      "zones": [
-        "ensis_room"
-      ],
-      "type": "other",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "ensis_room"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "ensis_room"
-        }
-      ]
-    },
-    {
       "id": "farumazula_6a43",
       "zones": [
         "farumazula"
       ],
       "type": "legacy_dungeon",
-      "weight": 10,
+      "weight": 15,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9001",
@@ -2628,7 +2490,7 @@
         "farumazula_godskinduo"
       ],
       "type": "other",
-      "weight": 5,
+      "weight": 8,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9004",
@@ -2664,7 +2526,7 @@
         "farumazula_godskinduo"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -2711,7 +2573,7 @@
         "farumazula_transept"
       ],
       "type": "legacy_dungeon",
-      "weight": 32,
+      "weight": 34,
       "entry_fogs": [
         {
           "fog_id": "AEG099_230_9000",
@@ -2747,7 +2609,7 @@
         "farumazula_maliketh"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -2775,7 +2637,7 @@
         "farumazula_transept"
       ],
       "type": "other",
-      "weight": 24,
+      "weight": 28,
       "entry_fogs": [
         {
           "fog_id": "13002500",
@@ -2808,7 +2670,7 @@
         "farumazula_transept"
       ],
       "type": "legacy_dungeon",
-      "weight": 12,
+      "weight": 14,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -2848,128 +2710,17 @@
         "farumazula_transept"
       ],
       "type": "other",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9002",
-          "zone": "farumazula_transept"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9002",
-          "zone": "farumazula_transept"
-        }
-      ]
-    },
-    {
-      "id": "fissure_boss_674e",
-      "zones": [
-        "fissure_boss"
-      ],
-      "type": "major_boss",
-      "weight": 3,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_3000",
-          "zone": "fissure_boss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_3000",
-          "zone": "fissure_boss"
-        }
-      ]
-    },
-    {
-      "id": "fissure_boss_7e38",
-      "zones": [
-        "fissure_boss",
-        "fissure_depths",
-        "fissure_preboss"
-      ],
-      "type": "major_boss",
-      "weight": 7,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "fissure_preboss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_3000",
-          "zone": "fissure_boss"
-        },
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "fissure_depths"
-        }
-      ]
-    },
-    {
-      "id": "fissure_depths_ba4a",
-      "zones": [
-        "fissure_depths"
-      ],
-      "type": "other",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "fissure_depths"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "fissure_depths"
-        }
-      ]
-    },
-    {
-      "id": "fissure_e510",
-      "zones": [
-        "fissure",
-        "fissure_depths"
-      ],
-      "type": "other",
       "weight": 4,
       "entry_fogs": [
         {
-          "fog_id": "AEG099_231_9500",
-          "zone": "fissure"
+          "fog_id": "AEG099_001_9002",
+          "zone": "farumazula_transept"
         }
       ],
       "exit_fogs": [
         {
-          "fog_id": "AEG099_231_9500",
-          "zone": "fissure"
-        },
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "fissure_depths"
-        }
-      ]
-    },
-    {
-      "id": "fissure_postboss_46ba",
-      "zones": [
-        "fissure_postboss"
-      ],
-      "type": "other",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_3000",
-          "zone": "fissure_postboss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_3000",
-          "zone": "fissure_postboss"
+          "fog_id": "AEG099_001_9002",
+          "zone": "farumazula_transept"
         }
       ]
     },
@@ -2979,7 +2730,7 @@
         "flamepeak_firegiant"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "m60_52_53_00-AEG099_002_9000",
@@ -3287,271 +3038,13 @@
       ]
     },
     {
-      "id": "gravesite_catacombs_1e77",
-      "zones": [
-        "gravesite_catacombs"
-      ],
-      "type": "mini_dungeon",
-      "weight": 4,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "gravesite_catacombs"
-        },
-        {
-          "fog_id": "AEG099_232_9000",
-          "zone": "gravesite_catacombs"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "gravesite_catacombs"
-        },
-        {
-          "fog_id": "AEG099_232_9000",
-          "zone": "gravesite_catacombs"
-        }
-      ]
-    },
-    {
-      "id": "gravesite_catacombs_boss_75da",
-      "zones": [
-        "gravesite_catacombs_boss"
-      ],
-      "type": "boss_arena",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "gravesite_catacombs_boss"
-        },
-        {
-          "fog_id": "40002840",
-          "zone": "gravesite_catacombs_boss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "gravesite_catacombs_boss"
-        },
-        {
-          "fog_id": "40002840",
-          "zone": "gravesite_catacombs_boss"
-        }
-      ]
-    },
-    {
-      "id": "gravesite_dragonpit_1f37",
-      "zones": [
-        "gravesite_dragonpit",
-        "gravesite_dragonpit_preboss"
-      ],
-      "type": "other",
-      "weight": 4,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_232_9000",
-          "zone": "gravesite_dragonpit"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_232_9000",
-          "zone": "gravesite_dragonpit"
-        },
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "gravesite_dragonpit_preboss"
-        }
-      ]
-    },
-    {
-      "id": "gravesite_dragonpit_boss_a438",
-      "zones": [
-        "gravesite_dragonpit_boss",
-        "gravesite_dragonpit_postboss"
-      ],
-      "type": "boss_arena",
-      "weight": 4,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "gravesite_dragonpit_boss"
-        },
-        {
-          "fog_id": "43012840",
-          "zone": "gravesite_dragonpit_boss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "gravesite_dragonpit_boss"
-        },
-        {
-          "fog_id": "43012840",
-          "zone": "gravesite_dragonpit_boss"
-        },
-        {
-          "fog_id": "AEG099_232_9001",
-          "zone": "gravesite_dragonpit_postboss"
-        }
-      ]
-    },
-    {
-      "id": "gravesite_dragonpit_postboss_6d64",
-      "zones": [
-        "gravesite_dragonpit_postboss"
-      ],
-      "type": "other",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_232_9001",
-          "zone": "gravesite_dragonpit_postboss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_232_9001",
-          "zone": "gravesite_dragonpit_postboss"
-        }
-      ]
-    },
-    {
-      "id": "gravesite_dragonpit_preboss_95cf",
-      "zones": [
-        "gravesite_dragonpit_preboss"
-      ],
-      "type": "other",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "gravesite_dragonpit_preboss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "gravesite_dragonpit_preboss"
-        }
-      ]
-    },
-    {
-      "id": "gravesite_forge_3724",
-      "zones": [
-        "gravesite_forge"
-      ],
-      "type": "mini_dungeon",
-      "weight": 4,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_232_9000",
-          "zone": "gravesite_forge"
-        },
-        {
-          "fog_id": "42002840",
-          "zone": "gravesite_forge"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_232_9000",
-          "zone": "gravesite_forge"
-        },
-        {
-          "fog_id": "42002840",
-          "zone": "gravesite_forge"
-        }
-      ]
-    },
-    {
-      "id": "gravesite_gaol_7342",
-      "zones": [
-        "gravesite_gaol"
-      ],
-      "type": "mini_dungeon",
-      "weight": 4,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "gravesite_gaol"
-        },
-        {
-          "fog_id": "AEG099_232_9000",
-          "zone": "gravesite_gaol"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "gravesite_gaol"
-        },
-        {
-          "fog_id": "AEG099_232_9000",
-          "zone": "gravesite_gaol"
-        }
-      ]
-    },
-    {
-      "id": "gravesite_gaol_boss_1cd2",
-      "zones": [
-        "gravesite_gaol_boss"
-      ],
-      "type": "boss_arena",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "gravesite_gaol_boss"
-        },
-        {
-          "fog_id": "41002840",
-          "zone": "gravesite_gaol_boss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "gravesite_gaol_boss"
-        },
-        {
-          "fog_id": "41002840",
-          "zone": "gravesite_gaol_boss"
-        }
-      ]
-    },
-    {
-      "id": "gravesite_mausoleum_boss_259d",
-      "zones": [
-        "gravesite_mausoleum_boss"
-      ],
-      "type": "boss_arena",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_003_9000",
-          "zone": "gravesite_mausoleum_boss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_003_9000",
-          "zone": "gravesite_mausoleum_boss"
-        }
-      ]
-    },
-    {
       "id": "graveyard_65d8",
       "zones": [
         "graveyard",
         "graveyard_grave"
       ],
       "type": "other",
-      "weight": 6,
+      "weight": 8,
       "entry_fogs": [
         {
           "fog_id": "AEG099_230_9000",
@@ -3612,7 +3105,7 @@
         "graveyard_cave_back"
       ],
       "type": "mini_dungeon",
-      "weight": 6,
+      "weight": 8,
       "entry_fogs": [
         {
           "fog_id": "AEG099_231_9000",
@@ -3669,7 +3162,7 @@
         "graveyard_cave_postboss"
       ],
       "type": "mini_dungeon",
-      "weight": 6,
+      "weight": 8,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9011",
@@ -3773,7 +3266,7 @@
         "haligtree"
       ],
       "type": "legacy_dungeon",
-      "weight": 10,
+      "weight": 15,
       "entry_fogs": [
         {
           "fog_id": "AEG099_003_9001",
@@ -3797,7 +3290,7 @@
         "haligtree_loretta"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_003_9001",
@@ -3825,7 +3318,7 @@
         "haligtree_malenia"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 5,
       "entry_fogs": [
         {
           "fog_id": "AEG099_003_9000",
@@ -3845,7 +3338,7 @@
         "haligtree_postloretta"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_003_9002",
@@ -3864,26 +3357,6 @@
         {
           "fog_id": "AEG099_230_9000",
           "zone": "haligtree_postloretta"
-        }
-      ]
-    },
-    {
-      "id": "jaggedpeak_bayle_f21a",
-      "zones": [
-        "jaggedpeak_bayle"
-      ],
-      "type": "major_boss",
-      "weight": 3,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "jaggedpeak_bayle"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "jaggedpeak_bayle"
         }
       ]
     },
@@ -3899,7 +3372,7 @@
         "sewer_ashen"
       ],
       "type": "legacy_dungeon",
-      "weight": 25,
+      "weight": 34,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9001",
@@ -3967,7 +3440,7 @@
         "leyndell2_colosseum"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_231_9000",
@@ -3990,7 +3463,7 @@
         "sewer_ashen"
       ],
       "type": "legacy_dungeon",
-      "weight": 18,
+      "weight": 22,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9003",
@@ -4082,7 +3555,7 @@
         "leyndell2_sanctuary"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9003",
@@ -4150,7 +3623,7 @@
         "leyndell2_sanctuaryback"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9005",
@@ -4186,7 +3659,7 @@
         "leyndell2_sanctuaryside"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9004",
@@ -4206,7 +3679,7 @@
         "leyndell2_throne"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9001",
@@ -4237,7 +3710,7 @@
         "leyndell_sanctuaryfront"
       ],
       "type": "legacy_dungeon",
-      "weight": 24,
+      "weight": 38,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9004",
@@ -4288,7 +3761,7 @@
         "leyndell_sanctuaryfront"
       ],
       "type": "legacy_dungeon",
-      "weight": 31,
+      "weight": 51,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -4363,7 +3836,7 @@
         "leyndell_pretower"
       ],
       "type": "legacy_dungeon",
-      "weight": 22,
+      "weight": 34,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9003",
@@ -4420,7 +3893,7 @@
         "leyndell_colosseum"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_231_9001",
@@ -4440,7 +3913,7 @@
         "leyndell_divinebridge"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "11002697",
@@ -4505,7 +3978,7 @@
         "leyndell_sanctuary"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 5,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9003",
@@ -4573,7 +4046,7 @@
         "leyndell_sanctuaryback"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9005",
@@ -4609,7 +4082,7 @@
         "leyndell_sanctuaryleft"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9008",
@@ -4637,7 +4110,7 @@
         "leyndell_start"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_230_9500",
@@ -4681,7 +4154,7 @@
         "leyndell_throne"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -4710,7 +4183,7 @@
         "leyndell_tower_inner"
       ],
       "type": "other",
-      "weight": 4,
+      "weight": 8,
       "entry_fogs": [
         {
           "fog_id": "AEG099_239_9000",
@@ -4782,7 +4255,7 @@
         "leyndell_tower_start"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_231_9000",
@@ -4882,7 +4355,7 @@
         "limgrave_dragonchurch"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -5215,7 +4688,7 @@
         "limgrave_tower"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_230_9001",
@@ -5324,7 +4797,7 @@
         "limgrave_waypoint_sellen"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9001",
@@ -5640,7 +5113,7 @@
         "liurnia_kingsrealm_chest"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9001",
@@ -5716,7 +5189,7 @@
         "liurnia_loretta"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_003_9000",
@@ -5856,7 +5329,7 @@
         "liurnia_slumbering"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -5933,7 +5406,7 @@
         "liurnia_tower"
       ],
       "type": "other",
-      "weight": 4,
+      "weight": 8,
       "entry_fogs": [
         {
           "fog_id": "AEG099_230_9000",
@@ -6009,60 +5482,12 @@
       ]
     },
     {
-      "id": "midramanse_1ac8",
-      "zones": [
-        "midramanse"
-      ],
-      "type": "other",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "midramanse"
-        },
-        {
-          "fog_id": "AEG099_230_9500",
-          "zone": "midramanse"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "midramanse"
-        },
-        {
-          "fog_id": "AEG099_230_9500",
-          "zone": "midramanse"
-        }
-      ]
-    },
-    {
-      "id": "midramanse_boss_0aaf",
-      "zones": [
-        "midramanse_boss"
-      ],
-      "type": "major_boss",
-      "weight": 3,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "midramanse_boss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "midramanse_boss"
-        }
-      ]
-    },
-    {
       "id": "mohgwyn_boss_e1a8",
       "zones": [
         "mohgwyn_boss"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -6103,7 +5528,7 @@
         "mohgwyn_postboss"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -6327,7 +5752,7 @@
         "mountaintops_sol_boss"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -6355,7 +5780,7 @@
         "mountaintops_sol_postboss"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9001",
@@ -6375,7 +5800,7 @@
         "mountaintops_start"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_231_9000",
@@ -6468,7 +5893,7 @@
         "outskirts_sealedtunnel_preboss"
       ],
       "type": "mini_dungeon",
-      "weight": 6,
+      "weight": 8,
       "entry_fogs": [
         {
           "fog_id": "AEG099_230_9000",
@@ -6528,7 +5953,7 @@
         "outskirts_sealedtunnel_preboss"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_003_9000",
@@ -7129,7 +6554,7 @@
         "peninsula_leonine"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -7150,7 +6575,7 @@
         "peninsula_postmorne"
       ],
       "type": "other",
-      "weight": 4,
+      "weight": 8,
       "entry_fogs": [
         {
           "fog_id": "AEG099_230_9500",
@@ -7174,7 +6599,7 @@
         "peninsula_postmorne"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -7390,7 +6815,7 @@
         "precipice_boss"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -7418,7 +6843,7 @@
         "precipice_postboss"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9001",
@@ -7429,187 +6854,6 @@
         {
           "fog_id": "AEG099_002_9001",
           "zone": "precipice_postboss"
-        }
-      ]
-    },
-    {
-      "id": "rauhbase_catacombs_0072",
-      "zones": [
-        "rauhbase_catacombs"
-      ],
-      "type": "mini_dungeon",
-      "weight": 4,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "rauhbase_catacombs"
-        },
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "rauhbase_catacombs"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "rauhbase_catacombs"
-        },
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "rauhbase_catacombs"
-        }
-      ]
-    },
-    {
-      "id": "rauhbase_catacombs_boss_3441",
-      "zones": [
-        "rauhbase_catacombs_boss"
-      ],
-      "type": "boss_arena",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "rauhbase_catacombs_boss"
-        },
-        {
-          "fog_id": "40012840",
-          "zone": "rauhbase_catacombs_boss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "rauhbase_catacombs_boss"
-        },
-        {
-          "fog_id": "40012840",
-          "zone": "rauhbase_catacombs_boss"
-        }
-      ]
-    },
-    {
-      "id": "rauhbase_forge_4177",
-      "zones": [
-        "rauhbase_forge"
-      ],
-      "type": "mini_dungeon",
-      "weight": 4,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_232_9000",
-          "zone": "rauhbase_forge"
-        },
-        {
-          "fog_id": "42032840",
-          "zone": "rauhbase_forge"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_232_9000",
-          "zone": "rauhbase_forge"
-        },
-        {
-          "fog_id": "42032840",
-          "zone": "rauhbase_forge"
-        }
-      ]
-    },
-    {
-      "id": "rauhbase_mausoleum_boss_2ecc",
-      "zones": [
-        "rauhbase_mausoleum_boss"
-      ],
-      "type": "boss_arena",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_003_9000",
-          "zone": "rauhbase_mausoleum_boss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_003_9000",
-          "zone": "rauhbase_mausoleum_boss"
-        }
-      ]
-    },
-    {
-      "id": "rauhruins_postromina_9cb1",
-      "zones": [
-        "rauhruins_postromina"
-      ],
-      "type": "other",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9001",
-          "zone": "rauhruins_postromina"
-        },
-        {
-          "fog_id": "AEG099_002_9501",
-          "zone": "rauhruins_postromina"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9001",
-          "zone": "rauhruins_postromina"
-        },
-        {
-          "fog_id": "AEG099_002_9501",
-          "zone": "rauhruins_postromina"
-        },
-        {
-          "fog_id": "20012020",
-          "zone": "rauhruins_postromina",
-          "unique": true
-        }
-      ]
-    },
-    {
-      "id": "rauhruins_romina_0212",
-      "zones": [
-        "rauhruins_romina"
-      ],
-      "type": "major_boss",
-      "weight": 3,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "rauhruins_romina"
-        },
-        {
-          "fog_id": "AEG099_002_9001",
-          "zone": "rauhruins_romina"
-        },
-        {
-          "fog_id": "AEG099_002_9500",
-          "zone": "rauhruins_romina"
-        },
-        {
-          "fog_id": "AEG099_002_9501",
-          "zone": "rauhruins_romina"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "rauhruins_romina"
-        },
-        {
-          "fog_id": "AEG099_002_9001",
-          "zone": "rauhruins_romina"
-        },
-        {
-          "fog_id": "AEG099_002_9500",
-          "zone": "rauhruins_romina"
-        },
-        {
-          "fog_id": "AEG099_002_9501",
-          "zone": "rauhruins_romina"
         }
       ]
     },
@@ -7619,7 +6863,7 @@
         "roundtable_balcony"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_231_9000",
@@ -7639,7 +6883,7 @@
         "roundtable"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_231_9000",
@@ -7650,270 +6894,6 @@
         {
           "fog_id": "AEG099_231_9000",
           "zone": "roundtable"
-        }
-      ]
-    },
-    {
-      "id": "scadualtus_catacombs_7a82",
-      "zones": [
-        "scadualtus_catacombs"
-      ],
-      "type": "other",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "scadualtus_catacombs"
-        },
-        {
-          "fog_id": "AEG099_001_9001",
-          "zone": "scadualtus_catacombs"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "scadualtus_catacombs"
-        },
-        {
-          "fog_id": "AEG099_001_9001",
-          "zone": "scadualtus_catacombs"
-        }
-      ]
-    },
-    {
-      "id": "scadualtus_catacombs_boss_1790",
-      "zones": [
-        "scadualtus_catacombs_boss"
-      ],
-      "type": "major_boss",
-      "weight": 3,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "scadualtus_catacombs_boss"
-        },
-        {
-          "fog_id": "AEG099_001_9001",
-          "zone": "scadualtus_catacombs_boss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "scadualtus_catacombs_boss"
-        },
-        {
-          "fog_id": "AEG099_001_9001",
-          "zone": "scadualtus_catacombs_boss"
-        }
-      ]
-    },
-    {
-      "id": "scadualtus_forge_b52b",
-      "zones": [
-        "scadualtus_forge"
-      ],
-      "type": "mini_dungeon",
-      "weight": 4,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "scadualtus_forge"
-        },
-        {
-          "fog_id": "42022840",
-          "zone": "scadualtus_forge"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "scadualtus_forge"
-        },
-        {
-          "fog_id": "42022840",
-          "zone": "scadualtus_forge"
-        }
-      ]
-    },
-    {
-      "id": "scadualtus_gaol_781e",
-      "zones": [
-        "scadualtus_gaol"
-      ],
-      "type": "mini_dungeon",
-      "weight": 4,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "scadualtus_gaol"
-        },
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "scadualtus_gaol"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "scadualtus_gaol"
-        },
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "scadualtus_gaol"
-        }
-      ]
-    },
-    {
-      "id": "scadualtus_gaol_boss_3a44",
-      "zones": [
-        "scadualtus_gaol_boss"
-      ],
-      "type": "boss_arena",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "scadualtus_gaol_boss"
-        },
-        {
-          "fog_id": "41012840",
-          "zone": "scadualtus_gaol_boss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "scadualtus_gaol_boss"
-        },
-        {
-          "fog_id": "41012840",
-          "zone": "scadualtus_gaol_boss"
-        }
-      ]
-    },
-    {
-      "id": "scadualtus_mausoleum_boss_a068",
-      "zones": [
-        "scadualtus_mausoleum_boss"
-      ],
-      "type": "boss_arena",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "scadualtus_mausoleum_boss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "scadualtus_mausoleum_boss"
-        }
-      ]
-    },
-    {
-      "id": "scadualtus_ymir_7356",
-      "zones": [
-        "scadualtus_ymir"
-      ],
-      "type": "boss_arena",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "scadualtus_ymir"
-        },
-        {
-          "fog_id": "AEG099_001_9001",
-          "zone": "scadualtus_ymir"
-        },
-        {
-          "fog_id": "AEG099_001_9002",
-          "zone": "scadualtus_ymir"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "scadualtus_ymir"
-        },
-        {
-          "fog_id": "AEG099_001_9001",
-          "zone": "scadualtus_ymir"
-        },
-        {
-          "fog_id": "AEG099_001_9002",
-          "zone": "scadualtus_ymir"
-        }
-      ]
-    },
-    {
-      "id": "scadutree_base_564e",
-      "zones": [
-        "scadutree_base"
-      ],
-      "type": "major_boss",
-      "weight": 3,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "scadutree_base"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "scadutree_base"
-        }
-      ]
-    },
-    {
-      "id": "scaduview_chalice_08ba",
-      "zones": [
-        "scaduview_chalice"
-      ],
-      "type": "other",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "scaduview_chalice"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "scaduview_chalice"
-        }
-      ]
-    },
-    {
-      "id": "scaduview_gaius_3bd7",
-      "zones": [
-        "scaduview_gaius"
-      ],
-      "type": "major_boss",
-      "weight": 3,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "scaduview_gaius"
-        },
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "scaduview_gaius"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "scaduview_gaius"
-        },
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "scaduview_gaius"
         }
       ]
     },
@@ -7924,7 +6904,7 @@
         "sewer_royal"
       ],
       "type": "mini_dungeon",
-      "weight": 6,
+      "weight": 8,
       "entry_fogs": [
         {
           "fog_id": "AEG099_230_9000",
@@ -8036,7 +7016,7 @@
         "sewer_mohg"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9000",
@@ -8055,137 +7035,6 @@
         {
           "fog_id": "AEG099_002_9000",
           "zone": "sewer_mohg"
-        }
-      ]
-    },
-    {
-      "id": "shadowkeep_8449",
-      "zones": [
-        "shadowkeep"
-      ],
-      "type": "other",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_003_9000",
-          "zone": "shadowkeep"
-        },
-        {
-          "fog_id": "AEG099_003_9001",
-          "zone": "shadowkeep"
-        },
-        {
-          "fog_id": "AEG099_230_9500",
-          "zone": "shadowkeep"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_003_9000",
-          "zone": "shadowkeep"
-        },
-        {
-          "fog_id": "AEG099_003_9001",
-          "zone": "shadowkeep"
-        },
-        {
-          "fog_id": "AEG099_230_9500",
-          "zone": "shadowkeep"
-        },
-        {
-          "fog_id": "2049472020",
-          "zone": "shadowkeep",
-          "unique": true
-        }
-      ]
-    },
-    {
-      "id": "shadowkeep_boss_77e7",
-      "zones": [
-        "shadowkeep_boss"
-      ],
-      "type": "major_boss",
-      "weight": 3,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "shadowkeep_boss"
-        },
-        {
-          "fog_id": "AEG099_003_9000",
-          "zone": "shadowkeep_boss"
-        },
-        {
-          "fog_id": "AEG099_003_9001",
-          "zone": "shadowkeep_boss"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "shadowkeep_boss"
-        },
-        {
-          "fog_id": "AEG099_003_9000",
-          "zone": "shadowkeep_boss"
-        },
-        {
-          "fog_id": "AEG099_003_9001",
-          "zone": "shadowkeep_boss"
-        }
-      ]
-    },
-    {
-      "id": "shadowkeep_church_7877",
-      "zones": [
-        "shadowkeep_church",
-        "shadowkeep_church_lower",
-        "shadowkeep_sanctum"
-      ],
-      "type": "other",
-      "weight": 6,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "shadowkeep_church"
-        },
-        {
-          "fog_id": "AEG099_230_9501",
-          "zone": "shadowkeep_church"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "shadowkeep_church"
-        },
-        {
-          "fog_id": "AEG099_230_9501",
-          "zone": "shadowkeep_church"
-        },
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "shadowkeep_sanctum"
-        }
-      ]
-    },
-    {
-      "id": "shadowkeep_sanctum_f3b7",
-      "zones": [
-        "shadowkeep_sanctum"
-      ],
-      "type": "other",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "shadowkeep_sanctum"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "shadowkeep_sanctum"
         }
       ]
     },
@@ -8337,7 +7186,7 @@
         "siofra_nokron_preboss"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -8361,7 +7210,7 @@
         "siofra_preboss"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -8497,7 +7346,7 @@
         "snowfield_evergaol"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "1048572301",
@@ -8554,7 +7403,7 @@
         "snowfield_prehiddenpath"
       ],
       "type": "mini_dungeon",
-      "weight": 6,
+      "weight": 8,
       "entry_fogs": [
         {
           "fog_id": "AEG099_232_9001",
@@ -8610,7 +7459,7 @@
         "snowfield_rold"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_232_9001",
@@ -8689,129 +7538,6 @@
       ]
     },
     {
-      "id": "storehouse_6660",
-      "zones": [
-        "storehouse",
-        "storehouse_back",
-        "storehouse_premessmer"
-      ],
-      "type": "other",
-      "weight": 6,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_230_9501",
-          "zone": "storehouse_back"
-        },
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "storehouse_back"
-        },
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "storehouse_back"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "storehouse"
-        },
-        {
-          "fog_id": "AEG099_230_9500",
-          "zone": "storehouse"
-        },
-        {
-          "fog_id": "AEG099_230_9501",
-          "zone": "storehouse_back"
-        },
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "storehouse_back"
-        },
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "storehouse_back"
-        },
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "storehouse_premessmer"
-        }
-      ]
-    },
-    {
-      "id": "storehouse_cc6f",
-      "zones": [
-        "storehouse",
-        "storehouse_premessmer"
-      ],
-      "type": "other",
-      "weight": 4,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "storehouse"
-        },
-        {
-          "fog_id": "AEG099_230_9500",
-          "zone": "storehouse"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "storehouse"
-        },
-        {
-          "fog_id": "AEG099_230_9500",
-          "zone": "storehouse"
-        },
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "storehouse_premessmer"
-        }
-      ]
-    },
-    {
-      "id": "storehouse_messmer_db3d",
-      "zones": [
-        "storehouse_messmer"
-      ],
-      "type": "major_boss",
-      "weight": 3,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "storehouse_messmer"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "storehouse_messmer"
-        }
-      ]
-    },
-    {
-      "id": "storehouse_premessmer_06a5",
-      "zones": [
-        "storehouse_premessmer"
-      ],
-      "type": "other",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "storehouse_premessmer"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "storehouse_premessmer"
-        }
-      ]
-    },
-    {
       "id": "stormhill_catacombs_boss_35f1",
       "zones": [
         "stormhill_catacombs_boss"
@@ -8873,7 +7599,7 @@
         "stormhill_colosseum"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_231_9000",
@@ -8922,7 +7648,7 @@
         "stormveil_start"
       ],
       "type": "legacy_dungeon",
-      "weight": 20,
+      "weight": 23,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -8959,7 +7685,7 @@
         "stormveil_throne"
       ],
       "type": "major_boss",
-      "weight": 5,
+      "weight": 8,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -8983,7 +7709,7 @@
         "stormveil_margit"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9001",
@@ -9011,7 +7737,7 @@
         "stormveil_throne"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_230_9000",
@@ -9037,7 +7763,7 @@
         "volcano_town"
       ],
       "type": "legacy_dungeon",
-      "weight": 38,
+      "weight": 48,
       "entry_fogs": [
         {
           "fog_id": "AEG099_232_9004",
@@ -9078,7 +7804,7 @@
         "volcano_abductors"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9000",
@@ -9108,7 +7834,7 @@
         "volcano_predoor"
       ],
       "type": "legacy_dungeon",
-      "weight": 14,
+      "weight": 20,
       "entry_fogs": [
         {
           "fog_id": "AEG099_230_9000",
@@ -9132,7 +7858,7 @@
         "volcano_drawingroom"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_232_9005",
@@ -9152,7 +7878,7 @@
         "volcano_pathway"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_003_9000",
@@ -9176,7 +7902,7 @@
         "volcano_postabductors"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_002_9001",
@@ -9199,7 +7925,7 @@
         "volcano_temple"
       ],
       "type": "legacy_dungeon",
-      "weight": 17,
+      "weight": 22,
       "entry_fogs": [
         {
           "fog_id": "AEG099_003_0500",
@@ -9236,7 +7962,7 @@
         "volcano_posttemple_elevator"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_003_0501",
@@ -9257,7 +7983,7 @@
         "volcano_town"
       ],
       "type": "other",
-      "weight": 12,
+      "weight": 14,
       "entry_fogs": [
         {
           "fog_id": "AEG099_232_9005",
@@ -9285,7 +8011,7 @@
         "volcano_rykard"
       ],
       "type": "major_boss",
-      "weight": 3,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_003_9000",
@@ -9305,7 +8031,7 @@
         "volcano_sendinggate"
       ],
       "type": "other",
-      "weight": 2,
+      "weight": 4,
       "entry_fogs": [
         {
           "fog_id": "AEG099_232_9004",
@@ -9353,34 +8079,6 @@
         {
           "fog_id": "AEG099_003_0500",
           "zone": "volcano_town"
-        }
-      ]
-    },
-    {
-      "id": "westrampart_5448",
-      "zones": [
-        "westrampart"
-      ],
-      "type": "other",
-      "weight": 2,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "westrampart"
-        },
-        {
-          "fog_id": "AEG099_230_9500",
-          "zone": "westrampart"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "westrampart"
-        },
-        {
-          "fog_id": "AEG099_230_9500",
-          "zone": "westrampart"
         }
       ]
     }

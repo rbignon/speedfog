@@ -880,12 +880,44 @@ def filter_and_enrich_clusters(
 # =============================================================================
 
 
-def clusters_to_json(clusters: list[Cluster]) -> dict:
-    """Convert clusters to JSON-serializable format."""
+def build_zone_maps(
+    clusters: list[Cluster],
+    areas: dict[str, AreaData],
+) -> dict[str, str]:
+    """
+    Build zone→map mapping for all zones in clusters.
+
+    Takes the first (primary) map from each zone's map list.
+    """
+    zone_maps: dict[str, str] = {}
+
+    # Collect all zones from clusters
+    all_zones: set[str] = set()
+    for cluster in clusters:
+        all_zones.update(cluster.zones)
+
+    # Build mapping
+    for zone_name in sorted(all_zones):
+        if zone_name in areas:
+            area = areas[zone_name]
+            if area.maps:
+                zone_maps[zone_name] = area.maps[0]  # Primary map
+
+    return zone_maps
+
+
+def clusters_to_json(
+    clusters: list[Cluster],
+    areas: dict[str, AreaData],
+) -> dict:
+    """Convert clusters to JSON-serializable format with zone→map mapping."""
+    zone_maps = build_zone_maps(clusters, areas)
+
     return {
-        "version": "1.0",
+        "version": "1.1",
         "generated_from": "fog.txt",
         "cluster_count": len(clusters),
+        "zone_maps": zone_maps,
         "clusters": [
             {
                 "id": c.cluster_id,
@@ -1047,7 +1079,7 @@ def main() -> int:
             print(f"    {t}: {count}")
 
     # Write output
-    output_data = clusters_to_json(clusters)
+    output_data = clusters_to_json(clusters, areas)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(output_data, f, indent=2)

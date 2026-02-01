@@ -49,6 +49,7 @@ class ClusterPool:
     clusters: list[ClusterData] = field(default_factory=list)
     by_type: dict[str, list[ClusterData]] = field(default_factory=dict)
     by_id: dict[str, ClusterData] = field(default_factory=dict)
+    zone_maps: dict[str, str] = field(default_factory=dict)
 
     def add(self, cluster: ClusterData) -> None:
         """Add a cluster to the pool."""
@@ -66,6 +67,18 @@ class ClusterPool:
         """Get a cluster by ID."""
         return self.by_id.get(cluster_id)
 
+    def get_map(self, zone: str) -> str | None:
+        """Get the map ID for a zone."""
+        return self.zone_maps.get(zone)
+
+    def get_map_for_cluster(self, cluster: ClusterData) -> str | None:
+        """Get the primary map for a cluster (from first zone with a map)."""
+        for zone in cluster.zones:
+            map_id = self.zone_maps.get(zone)
+            if map_id:
+                return map_id
+        return None
+
     @classmethod
     def from_json(cls, path: Path) -> ClusterPool:
         """Load cluster pool from JSON file."""
@@ -73,6 +86,8 @@ class ClusterPool:
             data = json.load(f)
 
         pool = cls()
+        pool.zone_maps = data.get("zone_maps", {})
+
         for cluster_data in data.get("clusters", []):
             cluster = ClusterData.from_dict(cluster_data)
             pool.add(cluster)
