@@ -16,15 +16,18 @@ Unlike FogRando which randomizes the entire world, SpeedFog generates a smaller,
 **Hybrid Python + C#:**
 
 ```
-Python (core/)          C# (writer/)
-─────────────────       ─────────────────
-config.toml        →
-clusters.json      →    graph.json → SpeedFogWriter → mod files
-DAG generation     →
+Python (core/)          C# (writer/)                    Output
+─────────────────       ─────────────────               ─────────────────
+config.toml        →                                    output/
+clusters.json      →    graph.json → SpeedFogWriter →   ├── mod/
+DAG generation     →                                    ├── ModEngine/
+                                                        ├── launch_speedfog.bat
+                                                        └── spoiler.txt
 ```
 
 - **Python**: Configuration, cluster/zone data, DAG generation algorithm
-- **C#**: SoulsFormats I/O, EMEVD events, param modifications
+- **C#**: SoulsFormats I/O, EMEVD events, param modifications, packaging
+- **Output**: Self-contained folder with ModEngine 2 (auto-downloaded)
 
 ## Directory Structure
 
@@ -32,14 +35,16 @@ DAG generation     →
 speedfog/
 ├── core/                    # Python - DAG generation (Phase 1-2)
 │   └── speedfog_core/
-├── writer/                  # C# - Mod file generation (Phase 3)
+├── writer/                  # C# - Mod file generation (Phase 3-4)
 │   └── SpeedFogWriter/
+│       ├── Writers/         # Mod file writers
+│       └── Packaging/       # ModEngine downloader, launcher scripts
 ├── reference/               # FogRando decompiled code (READ-ONLY)
 │   ├── fogrando-src/        # C# source files
 │   ├── fogrando-data/       # YAML data files (fog.txt, fogevents.txt)
 │   └── lib/                 # DLLs (SoulsFormats, SoulsIds, etc.)
 ├── docs/plans/              # Implementation specifications
-└── output/                  # Generated mod files (gitignored)
+└── output/                  # Generated mod (gitignored, self-contained)
 ```
 
 ## Key Files
@@ -50,6 +55,7 @@ speedfog/
 | `docs/plans/phase-1-foundations.md` | Python setup, zone conversion |
 | `docs/plans/phase-2-dag-generation.md` | DAG algorithm, balancing |
 | `docs/plans/phase-3-csharp-writer.md` | C# writer with FogRando references |
+| `docs/plans/phase-4-packaging.md` | ModEngine download, launcher scripts |
 | `reference/fogrando-src/GameDataWriterE.cs` | Main FogRando writer (5639 lines) |
 | `reference/fogrando-src/EldenScaling.cs` | Enemy scaling logic |
 | `config.example.toml` | Example configuration |
@@ -96,11 +102,15 @@ When implementing features, refer to these sections in `GameDataWriterE.cs`:
 ```bash
 # Python core (after Phase 1-2 implementation)
 cd core && pip install -e .
-speedfog config.toml -o graph.json --spoiler spoiler.txt
+speedfog config.toml -o graph.json
 
-# C# writer (after Phase 3 implementation)
+# C# writer (after Phase 3-4 implementation)
 cd writer && dotnet build
 dotnet run -- graph.json "/path/to/ELDEN RING/Game" ./output
+
+# Play! (output is self-contained with ModEngine + launcher)
+./output/launch_speedfog.bat   # Windows
+./output/launch_speedfog.sh    # Linux/Proton
 ```
 
 ## Important Notes

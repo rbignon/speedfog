@@ -3545,4 +3545,7 @@ ls -la output/mods/speedfog/
 
 ## Next Phase
 
-After completing Phase 3, proceed to Phase 4: Integration & Testing (spec to be created).
+After completing Phase 3, proceed to **[Phase 4: Packaging & Launcher](./phase-4-packaging.md)** which handles:
+- Automatic ModEngine 2 download from GitHub releases
+- Generation of `config_speedfog.toml` and launcher scripts
+- Self-contained output folder (double-click to play)
