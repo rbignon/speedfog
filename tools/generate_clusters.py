@@ -715,6 +715,11 @@ def get_zone_type(
             return "major_boss"
         return "boss_arena"
 
+    # Trivial zones are pass-through areas, not significant dungeons
+    # Check after special zones (start, final_boss, boss_arena) but before map-based classification
+    if "trivial" in tags_lower:
+        return "other"
+
     # Mini-fortresses (Caria Manor, Shaded Castle, Castle Redmane, Castle Sol)
     if area.name in fortress_zones:
         return "legacy_dungeon"
