@@ -89,7 +89,7 @@ The Phase 3 C# Writer implementation initially had critical gaps in EMEVD event 
 
 ---
 
-## Low Priority Issues (P2) - Pending
+## Low Priority Issues (P2) - ✅ FIXED
 
 ### Issue 5: Missing RuntimeIdentifier in csproj
 
@@ -97,15 +97,113 @@ The Phase 3 C# Writer implementation initially had critical gaps in EMEVD event 
 
 ---
 
-### Issue 6: DCX Types Should Use Constants
+### Issue 6: DCX Types Should Use Constants - ✅ DOCUMENTED
 
-**Status**: Not fixed (works correctly, just a code style issue)
+**Fix Applied** (2026-02-01): Added documentation comments explaining the magic numbers:
+```csharp
+// DCX compression types for Elden Ring (numeric values used for compatibility)
+// 13 = DCX_KRAK (Kraken compression, used for regulation.bin params)
+// 9 = DCX_DFLT_10000_24_9 (used for EMEVD and MSB files)
+// These match FogRando's GameDataWriterE.cs L4982
+```
 
 ---
 
 ### Issue 7: SpawnPoint Add Method
 
 **Status**: Not fixed (current implementation works)
+
+---
+
+## Second Code Review (2026-02-01) - ✅ ALL FIXED
+
+### Issue 8: Missing `total_zones` Field in SpeedFogGraph - ✅ FIXED
+
+**File**: `writer/SpeedFogWriter/Models/SpeedFogGraph.cs`
+
+Added missing field to match Python output format.
+
+---
+
+### Issue 9: WarpWriter MSB Lookup Bug - ✅ FIXED (CRITICAL)
+
+**File**: `writer/SpeedFogWriter/Writers/WarpWriter.cs`
+
+**Problem**: Entry fog position was looked up in target MSB instead of entry fog's actual map MSB.
+
+**Fix Applied**: Now correctly looks up in entry fog's map:
+```csharp
+var entryFogMap = fogGate.EntryFogData.Map;
+if (_msbs.TryGetValue(entryFogMap, out var entryMsb))
+{
+    (position, rotation) = GetFogPositionFromMsb(fogGate.EntryFogData, entryMsb);
+}
+```
+
+---
+
+### Issue 10: EnemyScalingApplicator Not Tracking Modified EMEVDs - ✅ FIXED (CRITICAL)
+
+**File**: `writer/SpeedFogWriter/Writers/EnemyScalingApplicator.cs`
+
+**Problem**: Modified EMEVDs weren't tracked, so scale events wouldn't be written.
+
+**Fix Applied**:
+- Added `_modifiedEmevds` HashSet and `ModifiedEmevds` property
+- Track in `CreateScaleEvent()`: `_modifiedEmevds.Add(mapName)`
+- Integrated in `ModWriter.GenerateScaling()` to add to `_writeEmevds`
+
+---
+
+### Issue 11: EntityIdAllocator Region/Flag ID Range Conflicts - ✅ FIXED
+
+**File**: `writer/SpeedFogWriter/Helpers/EntityIdAllocator.cs`
+
+**Problem**: Region IDs (1040290070) could collide with Flag IDs (1040290000).
+
+**Fix Applied**: Updated to use separate ranges per `speedfog-events.yaml` allocation plan:
+- Entity IDs: 755890000+ (FogRando range, no conflict)
+- Flag IDs: 79200000+
+- Region IDs: 79100000+
+- Event IDs: 79000100+
+
+---
+
+### Issue 12: FogAssetHelper Not Integrated in ModWriter - ✅ FIXED
+
+**Files**: `FogGateWriter.cs`, `FogGateEvent.cs`, `ModWriter.cs`
+
+**Problem**: MakeFrom fogs (dynamic fog gates with inline positions) weren't being created.
+
+**Fix Applied**:
+- Added `IsMakeFrom`, `FogPosition`, `FogRotation` to `FogGateEvent`
+- `FogGateWriter` now populates these fields from `FogEntryData`
+- `ModWriter.CreateFogGates()` calls `_fogAssetHelper.CreateFogGate()` for makefrom fogs
+
+---
+
+### Issue 13: Missing SpeedFogGraph Helper Methods - ✅ FIXED
+
+**File**: `writer/SpeedFogWriter/Models/SpeedFogGraph.cs`
+
+Added per spec lines 438-475:
+- `AllEdgesResolved()` - Yields edges with resolved node references
+- `GetOutgoingEdges(nodeId)` - Returns edges leaving a node
+- `GetIncomingEdges(nodeId)` - Returns edges entering a node
+- `NodesByLayer()` - Groups nodes by layer
+
+---
+
+### Issue 14: Missing NodeData Convenience Properties - ✅ FIXED
+
+**File**: `writer/SpeedFogWriter/Models/NodeData.cs`
+
+Added per spec lines 550-555:
+- `IsLegacyDungeon`
+- `IsMiniDungeon`
+- `IsBossArena`
+- `IsMajorBoss`
+- `IsMergePoint` (true when `EntryFogs.Count > 1`)
 
 ---
 
@@ -120,8 +218,14 @@ The Phase 3 C# Writer implementation initially had critical gaps in EMEVD event 
 
 | File | Changes |
 |------|---------|
-| `writer/SpeedFogWriter/Writers/ModWriter.cs` | Added event config loading, template registration, fog gate event generation |
-| `writer/SpeedFogWriter/Writers/EnemyScalingApplicator.cs` | Added `_colToZone`, collision lookup, `ScaleEventId` constant |
+| `writer/SpeedFogWriter/Writers/ModWriter.cs` | Added event config loading, template registration, fog gate event generation, makefrom fog creation, EMEVD tracking, DCX documentation |
+| `writer/SpeedFogWriter/Writers/EnemyScalingApplicator.cs` | Added `_colToZone`, collision lookup, `ScaleEventId` constant, `ModifiedEmevds` tracking |
+| `writer/SpeedFogWriter/Writers/WarpWriter.cs` | Fixed MSB lookup bug for entry fog position |
+| `writer/SpeedFogWriter/Writers/FogGateWriter.cs` | Added makefrom fog field population |
+| `writer/SpeedFogWriter/Writers/FogGateEvent.cs` | Added `IsMakeFrom`, `FogPosition`, `FogRotation` |
+| `writer/SpeedFogWriter/Models/SpeedFogGraph.cs` | Added `total_zones` field, helper methods |
+| `writer/SpeedFogWriter/Models/NodeData.cs` | Added convenience type-checking properties |
+| `writer/SpeedFogWriter/Helpers/EntityIdAllocator.cs` | Fixed ID allocation ranges |
 
 ---
 
@@ -138,6 +242,15 @@ After corrections, verify:
   - [ ] MSBs with SpawnPoint regions
 - [ ] Integration test (`writer/test/run_integration.sh`) passes
 - [ ] Manual test: fog gate is visible and functional in-game
+
+---
+
+## Commits
+
+| Commit | Description |
+|--------|-------------|
+| `a5caff4` | feat(phase3): add EMEVD event generation for fog gates |
+| `8b01068` | fix(phase3): address code review issues in C# writer |
 
 ---
 
