@@ -265,6 +265,14 @@ public class ModWriter
 
     private void GenerateFogGateEvents(FogGateEvent fogGate, int buttonParam, int defaultFogSfx, Dictionary<int, int> fogSfxCache)
     {
+        // Handle item-triggered warps (e.g., Pureblood Knight's Medal) differently
+        // They need to go in common.emevd and use a different template
+        if (fogGate.IsItemWarp)
+        {
+            GenerateItemWarpEvent(fogGate);
+            return;
+        }
+
         // Get source map EMEVD
         if (!_loader!.Emevds.TryGetValue(fogGate.SourceMap, out var emevd))
         {
@@ -341,6 +349,49 @@ public class ModWriter
 
         // Mark EMEVD for writing
         _writeEmevds.Add(fogGate.SourceMap);
+    }
+
+    /// <summary>
+    /// Generate events for item-triggered warps (e.g., Pureblood Knight's Medal).
+    /// These events detect when a SpEffect is applied and warp the player.
+    /// They must go in common.emevd since they can trigger from anywhere.
+    /// Reference: FogRando fogevents.txt event 922
+    /// </summary>
+    private void GenerateItemWarpEvent(FogGateEvent fogGate)
+    {
+        // Get common.emevd for global events
+        if (!_loader!.Emevds.TryGetValue("common", out var commonEmevd))
+        {
+            Console.WriteLine($"    WARNING: common.emevd not loaded, cannot create item warp for {fogGate.EdgeFogId}");
+            return;
+        }
+
+        var event0 = commonEmevd.Events.FirstOrDefault(e => e.ID == 0);
+        if (event0 == null)
+        {
+            Console.WriteLine($"    WARNING: Event 0 not found in common.emevd");
+            return;
+        }
+
+        // Pack target map bytes
+        var mapBytes = fogGate.TargetMapBytes;
+        int packedMapBytes = mapBytes[0] | (mapBytes[1] << 8) | (mapBytes[2] << 16) | (mapBytes[3] << 24);
+
+        // Add InitializeEvent for itemwarp template
+        // itemwarp(speffect, warp_region, map_bytes)
+        var itemWarpInit = _eventBuilder!.BuildInitializeEvent(
+            "itemwarp",
+            0,
+            fogGate.TriggerSpEffect!.Value,   // X0_4 = speffect
+            (int)fogGate.WarpRegionId,         // X4_4 = warp_region
+            packedMapBytes                     // X8_4 = packed map bytes
+        );
+        event0.Instructions.Add(itemWarpInit);
+
+        Console.WriteLine($"    [DEBUG] common event0: InitializeCommonEvent itemwarp({fogGate.TriggerSpEffect}, {fogGate.WarpRegionId}, {fogGate.TargetMap})");
+
+        // Mark common.emevd for writing
+        _writeEmevds.Add("common");
     }
 
     /// <summary>

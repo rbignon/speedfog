@@ -92,6 +92,26 @@ templates:
       - WaitFixedTimeFrames(1)
       - EndUnconditionally(EventEndType.Restart)
 
+  # Item-triggered warp (e.g., Pureblood Knight's Medal)
+  # Source: FogRando fogevents.txt ID 922
+  # Detects when player has a specific SpEffect and warps them
+  itemwarp:
+    id: 79000011
+    restart: true
+    params:
+      speffect: X0_4        # SpEffect that triggers the warp (e.g., 502160 for medal)
+      warp_region: X4_4     # SpawnPoint region to warp to
+      map_bytes: X8_4       # Packed 4 bytes: [m, area, block, sub]
+    commands:
+      - EndIfPlayerIsInWorldType(EventEndType.End, WorldType.OtherWorld)
+      - IfPlayerIsInWorldType(AND_01, WorldType.OwnWorld)
+      - IfCharacterHasSpEffect(AND_01, 10000, X0_4, true, ComparisonType.Equal, 1)
+      - IfConditionGroup(MAIN, PASS, AND_01)
+      - ShowTextOnLoadingScreen(Disabled)
+      - WarpPlayer(X8_1, X9_1, X10_1, X11_1, X4_4, 0)
+      - WaitFixedTimeFrames(1)
+      - EndUnconditionally(EventEndType.Restart)
+
   # Start boss fight when player enters region (if boss not defeated)
   # Source: FogRando ID 9005776
   startboss:

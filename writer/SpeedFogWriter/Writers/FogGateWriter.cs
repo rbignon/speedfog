@@ -60,6 +60,14 @@ public class FogGateWriter
             var primaryEntryFog = target.PrimaryEntryFog;
             var entryFogData = primaryEntryFog != null ? _fogData.GetFog(primaryEntryFog) : null;
 
+            // Determine if this is an item-triggered warp
+            var fogType = exitFogData.Type;
+            int? triggerSpEffect = null;
+            if (fogType == "warp" && FogGateEvent.ItemWarpSpEffects.TryGetValue(edge.FogId, out var spEffect))
+            {
+                triggerSpEffect = spEffect;
+            }
+
             var fogEvent = new FogGateEvent
             {
                 EventId = _idAllocator.AllocateEventId(),
@@ -88,6 +96,9 @@ public class FogGateWriter
 
                 SourceTier = source.Tier,
                 TargetTier = target.Tier,
+
+                FogType = fogType,
+                TriggerSpEffect = triggerSpEffect,
             };
 
             events.Add(fogEvent);

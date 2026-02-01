@@ -44,5 +44,31 @@ public class FogGateEvent
     public int SourceTier { get; set; }
     public int TargetTier { get; set; }
 
+    /// <summary>
+    /// The type of fog gate: "entrance" (physical fog gate) or "warp" (item-triggered).
+    /// </summary>
+    public string FogType { get; set; } = "entrance";
+
+    /// <summary>
+    /// For warp-type fogs, the SpEffect that triggers the warp.
+    /// For example, Pureblood Knight's Medal triggers SpEffect 502160.
+    /// </summary>
+    public int? TriggerSpEffect { get; set; }
+
     public byte[] TargetMapBytes => PathHelper.ParseMapId(TargetMap);
+
+    /// <summary>
+    /// Known SpEffects for item-triggered warps.
+    /// Key: fog ID (e.g., "12052021"), Value: SpEffect ID
+    /// Reference: FogRando fogevents.txt event 922
+    /// </summary>
+    public static readonly Dictionary<string, int> ItemWarpSpEffects = new()
+    {
+        { "12052021", 502160 },  // Pureblood Knight's Medal
+    };
+
+    /// <summary>
+    /// Check if this is an item-triggered warp (vs a physical fog gate).
+    /// </summary>
+    public bool IsItemWarp => FogType == "warp" && TriggerSpEffect.HasValue;
 }
