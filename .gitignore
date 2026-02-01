@@ -54,3 +54,7 @@ spoiler.txt
 # Track writer/lib/ for README but not DLLs
 !writer/lib/
 writer/lib/*.dll
+
+# Track runtime assets (crash fix DLLs, etc.)
+!writer/assets/
+!writer/assets/*.dll

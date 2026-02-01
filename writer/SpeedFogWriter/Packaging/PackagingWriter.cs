@@ -34,11 +34,15 @@ public class PackagingWriter
         CopyDirectory(modEngineCachePath, modEngineOutputPath);
         Console.WriteLine($"Copied ModEngine 2 to {modEngineOutputPath}");
 
-        // 3. Generate config file (using path relative to output dir)
+        // 3. Copy runtime assets (crash fix DLL, etc.)
+        CopyAssets();
+        Console.WriteLine("Copied runtime assets to lib/");
+
+        // 4. Generate config file (using path relative to output dir)
         ConfigGenerator.WriteModEngineConfig(_outputDir, "mods/speedfog");
         Console.WriteLine("Generated config_speedfog.toml");
 
-        // 4. Generate launcher scripts
+        // 5. Generate launcher scripts
         ConfigGenerator.WriteBatchLauncher(_outputDir);
         ConfigGenerator.WriteShellLauncher(_outputDir);
         Console.WriteLine("Generated launcher scripts");
@@ -48,6 +52,55 @@ public class PackagingWriter
         Console.WriteLine($"To play:");
         Console.WriteLine($"  Windows: double-click {Path.Combine(_outputDir, "launch_speedfog.bat")}");
         Console.WriteLine($"  Linux:   run {Path.Combine(_outputDir, "launch_speedfog.sh")}");
+    }
+
+    /// <summary>
+    /// Copies runtime assets (DLLs, etc.) to the output lib/ folder.
+    /// </summary>
+    private void CopyAssets()
+    {
+        var libDir = Path.Combine(_outputDir, "lib");
+        Directory.CreateDirectory(libDir);
+
+        // Find assets directory relative to the executable
+        var assetsDir = FindAssetsDirectory();
+        if (assetsDir == null)
+        {
+            Console.WriteLine("Warning: assets directory not found, skipping asset copy");
+            return;
+        }
+
+        foreach (var file in Directory.GetFiles(assetsDir, "*.dll"))
+        {
+            var destFile = Path.Combine(libDir, Path.GetFileName(file));
+            File.Copy(file, destFile, overwrite: true);
+        }
+    }
+
+    /// <summary>
+    /// Finds the assets directory by searching up from the executable location.
+    /// </summary>
+    private static string? FindAssetsDirectory()
+    {
+        // Try relative to executable
+        var exeDir = AppContext.BaseDirectory;
+        var candidates = new[]
+        {
+            Path.Combine(exeDir, "assets"),
+            Path.Combine(exeDir, "..", "assets"),
+            Path.Combine(exeDir, "..", "..", "assets"),
+            Path.Combine(exeDir, "..", "..", "..", "assets"),
+            Path.Combine(exeDir, "..", "..", "..", "..", "assets"),
+        };
+
+        foreach (var candidate in candidates)
+        {
+            var normalized = Path.GetFullPath(candidate);
+            if (Directory.Exists(normalized))
+                return normalized;
+        }
+
+        return null;
     }
 
     /// <summary>

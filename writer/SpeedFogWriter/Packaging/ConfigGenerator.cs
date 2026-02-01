@@ -21,7 +21,9 @@ public static class ConfigGenerator
 
 [modengine]
 debug = false
-external_dlls = []
+external_dlls = [
+    ""lib\\\\RandomizerCrashFix.dll"",
+]
 
 [extension.mod_loader]
 enabled = true
