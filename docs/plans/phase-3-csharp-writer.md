@@ -3,7 +3,7 @@
 **Parent document**: [SpeedFog Design](./2026-01-29-speedfog-design.md)
 **Prerequisite**: [Phase 2: DAG Generation](./phase-2-dag-generation.md), [Cluster Generation](./generate-clusters-spec.md)
 **Status**: Ready for implementation
-**Last updated**: 2026-02-01 (zone_maps in clusters.json, FogRando ID ranges, Events API fixed)
+**Last updated**: 2026-02-01 (feasibility review: DCX types, template MSB, Events init, validation)
 
 ## Objective
 
@@ -65,6 +65,40 @@ speedfog/writer/
 │       └── PathHelper.cs          # File path utilities
 │
 └── SpeedFogWriter.sln
+```
+
+---
+
+## Task 3.0: Prerequisites & Data Files
+
+Before starting C# implementation, ensure these files exist:
+
+### 3.0.1: speedfog-events.yaml (TO CREATE)
+
+Create `writer/data/speedfog-events.yaml` with event templates. This file defines EMEVD event structures in a readable format, parsed at runtime by `Events.ParseAddArg()`.
+
+**File location**: `writer/data/speedfog-events.yaml`
+
+The template content is defined in Task 3.3 below. Create the file before implementing `EventBuilder`.
+
+### 3.0.2: Required Data Files Checklist
+
+| File | Status | Purpose |
+|------|--------|---------|
+| `reference/fogrando-data/er-common.emedf.json` | ✅ EXISTS | EMEVD instruction definitions |
+| `reference/lib/*.dll` | ✅ EXISTS | SoulsFormats, SoulsIds, YamlDotNet |
+| `writer/data/fog_data.json` | ✅ EXISTS | Fog gate metadata |
+| `core/data/clusters.json` | ✅ EXISTS | Cluster definitions with zone_maps |
+| `writer/data/speedfog-events.yaml` | ❌ TO CREATE | Event templates |
+
+### 3.0.3: Template MSB Dependency
+
+**Critical**: The fog asset creation requires a template asset from `m60_46_38_00`. This map MUST always be loaded, even if not in the generated graph.
+
+```csharp
+// Template asset location (FogRando L154)
+const string TemplateMsbMap = "m60_46_38_00";
+const string TemplateAssetName = "AEG007_310_2000";
 ```
 
 ---
@@ -2319,14 +2353,19 @@ public class ModWriter
     {
         _editor = new GameEditor(GameSpec.FromGame.ER);
         _editor.Spec.GameDir = _gameDir;
-        _editor.Spec.DefDir = Path.Combine(_gameDir, "..", "Defs");  // Adjust path as needed
+        _editor.Spec.DefDir = Path.Combine(_gameDir, "..", "Defs");  // May need adjustment
 
         _idAllocator = new EntityIdAllocator();
 
         // Initialize Events helper for EMEVD parsing
-        // Reference: Randomizer.cs L36, L93
+        // Reference: FogRando Randomizer.cs L36, L93
+        // Path: reference/fogrando-data/er-common.emedf.json (relative to project root)
         var emedfPath = Path.Combine(_dataDir, "..", "reference", "fogrando-data", "er-common.emedf.json");
+        if (!File.Exists(emedfPath))
+            throw new FileNotFoundException($"er-common.emedf.json not found: {emedfPath}");
+
         _events = new Events(emedfPath, darkScriptMode: true, paramAwareMode: true);
+        Console.WriteLine($"  Loaded EMEDF from {emedfPath}");
     }
 
     private void LoadGameData()
@@ -2371,13 +2410,62 @@ public class ModWriter
         _clusterData = ClusterFile.Load(clustersPath);
         Console.WriteLine($"  Loaded {_clusterData.ZoneMaps.Count} zone→map entries");
 
+        // Validate: all fog_ids in graph must exist in fog_data
+        ValidateFogReferences();
+
         // Now load only required MSBs
         LoadRequiredMsbs();
     }
 
+    private void ValidateFogReferences()
+    {
+        var missingFogs = new List<string>();
+        var missingZoneMaps = new List<string>();
+
+        // Check all edge fog_ids exist in fog_data
+        foreach (var edge in _graph.Edges)
+        {
+            if (_fogData!.GetFog(edge.FogId) == null)
+                missingFogs.Add($"{edge.FogId} (edge {edge.Source} -> {edge.Target})");
+        }
+
+        // Check all zones have map mappings
+        foreach (var node in _graph.AllNodes())
+        {
+            foreach (var zone in node.Zones)
+            {
+                if (_clusterData!.GetMap(zone) == null)
+                    missingZoneMaps.Add($"{zone} (node {node.Id})");
+            }
+        }
+
+        if (missingFogs.Any())
+        {
+            Console.WriteLine($"  ERROR: {missingFogs.Count} fog_ids not found in fog_data.json:");
+            foreach (var fog in missingFogs.Take(5))
+                Console.WriteLine($"    - {fog}");
+            if (missingFogs.Count > 5)
+                Console.WriteLine($"    ... and {missingFogs.Count - 5} more");
+            throw new Exception("Graph references fogs not in fog_data.json");
+        }
+
+        if (missingZoneMaps.Any())
+        {
+            Console.WriteLine($"  WARNING: {missingZoneMaps.Count} zones without map mapping:");
+            foreach (var zone in missingZoneMaps.Take(5))
+                Console.WriteLine($"    - {zone}");
+        }
+
+        Console.WriteLine($"  Validated {_graph.Edges.Count} fog references");
+    }
+
     private void LoadRequiredMsbs()
     {
-        var requiredMaps = new HashSet<string>();
+        // CRITICAL: Template MSB must always be loaded for fog asset creation
+        // Reference: FogRando GameDataWriterE.cs L154
+        const string TemplateMsbMap = "m60_46_38_00";
+
+        var requiredMaps = new HashSet<string> { TemplateMsbMap };
 
         // Maps containing fog gates (from edges)
         foreach (var edge in _graph.Edges)
@@ -2411,7 +2499,11 @@ public class ModWriter
         }
         Console.WriteLine($"  Loaded {_msbs.Count} MSB files (of {requiredMaps.Count} required)");
 
-        // Initialize fog asset helper (needs MSBs)
+        // Validate template MSB was loaded
+        if (!_msbs.ContainsKey(TemplateMsbMap))
+            throw new Exception($"Template MSB {TemplateMsbMap} required but not found");
+
+        // Initialize fog asset helper (needs MSBs including template)
         _fogAssetHelper = new FogAssetHelper(_msbs);
     }
 
@@ -2472,6 +2564,12 @@ public class ModWriter
 
         var modDir = Path.Combine(_outputDir, "mods", "speedfog");
 
+        // DCX compression types (from FogRando GameDataWriterE.cs L4979-4982)
+        // Note: These are cast to DCX.Type enum values
+        const DCX.Type ParamDcxType = (DCX.Type)13;   // For regulation.bin
+        const DCX.Type EmevdDcxType = (DCX.Type)9;    // For EMEVD files
+        const DCX.Type MsbDcxType = (DCX.Type)9;      // For MSB files
+
         // Write params (regulation.bin)
         var paramDir = Path.Combine(modDir, "param", "gameparam");
         Directory.CreateDirectory(paramDir);
@@ -2482,7 +2580,7 @@ public class ModWriter
             _params.Inner,
             f => f.Write(),
             null,
-            DCX.Type.DCX_DFLT_11000_44_9
+            ParamDcxType
         );
         Console.WriteLine($"  Written: regulation.bin");
 
@@ -2494,7 +2592,7 @@ public class ModWriter
             if (_emevds.TryGetValue(name, out var emevd))
             {
                 var path = Path.Combine(eventDir, $"{name}.emevd.dcx");
-                emevd.Write(path, DCX.Type.DCX_DFLT_11000_44_9);
+                emevd.Write(path, EmevdDcxType);
             }
         }
         Console.WriteLine($"  Written: {_writeEmevds.Count} EMEVD files");
@@ -2507,7 +2605,7 @@ public class ModWriter
             if (_msbs.TryGetValue(name, out var msb))
             {
                 var path = Path.Combine(mapDir, $"{name}.msb.dcx");
-                msb.Write(path, DCX.Type.DCX_DFLT_11000_44_9);
+                msb.Write(path, MsbDcxType);
             }
         }
         Console.WriteLine($"  Written: {_writeMsbs.Count} MSB files");
@@ -2906,28 +3004,14 @@ SpeedFog uses a **YAML-based template approach** (Task 3.3) for EMEVD generation
 - Start with a single hardcoded fog gate to verify EMEVD format
 - Then validate the YAML template system works correctly
 
-### 2. Fog Position Data (NEW)
+### 2. Fog Position Data - COMPLETE
 
-**Critical dependency**: The C# writer needs `fog_data.json` with fog gate coordinates.
+`fog_data.json` has been extracted and includes:
+- `asset_name`: Full MSB asset name (e.g., "AEG099_002_9000")
+- `lookup_by`: "name" or "entity_id" for MSB lookup
+- `position`/`rotation`: Only for makefrom fogs (others resolved at runtime from MSB)
 
-This data must be extracted from `fog.txt` before Phase 3 implementation begins. Create a Python script `tools/extract_fog_data.py` that:
-
-1. Parses `fog.txt` Entrances and Warps sections
-2. Extracts position, rotation, entity_id, map, model for each fog
-3. Outputs `writer/data/fog_data.json`
-
-**Key sections in fog.txt to parse**:
-```yaml
-Entrances:
-  - Name: stormveil_front
-    ID: 1034432500
-    Area: stormveil_start
-    ...
-    Pos: "123.5 45.2 -78.9"
-    Rot: "0 180 0"
-```
-
-**Note**: The fog_id in clusters.json matches the ID or Name from fog.txt Entrances section.
+**Script**: `tools/extract_fog_data.py` (already exists)
 
 ### 3. Cluster-Based Architecture
 
@@ -2952,18 +3036,42 @@ The `addFakeGate` helper in FogRando (closure, not standalone) creates fog wall 
 3. Setting position and rotation
 4. Optionally setting EntityID and SfxParamRelativeID
 
+**Critical**: Template asset `AEG007_310_2000` from `m60_46_38_00` must always be loaded.
+
 **Key references**:
+- `GameDataWriterE.cs:L154` - Template asset initialization
 - `GameDataWriterE.cs:L262` - Basic usage
 - `GameDataWriterE.cs:L363-367` - Multi-height stacking
 - `GameDataWriterE.cs:L5221-5243` - `addAssetModel` helper
 
-### 4. SoulsFormats Compatibility
+### 5. DCX Compression Types
 
-Ensure you're using a SoulsFormats version that supports Elden Ring. SoulsFormatsNEXT is recommended.
+FogRando uses specific DCX compression types (from `GameDataWriterE.cs` L4979-4982):
+
+```csharp
+// Param files (regulation.bin)
+DCX.Type type = (DCX.Type)13;
+
+// EMEVD and MSB files
+int overrideDcx = 9;  // Cast to DCX.Type when calling Write()
+```
+
+The spec uses these values. If SoulsFormats enum names change, these numeric values should still work.
+
+### 6. SoulsFormats Compatibility
+
+Ensure you're using a SoulsFormats version that supports Elden Ring. The DLLs in `reference/lib/` are from FogRando and should be compatible.
 
 ---
 
 ## Acceptance Criteria
+
+### Task 3.0 (Prerequisites) - PARTIAL
+- [x] `reference/fogrando-data/er-common.emedf.json` exists
+- [x] `reference/lib/*.dll` all present (SoulsFormats, SoulsIds, YamlDotNet, etc.)
+- [x] `writer/data/fog_data.json` exists with `asset_name` field
+- [x] `core/data/clusters.json` exists with `zone_maps` field
+- [ ] `writer/data/speedfog-events.yaml` created with templates
 
 ### Task 3.2.1 (fog_data.json) - COMPLETE
 - [x] Python script `tools/extract_fog_data.py` exists
@@ -2981,12 +3089,15 @@ Ensure you're using a SoulsFormats version that supports Elden Ring. SoulsFormat
 - [ ] Project builds with `dotnet build`
 - [ ] SoulsFormats loads correctly
 - [ ] SoulsIds Events class can parse EMEVD commands
+- [ ] Events initialized with correct `er-common.emedf.json` path
 
-### Task 3.1.1 (Game Data Loading) - NEW
+### Task 3.1.1 (Game Data Loading)
 - [ ] `GameDataLoader` can load regulation.bin (params)
 - [ ] `GameDataLoader` can load MSB files
 - [ ] `GameDataLoader` can load EMEVD files
 - [ ] Only required MSBs are loaded (based on graph)
+- [ ] Template MSB `m60_46_38_00` always loaded for asset cloning
+- [ ] Fog reference validation runs before MSB loading
 
 ### Task 3.2 (Models)
 - [ ] `SpeedFogGraph.Load()` parses graph.json correctly
