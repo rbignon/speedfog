@@ -8,6 +8,7 @@ repos:
       - id: check-toml
       - id: check-json
       - id: check-added-large-files
+        exclude: ^data/fogevents\.txt$  # FogRando event templates (1.4 MB)
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.4.10

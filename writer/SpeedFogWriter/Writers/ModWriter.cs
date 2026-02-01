@@ -86,7 +86,7 @@ public class ModWriter
         Console.WriteLine($"  Loaded {_fogLocations.EnemyAreas.Count} enemy areas");
 
         // Load FogRando event templates from fogevents.txt
-        var fogEventsPath = Path.Combine(_dataDir, "..", "reference", "fogrando-data", "fogevents.txt");
+        var fogEventsPath = Path.Combine(_dataDir, "fogevents.txt");
         _eventRegistry = EventTemplateRegistry.Load(fogEventsPath);
         _eventBuilder = new EventBuilder(_eventRegistry, _loader!.EventsHelper!);
         Console.WriteLine($"  Loaded {_eventRegistry.GetAllTemplates().Count()} event templates from fogevents.txt");
@@ -202,16 +202,14 @@ public class ModWriter
         Console.WriteLine($"  Registered {commonCount} template events in common");
     }
 
-    // Entity and SpEffect constants
-    private const int PlayerEntity = 10000;
-    private const int TrappedSpEffect = 4280;  // Required for fog gate traversal
-
-    // FogRando event IDs for events without names
+    // FogRando event IDs for events without names in fogevents.txt
     private const int AbductionEventId = 755850220;  // Iron Virgin grab immortality
 
     /// <summary>
     /// Initialize common events required for SpeedFog.
-    /// Equivalent to FogRando settings: roundtable=true, scale=true, ChapelInit=true.
+    /// Equivalent to FogRando settings: roundtable=true, scale=true, ChapelInit=false.
+    /// Note: We use ChapelInit=false mode because common_fingerstart/fingerdoor work together,
+    /// and common_roundtable waits for the flag set by common_fingerstart (1040292051).
     /// </summary>
     private void RegisterCommonEvents()
     {
@@ -229,13 +227,10 @@ public class ModWriter
             return;
         }
 
-        // Add SetSpEffect(PlayerEntity, TrappedSpEffect) to allow fog gate traversal
-        // This is the "trapped" speffect that fogwarp checks before allowing warp
-        // Without this, player sees error dialog when trying to use fog gates
-        // Reference: fogevents.txt fogwarp template line 88
-        var initTrapped = new EMEVD.Instruction(2004, 8, new List<object> { PlayerEntity, TrappedSpEffect });
-        event0.Instructions.Add(initTrapped);
-        Console.WriteLine($"  Added SetSpEffect({PlayerEntity}, {TrappedSpEffect}) - trapped status");
+        // NOTE: Do NOT set SpEffect 4280 (trapped) here!
+        // SpEffect 4280 PREVENTS fog traversal. The fogwarp template checks:
+        // "IfCharacterHasSpEffect(AND_06, 10000, 4280, false, ...)" - player must NOT have 4280
+        // 4280 is set during certain events (Iron Virgin grab) and cleared afterward.
 
         // Initialize common events based on FogRando forced settings
         var slot = 0;
@@ -258,13 +253,23 @@ public class ModWriter
             Console.WriteLine("  Initialized common_fingerdoor");
         }
 
-        // common_gracetable (755850205) - Roundtable access after grace initialization
-        // Makes Roundtable available after sitting at a grace (flag 1040290190)
-        if (_eventBuilder.HasTemplate("common_gracetable"))
+        // common_autostart (755850204) - Award starting items (flasks, etc.)
+        // Awards ItemLot 10010000 if flag 60210 is not set, for moved Chapel starts
+        if (_eventBuilder.HasTemplate("common_autostart"))
         {
-            var init = _eventBuilder.BuildInitializeEvent("common_gracetable", slot++);
+            var init = _eventBuilder.BuildInitializeEvent("common_autostart", slot++);
             event0.Instructions.Add(init);
-            Console.WriteLine("  Initialized common_gracetable (roundtable access)");
+            Console.WriteLine("  Initialized common_autostart (starting items)");
+        }
+
+        // common_roundtable (755850202) - Roundtable access after game start
+        // Makes Roundtable available after flag 1040292051 (set by common_fingerstart)
+        // Note: We use common_roundtable (not common_gracetable) because fingerstart sets 1040292051
+        if (_eventBuilder.HasTemplate("common_roundtable"))
+        {
+            var init = _eventBuilder.BuildInitializeEvent("common_roundtable", slot++);
+            event0.Instructions.Add(init);
+            Console.WriteLine("  Initialized common_roundtable (roundtable access)");
         }
 
         // common_bellofreturn (755850250) - Return to Chapel with Bell of Return

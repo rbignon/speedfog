@@ -36,11 +36,11 @@ speedfog/
 ├── data/                    # Shared data files (source + generated)
 │   ├── fog.txt              # FogRando zone definitions (source)
 │   ├── foglocations2.txt    # FogRando enemy areas (source)
+│   ├── fogevents.txt        # FogRando event templates (source)
 │   ├── er-common.emedf.json # EMEVD instruction definitions
 │   ├── clusters.json        # Generated zone clusters
 │   ├── fog_data.json        # Generated fog gate metadata
-│   ├── zone_metadata.toml   # Zone weight config
-│   └── speedfog-events.yaml # EMEVD event templates
+│   └── zone_metadata.toml   # Zone weight config
 ├── core/                    # Python - DAG generation (Phase 1-2)
 │   └── speedfog_core/
 ├── writer/                  # C# - Mod file generation (Phase 3-4)
@@ -50,7 +50,7 @@ speedfog/
 │       └── Packaging/       # ModEngine downloader, launcher scripts
 ├── reference/               # FogRando decompiled code (READ-ONLY)
 │   ├── fogrando-src/        # C# source files
-│   └── fogrando-data/       # Reference data (fogevents.txt, foglocations.txt)
+│   └── fogrando-data/       # Reference data (foglocations.txt)
 ├── docs/plans/              # Implementation specifications
 └── output/                  # Generated mod (gitignored, self-contained)
 ```
@@ -78,9 +78,9 @@ speedfog/
 - **For in-game bugs**: Always consult FogRando sources first - we aim to match its behavior exactly
 
 ### Event Templates
-- Prefer editing `data/speedfog-events.yaml` over custom C# code
-- Templates are easier to audit against FogRando's `fogevents.txt`
-- Only add C# logic when YAML templates cannot express the behavior
+- Event templates are loaded directly from FogRando's `data/fogevents.txt`
+- SpeedFog aims to match FogRando behavior exactly - no custom templates
+- Only add C# logic when FogRando templates cannot express the behavior
 
 ### Python (core/)
 - Python 3.10+
@@ -180,15 +180,15 @@ cd writer/test && ./run_integration.sh
 
 1. **Match FogRando behavior**: SpeedFog aims to closely replicate FogRando's in-game behavior. When investigating issues, always consult `reference/fogrando-src/` first.
 
-2. **Prefer data over code**: Fix issues by editing `data/speedfog-events.yaml` rather than inserting custom code in the C# writer. Event templates are easier to maintain and audit against FogRando.
+2. **Prefer FogRando parity**: Fix issues by consulting FogRando sources first. Event templates come directly from `data/fogevents.txt` (copied from FogRando).
 
 3. **Reference-driven debugging**: For any in-game problem (fog gates not working, warps failing, scaling issues), first find the equivalent FogRando implementation in `reference/`.
 
 ### Common Issues
 
 **EMEVD events not triggering:**
-- Check event templates in `speedfog-events.yaml` against FogRando's `fogevents.txt`
-- Verify event IDs are in the 79000000+ range
+- Check event templates in `data/fogevents.txt` against FogRando source in `reference/`
+- Verify common events are initialized in `RegisterCommonEvents()` in ModWriter.cs
 - Confirm entity IDs exist in the target MSB
 
 **Fog gates not visible:**
@@ -236,13 +236,13 @@ cd writer/test && ./run_integration.sh
 }
 ```
 
-### speedfog-events.yaml
+### fogevents.txt
 
-EMEVD event templates with parameter notation `X{offset}_{size}`:
+FogRando EMEVD event templates with parameter notation `X{offset}_{size}`:
 - `X0_4` = 4-byte int at offset 0
 - `X12_1` = 1-byte value at offset 12
 
-Templates: `scale`, `showsfx`, `fogwarp`, `fogwarp_simple`, `itemwarp`
+Key templates: `scale`, `showsfx`, `fogwarp`, `common_fingerstart`, `common_roundtable`
 
 ### fog_data.json
 
