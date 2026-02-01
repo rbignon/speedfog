@@ -1,7 +1,7 @@
 {
   "version": "1.1",
   "generated_from": "fog.txt",
-  "cluster_count": 264,
+  "cluster_count": 256,
   "zone_maps": {
     "academy": "m14_00_00_00",
     "academy_cavetower": "m14_00_00_00",
@@ -118,13 +118,6 @@
     "haligtree_postloretta": "m15_00_00_00",
     "leyndell": "m11_00_00_00",
     "leyndell2": "m11_05_00_00",
-    "leyndell2_bedchamber": "m11_05_00_00",
-    "leyndell2_erdtree": "m11_05_00_00",
-    "leyndell2_pretower": "m11_05_00_00",
-    "leyndell2_sanctuary": "m11_05_00_00",
-    "leyndell2_sanctuaryback": "m11_05_00_00",
-    "leyndell2_sanctuaryside": "m11_05_00_00",
-    "leyndell2_throne": "m11_05_00_00",
     "leyndell_bedchamber": "m11_00_00_00",
     "leyndell_colosseum": "m45_00_00_00",
     "leyndell_divinebridge": "m11_00_00_00",
@@ -3361,109 +3354,14 @@
       ]
     },
     {
-      "id": "leyndell2_94fb",
+      "id": "leyndell2_2899",
       "zones": [
         "leyndell2",
-        "leyndell2_bedchamber",
-        "leyndell2_sanctuary",
-        "leyndell2_sanctuaryback",
-        "leyndell2_sanctuaryside",
         "sewer",
         "sewer_ashen"
       ],
       "type": "legacy_dungeon",
-      "weight": 34,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9001",
-          "zone": "leyndell2_bedchamber"
-        },
-        {
-          "fog_id": "AEG099_001_9007",
-          "zone": "leyndell2_bedchamber"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9003",
-          "zone": "leyndell2"
-        },
-        {
-          "fog_id": "AEG099_230_9000",
-          "zone": "leyndell2"
-        },
-        {
-          "fog_id": "AEG099_231_9000",
-          "zone": "leyndell2"
-        },
-        {
-          "fog_id": "AEG099_001_9001",
-          "zone": "leyndell2_bedchamber"
-        },
-        {
-          "fog_id": "AEG099_001_9007",
-          "zone": "leyndell2_bedchamber"
-        },
-        {
-          "fog_id": "AEG099_001_9004",
-          "zone": "leyndell2_sanctuary"
-        },
-        {
-          "fog_id": "AEG099_001_9005",
-          "zone": "leyndell2_sanctuary"
-        },
-        {
-          "fog_id": "AEG099_001_9006",
-          "zone": "leyndell2_sanctuary"
-        },
-        {
-          "fog_id": "AEG099_001_9008",
-          "zone": "leyndell2_sanctuary"
-        },
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "leyndell2_sanctuary"
-        },
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "sewer"
-        },
-        {
-          "fog_id": "AEG099_230_9003",
-          "zone": "sewer"
-        }
-      ]
-    },
-    {
-      "id": "leyndell2_colosseum_7864",
-      "zones": [
-        "leyndell2_colosseum"
-      ],
-      "type": "other",
-      "weight": 4,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_231_9000",
-          "zone": "leyndell2_colosseum"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_231_9000",
-          "zone": "leyndell2_colosseum"
-        }
-      ]
-    },
-    {
-      "id": "leyndell2_e77d",
-      "zones": [
-        "leyndell2",
-        "leyndell2_sanctuaryside",
-        "sewer",
-        "sewer_ashen"
-      ],
-      "type": "legacy_dungeon",
-      "weight": 22,
+      "weight": 18,
       "entry_fogs": [
         {
           "fog_id": "AEG099_001_9003",
@@ -3496,208 +3394,12 @@
           "zone": "leyndell2"
         },
         {
-          "fog_id": "AEG099_001_9004",
-          "zone": "leyndell2_sanctuaryside"
-        },
-        {
           "fog_id": "AEG099_001_9000",
           "zone": "sewer"
         },
         {
           "fog_id": "AEG099_230_9003",
           "zone": "sewer"
-        }
-      ]
-    },
-    {
-      "id": "leyndell2_erdtree_5aa2",
-      "zones": [
-        "leyndell2_erdtree"
-      ],
-      "type": "final_boss",
-      "weight": 4,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9002",
-          "zone": "leyndell2_erdtree"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9002",
-          "zone": "leyndell2_erdtree"
-        }
-      ]
-    },
-    {
-      "id": "leyndell2_pretower_cc01",
-      "zones": [
-        "leyndell2_pretower"
-      ],
-      "type": "legacy_dungeon",
-      "weight": 10,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_231_9500",
-          "zone": "leyndell2_pretower"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_231_9500",
-          "zone": "leyndell2_pretower"
-        }
-      ]
-    },
-    {
-      "id": "leyndell2_sanctuary_1ffc",
-      "zones": [
-        "leyndell2_sanctuary"
-      ],
-      "type": "major_boss",
-      "weight": 4,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9003",
-          "zone": "leyndell2_sanctuary"
-        },
-        {
-          "fog_id": "AEG099_001_9004",
-          "zone": "leyndell2_sanctuary"
-        },
-        {
-          "fog_id": "AEG099_001_9005",
-          "zone": "leyndell2_sanctuary"
-        },
-        {
-          "fog_id": "AEG099_001_9006",
-          "zone": "leyndell2_sanctuary"
-        },
-        {
-          "fog_id": "AEG099_001_9007",
-          "zone": "leyndell2_sanctuary"
-        },
-        {
-          "fog_id": "AEG099_001_9008",
-          "zone": "leyndell2_sanctuary"
-        },
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "leyndell2_sanctuary"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9003",
-          "zone": "leyndell2_sanctuary"
-        },
-        {
-          "fog_id": "AEG099_001_9004",
-          "zone": "leyndell2_sanctuary"
-        },
-        {
-          "fog_id": "AEG099_001_9005",
-          "zone": "leyndell2_sanctuary"
-        },
-        {
-          "fog_id": "AEG099_001_9006",
-          "zone": "leyndell2_sanctuary"
-        },
-        {
-          "fog_id": "AEG099_001_9007",
-          "zone": "leyndell2_sanctuary"
-        },
-        {
-          "fog_id": "AEG099_001_9008",
-          "zone": "leyndell2_sanctuary"
-        },
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "leyndell2_sanctuary"
-        }
-      ]
-    },
-    {
-      "id": "leyndell2_sanctuaryback_5384",
-      "zones": [
-        "leyndell2_sanctuaryback"
-      ],
-      "type": "other",
-      "weight": 4,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9005",
-          "zone": "leyndell2_sanctuaryback"
-        },
-        {
-          "fog_id": "AEG099_001_9006",
-          "zone": "leyndell2_sanctuaryback"
-        },
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "leyndell2_sanctuaryback"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9005",
-          "zone": "leyndell2_sanctuaryback"
-        },
-        {
-          "fog_id": "AEG099_001_9006",
-          "zone": "leyndell2_sanctuaryback"
-        },
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "leyndell2_sanctuaryback"
-        }
-      ]
-    },
-    {
-      "id": "leyndell2_sanctuaryside_6b62",
-      "zones": [
-        "leyndell2_sanctuaryside"
-      ],
-      "type": "other",
-      "weight": 4,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9004",
-          "zone": "leyndell2_sanctuaryside"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9004",
-          "zone": "leyndell2_sanctuaryside"
-        }
-      ]
-    },
-    {
-      "id": "leyndell2_throne_ba7d",
-      "zones": [
-        "leyndell2_throne"
-      ],
-      "type": "major_boss",
-      "weight": 4,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9001",
-          "zone": "leyndell2_throne"
-        },
-        {
-          "fog_id": "AEG099_001_9002",
-          "zone": "leyndell2_throne"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_001_9001",
-          "zone": "leyndell2_throne"
-        },
-        {
-          "fog_id": "AEG099_001_9002",
-          "zone": "leyndell2_throne"
         }
       ]
     },

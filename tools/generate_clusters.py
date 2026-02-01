@@ -177,6 +177,9 @@ OVERWORLD_TAG = "overworld"
 # Tags to exclude areas
 EXCLUDE_TAGS = {"unused", "crawlonly"}
 
+# Zone name prefixes to exclude (these use alternative fog gates that FogMod ignores)
+EXCLUDE_ZONE_PREFIXES = {"leyndell2_"}  # Ashen Leyndell - use pre-ashen instead
+
 
 # =============================================================================
 # Parsing Functions
@@ -628,6 +631,11 @@ def should_exclude_area(
     # Check overworld
     if exclude_overworld and OVERWORLD_TAG in tags_lower:
         return True
+
+    # Check excluded zone prefixes (e.g., ashen Leyndell uses alternative fog gates)
+    for prefix in EXCLUDE_ZONE_PREFIXES:
+        if area.name.startswith(prefix):
+            return True
 
     return False
 

@@ -114,6 +114,8 @@ Example:
 
         // Required options for SpeedFog
         opt["shuffle"] = true;  // World shuffle mode
+        opt["req_backportal"] = true;  // Enable backportals so boss rooms have return warps as edges
+        opt["req_all"] = true;  // Make all dungeon tags "core" so backportals aren't marked unused
 
         Console.WriteLine($"Options: seed={opt.Seed}, shuffle={opt["shuffle"]}, scale={opt["scale"]}");
 

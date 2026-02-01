@@ -50,25 +50,38 @@ public static class ConnectionInjector
             throw new Exception($"Exit edge not found: {conn.ExitGate} in {conn.ExitArea}\nAvailable: {available}");
         }
 
-        // Find the entrance edge via Pair of destination's exit edge
+        // Find the entrance edge in the destination area
         if (!graph.Nodes.TryGetValue(conn.EntranceArea, out var entranceNode))
         {
             throw new Exception($"Entrance area not found: {conn.EntranceArea}");
         }
 
+        Graph.Edge? entranceEdge = null;
+
+        // Strategy 1: For bidirectional fogs, find via To + Pair
         // The entrance gate name refers to an exit edge on the destination side,
         // whose Pair is the entrance edge we want
         var destExitEdge = entranceNode.To.Find(e => e.Name == conn.EntranceGate);
-        if (destExitEdge == null)
+        if (destExitEdge != null)
         {
-            var available = string.Join(", ", entranceNode.To.Select(e => e.Name));
-            throw new Exception($"Entrance edge (via dest exit) not found: {conn.EntranceGate} in {conn.EntranceArea}\nAvailable: {available}");
+            entranceEdge = destExitEdge.Pair;
         }
 
-        var entranceEdge = destExitEdge.Pair;
+        // Strategy 2: For one-way warps, the entrance edge is directly in From
+        // (one-way warps only have entrance edge on destination, no exit edge)
         if (entranceEdge == null)
         {
-            throw new Exception($"Entrance edge has no Pair: {destExitEdge}");
+            entranceEdge = entranceNode.From.Find(e => e.Name == conn.EntranceGate);
+        }
+
+        if (entranceEdge == null)
+        {
+            var availableTo = string.Join(", ", entranceNode.To.Select(e => e.Name));
+            var availableFrom = string.Join(", ", entranceNode.From.Select(e => e.Name));
+            throw new Exception(
+                $"Entrance edge not found: {conn.EntranceGate} in {conn.EntranceArea}\n" +
+                $"Available in To: {availableTo}\n" +
+                $"Available in From: {availableFrom}");
         }
 
         // Connect them
