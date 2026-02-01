@@ -17,6 +17,8 @@ public class ModWriter
     private FogDataFile? _fogData;
     private ClusterFile? _clusterData;
     private FogLocations? _fogLocations;
+    private SpeedFogEventConfig? _eventConfig;
+    private EventBuilder? _eventBuilder;
     private EntityIdAllocator _idAllocator = new();
     private ScalingWriter? _scalingWriter;
     private FogAssetHelper? _fogAssetHelper;
@@ -43,6 +45,9 @@ public class ModWriter
 
         Console.WriteLine("Generating scaling effects...");
         GenerateScaling();
+
+        Console.WriteLine("Registering event templates...");
+        RegisterTemplateEvents();
 
         Console.WriteLine("Creating fog gates...");
         CreateFogGates();
@@ -74,6 +79,10 @@ public class ModWriter
 
         _fogLocations = FogLocations.Load(Path.Combine(_dataDir, "foglocations2.txt"));
         Console.WriteLine($"  Loaded {_fogLocations.EnemyAreas.Count} enemy areas");
+
+        _eventConfig = SpeedFogEventConfig.Load(Path.Combine(_dataDir, "speedfog-events.yaml"));
+        _eventBuilder = new EventBuilder(_eventConfig, _loader!.EventsHelper!);
+        Console.WriteLine($"  Loaded {_eventConfig.Templates.Count} event templates");
 
         ValidateFogReferences();
         LoadRequiredMsbs();
@@ -134,19 +143,107 @@ public class ModWriter
             _writeMsbs.Add(msb);
     }
 
+    private void RegisterTemplateEvents()
+    {
+        // Add template events to common_func.emevd
+        // These are parameterized events that get instantiated via InitializeEvent
+        if (!_loader!.Emevds.TryGetValue("common_func", out var commonFuncEmevd))
+        {
+            Console.WriteLine("  WARNING: common_func.emevd not loaded, skipping template registration");
+            return;
+        }
+
+        var count = 0;
+        foreach (var templateEvent in _eventBuilder!.GetAllTemplateEvents())
+        {
+            // Check if event already exists
+            if (commonFuncEmevd.Events.Any(e => e.ID == templateEvent.ID))
+            {
+                Console.WriteLine($"    Template event {templateEvent.ID} already exists, skipping");
+                continue;
+            }
+
+            commonFuncEmevd.Events.Add(templateEvent);
+            count++;
+        }
+
+        Console.WriteLine($"  Registered {count} template events in common_func");
+    }
+
     private void CreateFogGates()
     {
         var fogWriter = new FogGateWriter(_fogData!, _clusterData!, _idAllocator);
         _fogGates = fogWriter.CreateFogGates(_graph);
         Console.WriteLine($"  Created {_fogGates.Count} fog gate definitions");
 
+        // Create spawn regions in target MSBs
         var warpWriter = new WarpWriter(_loader!.Msbs, _fogData!);
         foreach (var fogGate in _fogGates)
         {
             warpWriter.CreateSpawnRegion(fogGate);
             _writeMsbs.Add(fogGate.TargetMap);
-            _writeEmevds.Add(fogGate.SourceMap);
         }
+
+        // Generate EMEVD events for each fog gate
+        var buttonParam = _eventBuilder!.GetDefaultInt("button_param", 63000);
+        var fogSfx = _eventBuilder.GetDefaultInt("fog_sfx", 8011);
+
+        foreach (var fogGate in _fogGates)
+        {
+            GenerateFogGateEvents(fogGate, buttonParam, fogSfx);
+        }
+
+        Console.WriteLine($"  Generated EMEVD events for {_fogGates.Count} fog gates");
+    }
+
+    private void GenerateFogGateEvents(FogGateEvent fogGate, int buttonParam, int fogSfx)
+    {
+        // Get source map EMEVD
+        if (!_loader!.Emevds.TryGetValue(fogGate.SourceMap, out var emevd))
+        {
+            Console.WriteLine($"    WARNING: EMEVD not loaded for {fogGate.SourceMap}");
+            return;
+        }
+
+        // Find event 0 (initialization event)
+        var event0 = emevd.Events.FirstOrDefault(e => e.ID == 0);
+        if (event0 == null)
+        {
+            Console.WriteLine($"    WARNING: Event 0 not found in {fogGate.SourceMap}");
+            return;
+        }
+
+        // Parse target map bytes for warp instruction
+        var mapBytes = fogGate.TargetMapBytes;
+
+        // Add InitializeEvent for showsfx template
+        // showsfx(fog_gate, sfx_id)
+        var showSfxInit = _eventBuilder!.BuildInitializeEvent(
+            "showsfx",
+            0,
+            fogGate.FogEntityId,    // X0_4 = fog_gate
+            fogSfx                   // X4_4 = sfx_id
+        );
+        event0.Instructions.Add(showSfxInit);
+
+        // Add InitializeEvent for fogwarp_simple template
+        // fogwarp_simple(fog_gate, button_param, warp_region, map_m, map_area, map_block, map_sub, rotate_target)
+        var fogWarpInit = _eventBuilder.BuildInitializeEvent(
+            "fogwarp_simple",
+            0,
+            fogGate.FogEntityId,         // X0_4 = fog_gate
+            buttonParam,                  // X4_4 = button_param
+            (int)fogGate.WarpRegionId,   // X8_4 = warp_region
+            (int)mapBytes[0],            // X12_1 = map_m
+            (int)mapBytes[1],            // X13_1 = map_area
+            (int)mapBytes[2],            // X14_1 = map_block
+            (int)mapBytes[3],            // X15_1 = map_sub
+            (int)fogGate.WarpRegionId    // X16_4 = rotate_target (face spawn point)
+        );
+        event0.Instructions.Add(fogWarpInit);
+
+        // Mark EMEVD for writing
+        _writeEmevds.Add(fogGate.SourceMap);
     }
 
     private void AddStartingItems()

@@ -6,6 +6,9 @@ namespace SpeedFogWriter.Writers;
 
 public class EnemyScalingApplicator
 {
+    // Scale event template ID from speedfog-events.yaml
+    private const int ScaleEventId = 79000001;
+
     private readonly Dictionary<string, MSBE> _msbs;
     private readonly Dictionary<string, EMEVD> _emevds;
     private readonly SpeedFogGraph _graph;
@@ -16,6 +19,7 @@ public class EnemyScalingApplicator
     private readonly Dictionary<string, int> _targetTiers = new();
     private readonly Dictionary<string, string> _mapToZone = new();
     private readonly Dictionary<int, string> _groupToZone = new();
+    private readonly Dictionary<string, string> _colToZone = new();
 
     private readonly HashSet<string> _excludedModels = new() { "c0000", "c4670" };
     private readonly HashSet<string> _modifiedMsbs = new();
@@ -53,6 +57,9 @@ public class EnemyScalingApplicator
 
             foreach (var group in area.GetGroups())
                 _groupToZone[group] = area.Name;
+
+            foreach (var col in area.GetCols())
+                _colToZone[col] = area.Name;
         }
 
         foreach (var node in _graph.AllNodes())
@@ -131,12 +138,27 @@ public class EnemyScalingApplicator
 
     private string? DetermineEnemyZone(string mapName, MSBE.Part.Enemy enemy)
     {
+        // Priority 1: Entity group ID
         foreach (var groupId in enemy.EntityGroupIDs)
         {
             if (groupId != 0 && _groupToZone.TryGetValue((int)groupId, out var zone))
                 return zone;
         }
 
+        // Priority 2: Collision part name
+        if (!string.IsNullOrEmpty(enemy.CollisionPartName))
+        {
+            // Try with map prefix first (e.g., "m10_00_00_00_h0000B0")
+            var colKey = $"{mapName}_{enemy.CollisionPartName}";
+            if (_colToZone.TryGetValue(colKey, out var colZone))
+                return colZone;
+
+            // Try collision name alone
+            if (_colToZone.TryGetValue(enemy.CollisionPartName, out colZone))
+                return colZone;
+        }
+
+        // Priority 3: Map name
         if (_mapToZone.TryGetValue(mapName, out var mapZone))
             return mapZone;
 
@@ -151,11 +173,11 @@ public class EnemyScalingApplicator
         var event0 = emevd.Events.FirstOrDefault(e => e.ID == 0);
         if (event0 == null) return;
 
-        // InitializeEvent(slot=0, eventId=79000001, entityId, spEffectId)
+        // InitializeEvent(slot=0, eventId=ScaleEventId, entityId, spEffectId)
         var initInstruction = new EMEVD.Instruction(2000, 0, new List<object>
         {
-            0,          // slot
-            79000001,   // scale event template ID
+            0,              // slot
+            ScaleEventId,   // scale event template ID
             entityId,
             spEffectId
         });
