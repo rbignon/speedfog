@@ -67,7 +67,6 @@ public class GameDataLoader
     {
         // Try vanilla dir first (flat), then game dir (nested)
         string? mapDir = null;
-        bool flatStructure = false;
 
         if (_vanillaDir != null && Directory.Exists(_vanillaDir))
         {
@@ -75,7 +74,6 @@ public class GameDataLoader
             if (Directory.GetFiles(_vanillaDir, "*.msb.dcx").Length > 0)
             {
                 mapDir = _vanillaDir;
-                flatStructure = true;
             }
         }
         if (mapDir == null)
