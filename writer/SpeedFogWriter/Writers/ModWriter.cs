@@ -18,7 +18,7 @@ public class ModWriter
     private FogDataFile? _fogData;
     private ClusterFile? _clusterData;
     private FogLocations? _fogLocations;
-    private SpeedFogEventConfig? _eventConfig;
+    private EventTemplateRegistry? _eventRegistry;
     private EventBuilder? _eventBuilder;
     private EntityIdAllocator _idAllocator = new();
     private ScalingWriter? _scalingWriter;
@@ -51,6 +51,9 @@ public class ModWriter
         Console.WriteLine("Registering event templates...");
         RegisterTemplateEvents();
 
+        Console.WriteLine("Initializing common events...");
+        RegisterCommonEvents();
+
         Console.WriteLine("Creating fog gates...");
         CreateFogGates();
 
@@ -82,9 +85,11 @@ public class ModWriter
         _fogLocations = FogLocations.Load(Path.Combine(_dataDir, "foglocations2.txt"));
         Console.WriteLine($"  Loaded {_fogLocations.EnemyAreas.Count} enemy areas");
 
-        _eventConfig = SpeedFogEventConfig.Load(Path.Combine(_dataDir, "speedfog-events.yaml"));
-        _eventBuilder = new EventBuilder(_eventConfig, _loader!.EventsHelper!);
-        Console.WriteLine($"  Loaded {_eventConfig.Templates.Count} event templates");
+        // Load FogRando event templates from fogevents.txt
+        var fogEventsPath = Path.Combine(_dataDir, "..", "reference", "fogrando-data", "fogevents.txt");
+        _eventRegistry = EventTemplateRegistry.Load(fogEventsPath);
+        _eventBuilder = new EventBuilder(_eventRegistry, _loader!.EventsHelper!);
+        Console.WriteLine($"  Loaded {_eventRegistry.GetAllTemplates().Count()} event templates from fogevents.txt");
 
         ValidateFogReferences();
         LoadRequiredMsbs();
@@ -150,30 +155,137 @@ public class ModWriter
 
     private void RegisterTemplateEvents()
     {
-        // Add template events to common_func.emevd
-        // These are parameterized events that get instantiated via InitializeEvent
+        // Register non-common templates in common_func.emevd
+        // These are parameterized events like scale, showsfx, fogwarp
         if (!_loader!.Emevds.TryGetValue("common_func", out var commonFuncEmevd))
         {
             Console.WriteLine("  WARNING: common_func.emevd not loaded, skipping template registration");
             return;
         }
 
-        var count = 0;
+        var funcCount = 0;
         foreach (var templateEvent in _eventBuilder!.GetAllTemplateEvents())
         {
-            // Check if event already exists
+            // Check if event already exists in common_func (FogRando already has them)
             if (commonFuncEmevd.Events.Any(e => e.ID == templateEvent.ID))
             {
-                Console.WriteLine($"    Template event {templateEvent.ID} already exists, skipping");
+                Console.WriteLine($"    Template event {templateEvent.ID} already exists in common_func, skipping");
                 continue;
             }
 
             commonFuncEmevd.Events.Add(templateEvent);
-            Console.WriteLine($"    [DEBUG] Added template event ID {templateEvent.ID} with {templateEvent.Instructions.Count} instructions");
-            count++;
+            funcCount++;
+        }
+        Console.WriteLine($"  Registered {funcCount} template events in common_func");
+
+        // Register common_* templates in common.emevd
+        // These are events like common_fingerstart, common_gracetable, etc.
+        if (!_loader.Emevds.TryGetValue("common", out var commonEmevd))
+        {
+            Console.WriteLine("  WARNING: common.emevd not loaded, skipping common template registration");
+            return;
         }
 
-        Console.WriteLine($"  Registered {count} template events in common_func");
+        var commonCount = 0;
+        foreach (var templateEvent in _eventBuilder.GetCommonTemplateEvents())
+        {
+            // Check if event already exists in common
+            if (commonEmevd.Events.Any(e => e.ID == templateEvent.ID))
+            {
+                Console.WriteLine($"    Template event {templateEvent.ID} already exists in common, skipping");
+                continue;
+            }
+
+            commonEmevd.Events.Add(templateEvent);
+            commonCount++;
+        }
+        Console.WriteLine($"  Registered {commonCount} template events in common");
+    }
+
+    // Entity and SpEffect constants
+    private const int PlayerEntity = 10000;
+    private const int TrappedSpEffect = 4280;  // Required for fog gate traversal
+
+    // FogRando event IDs for events without names
+    private const int AbductionEventId = 755850220;  // Iron Virgin grab immortality
+
+    /// <summary>
+    /// Initialize common events required for SpeedFog.
+    /// Equivalent to FogRando settings: roundtable=true, scale=true, ChapelInit=true.
+    /// </summary>
+    private void RegisterCommonEvents()
+    {
+        if (!_loader!.Emevds.TryGetValue("common", out var commonEmevd))
+        {
+            Console.WriteLine("  WARNING: common.emevd not loaded, skipping common event initialization");
+            return;
+        }
+
+        // Find event 0 (common initialization event)
+        var event0 = commonEmevd.Events.FirstOrDefault(e => e.ID == 0);
+        if (event0 == null)
+        {
+            Console.WriteLine("  WARNING: Event 0 not found in common.emevd");
+            return;
+        }
+
+        // Add SetSpEffect(PlayerEntity, TrappedSpEffect) to allow fog gate traversal
+        // This is the "trapped" speffect that fogwarp checks before allowing warp
+        // Without this, player sees error dialog when trying to use fog gates
+        // Reference: fogevents.txt fogwarp template line 88
+        var initTrapped = new EMEVD.Instruction(2004, 8, new List<object> { PlayerEntity, TrappedSpEffect });
+        event0.Instructions.Add(initTrapped);
+        Console.WriteLine($"  Added SetSpEffect({PlayerEntity}, {TrappedSpEffect}) - trapped status");
+
+        // Initialize common events based on FogRando forced settings
+        var slot = 0;
+
+        // common_fingerstart (755850280) - Start after picking up finger
+        // Sets flag 1040292051 when flag 60210 (finger picked up) is set
+        if (_eventBuilder!.HasTemplate("common_fingerstart"))
+        {
+            var init = _eventBuilder.BuildInitializeEvent("common_fingerstart", slot++);
+            event0.Instructions.Add(init);
+            Console.WriteLine("  Initialized common_fingerstart");
+        }
+
+        // common_fingerdoor (755850282) - Auto-open Chapel door
+        // Opens door when in Chapel and game has started
+        if (_eventBuilder.HasTemplate("common_fingerdoor"))
+        {
+            var init = _eventBuilder.BuildInitializeEvent("common_fingerdoor", slot++);
+            event0.Instructions.Add(init);
+            Console.WriteLine("  Initialized common_fingerdoor");
+        }
+
+        // common_gracetable (755850205) - Roundtable access after grace initialization
+        // Makes Roundtable available after sitting at a grace (flag 1040290190)
+        if (_eventBuilder.HasTemplate("common_gracetable"))
+        {
+            var init = _eventBuilder.BuildInitializeEvent("common_gracetable", slot++);
+            event0.Instructions.Add(init);
+            Console.WriteLine("  Initialized common_gracetable (roundtable access)");
+        }
+
+        // common_bellofreturn (755850250) - Return to Chapel with Bell of Return
+        // Allows using Bell of Return to warp back to Chapel
+        if (_eventBuilder.HasTemplate("common_bellofreturn"))
+        {
+            var init = _eventBuilder.BuildInitializeEvent("common_bellofreturn", slot++);
+            event0.Instructions.Add(init);
+            Console.WriteLine("  Initialized common_bellofreturn");
+        }
+
+        // Abduction immortality (755850220) - Iron Virgin grab protection
+        // This event has no Name in fogevents.txt, so we use BuildInitializeEventById
+        // Prevents death from Iron Virgin abduction grab in Raya Lucaria
+        {
+            var init = _eventBuilder.BuildInitializeEventById(AbductionEventId, slot++);
+            event0.Instructions.Add(init);
+            Console.WriteLine($"  Initialized abduction immortality (event {AbductionEventId})");
+        }
+
+        Console.WriteLine($"  Initialized {slot} common events");
     }
 
     private void CreateFogGates()
@@ -239,16 +351,13 @@ public class ModWriter
         }
 
         // Generate EMEVD events for each fog gate
-        var buttonParam = _eventBuilder!.GetDefaultInt("button_param", 63000);
-        var defaultFogSfx = _eventBuilder.GetDefaultInt("fog_sfx", 3);
-
         // Cache extracted SFX IDs per fog entity to handle multiple edges using the same fog gate
         // The SFX is only in the vanilla events which get NOPed on first encounter
         var fogSfxCache = new Dictionary<int, int>();
 
         foreach (var fogGate in _fogGates)
         {
-            GenerateFogGateEvents(fogGate, buttonParam, defaultFogSfx, fogSfxCache);
+            GenerateFogGateEvents(fogGate, DefaultButtonParam, DefaultFogSfx, fogSfxCache);
         }
 
         Console.WriteLine($"  Generated EMEVD events for {_fogGates.Count} fog gates");
@@ -262,6 +371,11 @@ public class ModWriter
     // Event ID for the fog visibility event that contains the SFX parameter
     // 9005811 has format: (slot, eventId, X0_4=defeatFlag, X4_4=fogEntity, X8_4=sfxId, X12_4=secondFlag)
     private const int VanillaFogSfxEvent = 9005811;
+
+    // Default parameters for fog gate events
+    // These match FogRando behavior
+    private const int DefaultButtonParam = 10000;  // ActionButton param for fog gate interaction
+    private const int DefaultFogSfx = 3;           // Default fog visual effect ID
 
     private void GenerateFogGateEvents(FogGateEvent fogGate, int buttonParam, int defaultFogSfx, Dictionary<int, int> fogSfxCache)
     {
@@ -334,16 +448,24 @@ public class ModWriter
         event0.Instructions.Add(showSfxInit);
         Console.WriteLine($"    [DEBUG] {fogGate.SourceMap} event0: InitializeCommonEvent showsfx({fogGate.FogEntityId}, {fogSfx})");
 
-        // Add InitializeEvent for fogwarp_simple template
-        // fogwarp_simple(fog_gate, button_param, warp_region, map_bytes, rotate_target)
+        // Add InitializeEvent for fogwarp template (9005777)
+        // Uses FogRando's fogwarp with speffect 4280 check (init in RegisterCommonEvents)
+        // fogwarp parameters: X0_4=fog_gate, X4_4=button_param, X8_4=warp_target, X12_4=map_bytes,
+        //                     X16_4=boss_defeat_flag, X20_4=boss_trap_flag, X24_4=alt_flag,
+        //                     X28_4=alt_warp_target, X32_4=alt_map_bytes, X36_4=rotate_target
         var fogWarpInit = _eventBuilder.BuildInitializeEvent(
-            "fogwarp_simple",
+            "fogwarp",
             0,
-            fogGate.FogEntityId,         // X0_4 = fog_gate
-            buttonParam,                  // X4_4 = button_param
-            (int)fogGate.WarpRegionId,   // X8_4 = warp_region
+            fogGate.FogEntityId,         // X0_4 = fog gate entity
+            buttonParam,                  // X4_4 = button param (10000)
+            (int)fogGate.WarpRegionId,   // X8_4 = warp target region
             packedMapBytes,              // X12_4 = packed map bytes [m, area, block, sub]
-            (int)fogGate.WarpRegionId    // X16_4 = rotate_target (face spawn point)
+            0,                           // X16_4 = boss defeat flag (0 = no restriction)
+            0,                           // X20_4 = boss trap flag (0 = no trap)
+            0,                           // X24_4 = alternative flag (0 = no alt warp)
+            0,                           // X28_4 = alternative warp target (unused)
+            0,                           // X32_4 = alternate map bytes (unused)
+            (int)fogGate.WarpRegionId    // X36_4 = rotate character target (face spawn point)
         );
         event0.Instructions.Add(fogWarpInit);
 

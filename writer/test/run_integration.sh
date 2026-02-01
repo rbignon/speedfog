@@ -25,6 +25,12 @@ if [ ! -f "$DATA_DIR/er-common.emedf.json" ]; then
     exit 1
 fi
 
+FOGEVENTS_PATH="$DATA_DIR/../reference/fogrando-data/fogevents.txt"
+if [ ! -f "$FOGEVENTS_PATH" ]; then
+    echo "ERROR: reference/fogrando-data/fogevents.txt not found"
+    exit 1
+fi
+
 echo "Data files: OK"
 
 # Build project

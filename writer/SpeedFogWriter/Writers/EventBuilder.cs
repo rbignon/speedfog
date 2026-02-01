@@ -6,17 +6,17 @@ using SpeedFogWriter.Models;
 namespace SpeedFogWriter.Writers;
 
 /// <summary>
-/// Builds EMEVD events from YAML templates.
+/// Builds EMEVD events from templates loaded from FogRando's fogevents.txt.
 /// Uses SoulsIds Events class for instruction parsing.
 /// </summary>
 public class EventBuilder
 {
-    private readonly SpeedFogEventConfig _config;
+    private readonly EventTemplateRegistry _registry;
     private readonly Events _events;
 
-    public EventBuilder(SpeedFogEventConfig config, Events events)
+    public EventBuilder(EventTemplateRegistry registry, Events events)
     {
-        _config = config;
+        _registry = registry;
         _events = events;
     }
 
@@ -25,19 +25,27 @@ public class EventBuilder
     /// </summary>
     public int GetTemplateId(string templateName)
     {
-        return _config.GetTemplate(templateName).Id;
+        return _registry.GetByName(templateName).Id;
+    }
+
+    /// <summary>
+    /// Check if a template exists in the registry.
+    /// </summary>
+    public bool HasTemplate(string templateName)
+    {
+        return _registry.HasTemplate(templateName);
     }
 
     /// <summary>
     /// Create an EMEVD event from a template.
     /// The event uses parameter notation (X0_4, etc.) for runtime substitution.
     /// </summary>
-    /// <param name="templateName">Template name (e.g., "scale", "fogwarp_simple")</param>
+    /// <param name="templateName">Template name (e.g., "scale", "fogwarp")</param>
     /// <param name="eventId">Event ID to use (or null to use template's ID)</param>
     /// <returns>EMEVD event with parameterized instructions</returns>
     public EMEVD.Event BuildTemplateEvent(string templateName, long? eventId = null)
     {
-        var template = _config.GetTemplate(templateName);
+        var template = _registry.GetByName(templateName);
         var id = eventId ?? template.Id;
 
         var restartType = template.Restart
@@ -48,7 +56,7 @@ public class EventBuilder
 
         foreach (var commandStr in template.Commands)
         {
-            // Skip comment-only lines
+            // Skip comment-only lines (# style from YAML)
             if (commandStr.TrimStart().StartsWith("#"))
                 continue;
 
@@ -62,6 +70,17 @@ public class EventBuilder
     }
 
     /// <summary>
+    /// Create an EMEVD event from a template by ID.
+    /// </summary>
+    public EMEVD.Event BuildTemplateEventById(int templateId)
+    {
+        var template = _registry.GetById(templateId);
+        if (template.Name == null)
+            throw new InvalidOperationException($"Template {templateId} has no name");
+        return BuildTemplateEvent(template.Name);
+    }
+
+    /// <summary>
     /// Create an InitializeEvent instruction for a template event.
     /// </summary>
     /// <param name="templateName">Template name</param>
@@ -70,7 +89,7 @@ public class EventBuilder
     /// <returns>EMEVD instruction for InitializeEvent</returns>
     public EMEVD.Instruction BuildInitializeEvent(string templateName, int slot, params object[] args)
     {
-        var template = _config.GetTemplate(templateName);
+        var template = _registry.GetByName(templateName);
 
         // Build argument list for InitializeCommonEvent (2000[6]):
         // Format: (slot, eventId, param1, param2, ...)
@@ -96,25 +115,34 @@ public class EventBuilder
     }
 
     /// <summary>
-    /// Get all template events that should be registered in common_func.
+    /// Get all template events that should be registered.
+    /// Filters based on prefix:
+    /// - "common_*" templates go to common.emevd
+    /// - Other templates go to common_func.emevd
     /// </summary>
-    public IEnumerable<EMEVD.Event> GetAllTemplateEvents()
+    /// <param name="forCommon">If true, return common_* templates; if false, return non-common templates</param>
+    public IEnumerable<EMEVD.Event> GetTemplateEvents(bool forCommon)
     {
-        foreach (var (name, template) in _config.Templates)
+        foreach (var template in _registry.GetAllTemplates())
         {
-            // Skip special templates that aren't meant to be events
-            if (name == "common_init")
+            if (template.Name == null)
                 continue;
 
-            yield return BuildTemplateEvent(name);
+            bool isCommon = template.Name.StartsWith("common_", StringComparison.OrdinalIgnoreCase);
+            if (isCommon != forCommon)
+                continue;
+
+            yield return BuildTemplateEvent(template.Name);
         }
     }
 
     /// <summary>
-    /// Get default value from config.
+    /// Get all non-common template events for common_func.emevd.
     /// </summary>
-    public int GetDefaultInt(string name, int fallback = 0)
-    {
-        return _config.GetDefault(name, fallback);
-    }
+    public IEnumerable<EMEVD.Event> GetAllTemplateEvents() => GetTemplateEvents(forCommon: false);
+
+    /// <summary>
+    /// Get all common_* template events for common.emevd.
+    /// </summary>
+    public IEnumerable<EMEVD.Event> GetCommonTemplateEvents() => GetTemplateEvents(forCommon: true);
 }
