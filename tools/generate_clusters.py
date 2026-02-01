@@ -7,7 +7,7 @@ enters a cluster through an entry_fog, they have access to all exit_fogs.
 
 Usage:
     python generate_clusters.py fog.txt clusters.json [--metadata zone_metadata.toml]
-    python generate_clusters.py reference/fogrando-data/fog.txt core/data/clusters.json
+    python generate_clusters.py data/fog.txt data/clusters.json --metadata data/zone_metadata.toml
 """
 
 from __future__ import annotations

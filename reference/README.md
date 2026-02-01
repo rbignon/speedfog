@@ -1,14 +1,15 @@
 # Reference Files
 
-This directory contains reference materials extracted from FogRando and related tools. These files are for **reference only** - do not modify them directly.
+This directory contains reference materials extracted from FogRando for **studying the implementation**. Do not modify these files directly.
+
+**Note**: Production data files have been moved to `data/` and DLLs to `writer/lib/`. This directory only contains source code and reference data for study.
 
 ## Directory Structure
 
 ```
 reference/
 ├── fogrando-src/      # Decompiled C# source from FogRando
-├── fogrando-data/     # Zone/event data files from FogRando
-└── lib/               # DLL dependencies
+└── fogrando-data/     # Reference-only data files (fogevents.txt, foglocations.txt)
 ```
 
 ## fogrando-src/
@@ -28,40 +29,12 @@ Key C# files from FogRando (decompiled) that are relevant to SpeedFog:
 
 ## fogrando-data/
 
-Data files that define Elden Ring zones and events:
+Reference-only data files (production files are in `data/`):
 
 | File | Content | Use |
 |------|---------|-----|
-| `fog.txt` | Zone definitions (YAML) | Input for `convert_fogrando.py` |
 | `fogevents.txt` | Event templates (YAML) | Reference for EMEVD generation |
 | `foglocations.txt` | Item location mappings | May need for key items |
-| `foglocations2.txt` | Enemy/area info | Reference |
-| `er-common.emedf.json` | EMEVD instruction definitions | **Critical** for event writing |
-
-## lib/
-
-DLL dependencies for the C# writer (extracted from FogRando):
-
-| DLL | Purpose |
-|-----|---------|
-| `SoulsFormats.dll` | Read/write FromSoft file formats |
-| `SoulsIds.dll` | Helper library by thefifthmatt (GameEditor, ParamDictionary) |
-| `YamlDotNet.dll` | YAML parsing |
-| `Newtonsoft.Json.dll` | JSON parsing |
-| `ZstdNet.dll` | Compression |
-| `BouncyCastle.Cryptography.dll` | Encryption |
-
-### SoulsIds Key Classes
-
-| Class | Purpose |
-|-------|---------|
-| `GameEditor` | Load/save game data, param utilities (AddRow, CopyRow) |
-| `ParamDictionary` | Wrapper around game params with indexer access |
-| `GameSpec` | Game-specific configuration (paths, IDs) |
-
-**Note**: For updates, download fresh DLLs from:
-- [SoulsFormatsNEXT](https://github.com/soulsmods/SoulsFormatsNEXT/releases)
-- [SoulsIds](https://github.com/thefifthmatt/SoulsIds)
 
 ## Usage Notes
 
@@ -80,11 +53,6 @@ Event templates define how to create EMEVD instructions for:
 - Boss arena setup
 - Cutscene handling
 
-### Studying fog.txt
+### Studying fogevents.txt
 
-The YAML structure defines:
-- `Areas:` - Zone definitions with names, maps, tags
-- `Entrances:` - Fog gate definitions with positions
-- `Warps:` - Teleporter definitions
-
-Parse this with `convert_fogrando.py` to generate `zones.toml`.
+Reference for EMEVD event patterns. SpeedFog uses `data/speedfog-events.yaml` for its own event templates.

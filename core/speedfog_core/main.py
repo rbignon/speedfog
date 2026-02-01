@@ -92,10 +92,10 @@ def main() -> int:
 
         clusters_path = base_dir / config.paths.clusters_file
 
-        # Also check in core/data relative to script location
+        # Also check in data/ relative to project root
         if not clusters_path.exists():
-            script_dir = Path(__file__).parent.parent
-            alt_path = script_dir / "data" / "clusters.json"
+            project_root = Path(__file__).parent.parent.parent
+            alt_path = project_root / "data" / "clusters.json"
             if alt_path.exists():
                 clusters_path = alt_path
 

@@ -23,7 +23,7 @@ See [generate-clusters-spec.md](./generate-clusters-spec.md) for cluster details
 
 - Phase 2 completed (working `graph.json` output)
 - .NET 8.0 SDK
-- Libraries from `reference/lib/`:
+- Libraries from `writer/lib/`:
   - `SoulsFormats.dll` - FromSoft file format I/O
   - `SoulsIds.dll` - Helper library (GameEditor, ParamDictionary)
   - `YamlDotNet.dll`, `Newtonsoft.Json.dll`, `ZstdNet.dll`, `BouncyCastle.Cryptography.dll`
@@ -75,7 +75,7 @@ Before starting C# implementation, ensure these files exist:
 
 ### 3.0.1: speedfog-events.yaml - COMPLETE
 
-Event templates file created at `writer/data/speedfog-events.yaml`. Defines EMEVD event structures in a readable format, parsed at runtime by `Events.ParseAddArg()`.
+Event templates file created at `data/speedfog-events.yaml`. Defines EMEVD event structures in a readable format, parsed at runtime by `Events.ParseAddArg()`.
 
 Templates included: `scale`, `showsfx`, `fogwarp`, `fogwarp_simple`, `startboss`, `disable`, `give_items`, `common_init`.
 
@@ -83,12 +83,12 @@ Templates included: `scale`, `showsfx`, `fogwarp`, `fogwarp_simple`, `startboss`
 
 | File | Status | Purpose |
 |------|--------|---------|
-| `reference/fogrando-data/er-common.emedf.json` | ✅ EXISTS | EMEVD instruction definitions |
-| `reference/fogrando-data/foglocations2.txt` | ✅ EXISTS | Enemy area → tier mapping |
-| `reference/lib/*.dll` | ✅ EXISTS | SoulsFormats, SoulsIds, YamlDotNet |
-| `writer/data/fog_data.json` | ✅ EXISTS | Fog gate metadata |
-| `core/data/clusters.json` | ✅ EXISTS | Cluster definitions with zone_maps |
-| `writer/data/speedfog-events.yaml` | ✅ EXISTS | Event templates |
+| `data/er-common.emedf.json` | ✅ EXISTS | EMEVD instruction definitions |
+| `data/foglocations2.txt` | ✅ EXISTS | Enemy area → tier mapping |
+| `writer/lib/*.dll` | ✅ EXISTS | SoulsFormats, SoulsIds, YamlDotNet |
+| `data/fog_data.json` | ✅ EXISTS | Fog gate metadata |
+| `data/clusters.json` | ✅ EXISTS | Cluster definitions with zone_maps |
+| `data/speedfog-events.yaml` | ✅ EXISTS | Event templates |
 
 ### 3.0.3: Template MSB Dependency
 
@@ -122,15 +122,15 @@ const string TemplateAssetName = "AEG007_310_2000";
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Libraries from reference/lib/ (extracted from FogRando) -->
+    <!-- Libraries from writer/lib/ (extracted from FogRando) -->
     <Reference Include="SoulsFormats">
-      <HintPath>../../reference/lib/SoulsFormats.dll</HintPath>
+      <HintPath>../lib/SoulsFormats.dll</HintPath>
     </Reference>
     <Reference Include="SoulsIds">
-      <HintPath>../../reference/lib/SoulsIds.dll</HintPath>
+      <HintPath>../lib/SoulsIds.dll</HintPath>
     </Reference>
     <Reference Include="YamlDotNet">
-      <HintPath>../../reference/lib/YamlDotNet.dll</HintPath>
+      <HintPath>../lib/YamlDotNet.dll</HintPath>
     </Reference>
   </ItemGroup>
 
@@ -153,7 +153,7 @@ speedfog/
     └── SpeedFogWriter/
 ```
 
-**Note**: DLLs already available in `reference/lib/` (extracted from FogRando). For updates, download from [soulsmods/SoulsFormatsNEXT](https://github.com/soulsmods/SoulsFormatsNEXT).
+**Note**: DLLs should be placed in `writer/lib/` (not tracked by git). For updates, download from [soulsmods/SoulsFormatsNEXT](https://github.com/soulsmods/SoulsFormatsNEXT).
 
 ---
 
@@ -885,9 +885,9 @@ The Python script `tools/extract_fog_data.py` exists but needs to be updated to 
 ```bash
 # Generate fog_data.json
 python tools/extract_fog_data.py \
-    reference/fogrando-data/fog.txt \
-    writer/data/fog_data.json \
-    --validate-clusters core/data/clusters.json
+    data/fog.txt \
+    data/fog_data.json \
+    --validate-clusters data/clusters.json
 
 # Output:
 # Parsed 547 fog entries
@@ -988,7 +988,7 @@ Event scripting is defined in a YAML file rather than hardcoded in C#, for reada
 #   - size: parameter size in bytes (1 or 4)
 #   - Example: X0_4 = 4-byte param at offset 0, X12_1 = 1-byte param at offset 12
 #
-# FogRando Reference: reference/fogrando-data/fogevents.txt
+# FogRando Reference: reference/fogrando-data/fogevents.txt (for study only)
 
 templates:
   # Apply scaling to an enemy when loaded
@@ -1399,7 +1399,7 @@ Read `foglocations2.txt` directly with YamlDotNet (like FogRando does):
 ```csharp
 // Reference: FogRando Randomizer.cs L96-99
 using var reader = File.OpenText(
-    Path.Combine(_dataDir, "..", "reference", "fogrando-data", "foglocations2.txt"));
+    Path.Combine(_dataDir, "foglocations2.txt"));
 var fogLocations = new DeserializerBuilder().Build()
     .Deserialize<FogLocations>(reader);
 ```
@@ -2675,8 +2675,8 @@ public class ModWriter
 
         // Initialize Events helper for EMEVD parsing
         // Reference: FogRando Randomizer.cs L36, L93
-        // Path: reference/fogrando-data/er-common.emedf.json (relative to project root)
-        var emedfPath = Path.Combine(_dataDir, "..", "reference", "fogrando-data", "er-common.emedf.json");
+        // Path: data/er-common.emedf.json (relative to project root)
+        var emedfPath = Path.Combine(_dataDir, "er-common.emedf.json");
         if (!File.Exists(emedfPath))
             throw new FileNotFoundException($"er-common.emedf.json not found: {emedfPath}");
 
@@ -3305,7 +3305,7 @@ Dictionary<string, List<double>> makeScalingMatrix(
 
 SpeedFog uses a **YAML-based template approach** (Task 3.3) for EMEVD generation, inspired by FogRando but simplified:
 
-- Event templates are defined in `writer/data/speedfog-events.yaml`
+- Event templates are defined in `data/speedfog-events.yaml`
 - `EventBuilder.cs` parses templates and builds EMEVD using SoulsIds' `Events.ParseAddArg()`
 - This keeps event logic readable and separate from C# code
 
@@ -3376,23 +3376,23 @@ The spec uses these values. If SoulsFormats enum names change, these numeric val
 
 ### 6. SoulsFormats Compatibility
 
-Ensure you're using a SoulsFormats version that supports Elden Ring. The DLLs in `reference/lib/` are from FogRando and should be compatible.
+Ensure you're using a SoulsFormats version that supports Elden Ring. The DLLs in `writer/lib/` are from FogRando and should be compatible.
 
 ---
 
 ## Acceptance Criteria
 
 ### Task 3.0 (Prerequisites) - COMPLETE
-- [x] `reference/fogrando-data/er-common.emedf.json` exists
-- [x] `reference/lib/*.dll` all present (SoulsFormats, SoulsIds, YamlDotNet, etc.)
-- [x] `writer/data/fog_data.json` exists with `asset_name` field
-- [x] `core/data/clusters.json` exists with `zone_maps` field
-- [x] `writer/data/speedfog-events.yaml` created with templates
+- [x] `data/er-common.emedf.json` exists
+- [x] `writer/lib/*.dll` all present (SoulsFormats, SoulsIds, YamlDotNet, etc.)
+- [x] `data/fog_data.json` exists with `asset_name` field
+- [x] `data/clusters.json` exists with `zone_maps` field
+- [x] `data/speedfog-events.yaml` created with templates
 
 ### Task 3.2.1 (fog_data.json) - COMPLETE
 - [x] Python script `tools/extract_fog_data.py` exists
 - [x] Script parses fog.txt Entrances and Warps sections
-- [x] Script outputs `writer/data/fog_data.json`
+- [x] Script outputs `data/fog_data.json`
 - [x] All fog_ids from clusters.json are present in fog_data.json
 - [x] Script includes `asset_name` field (not just `model`)
 
@@ -3511,8 +3511,8 @@ public void FogData_AllEdgeFogsExist()
 # 1. Extract fog positions (prerequisite)
 cd speedfog
 python tools/extract_fog_data.py \
-    reference/fogrando-data/fog.txt \
-    writer/data/fog_data.json
+    data/fog.txt \
+    data/fog_data.json
 
 # 2. Generate graph (Phase 2)
 cd core

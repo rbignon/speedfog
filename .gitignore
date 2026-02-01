@@ -51,5 +51,6 @@ spoiler.txt
 # Keep example config
 !config.example.toml
 
-# Don't track DLLs (download them separately)
-reference/lib/*.dll
+# Track writer/lib/ for README but not DLLs
+!writer/lib/
+writer/lib/*.dll

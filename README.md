@@ -78,7 +78,7 @@ merge_probability = 0.3         # Chance of paths merging
 [paths]
 game_dir = "C:/Program Files/Steam/steamapps/common/ELDEN RING/Game"
 output_dir = "./output"
-clusters_file = "./core/data/clusters.json"
+clusters_file = "./data/clusters.json"
 ```
 
 ## How It Works
@@ -120,14 +120,20 @@ All key items (Rusty Key, Stonesword Keys, etc.) are given at the start to preve
 
 ```
 speedfog/
+├── data/                   # Shared data files
+│   ├── fog.txt             # FogRando zone definitions (source)
+│   ├── foglocations2.txt   # FogRando enemy areas (source)
+│   ├── er-common.emedf.json  # EMEVD instruction definitions
+│   ├── clusters.json       # Generated zone clusters
+│   ├── fog_data.json       # Generated fog gate metadata
+│   ├── zone_metadata.toml  # Zone weight defaults/overrides
+│   └── speedfog-events.yaml  # EMEVD event templates
 ├── core/                   # Python - DAG generation
-│   ├── speedfog_core/      # Python package
-│   └── data/
-│       ├── clusters.json   # Zone clusters with zone→map mapping
-│       └── zone_metadata.toml  # Weight defaults and overrides
+│   └── speedfog_core/      # Python package
 ├── writer/                 # C# - Mod file generation
 │   └── SpeedFogWriter/
-├── reference/              # FogRando source for reference
+├── reference/              # FogRando source for reference (read-only)
+│   └── fogrando-src/       # Decompiled C# code
 ├── docs/plans/             # Implementation specifications
 └── output/                 # Generated mod files
 ```
@@ -188,7 +194,7 @@ A: v1 focuses on base game zones. DLC support planned for v2.
 A: SpeedFog gives all key items at start, so softlocks should be rare. If stuck, check the spoiler log for the correct path.
 
 **Q: Can I customize which zones appear?**
-A: Edit `core/data/zone_metadata.toml` to adjust zone weights, or modify `clusters.json` to exclude specific clusters.
+A: Edit `data/zone_metadata.toml` to adjust zone weights, or modify `data/clusters.json` to exclude specific clusters.
 
 ## Credits
 

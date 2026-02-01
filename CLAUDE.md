@@ -33,16 +33,24 @@ DAG generation     →                                    ├── ModEngine/
 
 ```
 speedfog/
+├── data/                    # Shared data files (source + generated)
+│   ├── fog.txt              # FogRando zone definitions (source)
+│   ├── foglocations2.txt    # FogRando enemy areas (source)
+│   ├── er-common.emedf.json # EMEVD instruction definitions
+│   ├── clusters.json        # Generated zone clusters
+│   ├── fog_data.json        # Generated fog gate metadata
+│   ├── zone_metadata.toml   # Zone weight config
+│   └── speedfog-events.yaml # EMEVD event templates
 ├── core/                    # Python - DAG generation (Phase 1-2)
 │   └── speedfog_core/
 ├── writer/                  # C# - Mod file generation (Phase 3-4)
+│   ├── lib/                 # DLLs (SoulsFormats, SoulsIds, etc.)
 │   └── SpeedFogWriter/
 │       ├── Writers/         # Mod file writers
 │       └── Packaging/       # ModEngine downloader, launcher scripts
 ├── reference/               # FogRando decompiled code (READ-ONLY)
 │   ├── fogrando-src/        # C# source files
-│   ├── fogrando-data/       # YAML data files (fog.txt, fogevents.txt)
-│   └── lib/                 # DLLs (SoulsFormats, SoulsIds, etc.)
+│   └── fogrando-data/       # Reference data (fogevents.txt, foglocations.txt)
 ├── docs/plans/              # Implementation specifications
 └── output/                  # Generated mod (gitignored, self-contained)
 ```
@@ -74,14 +82,14 @@ speedfog/
 
 ### C# (writer/)
 - .NET 8.0
-- Reference DLLs from `reference/lib/`
+- Reference DLLs from `writer/lib/`
 - Follow FogRando patterns for EMEVD/param manipulation
 
 ### Zone Data
 - Zone definitions extracted from FogRando's `fog.txt` into `clusters.json`
 - Zone→map mapping stored in `clusters.json` under `zone_maps`
 - Zone types: `legacy_dungeon`, `mini_dungeon`, `boss_arena`, `major_boss`, `start`, `final_boss`
-- Weight defaults in `core/data/zone_metadata.toml`, overrides per zone
+- Weight defaults in `data/zone_metadata.toml`, overrides per zone
 - Weight = approximate duration in minutes
 
 ## FogRando Reference Points
@@ -124,8 +132,9 @@ dotnet run -- graph.json "/path/to/ELDEN RING/Game" ./output
 
 | Data | Source | Format |
 |------|--------|--------|
-| Key item IDs | `reference/fogrando-data/fog.txt` L3258-3358 | `ID: 3:XXXX` |
-| Zone definitions | `reference/fogrando-data/fog.txt` Areas section | YAML |
-| Warp positions | `reference/fogrando-data/fog.txt` Entrances section | YAML |
-| EMEVD instructions | `reference/fogrando-data/er-common.emedf.json` | JSON |
-| Scaling params | `reference/fogrando-src/EldenScaling.cs` | C# |
+| Key item IDs | `data/fog.txt` L3258-3358 | `ID: 3:XXXX` |
+| Zone definitions | `data/fog.txt` Areas section | YAML |
+| Warp positions | `data/fog.txt` Entrances section | YAML |
+| Enemy scaling tiers | `data/foglocations2.txt` EnemyAreas section | YAML |
+| EMEVD instructions | `data/er-common.emedf.json` | JSON |
+| Scaling logic | `reference/fogrando-src/EldenScaling.cs` | C# |
