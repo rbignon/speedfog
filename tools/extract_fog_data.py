@@ -93,6 +93,10 @@ class FogEntry:
     lookup_by: str | None  # "name" or "entity_id" or None
     position: list[float] | None = None  # [x, y, z] if MakeFrom
     rotation: list[float] | None = None  # [x, y, z] if MakeFrom
+    # Height adjustments - FogRando applies entrance-level + side-level (L433-440)
+    entrance_adjust_height: float = 0.0  # Entrance.AdjustHeight (applies to all sides)
+    aside_adjust_height: float = 0.0  # ASide.AdjustHeight
+    bside_adjust_height: float = 0.0  # BSide.AdjustHeight
 
     @property
     def zones(self) -> list[str]:
@@ -203,6 +207,20 @@ def get_zones(fog_data: dict[str, Any]) -> tuple[str, str]:
     return aside.get("Area", ""), bside.get("Area", "")
 
 
+def get_adjust_heights(fog_data: dict[str, Any]) -> tuple[float, float]:
+    """
+    Get height adjustments for both sides of a fog gate.
+
+    FogRando applies these after calculating the spawn position to account
+    for floor level differences at fog gates.
+
+    Returns (aside_adjust_height, bside_adjust_height).
+    """
+    aside = fog_data.get("ASide", {})
+    bside = fog_data.get("BSide", {})
+    return float(aside.get("AdjustHeight", 0.0)), float(bside.get("AdjustHeight", 0.0))
+
+
 def parse_fog_entry(fog_data: dict[str, Any], section: str) -> FogEntry | None:
     """Parse a single fog entry from Entrances or Warps section."""
     name = str(fog_data.get("Name", ""))
@@ -210,6 +228,9 @@ def parse_fog_entry(fog_data: dict[str, Any], section: str) -> FogEntry | None:
         return None
 
     aside_zone, bside_zone = get_zones(fog_data)
+    aside_adjust, bside_adjust = get_adjust_heights(fog_data)
+    # Entrance-level AdjustHeight applies to both sides
+    entrance_adjust = float(fog_data.get("AdjustHeight", 0.0))
 
     # Check for MakeFrom (custom position)
     makefrom = fog_data.get("MakeFrom")
@@ -229,6 +250,9 @@ def parse_fog_entry(fog_data: dict[str, Any], section: str) -> FogEntry | None:
             lookup_by=None,  # Position is inline
             position=position,
             rotation=rotation,
+            entrance_adjust_height=entrance_adjust,
+            aside_adjust_height=aside_adjust,
+            bside_adjust_height=bside_adjust,
         )
 
     # Regular fog - determine lookup method and model
@@ -271,6 +295,9 @@ def parse_fog_entry(fog_data: dict[str, Any], section: str) -> FogEntry | None:
         lookup_by=lookup_by,
         position=None,
         rotation=None,
+        entrance_adjust_height=entrance_adjust,
+        aside_adjust_height=aside_adjust,
+        bside_adjust_height=bside_adjust,
     )
 
 
@@ -369,6 +396,11 @@ def entries_to_json(entries: list[FogEntry]) -> dict[str, Any]:
     duplicate_count = 0
 
     for entry in entries:
+        # Total height adjustment = entrance-level + side-level
+        # FogRando applies both sequentially (GameDataWriterE.cs L433-440)
+        aside_total = entry.entrance_adjust_height + entry.aside_adjust_height
+        bside_total = entry.entrance_adjust_height + entry.bside_adjust_height
+
         fog_data = {
             "type": entry.fog_type,
             "zones": entry.zones,  # List of zones (both aside and bside)
@@ -379,6 +411,9 @@ def entries_to_json(entries: list[FogEntry]) -> dict[str, Any]:
             "lookup_by": entry.lookup_by,
             "position": entry.position,
             "rotation": entry.rotation,
+            # Total height adjustments per side (entrance + side level)
+            # Index matches zones: [0] = ASide, [1] = BSide
+            "adjust_heights": [aside_total, bside_total],
         }
 
         if entry.fog_id in seen_names:

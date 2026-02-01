@@ -67,8 +67,25 @@ public class FogEntryData
     [JsonPropertyName("rotation")]
     public float[]? Rotation { get; set; }
 
+    /// <summary>
+    /// Height adjustments per side: [0] = ASide, [1] = BSide.
+    /// FogRando applies these after calculating spawn position (GameDataWriterE.cs L433-440).
+    /// </summary>
+    [JsonPropertyName("adjust_heights")]
+    public float[]? AdjustHeights { get; set; }
+
     public bool HasPosition => Position != null && Position.Length == 3;
     public bool IsMakeFrom => Type == "makefrom";
+
+    /// <summary>
+    /// Get the height adjustment for a specific side (0 = ASide, 1 = BSide).
+    /// </summary>
+    public float GetAdjustHeight(int sideIndex)
+    {
+        if (AdjustHeights == null || sideIndex < 0 || sideIndex >= AdjustHeights.Length)
+            return 0f;
+        return AdjustHeights[sideIndex];
+    }
 
     public Vector3 PositionVec =>
         Position != null ? new(Position[0], Position[1], Position[2]) : default;

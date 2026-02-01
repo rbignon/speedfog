@@ -63,13 +63,22 @@ public class WarpWriter
         // Reference: FogRando GameDataWriterE.cs L420-431
         // - BSide (!flag2): r2 = asset4.Rotation (move forward)
         // - ASide (flag2): r2 = oppositeRotation (move backward)
-        var offsetDirection = DetermineSpawnSide(fogGate, rotation);
+        var (offsetDirection, sideIndex) = DetermineSpawnSide(fogGate, rotation);
 
         // Offset by 2 units in the appropriate direction
         // FogRando uses dist=1f (GameDataWriterE.cs L373) for main spawn, but adds 1-2f extra
         // for "retry" position on "main" or "unstable" fogs (L375-381).
         // We use 2f to ensure player spawns clear of all fog hitboxes.
         var spawnPosition = MoveInDirection(position, offsetDirection, 2f);
+
+        // Apply height adjustment for this side
+        // FogRando does this in GameDataWriterE.cs L433-440
+        float adjustHeight = fogGate.EntryFogData?.GetAdjustHeight(sideIndex) ?? 0f;
+        if (adjustHeight != 0f)
+        {
+            spawnPosition = new Vector3(spawnPosition.X, spawnPosition.Y + adjustHeight, spawnPosition.Z);
+            Console.WriteLine($"    [DEBUG] Applied height adjustment: {adjustHeight:F2}");
+        }
 
         // Player faces into the zone (opposite of offset direction)
         var playerRotation = OppositeRotation(offsetDirection);
@@ -88,18 +97,21 @@ public class WarpWriter
     }
 
     /// <summary>
-    /// Determine the offset direction based on which side of the fog we're entering.
+    /// Determine the offset direction and side index based on which side of the fog we're entering.
     /// FogRando convention in fog_data.json: zones[0] = ASide, zones[1] = BSide.
-    /// - To enter zones[0] (ASide): move backward (oppositeRotation)
-    /// - To enter zones[1] (BSide): move forward (original rotation)
+    /// - To enter zones[0] (ASide): move backward (oppositeRotation), sideIndex = 0
+    /// - To enter zones[1] (BSide): move forward (original rotation), sideIndex = 1
     /// Reference: FogRando GameDataWriterE.cs L420-431
     /// </summary>
-    private Vector3 DetermineSpawnSide(FogGateEvent fogGate, Vector3 fogRotation)
+    /// <returns>
+    /// Tuple of (offsetDirection, sideIndex) where sideIndex is used for AdjustHeight lookup.
+    /// </returns>
+    private (Vector3 OffsetDirection, int SideIndex) DetermineSpawnSide(FogGateEvent fogGate, Vector3 fogRotation)
     {
         if (fogGate.EntryFogData == null || fogGate.EntryFogData.Zones.Count < 2)
         {
-            Console.WriteLine($"    [DEBUG] No side info for {fogGate.TargetClusterId}, using forward");
-            return fogRotation;
+            Console.WriteLine($"    [DEBUG] No side info for {fogGate.TargetClusterId}, using forward (BSide)");
+            return (fogRotation, 1);  // Default to BSide
         }
 
         var fogZones = fogGate.EntryFogData.Zones;
@@ -111,7 +123,7 @@ public class WarpWriter
             if (fogZones.Count > 1 && fogZones[1] == targetZone)
             {
                 Console.WriteLine($"    [DEBUG] {fogGate.TargetClusterId}: Entering BSide ({targetZone}), offset forward");
-                return fogRotation;
+                return (fogRotation, 1);
             }
         }
 
@@ -121,15 +133,15 @@ public class WarpWriter
             if (fogZones[0] == targetZone)
             {
                 Console.WriteLine($"    [DEBUG] {fogGate.TargetClusterId}: Entering ASide ({targetZone}), offset backward");
-                return OppositeRotation(fogRotation);
+                return (OppositeRotation(fogRotation), 0);
             }
         }
 
-        // Default: no match found, log warning and use forward
+        // Default: no match found, log warning and use forward (BSide)
         Console.WriteLine($"    WARNING: Could not determine side for {fogGate.TargetClusterId}");
         Console.WriteLine($"      Fog zones: [{string.Join(", ", fogZones)}]");
         Console.WriteLine($"      Target zones: [{string.Join(", ", targetZones)}]");
-        return fogRotation;
+        return (fogRotation, 1);
     }
 
     private (Vector3 Position, Vector3 Rotation) GetFogPositionFromMsb(FogEntryData fog, MSBE msb)
