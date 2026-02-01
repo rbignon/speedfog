@@ -58,10 +58,14 @@ public class WarpWriter
             position = Vector3.Zero;
         }
 
-        // Offset spawn position by 1 unit away from the fog gate
+        // Offset spawn position away from the fog gate
         // This prevents the player from spawning directly on the fog and getting stuck
         // FogRando uses dist=1f (GameDataWriterE.cs L373)
-        var spawnPosition = MoveInDirection(position, rotation, 1f);
+        // IMPORTANT: Move in the direction the player faces (opposite to fog rotation),
+        // not the fog's direction - otherwise we move TOWARD the fog, not away from it
+        // (FogRando uses r2 which varies by side: L420-431)
+        var playerFacing = OppositeRotation(rotation);
+        var spawnPosition = MoveInDirection(position, playerFacing, 1f);
 
         var spawnRegion = new MSBE.Region.SpawnPoint
         {
