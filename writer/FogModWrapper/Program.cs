@@ -125,6 +125,76 @@ Example:
         Console.WriteLine($"Loading fog.txt from: {fogPath}");
         var ann = AnnotationData.LoadLiteConfig(fogPath);
 
+        // Initialize ConfigVars - LoadLiteConfig doesn't load them, but Graph.Construct needs them
+        // for condition evaluation. These are FogRando's dungeon crawler mode variables.
+        ann.ConfigVars = new Dictionary<string, string>
+        {
+            // Scaling/logic pass control (not used in SpeedFog)
+            { "scalepass", "FALSE" },
+            { "logicpass", "TRUE" },
+            // Great rune requirements (set to always true for SpeedFog - we give all items)
+            { "runes_leyndell", "TRUE" },
+            { "runes_rold", "TRUE" },
+            { "runes_end", "TRUE" },
+            // Dungeon crawler tier variables - all FALSE since we don't use crawl mode
+            { "tier1", "FALSE" },
+            { "tier2", "FALSE" },
+            { "tier3", "FALSE" },
+            { "tier4", "FALSE" },
+            { "tier5", "FALSE" },
+            { "tier6", "FALSE" },
+            { "tier7", "FALSE" },
+            { "tier8", "FALSE" },
+            { "tier9", "FALSE" },
+            // DLC kindling/imbued requirements (not used - base game only)
+            { "treekindling", "FALSE" },
+            { "imbued_base", "FALSE" },
+            { "imbued_base_any", "FALSE" },
+            { "imbued_dlc", "FALSE" },
+            { "imbued_dlc_any", "FALSE" },
+            // DLC high seal conditions (areas reached via seals)
+            { "rauhruins_high_seal", "FALSE" },
+            { "rauhbase_high_seal", "FALSE" },
+            { "gravesite_seal", "FALSE" },
+            { "scadualtus_high_seal", "FALSE" },
+            { "ymir_open", "FALSE" },
+            // Key items - all TRUE since SpeedFog gives all items at start
+            // Base game keys
+            { "academyglintstonekey", "TRUE" },
+            { "carianinvertedstatue", "TRUE" },
+            { "cursemarkofdeath", "TRUE" },
+            { "darkmoonring", "TRUE" },
+            { "dectusmedallionleft", "TRUE" },
+            { "dectusmedallionright", "TRUE" },
+            { "discardedpalacekey", "TRUE" },
+            { "drawingroomkey", "TRUE" },
+            { "haligtreesecretmedallionleft", "TRUE" },
+            { "haligtreesecretmedallionright", "TRUE" },
+            { "imbuedswordkey", "TRUE" },
+            { "imbuedswordkey1", "TRUE" },
+            { "imbuedswordkey2", "TRUE" },
+            { "imbuedswordkey3", "TRUE" },
+            { "imbuedswordkey4", "FALSE" },  // DLC key
+            { "purebloodknightsmedal", "TRUE" },
+            { "roldmedallion", "TRUE" },
+            { "runegodrick", "TRUE" },
+            { "runemalenia", "TRUE" },
+            { "runemohg", "TRUE" },
+            { "runemorgott", "TRUE" },
+            { "runeradahn", "TRUE" },
+            { "runerennala", "TRUE" },
+            { "runerykard", "TRUE" },
+            { "rustykey", "TRUE" },
+            // DLC keys (FALSE - not supported yet)
+            { "omother", "FALSE" },
+            { "welldepthskey", "FALSE" },
+            { "gaolupperlevelkey", "FALSE" },
+            { "gaollowerlevelkey", "FALSE" },
+            { "holeladennecklace", "FALSE" },
+            { "messmerskindling", "FALSE" },
+            { "messmerskindling1", "FALSE" },
+        };
+
         // Load foglocations for enemy area info (needed for scaling)
         var foglocationsPath = Path.Combine(config.DataDir, "foglocations2.txt");
         if (File.Exists(foglocationsPath))

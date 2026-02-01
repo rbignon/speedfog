@@ -10,7 +10,12 @@ from speedfog_core.balance import report_balance
 from speedfog_core.clusters import load_clusters
 from speedfog_core.config import Config, load_config
 from speedfog_core.generator import GenerationError, generate_with_retry
-from speedfog_core.output import export_json, export_json_v2, export_spoiler_log
+from speedfog_core.output import (
+    export_json,
+    export_json_v2,
+    export_spoiler_log,
+    load_fog_data,
+)
 
 
 def main() -> int:
@@ -110,6 +115,12 @@ def main() -> int:
         print(f"Error: Clusters file not found: {clusters_path}", file=sys.stderr)
         return 1
 
+    # Load fog_data.json for accurate map lookups
+    fog_data_path = clusters_path.parent / "fog_data.json"
+    fog_data = load_fog_data(fog_data_path) if fog_data_path.exists() else None
+    if args.verbose and fog_data:
+        print(f"Loaded {len(fog_data)} fogs from {fog_data_path}")
+
     # Generate DAG
     if args.verbose:
         mode = "fixed seed" if config.seed != 0 else "auto-reroll"
@@ -151,7 +162,7 @@ def main() -> int:
 
     # Export JSON v2 format (for FogModWrapper)
     json_path = seed_dir / "graph.json"
-    export_json_v2(dag, clusters, json_path)
+    export_json_v2(dag, clusters, json_path, fog_data=fog_data)
     print(f"Written: {json_path}")
 
     # Also export v1 format for compatibility

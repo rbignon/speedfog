@@ -120,26 +120,87 @@ def _get_fog_zone(node: DagNode, fog_id: str, is_entry: bool) -> str | None:
     return None
 
 
-def _make_fullname(fog_id: str, zone: str, clusters: ClusterPool) -> str:
+def load_fog_data(path: Path) -> dict[str, dict[str, Any]]:
+    """Load fog_data.json for fog→map lookups.
+
+    Args:
+        path: Path to fog_data.json
+
+    Returns:
+        Dictionary of fog_id → fog data (with "map" field)
+    """
+    if not path.exists():
+        return {}
+    with open(path, encoding="utf-8") as f:
+        data: dict[str, Any] = json.load(f)
+    fogs: dict[str, dict[str, Any]] = data.get("fogs", {})
+    return fogs
+
+
+def _make_fullname(
+    fog_id: str,
+    zone: str,
+    clusters: ClusterPool,
+    fog_data: dict[str, dict[str, Any]] | None = None,
+) -> str:
     """Convert a fog_id to FogMod FullName format: {map}_{fog_id}.
 
     Args:
         fog_id: The fog ID (e.g., "AEG099_001_9000" or "1035452610")
-        zone: The zone containing the fog
+        zone: The zone the fog connects to
         clusters: ClusterPool with zone_maps
+        fog_data: Optional fog_data.json lookup for map resolution
 
     Returns:
         FogMod FullName (e.g., "m10_01_00_00_AEG099_001_9000")
+
+    Note:
+        fog_data.json stores fogs with both short names and fully-qualified
+        names (e.g., "AEG099_230_9000" and "m60_43_50_00_AEG099_230_9000").
+        For dungeon entrances, the fog gate may be in a different map than
+        the destination zone (e.g., overworld entrance to a dungeon).
+        We search fog_data for a fullname that contains the destination zone.
     """
-    map_id = clusters.get_map(zone)
-    if map_id is None:
-        # Fallback to zone name if map not found
-        return f"unknown_{fog_id}"
-    return f"{map_id}_{fog_id}"
+    # For warps (numeric IDs), fog_data has the authoritative map
+    if fog_data and fog_id in fog_data and fog_id.isdigit():
+        map_id = fog_data[fog_id].get("map")
+        if map_id:
+            return f"{map_id}_{fog_id}"
+
+    # Get zone's map
+    zone_map = clusters.get_map(zone)
+
+    if fog_data:
+        # Strategy 1: Try fully-qualified name with zone's map
+        if zone_map:
+            fullname = f"{zone_map}_{fog_id}"
+            if fullname in fog_data:
+                return fullname
+
+        # Strategy 2: Search for any fullname ending with fog_id that contains zone
+        # This handles cases where the fog gate is in a different map (e.g., dungeon entrance)
+        for key, data in fog_data.items():
+            if key.endswith(f"_{fog_id}") and zone in data.get("zones", []):
+                return key
+
+    # Fallback to zone's map
+    if zone_map:
+        return f"{zone_map}_{fog_id}"
+
+    # Last resort: check fog_data for short name
+    if fog_data and fog_id in fog_data:
+        map_id = fog_data[fog_id].get("map")
+        if map_id:
+            return f"{map_id}_{fog_id}"
+
+    return f"unknown_{fog_id}"
 
 
 def dag_to_dict_v2(
-    dag: Dag, clusters: ClusterPool, options: dict[str, bool] | None = None
+    dag: Dag,
+    clusters: ClusterPool,
+    options: dict[str, bool] | None = None,
+    fog_data: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Convert a DAG to v2 JSON-serializable dictionary for FogModWrapper.
 
@@ -147,6 +208,7 @@ def dag_to_dict_v2(
         dag: The DAG to convert
         clusters: ClusterPool with zone_maps for FullName generation
         options: FogMod options to include (default: scale=True)
+        fog_data: Optional fog_data.json lookup for accurate map IDs (esp. for warps)
 
     Returns:
         Dictionary with the following structure:
@@ -195,10 +257,12 @@ def dag_to_dict_v2(
         connections.append(
             {
                 "exit_area": exit_zone,
-                "exit_gate": _make_fullname(edge.exit_fog, exit_zone, clusters),
+                "exit_gate": _make_fullname(
+                    edge.exit_fog, exit_zone, clusters, fog_data
+                ),
                 "entrance_area": entry_zone,
                 "entrance_gate": _make_fullname(
-                    effective_entry_fog, entry_zone, clusters
+                    effective_entry_fog, entry_zone, clusters, fog_data
                 ),
             }
         )
@@ -223,6 +287,7 @@ def export_json_v2(
     clusters: ClusterPool,
     output_path: Path,
     options: dict[str, bool] | None = None,
+    fog_data: dict[str, dict[str, Any]] | None = None,
 ) -> None:
     """Export a DAG to v2 formatted JSON file for FogModWrapper.
 
@@ -231,8 +296,9 @@ def export_json_v2(
         clusters: ClusterPool with zone_maps
         output_path: Path to write the JSON file
         options: FogMod options (default: scale=True, shuffle=True)
+        fog_data: Optional fog_data.json lookup for accurate map IDs
     """
-    data = dag_to_dict_v2(dag, clusters, options)
+    data = dag_to_dict_v2(dag, clusters, options, fog_data)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
