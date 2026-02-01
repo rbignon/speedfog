@@ -17,6 +17,7 @@ public class StartingItemsWriter
         (8106, 1, "Dectus Medallion (Right)"),
         (8107, 1, "Rold Medallion"),
         (8000, 10, "Stonesword Key"),
+        (2160, 1, "Pureblood Knight's Medal"),
     };
 
     private static readonly Dictionary<string, (int ItemId, int Quantity)> ZoneSpecificItems = new()
