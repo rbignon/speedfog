@@ -65,9 +65,11 @@ public class WarpWriter
         // - ASide (flag2): r2 = oppositeRotation (move backward)
         var offsetDirection = DetermineSpawnSide(fogGate, rotation);
 
-        // Offset by 1 unit in the appropriate direction
-        // FogRando uses dist=1f (GameDataWriterE.cs L373)
-        var spawnPosition = MoveInDirection(position, offsetDirection, 1f);
+        // Offset by 2 units in the appropriate direction
+        // FogRando uses dist=1f (GameDataWriterE.cs L373) for main spawn, but adds 1-2f extra
+        // for "retry" position on "main" or "unstable" fogs (L375-381).
+        // We use 2f to ensure player spawns clear of all fog hitboxes.
+        var spawnPosition = MoveInDirection(position, offsetDirection, 2f);
 
         // Player faces into the zone (opposite of offset direction)
         var playerRotation = OppositeRotation(offsetDirection);
@@ -81,6 +83,8 @@ public class WarpWriter
         };
 
         msb.Regions.SpawnPoints.Add(spawnRegion);
+
+        Console.WriteLine($"    [DEBUG] Spawn for {fogGate.TargetClusterId}: pos=({spawnPosition.X:F1},{spawnPosition.Y:F1},{spawnPosition.Z:F1}) rot=({playerRotation.Y:F1}) in {fogGate.TargetMap}");
     }
 
     /// <summary>
