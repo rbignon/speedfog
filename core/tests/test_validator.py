@@ -49,7 +49,7 @@ def make_simple_dag(seed: int = 42) -> Dag:
             exit_fogs=[],
         )
     )
-    dag.add_edge("start", "end", "fog_1")
+    dag.add_edge("start", "end", "fog_1", "fog_1")
     dag.start_id = "start"
     dag.end_id = "end"
     return dag
@@ -108,7 +108,7 @@ def make_dag_with_content(
                 exit_fogs=[f"fog_{edge_idx + 1}"],
             )
         )
-        dag.add_edge(prev_id, node_id, f"fog_{edge_idx}")
+        dag.add_edge(prev_id, node_id, f"fog_{edge_idx}", f"fog_{edge_idx}")
         prev_id = node_id
         edge_idx += 1
 
@@ -130,7 +130,7 @@ def make_dag_with_content(
                 exit_fogs=[f"fog_{edge_idx + 1}"],
             )
         )
-        dag.add_edge(prev_id, node_id, f"fog_{edge_idx}")
+        dag.add_edge(prev_id, node_id, f"fog_{edge_idx}", f"fog_{edge_idx}")
         prev_id = node_id
         edge_idx += 1
 
@@ -152,7 +152,7 @@ def make_dag_with_content(
                 exit_fogs=[f"fog_{edge_idx + 1}"],
             )
         )
-        dag.add_edge(prev_id, node_id, f"fog_{edge_idx}")
+        dag.add_edge(prev_id, node_id, f"fog_{edge_idx}", f"fog_{edge_idx}")
         prev_id = node_id
         edge_idx += 1
 
@@ -174,7 +174,7 @@ def make_dag_with_content(
                 exit_fogs=[f"fog_{edge_idx + 1}"],
             )
         )
-        dag.add_edge(prev_id, node_id, f"fog_{edge_idx}")
+        dag.add_edge(prev_id, node_id, f"fog_{edge_idx}", f"fog_{edge_idx}")
         prev_id = node_id
         edge_idx += 1
 
@@ -190,7 +190,7 @@ def make_dag_with_content(
             exit_fogs=[],
         )
     )
-    dag.add_edge(prev_id, "end", f"fog_{edge_idx}")
+    dag.add_edge(prev_id, "end", f"fog_{edge_idx}", f"fog_{edge_idx}")
     dag.start_id = "start"
     dag.end_id = "end"
 

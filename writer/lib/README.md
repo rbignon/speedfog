@@ -6,12 +6,14 @@ DLL dependencies for the SpeedFog C# writer (extracted from FogRando).
 
 | DLL | Purpose |
 |-----|---------|
+| `FogMod.dll` | FogRando mod generator (used by FogModWrapper) |
 | `SoulsFormats.dll` | Read/write FromSoft file formats |
 | `SoulsIds.dll` | Helper library by thefifthmatt (GameEditor, ParamDictionary) |
 | `YamlDotNet.dll` | YAML parsing |
 | `Newtonsoft.Json.dll` | JSON parsing |
 | `ZstdNet.dll` | Compression |
 | `BouncyCastle.Cryptography.dll` | Encryption |
+| `DrSwizzler.dll` | DDS texture swizzling |
 
 ## SoulsIds Key Classes
 

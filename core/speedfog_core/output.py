@@ -1,7 +1,7 @@
 """Output module for DAG export to JSON and spoiler logs.
 
 This module provides functions to export the generated DAG to:
-- JSON format for consumption by the C# writer
+- JSON format for consumption by the C# writer (v1 and v2 formats)
 - Human-readable spoiler log for players
 """
 
@@ -13,7 +13,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from speedfog_core.dag import Dag
+from speedfog_core.clusters import ClusterPool
+from speedfog_core.dag import Dag, DagNode
 
 
 def dag_to_dict(dag: Dag) -> dict[str, Any]:
@@ -85,13 +86,153 @@ def dag_to_dict(dag: Dag) -> dict[str, Any]:
 
 
 def export_json(dag: Dag, output_path: Path) -> None:
-    """Export a DAG to a formatted JSON file.
+    """Export a DAG to a formatted JSON file (v1 format).
 
     Args:
         dag: The DAG to export
         output_path: Path to write the JSON file
     """
     data = dag_to_dict(dag)
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+
+# =============================================================================
+# V2 Format for FogModWrapper
+# =============================================================================
+
+
+def _get_fog_zone(node: DagNode, fog_id: str, is_entry: bool) -> str | None:
+    """Get the zone containing a fog ID in a node's entry/exit fogs.
+
+    Args:
+        node: The node to search
+        fog_id: The fog ID to find
+        is_entry: True to search entry_fogs, False for exit_fogs
+
+    Returns:
+        Zone name, or None if not found
+    """
+    fogs = node.cluster.entry_fogs if is_entry else node.cluster.exit_fogs
+    for fog in fogs:
+        if fog["fog_id"] == fog_id:
+            return str(fog["zone"])
+    return None
+
+
+def _make_fullname(fog_id: str, zone: str, clusters: ClusterPool) -> str:
+    """Convert a fog_id to FogMod FullName format: {map}_{fog_id}.
+
+    Args:
+        fog_id: The fog ID (e.g., "AEG099_001_9000" or "1035452610")
+        zone: The zone containing the fog
+        clusters: ClusterPool with zone_maps
+
+    Returns:
+        FogMod FullName (e.g., "m10_01_00_00_AEG099_001_9000")
+    """
+    map_id = clusters.get_map(zone)
+    if map_id is None:
+        # Fallback to zone name if map not found
+        return f"unknown_{fog_id}"
+    return f"{map_id}_{fog_id}"
+
+
+def dag_to_dict_v2(
+    dag: Dag, clusters: ClusterPool, options: dict[str, bool] | None = None
+) -> dict[str, Any]:
+    """Convert a DAG to v2 JSON-serializable dictionary for FogModWrapper.
+
+    Args:
+        dag: The DAG to convert
+        clusters: ClusterPool with zone_maps for FullName generation
+        options: FogMod options to include (default: scale=True)
+
+    Returns:
+        Dictionary with the following structure:
+        - version: "2.0"
+        - seed: int
+        - options: dict of FogMod options
+        - connections: list of {exit_area, exit_gate, entrance_area, entrance_gate}
+        - area_tiers: dict of zone -> tier
+    """
+    if options is None:
+        options = {
+            "scale": True,
+            "shuffle": True,
+        }
+
+    # Build connections list
+    connections: list[dict[str, str]] = []
+    for edge in dag.edges:
+        source_node = dag.nodes.get(edge.source_id)
+        target_node = dag.nodes.get(edge.target_id)
+
+        if source_node is None or target_node is None:
+            continue
+
+        # Find zones for exit and entry fogs
+        exit_zone = _get_fog_zone(source_node, edge.exit_fog, is_entry=False)
+        entry_zone = _get_fog_zone(target_node, edge.entry_fog, is_entry=True)
+
+        # Handle final boss edge case: empty entry_fog means use first zone of target
+        if entry_zone is None and (not edge.entry_fog or edge.entry_fog == ""):
+            # Use first zone from target cluster
+            if target_node.cluster.zones:
+                entry_zone = target_node.cluster.zones[0]
+
+        # Skip if zones not found (shouldn't happen in valid DAG)
+        if exit_zone is None or entry_zone is None:
+            print(
+                f"Warning: Could not find zones for edge {edge.source_id} -> "
+                f"{edge.target_id}: exit_fog={edge.exit_fog}, entry_fog={edge.entry_fog}"
+            )
+            continue
+
+        # Handle empty entry_fog by using exit_fog (for one-way connections)
+        effective_entry_fog = edge.entry_fog if edge.entry_fog else edge.exit_fog
+
+        connections.append(
+            {
+                "exit_area": exit_zone,
+                "exit_gate": _make_fullname(edge.exit_fog, exit_zone, clusters),
+                "entrance_area": entry_zone,
+                "entrance_gate": _make_fullname(
+                    effective_entry_fog, entry_zone, clusters
+                ),
+            }
+        )
+
+    # Build area_tiers: zone -> tier
+    area_tiers: dict[str, int] = {}
+    for node in dag.nodes.values():
+        for zone in node.cluster.zones:
+            area_tiers[zone] = node.tier
+
+    return {
+        "version": "2.0",
+        "seed": dag.seed,
+        "options": options,
+        "connections": connections,
+        "area_tiers": area_tiers,
+    }
+
+
+def export_json_v2(
+    dag: Dag,
+    clusters: ClusterPool,
+    output_path: Path,
+    options: dict[str, bool] | None = None,
+) -> None:
+    """Export a DAG to v2 formatted JSON file for FogModWrapper.
+
+    Args:
+        dag: The DAG to export
+        clusters: ClusterPool with zone_maps
+        output_path: Path to write the JSON file
+        options: FogMod options (default: scale=True, shuffle=True)
+    """
+    data = dag_to_dict_v2(dag, clusters, options)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 

@@ -56,25 +56,33 @@ class DagNode:
 class DagEdge:
     """A directed edge between two nodes.
 
-    Edges are identified by the tuple (source_id, target_id, fog_id).
+    Edges are identified by the tuple (source_id, target_id, exit_fog, entry_fog).
     """
 
     source_id: str
     target_id: str
-    fog_id: str  # The fog gate connecting them
+    exit_fog: str  # The fog gate used to exit source (in source node's exit_fogs)
+    entry_fog: str  # The fog gate used to enter target (in target node's entry_fogs)
+
+    # Legacy alias for backward compatibility
+    @property
+    def fog_id(self) -> str:
+        """Alias for exit_fog for backward compatibility."""
+        return self.exit_fog
 
     def __hash__(self) -> int:
-        """Hash by (source_id, target_id, fog_id) tuple."""
-        return hash((self.source_id, self.target_id, self.fog_id))
+        """Hash by (source_id, target_id, exit_fog, entry_fog) tuple."""
+        return hash((self.source_id, self.target_id, self.exit_fog, self.entry_fog))
 
     def __eq__(self, other: object) -> bool:
-        """Equality by (source_id, target_id, fog_id) tuple."""
+        """Equality by (source_id, target_id, exit_fog, entry_fog) tuple."""
         if not isinstance(other, DagEdge):
             return NotImplemented
         return (
             self.source_id == other.source_id
             and self.target_id == other.target_id
-            and self.fog_id == other.fog_id
+            and self.exit_fog == other.exit_fog
+            and self.entry_fog == other.entry_fog
         )
 
 
@@ -98,9 +106,18 @@ class Dag:
         """Add a node to the DAG."""
         self.nodes[node.id] = node
 
-    def add_edge(self, source_id: str, target_id: str, fog_id: str) -> None:
-        """Add an edge to the DAG."""
-        self.edges.append(DagEdge(source_id, target_id, fog_id))
+    def add_edge(
+        self, source_id: str, target_id: str, exit_fog: str, entry_fog: str
+    ) -> None:
+        """Add an edge to the DAG.
+
+        Args:
+            source_id: ID of the source node
+            target_id: ID of the target node
+            exit_fog: Fog ID used to exit from source
+            entry_fog: Fog ID used to enter target
+        """
+        self.edges.append(DagEdge(source_id, target_id, exit_fog, entry_fog))
 
     def get_node(self, node_id: str) -> DagNode | None:
         """Get a node by id, or None if not found."""

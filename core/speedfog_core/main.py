@@ -10,7 +10,7 @@ from speedfog_core.balance import report_balance
 from speedfog_core.clusters import load_clusters
 from speedfog_core.config import Config, load_config
 from speedfog_core.generator import GenerationError, generate_with_retry
-from speedfog_core.output import export_json, export_spoiler_log
+from speedfog_core.output import export_json, export_json_v2, export_spoiler_log
 
 
 def main() -> int:
@@ -149,10 +149,16 @@ def main() -> int:
     seed_dir = args.output / str(actual_seed)
     seed_dir.mkdir(parents=True, exist_ok=True)
 
-    # Export JSON using output module
+    # Export JSON v2 format (for FogModWrapper)
     json_path = seed_dir / "graph.json"
-    export_json(dag, json_path)
+    export_json_v2(dag, clusters, json_path)
     print(f"Written: {json_path}")
+
+    # Also export v1 format for compatibility
+    json_v1_path = seed_dir / "graph_v1.json"
+    export_json(dag, json_v1_path)
+    if args.verbose:
+        print(f"Written: {json_v1_path} (v1 format)")
 
     # Export spoiler if requested using output module
     if args.spoiler:

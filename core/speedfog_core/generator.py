@@ -426,7 +426,7 @@ def execute_passant_layer(
             exit_fogs=exit_fogs,
         )
         dag.add_node(node)
-        dag.add_edge(branch.current_node_id, node_id, branch.available_exit)
+        dag.add_edge(branch.current_node_id, node_id, branch.available_exit, entry)
 
         new_branches.append(Branch(branch.id, node_id, rng.choice(exit_fogs)))
 
@@ -498,7 +498,7 @@ def execute_split_layer(
                 exit_fogs=exit_fogs,
             )
             dag.add_node(node)
-            dag.add_edge(branch.current_node_id, node_id, branch.available_exit)
+            dag.add_edge(branch.current_node_id, node_id, branch.available_exit, entry)
 
             # Create two new branches
             rng.shuffle(exit_fogs)
@@ -535,7 +535,7 @@ def execute_split_layer(
                 exit_fogs=exit_fogs,
             )
             dag.add_node(node)
-            dag.add_edge(branch.current_node_id, node_id, branch.available_exit)
+            dag.add_edge(branch.current_node_id, node_id, branch.available_exit, entry)
 
             new_branches.append(Branch(branch.id, node_id, rng.choice(exit_fogs)))
             letter_offset += 1
@@ -608,8 +608,11 @@ def execute_merge_layer(
     letter_offset += 1
 
     # Connect both merging branches to the merge node
-    for branch in merge_branches:
-        dag.add_edge(branch.current_node_id, merge_node_id, branch.available_exit)
+    # Pair each branch with its corresponding entry fog
+    for branch, entry in zip(merge_branches, entries, strict=False):
+        dag.add_edge(
+            branch.current_node_id, merge_node_id, branch.available_exit, entry
+        )
 
     # Create single branch for merged path
     new_branches.append(
@@ -630,13 +633,13 @@ def execute_merge_layer(
             )
         used_zones.update(cluster.zones)
 
-        entry = pick_entry_with_max_exits(cluster, 1, rng)
-        if entry is None:
+        passant_entry = pick_entry_with_max_exits(cluster, 1, rng)
+        if passant_entry is None:
             raise GenerationError(
                 f"Cluster {cluster.id} has no valid entry fog with exits"
             )
 
-        exits = compute_net_exits(cluster, [entry])
+        exits = compute_net_exits(cluster, [passant_entry])
         exit_fogs = [f["fog_id"] for f in exits]
 
         node_id = f"node_{layer_idx}_{chr(97 + letter_offset)}"
@@ -645,11 +648,13 @@ def execute_merge_layer(
             cluster=cluster,
             layer=layer_idx,
             tier=tier,
-            entry_fogs=[entry],
+            entry_fogs=[passant_entry],
             exit_fogs=exit_fogs,
         )
         dag.add_node(node)
-        dag.add_edge(branch.current_node_id, node_id, branch.available_exit)
+        dag.add_edge(
+            branch.current_node_id, node_id, branch.available_exit, passant_entry
+        )
 
         new_branches.append(Branch(branch.id, node_id, rng.choice(exit_fogs)))
         letter_offset += 1
@@ -885,7 +890,10 @@ def generate_dag(
         raise GenerationError("No branches remaining to connect to end")
 
     branch = branches[0]
-    dag.add_edge(branch.current_node_id, end_node.id, branch.available_exit)
+    # Use entry_fog_end, or empty string if None (final boss may have no entry fogs)
+    dag.add_edge(
+        branch.current_node_id, end_node.id, branch.available_exit, entry_fog_end or ""
+    )
 
     return dag
 

@@ -101,10 +101,10 @@ def make_test_dag() -> Dag:
     )
 
     # Add edges
-    dag.add_edge("start", "a", "fog_1")
-    dag.add_edge("start", "b", "fog_2")
-    dag.add_edge("a", "end", "fog_3")
-    dag.add_edge("b", "end", "fog_4")
+    dag.add_edge("start", "a", "fog_1", "fog_1")
+    dag.add_edge("start", "b", "fog_2", "fog_2")
+    dag.add_edge("a", "end", "fog_3", "fog_3")
+    dag.add_edge("b", "end", "fog_4", "fog_4")
 
     dag.start_id = "start"
     dag.end_id = "end"

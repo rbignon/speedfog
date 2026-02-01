@@ -43,7 +43,7 @@ def make_linear_dag(weights: list[int]) -> Dag:
         )
         dag.add_node(node)
         if i > 0:
-            dag.add_edge(f"n{i - 1}", f"n{i}", f"fog_{i}")
+            dag.add_edge(f"n{i - 1}", f"n{i}", f"fog_{i}", f"fog_{i}")
     if weights:
         dag.start_id = "n0"
         dag.end_id = f"n{len(weights) - 1}"
@@ -115,11 +115,11 @@ def make_forked_dag(
                 exit_fogs=[],
             )
             dag.add_node(node)
-            dag.add_edge(prev_id, node_id, f"fog_{node_id}")
+            dag.add_edge(prev_id, node_id, f"fog_{node_id}", f"fog_{node_id}")
             prev_id = node_id
 
         # Connect last node in branch to end
-        dag.add_edge(prev_id, "end", f"fog_{label}_end")
+        dag.add_edge(prev_id, "end", f"fog_{label}_end", f"fog_{label}_end")
 
     dag.start_id = "start"
     dag.end_id = "end"

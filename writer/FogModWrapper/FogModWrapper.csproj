@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="FogMod">
+      <HintPath>../lib/FogMod.dll</HintPath>
+    </Reference>
+    <Reference Include="SoulsFormats">
+      <HintPath>../lib/SoulsFormats.dll</HintPath>
+    </Reference>
+    <Reference Include="SoulsIds">
+      <HintPath>../lib/SoulsIds.dll</HintPath>
+    </Reference>
+    <Reference Include="YamlDotNet">
+      <HintPath>../lib/YamlDotNet.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>../lib/Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="DrSwizzler">
+      <HintPath>../lib/DrSwizzler.dll</HintPath>
+    </Reference>
+    <Reference Include="BouncyCastle.Cryptography">
+      <HintPath>../lib/BouncyCastle.Cryptography.dll</HintPath>
+    </Reference>
+    <Reference Include="ZstdNet">
+      <HintPath>../lib/ZstdNet.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>
