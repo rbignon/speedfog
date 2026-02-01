@@ -12,6 +12,7 @@ public class GameDataLoader
     public Dictionary<string, MSBE> Msbs { get; } = new();
     public Dictionary<string, EMEVD> Emevds { get; } = new();
     public ParamDictionary? Params { get; private set; }
+    public Events? EventsHelper { get; private set; }
 
     public GameDataLoader(string gameDir)
     {
@@ -67,6 +68,15 @@ public class GameDataLoader
             }
         }
         Console.WriteLine($"  Loaded {Msbs.Count} MSB files");
+    }
+
+    public void InitializeEvents(string emedfPath)
+    {
+        if (!File.Exists(emedfPath))
+            throw new FileNotFoundException($"er-common.emedf.json not found: {emedfPath}");
+
+        EventsHelper = new Events(emedfPath, darkScriptMode: true, paramAwareMode: true);
+        Console.WriteLine($"  Initialized Events helper from {emedfPath}");
     }
 
     public GameEditor Editor => _editor;
