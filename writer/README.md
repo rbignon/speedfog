@@ -18,7 +18,7 @@ dotnet build
 ## Usage
 
 ```bash
-dotnet run --project SpeedFogWriter -- <graph.json> <game_dir> <output_dir> [--data-dir <path>]
+dotnet run --project SpeedFogWriter -- <graph.json> <game_dir> <output_dir> [options]
 ```
 
 ### Arguments
@@ -29,20 +29,33 @@ dotnet run --project SpeedFogWriter -- <graph.json> <game_dir> <output_dir> [--d
 
 ### Options
 
-- `--data-dir` - Custom path to data directory (default: ../data)
+- `--data-dir <path>` - Custom path to data directory (default: ../data)
+- `--no-package` - Skip ModEngine packaging (output mod files only)
+- `--update-modengine` - Force re-download of ModEngine 2
+- `--no-spoiler` - Skip spoiler.txt generation
 
 ## Output
 
-Creates ModEngine 2-compatible mod structure:
+Creates a self-contained mod with ModEngine 2 and launcher scripts:
 
 ```
 output/
-└── mods/
-    └── speedfog/
-        ├── param/gameparam/regulation.bin
-        ├── event/*.emevd.dcx
-        └── map/mapstudio/*.msb.dcx
+├── ModEngine/              # ModEngine 2 (auto-downloaded)
+├── mods/speedfog/          # Mod files
+│   ├── param/gameparam/regulation.bin
+│   ├── event/*.emevd.dcx
+│   └── map/mapstudio/*.msb.dcx
+├── config_speedfog.toml    # ModEngine config
+├── launch_speedfog.bat     # Windows launcher
+├── launch_speedfog.sh      # Linux/Proton launcher
+└── spoiler.txt             # Path spoiler log
 ```
+
+## Playing
+
+After generating the mod:
+- **Windows**: Double-click `output/launch_speedfog.bat`
+- **Linux/Proton**: Run `output/launch_speedfog.sh`
 
 ## Development
 
