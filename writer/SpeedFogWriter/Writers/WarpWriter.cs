@@ -58,24 +58,74 @@ public class WarpWriter
             position = Vector3.Zero;
         }
 
-        // Offset spawn position away from the fog gate
-        // This prevents the player from spawning directly on the fog and getting stuck
+        // Determine which side of the fog gate to spawn on based on target zones
+        // FogRando convention: zones[0] = ASide (fog faces this way), zones[1] = BSide (opposite)
+        // Reference: FogRando GameDataWriterE.cs L420-431
+        // - BSide (!flag2): r2 = asset4.Rotation (move forward)
+        // - ASide (flag2): r2 = oppositeRotation (move backward)
+        var offsetDirection = DetermineSpawnSide(fogGate, rotation);
+
+        // Offset by 1 unit in the appropriate direction
         // FogRando uses dist=1f (GameDataWriterE.cs L373)
-        // IMPORTANT: Move in the direction the player faces (opposite to fog rotation),
-        // not the fog's direction - otherwise we move TOWARD the fog, not away from it
-        // (FogRando uses r2 which varies by side: L420-431)
-        var playerFacing = OppositeRotation(rotation);
-        var spawnPosition = MoveInDirection(position, playerFacing, 1f);
+        var spawnPosition = MoveInDirection(position, offsetDirection, 1f);
+
+        // Player faces into the zone (opposite of offset direction)
+        var playerRotation = OppositeRotation(offsetDirection);
 
         var spawnRegion = new MSBE.Region.SpawnPoint
         {
             Name = $"SpeedFog_Spawn_{fogGate.WarpRegionId}",
             EntityID = fogGate.WarpRegionId,
             Position = spawnPosition,
-            Rotation = OppositeRotation(rotation)
+            Rotation = playerRotation
         };
 
         msb.Regions.SpawnPoints.Add(spawnRegion);
+    }
+
+    /// <summary>
+    /// Determine the offset direction based on which side of the fog we're entering.
+    /// FogRando convention in fog_data.json: zones[0] = ASide, zones[1] = BSide.
+    /// - To enter zones[0] (ASide): move backward (oppositeRotation)
+    /// - To enter zones[1] (BSide): move forward (original rotation)
+    /// Reference: FogRando GameDataWriterE.cs L420-431
+    /// </summary>
+    private Vector3 DetermineSpawnSide(FogGateEvent fogGate, Vector3 fogRotation)
+    {
+        if (fogGate.EntryFogData == null || fogGate.EntryFogData.Zones.Count < 2)
+        {
+            Console.WriteLine($"    [DEBUG] No side info for {fogGate.TargetClusterId}, using forward");
+            return fogRotation;
+        }
+
+        var fogZones = fogGate.EntryFogData.Zones;
+        var targetZones = fogGate.TargetZones;
+
+        // Check if any target zone matches zones[1] (BSide) → move forward
+        foreach (var targetZone in targetZones)
+        {
+            if (fogZones.Count > 1 && fogZones[1] == targetZone)
+            {
+                Console.WriteLine($"    [DEBUG] {fogGate.TargetClusterId}: Entering BSide ({targetZone}), offset forward");
+                return fogRotation;
+            }
+        }
+
+        // Check if any target zone matches zones[0] (ASide) → move backward
+        foreach (var targetZone in targetZones)
+        {
+            if (fogZones[0] == targetZone)
+            {
+                Console.WriteLine($"    [DEBUG] {fogGate.TargetClusterId}: Entering ASide ({targetZone}), offset backward");
+                return OppositeRotation(fogRotation);
+            }
+        }
+
+        // Default: no match found, log warning and use forward
+        Console.WriteLine($"    WARNING: Could not determine side for {fogGate.TargetClusterId}");
+        Console.WriteLine($"      Fog zones: [{string.Join(", ", fogZones)}]");
+        Console.WriteLine($"      Target zones: [{string.Join(", ", targetZones)}]");
+        return fogRotation;
     }
 
     private (Vector3 Position, Vector3 Rotation) GetFogPositionFromMsb(FogEntryData fog, MSBE msb)
