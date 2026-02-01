@@ -1,5 +1,7 @@
 // writer/SpeedFogWriter/Program.cs
 using SpeedFogWriter.Models;
+using SpeedFogWriter.Writers;
+using SpeedFogWriter.Helpers;
 
 namespace SpeedFogWriter;
 
@@ -9,69 +11,70 @@ class Program
     {
         Console.WriteLine("SpeedFogWriter v0.1");
 
-        if (args.Length < 1)
+        if (args.Length < 3)
         {
-            Console.WriteLine("Usage: SpeedFogWriter <graph.json> [game_dir] [output_dir]");
+            Console.WriteLine("Usage: SpeedFogWriter <graph.json> <game_dir> <output_dir> [--data-dir <path>]");
+            Console.WriteLine();
+            Console.WriteLine("Arguments:");
+            Console.WriteLine("  graph.json  - Path to graph from speedfog-core");
+            Console.WriteLine("  game_dir    - Path to Elden Ring Game folder");
+            Console.WriteLine("  output_dir  - Output directory for mod files");
+            Console.WriteLine();
+            Console.WriteLine("Options:");
+            Console.WriteLine("  --data-dir  - Path to data directory (default: ../data)");
             return 1;
         }
 
         var graphPath = args[0];
+        var gameDir = args[1];
+        var outputDir = args[2];
+
+        var dataDir = PathHelper.GetDataDir();
+        for (int i = 3; i < args.Length - 1; i++)
+        {
+            if (args[i] == "--data-dir")
+                dataDir = args[i + 1];
+        }
 
         if (!File.Exists(graphPath))
         {
-            Console.Error.WriteLine($"Error: Graph file not found: {graphPath}");
+            Console.Error.WriteLine($"Error: Graph not found: {graphPath}");
+            return 1;
+        }
+
+        if (!Directory.Exists(gameDir))
+        {
+            Console.Error.WriteLine($"Error: Game directory not found: {gameDir}");
             return 1;
         }
 
         try
         {
-            // Test graph parsing
-            Console.WriteLine($"\nLoading graph: {graphPath}");
+            Console.WriteLine($"Loading graph: {graphPath}");
             var graph = SpeedFogGraph.Load(graphPath);
-
             Console.WriteLine($"  Seed: {graph.Seed}");
-            Console.WriteLine($"  Total nodes: {graph.TotalNodes}");
-            Console.WriteLine($"  Total edges: {graph.Edges.Count}");
-            Console.WriteLine($"  Start node: {graph.StartId} ({graph.StartNode?.Type})");
-            Console.WriteLine($"  End node: {graph.EndId} ({graph.EndNode?.Type})");
+            Console.WriteLine($"  Nodes: {graph.TotalNodes}");
+            Console.WriteLine($"  Edges: {graph.Edges.Count}");
 
-            Console.WriteLine("\nNodes:");
-            foreach (var node in graph.AllNodes())
+            if (graph.StartNode == null || graph.EndNode == null)
             {
-                Console.WriteLine($"  {node.Id}: {node.Type}, zones=[{string.Join(", ", node.Zones)}], tier={node.Tier}");
+                Console.Error.WriteLine("Error: Graph missing start or end node");
+                return 1;
             }
 
-            Console.WriteLine("\nEdges:");
-            foreach (var edge in graph.Edges)
-            {
-                Console.WriteLine($"  {edge.Source} -> {edge.Target} via {edge.FogId}");
-            }
+            Console.WriteLine();
+            var writer = new ModWriter(gameDir, outputDir, dataDir, graph);
+            writer.Generate();
 
-            // Test fog_data parsing if available
-            var fogDataPath = Path.Combine(Path.GetDirectoryName(graphPath) ?? ".", "..", "data", "fog_data.json");
-            if (File.Exists(fogDataPath))
-            {
-                Console.WriteLine($"\nLoading fog data: {fogDataPath}");
-                var fogData = FogDataFile.Load(fogDataPath);
-                Console.WriteLine($"  Fog entries: {fogData.Fogs.Count}");
-            }
-
-            // Test clusters parsing if available
-            var clustersPath = Path.Combine(Path.GetDirectoryName(graphPath) ?? ".", "..", "data", "clusters.json");
-            if (File.Exists(clustersPath))
-            {
-                Console.WriteLine($"\nLoading clusters: {clustersPath}");
-                var clusters = ClusterFile.Load(clustersPath);
-                Console.WriteLine($"  Zone maps: {clusters.ZoneMaps.Count}");
-                Console.WriteLine($"  Clusters: {clusters.Clusters.Count}");
-            }
-
-            Console.WriteLine("\nParsing tests passed!");
             return 0;
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Error: {ex.Message}");
+            if (Environment.GetEnvironmentVariable("SPEEDFOG_DEBUG") != null)
+            {
+                Console.Error.WriteLine(ex.StackTrace);
+            }
             return 1;
         }
     }
