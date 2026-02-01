@@ -73,13 +73,11 @@ speedfog/writer/
 
 Before starting C# implementation, ensure these files exist:
 
-### 3.0.1: speedfog-events.yaml (TO CREATE)
+### 3.0.1: speedfog-events.yaml - COMPLETE
 
-Create `writer/data/speedfog-events.yaml` with event templates. This file defines EMEVD event structures in a readable format, parsed at runtime by `Events.ParseAddArg()`.
+Event templates file created at `writer/data/speedfog-events.yaml`. Defines EMEVD event structures in a readable format, parsed at runtime by `Events.ParseAddArg()`.
 
-**File location**: `writer/data/speedfog-events.yaml`
-
-The template content is defined in Task 3.3 below. Create the file before implementing `EventBuilder`.
+Templates included: `scale`, `showsfx`, `fogwarp`, `fogwarp_simple`, `startboss`, `disable`, `give_items`, `common_init`.
 
 ### 3.0.2: Required Data Files Checklist
 
@@ -89,7 +87,7 @@ The template content is defined in Task 3.3 below. Create the file before implem
 | `reference/lib/*.dll` | ✅ EXISTS | SoulsFormats, SoulsIds, YamlDotNet |
 | `writer/data/fog_data.json` | ✅ EXISTS | Fog gate metadata |
 | `core/data/clusters.json` | ✅ EXISTS | Cluster definitions with zone_maps |
-| `writer/data/speedfog-events.yaml` | ❌ TO CREATE | Event templates |
+| `writer/data/speedfog-events.yaml` | ✅ EXISTS | Event templates |
 
 ### 3.0.3: Template MSB Dependency
 
@@ -3066,12 +3064,12 @@ Ensure you're using a SoulsFormats version that supports Elden Ring. The DLLs in
 
 ## Acceptance Criteria
 
-### Task 3.0 (Prerequisites) - PARTIAL
+### Task 3.0 (Prerequisites) - COMPLETE
 - [x] `reference/fogrando-data/er-common.emedf.json` exists
 - [x] `reference/lib/*.dll` all present (SoulsFormats, SoulsIds, YamlDotNet, etc.)
 - [x] `writer/data/fog_data.json` exists with `asset_name` field
 - [x] `core/data/clusters.json` exists with `zone_maps` field
-- [ ] `writer/data/speedfog-events.yaml` created with templates
+- [x] `writer/data/speedfog-events.yaml` created with templates
 
 ### Task 3.2.1 (fog_data.json) - COMPLETE
 - [x] Python script `tools/extract_fog_data.py` exists
