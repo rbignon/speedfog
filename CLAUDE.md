@@ -110,11 +110,12 @@ When implementing features, refer to these sections in `GameDataWriterE.cs`:
 ```bash
 # Python core (after Phase 1-2 implementation)
 cd core && pip install -e .
-speedfog config.toml -o graph.json
+speedfog config.toml --spoiler -o /tmp/speedfog
+# Creates /tmp/speedfog/<seed>/graph.json and spoiler.txt
 
 # C# writer (after Phase 3-4 implementation)
 cd writer && dotnet build
-dotnet run -- graph.json "/path/to/ELDEN RING/Game" ./output
+dotnet run -- /tmp/speedfog/<seed> "/path/to/ELDEN RING/Game" ./output
 
 # Play! (output is self-contained with ModEngine + launcher)
 ./output/launch_speedfog.bat   # Windows

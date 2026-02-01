@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -452,6 +453,7 @@ def export_spoiler_log(dag: Dag, output_path: Path) -> None:
     # Header
     lines.append("=" * 60)
     lines.append(f"SPEEDFOG SPOILER (seed: {dag.seed})")
+    lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     lines.append("=" * 60)
     lines.append(f"Total zones: {dag.total_zones()}")
     paths = dag.enumerate_paths()
@@ -577,6 +579,39 @@ def export_spoiler_log(dag: Dag, output_path: Path) -> None:
             for nid in path
         )
         lines.append(f"Path {i} (weight {weight}): {path_str}")
+
+    # NODE DETAILS section
+    lines.append("")
+    lines.append("=" * 60)
+    lines.append("NODE DETAILS")
+    lines.append("=" * 60)
+
+    # Build edge lookup: source_id -> list of (target_id, fog_id)
+    outgoing_edges: dict[str, list[tuple[str, str]]] = {}
+    for edge in dag.edges:
+        if edge.source_id not in outgoing_edges:
+            outgoing_edges[edge.source_id] = []
+        outgoing_edges[edge.source_id].append((edge.target_id, edge.fog_id))
+
+    # Print node details sorted by tier then by cluster ID
+    sorted_nodes = sorted(dag.nodes.values(), key=lambda n: (n.tier, n.cluster.id))
+    for node in sorted_nodes:
+        lines.append("")
+        lines.append(f"[{node.cluster.id}]")
+        lines.append(f"  Type: {node.cluster.type}")
+        lines.append(f"  Zones: {', '.join(node.cluster.zones)}")
+        lines.append(f"  Tier: {node.tier}")
+        lines.append(f"  Layer: {node.layer}")
+        lines.append(f"  Weight: {node.cluster.weight}")
+
+        # Exits with fog_id
+        exits = outgoing_edges.get(node.id, [])
+        if exits:
+            lines.append("  Exits:")
+            for target_id, fog_id in exits:
+                target_node = dag.nodes.get(target_id)
+                target_name = target_node.cluster.id if target_node else target_id
+                lines.append(f"    -> {target_name} via {fog_id}")
 
     # Write to file
     with open(output_path, "w", encoding="utf-8") as f:

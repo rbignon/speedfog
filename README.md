@@ -32,14 +32,15 @@ SpeedFog only randomizes zone connections. Run the Enemy/Item Randomizer first t
 cp config.example.toml config.toml
 nano config.toml
 
-# Generate the DAG
-speedfog config.toml -o graph.json --spoiler spoiler.txt
+# Generate the DAG and spoiler
+speedfog config.toml --spoiler -o /tmp/speedfog
+# Creates /tmp/speedfog/<seed>/graph.json and spoiler.txt
 
 # Generate mod files (Windows)
-SpeedFogWriter.exe graph.json "C:/Games/ELDEN RING/Game" ./output
+SpeedFogWriter.exe /tmp/speedfog/<seed> "C:/Games/ELDEN RING/Game" ./output
 
 # Generate mod files (Linux via Wine - see "Running on Linux" section)
-wine SpeedFogWriter.exe graph.json "/path/to/ELDEN RING/Game" ./output
+wine SpeedFogWriter.exe /tmp/speedfog/<seed> "/path/to/ELDEN RING/Game" ./output
 ```
 
 ### 3. Install the Mod
@@ -168,16 +169,17 @@ dotnet build -r win-x64
 The C# writer depends on Windows-only libraries (Oodle compression via `oo2core_6_win64.dll`). On Linux, use Wine:
 
 ```bash
-# 1. Generate the DAG (native Linux)
+# 1. Generate the DAG and spoiler (native Linux)
 cd core
-speedfog config.toml -o graph.json --spoiler spoiler.txt
+speedfog config.toml --spoiler -o /tmp/speedfog
+# Creates /tmp/speedfog/<seed>/graph.json and spoiler.txt
 
 # 2. Copy Oodle DLL from game folder (required for reading game files)
 cp "/path/to/ELDEN RING/Game/oo2core_6_win64.dll" ../writer/SpeedFogWriter/bin/Release/net8.0/win-x64/
 
 # 3. Run the writer with Wine
 cd ../writer/SpeedFogWriter/bin/Release/net8.0/win-x64/
-wine SpeedFogWriter.exe graph.json "/path/to/ELDEN RING/Game" ./output
+wine SpeedFogWriter.exe /tmp/speedfog/<seed> "/path/to/ELDEN RING/Game" ./output
 ```
 
 **Note**: The game itself runs via Proton on Linux, so this workflow integrates naturally.
