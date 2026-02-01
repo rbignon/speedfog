@@ -36,4 +36,11 @@
     </Reference>
   </ItemGroup>
 
+  <!-- Copy Oodle compression library to output (required for DCX decompression) -->
+  <ItemGroup>
+    <None Include="../lib/oo2core_6_win64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
