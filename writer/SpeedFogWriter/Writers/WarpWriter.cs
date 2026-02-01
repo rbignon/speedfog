@@ -58,11 +58,16 @@ public class WarpWriter
             position = Vector3.Zero;
         }
 
+        // Offset spawn position by 1 unit away from the fog gate
+        // This prevents the player from spawning directly on the fog and getting stuck
+        // FogRando uses dist=1f (GameDataWriterE.cs L373)
+        var spawnPosition = MoveInDirection(position, rotation, 1f);
+
         var spawnRegion = new MSBE.Region.SpawnPoint
         {
             Name = $"SpeedFog_Spawn_{fogGate.WarpRegionId}",
             EntityID = fogGate.WarpRegionId,
-            Position = position,
+            Position = spawnPosition,
             Rotation = OppositeRotation(rotation)
         };
 
@@ -94,6 +99,23 @@ public class WarpWriter
 
         Console.WriteLine($"  Warning: Could not find fog asset {fog.AssetName} in {fog.Map}");
         return (Vector3.Zero, Vector3.Zero);
+    }
+
+    /// <summary>
+    /// Move a position in the direction specified by rotation.
+    /// Same as FogRando's moveInDirection helper (GameDataWriterE.cs L5326).
+    /// </summary>
+    /// <param name="position">Starting position</param>
+    /// <param name="rotation">Rotation (Y component is the heading in degrees)</param>
+    /// <param name="distance">Distance to move (positive = forward)</param>
+    private static Vector3 MoveInDirection(Vector3 position, Vector3 rotation, float distance)
+    {
+        float radians = rotation.Y * MathF.PI / 180f;
+        return new Vector3(
+            position.X + MathF.Sin(radians) * distance,
+            position.Y,
+            position.Z + MathF.Cos(radians) * distance
+        );
     }
 
     private static Vector3 OppositeRotation(Vector3 rotation)
