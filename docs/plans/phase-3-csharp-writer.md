@@ -84,6 +84,7 @@ Templates included: `scale`, `showsfx`, `fogwarp`, `fogwarp_simple`, `startboss`
 | File | Status | Purpose |
 |------|--------|---------|
 | `reference/fogrando-data/er-common.emedf.json` | ✅ EXISTS | EMEVD instruction definitions |
+| `reference/fogrando-data/foglocations2.txt` | ✅ EXISTS | Enemy area → tier mapping |
 | `reference/lib/*.dll` | ✅ EXISTS | SoulsFormats, SoulsIds, YamlDotNet |
 | `writer/data/fog_data.json` | ✅ EXISTS | Fog gate metadata |
 | `core/data/clusters.json` | ✅ EXISTS | Cluster definitions with zone_maps |
@@ -1381,6 +1382,323 @@ public class ScalingWriter
             result[i] = min * Math.Pow(max / min, t);
         }
         return result;
+    }
+}
+```
+
+---
+
+## Task 3.4.1: Applying Scaling to Enemies (EnemyScalingApplicator)
+
+**Critical**: `ScalingWriter` creates SpEffect entries, but they must be **applied** to each enemy via EMEVD events.
+
+### Data Source
+
+Read `foglocations2.txt` directly with YamlDotNet (like FogRando does):
+
+```csharp
+// Reference: FogRando Randomizer.cs L96-99
+using var reader = File.OpenText(
+    Path.Combine(_dataDir, "..", "reference", "fogrando-data", "foglocations2.txt"));
+var fogLocations = new DeserializerBuilder().Build()
+    .Deserialize<FogLocations>(reader);
+```
+
+### FogLocations Model
+
+```csharp
+using YamlDotNet.Serialization;
+
+namespace SpeedFogWriter.Models;
+
+public class FogLocations
+{
+    public List<object> Items { get; set; } = new();  // Not used by SpeedFog
+    public List<EnemyArea> EnemyAreas { get; set; } = new();
+    public List<object> Enemies { get; set; } = new();  // Not used by SpeedFog
+}
+
+public class EnemyArea
+{
+    public string Name { get; set; } = "";        // Zone name (e.g., "limgrave")
+    public string? Groups { get; set; }           // Entity group IDs (space-separated)
+    public string? Cols { get; set; }             // Collision mesh IDs (space-separated)
+    public string? MainMap { get; set; }          // Map IDs (space-separated)
+    public int ScalingTier { get; set; }          // Vanilla tier for this zone
+
+    public List<int> GetGroups() =>
+        Groups?.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            .Select(int.Parse).ToList() ?? new();
+
+    public List<string> GetCols() =>
+        Cols?.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList() ?? new();
+
+    public List<string> GetMainMaps() =>
+        MainMap?.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToList() ?? new();
+}
+```
+
+### EnemyScalingApplicator.cs
+
+Iterates through MSB enemies and creates `scale` events. Adapted from FogRando `GameDataWriterE.cs` L2069-2220.
+
+```csharp
+using SoulsFormats;
+using SpeedFogWriter.Models;
+
+namespace SpeedFogWriter.Writers;
+
+/// <summary>
+/// Applies scaling SpEffects to enemies by creating EMEVD events.
+/// </summary>
+public class EnemyScalingApplicator
+{
+    private readonly Dictionary<string, MSBE> _msbs;
+    private readonly Dictionary<string, EMEVD> _emevds;
+    private readonly SpeedFogGraph _graph;
+    private readonly FogLocations _fogLocations;
+    private readonly ScalingWriter _scalingWriter;
+    private readonly Events _events;
+    private readonly Dictionary<string, EventConfig.NewEvent> _customEvents;
+
+    // Zone name → vanilla tier (from foglocations2.txt)
+    private readonly Dictionary<string, int> _vanillaTiers = new();
+    // Zone name → target tier (from graph.json)
+    private readonly Dictionary<string, int> _targetTiers = new();
+    // Map → zone (for enemy lookup)
+    private readonly Dictionary<string, string> _mapToZone = new();
+    // Entity group → zone
+    private readonly Dictionary<int, string> _groupToZone = new();
+    // Collision → zone
+    private readonly Dictionary<string, string> _colToZone = new();
+    // Track which MSBs were modified (need to be written)
+    private readonly HashSet<string> _modifiedMsbs = new();
+    // Excluded model names (NPCs, merchants, special characters)
+    private readonly HashSet<string> _excludedModels = new()
+    {
+        "c0000",  // Player/human NPCs
+        "c4670",  // Round Table NPCs
+    };
+
+    private uint _nextEntityId = 1028660000;  // FogRando's base for enemy IDs
+
+    public int EnemiesProcessed { get; private set; }
+    public int EnemiesScaled { get; private set; }
+    public int EnemiesSkipped { get; private set; }
+    public IReadOnlySet<string> ModifiedMsbs => _modifiedMsbs;
+
+    public EnemyScalingApplicator(
+        Dictionary<string, MSBE> msbs,
+        Dictionary<string, EMEVD> emevds,
+        SpeedFogGraph graph,
+        FogLocations fogLocations,
+        ScalingWriter scalingWriter,
+        Events events,
+        Dictionary<string, EventConfig.NewEvent> customEvents)
+    {
+        _msbs = msbs;
+        _emevds = emevds;
+        _graph = graph;
+        _fogLocations = fogLocations;
+        _scalingWriter = scalingWriter;
+        _events = events;
+        _customEvents = customEvents;
+
+        BuildLookupTables();
+    }
+
+    private void BuildLookupTables()
+    {
+        // Build vanilla tier lookup from foglocations2.txt
+        foreach (var area in _fogLocations.EnemyAreas)
+        {
+            _vanillaTiers[area.Name] = area.ScalingTier;
+
+            foreach (var map in area.GetMainMaps())
+                _mapToZone[map] = area.Name;
+
+            foreach (var group in area.GetGroups())
+                _groupToZone[group] = area.Name;
+
+            foreach (var col in area.GetCols())
+                _colToZone[col] = area.Name;
+        }
+
+        // Build target tier lookup from graph.json
+        foreach (var node in _graph.AllNodes())
+        {
+            foreach (var zone in node.Zones)
+            {
+                _targetTiers[zone] = node.Tier;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Apply scaling to all enemies in loaded MSBs.
+    /// </summary>
+    public void ApplyScaling()
+    {
+        foreach (var (mapName, msb) in _msbs)
+        {
+            foreach (var enemy in msb.Parts.Enemies)
+            {
+                ProcessEnemy(mapName, msb, enemy);
+            }
+        }
+
+        Console.WriteLine($"  Enemies: {EnemiesProcessed} processed, {EnemiesScaled} scaled, {EnemiesSkipped} skipped");
+    }
+
+    private void ProcessEnemy(string mapName, MSBE msb, MSBE.Part.Enemy enemy)
+    {
+        EnemiesProcessed++;
+
+        // Exclude NPCs and special characters
+        if (_excludedModels.Contains(enemy.ModelName))
+        {
+            EnemiesSkipped++;
+            return;
+        }
+
+        // Determine which zone this enemy belongs to
+        var zone = DetermineEnemyZone(mapName, enemy);
+        if (zone == null)
+        {
+            EnemiesSkipped++;
+            return;
+        }
+
+        // Get vanilla tier and target tier
+        if (!_vanillaTiers.TryGetValue(zone, out var vanillaTier))
+        {
+            EnemiesSkipped++;
+            return;
+        }
+
+        if (!_targetTiers.TryGetValue(zone, out var targetTier))
+        {
+            EnemiesSkipped++;
+            return;
+        }
+
+        // No scaling needed if tiers match
+        if (vanillaTier == targetTier)
+        {
+            EnemiesSkipped++;
+            return;
+        }
+
+        // Ensure enemy has an entity ID
+        if (enemy.EntityID == 0)
+        {
+            enemy.EntityID = _nextEntityId++;
+            _modifiedMsbs.Add(mapName);  // Track MSB for writing
+
+            // Gap handling to avoid ID range conflicts (like FogRando L2147-2150)
+            if (_nextEntityId % 10000U == 5000U)
+            {
+                _nextEntityId += 5000U;
+            }
+        }
+
+        // Get scaling SpEffect
+        var spEffectId = _scalingWriter.GetTransitionEffect(vanillaTier, targetTier);
+        if (spEffectId == -1)
+        {
+            EnemiesSkipped++;
+            return;
+        }
+
+        // Create scale event
+        CreateScaleEvent(mapName, (int)enemy.EntityID, spEffectId);
+        EnemiesScaled++;
+    }
+
+    private string? DetermineEnemyZone(string mapName, MSBE.Part.Enemy enemy)
+    {
+        // Priority 1: Entity group ID
+        foreach (var groupId in enemy.EntityGroupIDs)
+        {
+            if (groupId != 0 && _groupToZone.TryGetValue((int)groupId, out var zone))
+                return zone;
+        }
+
+        // Priority 2: Collision part name
+        if (enemy.CollisionPartName != null)
+        {
+            var colKey = $"{mapName}_{enemy.CollisionPartName}";
+            if (_colToZone.TryGetValue(colKey, out var zone))
+                return zone;
+        }
+
+        // Priority 3: Map name
+        if (_mapToZone.TryGetValue(mapName, out var mapZone))
+            return mapZone;
+
+        return null;
+    }
+
+    private void CreateScaleEvent(string mapName, int entityId, int spEffectId)
+    {
+        // Get or create EMEVD for this map
+        var emevdName = GetEventMap(mapName);
+        if (!_emevds.TryGetValue(emevdName, out var emevd))
+            return;
+
+        // Create InitializeEvent call for "scale" template
+        // Reference: FogRando GameDataWriterE.cs L2195-2202
+        var scaleEventId = _customEvents["scale"].ID;
+        var initInstruction = new EMEVD.Instruction(2000, 0, new List<object>
+        {
+            0,              // slot
+            scaleEventId,   // event ID
+            entityId,       // X0_4 = entity_id
+            spEffectId      // X4_4 = speffect
+        });
+
+        // Add to map's event 0 (initialization)
+        var event0 = emevd.Events.FirstOrDefault(e => e.ID == 0);
+        if (event0 != null)
+        {
+            event0.Instructions.Add(initInstruction);
+        }
+    }
+
+    private string GetEventMap(string mapName)
+    {
+        // Simplified - FogRando has complex logic for DLC maps
+        return mapName;
+    }
+}
+```
+
+### Integration in ModWriter
+
+```csharp
+private HashSet<string> _msbsToWrite = new();
+
+private void ApplyEnemyScaling()
+{
+    if (_scalingWriter == null || _fogLocations == null)
+        throw new InvalidOperationException("Scaling data not initialized");
+
+    var applicator = new EnemyScalingApplicator(
+        _msbs,
+        _emevds,
+        _graph,
+        _fogLocations,
+        _scalingWriter,
+        _events,
+        _customEvents
+    );
+
+    applicator.ApplyScaling();
+
+    // Track MSBs that need writing (entity IDs were assigned)
+    foreach (var msb in applicator.ModifiedMsbs)
+    {
+        _msbsToWrite.Add(msb);
     }
 }
 ```
