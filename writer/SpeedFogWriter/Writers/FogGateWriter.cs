@@ -66,6 +66,11 @@ public class FogGateWriter
                 FogAssetName = exitFogData.AssetName,
                 FogLookupBy = exitFogData.LookupBy,
 
+                // MakeFrom fog data (for dynamic asset creation)
+                IsMakeFrom = exitFogData.IsMakeFrom,
+                FogPosition = exitFogData.PositionVec,
+                FogRotation = exitFogData.RotationVec,
+
                 TargetMap = targetMap,
                 WarpRegionId = _idAllocator.AllocateRegionId(),
                 EntryFogData = entryFogData,

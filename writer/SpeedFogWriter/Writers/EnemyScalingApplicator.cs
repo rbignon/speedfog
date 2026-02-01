@@ -23,12 +23,14 @@ public class EnemyScalingApplicator
 
     private readonly HashSet<string> _excludedModels = new() { "c0000", "c4670" };
     private readonly HashSet<string> _modifiedMsbs = new();
+    private readonly HashSet<string> _modifiedEmevds = new();
     private uint _nextEntityId = 1028660000;
 
     public int EnemiesProcessed { get; private set; }
     public int EnemiesScaled { get; private set; }
     public int EnemiesSkipped { get; private set; }
     public IReadOnlySet<string> ModifiedMsbs => _modifiedMsbs;
+    public IReadOnlySet<string> ModifiedEmevds => _modifiedEmevds;
 
     public EnemyScalingApplicator(
         Dictionary<string, MSBE> msbs,
@@ -183,5 +185,8 @@ public class EnemyScalingApplicator
         });
 
         event0.Instructions.Add(initInstruction);
+
+        // Track modified EMEVD for writing
+        _modifiedEmevds.Add(mapName);
     }
 }

@@ -139,8 +139,11 @@ public class ModWriter
             _scalingWriter);
         applicator.ApplyScaling();
 
+        // Track modified files for writing
         foreach (var msb in applicator.ModifiedMsbs)
             _writeMsbs.Add(msb);
+        foreach (var emevd in applicator.ModifiedEmevds)
+            _writeEmevds.Add(emevd);
     }
 
     private void RegisterTemplateEvents()
@@ -175,6 +178,29 @@ public class ModWriter
         var fogWriter = new FogGateWriter(_fogData!, _clusterData!, _idAllocator);
         _fogGates = fogWriter.CreateFogGates(_graph);
         Console.WriteLine($"  Created {_fogGates.Count} fog gate definitions");
+
+        // Create makefrom fog assets (these don't exist in vanilla MSBs)
+        var makeFromCount = 0;
+        foreach (var fogGate in _fogGates)
+        {
+            if (fogGate.IsMakeFrom)
+            {
+                var asset = _fogAssetHelper!.CreateFogGate(
+                    fogGate.SourceMap,
+                    fogGate.FogModel,
+                    fogGate.FogPosition,
+                    fogGate.FogRotation,
+                    (uint)fogGate.FogEntityId);
+
+                if (asset != null)
+                {
+                    _writeMsbs.Add(fogGate.SourceMap);
+                    makeFromCount++;
+                }
+            }
+        }
+        if (makeFromCount > 0)
+            Console.WriteLine($"  Created {makeFromCount} makefrom fog assets");
 
         // Create spawn regions in target MSBs
         var warpWriter = new WarpWriter(_loader!.Msbs, _fogData!);
@@ -262,6 +288,10 @@ public class ModWriter
     {
         var modDir = Path.Combine(_outputDir, "mods", "speedfog");
 
+        // DCX compression types for Elden Ring (numeric values used for compatibility)
+        // 13 = DCX_KRAK (Kraken compression, used for regulation.bin params)
+        // 9 = DCX_DFLT_10000_24_9 (used for EMEVD and MSB files)
+        // These match FogRando's GameDataWriterE.cs L4982
         const DCX.Type ParamDcx = (DCX.Type)13;
         const DCX.Type EmevdDcx = (DCX.Type)9;
         const DCX.Type MsbDcx = (DCX.Type)9;

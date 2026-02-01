@@ -3,12 +3,18 @@ namespace SpeedFogWriter.Helpers;
 
 public class EntityIdAllocator
 {
-    // Reuse FogRando's ID ranges (SpeedFog and FogRando won't be used together)
-    // Reference: GameDataWriterE.cs L124-135
+    // ID allocation ranges (per speedfog-events.yaml allocation plan)
+    // 79000001-79000099: Template event definitions (in common_func)
+    // 79000100-79099999: Per-fog-gate event instances
+    // 79100000-79199999: SpawnPoint region IDs
+    // 79200000-79299999: Event flags
+    // 79900000-79999999: Reserved for special flags
+    //
+    // Entity IDs reuse FogRando's range (755890000+) since they won't be used together
     private uint _nextEntityId = 755890000;
-    private uint _nextFlagId = 1040290000;
-    private uint _nextRegionId = 1040290070;
-    private uint _nextEventId = 79000100;  // Per-fog-gate events
+    private uint _nextFlagId = 79200000;
+    private uint _nextRegionId = 79100000;
+    private uint _nextEventId = 79000100;
 
     public uint AllocateEntityId() => _nextEntityId++;
     public uint AllocateRegionId() => _nextRegionId++;

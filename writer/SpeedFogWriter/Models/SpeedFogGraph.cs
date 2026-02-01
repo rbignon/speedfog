@@ -15,6 +15,9 @@ public class SpeedFogGraph
     [JsonPropertyName("total_nodes")]
     public int TotalNodes { get; set; }
 
+    [JsonPropertyName("total_zones")]
+    public int TotalZones { get; set; }
+
     [JsonPropertyName("total_paths")]
     public int TotalPaths { get; set; }
 
@@ -51,4 +54,40 @@ public class SpeedFogGraph
     public NodeData? GetNode(string id) => Nodes.GetValueOrDefault(id);
     public NodeData? StartNode => GetNode(StartId);
     public NodeData? EndNode => GetNode(EndId);
+
+    /// <summary>
+    /// Get all edges with resolved node references.
+    /// </summary>
+    public IEnumerable<(NodeData Source, NodeData Target, string FogId)> AllEdgesResolved()
+    {
+        foreach (var edge in Edges)
+        {
+            var source = GetNode(edge.Source);
+            var target = GetNode(edge.Target);
+            if (source != null && target != null)
+            {
+                yield return (source, target, edge.FogId);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Get outgoing edges from a node.
+    /// </summary>
+    public IEnumerable<EdgeData> GetOutgoingEdges(string nodeId)
+        => Edges.Where(e => e.Source == nodeId);
+
+    /// <summary>
+    /// Get incoming edges to a node.
+    /// </summary>
+    public IEnumerable<EdgeData> GetIncomingEdges(string nodeId)
+        => Edges.Where(e => e.Target == nodeId);
+
+    /// <summary>
+    /// Group nodes by layer for iteration.
+    /// </summary>
+    public Dictionary<int, List<NodeData>> NodesByLayer()
+        => Nodes.Values
+            .GroupBy(n => n.Layer)
+            .ToDictionary(g => g.Key, g => g.ToList());
 }

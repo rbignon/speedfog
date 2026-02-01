@@ -31,12 +31,25 @@ public class WarpWriter
         {
             if (fogGate.EntryFogData.HasPosition)
             {
+                // MakeFrom fogs have inline positions
                 position = fogGate.EntryFogData.PositionVec;
                 rotation = fogGate.EntryFogData.RotationVec;
             }
             else
             {
-                (position, rotation) = GetFogPositionFromMsb(fogGate.EntryFogData, msb);
+                // IMPORTANT: Entry fog is in its own map, not necessarily the target map
+                // Look up in the correct MSB based on the fog's map
+                var entryFogMap = fogGate.EntryFogData.Map;
+                if (_msbs.TryGetValue(entryFogMap, out var entryMsb))
+                {
+                    (position, rotation) = GetFogPositionFromMsb(fogGate.EntryFogData, entryMsb);
+                }
+                else
+                {
+                    Console.WriteLine($"  Warning: MSB not loaded for entry fog map {entryFogMap}");
+                    position = Vector3.Zero;
+                    rotation = Vector3.Zero;
+                }
             }
         }
         else
