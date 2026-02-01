@@ -15,8 +15,9 @@
 - Elden Ring (Steam version)
 - [ModEngine 2](https://github.com/soulsmods/ModEngine2)
 - [Elden Ring Enemy and Item Randomizer](https://www.nexusmods.com/eldenring/mods/428) (run this first)
-- Python 3.10+ (for generation)
-- .NET 8.0 Runtime (for mod file writing)
+- Python 3.10+ (for DAG generation)
+- .NET 8.0 SDK (for building the writer)
+- Wine (Linux only, for running the writer)
 
 ## Quick Start
 
@@ -31,11 +32,14 @@ SpeedFog only randomizes zone connections. Run the Enemy/Item Randomizer first t
 cp config.example.toml config.toml
 nano config.toml
 
-# Generate the run
+# Generate the DAG
 speedfog config.toml -o graph.json --spoiler spoiler.txt
 
-# Generate mod files
-speedfog-writer graph.json "C:/Games/ELDEN RING/Game" ./output
+# Generate mod files (Windows)
+SpeedFogWriter.exe graph.json "C:/Games/ELDEN RING/Game" ./output
+
+# Generate mod files (Linux via Wine - see "Running on Linux" section)
+wine SpeedFogWriter.exe graph.json "/path/to/ELDEN RING/Game" ./output
 ```
 
 ### 3. Install the Mod
@@ -143,10 +147,33 @@ See [docs/plans/](docs/plans/) for detailed implementation specifications:
 cd core
 pip install -e .
 
-# C# writer
+# C# writer (Windows)
 cd writer
 dotnet build
+
+# C# writer (Linux - cross-compile for Windows)
+cd writer
+dotnet build -r win-x64
 ```
+
+### Running on Linux
+
+The C# writer depends on Windows-only libraries (Oodle compression via `oo2core_6_win64.dll`). On Linux, use Wine:
+
+```bash
+# 1. Generate the DAG (native Linux)
+cd core
+speedfog config.toml -o graph.json --spoiler spoiler.txt
+
+# 2. Copy Oodle DLL from game folder (required for reading game files)
+cp "/path/to/ELDEN RING/Game/oo2core_6_win64.dll" ../writer/SpeedFogWriter/bin/Release/net8.0/win-x64/
+
+# 3. Run the writer with Wine
+cd ../writer/SpeedFogWriter/bin/Release/net8.0/win-x64/
+wine SpeedFogWriter.exe graph.json "/path/to/ELDEN RING/Game" ./output
+```
+
+**Note**: The game itself runs via Proton on Linux, so this workflow integrates naturally.
 
 ## FAQ
 
