@@ -1,0 +1,58 @@
+{
+  "seed": 12345,
+  "total_layers": 3,
+  "total_nodes": 4,
+  "total_zones": 5,
+  "total_paths": 2,
+  "path_weights": [15, 18],
+  "nodes": {
+    "start": {
+      "cluster_id": "chapel_start_a1b2",
+      "zones": ["chapel_start"],
+      "type": "start",
+      "weight": 2,
+      "layer": 0,
+      "tier": 1,
+      "entry_fogs": [],
+      "exit_fogs": ["fog_001", "fog_002"]
+    },
+    "node_1a": {
+      "cluster_id": "stormveil_c3d4",
+      "zones": ["stormveil_start", "stormveil"],
+      "type": "legacy_dungeon",
+      "weight": 10,
+      "layer": 1,
+      "tier": 5,
+      "entry_fogs": ["fog_001"],
+      "exit_fogs": ["fog_003"]
+    },
+    "node_1b": {
+      "cluster_id": "limgrave_e5f6",
+      "zones": ["limgrave"],
+      "type": "mini_dungeon",
+      "weight": 8,
+      "layer": 1,
+      "tier": 3,
+      "entry_fogs": ["fog_002"],
+      "exit_fogs": ["fog_004"]
+    },
+    "end": {
+      "cluster_id": "radagon_g7h8",
+      "zones": ["radagon"],
+      "type": "final_boss",
+      "weight": 5,
+      "layer": 2,
+      "tier": 28,
+      "entry_fogs": ["fog_003", "fog_004"],
+      "exit_fogs": []
+    }
+  },
+  "edges": [
+    {"source": "start", "target": "node_1a", "fog_id": "fog_001"},
+    {"source": "start", "target": "node_1b", "fog_id": "fog_002"},
+    {"source": "node_1a", "target": "end", "fog_id": "fog_003"},
+    {"source": "node_1b", "target": "end", "fog_id": "fog_004"}
+  ],
+  "start_id": "start",
+  "end_id": "end"
+}
