@@ -32,10 +32,21 @@ public class FogGateWriter
                 continue;
             }
 
-            var exitFogData = _fogData.GetFog(edge.FogId);
+            // Use source node's zones to disambiguate fog lookup
+            // Many fogs share the same asset name (e.g., AEG099_001_9000) across different maps
+            // The zone context ensures we get the fog from the correct map
+            // Try each zone until we find a match
+            FogEntryData? exitFogData = null;
+            foreach (var zone in source.Zones)
+            {
+                exitFogData = _fogData.GetFog(edge.FogId, zone);
+                if (exitFogData != null) break;
+            }
+            // Fallback: try without zone context
+            exitFogData ??= _fogData.GetFog(edge.FogId);
             if (exitFogData == null)
             {
-                Console.WriteLine($"  Warning: Missing fog data for {edge.FogId}");
+                Console.WriteLine($"  Warning: Missing fog data for {edge.FogId} (zones: {string.Join(", ", source.Zones)})");
                 continue;
             }
 
