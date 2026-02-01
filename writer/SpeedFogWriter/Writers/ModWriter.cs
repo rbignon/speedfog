@@ -373,6 +373,27 @@ public class ModWriter
             return;
         }
 
+        // The vanilla warp destination region ID is the same as the fog ID for item warps
+        // e.g., fog ID "12052021" = region 12052021 in Mohgwyn Palace
+        if (int.TryParse(fogGate.EdgeFogId, out var vanillaRegionId))
+        {
+            // NOP the vanilla WarpPlayer instruction that warps to this region
+            // This prevents the vanilla event from executing alongside our custom event
+            var nopCount = NopVanillaItemWarp(commonEmevd, vanillaRegionId);
+            if (nopCount > 0)
+            {
+                Console.WriteLine($"    [DEBUG] common: NOPed {nopCount} vanilla WarpPlayer to region {vanillaRegionId}");
+                if (nopCount > 1)
+                {
+                    Console.WriteLine($"    WARNING: Multiple WarpPlayer instructions found for region {vanillaRegionId}, this is unexpected");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"    WARNING: Could not find vanilla WarpPlayer to region {vanillaRegionId} in common.emevd");
+            }
+        }
+
         // Pack target map bytes
         var mapBytes = fogGate.TargetMapBytes;
         int packedMapBytes = mapBytes[0] | (mapBytes[1] << 8) | (mapBytes[2] << 16) | (mapBytes[3] << 24);
@@ -392,6 +413,56 @@ public class ModWriter
 
         // Mark common.emevd for writing
         _writeEmevds.Add("common");
+    }
+
+    /// <summary>
+    /// Find and NOP vanilla WarpPlayer instructions that warp to a specific region.
+    /// Used for item-triggered warps (e.g., Pureblood Knight's Medal) where we need
+    /// to disable the vanilla warp and replace it with our custom destination.
+    /// WarpPlayer is Bank 2003, ID 14.
+    /// Arguments: AreaID(1), BlockID(1), Sub1(1), Sub2(1), SpawnPoint(4), Unknown(4)
+    /// </summary>
+    /// <param name="emevd">The common.emevd file</param>
+    /// <param name="vanillaRegionId">The vanilla spawn point region ID to find and NOP</param>
+    /// <returns>Number of instructions NOPed</returns>
+    private int NopVanillaItemWarp(EMEVD emevd, int vanillaRegionId)
+    {
+        const int WarpPlayerBank = 2003;
+        const int WarpPlayerId = 14;
+        // SpawnPoint argument is at byte offset 4 (after 4 single-byte args: Area, Block, Sub1, Sub2)
+        const int SpawnPointOffset = 4;
+
+        int nopCount = 0;
+
+        foreach (var evt in emevd.Events)
+        {
+            for (int i = 0; i < evt.Instructions.Count; i++)
+            {
+                var instr = evt.Instructions[i];
+
+                // Check if this is WarpPlayer (2003[14])
+                if (instr.Bank != WarpPlayerBank || instr.ID != WarpPlayerId)
+                    continue;
+
+                var args = instr.ArgData;
+                // WarpPlayer needs at least 12 bytes: 4 bytes for area/block/sub, 4 for spawnpoint, 4 for unknown
+                if (args.Length < 12)
+                    continue;
+
+                // Read SpawnPoint (int32 at offset 4)
+                int spawnPoint = BitConverter.ToInt32(args, SpawnPointOffset);
+
+                if (spawnPoint == vanillaRegionId)
+                {
+                    // Replace with NOP instruction (1014, 69) - same as FogRando
+                    evt.Instructions[i] = new EMEVD.Instruction(1014, 69);
+                    nopCount++;
+                    Console.WriteLine($"    [DEBUG] NOPed WarpPlayer in event {evt.ID} (was warping to {spawnPoint})");
+                }
+            }
+        }
+
+        return nopCount;
     }
 
     /// <summary>
