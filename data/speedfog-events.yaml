@@ -12,7 +12,7 @@ templates:
   # Apply scaling to an enemy when loaded
   # Source: FogRando ID 9005770
   scale:
-    id: 79000001
+    id: 79005770
     restart: true
     params:
       entity_id: X0_4
@@ -27,7 +27,7 @@ templates:
   # Show fog gate visual effect
   # Source: FogRando ID 9005775
   showsfx:
-    id: 79000002
+    id: 79005775
     params:
       fog_gate: X0_4
       sfx_id: X4_4
@@ -145,8 +145,8 @@ templates:
       - InitializeEvent(0, X0_4, X4_4, 0)
 
 defaults:
-  button_param: 63000      # "Traverse the mist" (action button)
-  fog_sfx: 8011            # Standard fog visual effect SFX ID
+  button_param: 10000      # ActionButton param for fog gates (FogRando standard)
+  fog_sfx: 3               # Standard fog visual effect SFX ID (FogRando default)
   trigger_flag: 79900000   # SpeedFog game start flag
   player_entity: 10000     # Player character entity ID
 

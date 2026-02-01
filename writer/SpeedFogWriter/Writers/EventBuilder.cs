@@ -72,12 +72,14 @@ public class EventBuilder
     {
         var template = _config.GetTemplate(templateName);
 
-        // Build argument list: slot, eventId, then template args
+        // Build argument list for InitializeCommonEvent (2000[6]):
+        // Format: (slot, eventId, param1, param2, ...)
+        // Reference: FogRando GameDataWriterE.cs line 3225
         var fullArgs = new List<object> { slot, template.Id };
         fullArgs.AddRange(args);
 
-        // Instruction 2000[00] = InitializeEvent
-        return new EMEVD.Instruction(2000, 0, fullArgs);
+        // Instruction 2000[06] = InitializeCommonEvent (for events in common_func.emevd)
+        return new EMEVD.Instruction(2000, 6, fullArgs);
     }
 
     /// <summary>
@@ -85,9 +87,12 @@ public class EventBuilder
     /// </summary>
     public EMEVD.Instruction BuildInitializeEventById(int eventId, int slot, params object[] args)
     {
+        // Build argument list for InitializeCommonEvent (2000[6]):
+        // Format: (slot, eventId, param1, param2, ...)
         var fullArgs = new List<object> { slot, eventId };
         fullArgs.AddRange(args);
-        return new EMEVD.Instruction(2000, 0, fullArgs);
+        // Instruction 2000[06] = InitializeCommonEvent (for events in common_func.emevd)
+        return new EMEVD.Instruction(2000, 6, fullArgs);
     }
 
     /// <summary>

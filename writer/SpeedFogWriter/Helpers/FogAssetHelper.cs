@@ -113,4 +113,48 @@ public class FogAssetHelper
             asset.UnkT54PartName = newName;
         }
     }
+
+    /// <summary>
+    /// Find and enable an existing fog gate asset by entity ID or name.
+    /// </summary>
+    public bool EnableExistingFogGate(string mapId, uint entityId, string? assetName = null)
+    {
+        if (!_msbs.TryGetValue(mapId, out var msb))
+        {
+            Console.WriteLine($"  Warning: MSB not loaded for map {mapId}");
+            return false;
+        }
+
+        MSBE.Part.Asset? asset = null;
+
+        // Find by entity ID first
+        asset = msb.Parts.Assets.FirstOrDefault(a => a.EntityID == entityId);
+
+        // Fall back to name search
+        if (asset == null && assetName != null)
+        {
+            asset = msb.Parts.Assets.FirstOrDefault(a => a.Name == assetName);
+        }
+
+        if (asset == null)
+        {
+            Console.WriteLine($"  Warning: Asset not found in {mapId} (entity={entityId}, name={assetName})");
+            return false;
+        }
+
+        // Log current state
+        Console.WriteLine($"    [DEBUG] Found asset {asset.Name} in {mapId}, EntityID={asset.EntityID}");
+
+        // Enable the asset for SFX display
+        if (FogWallModels.Any(m => asset.ModelName?.StartsWith(m) == true))
+        {
+            if (asset.AssetSfxParamRelativeID < 0)
+            {
+                Console.WriteLine($"    [DEBUG] Enabling SFX for {asset.Name} (was {asset.AssetSfxParamRelativeID})");
+                asset.AssetSfxParamRelativeID = 0;
+            }
+        }
+
+        return true;
+    }
 }

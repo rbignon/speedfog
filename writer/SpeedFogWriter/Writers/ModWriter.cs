@@ -12,6 +12,7 @@ public class ModWriter
     private readonly string _outputDir;
     private readonly string _dataDir;
     private readonly SpeedFogGraph _graph;
+    private readonly string? _vanillaDir;
 
     private GameDataLoader? _loader;
     private FogDataFile? _fogData;
@@ -27,12 +28,13 @@ public class ModWriter
     private readonly HashSet<string> _writeMsbs = new();
     private readonly HashSet<string> _writeEmevds = new() { "common", "common_func" };
 
-    public ModWriter(string gameDir, string outputDir, string dataDir, SpeedFogGraph graph)
+    public ModWriter(string gameDir, string outputDir, string dataDir, SpeedFogGraph graph, string? vanillaDir = null)
     {
         _gameDir = gameDir;
         _outputDir = outputDir;
         _dataDir = dataDir;
         _graph = graph;
+        _vanillaDir = vanillaDir;
     }
 
     public void Generate()
@@ -63,7 +65,7 @@ public class ModWriter
 
     private void LoadGameData()
     {
-        _loader = new GameDataLoader(_gameDir);
+        _loader = new GameDataLoader(_gameDir, _vanillaDir);
         _loader.LoadParams();
         _loader.LoadEmevds();
         _loader.InitializeEvents(Path.Combine(_dataDir, "er-common.emedf.json"));
@@ -167,6 +169,7 @@ public class ModWriter
             }
 
             commonFuncEmevd.Events.Add(templateEvent);
+            Console.WriteLine($"    [DEBUG] Added template event ID {templateEvent.ID} with {templateEvent.Instructions.Count} instructions");
             count++;
         }
 
@@ -175,12 +178,23 @@ public class ModWriter
 
     private void CreateFogGates()
     {
+        // Modify ActionButtonParam for fog gates (same as FogRando)
+        // This makes the action prompt appear at the correct height on fog gates
+        var buttonParam = _loader!.Params!["ActionButtonParam"];
+        if (buttonParam[10000] != null)
+        {
+            buttonParam[10000]["height"].Value = 2f;
+            buttonParam[10000]["baseHeightOffset"].Value = -1f;
+        }
+
         var fogWriter = new FogGateWriter(_fogData!, _clusterData!, _idAllocator);
         _fogGates = fogWriter.CreateFogGates(_graph);
         Console.WriteLine($"  Created {_fogGates.Count} fog gate definitions");
 
         // Create makefrom fog assets (these don't exist in vanilla MSBs)
+        // Also enable existing fog gates that need to be visible
         var makeFromCount = 0;
+        var enabledCount = 0;
         foreach (var fogGate in _fogGates)
         {
             if (fogGate.IsMakeFrom)
@@ -198,9 +212,23 @@ public class ModWriter
                     makeFromCount++;
                 }
             }
+            else
+            {
+                // Enable existing fog gate in MSB (may be disabled by default)
+                if (_fogAssetHelper!.EnableExistingFogGate(
+                    fogGate.SourceMap,
+                    (uint)fogGate.FogEntityId,
+                    fogGate.FogAssetName))
+                {
+                    _writeMsbs.Add(fogGate.SourceMap);
+                    enabledCount++;
+                }
+            }
         }
         if (makeFromCount > 0)
             Console.WriteLine($"  Created {makeFromCount} makefrom fog assets");
+        if (enabledCount > 0)
+            Console.WriteLine($"  Enabled {enabledCount} existing fog assets");
 
         // Create spawn regions in target MSBs
         var warpWriter = new WarpWriter(_loader!.Msbs, _fogData!);
@@ -212,17 +240,30 @@ public class ModWriter
 
         // Generate EMEVD events for each fog gate
         var buttonParam = _eventBuilder!.GetDefaultInt("button_param", 63000);
-        var fogSfx = _eventBuilder.GetDefaultInt("fog_sfx", 8011);
+        var defaultFogSfx = _eventBuilder.GetDefaultInt("fog_sfx", 3);
+
+        // Cache extracted SFX IDs per fog entity to handle multiple edges using the same fog gate
+        // The SFX is only in the vanilla events which get NOPed on first encounter
+        var fogSfxCache = new Dictionary<int, int>();
 
         foreach (var fogGate in _fogGates)
         {
-            GenerateFogGateEvents(fogGate, buttonParam, fogSfx);
+            GenerateFogGateEvents(fogGate, buttonParam, defaultFogSfx, fogSfxCache);
         }
 
         Console.WriteLine($"  Generated EMEVD events for {_fogGates.Count} fog gates");
     }
 
-    private void GenerateFogGateEvents(FogGateEvent fogGate, int buttonParam, int fogSfx)
+    // Vanilla fog gate visibility event IDs that need to be NOPed
+    // These events control fog gate appearance based on boss defeat flags, etc.
+    // Reference: FogRando fogevents.txt events 9005800, 9005801, 9005811
+    private static readonly HashSet<int> VanillaFogVisibilityEvents = new() { 9005800, 9005801, 9005811 };
+
+    // Event ID for the fog visibility event that contains the SFX parameter
+    // 9005811 has format: (slot, eventId, X0_4=defeatFlag, X4_4=fogEntity, X8_4=sfxId, X12_4=secondFlag)
+    private const int VanillaFogSfxEvent = 9005811;
+
+    private void GenerateFogGateEvents(FogGateEvent fogGate, int buttonParam, int defaultFogSfx, Dictionary<int, int> fogSfxCache)
     {
         // Get source map EMEVD
         if (!_loader!.Emevds.TryGetValue(fogGate.SourceMap, out var emevd))
@@ -239,6 +280,35 @@ public class ModWriter
             return;
         }
 
+        // Check cache first for SFX ID (handles multiple edges using the same fog gate)
+        int fogSfx;
+        if (fogSfxCache.TryGetValue(fogGate.FogEntityId, out var cachedSfx))
+        {
+            fogSfx = cachedSfx;
+        }
+        else
+        {
+            // NOP vanilla fog gate visibility events that reference this fog entity
+            // This prevents the vanilla game from controlling the fog gate visibility
+            // which would conflict with our showsfx event
+            // Also extracts the SFX ID from vanilla 9005811 events to use for our showsfx call
+            var (nopCount, extractedSfxId) = NopVanillaFogEvents(emevd, fogGate.FogEntityId, fogGate.SourceMap);
+            if (nopCount > 0)
+            {
+                Console.WriteLine($"    [DEBUG] {fogGate.SourceMap}: NOPed {nopCount} vanilla fog visibility events for entity {fogGate.FogEntityId}");
+            }
+
+            // Use the extracted SFX ID from vanilla events, or fall back to default
+            // Different fog gates have different SFX IDs (e.g., Chapel uses 16, Stormveil uses 3)
+            fogSfx = extractedSfxId ?? defaultFogSfx;
+            fogSfxCache[fogGate.FogEntityId] = fogSfx;
+
+            if (extractedSfxId != null && extractedSfxId != defaultFogSfx)
+            {
+                Console.WriteLine($"    [DEBUG] {fogGate.SourceMap}: Using extracted SFX ID {fogSfx} for entity {fogGate.FogEntityId}");
+            }
+        }
+
         // Parse target map bytes for warp instruction
         var mapBytes = fogGate.TargetMapBytes;
 
@@ -251,6 +321,7 @@ public class ModWriter
             fogSfx                   // X4_4 = sfx_id
         );
         event0.Instructions.Add(showSfxInit);
+        Console.WriteLine($"    [DEBUG] {fogGate.SourceMap} event0: InitializeCommonEvent showsfx({fogGate.FogEntityId}, {fogSfx})");
 
         // Add InitializeEvent for fogwarp_simple template
         // fogwarp_simple(fog_gate, button_param, warp_region, map_m, map_area, map_block, map_sub, rotate_target)
@@ -270,6 +341,77 @@ public class ModWriter
 
         // Mark EMEVD for writing
         _writeEmevds.Add(fogGate.SourceMap);
+    }
+
+    /// <summary>
+    /// Find and NOP vanilla InitializeCommonEvent instructions that control fog gate visibility.
+    /// These events (9005800, 9005801, 9005811) disable the fog gate and wait for conditions
+    /// before enabling it. We need to remove them so our showsfx event can control visibility.
+    /// Also extracts the SFX ID from 9005811 events for use in our showsfx calls.
+    /// </summary>
+    /// <param name="emevd">The map's EMEVD file (searches ALL events, not just event 0)</param>
+    /// <param name="fogEntityId">The fog gate entity ID to look for</param>
+    /// <param name="mapName">Map name for logging</param>
+    /// <returns>Tuple of (number of instructions NOPed, extracted SFX ID or null if not found)</returns>
+    private (int nopCount, int? sfxId) NopVanillaFogEvents(EMEVD emevd, int fogEntityId, string mapName)
+    {
+        int nopCount = 0;
+        int? extractedSfxId = null;
+
+        // Search ALL events in the EMEVD, not just event 0
+        // The vanilla InitializeCommonEvent calls may be in various events (e.g., event 10012849 for Chapel)
+        foreach (var evt in emevd.Events)
+        {
+            for (int i = 0; i < evt.Instructions.Count; i++)
+            {
+                var instr = evt.Instructions[i];
+
+                // Check if this is InitializeCommonEvent (2000[6])
+                if (instr.Bank != 2000 || instr.ID != 6)
+                    continue;
+
+                // Parse the instruction arguments
+                // InitializeCommonEvent format: (slot, eventId, args...)
+                // Slot is typically 0, eventId identifies which common_func event to call
+                var args = instr.ArgData;
+                if (args.Length < 8) // Need at least slot(4) + eventId(4)
+                    continue;
+
+                // Read eventId (bytes 4-7, little-endian int32)
+                // Note: slot is bytes 0-3, eventId is bytes 4-7
+                int eventId = BitConverter.ToInt32(args, 4);
+
+                if (!VanillaFogVisibilityEvents.Contains(eventId))
+                    continue;
+
+                // Read the fog entity ID argument
+                // For 9005800/9005801/9005811:
+                // Format is typically (slot, eventId, X0_4, X4_4, ...)
+                // X0_4 = boss defeat flag, X4_4 = fog gate entity
+                // So fog entity is at byte offset 12 (after slot=0-3, eventId=4-7, X0_4=8-11)
+                if (args.Length < 16)
+                    continue;
+
+                int fogArg = BitConverter.ToInt32(args, 12);
+
+                if (fogArg == fogEntityId)
+                {
+                    // Extract SFX ID from 9005811 events before NOPing
+                    // 9005811 format: (slot, eventId, X0_4=defeatFlag, X4_4=fogEntity, X8_4=sfxId, X12_4=secondFlag)
+                    // X8_4 is at byte offset 16 (slot=0-3, eventId=4-7, X0_4=8-11, X4_4=12-15, X8_4=16-19)
+                    if (eventId == VanillaFogSfxEvent && args.Length >= 20 && extractedSfxId == null)
+                    {
+                        extractedSfxId = BitConverter.ToInt32(args, 16);
+                    }
+
+                    // Replace with NOP instruction (1014, 69) - same as FogRando
+                    evt.Instructions[i] = new EMEVD.Instruction(1014, 69);
+                    nopCount++;
+                }
+            }
+        }
+
+        return (nopCount, extractedSfxId);
     }
 
     private void AddStartingItems()

@@ -51,6 +51,7 @@ public class SpeedFogEventConfig
     {
         var yaml = File.ReadAllText(path);
         var deserializer = new DeserializerBuilder()
+            .WithNamingConvention(YamlDotNet.Serialization.NamingConventions.CamelCaseNamingConvention.Instance)
             .IgnoreUnmatchedProperties()
             .Build();
         return deserializer.Deserialize<SpeedFogEventConfig>(yaml)

@@ -54,7 +54,7 @@ class Program
             }
 
             Console.WriteLine();
-            var writer = new ModWriter(options.GameDir, options.OutputDir, options.DataDir, graph);
+            var writer = new ModWriter(options.GameDir, options.OutputDir, options.DataDir, graph, options.VanillaDir);
             writer.Generate();
 
             // Copy spoiler.txt from seed directory if it exists
@@ -100,9 +100,10 @@ class Program
         Console.WriteLine("  output_dir  - Output directory for mod files");
         Console.WriteLine();
         Console.WriteLine("Options:");
-        Console.WriteLine("  --data-dir <path>   - Path to data directory (default: ../data)");
-        Console.WriteLine("  --no-package        - Skip ModEngine packaging (output mod files only)");
-        Console.WriteLine("  --update-modengine  - Force re-download of ModEngine 2");
+        Console.WriteLine("  --data-dir <path>    - Path to data directory (default: ../data)");
+        Console.WriteLine("  --vanilla-dir <path> - Path to extracted vanilla files (EMEVD, MSB)");
+        Console.WriteLine("  --no-package         - Skip ModEngine packaging (output mod files only)");
+        Console.WriteLine("  --update-modengine   - Force re-download of ModEngine 2");
     }
 
     private static WriterOptions ParseOptions(string[] args)
@@ -111,16 +112,21 @@ class Program
         {
             SeedDir = args[0],
             GameDir = args[1],
-            OutputDir = args[2],
-            DataDir = PathHelper.GetDataDir()
+            OutputDir = args[2]
         };
+
+        string? explicitDataDir = null;
+        string? explicitVanillaDir = null;
 
         for (int i = 3; i < args.Length; i++)
         {
             switch (args[i])
             {
                 case "--data-dir" when i + 1 < args.Length:
-                    options.DataDir = args[++i];
+                    explicitDataDir = args[++i];
+                    break;
+                case "--vanilla-dir" when i + 1 < args.Length:
+                    explicitVanillaDir = args[++i];
                     break;
                 case "--no-package":
                     options.Package = false;
@@ -131,6 +137,9 @@ class Program
             }
         }
 
+        options.DataDir = PathHelper.GetDataDir(explicitDataDir);
+        if (explicitVanillaDir != null)
+            options.VanillaDir = Path.GetFullPath(explicitVanillaDir);
         return options;
     }
 }
@@ -144,6 +153,7 @@ internal class WriterOptions
     public string GameDir { get; set; } = "";
     public string OutputDir { get; set; } = "";
     public string DataDir { get; set; } = "";
+    public string? VanillaDir { get; set; }
     public bool Package { get; set; } = true;
     public bool UpdateModEngine { get; set; } = false;
 }

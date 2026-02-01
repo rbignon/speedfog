@@ -5,8 +5,12 @@ public static class PathHelper
 {
     public static string GetDataDir(string? explicitPath = null)
     {
-        if (explicitPath != null && Directory.Exists(explicitPath))
-            return explicitPath;
+        if (explicitPath != null)
+        {
+            var fullPath = Path.GetFullPath(explicitPath);
+            if (Directory.Exists(fullPath))
+                return fullPath;
+        }
 
         // Default: ../data relative to executable
         var baseDir = AppContext.BaseDirectory;
