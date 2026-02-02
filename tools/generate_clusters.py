@@ -128,7 +128,13 @@ class FogData:
     def is_norandom(self) -> bool:
         """Non-randomizable fogs should be excluded."""
         tags_lower = [t.lower() for t in self.tags]
-        return "norandom" in tags_lower or "unused" in tags_lower
+        # norandom/unused: explicitly non-randomizable
+        # segmentonly: only valid within a connected segment, not as independent connections
+        return (
+            "norandom" in tags_lower
+            or "unused" in tags_lower
+            or "segmentonly" in tags_lower
+        )
 
     @property
     def is_major(self) -> bool:

@@ -401,6 +401,32 @@ class TestClassifyFogs:
             or fog not in zone_fogs.get("zone_b", ZoneFogs()).entry_fogs
         )
 
+    def test_segmentonly_fog_excluded(self):
+        """Segmentonly fogs are excluded (only valid in segmented modes).
+
+        These are warps like Fortissax dream entry/exit that only work in
+        FogRando's Segmented modes (Boss Rush, Endless). SpeedFog doesn't
+        use segmented mode, so these must be excluded.
+        """
+        fog = FogData(
+            name="12032858",
+            fog_id=12032858,
+            aside=FogSide(area="deeproot_dream", text="finishing Fortissax fight"),
+            bside=FogSide(area="deeproot_boss", text="arriving at throne"),
+            tags=["return", "segmentonly", "underground"],
+        )
+        zone_fogs = classify_fogs([], [fog])
+
+        # Segmentonly fogs should be excluded from all zones
+        assert (
+            "deeproot_dream" not in zone_fogs
+            or fog not in zone_fogs.get("deeproot_dream", ZoneFogs()).entry_fogs
+        )
+        assert (
+            "deeproot_boss" not in zone_fogs
+            or fog not in zone_fogs.get("deeproot_boss", ZoneFogs()).entry_fogs
+        )
+
     def test_uniquegate_pair_coupled(self):
         """Uniquegate fogs connecting same zones are coupled as one bidirectional."""
         # Two uniquegate warps connecting the same zones (like academy gates)
