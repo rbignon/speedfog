@@ -19,14 +19,14 @@ Unlike FogRando which randomizes the entire world, SpeedFog generates a smaller,
 Python (core/)          C# (writer/)                    Output
 ─────────────────       ─────────────────               ─────────────────
 config.toml        →                                    output/
-clusters.json      →    graph.json → SpeedFogWriter →   ├── mod/
+clusters.json      →    graph.json → FogModWrapper  →   ├── mod/
 DAG generation     →                                    ├── ModEngine/
                                                         ├── launch_speedfog.bat
                                                         └── spoiler.txt
 ```
 
 - **Python**: Configuration, cluster/zone data, DAG generation algorithm
-- **C#**: SoulsFormats I/O, EMEVD events, param modifications, packaging
+- **C#**: FogModWrapper - thin wrapper calling FogMod.dll with our graph connections
 - **Output**: Self-contained folder with ModEngine 2 (auto-downloaded)
 
 ## Directory Structure
@@ -44,10 +44,13 @@ speedfog/
 ├── core/                    # Python - DAG generation (Phase 1-2)
 │   └── speedfog_core/
 ├── writer/                  # C# - Mod file generation (Phase 3-4)
-│   ├── lib/                 # DLLs (SoulsFormats, SoulsIds, etc.)
-│   └── SpeedFogWriter/
-│       ├── Writers/         # Mod file writers
-│       └── Packaging/       # ModEngine downloader, launcher scripts
+│   ├── lib/                 # DLLs (FogMod, SoulsFormats, SoulsIds, etc.)
+│   ├── FogModWrapper/       # Main writer - thin wrapper calling FogMod.dll
+│   │   ├── Program.cs       # CLI entry point
+│   │   ├── GraphLoader.cs   # Load graph.json v2
+│   │   ├── ConnectionInjector.cs  # Inject connections into FogMod Graph
+│   │   └── eldendata/       # Game data (gitignored, symlinked)
+│   └── SpeedFogWriter/      # Legacy (deprecated)
 ├── reference/               # FogRando decompiled code (READ-ONLY)
 │   ├── fogrando-src/        # C# source files
 │   └── fogrando-data/       # Reference data (foglocations.txt)
@@ -62,7 +65,8 @@ speedfog/
 | `docs/plans/2026-01-29-speedfog-design.md` | Main design document |
 | `docs/plans/phase-1-foundations.md` | Python setup, zone conversion |
 | `docs/plans/phase-2-dag-generation.md` | DAG algorithm, balancing |
-| `docs/plans/phase-3-csharp-writer.md` | C# writer with FogRando references |
+| `docs/plans/2026-02-01-fogmod-wrapper-design.md` | FogModWrapper architecture |
+| `docs/plans/phase-3-csharp-writer.md` | Legacy SpeedFogWriter (deprecated) |
 | `docs/plans/phase-4-packaging.md` | ModEngine download, launcher scripts |
 | `reference/fogrando-src/GameDataWriterE.cs` | Main FogRando writer (5639 lines) |
 | `reference/fogrando-src/EldenScaling.cs` | Enemy scaling logic |
@@ -92,17 +96,20 @@ speedfog/
 - Reference DLLs from `writer/lib/`
 - Follow FogRando patterns for EMEVD/param manipulation
 
-**Writer classes** (in `Writers/`):
+**FogModWrapper** (uses FogMod.dll directly):
 | Class | Purpose |
 |-------|---------|
-| `ModWriter` | Orchestrator - calls all writers in sequence |
-| `FogGateWriter` | Creates fog gate assets (AEG099 models) |
-| `WarpWriter` | Creates warp triggers via EMEVD events |
-| `ScalingWriter` | Applies enemy scaling via SpEffect params |
-| `EnemyScalingApplicator` | Attaches SpEffect to enemies per tier |
-| `StartingItemsWriter` | Adds key items to initial inventory |
-| `EventBuilder` | Compiles YAML templates → EMEVD instructions |
-| `FogGateEvent` | Helper for fog gate event generation |
+| `Program.cs` | CLI entry, loads options, calls FogMod's GameDataWriterE |
+| `GraphLoader` | Parses graph.json v2 format from Python |
+| `ConnectionInjector` | Injects our connections into FogMod's Graph object |
+
+**Key FogMod classes** (from FogMod.dll):
+| Class | Purpose |
+|-------|---------|
+| `GameDataWriterE` | Main writer - handles all EMEVD/params/MSB |
+| `Graph` | Nodes/edges representing fog connections |
+| `RandomizerOptions` | Configuration options (crawl, scale, etc.) |
+| `AnnotationData` | Parsed fog.txt data |
 
 ### Zone Data
 - Zone definitions extracted from FogRando's `fog.txt` into `clusters.json`
@@ -110,6 +117,18 @@ speedfog/
 - Zone types: `legacy_dungeon`, `mini_dungeon`, `boss_arena`, `major_boss`, `start`, `final_boss`
 - Weight defaults in `data/zone_metadata.toml`, overrides per zone
 - Weight = approximate duration in minutes
+
+### FogMod Options
+Key options set by FogModWrapper for SpeedFog:
+
+| Option | Value | Purpose |
+|--------|-------|---------|
+| `crawl` | true | Dungeon crawler mode - enables tier progression |
+| `unconnected` | true | Allow edges without vanilla connections |
+| `req_backportal` | true | Enable return warps from boss rooms |
+| `scale` | true | Apply enemy scaling per tier |
+
+ConfigVars in `Program.cs` set all key items to TRUE (given at start).
 
 ## FogRando Reference Points
 
@@ -135,23 +154,21 @@ speedfog config.toml --spoiler -o /tmp/speedfog
 # Python tests
 cd core && pytest -v
 
-# C# writer - build and publish
-cd writer/SpeedFogWriter
+# C# FogModWrapper - build and publish
+cd writer/FogModWrapper
 dotnet build
 dotnet publish -c Release -r win-x64 --self-contained -o publish/win-x64
 
-# C# writer - run (Linux with Wine)
-wine publish/win-x64/SpeedFogWriter.exe \
-  <seed_dir> \
-  <game_dir> \
-  output \
+# FogModWrapper - run (Linux with Wine)
+wine publish/win-x64/FogModWrapper.exe \
+  <graph.json> \
+  --game-dir <game_dir> \
   --data-dir ../../data \
-  --vanilla-dir <vanilla_dir>
+  -o output
 
 # Example paths:
-#   seed_dir: ../../seeds/212559448
+#   graph.json: seeds/212559448/graph.json
 #   game_dir: /data/thewall/Game (ELDEN RING/Game folder)
-#   vanilla_dir: /home/rom1/src/games/ER/fog/eldendata/Vanilla
 
 # Play! (output is self-contained with ModEngine + launcher)
 ./output/launch_speedfog.bat   # Windows
@@ -223,18 +240,21 @@ cd writer/test && ./run_integration.sh
 
 ## Data Formats
 
-### graph.json (Python → C# interface)
+### graph.json v2 (Python → C# interface)
 
 ```json
 {
+  "version": "2.0",
   "seed": 212559448,
-  "total_layers": 5,
-  "nodes": {"node_id": {"cluster_id", "zones", "type", "weight", "layer", "tier", "entry_fogs", "exit_fogs"}},
-  "edges": [{"source", "target", "fog_id"}],
-  "start_id": "...",
-  "end_id": "..."
+  "options": {"scale": true, "crawl": true},
+  "connections": [
+    {"exit_area": "zone1", "exit_gate": "m10_...", "entrance_area": "zone2", "entrance_gate": "m31_..."}
+  ],
+  "area_tiers": {"zone1": 1, "zone2": 5}
 }
 ```
+
+Connections use FogMod's edge FullName format: `{map}_{gate_name}` (e.g., `m10_01_00_00_AEG099_001_9000`)
 
 ### fogevents.txt
 

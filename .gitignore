@@ -50,6 +50,7 @@ spoiler.txt
 *.log
 writer/*/publish/
 writer/*/run.txt
+writer/*/eldendata/
 
 # Keep example config
 !config.example.toml
