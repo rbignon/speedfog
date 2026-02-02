@@ -577,6 +577,14 @@ def classify_fogs(
             zone_fogs[aside_area].exit_fogs.append(fog)
             continue
 
+        # Return warps are one-way post-boss returns (ASide=boss area, BSide=return dest)
+        # These are return mechanisms, not fog gates for random connections
+        # Example: 34142852 (Fell Twins return) ASide=leyndell_tower_boss -> BSide=leyndell_tower
+        # Treated like 'unique' warps: exit from ASide only, no entry anywhere
+        if "return" in tags_lower and "returnpair" not in tags_lower:
+            zone_fogs[aside_area].exit_fogs.append(fog)
+            continue
+
         if fog.is_unique:
             # Unique fogs are one-way warps (sending gates, abductors, etc.)
             # ASide is exit only - FogMod can redirect where the warp sends you

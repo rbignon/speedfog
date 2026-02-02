@@ -427,6 +427,36 @@ class TestClassifyFogs:
             or fog not in zone_fogs.get("deeproot_boss", ZoneFogs()).entry_fogs
         )
 
+    def test_return_warp_exit_only(self):
+        """Return warps are exit-only from ASide, no entry anywhere.
+
+        Return warps (tagged 'return' but not 'returnpair') are post-boss
+        return mechanisms, not fog gates for random connections. They should
+        only create an exit from ASide, similar to 'unique' warps.
+        """
+        fog = FogData(
+            name="34142852",
+            fog_id=34142852,
+            aside=FogSide(area="leyndell_tower_boss", text="finishing Fell Twins"),
+            bside=FogSide(area="leyndell_tower", text="arriving at tower"),
+            tags=["divine", "return"],
+        )
+        zone_fogs = classify_fogs([], [fog])
+
+        # ASide should have exit only
+        assert fog in zone_fogs["leyndell_tower_boss"].exit_fogs
+        assert fog not in zone_fogs.get("leyndell_tower_boss", ZoneFogs()).entry_fogs
+
+        # BSide should have nothing (no entry, no exit)
+        assert (
+            "leyndell_tower" not in zone_fogs
+            or fog not in zone_fogs["leyndell_tower"].entry_fogs
+        )
+        assert (
+            "leyndell_tower" not in zone_fogs
+            or fog not in zone_fogs["leyndell_tower"].exit_fogs
+        )
+
     def test_uniquegate_pair_coupled(self):
         """Uniquegate fogs connecting same zones are coupled as one bidirectional."""
         # Two uniquegate warps connecting the same zones (like academy gates)
