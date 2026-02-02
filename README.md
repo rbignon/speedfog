@@ -135,17 +135,13 @@ speedfog/
 │   └── FogModWrapper/
 ├── reference/              # FogRando source for reference (read-only)
 │   └── fogrando-src/       # Decompiled C# code
-├── docs/plans/             # Implementation specifications
+├── docs/                   # Documentation
 └── output/                 # Generated mod files
 ```
 
 ## Development
 
-See [docs/plans/](docs/plans/) for detailed implementation specifications:
-
-- [Design Overview](docs/plans/2026-01-29-speedfog-design.md)
-- [Phase 1: Foundations](docs/plans/phase-1-foundations.md)
-- [Phase 2: DAG Generation](docs/plans/phase-2-dag-generation.md)
+See [docs/architecture.md](docs/architecture.md) for system architecture and data formats.
 ### Building from Source
 
 ```bash

@@ -18,4 +18,4 @@ speedfog config.toml -o graph.json --spoiler spoiler.txt
 
 ## Documentation
 
-See [Design Document](../docs/plans/2026-01-29-speedfog-design.md).
+See [Architecture](../docs/architecture.md).

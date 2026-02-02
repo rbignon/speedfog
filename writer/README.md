@@ -63,7 +63,7 @@ After generating the mod:
 
 FogModWrapper uses FogMod.dll directly from FogRando, injecting our custom connections into its graph.
 
-See `docs/plans/2026-02-01-fogmod-wrapper-design.md` for detailed architecture.
+See [Architecture](../docs/architecture.md) for details.
 
 ### Running Tests
 

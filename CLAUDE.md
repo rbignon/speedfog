@@ -57,7 +57,8 @@ speedfog/
 ├── reference/               # FogRando decompiled code (READ-ONLY)
 │   ├── fogrando-src/        # C# source files
 │   └── fogrando-data/       # Reference data (foglocations.txt)
-├── docs/plans/              # Implementation specifications
+├── docs/                    # Documentation
+│   └── architecture.md      # System architecture
 └── output/                  # Generated mod (gitignored, self-contained)
 ```
 
@@ -65,14 +66,9 @@ speedfog/
 
 | File | Purpose |
 |------|---------|
-| `docs/plans/2026-01-29-speedfog-design.md` | Main design document |
-| `docs/plans/phase-1-foundations.md` | Python setup, zone conversion |
-| `docs/plans/phase-2-dag-generation.md` | DAG algorithm, balancing |
-| `docs/plans/2026-02-01-fogmod-wrapper-design.md` | FogModWrapper architecture |
-| `docs/plans/phase-4-packaging.md` | ModEngine download, launcher scripts |
+| `docs/architecture.md` | System architecture and data formats |
 | `reference/fogrando-src/GameDataWriterE.cs` | Main FogRando writer (5639 lines) |
 | `reference/fogrando-src/EldenScaling.cs` | Enemy scaling logic |
-| `docs/reference/fogrando-graph-logic.md` | FogRando graph generation analysis |
 | `config.example.toml` | Example configuration |
 
 ## Development Guidelines
