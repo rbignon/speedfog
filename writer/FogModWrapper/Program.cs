@@ -124,6 +124,7 @@ Example:
         opt["crawl"] = true;  // Dungeon crawler mode - enables AllowUnlinked, tier progression
         opt["unconnected"] = true;  // Allow unconnected edges in the graph
         opt["req_backportal"] = true;  // Enable backportals so boss rooms have return warps as edges
+        opt["roundtable"] = true;  // Make Roundtable Hold available from the start
 
         // Mark dungeon types as "core" so their edges are processed
         // Note: Do NOT use req_all as it includes evergaols which lack StakeAsset definitions
