@@ -429,6 +429,89 @@ class TestClassifyFogs:
         # The representative fog should be the first one
         assert zone_fogs["zone_a"].entry_fogs[0] == fog1
 
+    def test_minorwarp_on_bside(self):
+        """Minorwarp tag on BSide means ASide=exit only, BSide=entry only."""
+        # Example: Auriza Side Tomb chest 30132216
+        # ASide = dupejail (use the chest), BSide = dupehallway (arrive) with minorwarp
+        fog = FogData(
+            name="30132216",
+            fog_id=30132216,
+            aside=FogSide(area="zone_a", text="using the chest"),
+            bside=FogSide(area="zone_b", text="arriving", tags=["minorwarp"]),
+            tags=["dungeon", "catacomb"],  # No minorwarp at fog level
+        )
+        zone_fogs = classify_fogs([], [fog])
+
+        # ASide is exit only
+        assert (
+            "zone_a" not in zone_fogs
+            or fog not in zone_fogs.get("zone_a", ZoneFogs()).entry_fogs
+        )
+        assert fog in zone_fogs["zone_a"].exit_fogs
+
+        # BSide is entry only
+        assert fog in zone_fogs["zone_b"].entry_fogs
+        assert (
+            "zone_b" not in zone_fogs
+            or fog not in zone_fogs.get("zone_b", ZoneFogs()).exit_fogs
+        )
+
+    def test_minorwarp_on_aside(self):
+        """Minorwarp tag on ASide means ASide=exit only, BSide=entry only."""
+        # Example: Auriza Side Tomb chest 30132217
+        # ASide = dupehallway (use the chest) with minorwarp, BSide = dupejail (arrive)
+        fog = FogData(
+            name="30132217",
+            fog_id=30132217,
+            aside=FogSide(area="zone_a", text="using the chest", tags=["minorwarp"]),
+            bside=FogSide(area="zone_b", text="arriving"),
+            tags=["dungeon", "catacomb"],  # No minorwarp at fog level
+        )
+        zone_fogs = classify_fogs([], [fog])
+
+        # ASide is exit only
+        assert (
+            "zone_a" not in zone_fogs
+            or fog not in zone_fogs.get("zone_a", ZoneFogs()).entry_fogs
+        )
+        assert fog in zone_fogs["zone_a"].exit_fogs
+
+        # BSide is entry only
+        assert fog in zone_fogs["zone_b"].entry_fogs
+        assert (
+            "zone_b" not in zone_fogs
+            or fog not in zone_fogs.get("zone_b", ZoneFogs()).exit_fogs
+        )
+
+    def test_minorwarp_paired_provides_bidirectional(self):
+        """Paired minorwarp chests provide bidirectional zone connectivity."""
+        # Two chests that PairWith each other (like Auriza Side Tomb 30132216/30132217)
+        fog1 = FogData(
+            name="30132216",
+            fog_id=30132216,
+            aside=FogSide(area="dupejail", text="using the chest"),
+            bside=FogSide(area="dupehallway", text="arriving", tags=["minorwarp"]),
+            tags=["dungeon", "catacomb"],
+        )
+        fog2 = FogData(
+            name="30132217",
+            fog_id=30132217,
+            aside=FogSide(
+                area="dupehallway", text="using the chest", tags=["minorwarp"]
+            ),
+            bside=FogSide(area="dupejail", text="arriving"),
+            tags=["dungeon", "catacomb"],
+        )
+        zone_fogs = classify_fogs([], [fog1, fog2])
+
+        # dupejail has: entry via fog2, exit via fog1
+        assert fog2 in zone_fogs["dupejail"].entry_fogs
+        assert fog1 in zone_fogs["dupejail"].exit_fogs
+
+        # dupehallway has: entry via fog1, exit via fog2
+        assert fog1 in zone_fogs["dupehallway"].entry_fogs
+        assert fog2 in zone_fogs["dupehallway"].exit_fogs
+
 
 # =============================================================================
 # Cluster Generation Tests
