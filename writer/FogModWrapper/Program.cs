@@ -251,7 +251,30 @@ Example:
 
         Console.WriteLine($"Graph constructed: {graph.Nodes.Count} nodes");
 
-        // 4b. Exclude evergaol zones from stake processing
+        // 4b. Disconnect trivial edges that were pre-connected by Graph.Construct()
+        // In crawl mode, FogMod marks entrances with "trivial" tag as IsFixed and connects them.
+        // SpeedFog needs these edges available for our custom graph, so we disconnect them.
+        var disconnectedCount = 0;
+        foreach (var node in graph.Nodes.Values)
+        {
+            // Find exit edges that are fixed, connected, and from trivial entrances
+            var edgesToDisconnect = node.To
+                .Where(e => e.IsFixed && e.Link != null && !e.IsWorld && e.Name != null)
+                .Where(e => graph.EntranceIds.TryGetValue(e.Name, out var entrance) && entrance.HasTag("trivial"))
+                .ToList();
+
+            foreach (var edge in edgesToDisconnect)
+            {
+                graph.Disconnect(edge);
+                disconnectedCount++;
+            }
+        }
+        if (disconnectedCount > 0)
+        {
+            Console.WriteLine($"Disconnected {disconnectedCount} trivial edges for SpeedFog graph");
+        }
+
+        // 4c. Exclude evergaol zones from stake processing
         // In crawl mode, FogRando replaces evergaols with "fake evergaol" connections,
         // but SpeedFog doesn't use evergaols. Without StakeAsset in fog.txt, they cause errors.
         // Setting BossTrigger=0 prevents FogMod from trying to create Stakes for these zones.
