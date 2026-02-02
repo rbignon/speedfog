@@ -118,7 +118,20 @@ Example:
         opt["crawl"] = true;  // Dungeon crawler mode - enables AllowUnlinked, tier progression
         opt["unconnected"] = true;  // Allow unconnected edges in the graph
         opt["req_backportal"] = true;  // Enable backportals so boss rooms have return warps as edges
-        opt["req_all"] = true;  // Make all dungeon tags "core" so backportals aren't marked unused
+
+        // Mark dungeon types as "core" so their edges are processed
+        // Note: Do NOT use req_all as it includes evergaols which lack StakeAsset definitions
+        opt["req_graveyard"] = true;  // Required when req_dungeon + shuffle are both enabled
+        opt["req_dungeon"] = true;  // Caves, tunnels, catacombs, graves
+        opt["req_cave"] = true;
+        opt["req_tunnel"] = true;
+        opt["req_catacomb"] = true;
+        opt["req_grave"] = true;
+        opt["req_legacy"] = true;  // Legacy dungeons
+        opt["req_major"] = true;   // Major bosses
+        //opt["req_underground"] = true;  // Underground areas
+        //opt["req_minorwarp"] = true;  // Minor warps
+        // Explicitly NOT setting req_evergaol - evergaols lack StakeAsset in fog.txt
 
         // Configure features that depend on crawl mode (normally done by Randomizer)
         opt[Feature.AllowUnlinked] = true;  // Allow edges without connections
@@ -233,6 +246,24 @@ Example:
         graph.Construct(opt, ann);
 
         Console.WriteLine($"Graph constructed: {graph.Nodes.Count} nodes");
+
+        // 4b. Exclude evergaol zones from stake processing
+        // In crawl mode, FogRando replaces evergaols with "fake evergaol" connections,
+        // but SpeedFog doesn't use evergaols. Without StakeAsset in fog.txt, they cause errors.
+        // Setting BossTrigger=0 prevents FogMod from trying to create Stakes for these zones.
+        var evergaolCount = 0;
+        foreach (var area in ann.Areas.Where(a => a.Name.Contains("evergaol")))
+        {
+            area.IsExcluded = true;
+            area.BossTrigger = 0;
+        }
+        foreach (var kvp in graph.Areas.Where(a => a.Key.Contains("evergaol")))
+        {
+            kvp.Value.IsExcluded = true;
+            kvp.Value.BossTrigger = 0;
+            evergaolCount++;
+        }
+        Console.WriteLine($"Excluded {evergaolCount} evergaol zones from stake processing");
 
         // 5. Inject OUR connections (replaces GraphConnector.Connect())
         ConnectionInjector.Inject(graph, graphData.Connections);
