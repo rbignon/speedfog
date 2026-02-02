@@ -519,6 +519,11 @@ def classify_fogs(
         if "crawlonly" in tags_lower:
             continue
 
+        # Skip minorwarps - they're transporter chests/sending gates
+        # that FogMod doesn't have edge data for (no AEG099 fog gate models)
+        if "minorwarp" in tags_lower:
+            continue
+
         aside_area = fog.aside.area
         bside_area = fog.bside.area
 
@@ -535,11 +540,8 @@ def classify_fogs(
 
         if fog.is_unique:
             # Unique: ASide is exit only, BSide is entry only
-            # Skip minorwarps entirely - they're transporter chests/sending gates
-            # that FogMod doesn't have edge data for (no AEG099 fog gate models)
-            if "minorwarp" not in tags_lower:
-                zone_fogs[aside_area].exit_fogs.append(fog)
-                zone_fogs[bside_area].entry_fogs.append(fog)
+            zone_fogs[aside_area].exit_fogs.append(fog)
+            zone_fogs[bside_area].entry_fogs.append(fog)
         elif fog.is_uniquegate:
             # Uniquegate: check if this pair was already processed
             zone_pair = fog.zone_pair
