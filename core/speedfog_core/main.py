@@ -34,8 +34,8 @@ def main() -> int:
         "-o",
         "--output",
         type=Path,
-        default=Path("."),
-        help="Output directory (default: current directory). Files are written to <output>/<seed>/",
+        default=Path("./seeds/"),
+        help="Output directory (default: ./seeds/). Files are written to <output>/<seed>/",
     )
     parser.add_argument(
         "--spoiler",
