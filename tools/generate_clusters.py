@@ -102,6 +102,17 @@ class FogData:
     aside: FogSide
     bside: FogSide
     tags: list[str] = field(default_factory=list)
+    split_from: str | None = None  # SplitFrom field (ashen alternates)
+
+    @property
+    def is_split(self) -> bool:
+        """Check if this fog is a split/alternate of another fog.
+
+        Split fogs (e.g., ashen capital versions) share the same logical
+        connection as their canonical counterpart in FogMod's graph.
+        They should not be used as separate entry/exit points.
+        """
+        return self.split_from is not None
 
     @property
     def is_unique(self) -> bool:
@@ -286,6 +297,7 @@ def parse_fog(fog_data: dict) -> FogData:
         aside=parse_fog_side(fog_data.get("ASide", {})),
         bside=parse_fog_side(fog_data.get("BSide", {})),
         tags=parse_tags(fog_data.get("Tags")),
+        split_from=fog_data.get("SplitFrom"),
     )
 
 
@@ -511,6 +523,11 @@ def classify_fogs(
 
     for fog in all_fogs:
         if fog.is_norandom:
+            continue
+
+        # Skip split/alternate fogs (e.g., ashen capital versions)
+        # They share the same logical connection as their canonical counterpart
+        if fog.is_split:
             continue
 
         tags_lower = [t.lower() for t in fog.tags]

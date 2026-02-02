@@ -512,6 +512,44 @@ class TestClassifyFogs:
         assert fog1 in zone_fogs["dupehallway"].entry_fogs
         assert fog2 in zone_fogs["dupehallway"].exit_fogs
 
+    def test_split_fog_excluded(self):
+        """Split fogs (ashen alternates) are excluded.
+
+        Split fogs (e.g., ashen capital versions with SplitFrom) share the same
+        logical connection as their canonical counterpart in FogMod's graph.
+        They should not be used as separate entry/exit points.
+        """
+        # Canonical fog (normal version)
+        fog_normal = FogData(
+            name="AEG099_230_9000",
+            fog_id=755894103,
+            aside=FogSide(area="sidetomb", text="at entrance"),
+            bside=FogSide(area="outskirts", text="at dungeon entrance"),
+            tags=["dungeon", "catacomb"],
+        )
+        # Split fog (ashen version) - has split_from set
+        fog_ashen = FogData(
+            name="AEG099_230_9502",
+            fog_id=755894107,
+            aside=FogSide(area="sidetomb", text="at ashen entrance"),
+            bside=FogSide(area="outskirts", text="at ashen dungeon entrance"),
+            tags=["dungeon", "catacomb"],
+            split_from="m60_45_52_00_AEG099_230_9000",  # Ashen split of canonical
+        )
+        zone_fogs = classify_fogs([fog_normal, fog_ashen], [])
+
+        # Canonical fog should be included
+        assert fog_normal in zone_fogs["sidetomb"].entry_fogs
+        assert fog_normal in zone_fogs["sidetomb"].exit_fogs
+        assert fog_normal in zone_fogs["outskirts"].entry_fogs
+        assert fog_normal in zone_fogs["outskirts"].exit_fogs
+
+        # Split fog should be excluded (not in any zone's fogs)
+        assert fog_ashen not in zone_fogs.get("sidetomb", ZoneFogs()).entry_fogs
+        assert fog_ashen not in zone_fogs.get("sidetomb", ZoneFogs()).exit_fogs
+        assert fog_ashen not in zone_fogs.get("outskirts", ZoneFogs()).entry_fogs
+        assert fog_ashen not in zone_fogs.get("outskirts", ZoneFogs()).exit_fogs
+
 
 # =============================================================================
 # Cluster Generation Tests
