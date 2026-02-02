@@ -62,3 +62,9 @@ clusters_file = "./data/clusters.json"
 # If set, SpeedFog merges with this mod's EMEVD files as base.
 # If omitted, SpeedFog uses vanilla game files.
 # randomizer_dir = "./mods/randomizer"
+
+# Platform for running FogModWrapper. Options:
+# - Omit or "auto": auto-detect (Wine on Linux, native on Windows)
+# - "windows": native Windows execution
+# - "linux": use Wine
+# platform = "auto"

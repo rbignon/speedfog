@@ -73,6 +73,7 @@ game_dir = "/path/to/game"
 output_dir = "./custom_output"
 clusters_file = "./custom_clusters.json"
 randomizer_dir = "./mods/randomizer"
+platform = "linux"
 """)
     config = Config.from_toml(config_file)
     # Run section
@@ -95,6 +96,7 @@ randomizer_dir = "./mods/randomizer"
     assert config.paths.output_dir == "./custom_output"
     assert config.paths.clusters_file == "./custom_clusters.json"
     assert config.paths.randomizer_dir == "./mods/randomizer"
+    assert config.paths.platform == "linux"
 
 
 def test_load_config_helper(tmp_path):
@@ -122,6 +124,7 @@ def test_paths_defaults():
     assert config.paths.output_dir == "./output"
     assert config.paths.clusters_file == "./data/clusters.json"
     assert config.paths.randomizer_dir is None
+    assert config.paths.platform is None
 
 
 def test_structure_defaults():

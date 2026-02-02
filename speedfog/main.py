@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import argparse
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -16,6 +18,78 @@ from speedfog.output import (
     export_spoiler_log,
     load_fog_data,
 )
+
+
+def run_fogmodwrapper(
+    seed_dir: Path,
+    game_dir: Path,
+    platform: str | None,
+    verbose: bool,
+) -> bool:
+    """Run FogModWrapper to generate the mod.
+
+    Args:
+        seed_dir: Directory containing graph.json (output also goes here)
+        game_dir: Path to Elden Ring Game directory
+        platform: "windows", "linux", or None for auto-detect
+        verbose: Print command and output
+
+    Returns:
+        True on success, False on failure.
+    """
+    project_root = Path(__file__).parent.parent
+    wrapper_exe = (
+        project_root / "writer/FogModWrapper/publish/win-x64/FogModWrapper.exe"
+    )
+    data_dir = project_root / "data"
+
+    if not wrapper_exe.exists():
+        print(f"Error: FogModWrapper not found at {wrapper_exe}", file=sys.stderr)
+        print("Run: python tools/setup_fogrando.py <fogrando.zip>", file=sys.stderr)
+        return False
+
+    # Detect platform (only Windows is native, everything else needs Wine)
+    if platform is None or platform == "auto":
+        platform = "windows" if sys.platform == "win32" else "linux"
+
+    # Check Wine availability on non-Windows
+    if platform == "linux" and shutil.which("wine") is None:
+        print(
+            "Error: Wine not found. Install wine to build mods on Linux.",
+            file=sys.stderr,
+        )
+        return False
+
+    # Build command
+    if platform == "linux":
+        cmd = ["wine", str(wrapper_exe)]
+    else:
+        cmd = [str(wrapper_exe)]
+
+    cmd.extend(
+        [
+            str(seed_dir),
+            "--game-dir",
+            str(game_dir),
+            "--data-dir",
+            str(data_dir),
+            "-o",
+            str(seed_dir),
+        ]
+    )
+
+    if verbose:
+        print(f"Running: {' '.join(cmd)}")
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        if verbose:
+            print(result.stdout)
+        print(result.stderr, file=sys.stderr)
+        return False
+    elif verbose:
+        print(result.stdout)
+    return True
 
 
 def main() -> int:
@@ -63,6 +137,16 @@ def main() -> int:
         "--verbose",
         action="store_true",
         help="Verbose output",
+    )
+    parser.add_argument(
+        "--no-build",
+        action="store_true",
+        help="Skip mod building (only generate graph.json)",
+    )
+    parser.add_argument(
+        "--game-dir",
+        type=Path,
+        help="Path to Elden Ring Game directory (overrides config)",
     )
 
     args = parser.parse_args()
@@ -176,6 +260,35 @@ def main() -> int:
         spoiler_path = seed_dir / "spoiler.txt"
         export_spoiler_log(dag, spoiler_path)
         print(f"Written: {spoiler_path}")
+
+    # Build mod unless --no-build
+    if not args.no_build:
+        # Determine game_dir (CLI > config)
+        game_dir = args.game_dir or (
+            Path(config.paths.game_dir) if config.paths.game_dir else None
+        )
+        if not game_dir:
+            print(
+                "Error: --game-dir required (or set paths.game_dir in config.toml)",
+                file=sys.stderr,
+            )
+            return 1
+
+        if not game_dir.exists():
+            print(f"Error: Game directory not found: {game_dir}", file=sys.stderr)
+            return 1
+
+        print("Building mod...")
+        if not run_fogmodwrapper(
+            seed_dir, game_dir, config.paths.platform, args.verbose
+        ):
+            print(
+                "Error: Mod build failed (graph.json preserved for debugging)",
+                file=sys.stderr,
+            )
+            return 1
+
+        print(f"Mod ready: {seed_dir}")
 
     return 0
 

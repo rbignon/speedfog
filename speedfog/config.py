@@ -66,6 +66,7 @@ class PathsConfig:
     output_dir: str = "./output"
     clusters_file: str = "./data/clusters.json"
     randomizer_dir: str | None = None
+    platform: str | None = None  # None = auto-detect, "windows", "linux"
 
 
 @dataclass
@@ -113,6 +114,7 @@ class Config:
                     "clusters_file", "./data/clusters.json"
                 ),
                 randomizer_dir=paths_section.get("randomizer_dir"),
+                platform=paths_section.get("platform"),
             ),
         )
 

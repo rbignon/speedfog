@@ -96,7 +96,7 @@ def find_sfextract() -> Path | None:
 
 def check_prerequisites(zip_path: Path) -> Path | None:
     """Check that all prerequisites are met. Returns sfextract path or None."""
-    print_step(1, 5, "Checking prerequisites...")
+    print_step(1, 6, "Checking prerequisites...")
 
     # Check sfextract
     sfextract = find_sfextract()
@@ -153,7 +153,7 @@ def extract_zip(zip_path: Path, temp_dir: Path) -> bool:
 
 def extract_dlls(sfextract: Path, exe_path: Path, output_dir: Path) -> int:
     """Extract DLLs from FogMod.exe using sfextract. Returns count of DLLs."""
-    print_step(2, 5, "Extracting FogMod.exe...")
+    print_step(2, 6, "Extracting FogMod.exe...")
 
     try:
         subprocess.run(
@@ -173,7 +173,7 @@ def extract_dlls(sfextract: Path, exe_path: Path, output_dir: Path) -> int:
 
 def copy_files(temp_dir: Path) -> bool:
     """Copy extracted files to their destinations."""
-    print_step(3, 5, "Copying files...")
+    print_step(3, 6, "Copying files...")
 
     extracted_dir = temp_dir / "extracted"
     fog_dir = temp_dir / "fog"
@@ -225,7 +225,7 @@ def copy_files(temp_dir: Path) -> bool:
 
 def regenerate_derived_data() -> bool:
     """Regenerate clusters.json and fog_data.json."""
-    print_step(4, 5, "Regenerating derived data...")
+    print_step(4, 6, "Regenerating derived data...")
 
     tools_dir = PROJECT_ROOT / "tools"
 
@@ -277,9 +277,44 @@ def regenerate_derived_data() -> bool:
     return True
 
 
+def compile_fogmodwrapper() -> bool:
+    """Compile FogModWrapper as self-contained Windows executable."""
+    print_step(5, 6, "Compiling FogModWrapper...")
+
+    wrapper_dir = PROJECT_ROOT / "writer" / "FogModWrapper"
+    publish_dir = wrapper_dir / "publish" / "win-x64"
+
+    try:
+        subprocess.run(
+            [
+                "dotnet",
+                "publish",
+                "-c",
+                "Release",
+                "-r",
+                "win-x64",
+                "--self-contained",
+                "-o",
+                str(publish_dir),
+            ],
+            cwd=wrapper_dir,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        print_ok(f"Published to {publish_dir.relative_to(PROJECT_ROOT)}")
+        return True
+    except subprocess.CalledProcessError as e:
+        print_error(f"dotnet publish failed: {e.stderr}")
+        return False
+    except FileNotFoundError:
+        print_error("dotnet not found - install .NET 8.0 SDK")
+        return False
+
+
 def cleanup(temp_dir: Path) -> None:
     """Clean up temporary directory."""
-    print_step(5, 5, "Cleanup...")
+    print_step(6, 6, "Cleanup...")
     shutil.rmtree(temp_dir, ignore_errors=True)
     print_ok("Done")
 
@@ -340,6 +375,10 @@ def main() -> int:
         if not regenerate_derived_data():
             return 1
 
+        # Compile FogModWrapper
+        if not compile_fogmodwrapper():
+            return 1
+
         # Cleanup
         cleanup(temp_dir)
 
@@ -349,8 +388,8 @@ def main() -> int:
         return 1
 
     print()
-    print("Setup complete! You can now build FogModWrapper:")
-    print("  cd writer/FogModWrapper && dotnet build")
+    print("Setup complete! You can now generate runs with:")
+    print("  uv run speedfog config.toml --spoiler")
 
     return 0
 

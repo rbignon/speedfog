@@ -37,11 +37,8 @@ uv pip install -e .
 # Install sfextract (extracts DLLs from FogRando)
 dotnet tool install -g sfextract
 
-# Extract FogRando dependencies
+# Extract FogRando dependencies and build FogModWrapper
 python tools/setup_fogrando.py /path/to/FogRando.zip
-
-# Build the C# writer
-cd writer/FogModWrapper && dotnet build && cd ../..
 ```
 
 ### 3. Configure
@@ -53,28 +50,29 @@ cp config.example.toml config.toml
 
 ## Usage
 
-### Generate a Run
+### Generate and Build a Run
 
 ```bash
-# Generate DAG and spoiler (from project root)
 uv run speedfog config.toml --spoiler
-
-# Output is in seeds/<seed>/ by default
 ```
 
-### Build the Mod
+Output is self-contained in `seeds/<seed>/`:
+- `graph.json` - DAG definition
+- `spoiler.txt` - Solution path
+- `mods/speedfog/` - Generated mod files
+- `launch_speedfog.bat` - Windows launcher
+- `launch_speedfog.sh` - Linux/Proton launcher
+
+### Generate Only (no mod build)
 
 ```bash
-# Windows
-cd writer/FogModWrapper
-dotnet run -- ../../seeds/<seed> --game-dir "C:/Games/ELDEN RING/Game" -o output
+uv run speedfog config.toml --no-build --spoiler
+```
 
-# Linux (via Wine)
-cd writer/FogModWrapper
-dotnet publish -c Release -r win-x64 --self-contained -o publish/win-x64
-wine publish/win-x64/FogModWrapper.exe ../../seeds/<seed> \
-  --game-dir "/path/to/ELDEN RING/Game" \
-  -o output
+Then build manually:
+```bash
+wine writer/FogModWrapper/publish/win-x64/FogModWrapper.exe \
+  seeds/<seed> --game-dir /path/to/game --data-dir data -o seeds/<seed>
 ```
 
 ### Play
@@ -83,10 +81,10 @@ The output folder is self-contained with ModEngine 2:
 
 ```bash
 # Windows
-./output/launch_speedfog.bat
+./seeds/<seed>/launch_speedfog.bat
 
 # Linux (Proton)
-./output/launch_speedfog.sh
+./seeds/<seed>/launch_speedfog.sh
 ```
 
 ## Configuration
