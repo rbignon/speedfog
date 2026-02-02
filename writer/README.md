@@ -1,6 +1,6 @@
-# SpeedFogWriter
+# FogModWrapper
 
-C# component of SpeedFog that generates Elden Ring mod files from a seed directory.
+C# component of SpeedFog - a thin wrapper around FogMod.dll that generates Elden Ring mod files from a graph.json.
 
 ## Requirements
 
@@ -11,25 +11,28 @@ C# component of SpeedFog that generates Elden Ring mod files from a seed directo
 ## Building
 
 ```bash
-cd writer
+cd writer/FogModWrapper
 dotnet build
+
+# For self-contained Windows executable:
+dotnet publish -c Release -r win-x64 --self-contained -o publish/win-x64
 ```
 
 ## Usage
 
 ```bash
-dotnet run --project SpeedFogWriter -- <seed_dir> <game_dir> <output_dir> [options]
+FogModWrapper.exe <graph.json> --game-dir <game_dir> [options]
 ```
 
 ### Arguments
 
-- `seed_dir` - Path to seed directory (contains graph.json, spoiler.txt)
-- `game_dir` - Path to Elden Ring's Game folder (contains regulation.bin)
-- `output_dir` - Where to write mod files
+- `graph.json` - Path to graph.json from Python DAG generator
 
 ### Options
 
+- `--game-dir <path>` - Path to Elden Ring's Game folder (contains regulation.bin)
 - `--data-dir <path>` - Custom path to data directory (default: ../data)
+- `-o, --output <path>` - Where to write mod files (default: ./output)
 - `--no-package` - Skip ModEngine packaging (output mod files only)
 - `--update-modengine` - Force re-download of ModEngine 2
 
@@ -58,7 +61,9 @@ After generating the mod:
 
 ## Development
 
-See `docs/plans/phase-3-csharp-writer.md` for detailed implementation spec.
+FogModWrapper uses FogMod.dll directly from FogRando, injecting our custom connections into its graph.
+
+See `docs/plans/2026-02-01-fogmod-wrapper-design.md` for detailed architecture.
 
 ### Running Tests
 

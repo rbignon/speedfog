@@ -45,12 +45,15 @@ speedfog/
 │   └── speedfog_core/
 ├── writer/                  # C# - Mod file generation (Phase 3-4)
 │   ├── lib/                 # DLLs (FogMod, SoulsFormats, SoulsIds, etc.)
-│   ├── FogModWrapper/       # Main writer - thin wrapper calling FogMod.dll
-│   │   ├── Program.cs       # CLI entry point
-│   │   ├── GraphLoader.cs   # Load graph.json v2
-│   │   ├── ConnectionInjector.cs  # Inject connections into FogMod Graph
-│   │   └── eldendata/       # Game data (gitignored, symlinked)
-│   └── SpeedFogWriter/      # Legacy (deprecated)
+│   └── FogModWrapper/       # Main writer - thin wrapper calling FogMod.dll
+│       ├── Program.cs       # CLI entry point
+│       ├── GraphLoader.cs   # Load graph.json v2
+│       ├── ConnectionInjector.cs  # Inject connections into FogMod Graph
+│       └── eldendata/       # Game data (gitignored, symlinked)
+├── tools/                   # Standalone data generation scripts
+│   ├── generate_clusters.py # Generate clusters.json from fog.txt
+│   ├── extract_fog_data.py  # Extract fog gate metadata
+│   └── test_generate_clusters.py  # Tests for generate_clusters.py
 ├── reference/               # FogRando decompiled code (READ-ONLY)
 │   ├── fogrando-src/        # C# source files
 │   └── fogrando-data/       # Reference data (foglocations.txt)
@@ -66,7 +69,6 @@ speedfog/
 | `docs/plans/phase-1-foundations.md` | Python setup, zone conversion |
 | `docs/plans/phase-2-dag-generation.md` | DAG algorithm, balancing |
 | `docs/plans/2026-02-01-fogmod-wrapper-design.md` | FogModWrapper architecture |
-| `docs/plans/phase-3-csharp-writer.md` | Legacy SpeedFogWriter (deprecated) |
 | `docs/plans/phase-4-packaging.md` | ModEngine download, launcher scripts |
 | `reference/fogrando-src/GameDataWriterE.cs` | Main FogRando writer (5639 lines) |
 | `reference/fogrando-src/EldenScaling.cs` | Enemy scaling logic |
@@ -178,14 +180,17 @@ wine publish/win-x64/FogModWrapper.exe \
 ## Testing
 
 ```bash
-# Python - all tests
+# Python - all tests (core + tools)
+pytest -v
+
+# Python - core package only
 cd core && pytest -v
+
+# Python - tools only
+pytest tools/ -v
 
 # Python - with coverage
 pytest --cov=speedfog_core
-
-# Python - specific module
-pytest tests/test_generator.py
 
 # C# - integration test
 cd writer/test && ./run_integration.sh
@@ -205,7 +210,7 @@ cd writer/test && ./run_integration.sh
 
 **EMEVD events not triggering:**
 - Check event templates in `data/fogevents.txt` against FogRando source in `reference/`
-- Verify common events are initialized in `RegisterCommonEvents()` in ModWriter.cs
+- Verify common events are initialized by FogMod's GameDataWriterE
 - Confirm entity IDs exist in the target MSB
 
 **Fog gates not visible:**

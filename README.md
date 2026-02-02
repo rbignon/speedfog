@@ -37,10 +37,10 @@ speedfog config.toml --spoiler -o /tmp/speedfog
 # Creates /tmp/speedfog/<seed>/graph.json and spoiler.txt
 
 # Generate mod files (Windows)
-SpeedFogWriter.exe /tmp/speedfog/<seed> "C:/Games/ELDEN RING/Game" ./output
+FogModWrapper.exe /tmp/speedfog/<seed>/graph.json --game-dir "C:/Games/ELDEN RING/Game" -o ./output
 
 # Generate mod files (Linux via Wine - see "Running on Linux" section)
-wine SpeedFogWriter.exe /tmp/speedfog/<seed> "/path/to/ELDEN RING/Game" ./output
+wine FogModWrapper.exe /tmp/speedfog/<seed>/graph.json --game-dir "/path/to/ELDEN RING/Game" -o ./output
 ```
 
 ### 3. Install the Mod
@@ -132,7 +132,7 @@ speedfog/
 ├── core/                   # Python - DAG generation
 │   └── speedfog_core/      # Python package
 ├── writer/                 # C# - Mod file generation
-│   └── SpeedFogWriter/
+│   └── FogModWrapper/
 ├── reference/              # FogRando source for reference (read-only)
 │   └── fogrando-src/       # Decompiled C# code
 ├── docs/plans/             # Implementation specifications
@@ -146,8 +146,6 @@ See [docs/plans/](docs/plans/) for detailed implementation specifications:
 - [Design Overview](docs/plans/2026-01-29-speedfog-design.md)
 - [Phase 1: Foundations](docs/plans/phase-1-foundations.md)
 - [Phase 2: DAG Generation](docs/plans/phase-2-dag-generation.md)
-- [Phase 3: C# Writer](docs/plans/phase-3-csharp-writer.md)
-
 ### Building from Source
 
 ```bash
@@ -174,12 +172,15 @@ cd core
 speedfog config.toml --spoiler -o /tmp/speedfog
 # Creates /tmp/speedfog/<seed>/graph.json and spoiler.txt
 
-# 2. Copy Oodle DLL from game folder (required for reading game files)
-cp "/path/to/ELDEN RING/Game/oo2core_6_win64.dll" ../writer/SpeedFogWriter/bin/Release/net8.0/win-x64/
+# 2. Build and publish the writer
+cd ../writer/FogModWrapper
+dotnet publish -c Release -r win-x64 --self-contained -o publish/win-x64
 
 # 3. Run the writer with Wine
-cd ../writer/SpeedFogWriter/bin/Release/net8.0/win-x64/
-wine SpeedFogWriter.exe /tmp/speedfog/<seed> "/path/to/ELDEN RING/Game" ./output
+wine publish/win-x64/FogModWrapper.exe /tmp/speedfog/<seed>/graph.json \
+  --game-dir "/path/to/ELDEN RING/Game" \
+  --data-dir ../../data \
+  -o ./output
 ```
 
 **Note**: The game itself runs via Proton on Linux, so this workflow integrates naturally.

@@ -2,13 +2,6 @@
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-
-# Add tools directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "tools"))
-
 from generate_clusters import (
     AreaData,
     Cluster,
