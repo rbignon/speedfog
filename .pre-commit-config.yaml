@@ -27,3 +27,13 @@ repos:
         exclude: ^(tests/|tools/)
         additional_dependencies:
           - types-PyYAML
+
+  - repo: local
+    hooks:
+      - id: dotnet-format
+        name: dotnet format
+        # CA1416: Platform compatibility - project targets Windows but may be developed on Linux
+        entry: dotnet format writer/FogModWrapper/FogModWrapper.csproj --verify-no-changes --exclude-diagnostics CA1416
+        language: system
+        types: [c#]
+        pass_filenames: false

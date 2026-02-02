@@ -142,7 +142,8 @@ public class ModEngineDownloader : IDisposable
         while (true)
         {
             var read = await contentStream.ReadAsync(buffer);
-            if (read == 0) break;
+            if (read == 0)
+                break;
 
             await fileStream.WriteAsync(buffer.AsMemory(0, read));
             totalRead += read;
