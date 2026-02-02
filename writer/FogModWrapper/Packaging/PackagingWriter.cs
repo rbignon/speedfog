@@ -6,10 +6,12 @@ namespace FogModWrapper.Packaging;
 public class PackagingWriter
 {
     private readonly string _outputDir;
+    private readonly string? _graphPath;
 
-    public PackagingWriter(string outputDir)
+    public PackagingWriter(string outputDir, string? graphPath = null)
     {
         _outputDir = outputDir;
+        _graphPath = graphPath;
     }
 
     /// <summary>
@@ -45,11 +47,35 @@ public class PackagingWriter
         ConfigGenerator.WriteShellLauncher(_outputDir);
         Console.WriteLine("Generated launcher scripts");
 
+        // 6. Copy spoiler.txt if it exists (from same directory as graph.json)
+        CopySpoiler();
+
         Console.WriteLine();
         Console.WriteLine("=== SpeedFog mod ready! ===");
         Console.WriteLine($"To play:");
         Console.WriteLine($"  Windows: double-click {Path.Combine(_outputDir, "launch_speedfog.bat")}");
         Console.WriteLine($"  Linux:   run {Path.Combine(_outputDir, "launch_speedfog.sh")}");
+    }
+
+    /// <summary>
+    /// Copies spoiler.txt from the graph.json directory to output.
+    /// </summary>
+    private void CopySpoiler()
+    {
+        if (string.IsNullOrEmpty(_graphPath))
+            return;
+
+        var graphDir = Path.GetDirectoryName(_graphPath);
+        if (string.IsNullOrEmpty(graphDir))
+            return;
+
+        var spoilerPath = Path.Combine(graphDir, "spoiler.txt");
+        if (File.Exists(spoilerPath))
+        {
+            var destPath = Path.Combine(_outputDir, "spoiler.txt");
+            File.Copy(spoilerPath, destPath, overwrite: true);
+            Console.WriteLine("Copied spoiler.txt");
+        }
     }
 
     /// <summary>
@@ -77,19 +103,29 @@ public class PackagingWriter
 
     /// <summary>
     /// Finds the assets directory by searching up from the executable location.
+    /// Assets are at writer/assets/, executable may be at:
+    /// - writer/FogModWrapper/bin/Debug/net8.0/win-x64/ (6 levels up to writer/)
+    /// - writer/FogModWrapper/publish/win-x64/ (3 levels up to writer/)
     /// </summary>
     private static string? FindAssetsDirectory()
     {
+        var candidates = new List<string>();
+
         // Try relative to executable
         var exeDir = AppContext.BaseDirectory;
-        var candidates = new[]
+        for (int i = 0; i <= 7; i++)
         {
-            Path.Combine(exeDir, "assets"),
-            Path.Combine(exeDir, "..", "assets"),
-            Path.Combine(exeDir, "..", "..", "assets"),
-            Path.Combine(exeDir, "..", "..", "..", "assets"),
-            Path.Combine(exeDir, "..", "..", "..", "..", "assets"),
-        };
+            var path = exeDir;
+            for (int j = 0; j < i; j++)
+                path = Path.Combine(path, "..");
+            candidates.Add(Path.Combine(path, "assets"));
+        }
+
+        // Also try relative to current working directory
+        var cwd = Directory.GetCurrentDirectory();
+        candidates.Add(Path.Combine(cwd, "assets"));
+        candidates.Add(Path.Combine(cwd, "..", "assets"));
+        candidates.Add(Path.Combine(cwd, "..", "..", "assets"));
 
         foreach (var candidate in candidates)
         {
