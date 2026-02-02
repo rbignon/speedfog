@@ -142,7 +142,7 @@ def _make_fullname(
     zone: str,
     clusters: ClusterPool,
     fog_data: dict[str, dict[str, Any]] | None = None,
-    is_entry: bool = False,
+    is_entry: bool = False,  # noqa: ARG001 - kept for API compatibility
 ) -> str:
     """Convert a fog_id to FogMod FullName format: {map}_{fog_id}.
 
@@ -151,7 +151,7 @@ def _make_fullname(
         zone: The zone the fog connects to
         clusters: ClusterPool with zone_maps
         fog_data: Optional fog_data.json lookup for map resolution
-        is_entry: True if this is an entry fog (use destination_map if available)
+        is_entry: Unused, kept for API compatibility
 
     Returns:
         FogMod FullName (e.g., "m10_01_00_00_AEG099_001_9000")
@@ -162,13 +162,14 @@ def _make_fullname(
         For dungeon entrances, the fog gate may be in a different map than
         the destination zone (e.g., overworld entrance to a dungeon).
         We search fog_data for a fullname that contains the destination zone.
+
+        FogMod edge names are always based on the map where the asset physically
+        exists (the "map" field), NOT the destination_map. The destination_map
+        field is informational only.
     """
     # For warps (numeric IDs), fog_data has the authoritative map
     if fog_data and fog_id in fog_data and fog_id.isdigit():
         data = fog_data[fog_id]
-        # For entry fogs, prefer destination_map (for one-way warps like sending gates)
-        if is_entry and data.get("destination_map"):
-            return f"{data['destination_map']}_{fog_id}"
         map_id = data.get("map")
         if map_id:
             return f"{map_id}_{fog_id}"
