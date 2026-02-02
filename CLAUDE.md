@@ -33,14 +33,14 @@ DAG generation     →                                    ├── ModEngine/
 
 ```
 speedfog/
-├── data/                    # Shared data files (source + generated)
-│   ├── fog.txt              # FogRando zone definitions (source)
-│   ├── foglocations2.txt    # FogRando enemy areas (source)
-│   ├── fogevents.txt        # FogRando event templates (source)
-│   ├── er-common.emedf.json # EMEVD instruction definitions
-│   ├── clusters.json        # Generated zone clusters
-│   ├── fog_data.json        # Generated fog gate metadata
-│   └── zone_metadata.toml   # Zone weight config
+├── data/                    # Shared data files
+│   ├── fog.txt              # FogRando zone definitions (gitignored)
+│   ├── foglocations2.txt    # FogRando enemy areas (gitignored)
+│   ├── fogevents.txt        # FogRando event templates (gitignored)
+│   ├── er-common.emedf.json # EMEVD instruction definitions (gitignored)
+│   ├── clusters.json        # Generated zone clusters (gitignored)
+│   ├── fog_data.json        # Generated fog gate metadata (gitignored)
+│   └── zone_metadata.toml   # Zone weight config (tracked)
 ├── core/                    # Python - DAG generation (Phase 1-2)
 │   └── speedfog_core/
 ├── writer/                  # C# - Mod file generation (Phase 3-4)
@@ -50,7 +50,8 @@ speedfog/
 │       ├── GraphLoader.cs   # Load graph.json v2
 │       ├── ConnectionInjector.cs  # Inject connections into FogMod Graph
 │       └── eldendata/       # Game data (gitignored, symlinked)
-├── tools/                   # Standalone data generation scripts
+├── tools/                   # Standalone scripts
+│   ├── setup_fogrando.py    # Extract FogRando dependencies from Nexusmods ZIP
 │   ├── generate_clusters.py # Generate clusters.json from fog.txt
 │   ├── extract_fog_data.py  # Extract fog gate metadata
 │   └── test_generate_clusters.py  # Tests for generate_clusters.py
@@ -141,11 +142,29 @@ When implementing features, refer to these sections in `GameDataWriterE.cs`:
 | Scaling | L1964-1966 | EldenScaling integration |
 | Write output | L4977-5030 | Params, EMEVDs |
 
+## Setup
+
+```bash
+# 1. Install Python dependencies
+cd core && uv pip install -e ".[dev]"
+
+# 2. Install sfextract (for extracting FogRando DLLs)
+dotnet tool install -g sfextract
+
+# 3. Download FogRando from Nexusmods (requires account):
+#    https://www.nexusmods.com/eldenring/mods/3295
+
+# 4. Extract FogRando dependencies
+python tools/setup_fogrando.py /path/to/FogRando.zip
+
+# 5. Build C# writer
+cd writer/FogModWrapper && dotnet build
+```
+
 ## Commands
 
 ```bash
 # Python core
-cd core && uv pip install -e ".[dev]"
 speedfog config.toml --spoiler -o /tmp/speedfog
 # Creates /tmp/speedfog/<seed>/graph.json and spoiler.txt
 

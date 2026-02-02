@@ -52,6 +52,14 @@ writer/*/publish/
 writer/*/run.txt
 writer/*/eldendata/
 
+# FogRando data files (extracted by tools/setup_fogrando.py)
+data/fog.txt
+data/fogevents.txt
+data/foglocations2.txt
+data/er-common.emedf.json
+data/clusters.json
+data/fog_data.json
+
 # Keep example config
 !config.example.toml
 
