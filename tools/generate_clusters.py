@@ -28,7 +28,6 @@ except ImportError:
 
 import yaml
 
-
 # =============================================================================
 # Data Structures
 # =============================================================================
@@ -264,10 +263,26 @@ def parse_fog_side(side_data: dict) -> FogSide:
 
 
 def parse_fog(fog_data: dict) -> FogData:
-    """Parse an entrance or warp entry."""
+    """Parse an entrance or warp entry.
+
+    Note: YAML parses names like "30052840_30051890" as integers (Python allows
+    underscores in numeric literals). We reconstruct the underscore from ID and
+    Location fields when this happens.
+    """
+    name = fog_data.get("Name", "")
+    fog_id = fog_data.get("ID", 0)
+    location = fog_data.get("Location")
+
+    # Reconstruct underscore-separated names that YAML parsed as integers
+    # Pattern: Name = "{ID}_{Location}" for backportals and paired warps
+    if isinstance(name, int) and location is not None:
+        expected_concat = int(f"{fog_id}{location}")
+        if name == expected_concat:
+            name = f"{fog_id}_{location}"
+
     return FogData(
-        name=fog_data.get("Name", ""),
-        fog_id=fog_data.get("ID", 0),
+        name=str(name),
+        fog_id=fog_id,
         aside=parse_fog_side(fog_data.get("ASide", {})),
         bside=parse_fog_side(fog_data.get("BSide", {})),
         tags=parse_tags(fog_data.get("Tags")),
@@ -520,9 +535,10 @@ def classify_fogs(
 
         if fog.is_unique:
             # Unique: ASide is exit only, BSide is entry only
-            zone_fogs[aside_area].exit_fogs.append(fog)
-            # Skip minorwarps as entry_fogs - they're transporter chests from fixed locations
+            # Skip minorwarps entirely - they're transporter chests/sending gates
+            # that FogMod doesn't have edge data for (no AEG099 fog gate models)
             if "minorwarp" not in tags_lower:
+                zone_fogs[aside_area].exit_fogs.append(fog)
                 zone_fogs[bside_area].entry_fogs.append(fog)
         elif fog.is_uniquegate:
             # Uniquegate: check if this pair was already processed
