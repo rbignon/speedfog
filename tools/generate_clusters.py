@@ -68,6 +68,30 @@ class FogSide:
     area: str
     text: str
     tags: list[str] = field(default_factory=list)
+    cond: str | None = None
+
+    def requires_own_zone(self) -> bool:
+        """Check if this side requires already being in its own zone.
+
+        When Cond contains the same zone as Area, it means you must already
+        have access to that zone to use this side. This typically indicates
+        a one-way drop or internal passage - NOT a valid entry point.
+
+        Examples:
+        - AEG099_002_9000 ASide: Area=volcano_town, Cond=volcano_town
+          -> "can be reached from main town dropping down" = one-way drop
+        """
+        if not self.cond or not self.area:
+            return False
+
+        # Tokenize condition, removing operators and parentheses
+        tokens = self.cond.replace("(", " ").replace(")", " ").split()
+        condition_zones = {
+            t.lower() for t in tokens if t.upper() not in ("OR", "AND", "OR3")
+        }
+
+        # If the condition contains only this zone, it's a self-requirement
+        return self.area.lower() in condition_zones
 
 
 @dataclass
@@ -235,6 +259,7 @@ def parse_fog_side(side_data: dict) -> FogSide:
         area=side_data.get("Area", ""),
         text=side_data.get("Text", ""),
         tags=parse_tags(side_data.get("Tags")),
+        cond=side_data.get("Cond"),
     )
 
 
@@ -510,15 +535,28 @@ def classify_fogs(
 
             # Use the first fog of the pair as representative
             representative = uniquegate_by_zones[zone_pair][0]
-            zone_fogs[aside_area].entry_fogs.append(representative)
+            # Apply same Cond logic as bidirectional fogs
+            if not representative.aside.requires_own_zone():
+                zone_fogs[aside_area].entry_fogs.append(representative)
             zone_fogs[aside_area].exit_fogs.append(representative)
-            zone_fogs[bside_area].entry_fogs.append(representative)
+            if not representative.bside.requires_own_zone():
+                zone_fogs[bside_area].entry_fogs.append(representative)
             zone_fogs[bside_area].exit_fogs.append(representative)
         else:
             # Bidirectional: both sides are entry + exit
-            zone_fogs[aside_area].entry_fogs.append(fog)
+            # EXCEPT when a side has Cond that requires its own zone (e.g., drops)
+            #
+            # Example: AEG099_002_9000 (volcano_town -> volcano_abductors)
+            #   ASide: Area=volcano_town, Cond=volcano_town
+            #   -> You must already be in volcano_town to use ASide (it's a drop)
+            #   -> This fog is NOT a valid entry into volcano_town from outside
+            #   -> But it IS still an exit from volcano_town (you can drop down)
+            if not fog.aside.requires_own_zone():
+                zone_fogs[aside_area].entry_fogs.append(fog)
             zone_fogs[aside_area].exit_fogs.append(fog)
-            zone_fogs[bside_area].entry_fogs.append(fog)
+
+            if not fog.bside.requires_own_zone():
+                zone_fogs[bside_area].entry_fogs.append(fog)
             zone_fogs[bside_area].exit_fogs.append(fog)
 
     return dict(zone_fogs)

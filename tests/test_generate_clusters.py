@@ -171,6 +171,52 @@ class TestParseFog:
         assert fog.is_norandom is True
 
 
+class TestFogSideRequiresOwnZone:
+    """Tests for FogSide.requires_own_zone method."""
+
+    def test_no_condition_returns_false(self):
+        """No Cond field means not a self-requirement."""
+        side = FogSide(area="volcano_town", text="", tags=[], cond=None)
+        assert side.requires_own_zone() is False
+
+    def test_different_zone_condition_returns_false(self):
+        """Cond with different zone is not a self-requirement."""
+        side = FogSide(area="volcano_abductors", text="", tags=[], cond="volcano_town")
+        assert side.requires_own_zone() is False
+
+    def test_same_zone_condition_returns_true(self):
+        """Cond with same zone as Area is a self-requirement (e.g., drops)."""
+        # Real example: AEG099_002_9000 ASide has Area=volcano_town, Cond=volcano_town
+        # This indicates a one-way drop - you must already be in volcano_town to use it
+        side = FogSide(area="volcano_town", text="", tags=[], cond="volcano_town")
+        assert side.requires_own_zone() is True
+
+    def test_complex_condition_with_own_zone_returns_true(self):
+        """Complex condition containing own zone is a self-requirement."""
+        side = FogSide(
+            area="test_zone",
+            text="",
+            tags=[],
+            cond="OR test_zone other_zone",
+        )
+        assert side.requires_own_zone() is True
+
+    def test_complex_condition_without_own_zone_returns_false(self):
+        """Complex condition not containing own zone is not a self-requirement."""
+        side = FogSide(
+            area="test_zone",
+            text="",
+            tags=[],
+            cond="OR zone_a zone_b",
+        )
+        assert side.requires_own_zone() is False
+
+    def test_case_insensitive(self):
+        """Zone name matching is case-insensitive."""
+        side = FogSide(area="Volcano_Town", text="", tags=[], cond="volcano_town")
+        assert side.requires_own_zone() is True
+
+
 # =============================================================================
 # World Graph Tests
 # =============================================================================
@@ -555,24 +601,24 @@ class TestGetZoneType:
         assert get_zone_type(area) == "legacy_dungeon"
 
     def test_catacomb(self):
-        """Zone on catacomb map."""
+        """Zone on catacomb map returns mini_dungeon."""
         area = AreaData(name="test_catacomb", text="", maps=["m30_01_00_00"], tags=[])
-        assert get_zone_type(area) == "catacomb"
+        assert get_zone_type(area) == "mini_dungeon"
 
     def test_cave(self):
-        """Zone on cave map."""
+        """Zone on cave map returns mini_dungeon."""
         area = AreaData(name="test_cave", text="", maps=["m31_01_00_00"], tags=[])
-        assert get_zone_type(area) == "cave"
+        assert get_zone_type(area) == "mini_dungeon"
 
     def test_tunnel(self):
-        """Zone on tunnel map."""
+        """Zone on tunnel map returns mini_dungeon."""
         area = AreaData(name="test_tunnel", text="", maps=["m32_01_00_00"], tags=[])
-        assert get_zone_type(area) == "tunnel"
+        assert get_zone_type(area) == "mini_dungeon"
 
     def test_gaol(self):
-        """Zone on gaol map."""
+        """Zone on gaol map returns mini_dungeon."""
         area = AreaData(name="test_gaol", text="", maps=["m39_01_00_00"], tags=[])
-        assert get_zone_type(area) == "gaol"
+        assert get_zone_type(area) == "mini_dungeon"
 
 
 class TestGenerateClusterId:

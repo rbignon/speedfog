@@ -1,7 +1,7 @@
 {
   "version": "1.1",
   "generated_from": "fog.txt",
-  "cluster_count": 256,
+  "cluster_count": 255,
   "zone_maps": {
     "academy": "m14_00_00_00",
     "academy_cavetower": "m14_00_00_00",
@@ -661,10 +661,6 @@
       "weight": 4,
       "entry_fogs": [
         {
-          "fog_id": "AEG099_001_9001",
-          "zone": "altus_catacombs"
-        },
-        {
           "fog_id": "AEG099_230_9000",
           "zone": "altus_catacombs"
         }
@@ -764,10 +760,6 @@
       "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "altus_grave"
-        },
         {
           "fog_id": "AEG099_230_9000",
           "zone": "altus_grave"
@@ -1375,10 +1367,6 @@
       "weight": 4,
       "entry_fogs": [
         {
-          "fog_id": "AEG099_001_9000",
-          "zone": "caelid_catacombs"
-        },
-        {
           "fog_id": "AEG099_230_9000",
           "zone": "caelid_catacombs"
         }
@@ -1470,10 +1458,6 @@
       "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "caelid_erdtreecatacombs"
-        },
         {
           "fog_id": "AEG099_230_9001",
           "zone": "caelid_erdtreecatacombs"
@@ -1629,10 +1613,6 @@
       "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "caelid_gaolcave"
-        },
         {
           "fog_id": "AEG099_232_9000",
           "zone": "caelid_gaolcave"
@@ -1953,10 +1933,6 @@
       "weight": 4,
       "entry_fogs": [
         {
-          "fog_id": "AEG099_001_9000",
-          "zone": "caelid_tower"
-        },
-        {
           "fog_id": "AEG099_230_9000",
           "zone": "caelid_tower"
         },
@@ -2080,10 +2056,6 @@
       "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "caelid_wardead"
-        },
         {
           "fog_id": "AEG099_230_9000",
           "zone": "caelid_wardead"
@@ -2282,10 +2254,6 @@
       "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "dragonbarrow_cave"
-        },
         {
           "fog_id": "AEG099_232_9000",
           "zone": "dragonbarrow_cave"
@@ -2755,10 +2723,6 @@
       "weight": 4,
       "entry_fogs": [
         {
-          "fog_id": "AEG099_001_9000",
-          "zone": "flamepeak_grave"
-        },
-        {
           "fog_id": "AEG099_230_9001",
           "zone": "flamepeak_grave"
         }
@@ -2811,10 +2775,6 @@
       "weight": 4,
       "entry_fogs": [
         {
-          "fog_id": "AEG099_001_9000",
-          "zone": "gelmir_grave"
-        },
-        {
           "fog_id": "AEG099_230_9000",
           "zone": "gelmir_grave"
         }
@@ -2866,10 +2826,6 @@
       "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "gelmir_seethewatercave"
-        },
         {
           "fog_id": "AEG099_232_9000",
           "zone": "gelmir_seethewatercave"
@@ -2979,10 +2935,6 @@
       "weight": 4,
       "entry_fogs": [
         {
-          "fog_id": "AEG099_001_9000",
-          "zone": "gelmir_wyndhamcatacombs"
-        },
-        {
           "fog_id": "AEG099_230_9001",
           "zone": "gelmir_wyndhamcatacombs"
         }
@@ -3067,10 +3019,6 @@
       "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9010",
-          "zone": "graveyard_cave"
-        },
         {
           "fog_id": "AEG099_230_9000",
           "zone": "graveyard_cave"
@@ -3464,10 +3412,6 @@
         {
           "fog_id": "AEG099_001_9000",
           "zone": "leyndell_bedchamber"
-        },
-        {
-          "fog_id": "AEG099_001_9007",
-          "zone": "leyndell_bedchamber"
         }
       ],
       "exit_fogs": [
@@ -3546,10 +3490,6 @@
         },
         {
           "fog_id": "AEG099_230_9500",
-          "zone": "leyndell"
-        },
-        {
-          "fog_id": "AEG099_230_9000",
           "zone": "leyndell"
         },
         {
@@ -4160,10 +4100,6 @@
       "weight": 4,
       "entry_fogs": [
         {
-          "fog_id": "AEG099_002_9000",
-          "zone": "limgrave_highroadcave"
-        },
-        {
           "fog_id": "AEG099_232_9000",
           "zone": "limgrave_highroadcave"
         }
@@ -4215,10 +4151,6 @@
       "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "limgrave_murkwatercatacombs"
-        },
         {
           "fog_id": "AEG099_230_9000",
           "zone": "limgrave_murkwatercatacombs"
@@ -4332,10 +4264,6 @@
       "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "limgrave_stormfootcatacombs"
-        },
         {
           "fog_id": "AEG099_230_9000",
           "zone": "limgrave_stormfootcatacombs"
@@ -4518,10 +4446,6 @@
       "weight": 4,
       "entry_fogs": [
         {
-          "fog_id": "AEG099_001_9000",
-          "zone": "liurnia_academycave"
-        },
-        {
           "fog_id": "AEG099_232_9000",
           "zone": "liurnia_academycave"
         }
@@ -4581,10 +4505,6 @@
       "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "liurnia_blackknifecatacombs"
-        },
         {
           "fog_id": "AEG099_001_9002",
           "zone": "liurnia_blackknifecatacombs"
@@ -4673,10 +4593,6 @@
       "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "liurnia_cliffbottomcatacombs"
-        },
         {
           "fog_id": "AEG099_232_9000",
           "zone": "liurnia_cliffbottomcatacombs"
@@ -4862,10 +4778,6 @@
       "weight": 4,
       "entry_fogs": [
         {
-          "fog_id": "AEG099_002_9000",
-          "zone": "liurnia_lakesidecave"
-        },
-        {
           "fog_id": "AEG099_232_9000",
           "zone": "liurnia_lakesidecave"
         }
@@ -4973,10 +4885,6 @@
       "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "liurnia_roadsendcatacombs"
-        },
         {
           "fog_id": "AEG099_232_9000",
           "zone": "liurnia_roadsendcatacombs"
@@ -5285,10 +5193,6 @@
       "weight": 4,
       "entry_fogs": [
         {
-          "fog_id": "AEG099_001_9000",
-          "zone": "mountaintops_catacombs"
-        },
-        {
           "fog_id": "AEG099_230_9000",
           "zone": "mountaintops_catacombs"
         }
@@ -5564,10 +5468,6 @@
       "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "outskirts_grave"
-        },
         {
           "fog_id": "AEG099_230_9000",
           "zone": "outskirts_grave"
@@ -6115,10 +6015,6 @@
       "weight": 4,
       "entry_fogs": [
         {
-          "fog_id": "AEG099_001_9000",
-          "zone": "peninsula_earthborecave"
-        },
-        {
           "fog_id": "AEG099_232_9000",
           "zone": "peninsula_earthborecave"
         }
@@ -6198,10 +6094,6 @@
       "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "peninsula_impalerscatacombs"
-        },
         {
           "fog_id": "AEG099_230_9000",
           "zone": "peninsula_impalerscatacombs"
@@ -6319,10 +6211,6 @@
       "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "peninsula_tombswardcatacombs"
-        },
         {
           "fog_id": "AEG099_230_9001",
           "zone": "peninsula_tombswardcatacombs"
@@ -6661,10 +6549,6 @@
       "weight": 4,
       "entry_fogs": [
         {
-          "fog_id": "AEG099_002_9100",
-          "zone": "sewer_catacombs"
-        },
-        {
           "fog_id": "AEG099_230_9003",
           "zone": "sewer_catacombs"
         }
@@ -6935,10 +6819,6 @@
       "weight": 4,
       "entry_fogs": [
         {
-          "fog_id": "AEG099_001_9000",
-          "zone": "snowfield_catacombs"
-        },
-        {
           "fog_id": "AEG099_230_9000",
           "zone": "snowfield_catacombs"
         }
@@ -6990,10 +6870,6 @@
       "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "snowfield_cave"
-        },
         {
           "fog_id": "AEG099_232_9000",
           "zone": "snowfield_cave"
@@ -7074,10 +6950,6 @@
       "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "snowfield_hiddenpath"
-        },
         {
           "fog_id": "AEG099_232_9000",
           "zone": "snowfield_hiddenpath"
@@ -7271,10 +7143,6 @@
       "type": "mini_dungeon",
       "weight": 4,
       "entry_fogs": [
-        {
-          "fog_id": "AEG099_001_9000",
-          "zone": "stormhill_catacombs"
-        },
         {
           "fog_id": "AEG099_230_9000",
           "zone": "stormhill_catacombs"
@@ -7551,26 +7419,6 @@
       ]
     },
     {
-      "id": "volcano_drawingroom_5039",
-      "zones": [
-        "volcano_drawingroom"
-      ],
-      "type": "other",
-      "weight": 4,
-      "entry_fogs": [
-        {
-          "fog_id": "AEG099_232_9005",
-          "zone": "volcano_drawingroom"
-        }
-      ],
-      "exit_fogs": [
-        {
-          "fog_id": "AEG099_232_9005",
-          "zone": "volcano_drawingroom"
-        }
-      ]
-    },
-    {
       "id": "volcano_pathway_51f6",
       "zones": [
         "volcano_pathway"
@@ -7756,10 +7604,6 @@
       "type": "legacy_dungeon",
       "weight": 10,
       "entry_fogs": [
-        {
-          "fog_id": "AEG099_002_9000",
-          "zone": "volcano_town"
-        },
         {
           "fog_id": "AEG099_003_0500",
           "zone": "volcano_town"
