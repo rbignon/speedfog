@@ -6,12 +6,10 @@ namespace FogModWrapper.Packaging;
 public class PackagingWriter
 {
     private readonly string _outputDir;
-    private readonly string? _graphPath;
 
-    public PackagingWriter(string outputDir, string? graphPath = null)
+    public PackagingWriter(string outputDir)
     {
         _outputDir = outputDir;
-        _graphPath = graphPath;
     }
 
     /// <summary>
@@ -47,35 +45,11 @@ public class PackagingWriter
         ConfigGenerator.WriteShellLauncher(_outputDir);
         Console.WriteLine("Generated launcher scripts");
 
-        // 6. Copy spoiler.txt if it exists (from same directory as graph.json)
-        CopySpoiler();
-
         Console.WriteLine();
         Console.WriteLine("=== SpeedFog mod ready! ===");
         Console.WriteLine($"To play:");
         Console.WriteLine($"  Windows: double-click {Path.Combine(_outputDir, "launch_speedfog.bat")}");
         Console.WriteLine($"  Linux:   run {Path.Combine(_outputDir, "launch_speedfog.sh")}");
-    }
-
-    /// <summary>
-    /// Copies spoiler.txt from the graph.json directory to output.
-    /// </summary>
-    private void CopySpoiler()
-    {
-        if (string.IsNullOrEmpty(_graphPath))
-            return;
-
-        var graphDir = Path.GetDirectoryName(_graphPath);
-        if (string.IsNullOrEmpty(graphDir))
-            return;
-
-        var spoilerPath = Path.Combine(graphDir, "spoiler.txt");
-        if (File.Exists(spoilerPath))
-        {
-            var destPath = Path.Combine(_outputDir, "spoiler.txt");
-            File.Copy(spoilerPath, destPath, overwrite: true);
-            Console.WriteLine("Copied spoiler.txt");
-        }
     }
 
     /// <summary>

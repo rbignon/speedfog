@@ -310,7 +310,7 @@ Example:
         writer.Write(opt, ann, graph, mergedMods, modDir, events, eventConfig, Console.WriteLine);
 
         // 8. Package with ModEngine 2
-        var packager = new PackagingWriter(config.OutputDir, config.GraphPath);
+        var packager = new PackagingWriter(config.OutputDir);
         await packager.WritePackageAsync();
     }
 
