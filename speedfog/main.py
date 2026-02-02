@@ -38,9 +38,8 @@ def run_fogmodwrapper(
         True on success, False on failure.
     """
     project_root = Path(__file__).parent.parent
-    wrapper_exe = (
-        project_root / "writer/FogModWrapper/publish/win-x64/FogModWrapper.exe"
-    )
+    wrapper_dir = project_root / "writer" / "FogModWrapper"
+    wrapper_exe = wrapper_dir / "publish" / "win-x64" / "FogModWrapper.exe"
     data_dir = project_root / "data"
 
     if not wrapper_exe.exists():
@@ -60,11 +59,15 @@ def run_fogmodwrapper(
         )
         return False
 
-    # Build command
+    # Build command with absolute paths (since we change cwd)
+    seed_dir = seed_dir.resolve()
+    game_dir = game_dir.resolve()
+    data_dir = data_dir.resolve()
+
     if platform == "linux":
-        cmd = ["wine", str(wrapper_exe)]
+        cmd = ["wine", str(wrapper_exe.resolve())]
     else:
-        cmd = [str(wrapper_exe)]
+        cmd = [str(wrapper_exe.resolve())]
 
     cmd.extend(
         [
@@ -80,8 +83,10 @@ def run_fogmodwrapper(
 
     if verbose:
         print(f"Running: {' '.join(cmd)}")
+        print(f"Working directory: {wrapper_dir}")
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    # Run from wrapper_dir so FogModWrapper finds eldendata/
+    result = subprocess.run(cmd, capture_output=True, text=True, cwd=wrapper_dir)
     if result.returncode != 0:
         if verbose:
             print(result.stdout)
