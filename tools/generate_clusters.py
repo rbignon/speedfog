@@ -514,13 +514,15 @@ def classify_fogs(
             continue
 
         tags_lower = [t.lower() for t in fog.tags]
+        aside_tags_lower = [t.lower() for t in fog.aside.tags]
+        bside_tags_lower = [t.lower() for t in fog.bside.tags]
 
         # Skip crawlonly fogs (we're not in crawl mode)
         if "crawlonly" in tags_lower:
             continue
 
-        # Skip minorwarps - they're transporter chests/sending gates
-        # that FogMod doesn't have edge data for (no AEG099 fog gate models)
+        # Skip fogs with minorwarp at the fog level (not on sides)
+        # These are transporter chests/sending gates without AEG099 fog gate models
         if "minorwarp" in tags_lower:
             continue
 
@@ -528,6 +530,20 @@ def classify_fogs(
         bside_area = fog.bside.area
 
         if not aside_area or not bside_area:
+            continue
+
+        # Check for minorwarp tag on sides (transporter chest/warp)
+        # In fog.txt, warps with minorwarp follow the standard ASide/BSide convention:
+        # - ASide = "using the chest" = source (exit)
+        # - BSide = "arriving" = destination (entry)
+        # The minorwarp tag indicates this specific warp is one-way (you take the chest
+        # and arrive somewhere). Paired warps (PairWith) may provide the return path.
+        #
+        # These warps are exit-only from ASide.Area, entry-only at BSide.Area
+        if "minorwarp" in aside_tags_lower or "minorwarp" in bside_tags_lower:
+            # ASide is source (exit), BSide is destination (entry)
+            zone_fogs[aside_area].exit_fogs.append(fog)
+            zone_fogs[bside_area].entry_fogs.append(fog)
             continue
 
         # Backportals become selfwarps in the boss room only
