@@ -72,7 +72,6 @@ from typing import Any
 
 import yaml
 
-
 # =============================================================================
 # Data Structures
 # =============================================================================
@@ -97,6 +96,8 @@ class FogEntry:
     entrance_adjust_height: float = 0.0  # Entrance.AdjustHeight (applies to all sides)
     aside_adjust_height: float = 0.0  # ASide.AdjustHeight
     bside_adjust_height: float = 0.0  # BSide.AdjustHeight
+    # Destination map for one-way warps (BSide.DestinationMap)
+    destination_map: str | None = None
 
     @property
     def zones(self) -> list[str]:
@@ -283,6 +284,10 @@ def parse_fog_entry(fog_data: dict[str, Any], section: str) -> FogEntry | None:
 
     fog_type = "entrance" if section == "Entrances" else "warp"
 
+    # Extract destination map for one-way warps (sending gates, etc.)
+    bside = fog_data.get("BSide", {})
+    destination_map = bside.get("DestinationMap")
+
     return FogEntry(
         fog_id=name,
         fog_type=fog_type,
@@ -298,6 +303,7 @@ def parse_fog_entry(fog_data: dict[str, Any], section: str) -> FogEntry | None:
         entrance_adjust_height=entrance_adjust,
         aside_adjust_height=aside_adjust,
         bside_adjust_height=bside_adjust,
+        destination_map=destination_map,
     )
 
 
@@ -414,6 +420,8 @@ def entries_to_json(entries: list[FogEntry]) -> dict[str, Any]:
             # Total height adjustments per side (entrance + side level)
             # Index matches zones: [0] = ASide, [1] = BSide
             "adjust_heights": [aside_total, bside_total],
+            # Destination map for one-way warps (BSide.DestinationMap)
+            "destination_map": entry.destination_map,
         }
 
         if entry.fog_id in seen_names:

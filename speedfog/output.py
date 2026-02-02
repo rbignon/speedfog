@@ -142,6 +142,7 @@ def _make_fullname(
     zone: str,
     clusters: ClusterPool,
     fog_data: dict[str, dict[str, Any]] | None = None,
+    is_entry: bool = False,
 ) -> str:
     """Convert a fog_id to FogMod FullName format: {map}_{fog_id}.
 
@@ -150,6 +151,7 @@ def _make_fullname(
         zone: The zone the fog connects to
         clusters: ClusterPool with zone_maps
         fog_data: Optional fog_data.json lookup for map resolution
+        is_entry: True if this is an entry fog (use destination_map if available)
 
     Returns:
         FogMod FullName (e.g., "m10_01_00_00_AEG099_001_9000")
@@ -163,7 +165,11 @@ def _make_fullname(
     """
     # For warps (numeric IDs), fog_data has the authoritative map
     if fog_data and fog_id in fog_data and fog_id.isdigit():
-        map_id = fog_data[fog_id].get("map")
+        data = fog_data[fog_id]
+        # For entry fogs, prefer destination_map (for one-way warps like sending gates)
+        if is_entry and data.get("destination_map"):
+            return f"{data['destination_map']}_{fog_id}"
+        map_id = data.get("map")
         if map_id:
             return f"{map_id}_{fog_id}"
 
@@ -258,11 +264,11 @@ def dag_to_dict_v2(
             {
                 "exit_area": exit_zone,
                 "exit_gate": _make_fullname(
-                    edge.exit_fog, exit_zone, clusters, fog_data
+                    edge.exit_fog, exit_zone, clusters, fog_data, is_entry=False
                 ),
                 "entrance_area": entry_zone,
                 "entrance_gate": _make_fullname(
-                    effective_entry_fog, entry_zone, clusters, fog_data
+                    effective_entry_fog, entry_zone, clusters, fog_data, is_entry=True
                 ),
             }
         )
