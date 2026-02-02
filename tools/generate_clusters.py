@@ -539,9 +539,10 @@ def classify_fogs(
             continue
 
         if fog.is_unique:
-            # Unique: ASide is exit only, BSide is entry only
+            # Unique fogs are one-way warps (sending gates, abductors, etc.)
+            # ASide is exit only - FogMod can redirect where the warp sends you
+            # BSide is NOT an entry_fog - there's no physical fog gate at destination
             zone_fogs[aside_area].exit_fogs.append(fog)
-            zone_fogs[bside_area].entry_fogs.append(fog)
         elif fog.is_uniquegate:
             # Uniquegate: check if this pair was already processed
             zone_pair = fog.zone_pair

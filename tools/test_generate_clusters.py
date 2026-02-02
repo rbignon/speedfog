@@ -23,7 +23,6 @@ from generate_clusters import (
     should_exclude_area,
 )
 
-
 # =============================================================================
 # Parser Tests
 # =============================================================================
@@ -363,7 +362,7 @@ class TestClassifyFogs:
         assert fog in zone_fogs["zone_b"].exit_fogs
 
     def test_unique_fog(self):
-        """Unique fog: ASide=exit only, BSide=entry only."""
+        """Unique fog: ASide=exit only, BSide has no fog gate (spawn point only)."""
         fog = FogData(
             name="test",
             fog_id=1,
@@ -373,13 +372,13 @@ class TestClassifyFogs:
         )
         zone_fogs = classify_fogs([fog], [])
 
-        # ASide is exit only
+        # ASide is exit only - FogMod can redirect where the warp sends you
         assert fog not in zone_fogs["zone_a"].entry_fogs
         assert fog in zone_fogs["zone_a"].exit_fogs
 
-        # BSide is entry only
-        assert fog in zone_fogs["zone_b"].entry_fogs
-        assert fog not in zone_fogs["zone_b"].exit_fogs
+        # BSide is NOT an entry_fog - there's no physical fog gate at destination
+        # FogMod doesn't have a "To" edge for one-way warp destinations
+        assert "zone_b" not in zone_fogs or fog not in zone_fogs["zone_b"].entry_fogs
 
     def test_norandom_fog_excluded(self):
         """Norandom fogs are excluded entirely."""
