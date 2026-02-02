@@ -15,6 +15,7 @@ from generate_clusters import (
     compute_cluster_fogs,
     generate_cluster_id,
     generate_clusters,
+    get_evergaol_zones,
     get_zone_type,
     is_condition_guaranteed,
     parse_area,
@@ -662,6 +663,64 @@ class TestComputeClusterFogs:
 # =============================================================================
 # Filter Tests
 # =============================================================================
+
+
+class TestGetEvergaolZones:
+    """Tests for get_evergaol_zones function."""
+
+    def test_evergaol_zones_from_warps(self):
+        """Zones connected by evergaol warps are collected."""
+        # Entry warp into evergaol
+        entry_warp = FogData(
+            name="1033452805",
+            fog_id=1033452805,
+            aside=FogSide(area="liurnia", text="entering evergaol"),
+            bside=FogSide(area="liurnia_evergaol_bols", text="arriving"),
+            tags=["evergaol", "returnpair"],
+        )
+        # Return warp from evergaol
+        return_warp = FogData(
+            name="1033452806",
+            fog_id=1033452806,
+            aside=FogSide(area="liurnia_evergaol_bols", text="exiting"),
+            bside=FogSide(area="liurnia", text="arriving outside"),
+            tags=["evergaol", "return"],
+        )
+
+        evergaol_zones = get_evergaol_zones([], [entry_warp, return_warp])
+
+        # Both the evergaol zone and the connected overworld zone are collected
+        assert "liurnia_evergaol_bols" in evergaol_zones
+        assert "liurnia" in evergaol_zones
+
+    def test_non_evergaol_warps_ignored(self):
+        """Warps without evergaol tag don't contribute zones."""
+        normal_warp = FogData(
+            name="normal_warp",
+            fog_id=12345,
+            aside=FogSide(area="zone_a", text=""),
+            bside=FogSide(area="zone_b", text=""),
+            tags=["dungeon"],
+        )
+
+        evergaol_zones = get_evergaol_zones([], [normal_warp])
+
+        assert len(evergaol_zones) == 0
+
+    def test_evergaol_entrances_also_checked(self):
+        """Entrances with evergaol tag are also processed."""
+        evergaol_entrance = FogData(
+            name="evergaol_fog",
+            fog_id=99999,
+            aside=FogSide(area="overworld", text=""),
+            bside=FogSide(area="evergaol_arena", text=""),
+            tags=["evergaol"],
+        )
+
+        evergaol_zones = get_evergaol_zones([evergaol_entrance], [])
+
+        assert "overworld" in evergaol_zones
+        assert "evergaol_arena" in evergaol_zones
 
 
 class TestShouldExcludeArea:

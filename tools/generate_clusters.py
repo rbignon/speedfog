@@ -776,6 +776,34 @@ def get_fortress_zones(warps: list[FogData]) -> set[str]:
     return fortress_zones
 
 
+def get_evergaol_zones(
+    entrances: list[FogData],
+    warps: list[FogData],
+) -> set[str]:
+    """
+    Get zones connected by fogs with 'evergaol' tag.
+
+    Evergaols are isolated arenas with special warp mechanics:
+    - Entry and exit are separate unpaired warps
+    - The exit warp has ReturnWarp pointing to the entry
+    - They can't be properly integrated into the fog gate graph
+
+    We propagate the 'evergaol' tag from warps to their connected zones
+    to ensure all evergaol zones are excluded from cluster generation.
+    """
+    evergaol_zones: set[str] = set()
+
+    for fog in entrances + warps:
+        tags_lower = [t.lower() for t in fog.tags]
+        if "evergaol" in tags_lower:
+            if fog.aside.area:
+                evergaol_zones.add(fog.aside.area)
+            if fog.bside.area:
+                evergaol_zones.add(fog.bside.area)
+
+    return evergaol_zones
+
+
 def get_zone_type(
     area: AreaData,
     major_zones: set[str] | None = None,
@@ -1113,9 +1141,16 @@ def main() -> int:
     print(f"Parsed {len(areas)} areas, {len(entrances)} entrances, {len(warps)} warps")
     print(f"Known key items: {len(key_items)}")
 
-    # Get zones to process (exclude DLC/overworld at zone level)
+    # Identify evergaol zones (propagate tag from warps to zones)
+    evergaol_zones = get_evergaol_zones(entrances, warps)
+    if args.verbose:
+        print(f"Evergaol zones to exclude: {len(evergaol_zones)}")
+
+    # Get zones to process (exclude DLC/overworld/evergaol at zone level)
     zones_to_process: set[str] = set()
     for name, area in areas.items():
+        if name in evergaol_zones:
+            continue  # Exclude evergaol zones
         if not should_exclude_area(area, exclude_dlc, exclude_overworld):
             zones_to_process.add(name)
 
