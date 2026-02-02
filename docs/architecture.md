@@ -5,19 +5,19 @@ SpeedFog generates short randomized Elden Ring runs (~1 hour) with a controlled 
 ## Overview
 
 ```
-User Config                Python Core                 C# Writer                    Output
-───────────                ───────────                 ─────────                    ──────
-config.toml ──────► speedfog_core ──────► graph.json ──────► FogModWrapper ──────► mod/
-                          │                                       │
-                    clusters.json                           FogMod.dll
-                    (pre-generated)                    (reuses FogRando writer)
+User Config                Python                      C# Writer                    Output
+───────────                ──────                      ─────────                    ──────
+config.toml ──────► speedfog ──────► graph.json ──────► FogModWrapper ──────► mod/
+                        │                                       │
+                  clusters.json                           FogMod.dll
+                  (pre-generated)                    (reuses FogRando writer)
 ```
 
 **Key insight**: SpeedFog reuses 100% of FogRando's game writer (`FogMod.dll`). We only generate the graph connections differently.
 
 ## Components
 
-### Python Core (`core/speedfog_core/`)
+### Python Package (`speedfog/`)
 
 Generates a balanced DAG of zone connections.
 
@@ -66,7 +66,7 @@ Clusters group connected zones. Once a player enters a cluster via an entry fog,
 ### 2. DAG Generation (per run)
 
 ```
-config.toml + clusters.json ──► speedfog_core ──► graph.json + spoiler.txt
+config.toml + clusters.json ──► speedfog ──► graph.json + spoiler.txt
 ```
 
 The DAG algorithm:

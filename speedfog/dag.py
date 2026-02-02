@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections import deque
 from dataclasses import dataclass, field
 
-from speedfog_core.clusters import ClusterData
+from speedfog.clusters import ClusterData
 
 
 @dataclass

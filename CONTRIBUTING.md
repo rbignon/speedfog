@@ -16,8 +16,8 @@
 git clone https://github.com/user/speedfog.git
 cd speedfog
 
-# Install Python dependencies
-cd core && uv pip install -e ".[dev]" && cd ..
+# Install Python dependencies (from project root)
+uv pip install -e ".[dev]"
 
 # Install sfextract
 dotnet tool install -g sfextract
@@ -44,13 +44,16 @@ python tools/setup_fogrando.py /path/to/NewFogRando.zip --force
 
 ```
 speedfog/
-├── core/                        # Python - DAG generation
-│   └── speedfog_core/           # Main package
-│       ├── __init__.py
-│       ├── cli.py               # CLI entry point
-│       ├── config.py            # Configuration loading
-│       ├── dag.py               # DAG generation algorithm
-│       └── ...
+├── pyproject.toml               # Python project config (at root)
+├── speedfog/                    # Python package - DAG generation
+│   ├── __init__.py
+│   ├── main.py                  # CLI entry point
+│   ├── config.py                # Configuration loading
+│   ├── dag.py                   # DAG data structures
+│   ├── generator.py             # DAG generation algorithm
+│   └── ...
+│
+├── tests/                       # Python tests
 │
 ├── writer/                      # C# - Mod file generation
 │   ├── lib/                     # DLLs (gitignored, from FogRando)
@@ -90,7 +93,7 @@ speedfog/
 SpeedFog uses a hybrid Python + C# architecture:
 
 ```
-Python (core/)              C# (writer/)                 Output
+Python (speedfog/)          C# (writer/)                 Output
 ──────────────────          ──────────────────           ──────────────────
 config.toml            →                                 seeds/<seed>/
 clusters.json          →    graph.json → FogModWrapper → ├── graph.json
@@ -102,7 +105,7 @@ DAG generation         →                                 └── spoiler.txt
                                                          └── launch_speedfog.bat
 ```
 
-- **Python**: Configuration, zone clustering, DAG generation
+- **Python**: Configuration, zone clustering, DAG generation (package at root)
 - **C#**: Thin wrapper around FogMod.dll for mod file generation
 - **Interface**: `graph.json` passes DAG from Python to C#
 
@@ -118,11 +121,11 @@ See [docs/architecture.md](docs/architecture.md) for details.
 ## Running Tests
 
 ```bash
-# Python - all tests
+# Python - all tests (from project root)
 pytest -v
 
 # Python - with coverage
-pytest --cov=speedfog_core
+pytest --cov=speedfog
 
 # C# - integration test
 cd writer/test && ./run_integration.sh

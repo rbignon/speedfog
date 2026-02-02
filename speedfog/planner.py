@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import random
 
-from speedfog_core.config import RequirementsConfig
+from speedfog.config import RequirementsConfig
 
 
 def compute_tier(layer_idx: int, total_layers: int) -> int:

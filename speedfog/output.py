@@ -13,8 +13,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from speedfog_core.clusters import ClusterPool
-from speedfog_core.dag import Dag, DagNode
+from speedfog.clusters import ClusterPool
+from speedfog.dag import Dag, DagNode
 
 
 def dag_to_dict(dag: Dag) -> dict[str, Any]:

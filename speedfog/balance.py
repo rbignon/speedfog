@@ -11,8 +11,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from speedfog_core.config import BudgetConfig
-    from speedfog_core.dag import Dag
+    from speedfog.config import BudgetConfig
+    from speedfog.dag import Dag
 
 
 @dataclass

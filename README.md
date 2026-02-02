@@ -32,7 +32,7 @@ git clone https://github.com/user/speedfog.git
 cd speedfog
 
 # Install Python dependencies
-cd core && uv pip install -e ".[dev]" && cd ..
+uv pip install -e .
 
 # Install sfextract (extracts DLLs from FogRando)
 dotnet tool install -g sfextract
@@ -56,8 +56,8 @@ cp config.example.toml config.toml
 ### Generate a Run
 
 ```bash
-# Generate DAG and spoiler
-speedfog config.toml --spoiler
+# Generate DAG and spoiler (from project root)
+uv run speedfog config.toml --spoiler
 
 # Output is in seeds/<seed>/ by default
 ```

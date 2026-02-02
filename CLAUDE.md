@@ -16,7 +16,7 @@ Unlike FogRando which randomizes the entire world, SpeedFog generates a smaller,
 **Hybrid Python + C#:**
 
 ```
-Python (core/)          C# (writer/)                    Output
+Python (speedfog/)      C# (writer/)                    Output
 ─────────────────       ─────────────────               ─────────────────
 config.toml        →                                    output/
 clusters.json      →    graph.json → FogModWrapper  →   ├── mod/
@@ -25,7 +25,7 @@ DAG generation     →                                    ├── ModEngine/
                                                         └── spoiler.txt
 ```
 
-- **Python**: Configuration, cluster/zone data, DAG generation algorithm
+- **Python**: Configuration, cluster/zone data, DAG generation algorithm (package at root)
 - **C#**: FogModWrapper - thin wrapper calling FogMod.dll with our graph connections
 - **Output**: Self-contained folder with ModEngine 2 (auto-downloaded)
 
@@ -33,6 +33,14 @@ DAG generation     →                                    ├── ModEngine/
 
 ```
 speedfog/
+├── pyproject.toml           # Python project config (at root)
+├── speedfog/                # Python package - DAG generation
+│   ├── __init__.py
+│   ├── main.py              # CLI entry point
+│   ├── config.py            # Configuration loading
+│   ├── dag.py               # DAG data structures
+│   └── generator.py         # DAG generation algorithm
+├── tests/                   # Python tests
 ├── data/                    # Shared data files
 │   ├── fog.txt              # FogRando zone definitions (gitignored)
 │   ├── foglocations2.txt    # FogRando enemy areas (gitignored)
@@ -41,20 +49,17 @@ speedfog/
 │   ├── clusters.json        # Generated zone clusters (gitignored)
 │   ├── fog_data.json        # Generated fog gate metadata (gitignored)
 │   └── zone_metadata.toml   # Zone weight config (tracked)
-├── core/                    # Python - DAG generation (Phase 1-2)
-│   └── speedfog_core/
-├── writer/                  # C# - Mod file generation (Phase 3-4)
+├── writer/                  # C# - Mod file generation
 │   ├── lib/                 # DLLs (FogMod, SoulsFormats, SoulsIds, etc.)
 │   └── FogModWrapper/       # Main writer - thin wrapper calling FogMod.dll
 │       ├── Program.cs       # CLI entry point
 │       ├── GraphLoader.cs   # Load graph.json v2
 │       ├── ConnectionInjector.cs  # Inject connections into FogMod Graph
-│       └── eldendata/       # Game data (gitignored, symlinked)
+│       └── eldendata/       # Game data (gitignored)
 ├── tools/                   # Standalone scripts
 │   ├── setup_fogrando.py    # Extract FogRando dependencies from Nexusmods ZIP
 │   ├── generate_clusters.py # Generate clusters.json from fog.txt
-│   ├── extract_fog_data.py  # Extract fog gate metadata
-│   └── test_generate_clusters.py  # Tests for generate_clusters.py
+│   └── extract_fog_data.py  # Extract fog gate metadata
 ├── reference/               # FogRando decompiled code (READ-ONLY)
 │   ├── fogrando-src/        # C# source files
 │   └── fogrando-data/       # Reference data (foglocations.txt)
@@ -85,10 +90,11 @@ speedfog/
 - SpeedFog aims to match FogRando behavior exactly - no custom templates
 - Only add C# logic when FogRando templates cannot express the behavior
 
-### Python (core/)
+### Python (speedfog/)
 - Python 3.10+
 - TOML for configuration
 - JSON for graph output (Python → C# interface)
+- Package at root, use `uv run speedfog` from project root
 
 ### C# (writer/)
 - .NET 8.0
@@ -145,8 +151,8 @@ When implementing features, refer to these sections in `GameDataWriterE.cs`:
 ## Setup
 
 ```bash
-# 1. Install Python dependencies
-cd core && uv pip install -e ".[dev]"
+# 1. Install Python dependencies (from project root)
+uv pip install -e ".[dev]"
 
 # 2. Install sfextract (for extracting FogRando DLLs)
 dotnet tool install -g sfextract
@@ -164,12 +170,12 @@ cd writer/FogModWrapper && dotnet build
 ## Commands
 
 ```bash
-# Python core
-speedfog config.toml --spoiler -o /tmp/speedfog
-# Creates /tmp/speedfog/<seed>/graph.json and spoiler.txt
+# Generate a run (from project root)
+uv run speedfog config.toml --spoiler
+# Creates seeds/<seed>/graph.json and spoiler.txt
 
 # Python tests
-cd core && pytest -v
+pytest -v
 
 # C# FogModWrapper - build and publish
 cd writer/FogModWrapper
@@ -195,17 +201,11 @@ wine publish/win-x64/FogModWrapper.exe \
 ## Testing
 
 ```bash
-# Python - all tests (core + tools)
+# Python - all tests
 pytest -v
 
-# Python - core package only
-cd core && pytest -v
-
-# Python - tools only
-pytest tools/ -v
-
 # Python - with coverage
-pytest --cov=speedfog_core
+pytest --cov=speedfog
 
 # C# - integration test
 cd writer/test && ./run_integration.sh

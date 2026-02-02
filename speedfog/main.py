@@ -6,11 +6,11 @@ import argparse
 import sys
 from pathlib import Path
 
-from speedfog_core.balance import report_balance
-from speedfog_core.clusters import load_clusters
-from speedfog_core.config import Config, load_config
-from speedfog_core.generator import GenerationError, generate_with_retry
-from speedfog_core.output import (
+from speedfog.balance import report_balance
+from speedfog.clusters import load_clusters
+from speedfog.config import Config, load_config
+from speedfog.generator import GenerationError, generate_with_retry
+from speedfog.output import (
     export_json,
     export_json_v2,
     export_spoiler_log,

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from speedfog_core import (
+from speedfog import (
     BudgetConfig,
     Config,
     RequirementsConfig,

@@ -2,8 +2,8 @@
 
 import random
 
-from speedfog_core.config import RequirementsConfig
-from speedfog_core.planner import compute_tier, plan_layer_types
+from speedfog.config import RequirementsConfig
+from speedfog.planner import compute_tier, plan_layer_types
 
 
 class TestComputeTier:

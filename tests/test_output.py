@@ -3,9 +3,9 @@
 import json
 from pathlib import Path
 
-from speedfog_core.clusters import ClusterData
-from speedfog_core.dag import Dag, DagNode
-from speedfog_core.output import dag_to_dict, export_json, export_spoiler_log
+from speedfog.clusters import ClusterData
+from speedfog.dag import Dag, DagNode
+from speedfog.output import dag_to_dict, export_json, export_spoiler_log
 
 
 def make_cluster(

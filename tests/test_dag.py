@@ -1,7 +1,7 @@
 """Tests for DAG data structures."""
 
-from speedfog_core.clusters import ClusterData
-from speedfog_core.dag import Dag, DagEdge, DagNode
+from speedfog.clusters import ClusterData
+from speedfog.dag import Dag, DagEdge, DagNode
 
 
 def make_cluster(

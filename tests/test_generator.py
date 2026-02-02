@@ -4,9 +4,9 @@ import random
 
 import pytest
 
-from speedfog_core.clusters import ClusterData, ClusterPool
-from speedfog_core.config import Config
-from speedfog_core.generator import (
+from speedfog.clusters import ClusterData, ClusterPool
+from speedfog.config import Config
+from speedfog.generator import (
     GenerationError,
     cluster_has_usable_exits,
     generate_dag,

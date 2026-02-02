@@ -13,11 +13,11 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum, auto
 
-from speedfog_core.clusters import ClusterData, ClusterPool
-from speedfog_core.config import Config
-from speedfog_core.dag import Branch, Dag, DagNode
-from speedfog_core.planner import compute_tier, plan_layer_types
-from speedfog_core.validator import ValidationResult, validate_dag
+from speedfog.clusters import ClusterData, ClusterPool
+from speedfog.config import Config
+from speedfog.dag import Branch, Dag, DagNode
+from speedfog.planner import compute_tier, plan_layer_types
+from speedfog.validator import ValidationResult, validate_dag
 
 
 class GenerationError(Exception):

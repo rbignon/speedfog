@@ -1,9 +1,9 @@
 """Tests for DAG validator."""
 
-from speedfog_core.clusters import ClusterData
-from speedfog_core.config import Config
-from speedfog_core.dag import Dag, DagNode
-from speedfog_core.validator import ValidationResult, validate_dag
+from speedfog.clusters import ClusterData
+from speedfog.config import Config
+from speedfog.dag import Dag, DagNode
+from speedfog.validator import ValidationResult, validate_dag
 
 
 def make_cluster(

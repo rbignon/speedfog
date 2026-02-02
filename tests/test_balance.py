@@ -1,9 +1,9 @@
 """Tests for balance analysis module."""
 
-from speedfog_core.balance import PathStats, analyze_balance, report_balance
-from speedfog_core.clusters import ClusterData
-from speedfog_core.config import BudgetConfig
-from speedfog_core.dag import Dag, DagNode
+from speedfog.balance import PathStats, analyze_balance, report_balance
+from speedfog.clusters import ClusterData
+from speedfog.config import BudgetConfig
+from speedfog.dag import Dag, DagNode
 
 
 def make_cluster(

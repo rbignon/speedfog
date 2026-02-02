@@ -1,6 +1,6 @@
 """Tests for config parsing."""
 
-from speedfog_core.config import BudgetConfig, Config, load_config
+from speedfog.config import BudgetConfig, Config, load_config
 
 
 def test_budget_min_max():

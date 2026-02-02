@@ -493,7 +493,7 @@ wheels = [
 ]
 
 [[package]]
-name = "speedfog-core"
+name = "speedfog"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

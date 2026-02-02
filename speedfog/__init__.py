@@ -2,9 +2,9 @@
 
 __version__ = "0.1.0"
 
-from speedfog_core.balance import PathStats, analyze_balance, report_balance
-from speedfog_core.clusters import ClusterData, ClusterPool, load_clusters
-from speedfog_core.config import (
+from speedfog.balance import PathStats, analyze_balance, report_balance
+from speedfog.clusters import ClusterData, ClusterPool, load_clusters
+from speedfog.config import (
     BudgetConfig,
     Config,
     PathsConfig,
@@ -12,16 +12,16 @@ from speedfog_core.config import (
     StructureConfig,
     load_config,
 )
-from speedfog_core.dag import Dag, DagEdge, DagNode
-from speedfog_core.generator import (
+from speedfog.dag import Dag, DagEdge, DagNode
+from speedfog.generator import (
     GenerationError,
     GenerationResult,
     generate_dag,
     generate_with_retry,
 )
-from speedfog_core.output import dag_to_dict, export_json, export_spoiler_log
-from speedfog_core.planner import compute_tier, plan_layer_types
-from speedfog_core.validator import ValidationResult, validate_dag
+from speedfog.output import dag_to_dict, export_json, export_spoiler_log
+from speedfog.planner import compute_tier, plan_layer_types
+from speedfog.validator import ValidationResult, validate_dag
 
 __all__ = [
     # Config
