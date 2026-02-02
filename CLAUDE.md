@@ -163,13 +163,13 @@ dotnet publish -c Release -r win-x64 --self-contained -o publish/win-x64
 
 # FogModWrapper - run (Linux with Wine)
 wine publish/win-x64/FogModWrapper.exe \
-  <graph.json> \
+  <seed_dir> \
   --game-dir <game_dir> \
   --data-dir ../../data \
   -o output
 
 # Example paths:
-#   graph.json: seeds/212559448/graph.json
+#   seed_dir: seeds/212559448 (contains graph.json and spoiler.txt)
 #   game_dir: /data/thewall/Game (ELDEN RING/Game folder)
 
 # Play! (output is self-contained with ModEngine + launcher)

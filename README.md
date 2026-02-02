@@ -37,10 +37,10 @@ speedfog config.toml --spoiler -o /tmp/speedfog
 # Creates /tmp/speedfog/<seed>/graph.json and spoiler.txt
 
 # Generate mod files (Windows)
-FogModWrapper.exe /tmp/speedfog/<seed>/graph.json --game-dir "C:/Games/ELDEN RING/Game" -o ./output
+FogModWrapper.exe /tmp/speedfog/<seed> --game-dir "C:/Games/ELDEN RING/Game" --data-dir data -o ./output
 
 # Generate mod files (Linux via Wine - see "Running on Linux" section)
-wine FogModWrapper.exe /tmp/speedfog/<seed>/graph.json --game-dir "/path/to/ELDEN RING/Game" -o ./output
+wine FogModWrapper.exe /tmp/speedfog/<seed> --game-dir "/path/to/ELDEN RING/Game" --data-dir data -o ./output
 ```
 
 ### 3. Install the Mod
@@ -177,7 +177,7 @@ cd ../writer/FogModWrapper
 dotnet publish -c Release -r win-x64 --self-contained -o publish/win-x64
 
 # 3. Run the writer with Wine
-wine publish/win-x64/FogModWrapper.exe /tmp/speedfog/<seed>/graph.json \
+wine publish/win-x64/FogModWrapper.exe /tmp/speedfog/<seed> \
   --game-dir "/path/to/ELDEN RING/Game" \
   --data-dir ../../data \
   -o ./output

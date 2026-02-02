@@ -54,14 +54,16 @@ class Program
                     {
                         throw new ArgumentException($"Unknown option: {arg}");
                     }
-                    config.GraphPath = arg;
+                    config.SeedDir = arg;
                     break;
             }
         }
 
         // Validate required args
-        if (string.IsNullOrEmpty(config.GraphPath))
-            throw new ArgumentException("Missing required argument: graph.json path");
+        if (string.IsNullOrEmpty(config.SeedDir))
+            throw new ArgumentException("Missing required argument: seed directory");
+        if (!File.Exists(config.GraphPath))
+            throw new ArgumentException($"graph.json not found in seed directory: {config.GraphPath}");
         if (string.IsNullOrEmpty(config.GameDir))
             throw new ArgumentException("Missing required argument: --game-dir");
         if (string.IsNullOrEmpty(config.DataDir))
@@ -76,23 +78,23 @@ class Program
     {
         Console.WriteLine(@"FogModWrapper - SpeedFog mod generator using FogMod.dll
 
-Usage: FogModWrapper <graph.json> --game-dir <path> --data-dir <path> -o <output>
+Usage: FogModWrapper <seed_dir> --game-dir <path> --data-dir <path> -o <output>
 
 Arguments:
-  <graph.json>       Path to graph.json v2 from Python core
+  <seed_dir>         Path to seed directory (contains graph.json, spoiler.txt)
   --game-dir <path>  Path to Elden Ring Game directory
   --data-dir <path>  Path to data directory (fog.txt, fogevents.txt, er-common.emedf.json)
   -o, --output       Output directory for generated mod files
 
 Example:
-  FogModWrapper seeds/123/graph.json --game-dir ""C:/Games/ELDEN RING/Game"" --data-dir data -o output
+  FogModWrapper seeds/123456 --game-dir ""C:/Games/ELDEN RING/Game"" --data-dir data -o output
 ");
     }
 
     static async Task RunAsync(Config config)
     {
         Console.WriteLine("=== FogModWrapper ===");
-        Console.WriteLine($"Graph: {config.GraphPath}");
+        Console.WriteLine($"Seed dir: {config.SeedDir}");
         Console.WriteLine($"Game dir: {config.GameDir}");
         Console.WriteLine($"Data dir: {config.DataDir}");
         Console.WriteLine($"Output: {config.OutputDir}");
@@ -314,7 +316,8 @@ Example:
 
     class Config
     {
-        public string GraphPath { get; set; } = "";
+        public string SeedDir { get; set; } = "";
+        public string GraphPath => Path.Combine(SeedDir, "graph.json");
         public string GameDir { get; set; } = "";
         public string DataDir { get; set; } = "";
         public string OutputDir { get; set; } = "";

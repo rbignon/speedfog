@@ -21,12 +21,12 @@ dotnet publish -c Release -r win-x64 --self-contained -o publish/win-x64
 ## Usage
 
 ```bash
-FogModWrapper.exe <graph.json> --game-dir <game_dir> [options]
+FogModWrapper.exe <seed_dir> --game-dir <game_dir> [options]
 ```
 
 ### Arguments
 
-- `graph.json` - Path to graph.json from Python DAG generator
+- `seed_dir` - Path to seed directory (contains graph.json, spoiler.txt)
 
 ### Options
 
