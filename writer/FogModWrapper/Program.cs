@@ -1,17 +1,17 @@
 using FogMod;
 using FogModWrapper;
-using FogModWrapper.Models;
+using FogModWrapper.Packaging;
 using SoulsIds;
 using YamlDotNet.Serialization;
 
 class Program
 {
-    static int Main(string[] args)
+    static async Task<int> Main(string[] args)
     {
         try
         {
             var config = ParseArgs(args);
-            Run(config);
+            await RunAsync(config);
             return 0;
         }
         catch (Exception ex)
@@ -89,7 +89,7 @@ Example:
 ");
     }
 
-    static void Run(Config config)
+    static async Task RunAsync(Config config)
     {
         Console.WriteLine("=== FogModWrapper ===");
         Console.WriteLine($"Graph: {config.GraphPath}");
@@ -97,6 +97,10 @@ Example:
         Console.WriteLine($"Data dir: {config.DataDir}");
         Console.WriteLine($"Output: {config.OutputDir}");
         Console.WriteLine();
+
+        // Mod files go in mods/speedfog/ subdirectory for ModEngine
+        var modDir = Path.Combine(config.OutputDir, "mods", "speedfog");
+        Directory.CreateDirectory(modDir);
 
         // 1. Load our graph.json
         var graphData = GraphLoader.Load(config.GraphPath);
@@ -272,17 +276,17 @@ Example:
         ConnectionInjector.ApplyAreaTiers(graph, graphData.AreaTiers);
 
         // 7. Call FogMod writer
-        Console.WriteLine($"Writing mod files to: {config.OutputDir}");
-        Directory.CreateDirectory(config.OutputDir);
+        Console.WriteLine($"Writing mod files to: {modDir}");
 
         // Create MergedMods to provide access to game files
         var mergedMods = new MergedMods(config.GameDir);
 
         var writer = new GameDataWriterE();
-        writer.Write(opt, ann, graph, mergedMods, config.OutputDir, events, eventConfig, Console.WriteLine);
+        writer.Write(opt, ann, graph, mergedMods, modDir, events, eventConfig, Console.WriteLine);
 
-        Console.WriteLine();
-        Console.WriteLine("=== Done! ===");
+        // 8. Package with ModEngine 2
+        var packager = new PackagingWriter(config.OutputDir);
+        await packager.WritePackageAsync();
     }
 
     class Config
