@@ -86,15 +86,23 @@ def run_fogmodwrapper(
         print(f"Working directory: {wrapper_dir}")
 
     # Run from wrapper_dir so FogModWrapper finds eldendata/
-    result = subprocess.run(cmd, capture_output=True, text=True, cwd=wrapper_dir)
-    if result.returncode != 0:
-        if verbose:
-            print(result.stdout)
-        print(result.stderr, file=sys.stderr)
-        return False
-    elif verbose:
-        print(result.stdout)
-    return True
+    # Stream output in real-time
+    process = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        cwd=wrapper_dir,
+        bufsize=1,  # Line buffered
+    )
+
+    # Print output as it arrives
+    assert process.stdout is not None
+    for line in process.stdout:
+        print(line, end="")
+
+    process.wait()
+    return process.returncode == 0
 
 
 def main() -> int:
