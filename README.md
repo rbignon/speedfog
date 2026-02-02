@@ -1,90 +1,116 @@
 # SpeedFog
 
-**SpeedFog** is an Elden Ring mod that generates short randomized runs (~1 hour) with a controlled zone structure. Unlike FogRando which randomizes the entire world, SpeedFog creates a focused path from Chapel of Anticipation to Radagon with balanced parallel branches.
+Elden Ring mod that generates short randomized runs (~1 hour) with balanced parallel paths.
+
+Unlike FogRando which randomizes the entire world, SpeedFog creates a focused path from Chapel of Anticipation to Radagon with no dead ends.
 
 ## Features
 
 - **Short runs**: ~1 hour target duration (configurable)
-- **Balanced paths**: All routes through the game have similar difficulty/length
+- **Balanced paths**: All routes have similar difficulty/length
 - **No dead ends**: Every path leads to Radagon
-- **Configurable**: Adjust number of bosses, dungeons, difficulty curve
 - **Seed-based**: Share seeds for identical runs
+- **Self-contained output**: Includes ModEngine 2 and launcher
 
 ## Requirements
 
-- Elden Ring (Steam version)
-- [ModEngine 2](https://github.com/soulsmods/ModEngine2)
-- [Elden Ring Enemy and Item Randomizer](https://www.nexusmods.com/eldenring/mods/428) (run this first)
-- Python 3.10+ (for DAG generation)
-- .NET 8.0 SDK (for building the writer)
-- Wine (Linux only, for running the writer)
+- Elden Ring (Steam version, base game)
+- Python 3.10+
+- .NET 8.0 SDK
+- Wine (Linux only)
 
-## Quick Start
+## Installation
 
-### 1. Run Enemy/Item Randomizer First
+### 1. Download FogRando
 
-SpeedFog only randomizes zone connections. Run the Enemy/Item Randomizer first to randomize enemies and item drops.
+Download [Elden Ring Fog Gate Randomizer](https://www.nexusmods.com/eldenring/mods/3295) from Nexusmods (requires account).
 
-### 2. Generate a SpeedFog Run
+### 2. Clone and Setup
 
 ```bash
-# Edit config to your preferences
+git clone https://github.com/user/speedfog.git
+cd speedfog
+
+# Install Python dependencies
+cd core && uv pip install -e ".[dev]" && cd ..
+
+# Install sfextract (extracts DLLs from FogRando)
+dotnet tool install -g sfextract
+
+# Extract FogRando dependencies
+python tools/setup_fogrando.py /path/to/FogRando.zip
+
+# Build the C# writer
+cd writer/FogModWrapper && dotnet build && cd ../..
+```
+
+### 3. Configure
+
+```bash
 cp config.example.toml config.toml
-nano config.toml
-
-# Generate the DAG and spoiler
-speedfog config.toml --spoiler -o /tmp/speedfog
-# Creates /tmp/speedfog/<seed>/graph.json and spoiler.txt
-
-# Generate mod files (Windows)
-FogModWrapper.exe /tmp/speedfog/<seed> --game-dir "C:/Games/ELDEN RING/Game" --data-dir data -o ./output
-
-# Generate mod files (Linux via Wine - see "Running on Linux" section)
-wine FogModWrapper.exe /tmp/speedfog/<seed> --game-dir "/path/to/ELDEN RING/Game" --data-dir data -o ./output
+# Edit config.toml to set your game directory and preferences
 ```
 
-### 3. Install the Mod
+## Usage
+
+### Generate a Run
 
 ```bash
-# Copy to ModEngine mods folder
-cp -r output/mods/speedfog /path/to/ModEngine/mods/
+# Generate DAG and spoiler
+speedfog config.toml --spoiler
+
+# Output is in seeds/<seed>/ by default
 ```
 
-### 4. Launch the Game
+### Build the Mod
 
-Start Elden Ring through ModEngine 2 and begin a new game.
+```bash
+# Windows
+cd writer/FogModWrapper
+dotnet run -- ../../seeds/<seed> --game-dir "C:/Games/ELDEN RING/Game" -o output
+
+# Linux (via Wine)
+cd writer/FogModWrapper
+dotnet publish -c Release -r win-x64 --self-contained -o publish/win-x64
+wine publish/win-x64/FogModWrapper.exe ../../seeds/<seed> \
+  --game-dir "/path/to/ELDEN RING/Game" \
+  -o output
+```
+
+### Play
+
+The output folder is self-contained with ModEngine 2:
+
+```bash
+# Windows
+./output/launch_speedfog.bat
+
+# Linux (Proton)
+./output/launch_speedfog.sh
+```
 
 ## Configuration
 
-Edit `config.toml` to customize your run:
+Edit `config.toml`:
 
 ```toml
 [run]
-seed = 12345                    # Set to 0 for random seed
+seed = 0                        # 0 = random seed
 
 [budget]
-total_weight = 30               # Target "length" of each path
-tolerance = 5                   # Allowed variance (+/- 5)
+total_weight = 30               # Target path length (~minutes)
+tolerance = 5                   # Allowed variance
 
 [requirements]
-legacy_dungeons = 1             # Minimum legacy dungeons per run
+legacy_dungeons = 1             # Minimum legacy dungeons
 bosses = 5                      # Minimum bosses before Radagon
-mini_dungeons = 5               # Minimum caves/catacombs/tunnels
-
-[structure]
-max_parallel_paths = 3          # Maximum simultaneous branches
-split_probability = 0.4         # Chance of path splitting
-merge_probability = 0.3         # Chance of paths merging
+mini_dungeons = 5               # Minimum caves/catacombs
 
 [paths]
-game_dir = "C:/Program Files/Steam/steamapps/common/ELDEN RING/Game"
-output_dir = "./output"
-clusters_file = "./data/clusters.json"
+game_dir = "/path/to/ELDEN RING/Game"
 ```
 
 ## How It Works
-
-### Zone Structure
 
 SpeedFog generates a DAG (Directed Acyclic Graph) of zones:
 
@@ -93,114 +119,47 @@ Chapel of Anticipation
          │
     ┌────┴────┐
     ▼         ▼
- Catacomb   Cave        ← Layer 1 (Tier 5)
+ Catacomb   Cave         ← Tier 5
     │         │
     ▼         │
   Boss    ┌───┘
     │     ▼
-    └──►Legacy Dungeon  ← Layer 2 (Tier 10)
+    └──►Legacy Dungeon   ← Tier 10
               │
          ┌────┴────┐
          ▼         ▼
-       Cave      Tunnel ← Layer 3 (Tier 15)
+       Cave      Tunnel  ← Tier 15
          │         │
          └────┬────┘
               ▼
-           Radagon      ← Final (Tier 28)
+           Radagon       ← Tier 28
 ```
 
-### Enemy Scaling
-
-Enemies are scaled based on their zone's tier (1-28). Early zones have weaker enemies, later zones are harder. The scaling uses SpEffect modifiers for HP, damage, defense, and souls.
-
-### Key Items
-
-All key items (Rusty Key, Stonesword Keys, etc.) are given at the start to prevent softlocks.
-
-## File Structure
-
-```
-speedfog/
-├── data/                   # Shared data files
-│   ├── fog.txt             # FogRando zone definitions (source)
-│   ├── foglocations2.txt   # FogRando enemy areas (source)
-│   ├── er-common.emedf.json  # EMEVD instruction definitions
-│   ├── clusters.json       # Generated zone clusters
-│   ├── fog_data.json       # Generated fog gate metadata
-│   ├── zone_metadata.toml  # Zone weight defaults/overrides
-│   └── speedfog-events.yaml  # EMEVD event templates
-├── core/                   # Python - DAG generation
-│   └── speedfog_core/      # Python package
-├── writer/                 # C# - Mod file generation
-│   └── FogModWrapper/
-├── reference/              # FogRando source for reference (read-only)
-│   └── fogrando-src/       # Decompiled C# code
-├── docs/                   # Documentation
-└── output/                 # Generated mod files
-```
-
-## Development
-
-See [docs/architecture.md](docs/architecture.md) for system architecture and data formats.
-### Building from Source
-
-```bash
-# Python core
-cd core
-pip install -e .
-
-# C# writer (Windows)
-cd writer
-dotnet build
-
-# C# writer (Linux - cross-compile for Windows)
-cd writer
-dotnet build -r win-x64
-```
-
-### Running on Linux
-
-The C# writer depends on Windows-only libraries (Oodle compression via `oo2core_6_win64.dll`). On Linux, use Wine:
-
-```bash
-# 1. Generate the DAG and spoiler (native Linux)
-cd core
-speedfog config.toml --spoiler -o /tmp/speedfog
-# Creates /tmp/speedfog/<seed>/graph.json and spoiler.txt
-
-# 2. Build and publish the writer
-cd ../writer/FogModWrapper
-dotnet publish -c Release -r win-x64 --self-contained -o publish/win-x64
-
-# 3. Run the writer with Wine
-wine publish/win-x64/FogModWrapper.exe /tmp/speedfog/<seed> \
-  --game-dir "/path/to/ELDEN RING/Game" \
-  --data-dir ../../data \
-  -o ./output
-```
-
-**Note**: The game itself runs via Proton on Linux, so this workflow integrates naturally.
+- **Enemy scaling**: Based on zone tier (1-28)
+- **Key items**: All given at start to prevent softlocks
+- **Fog gates**: Connect zones via FogRando's fog gate system
 
 ## FAQ
 
 **Q: Can I use this with other mods?**
-A: SpeedFog is designed to work with Enemy/Item Randomizer. Other mods may conflict.
+A: SpeedFog modifies zone connections and enemy scaling. Other mods may conflict.
 
-**Q: Why is there no DLC content?**
-A: v1 focuses on base game zones. DLC support planned for v2.
+**Q: Why base game only?**
+A: v1 focuses on base game. DLC support planned for v2.
 
 **Q: I'm stuck, is this a softlock?**
-A: SpeedFog gives all key items at start, so softlocks should be rare. If stuck, check the spoiler log for the correct path.
+A: Check the spoiler log (`seeds/<seed>/spoiler.txt`) for the correct path.
 
-**Q: Can I customize which zones appear?**
-A: Edit `data/zone_metadata.toml` to adjust zone weights, or modify `data/clusters.json` to exclude specific clusters.
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
 ## Credits
 
-- [FogRando](https://www.nexusmods.com/eldenring/mods/3295) by thefifthmatt - Inspiration and reference code
+- [FogRando](https://www.nexusmods.com/eldenring/mods/3295) by thefifthmatt - Core fog gate system
 - [SoulsFormats](https://github.com/soulsmods/SoulsFormatsNEXT) - File format library
 - [ModEngine 2](https://github.com/soulsmods/ModEngine2) - Mod loading
 
 ## License
 
-MIT License - See LICENSE file.
+MIT License - See [LICENSE](LICENSE) file.
