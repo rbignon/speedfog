@@ -55,6 +55,7 @@ speedfog/
 │       ├── Program.cs       # CLI entry point
 │       ├── GraphLoader.cs   # Load graph.json v2
 │       ├── ConnectionInjector.cs  # Inject connections into FogMod Graph
+│       ├── StartingItemInjector.cs  # Inject starting item events into EMEVD
 │       └── eldendata/       # Game data (gitignored)
 ├── tools/                   # Standalone scripts
 │   ├── setup_fogrando.py    # Extract FogRando dependencies from Nexusmods ZIP
@@ -107,6 +108,7 @@ speedfog/
 | `Program.cs` | CLI entry, loads options, calls FogMod's GameDataWriterE |
 | `GraphLoader` | Parses graph.json v2 format from Python |
 | `ConnectionInjector` | Injects our connections into FogMod's Graph object |
+| `StartingItemInjector` | Injects starting item events into common.emevd |
 
 **Key FogMod classes** (from FogMod.dll):
 | Class | Purpose |

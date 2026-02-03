@@ -196,6 +196,7 @@ def dag_to_dict_v2(
     clusters: ClusterPool,
     options: dict[str, bool] | None = None,
     fog_data: dict[str, dict[str, Any]] | None = None,
+    starting_item_lots: list[int] | None = None,
 ) -> dict[str, Any]:
     """Convert a DAG to v2 JSON-serializable dictionary for FogModWrapper.
 
@@ -204,6 +205,7 @@ def dag_to_dict_v2(
         clusters: ClusterPool with zone_maps for FullName generation
         options: FogMod options to include (default: scale=True)
         fog_data: Optional fog_data.json lookup for accurate map IDs (esp. for warps)
+        starting_item_lots: ItemLot IDs to award at game start
 
     Returns:
         Dictionary with the following structure:
@@ -212,6 +214,7 @@ def dag_to_dict_v2(
         - options: dict of FogMod options
         - connections: list of {exit_area, exit_gate, entrance_area, entrance_gate}
         - area_tiers: dict of zone -> tier
+        - starting_item_lots: list of ItemLot IDs
     """
     if options is None:
         options = {
@@ -274,6 +277,7 @@ def dag_to_dict_v2(
         "options": options,
         "connections": connections,
         "area_tiers": area_tiers,
+        "starting_item_lots": starting_item_lots or [],
     }
 
 
@@ -283,6 +287,7 @@ def export_json_v2(
     output_path: Path,
     options: dict[str, bool] | None = None,
     fog_data: dict[str, dict[str, Any]] | None = None,
+    starting_item_lots: list[int] | None = None,
 ) -> None:
     """Export a DAG to v2 formatted JSON file for FogModWrapper.
 
@@ -292,8 +297,9 @@ def export_json_v2(
         output_path: Path to write the JSON file
         options: FogMod options (default: scale=True, shuffle=True)
         fog_data: Optional fog_data.json lookup for accurate map IDs
+        starting_item_lots: ItemLot IDs to award at game start
     """
-    data = dag_to_dict_v2(dag, clusters, options, fog_data)
+    data = dag_to_dict_v2(dag, clusters, options, fog_data, starting_item_lots)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 

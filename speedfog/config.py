@@ -70,6 +70,67 @@ class PathsConfig:
 
 
 @dataclass
+class StartingItemsConfig:
+    """Starting items given when picking up the Tarnished's Wizened Finger.
+
+    These items are awarded via the common_startingitem event template.
+    """
+
+    # Key items for progression shortcuts
+    academy_key: bool = True  # Academy Glintstone Key (ItemLot 1034450100)
+    pureblood_medal: bool = True  # Pureblood Knight's Medal (ItemLot 100320)
+
+    # Great Runes (restored versions, equippable at graces)
+    great_runes: bool = True  # All Great Runes below
+    # Individual Great Runes (only used if great_runes=False)
+    rune_godrick: bool = True  # ItemLot 34100500
+    rune_radahn: bool = True  # ItemLot 34130050
+    rune_morgott: bool = True  # ItemLot 34140700
+    rune_mohg: bool = True  # ItemLot 34140710
+    rune_rykard: bool = True  # ItemLot 34120500
+    rune_malenia: bool = True  # ItemLot 34150000
+
+    def get_item_lots(self) -> list[int]:
+        """Get list of ItemLot IDs to award at game start."""
+        lots: list[int] = []
+
+        if self.academy_key:
+            lots.append(1034450100)
+        if self.pureblood_medal:
+            lots.append(100320)
+
+        # Great Runes
+        if self.great_runes:
+            # Add all Great Runes
+            lots.extend(
+                [
+                    34100500,  # Godrick
+                    34130050,  # Radahn
+                    34140700,  # Morgott
+                    34140710,  # Mohg
+                    34120500,  # Rykard
+                    34150000,  # Malenia
+                ]
+            )
+        else:
+            # Add individual Great Runes based on flags
+            if self.rune_godrick:
+                lots.append(34100500)
+            if self.rune_radahn:
+                lots.append(34130050)
+            if self.rune_morgott:
+                lots.append(34140700)
+            if self.rune_mohg:
+                lots.append(34140710)
+            if self.rune_rykard:
+                lots.append(34120500)
+            if self.rune_malenia:
+                lots.append(34150000)
+
+        return lots
+
+
+@dataclass
 class Config:
     """Main configuration container."""
 
@@ -78,6 +139,7 @@ class Config:
     requirements: RequirementsConfig = field(default_factory=RequirementsConfig)
     structure: StructureConfig = field(default_factory=StructureConfig)
     paths: PathsConfig = field(default_factory=PathsConfig)
+    starting_items: StartingItemsConfig = field(default_factory=StartingItemsConfig)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Config:
@@ -87,6 +149,7 @@ class Config:
         requirements_section = data.get("requirements", {})
         structure_section = data.get("structure", {})
         paths_section = data.get("paths", {})
+        starting_items_section = data.get("starting_items", {})
 
         return cls(
             seed=run_section.get("seed", 0),
@@ -115,6 +178,17 @@ class Config:
                 ),
                 randomizer_dir=paths_section.get("randomizer_dir"),
                 platform=paths_section.get("platform"),
+            ),
+            starting_items=StartingItemsConfig(
+                academy_key=starting_items_section.get("academy_key", True),
+                pureblood_medal=starting_items_section.get("pureblood_medal", True),
+                great_runes=starting_items_section.get("great_runes", True),
+                rune_godrick=starting_items_section.get("rune_godrick", True),
+                rune_radahn=starting_items_section.get("rune_radahn", True),
+                rune_morgott=starting_items_section.get("rune_morgott", True),
+                rune_mohg=starting_items_section.get("rune_mohg", True),
+                rune_rykard=starting_items_section.get("rune_rykard", True),
+                rune_malenia=starting_items_section.get("rune_malenia", True),
             ),
         )
 

@@ -21,6 +21,9 @@ public class GraphData
 
     [JsonPropertyName("area_tiers")]
     public Dictionary<string, int> AreaTiers { get; set; } = new();
+
+    [JsonPropertyName("starting_item_lots")]
+    public List<int> StartingItemLots { get; set; } = new();
 }
 
 /// <summary>

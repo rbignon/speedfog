@@ -311,6 +311,12 @@ Example:
         var writer = new GameDataWriterE();
         writer.Write(opt, ann, graph, mergedMods, modDir, events, eventConfig, Console.WriteLine);
 
+        // 7b. Inject starting items (post-process EMEVD)
+        if (graphData.StartingItemLots.Count > 0)
+        {
+            StartingItemInjector.Inject(modDir, graphData.StartingItemLots);
+        }
+
         // 8. Package with ModEngine 2
         var packager = new PackagingWriter(config.OutputDir);
         await packager.WritePackageAsync();

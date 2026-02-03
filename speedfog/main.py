@@ -258,8 +258,17 @@ def main() -> int:
 
     # Export JSON v2 format (for FogModWrapper)
     json_path = seed_dir / "graph.json"
-    export_json_v2(dag, clusters, json_path, fog_data=fog_data)
+    starting_item_lots = config.starting_items.get_item_lots()
+    export_json_v2(
+        dag,
+        clusters,
+        json_path,
+        fog_data=fog_data,
+        starting_item_lots=starting_item_lots,
+    )
     print(f"Written: {json_path}")
+    if starting_item_lots:
+        print(f"Starting items: {len(starting_item_lots)} item lots configured")
 
     # Export spoiler if requested using output module
     if args.spoiler:
