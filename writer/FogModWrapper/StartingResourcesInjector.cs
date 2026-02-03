@@ -3,50 +3,32 @@ using SoulsFormats;
 namespace FogModWrapper;
 
 /// <summary>
-/// Injects starting resources (runes, golden seeds, sacred tears) into the game.
-/// - Runes: Added to CharaInitParam for each starting class
-/// - Golden Seeds/Sacred Tears: Custom ItemLots created and awarded via EMEVD
+/// Injects starting resources (runes, golden seeds, sacred tears) into the game via EMEVD.
+/// Uses DirectlyGivePlayerItem following the same pattern as FogRando's cheatkeys.
 /// </summary>
 public static class StartingResourcesInjector
 {
-    // Good IDs for consumables
+    // Good IDs for consumables (from practice tool / game data)
     private const int GOLDEN_SEED_GOOD_ID = 10010;
     private const int SACRED_TEAR_GOOD_ID = 10020;
+    private const int LORDS_RUNE_GOOD_ID = 2919;  // 50,000 runes when used
 
-    // ItemLot category for Goods
-    private const int ITEMLOT_CATEGORY_GOODS = 1;
-
-    // Base ItemLot ID for our custom lots (using a safe range)
-    private const int BASE_ITEMLOT_ID = 75586000;
-
-    // Base event ID for resource events (after StartingItemInjector's range)
+    // Base event ID for resource events
     private const int BASE_EVENT_ID = 755861000;
+
+    // Flag used by FogRando for DirectlyGivePlayerItem (from cheatkeys)
+    private const int ITEM_FLAG_ID = 6001;
 
     // Flag set when player picks up the Tarnished's Wizened Finger
     private const int FINGER_PICKUP_FLAG = 1040292051;
 
-    // CharaInitParam row IDs for each starting class
-    // These are the standard Elden Ring classes (3000-3009)
-    private static readonly int[] STARTING_CLASS_IDS = {
-        3000, // Vagabond
-        3001, // Warrior
-        3002, // Hero
-        3003, // Bandit
-        3004, // Astrologer
-        3005, // Prophet
-        3006, // Samurai
-        3007, // Prisoner
-        3008, // Confessor
-        3009, // Wretch
-    };
+    // Flag to track if we already gave the starting resources (prevents re-giving on reload)
+    // Must be in 755861XXX range (same as event IDs) to be properly saved
+    private const int RESOURCES_GIVEN_FLAG = 755861999;
 
     /// <summary>
-    /// Inject starting resources into the mod files.
+    /// Inject starting resources into the mod files via EMEVD.
     /// </summary>
-    /// <param name="modDir">Directory containing mod files</param>
-    /// <param name="runes">Amount of runes to add to starting classes (max 10,000,000)</param>
-    /// <param name="goldenSeeds">Number of golden seeds to give (max 99)</param>
-    /// <param name="sacredTears">Number of sacred tears to give (max 12)</param>
     public static void Inject(string modDir, int runes, int goldenSeeds, int sacredTears)
     {
         if (runes <= 0 && goldenSeeds <= 0 && sacredTears <= 0)
@@ -55,11 +37,6 @@ public static class StartingResourcesInjector
         }
 
         // Clamp values to safe ranges
-        if (runes > 10_000_000)
-        {
-            Console.WriteLine($"Warning: starting_runes capped at 10,000,000 (was {runes})");
-            runes = 10_000_000;
-        }
         if (goldenSeeds > 99)
         {
             Console.WriteLine($"Warning: golden_seeds capped at 99 (was {goldenSeeds})");
@@ -71,119 +48,23 @@ public static class StartingResourcesInjector
             sacredTears = 12;
         }
 
-        Console.WriteLine("Injecting starting resources...");
-
-        // Inject runes via CharaInitParam
-        if (runes > 0)
+        // Convert runes to Lord's Rune items (50,000 runes each)
+        int lordsRunes = runes > 0 ? (runes + 49999) / 50000 : 0;
+        if (lordsRunes > 200)
         {
-            InjectStartingRunes(modDir, runes);
+            Console.WriteLine($"Warning: starting_runes capped at 10,000,000 (200 Lord's Runes)");
+            lordsRunes = 200;
         }
 
-        // Inject golden seeds and sacred tears via ItemLots + EMEVD
-        if (goldenSeeds > 0 || sacredTears > 0)
-        {
-            InjectConsumables(modDir, goldenSeeds, sacredTears);
-        }
-
-        Console.WriteLine("Starting resources injected successfully");
-    }
-
-    /// <summary>
-    /// Add runes to each starting class in CharaInitParam.
-    /// </summary>
-    private static void InjectStartingRunes(string modDir, int runes)
-    {
-        var regulationPath = Path.Combine(modDir, "regulation.bin");
-        if (!File.Exists(regulationPath))
-        {
-            Console.WriteLine($"Warning: regulation.bin not found at {regulationPath}, skipping rune injection");
-            return;
-        }
-
-        Console.WriteLine($"  Adding {runes:N0} runes to starting classes...");
-
-        // Load regulation.bin
-        var regulation = BND4.Read(regulationPath);
-
-        // Find CharaInitParam
-        var charaInitFile = regulation.Files.Find(f => f.Name.EndsWith("CharaInitParam.param"));
-        if (charaInitFile == null)
-        {
-            Console.WriteLine("Warning: CharaInitParam not found in regulation.bin");
-            return;
-        }
-
-        // Parse the param
-        var charaInit = PARAM.Read(charaInitFile.Bytes);
-
-        // Add runes to each starting class
-        int modifiedCount = 0;
-        foreach (var rowId in STARTING_CLASS_IDS)
-        {
-            var row = charaInit.Rows.Find(r => r.ID == rowId);
-            if (row == null)
-            {
-                continue;
-            }
-
-            // Get current soul value and add our runes (with overflow protection)
-            var soulCell = row.Cells.FirstOrDefault(c => c.Def.InternalName == "soul");
-            if (soulCell != null)
-            {
-                var currentSoul = Convert.ToInt32(soulCell.Value);
-                long newSoul = (long)currentSoul + runes;
-                if (newSoul > int.MaxValue)
-                {
-                    newSoul = int.MaxValue;
-                }
-                soulCell.Value = (int)newSoul;
-                modifiedCount++;
-            }
-        }
-
-        if (modifiedCount > 0)
-        {
-            // Write back to regulation
-            charaInitFile.Bytes = charaInit.Write();
-            regulation.Write(regulationPath);
-            Console.WriteLine($"  Modified {modifiedCount} starting classes (+{runes:N0} runes each)");
-        }
-    }
-
-    /// <summary>
-    /// Create ItemLots for golden seeds and sacred tears, and EMEVD events to award them.
-    /// </summary>
-    private static void InjectConsumables(string modDir, int goldenSeeds, int sacredTears)
-    {
-        var regulationPath = Path.Combine(modDir, "regulation.bin");
         var emevdPath = Path.Combine(modDir, "event", "common.emevd.dcx");
-
-        if (!File.Exists(regulationPath))
-        {
-            Console.WriteLine($"Warning: regulation.bin not found, skipping consumable injection");
-            return;
-        }
-
         if (!File.Exists(emevdPath))
         {
-            Console.WriteLine($"Warning: common.emevd.dcx not found, skipping consumable injection");
+            Console.WriteLine($"Warning: common.emevd.dcx not found, skipping resource injection");
             return;
         }
 
-        // Load regulation.bin
-        var regulation = BND4.Read(regulationPath);
+        Console.WriteLine("Injecting starting resources via EMEVD...");
 
-        // Find ItemLotParam_map
-        var itemLotFile = regulation.Files.Find(f => f.Name.EndsWith("ItemLotParam_map.param"));
-        if (itemLotFile == null)
-        {
-            Console.WriteLine("Warning: ItemLotParam_map not found in regulation.bin");
-            return;
-        }
-
-        var itemLotParam = PARAM.Read(itemLotFile.Bytes);
-
-        // Load EMEVD
         var emevd = EMEVD.Read(emevdPath);
         var initEvent = emevd.Events.Find(e => e.ID == 0);
         if (initEvent == null)
@@ -192,119 +73,128 @@ public static class StartingResourcesInjector
             return;
         }
 
-        int lotIndex = 0;
         int eventIndex = 0;
 
-        // Create ItemLot and event for golden seeds
+        // Create a single event that gives all resources
+        var evt = new EMEVD.Event(BASE_EVENT_ID + eventIndex);
+
+        // Wait for finger pickup (same pattern as StartingItemInjector)
+        AddIfEventFlag(evt, FINGER_PICKUP_FLAG);
+
+        // TODO: Add flag check to prevent re-giving on reload
+        // For now, items will be given every reload (to isolate issues)
+
+        // Add golden seeds
+        for (int i = 0; i < goldenSeeds; i++)
+        {
+            AddDirectlyGiveItem(evt, GOLDEN_SEED_GOOD_ID, i + 1);
+        }
         if (goldenSeeds > 0)
+            Console.WriteLine($"  Added {goldenSeeds} Golden Seeds");
+
+        // Add sacred tears
+        for (int i = 0; i < sacredTears; i++)
         {
-            var lotId = BASE_ITEMLOT_ID + lotIndex;
-            var eventId = BASE_EVENT_ID + eventIndex;
-
-            CreateItemLot(itemLotParam, lotId, GOLDEN_SEED_GOOD_ID, goldenSeeds);
-            CreateAwardEvent(emevd, initEvent, eventId, lotId);
-
-            Console.WriteLine($"  Added {goldenSeeds} Golden Seeds (ItemLot {lotId}, Event {eventId})");
-            lotIndex++;
-            eventIndex++;
+            AddDirectlyGiveItem(evt, SACRED_TEAR_GOOD_ID, goldenSeeds + i + 1);
         }
-
-        // Create ItemLot and event for sacred tears
         if (sacredTears > 0)
+            Console.WriteLine($"  Added {sacredTears} Sacred Tears");
+
+        // Add Lord's Runes
+        for (int i = 0; i < lordsRunes; i++)
         {
-            var lotId = BASE_ITEMLOT_ID + lotIndex;
-            var eventId = BASE_EVENT_ID + eventIndex;
-
-            CreateItemLot(itemLotParam, lotId, SACRED_TEAR_GOOD_ID, sacredTears);
-            CreateAwardEvent(emevd, initEvent, eventId, lotId);
-
-            Console.WriteLine($"  Added {sacredTears} Sacred Tears (ItemLot {lotId}, Event {eventId})");
-            lotIndex++;
-            eventIndex++;
+            AddDirectlyGiveItem(evt, LORDS_RUNE_GOOD_ID, goldenSeeds + sacredTears + i + 1);
+        }
+        if (lordsRunes > 0)
+        {
+            int actualRunes = lordsRunes * 50000;
+            Console.WriteLine($"  Added {lordsRunes} Lord's Runes ({actualRunes:N0} runes when used)");
         }
 
-        // Write back to files
-        itemLotFile.Bytes = itemLotParam.Write();
-        regulation.Write(regulationPath);
-        emevd.Write(emevdPath);
-    }
-
-    /// <summary>
-    /// Create an ItemLot row for a given good.
-    /// </summary>
-    private static void CreateItemLot(PARAM param, int lotId, int goodId, int quantity)
-    {
-        // Find an existing row to use as template (for the layout)
-        var templateRow = param.Rows.FirstOrDefault();
-        if (templateRow == null)
-        {
-            Console.WriteLine("Warning: No template row found in ItemLotParam_map");
-            return;
-        }
-
-        // Create new row
-        var newRow = new PARAM.Row(lotId, "", param.AppliedParamdef);
-
-        // Set the item in slot 1
-        SetCellValue(newRow, "lotItemId01", goodId);
-        SetCellValue(newRow, "lotItemCategory01", ITEMLOT_CATEGORY_GOODS);
-        SetCellValue(newRow, "lotItemBasePoint01", (ushort)1000); // 100% chance
-        SetCellValue(newRow, "lotItemNum01", (byte)quantity);
-
-        // Clear other slots
-        for (int i = 2; i <= 8; i++)
-        {
-            SetCellValue(newRow, $"lotItemId0{i}", 0);
-            SetCellValue(newRow, $"lotItemCategory0{i}", 0);
-            SetCellValue(newRow, $"lotItemBasePoint0{i}", (ushort)0);
-        }
-
-        // No flag restriction (can always be obtained)
-        SetCellValue(newRow, "getItemFlagId", 0u);
-
-        param.Rows.Add(newRow);
-    }
-
-    /// <summary>
-    /// Helper to set a cell value by name.
-    /// </summary>
-    private static void SetCellValue(PARAM.Row row, string cellName, object value)
-    {
-        var cell = row.Cells.FirstOrDefault(c => c.Def.InternalName == cellName);
-        if (cell != null)
-        {
-            cell.Value = value;
-        }
-    }
-
-    /// <summary>
-    /// Create an EMEVD event that awards an ItemLot when the finger is picked up.
-    /// </summary>
-    private static void CreateAwardEvent(EMEVD emevd, EMEVD.Event initEvent, int eventId, int itemLotId)
-    {
-        var evt = new EMEVD.Event(eventId);
-
-        // IfEventFlag(MAIN, ON, EventFlag, FINGER_PICKUP_FLAG)
-        var ifFlagArgs = new byte[8];
-        ifFlagArgs[0] = 0;  // MAIN condition group
-        ifFlagArgs[1] = 1;  // ON state
-        ifFlagArgs[2] = 0;  // EventFlag type
-        ifFlagArgs[3] = 0;  // padding
-        BitConverter.GetBytes(FINGER_PICKUP_FLAG).CopyTo(ifFlagArgs, 4);
-        evt.Instructions.Add(new EMEVD.Instruction(3, 3, ifFlagArgs));
-
-        // AwardItemLot(itemLotId)
-        var awardArgs = new byte[4];
-        BitConverter.GetBytes(itemLotId).CopyTo(awardArgs, 0);
-        evt.Instructions.Add(new EMEVD.Instruction(2003, 4, awardArgs));
+        // TODO: Set flag when we re-enable the flag check
+        // AddSetEventFlag(evt, RESOURCES_GIVEN_FLAG, true);
 
         emevd.Events.Add(evt);
 
         // Add initialization call to event 0
         var initArgs = new byte[12];
-        BitConverter.GetBytes(0).CopyTo(initArgs, 0);        // slot = 0
-        BitConverter.GetBytes(eventId).CopyTo(initArgs, 4);  // eventId
-        BitConverter.GetBytes(0).CopyTo(initArgs, 8);        // arg0 = 0
+        BitConverter.GetBytes(0).CopyTo(initArgs, 0);
+        BitConverter.GetBytes(BASE_EVENT_ID + eventIndex).CopyTo(initArgs, 4);
+        BitConverter.GetBytes(0).CopyTo(initArgs, 8);
         initEvent.Instructions.Add(new EMEVD.Instruction(2000, 0, initArgs));
+
+        emevd.Write(emevdPath);
+        Console.WriteLine("Starting resources injected successfully");
+    }
+
+    /// <summary>
+    /// Add IfEventFlag instruction to wait for a flag (MAIN condition group).
+    /// Instruction 3:3
+    /// </summary>
+    private static void AddIfEventFlag(EMEVD.Event evt, int flagId)
+    {
+        var args = new byte[8];
+        args[0] = 0;  // MAIN condition group
+        args[1] = 1;  // ON state
+        args[2] = 0;  // EventFlag type
+        args[3] = 0;  // padding
+        BitConverter.GetBytes(flagId).CopyTo(args, 4);
+        evt.Instructions.Add(new EMEVD.Instruction(3, 3, args));
+    }
+
+    /// <summary>
+    /// Add EndIfEventFlag - ends the event if flag matches state.
+    /// Instruction 1003:2
+    /// </summary>
+    private static void AddEndIfEventFlag(EMEVD.Event evt, int flagId)
+    {
+        // EndIfEventFlag(ComparisonType, FlagState, EventFlagType, FlagId)
+        // Args: comparisonType (1), flagState (1), eventFlagType (1), padding (1), flagId (4)
+        var args = new byte[8];
+        args[0] = 0;  // ComparisonType.Equal
+        args[1] = 1;  // FlagState.ON - end if flag is ON
+        args[2] = 0;  // EventFlagType.EventFlag
+        args[3] = 0;  // padding
+        BitConverter.GetBytes(flagId).CopyTo(args, 4);
+        evt.Instructions.Add(new EMEVD.Instruction(1003, 2, args));
+    }
+
+    /// <summary>
+    /// Add SetEventFlag instruction.
+    /// Instruction 2003:66
+    /// </summary>
+    private static void AddSetEventFlag(EMEVD.Event evt, int flagId, bool state)
+    {
+        var args = new byte[12];
+        args[0] = 0;  // EventFlag type
+        args[1] = 0;  // padding
+        args[2] = 0;  // padding
+        args[3] = 0;  // padding
+        BitConverter.GetBytes(flagId).CopyTo(args, 4);
+        args[8] = state ? (byte)1 : (byte)0;  // ON/OFF
+        args[9] = 0;  // padding
+        args[10] = 0; // padding
+        args[11] = 0; // padding
+        evt.Instructions.Add(new EMEVD.Instruction(2003, 66, args));
+    }
+
+    /// <summary>
+    /// Add DirectlyGivePlayerItem instruction.
+    /// Following FogRando's pattern: DirectlyGivePlayerItem(ItemType.Goods, itemId, 6001, 1)
+    /// Instruction 2003:43
+    /// </summary>
+    private static void AddDirectlyGiveItem(EMEVD.Event evt, int goodId, int index)
+    {
+        // DirectlyGivePlayerItem(itemType, itemId, baseFlagId, flagBits)
+        // Args: itemType (1), padding (3), itemId (4), baseFlagId (4), flagBits (4)
+        var args = new byte[16];
+        args[0] = 3;  // ItemType.Goods
+        args[1] = 0;  // padding
+        args[2] = 0;  // padding
+        args[3] = 0;  // padding
+        BitConverter.GetBytes(goodId).CopyTo(args, 4);       // Item ID
+        BitConverter.GetBytes(ITEM_FLAG_ID).CopyTo(args, 8); // Base Event Flag ID (6001)
+        BitConverter.GetBytes(1).CopyTo(args, 12);           // Number of Used Flag Bits
+        evt.Instructions.Add(new EMEVD.Instruction(2003, 43, args));
     }
 }
