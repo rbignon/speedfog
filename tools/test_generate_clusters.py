@@ -569,6 +569,67 @@ class TestClassifyFogs:
         assert fog1 in zone_fogs["dupehallway"].entry_fogs
         assert fog2 in zone_fogs["dupehallway"].exit_fogs
 
+    def test_door_fog_excluded(self):
+        """Door fogs (Morgott barriers) are excluded.
+
+        Door fogs (tagged 'door') are pre-connected in FogMod's vanilla graph
+        and cannot be redirected. They connect internal areas (e.g., sewer_mohg
+        to sewer_preflame) and attempting to use them as exit fogs causes
+        "Already matched" errors in FogMod.
+        """
+        # Real example: AEG099_002_9000 in sewers - Morgott barrier
+        fog = FogData(
+            name="AEG099_002_9000",
+            fog_id=35001504,
+            aside=FogSide(area="sewer_mohg", text="after Mohg's arena"),
+            bside=FogSide(area="sewer_preflame", text="before Frenzied Flame"),
+            tags=["door"],
+        )
+        zone_fogs = classify_fogs([fog], [])
+
+        # Door fogs should be excluded from all zones
+        assert (
+            "sewer_mohg" not in zone_fogs
+            or fog not in zone_fogs.get("sewer_mohg", ZoneFogs()).entry_fogs
+        )
+        assert (
+            "sewer_mohg" not in zone_fogs
+            or fog not in zone_fogs.get("sewer_mohg", ZoneFogs()).exit_fogs
+        )
+        assert (
+            "sewer_preflame" not in zone_fogs
+            or fog not in zone_fogs.get("sewer_preflame", ZoneFogs()).entry_fogs
+        )
+        assert (
+            "sewer_preflame" not in zone_fogs
+            or fog not in zone_fogs.get("sewer_preflame", ZoneFogs()).exit_fogs
+        )
+
+    def test_door_open_fog_excluded(self):
+        """Door fogs with 'open' variant are also excluded.
+
+        Some doors have 'door open' tags (e.g., Leyndell entrance barrier).
+        These should also be excluded.
+        """
+        fog = FogData(
+            name="AEG099_002_9000",
+            fog_id=1045521500,
+            aside=FogSide(area="outskirts_rampart", text="to Capital Rampart"),
+            bside=FogSide(area="leyndell_start", text="to Leyndell"),
+            tags=["door", "open"],
+        )
+        zone_fogs = classify_fogs([fog], [])
+
+        # Door fogs should be excluded from all zones
+        assert (
+            "outskirts_rampart" not in zone_fogs
+            or fog not in zone_fogs.get("outskirts_rampart", ZoneFogs()).entry_fogs
+        )
+        assert (
+            "leyndell_start" not in zone_fogs
+            or fog not in zone_fogs.get("leyndell_start", ZoneFogs()).entry_fogs
+        )
+
     def test_split_fog_excluded(self):
         """Split fogs (ashen alternates) are excluded.
 

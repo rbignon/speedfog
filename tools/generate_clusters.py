@@ -549,6 +549,14 @@ def classify_fogs(
         if "minorwarp" in tags_lower:
             continue
 
+        # Skip door fogs (Morgott barriers and similar magic doors)
+        # These are pre-connected in FogMod's vanilla graph and cannot be redirected.
+        # They connect internal areas (e.g., sewer_mohg -> sewer_preflame) and are
+        # kept linked by FogMod. Attempting to use them as exit fogs causes
+        # "Already matched" errors.
+        if "door" in tags_lower:
+            continue
+
         aside_area = fog.aside.area
         bside_area = fog.bside.area
 

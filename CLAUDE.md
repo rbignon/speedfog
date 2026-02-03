@@ -209,6 +209,9 @@ pytest -v
 # Python - with coverage
 pytest --cov=speedfog
 
+# Tools tests (generate_clusters.py)
+cd tools && pytest test_generate_clusters.py -v
+
 # C# - integration test
 cd writer/test && ./run_integration.sh
 ```
