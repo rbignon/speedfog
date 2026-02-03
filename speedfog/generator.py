@@ -26,6 +26,50 @@ class GenerationError(Exception):
     pass
 
 
+# Valid cluster types for first_layer_type
+VALID_FIRST_LAYER_TYPES = {"legacy_dungeon", "mini_dungeon", "boss_arena", "major_boss"}
+
+
+def validate_config(config: Config, clusters: ClusterPool) -> list[str]:
+    """Validate configuration options against available clusters.
+
+    Args:
+        config: Configuration to validate.
+        clusters: Available cluster pool.
+
+    Returns:
+        List of error messages (empty if valid).
+    """
+    errors: list[str] = []
+
+    # Validate first_layer_type
+    if config.structure.first_layer_type:
+        if config.structure.first_layer_type not in VALID_FIRST_LAYER_TYPES:
+            errors.append(
+                f"Invalid first_layer_type: '{config.structure.first_layer_type}'. "
+                f"Valid options: {', '.join(sorted(VALID_FIRST_LAYER_TYPES))}"
+            )
+
+    # Validate major_boss_ratio
+    if not 0.0 <= config.structure.major_boss_ratio <= 1.0:
+        errors.append(
+            f"major_boss_ratio must be between 0.0 and 1.0, "
+            f"got {config.structure.major_boss_ratio}"
+        )
+
+    # Validate final_boss_candidates
+    all_boss_clusters = clusters.get_by_type("major_boss") + clusters.get_by_type(
+        "final_boss"
+    )
+    all_boss_zones = {zone for cluster in all_boss_clusters for zone in cluster.zones}
+
+    for zone in config.structure.effective_final_boss_candidates:
+        if zone not in all_boss_zones:
+            errors.append(f"Unknown final_boss candidate zone: '{zone}'")
+
+    return errors
+
+
 class LayerOperation(Enum):
     """Type of operation to perform on a layer."""
 
@@ -776,18 +820,47 @@ def generate_dag(
         Branch(f"b{i}", "start", start_exits[i]) for i in range(num_initial_branches)
     ]
 
-    # 3. Plan layer types
+    # 3. Execute first layer if forced type
+    current_layer = 1
+    if config.structure.first_layer_type:
+        first_type = config.structure.first_layer_type
+        tier = compute_tier(current_layer, 10)  # Approximate, will be refined
+
+        branches = execute_passant_layer(
+            dag,
+            branches,
+            current_layer,
+            tier,
+            first_type,
+            clusters,
+            used_zones,
+            rng,
+        )
+        current_layer += 1
+
+    # 4. Plan remaining layer types
     num_intermediate_layers = rng.randint(
         config.structure.min_layers, config.structure.max_layers
     )
-    layer_types = plan_layer_types(config.requirements, num_intermediate_layers, rng)
+    # Reduce layer count if first layer was forced
+    if config.structure.first_layer_type:
+        num_intermediate_layers = max(1, num_intermediate_layers - 1)
+
+    layer_types = plan_layer_types(
+        config.requirements,
+        num_intermediate_layers,
+        rng,
+        major_boss_ratio=config.structure.major_boss_ratio,
+    )
 
     # Calculate total layers for tier computation
     # We might add extra layers for forced merges
-    estimated_total = len(layer_types) + 2  # +1 for start, +1 for end
+    first_layer_offset = 1 if config.structure.first_layer_type else 0
+    estimated_total = (
+        len(layer_types) + 2 + first_layer_offset
+    )  # +1 start, +1 end, +1 if first forced
 
-    # 4. Execute layers with dynamic topology
-    current_layer = 1
+    # 5. Execute layers with dynamic topology
     for layer_idx, layer_type in enumerate(layer_types):
         is_near_end = layer_idx >= len(layer_types) - 2
         tier = compute_tier(current_layer, estimated_total)
@@ -859,14 +932,30 @@ def generate_dag(
             rng,
         )
 
-    # 6. Create end node (final_boss)
-    end_candidates = clusters.get_by_type("final_boss")
-    if not end_candidates:
-        raise GenerationError("No final_boss cluster found")
+    # 7. Create end node (final_boss from candidates)
+    final_zone_candidates = config.structure.effective_final_boss_candidates.copy()
+    rng.shuffle(final_zone_candidates)
 
-    end_cluster = pick_cluster(end_candidates, used_zones, rng, require_exits=False)
+    # Find a cluster matching one of the candidate zones
+    end_cluster = None
+    all_boss_clusters = clusters.get_by_type("major_boss") + clusters.get_by_type(
+        "final_boss"
+    )
+
+    for zone_name in final_zone_candidates:
+        for cluster in all_boss_clusters:
+            if zone_name in cluster.zones:
+                # Check no zone overlap with already used zones
+                if not any(z in used_zones for z in cluster.zones):
+                    end_cluster = cluster
+                    break
+        if end_cluster:
+            break
+
     if end_cluster is None:
-        raise GenerationError("Could not pick final_boss cluster")
+        raise GenerationError(
+            f"No available final boss from candidates: {final_zone_candidates}"
+        )
 
     # Final boss has exactly 1 entry (from the single remaining branch)
     entry_fog_end = (
@@ -919,6 +1008,11 @@ def generate_with_retry(
     Raises:
         GenerationError: If generation fails after max_attempts
     """
+    # Validate config before attempting generation
+    config_errors = validate_config(config, clusters)
+    if config_errors:
+        raise GenerationError(f"Invalid configuration: {'; '.join(config_errors)}")
+
     if config.seed != 0:
         # Fixed seed - single attempt
         dag = generate_dag(config, clusters, config.seed)

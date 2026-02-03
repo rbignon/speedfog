@@ -148,3 +148,41 @@ class TestPlanLayerTypes:
         assert result.count("legacy_dungeon") >= 1
         assert result.count("boss_arena") >= 3
         assert result.count("mini_dungeon") >= 2
+
+    def test_major_boss_ratio_zero_no_major_boss(self):
+        """With major_boss_ratio=0, no major_boss should appear."""
+        reqs = RequirementsConfig(legacy_dungeons=1, bosses=2, mini_dungeons=2)
+        rng = random.Random(42)
+        result = plan_layer_types(reqs, total_layers=10, rng=rng, major_boss_ratio=0.0)
+        assert "major_boss" not in result
+
+    def test_major_boss_ratio_adds_major_bosses(self):
+        """With major_boss_ratio > 0, major_boss entries should appear."""
+        reqs = RequirementsConfig(legacy_dungeons=1, bosses=2, mini_dungeons=2)
+        rng = random.Random(42)
+        result = plan_layer_types(reqs, total_layers=10, rng=rng, major_boss_ratio=0.3)
+        # 0.3 * 10 = 3 major bosses expected
+        assert result.count("major_boss") >= 1
+
+    def test_major_boss_ratio_not_in_last_layer(self):
+        """Major bosses should not appear in the last layer."""
+        reqs = RequirementsConfig(legacy_dungeons=0, bosses=0, mini_dungeons=0)
+        # Test with high ratio to maximize chance of hitting last layer
+        for seed in range(100):
+            rng = random.Random(seed)
+            result = plan_layer_types(
+                reqs, total_layers=5, rng=rng, major_boss_ratio=0.8
+            )
+            # Last layer should never be major_boss
+            assert (
+                result[-1] != "major_boss"
+            ), f"Last layer is major_boss with seed {seed}"
+
+    def test_major_boss_ratio_respects_ratio(self):
+        """Number of major bosses should roughly match the ratio."""
+        reqs = RequirementsConfig(legacy_dungeons=0, bosses=0, mini_dungeons=0)
+        rng = random.Random(42)
+        result = plan_layer_types(reqs, total_layers=10, rng=rng, major_boss_ratio=0.3)
+        # Expect about 3 major bosses (0.3 * 10)
+        num_major = result.count("major_boss")
+        assert 1 <= num_major <= 5, f"Expected ~3 major_boss, got {num_major}"

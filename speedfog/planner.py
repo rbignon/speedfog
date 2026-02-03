@@ -39,16 +39,19 @@ def plan_layer_types(
     requirements: RequirementsConfig,
     total_layers: int,
     rng: random.Random,
+    major_boss_ratio: float = 0.0,
 ) -> list[str]:
     """Plan sequence of cluster types for each layer.
 
     Ensures minimum requirements are met, pads with mini_dungeons if needed,
     trims if requirements exceed total_layers, and shuffles the result.
+    Then replaces some layers with major_boss based on major_boss_ratio.
 
     Args:
         requirements: Configuration specifying minimum counts for each type.
         total_layers: Total number of layers to plan.
         rng: Random number generator for shuffling.
+        major_boss_ratio: Ratio of layers that can be major_boss (0.0-1.0).
 
     Returns:
         List of cluster type strings, one per layer.
@@ -70,5 +73,16 @@ def plan_layer_types(
 
     # Shuffle to distribute types randomly across layers
     rng.shuffle(layer_types)
+
+    # Replace some layers with major_boss based on ratio
+    if major_boss_ratio > 0.0 and total_layers > 1:
+        num_major_boss_slots = max(1, int(total_layers * major_boss_ratio))
+        # Avoid last layer (reserved for merge to final_boss)
+        eligible_indices = list(range(total_layers - 1))
+        num_to_replace = min(num_major_boss_slots, len(eligible_indices))
+        major_boss_indices = rng.sample(eligible_indices, num_to_replace)
+
+        for idx in major_boss_indices:
+            layer_types[idx] = "major_boss"
 
     return layer_types

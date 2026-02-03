@@ -56,6 +56,14 @@ class StructureConfig:
     split_probability: float = 0.3
     merge_probability: float = 0.3
     max_branches: int = 3
+    first_layer_type: str | None = None
+    major_boss_ratio: float = 0.0
+    final_boss_candidates: list[str] = field(default_factory=list)
+
+    @property
+    def effective_final_boss_candidates(self) -> list[str]:
+        """Return candidates or default if empty."""
+        return self.final_boss_candidates or ["leyndell_erdtree"]
 
 
 @dataclass
@@ -169,6 +177,11 @@ class Config:
                 split_probability=structure_section.get("split_probability", 0.3),
                 merge_probability=structure_section.get("merge_probability", 0.3),
                 max_branches=structure_section.get("max_branches", 3),
+                first_layer_type=structure_section.get("first_layer_type"),
+                major_boss_ratio=structure_section.get("major_boss_ratio", 0.0),
+                final_boss_candidates=structure_section.get(
+                    "final_boss_candidates", []
+                ),
             ),
             paths=PathsConfig(
                 game_dir=paths_section.get("game_dir", ""),

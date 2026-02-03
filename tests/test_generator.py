@@ -13,6 +13,7 @@ from speedfog.generator import (
     generate_with_retry,
     pick_cluster,
     pick_entry_fog_with_exits,
+    validate_config,
 )
 
 _SENTINEL = object()
@@ -73,10 +74,10 @@ def make_cluster_pool() -> ClusterPool:
     pool.add(
         make_cluster(
             "erdtree_boss",
-            zones=["erdtree_throne"],
+            zones=["leyndell_erdtree"],
             cluster_type="final_boss",
             weight=5,
-            entry_fogs=[{"fog_id": "final_entry", "zone": "erdtree_throne"}],
+            entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
             exit_fogs=[],
         )
     )
@@ -458,10 +459,10 @@ class TestGenerateDag:
         pool.add(
             make_cluster(
                 "erdtree_boss",
-                zones=["erdtree_throne"],
+                zones=["leyndell_erdtree"],
                 cluster_type="final_boss",
                 weight=5,
-                entry_fogs=[{"fog_id": "final_entry", "zone": "erdtree_throne"}],
+                entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
                 exit_fogs=[],
             )
         )
@@ -553,7 +554,7 @@ class TestGenerateDag:
         pool.add(
             make_cluster(
                 "erdtree_boss",
-                zones=["erdtree"],
+                zones=["leyndell_erdtree"],
                 cluster_type="final_boss",
             )
         )
@@ -729,7 +730,7 @@ class TestGenerateWithRetry:
         pool.add(
             make_cluster(
                 "erdtree_boss",
-                zones=["erdtree"],
+                zones=["leyndell_erdtree"],
                 cluster_type="final_boss",
             )
         )
@@ -745,7 +746,7 @@ class TestGenerateWithRetry:
         pool.add(
             make_cluster(
                 "erdtree_boss",
-                zones=["erdtree"],
+                zones=["leyndell_erdtree"],
                 cluster_type="final_boss",
             )
         )
@@ -754,3 +755,86 @@ class TestGenerateWithRetry:
 
         with pytest.raises(GenerationError):
             generate_with_retry(config, pool)
+
+
+class TestValidateConfig:
+    """Tests for validate_config function."""
+
+    def test_valid_config_returns_empty_list(self):
+        """Valid configuration returns no errors."""
+        pool = make_cluster_pool()
+        config = Config()
+        errors = validate_config(config, pool)
+        assert errors == []
+
+    def test_invalid_first_layer_type(self):
+        """Invalid first_layer_type returns error."""
+        pool = make_cluster_pool()
+        config = Config()
+        config.structure.first_layer_type = "invalid_type"
+        errors = validate_config(config, pool)
+        assert len(errors) == 1
+        assert "first_layer_type" in errors[0]
+        assert "invalid_type" in errors[0]
+
+    def test_valid_first_layer_type(self):
+        """Valid first_layer_type returns no error."""
+        pool = make_cluster_pool()
+        config = Config()
+        config.structure.first_layer_type = "legacy_dungeon"
+        errors = validate_config(config, pool)
+        assert errors == []
+
+    def test_major_boss_ratio_out_of_range_negative(self):
+        """Negative major_boss_ratio returns error."""
+        pool = make_cluster_pool()
+        config = Config()
+        config.structure.major_boss_ratio = -0.1
+        errors = validate_config(config, pool)
+        assert len(errors) == 1
+        assert "major_boss_ratio" in errors[0]
+
+    def test_major_boss_ratio_out_of_range_above_one(self):
+        """major_boss_ratio > 1.0 returns error."""
+        pool = make_cluster_pool()
+        config = Config()
+        config.structure.major_boss_ratio = 1.5
+        errors = validate_config(config, pool)
+        assert len(errors) == 1
+        assert "major_boss_ratio" in errors[0]
+
+    def test_valid_major_boss_ratio(self):
+        """Valid major_boss_ratio returns no error."""
+        pool = make_cluster_pool()
+        config = Config()
+        config.structure.major_boss_ratio = 0.5
+        errors = validate_config(config, pool)
+        assert errors == []
+
+    def test_unknown_final_boss_candidate(self):
+        """Unknown zone in final_boss_candidates returns error."""
+        pool = make_cluster_pool()
+        config = Config()
+        config.structure.final_boss_candidates = ["nonexistent_zone"]
+        errors = validate_config(config, pool)
+        assert len(errors) == 1
+        assert "nonexistent_zone" in errors[0]
+
+    def test_valid_final_boss_candidate(self):
+        """Valid zone in final_boss_candidates returns no error."""
+        pool = make_cluster_pool()
+        config = Config()
+        # leyndell_erdtree exists in the fixture
+        config.structure.final_boss_candidates = ["leyndell_erdtree"]
+        errors = validate_config(config, pool)
+        assert errors == []
+
+    def test_multiple_errors_returned(self):
+        """Multiple config errors are all returned."""
+        pool = make_cluster_pool()
+        config = Config()
+        config.structure.first_layer_type = "bad_type"
+        config.structure.major_boss_ratio = 2.0
+        config.structure.final_boss_candidates = ["bad_zone"]
+        errors = validate_config(config, pool)
+        assert len(errors) == 3

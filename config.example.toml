@@ -48,6 +48,32 @@ merge_probability = 0.3
 # Maximum number of branches when splitting.
 max_branches = 3
 
+# Force the first layer after start to be a specific cluster type.
+# Options: "legacy_dungeon", "mini_dungeon", "boss_arena", "major_boss"
+# If omitted: random based on requirements (current behavior)
+# first_layer_type = "legacy_dungeon"
+
+# Ratio of intermediate layers that can contain a major boss (0.0-1.0).
+# 0.0 = no intermediate major bosses (default)
+# 0.2 = roughly 20% of layers can be major bosses
+# major_boss_ratio = 0.2
+
+# Candidates for the final boss (zone names).
+# One will be chosen randomly. If omitted: Radagon only.
+# Available major bosses:
+#   caelid_radahn, haligtree_malenia, mohgwyn_boss, volcano_rykard,
+#   stormveil_godrick, farumazula_maliketh, flamepeak_firegiant,
+#   leyndell_erdtree (Radagon), leyndell_throne (Gideon), etc.
+# final_boss_candidates = [
+#     "leyndell_erdtree",
+#     "caelid_radahn",
+#     "haligtree_malenia",
+#     "mohgwyn_boss",
+#     "volcano_rykard",
+#     "farumazula_maliketh",
+#     "flamepeak_firegiant",
+# ]
+
 [paths]
 # Path to Elden Ring installation.
 game_dir = "C:/Program Files/Steam/steamapps/common/ELDEN RING/Game"

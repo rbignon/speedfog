@@ -133,3 +133,43 @@ def test_structure_defaults():
     assert config.structure.max_parallel_paths == 3
     assert config.structure.min_layers == 6
     assert config.structure.max_layers == 10
+    assert config.structure.first_layer_type is None
+    assert config.structure.major_boss_ratio == 0.0
+    assert config.structure.final_boss_candidates == []
+
+
+def test_structure_new_options(tmp_path):
+    """StructureConfig parses new DAG generation options."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[structure]
+first_layer_type = "legacy_dungeon"
+major_boss_ratio = 0.2
+final_boss_candidates = ["caelid_radahn", "haligtree_malenia", "leyndell_erdtree"]
+""")
+    config = Config.from_toml(config_file)
+    assert config.structure.first_layer_type == "legacy_dungeon"
+    assert config.structure.major_boss_ratio == 0.2
+    assert config.structure.final_boss_candidates == [
+        "caelid_radahn",
+        "haligtree_malenia",
+        "leyndell_erdtree",
+    ]
+
+
+def test_effective_final_boss_candidates_default():
+    """effective_final_boss_candidates returns default when list is empty."""
+    config = Config.from_dict({})
+    assert config.structure.final_boss_candidates == []
+    assert config.structure.effective_final_boss_candidates == ["leyndell_erdtree"]
+
+
+def test_effective_final_boss_candidates_custom():
+    """effective_final_boss_candidates returns custom list when set."""
+    config = Config.from_dict(
+        {"structure": {"final_boss_candidates": ["caelid_radahn", "mohgwyn_boss"]}}
+    )
+    assert config.structure.effective_final_boss_candidates == [
+        "caelid_radahn",
+        "mohgwyn_boss",
+    ]
