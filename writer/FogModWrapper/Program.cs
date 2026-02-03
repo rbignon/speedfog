@@ -319,6 +319,7 @@ Example:
         // 7c. Inject starting resources (runes, golden seeds, sacred tears)
         StartingResourcesInjector.Inject(
             modDir,
+            events,
             graphData.StartingRunes,
             graphData.StartingGoldenSeeds,
             graphData.StartingSacredTears
