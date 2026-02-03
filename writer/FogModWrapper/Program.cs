@@ -328,6 +328,9 @@ Example:
         // 7d. Inject Roundtable unlock (bypasses DLC finger pickup detection)
         RoundtableUnlockInjector.Inject(modDir);
 
+        // 7e. Inject smithing stones into merchant shop
+        SmithingStoneShopInjector.Inject(modDir);
+
         // 8. Package with ModEngine 2
         var packager = new PackagingWriter(config.OutputDir);
         await packager.WritePackageAsync();

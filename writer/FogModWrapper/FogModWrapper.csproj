@@ -46,4 +46,12 @@
     </None>
   </ItemGroup>
 
+  <!-- Copy paramdefs needed for shop injection -->
+  <ItemGroup>
+    <None Include="eldendata/Defs/ShopLineupParam.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>eldendata/Defs/ShopLineupParam.xml</Link>
+    </None>
+  </ItemGroup>
+
 </Project>
