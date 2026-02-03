@@ -114,3 +114,8 @@ great_runes = true
 # rune_mohg = true
 # rune_rykard = true
 # rune_malenia = true
+
+# Consumable starting resources
+# golden_seeds = 5       # Golden Seeds to upgrade flask uses (0-99)
+# sacred_tears = 3       # Sacred Tears to upgrade flask potency (0-12)
+# starting_runes = 50000 # Runes added to starting character (0-10000000)

@@ -316,7 +316,15 @@ Example:
             StartingItemInjector.Inject(modDir, graphData.StartingItemLots);
         }
 
-        // 7c. Inject Roundtable unlock (bypasses DLC finger pickup detection)
+        // 7c. Inject starting resources (runes, golden seeds, sacred tears)
+        StartingResourcesInjector.Inject(
+            modDir,
+            graphData.StartingRunes,
+            graphData.StartingGoldenSeeds,
+            graphData.StartingSacredTears
+        );
+
+        // 7d. Inject Roundtable unlock (bypasses DLC finger pickup detection)
         RoundtableUnlockInjector.Inject(modDir);
 
         // 8. Package with ModEngine 2

@@ -98,6 +98,22 @@ class StartingItemsConfig:
     rune_rykard: bool = True  # ItemLot 34120500
     rune_malenia: bool = True  # ItemLot 34150000
 
+    # Consumable starting resources
+    golden_seeds: int = 0  # Golden Seeds (Good ID 10010) - upgrade flask uses
+    sacred_tears: int = 0  # Sacred Tears (Good ID 10020) - upgrade flask potency
+    starting_runes: int = 0  # Runes added to starting character via CharaInitParam
+
+    def __post_init__(self) -> None:
+        """Validate starting items configuration."""
+        if self.golden_seeds < 0 or self.golden_seeds > 99:
+            raise ValueError(f"golden_seeds must be 0-99, got {self.golden_seeds}")
+        if self.sacred_tears < 0 or self.sacred_tears > 12:
+            raise ValueError(f"sacred_tears must be 0-12, got {self.sacred_tears}")
+        if self.starting_runes < 0 or self.starting_runes > 10_000_000:
+            raise ValueError(
+                f"starting_runes must be 0-10000000, got {self.starting_runes}"
+            )
+
     def get_item_lots(self) -> list[int]:
         """Get list of ItemLot IDs to award at game start."""
         lots: list[int] = []
@@ -202,6 +218,9 @@ class Config:
                 rune_mohg=starting_items_section.get("rune_mohg", True),
                 rune_rykard=starting_items_section.get("rune_rykard", True),
                 rune_malenia=starting_items_section.get("rune_malenia", True),
+                golden_seeds=starting_items_section.get("golden_seeds", 0),
+                sacred_tears=starting_items_section.get("sacred_tears", 0),
+                starting_runes=starting_items_section.get("starting_runes", 0),
             ),
         )
 

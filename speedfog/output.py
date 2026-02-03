@@ -197,6 +197,9 @@ def dag_to_dict_v2(
     options: dict[str, bool] | None = None,
     fog_data: dict[str, dict[str, Any]] | None = None,
     starting_item_lots: list[int] | None = None,
+    starting_runes: int = 0,
+    starting_golden_seeds: int = 0,
+    starting_sacred_tears: int = 0,
 ) -> dict[str, Any]:
     """Convert a DAG to v2 JSON-serializable dictionary for FogModWrapper.
 
@@ -206,6 +209,9 @@ def dag_to_dict_v2(
         options: FogMod options to include (default: scale=True)
         fog_data: Optional fog_data.json lookup for accurate map IDs (esp. for warps)
         starting_item_lots: ItemLot IDs to award at game start
+        starting_runes: Runes to add to starting classes (via CharaInitParam)
+        starting_golden_seeds: Golden Seeds to give at start
+        starting_sacred_tears: Sacred Tears to give at start
 
     Returns:
         Dictionary with the following structure:
@@ -215,6 +221,9 @@ def dag_to_dict_v2(
         - connections: list of {exit_area, exit_gate, entrance_area, entrance_gate}
         - area_tiers: dict of zone -> tier
         - starting_item_lots: list of ItemLot IDs
+        - starting_runes: int
+        - starting_golden_seeds: int
+        - starting_sacred_tears: int
     """
     if options is None:
         options = {
@@ -278,6 +287,9 @@ def dag_to_dict_v2(
         "connections": connections,
         "area_tiers": area_tiers,
         "starting_item_lots": starting_item_lots or [],
+        "starting_runes": starting_runes,
+        "starting_golden_seeds": starting_golden_seeds,
+        "starting_sacred_tears": starting_sacred_tears,
     }
 
 
@@ -288,6 +300,9 @@ def export_json_v2(
     options: dict[str, bool] | None = None,
     fog_data: dict[str, dict[str, Any]] | None = None,
     starting_item_lots: list[int] | None = None,
+    starting_runes: int = 0,
+    starting_golden_seeds: int = 0,
+    starting_sacred_tears: int = 0,
 ) -> None:
     """Export a DAG to v2 formatted JSON file for FogModWrapper.
 
@@ -298,8 +313,20 @@ def export_json_v2(
         options: FogMod options (default: scale=True, shuffle=True)
         fog_data: Optional fog_data.json lookup for accurate map IDs
         starting_item_lots: ItemLot IDs to award at game start
+        starting_runes: Runes to add to starting classes
+        starting_golden_seeds: Golden Seeds to give at start
+        starting_sacred_tears: Sacred Tears to give at start
     """
-    data = dag_to_dict_v2(dag, clusters, options, fog_data, starting_item_lots)
+    data = dag_to_dict_v2(
+        dag,
+        clusters,
+        options,
+        fog_data,
+        starting_item_lots,
+        starting_runes,
+        starting_golden_seeds,
+        starting_sacred_tears,
+    )
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 

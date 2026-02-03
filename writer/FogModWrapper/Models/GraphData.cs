@@ -24,6 +24,15 @@ public class GraphData
 
     [JsonPropertyName("starting_item_lots")]
     public List<int> StartingItemLots { get; set; } = new();
+
+    [JsonPropertyName("starting_runes")]
+    public int StartingRunes { get; set; } = 0;
+
+    [JsonPropertyName("starting_golden_seeds")]
+    public int StartingGoldenSeeds { get; set; } = 0;
+
+    [JsonPropertyName("starting_sacred_tears")]
+    public int StartingSacredTears { get; set; } = 0;
 }
 
 /// <summary>

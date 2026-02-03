@@ -173,3 +173,79 @@ def test_effective_final_boss_candidates_custom():
         "caelid_radahn",
         "mohgwyn_boss",
     ]
+
+
+def test_starting_items_defaults():
+    """StartingItemsConfig has correct defaults."""
+    config = Config.from_dict({})
+    assert config.starting_items.academy_key is True
+    assert config.starting_items.pureblood_medal is True
+    assert config.starting_items.great_runes is True
+    assert config.starting_items.golden_seeds == 0
+    assert config.starting_items.sacred_tears == 0
+    assert config.starting_items.starting_runes == 0
+
+
+def test_starting_items_consumables(tmp_path):
+    """StartingItemsConfig parses consumable starting resources."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[starting_items]
+golden_seeds = 5
+sacred_tears = 3
+starting_runes = 50000
+""")
+    config = Config.from_toml(config_file)
+    assert config.starting_items.golden_seeds == 5
+    assert config.starting_items.sacred_tears == 3
+    assert config.starting_items.starting_runes == 50000
+
+
+def test_starting_items_get_item_lots():
+    """get_item_lots returns correct ItemLot IDs."""
+    config = Config.from_dict(
+        {
+            "starting_items": {
+                "academy_key": True,
+                "pureblood_medal": False,
+                "great_runes": False,
+                "rune_godrick": True,
+                "rune_radahn": False,
+            }
+        }
+    )
+    lots = config.starting_items.get_item_lots()
+    assert 1034450100 in lots  # Academy Key
+    assert 100320 not in lots  # Pureblood Medal disabled
+    assert 34100500 in lots  # Godrick's Great Rune
+    assert 34130050 not in lots  # Radahn's Great Rune disabled
+
+
+def test_starting_items_validation_golden_seeds():
+    """golden_seeds must be 0-99."""
+    import pytest
+
+    with pytest.raises(ValueError, match="golden_seeds must be 0-99"):
+        Config.from_dict({"starting_items": {"golden_seeds": 100}})
+    with pytest.raises(ValueError, match="golden_seeds must be 0-99"):
+        Config.from_dict({"starting_items": {"golden_seeds": -1}})
+
+
+def test_starting_items_validation_sacred_tears():
+    """sacred_tears must be 0-12."""
+    import pytest
+
+    with pytest.raises(ValueError, match="sacred_tears must be 0-12"):
+        Config.from_dict({"starting_items": {"sacred_tears": 13}})
+    with pytest.raises(ValueError, match="sacred_tears must be 0-12"):
+        Config.from_dict({"starting_items": {"sacred_tears": -1}})
+
+
+def test_starting_items_validation_runes():
+    """starting_runes must be 0-10000000."""
+    import pytest
+
+    with pytest.raises(ValueError, match="starting_runes must be 0-10000000"):
+        Config.from_dict({"starting_items": {"starting_runes": 10_000_001}})
+    with pytest.raises(ValueError, match="starting_runes must be 0-10000000"):
+        Config.from_dict({"starting_items": {"starting_runes": -1}})
