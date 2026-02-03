@@ -60,10 +60,12 @@ max_branches = 3
 
 # Candidates for the final boss (zone names).
 # One will be chosen randomly. If omitted: Radagon only.
+# Use "all" to include all major bosses.
 # Available major bosses:
 #   caelid_radahn, haligtree_malenia, mohgwyn_boss, volcano_rykard,
 #   stormveil_godrick, farumazula_maliketh, flamepeak_firegiant,
 #   leyndell_erdtree (Radagon), leyndell_throne (Gideon), etc.
+# final_boss_candidates = ["all"]  # All major bosses
 # final_boss_candidates = [
 #     "leyndell_erdtree",
 #     "caelid_radahn",

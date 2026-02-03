@@ -1,6 +1,11 @@
 """Tests for config parsing."""
 
-from speedfog.config import BudgetConfig, Config, load_config
+from speedfog.config import (
+    BudgetConfig,
+    Config,
+    load_config,
+    resolve_final_boss_candidates,
+)
 
 
 def test_budget_min_max():
@@ -173,6 +178,30 @@ def test_effective_final_boss_candidates_custom():
         "caelid_radahn",
         "mohgwyn_boss",
     ]
+
+
+def test_resolve_final_boss_candidates_explicit_list():
+    """resolve_final_boss_candidates returns explicit list unchanged."""
+    all_zones = {"zone_a", "zone_b", "zone_c"}
+    candidates = ["zone_a", "zone_b"]
+    result = resolve_final_boss_candidates(candidates, all_zones)
+    assert result == ["zone_a", "zone_b"]
+
+
+def test_resolve_final_boss_candidates_all_keyword():
+    """resolve_final_boss_candidates expands 'all' to all zones."""
+    all_zones = {"zone_a", "zone_b", "zone_c"}
+    candidates = ["all"]
+    result = resolve_final_boss_candidates(candidates, all_zones)
+    assert result == ["zone_a", "zone_b", "zone_c"]  # Sorted
+
+
+def test_resolve_final_boss_candidates_empty_list():
+    """resolve_final_boss_candidates returns empty list unchanged."""
+    all_zones = {"zone_a", "zone_b"}
+    candidates: list[str] = []
+    result = resolve_final_boss_candidates(candidates, all_zones)
+    assert result == []
 
 
 def test_starting_items_defaults():

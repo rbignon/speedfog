@@ -66,6 +66,23 @@ class StructureConfig:
         return self.final_boss_candidates or ["leyndell_erdtree"]
 
 
+def resolve_final_boss_candidates(
+    candidates: list[str], all_boss_zones: set[str]
+) -> list[str]:
+    """Expand 'all' keyword to all major/final boss zones.
+
+    Args:
+        candidates: List of zone names, may include 'all' keyword.
+        all_boss_zones: Set of all valid boss zone names.
+
+    Returns:
+        List of zone names with 'all' expanded to actual zones.
+    """
+    if "all" in candidates:
+        return sorted(all_boss_zones)
+    return candidates
+
+
 @dataclass
 class PathsConfig:
     """File paths configuration."""

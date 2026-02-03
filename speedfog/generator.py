@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 
 from speedfog.clusters import ClusterData, ClusterPool
-from speedfog.config import Config
+from speedfog.config import Config, resolve_final_boss_candidates
 from speedfog.dag import Branch, Dag, DagNode
 from speedfog.planner import compute_tier, plan_layer_types
 from speedfog.validator import ValidationResult, validate_dag
@@ -63,7 +63,11 @@ def validate_config(config: Config, clusters: ClusterPool) -> list[str]:
     )
     all_boss_zones = {zone for cluster in all_boss_clusters for zone in cluster.zones}
 
-    for zone in config.structure.effective_final_boss_candidates:
+    # Resolve "all" keyword and validate each zone
+    resolved_candidates = resolve_final_boss_candidates(
+        config.structure.effective_final_boss_candidates, all_boss_zones
+    )
+    for zone in resolved_candidates:
         if zone not in all_boss_zones:
             errors.append(f"Unknown final_boss candidate zone: '{zone}'")
 
@@ -933,14 +937,20 @@ def generate_dag(
         )
 
     # 7. Create end node (final_boss from candidates)
-    final_zone_candidates = config.structure.effective_final_boss_candidates.copy()
+    all_boss_clusters = clusters.get_by_type("major_boss") + clusters.get_by_type(
+        "final_boss"
+    )
+    all_boss_zones = {zone for cluster in all_boss_clusters for zone in cluster.zones}
+
+    # Resolve "all" keyword to actual zone names
+    final_zone_candidates = resolve_final_boss_candidates(
+        config.structure.effective_final_boss_candidates, all_boss_zones
+    )
+    final_zone_candidates = list(final_zone_candidates)  # Make a copy for shuffling
     rng.shuffle(final_zone_candidates)
 
     # Find a cluster matching one of the candidate zones
     end_cluster = None
-    all_boss_clusters = clusters.get_by_type("major_boss") + clusters.get_by_type(
-        "final_boss"
-    )
 
     for zone_name in final_zone_candidates:
         for cluster in all_boss_clusters:

@@ -829,6 +829,14 @@ class TestValidateConfig:
         errors = validate_config(config, pool)
         assert errors == []
 
+    def test_final_boss_candidates_all_keyword(self):
+        """'all' keyword in final_boss_candidates is valid."""
+        pool = make_cluster_pool()
+        config = Config()
+        config.structure.final_boss_candidates = ["all"]
+        errors = validate_config(config, pool)
+        assert errors == []
+
     def test_multiple_errors_returned(self):
         """Multiple config errors are all returned."""
         pool = make_cluster_pool()
