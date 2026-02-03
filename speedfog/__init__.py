@@ -19,7 +19,7 @@ from speedfog.generator import (
     generate_dag,
     generate_with_retry,
 )
-from speedfog.output import dag_to_dict, export_json, export_spoiler_log
+from speedfog.output import dag_to_dict, export_spoiler_log
 from speedfog.planner import compute_tier, plan_layer_types
 from speedfog.validator import ValidationResult, validate_dag
 
@@ -56,6 +56,5 @@ __all__ = [
     "validate_dag",
     # Output
     "dag_to_dict",
-    "export_json",
     "export_spoiler_log",
 ]

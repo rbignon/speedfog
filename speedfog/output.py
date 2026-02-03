@@ -85,18 +85,6 @@ def dag_to_dict(dag: Dag) -> dict[str, Any]:
     }
 
 
-def export_json(dag: Dag, output_path: Path) -> None:
-    """Export a DAG to a formatted JSON file (v1 format).
-
-    Args:
-        dag: The DAG to export
-        output_path: Path to write the JSON file
-    """
-    data = dag_to_dict(dag)
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
-
-
 # =============================================================================
 # V2 Format for FogModWrapper
 # =============================================================================

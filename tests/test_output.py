@@ -1,11 +1,10 @@
 """Tests for output module (JSON and spoiler log export)."""
 
-import json
 from pathlib import Path
 
 from speedfog.clusters import ClusterData
 from speedfog.dag import Dag, DagNode
-from speedfog.output import dag_to_dict, export_json, export_spoiler_log
+from speedfog.output import dag_to_dict, export_spoiler_log
 
 
 def make_cluster(
@@ -216,44 +215,6 @@ class TestDagToDict:
         assert result["start_id"] == "start"
         assert "end_id" in result
         assert result["end_id"] == "end"
-
-
-# =============================================================================
-# export_json tests
-# =============================================================================
-
-
-class TestExportJson:
-    """Tests for export_json function."""
-
-    def test_creates_valid_json_file(self, tmp_path: Path):
-        """export_json creates a valid JSON file."""
-        dag = make_test_dag()
-        output_file = tmp_path / "graph.json"
-
-        export_json(dag, output_file)
-
-        assert output_file.exists()
-        # Verify it's valid JSON
-        with open(output_file, encoding="utf-8") as f:
-            data = json.load(f)
-        assert "seed" in data
-        assert data["seed"] == 42
-
-    def test_json_is_formatted(self, tmp_path: Path):
-        """export_json creates formatted (indented) JSON."""
-        dag = make_test_dag()
-        output_file = tmp_path / "graph.json"
-
-        export_json(dag, output_file)
-
-        content = output_file.read_text(encoding="utf-8")
-        # Check that it's indented (contains newlines and spaces)
-        assert "\n" in content
-        # Check for indentation (at least 2 spaces at start of some line)
-        lines = content.split("\n")
-        indented_lines = [line for line in lines if line.startswith("  ")]
-        assert len(indented_lines) > 0
 
 
 # =============================================================================

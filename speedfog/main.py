@@ -13,7 +13,6 @@ from speedfog.clusters import load_clusters
 from speedfog.config import Config, load_config
 from speedfog.generator import GenerationError, generate_with_retry
 from speedfog.output import (
-    export_json,
     export_json_v2,
     export_spoiler_log,
     load_fog_data,
@@ -261,12 +260,6 @@ def main() -> int:
     json_path = seed_dir / "graph.json"
     export_json_v2(dag, clusters, json_path, fog_data=fog_data)
     print(f"Written: {json_path}")
-
-    # Also export v1 format for compatibility
-    json_v1_path = seed_dir / "graph_v1.json"
-    export_json(dag, json_v1_path)
-    if args.verbose:
-        print(f"Written: {json_v1_path} (v1 format)")
 
     # Export spoiler if requested using output module
     if args.spoiler:

@@ -11,11 +11,11 @@ from speedfog import (
     RequirementsConfig,
     StructureConfig,
     ValidationResult,
-    export_json,
     export_spoiler_log,
     generate_with_retry,
     load_clusters,
 )
+from speedfog.output import export_json_v2
 
 
 @pytest.fixture
@@ -64,7 +64,7 @@ class TestFullPipeline:
 
         dag = result.dag
         json_path = tmp_path / "graph.json"
-        export_json(dag, json_path)
+        export_json_v2(dag, real_clusters, json_path)
         assert json_path.exists()
         with open(json_path) as f:
             data = json.load(f)
@@ -132,47 +132,40 @@ class TestFullPipeline:
         assert edges1 == edges2
 
     def test_exported_json_structure(self, real_clusters, relaxed_config, tmp_path):
-        """Verify exported JSON has correct structure for C# writer."""
+        """Verify exported JSON v2 has correct structure for FogModWrapper."""
         config = relaxed_config
         result = generate_with_retry(config, real_clusters)
         dag = result.dag
 
         json_path = tmp_path / "graph.json"
-        export_json(dag, json_path)
+        export_json_v2(dag, real_clusters, json_path)
 
         with open(json_path) as f:
             data = json.load(f)
 
-        # Top-level keys
+        # Top-level keys (v2 format)
+        assert data["version"] == "2.0"
         assert "seed" in data
-        assert "total_layers" in data
-        assert "total_nodes" in data
-        assert "total_zones" in data
-        assert "total_paths" in data
-        assert "path_weights" in data
-        assert "nodes" in data
-        assert "edges" in data
-        assert "start_id" in data
-        assert "end_id" in data
+        assert "options" in data
+        assert "connections" in data
+        assert "area_tiers" in data
 
-        # Nodes structure
-        assert isinstance(data["nodes"], dict)
-        for _node_id, node in data["nodes"].items():
-            assert "cluster_id" in node
-            assert "zones" in node
-            assert "type" in node
-            assert "weight" in node
-            assert "layer" in node
-            assert "tier" in node
-            assert "entry_fogs" in node
-            assert "exit_fogs" in node
+        # Options structure
+        assert isinstance(data["options"], dict)
 
-        # Edges structure
-        assert isinstance(data["edges"], list)
-        for edge in data["edges"]:
-            assert "source" in edge
-            assert "target" in edge
-            assert "fog_id" in edge
+        # Connections structure
+        assert isinstance(data["connections"], list)
+        for conn in data["connections"]:
+            assert "exit_area" in conn
+            assert "exit_gate" in conn
+            assert "entrance_area" in conn
+            assert "entrance_gate" in conn
+
+        # Area tiers structure
+        assert isinstance(data["area_tiers"], dict)
+        for zone, tier in data["area_tiers"].items():
+            assert isinstance(zone, str)
+            assert isinstance(tier, int)
 
     def test_validation_result_structure(self, real_clusters, relaxed_config):
         """Verify validation returns properly structured result."""
