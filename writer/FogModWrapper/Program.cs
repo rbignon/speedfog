@@ -144,7 +144,6 @@ Example:
         opt[Feature.AllowUnlinked] = true;  // Allow edges without connections
         opt[Feature.ForceUnlinked] = true;  // Force unlinked mode
         opt[Feature.SegmentFortresses] = true;  // Treat fortresses as segments
-        opt[Feature.ChapelInit] = true;  // Roundtable available after first grace (not first item pickup)
 
         Console.WriteLine($"Options: seed={opt.Seed}, crawl={opt["crawl"]}, scale={opt["scale"]}");
 
