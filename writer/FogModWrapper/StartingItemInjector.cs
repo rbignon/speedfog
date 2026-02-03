@@ -90,7 +90,7 @@ public static class StartingItemInjector
         // 2. AwardItemLot(itemLot)
 
         // Instruction: IfEventFlag(conditionGroup, state, flagType, flagId)
-        // Bank 3, ID 3
+        // Bank 3, ID 0 (IF Event Flag)
         // Args: condition (1 byte), state (1 byte), flagType (1 byte), padding (1 byte), flagId (4 bytes)
         var ifFlagArgs = new byte[8];
         ifFlagArgs[0] = 0;  // MAIN condition group
@@ -99,7 +99,7 @@ public static class StartingItemInjector
         ifFlagArgs[3] = 0;  // padding
         BitConverter.GetBytes(FINGER_PICKUP_FLAG).CopyTo(ifFlagArgs, 4);
 
-        evt.Instructions.Add(new EMEVD.Instruction(3, 3, ifFlagArgs));
+        evt.Instructions.Add(new EMEVD.Instruction(3, 0, ifFlagArgs));
 
         // Instruction: AwardItemLot(itemLotId)
         // Bank 2003, ID 4 - DirectlyGivePlayerItem / AwardItemLot
