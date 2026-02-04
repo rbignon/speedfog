@@ -44,6 +44,9 @@ class Program
                 case "--output":
                     config.OutputDir = args[++i];
                     break;
+                case "--merge-dir":
+                    config.MergeDir = args[++i];
+                    break;
                 case "-h":
                 case "--help":
                     PrintUsage();
@@ -78,16 +81,18 @@ class Program
     {
         Console.WriteLine(@"FogModWrapper - SpeedFog mod generator using FogMod.dll
 
-Usage: FogModWrapper <seed_dir> --game-dir <path> --data-dir <path> -o <output>
+Usage: FogModWrapper <seed_dir> --game-dir <path> --data-dir <path> -o <output> [--merge-dir <path>]
 
 Arguments:
   <seed_dir>         Path to seed directory (contains graph.json, spoiler.txt)
   --game-dir <path>  Path to Elden Ring Game directory
   --data-dir <path>  Path to data directory (fog.txt, fogevents.txt, er-common.emedf.json)
   -o, --output       Output directory for generated mod files
+  --merge-dir <path> Optional: Path to Item Randomizer output to merge
 
 Example:
   FogModWrapper seeds/123456 --game-dir ""C:/Games/ELDEN RING/Game"" --data-dir data -o output
+  FogModWrapper seeds/123456 --game-dir ""C:/Games/ELDEN RING/Game"" --data-dir data -o output --merge-dir temp/item-randomizer
 ");
     }
 
@@ -98,6 +103,10 @@ Example:
         Console.WriteLine($"Game dir: {config.GameDir}");
         Console.WriteLine($"Data dir: {config.DataDir}");
         Console.WriteLine($"Output: {config.OutputDir}");
+        if (!string.IsNullOrEmpty(config.MergeDir))
+        {
+            Console.WriteLine($"Merge dir: {config.MergeDir}");
+        }
         Console.WriteLine();
 
         // Mod files go in mods/speedfog/ subdirectory for ModEngine
@@ -306,8 +315,15 @@ Example:
         // 7. Call FogMod writer
         Console.WriteLine($"Writing mod files to: {modDir}");
 
-        // Create MergedMods to provide access to game files
-        var mergedMods = new MergedMods(config.GameDir);
+        // Create MergedMods to provide access to game files (and optionally Item Randomizer output)
+        var gameDirs = new List<string> { config.GameDir };
+        var modDirs = new List<string>();
+        if (!string.IsNullOrEmpty(config.MergeDir))
+        {
+            Console.WriteLine($"Merging with: {config.MergeDir}");
+            modDirs.Add(config.MergeDir);
+        }
+        var mergedMods = new MergedMods(gameDirs, modDirs);
 
         var writer = new GameDataWriterE();
         writer.Write(opt, ann, graph, mergedMods, modDir, events, eventConfig, Console.WriteLine);
@@ -345,5 +361,6 @@ Example:
         public string GameDir { get; set; } = "";
         public string DataDir { get; set; } = "";
         public string OutputDir { get; set; } = "";
+        public string? MergeDir { get; set; }
     }
 }
