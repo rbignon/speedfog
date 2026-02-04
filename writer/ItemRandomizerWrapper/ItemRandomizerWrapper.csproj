@@ -33,12 +33,15 @@
     </Reference>
   </ItemGroup>
 
-  <!-- Copy native compression libraries to output -->
+  <!-- Copy native compression libraries and dependencies to output -->
   <ItemGroup>
     <None Include="../lib/oo2core_6_win64.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="../lib/libzstd.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="../lib/Pidgin.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
