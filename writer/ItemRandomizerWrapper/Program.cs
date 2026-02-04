@@ -182,18 +182,19 @@ Example:
         Console.WriteLine();
 
         // Load enemy preset if specified
+        // Preset.LoadPreset expects a preset name and looks in presets/{name}.txt
         Preset? preset = null;
         if (!string.IsNullOrEmpty(randoConfig.Preset))
         {
-            var presetPath = Path.Combine(Path.GetDirectoryName(config.ConfigPath) ?? ".", randoConfig.Preset);
-            if (File.Exists(presetPath))
+            var presetFile = Path.Combine("presets", $"{randoConfig.Preset}.txt");
+            if (File.Exists(presetFile))
             {
-                Console.WriteLine($"Loading preset: {presetPath}");
-                preset = Preset.LoadPreset(presetPath);
+                Console.WriteLine($"Loading preset: {randoConfig.Preset}");
+                preset = Preset.LoadPreset(randoConfig.Preset);
             }
             else
             {
-                Console.WriteLine($"Warning: Preset not found: {presetPath}");
+                Console.WriteLine($"Warning: Preset file not found: {presetFile}");
             }
         }
 

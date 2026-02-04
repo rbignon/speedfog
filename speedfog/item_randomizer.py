@@ -31,7 +31,7 @@ def generate_item_config(config: Config, seed: int) -> dict[str, Any]:
             "crawl": True,
             "weaponreqs": config.item_randomizer.remove_requirements,
         },
-        "preset": "enemy_preset.yaml",
+        "preset": "speedfog_enemy",
         "helper_options": {
             "autoUpgradeWeapons": config.item_randomizer.auto_upgrade_weapons,
         },
@@ -88,6 +88,16 @@ def run_item_randomizer(
     game_dir = game_dir.resolve()
     output_dir = output_dir.resolve()
     config_path = seed_dir / "item_config.json"
+
+    # Copy preset to expected location (Preset.LoadPreset expects presets/{name}.txt)
+    preset_src = seed_dir / "enemy_preset.yaml"
+    presets_dir = wrapper_dir / "presets"
+    presets_dir.mkdir(exist_ok=True)
+    preset_dst = presets_dir / "speedfog_enemy.txt"
+    if preset_src.exists():
+        shutil.copy(preset_src, preset_dst)
+        if verbose:
+            print(f"Copied preset: {preset_dst}")
 
     if platform == "linux":
         cmd = ["wine", str(wrapper_exe.resolve())]

@@ -73,6 +73,7 @@ FOGRANDO_REQUIRED_DLLS = [
 # DLLs we need from Item Randomizer
 ITEMRANDO_REQUIRED_DLLS = [
     "RandomizerCommon.dll",
+    "Pidgin.dll",  # Parser library used by RandomizerCommon
     # Shared with FogRando (already extracted):
     # SoulsFormats.dll, SoulsIds.dll, YamlDotNet.dll, etc.
 ]

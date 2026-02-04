@@ -22,7 +22,7 @@ def test_generate_item_config_basic():
     assert result["options"]["fog"] is True
     assert result["options"]["crawl"] is True
     assert result["options"]["weaponreqs"] is True
-    assert result["preset"] == "enemy_preset.yaml"
+    assert result["preset"] == "speedfog_enemy"
     assert result["helper_options"]["autoUpgradeWeapons"] is True
 
 
