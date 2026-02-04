@@ -181,6 +181,22 @@ Example:
         Console.WriteLine($"Data dir: {dataDir}");
         Console.WriteLine();
 
+        // Load enemy preset if specified
+        Preset? preset = null;
+        if (!string.IsNullOrEmpty(randoConfig.Preset))
+        {
+            var presetPath = Path.Combine(Path.GetDirectoryName(config.ConfigPath) ?? ".", randoConfig.Preset);
+            if (File.Exists(presetPath))
+            {
+                Console.WriteLine($"Loading preset: {presetPath}");
+                preset = Preset.LoadPreset(presetPath);
+            }
+            else
+            {
+                Console.WriteLine($"Warning: Preset not found: {presetPath}");
+            }
+        }
+
         // Run randomizer
         var randomizer = new Randomizer();
         randomizer.Randomize(
@@ -188,11 +204,24 @@ Example:
             GameSpec.FromGame.ER,
             notify: status => Console.WriteLine($"  {status}"),
             outPath: config.OutputDir,
-            preset: null,
+            preset: preset,
             itemPreset: null,
             messages: new Messages("diste"),
             gameExe: Path.Combine(config.GameDir, "eldenring.exe")
         );
+
+        // Write helper options if specified (for RandomizerHelper.dll)
+        if (randoConfig.HelperOptions != null && randoConfig.HelperOptions.Count > 0)
+        {
+            var helperIniPath = Path.Combine(config.OutputDir, "RandomizerHelper_config.ini");
+            using var writer = new StreamWriter(helperIniPath);
+            writer.WriteLine("[settings]");
+            foreach (var kv in randoConfig.HelperOptions)
+            {
+                writer.WriteLine($"{kv.Key} = {kv.Value.ToString().ToLowerInvariant()}");
+            }
+            Console.WriteLine($"Written: {helperIniPath}");
+        }
 
         Console.WriteLine();
         Console.WriteLine($"Item randomization complete!");
@@ -212,5 +241,7 @@ Example:
         public int Seed { get; set; }
         public int Difficulty { get; set; } = 50;
         public Dictionary<string, bool>? Options { get; set; }
+        public string? Preset { get; set; }
+        public Dictionary<string, bool>? HelperOptions { get; set; }
     }
 }
