@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import shutil
+import subprocess
+import sys
+from pathlib import Path
 from typing import Any
 
 from speedfog.config import Config
@@ -32,3 +36,93 @@ def generate_item_config(config: Config, seed: int) -> dict[str, Any]:
             "autoUpgradeWeapons": config.item_randomizer.auto_upgrade_weapons,
         },
     }
+
+
+def run_item_randomizer(
+    seed_dir: Path,
+    game_dir: Path,
+    output_dir: Path,
+    platform: str | None,
+    verbose: bool,
+) -> bool:
+    """Run ItemRandomizerWrapper to generate randomized items/enemies.
+
+    Args:
+        seed_dir: Directory containing item_config.json and enemy_preset.yaml
+        game_dir: Path to Elden Ring Game directory
+        output_dir: Output directory for randomized files
+        platform: "windows", "linux", or None for auto-detect
+        verbose: Print command and output
+
+    Returns:
+        True on success, False on failure.
+    """
+    project_root = Path(__file__).parent.parent
+    wrapper_dir = project_root / "writer" / "ItemRandomizerWrapper"
+    wrapper_exe = wrapper_dir / "publish" / "win-x64" / "ItemRandomizerWrapper.exe"
+
+    if not wrapper_exe.exists():
+        print(
+            f"Error: ItemRandomizerWrapper not found at {wrapper_exe}", file=sys.stderr
+        )
+        print(
+            "Run: python tools/setup_dependencies.py --fogrando <path> --itemrando <path>",
+            file=sys.stderr,
+        )
+        return False
+
+    # Detect platform
+    if platform is None or platform == "auto":
+        platform = "windows" if sys.platform == "win32" else "linux"
+
+    # Check Wine availability on non-Windows
+    if platform == "linux" and shutil.which("wine") is None:
+        print(
+            "Error: Wine not found. Install wine to run Item Randomizer on Linux.",
+            file=sys.stderr,
+        )
+        return False
+
+    # Build command with absolute paths
+    seed_dir = seed_dir.resolve()
+    game_dir = game_dir.resolve()
+    output_dir = output_dir.resolve()
+    config_path = seed_dir / "item_config.json"
+
+    if platform == "linux":
+        cmd = ["wine", str(wrapper_exe.resolve())]
+    else:
+        cmd = [str(wrapper_exe.resolve())]
+
+    cmd.extend(
+        [
+            str(config_path),
+            "--game-dir",
+            str(game_dir),
+            "--data-dir",
+            str(wrapper_dir / "diste"),
+            "-o",
+            str(output_dir),
+        ]
+    )
+
+    if verbose:
+        print(f"Running: {' '.join(cmd)}")
+        print(f"Working directory: {wrapper_dir}")
+
+    # Run from wrapper_dir so it finds diste/
+    process = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        cwd=wrapper_dir,
+        bufsize=1,
+    )
+
+    assert process.stdout is not None
+    for line in process.stdout:
+        print(line, end="")
+
+    process.wait()
+    return process.returncode == 0
