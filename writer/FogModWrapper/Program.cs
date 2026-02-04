@@ -109,8 +109,8 @@ Example:
         }
         Console.WriteLine();
 
-        // Mod files go in mods/speedfog/ subdirectory for ModEngine
-        var modDir = Path.Combine(config.OutputDir, "mods", "speedfog");
+        // Mod files go in mods/fogmod/ subdirectory for ModEngine
+        var modDir = Path.Combine(config.OutputDir, "mods", "fogmod");
         Directory.CreateDirectory(modDir);
 
         // 1. Load our graph.json
@@ -315,15 +315,15 @@ Example:
         // 7. Call FogMod writer
         Console.WriteLine($"Writing mod files to: {modDir}");
 
-        // Create MergedMods to provide access to game files (and optionally Item Randomizer output)
-        var gameDirs = new List<string> { config.GameDir };
-        var modDirs = new List<string>();
+        // Create MergedMods to merge Item Randomizer output files
+        // MergedMods.Resolve() looks in these directories for files to merge
+        List<string>? modDirs = null;
         if (!string.IsNullOrEmpty(config.MergeDir))
         {
             Console.WriteLine($"Merging with: {config.MergeDir}");
-            modDirs.Add(config.MergeDir);
+            modDirs = new List<string> { config.MergeDir };
         }
-        var mergedMods = new MergedMods(gameDirs, modDirs);
+        var mergedMods = new MergedMods(modDirs, null);
 
         var writer = new GameDataWriterE();
         writer.Write(opt, ann, graph, mergedMods, modDir, events, eventConfig, Console.WriteLine);
@@ -351,7 +351,7 @@ Example:
 
         // 8. Package with ModEngine 2
         var packager = new PackagingWriter(config.OutputDir);
-        await packager.WritePackageAsync();
+        await packager.WritePackageAsync(config.MergeDir);
     }
 
     class Config

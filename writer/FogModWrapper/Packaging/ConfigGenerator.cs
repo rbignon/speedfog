@@ -9,10 +9,30 @@ public static class ConfigGenerator
     /// Writes the ModEngine 2 TOML configuration file.
     /// </summary>
     /// <param name="outputDir">The output directory.</param>
-    /// <param name="modPath">The relative path to the mod folder (default: "mods/speedfog").</param>
-    public static void WriteModEngineConfig(string outputDir, string modPath = "mods/speedfog")
+    /// <param name="modPath">The relative path to the mod folder (default: "mods/fogmod").</param>
+    /// <param name="itemRandomizerEnabled">Whether item randomizer was used (adds RandomizerHelper.dll).</param>
+    public static void WriteModEngineConfig(string outputDir, string modPath = "mods/fogmod", bool itemRandomizerEnabled = false)
     {
         var configPath = Path.Combine(outputDir, "config_speedfog.toml");
+
+        var externalDlls = new List<string> { @"lib\\RandomizerCrashFix.dll" };
+        if (itemRandomizerEnabled)
+        {
+            externalDlls.Add(@"lib\\RandomizerHelper.dll");
+        }
+
+        var dllsString = string.Join(",\n    ", externalDlls.Select(d => $"\"{d}\""));
+
+        // Build mods list - fogmod first (higher priority), then itemrando for non-merged files
+        // MergedMods merges regulation.bin and EMEVD, but map/msg/sfx need separate loading
+        var modsLines = new List<string>
+        {
+            $"    {{ enabled = true, name = \"fogmod\", path = \"{modPath}\" }}"
+        };
+        if (itemRandomizerEnabled)
+        {
+            modsLines.Add("    { enabled = true, name = \"itemrando\", path = \"mods/itemrando\" }");
+        }
 
         var config = $@"# SpeedFog ModEngine 2 Configuration
 # Auto-generated - do not edit manually
@@ -20,14 +40,14 @@ public static class ConfigGenerator
 [modengine]
 debug = false
 external_dlls = [
-    ""lib\\\\RandomizerCrashFix.dll"",
+    {dllsString},
 ]
 
 [extension.mod_loader]
 enabled = true
 loose_params = false
 mods = [
-    {{ enabled = true, name = ""speedfog"", path = ""{modPath}"" }}
+{string.Join(",\n", modsLines)}
 ]
 ";
 

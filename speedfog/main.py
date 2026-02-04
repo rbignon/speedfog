@@ -243,7 +243,8 @@ def main() -> int:
             print(f"Warning: Enemy preset not found at {preset_src}", file=sys.stderr)
 
         # Run ItemRandomizerWrapper
-        item_rando_dir = seed_dir / "temp" / "item-randomizer"
+        # Output directly to mods/itemrando so ModEngine can load it
+        item_rando_dir = seed_dir / "mods" / "itemrando"
         item_rando_dir.mkdir(parents=True, exist_ok=True)
 
         if run_item_randomizer(

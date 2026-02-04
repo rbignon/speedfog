@@ -1,4 +1,6 @@
+using System.Drawing;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using RandomizerCommon;
 using SoulsIds;
 
@@ -199,6 +201,10 @@ Example:
         }
 
         // Run randomizer
+        // Inject dummy MeasureText - CharacterWriter requires this for Elden Ring
+        // We don't need accurate measurements for headless operation, just estimate based on string length
+        CharacterWriter.MeasureText = (string s, Font f) => (int)(s.Length * f.Size * 0.6f);
+
         var randomizer = new Randomizer();
         randomizer.Randomize(
             opt,
@@ -207,7 +213,7 @@ Example:
             outPath: config.OutputDir,
             preset: preset,
             itemPreset: null,
-            messages: new Messages("diste"),
+            messages: null,
             gameExe: Path.Combine(config.GameDir, "eldenring.exe")
         );
 
@@ -239,10 +245,19 @@ Example:
 
     class RandomizerConfig
     {
+        [JsonPropertyName("seed")]
         public int Seed { get; set; }
+
+        [JsonPropertyName("difficulty")]
         public int Difficulty { get; set; } = 50;
+
+        [JsonPropertyName("options")]
         public Dictionary<string, bool>? Options { get; set; }
+
+        [JsonPropertyName("preset")]
         public string? Preset { get; set; }
+
+        [JsonPropertyName("helper_options")]
         public Dictionary<string, bool>? HelperOptions { get; set; }
     }
 }

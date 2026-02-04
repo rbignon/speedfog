@@ -16,11 +16,14 @@ public class PackagingWriter
     /// Writes the complete package: downloads ModEngine 2, copies it to output,
     /// and generates config and launcher scripts.
     /// </summary>
+    /// <param name="mergeDir">Optional merge directory (Item Randomizer output) - if set, includes RandomizerHelper.dll.</param>
     /// <param name="forceUpdate">Force re-download of ModEngine 2.</param>
-    public async Task WritePackageAsync(bool forceUpdate = false)
+    public async Task WritePackageAsync(string? mergeDir = null, bool forceUpdate = false)
     {
         Console.WriteLine();
         Console.WriteLine("=== Packaging SpeedFog Mod ===");
+
+        var itemRandomizerEnabled = !string.IsNullOrEmpty(mergeDir);
 
         using var downloader = new ModEngineDownloader(CacheHelper.GetCacheDirectory());
 
@@ -36,11 +39,24 @@ public class PackagingWriter
         CopyAssets();
         Console.WriteLine("Copied runtime assets to lib/");
 
-        // 4. Generate config file (using path relative to output dir)
-        ConfigGenerator.WriteModEngineConfig(_outputDir, "mods/speedfog");
+        // 4. Copy RandomizerHelper config if it exists in merge dir
+        if (itemRandomizerEnabled && mergeDir != null)
+        {
+            var helperConfigSrc = Path.Combine(mergeDir, "RandomizerHelper_config.ini");
+            if (File.Exists(helperConfigSrc))
+            {
+                var libDir = Path.Combine(_outputDir, "lib");
+                var helperConfigDst = Path.Combine(libDir, "RandomizerHelper_config.ini");
+                File.Copy(helperConfigSrc, helperConfigDst, overwrite: true);
+                Console.WriteLine("Copied RandomizerHelper_config.ini to lib/");
+            }
+        }
+
+        // 5. Generate config file (using path relative to output dir)
+        ConfigGenerator.WriteModEngineConfig(_outputDir, "mods/fogmod", itemRandomizerEnabled);
         Console.WriteLine("Generated config_speedfog.toml");
 
-        // 5. Generate launcher scripts
+        // 6. Generate launcher scripts
         ConfigGenerator.WriteBatchLauncher(_outputDir);
         ConfigGenerator.WriteShellLauncher(_outputDir);
         Console.WriteLine("Generated launcher scripts");

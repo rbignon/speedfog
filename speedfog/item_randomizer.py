@@ -121,18 +121,18 @@ def run_item_randomizer(
         print(f"Working directory: {wrapper_dir}")
 
     # Run from wrapper_dir so it finds diste/
+    # Don't use text=True - Wine output may contain non-UTF-8 bytes
     process = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        text=True,
         cwd=wrapper_dir,
-        bufsize=1,
     )
 
     assert process.stdout is not None
     for line in process.stdout:
-        print(line, end="")
+        # Decode with error replacement for Wine's binary output
+        print(line.decode("utf-8", errors="replace"), end="")
 
     process.wait()
     return process.returncode == 0
