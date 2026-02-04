@@ -17,16 +17,16 @@ Prerequisites:
 
 Usage:
     # Extract both (recommended)
-    python tools/setup_fogrando.py --fogrando /path/to/FogRando.zip --itemrando /path/to/ItemRandomizer.zip
+    python tools/setup_dependencies.py --fogrando /path/to/FogRando.zip --itemrando /path/to/ItemRandomizer.zip
 
     # Extract only FogRando
-    python tools/setup_fogrando.py --fogrando /path/to/FogRando.zip
+    python tools/setup_dependencies.py --fogrando /path/to/FogRando.zip
 
     # Extract only Item Randomizer
-    python tools/setup_fogrando.py --itemrando /path/to/ItemRandomizer.zip
+    python tools/setup_dependencies.py --itemrando /path/to/ItemRandomizer.zip
 
     # Legacy single-argument mode (FogRando only)
-    python tools/setup_fogrando.py /path/to/FogRando.zip
+    python tools/setup_dependencies.py /path/to/FogRando.zip
 """
 
 from __future__ import annotations

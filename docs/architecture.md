@@ -69,11 +69,11 @@ Standalone scripts for setup and data generation.
 
 | Script | Purpose |
 |--------|---------|
-| `setup_fogrando.py` | Extract FogRando and Item Randomizer dependencies |
+| `setup_dependencies.py` | Extract FogRando and Item Randomizer dependencies |
 | `generate_clusters.py` | Parse fog.txt → clusters.json |
 | `extract_fog_data.py` | Extract fog gate metadata |
 
-**setup_fogrando.py** extracts:
+**setup_dependencies.py** extracts:
 - From FogRando ZIP: FogMod.dll, SoulsFormats.dll, eldendata/, data files
 - From Item Randomizer ZIP: RandomizerCommon.dll, diste/, crash fix DLLs
 

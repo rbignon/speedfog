@@ -72,7 +72,7 @@ speedfog/
 │       ├── Program.cs       # CLI entry point
 │       └── diste/           # Item Randomizer game data (gitignored)
 ├── tools/                   # Standalone scripts
-│   ├── setup_fogrando.py    # Extract FogRando and Item Randomizer dependencies
+│   ├── setup_dependencies.py    # Extract FogRando and Item Randomizer dependencies
 │   ├── generate_clusters.py # Generate clusters.json from fog.txt
 │   └── extract_fog_data.py  # Extract fog gate metadata
 ├── reference/               # FogRando decompiled code (READ-ONLY)
@@ -193,12 +193,12 @@ dotnet tool install -g sfextract
 #    - Item Randomizer (optional): https://www.nexusmods.com/eldenring/mods/428
 
 # 4. Extract dependencies (both mods recommended)
-python tools/setup_fogrando.py \
+python tools/setup_dependencies.py \
   --fogrando /path/to/FogRando.zip \
   --itemrando /path/to/ItemRandomizer.zip
 
 # Or extract only FogRando (legacy mode)
-python tools/setup_fogrando.py /path/to/FogRando.zip
+python tools/setup_dependencies.py /path/to/FogRando.zip
 
 # 5. Build C# writers (done automatically by setup, or manually)
 cd writer/FogModWrapper && dotnet build

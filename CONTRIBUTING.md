@@ -26,7 +26,7 @@ dotnet tool install -g sfextract
 # https://www.nexusmods.com/eldenring/mods/3295
 
 # Extract FogRando dependencies
-python tools/setup_fogrando.py /path/to/FogRando.zip
+python tools/setup_dependencies.py /path/to/FogRando.zip
 
 # Build C# writer
 cd writer/FogModWrapper && dotnet build
@@ -37,7 +37,7 @@ cd writer/FogModWrapper && dotnet build
 When a new version of FogRando is released:
 
 ```bash
-python tools/setup_fogrando.py /path/to/NewFogRando.zip --force
+python tools/setup_dependencies.py /path/to/NewFogRando.zip --force
 ```
 
 ## Project Structure
@@ -73,7 +73,7 @@ speedfog/
 │   └── zone_metadata.toml       # Zone weights (tracked)
 │
 ├── tools/                       # Standalone scripts
-│   ├── setup_fogrando.py        # Extract FogRando dependencies
+│   ├── setup_dependencies.py        # Extract FogRando dependencies
 │   ├── generate_clusters.py     # Generate clusters.json
 │   └── extract_fog_data.py      # Generate fog_data.json
 │

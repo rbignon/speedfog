@@ -53,7 +53,7 @@ writer/*/run.txt
 writer/*/eldendata/
 writer/*/diste/
 
-# FogRando data files (extracted by tools/setup_fogrando.py)
+# FogRando data files (extracted by tools/setup_dependencies.py)
 data/fog.txt
 data/fogevents.txt
 data/foglocations2.txt
@@ -68,6 +68,6 @@ data/fog_data.json
 !writer/lib/
 writer/lib/*.dll
 
-# Track writer/assets/ directory but not DLLs (extracted by setup_fogrando.py)
+# Track writer/assets/ directory but not DLLs (extracted by setup_dependencies.py)
 !writer/assets/
 writer/assets/*.dll

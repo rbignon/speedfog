@@ -38,7 +38,7 @@ uv pip install -e .
 dotnet tool install -g sfextract
 
 # Extract FogRando dependencies and build FogModWrapper
-python tools/setup_fogrando.py /path/to/FogRando.zip
+python tools/setup_dependencies.py /path/to/FogRando.zip
 ```
 
 ### 3. Configure
