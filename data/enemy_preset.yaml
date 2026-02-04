@@ -1,0 +1,22 @@
+# SpeedFog enemy preset
+# Randomize only Basic and Wildlife enemies
+# Bosses stay in their original arenas (DAG already randomizes which boss you face)
+
+Classes:
+  Boss:
+    NoRandom: true
+  Miniboss:
+    NoRandom: true
+  MinorBoss:
+    NoRandom: true
+  NightMiniboss:
+    NoRandom: true
+  DragonMiniboss:
+    NoRandom: true
+  Evergaol:
+    NoRandom: true
+  HostileNPC:
+    NoRandom: true
+  CaravanTroll:
+    NoRandom: true
+  # Basic and Wildlife: default behavior (randomized between themselves)
