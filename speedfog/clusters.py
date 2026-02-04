@@ -30,16 +30,23 @@ class ClusterData:
             exit_fogs=data.get("exit_fogs", []),
         )
 
-    def available_exits(self, used_entry_fog: str | None) -> list[dict]:
+    def available_exits(self, used_entry: dict | None) -> list[dict]:
         """Get exit fogs available after using an entry fog.
 
-        If the entry fog is bidirectional (appears in both entry and exit),
-        it's removed from available exits.
+        A fog gate has two sides. Using an entry from zone A only removes
+        the exit from zone A (same side), not exits from other zones.
+
+        Args:
+            used_entry: Entry fog dict {"fog_id", "zone"}, or None.
+
+        Returns:
+            List of exit fog dicts still available.
         """
-        if used_entry_fog is None:
+        if used_entry is None:
             return list(self.exit_fogs)
 
-        return [f for f in self.exit_fogs if f["fog_id"] != used_entry_fog]
+        used_key = (used_entry["fog_id"], used_entry["zone"])
+        return [f for f in self.exit_fogs if (f["fog_id"], f["zone"]) != used_key]
 
 
 @dataclass

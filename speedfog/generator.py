@@ -104,21 +104,24 @@ class GenerationResult:
 # =============================================================================
 
 
-def compute_net_exits(cluster: ClusterData, consumed_entries: list[str]) -> list[dict]:
+def compute_net_exits(cluster: ClusterData, consumed_entries: list[dict]) -> list[dict]:
     """Return exits remaining after consuming given entry fogs.
 
-    Bidirectional fogs (appearing in both entry and exit) are removed
-    from available exits when their entry side is consumed.
+    A fog gate connecting two zones has two sides. Consuming an entry
+    from zone A only removes the exit from zone A (same side), not
+    the exit from zone B (opposite side of the same gate).
 
     Args:
         cluster: The cluster to check.
-        consumed_entries: List of entry fog_ids that are being used.
+        consumed_entries: List of entry fog dicts {"fog_id", "zone"} being used.
 
     Returns:
         List of exit fog dicts remaining after consuming entries.
     """
-    consumed_set = set(consumed_entries)
-    return [f for f in cluster.exit_fogs if f["fog_id"] not in consumed_set]
+    consumed_set = {(e["fog_id"], e["zone"]) for e in consumed_entries}
+    return [
+        f for f in cluster.exit_fogs if (f["fog_id"], f["zone"]) not in consumed_set
+    ]
 
 
 def count_net_exits(cluster: ClusterData, num_entries: int) -> int:
@@ -126,6 +129,9 @@ def count_net_exits(cluster: ClusterData, num_entries: int) -> int:
 
     This calculates the worst-case net exits by greedily selecting entries
     that cost the least (non-bidirectional entries have zero cost).
+
+    A fog is bidirectional only if the same (fog_id, zone) pair appears
+    in both entry and exit lists - meaning the same side of the gate.
 
     Args:
         cluster: The cluster to check.
@@ -137,19 +143,19 @@ def count_net_exits(cluster: ClusterData, num_entries: int) -> int:
     if num_entries > len(cluster.entry_fogs):
         return 0
 
-    # Build set of exit fog IDs for checking bidirectionality
-    exit_ids = {f["fog_id"] for f in cluster.exit_fogs}
+    # Build set of exit (fog_id, zone) pairs for checking bidirectionality
+    exit_keys = {(f["fog_id"], f["zone"]) for f in cluster.exit_fogs}
 
-    # Calculate cost for each entry (1 if bidirectional, 0 otherwise)
-    entry_costs: list[tuple[str, int]] = []
+    # Calculate cost for each entry (1 if same side exists in exits, 0 otherwise)
+    entry_costs: list[tuple[dict, int]] = []
     for entry in cluster.entry_fogs:
-        fog_id = entry["fog_id"]
-        cost = 1 if fog_id in exit_ids else 0
-        entry_costs.append((fog_id, cost))
+        key = (entry["fog_id"], entry["zone"])
+        cost = 1 if key in exit_keys else 0
+        entry_costs.append((entry, cost))
 
     # Sort by cost (cheapest first) and take num_entries
     entry_costs.sort(key=lambda x: x[1])
-    consumed = [fog_id for fog_id, _ in entry_costs[:num_entries]]
+    consumed = [entry for entry, _ in entry_costs[:num_entries]]
 
     return len(compute_net_exits(cluster, consumed))
 
@@ -200,10 +206,11 @@ def can_be_passant_node(cluster: ClusterData) -> bool:
 
 def select_entries_for_merge(
     cluster: ClusterData, num: int, rng: random.Random
-) -> list[str]:
+) -> list[dict]:
     """Select entry fogs that maximize remaining exits.
 
     Prefers non-bidirectional entries to preserve more exits.
+    A fog is bidirectional only if same (fog_id, zone) appears in both lists.
 
     Args:
         cluster: The cluster to select entries from.
@@ -211,13 +218,15 @@ def select_entries_for_merge(
         rng: Random number generator.
 
     Returns:
-        List of selected entry fog_ids.
+        List of selected entry fog dicts {"fog_id", "zone"}.
     """
-    exit_ids = {f["fog_id"] for f in cluster.exit_fogs}
+    exit_keys = {(f["fog_id"], f["zone"]) for f in cluster.exit_fogs}
 
-    # Separate entries by cost
-    non_bidir = [e["fog_id"] for e in cluster.entry_fogs if e["fog_id"] not in exit_ids]
-    bidir = [e["fog_id"] for e in cluster.entry_fogs if e["fog_id"] in exit_ids]
+    # Separate entries by cost (bidirectional = same side exists in exits)
+    non_bidir = [
+        e for e in cluster.entry_fogs if (e["fog_id"], e["zone"]) not in exit_keys
+    ]
+    bidir = [e for e in cluster.entry_fogs if (e["fog_id"], e["zone"]) in exit_keys]
 
     # Shuffle each group
     rng.shuffle(non_bidir)
@@ -234,7 +243,7 @@ def select_entries_for_merge(
 
 def pick_entry_with_max_exits(
     cluster: ClusterData, min_exits: int, rng: random.Random
-) -> str | None:
+) -> dict | None:
     """Pick an entry fog that leaves at least min_exits available.
 
     Args:
@@ -243,14 +252,13 @@ def pick_entry_with_max_exits(
         rng: Random number generator.
 
     Returns:
-        The fog_id of a valid entry, or None if no valid entry exists.
+        The entry fog dict {"fog_id", "zone"}, or None if no valid entry exists.
     """
-    valid_entries: list[str] = []
+    valid_entries: list[dict] = []
     for entry in cluster.entry_fogs:
-        entry_fog_id = entry["fog_id"]
-        remaining = compute_net_exits(cluster, [entry_fog_id])
+        remaining = compute_net_exits(cluster, [entry])
         if len(remaining) >= min_exits:
-            valid_entries.append(entry_fog_id)
+            valid_entries.append(entry)
 
     if not valid_entries:
         return None
@@ -461,6 +469,7 @@ def execute_passant_layer(
                 f"Cluster {cluster.id} has no valid entry fog with exits"
             )
 
+        entry_fog_id = entry["fog_id"]
         exits = compute_net_exits(cluster, [entry])
         exit_fogs = [f["fog_id"] for f in exits]
 
@@ -470,11 +479,13 @@ def execute_passant_layer(
             cluster=cluster,
             layer=layer_idx,
             tier=tier,
-            entry_fogs=[entry],
+            entry_fogs=[entry_fog_id],
             exit_fogs=exit_fogs,
         )
         dag.add_node(node)
-        dag.add_edge(branch.current_node_id, node_id, branch.available_exit, entry)
+        dag.add_edge(
+            branch.current_node_id, node_id, branch.available_exit, entry_fog_id
+        )
 
         new_branches.append(Branch(branch.id, node_id, rng.choice(exit_fogs)))
 
@@ -533,6 +544,7 @@ def execute_split_layer(
                     f"Cluster {cluster.id} has no valid entry fog with 2+ exits"
                 )
 
+            entry_fog_id = entry["fog_id"]
             exits = compute_net_exits(cluster, [entry])
             exit_fogs = [f["fog_id"] for f in exits]
 
@@ -542,11 +554,13 @@ def execute_split_layer(
                 cluster=cluster,
                 layer=layer_idx,
                 tier=tier,
-                entry_fogs=[entry],
+                entry_fogs=[entry_fog_id],
                 exit_fogs=exit_fogs,
             )
             dag.add_node(node)
-            dag.add_edge(branch.current_node_id, node_id, branch.available_exit, entry)
+            dag.add_edge(
+                branch.current_node_id, node_id, branch.available_exit, entry_fog_id
+            )
 
             # Create two new branches
             rng.shuffle(exit_fogs)
@@ -570,6 +584,7 @@ def execute_split_layer(
                     f"Cluster {cluster.id} has no valid entry fog with exits"
                 )
 
+            entry_fog_id = entry["fog_id"]
             exits = compute_net_exits(cluster, [entry])
             exit_fogs = [f["fog_id"] for f in exits]
 
@@ -579,11 +594,13 @@ def execute_split_layer(
                 cluster=cluster,
                 layer=layer_idx,
                 tier=tier,
-                entry_fogs=[entry],
+                entry_fogs=[entry_fog_id],
                 exit_fogs=exit_fogs,
             )
             dag.add_node(node)
-            dag.add_edge(branch.current_node_id, node_id, branch.available_exit, entry)
+            dag.add_edge(
+                branch.current_node_id, node_id, branch.available_exit, entry_fog_id
+            )
 
             new_branches.append(Branch(branch.id, node_id, rng.choice(exit_fogs)))
             letter_offset += 1
@@ -640,6 +657,7 @@ def execute_merge_layer(
     used_zones.update(cluster.zones)
 
     entries = select_entries_for_merge(cluster, 2, rng)
+    entry_fog_ids = [e["fog_id"] for e in entries]
     exits = compute_net_exits(cluster, entries)
     exit_fogs = [f["fog_id"] for f in exits]
 
@@ -649,7 +667,7 @@ def execute_merge_layer(
         cluster=cluster,
         layer=layer_idx,
         tier=tier,
-        entry_fogs=entries,
+        entry_fogs=entry_fog_ids,
         exit_fogs=exit_fogs,
     )
     dag.add_node(merge_node)
@@ -657,9 +675,9 @@ def execute_merge_layer(
 
     # Connect both merging branches to the merge node
     # Pair each branch with its corresponding entry fog
-    for branch, entry in zip(merge_branches, entries, strict=False):
+    for branch, entry_fog_id in zip(merge_branches, entry_fog_ids, strict=False):
         dag.add_edge(
-            branch.current_node_id, merge_node_id, branch.available_exit, entry
+            branch.current_node_id, merge_node_id, branch.available_exit, entry_fog_id
         )
 
     # Create single branch for merged path
@@ -687,6 +705,7 @@ def execute_merge_layer(
                 f"Cluster {cluster.id} has no valid entry fog with exits"
             )
 
+        passant_entry_fog_id = passant_entry["fog_id"]
         exits = compute_net_exits(cluster, [passant_entry])
         exit_fogs = [f["fog_id"] for f in exits]
 
@@ -696,12 +715,12 @@ def execute_merge_layer(
             cluster=cluster,
             layer=layer_idx,
             tier=tier,
-            entry_fogs=[passant_entry],
+            entry_fogs=[passant_entry_fog_id],
             exit_fogs=exit_fogs,
         )
         dag.add_node(node)
         dag.add_edge(
-            branch.current_node_id, node_id, branch.available_exit, passant_entry
+            branch.current_node_id, node_id, branch.available_exit, passant_entry_fog_id
         )
 
         new_branches.append(Branch(branch.id, node_id, rng.choice(exit_fogs)))

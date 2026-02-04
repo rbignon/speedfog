@@ -688,15 +688,17 @@ def compute_cluster_fogs(
                     break
 
     # Collect entry fogs from entry zones
-    seen_fog_ids: set[int] = set()
+    # Use (fog_id, zone) pairs to allow same fog from different zones (different sides)
+    seen_entries: set[tuple[int, str]] = set()
     cluster.entry_fogs = []
 
     for zone in sorted(entry_zones):
         if zone not in zone_fogs:
             continue
         for fog in zone_fogs[zone].entry_fogs:
-            if fog.fog_id not in seen_fog_ids:
-                seen_fog_ids.add(fog.fog_id)
+            key = (fog.fog_id, zone)
+            if key not in seen_entries:
+                seen_entries.add(key)
                 cluster.entry_fogs.append(
                     {
                         "fog_id": str(fog.name),  # Always string for consistency
@@ -705,15 +707,17 @@ def compute_cluster_fogs(
                 )
 
     # Collect exit fogs from all zones
-    seen_fog_ids = set()
+    # Use (fog_id, zone) pairs - same fog in different zones = different sides of the gate
+    seen_exits: set[tuple[int, str]] = set()
     cluster.exit_fogs = []
 
     for zone in sorted(cluster.zones):
         if zone not in zone_fogs:
             continue
         for fog in zone_fogs[zone].exit_fogs:
-            if fog.fog_id not in seen_fog_ids:
-                seen_fog_ids.add(fog.fog_id)
+            key = (fog.fog_id, zone)
+            if key not in seen_exits:
+                seen_exits.add(key)
                 fog_entry = {
                     "fog_id": str(fog.name),  # Always string for consistency
                     "zone": zone,
