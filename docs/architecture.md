@@ -5,15 +5,20 @@ SpeedFog generates short randomized Elden Ring runs (~1 hour) with a controlled 
 ## Overview
 
 ```
-User Config                Python                      C# Writer                    Output
-───────────                ──────                      ─────────                    ──────
-config.toml ──────► speedfog ──────► graph.json ──────► FogModWrapper ──────► mod/
-                        │                                       │
-                  clusters.json                           FogMod.dll
-                  (pre-generated)                    (reuses FogRando writer)
+User Config                Python                      C# Writers                     Output
+───────────                ──────                      ──────────                     ──────
+config.toml ──────► speedfog ──────► graph.json ──────► FogModWrapper ─────────┐
+                        │                                     │                 ├───► mod/
+                  clusters.json                         FogMod.dll              │
+                  (pre-generated)                  (reuses FogRando writer)     │
+                                                                                │
+item_config.json ─────────────────────────────────► ItemRandomizerWrapper ─────┘
+                                                          │              (merge)
+                                                  RandomizerCommon.dll
+                                                (reuses Item Randomizer)
 ```
 
-**Key insight**: SpeedFog reuses 100% of FogRando's game writer (`FogMod.dll`). We only generate the graph connections differently.
+**Key insight**: SpeedFog reuses 100% of FogRando's game writer (`FogMod.dll`) and optionally 100% of Item Randomizer's writer (`RandomizerCommon.dll`). We only generate the graph connections and item config differently.
 
 ## Components
 
@@ -33,7 +38,7 @@ Generates a balanced DAG of zone connections.
 | `output.py` | Export graph.json and spoiler.txt |
 | `main.py` | CLI entry point |
 
-### C# Writer (`writer/FogModWrapper/`)
+### C# Fog Writer (`writer/FogModWrapper/`)
 
 Thin wrapper around FogMod.dll that injects our connections.
 
@@ -44,14 +49,33 @@ Thin wrapper around FogMod.dll that injects our connections.
 | `ConnectionInjector.cs` | Inject connections into FogMod's Graph |
 | `Packaging/` | ModEngine download, config generation, launchers |
 
+### C# Item Writer (`writer/ItemRandomizerWrapper/`)
+
+Thin wrapper around RandomizerCommon.dll for item randomization.
+
+| Class | Purpose |
+|-------|---------|
+| `Program.cs` | CLI entry, parse item_config.json, call Randomizer |
+
+The wrapper configures `RandomizerOptions` and calls `Randomizer.Randomize()` with:
+- `item: true` - enable item randomization
+- `enemy: false` - disable enemy randomization (fog gates handle difficulty)
+- `seed` - from config
+- `difficulty` - placement difficulty (0-100)
+
 ### Tools (`tools/`)
 
-Standalone data generation scripts (run once when FogRando updates).
+Standalone scripts for setup and data generation.
 
 | Script | Purpose |
 |--------|---------|
+| `setup_fogrando.py` | Extract FogRando and Item Randomizer dependencies |
 | `generate_clusters.py` | Parse fog.txt → clusters.json |
 | `extract_fog_data.py` | Extract fog gate metadata |
+
+**setup_fogrando.py** extracts:
+- From FogRando ZIP: FogMod.dll, SoulsFormats.dll, eldendata/, data files
+- From Item Randomizer ZIP: RandomizerCommon.dll, diste/, crash fix DLLs
 
 ## Data Flow
 
@@ -76,20 +100,63 @@ The DAG algorithm:
 4. Track available exits for splits/merges
 5. Converge all paths to Radagon
 
-### 3. Mod Generation
+### 3. Item Randomization (optional)
+
+```
+item_config.json ──► ItemRandomizerWrapper ──► RandomizerCommon.dll ──► temp/item-randomizer/
+```
+
+ItemRandomizerWrapper:
+1. Loads item_config.json (seed, difficulty, options)
+2. Configures RandomizerOptions (item=true, enemy=false)
+3. Calls `Randomizer.Randomize()` to generate randomized items
+4. Outputs modified params/EMEVD to temp directory
+
+### 4. Fog Gate Generation
 
 ```
 graph.json ──► FogModWrapper ──► FogMod.dll ──► mod files
+                    ↑
+              (--merge-dir temp/item-randomizer/)
 ```
 
 FogModWrapper:
 1. Loads graph.json
 2. Configures FogMod options (crawl mode, scaling, etc.)
-3. Builds FogMod's Graph structure (unconnected)
-4. Injects our connections
-5. Calls `GameDataWriterE.Write()` to generate all mod files
+3. Creates MergedMods with game dir + item randomizer output (if present)
+4. Builds FogMod's Graph structure (unconnected)
+5. Injects our connections
+6. Calls `GameDataWriterE.Write()` - reads from merged dirs, writes combined output
+
+**Merge order matters**: Item Randomizer runs first, FogMod merges on top. This matches the official FogRando documentation.
 
 ## Data Formats
+
+### item_config.json
+
+Configuration for item randomization (ItemRandomizerWrapper).
+
+```json
+{
+  "seed": 12345,
+  "difficulty": 50,
+  "options": {
+    "item": true,
+    "enemy": false
+  }
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `seed` | int | Randomization seed |
+| `difficulty` | int | Placement difficulty 0-100 (higher = harder to find key items) |
+| `options` | object | Boolean flags for RandomizerOptions |
+
+Common options:
+- `item: true` - Enable item randomization
+- `enemy: false` - Disable enemy randomization (fog tiers handle difficulty)
+- `scale: true` - Enable enemy scaling (usually handled by FogMod)
 
 ### config.toml
 
@@ -161,9 +228,12 @@ Gate names use FogMod's FullName format: `{map}_{gate_name}`.
 | Aspect | Decision | Rationale |
 |--------|----------|-----------|
 | Architecture | Python + C# hybrid | Python for algorithm, C# for game file manipulation |
-| Writer | Reuse FogMod.dll | Avoid reimplementing 5000+ lines of game writer |
+| Fog Writer | Reuse FogMod.dll | Avoid reimplementing 5000+ lines of game writer |
+| Item Writer | Reuse RandomizerCommon.dll | Avoid reimplementing 3000+ lines of item logic |
+| Merge Order | Items first, then fog | Matches official FogRando documentation |
 | Layers | Uniform cluster type | Competitive fairness (same challenge per layer) |
 | Key items | All given at start | Prevent softlocks |
+| Enemy scaling | Via fog tiers, not item rando | FogMod handles scaling per zone tier |
 | DLC | Excluded (v1) | Base game focus |
 | One-ways | Excluded (v1) | Complexity reduction |
 
@@ -227,5 +297,6 @@ output/
 ## References
 
 - FogRando: https://www.nexusmods.com/eldenring/mods/3295
+- Item Randomizer: https://www.nexusmods.com/eldenring/mods/428
 - SoulsFormats: https://github.com/soulsmods/SoulsFormatsNEXT
 - ModEngine 2: https://github.com/soulsmods/ModEngine2

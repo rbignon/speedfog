@@ -1,18 +1,32 @@
 #!/usr/bin/env python3
 """
-Extract FogRando dependencies from the Nexusmods download.
+Extract FogRando and Item Randomizer dependencies from Nexusmods downloads.
 
 This script extracts:
-- DLLs from FogMod.exe → writer/lib/
-- eldendata/ → writer/FogModWrapper/eldendata/
-- Data files (fog.txt, etc.) → data/
+- FogRando:
+  - DLLs from FogMod.exe → writer/lib/
+  - eldendata/ → writer/FogModWrapper/eldendata/
+  - Data files (fog.txt, etc.) → data/
+- Item Randomizer:
+  - DLLs from EldenRingRandomizer.exe → writer/lib/
+  - diste/ → writer/ItemRandomizerWrapper/diste/
+  - RandomizerCrashFix.dll → writer/assets/
 
 Prerequisites:
 - sfextract (dotnet tool): dotnet tool install -g sfextract
 
 Usage:
+    # Extract both (recommended)
+    python tools/setup_fogrando.py --fogrando /path/to/FogRando.zip --itemrando /path/to/ItemRandomizer.zip
+
+    # Extract only FogRando
+    python tools/setup_fogrando.py --fogrando /path/to/FogRando.zip
+
+    # Extract only Item Randomizer
+    python tools/setup_fogrando.py --itemrando /path/to/ItemRandomizer.zip
+
+    # Legacy single-argument mode (FogRando only)
     python tools/setup_fogrando.py /path/to/FogRando.zip
-    python tools/setup_fogrando.py /path/to/FogRando.zip --force
 """
 
 from __future__ import annotations
@@ -31,7 +45,9 @@ PROJECT_ROOT = Path(__file__).parent.parent
 
 # Destination paths
 WRITER_LIB = PROJECT_ROOT / "writer" / "lib"
+WRITER_ASSETS = PROJECT_ROOT / "writer" / "assets"
 ELDENDATA_DEST = PROJECT_ROOT / "writer" / "FogModWrapper" / "eldendata"
+DISTE_DEST = PROJECT_ROOT / "writer" / "ItemRandomizerWrapper" / "diste"
 DATA_DEST = PROJECT_ROOT / "data"
 
 # Files to extract from eldendata/Base/ to data/
@@ -42,8 +58,8 @@ FOGRANDO_DATA_FILES = [
     "er-common.emedf.json",
 ]
 
-# DLLs we need (subset of what sfextract produces)
-REQUIRED_DLLS = [
+# DLLs we need from FogMod (subset of what sfextract produces)
+FOGRANDO_REQUIRED_DLLS = [
     "FogMod.dll",
     "SoulsFormats.dll",
     "SoulsIds.dll",
@@ -52,6 +68,19 @@ REQUIRED_DLLS = [
     "YamlDotNet.dll",
     "ZstdNet.dll",
     "DrSwizzler.dll",
+]
+
+# DLLs we need from Item Randomizer
+ITEMRANDO_REQUIRED_DLLS = [
+    "RandomizerCommon.dll",
+    # Shared with FogRando (already extracted):
+    # SoulsFormats.dll, SoulsIds.dll, YamlDotNet.dll, etc.
+]
+
+# Extra DLLs to copy from Item Randomizer zip (not from sfextract)
+ITEMRANDO_EXTRA_DLLS = [
+    "RandomizerCrashFix.dll",
+    "RandomizerHelper.dll",
 ]
 
 
@@ -94,39 +123,14 @@ def find_sfextract() -> Path | None:
     return None
 
 
-def check_prerequisites(zip_path: Path) -> Path | None:
-    """Check that all prerequisites are met. Returns sfextract path or None."""
-    print_step(1, 6, "Checking prerequisites...")
-
-    # Check sfextract
-    sfextract = find_sfextract()
-    if not sfextract:
-        print_error("sfextract not found")
-        print()
-        print("Install it with: dotnet tool install -g sfextract")
-        return None
-    print_ok("sfextract found")
-
-    # Check ZIP file
-    if not zip_path.exists():
-        print_error(f"ZIP file not found: {zip_path}")
-        return None
-    if not zipfile.is_zipfile(zip_path):
-        print_error(f"Not a valid ZIP file: {zip_path}")
-        return None
-    print_ok("ZIP file valid")
-
-    return sfextract
-
-
-def is_already_installed() -> bool:
+def is_fogrando_installed() -> bool:
     """Check if FogRando dependencies are already installed."""
     # Check for DLLs
     if not WRITER_LIB.exists():
         return False
-    dll_count = len(list(WRITER_LIB.glob("*.dll")))
-    if dll_count < len(REQUIRED_DLLS):
-        return False
+    for dll in FOGRANDO_REQUIRED_DLLS:
+        if not (WRITER_LIB / dll).exists():
+            return False
 
     # Check for eldendata
     if not ELDENDATA_DEST.exists():
@@ -135,6 +139,24 @@ def is_already_installed() -> bool:
     # Check for data files
     for filename in FOGRANDO_DATA_FILES:
         if not (DATA_DEST / filename).exists():
+            return False
+
+    return True
+
+
+def is_itemrando_installed() -> bool:
+    """Check if Item Randomizer dependencies are already installed."""
+    # Check for RandomizerCommon.dll
+    if not (WRITER_LIB / "RandomizerCommon.dll").exists():
+        return False
+
+    # Check for diste
+    if not DISTE_DEST.exists():
+        return False
+
+    # Check for extra DLLs in assets
+    for dll in ITEMRANDO_EXTRA_DLLS:
+        if not (WRITER_ASSETS / dll).exists():
             return False
 
     return True
@@ -151,9 +173,11 @@ def extract_zip(zip_path: Path, temp_dir: Path) -> bool:
         return False
 
 
-def extract_dlls(sfextract: Path, exe_path: Path, output_dir: Path) -> int:
-    """Extract DLLs from FogMod.exe using sfextract. Returns count of DLLs."""
-    print_step(2, 6, "Extracting FogMod.exe...")
+def extract_dlls(
+    sfextract: Path, exe_path: Path, output_dir: Path, exe_name: str = "FogMod.exe"
+) -> int:
+    """Extract DLLs from an exe using sfextract. Returns count of DLLs."""
+    print_info(f"Extracting {exe_name}...")
 
     try:
         subprocess.run(
@@ -164,18 +188,17 @@ def extract_dlls(sfextract: Path, exe_path: Path, output_dir: Path) -> int:
         )
         # Count extracted DLLs
         dll_count = len(list(output_dir.glob("*.dll")))
-        print_ok(f"Extracted {dll_count} DLLs")
+        print_ok(f"Extracted {dll_count} DLLs from {exe_name}")
         return dll_count
     except subprocess.CalledProcessError as e:
         print_error(f"sfextract failed: {e.stderr}")
         return 0
 
 
-def copy_files(temp_dir: Path) -> bool:
-    """Copy extracted files to their destinations."""
-    print_step(3, 6, "Copying files...")
+def copy_fogrando_files(temp_dir: Path, extracted_dir: Path) -> bool:
+    """Copy FogRando extracted files to their destinations."""
+    print_info("Copying FogRando files...")
 
-    extracted_dir = temp_dir / "extracted"
     fog_dir = temp_dir / "fog"
 
     # Copy DLLs to writer/lib/
@@ -195,7 +218,7 @@ def copy_files(temp_dir: Path) -> bool:
     if libzstd.exists():
         shutil.copy2(libzstd, WRITER_LIB / "libzstd.dll")
         dll_count += 1
-    print_info(f"writer/lib/ ({dll_count} DLLs)")
+    print_ok(f"writer/lib/ ({dll_count} DLLs)")
 
     # Copy eldendata/
     src_eldendata = fog_dir / "eldendata"
@@ -205,7 +228,7 @@ def copy_files(temp_dir: Path) -> bool:
     if ELDENDATA_DEST.exists():
         shutil.rmtree(ELDENDATA_DEST)
     shutil.copytree(src_eldendata, ELDENDATA_DEST)
-    print_info("writer/FogModWrapper/eldendata/")
+    print_ok("writer/FogModWrapper/eldendata/")
 
     # Copy data files to data/
     DATA_DEST.mkdir(parents=True, exist_ok=True)
@@ -218,14 +241,59 @@ def copy_files(temp_dir: Path) -> bool:
             file_count += 1
         else:
             print_error(f"Missing: {filename}")
-    print_info(f"data/ ({file_count} files)")
+    print_ok(f"data/ ({file_count} files)")
+
+    return True
+
+
+def copy_itemrando_files(temp_dir: Path, extracted_dir: Path) -> bool:
+    """Copy Item Randomizer extracted files to their destinations."""
+    print_info("Copying Item Randomizer files...")
+
+    randomizer_dir = temp_dir / "randomizer"
+
+    # Copy DLLs to writer/lib/ (only RandomizerCommon.dll, others are shared)
+    WRITER_LIB.mkdir(parents=True, exist_ok=True)
+    dll_count = 0
+    for dll_name in ITEMRANDO_REQUIRED_DLLS:
+        src = extracted_dir / dll_name
+        if src.exists():
+            shutil.copy2(src, WRITER_LIB / dll_name)
+            dll_count += 1
+        else:
+            print_error(f"Missing DLL: {dll_name}")
+            return False
+    print_ok(f"writer/lib/ (+{dll_count} DLLs)")
+
+    # Copy extra DLLs from randomizer/dll/ to writer/assets/
+    WRITER_ASSETS.mkdir(parents=True, exist_ok=True)
+    dll_dir = randomizer_dir / "dll"
+    extra_count = 0
+    for dll_name in ITEMRANDO_EXTRA_DLLS:
+        src = dll_dir / dll_name
+        if src.exists():
+            shutil.copy2(src, WRITER_ASSETS / dll_name)
+            extra_count += 1
+        else:
+            print_error(f"Missing extra DLL: {dll_name}")
+    print_ok(f"writer/assets/ ({extra_count} DLLs)")
+
+    # Copy diste/
+    src_diste = randomizer_dir / "diste"
+    if not src_diste.exists():
+        print_error("diste/ not found in ZIP")
+        return False
+    if DISTE_DEST.exists():
+        shutil.rmtree(DISTE_DEST)
+    shutil.copytree(src_diste, DISTE_DEST)
+    print_ok("writer/ItemRandomizerWrapper/diste/")
 
     return True
 
 
 def regenerate_derived_data() -> bool:
     """Regenerate clusters.json and fog_data.json."""
-    print_step(4, 6, "Regenerating derived data...")
+    print_info("Regenerating derived data...")
 
     tools_dir = PROJECT_ROOT / "tools"
 
@@ -247,7 +315,7 @@ def regenerate_derived_data() -> bool:
         with open(DATA_DEST / "clusters.json") as f:
             data = json.load(f)
         cluster_count = data.get("cluster_count", "?")
-        print_info(f"clusters.json ({cluster_count} clusters)")
+        print_ok(f"clusters.json ({cluster_count} clusters)")
     except subprocess.CalledProcessError as e:
         print_error(f"generate_clusters.py failed: {e.stderr}")
         return False
@@ -269,7 +337,7 @@ def regenerate_derived_data() -> bool:
         with open(DATA_DEST / "fog_data.json") as f:
             data = json.load(f)
         fog_count = len(data.get("fogs", {}))
-        print_info(f"fog_data.json ({fog_count} fog gates)")
+        print_ok(f"fog_data.json ({fog_count} fog gates)")
     except subprocess.CalledProcessError as e:
         print_error(f"extract_fog_data.py failed: {e.stderr}")
         return False
@@ -277,12 +345,21 @@ def regenerate_derived_data() -> bool:
     return True
 
 
-def compile_fogmodwrapper() -> bool:
-    """Compile FogModWrapper as self-contained Windows executable."""
-    print_step(5, 6, "Compiling FogModWrapper...")
+def compile_wrapper(wrapper_name: str) -> bool:
+    """Compile a wrapper as self-contained Windows executable."""
+    print_info(f"Compiling {wrapper_name}...")
 
-    wrapper_dir = PROJECT_ROOT / "writer" / "FogModWrapper"
+    wrapper_dir = PROJECT_ROOT / "writer" / wrapper_name
     publish_dir = wrapper_dir / "publish" / "win-x64"
+
+    if not wrapper_dir.exists():
+        print_error(f"{wrapper_name} directory not found")
+        return False
+
+    csproj = wrapper_dir / f"{wrapper_name}.csproj"
+    if not csproj.exists():
+        print_info(f"{wrapper_name}.csproj not found, skipping compilation")
+        return True
 
     try:
         subprocess.run(
@@ -312,22 +389,139 @@ def compile_fogmodwrapper() -> bool:
         return False
 
 
-def cleanup(temp_dir: Path) -> None:
-    """Clean up temporary directory."""
-    print_step(6, 6, "Cleanup...")
-    shutil.rmtree(temp_dir, ignore_errors=True)
-    print_ok("Done")
+def setup_fogrando(sfextract: Path, zip_path: Path, force: bool) -> bool:
+    """Set up FogRando dependencies."""
+    print("\n" + "=" * 50)
+    print("Setting up FogRando")
+    print("=" * 50)
+
+    if not force and is_fogrando_installed():
+        print_ok("FogRando already installed (use --force to reinstall)")
+        return True
+
+    # Validate ZIP
+    if not zip_path.exists():
+        print_error(f"ZIP file not found: {zip_path}")
+        return False
+    if not zipfile.is_zipfile(zip_path):
+        print_error(f"Not a valid ZIP file: {zip_path}")
+        return False
+
+    temp_dir = Path(tempfile.mkdtemp(prefix="fogrando_"))
+    try:
+        # Extract ZIP
+        if not extract_zip(zip_path, temp_dir):
+            return False
+
+        # Find FogMod.exe
+        exe_path = temp_dir / "fog" / "FogMod.exe"
+        if not exe_path.exists():
+            print_error("FogMod.exe not found in ZIP (expected at fog/FogMod.exe)")
+            return False
+
+        # Extract DLLs
+        extracted_dir = temp_dir / "extracted_fog"
+        extracted_dir.mkdir()
+        dll_count = extract_dlls(sfextract, exe_path, extracted_dir, "FogMod.exe")
+        if dll_count == 0:
+            return False
+
+        # Copy files
+        if not copy_fogrando_files(temp_dir, extracted_dir):
+            return False
+
+        # Regenerate derived data
+        if not regenerate_derived_data():
+            return False
+
+        # Compile FogModWrapper
+        if not compile_wrapper("FogModWrapper"):
+            return False
+
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+    print_ok("FogRando setup complete")
+    return True
+
+
+def setup_itemrando(sfextract: Path, zip_path: Path, force: bool) -> bool:
+    """Set up Item Randomizer dependencies."""
+    print("\n" + "=" * 50)
+    print("Setting up Item Randomizer")
+    print("=" * 50)
+
+    if not force and is_itemrando_installed():
+        print_ok("Item Randomizer already installed (use --force to reinstall)")
+        return True
+
+    # Validate ZIP
+    if not zip_path.exists():
+        print_error(f"ZIP file not found: {zip_path}")
+        return False
+    if not zipfile.is_zipfile(zip_path):
+        print_error(f"Not a valid ZIP file: {zip_path}")
+        return False
+
+    temp_dir = Path(tempfile.mkdtemp(prefix="itemrando_"))
+    try:
+        # Extract ZIP
+        if not extract_zip(zip_path, temp_dir):
+            return False
+
+        # Find EldenRingRandomizer.exe
+        exe_path = temp_dir / "randomizer" / "EldenRingRandomizer.exe"
+        if not exe_path.exists():
+            print_error(
+                "EldenRingRandomizer.exe not found in ZIP "
+                "(expected at randomizer/EldenRingRandomizer.exe)"
+            )
+            return False
+
+        # Extract DLLs
+        extracted_dir = temp_dir / "extracted_rando"
+        extracted_dir.mkdir()
+        dll_count = extract_dlls(
+            sfextract, exe_path, extracted_dir, "EldenRingRandomizer.exe"
+        )
+        if dll_count == 0:
+            return False
+
+        # Copy files
+        if not copy_itemrando_files(temp_dir, extracted_dir):
+            return False
+
+        # Compile ItemRandomizerWrapper (if it exists)
+        if not compile_wrapper("ItemRandomizerWrapper"):
+            return False
+
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+    print_ok("Item Randomizer setup complete")
+    return True
 
 
 def main() -> int:
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Extract FogRando dependencies from Nexusmods download."
+        description="Extract FogRando and Item Randomizer dependencies from Nexusmods downloads."
     )
     parser.add_argument(
         "zip_path",
         type=Path,
-        help="Path to FogRando ZIP file downloaded from Nexusmods",
+        nargs="?",
+        help="(Legacy) Path to FogRando ZIP file",
+    )
+    parser.add_argument(
+        "--fogrando",
+        type=Path,
+        help="Path to FogRando ZIP file (Fog Gate Randomizer)",
+    )
+    parser.add_argument(
+        "--itemrando",
+        type=Path,
+        help="Path to Item Randomizer ZIP file (Elden Ring Randomizer)",
     )
     parser.add_argument(
         "--force",
@@ -336,62 +530,49 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    # Check if already installed
-    if not args.force and is_already_installed():
-        print("FogRando dependencies already installed.")
-        print("Use --force to reinstall.")
-        return 0
+    # Handle legacy single-argument mode
+    if args.zip_path and not args.fogrando:
+        args.fogrando = args.zip_path
+
+    # Check that at least one ZIP is provided
+    if not args.fogrando and not args.itemrando:
+        parser.error("At least one of --fogrando or --itemrando must be provided")
 
     # Check prerequisites
-    sfextract = check_prerequisites(args.zip_path)
+    print_step(1, 1, "Checking prerequisites...")
+    sfextract = find_sfextract()
     if not sfextract:
+        print_error("sfextract not found")
+        print()
+        print("Install it with: dotnet tool install -g sfextract")
         return 1
+    print_ok("sfextract found")
 
-    # Create temp directory and extract
-    temp_dir = Path(tempfile.mkdtemp(prefix="fogrando_"))
-    try:
-        # Extract ZIP
-        if not extract_zip(args.zip_path, temp_dir):
-            return 1
+    success = True
 
-        # Find FogMod.exe
-        exe_path = temp_dir / "fog" / "FogMod.exe"
-        if not exe_path.exists():
-            print_error("FogMod.exe not found in ZIP (expected at fog/FogMod.exe)")
-            return 1
+    # Set up FogRando
+    if args.fogrando:
+        if not setup_fogrando(sfextract, args.fogrando, args.force):
+            success = False
 
-        # Extract DLLs
-        extracted_dir = temp_dir / "extracted"
-        extracted_dir.mkdir()
-        dll_count = extract_dlls(sfextract, exe_path, extracted_dir)
-        if dll_count == 0:
-            return 1
+    # Set up Item Randomizer
+    if args.itemrando:
+        if not setup_itemrando(sfextract, args.itemrando, args.force):
+            success = False
 
-        # Copy files
-        if not copy_files(temp_dir):
-            return 1
-
-        # Regenerate derived data
-        if not regenerate_derived_data():
-            return 1
-
-        # Compile FogModWrapper
-        if not compile_fogmodwrapper():
-            return 1
-
-        # Cleanup
-        cleanup(temp_dir)
-
-    except Exception as e:
-        print_error(f"Unexpected error: {e}")
-        shutil.rmtree(temp_dir, ignore_errors=True)
+    if success:
+        print()
+        print("=" * 50)
+        print("Setup complete!")
+        print("=" * 50)
+        print()
+        print("You can now generate runs with:")
+        print("  uv run speedfog config.toml --spoiler")
+        return 0
+    else:
+        print()
+        print_error("Setup failed")
         return 1
-
-    print()
-    print("Setup complete! You can now generate runs with:")
-    print("  uv run speedfog config.toml --spoiler")
-
-    return 0
 
 
 if __name__ == "__main__":

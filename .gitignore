@@ -51,6 +51,7 @@ spoiler.txt
 writer/*/publish/
 writer/*/run.txt
 writer/*/eldendata/
+writer/*/diste/
 
 # FogRando data files (extracted by tools/setup_fogrando.py)
 data/fog.txt
@@ -67,6 +68,6 @@ data/fog_data.json
 !writer/lib/
 writer/lib/*.dll
 
-# Track runtime assets (crash fix DLLs, etc.)
+# Track writer/assets/ directory but not DLLs (extracted by setup_fogrando.py)
 !writer/assets/
-!writer/assets/*.dll
+writer/assets/*.dll

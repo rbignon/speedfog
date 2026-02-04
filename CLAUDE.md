@@ -16,18 +16,27 @@ Unlike FogRando which randomizes the entire world, SpeedFog generates a smaller,
 **Hybrid Python + C#:**
 
 ```
-Python (speedfog/)      C# (writer/)                    Output
-─────────────────       ─────────────────               ─────────────────
-config.toml        →                                    output/
-clusters.json      →    graph.json → FogModWrapper  →   ├── mod/
-DAG generation     →                                    ├── ModEngine/
-                                                        ├── launch_speedfog.bat
-                                                        └── spoiler.txt
+Python (speedfog/)      C# (writer/)                              Output
+─────────────────       ─────────────────                         ─────────────────
+config.toml        →                                              output/
+clusters.json      →    graph.json → FogModWrapper ──────────┐    ├── mod/
+DAG generation     →                      ↑                  ├──► ├── ModEngine/
+                        item_config.json → ItemRandomizerWrapper  ├── launch_speedfog.bat
+                                          (optional)              └── spoiler.txt
 ```
 
 - **Python**: Configuration, cluster/zone data, DAG generation algorithm (package at root)
-- **C#**: FogModWrapper - thin wrapper calling FogMod.dll with our graph connections
+- **C#**:
+  - FogModWrapper - thin wrapper calling FogMod.dll with our graph connections
+  - ItemRandomizerWrapper - thin wrapper calling RandomizerCommon.dll for item randomization (optional)
 - **Output**: Self-contained folder with ModEngine 2 (auto-downloaded)
+
+### Item Randomization Workflow
+
+When item randomization is enabled, the workflow is:
+1. **ItemRandomizerWrapper** runs first → outputs to `temp/item-randomizer/`
+2. **FogModWrapper** runs with `--merge-dir temp/item-randomizer/` → merges item changes
+3. Final output contains both fog gate randomization and item randomization
 
 ## Directory Structure
 
@@ -50,16 +59,20 @@ speedfog/
 │   ├── fog_data.json        # Generated fog gate metadata (gitignored)
 │   └── zone_metadata.toml   # Zone weight config (tracked)
 ├── writer/                  # C# - Mod file generation
-│   ├── lib/                 # DLLs (FogMod, SoulsFormats, SoulsIds, etc.)
-│   └── FogModWrapper/       # Main writer - thin wrapper calling FogMod.dll
+│   ├── lib/                 # DLLs (FogMod, RandomizerCommon, SoulsFormats, etc.)
+│   ├── assets/              # Extra DLLs (RandomizerCrashFix, RandomizerHelper)
+│   ├── FogModWrapper/       # Fog gate writer - thin wrapper calling FogMod.dll
+│   │   ├── Program.cs       # CLI entry point
+│   │   ├── GraphLoader.cs   # Load graph.json v2
+│   │   ├── ConnectionInjector.cs  # Inject connections into FogMod Graph
+│   │   ├── StartingItemInjector.cs  # Inject starting item events into EMEVD
+│   │   ├── StartingResourcesInjector.cs  # Inject runes, seeds, tears
+│   │   └── eldendata/       # FogRando game data (gitignored)
+│   └── ItemRandomizerWrapper/  # Item randomizer - thin wrapper calling RandomizerCommon.dll
 │       ├── Program.cs       # CLI entry point
-│       ├── GraphLoader.cs   # Load graph.json v2
-│       ├── ConnectionInjector.cs  # Inject connections into FogMod Graph
-│       ├── StartingItemInjector.cs  # Inject starting item events into EMEVD
-│       ├── StartingResourcesInjector.cs  # Inject runes, seeds, tears
-│       └── eldendata/       # Game data (gitignored)
+│       └── diste/           # Item Randomizer game data (gitignored)
 ├── tools/                   # Standalone scripts
-│   ├── setup_fogrando.py    # Extract FogRando dependencies from Nexusmods ZIP
+│   ├── setup_fogrando.py    # Extract FogRando and Item Randomizer dependencies
 │   ├── generate_clusters.py # Generate clusters.json from fog.txt
 │   └── extract_fog_data.py  # Extract fog gate metadata
 ├── reference/               # FogRando decompiled code (READ-ONLY)
@@ -112,6 +125,11 @@ speedfog/
 | `StartingItemInjector` | Injects starting item events into common.emevd |
 | `StartingResourcesInjector` | Injects runes (CharaInitParam), seeds/tears (ItemLots) |
 
+**ItemRandomizerWrapper** (uses RandomizerCommon.dll directly):
+| Class | Purpose |
+|-------|---------|
+| `Program.cs` | CLI entry, loads item_config.json, calls Randomizer.Randomize() |
+
 **Key FogMod classes** (from FogMod.dll):
 | Class | Purpose |
 |-------|---------|
@@ -119,6 +137,15 @@ speedfog/
 | `Graph` | Nodes/edges representing fog connections |
 | `RandomizerOptions` | Configuration options (crawl, scale, etc.) |
 | `AnnotationData` | Parsed fog.txt data |
+
+**Key RandomizerCommon classes** (from RandomizerCommon.dll):
+| Class | Purpose |
+|-------|---------|
+| `Randomizer` | Main entry point - orchestrates randomization |
+| `RandomizerOptions` | Configuration (item, enemy, seed, difficulty) |
+| `Permutation` | Item placement logic |
+| `PermutationWriter` | Writes randomized items to params/EMEVD |
+| `GameData` | Loads game files from diste/ |
 
 ### Zone Data
 - Zone definitions extracted from FogRando's `fog.txt` into `clusters.json`
@@ -158,17 +185,24 @@ When implementing features, refer to these sections in `GameDataWriterE.cs`:
 # 1. Install Python dependencies (from project root)
 uv pip install -e ".[dev]"
 
-# 2. Install sfextract (for extracting FogRando DLLs)
+# 2. Install sfextract (for extracting DLLs from .NET single-file executables)
 dotnet tool install -g sfextract
 
-# 3. Download FogRando from Nexusmods (requires account):
-#    https://www.nexusmods.com/eldenring/mods/3295
+# 3. Download mods from Nexusmods (requires account):
+#    - FogRando: https://www.nexusmods.com/eldenring/mods/3295
+#    - Item Randomizer (optional): https://www.nexusmods.com/eldenring/mods/428
 
-# 4. Extract FogRando dependencies
+# 4. Extract dependencies (both mods recommended)
+python tools/setup_fogrando.py \
+  --fogrando /path/to/FogRando.zip \
+  --itemrando /path/to/ItemRandomizer.zip
+
+# Or extract only FogRando (legacy mode)
 python tools/setup_fogrando.py /path/to/FogRando.zip
 
-# 5. Build C# writer
+# 5. Build C# writers (done automatically by setup, or manually)
 cd writer/FogModWrapper && dotnet build
+cd writer/ItemRandomizerWrapper && dotnet build
 ```
 
 ## Commands
@@ -196,6 +230,20 @@ wine publish/win-x64/FogModWrapper.exe \
 # Example paths:
 #   seed_dir: seeds/212559448 (contains graph.json and spoiler.txt)
 #   game_dir: /data/thewall/Game (ELDEN RING/Game folder)
+
+# ItemRandomizerWrapper - build and publish
+cd writer/ItemRandomizerWrapper
+dotnet build
+dotnet publish -c Release -r win-x64 --self-contained -o publish/win-x64
+
+# ItemRandomizerWrapper - run (generates randomized items)
+wine publish/win-x64/ItemRandomizerWrapper.exe \
+  item_config.json \
+  --game-dir <game_dir> \
+  -o temp/item-randomizer
+
+# item_config.json format:
+# {"seed": 12345, "difficulty": 50, "options": {"item": true, "enemy": false}}
 
 # Play! (output is self-contained with ModEngine + launcher)
 ./output/launch_speedfog.bat   # Windows

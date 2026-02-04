@@ -1,0 +1,53 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="RandomizerCommon">
+      <HintPath>../lib/RandomizerCommon.dll</HintPath>
+    </Reference>
+    <Reference Include="SoulsFormats">
+      <HintPath>../lib/SoulsFormats.dll</HintPath>
+    </Reference>
+    <Reference Include="SoulsIds">
+      <HintPath>../lib/SoulsIds.dll</HintPath>
+    </Reference>
+    <Reference Include="YamlDotNet">
+      <HintPath>../lib/YamlDotNet.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json">
+      <HintPath>../lib/Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="BouncyCastle.Cryptography">
+      <HintPath>../lib/BouncyCastle.Cryptography.dll</HintPath>
+    </Reference>
+    <Reference Include="ZstdNet">
+      <HintPath>../lib/ZstdNet.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <!-- Copy native compression libraries to output -->
+  <ItemGroup>
+    <None Include="../lib/oo2core_6_win64.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="../lib/libzstd.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Copy crash fix DLL -->
+  <ItemGroup>
+    <None Include="../assets/RandomizerCrashFix.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
