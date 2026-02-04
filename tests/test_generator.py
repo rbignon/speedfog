@@ -9,10 +9,14 @@ from speedfog.config import Config
 from speedfog.generator import (
     GenerationError,
     cluster_has_usable_exits,
+    compute_net_exits,
+    count_net_exits,
     generate_dag,
     generate_with_retry,
     pick_cluster,
     pick_entry_fog_with_exits,
+    pick_entry_with_max_exits,
+    select_entries_for_merge,
     validate_config,
 )
 
@@ -846,3 +850,243 @@ class TestValidateConfig:
         config.structure.final_boss_candidates = ["bad_zone"]
         errors = validate_config(config, pool)
         assert len(errors) == 3
+
+
+# =============================================================================
+# Fog Gate Side Tests (fog_id, zone) pairs
+# =============================================================================
+
+
+class TestComputeNetExits:
+    """Tests for compute_net_exits with (fog_id, zone) logic."""
+
+    def test_consuming_entry_removes_same_side_exit(self):
+        """Consuming entry from zone A removes exit from zone A."""
+        cluster = make_cluster(
+            "test",
+            zones=["zone_a", "zone_b"],
+            entry_fogs=[
+                {"fog_id": "fog1", "zone": "zone_a"},
+            ],
+            exit_fogs=[
+                {"fog_id": "fog1", "zone": "zone_a"},
+                {"fog_id": "fog2", "zone": "zone_b"},
+            ],
+        )
+
+        consumed = [{"fog_id": "fog1", "zone": "zone_a"}]
+        remaining = compute_net_exits(cluster, consumed)
+
+        assert len(remaining) == 1
+        assert remaining[0]["fog_id"] == "fog2"
+
+    def test_consuming_entry_preserves_opposite_side_exit(self):
+        """Consuming entry from zone A does NOT remove exit from zone B with same fog_id."""
+        cluster = make_cluster(
+            "test",
+            zones=["zone_a", "zone_b"],
+            entry_fogs=[
+                {"fog_id": "shared_fog", "zone": "zone_a"},
+            ],
+            exit_fogs=[
+                {"fog_id": "shared_fog", "zone": "zone_a"},
+                {"fog_id": "shared_fog", "zone": "zone_b"},
+            ],
+        )
+
+        # Consume entry from zone_a side
+        consumed = [{"fog_id": "shared_fog", "zone": "zone_a"}]
+        remaining = compute_net_exits(cluster, consumed)
+
+        # Exit from zone_b should still be available
+        assert len(remaining) == 1
+        assert remaining[0]["fog_id"] == "shared_fog"
+        assert remaining[0]["zone"] == "zone_b"
+
+    def test_empty_consumed_returns_all_exits(self):
+        """No consumed entries returns all exits."""
+        cluster = make_cluster(
+            "test",
+            exit_fogs=[
+                {"fog_id": "fog1", "zone": "zone_a"},
+                {"fog_id": "fog2", "zone": "zone_b"},
+            ],
+        )
+
+        remaining = compute_net_exits(cluster, [])
+        assert len(remaining) == 2
+
+
+class TestCountNetExits:
+    """Tests for count_net_exits with (fog_id, zone) logic."""
+
+    def test_bidirectional_same_zone_costs_one(self):
+        """Entry that has same (fog_id, zone) in exits costs 1."""
+        cluster = make_cluster(
+            "test",
+            entry_fogs=[
+                {"fog_id": "bidir_fog", "zone": "zone_a"},
+            ],
+            exit_fogs=[
+                {"fog_id": "bidir_fog", "zone": "zone_a"},
+                {"fog_id": "other_fog", "zone": "zone_a"},
+            ],
+        )
+
+        # Consuming 1 entry removes 1 exit (the bidirectional one)
+        net_exits = count_net_exits(cluster, 1)
+        assert net_exits == 1
+
+    def test_different_zone_same_fog_id_costs_zero(self):
+        """Entry from zone A with fog in exits only in zone B costs 0."""
+        cluster = make_cluster(
+            "test",
+            entry_fogs=[
+                {"fog_id": "shared_fog", "zone": "zone_a"},
+            ],
+            exit_fogs=[
+                {"fog_id": "shared_fog", "zone": "zone_b"},
+                {"fog_id": "other_fog", "zone": "zone_b"},
+            ],
+        )
+
+        # Entry is from zone_a, but exits are in zone_b - no cost
+        net_exits = count_net_exits(cluster, 1)
+        assert net_exits == 2  # Both exits preserved
+
+
+class TestSelectEntriesForMerge:
+    """Tests for select_entries_for_merge returning dicts."""
+
+    def test_returns_dicts_with_fog_id_and_zone(self):
+        """Selected entries are dicts with fog_id and zone."""
+        cluster = make_cluster(
+            "test",
+            entry_fogs=[
+                {"fog_id": "fog1", "zone": "zone_a"},
+                {"fog_id": "fog2", "zone": "zone_b"},
+            ],
+            exit_fogs=[],
+        )
+
+        rng = random.Random(42)
+        entries = select_entries_for_merge(cluster, 2, rng)
+
+        assert len(entries) == 2
+        assert all(isinstance(e, dict) for e in entries)
+        assert all("fog_id" in e and "zone" in e for e in entries)
+
+    def test_prefers_non_bidirectional_entries(self):
+        """Non-bidirectional entries (different zone from exits) are preferred."""
+        cluster = make_cluster(
+            "test",
+            entry_fogs=[
+                {"fog_id": "bidir", "zone": "zone_a"},  # same zone as exit
+                {"fog_id": "non_bidir", "zone": "zone_b"},  # different zone
+            ],
+            exit_fogs=[
+                {"fog_id": "bidir", "zone": "zone_a"},
+            ],
+        )
+
+        rng = random.Random(42)
+        entries = select_entries_for_merge(cluster, 1, rng)
+
+        # Should pick non_bidir first since it doesn't consume an exit
+        assert len(entries) == 1
+        assert entries[0]["fog_id"] == "non_bidir"
+
+
+class TestPickEntryWithMaxExits:
+    """Tests for pick_entry_with_max_exits returning dicts."""
+
+    def test_returns_dict_with_fog_id_and_zone(self):
+        """Selected entry is a dict with fog_id and zone."""
+        cluster = make_cluster(
+            "test",
+            entry_fogs=[
+                {"fog_id": "fog1", "zone": "zone_a"},
+            ],
+            exit_fogs=[
+                {"fog_id": "exit1", "zone": "zone_a"},
+            ],
+        )
+
+        rng = random.Random(42)
+        entry = pick_entry_with_max_exits(cluster, 1, rng)
+
+        assert entry is not None
+        assert isinstance(entry, dict)
+        assert entry["fog_id"] == "fog1"
+        assert entry["zone"] == "zone_a"
+
+    def test_picks_entry_preserving_opposite_side_exits(self):
+        """Entry that preserves exits from other zones is valid."""
+        cluster = make_cluster(
+            "test",
+            entry_fogs=[
+                {"fog_id": "shared", "zone": "zone_a"},
+            ],
+            exit_fogs=[
+                {"fog_id": "shared", "zone": "zone_b"},  # Different zone
+            ],
+        )
+
+        rng = random.Random(42)
+        entry = pick_entry_with_max_exits(cluster, 1, rng)
+
+        # Entry from zone_a should be valid since exit is in zone_b
+        assert entry is not None
+        assert entry["fog_id"] == "shared"
+
+    def test_returns_none_when_no_valid_entry(self):
+        """Returns None when no entry leaves enough exits."""
+        cluster = make_cluster(
+            "test",
+            entry_fogs=[
+                {"fog_id": "fog1", "zone": "zone_a"},
+            ],
+            exit_fogs=[
+                {"fog_id": "fog1", "zone": "zone_a"},  # Will be consumed
+            ],
+        )
+
+        rng = random.Random(42)
+        entry = pick_entry_with_max_exits(cluster, 1, rng)
+
+        # Entry consumes the only exit, so no valid entry for min_exits=1
+        assert entry is None
+
+
+class TestClusterDataAvailableExits:
+    """Tests for ClusterData.available_exits with (fog_id, zone) logic."""
+
+    def test_removes_only_same_side_exit(self):
+        """Using entry from zone A only removes exit from zone A."""
+        cluster = make_cluster(
+            "test",
+            zones=["zone_a", "zone_b"],
+            exit_fogs=[
+                {"fog_id": "shared", "zone": "zone_a"},
+                {"fog_id": "shared", "zone": "zone_b"},
+            ],
+        )
+
+        used_entry = {"fog_id": "shared", "zone": "zone_a"}
+        available = cluster.available_exits(used_entry)
+
+        assert len(available) == 1
+        assert available[0]["zone"] == "zone_b"
+
+    def test_none_entry_returns_all_exits(self):
+        """None entry returns all exits."""
+        cluster = make_cluster(
+            "test",
+            exit_fogs=[
+                {"fog_id": "fog1", "zone": "zone_a"},
+                {"fog_id": "fog2", "zone": "zone_b"},
+            ],
+        )
+
+        available = cluster.available_exits(None)
+        assert len(available) == 2

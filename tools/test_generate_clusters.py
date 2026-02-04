@@ -776,6 +776,121 @@ class TestComputeClusterFogs:
         assert "top" in exit_zones
         assert "bottom" in exit_zones
 
+    def test_same_fog_id_different_zones_creates_separate_entries(self):
+        """Same fog_id in different zones creates separate exit entries.
+
+        This tests the fix for multi-zone clusters where a fog gate
+        connects two zones within the cluster. Each side of the gate
+        should be listed as a separate exit.
+        """
+        graph = WorldGraph()
+        graph.add_edge("boss_room", "post_boss", bidirectional=True)
+
+        # The fog "shared_gate" exists in both zones (two sides of same gate)
+        zone_fogs = {
+            "boss_room": ZoneFogs(
+                entry_fogs=[
+                    FogData(
+                        "shared_gate",
+                        100,
+                        FogSide("boss_room", ""),
+                        FogSide("post_boss", ""),
+                        [],
+                    )
+                ],
+                exit_fogs=[
+                    FogData(
+                        "shared_gate",
+                        100,
+                        FogSide("boss_room", ""),
+                        FogSide("post_boss", ""),
+                        [],
+                    ),
+                    FogData(
+                        "exit_a", 101, FogSide("boss_room", ""), FogSide("x", ""), []
+                    ),
+                ],
+            ),
+            "post_boss": ZoneFogs(
+                entry_fogs=[
+                    FogData(
+                        "shared_gate",
+                        100,
+                        FogSide("post_boss", ""),
+                        FogSide("boss_room", ""),
+                        [],
+                    )
+                ],
+                exit_fogs=[
+                    FogData(
+                        "shared_gate",
+                        100,
+                        FogSide("post_boss", ""),
+                        FogSide("boss_room", ""),
+                        [],
+                    ),
+                    FogData(
+                        "exit_b", 102, FogSide("post_boss", ""), FogSide("y", ""), []
+                    ),
+                ],
+            ),
+        }
+
+        cluster = Cluster(zones=frozenset({"boss_room", "post_boss"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        # Should have 4 exits: shared_gate from boss_room, shared_gate from post_boss,
+        # exit_a from boss_room, exit_b from post_boss
+        assert len(cluster.exit_fogs) == 4
+
+        # Verify we have shared_gate from both zones
+        shared_exits = [f for f in cluster.exit_fogs if f["fog_id"] == "shared_gate"]
+        assert len(shared_exits) == 2
+        shared_zones = {f["zone"] for f in shared_exits}
+        assert shared_zones == {"boss_room", "post_boss"}
+
+    def test_same_fog_id_different_zones_creates_separate_entries_for_entries(self):
+        """Same fog_id in different zones creates separate entry entries."""
+        graph = WorldGraph()
+        graph.add_edge("zone_a", "zone_b", bidirectional=True)
+
+        # Both zones have the same fog as entry
+        zone_fogs = {
+            "zone_a": ZoneFogs(
+                entry_fogs=[
+                    FogData(
+                        "shared_entry",
+                        200,
+                        FogSide("zone_a", ""),
+                        FogSide("zone_b", ""),
+                        [],
+                    )
+                ],
+                exit_fogs=[],
+            ),
+            "zone_b": ZoneFogs(
+                entry_fogs=[
+                    FogData(
+                        "shared_entry",
+                        200,
+                        FogSide("zone_b", ""),
+                        FogSide("zone_a", ""),
+                        [],
+                    )
+                ],
+                exit_fogs=[],
+            ),
+        }
+
+        cluster = Cluster(zones=frozenset({"zone_a", "zone_b"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        # Should have 2 entries: shared_entry from zone_a, shared_entry from zone_b
+        assert len(cluster.entry_fogs) == 2
+
+        entry_zones = {f["zone"] for f in cluster.entry_fogs}
+        assert entry_zones == {"zone_a", "zone_b"}
+
 
 # =============================================================================
 # Filter Tests
