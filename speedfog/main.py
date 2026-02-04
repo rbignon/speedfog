@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import subprocess
 import sys
@@ -12,6 +13,7 @@ from speedfog.balance import report_balance
 from speedfog.clusters import load_clusters
 from speedfog.config import Config, load_config
 from speedfog.generator import GenerationError, generate_with_retry
+from speedfog.item_randomizer import generate_item_config, run_item_randomizer
 from speedfog.output import (
     export_json_v2,
     export_spoiler_log,
@@ -24,6 +26,7 @@ def run_fogmodwrapper(
     game_dir: Path,
     platform: str | None,
     verbose: bool,
+    merge_dir: Path | None = None,
 ) -> bool:
     """Run FogModWrapper to generate the mod.
 
@@ -32,6 +35,7 @@ def run_fogmodwrapper(
         game_dir: Path to Elden Ring Game directory
         platform: "windows", "linux", or None for auto-detect
         verbose: Print command and output
+        merge_dir: Optional directory with Item Randomizer output to merge
 
     Returns:
         True on success, False on failure.
@@ -43,7 +47,10 @@ def run_fogmodwrapper(
 
     if not wrapper_exe.exists():
         print(f"Error: FogModWrapper not found at {wrapper_exe}", file=sys.stderr)
-        print("Run: python tools/setup_fogrando.py <fogrando.zip>", file=sys.stderr)
+        print(
+            "Run: python tools/setup_dependencies.py --fogrando <path> --itemrando <path>",
+            file=sys.stderr,
+        )
         return False
 
     # Detect platform (only Windows is native, everything else needs Wine)
@@ -79,6 +86,9 @@ def run_fogmodwrapper(
             str(seed_dir),
         ]
     )
+
+    if merge_dir is not None:
+        cmd.extend(["--merge-dir", str(merge_dir.resolve())])
 
     if verbose:
         print(f"Running: {' '.join(cmd)}")
@@ -285,12 +295,68 @@ def main() -> int:
         export_spoiler_log(dag, spoiler_path)
         print(f"Written: {spoiler_path}")
 
+    # Determine game_dir early (needed for Item Randomizer and FogModWrapper)
+    game_dir = args.game_dir or (
+        Path(config.paths.game_dir) if config.paths.game_dir else None
+    )
+
+    # Run Item Randomizer if enabled
+    item_rando_output: Path | None = None
+    if config.item_randomizer.enabled and not args.no_build:
+        if not game_dir:
+            print(
+                "Error: --game-dir required for Item Randomizer",
+                file=sys.stderr,
+            )
+            return 1
+
+        if not game_dir.exists():
+            print(f"Error: Game directory not found: {game_dir}", file=sys.stderr)
+            return 1
+
+        print("Running Item Randomizer...")
+
+        # Generate item_config.json
+        item_config = generate_item_config(config, actual_seed)
+        item_config_path = seed_dir / "item_config.json"
+        with item_config_path.open("w") as f:
+            json.dump(item_config, f, indent=2)
+        if args.verbose:
+            print(f"Written: {item_config_path}")
+
+        # Copy enemy preset
+        project_root = Path(__file__).parent.parent
+        preset_src = project_root / "data" / "enemy_preset.yaml"
+        preset_dst = seed_dir / "enemy_preset.yaml"
+        if preset_src.exists():
+            shutil.copy(preset_src, preset_dst)
+            if args.verbose:
+                print(f"Copied: {preset_dst}")
+        else:
+            print(f"Warning: Enemy preset not found at {preset_src}", file=sys.stderr)
+
+        # Run ItemRandomizerWrapper
+        item_rando_dir = seed_dir / "temp" / "item-randomizer"
+        item_rando_dir.mkdir(parents=True, exist_ok=True)
+
+        if run_item_randomizer(
+            seed_dir=seed_dir,
+            game_dir=game_dir,
+            output_dir=item_rando_dir,
+            platform=config.paths.platform,
+            verbose=args.verbose,
+        ):
+            item_rando_output = item_rando_dir
+        else:
+            print(
+                "Error: Item Randomizer failed (continuing without it)",
+                file=sys.stderr,
+            )
+
     # Build mod unless --no-build
     if not args.no_build:
-        # Determine game_dir (CLI > config)
-        game_dir = args.game_dir or (
-            Path(config.paths.game_dir) if config.paths.game_dir else None
-        )
+        # game_dir was already determined above for Item Randomizer
+        # but we still need to check it if Item Randomizer was disabled
         if not game_dir:
             print(
                 "Error: --game-dir required (or set paths.game_dir in config.toml)",
@@ -302,9 +368,14 @@ def main() -> int:
             print(f"Error: Game directory not found: {game_dir}", file=sys.stderr)
             return 1
 
+        # Determine merge_dir based on Item Randomizer
+        merge_dir = None
+        if item_rando_output and item_rando_output.exists():
+            merge_dir = item_rando_output
+
         print("Building mod...")
         if not run_fogmodwrapper(
-            seed_dir, game_dir, config.paths.platform, args.verbose
+            seed_dir, game_dir, config.paths.platform, args.verbose, merge_dir
         ):
             print(
                 "Error: Mod build failed (graph.json preserved for debugging)",
