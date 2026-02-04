@@ -172,6 +172,21 @@ class StartingItemsConfig:
 
 
 @dataclass
+class ItemRandomizerConfig:
+    """Item Randomizer configuration."""
+
+    enabled: bool = True
+    difficulty: int = 50
+    remove_requirements: bool = True
+    auto_upgrade_weapons: bool = True
+
+    def __post_init__(self) -> None:
+        """Validate configuration."""
+        if self.difficulty < 0 or self.difficulty > 100:
+            raise ValueError(f"difficulty must be 0-100, got {self.difficulty}")
+
+
+@dataclass
 class Config:
     """Main configuration container."""
 
@@ -181,6 +196,7 @@ class Config:
     structure: StructureConfig = field(default_factory=StructureConfig)
     paths: PathsConfig = field(default_factory=PathsConfig)
     starting_items: StartingItemsConfig = field(default_factory=StartingItemsConfig)
+    item_randomizer: ItemRandomizerConfig = field(default_factory=ItemRandomizerConfig)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Config:
@@ -191,6 +207,7 @@ class Config:
         structure_section = data.get("structure", {})
         paths_section = data.get("paths", {})
         starting_items_section = data.get("starting_items", {})
+        item_randomizer_section = data.get("item_randomizer", {})
 
         return cls(
             seed=run_section.get("seed", 0),
@@ -238,6 +255,16 @@ class Config:
                 golden_seeds=starting_items_section.get("golden_seeds", 0),
                 sacred_tears=starting_items_section.get("sacred_tears", 0),
                 starting_runes=starting_items_section.get("starting_runes", 0),
+            ),
+            item_randomizer=ItemRandomizerConfig(
+                enabled=item_randomizer_section.get("enabled", True),
+                difficulty=item_randomizer_section.get("difficulty", 50),
+                remove_requirements=item_randomizer_section.get(
+                    "remove_requirements", True
+                ),
+                auto_upgrade_weapons=item_randomizer_section.get(
+                    "auto_upgrade_weapons", True
+                ),
             ),
         )
 

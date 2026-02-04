@@ -278,3 +278,39 @@ def test_starting_items_validation_runes():
         Config.from_dict({"starting_items": {"starting_runes": 10_000_001}})
     with pytest.raises(ValueError, match="starting_runes must be 0-10000000"):
         Config.from_dict({"starting_items": {"starting_runes": -1}})
+
+
+def test_item_randomizer_defaults():
+    """ItemRandomizerConfig has correct defaults."""
+    config = Config.from_dict({})
+    assert config.item_randomizer.enabled is True
+    assert config.item_randomizer.difficulty == 50
+    assert config.item_randomizer.remove_requirements is True
+    assert config.item_randomizer.auto_upgrade_weapons is True
+
+
+def test_item_randomizer_from_toml(tmp_path):
+    """ItemRandomizerConfig parses from TOML."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[item_randomizer]
+enabled = false
+difficulty = 75
+remove_requirements = false
+auto_upgrade_weapons = false
+""")
+    config = Config.from_toml(config_file)
+    assert config.item_randomizer.enabled is False
+    assert config.item_randomizer.difficulty == 75
+    assert config.item_randomizer.remove_requirements is False
+    assert config.item_randomizer.auto_upgrade_weapons is False
+
+
+def test_item_randomizer_validation_difficulty():
+    """difficulty must be 0-100."""
+    import pytest
+
+    with pytest.raises(ValueError, match="difficulty must be 0-100"):
+        Config.from_dict({"item_randomizer": {"difficulty": 101}})
+    with pytest.raises(ValueError, match="difficulty must be 0-100"):
+        Config.from_dict({"item_randomizer": {"difficulty": -1}})
