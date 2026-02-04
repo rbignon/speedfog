@@ -121,3 +121,20 @@ great_runes = true
 # golden_seeds = 5       # Golden Seeds to upgrade flask uses (0-99)
 # sacred_tears = 3       # Sacred Tears to upgrade flask potency (0-12)
 # starting_runes = 50000 # Given as Lord's Rune items (50k each, use from inventory)
+
+[item_randomizer]
+# Enable Item/Enemy Randomizer integration (default: true)
+# Requires: python tools/setup_dependencies.py --itemrando <path>
+enabled = true
+
+# Item placement difficulty 0-100 (default: 50)
+# Higher = powerful items more dispersed, key items harder to find
+difficulty = 50
+
+# Remove stat requirements on weapons and spells (default: true)
+# Allows using any weapon regardless of STR/DEX/INT/FTH/ARC
+remove_requirements = true
+
+# Auto-upgrade weapons to player's highest upgrade level (default: true)
+# New weapons match your current max, no manual upgrading needed
+auto_upgrade_weapons = true
