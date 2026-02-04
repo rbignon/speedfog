@@ -126,6 +126,8 @@ Example:
         opt["req_backportal"] = true;  // Enable backportals so boss rooms have return warps as edges
         opt["roundtable"] = true;  // Make Roundtable Hold available from the start
 
+        opt["newgraces"] = true;  // Enable additional Sites of Grace
+
         // Mark dungeon types as "core" so their edges are processed
         // Note: Do NOT use req_all as it includes evergaols which lack StakeAsset definitions
         opt["req_graveyard"] = true;  // Required when req_dungeon + shuffle are both enabled
@@ -145,7 +147,7 @@ Example:
         opt[Feature.ForceUnlinked] = true;  // Force unlinked mode
         opt[Feature.SegmentFortresses] = true;  // Treat fortresses as segments
 
-        Console.WriteLine($"Options: seed={opt.Seed}, crawl={opt["crawl"]}, scale={opt["scale"]}");
+        Console.WriteLine($"Options: seed={opt.Seed}, crawl={opt["crawl"]}, scale={opt["scale"]}, newgraces={opt["newgraces"]}");
 
         // 3. Load FogMod data files
         var fogPath = Path.Combine(config.DataDir, "fog.txt");
