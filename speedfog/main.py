@@ -175,20 +175,20 @@ def main() -> int:
 
     # Export JSON v2 format (for FogModWrapper)
     json_path = seed_dir / "graph.json"
-    starting_item_lots = config.starting_items.get_item_lots()
+    starting_goods = config.starting_items.get_starting_goods()
     export_json_v2(
         dag,
         clusters,
         json_path,
         fog_data=fog_data,
-        starting_item_lots=starting_item_lots,
+        starting_goods=starting_goods,
         starting_runes=config.starting_items.starting_runes,
         starting_golden_seeds=config.starting_items.golden_seeds,
         starting_sacred_tears=config.starting_items.sacred_tears,
     )
     print(f"Written: {json_path}")
-    if starting_item_lots:
-        print(f"Starting items: {len(starting_item_lots)} item lots configured")
+    if starting_goods:
+        print(f"Starting items: {len(starting_goods)} goods configured")
     if config.starting_items.starting_runes > 0:
         print(f"Starting runes: {config.starting_items.starting_runes:,}")
     if config.starting_items.golden_seeds > 0:

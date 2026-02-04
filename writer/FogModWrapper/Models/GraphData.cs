@@ -25,6 +25,13 @@ public class GraphData
     [JsonPropertyName("starting_item_lots")]
     public List<int> StartingItemLots { get; set; } = new();
 
+    /// <summary>
+    /// Good IDs to award at game start using DirectlyGivePlayerItem.
+    /// Unlike ItemLots, these are not affected by Item Randomizer.
+    /// </summary>
+    [JsonPropertyName("starting_goods")]
+    public List<int> StartingGoods { get; set; } = new();
+
     [JsonPropertyName("starting_runes")]
     public int StartingRunes { get; set; } = 0;
 

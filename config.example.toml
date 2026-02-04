@@ -99,13 +99,15 @@ clusters_file = "./data/clusters.json"
 
 [starting_items]
 # Items given at game start when picking up the Tarnished's Wizened Finger.
-# These are awarded via EMEVD events using the common_startingitem template.
+# These are awarded via EMEVD events using DirectlyGivePlayerItem (not affected by Item Randomizer).
 
 # Key items for progression shortcuts
 academy_key = true       # Academy Glintstone Key - opens Raya Lucaria
 pureblood_medal = true   # Pureblood Knight's Medal - warps to Mohgwyn Palace
+drawing_room_key = true  # Drawing-Room Key - access Volcano Manor interior
 
 # Great Runes (restored versions, equippable at graces)
+# These are the ACTIVATED versions (Good IDs 191-196), not the boss drops
 # Set to true to give ALL Great Runes at start
 great_runes = true
 

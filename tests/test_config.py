@@ -209,6 +209,7 @@ def test_starting_items_defaults():
     config = Config.from_dict({})
     assert config.starting_items.academy_key is True
     assert config.starting_items.pureblood_medal is True
+    assert config.starting_items.drawing_room_key is True
     assert config.starting_items.great_runes is True
     assert config.starting_items.golden_seeds == 0
     assert config.starting_items.sacred_tears == 0
@@ -231,7 +232,7 @@ starting_runes = 50000
 
 
 def test_starting_items_get_item_lots():
-    """get_item_lots returns correct ItemLot IDs."""
+    """get_item_lots returns correct ItemLot IDs (deprecated, use get_starting_goods)."""
     config = Config.from_dict(
         {
             "starting_items": {
@@ -248,6 +249,50 @@ def test_starting_items_get_item_lots():
     assert 100320 not in lots  # Pureblood Medal disabled
     assert 34100500 in lots  # Godrick's Great Rune
     assert 34130050 not in lots  # Radahn's Great Rune disabled
+
+
+def test_starting_items_get_starting_goods():
+    """get_starting_goods returns correct Good IDs for DirectlyGivePlayerItem."""
+    config = Config.from_dict(
+        {
+            "starting_items": {
+                "academy_key": True,
+                "pureblood_medal": False,
+                "drawing_room_key": True,
+                "great_runes": False,
+                "rune_godrick": True,
+                "rune_radahn": False,
+            }
+        }
+    )
+    goods = config.starting_items.get_starting_goods()
+    assert 8109 in goods  # Academy Glintstone Key
+    assert 2160 not in goods  # Pureblood Knight's Medal disabled
+    assert 8134 in goods  # Drawing-Room Key
+    assert 191 in goods  # Godrick's Great Rune (restored, Good ID 191)
+    assert 192 not in goods  # Radahn's Great Rune disabled
+
+
+def test_starting_items_get_starting_goods_all_runes():
+    """get_starting_goods includes all Great Runes when great_runes=True."""
+    config = Config.from_dict(
+        {
+            "starting_items": {
+                "great_runes": True,
+            }
+        }
+    )
+    goods = config.starting_items.get_starting_goods()
+    # Should have all 6 Great Runes (restored, 191-196) + key items (defaults)
+    assert 8109 in goods  # Academy Glintstone Key
+    assert 2160 in goods  # Pureblood Knight's Medal
+    assert 8134 in goods  # Drawing-Room Key
+    assert 191 in goods  # Godrick (restored)
+    assert 192 in goods  # Radahn (restored)
+    assert 193 in goods  # Morgott (restored)
+    assert 194 in goods  # Rykard (restored)
+    assert 195 in goods  # Mohg (restored)
+    assert 196 in goods  # Malenia (restored)
 
 
 def test_starting_items_validation_golden_seeds():

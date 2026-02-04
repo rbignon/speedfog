@@ -329,9 +329,11 @@ Example:
         writer.Write(opt, ann, graph, mergedMods, modDir, events, eventConfig, Console.WriteLine);
 
         // 7b. Inject starting items (post-process EMEVD)
-        if (graphData.StartingItemLots.Count > 0)
+        // Use StartingGoods (Good IDs) instead of StartingItemLots (ItemLot IDs)
+        // because Item Randomizer modifies ItemLotParam but not the items themselves
+        if (graphData.StartingGoods.Count > 0)
         {
-            StartingItemInjector.Inject(modDir, graphData.StartingItemLots);
+            StartingItemInjector.Inject(modDir, graphData.StartingGoods, events);
         }
 
         // 7c. Inject starting resources (runes, golden seeds, sacred tears)

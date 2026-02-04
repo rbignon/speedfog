@@ -1,31 +1,33 @@
 using SoulsFormats;
+using SoulsIds;
 
 namespace FogModWrapper;
 
 /// <summary>
 /// Injects starting item events into the common.emevd after FogMod writes.
-/// Uses the common_startingitem template pattern from fogevents.txt.
+/// Uses DirectlyGivePlayerItem to give items by Good ID, which is not affected
+/// by Item Randomizer (unlike AwardItemLot which uses ItemLotParam).
 /// </summary>
 public static class StartingItemInjector
 {
-    // Event template ID for common_startingitem (from fogevents.txt)
-    // This event waits for flag 1040292051 (finger pickup) then awards an item lot
-    private const int TEMPLATE_EVENT_ID = 755856200;
-
     // Base event ID for our starting item events (using a safe range)
     private const int BASE_EVENT_ID = 755860000;
 
     // Flag set when player picks up the Tarnished's Wizened Finger
     private const int FINGER_PICKUP_FLAG = 1040292051;
 
+    // Flag to track if we already gave the starting items (prevents re-giving on reload)
+    private const int ITEMS_GIVEN_FLAG = 1040299001;
+
     /// <summary>
-    /// Inject starting item events into common.emevd.
+    /// Inject starting item events into common.emevd using Good IDs.
     /// </summary>
     /// <param name="modDir">Directory containing the mod files (with event/common.emevd)</param>
-    /// <param name="itemLots">List of ItemLot IDs to award at game start</param>
-    public static void Inject(string modDir, List<int> itemLots)
+    /// <param name="goodIds">List of Good IDs to award at game start</param>
+    /// <param name="events">Events parser for instruction generation</param>
+    public static void Inject(string modDir, List<int> goodIds, Events events)
     {
-        if (itemLots.Count == 0)
+        if (goodIds.Count == 0)
         {
             Console.WriteLine("No starting items to inject");
             return;
@@ -38,7 +40,7 @@ public static class StartingItemInjector
             return;
         }
 
-        Console.WriteLine($"Injecting {itemLots.Count} starting item events into common.emevd...");
+        Console.WriteLine($"Injecting {goodIds.Count} starting items into common.emevd...");
 
         // Load the EMEVD
         var emevd = EMEVD.Read(emevdPath);
@@ -51,81 +53,39 @@ public static class StartingItemInjector
             return;
         }
 
-        // Add events for each item lot
-        for (int i = 0; i < itemLots.Count; i++)
+        // Create a single event that gives all items (more efficient than one per item)
+        var evt = new EMEVD.Event(BASE_EVENT_ID);
+
+        // Wait for finger pickup (same pattern as StartingResourcesInjector)
+        evt.Instructions.Add(events.ParseAdd($"IfEventFlag(MAIN, ON, TargetEventFlagType.EventFlag, {FINGER_PICKUP_FLAG})"));
+
+        // Exit if we already gave the items (flag-based check for unique items)
+        evt.Instructions.Add(events.ParseAdd($"EndIfEventFlag(EventEndType.End, ON, TargetEventFlagType.EventFlag, {ITEMS_GIVEN_FLAG})"));
+
+        // Give all items using DirectlyGivePlayerItem
+        // This uses Good IDs directly, bypassing ItemLotParam which is modified by Item Randomizer
+        // Args: ItemType (3=Goods), GoodID, ItemLotParamRow (6001 for presentation), Quantity
+        foreach (var goodId in goodIds)
         {
-            var itemLot = itemLots[i];
-            var eventId = BASE_EVENT_ID + i;
-
-            // Create the event that awards this item lot
-            var newEvent = CreateStartingItemEvent(eventId, itemLot);
-            emevd.Events.Add(newEvent);
-
-            // Add initialization call to event 0
-            // InitializeEvent(0, eventId, 0) - the 0 at end is slot
-            var initInstruction = CreateInitializeEventInstruction(eventId);
-            initEvent.Instructions.Add(initInstruction);
-
-            Console.WriteLine($"  Added event {eventId} for ItemLot {itemLot}");
+            evt.Instructions.Add(events.ParseAdd($"DirectlyGivePlayerItem(ItemType.Goods, {goodId}, 6001, 1)"));
+            Console.WriteLine($"  Added Good ID {goodId}");
         }
+
+        // Set flag so we don't give items again on reload
+        evt.Instructions.Add(events.ParseAdd($"SetEventFlag(TargetEventFlagType.EventFlag, {ITEMS_GIVEN_FLAG}, ON)"));
+
+        // Add event to EMEVD
+        emevd.Events.Add(evt);
+
+        // Add initialization call to event 0 (same pattern as StartingResourcesInjector)
+        var initArgs = new byte[12];
+        BitConverter.GetBytes(0).CopyTo(initArgs, 0);              // slot = 0
+        BitConverter.GetBytes(BASE_EVENT_ID).CopyTo(initArgs, 4);  // eventId
+        BitConverter.GetBytes(0).CopyTo(initArgs, 8);              // arg0 = 0 (unused)
+        initEvent.Instructions.Add(new EMEVD.Instruction(2000, 0, initArgs));
 
         // Save the modified EMEVD
         emevd.Write(emevdPath);
-        Console.WriteLine($"Starting item events injected successfully");
-    }
-
-    /// <summary>
-    /// Create an event that waits for finger pickup flag then awards an item lot.
-    /// Matches the common_startingitem template from fogevents.txt.
-    /// </summary>
-    private static EMEVD.Event CreateStartingItemEvent(int eventId, int itemLot)
-    {
-        var evt = new EMEVD.Event(eventId);
-
-        // IfEventFlag(MAIN, ON, TargetEventFlagType.EventFlag, 1040292051)
-        // Bank 3, ID 0: IfConditionGroup (wait for condition MAIN to pass)
-        // Bank 3, ID 3: IfEventFlag
-        // We need to:
-        // 1. IfEventFlag(MAIN, ON, EventFlag, FINGER_PICKUP_FLAG)
-        // 2. AwardItemLot(itemLot)
-
-        // Instruction: IfEventFlag(conditionGroup, state, flagType, flagId)
-        // Bank 3, ID 0 (IF Event Flag)
-        // Args: condition (1 byte), state (1 byte), flagType (1 byte), padding (1 byte), flagId (4 bytes)
-        var ifFlagArgs = new byte[8];
-        ifFlagArgs[0] = 0;  // MAIN condition group
-        ifFlagArgs[1] = 1;  // ON state
-        ifFlagArgs[2] = 0;  // EventFlag type
-        ifFlagArgs[3] = 0;  // padding
-        BitConverter.GetBytes(FINGER_PICKUP_FLAG).CopyTo(ifFlagArgs, 4);
-
-        evt.Instructions.Add(new EMEVD.Instruction(3, 0, ifFlagArgs));
-
-        // Instruction: AwardItemLot(itemLotId)
-        // Bank 2003, ID 4 - DirectlyGivePlayerItem / AwardItemLot
-        // Args: itemLotId (4 bytes)
-        var awardArgs = new byte[4];
-        BitConverter.GetBytes(itemLot).CopyTo(awardArgs, 0);
-
-        evt.Instructions.Add(new EMEVD.Instruction(2003, 4, awardArgs));
-
-        return evt;
-    }
-
-    /// <summary>
-    /// Create an InitializeEvent instruction to call from event 0.
-    /// </summary>
-    private static EMEVD.Instruction CreateInitializeEventInstruction(int eventId)
-    {
-        // InitializeEvent(slot, eventId, args...)
-        // Bank 2000, ID 0
-        // Args: slot (4 bytes), eventId (4 bytes), followed by event args
-        // For common_startingitem template, the only arg is X0_4 = 0 (unused in our case)
-        var args = new byte[12];
-        BitConverter.GetBytes(0).CopyTo(args, 0);        // slot = 0
-        BitConverter.GetBytes(eventId).CopyTo(args, 4);  // eventId
-        BitConverter.GetBytes(0).CopyTo(args, 8);        // arg0 = 0 (unused)
-
-        return new EMEVD.Instruction(2000, 0, args);
+        Console.WriteLine("Starting item events injected successfully");
     }
 }

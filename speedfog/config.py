@@ -98,22 +98,25 @@ class PathsConfig:
 class StartingItemsConfig:
     """Starting items given when picking up the Tarnished's Wizened Finger.
 
-    These items are awarded via the common_startingitem event template.
+    These items are awarded via DirectlyGivePlayerItem using Good IDs.
+    Good IDs are from fog.txt KeyItems section (format: 3:XXXX where 3=Goods).
     """
 
     # Key items for progression shortcuts
-    academy_key: bool = True  # Academy Glintstone Key (ItemLot 1034450100)
-    pureblood_medal: bool = True  # Pureblood Knight's Medal (ItemLot 100320)
+    academy_key: bool = True  # Academy Glintstone Key (Good ID 8109)
+    pureblood_medal: bool = True  # Pureblood Knight's Medal (Good ID 2160)
+    drawing_room_key: bool = True  # Drawing-Room Key for Volcano Manor (Good ID 8134)
 
     # Great Runes (restored versions, equippable at graces)
+    # Restored Great Runes have Good IDs 191-196 (not the boss drop versions 8148-8153)
     great_runes: bool = True  # All Great Runes below
     # Individual Great Runes (only used if great_runes=False)
-    rune_godrick: bool = True  # ItemLot 34100500
-    rune_radahn: bool = True  # ItemLot 34130050
-    rune_morgott: bool = True  # ItemLot 34140700
-    rune_mohg: bool = True  # ItemLot 34140710
-    rune_rykard: bool = True  # ItemLot 34120500
-    rune_malenia: bool = True  # ItemLot 34150000
+    rune_godrick: bool = True  # Good ID 191 (restored)
+    rune_radahn: bool = True  # Good ID 192 (restored)
+    rune_morgott: bool = True  # Good ID 193 (restored)
+    rune_rykard: bool = True  # Good ID 194 (restored)
+    rune_mohg: bool = True  # Good ID 195 (restored)
+    rune_malenia: bool = True  # Good ID 196 (restored)
 
     # Consumable starting resources
     golden_seeds: int = 0  # Golden Seeds (Good ID 10010) - upgrade flask uses
@@ -132,7 +135,11 @@ class StartingItemsConfig:
             )
 
     def get_item_lots(self) -> list[int]:
-        """Get list of ItemLot IDs to award at game start."""
+        """Get list of ItemLot IDs to award at game start.
+
+        DEPRECATED: Use get_starting_goods() instead. ItemLots are randomized
+        by the Item Randomizer, so using AwardItemLot gives wrong items.
+        """
         lots: list[int] = []
 
         if self.academy_key:
@@ -169,6 +176,52 @@ class StartingItemsConfig:
                 lots.append(34150000)
 
         return lots
+
+    def get_starting_goods(self) -> list[int]:
+        """Get list of Good IDs to award at game start.
+
+        Uses DirectlyGivePlayerItem which is not affected by Item Randomizer.
+        Good IDs are from fog.txt KeyItems section (format: 3:XXXX where 3=Goods).
+        """
+        goods: list[int] = []
+
+        # Key items for progression shortcuts
+        if self.academy_key:
+            goods.append(8109)  # Academy Glintstone Key
+        if self.pureblood_medal:
+            goods.append(2160)  # Pureblood Knight's Medal
+        if self.drawing_room_key:
+            goods.append(8134)  # Drawing-Room Key (Volcano Manor)
+
+        # Great Runes (RESTORED versions - Good IDs 191-196)
+        # These are the activated/restored versions, equippable at Graces
+        # NOT the boss drop versions (8148-8153) which need Divine Tower activation
+        if self.great_runes:
+            goods.extend(
+                [
+                    191,  # Godrick's Great Rune (restored)
+                    192,  # Radahn's Great Rune (restored)
+                    193,  # Morgott's Great Rune (restored)
+                    194,  # Rykard's Great Rune (restored)
+                    195,  # Mohg's Great Rune (restored)
+                    196,  # Malenia's Great Rune (restored)
+                ]
+            )
+        else:
+            if self.rune_godrick:
+                goods.append(191)
+            if self.rune_radahn:
+                goods.append(192)
+            if self.rune_morgott:
+                goods.append(193)
+            if self.rune_rykard:
+                goods.append(194)
+            if self.rune_mohg:
+                goods.append(195)
+            if self.rune_malenia:
+                goods.append(196)
+
+        return goods
 
 
 @dataclass
@@ -245,6 +298,7 @@ class Config:
             starting_items=StartingItemsConfig(
                 academy_key=starting_items_section.get("academy_key", True),
                 pureblood_medal=starting_items_section.get("pureblood_medal", True),
+                drawing_room_key=starting_items_section.get("drawing_room_key", True),
                 great_runes=starting_items_section.get("great_runes", True),
                 rune_godrick=starting_items_section.get("rune_godrick", True),
                 rune_radahn=starting_items_section.get("rune_radahn", True),

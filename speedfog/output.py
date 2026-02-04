@@ -197,6 +197,7 @@ def dag_to_dict_v2(
     options: dict[str, bool] | None = None,
     fog_data: dict[str, dict[str, Any]] | None = None,
     starting_item_lots: list[int] | None = None,
+    starting_goods: list[int] | None = None,
     starting_runes: int = 0,
     starting_golden_seeds: int = 0,
     starting_sacred_tears: int = 0,
@@ -208,7 +209,8 @@ def dag_to_dict_v2(
         clusters: ClusterPool with zone_maps for FullName generation
         options: FogMod options to include (default: scale=True)
         fog_data: Optional fog_data.json lookup for accurate map IDs (esp. for warps)
-        starting_item_lots: ItemLot IDs to award at game start
+        starting_item_lots: DEPRECATED - ItemLot IDs (randomized by Item Randomizer)
+        starting_goods: Good IDs to award at game start (not affected by randomization)
         starting_runes: Runes to add to starting classes (via CharaInitParam)
         starting_golden_seeds: Golden Seeds to give at start
         starting_sacred_tears: Sacred Tears to give at start
@@ -220,7 +222,8 @@ def dag_to_dict_v2(
         - options: dict of FogMod options
         - connections: list of {exit_area, exit_gate, entrance_area, entrance_gate}
         - area_tiers: dict of zone -> tier
-        - starting_item_lots: list of ItemLot IDs
+        - starting_item_lots: list of ItemLot IDs (deprecated)
+        - starting_goods: list of Good IDs
         - starting_runes: int
         - starting_golden_seeds: int
         - starting_sacred_tears: int
@@ -287,6 +290,7 @@ def dag_to_dict_v2(
         "connections": connections,
         "area_tiers": area_tiers,
         "starting_item_lots": starting_item_lots or [],
+        "starting_goods": starting_goods or [],
         "starting_runes": starting_runes,
         "starting_golden_seeds": starting_golden_seeds,
         "starting_sacred_tears": starting_sacred_tears,
@@ -300,6 +304,7 @@ def export_json_v2(
     options: dict[str, bool] | None = None,
     fog_data: dict[str, dict[str, Any]] | None = None,
     starting_item_lots: list[int] | None = None,
+    starting_goods: list[int] | None = None,
     starting_runes: int = 0,
     starting_golden_seeds: int = 0,
     starting_sacred_tears: int = 0,
@@ -312,7 +317,8 @@ def export_json_v2(
         output_path: Path to write the JSON file
         options: FogMod options (default: scale=True, shuffle=True)
         fog_data: Optional fog_data.json lookup for accurate map IDs
-        starting_item_lots: ItemLot IDs to award at game start
+        starting_item_lots: DEPRECATED - ItemLot IDs (randomized by Item Randomizer)
+        starting_goods: Good IDs to award at game start
         starting_runes: Runes to add to starting classes
         starting_golden_seeds: Golden Seeds to give at start
         starting_sacred_tears: Sacred Tears to give at start
@@ -323,6 +329,7 @@ def export_json_v2(
         options,
         fog_data,
         starting_item_lots,
+        starting_goods,
         starting_runes,
         starting_golden_seeds,
         starting_sacred_tears,
