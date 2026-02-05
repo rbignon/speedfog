@@ -76,7 +76,6 @@ max_layers = 12
 [paths]
 game_dir = "/path/to/game"
 output_dir = "./custom_output"
-randomizer_dir = "./mods/randomizer"
 platform = "linux"
 """)
     config = Config.from_toml(config_file)
@@ -98,7 +97,6 @@ platform = "linux"
     # Paths section
     assert config.paths.game_dir == "/path/to/game"
     assert config.paths.output_dir == "./custom_output"
-    assert config.paths.randomizer_dir == "./mods/randomizer"
     assert config.paths.platform == "linux"
 
 
@@ -125,7 +123,6 @@ def test_paths_defaults():
     config = Config.from_dict({})
     assert config.paths.game_dir == ""
     assert config.paths.output_dir == "./seeds"
-    assert config.paths.randomizer_dir is None
     assert config.paths.platform is None
 
 
