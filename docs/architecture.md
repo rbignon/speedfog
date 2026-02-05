@@ -281,7 +281,7 @@ Zones have tiers (1-28) based on their layer in the DAG. FogMod applies SpEffect
 ```
 output/
 ├── ModEngine/              # ModEngine 2 (auto-downloaded)
-├── mods/speedfog/          # Mod files
+├── mods/fogmod/            # Mod files
 │   ├── param/gameparam/regulation.bin
 │   ├── event/*.emevd.dcx
 │   ├── map/mapstudio/*.msb.dcx

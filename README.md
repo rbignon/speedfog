@@ -66,9 +66,9 @@ uv run speedfog config.toml --spoiler
 
 Output is self-contained in `seeds/<seed>/`:
 - `graph.json` - DAG definition
-- `spoiler.txt` - Solution path
+- `spoiler.txt` - Spoiler Log
 - `ModEngine/` - ModEngine 2 (auto-downloaded)
-- `mods/speedfog/` - Generated mod files
+- `mods/` - Generated mod files
 - `config_speedfog.toml` - ModEngine config
 - `launch_speedfog.bat` - Windows launcher
 - `launch_speedfog.sh` - Linux/Proton launcher
