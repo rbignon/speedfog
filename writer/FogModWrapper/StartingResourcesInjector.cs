@@ -36,24 +36,26 @@ public static class StartingResourcesInjector
             return;
         }
 
-        // Clamp values to safe ranges
-        if (goldenSeeds > 99)
+        // Clamp values to safe ranges using ResourceCalculations
+        goldenSeeds = ResourceCalculations.ClampGoldenSeeds(goldenSeeds, out var seedsClamped);
+        if (seedsClamped)
         {
-            Console.WriteLine($"Warning: golden_seeds capped at 99 (was {goldenSeeds})");
-            goldenSeeds = 99;
-        }
-        if (sacredTears > 12)
-        {
-            Console.WriteLine($"Warning: sacred_tears capped at 12 (was {sacredTears})");
-            sacredTears = 12;
+            Console.WriteLine($"Warning: golden_seeds capped at {ResourceCalculations.MaxGoldenSeeds}");
         }
 
-        // Convert runes to Lord's Rune items (50,000 runes each)
-        int lordsRunes = runes > 0 ? (runes + 49999) / 50000 : 0;
-        if (lordsRunes > 200)
+        sacredTears = ResourceCalculations.ClampSacredTears(sacredTears, out var tearsClamped);
+        if (tearsClamped)
         {
-            Console.WriteLine($"Warning: starting_runes capped at 10,000,000 (200 Lord's Runes)");
-            lordsRunes = 200;
+            Console.WriteLine($"Warning: sacred_tears capped at {ResourceCalculations.MaxSacredTears}");
+        }
+
+        // Convert runes to Lord's Rune items
+        int lordsRunes = ResourceCalculations.ConvertRunesToLordsRunes(runes);
+        lordsRunes = ResourceCalculations.ClampLordsRunes(lordsRunes, out var runesClamped);
+        if (runesClamped)
+        {
+            int maxRunes = ResourceCalculations.LordsRunesToRunes(ResourceCalculations.MaxLordsRunes);
+            Console.WriteLine($"Warning: starting_runes capped at {maxRunes:N0} ({ResourceCalculations.MaxLordsRunes} Lord's Runes)");
         }
 
         var emevdPath = Path.Combine(modDir, "event", "common.emevd.dcx");

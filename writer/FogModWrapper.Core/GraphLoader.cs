@@ -29,11 +29,26 @@ public static class GraphLoader
         }
 
         var json = File.ReadAllText(path);
+        var data = Parse(json);
+
+        Console.WriteLine($"Loaded graph: seed={data.Seed}, {data.Connections.Count} connections, {data.AreaTiers.Count} area tiers");
+
+        return data;
+    }
+
+    /// <summary>
+    /// Parse graph data from a JSON string.
+    /// </summary>
+    /// <param name="json">JSON string to parse</param>
+    /// <returns>Parsed GraphData</returns>
+    /// <exception cref="JsonException">If JSON parsing fails</exception>
+    public static GraphData Parse(string json)
+    {
         var data = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
 
         if (data == null)
         {
-            throw new JsonException($"Failed to parse graph file: {path}");
+            throw new JsonException("Failed to parse graph JSON: result was null");
         }
 
         // Validate version
@@ -41,8 +56,6 @@ public static class GraphLoader
         {
             Console.WriteLine($"Warning: Expected graph.json version 2.0, got {data.Version}");
         }
-
-        Console.WriteLine($"Loaded graph: seed={data.Seed}, {data.Connections.Count} connections, {data.AreaTiers.Count} area tiers");
 
         return data;
     }

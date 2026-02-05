@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../FogModWrapper.Core/FogModWrapper.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="FogMod">
       <HintPath>../lib/FogMod.dll</HintPath>
     </Reference>

@@ -1,6 +1,5 @@
 using System.Drawing;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using RandomizerCommon;
 using SoulsIds;
 
@@ -22,7 +21,7 @@ class Program
     {
         try
         {
-            var config = ParseArgs(args);
+            var config = ArgParser.Parse(args);
             if (config == null)
             {
                 PrintUsage();
@@ -70,62 +69,7 @@ Example:
 ");
     }
 
-    static Config? ParseArgs(string[] args)
-    {
-        var config = new Config();
-
-        for (int i = 0; i < args.Length; i++)
-        {
-            switch (args[i])
-            {
-                case "--game-dir":
-                    if (i + 1 >= args.Length) return null;
-                    config.GameDir = args[++i];
-                    break;
-                case "-o":
-                case "--output":
-                    if (i + 1 >= args.Length) return null;
-                    config.OutputDir = args[++i];
-                    break;
-                case "--data-dir":
-                    if (i + 1 >= args.Length) return null;
-                    config.DataDir = args[++i];
-                    break;
-                default:
-                    if (args[i].StartsWith("-"))
-                    {
-                        Console.Error.WriteLine($"Unknown option: {args[i]}");
-                        return null;
-                    }
-                    if (string.IsNullOrEmpty(config.ConfigPath))
-                    {
-                        config.ConfigPath = args[i];
-                    }
-                    break;
-            }
-        }
-
-        // Validate required arguments
-        if (string.IsNullOrEmpty(config.ConfigPath))
-        {
-            Console.Error.WriteLine("Error: config.json path required");
-            return null;
-        }
-        if (string.IsNullOrEmpty(config.GameDir))
-        {
-            Console.Error.WriteLine("Error: --game-dir required");
-            return null;
-        }
-        if (string.IsNullOrEmpty(config.OutputDir))
-        {
-            Console.Error.WriteLine("Error: -o/--output required");
-            return null;
-        }
-
-        return config;
-    }
-
-    static async Task RunRandomizer(Config config)
+    static async Task RunRandomizer(CliConfig config)
     {
         // Load configuration from JSON
         var configJson = await File.ReadAllTextAsync(config.ConfigPath);
@@ -233,31 +177,5 @@ Example:
         Console.WriteLine();
         Console.WriteLine($"Item randomization complete!");
         Console.WriteLine($"Output written to: {config.OutputDir}");
-    }
-
-    class Config
-    {
-        public string ConfigPath { get; set; } = "";
-        public string GameDir { get; set; } = "";
-        public string OutputDir { get; set; } = "";
-        public string? DataDir { get; set; }
-    }
-
-    class RandomizerConfig
-    {
-        [JsonPropertyName("seed")]
-        public int Seed { get; set; }
-
-        [JsonPropertyName("difficulty")]
-        public int Difficulty { get; set; } = 50;
-
-        [JsonPropertyName("options")]
-        public Dictionary<string, bool>? Options { get; set; }
-
-        [JsonPropertyName("preset")]
-        public string? Preset { get; set; }
-
-        [JsonPropertyName("helper_options")]
-        public Dictionary<string, bool>? HelperOptions { get; set; }
     }
 }

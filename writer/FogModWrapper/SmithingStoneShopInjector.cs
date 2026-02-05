@@ -136,32 +136,7 @@ public static class SmithingStoneShopInjector
         Console.WriteLine($"Smithing stones injected successfully ({NormalStones.Length + SomberStones.Length} items)");
     }
 
-    /// <summary>
-    /// Find a contiguous range of free IDs within the given bounds.
-    /// </summary>
-    private static int FindContiguousFreeRange(HashSet<int> existingIds, int minId, int maxId, int count)
-    {
-        int start = minId;
-        while (start + count <= maxId)
-        {
-            bool found = true;
-            for (int i = 0; i < count; i++)
-            {
-                if (existingIds.Contains(start + i))
-                {
-                    // Skip to after this conflict
-                    start = start + i + 1;
-                    found = false;
-                    break;
-                }
-            }
-            if (found)
-            {
-                return start;
-            }
-        }
-        return -1;
-    }
+    // FindContiguousFreeRange is now in ShopIdAllocator (FogModWrapper.Core)
 
     private static void AddShopEntry(PARAM param, int shopId, int itemId, int price)
     {
