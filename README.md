@@ -11,6 +11,7 @@ Unlike FogRando which randomizes the entire world, SpeedFog creates a focused pa
 - **No dead ends**: Every path leads to Radagon
 - **Seed-based**: Share seeds for identical runs
 - **Self-contained output**: Includes ModEngine 2 and launcher
+- **Item randomization**: Optional integration with Item Randomizer
 
 ## Requirements
 
@@ -21,9 +22,11 @@ Unlike FogRando which randomizes the entire world, SpeedFog creates a focused pa
 
 ## Installation
 
-### 1. Download FogRando
+### 1. Download Dependencies
 
-Download [Elden Ring Fog Gate Randomizer](https://www.nexusmods.com/eldenring/mods/3295) from Nexusmods (requires account).
+From Nexusmods (requires account):
+- **Required**: [Elden Ring Fog Gate Randomizer](https://www.nexusmods.com/eldenring/mods/3295)
+- **Optional**: [Elden Ring Item and Enemy Randomizer](https://www.nexusmods.com/eldenring/mods/428) - for item/enemy randomization
 
 ### 2. Clone and Setup
 
@@ -37,8 +40,13 @@ uv pip install -e .
 # Install sfextract (extracts DLLs from FogRando)
 dotnet tool install -g sfextract
 
-# Extract FogRando dependencies and build FogModWrapper
-python tools/setup_dependencies.py /path/to/FogRando.zip
+# Extract dependencies (both mods recommended)
+python tools/setup_dependencies.py \
+  --fogrando /path/to/FogRando.zip \
+  --itemrando /path/to/ItemRandomizer.zip
+
+# Or FogRando only (no item randomization)
+python tools/setup_dependencies.py --fogrando /path/to/FogRando.zip
 ```
 
 ### 3. Configure
@@ -59,7 +67,9 @@ uv run speedfog config.toml --spoiler
 Output is self-contained in `seeds/<seed>/`:
 - `graph.json` - DAG definition
 - `spoiler.txt` - Solution path
+- `ModEngine/` - ModEngine 2 (auto-downloaded)
 - `mods/speedfog/` - Generated mod files
+- `config_speedfog.toml` - ModEngine config
 - `launch_speedfog.bat` - Windows launcher
 - `launch_speedfog.sh` - Linux/Proton launcher
 
@@ -69,11 +79,7 @@ Output is self-contained in `seeds/<seed>/`:
 uv run speedfog config.toml --no-build --spoiler
 ```
 
-Then build manually:
-```bash
-wine writer/FogModWrapper/publish/win-x64/FogModWrapper.exe \
-  seeds/<seed> --game-dir /path/to/game --data-dir data -o seeds/<seed>
-```
+This creates only `graph.json` and `spoiler.txt`. To build manually, see `writer/README.md`.
 
 ### Play
 
@@ -155,6 +161,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 ## Credits
 
 - [FogRando](https://www.nexusmods.com/eldenring/mods/3295) by thefifthmatt - Core fog gate system
+- [Item Randomizer](https://www.nexusmods.com/eldenring/mods/428) by thefifthmatt - Item/enemy randomization
 - [SoulsFormats](https://github.com/soulsmods/SoulsFormatsNEXT) - File format library
 - [ModEngine 2](https://github.com/soulsmods/ModEngine2) - Mod loading
 
