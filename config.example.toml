@@ -91,9 +91,6 @@ game_dir = "C:/Program Files/Steam/steamapps/common/ELDEN RING/Game"
 # Output directory for generated mod files (default: ./seeds).
 output_dir = "./seeds"
 
-# Path to cluster definitions file.
-clusters_file = "./data/clusters.json"
-
 # Optional: Path to Enemy/Item Randomizer mod output.
 # If set, SpeedFog merges with this mod's EMEVD files as base.
 # If omitted, SpeedFog uses vanilla game files.

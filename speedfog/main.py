@@ -47,11 +47,6 @@ def main() -> int:
         help="Generate spoiler log file",
     )
     parser.add_argument(
-        "--clusters",
-        type=Path,
-        help="Path to clusters.json (overrides config)",
-    )
-    parser.add_argument(
         "--seed",
         type=int,
         help="Random seed (overrides config, 0 = auto-reroll)",
@@ -105,24 +100,9 @@ def main() -> int:
     else:
         output_dir = Path(config.paths.output_dir)
 
-    # Determine clusters file path
-    if args.clusters:
-        clusters_path = args.clusters
-    else:
-        # Resolve relative to config file or current directory
-        if args.config:
-            base_dir = args.config.parent
-        else:
-            base_dir = Path.cwd()
-
-        clusters_path = base_dir / config.paths.clusters_file
-
-        # Also check in data/ relative to project root
-        if not clusters_path.exists():
-            project_root = Path(__file__).parent.parent.parent
-            alt_path = project_root / "data" / "clusters.json"
-            if alt_path.exists():
-                clusters_path = alt_path
+    # Find clusters.json in data/ relative to project root
+    project_root = Path(__file__).parent.parent
+    clusters_path = project_root / "data" / "clusters.json"
 
     # Load clusters
     try:
