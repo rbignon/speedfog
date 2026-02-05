@@ -126,7 +126,7 @@ def test_paths_defaults():
     """PathsConfig has correct defaults."""
     config = Config.from_dict({})
     assert config.paths.game_dir == ""
-    assert config.paths.output_dir == "./output"
+    assert config.paths.output_dir == "./seeds"
     assert config.paths.clusters_file == "./data/clusters.json"
     assert config.paths.randomizer_dir is None
     assert config.paths.platform is None

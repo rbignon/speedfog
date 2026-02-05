@@ -88,8 +88,8 @@ max_branches = 3
 # Path to Elden Ring installation.
 game_dir = "C:/Program Files/Steam/steamapps/common/ELDEN RING/Game"
 
-# Output directory for generated mod files.
-output_dir = "./output"
+# Output directory for generated mod files (default: ./seeds).
+output_dir = "./seeds"
 
 # Path to cluster definitions file.
 clusters_file = "./data/clusters.json"

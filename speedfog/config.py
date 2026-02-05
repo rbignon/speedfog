@@ -98,7 +98,7 @@ class PathsConfig:
     """File paths configuration."""
 
     game_dir: str = ""
-    output_dir: str = "./output"
+    output_dir: str = "./seeds"
     clusters_file: str = "./data/clusters.json"
     randomizer_dir: str | None = None
     platform: str | None = None  # None = auto-detect, "windows", "linux"
@@ -299,7 +299,7 @@ class Config:
             ),
             paths=PathsConfig(
                 game_dir=paths_section.get("game_dir", ""),
-                output_dir=paths_section.get("output_dir", "./output"),
+                output_dir=paths_section.get("output_dir", "./seeds"),
                 clusters_file=paths_section.get(
                     "clusters_file", "./data/clusters.json"
                 ),

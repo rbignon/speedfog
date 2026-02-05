@@ -37,8 +37,9 @@ def main() -> int:
         "-o",
         "--output",
         type=Path,
-        default=Path("./seeds/"),
-        help="Output directory (default: ./seeds/). Files are written to <output>/<seed>/",
+        default=None,
+        help="Output directory (default: config's output_dir or ./seeds). "
+        "Files are written to <output>/<seed>/",
     )
     parser.add_argument(
         "--spoiler",
@@ -97,6 +98,12 @@ def main() -> int:
     # Override seed if provided
     if args.seed is not None:
         config.seed = args.seed
+
+    # Determine output directory: CLI > config > default
+    if args.output is not None:
+        output_dir = args.output
+    else:
+        output_dir = Path(config.paths.output_dir)
 
     # Determine clusters file path
     if args.clusters:
@@ -170,7 +177,7 @@ def main() -> int:
         print(report_balance(dag, config.budget))
 
     # Create output directory: <output>/<seed>/
-    seed_dir = args.output / str(actual_seed)
+    seed_dir = output_dir / str(actual_seed)
     seed_dir.mkdir(parents=True, exist_ok=True)
 
     # Export JSON v2 format (for FogModWrapper)
