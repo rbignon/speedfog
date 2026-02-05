@@ -52,6 +52,7 @@ writer/*/publish/
 writer/*/run.txt
 writer/*/eldendata/
 writer/*/diste/
+writer/*/presets/
 
 # FogRando data files (extracted by tools/setup_dependencies.py)
 data/fog.txt
