@@ -10,27 +10,31 @@ import random
 from speedfog.config import RequirementsConfig
 
 
-def compute_tier(layer_idx: int, total_layers: int) -> int:
-    """Map layer index to difficulty tier (1-28).
+def compute_tier(layer_idx: int, total_layers: int, final_tier: int = 28) -> int:
+    """Map layer index to difficulty tier.
 
     Uses linear interpolation to spread tiers across layers.
-    First layer gets tier 1, last layer gets tier 28.
+    First layer gets tier 1, last layer gets final_tier.
 
     Args:
         layer_idx: Zero-based index of the current layer.
         total_layers: Total number of layers in the DAG.
+        final_tier: Maximum tier for the final layer (default 28, range 1-28).
 
     Returns:
-        Difficulty tier between 1 and 28 (inclusive).
+        Difficulty tier between 1 and final_tier (inclusive).
     """
     if total_layers <= 1:
         # Single layer gets the starting tier
         return 1
 
-    # Linear interpolation from tier 1 to tier 28
-    # layer_idx=0 -> tier 1, layer_idx=total_layers-1 -> tier 28
+    # Clamp final_tier to valid range
+    final_tier = max(1, min(28, final_tier))
+
+    # Linear interpolation from tier 1 to final_tier
+    # layer_idx=0 -> tier 1, layer_idx=total_layers-1 -> final_tier
     progress = layer_idx / (total_layers - 1)
-    tier = 1 + progress * 27  # 27 = 28 - 1
+    tier = 1 + progress * (final_tier - 1)
 
     return int(round(tier))
 

@@ -13,8 +13,8 @@ class TestComputeTier:
         """First layer (index 0) should have tier 1."""
         assert compute_tier(0, 10) == 1
 
-    def test_last_layer_tier_28(self):
-        """Last layer should have tier 28."""
+    def test_last_layer_tier_28_default(self):
+        """Last layer should have tier 28 with default final_tier."""
         assert compute_tier(9, 10) == 28
 
     def test_middle_layers_intermediate(self):
@@ -28,7 +28,7 @@ class TestComputeTier:
         assert compute_tier(0, 1) == 1
 
     def test_all_tiers_within_bounds(self):
-        """All computed tiers must be within [1, 28]."""
+        """All computed tiers must be within [1, final_tier]."""
         for total_layers in range(1, 20):
             for layer_idx in range(total_layers):
                 tier = compute_tier(layer_idx, total_layers)
@@ -37,9 +37,9 @@ class TestComputeTier:
                 ), f"Tier {tier} out of bounds for layer {layer_idx}/{total_layers}"
 
     def test_two_layers_first_and_last(self):
-        """Two layers should have tier 1 and tier 28."""
+        """Two layers should have tier 1 and final_tier."""
         assert compute_tier(0, 2) == 1
-        assert compute_tier(1, 2) == 28
+        assert compute_tier(1, 2) == 28  # default final_tier
 
     def test_tiers_monotonically_increase(self):
         """Tiers should increase or stay the same as layer index increases."""
@@ -49,6 +49,66 @@ class TestComputeTier:
                 assert (
                     tiers[i] >= tiers[i - 1]
                 ), f"Tiers not monotonic: {tiers} for {total_layers} layers"
+
+    # Tests for configurable final_tier
+
+    def test_custom_final_tier_last_layer(self):
+        """Last layer should match custom final_tier."""
+        assert compute_tier(9, 10, final_tier=20) == 20
+        assert compute_tier(9, 10, final_tier=15) == 15
+        assert compute_tier(9, 10, final_tier=10) == 10
+
+    def test_custom_final_tier_first_layer_always_1(self):
+        """First layer should always be tier 1 regardless of final_tier."""
+        assert compute_tier(0, 10, final_tier=20) == 1
+        assert compute_tier(0, 10, final_tier=10) == 1
+        assert compute_tier(0, 10, final_tier=5) == 1
+
+    def test_custom_final_tier_linear_interpolation(self):
+        """Tiers should interpolate linearly from 1 to final_tier."""
+        # With final_tier=10 and 10 layers:
+        # layer 0 -> 1, layer 9 -> 10
+        # layer 5 (middle) should be around 5 or 6
+        tier_mid = compute_tier(5, 10, final_tier=10)
+        assert 5 <= tier_mid <= 6
+
+    def test_custom_final_tier_two_layers(self):
+        """Two layers with custom final_tier should be 1 and final_tier."""
+        assert compute_tier(0, 2, final_tier=15) == 1
+        assert compute_tier(1, 2, final_tier=15) == 15
+
+    def test_custom_final_tier_bounds_within_range(self):
+        """All tiers should be within [1, final_tier]."""
+        for final_tier in [5, 10, 15, 20, 28]:
+            for total_layers in range(2, 15):
+                for layer_idx in range(total_layers):
+                    tier = compute_tier(layer_idx, total_layers, final_tier)
+                    assert 1 <= tier <= final_tier, (
+                        f"Tier {tier} out of bounds [1, {final_tier}] "
+                        f"for layer {layer_idx}/{total_layers}"
+                    )
+
+    def test_custom_final_tier_monotonic(self):
+        """Tiers should be monotonically increasing with custom final_tier."""
+        for final_tier in [5, 10, 15, 20]:
+            for total_layers in [3, 5, 10]:
+                tiers = [
+                    compute_tier(i, total_layers, final_tier)
+                    for i in range(total_layers)
+                ]
+                for i in range(1, len(tiers)):
+                    assert tiers[i] >= tiers[i - 1], (
+                        f"Tiers not monotonic: {tiers} "
+                        f"for {total_layers} layers, final_tier={final_tier}"
+                    )
+
+    def test_final_tier_clamped_to_valid_range(self):
+        """Final tier should be clamped to [1, 28]."""
+        # final_tier > 28 should be clamped to 28
+        assert compute_tier(9, 10, final_tier=50) == 28
+        # final_tier < 1 should be clamped to 1
+        assert compute_tier(9, 10, final_tier=0) == 1
+        assert compute_tier(9, 10, final_tier=-5) == 1
 
 
 class TestPlanLayerTypes:

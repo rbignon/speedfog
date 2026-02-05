@@ -141,6 +141,7 @@ def test_structure_defaults():
     assert config.structure.first_layer_type is None
     assert config.structure.major_boss_ratio == 0.0
     assert config.structure.final_boss_candidates == []
+    assert config.structure.final_tier == 28
 
 
 def test_structure_new_options(tmp_path):
@@ -359,3 +360,49 @@ def test_item_randomizer_validation_difficulty():
         Config.from_dict({"item_randomizer": {"difficulty": 101}})
     with pytest.raises(ValueError, match="difficulty must be 0-100"):
         Config.from_dict({"item_randomizer": {"difficulty": -1}})
+
+
+def test_structure_final_tier_from_toml(tmp_path):
+    """final_tier can be set from TOML."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[structure]
+final_tier = 20
+""")
+    config = Config.from_toml(config_file)
+    assert config.structure.final_tier == 20
+
+
+def test_structure_final_tier_validation():
+    """final_tier must be 1-28."""
+    import pytest
+
+    with pytest.raises(ValueError, match="final_tier must be 1-28"):
+        Config.from_dict({"structure": {"final_tier": 0}})
+    with pytest.raises(ValueError, match="final_tier must be 1-28"):
+        Config.from_dict({"structure": {"final_tier": 29}})
+    with pytest.raises(ValueError, match="final_tier must be 1-28"):
+        Config.from_dict({"structure": {"final_tier": -5}})
+
+
+def test_structure_final_tier_type_validation():
+    """final_tier must be an integer."""
+    import pytest
+
+    with pytest.raises(TypeError, match="final_tier must be int"):
+        Config.from_dict({"structure": {"final_tier": "20"}})
+    with pytest.raises(TypeError, match="final_tier must be int"):
+        Config.from_dict({"structure": {"final_tier": 20.5}})
+
+
+def test_structure_final_tier_valid_range():
+    """final_tier accepts valid values 1-28."""
+    # Test boundary values
+    config_low = Config.from_dict({"structure": {"final_tier": 1}})
+    assert config_low.structure.final_tier == 1
+
+    config_high = Config.from_dict({"structure": {"final_tier": 28}})
+    assert config_high.structure.final_tier == 28
+
+    config_mid = Config.from_dict({"structure": {"final_tier": 15}})
+    assert config_mid.structure.final_tier == 15

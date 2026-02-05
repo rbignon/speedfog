@@ -39,6 +39,14 @@ min_layers = 6
 # Maximum number of layers.
 max_layers = 10
 
+# Enemy scaling tier for the final boss and end of run (1-28).
+# Tiers control how much enemies are scaled up/down from vanilla.
+# - Tier 1: starting area difficulty
+# - Tier 28: maximum difficulty (default, vanilla endgame)
+# - Tier 15-20: mid-game difficulty (good for shorter/easier runs)
+# Intermediate zones scale linearly from 1 to this value.
+final_tier = 28
+
 # Probability of splitting into parallel branches at each layer.
 split_probability = 0.3
 

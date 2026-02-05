@@ -59,6 +59,16 @@ class StructureConfig:
     first_layer_type: str | None = None
     major_boss_ratio: float = 0.0
     final_boss_candidates: list[str] = field(default_factory=list)
+    final_tier: int = 28  # Enemy scaling tier for final boss (1-28)
+
+    def __post_init__(self) -> None:
+        """Validate structure configuration."""
+        if not isinstance(self.final_tier, int):
+            raise TypeError(
+                f"final_tier must be int, got {type(self.final_tier).__name__}"
+            )
+        if self.final_tier < 1 or self.final_tier > 28:
+            raise ValueError(f"final_tier must be 1-28, got {self.final_tier}")
 
     @property
     def effective_final_boss_candidates(self) -> list[str]:
@@ -285,6 +295,7 @@ class Config:
                 final_boss_candidates=structure_section.get(
                     "final_boss_candidates", []
                 ),
+                final_tier=structure_section.get("final_tier", 28),
             ),
             paths=PathsConfig(
                 game_dir=paths_section.get("game_dir", ""),

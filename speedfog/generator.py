@@ -847,7 +847,7 @@ def generate_dag(
     current_layer = 1
     if config.structure.first_layer_type:
         first_type = config.structure.first_layer_type
-        tier = compute_tier(current_layer, 10)  # Approximate, will be refined
+        tier = compute_tier(current_layer, 10, config.structure.final_tier)
 
         branches = execute_passant_layer(
             dag,
@@ -886,7 +886,7 @@ def generate_dag(
     # 5. Execute layers with dynamic topology
     for layer_idx, layer_type in enumerate(layer_types):
         is_near_end = layer_idx >= len(layer_types) - 2
-        tier = compute_tier(current_layer, estimated_total)
+        tier = compute_tier(current_layer, estimated_total, config.structure.final_tier)
 
         # Force merge if near end and multiple branches
         if is_near_end and len(branches) > 1:
@@ -943,7 +943,7 @@ def generate_dag(
     if len(branches) > 1:
         # Use the last layer type for final merge operations
         last_layer_type = layer_types[-1] if layer_types else "mini_dungeon"
-        tier = compute_tier(current_layer, estimated_total)
+        tier = compute_tier(current_layer, estimated_total, config.structure.final_tier)
         branches, current_layer = execute_forced_merge(
             dag,
             branches,
@@ -996,7 +996,7 @@ def generate_dag(
         id="end",
         cluster=end_cluster,
         layer=current_layer,
-        tier=28,
+        tier=config.structure.final_tier,
         entry_fogs=entry_fogs_end,
         exit_fogs=[],  # No exits from final boss
     )
