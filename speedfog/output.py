@@ -16,75 +16,6 @@ from typing import Any
 from speedfog.clusters import ClusterPool
 from speedfog.dag import Dag, DagNode
 
-
-def dag_to_dict(dag: Dag) -> dict[str, Any]:
-    """Convert a DAG to a JSON-serializable dictionary.
-
-    Args:
-        dag: The DAG to convert
-
-    Returns:
-        Dictionary with the following structure:
-        - seed: int
-        - total_layers: int
-        - total_nodes: int
-        - total_zones: int
-        - total_paths: int
-        - path_weights: list[int]
-        - nodes: dict[str, node_dict]
-        - edges: list[edge_dict]
-        - start_id: str
-        - end_id: str
-    """
-    # Build nodes dict
-    nodes: dict[str, dict[str, Any]] = {}
-    for node_id, node in dag.nodes.items():
-        nodes[node_id] = {
-            "cluster_id": node.cluster.id,
-            "zones": node.cluster.zones,
-            "type": node.cluster.type,
-            "weight": node.cluster.weight,
-            "layer": node.layer,
-            "tier": node.tier,
-            "entry_fogs": node.entry_fogs,
-            "exit_fogs": node.exit_fogs,
-        }
-
-    # Build edges list
-    edges: list[dict[str, str]] = []
-    for edge in dag.edges:
-        edges.append(
-            {
-                "source": edge.source_id,
-                "target": edge.target_id,
-                "fog_id": edge.fog_id,
-            }
-        )
-
-    # Calculate path statistics
-    paths = dag.enumerate_paths()
-    path_weights = [dag.path_weight(path) for path in paths]
-
-    # Calculate total layers (max layer + 1, or 0 if no nodes)
-    if dag.nodes:
-        total_layers = max(node.layer for node in dag.nodes.values()) + 1
-    else:
-        total_layers = 0
-
-    return {
-        "seed": dag.seed,
-        "total_layers": total_layers,
-        "total_nodes": dag.total_nodes(),
-        "total_zones": dag.total_zones(),
-        "total_paths": len(paths),
-        "path_weights": path_weights,
-        "nodes": nodes,
-        "edges": edges,
-        "start_id": dag.start_id,
-        "end_id": dag.end_id,
-    }
-
-
 # =============================================================================
 # V2 Format for FogModWrapper
 # =============================================================================
@@ -219,6 +150,10 @@ def dag_to_dict_v2(
         Dictionary with the following structure:
         - version: "2.0"
         - seed: int
+        - total_layers: int (number of layers in the DAG)
+        - total_nodes: int (number of cluster nodes)
+        - total_zones: int (number of unique game zones)
+        - total_paths: int (number of distinct paths from start to end)
         - options: dict of FogMod options
         - connections: list of {exit_area, exit_gate, entrance_area, entrance_gate}
         - area_tiers: dict of zone -> tier
@@ -283,9 +218,17 @@ def dag_to_dict_v2(
         for zone in node.cluster.zones:
             area_tiers[zone] = node.tier
 
+    # Calculate metadata
+    total_layers = max((n.layer for n in dag.nodes.values()), default=-1) + 1
+    total_paths = len(dag.enumerate_paths())
+
     return {
         "version": "2.0",
         "seed": dag.seed,
+        "total_layers": total_layers,
+        "total_nodes": dag.total_nodes(),
+        "total_zones": dag.total_zones(),
+        "total_paths": total_paths,
         "options": options,
         "connections": connections,
         "area_tiers": area_tiers,

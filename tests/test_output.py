@@ -4,7 +4,7 @@ from pathlib import Path
 
 from speedfog.clusters import ClusterData
 from speedfog.dag import Dag, DagNode
-from speedfog.output import dag_to_dict, export_spoiler_log
+from speedfog.output import export_spoiler_log
 
 
 def make_cluster(
@@ -109,112 +109,6 @@ def make_test_dag() -> Dag:
     dag.end_id = "end"
 
     return dag
-
-
-# =============================================================================
-# dag_to_dict tests
-# =============================================================================
-
-
-class TestDagToDict:
-    """Tests for dag_to_dict function."""
-
-    def test_contains_seed(self):
-        """dag_to_dict result contains the seed."""
-        dag = make_test_dag()
-        result = dag_to_dict(dag)
-        assert "seed" in result
-        assert result["seed"] == 42
-
-    def test_contains_nodes(self):
-        """dag_to_dict result contains nodes dict."""
-        dag = make_test_dag()
-        result = dag_to_dict(dag)
-        assert "nodes" in result
-        assert isinstance(result["nodes"], dict)
-        assert len(result["nodes"]) == 4
-        assert "start" in result["nodes"]
-        assert "a" in result["nodes"]
-        assert "b" in result["nodes"]
-        assert "end" in result["nodes"]
-
-    def test_node_has_cluster_info(self):
-        """Each node contains cluster information."""
-        dag = make_test_dag()
-        result = dag_to_dict(dag)
-        node_a = result["nodes"]["a"]
-        assert "cluster_id" in node_a
-        assert node_a["cluster_id"] == "c_a"
-        assert "zones" in node_a
-        assert node_a["zones"] == ["z_a"]
-        assert "type" in node_a
-        assert node_a["type"] == "legacy_dungeon"
-        assert "weight" in node_a
-        assert node_a["weight"] == 10
-        assert "layer" in node_a
-        assert node_a["layer"] == 1
-        assert "tier" in node_a
-        assert node_a["tier"] == 5
-        assert "entry_fogs" in node_a
-        assert node_a["entry_fogs"] == ["fog_1"]
-        assert "exit_fogs" in node_a
-        assert node_a["exit_fogs"] == ["fog_3"]
-
-    def test_contains_edges(self):
-        """dag_to_dict result contains edges list."""
-        dag = make_test_dag()
-        result = dag_to_dict(dag)
-        assert "edges" in result
-        assert isinstance(result["edges"], list)
-        assert len(result["edges"]) == 4
-
-    def test_edge_structure(self):
-        """Each edge has source, target, and fog_id."""
-        dag = make_test_dag()
-        result = dag_to_dict(dag)
-        edges = result["edges"]
-        # Find the edge from start to a
-        edge_start_a = next(
-            (e for e in edges if e["source"] == "start" and e["target"] == "a"), None
-        )
-        assert edge_start_a is not None
-        assert edge_start_a["source"] == "start"
-        assert edge_start_a["target"] == "a"
-        assert edge_start_a["fog_id"] == "fog_1"
-
-    def test_contains_path_stats(self):
-        """dag_to_dict result contains path statistics."""
-        dag = make_test_dag()
-        result = dag_to_dict(dag)
-        assert "total_paths" in result
-        assert result["total_paths"] == 2
-        assert "path_weights" in result
-        assert isinstance(result["path_weights"], list)
-        assert len(result["path_weights"]) == 2
-        # Weights: start->a->end = 5+10+5 = 20, start->b->end = 5+15+5 = 25
-        assert sorted(result["path_weights"]) == [20, 25]
-
-    def test_contains_totals(self):
-        """dag_to_dict result contains totals."""
-        dag = make_test_dag()
-        result = dag_to_dict(dag)
-        assert "total_nodes" in result
-        assert result["total_nodes"] == 4
-        assert "total_zones" in result
-        # Zones: z_start, z_a, z_b1, z_b2, z_end = 5
-        assert result["total_zones"] == 5
-        assert "total_layers" in result
-        # Layers: 0, 1, 2 = 3 layers
-        assert result["total_layers"] == 3
-
-    def test_contains_start_end_ids(self):
-        """dag_to_dict result contains start_id and end_id."""
-        dag = make_test_dag()
-        result = dag_to_dict(dag)
-        assert "start_id" in result
-        assert result["start_id"] == "start"
-        assert "end_id" in result
-        assert result["end_id"] == "end"
 
 
 # =============================================================================
