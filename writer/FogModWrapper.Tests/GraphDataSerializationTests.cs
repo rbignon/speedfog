@@ -17,7 +17,7 @@ public class GraphDataSerializationTests
     {
         var original = new GraphData
         {
-            Version = "2.0",
+            Version = "3.0",
             Seed = 12345,
             Options = new Dictionary<string, bool>
             {
@@ -108,7 +108,7 @@ public class GraphDataSerializationTests
     {
         var data = new GraphData
         {
-            Version = "2.0",
+            Version = "3.0",
             Seed = 1,
             StartingRunes = 5000,
             StartingGoldenSeeds = 2,

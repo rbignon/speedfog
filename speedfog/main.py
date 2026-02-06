@@ -15,7 +15,7 @@ from speedfog.fog_mod import run_fogmodwrapper
 from speedfog.generator import GenerationError, generate_with_retry
 from speedfog.item_randomizer import generate_item_config, run_item_randomizer
 from speedfog.output import (
-    export_json_v2,
+    export_json,
     export_spoiler_log,
     load_fog_data,
 )
@@ -160,10 +160,10 @@ def main() -> int:
     seed_dir = output_dir / str(actual_seed)
     seed_dir.mkdir(parents=True, exist_ok=True)
 
-    # Export JSON v2 format (for FogModWrapper)
+    # Export JSON v3 format (for FogModWrapper and visualization)
     json_path = seed_dir / "graph.json"
     starting_goods = config.starting_items.get_starting_goods()
-    export_json_v2(
+    export_json(
         dag,
         clusters,
         json_path,

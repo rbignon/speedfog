@@ -12,7 +12,7 @@ public class GraphLoaderTests
     {
         var json = """
             {
-                "version": "2.0",
+                "version": "3.0",
                 "seed": 12345,
                 "connections": [
                     {
@@ -35,7 +35,7 @@ public class GraphLoaderTests
 
         var data = GraphLoader.Parse(json);
 
-        Assert.Equal("2.0", data.Version);
+        Assert.Equal("3.0", data.Version);
         Assert.Equal(12345, data.Seed);
         Assert.Single(data.Connections);
         Assert.Equal("stormveil", data.Connections[0].ExitArea);
@@ -54,14 +54,14 @@ public class GraphLoaderTests
     {
         var json = """
             {
-                "version": "2.0",
+                "version": "3.0",
                 "seed": 1
             }
             """;
 
         var data = GraphLoader.Parse(json);
 
-        Assert.Equal("2.0", data.Version);
+        Assert.Equal("3.0", data.Version);
         Assert.Equal(1, data.Seed);
         Assert.Empty(data.Connections);
         Assert.Empty(data.AreaTiers);
@@ -77,9 +77,9 @@ public class GraphLoaderTests
     {
         var json = "{}";
 
-        // Parse succeeds but with default values (version will be "2.0" by default)
+        // Parse succeeds but with default values (version will be "3.0" by default)
         var data = GraphLoader.Parse(json);
-        Assert.Equal("2.0", data.Version);
+        Assert.Equal("3.0", data.Version);
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public class GraphLoaderTests
     {
         var json = """
             {
-                "version": "2.0",
+                "version": "3.0",
                 "seed": 42,
                 "unknown_field": "should be ignored",
                 "another_unknown": 123
@@ -129,7 +129,7 @@ public class GraphLoaderTests
 
         var data = GraphLoader.Parse(json);
 
-        Assert.Equal("2.0", data.Version);
+        Assert.Equal("3.0", data.Version);
         Assert.Equal(42, data.Seed);
     }
 
@@ -138,7 +138,7 @@ public class GraphLoaderTests
     {
         var json = """
             {
-                "VERSION": "2.0",
+                "VERSION": "3.0",
                 "SEED": 777,
                 "Area_Tiers": {"zone1": 5}
             }
@@ -146,7 +146,7 @@ public class GraphLoaderTests
 
         var data = GraphLoader.Parse(json);
 
-        Assert.Equal("2.0", data.Version);
+        Assert.Equal("3.0", data.Version);
         Assert.Equal(777, data.Seed);
         Assert.Single(data.AreaTiers);
     }
@@ -157,7 +157,7 @@ public class GraphLoaderTests
         var json = """
             {
                 // This is a comment
-                "version": "2.0",
+                "version": "3.0",
                 "seed": 123
                 /* This is also a comment */
             }
@@ -165,7 +165,7 @@ public class GraphLoaderTests
 
         var data = GraphLoader.Parse(json);
 
-        Assert.Equal("2.0", data.Version);
+        Assert.Equal("3.0", data.Version);
         Assert.Equal(123, data.Seed);
     }
 

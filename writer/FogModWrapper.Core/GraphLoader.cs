@@ -4,7 +4,7 @@ using FogModWrapper.Models;
 namespace FogModWrapper;
 
 /// <summary>
-/// Loads and parses the graph.json v2 format from Python.
+/// Loads and parses the graph.json format from Python.
 /// </summary>
 public static class GraphLoader
 {
@@ -52,9 +52,9 @@ public static class GraphLoader
         }
 
         // Validate version
-        if (data.Version != "2.0")
+        if (data.Version != "3.0")
         {
-            Console.WriteLine($"Warning: Expected graph.json version 2.0, got {data.Version}");
+            Console.WriteLine($"Warning: Expected graph.json version 3.0, got {data.Version}");
         }
 
         return data;

@@ -3,12 +3,12 @@ using System.Text.Json.Serialization;
 namespace FogModWrapper.Models;
 
 /// <summary>
-/// Root structure for graph.json v2 format.
+/// Root structure for graph.json format.
 /// </summary>
 public class GraphData
 {
     [JsonPropertyName("version")]
-    public string Version { get; set; } = "2.0";
+    public string Version { get; set; } = "3.0";
 
     [JsonPropertyName("seed")]
     public int Seed { get; set; }

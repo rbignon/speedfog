@@ -57,6 +57,7 @@ class ClusterPool:
     by_type: dict[str, list[ClusterData]] = field(default_factory=dict)
     by_id: dict[str, ClusterData] = field(default_factory=dict)
     zone_maps: dict[str, str] = field(default_factory=dict)
+    zone_names: dict[str, str] = field(default_factory=dict)
 
     def add(self, cluster: ClusterData) -> None:
         """Add a cluster to the pool."""
@@ -86,6 +87,22 @@ class ClusterPool:
                 return map_id
         return None
 
+    def get_display_name(self, cluster: ClusterData) -> str:
+        """Get the shortest display name among a cluster's zones.
+
+        Picks the shortest name to get a concise label for visualization.
+
+        Args:
+            cluster: The cluster to get a display name for
+
+        Returns:
+            Shortest display name found, or cluster.id as fallback
+        """
+        names = [self.zone_names[z] for z in cluster.zones if z in self.zone_names]
+        if not names:
+            return cluster.id
+        return min(names, key=len)
+
     @classmethod
     def from_json(cls, path: Path) -> ClusterPool:
         """Load cluster pool from JSON file."""
@@ -94,6 +111,7 @@ class ClusterPool:
 
         pool = cls()
         pool.zone_maps = data.get("zone_maps", {})
+        pool.zone_names = data.get("zone_names", {})
 
         for cluster_data in data.get("clusters", []):
             cluster = ClusterData.from_dict(cluster_data)

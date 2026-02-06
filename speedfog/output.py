@@ -1,7 +1,7 @@
 """Output module for DAG export to JSON and spoiler logs.
 
 This module provides functions to export the generated DAG to:
-- JSON format for consumption by the C# writer (v1 and v2 formats)
+- JSON format for consumption by the C# writer and visualization tools
 - Human-readable spoiler log for players
 """
 
@@ -17,7 +17,7 @@ from speedfog.clusters import ClusterPool
 from speedfog.dag import Dag, DagNode
 
 # =============================================================================
-# V2 Format for FogModWrapper
+# V3 Format for FogModWrapper and visualization
 # =============================================================================
 
 
@@ -122,7 +122,7 @@ def _make_fullname(
     return f"unknown_{fog_id}"
 
 
-def dag_to_dict_v2(
+def dag_to_dict(
     dag: Dag,
     clusters: ClusterPool,
     options: dict[str, bool] | None = None,
@@ -133,11 +133,15 @@ def dag_to_dict_v2(
     starting_golden_seeds: int = 0,
     starting_sacred_tears: int = 0,
 ) -> dict[str, Any]:
-    """Convert a DAG to v2 JSON-serializable dictionary for FogModWrapper.
+    """Convert a DAG to v3 JSON-serializable dictionary.
+
+    The v3 format extends v2 with `nodes` and `edges` sections for
+    visualization tools, while keeping `connections`/`area_tiers` for
+    FogModWrapper compatibility.
 
     Args:
         dag: The DAG to convert
-        clusters: ClusterPool with zone_maps for FullName generation
+        clusters: ClusterPool with zone_maps and zone_names
         options: FogMod options to include (default: scale=True)
         fog_data: Optional fog_data.json lookup for accurate map IDs (esp. for warps)
         starting_item_lots: DEPRECATED - ItemLot IDs (randomized by Item Randomizer)
@@ -148,20 +152,15 @@ def dag_to_dict_v2(
 
     Returns:
         Dictionary with the following structure:
-        - version: "2.0"
+        - version: "3.0"
         - seed: int
-        - total_layers: int (number of layers in the DAG)
-        - total_nodes: int (number of cluster nodes)
-        - total_zones: int (number of unique game zones)
-        - total_paths: int (number of distinct paths from start to end)
+        - total_layers, total_nodes, total_zones, total_paths: metadata
         - options: dict of FogMod options
+        - nodes: dict of cluster_id -> {type, display_name, zones, layer, tier, weight}
+        - edges: list of {from, to}
         - connections: list of {exit_area, exit_gate, entrance_area, entrance_gate}
         - area_tiers: dict of zone -> tier
-        - starting_item_lots: list of ItemLot IDs (deprecated)
-        - starting_goods: list of Good IDs
-        - starting_runes: int
-        - starting_golden_seeds: int
-        - starting_sacred_tears: int
+        - starting_goods, starting_runes, etc.
     """
     if options is None:
         options = {
@@ -222,14 +221,41 @@ def dag_to_dict_v2(
     total_layers = max((n.layer for n in dag.nodes.values()), default=-1) + 1
     total_paths = len(dag.enumerate_paths())
 
+    # Build nodes section: cluster_id -> metadata
+    nodes: dict[str, dict[str, Any]] = {}
+    for node in dag.nodes.values():
+        nodes[node.cluster.id] = {
+            "type": node.cluster.type,
+            "display_name": clusters.get_display_name(node.cluster),
+            "zones": node.cluster.zones,
+            "layer": node.layer,
+            "tier": node.tier,
+            "weight": node.cluster.weight,
+        }
+
+    # Build edges section: unique (from, to) pairs by cluster_id
+    seen_edges: set[tuple[str, str]] = set()
+    edges_list: list[dict[str, str]] = []
+    for edge in dag.edges:
+        source_node = dag.nodes.get(edge.source_id)
+        target_node = dag.nodes.get(edge.target_id)
+        if source_node is None or target_node is None:
+            continue
+        pair = (source_node.cluster.id, target_node.cluster.id)
+        if pair not in seen_edges:
+            seen_edges.add(pair)
+            edges_list.append({"from": pair[0], "to": pair[1]})
+
     return {
-        "version": "2.0",
+        "version": "3.0",
         "seed": dag.seed,
         "total_layers": total_layers,
         "total_nodes": dag.total_nodes(),
         "total_zones": dag.total_zones(),
         "total_paths": total_paths,
         "options": options,
+        "nodes": nodes,
+        "edges": edges_list,
         "connections": connections,
         "area_tiers": area_tiers,
         "starting_item_lots": starting_item_lots or [],
@@ -240,7 +266,7 @@ def dag_to_dict_v2(
     }
 
 
-def export_json_v2(
+def export_json(
     dag: Dag,
     clusters: ClusterPool,
     output_path: Path,
@@ -252,11 +278,11 @@ def export_json_v2(
     starting_golden_seeds: int = 0,
     starting_sacred_tears: int = 0,
 ) -> None:
-    """Export a DAG to v2 formatted JSON file for FogModWrapper.
+    """Export a DAG to v3 formatted JSON file.
 
     Args:
         dag: The DAG to export
-        clusters: ClusterPool with zone_maps
+        clusters: ClusterPool with zone_maps and zone_names
         output_path: Path to write the JSON file
         options: FogMod options (default: scale=True, shuffle=True)
         fog_data: Optional fog_data.json lookup for accurate map IDs
@@ -266,7 +292,7 @@ def export_json_v2(
         starting_golden_seeds: Golden Seeds to give at start
         starting_sacred_tears: Sacred Tears to give at start
     """
-    data = dag_to_dict_v2(
+    data = dag_to_dict(
         dag,
         clusters,
         options,

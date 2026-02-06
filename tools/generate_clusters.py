@@ -1060,18 +1060,45 @@ def build_zone_maps(
     return zone_maps
 
 
+def build_zone_names(
+    clusters: list[Cluster],
+    areas: dict[str, AreaData],
+) -> dict[str, str]:
+    """Build zone→display_name mapping from area text fields.
+
+    Args:
+        clusters: List of clusters to extract zones from
+        areas: Parsed area data with text (display name) fields
+
+    Returns:
+        Dictionary mapping zone name to display name
+    """
+    all_zones: set[str] = set()
+    for cluster in clusters:
+        all_zones.update(cluster.zones)
+
+    zone_names: dict[str, str] = {}
+    for zone_name in sorted(all_zones):
+        if zone_name in areas and areas[zone_name].text:
+            zone_names[zone_name] = areas[zone_name].text
+
+    return zone_names
+
+
 def clusters_to_json(
     clusters: list[Cluster],
     areas: dict[str, AreaData],
 ) -> dict:
     """Convert clusters to JSON-serializable format with zone→map mapping."""
     zone_maps = build_zone_maps(clusters, areas)
+    zone_names = build_zone_names(clusters, areas)
 
     return {
-        "version": "1.1",
+        "version": "1.2",
         "generated_from": "fog.txt",
         "cluster_count": len(clusters),
         "zone_maps": zone_maps,
+        "zone_names": zone_names,
         "clusters": [
             {
                 "id": c.cluster_id,

@@ -185,8 +185,9 @@ Pre-computed zone clusters with entry/exit fogs.
 
 ```json
 {
-  "version": "1.1",
+  "version": "1.2",
   "zone_maps": {"stormveil": "m10_00_00_00", ...},
+  "zone_names": {"stormveil": "Stormveil Castle", ...},
   "clusters": [
     {
       "id": "stormveil_c1d3",
@@ -200,15 +201,28 @@ Pre-computed zone clusters with entry/exit fogs.
 }
 ```
 
-### graph.json v2
+### graph.json v3
 
-DAG serialized for C# consumption.
+DAG serialized for C# consumption and visualization tools.
 
 ```json
 {
-  "version": "2.0",
+  "version": "3.0",
   "seed": 212559448,
   "options": {"scale": true, "crawl": true},
+  "nodes": {
+    "stormveil_c1d3": {
+      "type": "legacy_dungeon",
+      "display_name": "Stormveil Castle",
+      "zones": ["stormveil_start", "stormveil"],
+      "layer": 1,
+      "tier": 5,
+      "weight": 15
+    }
+  },
+  "edges": [
+    {"from": "chapel_start_a1b2", "to": "stormveil_c1d3"}
+  ],
   "connections": [
     {
       "exit_area": "chapel_start",

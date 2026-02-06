@@ -15,7 +15,7 @@ from speedfog import (
     generate_with_retry,
     load_clusters,
 )
-from speedfog.output import export_json_v2
+from speedfog.output import export_json
 
 
 @pytest.fixture
@@ -64,7 +64,7 @@ class TestFullPipeline:
 
         dag = result.dag
         json_path = tmp_path / "graph.json"
-        export_json_v2(dag, real_clusters, json_path)
+        export_json(dag, real_clusters, json_path)
         assert json_path.exists()
         with open(json_path) as f:
             data = json.load(f)
@@ -132,26 +132,53 @@ class TestFullPipeline:
         assert edges1 == edges2
 
     def test_exported_json_structure(self, real_clusters, relaxed_config, tmp_path):
-        """Verify exported JSON v2 has correct structure for FogModWrapper."""
+        """Verify exported JSON v3 has correct structure."""
         config = relaxed_config
         result = generate_with_retry(config, real_clusters)
         dag = result.dag
 
         json_path = tmp_path / "graph.json"
-        export_json_v2(dag, real_clusters, json_path)
+        export_json(dag, real_clusters, json_path)
 
         with open(json_path) as f:
             data = json.load(f)
 
-        # Top-level keys (v2 format)
-        assert data["version"] == "2.0"
+        # Top-level keys (v3 format)
+        assert data["version"] == "3.0"
         assert "seed" in data
         assert "options" in data
         assert "connections" in data
         assert "area_tiers" in data
+        assert "nodes" in data
+        assert "edges" in data
 
         # Options structure
         assert isinstance(data["options"], dict)
+
+        # Nodes structure
+        assert isinstance(data["nodes"], dict)
+        assert len(data["nodes"]) > 0
+        for cluster_id, node_data in data["nodes"].items():
+            assert isinstance(cluster_id, str)
+            assert "type" in node_data
+            assert "display_name" in node_data
+            assert "zones" in node_data
+            assert "layer" in node_data
+            assert "tier" in node_data
+            assert "weight" in node_data
+            assert isinstance(node_data["zones"], list)
+            assert isinstance(node_data["layer"], int)
+            assert isinstance(node_data["tier"], int)
+            assert isinstance(node_data["weight"], int)
+
+        # Edges structure
+        assert isinstance(data["edges"], list)
+        assert len(data["edges"]) > 0
+        for edge in data["edges"]:
+            assert "from" in edge
+            assert "to" in edge
+            assert edge["from"] in data["nodes"]
+            assert edge["to"] in data["nodes"]
 
         # Connections structure
         assert isinstance(data["connections"], list)
