@@ -73,13 +73,13 @@ public class GraphLoaderTests
     }
 
     [Fact]
-    public void Parse_EmptyJson_ThrowsJsonException()
+    public void Parse_EmptyJson_UsesDefaults()
     {
         var json = "{}";
 
-        // Parse succeeds but with default values (version will be "3.0" by default)
+        // Parse succeeds with default values
         var data = GraphLoader.Parse(json);
-        Assert.Equal("3.0", data.Version);
+        Assert.Equal("4.0", data.Version);
     }
 
     [Fact]
@@ -175,5 +175,37 @@ public class GraphLoaderTests
         var path = "/nonexistent/path/graph.json";
 
         Assert.Throws<FileNotFoundException>(() => GraphLoader.Load(path));
+    }
+
+    [Fact]
+    public void Parse_V4_AcceptsVersion()
+    {
+        var json = """
+            {
+                "version": "4.0",
+                "seed": 42,
+                "event_map": {"9000000": "stormveil", "9000001": "radagon"},
+                "finish_event": 9000001,
+                "connections": [
+                    {
+                        "exit_area": "stormveil",
+                        "exit_gate": "m10_00_00_00_AEG099_001_9000",
+                        "entrance_area": "liurnia",
+                        "entrance_gate": "m11_00_00_00_AEG099_002_9000",
+                        "flag_id": 9000000
+                    }
+                ]
+            }
+            """;
+
+        var data = GraphLoader.Parse(json);
+
+        Assert.Equal("4.0", data.Version);
+        Assert.Equal(42, data.Seed);
+        Assert.Equal(2, data.EventMap.Count);
+        Assert.Equal("stormveil", data.EventMap["9000000"]);
+        Assert.Equal(9000001, data.FinishEvent);
+        Assert.Single(data.Connections);
+        Assert.Equal(9000000, data.Connections[0].FlagId);
     }
 }

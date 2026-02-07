@@ -17,7 +17,7 @@ public class GraphDataSerializationTests
     {
         var original = new GraphData
         {
-            Version = "3.0",
+            Version = "4.0",
             Seed = 12345,
             Options = new Dictionary<string, bool>
             {
@@ -43,7 +43,13 @@ public class GraphDataSerializationTests
             StartingGoods = new List<int> { 8000, 8001 },
             StartingRunes = 100000,
             StartingGoldenSeeds = 5,
-            StartingSacredTears = 3
+            StartingSacredTears = 3,
+            EventMap = new Dictionary<string, string>
+            {
+                ["9000000"] = "stormveil",
+                ["9000001"] = "liurnia"
+            },
+            FinishEvent = 9000001
         };
 
         var json = JsonSerializer.Serialize(original, JsonOptions);
@@ -61,6 +67,8 @@ public class GraphDataSerializationTests
         Assert.Equal(original.StartingRunes, deserialized.StartingRunes);
         Assert.Equal(original.StartingGoldenSeeds, deserialized.StartingGoldenSeeds);
         Assert.Equal(original.StartingSacredTears, deserialized.StartingSacredTears);
+        Assert.Equal(original.EventMap.Count, deserialized.EventMap.Count);
+        Assert.Equal(original.FinishEvent, deserialized.FinishEvent);
     }
 
     [Fact]
@@ -71,7 +79,8 @@ public class GraphDataSerializationTests
             ExitArea = "zone_a",
             ExitGate = "m10_00_00_00_AEG099_001_9000",
             EntranceArea = "zone_b",
-            EntranceGate = "m11_00_00_00_AEG099_002_9000"
+            EntranceGate = "m11_00_00_00_AEG099_002_9000",
+            FlagId = 9000042
         };
 
         var json = JsonSerializer.Serialize(original, JsonOptions);
@@ -82,6 +91,7 @@ public class GraphDataSerializationTests
         Assert.Equal(original.ExitGate, deserialized.ExitGate);
         Assert.Equal(original.EntranceArea, deserialized.EntranceArea);
         Assert.Equal(original.EntranceGate, deserialized.EntranceGate);
+        Assert.Equal(original.FlagId, deserialized.FlagId);
     }
 
     [Fact]
@@ -108,7 +118,7 @@ public class GraphDataSerializationTests
     {
         var data = new GraphData
         {
-            Version = "3.0",
+            Version = "4.0",
             Seed = 1,
             StartingRunes = 5000,
             StartingGoldenSeeds = 2,
@@ -142,5 +152,83 @@ public class GraphDataSerializationTests
         Assert.Contains("\"exit_gate\"", json);
         Assert.Contains("\"entrance_area\"", json);
         Assert.Contains("\"entrance_gate\"", json);
+    }
+
+    [Fact]
+    public void GraphData_V4_RoundTrip_PreservesEventMap()
+    {
+        var original = new GraphData
+        {
+            Version = "4.0",
+            Seed = 42,
+            EventMap = new Dictionary<string, string>
+            {
+                ["9000000"] = "stormveil",
+                ["9000001"] = "liurnia",
+                ["9000002"] = "radagon"
+            }
+        };
+
+        var json = JsonSerializer.Serialize(original, JsonOptions);
+        var deserialized = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.Equal(3, deserialized.EventMap.Count);
+        Assert.Equal("stormveil", deserialized.EventMap["9000000"]);
+        Assert.Equal("liurnia", deserialized.EventMap["9000001"]);
+        Assert.Equal("radagon", deserialized.EventMap["9000002"]);
+    }
+
+    [Fact]
+    public void GraphData_V4_RoundTrip_PreservesFinishEvent()
+    {
+        var original = new GraphData
+        {
+            Version = "4.0",
+            Seed = 42,
+            FinishEvent = 9000002
+        };
+
+        var json = JsonSerializer.Serialize(original, JsonOptions);
+        var deserialized = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.Equal(9000002, deserialized.FinishEvent);
+    }
+
+    [Fact]
+    public void Connection_V4_RoundTrip_PreservesFlagId()
+    {
+        var original = new Connection
+        {
+            ExitArea = "zone_a",
+            ExitGate = "m10_00_00_00_AEG099_001_9000",
+            EntranceArea = "zone_b",
+            EntranceGate = "m11_00_00_00_AEG099_002_9000",
+            FlagId = 9000001
+        };
+
+        var json = JsonSerializer.Serialize(original, JsonOptions);
+        var deserialized = JsonSerializer.Deserialize<Connection>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.Equal(9000001, deserialized.FlagId);
+    }
+
+    [Fact]
+    public void GraphData_V4_JsonPropertyNames_UseSnakeCase()
+    {
+        var data = new GraphData
+        {
+            Version = "4.0",
+            Seed = 1,
+            EventMap = new Dictionary<string, string> { ["9000000"] = "test" },
+            FinishEvent = 9000000
+        };
+
+        var json = JsonSerializer.Serialize(data);
+
+        Assert.Contains("\"event_map\"", json);
+        Assert.Contains("\"finish_event\"", json);
     }
 }

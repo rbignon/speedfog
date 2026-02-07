@@ -48,7 +48,15 @@ def make_test_dag() -> Dag:
         DagNode(
             id="start",
             cluster=make_cluster(
-                "c_start", zones=["z_start"], cluster_type="start", weight=5
+                "c_start",
+                zones=["z_start"],
+                cluster_type="start",
+                weight=5,
+                entry_fogs=[],
+                exit_fogs=[
+                    {"fog_id": "fog_1", "zone": "z_start"},
+                    {"fog_id": "fog_2", "zone": "z_start"},
+                ],
             ),
             layer=0,
             tier=1,
@@ -62,7 +70,12 @@ def make_test_dag() -> Dag:
         DagNode(
             id="a",
             cluster=make_cluster(
-                "c_a", zones=["z_a"], cluster_type="legacy_dungeon", weight=10
+                "c_a",
+                zones=["z_a"],
+                cluster_type="legacy_dungeon",
+                weight=10,
+                entry_fogs=[{"fog_id": "fog_1", "zone": "z_a"}],
+                exit_fogs=[{"fog_id": "fog_3", "zone": "z_a"}],
             ),
             layer=1,
             tier=5,
@@ -76,7 +89,12 @@ def make_test_dag() -> Dag:
         DagNode(
             id="b",
             cluster=make_cluster(
-                "c_b", zones=["z_b1", "z_b2"], cluster_type="mini_dungeon", weight=15
+                "c_b",
+                zones=["z_b1", "z_b2"],
+                cluster_type="mini_dungeon",
+                weight=15,
+                entry_fogs=[{"fog_id": "fog_2", "zone": "z_b1"}],
+                exit_fogs=[{"fog_id": "fog_4", "zone": "z_b1"}],
             ),
             layer=1,
             tier=5,
@@ -90,7 +108,15 @@ def make_test_dag() -> Dag:
         DagNode(
             id="end",
             cluster=make_cluster(
-                "c_end", zones=["z_end"], cluster_type="final_boss", weight=5
+                "c_end",
+                zones=["z_end"],
+                cluster_type="final_boss",
+                weight=5,
+                entry_fogs=[
+                    {"fog_id": "fog_3", "zone": "z_end"},
+                    {"fog_id": "fog_4", "zone": "z_end"},
+                ],
+                exit_fogs=[],
             ),
             layer=2,
             tier=10,
@@ -245,3 +271,101 @@ class TestExportSpoilerLog:
         content = output_file.read_text(encoding="utf-8")
         assert "[final_boss]" in content
         assert "[major_boss]" not in content
+
+
+# =============================================================================
+# Event map / v4 format tests
+# =============================================================================
+
+
+def _make_result() -> dict:
+    """Helper: call dag_to_dict with the standard diamond test DAG."""
+    dag = make_test_dag()
+    clusters = ClusterPool(
+        clusters=[node.cluster for node in dag.nodes.values()],
+        zone_maps={},
+        zone_names={},
+    )
+    return dag_to_dict(dag, clusters)
+
+
+class TestEventMap:
+    """Tests for v4 event_map, finish_event, and flag_id fields."""
+
+    def test_version_is_4(self):
+        """Version string is '4.0'."""
+        result = _make_result()
+        assert result["version"] == "4.0"
+
+    def test_event_map_keys_are_string_flag_ids(self):
+        """event_map keys are stringified integers."""
+        result = _make_result()
+        for key in result["event_map"]:
+            assert isinstance(key, str)
+            int(key)  # should not raise
+
+    def test_event_map_values_are_node_ids(self):
+        """event_map values match cluster IDs from the nodes dict."""
+        result = _make_result()
+        node_ids = set(result["nodes"].keys())
+        for cluster_id in result["event_map"].values():
+            assert cluster_id in node_ids
+
+    def test_event_map_excludes_start_node(self):
+        """Start node does not appear in event_map."""
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+
+        start_cluster_id = dag.nodes[dag.start_id].cluster.id
+        assert start_cluster_id not in result["event_map"].values()
+
+    def test_finish_event_is_final_boss_flag(self):
+        """finish_event matches the final_boss node's flag_id."""
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+
+        end_cluster_id = dag.nodes[dag.end_id].cluster.id
+        # Find the flag_id for the end node
+        end_flag_id = None
+        for flag_str, cid in result["event_map"].items():
+            if cid == end_cluster_id:
+                end_flag_id = int(flag_str)
+                break
+        assert end_flag_id is not None
+        assert result["finish_event"] == end_flag_id
+
+    def test_finish_event_in_event_map(self):
+        """finish_event appears as a key in event_map."""
+        result = _make_result()
+        assert str(result["finish_event"]) in result["event_map"]
+
+    def test_connections_have_flag_id(self):
+        """Each connection has a flag_id field."""
+        result = _make_result()
+        for conn in result["connections"]:
+            assert "flag_id" in conn
+            assert isinstance(conn["flag_id"], int)
+            assert conn["flag_id"] >= 9000000
+
+    def test_merge_node_connections_share_flag_id(self):
+        """Two connections to the same node get the same flag_id.
+
+        In the diamond DAG, edges a→end and b→end should share the end node's flag_id.
+        """
+        result = _make_result()
+        # Find connections going to the end node's zone (z_end)
+        end_connections = [
+            c for c in result["connections"] if c["entrance_area"] == "z_end"
+        ]
+        assert len(end_connections) == 2
+        assert end_connections[0]["flag_id"] == end_connections[1]["flag_id"]

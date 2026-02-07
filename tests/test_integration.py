@@ -132,7 +132,7 @@ class TestFullPipeline:
         assert edges1 == edges2
 
     def test_exported_json_structure(self, real_clusters, relaxed_config, tmp_path):
-        """Verify exported JSON v3 has correct structure."""
+        """Verify exported JSON v4 has correct structure."""
         config = relaxed_config
         result = generate_with_retry(config, real_clusters)
         dag = result.dag
@@ -143,14 +143,16 @@ class TestFullPipeline:
         with open(json_path) as f:
             data = json.load(f)
 
-        # Top-level keys (v3 format)
-        assert data["version"] == "3.0"
+        # Top-level keys (v4 format)
+        assert data["version"] == "4.0"
         assert "seed" in data
         assert "options" in data
         assert "connections" in data
         assert "area_tiers" in data
         assert "nodes" in data
         assert "edges" in data
+        assert "event_map" in data
+        assert "finish_event" in data
 
         # Options structure
         assert isinstance(data["options"], dict)
@@ -180,19 +182,35 @@ class TestFullPipeline:
             assert edge["from"] in data["nodes"]
             assert edge["to"] in data["nodes"]
 
-        # Connections structure
+        # Connections structure (v4: includes flag_id)
         assert isinstance(data["connections"], list)
         for conn in data["connections"]:
             assert "exit_area" in conn
             assert "exit_gate" in conn
             assert "entrance_area" in conn
             assert "entrance_gate" in conn
+            assert "flag_id" in conn
+            assert isinstance(conn["flag_id"], int)
+            assert conn["flag_id"] >= 9000000
 
         # Area tiers structure
         assert isinstance(data["area_tiers"], dict)
         for zone, tier in data["area_tiers"].items():
             assert isinstance(zone, str)
             assert isinstance(tier, int)
+
+        # Event map structure (v4)
+        assert isinstance(data["event_map"], dict)
+        assert len(data["event_map"]) > 0
+        for flag_str, cluster_id in data["event_map"].items():
+            assert isinstance(flag_str, str)
+            int(flag_str)  # should be a stringified int
+            assert cluster_id in data["nodes"]
+
+        # Finish event
+        assert isinstance(data["finish_event"], int)
+        assert data["finish_event"] >= 9000000
+        assert str(data["finish_event"]) in data["event_map"]
 
     def test_validation_result_structure(self, real_clusters, relaxed_config):
         """Verify validation returns properly structured result."""

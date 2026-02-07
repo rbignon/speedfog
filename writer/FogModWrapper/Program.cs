@@ -307,7 +307,8 @@ Example:
         Console.WriteLine($"Excluded {evergaolCount} evergaol zones from stake processing");
 
         // 5. Inject OUR connections (replaces GraphConnector.Connect())
-        ConnectionInjector.Inject(graph, graphData.Connections);
+        var injectionResult = ConnectionInjector.InjectAndExtract(
+            graph, graphData.Connections, graphData.FinishEvent);
 
         // 6. Apply tiers for scaling
         ConnectionInjector.ApplyAreaTiers(graph, graphData.AreaTiers);
@@ -350,6 +351,17 @@ Example:
 
         // 7e. Inject smithing stones into merchant shop
         SmithingStoneShopInjector.Inject(modDir);
+
+        // 7f. Inject zone tracking events for racing support
+        if (graphData.FinishEvent > 0 && injectionResult.WarpMatches.Count > 0)
+        {
+            ZoneTrackingInjector.Inject(
+                modDir,
+                events,
+                injectionResult.WarpMatches,
+                injectionResult.FinishEvent,
+                injectionResult.BossDefeatFlag);
+        }
 
         // 8. Package with ModEngine 2
         var packager = new PackagingWriter(config.OutputDir);

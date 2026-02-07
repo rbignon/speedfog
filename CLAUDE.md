@@ -120,8 +120,9 @@ speedfog/
 | Class | Purpose |
 |-------|---------|
 | `Program.cs` | CLI entry, loads options, calls FogMod's GameDataWriterE |
-| `GraphLoader` | Parses graph.json v2 format from Python |
-| `ConnectionInjector` | Injects our connections into FogMod's Graph object |
+| `GraphLoader` | Parses graph.json v4 format from Python |
+| `ConnectionInjector` | Injects connections into FogMod's Graph, extracts warp data |
+| `ZoneTrackingInjector` | Injects SetEventFlag before fog gate warps for racing |
 | `StartingItemInjector` | Injects starting item events into common.emevd |
 | `StartingResourcesInjector` | Injects runes (CharaInitParam), seeds/tears (ItemLots) |
 
@@ -315,24 +316,30 @@ cd writer/test && ./run_integration.sh
 
 ## Data Formats
 
-### graph.json v3 (Python → C# + visualization)
+### graph.json v4 (Python → C# + visualization + racing)
 
 ```json
 {
-  "version": "3.0",
+  "version": "4.0",
   "seed": 212559448,
   "options": {"scale": true, "crawl": true},
   "nodes": {"cluster_id": {"type": "legacy_dungeon", "display_name": "Stormveil Castle", "zones": [...], "layer": 1, "tier": 5, "weight": 15}},
   "edges": [{"from": "cluster_id_1", "to": "cluster_id_2"}],
   "connections": [
-    {"exit_area": "zone1", "exit_gate": "m10_...", "entrance_area": "zone2", "entrance_gate": "m31_..."}
+    {"exit_area": "zone1", "exit_gate": "m10_...", "entrance_area": "zone2", "entrance_gate": "m31_...", "flag_id": 9000000}
   ],
-  "area_tiers": {"zone1": 1, "zone2": 5}
+  "area_tiers": {"zone1": 1, "zone2": 5},
+  "event_map": {"9000000": "cluster_id"},
+  "finish_event": 9000002
 }
 ```
 
 - `nodes`/`edges`: DAG topology for visualization tools
 - `connections`/`area_tiers`: FogModWrapper consumption (unchanged from v2)
+- `event_map`: flag_id (str) → cluster_id mapping for racing zone tracking
+- `finish_event`: flag_id set on final boss defeat
+- `flag_id` per connection: event flag set when fog gate is traversed
+- Event flags allocated sequentially from base 9000000 (range 9000000–9000999)
 - Connections use FogMod's edge FullName format: `{map}_{gate_name}` (e.g., `m10_01_00_00_AEG099_001_9000`)
 
 ### fogevents.txt

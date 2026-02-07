@@ -4,24 +4,58 @@ using FogModWrapper.Models;
 namespace FogModWrapper;
 
 /// <summary>
+/// Warp data extracted from FogMod's Graph for post-processing EMEVD matching.
+/// </summary>
+public class WarpMatchData
+{
+    /// <summary>4 bytes: area, block, sub, sub2 from map string.</summary>
+    public byte[] DestMapBytes { get; set; } = Array.Empty<byte>();
+
+    /// <summary>WarpPoint.Region entity ID.</summary>
+    public int DestRegion { get; set; }
+
+    /// <summary>Event flag to set on traversal.</summary>
+    public int FlagId { get; set; }
+}
+
+/// <summary>
+/// Result of connection injection, carrying data needed for EMEVD post-processing.
+/// </summary>
+public class InjectionResult
+{
+    public List<WarpMatchData> WarpMatches { get; set; } = new();
+
+    /// <summary>FogMod DefeatFlag for the final boss zone.</summary>
+    public int BossDefeatFlag { get; set; }
+
+    /// <summary>The finish_event flag ID from graph.json.</summary>
+    public int FinishEvent { get; set; }
+}
+
+/// <summary>
 /// Injects SpeedFog's graph connections into FogMod's Graph object.
 /// </summary>
 public static class ConnectionInjector
 {
     /// <summary>
-    /// Inject connections from SpeedFog's graph.json into FogMod's Graph.
+    /// Inject connections and extract warp matching data for EMEVD post-processing.
     /// </summary>
     /// <param name="graph">FogMod Graph with nodes/edges constructed but not connected</param>
     /// <param name="connections">List of connections from graph.json</param>
-    public static void Inject(Graph graph, List<Connection> connections)
+    /// <param name="finishEvent">The finish_event flag ID (0 if not using v4)</param>
+    /// <returns>InjectionResult with warp match data for zone tracking</returns>
+    public static InjectionResult InjectAndExtract(
+        Graph graph, List<Connection> connections, int finishEvent)
     {
         Console.WriteLine($"Injecting {connections.Count} connections...");
+
+        var result = new InjectionResult { FinishEvent = finishEvent };
 
         foreach (var conn in connections)
         {
             try
             {
-                ConnectEdges(graph, conn);
+                ConnectAndExtract(graph, conn, finishEvent, result);
             }
             catch (Exception ex)
             {
@@ -29,13 +63,15 @@ public static class ConnectionInjector
             }
         }
 
-        Console.WriteLine("All connections injected successfully.");
+        Console.WriteLine($"All connections injected successfully. Extracted {result.WarpMatches.Count} warp matches.");
+        return result;
     }
 
     /// <summary>
-    /// Connect a single exit edge to an entrance edge.
+    /// Connect a single exit edge to an entrance edge and extract warp data.
     /// </summary>
-    private static void ConnectEdges(Graph graph, Connection conn)
+    private static void ConnectAndExtract(
+        Graph graph, Connection conn, int finishEvent, InjectionResult result)
     {
         // Find the exit edge in the source area's To list
         if (!graph.Nodes.TryGetValue(conn.ExitArea, out var exitNode))
@@ -88,6 +124,67 @@ public static class ConnectionInjector
         graph.Connect(exitEdge, entranceEdge);
 
         Console.WriteLine($"  Connected: {conn.ExitArea} --[{conn.ExitGate}]--> {conn.EntranceArea}");
+
+        // Extract warp matching data for zone tracking
+        var destWarp = entranceEdge.Side?.Warp;
+        if (destWarp != null && conn.FlagId > 0)
+        {
+            var mapBytes = ParseMapBytes(destWarp.Map);
+            if (mapBytes != null)
+            {
+                result.WarpMatches.Add(new WarpMatchData
+                {
+                    DestMapBytes = mapBytes,
+                    DestRegion = destWarp.Region,
+                    FlagId = conn.FlagId,
+                });
+            }
+        }
+
+        // For the finish event connection, extract boss defeat flag.
+        // Multiple connections may target the same final boss node (diamond DAG merge),
+        // but they all share the same EntranceArea so DefeatFlag is consistent.
+        if (conn.FlagId == finishEvent && finishEvent > 0)
+        {
+            var area = graph.Areas.GetValueOrDefault(conn.EntranceArea);
+            if (area != null && area.DefeatFlag > 0)
+            {
+                result.BossDefeatFlag = area.DefeatFlag;
+            }
+            else
+            {
+                Console.WriteLine($"Warning: No DefeatFlag found for finish area {conn.EntranceArea}");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Parse a map string like "m60_35_43_00" into 4 bytes [60, 35, 43, 0].
+    /// </summary>
+    private static byte[]? ParseMapBytes(string? map)
+    {
+        if (string.IsNullOrEmpty(map))
+            return null;
+
+        var parts = map.TrimStart('m').Split('_');
+        if (parts.Length < 4)
+            return null;
+
+        try
+        {
+            return new byte[]
+            {
+                byte.Parse(parts[0]),
+                byte.Parse(parts[1]),
+                byte.Parse(parts[2]),
+                byte.Parse(parts[3]),
+            };
+        }
+        catch (FormatException)
+        {
+            Console.WriteLine($"Warning: Could not parse map bytes from: {map}");
+            return null;
+        }
     }
 
     /// <summary>

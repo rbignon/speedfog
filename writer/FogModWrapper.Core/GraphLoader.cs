@@ -52,9 +52,9 @@ public static class GraphLoader
         }
 
         // Validate version
-        if (data.Version != "3.0")
+        if (data.Version != "3.0" && data.Version != "4.0")
         {
-            Console.WriteLine($"Warning: Expected graph.json version 3.0, got {data.Version}");
+            Console.WriteLine($"Warning: Expected graph.json version 3.0 or 4.0, got {data.Version}");
         }
 
         return data;

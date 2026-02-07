@@ -25,7 +25,7 @@ def _effective_type(node: DagNode, dag: Dag) -> str:
 
 
 # =============================================================================
-# V3 Format for FogModWrapper and visualization
+# V4 Format for FogModWrapper, visualization, and racing zone tracking
 # =============================================================================
 
 
@@ -141,11 +141,12 @@ def dag_to_dict(
     starting_golden_seeds: int = 0,
     starting_sacred_tears: int = 0,
 ) -> dict[str, Any]:
-    """Convert a DAG to v3 JSON-serializable dictionary.
+    """Convert a DAG to v4 JSON-serializable dictionary.
 
-    The v3 format extends v2 with `nodes` and `edges` sections for
-    visualization tools, while keeping `connections`/`area_tiers` for
-    FogModWrapper compatibility.
+    The v4 format extends v3 with event flag tracking for racing support:
+    - `event_map`: mapping of flag_id (str) -> cluster_id for zone tracking
+    - `finish_event`: flag_id for final boss death detection
+    - Each connection includes a `flag_id` for its destination node
 
     Args:
         dag: The DAG to convert
@@ -160,14 +161,16 @@ def dag_to_dict(
 
     Returns:
         Dictionary with the following structure:
-        - version: "3.0"
+        - version: "4.0"
         - seed: int
         - total_layers, total_nodes, total_zones, total_paths: metadata
         - options: dict of FogMod options
         - nodes: dict of cluster_id -> {type, display_name, zones, layer, tier, weight}
         - edges: list of {from, to}
-        - connections: list of {exit_area, exit_gate, entrance_area, entrance_gate}
+        - connections: list of {exit_area, exit_gate, entrance_area, entrance_gate, flag_id}
         - area_tiers: dict of zone -> tier
+        - event_map: dict of str(flag_id) -> cluster_id
+        - finish_event: int flag_id for final boss node
         - starting_goods, starting_runes, etc.
     """
     if options is None:
@@ -176,8 +179,20 @@ def dag_to_dict(
             "shuffle": True,
         }
 
+    # Allocate event flag IDs per non-start destination node (for racing zone tracking)
+    EVENT_FLAG_BASE = 9000000
+    node_flag_ids: dict[str, int] = {}
+    flag_counter = 0
+    for node in dag.nodes.values():
+        if node.id == dag.start_id:
+            continue
+        cluster_id = node.cluster.id
+        if cluster_id not in node_flag_ids:
+            node_flag_ids[cluster_id] = EVENT_FLAG_BASE + flag_counter
+            flag_counter += 1
+
     # Build connections list
-    connections: list[dict[str, str]] = []
+    connections: list[dict[str, str | int]] = []
     for edge in dag.edges:
         source_node = dag.nodes.get(edge.source_id)
         target_node = dag.nodes.get(edge.target_id)
@@ -216,6 +231,7 @@ def dag_to_dict(
                 "entrance_gate": _make_fullname(
                     effective_entry_fog, entry_zone, clusters, fog_data, is_entry=True
                 ),
+                "flag_id": node_flag_ids[target_node.cluster.id],
             }
         )
 
@@ -254,8 +270,15 @@ def dag_to_dict(
             seen_edges.add(pair)
             edges_list.append({"from": pair[0], "to": pair[1]})
 
+    # Build event_map: str(flag_id) -> cluster_id
+    event_map = {str(fid): cid for cid, fid in node_flag_ids.items()}
+
+    # finish_event: flag ID of the final_boss node
+    end_node = dag.nodes[dag.end_id]
+    finish_event = node_flag_ids[end_node.cluster.id]
+
     return {
-        "version": "3.0",
+        "version": "4.0",
         "seed": dag.seed,
         "total_layers": total_layers,
         "total_nodes": dag.total_nodes(),
@@ -266,6 +289,8 @@ def dag_to_dict(
         "edges": edges_list,
         "connections": connections,
         "area_tiers": area_tiers,
+        "event_map": event_map,
+        "finish_event": finish_event,
         "starting_item_lots": starting_item_lots or [],
         "starting_goods": starting_goods or [],
         "starting_runes": starting_runes,
@@ -286,7 +311,7 @@ def export_json(
     starting_golden_seeds: int = 0,
     starting_sacred_tears: int = 0,
 ) -> None:
-    """Export a DAG to v3 formatted JSON file.
+    """Export a DAG to v4 formatted JSON file.
 
     Args:
         dag: The DAG to export

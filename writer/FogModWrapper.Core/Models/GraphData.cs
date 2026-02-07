@@ -8,7 +8,7 @@ namespace FogModWrapper.Models;
 public class GraphData
 {
     [JsonPropertyName("version")]
-    public string Version { get; set; } = "3.0";
+    public string Version { get; set; } = "4.0";
 
     [JsonPropertyName("seed")]
     public int Seed { get; set; }
@@ -40,6 +40,19 @@ public class GraphData
 
     [JsonPropertyName("starting_sacred_tears")]
     public int StartingSacredTears { get; set; } = 0;
+
+    /// <summary>
+    /// Mapping of event flag ID (as string) to cluster ID.
+    /// Used by racing mod to detect zone transitions via EMEVD flags.
+    /// </summary>
+    [JsonPropertyName("event_map")]
+    public Dictionary<string, string> EventMap { get; set; } = new();
+
+    /// <summary>
+    /// Event flag ID set when the final boss is defeated.
+    /// </summary>
+    [JsonPropertyName("finish_event")]
+    public int FinishEvent { get; set; } = 0;
 }
 
 /// <summary>
@@ -70,6 +83,13 @@ public class Connection
     /// </summary>
     [JsonPropertyName("entrance_gate")]
     public string EntranceGate { get; set; } = "";
+
+    /// <summary>
+    /// Event flag ID to set when this connection's fog gate is traversed.
+    /// Maps to the destination node's flag in event_map.
+    /// </summary>
+    [JsonPropertyName("flag_id")]
+    public int FlagId { get; set; } = 0;
 
     public override string ToString()
     {
