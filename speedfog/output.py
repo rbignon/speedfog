@@ -16,6 +16,14 @@ from typing import Any
 from speedfog.clusters import ClusterPool
 from speedfog.dag import Dag, DagNode
 
+
+def _effective_type(node: DagNode, dag: Dag) -> str:
+    """Return the node's effective type, overriding to 'final_boss' for the end node."""
+    if node.id == dag.end_id:
+        return "final_boss"
+    return node.cluster.type
+
+
 # =============================================================================
 # V3 Format for FogModWrapper and visualization
 # =============================================================================
@@ -225,7 +233,7 @@ def dag_to_dict(
     nodes: dict[str, dict[str, Any]] = {}
     for node in dag.nodes.values():
         nodes[node.cluster.id] = {
-            "type": node.cluster.type,
+            "type": _effective_type(node, dag),
             "display_name": clusters.get_display_name(node.cluster),
             "zones": node.cluster.zones,
             "layer": node.layer,
@@ -763,7 +771,7 @@ def export_spoiler_log(dag: Dag, output_path: Path) -> None:
         type_parts = []
         for node_id in node_ids:
             node = dag.nodes[node_id]
-            type_str = f"[{node.cluster.type}]"
+            type_str = f"[{_effective_type(node, dag)}]"
             type_parts.append(type_str.center(col_width))
         type_line = " " * offset + "".join(type_parts)
         lines.append(type_line)
@@ -809,7 +817,7 @@ def export_spoiler_log(dag: Dag, output_path: Path) -> None:
     for node in sorted_nodes:
         lines.append("")
         lines.append(f"[{node.cluster.id}]")
-        lines.append(f"  Type: {node.cluster.type}")
+        lines.append(f"  Type: {_effective_type(node, dag)}")
         lines.append(f"  Zones: {', '.join(node.cluster.zones)}")
         lines.append(f"  Tier: {node.tier}")
         lines.append(f"  Layer: {node.layer}")

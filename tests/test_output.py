@@ -2,9 +2,9 @@
 
 from pathlib import Path
 
-from speedfog.clusters import ClusterData
+from speedfog.clusters import ClusterData, ClusterPool
 from speedfog.dag import Dag, DagNode
-from speedfog.output import export_spoiler_log
+from speedfog.output import _effective_type, dag_to_dict, export_spoiler_log
 
 
 def make_cluster(
@@ -112,6 +112,74 @@ def make_test_dag() -> Dag:
 
 
 # =============================================================================
+# _effective_type tests
+# =============================================================================
+
+
+class TestEffectiveType:
+    """Tests for _effective_type helper."""
+
+    def test_end_node_major_boss_becomes_final_boss(self):
+        """End node with major_boss cluster type returns 'final_boss'."""
+        dag = make_test_dag()
+        # Override end node's cluster type to major_boss
+        dag.nodes["end"].cluster.type = "major_boss"
+
+        assert _effective_type(dag.nodes["end"], dag) == "final_boss"
+
+    def test_end_node_already_final_boss(self):
+        """End node with final_boss cluster type still returns 'final_boss'."""
+        dag = make_test_dag()
+        assert dag.nodes["end"].cluster.type == "final_boss"
+
+        assert _effective_type(dag.nodes["end"], dag) == "final_boss"
+
+    def test_non_end_node_keeps_original_type(self):
+        """Non-end nodes keep their original cluster type."""
+        dag = make_test_dag()
+
+        assert _effective_type(dag.nodes["start"], dag) == "start"
+        assert _effective_type(dag.nodes["a"], dag) == "legacy_dungeon"
+        assert _effective_type(dag.nodes["b"], dag) == "mini_dungeon"
+
+    def test_non_end_major_boss_stays_major_boss(self):
+        """A major_boss node that is NOT the end node keeps 'major_boss'."""
+        dag = make_test_dag()
+        dag.nodes["a"].cluster.type = "major_boss"
+
+        assert _effective_type(dag.nodes["a"], dag) == "major_boss"
+
+
+# =============================================================================
+# dag_to_dict effective type tests
+# =============================================================================
+
+
+class TestDagToDictEffectiveType:
+    """Tests for final_boss type override in dag_to_dict."""
+
+    def test_major_boss_end_node_typed_final_boss_in_json(self):
+        """dag_to_dict outputs 'final_boss' for end node even if cluster is major_boss."""
+        dag = make_test_dag()
+        dag.nodes["end"].cluster.type = "major_boss"
+
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+
+        result = dag_to_dict(dag, clusters)
+
+        assert result["nodes"]["c_end"]["type"] == "final_boss"
+        # ClusterData was NOT mutated
+        assert dag.nodes["end"].cluster.type == "major_boss"
+        # Other nodes unchanged
+        assert result["nodes"]["c_start"]["type"] == "start"
+        assert result["nodes"]["c_a"]["type"] == "legacy_dungeon"
+
+
+# =============================================================================
 # export_spoiler_log tests
 # =============================================================================
 
@@ -165,3 +233,15 @@ class TestExportSpoilerLog:
         content = output_file.read_text(encoding="utf-8")
         # Should have paths information
         assert "path" in content.lower()
+
+    def test_major_boss_end_shows_final_boss(self, tmp_path: Path):
+        """Spoiler log shows [final_boss] for end node even if cluster is major_boss."""
+        dag = make_test_dag()
+        dag.nodes["end"].cluster.type = "major_boss"
+        output_file = tmp_path / "spoiler.txt"
+
+        export_spoiler_log(dag, output_file)
+
+        content = output_file.read_text(encoding="utf-8")
+        assert "[final_boss]" in content
+        assert "[major_boss]" not in content
