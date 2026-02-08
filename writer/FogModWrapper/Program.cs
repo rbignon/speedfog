@@ -363,6 +363,9 @@ Example:
                 injectionResult.BossDefeatFlag);
         }
 
+        // 7g. Inject "RUN COMPLETE" full screen message on final boss defeat
+        RunCompleteInjector.Inject(modDir, events, graphData.FinishEvent);
+
         // 8. Package with ModEngine 2
         var packager = new PackagingWriter(config.OutputDir);
         await packager.WritePackageAsync(config.MergeDir);

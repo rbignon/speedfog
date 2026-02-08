@@ -67,6 +67,7 @@ speedfog/
 │   │   ├── ConnectionInjector.cs  # Inject connections into FogMod Graph
 │   │   ├── StartingItemInjector.cs  # Inject starting item events into EMEVD
 │   │   ├── StartingResourcesInjector.cs  # Inject runes, seeds, tears
+│   │   ├── RunCompleteInjector.cs  # Inject "RUN COMPLETE" message on final boss defeat
 │   │   └── eldendata/       # FogRando game data (gitignored)
 │   └── ItemRandomizerWrapper/  # Item randomizer - thin wrapper calling RandomizerCommon.dll
 │       ├── Program.cs       # CLI entry point
@@ -123,6 +124,7 @@ speedfog/
 | `GraphLoader` | Parses graph.json v4 format from Python |
 | `ConnectionInjector` | Injects connections into FogMod's Graph, extracts warp data |
 | `ZoneTrackingInjector` | Injects SetEventFlag before fog gate warps for racing |
+| `RunCompleteInjector` | Injects "RUN COMPLETE" full screen message on final boss defeat |
 | `StartingItemInjector` | Injects starting item events into common.emevd |
 | `StartingResourcesInjector` | Injects runes (CharaInitParam), seeds/tears (ItemLots) |
 
