@@ -27,17 +27,21 @@ public static class ZoneTrackingInjector
     /// <param name="modDir">Path to mod output directory (contains event/ subdirectory)</param>
     /// <param name="events">Events instance for instruction parsing</param>
     /// <param name="connections">Connections from graph.json with flag_id per connection</param>
+    /// <param name="areaMaps">Maps each area name to its internal map IDs (from FogMod Graph).
+    /// Used to resolve entrance areas to their actual WarpPlayer destination maps,
+    /// which may differ from the entrance_gate's map prefix (e.g., overworld tile vs dungeon interior).</param>
     /// <param name="finishEvent">The finish_event flag ID</param>
     /// <param name="bossDefeatFlag">The boss defeat flag from FogMod's Graph</param>
     public static void Inject(
         string modDir,
         Events events,
         List<Connection> connections,
+        Dictionary<string, string> areaMaps,
         int finishEvent,
         int bossDefeatFlag)
     {
         // Part A: Inject SetEventFlag before WarpPlayer in per-instance warp events
-        InjectFogGateFlags(modDir, events, connections);
+        InjectFogGateFlags(modDir, events, connections, areaMaps);
 
         // Part B: Create boss death monitor in common.emevd
         if (finishEvent > 0 && bossDefeatFlag > 0)
@@ -59,9 +63,16 @@ public static class ZoneTrackingInjector
     /// FogMod's EventEditor compiles the fogwarp template (9005777) into per-instance events
     /// with unique IDs and literal WarpPlayer values. These events are placed in map EMEVD files
     /// and called via InitializeEvent (2000:0). We post-process them to add zone tracking.
+    ///
+    /// Matching strategy (see docs/specs/zone-tracking-accuracy.md):
+    /// 1. Try compound key (source_map, dest_map) — resolves collisions when two connections
+    ///    from different source maps target the same dest map.
+    /// 2. Fall back to dest-only matching — because FogMod's getEventMap() may place events
+    ///    in a different EMEVD file than the exit gate's map prefix.
     /// </summary>
     private static void InjectFogGateFlags(
-        string modDir, Events events, List<Connection> connections)
+        string modDir, Events events, List<Connection> connections,
+        Dictionary<string, string> areaMaps)
     {
         var eventDir = Path.Combine(modDir, "event");
         if (!Directory.Exists(eventDir))
@@ -70,48 +81,73 @@ public static class ZoneTrackingInjector
             return;
         }
 
-        // Build lookup: (source_map, dest_map) → flagId
-        // Using a compound key prevents collisions when two connections from different
-        // source maps lead to the same destination map (e.g., two zones in m18_00_00_00).
-        // Parse map bytes from exit_gate (source) and entrance_gate (destination).
-        // Cross-tile gates yield multiple map byte sets; register all combinations.
-        // See docs/specs/zone-tracking-accuracy.md for design rationale.
-        var lookup = new Dictionary<((byte, byte, byte, byte), (byte, byte, byte, byte)), int>();
+        // Build TWO lookups from connections:
+        // 1. Compound key (source_map, dest_map) → flagId  — for collision resolution
+        // 2. Dest-only dest_map → flagId  — fallback when compound key doesn't match
+        //
+        // FogMod's getEventMap() may place warp events in a different EMEVD file than the
+        // exit gate's map prefix (e.g., parent maps for open world tiles, map deduplication).
+        // The compound key works when EMEVD filename matches exit_gate map; dest-only handles
+        // the rest. See docs/specs/zone-tracking-accuracy.md for design rationale.
+        var compoundLookup = new Dictionary<((byte, byte, byte, byte), (byte, byte, byte, byte)), int>();
+        var destOnlyLookup = new Dictionary<(byte, byte, byte, byte), int>();
+        var destOnlyCollisions = new HashSet<(byte, byte, byte, byte)>();
+
         foreach (var conn in connections)
         {
             if (conn.FlagId <= 0)
                 continue;
             var exitMapBytesList = ParseMapBytesFromGateName(conn.ExitGate);
             var entranceMapBytesList = ParseMapBytesFromGateName(conn.EntranceGate);
+
+            // Register compound keys (all exit × entrance combinations for cross-tile gates)
             foreach (var exitBytes in exitMapBytesList)
             {
                 var srcKey = (exitBytes[0], exitBytes[1], exitBytes[2], exitBytes[3]);
                 foreach (var entranceBytes in entranceMapBytesList)
                 {
                     var destKey = (entranceBytes[0], entranceBytes[1], entranceBytes[2], entranceBytes[3]);
-                    var key = (srcKey, destKey);
-                    if (lookup.TryGetValue(key, out int existing) && existing != conn.FlagId)
+                    compoundLookup.TryAdd((srcKey, destKey), conn.FlagId);
+                }
+            }
+
+            // Register dest-only keys from gate name (track collisions)
+            RegisterDestKeys(entranceMapBytesList, conn.FlagId, destOnlyLookup, destOnlyCollisions);
+
+            // Also register internal maps from areaMaps — FogMod may warp to the dungeon
+            // interior map (e.g., m30_02) instead of the overworld entrance tile (e.g., m60_41_37)
+            if (areaMaps.TryGetValue(conn.EntranceArea, out var mapsStr) && !string.IsNullOrEmpty(mapsStr))
+            {
+                var internalMapBytes = ParseMapBytesFromMapString(mapsStr);
+                RegisterDestKeys(internalMapBytes, conn.FlagId, destOnlyLookup, destOnlyCollisions);
+
+                // Also register compound keys for internal maps
+                foreach (var exitBytes in exitMapBytesList)
+                {
+                    var srcKey = (exitBytes[0], exitBytes[1], exitBytes[2], exitBytes[3]);
+                    foreach (var intBytes in internalMapBytes)
                     {
-                        Console.WriteLine($"Warning: Zone tracking collision for {conn.EntranceGate}: " +
-                                          $"flag {conn.FlagId} conflicts with existing flag {existing} " +
-                                          $"(same source+dest map pair)");
+                        var destKey = (intBytes[0], intBytes[1], intBytes[2], intBytes[3]);
+                        compoundLookup.TryAdd((srcKey, destKey), conn.FlagId);
                     }
-                    lookup.TryAdd(key, conn.FlagId);  // first wins if duplicate (diamond merges share flagId)
                 }
             }
         }
 
-        Console.WriteLine($"Zone tracking: {lookup.Count} (source,dest) map pairs to match");
+        Console.WriteLine($"Zone tracking: {compoundLookup.Count} compound keys, " +
+                          $"{destOnlyLookup.Count} dest maps ({destOnlyCollisions.Count} collisions)");
 
         int totalInjected = 0;
+        int compoundMatches = 0;
+        int destOnlyMatches = 0;
 
         foreach (var emevdPath in Directory.GetFiles(eventDir, "*.emevd.dcx"))
         {
             // Parse source map from EMEVD filename (e.g., "m10_01_00_00.emevd.dcx")
             var sourceMapBytes = ParseMapBytesFromFileName(emevdPath);
-            if (sourceMapBytes == null)
-                continue;  // Skip non-map files (e.g., common.emevd.dcx)
-            var sourceMap = (sourceMapBytes[0], sourceMapBytes[1], sourceMapBytes[2], sourceMapBytes[3]);
+            var sourceMap = sourceMapBytes != null
+                ? ((byte, byte, byte, byte)?)(sourceMapBytes[0], sourceMapBytes[1], sourceMapBytes[2], sourceMapBytes[3])
+                : null;
 
             var emevd = EMEVD.Read(emevdPath);
             bool fileModified = false;
@@ -141,10 +177,33 @@ public static class ZoneTrackingInjector
                     if (region < FOGMOD_ENTITY_BASE)
                         continue;
 
-                    // Match against our connection lookup using compound key
-                    var key = (sourceMap, destMap);
-                    if (!lookup.TryGetValue(key, out int flagId))
-                        continue;
+                    // Strategy 1: Try compound key (source_map, dest_map) — resolves collisions
+                    int flagId = 0;
+                    bool matched = false;
+                    if (sourceMap.HasValue)
+                    {
+                        var compoundKey = (sourceMap.Value, destMap);
+                        if (compoundLookup.TryGetValue(compoundKey, out flagId))
+                        {
+                            matched = true;
+                            compoundMatches++;
+                        }
+                    }
+
+                    // Strategy 2: Fall back to dest-only matching
+                    if (!matched)
+                    {
+                        if (!destOnlyLookup.TryGetValue(destMap, out flagId))
+                            continue;
+                        matched = true;
+                        destOnlyMatches++;
+                        if (destOnlyCollisions.Contains(destMap))
+                        {
+                            var destMapStr = $"m{destMap.Item1}_{destMap.Item2:D2}_{destMap.Item3:D2}_{destMap.Item4:D2}";
+                            Console.WriteLine($"Warning: Zone tracking dest-only fallback with collision " +
+                                              $"on {destMapStr} — flag {flagId} may be inaccurate");
+                        }
+                    }
 
                     // Insert SetEventFlag(flagId, ON) before WarpPlayer
                     var setFlagInstr = events.ParseAdd(
@@ -172,7 +231,10 @@ public static class ZoneTrackingInjector
             }
         }
 
-        Console.WriteLine($"Zone tracking: injected {totalInjected} fog gate tracking flags");
+        var expectedFlags = connections.Where(c => c.FlagId > 0).Select(c => c.FlagId).Distinct().Count();
+        Console.WriteLine($"Zone tracking: injected {totalInjected} fog gate tracking flags " +
+                          $"(compound: {compoundMatches}, dest-only: {destOnlyMatches}, " +
+                          $"expected unique flags: {expectedFlags})");
     }
 
     /// <summary>
@@ -276,6 +338,61 @@ public static class ZoneTrackingInjector
         {
             return null;
         }
+    }
+
+    /// <summary>
+    /// Register map byte tuples in the dest-only lookup, tracking collisions.
+    /// </summary>
+    private static void RegisterDestKeys(
+        List<byte[]> mapBytesList, int flagId,
+        Dictionary<(byte, byte, byte, byte), int> destOnlyLookup,
+        HashSet<(byte, byte, byte, byte)> destOnlyCollisions)
+    {
+        foreach (var bytes in mapBytesList)
+        {
+            var destKey = (bytes[0], bytes[1], bytes[2], bytes[3]);
+            if (destOnlyLookup.TryGetValue(destKey, out int existing) && existing != flagId)
+            {
+                destOnlyCollisions.Add(destKey);
+                var destMapStr = $"m{destKey.Item1}_{destKey.Item2:D2}_{destKey.Item3:D2}_{destKey.Item4:D2}";
+                Console.WriteLine($"Zone tracking: dest-only collision on {destMapStr} " +
+                                  $"(flag {flagId} vs {existing})");
+            }
+            destOnlyLookup.TryAdd(destKey, flagId);
+        }
+    }
+
+    /// <summary>
+    /// Parse map bytes from a space-separated map string (e.g., "m31_19_00_00 m31_19_00_01").
+    /// Used to resolve FogMod's internal area maps, which may differ from gate name prefixes.
+    /// </summary>
+    private static List<byte[]> ParseMapBytesFromMapString(string mapsStr)
+    {
+        var results = new List<byte[]>();
+        foreach (var mapId in mapsStr.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (!mapId.StartsWith("m", StringComparison.OrdinalIgnoreCase))
+                continue;
+            var name = mapId.TrimStart('m');
+            var parts = name.Split('_');
+            if (parts.Length < 4)
+                continue;
+            try
+            {
+                results.Add(new byte[]
+                {
+                    byte.Parse(parts[0]),
+                    byte.Parse(parts[1]),
+                    byte.Parse(parts[2]),
+                    byte.Parse(parts[3]),
+                });
+            }
+            catch (FormatException)
+            {
+                // Skip unparseable map IDs
+            }
+        }
+        return results;
     }
 
     /// <summary>

@@ -356,10 +356,18 @@ Example:
         // 7f. Inject zone tracking events for racing support
         if (graphData.FinishEvent > 0)
         {
+            // Build area→maps lookup from FogMod's graph for internal map resolution.
+            // FogMod may warp to dungeon interior maps (e.g., m30_02) that differ from
+            // the overworld entrance tile in graph.json's entrance_gate prefix (e.g., m60_41_37).
+            var areaMaps = graph.Areas
+                .Where(kvp => !string.IsNullOrEmpty(kvp.Value.Maps))
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Maps);
+
             ZoneTrackingInjector.Inject(
                 modDir,
                 events,
                 graphData.Connections,
+                areaMaps,
                 injectionResult.FinishEvent,
                 injectionResult.BossDefeatFlag);
         }
