@@ -21,7 +21,8 @@ public static class StartingItemInjector
     private const int ITEMS_GIVEN_FLAG = 1040299001;
 
     // ItemType enum names for DirectlyGivePlayerItem instruction
-    private static readonly string[] ItemTypeNames = { "ItemType.Weapon", "ItemType.Protector", "ItemType.Accessory", "ItemType.Goods" };
+    // Must match EMEDF enum: Weapon=0, Armor=1, Ring=2, Goods=3
+    private static readonly string[] ItemTypeNames = { "ItemType.Weapon", "ItemType.Armor", "ItemType.Ring", "ItemType.Goods" };
 
     /// <summary>
     /// Inject starting item events into common.emevd.
