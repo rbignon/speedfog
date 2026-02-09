@@ -13,6 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from speedfog.care_package import CarePackageItem
 from speedfog.clusters import ClusterPool
 from speedfog.dag import Dag, DagNode
 
@@ -140,6 +141,7 @@ def dag_to_dict(
     starting_runes: int = 0,
     starting_golden_seeds: int = 0,
     starting_sacred_tears: int = 0,
+    care_package: list[CarePackageItem] | None = None,
 ) -> dict[str, Any]:
     """Convert a DAG to v4 JSON-serializable dictionary.
 
@@ -158,6 +160,7 @@ def dag_to_dict(
         starting_runes: Runes to add to starting classes (via CharaInitParam)
         starting_golden_seeds: Golden Seeds to give at start
         starting_sacred_tears: Sacred Tears to give at start
+        care_package: List of CarePackageItem for randomized starting build
 
     Returns:
         Dictionary with the following structure:
@@ -300,6 +303,10 @@ def dag_to_dict(
         "starting_runes": starting_runes,
         "starting_golden_seeds": starting_golden_seeds,
         "starting_sacred_tears": starting_sacred_tears,
+        "care_package": [
+            {"type": item.type, "id": item.id, "name": item.name}
+            for item in (care_package or [])
+        ],
     }
 
 
@@ -314,6 +321,7 @@ def export_json(
     starting_runes: int = 0,
     starting_golden_seeds: int = 0,
     starting_sacred_tears: int = 0,
+    care_package: list[CarePackageItem] | None = None,
 ) -> None:
     """Export a DAG to v4 formatted JSON file.
 
@@ -328,6 +336,7 @@ def export_json(
         starting_runes: Runes to add to starting classes
         starting_golden_seeds: Golden Seeds to give at start
         starting_sacred_tears: Sacred Tears to give at start
+        care_package: List of CarePackageItem for randomized starting build
     """
     data = dag_to_dict(
         dag,
@@ -339,6 +348,7 @@ def export_json(
         starting_runes,
         starting_golden_seeds,
         starting_sacred_tears,
+        care_package,
     )
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
@@ -689,12 +699,17 @@ def _build_connection_lines(
     return lines
 
 
-def export_spoiler_log(dag: Dag, output_path: Path) -> None:
+def export_spoiler_log(
+    dag: Dag,
+    output_path: Path,
+    care_package: list[CarePackageItem] | None = None,
+) -> None:
     """Export human-readable spoiler log with ASCII graph visualization.
 
     Args:
         dag: The DAG to export
         output_path: Path to write the spoiler log
+        care_package: Optional care package items to include in spoiler
     """
     lines: list[str] = []
 
@@ -860,6 +875,17 @@ def export_spoiler_log(dag: Dag, output_path: Path) -> None:
                 target_node = dag.nodes.get(target_id)
                 target_name = target_node.cluster.id if target_node else target_id
                 lines.append(f"    -> {target_name} via {fog_id}")
+
+    # Care package section
+    if care_package:
+        lines.append("")
+        lines.append("=" * 60)
+        lines.append("CARE PACKAGE (starting build)")
+        lines.append("=" * 60)
+        type_names = {0: "Weapon", 1: "Armor", 2: "Talisman", 3: "Spell/Item"}
+        for item in care_package:
+            type_label = type_names.get(item.type, "Unknown")
+            lines.append(f"  [{type_label}] {item.name} (id={item.id})")
 
     # Write to file
     with open(output_path, "w", encoding="utf-8") as f:

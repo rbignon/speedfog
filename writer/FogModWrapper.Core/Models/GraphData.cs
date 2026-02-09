@@ -53,6 +53,38 @@ public class GraphData
     /// </summary>
     [JsonPropertyName("finish_event")]
     public int FinishEvent { get; set; } = 0;
+
+    /// <summary>
+    /// Randomized starting build items (care package).
+    /// Each item has a type (Weapon/Protector/Accessory/Goods), param row ID, and display name.
+    /// </summary>
+    [JsonPropertyName("care_package")]
+    public List<CarePackageItem> CarePackage { get; set; } = new();
+}
+
+/// <summary>
+/// A single care package item to give the player at game start.
+/// </summary>
+public class CarePackageItem
+{
+    /// <summary>
+    /// Item type: 0=Weapon, 1=Protector, 2=Accessory, 3=Goods.
+    /// Maps to EMEDF ItemType enum for DirectlyGivePlayerItem.
+    /// </summary>
+    [JsonPropertyName("type")]
+    public int Type { get; set; }
+
+    /// <summary>
+    /// Param row ID (with upgrade level encoded for weapons).
+    /// </summary>
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    /// <summary>
+    /// Display name for logging/spoiler.
+    /// </summary>
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = "";
 }
 
 /// <summary>

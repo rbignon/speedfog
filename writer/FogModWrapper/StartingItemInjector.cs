@@ -1,3 +1,4 @@
+using FogModWrapper.Models;
 using SoulsFormats;
 using SoulsIds;
 
@@ -5,7 +6,7 @@ namespace FogModWrapper;
 
 /// <summary>
 /// Injects starting item events into the common.emevd after FogMod writes.
-/// Uses DirectlyGivePlayerItem to give items by Good ID, which is not affected
+/// Uses DirectlyGivePlayerItem to give items by type + ID, which is not affected
 /// by Item Randomizer (unlike AwardItemLot which uses ItemLotParam).
 /// </summary>
 public static class StartingItemInjector
@@ -19,15 +20,21 @@ public static class StartingItemInjector
     // Flag to track if we already gave the starting items (prevents re-giving on reload)
     private const int ITEMS_GIVEN_FLAG = 1040299001;
 
+    // ItemType enum names for DirectlyGivePlayerItem instruction
+    private static readonly string[] ItemTypeNames = { "ItemType.Weapon", "ItemType.Protector", "ItemType.Accessory", "ItemType.Goods" };
+
     /// <summary>
-    /// Inject starting item events into common.emevd using Good IDs.
+    /// Inject starting item events into common.emevd.
+    /// Gives Good IDs (key items) and care package items (typed) at game start.
     /// </summary>
     /// <param name="modDir">Directory containing the mod files (with event/common.emevd)</param>
-    /// <param name="goodIds">List of Good IDs to award at game start</param>
+    /// <param name="goodIds">List of Good IDs to award (key items, great runes)</param>
+    /// <param name="carePackage">List of typed care package items (weapons, armor, etc.)</param>
     /// <param name="events">Events parser for instruction generation</param>
-    public static void Inject(string modDir, List<int> goodIds, Events events)
+    public static void Inject(string modDir, List<int> goodIds, List<CarePackageItem> carePackage, Events events)
     {
-        if (goodIds.Count == 0)
+        var totalItems = goodIds.Count + carePackage.Count;
+        if (totalItems == 0)
         {
             Console.WriteLine("No starting items to inject");
             return;
@@ -40,7 +47,7 @@ public static class StartingItemInjector
             return;
         }
 
-        Console.WriteLine($"Injecting {goodIds.Count} starting items into common.emevd...");
+        Console.WriteLine($"Injecting {totalItems} starting items into common.emevd...");
 
         // Load the EMEVD
         var emevd = EMEVD.Read(emevdPath);
@@ -62,13 +69,21 @@ public static class StartingItemInjector
         // Exit if we already gave the items (flag-based check for unique items)
         evt.Instructions.Add(events.ParseAdd($"EndIfEventFlag(EventEndType.End, ON, TargetEventFlagType.EventFlag, {ITEMS_GIVEN_FLAG})"));
 
-        // Give all items using DirectlyGivePlayerItem
-        // This uses Good IDs directly, bypassing ItemLotParam which is modified by Item Randomizer
-        // Args: ItemType (3=Goods), GoodID, ItemLotParamRow (6001 for presentation), Quantity
+        // Give Good IDs (key items, great runes) using ItemType.Goods
         foreach (var goodId in goodIds)
         {
             evt.Instructions.Add(events.ParseAdd($"DirectlyGivePlayerItem(ItemType.Goods, {goodId}, 6001, 1)"));
             Console.WriteLine($"  Added Good ID {goodId}");
+        }
+
+        // Give care package items with their specific ItemType
+        foreach (var item in carePackage)
+        {
+            var itemType = item.Type >= 0 && item.Type < ItemTypeNames.Length
+                ? ItemTypeNames[item.Type]
+                : "ItemType.Goods";
+            evt.Instructions.Add(events.ParseAdd($"DirectlyGivePlayerItem({itemType}, {item.Id}, 6001, 1)"));
+            Console.WriteLine($"  Added {itemType} {item.Name} (id={item.Id})");
         }
 
         // Set flag so we don't give items again on reload

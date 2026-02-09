@@ -1,0 +1,442 @@
+# Care Package Item Pool
+#
+# Curated lists of items for randomized starting builds.
+# IDs are EquipParam row IDs (base, before upgrade encoding).
+#
+# Item types (maps to EMEDF ItemType for DirectlyGivePlayerItem):
+#   Weapon (0):    weapons, shields, catalysts (EquipParamWeapon)
+#   Protector (1): armor pieces (EquipParamProtector)
+#   Accessory (2): talismans (EquipParamAccessory)
+#   Goods (3):     sorceries, incantations, crystal tears (EquipParamGoods)
+#
+# Weapon upgrade encoding: base_id + upgrade_level
+#   Standard: +0 to +25 (regular smithing stones)
+#   Somber:   +0 to +10 (somber smithing stones)
+
+# =============================================================================
+# Weapons - standard upgrade path (infusible, regular smithing stones)
+# =============================================================================
+
+[[weapons.standard]]
+name = "Longsword"
+id = 2000000
+
+[[weapons.standard]]
+name = "Broadsword"
+id = 2020000
+
+[[weapons.standard]]
+name = "Lordsworn's Straight Sword"
+id = 2040000
+
+[[weapons.standard]]
+name = "Bastard Sword"
+id = 3000000
+
+[[weapons.standard]]
+name = "Lordsworn's Greatsword"
+id = 3030000
+
+[[weapons.standard]]
+name = "Claymore"
+id = 3180000
+
+[[weapons.standard]]
+name = "Uchigatana"
+id = 9000000
+
+[[weapons.standard]]
+name = "Nagakiba"
+id = 9010000
+
+[[weapons.standard]]
+name = "Misericorde"
+id = 1030000
+
+[[weapons.standard]]
+name = "Great Knife"
+id = 1090000
+
+[[weapons.standard]]
+name = "Dagger"
+id = 1000000
+
+[[weapons.standard]]
+name = "Celebrant's Sickle"
+id = 1060000
+
+# =============================================================================
+# Weapons - somber upgrade path (unique weapons, somber smithing stones)
+# =============================================================================
+
+[[weapons.somber]]
+name = "Reduvia"
+id = 1040000
+
+[[weapons.somber]]
+name = "Crystal Knife"
+id = 1050000
+
+[[weapons.somber]]
+name = "Moonveil"
+id = 9060000
+
+[[weapons.somber]]
+name = "Bloodhound's Fang"
+id = 8030000
+
+[[weapons.somber]]
+name = "Sword of Night and Flame"
+id = 2140000
+
+[[weapons.somber]]
+name = "Ornamental Straight Sword"
+id = 2060000
+
+# =============================================================================
+# Shields (type=Weapon in game, standard upgrade)
+# =============================================================================
+
+[[shields]]
+name = "Brass Shield"
+id = 31130000
+
+[[shields]]
+name = "Man-Serpent's Shield"
+id = 30020000
+
+[[shields]]
+name = "Beastman's Jar-Shield"
+id = 30060000
+
+[[shields]]
+name = "Ice Crest Shield"
+id = 30140000
+
+[[shields]]
+name = "Perfumer's Shield"
+id = 30010000
+
+# =============================================================================
+# Catalysts - standard upgrade (staves and seals, type=Weapon)
+# =============================================================================
+
+[[catalysts.standard]]
+name = "Glintstone Staff"
+id = 33000000
+
+[[catalysts.standard]]
+name = "Astrologer's Staff"
+id = 33130000
+
+[[catalysts.standard]]
+name = "Finger Seal"
+id = 34000000
+
+# =============================================================================
+# Catalysts - somber upgrade (unique staves and seals, type=Weapon)
+# =============================================================================
+
+[[catalysts.somber]]
+name = "Lusat's Glintstone Staff"
+id = 33240000
+
+[[catalysts.somber]]
+name = "Azur's Glintstone Staff"
+id = 33230000
+
+[[catalysts.somber]]
+name = "Dragon Communion Seal"
+id = 34080000
+
+[[catalysts.somber]]
+name = "Godslayer's Seal"
+id = 34010000
+
+[[catalysts.somber]]
+name = "Clawmark Seal"
+id = 34040000
+
+# =============================================================================
+# Armor - Head (type=Protector)
+# =============================================================================
+
+[[armor.head]]
+name = "Iron Helmet"
+id = 40000
+
+[[armor.head]]
+name = "Kaiden Helm"
+id = 50000
+
+[[armor.head]]
+name = "Scaled Helm"
+id = 80000
+
+[[armor.head]]
+name = "Alberich's Pointed Hat"
+id = 120000
+
+[[armor.head]]
+name = "Bull-Goat Helm"
+id = 140000
+
+[[armor.head]]
+name = "Black Wolf Mask"
+id = 170000
+
+# =============================================================================
+# Armor - Body (type=Protector)
+# =============================================================================
+
+[[armor.body]]
+name = "Scale Armor"
+id = 40100
+
+[[armor.body]]
+name = "Kaiden Armor"
+id = 50100
+
+[[armor.body]]
+name = "Scaled Armor"
+id = 80100
+
+[[armor.body]]
+name = "Alberich's Robe"
+id = 120100
+
+[[armor.body]]
+name = "Bull-Goat Armor"
+id = 140100
+
+[[armor.body]]
+name = "Blaidd's Armor"
+id = 170100
+
+# =============================================================================
+# Armor - Arms (type=Protector)
+# =============================================================================
+
+[[armor.arm]]
+name = "Iron Gauntlets"
+id = 40200
+
+[[armor.arm]]
+name = "Kaiden Gauntlets"
+id = 50200
+
+[[armor.arm]]
+name = "Scaled Gauntlets"
+id = 80200
+
+[[armor.arm]]
+name = "Alberich's Bracers"
+id = 120200
+
+[[armor.arm]]
+name = "Bull-Goat Gauntlets"
+id = 140200
+
+[[armor.arm]]
+name = "Blaidd's Gauntlets"
+id = 170200
+
+# =============================================================================
+# Armor - Legs (type=Protector)
+# =============================================================================
+
+[[armor.leg]]
+name = "Leather Trousers"
+id = 40300
+
+[[armor.leg]]
+name = "Kaiden Trousers"
+id = 50300
+
+[[armor.leg]]
+name = "Scaled Greaves"
+id = 80300
+
+[[armor.leg]]
+name = "Alberich's Trousers"
+id = 120300
+
+[[armor.leg]]
+name = "Bull-Goat Greaves"
+id = 140300
+
+# =============================================================================
+# Talismans (type=Accessory)
+# =============================================================================
+
+[[talismans]]
+name = "Crimson Amber Medallion"
+id = 1000
+
+[[talismans]]
+name = "Arsenal Charm"
+id = 1030
+
+[[talismans]]
+name = "Erdtree's Favor"
+id = 1040
+
+[[talismans]]
+name = "Radagon's Soreseal"
+id = 1051
+
+[[talismans]]
+name = "Starscourge Heirloom"
+id = 1060
+
+[[talismans]]
+name = "Prosthesis-Wearer Heirloom"
+id = 1070
+
+[[talismans]]
+name = "Stargazer Heirloom"
+id = 1080
+
+[[talismans]]
+name = "Two Fingers Heirloom"
+id = 1090
+
+[[talismans]]
+name = "Green Turtle Talisman"
+id = 1150
+
+[[talismans]]
+name = "Marika's Soreseal"
+id = 1221
+
+# =============================================================================
+# Sorceries (type=Goods)
+# =============================================================================
+
+[[sorceries]]
+name = "Glintstone Pebble"
+id = 4000
+
+[[sorceries]]
+name = "Great Glintstone Shard"
+id = 4001
+
+[[sorceries]]
+name = "Glintstone Stars"
+id = 4040
+
+[[sorceries]]
+name = "Glintstone Arc"
+id = 4070
+
+[[sorceries]]
+name = "Magic Glintblade"
+id = 4390
+
+[[sorceries]]
+name = "Carian Greatsword"
+id = 4430
+
+[[sorceries]]
+name = "Carian Slicer"
+id = 4440
+
+[[sorceries]]
+name = "Scholar's Armament"
+id = 4460
+
+[[sorceries]]
+name = "Rock Sling"
+id = 4710
+
+[[sorceries]]
+name = "Comet Azur"
+id = 4200
+
+# =============================================================================
+# Incantations (type=Goods)
+# =============================================================================
+
+[[incantations]]
+name = "Catch Flame"
+id = 6000
+
+[[incantations]]
+name = "O, Flame!"
+id = 6001
+
+[[incantations]]
+name = "Flame Sling"
+id = 6010
+
+[[incantations]]
+name = "Flame, Grant Me Strength"
+id = 6050
+
+[[incantations]]
+name = "Black Flame"
+id = 6210
+
+[[incantations]]
+name = "Urgent Heal"
+id = 6420
+
+[[incantations]]
+name = "Heal"
+id = 6421
+
+[[incantations]]
+name = "Great Heal"
+id = 6422
+
+[[incantations]]
+name = "Blessing's Boon"
+id = 6430
+
+[[incantations]]
+name = "Golden Vow"
+id = 6600
+
+# =============================================================================
+# Crystal Tears (type=Goods, for Flask of Wondrous Physick)
+# =============================================================================
+
+[[crystal_tears]]
+name = "Crimsonspill Crystal Tear"
+id = 11000
+
+[[crystal_tears]]
+name = "Greenspill Crystal Tear"
+id = 11001
+
+[[crystal_tears]]
+name = "Crimsonburst Crystal Tear"
+id = 11009
+
+[[crystal_tears]]
+name = "Greenburst Crystal Tear"
+id = 11010
+
+[[crystal_tears]]
+name = "Winged Crystal Tear"
+id = 11012
+
+[[crystal_tears]]
+name = "Strength-knot Crystal Tear"
+id = 11021
+
+[[crystal_tears]]
+name = "Dexterity-knot Crystal Tear"
+id = 11022
+
+[[crystal_tears]]
+name = "Intelligence-knot Crystal Tear"
+id = 11023
+
+[[crystal_tears]]
+name = "Faith-knot Crystal Tear"
+id = 11024
+
+[[crystal_tears]]
+name = "Purifying Crystal Tear"
+id = 11027

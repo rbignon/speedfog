@@ -332,9 +332,9 @@ Example:
         // 7b. Inject starting items (post-process EMEVD)
         // Use StartingGoods (Good IDs) instead of StartingItemLots (ItemLot IDs)
         // because Item Randomizer modifies ItemLotParam but not the items themselves
-        if (graphData.StartingGoods.Count > 0)
+        if (graphData.StartingGoods.Count > 0 || graphData.CarePackage.Count > 0)
         {
-            StartingItemInjector.Inject(modDir, graphData.StartingGoods, events);
+            StartingItemInjector.Inject(modDir, graphData.StartingGoods, graphData.CarePackage, events);
         }
 
         // 7c. Inject starting resources (runes, golden seeds, sacred tears)

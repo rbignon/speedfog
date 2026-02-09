@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from speedfog.balance import report_balance
+from speedfog.care_package import sample_care_package
 from speedfog.clusters import load_clusters
 from speedfog.config import Config, load_config
 from speedfog.fog_mod import run_fogmodwrapper
@@ -160,7 +161,23 @@ def main() -> int:
     seed_dir = output_dir / str(actual_seed)
     seed_dir.mkdir(parents=True, exist_ok=True)
 
-    # Export JSON v3 format (for FogModWrapper and visualization)
+    # Sample care package if enabled
+    care_package_items = None
+    if config.care_package.enabled:
+        pool_path = project_root / "data" / "care_package_items.toml"
+        if pool_path.exists():
+            care_package_items = sample_care_package(
+                config.care_package, actual_seed, pool_path
+            )
+            if args.verbose:
+                print(f"Care package: {len(care_package_items)} items sampled")
+        else:
+            print(
+                f"Warning: Care package pool not found: {pool_path}",
+                file=sys.stderr,
+            )
+
+    # Export JSON v4 format (for FogModWrapper and visualization)
     json_path = seed_dir / "graph.json"
     starting_goods = config.starting_items.get_starting_goods()
     export_json(
@@ -172,6 +189,7 @@ def main() -> int:
         starting_runes=config.starting_items.starting_runes,
         starting_golden_seeds=config.starting_items.golden_seeds,
         starting_sacred_tears=config.starting_items.sacred_tears,
+        care_package=care_package_items,
     )
     print(f"Written: {json_path}")
     if starting_goods:
@@ -182,11 +200,19 @@ def main() -> int:
         print(f"Starting golden seeds: {config.starting_items.golden_seeds}")
     if config.starting_items.sacred_tears > 0:
         print(f"Starting sacred tears: {config.starting_items.sacred_tears}")
+    if care_package_items:
+        print(f"Care package: {len(care_package_items)} items")
+        if args.verbose:
+            for item in care_package_items:
+                type_names = {0: "Weapon", 1: "Protector", 2: "Accessory", 3: "Goods"}
+                print(
+                    f"  [{type_names.get(item.type, '?')}] {item.name} (id={item.id})"
+                )
 
     # Export spoiler if requested using output module
     if args.spoiler:
         spoiler_path = seed_dir / "spoiler.txt"
-        export_spoiler_log(dag, spoiler_path)
+        export_spoiler_log(dag, spoiler_path, care_package=care_package_items)
         print(f"Written: {spoiler_path}")
 
     # Determine game_dir early (needed for Item Randomizer and FogModWrapper)

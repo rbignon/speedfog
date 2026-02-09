@@ -124,6 +124,30 @@ great_runes = true
 # sacred_tears = 3       # Sacred Tears to upgrade flask potency (0-12)
 # starting_runes = 50000 # Given as Lord's Rune items (50k each, use from inventory)
 
+[care_package]
+# Randomized starting build - gives a random selection of weapons, armor,
+# spells, and talismans at game start for immediate combat readiness.
+# Items are sampled from data/care_package_items.toml using the run seed.
+# Same seed = same starting build for consistent racing.
+enabled = false
+
+# Weapon upgrade level (standard smithing stones, 0-25).
+# Somber weapons get floor(weapon_upgrade / 2.5), e.g. +8 -> +3 somber.
+# weapon_upgrade = 8
+
+# Per-category item counts (set to 0 to disable a category)
+# weapons = 2          # Random melee weapons
+# shields = 1          # Random shield
+# catalysts = 1        # Random staff or seal
+# talismans = 2        # Random talismans
+# sorceries = 3        # Random sorceries
+# incantations = 3     # Random incantations
+# head_armor = 1       # Random helm
+# body_armor = 1       # Random chest armor
+# arm_armor = 1        # Random gauntlets
+# leg_armor = 1        # Random leg armor
+# crystal_tears = 3    # Random crystal tears for Flask of Wondrous Physick
+
 [item_randomizer]
 # Enable Item/Enemy Randomizer integration (default: true)
 # Requires: python tools/setup_dependencies.py --itemrando <path>

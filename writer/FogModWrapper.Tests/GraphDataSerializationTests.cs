@@ -231,4 +231,78 @@ public class GraphDataSerializationTests
         Assert.Contains("\"event_map\"", json);
         Assert.Contains("\"finish_event\"", json);
     }
+
+    [Fact]
+    public void GraphData_CarePackage_RoundTrip()
+    {
+        var original = new GraphData
+        {
+            Version = "4.0",
+            Seed = 42,
+            CarePackage = new List<CarePackageItem>
+            {
+                new() { Type = 0, Id = 9000008, Name = "Uchigatana +8" },
+                new() { Type = 1, Id = 50000, Name = "Kaiden Helm" },
+                new() { Type = 2, Id = 1040, Name = "Erdtree's Favor" },
+                new() { Type = 3, Id = 4000, Name = "Glintstone Pebble" }
+            }
+        };
+
+        var json = JsonSerializer.Serialize(original, JsonOptions);
+        var deserialized = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.Equal(4, deserialized.CarePackage.Count);
+        Assert.Equal(0, deserialized.CarePackage[0].Type);
+        Assert.Equal(9000008, deserialized.CarePackage[0].Id);
+        Assert.Equal("Uchigatana +8", deserialized.CarePackage[0].Name);
+        Assert.Equal(1, deserialized.CarePackage[1].Type);
+        Assert.Equal(50000, deserialized.CarePackage[1].Id);
+        Assert.Equal(2, deserialized.CarePackage[2].Type);
+        Assert.Equal(3, deserialized.CarePackage[3].Type);
+    }
+
+    [Fact]
+    public void GraphData_CarePackage_EmptyByDefault()
+    {
+        var data = new GraphData { Version = "4.0", Seed = 1 };
+
+        var json = JsonSerializer.Serialize(data, JsonOptions);
+        var deserialized = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.Empty(deserialized.CarePackage);
+    }
+
+    [Fact]
+    public void GraphData_CarePackage_JsonPropertyNames_UseSnakeCase()
+    {
+        var data = new GraphData
+        {
+            Version = "4.0",
+            Seed = 1,
+            CarePackage = new List<CarePackageItem>
+            {
+                new() { Type = 0, Id = 1000000, Name = "Dagger" }
+            }
+        };
+
+        var json = JsonSerializer.Serialize(data);
+
+        Assert.Contains("\"care_package\"", json);
+        Assert.Contains("\"type\"", json);
+        Assert.Contains("\"id\"", json);
+        Assert.Contains("\"name\"", json);
+    }
+
+    [Fact]
+    public void GraphData_CarePackage_IgnoredWhenMissing()
+    {
+        // Simulate old graph.json without care_package field
+        var json = """{"version":"4.0","seed":1}""";
+        var deserialized = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.Empty(deserialized.CarePackage);
+    }
 }

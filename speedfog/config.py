@@ -248,6 +248,51 @@ class ItemRandomizerConfig:
 
 
 @dataclass
+class CarePackageConfig:
+    """Care package configuration for randomized starting builds.
+
+    Items are sampled from data/care_package_items.toml per category.
+    Weapon upgrade level controls how upgraded starting weapons are.
+    """
+
+    enabled: bool = False
+    weapon_upgrade: int = 8  # Standard upgrade level (0-25)
+    weapons: int = 2
+    shields: int = 1
+    catalysts: int = 1
+    talismans: int = 2
+    sorceries: int = 3
+    incantations: int = 3
+    head_armor: int = 1
+    body_armor: int = 1
+    arm_armor: int = 1
+    leg_armor: int = 1
+    crystal_tears: int = 3
+
+    def __post_init__(self) -> None:
+        """Validate care package configuration."""
+        if self.weapon_upgrade < 0 or self.weapon_upgrade > 25:
+            raise ValueError(f"weapon_upgrade must be 0-25, got {self.weapon_upgrade}")
+        count_fields = [
+            "weapons",
+            "shields",
+            "catalysts",
+            "talismans",
+            "sorceries",
+            "incantations",
+            "head_armor",
+            "body_armor",
+            "arm_armor",
+            "leg_armor",
+            "crystal_tears",
+        ]
+        for field_name in count_fields:
+            value = getattr(self, field_name)
+            if value < 0:
+                raise ValueError(f"{field_name} must be >= 0, got {value}")
+
+
+@dataclass
 class Config:
     """Main configuration container."""
 
@@ -258,6 +303,7 @@ class Config:
     paths: PathsConfig = field(default_factory=PathsConfig)
     starting_items: StartingItemsConfig = field(default_factory=StartingItemsConfig)
     item_randomizer: ItemRandomizerConfig = field(default_factory=ItemRandomizerConfig)
+    care_package: CarePackageConfig = field(default_factory=CarePackageConfig)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Config:
@@ -269,6 +315,7 @@ class Config:
         paths_section = data.get("paths", {})
         starting_items_section = data.get("starting_items", {})
         item_randomizer_section = data.get("item_randomizer", {})
+        care_package_section = data.get("care_package", {})
 
         return cls(
             seed=run_section.get("seed", 0),
@@ -324,6 +371,21 @@ class Config:
                 auto_upgrade_weapons=item_randomizer_section.get(
                     "auto_upgrade_weapons", True
                 ),
+            ),
+            care_package=CarePackageConfig(
+                enabled=care_package_section.get("enabled", False),
+                weapon_upgrade=care_package_section.get("weapon_upgrade", 8),
+                weapons=care_package_section.get("weapons", 2),
+                shields=care_package_section.get("shields", 1),
+                catalysts=care_package_section.get("catalysts", 1),
+                talismans=care_package_section.get("talismans", 2),
+                sorceries=care_package_section.get("sorceries", 3),
+                incantations=care_package_section.get("incantations", 3),
+                head_armor=care_package_section.get("head_armor", 1),
+                body_armor=care_package_section.get("body_armor", 1),
+                arm_armor=care_package_section.get("arm_armor", 1),
+                leg_armor=care_package_section.get("leg_armor", 1),
+                crystal_tears=care_package_section.get("crystal_tears", 3),
             ),
         )
 
