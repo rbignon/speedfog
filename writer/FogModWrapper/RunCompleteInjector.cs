@@ -23,6 +23,10 @@ public static class RunCompleteInjector
     // GR_MenuText FMG ID for the "VICTORY" banner text
     private const int BANNER_FMG_ID = 331314;
 
+    // Boss victory jingle (SoundType.SFX=5, same sound used by all major boss defeats)
+    private const int VICTORY_SOUND_ID = 888880000;
+    private const int PLAYER_ENTITY_ID = 10000;
+
     /// <summary>
     /// Inject the "RUN COMPLETE" message display into both FMG and EMEVD.
     /// </summary>
@@ -93,7 +97,8 @@ public static class RunCompleteInjector
     }
 
     /// <summary>
-    /// Create EMEVD event that waits for finish_event, delays, then displays the message.
+    /// Create EMEVD event that waits for finish_event, delays, then plays a victory
+    /// jingle and displays the banner.
     /// </summary>
     private static void InjectEmevdEvent(string modDir, Events events, int finishEvent)
     {
@@ -123,7 +128,11 @@ public static class RunCompleteInjector
         evt.Instructions.Add(events.ParseAdd(
             $"WaitFixedTimeSeconds({DELAY_SECONDS})"));
 
-        // 3. Display banner (bank 2007, index 2, single byte arg = banner type)
+        // 3. Play victory jingle (PlaySE: bank 2010, index 2)
+        evt.Instructions.Add(events.ParseAdd(
+            $"PlaySE({PLAYER_ENTITY_ID}, SoundType.SFX, {VICTORY_SOUND_ID})"));
+
+        // 4. Display banner (bank 2007, index 2, single byte arg = banner type)
         evt.Instructions.Add(new EMEVD.Instruction(2007, 2, new[] { BANNER_TYPE }));
 
         emevd.Events.Add(evt);
