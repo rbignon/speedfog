@@ -103,6 +103,27 @@ public static class ConnectionInjector
                 $"Available in From: {availableFrom}");
         }
 
+        // Pre-disconnect any edges that FogMod's Graph.Construct() auto-connected.
+        // This happens for internal dungeon fog gates (e.g., enirilim_stairs ↔ enirilim_radahn)
+        // that we want to redirect to our custom DAG connections.
+        // Graph.Disconnect(exit) clears both directions and paired edges.
+        if (exitEdge.Link != null)
+        {
+            Console.WriteLine($"  Disconnecting pre-connected exit: {conn.ExitGate}");
+            graph.Disconnect(exitEdge);
+        }
+        if (destExitEdge != null && destExitEdge.Link != null)
+        {
+            Console.WriteLine($"  Disconnecting pre-connected entrance: {conn.EntranceGate}");
+            graph.Disconnect(destExitEdge);
+        }
+        // Fallback: entrance edge still linked (e.g., one-way warp pre-connected independently)
+        if (entranceEdge.Link != null)
+        {
+            Console.WriteLine($"  Disconnecting pre-connected entrance link: {conn.EntranceGate}");
+            graph.Disconnect(entranceEdge.Link);
+        }
+
         // Connect them
         graph.Connect(exitEdge, entranceEdge);
 
