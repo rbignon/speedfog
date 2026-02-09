@@ -49,7 +49,16 @@ public class GraphData
     public Dictionary<string, string> EventMap { get; set; } = new();
 
     /// <summary>
+    /// Zone-tracking flag for the final boss node.
+    /// Used to identify connections leading to the final boss area
+    /// and extract its DefeatFlag from FogMod's Graph.
+    /// </summary>
+    [JsonPropertyName("final_node_flag")]
+    public int FinalNodeFlag { get; set; } = 0;
+
+    /// <summary>
     /// Event flag ID set when the final boss is defeated.
+    /// Separate from FinalNodeFlag: this fires on boss death, not fog gate traversal.
     /// </summary>
     [JsonPropertyName("finish_event")]
     public int FinishEvent { get; set; } = 0;

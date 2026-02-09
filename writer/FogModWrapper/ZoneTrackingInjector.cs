@@ -70,35 +70,49 @@ public static class ZoneTrackingInjector
             return;
         }
 
-        // Build lookup: destination (area, block, sub, sub2) → flagId
-        // Parse map bytes from entrance_gate name (e.g., "m31_05_00_00_AEG099_230_9001" → [31,5,0,0])
-        // Cross-tile gates (e.g., "m60_13_13_02_m60_52_53_00-...") yield multiple map byte sets.
-        // The entrance_gate is in the destination area's map, so its map prefix matches
-        // the WarpPlayer destination bytes.
-        var lookup = new Dictionary<(byte, byte, byte, byte), int>();
+        // Build lookup: (source_map, dest_map) → flagId
+        // Using a compound key prevents collisions when two connections from different
+        // source maps lead to the same destination map (e.g., two zones in m18_00_00_00).
+        // Parse map bytes from exit_gate (source) and entrance_gate (destination).
+        // Cross-tile gates yield multiple map byte sets; register all combinations.
+        // See docs/specs/zone-tracking-accuracy.md for design rationale.
+        var lookup = new Dictionary<((byte, byte, byte, byte), (byte, byte, byte, byte)), int>();
         foreach (var conn in connections)
         {
             if (conn.FlagId <= 0)
                 continue;
-            var mapBytesList = ParseMapBytesFromGateName(conn.EntranceGate);
-            foreach (var mapBytes in mapBytesList)
+            var exitMapBytesList = ParseMapBytesFromGateName(conn.ExitGate);
+            var entranceMapBytesList = ParseMapBytesFromGateName(conn.EntranceGate);
+            foreach (var exitBytes in exitMapBytesList)
             {
-                var key = (mapBytes[0], mapBytes[1], mapBytes[2], mapBytes[3]);
-                if (lookup.TryGetValue(key, out int existing) && existing != conn.FlagId)
+                var srcKey = (exitBytes[0], exitBytes[1], exitBytes[2], exitBytes[3]);
+                foreach (var entranceBytes in entranceMapBytesList)
                 {
-                    Console.WriteLine($"Warning: Zone tracking map collision for {conn.EntranceGate}: " +
-                                      $"flag {conn.FlagId} conflicts with existing flag {existing}");
+                    var destKey = (entranceBytes[0], entranceBytes[1], entranceBytes[2], entranceBytes[3]);
+                    var key = (srcKey, destKey);
+                    if (lookup.TryGetValue(key, out int existing) && existing != conn.FlagId)
+                    {
+                        Console.WriteLine($"Warning: Zone tracking collision for {conn.EntranceGate}: " +
+                                          $"flag {conn.FlagId} conflicts with existing flag {existing} " +
+                                          $"(same source+dest map pair)");
+                    }
+                    lookup.TryAdd(key, conn.FlagId);  // first wins if duplicate (diamond merges share flagId)
                 }
-                lookup.TryAdd(key, conn.FlagId);  // first wins if duplicate (diamond merges share flagId)
             }
         }
 
-        Console.WriteLine($"Zone tracking: {lookup.Count} destination maps to match");
+        Console.WriteLine($"Zone tracking: {lookup.Count} (source,dest) map pairs to match");
 
         int totalInjected = 0;
 
         foreach (var emevdPath in Directory.GetFiles(eventDir, "*.emevd.dcx"))
         {
+            // Parse source map from EMEVD filename (e.g., "m10_01_00_00.emevd.dcx")
+            var sourceMapBytes = ParseMapBytesFromFileName(emevdPath);
+            if (sourceMapBytes == null)
+                continue;  // Skip non-map files (e.g., common.emevd.dcx)
+            var sourceMap = (sourceMapBytes[0], sourceMapBytes[1], sourceMapBytes[2], sourceMapBytes[3]);
+
             var emevd = EMEVD.Read(emevdPath);
             bool fileModified = false;
 
@@ -127,8 +141,9 @@ public static class ZoneTrackingInjector
                     if (region < FOGMOD_ENTITY_BASE)
                         continue;
 
-                    // Match against our connection lookup
-                    if (!lookup.TryGetValue(destMap, out int flagId))
+                    // Match against our connection lookup using compound key
+                    var key = (sourceMap, destMap);
+                    if (!lookup.TryGetValue(key, out int flagId))
                         continue;
 
                     // Insert SetEventFlag(flagId, ON) before WarpPlayer
@@ -227,6 +242,40 @@ public static class ZoneTrackingInjector
             Console.WriteLine($"Warning: No map bytes parsed from gate name: {gateName}");
 
         return results;
+    }
+
+    /// <summary>
+    /// Parse map bytes from an EMEVD filename (e.g., "m10_01_00_00.emevd.dcx" → [10,1,0,0]).
+    /// Returns null for non-map files (e.g., "common.emevd.dcx").
+    /// </summary>
+    private static byte[]? ParseMapBytesFromFileName(string emevdPath)
+    {
+        // Strip extensions: "m10_01_00_00.emevd.dcx" → "m10_01_00_00"
+        var fileName = Path.GetFileNameWithoutExtension(emevdPath);  // "m10_01_00_00.emevd"
+        fileName = Path.GetFileNameWithoutExtension(fileName);        // "m10_01_00_00"
+
+        if (!fileName.StartsWith("m", StringComparison.OrdinalIgnoreCase))
+            return null;
+
+        var name = fileName.TrimStart('m');
+        var parts = name.Split('_');
+        if (parts.Length < 4)
+            return null;
+
+        try
+        {
+            return new byte[]
+            {
+                byte.Parse(parts[0]),
+                byte.Parse(parts[1]),
+                byte.Parse(parts[2]),
+                byte.Parse(parts[3]),
+            };
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
     }
 
     /// <summary>

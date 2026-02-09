@@ -278,6 +278,12 @@ def dag_to_dict(
     # Build event_map: str(flag_id) -> cluster_id
     event_map = {str(fid): cid for cid, fid in node_flag_ids.items()}
 
+    # final_node_flag: the zone-tracking flag for the final boss node.
+    # Used by C# to identify connections leading to the final boss area
+    # and extract its DefeatFlag from FogMod's Graph.
+    end_node = dag.nodes[dag.end_id]
+    final_node_flag = node_flag_ids[end_node.cluster.id]
+
     # finish_event: a SEPARATE flag for final boss death detection.
     # Must not reuse a zone-tracking flag, otherwise traversing the fog gate
     # into the final zone would prematurely trigger "RUN COMPLETE".
@@ -297,6 +303,7 @@ def dag_to_dict(
         "connections": connections,
         "area_tiers": area_tiers,
         "event_map": event_map,
+        "final_node_flag": final_node_flag,
         "finish_event": finish_event,
         "starting_item_lots": starting_item_lots or [],
         "starting_goods": starting_goods or [],

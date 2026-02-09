@@ -26,9 +26,11 @@ public static class ConnectionInjector
     /// <param name="graph">FogMod Graph with nodes/edges constructed but not connected</param>
     /// <param name="connections">List of connections from graph.json</param>
     /// <param name="finishEvent">The finish_event flag ID (0 if not using v4)</param>
+    /// <param name="finalNodeFlag">Zone-tracking flag for the final boss node, used to identify
+    /// which connections lead to the final boss area and extract its DefeatFlag</param>
     /// <returns>InjectionResult with boss defeat flag for zone tracking</returns>
     public static InjectionResult InjectAndExtract(
-        Graph graph, List<Connection> connections, int finishEvent)
+        Graph graph, List<Connection> connections, int finishEvent, int finalNodeFlag)
     {
         Console.WriteLine($"Injecting {connections.Count} connections...");
 
@@ -38,7 +40,7 @@ public static class ConnectionInjector
         {
             try
             {
-                ConnectAndExtract(graph, conn, finishEvent, result);
+                ConnectAndExtract(graph, conn, finalNodeFlag, result);
             }
             catch (Exception ex)
             {
@@ -54,7 +56,7 @@ public static class ConnectionInjector
     /// Connect a single exit edge to an entrance edge and extract warp data.
     /// </summary>
     private static void ConnectAndExtract(
-        Graph graph, Connection conn, int finishEvent, InjectionResult result)
+        Graph graph, Connection conn, int finalNodeFlag, InjectionResult result)
     {
         // Find the exit edge in the source area's To list
         if (!graph.Nodes.TryGetValue(conn.ExitArea, out var exitNode))
@@ -129,10 +131,10 @@ public static class ConnectionInjector
 
         Console.WriteLine($"  Connected: {conn.ExitArea} --[{conn.ExitGate}]--> {conn.EntranceArea}");
 
-        // For the finish event connection, extract boss defeat flag.
+        // For connections targeting the final boss node, extract boss defeat flag.
         // Multiple connections may target the same final boss node (diamond DAG merge),
-        // but they all share the same EntranceArea so DefeatFlag is consistent.
-        if (conn.FlagId == finishEvent && finishEvent > 0)
+        // but they all share the same FlagId (finalNodeFlag) so DefeatFlag is consistent.
+        if (conn.FlagId == finalNodeFlag && finalNodeFlag > 0)
         {
             var area = graph.Areas.GetValueOrDefault(conn.EntranceArea);
             if (area != null && area.DefeatFlag > 0)

@@ -49,7 +49,8 @@ public class GraphDataSerializationTests
                 ["9000000"] = "stormveil",
                 ["9000001"] = "liurnia"
             },
-            FinishEvent = 9000001
+            FinalNodeFlag = 9000001,
+            FinishEvent = 9000002
         };
 
         var json = JsonSerializer.Serialize(original, JsonOptions);
@@ -68,6 +69,7 @@ public class GraphDataSerializationTests
         Assert.Equal(original.StartingGoldenSeeds, deserialized.StartingGoldenSeeds);
         Assert.Equal(original.StartingSacredTears, deserialized.StartingSacredTears);
         Assert.Equal(original.EventMap.Count, deserialized.EventMap.Count);
+        Assert.Equal(original.FinalNodeFlag, deserialized.FinalNodeFlag);
         Assert.Equal(original.FinishEvent, deserialized.FinishEvent);
     }
 
@@ -180,6 +182,23 @@ public class GraphDataSerializationTests
     }
 
     [Fact]
+    public void GraphData_V4_RoundTrip_PreservesFinalNodeFlag()
+    {
+        var original = new GraphData
+        {
+            Version = "4.0",
+            Seed = 42,
+            FinalNodeFlag = 1040292817
+        };
+
+        var json = JsonSerializer.Serialize(original, JsonOptions);
+        var deserialized = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.Equal(1040292817, deserialized.FinalNodeFlag);
+    }
+
+    [Fact]
     public void GraphData_V4_RoundTrip_PreservesFinishEvent()
     {
         var original = new GraphData
@@ -223,12 +242,14 @@ public class GraphDataSerializationTests
             Version = "4.0",
             Seed = 1,
             EventMap = new Dictionary<string, string> { ["9000000"] = "test" },
-            FinishEvent = 9000000
+            FinalNodeFlag = 9000000,
+            FinishEvent = 9000001
         };
 
         var json = JsonSerializer.Serialize(data);
 
         Assert.Contains("\"event_map\"", json);
+        Assert.Contains("\"final_node_flag\"", json);
         Assert.Contains("\"finish_event\"", json);
     }
 
@@ -293,6 +314,18 @@ public class GraphDataSerializationTests
         Assert.Contains("\"type\"", json);
         Assert.Contains("\"id\"", json);
         Assert.Contains("\"name\"", json);
+    }
+
+    [Fact]
+    public void GraphData_FinalNodeFlag_DefaultsToZeroWhenMissing()
+    {
+        // Simulate old graph.json without final_node_flag field
+        var json = """{"version":"4.0","seed":1,"finish_event":9000002}""";
+        var deserialized = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.Equal(0, deserialized.FinalNodeFlag);
+        Assert.Equal(9000002, deserialized.FinishEvent);
     }
 
     [Fact]

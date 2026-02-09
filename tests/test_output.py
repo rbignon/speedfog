@@ -347,13 +347,39 @@ class TestEventMap:
         zone_flags = {int(k) for k in result["event_map"]}
         assert result["finish_event"] > max(zone_flags)
 
+    def test_final_node_flag_is_end_node_zone_flag(self):
+        """final_node_flag matches the zone-tracking flag for the end node."""
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+
+        end_cluster_id = dag.nodes[dag.end_id].cluster.id
+        # Find the flag_id that maps to the end node in event_map
+        end_flag = None
+        for flag_str, cluster_id in result["event_map"].items():
+            if cluster_id == end_cluster_id:
+                end_flag = int(flag_str)
+                break
+
+        assert end_flag is not None
+        assert result["final_node_flag"] == end_flag
+
+    def test_final_node_flag_differs_from_finish_event(self):
+        """final_node_flag (zone entry) and finish_event (boss death) are different."""
+        result = _make_result()
+        assert result["final_node_flag"] != result["finish_event"]
+
     def test_connections_have_flag_id(self):
         """Each connection has a flag_id field."""
         result = _make_result()
         for conn in result["connections"]:
             assert "flag_id" in conn
             assert isinstance(conn["flag_id"], int)
-            assert conn["flag_id"] >= 9000000
+            assert conn["flag_id"] >= 1040292800
 
     def test_merge_node_connections_share_flag_id(self):
         """Two connections to the same node get the same flag_id.

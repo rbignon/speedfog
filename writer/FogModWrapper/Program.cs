@@ -309,7 +309,7 @@ Example:
 
         // 5. Inject OUR connections (replaces GraphConnector.Connect())
         var injectionResult = ConnectionInjector.InjectAndExtract(
-            graph, graphData.Connections, graphData.FinishEvent);
+            graph, graphData.Connections, graphData.FinishEvent, graphData.FinalNodeFlag);
 
         // 6. Apply tiers for scaling
         ConnectionInjector.ApplyAreaTiers(graph, graphData.AreaTiers);
