@@ -5,7 +5,7 @@ namespace FogModWrapper;
 
 /// <summary>
 /// Injects EMEVD events for racing zone tracking:
-/// A) SetEventFlag before each WarpPlayer instruction matching our connections
+/// A) Modify fogwarp template to add parameterized SetEventFlag, extend InitializeEvent calls
 /// B) Boss death monitor event that sets finish_event on final boss defeat
 /// </summary>
 public static class ZoneTrackingInjector
@@ -27,7 +27,7 @@ public static class ZoneTrackingInjector
         int finishEvent,
         int bossDefeatFlag)
     {
-        // Part A: Inject SetEventFlag before WarpPlayer in map EMEVDs
+        // Part A: Modify fogwarp template + extend InitializeEvent calls
         InjectFogGateFlags(modDir, events, warpMatches);
 
         // Part B: Create boss death monitor in common.emevd
@@ -42,8 +42,15 @@ public static class ZoneTrackingInjector
         }
     }
 
+    private const int FOGWARP_EVENT_ID = 9005777;
+    private const int BANK_LABEL = 1014;
+    private const int LABEL10 = 10;
+    private const int BANK_INIT_EVENT = 2000;
+    private const int ID_INIT_EVENT = 0;
+
     /// <summary>
-    /// Scan map EMEVD files for WarpPlayer instructions and inject SetEventFlag before matches.
+    /// Modify the fogwarp template event (9005777) to include a parameterized SetEventFlag,
+    /// then extend all InitializeEvent calls to pass the tracking flag ID.
     /// </summary>
     private static void InjectFogGateFlags(
         string modDir, Events events, List<WarpMatchData> warpMatches)
@@ -66,50 +73,214 @@ public static class ZoneTrackingInjector
             lookup.TryAdd(key, wm.FlagId);  // first wins if duplicate
         }
 
-        Console.WriteLine($"Zone tracking: scanning EMEVDs for {lookup.Count} warp destinations...");
+        Console.WriteLine($"Zone tracking: {lookup.Count} warp destinations to match");
 
-        int totalInjected = 0;
+        // Step 1: Determine instruction arg byte offsets using sentinel values
+        const int SENTINEL = 0x7F7F7F7F;
+        var sentinelGoto = events.ParseAdd(
+            $"GotoIfComparison(Label.Label20, ComparisonType.Equal, {SENTINEL}, 0)");
+        int gotoFlagOffset = FindInt32Offset(sentinelGoto.ArgData, SENTINEL);
+
+        var sentinelSetFlag = events.ParseAdd(
+            $"SetEventFlag(TargetEventFlagType.EventFlag, {SENTINEL}, ON)");
+        int setFlagOffset = FindInt32Offset(sentinelSetFlag.ArgData, SENTINEL);
+
+        Console.WriteLine($"Zone tracking: GotoIfComparison flag offset={gotoFlagOffset}, SetEventFlag flag offset={setFlagOffset}");
+
+        // Find fogwarp event 9005777 and modify it; extend all InitializeEvent calls
+        bool templateModified = false;
+        int totalExtended = 0;
 
         foreach (var emevdPath in Directory.GetFiles(eventDir, "*.emevd.dcx"))
         {
             var emevd = EMEVD.Read(emevdPath);
-            bool modified = false;
+            bool fileModified = false;
 
-            foreach (var evt in emevd.Events)
+            // Look for the fogwarp template event
+            if (!templateModified)
             {
-                for (int i = 0; i < evt.Instructions.Count; i++)
+                var fogwarpEvent = emevd.Events.Find(e => e.ID == FOGWARP_EVENT_ID);
+                if (fogwarpEvent != null)
                 {
-                    var instr = evt.Instructions[i];
-                    // WarpPlayer: bank 2003, id 14
-                    if (instr.Bank != 2003 || instr.ID != 14)
-                        continue;
-
-                    var args = instr.ArgData;
-                    if (args.Length < 8)
-                        continue;
-
-                    var key = (args[0], args[1], args[2], args[3],
-                               BitConverter.ToInt32(args, 4));
-
-                    if (lookup.TryGetValue(key, out int flagId))
-                    {
-                        var setFlag = events.ParseAdd(
-                            $"SetEventFlag(TargetEventFlagType.EventFlag, {flagId}, ON)");
-                        evt.Instructions.Insert(i, setFlag);
-                        i++;  // skip past insertion
-                        modified = true;
-                        totalInjected++;
-                    }
+                    ModifyFogwarpTemplate(fogwarpEvent, events, gotoFlagOffset, setFlagOffset);
+                    templateModified = true;
+                    fileModified = true;
+                    Console.WriteLine($"Zone tracking: modified fogwarp template in {Path.GetFileName(emevdPath)}");
                 }
             }
 
-            if (modified)
+            // Extend InitializeEvent calls targeting fogwarp
+            int extended = ExtendInitializeEventCalls(emevd, lookup);
+            if (extended > 0)
+            {
+                fileModified = true;
+                totalExtended += extended;
+                Console.WriteLine($"Zone tracking: extended {extended} InitializeEvent calls in {Path.GetFileName(emevdPath)}");
+            }
+
+            if (fileModified)
             {
                 emevd.Write(emevdPath);
             }
         }
 
-        Console.WriteLine($"Zone tracking: injected {totalInjected} SetEventFlag instructions");
+        if (!templateModified)
+        {
+            Console.WriteLine("Warning: fogwarp event 9005777 not found in any EMEVD file");
+        }
+
+        Console.WriteLine($"Zone tracking: extended {totalExtended} fogwarp calls total, {lookup.Count} warp destinations available");
+    }
+
+    /// <summary>
+    /// Modify the fogwarp template event to add SetEventFlag with parameterized X40_4.
+    /// Inserts 3 instructions after Label10:
+    ///   GotoIfComparison(Label20, Equal, X40_4, 0)  — skip if flag is 0
+    ///   SetEventFlag(EventFlag, X40_4, ON)
+    ///   Label20()
+    /// </summary>
+    private static void ModifyFogwarpTemplate(
+        EMEVD.Event fogwarpEvent, Events events, int gotoFlagOffset, int setFlagOffset)
+    {
+        // Find Label10 instruction
+        int label10Index = -1;
+        for (int i = 0; i < fogwarpEvent.Instructions.Count; i++)
+        {
+            var instr = fogwarpEvent.Instructions[i];
+            if (instr.Bank == BANK_LABEL && instr.ID == LABEL10)
+            {
+                label10Index = i;
+                break;
+            }
+        }
+
+        if (label10Index < 0)
+        {
+            Console.WriteLine("Warning: Label10 not found in fogwarp event, skipping template modification");
+            return;
+        }
+
+        int insertIndex = label10Index + 1;
+
+        // Create the 3 new instructions with placeholder values (will be parameterized)
+        var gotoInstr = events.ParseAdd("GotoIfComparison(Label.Label20, ComparisonType.Equal, 0, 0)");
+        var setFlagInstr = events.ParseAdd("SetEventFlag(TargetEventFlagType.EventFlag, 0, ON)");
+        var label20Instr = new EMEVD.Instruction(BANK_LABEL, 20);
+
+        // Insert in order after Label10
+        fogwarpEvent.Instructions.Insert(insertIndex, gotoInstr);
+        fogwarpEvent.Instructions.Insert(insertIndex + 1, setFlagInstr);
+        fogwarpEvent.Instructions.Insert(insertIndex + 2, label20Instr);
+
+        // Step 4: Shift existing Parameter entries for instructions after the insertion point
+        foreach (var param in fogwarpEvent.Parameters)
+        {
+            if (param.InstructionIndex >= insertIndex)
+            {
+                param.InstructionIndex += 3;
+            }
+        }
+
+        // Step 5: Add new Parameter entries for X40_4 (SourceStartByte = 40)
+        fogwarpEvent.Parameters.Add(new EMEVD.Parameter
+        {
+            InstructionIndex = insertIndex,
+            TargetStartByte = gotoFlagOffset,
+            SourceStartByte = 40,
+            ByteCount = 4,
+        });
+        fogwarpEvent.Parameters.Add(new EMEVD.Parameter
+        {
+            InstructionIndex = insertIndex + 1,
+            TargetStartByte = setFlagOffset,
+            SourceStartByte = 40,
+            ByteCount = 4,
+        });
+    }
+
+    /// <summary>
+    /// Extend InitializeEvent calls targeting fogwarp (9005777) to include the tracking flag.
+    /// Returns the number of calls extended.
+    /// </summary>
+    private static int ExtendInitializeEventCalls(
+        EMEVD emevd, Dictionary<(byte, byte, byte, byte, int), int> lookup)
+    {
+        int count = 0;
+
+        foreach (var evt in emevd.Events)
+        {
+            foreach (var instr in evt.Instructions)
+            {
+                // InitializeEvent: bank 2000, id 0
+                if (instr.Bank != BANK_INIT_EVENT || instr.ID != ID_INIT_EVENT)
+                    continue;
+
+                var args = instr.ArgData;
+                // InitializeEvent args: [0..3] slot, [4..7] eventId, [8..] event params
+                if (args.Length < 8)
+                    continue;
+
+                int eventId = BitConverter.ToInt32(args, 4);
+                if (eventId != FOGWARP_EVENT_ID)
+                    continue;
+
+                // fogwarp InitializeEvent layout (event params start at offset 8):
+                //   [8..11]  X0_4  fog gate entity
+                //   [12..15] X4_4  button param
+                //   [16..19] X8_4  warp target region
+                //   [20..23] X12   map bytes (4×byte)
+                //   [24..27] X16_4 defeat flag
+                //   [28..31] X20_4 trap flag
+                //   [32..35] X24_4 alt flag
+                //   [36..39] X28_4 alt warp target
+                //   [40..43] X32   alt map bytes
+                //   [44..47] X36_4 rotate target
+                // We need at least 24 bytes (up to map bytes) to match
+                if (args.Length < 24)
+                    continue;
+
+                // Extract match keys: map bytes at [20..23], region at [16..19]
+                byte mapA = args[20];
+                byte mapB = args[21];
+                byte mapC = args[22];
+                byte mapD = args[23];
+                int region = BitConverter.ToInt32(args, 16);
+
+                var key = (mapA, mapB, mapC, mapD, region);
+                int flagId = lookup.GetValueOrDefault(key, 0);
+
+                // Extend args from current size to current + 4, appending flagId
+                var newArgs = new byte[args.Length + 4];
+                Array.Copy(args, newArgs, args.Length);
+                BitConverter.GetBytes(flagId).CopyTo(newArgs, args.Length);
+                instr.ArgData = newArgs;
+
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    /// <summary>
+    /// Find the byte offset of a sentinel int32 value in instruction ArgData.
+    /// </summary>
+    private static int FindInt32Offset(byte[] argData, int sentinel)
+    {
+        var sentinelBytes = BitConverter.GetBytes(sentinel);
+        for (int i = 0; i <= argData.Length - 4; i++)
+        {
+            if (argData[i] == sentinelBytes[0]
+                && argData[i + 1] == sentinelBytes[1]
+                && argData[i + 2] == sentinelBytes[2]
+                && argData[i + 3] == sentinelBytes[3])
+            {
+                return i;
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Sentinel value 0x{sentinel:X8} not found in ArgData ({argData.Length} bytes)");
     }
 
     /// <summary>
