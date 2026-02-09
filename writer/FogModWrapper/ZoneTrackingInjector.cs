@@ -72,6 +72,7 @@ public static class ZoneTrackingInjector
 
         // Build lookup: destination (area, block, sub, sub2) → flagId
         // Parse map bytes from entrance_gate name (e.g., "m31_05_00_00_AEG099_230_9001" → [31,5,0,0])
+        // Cross-tile gates (e.g., "m60_13_13_02_m60_52_53_00-...") yield multiple map byte sets.
         // The entrance_gate is in the destination area's map, so its map prefix matches
         // the WarpPlayer destination bytes.
         var lookup = new Dictionary<(byte, byte, byte, byte), int>();
@@ -79,16 +80,17 @@ public static class ZoneTrackingInjector
         {
             if (conn.FlagId <= 0)
                 continue;
-            var mapBytes = ParseMapBytesFromGateName(conn.EntranceGate);
-            if (mapBytes == null)
-                continue;
-            var key = (mapBytes[0], mapBytes[1], mapBytes[2], mapBytes[3]);
-            if (lookup.TryGetValue(key, out int existing) && existing != conn.FlagId)
+            var mapBytesList = ParseMapBytesFromGateName(conn.EntranceGate);
+            foreach (var mapBytes in mapBytesList)
             {
-                Console.WriteLine($"Warning: Zone tracking map collision for {conn.EntranceGate}: " +
-                                  $"flag {conn.FlagId} conflicts with existing flag {existing}");
+                var key = (mapBytes[0], mapBytes[1], mapBytes[2], mapBytes[3]);
+                if (lookup.TryGetValue(key, out int existing) && existing != conn.FlagId)
+                {
+                    Console.WriteLine($"Warning: Zone tracking map collision for {conn.EntranceGate}: " +
+                                      $"flag {conn.FlagId} conflicts with existing flag {existing}");
+                }
+                lookup.TryAdd(key, conn.FlagId);  // first wins if duplicate (diamond merges share flagId)
             }
-            lookup.TryAdd(key, conn.FlagId);  // first wins if duplicate (diamond merges share flagId)
         }
 
         Console.WriteLine($"Zone tracking: {lookup.Count} destination maps to match");
@@ -159,33 +161,72 @@ public static class ZoneTrackingInjector
     }
 
     /// <summary>
-    /// Parse map bytes from a gate name like "m31_05_00_00_AEG099_230_9001" → [31, 5, 0, 0].
+    /// Parse map bytes from a gate name.
+    /// Simple gate: "m31_05_00_00_AEG099_230_9001" → [[31, 5, 0, 0]]
+    /// Cross-tile gate: "m60_13_13_02_m60_52_53_00-AEG099_003_9001" → [[60,13,13,2], [60,52,53,0]]
+    /// Returns all possible map byte arrays so the caller can register each in the lookup.
     /// </summary>
-    private static byte[]? ParseMapBytesFromGateName(string gateName)
+    private static List<byte[]> ParseMapBytesFromGateName(string gateName)
     {
+        var results = new List<byte[]>();
         if (string.IsNullOrEmpty(gateName))
-            return null;
+            return results;
 
-        var name = gateName.TrimStart('m');
-        var parts = name.Split('_');
-        if (parts.Length < 4)
-            return null;
-
-        try
+        // Split on 'm' prefix boundaries to find all map coordinate groups.
+        // Cross-tile gates encode two tiles: "m60_13_13_02_m60_52_53_00-AEG099..."
+        // The second tile starts at "_m" within the name.
+        var mapParts = new List<string>();
+        var rest = gateName;
+        while (rest.Length > 0)
         {
-            return new byte[]
+            if (!rest.StartsWith("m", StringComparison.OrdinalIgnoreCase))
+                break;
+
+            // Find next "_m" boundary (start of another map prefix)
+            int nextM = rest.IndexOf("_m", 1, StringComparison.OrdinalIgnoreCase);
+            if (nextM > 0)
             {
-                byte.Parse(parts[0]),
-                byte.Parse(parts[1]),
-                byte.Parse(parts[2]),
-                byte.Parse(parts[3]),
-            };
+                mapParts.Add(rest.Substring(0, nextM));
+                rest = rest.Substring(nextM + 1); // skip the underscore, keep the 'm'
+            }
+            else
+            {
+                mapParts.Add(rest);
+                break;
+            }
         }
-        catch (FormatException)
+
+        foreach (var mapPart in mapParts)
         {
-            Console.WriteLine($"Warning: Could not parse map bytes from gate name: {gateName}");
-            return null;
+            // Strip leading 'm', split, take first 4 as bytes
+            var name = mapPart.TrimStart('m');
+            // Remove anything after a hyphen (entity suffix on last map part)
+            var hyphen = name.IndexOf('-');
+            if (hyphen >= 0)
+                name = name.Substring(0, hyphen);
+            var parts = name.Split('_');
+            if (parts.Length < 4)
+                continue;
+            try
+            {
+                results.Add(new byte[]
+                {
+                    byte.Parse(parts[0]),
+                    byte.Parse(parts[1]),
+                    byte.Parse(parts[2]),
+                    byte.Parse(parts[3]),
+                });
+            }
+            catch (FormatException)
+            {
+                Console.WriteLine($"Warning: Could not parse map bytes from gate part: {mapPart} (gate: {gateName})");
+            }
         }
+
+        if (results.Count == 0)
+            Console.WriteLine($"Warning: No map bytes parsed from gate name: {gateName}");
+
+        return results;
     }
 
     /// <summary>
