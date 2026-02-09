@@ -77,7 +77,7 @@ def make_cluster_pool() -> ClusterPool:
         )
     )
 
-    # Final boss
+    # Final bosses
     pool.add(
         make_cluster(
             "erdtree_boss",
@@ -85,6 +85,16 @@ def make_cluster_pool() -> ClusterPool:
             cluster_type="final_boss",
             weight=5,
             entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
+            exit_fogs=[],
+        )
+    )
+    pool.add(
+        make_cluster(
+            "pcr_boss",
+            zones=["enirilim_radahn"],
+            cluster_type="final_boss",
+            weight=5,
+            entry_fogs=[{"fog_id": "pcr_entry", "zone": "enirilim_radahn"}],
             exit_fogs=[],
         )
     )
@@ -738,6 +748,13 @@ class TestGenerateWithRetry:
             make_cluster(
                 "erdtree_boss",
                 zones=["leyndell_erdtree"],
+                cluster_type="final_boss",
+            )
+        )
+        pool.add(
+            make_cluster(
+                "pcr_boss",
+                zones=["enirilim_radahn"],
                 cluster_type="final_boss",
             )
         )

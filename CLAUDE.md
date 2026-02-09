@@ -300,7 +300,6 @@ cd writer/test && ./run_integration.sh
 
 ## Important Notes
 
-- DLC content excluded in v1 (base game only)
 - One-way paths (coffins, drops) excluded in v1
 - Key items given at start to prevent softlocks
 - Enemy scaling uses tiers 1-28 (subset of vanilla's 1-34)

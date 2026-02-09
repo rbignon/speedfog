@@ -73,7 +73,7 @@ class StructureConfig:
     @property
     def effective_final_boss_candidates(self) -> list[str]:
         """Return candidates or default if empty."""
-        return self.final_boss_candidates or ["leyndell_erdtree"]
+        return self.final_boss_candidates or ["leyndell_erdtree", "enirilim_radahn"]
 
 
 def resolve_final_boss_candidates(
@@ -126,6 +126,14 @@ class StartingItemsConfig:
     rune_mohg: bool = True  # Good ID 195 (restored)
     rune_malenia: bool = True  # Good ID 196 (restored)
 
+    # DLC key items
+    omother: bool = True  # O, Mother (Good ID 2009004)
+    welldepthskey: bool = True  # Well Depths Key (Good ID 2008004)
+    gaolupperlevelkey: bool = True  # Gaol Upper Level Key (Good ID 2008005)
+    gaollowerlevelkey: bool = True  # Gaol Lower Level Key (Good ID 2008006)
+    holeladennecklace: bool = True  # Hole-Laden Necklace (Good ID 2008008)
+    messmerskindling: bool = True  # Messmer's Kindling (Good ID 2008021)
+
     # Consumable starting resources
     golden_seeds: int = 0  # Golden Seeds (Good ID 10010) - upgrade flask uses
     sacred_tears: int = 0  # Sacred Tears (Good ID 10020) - upgrade flask potency
@@ -157,6 +165,20 @@ class StartingItemsConfig:
             goods.append(2160)  # Pureblood Knight's Medal
         if self.drawing_room_key:
             goods.append(8134)  # Drawing-Room Key (Volcano Manor)
+
+        # DLC key items
+        if self.omother:
+            goods.append(2009004)  # O, Mother
+        if self.welldepthskey:
+            goods.append(2008004)  # Well Depths Key
+        if self.gaolupperlevelkey:
+            goods.append(2008005)  # Gaol Upper Level Key
+        if self.gaollowerlevelkey:
+            goods.append(2008006)  # Gaol Lower Level Key
+        if self.holeladennecklace:
+            goods.append(2008008)  # Hole-Laden Necklace
+        if self.messmerskindling:
+            goods.append(2008021)  # Messmer's Kindling
 
         # Great Runes (RESTORED versions - Good IDs 191-196)
         # These are the activated/restored versions, equippable at Graces
@@ -315,6 +337,12 @@ class Config:
                 rune_mohg=starting_items_section.get("rune_mohg", True),
                 rune_rykard=starting_items_section.get("rune_rykard", True),
                 rune_malenia=starting_items_section.get("rune_malenia", True),
+                omother=starting_items_section.get("omother", True),
+                welldepthskey=starting_items_section.get("welldepthskey", True),
+                gaolupperlevelkey=starting_items_section.get("gaolupperlevelkey", True),
+                gaollowerlevelkey=starting_items_section.get("gaollowerlevelkey", True),
+                holeladennecklace=starting_items_section.get("holeladennecklace", True),
+                messmerskindling=starting_items_section.get("messmerskindling", True),
                 golden_seeds=starting_items_section.get("golden_seeds", 0),
                 sacred_tears=starting_items_section.get("sacred_tears", 0),
                 starting_runes=starting_items_section.get("starting_runes", 0),

@@ -248,7 +248,7 @@ Gate names use FogMod's FullName format: `{map}_{gate_name}`.
 | Layers | Uniform cluster type | Competitive fairness (same challenge per layer) |
 | Key items | All given at start | Prevent softlocks |
 | Enemy scaling | Via fog tiers, not item rando | FogMod handles scaling per zone tier |
-| DLC | Excluded (v1) | Base game focus |
+| DLC | Included | Shadow of the Erdtree zones, PCR as final boss candidate |
 | One-ways | Excluded (v1) | Complexity reduction |
 
 ## FogMod Integration

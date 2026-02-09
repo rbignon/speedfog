@@ -13,6 +13,7 @@ from generate_clusters import (
     build_world_graph,
     classify_fogs,
     compute_cluster_fogs,
+    filter_and_enrich_clusters,
     generate_cluster_id,
     generate_clusters,
     get_evergaol_zones,
@@ -1052,3 +1053,153 @@ class TestGenerateClusterId:
         # Should have 4-char hash suffix
         parts = cluster_id.split("_")
         assert len(parts[-1]) == 4
+
+
+# =============================================================================
+# Filter and Enrich Tests (metadata overrides)
+# =============================================================================
+
+
+def _make_cluster_with_fogs(zones: frozenset[str]) -> Cluster:
+    """Helper: create a cluster with minimal entry/exit fogs."""
+    primary = sorted(zones)[0]
+    return Cluster(
+        zones=zones,
+        entry_fogs=[{"fog_id": f"entry_{primary}", "zone": primary}],
+        exit_fogs=[{"fog_id": f"exit_{primary}", "zone": primary}],
+    )
+
+
+class TestFilterAndEnrichMetadataTypeOverride:
+    """Tests for metadata type overrides in filter_and_enrich_clusters."""
+
+    def test_metadata_type_override(self):
+        """Metadata 'type' field overrides heuristic zone type."""
+        areas = {
+            "belurat": AreaData(
+                name="belurat", text="Belurat", maps=["m20_00_00_00"], tags=["dlc"]
+            ),
+        }
+        metadata = {
+            "defaults": {"legacy_dungeon": 10, "other": 2},
+            "zones": {"belurat": {"type": "legacy_dungeon", "weight": 12}},
+        }
+        cluster = _make_cluster_with_fogs(frozenset({"belurat"}))
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert len(result) == 1
+        assert result[0].cluster_type == "legacy_dungeon"
+
+    def test_heuristic_type_when_no_metadata(self):
+        """Without metadata override, heuristic type is used."""
+        areas = {
+            "stormveil": AreaData(
+                name="stormveil", text="Stormveil", maps=["m10_00_00_00"], tags=[]
+            ),
+        }
+        metadata = {"defaults": {"legacy_dungeon": 10}, "zones": {}}
+        cluster = _make_cluster_with_fogs(frozenset({"stormveil"}))
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert len(result) == 1
+        assert result[0].cluster_type == "legacy_dungeon"
+
+
+class TestFilterAndEnrichMetadataExclude:
+    """Tests for metadata exclude flag in filter_and_enrich_clusters."""
+
+    def test_exclude_flag_removes_cluster(self):
+        """Cluster with excluded zone is filtered out."""
+        areas = {
+            "fissure_boss": AreaData(
+                name="fissure_boss", text="", maps=["m20_01_00_00"], tags=["dlc"]
+            ),
+        }
+        metadata = {
+            "defaults": {"other": 2},
+            "zones": {"fissure_boss": {"exclude": True}},
+        }
+        cluster = _make_cluster_with_fogs(frozenset({"fissure_boss"}))
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert len(result) == 0
+
+    def test_no_exclude_flag_keeps_cluster(self):
+        """Cluster without exclude flag is kept."""
+        areas = {
+            "ensis": AreaData(
+                name="ensis", text="Ensis", maps=["m20_02_00_00"], tags=["dlc"]
+            ),
+        }
+        metadata = {
+            "defaults": {"legacy_dungeon": 10},
+            "zones": {"ensis": {"type": "legacy_dungeon"}},
+        }
+        cluster = _make_cluster_with_fogs(frozenset({"ensis"}))
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert len(result) == 1
+
+    def test_exclude_multi_zone_cluster(self):
+        """Cluster excluded when ANY zone has exclude flag."""
+        areas = {
+            "fissure_boss": AreaData(
+                name="fissure_boss", text="", maps=["m20_01_00_00"], tags=["dlc"]
+            ),
+            "fissure_depths": AreaData(
+                name="fissure_depths", text="", maps=["m20_01_00_00"], tags=["dlc"]
+            ),
+        }
+        metadata = {
+            "defaults": {"other": 2},
+            "zones": {"fissure_boss": {"exclude": True}},
+        }
+        cluster = _make_cluster_with_fogs(frozenset({"fissure_boss", "fissure_depths"}))
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert len(result) == 0

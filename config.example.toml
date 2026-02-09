@@ -67,15 +67,18 @@ max_branches = 3
 # major_boss_ratio = 0.2
 
 # Candidates for the final boss (zone names).
-# One will be chosen randomly. If omitted: Radagon only.
+# One will be chosen randomly. Default: Radagon + Promised Consort Radahn.
 # Use "all" to include all major bosses.
 # Available major bosses:
 #   caelid_radahn, haligtree_malenia, mohgwyn_boss, volcano_rykard,
 #   stormveil_godrick, farumazula_maliketh, flamepeak_firegiant,
-#   leyndell_erdtree (Radagon), leyndell_throne (Gideon), etc.
+#   leyndell_erdtree (Radagon), leyndell_throne (Gideon),
+#   enirilim_radahn (Promised Consort Radahn, DLC), etc.
 # final_boss_candidates = ["all"]  # All major bosses
+# final_boss_candidates = ["leyndell_erdtree"]  # Base game only (Radagon)
 # final_boss_candidates = [
 #     "leyndell_erdtree",
+#     "enirilim_radahn",
 #     "caelid_radahn",
 #     "haligtree_malenia",
 #     "mohgwyn_boss",
@@ -118,6 +121,14 @@ great_runes = true
 # rune_mohg = true
 # rune_rykard = true
 # rune_malenia = true
+
+# DLC key items (given at start to prevent softlocks in DLC areas)
+omother = true            # O, Mother - access Enir-Ilim inner area
+welldepthskey = true      # Well Depths Key - access Belurat well area
+gaolupperlevelkey = true  # Gaol Upper Level Key
+gaollowerlevelkey = true  # Gaol Lower Level Key
+holeladennecklace = true  # Hole-Laden Necklace - access Manus Metyr
+messmerskindling = true   # Messmer's Kindling - progress through DLC
 
 # Consumable starting resources (awarded via EMEVD when picking up Finger)
 # golden_seeds = 5       # Golden Seeds to upgrade flask uses (0-99)

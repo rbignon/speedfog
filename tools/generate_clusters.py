@@ -196,7 +196,7 @@ KEY_ITEMS = {
     "runerennala",
     "runerykard",
     "rustykey",
-    # DLC items (excluded anyway but listed for completeness)
+    # DLC key items
     "omother",
     "welldepthskey",
     "gaolupperlevelkey",
@@ -979,11 +979,18 @@ def filter_and_enrich_clusters(
     - Underground clusters (large empty exploration areas)
     """
     filtered: list[Cluster] = []
+    zones_meta = metadata.get("zones", {})
 
     for cluster in clusters:
-        # Check if any zone should be excluded
+        # Check if any zone should be excluded (via area tags or metadata)
         skip = False
         for zone_name in cluster.zones:
+            # Check metadata exclusion
+            if zone_name in zones_meta:
+                zm = zones_meta[zone_name]
+                if isinstance(zm, dict) and zm.get("exclude"):
+                    skip = True
+                    break
             if zone_name not in areas:
                 continue
             if should_exclude_area(areas[zone_name], exclude_dlc, exclude_overworld):
@@ -997,14 +1004,18 @@ def filter_and_enrich_clusters(
         if not cluster.entry_fogs or not cluster.exit_fogs:
             continue
 
-        # Determine cluster type (from primary zone)
+        # Determine cluster type: metadata override > heuristic
         primary_zone = sorted(cluster.zones)[0]
-        if primary_zone in areas:
-            cluster.cluster_type = get_zone_type(
+        cluster_type = None
+        if primary_zone in zones_meta:
+            zm = zones_meta[primary_zone]
+            if isinstance(zm, dict) and "type" in zm:
+                cluster_type = zm["type"]
+        if cluster_type is None and primary_zone in areas:
+            cluster_type = get_zone_type(
                 areas[primary_zone], major_zones, fortress_zones
             )
-        else:
-            cluster.cluster_type = "unknown"
+        cluster.cluster_type = cluster_type or "unknown"
 
         # Skip underground clusters (large empty exploration areas)
         if cluster.cluster_type == "underground":
@@ -1013,11 +1024,15 @@ def filter_and_enrich_clusters(
         # Calculate total weight
         total_weight = 0
         for zone_name in cluster.zones:
-            if zone_name in areas:
+            # Use metadata type override if available, else heuristic
+            zone_type = None
+            if zone_name in zones_meta:
+                zm = zones_meta[zone_name]
+                if isinstance(zm, dict) and "type" in zm:
+                    zone_type = zm["type"]
+            if zone_type is None and zone_name in areas:
                 zone_type = get_zone_type(areas[zone_name], major_zones, fortress_zones)
-                total_weight += get_zone_weight(zone_name, zone_type, metadata)
-            else:
-                total_weight += 4  # Default weight
+            total_weight += get_zone_weight(zone_name, zone_type or "other", metadata)
 
         cluster.weight = total_weight
 
@@ -1142,13 +1157,8 @@ def main() -> int:
     parser.add_argument(
         "--exclude-dlc",
         action="store_true",
-        default=True,
-        help="Exclude DLC zones (default: True)",
-    )
-    parser.add_argument(
-        "--include-dlc",
-        action="store_true",
-        help="Include DLC zones",
+        default=False,
+        help="Exclude DLC zones (default: False)",
     )
     parser.add_argument(
         "--exclude-overworld",
@@ -1170,8 +1180,7 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    # Handle include flags overriding exclude defaults
-    exclude_dlc = args.exclude_dlc and not args.include_dlc
+    exclude_dlc = args.exclude_dlc
     exclude_overworld = args.exclude_overworld and not args.include_overworld
 
     if not args.fog_txt.exists():

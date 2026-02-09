@@ -84,3 +84,60 @@ weight = 5
 
 [zones.farumazula_maliketh]
 weight = 4
+
+# =============================================================================
+# DLC - Shadow of the Erdtree
+# =============================================================================
+
+# DLC Final Boss
+[zones.enirilim_radahn]
+type = "final_boss"
+weight = 5
+
+# DLC Legacy Dungeons (type override: m20_ maps not in legacy_prefixes heuristic)
+[zones.belurat]
+type = "legacy_dungeon"
+weight = 12
+
+[zones.ensis]
+type = "legacy_dungeon"
+weight = 10
+
+[zones.shadowkeep]
+type = "legacy_dungeon"
+weight = 12
+
+[zones.shadowkeep_church]
+type = "legacy_dungeon"
+weight = 10
+
+[zones.storehouse]
+type = "legacy_dungeon"
+weight = 10
+
+[zones.midramanse]
+type = "legacy_dungeon"
+weight = 10
+
+# DLC Boss arenas
+[zones.belurat_boss]
+weight = 4
+
+[zones.ensis_boss]
+weight = 4
+
+[zones.shadowkeep_boss]
+weight = 4
+
+[zones.storehouse_messmer]
+weight = 4
+
+[zones.midramanse_boss]
+weight = 4
+
+# DLC Exclusions (zones that don't work well as independent clusters)
+[zones.fissure_boss]
+exclude = true
+
+[zones.rauhruins_postromina]
+exclude = true

@@ -136,6 +136,7 @@ Example:
         opt["roundtable"] = true;  // Make Roundtable Hold available from the start
 
         opt["newgraces"] = true;  // Enable additional Sites of Grace
+        opt["dlc"] = true;  // Include DLC areas in fog graph
 
         // Mark dungeon types as "core" so their edges are processed
         // Note: Do NOT use req_all as it includes evergaols which lack StakeAsset definitions
@@ -187,18 +188,18 @@ Example:
             { "tier7", "FALSE" },
             { "tier8", "FALSE" },
             { "tier9", "FALSE" },
-            // DLC kindling/imbued requirements (not used - base game only)
-            { "treekindling", "FALSE" },
-            { "imbued_base", "FALSE" },
-            { "imbued_base_any", "FALSE" },
-            { "imbued_dlc", "FALSE" },
-            { "imbued_dlc_any", "FALSE" },
-            // DLC high seal conditions (areas reached via seals)
-            { "rauhruins_high_seal", "FALSE" },
-            { "rauhbase_high_seal", "FALSE" },
-            { "gravesite_seal", "FALSE" },
-            { "scadualtus_high_seal", "FALSE" },
-            { "ymir_open", "FALSE" },
+            // DLC kindling/imbued requirements (all TRUE - SpeedFog gives all items)
+            { "treekindling", "TRUE" },
+            { "imbued_base", "TRUE" },
+            { "imbued_base_any", "TRUE" },
+            { "imbued_dlc", "TRUE" },
+            { "imbued_dlc_any", "TRUE" },
+            // DLC high seal conditions (areas reached via seals - all TRUE)
+            { "rauhruins_high_seal", "TRUE" },
+            { "rauhbase_high_seal", "TRUE" },
+            { "gravesite_seal", "TRUE" },
+            { "scadualtus_high_seal", "TRUE" },
+            { "ymir_open", "TRUE" },
             // Key items - all TRUE since SpeedFog gives all items at start
             // Base game keys
             { "academyglintstonekey", "TRUE" },
@@ -215,7 +216,7 @@ Example:
             { "imbuedswordkey1", "TRUE" },
             { "imbuedswordkey2", "TRUE" },
             { "imbuedswordkey3", "TRUE" },
-            { "imbuedswordkey4", "FALSE" },  // DLC key
+            { "imbuedswordkey4", "TRUE" },  // DLC key
             { "purebloodknightsmedal", "TRUE" },
             { "roldmedallion", "TRUE" },
             { "runegodrick", "TRUE" },
@@ -226,14 +227,14 @@ Example:
             { "runerennala", "TRUE" },
             { "runerykard", "TRUE" },
             { "rustykey", "TRUE" },
-            // DLC keys (FALSE - not supported yet)
-            { "omother", "FALSE" },
-            { "welldepthskey", "FALSE" },
-            { "gaolupperlevelkey", "FALSE" },
-            { "gaollowerlevelkey", "FALSE" },
-            { "holeladennecklace", "FALSE" },
-            { "messmerskindling", "FALSE" },
-            { "messmerskindling1", "FALSE" },
+            // DLC keys (all TRUE - SpeedFog gives all items at start)
+            { "omother", "TRUE" },
+            { "welldepthskey", "TRUE" },
+            { "gaolupperlevelkey", "TRUE" },
+            { "gaollowerlevelkey", "TRUE" },
+            { "holeladennecklace", "TRUE" },
+            { "messmerskindling", "TRUE" },
+            { "messmerskindling1", "TRUE" },
         };
 
         // Load foglocations for enemy area info (needed for scaling)

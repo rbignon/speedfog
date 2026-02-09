@@ -161,7 +161,10 @@ def test_effective_final_boss_candidates_default():
     """effective_final_boss_candidates returns default when list is empty."""
     config = Config.from_dict({})
     assert config.structure.final_boss_candidates == []
-    assert config.structure.effective_final_boss_candidates == ["leyndell_erdtree"]
+    assert config.structure.effective_final_boss_candidates == [
+        "leyndell_erdtree",
+        "enirilim_radahn",
+    ]
 
 
 def test_effective_final_boss_candidates_custom():
