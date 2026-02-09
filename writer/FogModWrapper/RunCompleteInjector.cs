@@ -4,21 +4,29 @@ using SoulsIds;
 namespace FogModWrapper;
 
 /// <summary>
-/// Injects a "RUN COMPLETE" full screen message that displays after the final boss is defeated.
-/// - FMG: Adds EventTextForMap entry to menu_dlc02.msgbnd.dcx
-/// - EMEVD: Creates event that waits for finish_event flag, delays 7s, shows message
+/// Injects a "RUN COMPLETE" banner that displays after the final boss is defeated.
+/// - FMG: Overwrites the "VICTORY" banner text in GR_MenuText (menu_dlc02.msgbnd.dcx)
+///        for all game languages
+/// - EMEVD: Creates event that waits for finish_event flag, delays 7s, shows banner
+///
+/// Uses the golden banner style (same as "GREAT ENEMY FELLED", "GOD SLAIN", etc.)
+/// by repurposing the "VICTORY" banner type (Colosseum-only, unused in PvE).
 /// </summary>
 public static class RunCompleteInjector
 {
     private const int EVENT_ID = 755863000;
-    private const int MESSAGE_ID = 755863000;
     private const string MESSAGE_TEXT = "RUN COMPLETE";
     private const float DELAY_SECONDS = 7.0f;
+
+    // TextBannerType.Victory (33) - Colosseum-only, safe to repurpose in PvE
+    private const byte BANNER_TYPE = 33;
+    // GR_MenuText FMG ID for the "VICTORY" banner text
+    private const int BANNER_FMG_ID = 331314;
 
     /// <summary>
     /// Inject the "RUN COMPLETE" message display into both FMG and EMEVD.
     /// </summary>
-    public static void Inject(string modDir, Events events, int finishEvent)
+    public static void Inject(string modDir, string gameDir, Events events, int finishEvent)
     {
         if (finishEvent <= 0)
         {
@@ -26,41 +34,62 @@ public static class RunCompleteInjector
             return;
         }
 
-        InjectFmgEntry(modDir);
+        InjectFmgEntries(modDir, gameDir);
         InjectEmevdEvent(modDir, events, finishEvent);
     }
 
     /// <summary>
-    /// Add "RUN COMPLETE" text entry to EventTextForMap FMG in menu_dlc02.msgbnd.dcx.
+    /// Overwrite the "VICTORY" banner text in GR_MenuText FMG with "RUN COMPLETE"
+    /// for all game languages.
     /// </summary>
-    private static void InjectFmgEntry(string modDir)
+    private static void InjectFmgEntries(string modDir, string gameDir)
     {
-        var msgPath = Path.Combine(modDir, "msg", "engus", "menu_dlc02.msgbnd.dcx");
-        if (!File.Exists(msgPath))
+        var gameMsgDir = Path.Combine(gameDir, "msg");
+        if (!Directory.Exists(gameMsgDir))
         {
-            Console.WriteLine("Warning: menu_dlc02.msgbnd.dcx not found, skipping FMG injection");
+            Console.WriteLine("Warning: Game msg directory not found, skipping FMG injection");
             return;
         }
 
-        var bnd = BND4.Read(msgPath);
-
-        // Find the EventTextForMap FMG file within the bundle
-        var fmgFile = bnd.Files.Find(f => f.Name.Contains("EventTextForMap"));
-        if (fmgFile == null)
+        int count = 0;
+        foreach (var langDir in Directory.GetDirectories(gameMsgDir))
         {
-            Console.WriteLine("Warning: EventTextForMap FMG not found in menu_dlc02.msgbnd.dcx");
-            return;
+            var langName = Path.GetFileName(langDir);
+            var vanillaPath = Path.Combine(langDir, "menu_dlc02.msgbnd.dcx");
+            if (!File.Exists(vanillaPath))
+                continue;
+
+            // For English, FogMod already created the file in modDir - modify that.
+            // For other languages, read from vanilla and write a new file to modDir.
+            var modMsgPath = Path.Combine(modDir, "msg", langName, "menu_dlc02.msgbnd.dcx");
+            var sourcePath = File.Exists(modMsgPath) ? modMsgPath : vanillaPath;
+
+            var bnd = BND4.Read(sourcePath);
+
+            var fmgFile = bnd.Files.Find(f => f.Name.Contains("GR_MenuText"));
+            if (fmgFile == null)
+                continue;
+
+            var fmg = FMG.Read(fmgFile.Bytes);
+
+            var existing = fmg.Entries.Find(e => e.ID == BANNER_FMG_ID);
+            if (existing != null)
+            {
+                existing.Text = MESSAGE_TEXT;
+            }
+            else
+            {
+                fmg.Entries.Add(new FMG.Entry(BANNER_FMG_ID, MESSAGE_TEXT));
+            }
+
+            fmgFile.Bytes = fmg.Write();
+
+            Directory.CreateDirectory(Path.GetDirectoryName(modMsgPath)!);
+            bnd.Write(modMsgPath);
+            count++;
         }
 
-        var fmg = FMG.Read(fmgFile.Bytes);
-
-        // Add our message entry
-        fmg.Entries.Add(new FMG.Entry(MESSAGE_ID, MESSAGE_TEXT));
-
-        fmgFile.Bytes = fmg.Write();
-        bnd.Write(msgPath);
-
-        Console.WriteLine($"Run complete: added FMG entry {MESSAGE_ID} = \"{MESSAGE_TEXT}\"");
+        Console.WriteLine($"Run complete: set GR_MenuText[{BANNER_FMG_ID}] = \"{MESSAGE_TEXT}\" in {count} languages");
     }
 
     /// <summary>
@@ -94,9 +123,8 @@ public static class RunCompleteInjector
         evt.Instructions.Add(events.ParseAdd(
             $"WaitFixedTimeSeconds({DELAY_SECONDS})"));
 
-        // 3. Display full screen message (bank 2007, index 9, single int32 arg)
-        var msgArgs = BitConverter.GetBytes(MESSAGE_ID);
-        evt.Instructions.Add(new EMEVD.Instruction(2007, 9, msgArgs));
+        // 3. Display banner (bank 2007, index 2, single byte arg = banner type)
+        evt.Instructions.Add(new EMEVD.Instruction(2007, 2, new[] { BANNER_TYPE }));
 
         emevd.Events.Add(evt);
 
@@ -109,6 +137,6 @@ public static class RunCompleteInjector
         emevd.Write(emevdPath);
 
         Console.WriteLine($"Run complete: event {EVENT_ID} " +
-                          $"(finish flag {finishEvent} -> delay {DELAY_SECONDS}s -> message {MESSAGE_ID})");
+                          $"(finish flag {finishEvent} -> delay {DELAY_SECONDS}s -> banner type {BANNER_TYPE})");
     }
 }
