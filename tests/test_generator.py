@@ -6,8 +6,11 @@ import pytest
 
 from speedfog.clusters import ClusterData, ClusterPool
 from speedfog.config import Config
+from speedfog.dag import Branch
 from speedfog.generator import (
     GenerationError,
+    _find_valid_merge_indices,
+    _has_valid_merge_pair,
     cluster_has_usable_exits,
     compute_net_exits,
     count_net_exits,
@@ -1090,3 +1093,181 @@ class TestClusterDataAvailableExits:
 
         available = cluster.available_exits(None)
         assert len(available) == 2
+
+
+# =============================================================================
+# Merge guard tests
+# =============================================================================
+
+
+class TestMergeGuards:
+    """Tests for _has_valid_merge_pair and _find_valid_merge_indices."""
+
+    def test_merge_rejects_same_source_branches(self):
+        """_find_valid_merge_indices raises when all branches share the same node."""
+        branches = [
+            Branch("b0", "node_1_a", "exit_0"),
+            Branch("b1", "node_1_a", "exit_1"),
+        ]
+        rng = random.Random(42)
+
+        assert _has_valid_merge_pair(branches) is False
+        with pytest.raises(GenerationError, match="same current node"):
+            _find_valid_merge_indices(branches, rng)
+
+    def test_merge_selects_different_source_branches(self):
+        """_find_valid_merge_indices selects branches with different current nodes."""
+        branches = [
+            Branch("b0", "node_1_a", "exit_0"),
+            Branch("b1", "node_1_a", "exit_1"),
+            Branch("b2", "node_1_b", "exit_2"),
+        ]
+        rng = random.Random(42)
+
+        assert _has_valid_merge_pair(branches) is True
+        indices = _find_valid_merge_indices(branches, rng)
+
+        assert len(indices) == 2
+        # The selected pair must have different current nodes
+        assert (
+            branches[indices[0]].current_node_id != branches[indices[1]].current_node_id
+        )
+
+    def test_has_valid_merge_pair_all_different(self):
+        """All branches from different nodes: valid merge possible."""
+        branches = [
+            Branch("b0", "node_a", "exit_0"),
+            Branch("b1", "node_b", "exit_1"),
+        ]
+        assert _has_valid_merge_pair(branches) is True
+
+    def test_find_valid_merge_indices_randomness(self):
+        """Different seeds select different valid pairs."""
+        branches = [
+            Branch("b0", "node_a", "exit_0"),
+            Branch("b1", "node_b", "exit_1"),
+            Branch("b2", "node_c", "exit_2"),
+        ]
+
+        selected_pairs = set()
+        for seed in range(100):
+            rng = random.Random(seed)
+            indices = _find_valid_merge_indices(branches, rng)
+            selected_pairs.add(tuple(sorted(indices)))
+
+        # With 3 branches all from different nodes, there are 3 valid pairs
+        assert len(selected_pairs) > 1
+
+    def test_no_duplicate_edges_in_generated_dag(self):
+        """Generated DAGs with splits/merges have no duplicate (source, target) edges."""
+        # Build a pool with split-, merge-, and passant-compatible clusters
+        pool = ClusterPool()
+
+        pool.add(
+            make_cluster(
+                "chapel_start",
+                zones=["chapel"],
+                cluster_type="start",
+                weight=1,
+                entry_fogs=[],
+                exit_fogs=[
+                    {"fog_id": "start_exit_1", "zone": "chapel"},
+                    {"fog_id": "start_exit_2", "zone": "chapel"},
+                ],
+            )
+        )
+
+        pool.add(
+            make_cluster(
+                "erdtree_boss",
+                zones=["leyndell_erdtree"],
+                cluster_type="final_boss",
+                weight=5,
+                entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
+                exit_fogs=[],
+            )
+        )
+
+        # Split-compatible (1 entry bidir + 2 pure exits = 2 net exits)
+        for i in range(8):
+            pool.add(
+                make_cluster(
+                    f"split_{i}",
+                    zones=[f"split_{i}_zone"],
+                    cluster_type="mini_dungeon",
+                    weight=5,
+                    entry_fogs=[
+                        {"fog_id": f"split_{i}_entry", "zone": f"split_{i}_zone"},
+                    ],
+                    exit_fogs=[
+                        {"fog_id": f"split_{i}_entry", "zone": f"split_{i}_zone"},
+                        {"fog_id": f"split_{i}_exit_a", "zone": f"split_{i}_zone"},
+                        {"fog_id": f"split_{i}_exit_b", "zone": f"split_{i}_zone"},
+                    ],
+                )
+            )
+
+        # Merge-compatible (2 entries bidir + 1 pure exit = 1 net exit)
+        for i in range(8):
+            pool.add(
+                make_cluster(
+                    f"merge_{i}",
+                    zones=[f"merge_{i}_zone"],
+                    cluster_type="mini_dungeon",
+                    weight=5,
+                    entry_fogs=[
+                        {"fog_id": f"merge_{i}_entry_a", "zone": f"merge_{i}_zone"},
+                        {"fog_id": f"merge_{i}_entry_b", "zone": f"merge_{i}_zone"},
+                    ],
+                    exit_fogs=[
+                        {"fog_id": f"merge_{i}_entry_a", "zone": f"merge_{i}_zone"},
+                        {"fog_id": f"merge_{i}_entry_b", "zone": f"merge_{i}_zone"},
+                        {"fog_id": f"merge_{i}_exit", "zone": f"merge_{i}_zone"},
+                    ],
+                )
+            )
+
+        # Passant-compatible (1 entry bidir + 1 pure exit = 1 net exit)
+        for i in range(15):
+            pool.add(
+                make_cluster(
+                    f"passant_{i}",
+                    zones=[f"passant_{i}_zone"],
+                    cluster_type="mini_dungeon",
+                    weight=5,
+                    entry_fogs=[
+                        {"fog_id": f"passant_{i}_entry", "zone": f"passant_{i}_zone"},
+                    ],
+                    exit_fogs=[
+                        {"fog_id": f"passant_{i}_entry", "zone": f"passant_{i}_zone"},
+                        {"fog_id": f"passant_{i}_exit", "zone": f"passant_{i}_zone"},
+                    ],
+                )
+            )
+
+        config = Config()
+        config.structure.min_layers = 4
+        config.structure.max_layers = 6
+        config.structure.max_branches = 2
+        config.structure.split_probability = 0.4
+        config.structure.merge_probability = 0.4
+        config.requirements.legacy_dungeons = 0
+        config.requirements.bosses = 0
+        config.requirements.mini_dungeons = 0
+
+        successes = 0
+        for seed in range(1, 201):
+            try:
+                dag = generate_dag(config, pool, seed=seed)
+            except GenerationError:
+                continue
+            successes += 1
+
+            # Check for duplicate (source_id, target_id) pairs
+            edge_pairs = [(e.source_id, e.target_id) for e in dag.edges]
+            assert len(edge_pairs) == len(
+                set(edge_pairs)
+            ), f"Seed {seed}: duplicate edge pair found in {edge_pairs}"
+
+        # Ensure we actually tested some successful generations
+        assert successes >= 10, f"Only {successes} seeds succeeded out of 200"

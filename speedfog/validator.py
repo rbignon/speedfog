@@ -58,6 +58,11 @@ def validate_dag(dag: Dag, config: Config) -> ValidationResult:
     if entry_fog_errors:
         errors.extend(entry_fog_errors)
 
+    # Check no duplicate edges (same source→target pair)
+    duplicate_errors = _check_no_duplicate_edges(dag)
+    if duplicate_errors:
+        errors.extend(duplicate_errors)
+
     # Check minimum requirements
     _check_requirements(dag, config, errors)
 
@@ -164,6 +169,32 @@ def _check_paths(
                 f"Path {i + 1} is overweight: {weight} > {max_weight} "
                 f"(target: {budget.total_weight})"
             )
+
+
+def _check_no_duplicate_edges(dag: Dag) -> list[str]:
+    """Check that no two edges share the same (source_id, target_id) pair.
+
+    Duplicate edges indicate a micro split-merge pattern where two branches
+    from the same node merge into the same target, creating a pointless
+    Y-shape topology.
+
+    Args:
+        dag: The DAG to check.
+
+    Returns:
+        List of error messages.
+    """
+    errors: list[str] = []
+    seen: set[tuple[str, str]] = set()
+    for edge in dag.edges:
+        pair = (edge.source_id, edge.target_id)
+        if pair in seen:
+            errors.append(
+                f"Duplicate edge: {edge.source_id} → {edge.target_id} "
+                f"(micro split-merge pattern)"
+            )
+        seen.add(pair)
+    return errors
 
 
 def _check_layers(dag: Dag, config: Config, warnings: list[str]) -> None:

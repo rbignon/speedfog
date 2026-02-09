@@ -608,6 +608,40 @@ def execute_split_layer(
     return new_branches
 
 
+def _has_valid_merge_pair(branches: list[Branch]) -> bool:
+    """Check if any two branches have different current nodes."""
+    node_ids = {b.current_node_id for b in branches}
+    return len(node_ids) >= 2
+
+
+def _find_valid_merge_indices(branches: list[Branch], rng: random.Random) -> list[int]:
+    """Select two branch indices with different current nodes for merging.
+
+    Prevents micro split-merge where two branches from the same split node
+    immediately merge into one target, creating a pointless Y-shape.
+
+    Args:
+        branches: Current branches.
+        rng: Random number generator.
+
+    Returns:
+        List of two branch indices with different current nodes.
+
+    Raises:
+        GenerationError: If all branches share the same current node.
+    """
+    valid_pairs: list[tuple[int, int]] = []
+    for i in range(len(branches)):
+        for j in range(i + 1, len(branches)):
+            if branches[i].current_node_id != branches[j].current_node_id:
+                valid_pairs.append((i, j))
+    if not valid_pairs:
+        raise GenerationError(
+            "No valid merge pair: all branches share the same current node"
+        )
+    return list(rng.choice(valid_pairs))
+
+
 def execute_merge_layer(
     dag: Dag,
     branches: list[Branch],
@@ -639,7 +673,7 @@ def execute_merge_layer(
     if len(branches) < 2:
         raise GenerationError("Cannot merge with fewer than 2 branches")
 
-    merge_indices = rng.sample(range(len(branches)), 2)
+    merge_indices = _find_valid_merge_indices(branches, rng)
     merge_branches = [branches[i] for i in merge_indices]
 
     candidates = clusters.get_by_type(layer_type)
@@ -761,6 +795,19 @@ def execute_forced_merge(
     """
     current_layer = layer_idx
     while len(branches) > 1:
+        if not _has_valid_merge_pair(branches):
+            # All branches share the same source; insert passant to diverge
+            branches = execute_passant_layer(
+                dag,
+                branches,
+                current_layer,
+                tier,
+                layer_type,
+                clusters,
+                used_zones,
+                rng,
+            )
+            current_layer += 1
         branches = execute_merge_layer(
             dag, branches, current_layer, tier, layer_type, clusters, used_zones, rng
         )
@@ -927,16 +974,29 @@ def generate_dag(
                     rng,
                 )
             elif operation == LayerOperation.MERGE:
-                branches = execute_merge_layer(
-                    dag,
-                    branches,
-                    current_layer,
-                    tier,
-                    layer_type,
-                    clusters,
-                    used_zones,
-                    rng,
-                )
+                if _has_valid_merge_pair(branches):
+                    branches = execute_merge_layer(
+                        dag,
+                        branches,
+                        current_layer,
+                        tier,
+                        layer_type,
+                        clusters,
+                        used_zones,
+                        rng,
+                    )
+                else:
+                    # All branches share the same source; fall back to passant
+                    branches = execute_passant_layer(
+                        dag,
+                        branches,
+                        current_layer,
+                        tier,
+                        layer_type,
+                        clusters,
+                        used_zones,
+                        rng,
+                    )
             current_layer += 1
 
     # 5. Final merge if still multiple branches
