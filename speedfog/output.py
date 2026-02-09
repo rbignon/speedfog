@@ -275,9 +275,11 @@ def dag_to_dict(
     # Build event_map: str(flag_id) -> cluster_id
     event_map = {str(fid): cid for cid, fid in node_flag_ids.items()}
 
-    # finish_event: flag ID of the final_boss node
-    end_node = dag.nodes[dag.end_id]
-    finish_event = node_flag_ids[end_node.cluster.id]
+    # finish_event: a SEPARATE flag for final boss death detection.
+    # Must not reuse a zone-tracking flag, otherwise traversing the fog gate
+    # into the final zone would prematurely trigger "RUN COMPLETE".
+    finish_event = EVENT_FLAG_BASE + flag_counter
+    flag_counter += 1
 
     return {
         "version": "4.0",

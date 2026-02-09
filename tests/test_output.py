@@ -324,8 +324,8 @@ class TestEventMap:
         start_cluster_id = dag.nodes[dag.start_id].cluster.id
         assert start_cluster_id not in result["event_map"].values()
 
-    def test_finish_event_is_final_boss_flag(self):
-        """finish_event matches the final_boss node's flag_id."""
+    def test_finish_event_is_separate_from_zone_flags(self):
+        """finish_event is a distinct flag not used for zone tracking."""
         dag = make_test_dag()
         clusters = ClusterPool(
             clusters=[node.cluster for node in dag.nodes.values()],
@@ -334,20 +334,18 @@ class TestEventMap:
         )
         result = dag_to_dict(dag, clusters)
 
-        end_cluster_id = dag.nodes[dag.end_id].cluster.id
-        # Find the flag_id for the end node
-        end_flag_id = None
-        for flag_str, cid in result["event_map"].items():
-            if cid == end_cluster_id:
-                end_flag_id = int(flag_str)
-                break
-        assert end_flag_id is not None
-        assert result["finish_event"] == end_flag_id
+        # finish_event must NOT appear in event_map (it's a separate flag)
+        assert str(result["finish_event"]) not in result["event_map"]
 
-    def test_finish_event_in_event_map(self):
-        """finish_event appears as a key in event_map."""
+        # It should be a valid flag ID in the expected range
+        assert isinstance(result["finish_event"], int)
+        assert result["finish_event"] >= 1040292800
+
+    def test_finish_event_follows_zone_flags(self):
+        """finish_event is allocated after all zone tracking flags."""
         result = _make_result()
-        assert str(result["finish_event"]) in result["event_map"]
+        zone_flags = {int(k) for k in result["event_map"]}
+        assert result["finish_event"] > max(zone_flags)
 
     def test_connections_have_flag_id(self):
         """Each connection has a flag_id field."""

@@ -207,10 +207,10 @@ class TestFullPipeline:
             int(flag_str)  # should be a stringified int
             assert cluster_id in data["nodes"]
 
-        # Finish event
+        # Finish event (separate flag, not in event_map)
         assert isinstance(data["finish_event"], int)
         assert data["finish_event"] >= 9000000
-        assert str(data["finish_event"]) in data["event_map"]
+        assert str(data["finish_event"]) not in data["event_map"]
 
     def test_validation_result_structure(self, real_clusters, relaxed_config):
         """Verify validation returns properly structured result."""
