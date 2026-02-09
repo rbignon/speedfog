@@ -24,6 +24,24 @@ def test_generate_item_config_basic():
     assert result["options"]["weaponreqs"] is True
     assert result["preset"] == "speedfog_enemy"
     assert result["helper_options"]["autoUpgradeWeapons"] is True
+    # All 14 bool options must be explicitly set (DLL defaults most to true)
+    helper = result["helper_options"]
+    assert len(helper) == 14
+    # Auto-equip: all disabled
+    assert helper["autoEquip"] is False
+    assert helper["equipShop"] is False
+    assert helper["equipWeapons"] is False
+    assert helper["bowLeft"] is False
+    assert helper["castLeft"] is False
+    assert helper["equipArmor"] is False
+    assert helper["equipAccessory"] is False
+    assert helper["equipSpells"] is False
+    assert helper["equipCrystalTears"] is False
+    # Auto-upgrade: enabled
+    assert helper["autoUpgrade"] is True
+    assert helper["autoUpgradeSpiritAshes"] is True
+    assert helper["autoUpgradeDropped"] is False
+    assert helper["regionLockWeapons"] is False
 
 
 def test_generate_item_config_custom_settings():
@@ -45,6 +63,8 @@ def test_generate_item_config_custom_settings():
     assert result["difficulty"] == 75
     assert result["options"]["weaponreqs"] is False
     assert result["helper_options"]["autoUpgradeWeapons"] is False
+    # Auto-equip still disabled regardless of auto_upgrade_weapons
+    assert result["helper_options"]["autoEquip"] is False
 
 
 def test_generate_item_config_json_serializable():

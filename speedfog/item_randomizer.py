@@ -32,8 +32,27 @@ def generate_item_config(config: Config, seed: int) -> dict[str, Any]:
             "weaponreqs": config.item_randomizer.remove_requirements,
         },
         "preset": "speedfog_enemy",
+        # RandomizerHelper.dll defaults almost everything to true when not
+        # specified in the INI.  We must be exhaustive to avoid surprises
+        # (e.g. auto-equip activating silently).  Int options like
+        # weaponLevelsBelowMax/weaponLevelRange default to 0 which is fine.
         "helper_options": {
+            # Auto-equip: disabled — SpeedFog gives a care package instead
+            "autoEquip": False,
+            "equipShop": False,
+            "equipWeapons": False,
+            "bowLeft": False,
+            "castLeft": False,
+            "equipArmor": False,
+            "equipAccessory": False,
+            "equipSpells": False,
+            "equipCrystalTears": False,
+            # Auto-upgrade: enabled
+            "autoUpgrade": True,
             "autoUpgradeWeapons": config.item_randomizer.auto_upgrade_weapons,
+            "regionLockWeapons": False,
+            "autoUpgradeSpiritAshes": True,
+            "autoUpgradeDropped": False,
         },
     }
 
