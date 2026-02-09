@@ -4,27 +4,10 @@ using FogModWrapper.Models;
 namespace FogModWrapper;
 
 /// <summary>
-/// Warp data extracted from FogMod's Graph for post-processing EMEVD matching.
-/// </summary>
-public class WarpMatchData
-{
-    /// <summary>4 bytes: area, block, sub, sub2 from map string.</summary>
-    public byte[] DestMapBytes { get; set; } = Array.Empty<byte>();
-
-    /// <summary>WarpPoint.Region entity ID.</summary>
-    public int DestRegion { get; set; }
-
-    /// <summary>Event flag to set on traversal.</summary>
-    public int FlagId { get; set; }
-}
-
-/// <summary>
 /// Result of connection injection, carrying data needed for EMEVD post-processing.
 /// </summary>
 public class InjectionResult
 {
-    public List<WarpMatchData> WarpMatches { get; set; } = new();
-
     /// <summary>FogMod DefeatFlag for the final boss zone.</summary>
     public int BossDefeatFlag { get; set; }
 
@@ -38,12 +21,12 @@ public class InjectionResult
 public static class ConnectionInjector
 {
     /// <summary>
-    /// Inject connections and extract warp matching data for EMEVD post-processing.
+    /// Inject connections and extract boss defeat flag for EMEVD post-processing.
     /// </summary>
     /// <param name="graph">FogMod Graph with nodes/edges constructed but not connected</param>
     /// <param name="connections">List of connections from graph.json</param>
     /// <param name="finishEvent">The finish_event flag ID (0 if not using v4)</param>
-    /// <returns>InjectionResult with warp match data for zone tracking</returns>
+    /// <returns>InjectionResult with boss defeat flag for zone tracking</returns>
     public static InjectionResult InjectAndExtract(
         Graph graph, List<Connection> connections, int finishEvent)
     {
@@ -63,7 +46,7 @@ public static class ConnectionInjector
             }
         }
 
-        Console.WriteLine($"All connections injected successfully. Extracted {result.WarpMatches.Count} warp matches.");
+        Console.WriteLine($"All connections injected successfully.");
         return result;
     }
 
@@ -125,22 +108,6 @@ public static class ConnectionInjector
 
         Console.WriteLine($"  Connected: {conn.ExitArea} --[{conn.ExitGate}]--> {conn.EntranceArea}");
 
-        // Extract warp matching data for zone tracking
-        var destWarp = entranceEdge.Side?.Warp;
-        if (destWarp != null && conn.FlagId > 0)
-        {
-            var mapBytes = ParseMapBytes(destWarp.Map);
-            if (mapBytes != null)
-            {
-                result.WarpMatches.Add(new WarpMatchData
-                {
-                    DestMapBytes = mapBytes,
-                    DestRegion = destWarp.Region,
-                    FlagId = conn.FlagId,
-                });
-            }
-        }
-
         // For the finish event connection, extract boss defeat flag.
         // Multiple connections may target the same final boss node (diamond DAG merge),
         // but they all share the same EntranceArea so DefeatFlag is consistent.
@@ -155,35 +122,6 @@ public static class ConnectionInjector
             {
                 Console.WriteLine($"Warning: No DefeatFlag found for finish area {conn.EntranceArea}");
             }
-        }
-    }
-
-    /// <summary>
-    /// Parse a map string like "m60_35_43_00" into 4 bytes [60, 35, 43, 0].
-    /// </summary>
-    private static byte[]? ParseMapBytes(string? map)
-    {
-        if (string.IsNullOrEmpty(map))
-            return null;
-
-        var parts = map.TrimStart('m').Split('_');
-        if (parts.Length < 4)
-            return null;
-
-        try
-        {
-            return new byte[]
-            {
-                byte.Parse(parts[0]),
-                byte.Parse(parts[1]),
-                byte.Parse(parts[2]),
-                byte.Parse(parts[3]),
-            };
-        }
-        catch (FormatException)
-        {
-            Console.WriteLine($"Warning: Could not parse map bytes from: {map}");
-            return null;
         }
     }
 
