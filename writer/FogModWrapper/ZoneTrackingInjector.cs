@@ -1,3 +1,4 @@
+using FogModWrapper.Models;
 using SoulsFormats;
 using SoulsIds;
 
@@ -17,18 +18,18 @@ public static class ZoneTrackingInjector
     /// </summary>
     /// <param name="modDir">Path to mod output directory (contains event/ subdirectory)</param>
     /// <param name="events">Events instance for instruction parsing</param>
-    /// <param name="warpMatches">Warp data extracted from FogMod's Graph</param>
+    /// <param name="connections">Connections from graph.json with flag_id per connection</param>
     /// <param name="finishEvent">The finish_event flag ID</param>
     /// <param name="bossDefeatFlag">The boss defeat flag from FogMod's Graph</param>
     public static void Inject(
         string modDir,
         Events events,
-        List<WarpMatchData> warpMatches,
+        List<Connection> connections,
         int finishEvent,
         int bossDefeatFlag)
     {
         // Part A: Modify fogwarp template + extend InitializeEvent calls
-        InjectFogGateFlags(modDir, events, warpMatches);
+        InjectFogGateFlags(modDir, events, connections);
 
         // Part B: Create boss death monitor in common.emevd
         if (finishEvent > 0 && bossDefeatFlag > 0)
@@ -53,7 +54,7 @@ public static class ZoneTrackingInjector
     /// then extend all InitializeEvent calls to pass the tracking flag ID.
     /// </summary>
     private static void InjectFogGateFlags(
-        string modDir, Events events, List<WarpMatchData> warpMatches)
+        string modDir, Events events, List<Connection> connections)
     {
         var eventDir = Path.Combine(modDir, "event");
         if (!Directory.Exists(eventDir))
@@ -62,18 +63,21 @@ public static class ZoneTrackingInjector
             return;
         }
 
-        // Build lookup: (area, block, sub, sub2, region) → flagId
-        var lookup = new Dictionary<(byte, byte, byte, byte, int), int>();
-        foreach (var wm in warpMatches)
+        // Build lookup: (area, block, sub, sub2) → flagId
+        // Parse map bytes from the entrance_gate name (e.g., "m31_05_00_00_AEG099_230_9001" → [31,5,0,0])
+        var lookup = new Dictionary<(byte, byte, byte, byte), int>();
+        foreach (var conn in connections)
         {
-            if (wm.DestMapBytes.Length < 4)
+            if (conn.FlagId <= 0)
                 continue;
-            var key = (wm.DestMapBytes[0], wm.DestMapBytes[1],
-                       wm.DestMapBytes[2], wm.DestMapBytes[3], wm.DestRegion);
-            lookup.TryAdd(key, wm.FlagId);  // first wins if duplicate
+            var mapBytes = ParseMapBytesFromGateName(conn.EntranceGate);
+            if (mapBytes == null)
+                continue;
+            var key = (mapBytes[0], mapBytes[1], mapBytes[2], mapBytes[3]);
+            lookup.TryAdd(key, conn.FlagId);  // first wins if duplicate (diamond merges have same flagId)
         }
 
-        Console.WriteLine($"Zone tracking: {lookup.Count} warp destinations to match");
+        Console.WriteLine($"Zone tracking: {lookup.Count} destination maps to match");
 
         // Step 1: Determine instruction arg byte offsets using sentinel values
         const int SENTINEL = 0x7F7F7F7F;
@@ -203,7 +207,7 @@ public static class ZoneTrackingInjector
     /// Returns the number of calls extended.
     /// </summary>
     private static int ExtendInitializeEventCalls(
-        EMEVD emevd, Dictionary<(byte, byte, byte, byte, int), int> lookup)
+        EMEVD emevd, Dictionary<(byte, byte, byte, byte), int> lookup)
     {
         int count = 0;
 
@@ -228,7 +232,7 @@ public static class ZoneTrackingInjector
                 //   [8..11]  X0_4  fog gate entity
                 //   [12..15] X4_4  button param
                 //   [16..19] X8_4  warp target region
-                //   [20..23] X12   map bytes (4×byte)
+                //   [20..23] X12_1..X15_1  map bytes (4×byte)
                 //   [24..27] X16_4 defeat flag
                 //   [28..31] X20_4 trap flag
                 //   [32..35] X24_4 alt flag
@@ -239,14 +243,8 @@ public static class ZoneTrackingInjector
                 if (args.Length < 24)
                     continue;
 
-                // Extract match keys: map bytes at [20..23], region at [16..19]
-                byte mapA = args[20];
-                byte mapB = args[21];
-                byte mapC = args[22];
-                byte mapD = args[23];
-                int region = BitConverter.ToInt32(args, 16);
-
-                var key = (mapA, mapB, mapC, mapD, region);
+                // Match by destination map bytes at [20..23]
+                var key = (args[20], args[21], args[22], args[23]);
                 int flagId = lookup.GetValueOrDefault(key, 0);
 
                 // Extend args from current size to current + 4, appending flagId
@@ -260,6 +258,36 @@ public static class ZoneTrackingInjector
         }
 
         return count;
+    }
+
+    /// <summary>
+    /// Parse map bytes from a gate name like "m31_05_00_00_AEG099_230_9001" → [31, 5, 0, 0].
+    /// </summary>
+    private static byte[]? ParseMapBytesFromGateName(string gateName)
+    {
+        if (string.IsNullOrEmpty(gateName))
+            return null;
+
+        var name = gateName.TrimStart('m');
+        var parts = name.Split('_');
+        if (parts.Length < 4)
+            return null;
+
+        try
+        {
+            return new byte[]
+            {
+                byte.Parse(parts[0]),
+                byte.Parse(parts[1]),
+                byte.Parse(parts[2]),
+                byte.Parse(parts[3]),
+            };
+        }
+        catch (FormatException)
+        {
+            Console.WriteLine($"Warning: Could not parse map bytes from gate name: {gateName}");
+            return null;
+        }
     }
 
     /// <summary>

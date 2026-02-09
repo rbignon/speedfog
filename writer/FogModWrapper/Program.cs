@@ -353,12 +353,12 @@ Example:
         SmithingStoneShopInjector.Inject(modDir);
 
         // 7f. Inject zone tracking events for racing support
-        if (graphData.FinishEvent > 0 && injectionResult.WarpMatches.Count > 0)
+        if (graphData.FinishEvent > 0)
         {
             ZoneTrackingInjector.Inject(
                 modDir,
                 events,
-                injectionResult.WarpMatches,
+                graphData.Connections,
                 injectionResult.FinishEvent,
                 injectionResult.BossDefeatFlag);
         }
