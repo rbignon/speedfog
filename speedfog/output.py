@@ -179,8 +179,10 @@ def dag_to_dict(
             "shuffle": True,
         }
 
-    # Allocate event flag IDs per non-start destination node (for racing zone tracking)
-    EVENT_FLAG_BASE = 9000000
+    # Allocate event flag IDs per non-start destination node (for racing zone tracking).
+    # Must land in a category pre-allocated by FogRando in VirtualMemoryFlag.
+    # FogRando's category 1040292 uses offsets ~100-299; we use 800-999 (200 flags).
+    EVENT_FLAG_BASE = 1040292800
     node_flag_ids: dict[str, int] = {}
     flag_counter = 0
     for node in dag.nodes.values():
