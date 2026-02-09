@@ -4,7 +4,7 @@ Elden Ring mod that generates short randomized runs (~1 hour) with a controlled 
 
 ## Project Context
 
-SpeedFog creates focused paths from Chapel of Anticipation to Radagon/Elden Beast with:
+SpeedFog creates focused paths from Chapel of Anticipation to a random major boss with:
 - Balanced parallel branches (no disadvantaged paths)
 - No dead ends (all paths lead to the end)
 - Configurable parameters (bosses, dungeons, duration)
@@ -124,7 +124,7 @@ speedfog/
 | `GraphLoader` | Parses graph.json v4 format from Python |
 | `ConnectionInjector` | Injects connections into FogMod's Graph, extracts warp data |
 | `ZoneTrackingInjector` | Injects SetEventFlag before fog gate warps for racing |
-| `RunCompleteInjector` | Injects "RUN COMPLETE" full screen message on final boss defeat |
+| `RunCompleteInjector` | Injects "RUN COMPLETE" golden banner on final boss defeat |
 | `StartingItemInjector` | Injects starting item events into common.emevd |
 | `StartingResourcesInjector` | Injects runes (CharaInitParam), seeds/tears (ItemLots) |
 
