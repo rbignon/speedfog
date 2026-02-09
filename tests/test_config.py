@@ -226,26 +226,6 @@ starting_runes = 50000
     assert config.starting_items.starting_runes == 50000
 
 
-def test_starting_items_get_item_lots():
-    """get_item_lots returns correct ItemLot IDs (deprecated, use get_starting_goods)."""
-    config = Config.from_dict(
-        {
-            "starting_items": {
-                "academy_key": True,
-                "pureblood_medal": False,
-                "great_runes": False,
-                "rune_godrick": True,
-                "rune_radahn": False,
-            }
-        }
-    )
-    lots = config.starting_items.get_item_lots()
-    assert 1034450100 in lots  # Academy Key
-    assert 100320 not in lots  # Pureblood Medal disabled
-    assert 34100500 in lots  # Godrick's Great Rune
-    assert 34130050 not in lots  # Radahn's Great Rune disabled
-
-
 def test_starting_items_get_starting_goods():
     """get_starting_goods returns correct Good IDs for DirectlyGivePlayerItem."""
     config = Config.from_dict(

@@ -142,49 +142,6 @@ class StartingItemsConfig:
                 f"starting_runes must be 0-10000000, got {self.starting_runes}"
             )
 
-    def get_item_lots(self) -> list[int]:
-        """Get list of ItemLot IDs to award at game start.
-
-        DEPRECATED: Use get_starting_goods() instead. ItemLots are randomized
-        by the Item Randomizer, so using AwardItemLot gives wrong items.
-        """
-        lots: list[int] = []
-
-        if self.academy_key:
-            lots.append(1034450100)
-        if self.pureblood_medal:
-            lots.append(100320)
-
-        # Great Runes
-        if self.great_runes:
-            # Add all Great Runes
-            lots.extend(
-                [
-                    34100500,  # Godrick
-                    34130050,  # Radahn
-                    34140700,  # Morgott
-                    34140710,  # Mohg
-                    34120500,  # Rykard
-                    34150000,  # Malenia
-                ]
-            )
-        else:
-            # Add individual Great Runes based on flags
-            if self.rune_godrick:
-                lots.append(34100500)
-            if self.rune_radahn:
-                lots.append(34130050)
-            if self.rune_morgott:
-                lots.append(34140700)
-            if self.rune_mohg:
-                lots.append(34140710)
-            if self.rune_rykard:
-                lots.append(34120500)
-            if self.rune_malenia:
-                lots.append(34150000)
-
-        return lots
-
     def get_starting_goods(self) -> list[int]:
         """Get list of Good IDs to award at game start.
 
