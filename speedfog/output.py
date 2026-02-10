@@ -107,10 +107,14 @@ def _make_fullname(
 
     if fog_data:
         # Strategy 1: Try fully-qualified name with zone's map
+        # Verify the zone is actually in this fog entry's zones, since the same
+        # fog_id (e.g., AEG099_002_9000) can exist on many different maps.
         if zone_map:
             fullname = f"{zone_map}_{fog_id}"
             if fullname in fog_data:
-                return fullname
+                entry_zones = fog_data[fullname].get("zones", [])
+                if zone in entry_zones:
+                    return fullname
 
         # Strategy 2: Search for any fullname ending with fog_id that contains zone
         # This handles cases where the fog gate is in a different map (e.g., dungeon entrance)
