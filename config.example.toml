@@ -112,6 +112,7 @@ output_dir = "./seeds"
 academy_key = true       # Academy Glintstone Key - opens Raya Lucaria
 pureblood_medal = true   # Pureblood Knight's Medal - warps to Mohgwyn Palace
 drawing_room_key = true  # Drawing-Room Key - access Volcano Manor interior
+lantern = true           # Lantern - hands-free light source for dark areas
 
 # Great Runes (restored versions, equippable at graces)
 # These are the ACTIVATED versions (Good IDs 191-196), not the boss drops

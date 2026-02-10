@@ -114,6 +114,7 @@ class StartingItemsConfig:
     academy_key: bool = True  # Academy Glintstone Key (Good ID 8109)
     pureblood_medal: bool = True  # Pureblood Knight's Medal (Good ID 2160)
     drawing_room_key: bool = True  # Drawing-Room Key for Volcano Manor (Good ID 8134)
+    lantern: bool = True  # Lantern (Good ID 2070) - hands-free light source
 
     # Great Runes (restored versions, equippable at graces)
     # Restored Great Runes have Good IDs 191-196 (not the boss drop versions 8148-8153)
@@ -165,6 +166,8 @@ class StartingItemsConfig:
             goods.append(2160)  # Pureblood Knight's Medal
         if self.drawing_room_key:
             goods.append(8134)  # Drawing-Room Key (Volcano Manor)
+        if self.lantern:
+            goods.append(2070)  # Lantern
 
         # DLC key items
         if self.omother:
