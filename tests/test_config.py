@@ -19,6 +19,7 @@ def test_config_defaults():
     """Config.from_dict with empty dict uses all defaults."""
     config = Config.from_dict({})
     assert config.seed == 0
+    assert config.run_complete_message == "RUN COMPLETE"
     assert config.budget.total_weight == 30
     assert config.budget.tolerance == 5
     assert config.requirements.bosses == 5
@@ -370,6 +371,17 @@ def test_structure_final_tier_type_validation():
         Config.from_dict({"structure": {"final_tier": "20"}})
     with pytest.raises(TypeError, match="final_tier must be int"):
         Config.from_dict({"structure": {"final_tier": 20.5}})
+
+
+def test_run_complete_message_from_toml(tmp_path):
+    """run_complete_message can be set from TOML."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[run]
+run_complete_message = "GG EZ"
+""")
+    config = Config.from_toml(config_file)
+    assert config.run_complete_message == "GG EZ"
 
 
 def test_structure_final_tier_valid_range():

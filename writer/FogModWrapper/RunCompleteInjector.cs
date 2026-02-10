@@ -15,7 +15,6 @@ namespace FogModWrapper;
 public static class RunCompleteInjector
 {
     private const int EVENT_ID = 755863000;
-    private const string MESSAGE_TEXT = "RUN COMPLETE";
     private const float DELAY_SECONDS = 7.0f;
 
     // TextBannerType.Victory (33) - Colosseum-only, safe to repurpose in PvE
@@ -28,9 +27,9 @@ public static class RunCompleteInjector
     private const int PLAYER_ENTITY_ID = 10000;
 
     /// <summary>
-    /// Inject the "RUN COMPLETE" message display into both FMG and EMEVD.
+    /// Inject the run complete message display into both FMG and EMEVD.
     /// </summary>
-    public static void Inject(string modDir, string gameDir, Events events, int finishEvent)
+    public static void Inject(string modDir, string gameDir, Events events, int finishEvent, string messageText = "RUN COMPLETE")
     {
         if (finishEvent <= 0)
         {
@@ -38,15 +37,15 @@ public static class RunCompleteInjector
             return;
         }
 
-        InjectFmgEntries(modDir, gameDir);
+        InjectFmgEntries(modDir, gameDir, messageText);
         InjectEmevdEvent(modDir, events, finishEvent);
     }
 
     /// <summary>
-    /// Overwrite the "VICTORY" banner text in GR_MenuText FMG with "RUN COMPLETE"
-    /// for all game languages.
+    /// Overwrite the "VICTORY" banner text in GR_MenuText FMG with the run complete
+    /// message for all game languages.
     /// </summary>
-    private static void InjectFmgEntries(string modDir, string gameDir)
+    private static void InjectFmgEntries(string modDir, string gameDir, string messageText)
     {
         var gameMsgDir = Path.Combine(gameDir, "msg");
         if (!Directory.Exists(gameMsgDir))
@@ -79,11 +78,11 @@ public static class RunCompleteInjector
             var existing = fmg.Entries.Find(e => e.ID == BANNER_FMG_ID);
             if (existing != null)
             {
-                existing.Text = MESSAGE_TEXT;
+                existing.Text = messageText;
             }
             else
             {
-                fmg.Entries.Add(new FMG.Entry(BANNER_FMG_ID, MESSAGE_TEXT));
+                fmg.Entries.Add(new FMG.Entry(BANNER_FMG_ID, messageText));
             }
 
             fmgFile.Bytes = fmg.Write();
@@ -93,7 +92,7 @@ public static class RunCompleteInjector
             count++;
         }
 
-        Console.WriteLine($"Run complete: set GR_MenuText[{BANNER_FMG_ID}] = \"{MESSAGE_TEXT}\" in {count} languages");
+        Console.WriteLine($"Run complete: set GR_MenuText[{BANNER_FMG_ID}] = \"{messageText}\" in {count} languages");
     }
 
     /// <summary>

@@ -64,6 +64,13 @@ public class GraphData
     public int FinishEvent { get; set; } = 0;
 
     /// <summary>
+    /// Text displayed as a golden banner after the final boss is defeated.
+    /// Configurable via config.toml [run] run_complete_message.
+    /// </summary>
+    [JsonPropertyName("run_complete_message")]
+    public string RunCompleteMessage { get; set; } = "RUN COMPLETE";
+
+    /// <summary>
     /// Randomized starting build items (care package).
     /// Each item has a type (Weapon/Protector/Accessory/Goods), param row ID, and display name.
     /// </summary>

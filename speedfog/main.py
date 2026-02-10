@@ -190,6 +190,7 @@ def main() -> int:
         starting_golden_seeds=config.starting_items.golden_seeds,
         starting_sacred_tears=config.starting_items.sacred_tears,
         care_package=care_package_items,
+        run_complete_message=config.run_complete_message,
     )
     print(f"Written: {json_path}")
     if starting_goods:

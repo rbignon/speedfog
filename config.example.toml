@@ -8,6 +8,10 @@
 # Share a specific seed with friends for identical runs!
 seed = 0
 
+# Text displayed as a golden banner after defeating the final boss.
+# Default: "RUN COMPLETE"
+# run_complete_message = "RUN COMPLETE"
+
 [budget]
 # Target total "weight" for each path through the game.
 # Weight roughly corresponds to minutes (weight 30 ≈ 30-40 min of zones)

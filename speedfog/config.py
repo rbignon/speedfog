@@ -276,6 +276,7 @@ class Config:
     """Main configuration container."""
 
     seed: int = 0
+    run_complete_message: str = "RUN COMPLETE"
     budget: BudgetConfig = field(default_factory=BudgetConfig)
     requirements: RequirementsConfig = field(default_factory=RequirementsConfig)
     structure: StructureConfig = field(default_factory=StructureConfig)
@@ -298,6 +299,9 @@ class Config:
 
         return cls(
             seed=run_section.get("seed", 0),
+            run_complete_message=run_section.get(
+                "run_complete_message", "RUN COMPLETE"
+            ),
             budget=BudgetConfig(
                 total_weight=budget_section.get("total_weight", 30),
                 tolerance=budget_section.get("tolerance", 5),

@@ -50,7 +50,8 @@ public class GraphDataSerializationTests
                 ["9000001"] = "liurnia"
             },
             FinalNodeFlag = 9000001,
-            FinishEvent = 9000002
+            FinishEvent = 9000002,
+            RunCompleteMessage = "TEST COMPLETE"
         };
 
         var json = JsonSerializer.Serialize(original, JsonOptions);
@@ -71,6 +72,7 @@ public class GraphDataSerializationTests
         Assert.Equal(original.EventMap.Count, deserialized.EventMap.Count);
         Assert.Equal(original.FinalNodeFlag, deserialized.FinalNodeFlag);
         Assert.Equal(original.FinishEvent, deserialized.FinishEvent);
+        Assert.Equal(original.RunCompleteMessage, deserialized.RunCompleteMessage);
     }
 
     [Fact]
@@ -337,5 +339,47 @@ public class GraphDataSerializationTests
 
         Assert.NotNull(deserialized);
         Assert.Empty(deserialized.CarePackage);
+    }
+
+    [Fact]
+    public void GraphData_RunCompleteMessage_DefaultsWhenMissing()
+    {
+        var json = """{"version":"4.0","seed":1}""";
+        var deserialized = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.Equal("RUN COMPLETE", deserialized.RunCompleteMessage);
+    }
+
+    [Fact]
+    public void GraphData_RunCompleteMessage_RoundTrip()
+    {
+        var original = new GraphData
+        {
+            Version = "4.0",
+            Seed = 42,
+            RunCompleteMessage = "GG EZ"
+        };
+
+        var json = JsonSerializer.Serialize(original, JsonOptions);
+        var deserialized = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.Equal("GG EZ", deserialized.RunCompleteMessage);
+    }
+
+    [Fact]
+    public void GraphData_RunCompleteMessage_JsonPropertyName_UsesSnakeCase()
+    {
+        var data = new GraphData
+        {
+            Version = "4.0",
+            Seed = 1,
+            RunCompleteMessage = "TEST"
+        };
+
+        var json = JsonSerializer.Serialize(data);
+
+        Assert.Contains("\"run_complete_message\"", json);
     }
 }

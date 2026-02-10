@@ -393,3 +393,19 @@ class TestEventMap:
         ]
         assert len(end_connections) == 2
         assert end_connections[0]["flag_id"] == end_connections[1]["flag_id"]
+
+    def test_run_complete_message_default(self):
+        """Default run_complete_message is 'RUN COMPLETE'."""
+        result = _make_result()
+        assert result["run_complete_message"] == "RUN COMPLETE"
+
+    def test_run_complete_message_custom(self):
+        """Custom run_complete_message is passed through."""
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters, run_complete_message="GG")
+        assert result["run_complete_message"] == "GG"

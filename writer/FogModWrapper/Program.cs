@@ -373,7 +373,7 @@ Example:
         }
 
         // 7g. Inject "RUN COMPLETE" banner on final boss defeat
-        RunCompleteInjector.Inject(modDir, config.GameDir, events, graphData.FinishEvent);
+        RunCompleteInjector.Inject(modDir, config.GameDir, events, graphData.FinishEvent, graphData.RunCompleteMessage);
 
         // 8. Package with ModEngine 2
         var packager = new PackagingWriter(config.OutputDir);
