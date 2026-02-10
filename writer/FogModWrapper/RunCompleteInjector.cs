@@ -15,7 +15,7 @@ namespace FogModWrapper;
 public static class RunCompleteInjector
 {
     private const int EVENT_ID = 755863000;
-    private const float DELAY_SECONDS = 7.0f;
+    private const float DELAY_SECONDS = 4.0f;
 
     // TextBannerType.Victory (33) - Colosseum-only, safe to repurpose in PvE
     private const byte BANNER_TYPE = 33;
