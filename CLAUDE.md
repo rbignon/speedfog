@@ -61,9 +61,11 @@ speedfog/
 ├── writer/                  # C# - Mod file generation
 │   ├── lib/                 # DLLs (FogMod, RandomizerCommon, SoulsFormats, etc.)
 │   ├── assets/              # Extra DLLs (RandomizerCrashFix, RandomizerHelper)
+│   ├── FogModWrapper.Core/  # Shared library (models, graph loading)
+│   │   ├── GraphLoader.cs   # Load graph.json v4
+│   │   └── Models/GraphData.cs  # GraphData, Connection, CarePackageItem
 │   ├── FogModWrapper/       # Fog gate writer - thin wrapper calling FogMod.dll
 │   │   ├── Program.cs       # CLI entry point
-│   │   ├── GraphLoader.cs   # Load graph.json v4
 │   │   ├── ConnectionInjector.cs  # Inject connections into FogMod Graph
 │   │   ├── StartingItemInjector.cs  # Inject starting item events into EMEVD
 │   │   ├── StartingResourcesInjector.cs  # Inject runes, seeds, tears
@@ -73,6 +75,7 @@ speedfog/
 │   │   ├── RunCompleteInjector.cs  # Inject "RUN COMPLETE" message on final boss defeat
 │   │   ├── ChapelGraceInjector.cs  # Site of Grace at Chapel of Anticipation
 │   │   └── eldendata/       # FogRando game data (gitignored)
+│   ├── FogModWrapper.Tests/  # xUnit tests
 │   └── ItemRandomizerWrapper/  # Item randomizer - thin wrapper calling RandomizerCommon.dll
 │       ├── Program.cs       # CLI entry point
 │       └── diste/           # Item Randomizer game data (gitignored)
