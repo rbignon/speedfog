@@ -115,6 +115,9 @@ class StartingItemsConfig:
     pureblood_medal: bool = True  # Pureblood Knight's Medal (Good ID 2160)
     drawing_room_key: bool = True  # Drawing-Room Key for Volcano Manor (Good ID 8134)
     lantern: bool = True  # Lantern (Good ID 2070) - hands-free light source
+    whetblades: bool = (
+        True  # Whetstone Knife + all Whetblades (Good IDs 8590, 8970-8974)
+    )
 
     # Great Runes (restored versions, equippable at graces)
     # Restored Great Runes have Good IDs 191-196 (not the boss drop versions 8148-8153)
@@ -168,6 +171,17 @@ class StartingItemsConfig:
             goods.append(8134)  # Drawing-Room Key (Volcano Manor)
         if self.lantern:
             goods.append(2070)  # Lantern
+        if self.whetblades:
+            goods.extend(
+                [
+                    8590,  # Whetstone Knife
+                    8970,  # Iron Whetblade (Heavy, Keen, Quality)
+                    8971,  # Red-Hot Whetblade (Fire, Flame Art)
+                    8972,  # Sanctified Whetblade (Lightning, Sacred)
+                    8973,  # Glintstone Whetblade (Magic, Cold)
+                    8974,  # Black Whetblade (Poison, Blood, Occult)
+                ]
+            )
 
         # DLC key items
         if self.omother:

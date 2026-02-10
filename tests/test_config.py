@@ -210,6 +210,7 @@ def test_starting_items_defaults():
     assert config.starting_items.pureblood_medal is True
     assert config.starting_items.drawing_room_key is True
     assert config.starting_items.lantern is True
+    assert config.starting_items.whetblades is True
     assert config.starting_items.great_runes is True
     assert config.starting_items.golden_seeds == 0
     assert config.starting_items.sacred_tears == 0
@@ -250,6 +251,8 @@ def test_starting_items_get_starting_goods():
     assert 2160 not in goods  # Pureblood Knight's Medal disabled
     assert 8134 in goods  # Drawing-Room Key
     assert 2070 in goods  # Lantern
+    assert 8590 in goods  # Whetstone Knife
+    assert 8970 in goods  # Iron Whetblade
     assert 191 in goods  # Godrick's Great Rune (restored, Good ID 191)
     assert 192 not in goods  # Radahn's Great Rune disabled
 
@@ -269,6 +272,8 @@ def test_starting_items_get_starting_goods_all_runes():
     assert 2160 in goods  # Pureblood Knight's Medal
     assert 8134 in goods  # Drawing-Room Key
     assert 2070 in goods  # Lantern
+    assert 8590 in goods  # Whetstone Knife
+    assert 8974 in goods  # Black Whetblade
     assert 191 in goods  # Godrick (restored)
     assert 192 in goods  # Radahn (restored)
     assert 193 in goods  # Morgott (restored)
