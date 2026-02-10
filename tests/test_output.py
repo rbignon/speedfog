@@ -409,3 +409,19 @@ class TestEventMap:
         )
         result = dag_to_dict(dag, clusters, run_complete_message="GG")
         assert result["run_complete_message"] == "GG"
+
+    def test_chapel_grace_default(self):
+        """Default chapel_grace is True."""
+        result = _make_result()
+        assert result["chapel_grace"] is True
+
+    def test_chapel_grace_false(self):
+        """chapel_grace=False is passed through."""
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters, chapel_grace=False)
+        assert result["chapel_grace"] is False

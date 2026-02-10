@@ -294,6 +294,7 @@ class Config:
 
     seed: int = 0
     run_complete_message: str = "RUN COMPLETE"
+    chapel_grace: bool = True
     budget: BudgetConfig = field(default_factory=BudgetConfig)
     requirements: RequirementsConfig = field(default_factory=RequirementsConfig)
     structure: StructureConfig = field(default_factory=StructureConfig)
@@ -319,6 +320,7 @@ class Config:
             run_complete_message=run_section.get(
                 "run_complete_message", "RUN COMPLETE"
             ),
+            chapel_grace=run_section.get("chapel_grace", True),
             budget=BudgetConfig(
                 total_weight=budget_section.get("total_weight", 30),
                 tolerance=budget_section.get("tolerance", 5),

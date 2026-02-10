@@ -12,6 +12,10 @@ seed = 0
 # Default: "RUN COMPLETE"
 # run_complete_message = "RUN COMPLETE"
 
+# Add a Site of Grace at Chapel of Anticipation (starting location).
+# Default: true
+# chapel_grace = true
+
 [budget]
 # Target total "weight" for each path through the game.
 # Weight roughly corresponds to minutes (weight 30 ≈ 30-40 min of zones)

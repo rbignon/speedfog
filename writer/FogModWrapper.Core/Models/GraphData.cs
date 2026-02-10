@@ -71,6 +71,12 @@ public class GraphData
     public string RunCompleteMessage { get; set; } = "RUN COMPLETE";
 
     /// <summary>
+    /// Whether to add a Site of Grace at Chapel of Anticipation (starting location).
+    /// </summary>
+    [JsonPropertyName("chapel_grace")]
+    public bool ChapelGrace { get; set; } = true;
+
+    /// <summary>
     /// Randomized starting build items (care package).
     /// Each item has a type (Weapon/Protector/Accessory/Goods), param row ID, and display name.
     /// </summary>

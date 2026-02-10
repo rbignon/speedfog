@@ -51,7 +51,8 @@ public class GraphDataSerializationTests
             },
             FinalNodeFlag = 9000001,
             FinishEvent = 9000002,
-            RunCompleteMessage = "TEST COMPLETE"
+            RunCompleteMessage = "TEST COMPLETE",
+            ChapelGrace = false
         };
 
         var json = JsonSerializer.Serialize(original, JsonOptions);
@@ -73,6 +74,7 @@ public class GraphDataSerializationTests
         Assert.Equal(original.FinalNodeFlag, deserialized.FinalNodeFlag);
         Assert.Equal(original.FinishEvent, deserialized.FinishEvent);
         Assert.Equal(original.RunCompleteMessage, deserialized.RunCompleteMessage);
+        Assert.Equal(original.ChapelGrace, deserialized.ChapelGrace);
     }
 
     [Fact]
@@ -381,5 +383,47 @@ public class GraphDataSerializationTests
         var json = JsonSerializer.Serialize(data);
 
         Assert.Contains("\"run_complete_message\"", json);
+    }
+
+    [Fact]
+    public void GraphData_ChapelGrace_RoundTrip()
+    {
+        var original = new GraphData
+        {
+            Version = "4.0",
+            Seed = 42,
+            ChapelGrace = false
+        };
+
+        var json = JsonSerializer.Serialize(original, JsonOptions);
+        var deserialized = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.False(deserialized.ChapelGrace);
+    }
+
+    [Fact]
+    public void GraphData_ChapelGrace_DefaultsTrueWhenMissing()
+    {
+        var json = """{"version":"4.0","seed":1}""";
+        var deserialized = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.True(deserialized.ChapelGrace);
+    }
+
+    [Fact]
+    public void GraphData_ChapelGrace_JsonPropertyName_UsesSnakeCase()
+    {
+        var data = new GraphData
+        {
+            Version = "4.0",
+            Seed = 1,
+            ChapelGrace = true
+        };
+
+        var json = JsonSerializer.Serialize(data);
+
+        Assert.Contains("\"chapel_grace\"", json);
     }
 }

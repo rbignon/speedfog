@@ -375,6 +375,12 @@ Example:
         // 7g. Inject "RUN COMPLETE" banner on final boss defeat
         RunCompleteInjector.Inject(modDir, config.GameDir, events, graphData.FinishEvent, graphData.RunCompleteMessage);
 
+        // 7h. Inject Site of Grace at Chapel of Anticipation
+        if (graphData.ChapelGrace)
+        {
+            ChapelGraceInjector.Inject(modDir, config.GameDir);
+        }
+
         // 8. Package with ModEngine 2
         var packager = new PackagingWriter(config.OutputDir);
         await packager.WritePackageAsync(config.MergeDir);

@@ -191,6 +191,7 @@ def main() -> int:
         starting_sacred_tears=config.starting_items.sacred_tears,
         care_package=care_package_items,
         run_complete_message=config.run_complete_message,
+        chapel_grace=config.chapel_grace,
     )
     print(f"Written: {json_path}")
     if starting_goods:

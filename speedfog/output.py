@@ -143,6 +143,7 @@ def dag_to_dict(
     starting_sacred_tears: int = 0,
     care_package: list[CarePackageItem] | None = None,
     run_complete_message: str = "RUN COMPLETE",
+    chapel_grace: bool = True,
 ) -> dict[str, Any]:
     """Convert a DAG to v4 JSON-serializable dictionary.
 
@@ -163,6 +164,7 @@ def dag_to_dict(
         starting_sacred_tears: Sacred Tears to give at start
         care_package: List of CarePackageItem for randomized starting build
         run_complete_message: Text for the golden banner after final boss defeat
+        chapel_grace: Whether to add a Site of Grace at Chapel of Anticipation
 
     Returns:
         Dictionary with the following structure:
@@ -308,6 +310,7 @@ def dag_to_dict(
         "final_node_flag": final_node_flag,
         "finish_event": finish_event,
         "run_complete_message": run_complete_message,
+        "chapel_grace": chapel_grace,
         "starting_item_lots": starting_item_lots or [],
         "starting_goods": starting_goods or [],
         "starting_runes": starting_runes,
@@ -333,6 +336,7 @@ def export_json(
     starting_sacred_tears: int = 0,
     care_package: list[CarePackageItem] | None = None,
     run_complete_message: str = "RUN COMPLETE",
+    chapel_grace: bool = True,
 ) -> None:
     """Export a DAG to v4 formatted JSON file.
 
@@ -349,6 +353,7 @@ def export_json(
         starting_sacred_tears: Sacred Tears to give at start
         care_package: List of CarePackageItem for randomized starting build
         run_complete_message: Text for the golden banner after final boss defeat
+        chapel_grace: Whether to add a Site of Grace at Chapel of Anticipation
     """
     data = dag_to_dict(
         dag,
@@ -362,6 +367,7 @@ def export_json(
         starting_sacred_tears,
         care_package,
         run_complete_message,
+        chapel_grace,
     )
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)

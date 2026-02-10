@@ -20,6 +20,7 @@ def test_config_defaults():
     config = Config.from_dict({})
     assert config.seed == 0
     assert config.run_complete_message == "RUN COMPLETE"
+    assert config.chapel_grace is True
     assert config.budget.total_weight == 30
     assert config.budget.tolerance == 5
     assert config.requirements.bosses == 5
@@ -403,3 +404,14 @@ def test_structure_final_tier_valid_range():
 
     config_mid = Config.from_dict({"structure": {"final_tier": 15}})
     assert config_mid.structure.final_tier == 15
+
+
+def test_chapel_grace_from_toml(tmp_path):
+    """chapel_grace can be set from TOML."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[run]
+chapel_grace = false
+""")
+    config = Config.from_toml(config_file)
+    assert config.chapel_grace is False
