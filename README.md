@@ -40,7 +40,7 @@ uv pip install -e .
 # Install sfextract (extracts DLLs from FogRando)
 dotnet tool install -g sfextract
 
-# Extract dependencies (both mods recommended)
+# Extract dependencies, generate derived data, and build C# writers
 python tools/setup_dependencies.py \
   --fogrando /path/to/FogRando.zip \
   --itemrando /path/to/ItemRandomizer.zip

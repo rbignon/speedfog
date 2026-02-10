@@ -63,11 +63,15 @@ speedfog/
 │   ├── assets/              # Extra DLLs (RandomizerCrashFix, RandomizerHelper)
 │   ├── FogModWrapper/       # Fog gate writer - thin wrapper calling FogMod.dll
 │   │   ├── Program.cs       # CLI entry point
-│   │   ├── GraphLoader.cs   # Load graph.json v2
+│   │   ├── GraphLoader.cs   # Load graph.json v4
 │   │   ├── ConnectionInjector.cs  # Inject connections into FogMod Graph
 │   │   ├── StartingItemInjector.cs  # Inject starting item events into EMEVD
 │   │   ├── StartingResourcesInjector.cs  # Inject runes, seeds, tears
+│   │   ├── RoundtableUnlockInjector.cs  # Unlock Roundtable Hold at start
+│   │   ├── SmithingStoneShopInjector.cs  # Add smithing stones to shop
+│   │   ├── ZoneTrackingInjector.cs  # Zone tracking flags for racing
 │   │   ├── RunCompleteInjector.cs  # Inject "RUN COMPLETE" message on final boss defeat
+│   │   ├── ChapelGraceInjector.cs  # Site of Grace at Chapel of Anticipation
 │   │   └── eldendata/       # FogRando game data (gitignored)
 │   └── ItemRandomizerWrapper/  # Item randomizer - thin wrapper calling RandomizerCommon.dll
 │       ├── Program.cs       # CLI entry point
@@ -80,7 +84,8 @@ speedfog/
 │   ├── fogrando-src/        # C# source files
 │   └── fogrando-data/       # Reference data (foglocations.txt)
 ├── docs/                    # Documentation
-│   └── architecture.md      # System architecture
+│   ├── architecture.md      # System architecture
+│   └── event-flags.md       # Event flag allocation and EMEVD reference
 └── output/                  # Generated mod (gitignored, self-contained)
 ```
 
@@ -89,6 +94,7 @@ speedfog/
 | File | Purpose |
 |------|---------|
 | `docs/architecture.md` | System architecture and data formats |
+| `docs/event-flags.md` | Event flag allocation and EMEVD reference |
 | `reference/fogrando-src/GameDataWriterE.cs` | Main FogRando writer (5639 lines) |
 | `reference/fogrando-src/EldenScaling.cs` | Enemy scaling logic |
 | `config.example.toml` | Example configuration |
@@ -123,10 +129,13 @@ speedfog/
 | `Program.cs` | CLI entry, loads options, calls FogMod's GameDataWriterE |
 | `GraphLoader` | Parses graph.json v4 format from Python |
 | `ConnectionInjector` | Injects connections into FogMod's Graph, extracts warp data |
-| `ZoneTrackingInjector` | Injects SetEventFlag before fog gate warps for racing |
-| `RunCompleteInjector` | Injects "RUN COMPLETE" golden banner on final boss defeat |
 | `StartingItemInjector` | Injects starting item events into common.emevd |
 | `StartingResourcesInjector` | Injects runes (CharaInitParam), seeds/tears (ItemLots) |
+| `RoundtableUnlockInjector` | Unlocks Roundtable Hold at game start |
+| `SmithingStoneShopInjector` | Adds smithing stones to Twin Maiden Husks shop |
+| `ZoneTrackingInjector` | Injects SetEventFlag before fog gate warps for racing |
+| `RunCompleteInjector` | Injects "RUN COMPLETE" golden banner on final boss defeat |
+| `ChapelGraceInjector` | Adds Site of Grace at Chapel of Anticipation |
 
 **ItemRandomizerWrapper** (uses RandomizerCommon.dll directly):
 | Class | Purpose |
@@ -327,11 +336,11 @@ cd writer/test && ./run_integration.sh
   "nodes": {"cluster_id": {"type": "legacy_dungeon", "display_name": "Stormveil Castle", "zones": [...], "layer": 1, "tier": 5, "weight": 15}},
   "edges": [{"from": "cluster_id_1", "to": "cluster_id_2"}],
   "connections": [
-    {"exit_area": "zone1", "exit_gate": "m10_...", "entrance_area": "zone2", "entrance_gate": "m31_...", "flag_id": 9000000}
+    {"exit_area": "zone1", "exit_gate": "m10_...", "entrance_area": "zone2", "entrance_gate": "m31_...", "flag_id": 1040292800}
   ],
   "area_tiers": {"zone1": 1, "zone2": 5},
-  "event_map": {"9000000": "cluster_id"},
-  "finish_event": 9000002
+  "event_map": {"1040292800": "cluster_id"},
+  "finish_event": 1040292802
 }
 ```
 
@@ -340,7 +349,7 @@ cd writer/test && ./run_integration.sh
 - `event_map`: flag_id (str) → cluster_id mapping for racing zone tracking
 - `finish_event`: flag_id set on final boss defeat
 - `flag_id` per connection: event flag set when fog gate is traversed
-- Event flags allocated sequentially from base 9000000 (range 9000000–9000999)
+- Event flags allocated sequentially from base 1040292800 (range 1040292800–1040292999)
 - Connections use FogMod's edge FullName format: `{map}_{gate_name}` (e.g., `m10_01_00_00_AEG099_001_9000`)
 
 ### fogevents.txt

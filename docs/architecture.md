@@ -40,13 +40,20 @@ Generates a balanced DAG of zone connections.
 
 ### C# Fog Writer (`writer/FogModWrapper/`)
 
-Thin wrapper around FogMod.dll that injects our connections.
+Thin wrapper around FogMod.dll that injects our connections and post-processes game files.
 
 | Class | Purpose |
 |-------|---------|
-| `Program.cs` | CLI entry, configure FogMod options |
-| `GraphLoader.cs` | Parse graph.json v2 format |
-| `ConnectionInjector.cs` | Inject connections into FogMod's Graph |
+| `Program.cs` | CLI entry, configure FogMod options, orchestrate pipeline |
+| `GraphLoader.cs` | Parse graph.json v4 format |
+| `ConnectionInjector.cs` | Inject connections into FogMod's Graph, extract boss defeat flag |
+| `StartingItemInjector.cs` | Give starting items + care package via EMEVD |
+| `StartingResourcesInjector.cs` | Give runes, golden seeds, sacred tears via EMEVD |
+| `RoundtableUnlockInjector.cs` | Unlock Roundtable Hold at game start |
+| `SmithingStoneShopInjector.cs` | Add smithing stones to Twin Maiden Husks shop |
+| `ZoneTrackingInjector.cs` | Inject zone tracking flags before fog gate warps |
+| `RunCompleteInjector.cs` | Display victory banner on final boss defeat |
+| `ChapelGraceInjector.cs` | Add Site of Grace at Chapel of Anticipation |
 | `Packaging/` | ModEngine download, config generation, launchers |
 
 ### C# Item Writer (`writer/ItemRandomizerWrapper/`)
@@ -69,7 +76,7 @@ Standalone scripts for setup and data generation.
 
 | Script | Purpose |
 |--------|---------|
-| `setup_dependencies.py` | Extract FogRando and Item Randomizer dependencies |
+| `setup_dependencies.py` | Extract dependencies, generate derived data, build C# writers |
 | `generate_clusters.py` | Parse fog.txt → clusters.json |
 | `extract_fog_data.py` | Extract fog gate metadata |
 
@@ -125,8 +132,9 @@ FogModWrapper:
 2. Configures FogMod options (crawl mode, scaling, etc.)
 3. Creates MergedMods with game dir + item randomizer output (if present)
 4. Builds FogMod's Graph structure (unconnected)
-5. Injects our connections
+5. Injects our connections via ConnectionInjector
 6. Calls `GameDataWriterE.Write()` - reads from merged dirs, writes combined output
+7. Post-processes: starting items, resources, shop, zone tracking, victory banner, grace
 
 **Merge order matters**: Item Randomizer runs first, FogMod merges on top. This matches the official FogRando documentation.
 
@@ -201,13 +209,13 @@ Pre-computed zone clusters with entry/exit fogs.
 }
 ```
 
-### graph.json v3
+### graph.json v4
 
-DAG serialized for C# consumption and visualization tools.
+DAG serialized for C# consumption, visualization tools, and racing.
 
 ```json
 {
-  "version": "3.0",
+  "version": "4.0",
   "seed": 212559448,
   "options": {"scale": true, "crawl": true},
   "nodes": {
@@ -228,14 +236,20 @@ DAG serialized for C# consumption and visualization tools.
       "exit_area": "chapel_start",
       "exit_gate": "m10_01_00_00_AEG099_001_9000",
       "entrance_area": "stormveil",
-      "entrance_gate": "m10_00_00_00_AEG099_002_9000"
+      "entrance_gate": "m10_00_00_00_AEG099_002_9000",
+      "flag_id": 1040292800
     }
   ],
-  "area_tiers": {"chapel_start": 1, "stormveil": 5, ...}
+  "area_tiers": {"chapel_start": 1, "stormveil": 5, ...},
+  "event_map": {"1040292800": "stormveil_c1d3"},
+  "final_node_flag": 1040292801,
+  "finish_event": 1040292802
 }
 ```
 
 Gate names use FogMod's FullName format: `{map}_{gate_name}`.
+
+v4 additions over v3: `flag_id` per connection, `event_map`, `final_node_flag`, `finish_event` (for zone tracking/racing), `run_complete_message`, `chapel_grace`, `starting_goods`, `care_package`.
 
 ## Key Design Decisions
 
@@ -307,6 +321,10 @@ output/
 ├── launch_speedfog.sh      # Linux/Proton launcher
 └── spoiler.txt             # Path spoiler log
 ```
+
+## Event Flags & EMEVD
+
+See [event-flags.md](event-flags.md) for the complete reference on event flag allocation, EMEVD event IDs, and VirtualMemoryFlag constraints.
 
 ## References
 
