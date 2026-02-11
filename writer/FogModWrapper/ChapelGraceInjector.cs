@@ -51,6 +51,9 @@ public static class ChapelGraceInjector
     // Grace asset model (the visual flame)
     private const string GRACE_ASSET_MODEL = "AEG099_060";
 
+    // MSB directory name variants (vanilla=PascalCase, FogMod under Wine=lowercase)
+    private static readonly string[] MSB_DIR_VARIANTS = { "mapstudio", "MapStudio" };
+
     // Preferred source entities to clone from (fog.txt CustomBonfires)
     private const string PREFERRED_ASSET = "AEG217_237_0501";
     private const string PREFERRED_ENEMY = "c4690_9000";
@@ -90,13 +93,25 @@ public static class ChapelGraceInjector
     /// </summary>
     private static MsbResult? InjectMsb(string modDir, string gameDir)
     {
-        var modMsbPath = Path.Combine(modDir, "map", "MapStudio", $"{MAP_ID}.msb.dcx");
-        var gameMsbPath = Path.Combine(gameDir, "map", "MapStudio", $"{MAP_ID}.msb.dcx");
+        var msbFileName = $"{MAP_ID}.msb.dcx";
 
-        var msbPath = File.Exists(modMsbPath) ? modMsbPath : gameMsbPath;
-        if (!File.Exists(msbPath))
+        // FogMod writes "mapstudio" (lowercase) but vanilla game uses "MapStudio" (PascalCase).
+        // On Linux (case-sensitive fs), we must check both.
+        var modMsbPath = FindMsbPath(modDir, msbFileName);
+        var gameMsbPath = FindMsbPath(gameDir, msbFileName);
+
+        string msbPath;
+        if (modMsbPath != null)
         {
-            Console.WriteLine($"Warning: {MAP_ID}.msb.dcx not found, skipping chapel grace");
+            msbPath = modMsbPath;
+        }
+        else if (gameMsbPath != null)
+        {
+            msbPath = gameMsbPath;
+        }
+        else
+        {
+            Console.WriteLine($"Warning: {msbFileName} not found, skipping chapel grace");
             return null;
         }
 
@@ -191,9 +206,11 @@ public static class ChapelGraceInjector
         gracePlayer.EntityID = playerEntity;
         msb.Parts.Players.Add(gracePlayer);
 
-        // Write to modDir (always write to mod output, not game dir)
-        Directory.CreateDirectory(Path.GetDirectoryName(modMsbPath)!);
-        msb.Write(modMsbPath);
+        // Write to modDir (always write to mod output, not game dir).
+        // Use the same directory case that FogMod used (mapstudio vs MapStudio).
+        var writePath = modMsbPath ?? FindOrCreateMsbDir(modDir, msbFileName);
+        Directory.CreateDirectory(Path.GetDirectoryName(writePath)!);
+        msb.Write(writePath);
 
         Console.WriteLine($"  MSB: asset {graceAsset.Name} (entity {bonfireEntity}), " +
                           $"NPC {graceNpc.Name} (entity {chrEntity}), " +
@@ -420,5 +437,41 @@ public static class ChapelGraceInjector
             if (!names.Contains(name))
                 return name;
         }
+    }
+
+    /// <summary>
+    /// Find an MSB file under a base directory, trying both "MapStudio" (vanilla)
+    /// and "mapstudio" (FogMod on Linux via Wine) directory names.
+    /// Returns the full path if found, null otherwise.
+    /// </summary>
+    private static string? FindMsbPath(string baseDir, string msbFileName)
+    {
+        foreach (var dirName in MSB_DIR_VARIANTS)
+        {
+            var path = Path.Combine(baseDir, "map", dirName, msbFileName);
+            if (File.Exists(path))
+                return path;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Find the existing mapstudio directory in modDir, or create one
+    /// matching the convention FogMod used (defaults to "mapstudio").
+    /// </summary>
+    private static string FindOrCreateMsbDir(string modDir, string msbFileName)
+    {
+        var mapDir = Path.Combine(modDir, "map");
+        if (Directory.Exists(mapDir))
+        {
+            foreach (var dirName in MSB_DIR_VARIANTS)
+            {
+                var dir = Path.Combine(mapDir, dirName);
+                if (Directory.Exists(dir))
+                    return Path.Combine(dir, msbFileName);
+            }
+        }
+        // Default to lowercase (FogMod convention under Wine)
+        return Path.Combine(mapDir, "mapstudio", msbFileName);
     }
 }
