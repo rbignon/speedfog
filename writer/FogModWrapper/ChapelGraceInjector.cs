@@ -60,12 +60,22 @@ public static class ChapelGraceInjector
     private const string PREFERRED_PLAYER = "c0000_0000";
 
     /// <summary>
+    /// Result of chapel grace injection, containing IDs needed by downstream injectors.
+    /// </summary>
+    public struct InjectResult
+    {
+        /// <summary>Player warp target entity ID (for ChapelSpawnInjector warp).</summary>
+        public uint PlayerEntityId;
+        /// <summary>Bonfire event flag ID (for ChapelSpawnInjector to pre-activate the grace).</summary>
+        public uint BonfireFlag;
+    }
+
+    /// <summary>
     /// Inject a Site of Grace at Chapel of Anticipation.
     /// Skips gracefully if the grace already exists (e.g., added by Item Randomizer).
-    /// Returns the player warp target entity ID (for use by ChapelSpawnInjector),
-    /// or null if injection was skipped or failed.
+    /// Returns IDs needed by ChapelSpawnInjector, or null if injection was skipped or failed.
     /// </summary>
-    public static uint? Inject(string modDir, string gameDir)
+    public static InjectResult? Inject(string modDir, string gameDir)
     {
         Console.WriteLine("Injecting Chapel of Anticipation grace...");
 
@@ -85,7 +95,11 @@ public static class ChapelGraceInjector
         Console.WriteLine("Chapel of Anticipation grace injected successfully");
 
         // Player entity = bonfire entity - 970 (FogRando convention: GameDataWriterE.cs:4697)
-        return msbResult.Value.BonfireEntityId - 970;
+        return new InjectResult
+        {
+            PlayerEntityId = msbResult.Value.BonfireEntityId - 970,
+            BonfireFlag = bonfireFlag.Value,
+        };
     }
 
     private struct MsbResult

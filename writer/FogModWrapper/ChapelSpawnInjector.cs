@@ -26,11 +26,12 @@ public static class ChapelSpawnInjector
     /// <param name="modDir">Mod output directory (contains event/ subdirectory)</param>
     /// <param name="events">Events parser for building EMEVD instructions</param>
     /// <param name="playerEntityId">Player warp target entity from ChapelGraceInjector</param>
-    public static void Inject(string modDir, Events events, uint playerEntityId)
+    /// <param name="bonfireFlag">Bonfire event flag to pre-activate the grace</param>
+    public static void Inject(string modDir, Events events, uint playerEntityId, uint bonfireFlag)
     {
-        if (playerEntityId == 0)
+        if (playerEntityId == 0 || bonfireFlag == 0)
         {
-            Console.WriteLine("Warning: Invalid player entity ID 0, skipping chapel spawn injection");
+            Console.WriteLine("Warning: Invalid player entity ID or bonfire flag 0, skipping chapel spawn injection");
             return;
         }
 
@@ -75,7 +76,11 @@ public static class ChapelSpawnInjector
         BitConverter.GetBytes(0).CopyTo(warpArgs, 8);
         evt.Instructions.Add(new EMEVD.Instruction(2003, 14, warpArgs));
 
-        // 4. Mark as done so this doesn't trigger again
+        // 4. Activate the grace so the player can rest/fast-travel immediately
+        evt.Instructions.Add(events.ParseAdd(
+            $"SetEventFlag(TargetEventFlagType.EventFlag, {bonfireFlag}, ON)"));
+
+        // 5. Mark as done so this doesn't trigger again
         evt.Instructions.Add(events.ParseAdd(
             $"SetEventFlag(TargetEventFlagType.EventFlag, {SPAWN_DONE_FLAG}, ON)"));
 
@@ -90,6 +95,7 @@ public static class ChapelSpawnInjector
         emevd.Write(emevdPath);
 
         Console.WriteLine($"Chapel spawn: event {EVENT_ID} " +
-                          $"(warp to player entity {playerEntityId}, flag {SPAWN_DONE_FLAG})");
+                          $"(warp to player entity {playerEntityId}, " +
+                          $"activate grace flag {bonfireFlag}, done flag {SPAWN_DONE_FLAG})");
     }
 }
