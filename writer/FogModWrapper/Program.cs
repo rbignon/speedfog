@@ -365,13 +365,28 @@ Example:
                 .Where(kvp => !string.IsNullOrEmpty(kvp.Value.Maps))
                 .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Maps);
 
+            // Use graph.json's FinishBossDefeatFlag (from fog.txt) with priority,
+            // falling back to FogMod's Graph extraction. This fixes leyndell_erdtree
+            // where the boss zone (erdtree) is reachable via norandom fogs but not
+            // directly in the cluster, so FogMod's Graph doesn't have the DefeatFlag.
+            int bossDefeatFlag = graphData.FinishBossDefeatFlag > 0
+                ? graphData.FinishBossDefeatFlag
+                : injectionResult.BossDefeatFlag;
+
+            if (graphData.FinishBossDefeatFlag > 0 && injectionResult.BossDefeatFlag > 0
+                && graphData.FinishBossDefeatFlag != injectionResult.BossDefeatFlag)
+            {
+                Console.WriteLine($"Note: Using graph.json defeat flag {graphData.FinishBossDefeatFlag} " +
+                    $"(FogMod Graph had {injectionResult.BossDefeatFlag})");
+            }
+
             ZoneTrackingInjector.Inject(
                 modDir,
                 events,
                 graphData.Connections,
                 areaMaps,
                 injectionResult.FinishEvent,
-                injectionResult.BossDefeatFlag);
+                bossDefeatFlag);
         }
 
         // 7g. Inject "RUN COMPLETE" banner on final boss defeat

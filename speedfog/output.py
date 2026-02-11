@@ -298,6 +298,11 @@ def dag_to_dict(
     finish_event = EVENT_FLAG_BASE + flag_counter
     flag_counter += 1
 
+    # finish_boss_defeat_flag: the DefeatFlag for the final boss, propagated from
+    # fog.txt through clusters.json. Used by C# as primary source for boss death
+    # detection, with FogMod Graph extraction as fallback.
+    finish_boss_defeat_flag = end_node.cluster.defeat_flag
+
     return {
         "version": "4.0",
         "seed": dag.seed,
@@ -313,6 +318,7 @@ def dag_to_dict(
         "event_map": event_map,
         "final_node_flag": final_node_flag,
         "finish_event": finish_event,
+        "finish_boss_defeat_flag": finish_boss_defeat_flag,
         "run_complete_message": run_complete_message,
         "chapel_grace": chapel_grace,
         "starting_item_lots": starting_item_lots or [],

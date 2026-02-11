@@ -17,6 +17,7 @@ class ClusterData:
     weight: int
     entry_fogs: list[dict]  # [{"fog_id": str, "zone": str}, ...]
     exit_fogs: list[dict]  # [{"fog_id": str, "zone": str, "unique"?: bool}, ...]
+    defeat_flag: int = 0  # Boss defeat event flag (from fog.txt DefeatFlag)
 
     @classmethod
     def from_dict(cls, data: dict) -> ClusterData:
@@ -28,6 +29,7 @@ class ClusterData:
             weight=data["weight"],
             entry_fogs=data.get("entry_fogs", []),
             exit_fogs=data.get("exit_fogs", []),
+            defeat_flag=data.get("defeat_flag", 0),
         )
 
     def available_exits(self, used_entry: dict | None) -> list[dict]:

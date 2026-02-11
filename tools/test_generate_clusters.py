@@ -15,6 +15,7 @@ from generate_clusters import (
     classify_fogs,
     compute_cluster_fogs,
     filter_and_enrich_clusters,
+    find_defeat_flag,
     generate_cluster_id,
     generate_clusters,
     get_evergaol_zones,
@@ -1263,3 +1264,241 @@ class TestFilterAndEnrichMetadataExclude:
         )
 
         assert len(result) == 0
+
+
+# =============================================================================
+# DefeatFlag Tests
+# =============================================================================
+
+
+class TestParseAreaDefeatFlag:
+    """Tests for DefeatFlag parsing in parse_area."""
+
+    def test_parse_area_with_defeat_flag(self):
+        """Area with DefeatFlag gets parsed correctly."""
+        area_data = {
+            "Name": "erdtree",
+            "Text": "Erdtree",
+            "Maps": "m11_10_00_00",
+            "Tags": "final",
+            "DefeatFlag": 19000800,
+        }
+        area = parse_area(area_data)
+        assert area.defeat_flag == 19000800
+
+    def test_parse_area_without_defeat_flag(self):
+        """Area without DefeatFlag defaults to 0."""
+        area_data = {
+            "Name": "leyndell_erdtree",
+            "Text": "Leyndell Erdtree",
+            "Maps": "m11_00_00_00",
+            "Tags": "trivial",
+        }
+        area = parse_area(area_data)
+        assert area.defeat_flag == 0
+
+    def test_parse_area_defeat_flag_string(self):
+        """DefeatFlag as string (YAML parsing) is converted to int."""
+        area_data = {
+            "Name": "boss_zone",
+            "Text": "Boss",
+            "Maps": "m10_00_00_00",
+            "DefeatFlag": "12345678",
+        }
+        area = parse_area(area_data)
+        assert area.defeat_flag == 12345678
+
+
+class TestFindDefeatFlag:
+    """Tests for find_defeat_flag traversal function."""
+
+    def test_direct_defeat_flag(self):
+        """Zone with DefeatFlag returns it directly."""
+        areas = {
+            "boss_zone": AreaData(
+                name="boss_zone", text="", maps=[], tags=[], defeat_flag=19000800
+            ),
+        }
+        assert find_defeat_flag("boss_zone", areas, []) == 19000800
+
+    def test_no_defeat_flag(self):
+        """Zone with no reachable DefeatFlag returns 0."""
+        areas = {
+            "empty_zone": AreaData(name="empty_zone", text="", maps=[], tags=[]),
+        }
+        assert find_defeat_flag("empty_zone", areas, []) == 0
+
+    def test_traversal_via_area_to(self):
+        """DefeatFlag found via Area.To transition."""
+        areas = {
+            "zone_a": AreaData(
+                name="zone_a",
+                text="",
+                maps=[],
+                tags=[],
+                to_connections=[WorldConnection(target_area="zone_b", text="")],
+            ),
+            "zone_b": AreaData(
+                name="zone_b",
+                text="",
+                maps=[],
+                tags=[],
+                defeat_flag=99999,
+            ),
+        }
+        assert find_defeat_flag("zone_a", areas, []) == 99999
+
+    def test_traversal_via_norandom_fog(self):
+        """DefeatFlag found via norandom fog gate."""
+        areas = {
+            "zone_a": AreaData(name="zone_a", text="", maps=[], tags=[]),
+            "zone_b": AreaData(
+                name="zone_b", text="", maps=[], tags=[], defeat_flag=88888
+            ),
+        }
+        norandom_fog = FogData(
+            name="norandom_gate",
+            fog_id=1,
+            aside=FogSide(area="zone_a", text=""),
+            bside=FogSide(area="zone_b", text=""),
+            tags=["norandom"],
+        )
+        assert find_defeat_flag("zone_a", areas, [norandom_fog]) == 88888
+
+    def test_leyndell_erdtree_traversal(self):
+        """Simulate leyndell_erdtree → leyndell2_erdtree → erdtree chain.
+
+        This is the real-world case: leyndell_erdtree has no DefeatFlag,
+        but erdtree (DefeatFlag=19000800) is reachable via Area.To +
+        norandom fog gate.
+        """
+        areas = {
+            "leyndell_erdtree": AreaData(
+                name="leyndell_erdtree",
+                text="Erdtree Sanctuary",
+                maps=["m11_00_00_00"],
+                tags=["trivial"],
+                to_connections=[
+                    WorldConnection(
+                        target_area="leyndell2_erdtree",
+                        text="to ashen capital",
+                        cond="farumazula_maliketh",
+                    )
+                ],
+            ),
+            "leyndell2_erdtree": AreaData(
+                name="leyndell2_erdtree",
+                text="Erdtree Sanctuary (Ashen)",
+                maps=["m11_00_00_00"],
+                tags=[],
+            ),
+            "erdtree": AreaData(
+                name="erdtree",
+                text="Erdtree",
+                maps=["m11_10_00_00"],
+                tags=["final"],
+                defeat_flag=19000800,
+            ),
+        }
+        norandom_fog = FogData(
+            name="erdtree_fog",
+            fog_id=999,
+            aside=FogSide(area="leyndell2_erdtree", text=""),
+            bside=FogSide(area="erdtree", text=""),
+            tags=["norandom"],
+        )
+        result = find_defeat_flag("leyndell_erdtree", areas, [norandom_fog])
+        assert result == 19000800
+
+    def test_depth_limit(self):
+        """Traversal respects max_depth."""
+        # Create a chain of 10 zones, defeat_flag at the end
+        areas = {}
+        for i in range(10):
+            conns = (
+                [WorldConnection(target_area=f"zone_{i + 1}", text="")] if i < 9 else []
+            )
+            areas[f"zone_{i}"] = AreaData(
+                name=f"zone_{i}",
+                text="",
+                maps=[],
+                tags=[],
+                to_connections=conns,
+                defeat_flag=77777 if i == 9 else 0,
+            )
+
+        # With depth 5, should not reach zone_9
+        assert find_defeat_flag("zone_0", areas, [], max_depth=5) == 0
+        # With depth 10, should reach it
+        assert find_defeat_flag("zone_0", areas, [], max_depth=10) == 77777
+
+
+class TestClusterDefeatFlag:
+    """Tests for defeat_flag propagation to clusters."""
+
+    def test_cluster_with_direct_defeat_flag(self):
+        """Cluster zone with DefeatFlag gets it set."""
+        areas = {
+            "boss_zone": AreaData(
+                name="boss_zone",
+                text="Boss",
+                maps=["m10_00_00_00"],
+                tags=[],
+                has_boss=True,
+                defeat_flag=12345678,
+            ),
+        }
+        metadata = {"defaults": {"boss_arena": 2}, "zones": {}}
+        cluster = _make_cluster_with_fogs(frozenset({"boss_zone"}))
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            {"boss_zone"},
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert len(result) == 1
+        assert result[0].defeat_flag == 12345678
+
+    def test_cluster_defeat_flag_via_traversal(self):
+        """Cluster without direct DefeatFlag gets it via traversal."""
+        areas = {
+            "trivial_zone": AreaData(
+                name="trivial_zone",
+                text="Trivial",
+                maps=["m11_00_00_00"],
+                tags=["trivial"],
+                to_connections=[WorldConnection(target_area="boss_zone", text="")],
+            ),
+            "boss_zone": AreaData(
+                name="boss_zone",
+                text="Boss",
+                maps=["m11_10_00_00"],
+                tags=["final"],
+                defeat_flag=19000800,
+            ),
+        }
+        metadata = {
+            "defaults": {"other": 2, "final_boss": 4},
+            "zones": {"trivial_zone": {"type": "final_boss"}},
+        }
+        cluster = _make_cluster_with_fogs(frozenset({"trivial_zone"}))
+
+        # Need all_fogs for traversal (empty here since we traverse via Area.To)
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+            all_fogs=[],
+        )
+
+        assert len(result) == 1
+        assert result[0].defeat_flag == 19000800

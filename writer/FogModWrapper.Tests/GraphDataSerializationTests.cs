@@ -51,6 +51,7 @@ public class GraphDataSerializationTests
             },
             FinalNodeFlag = 9000001,
             FinishEvent = 9000002,
+            FinishBossDefeatFlag = 19000800,
             RunCompleteMessage = "TEST COMPLETE",
             ChapelGrace = false
         };
@@ -73,6 +74,7 @@ public class GraphDataSerializationTests
         Assert.Equal(original.EventMap.Count, deserialized.EventMap.Count);
         Assert.Equal(original.FinalNodeFlag, deserialized.FinalNodeFlag);
         Assert.Equal(original.FinishEvent, deserialized.FinishEvent);
+        Assert.Equal(original.FinishBossDefeatFlag, deserialized.FinishBossDefeatFlag);
         Assert.Equal(original.RunCompleteMessage, deserialized.RunCompleteMessage);
         Assert.Equal(original.ChapelGrace, deserialized.ChapelGrace);
     }
@@ -425,5 +427,47 @@ public class GraphDataSerializationTests
         var json = JsonSerializer.Serialize(data);
 
         Assert.Contains("\"chapel_grace\"", json);
+    }
+
+    [Fact]
+    public void GraphData_FinishBossDefeatFlag_RoundTrip()
+    {
+        var original = new GraphData
+        {
+            Version = "4.0",
+            Seed = 42,
+            FinishBossDefeatFlag = 19000800
+        };
+
+        var json = JsonSerializer.Serialize(original, JsonOptions);
+        var deserialized = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.Equal(19000800, deserialized.FinishBossDefeatFlag);
+    }
+
+    [Fact]
+    public void GraphData_FinishBossDefeatFlag_DefaultsToZeroWhenMissing()
+    {
+        var json = """{"version":"4.0","seed":1}""";
+        var deserialized = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.Equal(0, deserialized.FinishBossDefeatFlag);
+    }
+
+    [Fact]
+    public void GraphData_FinishBossDefeatFlag_JsonPropertyName_UsesSnakeCase()
+    {
+        var data = new GraphData
+        {
+            Version = "4.0",
+            Seed = 1,
+            FinishBossDefeatFlag = 19000800
+        };
+
+        var json = JsonSerializer.Serialize(data);
+
+        Assert.Contains("\"finish_boss_defeat_flag\"", json);
     }
 }

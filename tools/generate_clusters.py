@@ -58,6 +58,7 @@ class AreaData:
     tags: list[str]
     to_connections: list[WorldConnection] = field(default_factory=list)
     has_boss: bool = False  # True if zone has BossTrigger (boss fight zone)
+    defeat_flag: int = 0  # DefeatFlag from fog.txt (boss defeat event flag)
 
 
 @dataclass
@@ -165,6 +166,7 @@ class Cluster:
     cluster_type: str = ""
     weight: int = 0
     cluster_id: str = ""
+    defeat_flag: int = 0
 
 
 # =============================================================================
@@ -264,6 +266,9 @@ def parse_area(area_data: dict) -> AreaData:
     # Check if zone has a boss (BossTrigger field present)
     has_boss = "BossTrigger" in area_data
 
+    # Extract DefeatFlag (boss defeat event flag, e.g., 19000800 for Elden Beast)
+    defeat_flag = int(area_data.get("DefeatFlag", 0))
+
     return AreaData(
         name=area_data.get("Name", ""),
         text=area_data.get("Text", ""),
@@ -271,6 +276,7 @@ def parse_area(area_data: dict) -> AreaData:
         tags=parse_tags(area_data.get("Tags")),
         to_connections=to_connections,
         has_boss=has_boss,
+        defeat_flag=defeat_flag,
     )
 
 
@@ -496,6 +502,75 @@ def build_world_graph(
             graph.add_edge(from_area, to_area, bidirectional=has_reverse)
 
     return graph
+
+
+def find_defeat_flag(
+    start_zone: str,
+    areas: dict[str, AreaData],
+    all_fogs: list[FogData],
+    max_depth: int = 5,
+) -> int:
+    """Find a DefeatFlag reachable from start_zone via Area.To and norandom fogs.
+
+    Some boss clusters (e.g., leyndell_erdtree) don't have a DefeatFlag on their
+    own zone. The actual boss zone is reachable via:
+    1. Area.To transitions (unconditional traversal, ignoring Cond)
+    2. Norandom fog gates (ASide → BSide)
+
+    For leyndell_erdtree: leyndell_erdtree → (Area.To) → leyndell2_erdtree
+    → (norandom fog BSide) → erdtree (DefeatFlag: 19000800)
+
+    Args:
+        start_zone: Zone name to start traversal from
+        areas: All parsed areas
+        all_fogs: All parsed fogs (entrances + warps)
+        max_depth: Maximum traversal depth
+
+    Returns:
+        First defeat_flag > 0 found, or 0 if none reachable
+    """
+    # Build norandom fog adjacency: zone → set of reachable zones via norandom fogs
+    norandom_adj: dict[str, set[str]] = defaultdict(set)
+    for fog in all_fogs:
+        if not fog.is_norandom:
+            continue
+        # ASide → BSide traversal (norandom fogs are fixed connections)
+        if fog.aside.area and fog.bside.area:
+            norandom_adj[fog.aside.area].add(fog.bside.area)
+
+    visited: set[str] = set()
+    frontier = [start_zone]
+
+    for _ in range(max_depth):
+        next_frontier: list[str] = []
+        for zone in frontier:
+            if zone in visited:
+                continue
+            visited.add(zone)
+
+            area = areas.get(zone)
+            if area is None:
+                continue
+
+            # Check if this zone has a defeat flag
+            if area.defeat_flag > 0:
+                return area.defeat_flag
+
+            # Follow Area.To transitions (unconditionally)
+            for conn in area.to_connections:
+                if conn.target_area and conn.target_area not in visited:
+                    next_frontier.append(conn.target_area)
+
+            # Follow norandom fog gates (ASide → BSide)
+            for target in norandom_adj.get(zone, set()):
+                if target not in visited:
+                    next_frontier.append(target)
+
+        if not next_frontier:
+            break
+        frontier = next_frontier
+
+    return 0
 
 
 # =============================================================================
@@ -980,9 +1055,10 @@ def filter_and_enrich_clusters(
     fortress_zones: set[str],
     exclude_dlc: bool,
     exclude_overworld: bool,
+    all_fogs: list[FogData] | None = None,
 ) -> list[Cluster]:
     """
-    Filter out invalid clusters and enrich with type/weight/id.
+    Filter out invalid clusters and enrich with type/weight/id/defeat_flag.
 
     Excludes:
     - Clusters with DLC zones (if exclude_dlc)
@@ -1047,6 +1123,21 @@ def filter_and_enrich_clusters(
             total_weight += get_zone_weight(zone_name, zone_type or "other", metadata)
 
         cluster.weight = total_weight
+
+        # Find defeat_flag: check direct zone flags first, then traverse
+        for zone_name in sorted(cluster.zones):
+            area = areas.get(zone_name)
+            if area and area.defeat_flag > 0:
+                cluster.defeat_flag = area.defeat_flag
+                break
+
+        if cluster.defeat_flag == 0 and all_fogs is not None:
+            # Traverse Area.To and norandom fogs to find a reachable DefeatFlag
+            for zone_name in sorted(cluster.zones):
+                flag = find_defeat_flag(zone_name, areas, all_fogs)
+                if flag > 0:
+                    cluster.defeat_flag = flag
+                    break
 
         # Generate ID
         cluster.cluster_id = generate_cluster_id(cluster.zones)
@@ -1120,23 +1211,27 @@ def clusters_to_json(
     zone_maps = build_zone_maps(clusters, areas)
     zone_names = build_zone_names(clusters, areas)
 
+    cluster_list = []
+    for c in sorted(clusters, key=lambda x: x.cluster_id):
+        entry: dict[str, Any] = {
+            "id": c.cluster_id,
+            "zones": sorted(c.zones),
+            "type": c.cluster_type,
+            "weight": c.weight,
+            "entry_fogs": c.entry_fogs,
+            "exit_fogs": c.exit_fogs,
+        }
+        if c.defeat_flag > 0:
+            entry["defeat_flag"] = c.defeat_flag
+        cluster_list.append(entry)
+
     return {
-        "version": "1.2",
+        "version": "1.3",
         "generated_from": "fog.txt",
         "cluster_count": len(clusters),
         "zone_maps": zone_maps,
         "zone_names": zone_names,
-        "clusters": [
-            {
-                "id": c.cluster_id,
-                "zones": sorted(c.zones),
-                "type": c.cluster_type,
-                "weight": c.weight,
-                "entry_fogs": c.entry_fogs,
-                "exit_fogs": c.exit_fogs,
-            }
-            for c in sorted(clusters, key=lambda x: x.cluster_id)
-        ],
+        "clusters": cluster_list,
     }
 
 
@@ -1267,6 +1362,7 @@ def main() -> int:
 
     # Filter and enrich
     print("Filtering and enriching clusters...")
+    all_fogs = entrances + warps
     clusters = filter_and_enrich_clusters(
         clusters,
         areas,
@@ -1275,6 +1371,7 @@ def main() -> int:
         fortress_zones,
         exclude_dlc,
         exclude_overworld,
+        all_fogs=all_fogs,
     )
     print(f"  Final cluster count: {len(clusters)}")
 

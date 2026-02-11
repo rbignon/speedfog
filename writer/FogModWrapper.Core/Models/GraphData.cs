@@ -64,6 +64,15 @@ public class GraphData
     public int FinishEvent { get; set; } = 0;
 
     /// <summary>
+    /// DefeatFlag for the final boss, propagated from fog.txt through clusters.json.
+    /// Primary source for boss death detection. When > 0, takes priority over
+    /// the DefeatFlag extracted from FogMod's Graph (which may be missing for
+    /// zones like leyndell_erdtree where the boss is in a linked zone).
+    /// </summary>
+    [JsonPropertyName("finish_boss_defeat_flag")]
+    public int FinishBossDefeatFlag { get; set; } = 0;
+
+    /// <summary>
     /// Text displayed as a golden banner after the final boss is defeated.
     /// Configurable via config.toml [run] run_complete_message.
     /// </summary>

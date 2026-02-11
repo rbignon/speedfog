@@ -143,7 +143,8 @@ public static class ConnectionInjector
             }
             else
             {
-                Console.WriteLine($"Warning: No DefeatFlag found for finish area {conn.EntranceArea}");
+                Console.WriteLine($"Note: No DefeatFlag in FogMod Graph for finish area {conn.EntranceArea} " +
+                    "(will use graph.json finish_boss_defeat_flag if available)");
             }
         }
     }

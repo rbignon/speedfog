@@ -425,3 +425,25 @@ class TestEventMap:
         )
         result = dag_to_dict(dag, clusters, chapel_grace=False)
         assert result["chapel_grace"] is False
+
+    def test_finish_boss_defeat_flag_present(self):
+        """finish_boss_defeat_flag is included in the output."""
+        result = _make_result()
+        assert "finish_boss_defeat_flag" in result
+
+    def test_finish_boss_defeat_flag_from_cluster(self):
+        """finish_boss_defeat_flag reflects the end node's cluster defeat_flag."""
+        dag = make_test_dag()
+        dag.nodes["end"].cluster.defeat_flag = 19000800
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+        assert result["finish_boss_defeat_flag"] == 19000800
+
+    def test_finish_boss_defeat_flag_zero_when_missing(self):
+        """finish_boss_defeat_flag is 0 when cluster has no defeat_flag."""
+        result = _make_result()
+        assert result["finish_boss_defeat_flag"] == 0
