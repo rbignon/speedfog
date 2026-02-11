@@ -66,9 +66,11 @@ public static class ZoneTrackingInjector
     ///
     /// Matching strategy (see docs/specs/zone-tracking-accuracy.md):
     /// 1. Try compound key (source_map, dest_map) — resolves collisions when two connections
-    ///    from different source maps target the same dest map.
+    ///    from different source maps target the same dest map. Source maps include both
+    ///    exit_gate map bytes AND exit_area areaMaps (FogMod may place events in either).
+    ///    Dest maps include entrance_gate map bytes AND entrance_area areaMaps.
     /// 2. Fall back to dest-only matching — because FogMod's getEventMap() may place events
-    ///    in a different EMEVD file than the exit gate's map prefix.
+    ///    in a different EMEVD file than any known source map.
     /// </summary>
     private static void InjectFogGateFlags(
         string modDir, Events events, List<Connection> connections,
@@ -97,41 +99,34 @@ public static class ZoneTrackingInjector
         {
             if (conn.FlagId <= 0)
                 continue;
-            var exitMapBytesList = ParseMapBytesFromGateName(conn.ExitGate);
-            var entranceMapBytesList = ParseMapBytesFromGateName(conn.EntranceGate);
 
-            // Register compound keys (all exit × entrance combinations for cross-tile gates)
-            foreach (var exitBytes in exitMapBytesList)
+            // Build all possible source maps (exit_gate maps + exit_area areaMaps).
+            // FogMod's getEventMap() may place the warp event in the exit area's internal
+            // map file instead of the gate's tile map, so we need both as potential sources.
+            var allSourceMaps = ParseMapBytesFromGateName(conn.ExitGate);
+            if (areaMaps.TryGetValue(conn.ExitArea, out var exitMapsStr) && !string.IsNullOrEmpty(exitMapsStr))
+                allSourceMaps.AddRange(ParseMapBytesFromMapString(exitMapsStr));
+
+            // Build all possible dest maps (entrance_gate maps + entrance_area areaMaps).
+            // FogMod may warp to the dungeon interior map (e.g., m31_01) instead of the
+            // overworld entrance tile (e.g., m60_44_34).
+            var allDestMaps = ParseMapBytesFromGateName(conn.EntranceGate);
+            if (areaMaps.TryGetValue(conn.EntranceArea, out var entranceMapsStr) && !string.IsNullOrEmpty(entranceMapsStr))
+                allDestMaps.AddRange(ParseMapBytesFromMapString(entranceMapsStr));
+
+            // Register compound keys (all source × dest combinations)
+            foreach (var srcBytes in allSourceMaps)
             {
-                var srcKey = (exitBytes[0], exitBytes[1], exitBytes[2], exitBytes[3]);
-                foreach (var entranceBytes in entranceMapBytesList)
+                var srcKey = (srcBytes[0], srcBytes[1], srcBytes[2], srcBytes[3]);
+                foreach (var destBytes in allDestMaps)
                 {
-                    var destKey = (entranceBytes[0], entranceBytes[1], entranceBytes[2], entranceBytes[3]);
+                    var destKey = (destBytes[0], destBytes[1], destBytes[2], destBytes[3]);
                     compoundLookup.TryAdd((srcKey, destKey), conn.FlagId);
                 }
             }
 
-            // Register dest-only keys from gate name (track collisions)
-            RegisterDestKeys(entranceMapBytesList, conn.FlagId, destOnlyLookup, destOnlyCollisions);
-
-            // Also register internal maps from areaMaps — FogMod may warp to the dungeon
-            // interior map (e.g., m30_02) instead of the overworld entrance tile (e.g., m60_41_37)
-            if (areaMaps.TryGetValue(conn.EntranceArea, out var mapsStr) && !string.IsNullOrEmpty(mapsStr))
-            {
-                var internalMapBytes = ParseMapBytesFromMapString(mapsStr);
-                RegisterDestKeys(internalMapBytes, conn.FlagId, destOnlyLookup, destOnlyCollisions);
-
-                // Also register compound keys for internal maps
-                foreach (var exitBytes in exitMapBytesList)
-                {
-                    var srcKey = (exitBytes[0], exitBytes[1], exitBytes[2], exitBytes[3]);
-                    foreach (var intBytes in internalMapBytes)
-                    {
-                        var destKey = (intBytes[0], intBytes[1], intBytes[2], intBytes[3]);
-                        compoundLookup.TryAdd((srcKey, destKey), conn.FlagId);
-                    }
-                }
-            }
+            // Register dest-only keys (fallback when compound key doesn't match)
+            RegisterDestKeys(allDestMaps, conn.FlagId, destOnlyLookup, destOnlyCollisions);
         }
 
         Console.WriteLine($"Zone tracking: {compoundLookup.Count} compound keys, " +

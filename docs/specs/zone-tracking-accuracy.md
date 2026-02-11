@@ -36,11 +36,16 @@ the second connection's fog gate sets the wrong tracking flag.
 ## Option A: Compound Key (source_map, dest_map)
 
 Use the EMEVD filename (= source map) combined with the WarpPlayer destination map as
-a compound lookup key. For the exit side, parse map bytes from the connection's exit_gate
-name.
+a compound lookup key. Source maps are gathered from both the exit_gate name AND the
+exit_area's areaMaps. Dest maps are gathered from the entrance_gate name AND the
+entrance_area's areaMaps.
 
-This resolves the m18 collision above because the two connections originate from
-different source maps (m43_01_00_00 and m31_15_00_00).
+This resolves collisions because:
+1. Two connections from different exit areas produce different compound keys even when
+   targeting the same dest map (e.g., m31_01_00_00 for both earthbore_boss and
+   earthbore_cave on seed 305519984 — resolved by different exit area maps).
+2. Including exit_area areaMaps covers FogMod's getEventMap() remapping, where the
+   warp event is placed in the exit area's internal map file instead of the gate's tile.
 
 **Remaining limitation**: two connections from the same source map to the same destination
 map would still collide. This requires two fog gates in one map both leading to different
