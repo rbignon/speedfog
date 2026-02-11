@@ -483,7 +483,7 @@ public static class ChapelGraceInjector
         var spawnPos = MoveInDirection(POS_X, POS_Y, POS_Z, ROT_Y, 2f);
         var region = new MSBE.Region.SpawnPoint
         {
-            Name = $"SpawnPoint grace_chapel",
+            Name = "SpawnPoint grace_chapel",
             EntityID = GRACE_SPAWN_REGION,
             Position = spawnPos,
             Rotation = new System.Numerics.Vector3(0f, ROT_Y, 0f),
