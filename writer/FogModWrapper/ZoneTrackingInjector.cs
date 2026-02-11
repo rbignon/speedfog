@@ -135,6 +135,8 @@ public static class ZoneTrackingInjector
         int totalInjected = 0;
         int compoundMatches = 0;
         int destOnlyMatches = 0;
+        int skippedCollisions = 0;
+        var injectedFlags = new HashSet<int>();
 
         foreach (var emevdPath in Directory.GetFiles(eventDir, "*.emevd.dcx"))
         {
@@ -185,25 +187,35 @@ public static class ZoneTrackingInjector
                         }
                     }
 
-                    // Strategy 2: Fall back to dest-only matching
+                    // Strategy 2: Fall back to dest-only matching.
+                    // When dest map has a collision AND source map is known (map-specific
+                    // EMEVD), skip injection — these are typically back-portal return warps
+                    // whose source EMEVD doesn't match any registered exit map.
+                    // When source map is unknown (common.emevd), always inject — FogMod
+                    // places forward warps for vanilla gate types (numeric entity IDs) in
+                    // common.emevd, and these are legitimate forward transitions.
                     if (!matched)
                     {
                         if (!destOnlyLookup.TryGetValue(destMap, out flagId))
                             continue;
-                        matched = true;
-                        destOnlyMatches++;
-                        if (destOnlyCollisions.Contains(destMap))
+                        if (destOnlyCollisions.Contains(destMap) && sourceMap.HasValue)
                         {
                             var destMapStr = $"m{destMap.Item1}_{destMap.Item2:D2}_{destMap.Item3:D2}_{destMap.Item4:D2}";
-                            Console.WriteLine($"Warning: Zone tracking dest-only fallback with collision " +
-                                              $"on {destMapStr} — flag {flagId} may be inaccurate");
+                            var srcMapStr = $"m{sourceMap.Value.Item1}_{sourceMap.Value.Item2:D2}_{sourceMap.Value.Item3:D2}_{sourceMap.Value.Item4:D2}";
+                            Console.WriteLine($"Zone tracking: skipped collided dest-only " +
+                                              $"on {destMapStr} from EMEVD {srcMapStr} (event {evt.ID})");
+                            skippedCollisions++;
+                            continue;
                         }
+                        matched = true;
+                        destOnlyMatches++;
                     }
 
                     // Insert SetEventFlag(flagId, ON) before WarpPlayer
                     var setFlagInstr = events.ParseAdd(
                         $"SetEventFlag(TargetEventFlagType.EventFlag, {flagId}, ON)");
                     evt.Instructions.Insert(i, setFlagInstr);
+                    injectedFlags.Add(flagId);
 
                     // Shift Parameter entries for instructions at or after insertion point
                     foreach (var param in evt.Parameters)
@@ -226,10 +238,17 @@ public static class ZoneTrackingInjector
             }
         }
 
-        var expectedFlags = connections.Where(c => c.FlagId > 0).Select(c => c.FlagId).Distinct().Count();
+        var expectedFlagSet = connections.Where(c => c.FlagId > 0).Select(c => c.FlagId).Distinct().ToHashSet();
         Console.WriteLine($"Zone tracking: injected {totalInjected} fog gate tracking flags " +
                           $"(compound: {compoundMatches}, dest-only: {destOnlyMatches}, " +
-                          $"expected unique flags: {expectedFlags})");
+                          $"skipped collisions: {skippedCollisions}, expected unique flags: {expectedFlagSet.Count})");
+
+        var missingFlags = expectedFlagSet.Except(injectedFlags).OrderBy(f => f).ToList();
+        if (missingFlags.Count > 0)
+        {
+            Console.WriteLine($"WARNING: {missingFlags.Count} zone tracking flags NOT injected: " +
+                              string.Join(", ", missingFlags));
+        }
     }
 
     /// <summary>

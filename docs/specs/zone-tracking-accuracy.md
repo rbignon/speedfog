@@ -47,6 +47,14 @@ This resolves collisions because:
 2. Including exit_area areaMaps covers FogMod's getEventMap() remapping, where the
    warp event is placed in the exit area's internal map file instead of the gate's tile.
 
+**Collision handling**: when dest-only fallback hits a collision (same dest map registered
+for multiple flags) AND the source EMEVD is a map-specific file (known source map),
+injection is skipped. These collisions are typically back-portal return warps from
+entrance areas (e.g., m31_22 → m31_01_00_00 return warp alongside a forward entrance
+to earthbore_boss on the same map). When the source EMEVD is common.emevd (unknown
+source map), injection proceeds — FogMod places forward warps for vanilla gate types
+(numeric entity IDs like coffins/teleports) in common.emevd, not return warps.
+
 **Remaining limitation**: two connections from the same source map to the same destination
 map would still collide. This requires two fog gates in one map both leading to different
 zones in another map — extremely unlikely in a SpeedFog DAG but theoretically possible.
