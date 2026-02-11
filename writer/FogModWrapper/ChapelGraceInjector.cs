@@ -162,9 +162,14 @@ public static class ChapelGraceInjector
         var graceAsset = (MSBE.Part.Asset)baseAsset.DeepCopy();
         graceAsset.ModelName = GRACE_ASSET_MODEL;
         graceAsset.Name = GeneratePartName(msb.Parts.Assets.Select(a => a.Name), GRACE_ASSET_MODEL);
+        SetNameIdent(graceAsset);
         graceAsset.Position = new System.Numerics.Vector3(POS_X, POS_Y, POS_Z);
         graceAsset.Rotation = new System.Numerics.Vector3(0f, ROT_Y, 0f);
         graceAsset.EntityID = bonfireEntity;
+        // Clear inherited references from source asset (FogRando's setAssetName does this)
+        for (int i = 0; i < graceAsset.UnkPartNames.Length; i++)
+            graceAsset.UnkPartNames[i] = null;
+        graceAsset.UnkT54PartName = null;
         msb.Parts.Assets.Add(graceAsset);
 
         // 2. Grace NPC (c1000 - invisible bonfire controller)
@@ -179,9 +184,11 @@ public static class ChapelGraceInjector
         var graceNpc = (MSBE.Part.Enemy)baseEnemy.DeepCopy();
         graceNpc.ModelName = GRACE_NPC_MODEL;
         graceNpc.Name = GeneratePartName(msb.Parts.Enemies.Select(e => e.Name), GRACE_NPC_MODEL);
+        SetNameIdent(graceNpc);
         graceNpc.Position = new System.Numerics.Vector3(POS_X, POS_Y, POS_Z);
         graceNpc.Rotation = new System.Numerics.Vector3(0f, ROT_Y, 0f);
         graceNpc.EntityID = chrEntity;
+        Array.Clear(graceNpc.EntityGroupIDs);
         graceNpc.ThinkParamID = NPC_THINK_PARAM;
         graceNpc.NPCParamID = NPC_NPC_PARAM;
         graceNpc.TalkID = NPC_TALK_ID;
@@ -201,6 +208,7 @@ public static class ChapelGraceInjector
         var playerPos = MoveInDirection(POS_X, POS_Y, POS_Z, ROT_Y, 2f);
         var gracePlayer = (MSBE.Part.Player)basePlayer.DeepCopy();
         gracePlayer.Name = GeneratePartName(msb.Parts.Players.Select(p => p.Name), "c0000");
+        SetNameIdent(gracePlayer);
         gracePlayer.Position = playerPos;
         gracePlayer.Rotation = new System.Numerics.Vector3(0f, ROT_Y, 0f);
         gracePlayer.EntityID = playerEntity;
@@ -382,6 +390,20 @@ public static class ChapelGraceInjector
     }
 
     // --- Helper methods ---
+
+    /// <summary>
+    /// Set Unk08 from the numeric suffix of a part's Name.
+    /// Replicates FogRando's setNameIdent (GameDataWriterE.cs:5263-5268).
+    /// Required for all MSB parts - the game uses Unk08 for entity identity resolution.
+    /// </summary>
+    private static void SetNameIdent(MSBE.Part part)
+    {
+        var segments = part.Name.Split('_');
+        if (segments.Length > 0 && int.TryParse(segments[^1], out var ident))
+        {
+            part.Unk08 = ident;
+        }
+    }
 
     /// <summary>
     /// Move a position forward by 'dist' meters in the direction of Y-axis rotation.
