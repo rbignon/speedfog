@@ -392,17 +392,10 @@ Example:
         // 7g. Inject "RUN COMPLETE" banner on final boss defeat
         RunCompleteInjector.Inject(modDir, config.GameDir, events, graphData.FinishEvent, graphData.RunCompleteMessage);
 
-        // 7h. Inject Site of Grace at Chapel of Anticipation
-        ChapelGraceInjector.InjectResult? chapelResult = null;
+        // 7h. Inject Site of Grace at Chapel of Anticipation and relocate player spawn
         if (graphData.ChapelGrace)
         {
-            chapelResult = ChapelGraceInjector.Inject(modDir, config.GameDir);
-        }
-
-        // 7i. Warp player to chapel grace on first game load and pre-activate the grace
-        if (chapelResult != null)
-        {
-            ChapelSpawnInjector.Inject(modDir, events, chapelResult.Value.PlayerEntityId, chapelResult.Value.BonfireFlag);
+            ChapelGraceInjector.Inject(modDir, config.GameDir, events);
         }
 
         // 8. Package with ModEngine 2

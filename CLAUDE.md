@@ -138,7 +138,7 @@ speedfog/
 | `SmithingStoneShopInjector` | Adds smithing stones to Twin Maiden Husks shop |
 | `ZoneTrackingInjector` | Injects SetEventFlag before fog gate warps for racing |
 | `RunCompleteInjector` | Injects "RUN COMPLETE" golden banner on final boss defeat |
-| `ChapelGraceInjector` | Adds Site of Grace at Chapel of Anticipation |
+| `ChapelGraceInjector` | Site of Grace + player spawn relocation at Chapel of Anticipation |
 
 **ItemRandomizerWrapper** (uses RandomizerCommon.dll directly):
 | Class | Purpose |

@@ -8,10 +8,11 @@ namespace FogModWrapper;
 /// Replicates the grace creation logic from FogMod's custom bonfire system
 /// as a post-processing step after FogMod writes.
 ///
-/// Three modifications:
-/// 1. MSB: Grace visual (AEG099_060), grace NPC (c1000), player warp target
+/// Four modifications:
+/// 1. MSB: Grace visual (AEG099_060), grace NPC (c1000), player warp target,
+///    and relocate vanilla player spawn (c0000_0000) to the grace position
 /// 2. BonfireWarpParam: Fast travel entry in regulation.bin
-/// 3. EMEVD: RegisterBonfire instruction in map event 0
+/// 3. EMEVD: RegisterBonfire + pre-activate grace flag in map event 0
 ///
 /// Based on FogMod's CustomBonfires "chapel" handling in GameDataWriterE.cs:4693-4818
 /// and the fog.txt CustomBonfires entry for Chapel of Anticipation.
@@ -60,46 +61,28 @@ public static class ChapelGraceInjector
     private const string PREFERRED_PLAYER = "c0000_0000";
 
     /// <summary>
-    /// Result of chapel grace injection, containing IDs needed by downstream injectors.
-    /// </summary>
-    public struct InjectResult
-    {
-        /// <summary>Player warp target entity ID (for ChapelSpawnInjector warp).</summary>
-        public uint PlayerEntityId;
-        /// <summary>Bonfire event flag ID (for ChapelSpawnInjector to pre-activate the grace).</summary>
-        public uint BonfireFlag;
-    }
-
-    /// <summary>
     /// Inject a Site of Grace at Chapel of Anticipation.
     /// Skips gracefully if the grace already exists (e.g., added by Item Randomizer).
-    /// Returns IDs needed by ChapelSpawnInjector, or null if injection was skipped or failed.
+    /// Also relocates the vanilla player spawn to the grace so the player starts there directly.
     /// </summary>
-    public static InjectResult? Inject(string modDir, string gameDir)
+    public static void Inject(string modDir, string gameDir, Events events)
     {
         Console.WriteLine("Injecting Chapel of Anticipation grace...");
 
-        // Step 1: MSB - add grace asset, NPC, and player spawn
+        // Step 1: MSB - add grace parts + relocate vanilla player spawn
         var msbResult = InjectMsb(modDir, gameDir);
         if (msbResult == null)
-            return null;
+            return;
 
         // Step 2: BonfireWarpParam - add fast travel entry
         var bonfireFlag = InjectBonfireWarpParam(modDir, msbResult.Value.BonfireEntityId);
         if (bonfireFlag == null)
-            return null;
+            return;
 
-        // Step 3: EMEVD - add RegisterBonfire instruction
-        InjectEmevd(modDir, gameDir, bonfireFlag.Value, msbResult.Value.BonfireEntityId);
+        // Step 3: EMEVD - RegisterBonfire + pre-activate grace flag
+        InjectEmevd(modDir, gameDir, events, bonfireFlag.Value, msbResult.Value.BonfireEntityId);
 
         Console.WriteLine("Chapel of Anticipation grace injected successfully");
-
-        // Player entity = bonfire entity - 970 (FogRando convention: GameDataWriterE.cs:4697)
-        return new InjectResult
-        {
-            PlayerEntityId = msbResult.Value.BonfireEntityId - 970,
-            BonfireFlag = bonfireFlag.Value,
-        };
     }
 
     private struct MsbResult
@@ -142,7 +125,14 @@ public static class ChapelGraceInjector
             a.EntityID >= BONFIRE_ENTITY_BASE && a.EntityID < BONFIRE_ENTITY_BASE + 100);
         if (existingGrace != null)
         {
-            Console.WriteLine($"  Chapel grace already exists (entity {existingGrace.EntityID}), skipping MSB");
+            Console.WriteLine($"  Chapel grace already exists (entity {existingGrace.EntityID}), skipping grace creation");
+
+            // Still relocate vanilla player spawn even if grace was pre-created
+            RelocateVanillaPlayer(msb);
+            var earlyWritePath = modMsbPath ?? FindOrCreateMsbDir(modDir, msbFileName);
+            Directory.CreateDirectory(Path.GetDirectoryName(earlyWritePath)!);
+            msb.Write(earlyWritePath);
+
             return new MsbResult { BonfireEntityId = existingGrace.EntityID };
         }
 
@@ -232,6 +222,10 @@ public static class ChapelGraceInjector
         gracePlayer.Rotation = new System.Numerics.Vector3(0f, ROT_Y, 0f);
         gracePlayer.EntityID = playerEntity;
         msb.Parts.Players.Add(gracePlayer);
+
+        // 4. Relocate vanilla player spawn to the grace position so the player starts
+        //    directly at the grace instead of at the Grafted Scion (skips tutorial)
+        RelocateVanillaPlayer(msb);
 
         // Write to modDir (always write to mod output, not game dir).
         // Use the same directory case that FogMod used (mapstudio vs MapStudio).
@@ -364,9 +358,11 @@ public static class ChapelGraceInjector
     }
 
     /// <summary>
-    /// Add RegisterBonfire instruction to the chapel map EMEVD event 0.
+    /// Add RegisterBonfire and pre-activate grace flag in the chapel map EMEVD event 0.
+    /// Setting the bonfire flag to ON makes the grace appear already discovered,
+    /// so the player can rest and fast-travel immediately without touching it first.
     /// </summary>
-    private static void InjectEmevd(string modDir, string gameDir, uint bonfireFlag, uint bonfireEntity)
+    private static void InjectEmevd(string modDir, string gameDir, Events events, uint bonfireFlag, uint bonfireEntity)
     {
         var emevdPath = Path.Combine(modDir, "event", $"{MAP_ID}.emevd.dcx");
 
@@ -404,11 +400,33 @@ public static class ChapelGraceInjector
         BitConverter.GetBytes(5f).CopyTo(args, 20);
         initEvent.Instructions.Add(new EMEVD.Instruction(2009, 3, args));
 
+        // Pre-activate the grace by setting its bonfire flag to ON
+        initEvent.Instructions.Add(events.ParseAdd(
+            $"SetEventFlag(TargetEventFlagType.EventFlag, {bonfireFlag}, ON)"));
+
         emevd.Write(emevdPath);
-        Console.WriteLine($"  EMEVD: RegisterBonfire(flag={bonfireFlag}, entity={bonfireEntity})");
+        Console.WriteLine($"  EMEVD: RegisterBonfire(flag={bonfireFlag}, entity={bonfireEntity}), " +
+                          $"SetEventFlag({bonfireFlag}, ON)");
     }
 
     // --- Helper methods ---
+
+    /// <summary>
+    /// Relocate the vanilla player spawn (c0000_0000) to 2m in front of the grace.
+    /// This makes the initial map load spawn the player at the grace directly,
+    /// avoiding the need for a WarpPlayer event (and its loading screen).
+    /// </summary>
+    private static void RelocateVanillaPlayer(MSBE msb)
+    {
+        var vanillaPlayer = msb.Parts.Players.Find(p => p.Name == PREFERRED_PLAYER);
+        if (vanillaPlayer == null)
+            return;
+
+        var playerPos = MoveInDirection(POS_X, POS_Y, POS_Z, ROT_Y, 2f);
+        vanillaPlayer.Position = playerPos;
+        vanillaPlayer.Rotation = new System.Numerics.Vector3(0f, ROT_Y, 0f);
+        Console.WriteLine($"  MSB: relocated {PREFERRED_PLAYER} to grace position");
+    }
 
     /// <summary>
     /// Set Unk08 from the numeric suffix of a part's Name.
