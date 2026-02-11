@@ -34,6 +34,7 @@ The 500-offset gap (300-799) avoids collision with FogRando's allocation.
 | 1040292051 | 1040292 | Roundtable unlock / start trigger | RoundtableUnlockInjector |
 | 1040299000 | 1040299 | Starting resources already given | StartingResourcesInjector |
 | 1040299001 | 1040299 | Starting items already given | StartingItemInjector |
+| 1040299002 | 1040299 | Chapel warp already performed | ChapelGraceInjector |
 
 Flag 1040292051 is defined by FogRando (used in `common_roundtable` and `common_fingerstart` templates). SpeedFog's RoundtableUnlockInjector just sets it early to bypass the finger pickup.
 
@@ -59,6 +60,7 @@ SpeedFog injects custom events into EMEVD files:
 | 755861000 | StartingResourcesInjector | common.emevd | Give runes, golden seeds, sacred tears |
 | 755862000 | ZoneTrackingInjector | common.emevd | Monitor final boss defeat flag |
 | 755863000 | RunCompleteInjector | common.emevd | Display victory banner + jingle |
+| 755864000 | ChapelGraceInjector | m10_01_00_00.emevd | One-shot warp to chapel grace (initial spawn) |
 
 All events are registered in Event 0 via `InitializeEvent` (bank 2000, id 0).
 

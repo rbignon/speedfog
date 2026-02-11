@@ -10,10 +10,11 @@ namespace FogModWrapper;
 ///
 /// Four modifications:
 /// 1. MSB: Grace visual (AEG099_060), grace NPC (c1000), player warp target,
-///    and a SpawnPoint region at the grace for initial spawn redirection
+///    and a SpawnPoint region at the grace for respawn redirection
 /// 2. BonfireWarpParam: Fast travel entry in regulation.bin
 /// 3. EMEVD: RegisterBonfire + pre-activate grace flag in event 0,
-///    and patch event 10010020 to redirect initial spawn to grace region
+///    patch event 10010020 to redirect respawns to grace region,
+///    and a one-shot WarpPlayer event for the initial new-game spawn
 ///
 /// Based on FogMod's CustomBonfires "chapel" handling in GameDataWriterE.cs:4693-4818
 /// and the fog.txt CustomBonfires entry for Chapel of Anticipation.
@@ -67,6 +68,13 @@ public static class ChapelGraceInjector
     // SpawnPoint region entity ID for our grace spawn (next available after vanilla)
     private const uint GRACE_SPAWN_REGION = 10012021;
 
+    // One-shot warp event: teleports player to grace on first map load (new-game spawn).
+    // SetPlayerRespawnPoint only controls *re*spawns (after death/loading), not the initial
+    // new-character spawn which is engine/cutscene-controlled. An explicit WarpPlayer is the
+    // only way to move the player on first load.
+    private const int WARP_EVENT_ID = 755864000;
+    private const int SPAWN_DONE_FLAG = 1040299002;
+
     /// <summary>
     /// Inject a Site of Grace at Chapel of Anticipation.
     /// Skips gracefully if the grace already exists (e.g., added by Item Randomizer).
@@ -86,9 +94,9 @@ public static class ChapelGraceInjector
         if (bonfireFlag == null)
             return;
 
-        // Step 3: EMEVD - RegisterBonfire + pre-activate grace flag + redirect initial spawn
+        // Step 3: EMEVD - RegisterBonfire + pre-activate grace flag + redirect initial spawn + one-shot warp
         InjectEmevd(modDir, gameDir, events, bonfireFlag.Value, msbResult.Value.BonfireEntityId,
-                    msbResult.Value.SpawnRegionEntityId);
+                    msbResult.Value.SpawnRegionEntityId, msbResult.Value.PlayerEntityId);
 
         Console.WriteLine("Chapel of Anticipation grace injected successfully");
     }
@@ -97,6 +105,7 @@ public static class ChapelGraceInjector
     {
         public uint BonfireEntityId;
         public uint SpawnRegionEntityId;
+        public uint PlayerEntityId;
     }
 
     /// <summary>
@@ -142,7 +151,12 @@ public static class ChapelGraceInjector
             Directory.CreateDirectory(Path.GetDirectoryName(earlyWritePath)!);
             msb.Write(earlyWritePath);
 
-            return new MsbResult { BonfireEntityId = existingGrace.EntityID, SpawnRegionEntityId = earlySpawnRegion };
+            return new MsbResult
+            {
+                BonfireEntityId = existingGrace.EntityID,
+                SpawnRegionEntityId = earlySpawnRegion,
+                PlayerEntityId = existingGrace.EntityID - 970,
+            };
         }
 
         // Collect existing entity IDs for conflict avoidance
@@ -247,7 +261,7 @@ public static class ChapelGraceInjector
                           $"NPC {graceNpc.Name} (entity {chrEntity}), " +
                           $"player {gracePlayer.Name} (entity {playerEntity})");
 
-        return new MsbResult { BonfireEntityId = bonfireEntity, SpawnRegionEntityId = spawnRegion };
+        return new MsbResult { BonfireEntityId = bonfireEntity, SpawnRegionEntityId = spawnRegion, PlayerEntityId = playerEntity };
     }
 
     /// <summary>
@@ -370,10 +384,12 @@ public static class ChapelGraceInjector
     /// <summary>
     /// Add RegisterBonfire and pre-activate grace flag in the chapel map EMEVD event 0.
     /// Also patch event 10010020 ("Game start") to redirect SetPlayerRespawnPoint
-    /// to our grace spawn region, so the player spawns at the grace directly.
+    /// to our grace spawn region, and inject a one-shot WarpPlayer event to teleport
+    /// the player to the grace on first map load (new-game initial spawn).
     /// </summary>
     private static void InjectEmevd(string modDir, string gameDir, Events events,
-                                     uint bonfireFlag, uint bonfireEntity, uint spawnRegionEntity)
+                                     uint bonfireFlag, uint bonfireEntity, uint spawnRegionEntity,
+                                     uint playerEntityId)
     {
         var emevdPath = Path.Combine(modDir, "event", $"{MAP_ID}.emevd.dcx");
 
@@ -420,9 +436,41 @@ public static class ChapelGraceInjector
         // at the Grafted Scion area. We replace the region ID with our grace spawn region.
         PatchGameStartEvent(emevd, spawnRegionEntity);
 
+        // One-shot warp event: teleport player to grace on first map load.
+        // SetPlayerRespawnPoint only controls respawns (after death/loading), not the initial
+        // new-character spawn. An explicit WarpPlayer is needed for the first-ever load.
+        var warpEvt = new EMEVD.Event(WARP_EVENT_ID);
+        // Skip if already warped (one-time only)
+        warpEvt.Instructions.Add(events.ParseAdd(
+            $"EndIfEventFlag(EventEndType.End, ON, TargetEventFlagType.EventFlag, {SPAWN_DONE_FLAG})"));
+        // Wait 1 frame for map/entity loading
+        warpEvt.Instructions.Add(events.ParseAdd("WaitFixedTimeFrames(1)"));
+        // WarpPlayer to grace player entity (bank 2003, id 14)
+        // Args: AreaID(u8), BlockID(u8), RegionID(u8), IndexID(u8), EntityID(u32), PopupMsgID(i32)
+        var warpArgs = new byte[12];
+        warpArgs[0] = 10; // Area ID (m10_01_00_00)
+        warpArgs[1] = 1;  // Block ID
+        warpArgs[2] = 0;  // Region ID
+        warpArgs[3] = 0;  // Index ID
+        BitConverter.GetBytes(playerEntityId).CopyTo(warpArgs, 4);  // player entity
+        BitConverter.GetBytes(0).CopyTo(warpArgs, 8);               // no popup
+        warpEvt.Instructions.Add(new EMEVD.Instruction(2003, 14, warpArgs));
+        // Mark warp as done so it never fires again
+        warpEvt.Instructions.Add(events.ParseAdd(
+            $"SetEventFlag(TargetEventFlagType.EventFlag, {SPAWN_DONE_FLAG}, ON)"));
+        emevd.Events.Add(warpEvt);
+
+        // Register warp event in Event 0 (InitializeEvent: bank 2000, id 0)
+        var warpInitArgs = new byte[8];
+        BitConverter.GetBytes(0).CopyTo(warpInitArgs, 0);              // slot = 0
+        BitConverter.GetBytes(WARP_EVENT_ID).CopyTo(warpInitArgs, 4);  // eventId
+        initEvent.Instructions.Add(new EMEVD.Instruction(2000, 0, warpInitArgs));
+
         emevd.Write(emevdPath);
         Console.WriteLine($"  EMEVD: RegisterBonfire(flag={bonfireFlag}, entity={bonfireEntity}), " +
                           $"SetEventFlag({bonfireFlag}, ON)");
+        Console.WriteLine($"  EMEVD: chapel warp event {WARP_EVENT_ID} " +
+                          $"(warp to player entity {playerEntityId}, flag {SPAWN_DONE_FLAG})");
     }
 
     // --- Helper methods ---
