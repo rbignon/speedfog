@@ -393,9 +393,16 @@ Example:
         RunCompleteInjector.Inject(modDir, config.GameDir, events, graphData.FinishEvent, graphData.RunCompleteMessage);
 
         // 7h. Inject Site of Grace at Chapel of Anticipation
+        uint? chapelPlayerEntity = null;
         if (graphData.ChapelGrace)
         {
-            ChapelGraceInjector.Inject(modDir, config.GameDir);
+            chapelPlayerEntity = ChapelGraceInjector.Inject(modDir, config.GameDir);
+        }
+
+        // 7i. Warp player to chapel grace on first game load
+        if (chapelPlayerEntity != null)
+        {
+            ChapelSpawnInjector.Inject(modDir, events, chapelPlayerEntity.Value);
         }
 
         // 8. Package with ModEngine 2

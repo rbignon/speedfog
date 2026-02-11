@@ -62,25 +62,30 @@ public static class ChapelGraceInjector
     /// <summary>
     /// Inject a Site of Grace at Chapel of Anticipation.
     /// Skips gracefully if the grace already exists (e.g., added by Item Randomizer).
+    /// Returns the player warp target entity ID (for use by ChapelSpawnInjector),
+    /// or null if injection was skipped or failed.
     /// </summary>
-    public static void Inject(string modDir, string gameDir)
+    public static uint? Inject(string modDir, string gameDir)
     {
         Console.WriteLine("Injecting Chapel of Anticipation grace...");
 
         // Step 1: MSB - add grace asset, NPC, and player spawn
         var msbResult = InjectMsb(modDir, gameDir);
         if (msbResult == null)
-            return;
+            return null;
 
         // Step 2: BonfireWarpParam - add fast travel entry
         var bonfireFlag = InjectBonfireWarpParam(modDir, msbResult.Value.BonfireEntityId);
         if (bonfireFlag == null)
-            return;
+            return null;
 
         // Step 3: EMEVD - add RegisterBonfire instruction
         InjectEmevd(modDir, gameDir, bonfireFlag.Value, msbResult.Value.BonfireEntityId);
 
         Console.WriteLine("Chapel of Anticipation grace injected successfully");
+
+        // Player entity = bonfire entity - 970 (FogRando convention: GameDataWriterE.cs:4697)
+        return msbResult.Value.BonfireEntityId - 970;
     }
 
     private struct MsbResult
