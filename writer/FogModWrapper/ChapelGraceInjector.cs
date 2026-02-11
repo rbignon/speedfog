@@ -10,9 +10,10 @@ namespace FogModWrapper;
 ///
 /// Four modifications:
 /// 1. MSB: Grace visual (AEG099_060), grace NPC (c1000), player warp target,
-///    and relocate vanilla player spawn (c0000_0000) to the grace position
+///    and a SpawnPoint region at the grace for initial spawn redirection
 /// 2. BonfireWarpParam: Fast travel entry in regulation.bin
-/// 3. EMEVD: RegisterBonfire + pre-activate grace flag in map event 0
+/// 3. EMEVD: RegisterBonfire + pre-activate grace flag in event 0,
+///    and patch event 10010020 to redirect initial spawn to grace region
 ///
 /// Based on FogMod's CustomBonfires "chapel" handling in GameDataWriterE.cs:4693-4818
 /// and the fog.txt CustomBonfires entry for Chapel of Anticipation.
@@ -60,6 +61,12 @@ public static class ChapelGraceInjector
     private const string PREFERRED_ENEMY = "c4690_9000";
     private const string PREFERRED_PLAYER = "c0000_0000";
 
+    // Vanilla "Game start" event and spawn region (fogevents.txt ID 10010020)
+    private const long GAME_START_EVENT_ID = 10010020;
+    private const uint VANILLA_SPAWN_REGION = 10012020;
+    // SpawnPoint region entity ID for our grace spawn (next available after vanilla)
+    private const uint GRACE_SPAWN_REGION = 10012021;
+
     /// <summary>
     /// Inject a Site of Grace at Chapel of Anticipation.
     /// Skips gracefully if the grace already exists (e.g., added by Item Randomizer).
@@ -79,8 +86,9 @@ public static class ChapelGraceInjector
         if (bonfireFlag == null)
             return;
 
-        // Step 3: EMEVD - RegisterBonfire + pre-activate grace flag
-        InjectEmevd(modDir, gameDir, events, bonfireFlag.Value, msbResult.Value.BonfireEntityId);
+        // Step 3: EMEVD - RegisterBonfire + pre-activate grace flag + redirect initial spawn
+        InjectEmevd(modDir, gameDir, events, bonfireFlag.Value, msbResult.Value.BonfireEntityId,
+                    msbResult.Value.SpawnRegionEntityId);
 
         Console.WriteLine("Chapel of Anticipation grace injected successfully");
     }
@@ -88,6 +96,7 @@ public static class ChapelGraceInjector
     private struct MsbResult
     {
         public uint BonfireEntityId;
+        public uint SpawnRegionEntityId;
     }
 
     /// <summary>
@@ -127,13 +136,13 @@ public static class ChapelGraceInjector
         {
             Console.WriteLine($"  Chapel grace already exists (entity {existingGrace.EntityID}), skipping grace creation");
 
-            // Still relocate vanilla player spawn even if grace was pre-created
-            RelocateVanillaPlayer(msb);
+            // Still create spawn region even if grace was pre-created
+            var earlySpawnRegion = CreateGraceSpawnRegion(msb);
             var earlyWritePath = modMsbPath ?? FindOrCreateMsbDir(modDir, msbFileName);
             Directory.CreateDirectory(Path.GetDirectoryName(earlyWritePath)!);
             msb.Write(earlyWritePath);
 
-            return new MsbResult { BonfireEntityId = existingGrace.EntityID };
+            return new MsbResult { BonfireEntityId = existingGrace.EntityID, SpawnRegionEntityId = earlySpawnRegion };
         }
 
         // Collect existing entity IDs for conflict avoidance
@@ -223,9 +232,10 @@ public static class ChapelGraceInjector
         gracePlayer.EntityID = playerEntity;
         msb.Parts.Players.Add(gracePlayer);
 
-        // 4. Relocate vanilla player spawn to the grace position so the player starts
-        //    directly at the grace instead of at the Grafted Scion (skips tutorial)
-        RelocateVanillaPlayer(msb);
+        // 4. Create SpawnPoint region at the grace for initial spawn redirection
+        //    Event 10010020 ("Game start") calls SetPlayerRespawnPoint with a region ID;
+        //    we'll patch it in InjectEmevd to use this region instead of the vanilla one
+        var spawnRegion = CreateGraceSpawnRegion(msb);
 
         // Write to modDir (always write to mod output, not game dir).
         // Use the same directory case that FogMod used (mapstudio vs MapStudio).
@@ -237,7 +247,7 @@ public static class ChapelGraceInjector
                           $"NPC {graceNpc.Name} (entity {chrEntity}), " +
                           $"player {gracePlayer.Name} (entity {playerEntity})");
 
-        return new MsbResult { BonfireEntityId = bonfireEntity };
+        return new MsbResult { BonfireEntityId = bonfireEntity, SpawnRegionEntityId = spawnRegion };
     }
 
     /// <summary>
@@ -359,10 +369,11 @@ public static class ChapelGraceInjector
 
     /// <summary>
     /// Add RegisterBonfire and pre-activate grace flag in the chapel map EMEVD event 0.
-    /// Setting the bonfire flag to ON makes the grace appear already discovered,
-    /// so the player can rest and fast-travel immediately without touching it first.
+    /// Also patch event 10010020 ("Game start") to redirect SetPlayerRespawnPoint
+    /// to our grace spawn region, so the player spawns at the grace directly.
     /// </summary>
-    private static void InjectEmevd(string modDir, string gameDir, Events events, uint bonfireFlag, uint bonfireEntity)
+    private static void InjectEmevd(string modDir, string gameDir, Events events,
+                                     uint bonfireFlag, uint bonfireEntity, uint spawnRegionEntity)
     {
         var emevdPath = Path.Combine(modDir, "event", $"{MAP_ID}.emevd.dcx");
 
@@ -404,6 +415,11 @@ public static class ChapelGraceInjector
         initEvent.Instructions.Add(events.ParseAdd(
             $"SetEventFlag(TargetEventFlagType.EventFlag, {bonfireFlag}, ON)"));
 
+        // Patch event 10010020 ("Game start") to redirect initial spawn to grace region.
+        // The vanilla event calls SetPlayerRespawnPoint(10012020) which places the player
+        // at the Grafted Scion area. We replace the region ID with our grace spawn region.
+        PatchGameStartEvent(emevd, spawnRegionEntity);
+
         emevd.Write(emevdPath);
         Console.WriteLine($"  EMEVD: RegisterBonfire(flag={bonfireFlag}, entity={bonfireEntity}), " +
                           $"SetEventFlag({bonfireFlag}, ON)");
@@ -412,20 +428,70 @@ public static class ChapelGraceInjector
     // --- Helper methods ---
 
     /// <summary>
-    /// Relocate the vanilla player spawn (c0000_0000) to 2m in front of the grace.
-    /// This makes the initial map load spawn the player at the grace directly,
-    /// avoiding the need for a WarpPlayer event (and its loading screen).
+    /// Patch event 10010020 ("Game start") to redirect SetPlayerRespawnPoint
+    /// from the vanilla region (10012020) to our grace spawn region.
+    /// SetPlayerRespawnPoint = bank 2003, id 23, single uint32 arg (region entity ID).
     /// </summary>
-    private static void RelocateVanillaPlayer(MSBE msb)
+    private static void PatchGameStartEvent(EMEVD emevd, uint newRegionEntity)
     {
-        var vanillaPlayer = msb.Parts.Players.Find(p => p.Name == PREFERRED_PLAYER);
-        if (vanillaPlayer == null)
+        var gameStartEvent = emevd.Events.Find(e => e.ID == GAME_START_EVENT_ID);
+        if (gameStartEvent == null)
+        {
+            Console.WriteLine($"Warning: Event {GAME_START_EVENT_ID} not found, skipping spawn redirect");
             return;
+        }
 
-        var playerPos = MoveInDirection(POS_X, POS_Y, POS_Z, ROT_Y, 2f);
-        vanillaPlayer.Position = playerPos;
-        vanillaPlayer.Rotation = new System.Numerics.Vector3(0f, ROT_Y, 0f);
-        Console.WriteLine($"  MSB: relocated {PREFERRED_PLAYER} to grace position");
+        var patched = false;
+        foreach (var instr in gameStartEvent.Instructions)
+        {
+            // SetPlayerRespawnPoint = bank 2003, id 23
+            if (instr.Bank == 2003 && instr.ID == 23 && instr.ArgData.Length >= 4)
+            {
+                var currentRegion = BitConverter.ToUInt32(instr.ArgData, 0);
+                if (currentRegion == VANILLA_SPAWN_REGION)
+                {
+                    BitConverter.GetBytes(newRegionEntity).CopyTo(instr.ArgData, 0);
+                    patched = true;
+                    Console.WriteLine($"  EMEVD: patched event {GAME_START_EVENT_ID} " +
+                                      $"SetPlayerRespawnPoint({VANILLA_SPAWN_REGION} -> {newRegionEntity})");
+                }
+            }
+        }
+
+        if (!patched)
+        {
+            Console.WriteLine($"Warning: SetPlayerRespawnPoint({VANILLA_SPAWN_REGION}) not found in event {GAME_START_EVENT_ID}");
+        }
+    }
+
+    /// <summary>
+    /// Create a SpawnPoint region at the grace position (2m forward).
+    /// Used by event 10010020 ("Game start") via SetPlayerRespawnPoint to place the
+    /// player directly at the grace on first load, instead of the vanilla Grafted Scion area.
+    /// Returns the entity ID of the created region.
+    /// </summary>
+    private static uint CreateGraceSpawnRegion(MSBE msb)
+    {
+        // Check if already created
+        var existing = msb.Regions.SpawnPoints.Find(r => r.EntityID == GRACE_SPAWN_REGION);
+        if (existing != null)
+        {
+            Console.WriteLine($"  MSB: grace spawn region already exists (entity {GRACE_SPAWN_REGION})");
+            return GRACE_SPAWN_REGION;
+        }
+
+        var spawnPos = MoveInDirection(POS_X, POS_Y, POS_Z, ROT_Y, 2f);
+        var region = new MSBE.Region.SpawnPoint
+        {
+            Name = $"SpawnPoint grace_chapel",
+            EntityID = GRACE_SPAWN_REGION,
+            Position = spawnPos,
+            Rotation = new System.Numerics.Vector3(0f, ROT_Y, 0f),
+        };
+        msb.Regions.SpawnPoints.Add(region);
+
+        Console.WriteLine($"  MSB: created grace spawn region (entity {GRACE_SPAWN_REGION})");
+        return GRACE_SPAWN_REGION;
     }
 
     /// <summary>
