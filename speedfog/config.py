@@ -253,17 +253,17 @@ class CarePackageConfig:
 
     enabled: bool = False
     weapon_upgrade: int = 8  # Standard upgrade level (0-25)
-    weapons: int = 2
-    shields: int = 1
-    catalysts: int = 1
-    talismans: int = 2
-    sorceries: int = 3
-    incantations: int = 3
-    head_armor: int = 1
-    body_armor: int = 1
-    arm_armor: int = 1
-    leg_armor: int = 1
-    crystal_tears: int = 3
+    weapons: int = 5
+    shields: int = 2
+    catalysts: int = 2
+    talismans: int = 4
+    sorceries: int = 5
+    incantations: int = 5
+    head_armor: int = 2
+    body_armor: int = 2
+    arm_armor: int = 2
+    leg_armor: int = 2
+    crystal_tears: int = 5
 
     def __post_init__(self) -> None:
         """Validate care package configuration."""
@@ -383,17 +383,17 @@ class Config:
             care_package=CarePackageConfig(
                 enabled=care_package_section.get("enabled", False),
                 weapon_upgrade=care_package_section.get("weapon_upgrade", 8),
-                weapons=care_package_section.get("weapons", 2),
-                shields=care_package_section.get("shields", 1),
-                catalysts=care_package_section.get("catalysts", 1),
-                talismans=care_package_section.get("talismans", 2),
-                sorceries=care_package_section.get("sorceries", 3),
-                incantations=care_package_section.get("incantations", 3),
-                head_armor=care_package_section.get("head_armor", 1),
-                body_armor=care_package_section.get("body_armor", 1),
-                arm_armor=care_package_section.get("arm_armor", 1),
-                leg_armor=care_package_section.get("leg_armor", 1),
-                crystal_tears=care_package_section.get("crystal_tears", 3),
+                weapons=care_package_section.get("weapons", 5),
+                shields=care_package_section.get("shields", 2),
+                catalysts=care_package_section.get("catalysts", 2),
+                talismans=care_package_section.get("talismans", 4),
+                sorceries=care_package_section.get("sorceries", 5),
+                incantations=care_package_section.get("incantations", 5),
+                head_armor=care_package_section.get("head_armor", 2),
+                body_armor=care_package_section.get("body_armor", 2),
+                arm_armor=care_package_section.get("arm_armor", 2),
+                leg_armor=care_package_section.get("leg_armor", 2),
+                crystal_tears=care_package_section.get("crystal_tears", 5),
             ),
         )
 

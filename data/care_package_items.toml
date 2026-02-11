@@ -65,6 +65,30 @@ id = 1000000
 name = "Celebrant's Sickle"
 id = 1060000
 
+[[weapons.standard]]
+name = "Halberd"
+id = 12000000
+
+[[weapons.standard]]
+name = "Great Epee"
+id = 7010000
+
+[[weapons.standard]]
+name = "Morningstar"
+id = 14020000
+
+[[weapons.standard]]
+name = "Cross-Naginata"
+id = 15050000
+
+[[weapons.standard]]
+name = "Twinblade"
+id = 10000000
+
+[[weapons.standard]]
+name = "Flail"
+id = 14050000
+
 # =============================================================================
 # Weapons - somber upgrade path (unique weapons, somber smithing stones)
 # =============================================================================
@@ -93,6 +117,30 @@ id = 2140000
 name = "Ornamental Straight Sword"
 id = 2060000
 
+[[weapons.somber]]
+name = "Blasphemous Blade"
+id = 4060000
+
+[[weapons.somber]]
+name = "Rivers of Blood"
+id = 9070000
+
+[[weapons.somber]]
+name = "Wing of Astel"
+id = 8050000
+
+[[weapons.somber]]
+name = "Bolt of Gransax"
+id = 15080000
+
+[[weapons.somber]]
+name = "Dark Moon Greatsword"
+id = 3120000
+
+[[weapons.somber]]
+name = "Eleonora's Poleblade"
+id = 10060000
+
 # =============================================================================
 # Shields (type=Weapon in game, standard upgrade)
 # =============================================================================
@@ -117,6 +165,14 @@ id = 30140000
 name = "Perfumer's Shield"
 id = 30010000
 
+[[shields]]
+name = "Banished Knight's Shield"
+id = 31100000
+
+[[shields]]
+name = "Large Leather Shield"
+id = 31040000
+
 # =============================================================================
 # Catalysts - standard upgrade (staves and seals, type=Weapon)
 # =============================================================================
@@ -132,6 +188,10 @@ id = 33130000
 [[catalysts.standard]]
 name = "Finger Seal"
 id = 34000000
+
+[[catalysts.standard]]
+name = "Demi-Human Queen's Staff"
+id = 33040000
 
 # =============================================================================
 # Catalysts - somber upgrade (unique staves and seals, type=Weapon)
@@ -264,6 +324,10 @@ id = 120300
 [[armor.leg]]
 name = "Bull-Goat Greaves"
 id = 140300
+
+[[armor.leg]]
+name = "Blaidd's Greaves"
+id = 170300
 
 # =============================================================================
 # Talismans (type=Accessory)

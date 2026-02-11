@@ -287,10 +287,17 @@ class TestCarePackageConfig:
         config = Config.from_dict({})
         assert config.care_package.enabled is False
         assert config.care_package.weapon_upgrade == 8
-        assert config.care_package.weapons == 2
-        assert config.care_package.shields == 1
-        assert config.care_package.talismans == 2
-        assert config.care_package.crystal_tears == 3
+        assert config.care_package.weapons == 5
+        assert config.care_package.shields == 2
+        assert config.care_package.catalysts == 2
+        assert config.care_package.talismans == 4
+        assert config.care_package.sorceries == 5
+        assert config.care_package.incantations == 5
+        assert config.care_package.head_armor == 2
+        assert config.care_package.body_armor == 2
+        assert config.care_package.arm_armor == 2
+        assert config.care_package.leg_armor == 2
+        assert config.care_package.crystal_tears == 5
 
     def test_from_toml(self, tmp_path):
         config_file = tmp_path / "config.toml"

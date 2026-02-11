@@ -157,17 +157,17 @@ enabled = false
 # weapon_upgrade = 8
 
 # Per-category item counts (set to 0 to disable a category)
-# weapons = 2          # Random melee weapons
-# shields = 1          # Random shield
-# catalysts = 1        # Random staff or seal
-# talismans = 2        # Random talismans
-# sorceries = 3        # Random sorceries
-# incantations = 3     # Random incantations
-# head_armor = 1       # Random helm
-# body_armor = 1       # Random chest armor
-# arm_armor = 1        # Random gauntlets
-# leg_armor = 1        # Random leg armor
-# crystal_tears = 3    # Random crystal tears for Flask of Wondrous Physick
+# weapons = 5          # Random melee weapons
+# shields = 2          # Random shields
+# catalysts = 2        # Random staves or seals
+# talismans = 4        # Random talismans
+# sorceries = 5        # Random sorceries
+# incantations = 5     # Random incantations
+# head_armor = 2       # Random helms
+# body_armor = 2       # Random chest armor
+# arm_armor = 2        # Random gauntlets
+# leg_armor = 2        # Random leg armor
+# crystal_tears = 5    # Random crystal tears for Flask of Wondrous Physick
 
 [item_randomizer]
 # Enable Item/Enemy Randomizer integration (default: true)
