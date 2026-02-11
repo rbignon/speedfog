@@ -236,6 +236,9 @@ class ItemRandomizerConfig:
     difficulty: int = 50
     remove_requirements: bool = True
     auto_upgrade_weapons: bool = True
+    auto_upgrade_dropped: bool = True
+    reduce_upgrade_cost: bool = True
+    dlc: bool = True
 
     def __post_init__(self) -> None:
         """Validate configuration."""
@@ -379,6 +382,13 @@ class Config:
                 auto_upgrade_weapons=item_randomizer_section.get(
                     "auto_upgrade_weapons", True
                 ),
+                auto_upgrade_dropped=item_randomizer_section.get(
+                    "auto_upgrade_dropped", True
+                ),
+                reduce_upgrade_cost=item_randomizer_section.get(
+                    "reduce_upgrade_cost", True
+                ),
+                dlc=item_randomizer_section.get("dlc", True),
             ),
             care_package=CarePackageConfig(
                 enabled=care_package_section.get("enabled", False),

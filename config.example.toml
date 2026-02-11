@@ -185,3 +185,15 @@ remove_requirements = true
 # Auto-upgrade weapons to player's highest upgrade level (default: true)
 # New weapons match your current max, no manual upgrading needed
 auto_upgrade_weapons = true
+
+# Auto-upgrade items left on the ground when picked up (default: true)
+# Dropped weapons/shields auto-match your upgrade level on pickup
+auto_upgrade_dropped = true
+
+# Reduce smithing stone cost to 1 per upgrade level for regular weapons (default: true)
+# Somber weapons already cost 1 per level; this makes regular weapons match
+reduce_upgrade_cost = true
+
+# Randomize DLC (Shadow of the Erdtree) items and enemies (default: true)
+# DLC enemies are mixed with base game (no separate silo)
+dlc = true

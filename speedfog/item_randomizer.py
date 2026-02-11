@@ -29,7 +29,9 @@ def generate_item_config(config: Config, seed: int) -> dict[str, Any]:
             "enemy": True,
             "fog": True,
             "crawl": True,
+            "dlc": config.item_randomizer.dlc,
             "weaponreqs": config.item_randomizer.remove_requirements,
+            "sombermode": config.item_randomizer.reduce_upgrade_cost,
         },
         "preset": "speedfog_enemy",
         # RandomizerHelper.dll defaults almost everything to true when not
@@ -52,7 +54,7 @@ def generate_item_config(config: Config, seed: int) -> dict[str, Any]:
             "autoUpgradeWeapons": config.item_randomizer.auto_upgrade_weapons,
             "regionLockWeapons": False,
             "autoUpgradeSpiritAshes": True,
-            "autoUpgradeDropped": False,
+            "autoUpgradeDropped": config.item_randomizer.auto_upgrade_dropped,
         },
     }
 

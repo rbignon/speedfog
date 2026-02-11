@@ -22,6 +22,8 @@ def test_generate_item_config_basic():
     assert result["options"]["fog"] is True
     assert result["options"]["crawl"] is True
     assert result["options"]["weaponreqs"] is True
+    assert result["options"]["dlc"] is True
+    assert result["options"]["sombermode"] is True
     assert result["preset"] == "speedfog_enemy"
     assert result["helper_options"]["autoUpgradeWeapons"] is True
     # All 14 bool options must be explicitly set (DLL defaults most to true)
@@ -40,7 +42,7 @@ def test_generate_item_config_basic():
     # Auto-upgrade: enabled
     assert helper["autoUpgrade"] is True
     assert helper["autoUpgradeSpiritAshes"] is True
-    assert helper["autoUpgradeDropped"] is False
+    assert helper["autoUpgradeDropped"] is True
     assert helper["regionLockWeapons"] is False
 
 
