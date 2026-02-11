@@ -214,8 +214,13 @@ DLC_TAGS = {"dlc", "dlc1", "dlc2", "dlconly"}
 # Tags that mark overworld areas
 OVERWORLD_TAG = "overworld"
 
-# Tags to exclude areas
-EXCLUDE_TAGS = {"unused", "crawlonly", "evergaol"}  # evergaols need special handling
+# Tags to exclude areas (note: crawlonly AREAS are evergaol-style internal selfwarp
+# destinations, not regular zones — different from crawlonly WARPS which are valid fogs)
+EXCLUDE_TAGS = {"unused", "crawlonly", "evergaol"}
+
+# Dungeon-entrance-only warp tags — FogMod marks these as unused in crawl mode
+# with req_backportal=true (Graph.cs:1069-1076)
+_DUNGEON_ONLY_TAGS = frozenset({"caveonly", "catacombonly", "forgeonly", "gaolonly"})
 
 # Zone name prefixes to exclude (these use alternative fog gates that FogMod ignores)
 EXCLUDE_ZONE_PREFIXES = {"leyndell2_"}  # Ashen Leyndell - use pre-ashen instead
@@ -540,8 +545,15 @@ def classify_fogs(
         aside_tags_lower = [t.lower() for t in fog.aside.tags]
         bside_tags_lower = [t.lower() for t in fog.bside.tags]
 
-        # Skip crawlonly fogs (we're not in crawl mode)
-        if "crawlonly" in tags_lower:
+        # Note: crawlonly warps are valid in SpeedFog (crawl=true).
+        # FogMod only marks them unused when !crawl (Graph.cs:1048-1050).
+        # We keep them as they create valid edges in FogMod's graph.
+
+        # Skip dungeon-entrance-only warps (caveonly, catacombonly, forgeonly, gaolonly)
+        # FogMod marks these as unused in crawl mode with req_backportal=true
+        # (SpeedFog's standard config), so they don't create graph edges.
+        # See reference/fogrando-src/Graph.cs:1069-1076
+        if _DUNGEON_ONLY_TAGS & set(tags_lower):
             continue
 
         # Skip fogs with minorwarp at the fog level (not on sides)

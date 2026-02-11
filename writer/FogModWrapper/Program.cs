@@ -146,6 +146,8 @@ Example:
         opt["req_tunnel"] = true;
         opt["req_catacomb"] = true;
         opt["req_grave"] = true;
+        opt["req_forge"] = true;   // DLC forges (Taylew's, Starfall Past, Lava Intake)
+        opt["req_gaol"] = true;    // DLC gaols (Belurat, Bonny, Lamenter's)
         opt["req_legacy"] = true;  // Legacy dungeons
         opt["req_major"] = true;   // Major bosses
         opt["req_underground"] = true;  // Underground areas (Siofra, Ainsel, Nokron, etc.)

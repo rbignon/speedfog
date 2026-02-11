@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import pytest
 from generate_clusters import (
     AreaData,
     Cluster,
@@ -668,6 +669,65 @@ class TestClassifyFogs:
         assert fog_ashen not in zone_fogs.get("sidetomb", ZoneFogs()).exit_fogs
         assert fog_ashen not in zone_fogs.get("outskirts", ZoneFogs()).entry_fogs
         assert fog_ashen not in zone_fogs.get("outskirts", ZoneFogs()).exit_fogs
+
+    def test_crawlonly_fog_included(self):
+        """Crawlonly fogs are valid in SpeedFog (crawl=true).
+
+        FogMod only marks crawlonly warps as unused when !crawl.
+        Since SpeedFog uses crawl=true, they create valid graph edges.
+        """
+        fog = FogData(
+            name="AEG099_230_9000",
+            fog_id=12345,
+            aside=FogSide(area="zone_a", text="at gate"),
+            bside=FogSide(area="zone_b", text="at gate"),
+            tags=["crawlonly"],
+        )
+        zone_fogs = classify_fogs([fog], [])
+        # crawlonly fogs should be included as bidirectional
+        assert fog in zone_fogs["zone_a"].exit_fogs
+        assert fog in zone_fogs["zone_b"].exit_fogs
+
+    @pytest.mark.parametrize(
+        "tag", ["caveonly", "catacombonly", "forgeonly", "gaolonly"]
+    )
+    def test_dungeon_only_fog_excluded(self, tag):
+        """Dungeon-entrance-only fogs are excluded.
+
+        FogMod marks caveonly/catacombonly/forgeonly/gaolonly warps as unused
+        in crawl mode with req_backportal=true (SpeedFog's standard config).
+        They don't create graph edges. See Graph.cs:1069-1076.
+        """
+        fog = FogData(
+            name="AEG099_232_9000",
+            fog_id=42032840,
+            aside=FogSide(area="zone_a", text="at entrance"),
+            bside=FogSide(area="zone_b", text="at gate"),
+            tags=[tag],
+        )
+        zone_fogs = classify_fogs([fog], [])
+        assert fog not in zone_fogs.get("zone_a", ZoneFogs()).entry_fogs
+        assert fog not in zone_fogs.get("zone_a", ZoneFogs()).exit_fogs
+        assert fog not in zone_fogs.get("zone_b", ZoneFogs()).entry_fogs
+        assert fog not in zone_fogs.get("zone_b", ZoneFogs()).exit_fogs
+
+    def test_backportal_selfwarp(self):
+        """Backportal warps become selfwarps, added to ASide only.
+
+        With req_backportal=true, FogMod reassigns BSide.Area = ASide.Area
+        (Graph.cs:1079-1095). They're added to both entry and exit fogs
+        for the ASide zone only.
+        """
+        fog = FogData(
+            name="42032840",
+            fog_id=42032840,
+            aside=FogSide(area="rauhbase_forge", text="return to entrance"),
+            bside=FogSide(area="rauhbase_forge", text="arriving at entrance"),
+            tags=["backportal", "dungeon", "alwaysback", "forge"],
+        )
+        zone_fogs = classify_fogs([], [fog])
+        assert fog in zone_fogs["rauhbase_forge"].entry_fogs
+        assert fog in zone_fogs["rauhbase_forge"].exit_fogs
 
 
 # =============================================================================
