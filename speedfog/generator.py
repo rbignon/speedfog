@@ -12,6 +12,7 @@ import random
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum, auto
+from itertools import combinations
 
 from speedfog.clusters import ClusterData, ClusterPool
 from speedfog.config import Config, resolve_final_boss_candidates
@@ -392,11 +393,16 @@ def decide_operation(
     Returns:
         The operation to perform.
     """
+    max_paths = config.structure.max_parallel_paths
     max_branches = config.structure.max_branches
     split_prob = config.structure.split_probability
     merge_prob = config.structure.merge_probability
 
-    if num_branches >= max_branches:
+    # Splits and merges need fan-out >= 2
+    if max_branches < 2:
+        return LayerOperation.PASSANT
+
+    if num_branches >= max_paths:
         # At max: can only merge or passant
         return (
             LayerOperation.MERGE
@@ -501,8 +507,12 @@ def execute_split_layer(
     clusters: ClusterPool,
     used_zones: set[str],
     rng: random.Random,
+    config: Config,
 ) -> list[Branch]:
-    """Execute a split layer where one branch splits into two.
+    """Execute a split layer where one branch splits into N.
+
+    The fan-out N is controlled by config.structure.max_branches, capped by
+    available room under max_parallel_paths. Tries from max down to 2.
 
     Args:
         dag: The DAG being built.
@@ -513,9 +523,10 @@ def execute_split_layer(
         clusters: Pool of available clusters.
         used_zones: Set of already used zones.
         rng: Random number generator.
+        config: Configuration with max_branches and max_parallel_paths.
 
     Returns:
-        Updated list of branches (with one extra).
+        Updated list of branches.
 
     Raises:
         GenerationError: If no suitable cluster found.
@@ -525,23 +536,37 @@ def execute_split_layer(
     candidates = clusters.get_by_type(layer_type)
     letter_offset = 0
 
+    # Max fan-out: limited by max_branches and room under max_parallel_paths
+    # Splitting replaces 1 branch with N, so net increase is N-1
+    room = config.structure.max_parallel_paths - len(branches) + 1
+    max_fan_out = min(config.structure.max_branches, room)
+
     for i, branch in enumerate(branches):
         if i == split_idx:
-            # This branch splits into two
-            cluster = pick_cluster_with_filter(
-                candidates, used_zones, rng, lambda c: can_be_split_node(c, 2)
-            )
+            # Try N-ary split from max_fan_out down to 2
+            cluster = None
+            actual_fan_out = 2
+            for n in range(max_fan_out, 1, -1):
+                cluster = pick_cluster_with_filter(
+                    candidates,
+                    used_zones,
+                    rng,
+                    lambda c, n=n: can_be_split_node(c, n),  # type: ignore[misc]
+                )
+                if cluster is not None:
+                    actual_fan_out = n
+                    break
+
             if cluster is None:
                 raise GenerationError(
                     f"No split-compatible cluster for layer {layer_idx} (type: {layer_type})"
                 )
             used_zones.update(cluster.zones)
 
-            # Pick entry that leaves at least 2 exits
-            entry = pick_entry_with_max_exits(cluster, 2, rng)
+            entry = pick_entry_with_max_exits(cluster, actual_fan_out, rng)
             if entry is None:
                 raise GenerationError(
-                    f"Cluster {cluster.id} has no valid entry fog with 2+ exits"
+                    f"Cluster {cluster.id} has no valid entry fog with {actual_fan_out}+ exits"
                 )
 
             entry_fog_id = entry["fog_id"]
@@ -562,10 +587,13 @@ def execute_split_layer(
                 branch.current_node_id, node_id, branch.available_exit, entry_fog_id
             )
 
-            # Create two new branches
+            # Create actual_fan_out new branches
             rng.shuffle(exit_fogs)
-            new_branches.append(Branch(f"{branch.id}_a", node_id, exit_fogs[0]))
-            new_branches.append(Branch(f"{branch.id}_b", node_id, exit_fogs[1]))
+            for j in range(actual_fan_out):
+                suffix = chr(97 + j)
+                new_branches.append(
+                    Branch(f"{branch.id}_{suffix}", node_id, exit_fogs[j])
+                )
             letter_offset += 1
         else:
             # Regular passant for this branch
@@ -614,32 +642,35 @@ def _has_valid_merge_pair(branches: list[Branch]) -> bool:
     return len(node_ids) >= 2
 
 
-def _find_valid_merge_indices(branches: list[Branch], rng: random.Random) -> list[int]:
-    """Select two branch indices with different current nodes for merging.
+def _find_valid_merge_indices(
+    branches: list[Branch], rng: random.Random, count: int = 2
+) -> list[int] | None:
+    """Select branch indices with at least 2 different parent nodes for merging.
 
-    Prevents micro split-merge where two branches from the same split node
-    immediately merge into one target, creating a pointless Y-shape.
+    Prevents micro split-merge where all merging branches come from the same
+    split node, creating a pointless fan-out/fan-in.
 
     Args:
         branches: Current branches.
         rng: Random number generator.
+        count: Number of branches to select for merging.
 
     Returns:
-        List of two branch indices with different current nodes.
-
-    Raises:
-        GenerationError: If all branches share the same current node.
+        List of branch indices, or None if no valid selection exists.
     """
-    valid_pairs: list[tuple[int, int]] = []
-    for i in range(len(branches)):
-        for j in range(i + 1, len(branches)):
-            if branches[i].current_node_id != branches[j].current_node_id:
-                valid_pairs.append((i, j))
-    if not valid_pairs:
-        raise GenerationError(
-            "No valid merge pair: all branches share the same current node"
-        )
-    return list(rng.choice(valid_pairs))
+    if count > len(branches):
+        return None
+
+    valid_combos: list[list[int]] = []
+    for combo in combinations(range(len(branches)), count):
+        parents = {branches[i].current_node_id for i in combo}
+        if len(parents) >= 2:
+            valid_combos.append(list(combo))
+
+    if not valid_combos:
+        return None
+
+    return rng.choice(valid_combos)
 
 
 def execute_merge_layer(
@@ -651,8 +682,12 @@ def execute_merge_layer(
     clusters: ClusterPool,
     used_zones: set[str],
     rng: random.Random,
+    config: Config,
 ) -> list[Branch]:
-    """Execute a merge layer where two branches merge into one.
+    """Execute a merge layer where N branches merge into one.
+
+    The fan-in N is controlled by config.structure.max_branches.
+    Tries from max down to 2.
 
     Args:
         dag: The DAG being built.
@@ -663,9 +698,10 @@ def execute_merge_layer(
         clusters: Pool of available clusters.
         used_zones: Set of already used zones.
         rng: Random number generator.
+        config: Configuration with max_branches.
 
     Returns:
-        Updated list of branches (with one fewer).
+        Updated list of branches (with fewer branches).
 
     Raises:
         GenerationError: If no suitable cluster found.
@@ -673,24 +709,43 @@ def execute_merge_layer(
     if len(branches) < 2:
         raise GenerationError("Cannot merge with fewer than 2 branches")
 
-    merge_indices = _find_valid_merge_indices(branches, rng)
-    merge_branches = [branches[i] for i in merge_indices]
-
+    max_merge = max(min(config.structure.max_branches, len(branches)), 2)
     candidates = clusters.get_by_type(layer_type)
-    new_branches: list[Branch] = []
-    letter_offset = 0
 
-    # Create merge node first
-    cluster = pick_cluster_with_filter(
-        candidates, used_zones, rng, lambda c: can_be_merge_node(c, 2)
-    )
-    if cluster is None:
+    # Try from max_merge down to 2: find valid indices AND matching cluster
+    merge_indices: list[int] | None = None
+    merge_cluster: ClusterData | None = None
+    actual_merge = 2
+    for n in range(max_merge, 1, -1):
+        indices = _find_valid_merge_indices(branches, rng, n)
+        if indices is None:
+            continue
+        c = pick_cluster_with_filter(
+            candidates,
+            used_zones,
+            rng,
+            lambda c, n=n: can_be_merge_node(c, n),  # type: ignore[misc]
+        )
+        if c is not None:
+            merge_indices = indices
+            merge_cluster = c
+            actual_merge = n
+            break
+
+    if merge_indices is None or merge_cluster is None:
         raise GenerationError(
             f"No merge-compatible cluster for layer {layer_idx} (type: {layer_type})"
         )
-    used_zones.update(cluster.zones)
 
-    entries = select_entries_for_merge(cluster, 2, rng)
+    merge_branches = [branches[i] for i in merge_indices]
+    assert merge_cluster is not None  # narrowing for mypy
+    cluster = merge_cluster
+
+    new_branches: list[Branch] = []
+    letter_offset = 0
+
+    used_zones.update(cluster.zones)
+    entries = select_entries_for_merge(cluster, actual_merge, rng)
     entry_fog_ids = [e["fog_id"] for e in entries]
     exits = compute_net_exits(cluster, entries)
     exit_fogs = [f["fog_id"] for f in exits]
@@ -707,8 +762,7 @@ def execute_merge_layer(
     dag.add_node(merge_node)
     letter_offset += 1
 
-    # Connect both merging branches to the merge node
-    # Pair each branch with its corresponding entry fog
+    # Connect all merging branches to the merge node
     for branch, entry_fog_id in zip(merge_branches, entry_fog_ids, strict=False):
         dag.add_edge(
             branch.current_node_id, merge_node_id, branch.available_exit, entry_fog_id
@@ -720,33 +774,34 @@ def execute_merge_layer(
     )
 
     # Handle non-merged branches as passant
+    merge_idx_set = set(merge_indices)
     for i, branch in enumerate(branches):
-        if i in merge_indices:
+        if i in merge_idx_set:
             continue
 
-        cluster = pick_cluster_with_filter(
+        passant_cluster = pick_cluster_with_filter(
             candidates, used_zones, rng, can_be_passant_node
         )
-        if cluster is None:
+        if passant_cluster is None:
             raise GenerationError(
                 f"No passant-compatible cluster for layer {layer_idx} branch {i} (type: {layer_type})"
             )
-        used_zones.update(cluster.zones)
+        used_zones.update(passant_cluster.zones)
 
-        passant_entry = pick_entry_with_max_exits(cluster, 1, rng)
+        passant_entry = pick_entry_with_max_exits(passant_cluster, 1, rng)
         if passant_entry is None:
             raise GenerationError(
-                f"Cluster {cluster.id} has no valid entry fog with exits"
+                f"Cluster {passant_cluster.id} has no valid entry fog with exits"
             )
 
         passant_entry_fog_id = passant_entry["fog_id"]
-        exits = compute_net_exits(cluster, [passant_entry])
+        exits = compute_net_exits(passant_cluster, [passant_entry])
         exit_fogs = [f["fog_id"] for f in exits]
 
         node_id = f"node_{layer_idx}_{chr(97 + letter_offset)}"
         node = DagNode(
             id=node_id,
-            cluster=cluster,
+            cluster=passant_cluster,
             layer=layer_idx,
             tier=tier,
             entry_fogs=[passant_entry_fog_id],
@@ -772,10 +827,12 @@ def execute_forced_merge(
     clusters: ClusterPool,
     used_zones: set[str],
     rng: random.Random,
+    config: Config,
 ) -> tuple[list[Branch], int]:
     """Force all branches to merge into one.
 
-    Repeatedly merges until only 1 branch remains.
+    Repeatedly merges until only 1 branch remains. With N-ary merges
+    controlled by config.structure.max_branches, this may complete faster.
 
     Args:
         dag: The DAG being built.
@@ -786,6 +843,7 @@ def execute_forced_merge(
         clusters: Pool of available clusters.
         used_zones: Set of already used zones.
         rng: Random number generator.
+        config: Configuration with max_branches.
 
     Returns:
         Tuple of (list with single branch, final layer index used).
@@ -809,7 +867,15 @@ def execute_forced_merge(
             )
             current_layer += 1
         branches = execute_merge_layer(
-            dag, branches, current_layer, tier, layer_type, clusters, used_zones, rng
+            dag,
+            branches,
+            current_layer,
+            tier,
+            layer_type,
+            clusters,
+            used_zones,
+            rng,
+            config,
         )
         current_layer += 1
 
@@ -879,7 +945,11 @@ def generate_dag(
     # 2. Initialize branches from start exits
     # Natural split at start based on available exits
     start_exits = start_node.exit_fogs
-    num_initial_branches = min(len(start_exits), config.structure.max_branches)
+    num_initial_branches = min(
+        len(start_exits),
+        config.structure.max_parallel_paths,
+        config.structure.max_branches,
+    )
 
     if num_initial_branches == 0:
         raise GenerationError("Start cluster has no exits")
@@ -946,6 +1016,7 @@ def generate_dag(
                 clusters,
                 used_zones,
                 rng,
+                config,
             )
         else:
             # Decide operation based on current state
@@ -972,6 +1043,7 @@ def generate_dag(
                     clusters,
                     used_zones,
                     rng,
+                    config,
                 )
             elif operation == LayerOperation.MERGE:
                 if _has_valid_merge_pair(branches):
@@ -984,6 +1056,7 @@ def generate_dag(
                         clusters,
                         used_zones,
                         rng,
+                        config,
                     )
                 else:
                     # All branches share the same source; fall back to passant
@@ -1013,6 +1086,7 @@ def generate_dag(
             clusters,
             used_zones,
             rng,
+            config,
         )
 
     # 7. Create end node (final_boss from candidates)

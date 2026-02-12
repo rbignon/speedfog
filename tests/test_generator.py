@@ -452,8 +452,8 @@ class TestGenerateDag:
             assert path[0] == "start"
             assert path[-1] == "end"
 
-    def test_respects_max_branches(self):
-        """DAG does not exceed max_branches at any layer."""
+    def test_respects_max_parallel_paths(self):
+        """DAG does not exceed max_parallel_paths at any layer."""
         # Create pool with merge-compatible clusters (2+ entries)
         pool = ClusterPool()
 
@@ -525,6 +525,7 @@ class TestGenerateDag:
 
         config = Config()
         config.structure.max_branches = 2
+        config.structure.max_parallel_paths = 3
         config.structure.min_layers = 4
         config.structure.max_layers = 4
         config.structure.split_probability = 0.2
@@ -535,17 +536,17 @@ class TestGenerateDag:
 
         dag = generate_dag(config, pool, seed=42)
 
-        # Count nodes per layer (excluding start and end)
+        # Count nodes per layer
         nodes_by_layer: dict[int, int] = {}
         for node in dag.nodes.values():
             layer = node.layer
             nodes_by_layer[layer] = nodes_by_layer.get(layer, 0) + 1
 
-        # Each layer should have at most max_branches nodes
+        # Each layer should have at most max_parallel_paths nodes
         for layer, count in nodes_by_layer.items():
             assert (
-                count <= config.structure.max_branches
-            ), f"Layer {layer} has {count} nodes > max_branches {config.structure.max_branches}"
+                count <= config.structure.max_parallel_paths
+            ), f"Layer {layer} has {count} nodes > max_parallel_paths {config.structure.max_parallel_paths}"
 
     def test_no_zone_overlap(self):
         """Each zone appears in exactly one node."""
@@ -1121,7 +1122,7 @@ class TestMergeGuards:
     """Tests for _has_valid_merge_pair and _find_valid_merge_indices."""
 
     def test_merge_rejects_same_source_branches(self):
-        """_find_valid_merge_indices raises when all branches share the same node."""
+        """_find_valid_merge_indices returns None when all branches share the same node."""
         branches = [
             Branch("b0", "node_1_a", "exit_0"),
             Branch("b1", "node_1_a", "exit_1"),
@@ -1129,8 +1130,7 @@ class TestMergeGuards:
         rng = random.Random(42)
 
         assert _has_valid_merge_pair(branches) is False
-        with pytest.raises(GenerationError, match="same current node"):
-            _find_valid_merge_indices(branches, rng)
+        assert _find_valid_merge_indices(branches, rng) is None
 
     def test_merge_selects_different_source_branches(self):
         """_find_valid_merge_indices selects branches with different current nodes."""

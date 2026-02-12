@@ -63,6 +63,12 @@ class StructureConfig:
 
     def __post_init__(self) -> None:
         """Validate structure configuration."""
+        if self.max_branches < 1:
+            raise ValueError(f"max_branches must be >= 1, got {self.max_branches}")
+        if self.max_parallel_paths < 1:
+            raise ValueError(
+                f"max_parallel_paths must be >= 1, got {self.max_parallel_paths}"
+            )
         if not isinstance(self.final_tier, int):
             raise TypeError(
                 f"final_tier must be int, got {type(self.final_tier).__name__}"
