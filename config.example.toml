@@ -140,6 +140,10 @@ gaollowerlevelkey = true  # Gaol Lower Level Key
 holeladennecklace = true  # Hole-Laden Necklace - access Manus Metyr
 messmerskindling = true   # Messmer's Kindling - progress through DLC
 
+# Talisman Pouches - expand equip slots (0-3, default: 3 = 4 total slots)
+# In vanilla, pouches come from Margit, Enia, and Godfrey - none guaranteed in SpeedFog
+talisman_pouches = 3
+
 # Consumable starting resources (awarded via EMEVD when picking up Finger)
 # golden_seeds = 5       # Golden Seeds to upgrade flask uses (0-99)
 # sacred_tears = 3       # Sacred Tears to upgrade flask potency (0-12)

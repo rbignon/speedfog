@@ -138,6 +138,9 @@ class StartingItemsConfig:
     holeladennecklace: bool = True  # Hole-Laden Necklace (Good ID 2008008)
     messmerskindling: bool = True  # Messmer's Kindling (Good ID 2008021)
 
+    # Talisman pouches (expand equip slots)
+    talisman_pouches: int = 3  # Talisman Pouches (Good ID 10040) - +1 slot each, max 3
+
     # Consumable starting resources
     golden_seeds: int = 0  # Golden Seeds (Good ID 10010) - upgrade flask uses
     sacred_tears: int = 0  # Sacred Tears (Good ID 10020) - upgrade flask potency
@@ -145,6 +148,10 @@ class StartingItemsConfig:
 
     def __post_init__(self) -> None:
         """Validate starting items configuration."""
+        if self.talisman_pouches < 0 or self.talisman_pouches > 3:
+            raise ValueError(
+                f"talisman_pouches must be 0-3, got {self.talisman_pouches}"
+            )
         if self.golden_seeds < 0 or self.golden_seeds > 99:
             raise ValueError(f"golden_seeds must be 0-99, got {self.golden_seeds}")
         if self.sacred_tears < 0 or self.sacred_tears > 12:
@@ -196,6 +203,10 @@ class StartingItemsConfig:
             goods.append(2008008)  # Hole-Laden Necklace
         if self.messmerskindling:
             goods.append(2008021)  # Messmer's Kindling
+
+        # Talisman Pouches (+1 equip slot each, max 3)
+        for _ in range(self.talisman_pouches):
+            goods.append(10040)  # Talisman Pouch
 
         # Great Runes (RESTORED versions - Good IDs 191-196)
         # These are the activated/restored versions, equippable at Graces
@@ -369,6 +380,7 @@ class Config:
                 gaollowerlevelkey=starting_items_section.get("gaollowerlevelkey", True),
                 holeladennecklace=starting_items_section.get("holeladennecklace", True),
                 messmerskindling=starting_items_section.get("messmerskindling", True),
+                talisman_pouches=starting_items_section.get("talisman_pouches", 3),
                 golden_seeds=starting_items_section.get("golden_seeds", 0),
                 sacred_tears=starting_items_section.get("sacred_tears", 0),
                 starting_runes=starting_items_section.get("starting_runes", 0),

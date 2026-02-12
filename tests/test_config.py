@@ -213,6 +213,7 @@ def test_starting_items_defaults():
     assert config.starting_items.lantern is True
     assert config.starting_items.whetblades is True
     assert config.starting_items.great_runes is True
+    assert config.starting_items.talisman_pouches == 3
     assert config.starting_items.golden_seeds == 0
     assert config.starting_items.sacred_tears == 0
     assert config.starting_items.starting_runes == 0
@@ -223,11 +224,13 @@ def test_starting_items_consumables(tmp_path):
     config_file = tmp_path / "config.toml"
     config_file.write_text("""
 [starting_items]
+talisman_pouches = 2
 golden_seeds = 5
 sacred_tears = 3
 starting_runes = 50000
 """)
     config = Config.from_toml(config_file)
+    assert config.starting_items.talisman_pouches == 2
     assert config.starting_items.golden_seeds == 5
     assert config.starting_items.sacred_tears == 3
     assert config.starting_items.starting_runes == 50000
@@ -256,6 +259,15 @@ def test_starting_items_get_starting_goods():
     assert 8970 in goods  # Iron Whetblade
     assert 191 in goods  # Godrick's Great Rune (restored, Good ID 191)
     assert 192 not in goods  # Radahn's Great Rune disabled
+    # Default 3 talisman pouches
+    assert goods.count(10040) == 3  # 3x Talisman Pouch
+
+
+def test_starting_items_get_starting_goods_no_pouches():
+    """get_starting_goods omits pouches when talisman_pouches=0."""
+    config = Config.from_dict({"starting_items": {"talisman_pouches": 0}})
+    goods = config.starting_items.get_starting_goods()
+    assert 10040 not in goods
 
 
 def test_starting_items_get_starting_goods_all_runes():
@@ -281,6 +293,17 @@ def test_starting_items_get_starting_goods_all_runes():
     assert 194 in goods  # Rykard (restored)
     assert 195 in goods  # Mohg (restored)
     assert 196 in goods  # Malenia (restored)
+    assert goods.count(10040) == 3  # 3x Talisman Pouch (default)
+
+
+def test_starting_items_validation_talisman_pouches():
+    """talisman_pouches must be 0-3."""
+    import pytest
+
+    with pytest.raises(ValueError, match="talisman_pouches must be 0-3"):
+        Config.from_dict({"starting_items": {"talisman_pouches": 4}})
+    with pytest.raises(ValueError, match="talisman_pouches must be 0-3"):
+        Config.from_dict({"starting_items": {"talisman_pouches": -1}})
 
 
 def test_starting_items_validation_golden_seeds():
