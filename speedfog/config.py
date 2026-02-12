@@ -69,6 +69,11 @@ class StructureConfig:
             raise ValueError(
                 f"max_parallel_paths must be >= 1, got {self.max_parallel_paths}"
             )
+        if self.max_branches >= 2 and self.max_parallel_paths < 2:
+            raise ValueError(
+                f"max_parallel_paths must be >= 2 when max_branches >= 2, "
+                f"got max_parallel_paths={self.max_parallel_paths}"
+            )
         if not isinstance(self.final_tier, int):
             raise TypeError(
                 f"final_tier must be int, got {type(self.final_tier).__name__}"

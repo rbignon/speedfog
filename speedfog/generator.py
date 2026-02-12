@@ -78,9 +78,9 @@ def validate_config(config: Config, clusters: ClusterPool) -> list[str]:
 class LayerOperation(Enum):
     """Type of operation to perform on a layer."""
 
-    PASSANT = auto()  # 1 branch -> 1 branch
-    SPLIT = auto()  # 1 branch -> 2 branches
-    MERGE = auto()  # 2 branches -> 1 branch
+    PASSANT = auto()  # 1 branch -> 1 branch (per branch)
+    SPLIT = auto()  # 1 branch -> N branches
+    MERGE = auto()  # N branches -> 1 branch
 
 
 @dataclass

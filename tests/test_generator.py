@@ -1175,6 +1175,199 @@ class TestMergeGuards:
         # With 3 branches all from different nodes, there are 3 valid pairs
         assert len(selected_pairs) > 1
 
+    def test_find_valid_merge_indices_ternary(self):
+        """_find_valid_merge_indices with count=3 selects 3-way merges."""
+        branches = [
+            Branch("b0", "node_a", "exit_0"),
+            Branch("b1", "node_b", "exit_1"),
+            Branch("b2", "node_c", "exit_2"),
+        ]
+        rng = random.Random(42)
+        indices = _find_valid_merge_indices(branches, rng, count=3)
+
+        assert indices is not None
+        assert len(indices) == 3
+        # All 3 nodes are different, so the only combo is [0, 1, 2]
+        assert sorted(indices) == [0, 1, 2]
+
+    def test_find_valid_merge_indices_ternary_needs_two_parents(self):
+        """3-way merge requires at least 2 distinct parent nodes."""
+        # 3 branches but only 1 distinct parent → no valid 3-way merge
+        branches = [
+            Branch("b0", "same_node", "exit_0"),
+            Branch("b1", "same_node", "exit_1"),
+            Branch("b2", "same_node", "exit_2"),
+        ]
+        rng = random.Random(42)
+        indices = _find_valid_merge_indices(branches, rng, count=3)
+        assert indices is None
+
+    def test_find_valid_merge_indices_count_exceeds_branches(self):
+        """count > len(branches) returns None."""
+        branches = [
+            Branch("b0", "node_a", "exit_0"),
+            Branch("b1", "node_b", "exit_1"),
+        ]
+        rng = random.Random(42)
+        assert _find_valid_merge_indices(branches, rng, count=3) is None
+
+    def test_nary_split_and_merge_in_generated_dag(self):
+        """With max_branches=3 and suitable clusters, DAGs produce 3-way splits/merges."""
+        pool = ClusterPool()
+
+        # Start cluster with 3 exits (enables 3-way initial split)
+        pool.add(
+            make_cluster(
+                "chapel_start",
+                zones=["chapel"],
+                cluster_type="start",
+                weight=1,
+                entry_fogs=[],
+                exit_fogs=[
+                    {"fog_id": "start_exit_1", "zone": "chapel"},
+                    {"fog_id": "start_exit_2", "zone": "chapel"},
+                    {"fog_id": "start_exit_3", "zone": "chapel"},
+                ],
+            )
+        )
+
+        # Final boss
+        pool.add(
+            make_cluster(
+                "erdtree_boss",
+                zones=["leyndell_erdtree"],
+                cluster_type="final_boss",
+                weight=5,
+                entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
+                exit_fogs=[],
+            )
+        )
+
+        # 3-entry merge clusters (3 entries, 1 net exit after merge)
+        for i in range(5):
+            pool.add(
+                make_cluster(
+                    f"merge3_{i}",
+                    zones=[f"merge3_{i}_zone"],
+                    cluster_type="mini_dungeon",
+                    weight=5,
+                    entry_fogs=[
+                        {"fog_id": f"merge3_{i}_entry_a", "zone": f"merge3_{i}_zone"},
+                        {"fog_id": f"merge3_{i}_entry_b", "zone": f"merge3_{i}_zone"},
+                        {"fog_id": f"merge3_{i}_entry_c", "zone": f"merge3_{i}_zone"},
+                    ],
+                    exit_fogs=[
+                        {"fog_id": f"merge3_{i}_exit", "zone": f"merge3_{i}_zone"},
+                        {"fog_id": f"merge3_{i}_entry_a", "zone": f"merge3_{i}_zone"},
+                        {"fog_id": f"merge3_{i}_entry_b", "zone": f"merge3_{i}_zone"},
+                        {"fog_id": f"merge3_{i}_entry_c", "zone": f"merge3_{i}_zone"},
+                    ],
+                )
+            )
+
+        # 3-exit split clusters (1 entry, 3 net exits)
+        for i in range(5):
+            pool.add(
+                make_cluster(
+                    f"split3_{i}",
+                    zones=[f"split3_{i}_zone"],
+                    cluster_type="mini_dungeon",
+                    weight=5,
+                    entry_fogs=[
+                        {"fog_id": f"split3_{i}_entry", "zone": f"split3_{i}_zone"},
+                    ],
+                    exit_fogs=[
+                        {"fog_id": f"split3_{i}_exit_a", "zone": f"split3_{i}_zone"},
+                        {"fog_id": f"split3_{i}_exit_b", "zone": f"split3_{i}_zone"},
+                        {"fog_id": f"split3_{i}_exit_c", "zone": f"split3_{i}_zone"},
+                    ],
+                )
+            )
+
+        # Passant clusters covering all types used by pick_layer_type
+        for i in range(10):
+            pool.add(
+                make_cluster(
+                    f"mini_p_{i}",
+                    zones=[f"mini_p_{i}_zone"],
+                    cluster_type="mini_dungeon",
+                    weight=5,
+                    entry_fogs=[
+                        {"fog_id": f"mini_p_{i}_entry", "zone": f"mini_p_{i}_zone"},
+                    ],
+                    exit_fogs=[
+                        {"fog_id": f"mini_p_{i}_exit", "zone": f"mini_p_{i}_zone"},
+                        {"fog_id": f"mini_p_{i}_entry", "zone": f"mini_p_{i}_zone"},
+                    ],
+                )
+            )
+        for i in range(5):
+            pool.add(
+                make_cluster(
+                    f"boss_p_{i}",
+                    zones=[f"boss_p_{i}_zone"],
+                    cluster_type="boss_arena",
+                    weight=3,
+                    entry_fogs=[
+                        {"fog_id": f"boss_p_{i}_entry", "zone": f"boss_p_{i}_zone"},
+                    ],
+                    exit_fogs=[
+                        {"fog_id": f"boss_p_{i}_exit", "zone": f"boss_p_{i}_zone"},
+                        {"fog_id": f"boss_p_{i}_entry", "zone": f"boss_p_{i}_zone"},
+                    ],
+                )
+            )
+        for i in range(3):
+            pool.add(
+                make_cluster(
+                    f"legacy_p_{i}",
+                    zones=[f"legacy_p_{i}_zone"],
+                    cluster_type="legacy_dungeon",
+                    weight=10,
+                    entry_fogs=[
+                        {"fog_id": f"legacy_p_{i}_entry", "zone": f"legacy_p_{i}_zone"},
+                    ],
+                    exit_fogs=[
+                        {"fog_id": f"legacy_p_{i}_exit", "zone": f"legacy_p_{i}_zone"},
+                        {"fog_id": f"legacy_p_{i}_entry", "zone": f"legacy_p_{i}_zone"},
+                    ],
+                )
+            )
+
+        config = Config()
+        config.structure.min_layers = 4
+        config.structure.max_layers = 8
+        config.structure.max_branches = 3
+        config.structure.max_parallel_paths = 4
+        config.structure.split_probability = 0.6
+        config.structure.merge_probability = 0.6
+        config.requirements.legacy_dungeons = 0
+        config.requirements.bosses = 0
+        config.requirements.mini_dungeons = 0
+
+        found_3way_split = False
+        found_3way_merge = False
+
+        for seed in range(1, 501):
+            try:
+                dag = generate_dag(config, pool, seed=seed)
+            except GenerationError:
+                continue
+
+            for node_id in dag.nodes:
+                in_edges = [e for e in dag.edges if e.target_id == node_id]
+                out_edges = [e for e in dag.edges if e.source_id == node_id]
+                if len(out_edges) >= 3:
+                    found_3way_split = True
+                if len(in_edges) >= 3:
+                    found_3way_merge = True
+
+            if found_3way_split and found_3way_merge:
+                break
+
+        assert found_3way_split, "No 3-way split found in 500 seeds"
+        assert found_3way_merge, "No 3-way merge found in 500 seeds"
+
     def test_no_duplicate_edges_in_generated_dag(self):
         """Generated DAGs with splits/merges have no duplicate (source, target) edges."""
         # Build a pool with split-, merge-, and passant-compatible clusters

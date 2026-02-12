@@ -1,5 +1,7 @@
 """Tests for config parsing."""
 
+import pytest
+
 from speedfog.config import (
     BudgetConfig,
     Config,
@@ -451,3 +453,18 @@ chapel_grace = false
 """)
     config = Config.from_toml(config_file)
     assert config.chapel_grace is False
+
+
+def test_max_branches_cross_validation():
+    """max_parallel_paths=1 with max_branches>=2 raises ValueError."""
+    with pytest.raises(ValueError, match="max_parallel_paths must be >= 2"):
+        Config.from_dict({"structure": {"max_parallel_paths": 1, "max_branches": 2}})
+
+
+def test_max_branches_one_allows_single_path():
+    """max_branches=1 with max_parallel_paths=1 is valid (linear only)."""
+    config = Config.from_dict(
+        {"structure": {"max_parallel_paths": 1, "max_branches": 1}}
+    )
+    assert config.structure.max_parallel_paths == 1
+    assert config.structure.max_branches == 1

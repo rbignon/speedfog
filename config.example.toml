@@ -61,7 +61,11 @@ split_probability = 0.3
 # Probability of merging parallel branches back together.
 merge_probability = 0.3
 
-# Maximum number of branches when splitting.
+# Maximum fan-out per split/merge operation.
+# Split: 1 entry → N exits (N up to max_branches).
+# Merge: N entries → 1 exit (N up to max_branches).
+# Higher values allow zones with more fog gates to be fully used.
+# Actual fan-out depends on available clusters and room under max_parallel_paths.
 max_branches = 3
 
 # Force the first layer after start to be a specific cluster type.
