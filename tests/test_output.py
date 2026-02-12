@@ -528,3 +528,39 @@ class TestNodeExits:
         exit_by_fog = {e["fog_id"]: e for e in start_exits}
         assert exit_by_fog["fog_1"]["text"] == "fog_1"
         assert exit_by_fog["fog_2"]["text"] == "fog_2"
+
+
+# =============================================================================
+# Starting larval tears tests
+# =============================================================================
+
+
+class TestStartingLarvalTears:
+    """Tests for starting_larval_tears in graph.json output."""
+
+    def test_default_value(self):
+        """Default starting_larval_tears is 10."""
+        result = _make_result()
+        assert result["starting_larval_tears"] == 10
+
+    def test_custom_value(self):
+        """Custom starting_larval_tears is passed through."""
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters, starting_larval_tears=5)
+        assert result["starting_larval_tears"] == 5
+
+    def test_zero_value(self):
+        """starting_larval_tears=0 disables rebirth."""
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters, starting_larval_tears=0)
+        assert result["starting_larval_tears"] == 0

@@ -340,13 +340,14 @@ Example:
             StartingItemInjector.Inject(modDir, graphData.StartingGoods, graphData.CarePackage, events);
         }
 
-        // 7c. Inject starting resources (runes, golden seeds, sacred tears)
+        // 7c. Inject starting resources (runes, golden seeds, sacred tears, larval tears)
         StartingResourcesInjector.Inject(
             modDir,
             events,
             graphData.StartingRunes,
             graphData.StartingGoldenSeeds,
-            graphData.StartingSacredTears
+            graphData.StartingSacredTears,
+            graphData.StartingLarvalTears
         );
 
         // 7d. Inject Roundtable unlock (bypasses DLC finger pickup detection)
@@ -396,6 +397,12 @@ Example:
         if (graphData.ChapelGrace)
         {
             ChapelGraceInjector.Inject(modDir, config.GameDir, events);
+        }
+
+        // 7i. Inject rebirth option at Sites of Grace
+        if (graphData.StartingLarvalTears > 0)
+        {
+            RebirthInjector.Inject(modDir, config.GameDir);
         }
 
         // 8. Package with ModEngine 2

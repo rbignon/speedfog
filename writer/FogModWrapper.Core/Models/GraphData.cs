@@ -42,6 +42,13 @@ public class GraphData
     public int StartingSacredTears { get; set; } = 0;
 
     /// <summary>
+    /// Larval Tears to give at game start for rebirth at Sites of Grace.
+    /// When > 0, also injects the rebirth menu option into the grace ESD.
+    /// </summary>
+    [JsonPropertyName("starting_larval_tears")]
+    public int StartingLarvalTears { get; set; } = 10;
+
+    /// <summary>
     /// Mapping of event flag ID (as string) to cluster ID.
     /// Used by racing mod to detect zone transitions via EMEVD flags.
     /// </summary>

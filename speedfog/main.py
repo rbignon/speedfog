@@ -192,6 +192,7 @@ def main() -> int:
         care_package=care_package_items,
         run_complete_message=config.run_complete_message,
         chapel_grace=config.chapel_grace,
+        starting_larval_tears=config.starting_items.larval_tears,
     )
     print(f"Written: {json_path}")
     if starting_goods:
@@ -202,6 +203,8 @@ def main() -> int:
         print(f"Starting golden seeds: {config.starting_items.golden_seeds}")
     if config.starting_items.sacred_tears > 0:
         print(f"Starting sacred tears: {config.starting_items.sacred_tears}")
+    if config.starting_items.larval_tears > 0:
+        print(f"Starting larval tears: {config.starting_items.larval_tears}")
     if care_package_items:
         print(f"Care package: {len(care_package_items)} items")
         if args.verbose:

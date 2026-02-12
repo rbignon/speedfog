@@ -156,6 +156,7 @@ class StartingItemsConfig:
     golden_seeds: int = 0  # Golden Seeds (Good ID 10010) - upgrade flask uses
     sacred_tears: int = 0  # Sacred Tears (Good ID 10020) - upgrade flask potency
     starting_runes: int = 0  # Runes added to starting character via CharaInitParam
+    larval_tears: int = 10  # Larval Tears (Good ID 8185) - for rebirth at graces
 
     def __post_init__(self) -> None:
         """Validate starting items configuration."""
@@ -171,6 +172,8 @@ class StartingItemsConfig:
             raise ValueError(
                 f"starting_runes must be 0-10000000, got {self.starting_runes}"
             )
+        if self.larval_tears < 0 or self.larval_tears > 99:
+            raise ValueError(f"larval_tears must be 0-99, got {self.larval_tears}")
 
     def get_starting_goods(self) -> list[int]:
         """Get list of Good IDs to award at game start.
@@ -397,6 +400,7 @@ class Config:
                 golden_seeds=starting_items_section.get("golden_seeds", 0),
                 sacred_tears=starting_items_section.get("sacred_tears", 0),
                 starting_runes=starting_items_section.get("starting_runes", 0),
+                larval_tears=starting_items_section.get("larval_tears", 10),
             ),
             item_randomizer=ItemRandomizerConfig(
                 enabled=item_randomizer_section.get("enabled", True),

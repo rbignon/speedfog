@@ -351,6 +351,22 @@ def test_starting_items_validation_runes():
         Config.from_dict({"starting_items": {"starting_runes": -1}})
 
 
+def test_starting_items_validation_larval_tears():
+    """larval_tears must be 0-99."""
+    import pytest
+
+    with pytest.raises(ValueError, match="larval_tears must be 0-99"):
+        Config.from_dict({"starting_items": {"larval_tears": 100}})
+    with pytest.raises(ValueError, match="larval_tears must be 0-99"):
+        Config.from_dict({"starting_items": {"larval_tears": -1}})
+
+
+def test_starting_items_larval_tears_default():
+    """Default larval_tears is 10."""
+    config = Config.from_dict({})
+    assert config.starting_items.larval_tears == 10
+
+
 def test_item_randomizer_defaults():
     """ItemRandomizerConfig has correct defaults."""
     config = Config.from_dict({})

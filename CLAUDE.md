@@ -74,6 +74,7 @@ speedfog/
 │   │   ├── ZoneTrackingInjector.cs  # Zone tracking flags for racing
 │   │   ├── RunCompleteInjector.cs  # Inject "RUN COMPLETE" message on final boss defeat
 │   │   ├── ChapelGraceInjector.cs  # Site of Grace at Chapel of Anticipation
+│   │   ├── RebirthInjector.cs  # Rebirth (stat reallocation) at Sites of Grace
 │   │   └── eldendata/       # FogRando game data (gitignored)
 │   ├── FogModWrapper.Tests/  # xUnit tests
 │   └── ItemRandomizerWrapper/  # Item randomizer - thin wrapper calling RandomizerCommon.dll
@@ -139,6 +140,7 @@ speedfog/
 | `ZoneTrackingInjector` | Injects SetEventFlag before fog gate warps for racing |
 | `RunCompleteInjector` | Injects "RUN COMPLETE" golden banner on final boss defeat |
 | `ChapelGraceInjector` | Site of Grace + player spawn relocation at Chapel of Anticipation |
+| `RebirthInjector` | Rebirth (stat reallocation) option at Sites of Grace via ESD |
 
 **ItemRandomizerWrapper** (uses RandomizerCommon.dll directly):
 | Class | Purpose |

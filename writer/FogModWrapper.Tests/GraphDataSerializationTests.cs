@@ -470,4 +470,46 @@ public class GraphDataSerializationTests
 
         Assert.Contains("\"finish_boss_defeat_flag\"", json);
     }
+
+    [Fact]
+    public void GraphData_StartingLarvalTears_RoundTrip()
+    {
+        var original = new GraphData
+        {
+            Version = "4.0",
+            Seed = 42,
+            StartingLarvalTears = 15
+        };
+
+        var json = JsonSerializer.Serialize(original, JsonOptions);
+        var deserialized = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.Equal(15, deserialized.StartingLarvalTears);
+    }
+
+    [Fact]
+    public void GraphData_StartingLarvalTears_DefaultsTo10WhenMissing()
+    {
+        var json = """{"version":"4.0","seed":1}""";
+        var deserialized = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.Equal(10, deserialized.StartingLarvalTears);
+    }
+
+    [Fact]
+    public void GraphData_StartingLarvalTears_JsonPropertyName_UsesSnakeCase()
+    {
+        var data = new GraphData
+        {
+            Version = "4.0",
+            Seed = 1,
+            StartingLarvalTears = 10
+        };
+
+        var json = JsonSerializer.Serialize(data);
+
+        Assert.Contains("\"starting_larval_tears\"", json);
+    }
 }

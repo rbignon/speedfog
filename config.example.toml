@@ -152,6 +152,7 @@ talisman_pouches = 3
 # golden_seeds = 5       # Golden Seeds to upgrade flask uses (0-99)
 # sacred_tears = 3       # Sacred Tears to upgrade flask potency (0-12)
 # starting_runes = 50000 # Given as Lord's Rune items (50k each, use from inventory)
+# larval_tears = 10      # Larval Tears for rebirth at Sites of Grace (0-99, default: 10)
 
 [care_package]
 # Randomized starting build - gives a random selection of weapons, armor,
