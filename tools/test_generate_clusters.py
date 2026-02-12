@@ -119,6 +119,7 @@ class TestParseFog:
         fog_data = {
             "Name": "AEG099_002_9000",
             "ID": 10001800,
+            "Text": "Godrick front",
             "ASide": {
                 "Area": "stormveil",
                 "Text": "before Godrick's arena",
@@ -134,10 +135,22 @@ class TestParseFog:
 
         assert fog.name == "AEG099_002_9000"
         assert fog.fog_id == 10001800
+        assert fog.text == "Godrick front"
         assert fog.aside.area == "stormveil"
         assert fog.bside.area == "stormveil_godrick"
         assert fog.tags == ["major"]
         assert fog.is_unique is False
+
+    def test_parse_fog_without_text(self):
+        """Fog without Text field defaults to empty string."""
+        fog_data = {
+            "Name": "AEG099_001_9000",
+            "ID": 99999,
+            "ASide": {"Area": "a"},
+            "BSide": {"Area": "b"},
+        }
+        fog = parse_fog(fog_data)
+        assert fog.text == ""
 
     def test_parse_unique_fog(self):
         """Parse a unique (one-way) fog."""
@@ -786,12 +799,12 @@ class TestComputeClusterFogs:
 
         zone_fogs = {
             "a": ZoneFogs(
-                entry_fogs=[FogData("f1", 1, FogSide("a", ""), FogSide("x", ""), [])],
-                exit_fogs=[FogData("f1", 1, FogSide("a", ""), FogSide("x", ""), [])],
+                entry_fogs=[FogData("f1", 1, FogSide("a", ""), FogSide("x", ""))],
+                exit_fogs=[FogData("f1", 1, FogSide("a", ""), FogSide("x", ""))],
             ),
             "b": ZoneFogs(
-                entry_fogs=[FogData("f2", 2, FogSide("b", ""), FogSide("y", ""), [])],
-                exit_fogs=[FogData("f2", 2, FogSide("b", ""), FogSide("y", ""), [])],
+                entry_fogs=[FogData("f2", 2, FogSide("b", ""), FogSide("y", ""))],
+                exit_fogs=[FogData("f2", 2, FogSide("b", ""), FogSide("y", ""))],
             ),
         }
 
@@ -808,19 +821,15 @@ class TestComputeClusterFogs:
 
         zone_fogs = {
             "top": ZoneFogs(
-                entry_fogs=[
-                    FogData("f_top", 1, FogSide("top", ""), FogSide("x", ""), [])
-                ],
-                exit_fogs=[
-                    FogData("f_top", 1, FogSide("top", ""), FogSide("x", ""), [])
-                ],
+                entry_fogs=[FogData("f_top", 1, FogSide("top", ""), FogSide("x", ""))],
+                exit_fogs=[FogData("f_top", 1, FogSide("top", ""), FogSide("x", ""))],
             ),
             "bottom": ZoneFogs(
                 entry_fogs=[
-                    FogData("f_bot", 2, FogSide("bottom", ""), FogSide("y", ""), [])
+                    FogData("f_bot", 2, FogSide("bottom", ""), FogSide("y", ""))
                 ],
                 exit_fogs=[
-                    FogData("f_bot", 2, FogSide("bottom", ""), FogSide("y", ""), [])
+                    FogData("f_bot", 2, FogSide("bottom", ""), FogSide("y", ""))
                 ],
             ),
         }
@@ -857,7 +866,6 @@ class TestComputeClusterFogs:
                         100,
                         FogSide("boss_room", ""),
                         FogSide("post_boss", ""),
-                        [],
                     )
                 ],
                 exit_fogs=[
@@ -866,11 +874,8 @@ class TestComputeClusterFogs:
                         100,
                         FogSide("boss_room", ""),
                         FogSide("post_boss", ""),
-                        [],
                     ),
-                    FogData(
-                        "exit_a", 101, FogSide("boss_room", ""), FogSide("x", ""), []
-                    ),
+                    FogData("exit_a", 101, FogSide("boss_room", ""), FogSide("x", "")),
                 ],
             ),
             "post_boss": ZoneFogs(
@@ -880,7 +885,6 @@ class TestComputeClusterFogs:
                         100,
                         FogSide("post_boss", ""),
                         FogSide("boss_room", ""),
-                        [],
                     )
                 ],
                 exit_fogs=[
@@ -889,11 +893,8 @@ class TestComputeClusterFogs:
                         100,
                         FogSide("post_boss", ""),
                         FogSide("boss_room", ""),
-                        [],
                     ),
-                    FogData(
-                        "exit_b", 102, FogSide("post_boss", ""), FogSide("y", ""), []
-                    ),
+                    FogData("exit_b", 102, FogSide("post_boss", ""), FogSide("y", "")),
                 ],
             ),
         }
@@ -911,6 +912,43 @@ class TestComputeClusterFogs:
         shared_zones = {f["zone"] for f in shared_exits}
         assert shared_zones == {"boss_room", "post_boss"}
 
+    def test_fog_text_propagated_to_cluster_fogs(self):
+        """Gate-level Text propagates into cluster entry/exit fog dicts."""
+        graph = WorldGraph()
+
+        fog = FogData(
+            "gate1",
+            1,
+            FogSide("zone_a", "side A"),
+            FogSide("zone_b", "side B"),
+            text="Main Gate",
+            tags=[],
+        )
+        zone_fogs = {
+            "zone_a": ZoneFogs(entry_fogs=[fog], exit_fogs=[fog]),
+        }
+
+        cluster = Cluster(zones=frozenset({"zone_a"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        assert cluster.entry_fogs[0]["text"] == "Main Gate"
+        assert cluster.exit_fogs[0]["text"] == "Main Gate"
+
+    def test_fog_without_text_omits_key(self):
+        """Fog without text does not add text key to cluster fog dicts."""
+        graph = WorldGraph()
+
+        fog = FogData("gate1", 1, FogSide("zone_a", ""), FogSide("zone_b", ""), tags=[])
+        zone_fogs = {
+            "zone_a": ZoneFogs(entry_fogs=[fog], exit_fogs=[fog]),
+        }
+
+        cluster = Cluster(zones=frozenset({"zone_a"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        assert "text" not in cluster.entry_fogs[0]
+        assert "text" not in cluster.exit_fogs[0]
+
     def test_same_fog_id_different_zones_creates_separate_entries_for_entries(self):
         """Same fog_id in different zones creates separate entry entries."""
         graph = WorldGraph()
@@ -925,7 +963,6 @@ class TestComputeClusterFogs:
                         200,
                         FogSide("zone_a", ""),
                         FogSide("zone_b", ""),
-                        [],
                     )
                 ],
                 exit_fogs=[],
@@ -937,7 +974,6 @@ class TestComputeClusterFogs:
                         200,
                         FogSide("zone_b", ""),
                         FogSide("zone_a", ""),
-                        [],
                     )
                 ],
                 exit_fogs=[],

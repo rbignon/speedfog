@@ -30,6 +30,22 @@ def _effective_type(node: DagNode, dag: Dag) -> str:
 # =============================================================================
 
 
+def _get_fog_text(node: DagNode, fog_id: str) -> str:
+    """Get the human-readable text for a fog gate from a node's exit_fogs.
+
+    Args:
+        node: The node to search
+        fog_id: The fog ID to find
+
+    Returns:
+        Text string, or fog_id itself as fallback
+    """
+    for fog in node.cluster.exit_fogs:
+        if fog["fog_id"] == fog_id:
+            return str(fog.get("text", fog_id))
+    return fog_id
+
+
 def _get_fog_zone(node: DagNode, fog_id: str, is_entry: bool) -> str | None:
     """Get the zone containing a fog ID in a node's entry/exit fogs.
 
@@ -268,7 +284,25 @@ def dag_to_dict(
             "layer": node.layer,
             "tier": node.tier,
             "weight": node.cluster.weight,
+            "exits": [],
         }
+
+    # Populate exits from DAG edges
+    for edge in dag.edges:
+        source_node = dag.nodes.get(edge.source_id)
+        target_node = dag.nodes.get(edge.target_id)
+        if source_node is None or target_node is None:
+            continue
+        source_cluster_id = source_node.cluster.id
+        target_cluster_id = target_node.cluster.id
+        text = _get_fog_text(source_node, edge.exit_fog)
+        nodes[source_cluster_id]["exits"].append(
+            {
+                "fog_id": edge.exit_fog,
+                "text": text,
+                "to": target_cluster_id,
+            }
+        )
 
     # Build edges section: unique (from, to) pairs by cluster_id
     seen_edges: set[tuple[str, str]] = set()
@@ -896,14 +930,18 @@ def export_spoiler_log(
         lines.append(f"  Layer: {node.layer}")
         lines.append(f"  Weight: {node.cluster.weight}")
 
-        # Exits with fog_id
+        # Exits with fog_id and text
         exits = outgoing_edges.get(node.id, [])
         if exits:
             lines.append("  Exits:")
             for target_id, fog_id in exits:
                 target_node = dag.nodes.get(target_id)
                 target_name = target_node.cluster.id if target_node else target_id
-                lines.append(f"    -> {target_name} via {fog_id}")
+                text = _get_fog_text(node, fog_id)
+                if text and text != fog_id:
+                    lines.append(f"    -> {target_name} via {fog_id} ({text})")
+                else:
+                    lines.append(f"    -> {target_name} via {fog_id}")
 
     # Care package section
     if care_package:

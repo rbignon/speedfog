@@ -102,6 +102,7 @@ class FogData:
     fog_id: int
     aside: FogSide
     bside: FogSide
+    text: str = ""  # Gate-level Text from fog.txt (human-readable name)
     tags: list[str] = field(default_factory=list)
     split_from: str | None = None  # SplitFrom field (ashen alternates)
 
@@ -313,6 +314,7 @@ def parse_fog(fog_data: dict) -> FogData:
         fog_id=fog_id,
         aside=parse_fog_side(fog_data.get("ASide", {})),
         bside=parse_fog_side(fog_data.get("BSide", {})),
+        text=fog_data.get("Text", ""),
         tags=parse_tags(fog_data.get("Tags")),
         split_from=fog_data.get("SplitFrom"),
     )
@@ -786,12 +788,13 @@ def compute_cluster_fogs(
             key = (fog.fog_id, zone)
             if key not in seen_entries:
                 seen_entries.add(key)
-                cluster.entry_fogs.append(
-                    {
-                        "fog_id": str(fog.name),  # Always string for consistency
-                        "zone": zone,
-                    }
-                )
+                entry = {
+                    "fog_id": str(fog.name),  # Always string for consistency
+                    "zone": zone,
+                }
+                if fog.text:
+                    entry["text"] = fog.text
+                cluster.entry_fogs.append(entry)
 
     # Collect exit fogs from all zones
     # Use (fog_id, zone) pairs - same fog in different zones = different sides of the gate
@@ -809,6 +812,8 @@ def compute_cluster_fogs(
                     "fog_id": str(fog.name),  # Always string for consistency
                     "zone": zone,
                 }
+                if fog.text:
+                    fog_entry["text"] = fog.text
                 if fog.is_unique:
                     fog_entry["unique"] = True
                 cluster.exit_fogs.append(fog_entry)
@@ -1226,7 +1231,7 @@ def clusters_to_json(
         cluster_list.append(entry)
 
     return {
-        "version": "1.3",
+        "version": "1.4",
         "generated_from": "fog.txt",
         "cluster_count": len(clusters),
         "zone_maps": zone_maps,

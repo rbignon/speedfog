@@ -22,8 +22,21 @@ def make_cluster(
         type=cluster_type,
         weight=weight,
         entry_fogs=entry_fogs
-        or [{"fog_id": f"{cluster_id}_entry", "zone": cluster_id}],
-        exit_fogs=exit_fogs or [{"fog_id": f"{cluster_id}_exit", "zone": cluster_id}],
+        or [
+            {
+                "fog_id": f"{cluster_id}_entry",
+                "zone": cluster_id,
+                "text": f"{cluster_id} entry",
+            }
+        ],
+        exit_fogs=exit_fogs
+        or [
+            {
+                "fog_id": f"{cluster_id}_exit",
+                "zone": cluster_id,
+                "text": f"{cluster_id} exit",
+            }
+        ],
     )
 
 
@@ -54,8 +67,8 @@ def make_test_dag() -> Dag:
                 weight=5,
                 entry_fogs=[],
                 exit_fogs=[
-                    {"fog_id": "fog_1", "zone": "z_start"},
-                    {"fog_id": "fog_2", "zone": "z_start"},
+                    {"fog_id": "fog_1", "zone": "z_start", "text": "Gate to A"},
+                    {"fog_id": "fog_2", "zone": "z_start", "text": "Gate to B"},
                 ],
             ),
             layer=0,
@@ -74,8 +87,8 @@ def make_test_dag() -> Dag:
                 zones=["z_a"],
                 cluster_type="legacy_dungeon",
                 weight=10,
-                entry_fogs=[{"fog_id": "fog_1", "zone": "z_a"}],
-                exit_fogs=[{"fog_id": "fog_3", "zone": "z_a"}],
+                entry_fogs=[{"fog_id": "fog_1", "zone": "z_a", "text": "Gate to A"}],
+                exit_fogs=[{"fog_id": "fog_3", "zone": "z_a", "text": "Gate to end"}],
             ),
             layer=1,
             tier=5,
@@ -93,8 +106,10 @@ def make_test_dag() -> Dag:
                 zones=["z_b1", "z_b2"],
                 cluster_type="mini_dungeon",
                 weight=15,
-                entry_fogs=[{"fog_id": "fog_2", "zone": "z_b1"}],
-                exit_fogs=[{"fog_id": "fog_4", "zone": "z_b1"}],
+                entry_fogs=[{"fog_id": "fog_2", "zone": "z_b1", "text": "Gate to B"}],
+                exit_fogs=[
+                    {"fog_id": "fog_4", "zone": "z_b1", "text": "Gate to end B"}
+                ],
             ),
             layer=1,
             tier=5,
@@ -113,8 +128,8 @@ def make_test_dag() -> Dag:
                 cluster_type="final_boss",
                 weight=5,
                 entry_fogs=[
-                    {"fog_id": "fog_3", "zone": "z_end"},
-                    {"fog_id": "fog_4", "zone": "z_end"},
+                    {"fog_id": "fog_3", "zone": "z_end", "text": "Gate to end"},
+                    {"fog_id": "fog_4", "zone": "z_end", "text": "Gate to end B"},
                 ],
                 exit_fogs=[],
             ),
@@ -447,3 +462,69 @@ class TestEventMap:
         """finish_boss_defeat_flag is 0 when cluster has no defeat_flag."""
         result = _make_result()
         assert result["finish_boss_defeat_flag"] == 0
+
+
+# =============================================================================
+# Node exits tests
+# =============================================================================
+
+
+class TestNodeExits:
+    """Tests for exits field in graph.json nodes."""
+
+    def test_exits_present_in_nodes(self):
+        """Every node has an exits key."""
+        result = _make_result()
+        for node_id, node_data in result["nodes"].items():
+            assert "exits" in node_data, f"Node {node_id} missing exits"
+
+    def test_exits_from_dag_edges(self):
+        """Exits match actual DAG edges from each node."""
+        result = _make_result()
+        # start has 2 exits (to c_a and c_b)
+        start_exits = result["nodes"]["c_start"]["exits"]
+        assert len(start_exits) == 2
+        exit_targets = {e["to"] for e in start_exits}
+        assert exit_targets == {"c_a", "c_b"}
+
+    def test_exit_fields(self):
+        """Each exit has fog_id, text, and to fields."""
+        result = _make_result()
+        for node_id, node_data in result["nodes"].items():
+            for exit_item in node_data["exits"]:
+                assert "fog_id" in exit_item, f"Exit in {node_id} missing fog_id"
+                assert "text" in exit_item, f"Exit in {node_id} missing text"
+                assert "to" in exit_item, f"Exit in {node_id} missing to"
+
+    def test_end_node_has_no_exits(self):
+        """Final boss node has exits: []."""
+        result = _make_result()
+        assert result["nodes"]["c_end"]["exits"] == []
+
+    def test_exit_text_from_cluster(self):
+        """Exit text comes from the cluster's exit_fogs text field."""
+        result = _make_result()
+        start_exits = result["nodes"]["c_start"]["exits"]
+        # fog_1 has text "Gate to A", fog_2 has text "Gate to B"
+        exit_by_fog = {e["fog_id"]: e for e in start_exits}
+        assert exit_by_fog["fog_1"]["text"] == "Gate to A"
+        assert exit_by_fog["fog_2"]["text"] == "Gate to B"
+
+    def test_exit_text_fallback_to_fog_id(self):
+        """When text is missing from exit_fogs, falls back to fog_id."""
+        dag = make_test_dag()
+        # Remove text from start's exit_fogs
+        dag.nodes["start"].cluster.exit_fogs = [
+            {"fog_id": "fog_1", "zone": "z_start"},
+            {"fog_id": "fog_2", "zone": "z_start"},
+        ]
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+        start_exits = result["nodes"]["c_start"]["exits"]
+        exit_by_fog = {e["fog_id"]: e for e in start_exits}
+        assert exit_by_fog["fog_1"]["text"] == "fog_1"
+        assert exit_by_fog["fog_2"]["text"] == "fog_2"

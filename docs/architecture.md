@@ -193,7 +193,7 @@ Pre-computed zone clusters with entry/exit fogs.
 
 ```json
 {
-  "version": "1.2",
+  "version": "1.4",
   "zone_maps": {"stormveil": "m10_00_00_00", ...},
   "zone_names": {"stormveil": "Stormveil Castle", ...},
   "clusters": [
@@ -202,8 +202,8 @@ Pre-computed zone clusters with entry/exit fogs.
       "zones": ["stormveil_start", "stormveil"],
       "type": "legacy_dungeon",
       "weight": 15,
-      "entry_fogs": [{"fog_id": "AEG099_002_9000", "zone": "stormveil_start"}],
-      "exit_fogs": [{"fog_id": "AEG099_002_9000", "zone": "stormveil"}, ...]
+      "entry_fogs": [{"fog_id": "AEG099_002_9000", "zone": "stormveil_start", "text": "Godrick front"}],
+      "exit_fogs": [{"fog_id": "AEG099_002_9000", "zone": "stormveil", "text": "Godrick front"}, ...]
     }
   ]
 }
@@ -225,7 +225,10 @@ DAG serialized for C# consumption, visualization tools, and racing.
       "zones": ["stormveil_start", "stormveil"],
       "layer": 1,
       "tier": 5,
-      "weight": 15
+      "weight": 15,
+      "exits": [
+        {"fog_id": "AEG099_002_9000", "text": "Godrick front", "to": "stormveil_godrick_3c4d"}
+      ]
     }
   },
   "edges": [
@@ -249,7 +252,7 @@ DAG serialized for C# consumption, visualization tools, and racing.
 
 Gate names use FogMod's FullName format: `{map}_{gate_name}`.
 
-v4 additions over v3: `flag_id` per connection, `event_map`, `final_node_flag`, `finish_event` (for zone tracking/racing), `run_complete_message`, `chapel_grace`, `starting_goods`, `care_package`.
+v4 additions over v3: `flag_id` per connection, `event_map`, `final_node_flag`, `finish_event` (for zone tracking/racing), `run_complete_message`, `chapel_grace`, `starting_goods`, `care_package`, `exits` per node (fog_id, text, destination).
 
 ## Key Design Decisions
 
