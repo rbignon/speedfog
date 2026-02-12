@@ -29,7 +29,9 @@ public static class SmithingStoneShopInjector
         (10163, "Somber Smithing Stone [4]", 5000),
         (10164, "Somber Smithing Stone [5]", 8000),
         (10165, "Somber Smithing Stone [6]", 12000),
-        // Somber [7-9] omitted - not needed for short runs, and [9] ID seems incorrect
+        (10166, "Somber Smithing Stone [7]", 16000),
+        (10167, "Somber Smithing Stone [8]", 20000),
+        (10200, "Somber Smithing Stone [9]", 25000),
     };
 
     // Base shop ID for our entries
