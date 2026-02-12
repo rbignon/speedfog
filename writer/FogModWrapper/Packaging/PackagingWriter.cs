@@ -30,9 +30,9 @@ public class PackagingWriter
         // 1. Ensure ModEngine 2 is downloaded
         var modEngineCachePath = await downloader.EnsureModEngineAsync(forceUpdate);
 
-        // 2. Copy ModEngine to output
+        // 2. Copy ModEngine to output (runtime files only, skip dev assets)
         var modEngineOutputPath = Path.Combine(_outputDir, "ModEngine");
-        CopyDirectory(modEngineCachePath, modEngineOutputPath);
+        CopyModEngine(modEngineCachePath, modEngineOutputPath);
         Console.WriteLine($"Copied ModEngine 2 to {modEngineOutputPath}");
 
         // 3. Copy runtime assets (crash fix DLL, etc.)
@@ -125,6 +125,48 @@ public class PackagingWriter
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Copies only the runtime-essential ModEngine 2 files to the output directory.
+    /// Skips development files (C++ headers, debug menus, locale data) and configs
+    /// for other games. This reduces the output by ~17 MB compared to a full copy.
+    /// </summary>
+    private static void CopyModEngine(string cacheDir, string destDir)
+    {
+        Directory.CreateDirectory(destDir);
+
+        // Top-level files: only the launcher and our version marker
+        string[] allowedFiles = ["modengine2_launcher.exe", "version.txt"];
+        foreach (var name in allowedFiles)
+        {
+            var src = Path.Combine(cacheDir, name);
+            if (File.Exists(src))
+                File.Copy(src, Path.Combine(destDir, name), overwrite: true);
+        }
+
+        // modengine2/ subdirectories: only runtime essentials
+        // Skips: assets/ (debug menu), include/ (C++ headers),
+        //        lib/ (.lib linker files), share/ (cmake configs)
+        string[] allowedSubDirs = ["bin", "crashpad", "tools"];
+        var me2Src = Path.Combine(cacheDir, "modengine2");
+        var me2Dst = Path.Combine(destDir, "modengine2");
+
+        if (Directory.Exists(me2Src))
+        {
+            Directory.CreateDirectory(me2Dst);
+            foreach (var name in allowedSubDirs)
+            {
+                var src = Path.Combine(me2Src, name);
+                if (Directory.Exists(src))
+                    CopyDirectory(src, Path.Combine(me2Dst, name));
+            }
+        }
+        else
+        {
+            Console.WriteLine(
+                "Warning: modengine2/ directory not found in cache, mod may not launch correctly");
+        }
     }
 
     /// <summary>
