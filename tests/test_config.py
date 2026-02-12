@@ -270,6 +270,19 @@ def test_starting_items_get_starting_goods_no_pouches():
     assert 10040 not in goods
 
 
+def test_starting_items_lantern_whetblades_from_dict():
+    """lantern and whetblades are parsed from config dict."""
+    config = Config.from_dict(
+        {"starting_items": {"lantern": False, "whetblades": False}}
+    )
+    assert config.starting_items.lantern is False
+    assert config.starting_items.whetblades is False
+    goods = config.starting_items.get_starting_goods()
+    assert 2070 not in goods  # Lantern disabled
+    assert 8590 not in goods  # Whetstone Knife disabled
+    assert 8970 not in goods  # Iron Whetblade disabled
+
+
 def test_starting_items_get_starting_goods_all_runes():
     """get_starting_goods includes all Great Runes when great_runes=True."""
     config = Config.from_dict(

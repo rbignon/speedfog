@@ -367,6 +367,8 @@ class Config:
                 academy_key=starting_items_section.get("academy_key", True),
                 pureblood_medal=starting_items_section.get("pureblood_medal", True),
                 drawing_room_key=starting_items_section.get("drawing_room_key", True),
+                lantern=starting_items_section.get("lantern", True),
+                whetblades=starting_items_section.get("whetblades", True),
                 great_runes=starting_items_section.get("great_runes", True),
                 rune_godrick=starting_items_section.get("rune_godrick", True),
                 rune_radahn=starting_items_section.get("rune_radahn", True),
