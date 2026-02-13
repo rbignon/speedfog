@@ -54,6 +54,8 @@ Thin wrapper around FogMod.dll that injects our connections and post-processes g
 | `ZoneTrackingInjector.cs` | Inject zone tracking flags before fog gate warps |
 | `RunCompleteInjector.cs` | Display victory banner on final boss defeat |
 | `ChapelGraceInjector.cs` | Add Site of Grace at Chapel of Anticipation |
+| `RebirthInjector.cs` | Rebirth (stat reallocation) at Sites of Grace |
+| `VanillaWarpRemover.cs` | Remove vanilla warp assets that FogMod couldn't delete |
 | `Packaging/` | ModEngine download, config generation, launchers |
 
 ### C# Item Writer (`writer/ItemRandomizerWrapper/`)
@@ -134,7 +136,7 @@ FogModWrapper:
 4. Builds FogMod's Graph structure (unconnected)
 5. Injects our connections via ConnectionInjector
 6. Calls `GameDataWriterE.Write()` - reads from merged dirs, writes combined output
-7. Post-processes: starting items, resources, shop, zone tracking, victory banner, grace
+7. Post-processes: starting items, resources, shop, zone tracking, victory banner, grace, rebirth, vanilla warp removal
 
 **Merge order matters**: Item Randomizer runs first, FogMod merges on top. This matches the official FogRando documentation.
 
@@ -246,13 +248,16 @@ DAG serialized for C# consumption, visualization tools, and racing.
   "area_tiers": {"chapel_start": 1, "stormveil": 5, ...},
   "event_map": {"1040292800": "stormveil_c1d3"},
   "final_node_flag": 1040292801,
-  "finish_event": 1040292802
+  "finish_event": 1040292802,
+  "remove_entities": [
+    {"map": "m12_05_00_00", "entity_id": 12051500}
+  ]
 }
 ```
 
 Gate names use FogMod's FullName format: `{map}_{gate_name}`.
 
-v4 additions over v3: `flag_id` per connection, `event_map`, `final_node_flag`, `finish_event` (for zone tracking/racing), `run_complete_message`, `chapel_grace`, `starting_goods`, `care_package`, `exits` per node (fog_id, text, destination).
+v4 additions over v3: `flag_id` per connection, `event_map`, `final_node_flag`, `finish_event` (for zone tracking/racing), `run_complete_message`, `chapel_grace`, `starting_goods`, `care_package`, `exits` per node (fog_id, text, destination), `remove_entities` (vanilla warp MSB assets to delete).
 
 ## Key Design Decisions
 

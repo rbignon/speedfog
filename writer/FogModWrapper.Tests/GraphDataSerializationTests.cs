@@ -512,4 +512,58 @@ public class GraphDataSerializationTests
 
         Assert.Contains("\"starting_larval_tears\"", json);
     }
+
+    [Fact]
+    public void GraphData_RemoveEntities_RoundTrip()
+    {
+        var original = new GraphData
+        {
+            Version = "4.0",
+            Seed = 42,
+            RemoveEntities = new List<RemoveEntity>
+            {
+                new() { Map = "m12_05_00_00", EntityId = 12051500 },
+                new() { Map = "m21_00_00_00", EntityId = 21001576 }
+            }
+        };
+
+        var json = JsonSerializer.Serialize(original, JsonOptions);
+        var deserialized = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.Equal(2, deserialized.RemoveEntities.Count);
+        Assert.Equal("m12_05_00_00", deserialized.RemoveEntities[0].Map);
+        Assert.Equal(12051500, deserialized.RemoveEntities[0].EntityId);
+        Assert.Equal("m21_00_00_00", deserialized.RemoveEntities[1].Map);
+        Assert.Equal(21001576, deserialized.RemoveEntities[1].EntityId);
+    }
+
+    [Fact]
+    public void GraphData_RemoveEntities_EmptyByDefault()
+    {
+        var json = """{"version":"4.0","seed":1}""";
+        var deserialized = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.Empty(deserialized.RemoveEntities);
+    }
+
+    [Fact]
+    public void GraphData_RemoveEntities_JsonPropertyName_UsesSnakeCase()
+    {
+        var data = new GraphData
+        {
+            Version = "4.0",
+            Seed = 1,
+            RemoveEntities = new List<RemoveEntity>
+            {
+                new() { Map = "m10_00_00_00", EntityId = 1000 }
+            }
+        };
+
+        var json = JsonSerializer.Serialize(data);
+
+        Assert.Contains("\"remove_entities\"", json);
+        Assert.Contains("\"entity_id\"", json);
+    }
 }

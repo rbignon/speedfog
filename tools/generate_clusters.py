@@ -105,6 +105,7 @@ class FogData:
     text: str = ""  # Gate-level Text from fog.txt (human-readable name)
     tags: list[str] = field(default_factory=list)
     split_from: str | None = None  # SplitFrom field (ashen alternates)
+    location: int | None = None  # Location field from fog.txt (entity ID in MSB)
 
     @property
     def is_split(self) -> bool:
@@ -317,6 +318,7 @@ def parse_fog(fog_data: dict) -> FogData:
         text=fog_data.get("Text", ""),
         tags=parse_tags(fog_data.get("Tags")),
         split_from=fog_data.get("SplitFrom"),
+        location=int(location) if location is not None else None,
     )
 
 
@@ -816,6 +818,8 @@ def compute_cluster_fogs(
                     fog_entry["text"] = fog.text
                 if fog.is_unique:
                     fog_entry["unique"] = True
+                    if fog.location is not None:
+                        fog_entry["location"] = fog.location
                 cluster.exit_fogs.append(fog_entry)
 
 

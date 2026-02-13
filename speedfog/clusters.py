@@ -17,18 +17,23 @@ class ClusterData:
     weight: int
     entry_fogs: list[dict]  # [{"fog_id": str, "zone": str}, ...]
     exit_fogs: list[dict]  # [{"fog_id": str, "zone": str, "unique"?: bool}, ...]
+    unique_exit_fogs: list[dict] = field(
+        default_factory=list
+    )  # unique exits (filtered out)
     defeat_flag: int = 0  # Boss defeat event flag (from fog.txt DefeatFlag)
 
     @classmethod
     def from_dict(cls, data: dict) -> ClusterData:
         """Create ClusterData from a dictionary."""
+        all_exits = data.get("exit_fogs", [])
         return cls(
             id=data["id"],
             zones=data["zones"],
             type=data["type"],
             weight=data["weight"],
             entry_fogs=data.get("entry_fogs", []),
-            exit_fogs=data.get("exit_fogs", []),
+            exit_fogs=[f for f in all_exits if not f.get("unique")],
+            unique_exit_fogs=[f for f in all_exits if f.get("unique")],
             defeat_flag=data.get("defeat_flag", 0),
         )
 

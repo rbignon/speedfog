@@ -405,6 +405,12 @@ Example:
             RebirthInjector.Inject(modDir, config.GameDir);
         }
 
+        // 7j. Remove vanilla warp assets that FogMod couldn't properly remove
+        if (graphData.RemoveEntities.Count > 0)
+        {
+            VanillaWarpRemover.Remove(modDir, graphData.RemoveEntities);
+        }
+
         // 8. Package with ModEngine 2
         var packager = new PackagingWriter(config.OutputDir);
         await packager.WritePackageAsync(config.MergeDir);

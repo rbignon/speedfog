@@ -98,6 +98,14 @@ public class GraphData
     /// </summary>
     [JsonPropertyName("care_package")]
     public List<CarePackageItem> CarePackage { get; set; } = new();
+
+    /// <summary>
+    /// Vanilla warp entities to remove from MSBs.
+    /// These are one-way teleporters (coffins, DLC warps) that FogMod marks for removal
+    /// but can't actually delete due to a name mismatch in its removal logic.
+    /// </summary>
+    [JsonPropertyName("remove_entities")]
+    public List<RemoveEntity> RemoveEntities { get; set; } = new();
 }
 
 /// <summary>
@@ -165,4 +173,22 @@ public class Connection
     {
         return $"{ExitArea} --[{ExitGate}]--> {EntranceArea} via [{EntranceGate}]";
     }
+}
+
+/// <summary>
+/// A vanilla warp entity to remove from an MSB.
+/// </summary>
+public class RemoveEntity
+{
+    /// <summary>
+    /// Map ID where the entity exists (e.g., "m12_05_00_00").
+    /// </summary>
+    [JsonPropertyName("map")]
+    public string Map { get; set; } = "";
+
+    /// <summary>
+    /// MSB entity ID to remove (matches Parts.Assets.EntityID).
+    /// </summary>
+    [JsonPropertyName("entity_id")]
+    public int EntityId { get; set; }
 }

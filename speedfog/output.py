@@ -339,6 +339,26 @@ def dag_to_dict(
     # detection, with FogMod Graph extraction as fallback.
     finish_boss_defeat_flag = end_node.cluster.defeat_flag
 
+    # Collect vanilla warp entities to remove from MSBs.
+    # Unique exits (coffins, DLC warps) are one-way teleporters that FogMod marks
+    # as "remove" but can't actually delete (name mismatch). We propagate entity IDs
+    # so C# can remove them from the MSB, preventing vanilla warps from persisting.
+    remove_entities: list[dict[str, str | int]] = []
+    seen_entities: set[tuple[str, int]] = set()
+    for node in dag.nodes.values():
+        for fog in node.cluster.unique_exit_fogs:
+            location = fog.get("location")
+            if location is None:
+                continue
+            zone = fog["zone"]
+            map_id = clusters.get_map(zone)
+            if map_id is None:
+                continue
+            key = (map_id, location)
+            if key not in seen_entities:
+                seen_entities.add(key)
+                remove_entities.append({"map": map_id, "entity_id": location})
+
     return {
         "version": "4.0",
         "seed": dag.seed,
@@ -367,6 +387,7 @@ def dag_to_dict(
             {"type": item.type, "id": item.id, "name": item.name}
             for item in (care_package or [])
         ],
+        "remove_entities": remove_entities,
     }
 
 

@@ -564,3 +564,133 @@ class TestStartingLarvalTears:
         )
         result = dag_to_dict(dag, clusters, starting_larval_tears=0)
         assert result["starting_larval_tears"] == 0
+
+
+# =============================================================================
+# ClusterData.from_dict unique exit filtering tests
+# =============================================================================
+
+
+class TestClusterDataFromDictUniqueFiltering:
+    """Tests for unique exit_fogs filtering in ClusterData.from_dict()."""
+
+    def test_unique_exits_filtered_from_exit_fogs(self):
+        """Unique exits are removed from exit_fogs."""
+        data = {
+            "id": "test",
+            "zones": ["z1"],
+            "type": "mini_dungeon",
+            "weight": 5,
+            "exit_fogs": [
+                {"fog_id": "normal_gate", "zone": "z1"},
+                {"fog_id": "coffin_warp", "zone": "z1", "unique": True},
+            ],
+        }
+        cluster = ClusterData.from_dict(data)
+        assert len(cluster.exit_fogs) == 1
+        assert cluster.exit_fogs[0]["fog_id"] == "normal_gate"
+
+    def test_unique_exits_stored_in_unique_exit_fogs(self):
+        """Unique exits are stored in unique_exit_fogs."""
+        data = {
+            "id": "test",
+            "zones": ["z1"],
+            "type": "mini_dungeon",
+            "weight": 5,
+            "exit_fogs": [
+                {"fog_id": "normal_gate", "zone": "z1"},
+                {
+                    "fog_id": "coffin_warp",
+                    "zone": "z1",
+                    "unique": True,
+                    "location": 12345,
+                },
+            ],
+        }
+        cluster = ClusterData.from_dict(data)
+        assert len(cluster.unique_exit_fogs) == 1
+        assert cluster.unique_exit_fogs[0]["fog_id"] == "coffin_warp"
+        assert cluster.unique_exit_fogs[0]["location"] == 12345
+
+    def test_no_unique_exits_empty_list(self):
+        """No unique exits results in empty unique_exit_fogs."""
+        data = {
+            "id": "test",
+            "zones": ["z1"],
+            "type": "mini_dungeon",
+            "weight": 5,
+            "exit_fogs": [{"fog_id": "gate", "zone": "z1"}],
+        }
+        cluster = ClusterData.from_dict(data)
+        assert cluster.unique_exit_fogs == []
+        assert len(cluster.exit_fogs) == 1
+
+
+# =============================================================================
+# remove_entities tests
+# =============================================================================
+
+
+class TestRemoveEntities:
+    """Tests for remove_entities in dag_to_dict output."""
+
+    def test_empty_when_no_unique_exits(self):
+        """remove_entities is empty when no clusters have unique exits."""
+        result = _make_result()
+        assert result["remove_entities"] == []
+
+    def test_emits_entities_from_unique_exits(self):
+        """remove_entities contains entries from unique_exit_fogs with locations."""
+        dag = make_test_dag()
+        # Add unique exits to a node's cluster
+        dag.nodes["a"].cluster.unique_exit_fogs = [
+            {
+                "fog_id": "coffin_warp",
+                "zone": "z_a",
+                "unique": True,
+                "location": 12051500,
+            },
+        ]
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={"z_a": "m12_05_00_00"},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+        assert len(result["remove_entities"]) == 1
+        assert result["remove_entities"][0] == {
+            "map": "m12_05_00_00",
+            "entity_id": 12051500,
+        }
+
+    def test_skips_unique_exits_without_location(self):
+        """Unique exits without location field are skipped."""
+        dag = make_test_dag()
+        dag.nodes["a"].cluster.unique_exit_fogs = [
+            {"fog_id": "warp_no_loc", "zone": "z_a", "unique": True},
+        ]
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={"z_a": "m12_05_00_00"},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+        assert result["remove_entities"] == []
+
+    def test_deduplicates_same_entity(self):
+        """Same (map, entity_id) from different nodes is deduplicated."""
+        dag = make_test_dag()
+        dag.nodes["a"].cluster.unique_exit_fogs = [
+            {"fog_id": "warp1", "zone": "z_a", "unique": True, "location": 12051500},
+        ]
+        dag.nodes["b"].cluster.unique_exit_fogs = [
+            {"fog_id": "warp2", "zone": "z_a", "unique": True, "location": 12051500},
+        ]
+        # Both reference z_a which maps to same map
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={"z_a": "m12_05_00_00"},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+        assert len(result["remove_entities"]) == 1
