@@ -110,6 +110,49 @@ class ClusterPool:
             return cluster.id
         return min(names, key=len)
 
+    def merge_roundtable_into_start(self) -> None:
+        """Merge the roundtable cluster into the start cluster.
+
+        Roundtable Hold is always accessible from Chapel of Anticipation
+        via menu teleport (unlocked by RoundtableUnlockInjector). Merging
+        makes the roundtable fog gate a second exit from the start node,
+        enabling two branches from the very beginning of a run.
+
+        The roundtable_balcony cluster (type "other") remains in the pool
+        but is harmless since the generator never picks "other" clusters.
+        """
+        start_clusters = self.get_by_type("start")
+        if not start_clusters:
+            return
+
+        start = start_clusters[0]
+
+        # Find roundtable cluster by zone name
+        roundtable: ClusterData | None = None
+        for cluster in self.clusters:
+            if "roundtable" in cluster.zones:
+                roundtable = cluster
+                break
+
+        if roundtable is None:
+            return
+
+        # Merge roundtable data into the start cluster.
+        # Weight is intentionally NOT updated: roundtable is a hub accessible
+        # via menu teleport, not a dungeon the player must traverse sequentially.
+        start.zones.extend(roundtable.zones)
+        start.entry_fogs.extend(roundtable.entry_fogs)
+        start.exit_fogs.extend(roundtable.exit_fogs)
+        start.unique_exit_fogs.extend(roundtable.unique_exit_fogs)
+
+        # Remove roundtable from the pool
+        self.clusters.remove(roundtable)
+        del self.by_id[roundtable.id]
+        if roundtable.type in self.by_type:
+            type_list = self.by_type[roundtable.type]
+            if roundtable in type_list:
+                type_list.remove(roundtable)
+
     @classmethod
     def from_json(cls, path: Path) -> ClusterPool:
         """Load cluster pool from JSON file."""

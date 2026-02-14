@@ -116,6 +116,12 @@ def main() -> int:
         print(f"Error: Clusters file not found: {clusters_path}", file=sys.stderr)
         return 1
 
+    # Merge roundtable into start cluster for a second exit branch.
+    # Only when branching is enabled (max_branches > 1) and parallel paths
+    # are allowed (max_parallel_paths > 1), otherwise the extra exit is unused.
+    if config.structure.max_branches > 1 and config.structure.max_parallel_paths > 1:
+        clusters.merge_roundtable_into_start()
+
     # Load fog_data.json for accurate map lookups
     fog_data_path = clusters_path.parent / "fog_data.json"
     fog_data = load_fog_data(fog_data_path) if fog_data_path.exists() else None

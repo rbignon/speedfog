@@ -1481,3 +1481,122 @@ class TestMergeGuards:
 
         # Ensure we actually tested some successful generations
         assert successes >= 10, f"Only {successes} seeds succeeded out of 200"
+
+
+# =============================================================================
+# Roundtable merge into start
+# =============================================================================
+
+
+class TestMergeRoundtableIntoStart:
+    """Tests for ClusterPool.merge_roundtable_into_start."""
+
+    def _make_pool_with_roundtable(self) -> ClusterPool:
+        """Create a pool with chapel_start and roundtable clusters."""
+        pool = ClusterPool()
+        pool.add(
+            make_cluster(
+                "chapel_start",
+                zones=["chapel_start"],
+                cluster_type="start",
+                weight=1,
+                entry_fogs=[
+                    {"fog_id": "AEG099_001_9000", "zone": "chapel_start"},
+                ],
+                exit_fogs=[
+                    {"fog_id": "AEG099_001_9000", "zone": "chapel_start"},
+                ],
+            )
+        )
+        pool.add(
+            make_cluster(
+                "roundtable_dacf",
+                zones=["roundtable"],
+                cluster_type="other",
+                weight=4,
+                entry_fogs=[
+                    {"fog_id": "AEG099_231_9000", "zone": "roundtable"},
+                ],
+                exit_fogs=[
+                    {"fog_id": "AEG099_231_9000", "zone": "roundtable"},
+                ],
+            )
+        )
+        return pool
+
+    def test_merges_zones(self):
+        """Start cluster gains roundtable zone after merge."""
+        pool = self._make_pool_with_roundtable()
+        pool.merge_roundtable_into_start()
+
+        start = pool.get_by_type("start")[0]
+        assert "roundtable" in start.zones
+        assert "chapel_start" in start.zones
+
+    def test_merges_exit_fogs(self):
+        """Start cluster gains roundtable exit fog after merge."""
+        pool = self._make_pool_with_roundtable()
+        pool.merge_roundtable_into_start()
+
+        start = pool.get_by_type("start")[0]
+        exit_fog_ids = [f["fog_id"] for f in start.exit_fogs]
+        assert "AEG099_001_9000" in exit_fog_ids
+        assert "AEG099_231_9000" in exit_fog_ids
+
+    def test_merges_entry_fogs(self):
+        """Start cluster gains roundtable entry fog after merge."""
+        pool = self._make_pool_with_roundtable()
+        pool.merge_roundtable_into_start()
+
+        start = pool.get_by_type("start")[0]
+        entry_fog_ids = [f["fog_id"] for f in start.entry_fogs]
+        assert "AEG099_231_9000" in entry_fog_ids
+
+    def test_removes_roundtable_from_pool(self):
+        """Roundtable cluster is removed from pool after merge."""
+        pool = self._make_pool_with_roundtable()
+        assert pool.get_by_id("roundtable_dacf") is not None
+
+        pool.merge_roundtable_into_start()
+
+        assert pool.get_by_id("roundtable_dacf") is None
+        assert all("roundtable" not in c.zones for c in pool.get_by_type("other"))
+
+    def test_noop_without_roundtable(self):
+        """Merge is a no-op when there is no roundtable cluster."""
+        pool = ClusterPool()
+        pool.add(
+            make_cluster(
+                "chapel_start",
+                zones=["chapel_start"],
+                cluster_type="start",
+                weight=1,
+                entry_fogs=[],
+                exit_fogs=[
+                    {"fog_id": "exit1", "zone": "chapel_start"},
+                ],
+            )
+        )
+
+        pool.merge_roundtable_into_start()
+
+        start = pool.get_by_type("start")[0]
+        assert start.zones == ["chapel_start"]
+        assert len(start.exit_fogs) == 1
+
+    def test_noop_without_start(self):
+        """Merge is a no-op when there is no start cluster."""
+        pool = ClusterPool()
+        pool.add(
+            make_cluster(
+                "roundtable_dacf",
+                zones=["roundtable"],
+                cluster_type="other",
+                weight=4,
+            )
+        )
+
+        pool.merge_roundtable_into_start()
+
+        # Roundtable should still be in the pool
+        assert pool.get_by_id("roundtable_dacf") is not None
