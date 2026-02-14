@@ -298,13 +298,15 @@ def dag_to_dict(
         source_cluster_id = source_node.cluster.id
         target_cluster_id = target_node.cluster.id
         text = _get_fog_text(source_node, edge.exit_fog)
-        nodes[source_cluster_id]["exits"].append(
-            {
-                "fog_id": edge.exit_fog,
-                "text": text,
-                "to": target_cluster_id,
-            }
-        )
+        from_zone = _get_fog_zone(source_node, edge.exit_fog, is_entry=False)
+        exit_entry: dict[str, str] = {
+            "fog_id": edge.exit_fog,
+            "text": text,
+        }
+        if from_zone is not None:
+            exit_entry["from"] = from_zone
+        exit_entry["to"] = target_cluster_id
+        nodes[source_cluster_id]["exits"].append(exit_entry)
 
     # Build edges section: unique (from, to) pairs by cluster_id
     seen_edges: set[tuple[str, str]] = set()

@@ -488,13 +488,14 @@ class TestNodeExits:
         assert exit_targets == {"c_a", "c_b"}
 
     def test_exit_fields(self):
-        """Each exit has fog_id, text, and to fields."""
+        """Each exit has fog_id, text, to, and from fields."""
         result = _make_result()
         for node_id, node_data in result["nodes"].items():
             for exit_item in node_data["exits"]:
                 assert "fog_id" in exit_item, f"Exit in {node_id} missing fog_id"
                 assert "text" in exit_item, f"Exit in {node_id} missing text"
                 assert "to" in exit_item, f"Exit in {node_id} missing to"
+                assert "from" in exit_item, f"Exit in {node_id} missing from"
 
     def test_end_node_has_no_exits(self):
         """Final boss node has exits: []."""
@@ -509,6 +510,33 @@ class TestNodeExits:
         exit_by_fog = {e["fog_id"]: e for e in start_exits}
         assert exit_by_fog["fog_1"]["text"] == "Gate to A"
         assert exit_by_fog["fog_2"]["text"] == "Gate to B"
+
+    def test_exit_from_zone(self):
+        """Exit 'from' field contains the origin zone within the cluster."""
+        result = _make_result()
+        # start exits both come from z_start
+        start_exits = result["nodes"]["c_start"]["exits"]
+        for exit_item in start_exits:
+            assert exit_item["from"] == "z_start"
+        # branch b exit comes from z_b1 (not z_b2)
+        b_exits = result["nodes"]["c_b"]["exits"]
+        assert len(b_exits) == 1
+        assert b_exits[0]["from"] == "z_b1"
+
+    def test_exit_from_omitted_when_fog_not_in_exit_fogs(self):
+        """Exit 'from' field is omitted when fog_id is not in cluster exit_fogs."""
+        dag = make_test_dag()
+        dag.add_edge("start", "a", "unknown_fog", "fog_1")
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+        start_exits = result["nodes"]["c_start"]["exits"]
+        unknown_exits = [e for e in start_exits if e["fog_id"] == "unknown_fog"]
+        assert len(unknown_exits) == 1
+        assert "from" not in unknown_exits[0]
 
     def test_exit_text_fallback_to_fog_id(self):
         """When text is missing from exit_fogs, falls back to fog_id."""

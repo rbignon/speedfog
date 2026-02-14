@@ -229,7 +229,7 @@ DAG serialized for C# consumption, visualization tools, and racing.
       "tier": 5,
       "weight": 15,
       "exits": [
-        {"fog_id": "AEG099_002_9000", "text": "Godrick front", "to": "stormveil_godrick_3c4d"}
+        {"fog_id": "AEG099_002_9000", "text": "Godrick front", "from": "stormveil", "to": "stormveil_godrick_3c4d"}
       ]
     }
   },
