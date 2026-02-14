@@ -169,6 +169,23 @@ Example:
         Console.WriteLine($"Loading fog.txt from: {fogPath}");
         var ann = AnnotationData.LoadLiteConfig(fogPath);
 
+        // LoadLiteConfig only loads Areas/Warps/Entrances/DungeonItems (via internal LiteConfig class).
+        // CustomBonfires are needed for newgraces - load them separately.
+        {
+            var deserializer = new DeserializerBuilder().IgnoreUnmatchedProperties().Build();
+            using var input = File.OpenText(fogPath);
+            var bonfireConfig = deserializer.Deserialize<BonfireConfig>(input);
+            ann.CustomBonfires = bonfireConfig?.CustomBonfires;
+            if (ann.CustomBonfires != null)
+            {
+                Console.WriteLine($"Loaded {ann.CustomBonfires.Count} custom bonfires for newgraces");
+            }
+            else
+            {
+                Console.WriteLine("Warning: No CustomBonfires found in fog.txt - newgraces will have no effect");
+            }
+        }
+
         // Initialize ConfigVars - LoadLiteConfig doesn't load them, but Graph.Construct needs them
         // for condition evaluation. These are FogRando's dungeon crawler mode variables.
         ann.ConfigVars = new Dictionary<string, string>
@@ -424,5 +441,15 @@ Example:
         public string DataDir { get; set; } = "";
         public string OutputDir { get; set; } = "";
         public string? MergeDir { get; set; }
+    }
+
+    /// <summary>
+    /// Minimal YAML wrapper to load CustomBonfires from fog.txt.
+    /// LoadLiteConfig uses an internal LiteConfig class that omits CustomBonfires,
+    /// so we load them separately with this focused class.
+    /// </summary>
+    class BonfireConfig
+    {
+        public List<AnnotationData.CustomBonfire>? CustomBonfires { get; set; }
     }
 }
