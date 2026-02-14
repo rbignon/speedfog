@@ -792,6 +792,14 @@ def compute_cluster_fogs(
                     "fog_id": str(fog.name),  # Always string for consistency
                     "zone": zone,
                 }
+                # Side text: use the text from the side matching this zone
+                side_text = ""
+                if fog.aside.area == zone and fog.aside.text:
+                    side_text = fog.aside.text
+                elif fog.bside.area == zone and fog.bside.text:
+                    side_text = fog.bside.text
+                if side_text:
+                    entry["side_text"] = side_text
                 if fog.text:
                     entry["text"] = fog.text
                 # Propagate "main" tag from the side entering this zone
@@ -821,6 +829,14 @@ def compute_cluster_fogs(
                     "fog_id": str(fog.name),  # Always string for consistency
                     "zone": zone,
                 }
+                # Side text: use the text from the side matching this zone
+                side_text = ""
+                if fog.aside.area == zone and fog.aside.text:
+                    side_text = fog.aside.text
+                elif fog.bside.area == zone and fog.bside.text:
+                    side_text = fog.bside.text
+                if side_text:
+                    fog_entry["side_text"] = side_text
                 if fog.text:
                     fog_entry["text"] = fog.text
                 if fog.is_unique:

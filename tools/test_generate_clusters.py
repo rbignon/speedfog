@@ -977,6 +977,9 @@ class TestComputeClusterFogs:
 
         assert cluster.entry_fogs[0]["text"] == "Main Gate"
         assert cluster.exit_fogs[0]["text"] == "Main Gate"
+        # Side text from ASide (zone_a matches ASide area)
+        assert cluster.entry_fogs[0]["side_text"] == "side A"
+        assert cluster.exit_fogs[0]["side_text"] == "side A"
 
     def test_fog_without_text_omits_key(self):
         """Fog without text does not add text key to cluster fog dicts."""
@@ -992,6 +995,39 @@ class TestComputeClusterFogs:
 
         assert "text" not in cluster.entry_fogs[0]
         assert "text" not in cluster.exit_fogs[0]
+        assert "side_text" not in cluster.entry_fogs[0]
+        assert "side_text" not in cluster.exit_fogs[0]
+
+    def test_side_text_matches_zone(self):
+        """Side text uses the text from the side matching the fog's zone."""
+        graph = WorldGraph()
+
+        fog = FogData(
+            "gate1",
+            1,
+            FogSide("zone_a", "from zone A side"),
+            FogSide("zone_b", "from zone B side"),
+            text="Gate Name",
+            tags=[],
+        )
+        zone_fogs = {
+            "zone_a": ZoneFogs(entry_fogs=[fog], exit_fogs=[fog]),
+            "zone_b": ZoneFogs(entry_fogs=[fog], exit_fogs=[fog]),
+        }
+
+        cluster = Cluster(zones=frozenset({"zone_a", "zone_b"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        # Find entry/exit by zone
+        entry_a = next(e for e in cluster.entry_fogs if e["zone"] == "zone_a")
+        entry_b = next(e for e in cluster.entry_fogs if e["zone"] == "zone_b")
+        exit_a = next(e for e in cluster.exit_fogs if e["zone"] == "zone_a")
+        exit_b = next(e for e in cluster.exit_fogs if e["zone"] == "zone_b")
+
+        assert entry_a["side_text"] == "from zone A side"
+        assert entry_b["side_text"] == "from zone B side"
+        assert exit_a["side_text"] == "from zone A side"
+        assert exit_b["side_text"] == "from zone B side"
 
     def test_main_tag_propagated_from_bside(self):
         """Main tag on BSide propagates to entry dict when BSide is the entry zone."""

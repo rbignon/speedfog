@@ -557,6 +557,32 @@ class TestNodeExits:
         assert exit_by_fog["fog_1"]["text"] == "fog_1"
         assert exit_by_fog["fog_2"]["text"] == "fog_2"
 
+    def test_exit_text_prefers_side_text(self):
+        """When side_text is present, it takes priority over gate-level text."""
+        dag = make_test_dag()
+        # Add side_text to start's exit_fogs
+        dag.nodes["start"].cluster.exit_fogs = [
+            {
+                "fog_id": "fog_1",
+                "zone": "z_start",
+                "text": "Gate Name",
+                "side_text": "detailed side description",
+            },
+            {"fog_id": "fog_2", "zone": "z_start", "text": "Gate to B"},
+        ]
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+        start_exits = result["nodes"]["c_start"]["exits"]
+        exit_by_fog = {e["fog_id"]: e for e in start_exits}
+        # fog_1 should use side_text
+        assert exit_by_fog["fog_1"]["text"] == "detailed side description"
+        # fog_2 falls back to gate-level text
+        assert exit_by_fog["fog_2"]["text"] == "Gate to B"
+
 
 # =============================================================================
 # Duplicate fog_id across zones tests

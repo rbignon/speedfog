@@ -33,6 +33,8 @@ def _effective_type(node: DagNode, dag: Dag) -> str:
 def _get_fog_text(node: DagNode, fog_id: str) -> str:
     """Get the human-readable text for a fog gate from a node's exit_fogs.
 
+    Prefers side_text (zone-specific description) over gate-level text.
+
     Args:
         node: The node to search
         fog_id: The fog ID to find
@@ -42,7 +44,7 @@ def _get_fog_text(node: DagNode, fog_id: str) -> str:
     """
     for fog in node.cluster.exit_fogs:
         if fog["fog_id"] == fog_id:
-            return str(fog.get("text", fog_id))
+            return str(fog.get("side_text", fog.get("text", fog_id)))
     return fog_id
 
 
