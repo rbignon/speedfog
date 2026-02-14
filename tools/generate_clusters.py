@@ -652,10 +652,11 @@ def classify_fogs(
         # Minorwarp: transporter chests/sending gates (no AEG099 fog model).
         # Tag can appear at fog level OR on ASide/BSide — both mean one-way:
         #   ASide = "using the chest" = source (exit only)
-        #   BSide = "arriving" = destination (entry only)
-        # Paired warps (PairWith) may provide the return path.
+        #   BSide = "arriving" = destination (not added; FogMod handles internally)
         # With req_minorwarp enabled, FogMod marks these as core graph edges
         # (see reference/fogrando-src/Graph.cs:1159-1161).
+        # Only ASide (exit) is added: BSide destinations cannot be used as
+        # DAG connection entrances — FogMod handles arrival internally.
         is_minorwarp = (
             "minorwarp" in tags_lower
             or "minorwarp" in aside_tags_lower
@@ -663,7 +664,6 @@ def classify_fogs(
         )
         if is_minorwarp:
             zone_fogs[aside_area].exit_fogs.append(fog)
-            zone_fogs[bside_area].entry_fogs.append(fog)
             continue
 
         # Backportals become selfwarps in the boss room only

@@ -503,7 +503,11 @@ class TestClassifyFogs:
         assert zone_fogs["zone_a"].entry_fogs[0] == fog1
 
     def test_minorwarp_on_bside(self):
-        """Minorwarp tag on BSide means ASide=exit only, BSide=entry only."""
+        """Minorwarp tag on BSide means ASide=exit only, BSide=nothing.
+
+        BSide destinations are not added as entry_fogs because they can't
+        be used as DAG connection entrances (FogMod handles arrival internally).
+        """
         # Example: Auriza Side Tomb chest 30132216
         # ASide = dupejail (use the chest), BSide = dupehallway (arrive) with minorwarp
         fog = FogData(
@@ -522,15 +526,18 @@ class TestClassifyFogs:
         )
         assert fog in zone_fogs["zone_a"].exit_fogs
 
-        # BSide is entry only
-        assert fog in zone_fogs["zone_b"].entry_fogs
+        # BSide has nothing (not usable as connection entrance)
+        assert (
+            "zone_b" not in zone_fogs
+            or fog not in zone_fogs.get("zone_b", ZoneFogs()).entry_fogs
+        )
         assert (
             "zone_b" not in zone_fogs
             or fog not in zone_fogs.get("zone_b", ZoneFogs()).exit_fogs
         )
 
     def test_minorwarp_on_aside(self):
-        """Minorwarp tag on ASide means ASide=exit only, BSide=entry only."""
+        """Minorwarp tag on ASide means ASide=exit only, BSide=nothing."""
         # Example: Auriza Side Tomb chest 30132217
         # ASide = dupehallway (use the chest) with minorwarp, BSide = dupejail (arrive)
         fog = FogData(
@@ -549,15 +556,22 @@ class TestClassifyFogs:
         )
         assert fog in zone_fogs["zone_a"].exit_fogs
 
-        # BSide is entry only
-        assert fog in zone_fogs["zone_b"].entry_fogs
+        # BSide has nothing
+        assert (
+            "zone_b" not in zone_fogs
+            or fog not in zone_fogs.get("zone_b", ZoneFogs()).entry_fogs
+        )
         assert (
             "zone_b" not in zone_fogs
             or fog not in zone_fogs.get("zone_b", ZoneFogs()).exit_fogs
         )
 
-    def test_minorwarp_paired_provides_bidirectional(self):
-        """Paired minorwarp chests provide bidirectional zone connectivity."""
+    def test_minorwarp_paired_provides_exits_only(self):
+        """Paired minorwarp chests provide exits from both zones, no entries.
+
+        Each zone gets an exit (the chest), but neither gets an entry_fog
+        since minorwarp destinations can't be DAG connection targets.
+        """
         # Two chests that PairWith each other (like Auriza Side Tomb 30132216/30132217)
         fog1 = FogData(
             name="30132216",
@@ -577,16 +591,16 @@ class TestClassifyFogs:
         )
         zone_fogs = classify_fogs([], [fog1, fog2])
 
-        # dupejail has: entry via fog2, exit via fog1
-        assert fog2 in zone_fogs["dupejail"].entry_fogs
+        # dupejail has: exit via fog1, no entry from minorwarps
         assert fog1 in zone_fogs["dupejail"].exit_fogs
+        assert fog2 not in zone_fogs["dupejail"].entry_fogs
 
-        # dupehallway has: entry via fog1, exit via fog2
-        assert fog1 in zone_fogs["dupehallway"].entry_fogs
+        # dupehallway has: exit via fog2, no entry from minorwarps
         assert fog2 in zone_fogs["dupehallway"].exit_fogs
+        assert fog1 not in zone_fogs["dupehallway"].entry_fogs
 
     def test_minorwarp_at_fog_level(self):
-        """Fog-level minorwarp tag follows same one-way logic as side-level."""
+        """Fog-level minorwarp tag follows same logic: ASide=exit, BSide=nothing."""
         # Example: Auriza Side Tomb chest 30132210 has minorwarp at fog level
         # ASide = hallway (use the chest), BSide = sidetomb (arrive)
         fog = FogData(
@@ -605,8 +619,11 @@ class TestClassifyFogs:
             or fog not in zone_fogs.get("zone_a", ZoneFogs()).entry_fogs
         )
 
-        # BSide is entry only
-        assert fog in zone_fogs["zone_b"].entry_fogs
+        # BSide has nothing
+        assert (
+            "zone_b" not in zone_fogs
+            or fog not in zone_fogs.get("zone_b", ZoneFogs()).entry_fogs
+        )
         assert (
             "zone_b" not in zone_fogs
             or fog not in zone_fogs.get("zone_b", ZoneFogs()).exit_fogs
