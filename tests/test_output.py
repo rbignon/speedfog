@@ -559,6 +559,178 @@ class TestNodeExits:
 
 
 # =============================================================================
+# Duplicate fog_id across zones tests
+# =============================================================================
+
+
+class TestDuplicateFogIdAcrossZones:
+    """Tests for clusters with the same fog_id in exit_fogs for multiple zones.
+
+    This reproduces the Redmane Castle scenario where AEG099_001_9001 appears
+    as an exit from both caelid_redmane_boss and caelid_redmane_postboss zones
+    (two sides of the same physical fog gate).
+    """
+
+    def _make_dag_with_duplicate_exit_fogs(self) -> tuple[Dag, ClusterPool]:
+        """Create a DAG where a multi-zone cluster has duplicate fog_ids.
+
+        Structure:
+            start -> mid -> dest_1
+                         -> dest_2
+
+        mid has two zones (zone_a, zone_b) with fog_id "shared_fog" as an
+        exit from both zones (two sides of the same gate).
+        """
+        dag = Dag(seed=99)
+
+        dag.add_node(
+            DagNode(
+                id="start",
+                cluster=make_cluster(
+                    "c_start",
+                    zones=["z_start"],
+                    cluster_type="start",
+                    entry_fogs=[],
+                    exit_fogs=[
+                        {"fog_id": "fog_entry", "zone": "z_start", "text": "To mid"},
+                    ],
+                ),
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+                exit_fogs=["fog_entry"],
+            )
+        )
+
+        # Multi-zone cluster with duplicate fog_id across zones
+        dag.add_node(
+            DagNode(
+                id="mid",
+                cluster=make_cluster(
+                    "c_mid",
+                    zones=["zone_a", "zone_b"],
+                    cluster_type="boss_arena",
+                    entry_fogs=[
+                        {"fog_id": "fog_entry", "zone": "zone_b", "text": "Entry"},
+                    ],
+                    exit_fogs=[
+                        {
+                            "fog_id": "unique_fog",
+                            "zone": "zone_a",
+                            "text": "Unique exit",
+                        },
+                        # Same fog_id, different zones (two sides of one gate)
+                        {
+                            "fog_id": "shared_fog",
+                            "zone": "zone_a",
+                            "text": "Shared A side",
+                        },
+                        {
+                            "fog_id": "shared_fog",
+                            "zone": "zone_b",
+                            "text": "Shared B side",
+                        },
+                    ],
+                ),
+                layer=1,
+                tier=3,
+                entry_fogs=["fog_entry"],
+                exit_fogs=["unique_fog", "shared_fog", "shared_fog"],
+            )
+        )
+
+        dag.add_node(
+            DagNode(
+                id="dest_1",
+                cluster=make_cluster(
+                    "c_dest1",
+                    zones=["z_d1"],
+                    cluster_type="mini_dungeon",
+                    entry_fogs=[
+                        {"fog_id": "d1_entry", "zone": "z_d1", "text": "Dest 1 entry"},
+                    ],
+                    exit_fogs=[],
+                ),
+                layer=2,
+                tier=5,
+                entry_fogs=["d1_entry"],
+                exit_fogs=[],
+            )
+        )
+
+        dag.add_node(
+            DagNode(
+                id="dest_2",
+                cluster=make_cluster(
+                    "c_dest2",
+                    zones=["z_d2"],
+                    cluster_type="mini_dungeon",
+                    entry_fogs=[
+                        {"fog_id": "d2_entry", "zone": "z_d2", "text": "Dest 2 entry"},
+                    ],
+                    exit_fogs=[],
+                ),
+                layer=2,
+                tier=5,
+                entry_fogs=["d2_entry"],
+                exit_fogs=[],
+            )
+        )
+
+        dag.add_edge("start", "mid", "fog_entry", "fog_entry")
+        # Two edges using the same fog_id but from different zone sides
+        dag.add_edge("mid", "dest_1", "shared_fog", "d1_entry")
+        dag.add_edge("mid", "dest_2", "shared_fog", "d2_entry")
+
+        dag.start_id = "start"
+        dag.end_id = "dest_2"
+
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={
+                "zone_a": "m10_00",
+                "zone_b": "m10_00",
+                "z_start": "m00_00",
+                "z_d1": "m20_00",
+                "z_d2": "m30_00",
+            },
+            zone_names={},
+        )
+        return dag, clusters
+
+    def test_connections_have_different_exit_areas(self):
+        """Two edges with same fog_id get different exit_area (different fog sides)."""
+        dag, clusters = self._make_dag_with_duplicate_exit_fogs()
+        result = dag_to_dict(dag, clusters)
+
+        shared_conns = [
+            c for c in result["connections"] if "shared_fog" in c["exit_gate"]
+        ]
+        assert len(shared_conns) == 2
+
+        exit_areas = {c["exit_area"] for c in shared_conns}
+        assert exit_areas == {
+            "zone_a",
+            "zone_b",
+        }, f"Expected both zones, got {exit_areas}"
+
+    def test_node_exits_have_different_from_zones(self):
+        """Two exits with same fog_id get different 'from' zones."""
+        dag, clusters = self._make_dag_with_duplicate_exit_fogs()
+        result = dag_to_dict(dag, clusters)
+
+        mid_exits = result["nodes"]["c_mid"]["exits"]
+        shared_exits = [e for e in mid_exits if e["fog_id"] == "shared_fog"]
+        assert len(shared_exits) == 2
+
+        from_zones = {e["from"] for e in shared_exits}
+        assert from_zones == {
+            "zone_a",
+            "zone_b",
+        }, f"Expected both zones, got {from_zones}"
+
+
+# =============================================================================
 # Starting larval tears tests
 # =============================================================================
 
