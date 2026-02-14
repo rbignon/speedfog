@@ -210,7 +210,7 @@ def test_starting_items_defaults():
     """StartingItemsConfig has correct defaults."""
     config = Config.from_dict({})
     assert config.starting_items.academy_key is True
-    assert config.starting_items.pureblood_medal is True
+    assert config.starting_items.pureblood_medal is False
     assert config.starting_items.drawing_room_key is True
     assert config.starting_items.lantern is True
     assert config.starting_items.whetblades is True
@@ -297,7 +297,7 @@ def test_starting_items_get_starting_goods_all_runes():
     goods = config.starting_items.get_starting_goods()
     # Should have all 6 Great Runes (restored, 191-196) + key items (defaults)
     assert 8109 in goods  # Academy Glintstone Key
-    assert 2160 in goods  # Pureblood Knight's Medal
+    assert 2160 not in goods  # Pureblood Knight's Medal (disabled by default)
     assert 8134 in goods  # Drawing-Room Key
     assert 2070 in goods  # Lantern
     assert 8590 in goods  # Whetstone Knife

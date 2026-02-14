@@ -123,7 +123,7 @@ class StartingItemsConfig:
 
     # Key items for progression shortcuts
     academy_key: bool = True  # Academy Glintstone Key (Good ID 8109)
-    pureblood_medal: bool = True  # Pureblood Knight's Medal (Good ID 2160)
+    pureblood_medal: bool = False  # Pureblood Knight's Medal (Good ID 2160)
     drawing_room_key: bool = True  # Drawing-Room Key for Volcano Manor (Good ID 8134)
     lantern: bool = True  # Lantern (Good ID 2070) - hands-free light source
     whetblades: bool = (
@@ -379,7 +379,7 @@ class Config:
             ),
             starting_items=StartingItemsConfig(
                 academy_key=starting_items_section.get("academy_key", True),
-                pureblood_medal=starting_items_section.get("pureblood_medal", True),
+                pureblood_medal=starting_items_section.get("pureblood_medal", False),
                 drawing_room_key=starting_items_section.get("drawing_room_key", True),
                 lantern=starting_items_section.get("lantern", True),
                 whetblades=starting_items_section.get("whetblades", True),
