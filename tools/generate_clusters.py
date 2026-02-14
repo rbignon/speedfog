@@ -794,6 +794,15 @@ def compute_cluster_fogs(
                 }
                 if fog.text:
                     entry["text"] = fog.text
+                # Propagate "main" tag from the side entering this zone
+                if fog.bside.area == zone and "main" in (
+                    t.lower() for t in fog.bside.tags
+                ):
+                    entry["main"] = True
+                elif fog.aside.area == zone and "main" in (
+                    t.lower() for t in fog.aside.tags
+                ):
+                    entry["main"] = True
                 cluster.entry_fogs.append(entry)
 
     # Collect exit fogs from all zones
@@ -1233,7 +1242,7 @@ def clusters_to_json(
         cluster_list.append(entry)
 
     return {
-        "version": "1.4",
+        "version": "1.5",
         "generated_from": "fog.txt",
         "cluster_count": len(clusters),
         "zone_maps": zone_maps,

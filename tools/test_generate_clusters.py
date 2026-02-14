@@ -976,6 +976,91 @@ class TestComputeClusterFogs:
         assert "text" not in cluster.entry_fogs[0]
         assert "text" not in cluster.exit_fogs[0]
 
+    def test_main_tag_propagated_from_bside(self):
+        """Main tag on BSide propagates to entry dict when BSide is the entry zone."""
+        graph = WorldGraph()
+
+        fog = FogData(
+            "boss_gate",
+            1,
+            FogSide("outside", ""),
+            FogSide("boss_room", "", tags=["main"]),
+            tags=[],
+        )
+        zone_fogs = {
+            "boss_room": ZoneFogs(entry_fogs=[fog], exit_fogs=[]),
+        }
+
+        cluster = Cluster(zones=frozenset({"boss_room"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        assert len(cluster.entry_fogs) == 1
+        assert cluster.entry_fogs[0].get("main") is True
+
+    def test_main_tag_propagated_from_aside(self):
+        """Main tag on ASide propagates when ASide is the entry zone."""
+        graph = WorldGraph()
+
+        fog = FogData(
+            "boss_gate",
+            1,
+            FogSide("boss_room", "", tags=["Main"]),  # case-insensitive
+            FogSide("outside", ""),
+            tags=[],
+        )
+        zone_fogs = {
+            "boss_room": ZoneFogs(entry_fogs=[fog], exit_fogs=[]),
+        }
+
+        cluster = Cluster(zones=frozenset({"boss_room"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        assert len(cluster.entry_fogs) == 1
+        assert cluster.entry_fogs[0].get("main") is True
+
+    def test_main_tag_absent_when_no_main(self):
+        """Entry dict has no main key when neither side has main tag."""
+        graph = WorldGraph()
+
+        fog = FogData(
+            "side_gate",
+            2,
+            FogSide("outside", ""),
+            FogSide("boss_room", ""),
+            tags=[],
+        )
+        zone_fogs = {
+            "boss_room": ZoneFogs(entry_fogs=[fog], exit_fogs=[]),
+        }
+
+        cluster = Cluster(zones=frozenset({"boss_room"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        assert len(cluster.entry_fogs) == 1
+        assert "main" not in cluster.entry_fogs[0]
+
+    def test_main_tag_not_set_from_wrong_side(self):
+        """Main tag on the opposite side (not entering this zone) is ignored."""
+        graph = WorldGraph()
+
+        # Main is on ASide (outside), but we're entering boss_room via BSide
+        fog = FogData(
+            "gate",
+            3,
+            FogSide("outside", "", tags=["main"]),
+            FogSide("boss_room", ""),
+            tags=[],
+        )
+        zone_fogs = {
+            "boss_room": ZoneFogs(entry_fogs=[fog], exit_fogs=[]),
+        }
+
+        cluster = Cluster(zones=frozenset({"boss_room"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        assert len(cluster.entry_fogs) == 1
+        assert "main" not in cluster.entry_fogs[0]
+
     def test_same_fog_id_different_zones_creates_separate_entries_for_entries(self):
         """Same fog_id in different zones creates separate entry entries."""
         graph = WorldGraph()

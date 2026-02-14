@@ -205,6 +205,19 @@ def can_be_passant_node(cluster: ClusterData) -> bool:
     return count_net_exits(cluster, 1) == 1
 
 
+def _stable_main_shuffle(entries: list[dict], rng: random.Random) -> list[dict]:
+    """Shuffle entries with main-tagged ones first.
+
+    Within each group (main vs non-main), order is randomized.
+    This gives a soft preference to main entries without hard-excluding others.
+    """
+    main = [e for e in entries if e.get("main")]
+    rest = [e for e in entries if not e.get("main")]
+    rng.shuffle(main)
+    rng.shuffle(rest)
+    return main + rest
+
+
 def select_entries_for_merge(
     cluster: ClusterData, num: int, rng: random.Random
 ) -> list[dict]:
@@ -212,6 +225,7 @@ def select_entries_for_merge(
 
     Prefers non-bidirectional entries to preserve more exits.
     A fog is bidirectional only if same (fog_id, zone) appears in both lists.
+    Within each group, main-tagged entries are preferred.
 
     Args:
         cluster: The cluster to select entries from.
@@ -229,9 +243,9 @@ def select_entries_for_merge(
     ]
     bidir = [e for e in cluster.entry_fogs if (e["fog_id"], e["zone"]) in exit_keys]
 
-    # Shuffle each group
-    rng.shuffle(non_bidir)
-    rng.shuffle(bidir)
+    # Shuffle each group with main entries first
+    non_bidir = _stable_main_shuffle(non_bidir, rng)
+    bidir = _stable_main_shuffle(bidir, rng)
 
     # Take from non-bidir first, then bidir
     result = non_bidir[:num]
@@ -246,6 +260,8 @@ def pick_entry_with_max_exits(
     cluster: ClusterData, min_exits: int, rng: random.Random
 ) -> dict | None:
     """Pick an entry fog that leaves at least min_exits available.
+
+    Prefers main-tagged entries when multiple valid entries exist.
 
     Args:
         cluster: The cluster to pick from.
@@ -264,6 +280,10 @@ def pick_entry_with_max_exits(
     if not valid_entries:
         return None
 
+    # Prefer main-tagged entries (boss arena main gate)
+    main_entries = [e for e in valid_entries if e.get("main")]
+    if main_entries:
+        return rng.choice(main_entries)
     return rng.choice(valid_entries)
 
 
@@ -1121,9 +1141,17 @@ def generate_dag(
         )
 
     # Final boss has exactly 1 entry (from the single remaining branch)
-    entry_fog_end = (
-        rng.choice(end_cluster.entry_fogs)["fog_id"] if end_cluster.entry_fogs else None
-    )
+    # Prefer main-tagged entry (boss arena main gate for correct Stake of Marika)
+    if end_cluster.entry_fogs:
+        main_entries = [e for e in end_cluster.entry_fogs if e.get("main")]
+        chosen = (
+            rng.choice(main_entries)
+            if main_entries
+            else rng.choice(end_cluster.entry_fogs)
+        )
+        entry_fog_end = chosen["fog_id"]
+    else:
+        entry_fog_end = None
     entry_fogs_end = [entry_fog_end] if entry_fog_end else []
 
     end_node = DagNode(

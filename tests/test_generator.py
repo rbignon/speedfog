@@ -11,6 +11,7 @@ from speedfog.generator import (
     GenerationError,
     _find_valid_merge_indices,
     _has_valid_merge_pair,
+    _stable_main_shuffle,
     cluster_has_usable_exits,
     compute_net_exits,
     count_net_exits,
@@ -1077,6 +1078,118 @@ class TestPickEntryWithMaxExits:
 
         # Entry consumes the only exit, so no valid entry for min_exits=1
         assert entry is None
+
+
+class TestStableMainShuffle:
+    """Tests for _stable_main_shuffle helper."""
+
+    def test_main_entries_come_first(self):
+        """Main-tagged entries appear before non-main entries."""
+        entries = [
+            {"fog_id": "a", "zone": "z1"},
+            {"fog_id": "b", "zone": "z2", "main": True},
+            {"fog_id": "c", "zone": "z3"},
+        ]
+        result = _stable_main_shuffle(entries, random.Random(42))
+        assert result[0]["fog_id"] == "b"
+        assert {e["fog_id"] for e in result[1:]} == {"a", "c"}
+
+    def test_no_main_entries(self):
+        """All entries returned when none are main-tagged."""
+        entries = [
+            {"fog_id": "a", "zone": "z1"},
+            {"fog_id": "b", "zone": "z2"},
+        ]
+        result = _stable_main_shuffle(entries, random.Random(42))
+        assert len(result) == 2
+
+    def test_all_main_entries(self):
+        """All main entries shuffled and returned."""
+        entries = [
+            {"fog_id": "a", "zone": "z1", "main": True},
+            {"fog_id": "b", "zone": "z2", "main": True},
+        ]
+        result = _stable_main_shuffle(entries, random.Random(42))
+        assert len(result) == 2
+        assert all(e.get("main") for e in result)
+
+
+class TestMainPreference:
+    """Tests for main-tagged entry preference in selection functions."""
+
+    def test_pick_entry_prefers_main(self):
+        """pick_entry_with_max_exits prefers main-tagged entry."""
+        cluster = make_cluster(
+            "boss",
+            entry_fogs=[
+                {"fog_id": "back_gate", "zone": "boss_room"},
+                {"fog_id": "main_gate", "zone": "boss_room", "main": True},
+            ],
+            exit_fogs=[
+                {"fog_id": "exit1", "zone": "boss_room"},
+            ],
+        )
+
+        # Run many times to verify consistency
+        for seed in range(20):
+            entry = pick_entry_with_max_exits(cluster, 1, random.Random(seed))
+            assert entry is not None
+            assert entry["fog_id"] == "main_gate"
+
+    def test_pick_entry_falls_back_when_no_main(self):
+        """pick_entry_with_max_exits falls back to any valid entry."""
+        cluster = make_cluster(
+            "boss",
+            entry_fogs=[
+                {"fog_id": "gate_a", "zone": "boss_room"},
+                {"fog_id": "gate_b", "zone": "boss_room"},
+            ],
+            exit_fogs=[
+                {"fog_id": "exit1", "zone": "boss_room"},
+            ],
+        )
+
+        entry = pick_entry_with_max_exits(cluster, 1, random.Random(42))
+        assert entry is not None
+        assert entry["fog_id"] in ("gate_a", "gate_b")
+
+    def test_pick_entry_falls_back_when_main_violates_exit_constraint(self):
+        """Falls back to non-main when main entry would consume the only exit."""
+        cluster = make_cluster(
+            "boss",
+            entry_fogs=[
+                # main entry is bidirectional and would consume the only exit
+                {"fog_id": "main_gate", "zone": "boss_room", "main": True},
+                # non-main entry doesn't consume any exit
+                {"fog_id": "back_gate", "zone": "other_zone"},
+            ],
+            exit_fogs=[
+                {"fog_id": "main_gate", "zone": "boss_room"},
+            ],
+        )
+
+        entry = pick_entry_with_max_exits(cluster, 1, random.Random(42))
+        assert entry is not None
+        # main_gate consumes the only exit -> 0 remaining, below min_exits=1
+        # back_gate preserves the exit -> 1 remaining, meets min_exits=1
+        assert entry["fog_id"] == "back_gate"
+
+    def test_select_entries_for_merge_prefers_main(self):
+        """select_entries_for_merge prefers main within each group."""
+        cluster = make_cluster(
+            "boss",
+            entry_fogs=[
+                {"fog_id": "non_main", "zone": "z1"},
+                {"fog_id": "main_entry", "zone": "z2", "main": True},
+            ],
+            exit_fogs=[],  # all non-bidir
+        )
+
+        # Selecting 1 should get the main one
+        for seed in range(20):
+            entries = select_entries_for_merge(cluster, 1, random.Random(seed))
+            assert len(entries) == 1
+            assert entries[0]["fog_id"] == "main_entry"
 
 
 class TestClusterDataAvailableExits:
