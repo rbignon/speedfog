@@ -124,14 +124,14 @@ public static class RebirthInjector
         ESD.State menuState,
         ref long baseId)
     {
-        // Find the return state (state that the menu entry's first condition points back to).
-        // This is the main grace menu idle state - we return here after any rebirth outcome.
-        // The menuState created by ModifyCustomTalkEntry has a condition leading to the
-        // action state and potentially a default return. We need to identify the return target.
-        // Convention: use the state pointed to by the last condition (the "cancel/leave" path).
+        // Save the return state (the grace menu idle state) from the default condition
+        // created by ModifyCustomTalkEntry, then clear existing conditions so we can
+        // build our own branching logic. This matches FogRando's pattern in
+        // GameDataWriterE.cs:3928-3929 for custom post-menu state machines.
         long returnId = menuState.Conditions.Count > 0
-            ? menuState.Conditions[^1].TargetState ?? baseId
+            ? menuState.Conditions[0].TargetState ?? baseId
             : baseId;
+        menuState.Conditions.Clear();
 
         // Check: does player have a Larval Tear? (Good 8185 OR Good 2008033)
         var hasTear = HasItemExpr(LARVAL_TEAR_GOOD_ID);
