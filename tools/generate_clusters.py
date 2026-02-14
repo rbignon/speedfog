@@ -635,11 +635,6 @@ def classify_fogs(
         if _DUNGEON_ONLY_TAGS & set(tags_lower):
             continue
 
-        # Skip fogs with minorwarp at the fog level (not on sides)
-        # These are transporter chests/sending gates without AEG099 fog gate models
-        if "minorwarp" in tags_lower:
-            continue
-
         # Skip door fogs (Morgott barriers and similar magic doors)
         # These are pre-connected in FogMod's vanilla graph and cannot be redirected.
         # They connect internal areas (e.g., sewer_mohg -> sewer_preflame) and are
@@ -654,16 +649,19 @@ def classify_fogs(
         if not aside_area or not bside_area:
             continue
 
-        # Check for minorwarp tag on sides (transporter chest/warp)
-        # In fog.txt, warps with minorwarp follow the standard ASide/BSide convention:
-        # - ASide = "using the chest" = source (exit)
-        # - BSide = "arriving" = destination (entry)
-        # The minorwarp tag indicates this specific warp is one-way (you take the chest
-        # and arrive somewhere). Paired warps (PairWith) may provide the return path.
-        #
-        # These warps are exit-only from ASide.Area, entry-only at BSide.Area
-        if "minorwarp" in aside_tags_lower or "minorwarp" in bside_tags_lower:
-            # ASide is source (exit), BSide is destination (entry)
+        # Minorwarp: transporter chests/sending gates (no AEG099 fog model).
+        # Tag can appear at fog level OR on ASide/BSide — both mean one-way:
+        #   ASide = "using the chest" = source (exit only)
+        #   BSide = "arriving" = destination (entry only)
+        # Paired warps (PairWith) may provide the return path.
+        # With req_minorwarp enabled, FogMod marks these as core graph edges
+        # (see reference/fogrando-src/Graph.cs:1159-1161).
+        is_minorwarp = (
+            "minorwarp" in tags_lower
+            or "minorwarp" in aside_tags_lower
+            or "minorwarp" in bside_tags_lower
+        )
+        if is_minorwarp:
             zone_fogs[aside_area].exit_fogs.append(fog)
             zone_fogs[bside_area].entry_fogs.append(fog)
             continue

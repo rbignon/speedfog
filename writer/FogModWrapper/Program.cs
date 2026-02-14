@@ -151,7 +151,7 @@ Example:
         opt["req_legacy"] = true;  // Legacy dungeons
         opt["req_major"] = true;   // Major bosses
         opt["req_underground"] = true;  // Underground areas (Siofra, Ainsel, Nokron, etc.)
-        //opt["req_minorwarp"] = true;  // Minor warps
+        opt["req_minorwarp"] = true;  // Minor warps (transporter chests)
         // Explicitly NOT setting req_evergaol - evergaols lack StakeAsset in fog.txt
 
         // Configure features that depend on crawl mode (normally done by Randomizer)

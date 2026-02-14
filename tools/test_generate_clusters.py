@@ -585,6 +585,33 @@ class TestClassifyFogs:
         assert fog1 in zone_fogs["dupehallway"].entry_fogs
         assert fog2 in zone_fogs["dupehallway"].exit_fogs
 
+    def test_minorwarp_at_fog_level(self):
+        """Fog-level minorwarp tag follows same one-way logic as side-level."""
+        # Example: Auriza Side Tomb chest 30132210 has minorwarp at fog level
+        # ASide = hallway (use the chest), BSide = sidetomb (arrive)
+        fog = FogData(
+            name="30132210",
+            fog_id=30132210,
+            aside=FogSide(area="zone_a", text="using the chest"),
+            bside=FogSide(area="zone_b", text="arriving"),
+            tags=["dungeon", "minorwarp", "catacomb"],  # minorwarp at fog level
+        )
+        zone_fogs = classify_fogs([], [fog])
+
+        # ASide is exit only
+        assert fog in zone_fogs["zone_a"].exit_fogs
+        assert (
+            "zone_a" not in zone_fogs
+            or fog not in zone_fogs.get("zone_a", ZoneFogs()).entry_fogs
+        )
+
+        # BSide is entry only
+        assert fog in zone_fogs["zone_b"].entry_fogs
+        assert (
+            "zone_b" not in zone_fogs
+            or fog not in zone_fogs.get("zone_b", ZoneFogs()).exit_fogs
+        )
+
     def test_door_fog_excluded(self):
         """Door fogs (Morgott barriers) are excluded.
 
