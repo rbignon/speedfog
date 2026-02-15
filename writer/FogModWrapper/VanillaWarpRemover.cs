@@ -58,12 +58,28 @@ public static class VanillaWarpRemover
         var entityIds = new HashSet<uint>(
             entities.Where(e => e.EntityId > 0).Select(e => (uint)e.EntityId));
 
+        // Collect names of assets to remove (for cleaning up event references)
+        var removedNames = new HashSet<string>(
+            msb.Parts.Assets
+                .Where(a => entityIds.Contains(a.EntityID))
+                .Select(a => a.Name));
+
         var removed = msb.Parts.Assets.RemoveAll(a => entityIds.Contains(a.EntityID));
 
         if (removed > 0)
         {
+            // Remove ObjAct events that reference the removed assets (same pattern as
+            // FogRando's GameDataWriterE.cs:574 — ObjAct events hold a part name reference
+            // that causes MSB.Write() to fail if the part no longer exists).
+            var objActsRemoved = msb.Events.ObjActs.RemoveAll(
+                oa => removedNames.Contains(oa.ObjActPartName));
+
             msb.Write(msbPath);
             Console.WriteLine($"  {mapId}: removed {removed} warp assets");
+            if (objActsRemoved > 0)
+            {
+                Console.WriteLine($"  {mapId}: also removed {objActsRemoved} ObjAct events");
+            }
         }
 
         return removed;
