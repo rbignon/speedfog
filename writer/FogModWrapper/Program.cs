@@ -152,6 +152,9 @@ Example:
         opt["req_major"] = true;   // Major bosses
         opt["req_underground"] = true;  // Underground areas (Siofra, Ainsel, Nokron, etc.)
         opt["req_minorwarp"] = true;  // Minor warps (transporter chests)
+        opt["coupledminor"] = true;  // Keep uniqueminor warps as coupled pairs (not unique)
+        // Without this, Graph.Construct converts uniqueminor→unique, then crawl mode marks
+        // warps with mixed open/neveropen sides as unused (e.g., Redmane Castle sending gates).
         // Explicitly NOT setting req_evergaol - evergaols lack StakeAsset in fog.txt
 
         // Configure features that depend on crawl mode (normally done by Randomizer)
