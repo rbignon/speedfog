@@ -131,7 +131,7 @@ def _make_fullname(
     zone: str,
     clusters: ClusterPool,
     fog_data: dict[str, dict[str, Any]] | None = None,
-    is_entry: bool = False,  # noqa: ARG001 - kept for API compatibility
+    is_entry: bool = False,
 ) -> str:
     """Convert a fog_id to FogMod FullName format: {map}_{fog_id}.
 
@@ -140,7 +140,7 @@ def _make_fullname(
         zone: The zone the fog connects to
         clusters: ClusterPool with zone_maps
         fog_data: Optional fog_data.json lookup for map resolution
-        is_entry: Unused, kept for API compatibility
+        is_entry: Whether this is an entrance gate (affects warp resolution)
 
     Returns:
         FogMod FullName (e.g., "m10_01_00_00_AEG099_001_9000")
@@ -155,11 +155,46 @@ def _make_fullname(
         FogMod edge names are always based on the map where the asset physically
         exists (the "map" field), NOT the destination_map. The destination_map
         field is informational only.
+
+        For warps at cross-map boundaries, the entity in fog_data may be on
+        the wrong side for the operation. Entry gates need the external-side
+        entity (FogMod From edge), exit gates need the internal-side entity
+        (FogMod To edge). When the entity is on the wrong side, we look up
+        the paired entity in the destination map.
     """
     # For warps (numeric IDs), fog_data has the authoritative map
     if fog_data and fog_id in fog_data and fog_id.isdigit():
         data = fog_data[fog_id]
         map_id = data.get("map")
+
+        # For cross-map boundary warps, check if the entity is on the wrong
+        # side. Entry needs external (zones[0] != zone), exit needs internal
+        # (zones[0] == zone). If on wrong side, find the paired entity.
+        if map_id:
+            dest_map = data.get("destination_map")
+            fog_zones = data.get("zones", [])
+            # zones[0] is always the ASide zone — the zone where the entity
+            # physically exists (per extract_fog_data.py FogEntry.zones).
+            is_internal = fog_zones and fog_zones[0] == zone
+            on_wrong_side = (is_entry and is_internal) or (
+                not is_entry and not is_internal
+            )
+            if dest_map and dest_map != map_id and on_wrong_side:
+                fog_zones_set = set(fog_zones)
+                for key, fdata in fog_data.items():
+                    if (
+                        not key.startswith("m")
+                        and fdata.get("map") == dest_map
+                        and set(fdata.get("zones", [])) == fog_zones_set
+                        and key != fog_id
+                    ):
+                        return f"{dest_map}_{key}"
+                side = "entry" if is_entry else "exit"
+                print(
+                    f"Warning: No paired {side} entity for cross-map warp "
+                    f"{fog_id} (dest_map={dest_map})"
+                )
+
         if map_id:
             return f"{map_id}_{fog_id}"
 

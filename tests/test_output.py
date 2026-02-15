@@ -4,7 +4,12 @@ from pathlib import Path
 
 from speedfog.clusters import ClusterData, ClusterPool
 from speedfog.dag import Dag, DagNode
-from speedfog.output import _effective_type, dag_to_dict, export_spoiler_log
+from speedfog.output import (
+    _effective_type,
+    _make_fullname,
+    dag_to_dict,
+    export_spoiler_log,
+)
 
 
 def make_cluster(
@@ -920,3 +925,179 @@ class TestRemoveEntities:
         )
         result = dag_to_dict(dag, clusters)
         assert len(result["remove_entities"]) == 1
+
+
+# =============================================================================
+# _make_fullname cross-map warp tests
+# =============================================================================
+
+
+def _make_cross_map_fog_data() -> dict:
+    """Create fog_data simulating a cross-map boundary warp (e.g., Raya Lucaria).
+
+    Entity 1035452610 is on the academy_entrance side (m60_35_46_00).
+    Entity 1035462610 is the paired entity on the liurnia side (m60_35_45_00).
+    They connect the same two zones but are in different map tiles.
+    """
+    return {
+        # South gate: academy_entrance side (internal)
+        "1035452610": {
+            "type": "warp",
+            "zones": ["academy_entrance", "liurnia"],
+            "map": "m60_35_46_00",
+            "destination_map": "m60_35_45_00",
+        },
+        "m60_35_46_00_1035452610": {
+            "type": "warp",
+            "zones": ["academy_entrance", "liurnia"],
+            "map": "m60_35_46_00",
+            "destination_map": "m60_35_45_00",
+        },
+        # South gate: liurnia side (external) — the paired entity
+        "1035462610": {
+            "type": "warp",
+            "zones": ["liurnia", "academy_entrance"],
+            "map": "m60_35_45_00",
+            "destination_map": "m60_35_46_00",
+        },
+        "m60_35_45_00_1035462610": {
+            "type": "warp",
+            "zones": ["liurnia", "academy_entrance"],
+            "map": "m60_35_45_00",
+            "destination_map": "m60_35_46_00",
+        },
+        # A same-map boss warp (no cross-map issue)
+        "30122840": {
+            "type": "warp",
+            "zones": ["dungeon_boss", "dungeon"],
+            "map": "m30_12_00_00",
+            "destination_map": "m30_12_00_00",
+        },
+        "m30_12_00_00_30122840": {
+            "type": "warp",
+            "zones": ["dungeon_boss", "dungeon"],
+            "map": "m30_12_00_00",
+            "destination_map": "m30_12_00_00",
+        },
+    }
+
+
+def _make_pool() -> ClusterPool:
+    """Minimal ClusterPool for _make_fullname tests."""
+    return ClusterPool(
+        clusters=[],
+        zone_maps={
+            "academy_entrance": "m14_00_00_00",
+            "liurnia": "m60_35_45_00",
+            "dungeon_boss": "m30_12_00_00",
+            "dungeon": "m30_12_00_00",
+        },
+        zone_names={},
+    )
+
+
+class TestMakeFullnameCrossMapWarps:
+    """Tests for _make_fullname handling of cross-map boundary warps.
+
+    Overworld warps that span different map tiles have two entities — one on
+    each side. Entry gates need the external-side entity (FogMod From edge),
+    exit gates need the internal-side entity (FogMod To edge).
+    """
+
+    def test_entry_internal_resolves_to_external(self):
+        """Entry warp on internal side resolves to paired external entity."""
+        fog_data = _make_cross_map_fog_data()
+        pool = _make_pool()
+
+        result = _make_fullname(
+            "1035452610", "academy_entrance", pool, fog_data, is_entry=True
+        )
+        assert result == "m60_35_45_00_1035462610"
+
+    def test_entry_already_external_unchanged(self):
+        """Entry warp already on external side stays unchanged."""
+        fog_data = _make_cross_map_fog_data()
+        pool = _make_pool()
+
+        result = _make_fullname(
+            "1035462610", "academy_entrance", pool, fog_data, is_entry=True
+        )
+        assert result == "m60_35_45_00_1035462610"
+
+    def test_exit_external_resolves_to_internal(self):
+        """Exit warp on external side resolves to paired internal entity."""
+        fog_data = _make_cross_map_fog_data()
+        pool = _make_pool()
+
+        result = _make_fullname(
+            "1035462610", "academy_entrance", pool, fog_data, is_entry=False
+        )
+        assert result == "m60_35_46_00_1035452610"
+
+    def test_exit_already_internal_unchanged(self):
+        """Exit warp already on internal side stays unchanged."""
+        fog_data = _make_cross_map_fog_data()
+        pool = _make_pool()
+
+        result = _make_fullname(
+            "1035452610", "academy_entrance", pool, fog_data, is_entry=False
+        )
+        assert result == "m60_35_46_00_1035452610"
+
+    def test_same_map_warp_unaffected(self):
+        """Same-map boss warps (dest_map == map) are not altered."""
+        fog_data = _make_cross_map_fog_data()
+        pool = _make_pool()
+
+        entry = _make_fullname(
+            "30122840", "dungeon_boss", pool, fog_data, is_entry=True
+        )
+        exit_ = _make_fullname(
+            "30122840", "dungeon_boss", pool, fog_data, is_entry=False
+        )
+        assert entry == "m30_12_00_00_30122840"
+        assert exit_ == "m30_12_00_00_30122840"
+
+    def test_no_paired_entity_falls_through(self, capsys):
+        """When no paired entity exists, falls through with warning."""
+        fog_data = {
+            "9999999": {
+                "type": "warp",
+                "zones": ["zone_a", "zone_b"],
+                "map": "m60_01_00_00",
+                "destination_map": "m60_02_00_00",
+            },
+        }
+        pool = ClusterPool(
+            clusters=[],
+            zone_maps={"zone_a": "m60_01_00_00"},
+            zone_names={},
+        )
+
+        # Entry with internal entity but no paired entity in dest_map
+        result = _make_fullname("9999999", "zone_a", pool, fog_data, is_entry=True)
+        # Falls through to default: map_id + fog_id
+        assert result == "m60_01_00_00_9999999"
+
+        captured = capsys.readouterr()
+        assert "Warning" in captured.out
+        assert "9999999" in captured.out
+
+    def test_non_numeric_fog_unaffected(self):
+        """AEG fog gates (non-numeric) skip the warp cross-map logic entirely."""
+        fog_data = {
+            "AEG099_001_9000": {
+                "zones": ["academy_entrance"],
+                "map": "m14_00_00_00",
+            },
+            "m14_00_00_00_AEG099_001_9000": {
+                "zones": ["academy_entrance"],
+                "map": "m14_00_00_00",
+            },
+        }
+        pool = _make_pool()
+
+        result = _make_fullname(
+            "AEG099_001_9000", "academy_entrance", pool, fog_data, is_entry=True
+        )
+        assert result == "m14_00_00_00_AEG099_001_9000"
