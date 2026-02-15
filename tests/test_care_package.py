@@ -7,6 +7,7 @@ import pytest
 
 from speedfog.care_package import (
     ITEM_TYPE_ACCESSORY,
+    ITEM_TYPE_GEM,
     ITEM_TYPE_GOODS,
     ITEM_TYPE_PROTECTOR,
     ITEM_TYPE_WEAPON,
@@ -110,6 +111,7 @@ class TestLoadItemPool:
         assert "sorceries" in pool
         assert "incantations" in pool
         assert "crystal_tears" in pool
+        assert "ashes_of_war" in pool
 
     def test_pool_items_have_name_and_id(self):
         """Each item must have 'name' and 'id' fields."""
@@ -121,6 +123,20 @@ class TestLoadItemPool:
             assert "name" in weapon
             assert "id" in weapon
             assert isinstance(weapon["id"], int)
+
+    def test_rejects_zero_id(self, tmp_path):
+        """Items with id=0 (placeholders) should be rejected."""
+        pool_file = tmp_path / "bad_pool.toml"
+        pool_file.write_text('[[sorceries]]\nname = "Placeholder Spell"\nid = 0\n')
+        with pytest.raises(ValueError, match="id=0"):
+            load_item_pool(pool_file)
+
+    def test_rejects_zero_id_nested(self, tmp_path):
+        """Items with id=0 in nested categories should be rejected."""
+        pool_file = tmp_path / "bad_pool.toml"
+        pool_file.write_text('[[weapons.standard]]\nname = "Bad Sword"\nid = 0\n')
+        with pytest.raises(ValueError, match="id=0"):
+            load_item_pool(pool_file)
 
 
 # =============================================================================
@@ -199,6 +215,7 @@ class TestSampleCarePackage:
             arm_armor=0,
             leg_armor=0,
             crystal_tears=0,
+            ashes_of_war=0,
         )
         items = sample_care_package(config, seed=42, pool_path=pool_path)
         assert len(items) == 1
@@ -228,6 +245,7 @@ class TestSampleCarePackage:
             arm_armor=0,
             leg_armor=0,
             crystal_tears=0,
+            ashes_of_war=0,
         )
         items = sample_care_package(config, seed=42, pool_path=pool_path)
         assert len(items) == 0
@@ -298,6 +316,7 @@ class TestCarePackageConfig:
         assert config.care_package.arm_armor == 2
         assert config.care_package.leg_armor == 2
         assert config.care_package.crystal_tears == 5
+        assert config.care_package.ashes_of_war == 0
 
     def test_from_toml(self, tmp_path):
         config_file = tmp_path / "config.toml"
@@ -316,6 +335,7 @@ body_armor = 2
 arm_armor = 2
 leg_armor = 2
 crystal_tears = 5
+ashes_of_war = 4
 """)
         config = Config.from_toml(config_file)
         assert config.care_package.enabled is True
@@ -331,6 +351,7 @@ crystal_tears = 5
         assert config.care_package.arm_armor == 2
         assert config.care_package.leg_armor == 2
         assert config.care_package.crystal_tears == 5
+        assert config.care_package.ashes_of_war == 4
 
     def test_validation_weapon_upgrade_too_high(self):
         with pytest.raises(ValueError, match="weapon_upgrade must be 0-25"):
@@ -347,6 +368,74 @@ crystal_tears = 5
     def test_validation_negative_talismans(self):
         with pytest.raises(ValueError, match="talismans must be >= 0"):
             Config.from_dict({"care_package": {"talismans": -5}})
+
+
+# =============================================================================
+# Ashes of War tests
+# =============================================================================
+
+
+class TestAshesOfWar:
+    """Tests for Ashes of War (gem) items in care package."""
+
+    @pytest.fixture()
+    def pool_path(self) -> Path:
+        path = Path(__file__).parent.parent / "data" / "care_package_items.toml"
+        if not path.exists():
+            pytest.skip("data/care_package_items.toml not found")
+        return path
+
+    def test_ashes_of_war_sampled_with_type_4(self, pool_path: Path):
+        """Ashes of War items should have type=4 (Gem)."""
+        config = CarePackageConfig(
+            enabled=True,
+            weapons=0,
+            shields=0,
+            catalysts=0,
+            talismans=0,
+            sorceries=0,
+            incantations=0,
+            head_armor=0,
+            body_armor=0,
+            arm_armor=0,
+            leg_armor=0,
+            crystal_tears=0,
+            ashes_of_war=3,
+        )
+        items = sample_care_package(config, seed=42, pool_path=pool_path)
+        assert len(items) == 3
+        for item in items:
+            assert item.type == ITEM_TYPE_GEM
+
+    def test_ashes_of_war_zero_count(self, pool_path: Path):
+        """Zero ashes_of_war produces no gem items."""
+        config = CarePackageConfig(
+            enabled=True,
+            weapons=0,
+            shields=0,
+            catalysts=0,
+            talismans=0,
+            sorceries=0,
+            incantations=0,
+            head_armor=0,
+            body_armor=0,
+            arm_armor=0,
+            leg_armor=0,
+            crystal_tears=0,
+            ashes_of_war=0,
+        )
+        items = sample_care_package(config, seed=42, pool_path=pool_path)
+        assert len(items) == 0
+
+    def test_ashes_of_war_default_count(self):
+        """Default ashes_of_war count is 0 (requires racing DLL)."""
+        config = CarePackageConfig()
+        assert config.ashes_of_war == 0
+
+    def test_config_from_dict_ashes_of_war(self):
+        """Config.from_dict should parse ashes_of_war count."""
+        config = Config.from_dict({"care_package": {"ashes_of_war": 5}})
+        assert config.care_package.ashes_of_war == 5
 
 
 # =============================================================================

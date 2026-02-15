@@ -32,13 +32,14 @@ ITEM_TYPE_WEAPON = 0
 ITEM_TYPE_PROTECTOR = 1
 ITEM_TYPE_ACCESSORY = 2
 ITEM_TYPE_GOODS = 3
+ITEM_TYPE_GEM = 4
 
 
 @dataclass
 class CarePackageItem:
     """A single item to give the player at game start."""
 
-    type: int  # 0=Weapon, 1=Protector, 2=Accessory, 3=Goods
+    type: int  # 0=Weapon, 1=Protector, 2=Accessory, 3=Goods, 4=Gem (Ash of War)
     id: int  # Param row ID (with upgrade level encoded for weapons)
     name: str  # Display name for spoiler log
 
@@ -51,10 +52,35 @@ def load_item_pool(path: Path) -> dict[str, Any]:
 
     Returns:
         Parsed TOML data as a dictionary.
+
+    Raises:
+        ValueError: If any item has id=0 (placeholder not replaced).
     """
     with path.open("rb") as f:
         result: dict[str, Any] = tomllib.load(f)
+    _validate_pool_ids(result)
     return result
+
+
+def _validate_pool_ids(pool: dict[str, Any]) -> None:
+    """Check that all items in the pool have non-zero IDs."""
+    for key, value in pool.items():
+        if isinstance(value, list):
+            for item in value:
+                if isinstance(item, dict) and item.get("id") == 0:
+                    raise ValueError(
+                        f"Item '{item.get('name', '?')}' in [{key}] has id=0 "
+                        f"(placeholder not replaced)"
+                    )
+        elif isinstance(value, dict):
+            for sub_key, sub_items in value.items():
+                if isinstance(sub_items, list):
+                    for item in sub_items:
+                        if isinstance(item, dict) and item.get("id") == 0:
+                            raise ValueError(
+                                f"Item '{item.get('name', '?')}' in [{key}.{sub_key}] "
+                                f"has id=0 (placeholder not replaced)"
+                            )
 
 
 def _somber_upgrade(standard_level: int) -> int:
@@ -196,5 +222,8 @@ def sample_care_package(
 
     # Crystal Tears (Goods type)
     sample_simple(pool.get("crystal_tears", []), config.crystal_tears, ITEM_TYPE_GOODS)
+
+    # Ashes of War (Gem type, no upgrade)
+    sample_simple(pool.get("ashes_of_war", []), config.ashes_of_war, ITEM_TYPE_GEM)
 
     return items

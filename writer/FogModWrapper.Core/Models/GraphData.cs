@@ -114,8 +114,9 @@ public class GraphData
 public class CarePackageItem
 {
     /// <summary>
-    /// Item type: 0=Weapon, 1=Protector, 2=Accessory, 3=Goods.
-    /// Maps to EMEDF ItemType enum for DirectlyGivePlayerItem.
+    /// Item type: 0=Weapon, 1=Protector, 2=Accessory, 3=Goods, 4=Gem (Ash of War).
+    /// Types 0-3 map to EMEDF ItemType enum for DirectlyGivePlayerItem.
+    /// Type 4 (Gem) is runtime-spawned by the racing mod (not supported by EMEVD).
     /// </summary>
     [JsonPropertyName("type")]
     public int Type { get; set; }

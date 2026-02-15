@@ -504,3 +504,61 @@ id = 11024
 [[crystal_tears]]
 name = "Purifying Crystal Tear"
 id = 11027
+
+# =============================================================================
+# Ashes of War (type=Gem, EquipParamGem)
+# Runtime-spawned by the racing mod (EMEVD doesn't support Gem type)
+# IDs sourced from EldenRingTool/ashes.csv (hex 0x80XXXXXX → decimal XXXXXX)
+# =============================================================================
+
+[[ashes_of_war]]
+name = "Kick"
+id = 50300
+
+[[ashes_of_war]]
+name = "Quickstep"
+id = 80000
+
+[[ashes_of_war]]
+name = "Bloodhound's Step"
+id = 80100
+
+[[ashes_of_war]]
+name = "Flame of the Redmanes"
+id = 50500
+
+[[ashes_of_war]]
+name = "Royal Knight's Resolve"
+id = 60100
+
+[[ashes_of_war]]
+name = "Seppuku"
+id = 60600
+
+[[ashes_of_war]]
+name = "Lion's Claw"
+id = 10000
+
+[[ashes_of_war]]
+name = "Hoarfrost Stomp"
+id = 50100
+
+[[ashes_of_war]]
+name = "War Cry"
+id = 65100
+
+[[ashes_of_war]]
+name = "Giant Hunt"
+id = 11600
+
+[[ashes_of_war]]
+name = "Sword Dance"
+id = 12400
+
+[[ashes_of_war]]
+name = "Unsheathe"
+id = 11400
+
+[[ashes_of_war]]
+name = "Barbaric Roar"
+id = 65000

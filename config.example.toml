@@ -177,6 +177,7 @@ enabled = false
 # arm_armor = 2        # Random gauntlets
 # leg_armor = 2        # Random leg armor
 # crystal_tears = 5    # Random crystal tears for Flask of Wondrous Physick
+# ashes_of_war = 0     # Random ashes of war (requires SpeedFog Racing DLL for runtime delivery)
 
 [item_randomizer]
 # Enable Item/Enemy Randomizer integration (default: true)

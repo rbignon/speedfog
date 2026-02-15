@@ -292,6 +292,7 @@ class CarePackageConfig:
     arm_armor: int = 2
     leg_armor: int = 2
     crystal_tears: int = 5
+    ashes_of_war: int = 0
 
     def __post_init__(self) -> None:
         """Validate care package configuration."""
@@ -309,6 +310,7 @@ class CarePackageConfig:
             "arm_armor",
             "leg_armor",
             "crystal_tears",
+            "ashes_of_war",
         ]
         for field_name in count_fields:
             value = getattr(self, field_name)
@@ -433,6 +435,7 @@ class Config:
                 arm_armor=care_package_section.get("arm_armor", 2),
                 leg_armor=care_package_section.get("leg_armor", 2),
                 crystal_tears=care_package_section.get("crystal_tears", 5),
+                ashes_of_war=care_package_section.get("ashes_of_war", 0),
             ),
         )
 

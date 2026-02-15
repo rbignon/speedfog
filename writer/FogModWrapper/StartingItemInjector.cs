@@ -1,3 +1,4 @@
+using System.Linq;
 using FogModWrapper.Models;
 using SoulsFormats;
 using SoulsIds;
@@ -78,13 +79,21 @@ public static class StartingItemInjector
         }
 
         // Give care package items with their specific ItemType
-        foreach (var item in carePackage)
+        // Skip type >= 4 (Gem/Ash of War) — not supported by DirectlyGivePlayerItem,
+        // runtime-spawned by the racing mod instead
+        foreach (var item in carePackage.Where(i => i.Type < 4))
         {
             var itemType = item.Type >= 0 && item.Type < ItemTypeNames.Length
                 ? ItemTypeNames[item.Type]
                 : "ItemType.Goods";
             evt.Instructions.Add(events.ParseAdd($"DirectlyGivePlayerItem({itemType}, {item.Id}, 6001, 1)"));
             Console.WriteLine($"  Added {itemType} {item.Name} (id={item.Id})");
+        }
+
+        // Log skipped gem items
+        foreach (var item in carePackage.Where(i => i.Type >= 4))
+        {
+            Console.WriteLine($"  Skipping gem item {item.Name} (id={item.Id}, runtime-spawned by mod)");
         }
 
         // Set flag so we don't give items again on reload
