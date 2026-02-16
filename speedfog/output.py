@@ -15,7 +15,7 @@ from typing import Any
 
 from speedfog.care_package import CarePackageItem
 from speedfog.clusters import ClusterPool
-from speedfog.dag import Dag, DagNode
+from speedfog.dag import Dag, DagNode, FogRef
 
 
 def _effective_type(node: DagNode, dag: Dag) -> str:
@@ -30,83 +30,27 @@ def _effective_type(node: DagNode, dag: Dag) -> str:
 # =============================================================================
 
 
-def _get_fog_text(node: DagNode, fog_id: str) -> str:
+def _get_fog_text(node: DagNode, fog_ref: FogRef) -> str:
     """Get the human-readable text for a fog gate from a node's exit_fogs.
 
+    Prefers exact (fog_id, zone) match, then falls back to fog_id-only match.
     Prefers side_text (zone-specific description) over gate-level text.
 
     Args:
         node: The node to search
-        fog_id: The fog ID to find
+        fog_ref: The FogRef to find
 
     Returns:
         Text string, or fog_id itself as fallback
     """
     for fog in node.cluster.exit_fogs:
-        if fog["fog_id"] == fog_id:
-            return str(fog.get("side_text", fog.get("text", fog_id)))
-    return fog_id
-
-
-def _get_fog_zone(node: DagNode, fog_id: str, is_entry: bool) -> str | None:
-    """Get the zone containing a fog ID in a node's entry/exit fogs.
-
-    Args:
-        node: The node to search
-        fog_id: The fog ID to find
-        is_entry: True to search entry_fogs, False for exit_fogs
-
-    Returns:
-        Zone name, or None if not found
-    """
-    fogs = node.cluster.entry_fogs if is_entry else node.cluster.exit_fogs
-    for fog in fogs:
-        if fog["fog_id"] == fog_id:
-            return str(fog["zone"])
-    return None
-
-
-def _assign_exit_zones(dag: Dag) -> dict[int, str | None]:
-    """Pre-assign exit zones for edges, disambiguating duplicate fog_ids.
-
-    When a cluster has the same fog_id in exit_fogs for multiple zones
-    (two sides of the same physical fog gate), each edge gets a different
-    zone so that ConnectionInjector looks up different FogMod graph nodes.
-
-    Args:
-        dag: The DAG with edges to process.
-
-    Returns:
-        Mapping of edge index → exit zone name (or None if not found).
-    """
-    result: dict[int, str | None] = {}
-    used_per_source: dict[str, set[tuple[str, str]]] = {}
-
-    for i, edge in enumerate(dag.edges):
-        source = dag.nodes.get(edge.source_id)
-        if source is None:
-            result[i] = None
-            continue
-
-        used = used_per_source.setdefault(edge.source_id, set())
-
-        # Find first matching zone not already used for this (source, fog_id)
-        zone: str | None = None
-        for fog in source.cluster.exit_fogs:
-            if fog["fog_id"] == edge.exit_fog:
-                pair = (edge.exit_fog, str(fog["zone"]))
-                if pair not in used:
-                    zone = str(fog["zone"])
-                    used.add(pair)
-                    break
-
-        # Fallback: all zones exhausted, use first match
-        if zone is None:
-            zone = _get_fog_zone(source, edge.exit_fog, is_entry=False)
-
-        result[i] = zone
-
-    return result
+        if fog["fog_id"] == fog_ref.fog_id and fog["zone"] == fog_ref.zone:
+            return str(fog.get("side_text", fog.get("text", fog_ref.fog_id)))
+    # Fallback: match just fog_id
+    for fog in node.cluster.exit_fogs:
+        if fog["fog_id"] == fog_ref.fog_id:
+            return str(fog.get("side_text", fog.get("text", fog_ref.fog_id)))
+    return fog_ref.fog_id
 
 
 def load_fog_data(path: Path) -> dict[str, dict[str, Any]]:
@@ -302,32 +246,25 @@ def dag_to_dict(
             node_flag_ids[cluster_id] = EVENT_FLAG_BASE + flag_counter
             flag_counter += 1
 
-    # Pre-assign exit zones, disambiguating duplicate fog_ids per source.
-    # When a cluster has the same fog_id in exit_fogs for multiple zones
-    # (two sides of the same fog gate), each edge gets a different zone.
-    exit_zones = _assign_exit_zones(dag)
-
-    # Build connections list
+    # Build connections list — zone info comes directly from FogRef
     connections: list[dict[str, str | int]] = []
-    for i, edge in enumerate(dag.edges):
+    for edge in dag.edges:
         source_node = dag.nodes.get(edge.source_id)
         target_node = dag.nodes.get(edge.target_id)
 
         if source_node is None or target_node is None:
             continue
 
-        # Find zones for exit and entry fogs
-        exit_zone = exit_zones[i]
-        entry_zone = _get_fog_zone(target_node, edge.entry_fog, is_entry=True)
+        exit_zone = edge.exit_fog.zone
+        entry_zone = edge.entry_fog.zone
 
         # Handle final boss edge case: empty entry_fog means use first zone of target
-        if entry_zone is None and (not edge.entry_fog or edge.entry_fog == ""):
-            # Use first zone from target cluster
+        if not entry_zone and not edge.entry_fog.fog_id:
             if target_node.cluster.zones:
                 entry_zone = target_node.cluster.zones[0]
 
         # Skip if zones not found (shouldn't happen in valid DAG)
-        if exit_zone is None or entry_zone is None:
+        if not exit_zone or not entry_zone:
             print(
                 f"Warning: Could not find zones for edge {edge.source_id} -> "
                 f"{edge.target_id}: exit_fog={edge.exit_fog}, entry_fog={edge.entry_fog}"
@@ -335,17 +272,27 @@ def dag_to_dict(
             continue
 
         # Handle empty entry_fog by using exit_fog (for one-way connections)
-        effective_entry_fog = edge.entry_fog if edge.entry_fog else edge.exit_fog
+        effective_entry_fog = (
+            edge.entry_fog.fog_id if edge.entry_fog.fog_id else edge.exit_fog.fog_id
+        )
 
         connections.append(
             {
                 "exit_area": exit_zone,
                 "exit_gate": _make_fullname(
-                    edge.exit_fog, exit_zone, clusters, fog_data, is_entry=False
+                    edge.exit_fog.fog_id,
+                    exit_zone,
+                    clusters,
+                    fog_data,
+                    is_entry=False,
                 ),
                 "entrance_area": entry_zone,
                 "entrance_gate": _make_fullname(
-                    effective_entry_fog, entry_zone, clusters, fog_data, is_entry=True
+                    effective_entry_fog,
+                    entry_zone,
+                    clusters,
+                    fog_data,
+                    is_entry=True,
                 ),
                 "flag_id": node_flag_ids[target_node.cluster.id],
             }
@@ -375,7 +322,7 @@ def dag_to_dict(
         }
 
     # Populate exits from DAG edges
-    for i, edge in enumerate(dag.edges):
+    for edge in dag.edges:
         source_node = dag.nodes.get(edge.source_id)
         target_node = dag.nodes.get(edge.target_id)
         if source_node is None or target_node is None:
@@ -383,12 +330,12 @@ def dag_to_dict(
         source_cluster_id = source_node.cluster.id
         target_cluster_id = target_node.cluster.id
         text = _get_fog_text(source_node, edge.exit_fog)
-        from_zone = exit_zones[i]
+        from_zone = edge.exit_fog.zone
         exit_entry: dict[str, str] = {
-            "fog_id": edge.exit_fog,
+            "fog_id": edge.exit_fog.fog_id,
             "text": text,
         }
-        if from_zone is not None:
+        if from_zone:
             exit_entry["from"] = from_zone
         exit_entry["to"] = target_cluster_id
         nodes[source_cluster_id]["exits"].append(exit_entry)
@@ -1026,12 +973,12 @@ def export_spoiler_log(
     lines.append("NODE DETAILS")
     lines.append("=" * 60)
 
-    # Build edge lookup: source_id -> list of (target_id, fog_id)
-    outgoing_edges: dict[str, list[tuple[str, str]]] = {}
+    # Build edge lookup: source_id -> list of (target_id, exit_fog FogRef)
+    outgoing_edges: dict[str, list[tuple[str, FogRef]]] = {}
     for edge in dag.edges:
         if edge.source_id not in outgoing_edges:
             outgoing_edges[edge.source_id] = []
-        outgoing_edges[edge.source_id].append((edge.target_id, edge.fog_id))
+        outgoing_edges[edge.source_id].append((edge.target_id, edge.exit_fog))
 
     # Print node details sorted by tier then by cluster ID
     sorted_nodes = sorted(dag.nodes.values(), key=lambda n: (n.tier, n.cluster.id))
@@ -1048,14 +995,15 @@ def export_spoiler_log(
         exits = outgoing_edges.get(node.id, [])
         if exits:
             lines.append("  Exits:")
-            for target_id, fog_id in exits:
+            for target_id, fog_ref in exits:
                 target_node = dag.nodes.get(target_id)
                 target_name = target_node.cluster.id if target_node else target_id
-                text = _get_fog_text(node, fog_id)
-                if text and text != fog_id:
-                    lines.append(f"    -> {target_name} via {fog_id} ({text})")
+                text = _get_fog_text(node, fog_ref)
+                fog_display = fog_ref.fog_id
+                if text and text != fog_display:
+                    lines.append(f"    -> {target_name} via {fog_display} ({text})")
                 else:
-                    lines.append(f"    -> {target_name} via {fog_id}")
+                    lines.append(f"    -> {target_name} via {fog_display}")
 
     # Care package section
     if care_package:
