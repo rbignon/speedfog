@@ -207,3 +207,9 @@ reduce_upgrade_cost = true
 # Randomize DLC (Shadow of the Erdtree) items and enemies (default: true)
 # DLC enemies are mixed with base game (no separate silo)
 dlc = true
+
+# Enable item placement preset (default: true)
+# Weapons and talismans go to boss drops, seeds/tears to important locations.
+item_preset = true
+# Custom item preset YAML (default: built-in data/item_preset.yaml)
+# item_preset_path = "/path/to/custom_preset.yaml"

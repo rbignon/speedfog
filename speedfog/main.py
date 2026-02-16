@@ -266,6 +266,23 @@ def main() -> int:
         else:
             print(f"Warning: Enemy preset not found at {preset_src}", file=sys.stderr)
 
+        # Copy item preset
+        if config.item_randomizer.item_preset:
+            if config.item_randomizer.item_preset_path:
+                item_preset_src = Path(config.item_randomizer.item_preset_path)
+            else:
+                item_preset_src = project_root / "data" / "item_preset.yaml"
+            item_preset_dst = seed_dir / "item_preset.yaml"
+            if item_preset_src.exists():
+                shutil.copy(item_preset_src, item_preset_dst)
+                if args.verbose:
+                    print(f"Copied: {item_preset_dst}")
+            else:
+                print(
+                    f"Warning: Item preset not found at {item_preset_src}",
+                    file=sys.stderr,
+                )
+
         # Run ItemRandomizerWrapper
         # Output directly to mods/itemrando so ModEngine can load it
         item_rando_dir = seed_dir / "mods" / "itemrando"

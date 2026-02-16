@@ -69,6 +69,22 @@ def test_generate_item_config_custom_settings():
     assert result["helper_options"]["autoEquip"] is False
 
 
+def test_generate_item_config_with_item_preset():
+    """generate_item_config includes item_preset_path when item_preset enabled."""
+    config = Config.from_dict({"item_randomizer": {"item_preset": True}})
+    result = generate_item_config(config, 42)
+
+    assert result["item_preset_path"] == "item_preset.yaml"
+
+
+def test_generate_item_config_without_item_preset():
+    """generate_item_config omits item_preset_path when item_preset disabled."""
+    config = Config.from_dict({"item_randomizer": {"item_preset": False}})
+    result = generate_item_config(config, 42)
+
+    assert "item_preset_path" not in result
+
+
 def test_generate_item_config_json_serializable():
     """generate_item_config output is JSON serializable."""
     config = Config.from_dict({})

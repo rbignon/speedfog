@@ -32,4 +32,7 @@ public class RandomizerConfig
 
     [JsonPropertyName("helper_options")]
     public Dictionary<string, bool>? HelperOptions { get; set; }
+
+    [JsonPropertyName("item_preset_path")]
+    public string? ItemPresetPath { get; set; }
 }

@@ -264,6 +264,8 @@ class ItemRandomizerConfig:
     auto_upgrade_dropped: bool = True
     reduce_upgrade_cost: bool = True
     dlc: bool = True
+    item_preset: bool = True  # Enable item placement preset
+    item_preset_path: str = ""  # Custom preset path (empty = built-in default)
 
     def __post_init__(self) -> None:
         """Validate configuration."""
@@ -420,6 +422,8 @@ class Config:
                     "reduce_upgrade_cost", True
                 ),
                 dlc=item_randomizer_section.get("dlc", True),
+                item_preset=item_randomizer_section.get("item_preset", True),
+                item_preset_path=item_randomizer_section.get("item_preset_path", ""),
             ),
             care_package=CarePackageConfig(
                 enabled=care_package_section.get("enabled", False),

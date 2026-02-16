@@ -61,7 +61,8 @@ Config JSON format:
         ""options"": {
             ""item"": true,
             ""enemy"": false
-        }
+        },
+        ""item_preset_path"": ""item_preset.yaml""
     }
 
 Example:
@@ -144,6 +145,25 @@ Example:
             }
         }
 
+        // Load item preset if specified
+        // ItemPreset.ParsePreset parses YAML to control item placement
+        ItemPreset? itemPreset = null;
+        if (!string.IsNullOrEmpty(randoConfig.ItemPresetPath))
+        {
+            var configDir = Path.GetDirectoryName(Path.GetFullPath(config.ConfigPath)) ?? ".";
+            var itemPresetFile = Path.Combine(configDir, randoConfig.ItemPresetPath);
+            if (File.Exists(itemPresetFile))
+            {
+                Console.WriteLine($"Loading item preset: {itemPresetFile}");
+                var yamlText = await File.ReadAllTextAsync(itemPresetFile);
+                itemPreset = ItemPreset.ParsePreset(yamlText);
+            }
+            else
+            {
+                Console.WriteLine($"Warning: Item preset file not found: {itemPresetFile}");
+            }
+        }
+
         // Run randomizer
         // Inject dummy MeasureText - CharacterWriter requires this for Elden Ring
         // We don't need accurate measurements for headless operation, just estimate based on string length
@@ -156,7 +176,7 @@ Example:
             notify: status => Console.WriteLine($"  {status}"),
             outPath: config.OutputDir,
             preset: preset,
-            itemPreset: null,
+            itemPreset: itemPreset,
             messages: null,
             gameExe: Path.Combine(config.GameDir, "eldenring.exe")
         );

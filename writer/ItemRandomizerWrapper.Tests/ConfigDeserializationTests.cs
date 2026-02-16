@@ -175,6 +175,37 @@ public class ConfigDeserializationTests
     }
 
     [Fact]
+    public void RandomizerConfig_WithItemPresetPath_Deserializes()
+    {
+        var json = """
+            {
+                "seed": 123,
+                "item_preset_path": "item_preset.yaml"
+            }
+            """;
+
+        var config = JsonSerializer.Deserialize<RandomizerConfig>(json, JsonOptions);
+
+        Assert.NotNull(config);
+        Assert.Equal("item_preset.yaml", config.ItemPresetPath);
+    }
+
+    [Fact]
+    public void RandomizerConfig_WithoutItemPresetPath_IsNull()
+    {
+        var json = """
+            {
+                "seed": 123
+            }
+            """;
+
+        var config = JsonSerializer.Deserialize<RandomizerConfig>(json, JsonOptions);
+
+        Assert.NotNull(config);
+        Assert.Null(config.ItemPresetPath);
+    }
+
+    [Fact]
     public void RandomizerConfig_CaseInsensitive_Works()
     {
         var json = """

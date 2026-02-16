@@ -374,6 +374,8 @@ def test_item_randomizer_defaults():
     assert config.item_randomizer.difficulty == 50
     assert config.item_randomizer.remove_requirements is True
     assert config.item_randomizer.auto_upgrade_weapons is True
+    assert config.item_randomizer.item_preset is True
+    assert config.item_randomizer.item_preset_path == ""
 
 
 def test_item_randomizer_from_toml(tmp_path):
@@ -391,6 +393,19 @@ auto_upgrade_weapons = false
     assert config.item_randomizer.difficulty == 75
     assert config.item_randomizer.remove_requirements is False
     assert config.item_randomizer.auto_upgrade_weapons is False
+
+
+def test_item_randomizer_item_preset_from_toml(tmp_path):
+    """item_preset and item_preset_path parse from TOML."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[item_randomizer]
+item_preset = false
+item_preset_path = "/custom/preset.yaml"
+""")
+    config = Config.from_toml(config_file)
+    assert config.item_randomizer.item_preset is False
+    assert config.item_randomizer.item_preset_path == "/custom/preset.yaml"
 
 
 def test_item_randomizer_validation_difficulty():

@@ -1,0 +1,190 @@
+# SpeedFog default item placement preset for Elden Ring Item Randomizer.
+#
+# Controls WHERE items end up in the randomized world:
+# - Weapons and talismans go to boss/important locations (CoreMechanics)
+# - Golden Seeds and Sacred Tears prioritized at key locations (SacredFlaskUpgrades)
+# - DLC blessing items at key locations (ShadowRealmBlessings)
+# - Key items at racemode/boss locations (KeyItems)
+#
+# Adapted from FogRando config. Uses Item Randomizer's ItemPreset.ParsePreset().
+# Must include all 9 PlacementTypes + LocationGroups or Resolve() throws.
+
+NorandomItems:
+
+- Name: Spectral Steed Whistle
+  ID: goods:130
+- Name: Flask of Wondrous Physick
+  ID: goods:250
+- Name: Crafting Kit
+  ID: goods:8500
+- Name: Spirit Calling Bell
+  ID: goods:8158
+- Name: Whetstone Knife
+  ID: goods:8590
+- Name: Lantern
+  ID: goods:2070
+- Name: Gaol Lower Level Key
+  ID: goods:2008006
+- Name: Gaol Upper Level Key
+  ID: goods:2008005
+- Name: O Mother
+  ID: goods:2009004
+
+Placements:
+
+- Type: KeyItems
+  Mode: Important
+  Items:
+  - Group: keyitems
+  Requires:
+  - Tag: racemode
+  - Tag: boss
+  - Tag: altboss
+  Excludes:
+  - Tag: missable
+
+- Type: QuestItems
+  Mode: Anywhere
+  Items:
+  - Group: questitems
+  - Name: Shabriri Grape
+    ID: goods:1240
+  - Name: Seedbed Curse
+    ID: goods:8193
+  - Name: Deathroot
+    ID: goods:2090
+  Excludes:
+  - Tag: missable
+
+- Type: CoreMechanics
+  Mode: Custom
+  Items:
+  - Name: Talisman Pouch
+    ID: goods:10040
+  - Name: Memory Stone
+    ID: goods:10030
+  - Name: Iron Whetblade
+    ID: goods:8970
+  - Name: Red-Hot Whetblade
+    ID: goods:8971
+  - Name: Sanctified Whetblade
+    ID: goods:8972
+  - Name: Glintstone Whetblade
+    ID: goods:8973
+  - Name: Black Whetblade
+    ID: goods:8974
+  - Group: crystaltears
+  - Name: Mohg's Shackle
+    ID: goods:2150
+  - Name: Margit's Shackle
+    ID: goods:2140
+  - Group: accessories
+  - Group: weapons
+  Requires:
+  - Tag: racemode
+  - Tag: boss
+  - Tag: altboss
+  - Tag: catacombboss
+  - Tag: caveboss
+  - Tag: night
+  - Tag: evergaol
+  - Tag: gaolboss
+  - Tag: graveboss
+  - Tag: minidungeonboss
+  - Tag: namelessmausoleum
+  - Tag: criticalpath
+  - Tag: tunnelboss
+  Excludes:
+  - Tag: missable
+
+- Type: SacredFlaskUpgrades
+  Mode: Important
+  Items:
+  - Name: Golden Seed
+    ID: goods:10010
+  - Name: Sacred Tear
+    ID: goods:10020
+  Requires:
+  - Tag: racemode
+  - Tag: boss
+  - Tag: altboss
+  Excludes:
+  - Tag: missable
+
+- Type: UpgradeBellBearings
+  Mode: Anywhere
+  Items:
+  - Group: upgradeashes
+  Excludes:
+  - Tag: missable
+
+- Type: ShadowRealmBlessings
+  Mode: Important
+  Items:
+  - Name: Scadutree Fragment
+    ID: goods:2010000
+  - Name: Revered Spirit Ash
+    ID: goods:2010100
+  Requires:
+  - Tag: racemode
+  - Tag: boss
+  - Tag: altboss
+  Excludes:
+  - Tag: missable
+
+- Type: BossTools
+  Mode: Custom
+  Items: []
+  Requires: []
+  Excludes:
+  - Tag: missable
+  - Tag: boss
+  - Tag: altboss
+
+- Type: BaseOnlyItems
+  Mode: Custom
+  Items:
+  - Name: Black Whetblade
+    ID: goods:8974
+  - Name: Glintstone Whetblade
+    ID: goods:8973
+  - Name: Iron Whetblade
+    ID: goods:8970
+  - Name: Red-Hot Whetblade
+    ID: goods:8971
+  - Name: Sanctified Whetblade
+    ID: goods:8972
+  - Name: Whetstone Knife
+    ID: goods:8590
+  - Name: Golden Seed
+    ID: goods:10010
+  - Name: Sacred Tear
+    ID: goods:10020
+  - Name: Margit's Shackle
+    ID: goods:2140
+  - Name: Mohg's Shackle
+    ID: goods:2150
+  Requires: []
+  Excludes:
+  - Tag: dlc
+
+- Type: DlcOnlyItems
+  Mode: Custom
+  Items: []
+  Requires: []
+  Excludes:
+  - Tag: nodlc
+
+LocationGroups:
+
+- Requires:
+  - Tag: racemode
+  - Tag: boss
+  - Tag: seedtree
+  - Tag: church
+  - Tag: cross
+  - Tag: altboss
+  Excludes:
+  - Tag: missable
+
+Version: 1

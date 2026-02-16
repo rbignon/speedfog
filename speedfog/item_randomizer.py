@@ -21,7 +21,7 @@ def generate_item_config(config: Config, seed: int) -> dict[str, Any]:
     Returns:
         Dictionary ready to be serialized to JSON.
     """
-    return {
+    result: dict[str, Any] = {
         "seed": seed,
         "difficulty": config.item_randomizer.difficulty,
         "options": {
@@ -57,6 +57,11 @@ def generate_item_config(config: Config, seed: int) -> dict[str, Any]:
             "autoUpgradeDropped": config.item_randomizer.auto_upgrade_dropped,
         },
     }
+
+    if config.item_randomizer.item_preset:
+        result["item_preset_path"] = "item_preset.yaml"
+
+    return result
 
 
 def run_item_randomizer(
