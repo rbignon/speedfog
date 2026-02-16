@@ -133,10 +133,13 @@ class FogData:
         tags_lower = [t.lower() for t in self.tags]
         # norandom/unused: explicitly non-randomizable
         # segmentonly: only valid within a connected segment, not as independent connections
+        # baseonly: special progression warps (Pureblood Knight's Medal,
+        #   DLC entry) unsuitable for DAG randomization
         return (
             "norandom" in tags_lower
             or "unused" in tags_lower
             or "segmentonly" in tags_lower
+            or "baseonly" in tags_lower
         )
 
     @property

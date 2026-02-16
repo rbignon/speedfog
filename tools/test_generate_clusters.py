@@ -181,6 +181,19 @@ class TestParseFog:
 
         assert fog.is_norandom is True
 
+    def test_parse_baseonly_fog(self):
+        """Baseonly fogs are excluded (special progression warps)."""
+        fog_data = {
+            "Name": "test",
+            "ID": 12345,
+            "ASide": {"Area": "a"},
+            "BSide": {"Area": "b"},
+            "Tags": "unique baseonly",
+        }
+        fog = parse_fog(fog_data)
+
+        assert fog.is_norandom is True
+
 
 class TestFogSideRequiresOwnZone:
     """Tests for FogSide.requires_own_zone method."""
