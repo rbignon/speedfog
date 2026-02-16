@@ -29,7 +29,7 @@ class Branch:
 
     id: str
     current_node_id: str
-    available_exit: str
+    available_exit: FogRef
 
 
 @dataclass
@@ -44,10 +44,10 @@ class DagNode:
     cluster: ClusterData
     layer: int
     tier: int  # Difficulty scaling (1-28)
-    entry_fogs: list[str] = field(
+    entry_fogs: list[FogRef] = field(
         default_factory=list
-    )  # fog_ids used to enter (empty for start)
-    exit_fogs: list[str] = field(default_factory=list)  # Available exits
+    )  # FogRef pairs used to enter (empty for start)
+    exit_fogs: list[FogRef] = field(default_factory=list)  # Available exits
 
     def __hash__(self) -> int:
         """Hash by id only."""
@@ -69,14 +69,13 @@ class DagEdge:
 
     source_id: str
     target_id: str
-    exit_fog: str  # The fog gate used to exit source (in source node's exit_fogs)
-    entry_fog: str  # The fog gate used to enter target (in target node's entry_fogs)
+    exit_fog: FogRef  # The fog gate used to exit source (in source node's exit_fogs)
+    entry_fog: FogRef  # The fog gate used to enter target (in target node's entry_fogs)
 
-    # Legacy alias for backward compatibility
     @property
     def fog_id(self) -> str:
-        """Alias for exit_fog for backward compatibility."""
-        return self.exit_fog
+        """Return the exit fog_id string for backward compatibility."""
+        return self.exit_fog.fog_id
 
     def __hash__(self) -> int:
         """Hash by (source_id, target_id, exit_fog, entry_fog) tuple."""
@@ -115,15 +114,15 @@ class Dag:
         self.nodes[node.id] = node
 
     def add_edge(
-        self, source_id: str, target_id: str, exit_fog: str, entry_fog: str
+        self, source_id: str, target_id: str, exit_fog: FogRef, entry_fog: FogRef
     ) -> None:
         """Add an edge to the DAG.
 
         Args:
             source_id: ID of the source node
             target_id: ID of the target node
-            exit_fog: Fog ID used to exit from source
-            entry_fog: Fog ID used to enter target
+            exit_fog: FogRef for the exit gate
+            entry_fog: FogRef for the entry gate
         """
         self.edges.append(DagEdge(source_id, target_id, exit_fog, entry_fog))
 
