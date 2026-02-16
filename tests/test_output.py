@@ -762,6 +762,115 @@ class TestDuplicateFogIdAcrossZones:
 
 
 # =============================================================================
+# Duplicate exit fog: zone resolution regression test
+# =============================================================================
+
+
+class TestDuplicateExitFogs:
+    """Regression test for duplicate fog_ids resolving to wrong zone.
+
+    When a cluster has the same fog_id as both an entry and an exit in
+    different zones, the exit should use the zone that wasn't consumed
+    by the entry — not the first match.
+    """
+
+    def test_single_edge_picks_correct_zone_for_duplicate_fog(self):
+        """Single edge with duplicate fog_id resolves to correct zone (not first match)."""
+        dag = Dag(seed=42)
+
+        dag.add_node(
+            DagNode(
+                id="start",
+                cluster=make_cluster(
+                    "c_start",
+                    zones=["z_start"],
+                    cluster_type="start",
+                    entry_fogs=[],
+                    exit_fogs=[
+                        {"fog_id": "fog_entry", "zone": "z_start", "text": "Go"},
+                    ],
+                ),
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+                exit_fogs=["fog_entry"],
+            )
+        )
+
+        # Cluster with same fog_id in two zones (like belurat_2c41)
+        dag.add_node(
+            DagNode(
+                id="mid",
+                cluster=make_cluster(
+                    "c_mid",
+                    zones=["zone_a", "zone_b"],
+                    cluster_type="legacy_dungeon",
+                    entry_fogs=[
+                        {"fog_id": "shared_fog", "zone": "zone_a", "text": "Entry A"},
+                    ],
+                    exit_fogs=[
+                        {"fog_id": "shared_fog", "zone": "zone_a", "text": "Side A"},
+                        {"fog_id": "shared_fog", "zone": "zone_b", "text": "Side B"},
+                    ],
+                ),
+                layer=1,
+                tier=3,
+                # After consuming entry (zone_a), only zone_b exit remains
+                # But stored as bare string, zone info lost:
+                entry_fogs=["shared_fog"],
+                exit_fogs=["shared_fog"],
+            )
+        )
+
+        dag.add_node(
+            DagNode(
+                id="dest",
+                cluster=make_cluster(
+                    "c_dest",
+                    zones=["z_dest"],
+                    cluster_type="mini_dungeon",
+                    entry_fogs=[
+                        {"fog_id": "d_entry", "zone": "z_dest", "text": "Dest entry"},
+                    ],
+                    exit_fogs=[],
+                ),
+                layer=2,
+                tier=5,
+                entry_fogs=["d_entry"],
+                exit_fogs=[],
+            )
+        )
+
+        dag.add_edge("start", "mid", "fog_entry", "shared_fog")
+        dag.add_edge("mid", "dest", "shared_fog", "d_entry")
+        dag.start_id = "start"
+        dag.end_id = "dest"
+
+        clusters = ClusterPool(
+            clusters=[n.cluster for n in dag.nodes.values()],
+            zone_maps={
+                "zone_a": "m10_00",
+                "zone_b": "m20_00",
+                "z_start": "m00_00",
+                "z_dest": "m30_00",
+            },
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+
+        # The exit edge from mid should use zone_b (the remaining exit after
+        # consuming zone_a entry)
+        mid_conn = [
+            c for c in result["connections"] if c["exit_area"] in ("zone_a", "zone_b")
+        ]
+        assert len(mid_conn) == 1
+        assert mid_conn[0]["exit_area"] == "zone_b", (
+            f"Expected zone_b (remaining after entry consumed zone_a), "
+            f"got {mid_conn[0]['exit_area']}"
+        )
+
+
+# =============================================================================
 # Starting larval tears tests
 # =============================================================================
 
