@@ -3,7 +3,7 @@
 from speedfog.balance import PathStats, analyze_balance, report_balance
 from speedfog.clusters import ClusterData
 from speedfog.config import BudgetConfig
-from speedfog.dag import Dag, DagNode
+from speedfog.dag import Dag, DagNode, FogRef
 
 
 def make_cluster(
@@ -38,12 +38,17 @@ def make_linear_dag(weights: list[int]) -> Dag:
             cluster=make_cluster(f"c{i}", weight=weight),
             layer=i,
             tier=1,
-            entry_fogs=[f"fog_{i}"] if i > 0 else [],
+            entry_fogs=[FogRef(f"fog_{i}", "z")] if i > 0 else [],
             exit_fogs=[],
         )
         dag.add_node(node)
         if i > 0:
-            dag.add_edge(f"n{i - 1}", f"n{i}", f"fog_{i}", f"fog_{i}")
+            dag.add_edge(
+                f"n{i - 1}",
+                f"n{i}",
+                FogRef(f"fog_{i}", "z"),
+                FogRef(f"fog_{i}", "z"),
+            )
     if weights:
         dag.start_id = "n0"
         dag.end_id = f"n{len(weights) - 1}"
@@ -93,7 +98,7 @@ def make_forked_dag(
         cluster=make_cluster("c_end", weight=end_weight),
         layer=end_layer,
         tier=10,
-        entry_fogs=["fog_end"],
+        entry_fogs=[FogRef("fog_end", "z")],
         exit_fogs=[],
     )
     dag.add_node(end)
@@ -111,15 +116,25 @@ def make_forked_dag(
                 cluster=make_cluster(f"c_{node_id}", weight=weight),
                 layer=node_idx + 1,
                 tier=node_idx + 1,
-                entry_fogs=[f"fog_{node_id}"],
+                entry_fogs=[FogRef(f"fog_{node_id}", "z")],
                 exit_fogs=[],
             )
             dag.add_node(node)
-            dag.add_edge(prev_id, node_id, f"fog_{node_id}", f"fog_{node_id}")
+            dag.add_edge(
+                prev_id,
+                node_id,
+                FogRef(f"fog_{node_id}", "z"),
+                FogRef(f"fog_{node_id}", "z"),
+            )
             prev_id = node_id
 
         # Connect last node in branch to end
-        dag.add_edge(prev_id, "end", f"fog_{label}_end", f"fog_{label}_end")
+        dag.add_edge(
+            prev_id,
+            "end",
+            FogRef(f"fog_{label}_end", "z"),
+            FogRef(f"fog_{label}_end", "z"),
+        )
 
     dag.start_id = "start"
     dag.end_id = "end"

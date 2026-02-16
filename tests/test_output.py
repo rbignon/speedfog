@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from speedfog.clusters import ClusterData, ClusterPool
-from speedfog.dag import Dag, DagNode
+from speedfog.dag import Dag, DagNode, FogRef
 from speedfog.output import (
     _effective_type,
     _make_fullname,
@@ -79,7 +79,7 @@ def make_test_dag() -> Dag:
             layer=0,
             tier=1,
             entry_fogs=[],
-            exit_fogs=["fog_1", "fog_2"],
+            exit_fogs=[FogRef("fog_1", "z_start"), FogRef("fog_2", "z_start")],
         )
     )
 
@@ -97,8 +97,8 @@ def make_test_dag() -> Dag:
             ),
             layer=1,
             tier=5,
-            entry_fogs=["fog_1"],
-            exit_fogs=["fog_3"],
+            entry_fogs=[FogRef("fog_1", "z_a")],
+            exit_fogs=[FogRef("fog_3", "z_a")],
         )
     )
 
@@ -118,8 +118,8 @@ def make_test_dag() -> Dag:
             ),
             layer=1,
             tier=5,
-            entry_fogs=["fog_2"],
-            exit_fogs=["fog_4"],
+            entry_fogs=[FogRef("fog_2", "z_b1")],
+            exit_fogs=[FogRef("fog_4", "z_b1")],
         )
     )
 
@@ -140,16 +140,16 @@ def make_test_dag() -> Dag:
             ),
             layer=2,
             tier=10,
-            entry_fogs=["fog_3", "fog_4"],  # Both branches merge here
+            entry_fogs=[FogRef("fog_3", "z_end"), FogRef("fog_4", "z_end")],
             exit_fogs=[],
         )
     )
 
     # Add edges
-    dag.add_edge("start", "a", "fog_1", "fog_1")
-    dag.add_edge("start", "b", "fog_2", "fog_2")
-    dag.add_edge("a", "end", "fog_3", "fog_3")
-    dag.add_edge("b", "end", "fog_4", "fog_4")
+    dag.add_edge("start", "a", FogRef("fog_1", "z_start"), FogRef("fog_1", "z_a"))
+    dag.add_edge("start", "b", FogRef("fog_2", "z_start"), FogRef("fog_2", "z_b1"))
+    dag.add_edge("a", "end", FogRef("fog_3", "z_a"), FogRef("fog_3", "z_end"))
+    dag.add_edge("b", "end", FogRef("fog_4", "z_b1"), FogRef("fog_4", "z_end"))
 
     dag.start_id = "start"
     dag.end_id = "end"
@@ -528,10 +528,12 @@ class TestNodeExits:
         assert len(b_exits) == 1
         assert b_exits[0]["from"] == "z_b1"
 
-    def test_exit_from_omitted_when_fog_not_in_exit_fogs(self):
-        """Exit 'from' field is omitted when fog_id is not in cluster exit_fogs."""
+    def test_exit_from_uses_fogref_zone_even_when_not_in_exit_fogs(self):
+        """Exit 'from' uses FogRef zone even when fog_id not in cluster exit_fogs."""
         dag = make_test_dag()
-        dag.add_edge("start", "a", "unknown_fog", "fog_1")
+        dag.add_edge(
+            "start", "a", FogRef("unknown_fog", "z_start"), FogRef("fog_1", "z_a")
+        )
         clusters = ClusterPool(
             clusters=[node.cluster for node in dag.nodes.values()],
             zone_maps={},
@@ -541,7 +543,8 @@ class TestNodeExits:
         start_exits = result["nodes"]["c_start"]["exits"]
         unknown_exits = [e for e in start_exits if e["fog_id"] == "unknown_fog"]
         assert len(unknown_exits) == 1
-        assert "from" not in unknown_exits[0]
+        # FogRef always carries zone, so 'from' is always present
+        assert unknown_exits[0]["from"] == "z_start"
 
     def test_exit_text_fallback_to_fog_id(self):
         """When text is missing from exit_fogs, falls back to fog_id."""
@@ -629,7 +632,7 @@ class TestDuplicateFogIdAcrossZones:
                 layer=0,
                 tier=1,
                 entry_fogs=[],
-                exit_fogs=["fog_entry"],
+                exit_fogs=[FogRef("fog_entry", "z_start")],
             )
         )
 
@@ -665,8 +668,12 @@ class TestDuplicateFogIdAcrossZones:
                 ),
                 layer=1,
                 tier=3,
-                entry_fogs=["fog_entry"],
-                exit_fogs=["unique_fog", "shared_fog", "shared_fog"],
+                entry_fogs=[FogRef("fog_entry", "zone_b")],
+                exit_fogs=[
+                    FogRef("unique_fog", "zone_a"),
+                    FogRef("shared_fog", "zone_a"),
+                    FogRef("shared_fog", "zone_b"),
+                ],
             )
         )
 
@@ -684,7 +691,7 @@ class TestDuplicateFogIdAcrossZones:
                 ),
                 layer=2,
                 tier=5,
-                entry_fogs=["d1_entry"],
+                entry_fogs=[FogRef("d1_entry", "z_d1")],
                 exit_fogs=[],
             )
         )
@@ -703,15 +710,30 @@ class TestDuplicateFogIdAcrossZones:
                 ),
                 layer=2,
                 tier=5,
-                entry_fogs=["d2_entry"],
+                entry_fogs=[FogRef("d2_entry", "z_d2")],
                 exit_fogs=[],
             )
         )
 
-        dag.add_edge("start", "mid", "fog_entry", "fog_entry")
+        dag.add_edge(
+            "start",
+            "mid",
+            FogRef("fog_entry", "z_start"),
+            FogRef("fog_entry", "zone_b"),
+        )
         # Two edges using the same fog_id but from different zone sides
-        dag.add_edge("mid", "dest_1", "shared_fog", "d1_entry")
-        dag.add_edge("mid", "dest_2", "shared_fog", "d2_entry")
+        dag.add_edge(
+            "mid",
+            "dest_1",
+            FogRef("shared_fog", "zone_a"),
+            FogRef("d1_entry", "z_d1"),
+        )
+        dag.add_edge(
+            "mid",
+            "dest_2",
+            FogRef("shared_fog", "zone_b"),
+            FogRef("d2_entry", "z_d2"),
+        )
 
         dag.start_id = "start"
         dag.end_id = "dest_2"
@@ -793,7 +815,7 @@ class TestDuplicateExitFogs:
                 layer=0,
                 tier=1,
                 entry_fogs=[],
-                exit_fogs=["fog_entry"],
+                exit_fogs=[FogRef("fog_entry", "z_start")],
             )
         )
 
@@ -816,9 +838,9 @@ class TestDuplicateExitFogs:
                 layer=1,
                 tier=3,
                 # After consuming entry (zone_a), only zone_b exit remains
-                # But stored as bare string, zone info lost:
-                entry_fogs=["shared_fog"],
-                exit_fogs=["shared_fog"],
+                # FogRef now carries zone info:
+                entry_fogs=[FogRef("shared_fog", "zone_a")],
+                exit_fogs=[FogRef("shared_fog", "zone_b")],
             )
         )
 
@@ -836,13 +858,23 @@ class TestDuplicateExitFogs:
                 ),
                 layer=2,
                 tier=5,
-                entry_fogs=["d_entry"],
+                entry_fogs=[FogRef("d_entry", "z_dest")],
                 exit_fogs=[],
             )
         )
 
-        dag.add_edge("start", "mid", "fog_entry", "shared_fog")
-        dag.add_edge("mid", "dest", "shared_fog", "d_entry")
+        dag.add_edge(
+            "start",
+            "mid",
+            FogRef("fog_entry", "z_start"),
+            FogRef("shared_fog", "zone_a"),
+        )
+        dag.add_edge(
+            "mid",
+            "dest",
+            FogRef("shared_fog", "zone_b"),
+            FogRef("d_entry", "z_dest"),
+        )
         dag.start_id = "start"
         dag.end_id = "dest"
 

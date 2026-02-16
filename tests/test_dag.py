@@ -1,7 +1,7 @@
 """Tests for DAG data structures."""
 
 from speedfog.clusters import ClusterData
-from speedfog.dag import Dag, DagEdge, DagNode
+from speedfog.dag import Dag, DagEdge, DagNode, FogRef
 
 
 def make_cluster(
@@ -24,6 +24,11 @@ def make_cluster(
     )
 
 
+def _f(fog_id: str, zone: str = "z") -> FogRef:
+    """Shorthand for creating FogRef in tests."""
+    return FogRef(fog_id, zone)
+
+
 # =============================================================================
 # DagNode tests
 # =============================================================================
@@ -41,15 +46,15 @@ class TestDagNode:
             layer=0,
             tier=1,
             entry_fogs=[],
-            exit_fogs=["fog_a"],
+            exit_fogs=[_f("fog_a")],
         )
         node2 = DagNode(
             id="node_1",
             cluster=cluster,
             layer=1,  # Different layer
             tier=5,  # Different tier
-            entry_fogs=["different"],
-            exit_fogs=["fog_b"],
+            entry_fogs=[_f("different")],
+            exit_fogs=[_f("fog_b")],
         )
         assert hash(node1) == hash(node2)
 
@@ -70,8 +75,8 @@ class TestDagNode:
             cluster=cluster2,  # Different cluster
             layer=5,  # Different layer
             tier=10,  # Different tier
-            entry_fogs=["entry"],
-            exit_fogs=["exit"],
+            entry_fogs=[_f("entry")],
+            exit_fogs=[_f("exit")],
         )
         assert node1 == node2
 
@@ -110,8 +115,8 @@ class TestDagNode:
             cluster=cluster,
             layer=5,
             tier=10,
-            entry_fogs=["x"],
-            exit_fogs=["y"],
+            entry_fogs=[_f("x")],
+            exit_fogs=[_f("y")],
         )
 
         node_set = {node1, node2, node1_dup}
@@ -129,63 +134,102 @@ class TestDagEdge:
     def test_hash_by_tuple(self):
         """DagEdge hashes by (source_id, target_id, fog_id)."""
         edge1 = DagEdge(
-            source_id="a", target_id="b", exit_fog="fog_1", entry_fog="fog_1"
+            source_id="a",
+            target_id="b",
+            exit_fog=_f("fog_1"),
+            entry_fog=_f("fog_1"),
         )
         edge2 = DagEdge(
-            source_id="a", target_id="b", exit_fog="fog_1", entry_fog="fog_1"
+            source_id="a",
+            target_id="b",
+            exit_fog=_f("fog_1"),
+            entry_fog=_f("fog_1"),
         )
         assert hash(edge1) == hash(edge2)
 
     def test_equality_by_tuple(self):
         """DagEdge equality is by (source_id, target_id, fog_id)."""
         edge1 = DagEdge(
-            source_id="a", target_id="b", exit_fog="fog_1", entry_fog="fog_1"
+            source_id="a",
+            target_id="b",
+            exit_fog=_f("fog_1"),
+            entry_fog=_f("fog_1"),
         )
         edge2 = DagEdge(
-            source_id="a", target_id="b", exit_fog="fog_1", entry_fog="fog_1"
+            source_id="a",
+            target_id="b",
+            exit_fog=_f("fog_1"),
+            entry_fog=_f("fog_1"),
         )
         assert edge1 == edge2
 
     def test_inequality_different_source(self):
         """DagEdge with different source_id are not equal."""
         edge1 = DagEdge(
-            source_id="a", target_id="b", exit_fog="fog_1", entry_fog="fog_1"
+            source_id="a",
+            target_id="b",
+            exit_fog=_f("fog_1"),
+            entry_fog=_f("fog_1"),
         )
         edge2 = DagEdge(
-            source_id="x", target_id="b", exit_fog="fog_1", entry_fog="fog_1"
+            source_id="x",
+            target_id="b",
+            exit_fog=_f("fog_1"),
+            entry_fog=_f("fog_1"),
         )
         assert edge1 != edge2
 
     def test_inequality_different_target(self):
         """DagEdge with different target_id are not equal."""
         edge1 = DagEdge(
-            source_id="a", target_id="b", exit_fog="fog_1", entry_fog="fog_1"
+            source_id="a",
+            target_id="b",
+            exit_fog=_f("fog_1"),
+            entry_fog=_f("fog_1"),
         )
         edge2 = DagEdge(
-            source_id="a", target_id="x", exit_fog="fog_1", entry_fog="fog_1"
+            source_id="a",
+            target_id="x",
+            exit_fog=_f("fog_1"),
+            entry_fog=_f("fog_1"),
         )
         assert edge1 != edge2
 
     def test_inequality_different_fog(self):
         """DagEdge with different fog_id are not equal."""
         edge1 = DagEdge(
-            source_id="a", target_id="b", exit_fog="fog_1", entry_fog="fog_1"
+            source_id="a",
+            target_id="b",
+            exit_fog=_f("fog_1"),
+            entry_fog=_f("fog_1"),
         )
         edge2 = DagEdge(
-            source_id="a", target_id="b", exit_fog="fog_2", entry_fog="fog_2"
+            source_id="a",
+            target_id="b",
+            exit_fog=_f("fog_2"),
+            entry_fog=_f("fog_2"),
         )
         assert edge1 != edge2
 
     def test_usable_in_set(self):
         """DagEdge can be used in sets (hashable)."""
         edge1 = DagEdge(
-            source_id="a", target_id="b", exit_fog="fog_1", entry_fog="fog_1"
+            source_id="a",
+            target_id="b",
+            exit_fog=_f("fog_1"),
+            entry_fog=_f("fog_1"),
         )
         edge2 = DagEdge(
-            source_id="a", target_id="c", exit_fog="fog_2", entry_fog="fog_2"
+            source_id="a",
+            target_id="c",
+            exit_fog=_f("fog_2"),
+            entry_fog=_f("fog_2"),
         )
         edge1_dup = DagEdge(
-            source_id="a", target_id="b", exit_fog="fog_1", entry_fog="fog_1"
+            source_id="a",
+            target_id="b",
+            exit_fog=_f("fog_1"),
+            entry_fog=_f("fog_1"),
         )
 
         edge_set = {edge1, edge2, edge1_dup}
@@ -217,7 +261,7 @@ class TestDagBasicOperations:
         """Dag.add_edge adds edge to edges list."""
         dag = Dag(seed=42)
 
-        dag.add_edge("a", "b", "fog_1", "fog_1")
+        dag.add_edge("a", "b", _f("fog_1"), _f("fog_1"))
 
         assert len(dag.edges) == 1
         assert dag.edges[0].source_id == "a"
@@ -248,9 +292,9 @@ class TestDagBasicOperations:
     def test_get_outgoing_edges(self):
         """Dag.get_outgoing_edges returns edges from a node."""
         dag = Dag(seed=42)
-        dag.add_edge("a", "b", "fog_1", "fog_1")
-        dag.add_edge("a", "c", "fog_2", "fog_2")
-        dag.add_edge("b", "c", "fog_3", "fog_3")
+        dag.add_edge("a", "b", _f("fog_1"), _f("fog_1"))
+        dag.add_edge("a", "c", _f("fog_2"), _f("fog_2"))
+        dag.add_edge("b", "c", _f("fog_3"), _f("fog_3"))
 
         edges = dag.get_outgoing_edges("a")
 
@@ -261,7 +305,7 @@ class TestDagBasicOperations:
     def test_get_outgoing_edges_empty(self):
         """Dag.get_outgoing_edges returns empty list for node with no outgoing."""
         dag = Dag(seed=42)
-        dag.add_edge("a", "b", "fog_1", "fog_1")
+        dag.add_edge("a", "b", _f("fog_1"), _f("fog_1"))
 
         edges = dag.get_outgoing_edges("b")
 
@@ -270,9 +314,9 @@ class TestDagBasicOperations:
     def test_get_incoming_edges(self):
         """Dag.get_incoming_edges returns edges to a node."""
         dag = Dag(seed=42)
-        dag.add_edge("a", "c", "fog_1", "fog_1")
-        dag.add_edge("b", "c", "fog_2", "fog_2")
-        dag.add_edge("c", "d", "fog_3", "fog_3")
+        dag.add_edge("a", "c", _f("fog_1"), _f("fog_1"))
+        dag.add_edge("b", "c", _f("fog_2"), _f("fog_2"))
+        dag.add_edge("c", "d", _f("fog_3"), _f("fog_3"))
 
         edges = dag.get_incoming_edges("c")
 
@@ -283,7 +327,7 @@ class TestDagBasicOperations:
     def test_get_incoming_edges_empty(self):
         """Dag.get_incoming_edges returns empty list for node with no incoming."""
         dag = Dag(seed=42)
-        dag.add_edge("a", "b", "fog_1", "fog_1")
+        dag.add_edge("a", "b", _f("fog_1"), _f("fog_1"))
 
         edges = dag.get_incoming_edges("a")
 
@@ -313,8 +357,8 @@ class TestDagPathEnumeration:
                     exit_fogs=[],
                 )
             )
-        dag.add_edge("start", "mid", "fog_1", "fog_1")
-        dag.add_edge("mid", "end", "fog_2", "fog_2")
+        dag.add_edge("start", "mid", _f("fog_1"), _f("fog_1"))
+        dag.add_edge("mid", "end", _f("fog_2"), _f("fog_2"))
         dag.start_id = "start"
         dag.end_id = "end"
 
@@ -348,7 +392,7 @@ class TestDagPathEnumeration:
                 cluster=make_cluster("c1"),
                 layer=1,
                 tier=5,
-                entry_fogs=["e1"],
+                entry_fogs=[_f("e1")],
                 exit_fogs=[],
             )
         )
@@ -358,7 +402,7 @@ class TestDagPathEnumeration:
                 cluster=make_cluster("c2"),
                 layer=1,
                 tier=5,
-                entry_fogs=["e2"],
+                entry_fogs=[_f("e2")],
                 exit_fogs=[],
             )
         )
@@ -368,14 +412,14 @@ class TestDagPathEnumeration:
                 cluster=make_cluster("c3"),
                 layer=2,
                 tier=10,
-                entry_fogs=["e3"],
+                entry_fogs=[_f("e3")],
                 exit_fogs=[],
             )
         )
-        dag.add_edge("start", "a", "fog_1", "fog_1")
-        dag.add_edge("start", "b", "fog_2", "fog_2")
-        dag.add_edge("a", "end", "fog_3", "fog_3")
-        dag.add_edge("b", "end", "fog_4", "fog_4")
+        dag.add_edge("start", "a", _f("fog_1"), _f("fog_1"))
+        dag.add_edge("start", "b", _f("fog_2"), _f("fog_2"))
+        dag.add_edge("a", "end", _f("fog_3"), _f("fog_3"))
+        dag.add_edge("b", "end", _f("fog_4"), _f("fog_4"))
         dag.start_id = "start"
         dag.end_id = "end"
 
@@ -732,7 +776,7 @@ class TestDagValidation:
                 exit_fogs=[],
             )
         )
-        dag.add_edge("start", "end", "fog_1", "fog_1")
+        dag.add_edge("start", "end", _f("fog_1"), _f("fog_1"))
         dag.start_id = "start"
         dag.end_id = "end"
 
@@ -773,8 +817,8 @@ class TestDagValidation:
                 exit_fogs=[],
             )
         )
-        dag.add_edge("start", "dead", "fog_1", "fog_1")
-        dag.add_edge("start", "end", "fog_2", "fog_2")
+        dag.add_edge("start", "dead", _f("fog_1"), _f("fog_1"))
+        dag.add_edge("start", "end", _f("fog_2"), _f("fog_2"))
         dag.start_id = "start"
         dag.end_id = "end"
 
@@ -815,9 +859,9 @@ class TestDagValidation:
                 exit_fogs=[],
             )
         )
-        dag.add_edge("start", "mid", "fog_1", "fog_1")
-        dag.add_edge("mid", "end", "fog_2", "fog_2")
-        dag.add_edge("mid", "start", "fog_3", "fog_3")  # Backward edge!
+        dag.add_edge("start", "mid", _f("fog_1"), _f("fog_1"))
+        dag.add_edge("mid", "end", _f("fog_2"), _f("fog_2"))
+        dag.add_edge("mid", "start", _f("fog_3"), _f("fog_3"))  # Backward edge!
         dag.start_id = "start"
         dag.end_id = "end"
 
@@ -868,10 +912,10 @@ class TestDagValidation:
                 exit_fogs=[],
             )
         )
-        dag.add_edge("start", "a", "fog_1", "fog_1")
-        dag.add_edge("start", "b", "fog_2", "fog_2")
-        dag.add_edge("a", "b", "fog_3", "fog_3")  # Same layer edge!
-        dag.add_edge("b", "end", "fog_4", "fog_4")
+        dag.add_edge("start", "a", _f("fog_1"), _f("fog_1"))
+        dag.add_edge("start", "b", _f("fog_2"), _f("fog_2"))
+        dag.add_edge("a", "b", _f("fog_3"), _f("fog_3"))  # Same layer edge!
+        dag.add_edge("b", "end", _f("fog_4"), _f("fog_4"))
         dag.start_id = "start"
         dag.end_id = "end"
 
@@ -898,7 +942,7 @@ class TestDagValidation:
                 cluster=make_cluster("c2"),
                 layer=1,
                 tier=5,
-                entry_fogs=["e1"],
+                entry_fogs=[_f("e1")],
                 exit_fogs=[],
             )
         )
@@ -908,7 +952,7 @@ class TestDagValidation:
                 cluster=make_cluster("c3"),
                 layer=1,
                 tier=5,
-                entry_fogs=["e2"],
+                entry_fogs=[_f("e2")],
                 exit_fogs=[],
             )
         )
@@ -918,14 +962,14 @@ class TestDagValidation:
                 cluster=make_cluster("c4"),
                 layer=2,
                 tier=10,
-                entry_fogs=["e3"],
+                entry_fogs=[_f("e3")],
                 exit_fogs=[],
             )
         )
-        dag.add_edge("start", "a", "fog_1", "fog_1")
-        dag.add_edge("start", "b", "fog_2", "fog_2")
-        dag.add_edge("a", "end", "fog_3", "fog_3")
-        dag.add_edge("b", "end", "fog_4", "fog_4")
+        dag.add_edge("start", "a", _f("fog_1"), _f("fog_1"))
+        dag.add_edge("start", "b", _f("fog_2"), _f("fog_2"))
+        dag.add_edge("a", "end", _f("fog_3"), _f("fog_3"))
+        dag.add_edge("b", "end", _f("fog_4"), _f("fog_4"))
         dag.start_id = "start"
         dag.end_id = "end"
 
@@ -956,8 +1000,8 @@ class TestDagValidation:
                 exit_fogs=[],
             )
         )
-        dag.add_edge("start", "end", "fog_1", "fog_1")
-        dag.add_edge("nonexistent", "end", "fog_2", "fog_2")  # Missing source
+        dag.add_edge("start", "end", _f("fog_1"), _f("fog_1"))
+        dag.add_edge("nonexistent", "end", _f("fog_2"), _f("fog_2"))  # Missing source
         dag.start_id = "start"
         dag.end_id = "end"
 
@@ -988,8 +1032,8 @@ class TestDagValidation:
                 exit_fogs=[],
             )
         )
-        dag.add_edge("start", "end", "fog_1", "fog_1")
-        dag.add_edge("start", "nonexistent", "fog_2", "fog_2")  # Missing target
+        dag.add_edge("start", "end", _f("fog_1"), _f("fog_1"))
+        dag.add_edge("start", "nonexistent", _f("fog_2"), _f("fog_2"))  # Missing target
         dag.start_id = "start"
         dag.end_id = "end"
 

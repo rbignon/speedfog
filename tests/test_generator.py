@@ -6,7 +6,7 @@ import pytest
 
 from speedfog.clusters import ClusterData, ClusterPool
 from speedfog.config import Config
-from speedfog.dag import Branch
+from speedfog.dag import Branch, FogRef
 from speedfog.generator import (
     GenerationError,
     _find_valid_merge_indices,
@@ -1237,8 +1237,8 @@ class TestMergeGuards:
     def test_merge_rejects_same_source_branches(self):
         """_find_valid_merge_indices returns None when all branches share the same node."""
         branches = [
-            Branch("b0", "node_1_a", "exit_0"),
-            Branch("b1", "node_1_a", "exit_1"),
+            Branch("b0", "node_1_a", FogRef("exit_0", "z")),
+            Branch("b1", "node_1_a", FogRef("exit_1", "z")),
         ]
         rng = random.Random(42)
 
@@ -1248,9 +1248,9 @@ class TestMergeGuards:
     def test_merge_selects_different_source_branches(self):
         """_find_valid_merge_indices selects branches with different current nodes."""
         branches = [
-            Branch("b0", "node_1_a", "exit_0"),
-            Branch("b1", "node_1_a", "exit_1"),
-            Branch("b2", "node_1_b", "exit_2"),
+            Branch("b0", "node_1_a", FogRef("exit_0", "z")),
+            Branch("b1", "node_1_a", FogRef("exit_1", "z")),
+            Branch("b2", "node_1_b", FogRef("exit_2", "z")),
         ]
         rng = random.Random(42)
 
@@ -1266,17 +1266,17 @@ class TestMergeGuards:
     def test_has_valid_merge_pair_all_different(self):
         """All branches from different nodes: valid merge possible."""
         branches = [
-            Branch("b0", "node_a", "exit_0"),
-            Branch("b1", "node_b", "exit_1"),
+            Branch("b0", "node_a", FogRef("exit_0", "z")),
+            Branch("b1", "node_b", FogRef("exit_1", "z")),
         ]
         assert _has_valid_merge_pair(branches) is True
 
     def test_find_valid_merge_indices_randomness(self):
         """Different seeds select different valid pairs."""
         branches = [
-            Branch("b0", "node_a", "exit_0"),
-            Branch("b1", "node_b", "exit_1"),
-            Branch("b2", "node_c", "exit_2"),
+            Branch("b0", "node_a", FogRef("exit_0", "z")),
+            Branch("b1", "node_b", FogRef("exit_1", "z")),
+            Branch("b2", "node_c", FogRef("exit_2", "z")),
         ]
 
         selected_pairs = set()
@@ -1291,9 +1291,9 @@ class TestMergeGuards:
     def test_find_valid_merge_indices_ternary(self):
         """_find_valid_merge_indices with count=3 selects 3-way merges."""
         branches = [
-            Branch("b0", "node_a", "exit_0"),
-            Branch("b1", "node_b", "exit_1"),
-            Branch("b2", "node_c", "exit_2"),
+            Branch("b0", "node_a", FogRef("exit_0", "z")),
+            Branch("b1", "node_b", FogRef("exit_1", "z")),
+            Branch("b2", "node_c", FogRef("exit_2", "z")),
         ]
         rng = random.Random(42)
         indices = _find_valid_merge_indices(branches, rng, count=3)
@@ -1307,9 +1307,9 @@ class TestMergeGuards:
         """3-way merge requires at least 2 distinct parent nodes."""
         # 3 branches but only 1 distinct parent → no valid 3-way merge
         branches = [
-            Branch("b0", "same_node", "exit_0"),
-            Branch("b1", "same_node", "exit_1"),
-            Branch("b2", "same_node", "exit_2"),
+            Branch("b0", "same_node", FogRef("exit_0", "z")),
+            Branch("b1", "same_node", FogRef("exit_1", "z")),
+            Branch("b2", "same_node", FogRef("exit_2", "z")),
         ]
         rng = random.Random(42)
         indices = _find_valid_merge_indices(branches, rng, count=3)
@@ -1318,8 +1318,8 @@ class TestMergeGuards:
     def test_find_valid_merge_indices_count_exceeds_branches(self):
         """count > len(branches) returns None."""
         branches = [
-            Branch("b0", "node_a", "exit_0"),
-            Branch("b1", "node_b", "exit_1"),
+            Branch("b0", "node_a", FogRef("exit_0", "z")),
+            Branch("b1", "node_b", FogRef("exit_1", "z")),
         ]
         rng = random.Random(42)
         assert _find_valid_merge_indices(branches, rng, count=3) is None
