@@ -1067,6 +1067,75 @@ class TestRemoveEntities:
         result = dag_to_dict(dag, clusters)
         assert len(result["remove_entities"]) == 1
 
+    def test_unused_exit_with_location_removed(self):
+        """Regular exit_fogs with location but NOT used in edges are removed."""
+        dag = make_test_dag()
+        # Add a location to an exit_fog that is NOT used in any edge
+        # The end node has no outgoing edges, so all its exit_fogs are unused
+        dag.nodes["end"].cluster.exit_fogs = [
+            {"fog_id": "unused_warp", "zone": "z_end", "location": 99999},
+        ]
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={"z_end": "m13_00_00_00"},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+        assert {"map": "m13_00_00_00", "entity_id": 99999} in result["remove_entities"]
+
+    def test_used_exit_with_location_not_removed(self):
+        """Regular exit_fogs with location that ARE used in edges are NOT removed."""
+        dag = make_test_dag()
+        # Add location to start's fog_1 exit, which IS used (edge start→a)
+        dag.nodes["start"].cluster.exit_fogs = [
+            {"fog_id": "fog_1", "zone": "z_start", "location": 88888},
+            {"fog_id": "fog_2", "zone": "z_start"},
+        ]
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={"z_start": "m10_00_00_00"},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+        # fog_1 is used in edge start→a, so its entity should NOT be removed
+        removed = {(e["map"], e["entity_id"]) for e in result["remove_entities"]}
+        assert ("m10_00_00_00", 88888) not in removed
+
+    def test_unused_exit_without_location_ignored(self):
+        """Regular exit_fogs without location are not added to remove_entities."""
+        dag = make_test_dag()
+        # end node's exit_fogs have no location
+        dag.nodes["end"].cluster.exit_fogs = [
+            {"fog_id": "unused_warp", "zone": "z_end"},  # No location
+        ]
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={"z_end": "m13_00_00_00"},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+        assert result["remove_entities"] == []
+
+    def test_unused_exit_deduplicates_with_unique_exits(self):
+        """Unused regular exit and unique exit with same entity are deduplicated."""
+        dag = make_test_dag()
+        # Same entity from unique and regular exit
+        dag.nodes["a"].cluster.unique_exit_fogs = [
+            {"fog_id": "warp1", "zone": "z_a", "unique": True, "location": 55555},
+        ]
+        dag.nodes["end"].cluster.exit_fogs = [
+            {"fog_id": "warp2", "zone": "z_a", "location": 55555},
+        ]
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={"z_a": "m12_05_00_00"},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+        # Should be deduplicated to just 1 entry
+        matching = [e for e in result["remove_entities"] if e["entity_id"] == 55555]
+        assert len(matching) == 1
+
 
 # =============================================================================
 # _make_fullname cross-map warp tests

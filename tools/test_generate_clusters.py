@@ -11,6 +11,7 @@ from generate_clusters import (
     WorldConnection,
     WorldGraph,
     ZoneFogs,
+    _is_side_core,
     build_world_graph,
     classify_fogs,
     compute_cluster_fogs,
@@ -21,6 +22,7 @@ from generate_clusters import (
     get_evergaol_zones,
     get_zone_type,
     is_condition_guaranteed,
+    is_warp_edge_active,
     parse_area,
     parse_fog,
     parse_tags,
@@ -1703,3 +1705,249 @@ class TestClusterDefeatFlag:
 
         assert len(result) == 1
         assert result[0].defeat_flag == 19000800
+
+
+# =============================================================================
+# IsCore / is_warp_edge_active Tests
+# =============================================================================
+
+
+class TestIsSideCore:
+    """Tests for _is_side_core helper."""
+
+    def test_no_optional_tags_is_core(self):
+        """Side with no optional tags is core by default."""
+        fog = FogData(
+            name="13002500",
+            fog_id=13002500,
+            aside=FogSide(area="flamepeak_firegiant", text=""),
+            bside=FogSide(area="flamepeak_erdtree", text=""),
+            tags=["unique", "major"],
+        )
+        assert _is_side_core(fog, fog.aside) is True
+        assert _is_side_core(fog, fog.bside) is True
+
+    def test_divine_tag_not_core(self):
+        """Side with 'divine' tag is not core (no req_divine option)."""
+        fog = FogData(
+            name="34152692",
+            fog_id=34152692,
+            aside=FogSide(area="leyndell_tower", text=""),
+            bside=FogSide(area="leyndell_divinebridge", text=""),
+            tags=["unique", "divine"],
+        )
+        # Both sides inherit 'divine' from fog-level tags
+        assert _is_side_core(fog, fog.aside) is False
+        assert _is_side_core(fog, fog.bside) is False
+
+    def test_open_tag_not_core_in_crawl(self):
+        """Side with 'open' tag is not core in crawl mode."""
+        fog = FogData(
+            name="1037462650",
+            fog_id=1037462650,
+            aside=FogSide(area="zone_a", text=""),
+            bside=FogSide(area="zone_b", text="", tags=["open"]),
+            tags=["unique"],
+        )
+        assert _is_side_core(fog, fog.aside) is True
+        assert _is_side_core(fog, fog.bside) is False
+
+    def test_neveropen_without_open_is_core(self):
+        """'neveropen' tag makes side core when 'open' is absent."""
+        fog = FogData(
+            name="test",
+            fog_id=999,
+            aside=FogSide(area="zone_a", text=""),
+            bside=FogSide(area="zone_b", text=""),
+            tags=["unique", "neveropen"],
+        )
+        assert _is_side_core(fog, fog.aside) is True
+        assert _is_side_core(fog, fog.bside) is True
+
+    def test_open_takes_precedence_over_neveropen(self):
+        """'open' takes precedence over 'neveropen' (matches FogMod Graph.cs:1167-1176)."""
+        fog = FogData(
+            name="test",
+            fog_id=999,
+            aside=FogSide(area="zone_a", text=""),
+            bside=FogSide(area="zone_b", text=""),
+            tags=["unique", "open", "neveropen"],
+        )
+        # FogMod checks open first (else-if neveropen), so open wins
+        assert _is_side_core(fog, fog.aside) is False
+        assert _is_side_core(fog, fog.bside) is False
+
+    def test_cave_tag_core_with_req(self):
+        """Side with 'cave' tag is core (req_cave is in SpeedFog options)."""
+        fog = FogData(
+            name="test",
+            fog_id=999,
+            aside=FogSide(area="zone_a", text=""),
+            bside=FogSide(area="cave_zone", text="", tags=["cave"]),
+            tags=["unique"],
+        )
+        assert _is_side_core(fog, fog.bside) is True
+
+    def test_colosseum_tag_not_core(self):
+        """Side with 'colosseum' tag is not core (no req_colosseum option)."""
+        fog = FogData(
+            name="test",
+            fog_id=999,
+            aside=FogSide(area="zone_a", text=""),
+            bside=FogSide(area="colosseum", text="", tags=["colosseum"]),
+            tags=["unique"],
+        )
+        assert _is_side_core(fog, fog.bside) is False
+
+    def test_side_tags_combined_with_fog_tags(self):
+        """Side tags and fog-level tags are combined for IsCore check."""
+        # divine at fog level, cave at side level
+        fog = FogData(
+            name="test",
+            fog_id=999,
+            aside=FogSide(area="zone_a", text="", tags=["cave"]),
+            bside=FogSide(area="zone_b", text=""),
+            tags=["unique", "divine"],
+        )
+        # ASide has divine+cave → cave has req_cave → at least one → core
+        assert _is_side_core(fog, fog.aside) is True
+        # BSide has divine only → no req_divine → not core
+        assert _is_side_core(fog, fog.bside) is False
+
+
+class TestIsWarpEdgeActive:
+    """Tests for is_warp_edge_active function."""
+
+    def test_both_sides_core_is_active(self):
+        """Warp with both sides core → edge active (usable exit)."""
+        # 13002500: Melina's hand warp. Tags: unique major.
+        # Neither unique nor major is an optional tag → both sides core.
+        fog = FogData(
+            name="13002500",
+            fog_id=13002500,
+            aside=FogSide(area="flamepeak_firegiant", text="Melina's hand"),
+            bside=FogSide(area="flamepeak_erdtree", text="arriving"),
+            tags=["unique", "major"],
+        )
+        assert is_warp_edge_active(fog) is True
+
+    def test_divine_tower_inactive(self):
+        """Divine tower warp → edge inactive (divine tag, no req_divine)."""
+        fog = FogData(
+            name="34152692",
+            fog_id=34152692,
+            aside=FogSide(area="leyndell_tower", text=""),
+            bside=FogSide(area="leyndell_divinebridge", text=""),
+            tags=["unique", "divine"],
+        )
+        assert is_warp_edge_active(fog) is False
+
+    def test_bside_open_inactive(self):
+        """Warp with BSide 'open' tag → edge inactive (crawl mode)."""
+        fog = FogData(
+            name="1037462650",
+            fog_id=1037462650,
+            aside=FogSide(area="zone_a", text=""),
+            bside=FogSide(area="zone_b", text="", tags=["open"]),
+            tags=["unique"],
+        )
+        assert is_warp_edge_active(fog) is False
+
+    def test_one_side_non_core_is_inactive(self):
+        """Warp inactive if only one side is non-core."""
+        fog = FogData(
+            name="test",
+            fog_id=999,
+            aside=FogSide(area="zone_a", text=""),
+            bside=FogSide(area="colosseum", text="", tags=["colosseum"]),
+            tags=["unique"],
+        )
+        assert is_warp_edge_active(fog) is False
+
+    def test_both_sides_have_enabled_optional_tags(self):
+        """Warp active when both sides have optional tags with req_* enabled."""
+        fog = FogData(
+            name="test",
+            fog_id=999,
+            aside=FogSide(area="zone_a", text="", tags=["cave"]),
+            bside=FogSide(area="zone_b", text="", tags=["tunnel"]),
+            tags=["unique"],
+        )
+        assert is_warp_edge_active(fog) is True
+
+
+class TestComputeClusterFogsUniqueClassification:
+    """Tests for compute_cluster_fogs unique exit classification."""
+
+    def test_usable_unique_exit_not_marked_unique(self):
+        """Usable unique exits (both sides core) are NOT marked as 'unique'."""
+        graph = WorldGraph()
+
+        # Unique warp with no optional tags → both sides core → active
+        fog = FogData(
+            name="13002500",
+            fog_id=13002500,
+            aside=FogSide(area="zone_a", text="Melina's hand"),
+            bside=FogSide(area="zone_b", text="arriving"),
+            tags=["unique", "major"],
+            location=13002500,
+        )
+        zone_fogs = {
+            "zone_a": ZoneFogs(entry_fogs=[], exit_fogs=[fog]),
+        }
+
+        cluster = Cluster(zones=frozenset({"zone_a"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        assert len(cluster.exit_fogs) == 1
+        exit_fog = cluster.exit_fogs[0]
+        assert "unique" not in exit_fog  # NOT marked unique
+        assert exit_fog["location"] == 13002500  # Location preserved
+
+    def test_disabled_unique_exit_marked_unique(self):
+        """Disabled unique exits (non-core side) ARE marked as 'unique'."""
+        graph = WorldGraph()
+
+        # Unique warp with divine tag → non-core → inactive
+        fog = FogData(
+            name="34152692",
+            fog_id=34152692,
+            aside=FogSide(area="zone_a", text=""),
+            bside=FogSide(area="zone_b", text=""),
+            tags=["unique", "divine"],
+            location=34152692,
+        )
+        zone_fogs = {
+            "zone_a": ZoneFogs(entry_fogs=[], exit_fogs=[fog]),
+        }
+
+        cluster = Cluster(zones=frozenset({"zone_a"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        assert len(cluster.exit_fogs) == 1
+        exit_fog = cluster.exit_fogs[0]
+        assert exit_fog.get("unique") is True  # Marked unique
+        assert exit_fog["location"] == 34152692  # Location preserved
+
+    def test_usable_unique_exit_without_location(self):
+        """Usable unique exit without location has no location key."""
+        graph = WorldGraph()
+
+        fog = FogData(
+            name="test",
+            fog_id=999,
+            aside=FogSide(area="zone_a", text=""),
+            bside=FogSide(area="zone_b", text=""),
+            tags=["unique", "major"],
+            location=None,
+        )
+        zone_fogs = {
+            "zone_a": ZoneFogs(entry_fogs=[], exit_fogs=[fog]),
+        }
+
+        cluster = Cluster(zones=frozenset({"zone_a"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        assert len(cluster.exit_fogs) == 1
+        assert "unique" not in cluster.exit_fogs[0]
+        assert "location" not in cluster.exit_fogs[0]

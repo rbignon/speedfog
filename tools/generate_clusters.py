@@ -226,6 +226,106 @@ EXCLUDE_TAGS = {"unused", "crawlonly", "evergaol"}
 # with req_backportal=true (Graph.cs:1069-1076)
 _DUNGEON_ONLY_TAGS = frozenset({"caveonly", "catacombonly", "forgeonly", "gaolonly"})
 
+# =============================================================================
+# FogMod IsCore simulation (for unique warp edge classification)
+# =============================================================================
+
+# Tags that FogMod treats as "optional" — nodes/warps with these tags are non-core
+# unless the corresponding req_* option is enabled.
+# Source: FogMod Graph.cs IsCore checks
+FOGMOD_OPTIONAL_TAGS = frozenset(
+    {
+        "underground",
+        "colosseum",
+        "divine",
+        "belfries",
+        "graveyard",
+        "evergaol",
+        "open",
+        "cave",
+        "tunnel",
+        "catacomb",
+        "grave",
+        "cellar",
+        "gaol",
+        "forge",
+        "rauhruins",  # DLC: separate check in Graph.cs:1177-1180
+    }
+)
+
+# req_* options that SpeedFog enables (making their tags core).
+# Tags in FOGMOD_OPTIONAL_TAGS that have a matching req_* here will be core.
+SPEEDFOG_REQ_OPTIONS = frozenset(
+    {
+        "req_graveyard",
+        "req_dungeon",
+        "req_cave",
+        "req_tunnel",
+        "req_catacomb",
+        "req_grave",
+        "req_forge",
+        "req_gaol",
+        "req_legacy",
+        "req_major",
+        "req_underground",
+        "req_minorwarp",
+    }
+)
+
+
+def _is_side_core(fog: FogData, side: FogSide) -> bool:
+    """Check if one side of a unique warp is core in FogMod's graph.
+
+    A side is core (always included) unless it has optional tags whose
+    corresponding req_* options are not enabled by SpeedFog.
+
+    This is a simplified simulation of FogMod's IsCore logic (Graph.cs).
+    It does not model the minorwarp special case (Graph.cs:1159-1161) since
+    minorwarp and unique are mutually exclusive warp types in fog.txt.
+    It also does not model req_all (SpeedFog does not set it).
+
+    Args:
+        fog: The fog gate (provides gate-level tags)
+        side: The specific side (ASide or BSide) to check
+
+    Returns:
+        True if this side is core (FogMod will include it)
+    """
+    all_tags = {t.lower() for t in fog.tags} | {t.lower() for t in side.tags}
+
+    # Crawl mode checks (Graph.cs:1167-1176).
+    # Order matters: open takes precedence, neveropen is else-if.
+    if "open" in all_tags:
+        return False
+    if "neveropen" in all_tags:
+        return True
+
+    # Check intersection with optional tags
+    optional_matches = all_tags & FOGMOD_OPTIONAL_TAGS
+
+    if not optional_matches:
+        return True  # No optional tags → core by default
+
+    # Core if at least one matching optional tag has req_* in SpeedFog's options
+    return any(f"req_{tag}" in SPEEDFOG_REQ_OPTIONS for tag in optional_matches)
+
+
+def is_warp_edge_active(fog: FogData) -> bool:
+    """Check if FogMod will create an edge for a unique warp.
+
+    FogMod only creates edges when BOTH sides of a warp are core.
+    Unique warps where at least one side is non-core (e.g., divine towers,
+    DLC opensplit) won't have edges and must be marked as disabled.
+
+    Args:
+        fog: A unique fog gate from fog.txt
+
+    Returns:
+        True if both sides are core → FogMod creates an edge → usable exit
+    """
+    return _is_side_core(fog, fog.aside) and _is_side_core(fog, fog.bside)
+
+
 # Zone name prefixes to exclude (these use alternative fog gates that FogMod ignores)
 EXCLUDE_ZONE_PREFIXES = {"leyndell2_"}  # Ashen Leyndell - use pre-ashen instead
 
@@ -840,7 +940,10 @@ def compute_cluster_fogs(
                 if fog.text:
                     fog_entry["text"] = fog.text
                 if fog.is_unique:
-                    fog_entry["unique"] = True
+                    if not is_warp_edge_active(fog):
+                        # Disabled: FogMod won't create an edge for this warp
+                        fog_entry["unique"] = True
+                    # Always preserve location for entity removal tracking
                     if fog.location is not None:
                         fog_entry["location"] = fog.location
                 cluster.exit_fogs.append(fog_entry)

@@ -393,6 +393,31 @@ def dag_to_dict(
                 seen_entities.add(key)
                 remove_entities.append({"map": map_id, "entity_id": location})
 
+    # Also remove vanilla entities for regular exits that have a location
+    # but are not used in any connection (e.g., end node drops all exits,
+    # or usable unique exits that weren't picked by the generator).
+    used_exit_keys: set[tuple[str, str, str]] = set()
+    for edge in dag.edges:
+        source = dag.nodes.get(edge.source_id)
+        if source:
+            used_exit_keys.add((source.id, edge.exit_fog.fog_id, edge.exit_fog.zone))
+
+    for node in dag.nodes.values():
+        for fog in node.cluster.exit_fogs:
+            location = fog.get("location")
+            if location is None:
+                continue
+            if (node.id, fog["fog_id"], fog["zone"]) in used_exit_keys:
+                continue  # Used as connection — FogMod handles redirection
+            zone = fog["zone"]
+            map_id = clusters.get_map(zone)
+            if map_id is None:
+                continue
+            key = (map_id, location)
+            if key not in seen_entities:
+                seen_entities.add(key)
+                remove_entities.append({"map": map_id, "entity_id": location})
+
     return {
         "version": "4.0",
         "seed": dag.seed,
