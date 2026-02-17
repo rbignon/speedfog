@@ -373,6 +373,66 @@ id = 1150
 name = "Marika's Soreseal"
 id = 1221
 
+[[talismans]]
+name = "Cerulean Amber Medallion"
+id = 1010
+
+[[talismans]]
+name = "Great-Jar's Arsenal"
+id = 1032
+
+[[talismans]]
+name = "Shard of Alexander"
+id = 1231
+
+[[talismans]]
+name = "Millicent's Prosthesis"
+id = 1250
+
+[[talismans]]
+name = "Ritual Sword Talisman"
+id = 2050
+
+[[talismans]]
+name = "Rotten Winged Sword Insignia"
+id = 2081
+
+[[talismans]]
+name = "Blue Dancer Charm"
+id = 2110
+
+[[talismans]]
+name = "Lord of Blood's Exultation"
+id = 2160
+
+[[talismans]]
+name = "Claw Talisman"
+id = 2180
+
+[[talismans]]
+name = "Graven-Mass Talisman"
+id = 3001
+
+[[talismans]]
+name = "Flock's Canvas Talisman"
+id = 3050
+
+[[talismans]]
+name = "Godfrey Icon"
+id = 3090
+
+[[talismans]]
+name = "Dragoncrest Greatshield Talisman"
+id = 4003
+
+[[talismans]]
+name = "Assassin's Crimson Dagger"
+id = 5050
+
+[[talismans]]
+name = "Carian Filigreed Crest"
+id = 6020
+
 # =============================================================================
 # Sorceries (type=Goods)
 # =============================================================================

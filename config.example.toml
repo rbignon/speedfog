@@ -121,6 +121,7 @@ academy_key = true       # Academy Glintstone Key - opens Raya Lucaria
 pureblood_medal = false  # Pureblood Knight's Medal - disabled (warp destination removed)
 drawing_room_key = true  # Drawing-Room Key - access Volcano Manor interior
 lantern = true           # Lantern - hands-free light source for dark areas
+physick_flask = true     # Flask of Wondrous Physick - mix crystal tears for custom buffs
 whetblades = true        # Whetstone Knife + all Whetblades - unlocks all weapon affinities
 
 # Great Runes (restored versions, equippable at graces)

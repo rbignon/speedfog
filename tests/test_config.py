@@ -213,6 +213,7 @@ def test_starting_items_defaults():
     assert config.starting_items.pureblood_medal is False
     assert config.starting_items.drawing_room_key is True
     assert config.starting_items.lantern is True
+    assert config.starting_items.physick_flask is True
     assert config.starting_items.whetblades is True
     assert config.starting_items.great_runes is True
     assert config.starting_items.talisman_pouches == 3
@@ -257,6 +258,7 @@ def test_starting_items_get_starting_goods():
     assert 2160 not in goods  # Pureblood Knight's Medal disabled
     assert 8134 in goods  # Drawing-Room Key
     assert 2070 in goods  # Lantern
+    assert 250 in goods  # Flask of Wondrous Physick
     assert 8590 in goods  # Whetstone Knife
     assert 8970 in goods  # Iron Whetblade
     assert 191 in goods  # Godrick's Great Rune (restored, Good ID 191)
@@ -283,6 +285,14 @@ def test_starting_items_lantern_whetblades_from_dict():
     assert 2070 not in goods  # Lantern disabled
     assert 8590 not in goods  # Whetstone Knife disabled
     assert 8970 not in goods  # Iron Whetblade disabled
+
+
+def test_starting_items_physick_flask_from_dict():
+    """physick_flask is parsed from config dict and can be disabled."""
+    config = Config.from_dict({"starting_items": {"physick_flask": False}})
+    assert config.starting_items.physick_flask is False
+    goods = config.starting_items.get_starting_goods()
+    assert 250 not in goods  # Flask of Wondrous Physick disabled
 
 
 def test_starting_items_get_starting_goods_all_runes():

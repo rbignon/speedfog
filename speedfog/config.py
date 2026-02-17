@@ -126,6 +126,9 @@ class StartingItemsConfig:
     pureblood_medal: bool = False  # Pureblood Knight's Medal (Good ID 2160)
     drawing_room_key: bool = True  # Drawing-Room Key for Volcano Manor (Good ID 8134)
     lantern: bool = True  # Lantern (Good ID 2070) - hands-free light source
+    physick_flask: bool = (
+        True  # Flask of Wondrous Physick (Good ID 250) - mix crystal tears
+    )
     whetblades: bool = (
         True  # Whetstone Knife + all Whetblades (Good IDs 8590, 8970-8974)
     )
@@ -192,6 +195,8 @@ class StartingItemsConfig:
             goods.append(8134)  # Drawing-Room Key (Volcano Manor)
         if self.lantern:
             goods.append(2070)  # Lantern
+        if self.physick_flask:
+            goods.append(250)  # Flask of Wondrous Physick
         if self.whetblades:
             goods.extend(
                 [
@@ -386,6 +391,7 @@ class Config:
                 pureblood_medal=starting_items_section.get("pureblood_medal", False),
                 drawing_room_key=starting_items_section.get("drawing_room_key", True),
                 lantern=starting_items_section.get("lantern", True),
+                physick_flask=starting_items_section.get("physick_flask", True),
                 whetblades=starting_items_section.get("whetblades", True),
                 great_runes=starting_items_section.get("great_runes", True),
                 rune_godrick=starting_items_section.get("rune_godrick", True),
