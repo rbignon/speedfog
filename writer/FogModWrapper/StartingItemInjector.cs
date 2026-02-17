@@ -25,6 +25,19 @@ public static class StartingItemInjector
     // Must match EMEDF enum: Weapon=0, Armor=1, Ring=2, Goods=3
     private static readonly string[] ItemTypeNames = { "ItemType.Weapon", "ItemType.Armor", "ItemType.Ring", "ItemType.Goods" };
 
+    // Auxiliary event flags that the game checks to unlock weapon infusion affinities.
+    // DirectlyGivePlayerItem puts items in inventory but doesn't set these flags,
+    // so the Ashes of War menu won't show the corresponding affinities without them.
+    // Source: Item Randomizer itemevents.txt event 1450 / CharacterWriter.cs
+    private static readonly Dictionary<int, int> WhetbladeFlags = new()
+    {
+        { 8970, 65610 },  // Iron Whetblade → Heavy, Keen, Quality
+        { 8971, 65640 },  // Red-Hot Whetblade → Fire, Flame Art
+        { 8972, 65660 },  // Sanctified Whetblade → Lightning, Sacred
+        { 8973, 65680 },  // Glintstone Whetblade → Magic, Cold
+        { 8974, 65720 },  // Black Whetblade → Poison, Blood, Occult
+    };
+
     /// <summary>
     /// Inject starting item events into common.emevd.
     /// Gives Good IDs (key items) and care package items (typed) at game start.
@@ -75,7 +88,17 @@ public static class StartingItemInjector
         foreach (var goodId in goodIds)
         {
             evt.Instructions.Add(events.ParseAdd($"DirectlyGivePlayerItem(ItemType.Goods, {goodId}, 6001, 1)"));
-            Console.WriteLine($"  Added Good ID {goodId}");
+
+            // Set auxiliary flags for whetblades so the game unlocks infusion affinities
+            if (WhetbladeFlags.TryGetValue(goodId, out var auxFlag))
+            {
+                evt.Instructions.Add(events.ParseAdd($"SetEventFlag(TargetEventFlagType.EventFlag, {auxFlag}, ON)"));
+                Console.WriteLine($"  Added Good ID {goodId} + infusion flag {auxFlag}");
+            }
+            else
+            {
+                Console.WriteLine($"  Added Good ID {goodId}");
+            }
         }
 
         // Give care package items with their specific ItemType
