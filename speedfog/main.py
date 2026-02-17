@@ -298,9 +298,10 @@ def main() -> int:
             item_rando_output = item_rando_dir
         else:
             print(
-                "Error: Item Randomizer failed (continuing without it)",
+                "Error: Item Randomizer failed",
                 file=sys.stderr,
             )
+            return 1
 
     # Build mod unless --no-build
     if not args.no_build:
