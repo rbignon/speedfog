@@ -352,6 +352,37 @@ Example:
         var writer = new GameDataWriterE();
         writer.Write(opt, ann, graph, mergedMods, modDir, events, eventConfig, Console.WriteLine);
 
+        // 7a2. Copy non-English FMG files from Item Randomizer output.
+        // FogMod only loads and writes msg/engus/ FMGs. When Item Randomizer
+        // generates localized content (e.g., class descriptions in French),
+        // those files are in the merge-dir but FogMod never writes them out.
+        // This must run BEFORE other injectors (e.g., RunCompleteInjector) so
+        // they can layer their changes on top of the copied files.
+        if (!string.IsNullOrEmpty(config.MergeDir))
+        {
+            var mergeMsgDir = Path.Combine(config.MergeDir, "msg");
+            if (Directory.Exists(mergeMsgDir))
+            {
+                foreach (var langDir in Directory.GetDirectories(mergeMsgDir))
+                {
+                    var langName = Path.GetFileName(langDir);
+                    if (langName == "engus")
+                        continue; // FogMod already merges English FMGs
+
+                    var destDir = Path.Combine(modDir, "msg", langName);
+                    Directory.CreateDirectory(destDir);
+
+                    var files = Directory.GetFiles(langDir);
+                    foreach (var srcFile in files)
+                    {
+                        var destFile = Path.Combine(destDir, Path.GetFileName(srcFile));
+                        File.Copy(srcFile, destFile, overwrite: true);
+                    }
+                    Console.WriteLine($"Copied {files.Length} localized FMGs: msg/{langName}/");
+                }
+            }
+        }
+
         // 7b. Inject starting items (post-process EMEVD)
         // Use StartingGoods (Good IDs) instead of StartingItemLots (ItemLot IDs)
         // because Item Randomizer modifies ItemLotParam but not the items themselves
