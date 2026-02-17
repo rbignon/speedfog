@@ -66,6 +66,10 @@ weight = 6
 [zones.giant_conquering_hero_grave]
 weight = 6
 
+# Type overrides
+[zones.volcano_abductors]
+type = "boss_arena"
+
 # Boss arenas with longer fights
 [zones.stormveil_godrick]
 weight = 4
