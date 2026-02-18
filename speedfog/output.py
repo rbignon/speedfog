@@ -18,6 +18,44 @@ from speedfog.clusters import ClusterPool
 from speedfog.dag import Dag, DagNode, FogRef
 
 
+def load_vanilla_tiers(path: Path) -> dict[str, int]:
+    """Load vanilla scaling tiers from foglocations2.txt EnemyAreas section.
+
+    Parses the YAML-like file format to extract zone name → ScalingTier mapping.
+
+    Args:
+        path: Path to foglocations2.txt
+
+    Returns:
+        Dictionary of zone_name → scaling_tier (int)
+    """
+    tiers: dict[str, int] = {}
+    if not path.exists():
+        return tiers
+
+    current_name: str | None = None
+    in_enemy_areas = False
+
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            stripped = line.strip()
+            if stripped == "EnemyAreas:":
+                in_enemy_areas = True
+                continue
+            if not in_enemy_areas:
+                continue
+            # A new top-level section (non-indented, non-list line with colon)
+            if stripped and not line[0].isspace() and not line.startswith("-"):
+                break
+            if stripped.startswith("- Name:"):
+                current_name = stripped.split(":", 1)[1].strip()
+            elif stripped.startswith("ScalingTier:") and current_name is not None:
+                tiers[current_name] = int(stripped.split(":", 1)[1].strip())
+                current_name = None
+
+    return tiers
+
+
 def _effective_type(node: DagNode, dag: Dag) -> str:
     """Return the node's effective type, overriding to 'final_boss' for the end node."""
     if node.id == dag.end_id:
@@ -189,6 +227,7 @@ def dag_to_dict(
     run_complete_message: str = "RUN COMPLETE",
     chapel_grace: bool = True,
     starting_larval_tears: int = 10,
+    vanilla_tiers: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     """Convert a DAG to v4 JSON-serializable dictionary.
 
@@ -211,6 +250,8 @@ def dag_to_dict(
         run_complete_message: Text for the golden banner after final boss defeat
         chapel_grace: Whether to add a Site of Grace at Chapel of Anticipation
         starting_larval_tears: Larval Tears to give at start (for rebirth at graces)
+        vanilla_tiers: Optional zone_name → ScalingTier mapping from foglocations2.txt.
+            When provided, each node gets an original_tier field (max ScalingTier of its zones).
 
     Returns:
         Dictionary with the following structure:
@@ -311,12 +352,22 @@ def dag_to_dict(
     # Build nodes section: cluster_id -> metadata
     nodes: dict[str, dict[str, Any]] = {}
     for node in dag.nodes.values():
+        # Compute original_tier: max ScalingTier of the node's zones
+        original_tier: int | None = None
+        if vanilla_tiers:
+            zone_tiers = [
+                vanilla_tiers[z] for z in node.cluster.zones if z in vanilla_tiers
+            ]
+            if zone_tiers:
+                original_tier = max(zone_tiers)
+
         nodes[node.cluster.id] = {
             "type": _effective_type(node, dag),
             "display_name": clusters.get_display_name(node.cluster),
             "zones": node.cluster.zones,
             "layer": node.layer,
             "tier": node.tier,
+            "original_tier": original_tier,
             "weight": node.cluster.weight,
             "exits": [],
         }
@@ -465,6 +516,7 @@ def export_json(
     run_complete_message: str = "RUN COMPLETE",
     chapel_grace: bool = True,
     starting_larval_tears: int = 10,
+    vanilla_tiers: dict[str, int] | None = None,
 ) -> None:
     """Export a DAG to v4 formatted JSON file.
 
@@ -483,6 +535,7 @@ def export_json(
         run_complete_message: Text for the golden banner after final boss defeat
         chapel_grace: Whether to add a Site of Grace at Chapel of Anticipation
         starting_larval_tears: Larval Tears to give at start (for rebirth at graces)
+        vanilla_tiers: Optional zone_name → ScalingTier mapping from foglocations2.txt
     """
     data = dag_to_dict(
         dag,
@@ -498,6 +551,7 @@ def export_json(
         run_complete_message,
         chapel_grace,
         starting_larval_tears,
+        vanilla_tiers,
     )
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)

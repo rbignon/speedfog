@@ -19,6 +19,7 @@ from speedfog.output import (
     export_json,
     export_spoiler_log,
     load_fog_data,
+    load_vanilla_tiers,
 )
 
 
@@ -128,6 +129,12 @@ def main() -> int:
     if args.verbose and fog_data:
         print(f"Loaded {len(fog_data)} fogs from {fog_data_path}")
 
+    # Load vanilla scaling tiers for original_tier in graph.json
+    foglocations_path = clusters_path.parent / "foglocations2.txt"
+    vanilla_tiers = load_vanilla_tiers(foglocations_path)
+    if args.verbose and vanilla_tiers:
+        print(f"Loaded {len(vanilla_tiers)} vanilla tiers from {foglocations_path}")
+
     # Generate DAG
     if args.verbose:
         mode = "fixed seed" if config.seed != 0 else "auto-reroll"
@@ -199,6 +206,7 @@ def main() -> int:
         run_complete_message=config.run_complete_message,
         chapel_grace=config.chapel_grace,
         starting_larval_tears=config.starting_items.larval_tears,
+        vanilla_tiers=vanilla_tiers,
     )
     print(f"Written: {json_path}")
     if starting_goods:

@@ -9,6 +9,7 @@ from speedfog.output import (
     _make_fullname,
     dag_to_dict,
     export_spoiler_log,
+    load_vanilla_tiers,
 )
 
 
@@ -1311,3 +1312,120 @@ class TestMakeFullnameCrossMapWarps:
             "AEG099_001_9000", "academy_entrance", pool, fog_data, is_entry=True
         )
         assert result == "m14_00_00_00_AEG099_001_9000"
+
+
+# =============================================================================
+# load_vanilla_tiers tests
+# =============================================================================
+
+
+class TestLoadVanillaTiers:
+    """Tests for load_vanilla_tiers function."""
+
+    def test_parses_enemy_areas(self, tmp_path: Path):
+        """Parses Name and ScalingTier from EnemyAreas section."""
+        content = """\
+Items: []
+EnemyAreas:
+- Name: limgrave
+  Groups: 123
+  ScalingTier: 1
+- Name: stormveil
+  Cols: m10_00_00_00_h001
+  ScalingTier: 3
+- Name: caelid
+  ScalingTier: 10
+"""
+        p = tmp_path / "foglocations2.txt"
+        p.write_text(content, encoding="utf-8")
+
+        tiers = load_vanilla_tiers(p)
+        assert tiers == {"limgrave": 1, "stormveil": 3, "caelid": 10}
+
+    def test_missing_file_returns_empty(self, tmp_path: Path):
+        """Returns empty dict when file doesn't exist."""
+        p = tmp_path / "nonexistent.txt"
+        tiers = load_vanilla_tiers(p)
+        assert tiers == {}
+
+    def test_no_enemy_areas_returns_empty(self, tmp_path: Path):
+        """Returns empty dict when file has no EnemyAreas section."""
+        p = tmp_path / "foglocations2.txt"
+        p.write_text("Items: []\n", encoding="utf-8")
+        tiers = load_vanilla_tiers(p)
+        assert tiers == {}
+
+    def test_real_file(self):
+        """Smoke test against the real foglocations2.txt."""
+        real_path = Path(__file__).parent.parent / "data" / "foglocations2.txt"
+        if not real_path.exists():
+            return  # Skip if not available
+        tiers = load_vanilla_tiers(real_path)
+        # Should have many entries
+        assert len(tiers) > 50
+        # Spot-check known values
+        assert tiers["limgrave"] == 1
+        assert tiers["stormveil"] == 3
+        assert tiers["stormveil_godrick"] == 4
+
+
+# =============================================================================
+# original_tier in dag_to_dict tests
+# =============================================================================
+
+
+class TestOriginalTier:
+    """Tests for original_tier field in dag_to_dict output."""
+
+    def test_none_when_no_vanilla_tiers(self):
+        """original_tier is None when vanilla_tiers not provided."""
+        result = _make_result()
+        for node_data in result["nodes"].values():
+            assert node_data["original_tier"] is None
+
+    def test_populated_from_vanilla_tiers(self):
+        """original_tier is set from vanilla_tiers mapping."""
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        vanilla_tiers = {"z_start": 1, "z_a": 5, "z_b1": 8, "z_b2": 12, "z_end": 20}
+        result = dag_to_dict(dag, clusters, vanilla_tiers=vanilla_tiers)
+
+        assert result["nodes"]["c_start"]["original_tier"] == 1
+        assert result["nodes"]["c_a"]["original_tier"] == 5
+        # c_b has zones z_b1 (8) and z_b2 (12) → max is 12
+        assert result["nodes"]["c_b"]["original_tier"] == 12
+        assert result["nodes"]["c_end"]["original_tier"] == 20
+
+    def test_max_of_multiple_zones(self):
+        """original_tier uses max tier across multiple zones in a node."""
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        # Only provide tiers for the multi-zone node (c_b has z_b1, z_b2)
+        vanilla_tiers = {"z_b1": 3, "z_b2": 7}
+        result = dag_to_dict(dag, clusters, vanilla_tiers=vanilla_tiers)
+
+        assert result["nodes"]["c_b"]["original_tier"] == 7
+        # Nodes with no matching zones get None
+        assert result["nodes"]["c_start"]["original_tier"] is None
+
+    def test_partial_zone_coverage(self):
+        """original_tier works when only some zones have tiers."""
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        # Only z_b2 has a tier, z_b1 doesn't
+        vanilla_tiers = {"z_b2": 15}
+        result = dag_to_dict(dag, clusters, vanilla_tiers=vanilla_tiers)
+
+        assert result["nodes"]["c_b"]["original_tier"] == 15
