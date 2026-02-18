@@ -32,6 +32,7 @@ def generate_item_config(config: Config, seed: int) -> dict[str, Any]:
             "dlc": config.item_randomizer.dlc,
             "weaponreqs": config.item_randomizer.remove_requirements,
             "sombermode": config.item_randomizer.reduce_upgrade_cost,
+            "nerfgargoyles": config.item_randomizer.nerf_gargoyles,
         },
         "preset": "speedfog_enemy",
         # RandomizerHelper.dll defaults almost everything to true when not

@@ -269,6 +269,9 @@ class ItemRandomizerConfig:
     auto_upgrade_dropped: bool = True
     reduce_upgrade_cost: bool = True
     dlc: bool = True
+    nerf_gargoyles: bool = (
+        True  # Disable damage tick in Valiant Gargoyles's poison cloud
+    )
     item_preset: bool = True  # Enable item placement preset
     item_preset_path: str = ""  # Custom preset path (empty = built-in default)
 
@@ -428,6 +431,7 @@ class Config:
                     "reduce_upgrade_cost", True
                 ),
                 dlc=item_randomizer_section.get("dlc", True),
+                nerf_gargoyles=item_randomizer_section.get("nerf_gargoyles", True),
                 item_preset=item_randomizer_section.get("item_preset", True),
                 item_preset_path=item_randomizer_section.get("item_preset_path", ""),
             ),

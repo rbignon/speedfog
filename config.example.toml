@@ -209,6 +209,10 @@ reduce_upgrade_cost = true
 # DLC enemies are mixed with base game (no separate silo)
 dlc = true
 
+# Disable damage tick in Valiant Gargoyles's poison cloud (default: true)
+# Sets the magic damage of their poison attacks to 0
+nerf_gargoyles = true
+
 # Enable item placement preset (default: true)
 # Weapons and talismans go to boss drops, seeds/tears to important locations.
 item_preset = true
