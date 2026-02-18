@@ -151,7 +151,12 @@ public static class ZoneTrackingInjector
 
             foreach (var evt in emevd.Events)
             {
-                // Find WarpPlayer instruction (bank 2003, id 14) with literal map bytes
+                // First pass: find all matching WarpPlayer positions and their flag IDs.
+                // Some events (e.g., lie-down warps like Placidusax teleport) have multiple
+                // WarpPlayer instructions on different execution paths. We must inject
+                // SetEventFlag before ALL of them, not just the first.
+                var warpPositions = new List<(int index, int flagId)>();
+
                 for (int i = 0; i < evt.Instructions.Count; i++)
                 {
                     var instr = evt.Instructions[i];
@@ -211,25 +216,36 @@ public static class ZoneTrackingInjector
                         destOnlyMatches++;
                     }
 
-                    // Insert SetEventFlag(flagId, ON) before WarpPlayer
+                    warpPositions.Add((i, flagId));
+                }
+
+                if (warpPositions.Count == 0)
+                    continue;
+
+                // Second pass: insert SetEventFlag before each WarpPlayer, from last to first
+                // to avoid index shifting affecting earlier positions.
+                for (int j = warpPositions.Count - 1; j >= 0; j--)
+                {
+                    var (warpIdx, flagId) = warpPositions[j];
+
                     var setFlagInstr = events.ParseAdd(
                         $"SetEventFlag(TargetEventFlagType.EventFlag, {flagId}, ON)");
-                    evt.Instructions.Insert(i, setFlagInstr);
-                    injectedFlags.Add(flagId);
+                    evt.Instructions.Insert(warpIdx, setFlagInstr);
 
                     // Shift Parameter entries for instructions at or after insertion point
                     foreach (var param in evt.Parameters)
                     {
-                        if (param.InstructionIndex >= i)
+                        if (param.InstructionIndex >= warpIdx)
                         {
                             param.InstructionIndex++;
                         }
                     }
-
-                    totalInjected++;
-                    fileModified = true;
-                    break;  // Alt-warp uses same destination map; indices shifted, so stop
                 }
+
+                foreach (var (_, fid) in warpPositions)
+                    injectedFlags.Add(fid);
+                totalInjected += warpPositions.Count;
+                fileModified = true;
             }
 
             if (fileModified)
