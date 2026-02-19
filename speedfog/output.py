@@ -388,6 +388,9 @@ def dag_to_dict(
         }
         if from_zone:
             exit_entry["from"] = from_zone
+            from_text = clusters.zone_names.get(from_zone)
+            if from_text:
+                exit_entry["from_text"] = from_text
         exit_entry["to"] = target_cluster_id
         nodes[source_cluster_id]["exits"].append(exit_entry)
 
