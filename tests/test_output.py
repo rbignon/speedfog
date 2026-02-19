@@ -529,6 +529,29 @@ class TestNodeExits:
         assert len(b_exits) == 1
         assert b_exits[0]["from"] == "z_b1"
 
+    def test_exit_from_text_from_zone_names(self):
+        """Exit 'from_text' is populated from zone_names when available."""
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={"z_start": "Starting Area", "z_b1": "Branch B Room 1"},
+        )
+        result = dag_to_dict(dag, clusters)
+        # start exits have from=z_start → from_text present
+        for exit_item in result["nodes"]["c_start"]["exits"]:
+            assert exit_item["from_text"] == "Starting Area"
+        # branch b exit has from=z_b1 → from_text present
+        b_exits = result["nodes"]["c_b"]["exits"]
+        assert b_exits[0]["from_text"] == "Branch B Room 1"
+
+    def test_exit_from_text_absent_when_zone_name_missing(self):
+        """Exit has no 'from_text' when zone_names lacks the zone ID."""
+        result = _make_result()  # uses zone_names={}
+        for node_data in result["nodes"].values():
+            for exit_item in node_data["exits"]:
+                assert "from_text" not in exit_item
+
     def test_exit_from_uses_fogref_zone_even_when_not_in_exit_fogs(self):
         """Exit 'from' uses FogRef zone even when fog_id not in cluster exit_fogs."""
         dag = make_test_dag()
