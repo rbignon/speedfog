@@ -36,7 +36,6 @@ language = "Français"
 locale = "fr"
 version = "1.0"
 
-
 # =============================================================================
 # Types de clusters
 # =============================================================================
@@ -48,7 +47,6 @@ legacy_dungeon = "donjon majeur"
 mini_dungeon = "donjon mineur"
 boss_arena = "arène de boss"
 major_boss = "boss majeur"
-
 
 # =============================================================================
 # Noms propres — DRAFT
@@ -168,7 +166,7 @@ major_boss = "boss majeur"
 "Jori, Elder Inquisitor" = "Jori, doyen inquisiteur"
 "Loretta, Knight of the Haligtree" = "Loretta, chevalière de l'Arbre-Sacré"
 "Magma Wrym Makar" = "Makar le Dragon du magma"
-"Malenia, Blade of Miquella" = "Malenia, Lame de Miquella"
+"Malenia, Blade of Miquella" = "Malenia, Épée de Miquella"
 "Maliketh the Black Blade" = "Maliketh, la Lame noire"
 "Manus Metyr" = "Manus Metyr"
 "Margit, the Fell Omen" = "Margit le Déchu"
@@ -181,7 +179,7 @@ major_boss = "boss majeur"
 "Rellana, Twin Moon Knight" = "Rellana, chevalière bi-lunaire"
 "Romina, Saint of the Bud" = "Romina, sainte du Bourgeon"
 "Royal Knight Loretta" = "Loretta, chevalière royale"
-"Royal Revenant" = "Spectre royal"
+"Royal Revenant" = "le Revenant Royal"
 "Rykard, Lord of Blasphemy" = "Rykard, seigneur du blasphème"
 "Sellen" = "Sellen"
 
@@ -193,7 +191,7 @@ major_boss = "boss majeur"
 "Cerulean Coast" = "la Côte Céruléenne"
 "Charo's Hidden Grave" = "la Tombe Cachée de Charo"
 "Consecrated Snowfield" = "les Champs enneigés consacrés"
-"Dragonbarrow" = "le Tertre du Dragon"
+"Dragonbarrow" = "le Tertre Draconique"
 "Ellac River" = "la Rivière Ellac"
 "Flame Peak" = "le Pic de la Flamme"
 "Gravesite Plain" = "la Plaine du Cimetière"
@@ -410,7 +408,6 @@ major_boss = "boss majeur"
 "Wyndham Catacombs" = "Catacombes de Wyndham"
 "Yelough Anix Tunnel" = "Galerie d'anis jaune"
 
-
 # =============================================================================
 # Patterns — labels de fog gates (champ text)
 # =============================================================================
@@ -432,7 +429,6 @@ major_boss = "boss majeur"
 "{zone} entrance" = "Entrée de {zone}"
 "{zone} exit" = "Sortie de {zone}"
 "{zone1}-{zone2} boundary" = "Frontière {zone1}-{zone2}"
-
 
 # =============================================================================
 # Patterns — descriptions de fog gates (champ side_text)
@@ -472,7 +468,6 @@ major_boss = "boss majeur"
 "at the front of the {location} boss arena" = "devant l'arène de boss de {location}"
 "{zone1}-{zone2} boundary" = "frontière {zone1}-{zone2}"
 
-
 # =============================================================================
 # Patterns — segments de display_name (noms composites "Region - Location - Boss")
 # =============================================================================
@@ -494,7 +489,6 @@ major_boss = "boss majeur"
 "After Waypoint" = "Après le point de passage"
 "Before Divine Tower" = "Avant la Tour divine"
 
-
 # =============================================================================
 # Overrides — labels spéciaux (champ text)
 # Traductions complètes pour les labels qui ne matchent aucun pattern.
@@ -511,7 +505,6 @@ major_boss = "boss majeur"
 "Sending gate after Fia's Champions" = "Portail après les Champions de Fia"
 "Ordina Evergaol" = "Carcan de l'Éternel d'Ordina"
 "Ordina Evergaol return" = "Retour du Carcan d'Ordina"
-"Liurnia-Ainsel boundary" = "Frontière Liurnia-Ainsel"
 "Hinterland entrance" = "Entrée de l'Arrière-pays"
 "Fell Twins return" = "Retour des Jumeaux abominables"
 "Divine Tower of Liurnia Door, only required if key items are randomized" = "Porte de la Tour divine de Liurnia (uniquement si les objets clés sont randomisés)"
@@ -540,23 +533,14 @@ major_boss = "boss majeur"
 "Manus Metyr south gate on west side" = "Manus Metyr porte sud (côté ouest)"
 "Manus Metyr north gate on west side" = "Manus Metyr porte nord (côté ouest)"
 "Manus Metyr main gate from north" = "Manus Metyr porte principale (depuis le nord)"
-"Gideon front left" = "Gideon (avant gauche)"
-"Gideon front" = "Gideon (devant)"
-"Godfrey side" = "Godfrey (côté)"
 "Godfrey side left" = "Godfrey (côté gauche)"
 "Godfrey side right" = "Godfrey (côté droit)"
-"Godfrey back left" = "Godfrey (arrière gauche)"
-"Godfrey back right" = "Godfrey (arrière droit)"
-"Godfrey back center" = "Godfrey (arrière centre)"
 "Fire Giant left front" = "Géant de feu (avant gauche)"
 "Fire Giant right front" = "Géant de feu (avant droit)"
 "Deeproot boss front" = "Boss des Profondeurs de Fonderacine (devant)"
 "Darklight Catacombs entrance" = "Entrée des Catacombes d'Ombrelumière"
 "Darklight Catacombs exit" = "Sortie des Catacombes d'Ombrelumière"
 "Auriza entrance" = "Entrée d'Auriza"
-"Messmer entrance" = "Entrée de Messmer"
-"Belurat entrance" = "Entrée de Belurat"
-
 
 # =============================================================================
 # Overrides — descriptions non-formulaïques (champ side_text)
@@ -570,7 +554,6 @@ major_boss = "boss majeur"
 "at the top of the steps before Raya Lucaria rooftops section" = "en haut des escaliers avant la section des toits de Raya Lucaria"
 "on the steps to Raya Lucaria rooftops section" = "dans les escaliers vers la section des toits de Raya Lucaria"
 "using the sending gate before the elevator to Grand Library" = "en utilisant le portail avant l'ascenseur vers la Grande Bibliothèque"
-"at the back left of Red Wolf's arena" = "à l'arrière gauche de l'arène du Loup Rouge"
 
 # --- Ainsel / Siofra / Nokron ---
 "after the tunnel from Ainsel River Main" = "après le tunnel depuis l'Ainsel Principale"
@@ -579,18 +562,13 @@ major_boss = "boss majeur"
 "after Dragonkin of Nokstella" = "après le Rejeton-Dragon de Nokstella"
 "after Valiant Gargoyles in the small room next to the main entrance" = "après les Gargouilles Vaillantes, dans la petite salle à côté de l'entrée principale"
 "resting in the coffin after defeating the boss" = "en se reposant dans le cercueil après avoir vaincu le boss"
-"at the side exit of Mimic Tear's arena" = "à la sortie latérale de l'arène de la Larme imitatrice"
 "using the sending gate after Fia's Champions" = "en utilisant le portail après les Champions de Fia"
 
 # --- Altus / Shaded Castle ---
 "using the new sending gate before the Shaded Castle swamp" = "en utilisant le nouveau portail avant le marais du Bastiombre"
-"at the back of Demi-Human Queen Gilika's arena" = "derrière l'arène de Gilika, reine semi-humaine"
 
 # --- Caelid ---
-"inside Caelid Colosseum" = "dans le Colisée de Caelid"
-"at the back of Nox Duo's arena" = "derrière l'arène du Duo Nox"
 "at the Gael Tunnel rear exit, North of the Third Church of Marika" = "à la sortie arrière de la Galerie de Gael, au nord de la Troisième église de Marika"
-"at the back of Frenzied Duelist's arena" = "derrière l'arène du Duelliste frénétique"
 "at the dropdown before Frenzied Duelist's arena" = "au saut avant l'arène du Duelliste frénétique"
 "at the bottom of the elevator before the Radahn warp" = "en bas de l'ascenseur avant la téléportation vers Radahn"
 "using the Sending Gate before Starscourge Radahn" = "en utilisant le portail avant Radahn le Fléau des astres"
@@ -606,36 +584,24 @@ major_boss = "boss majeur"
 
 # --- Tours Divines ---
 "up the stairs to Caelid Divine Tower's Two Fingers" = "en haut des escaliers vers les Deux Doigts de la Tour Divine de Caelid"
-"at the back of Godskin Apostle's arena" = "derrière l'arène de l'Apôtre sanctechair"
 "at the door to Caelid Divine Tower's Two Fingers" = "à la porte des Deux Doigts de la Tour Divine de Caelid"
 "at the base of the elevator to the Divine Tower of East Altus" = "au pied de l'ascenseur vers la Tour divine d'Altus-Est"
 "at the elevator to the Divine Tower of East Altus" = "à l'ascenseur vers la Tour divine d'Altus-Est"
-"at the exit from Divine Tower of East Altus" = "à la sortie de la Tour divine d'Altus-Est"
 "approaching the Divine Tower of East Altus gate, or using the grace menu" = "en approchant de la porte de la Tour divine d'Altus-Est, ou via le menu de la grâce"
 "using the sending gate in the first half of the Divine Tower of Limgrave" = "en utilisant le portail dans la première moitié de la Tour divine de Nécrolimbe"
 
 # --- Chapel / Stranded Graveyard ---
-"at the side exit of Grafted Scion's arena" = "à la sortie latérale de l'arène du Rejeton greffé"
 "at the door from Cave of Knowledge" = "à la porte depuis la Grotte du savoir"
-"at the exit to Limgrave" = "à la sortie vers Nécrolimbe"
 "at the door to Stranded Graveyard" = "à la porte vers le Cimetière abandonné"
 "at the back entrance from the Seaside Ruins beach" = "à l'entrée arrière depuis la plage des Ruines du littoral"
-"at the back of Soldier of Godrick's arena" = "derrière l'arène du Soldat de Godrick"
 
 # --- Castle Ensis / DLC ---
-"at the back of Rellana's arena" = "derrière l'arène de Rellana"
 "on the bridge from Gravesite Plain" = "sur le pont depuis la Plaine du Cimetière"
 "in the Spelldrake Talisman room below Castle Ensis" = "dans la salle du Talisman Spelldrake sous le Château d'Ensis"
-"at the side of Divine Beast Dancing Lion's arena" = "sur le côté de l'arène de la Bête Divine Lion Dansant"
 
 # --- Farum Azula ---
 "at the Imp Seal leading up to the Dragon Temple Lift grace" = "au sceau d'imp menant à la grâce de l'Ascenseur du Temple des dragons"
 "lying down in front of the tempest below the great bridge" = "en s'allongeant devant la tempête sous le grand pont"
-"on the balcony above Godskin Duo's arena" = "sur le balcon au-dessus de l'arène du Duo sanctechair"
-"at the back right of Godskin Duo's arena" = "à l'arrière droit de l'arène du Duo sanctechair"
-"at the front left of Godskin Duo's arena" = "à l'avant gauche de l'arène du Duo sanctechair"
-"at the front right of Godskin Duo's arena" = "à l'avant droit de l'arène du Duo sanctechair"
-"at the back left of Godskin Duo's arena" = "à l'arrière gauche de l'arène du Duo sanctechair"
 "down the elevator from Dragon Temple Lift grace" = "en bas de l'ascenseur depuis la grâce de l'Ascenseur du Temple des dragons"
 "before back right of Godskin Duo arena, down Dragon Temple stairs" = "avant l'arrière droit de l'arène du Duo sanctechair, en bas des escaliers du Temple des dragons"
 "before back left of Godskin Duo arena, by the crumbled stairs" = "avant l'arrière gauche de l'arène du Duo sanctechair, près des escaliers effondrés"
@@ -646,7 +612,6 @@ major_boss = "boss majeur"
 
 # --- Fissure / Jagged Peak ---
 "before the boss at Fissure Depths" = "avant le boss des Profondeurs de la Fissure"
-"at the exit to Jagged Peak" = "à la sortie vers le Pic Dentelé"
 
 # --- Fire Giant / Forge ---
 "in the left front of Fire Giant's arena, closer to the forge" = "à l'avant gauche de l'arène du Géant de feu, plus proche de la forge"
@@ -659,7 +624,6 @@ major_boss = "boss majeur"
 "at the bottom of the elevator before Elphael" = "en bas de l'ascenseur avant Elphael"
 
 # --- Leyndell ---
-"at the front entrance to Gideon's arena" = "à l'entrée principale de l'arène de Gideon"
 "at the Ashen Capital entrance from Capital Rampart" = "à l'entrée de la Capitale de Cendres depuis le Rempart de la capitale"
 "at the Leyndell entrance from Capital Rampart" = "à l'entrée de Leyndell depuis le Rempart de la capitale"
 "outside of Godfrey's arena at the stairs which go down to the Marika statue" = "à l'extérieur de l'arène de Godfrey, aux escaliers descendant vers la statue de Marika"
@@ -678,42 +642,27 @@ major_boss = "boss majeur"
 "outside of Godfrey's arena at the center back exit" = "à l'extérieur de l'arène de Godfrey à la sortie arrière centrale"
 "outside of Godfrey's arena with a treasure item" = "à l'extérieur de l'arène de Godfrey avec un trésor"
 "outside of Gideon's arena with a treasure item" = "à l'extérieur de l'arène de Gideon avec un trésor"
-"inside Royal Colosseum" = "dans le Colisée royal"
 "the path up to the Erdtree" = "le chemin montant vers l'Arbre-Monde"
-"at the back of Morgott's arena" = "derrière l'arène de Morgott"
-"at the exit to Forbidden Lands" = "à la sortie vers les Terres interdites"
 "inside the Fell Twins' arena" = "dans l'arène des Jumeaux abominables"
 "finishing the Fell Twins' arena fight" = "en terminant le combat de l'arène des Jumeaux abominables"
 "at the entrance to Leyndell Catacombs at the bottom of the room with the pipes" = "à l'entrée des Catacombes de Leyndell, en bas de la salle aux tuyaux"
-"at the entrance to Subterranean Shunning-Grounds" = "à l'entrée de la Prison souterraine des parias"
 
 # --- Limgrave ---
-"inside Limgrave Colosseum" = "dans le Colisée de Nécrolimbe"
 "at the side path to Limgrave Divine Tower" = "sur le chemin latéral vers la Tour divine de Nécrolimbe"
-"at the back of Margit's arena" = "derrière l'arène de Margit"
 "opening the transporter chest in Patches' room" = "en ouvrant le coffre piégé dans la salle de Pat"
-"at the back of Mad Pumpkin Head's arena" = "derrière l'arène de la Tête de citrouille démente"
 "after Coastal Cave boss to Dragon Church" = "après le boss de la Grotte marine vers l'Église du Dragon"
-"at the back of Demi-Human Chiefs' arena" = "derrière l'arène des Chefs Semi-Humains"
 
 # --- Liurnia ---
-"at the back of Crystallians' arena" = "derrière l'arène des Cristaliens"
-"at the back of Royal Revenant's arena" = "derrière l'arène du Revenant Royal"
-"at the back of Bloodhound Knight's arena" = "derrière l'arène du Chevalier-limier"
-"at the back of Loretta's arena" = "derrière l'arène de Loretta"
 "using the new sending gate at the Caria Manor entrance" = "en utilisant le nouveau portail à l'entrée du Manoir de Caria"
 "after Lakeside Crystal Cave boss" = "après le boss de la Grotte cristalline du lac"
 "opening the door at the bottom of the flipped tower" = "en ouvrant la porte en bas de la tour inversée"
 
 # --- Mohgwyn ---
-"at the back right of Mohg's arena" = "à l'arrière droit de l'arène de Mohg"
-"at the back left of Mohg's arena" = "à l'arrière gauche de l'arène de Mohg"
 "after Mohg's arena at the back right" = "après l'arène de Mohg, côté arrière droit"
 "after Mohg's arena at the back left" = "après l'arène de Mohg, côté arrière gauche"
 
 # --- Mountaintops / Snowfield ---
 "using the new sending gate at the Castle Sol entrance" = "en utilisant le nouveau portail à l'entrée du Solcastel"
-"at the back of Commander Niall's arena" = "derrière l'arène du Commandant Niall"
 "using the Rold Medallion at Forbidden Lands" = "en utilisant le Médaillon de Rold aux Terres interdites"
 "using the Haligtree secret medallions at Forbidden Lands" = "en utilisant les médaillons secrets de l'Arbre-Sacré aux Terres interdites"
 "arriving in Ordina Evergaol" = "en arrivant au Carcan de l'Éternel d'Ordina"
@@ -724,15 +673,11 @@ major_boss = "boss majeur"
 "arriving at Hidden Path to the Haligtree at the Grand Lift of Rold" = "en arrivant au Chemin secret vers l'Arbre-Sacré depuis le Grand Ascenseur de Rold"
 
 # --- Sealed Tunnel ---
-"at the back of Onyx Lord's arena" = "derrière l'arène du Seigneur d'onyx"
 "using the chest in the actual entrance" = "en utilisant le coffre à l'entrée"
 "using the chest before the main hallway" = "en utilisant le coffre avant le couloir principal"
 "using the chest at the end of the main hallway" = "en utilisant le coffre au bout du couloir principal"
 "using the chest behind the illusory wall" = "en utilisant le coffre derrière le mur illusoire"
 "after Sealed Tunnel boss" = "après le boss de la Galerie scellée"
-
-# --- Precipice / Magma Wyrm ---
-"at the back of Magma Wyrm Makar's arena" = "derrière l'arène de Makar le Dragon du magma"
 
 # --- Roundtable Hold ---
 "in Roundtable Hold at the balcony overlooking the first floor" = "au Bastion de la Table ronde, au balcon surplombant le premier étage"
@@ -742,14 +687,9 @@ major_boss = "boss majeur"
 "at the shortcut door to the right of Golden Hippopotamus's arena" = "à la porte raccourci à droite de l'arène de l'Hippopotame Doré"
 "at the top of the elevator to Specimen Storehouse" = "en haut de l'ascenseur vers l'Entrepôt de Spécimens"
 "using the coffin beneath Shadow Keep" = "en utilisant le cercueil sous le Donjon de l'Ombre"
-"at the left side of Golden Hippopotamus's arena" = "sur le côté gauche de l'arène de l'Hippopotame Doré"
-"at the right side of Golden Hippopotamus's arena" = "sur le côté droit de l'arène de l'Hippopotame Doré"
 "at the normal exit to the left of Golden Hippopotamus's arena" = "à la sortie normale à gauche de l'arène de l'Hippopotame Doré"
 "at the tunnel entrance from Scadu Altus" = "à l'entrée du tunnel depuis Scadu Altus"
 "past the statue after using O Mother" = "après la statue, après avoir utilisé Ô Mère"
-"at the back of Romina's arena" = "derrière l'arène de Romina"
-"at the back of Jori's arena" = "derrière l'arène de Jori"
-"at the back of Gaius's arena" = "derrière l'arène de Gaius"
 "at the side entrance, the right North gate" = "à l'entrée latérale, la porte nord à droite"
 "at the side entrance, the left South gate" = "à l'entrée latérale, la porte sud à gauche"
 "at the main entrance gate" = "à la porte d'entrée principale"
@@ -762,21 +702,9 @@ major_boss = "boss majeur"
 "on the doorway on the second story opposite the Sending Gate" = "à la porte du deuxième étage en face du portail"
 "using the Sending Gate after Volcano Manor temple" = "en utilisant le portail après le temple du Manoir du volcan"
 "before Abductor Virgins' arena. it can be reached from main town dropping down outside Temple of Eiglay" = "avant l'arène des Vierges Ravisseuses — accessible depuis la ville principale en sautant à l'extérieur du Temple d'Eiglay"
-"at the back of Abductor Virgins' arena" = "derrière l'arène des Vierges Ravisseuses"
 "at the doorway from Mt. Gelmir" = "à la porte depuis le Mont Gelmir"
-"at the back left of Godskin Noble's arena" = "à l'arrière gauche de l'arène du Noble sanctechair"
 "behind the altar coming from the manor" = "derrière l'autel en venant du manoir"
 "at the elevator to West Rampart" = "à l'ascenseur vers le Rempart Ouest"
-"at the exit to Rauh Ruins" = "à la sortie vers les Ruines de Rauh"
 
 # --- Abduction ---
 "getting abducted at the bottom of the elevator. this requires dying in the bottom 30 meters, not above that" = "en se faisant enlever au bas de l'ascenseur — il faut mourir dans les 30 derniers mètres, pas au-dessus"
-
-# --- Divers post-boss ---
-"after Nox Duo's arena in Sellia Chair-Crypt" = "après l'arène du Duo Nox dans la Crypte de Sellia"
-"after Sanguine Noble's arena in Writheblood Ruins" = "après l'arène du Noble sanglant dans les Ruines Grouille-Sang"
-"after Royal Revenant's arena in Kingsrealm Ruins" = "après l'arène du Revenant Royal dans les Ruines du domaine royal"
-"after Demi-Human Queen Gilika's arena in Lux Ruins" = "après l'arène de Gilika, reine semi-humaine dans les Ruines de Lux"
-"after Mad Pumpkin Head's arena in Waypoint Ruins" = "après l'arène de la Tête de citrouille démente dans le Relais en ruines"
-"after Mad Pumpkin Heads' arena in Caelem Ruins" = "après l'arène des Têtes de citrouille démentes dans les Ruines de Caelem"
-"after Godskin Duo arena" = "après l'arène du Duo sanctechair"
