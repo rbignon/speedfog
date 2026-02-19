@@ -65,6 +65,9 @@ data/er-common.emedf.json
 data/clusters.json
 data/fog_data.json
 
+# Generated i18n data (from tools/update_i18n_names.py)
+data/i18n/fmg_names.json
+
 # Keep example config
 !config.example.toml
 
