@@ -201,7 +201,6 @@ def make_config(
     legacy_dungeons: int = 1,
     bosses: int = 5,
     mini_dungeons: int = 5,
-    total_weight: int = 30,
     tolerance: int = 5,
     min_layers: int = 6,
     max_layers: int = 10,
@@ -210,7 +209,6 @@ def make_config(
     return Config.from_dict(
         {
             "budget": {
-                "total_weight": total_weight,
                 "tolerance": tolerance,
             },
             "requirements": {
@@ -399,11 +397,10 @@ class TestPathValidation:
 
 
 class TestWeightValidation:
-    """Tests for path weight validation."""
+    """Tests for path weight spread validation."""
 
-    def test_underweight_path_warning(self):
-        """Path with weight below budget-tolerance produces warning."""
-        # Create DAG with low weight
+    def test_single_path_no_spread_warning(self):
+        """Single-path DAG has zero spread, no weight warnings."""
         dag = make_dag_with_content(
             legacy_count=0,
             mini_dungeon_count=1,
@@ -412,7 +409,6 @@ class TestWeightValidation:
             layer_count=2,
         )
         config = make_config(
-            total_weight=30,
             tolerance=5,
             legacy_dungeons=0,
             bosses=0,
@@ -422,23 +418,64 @@ class TestWeightValidation:
 
         result = validate_dag(dag, config)
 
-        # Underweight is a warning
-        assert any(
-            "weight" in w.lower() or "under" in w.lower() for w in result.warnings
-        )
+        weight_warnings = [w for w in result.warnings if "spread" in w.lower()]
+        assert weight_warnings == []
 
-    def test_overweight_path_warning(self):
-        """Path with weight above budget+tolerance produces warning."""
-        # Create DAG with high weight
-        dag = make_dag_with_content(
-            legacy_count=0,
-            mini_dungeon_count=1,
-            boss_count=0,
-            path_weight=50,
-            layer_count=2,
+    def test_spread_exceeds_tolerance_warning(self):
+        """Multi-path DAG with spread > tolerance produces warning."""
+        from speedfog.dag import FogRef
+
+        # Build a forked DAG: start -> a(5) -> end, start -> b(20) -> end
+        # Path weights: 0+5+5=10 and 0+20+5=25, spread=15 > tolerance=5
+        dag = Dag(seed=42)
+        dag.add_node(
+            DagNode(
+                id="start",
+                cluster=make_cluster("cs", cluster_type="start", weight=0),
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+                exit_fogs=[],
+            )
         )
+        dag.add_node(
+            DagNode(
+                id="a",
+                cluster=make_cluster("ca", weight=5),
+                layer=1,
+                tier=1,
+                entry_fogs=[FogRef("f1", "z")],
+                exit_fogs=[],
+            )
+        )
+        dag.add_node(
+            DagNode(
+                id="b",
+                cluster=make_cluster("cb", weight=20),
+                layer=1,
+                tier=1,
+                entry_fogs=[FogRef("f2", "z")],
+                exit_fogs=[],
+            )
+        )
+        dag.add_node(
+            DagNode(
+                id="end",
+                cluster=make_cluster("ce", cluster_type="final_boss", weight=5),
+                layer=2,
+                tier=1,
+                entry_fogs=[FogRef("f3", "z"), FogRef("f4", "z")],
+                exit_fogs=[],
+            )
+        )
+        dag.add_edge("start", "a", FogRef("f1", "z"), FogRef("f1", "z"))
+        dag.add_edge("start", "b", FogRef("f2", "z"), FogRef("f2", "z"))
+        dag.add_edge("a", "end", FogRef("f3", "z"), FogRef("f3", "z"))
+        dag.add_edge("b", "end", FogRef("f4", "z"), FogRef("f4", "z"))
+        dag.start_id = "start"
+        dag.end_id = "end"
+
         config = make_config(
-            total_weight=30,
             tolerance=5,
             legacy_dungeons=0,
             bosses=0,
@@ -448,22 +485,62 @@ class TestWeightValidation:
 
         result = validate_dag(dag, config)
 
-        # Overweight is a warning
-        assert any(
-            "weight" in w.lower() or "over" in w.lower() for w in result.warnings
-        )
+        assert any("spread" in w.lower() for w in result.warnings)
 
-    def test_balanced_path_no_warning(self):
-        """Path with weight within budget range produces no weight warnings."""
-        dag = make_dag_with_content(
-            legacy_count=0,
-            mini_dungeon_count=1,
-            boss_count=0,
-            path_weight=30,
-            layer_count=2,
+    def test_spread_within_tolerance_no_warning(self):
+        """Multi-path DAG with spread <= tolerance produces no weight warning."""
+        from speedfog.dag import FogRef
+
+        # Two paths with equal weight → spread = 0
+        dag = Dag(seed=42)
+        dag.add_node(
+            DagNode(
+                id="start",
+                cluster=make_cluster("cs", cluster_type="start", weight=0),
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+                exit_fogs=[],
+            )
         )
+        dag.add_node(
+            DagNode(
+                id="a",
+                cluster=make_cluster("ca", weight=10),
+                layer=1,
+                tier=1,
+                entry_fogs=[FogRef("f1", "z")],
+                exit_fogs=[],
+            )
+        )
+        dag.add_node(
+            DagNode(
+                id="b",
+                cluster=make_cluster("cb", weight=10),
+                layer=1,
+                tier=1,
+                entry_fogs=[FogRef("f2", "z")],
+                exit_fogs=[],
+            )
+        )
+        dag.add_node(
+            DagNode(
+                id="end",
+                cluster=make_cluster("ce", cluster_type="final_boss", weight=5),
+                layer=2,
+                tier=1,
+                entry_fogs=[FogRef("f3", "z"), FogRef("f4", "z")],
+                exit_fogs=[],
+            )
+        )
+        dag.add_edge("start", "a", FogRef("f1", "z"), FogRef("f1", "z"))
+        dag.add_edge("start", "b", FogRef("f2", "z"), FogRef("f2", "z"))
+        dag.add_edge("a", "end", FogRef("f3", "z"), FogRef("f3", "z"))
+        dag.add_edge("b", "end", FogRef("f4", "z"), FogRef("f4", "z"))
+        dag.start_id = "start"
+        dag.end_id = "end"
+
         config = make_config(
-            total_weight=30,
             tolerance=5,
             legacy_dungeons=0,
             bosses=0,
@@ -473,8 +550,7 @@ class TestWeightValidation:
 
         result = validate_dag(dag, config)
 
-        # No weight-related warnings
-        weight_warnings = [w for w in result.warnings if "weight" in w.lower()]
+        weight_warnings = [w for w in result.warnings if "spread" in w.lower()]
         assert weight_warnings == []
 
 

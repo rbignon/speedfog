@@ -10,11 +10,10 @@ from speedfog.config import (
 )
 
 
-def test_budget_min_max():
-    """BudgetConfig computes min/max weight from total and tolerance."""
-    budget = BudgetConfig(total_weight=30, tolerance=5)
-    assert budget.min_weight == 25
-    assert budget.max_weight == 35
+def test_budget_tolerance():
+    """BudgetConfig stores tolerance for max allowed spread."""
+    budget = BudgetConfig(tolerance=5)
+    assert budget.tolerance == 5
 
 
 def test_config_defaults():
@@ -23,7 +22,6 @@ def test_config_defaults():
     assert config.seed == 0
     assert config.run_complete_message == "RUN COMPLETE"
     assert config.chapel_grace is True
-    assert config.budget.total_weight == 30
     assert config.budget.tolerance == 5
     assert config.requirements.bosses == 5
     assert config.requirements.legacy_dungeons == 1
@@ -39,7 +37,6 @@ def test_config_from_toml(tmp_path):
 seed = 42
 
 [budget]
-total_weight = 25
 tolerance = 3
 
 [requirements]
@@ -47,10 +44,7 @@ bosses = 7
 """)
     config = Config.from_toml(config_file)
     assert config.seed == 42
-    assert config.budget.total_weight == 25
     assert config.budget.tolerance == 3
-    assert config.budget.min_weight == 22
-    assert config.budget.max_weight == 28
     assert config.requirements.bosses == 7
     # Defaults for unspecified values
     assert config.requirements.legacy_dungeons == 1
@@ -64,7 +58,6 @@ def test_config_full_toml(tmp_path):
 seed = 12345
 
 [budget]
-total_weight = 40
 tolerance = 10
 
 [requirements]
@@ -86,10 +79,7 @@ platform = "linux"
     # Run section
     assert config.seed == 12345
     # Budget section
-    assert config.budget.total_weight == 40
     assert config.budget.tolerance == 10
-    assert config.budget.min_weight == 30
-    assert config.budget.max_weight == 50
     # Requirements section
     assert config.requirements.legacy_dungeons == 2
     assert config.requirements.bosses == 8
@@ -112,13 +102,11 @@ def test_load_config_helper(tmp_path):
 seed = 99
 
 [budget]
-total_weight = 20
+tolerance = 8
 """)
     config = load_config(config_file)
     assert config.seed == 99
-    assert config.budget.total_weight == 20
-    # Verify defaults are applied
-    assert config.budget.tolerance == 5
+    assert config.budget.tolerance == 8
     assert config.requirements.bosses == 5
 
 

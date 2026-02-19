@@ -214,63 +214,59 @@ class TestPathStatsFromDag:
 class TestAnalyzeBalance:
     """Tests for analyze_balance function."""
 
-    def test_balanced_paths_returns_balanced_true(self):
-        """Balanced paths (within budget) returns is_balanced=True."""
+    def test_equal_paths_balanced(self):
+        """Equal-weight paths are balanced regardless of tolerance."""
         # Two equal branches: both = 25
         dag = make_forked_dag(5, [[10], [10]], 10)
-        budget = BudgetConfig(total_weight=25, tolerance=5)  # 20-30
+        budget = BudgetConfig(tolerance=5)
 
         result = analyze_balance(dag, budget)
 
         assert result["is_balanced"] is True
-        assert result["underweight_paths"] == []
-        assert result["overweight_paths"] == []
+        assert result["weight_spread"] == 0
 
-    def test_underweight_path_detected(self):
-        """Underweight path detected (below budget.min_weight)."""
-        # Branch a: 5 + 5 + 5 = 15 (underweight)
-        # Branch b: 5 + 20 + 5 = 30 (ok)
+    def test_spread_within_tolerance_balanced(self):
+        """Paths with spread <= tolerance are balanced."""
+        # Branch a: 5 + 10 + 5 = 20
+        # Branch b: 5 + 15 + 5 = 25
+        # Spread = 5
+        dag = make_forked_dag(5, [[10], [15]], 5)
+        budget = BudgetConfig(tolerance=5)
+
+        result = analyze_balance(dag, budget)
+
+        assert result["is_balanced"] is True
+        assert result["weight_spread"] == 5
+
+    def test_spread_exceeds_tolerance_imbalanced(self):
+        """Paths with spread > tolerance are imbalanced."""
+        # Branch a: 5 + 5 + 5 = 15
+        # Branch b: 5 + 20 + 5 = 30
+        # Spread = 15
         dag = make_forked_dag(5, [[5], [20]], 5)
-        budget = BudgetConfig(total_weight=30, tolerance=5)  # 25-35
+        budget = BudgetConfig(tolerance=5)
 
         result = analyze_balance(dag, budget)
 
         assert result["is_balanced"] is False
-        assert len(result["underweight_paths"]) == 1
-        # The underweight path is start -> a0 -> end with weight 15
-        underweight = result["underweight_paths"][0]
-        assert underweight["weight"] == 15
-
-    def test_overweight_path_detected(self):
-        """Overweight path detected (above budget.max_weight)."""
-        # Branch a: 5 + 10 + 5 = 20 (ok)
-        # Branch b: 5 + 50 + 5 = 60 (overweight)
-        dag = make_forked_dag(5, [[10], [50]], 5)
-        budget = BudgetConfig(total_weight=25, tolerance=10)  # 15-35
-
-        result = analyze_balance(dag, budget)
-
-        assert result["is_balanced"] is False
-        assert len(result["overweight_paths"]) == 1
-        overweight = result["overweight_paths"][0]
-        assert overweight["weight"] == 60
+        assert result["weight_spread"] == 15
 
     def test_weight_spread_calculation(self):
         """weight_spread is max - min."""
-        # Two branches:
         # start(5) -> a0(10) -> end(5) = 20
         # start(5) -> b0(30) -> end(5) = 40
         dag = make_forked_dag(5, [[10], [30]], 5)
-        budget = BudgetConfig(total_weight=30, tolerance=20)
+        budget = BudgetConfig(tolerance=20)
 
         result = analyze_balance(dag, budget)
 
         assert result["weight_spread"] == 20  # 40 - 20
+        assert result["is_balanced"] is True
 
     def test_stats_included_in_result(self):
         """Result includes PathStats."""
         dag = make_linear_dag([10, 20, 30])
-        budget = BudgetConfig(total_weight=60, tolerance=10)
+        budget = BudgetConfig(tolerance=10)
 
         result = analyze_balance(dag, budget)
 
@@ -282,14 +278,12 @@ class TestAnalyzeBalance:
     def test_empty_dag(self):
         """Empty DAG returns balanced with zero spread."""
         dag = Dag(seed=42)
-        budget = BudgetConfig(total_weight=30, tolerance=5)
+        budget = BudgetConfig(tolerance=5)
 
         result = analyze_balance(dag, budget)
 
         assert result["is_balanced"] is True
         assert result["weight_spread"] == 0
-        assert result["underweight_paths"] == []
-        assert result["overweight_paths"] == []
 
 
 # =============================================================================
@@ -303,7 +297,7 @@ class TestReportBalance:
     def test_report_contains_statistics(self):
         """Report contains key statistics."""
         dag = make_forked_dag(5, [[10], [15]], 5)
-        budget = BudgetConfig(total_weight=25, tolerance=10)
+        budget = BudgetConfig(tolerance=10)
 
         report = report_balance(dag, budget)
 
@@ -314,7 +308,7 @@ class TestReportBalance:
     def test_report_shows_balanced(self):
         """Report shows balanced indicator for balanced DAG."""
         dag = make_forked_dag(5, [[10], [10]], 5)
-        budget = BudgetConfig(total_weight=20, tolerance=10)  # 10-30, both paths = 20
+        budget = BudgetConfig(tolerance=10)
 
         report = report_balance(dag, budget)
 
@@ -322,19 +316,20 @@ class TestReportBalance:
 
     def test_report_shows_imbalanced(self):
         """Report shows imbalanced indicator for unbalanced DAG."""
-        # Branch a: 5 + 5 + 5 = 15 (underweight for 30 +/- 5)
-        # Branch b: 5 + 20 + 5 = 30 (ok)
+        # Branch a: 5 + 5 + 5 = 15
+        # Branch b: 5 + 20 + 5 = 30
+        # Spread = 15 > tolerance 5
         dag = make_forked_dag(5, [[5], [20]], 5)
-        budget = BudgetConfig(total_weight=30, tolerance=5)  # 25-35
+        budget = BudgetConfig(tolerance=5)
 
         report = report_balance(dag, budget)
 
-        assert "underweight" in report.lower() or "imbalanced" in report.lower()
+        assert "imbalanced" in report.lower()
 
     def test_report_shows_weight_spread(self):
         """Report includes weight spread."""
         dag = make_forked_dag(5, [[10], [30]], 5)
-        budget = BudgetConfig(total_weight=30, tolerance=20)
+        budget = BudgetConfig(tolerance=20)
 
         report = report_balance(dag, budget)
 
@@ -343,7 +338,7 @@ class TestReportBalance:
     def test_report_empty_dag(self):
         """Report handles empty DAG gracefully."""
         dag = Dag(seed=42)
-        budget = BudgetConfig(total_weight=30, tolerance=5)
+        budget = BudgetConfig(tolerance=5)
 
         report = report_balance(dag, budget)
 

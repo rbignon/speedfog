@@ -102,8 +102,7 @@ Edit `config.toml`:
 seed = 0                        # 0 = random seed
 
 [budget]
-total_weight = 30               # Target path length (~minutes)
-tolerance = 5                   # Allowed variance
+tolerance = 5                   # Max weight spread between paths
 
 [requirements]
 legacy_dungeons = 1             # Minimum legacy dungeons

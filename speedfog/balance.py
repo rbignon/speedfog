@@ -68,39 +68,26 @@ class PathStats:
 def analyze_balance(dag: Dag, budget: BudgetConfig) -> dict[str, Any]:
     """Analyze whether paths through the DAG are balanced.
 
-    A DAG is balanced if all paths have weights within the budget tolerance.
+    A DAG is balanced if the weight spread (heaviest - lightest path)
+    does not exceed the budget tolerance.
 
     Args:
         dag: The DAG to analyze
-        budget: Budget configuration with min_weight and max_weight
+        budget: Budget configuration with tolerance (max allowed spread)
 
     Returns:
         Dictionary containing:
-        - is_balanced: True if all paths are within budget
+        - is_balanced: True if weight spread <= tolerance
         - stats: PathStats object with detailed statistics
-        - underweight_paths: List of paths below budget.min_weight
-        - overweight_paths: List of paths above budget.max_weight
         - weight_spread: Difference between max and min path weights
     """
     stats = PathStats.from_dag(dag)
-
-    underweight_paths: list[dict[str, Any]] = []
-    overweight_paths: list[dict[str, Any]] = []
-
-    for path, weight in zip(stats.paths, stats.weights, strict=True):
-        if weight < budget.min_weight:
-            underweight_paths.append({"path": path, "weight": weight})
-        elif weight > budget.max_weight:
-            overweight_paths.append({"path": path, "weight": weight})
-
-    is_balanced = len(underweight_paths) == 0 and len(overweight_paths) == 0
     weight_spread = stats.max_weight - stats.min_weight
+    is_balanced = weight_spread <= budget.tolerance
 
     return {
         "is_balanced": is_balanced,
         "stats": stats,
-        "underweight_paths": underweight_paths,
-        "overweight_paths": overweight_paths,
         "weight_spread": weight_spread,
     }
 
@@ -141,26 +128,9 @@ def report_balance(dag: Dag, budget: BudgetConfig) -> str:
         lines.append(f"  Weight spread: {analysis['weight_spread']}")
     lines.append("")
 
-    # Budget info
-    lines.append("Budget Configuration:")
-    lines.append(f"  Target weight: {budget.total_weight}")
-    lines.append(f"  Tolerance: +/- {budget.tolerance}")
-    lines.append(f"  Acceptable range: {budget.min_weight} - {budget.max_weight}")
+    # Balance config
+    lines.append("Balance Configuration:")
+    lines.append(f"  Max spread tolerance: {budget.tolerance}")
     lines.append("")
-
-    # Problem paths
-    if analysis["underweight_paths"]:
-        lines.append(f"Underweight Paths ({len(analysis['underweight_paths'])}):")
-        for item in analysis["underweight_paths"]:
-            path_str = " -> ".join(item["path"])
-            lines.append(f"  Weight {item['weight']}: {path_str}")
-        lines.append("")
-
-    if analysis["overweight_paths"]:
-        lines.append(f"Overweight Paths ({len(analysis['overweight_paths'])}):")
-        for item in analysis["overweight_paths"]:
-            path_str = " -> ".join(item["path"])
-            lines.append(f"  Weight {item['weight']}: {path_str}")
-        lines.append("")
 
     return "\n".join(lines)

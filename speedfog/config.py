@@ -21,20 +21,13 @@ else:
 
 @dataclass
 class BudgetConfig:
-    """Path budget configuration."""
+    """Path balance configuration.
 
-    total_weight: int = 30
+    tolerance: maximum allowed weight spread between the heaviest and
+    lightest paths through the DAG.
+    """
+
     tolerance: int = 5
-
-    @property
-    def min_weight(self) -> int:
-        """Minimum acceptable path weight."""
-        return self.total_weight - self.tolerance
-
-    @property
-    def max_weight(self) -> int:
-        """Maximum acceptable path weight."""
-        return self.total_weight + self.tolerance
 
 
 @dataclass
@@ -362,7 +355,6 @@ class Config:
             ),
             chapel_grace=run_section.get("chapel_grace", True),
             budget=BudgetConfig(
-                total_weight=budget_section.get("total_weight", 30),
                 tolerance=budget_section.get("tolerance", 5),
             ),
             requirements=RequirementsConfig(

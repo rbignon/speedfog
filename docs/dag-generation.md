@@ -202,12 +202,10 @@ This maps to FogMod's enemy scaling SpEffects.
 
 Each cluster has a **weight** (approximate traversal time in minutes). Each path through the DAG has a total weight = sum of node weights along the path.
 
-**Budget constraints** (from config):
-- `total_weight`: target weight per path (default 30)
-- `tolerance`: allowed variance (default 5)
-- Valid range: `[total_weight - tolerance, total_weight + tolerance]`
+**Balance constraint** (from config):
+- `tolerance`: maximum allowed weight spread between heaviest and lightest paths (default 5)
 
-The validator checks all paths are within budget. Paths outside budget produce warnings (not hard errors).
+The validator checks that all paths have similar weights. If the spread exceeds tolerance, a warning is produced (not a hard error).
 
 ## Retry System
 
@@ -234,8 +232,7 @@ The validator checks all paths are within budget. Paths outside budget produce w
 | `structure.major_boss_ratio` | 0.0 | Fraction of layers with major bosses |
 | `structure.final_boss_candidates` | `["leyndell_erdtree", "enirilim_radahn"]` | Possible end bosses |
 | `structure.final_tier` | 28 | Enemy tier for final boss |
-| `budget.total_weight` | 30 | Target path weight (minutes) |
-| `budget.tolerance` | 5 | Allowed weight variance |
+| `budget.tolerance` | 5 | Max allowed spread between paths |
 | `requirements.legacy_dungeons` | 1 | Minimum legacy dungeons |
 | `requirements.bosses` | 5 | Minimum boss arenas |
 | `requirements.mini_dungeons` | 5 | Minimum mini dungeons |

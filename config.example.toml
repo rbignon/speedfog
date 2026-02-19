@@ -17,12 +17,8 @@ seed = 0
 # chapel_grace = true
 
 [budget]
-# Target total "weight" for each path through the game.
-# Weight roughly corresponds to minutes (weight 30 ≈ 30-40 min of zones)
-total_weight = 30
-
-# Allowed variance from target weight.
-# With total=30 and tolerance=5, paths can be 25-35 weight.
+# Maximum allowed weight spread between the heaviest and lightest paths.
+# If the spread exceeds this, the DAG is considered imbalanced.
 tolerance = 5
 
 [requirements]

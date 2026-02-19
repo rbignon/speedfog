@@ -208,8 +208,7 @@ User configuration for DAG generation.
 seed = 0                    # 0 = random, N = force seed
 
 [budget]
-total_weight = 30           # Target weight per path
-tolerance = 5               # Allowed variance
+tolerance = 5               # Max allowed spread between paths
 
 [requirements]
 legacy_dungeons = 1         # Minimum per run

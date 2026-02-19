@@ -35,7 +35,7 @@ def validate_dag(dag: Dag, config: Config) -> ValidationResult:
     - Entry fog consistency (incoming edges match entry_fogs count)
     - Minimum requirements (bosses, legacy_dungeons, mini_dungeons)
     - Path count (no paths = error, single path = warning)
-    - Weight balance (underweight/overweight = warnings)
+    - Weight spread (path weight disparity = warnings)
     - Layer count (few layers = warning)
 
     Args:
@@ -152,23 +152,14 @@ def _check_paths(
     if len(paths) == 1:
         warnings.append("Only a single path exists (no parallel branches)")
 
-    # Check weight balance for each path
-    budget = config.budget
-    min_weight = budget.min_weight
-    max_weight = budget.max_weight
-
-    for i, path in enumerate(paths):
-        weight = dag.path_weight(path)
-        if weight < min_weight:
-            warnings.append(
-                f"Path {i + 1} is underweight: {weight} < {min_weight} "
-                f"(target: {budget.total_weight})"
-            )
-        elif weight > max_weight:
-            warnings.append(
-                f"Path {i + 1} is overweight: {weight} > {max_weight} "
-                f"(target: {budget.total_weight})"
-            )
+    # Check weight spread across paths
+    weights = [dag.path_weight(path) for path in paths]
+    spread = max(weights) - min(weights)
+    if spread > config.budget.tolerance:
+        warnings.append(
+            f"Path weight spread {spread} exceeds tolerance {config.budget.tolerance} "
+            f"(min: {min(weights)}, max: {max(weights)})"
+        )
 
 
 def _check_no_duplicate_edges(dag: Dag) -> list[str]:

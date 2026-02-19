@@ -35,7 +35,7 @@ def relaxed_config():
     """
     return Config(
         seed=1,
-        budget=BudgetConfig(total_weight=60, tolerance=30),  # Wide tolerance
+        budget=BudgetConfig(tolerance=30),  # Wide tolerance for spread
         requirements=RequirementsConfig(
             legacy_dungeons=0,
             bosses=0,
