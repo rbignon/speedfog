@@ -95,20 +95,21 @@ class ClusterPool:
         return None
 
     def get_display_name(self, cluster: ClusterData) -> str:
-        """Get the shortest display name among a cluster's zones.
+        """Get the display name from the cluster's primary (first) zone.
 
-        Picks the shortest name to get a concise label for visualization.
+        The first zone defines the cluster's identity; other zones are
+        secondary (e.g. roundtable merged into chapel_start).
 
         Args:
             cluster: The cluster to get a display name for
 
         Returns:
-            Shortest display name found, or cluster.id as fallback
+            Display name of the first zone, or cluster.id as fallback
         """
-        names = [self.zone_names[z] for z in cluster.zones if z in self.zone_names]
-        if not names:
-            return cluster.id
-        return min(names, key=len)
+        for zone in cluster.zones:
+            if zone in self.zone_names:
+                return self.zone_names[zone]
+        return cluster.id
 
     def merge_roundtable_into_start(self) -> None:
         """Merge the roundtable cluster into the start cluster.
