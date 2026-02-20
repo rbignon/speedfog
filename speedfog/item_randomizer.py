@@ -11,12 +11,15 @@ from typing import Any
 from speedfog.config import Config
 
 
-def generate_item_config(config: Config, seed: int) -> dict[str, Any]:
+def generate_item_config(
+    config: Config, seed: int, finish_boss_defeat_flag: int = 0
+) -> dict[str, Any]:
     """Generate item_config.json content for ItemRandomizerWrapper.
 
     Args:
         config: SpeedFog configuration.
         seed: Random seed for the run.
+        finish_boss_defeat_flag: Defeat flag of the final boss (for lock_final_boss).
 
     Returns:
         Dictionary ready to be serialized to JSON.
@@ -34,7 +37,11 @@ def generate_item_config(config: Config, seed: int) -> dict[str, Any]:
             "sombermode": config.item_randomizer.reduce_upgrade_cost,
             "nerfgargoyles": config.item_randomizer.nerf_gargoyles,
         },
-        "preset": "speedfog_enemy",
+        "enemy_options": {
+            "randomize_bosses": config.enemy.randomize_bosses,
+            "lock_final_boss": config.enemy.lock_final_boss,
+            "finish_boss_defeat_flag": finish_boss_defeat_flag,
+        },
         # RandomizerHelper.dll defaults almost everything to true when not
         # specified in the INI.  We must be exhaustive to avoid surprises
         # (e.g. auto-equip activating silently).  Int options like
@@ -75,7 +82,7 @@ def run_item_randomizer(
     """Run ItemRandomizerWrapper to generate randomized items/enemies.
 
     Args:
-        seed_dir: Directory containing item_config.json and enemy_preset.yaml
+        seed_dir: Directory containing item_config.json
         game_dir: Path to Elden Ring Game directory
         output_dir: Output directory for randomized files
         platform: "windows", "linux", or None for auto-detect
@@ -115,16 +122,6 @@ def run_item_randomizer(
     game_dir = game_dir.resolve()
     output_dir = output_dir.resolve()
     config_path = seed_dir / "item_config.json"
-
-    # Copy preset to expected location (Preset.LoadPreset expects presets/{name}.txt)
-    preset_src = seed_dir / "enemy_preset.yaml"
-    presets_dir = wrapper_dir / "presets"
-    presets_dir.mkdir(exist_ok=True)
-    preset_dst = presets_dir / "speedfog_enemy.txt"
-    if preset_src.exists():
-        shutil.copy(preset_src, preset_dst)
-        if verbose:
-            print(f"Copied preset: {preset_dst}")
 
     if platform == "linux":
         cmd = ["wine", str(wrapper_exe.resolve())]

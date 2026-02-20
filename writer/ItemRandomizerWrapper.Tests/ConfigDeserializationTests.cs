@@ -223,4 +223,38 @@ public class ConfigDeserializationTests
         Assert.Equal(60, config.Difficulty);
         Assert.NotNull(config.HelperOptions);
     }
+
+    [Fact]
+    public void RandomizerConfig_WithEnemyOptions_Deserializes()
+    {
+        var json = """
+            {
+                "seed": 123,
+                "enemy_options": {
+                    "randomize_bosses": true,
+                    "lock_final_boss": false,
+                    "finish_boss_defeat_flag": 1052380800
+                }
+            }
+            """;
+
+        var config = JsonSerializer.Deserialize<RandomizerConfig>(json, JsonOptions);
+
+        Assert.NotNull(config);
+        Assert.NotNull(config.EnemyOptions);
+        Assert.True(config.EnemyOptions.RandomizeBosses);
+        Assert.False(config.EnemyOptions.LockFinalBoss);
+        Assert.Equal(1052380800, config.EnemyOptions.FinishBossDefeatFlag);
+    }
+
+    [Fact]
+    public void RandomizerConfig_WithoutEnemyOptions_IsNull()
+    {
+        var json = """{ "seed": 123 }""";
+
+        var config = JsonSerializer.Deserialize<RandomizerConfig>(json, JsonOptions);
+
+        Assert.NotNull(config);
+        Assert.Null(config.EnemyOptions);
+    }
 }

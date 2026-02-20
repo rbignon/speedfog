@@ -275,6 +275,14 @@ class ItemRandomizerConfig:
 
 
 @dataclass
+class EnemyConfig:
+    """Enemy randomization configuration."""
+
+    randomize_bosses: bool = False
+    lock_final_boss: bool = True
+
+
+@dataclass
 class CarePackageConfig:
     """Care package configuration for randomized starting builds.
 
@@ -335,6 +343,7 @@ class Config:
     starting_items: StartingItemsConfig = field(default_factory=StartingItemsConfig)
     item_randomizer: ItemRandomizerConfig = field(default_factory=ItemRandomizerConfig)
     care_package: CarePackageConfig = field(default_factory=CarePackageConfig)
+    enemy: EnemyConfig = field(default_factory=EnemyConfig)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Config:
@@ -347,6 +356,7 @@ class Config:
         starting_items_section = data.get("starting_items", {})
         item_randomizer_section = data.get("item_randomizer", {})
         care_package_section = data.get("care_package", {})
+        enemy_section = data.get("enemy", {})
 
         return cls(
             seed=run_section.get("seed", 0),
@@ -442,6 +452,10 @@ class Config:
                 leg_armor=care_package_section.get("leg_armor", 2),
                 crystal_tears=care_package_section.get("crystal_tears", 5),
                 ashes_of_war=care_package_section.get("ashes_of_war", 0),
+            ),
+            enemy=EnemyConfig(
+                randomize_bosses=enemy_section.get("randomize_bosses", False),
+                lock_final_boss=enemy_section.get("lock_final_boss", True),
             ),
         )
 

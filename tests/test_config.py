@@ -497,3 +497,39 @@ def test_max_branches_one_allows_single_path():
     )
     assert config.structure.max_parallel_paths == 1
     assert config.structure.max_branches == 1
+
+
+def test_enemy_config_defaults():
+    """EnemyConfig has correct defaults."""
+    config = Config.from_dict({})
+    assert config.enemy.randomize_bosses is False
+    assert config.enemy.lock_final_boss is True
+
+
+def test_enemy_config_from_dict():
+    """EnemyConfig parses from config dict."""
+    config = Config.from_dict(
+        {"enemy": {"randomize_bosses": True, "lock_final_boss": False}}
+    )
+    assert config.enemy.randomize_bosses is True
+    assert config.enemy.lock_final_boss is False
+
+
+def test_enemy_config_from_toml(tmp_path):
+    """EnemyConfig parses from TOML file."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[enemy]
+randomize_bosses = true
+lock_final_boss = false
+""")
+    config = Config.from_toml(config_file)
+    assert config.enemy.randomize_bosses is True
+    assert config.enemy.lock_final_boss is False
+
+
+def test_enemy_config_partial():
+    """EnemyConfig uses defaults for missing fields."""
+    config = Config.from_dict({"enemy": {"randomize_bosses": True}})
+    assert config.enemy.randomize_bosses is True
+    assert config.enemy.lock_final_boss is True  # default

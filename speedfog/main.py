@@ -256,23 +256,14 @@ def main() -> int:
         print("Running Item Randomizer...")
 
         # Generate item_config.json
-        item_config = generate_item_config(config, actual_seed)
+        end_node = dag.nodes[dag.end_id]
+        finish_boss_defeat_flag = end_node.cluster.defeat_flag or 0
+        item_config = generate_item_config(config, actual_seed, finish_boss_defeat_flag)
         item_config_path = seed_dir / "item_config.json"
         with item_config_path.open("w") as f:
             json.dump(item_config, f, indent=2)
         if args.verbose:
             print(f"Written: {item_config_path}")
-
-        # Copy enemy preset
-        project_root = Path(__file__).parent.parent
-        preset_src = project_root / "data" / "enemy_preset.yaml"
-        preset_dst = seed_dir / "enemy_preset.yaml"
-        if preset_src.exists():
-            shutil.copy(preset_src, preset_dst)
-            if args.verbose:
-                print(f"Copied: {preset_dst}")
-        else:
-            print(f"Warning: Enemy preset not found at {preset_src}", file=sys.stderr)
 
         # Copy item preset
         if config.item_randomizer.item_preset:

@@ -35,4 +35,22 @@ public class RandomizerConfig
 
     [JsonPropertyName("item_preset_path")]
     public string? ItemPresetPath { get; set; }
+
+    [JsonPropertyName("enemy_options")]
+    public EnemyOptionsConfig? EnemyOptions { get; set; }
+}
+
+/// <summary>
+/// Enemy randomization options from Python config.
+/// </summary>
+public class EnemyOptionsConfig
+{
+    [JsonPropertyName("randomize_bosses")]
+    public bool RandomizeBosses { get; set; }
+
+    [JsonPropertyName("lock_final_boss")]
+    public bool LockFinalBoss { get; set; } = true;
+
+    [JsonPropertyName("finish_boss_defeat_flag")]
+    public int FinishBossDefeatFlag { get; set; }
 }

@@ -176,6 +176,15 @@ enabled = false
 # crystal_tears = 5    # Random crystal tears for Flask of Wondrous Physick
 # ashes_of_war = 0     # Random ashes of war (requires SpeedFog Racing DLL for runtime delivery)
 
+[enemy]
+# Boss entity randomization (requires [item_randomizer] enabled = true).
+# Randomize boss entities among themselves (major with major, minor with minor).
+# The DAG already controls WHICH boss zones you visit — this swaps the actual
+# boss enemy at each location. Default: false (bosses stay in their vanilla arenas).
+randomize_bosses = false
+# Keep the final arena's boss in place. Only applies when randomize_bosses = true.
+lock_final_boss = true
+
 [item_randomizer]
 # Enable Item/Enemy Randomizer integration (default: true)
 # Requires: python tools/setup_dependencies.py --itemrando <path>

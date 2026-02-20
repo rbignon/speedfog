@@ -128,11 +128,17 @@ Example:
         Console.WriteLine($"Data dir: {dataDir}");
         Console.WriteLine();
 
-        // Load enemy preset if specified
-        // Preset.LoadPreset expects a preset name and looks in presets/{name}.txt
+        // Build or load enemy preset
         Preset? preset = null;
-        if (!string.IsNullOrEmpty(randoConfig.Preset))
+        if (randoConfig.EnemyOptions != null)
         {
+            preset = BuildEnemyPreset(randoConfig.EnemyOptions);
+            Console.WriteLine($"Enemy preset: randomize_bosses={randoConfig.EnemyOptions.RandomizeBosses}, "
+                + $"lock_final_boss={randoConfig.EnemyOptions.LockFinalBoss}");
+        }
+        else if (!string.IsNullOrEmpty(randoConfig.Preset))
+        {
+            // Backward compat: load YAML preset file
             var presetFile = Path.Combine("presets", $"{randoConfig.Preset}.txt");
             if (File.Exists(presetFile))
             {
@@ -197,5 +203,50 @@ Example:
         Console.WriteLine();
         Console.WriteLine($"Item randomization complete!");
         Console.WriteLine($"Output written to: {config.OutputDir}");
+    }
+
+    /// <summary>
+    /// Build an enemy Preset programmatically from EnemyOptionsConfig.
+    /// </summary>
+    static Preset BuildEnemyPreset(EnemyOptionsConfig options)
+    {
+        var preset = new Preset();
+
+        // Always lock non-boss classes that shouldn't swap
+        preset.Classes[EnemyAnnotations.EnemyClass.HostileNPC] =
+            new Preset.ClassAssignment { NoRandom = true };
+        preset.Classes[EnemyAnnotations.EnemyClass.CaravanTroll] =
+            new Preset.ClassAssignment { NoRandom = true };
+
+        if (!options.RandomizeBosses)
+        {
+            // Lock all boss classes (current default behavior)
+            foreach (var cls in new[] {
+                EnemyAnnotations.EnemyClass.Boss,
+                EnemyAnnotations.EnemyClass.Miniboss,
+                EnemyAnnotations.EnemyClass.MinorBoss,
+                EnemyAnnotations.EnemyClass.NightMiniboss,
+                EnemyAnnotations.EnemyClass.DragonMiniboss,
+                EnemyAnnotations.EnemyClass.Evergaol,
+            })
+            {
+                preset.Classes[cls] = new Preset.ClassAssignment { NoRandom = true };
+            }
+        }
+        else if (options.LockFinalBoss && options.FinishBossDefeatFlag > 0)
+        {
+            // Boss classes randomize by default (absent from Classes dict).
+            // Lock only the final boss via DontRandomizeIDs.
+            var flag = (uint)options.FinishBossDefeatFlag;
+            preset.DontRandomizeIDs.Add(flag);
+
+            // Radahn and Fire Giant (base game): DefeatFlag = entity_id + 200M.
+            // DLC bosses (>= 2B): DefeatFlag IS the entity ID directly.
+            if (flag >= 1_200_000_000 && flag < 2_000_000_000)
+                preset.DontRandomizeIDs.Add(flag - 200_000_000);
+        }
+        // else: randomize_bosses=true, lock_final_boss=false → all bosses swap freely
+
+        return preset;
     }
 }

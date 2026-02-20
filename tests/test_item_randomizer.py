@@ -24,7 +24,9 @@ def test_generate_item_config_basic():
     assert result["options"]["weaponreqs"] is True
     assert result["options"]["dlc"] is True
     assert result["options"]["sombermode"] is True
-    assert result["preset"] == "speedfog_enemy"
+    assert "preset" not in result
+    assert result["enemy_options"]["randomize_bosses"] is False
+    assert result["enemy_options"]["lock_final_boss"] is True
     assert result["helper_options"]["autoUpgradeWeapons"] is True
     # All 14 bool options must be explicitly set (DLL defaults most to true)
     helper = result["helper_options"]
@@ -163,3 +165,36 @@ def test_run_item_randomizer_builds_correct_command(tmp_path, monkeypatch):
     assert result is True
     assert str(seed_dir / "item_config.json") in captured_cmd
     assert "--game-dir" in captured_cmd
+
+
+def test_generate_item_config_enemy_options_default():
+    """generate_item_config includes enemy_options with defaults."""
+    config = Config.from_dict({})
+    result = generate_item_config(config, 42)
+
+    assert "enemy_options" in result
+    assert result["enemy_options"]["randomize_bosses"] is False
+    assert result["enemy_options"]["lock_final_boss"] is True
+    assert result["enemy_options"]["finish_boss_defeat_flag"] == 0
+    # preset key should no longer be present
+    assert "preset" not in result
+
+
+def test_generate_item_config_enemy_options_enabled():
+    """generate_item_config passes through enemy randomization settings."""
+    config = Config.from_dict(
+        {"enemy": {"randomize_bosses": True, "lock_final_boss": False}}
+    )
+    result = generate_item_config(config, 42, finish_boss_defeat_flag=1042380520)
+
+    assert result["enemy_options"]["randomize_bosses"] is True
+    assert result["enemy_options"]["lock_final_boss"] is False
+    assert result["enemy_options"]["finish_boss_defeat_flag"] == 1042380520
+
+
+def test_generate_item_config_finish_boss_defeat_flag():
+    """generate_item_config propagates finish_boss_defeat_flag correctly."""
+    config = Config.from_dict({"enemy": {"randomize_bosses": True}})
+    result = generate_item_config(config, 42, finish_boss_defeat_flag=1234567890)
+
+    assert result["enemy_options"]["finish_boss_defeat_flag"] == 1234567890
