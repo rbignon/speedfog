@@ -317,15 +317,23 @@ def dag_to_dict(
         flag_id = EVENT_FLAG_BASE + flag_counter
         flag_counter += 1
 
+        exit_gate_str = _make_fullname(
+            edge.exit_fog.fog_id,
+            exit_zone,
+            clusters,
+            fog_data,
+            is_entry=False,
+        )
+
+        # Look up entity_id from fog_data for entity-based disambiguation
+        # in ZoneTrackingInjector (resolves compound key collisions).
+        exit_entity_id = 0
+        if fog_data and exit_gate_str in fog_data:
+            exit_entity_id = fog_data[exit_gate_str].get("entity_id", 0)
+
         conn_dict: dict[str, str | int | bool] = {
             "exit_area": exit_zone,
-            "exit_gate": _make_fullname(
-                edge.exit_fog.fog_id,
-                exit_zone,
-                clusters,
-                fog_data,
-                is_entry=False,
-            ),
+            "exit_gate": exit_gate_str,
             "entrance_area": entry_zone,
             "entrance_gate": _make_fullname(
                 effective_entry_fog,
@@ -335,6 +343,7 @@ def dag_to_dict(
                 is_entry=True,
             ),
             "flag_id": flag_id,
+            "exit_entity_id": exit_entity_id,
         }
         if target_node.cluster.allow_entry_as_exit:
             conn_dict["ignore_pair"] = True

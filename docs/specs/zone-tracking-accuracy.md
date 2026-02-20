@@ -55,11 +55,44 @@ to earthbore_boss on the same map). When the source EMEVD is common.emevd (unkno
 source map), injection proceeds — FogMod places forward warps for vanilla gate types
 (numeric entity IDs like coffins/teleports) in common.emevd, not return warps.
 
-**Remaining limitation**: two connections from the same source map to the same destination
-map would still collide. This requires two fog gates in one map both leading to different
-zones in another map — extremely unlikely in a SpeedFog DAG but theoretically possible.
+**Compound key collisions** (same source_map, same dest_map) are now resolved by
+Option C (entity-based disambiguation) below. If entity matching also fails (e.g.,
+exit_entity_id=0 or no match in event instructions), the build aborts with a fatal error.
 
-**Status**: implemented as the current fix.
+**Status**: implemented, augmented by Option C for compound collision cases.
+
+## Option C: Entity-Based Disambiguation (implemented)
+
+When two connections share the same compound key (source_map, dest_map), use the exit
+fog gate's entity ID to identify which event belongs to which connection.
+
+### How it works
+
+1. **Python** (`output.py`): Each connection gets an `exit_entity_id` field, looked up from
+   `fog_data.json` using the resolved exit_gate fullname. Default 0 when unavailable.
+
+2. **C# model** (`GraphData.cs`): `Connection.ExitEntityId` (default 0, backward compatible).
+
+3. **Injector** (`ZoneTrackingInjector.cs`): When a compound key match hits a known collision:
+   - Call `TryMatchByEntityId()` to scan event instructions for a known entity_id.
+   - Only checks `IfActionButtonInArea` (bank 3, id 24) at ArgData offset 8, where
+     the fogwarp template's `X0_4` gate entity parameter is compiled as a literal.
+   - This precision targeting avoids false positives from other integers in the event.
+
+4. **Fatal error**: After all strategies (compound, entity, dest-only), if any expected flags
+   remain uninjected, the build aborts. No silent tracking bugs in-game.
+
+### Edge cases
+
+- **Numeric fog IDs** (boss defeat warps like `32082840`): may not have entity_id in fog_data
+  → exit_entity_id=0 → entity matching skipped, falls back to compound/dest-only.
+- **PlayCutsceneToPlayerAndWarp events**: no fogwarp template, no gate entity in instructions.
+  Entity matching skipped, existing strategies apply.
+- **ExitEntityId=0** (old graph.json or missing fog_data): entity matching skipped entirely.
+
+### Status
+
+Implemented. Resolves the "remaining limitation" from Option A.
 
 ## Option B: Per-Warp Flag Injection (future, 100% accurate)
 

@@ -1462,6 +1462,89 @@ class TestOriginalTier:
         assert result["nodes"]["c_b"]["original_tier"] == 15
 
 
+# =============================================================================
+# exit_entity_id tests
+# =============================================================================
+
+
+class TestExitEntityId:
+    """Tests for exit_entity_id field in dag_to_dict connections."""
+
+    def test_connections_have_exit_entity_id(self):
+        """Connections have exit_entity_id populated from fog_data entity_id."""
+        dag = make_test_dag()
+        # fog_data keyed by fullname (after _make_fullname resolution).
+        # With zone_maps provided, _make_fullname produces "{map}_{fog_id}" fullnames.
+        fog_data = {
+            "m10_00_00_00_fog_1": {
+                "zones": ["z_start"],
+                "map": "m10_00_00_00",
+                "entity_id": 13001850,
+            },
+            "m10_00_00_00_fog_2": {
+                "zones": ["z_start"],
+                "map": "m10_00_00_00",
+                "entity_id": 13001851,
+            },
+            "m11_00_00_00_fog_3": {
+                "zones": ["z_a"],
+                "map": "m11_00_00_00",
+                "entity_id": 13001900,
+            },
+            "m12_00_00_00_fog_4": {
+                "zones": ["z_b1"],
+                "map": "m12_00_00_00",
+                "entity_id": 13001901,
+            },
+        }
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={
+                "z_start": "m10_00_00_00",
+                "z_a": "m11_00_00_00",
+                "z_b1": "m12_00_00_00",
+                "z_b2": "m12_00_00_00",
+                "z_end": "m13_00_00_00",
+            },
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters, fog_data=fog_data)
+        # Verify specific entity_id values by matching exit_gate fullnames
+        entity_by_gate = {
+            c["exit_gate"]: c["exit_entity_id"] for c in result["connections"]
+        }
+        assert entity_by_gate["m10_00_00_00_fog_1"] == 13001850
+        assert entity_by_gate["m10_00_00_00_fog_2"] == 13001851
+        assert entity_by_gate["m11_00_00_00_fog_3"] == 13001900
+        assert entity_by_gate["m12_00_00_00_fog_4"] == 13001901
+
+    def test_connections_exit_entity_id_zero_without_fog_data(self):
+        """Without fog_data, exit_entity_id defaults to 0."""
+        result = _make_result()
+        for conn in result["connections"]:
+            assert conn["exit_entity_id"] == 0
+
+    def test_connections_exit_entity_id_zero_when_not_in_fog_data(self):
+        """When fullname is not in fog_data, exit_entity_id is 0."""
+        dag = make_test_dag()
+        # fog_data with keys that won't match the fullnames
+        fog_data = {
+            "m99_00_00_00_AEG099_999_9999": {
+                "zones": ["unrelated"],
+                "map": "m99_00_00_00",
+                "entity_id": 99999999,
+            },
+        }
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters, fog_data=fog_data)
+        for conn in result["connections"]:
+            assert conn["exit_entity_id"] == 0
+
+
 class TestIgnorePairInConnections:
     """Tests for ignore_pair field in dag_to_dict connections."""
 

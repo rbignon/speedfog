@@ -172,6 +172,15 @@ public class Connection
     public int FlagId { get; set; } = 0;
 
     /// <summary>
+    /// MSB entity ID of the exit fog gate asset (from fog_data.json).
+    /// Used by ZoneTrackingInjector for entity-based disambiguation when
+    /// compound key (source_map, dest_map) collisions occur.
+    /// Default 0 = not available (backward compatible with old graph.json).
+    /// </summary>
+    [JsonPropertyName("exit_entity_id")]
+    public int ExitEntityId { get; set; } = 0;
+
+    /// <summary>
     /// When true, tells FogMod to not remove the entrance edge's bidirectional pair.
     /// Used for entry-as-exit boss arenas where the entry fog's return direction
     /// serves as a forward exit to another area.

@@ -176,11 +176,21 @@ public static class ZoneTrackingInjector
         var compoundLookup = new Dictionary<((byte, byte, byte, byte), (byte, byte, byte, byte)), int>();
         var destOnlyLookup = new Dictionary<(byte, byte, byte, byte), int>();
         var destOnlyCollisions = new HashSet<(byte, byte, byte, byte)>();
+        var compoundCollisions = new HashSet<((byte, byte, byte, byte), (byte, byte, byte, byte))>();
+
+        // Entity-based disambiguation: exit gate entity_id → flag_id.
+        // Used to resolve compound key collisions where two connections share
+        // the same (source_map, dest_map) but have different exit fog gates.
+        var entityToFlag = new Dictionary<int, int>();
 
         foreach (var conn in connections)
         {
             if (conn.FlagId <= 0)
                 continue;
+
+            // Build entity lookup for disambiguation
+            if (conn.ExitEntityId > 0)
+                entityToFlag.TryAdd(conn.ExitEntityId, conn.FlagId);
 
             // Build all possible source maps (exit_gate maps + exit_area areaMaps).
             // FogMod's getEventMap() may place the warp event in the exit area's internal
@@ -197,13 +207,22 @@ public static class ZoneTrackingInjector
                 allDestMaps.AddRange(ParseMapBytesFromMapString(entranceMapsStr));
 
             // Register compound keys (all source × dest combinations)
+            // Track collisions where TryAdd would keep a different flag
             foreach (var srcBytes in allSourceMaps)
             {
                 var srcKey = (srcBytes[0], srcBytes[1], srcBytes[2], srcBytes[3]);
                 foreach (var destBytes in allDestMaps)
                 {
                     var destKey = (destBytes[0], destBytes[1], destBytes[2], destBytes[3]);
-                    compoundLookup.TryAdd((srcKey, destKey), conn.FlagId);
+                    var compoundKey = (srcKey, destKey);
+                    if (compoundLookup.TryGetValue(compoundKey, out int existing) && existing != conn.FlagId)
+                    {
+                        compoundCollisions.Add(compoundKey);
+                        Console.WriteLine($"Zone tracking: compound key collision on " +
+                                          $"{FormatMap(srcKey)} -> {FormatMap(destKey)} " +
+                                          $"(flag {conn.FlagId} vs {existing})");
+                    }
+                    compoundLookup.TryAdd(compoundKey, conn.FlagId);
                 }
             }
 
@@ -212,10 +231,13 @@ public static class ZoneTrackingInjector
         }
 
         Console.WriteLine($"Zone tracking: {compoundLookup.Count} compound keys, " +
-                          $"{destOnlyLookup.Count} dest maps ({destOnlyCollisions.Count} collisions)");
+                          $"{destOnlyLookup.Count} dest maps ({destOnlyCollisions.Count} dest collisions, " +
+                          $"{compoundCollisions.Count} compound collisions, " +
+                          $"{entityToFlag.Count} entity IDs)");
 
         int totalInjected = 0;
         int compoundMatches = 0;
+        int entityMatches = 0;
         int destOnlyMatches = 0;
         int skippedCollisions = 0;
         var injectedFlags = new HashSet<int>();
@@ -263,8 +285,26 @@ public static class ZoneTrackingInjector
                         var compoundKey = (sourceMap.Value, destMap);
                         if (compoundLookup.TryGetValue(compoundKey, out flagId))
                         {
-                            matched = true;
-                            compoundMatches++;
+                            // Strategy 1.5: If this compound key has a collision, try
+                            // entity-based matching for more precise disambiguation.
+                            // The fogwarp template bakes the gate entity ID into
+                            // IfActionButtonInArea instructions — scan for it.
+                            if (compoundCollisions.Contains(compoundKey) && entityToFlag.Count > 0)
+                            {
+                                var entityFlag = TryMatchByEntityId(evt, entityToFlag);
+                                if (entityFlag.HasValue)
+                                {
+                                    flagId = entityFlag.Value;
+                                    entityMatches++;
+                                    matched = true;
+                                }
+                                // else: fall through to use the compound-matched flag
+                            }
+                            if (!matched)
+                            {
+                                matched = true;
+                                compoundMatches++;
+                            }
                         }
                     }
 
@@ -281,10 +321,8 @@ public static class ZoneTrackingInjector
                             continue;
                         if (destOnlyCollisions.Contains(destMap) && sourceMap.HasValue)
                         {
-                            var destMapStr = $"m{destMap.Item1}_{destMap.Item2:D2}_{destMap.Item3:D2}_{destMap.Item4:D2}";
-                            var srcMapStr = $"m{sourceMap.Value.Item1}_{sourceMap.Value.Item2:D2}_{sourceMap.Value.Item3:D2}_{sourceMap.Value.Item4:D2}";
                             Console.WriteLine($"Zone tracking: skipped collided dest-only " +
-                                              $"on {destMapStr} from EMEVD {srcMapStr} (event {evt.ID})");
+                                              $"on {FormatMap(destMap)} from EMEVD {FormatMap(sourceMap.Value)} (event {evt.ID})");
                             skippedCollisions++;
                             continue;
                         }
@@ -332,14 +370,16 @@ public static class ZoneTrackingInjector
 
         var expectedFlagSet = connections.Where(c => c.FlagId > 0).Select(c => c.FlagId).Distinct().ToHashSet();
         Console.WriteLine($"Zone tracking: injected {totalInjected} fog gate tracking flags " +
-                          $"(compound: {compoundMatches}, dest-only: {destOnlyMatches}, " +
+                          $"(compound: {compoundMatches}, entity: {entityMatches}, dest-only: {destOnlyMatches}, " +
                           $"skipped collisions: {skippedCollisions}, expected unique flags: {expectedFlagSet.Count})");
 
         var missingFlags = expectedFlagSet.Except(injectedFlags).OrderBy(f => f).ToList();
         if (missingFlags.Count > 0)
         {
-            Console.WriteLine($"WARNING: {missingFlags.Count} zone tracking flags NOT injected: " +
-                              string.Join(", ", missingFlags));
+            throw new Exception(
+                $"Zone tracking: {missingFlags.Count} flags NOT injected: " +
+                string.Join(", ", missingFlags) +
+                ". Cannot produce a valid mod output.");
         }
     }
 
@@ -466,6 +506,41 @@ public static class ZoneTrackingInjector
             }
             destOnlyLookup.TryAdd(destKey, flagId);
         }
+    }
+
+    /// <summary>
+    /// Try to match an event to a connection flag by scanning its instructions for a known
+    /// exit gate entity ID. FogMod's fogwarp template bakes the gate entity_id into
+    /// IfActionButtonInArea (bank 3, id 24) as the third argument (offset 8 in ArgData).
+    /// Only that instruction type and offset are checked to avoid false positives.
+    ///
+    /// ArgData layout for IfActionButtonInArea (3:24):
+    ///   [0..3] Condition Group (int)
+    ///   [4..7] Action Button Parameter ID (int)
+    ///   [8..11] Target Entity ID (uint) ← the fog gate entity
+    /// </summary>
+    /// <returns>The matching flag_id, or null if no entity_id matches.</returns>
+    private static int? TryMatchByEntityId(EMEVD.Event evt, Dictionary<int, int> entityToFlag)
+    {
+        foreach (var instr in evt.Instructions)
+        {
+            // IfActionButtonInArea (bank 3, id 24): entity_id at ArgData offset 8
+            if (instr.Bank == 3 && instr.ID == 24 && instr.ArgData.Length >= 12)
+            {
+                int entityId = BitConverter.ToInt32(instr.ArgData, 8);
+                if (entityToFlag.TryGetValue(entityId, out int flagId))
+                    return flagId;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Format a map byte tuple as a human-readable string (e.g., "m10_01_00_00").
+    /// </summary>
+    private static string FormatMap((byte, byte, byte, byte) map)
+    {
+        return $"m{map.Item1}_{map.Item2:D2}_{map.Item3:D2}_{map.Item4:D2}";
     }
 
     /// <summary>
