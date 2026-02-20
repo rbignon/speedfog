@@ -767,10 +767,21 @@ def execute_merge_layer(
     letter_offset = 0
 
     used_zones.update(cluster.zones)
-    entries = select_entries_for_merge(cluster, actual_merge, rng)
-    entry_fogs_list = [FogRef(e["fog_id"], e["zone"]) for e in entries]
-    exits = compute_net_exits(cluster, entries)
-    exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits]
+
+    if cluster.allow_shared_entrance:
+        # Shared entrance: all branches connect to the same entry fog
+        entry = _stable_main_shuffle(cluster.entry_fogs, rng)[0]
+        shared_entry_fog = FogRef(entry["fog_id"], entry["zone"])
+        entry_fogs_list = [shared_entry_fog]
+        # Consume the shared entry's bidirectional pair from exits
+        exits = compute_net_exits(cluster, [entry])
+        exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits]
+    else:
+        # Original model: select N distinct entries
+        entries = select_entries_for_merge(cluster, actual_merge, rng)
+        entry_fogs_list = [FogRef(e["fog_id"], e["zone"]) for e in entries]
+        exits = compute_net_exits(cluster, entries)
+        exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits]
 
     merge_node_id = f"node_{layer_idx}_{chr(97 + letter_offset)}"
     merge_node = DagNode(
@@ -785,10 +796,24 @@ def execute_merge_layer(
     letter_offset += 1
 
     # Connect all merging branches to the merge node
-    for branch, entry_fog in zip(merge_branches, entry_fogs_list, strict=False):
-        dag.add_edge(
-            branch.current_node_id, merge_node_id, branch.available_exit, entry_fog
-        )
+    if cluster.allow_shared_entrance:
+        # All branches connect to the same entry fog
+        for branch in merge_branches:
+            dag.add_edge(
+                branch.current_node_id,
+                merge_node_id,
+                branch.available_exit,
+                shared_entry_fog,
+            )
+    else:
+        # Original model: each branch gets a distinct entry
+        for branch, entry_fog in zip(merge_branches, entry_fogs_list, strict=False):
+            dag.add_edge(
+                branch.current_node_id,
+                merge_node_id,
+                branch.available_exit,
+                entry_fog,
+            )
 
     # Create single branch for merged path
     new_branches.append(

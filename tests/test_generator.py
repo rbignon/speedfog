@@ -6,7 +6,7 @@ import pytest
 
 from speedfog.clusters import ClusterData, ClusterPool
 from speedfog.config import Config
-from speedfog.dag import Branch, FogRef
+from speedfog.dag import Branch, Dag, DagNode, FogRef
 from speedfog.generator import (
     GenerationError,
     _find_valid_merge_indices,
@@ -16,6 +16,7 @@ from speedfog.generator import (
     cluster_has_usable_exits,
     compute_net_exits,
     count_net_exits,
+    execute_merge_layer,
     generate_dag,
     generate_with_retry,
     pick_cluster,
@@ -1667,6 +1668,118 @@ class TestMergeGuards:
 
         # Ensure we actually tested some successful generations
         assert successes >= 10, f"Only {successes} seeds succeeded out of 200"
+
+
+# =============================================================================
+# Shared entrance merge layer tests
+# =============================================================================
+
+
+class TestExecuteMergeLayerSharedEntrance:
+    """Tests for execute_merge_layer with shared entrance clusters."""
+
+    def _make_merge_pool(self):
+        """Build a minimal pool where the ONLY merge-capable mini_dungeon
+        is a shared-entrance cluster. This ensures deterministic testing."""
+        pool = ClusterPool()
+
+        # Source clusters (passant-capable, 1 entry + 2 exits with bidir)
+        for i in range(2):
+            pool.add(
+                make_cluster(
+                    f"src_{i}",
+                    zones=[f"src_{i}_zone"],
+                    cluster_type="mini_dungeon",
+                    entry_fogs=[{"fog_id": f"src_{i}_entry", "zone": f"src_{i}_zone"}],
+                    exit_fogs=[
+                        {"fog_id": f"src_{i}_exit", "zone": f"src_{i}_zone"},
+                        {"fog_id": f"src_{i}_entry", "zone": f"src_{i}_zone"},
+                    ],
+                )
+            )
+
+        # The only merge-capable cluster (shared entrance: 2 entries + 1 exit)
+        pool.add(
+            make_cluster(
+                "shared_merge",
+                zones=["shared_merge_zone"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[
+                    {"fog_id": "shared_entry_a", "zone": "shared_merge_zone"},
+                    {"fog_id": "shared_entry_b", "zone": "shared_merge_zone"},
+                ],
+                exit_fogs=[
+                    {"fog_id": "shared_exit", "zone": "shared_merge_zone"},
+                ],
+                allow_shared_entrance=True,
+            )
+        )
+
+        return pool
+
+    def test_shared_entrance_merge_creates_single_entry_node(self):
+        """Shared entrance merge creates a node with 1 entry_fog, not N."""
+        pool = self._make_merge_pool()
+        dag = Dag(seed=42)
+
+        # Create two source nodes from different parents
+        src_a_cluster = pool.get_by_id("src_0")
+        src_b_cluster = pool.get_by_id("src_1")
+        src_a = DagNode(
+            id="src_a",
+            cluster=src_a_cluster,
+            layer=0,
+            tier=1,
+            entry_fogs=[],
+            exit_fogs=[FogRef("src_0_exit", "src_0_zone")],
+        )
+        src_b = DagNode(
+            id="src_b",
+            cluster=src_b_cluster,
+            layer=0,
+            tier=1,
+            entry_fogs=[],
+            exit_fogs=[FogRef("src_1_exit", "src_1_zone")],
+        )
+        dag.add_node(src_a)
+        dag.add_node(src_b)
+
+        branches = [
+            Branch("a", "src_a", FogRef("src_0_exit", "src_0_zone")),
+            Branch("b", "src_b", FogRef("src_1_exit", "src_1_zone")),
+        ]
+
+        rng = random.Random(42)
+        config = Config()
+        used_zones = {"src_0_zone", "src_1_zone"}
+
+        result = execute_merge_layer(
+            dag,
+            branches,
+            1,
+            2,
+            "mini_dungeon",
+            pool,
+            used_zones,
+            rng,
+            config,
+        )
+
+        # Find the merge node
+        merge_nodes = [n for n in dag.nodes.values() if n.cluster.id == "shared_merge"]
+        assert len(merge_nodes) == 1
+        merge_node = merge_nodes[0]
+
+        # Shared entrance: node has 1 entry_fog, not 2
+        assert len(merge_node.entry_fogs) == 1
+
+        # Both edges point to the same entry_fog
+        merge_edges = [e for e in dag.edges if e.target_id == merge_node.id]
+        assert len(merge_edges) == 2
+        assert merge_edges[0].entry_fog == merge_edges[1].entry_fog
+
+        # Result should have 1 branch (merged)
+        assert len(result) == 1
 
 
 # =============================================================================
