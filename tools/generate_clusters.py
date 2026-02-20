@@ -1576,6 +1576,17 @@ def main() -> int:
     for cluster in clusters:
         compute_cluster_fogs(cluster, world_graph, zone_fogs)
 
+    # Deduplicate clusters (pruning may have made some zone sets identical)
+    seen_pruned: set[frozenset[str]] = set()
+    unique_clusters: list[Cluster] = []
+    for cluster in clusters:
+        if cluster.zones not in seen_pruned:
+            seen_pruned.add(cluster.zones)
+            unique_clusters.append(cluster)
+    if len(unique_clusters) < len(clusters):
+        print(f"  Deduplicated {len(clusters) - len(unique_clusters)} pruned clusters")
+    clusters = unique_clusters
+
     # Load metadata
     metadata = load_metadata(args.metadata)
 

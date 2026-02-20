@@ -1363,6 +1363,35 @@ class TestComputeClusterFogs:
         entry_zones = {f["zone"] for f in cluster.entry_fogs}
         assert entry_zones == {"zone_a", "zone_b"}
 
+    def test_pruning_creates_deduplication_opportunity(self):
+        """Two clusters with different zones become identical after pruning."""
+        # Cluster 1: {a, b, c} where c is unreachable from a
+        # Cluster 2: {a, b}
+        # After pruning cluster 1 -> {a, b} = same as cluster 2
+        graph = WorldGraph()
+        graph.add_edge("a", "b", bidirectional=True)
+        graph.add_edge("c", "b", bidirectional=False)  # drop, c unreachable from a
+
+        zone_fogs = {
+            "a": ZoneFogs(
+                entry_fogs=[FogData("f_a", 1, FogSide("a", ""), FogSide("x", ""))],
+                exit_fogs=[FogData("f_a", 1, FogSide("a", ""), FogSide("x", ""))],
+            ),
+            "b": ZoneFogs(
+                entry_fogs=[],
+                exit_fogs=[FogData("f_b", 2, FogSide("b", ""), FogSide("y", ""))],
+            ),
+        }
+
+        cluster1 = Cluster(zones=frozenset({"a", "b", "c"}))
+        cluster2 = Cluster(zones=frozenset({"a", "b"}))
+        compute_cluster_fogs(cluster1, graph, zone_fogs)
+        compute_cluster_fogs(cluster2, graph, zone_fogs)
+
+        # After pruning, cluster1.zones == cluster2.zones
+        assert cluster1.zones == cluster2.zones
+        assert cluster1.zones == frozenset({"a", "b"})
+
 
 # =============================================================================
 # Filter Tests
