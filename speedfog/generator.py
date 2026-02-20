@@ -164,27 +164,27 @@ def count_net_exits(cluster: ClusterData, num_entries: int) -> int:
 def can_be_split_node(cluster: ClusterData, num_out: int) -> bool:
     """Check if cluster can be a split node (1 entry -> num_out exits).
 
-    With entry-as-exit enabled, the entry fog's bidirectional pair is NOT
-    consumed as an exit, so all exit_fogs remain available.
+    Requires at least num_out exits after consuming 1 entry.
+    Extra exits beyond num_out are left unmapped (no fog gate created).
 
     Args:
         cluster: The cluster to check.
-        num_out: Number of required exits after using 1 entry.
+        num_out: Minimum number of exits required after using 1 entry.
 
     Returns:
         True if cluster has enough exits for num_out branches.
     """
     if cluster.allow_entry_as_exit:
-        # >= because entry doesn't consume its pair; extra exits are unused but harmless
         return len(cluster.entry_fogs) >= 1 and len(cluster.exit_fogs) >= num_out
-    return count_net_exits(cluster, 1) == num_out
+    return count_net_exits(cluster, 1) >= num_out
 
 
 def can_be_merge_node(cluster: ClusterData, num_in: int) -> bool:
-    """Check if cluster can be a merge node (num_in entries -> 1 exit).
+    """Check if cluster can be a merge node (num_in entries -> 1+ exit).
 
     With shared entrance enabled, multiple branches connect to the same
     entrance fog gate. Only needs 2+ entries + 1+ exit regardless of fan-in.
+    Extra exits beyond 1 are left unmapped.
 
     Args:
         cluster: The cluster to check.
@@ -194,26 +194,25 @@ def can_be_merge_node(cluster: ClusterData, num_in: int) -> bool:
         True if cluster can serve as a merge node.
     """
     if cluster.allow_shared_entrance:
-        # Shared entrance: require 2+ entries even with override, per spec constraint
         return len(cluster.entry_fogs) >= 2 and len(cluster.exit_fogs) >= 1
-    return len(cluster.entry_fogs) >= num_in and count_net_exits(cluster, num_in) == 1
+    return len(cluster.entry_fogs) >= num_in and count_net_exits(cluster, num_in) >= 1
 
 
 def can_be_passant_node(cluster: ClusterData) -> bool:
-    """Check if cluster can be a passant node (1 entry -> 1 exit).
+    """Check if cluster can be a passant node (1 entry -> 1+ exit).
 
-    With entry-as-exit enabled, the entry fog's bidirectional pair is NOT
-    consumed, so any cluster with 1+ entry and 1+ exit qualifies.
+    Requires at least 1 exit after consuming 1 entry.
+    Extra exits are left unmapped (no fog gate created).
 
     Args:
         cluster: The cluster to check.
 
     Returns:
-        True if cluster has at least 1 exit available.
+        True if cluster has at least 1 exit available after using 1 entry.
     """
     if cluster.allow_entry_as_exit:
         return len(cluster.entry_fogs) >= 1 and len(cluster.exit_fogs) >= 1
-    return count_net_exits(cluster, 1) == 1
+    return count_net_exits(cluster, 1) >= 1
 
 
 def _stable_main_shuffle(entries: list[dict], rng: random.Random) -> list[dict]:
@@ -461,19 +460,20 @@ def decide_operation(
 def _pick_entry_and_exits_for_node(
     cluster: ClusterData, min_exits: int, rng: random.Random
 ) -> tuple[FogRef, list[FogRef]]:
-    """Pick an entry fog and available exits for a node.
+    """Pick an entry fog and exactly min_exits randomly-selected exits.
 
+    Returns a randomized subset of available exits, trimmed to min_exits.
     With entry-as-exit, the entry's bidirectional pair is not consumed,
-    so all exit_fogs remain available. Otherwise, uses the standard
-    net-exit calculation.
+    so all exit_fogs are candidates. Otherwise, uses the standard
+    net-exit calculation to determine candidates.
 
     Args:
         cluster: The cluster to pick entry/exits for.
-        min_exits: Minimum number of exits required.
+        min_exits: Exact number of exits to return.
         rng: Random number generator.
 
     Returns:
-        Tuple of (entry_fog, exit_fogs).
+        Tuple of (entry_fog, exit_fogs) where len(exit_fogs) == min_exits.
 
     Raises:
         GenerationError: If no valid entry fog found.
@@ -484,8 +484,9 @@ def _pick_entry_and_exits_for_node(
             rng.choice(main_entries) if main_entries else rng.choice(cluster.entry_fogs)
         )
         entry_fog = FogRef(entry["fog_id"], entry["zone"])
-        exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in cluster.exit_fogs]
-        return entry_fog, exit_fogs
+        all_exits = [FogRef(f["fog_id"], f["zone"]) for f in cluster.exit_fogs]
+        rng.shuffle(all_exits)
+        return entry_fog, all_exits[:min_exits]
 
     picked = pick_entry_with_max_exits(cluster, min_exits, rng)
     if picked is None:
@@ -494,7 +495,8 @@ def _pick_entry_and_exits_for_node(
         )
     entry_fog = FogRef(picked["fog_id"], picked["zone"])
     exits = compute_net_exits(cluster, [picked])
-    exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits]
+    rng.shuffle(exits)
+    exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits[:min_exits]]
     return entry_fog, exit_fogs
 
 
@@ -641,8 +643,7 @@ def execute_split_layer(
                 branch.current_node_id, node_id, branch.available_exit, entry_fog
             )
 
-            # Create actual_fan_out new branches
-            rng.shuffle(exit_fogs)
+            # Create actual_fan_out new branches (exits already randomized)
             for j in range(actual_fan_out):
                 suffix = chr(97 + j)
                 new_branches.append(
@@ -800,13 +801,15 @@ def execute_merge_layer(
         shared_entry_fog = FogRef(entries[0]["fog_id"], entries[0]["zone"])
         entry_fogs_list = [shared_entry_fog]
         exits = compute_net_exits(cluster, entries)
-        exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits]
+        rng.shuffle(exits)
+        exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits[:1]]
     else:
         # Original model: select N distinct entries
         entries = select_entries_for_merge(cluster, actual_merge, rng)
         entry_fogs_list = [FogRef(e["fog_id"], e["zone"]) for e in entries]
         exits = compute_net_exits(cluster, entries)
-        exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits]
+        rng.shuffle(exits)
+        exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits[:1]]
 
     merge_node_id = f"node_{layer_idx}_{chr(97 + letter_offset)}"
     merge_node = DagNode(

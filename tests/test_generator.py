@@ -11,6 +11,7 @@ from speedfog.generator import (
     GenerationError,
     _find_valid_merge_indices,
     _has_valid_merge_pair,
+    _pick_entry_and_exits_for_node,
     _stable_main_shuffle,
     can_be_merge_node,
     can_be_passant_node,
@@ -948,6 +949,56 @@ class TestComputeNetExits:
         assert len(remaining) == 2
 
 
+class TestCanBeNodeWithExcessExits:
+    """Tests for can_be_*_node with excess exits (>= relaxation)."""
+
+    def test_passant_with_excess_exits(self):
+        """Cluster with 3 net exits qualifies as passant."""
+        cluster = make_cluster(
+            "big",
+            entry_fogs=[{"fog_id": "entry1", "zone": "zone_a"}],
+            exit_fogs=[
+                {"fog_id": "exit1", "zone": "zone_b"},
+                {"fog_id": "exit2", "zone": "zone_b"},
+                {"fog_id": "exit3", "zone": "zone_b"},
+            ],
+        )
+        assert can_be_passant_node(cluster) is True
+
+    def test_split_with_excess_exits(self):
+        """Cluster with 4 net exits qualifies as split(2)."""
+        cluster = make_cluster(
+            "big",
+            entry_fogs=[{"fog_id": "entry1", "zone": "zone_a"}],
+            exit_fogs=[
+                {"fog_id": "exit1", "zone": "zone_b"},
+                {"fog_id": "exit2", "zone": "zone_b"},
+                {"fog_id": "exit3", "zone": "zone_b"},
+                {"fog_id": "exit4", "zone": "zone_b"},
+            ],
+        )
+        assert can_be_split_node(cluster, 2) is True
+
+    def test_merge_with_excess_exits(self):
+        """Cluster with 3 entries and 2 net exits qualifies as merge(3)."""
+        cluster = make_cluster(
+            "big",
+            entry_fogs=[
+                {"fog_id": "entry_a", "zone": "zone_a"},
+                {"fog_id": "entry_b", "zone": "zone_b"},
+                {"fog_id": "entry_c", "zone": "zone_c"},
+            ],
+            exit_fogs=[
+                {"fog_id": "entry_a", "zone": "zone_a"},
+                {"fog_id": "entry_b", "zone": "zone_b"},
+                {"fog_id": "entry_c", "zone": "zone_c"},
+                {"fog_id": "exit1", "zone": "zone_a"},
+                {"fog_id": "exit2", "zone": "zone_b"},
+            ],
+        )
+        assert can_be_merge_node(cluster, 3) is True
+
+
 class TestCanBeSplitNodeEntryAsExit:
     """Tests for can_be_split_node with allow_entry_as_exit."""
 
@@ -1236,6 +1287,77 @@ class TestPickEntryWithMaxExits:
 
         # Entry consumes the only exit, so no valid entry for min_exits=1
         assert entry is None
+
+
+class TestPickEntryAndExitsForNode:
+    """Tests for _pick_entry_and_exits_for_node exit trimming."""
+
+    def test_trims_excess_exits_to_min_exits(self):
+        """Cluster with 4 exits returns exactly min_exits=1 exit."""
+        cluster = make_cluster(
+            "big",
+            zones=["zone_a", "zone_b"],
+            entry_fogs=[{"fog_id": "entry1", "zone": "zone_a"}],
+            exit_fogs=[
+                {"fog_id": "exit1", "zone": "zone_a"},
+                {"fog_id": "exit2", "zone": "zone_b"},
+                {"fog_id": "exit3", "zone": "zone_b"},
+                {"fog_id": "exit4", "zone": "zone_b"},
+            ],
+        )
+        rng = random.Random(42)
+        entry, exits = _pick_entry_and_exits_for_node(cluster, 1, rng)
+        assert entry.fog_id == "entry1"
+        assert len(exits) == 1
+
+    def test_trims_exits_for_split(self):
+        """Cluster with 5 exits returns exactly min_exits=2 for split."""
+        cluster = make_cluster(
+            "big",
+            zones=["zone_a", "zone_b"],
+            entry_fogs=[{"fog_id": "entry1", "zone": "zone_a"}],
+            exit_fogs=[
+                {"fog_id": "exit1", "zone": "zone_a"},
+                {"fog_id": "exit2", "zone": "zone_b"},
+                {"fog_id": "exit3", "zone": "zone_b"},
+                {"fog_id": "exit4", "zone": "zone_b"},
+                {"fog_id": "exit5", "zone": "zone_b"},
+            ],
+        )
+        rng = random.Random(42)
+        entry, exits = _pick_entry_and_exits_for_node(cluster, 2, rng)
+        assert len(exits) == 2
+
+    def test_entry_as_exit_trims_exits(self):
+        """Entry-as-exit cluster also trims excess exits."""
+        cluster = make_cluster(
+            "eae",
+            zones=["zone_a"],
+            entry_fogs=[{"fog_id": "shared", "zone": "zone_a", "main": True}],
+            exit_fogs=[
+                {"fog_id": "exit1", "zone": "zone_a"},
+                {"fog_id": "exit2", "zone": "zone_a"},
+                {"fog_id": "exit3", "zone": "zone_a"},
+            ],
+            allow_entry_as_exit=True,
+        )
+        rng = random.Random(42)
+        entry, exits = _pick_entry_and_exits_for_node(cluster, 1, rng)
+        assert len(exits) == 1
+
+    def test_exact_exits_not_trimmed(self):
+        """Cluster with exactly min_exits returns all of them."""
+        cluster = make_cluster(
+            "exact",
+            zones=["zone_a", "zone_b"],
+            entry_fogs=[{"fog_id": "entry1", "zone": "zone_a"}],
+            exit_fogs=[
+                {"fog_id": "exit1", "zone": "zone_b"},
+            ],
+        )
+        rng = random.Random(42)
+        entry, exits = _pick_entry_and_exits_for_node(cluster, 1, rng)
+        assert len(exits) == 1
 
 
 class TestStableMainShuffle:
@@ -2330,7 +2452,8 @@ class TestEntryAsExitSimulation:
             )
 
         # Merge-compatible boss arenas (2 entries + shared entrance)
-        for i in range(3):
+        # Need enough to survive passant consumption (they're now also passant-eligible)
+        for i in range(8):
             pool.add(
                 make_cluster(
                     f"merge_boss_{i}",
@@ -2384,7 +2507,8 @@ class TestEntryAsExitSimulation:
             )
 
         # Merge-compatible clusters (shared entrance)
-        for i in range(5):
+        # Need enough to survive passant consumption (they're now also passant-eligible)
+        for i in range(10):
             pool.add(
                 make_cluster(
                     f"merge_{i}",
