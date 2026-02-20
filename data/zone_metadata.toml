@@ -6,17 +6,21 @@
 # weight = approximate duration in minutes
 
 [defaults]
-# Default weights by zone type (5 types)
+# Default weights by zone type
 legacy_dungeon = 10
-mini_dungeon = 4
+mini_dungeon = 3
+major_boss = 4
 boss_arena = 2
+underground = 6
 start = 1
 final_boss = 4
+other = 2
 
 # Zone-specific overrides
 # Format: [zones.zone_name]
 #         weight = X
 
+# Base game legacy dungeons
 [zones.stormveil]
 weight = 15
 
@@ -44,20 +48,11 @@ weight = 5
 [zones.volcano]
 weight = 12
 
-[zones.volcano_manor]
-weight = 8
-
 [zones.haligtree]
 weight = 15
 
-[zones.haligtree_town]
-weight = 10
-
 [zones.farumazula]
 weight = 15
-
-[zones.farumazula_dragon]
-weight = 8
 
 # Large catacombs
 [zones.gelmir_hero_grave]
@@ -70,24 +65,12 @@ weight = 6
 [zones.volcano_abductors]
 type = "boss_arena"
 
-# Boss arenas with longer fights
-[zones.stormveil_godrick]
-weight = 4
-
+# Boss arenas with non-default weights
 [zones.academy_library]
 weight = 3
 
-[zones.leyndell_throne]
-weight = 4
-
-[zones.volcano_rykard]
-weight = 4
-
 [zones.haligtree_malenia]
 weight = 5
-
-[zones.farumazula_maliketh]
-weight = 4
 
 # =============================================================================
 # DLC - Shadow of the Erdtree
@@ -105,7 +88,6 @@ weight = 12
 
 [zones.ensis]
 type = "legacy_dungeon"
-weight = 10
 
 [zones.shadowkeep]
 type = "legacy_dungeon"
@@ -113,35 +95,44 @@ weight = 12
 
 [zones.shadowkeep_church]
 type = "legacy_dungeon"
-weight = 10
 
 [zones.storehouse]
 type = "legacy_dungeon"
-weight = 10
 
 [zones.midramanse]
 type = "legacy_dungeon"
-weight = 10
 
-# DLC Boss arenas
-[zones.belurat_boss]
-weight = 4
+# DLC Mini Dungeons (longer than base game, ~6 min each)
+[zones.gravesite_catacombs]
+weight = 6
 
-[zones.ensis_boss]
-weight = 4
+[zones.gravesite_forge]
+weight = 6
 
-[zones.shadowkeep_boss]
-weight = 4
+[zones.gravesite_gaol]
+weight = 6
 
-[zones.storehouse_messmer]
-weight = 4
+[zones.ellac_cave]
+weight = 6
 
-[zones.midramanse_boss]
-weight = 4
+[zones.rauhbase_catacombs]
+weight = 6
+
+[zones.rauhbase_forge]
+weight = 6
+
+[zones.scadualtus_forge]
+weight = 6
+
+[zones.scadualtus_gaol]
+weight = 6
 
 # DLC Exclusions (zones that don't work well as independent clusters)
 [zones.fissure_boss]
 exclude = true
 
 [zones.rauhruins_postromina]
+exclude = true
+
+[zones.graveyard_cave]
 exclude = true

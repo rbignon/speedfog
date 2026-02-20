@@ -1220,8 +1220,8 @@ def load_metadata(path: Path | None) -> dict:
         return {
             "defaults": {
                 "legacy_dungeon": 10,
-                "mini_dungeon": 4,
-                "major_boss": 3,
+                "mini_dungeon": 3,
+                "major_boss": 4,
                 "boss_arena": 2,
                 "underground": 6,
                 "start": 1,
