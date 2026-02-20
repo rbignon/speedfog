@@ -1781,6 +1781,95 @@ class TestExecuteMergeLayerSharedEntrance:
         # Result should have 1 branch (merged)
         assert len(result) == 1
 
+    def test_shared_entrance_prefers_non_bidir_entry(self):
+        """Shared entrance selects non-bidirectional entry to preserve exits.
+
+        Regression test: if a random entry is chosen and it's bidirectional,
+        it may consume all exits, leading to an empty exit_fogs list.
+        """
+        pool = ClusterPool()
+
+        # Source clusters
+        for i in range(2):
+            pool.add(
+                make_cluster(
+                    f"src_{i}",
+                    zones=[f"src_{i}_zone"],
+                    cluster_type="mini_dungeon",
+                    entry_fogs=[{"fog_id": f"src_{i}_entry", "zone": f"src_{i}_zone"}],
+                    exit_fogs=[
+                        {"fog_id": f"src_{i}_exit", "zone": f"src_{i}_zone"},
+                        {"fog_id": f"src_{i}_entry", "zone": f"src_{i}_zone"},
+                    ],
+                )
+            )
+
+        # Asymmetric shared entrance: entry_a is bidirectional (also an exit),
+        # entry_b is not. The only exit is entry_a's pair. If entry_a is chosen,
+        # exits become empty. select_entries_for_merge should prefer entry_b.
+        pool.add(
+            make_cluster(
+                "asymmetric_merge",
+                zones=["asym_zone"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[
+                    {"fog_id": "bidir_fog", "zone": "asym_zone"},
+                    {"fog_id": "nonbidir_fog", "zone": "asym_zone"},
+                ],
+                exit_fogs=[
+                    {"fog_id": "bidir_fog", "zone": "asym_zone"},
+                ],
+                allow_shared_entrance=True,
+            )
+        )
+
+        dag = Dag(seed=42)
+        src_a_cluster = pool.get_by_id("src_0")
+        src_b_cluster = pool.get_by_id("src_1")
+        src_a = DagNode(
+            id="src_a",
+            cluster=src_a_cluster,
+            layer=0,
+            tier=1,
+            entry_fogs=[],
+            exit_fogs=[FogRef("src_0_exit", "src_0_zone")],
+        )
+        src_b = DagNode(
+            id="src_b",
+            cluster=src_b_cluster,
+            layer=0,
+            tier=1,
+            entry_fogs=[],
+            exit_fogs=[FogRef("src_1_exit", "src_1_zone")],
+        )
+        dag.add_node(src_a)
+        dag.add_node(src_b)
+
+        branches = [
+            Branch("a", "src_a", FogRef("src_0_exit", "src_0_zone")),
+            Branch("b", "src_b", FogRef("src_1_exit", "src_1_zone")),
+        ]
+
+        rng = random.Random(42)
+        config = Config()
+        used_zones = {"src_0_zone", "src_1_zone"}
+
+        result = execute_merge_layer(
+            dag, branches, 1, 2, "mini_dungeon", pool, used_zones, rng, config
+        )
+
+        merge_nodes = [
+            n for n in dag.nodes.values() if n.cluster.id == "asymmetric_merge"
+        ]
+        assert len(merge_nodes) == 1
+        merge_node = merge_nodes[0]
+
+        # Should have selected the non-bidirectional entry to preserve the exit
+        assert merge_node.entry_fogs[0] == FogRef("nonbidir_fog", "asym_zone")
+        # Exit preserved (bidir_fog not consumed)
+        assert len(merge_node.exit_fogs) == 1
+        assert len(result) == 1
+
 
 # =============================================================================
 # Roundtable merge into start

@@ -13,6 +13,7 @@ def make_cluster(
     weight: int = 5,
     entry_fogs: list[dict] | None = None,
     exit_fogs: list[dict] | None = None,
+    allow_shared_entrance: bool = False,
 ) -> ClusterData:
     """Helper to create test ClusterData objects."""
     return ClusterData(
@@ -23,6 +24,7 @@ def make_cluster(
         entry_fogs=entry_fogs
         or [{"fog_id": f"{cluster_id}_entry", "zone": cluster_id}],
         exit_fogs=exit_fogs or [{"fog_id": f"{cluster_id}_exit", "zone": cluster_id}],
+        allow_shared_entrance=allow_shared_entrance,
     )
 
 
@@ -582,3 +584,182 @@ class TestLayerValidation:
 
         # Few layers is a warning
         assert any("layer" in w.lower() for w in result.warnings)
+
+
+# =============================================================================
+# Shared entrance entry fog consistency tests
+# =============================================================================
+
+
+class TestSharedEntranceValidation:
+    """Tests for entry fog consistency with shared entrance nodes."""
+
+    def test_shared_entrance_allows_fewer_entry_fogs(self):
+        """Shared entrance node with 2 incoming edges but 1 entry_fog is valid."""
+        dag = Dag(seed=42)
+
+        start_cluster = make_cluster("start", cluster_type="start", weight=0)
+        dag.add_node(
+            DagNode(
+                id="start",
+                cluster=start_cluster,
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+                exit_fogs=["exit_a", "exit_b"],
+            )
+        )
+
+        branch_a = make_cluster("branch_a", cluster_type="mini_dungeon")
+        dag.add_node(
+            DagNode(
+                id="branch_a",
+                cluster=branch_a,
+                layer=1,
+                tier=1,
+                entry_fogs=["fog_a"],
+                exit_fogs=["fog_a_out"],
+            )
+        )
+        dag.add_edge("start", "branch_a", "exit_a", "fog_a")
+
+        branch_b = make_cluster("branch_b", cluster_type="mini_dungeon")
+        dag.add_node(
+            DagNode(
+                id="branch_b",
+                cluster=branch_b,
+                layer=1,
+                tier=1,
+                entry_fogs=["fog_b"],
+                exit_fogs=["fog_b_out"],
+            )
+        )
+        dag.add_edge("start", "branch_b", "exit_b", "fog_b")
+
+        # Shared entrance merge: 2 incoming edges, 1 entry_fog
+        merge_cluster = make_cluster(
+            "merge",
+            cluster_type="mini_dungeon",
+            allow_shared_entrance=True,
+        )
+        dag.add_node(
+            DagNode(
+                id="merge",
+                cluster=merge_cluster,
+                layer=2,
+                tier=1,
+                entry_fogs=["shared_entry"],
+                exit_fogs=["merge_exit"],
+            )
+        )
+        dag.add_edge("branch_a", "merge", "fog_a_out", "shared_entry")
+        dag.add_edge("branch_b", "merge", "fog_b_out", "shared_entry")
+
+        # End node
+        end_cluster = make_cluster("end", cluster_type="major_boss", weight=0)
+        dag.add_node(
+            DagNode(
+                id="end",
+                cluster=end_cluster,
+                layer=3,
+                tier=1,
+                entry_fogs=["end_entry"],
+                exit_fogs=[],
+            )
+        )
+        dag.add_edge("merge", "end", "merge_exit", "end_entry")
+        dag.start_id = "start"
+        dag.end_id = "end"
+
+        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0)
+        result = validate_dag(dag, config)
+
+        # No entry fog consistency errors
+        entry_fog_errors = [
+            e for e in result.errors if "entry_fogs" in e or "shared entrance" in e
+        ]
+        assert entry_fog_errors == []
+
+    def test_non_shared_entrance_rejects_mismatched_entry_fogs(self):
+        """Non-shared entrance node with 2 incoming edges but 1 entry_fog is invalid."""
+        dag = Dag(seed=42)
+
+        start_cluster = make_cluster("start", cluster_type="start", weight=0)
+        dag.add_node(
+            DagNode(
+                id="start",
+                cluster=start_cluster,
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+                exit_fogs=["exit_a", "exit_b"],
+            )
+        )
+
+        branch_a = make_cluster("branch_a", cluster_type="mini_dungeon")
+        dag.add_node(
+            DagNode(
+                id="branch_a",
+                cluster=branch_a,
+                layer=1,
+                tier=1,
+                entry_fogs=["fog_a"],
+                exit_fogs=["fog_a_out"],
+            )
+        )
+        dag.add_edge("start", "branch_a", "exit_a", "fog_a")
+
+        branch_b = make_cluster("branch_b", cluster_type="mini_dungeon")
+        dag.add_node(
+            DagNode(
+                id="branch_b",
+                cluster=branch_b,
+                layer=1,
+                tier=1,
+                entry_fogs=["fog_b"],
+                exit_fogs=["fog_b_out"],
+            )
+        )
+        dag.add_edge("start", "branch_b", "exit_b", "fog_b")
+
+        # NOT shared entrance: 2 incoming edges, 1 entry_fog → error
+        merge_cluster = make_cluster(
+            "merge",
+            cluster_type="mini_dungeon",
+            allow_shared_entrance=False,
+        )
+        dag.add_node(
+            DagNode(
+                id="merge",
+                cluster=merge_cluster,
+                layer=2,
+                tier=1,
+                entry_fogs=["only_entry"],
+                exit_fogs=["merge_exit"],
+            )
+        )
+        dag.add_edge("branch_a", "merge", "fog_a_out", "only_entry")
+        dag.add_edge("branch_b", "merge", "fog_b_out", "only_entry")
+
+        end_cluster = make_cluster("end", cluster_type="major_boss", weight=0)
+        dag.add_node(
+            DagNode(
+                id="end",
+                cluster=end_cluster,
+                layer=3,
+                tier=1,
+                entry_fogs=["end_entry"],
+                exit_fogs=[],
+            )
+        )
+        dag.add_edge("merge", "end", "merge_exit", "end_entry")
+        dag.start_id = "start"
+        dag.end_id = "end"
+
+        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0)
+        result = validate_dag(dag, config)
+
+        # Should have entry fog consistency error
+        entry_fog_errors = [e for e in result.errors if "entry_fogs" in e]
+        assert len(entry_fog_errors) == 1
+        assert "merge" in entry_fog_errors[0]

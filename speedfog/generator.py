@@ -769,12 +769,13 @@ def execute_merge_layer(
     used_zones.update(cluster.zones)
 
     if cluster.allow_shared_entrance:
-        # Shared entrance: all branches connect to the same entry fog
-        entry = _stable_main_shuffle(cluster.entry_fogs, rng)[0]
-        shared_entry_fog = FogRef(entry["fog_id"], entry["zone"])
+        # Shared entrance: all branches connect to the same entry fog.
+        # Use select_entries_for_merge(num=1) to prefer non-bidirectional
+        # entries, ensuring we don't consume exits unnecessarily.
+        entries = select_entries_for_merge(cluster, 1, rng)
+        shared_entry_fog = FogRef(entries[0]["fog_id"], entries[0]["zone"])
         entry_fogs_list = [shared_entry_fog]
-        # Consume the shared entry's bidirectional pair from exits
-        exits = compute_net_exits(cluster, [entry])
+        exits = compute_net_exits(cluster, entries)
         exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits]
     else:
         # Original model: select N distinct entries
@@ -816,6 +817,11 @@ def execute_merge_layer(
             )
 
     # Create single branch for merged path
+    if not exit_fogs:
+        raise GenerationError(
+            f"Merge node {merge_node_id} ({cluster.id}): "
+            "no exits remaining after consuming entries"
+        )
     new_branches.append(
         Branch(f"merged_{layer_idx}", merge_node_id, rng.choice(exit_fogs))
     )
