@@ -213,6 +213,10 @@ KEY_ITEMS = {
     # Special pass items (always available)
     "scalepass",
     "logicpass",
+    # ConfigVar aliases (composite conditions guaranteed when all items given)
+    "runes_leyndell",  # OR2 of Great Runes — all given at start
+    "runes_rold",  # roldmedallion — given at start
+    "runes_end",  # TRUE — always satisfied
 }
 
 # Tags that mark DLC content

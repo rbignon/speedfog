@@ -895,6 +895,33 @@ class TestClassifyFogs:
         assert fog in zone_fogs["zone_a"].entry_fogs
         assert fog in zone_fogs["zone_a"].exit_fogs
 
+    def test_runes_leyndell_cond_not_excluded(self):
+        """ConfigVar alias runes_leyndell is guaranteed (all runes given).
+
+        Real case: Deeproot→Leyndell sending gate (11002500) has ASide
+        Cond 'runes_leyndell'. This expands to OR2 of Great Runes, all
+        of which SpeedFog gives at start.
+        """
+        fog = FogData(
+            name="11002500",
+            fog_id=11002500,
+            aside=FogSide(
+                area="deeproot_boss",
+                text="using the sending gate after Fia's Champions",
+                cond="runes_leyndell",
+            ),
+            bside=FogSide(
+                area="leyndell",
+                text="arriving at Leyndell from Deeproot",
+                tags=["neveropen"],
+            ),
+            tags=["unique", "underground"],
+        )
+        zone_fogs = classify_fogs([fog], [])
+
+        # runes_leyndell is guaranteed → ASide is a valid exit
+        assert fog in zone_fogs["deeproot_boss"].exit_fogs
+
 
 # =============================================================================
 # Cluster Generation Tests
