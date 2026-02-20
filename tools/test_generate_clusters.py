@@ -1268,6 +1268,61 @@ class TestComputeClusterFogs:
         assert len(cluster.entry_fogs) == 1
         assert "main" not in cluster.entry_fogs[0]
 
+    def test_prune_unreachable_zones(self):
+        """Zones unreachable from entry fog zones are pruned."""
+        # Pattern: C --drop--> B <--bidir--> A (entry fog), C --> D (exit fog)
+        # Cluster {A, B, C, D} from flood-fill starting at C
+        # Entry fogs only at A -> reachable = {A, B} -> prune C, D
+        graph = WorldGraph()
+        graph.add_edge("c", "b", bidirectional=False)  # drop
+        graph.add_edge("a", "b", bidirectional=True)
+        graph.add_edge("c", "d", bidirectional=False)
+
+        zone_fogs = {
+            "a": ZoneFogs(
+                entry_fogs=[FogData("f_a", 1, FogSide("a", ""), FogSide("x", ""))],
+                exit_fogs=[FogData("f_a", 1, FogSide("a", ""), FogSide("x", ""))],
+            ),
+            "d": ZoneFogs(
+                entry_fogs=[],
+                exit_fogs=[FogData("f_d", 2, FogSide("d", ""), FogSide("y", ""))],
+            ),
+        }
+
+        cluster = Cluster(zones=frozenset({"a", "b", "c", "d"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        assert cluster.zones == frozenset({"a", "b"})
+        exit_zones = {f["zone"] for f in cluster.exit_fogs}
+        assert "d" not in exit_zones
+        assert "a" in exit_zones
+
+    def test_no_pruning_when_all_reachable(self):
+        """No zones pruned when all are reachable from entry fog zones."""
+        graph = WorldGraph()
+        graph.add_edge("top", "bottom", bidirectional=False)  # drop
+
+        zone_fogs = {
+            "top": ZoneFogs(
+                entry_fogs=[FogData("f_top", 1, FogSide("top", ""), FogSide("x", ""))],
+                exit_fogs=[FogData("f_top", 1, FogSide("top", ""), FogSide("x", ""))],
+            ),
+            "bottom": ZoneFogs(
+                entry_fogs=[],
+                exit_fogs=[
+                    FogData("f_bot", 2, FogSide("bottom", ""), FogSide("y", ""))
+                ],
+            ),
+        }
+
+        cluster = Cluster(zones=frozenset({"top", "bottom"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        # top is entry zone and has entry fog, bottom reachable via drop
+        assert cluster.zones == frozenset({"top", "bottom"})
+        exit_zones = {f["zone"] for f in cluster.exit_fogs}
+        assert "bottom" in exit_zones
+
     def test_same_fog_id_different_zones_creates_separate_entries_for_entries(self):
         """Same fog_id in different zones creates separate entry entries."""
         graph = WorldGraph()

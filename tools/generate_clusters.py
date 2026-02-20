@@ -990,6 +990,13 @@ def compute_cluster_fogs(
                     entry["main"] = True
                 cluster.entry_fogs.append(entry)
 
+    # Prune zones unreachable from entry fog zones
+    entry_fog_zones = {f["zone"] for f in cluster.entry_fogs}
+    if entry_fog_zones:
+        reachable = world_graph.get_reachable_within(entry_fog_zones, cluster.zones)
+        if reachable < cluster.zones:
+            cluster.zones = frozenset(reachable)
+
     # Collect exit fogs from all zones
     # Use (fog_id, zone) pairs - same fog in different zones = different sides of the gate
     seen_exits: set[tuple[int, str]] = set()
