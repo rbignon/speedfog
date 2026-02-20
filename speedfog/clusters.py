@@ -21,6 +21,10 @@ class ClusterData:
         default_factory=list
     )  # unique exits (filtered out)
     defeat_flag: int = 0  # Boss defeat event flag (from fog.txt DefeatFlag)
+    allow_shared_entrance: bool = False  # Multiple branches can share one entry fog
+    allow_entry_as_exit: bool = (
+        False  # Entry fog's return direction used as forward exit
+    )
 
     @classmethod
     def from_dict(cls, data: dict) -> ClusterData:
@@ -35,6 +39,8 @@ class ClusterData:
             exit_fogs=[f for f in all_exits if not f.get("unique")],
             unique_exit_fogs=[f for f in all_exits if f.get("unique")],
             defeat_flag=data.get("defeat_flag", 0),
+            allow_shared_entrance=data.get("allow_shared_entrance", False),
+            allow_entry_as_exit=data.get("allow_entry_as_exit", False),
         )
 
     def available_exits(self, used_entry: dict | None) -> list[dict]:

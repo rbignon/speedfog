@@ -34,6 +34,8 @@ def make_cluster(
     weight: int = 5,
     entry_fogs: list[dict] | object = _SENTINEL,
     exit_fogs: list[dict] | object = _SENTINEL,
+    allow_shared_entrance: bool = False,
+    allow_entry_as_exit: bool = False,
 ) -> ClusterData:
     """Helper to create test ClusterData objects.
 
@@ -50,6 +52,8 @@ def make_cluster(
         weight=weight,
         entry_fogs=entry_fogs,  # type: ignore[arg-type]
         exit_fogs=exit_fogs,  # type: ignore[arg-type]
+        allow_shared_entrance=allow_shared_entrance,
+        allow_entry_as_exit=allow_entry_as_exit,
     )
 
 
