@@ -179,15 +179,19 @@ def can_be_split_node(cluster: ClusterData, num_out: int) -> bool:
 def can_be_merge_node(cluster: ClusterData, num_in: int) -> bool:
     """Check if cluster can be a merge node (num_in entries -> 1 exit).
 
-    All fogs must be mapped: num_in entries consumed + 1 exit used.
+    With shared entrance enabled, multiple branches connect to the same
+    entrance fog gate. Only needs 2+ entries + 1+ exit regardless of fan-in.
 
     Args:
         cluster: The cluster to check.
         num_in: Number of entry fogs to consume.
 
     Returns:
-        True if cluster has enough entries and exactly 1 net exit.
+        True if cluster can serve as a merge node.
     """
+    if cluster.allow_shared_entrance:
+        # Shared entrance: require 2+ entries even with override, per spec constraint
+        return len(cluster.entry_fogs) >= 2 and len(cluster.exit_fogs) >= 1
     return len(cluster.entry_fogs) >= num_in and count_net_exits(cluster, num_in) == 1
 
 

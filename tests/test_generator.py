@@ -12,6 +12,7 @@ from speedfog.generator import (
     _find_valid_merge_indices,
     _has_valid_merge_pair,
     _stable_main_shuffle,
+    can_be_merge_node,
     cluster_has_usable_exits,
     compute_net_exits,
     count_net_exits,
@@ -941,6 +942,74 @@ class TestComputeNetExits:
 
         remaining = compute_net_exits(cluster, [])
         assert len(remaining) == 2
+
+
+class TestCanBeMergeNodeSharedEntrance:
+    """Tests for can_be_merge_node with allow_shared_entrance."""
+
+    def test_shared_entrance_two_entries_one_exit(self):
+        """With shared entrance, 2 entries + 1 exit qualifies for merge(2+)."""
+        cluster = make_cluster(
+            "merge_test",
+            entry_fogs=[
+                {"fog_id": "entry_a", "zone": "merge_test"},
+                {"fog_id": "entry_b", "zone": "merge_test"},
+            ],
+            exit_fogs=[{"fog_id": "exit_a", "zone": "merge_test"}],
+            allow_shared_entrance=True,
+        )
+        assert can_be_merge_node(cluster, 2) is True
+        assert can_be_merge_node(cluster, 3) is True  # fan-in doesn't matter
+
+    def test_shared_entrance_needs_at_least_two_entries(self):
+        """Shared entrance still requires 2+ entries (spec constraint)."""
+        cluster = make_cluster(
+            "merge_test",
+            entry_fogs=[{"fog_id": "entry_a", "zone": "merge_test"}],
+            exit_fogs=[{"fog_id": "exit_a", "zone": "merge_test"}],
+            allow_shared_entrance=True,
+        )
+        assert can_be_merge_node(cluster, 2) is False
+
+    def test_shared_entrance_needs_at_least_one_exit(self):
+        """With shared entrance, still needs at least 1 exit."""
+        cluster = make_cluster(
+            "merge_test",
+            entry_fogs=[
+                {"fog_id": "entry_a", "zone": "merge_test"},
+                {"fog_id": "entry_b", "zone": "merge_test"},
+            ],
+            exit_fogs=[],
+            allow_shared_entrance=True,
+        )
+        assert can_be_merge_node(cluster, 2) is False
+
+    def test_shared_entrance_bidirectional_entry(self):
+        """Shared entrance with bidirectional entry still qualifies."""
+        cluster = make_cluster(
+            "merge_test",
+            entry_fogs=[
+                {"fog_id": "bidir", "zone": "merge_test"},
+                {"fog_id": "entry_b", "zone": "merge_test"},
+            ],
+            exit_fogs=[
+                {"fog_id": "bidir", "zone": "merge_test"},
+                {"fog_id": "exit_a", "zone": "merge_test"},
+            ],
+            allow_shared_entrance=True,
+        )
+        assert can_be_merge_node(cluster, 2) is True
+
+    def test_without_shared_entrance_original_behavior(self):
+        """Without shared entrance, original strict merge rules apply."""
+        # 1 entry, 1 exit (bidirectional) — net exits = 0 → not merge(2)
+        cluster = make_cluster(
+            "merge_test",
+            entry_fogs=[{"fog_id": "bidir", "zone": "merge_test"}],
+            exit_fogs=[{"fog_id": "bidir", "zone": "merge_test"}],
+            allow_shared_entrance=False,
+        )
+        assert can_be_merge_node(cluster, 2) is False
 
 
 class TestCountNetExits:
