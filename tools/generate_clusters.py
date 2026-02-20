@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import sys
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -1219,7 +1220,7 @@ def load_metadata(path: Path | None) -> dict:
     if path is None or not path.exists():
         return {
             "defaults": {
-                "legacy_dungeon": 10,
+                "legacy_dungeon": 5,
                 "mini_dungeon": 3,
                 "major_boss": 4,
                 "boss_arena": 2,
@@ -1361,8 +1362,11 @@ def filter_and_enrich_clusters(
         if cluster.cluster_type == "underground":
             continue
 
-        # Calculate total weight
-        total_weight = 0
+        # Calculate cluster weight with logarithmic aggregation.
+        # Players traverse a path through zones, not all of them,
+        # so additional zones have diminishing impact on traversal time.
+        # Formula: avg_zone_weight * (1 + 0.5 * ln(n_zones))
+        zone_weights: list[int] = []
         for zone_name in cluster.zones:
             # Use metadata type override if available, else heuristic
             zone_type = None
@@ -1372,9 +1376,13 @@ def filter_and_enrich_clusters(
                     zone_type = zm["type"]
             if zone_type is None and zone_name in areas:
                 zone_type = get_zone_type(areas[zone_name], major_zones, fortress_zones)
-            total_weight += get_zone_weight(zone_name, zone_type or "other", metadata)
+            zone_weights.append(
+                get_zone_weight(zone_name, zone_type or "other", metadata)
+            )
 
-        cluster.weight = total_weight
+        n_zones = len(zone_weights)
+        avg_weight = sum(zone_weights) / n_zones
+        cluster.weight = round(avg_weight * (1 + 0.5 * math.log(n_zones)))
 
         # Compute fog reuse flags (Phase 1: shared entrance only)
         cluster.allow_shared_entrance = compute_allow_shared_entrance(

@@ -3,11 +3,15 @@
 # This file defines default weights per zone type and optional
 # zone-specific overrides for cluster weight calculations.
 #
-# weight = approximate duration in minutes
+# weight = approximate traversal time in minutes
+#
+# Multi-zone cluster weights use logarithmic aggregation:
+#   cluster_weight = round(avg_zone_weight * (1 + 0.5 * ln(n_zones)))
+# This reflects that players traverse a path through zones, not all of them.
 
 [defaults]
 # Default weights by zone type
-legacy_dungeon = 10
+legacy_dungeon = 5
 mini_dungeon = 3
 major_boss = 4
 boss_arena = 2
@@ -22,37 +26,37 @@ other = 2
 
 # Base game legacy dungeons
 [zones.stormveil]
-weight = 15
+weight = 8
 
 [zones.stormveil_start]
-weight = 8
+weight = 4
 
 [zones.academy]
-weight = 12
-
-[zones.academy_entrance]
-weight = 5
-
-[zones.academy_rooftops]
-weight = 8
-
-[zones.academy_courtyard]
 weight = 6
 
+[zones.academy_entrance]
+weight = 3
+
+[zones.academy_rooftops]
+weight = 4
+
+[zones.academy_courtyard]
+weight = 3
+
 [zones.leyndell]
-weight = 20
+weight = 10
 
 [zones.leyndell_sanctuary]
-weight = 5
+weight = 3
 
 [zones.volcano]
-weight = 12
+weight = 6
 
 [zones.haligtree]
-weight = 15
+weight = 8
 
 [zones.farumazula]
-weight = 15
+weight = 8
 
 # Large catacombs
 [zones.gelmir_hero_grave]
@@ -84,14 +88,14 @@ weight = 5
 # DLC Legacy Dungeons (type override: m20_ maps not in legacy_prefixes heuristic)
 [zones.belurat]
 type = "legacy_dungeon"
-weight = 12
+weight = 6
 
 [zones.ensis]
 type = "legacy_dungeon"
 
 [zones.shadowkeep]
 type = "legacy_dungeon"
-weight = 12
+weight = 6
 
 [zones.shadowkeep_church]
 type = "legacy_dungeon"
