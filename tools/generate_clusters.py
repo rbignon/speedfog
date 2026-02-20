@@ -523,6 +523,25 @@ class WorldGraph:
         visited.discard(start)  # Don't include start in result
         return visited
 
+    def get_reachable_within(
+        self, starts: set[str], allowed: frozenset[str]
+    ) -> set[str]:
+        """Get all zones reachable from starts, only traversing zones in allowed."""
+        visited: set[str] = set()
+        stack = [s for s in starts if s in allowed]
+
+        while stack:
+            current = stack.pop()
+            if current in visited:
+                continue
+            visited.add(current)
+
+            for target, _ in self.edges[current]:
+                if target not in visited and target in allowed:
+                    stack.append(target)
+
+        return visited
+
 
 def is_condition_guaranteed(cond: str | None, key_items: set[str]) -> bool:
     """

@@ -322,6 +322,25 @@ class TestWorldGraph:
         # From c: can reach b
         assert graph.get_reachable("c") == {"b"}
 
+    def test_get_reachable_within(self):
+        """Flood-fill scoped to allowed zones only."""
+        graph = WorldGraph()
+        graph.add_edge("a", "b", bidirectional=True)
+        graph.add_edge("b", "c", bidirectional=False)
+        graph.add_edge("c", "d", bidirectional=False)
+
+        # Scoped to {a, b, c}: d is excluded even though c->d exists
+        result = graph.get_reachable_within({"a"}, frozenset({"a", "b", "c"}))
+        assert result == {"a", "b", "c"}
+
+        # Scoped to {a, b}: c is excluded
+        result = graph.get_reachable_within({"a"}, frozenset({"a", "b"}))
+        assert result == {"a", "b"}
+
+        # Multiple starts
+        result = graph.get_reachable_within({"a", "d"}, frozenset({"a", "b", "c", "d"}))
+        assert result == {"a", "b", "c", "d"}
+
 
 class TestBuildWorldGraph:
     """Tests for build_world_graph function."""
