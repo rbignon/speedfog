@@ -1899,3 +1899,150 @@ class TestMergeRoundtableIntoStart:
 
         # Roundtable should still be in the pool
         assert pool.get_by_id("roundtable_dacf") is not None
+
+
+# =============================================================================
+# Shared entrance simulation tests
+# =============================================================================
+
+
+def make_cluster_pool_with_shared_entrance() -> ClusterPool:
+    """Create a cluster pool with shared-entrance merge-capable clusters.
+
+    Includes clusters with 2 bidir entries + no pure exit, which:
+    - Cannot be merge(2) in the old model (0 net exits after consuming 2)
+    - CAN be merge(N) with shared entrance (2+ entries, 1+ exits)
+
+    This pool demonstrates the key benefit of the fog reuse model.
+    """
+    pool = ClusterPool()
+
+    # Start with 2 exits
+    pool.add(
+        make_cluster(
+            "chapel_start",
+            zones=["chapel"],
+            cluster_type="start",
+            weight=1,
+            entry_fogs=[],
+            exit_fogs=[
+                {"fog_id": "start_exit_1", "zone": "chapel"},
+                {"fog_id": "start_exit_2", "zone": "chapel"},
+            ],
+        )
+    )
+
+    # Final boss
+    pool.add(
+        make_cluster(
+            "erdtree_boss",
+            zones=["leyndell_erdtree"],
+            cluster_type="final_boss",
+            weight=5,
+            entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
+            exit_fogs=[],
+        )
+    )
+
+    # Shared-entrance merge clusters: 2 bidir entries, no pure exit.
+    # Old model: count_net_exits(2) = 0 → NOT merge(2).
+    # Shared entrance: 2+ entries, 1+ exits → merge-capable.
+    for i in range(5):
+        pool.add(
+            make_cluster(
+                f"shared_{i}",
+                zones=[f"shared_{i}_zone"],
+                cluster_type="mini_dungeon",
+                weight=5,
+                entry_fogs=[
+                    {"fog_id": f"shared_{i}_entry_a", "zone": f"shared_{i}_zone"},
+                    {"fog_id": f"shared_{i}_entry_b", "zone": f"shared_{i}_zone"},
+                ],
+                exit_fogs=[
+                    {"fog_id": f"shared_{i}_entry_a", "zone": f"shared_{i}_zone"},
+                    {"fog_id": f"shared_{i}_entry_b", "zone": f"shared_{i}_zone"},
+                ],
+                allow_shared_entrance=True,
+            )
+        )
+
+    # Passant clusters (1 entry bidir + 1 pure exit = 1 net exit)
+    for i in range(15):
+        pool.add(
+            make_cluster(
+                f"passant_{i}",
+                zones=[f"passant_{i}_zone"],
+                cluster_type="mini_dungeon",
+                weight=5,
+                entry_fogs=[
+                    {"fog_id": f"passant_{i}_entry", "zone": f"passant_{i}_zone"},
+                ],
+                exit_fogs=[
+                    {"fog_id": f"passant_{i}_entry", "zone": f"passant_{i}_zone"},
+                    {"fog_id": f"passant_{i}_exit", "zone": f"passant_{i}_zone"},
+                ],
+            )
+        )
+
+    # Boss arenas (passant-capable)
+    for i in range(6):
+        pool.add(
+            make_cluster(
+                f"boss_{i}",
+                zones=[f"boss_{i}_zone"],
+                cluster_type="boss_arena",
+                weight=3,
+                entry_fogs=[
+                    {"fog_id": f"boss_{i}_entry", "zone": f"boss_{i}_zone"},
+                ],
+                exit_fogs=[
+                    {"fog_id": f"boss_{i}_entry", "zone": f"boss_{i}_zone"},
+                    {"fog_id": f"boss_{i}_exit", "zone": f"boss_{i}_zone"},
+                ],
+            )
+        )
+
+    # Legacy dungeons (passant-capable)
+    for i in range(3):
+        pool.add(
+            make_cluster(
+                f"legacy_{i}",
+                zones=[f"legacy_{i}_zone"],
+                cluster_type="legacy_dungeon",
+                weight=10,
+                entry_fogs=[
+                    {"fog_id": f"legacy_{i}_entry", "zone": f"legacy_{i}_zone"},
+                ],
+                exit_fogs=[
+                    {"fog_id": f"legacy_{i}_entry", "zone": f"legacy_{i}_zone"},
+                    {"fog_id": f"legacy_{i}_exit", "zone": f"legacy_{i}_zone"},
+                ],
+            )
+        )
+
+    return pool
+
+
+class TestSharedEntranceSimulation:
+    """Verify shared entrance merges work in full DAG generation."""
+
+    def test_generation_succeeds_with_shared_entrance_clusters(self):
+        """DAG generation succeeds when merge pool includes shared-entrance clusters."""
+        pool = make_cluster_pool_with_shared_entrance()
+        config = Config()
+        config.structure.split_probability = 0.0
+        config.structure.merge_probability = 0.5
+        config.structure.min_layers = 4
+        config.structure.max_layers = 6
+        # Relax requirements for the test pool
+        config.requirements.legacy_dungeons = 0
+        config.requirements.bosses = 0
+        config.requirements.mini_dungeons = 0
+
+        # Run 20 seeds — verify no GenerationError
+        for seed in range(20):
+            try:
+                dag = generate_dag(config, pool, seed=seed)
+                assert len(dag.nodes) >= 3  # at least start + 1 node + end
+            except GenerationError:
+                pytest.fail(f"Generation failed with seed {seed}")
