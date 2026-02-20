@@ -36,11 +36,30 @@ public static class ConnectionInjector
 
         var result = new InjectionResult { FinishEvent = finishEvent };
 
+        // Group connections by (entrance_area, entrance_gate) to detect shared entrances.
+        // Shared entrance = multiple exits connecting to the same entrance fog gate.
+        var entranceGroups = new Dictionary<string, List<Connection>>();
+        foreach (var conn in connections)
+        {
+            var key = $"{conn.EntranceArea}|{conn.EntranceGate}";
+            if (!entranceGroups.ContainsKey(key))
+                entranceGroups[key] = new List<Connection>();
+            entranceGroups[key].Add(conn);
+        }
+
+        // Track which entrances have already been connected (for DuplicateEntrance)
+        var connectedEntrances = new Dictionary<string, Graph.Edge>();
+
         foreach (var conn in connections)
         {
             try
             {
-                ConnectAndExtract(graph, conn, finalNodeFlag, result);
+                var key = $"{conn.EntranceArea}|{conn.EntranceGate}";
+                bool isSharedEntrance = entranceGroups[key].Count > 1;
+                bool isSecondaryConnection = connectedEntrances.ContainsKey(key);
+
+                ConnectAndExtract(graph, conn, finalNodeFlag, result,
+                    isSharedEntrance, isSecondaryConnection, connectedEntrances);
             }
             catch (Exception ex)
             {
@@ -54,9 +73,12 @@ public static class ConnectionInjector
 
     /// <summary>
     /// Connect a single exit edge to an entrance edge and extract warp data.
+    /// For shared entrances, secondary connections use DuplicateEntrance().
     /// </summary>
     private static void ConnectAndExtract(
-        Graph graph, Connection conn, int finalNodeFlag, InjectionResult result)
+        Graph graph, Connection conn, int finalNodeFlag, InjectionResult result,
+        bool isSharedEntrance, bool isSecondaryConnection,
+        Dictionary<string, Graph.Edge> connectedEntrances)
     {
         // Find the exit edge in the source area's To list
         if (!graph.Nodes.TryGetValue(conn.ExitArea, out var exitNode))
@@ -78,58 +100,80 @@ public static class ConnectionInjector
         }
 
         Graph.Edge? entranceEdge = null;
+        Graph.Edge? destExitEdge = null;
 
-        // Strategy 1: For bidirectional fogs, find via To + Pair
-        // The entrance gate name refers to an exit edge on the destination side,
-        // whose Pair is the entrance edge we want
-        var destExitEdge = entranceNode.To.Find(e => e.Name == conn.EntranceGate);
-        if (destExitEdge != null)
+        if (isSecondaryConnection)
         {
-            entranceEdge = destExitEdge.Pair;
+            // Shared entrance: duplicate the original entrance for this connection
+            var key = $"{conn.EntranceArea}|{conn.EntranceGate}";
+            var originalEntrance = connectedEntrances[key];
+            entranceEdge = graph.DuplicateEntrance(originalEntrance);
+            Console.WriteLine($"  Duplicated entrance for shared merge: {conn.EntranceGate}");
+        }
+        else
+        {
+            // Strategy 1: For bidirectional fogs, find via To + Pair
+            // The entrance gate name refers to an exit edge on the destination side,
+            // whose Pair is the entrance edge we want
+            destExitEdge = entranceNode.To.Find(e => e.Name == conn.EntranceGate);
+            if (destExitEdge != null)
+            {
+                entranceEdge = destExitEdge.Pair;
+            }
+
+            // Strategy 2: For one-way warps, the entrance edge is directly in From
+            // (one-way warps only have entrance edge on destination, no exit edge)
+            if (entranceEdge == null)
+            {
+                entranceEdge = entranceNode.From.Find(e => e.Name == conn.EntranceGate);
+            }
+
+            if (entranceEdge == null)
+            {
+                var availableTo = string.Join(", ", entranceNode.To.Select(e => e.Name));
+                var availableFrom = string.Join(", ", entranceNode.From.Select(e => e.Name));
+                throw new Exception(
+                    $"Entrance edge not found: {conn.EntranceGate} in {conn.EntranceArea}\n" +
+                    $"Available in To: {availableTo}\n" +
+                    $"Available in From: {availableFrom}");
+            }
         }
 
-        // Strategy 2: For one-way warps, the entrance edge is directly in From
-        // (one-way warps only have entrance edge on destination, no exit edge)
-        if (entranceEdge == null)
-        {
-            entranceEdge = entranceNode.From.Find(e => e.Name == conn.EntranceGate);
-        }
-
-        if (entranceEdge == null)
-        {
-            var availableTo = string.Join(", ", entranceNode.To.Select(e => e.Name));
-            var availableFrom = string.Join(", ", entranceNode.From.Select(e => e.Name));
-            throw new Exception(
-                $"Entrance edge not found: {conn.EntranceGate} in {conn.EntranceArea}\n" +
-                $"Available in To: {availableTo}\n" +
-                $"Available in From: {availableFrom}");
-        }
-
-        // Pre-disconnect any edges that FogMod's Graph.Construct() auto-connected.
-        // This happens for internal dungeon fog gates (e.g., enirilim_stairs ↔ enirilim_radahn)
-        // that we want to redirect to our custom DAG connections.
-        // Graph.Disconnect(exit) clears both directions and paired edges.
+        // Always disconnect the exit edge if pre-connected (each connection has its own exit)
         if (exitEdge.Link != null)
         {
             Console.WriteLine($"  Disconnecting pre-connected exit: {conn.ExitGate}");
             graph.Disconnect(exitEdge);
         }
-        if (destExitEdge != null && destExitEdge.Link != null)
+
+        // Entrance-side disconnect only for primary connections (duplicates are fresh edges)
+        if (!isSecondaryConnection)
         {
-            Console.WriteLine($"  Disconnecting pre-connected entrance: {conn.EntranceGate}");
-            graph.Disconnect(destExitEdge);
-        }
-        // Fallback: entrance edge still linked (e.g., one-way warp pre-connected independently)
-        if (entranceEdge.Link != null)
-        {
-            Console.WriteLine($"  Disconnecting pre-connected entrance link: {conn.EntranceGate}");
-            graph.Disconnect(entranceEdge.Link);
+            if (destExitEdge != null && destExitEdge.Link != null)
+            {
+                Console.WriteLine($"  Disconnecting pre-connected entrance: {conn.EntranceGate}");
+                graph.Disconnect(destExitEdge);
+            }
+            // Fallback: entrance edge still linked (e.g., one-way warp pre-connected independently)
+            if (entranceEdge.Link != null)
+            {
+                Console.WriteLine($"  Disconnecting pre-connected entrance link: {conn.EntranceGate}");
+                graph.Disconnect(entranceEdge.Link);
+            }
         }
 
         // Connect them
         graph.Connect(exitEdge, entranceEdge);
 
-        Console.WriteLine($"  Connected: {conn.ExitArea} --[{conn.ExitGate}]--> {conn.EntranceArea}");
+        // Track connected entrance for shared entrance detection
+        if (isSharedEntrance && !isSecondaryConnection)
+        {
+            var key = $"{conn.EntranceArea}|{conn.EntranceGate}";
+            connectedEntrances[key] = entranceEdge;
+        }
+
+        Console.WriteLine($"  Connected: {conn.ExitArea} --[{conn.ExitGate}]--> {conn.EntranceArea}" +
+            (isSecondaryConnection ? " (shared entrance)" : ""));
 
         // For connections targeting the final boss node, extract boss defeat flag.
         // Multiple connections may target the same final boss node (diamond DAG merge),
