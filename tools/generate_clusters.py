@@ -172,6 +172,8 @@ class Cluster:
     weight: int = 0
     cluster_id: str = ""
     defeat_flag: int = 0
+    allow_shared_entrance: bool = False
+    allow_entry_as_exit: bool = False
 
 
 # =============================================================================
@@ -1253,6 +1255,37 @@ def get_zone_weight(
     return defaults.get(zone_type, 4)
 
 
+def compute_allow_shared_entrance(
+    entry_fogs: list[dict],
+    zones_meta: dict,
+    zones: frozenset[str],
+) -> bool:
+    """Compute allow_shared_entrance default for a cluster.
+
+    Default: True if 2+ entry fogs.
+    Per-zone overrides from zone_metadata.toml take priority.
+
+    Args:
+        entry_fogs: List of entry fog dicts
+        zones_meta: The [zones] section from zone_metadata.toml
+        zones: Set of zone names in this cluster
+
+    Returns:
+        Whether this cluster allows shared entrance merges.
+    """
+    allow = len(entry_fogs) >= 2
+
+    # Per-zone overrides (any zone in cluster can override)
+    for zone_name in zones:
+        if zone_name not in zones_meta:
+            continue
+        zm = zones_meta[zone_name]
+        if isinstance(zm, dict) and "allow_shared_entrance" in zm:
+            allow = bool(zm["allow_shared_entrance"])
+
+    return allow
+
+
 def generate_cluster_id(zones: frozenset[str]) -> str:
     """Generate a unique cluster ID from zones."""
     # Sort zones for determinism
@@ -1342,6 +1375,13 @@ def filter_and_enrich_clusters(
             total_weight += get_zone_weight(zone_name, zone_type or "other", metadata)
 
         cluster.weight = total_weight
+
+        # Compute fog reuse flags (Phase 1: shared entrance only)
+        cluster.allow_shared_entrance = compute_allow_shared_entrance(
+            cluster.entry_fogs,
+            zones_meta,
+            cluster.zones,
+        )
 
         # Find defeat_flag: check direct zone flags first, then traverse
         for zone_name in sorted(cluster.zones):
@@ -1442,6 +1482,10 @@ def clusters_to_json(
         }
         if c.defeat_flag > 0:
             entry["defeat_flag"] = c.defeat_flag
+        if c.allow_shared_entrance:
+            entry["allow_shared_entrance"] = True
+        if c.allow_entry_as_exit:
+            entry["allow_entry_as_exit"] = True
         cluster_list.append(entry)
 
     return {
