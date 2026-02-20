@@ -273,22 +273,19 @@ def dag_to_dict(
             "shuffle": True,
         }
 
-    # Allocate event flag IDs per non-start destination node (for racing zone tracking).
+    # Allocate event flag IDs per connection (for racing zone tracking).
+    # Each connection gets a unique flag_id so the racing mod can detect re-entry
+    # to the same cluster from a different branch (e.g., shared entrance merges).
     # Must land in a category pre-allocated by FogRando in VirtualMemoryFlag.
     # FogRando's category 1040292 uses offsets ~100-299; we use 800-999 (200 flags).
     EVENT_FLAG_BASE = 1040292800
-    node_flag_ids: dict[str, int] = {}
     flag_counter = 0
-    for node in dag.nodes.values():
-        if node.id == dag.start_id:
-            continue
-        cluster_id = node.cluster.id
-        if cluster_id not in node_flag_ids:
-            node_flag_ids[cluster_id] = EVENT_FLAG_BASE + flag_counter
-            flag_counter += 1
+    event_map: dict[str, str] = {}  # str(flag_id) -> cluster_id
+    final_node_flag = 0  # first flag targeting the end node
 
     # Build connections list — zone info comes directly from FogRef
     connections: list[dict[str, str | int]] = []
+    end_cluster_id = dag.nodes[dag.end_id].cluster.id
     for edge in dag.edges:
         source_node = dag.nodes.get(edge.source_id)
         target_node = dag.nodes.get(edge.target_id)
@@ -317,6 +314,9 @@ def dag_to_dict(
             edge.entry_fog.fog_id if edge.entry_fog.fog_id else edge.exit_fog.fog_id
         )
 
+        flag_id = EVENT_FLAG_BASE + flag_counter
+        flag_counter += 1
+
         connections.append(
             {
                 "exit_area": exit_zone,
@@ -335,9 +335,15 @@ def dag_to_dict(
                     fog_data,
                     is_entry=True,
                 ),
-                "flag_id": node_flag_ids[target_node.cluster.id],
+                "flag_id": flag_id,
             }
         )
+
+        cluster_id = target_node.cluster.id
+        event_map[str(flag_id)] = cluster_id
+
+        if cluster_id == end_cluster_id and final_node_flag == 0:
+            final_node_flag = flag_id
 
     # Build area_tiers: zone -> tier
     area_tiers: dict[str, int] = {}
@@ -407,24 +413,22 @@ def dag_to_dict(
             seen_edges.add(pair)
             edges_list.append({"from": pair[0], "to": pair[1]})
 
-    # Build event_map: str(flag_id) -> cluster_id
-    event_map = {str(fid): cid for cid, fid in node_flag_ids.items()}
-
-    # final_node_flag: the zone-tracking flag for the final boss node.
-    # Used by C# to identify connections leading to the final boss area
-    # and extract its DefeatFlag from FogMod's Graph.
-    end_node = dag.nodes[dag.end_id]
-    final_node_flag = node_flag_ids[end_node.cluster.id]
-
     # finish_event: a SEPARATE flag for final boss death detection.
     # Must not reuse a zone-tracking flag, otherwise traversing the fog gate
     # into the final zone would prematurely trigger "RUN COMPLETE".
     finish_event = EVENT_FLAG_BASE + flag_counter
     flag_counter += 1
 
+    if flag_counter > 200:
+        raise ValueError(
+            f"Event flag budget exceeded: {flag_counter} flags allocated "
+            f"(max 200 in range 1040292800-1040292999)"
+        )
+
     # finish_boss_defeat_flag: the DefeatFlag for the final boss, propagated from
     # fog.txt through clusters.json. Used by C# as primary source for boss death
     # detection, with FogMod Graph extraction as fallback.
+    end_node = dag.nodes[dag.end_id]
     finish_boss_defeat_flag = end_node.cluster.defeat_flag
 
     # Collect vanilla warp entities to remove from MSBs.

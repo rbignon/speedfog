@@ -369,7 +369,7 @@ class TestEventMap:
         assert result["finish_event"] > max(zone_flags)
 
     def test_final_node_flag_is_end_node_zone_flag(self):
-        """final_node_flag matches the zone-tracking flag for the end node."""
+        """final_node_flag matches one of the zone-tracking flags for the end node."""
         dag = make_test_dag()
         clusters = ClusterPool(
             clusters=[node.cluster for node in dag.nodes.values()],
@@ -402,10 +402,12 @@ class TestEventMap:
             assert isinstance(conn["flag_id"], int)
             assert conn["flag_id"] >= 1040292800
 
-    def test_merge_node_connections_share_flag_id(self):
-        """Two connections to the same node get the same flag_id.
+    def test_merge_node_connections_have_unique_flag_ids(self):
+        """Two connections to the same node get different flag_ids.
 
-        In the diamond DAG, edges a→end and b→end should share the end node's flag_id.
+        In the diamond DAG, edges a→end and b→end have unique flags so the
+        racing mod can detect re-entry from a different branch.
+        Both flags map to the same cluster in event_map.
         """
         result = _make_result()
         # Find connections going to the end node's zone (z_end)
@@ -413,7 +415,13 @@ class TestEventMap:
             c for c in result["connections"] if c["entrance_area"] == "z_end"
         ]
         assert len(end_connections) == 2
-        assert end_connections[0]["flag_id"] == end_connections[1]["flag_id"]
+        assert end_connections[0]["flag_id"] != end_connections[1]["flag_id"]
+
+        # Both flags map to the same cluster in event_map
+        event_map = result["event_map"]
+        cluster_0 = event_map[str(end_connections[0]["flag_id"])]
+        cluster_1 = event_map[str(end_connections[1]["flag_id"])]
+        assert cluster_0 == cluster_1
 
     def test_run_complete_message_default(self):
         """Default run_complete_message is 'RUN COMPLETE'."""

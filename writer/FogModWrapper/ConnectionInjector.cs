@@ -176,8 +176,9 @@ public static class ConnectionInjector
             (isSecondaryConnection ? " (shared entrance)" : ""));
 
         // For connections targeting the final boss node, extract boss defeat flag.
-        // Multiple connections may target the same final boss node (diamond DAG merge),
-        // but they all share the same FlagId (finalNodeFlag) so DefeatFlag is consistent.
+        // finalNodeFlag matches the first connection to the end node; subsequent
+        // connections to the same node have different flag_ids (per-connection allocation)
+        // but we only need one match to extract the DefeatFlag.
         if (conn.FlagId == finalNodeFlag && finalNodeFlag > 0)
         {
             var area = graph.Areas.GetValueOrDefault(conn.EntranceArea);
