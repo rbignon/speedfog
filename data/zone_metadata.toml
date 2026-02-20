@@ -140,3 +140,7 @@ exclude = true
 
 [zones.graveyard_cave]
 exclude = true
+
+# Auriza Side Tomb: confusing trap-chest dungeon, monopolizes split(3/4) at mb=4
+[zones.outskirts_sidetomb]
+exclude = true
