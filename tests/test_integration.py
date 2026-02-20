@@ -109,11 +109,11 @@ class TestFullPipeline:
     def test_same_seed_produces_identical_dag(self, real_clusters, relaxed_config):
         """Same seed produces identical DAG (determinism)."""
         config = relaxed_config
-        config.seed = 12345
+        config.seed = 12346
         result1 = generate_with_retry(config, real_clusters)
         result2 = generate_with_retry(config, real_clusters)
 
-        assert result1.seed == result2.seed == 12345
+        assert result1.seed == result2.seed == 12346
         assert result1.dag.seed == result2.dag.seed
 
         # Same nodes

@@ -685,6 +685,37 @@ def find_defeat_flag(
 # =============================================================================
 
 
+def has_cross_zone_cond(side: FogSide, key_items: set[str]) -> bool:
+    """Check if a side has a Cond that depends on OTHER zones being reached.
+
+    Self-referencing conds (area == cond token) are drop indicators — you must
+    already be in the zone to use this side.  These are fine for exits.
+
+    Cross-zone conds (e.g., "OR altus outskirts gelmir") mean the gate is
+    controlled by vanilla activation events we can't guarantee (e.g., the
+    Redmane festival flag).  These must be excluded.
+
+    Returns True when the cond has non-key-item tokens referencing other zones.
+    """
+    if side.cond is None:
+        return False
+
+    tokens = side.cond.replace("(", " ").replace(")", " ").split()
+    items = [t.lower() for t in tokens if t.upper() not in ("OR", "AND")]
+
+    if not items:
+        return False
+
+    # Remove the side's own area (self-referencing = drop, not cross-zone)
+    cross_zone = [t for t in items if t != side.area.lower()]
+
+    if not cross_zone:
+        return False
+
+    # If remaining tokens are all key items, the condition is guaranteed
+    return not all(item in key_items for item in cross_zone)
+
+
 def classify_fogs(
     entrances: list[FogData],
     warps: list[FogData],
@@ -752,6 +783,15 @@ def classify_fogs(
         if not aside_area or not bside_area:
             continue
 
+        # Check if each side depends on other zones being reached.
+        # Cross-zone Cond (e.g., "OR altus outskirts gelmir") means the gate
+        # is controlled by vanilla activation events we can't guarantee.
+        # Exclude such sides to prevent softlocks (e.g., Redmane sending gate
+        # disabled when festival conditions aren't met).
+        # Self-referencing conds (area == cond) are drops, NOT cross-zone.
+        aside_cond_ok = not has_cross_zone_cond(fog.aside, KEY_ITEMS)
+        bside_cond_ok = not has_cross_zone_cond(fog.bside, KEY_ITEMS)
+
         # Minorwarp: transporter chests/sending gates (no AEG099 fog model).
         # Tag can appear at fog level OR on ASide/BSide — both mean one-way:
         #   ASide = "using the chest" = source (exit only)
@@ -766,15 +806,17 @@ def classify_fogs(
             or "minorwarp" in bside_tags_lower
         )
         if is_minorwarp:
-            zone_fogs[aside_area].exit_fogs.append(fog)
+            if aside_cond_ok:
+                zone_fogs[aside_area].exit_fogs.append(fog)
             continue
 
         # Backportals become selfwarps in the boss room only
         # With req_backportal=true, BSide.Area = ASide.Area
         if "backportal" in tags_lower:
             # Selfwarp: only add to ASide (the boss room)
-            zone_fogs[aside_area].entry_fogs.append(fog)
-            zone_fogs[aside_area].exit_fogs.append(fog)
+            if aside_cond_ok:
+                zone_fogs[aside_area].entry_fogs.append(fog)
+                zone_fogs[aside_area].exit_fogs.append(fog)
             continue
 
         # Return warps are one-way post-boss returns (ASide=boss area, BSide=return dest)
@@ -782,14 +824,16 @@ def classify_fogs(
         # Example: 34142852 (Fell Twins return) ASide=leyndell_tower_boss -> BSide=leyndell_tower
         # Treated like 'unique' warps: exit from ASide only, no entry anywhere
         if "return" in tags_lower and "returnpair" not in tags_lower:
-            zone_fogs[aside_area].exit_fogs.append(fog)
+            if aside_cond_ok:
+                zone_fogs[aside_area].exit_fogs.append(fog)
             continue
 
         if fog.is_unique:
             # Unique fogs are one-way warps (sending gates, abductors, etc.)
             # ASide is exit only - FogMod can redirect where the warp sends you
             # BSide is NOT an entry_fog - there's no physical fog gate at destination
-            zone_fogs[aside_area].exit_fogs.append(fog)
+            if aside_cond_ok:
+                zone_fogs[aside_area].exit_fogs.append(fog)
         elif fog.is_uniquegate:
             # Uniquegate: check if this pair was already processed
             zone_pair = fog.zone_pair
@@ -801,29 +845,36 @@ def classify_fogs(
 
             # Use the first fog of the pair as representative
             representative = uniquegate_by_zones[zone_pair][0]
+            rep_aside_ok = not has_cross_zone_cond(representative.aside, KEY_ITEMS)
+            rep_bside_ok = not has_cross_zone_cond(representative.bside, KEY_ITEMS)
             # Apply same Cond logic as bidirectional fogs
-            if not representative.aside.requires_own_zone():
+            if rep_aside_ok and not representative.aside.requires_own_zone():
                 zone_fogs[aside_area].entry_fogs.append(representative)
-            zone_fogs[aside_area].exit_fogs.append(representative)
-            if not representative.bside.requires_own_zone():
+            if rep_aside_ok:
+                zone_fogs[aside_area].exit_fogs.append(representative)
+            if rep_bside_ok and not representative.bside.requires_own_zone():
                 zone_fogs[bside_area].entry_fogs.append(representative)
-            zone_fogs[bside_area].exit_fogs.append(representative)
+            if rep_bside_ok:
+                zone_fogs[bside_area].exit_fogs.append(representative)
         else:
             # Bidirectional: both sides are entry + exit
             # EXCEPT when a side has Cond that requires its own zone (e.g., drops)
+            # or a zone-based Cond we can't guarantee (e.g., festival conditions)
             #
             # Example: AEG099_002_9000 (volcano_town -> volcano_abductors)
             #   ASide: Area=volcano_town, Cond=volcano_town
             #   -> You must already be in volcano_town to use ASide (it's a drop)
             #   -> This fog is NOT a valid entry into volcano_town from outside
             #   -> But it IS still an exit from volcano_town (you can drop down)
-            if not fog.aside.requires_own_zone():
+            if aside_cond_ok and not fog.aside.requires_own_zone():
                 zone_fogs[aside_area].entry_fogs.append(fog)
-            zone_fogs[aside_area].exit_fogs.append(fog)
+            if aside_cond_ok:
+                zone_fogs[aside_area].exit_fogs.append(fog)
 
-            if not fog.bside.requires_own_zone():
+            if bside_cond_ok and not fog.bside.requires_own_zone():
                 zone_fogs[bside_area].entry_fogs.append(fog)
-            zone_fogs[bside_area].exit_fogs.append(fog)
+            if bside_cond_ok:
+                zone_fogs[bside_area].exit_fogs.append(fog)
 
     return dict(zone_fogs)
 

@@ -802,6 +802,99 @@ class TestClassifyFogs:
         assert fog in zone_fogs["rauhbase_forge"].entry_fogs
         assert fog in zone_fogs["rauhbase_forge"].exit_fogs
 
+    def test_zone_cond_excludes_side_from_exit(self):
+        """Side with zone-based Cond is excluded from exit fogs.
+
+        Real case: Redmane sending gate (1050360600) has ASide Cond
+        'OR altus outskirts gelmir caelid_radahn'. The vanilla sending gate
+        is controlled by the festival flag — if conditions aren't met, it's
+        disabled in-game, causing a softlock.
+        """
+        fog = FogData(
+            name="1050360600",
+            fog_id=1050360600,
+            aside=FogSide(
+                area="caelid_redmane",
+                text="using the sending gate in Redmane Castle",
+                tags=["neveropen"],
+                cond="OR altus outskirts gelmir caelid_radahn",
+            ),
+            bside=FogSide(
+                area="caelid",
+                text="arriving at Impassable Greatbridge",
+                tags=["open"],
+            ),
+            tags=["uniqueminor", "minorwarp"],
+        )
+        zone_fogs = classify_fogs([fog], [])
+
+        # ASide has zone Cond → not a valid exit (sending gate may be disabled)
+        assert fog not in zone_fogs.get("caelid_redmane", ZoneFogs()).exit_fogs
+
+    def test_zone_cond_excludes_side_from_entry(self):
+        """Side with zone-based Cond is excluded from entry fogs too."""
+        fog = FogData(
+            name="test",
+            fog_id=1,
+            aside=FogSide(
+                area="zone_a",
+                text="",
+                cond="OR other_zone another_zone",
+            ),
+            bside=FogSide(area="zone_b", text=""),
+            tags=[],
+        )
+        zone_fogs = classify_fogs([fog], [])
+
+        # ASide has zone Cond → not a valid entry either
+        assert fog not in zone_fogs.get("zone_a", ZoneFogs()).entry_fogs
+        # BSide has no Cond → still valid
+        assert fog in zone_fogs["zone_b"].entry_fogs
+        assert fog in zone_fogs["zone_b"].exit_fogs
+
+    def test_self_referencing_cond_still_valid_exit(self):
+        """Self-referencing Cond (drop indicator) does NOT exclude from exits.
+
+        Example: catacomb ASide with cond=own_zone means you must already
+        be there to use it (a drop). It's not a valid entry, but IS a
+        valid exit — you can drop down to leave the zone.
+        """
+        fog = FogData(
+            name="test",
+            fog_id=1,
+            aside=FogSide(
+                area="my_catacomb",
+                text="dropping down",
+                cond="my_catacomb",
+            ),
+            bside=FogSide(area="overworld", text=""),
+            tags=[],
+        )
+        zone_fogs = classify_fogs([fog], [])
+
+        # ASide with self-referencing cond: NOT a valid entry, but IS a valid exit
+        assert fog not in zone_fogs.get("my_catacomb", ZoneFogs()).entry_fogs
+        assert fog in zone_fogs.get("my_catacomb", ZoneFogs()).exit_fogs
+
+    def test_key_item_cond_not_excluded(self):
+        """Side with key-item-only Cond is NOT excluded (items are given)."""
+        fog = FogData(
+            name="test",
+            fog_id=1,
+            aside=FogSide(
+                area="zone_a",
+                text="",
+                cond="rustykey",
+            ),
+            bside=FogSide(area="zone_b", text=""),
+            tags=[],
+        )
+        zone_fogs = classify_fogs([fog], [])
+
+        # Key item cond is guaranteed → still valid
+        assert fog in zone_fogs["zone_a"].entry_fogs
+        assert fog in zone_fogs["zone_a"].exit_fogs
+
 
 # =============================================================================
 # Cluster Generation Tests
