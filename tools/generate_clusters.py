@@ -1489,7 +1489,7 @@ def clusters_to_json(
         cluster_list.append(entry)
 
     return {
-        "version": "1.5",
+        "version": "1.6",
         "generated_from": "fog.txt",
         "cluster_count": len(clusters),
         "zone_maps": zone_maps,
