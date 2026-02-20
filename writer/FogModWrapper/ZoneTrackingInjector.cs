@@ -6,7 +6,7 @@ namespace FogModWrapper;
 
 /// <summary>
 /// Injects EMEVD events for racing zone tracking:
-/// A) Inject SetEventFlag before WarpPlayer in FogMod-generated per-instance warp events
+/// A) Inject SetEventFlag before warp instructions in FogMod-generated events
 /// B) Boss death monitor event that sets finish_event on final boss defeat
 /// </summary>
 public static class ZoneTrackingInjector
@@ -20,6 +20,82 @@ public static class ZoneTrackingInjector
     /// we only modify FogMod-generated warp events, not vanilla ones.
     /// </summary>
     private const int FOGMOD_ENTITY_BASE = 755890000;
+
+    /// <summary>
+    /// Destination map and region extracted from a warp instruction.
+    /// </summary>
+    private readonly struct WarpInfo
+    {
+        public readonly (byte, byte, byte, byte) DestMap;
+        public readonly int Region;
+
+        public WarpInfo((byte, byte, byte, byte) destMap, int region)
+        {
+            DestMap = destMap;
+            Region = region;
+        }
+    }
+
+    /// <summary>
+    /// Try to extract warp destination info from an EMEVD instruction.
+    /// Handles two instruction families that FogMod uses for zone transitions:
+    ///
+    /// 1. WarpPlayer (bank 2003, id 14):
+    ///    ArgData layout: [area(1), block(1), sub(1), sub2(1), region(4), unk(4)]
+    ///    Used by fogwarp template events and WarpBonfire portal events.
+    ///
+    /// 2. PlayCutsceneToPlayerAndWarp (bank 2002, id 11/12):
+    ///    ArgData layout: [cutsceneId(4), playback(4), region(4), mapId(4), ...]
+    ///    mapId is packed decimal: area*1000000 + block*10000 + sub*100 + sub2
+    ///    Used by cutscene-based transitions (e.g., Erdtree burning at Forge of the Giants).
+    ///    FogMod's EventEditor replaces the region and map in these instructions.
+    /// </summary>
+    private static WarpInfo? TryExtractWarpInfo(EMEVD.Instruction instr)
+    {
+        var a = instr.ArgData;
+
+        // WarpPlayer (bank 2003, id 14)
+        if (instr.Bank == 2003 && instr.ID == 14)
+        {
+            if (a.Length < 8)
+                return null;
+            var destMap = (a[0], a[1], a[2], a[3]);
+            if (destMap == (0, 0, 0, 0))
+                return null; // parameterized template
+            int region = BitConverter.ToInt32(a, 4);
+            return new WarpInfo(destMap, region);
+        }
+
+        // PlayCutsceneToPlayerAndWarp (bank 2002, id 11)
+        // PlayCutsceneToPlayerAndWarpWithWeatherAndTime (bank 2002, id 12)
+        if (instr.Bank == 2002 && (instr.ID == 11 || instr.ID == 12))
+        {
+            if (a.Length < 16)
+                return null;
+            int region = BitConverter.ToInt32(a, 8);
+            int mapInt = BitConverter.ToInt32(a, 12);
+            if (mapInt == 0)
+                return null; // parameterized template
+            var destMap = UnpackMapId(mapInt);
+            return new WarpInfo(destMap, region);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Unpack a packed map ID int32 into 4 map bytes.
+    /// Format: area * 1000000 + block * 10000 + sub * 100 + sub2
+    /// (e.g., m13_00_00_00 = 13000000, m31_06_00_00 = 31060000)
+    /// </summary>
+    private static (byte, byte, byte, byte) UnpackMapId(int mapInt)
+    {
+        byte area = (byte)(mapInt / 1000000);
+        byte block = (byte)((mapInt % 1000000) / 10000);
+        byte sub = (byte)((mapInt % 10000) / 100);
+        byte sub2 = (byte)(mapInt % 100);
+        return (area, block, sub, sub2);
+    }
 
     /// <summary>
     /// Inject zone tracking events into EMEVD files.
@@ -40,7 +116,7 @@ public static class ZoneTrackingInjector
         int finishEvent,
         int bossDefeatFlag)
     {
-        // Part A: Inject SetEventFlag before WarpPlayer in per-instance warp events
+        // Part A: Inject SetEventFlag before warp instructions in FogMod-modified events
         InjectFogGateFlags(modDir, events, connections, areaMaps);
 
         // Part B: Create boss death monitor in common.emevd
@@ -56,13 +132,19 @@ public static class ZoneTrackingInjector
     }
 
     /// <summary>
-    /// Scan all EMEVD files for WarpPlayer instructions with literal destination map bytes.
+    /// Scan all EMEVD files for warp instructions with literal destination map bytes.
     /// When a destination matches a connection's entrance gate map, inject SetEventFlag before
-    /// the WarpPlayer to set the zone tracking flag on traversal.
+    /// the warp to set the zone tracking flag on traversal.
+    ///
+    /// Handles two warp instruction families:
+    /// - WarpPlayer (2003:14): fogwarp template events and WarpBonfire portal events
+    /// - PlayCutsceneToPlayerAndWarp (2002:11/12): cutscene-based transitions like the
+    ///   Erdtree burning at the Forge of the Giants
     ///
     /// FogMod's EventEditor compiles the fogwarp template (9005777) into per-instance events
-    /// with unique IDs and literal WarpPlayer values. These events are placed in map EMEVD files
-    /// and called via InitializeEvent (2000:0). We post-process them to add zone tracking.
+    /// with unique IDs and literal WarpPlayer values. It also modifies vanilla cutscene warp
+    /// events to redirect to FogMod destinations. Both types are placed in map EMEVD files
+    /// and we post-process them to add zone tracking.
     ///
     /// Matching strategy (see docs/specs/zone-tracking-accuracy.md):
     /// 1. Try compound key (source_map, dest_map) — resolves collisions when two connections
@@ -151,31 +233,25 @@ public static class ZoneTrackingInjector
 
             foreach (var evt in emevd.Events)
             {
-                // First pass: find all matching WarpPlayer positions and their flag IDs.
+                // First pass: find all matching warp positions and their flag IDs.
                 // Some events (e.g., lie-down warps like Placidusax teleport) have multiple
-                // WarpPlayer instructions on different execution paths. We must inject
+                // warp instructions on different execution paths. We must inject
                 // SetEventFlag before ALL of them, not just the first.
                 var warpPositions = new List<(int index, int flagId)>();
 
                 for (int i = 0; i < evt.Instructions.Count; i++)
                 {
                     var instr = evt.Instructions[i];
-                    if (instr.Bank != 2003 || instr.ID != 14)
+                    var warpInfo = TryExtractWarpInfo(instr);
+                    if (warpInfo == null)
                         continue;
 
-                    var a = instr.ArgData;
-                    if (a.Length < 8)
-                        continue;
-
-                    // Skip parameterized WarpPlayer (all-zero map = template placeholder)
-                    var destMap = (a[0], a[1], a[2], a[3]);
-                    if (destMap == (0, 0, 0, 0))
-                        continue;
+                    var destMap = warpInfo.Value.DestMap;
+                    int region = warpInfo.Value.Region;
 
                     // Only match FogMod-generated warp events, not vanilla ones.
                     // FogMod allocates warp target regions from FOGMOD_ENTITY_BASE;
                     // vanilla events use map-specific IDs well below that range.
-                    int region = BitConverter.ToInt32(a, 4);
                     if (region < FOGMOD_ENTITY_BASE)
                         continue;
 
@@ -222,7 +298,7 @@ public static class ZoneTrackingInjector
                 if (warpPositions.Count == 0)
                     continue;
 
-                // Second pass: insert SetEventFlag before each WarpPlayer, from last to first
+                // Second pass: insert SetEventFlag before each warp, from last to first
                 // to avoid index shifting affecting earlier positions.
                 for (int j = warpPositions.Count - 1; j >= 0; j--)
                 {
