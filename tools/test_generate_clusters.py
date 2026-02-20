@@ -14,6 +14,7 @@ from generate_clusters import (
     _is_side_core,
     build_world_graph,
     classify_fogs,
+    compute_allow_entry_as_exit,
     compute_allow_shared_entrance,
     compute_cluster_fogs,
     filter_and_enrich_clusters,
@@ -2299,3 +2300,128 @@ class TestFogReuseInFilterAndEnrich:
 
         assert len(result) == 1
         assert result[0].allow_shared_entrance is False
+
+
+class TestComputeAllowEntryAsExit:
+    """Tests for compute_allow_entry_as_exit function."""
+
+    def test_boss_arena_with_two_exits(self):
+        """boss_arena with 2+ exit fogs gets allow_entry_as_exit=True."""
+        exit_fogs = [
+            {"fog_id": "fog_a", "zone": "z1"},
+            {"fog_id": "fog_b", "zone": "z1"},
+        ]
+        result = compute_allow_entry_as_exit(
+            "boss_arena", exit_fogs, {}, frozenset({"z1"})
+        )
+        assert result is True
+
+    def test_boss_arena_with_one_exit(self):
+        """boss_arena with 1 exit fog gets allow_entry_as_exit=False."""
+        exit_fogs = [{"fog_id": "fog_a", "zone": "z1"}]
+        result = compute_allow_entry_as_exit(
+            "boss_arena", exit_fogs, {}, frozenset({"z1"})
+        )
+        assert result is False
+
+    def test_mini_dungeon_with_two_exits(self):
+        """mini_dungeon with 2+ exits gets allow_entry_as_exit=False."""
+        exit_fogs = [
+            {"fog_id": "fog_a", "zone": "z1"},
+            {"fog_id": "fog_b", "zone": "z1"},
+        ]
+        result = compute_allow_entry_as_exit(
+            "mini_dungeon", exit_fogs, {}, frozenset({"z1"})
+        )
+        assert result is False
+
+    def test_override_false_on_boss_arena(self):
+        """zone_metadata.toml can disable allow_entry_as_exit on a boss_arena."""
+        exit_fogs = [
+            {"fog_id": "fog_a", "zone": "z1"},
+            {"fog_id": "fog_b", "zone": "z1"},
+        ]
+        zones_meta = {"z1": {"allow_entry_as_exit": False}}
+        result = compute_allow_entry_as_exit(
+            "boss_arena", exit_fogs, zones_meta, frozenset({"z1"})
+        )
+        assert result is False
+
+    def test_override_true_on_mini_dungeon(self):
+        """zone_metadata.toml can force allow_entry_as_exit on non-boss_arena."""
+        exit_fogs = [
+            {"fog_id": "fog_a", "zone": "z1"},
+            {"fog_id": "fog_b", "zone": "z1"},
+        ]
+        zones_meta = {"z1": {"allow_entry_as_exit": True}}
+        result = compute_allow_entry_as_exit(
+            "mini_dungeon", exit_fogs, zones_meta, frozenset({"z1"})
+        )
+        assert result is True
+
+
+class TestEntryAsExitInFilterAndEnrich:
+    """Tests for entry-as-exit flag flowing through filter_and_enrich_clusters."""
+
+    def test_boss_arena_type_override_with_two_exits(self):
+        """boss_arena with type override and 2+ exits gets allow_entry_as_exit=True."""
+        areas = {
+            "zone_a": AreaData(
+                name="zone_a", text="Zone A", maps=["m10_00_00_00"], tags=[]
+            ),
+        }
+        metadata = {
+            "defaults": {"boss_arena": 3},
+            "zones": {"zone_a": {"type": "boss_arena"}},
+        }
+        cluster = Cluster(
+            zones=frozenset({"zone_a"}),
+            entry_fogs=[{"fog_id": "entry_a", "zone": "zone_a"}],
+            exit_fogs=[
+                {"fog_id": "exit_a", "zone": "zone_a"},
+                {"fog_id": "entry_a", "zone": "zone_a"},
+            ],
+        )
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert len(result) == 1
+        assert result[0].allow_entry_as_exit is True
+
+    def test_boss_arena_one_exit_gets_false(self):
+        """boss_arena with 1 exit gets allow_entry_as_exit=False."""
+        areas = {
+            "zone_a": AreaData(
+                name="zone_a", text="Zone A", maps=["m10_00_00_00"], tags=[]
+            ),
+        }
+        metadata = {
+            "defaults": {"boss_arena": 3},
+            "zones": {"zone_a": {"type": "boss_arena"}},
+        }
+        cluster = Cluster(
+            zones=frozenset({"zone_a"}),
+            entry_fogs=[{"fog_id": "entry_a", "zone": "zone_a"}],
+            exit_fogs=[{"fog_id": "exit_a", "zone": "zone_a"}],
+        )
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert len(result) == 1
+        assert result[0].allow_entry_as_exit is False

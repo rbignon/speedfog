@@ -1287,6 +1287,39 @@ def compute_allow_shared_entrance(
     return allow
 
 
+def compute_allow_entry_as_exit(
+    cluster_type: str,
+    exit_fogs: list[dict],
+    zones_meta: dict,
+    zones: frozenset[str],
+) -> bool:
+    """Determine if a cluster's entry fog can be reused as a forward exit.
+
+    Default: True for boss_arena clusters with 2+ exit fogs.
+    Overridable per zone in zone_metadata.toml.
+
+    Args:
+        cluster_type: The cluster type (boss_arena, mini_dungeon, etc.)
+        exit_fogs: List of exit fog dicts
+        zones_meta: The [zones] section from zone_metadata.toml
+        zones: Set of zone names in this cluster
+
+    Returns:
+        Whether this cluster allows entry-as-exit reuse.
+    """
+    allow = cluster_type == "boss_arena" and len(exit_fogs) >= 2
+
+    # Per-zone overrides (any zone in cluster can override)
+    for zone_name in zones:
+        if zone_name not in zones_meta:
+            continue
+        zm = zones_meta[zone_name]
+        if isinstance(zm, dict) and "allow_entry_as_exit" in zm:
+            allow = bool(zm["allow_entry_as_exit"])
+
+    return allow
+
+
 def generate_cluster_id(zones: frozenset[str]) -> str:
     """Generate a unique cluster ID from zones."""
     # Sort zones for determinism
@@ -1384,9 +1417,15 @@ def filter_and_enrich_clusters(
         avg_weight = sum(zone_weights) / n_zones
         cluster.weight = round(avg_weight * (1 + 0.5 * math.log(n_zones)))
 
-        # Compute fog reuse flags (Phase 1: shared entrance only)
+        # Compute fog reuse flags
         cluster.allow_shared_entrance = compute_allow_shared_entrance(
             cluster.entry_fogs,
+            zones_meta,
+            cluster.zones,
+        )
+        cluster.allow_entry_as_exit = compute_allow_entry_as_exit(
+            cluster.cluster_type,
+            cluster.exit_fogs,
             zones_meta,
             cluster.zones,
         )
@@ -1497,7 +1536,7 @@ def clusters_to_json(
         cluster_list.append(entry)
 
     return {
-        "version": "1.6",
+        "version": "1.7",
         "generated_from": "fog.txt",
         "cluster_count": len(clusters),
         "zone_maps": zone_maps,

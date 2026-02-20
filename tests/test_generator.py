@@ -13,10 +13,13 @@ from speedfog.generator import (
     _has_valid_merge_pair,
     _stable_main_shuffle,
     can_be_merge_node,
+    can_be_passant_node,
+    can_be_split_node,
     cluster_has_usable_exits,
     compute_net_exits,
     count_net_exits,
     execute_merge_layer,
+    execute_split_layer,
     generate_dag,
     generate_with_retry,
     pick_cluster,
@@ -943,6 +946,87 @@ class TestComputeNetExits:
 
         remaining = compute_net_exits(cluster, [])
         assert len(remaining) == 2
+
+
+class TestCanBeSplitNodeEntryAsExit:
+    """Tests for can_be_split_node with allow_entry_as_exit."""
+
+    def test_boss_arena_split2_with_entry_as_exit(self):
+        """boss_arena with 1 entry (bidir) + 2 exits, allow_entry_as_exit=True → split(2)."""
+        # Without entry-as-exit: 1 entry bidir pair consumed → only 1 net exit → passant only
+        # With entry-as-exit: entry doesn't consume pair → 2 exits available → split(2)
+        cluster = make_cluster(
+            "boss",
+            cluster_type="boss_arena",
+            entry_fogs=[{"fog_id": "boss_entry", "zone": "boss"}],
+            exit_fogs=[
+                {"fog_id": "boss_entry", "zone": "boss"},  # bidir pair
+                {"fog_id": "boss_exit", "zone": "boss"},  # pure exit
+            ],
+            allow_entry_as_exit=True,
+        )
+
+        assert can_be_split_node(cluster, 2) is True
+
+    def test_boss_arena_split2_without_entry_as_exit(self):
+        """Same boss_arena with allow_entry_as_exit=False → NOT split(2)."""
+        cluster = make_cluster(
+            "boss",
+            cluster_type="boss_arena",
+            entry_fogs=[{"fog_id": "boss_entry", "zone": "boss"}],
+            exit_fogs=[
+                {"fog_id": "boss_entry", "zone": "boss"},
+                {"fog_id": "boss_exit", "zone": "boss"},
+            ],
+            allow_entry_as_exit=False,
+        )
+
+        assert can_be_split_node(cluster, 2) is False
+
+    def test_entry_as_exit_no_entries(self):
+        """allow_entry_as_exit with no entries → not split-capable."""
+        cluster = make_cluster(
+            "boss",
+            cluster_type="boss_arena",
+            entry_fogs=[],
+            exit_fogs=[
+                {"fog_id": "exit_a", "zone": "boss"},
+                {"fog_id": "exit_b", "zone": "boss"},
+            ],
+            allow_entry_as_exit=True,
+        )
+
+        assert can_be_split_node(cluster, 2) is False
+
+
+class TestCanBePassantNodeEntryAsExit:
+    """Tests for can_be_passant_node with allow_entry_as_exit."""
+
+    def test_boss_arena_passant_with_entry_as_exit(self):
+        """boss_arena with 1 entry + 1 exit (bidir pair), allow_entry_as_exit=True → passant."""
+        # Without entry-as-exit: bidir pair consumed → 0 net exits → dead end
+        # With entry-as-exit: 1 exit available → passant
+        cluster = make_cluster(
+            "boss",
+            cluster_type="boss_arena",
+            entry_fogs=[{"fog_id": "boss_entry", "zone": "boss"}],
+            exit_fogs=[{"fog_id": "boss_entry", "zone": "boss"}],
+            allow_entry_as_exit=True,
+        )
+
+        assert can_be_passant_node(cluster) is True
+
+    def test_boss_arena_passant_without_entry_as_exit(self):
+        """Same cluster with allow_entry_as_exit=False → NOT passant (dead end)."""
+        cluster = make_cluster(
+            "boss",
+            cluster_type="boss_arena",
+            entry_fogs=[{"fog_id": "boss_entry", "zone": "boss"}],
+            exit_fogs=[{"fog_id": "boss_entry", "zone": "boss"}],
+            allow_entry_as_exit=False,
+        )
+
+        assert can_be_passant_node(cluster) is False
 
 
 class TestCanBeMergeNodeSharedEntrance:
@@ -2135,3 +2219,239 @@ class TestSharedEntranceSimulation:
                 assert len(dag.nodes) >= 3  # at least start + 1 node + end
             except GenerationError:
                 pytest.fail(f"Generation failed with seed {seed}")
+
+
+class TestExecuteSplitLayerEntryAsExit:
+    """Tests for execute_split_layer with entry-as-exit boss arenas."""
+
+    def test_boss_arena_becomes_split2_with_entry_as_exit(self):
+        """A boss_arena with 1 entry (bidir) + 1 pure exit can split(2) via entry-as-exit."""
+        # Without entry-as-exit: 1 bidir entry consumes its pair → 1 net exit → passant only
+        # With entry-as-exit: entry doesn't consume pair → 2 exits → split(2)
+        pool = ClusterPool()
+        boss = make_cluster(
+            "split_boss",
+            zones=["split_boss_zone"],
+            cluster_type="boss_arena",
+            weight=3,
+            entry_fogs=[{"fog_id": "boss_entry", "zone": "split_boss_zone"}],
+            exit_fogs=[
+                {"fog_id": "boss_entry", "zone": "split_boss_zone"},  # bidir pair
+                {"fog_id": "boss_exit", "zone": "split_boss_zone"},  # pure exit
+            ],
+            allow_entry_as_exit=True,
+        )
+        pool.add(boss)
+
+        # Set up a DAG with a single branch pointing at the split node
+        dag = Dag(seed=42)
+        start_node = DagNode(
+            id="start",
+            cluster=make_cluster(
+                "start_c", cluster_type="start", weight=1, entry_fogs=[]
+            ),
+            layer=0,
+            tier=1,
+            entry_fogs=[],
+            exit_fogs=[FogRef("start_exit", "start_c")],
+        )
+        dag.add_node(start_node)
+        dag.start_id = "start"
+
+        branches = [Branch("main", "start", FogRef("start_exit", "start_c"))]
+        config = Config()
+        config.structure.max_branches = 2
+        config.structure.max_parallel_paths = 4
+        rng = random.Random(42)
+
+        result = execute_split_layer(
+            dag, branches, 1, 2, "boss_arena", pool, set(), rng, config
+        )
+
+        # Should have split into 2 branches
+        assert len(result) == 2
+        # The split node should exist and have 2 exit fogs
+        split_node = dag.nodes["node_1_a"]
+        assert len(split_node.exit_fogs) == 2
+        assert split_node.cluster.id == "split_boss"
+
+
+class TestEntryAsExitSimulation:
+    """Verify entry-as-exit boss arenas work in full DAG generation."""
+
+    def _make_pool_with_entry_as_exit(self) -> ClusterPool:
+        """Create a pool with entry-as-exit boss arenas."""
+        pool = ClusterPool()
+
+        # Start with 2 exits
+        pool.add(
+            make_cluster(
+                "chapel_start",
+                zones=["chapel"],
+                cluster_type="start",
+                weight=1,
+                entry_fogs=[],
+                exit_fogs=[
+                    {"fog_id": "start_exit_1", "zone": "chapel"},
+                    {"fog_id": "start_exit_2", "zone": "chapel"},
+                ],
+            )
+        )
+
+        # Final boss
+        pool.add(
+            make_cluster(
+                "erdtree_boss",
+                zones=["leyndell_erdtree"],
+                cluster_type="final_boss",
+                weight=5,
+                entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
+                exit_fogs=[],
+            )
+        )
+
+        # Boss arenas with entry-as-exit (split-capable via the mechanism)
+        for i in range(6):
+            pool.add(
+                make_cluster(
+                    f"eae_boss_{i}",
+                    zones=[f"eae_boss_{i}_zone"],
+                    cluster_type="boss_arena",
+                    weight=3,
+                    entry_fogs=[
+                        {"fog_id": f"eae_boss_{i}_entry", "zone": f"eae_boss_{i}_zone"},
+                    ],
+                    exit_fogs=[
+                        {"fog_id": f"eae_boss_{i}_entry", "zone": f"eae_boss_{i}_zone"},
+                        {"fog_id": f"eae_boss_{i}_exit", "zone": f"eae_boss_{i}_zone"},
+                    ],
+                    allow_entry_as_exit=True,
+                )
+            )
+
+        # Merge-compatible boss arenas (2 entries + shared entrance)
+        for i in range(3):
+            pool.add(
+                make_cluster(
+                    f"merge_boss_{i}",
+                    zones=[f"merge_boss_{i}_zone"],
+                    cluster_type="boss_arena",
+                    weight=3,
+                    entry_fogs=[
+                        {
+                            "fog_id": f"merge_boss_{i}_entry_a",
+                            "zone": f"merge_boss_{i}_zone",
+                        },
+                        {
+                            "fog_id": f"merge_boss_{i}_entry_b",
+                            "zone": f"merge_boss_{i}_zone",
+                        },
+                    ],
+                    exit_fogs=[
+                        {
+                            "fog_id": f"merge_boss_{i}_entry_a",
+                            "zone": f"merge_boss_{i}_zone",
+                        },
+                        {
+                            "fog_id": f"merge_boss_{i}_entry_b",
+                            "zone": f"merge_boss_{i}_zone",
+                        },
+                        {
+                            "fog_id": f"merge_boss_{i}_exit",
+                            "zone": f"merge_boss_{i}_zone",
+                        },
+                    ],
+                    allow_shared_entrance=True,
+                )
+            )
+
+        # Mini dungeons (passant-capable)
+        for i in range(10):
+            pool.add(
+                make_cluster(
+                    f"mini_{i}",
+                    zones=[f"mini_{i}_zone"],
+                    cluster_type="mini_dungeon",
+                    weight=5,
+                    entry_fogs=[
+                        {"fog_id": f"mini_{i}_entry", "zone": f"mini_{i}_zone"},
+                    ],
+                    exit_fogs=[
+                        {"fog_id": f"mini_{i}_entry", "zone": f"mini_{i}_zone"},
+                        {"fog_id": f"mini_{i}_exit", "zone": f"mini_{i}_zone"},
+                    ],
+                )
+            )
+
+        # Merge-compatible clusters (shared entrance)
+        for i in range(5):
+            pool.add(
+                make_cluster(
+                    f"merge_{i}",
+                    zones=[f"merge_{i}_zone"],
+                    cluster_type="mini_dungeon",
+                    weight=5,
+                    entry_fogs=[
+                        {"fog_id": f"merge_{i}_entry_a", "zone": f"merge_{i}_zone"},
+                        {"fog_id": f"merge_{i}_entry_b", "zone": f"merge_{i}_zone"},
+                    ],
+                    exit_fogs=[
+                        {"fog_id": f"merge_{i}_entry_a", "zone": f"merge_{i}_zone"},
+                        {"fog_id": f"merge_{i}_entry_b", "zone": f"merge_{i}_zone"},
+                        {"fog_id": f"merge_{i}_exit", "zone": f"merge_{i}_zone"},
+                    ],
+                    allow_shared_entrance=True,
+                )
+            )
+
+        return pool
+
+    def test_generation_succeeds_with_entry_as_exit(self):
+        """DAG generation succeeds with entry-as-exit boss arenas."""
+        pool = self._make_pool_with_entry_as_exit()
+        config = Config()
+        config.structure.split_probability = 0.3
+        config.structure.merge_probability = 0.3
+        config.structure.min_layers = 4
+        config.structure.max_layers = 6
+        config.structure.max_branches = 2
+        config.requirements.legacy_dungeons = 0
+        config.requirements.bosses = 2  # plan boss_arena layers
+        config.requirements.mini_dungeons = 0
+
+        for seed in range(20):
+            try:
+                dag = generate_dag(config, pool, seed=seed)
+                assert len(dag.nodes) >= 3
+            except GenerationError:
+                pytest.fail(f"Generation failed with seed {seed}")
+
+    def test_boss_arena_used_as_split_node(self):
+        """At least some seeds produce a DAG where a boss_arena acts as split node."""
+        pool = self._make_pool_with_entry_as_exit()
+        config = Config()
+        config.structure.split_probability = 1.0  # force splits
+        config.structure.merge_probability = 0.3
+        config.structure.min_layers = 4
+        config.structure.max_layers = 6
+        config.structure.max_branches = 2
+        config.requirements.legacy_dungeons = 0
+        config.requirements.bosses = 3  # plan boss_arena layers so splits can use them
+        config.requirements.mini_dungeons = 0
+
+        boss_arena_split_count = 0
+        for seed in range(50):
+            try:
+                dag = generate_dag(config, pool, seed=seed)
+                for node in dag.nodes.values():
+                    if node.cluster.type == "boss_arena" and len(node.exit_fogs) >= 2:
+                        # Count outgoing edges to verify it's actually a split
+                        out_edges = [e for e in dag.edges if e.source_id == node.id]
+                        if len(out_edges) >= 2:
+                            boss_arena_split_count += 1
+            except GenerationError:
+                pass  # Some seeds may fail, that's OK
+
+        assert (
+            boss_arena_split_count > 0
+        ), "No seeds produced a boss_arena split node (expected at least 1 in 50 seeds)"

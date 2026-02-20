@@ -164,15 +164,19 @@ def count_net_exits(cluster: ClusterData, num_entries: int) -> int:
 def can_be_split_node(cluster: ClusterData, num_out: int) -> bool:
     """Check if cluster can be a split node (1 entry -> num_out exits).
 
-    All fogs must be mapped: 1 entry consumed + num_out exits used.
+    With entry-as-exit enabled, the entry fog's bidirectional pair is NOT
+    consumed as an exit, so all exit_fogs remain available.
 
     Args:
         cluster: The cluster to check.
         num_out: Number of required exits after using 1 entry.
 
     Returns:
-        True if cluster has exactly num_out net exits after using 1 entry.
+        True if cluster has enough exits for num_out branches.
     """
+    if cluster.allow_entry_as_exit:
+        # >= because entry doesn't consume its pair; extra exits are unused but harmless
+        return len(cluster.entry_fogs) >= 1 and len(cluster.exit_fogs) >= num_out
     return count_net_exits(cluster, 1) == num_out
 
 
@@ -198,14 +202,17 @@ def can_be_merge_node(cluster: ClusterData, num_in: int) -> bool:
 def can_be_passant_node(cluster: ClusterData) -> bool:
     """Check if cluster can be a passant node (1 entry -> 1 exit).
 
-    All fogs must be mapped: 1 entry consumed + 1 exit used.
+    With entry-as-exit enabled, the entry fog's bidirectional pair is NOT
+    consumed, so any cluster with 1+ entry and 1+ exit qualifies.
 
     Args:
         cluster: The cluster to check.
 
     Returns:
-        True if cluster has exactly 1 net exit after using 1 entry.
+        True if cluster has at least 1 exit available.
     """
+    if cluster.allow_entry_as_exit:
+        return len(cluster.entry_fogs) >= 1 and len(cluster.exit_fogs) >= 1
     return count_net_exits(cluster, 1) == 1
 
 
@@ -451,6 +458,46 @@ def decide_operation(
             return LayerOperation.PASSANT
 
 
+def _pick_entry_and_exits_for_node(
+    cluster: ClusterData, min_exits: int, rng: random.Random
+) -> tuple[FogRef, list[FogRef]]:
+    """Pick an entry fog and available exits for a node.
+
+    With entry-as-exit, the entry's bidirectional pair is not consumed,
+    so all exit_fogs remain available. Otherwise, uses the standard
+    net-exit calculation.
+
+    Args:
+        cluster: The cluster to pick entry/exits for.
+        min_exits: Minimum number of exits required.
+        rng: Random number generator.
+
+    Returns:
+        Tuple of (entry_fog, exit_fogs).
+
+    Raises:
+        GenerationError: If no valid entry fog found.
+    """
+    if cluster.allow_entry_as_exit:
+        main_entries = [e for e in cluster.entry_fogs if e.get("main")]
+        entry = (
+            rng.choice(main_entries) if main_entries else rng.choice(cluster.entry_fogs)
+        )
+        entry_fog = FogRef(entry["fog_id"], entry["zone"])
+        exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in cluster.exit_fogs]
+        return entry_fog, exit_fogs
+
+    picked = pick_entry_with_max_exits(cluster, min_exits, rng)
+    if picked is None:
+        raise GenerationError(
+            f"Cluster {cluster.id} has no valid entry fog with {min_exits}+ exits"
+        )
+    entry_fog = FogRef(picked["fog_id"], picked["zone"])
+    exits = compute_net_exits(cluster, [picked])
+    exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits]
+    return entry_fog, exit_fogs
+
+
 def execute_passant_layer(
     dag: Dag,
     branches: list[Branch],
@@ -492,16 +539,7 @@ def execute_passant_layer(
             )
         used_zones.update(cluster.zones)
 
-        # Pick entry that leaves at least 1 exit
-        entry = pick_entry_with_max_exits(cluster, 1, rng)
-        if entry is None:
-            raise GenerationError(
-                f"Cluster {cluster.id} has no valid entry fog with exits"
-            )
-
-        entry_fog = FogRef(entry["fog_id"], entry["zone"])
-        exits = compute_net_exits(cluster, [entry])
-        exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits]
+        entry_fog, exit_fogs = _pick_entry_and_exits_for_node(cluster, 1, rng)
 
         node_id = f"node_{layer_idx}_{chr(97 + i)}"
         node = DagNode(
@@ -585,15 +623,9 @@ def execute_split_layer(
                 )
             used_zones.update(cluster.zones)
 
-            entry = pick_entry_with_max_exits(cluster, actual_fan_out, rng)
-            if entry is None:
-                raise GenerationError(
-                    f"Cluster {cluster.id} has no valid entry fog with {actual_fan_out}+ exits"
-                )
-
-            entry_fog = FogRef(entry["fog_id"], entry["zone"])
-            exits = compute_net_exits(cluster, [entry])
-            exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits]
+            entry_fog, exit_fogs = _pick_entry_and_exits_for_node(
+                cluster, actual_fan_out, rng
+            )
 
             node_id = f"node_{layer_idx}_{chr(97 + letter_offset)}"
             node = DagNode(
@@ -628,15 +660,7 @@ def execute_split_layer(
                 )
             used_zones.update(cluster.zones)
 
-            entry = pick_entry_with_max_exits(cluster, 1, rng)
-            if entry is None:
-                raise GenerationError(
-                    f"Cluster {cluster.id} has no valid entry fog with exits"
-                )
-
-            entry_fog = FogRef(entry["fog_id"], entry["zone"])
-            exits = compute_net_exits(cluster, [entry])
-            exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits]
+            entry_fog, exit_fogs = _pick_entry_and_exits_for_node(cluster, 1, rng)
 
             node_id = f"node_{layer_idx}_{chr(97 + letter_offset)}"
             node = DagNode(
@@ -841,15 +865,9 @@ def execute_merge_layer(
             )
         used_zones.update(passant_cluster.zones)
 
-        passant_entry = pick_entry_with_max_exits(passant_cluster, 1, rng)
-        if passant_entry is None:
-            raise GenerationError(
-                f"Cluster {passant_cluster.id} has no valid entry fog with exits"
-            )
-
-        passant_entry_fog = FogRef(passant_entry["fog_id"], passant_entry["zone"])
-        exits = compute_net_exits(passant_cluster, [passant_entry])
-        exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits]
+        passant_entry_fog, exit_fogs = _pick_entry_and_exits_for_node(
+            passant_cluster, 1, rng
+        )
 
         node_id = f"node_{layer_idx}_{chr(97 + letter_offset)}"
         node = DagNode(

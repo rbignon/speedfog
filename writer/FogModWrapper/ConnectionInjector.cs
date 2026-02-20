@@ -163,7 +163,9 @@ public static class ConnectionInjector
         }
 
         // Connect them
-        graph.Connect(exitEdge, entranceEdge);
+        graph.Connect(exitEdge, entranceEdge, ignorePair: conn.IgnorePair);
+        if (conn.IgnorePair)
+            Console.WriteLine($"  Using ignorePair for entry-as-exit: {conn.EntranceGate}");
 
         // Track connected entrance for shared entrance detection
         if (isSharedEntrance && !isSecondaryConnection)

@@ -1460,3 +1460,86 @@ class TestOriginalTier:
         result = dag_to_dict(dag, clusters, vanilla_tiers=vanilla_tiers)
 
         assert result["nodes"]["c_b"]["original_tier"] == 15
+
+
+class TestIgnorePairInConnections:
+    """Tests for ignore_pair field in dag_to_dict connections."""
+
+    def test_ignore_pair_set_when_target_has_allow_entry_as_exit(self):
+        """Connections targeting an allow_entry_as_exit cluster get ignore_pair=True."""
+        dag = Dag(seed=42)
+        start_cluster = make_cluster(
+            "c_start",
+            zones=["z_start"],
+            cluster_type="start",
+            weight=5,
+            entry_fogs=[],
+            exit_fogs=[{"fog_id": "fog_1", "zone": "z_start", "text": "Out"}],
+        )
+        boss_cluster = ClusterData(
+            id="c_boss",
+            zones=["z_boss"],
+            type="boss_arena",
+            weight=3,
+            entry_fogs=[{"fog_id": "fog_1", "zone": "z_boss", "text": "In"}],
+            exit_fogs=[
+                {"fog_id": "fog_1", "zone": "z_boss", "text": "Back"},
+                {"fog_id": "fog_2", "zone": "z_boss", "text": "Out"},
+            ],
+            allow_entry_as_exit=True,
+        )
+        dag.add_node(
+            DagNode(
+                id="start",
+                cluster=start_cluster,
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+                exit_fogs=[FogRef("fog_1", "z_start")],
+            )
+        )
+        dag.add_node(
+            DagNode(
+                id="boss",
+                cluster=boss_cluster,
+                layer=1,
+                tier=5,
+                entry_fogs=[FogRef("fog_1", "z_boss")],
+                exit_fogs=[FogRef("fog_1", "z_boss"), FogRef("fog_2", "z_boss")],
+            )
+        )
+        dag.add_edge(
+            "start", "boss", FogRef("fog_1", "z_start"), FogRef("fog_1", "z_boss")
+        )
+        dag.start_id = "start"
+        dag.end_id = "boss"
+
+        clusters = ClusterPool(
+            clusters=[start_cluster, boss_cluster],
+            zone_maps={"z_start": "m10_00_00_00", "z_boss": "m11_00_00_00"},
+            zone_names={},
+        )
+
+        result = dag_to_dict(dag, clusters)
+
+        assert len(result["connections"]) == 1
+        assert result["connections"][0]["ignore_pair"] is True
+
+    def test_no_ignore_pair_when_target_is_normal(self):
+        """Connections targeting a normal cluster do NOT get ignore_pair."""
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={
+                "z_start": "m10_00_00_00",
+                "z_a": "m11_00_00_00",
+                "z_b1": "m12_00_00_00",
+                "z_b2": "m12_00_00_00",
+                "z_end": "m13_00_00_00",
+            },
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+
+        for conn in result["connections"]:
+            assert "ignore_pair" not in conn

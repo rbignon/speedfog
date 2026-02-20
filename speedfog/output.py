@@ -317,27 +317,28 @@ def dag_to_dict(
         flag_id = EVENT_FLAG_BASE + flag_counter
         flag_counter += 1
 
-        connections.append(
-            {
-                "exit_area": exit_zone,
-                "exit_gate": _make_fullname(
-                    edge.exit_fog.fog_id,
-                    exit_zone,
-                    clusters,
-                    fog_data,
-                    is_entry=False,
-                ),
-                "entrance_area": entry_zone,
-                "entrance_gate": _make_fullname(
-                    effective_entry_fog,
-                    entry_zone,
-                    clusters,
-                    fog_data,
-                    is_entry=True,
-                ),
-                "flag_id": flag_id,
-            }
-        )
+        conn_dict: dict[str, str | int | bool] = {
+            "exit_area": exit_zone,
+            "exit_gate": _make_fullname(
+                edge.exit_fog.fog_id,
+                exit_zone,
+                clusters,
+                fog_data,
+                is_entry=False,
+            ),
+            "entrance_area": entry_zone,
+            "entrance_gate": _make_fullname(
+                effective_entry_fog,
+                entry_zone,
+                clusters,
+                fog_data,
+                is_entry=True,
+            ),
+            "flag_id": flag_id,
+        }
+        if target_node.cluster.allow_entry_as_exit:
+            conn_dict["ignore_pair"] = True
+        connections.append(conn_dict)
 
         cluster_id = target_node.cluster.id
         event_map[str(flag_id)] = cluster_id

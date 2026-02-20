@@ -171,6 +171,14 @@ public class Connection
     [JsonPropertyName("flag_id")]
     public int FlagId { get; set; } = 0;
 
+    /// <summary>
+    /// When true, tells FogMod to not remove the entrance edge's bidirectional pair.
+    /// Used for entry-as-exit boss arenas where the entry fog's return direction
+    /// serves as a forward exit to another area.
+    /// </summary>
+    [JsonPropertyName("ignore_pair")]
+    public bool IgnorePair { get; set; } = false;
+
     public override string ToString()
     {
         return $"{ExitArea} --[{ExitGate}]--> {EntranceArea} via [{EntranceGate}]";

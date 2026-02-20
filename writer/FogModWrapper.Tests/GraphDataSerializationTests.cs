@@ -88,7 +88,8 @@ public class GraphDataSerializationTests
             ExitGate = "m10_00_00_00_AEG099_001_9000",
             EntranceArea = "zone_b",
             EntranceGate = "m11_00_00_00_AEG099_002_9000",
-            FlagId = 9000042
+            FlagId = 9000042,
+            IgnorePair = true
         };
 
         var json = JsonSerializer.Serialize(original, JsonOptions);
@@ -100,6 +101,17 @@ public class GraphDataSerializationTests
         Assert.Equal(original.EntranceArea, deserialized.EntranceArea);
         Assert.Equal(original.EntranceGate, deserialized.EntranceGate);
         Assert.Equal(original.FlagId, deserialized.FlagId);
+        Assert.Equal(original.IgnorePair, deserialized.IgnorePair);
+    }
+
+    [Fact]
+    public void Connection_IgnorePair_DefaultsFalse()
+    {
+        var json = """{"exit_area":"a","exit_gate":"b","entrance_area":"c","entrance_gate":"d","flag_id":1}""";
+        var deserialized = JsonSerializer.Deserialize<Connection>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.False(deserialized.IgnorePair);
     }
 
     [Fact]
@@ -151,7 +163,8 @@ public class GraphDataSerializationTests
             ExitArea = "a",
             ExitGate = "b",
             EntranceArea = "c",
-            EntranceGate = "d"
+            EntranceGate = "d",
+            IgnorePair = true
         };
 
         var json = JsonSerializer.Serialize(conn);
@@ -160,6 +173,7 @@ public class GraphDataSerializationTests
         Assert.Contains("\"exit_gate\"", json);
         Assert.Contains("\"entrance_area\"", json);
         Assert.Contains("\"entrance_gate\"", json);
+        Assert.Contains("\"ignore_pair\"", json);
     }
 
     [Fact]
