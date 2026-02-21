@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../ItemRandomizerWrapper.Core/ItemRandomizerWrapper.Core.csproj" />
+    <ProjectReference Include="../ItemRandomizerWrapper/ItemRandomizerWrapper.csproj" />
   </ItemGroup>
 
 </Project>
