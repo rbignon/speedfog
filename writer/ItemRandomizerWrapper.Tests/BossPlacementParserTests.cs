@@ -82,6 +82,22 @@ public class BossPlacementParserTests
     }
 
     [Fact]
+    public void Parse_LargeEntityId_DoesNotOverflow()
+    {
+        // DLC entity IDs can exceed Int32.MaxValue (2,147,483,647)
+        var lines = new[]
+        {
+            "Replacing DLC Boss (#2300000800) in DLC Arena: Another Boss (#2400000850) from Other Arena",
+        };
+
+        var result = BossPlacementParser.Parse(lines);
+
+        Assert.Single(result);
+        Assert.Equal("Another Boss", result["2300000800"].Name);
+        Assert.Equal(2400000850L, result["2300000800"].EntityId);
+    }
+
+    [Fact]
     public void Serialize_ProducesExpectedJson()
     {
         var placements = new Dictionary<string, BossPlacement>

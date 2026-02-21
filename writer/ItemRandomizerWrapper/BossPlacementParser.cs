@@ -10,7 +10,7 @@ public class BossPlacement
     public string Name { get; set; } = "";
 
     [JsonPropertyName("entity_id")]
-    public int EntityId { get; set; }
+    public long EntityId { get; set; }
 }
 
 public static class BossPlacementParser
@@ -31,7 +31,7 @@ public static class BossPlacementParser
 
             var targetId = match.Groups[1].Value;
             var sourceName = match.Groups[2].Value;
-            var sourceId = int.Parse(match.Groups[3].Value);
+            var sourceId = long.Parse(match.Groups[3].Value);
 
             placements[targetId] = new BossPlacement
             {
