@@ -8,6 +8,7 @@ from speedfog.dag import Dag, DagNode, FogRef
 from speedfog.output import (
     _effective_type,
     _make_fullname,
+    append_boss_placements_to_spoiler,
     dag_to_dict,
     export_spoiler_log,
     load_boss_placements,
@@ -1905,3 +1906,59 @@ class TestPatchGraphBossPlacements:
 
         patched = json.loads(graph_path.read_text())
         assert "randomized_boss" not in patched["nodes"]["a"]
+
+
+class TestAppendBossPlacementsToSpoiler:
+    def test_appends_section_to_existing_spoiler(self, tmp_path):
+        """Boss placements section is appended to an existing spoiler file."""
+        spoiler = tmp_path / "spoiler.txt"
+        spoiler.write_text("EXISTING SPOILER CONTENT\n")
+
+        placements = {
+            "14000850": {"name": "Rennala", "entity_id": 14000800},
+        }
+
+        append_boss_placements_to_spoiler(spoiler, placements)
+
+        content = spoiler.read_text()
+        assert "EXISTING SPOILER CONTENT" in content
+        assert "BOSS PLACEMENTS (randomized)" in content
+        assert "Arena #14000850 -> Rennala (#14000800)" in content
+
+    def test_empty_placements_does_nothing(self, tmp_path):
+        """Empty placements dict does not modify the spoiler file."""
+        spoiler = tmp_path / "spoiler.txt"
+        spoiler.write_text("ORIGINAL\n")
+
+        append_boss_placements_to_spoiler(spoiler, {})
+
+        assert spoiler.read_text() == "ORIGINAL\n"
+
+    def test_missing_spoiler_file_does_nothing(self, tmp_path):
+        """Does not crash when spoiler file does not exist."""
+        spoiler = tmp_path / "nonexistent.txt"
+
+        append_boss_placements_to_spoiler(
+            spoiler, {"1": {"name": "Boss", "entity_id": 2}}
+        )
+
+        assert not spoiler.exists()
+
+    def test_entries_sorted_by_target_id(self, tmp_path):
+        """Boss placement entries are sorted by target entity ID."""
+        spoiler = tmp_path / "spoiler.txt"
+        spoiler.write_text("HEADER\n")
+
+        placements = {
+            "30000800": {"name": "Boss C", "entity_id": 3},
+            "14000800": {"name": "Boss A", "entity_id": 1},
+            "20000800": {"name": "Boss B", "entity_id": 2},
+        }
+
+        append_boss_placements_to_spoiler(spoiler, placements)
+
+        content = spoiler.read_text()
+        pos_a = content.index("Boss A")
+        pos_b = content.index("Boss B")
+        pos_c = content.index("Boss C")
+        assert pos_a < pos_b < pos_c

@@ -37,6 +37,12 @@ public class TeeTextWriter : TextWriter
         _secondary.WriteLine(value);
     }
 
+    public override void Write(char[] buffer, int index, int count)
+    {
+        _primary.Write(buffer, index, count);
+        _secondary.Write(buffer, index, count);
+    }
+
     public override void Flush()
     {
         _primary.Flush();
