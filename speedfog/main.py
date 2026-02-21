@@ -16,10 +16,13 @@ from speedfog.fog_mod import run_fogmodwrapper
 from speedfog.generator import GenerationError, generate_with_retry
 from speedfog.item_randomizer import generate_item_config, run_item_randomizer
 from speedfog.output import (
+    append_boss_placements_to_spoiler,
     export_json,
     export_spoiler_log,
+    load_boss_placements,
     load_fog_data,
     load_vanilla_tiers,
+    patch_graph_boss_placements,
 )
 
 
@@ -295,6 +298,17 @@ def main() -> int:
             verbose=args.verbose,
         ):
             item_rando_output = item_rando_dir
+
+            # Patch graph.json with boss placements if available
+            boss_placements_path = item_rando_dir / "boss_placements.json"
+            boss_placements = load_boss_placements(boss_placements_path)
+            if boss_placements:
+                patch_graph_boss_placements(json_path, dag, boss_placements)
+                print(f"Boss placements: {len(boss_placements)} bosses randomized")
+
+                # Append boss placements to spoiler log
+                if args.spoiler:
+                    append_boss_placements_to_spoiler(spoiler_path, boss_placements)
         else:
             print(
                 "Error: Item Randomizer failed",
