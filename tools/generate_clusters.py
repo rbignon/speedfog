@@ -1432,16 +1432,22 @@ def filter_and_enrich_clusters(
 
         # For boss_arena clusters with one-way internal links, remove
         # exit fogs from zones that become unreachable after traversal.
-        # The player is forced to enter the boss zone (via one-way drop),
-        # so exits in the entry zone are unreachable after the boss fight.
+        # Only applies when the boss is in a deep zone (past the one-way),
+        # forcing the player to descend.  If the boss is in the entry zone
+        # (e.g. gravesite_dragonpit_boss -> postboss), exits there are fine.
         if cluster.cluster_type == "boss_arena" and cluster.oneway_entry_zones:
-            cluster.exit_fogs = [
-                f
-                for f in cluster.exit_fogs
-                if f["zone"] not in cluster.oneway_entry_zones
-            ]
-            if not cluster.exit_fogs:
-                continue  # No reachable exits after pruning
+            deep_zones = set(cluster.zones) - cluster.oneway_entry_zones
+            boss_in_deep = any(
+                areas.get(z) and areas[z].defeat_flag > 0 for z in deep_zones
+            )
+            if boss_in_deep:
+                cluster.exit_fogs = [
+                    f
+                    for f in cluster.exit_fogs
+                    if f["zone"] not in cluster.oneway_entry_zones
+                ]
+                if not cluster.exit_fogs:
+                    continue  # No reachable exits after pruning
 
         # Compute fog reuse flags
         cluster.allow_shared_entrance = compute_allow_shared_entrance(

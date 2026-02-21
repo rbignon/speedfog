@@ -2592,6 +2592,56 @@ class TestBossArenaOnewayExitPruning:
         assert ("gate", "courtyard") in exit_fogs
         assert ("arena_exit", "arena") in exit_fogs
 
+    def test_boss_arena_with_oneway_to_postboss_keeps_entry_exits(self):
+        """Boss in entry zone with one-way to postboss: entry exits preserved."""
+        areas = {
+            "boss": AreaData(
+                name="boss",
+                text="Boss Arena",
+                maps=["m43_01_00_00"],
+                tags=[],
+                defeat_flag=43010800,
+            ),
+            "postboss": AreaData(
+                name="postboss",
+                text="After Boss",
+                maps=["m43_01_00_00"],
+                tags=[],
+            ),
+        }
+        metadata = {
+            "defaults": {"boss_arena": 3},
+            "zones": {"boss": {"type": "boss_arena"}},
+        }
+        cluster = Cluster(
+            zones=frozenset({"boss", "postboss"}),
+            entry_fogs=[{"fog_id": "entry_fog", "zone": "boss"}],
+            exit_fogs=[
+                {"fog_id": "entry_fog", "zone": "boss"},
+                {"fog_id": "boss_warp", "zone": "boss"},
+                {"fog_id": "post_exit", "zone": "postboss"},
+            ],
+            oneway_entry_zones=frozenset({"boss"}),
+        )
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert len(result) == 1
+        exit_fogs = {(f["fog_id"], f["zone"]) for f in result[0].exit_fogs}
+        # Boss is in entry zone - player is NOT forced to take one-way
+        # All exits preserved
+        assert ("entry_fog", "boss") in exit_fogs
+        assert ("boss_warp", "boss") in exit_fogs
+        assert ("post_exit", "postboss") in exit_fogs
+
     def test_boss_arena_without_oneway_keeps_all_exits(self):
         """Boss arena without one-way links: all exits preserved."""
         areas = {
