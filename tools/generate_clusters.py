@@ -175,6 +175,9 @@ class Cluster:
     defeat_flag: int = 0
     allow_shared_entrance: bool = False
     allow_entry_as_exit: bool = False
+    # Zones that are entry-only: reachable as entry but not reachable
+    # back from deep zones (e.g. preboss zone with a one-way drop to boss).
+    oneway_entry_zones: frozenset[str] = field(default_factory=frozenset)
 
 
 # =============================================================================
@@ -1000,6 +1003,16 @@ def compute_cluster_fogs(
         if reachable < cluster.zones:
             cluster.zones = frozenset(reachable)
 
+    # Identify entry zones that become unreachable after one-way traversal.
+    # E.g. preboss zone with a dropdown to boss: once you drop, you can't
+    # go back.  Used by filter_and_enrich to prune exit fogs for boss_arena.
+    # Intersect with pruned zones in case some entry zones were removed
+    remaining_entry = entry_zones & set(cluster.zones)
+    deep_zones = set(cluster.zones) - remaining_entry
+    if deep_zones:
+        exit_reachable = world_graph.get_reachable_within(deep_zones, cluster.zones)
+        cluster.oneway_entry_zones = frozenset(remaining_entry - exit_reachable)
+
     # Collect exit fogs from all zones
     # Use (fog_id, zone) pairs - same fog in different zones = different sides of the gate
     seen_exits: set[tuple[int, str]] = set()
@@ -1416,6 +1429,19 @@ def filter_and_enrich_clusters(
         n_zones = len(zone_weights)
         avg_weight = sum(zone_weights) / n_zones
         cluster.weight = round(avg_weight * (1 + 0.5 * math.log(n_zones)))
+
+        # For boss_arena clusters with one-way internal links, remove
+        # exit fogs from zones that become unreachable after traversal.
+        # The player is forced to enter the boss zone (via one-way drop),
+        # so exits in the entry zone are unreachable after the boss fight.
+        if cluster.cluster_type == "boss_arena" and cluster.oneway_entry_zones:
+            cluster.exit_fogs = [
+                f
+                for f in cluster.exit_fogs
+                if f["zone"] not in cluster.oneway_entry_zones
+            ]
+            if not cluster.exit_fogs:
+                continue  # No reachable exits after pruning
 
         # Compute fog reuse flags
         cluster.allow_shared_entrance = compute_allow_shared_entrance(

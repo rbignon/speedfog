@@ -1047,6 +1047,74 @@ class TestComputeClusterFogs:
         assert "top" in exit_zones
         assert "bottom" in exit_zones
 
+    def test_oneway_entry_zones_with_drop(self):
+        """One-way drop marks entry zone as oneway_entry_zone."""
+        graph = WorldGraph()
+        graph.add_edge("top", "bottom", bidirectional=False)
+
+        zone_fogs = {
+            "top": ZoneFogs(
+                entry_fogs=[FogData("f_top", 1, FogSide("top", ""), FogSide("x", ""))],
+                exit_fogs=[FogData("f_top", 1, FogSide("top", ""), FogSide("x", ""))],
+            ),
+            "bottom": ZoneFogs(
+                entry_fogs=[
+                    FogData("f_bot", 2, FogSide("bottom", ""), FogSide("y", ""))
+                ],
+                exit_fogs=[
+                    FogData("f_bot", 2, FogSide("bottom", ""), FogSide("y", ""))
+                ],
+            ),
+        }
+
+        cluster = Cluster(zones=frozenset({"top", "bottom"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        assert cluster.oneway_entry_zones == frozenset({"top"})
+
+    def test_oneway_entry_zones_bidirectional(self):
+        """No oneway entry zones when links are bidirectional."""
+        graph = WorldGraph()
+        graph.add_edge("a", "b", bidirectional=True)
+
+        zone_fogs = {
+            "a": ZoneFogs(
+                entry_fogs=[FogData("f_a", 1, FogSide("a", ""), FogSide("x", ""))],
+                exit_fogs=[FogData("f_a", 1, FogSide("a", ""), FogSide("x", ""))],
+            ),
+            "b": ZoneFogs(
+                entry_fogs=[FogData("f_b", 2, FogSide("b", ""), FogSide("y", ""))],
+                exit_fogs=[FogData("f_b", 2, FogSide("b", ""), FogSide("y", ""))],
+            ),
+        }
+
+        cluster = Cluster(zones=frozenset({"a", "b"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        assert cluster.oneway_entry_zones == frozenset()
+
+    def test_oneway_entry_zones_with_return_path(self):
+        """If deep zone has bidirectional back, entry zone is NOT oneway."""
+        graph = WorldGraph()
+        graph.add_edge("top", "bottom", bidirectional=False)
+        graph.add_edge("bottom", "top", bidirectional=True)
+
+        zone_fogs = {
+            "top": ZoneFogs(
+                entry_fogs=[FogData("f_top", 1, FogSide("top", ""), FogSide("x", ""))],
+                exit_fogs=[FogData("f_top", 1, FogSide("top", ""), FogSide("x", ""))],
+            ),
+            "bottom": ZoneFogs(
+                entry_fogs=[FogData("f_b", 2, FogSide("bottom", ""), FogSide("y", ""))],
+                exit_fogs=[FogData("f_b", 2, FogSide("bottom", ""), FogSide("y", ""))],
+            ),
+        }
+
+        cluster = Cluster(zones=frozenset({"top", "bottom"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        assert cluster.oneway_entry_zones == frozenset()
+
     def test_same_fog_id_different_zones_creates_separate_entries(self):
         """Same fog_id in different zones creates separate exit entries.
 
@@ -2425,3 +2493,139 @@ class TestEntryAsExitInFilterAndEnrich:
 
         assert len(result) == 1
         assert result[0].allow_entry_as_exit is False
+
+
+class TestBossArenaOnewayExitPruning:
+    """Boss arena clusters should exclude exits from oneway entry zones."""
+
+    def test_boss_arena_prunes_exits_from_oneway_entry_zone(self):
+        """Boss arena with one-way drop: exits in entry zone are removed."""
+        areas = {
+            "preboss": AreaData(
+                name="preboss", text="Above Boss", maps=["m31_21_00_00"], tags=[]
+            ),
+            "boss": AreaData(
+                name="boss",
+                text="Boss Arena",
+                maps=["m31_21_00_00"],
+                tags=[],
+                defeat_flag=31210800,
+            ),
+        }
+        metadata = {
+            "defaults": {"boss_arena": 3},
+            "zones": {"boss": {"type": "boss_arena"}},
+        }
+        cluster = Cluster(
+            zones=frozenset({"preboss", "boss"}),
+            entry_fogs=[{"fog_id": "entry_fog", "zone": "preboss"}],
+            exit_fogs=[
+                {"fog_id": "entry_fog", "zone": "preboss"},
+                {"fog_id": "other_exit", "zone": "preboss"},
+                {"fog_id": "boss_exit", "zone": "boss"},
+                {"fog_id": "boss_warp", "zone": "boss"},
+            ],
+            oneway_entry_zones=frozenset({"preboss"}),
+        )
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert len(result) == 1
+        exit_fogs = {(f["fog_id"], f["zone"]) for f in result[0].exit_fogs}
+        # All preboss exits removed (both entry fog and other_exit)
+        assert ("entry_fog", "preboss") not in exit_fogs
+        assert ("other_exit", "preboss") not in exit_fogs
+        # Boss zone exits preserved
+        assert ("boss_exit", "boss") in exit_fogs
+        assert ("boss_warp", "boss") in exit_fogs
+
+    def test_non_boss_cluster_keeps_all_exits(self):
+        """Legacy dungeon with one-way drop: all exits preserved."""
+        areas = {
+            "courtyard": AreaData(
+                name="courtyard",
+                text="Courtyard",
+                maps=["m14_00_00_00"],
+                tags=[],
+            ),
+            "arena": AreaData(
+                name="arena", text="Arena", maps=["m14_00_00_00"], tags=[]
+            ),
+        }
+        metadata = {
+            "defaults": {"legacy_dungeon": 10},
+            "zones": {"courtyard": {"type": "legacy_dungeon"}},
+        }
+        cluster = Cluster(
+            zones=frozenset({"courtyard", "arena"}),
+            entry_fogs=[{"fog_id": "entry_fog", "zone": "courtyard"}],
+            exit_fogs=[
+                {"fog_id": "entry_fog", "zone": "courtyard"},
+                {"fog_id": "gate", "zone": "courtyard"},
+                {"fog_id": "arena_exit", "zone": "arena"},
+            ],
+            oneway_entry_zones=frozenset({"courtyard"}),
+        )
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert len(result) == 1
+        # All exits preserved for non-boss cluster
+        exit_fogs = {(f["fog_id"], f["zone"]) for f in result[0].exit_fogs}
+        assert ("entry_fog", "courtyard") in exit_fogs
+        assert ("gate", "courtyard") in exit_fogs
+        assert ("arena_exit", "arena") in exit_fogs
+
+    def test_boss_arena_without_oneway_keeps_all_exits(self):
+        """Boss arena without one-way links: all exits preserved."""
+        areas = {
+            "zone_a": AreaData(
+                name="zone_a",
+                text="Zone A",
+                maps=["m10_00_00_00"],
+                tags=[],
+                defeat_flag=10000800,
+            ),
+        }
+        metadata = {
+            "defaults": {"boss_arena": 3},
+            "zones": {"zone_a": {"type": "boss_arena"}},
+        }
+        cluster = Cluster(
+            zones=frozenset({"zone_a"}),
+            entry_fogs=[{"fog_id": "entry", "zone": "zone_a"}],
+            exit_fogs=[
+                {"fog_id": "entry", "zone": "zone_a"},
+                {"fog_id": "back", "zone": "zone_a"},
+            ],
+            # No oneway entry zones (single zone or bidirectional)
+        )
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert len(result) == 1
+        assert len(result[0].exit_fogs) == 2
