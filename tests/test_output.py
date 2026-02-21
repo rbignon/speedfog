@@ -1,5 +1,6 @@
 """Tests for output module (JSON and spoiler log export)."""
 
+import json
 from pathlib import Path
 
 from speedfog.clusters import ClusterData, ClusterPool
@@ -9,7 +10,9 @@ from speedfog.output import (
     _make_fullname,
     dag_to_dict,
     export_spoiler_log,
+    load_boss_placements,
     load_vanilla_tiers,
+    patch_graph_boss_placements,
 )
 
 
@@ -1754,3 +1757,151 @@ class TestIgnorePairInConnections:
 
         for conn in result["connections"]:
             assert "ignore_pair" not in conn
+
+
+class TestBossPlacementLoading:
+    def test_load_boss_placements_returns_dict(self, tmp_path):
+        path = tmp_path / "boss_placements.json"
+        path.write_text('{"14000850": {"name": "Rennala", "entity_id": 14000800}}')
+
+        result = load_boss_placements(path)
+
+        assert result == {"14000850": {"name": "Rennala", "entity_id": 14000800}}
+
+    def test_load_boss_placements_missing_file_returns_empty(self, tmp_path):
+        result = load_boss_placements(tmp_path / "nonexistent.json")
+
+        assert result == {}
+
+
+class TestPatchGraphBossPlacements:
+    def test_patch_matches_defeat_flag(self, tmp_path):
+        """Node with defeat_flag matching a placement key gets randomized_boss."""
+        graph = {
+            "nodes": {
+                "stormveil_godrick": {
+                    "type": "major_boss",
+                    "display_name": "Stormveil Castle",
+                }
+            }
+        }
+        graph_path = tmp_path / "graph.json"
+        graph_path.write_text(json.dumps(graph))
+
+        placements = {"14000850": {"name": "Rennala", "entity_id": 14000800}}
+
+        # Build a minimal DAG with matching defeat_flag
+        dag = Dag(seed=1)
+        cluster = make_cluster(
+            "stormveil_godrick", cluster_type="major_boss", exit_fogs=[]
+        )
+        cluster.defeat_flag = 14000850
+        dag.add_node(
+            DagNode(
+                id="n1",
+                cluster=cluster,
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+                exit_fogs=[],
+            )
+        )
+
+        patch_graph_boss_placements(graph_path, dag, placements)
+
+        patched = json.loads(graph_path.read_text())
+        assert patched["nodes"]["stormveil_godrick"]["randomized_boss"] == "Rennala"
+
+    def test_patch_200m_offset_match(self, tmp_path):
+        """Radahn/Fire Giant: defeat_flag = entity_id + 200_000_000."""
+        graph = {
+            "nodes": {
+                "radahn_arena": {
+                    "type": "major_boss",
+                    "display_name": "Radahn Arena",
+                }
+            }
+        }
+        graph_path = tmp_path / "graph.json"
+        graph_path.write_text(json.dumps(graph))
+
+        # Entity ID = 1_052_380_800, defeat_flag = 1_252_380_800
+        placements = {"1052380800": {"name": "Fire Giant", "entity_id": 99999}}
+
+        dag = Dag(seed=1)
+        cluster = make_cluster("radahn_arena", cluster_type="major_boss", exit_fogs=[])
+        cluster.defeat_flag = 1_252_380_800  # entity_id + 200M
+        dag.add_node(
+            DagNode(
+                id="n1",
+                cluster=cluster,
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+                exit_fogs=[],
+            )
+        )
+
+        patch_graph_boss_placements(graph_path, dag, placements)
+
+        patched = json.loads(graph_path.read_text())
+        assert patched["nodes"]["radahn_arena"]["randomized_boss"] == "Fire Giant"
+
+    def test_patch_no_match_leaves_node_unchanged(self, tmp_path):
+        """Node without matching defeat_flag is not modified."""
+        graph = {
+            "nodes": {
+                "some_dungeon": {
+                    "type": "mini_dungeon",
+                    "display_name": "Some Dungeon",
+                }
+            }
+        }
+        graph_path = tmp_path / "graph.json"
+        graph_path.write_text(json.dumps(graph))
+
+        placements = {"99999999": {"name": "SomeBoss", "entity_id": 11111}}
+
+        dag = Dag(seed=1)
+        cluster = make_cluster("some_dungeon", exit_fogs=[])
+        cluster.defeat_flag = 0  # No defeat flag
+        dag.add_node(
+            DagNode(
+                id="n1",
+                cluster=cluster,
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+                exit_fogs=[],
+            )
+        )
+
+        patch_graph_boss_placements(graph_path, dag, placements)
+
+        patched = json.loads(graph_path.read_text())
+        assert "randomized_boss" not in patched["nodes"]["some_dungeon"]
+
+    def test_patch_empty_placements_no_change(self, tmp_path):
+        """Empty placements dict leaves graph unchanged."""
+        graph = {"nodes": {"a": {"type": "major_boss"}}}
+        graph_path = tmp_path / "graph.json"
+        graph_path.write_text(json.dumps(graph))
+
+        dag = Dag(seed=1)
+        cluster = make_cluster("a", cluster_type="major_boss", exit_fogs=[])
+        cluster.defeat_flag = 14000850
+        dag.add_node(
+            DagNode(
+                id="n1",
+                cluster=cluster,
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+                exit_fogs=[],
+            )
+        )
+
+        patch_graph_boss_placements(graph_path, dag, {})
+
+        patched = json.loads(graph_path.read_text())
+        assert "randomized_boss" not in patched["nodes"]["a"]

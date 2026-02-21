@@ -1151,3 +1151,109 @@ def export_spoiler_log(
     # Write to file
     with open(output_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
+
+
+def load_boss_placements(path: Path) -> dict[str, dict[str, Any]]:
+    """Load boss_placements.json written by ItemRandomizerWrapper.
+
+    Args:
+        path: Path to boss_placements.json
+
+    Returns:
+        Dictionary of target_entity_id (str) -> {"name": str, "entity_id": int}
+        Empty dict if file doesn't exist.
+    """
+    if not path.exists():
+        return {}
+    with open(path, encoding="utf-8") as f:
+        data: dict[str, Any] = json.load(f)
+    return data
+
+
+def patch_graph_boss_placements(
+    graph_path: Path,
+    dag: Dag,
+    placements: dict[str, dict[str, Any]],
+) -> None:
+    """Patch graph.json nodes with randomized boss names.
+
+    Matches each node's cluster.defeat_flag against the entity IDs in placements.
+    For most bosses, defeat_flag == entity_id. For Radahn and Fire Giant,
+    defeat_flag == entity_id + 200_000_000.
+
+    Args:
+        graph_path: Path to existing graph.json to patch
+        dag: The DAG with cluster defeat_flags
+        placements: Boss placements from load_boss_placements()
+    """
+    if not placements:
+        return
+
+    with open(graph_path, encoding="utf-8") as f:
+        graph: dict[str, Any] = json.load(f)
+
+    nodes = graph.get("nodes", {})
+
+    for node in dag.nodes.values():
+        defeat_flag = node.cluster.defeat_flag
+        if defeat_flag == 0:
+            continue
+
+        boss_name = _match_boss_placement(defeat_flag, placements)
+        if boss_name and node.cluster.id in nodes:
+            nodes[node.cluster.id]["randomized_boss"] = boss_name
+
+    with open(graph_path, "w", encoding="utf-8") as f:
+        json.dump(graph, f, indent=2)
+
+
+def _match_boss_placement(
+    defeat_flag: int, placements: dict[str, dict[str, Any]]
+) -> str | None:
+    """Match a defeat_flag to a boss placement entry.
+
+    Args:
+        defeat_flag: Cluster's DefeatFlag from fog.txt
+        placements: Boss placements keyed by entity ID string
+
+    Returns:
+        Boss name if matched, None otherwise.
+    """
+    key = str(defeat_flag)
+    if key in placements:
+        return str(placements[key]["name"])
+
+    # Radahn/Fire Giant: defeat_flag = entity_id + 200_000_000
+    if 1_200_000_000 <= defeat_flag < 2_000_000_000:
+        key = str(defeat_flag - 200_000_000)
+        if key in placements:
+            return str(placements[key]["name"])
+
+    return None
+
+
+def append_boss_placements_to_spoiler(
+    spoiler_path: Path,
+    placements: dict[str, dict[str, Any]],
+) -> None:
+    """Append boss placement section to an existing spoiler log.
+
+    Args:
+        spoiler_path: Path to existing spoiler.txt
+        placements: Boss placements from load_boss_placements()
+    """
+    if not placements or not spoiler_path.exists():
+        return
+
+    lines: list[str] = []
+    lines.append("")
+    lines.append("=" * 60)
+    lines.append("BOSS PLACEMENTS (randomized)")
+    lines.append("=" * 60)
+
+    for target_id, info in sorted(placements.items()):
+        lines.append(f"  Arena #{target_id} -> {info['name']} (#{info['entity_id']})")
+
+    with open(spoiler_path, "a", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+        f.write("\n")
