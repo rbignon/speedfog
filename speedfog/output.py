@@ -68,27 +68,37 @@ def _effective_type(node: DagNode, dag: Dag) -> str:
 # =============================================================================
 
 
-def _get_fog_text(node: DagNode, fog_ref: FogRef) -> str:
-    """Get the human-readable text for a fog gate from a node's exit_fogs.
+def _get_fog_text_from_list(fogs: list[dict[str, str]], fog_ref: FogRef) -> str:
+    """Get the human-readable text for a fog gate from a list of fog dicts.
 
     Prefers exact (fog_id, zone) match, then falls back to fog_id-only match.
     Prefers side_text (zone-specific description) over gate-level text.
 
     Args:
-        node: The node to search
+        fogs: List of fog dicts (entry_fogs or exit_fogs)
         fog_ref: The FogRef to find
 
     Returns:
         Text string, or fog_id itself as fallback
     """
-    for fog in node.cluster.exit_fogs:
+    for fog in fogs:
         if fog["fog_id"] == fog_ref.fog_id and fog["zone"] == fog_ref.zone:
             return str(fog.get("side_text", fog.get("text", fog_ref.fog_id)))
     # Fallback: match just fog_id
-    for fog in node.cluster.exit_fogs:
+    for fog in fogs:
         if fog["fog_id"] == fog_ref.fog_id:
             return str(fog.get("side_text", fog.get("text", fog_ref.fog_id)))
     return fog_ref.fog_id
+
+
+def _get_fog_text(node: DagNode, fog_ref: FogRef) -> str:
+    """Get the human-readable text for a fog gate from a node's exit_fogs."""
+    return _get_fog_text_from_list(node.cluster.exit_fogs, fog_ref)
+
+
+def _get_entry_fog_text(node: DagNode, fog_ref: FogRef) -> str:
+    """Get the human-readable text for a fog gate from a node's entry_fogs."""
+    return _get_fog_text_from_list(node.cluster.entry_fogs, fog_ref)
 
 
 def load_fog_data(path: Path) -> dict[str, dict[str, Any]]:
@@ -386,6 +396,7 @@ def dag_to_dict(
             "original_tier": original_tier,
             "weight": node.cluster.weight,
             "exits": [],
+            "entrances": [],
         }
 
     # Populate exits from DAG edges
@@ -409,6 +420,31 @@ def dag_to_dict(
                 exit_entry["from_text"] = from_text
         exit_entry["to"] = target_cluster_id
         nodes[source_cluster_id]["exits"].append(exit_entry)
+
+    # Populate entrances from DAG edges (mirror of exits)
+    for edge in dag.edges:
+        source_node = dag.nodes.get(edge.source_id)
+        target_node = dag.nodes.get(edge.target_id)
+        if source_node is None or target_node is None:
+            continue
+        source_cluster_id = source_node.cluster.id
+        target_cluster_id = target_node.cluster.id
+        text = _get_entry_fog_text(target_node, edge.entry_fog)
+        to_zone = edge.entry_fog.zone
+        # Handle final boss edge case: empty entry_fog means use first zone of target
+        if not to_zone and not edge.entry_fog.fog_id:
+            if target_node.cluster.zones:
+                to_zone = target_node.cluster.zones[0]
+        entrance_entry: dict[str, str] = {
+            "text": text,
+            "from": source_cluster_id,
+        }
+        if to_zone:
+            entrance_entry["to"] = to_zone
+            to_text = clusters.zone_names.get(to_zone)
+            if to_text:
+                entrance_entry["to_text"] = to_text
+        nodes[target_cluster_id]["entrances"].append(entrance_entry)
 
     # Build edges section: unique (from, to) pairs by cluster_id
     seen_edges: set[tuple[str, str]] = set()

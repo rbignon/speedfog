@@ -625,6 +625,134 @@ class TestNodeExits:
 
 
 # =============================================================================
+# Node entrances tests
+# =============================================================================
+
+
+class TestNodeEntrances:
+    """Tests for entrances field in graph.json nodes."""
+
+    def test_entrances_present_in_nodes(self):
+        """Every node has an entrances key."""
+        result = _make_result()
+        for node_id, node_data in result["nodes"].items():
+            assert "entrances" in node_data, f"Node {node_id} missing entrances"
+
+    def test_entrances_from_dag_edges(self):
+        """Entrances match actual DAG edges targeting each node."""
+        result = _make_result()
+        # end node has 2 entrances (from c_a and c_b)
+        end_entrances = result["nodes"]["c_end"]["entrances"]
+        assert len(end_entrances) == 2
+        entrance_sources = {e["from"] for e in end_entrances}
+        assert entrance_sources == {"c_a", "c_b"}
+
+    def test_entrance_fields(self):
+        """Each entrance has text, from, and to fields."""
+        result = _make_result()
+        for node_id, node_data in result["nodes"].items():
+            for ent in node_data["entrances"]:
+                assert "text" in ent, f"Entrance in {node_id} missing text"
+                assert "from" in ent, f"Entrance in {node_id} missing from"
+                assert "to" in ent, f"Entrance in {node_id} missing to"
+
+    def test_start_node_has_no_entrances(self):
+        """Start node has entrances: []."""
+        result = _make_result()
+        assert result["nodes"]["c_start"]["entrances"] == []
+
+    def test_entrance_text_from_cluster(self):
+        """Entrance text comes from the cluster's entry_fogs text field."""
+        result = _make_result()
+        # c_a has entry_fogs with text "Gate to A"
+        a_entrances = result["nodes"]["c_a"]["entrances"]
+        assert len(a_entrances) == 1
+        assert a_entrances[0]["text"] == "Gate to A"
+
+    def test_entrance_from_is_source_cluster_id(self):
+        """Entrance 'from' field is the source cluster ID."""
+        result = _make_result()
+        a_entrances = result["nodes"]["c_a"]["entrances"]
+        assert a_entrances[0]["from"] == "c_start"
+        b_entrances = result["nodes"]["c_b"]["entrances"]
+        assert b_entrances[0]["from"] == "c_start"
+
+    def test_entrance_to_is_entry_zone(self):
+        """Entrance 'to' field is the zone within this node where we arrive."""
+        result = _make_result()
+        a_entrances = result["nodes"]["c_a"]["entrances"]
+        assert a_entrances[0]["to"] == "z_a"
+        b_entrances = result["nodes"]["c_b"]["entrances"]
+        assert b_entrances[0]["to"] == "z_b1"
+
+    def test_entrance_to_text_from_zone_names(self):
+        """Entrance 'to_text' is populated from zone_names when available."""
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={"z_a": "Branch A Room", "z_b1": "Branch B Room 1"},
+        )
+        result = dag_to_dict(dag, clusters)
+        a_entrances = result["nodes"]["c_a"]["entrances"]
+        assert a_entrances[0]["to_text"] == "Branch A Room"
+        b_entrances = result["nodes"]["c_b"]["entrances"]
+        assert b_entrances[0]["to_text"] == "Branch B Room 1"
+
+    def test_entrance_to_text_absent_when_zone_name_missing(self):
+        """Entrance has no 'to_text' when zone_names lacks the zone ID."""
+        result = _make_result()  # uses zone_names={}
+        for node_data in result["nodes"].values():
+            for ent in node_data["entrances"]:
+                assert "to_text" not in ent
+
+    def test_entrance_text_prefers_side_text(self):
+        """When side_text is present in entry_fogs, it takes priority over text."""
+        dag = make_test_dag()
+        dag.nodes["a"].cluster.entry_fogs = [
+            {
+                "fog_id": "fog_1",
+                "zone": "z_a",
+                "text": "Gate Name",
+                "side_text": "detailed entry description",
+            },
+        ]
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+        a_entrances = result["nodes"]["c_a"]["entrances"]
+        assert a_entrances[0]["text"] == "detailed entry description"
+
+    def test_entrance_text_fallback_to_fog_id(self):
+        """When text is missing from entry_fogs, falls back to fog_id."""
+        dag = make_test_dag()
+        dag.nodes["a"].cluster.entry_fogs = [
+            {"fog_id": "fog_1", "zone": "z_a"},
+        ]
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+        a_entrances = result["nodes"]["c_a"]["entrances"]
+        assert a_entrances[0]["text"] == "fog_1"
+
+    def test_merge_node_has_multiple_entrances(self):
+        """End node (merge point) has entrances from both branches."""
+        result = _make_result()
+        end_entrances = result["nodes"]["c_end"]["entrances"]
+        assert len(end_entrances) == 2
+        # Check both branches contribute
+        from_clusters = [e["from"] for e in end_entrances]
+        assert "c_a" in from_clusters
+        assert "c_b" in from_clusters
+
+
+# =============================================================================
 # Duplicate fog_id across zones tests
 # =============================================================================
 
