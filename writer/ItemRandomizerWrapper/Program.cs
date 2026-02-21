@@ -175,17 +175,42 @@ Example:
         // We don't need accurate measurements for headless operation, just estimate based on string length
         CharacterWriter.MeasureText = (string s, Font f) => (int)(s.Length * f.Size * 0.6f);
 
-        var randomizer = new Randomizer();
-        randomizer.Randomize(
-            opt,
-            GameSpec.FromGame.ER,
-            notify: status => Console.WriteLine($"  {status}"),
-            outPath: config.OutputDir,
-            preset: preset,
-            itemPreset: itemPreset,
-            messages: null,
-            gameExe: Path.Combine(config.GameDir, "eldenring.exe")
-        );
+        // Capture Console.Out during randomization to parse boss placements
+        var originalOut = Console.Out;
+        var capturedOutput = new StringWriter();
+        var teeWriter = new TeeTextWriter(originalOut, capturedOutput);
+        Console.SetOut(teeWriter);
+
+        try
+        {
+            var randomizer = new Randomizer();
+            randomizer.Randomize(
+                opt,
+                GameSpec.FromGame.ER,
+                notify: status => Console.Error.WriteLine($"  {status}"),
+                outPath: config.OutputDir,
+                preset: preset,
+                itemPreset: itemPreset,
+                messages: null,
+                gameExe: Path.Combine(config.GameDir, "eldenring.exe")
+            );
+        }
+        finally
+        {
+            Console.SetOut(originalOut);
+        }
+
+        // Parse boss placements from captured output
+        var capturedLines = capturedOutput.ToString().Split('\n', StringSplitOptions.TrimEntries);
+        var placements = BossPlacementParser.Parse(capturedLines);
+
+        if (placements.Count > 0)
+        {
+            var placementsPath = Path.Combine(config.OutputDir, "boss_placements.json");
+            File.WriteAllText(placementsPath, BossPlacementParser.Serialize(placements));
+            Console.WriteLine($"Boss placements: {placements.Count} bosses randomized");
+            Console.WriteLine($"Written: {placementsPath}");
+        }
 
         // Write helper options if specified (for RandomizerHelper.dll)
         if (randoConfig.HelperOptions != null && randoConfig.HelperOptions.Count > 0)
