@@ -40,6 +40,8 @@ Placements:
   - Tag: racemode
   - Tag: boss
   - Tag: altboss
+  - Tag: seedtree
+  - Tag: church
   Excludes:
   - Tag: missable
 
@@ -566,6 +568,8 @@ Placements:
   - Tag: racemode
   - Tag: boss
   - Tag: altboss
+  - Tag: seedtree
+  - Tag: church
   Excludes:
   - Tag: missable
 
