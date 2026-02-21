@@ -331,11 +331,11 @@ cd writer/test && ./run_integration.sh
 
 ## Data Formats
 
-### graph.json v4 (Python → C# + visualization + racing)
+### graph.json v4.1 (Python → C# + visualization + racing)
 
 ```json
 {
-  "version": "4.0",
+  "version": "4.1",
   "seed": 212559448,
   "options": {"scale": true, "crawl": true},
   "nodes": {"cluster_id": {"type": "legacy_dungeon", "display_name": "Stormveil Castle", "zones": [...], "layer": 1, "tier": 5, "weight": 15, "exits": [{"fog_id": "AEG099_002_9000", "text": "Godrick front", "from": "stormveil", "to": "other_cluster_id"}], "entrances": [{"text": "before main gate", "from": "source_cluster_id", "to": "stormveil_start", "to_text": "Stormveil Castle Start"}]}},

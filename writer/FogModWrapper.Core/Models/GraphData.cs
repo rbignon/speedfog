@@ -8,7 +8,7 @@ namespace FogModWrapper.Models;
 public class GraphData
 {
     [JsonPropertyName("version")]
-    public string Version { get; set; } = "4.0";
+    public string Version { get; set; } = "4.1";
 
     [JsonPropertyName("seed")]
     public int Seed { get; set; }

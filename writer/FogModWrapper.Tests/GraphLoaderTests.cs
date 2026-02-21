@@ -79,7 +79,7 @@ public class GraphLoaderTests
 
         // Parse succeeds with default values
         var data = GraphLoader.Parse(json);
-        Assert.Equal("4.0", data.Version);
+        Assert.Equal("4.1", data.Version);
     }
 
     [Fact]
@@ -182,7 +182,7 @@ public class GraphLoaderTests
     {
         var json = """
             {
-                "version": "4.0",
+                "version": "4.1",
                 "seed": 42,
                 "event_map": {"9000000": "stormveil", "9000001": "radagon"},
                 "finish_event": 9000001,
@@ -200,7 +200,7 @@ public class GraphLoaderTests
 
         var data = GraphLoader.Parse(json);
 
-        Assert.Equal("4.0", data.Version);
+        Assert.Equal("4.1", data.Version);
         Assert.Equal(42, data.Seed);
         Assert.Equal(2, data.EventMap.Count);
         Assert.Equal("stormveil", data.EventMap["9000000"]);

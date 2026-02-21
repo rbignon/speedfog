@@ -265,7 +265,7 @@ def dag_to_dict(
 
     Returns:
         Dictionary with the following structure:
-        - version: "4.0"
+        - version: "4.1"
         - seed: int
         - total_layers, total_nodes, total_zones, total_paths: metadata
         - options: dict of FogMod options
@@ -523,7 +523,7 @@ def dag_to_dict(
                 remove_entities.append({"map": map_id, "entity_id": location})
 
     return {
-        "version": "4.0",
+        "version": "4.1",
         "seed": dag.seed,
         "total_layers": total_layers,
         "total_nodes": dag.total_nodes(),

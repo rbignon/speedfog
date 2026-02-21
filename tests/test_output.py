@@ -313,10 +313,10 @@ def _make_result() -> dict:
 class TestEventMap:
     """Tests for v4 event_map, finish_event, and flag_id fields."""
 
-    def test_version_is_4(self):
-        """Version string is '4.0'."""
+    def test_version_is_4_1(self):
+        """Version string is '4.1'."""
         result = _make_result()
-        assert result["version"] == "4.0"
+        assert result["version"] == "4.1"
 
     def test_event_map_keys_are_string_flag_ids(self):
         """event_map keys are stringified integers."""

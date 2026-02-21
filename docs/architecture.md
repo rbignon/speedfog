@@ -241,13 +241,13 @@ Pre-computed zone clusters with entry/exit fogs.
 }
 ```
 
-### graph.json v4
+### graph.json v4.1
 
 DAG serialized for C# consumption, visualization tools, and racing.
 
 ```json
 {
-  "version": "4.0",
+  "version": "4.1",
   "seed": 212559448,
   "total_layers": 8, "total_nodes": 12, "total_zones": 24, "total_paths": 3,
   "options": {"scale": true, "shuffle": true},
