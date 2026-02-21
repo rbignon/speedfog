@@ -6,6 +6,7 @@ import argparse
 import json
 import shutil
 import sys
+import time
 from pathlib import Path
 
 from speedfog.balance import report_balance
@@ -24,6 +25,41 @@ from speedfog.output import (
     load_vanilla_tiers,
     patch_graph_boss_placements,
 )
+
+
+class StepTimer:
+    """Tracks elapsed time per named step."""
+
+    def __init__(self) -> None:
+        self.steps: list[tuple[str, float]] = []
+        self._start = time.perf_counter()
+        self._step_start: float = 0.0
+        self._step_name: str | None = None
+
+    def step(self, name: str) -> None:
+        """Start a new step, closing the previous one if any."""
+        now = time.perf_counter()
+        if self._step_name is not None:
+            self.steps.append((self._step_name, now - self._step_start))
+        self._step_name = name
+        self._step_start = now
+
+    def stop(self) -> float:
+        """Stop the current step and return total elapsed time."""
+        now = time.perf_counter()
+        if self._step_name is not None:
+            self.steps.append((self._step_name, now - self._step_start))
+            self._step_name = None
+        return now - self._start
+
+    def format_summary(self) -> str:
+        """Format per-step timing summary."""
+        total = sum(d for _, d in self.steps)
+        lines = []
+        for name, duration in self.steps:
+            pct = (duration / total * 100) if total > 0 else 0
+            lines.append(f"  {name:<25s} {duration:6.2f}s  ({pct:4.1f}%)")
+        return "\n".join(lines)
 
 
 def main() -> int:
@@ -80,6 +116,9 @@ def main() -> int:
     )
 
     args = parser.parse_args()
+
+    timer = StepTimer()
+    timer.step("Generate DAG")
 
     # Load or create config
     if args.config:
@@ -256,6 +295,7 @@ def main() -> int:
             print(f"Error: Game directory not found: {game_dir}", file=sys.stderr)
             return 1
 
+        timer.step("Item Randomizer")
         print("Running Item Randomizer...")
 
         # Generate item_config.json
@@ -336,6 +376,7 @@ def main() -> int:
         if item_rando_output and item_rando_output.exists():
             merge_dir = item_rando_output
 
+        timer.step("Build mod")
         print("Building mod...")
         if not run_fogmodwrapper(
             seed_dir, game_dir, config.paths.platform, args.verbose, merge_dir
@@ -347,6 +388,12 @@ def main() -> int:
             return 1
 
         print(f"Mod ready: {seed_dir}")
+
+    total = timer.stop()
+    print(f"Done in {total:.2f}s")
+    if args.verbose and len(timer.steps) > 1:
+        print("Timing breakdown:")
+        print(timer.format_summary())
 
     return 0
 
