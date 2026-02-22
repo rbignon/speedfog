@@ -66,11 +66,12 @@ def main():
 
     if config.structure.max_branches > 1 and config.structure.max_parallel_paths > 1:
         clusters.merge_roundtable_into_start()
-    clusters.filter_passant_incompatible()
-
-    all_boss_clusters = clusters.get_by_type("major_boss") + clusters.get_by_type(
+    boss_candidates = clusters.get_by_type("major_boss") + clusters.get_by_type(
         "final_boss"
     )
+    clusters.filter_passant_incompatible()
+
+    all_boss_clusters = boss_candidates
     all_boss_zones = {zone for cluster in all_boss_clusters for zone in cluster.zones}
     config.structure.final_boss_candidates = resolve_final_boss_candidates(
         config.structure.effective_final_boss_candidates, all_boss_zones
@@ -91,7 +92,7 @@ def main():
     for _i in range(num_seeds):
         seed = base_rng.randint(1, 999_999_999)
         try:
-            dag = generate_dag(config, clusters, seed)
+            dag = generate_dag(config, clusters, seed, boss_candidates=boss_candidates)
             successful += 1
             nodes_per_seed.append(len(dag.nodes))
 

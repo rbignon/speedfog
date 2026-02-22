@@ -54,6 +54,7 @@ def load_racing_standard_config() -> Config:
 def run_analysis(
     config: Config,
     clusters: ClusterPool,
+    boss_candidates: list,
     num_seeds: int,
     verbose: bool = False,
 ) -> None:
@@ -77,7 +78,7 @@ def run_analysis(
     for i in range(num_seeds):
         seed = base_rng.randint(1, 999_999_999)
         try:
-            dag = generate_dag(config, clusters, seed)
+            dag = generate_dag(config, clusters, seed, boss_candidates=boss_candidates)
             successful += 1
 
             for _node_id, node in dag.nodes.items():
@@ -314,14 +315,15 @@ def main() -> int:
     # Preprocess clusters (same as main.py)
     if config.structure.max_branches > 1 and config.structure.max_parallel_paths > 1:
         clusters.merge_roundtable_into_start()
+    boss_candidates = clusters.get_by_type("major_boss") + clusters.get_by_type(
+        "final_boss"
+    )
     removed = clusters.filter_passant_incompatible()
     if removed:
         print(f"Filtered {len(removed)} passant-incompatible clusters")
 
     # Resolve final_boss_candidates
-    all_boss_clusters = clusters.get_by_type("major_boss") + clusters.get_by_type(
-        "final_boss"
-    )
+    all_boss_clusters = boss_candidates
     all_boss_zones = {zone for cluster in all_boss_clusters for zone in cluster.zones}
     config.structure.final_boss_candidates = resolve_final_boss_candidates(
         config.structure.effective_final_boss_candidates, all_boss_zones
@@ -332,7 +334,7 @@ def main() -> int:
     for ctype, clist in sorted(clusters.by_type.items()):
         print(f"  {ctype}: {len(clist)}")
 
-    run_analysis(config, clusters, args.seeds, verbose=args.verbose)
+    run_analysis(config, clusters, boss_candidates, args.seeds, verbose=args.verbose)
     return 0
 
 
