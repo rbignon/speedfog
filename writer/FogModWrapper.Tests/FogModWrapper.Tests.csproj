@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../FogModWrapper.Core/FogModWrapper.Core.csproj" />
+    <ProjectReference Include="../FogModWrapper/FogModWrapper.csproj" />
   </ItemGroup>
 
 </Project>

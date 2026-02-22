@@ -191,9 +191,17 @@ public static class ZoneTrackingInjector
             if (conn.FlagId <= 0)
                 continue;
 
-            // Build entity lookup for disambiguation
+            // Build entity lookup for disambiguation.
+            // Two entity sources:
+            // 1. ExitEntityId — the fog gate asset entity from fog_data.json
+            // 2. Gate name suffix — for numeric gates (e.g., m34_12_00_00_34122840),
+            //    the suffix IS the action entity used by FogMod in IfActionButtonInArea.
+            //    For AEG099 gates, this is not a valid entity (skipped by TryParse).
             if (conn.ExitEntityId > 0)
                 entityToFlag.TryAdd(conn.ExitEntityId, conn.FlagId);
+            int gateActionEntity = ParseGateActionEntity(conn.ExitGate);
+            if (gateActionEntity > 0)
+                entityToFlag.TryAdd(gateActionEntity, conn.FlagId);
 
             // Build all possible source maps (exit_gate maps + exit_area areaMaps).
             // FogMod's getEventMap() may place the warp event in the exit area's internal
@@ -256,6 +264,29 @@ public static class ZoneTrackingInjector
             var emevd = EMEVD.Read(emevdPath);
             bool fileModified = false;
 
+            // Build map from event ID → init args for resolving parameterized event values.
+            // FogMod's manual events use InitializeEvent (bank 2000, id 0) to pass
+            // actual entity IDs as parameters. The event template stores 0 as placeholder
+            // and the Parameter list maps init arg offsets to instruction arg offsets.
+            var initArgsMap = new Dictionary<long, List<byte[]>>();
+            var evt0 = emevd.Events.Find(e => e.ID == 0);
+            if (evt0 != null)
+            {
+                foreach (var initInstr in evt0.Instructions)
+                {
+                    if (initInstr.Bank == 2000 && initInstr.ID == 0 && initInstr.ArgData.Length >= 8)
+                    {
+                        int evtId = BitConverter.ToInt32(initInstr.ArgData, 4);
+                        if (!initArgsMap.TryGetValue(evtId, out var list))
+                        {
+                            list = new List<byte[]>();
+                            initArgsMap[evtId] = list;
+                        }
+                        list.Add(initInstr.ArgData);
+                    }
+                }
+            }
+
             foreach (var evt in emevd.Events)
             {
                 // First pass: find all matching warp positions and their flag IDs.
@@ -269,7 +300,14 @@ public static class ZoneTrackingInjector
                 // if it uses vanilla region entity IDs (e.g., Placidusax lie-down uses region
                 // 13002834 which is below FOGMOD_ENTITY_BASE). The entity match gives us the
                 // flag_id directly.
-                int? entityMatchedFlag = TryMatchByEntityId(evt, entityToFlag);
+                //
+                // Also resolves parameterized entity values: FogMod's manual events use
+                // InitializeEvent to pass actual entity IDs as parameters, with 0 as
+                // placeholder in the instruction. We resolve these via the event's
+                // Parameter list and the init args.
+                List<byte[]>? evtInitArgs = null;
+                initArgsMap.TryGetValue(evt.ID, out evtInitArgs);
+                int? entityMatchedFlag = TryMatchByEntityId(evt, entityToFlag, evtInitArgs);
 
                 for (int i = 0; i < evt.Instructions.Count; i++)
                 {
@@ -312,7 +350,7 @@ public static class ZoneTrackingInjector
                             // for more precise disambiguation.
                             if (compoundCollisions.Contains(compoundKey) && entityToFlag.Count > 0)
                             {
-                                var entityFlag = TryMatchByEntityId(evt, entityToFlag);
+                                var entityFlag = TryMatchByEntityId(evt, entityToFlag, evtInitArgs);
                                 if (entityFlag.HasValue)
                                 {
                                     flagId = entityFlag.Value;
@@ -531,29 +569,98 @@ public static class ZoneTrackingInjector
 
     /// <summary>
     /// Try to match an event to a connection flag by scanning its instructions for a known
-    /// exit gate entity ID. FogMod's fogwarp template bakes the gate entity_id into
-    /// IfActionButtonInArea (bank 3, id 24) as the third argument (offset 8 in ArgData).
-    /// Only that instruction type and offset are checked to avoid false positives.
+    /// exit gate entity ID in IfActionButtonInArea (bank 3, id 24).
     ///
     /// ArgData layout for IfActionButtonInArea (3:24):
     ///   [0..3] Condition Group (int)
     ///   [4..7] Action Button Parameter ID (int)
     ///   [8..11] Target Entity ID (uint) ← the fog gate entity
+    ///
+    /// Handles two cases:
+    /// 1. Literal entity ID baked directly into the instruction (non-parameterized events).
+    /// 2. Parameterized entity ID: the instruction stores 0 as placeholder, and the actual
+    ///    value is passed via InitializeEvent args. FogMod's manual fogwarp events for
+    ///    numeric-named gates (e.g., 34122840) use this pattern. We resolve the parameter
+    ///    by finding the Parameter entry that targets this instruction's offset 8, then
+    ///    reading the actual value from the InitializeEvent args at the source offset.
     /// </summary>
     /// <returns>The matching flag_id, or null if no entity_id matches.</returns>
-    private static int? TryMatchByEntityId(EMEVD.Event evt, Dictionary<int, int> entityToFlag)
+    /// <remarks>
+    /// Must be called before any instruction insertions into the event, since
+    /// Parameter.InstructionIndex values refer to the original instruction list.
+    /// </remarks>
+    private static int? TryMatchByEntityId(
+        EMEVD.Event evt, Dictionary<int, int> entityToFlag, List<byte[]>? initArgsList)
     {
-        foreach (var instr in evt.Instructions)
+        for (int instrIdx = 0; instrIdx < evt.Instructions.Count; instrIdx++)
         {
+            var instr = evt.Instructions[instrIdx];
             // IfActionButtonInArea (bank 3, id 24): entity_id at ArgData offset 8
-            if (instr.Bank == 3 && instr.ID == 24 && instr.ArgData.Length >= 12)
+            if (instr.Bank != 3 || instr.ID != 24 || instr.ArgData.Length < 12)
+                continue;
+
+            int entityId = BitConverter.ToInt32(instr.ArgData, 8);
+
+            // Case 1: literal entity ID
+            if (entityId != 0 && entityToFlag.TryGetValue(entityId, out int flagId))
+                return flagId;
+
+            // Case 2: parameterized entity (placeholder = 0). Resolve from init args.
+            if (entityId == 0 && initArgsList != null)
             {
-                int entityId = BitConverter.ToInt32(instr.ArgData, 8);
-                if (entityToFlag.TryGetValue(entityId, out int flagId))
-                    return flagId;
+                // Find the Parameter entry that maps to this instruction's offset 8
+                foreach (var param in evt.Parameters)
+                {
+                    if (param.InstructionIndex == instrIdx &&
+                        param.TargetStartByte == 8 &&
+                        param.ByteCount == 4)
+                    {
+                        // Read the actual entity value from each init args set
+                        foreach (var initArgs in initArgsList)
+                        {
+                            // InitializeEvent args layout: [slot(4), eventId(4), params...]
+                            // param.SourceStartByte is offset into the params portion,
+                            // which starts at byte 8 in the init instruction's ArgData.
+                            int srcOffset = 8 + (int)param.SourceStartByte;
+                            if (srcOffset + 4 <= initArgs.Length)
+                            {
+                                int resolvedEntity = BitConverter.ToInt32(initArgs, srcOffset);
+                                if (resolvedEntity != 0 &&
+                                    entityToFlag.TryGetValue(resolvedEntity, out flagId))
+                                    return flagId;
+                            }
+                        }
+                    }
+                }
             }
         }
         return null;
+    }
+
+    /// <summary>
+    /// Extract the action entity ID from a gate name's numeric suffix.
+    /// For numeric-named gates (e.g., "m34_12_00_00_34122840"), the suffix after the
+    /// 4-part map prefix IS the action entity used by FogMod in IfActionButtonInArea.
+    /// For AEG099 gates (e.g., "m10_01_00_00_AEG099_001_9000"), returns 0 (not numeric).
+    /// Assumes numeric gates are always single-tile (no cross-tile "mXX_..._mXX_..." format).
+    /// </summary>
+    internal static int ParseGateActionEntity(string gateName)
+    {
+        if (string.IsNullOrEmpty(gateName))
+            return 0;
+
+        // Gate format: "m{area}_{block}_{sub}_{sub2}_{suffix}"
+        // Split and take everything after the 4th underscore
+        var parts = gateName.Split('_');
+        if (parts.Length < 5)
+            return 0;
+
+        // The suffix is the 5th part (index 4). For numeric gates it's a pure number.
+        // For AEG099 gates it's "AEG099" which won't parse as int.
+        if (int.TryParse(parts[4], out int entityId))
+            return entityId;
+
+        return 0;
     }
 
     /// <summary>
