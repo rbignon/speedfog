@@ -6,18 +6,20 @@ namespace FogModWrapper;
 /// <summary>
 /// Fixes Maliketh's post-defeat warp when connecting to Ashen Leyndell.
 ///
-/// When SpeedFog connects farumazula_maliketh → leyndell_erdtree, FogMod replaces
-/// the warp destination with the entrance's primary Side (m11_00_00_00). But the
-/// Maliketh warp also sets flag 300 (Erdtree burning) via WarpBonfireFlag, which
-/// causes the game to load m11_05_00_00 (Ashen Capital). The warp region doesn't
-/// exist in the Ashen map, so the warp fails silently.
+/// When SpeedFog connects farumazula_maliketh → leyndell_erdtree, FogMod's
+/// EventEditor replaces the warp region in existing events to point to the
+/// entrance's primary SpawnPoint in m11_00_00_00. However, the vanilla Event 900
+/// (Maliketh defeat cutscene) also sets flag 300 (Erdtree burning) via
+/// WarpBonfireFlag, causing the game to load m11_05_00_00 (Ashen Capital).
+/// The primary region doesn't exist in the Ashen map → warp fails silently.
 ///
-/// FogMod's AlternateSide mechanism computes warp points for BOTH map versions.
-/// This injector patches warp instructions to use the alternate (Ashen) destination.
+/// FogMod's AlternateSide mechanism computes SpawnPoints for BOTH map versions.
+/// This injector replaces the primary region with the alternate region (and fixes
+/// the map bytes where applicable) in all warp instructions across all EMEVDs.
 ///
-/// Scans all EMEVD files for both instruction families:
-/// - WarpPlayer (2003:14): [area(1), block(1), sub(1), sub2(1), region(4)]
-/// - PlayCutsceneToPlayerAndWarp (2002:11/12): [cutscene(4), playback(4), region(4), packedMap(4)]
+/// Key insight: EventEditor only replaces the region in PlayCutsceneToPlayerAndWarp
+/// (no MapArg in WarpArgs), so the map bytes may already be m11_05 (vanilla) while
+/// the region is the FogMod primary (m11_00). We match solely on region, not map.
 /// </summary>
 public static class AshenLeyndellWarpInjector
 {
@@ -41,13 +43,7 @@ public static class AshenLeyndellWarpInjector
 
         int primaryRegion = primaryWarp.Region;
         int altRegion = altWarp.Region;
-
-        // Primary map bytes for WarpPlayer matching (4 individual bytes)
-        byte[] primaryMapBytes = ParseMapBytes(primaryWarp.Map);
         byte[] altMapBytes = ParseMapBytes(altWarp.Map);
-
-        // Packed map ints for PlayCutsceneToPlayerAndWarp matching
-        int primaryMapPacked = PackMapId(primaryWarp.Map);
         int altMapPacked = PackMapId(altWarp.Map);
 
         int totalPatched = 0;
@@ -61,14 +57,10 @@ public static class AshenLeyndellWarpInjector
             {
                 foreach (var instr in evt.Instructions)
                 {
-                    if (TryPatchWarpPlayer(instr, primaryRegion, primaryMapBytes, altRegion, altMapBytes))
-                    {
+                    if (TryPatchWarpPlayer(instr, primaryRegion, altRegion, altMapBytes))
                         patched++;
-                    }
-                    else if (TryPatchCutsceneWarp(instr, primaryRegion, primaryMapPacked, altRegion, altMapPacked))
-                    {
+                    else if (TryPatchCutsceneWarp(instr, primaryRegion, altRegion, altMapPacked))
                         patched++;
-                    }
                 }
             }
 
@@ -83,59 +75,48 @@ public static class AshenLeyndellWarpInjector
 
         if (totalPatched > 0)
         {
-            Console.WriteLine($"Ashen Leyndell fix: patched {totalPatched} warp(s) from {primaryWarp.Map} to {altWarp.Map}");
+            Console.WriteLine($"Ashen Leyndell fix: patched {totalPatched} warp(s) " +
+                $"(region {primaryRegion} -> {altRegion}, map -> {altWarp.Map})");
         }
         else
         {
             Console.WriteLine($"Warning: No warp instructions matched for Ashen Leyndell fix " +
-                $"(primary region {primaryRegion}, alt region {altRegion})");
+                $"(expected region {primaryRegion})");
         }
     }
 
     /// <summary>
     /// Try to patch a WarpPlayer instruction (bank 2003, id 14).
     /// ArgData layout: [area(1), block(1), sub(1), sub2(1), region(4), ...]
-    /// Match on region (must be FogMod-generated) AND map bytes.
+    /// Match solely on region == primaryRegion. Replace region and map bytes.
     /// </summary>
     private static bool TryPatchWarpPlayer(
         EMEVD.Instruction instr,
-        int primaryRegion, byte[] primaryMapBytes,
-        int altRegion, byte[] altMapBytes)
+        int primaryRegion, int altRegion, byte[] altMapBytes)
     {
         if (instr.Bank != 2003 || instr.ID != 14 || instr.ArgData.Length < 8)
             return false;
 
-        var a = instr.ArgData;
-        int region = BitConverter.ToInt32(a, 4);
-
-        if (region < FOGMOD_ENTITY_BASE)
-            return false;
-
-        // Match map bytes at offset 0-3
-        if (a[0] != primaryMapBytes[0] || a[1] != primaryMapBytes[1] ||
-            a[2] != primaryMapBytes[2] || a[3] != primaryMapBytes[3])
-            return false;
-
-        // Match region
+        int region = BitConverter.ToInt32(instr.ArgData, 4);
         if (region != primaryRegion)
             return false;
 
-        // Patch map bytes
-        altMapBytes.CopyTo(a, 0);
-        // Patch region
-        BitConverter.GetBytes(altRegion).CopyTo(a, 4);
+        // Patch map bytes and region
+        altMapBytes.CopyTo(instr.ArgData, 0);
+        BitConverter.GetBytes(altRegion).CopyTo(instr.ArgData, 4);
         return true;
     }
 
     /// <summary>
     /// Try to patch a PlayCutsceneToPlayerAndWarp instruction (bank 2002, id 11/12).
     /// ArgData layout: [cutsceneId(4), playback(4), region(4), mapId(4), ...]
-    /// mapId is packed decimal: area*1000000 + block*10000 + sub*100 + sub2.
+    /// Match solely on region == primaryRegion. Replace region and map.
+    /// The map may already be m11_05 (vanilla, since EventEditor has no MapArg
+    /// for this instruction) or m11_00 (if another injector changed it).
     /// </summary>
     private static bool TryPatchCutsceneWarp(
         EMEVD.Instruction instr,
-        int primaryRegion, int primaryMapPacked,
-        int altRegion, int altMapPacked)
+        int primaryRegion, int altRegion, int altMapPacked)
     {
         if (instr.Bank != 2002 || (instr.ID != 11 && instr.ID != 12))
             return false;
@@ -143,9 +124,7 @@ public static class AshenLeyndellWarpInjector
             return false;
 
         int region = BitConverter.ToInt32(instr.ArgData, 8);
-        int mapInt = BitConverter.ToInt32(instr.ArgData, 12);
-
-        if (region != primaryRegion || mapInt != primaryMapPacked)
+        if (region != primaryRegion)
             return false;
 
         BitConverter.GetBytes(altRegion).CopyTo(instr.ArgData, 8);
@@ -171,7 +150,6 @@ public static class AshenLeyndellWarpInjector
     /// <summary>
     /// Pack a map name string into a decimal int.
     /// "m11_05_00_00" → 11050000
-    /// Format: area*1000000 + block*10000 + sub*100 + sub2
     /// </summary>
     private static int PackMapId(string map)
     {
