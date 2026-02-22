@@ -1122,22 +1122,35 @@ def generate_dag(
         Branch(f"b{i}", "start", start_exits[i]) for i in range(num_initial_branches)
     ]
 
-    # 3. Execute first layer if forced type
+    # 3. Execute first layer if forced type (cluster-first passant)
     current_layer = 1
     if config.structure.first_layer_type:
         first_type = config.structure.first_layer_type
         tier = compute_tier(current_layer, 10, config.structure.final_tier)
+        first_candidates = clusters.get_by_type(first_type)
 
-        branches = execute_passant_layer(
-            dag,
-            branches,
-            current_layer,
-            tier,
-            first_type,
-            clusters,
-            used_zones,
-            rng,
-        )
+        new_branches: list[Branch] = []
+        for i, branch in enumerate(branches):
+            c = pick_cluster_uniform(first_candidates, used_zones, rng)
+            if c is None:
+                raise GenerationError(
+                    f"No cluster for first layer branch {i} (type: {first_type})"
+                )
+            used_zones.update(c.zones)
+            ef, exf = _pick_entry_and_exits_for_node(c, 1, rng)
+            nid = f"node_{current_layer}_{chr(97 + i)}"
+            n = DagNode(
+                id=nid,
+                cluster=c,
+                layer=current_layer,
+                tier=tier,
+                entry_fogs=[ef],
+                exit_fogs=exf,
+            )
+            dag.add_node(n)
+            dag.add_edge(branch.current_node_id, nid, branch.available_exit, ef)
+            new_branches.append(Branch(branch.id, nid, rng.choice(exf)))
+        branches = new_branches
         current_layer += 1
 
     # 4. Plan remaining layer types
@@ -1162,7 +1175,7 @@ def generate_dag(
         len(layer_types) + 2 + first_layer_offset
     )  # +1 start, +1 end, +1 if first forced
 
-    # 5. Execute layers with dynamic topology
+    # 5. Execute layers with cluster-first selection
     for layer_idx, layer_type in enumerate(layer_types):
         is_near_end = layer_idx >= len(layer_types) - 2
         tier = compute_tier(current_layer, estimated_total, config.structure.final_tier)
@@ -1180,59 +1193,227 @@ def generate_dag(
                 rng,
                 config,
             )
-        else:
-            # Decide operation based on current state
-            operation = decide_operation(len(branches), config, rng)
+            continue
 
-            if operation == LayerOperation.PASSANT:
-                branches = execute_passant_layer(
-                    dag,
-                    branches,
-                    current_layer,
-                    tier,
-                    layer_type,
-                    clusters,
-                    used_zones,
-                    rng,
-                )
-            elif operation == LayerOperation.SPLIT:
-                branches = execute_split_layer(
-                    dag,
-                    branches,
-                    current_layer,
-                    tier,
-                    layer_type,
-                    clusters,
-                    used_zones,
-                    rng,
-                    config,
-                )
-            elif operation == LayerOperation.MERGE:
-                if _has_valid_merge_pair(branches):
-                    branches = execute_merge_layer(
-                        dag,
-                        branches,
-                        current_layer,
-                        tier,
-                        layer_type,
-                        clusters,
-                        used_zones,
-                        rng,
-                        config,
+        candidates = clusters.get_by_type(layer_type)
+
+        # Pick a cluster uniformly for the "primary" branch action
+        primary_cluster = pick_cluster_uniform(candidates, used_zones, rng)
+        if primary_cluster is None:
+            raise GenerationError(
+                f"No cluster available for layer {current_layer} "
+                f"(type: {layer_type})"
+            )
+
+        # Determine operation from cluster capabilities
+        operation, fan = determine_operation(primary_cluster, branches, config, rng)
+
+        if operation == LayerOperation.SPLIT:
+            # Pick which branch to split
+            split_idx = rng.randrange(len(branches))
+            new_branches = []
+            letter_offset = 0
+
+            for i, branch in enumerate(branches):
+                if i == split_idx:
+                    used_zones.update(primary_cluster.zones)
+                    entry_fog, exit_fogs = _pick_entry_and_exits_for_node(
+                        primary_cluster, fan, rng
                     )
+                    node_id = f"node_{current_layer}_{chr(97 + letter_offset)}"
+                    node = DagNode(
+                        id=node_id,
+                        cluster=primary_cluster,
+                        layer=current_layer,
+                        tier=tier,
+                        entry_fogs=[entry_fog],
+                        exit_fogs=exit_fogs,
+                    )
+                    dag.add_node(node)
+                    dag.add_edge(
+                        branch.current_node_id,
+                        node_id,
+                        branch.available_exit,
+                        entry_fog,
+                    )
+                    for j in range(fan):
+                        new_branches.append(
+                            Branch(
+                                f"{branch.id}_{chr(97 + j)}",
+                                node_id,
+                                exit_fogs[j],
+                            )
+                        )
+                    letter_offset += 1
                 else:
-                    # All branches share the same source; fall back to passant
-                    branches = execute_passant_layer(
-                        dag,
-                        branches,
-                        current_layer,
-                        tier,
-                        layer_type,
-                        clusters,
-                        used_zones,
-                        rng,
+                    # Passant for non-split branches (uniform pick)
+                    pc = pick_cluster_uniform(candidates, used_zones, rng)
+                    if pc is None:
+                        raise GenerationError(
+                            f"No cluster for layer {current_layer} branch {i} "
+                            f"(type: {layer_type})"
+                        )
+                    used_zones.update(pc.zones)
+                    ef, exf = _pick_entry_and_exits_for_node(pc, 1, rng)
+                    nid = f"node_{current_layer}_{chr(97 + letter_offset)}"
+                    n = DagNode(
+                        id=nid,
+                        cluster=pc,
+                        layer=current_layer,
+                        tier=tier,
+                        entry_fogs=[ef],
+                        exit_fogs=exf,
                     )
-            current_layer += 1
+                    dag.add_node(n)
+                    dag.add_edge(branch.current_node_id, nid, branch.available_exit, ef)
+                    new_branches.append(Branch(branch.id, nid, rng.choice(exf)))
+                    letter_offset += 1
+
+            branches = new_branches
+
+        elif operation == LayerOperation.MERGE:
+            # Find merge indices and actual fan-in
+            max_merge = max(min(config.structure.max_branches, len(branches)), 2)
+            merge_indices: list[int] | None = None
+            actual_merge = 2
+            for merge_n in range(max_merge, 1, -1):
+                if can_be_merge_node(primary_cluster, merge_n):
+                    indices = _find_valid_merge_indices(branches, rng, merge_n)
+                    if indices is not None:
+                        merge_indices = indices
+                        actual_merge = merge_n
+                        break
+
+            if merge_indices is None:
+                merge_indices = _find_valid_merge_indices(branches, rng, 2)
+
+            if merge_indices is None:
+                # Fallback: treat as passant
+                operation = LayerOperation.PASSANT
+            else:
+                used_zones.update(primary_cluster.zones)
+                merge_branches_list = [branches[i] for i in merge_indices]
+
+                if primary_cluster.allow_shared_entrance:
+                    entries = select_entries_for_merge(primary_cluster, 1, rng)
+                    shared_entry = FogRef(entries[0]["fog_id"], entries[0]["zone"])
+                    entry_fogs_list = [shared_entry]
+                    exits = compute_net_exits(primary_cluster, entries)
+                else:
+                    entries = select_entries_for_merge(
+                        primary_cluster, actual_merge, rng
+                    )
+                    entry_fogs_list = [FogRef(e["fog_id"], e["zone"]) for e in entries]
+                    exits = compute_net_exits(primary_cluster, entries)
+
+                rng.shuffle(exits)
+                exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits[:1]]
+
+                merge_node_id = f"node_{current_layer}_a"
+                merge_node = DagNode(
+                    id=merge_node_id,
+                    cluster=primary_cluster,
+                    layer=current_layer,
+                    tier=tier,
+                    entry_fogs=entry_fogs_list,
+                    exit_fogs=exit_fogs,
+                )
+                dag.add_node(merge_node)
+
+                if primary_cluster.allow_shared_entrance:
+                    for branch in merge_branches_list:
+                        dag.add_edge(
+                            branch.current_node_id,
+                            merge_node_id,
+                            branch.available_exit,
+                            shared_entry,
+                        )
+                else:
+                    for branch, ef in zip(
+                        merge_branches_list, entry_fogs_list, strict=False
+                    ):
+                        dag.add_edge(
+                            branch.current_node_id,
+                            merge_node_id,
+                            branch.available_exit,
+                            ef,
+                        )
+
+                if not exit_fogs:
+                    raise GenerationError(
+                        f"Merge node {merge_node_id}: no exits remaining"
+                    )
+
+                new_branches = [
+                    Branch(
+                        f"merged_{current_layer}",
+                        merge_node_id,
+                        rng.choice(exit_fogs),
+                    )
+                ]
+
+                # Non-merged branches get passant (uniform pick)
+                merge_set = set(merge_indices)
+                letter = 1
+                for i, branch in enumerate(branches):
+                    if i in merge_set:
+                        continue
+                    pc = pick_cluster_uniform(candidates, used_zones, rng)
+                    if pc is None:
+                        raise GenerationError(
+                            f"No cluster for layer {current_layer} branch {i} "
+                            f"(type: {layer_type})"
+                        )
+                    used_zones.update(pc.zones)
+                    ef, exf = _pick_entry_and_exits_for_node(pc, 1, rng)
+                    nid = f"node_{current_layer}_{chr(97 + letter)}"
+                    n = DagNode(
+                        id=nid,
+                        cluster=pc,
+                        layer=current_layer,
+                        tier=tier,
+                        entry_fogs=[ef],
+                        exit_fogs=exf,
+                    )
+                    dag.add_node(n)
+                    dag.add_edge(branch.current_node_id, nid, branch.available_exit, ef)
+                    new_branches.append(Branch(branch.id, nid, rng.choice(exf)))
+                    letter += 1
+
+                branches = new_branches
+
+        # Passant fallback (also handles merge-fallback case)
+        if operation == LayerOperation.PASSANT:
+            new_branches = []
+            first = True
+            for i, branch in enumerate(branches):
+                if first:
+                    c = primary_cluster
+                    first = False
+                else:
+                    c = pick_cluster_uniform(candidates, used_zones, rng)
+                    if c is None:
+                        raise GenerationError(
+                            f"No cluster for layer {current_layer} branch {i} "
+                            f"(type: {layer_type})"
+                        )
+                used_zones.update(c.zones)
+                ef, exf = _pick_entry_and_exits_for_node(c, 1, rng)
+                nid = f"node_{current_layer}_{chr(97 + i)}"
+                n = DagNode(
+                    id=nid,
+                    cluster=c,
+                    layer=current_layer,
+                    tier=tier,
+                    entry_fogs=[ef],
+                    exit_fogs=exf,
+                )
+                dag.add_node(n)
+                dag.add_edge(branch.current_node_id, nid, branch.available_exit, ef)
+                new_branches.append(Branch(branch.id, nid, rng.choice(exf)))
+            branches = new_branches
+
+        current_layer += 1
 
     # 5. Final merge if still multiple branches
     if len(branches) > 1:

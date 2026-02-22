@@ -20,11 +20,14 @@ from speedfog.output import export_json
 
 @pytest.fixture
 def real_clusters():
-    """Load the actual clusters.json."""
+    """Load the actual clusters.json with standard preprocessing."""
     clusters_path = Path(__file__).parent.parent / "data" / "clusters.json"
     if not clusters_path.exists():
         pytest.skip("clusters.json not found")
-    return load_clusters(clusters_path)
+    clusters = load_clusters(clusters_path)
+    clusters.merge_roundtable_into_start()
+    clusters.filter_passant_incompatible()
+    return clusters
 
 
 @pytest.fixture
