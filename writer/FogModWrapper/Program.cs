@@ -358,25 +358,6 @@ Example:
         var writer = new GameDataWriterE();
         writer.Write(opt, ann, graph, mergedMods, modDir, events, eventConfig, Console.WriteLine);
 
-        // 7a. Fix Maliketh warp to Ashen Leyndell.
-        // Event 900 sets flag 300 (Erdtree burning) then warps to the entrance.
-        // FogMod replaces the warp with m11_00_00_00 (pre-ash), but flag 300
-        // causes the game to load m11_05_00_00 (Ashen). Patch to use the alternate.
-        // NOTE: Must run BEFORE ZoneTrackingInjector (7f) which inserts instructions
-        // into the same EMEVD, shifting indices.
-        var erdtreeEntrance = ann.Entrances.Concat(ann.Warps).FirstOrDefault(e =>
-            e.BSide?.Area == "leyndell_erdtree" &&
-            e.BSide?.AlternateSide?.Warp != null &&
-            e.BSide.AlternateFlag > 0);
-
-        if (erdtreeEntrance != null)
-        {
-            AshenLeyndellWarpInjector.Inject(
-                modDir,
-                erdtreeEntrance.BSide.Warp,
-                erdtreeEntrance.BSide.AlternateSide.Warp);
-        }
-
         // 7a2. Copy non-English FMG files from Item Randomizer output.
         // FogMod only loads and writes msg/engus/ FMGs. When Item Randomizer
         // generates localized content (e.g., class descriptions in French),
@@ -465,6 +446,26 @@ Example:
                 areaMaps,
                 injectionResult.FinishEvent,
                 bossDefeatFlag);
+        }
+
+        // 7f2. Fix Maliketh warp to Ashen Leyndell.
+        // Event 900 sets flag 300 (Erdtree burning) then warps to the entrance.
+        // FogMod replaces the warp with m11_00_00_00 (pre-ash), but flag 300
+        // causes the game to load m11_05_00_00 (Ashen). Patch to use the alternate.
+        // NOTE: Must run AFTER ZoneTrackingInjector (7f) which needs to see the
+        // original m11_00 destination to match connections, and inserts instructions
+        // that shift indices.
+        var erdtreeEntrance = ann.Entrances.Concat(ann.Warps).FirstOrDefault(e =>
+            e.BSide?.Area == "leyndell_erdtree" &&
+            e.BSide?.AlternateSide?.Warp != null &&
+            e.BSide.AlternateFlag > 0);
+
+        if (erdtreeEntrance != null)
+        {
+            AshenLeyndellWarpInjector.Inject(
+                modDir,
+                erdtreeEntrance.BSide.Warp,
+                erdtreeEntrance.BSide.AlternateSide.Warp);
         }
 
         // 7g. Inject "RUN COMPLETE" banner on final boss defeat
