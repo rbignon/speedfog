@@ -165,6 +165,11 @@ def main() -> int:
     if config.structure.max_branches > 1 and config.structure.max_parallel_paths > 1:
         clusters.merge_roundtable_into_start()
 
+    # Filter clusters that can never be passant nodes (1 bidir entry + 1 exit)
+    removed = clusters.filter_passant_incompatible()
+    if args.verbose and removed:
+        print(f"Filtered {len(removed)} passant-incompatible clusters")
+
     # Load fog_data.json for accurate map lookups
     fog_data_path = clusters_path.parent / "fog_data.json"
     fog_data = load_fog_data(fog_data_path) if fog_data_path.exists() else None
