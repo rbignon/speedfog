@@ -42,6 +42,7 @@ Placements:
   - Tag: altboss
   - Tag: seedtree
   - Tag: church
+  - Tag: cross
   Excludes:
   - Tag: missable
 
@@ -570,6 +571,7 @@ Placements:
   - Tag: altboss
   - Tag: seedtree
   - Tag: church
+  - Tag: cross
   Excludes:
   - Tag: missable
 
