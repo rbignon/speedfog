@@ -146,7 +146,10 @@ public static class ZoneTrackingInjector
     /// events to redirect to FogMod destinations. Both types are placed in map EMEVD files
     /// and we post-process them to add zone tracking.
     ///
-    /// Matching strategy (see docs/specs/zone-tracking-accuracy.md):
+    /// Matching strategy:
+    /// 0. Entity match — if the event contains IfActionButtonInArea with a known exit gate
+    ///    entity, match directly by entity_id. Most reliable, handles cases where FogMod
+    ///    reuses vanilla destination entities (e.g., Placidusax lie-down uses region 13002834).
     /// 1. Try compound key (source_map, dest_map) — resolves collisions when two connections
     ///    from different source maps target the same dest map. Source maps include both
     ///    exit_gate map bytes AND exit_area areaMaps (FogMod may place events in either).
@@ -261,6 +264,13 @@ public static class ZoneTrackingInjector
                 // SetEventFlag before ALL of them, not just the first.
                 var warpPositions = new List<(int index, int flagId)>();
 
+                // Pre-scan: check if this event contains an IfActionButtonInArea with a known
+                // exit gate entity. If so, it's a FogMod-generated manual fogwarp event, even
+                // if it uses vanilla region entity IDs (e.g., Placidusax lie-down uses region
+                // 13002834 which is below FOGMOD_ENTITY_BASE). The entity match gives us the
+                // flag_id directly.
+                int? entityMatchedFlag = TryMatchByEntityId(evt, entityToFlag);
+
                 for (int i = 0; i < evt.Instructions.Count; i++)
                 {
                     var instr = evt.Instructions[i];
@@ -271,24 +281,35 @@ public static class ZoneTrackingInjector
                     var destMap = warpInfo.Value.DestMap;
                     int region = warpInfo.Value.Region;
 
-                    // Only match FogMod-generated warp events, not vanilla ones.
-                    // FogMod allocates warp target regions from FOGMOD_ENTITY_BASE;
-                    // vanilla events use map-specific IDs well below that range.
-                    if (region < FOGMOD_ENTITY_BASE)
+                    // Filter: only match FogMod-generated warp events, not vanilla ones.
+                    // Two ways an event qualifies as FogMod-generated:
+                    // 1. Region >= FOGMOD_ENTITY_BASE (FogMod-allocated warp target entity)
+                    // 2. Event contains IfActionButtonInArea with a known exit gate entity
+                    //    (FogMod manual fogwarp that reuses vanilla destination regions)
+                    if (region < FOGMOD_ENTITY_BASE && !entityMatchedFlag.HasValue)
                         continue;
 
-                    // Strategy 1: Try compound key (source_map, dest_map) — resolves collisions
+                    // Strategy 0: Direct entity match — the event's IfActionButtonInArea
+                    // references a known exit gate, giving us an unambiguous flag_id.
+                    // This is the most reliable match: it identifies exactly which fog gate
+                    // triggers this warp, regardless of the region entity ID value.
                     int flagId = 0;
                     bool matched = false;
-                    if (sourceMap.HasValue)
+                    if (entityMatchedFlag.HasValue)
+                    {
+                        flagId = entityMatchedFlag.Value;
+                        entityMatches++;
+                        matched = true;
+                    }
+
+                    // Strategy 1: Try compound key (source_map, dest_map) — resolves collisions
+                    if (!matched && sourceMap.HasValue)
                     {
                         var compoundKey = (sourceMap.Value, destMap);
                         if (compoundLookup.TryGetValue(compoundKey, out flagId))
                         {
-                            // Strategy 1.5: If this compound key has a collision, try
-                            // entity-based matching for more precise disambiguation.
-                            // The fogwarp template bakes the gate entity ID into
-                            // IfActionButtonInArea instructions — scan for it.
+                            // If this compound key has a collision, try entity-based matching
+                            // for more precise disambiguation.
                             if (compoundCollisions.Contains(compoundKey) && entityToFlag.Count > 0)
                             {
                                 var entityFlag = TryMatchByEntityId(evt, entityToFlag);
