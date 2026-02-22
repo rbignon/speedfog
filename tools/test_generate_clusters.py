@@ -1883,6 +1883,52 @@ class TestFilterAndEnrichMetadataExclude:
 
         assert len(result) == 0
 
+    def test_leyndell_erdtree_excluded_leyndell2_erdtree_kept(self):
+        """leyndell_erdtree is excluded (Maliketh condition), leyndell2_erdtree is kept.
+
+        The world connection leyndell_erdtree → leyndell2_erdtree has
+        Cond: farumazula_maliketh, requiring Maliketh's defeat. By excluding
+        leyndell_erdtree and using leyndell2_erdtree as final_boss, SpeedFog
+        fog gates warp directly to the Ashen Erdtree entrance, bypassing
+        the condition entirely.
+        """
+        areas = {
+            "leyndell_erdtree": AreaData(
+                name="leyndell_erdtree",
+                text="Leyndell - Erdtree Entrance",
+                maps=["m11_00_00_00"],
+                tags=["trivial"],
+            ),
+            "leyndell2_erdtree": AreaData(
+                name="leyndell2_erdtree",
+                text="Ashen Leyndell - Erdtree Entrance",
+                maps=["m11_05_00_00"],
+                tags=["trivial"],
+            ),
+        }
+        metadata = {
+            "defaults": {"final_boss": 4},
+            "zones": {
+                "leyndell_erdtree": {"exclude": True},
+            },
+        }
+        cluster_pre = _make_cluster_with_fogs(frozenset({"leyndell_erdtree"}))
+        cluster_ashen = _make_cluster_with_fogs(frozenset({"leyndell2_erdtree"}))
+
+        result = filter_and_enrich_clusters(
+            [cluster_pre, cluster_ashen],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        result_zones = {z for c in result for z in c.zones}
+        assert "leyndell_erdtree" not in result_zones
+        assert "leyndell2_erdtree" in result_zones
+
 
 # =============================================================================
 # DefeatFlag Tests
