@@ -25,6 +25,7 @@ class ClusterData:
     allow_entry_as_exit: bool = (
         False  # Entry fog's return direction used as forward exit
     )
+    requires: str = ""  # Zone that must be defeated before this cluster
 
     @classmethod
     def from_dict(cls, data: dict) -> ClusterData:
@@ -41,6 +42,7 @@ class ClusterData:
             defeat_flag=data.get("defeat_flag", 0),
             allow_shared_entrance=data.get("allow_shared_entrance", False),
             allow_entry_as_exit=data.get("allow_entry_as_exit", False),
+            requires=data.get("requires", ""),
         )
 
     def available_exits(self, used_entry: dict | None) -> list[dict]:

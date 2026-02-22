@@ -12,6 +12,7 @@ from speedfog.generator import (
     LayerOperation,
     _find_valid_merge_indices,
     _has_valid_merge_pair,
+    _inject_prerequisite,
     _pick_entry_and_exits_for_node,
     _stable_main_shuffle,
     can_be_merge_node,
@@ -46,6 +47,7 @@ def make_cluster(
     exit_fogs: list[dict] | object = _SENTINEL,
     allow_shared_entrance: bool = False,
     allow_entry_as_exit: bool = False,
+    requires: str = "",
 ) -> ClusterData:
     """Helper to create test ClusterData objects.
 
@@ -64,6 +66,7 @@ def make_cluster(
         exit_fogs=exit_fogs,  # type: ignore[arg-type]
         allow_shared_entrance=allow_shared_entrance,
         allow_entry_as_exit=allow_entry_as_exit,
+        requires=requires,
     )
 
 
@@ -101,6 +104,7 @@ def make_cluster_pool() -> ClusterPool:
             weight=5,
             entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
             exit_fogs=[],
+            requires="farumazula_maliketh",
         )
     )
     pool.add(
@@ -111,6 +115,21 @@ def make_cluster_pool() -> ClusterPool:
             weight=5,
             entry_fogs=[{"fog_id": "pcr_entry", "zone": "enirilim_radahn"}],
             exit_fogs=[],
+        )
+    )
+
+    # Maliketh (prerequisite for erdtree, passant-capable major_boss)
+    pool.add(
+        make_cluster(
+            "maliketh",
+            zones=["farumazula_maliketh"],
+            cluster_type="major_boss",
+            weight=4,
+            entry_fogs=[{"fog_id": "maliketh_entry", "zone": "farumazula_maliketh"}],
+            exit_fogs=[
+                {"fog_id": "maliketh_exit", "zone": "farumazula_maliketh"},
+                {"fog_id": "maliketh_entry", "zone": "farumazula_maliketh"},
+            ],
         )
     )
 
@@ -2596,3 +2615,262 @@ class TestDetermineOperation:
         # Split should get ~90%, merge ~10%
         assert counts[LayerOperation.SPLIT] > 800
         assert counts[LayerOperation.MERGE] > 50
+
+
+# =============================================================================
+# Prerequisite injection tests
+# =============================================================================
+
+
+class TestInjectPrerequisite:
+    """Tests for _inject_prerequisite function."""
+
+    def test_no_prerequisite_is_noop(self):
+        """No prerequisite → returns branches and layer unchanged."""
+        pool = make_cluster_pool()
+        dag = Dag(seed=1)
+        dag.add_node(
+            DagNode(
+                id="merge_node",
+                cluster=pool.get_by_type("mini_dungeon")[0],
+                layer=5,
+                tier=10,
+                entry_fogs=[FogRef("e", "z")],
+                exit_fogs=[FogRef("x", "z")],
+            )
+        )
+        branches = [Branch("b0", "merge_node", FogRef("x", "z"))]
+
+        # pcr_boss has no requires
+        end_cluster = pool.get_by_id("pcr_boss")
+        assert end_cluster is not None
+
+        result_branches, result_layer = _inject_prerequisite(
+            dag, branches, 6, end_cluster, pool, set(), random.Random(42), 28
+        )
+        assert result_branches is branches
+        assert result_layer == 6
+
+    def test_prerequisite_injects_node(self):
+        """Prerequisite cluster is injected as passant node."""
+        pool = make_cluster_pool()
+        dag = Dag(seed=1)
+        dag.add_node(
+            DagNode(
+                id="merge_node",
+                cluster=pool.get_by_type("mini_dungeon")[0],
+                layer=5,
+                tier=10,
+                entry_fogs=[FogRef("e", "z")],
+                exit_fogs=[FogRef("x", "z")],
+            )
+        )
+        branches = [Branch("b0", "merge_node", FogRef("x", "z"))]
+
+        end_cluster = pool.get_by_id("erdtree_boss")
+        assert end_cluster is not None
+        assert end_cluster.requires == "farumazula_maliketh"
+
+        result_branches, result_layer = _inject_prerequisite(
+            dag, branches, 6, end_cluster, pool, set(), random.Random(42), 28
+        )
+
+        # New node should be added
+        assert "node_6_a" in dag.nodes
+        prereq_node = dag.nodes["node_6_a"]
+        assert "farumazula_maliketh" in prereq_node.cluster.zones
+
+        # Branch updated
+        assert len(result_branches) == 1
+        assert result_branches[0].current_node_id == "node_6_a"
+        assert result_layer == 7
+
+        # Edge from merge_node to prereq
+        assert any(
+            e.source_id == "merge_node" and e.target_id == "node_6_a" for e in dag.edges
+        )
+
+    def test_prerequisite_unavailable_raises(self):
+        """Raises GenerationError if prerequisite zones already used."""
+        pool = make_cluster_pool()
+        dag = Dag(seed=1)
+        dag.add_node(
+            DagNode(
+                id="merge_node",
+                cluster=pool.get_by_type("mini_dungeon")[0],
+                layer=5,
+                tier=10,
+                entry_fogs=[FogRef("e", "z")],
+                exit_fogs=[FogRef("x", "z")],
+            )
+        )
+        branches = [Branch("b0", "merge_node", FogRef("x", "z"))]
+
+        end_cluster = pool.get_by_id("erdtree_boss")
+        assert end_cluster is not None
+
+        # Mark maliketh zones as used
+        used_zones = {"farumazula_maliketh"}
+
+        with pytest.raises(GenerationError, match="Prerequisite cluster not available"):
+            _inject_prerequisite(
+                dag,
+                branches,
+                6,
+                end_cluster,
+                pool,
+                used_zones,
+                random.Random(42),
+                28,
+            )
+
+
+class TestPrerequisiteInGenerateDag:
+    """Tests for prerequisite behavior in full generate_dag."""
+
+    def test_erdtree_boss_has_maliketh_on_path(self):
+        """When leyndell_erdtree is final boss, Maliketh appears on mandatory path."""
+        pool = make_cluster_pool()
+        config = Config()
+        config.seed = 42
+        config.structure.min_layers = 3
+        config.structure.max_layers = 3
+        config.structure.max_branches = 1
+        config.structure.split_probability = 0.0
+        config.structure.merge_probability = 0.0
+        config.structure.final_boss_candidates = ["leyndell_erdtree"]
+
+        dag = generate_dag(
+            config, pool, seed=42, boss_candidates=_boss_candidates(pool)
+        )
+
+        # Maliketh should be on the path from start to end
+        paths = dag.enumerate_paths()
+        assert len(paths) >= 1
+        for path in paths:
+            node_clusters = [dag.nodes[nid].cluster.id for nid in path]
+            assert (
+                "maliketh" in node_clusters
+            ), f"Maliketh not found on path: {node_clusters}"
+
+        # Maliketh should be immediately before end
+        for path in paths:
+            end_idx = path.index("end")
+            prereq_node_id = path[end_idx - 1]
+            assert dag.nodes[prereq_node_id].cluster.id == "maliketh"
+
+    def test_maliketh_not_randomly_placed_when_reserved(self):
+        """Maliketh zones are reserved and not used for intermediate layers."""
+        pool = make_cluster_pool()
+        config = Config()
+        config.structure.min_layers = 3
+        config.structure.max_layers = 5
+        config.structure.max_branches = 1
+        config.structure.split_probability = 0.0
+        config.structure.merge_probability = 0.0
+        config.structure.final_boss_candidates = ["leyndell_erdtree"]
+
+        # Run many seeds to check Maliketh is never on an optional branch
+        for seed in range(50):
+            try:
+                dag = generate_dag(
+                    config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
+                )
+            except GenerationError:
+                continue
+
+            # Verify end is erdtree
+            end_node = dag.nodes["end"]
+            if "leyndell_erdtree" not in end_node.cluster.zones:
+                continue
+
+            # Maliketh should appear exactly once: as the prereq node
+            maliketh_nodes = [
+                nid
+                for nid, n in dag.nodes.items()
+                if "farumazula_maliketh" in n.cluster.zones
+            ]
+            assert len(maliketh_nodes) == 1
+            # And it should be the immediate predecessor of end
+            paths = dag.enumerate_paths()
+            for path in paths:
+                end_idx = path.index("end")
+                assert path[end_idx - 1] == maliketh_nodes[0]
+
+    def test_no_prerequisite_for_pcr_boss(self):
+        """PCR boss (no requires) doesn't inject any prerequisite."""
+        pool = make_cluster_pool()
+        config = Config()
+        config.seed = 42
+        config.structure.min_layers = 3
+        config.structure.max_layers = 3
+        config.structure.max_branches = 1
+        config.structure.split_probability = 0.0
+        config.structure.merge_probability = 0.0
+        config.structure.final_boss_candidates = ["enirilim_radahn"]
+
+        dag = generate_dag(
+            config, pool, seed=42, boss_candidates=_boss_candidates(pool)
+        )
+
+        # Maliketh should NOT be on the path (it's available as major_boss
+        # but not required)
+        end_node = dag.nodes["end"]
+        assert "enirilim_radahn" in end_node.cluster.zones
+
+        # All paths should reach end (basic structural check)
+        paths = dag.enumerate_paths()
+        assert len(paths) >= 1
+        for path in paths:
+            assert path[-1] == "end"
+
+
+class TestPickClusterUniformReservedZones:
+    """Tests for reserved_zones parameter in pick_cluster_uniform."""
+
+    def test_reserved_zones_excluded(self):
+        """Clusters with reserved zones are not picked."""
+        c1 = make_cluster("c1", zones=["z1"])
+        c2 = make_cluster("c2", zones=["z2"])
+        c3 = make_cluster("c3", zones=["z3"])
+        candidates = [c1, c2, c3]
+
+        # Reserve z2 — c2 should never be picked
+        for _ in range(100):
+            result = pick_cluster_uniform(
+                candidates,
+                set(),
+                random.Random(_),
+                reserved_zones=frozenset(["z2"]),
+            )
+            assert result is not None
+            assert result.id != "c2"
+
+    def test_reserved_and_used_both_excluded(self):
+        """Both used_zones and reserved_zones are excluded."""
+        c1 = make_cluster("c1", zones=["z1"])
+        c2 = make_cluster("c2", zones=["z2"])
+        c3 = make_cluster("c3", zones=["z3"])
+        candidates = [c1, c2, c3]
+
+        result = pick_cluster_uniform(
+            candidates,
+            {"z1"},
+            random.Random(42),
+            reserved_zones=frozenset(["z2"]),
+        )
+        assert result is not None
+        assert result.id == "c3"
+
+    def test_all_reserved_returns_none(self):
+        """Returns None when all clusters have reserved zones."""
+        c1 = make_cluster("c1", zones=["z1"])
+        candidates = [c1]
+
+        result = pick_cluster_uniform(
+            candidates,
+            set(),
+            random.Random(42),
+            reserved_zones=frozenset(["z1"]),
+        )
+        assert result is None

@@ -303,6 +303,8 @@ def pick_cluster_with_filter(
     used_zones: set[str],
     rng: random.Random,
     filter_fn: Callable[[ClusterData], bool],
+    *,
+    reserved_zones: frozenset[str] = frozenset(),
 ) -> ClusterData | None:
     """Pick a cluster that passes the filter function.
 
@@ -311,14 +313,15 @@ def pick_cluster_with_filter(
         used_zones: Set of zone IDs already used.
         rng: Random number generator.
         filter_fn: Function that takes a ClusterData and returns bool.
+        reserved_zones: Zones reserved for prerequisite placement (excluded).
 
     Returns:
         A cluster that passes the filter, or None if none available.
     """
     available = []
     for cluster in candidates:
-        # Check no zone overlap
-        if any(z in used_zones for z in cluster.zones):
+        # Check no zone overlap (including reserved)
+        if any(z in used_zones or z in reserved_zones for z in cluster.zones):
             continue
 
         # Check filter
@@ -337,20 +340,28 @@ def pick_cluster_uniform(
     candidates: list[ClusterData],
     used_zones: set[str],
     rng: random.Random,
+    *,
+    reserved_zones: frozenset[str] = frozenset(),
 ) -> ClusterData | None:
     """Pick a cluster uniformly at random (no capability filter).
 
-    Only checks zone overlap. Capability is determined after selection.
+    Only checks zone overlap and reserved zones. Capability is determined
+    after selection.
 
     Args:
         candidates: List of candidate clusters.
         used_zones: Set of zone IDs already used.
         rng: Random number generator.
+        reserved_zones: Zones reserved for prerequisite placement (excluded).
 
     Returns:
         A random available cluster, or None if all zones overlap.
     """
-    available = [c for c in candidates if not any(z in used_zones for z in c.zones)]
+    available = [
+        c
+        for c in candidates
+        if not any(z in used_zones or z in reserved_zones for z in c.zones)
+    ]
     if not available:
         return None
     return rng.choice(available)
@@ -476,6 +487,8 @@ def execute_passant_layer(
     clusters: ClusterPool,
     used_zones: set[str],
     rng: random.Random,
+    *,
+    reserved_zones: frozenset[str] = frozenset(),
 ) -> list[Branch]:
     """Execute a passant layer where each branch advances to its own new node.
 
@@ -488,6 +501,7 @@ def execute_passant_layer(
         clusters: Pool of available clusters.
         used_zones: Set of already used zones.
         rng: Random number generator.
+        reserved_zones: Zones reserved for prerequisite placement (excluded).
 
     Returns:
         Updated list of branches.
@@ -500,7 +514,11 @@ def execute_passant_layer(
 
     for i, branch in enumerate(branches):
         cluster = pick_cluster_with_filter(
-            candidates, used_zones, rng, can_be_passant_node
+            candidates,
+            used_zones,
+            rng,
+            can_be_passant_node,
+            reserved_zones=reserved_zones,
         )
         if cluster is None:
             raise GenerationError(
@@ -574,6 +592,8 @@ def execute_merge_layer(
     used_zones: set[str],
     rng: random.Random,
     config: Config,
+    *,
+    reserved_zones: frozenset[str] = frozenset(),
 ) -> list[Branch]:
     """Execute a merge layer where N branches merge into one.
 
@@ -590,6 +610,7 @@ def execute_merge_layer(
         used_zones: Set of already used zones.
         rng: Random number generator.
         config: Configuration with max_branches.
+        reserved_zones: Zones reserved for prerequisite placement (excluded).
 
     Returns:
         Updated list of branches (with fewer branches).
@@ -616,6 +637,7 @@ def execute_merge_layer(
             used_zones,
             rng,
             lambda c, n=n: can_be_merge_node(c, n),  # type: ignore[misc]
+            reserved_zones=reserved_zones,
         )
         if c is not None:
             merge_indices = indices
@@ -704,7 +726,11 @@ def execute_merge_layer(
             continue
 
         passant_cluster = pick_cluster_with_filter(
-            candidates, used_zones, rng, can_be_passant_node
+            candidates,
+            used_zones,
+            rng,
+            can_be_passant_node,
+            reserved_zones=reserved_zones,
         )
         if passant_cluster is None:
             raise GenerationError(
@@ -746,6 +772,8 @@ def execute_forced_merge(
     used_zones: set[str],
     rng: random.Random,
     config: Config,
+    *,
+    reserved_zones: frozenset[str] = frozenset(),
 ) -> tuple[list[Branch], int]:
     """Force all branches to merge into one.
 
@@ -762,6 +790,7 @@ def execute_forced_merge(
         used_zones: Set of already used zones.
         rng: Random number generator.
         config: Configuration with max_branches.
+        reserved_zones: Zones reserved for prerequisite placement (excluded).
 
     Returns:
         Tuple of (list with single branch, final layer index used).
@@ -782,6 +811,7 @@ def execute_forced_merge(
                 clusters,
                 used_zones,
                 rng,
+                reserved_zones=reserved_zones,
             )
             current_layer += 1
         branches = execute_merge_layer(
@@ -794,6 +824,7 @@ def execute_forced_merge(
             used_zones,
             rng,
             config,
+            reserved_zones=reserved_zones,
         )
         current_layer += 1
 
@@ -803,6 +834,76 @@ def execute_forced_merge(
 # =============================================================================
 # Main DAG Generation
 # =============================================================================
+
+
+def _inject_prerequisite(
+    dag: Dag,
+    branches: list[Branch],
+    current_layer: int,
+    end_cluster: ClusterData,
+    clusters: ClusterPool,
+    used_zones: set[str],
+    rng: random.Random,
+    final_tier: int,
+) -> tuple[list[Branch], int]:
+    """Inject mandatory prerequisite cluster before final boss if needed.
+
+    When the final boss cluster has a `requires` field (e.g. leyndell_erdtree
+    requires farumazula_maliketh), this places the prerequisite as a passant
+    node on the single merged path just before the final boss.
+
+    Args:
+        dag: The DAG being built.
+        branches: Current branches (should be exactly 1 after forced merge).
+        current_layer: Current layer index.
+        end_cluster: The pre-selected final boss cluster.
+        clusters: Pool of available clusters.
+        used_zones: Set of already used zones.
+        rng: Random number generator.
+        final_tier: Final tier for tier computation.
+
+    Returns:
+        Tuple of (updated branches, updated layer index).
+
+    Raises:
+        GenerationError: If prerequisite cluster is not available.
+    """
+    if not end_cluster.requires:
+        return branches, current_layer
+
+    prereq_zone = end_cluster.requires
+
+    # Find cluster containing the prerequisite zone
+    prereq: ClusterData | None = None
+    for c in clusters.clusters:
+        if prereq_zone in c.zones and not any(z in used_zones for z in c.zones):
+            prereq = c
+            break
+
+    if prereq is None:
+        raise GenerationError(f"Prerequisite cluster not available: {prereq_zone}")
+
+    used_zones.update(prereq.zones)
+    tier = compute_tier(current_layer, current_layer + 2, final_tier)
+    ef, exf = _pick_entry_and_exits_for_node(prereq, 1, rng)
+    node_id = f"node_{current_layer}_a"
+    node = DagNode(
+        id=node_id,
+        cluster=prereq,
+        layer=current_layer,
+        tier=tier,
+        entry_fogs=[ef],
+        exit_fogs=exf,
+    )
+    dag.add_node(node)
+
+    assert (
+        len(branches) == 1
+    ), f"Expected 1 branch for prerequisite, got {len(branches)}"
+    branch = branches[0]
+    dag.add_edge(branch.current_node_id, node_id, branch.available_exit, ef)
+
+    return [Branch("prereq", node_id, rng.choice(exf))], current_layer + 1
 
 
 def generate_dag(
@@ -882,7 +983,43 @@ def generate_dag(
         Branch(f"b{i}", "start", start_exits[i]) for i in range(num_initial_branches)
     ]
 
-    # 3. Execute first layer if forced type (cluster-first passant)
+    # 3. Pre-select final boss and compute reserved zones
+    # Must happen before layer execution so prerequisite zones are reserved.
+    all_boss_zones = {zone for cluster in boss_candidates for zone in cluster.zones}
+    final_zone_candidates = resolve_final_boss_candidates(
+        config.structure.effective_final_boss_candidates, all_boss_zones
+    )
+    final_zone_candidates = list(final_zone_candidates)  # Make a copy for shuffling
+    rng.shuffle(final_zone_candidates)
+
+    # Find a cluster matching one of the candidate zones
+    end_cluster = None
+    for zone_name in final_zone_candidates:
+        for cluster in boss_candidates:
+            if zone_name in cluster.zones:
+                if not any(z in used_zones for z in cluster.zones):
+                    end_cluster = cluster
+                    break
+        if end_cluster:
+            break
+
+    if end_cluster is None:
+        raise GenerationError(
+            f"No available final boss from candidates: {final_zone_candidates}"
+        )
+
+    # Determine reserved zones: end cluster + prerequisite
+    # End cluster zones must be reserved to prevent intermediate layers
+    # from consuming them (e.g. via major_boss_ratio).
+    reserved_zones: frozenset[str] = frozenset(end_cluster.zones)
+    if end_cluster.requires:
+        prereq_zone = end_cluster.requires
+        for candidate in clusters.clusters:
+            if prereq_zone in candidate.zones:
+                reserved_zones = reserved_zones | frozenset(candidate.zones)
+                break
+
+    # 4. Execute first layer if forced type (cluster-first passant)
     current_layer = 1
     if config.structure.first_layer_type:
         first_type = config.structure.first_layer_type
@@ -891,7 +1028,9 @@ def generate_dag(
 
         new_branches: list[Branch] = []
         for i, branch in enumerate(branches):
-            c = pick_cluster_uniform(first_candidates, used_zones, rng)
+            c = pick_cluster_uniform(
+                first_candidates, used_zones, rng, reserved_zones=reserved_zones
+            )
             if c is None:
                 raise GenerationError(
                     f"No cluster for first layer branch {i} (type: {first_type})"
@@ -913,7 +1052,7 @@ def generate_dag(
         branches = new_branches
         current_layer += 1
 
-    # 4. Plan remaining layer types
+    # 5. Plan remaining layer types
     num_intermediate_layers = rng.randint(
         config.structure.min_layers, config.structure.max_layers
     )
@@ -935,7 +1074,7 @@ def generate_dag(
         len(layer_types) + 2 + first_layer_offset
     )  # +1 start, +1 end, +1 if first forced
 
-    # 5. Execute layers with cluster-first selection
+    # 6. Execute layers with cluster-first selection
     for layer_idx, layer_type in enumerate(layer_types):
         is_near_end = layer_idx >= len(layer_types) - 2
         tier = compute_tier(current_layer, estimated_total, config.structure.final_tier)
@@ -952,13 +1091,16 @@ def generate_dag(
                 used_zones,
                 rng,
                 config,
+                reserved_zones=reserved_zones,
             )
             continue
 
         candidates = clusters.get_by_type(layer_type)
 
         # Pick a cluster uniformly for the "primary" branch action
-        primary_cluster = pick_cluster_uniform(candidates, used_zones, rng)
+        primary_cluster = pick_cluster_uniform(
+            candidates, used_zones, rng, reserved_zones=reserved_zones
+        )
         if primary_cluster is None:
             raise GenerationError(
                 f"No cluster available for layer {current_layer} "
@@ -1009,7 +1151,9 @@ def generate_dag(
                     # Passant for non-split branches (uniform pick).
                     # All candidates are passant-compatible (guaranteed by
                     # filter_passant_incompatible at load time).
-                    pc = pick_cluster_uniform(candidates, used_zones, rng)
+                    pc = pick_cluster_uniform(
+                        candidates, used_zones, rng, reserved_zones=reserved_zones
+                    )
                     if pc is None:
                         raise GenerationError(
                             f"No cluster for layer {current_layer} branch {i} "
@@ -1122,7 +1266,9 @@ def generate_dag(
                 for i, branch in enumerate(branches):
                     if i in merge_set:
                         continue
-                    pc = pick_cluster_uniform(candidates, used_zones, rng)
+                    pc = pick_cluster_uniform(
+                        candidates, used_zones, rng, reserved_zones=reserved_zones
+                    )
                     if pc is None:
                         raise GenerationError(
                             f"No cluster for layer {current_layer} branch {i} "
@@ -1155,7 +1301,9 @@ def generate_dag(
                     c = primary_cluster
                     first = False
                 else:
-                    c = pick_cluster_uniform(candidates, used_zones, rng)
+                    c = pick_cluster_uniform(
+                        candidates, used_zones, rng, reserved_zones=reserved_zones
+                    )
                     if c is None:
                         raise GenerationError(
                             f"No cluster for layer {current_layer} branch {i} "
@@ -1179,7 +1327,7 @@ def generate_dag(
 
         current_layer += 1
 
-    # 5. Final merge if still multiple branches
+    # 7. Final merge if still multiple branches
     if len(branches) > 1:
         # Use the last layer type for final merge operations
         last_layer_type = layer_types[-1] if layer_types else "mini_dungeon"
@@ -1194,39 +1342,22 @@ def generate_dag(
             used_zones,
             rng,
             config,
+            reserved_zones=reserved_zones,
         )
 
-    # 7. Create end node (final_boss from candidates)
-    all_boss_clusters = [
-        c for c in boss_candidates if not any(z in used_zones for z in c.zones)
-    ]
-    all_boss_zones = {zone for cluster in all_boss_clusters for zone in cluster.zones}
-
-    # Resolve "all" keyword to actual zone names
-    final_zone_candidates = resolve_final_boss_candidates(
-        config.structure.effective_final_boss_candidates, all_boss_zones
+    # 8. Inject prerequisite if needed (after merge, before final boss)
+    branches, current_layer = _inject_prerequisite(
+        dag,
+        branches,
+        current_layer,
+        end_cluster,
+        clusters,
+        used_zones,
+        rng,
+        config.structure.final_tier,
     )
-    final_zone_candidates = list(final_zone_candidates)  # Make a copy for shuffling
-    rng.shuffle(final_zone_candidates)
 
-    # Find a cluster matching one of the candidate zones
-    end_cluster = None
-
-    for zone_name in final_zone_candidates:
-        for cluster in all_boss_clusters:
-            if zone_name in cluster.zones:
-                # Check no zone overlap with already used zones
-                if not any(z in used_zones for z in cluster.zones):
-                    end_cluster = cluster
-                    break
-        if end_cluster:
-            break
-
-    if end_cluster is None:
-        raise GenerationError(
-            f"No available final boss from candidates: {final_zone_candidates}"
-        )
-
+    # 9. Create end node (using pre-selected end_cluster)
     # Final boss has exactly 1 entry (from the single remaining branch)
     # Prefer main-tagged entry (boss arena main gate for correct Stake of Marika)
     entry_fog_end: FogRef | None = None

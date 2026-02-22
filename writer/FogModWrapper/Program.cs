@@ -257,6 +257,12 @@ Example:
             { "holeladennecklace", "TRUE" },
             { "messmerskindling", "TRUE" },
             { "messmerskindling1", "TRUE" },
+            // Boss defeat conditions used in world edges
+            // farumazula_maliketh: Cond on leyndell_erdtree → leyndell2_erdtree edge.
+            // SpeedFog's Python generator forces Maliketh onto the mandatory path
+            // before the Erdtree, so this condition is always met at runtime.
+            // Setting TRUE here makes FogMod treat the area as reachable at build time.
+            { "farumazula_maliketh", "TRUE" },
         };
 
         // Load foglocations for enemy area info (needed for scaling)
@@ -328,27 +334,6 @@ Example:
             evergaolCount++;
         }
         Console.WriteLine($"Excluded {evergaolCount} evergaol zones from stake processing");
-
-        // 4d. Remove Maliketh condition on leyndell_erdtree → leyndell2_erdtree world edge
-        // The world connection has Cond: farumazula_maliketh, which would block progression
-        // to the Erdtree. Since SpeedFog uses leyndell_erdtree as a final boss candidate,
-        // we nullify this condition so FogMod doesn't gate it behind Maliketh's defeat.
-        if (graph.Nodes.TryGetValue("leyndell_erdtree", out var erdtreeNode))
-        {
-            var malikethEdge = erdtreeNode.To
-                .FirstOrDefault(e => e.IsWorld && e.Link?.To == "leyndell2_erdtree");
-            if (malikethEdge != null)
-            {
-                malikethEdge.Expr = null;
-                malikethEdge.LinkedExpr = null;
-                if (malikethEdge.Link != null)
-                {
-                    malikethEdge.Link.Expr = null;
-                    malikethEdge.Link.LinkedExpr = null;
-                }
-                Console.WriteLine("Removed Maliketh condition on leyndell_erdtree → leyndell2_erdtree world edge");
-            }
-        }
 
         // 5. Inject OUR connections (replaces GraphConnector.Connect())
         var injectionResult = ConnectionInjector.InjectAndExtract(

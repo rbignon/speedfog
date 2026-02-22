@@ -15,6 +15,7 @@ from generate_clusters import (
     _resolve_zone_type,
     build_world_graph,
     classify_fogs,
+    clusters_to_json,
     compute_allow_entry_as_exit,
     compute_allow_shared_entrance,
     compute_cluster_fogs,
@@ -2856,3 +2857,116 @@ class TestBossArenaOnewayExitPruning:
 
         assert len(result) == 1
         assert len(result[0].exit_fogs) == 2
+
+
+# =============================================================================
+# Requires Field Tests
+# =============================================================================
+
+
+class TestRequiresField:
+    """Tests for the requires field in clusters."""
+
+    def test_requires_read_from_metadata(self):
+        """requires field is read from zone_metadata and set on cluster."""
+        areas = {
+            "leyndell_erdtree": AreaData(
+                name="leyndell_erdtree",
+                text="Leyndell - Erdtree Entrance",
+                maps=["m11_00_00_00"],
+                tags=["trivial"],
+            ),
+        }
+        metadata = {
+            "defaults": {"final_boss": 4},
+            "zones": {
+                "leyndell_erdtree": {"requires": "farumazula_maliketh"},
+            },
+        }
+        cluster = _make_cluster_with_fogs(frozenset({"leyndell_erdtree"}))
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert len(result) == 1
+        assert result[0].requires == "farumazula_maliketh"
+
+    def test_no_requires_defaults_empty(self):
+        """Cluster without requires metadata has empty requires."""
+        areas = {
+            "some_zone": AreaData(
+                name="some_zone",
+                text="Some Zone",
+                maps=["m10_00_00_00"],
+                tags=["trivial"],
+            ),
+        }
+        metadata = {"defaults": {"mini_dungeon": 3}, "zones": {}}
+        cluster = _make_cluster_with_fogs(frozenset({"some_zone"}))
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert len(result) == 1
+        assert result[0].requires == ""
+
+    def test_requires_serialized_to_json(self):
+        """requires field appears in clusters_to_json output."""
+        areas = {
+            "leyndell_erdtree": AreaData(
+                name="leyndell_erdtree",
+                text="Leyndell - Erdtree Entrance",
+                maps=["m11_00_00_00"],
+                tags=["trivial"],
+            ),
+        }
+        cluster = Cluster(
+            zones=frozenset({"leyndell_erdtree"}),
+            entry_fogs=[{"fog_id": "e", "zone": "leyndell_erdtree"}],
+            exit_fogs=[{"fog_id": "x", "zone": "leyndell_erdtree"}],
+            cluster_type="final_boss",
+            weight=5,
+            cluster_id="leyndell_erdtree_abcd",
+            requires="farumazula_maliketh",
+        )
+
+        result = clusters_to_json([cluster], areas)
+        cluster_entry = result["clusters"][0]
+        assert cluster_entry["requires"] == "farumazula_maliketh"
+
+    def test_no_requires_not_in_json(self):
+        """Empty requires field is omitted from JSON output."""
+        areas = {
+            "some_zone": AreaData(
+                name="some_zone",
+                text="Some Zone",
+                maps=["m10_00_00_00"],
+                tags=["trivial"],
+            ),
+        }
+        cluster = Cluster(
+            zones=frozenset({"some_zone"}),
+            entry_fogs=[{"fog_id": "e", "zone": "some_zone"}],
+            exit_fogs=[{"fog_id": "x", "zone": "some_zone"}],
+            cluster_type="mini_dungeon",
+            weight=3,
+            cluster_id="some_zone_abcd",
+        )
+
+        result = clusters_to_json([cluster], areas)
+        cluster_entry = result["clusters"][0]
+        assert "requires" not in cluster_entry

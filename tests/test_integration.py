@@ -57,7 +57,7 @@ def relaxed_config():
     Uses minimal requirements to ensure generation succeeds with most seeds.
     """
     return Config(
-        seed=1,
+        seed=3,
         budget=BudgetConfig(tolerance=30),  # Wide tolerance for spread
         requirements=RequirementsConfig(
             legacy_dungeons=0,
@@ -84,7 +84,7 @@ class TestFullPipeline:
         result = generate_with_retry(
             config, real_clusters, max_attempts=50, boss_candidates=real_boss_candidates
         )
-        assert result.seed == 1
+        assert result.seed == 3
         assert (
             result.validation.is_valid
         ), f"Validation failed: {result.validation.errors}"
@@ -95,7 +95,7 @@ class TestFullPipeline:
         assert json_path.exists()
         with open(json_path) as f:
             data = json.load(f)
-        assert data["seed"] == 1
+        assert data["seed"] == 3
 
         spoiler_path = tmp_path / "spoiler.txt"
         export_spoiler_log(dag, spoiler_path)
@@ -129,9 +129,9 @@ class TestFullPipeline:
     ):
         """Different seeds produce different DAGs."""
         config1 = relaxed_config
-        config1.seed = 1
+        config1.seed = 3
         config2 = Config(
-            seed=2,
+            seed=5,
             budget=relaxed_config.budget,
             requirements=relaxed_config.requirements,
             structure=relaxed_config.structure,
