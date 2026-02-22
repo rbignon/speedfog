@@ -462,9 +462,20 @@ def _pick_entry_and_exits_for_node(
             rng.choice(main_entries) if main_entries else rng.choice(cluster.entry_fogs)
         )
         entry_fog = FogRef(entry["fog_id"], entry["zone"])
-        all_exits = [FogRef(f["fog_id"], f["zone"]) for f in cluster.exit_fogs]
-        rng.shuffle(all_exits)
-        return entry_fog, all_exits[:min_exits]
+        # Prefer exits that don't match the consumed entry;
+        # entry-as-exit is a fallback for when more exits are needed (splits).
+        entry_key = (entry["fog_id"], entry["zone"])
+        preferred = [
+            f for f in cluster.exit_fogs if (f["fog_id"], f["zone"]) != entry_key
+        ]
+        fallback = [
+            f for f in cluster.exit_fogs if (f["fog_id"], f["zone"]) == entry_key
+        ]
+        rng.shuffle(preferred)
+        rng.shuffle(fallback)
+        ordered = preferred + fallback
+        exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in ordered[:min_exits]]
+        return entry_fog, exit_fogs
 
     picked = pick_entry_with_max_exits(cluster, min_exits, rng)
     if picked is None:

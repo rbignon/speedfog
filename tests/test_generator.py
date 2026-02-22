@@ -1172,6 +1172,63 @@ class TestPickEntryAndExitsForNode:
         entry, exits = _pick_entry_and_exits_for_node(cluster, 1, rng)
         assert len(exits) == 1
 
+    def test_entry_as_exit_prefers_non_entry_exit(self):
+        """Entry-as-exit cluster prefers exits that differ from the consumed entry."""
+        cluster = make_cluster(
+            "boss",
+            zones=["boss_zone"],
+            entry_fogs=[
+                {"fog_id": "gate_front", "zone": "boss_zone", "main": True},
+            ],
+            exit_fogs=[
+                {"fog_id": "gate_front", "zone": "boss_zone"},  # same as entry
+                {"fog_id": "gate_back", "zone": "boss_zone"},  # different
+            ],
+            allow_entry_as_exit=True,
+        )
+        # With min_exits=1, should always pick gate_back (preferred), never gate_front
+        for seed in range(20):
+            rng = random.Random(seed)
+            entry, exits = _pick_entry_and_exits_for_node(cluster, 1, rng)
+            assert entry.fog_id == "gate_front"
+            assert len(exits) == 1
+            assert exits[0].fog_id == "gate_back"
+
+    def test_entry_as_exit_uses_entry_fog_for_split(self):
+        """Entry-as-exit cluster uses entry fog as fallback when split needs it."""
+        cluster = make_cluster(
+            "boss",
+            zones=["boss_zone"],
+            entry_fogs=[
+                {"fog_id": "gate_front", "zone": "boss_zone", "main": True},
+            ],
+            exit_fogs=[
+                {"fog_id": "gate_front", "zone": "boss_zone"},
+                {"fog_id": "gate_back", "zone": "boss_zone"},
+            ],
+            allow_entry_as_exit=True,
+        )
+        # With min_exits=2, must use both; preferred (gate_back) comes first
+        rng = random.Random(42)
+        entry, exits = _pick_entry_and_exits_for_node(cluster, 2, rng)
+        assert entry.fog_id == "gate_front"
+        assert len(exits) == 2
+        assert exits[0].fog_id == "gate_back"
+        assert exits[1].fog_id == "gate_front"
+
+    def test_entry_as_exit_all_exits_match_entry(self):
+        """When only exit matches entry, it is still used (no alternative)."""
+        cluster = make_cluster(
+            "boss",
+            zones=["boss_zone"],
+            entry_fogs=[{"fog_id": "only_gate", "zone": "boss_zone", "main": True}],
+            exit_fogs=[{"fog_id": "only_gate", "zone": "boss_zone"}],
+            allow_entry_as_exit=True,
+        )
+        rng = random.Random(42)
+        entry, exits = _pick_entry_and_exits_for_node(cluster, 1, rng)
+        assert exits[0].fog_id == "only_gate"
+
     def test_exact_exits_not_trimmed(self):
         """Cluster with exactly min_exits returns all of them."""
         cluster = make_cluster(
