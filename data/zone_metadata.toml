@@ -139,8 +139,8 @@ weight = 6
 weight = 6
 
 # Exclusions
-[zones.leyndell_erdtree]
-exclude = true  # Pre-ashen Erdtree entrance — has Cond: farumazula_maliketh, use leyndell2_erdtree instead
+[zones.leyndell2_erdtree]
+exclude = true  # Ashen Erdtree entrance — no usable entry fogs in FogMod graph (AlternateOf + altlogic tags)
 
 [zones.erdtree]
 exclude = true  # Elden Beast arena — accessed via leyndell2_erdtree unique fog, not standalone

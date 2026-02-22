@@ -1883,14 +1883,13 @@ class TestFilterAndEnrichMetadataExclude:
 
         assert len(result) == 0
 
-    def test_leyndell_erdtree_excluded_leyndell2_erdtree_kept(self):
-        """leyndell_erdtree is excluded (Maliketh condition), leyndell2_erdtree is kept.
+    def test_leyndell2_erdtree_excluded_leyndell_erdtree_kept(self):
+        """leyndell2_erdtree is excluded (no entry fogs), leyndell_erdtree is kept.
 
-        The world connection leyndell_erdtree → leyndell2_erdtree has
-        Cond: farumazula_maliketh, requiring Maliketh's defeat. By excluding
-        leyndell_erdtree and using leyndell2_erdtree as final_boss, SpeedFog
-        fog gates warp directly to the Ashen Erdtree entrance, bypassing
-        the condition entirely.
+        leyndell2_erdtree has no usable entry fogs in FogMod's graph because
+        its fog gate BSide has AlternateOf + altlogic tags, causing
+        Graph.Construct() to skip it. The Maliketh condition on the world
+        edge leyndell_erdtree → leyndell2_erdtree is removed in Program.cs.
         """
         areas = {
             "leyndell_erdtree": AreaData(
@@ -1909,7 +1908,7 @@ class TestFilterAndEnrichMetadataExclude:
         metadata = {
             "defaults": {"final_boss": 4},
             "zones": {
-                "leyndell_erdtree": {"exclude": True},
+                "leyndell2_erdtree": {"exclude": True},
             },
         }
         cluster_pre = _make_cluster_with_fogs(frozenset({"leyndell_erdtree"}))
@@ -1926,8 +1925,8 @@ class TestFilterAndEnrichMetadataExclude:
         )
 
         result_zones = {z for c in result for z in c.zones}
-        assert "leyndell_erdtree" not in result_zones
-        assert "leyndell2_erdtree" in result_zones
+        assert "leyndell2_erdtree" not in result_zones
+        assert "leyndell_erdtree" in result_zones
 
 
 # =============================================================================
