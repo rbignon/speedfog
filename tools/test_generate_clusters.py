@@ -872,6 +872,29 @@ class TestClassifyFogs:
         assert fog in zone_fogs["rauhbase_forge"].entry_fogs
         assert fog in zone_fogs["rauhbase_forge"].exit_fogs
 
+    def test_returnpair_warp_unidirectional(self):
+        """Returnpair warps are unidirectional: ASide=exit, BSide=entry only.
+
+        FogMod creates warps with ASide as To edge (exit) and BSide as From
+        edge (entrance only). BSide is NOT a To edge, so it cannot be used
+        as an exit. Example: 34142851 (Fell Twins) ASide=leyndell_tower ->
+        BSide=leyndell_tower_boss.
+        """
+        fog = FogData(
+            name="34142851",
+            fog_id=34142851,
+            aside=FogSide(area="leyndell_tower", text="approaching the gate"),
+            bside=FogSide(area="leyndell_tower_boss", text="inside the arena"),
+            tags=["divine", "returnpair"],
+        )
+        zone_fogs = classify_fogs([], [fog])
+        # ASide is exit only (no entry — it's a one-way warp)
+        assert fog in zone_fogs["leyndell_tower"].exit_fogs
+        assert fog not in zone_fogs.get("leyndell_tower", ZoneFogs()).entry_fogs
+        # BSide is entry only (NOT exit — FogMod has no To edge for this)
+        assert fog in zone_fogs["leyndell_tower_boss"].entry_fogs
+        assert fog not in zone_fogs["leyndell_tower_boss"].exit_fogs
+
     def test_zone_cond_excludes_side_from_exit(self):
         """Side with zone-based Cond is excluded from exit fogs.
 

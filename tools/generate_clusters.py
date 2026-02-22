@@ -858,6 +858,17 @@ def classify_fogs(
                 zone_fogs[aside_area].exit_fogs.append(fog)
             continue
 
+        # Returnpair warps are the forward half of return/returnpair pairs.
+        # FogMod creates: ASide → To edge (exit), BSide → From edge (entrance only).
+        # Example: 34142851 ASide=leyndell_tower -> BSide=leyndell_tower_boss
+        # BSide is NOT a To edge in FogMod, so it cannot be used as an exit.
+        if "returnpair" in tags_lower:
+            if aside_cond_ok:
+                zone_fogs[aside_area].exit_fogs.append(fog)
+            if bside_cond_ok:
+                zone_fogs[bside_area].entry_fogs.append(fog)
+            continue
+
         if fog.is_unique:
             # Unique fogs are one-way warps (sending gates, abductors, etc.)
             # ASide is exit only - FogMod can redirect where the warp sends you
