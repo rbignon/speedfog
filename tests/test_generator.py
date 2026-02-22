@@ -9,6 +9,7 @@ from speedfog.config import Config
 from speedfog.dag import Branch, Dag, DagNode, FogRef
 from speedfog.generator import (
     GenerationError,
+    LayerOperation,
     _find_valid_merge_indices,
     _has_valid_merge_pair,
     _pick_entry_and_exits_for_node,
@@ -19,11 +20,13 @@ from speedfog.generator import (
     cluster_has_usable_exits,
     compute_net_exits,
     count_net_exits,
+    determine_operation,
     execute_merge_layer,
     execute_split_layer,
     generate_dag,
     generate_with_retry,
     pick_cluster,
+    pick_cluster_uniform,
     pick_entry_fog_with_exits,
     pick_entry_with_max_exits,
     select_entries_for_merge,
@@ -2657,3 +2660,118 @@ class TestFilterPassantIncompatible:
         removed = pool.filter_passant_incompatible()
         assert len(pool.clusters) == 2
         assert len(removed) == 0
+
+
+class TestPickClusterUniform:
+    """Tests for pick_cluster_uniform."""
+
+    def test_picks_from_available(self):
+        """Picks a cluster with no zone overlap."""
+        c1 = make_cluster("c1", zones=["z1"])
+        c2 = make_cluster("c2", zones=["z2"])
+        result = pick_cluster_uniform([c1, c2], {"z1"}, random.Random(42))
+        assert result is c2
+
+    def test_returns_none_when_all_used(self):
+        """Returns None when all zones overlap."""
+        c1 = make_cluster("c1", zones=["z1"])
+        result = pick_cluster_uniform([c1], {"z1"}, random.Random(42))
+        assert result is None
+
+    def test_uniform_distribution(self):
+        """Selection is approximately uniform."""
+        clusters = [make_cluster(f"c{i}", zones=[f"z{i}"]) for i in range(3)]
+        counts = {c.id: 0 for c in clusters}
+        for seed in range(3000):
+            picked = pick_cluster_uniform(clusters, set(), random.Random(seed))
+            counts[picked.id] += 1
+        # Each should be roughly 1000 +/- 200
+        for count in counts.values():
+            assert 800 < count < 1200
+
+
+class TestDetermineOperation:
+    """Tests for determine_operation."""
+
+    def test_passant_when_cluster_cant_split_or_merge(self):
+        """Returns PASSANT when cluster has no split/merge capability."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
+            exit_fogs=[
+                {"fog_id": "e1", "zone": "z1"},
+                {"fog_id": "x1", "zone": "z1"},
+            ],
+        )
+        config = Config()
+        config.structure.split_probability = 1.0
+        config.structure.merge_probability = 1.0
+        branches = [Branch("b0", "start", FogRef("x", "z"))]
+        op, fan = determine_operation(cluster, branches, config, random.Random(42))
+        assert op == LayerOperation.PASSANT
+
+    def test_split_when_cluster_can_split(self):
+        """Returns SPLIT when cluster has 2+ exits and probability hits."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
+            exit_fogs=[
+                {"fog_id": "x1", "zone": "z1"},
+                {"fog_id": "x2", "zone": "z1"},
+                {"fog_id": "x3", "zone": "z1"},
+            ],
+        )
+        config = Config()
+        config.structure.split_probability = 1.0
+        config.structure.max_branches = 3
+        config.structure.max_parallel_paths = 3
+        branches = [Branch("b0", "start", FogRef("x", "z"))]
+        op, fan = determine_operation(cluster, branches, config, random.Random(42))
+        assert op == LayerOperation.SPLIT
+        assert fan >= 2
+
+    def test_no_split_at_max_paths(self):
+        """Never returns SPLIT when already at max_parallel_paths."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
+            exit_fogs=[
+                {"fog_id": "x1", "zone": "z1"},
+                {"fog_id": "x2", "zone": "z1"},
+            ],
+        )
+        config = Config()
+        config.structure.split_probability = 1.0
+        config.structure.merge_probability = 0.0
+        config.structure.max_parallel_paths = 2
+        branches = [
+            Branch("b0", "n0", FogRef("x", "z")),
+            Branch("b1", "n1", FogRef("y", "z")),
+        ]
+        op, fan = determine_operation(cluster, branches, config, random.Random(42))
+        assert op == LayerOperation.PASSANT
+
+    def test_merge_when_cluster_can_merge(self):
+        """Returns MERGE when cluster has 2+ entries and valid merge pair."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[
+                {"fog_id": "e1", "zone": "z1"},
+                {"fog_id": "e2", "zone": "z1"},
+            ],
+            exit_fogs=[
+                {"fog_id": "x1", "zone": "z1"},
+            ],
+            allow_shared_entrance=True,
+        )
+        config = Config()
+        config.structure.merge_probability = 1.0
+        config.structure.split_probability = 0.0
+        config.structure.max_branches = 2
+        config.structure.max_parallel_paths = 3
+        branches = [
+            Branch("b0", "n0", FogRef("x", "z")),
+            Branch("b1", "n1", FogRef("y", "z")),
+        ]
+        op, fan = determine_operation(cluster, branches, config, random.Random(42))
+        assert op == LayerOperation.MERGE

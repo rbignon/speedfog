@@ -405,6 +405,94 @@ def pick_cluster(
     return rng.choice(available)
 
 
+def pick_cluster_uniform(
+    candidates: list[ClusterData],
+    used_zones: set[str],
+    rng: random.Random,
+) -> ClusterData | None:
+    """Pick a cluster uniformly at random (no capability filter).
+
+    Only checks zone overlap. Capability is determined after selection.
+
+    Args:
+        candidates: List of candidate clusters.
+        used_zones: Set of zone IDs already used.
+        rng: Random number generator.
+
+    Returns:
+        A random available cluster, or None if all zones overlap.
+    """
+    available = [c for c in candidates if not any(z in used_zones for z in c.zones)]
+    if not available:
+        return None
+    return rng.choice(available)
+
+
+def determine_operation(
+    cluster: ClusterData,
+    branches: list[Branch],
+    config: Config,
+    rng: random.Random,
+) -> tuple[LayerOperation, int]:
+    """Determine what operation to perform given a pre-selected cluster.
+
+    Checks what the cluster can do (split, merge, passant) and decides
+    based on configured probabilities and current DAG state.
+
+    Args:
+        cluster: Pre-selected cluster.
+        branches: Current active branches.
+        config: Configuration with probabilities and limits.
+        rng: Random number generator.
+
+    Returns:
+        Tuple of (operation, fan_out/fan_in). fan is 1 for PASSANT.
+    """
+    num_branches = len(branches)
+    max_paths = config.structure.max_parallel_paths
+    max_br = config.structure.max_branches
+    split_prob = config.structure.split_probability
+    merge_prob = config.structure.merge_probability
+
+    # Determine split capability
+    can_split = False
+    split_fan = 2
+    if max_br >= 2 and num_branches < max_paths:
+        room = max_paths - num_branches + 1
+        max_fan = min(max_br, room)
+        for n in range(max_fan, 1, -1):
+            if can_be_split_node(cluster, n):
+                can_split = True
+                split_fan = n
+                break
+
+    # Determine merge capability
+    can_merge = (
+        max_br >= 2
+        and num_branches >= 2
+        and _has_valid_merge_pair(branches)
+        and can_be_merge_node(cluster, 2)
+    )
+
+    # Decide based on capabilities
+    if can_split and can_merge:
+        roll = rng.random()
+        if roll < split_prob:
+            return LayerOperation.SPLIT, split_fan
+        elif roll < split_prob + merge_prob:
+            return LayerOperation.MERGE, 2
+        else:
+            return LayerOperation.PASSANT, 1
+    elif can_split:
+        if rng.random() < split_prob:
+            return LayerOperation.SPLIT, split_fan
+    elif can_merge:
+        if rng.random() < merge_prob:
+            return LayerOperation.MERGE, 2
+
+    return LayerOperation.PASSANT, 1
+
+
 # =============================================================================
 # Layer Operation Logic
 # =============================================================================
