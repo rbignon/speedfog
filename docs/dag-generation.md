@@ -226,8 +226,8 @@ The validator checks that all paths have similar weights. If the spread exceeds 
 | `structure.max_branches` | 3 | Maximum fan-out/fan-in per operation |
 | `structure.min_layers` | 6 | Minimum intermediate layers |
 | `structure.max_layers` | 10 | Maximum intermediate layers |
-| `structure.split_probability` | 0.3 | Chance of split at each layer |
-| `structure.merge_probability` | 0.3 | Chance of merge at each layer |
+| `structure.split_probability` | 0.9 | Chance of split at each layer (if cluster supports it) |
+| `structure.merge_probability` | 0.5 | Chance of merge at each layer (if cluster supports it) |
 | `structure.first_layer_type` | None | Force type for first layer |
 | `structure.major_boss_ratio` | 0.0 | Fraction of layers with major bosses |
 | `structure.final_boss_candidates` | `["leyndell_erdtree", "enirilim_radahn"]` | Possible end bosses |

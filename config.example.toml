@@ -52,10 +52,10 @@ max_layers = 10
 final_tier = 28
 
 # Probability of splitting into parallel branches at each layer.
-split_probability = 0.3
+split_probability = 0.9
 
 # Probability of merging parallel branches back together.
-merge_probability = 0.3
+merge_probability = 0.5
 
 # Maximum fan-out per split/merge operation.
 # Split: 1 entry → N exits (N up to max_branches).

@@ -40,7 +40,7 @@ def load_racing_standard_config() -> Config:
                 "min_layers": 25,
                 "max_layers": 30,
                 "final_tier": 20,
-                "split_probability": 0.5,
+                "split_probability": 0.9,
                 "merge_probability": 0.5,
                 "max_branches": 3,
                 "first_layer_type": "legacy_dungeon",
