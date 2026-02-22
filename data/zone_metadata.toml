@@ -150,7 +150,7 @@ exclude = true
 exclude = true
 
 [zones.scadualtus_ymir]
-exclude = true
+exclude = true  # Cathedral of Manus Metyr interior — accessed via unique warp, not standalone
 
 # Auriza Side Tomb: confusing trap-chest dungeon, monopolizes split(3/4) at mb=4
 [zones.outskirts_sidetomb]

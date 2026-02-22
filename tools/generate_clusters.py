@@ -865,7 +865,6 @@ def classify_fogs(
                 zone_fogs[aside_area].exit_fogs.append(fog)
             # BSide is an entry_fog when the destination is a boss zone
             # (e.g., Placidusax, Radahn, Metyr — accessed via unique warps)
-            bside_area = fog.bside.area
             if areas and bside_area in areas and areas[bside_area].has_boss:
                 zone_fogs[bside_area].entry_fogs.append(fog)
         elif fog.is_uniquegate:
@@ -1388,23 +1387,6 @@ def get_primary_zone(
         return (-ZONE_TYPE_PRIORITY.get(zone_type, 0), zone)
 
     return min(zones, key=sort_key)
-
-
-def generate_cluster_id(zones: frozenset[str]) -> str:
-    """Generate a unique cluster ID from zones.
-
-    Uses alphabetical primary zone for determinism.
-    Callers may update cluster_id after type-based primary zone resolution.
-    """
-    # Sort zones for determinism
-    sorted_zones = sorted(zones)
-    primary_zone = sorted_zones[0]
-
-    # Generate short hash
-    hash_input = ",".join(sorted_zones).encode("utf-8")
-    short_hash = hashlib.md5(hash_input).hexdigest()[:4]
-
-    return f"{primary_zone}_{short_hash}"
 
 
 def filter_and_enrich_clusters(

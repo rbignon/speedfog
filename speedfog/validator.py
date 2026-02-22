@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 
 from speedfog.clusters import ClusterPool
 from speedfog.config import Config
-from speedfog.dag import Dag
+from speedfog.dag import Dag, DagEdge
 
 
 @dataclass
@@ -248,7 +248,7 @@ def _check_zone_tracking_collisions(dag: Dag, clusters: ClusterPool) -> list[str
     errors: list[str] = []
 
     # Group edges by exit fog_id
-    by_exit_fog: dict[str, list] = {}
+    by_exit_fog: dict[str, list[DagEdge]] = {}
     for edge in dag.edges:
         by_exit_fog.setdefault(edge.exit_fog.fog_id, []).append(edge)
 
@@ -267,10 +267,12 @@ def _check_zone_tracking_collisions(dag: Dag, clusters: ClusterPool) -> list[str
                     f"Zone tracking collision: gate {fog_id} exits to "
                     f"{entrance_map} from both {seen_entrance_maps[entrance_map]}"
                     f" and {edge.exit_fog.zone}→{edge.entry_fog.zone}"
+                    f" (node {edge.target_id})"
                 )
             else:
                 seen_entrance_maps[entrance_map] = (
                     f"{edge.exit_fog.zone}→{edge.entry_fog.zone}"
+                    f" (node {edge.target_id})"
                 )
 
     return errors

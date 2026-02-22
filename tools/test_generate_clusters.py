@@ -12,6 +12,7 @@ from generate_clusters import (
     WorldGraph,
     ZoneFogs,
     _is_side_core,
+    _resolve_zone_type,
     build_world_graph,
     classify_fogs,
     compute_allow_entry_as_exit,
@@ -19,9 +20,9 @@ from generate_clusters import (
     compute_cluster_fogs,
     filter_and_enrich_clusters,
     find_defeat_flag,
-    generate_cluster_id,
     generate_clusters,
     get_evergaol_zones,
+    get_primary_zone,
     get_zone_type,
     is_condition_guaranteed,
     is_warp_edge_active,
@@ -431,6 +432,54 @@ class TestClassifyFogs:
 
         # BSide is NOT an entry_fog - there's no physical fog gate at destination
         # FogMod doesn't have a "To" edge for one-way warp destinations
+        assert "zone_b" not in zone_fogs or fog not in zone_fogs["zone_b"].entry_fogs
+
+    def test_unique_fog_bside_boss_entry(self):
+        """Unique fog BSide becomes entry when destination is a boss zone."""
+        fog = FogData(
+            name="test",
+            fog_id=1,
+            aside=FogSide(area="zone_a", text=""),
+            bside=FogSide(area="boss_zone", text=""),
+            tags=["unique"],
+        )
+        areas = {
+            "zone_a": AreaData(name="zone_a", text="", maps=["m10_00_00_00"], tags=[]),
+            "boss_zone": AreaData(
+                name="boss_zone",
+                text="",
+                maps=["m10_00_00_00"],
+                tags=[],
+                has_boss=True,
+            ),
+        }
+        zone_fogs = classify_fogs([fog], [], areas=areas)
+
+        # ASide is still exit only
+        assert fog not in zone_fogs["zone_a"].entry_fogs
+        assert fog in zone_fogs["zone_a"].exit_fogs
+
+        # BSide IS an entry_fog because destination has a boss
+        assert fog in zone_fogs["boss_zone"].entry_fogs
+
+    def test_unique_fog_bside_no_boss_no_entry(self):
+        """Unique fog BSide is NOT entry when destination has no boss."""
+        fog = FogData(
+            name="test",
+            fog_id=1,
+            aside=FogSide(area="zone_a", text=""),
+            bside=FogSide(area="zone_b", text=""),
+            tags=["unique"],
+        )
+        areas = {
+            "zone_a": AreaData(name="zone_a", text="", maps=["m10_00_00_00"], tags=[]),
+            "zone_b": AreaData(
+                name="zone_b", text="", maps=["m10_00_00_00"], tags=[], has_boss=False
+            ),
+        }
+        zone_fogs = classify_fogs([fog], [], areas=areas)
+
+        # BSide is NOT entry — no boss at destination
         assert "zone_b" not in zone_fogs or fog not in zone_fogs["zone_b"].entry_fogs
 
     def test_norandom_fog_excluded(self):
@@ -1596,33 +1645,93 @@ class TestGetZoneType:
         assert get_zone_type(area) == "mini_dungeon"
 
 
-class TestGenerateClusterId:
-    """Tests for generate_cluster_id function."""
+class TestResolveZoneType:
+    """Tests for _resolve_zone_type function."""
 
-    def test_deterministic(self):
-        """Same zones produce same ID."""
-        zones1 = frozenset({"a", "b", "c"})
-        zones2 = frozenset({"c", "a", "b"})  # Different order
+    def test_metadata_type_override(self):
+        """Metadata type override takes precedence over heuristic."""
+        area = AreaData(name="my_zone", text="", maps=["m10_00_00_00"], tags=[])
+        zones_meta = {"my_zone": {"type": "final_boss"}}
+        result = _resolve_zone_type(
+            "my_zone", zones_meta, {"my_zone": area}, set(), set()
+        )
+        assert result == "final_boss"
 
-        assert generate_cluster_id(zones1) == generate_cluster_id(zones2)
+    def test_heuristic_fallback(self):
+        """Falls back to heuristic when no metadata override."""
+        area = AreaData(
+            name="my_boss", text="", maps=["m10_00_00_00"], tags=[], has_boss=True
+        )
+        result = _resolve_zone_type(
+            "my_boss", {}, {"my_boss": area}, {"my_boss"}, set()
+        )
+        assert result == "major_boss"
 
-    def test_different_zones_different_id(self):
-        """Different zones produce different IDs."""
-        zones1 = frozenset({"a", "b"})
-        zones2 = frozenset({"a", "c"})
+    def test_unknown_zone_returns_other(self):
+        """Unknown zone (not in meta or areas) returns 'other'."""
+        result = _resolve_zone_type("missing", {}, {}, set(), set())
+        assert result == "other"
 
-        assert generate_cluster_id(zones1) != generate_cluster_id(zones2)
 
-    def test_id_format(self):
-        """ID has expected format: primary_zone_hash."""
-        zones = frozenset({"zebra", "apple"})
-        cluster_id = generate_cluster_id(zones)
+class TestGetPrimaryZone:
+    """Tests for get_primary_zone function."""
 
-        # Should start with first zone alphabetically
-        assert cluster_id.startswith("apple_")
-        # Should have 4-char hash suffix
-        parts = cluster_id.split("_")
-        assert len(parts[-1]) == 4
+    def test_single_zone(self):
+        """Single zone is always primary."""
+        area = AreaData(name="only_zone", text="", maps=["m10_00_00_00"], tags=[])
+        result = get_primary_zone(
+            frozenset({"only_zone"}), {}, {"only_zone": area}, set(), set()
+        )
+        assert result == "only_zone"
+
+    def test_higher_type_wins(self):
+        """Zone with higher type priority becomes primary."""
+        areas = {
+            "dungeon": AreaData(
+                name="dungeon", text="", maps=["m30_01_00_00"], tags=[]
+            ),
+            "boss": AreaData(
+                name="boss", text="", maps=["m10_00_00_00"], tags=[], has_boss=True
+            ),
+        }
+        result = get_primary_zone(
+            frozenset({"dungeon", "boss"}), {}, areas, {"boss"}, set()
+        )
+        assert result == "boss"
+
+    def test_alphabetical_tiebreak(self):
+        """Same type priority breaks tie alphabetically."""
+        areas = {
+            "zone_b": AreaData(name="zone_b", text="", maps=["m10_00_00_00"], tags=[]),
+            "zone_a": AreaData(name="zone_a", text="", maps=["m10_00_00_00"], tags=[]),
+        }
+        result = get_primary_zone(
+            frozenset({"zone_b", "zone_a"}), {}, areas, set(), set()
+        )
+        assert result == "zone_a"
+
+    def test_metadata_override_affects_priority(self):
+        """Metadata type override changes which zone is primary."""
+        areas = {
+            "plain_zone": AreaData(
+                name="plain_zone", text="", maps=["m10_00_00_00"], tags=[]
+            ),
+            "overridden": AreaData(
+                name="overridden", text="", maps=["m10_00_00_00"], tags=[]
+            ),
+        }
+        # Without override, both are "other" -> alphabetical wins
+        result_no_meta = get_primary_zone(
+            frozenset({"plain_zone", "overridden"}), {}, areas, set(), set()
+        )
+        assert result_no_meta == "overridden"  # alphabetical
+
+        # With override, overridden becomes major_boss
+        zones_meta = {"overridden": {"type": "major_boss"}}
+        result_with_meta = get_primary_zone(
+            frozenset({"plain_zone", "overridden"}), zones_meta, areas, set(), set()
+        )
+        assert result_with_meta == "overridden"  # by priority
 
 
 # =============================================================================
