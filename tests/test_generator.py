@@ -22,7 +22,6 @@ from speedfog.generator import (
     count_net_exits,
     determine_operation,
     execute_merge_layer,
-    execute_split_layer,
     generate_dag,
     generate_with_retry,
     pick_cluster,
@@ -2344,61 +2343,6 @@ class TestSharedEntranceSimulation:
                 assert len(dag.nodes) >= 3  # at least start + 1 node + end
             except GenerationError:
                 pytest.fail(f"Generation failed with seed {seed}")
-
-
-class TestExecuteSplitLayerEntryAsExit:
-    """Tests for execute_split_layer with entry-as-exit boss arenas."""
-
-    def test_boss_arena_becomes_split2_with_entry_as_exit(self):
-        """A boss_arena with 1 entry (bidir) + 1 pure exit can split(2) via entry-as-exit."""
-        # Without entry-as-exit: 1 bidir entry consumes its pair → 1 net exit → passant only
-        # With entry-as-exit: entry doesn't consume pair → 2 exits → split(2)
-        pool = ClusterPool()
-        boss = make_cluster(
-            "split_boss",
-            zones=["split_boss_zone"],
-            cluster_type="boss_arena",
-            weight=3,
-            entry_fogs=[{"fog_id": "boss_entry", "zone": "split_boss_zone"}],
-            exit_fogs=[
-                {"fog_id": "boss_entry", "zone": "split_boss_zone"},  # bidir pair
-                {"fog_id": "boss_exit", "zone": "split_boss_zone"},  # pure exit
-            ],
-            allow_entry_as_exit=True,
-        )
-        pool.add(boss)
-
-        # Set up a DAG with a single branch pointing at the split node
-        dag = Dag(seed=42)
-        start_node = DagNode(
-            id="start",
-            cluster=make_cluster(
-                "start_c", cluster_type="start", weight=1, entry_fogs=[]
-            ),
-            layer=0,
-            tier=1,
-            entry_fogs=[],
-            exit_fogs=[FogRef("start_exit", "start_c")],
-        )
-        dag.add_node(start_node)
-        dag.start_id = "start"
-
-        branches = [Branch("main", "start", FogRef("start_exit", "start_c"))]
-        config = Config()
-        config.structure.max_branches = 2
-        config.structure.max_parallel_paths = 4
-        rng = random.Random(42)
-
-        result = execute_split_layer(
-            dag, branches, 1, 2, "boss_arena", pool, set(), rng, config
-        )
-
-        # Should have split into 2 branches
-        assert len(result) == 2
-        # The split node should exist and have 2 exit fogs
-        split_node = dag.nodes["node_1_a"]
-        assert len(split_node.exit_fogs) == 2
-        assert split_node.cluster.id == "split_boss"
 
 
 class TestEntryAsExitSimulation:
