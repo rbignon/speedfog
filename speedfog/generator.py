@@ -1292,7 +1292,7 @@ def generate_with_retry(
     if config.seed != 0:
         # Fixed seed - single attempt
         dag = generate_dag(config, clusters, config.seed)
-        validation = validate_dag(dag, config)
+        validation = validate_dag(dag, config, clusters)
         if not validation.is_valid:
             errors = "; ".join(validation.errors)
             raise GenerationError(f"Validation failed: {errors}")
@@ -1310,7 +1310,7 @@ def generate_with_retry(
         seed = base_rng.randint(1, 999999999)
         try:
             dag = generate_dag(config, clusters, seed)
-            validation = validate_dag(dag, config)
+            validation = validate_dag(dag, config, clusters)
             if not validation.is_valid:
                 errors = "; ".join(validation.errors)
                 raise GenerationError(f"Validation failed: {errors}")

@@ -1,8 +1,8 @@
 """Tests for DAG validator."""
 
-from speedfog.clusters import ClusterData
+from speedfog.clusters import ClusterData, ClusterPool
 from speedfog.config import Config
-from speedfog.dag import Dag, DagNode
+from speedfog.dag import Dag, DagNode, FogRef
 from speedfog.validator import ValidationResult, validate_dag
 
 
@@ -763,3 +763,187 @@ class TestSharedEntranceValidation:
         entry_fog_errors = [e for e in result.errors if "entry_fogs" in e]
         assert len(entry_fog_errors) == 1
         assert "merge" in entry_fog_errors[0]
+
+
+class TestZoneTrackingCollisions:
+    """Tests for zone tracking collision detection."""
+
+    @staticmethod
+    def _make_clusters_with_maps(zone_maps: dict[str, str]) -> ClusterPool:
+        pool = ClusterPool()
+        pool.zone_maps = zone_maps
+        return pool
+
+    def test_shared_exit_gate_same_entrance_map_rejected(self):
+        """Two edges sharing exit fog_id with same entrance map = error."""
+        dag = Dag(seed=42)
+        dag.add_node(
+            DagNode(
+                id="start",
+                cluster=make_cluster("start_c", cluster_type="start", weight=0),
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+            )
+        )
+        dag.add_node(
+            DagNode(
+                id="mid",
+                cluster=make_cluster(
+                    "cave",
+                    zones=["cave_main", "cave_boss"],
+                    cluster_type="mini_dungeon",
+                ),
+                layer=1,
+                tier=1,
+                entry_fogs=[FogRef("entry_fog", "cave_main")],
+            )
+        )
+        dag.add_node(
+            DagNode(
+                id="end_a",
+                cluster=make_cluster(
+                    "castle",
+                    zones=["castle_front"],
+                    cluster_type="legacy_dungeon",
+                ),
+                layer=2,
+                tier=1,
+                entry_fogs=[
+                    FogRef("castle_entry_a", "castle_front"),
+                    FogRef("castle_entry_b", "castle_front"),
+                ],
+            )
+        )
+        # Two edges from different zones of the cave, same exit fog_id,
+        # both targeting castle_front (same map)
+        dag.add_edge(
+            "start",
+            "mid",
+            FogRef("start_exit", "start_c_zone"),
+            FogRef("entry_fog", "cave_main"),
+        )
+        dag.add_edge(
+            "mid",
+            "end_a",
+            FogRef("AEG099_003_9000", "cave_main"),
+            FogRef("castle_entry_a", "castle_front"),
+        )
+        dag.add_edge(
+            "mid",
+            "end_a",
+            FogRef("AEG099_003_9000", "cave_boss"),
+            FogRef("castle_entry_b", "castle_front"),
+        )
+        dag.start_id = "start"
+        dag.end_id = "end_a"
+
+        clusters = self._make_clusters_with_maps(
+            {
+                "cave_main": "m31_15_00_00",
+                "cave_boss": "m31_15_00_00",
+                "castle_front": "m10_00_00_00",
+                "start_c_zone": "m10_01_00_00",
+            }
+        )
+        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0)
+        result = validate_dag(dag, config, clusters)
+
+        collision_errors = [e for e in result.errors if "Zone tracking collision" in e]
+        assert len(collision_errors) == 1
+        assert "AEG099_003_9000" in collision_errors[0]
+
+    def test_shared_exit_gate_different_entrance_maps_accepted(self):
+        """Two edges sharing exit fog_id with different entrance maps = ok."""
+        dag = Dag(seed=42)
+        dag.add_node(
+            DagNode(
+                id="start",
+                cluster=make_cluster("start_c", cluster_type="start", weight=0),
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+            )
+        )
+        dag.add_node(
+            DagNode(
+                id="mid",
+                cluster=make_cluster(
+                    "cave",
+                    zones=["cave_main", "cave_boss"],
+                    cluster_type="mini_dungeon",
+                ),
+                layer=1,
+                tier=1,
+                entry_fogs=[FogRef("entry_fog", "cave_main")],
+            )
+        )
+        dag.add_node(
+            DagNode(
+                id="end_a",
+                cluster=make_cluster(
+                    "castle",
+                    zones=["castle_zone"],
+                    cluster_type="legacy_dungeon",
+                ),
+                layer=2,
+                tier=1,
+                entry_fogs=[FogRef("castle_entry", "castle_zone")],
+            )
+        )
+        dag.add_node(
+            DagNode(
+                id="end_b",
+                cluster=make_cluster(
+                    "ruins",
+                    zones=["ruins_zone"],
+                    cluster_type="boss_arena",
+                ),
+                layer=2,
+                tier=1,
+                entry_fogs=[FogRef("ruins_entry", "ruins_zone")],
+            )
+        )
+        dag.add_edge(
+            "start",
+            "mid",
+            FogRef("start_exit", "start_c_zone"),
+            FogRef("entry_fog", "cave_main"),
+        )
+        # Same exit fog_id but different entrance maps
+        dag.add_edge(
+            "mid",
+            "end_a",
+            FogRef("AEG099_003_9000", "cave_main"),
+            FogRef("castle_entry", "castle_zone"),
+        )
+        dag.add_edge(
+            "mid",
+            "end_b",
+            FogRef("AEG099_003_9000", "cave_boss"),
+            FogRef("ruins_entry", "ruins_zone"),
+        )
+        dag.start_id = "start"
+        dag.end_id = "end_a"
+
+        clusters = self._make_clusters_with_maps(
+            {
+                "cave_main": "m31_15_00_00",
+                "cave_boss": "m31_15_00_00",
+                "castle_zone": "m10_00_00_00",
+                "ruins_zone": "m12_05_00_00",
+                "start_c_zone": "m10_01_00_00",
+            }
+        )
+        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0)
+        result = validate_dag(dag, config, clusters)
+
+        collision_errors = [e for e in result.errors if "Zone tracking collision" in e]
+        assert len(collision_errors) == 0
+
+    def test_no_clusters_skips_check(self):
+        """Without clusters parameter, zone tracking check is skipped."""
+        dag = make_simple_dag()
+        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0)
+        result = validate_dag(dag, config)
+        assert result.is_valid

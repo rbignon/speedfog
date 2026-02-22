@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from speedfog.clusters import ClusterPool
 from speedfog.config import Config
 from speedfog.dag import Dag
 
@@ -27,13 +28,16 @@ class ValidationResult:
     warnings: list[str] = field(default_factory=list)
 
 
-def validate_dag(dag: Dag, config: Config) -> ValidationResult:
+def validate_dag(
+    dag: Dag, config: Config, clusters: ClusterPool | None = None
+) -> ValidationResult:
     """Validate a DAG against all constraints.
 
     Checks:
     - Structural validity (uses dag.validate_structure())
     - Entry fog consistency (incoming edges match entry_fogs count)
     - Minimum requirements (bosses, legacy_dungeons, mini_dungeons)
+    - Zone tracking collisions (shared exit gate + same entrance map)
     - Path count (no paths = error, single path = warning)
     - Weight spread (path weight disparity = warnings)
     - Layer count (few layers = warning)
@@ -41,6 +45,8 @@ def validate_dag(dag: Dag, config: Config) -> ValidationResult:
     Args:
         dag: The DAG to validate.
         config: Configuration with requirements and budget.
+        clusters: Optional ClusterPool for zone→map resolution. When provided,
+            enables zone tracking collision detection.
 
     Returns:
         ValidationResult with errors and warnings.
@@ -62,6 +68,12 @@ def validate_dag(dag: Dag, config: Config) -> ValidationResult:
     duplicate_errors = _check_no_duplicate_edges(dag)
     if duplicate_errors:
         errors.extend(duplicate_errors)
+
+    # Check zone tracking collisions (shared exit gate + same entrance map)
+    if clusters is not None:
+        collision_errors = _check_zone_tracking_collisions(dag, clusters)
+        if collision_errors:
+            errors.extend(collision_errors)
 
     # Check minimum requirements
     _check_requirements(dag, config, errors)
@@ -215,3 +227,50 @@ def _check_layers(dag: Dag, config: Config, warnings: list[str]) -> None:
         warnings.append(
             f"Few layers: {layer_count} < {config.structure.min_layers} minimum"
         )
+
+
+def _check_zone_tracking_collisions(dag: Dag, clusters: ClusterPool) -> list[str]:
+    """Check for exit gate collisions that break zone tracking.
+
+    When two edges share the same exit fog_id (same physical gate, e.g., a
+    bidirectional gate between two zones of one dungeon) AND their entrance
+    zones resolve to the same map, the C# ZoneTrackingInjector cannot
+    disambiguate which event flag to inject. Reject the DAG early rather
+    than letting the C# build fail.
+
+    Args:
+        dag: The DAG to check.
+        clusters: ClusterPool for zone→map resolution.
+
+    Returns:
+        List of error messages.
+    """
+    errors: list[str] = []
+
+    # Group edges by exit fog_id
+    by_exit_fog: dict[str, list] = {}
+    for edge in dag.edges:
+        by_exit_fog.setdefault(edge.exit_fog.fog_id, []).append(edge)
+
+    for fog_id, edges in by_exit_fog.items():
+        if len(edges) < 2:
+            continue
+
+        # Check if any pair of edges targets the same entrance map
+        seen_entrance_maps: dict[str, str] = {}  # map_id -> edge description
+        for edge in edges:
+            entrance_map = clusters.get_map(edge.entry_fog.zone)
+            if entrance_map is None:
+                continue
+            if entrance_map in seen_entrance_maps:
+                errors.append(
+                    f"Zone tracking collision: gate {fog_id} exits to "
+                    f"{entrance_map} from both {seen_entrance_maps[entrance_map]}"
+                    f" and {edge.exit_fog.zone}→{edge.entry_fog.zone}"
+                )
+            else:
+                seen_entrance_maps[entrance_map] = (
+                    f"{edge.exit_fog.zone}→{edge.entry_fog.zone}"
+                )
+
+    return errors
