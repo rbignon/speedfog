@@ -66,6 +66,7 @@ speedfog/
 │   │   └── Models/GraphData.cs  # GraphData, Connection, CarePackageItem
 │   ├── FogModWrapper/       # Fog gate writer - thin wrapper calling FogMod.dll
 │   │   ├── Program.cs       # CLI entry point
+│   │   ├── AshenLeyndellWarpInjector.cs  # Fix Maliketh warp m11_00 → m11_05
 │   │   ├── ConnectionInjector.cs  # Inject connections into FogMod Graph
 │   │   ├── StartingItemInjector.cs  # Inject starting item events into EMEVD
 │   │   ├── StartingResourcesInjector.cs  # Inject runes, seeds, tears
@@ -137,6 +138,7 @@ speedfog/
 | `StartingResourcesInjector` | Injects runes (CharaInitParam), seeds/tears (ItemLots) |
 | `RoundtableUnlockInjector` | Unlocks Roundtable Hold at game start |
 | `SmithingStoneShopInjector` | Adds smithing stones to Twin Maiden Husks shop |
+| `AshenLeyndellWarpInjector` | Fix Maliketh warp: patch m11_00 → m11_05 for Ashen Capital |
 | `ZoneTrackingInjector` | Injects SetEventFlag before fog gate warps for racing |
 | `RunCompleteInjector` | Injects "RUN COMPLETE" golden banner on final boss defeat |
 | `ChapelGraceInjector` | Site of Grace + player spawn relocation at Chapel of Anticipation |
