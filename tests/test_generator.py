@@ -2579,3 +2579,81 @@ class TestEntryAsExitSimulation:
         assert (
             boss_arena_split_count > 0
         ), "No seeds produced a boss_arena split node (expected at least 1 in 50 seeds)"
+
+
+# =============================================================================
+# Cluster-first selection tests
+# =============================================================================
+
+
+class TestFilterPassantIncompatible:
+    """Tests for ClusterPool.filter_passant_incompatible."""
+
+    def test_removes_clusters_with_zero_net_exits(self):
+        """Clusters with 1 bidir entry + 1 exit (0 net) are removed."""
+        pool = ClusterPool()
+        # Good: 1 entry + 2 exits (1 bidir + 1 pure) = 1 net exit
+        pool.add(
+            make_cluster(
+                "good",
+                cluster_type="mini_dungeon",
+                entry_fogs=[{"fog_id": "f1", "zone": "z1"}],
+                exit_fogs=[
+                    {"fog_id": "f1", "zone": "z1"},
+                    {"fog_id": "f2", "zone": "z1"},
+                ],
+            )
+        )
+        # Bad: 1 entry + 1 exit, same fog = 0 net exits
+        pool.add(
+            make_cluster(
+                "bad",
+                cluster_type="mini_dungeon",
+                entry_fogs=[{"fog_id": "f1", "zone": "z1"}],
+                exit_fogs=[{"fog_id": "f1", "zone": "z1"}],
+            )
+        )
+        removed = pool.filter_passant_incompatible()
+        assert len(pool.get_by_type("mini_dungeon")) == 1
+        assert pool.get_by_type("mini_dungeon")[0].id == "good"
+        assert len(removed) == 1
+        assert removed[0].id == "bad"
+
+    def test_keeps_entry_as_exit_clusters(self):
+        """Clusters with allow_entry_as_exit are always passant-compatible."""
+        pool = ClusterPool()
+        pool.add(
+            make_cluster(
+                "eax",
+                cluster_type="boss_arena",
+                entry_fogs=[{"fog_id": "f1", "zone": "z1"}],
+                exit_fogs=[{"fog_id": "f1", "zone": "z1"}],
+                allow_entry_as_exit=True,
+            )
+        )
+        removed = pool.filter_passant_incompatible()
+        assert len(pool.get_by_type("boss_arena")) == 1
+        assert len(removed) == 0
+
+    def test_skips_start_and_final_boss(self):
+        """Start and final_boss clusters are never filtered."""
+        pool = ClusterPool()
+        pool.add(
+            make_cluster(
+                "start",
+                cluster_type="start",
+                entry_fogs=[],
+                exit_fogs=[{"fog_id": "f1", "zone": "z1"}],
+            )
+        )
+        pool.add(
+            make_cluster(
+                "fb",
+                cluster_type="final_boss",
+                entry_fogs=[{"fog_id": "f1", "zone": "z1"}],
+                exit_fogs=[],
+            )
+        )
+        removed = pool.filter_passant_incompatible()
+        assert len(pool.clusters) == 2
+        assert len(removed) == 0

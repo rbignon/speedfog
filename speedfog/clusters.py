@@ -160,6 +160,38 @@ class ClusterPool:
             if roundtable in type_list:
                 type_list.remove(roundtable)
 
+    def filter_passant_incompatible(self) -> list[ClusterData]:
+        """Remove clusters that can never serve as passant nodes.
+
+        A cluster is passant-incompatible if consuming any single entry
+        leaves zero exits. This happens when it has 1 bidirectional
+        entry and 1 exit (same fog gate, same zone).
+
+        Start and final_boss clusters are exempt (they don't need
+        passant capability).
+
+        Returns:
+            List of removed clusters.
+        """
+        from speedfog.generator import can_be_passant_node
+
+        exempt_types = {"start", "final_boss"}
+        to_remove = [
+            c
+            for c in self.clusters
+            if c.type not in exempt_types and not can_be_passant_node(c)
+        ]
+
+        for cluster in to_remove:
+            self.clusters.remove(cluster)
+            del self.by_id[cluster.id]
+            if cluster.type in self.by_type:
+                type_list = self.by_type[cluster.type]
+                if cluster in type_list:
+                    type_list.remove(cluster)
+
+        return to_remove
+
     @classmethod
     def from_json(cls, path: Path) -> ClusterPool:
         """Load cluster pool from JSON file."""
