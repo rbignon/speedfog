@@ -91,10 +91,10 @@ def make_cluster_pool() -> ClusterPool:
     pool.add(
         make_cluster(
             "erdtree_boss",
-            zones=["leyndell_erdtree"],
+            zones=["leyndell2_erdtree"],
             cluster_type="final_boss",
             weight=5,
-            entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
+            entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell2_erdtree"}],
             exit_fogs=[],
         )
     )
@@ -247,10 +247,10 @@ class TestGenerateDag:
         pool.add(
             make_cluster(
                 "erdtree_boss",
-                zones=["leyndell_erdtree"],
+                zones=["leyndell2_erdtree"],
                 cluster_type="final_boss",
                 weight=5,
-                entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
+                entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell2_erdtree"}],
                 exit_fogs=[],
             )
         )
@@ -343,7 +343,7 @@ class TestGenerateDag:
         pool.add(
             make_cluster(
                 "erdtree_boss",
-                zones=["leyndell_erdtree"],
+                zones=["leyndell2_erdtree"],
                 cluster_type="final_boss",
             )
         )
@@ -519,7 +519,7 @@ class TestGenerateWithRetry:
         pool.add(
             make_cluster(
                 "erdtree_boss",
-                zones=["leyndell_erdtree"],
+                zones=["leyndell2_erdtree"],
                 cluster_type="final_boss",
             )
         )
@@ -542,7 +542,7 @@ class TestGenerateWithRetry:
         pool.add(
             make_cluster(
                 "erdtree_boss",
-                zones=["leyndell_erdtree"],
+                zones=["leyndell2_erdtree"],
                 cluster_type="final_boss",
             )
         )
@@ -620,8 +620,8 @@ class TestValidateConfig:
         """Valid zone in final_boss_candidates returns no error."""
         pool = make_cluster_pool()
         config = Config()
-        # leyndell_erdtree exists in the fixture
-        config.structure.final_boss_candidates = ["leyndell_erdtree"]
+        # leyndell2_erdtree exists in the fixture
+        config.structure.final_boss_candidates = ["leyndell2_erdtree"]
         errors = validate_config(config, pool)
         assert errors == []
 
@@ -1388,10 +1388,10 @@ class TestMergeGuards:
         pool.add(
             make_cluster(
                 "erdtree_boss",
-                zones=["leyndell_erdtree"],
+                zones=["leyndell2_erdtree"],
                 cluster_type="final_boss",
                 weight=5,
-                entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
+                entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell2_erdtree"}],
                 exit_fogs=[],
             )
         )
@@ -1543,10 +1543,10 @@ class TestMergeGuards:
         pool.add(
             make_cluster(
                 "erdtree_boss",
-                zones=["leyndell_erdtree"],
+                zones=["leyndell2_erdtree"],
                 cluster_type="final_boss",
                 weight=5,
-                entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
+                entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell2_erdtree"}],
                 exit_fogs=[],
             )
         )
@@ -1991,10 +1991,10 @@ def make_cluster_pool_with_shared_entrance() -> ClusterPool:
     pool.add(
         make_cluster(
             "erdtree_boss",
-            zones=["leyndell_erdtree"],
+            zones=["leyndell2_erdtree"],
             cluster_type="final_boss",
             weight=5,
-            entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
+            entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell2_erdtree"}],
             exit_fogs=[],
         )
     )
@@ -2129,10 +2129,10 @@ class TestEntryAsExitSimulation:
         pool.add(
             make_cluster(
                 "erdtree_boss",
-                zones=["leyndell_erdtree"],
+                zones=["leyndell2_erdtree"],
                 cluster_type="final_boss",
                 weight=5,
-                entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
+                entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell2_erdtree"}],
                 exit_fogs=[],
             )
         )

@@ -339,8 +339,8 @@ def is_warp_edge_active(fog: FogData) -> bool:
     return _is_side_core(fog, fog.aside) and _is_side_core(fog, fog.bside)
 
 
-# Zone name prefixes to exclude (these use alternative fog gates that FogMod ignores)
-EXCLUDE_ZONE_PREFIXES = {"leyndell2_"}  # Ashen Leyndell - use pre-ashen instead
+# Zone name prefixes to exclude (reserved for future use)
+EXCLUDE_ZONE_PREFIXES: set[str] = set()
 
 
 # =============================================================================
@@ -748,6 +748,7 @@ def has_cross_zone_cond(side: FogSide, key_items: set[str]) -> bool:
 def classify_fogs(
     entrances: list[FogData],
     warps: list[FogData],
+    areas: dict[str, AreaData] | None = None,
 ) -> dict[str, ZoneFogs]:
     """
     Classify fogs as entry/exit for each zone.
@@ -860,9 +861,13 @@ def classify_fogs(
         if fog.is_unique:
             # Unique fogs are one-way warps (sending gates, abductors, etc.)
             # ASide is exit only - FogMod can redirect where the warp sends you
-            # BSide is NOT an entry_fog - there's no physical fog gate at destination
             if aside_cond_ok:
                 zone_fogs[aside_area].exit_fogs.append(fog)
+            # BSide is an entry_fog when the destination is a boss zone
+            # (e.g., Placidusax, Radahn, Metyr — accessed via unique warps)
+            bside_area = fog.bside.area
+            if areas and bside_area in areas and areas[bside_area].has_boss:
+                zone_fogs[bside_area].entry_fogs.append(fog)
         elif fog.is_uniquegate:
             # Uniquegate: check if this pair was already processed
             zone_pair = fog.zone_pair
@@ -1333,8 +1338,64 @@ def compute_allow_entry_as_exit(
     return allow
 
 
+# Zone type priority for determining the primary zone in a multi-zone cluster.
+# Higher value = more significant zone. Ties broken alphabetically.
+ZONE_TYPE_PRIORITY = {
+    "other": 0,
+    "underground": 1,
+    "mini_dungeon": 2,
+    "legacy_dungeon": 3,
+    "boss_arena": 4,
+    "major_boss": 5,
+    "final_boss": 6,
+    "start": 7,
+}
+
+
+def _resolve_zone_type(
+    zone: str,
+    zones_meta: dict,
+    areas: dict[str, AreaData],
+    major_zones: set[str],
+    fortress_zones: set[str],
+) -> str:
+    """Resolve zone type from metadata override or heuristic."""
+    if zone in zones_meta:
+        zm = zones_meta[zone]
+        if isinstance(zm, dict) and "type" in zm:
+            return zm["type"]
+    if zone in areas:
+        return get_zone_type(areas[zone], major_zones, fortress_zones)
+    return "other"
+
+
+def get_primary_zone(
+    zones: frozenset[str],
+    zones_meta: dict,
+    areas: dict[str, AreaData],
+    major_zones: set[str],
+    fortress_zones: set[str],
+) -> str:
+    """Pick the primary zone in a cluster by type priority, then alphabetically.
+
+    The primary zone determines the cluster's type and ID prefix.
+    """
+
+    def sort_key(zone: str) -> tuple[int, str]:
+        zone_type = _resolve_zone_type(
+            zone, zones_meta, areas, major_zones, fortress_zones
+        )
+        return (-ZONE_TYPE_PRIORITY.get(zone_type, 0), zone)
+
+    return min(zones, key=sort_key)
+
+
 def generate_cluster_id(zones: frozenset[str]) -> str:
-    """Generate a unique cluster ID from zones."""
+    """Generate a unique cluster ID from zones.
+
+    Uses alphabetical primary zone for determinism.
+    Callers may update cluster_id after type-based primary zone resolution.
+    """
     # Sort zones for determinism
     sorted_zones = sorted(zones)
     primary_zone = sorted_zones[0]
@@ -1387,22 +1448,30 @@ def filter_and_enrich_clusters(
         if skip:
             continue
 
-        # Skip empty clusters
-        if not cluster.entry_fogs or not cluster.exit_fogs:
+        # Skip clusters with no entry fogs
+        if not cluster.entry_fogs:
             continue
 
-        # Determine cluster type: metadata override > heuristic
-        primary_zone = sorted(cluster.zones)[0]
-        cluster_type = None
-        if primary_zone in zones_meta:
-            zm = zones_meta[primary_zone]
-            if isinstance(zm, dict) and "type" in zm:
-                cluster_type = zm["type"]
-        if cluster_type is None and primary_zone in areas:
-            cluster_type = get_zone_type(
-                areas[primary_zone], major_zones, fortress_zones
-            )
+        # Skip clusters with no exit fogs, unless they contain a boss zone
+        # (terminal boss arenas like Placidusax are valid as final_boss nodes)
+        if not cluster.exit_fogs:
+            has_boss = any(areas.get(z) and areas[z].has_boss for z in cluster.zones)
+            if not has_boss:
+                continue
+
+        # Determine cluster type from primary zone (highest type priority)
+        primary_zone = get_primary_zone(
+            cluster.zones, zones_meta, areas, major_zones, fortress_zones
+        )
+        cluster_type = _resolve_zone_type(
+            primary_zone, zones_meta, areas, major_zones, fortress_zones
+        )
         cluster.cluster_type = cluster_type or "unknown"
+
+        # Update cluster ID to use the type-based primary zone
+        hash_input = ",".join(sorted(cluster.zones)).encode("utf-8")
+        short_hash = hashlib.md5(hash_input).hexdigest()[:4]
+        cluster.cluster_id = f"{primary_zone}_{short_hash}"
 
         # Skip underground clusters (large empty exploration areas)
         if cluster.cluster_type == "underground":
@@ -1476,9 +1545,6 @@ def filter_and_enrich_clusters(
                 if flag > 0:
                     cluster.defeat_flag = flag
                     break
-
-        # Generate ID
-        cluster.cluster_id = generate_cluster_id(cluster.zones)
 
         filtered.append(cluster)
 
@@ -1677,7 +1743,7 @@ def main() -> int:
 
     # Classify fogs
     print("Classifying fogs...")
-    zone_fogs = classify_fogs(entrances, warps)
+    zone_fogs = classify_fogs(entrances, warps, areas)
     print(f"  Found fogs for {len(zone_fogs)} zones")
 
     # Identify major boss zones (connected to fog gates with 'major' tag)

@@ -154,7 +154,7 @@ def test_effective_final_boss_candidates_default():
     config = Config.from_dict({})
     assert config.structure.final_boss_candidates == []
     assert config.structure.effective_final_boss_candidates == [
-        "leyndell_erdtree",
+        "leyndell2_erdtree",
         "enirilim_radahn",
     ]
 

@@ -69,6 +69,13 @@ weight = 6
 [zones.volcano_abductors]
 type = "boss_arena"
 
+# Boss arenas: disable entry-as-exit (enter from front, exit from back)
+[zones.ainsel_dragonkin]
+allow_entry_as_exit = false
+
+[zones.deeproot_boss]
+allow_entry_as_exit = false
+
 # Boss arenas with non-default weights
 [zones.academy_library]
 weight = 3
@@ -131,14 +138,18 @@ weight = 6
 [zones.scadualtus_gaol]
 weight = 6
 
-# DLC Exclusions (zones that don't work well as independent clusters)
-[zones.fissure_boss]
-exclude = true
+# Exclusions
+[zones.erdtree]
+exclude = true  # Elden Beast arena — accessed via leyndell2_erdtree unique fog, not standalone
 
+# DLC Exclusions (zones that don't work well as independent clusters)
 [zones.rauhruins_postromina]
 exclude = true
 
 [zones.graveyard_cave]
+exclude = true
+
+[zones.scadualtus_ymir]
 exclude = true
 
 # Auriza Side Tomb: confusing trap-chest dungeon, monopolizes split(3/4) at mb=4

@@ -77,7 +77,7 @@ class StructureConfig:
     @property
     def effective_final_boss_candidates(self) -> list[str]:
         """Return candidates or default if empty."""
-        return self.final_boss_candidates or ["leyndell_erdtree", "enirilim_radahn"]
+        return self.final_boss_candidates or ["leyndell2_erdtree", "enirilim_radahn"]
 
 
 def resolve_final_boss_candidates(
