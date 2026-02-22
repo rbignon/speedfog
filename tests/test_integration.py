@@ -19,15 +19,35 @@ from speedfog.output import export_json
 
 
 @pytest.fixture
-def real_clusters():
-    """Load the actual clusters.json with standard preprocessing."""
+def real_clusters_and_bosses():
+    """Load clusters.json, snapshot boss candidates, then filter.
+
+    Returns (clusters, boss_candidates) where boss_candidates is captured
+    BEFORE filter_passant_incompatible() removes dead-end arenas.
+    """
     clusters_path = Path(__file__).parent.parent / "data" / "clusters.json"
     if not clusters_path.exists():
         pytest.skip("clusters.json not found")
     clusters = load_clusters(clusters_path)
     clusters.merge_roundtable_into_start()
+    # Snapshot before filtering (dead-end bosses are valid final boss targets)
+    boss_candidates = clusters.get_by_type("major_boss") + clusters.get_by_type(
+        "final_boss"
+    )
     clusters.filter_passant_incompatible()
-    return clusters
+    return clusters, boss_candidates
+
+
+@pytest.fixture
+def real_clusters(real_clusters_and_bosses):
+    """Load the actual clusters.json with standard preprocessing."""
+    return real_clusters_and_bosses[0]
+
+
+@pytest.fixture
+def real_boss_candidates(real_clusters_and_bosses):
+    """Boss candidates snapshotted before passant filtering."""
+    return real_clusters_and_bosses[1]
 
 
 @pytest.fixture
@@ -55,11 +75,15 @@ def relaxed_config():
 class TestFullPipeline:
     """End-to-end tests for the generation pipeline."""
 
-    def test_generate_validate_export(self, real_clusters, relaxed_config, tmp_path):
+    def test_generate_validate_export(
+        self, real_clusters, real_boss_candidates, relaxed_config, tmp_path
+    ):
         """Full pipeline: generate -> validate -> export."""
         config = relaxed_config
 
-        result = generate_with_retry(config, real_clusters, max_attempts=50)
+        result = generate_with_retry(
+            config, real_clusters, max_attempts=50, boss_candidates=real_boss_candidates
+        )
         assert result.seed == 1
         assert (
             result.validation.is_valid
@@ -85,15 +109,24 @@ class TestFullPipeline:
         # ASCII graph should have box-drawing characters
         assert "│" in spoiler_content
 
-    def test_auto_reroll_finds_valid_seed(self, real_clusters, relaxed_config):
+    def test_auto_reroll_finds_valid_seed(
+        self, real_clusters, real_boss_candidates, relaxed_config
+    ):
         """seed=0 finds a working seed automatically."""
         config = relaxed_config
         config.seed = 0  # Auto-reroll mode
-        result = generate_with_retry(config, real_clusters, max_attempts=100)
+        result = generate_with_retry(
+            config,
+            real_clusters,
+            max_attempts=100,
+            boss_candidates=real_boss_candidates,
+        )
         assert result.seed != 0
         assert result.validation.is_valid
 
-    def test_multiple_seeds_produce_different_dags(self, real_clusters, relaxed_config):
+    def test_multiple_seeds_produce_different_dags(
+        self, real_clusters, real_boss_candidates, relaxed_config
+    ):
         """Different seeds produce different DAGs."""
         config1 = relaxed_config
         config1.seed = 1
@@ -103,18 +136,28 @@ class TestFullPipeline:
             requirements=relaxed_config.requirements,
             structure=relaxed_config.structure,
         )
-        result1 = generate_with_retry(config1, real_clusters)
-        result2 = generate_with_retry(config2, real_clusters)
+        result1 = generate_with_retry(
+            config1, real_clusters, boss_candidates=real_boss_candidates
+        )
+        result2 = generate_with_retry(
+            config2, real_clusters, boss_candidates=real_boss_candidates
+        )
         nodes1 = {n.cluster.id for n in result1.dag.nodes.values()}
         nodes2 = {n.cluster.id for n in result2.dag.nodes.values()}
         assert nodes1 != nodes2
 
-    def test_same_seed_produces_identical_dag(self, real_clusters, relaxed_config):
+    def test_same_seed_produces_identical_dag(
+        self, real_clusters, real_boss_candidates, relaxed_config
+    ):
         """Same seed produces identical DAG (determinism)."""
         config = relaxed_config
         config.seed = 12346
-        result1 = generate_with_retry(config, real_clusters)
-        result2 = generate_with_retry(config, real_clusters)
+        result1 = generate_with_retry(
+            config, real_clusters, boss_candidates=real_boss_candidates
+        )
+        result2 = generate_with_retry(
+            config, real_clusters, boss_candidates=real_boss_candidates
+        )
 
         assert result1.seed == result2.seed == 12346
         assert result1.dag.seed == result2.dag.seed
@@ -134,10 +177,14 @@ class TestFullPipeline:
         edges2 = {(e.source_id, e.target_id) for e in result2.dag.edges}
         assert edges1 == edges2
 
-    def test_exported_json_structure(self, real_clusters, relaxed_config, tmp_path):
+    def test_exported_json_structure(
+        self, real_clusters, real_boss_candidates, relaxed_config, tmp_path
+    ):
         """Verify exported JSON v4 has correct structure."""
         config = relaxed_config
-        result = generate_with_retry(config, real_clusters)
+        result = generate_with_retry(
+            config, real_clusters, boss_candidates=real_boss_candidates
+        )
         dag = result.dag
 
         json_path = tmp_path / "graph.json"
@@ -222,10 +269,14 @@ class TestFullPipeline:
         assert str(data["finish_event"]) not in data["event_map"]
         assert data["final_node_flag"] != data["finish_event"]
 
-    def test_validation_result_structure(self, real_clusters, relaxed_config):
+    def test_validation_result_structure(
+        self, real_clusters, real_boss_candidates, relaxed_config
+    ):
         """Verify validation returns properly structured result."""
         config = relaxed_config
-        gen_result = generate_with_retry(config, real_clusters)
+        gen_result = generate_with_retry(
+            config, real_clusters, boss_candidates=real_boss_candidates
+        )
 
         validation = gen_result.validation
 

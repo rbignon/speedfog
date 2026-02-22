@@ -32,6 +32,11 @@ from speedfog.generator import (
 _SENTINEL = object()
 
 
+def _boss_candidates(pool: ClusterPool) -> list[ClusterData]:
+    """Return boss candidates from a pool (major_boss + final_boss)."""
+    return pool.get_by_type("major_boss") + pool.get_by_type("final_boss")
+
+
 def make_cluster(
     cluster_id: str,
     zones: list[str] | None = None,
@@ -181,8 +186,12 @@ class TestGenerateDag:
         config.structure.split_probability = 0.0
         config.structure.merge_probability = 0.0
 
-        dag1 = generate_dag(config, pool, seed=12345)
-        dag2 = generate_dag(config, pool, seed=12345)
+        dag1 = generate_dag(
+            config, pool, seed=12345, boss_candidates=_boss_candidates(pool)
+        )
+        dag2 = generate_dag(
+            config, pool, seed=12345, boss_candidates=_boss_candidates(pool)
+        )
 
         assert dag1.seed == dag2.seed == 12345
         assert len(dag1.nodes) == len(dag2.nodes)
@@ -198,7 +207,9 @@ class TestGenerateDag:
         config.structure.split_probability = 0.0
         config.structure.merge_probability = 0.0
 
-        dag = generate_dag(config, pool, seed=42)
+        dag = generate_dag(
+            config, pool, seed=42, boss_candidates=_boss_candidates(pool)
+        )
 
         assert dag.start_id == "start"
         assert dag.end_id == "end"
@@ -215,7 +226,9 @@ class TestGenerateDag:
         config.structure.split_probability = 0.0
         config.structure.merge_probability = 0.0
 
-        dag = generate_dag(config, pool, seed=42)
+        dag = generate_dag(
+            config, pool, seed=42, boss_candidates=_boss_candidates(pool)
+        )
         paths = dag.enumerate_paths()
 
         assert len(paths) > 0
@@ -305,7 +318,9 @@ class TestGenerateDag:
         config.requirements.bosses = 0
         config.requirements.mini_dungeons = 0
 
-        dag = generate_dag(config, pool, seed=42)
+        dag = generate_dag(
+            config, pool, seed=42, boss_candidates=_boss_candidates(pool)
+        )
 
         # Count nodes per layer
         nodes_by_layer: dict[int, int] = {}
@@ -329,7 +344,9 @@ class TestGenerateDag:
         config.structure.split_probability = 0.0
         config.structure.merge_probability = 0.0
 
-        dag = generate_dag(config, pool, seed=42)
+        dag = generate_dag(
+            config, pool, seed=42, boss_candidates=_boss_candidates(pool)
+        )
 
         all_zones: set[str] = set()
         for node in dag.nodes.values():
@@ -350,7 +367,7 @@ class TestGenerateDag:
         config = Config()
 
         with pytest.raises(GenerationError, match="[Ss]tart"):
-            generate_dag(config, pool, seed=42)
+            generate_dag(config, pool, seed=42, boss_candidates=_boss_candidates(pool))
 
     def test_raises_if_no_final_boss(self):
         """Raises GenerationError if no final_boss cluster exists."""
@@ -426,7 +443,7 @@ class TestGenerateDag:
         config.requirements.bosses = 1
 
         with pytest.raises(GenerationError, match="[Ff]inal"):
-            generate_dag(config, pool, seed=42)
+            generate_dag(config, pool, seed=42, boss_candidates=_boss_candidates(pool))
 
     def test_layer_tiers_increase(self):
         """Difficulty tier increases with layer index."""
@@ -438,7 +455,9 @@ class TestGenerateDag:
         config.structure.split_probability = 0.0
         config.structure.merge_probability = 0.0
 
-        dag = generate_dag(config, pool, seed=42)
+        dag = generate_dag(
+            config, pool, seed=42, boss_candidates=_boss_candidates(pool)
+        )
 
         # Group tiers by layer
         tiers_by_layer: dict[int, list[int]] = {}
@@ -483,7 +502,9 @@ class TestGenerateWithRetry:
         config.requirements.bosses = 0
         config.requirements.mini_dungeons = 0
 
-        result = generate_with_retry(config, pool)
+        result = generate_with_retry(
+            config, pool, boss_candidates=_boss_candidates(pool)
+        )
 
         assert result.seed == 99999
         assert result.dag.seed == 99999
@@ -505,7 +526,9 @@ class TestGenerateWithRetry:
         config.requirements.bosses = 0
         config.requirements.mini_dungeons = 0
 
-        result = generate_with_retry(config, pool, max_attempts=100)
+        result = generate_with_retry(
+            config, pool, max_attempts=100, boss_candidates=_boss_candidates(pool)
+        )
 
         assert result.seed != 0  # Should have found a random seed
         assert result.dag.seed == result.seed
@@ -534,7 +557,9 @@ class TestGenerateWithRetry:
         config.seed = 0
 
         with pytest.raises(GenerationError, match="after.*attempts"):
-            generate_with_retry(config, pool, max_attempts=5)
+            generate_with_retry(
+                config, pool, max_attempts=5, boss_candidates=_boss_candidates(pool)
+            )
 
     def test_fixed_seed_propagates_error(self):
         """With fixed seed that fails, propagates the error."""
@@ -550,7 +575,7 @@ class TestGenerateWithRetry:
         config.seed = 42  # Fixed seed
 
         with pytest.raises(GenerationError):
-            generate_with_retry(config, pool)
+            generate_with_retry(config, pool, boss_candidates=_boss_candidates(pool))
 
 
 class TestValidateConfig:
@@ -560,7 +585,7 @@ class TestValidateConfig:
         """Valid configuration returns no errors."""
         pool = make_cluster_pool()
         config = Config()
-        errors = validate_config(config, pool)
+        errors = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
 
     def test_invalid_first_layer_type(self):
@@ -568,7 +593,7 @@ class TestValidateConfig:
         pool = make_cluster_pool()
         config = Config()
         config.structure.first_layer_type = "invalid_type"
-        errors = validate_config(config, pool)
+        errors = validate_config(config, pool, _boss_candidates(pool))
         assert len(errors) == 1
         assert "first_layer_type" in errors[0]
         assert "invalid_type" in errors[0]
@@ -578,7 +603,7 @@ class TestValidateConfig:
         pool = make_cluster_pool()
         config = Config()
         config.structure.first_layer_type = "legacy_dungeon"
-        errors = validate_config(config, pool)
+        errors = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
 
     def test_major_boss_ratio_out_of_range_negative(self):
@@ -586,7 +611,7 @@ class TestValidateConfig:
         pool = make_cluster_pool()
         config = Config()
         config.structure.major_boss_ratio = -0.1
-        errors = validate_config(config, pool)
+        errors = validate_config(config, pool, _boss_candidates(pool))
         assert len(errors) == 1
         assert "major_boss_ratio" in errors[0]
 
@@ -595,7 +620,7 @@ class TestValidateConfig:
         pool = make_cluster_pool()
         config = Config()
         config.structure.major_boss_ratio = 1.5
-        errors = validate_config(config, pool)
+        errors = validate_config(config, pool, _boss_candidates(pool))
         assert len(errors) == 1
         assert "major_boss_ratio" in errors[0]
 
@@ -604,7 +629,7 @@ class TestValidateConfig:
         pool = make_cluster_pool()
         config = Config()
         config.structure.major_boss_ratio = 0.5
-        errors = validate_config(config, pool)
+        errors = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
 
     def test_unknown_final_boss_candidate(self):
@@ -612,7 +637,7 @@ class TestValidateConfig:
         pool = make_cluster_pool()
         config = Config()
         config.structure.final_boss_candidates = ["nonexistent_zone"]
-        errors = validate_config(config, pool)
+        errors = validate_config(config, pool, _boss_candidates(pool))
         assert len(errors) == 1
         assert "nonexistent_zone" in errors[0]
 
@@ -622,7 +647,7 @@ class TestValidateConfig:
         config = Config()
         # leyndell_erdtree exists in the fixture
         config.structure.final_boss_candidates = ["leyndell_erdtree"]
-        errors = validate_config(config, pool)
+        errors = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
 
     def test_final_boss_candidates_all_keyword(self):
@@ -630,7 +655,7 @@ class TestValidateConfig:
         pool = make_cluster_pool()
         config = Config()
         config.structure.final_boss_candidates = ["all"]
-        errors = validate_config(config, pool)
+        errors = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
 
     def test_multiple_errors_returned(self):
@@ -640,8 +665,31 @@ class TestValidateConfig:
         config.structure.first_layer_type = "bad_type"
         config.structure.major_boss_ratio = 2.0
         config.structure.final_boss_candidates = ["bad_zone"]
-        errors = validate_config(config, pool)
+        errors = validate_config(config, pool, _boss_candidates(pool))
         assert len(errors) == 3
+
+    def test_dead_end_major_boss_valid_as_final_boss(self):
+        """A major_boss with 0 exits (pruned by passant filter) is valid as final_boss candidate."""
+        pool = make_cluster_pool()
+        # Add a dead-end boss (0 exits, like Placidusax)
+        pool.add(
+            make_cluster(
+                "dead_end_boss",
+                zones=["placidusax_zone"],
+                cluster_type="major_boss",
+                weight=4,
+                entry_fogs=[{"fog_id": "f1", "zone": "placidusax_zone"}],
+                exit_fogs=[],
+            )
+        )
+        # Snapshot BEFORE filtering (like main.py does)
+        boss_candidates = _boss_candidates(pool)
+        pool.filter_passant_incompatible()
+
+        config = Config()
+        config.structure.final_boss_candidates = ["placidusax_zone"]
+        errors = validate_config(config, pool, boss_candidates)
+        assert errors == []
 
 
 # =============================================================================
@@ -1503,7 +1551,9 @@ class TestMergeGuards:
 
         for seed in range(1, 501):
             try:
-                dag = generate_dag(config, pool, seed=seed)
+                dag = generate_dag(
+                    config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
+                )
             except GenerationError:
                 continue
 
@@ -1621,7 +1671,9 @@ class TestMergeGuards:
         successes = 0
         for seed in range(1, 201):
             try:
-                dag = generate_dag(config, pool, seed=seed)
+                dag = generate_dag(
+                    config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
+                )
             except GenerationError:
                 continue
             successes += 1
@@ -2097,7 +2149,9 @@ class TestSharedEntranceSimulation:
         # Run 20 seeds — verify no GenerationError
         for seed in range(20):
             try:
-                dag = generate_dag(config, pool, seed=seed)
+                dag = generate_dag(
+                    config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
+                )
                 assert len(dag.nodes) >= 3  # at least start + 1 node + end
             except GenerationError:
                 pytest.fail(f"Generation failed with seed {seed}")
@@ -2250,7 +2304,9 @@ class TestEntryAsExitSimulation:
 
         for seed in range(20):
             try:
-                dag = generate_dag(config, pool, seed=seed)
+                dag = generate_dag(
+                    config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
+                )
                 assert len(dag.nodes) >= 3
             except GenerationError:
                 pytest.fail(f"Generation failed with seed {seed}")
@@ -2271,7 +2327,9 @@ class TestEntryAsExitSimulation:
         boss_arena_split_count = 0
         for seed in range(50):
             try:
-                dag = generate_dag(config, pool, seed=seed)
+                dag = generate_dag(
+                    config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
+                )
                 for node in dag.nodes.values():
                     if node.cluster.type == "boss_arena" and len(node.exit_fogs) >= 2:
                         # Count outgoing edges to verify it's actually a split
@@ -2362,6 +2420,23 @@ class TestFilterPassantIncompatible:
         removed = pool.filter_passant_incompatible()
         assert len(pool.clusters) == 2
         assert len(removed) == 0
+
+    def test_dead_end_major_boss_pruned_from_pool(self):
+        """A major_boss with 0 exits is removed from the active pool."""
+        pool = ClusterPool()
+        pool.add(
+            make_cluster(
+                "dead_end",
+                cluster_type="major_boss",
+                zones=["dead_zone"],
+                entry_fogs=[{"fog_id": "f1", "zone": "dead_zone"}],
+                exit_fogs=[],
+            )
+        )
+        removed = pool.filter_passant_incompatible()
+        assert len(removed) == 1
+        assert removed[0].id == "dead_end"
+        assert pool.get_by_type("major_boss") == []
 
 
 class TestPickClusterUniform:

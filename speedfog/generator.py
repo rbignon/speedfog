@@ -31,12 +31,15 @@ class GenerationError(Exception):
 VALID_FIRST_LAYER_TYPES = {"legacy_dungeon", "mini_dungeon", "boss_arena", "major_boss"}
 
 
-def validate_config(config: Config, clusters: ClusterPool) -> list[str]:
+def validate_config(
+    config: Config, clusters: ClusterPool, boss_candidates: list[ClusterData]
+) -> list[str]:
     """Validate configuration options against available clusters.
 
     Args:
         config: Configuration to validate.
         clusters: Available cluster pool.
+        boss_candidates: Pre-filtered list of clusters eligible as final boss.
 
     Returns:
         List of error messages (empty if valid).
@@ -59,9 +62,7 @@ def validate_config(config: Config, clusters: ClusterPool) -> list[str]:
         )
 
     # Validate final_boss_candidates
-    all_boss_clusters = clusters.get_by_type("major_boss") + clusters.get_by_type(
-        "final_boss"
-    )
+    all_boss_clusters = boss_candidates
     all_boss_zones = {zone for cluster in all_boss_clusters for zone in cluster.zones}
 
     # Resolve "all" keyword and validate each zone
@@ -808,6 +809,8 @@ def generate_dag(
     config: Config,
     clusters: ClusterPool,
     seed: int | None = None,
+    *,
+    boss_candidates: list[ClusterData],
 ) -> Dag:
     """Generate a randomized DAG with dynamic split/merge/passant topology.
 
@@ -823,6 +826,7 @@ def generate_dag(
         config: Configuration with requirements and structure
         clusters: Pool of available clusters
         seed: Random seed (uses config.seed if None)
+        boss_candidates: Pre-filtered list of clusters eligible as final boss.
 
     Returns:
         Generated DAG
@@ -1193,9 +1197,9 @@ def generate_dag(
         )
 
     # 7. Create end node (final_boss from candidates)
-    all_boss_clusters = clusters.get_by_type("major_boss") + clusters.get_by_type(
-        "final_boss"
-    )
+    all_boss_clusters = [
+        c for c in boss_candidates if not any(z in used_zones for z in c.zones)
+    ]
     all_boss_zones = {zone for cluster in all_boss_clusters for zone in cluster.zones}
 
     # Resolve "all" keyword to actual zone names
@@ -1267,6 +1271,8 @@ def generate_with_retry(
     config: Config,
     clusters: ClusterPool,
     max_attempts: int = 100,
+    *,
+    boss_candidates: list[ClusterData],
 ) -> GenerationResult:
     """Generate DAG with automatic retry on failure.
 
@@ -1277,6 +1283,7 @@ def generate_with_retry(
         config: Configuration
         clusters: Cluster pool
         max_attempts: Maximum retry attempts (only for seed=0)
+        boss_candidates: Pre-filtered list of clusters eligible as final boss.
 
     Returns:
         GenerationResult with DAG, seed, validation, and attempt count.
@@ -1285,13 +1292,15 @@ def generate_with_retry(
         GenerationError: If generation fails after max_attempts
     """
     # Validate config before attempting generation
-    config_errors = validate_config(config, clusters)
+    config_errors = validate_config(config, clusters, boss_candidates)
     if config_errors:
         raise GenerationError(f"Invalid configuration: {'; '.join(config_errors)}")
 
     if config.seed != 0:
         # Fixed seed - single attempt
-        dag = generate_dag(config, clusters, config.seed)
+        dag = generate_dag(
+            config, clusters, config.seed, boss_candidates=boss_candidates
+        )
         validation = validate_dag(dag, config, clusters)
         if not validation.is_valid:
             errors = "; ".join(validation.errors)
@@ -1309,7 +1318,7 @@ def generate_with_retry(
     for attempt in range(max_attempts):
         seed = base_rng.randint(1, 999999999)
         try:
-            dag = generate_dag(config, clusters, seed)
+            dag = generate_dag(config, clusters, seed, boss_candidates=boss_candidates)
             validation = validate_dag(dag, config, clusters)
             if not validation.is_valid:
                 errors = "; ".join(validation.errors)

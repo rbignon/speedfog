@@ -165,6 +165,13 @@ def main() -> int:
     if config.structure.max_branches > 1 and config.structure.max_parallel_paths > 1:
         clusters.merge_roundtable_into_start()
 
+    # Snapshot boss clusters before passant filter removes dead-end arenas.
+    # Dead-end bosses (0 exits) are invalid as passant nodes but valid as
+    # final boss endpoints — the run terminates there.
+    boss_candidates = clusters.get_by_type("major_boss") + clusters.get_by_type(
+        "final_boss"
+    )
+
     # Filter clusters that can never be passant nodes (1 bidir entry + 1 exit)
     removed = clusters.filter_passant_incompatible()
     if args.verbose and removed:
@@ -188,7 +195,12 @@ def main() -> int:
         print(f"Generating DAG ({mode})...")
 
     try:
-        result = generate_with_retry(config, clusters, max_attempts=args.max_attempts)
+        result = generate_with_retry(
+            config,
+            clusters,
+            max_attempts=args.max_attempts,
+            boss_candidates=boss_candidates,
+        )
     except GenerationError as e:
         print(f"Error: Generation failed: {e}", file=sys.stderr)
         return 1
