@@ -94,21 +94,29 @@ N branches converge into a single node. Creates convergence in the DAG.
 
 **Entry selection**: `select_entries_for_merge()` prefers non-bidirectional entries (preserves exit count for future operations), with main-tagged entries as a soft preference within each group.
 
-## Operation Decision
+## Cluster-First Selection
+
+The generator uses a **cluster-first** model: pick a cluster uniformly at random, then determine what operation it supports based on its fog gate structure.
 
 ```
-decide_operation(num_branches, config, rng):
-    if num_branches >= max_parallel_paths:
-        → MERGE (merge_prob) or PASSANT (1 - merge_prob)
-    elif num_branches == 1:
-        → SPLIT (split_prob) or PASSANT (1 - split_prob)
-    else:  # 1 < branches < max
+pick_cluster_uniform(candidates, used_zones, rng)
+    → filter by zone overlap only, pick uniformly
+
+determine_operation(cluster, branches, config, rng):
+    check cluster capabilities (split, merge, passant)
+    if can_split AND can_merge:
         → SPLIT (split_prob) | MERGE (merge_prob) | PASSANT (remainder)
+    elif can_split:
+        → SPLIT (split_prob) or PASSANT (1 - split_prob)
+    elif can_merge:
+        → MERGE (merge_prob) or PASSANT (1 - merge_prob)
+    else:
+        → PASSANT (always)
 ```
 
-Default probabilities: split=0.3, merge=0.3, passant=0.4 (implicit).
+Default probabilities: split=0.9, merge=0.5. Because operations are gated by the cluster's capability (many clusters only support passant), these values are higher than they appear — the effective rate is `P(cluster supports op) × configured_prob`.
 
-When at max parallel paths, only merge or passant are available. When at 1 branch, only split or passant.
+Passant-incompatible clusters (those with zero net exits after consuming an entry) are filtered at load time by `ClusterPool.filter_passant_incompatible()`, ensuring every cluster in the pool can serve as at least a passant node.
 
 ## Cluster Compatibility
 

@@ -17,16 +17,13 @@ from speedfog.generator import (
     can_be_merge_node,
     can_be_passant_node,
     can_be_split_node,
-    cluster_has_usable_exits,
     compute_net_exits,
     count_net_exits,
     determine_operation,
     execute_merge_layer,
     generate_dag,
     generate_with_retry,
-    pick_cluster,
     pick_cluster_uniform,
-    pick_entry_fog_with_exits,
     pick_entry_with_max_exits,
     select_entries_for_merge,
     validate_config,
@@ -163,245 +160,6 @@ def make_cluster_pool() -> ClusterPool:
         )
 
     return pool
-
-
-# =============================================================================
-# cluster_has_usable_exits tests
-# =============================================================================
-
-
-class TestClusterHasUsableExits:
-    """Tests for cluster_has_usable_exits function."""
-
-    def test_cluster_with_exits_after_entry(self):
-        """A cluster with exit fogs remaining after using entry is usable."""
-        cluster = make_cluster(
-            "test",
-            entry_fogs=[{"fog_id": "entry_fog", "zone": "test"}],
-            exit_fogs=[
-                {"fog_id": "entry_fog", "zone": "test"},  # bidirectional
-                {"fog_id": "other_exit", "zone": "test"},  # additional exit
-            ],
-        )
-
-        assert cluster_has_usable_exits(cluster) is True
-
-    def test_cluster_without_exits_after_entry(self):
-        """A cluster with only bidirectional fog is a dead end."""
-        cluster = make_cluster(
-            "test",
-            entry_fogs=[{"fog_id": "bidirectional", "zone": "test"}],
-            exit_fogs=[{"fog_id": "bidirectional", "zone": "test"}],
-        )
-
-        assert cluster_has_usable_exits(cluster) is False
-
-    def test_cluster_no_entry_fogs(self):
-        """A cluster without entry fogs is not usable (can't enter)."""
-        cluster = make_cluster(
-            "test",
-            entry_fogs=[],
-            exit_fogs=[{"fog_id": "exit_fog", "zone": "test"}],
-        )
-
-        assert cluster_has_usable_exits(cluster) is False
-
-    def test_cluster_multiple_entries_one_has_exits(self):
-        """A cluster is usable if at least one entry leaves exits available."""
-        cluster = make_cluster(
-            "test",
-            entry_fogs=[
-                {"fog_id": "dead_end_entry", "zone": "test"},
-                {"fog_id": "good_entry", "zone": "test"},
-            ],
-            exit_fogs=[
-                {
-                    "fog_id": "dead_end_entry",
-                    "zone": "test",
-                },  # only exit for first entry
-                {
-                    "fog_id": "other_exit",
-                    "zone": "test",
-                },  # exit remains for second entry
-            ],
-        )
-
-        assert cluster_has_usable_exits(cluster) is True
-
-
-# =============================================================================
-# pick_entry_fog_with_exits tests
-# =============================================================================
-
-
-class TestPickEntryFogWithExits:
-    """Tests for pick_entry_fog_with_exits function."""
-
-    def test_picks_valid_entry(self):
-        """Picks an entry fog that leaves at least one exit available."""
-        cluster = make_cluster(
-            "test",
-            entry_fogs=[
-                {"fog_id": "entry_a", "zone": "test"},
-                {"fog_id": "entry_b", "zone": "test"},
-            ],
-            exit_fogs=[
-                {"fog_id": "entry_a", "zone": "test"},  # bidirectional
-                {
-                    "fog_id": "exit_c",
-                    "zone": "test",
-                },  # available after using entry_a or entry_b
-            ],
-        )
-        rng = random.Random(42)
-
-        result = pick_entry_fog_with_exits(cluster, rng)
-
-        # Both entries should leave exit_c available
-        assert result in ["entry_a", "entry_b"]
-
-    def test_returns_none_if_no_valid_entry(self):
-        """Returns None when no entry fog leaves any exits available."""
-        cluster = make_cluster(
-            "test",
-            entry_fogs=[{"fog_id": "only_entry", "zone": "test"}],
-            exit_fogs=[{"fog_id": "only_entry", "zone": "test"}],  # only bidirectional
-        )
-        rng = random.Random(42)
-
-        result = pick_entry_fog_with_exits(cluster, rng)
-
-        assert result is None
-
-    def test_picks_any_valid_entry(self):
-        """Picks any entry fog that leaves exits available."""
-        # Both entries are valid since each leaves at least one exit
-        cluster = make_cluster(
-            "test",
-            entry_fogs=[
-                {"fog_id": "entry_a", "zone": "test"},
-                {"fog_id": "entry_b", "zone": "test"},
-            ],
-            exit_fogs=[
-                {"fog_id": "entry_a", "zone": "test"},  # Bidirectional
-                {"fog_id": "entry_b", "zone": "test"},  # Bidirectional
-                {"fog_id": "real_exit", "zone": "test"},  # Always available
-            ],
-        )
-
-        # Verify both entries can be selected (different seeds)
-        selected = set()
-        for seed in range(100):
-            rng = random.Random(seed)
-            result = pick_entry_fog_with_exits(cluster, rng)
-            assert result in ["entry_a", "entry_b"]
-            selected.add(result)
-
-        # Both should have been selected at least once
-        assert "entry_a" in selected
-        assert "entry_b" in selected
-
-
-# =============================================================================
-# pick_cluster tests
-# =============================================================================
-
-
-class TestPickCluster:
-    """Tests for pick_cluster function."""
-
-    def test_picks_from_candidates(self):
-        """Picks a cluster from the candidates list."""
-        candidates = [
-            make_cluster("a", zones=["zone_a"]),
-            make_cluster("b", zones=["zone_b"]),
-        ]
-        rng = random.Random(42)
-
-        result = pick_cluster(candidates, set(), rng)
-
-        assert result is not None
-        assert result.id in ["a", "b"]
-
-    def test_excludes_used_zones(self):
-        """Does not pick clusters whose zones overlap with used_zones."""
-        candidates = [
-            make_cluster("a", zones=["zone_a"]),
-            make_cluster("b", zones=["zone_b"]),
-        ]
-        used_zones = {"zone_a"}
-        rng = random.Random(42)
-
-        result = pick_cluster(candidates, used_zones, rng)
-
-        assert result is not None
-        assert result.id == "b"
-
-    def test_returns_none_if_all_used(self):
-        """Returns None when all candidates have used zones."""
-        candidates = [
-            make_cluster("a", zones=["zone_a"]),
-            make_cluster("b", zones=["zone_b"]),
-        ]
-        used_zones = {"zone_a", "zone_b"}
-        rng = random.Random(42)
-
-        result = pick_cluster(candidates, used_zones, rng)
-
-        assert result is None
-
-    def test_returns_none_if_empty_candidates(self):
-        """Returns None for empty candidates list."""
-        candidates: list[ClusterData] = []
-        rng = random.Random(42)
-
-        result = pick_cluster(candidates, set(), rng)
-
-        assert result is None
-
-    def test_require_exits_filters_dead_ends(self):
-        """With require_exits=True, filters out clusters without usable exits."""
-        # Dead end cluster - entry is the only exit
-        dead_end = make_cluster(
-            "dead",
-            zones=["dead_zone"],
-            entry_fogs=[{"fog_id": "bidir", "zone": "dead_zone"}],
-            exit_fogs=[{"fog_id": "bidir", "zone": "dead_zone"}],
-        )
-        # Good cluster - has additional exit
-        good = make_cluster(
-            "good",
-            zones=["good_zone"],
-            entry_fogs=[{"fog_id": "entry", "zone": "good_zone"}],
-            exit_fogs=[
-                {"fog_id": "entry", "zone": "good_zone"},
-                {"fog_id": "exit", "zone": "good_zone"},
-            ],
-        )
-        candidates = [dead_end, good]
-        rng = random.Random(42)
-
-        result = pick_cluster(candidates, set(), rng, require_exits=True)
-
-        assert result is not None
-        assert result.id == "good"
-
-    def test_require_exits_false_allows_dead_ends(self):
-        """With require_exits=False, allows clusters without usable exits."""
-        # Dead end cluster - entry is the only exit
-        dead_end = make_cluster(
-            "dead",
-            zones=["dead_zone"],
-            entry_fogs=[{"fog_id": "bidir", "zone": "dead_zone"}],
-            exit_fogs=[{"fog_id": "bidir", "zone": "dead_zone"}],
-        )
-        candidates = [dead_end]
-        rng = random.Random(42)
-
-        result = pick_cluster(candidates, set(), rng, require_exits=False)
-
-        assert result is not None
-        assert result.id == "dead"
 
 
 # =============================================================================
@@ -2719,3 +2477,47 @@ class TestDetermineOperation:
         ]
         op, fan = determine_operation(cluster, branches, config, random.Random(42))
         assert op == LayerOperation.MERGE
+
+    def test_both_split_and_merge_priority_cascade(self):
+        """When split_prob + merge_prob > 1.0, acts as priority cascade."""
+        # Cluster that can both split (3 exits) and merge (2 entries, shared)
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[
+                {"fog_id": "e1", "zone": "z1"},
+                {"fog_id": "e2", "zone": "z1"},
+            ],
+            exit_fogs=[
+                {"fog_id": "x1", "zone": "z1"},
+                {"fog_id": "x2", "zone": "z1"},
+                {"fog_id": "x3", "zone": "z1"},
+            ],
+            allow_shared_entrance=True,
+        )
+        config = Config()
+        config.structure.split_probability = 0.9
+        config.structure.merge_probability = 0.5
+        config.structure.max_branches = 3
+        config.structure.max_parallel_paths = 4
+        branches = [
+            Branch("b0", "n0", FogRef("x", "z")),
+            Branch("b1", "n1", FogRef("y", "z")),
+        ]
+
+        # Run many times and check distribution
+        counts: dict[LayerOperation, int] = {
+            LayerOperation.SPLIT: 0,
+            LayerOperation.MERGE: 0,
+            LayerOperation.PASSANT: 0,
+        }
+        for seed in range(1000):
+            op, _fan = determine_operation(
+                cluster, branches, config, random.Random(seed)
+            )
+            counts[op] += 1
+
+        # With 0.9 + 0.5 = 1.4, passant should never be reached
+        assert counts[LayerOperation.PASSANT] == 0
+        # Split should get ~90%, merge ~10%
+        assert counts[LayerOperation.SPLIT] > 800
+        assert counts[LayerOperation.MERGE] > 50

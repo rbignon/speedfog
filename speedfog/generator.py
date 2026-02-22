@@ -332,79 +332,6 @@ def pick_cluster_with_filter(
     return rng.choice(available)
 
 
-# =============================================================================
-# Legacy Helper Functions (kept for compatibility)
-# =============================================================================
-
-
-def cluster_has_usable_exits(cluster: ClusterData) -> bool:
-    """Check if cluster will have at least 1 exit after using any entry fog.
-
-    A cluster is usable if for at least one entry_fog, there remains
-    at least one exit_fog after removing the bidirectional entry.
-    """
-    if not cluster.entry_fogs:
-        return False
-
-    for entry in cluster.entry_fogs:
-        entry_fog_id = entry["fog_id"]
-        remaining_exits = [e for e in cluster.exit_fogs if e["fog_id"] != entry_fog_id]
-        if remaining_exits:
-            return True
-
-    return False
-
-
-def pick_entry_fog_with_exits(cluster: ClusterData, rng: random.Random) -> str | None:
-    """Pick an entry fog that leaves at least one exit available.
-
-    Returns the fog_id of a valid entry, or None if no valid entry exists.
-    """
-    valid_entries: list[str] = []
-    for entry in cluster.entry_fogs:
-        entry_fog_id = entry["fog_id"]
-        remaining_exits = [e for e in cluster.exit_fogs if e["fog_id"] != entry_fog_id]
-        if remaining_exits:
-            valid_entries.append(entry_fog_id)
-
-    if not valid_entries:
-        return None
-
-    return rng.choice(valid_entries)
-
-
-def pick_cluster(
-    candidates: list[ClusterData],
-    used_zones: set[str],
-    rng: random.Random,
-    require_exits: bool = True,
-) -> ClusterData | None:
-    """Pick a cluster whose zones don't overlap with used_zones.
-
-    Args:
-        candidates: List of candidate clusters
-        used_zones: Set of zone IDs already used
-        rng: Random number generator
-        require_exits: If True, only pick clusters with usable exits
-    """
-    available = []
-    for cluster in candidates:
-        # Check no zone overlap
-        if any(z in used_zones for z in cluster.zones):
-            continue
-
-        # Check cluster has usable exits (unless it's the final node)
-        if require_exits and not cluster_has_usable_exits(cluster):
-            continue
-
-        available.append(cluster)
-
-    if not available:
-        return None
-
-    return rng.choice(available)
-
-
 def pick_cluster_uniform(
     candidates: list[ClusterData],
     used_zones: set[str],
@@ -474,7 +401,10 @@ def determine_operation(
         and can_be_merge_node(cluster, 2)
     )
 
-    # Decide based on capabilities
+    # Decide based on capabilities.
+    # When split_prob + merge_prob >= 1.0 (e.g. 0.9 + 0.5), the probabilities
+    # act as a priority cascade: split is tried first, then merge gets the
+    # remainder, and passant is only reached if the sum < 1.0.
     if can_split and can_merge:
         roll = rng.random()
         if roll < split_prob:
@@ -912,7 +842,8 @@ def generate_dag(
     if not start_candidates:
         raise GenerationError("No start cluster found")
 
-    start_cluster = pick_cluster(start_candidates, used_zones, rng, require_exits=False)
+    # Start cluster has no entry fogs, so zone-overlap filter is sufficient
+    start_cluster = pick_cluster_uniform(start_candidates, used_zones, rng)
     if start_cluster is None:
         raise GenerationError("Could not pick start cluster")
 
@@ -1071,7 +1002,9 @@ def generate_dag(
                         )
                     letter_offset += 1
                 else:
-                    # Passant for non-split branches (uniform pick)
+                    # Passant for non-split branches (uniform pick).
+                    # All candidates are passant-compatible (guaranteed by
+                    # filter_passant_incompatible at load time).
                     pc = pick_cluster_uniform(candidates, used_zones, rng)
                     if pc is None:
                         raise GenerationError(
@@ -1177,7 +1110,9 @@ def generate_dag(
                     )
                 ]
 
-                # Non-merged branches get passant (uniform pick)
+                # Non-merged branches get passant (uniform pick).
+                # All candidates are passant-compatible (guaranteed by
+                # filter_passant_incompatible at load time).
                 merge_set = set(merge_indices)
                 letter = 1
                 for i, branch in enumerate(branches):
