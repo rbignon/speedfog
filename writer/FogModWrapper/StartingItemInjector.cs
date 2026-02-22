@@ -38,6 +38,24 @@ public static class StartingItemInjector
         { 8974, 65720 },  // Black Whetblade → Poison, Blood, Occult
     };
 
+    // Vanilla event flag set when the player has activated 2+ Great Runes at Divine Towers.
+    // Checked by sending gate events (e.g. Deeproot→Leyndell, event 12032500 in fogevents.txt)
+    // and the Leyndell capital barrier. Giving restored Great Runes via DirectlyGivePlayerItem
+    // does NOT set this flag — the vanilla game only sets it via Divine Tower activation.
+    private const int GREAT_RUNES_ACTIVATED_FLAG = 182;
+
+    // Restored Great Rune Good IDs (191-196). When any 2+ are given, we must also
+    // set GREAT_RUNES_ACTIVATED_FLAG so vanilla gate checks pass.
+    private static readonly HashSet<int> GreatRuneGoodIds = new()
+    {
+        191,  // Godrick's Great Rune
+        192,  // Radahn's Great Rune
+        193,  // Morgott's Great Rune
+        194,  // Rykard's Great Rune
+        195,  // Mohg's Great Rune
+        196,  // Malenia's Great Rune
+    };
+
     /// <summary>
     /// Inject starting item events into common.emevd.
     /// Gives Good IDs (key items) and care package items (typed) at game start.
@@ -99,6 +117,16 @@ public static class StartingItemInjector
             {
                 Console.WriteLine($"  Added Good ID {goodId}");
             }
+        }
+
+        // Set the "2+ Great Runes activated" vanilla flag if we gave enough Great Runes.
+        // Without this, sending gates (Deeproot→Leyndell) and the capital barrier
+        // show "not enough Great Runes" even though the items are in inventory.
+        int greatRuneCount = goodIds.Count(id => GreatRuneGoodIds.Contains(id));
+        if (greatRuneCount >= 2)
+        {
+            evt.Instructions.Add(events.ParseAdd($"SetEventFlag(TargetEventFlagType.EventFlag, {GREAT_RUNES_ACTIVATED_FLAG}, ON)"));
+            Console.WriteLine($"  Set Great Runes activated flag ({GREAT_RUNES_ACTIVATED_FLAG}) — {greatRuneCount} runes given");
         }
 
         // Give care package items with their specific ItemType
