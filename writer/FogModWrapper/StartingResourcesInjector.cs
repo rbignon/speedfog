@@ -14,6 +14,7 @@ public static class StartingResourcesInjector
     private const int SACRED_TEAR_GOOD_ID = 10020;
     private const int LORDS_RUNE_GOOD_ID = 2919;  // 50,000 runes when used
     private const int LARVAL_TEAR_GOOD_ID = 8185;  // Larval Tear - used for rebirth
+    private const int STONESWORD_KEY_GOOD_ID = 8000;  // Stonesword Key - unlocks imp seals
 
     // Base event ID for resource events
     private const int BASE_EVENT_ID = 755861000;
@@ -30,9 +31,9 @@ public static class StartingResourcesInjector
     /// Inject starting resources into the mod files via EMEVD.
     /// Uses a flag to track if resources were already given (for stackable items).
     /// </summary>
-    public static void Inject(string modDir, Events events, int runes, int goldenSeeds, int sacredTears, int larvalTears = 0)
+    public static void Inject(string modDir, Events events, int runes, int goldenSeeds, int sacredTears, int larvalTears = 0, int stoneswordKeys = 0)
     {
-        if (runes <= 0 && goldenSeeds <= 0 && sacredTears <= 0 && larvalTears <= 0)
+        if (runes <= 0 && goldenSeeds <= 0 && sacredTears <= 0 && larvalTears <= 0 && stoneswordKeys <= 0)
         {
             return;
         }
@@ -116,6 +117,13 @@ public static class StartingResourcesInjector
         }
         if (larvalTears > 0)
             Console.WriteLine($"  Added {larvalTears} Larval Tears");
+
+        for (int i = 0; i < stoneswordKeys; i++)
+        {
+            evt.Instructions.Add(events.ParseAdd($"DirectlyGivePlayerItem(ItemType.Goods, {STONESWORD_KEY_GOOD_ID}, 6001, 1)"));
+        }
+        if (stoneswordKeys > 0)
+            Console.WriteLine($"  Added {stoneswordKeys} Stonesword Keys");
 
         // Set flag so we don't give items again on reload
         evt.Instructions.Add(events.ParseAdd($"SetEventFlag(TargetEventFlagType.EventFlag, {RESOURCES_GIVEN_FLAG}, ON)"));

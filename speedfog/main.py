@@ -253,6 +253,7 @@ def main() -> int:
         run_complete_message=config.run_complete_message,
         chapel_grace=config.chapel_grace,
         starting_larval_tears=config.starting_items.larval_tears,
+        starting_stonesword_keys=config.starting_items.stonesword_keys,
         vanilla_tiers=vanilla_tiers,
     )
     print(f"Written: {json_path}")

@@ -398,7 +398,8 @@ Example:
             graphData.StartingRunes,
             graphData.StartingGoldenSeeds,
             graphData.StartingSacredTears,
-            graphData.StartingLarvalTears
+            graphData.StartingLarvalTears,
+            graphData.StartingStoneswordKeys
         );
 
         // 7d. Inject Roundtable unlock (bypasses DLC finger pickup detection)

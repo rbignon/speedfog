@@ -49,6 +49,12 @@ public class GraphData
     public int StartingLarvalTears { get; set; } = 10;
 
     /// <summary>
+    /// Stonesword Keys to give at game start for unlocking imp statue seals.
+    /// </summary>
+    [JsonPropertyName("starting_stonesword_keys")]
+    public int StartingStoneswordKeys { get; set; } = 6;
+
+    /// <summary>
     /// Mapping of event flag ID (as string) to cluster ID.
     /// Used by racing mod to detect zone transitions via EMEVD flags.
     /// </summary>

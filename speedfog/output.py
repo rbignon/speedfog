@@ -237,6 +237,7 @@ def dag_to_dict(
     run_complete_message: str = "RUN COMPLETE",
     chapel_grace: bool = True,
     starting_larval_tears: int = 10,
+    starting_stonesword_keys: int = 6,
     vanilla_tiers: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     """Convert a DAG to v4 JSON-serializable dictionary.
@@ -260,6 +261,7 @@ def dag_to_dict(
         run_complete_message: Text for the golden banner after final boss defeat
         chapel_grace: Whether to add a Site of Grace at Chapel of Anticipation
         starting_larval_tears: Larval Tears to give at start (for rebirth at graces)
+        starting_stonesword_keys: Stonesword Keys to give at start (unlock imp seals)
         vanilla_tiers: Optional zone_name → ScalingTier mapping from foglocations2.txt.
             When provided, each node gets an original_tier field (max ScalingTier of its zones).
 
@@ -546,6 +548,7 @@ def dag_to_dict(
         "starting_golden_seeds": starting_golden_seeds,
         "starting_sacred_tears": starting_sacred_tears,
         "starting_larval_tears": starting_larval_tears,
+        "starting_stonesword_keys": starting_stonesword_keys,
         "care_package": [
             {"type": item.type, "id": item.id, "name": item.name}
             for item in (care_package or [])
@@ -569,6 +572,7 @@ def export_json(
     run_complete_message: str = "RUN COMPLETE",
     chapel_grace: bool = True,
     starting_larval_tears: int = 10,
+    starting_stonesword_keys: int = 6,
     vanilla_tiers: dict[str, int] | None = None,
 ) -> None:
     """Export a DAG to v4 formatted JSON file.
@@ -588,6 +592,7 @@ def export_json(
         run_complete_message: Text for the golden banner after final boss defeat
         chapel_grace: Whether to add a Site of Grace at Chapel of Anticipation
         starting_larval_tears: Larval Tears to give at start (for rebirth at graces)
+        starting_stonesword_keys: Stonesword Keys to give at start (unlock imp seals)
         vanilla_tiers: Optional zone_name → ScalingTier mapping from foglocations2.txt
     """
     data = dag_to_dict(
@@ -604,6 +609,7 @@ def export_json(
         run_complete_message,
         chapel_grace,
         starting_larval_tears,
+        starting_stonesword_keys,
         vanilla_tiers,
     )
     with open(output_path, "w", encoding="utf-8") as f:

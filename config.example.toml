@@ -150,6 +150,7 @@ talisman_pouches = 3
 # sacred_tears = 3       # Sacred Tears to upgrade flask potency (0-12)
 # starting_runes = 50000 # Given as Lord's Rune items (50k each, use from inventory)
 # larval_tears = 10      # Larval Tears for rebirth at Sites of Grace (0-99, default: 10)
+# stonesword_keys = 6    # Stonesword Keys to unlock imp statue seals (0-99, default: 6)
 
 [care_package]
 # Randomized starting build - gives a random selection of weapons, armor,
