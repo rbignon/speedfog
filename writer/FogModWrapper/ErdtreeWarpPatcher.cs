@@ -4,12 +4,16 @@ namespace FogModWrapper;
 
 /// <summary>
 /// Patches all fogwarp events targeting leyndell_erdtree (m11_00) to warp directly
-/// to leyndell2_erdtree (m11_05), removing the dependency on flag 300 (Erdtree burning).
+/// to leyndell2_erdtree (m11_05), replacing FogMod's alt-warp mechanism with a direct
+/// warp and on-demand flag 300 activation.
 ///
 /// In vanilla, the fogwarp template (9005777) compiles an alt-warp: primary goes to
 /// m11_00, and if flag 300 is ON (set by Maliketh death), it warps to m11_05 instead.
-/// This patcher replaces the primary destination with m11_05 coordinates, so the fog
-/// gate always reaches leyndell2_erdtree regardless of Maliketh/flag 300.
+/// This patcher replaces the primary destination with m11_05 coordinates and injects
+/// SetEventFlag(300, ON) just before the warp, so the engine loads the correct assets.
+/// Flag 300 tells the engine which map tile to load at Leyndell coordinates (m11_00
+/// vs m11_05). It stays OFF during the run so leyndell_* connections work normally,
+/// and is set ON only at the moment of warping to the Erdtree.
 ///
 /// Scans ALL EMEVD files in the mod output since the fog gate could be on any map.
 /// </summary>
@@ -67,7 +71,13 @@ public static class ErdtreeWarpPatcher
     }
 
     /// <summary>
+    /// Flag 300 = Erdtree burning. Set before warping so the engine loads m11_05 assets.
+    /// </summary>
+    private const int ERDTREE_BURNING_FLAG = 300;
+
+    /// <summary>
     /// Patch all events in an EMEVD. Returns total count of patched instructions.
+    /// For each patched warp, inserts SetEventFlag(300, ON) just before it.
     /// </summary>
     internal static int PatchEmevd(
         EMEVD emevd, int primaryRegion, int altRegion, byte[] altMapBytes, int altMapPacked)
@@ -75,15 +85,44 @@ public static class ErdtreeWarpPatcher
         int total = 0;
         foreach (var evt in emevd.Events)
         {
-            foreach (var instr in evt.Instructions)
+            // Collect indices to insert at (reverse order to preserve positions)
+            var insertions = new List<int>();
+            for (int i = 0; i < evt.Instructions.Count; i++)
             {
+                var instr = evt.Instructions[i];
                 if (TryPatchWarpPlayer(instr, primaryRegion, altRegion, altMapBytes))
-                    total++;
+                    insertions.Add(i);
                 else if (TryPatchCutsceneWarp(instr, primaryRegion, altRegion, altMapPacked))
-                    total++;
+                    insertions.Add(i);
             }
+
+            // Insert SetEventFlag(300, ON) before each patched warp (reverse to keep indices valid)
+            for (int j = insertions.Count - 1; j >= 0; j--)
+            {
+                evt.Instructions.Insert(insertions[j], MakeSetEventFlag(ERDTREE_BURNING_FLAG));
+                // Shift Parameter entries for instructions at or after insertion point
+                foreach (var param in evt.Parameters)
+                {
+                    if (param.InstructionIndex >= insertions[j])
+                        param.InstructionIndex++;
+                }
+            }
+
+            total += insertions.Count;
         }
         return total;
+    }
+
+    /// <summary>
+    /// Create a SetEventFlag instruction: bank 2003, id 66.
+    /// Args: [targetType(4)=0, flagId(4), state(1)=1, padding(3)]
+    /// </summary>
+    internal static EMEVD.Instruction MakeSetEventFlag(int flagId)
+    {
+        var args = new byte[12];
+        BitConverter.GetBytes(flagId).CopyTo(args, 4);
+        args[8] = 1; // ON
+        return new EMEVD.Instruction(2003, 66, args);
     }
 
     /// <summary>
