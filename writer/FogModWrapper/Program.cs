@@ -1,6 +1,7 @@
 using FogMod;
 using FogModWrapper;
 using FogModWrapper.Packaging;
+using SoulsFormats;
 using SoulsIds;
 using YamlDotNet.Serialization;
 
@@ -258,10 +259,6 @@ Example:
             { "messmerskindling", "TRUE" },
             { "messmerskindling1", "TRUE" },
             // Boss defeat conditions used in world edges
-            // farumazula_maliketh: Cond on leyndell_erdtree → leyndell2_erdtree edge.
-            // SpeedFog's Python generator forces Maliketh onto the mandatory path
-            // before the Erdtree, so this condition is always met at runtime.
-            // Setting TRUE here makes FogMod treat the area as reachable at build time.
             { "farumazula_maliketh", "TRUE" },
         };
 
@@ -446,6 +443,25 @@ Example:
                 areaMaps,
                 injectionResult.FinishEvent,
                 bossDefeatFlag);
+        }
+
+        // 7f2. Patch Maliketh warp for Ashen Leyndell.
+        // Event 900 sets flag 300 (Erdtree burning) then warps via WarpPlayer.
+        // EventEditor replaced the region with primary (m11_00), but flag 300
+        // causes m11_05 to load. Patch Event 900 + m13 portal to use alt region.
+        // NOTE: fogwarp events handle alt-warp natively (template 9005777).
+        var erdtreeEntrance = ann.Entrances.Concat(ann.Warps).FirstOrDefault(e =>
+            e.BSide?.Area == "leyndell_erdtree" &&
+            e.BSide?.AlternateSide?.Warp != null &&
+            e.BSide.AlternateFlag > 0);
+
+        if (erdtreeEntrance != null)
+        {
+            MalikethWarpPatcher.Patch(
+                modDir,
+                erdtreeEntrance.BSide.Warp.Region,
+                erdtreeEntrance.BSide.AlternateSide.Warp.Region,
+                erdtreeEntrance.BSide.AlternateSide.Warp.Map);
         }
 
         // 7g. Inject "RUN COMPLETE" banner on final boss defeat
