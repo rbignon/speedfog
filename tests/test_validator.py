@@ -765,6 +765,58 @@ class TestSharedEntranceValidation:
         assert "merge" in entry_fog_errors[0]
 
 
+class TestRequiredZones:
+    """Tests for required zones validation."""
+
+    def test_required_zone_present_passes(self):
+        """DAG containing the required zone passes validation."""
+        dag = make_dag_with_content(legacy_count=1, boss_count=1, mini_dungeon_count=1)
+        # The helper creates clusters with zones like "legacy_cluster_0_zone"
+        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0)
+        config.requirements.zones = ["legacy_cluster_0_zone"]
+
+        result = validate_dag(dag, config)
+
+        zone_errors = [e for e in result.errors if "Required zone" in e]
+        assert zone_errors == []
+
+    def test_required_zone_missing_fails(self):
+        """DAG missing a required zone produces error."""
+        dag = make_dag_with_content(legacy_count=1, boss_count=1, mini_dungeon_count=1)
+        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0)
+        config.requirements.zones = ["haligtree_malenia"]
+
+        result = validate_dag(dag, config)
+
+        assert result.is_valid is False
+        zone_errors = [e for e in result.errors if "Required zone" in e]
+        assert len(zone_errors) == 1
+        assert "haligtree_malenia" in zone_errors[0]
+
+    def test_multiple_required_zones_all_missing(self):
+        """DAG missing multiple required zones reports each one."""
+        dag = make_dag_with_content(legacy_count=1, boss_count=1, mini_dungeon_count=1)
+        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0)
+        config.requirements.zones = ["caelid_radahn", "haligtree_malenia"]
+
+        result = validate_dag(dag, config)
+
+        assert result.is_valid is False
+        zone_errors = [e for e in result.errors if "Required zone" in e]
+        assert len(zone_errors) == 2
+
+    def test_empty_required_zones_passes(self):
+        """Empty zones list imposes no constraint."""
+        dag = make_simple_dag()
+        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+        config.requirements.zones = []
+
+        result = validate_dag(dag, config)
+
+        zone_errors = [e for e in result.errors if "Required zone" in e]
+        assert zone_errors == []
+
+
 class TestZoneTrackingCollisions:
     """Tests for zone tracking collision detection."""
 

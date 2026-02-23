@@ -37,6 +37,7 @@ class RequirementsConfig:
     legacy_dungeons: int = 1
     bosses: int = 5
     mini_dungeons: int = 5
+    zones: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -376,6 +377,7 @@ class Config:
                 legacy_dungeons=requirements_section.get("legacy_dungeons", 1),
                 bosses=requirements_section.get("bosses", 5),
                 mini_dungeons=requirements_section.get("mini_dungeons", 5),
+                zones=requirements_section.get("zones", []),
             ),
             structure=StructureConfig(
                 max_parallel_paths=structure_section.get("max_parallel_paths", 3),

@@ -148,6 +148,15 @@ def _check_requirements(dag: Dag, config: Config, errors: list[str]) -> None:
     if mini_count < req.mini_dungeons:
         errors.append(f"Insufficient mini_dungeons: {mini_count} < {req.mini_dungeons}")
 
+    # Check required zones
+    if req.zones:
+        all_zones: set[str] = set()
+        for node in dag.nodes.values():
+            all_zones.update(node.cluster.zones)
+        for zone in req.zones:
+            if zone not in all_zones:
+                errors.append(f"Required zone missing: '{zone}'")
+
 
 def _check_paths(
     dag: Dag, config: Config, errors: list[str], warnings: list[str]

@@ -32,6 +32,10 @@ bosses = 5
 # Minimum number of mini-dungeons (caves, catacombs, tunnels).
 mini_dungeons = 5
 
+# Zones that must appear in the DAG (rerolls until present).
+# Useful for testing specific boss behavior.
+# zones = ["caelid_radahn", "haligtree_malenia"]
+
 [structure]
 # Maximum number of parallel paths at any point.
 # Higher = more choices, but harder to balance.
