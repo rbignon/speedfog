@@ -26,4 +26,10 @@
     <ProjectReference Include="../FogModWrapper/FogModWrapper.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="SoulsFormats">
+      <HintPath>../lib/SoulsFormats.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>
