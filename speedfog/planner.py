@@ -81,8 +81,7 @@ def plan_layer_types(
     # Replace some layers with major_boss based on ratio
     if major_boss_ratio > 0.0 and total_layers > 1:
         num_major_boss_slots = max(1, int(total_layers * major_boss_ratio))
-        # Avoid last layer (reserved for merge to final_boss)
-        eligible_indices = list(range(total_layers - 1))
+        eligible_indices = list(range(total_layers))
         num_to_replace = min(num_major_boss_slots, len(eligible_indices))
         major_boss_indices = rng.sample(eligible_indices, num_to_replace)
 

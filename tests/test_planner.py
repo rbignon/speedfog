@@ -224,19 +224,14 @@ class TestPlanLayerTypes:
         # 0.3 * 10 = 3 major bosses expected
         assert result.count("major_boss") >= 1
 
-    def test_major_boss_ratio_not_in_last_layer(self):
-        """Major bosses should not appear in the last layer."""
+    def test_major_boss_ratio_one_replaces_all_layers(self):
+        """With major_boss_ratio=1.0, all layers should be major_boss."""
         reqs = RequirementsConfig(legacy_dungeons=0, bosses=0, mini_dungeons=0)
-        # Test with high ratio to maximize chance of hitting last layer
-        for seed in range(100):
-            rng = random.Random(seed)
-            result = plan_layer_types(
-                reqs, total_layers=5, rng=rng, major_boss_ratio=0.8
-            )
-            # Last layer should never be major_boss
-            assert (
-                result[-1] != "major_boss"
-            ), f"Last layer is major_boss with seed {seed}"
+        rng = random.Random(42)
+        result = plan_layer_types(reqs, total_layers=5, rng=rng, major_boss_ratio=1.0)
+        assert all(
+            t == "major_boss" for t in result
+        ), f"Expected all major_boss, got {result}"
 
     def test_major_boss_ratio_respects_ratio(self):
         """Number of major bosses should roughly match the ratio."""
