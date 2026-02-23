@@ -79,9 +79,11 @@ allow_entry_as_exit = false
 # Boss arenas with non-default weights
 [zones.academy_library]
 weight = 3
+allow_entry_as_exit = true
 
 [zones.haligtree_malenia]
 weight = 5
+allow_entry_as_exit = true
 
 # =============================================================================
 # DLC - Shadow of the Erdtree
@@ -137,6 +139,31 @@ weight = 6
 
 [zones.scadualtus_gaol]
 weight = 6
+
+# Major bosses: allow entry-as-exit so they can be pass-through nodes
+[zones.altus_elemer]
+allow_entry_as_exit = true
+
+[zones.fissure_boss]
+allow_entry_as_exit = true
+
+[zones.jaggedpeak_bayle]
+allow_entry_as_exit = true
+
+[zones.midramanse_boss]
+allow_entry_as_exit = true
+
+[zones.peninsula_leonine]
+allow_entry_as_exit = true
+
+[zones.scadutree_base]
+allow_entry_as_exit = true
+
+[zones.sewer_mohg]
+allow_entry_as_exit = true
+
+[zones.storehouse_messmer]
+allow_entry_as_exit = true
 
 # Exclusions
 [zones.leyndell2_erdtree]
