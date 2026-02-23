@@ -72,7 +72,7 @@ speedfog/
 │   │   ├── RoundtableUnlockInjector.cs  # Unlock Roundtable Hold at start
 │   │   ├── SmithingStoneShopInjector.cs  # Add smithing stones to shop
 │   │   ├── ZoneTrackingInjector.cs  # Zone tracking flags for racing
-│   │   ├── MalikethWarpPatcher.cs  # Patch Event 900 warp for Ashen Leyndell
+│   │   ├── ErdtreeWarpPatcher.cs  # Patch Erdtree fogwarp to target m11_05 directly
 │   │   ├── RunCompleteInjector.cs  # Inject "RUN COMPLETE" message on final boss defeat
 │   │   ├── ChapelGraceInjector.cs  # Site of Grace at Chapel of Anticipation
 │   │   ├── RebirthInjector.cs  # Rebirth (stat reallocation) at Sites of Grace
@@ -139,7 +139,7 @@ speedfog/
 | `RoundtableUnlockInjector` | Unlocks Roundtable Hold at game start |
 | `SmithingStoneShopInjector` | Adds smithing stones to Twin Maiden Husks shop |
 | `ZoneTrackingInjector` | Injects SetEventFlag before fog gate warps for racing |
-| `MalikethWarpPatcher` | Patches Event 900 + m13 portal warps for Ashen Leyndell (m11_00 → m11_05) |
+| `ErdtreeWarpPatcher` | Patches all fogwarps targeting leyndell_erdtree to warp to m11_05 directly (no Maliketh/flag 300 dependency) |
 | `RunCompleteInjector` | Injects "RUN COMPLETE" golden banner on final boss defeat |
 | `ChapelGraceInjector` | Site of Grace + player spawn relocation at Chapel of Anticipation |
 | `RebirthInjector` | Rebirth (stat reallocation) option at Sites of Grace via ESD |

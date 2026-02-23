@@ -138,10 +138,6 @@ weight = 6
 [zones.scadualtus_gaol]
 weight = 6
 
-# Prerequisites
-[zones.leyndell_erdtree]
-requires = "farumazula_maliketh"  # Must defeat Maliketh to remove Erdtree thorns
-
 # Exclusions
 [zones.leyndell2_erdtree]
 exclude = true  # Ashen Erdtree entrance — no usable entry fogs in FogMod graph (AlternateOf + altlogic tags)

@@ -445,11 +445,10 @@ Example:
                 bossDefeatFlag);
         }
 
-        // 7f2. Patch Maliketh warp for Ashen Leyndell.
-        // Event 900 sets flag 300 (Erdtree burning) then warps via WarpPlayer.
-        // EventEditor replaced the region with primary (m11_00), but flag 300
-        // causes m11_05 to load. Patch Event 900 + m13 portal to use alt region.
-        // NOTE: fogwarp events handle alt-warp natively (template 9005777).
+        // 7f2. Patch Erdtree warp to target Ashen Leyndell (m11_05) directly.
+        // FogMod's fogwarp template compiles an alt-warp: primary → m11_00,
+        // alt (flag 300) → m11_05. We replace the primary with m11_05 so
+        // the Erdtree is reachable without Maliketh defeat / flag 300.
         var erdtreeEntrance = ann.Entrances.Concat(ann.Warps).FirstOrDefault(e =>
             e.BSide?.Area == "leyndell_erdtree" &&
             e.BSide?.AlternateSide?.Warp != null &&
@@ -457,7 +456,7 @@ Example:
 
         if (erdtreeEntrance != null)
         {
-            MalikethWarpPatcher.Patch(
+            ErdtreeWarpPatcher.Patch(
                 modDir,
                 erdtreeEntrance.BSide.Warp.Region,
                 erdtreeEntrance.BSide.AlternateSide.Warp.Region,

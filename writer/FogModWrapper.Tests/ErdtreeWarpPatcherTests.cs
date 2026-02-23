@@ -3,11 +3,14 @@ using Xunit;
 
 namespace FogModWrapper.Tests;
 
-public class MalikethWarpPatcherTests
+public class ErdtreeWarpPatcherTests
 {
     private const int PRIMARY_REGION = 755890068;
     private const int ALT_REGION = 755890086;
     private const string ALT_MAP = "m11_05_00_00";
+
+    private static readonly byte[] AltMapBytes = ErdtreeWarpPatcher.ParseMapBytes(ALT_MAP);
+    private static readonly int AltMapPacked = ErdtreeWarpPatcher.PackMapId(ALT_MAP);
 
     private static EMEVD.Event MakeEvent(long id, params EMEVD.Instruction[] instructions)
     {
@@ -52,15 +55,16 @@ public class MalikethWarpPatcherTests
         return new EMEVD.Instruction(2003, 66, args);
     }
 
-    // --- PatchEvent tests ---
+    // --- PatchEmevd tests ---
 
     [Fact]
-    public void PatchEvent_WarpPlayer_PatchesRegionAndMap()
+    public void PatchEmevd_WarpPlayer_PatchesRegionAndMap()
     {
         var warp = MakeWarpPlayer(11, 0, 0, 0, PRIMARY_REGION);
-        var evt = MakeEvent(900, MakeSetEventFlag(300), warp);
+        var emevd = new EMEVD();
+        emevd.Events.Add(MakeEvent(1040290310, warp));
 
-        var result = MalikethWarpPatcher.PatchEvent(evt, PRIMARY_REGION, ALT_REGION, ALT_MAP);
+        var result = ErdtreeWarpPatcher.PatchEmevd(emevd, PRIMARY_REGION, ALT_REGION, AltMapBytes, AltMapPacked);
 
         Assert.Equal(1, result);
         Assert.Equal(ALT_REGION, BitConverter.ToInt32(warp.ArgData, 4));
@@ -71,26 +75,13 @@ public class MalikethWarpPatcherTests
     }
 
     [Fact]
-    public void PatchEvent_MultipleWarpPlayers_PatchesAll()
-    {
-        var warp1 = MakeWarpPlayer(11, 0, 0, 0, PRIMARY_REGION);
-        var warp2 = MakeWarpPlayer(11, 0, 0, 0, PRIMARY_REGION);
-        var evt = MakeEvent(900, MakeSetEventFlag(300), warp1, warp2);
-
-        var result = MalikethWarpPatcher.PatchEvent(evt, PRIMARY_REGION, ALT_REGION, ALT_MAP);
-
-        Assert.Equal(2, result);
-        Assert.Equal(ALT_REGION, BitConverter.ToInt32(warp1.ArgData, 4));
-        Assert.Equal(ALT_REGION, BitConverter.ToInt32(warp2.ArgData, 4));
-    }
-
-    [Fact]
-    public void PatchEvent_CutsceneWarp_PatchesRegionAndMap()
+    public void PatchEmevd_CutsceneWarp_PatchesRegionAndMap()
     {
         var warp = MakeCutsceneWarp(13000050, 1, PRIMARY_REGION, 11000000);
-        var evt = MakeEvent(900, warp);
+        var emevd = new EMEVD();
+        emevd.Events.Add(MakeEvent(900, warp));
 
-        var result = MalikethWarpPatcher.PatchEvent(evt, PRIMARY_REGION, ALT_REGION, ALT_MAP);
+        var result = ErdtreeWarpPatcher.PatchEmevd(emevd, PRIMARY_REGION, ALT_REGION, AltMapBytes, AltMapPacked);
 
         Assert.Equal(1, result);
         Assert.Equal(ALT_REGION, BitConverter.ToInt32(warp.ArgData, 8));
@@ -98,55 +89,54 @@ public class MalikethWarpPatcherTests
     }
 
     [Fact]
-    public void PatchEvent_NonMatchingRegion_DoesNotPatch()
+    public void PatchEmevd_MultipleEvents_PatchesAll()
+    {
+        var warp1 = MakeWarpPlayer(11, 0, 0, 0, PRIMARY_REGION);
+        var warp2 = MakeWarpPlayer(11, 0, 0, 0, PRIMARY_REGION);
+        var emevd = new EMEVD();
+        emevd.Events.Add(MakeEvent(1040290310, warp1));
+        emevd.Events.Add(MakeEvent(900, MakeSetEventFlag(300), warp2));
+
+        var result = ErdtreeWarpPatcher.PatchEmevd(emevd, PRIMARY_REGION, ALT_REGION, AltMapBytes, AltMapPacked);
+
+        Assert.Equal(2, result);
+        Assert.Equal(ALT_REGION, BitConverter.ToInt32(warp1.ArgData, 4));
+        Assert.Equal(ALT_REGION, BitConverter.ToInt32(warp2.ArgData, 4));
+    }
+
+    [Fact]
+    public void PatchEmevd_NonMatchingRegion_DoesNotPatch()
     {
         int otherRegion = 755890099;
         var warp = MakeWarpPlayer(11, 0, 0, 0, otherRegion);
-        var evt = MakeEvent(900, warp);
+        var emevd = new EMEVD();
+        emevd.Events.Add(MakeEvent(1040290310, warp));
 
-        var result = MalikethWarpPatcher.PatchEvent(evt, PRIMARY_REGION, ALT_REGION, ALT_MAP);
+        var result = ErdtreeWarpPatcher.PatchEmevd(emevd, PRIMARY_REGION, ALT_REGION, AltMapBytes, AltMapPacked);
 
         Assert.Equal(0, result);
         Assert.Equal(otherRegion, BitConverter.ToInt32(warp.ArgData, 4));
     }
 
     [Fact]
-    public void PatchEvent_NonWarpInstruction_Untouched()
+    public void PatchEmevd_NonWarpInstruction_Untouched()
     {
         var setFlag = MakeSetEventFlag(300);
         var originalArgs = (byte[])setFlag.ArgData.Clone();
-        var evt = MakeEvent(900, setFlag);
+        var emevd = new EMEVD();
+        emevd.Events.Add(MakeEvent(900, setFlag));
 
-        MalikethWarpPatcher.PatchEvent(evt, PRIMARY_REGION, ALT_REGION, ALT_MAP);
+        ErdtreeWarpPatcher.PatchEmevd(emevd, PRIMARY_REGION, ALT_REGION, AltMapBytes, AltMapPacked);
 
         Assert.Equal(originalArgs, setFlag.ArgData);
     }
 
-    // --- PatchEmevdEvents tests ---
-
     [Fact]
-    public void PatchEmevdEvents_OnlyMatchesTargetRegion()
-    {
-        int otherRegion = 755890099;
-        var matchWarp = MakeWarpPlayer(11, 0, 0, 0, PRIMARY_REGION);
-        var noMatchWarp = MakeWarpPlayer(10, 1, 0, 0, otherRegion);
-        var emevd = new EMEVD();
-        emevd.Events.Add(MakeEvent(1040290310, matchWarp));
-        emevd.Events.Add(MakeEvent(1040290311, noMatchWarp));
-
-        var result = MalikethWarpPatcher.PatchEmevdEvents(emevd, PRIMARY_REGION, ALT_REGION, ALT_MAP);
-
-        Assert.Equal(1, result);
-        Assert.Equal(ALT_REGION, BitConverter.ToInt32(matchWarp.ArgData, 4));
-        Assert.Equal(otherRegion, BitConverter.ToInt32(noMatchWarp.ArgData, 4));
-    }
-
-    [Fact]
-    public void PatchEmevdEvents_EmptyEmevd_ReturnsZero()
+    public void PatchEmevd_EmptyEmevd_ReturnsZero()
     {
         var emevd = new EMEVD();
 
-        var result = MalikethWarpPatcher.PatchEmevdEvents(emevd, PRIMARY_REGION, ALT_REGION, ALT_MAP);
+        var result = ErdtreeWarpPatcher.PatchEmevd(emevd, PRIMARY_REGION, ALT_REGION, AltMapBytes, AltMapPacked);
 
         Assert.Equal(0, result);
     }
@@ -159,7 +149,7 @@ public class MalikethWarpPatcherTests
     [InlineData("m13_00_00_00", new byte[] { 13, 0, 0, 0 })]
     public void ParseMapBytes_ValidMap_ReturnsCorrectBytes(string map, byte[] expected)
     {
-        Assert.Equal(expected, MalikethWarpPatcher.ParseMapBytes(map));
+        Assert.Equal(expected, ErdtreeWarpPatcher.ParseMapBytes(map));
     }
 
     [Theory]
@@ -168,6 +158,6 @@ public class MalikethWarpPatcherTests
     [InlineData("m13_00_00_00", 13000000)]
     public void PackMapId_ValidMap_ReturnsCorrectId(string map, int expected)
     {
-        Assert.Equal(expected, MalikethWarpPatcher.PackMapId(map));
+        Assert.Equal(expected, ErdtreeWarpPatcher.PackMapId(map));
     }
 }
