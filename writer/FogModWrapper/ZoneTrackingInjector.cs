@@ -193,7 +193,7 @@ public static class ZoneTrackingInjector
         // FogMod's getEventMap() may place warp events in a different EMEVD file than the
         // exit gate's map prefix (e.g., parent maps for open world tiles, map deduplication).
         // The compound key works when EMEVD filename matches exit_gate map; dest-only handles
-        // the rest. See docs/specs/zone-tracking-accuracy.md for design rationale.
+        // the rest. See docs/zone-tracking.md for design rationale.
         var compoundLookup = new Dictionary<((byte, byte, byte, byte), (byte, byte, byte, byte)), int>();
         var destOnlyLookup = new Dictionary<(byte, byte, byte, byte), int>();
         var destOnlyCollisions = new HashSet<(byte, byte, byte, byte)>();

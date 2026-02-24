@@ -421,6 +421,7 @@ Zones have tiers (1-28) based on their layer in the DAG. FogMod applies SpEffect
 ## Further Documentation
 
 - [event-flags.md](event-flags.md) — Event flag allocation, EMEVD event IDs, VirtualMemoryFlag constraints
+- [zone-tracking.md](zone-tracking.md) — Zone tracking injection: FogMod event compilation, matching strategies, entity disambiguation
 - [dag-generation.md](dag-generation.md) — DAG generation algorithm: topology operations, cluster compatibility, retry system
 - [clusters.md](clusters.md) — Cluster generation: zone grouping, fog classification, bidirectional detection
 - [item-giving-limitations.md](item-giving-limitations.md) — EMEVD item type constraints and Ash of War workaround
