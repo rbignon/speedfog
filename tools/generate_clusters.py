@@ -1410,6 +1410,7 @@ def filter_and_enrich_clusters(
     exclude_dlc: bool,
     exclude_overworld: bool,
     all_fogs: list[FogData] | None = None,
+    world_graph: WorldGraph | None = None,
 ) -> list[Cluster]:
     """
     Filter out invalid clusters and enrich with type/weight/id/defeat_flag.
@@ -1461,6 +1462,39 @@ def filter_and_enrich_clusters(
             primary_zone, zones_meta, areas, major_zones, fortress_zones
         )
         cluster.cluster_type = cluster_type or "unknown"
+
+        # Downgrade multi-zone major_boss clusters where the boss is skippable.
+        # A boss is skippable when the player can reach exit fogs from the entry
+        # without passing through any boss zone (has_boss). This prevents clusters
+        # like "Ashen Leyndell" (7 zones, exits in sewers/capital) from being
+        # treated as mandatory boss encounters when the boss can be bypassed.
+        if (
+            cluster.cluster_type == "major_boss"
+            and len(cluster.zones) > 1
+            and world_graph is not None
+        ):
+            boss_zones = frozenset(
+                z for z in cluster.zones if areas.get(z) and areas[z].has_boss
+            )
+            entry_fog_zones = {f["zone"] for f in cluster.entry_fogs}
+            # Only check when entry is NOT in a boss zone (if it is, the player
+            # lands directly in the boss arena and cannot avoid the fight)
+            if boss_zones and not (entry_fog_zones & boss_zones):
+                non_boss = frozenset(cluster.zones) - boss_zones
+                reachable = world_graph.get_reachable_within(entry_fog_zones, non_boss)
+                # Exclude exits that share a fog_id with an entry fog in the
+                # same zone — these are bidirectional gates used as the entry
+                # point itself (e.g., Godskin Duo balcony fog). Taking that
+                # exit just means going back through the same gate, not
+                # bypassing the boss via an alternate route.
+                entry_fog_ids = {(f["fog_id"], f["zone"]) for f in cluster.entry_fogs}
+                has_alternate_exit = any(
+                    f["zone"] in reachable
+                    and (f["fog_id"], f["zone"]) not in entry_fog_ids
+                    for f in cluster.exit_fogs
+                )
+                if has_alternate_exit:
+                    cluster.cluster_type = "legacy_dungeon"
 
         # Update cluster ID to use the type-based primary zone
         hash_input = ",".join(sorted(cluster.zones)).encode("utf-8")
@@ -1794,6 +1828,7 @@ def main() -> int:
         exclude_dlc,
         exclude_overworld,
         all_fogs=all_fogs,
+        world_graph=world_graph,
     )
     print(f"  Final cluster count: {len(clusters)}")
 

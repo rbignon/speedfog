@@ -2970,3 +2970,195 @@ class TestRequiresField:
         result = clusters_to_json([cluster], areas)
         cluster_entry = result["clusters"][0]
         assert "requires" not in cluster_entry
+
+
+class TestMajorBossDowngrade:
+    """Tests for downgrading major_boss clusters with skippable bosses.
+
+    Multi-zone major_boss clusters where exits are reachable without passing
+    through a boss zone should be downgraded to legacy_dungeon.
+    """
+
+    @staticmethod
+    def _make_areas(**zone_defs: dict) -> dict[str, AreaData]:
+        """Helper: create AreaData entries. Each value is a dict with optional
+        keys: maps, tags, has_boss, defeat_flag."""
+        areas = {}
+        for name, opts in zone_defs.items():
+            areas[name] = AreaData(
+                name=name,
+                text=opts.get("text", name),
+                maps=opts.get("maps", ["m10_00_00_00"]),
+                tags=opts.get("tags", []),
+                has_boss=opts.get("has_boss", False),
+                defeat_flag=opts.get("defeat_flag", 0),
+            )
+        return areas
+
+    def test_skippable_boss_downgraded(self):
+        """Cluster with exits reachable without passing through boss is downgraded."""
+        # Layout: entry_zone -> boss_zone (one-way drop)
+        #         entry_zone -> exploration_zone (bidirectional)
+        # Entry in entry_zone, boss in boss_zone, exits in exploration_zone
+        # → boss is skippable → downgrade to legacy_dungeon
+        areas = self._make_areas(
+            entry_zone={"maps": ["m10_00_00_00"]},
+            boss_zone={"maps": ["m10_00_00_00"], "has_boss": True, "defeat_flag": 999},
+            exploration_zone={"maps": ["m10_00_00_00"]},
+        )
+        wg = WorldGraph()
+        wg.add_edge("entry_zone", "boss_zone", bidirectional=False)
+        wg.add_edge("entry_zone", "exploration_zone", bidirectional=True)
+
+        cluster = Cluster(
+            zones=frozenset({"entry_zone", "boss_zone", "exploration_zone"}),
+            entry_fogs=[{"fog_id": "entry_fog", "zone": "entry_zone"}],
+            exit_fogs=[
+                {"fog_id": "boss_exit", "zone": "boss_zone"},
+                {"fog_id": "explore_exit", "zone": "exploration_zone"},
+            ],
+        )
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            {"defaults": {"major_boss": 4, "legacy_dungeon": 5}, "zones": {}},
+            {"boss_zone"},
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+            world_graph=wg,
+        )
+
+        assert len(result) == 1
+        assert result[0].cluster_type == "legacy_dungeon"
+
+    def test_unskippable_boss_entry_in_boss_zone(self):
+        """Cluster with entry directly in boss zone stays major_boss."""
+        # Entry fog is in the boss zone itself → can't avoid the boss
+        areas = self._make_areas(
+            boss_zone={"maps": ["m10_00_00_00"], "has_boss": True, "defeat_flag": 999},
+            post_boss={"maps": ["m10_00_00_00"]},
+        )
+        wg = WorldGraph()
+        wg.add_edge("boss_zone", "post_boss", bidirectional=False)
+
+        cluster = Cluster(
+            zones=frozenset({"boss_zone", "post_boss"}),
+            entry_fogs=[{"fog_id": "entry_fog", "zone": "boss_zone"}],
+            exit_fogs=[
+                {"fog_id": "boss_exit", "zone": "boss_zone"},
+                {"fog_id": "post_exit", "zone": "post_boss"},
+            ],
+        )
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            {"defaults": {"major_boss": 4}, "zones": {}},
+            {"boss_zone"},
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+            world_graph=wg,
+        )
+
+        assert len(result) == 1
+        assert result[0].cluster_type == "major_boss"
+
+    def test_unskippable_boss_only_entry_fog_as_exit(self):
+        """Cluster where only non-boss exit is the entry fog itself stays major_boss.
+
+        Models Godskin Duo: entry on balcony, drop to boss arena. The balcony
+        fog is both entry and exit, but taking that exit just goes back through
+        the entrance gate — not an alternate route bypassing the boss.
+        """
+        areas = self._make_areas(
+            balcony={"maps": ["m13_00_00_00"]},
+            boss_arena={"maps": ["m13_00_00_00"], "has_boss": True, "defeat_flag": 888},
+        )
+        wg = WorldGraph()
+        wg.add_edge("balcony", "boss_arena", bidirectional=False)
+
+        cluster = Cluster(
+            zones=frozenset({"balcony", "boss_arena"}),
+            entry_fogs=[{"fog_id": "balcony_fog", "zone": "balcony"}],
+            exit_fogs=[
+                {"fog_id": "balcony_fog", "zone": "balcony"},  # same fog as entry
+                {"fog_id": "arena_exit", "zone": "boss_arena"},
+            ],
+        )
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            {"defaults": {"major_boss": 4}, "zones": {}},
+            {"boss_arena"},
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+            world_graph=wg,
+        )
+
+        assert len(result) == 1
+        assert result[0].cluster_type == "major_boss"
+
+    def test_no_world_graph_no_downgrade(self):
+        """Without world_graph, skippability check is skipped entirely."""
+        areas = self._make_areas(
+            entry_zone={"maps": ["m10_00_00_00"]},
+            boss_zone={
+                "maps": ["m10_00_00_00"],
+                "has_boss": True,
+                "defeat_flag": 999,
+            },
+            exploration_zone={"maps": ["m10_00_00_00"]},
+        )
+        cluster = Cluster(
+            zones=frozenset({"entry_zone", "boss_zone", "exploration_zone"}),
+            entry_fogs=[{"fog_id": "entry_fog", "zone": "entry_zone"}],
+            exit_fogs=[
+                {"fog_id": "boss_exit", "zone": "boss_zone"},
+                {"fog_id": "explore_exit", "zone": "exploration_zone"},
+            ],
+        )
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            {"defaults": {"major_boss": 4, "legacy_dungeon": 5}, "zones": {}},
+            {"boss_zone"},
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+            # world_graph intentionally not passed
+        )
+
+        assert len(result) == 1
+        assert result[0].cluster_type == "major_boss"
+
+    def test_single_zone_major_boss_not_affected(self):
+        """Single-zone major_boss cluster is never downgraded."""
+        areas = self._make_areas(
+            boss_zone={"maps": ["m10_00_00_00"], "has_boss": True, "defeat_flag": 777},
+        )
+
+        cluster = Cluster(
+            zones=frozenset({"boss_zone"}),
+            entry_fogs=[{"fog_id": "entry", "zone": "boss_zone"}],
+            exit_fogs=[{"fog_id": "exit", "zone": "boss_zone"}],
+        )
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            {"defaults": {"major_boss": 4}, "zones": {}},
+            {"boss_zone"},
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+            world_graph=WorldGraph(),
+        )
+
+        assert len(result) == 1
+        assert result[0].cluster_type == "major_boss"
