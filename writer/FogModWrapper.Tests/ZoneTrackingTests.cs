@@ -40,4 +40,80 @@ public class ZoneTrackingTests
         Assert.Equal(0, ZoneTrackingInjector.ParseGateActionEntity(
             "m60_13_13_02_m60_52_53_00-AEG099_003_9001"));
     }
+
+    [Fact]
+    public void ResolveEntityCandidate_SingleCandidate_ReturnsFlag()
+    {
+        var candidates = new List<ZoneTrackingInjector.EntityCandidate>
+        {
+            new(flagId: 100, destMaps: new HashSet<(byte, byte, byte, byte)> { (31, 5, 0, 0) })
+        };
+        // Even with a non-matching dest map, single candidate returns directly
+        var result = ZoneTrackingInjector.ResolveEntityCandidate(candidates, (10, 1, 0, 0));
+        Assert.Equal(100, result);
+    }
+
+    [Fact]
+    public void ResolveEntityCandidate_TwoCandidates_DisambiguatesByDestMap()
+    {
+        var candidates = new List<ZoneTrackingInjector.EntityCandidate>
+        {
+            new(flagId: 100, destMaps: new HashSet<(byte, byte, byte, byte)> { (31, 5, 0, 0) }),
+            new(flagId: 200, destMaps: new HashSet<(byte, byte, byte, byte)> { (10, 1, 0, 0) })
+        };
+        // Warp targets m10_01 → should pick flag 200
+        var result = ZoneTrackingInjector.ResolveEntityCandidate(candidates, (10, 1, 0, 0));
+        Assert.Equal(200, result);
+
+        // Warp targets m31_05 → should pick flag 100
+        result = ZoneTrackingInjector.ResolveEntityCandidate(candidates, (31, 5, 0, 0));
+        Assert.Equal(100, result);
+    }
+
+    [Fact]
+    public void ResolveEntityCandidate_TwoCandidates_BothMatch_ReturnsNull()
+    {
+        // When both candidates share the same dest map, disambiguation is impossible
+        var sharedMap = ((byte)31, (byte)5, (byte)0, (byte)0);
+        var candidates = new List<ZoneTrackingInjector.EntityCandidate>
+        {
+            new(flagId: 100, destMaps: new HashSet<(byte, byte, byte, byte)> { sharedMap }),
+            new(flagId: 200, destMaps: new HashSet<(byte, byte, byte, byte)> { sharedMap })
+        };
+        var result = ZoneTrackingInjector.ResolveEntityCandidate(candidates, sharedMap);
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void ResolveEntityCandidate_TwoCandidates_NoMatch_ReturnsNull()
+    {
+        var candidates = new List<ZoneTrackingInjector.EntityCandidate>
+        {
+            new(flagId: 100, destMaps: new HashSet<(byte, byte, byte, byte)> { (31, 5, 0, 0) }),
+            new(flagId: 200, destMaps: new HashSet<(byte, byte, byte, byte)> { (10, 1, 0, 0) })
+        };
+        // Warp targets a map not in either candidate's DestMaps
+        var result = ZoneTrackingInjector.ResolveEntityCandidate(candidates, (60, 44, 34, 0));
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void RegisterEntity_SharedEntity_CreatesTwoCandidates()
+    {
+        var entityToFlag = new Dictionary<int, List<ZoneTrackingInjector.EntityCandidate>>();
+
+        // Register two connections that share entity 12345
+        ZoneTrackingInjector.RegisterEntity(
+            entityToFlag, 12345, 100,
+            new HashSet<(byte, byte, byte, byte)> { (31, 5, 0, 0) });
+        ZoneTrackingInjector.RegisterEntity(
+            entityToFlag, 12345, 200,
+            new HashSet<(byte, byte, byte, byte)> { (10, 1, 0, 0) });
+
+        Assert.True(entityToFlag.ContainsKey(12345));
+        var candidates = entityToFlag[12345];
+        Assert.Equal(2, candidates.Count);
+        Assert.Equal(100, candidates[0].FlagId);
+        Assert.Equal(200, candidates[1].FlagId);
+    }
 }

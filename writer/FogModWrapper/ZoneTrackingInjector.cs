@@ -22,6 +22,24 @@ public static class ZoneTrackingInjector
     private const int FOGMOD_ENTITY_BASE = 755890000;
 
     /// <summary>
+    /// A candidate entity-to-flag mapping, enriched with destination maps for disambiguation.
+    /// When two connections share the same exit fog gate (allow_entry_as_exit), the same entity
+    /// maps to multiple flags. The DestMaps allow disambiguation by comparing against the warp
+    /// instruction's actual destination.
+    /// </summary>
+    internal readonly struct EntityCandidate
+    {
+        public readonly int FlagId;
+        public readonly HashSet<(byte, byte, byte, byte)> DestMaps;
+
+        public EntityCandidate(int flagId, HashSet<(byte, byte, byte, byte)> destMaps)
+        {
+            FlagId = flagId;
+            DestMaps = destMaps;
+        }
+    }
+
+    /// <summary>
     /// Destination map and region extracted from a warp instruction.
     /// </summary>
     private readonly struct WarpInfo
@@ -181,27 +199,16 @@ public static class ZoneTrackingInjector
         var destOnlyCollisions = new HashSet<(byte, byte, byte, byte)>();
         var compoundCollisions = new HashSet<((byte, byte, byte, byte), (byte, byte, byte, byte))>();
 
-        // Entity-based disambiguation: exit gate entity_id → flag_id.
-        // Used to resolve compound key collisions where two connections share
-        // the same (source_map, dest_map) but have different exit fog gates.
-        var entityToFlag = new Dictionary<int, int>();
+        // Entity-based disambiguation: exit gate entity_id → list of candidates.
+        // When two connections share the same exit fog gate (allow_entry_as_exit),
+        // the same entity maps to multiple candidates. Each candidate carries its
+        // destination maps for disambiguation against the warp instruction's target.
+        var entityToFlag = new Dictionary<int, List<EntityCandidate>>();
 
         foreach (var conn in connections)
         {
             if (conn.FlagId <= 0)
                 continue;
-
-            // Build entity lookup for disambiguation.
-            // Two entity sources:
-            // 1. ExitEntityId — the fog gate asset entity from fog_data.json
-            // 2. Gate name suffix — for numeric gates (e.g., m34_12_00_00_34122840),
-            //    the suffix IS the action entity used by FogMod in IfActionButtonInArea.
-            //    For AEG099 gates, this is not a valid entity (skipped by TryParse).
-            if (conn.ExitEntityId > 0)
-                entityToFlag.TryAdd(conn.ExitEntityId, conn.FlagId);
-            int gateActionEntity = ParseGateActionEntity(conn.ExitGate);
-            if (gateActionEntity > 0)
-                entityToFlag.TryAdd(gateActionEntity, conn.FlagId);
 
             // Build all possible source maps (exit_gate maps + exit_area areaMaps).
             // FogMod's getEventMap() may place the warp event in the exit area's internal
@@ -216,6 +223,20 @@ public static class ZoneTrackingInjector
             var allDestMaps = ParseMapBytesFromGateName(conn.EntranceGate);
             if (areaMaps.TryGetValue(conn.EntranceArea, out var entranceMapsStr) && !string.IsNullOrEmpty(entranceMapsStr))
                 allDestMaps.AddRange(ParseMapBytesFromMapString(entranceMapsStr));
+
+            // Build entity lookup for disambiguation (after allDestMaps so we can attach them).
+            // Two entity sources:
+            // 1. ExitEntityId — the fog gate asset entity from fog_data.json
+            // 2. Gate name suffix — for numeric gates (e.g., m34_12_00_00_34122840),
+            //    the suffix IS the action entity used by FogMod in IfActionButtonInArea.
+            //    For AEG099 gates, this is not a valid entity (skipped by TryParse).
+            var destMapSet = new HashSet<(byte, byte, byte, byte)>(
+                allDestMaps.Select(b => (b[0], b[1], b[2], b[3])));
+            if (conn.ExitEntityId > 0)
+                RegisterEntity(entityToFlag, conn.ExitEntityId, conn.FlagId, destMapSet);
+            int gateActionEntity = ParseGateActionEntity(conn.ExitGate);
+            if (gateActionEntity > 0)
+                RegisterEntity(entityToFlag, gateActionEntity, conn.FlagId, destMapSet);
 
             // Register compound keys (all source × dest combinations)
             // Track collisions where TryAdd would keep a different flag
@@ -244,7 +265,7 @@ public static class ZoneTrackingInjector
         Console.WriteLine($"Zone tracking: {compoundLookup.Count} compound keys, " +
                           $"{destOnlyLookup.Count} dest maps ({destOnlyCollisions.Count} dest collisions, " +
                           $"{compoundCollisions.Count} compound collisions, " +
-                          $"{entityToFlag.Count} entity IDs)");
+                          $"{entityToFlag.Values.Sum(v => v.Count)} entity candidates across {entityToFlag.Count} entities)");
 
         int totalInjected = 0;
         int compoundMatches = 0;
@@ -299,7 +320,7 @@ public static class ZoneTrackingInjector
                 // exit gate entity. If so, it's a FogMod-generated manual fogwarp event, even
                 // if it uses vanilla region entity IDs (e.g., Placidusax lie-down uses region
                 // 13002834 which is below FOGMOD_ENTITY_BASE). The entity match gives us the
-                // flag_id directly.
+                // flag_id directly (or a list of candidates if the gate is shared).
                 //
                 // Also resolves parameterized entity values: FogMod's manual events use
                 // InitializeEvent to pass actual entity IDs as parameters, with 0 as
@@ -307,7 +328,7 @@ public static class ZoneTrackingInjector
                 // Parameter list and the init args.
                 List<byte[]>? evtInitArgs = null;
                 initArgsMap.TryGetValue(evt.ID, out evtInitArgs);
-                int? entityMatchedFlag = TryMatchByEntityId(evt, entityToFlag, evtInitArgs);
+                var entityCandidates = TryMatchEntityCandidates(evt, entityToFlag, evtInitArgs);
 
                 for (int i = 0; i < evt.Instructions.Count; i++)
                 {
@@ -324,20 +345,24 @@ public static class ZoneTrackingInjector
                     // 1. Region >= FOGMOD_ENTITY_BASE (FogMod-allocated warp target entity)
                     // 2. Event contains IfActionButtonInArea with a known exit gate entity
                     //    (FogMod manual fogwarp that reuses vanilla destination regions)
-                    if (region < FOGMOD_ENTITY_BASE && !entityMatchedFlag.HasValue)
+                    if (region < FOGMOD_ENTITY_BASE && entityCandidates == null)
                         continue;
 
                     // Strategy 0: Direct entity match — the event's IfActionButtonInArea
-                    // references a known exit gate, giving us an unambiguous flag_id.
-                    // This is the most reliable match: it identifies exactly which fog gate
-                    // triggers this warp, regardless of the region entity ID value.
+                    // references a known exit gate. Resolve candidates against the warp
+                    // destination map for disambiguation when the gate is shared.
                     int flagId = 0;
                     bool matched = false;
-                    if (entityMatchedFlag.HasValue)
+                    if (entityCandidates != null)
                     {
-                        flagId = entityMatchedFlag.Value;
-                        entityMatches++;
-                        matched = true;
+                        var resolved = ResolveEntityCandidate(entityCandidates, destMap);
+                        if (resolved.HasValue)
+                        {
+                            flagId = resolved.Value;
+                            entityMatches++;
+                            matched = true;
+                        }
+                        // else: multiple candidates, none matched dest map — fall through
                     }
 
                     // Strategy 1: Try compound key (source_map, dest_map) — resolves collisions
@@ -347,13 +372,14 @@ public static class ZoneTrackingInjector
                         if (compoundLookup.TryGetValue(compoundKey, out flagId))
                         {
                             // If this compound key has a collision, try entity-based matching
-                            // for more precise disambiguation.
-                            if (compoundCollisions.Contains(compoundKey) && entityToFlag.Count > 0)
+                            // for more precise disambiguation. Reuse entityCandidates from
+                            // the pre-scan rather than re-scanning the event's instructions.
+                            if (compoundCollisions.Contains(compoundKey) && entityCandidates != null)
                             {
-                                var entityFlag = TryMatchByEntityId(evt, entityToFlag, evtInitArgs);
-                                if (entityFlag.HasValue)
+                                var resolved = ResolveEntityCandidate(entityCandidates, destMap);
+                                if (resolved.HasValue)
                                 {
-                                    flagId = entityFlag.Value;
+                                    flagId = resolved.Value;
                                     entityMatches++;
                                     matched = true;
                                 }
@@ -568,7 +594,22 @@ public static class ZoneTrackingInjector
     }
 
     /// <summary>
-    /// Try to match an event to a connection flag by scanning its instructions for a known
+    /// Register an entity ID → candidate mapping, appending to the list for shared entities.
+    /// </summary>
+    internal static void RegisterEntity(
+        Dictionary<int, List<EntityCandidate>> entityToFlag,
+        int entityId, int flagId, HashSet<(byte, byte, byte, byte)> destMaps)
+    {
+        if (!entityToFlag.TryGetValue(entityId, out var list))
+        {
+            list = new List<EntityCandidate>();
+            entityToFlag[entityId] = list;
+        }
+        list.Add(new EntityCandidate(flagId, destMaps));
+    }
+
+    /// <summary>
+    /// Try to match an event to connection candidates by scanning its instructions for a known
     /// exit gate entity ID in IfActionButtonInArea (bank 3, id 24).
     ///
     /// ArgData layout for IfActionButtonInArea (3:24):
@@ -584,13 +625,13 @@ public static class ZoneTrackingInjector
     ///    by finding the Parameter entry that targets this instruction's offset 8, then
     ///    reading the actual value from the InitializeEvent args at the source offset.
     /// </summary>
-    /// <returns>The matching flag_id, or null if no entity_id matches.</returns>
+    /// <returns>The matching candidate list, or null if no entity_id matches.</returns>
     /// <remarks>
     /// Must be called before any instruction insertions into the event, since
     /// Parameter.InstructionIndex values refer to the original instruction list.
     /// </remarks>
-    private static int? TryMatchByEntityId(
-        EMEVD.Event evt, Dictionary<int, int> entityToFlag, List<byte[]>? initArgsList)
+    internal static List<EntityCandidate>? TryMatchEntityCandidates(
+        EMEVD.Event evt, Dictionary<int, List<EntityCandidate>> entityToFlag, List<byte[]>? initArgsList)
     {
         for (int instrIdx = 0; instrIdx < evt.Instructions.Count; instrIdx++)
         {
@@ -602,8 +643,8 @@ public static class ZoneTrackingInjector
             int entityId = BitConverter.ToInt32(instr.ArgData, 8);
 
             // Case 1: literal entity ID
-            if (entityId != 0 && entityToFlag.TryGetValue(entityId, out int flagId))
-                return flagId;
+            if (entityId != 0 && entityToFlag.TryGetValue(entityId, out var candidates))
+                return candidates;
 
             // Case 2: parameterized entity (placeholder = 0). Resolve from init args.
             if (entityId == 0 && initArgsList != null)
@@ -626,14 +667,49 @@ public static class ZoneTrackingInjector
                             {
                                 int resolvedEntity = BitConverter.ToInt32(initArgs, srcOffset);
                                 if (resolvedEntity != 0 &&
-                                    entityToFlag.TryGetValue(resolvedEntity, out flagId))
-                                    return flagId;
+                                    entityToFlag.TryGetValue(resolvedEntity, out candidates))
+                                    return candidates;
                             }
                         }
                     }
                 }
+
+                // Diagnostic: parameterized entity with no init args to resolve.
+                // This happens for roundtable exit events where entity_id=0 but no
+                // InitializeEvent args are available in this EMEVD file.
+                if (initArgsList.Count == 0)
+                {
+                    Console.WriteLine($"Zone tracking: event {evt.ID} has IfActionButtonInArea " +
+                                      $"with entity_id=0 but no init args to resolve (possible roundtable exit)");
+                }
+            }
+            else if (entityId == 0 && initArgsList == null)
+            {
+                Console.WriteLine($"Zone tracking: event {evt.ID} has IfActionButtonInArea " +
+                                  $"with entity_id=0 and no init args map entry (possible roundtable exit)");
             }
         }
+        return null;
+    }
+
+    /// <summary>
+    /// Resolve a list of entity candidates to a single flag ID by matching against the
+    /// warp instruction's destination map. When only one candidate exists, returns it
+    /// directly. When multiple exist (shared exit gate), disambiguates by destination map.
+    /// </summary>
+    /// <returns>The matched flag_id, or null if disambiguation fails.</returns>
+    internal static int? ResolveEntityCandidate(
+        List<EntityCandidate> candidates, (byte, byte, byte, byte) warpDestMap)
+    {
+        if (candidates.Count == 1)
+            return candidates[0].FlagId;
+
+        // Multiple candidates: find the one whose DestMaps contains the warp destination.
+        var matches = candidates.Where(c => c.DestMaps.Contains(warpDestMap)).ToList();
+        if (matches.Count == 1)
+            return matches[0].FlagId;
+
+        // 0 or N matches — ambiguous, fall through to compound/dest-only strategies.
         return null;
     }
 
