@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 
-def _parse_qualified_fog_id(qualified: str) -> tuple[str | None, str]:
+def parse_qualified_fog_id(qualified: str) -> tuple[str | None, str]:
     """Parse 'zone:fog_id' or plain 'fog_id'. Returns (zone_or_none, fog_id)."""
     if ":" in qualified:
         zone, fog_id = qualified.split(":", 1)
@@ -21,7 +21,7 @@ def _filter_fogs_by_allowed(fogs: list[dict], allowed: list[str]) -> list[dict]:
     Each specifier is either a plain fog_id (matches any zone) or
     'zone:fog_id' (matches only that zone).
     """
-    parsed = [_parse_qualified_fog_id(spec) for spec in allowed]
+    parsed = [parse_qualified_fog_id(spec) for spec in allowed]
     result = []
     for fog in fogs:
         fog_id = fog["fog_id"]

@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from itertools import combinations
 
-from speedfog.clusters import ClusterData, ClusterPool, _parse_qualified_fog_id
+from speedfog.clusters import ClusterData, ClusterPool, parse_qualified_fog_id
 from speedfog.config import Config, resolve_final_boss_candidates
 from speedfog.dag import Branch, Dag, DagNode, FogRef
 from speedfog.planner import compute_tier, plan_layer_types
@@ -108,7 +108,7 @@ class GenerationResult:
 
 def _fog_matches_spec(fog_id: str, fog_zone: str, spec: str) -> bool:
     """Check if a fog matches a qualified or unqualified spec."""
-    spec_zone, spec_fog = _parse_qualified_fog_id(spec)
+    spec_zone, spec_fog = parse_qualified_fog_id(spec)
     return spec_fog == fog_id and (spec_zone is None or spec_zone == fog_zone)
 
 
@@ -1271,12 +1271,16 @@ def generate_dag(
                     shared_entry = FogRef(entries[0]["fog_id"], entries[0]["zone"])
                     entry_fogs_list = [shared_entry]
                     exits = compute_net_exits(primary_cluster, entries)
+                    for e in entries:
+                        exits = _filter_exits_by_proximity(primary_cluster, e, exits)
                 else:
                     entries = select_entries_for_merge(
                         primary_cluster, actual_merge, rng
                     )
                     entry_fogs_list = [FogRef(e["fog_id"], e["zone"]) for e in entries]
                     exits = compute_net_exits(primary_cluster, entries)
+                    for e in entries:
+                        exits = _filter_exits_by_proximity(primary_cluster, e, exits)
 
                 rng.shuffle(exits)
                 exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits[:1]]
