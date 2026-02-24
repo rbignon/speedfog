@@ -180,6 +180,9 @@ class Cluster:
     # Zones that are entry-only: reachable as entry but not reachable
     # back from deep zones (e.g. preboss zone with a one-way drop to boss).
     oneway_entry_zones: frozenset[str] = field(default_factory=frozenset)
+    proximity_groups: list[list[str]] = field(default_factory=list)
+    allowed_entries: list[str] = field(default_factory=list)
+    allowed_exits: list[str] = field(default_factory=list)
 
 
 # =============================================================================
@@ -1583,6 +1586,14 @@ def filter_and_enrich_clusters(
                 cluster.requires = zm["requires"]
                 break
 
+        # Read cluster-level constraints from [clusters.<id>] section
+        clusters_meta = metadata.get("clusters", {})
+        if cluster.cluster_id in clusters_meta:
+            cm = clusters_meta[cluster.cluster_id]
+            cluster.proximity_groups = cm.get("proximity_groups", [])
+            cluster.allowed_entries = cm.get("allowed_entries", [])
+            cluster.allowed_exits = cm.get("allowed_exits", [])
+
         filtered.append(cluster)
 
     return filtered
@@ -1678,10 +1689,16 @@ def clusters_to_json(
             entry["allow_entry_as_exit"] = True
         if c.requires:
             entry["requires"] = c.requires
+        if c.proximity_groups:
+            entry["proximity_groups"] = c.proximity_groups
+        if c.allowed_entries:
+            entry["allowed_entries"] = c.allowed_entries
+        if c.allowed_exits:
+            entry["allowed_exits"] = c.allowed_exits
         cluster_list.append(entry)
 
     return {
-        "version": "1.7",
+        "version": "1.8",
         "generated_from": "fog.txt",
         "cluster_count": len(clusters),
         "zone_maps": zone_maps,

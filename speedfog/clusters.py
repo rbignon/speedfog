@@ -7,6 +7,32 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 
+def _parse_qualified_fog_id(qualified: str) -> tuple[str | None, str]:
+    """Parse 'zone:fog_id' or plain 'fog_id'. Returns (zone_or_none, fog_id)."""
+    if ":" in qualified:
+        zone, fog_id = qualified.split(":", 1)
+        return zone, fog_id
+    return None, qualified
+
+
+def _filter_fogs_by_allowed(fogs: list[dict], allowed: list[str]) -> list[dict]:
+    """Filter fog list to only fogs matching allowed specifiers.
+
+    Each specifier is either a plain fog_id (matches any zone) or
+    'zone:fog_id' (matches only that zone).
+    """
+    parsed = [_parse_qualified_fog_id(spec) for spec in allowed]
+    result = []
+    for fog in fogs:
+        fog_id = fog["fog_id"]
+        fog_zone = fog["zone"]
+        for spec_zone, spec_fog in parsed:
+            if spec_fog == fog_id and (spec_zone is None or spec_zone == fog_zone):
+                result.append(fog)
+                break
+    return result
+
+
 @dataclass
 class ClusterData:
     """A cluster loaded from clusters.json."""
@@ -26,23 +52,39 @@ class ClusterData:
         False  # Entry fog's return direction used as forward exit
     )
     requires: str = ""  # Zone that must be defeated before this cluster
+    proximity_groups: list[list[str]] = field(
+        default_factory=list
+    )  # Fogs spatially close — entry and exit cannot share a group
 
     @classmethod
     def from_dict(cls, data: dict) -> ClusterData:
         """Create ClusterData from a dictionary."""
         all_exits = data.get("exit_fogs", [])
+        entry_fogs = data.get("entry_fogs", [])
+        exit_fogs = [f for f in all_exits if not f.get("unique")]
+
+        # Filter by allowed_entries/allowed_exits at load time so all
+        # capacity checks automatically respect the constraints.
+        allowed_entries = data.get("allowed_entries", [])
+        if allowed_entries:
+            entry_fogs = _filter_fogs_by_allowed(entry_fogs, allowed_entries)
+        allowed_exits = data.get("allowed_exits", [])
+        if allowed_exits:
+            exit_fogs = _filter_fogs_by_allowed(exit_fogs, allowed_exits)
+
         return cls(
             id=data["id"],
             zones=data["zones"],
             type=data["type"],
             weight=data["weight"],
-            entry_fogs=data.get("entry_fogs", []),
-            exit_fogs=[f for f in all_exits if not f.get("unique")],
+            entry_fogs=entry_fogs,
+            exit_fogs=exit_fogs,
             unique_exit_fogs=[f for f in all_exits if f.get("unique")],
             defeat_flag=data.get("defeat_flag", 0),
             allow_shared_entrance=data.get("allow_shared_entrance", False),
             allow_entry_as_exit=data.get("allow_entry_as_exit", False),
             requires=data.get("requires", ""),
+            proximity_groups=data.get("proximity_groups", []),
         )
 
     def available_exits(self, used_entry: dict | None) -> list[dict]:

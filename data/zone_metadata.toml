@@ -239,3 +239,35 @@ exclude = true  # Cathedral of Manus Metyr interior — accessed via unique warp
 # Auriza Side Tomb: confusing trap-chest dungeon, monopolizes split(3/4) at mb=4
 [zones.outskirts_sidetomb]
 exclude = true
+
+# =============================================================================
+# Cluster-level traversal constraints
+# =============================================================================
+#
+# proximity_groups: fogs spatially close — entry and exit cannot share a group
+# allowed_entries/allowed_exits: restrict eligible fogs
+# Use "zone:fog_id" when the same fog_id appears in multiple zones
+
+[clusters.stormveil_db4a]
+proximity_groups = [["AEG099_230_9001", "AEG099_002_9002"]]
+
+[clusters.storehouse_cc6f]
+proximity_groups = [["AEG099_230_9000", "AEG099_230_9500"]]
+
+[clusters.altus_sagescave_1646]
+proximity_groups = [["AEG099_001_9000", "AEG099_001_9002"]]
+
+[clusters.academy_2a8a]
+proximity_groups = [["1035452610", "1035462611"]]
+
+[clusters.caelid_tower_109e]
+proximity_groups = [["AEG099_230_9000", "AEG099_230_9001", "AEG099_230_9002"]]
+
+[clusters.storehouse_6660]
+proximity_groups = [["storehouse_back:AEG099_001_9000", "storehouse_back:AEG099_230_9000"]]
+
+[clusters.midramanse_1ac8]
+allowed_entries = ["AEG099_230_9500"]
+
+[clusters.haligtree_elphael_700b]
+allowed_entries = ["AEG099_230_9000"]

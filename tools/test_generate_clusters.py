@@ -3162,3 +3162,101 @@ class TestMajorBossDowngrade:
 
         assert len(result) == 1
         assert result[0].cluster_type == "major_boss"
+
+
+# =============================================================================
+# Cluster Constraints Serialization Tests
+# =============================================================================
+
+
+class TestClusterConstraintsSerialization:
+    """Tests for proximity_groups/allowed_entries/allowed_exits serialization."""
+
+    def test_proximity_groups_serialized(self):
+        """proximity_groups appear in JSON output when non-empty."""
+        cluster = Cluster(
+            zones=frozenset({"z1"}),
+            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
+            exit_fogs=[{"fog_id": "x1", "zone": "z1"}],
+            cluster_id="test_1234",
+            cluster_type="mini_dungeon",
+            weight=5,
+            proximity_groups=[["e1", "x1"]],
+        )
+        areas = {
+            "z1": AreaData(name="z1", text="Zone 1", maps=["m10_00_00_00"], tags=[])
+        }
+        result = clusters_to_json([cluster], areas)
+        c = result["clusters"][0]
+        assert c["proximity_groups"] == [["e1", "x1"]]
+
+    def test_allowed_entries_serialized(self):
+        """allowed_entries appear in JSON output when non-empty."""
+        cluster = Cluster(
+            zones=frozenset({"z1"}),
+            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
+            exit_fogs=[{"fog_id": "x1", "zone": "z1"}],
+            cluster_id="test_1234",
+            cluster_type="mini_dungeon",
+            weight=5,
+            allowed_entries=["e1"],
+        )
+        areas = {
+            "z1": AreaData(name="z1", text="Zone 1", maps=["m10_00_00_00"], tags=[])
+        }
+        result = clusters_to_json([cluster], areas)
+        c = result["clusters"][0]
+        assert c["allowed_entries"] == ["e1"]
+
+    def test_allowed_exits_serialized(self):
+        """allowed_exits appear in JSON output when non-empty."""
+        cluster = Cluster(
+            zones=frozenset({"z1"}),
+            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
+            exit_fogs=[{"fog_id": "x1", "zone": "z1"}],
+            cluster_id="test_1234",
+            cluster_type="mini_dungeon",
+            weight=5,
+            allowed_exits=["x1"],
+        )
+        areas = {
+            "z1": AreaData(name="z1", text="Zone 1", maps=["m10_00_00_00"], tags=[])
+        }
+        result = clusters_to_json([cluster], areas)
+        c = result["clusters"][0]
+        assert c["allowed_exits"] == ["x1"]
+
+    def test_empty_constraints_omitted(self):
+        """Empty constraint fields are omitted from JSON output."""
+        cluster = Cluster(
+            zones=frozenset({"z1"}),
+            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
+            exit_fogs=[{"fog_id": "x1", "zone": "z1"}],
+            cluster_id="test_1234",
+            cluster_type="mini_dungeon",
+            weight=5,
+        )
+        areas = {
+            "z1": AreaData(name="z1", text="Zone 1", maps=["m10_00_00_00"], tags=[])
+        }
+        result = clusters_to_json([cluster], areas)
+        c = result["clusters"][0]
+        assert "proximity_groups" not in c
+        assert "allowed_entries" not in c
+        assert "allowed_exits" not in c
+
+    def test_version_is_1_8(self):
+        """clusters.json version bumped to 1.8."""
+        cluster = Cluster(
+            zones=frozenset({"z1"}),
+            entry_fogs=[],
+            exit_fogs=[],
+            cluster_id="test_1234",
+            cluster_type="mini_dungeon",
+            weight=5,
+        )
+        areas = {
+            "z1": AreaData(name="z1", text="Zone 1", maps=["m10_00_00_00"], tags=[])
+        }
+        result = clusters_to_json([cluster], areas)
+        assert result["version"] == "1.8"

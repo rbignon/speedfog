@@ -10,7 +10,9 @@ from speedfog.dag import Branch, Dag, DagNode, FogRef
 from speedfog.generator import (
     GenerationError,
     LayerOperation,
+    _filter_exits_by_proximity,
     _find_valid_merge_indices,
+    _fog_matches_spec,
     _has_valid_merge_pair,
     _inject_prerequisite,
     _pick_entry_and_exits_for_node,
@@ -48,6 +50,7 @@ def make_cluster(
     allow_shared_entrance: bool = False,
     allow_entry_as_exit: bool = False,
     requires: str = "",
+    proximity_groups: list[list[str]] | None = None,
 ) -> ClusterData:
     """Helper to create test ClusterData objects.
 
@@ -67,6 +70,7 @@ def make_cluster(
         allow_shared_entrance=allow_shared_entrance,
         allow_entry_as_exit=allow_entry_as_exit,
         requires=requires,
+        proximity_groups=proximity_groups or [],
     )
 
 
@@ -2931,3 +2935,338 @@ class TestPickClusterUniformReservedZones:
             reserved_zones=frozenset(["z1"]),
         )
         assert result is None
+
+
+# =============================================================================
+# Proximity Groups tests
+# =============================================================================
+
+
+class TestFogMatchesSpec:
+    """Tests for _fog_matches_spec helper."""
+
+    def test_unqualified_matches_any_zone(self):
+        assert _fog_matches_spec("fog_A", "zone_x", "fog_A") is True
+        assert _fog_matches_spec("fog_A", "zone_y", "fog_A") is True
+
+    def test_unqualified_no_match(self):
+        assert _fog_matches_spec("fog_A", "zone_x", "fog_B") is False
+
+    def test_qualified_matches_exact(self):
+        assert _fog_matches_spec("fog_A", "zone_x", "zone_x:fog_A") is True
+
+    def test_qualified_wrong_zone(self):
+        assert _fog_matches_spec("fog_A", "zone_x", "zone_y:fog_A") is False
+
+    def test_qualified_wrong_fog(self):
+        assert _fog_matches_spec("fog_A", "zone_x", "zone_x:fog_B") is False
+
+
+class TestFilterExitsByProximity:
+    """Tests for _filter_exits_by_proximity."""
+
+    def test_no_groups_returns_all(self):
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "e1", "zone": "z"}],
+            exit_fogs=[{"fog_id": "x1", "zone": "z"}, {"fog_id": "x2", "zone": "z"}],
+        )
+        entry = {"fog_id": "e1", "zone": "z"}
+        result = _filter_exits_by_proximity(cluster, entry, cluster.exit_fogs)
+        assert len(result) == 2
+
+    def test_entry_in_group_blocks_exit(self):
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "fog_A", "zone": "z"}],
+            exit_fogs=[
+                {"fog_id": "fog_B", "zone": "z"},
+                {"fog_id": "fog_C", "zone": "z"},
+            ],
+            proximity_groups=[["fog_A", "fog_B"]],
+        )
+        entry = {"fog_id": "fog_A", "zone": "z"}
+        result = _filter_exits_by_proximity(cluster, entry, cluster.exit_fogs)
+        assert len(result) == 1
+        assert result[0]["fog_id"] == "fog_C"
+
+    def test_entry_not_in_any_group(self):
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "fog_D", "zone": "z"}],
+            exit_fogs=[
+                {"fog_id": "fog_A", "zone": "z"},
+                {"fog_id": "fog_B", "zone": "z"},
+            ],
+            proximity_groups=[["fog_A", "fog_B"]],
+        )
+        entry = {"fog_id": "fog_D", "zone": "z"}
+        result = _filter_exits_by_proximity(cluster, entry, cluster.exit_fogs)
+        assert len(result) == 2
+
+    def test_zone_qualified_spec(self):
+        """Zone-qualified spec only blocks matching zone."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "fog_A", "zone": "z1"}],
+            exit_fogs=[
+                {"fog_id": "fog_B", "zone": "z1"},
+                {"fog_id": "fog_B", "zone": "z2"},
+            ],
+            proximity_groups=[["z1:fog_A", "z1:fog_B"]],
+        )
+        entry = {"fog_id": "fog_A", "zone": "z1"}
+        result = _filter_exits_by_proximity(cluster, entry, cluster.exit_fogs)
+        # fog_B in z1 blocked, fog_B in z2 not blocked
+        assert len(result) == 1
+        assert result[0]["zone"] == "z2"
+
+    def test_three_fogs_in_group(self):
+        """All three fogs in a group block each other."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "fog_A", "zone": "z"}],
+            exit_fogs=[
+                {"fog_id": "fog_B", "zone": "z"},
+                {"fog_id": "fog_C", "zone": "z"},
+                {"fog_id": "fog_D", "zone": "z"},
+            ],
+            proximity_groups=[["fog_A", "fog_B", "fog_C"]],
+        )
+        entry = {"fog_id": "fog_A", "zone": "z"}
+        result = _filter_exits_by_proximity(cluster, entry, cluster.exit_fogs)
+        assert len(result) == 1
+        assert result[0]["fog_id"] == "fog_D"
+
+
+class TestProximityGroups:
+    """Tests for proximity_groups integration in capacity checks and fog picking."""
+
+    def test_count_net_exits_reduced_by_proximity(self):
+        """Proximity groups reduce counted exits."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "e1", "zone": "z"}],
+            exit_fogs=[
+                {"fog_id": "x1", "zone": "z"},
+                {"fog_id": "x2", "zone": "z"},
+            ],
+            proximity_groups=[["e1", "x1"]],
+        )
+        # Without proximity: 2 exits (e1 not bidirectional with x1/x2)
+        # With proximity: e1 blocks x1, so worst case = 1
+        assert count_net_exits(cluster, 1) == 1
+
+    def test_can_be_passant_with_proximity(self):
+        """Passant still works if at least 1 exit survives proximity."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "e1", "zone": "z"}],
+            exit_fogs=[
+                {"fog_id": "x1", "zone": "z"},
+                {"fog_id": "x2", "zone": "z"},
+            ],
+            proximity_groups=[["e1", "x1"]],
+        )
+        assert can_be_passant_node(cluster) is True
+
+    def test_cannot_be_passant_all_exits_blocked(self):
+        """Passant fails if all exits are in proximity group with entry."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "e1", "zone": "z"}],
+            exit_fogs=[{"fog_id": "x1", "zone": "z"}],
+            proximity_groups=[["e1", "x1"]],
+        )
+        assert can_be_passant_node(cluster) is False
+
+    def test_count_net_exits_multi_entry_proximity(self):
+        """Multi-entry proximity: both entries block different exits."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[
+                {"fog_id": "e1", "zone": "z"},
+                {"fog_id": "e2", "zone": "z"},
+            ],
+            exit_fogs=[
+                {"fog_id": "x1", "zone": "z"},
+                {"fog_id": "x2", "zone": "z"},
+                {"fog_id": "x3", "zone": "z"},
+            ],
+            proximity_groups=[["e1", "x1"], ["e2", "x2"]],
+        )
+        # With 2 entries: e1 blocks x1, e2 blocks x2, only x3 survives
+        assert count_net_exits(cluster, 2) == 1
+
+    def test_merge_blocked_by_proximity(self):
+        """Merge fails if proximity blocks all exits for some entry combo."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[
+                {"fog_id": "e1", "zone": "z"},
+                {"fog_id": "e2", "zone": "z"},
+            ],
+            exit_fogs=[
+                {"fog_id": "x1", "zone": "z"},
+            ],
+            proximity_groups=[["e1", "x1"], ["e2", "x1"]],
+        )
+        # Both entries block the only exit → can't merge
+        assert can_be_merge_node(cluster, 2) is False
+
+    def test_pick_entry_with_max_exits_respects_proximity(self):
+        """pick_entry_with_max_exits skips entries where proximity blocks exits."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[
+                {"fog_id": "e1", "zone": "z"},
+                {"fog_id": "e2", "zone": "z"},
+            ],
+            exit_fogs=[
+                {"fog_id": "x1", "zone": "z"},
+                {"fog_id": "x2", "zone": "z"},
+            ],
+            proximity_groups=[["e1", "x1", "x2"]],
+        )
+        rng = random.Random(42)
+        # e1 blocks both exits; e2 blocks neither
+        result = pick_entry_with_max_exits(cluster, 2, rng)
+        assert result is not None
+        assert result["fog_id"] == "e2"
+
+    def test_pick_entry_and_exits_filters_proximity(self):
+        """_pick_entry_and_exits_for_node excludes proximity-blocked exits."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "e1", "zone": "z"}],
+            exit_fogs=[
+                {"fog_id": "x1", "zone": "z"},
+                {"fog_id": "x2", "zone": "z"},
+            ],
+            proximity_groups=[["e1", "x1"]],
+        )
+        rng = random.Random(42)
+        entry, exits = _pick_entry_and_exits_for_node(cluster, 1, rng)
+        assert entry.fog_id == "e1"
+        assert len(exits) == 1
+        assert exits[0].fog_id == "x2"
+
+    def test_entry_as_exit_proximity_partial_block(self):
+        """Entry-as-exit: proximity blocks some but not all exits."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "e1", "zone": "z"}],
+            exit_fogs=[
+                {"fog_id": "x1", "zone": "z"},
+                {"fog_id": "x2", "zone": "z"},
+                {"fog_id": "e1", "zone": "z"},
+            ],
+            allow_entry_as_exit=True,
+            proximity_groups=[["e1", "x1"]],
+        )
+        rng = random.Random(42)
+        entry, exits = _pick_entry_and_exits_for_node(cluster, 1, rng)
+        assert entry.fog_id == "e1"
+        # x1 and e1 blocked by proximity with e1; only x2 survives
+        assert len(exits) == 1
+        assert exits[0].fog_id == "x2"
+
+
+class TestAllowedEntriesExits:
+    """Tests for allowed_entries/allowed_exits load-time filtering."""
+
+    def test_allowed_entries_filters_at_load(self):
+        """Only specified entries survive from_dict."""
+        data = {
+            "id": "c1",
+            "zones": ["z"],
+            "type": "mini_dungeon",
+            "weight": 5,
+            "entry_fogs": [
+                {"fog_id": "e1", "zone": "z"},
+                {"fog_id": "e2", "zone": "z"},
+                {"fog_id": "e3", "zone": "z"},
+            ],
+            "exit_fogs": [{"fog_id": "x1", "zone": "z"}],
+            "allowed_entries": ["e2"],
+        }
+        cluster = ClusterData.from_dict(data)
+        assert len(cluster.entry_fogs) == 1
+        assert cluster.entry_fogs[0]["fog_id"] == "e2"
+
+    def test_allowed_exits_filters_at_load(self):
+        """Only specified exits survive from_dict."""
+        data = {
+            "id": "c1",
+            "zones": ["z"],
+            "type": "mini_dungeon",
+            "weight": 5,
+            "entry_fogs": [{"fog_id": "e1", "zone": "z"}],
+            "exit_fogs": [
+                {"fog_id": "x1", "zone": "z"},
+                {"fog_id": "x2", "zone": "z"},
+                {"fog_id": "x3", "zone": "z"},
+            ],
+            "allowed_exits": ["x1", "x3"],
+        }
+        cluster = ClusterData.from_dict(data)
+        assert len(cluster.exit_fogs) == 2
+        fog_ids = {f["fog_id"] for f in cluster.exit_fogs}
+        assert fog_ids == {"x1", "x3"}
+
+    def test_zone_qualified_allowed_entries(self):
+        """Zone-qualified specifiers match only the correct zone."""
+        data = {
+            "id": "c1",
+            "zones": ["z1", "z2"],
+            "type": "mini_dungeon",
+            "weight": 5,
+            "entry_fogs": [
+                {"fog_id": "e1", "zone": "z1"},
+                {"fog_id": "e1", "zone": "z2"},
+            ],
+            "exit_fogs": [{"fog_id": "x1", "zone": "z1"}],
+            "allowed_entries": ["z2:e1"],
+        }
+        cluster = ClusterData.from_dict(data)
+        assert len(cluster.entry_fogs) == 1
+        assert cluster.entry_fogs[0]["zone"] == "z2"
+
+    def test_no_allowed_entries_keeps_all(self):
+        """Without allowed_entries, all entries are kept."""
+        data = {
+            "id": "c1",
+            "zones": ["z"],
+            "type": "mini_dungeon",
+            "weight": 5,
+            "entry_fogs": [
+                {"fog_id": "e1", "zone": "z"},
+                {"fog_id": "e2", "zone": "z"},
+            ],
+            "exit_fogs": [{"fog_id": "x1", "zone": "z"}],
+        }
+        cluster = ClusterData.from_dict(data)
+        assert len(cluster.entry_fogs) == 2
+
+    def test_allowed_entries_affects_capacity(self):
+        """Filtering entries at load time reduces merge capacity."""
+        data = {
+            "id": "c1",
+            "zones": ["z"],
+            "type": "mini_dungeon",
+            "weight": 5,
+            "entry_fogs": [
+                {"fog_id": "e1", "zone": "z"},
+                {"fog_id": "e2", "zone": "z"},
+                {"fog_id": "e3", "zone": "z"},
+            ],
+            "exit_fogs": [
+                {"fog_id": "x1", "zone": "z"},
+                {"fog_id": "x2", "zone": "z"},
+            ],
+            "allowed_entries": ["e1"],
+        }
+        cluster = ClusterData.from_dict(data)
+        # Only 1 entry → can't merge (needs 2)
+        assert can_be_merge_node(cluster, 2) is False
+        assert can_be_passant_node(cluster) is True

@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from itertools import combinations
 
-from speedfog.clusters import ClusterData, ClusterPool
+from speedfog.clusters import ClusterData, ClusterPool, _parse_qualified_fog_id
 from speedfog.config import Config, resolve_final_boss_candidates
 from speedfog.dag import Branch, Dag, DagNode, FogRef
 from speedfog.planner import compute_tier, plan_layer_types
@@ -106,6 +106,43 @@ class GenerationResult:
 # =============================================================================
 
 
+def _fog_matches_spec(fog_id: str, fog_zone: str, spec: str) -> bool:
+    """Check if a fog matches a qualified or unqualified spec."""
+    spec_zone, spec_fog = _parse_qualified_fog_id(spec)
+    return spec_fog == fog_id and (spec_zone is None or spec_zone == fog_zone)
+
+
+def _filter_exits_by_proximity(
+    cluster: ClusterData, entry: dict, exits: list[dict]
+) -> list[dict]:
+    """Remove exits that share a proximity group with the entry."""
+    if not cluster.proximity_groups:
+        return exits
+
+    entry_id = entry["fog_id"]
+    entry_zone = entry["zone"]
+
+    # Find all groups the entry belongs to
+    blocked_specs: set[str] = set()
+    for group in cluster.proximity_groups:
+        entry_in_group = any(
+            _fog_matches_spec(entry_id, entry_zone, spec) for spec in group
+        )
+        if entry_in_group:
+            blocked_specs.update(group)
+
+    if not blocked_specs:
+        return exits
+
+    return [
+        f
+        for f in exits
+        if not any(
+            _fog_matches_spec(f["fog_id"], f["zone"], spec) for spec in blocked_specs
+        )
+    ]
+
+
 def compute_net_exits(cluster: ClusterData, consumed_entries: list[dict]) -> list[dict]:
     """Return exits remaining after consuming given entry fogs.
 
@@ -131,6 +168,8 @@ def count_net_exits(cluster: ClusterData, num_entries: int) -> int:
 
     This calculates the worst-case net exits by greedily selecting entries
     that cost the least (non-bidirectional entries have zero cost).
+    Also accounts for proximity_groups: exits sharing a proximity group
+    with any consumed entry are excluded.
 
     A fog is bidirectional only if the same (fog_id, zone) pair appears
     in both entry and exit lists - meaning the same side of the gate.
@@ -145,21 +184,30 @@ def count_net_exits(cluster: ClusterData, num_entries: int) -> int:
     if num_entries > len(cluster.entry_fogs):
         return 0
 
-    # Build set of exit (fog_id, zone) pairs for checking bidirectionality
-    exit_keys = {(f["fog_id"], f["zone"]) for f in cluster.exit_fogs}
+    if not cluster.proximity_groups:
+        # Fast path: no proximity constraints
+        exit_keys = {(f["fog_id"], f["zone"]) for f in cluster.exit_fogs}
+        entry_costs: list[tuple[dict, int]] = []
+        for entry in cluster.entry_fogs:
+            key = (entry["fog_id"], entry["zone"])
+            cost = 1 if key in exit_keys else 0
+            entry_costs.append((entry, cost))
+        entry_costs.sort(key=lambda x: x[1])
+        consumed = [entry for entry, _ in entry_costs[:num_entries]]
+        return len(compute_net_exits(cluster, consumed))
 
-    # Calculate cost for each entry (1 if same side exists in exits, 0 otherwise)
-    entry_costs: list[tuple[dict, int]] = []
-    for entry in cluster.entry_fogs:
-        key = (entry["fog_id"], entry["zone"])
-        cost = 1 if key in exit_keys else 0
-        entry_costs.append((entry, cost))
+    # With proximity: worst-case across all entry combinations.
+    # For each combination, compute net exits then filter by proximity
+    # for each consumed entry. Return the minimum.
+    min_exits = len(cluster.exit_fogs)
+    for combo in combinations(cluster.entry_fogs, num_entries):
+        consumed = list(combo)
+        net = compute_net_exits(cluster, consumed)
+        for entry in consumed:
+            net = _filter_exits_by_proximity(cluster, entry, net)
+        min_exits = min(min_exits, len(net))
 
-    # Sort by cost (cheapest first) and take num_entries
-    entry_costs.sort(key=lambda x: x[1])
-    consumed = [entry for entry, _ in entry_costs[:num_entries]]
-
-    return len(compute_net_exits(cluster, consumed))
+    return min_exits
 
 
 def can_be_split_node(cluster: ClusterData, num_out: int) -> bool:
@@ -285,6 +333,7 @@ def pick_entry_with_max_exits(
     valid_entries: list[dict] = []
     for entry in cluster.entry_fogs:
         remaining = compute_net_exits(cluster, [entry])
+        remaining = _filter_exits_by_proximity(cluster, entry, remaining)
         if len(remaining) >= min_exits:
             valid_entries.append(entry)
 
@@ -474,6 +523,7 @@ def _pick_entry_and_exits_for_node(
         rng.shuffle(preferred)
         rng.shuffle(fallback)
         ordered = preferred + fallback
+        ordered = _filter_exits_by_proximity(cluster, entry, ordered)
         exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in ordered[:min_exits]]
         return entry_fog, exit_fogs
 
@@ -484,6 +534,7 @@ def _pick_entry_and_exits_for_node(
         )
     entry_fog = FogRef(picked["fog_id"], picked["zone"])
     exits = compute_net_exits(cluster, [picked])
+    exits = _filter_exits_by_proximity(cluster, picked, exits)
     rng.shuffle(exits)
     exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits[:min_exits]]
     return entry_fog, exit_fogs
@@ -678,6 +729,8 @@ def execute_merge_layer(
         shared_entry_fog = FogRef(entries[0]["fog_id"], entries[0]["zone"])
         entry_fogs_list = [shared_entry_fog]
         exits = compute_net_exits(cluster, entries)
+        for e in entries:
+            exits = _filter_exits_by_proximity(cluster, e, exits)
         rng.shuffle(exits)
         exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits[:1]]
     else:
@@ -685,6 +738,8 @@ def execute_merge_layer(
         entries = select_entries_for_merge(cluster, actual_merge, rng)
         entry_fogs_list = [FogRef(e["fog_id"], e["zone"]) for e in entries]
         exits = compute_net_exits(cluster, entries)
+        for e in entries:
+            exits = _filter_exits_by_proximity(cluster, e, exits)
         rng.shuffle(exits)
         exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits[:1]]
 
