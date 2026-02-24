@@ -237,9 +237,17 @@ Example:
     {
         var preset = new Preset();
 
-        // Always lock non-boss classes that shouldn't swap
+        // HostileNPC: randomize among themselves only (isolated pool).
+        // No MergeParent — must not merge into parent class pool.
         preset.Classes[EnemyAnnotations.EnemyClass.HostileNPC] =
-            new Preset.ClassAssignment { NoRandom = true };
+            new Preset.ClassAssignment
+            {
+                Pools = new List<Preset.PoolAssignment>
+                {
+                    new Preset.PoolAssignment { Weight = 1000, Pool = "hostilenpc" }
+                }
+            };
+        // CaravanTroll: never randomize (special scripted entity)
         preset.Classes[EnemyAnnotations.EnemyClass.CaravanTroll] =
             new Preset.ClassAssignment { NoRandom = true };
 
