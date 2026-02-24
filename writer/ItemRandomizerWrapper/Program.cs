@@ -258,19 +258,50 @@ Example:
                 preset.Classes[cls] = new Preset.ClassAssignment { NoRandom = true };
             }
         }
-        else if (options.LockFinalBoss && options.FinishBossDefeatFlag > 0)
+        else
         {
-            // Boss classes randomize by default (absent from Classes dict).
-            // Lock only the final boss via DontRandomizeIDs.
-            var flag = (uint)options.FinishBossDefeatFlag;
-            preset.DontRandomizeIDs.Add(flag);
+            // Merge all non-major boss classes into the MinorBoss pool so
+            // Miniboss, NightMiniboss, DragonMiniboss, Evergaol can all
+            // swap with each other. Major bosses (Boss) stay in their own pool.
+            foreach (var cls in new[] {
+                EnemyAnnotations.EnemyClass.NightMiniboss,
+                EnemyAnnotations.EnemyClass.DragonMiniboss,
+                EnemyAnnotations.EnemyClass.Evergaol,
+            })
+            {
+                preset.Classes[cls] = new Preset.ClassAssignment
+                {
+                    MergeParent = true,
+                    Pools = new List<Preset.PoolAssignment>
+                    {
+                        new Preset.PoolAssignment { Weight = 1000, Pool = "default" }
+                    }
+                };
+            }
+            // Miniboss.Parent is Boss, but AltParent includes MinorBoss.
+            // Use ManualParent to redirect the merge into MinorBoss instead of Boss.
+            preset.Classes[EnemyAnnotations.EnemyClass.Miniboss] = new Preset.ClassAssignment
+            {
+                MergeParent = true,
+                ManualParent = EnemyAnnotations.EnemyClass.MinorBoss,
+                Pools = new List<Preset.PoolAssignment>
+                {
+                    new Preset.PoolAssignment { Weight = 1000, Pool = "default" }
+                }
+            };
 
-            // Radahn and Fire Giant (base game): DefeatFlag = entity_id + 200M.
-            // DLC bosses (>= 2B): DefeatFlag IS the entity ID directly.
-            if (flag >= 1_200_000_000 && flag < 2_000_000_000)
-                preset.DontRandomizeIDs.Add(flag - 200_000_000);
+            if (options.LockFinalBoss && options.FinishBossDefeatFlag > 0)
+            {
+                // Lock only the final boss via DontRandomizeIDs.
+                var flag = (uint)options.FinishBossDefeatFlag;
+                preset.DontRandomizeIDs.Add(flag);
+
+                // Radahn and Fire Giant (base game): DefeatFlag = entity_id + 200M.
+                // DLC bosses (>= 2B): DefeatFlag IS the entity ID directly.
+                if (flag >= 1_200_000_000 && flag < 2_000_000_000)
+                    preset.DontRandomizeIDs.Add(flag - 200_000_000);
+            }
         }
-        // else: randomize_bosses=true, lock_final_boss=false → all bosses swap freely
 
         return preset;
     }
