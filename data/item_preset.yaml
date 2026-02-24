@@ -29,6 +29,12 @@ NorandomItems:
   ID: goods:2008005
 - Name: O Mother
   ID: goods:2009004
+- Name: Hole-Laden Necklace
+  ID: goods:2008008
+- Name: Well Depths Key
+  ID: goods:2008004
+- Name: Messmer's Kindling
+  ID: goods:2008021
 
 Placements:
 
