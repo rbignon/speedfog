@@ -1271,20 +1271,20 @@ def get_zone_weight(
     zone: str,
     zone_type: str,
     metadata: dict,
-) -> int:
+) -> float:
     """Get weight for a zone from metadata."""
     # Check zone-specific override
     zones_meta = metadata.get("zones", {})
     if zone in zones_meta:
         zone_meta = zones_meta[zone]
         if isinstance(zone_meta, dict) and "weight" in zone_meta:
-            return zone_meta["weight"]
-        if isinstance(zone_meta, int):
-            return zone_meta
+            return float(zone_meta["weight"])
+        if isinstance(zone_meta, int | float):
+            return float(zone_meta)
 
     # Use default for type
     defaults = metadata.get("defaults", {})
-    return defaults.get(zone_type, 4)
+    return float(defaults.get(zone_type, 4))
 
 
 def compute_allow_shared_entrance(
@@ -1511,7 +1511,7 @@ def filter_and_enrich_clusters(
         # Players traverse a path through zones, not all of them,
         # so additional zones have diminishing impact on traversal time.
         # Formula: avg_zone_weight * (1 + 0.5 * ln(n_zones))
-        zone_weights: list[int] = []
+        zone_weights: list[float] = []
         for zone_name in cluster.zones:
             # Use metadata type override if available, else heuristic
             zone_type = None

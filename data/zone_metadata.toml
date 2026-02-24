@@ -10,14 +10,14 @@
 # This reflects that players traverse a path through zones, not all of them.
 
 [defaults]
-# Default weights by zone type
-legacy_dungeon = 5
-mini_dungeon = 3
-major_boss = 4
-boss_arena = 2
+# Default weights by zone type (calibrated from production race data, 2026-02-24)
+legacy_dungeon = 3
+mini_dungeon = 1
+major_boss = 1.5
+boss_arena = 0.5
 underground = 6
 start = 1
-final_boss = 4
+final_boss = 2.5
 other = 2
 
 # Zone-specific overrides
@@ -45,9 +45,6 @@ weight = 3
 
 [zones.leyndell]
 weight = 10
-
-[zones.leyndell_sanctuary]
-weight = 3
 
 [zones.volcano]
 weight = 6
@@ -85,6 +82,66 @@ allow_entry_as_exit = true
 weight = 5
 allow_entry_as_exit = true
 
+# Boss arenas calibrated from race data
+[zones.outskirts_grave_boss]
+weight = 13.5
+
+[zones.ainsel_boss]
+weight = 1
+
+[zones.caelid_wardead_boss]
+weight = 1
+
+[zones.dragonbarrow_selliahideaway_boss]
+weight = 1.5
+
+[zones.gravesite_dragonpit_boss]
+weight = 1.5
+
+[zones.outskirts_sidetomb_boss]
+weight = 1
+
+[zones.siofra_nokron_boss]
+weight = 1.5
+
+[zones.snowfield_hiddenpath_boss]
+weight = 1
+
+# Mini dungeons calibrated from race data
+[zones.caelid_gaolcave]
+weight = 2
+
+[zones.flamepeak_grave]
+weight = 2.5
+
+[zones.gelmir_grave]
+weight = 2.5
+
+[zones.limgrave_tunnels]
+weight = 2
+
+[zones.liurnia_tunnel]
+weight = 2
+
+[zones.outskirts_grave]
+weight = 2
+
+[zones.sewer]
+weight = 6
+
+[zones.sewer_catacombs]
+weight = 2.5
+
+# Major bosses calibrated from race data
+[zones.caelid_radahn]
+weight = 3
+
+[zones.flamepeak_firegiant]
+weight = 6
+
+[zones.mountaintops_sol_boss]
+weight = 3.5
+
 # =============================================================================
 # DLC - Shadow of the Erdtree
 # =============================================================================
@@ -115,21 +172,18 @@ type = "legacy_dungeon"
 [zones.midramanse]
 type = "legacy_dungeon"
 
-# DLC Mini Dungeons (longer than base game, ~6 min each)
+# DLC Mini Dungeons (calibrated from race data)
 [zones.gravesite_catacombs]
-weight = 6
+weight = 3.5
 
 [zones.gravesite_forge]
-weight = 6
+weight = 2.5
 
 [zones.gravesite_gaol]
 weight = 6
 
-[zones.ellac_cave]
-weight = 6
-
 [zones.rauhbase_catacombs]
-weight = 6
+weight = 3.5
 
 [zones.rauhbase_forge]
 weight = 6
@@ -138,7 +192,7 @@ weight = 6
 weight = 6
 
 [zones.scadualtus_gaol]
-weight = 6
+weight = 3
 
 # Major bosses: allow entry-as-exit so they can be pass-through nodes
 [zones.altus_elemer]
