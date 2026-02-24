@@ -3,18 +3,18 @@
 # This file defines default weights per zone type and optional
 # zone-specific overrides for cluster weight calculations.
 #
-# weight = approximate traversal time in minutes
+# weight = relative traversal difficulty (data-driven for dungeons, phase-based for bosses)
 #
 # Multi-zone cluster weights use logarithmic aggregation:
 #   cluster_weight = round(avg_zone_weight * (1 + 0.5 * ln(n_zones)))
 # This reflects that players traverse a path through zones, not all of them.
 
 [defaults]
-# Default weights by zone type (calibrated from production race data, 2026-02-24)
+# Default weights by zone type
 legacy_dungeon = 3
 mini_dungeon = 1
-major_boss = 1.5
-boss_arena = 0.5
+major_boss = 1
+boss_arena = 1
 underground = 6
 start = 1
 final_boss = 2.5
@@ -73,39 +73,9 @@ allow_entry_as_exit = false
 [zones.deeproot_boss]
 allow_entry_as_exit = false
 
-# Boss arenas with non-default weights
-[zones.academy_library]
-weight = 3
-allow_entry_as_exit = true
-
 [zones.haligtree_malenia]
 weight = 5
 allow_entry_as_exit = true
-
-# Boss arenas calibrated from race data
-[zones.outskirts_grave_boss]
-weight = 13.5
-
-[zones.ainsel_boss]
-weight = 1
-
-[zones.caelid_wardead_boss]
-weight = 1
-
-[zones.dragonbarrow_selliahideaway_boss]
-weight = 1.5
-
-[zones.gravesite_dragonpit_boss]
-weight = 1.5
-
-[zones.outskirts_sidetomb_boss]
-weight = 1
-
-[zones.siofra_nokron_boss]
-weight = 1.5
-
-[zones.snowfield_hiddenpath_boss]
-weight = 1
 
 # Mini dungeons calibrated from race data
 [zones.caelid_gaolcave]
@@ -132,15 +102,26 @@ weight = 6
 [zones.sewer_catacombs]
 weight = 2.5
 
-# Major bosses calibrated from race data
-[zones.caelid_radahn]
-weight = 3
+# Multi-phase major bosses (2+ phase transitions)
+[zones.academy_library]
+type = "major_boss"
+weight = 2
+allow_entry_as_exit = true
+
+[zones.stormveil_godrick]
+weight = 2
+
+[zones.leyndell_sanctuary]
+weight = 2
+
+[zones.leyndell_throne]
+weight = 2
 
 [zones.flamepeak_firegiant]
-weight = 6
+weight = 2
 
-[zones.mountaintops_sol_boss]
-weight = 3.5
+[zones.farumazula_maliketh]
+weight = 2
 
 # =============================================================================
 # DLC - Shadow of the Erdtree
@@ -217,6 +198,7 @@ allow_entry_as_exit = true
 allow_entry_as_exit = true
 
 [zones.storehouse_messmer]
+weight = 2
 allow_entry_as_exit = true
 
 # Exclusions
