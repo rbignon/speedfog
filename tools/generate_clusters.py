@@ -60,6 +60,7 @@ class AreaData:
     to_connections: list[WorldConnection] = field(default_factory=list)
     has_boss: bool = False  # True if zone has BossTrigger (boss fight zone)
     defeat_flag: int = 0  # DefeatFlag from fog.txt (boss defeat event flag)
+    boss_text: str = ""  # BossText from fog.txt (boss name, when Text is a location)
 
 
 @dataclass
@@ -393,6 +394,7 @@ def parse_area(area_data: dict) -> AreaData:
         to_connections=to_connections,
         has_boss=has_boss,
         defeat_flag=defeat_flag,
+        boss_text=area_data.get("BossText", ""),
     )
 
 
@@ -1636,8 +1638,16 @@ def build_zone_names(
 
     zone_names: dict[str, str] = {}
     for zone_name in sorted(all_zones):
-        if zone_name in areas and areas[zone_name].text:
-            zone_names[zone_name] = areas[zone_name].text
+        if zone_name not in areas:
+            continue
+        area = areas[zone_name]
+        # Prefer BossText for boss zones (e.g., "Leyndell - Godfrey" instead
+        # of "Leyndell - Erdtree Sanctuary") for consistency with other boss
+        # arenas that already use the boss name as their Text.
+        if area.boss_text:
+            zone_names[zone_name] = area.boss_text
+        elif area.text:
+            zone_names[zone_name] = area.text
 
     return zone_names
 
