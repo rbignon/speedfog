@@ -119,6 +119,7 @@ weight = 2
 
 [zones.flamepeak_firegiant]
 weight = 2
+allow_entry_as_exit = false
 
 [zones.farumazula_maliketh]
 weight = 2
@@ -250,6 +251,9 @@ proximity_groups = [["storehouse_back:AEG099_001_9000", "storehouse_back:AEG099_
 
 [clusters.midramanse_1ac8]
 allowed_entries = ["AEG099_230_9500"]
+
+[clusters.flamepeak_firegiant_07f0]
+proximity_groups = [["m60_52_53_00-AEG099_002_9000", "m60_52_53_00-AEG099_003_9001"]]
 
 [clusters.haligtree_elphael_700b]
 allowed_entries = ["AEG099_230_9000"]
