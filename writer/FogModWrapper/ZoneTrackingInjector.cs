@@ -262,15 +262,37 @@ public static class ZoneTrackingInjector
             RegisterDestKeys(allDestMaps, conn.FlagId, destOnlyLookup, destOnlyCollisions);
         }
 
+        // Common event lookup: for WarpBonfire connections whose vanilla events
+        // live in common.emevd. These events have no IfActionButtonInArea and no
+        // source map, so Strategies 0-2 can't match them reliably when dest maps
+        // collide. Strategy 3 uses this dedicated lookup.
+        var commonEventLookup = new Dictionary<(byte, byte, byte, byte), int>();
+        var commonEventCollisions = new HashSet<(byte, byte, byte, byte)>();
+
+        foreach (var conn in connections)
+        {
+            if (conn.FlagId <= 0 || !conn.HasCommonEvent)
+                continue;
+
+            var destMaps = ParseMapBytesFromGateName(conn.EntranceGate);
+            if (areaMaps.TryGetValue(conn.EntranceArea, out var mapsStr) && !string.IsNullOrEmpty(mapsStr))
+                destMaps.AddRange(ParseMapBytesFromMapString(mapsStr));
+
+            foreach (var destBytes in destMaps)
+                RegisterCommonEventKeys(destBytes, conn.FlagId, commonEventLookup, commonEventCollisions);
+        }
+
         Console.WriteLine($"Zone tracking: {compoundLookup.Count} compound keys, " +
                           $"{destOnlyLookup.Count} dest maps ({destOnlyCollisions.Count} dest collisions, " +
                           $"{compoundCollisions.Count} compound collisions, " +
-                          $"{entityToFlag.Values.Sum(v => v.Count)} entity candidates across {entityToFlag.Count} entities)");
+                          $"{entityToFlag.Values.Sum(v => v.Count)} entity candidates across {entityToFlag.Count} entities, " +
+                          $"{commonEventLookup.Count} common event keys)");
 
         int totalInjected = 0;
         int compoundMatches = 0;
         int entityMatches = 0;
         int destOnlyMatches = 0;
+        int commonEventMatches = 0;
         int skippedCollisions = 0;
         var injectedFlags = new HashSet<int>();
 
@@ -397,22 +419,41 @@ public static class ZoneTrackingInjector
                     // When dest map has a collision AND source map is known (map-specific
                     // EMEVD), skip injection — these are typically back-portal return warps
                     // whose source EMEVD doesn't match any registered exit map.
-                    // When source map is unknown (common.emevd), always inject — FogMod
-                    // places forward warps for vanilla gate types (numeric entity IDs) in
-                    // common.emevd, and these are legitimate forward transitions.
+                    // When source map is unknown (common.emevd) AND dest map has a common
+                    // event entry, also skip — let Strategy 3 handle it more precisely.
+                    // When source map is unknown AND no common event entry, inject anyway —
+                    // FogMod places forward warps for vanilla gate types in common.emevd.
                     if (!matched)
                     {
                         if (!destOnlyLookup.TryGetValue(destMap, out flagId))
                             continue;
-                        if (destOnlyCollisions.Contains(destMap) && sourceMap.HasValue)
+                        if (destOnlyCollisions.Contains(destMap))
                         {
-                            Console.WriteLine($"Zone tracking: skipped collided dest-only " +
-                                              $"on {FormatMap(destMap)} from EMEVD {FormatMap(sourceMap.Value)} (event {evt.ID})");
-                            skippedCollisions++;
-                            continue;
+                            if (sourceMap.HasValue || commonEventLookup.ContainsKey(destMap))
+                            {
+                                if (sourceMap.HasValue)
+                                    Console.WriteLine($"Zone tracking: skipped collided dest-only " +
+                                                      $"on {FormatMap(destMap)} from EMEVD {FormatMap(sourceMap.Value)} (event {evt.ID})");
+                                skippedCollisions++;
+                                continue;
+                            }
                         }
                         matched = true;
                         destOnlyMatches++;
+                    }
+
+                    // Strategy 3: Common event matching — for WarpBonfire connections whose
+                    // vanilla events (e.g., Erdtree burning Event 901) live in common.emevd.
+                    // Only checked when sourceMap is null (common.emevd) and all other
+                    // strategies failed.
+                    if (!matched && !sourceMap.HasValue)
+                    {
+                        if (commonEventLookup.TryGetValue(destMap, out flagId) &&
+                            !commonEventCollisions.Contains(destMap))
+                        {
+                            matched = true;
+                            commonEventMatches++;
+                        }
                     }
 
                     warpPositions.Add((i, flagId));
@@ -456,7 +497,8 @@ public static class ZoneTrackingInjector
         var expectedFlagSet = connections.Where(c => c.FlagId > 0).Select(c => c.FlagId).Distinct().ToHashSet();
         Console.WriteLine($"Zone tracking: injected {totalInjected} fog gate tracking flags " +
                           $"(compound: {compoundMatches}, entity: {entityMatches}, dest-only: {destOnlyMatches}, " +
-                          $"skipped collisions: {skippedCollisions}, expected unique flags: {expectedFlagSet.Count})");
+                          $"common-event: {commonEventMatches}, skipped collisions: {skippedCollisions}, " +
+                          $"expected unique flags: {expectedFlagSet.Count})");
 
         var missingFlags = expectedFlagSet.Except(injectedFlags).OrderBy(f => f).ToList();
         if (missingFlags.Count > 0)
@@ -591,6 +633,26 @@ public static class ZoneTrackingInjector
             }
             destOnlyLookup.TryAdd(destKey, flagId);
         }
+    }
+
+    /// <summary>
+    /// Register map byte tuples in the common event lookup, tracking collisions.
+    /// Used for connections whose vanilla warp event lives in common.emevd
+    /// (WarpBonfire gates like the Erdtree burning).
+    /// </summary>
+    internal static void RegisterCommonEventKeys(
+        byte[] destBytes, int flagId,
+        Dictionary<(byte, byte, byte, byte), int> commonEventLookup,
+        HashSet<(byte, byte, byte, byte)> commonEventCollisions)
+    {
+        var destKey = (destBytes[0], destBytes[1], destBytes[2], destBytes[3]);
+        if (commonEventLookup.TryGetValue(destKey, out int existing) && existing != flagId)
+        {
+            commonEventCollisions.Add(destKey);
+            Console.WriteLine($"Zone tracking: common event collision on {FormatMap(destKey)} " +
+                              $"(flag {flagId} vs {existing})");
+        }
+        commonEventLookup.TryAdd(destKey, flagId);
     }
 
     /// <summary>

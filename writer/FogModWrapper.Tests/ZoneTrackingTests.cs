@@ -98,6 +98,39 @@ public class ZoneTrackingTests
     }
 
     [Fact]
+    public void CommonEventLookup_ResolvesWhenDestOnlyCollides()
+    {
+        // Simulate: Fire Giant exit (has_common_event) + Margit exit both target m10
+        var destMap = ((byte)10, (byte)0, (byte)0, (byte)0);
+
+        // Build common event lookup from connections with HasCommonEvent
+        var commonEventLookup = new Dictionary<(byte, byte, byte, byte), int>();
+        var commonEventCollisions = new HashSet<(byte, byte, byte, byte)>();
+
+        // Only the Fire Giant connection has HasCommonEvent
+        ZoneTrackingInjector.RegisterCommonEventKeys(
+            new byte[] { 10, 0, 0, 0 }, 1040292829, commonEventLookup, commonEventCollisions);
+
+        Assert.True(commonEventLookup.ContainsKey(destMap));
+        Assert.Equal(1040292829, commonEventLookup[destMap]);
+        Assert.Empty(commonEventCollisions);
+    }
+
+    [Fact]
+    public void CommonEventLookup_TracksCollisions()
+    {
+        var commonEventLookup = new Dictionary<(byte, byte, byte, byte), int>();
+        var commonEventCollisions = new HashSet<(byte, byte, byte, byte)>();
+
+        ZoneTrackingInjector.RegisterCommonEventKeys(
+            new byte[] { 10, 0, 0, 0 }, 100, commonEventLookup, commonEventCollisions);
+        ZoneTrackingInjector.RegisterCommonEventKeys(
+            new byte[] { 10, 0, 0, 0 }, 200, commonEventLookup, commonEventCollisions);
+
+        Assert.Contains(((byte)10, (byte)0, (byte)0, (byte)0), commonEventCollisions);
+    }
+
+    [Fact]
     public void RegisterEntity_SharedEntity_CreatesTwoCandidates()
     {
         var entityToFlag = new Dictionary<int, List<ZoneTrackingInjector.EntityCandidate>>();
