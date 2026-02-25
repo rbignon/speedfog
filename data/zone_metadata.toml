@@ -47,7 +47,7 @@ weight = 3
 weight = 10
 
 [zones.volcano]
-weight = 6
+weight = 0.1
 
 [zones.haligtree]
 weight = 8
@@ -227,9 +227,13 @@ exclude = true
 # Cluster-level traversal constraints
 # =============================================================================
 #
+# exclude: remove this cluster entirely from the pool
 # proximity_groups: fogs spatially close — entry and exit cannot share a group
 # allowed_entries/allowed_exits: restrict eligible fogs
 # Use "zone:fog_id" when the same fog_id appears in multiple zones
+
+[clusters.volcano_ac44]
+exclude = true  # Too small for legacy_dungeon (~30s to traverse)
 
 [clusters.stormveil_db4a]
 proximity_groups = [["AEG099_230_9001", "AEG099_002_9002"]]

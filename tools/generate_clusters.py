@@ -1590,6 +1590,8 @@ def filter_and_enrich_clusters(
         clusters_meta = metadata.get("clusters", {})
         if cluster.cluster_id in clusters_meta:
             cm = clusters_meta[cluster.cluster_id]
+            if cm.get("exclude"):
+                continue
             cluster.proximity_groups = cm.get("proximity_groups", [])
             cluster.allowed_entries = cm.get("allowed_entries", [])
             cluster.allowed_exits = cm.get("allowed_exits", [])
