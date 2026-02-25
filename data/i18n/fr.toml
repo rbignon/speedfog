@@ -497,7 +497,8 @@ major_boss = "boss majeur"
 # Retours post-boss ("completing" must come before bare "{boss}" — first match wins)
 "return to entrance after completing {zone}" = "retour à l'entrée après {zone}"
 "return to entrance after {boss}" = "retour à l'entrée après {boss}"
-# Entrées/sorties de zones
+# Entrées/sorties de zones (possessive before bare zone — first match wins)
+"at the entrance from {boss}'s arena" = "à l'entrée depuis l'arène de {boss}"
 "at the entrance from {zone}" = "à l'entrée depuis {zone}"
 "at the entrance to {zone}" = "à l'entrée de {zone}"
 "at the exit to {zone}" = "à la sortie vers {zone}"
@@ -639,7 +640,6 @@ major_boss = "boss majeur"
 "at the bottom of the elevator before the Radahn warp" = "en bas de l'ascenseur avant la téléportation vers Radahn"
 "using the Sending Gate before Starscourge Radahn" = "en utilisant le portail avant Radahn le Fléau des astres"
 "at the far North entrance to War-Dead Catacombs" = "à l'entrée nord de la tombe des héros"
-"at the entrance from Radahn's arena" = "à l'entrée depuis l'arène de Radahn"
 "at the front of the Deeproot Depths boss arena" = "devant l'arène de boss des Profondeurs de Fonderacine"
 
 # --- Redmane Castle ---
