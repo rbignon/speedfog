@@ -2436,6 +2436,50 @@ class TestComputeClusterFogsUniqueClassification:
         assert "unique" not in cluster.exit_fogs[0]
         assert "location" not in cluster.exit_fogs[0]
 
+    def test_warp_bonfire_propagated_to_exit_fogs(self):
+        """WarpBonfire on ASide sets warp_bonfire=True in exit_fogs."""
+        graph = WorldGraph()
+
+        fog = FogData(
+            name="test_warp",
+            fog_id=888,
+            aside=FogSide(area="zone_a", text="", warp_bonfire=12345),
+            bside=FogSide(area="zone_b", text=""),
+            tags=["unique", "major"],
+            location=99999,
+        )
+        zone_fogs = {
+            "zone_a": ZoneFogs(entry_fogs=[], exit_fogs=[fog]),
+        }
+
+        cluster = Cluster(zones=frozenset({"zone_a"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        assert len(cluster.exit_fogs) == 1
+        assert cluster.exit_fogs[0]["warp_bonfire"] is True
+
+    def test_no_warp_bonfire_when_absent(self):
+        """Exit fog without WarpBonfire does NOT get warp_bonfire key."""
+        graph = WorldGraph()
+
+        fog = FogData(
+            name="test_normal",
+            fog_id=777,
+            aside=FogSide(area="zone_a", text=""),
+            bside=FogSide(area="zone_b", text=""),
+            tags=["unique", "major"],
+            location=88888,
+        )
+        zone_fogs = {
+            "zone_a": ZoneFogs(entry_fogs=[], exit_fogs=[fog]),
+        }
+
+        cluster = Cluster(zones=frozenset({"zone_a"}))
+        compute_cluster_fogs(cluster, graph, zone_fogs)
+
+        assert len(cluster.exit_fogs) == 1
+        assert "warp_bonfire" not in cluster.exit_fogs[0]
+
 
 # =============================================================================
 # Fog Reuse Default Tests

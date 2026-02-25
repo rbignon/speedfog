@@ -71,6 +71,7 @@ class FogSide:
     text: str
     tags: list[str] = field(default_factory=list)
     cond: str | None = None
+    warp_bonfire: int | None = None
 
     def requires_own_zone(self) -> bool:
         """Check if this side requires already being in its own zone.
@@ -108,6 +109,11 @@ class FogData:
     tags: list[str] = field(default_factory=list)
     split_from: str | None = None  # SplitFrom field (ashen alternates)
     location: int | None = None  # Location field from fog.txt (entity ID in MSB)
+
+    @property
+    def has_warp_bonfire(self) -> bool:
+        """Check if this fog's ASide uses a WarpBonfire (bonfire-sit warp)."""
+        return self.aside.warp_bonfire is not None
 
     @property
     def is_split(self) -> bool:
@@ -409,6 +415,7 @@ def parse_fog_side(side_data: dict) -> FogSide:
         text=side_data.get("Text", ""),
         tags=parse_tags(side_data.get("Tags")),
         cond=side_data.get("Cond"),
+        warp_bonfire=side_data.get("WarpBonfire"),
     )
 
 
@@ -1068,6 +1075,8 @@ def compute_cluster_fogs(
                     # Always preserve location for entity removal tracking
                     if fog.location is not None:
                         fog_entry["location"] = fog.location
+                if fog.has_warp_bonfire and fog.aside.area == zone:
+                    fog_entry["warp_bonfire"] = True
                 cluster.exit_fogs.append(fog_entry)
 
 

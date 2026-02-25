@@ -343,11 +343,11 @@ def dag_to_dict(
         if fog_data and exit_gate_str in fog_data:
             exit_entity_id = fog_data[exit_gate_str].get("entity_id", 0)
 
-        # Detect WarpBonfire exits: clusters.json exit_fogs with a "location"
-        # field are bonfire-sit warps whose vanilla event lives in common.emevd.
+        # Detect WarpBonfire exits: clusters.json exit_fogs with "warp_bonfire"
+        # are bonfire-sit warps whose vanilla event lives in common.emevd.
         # ZoneTrackingInjector needs this to match the vanilla warp event.
         has_common_event = any(
-            ef["fog_id"] == edge.exit_fog.fog_id and ef.get("location")
+            ef["fog_id"] == edge.exit_fog.fog_id and ef.get("warp_bonfire")
             for ef in source_node.cluster.exit_fogs
         )
 
