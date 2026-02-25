@@ -33,6 +33,17 @@ Some fog gates use hand-crafted events instead of the fogwarp template (e.g., li
 
 Cutscene-based transitions (bank 2002, id 11/12) pack the destination map as an int32 (`area*1000000 + block*10000 + sub*100 + sub2`). FogMod replaces the region and map in these instructions. Used by transitions like the Erdtree burning at the Forge of the Giants.
 
+### WarpBonfire gates
+
+WarpBonfire gates are bonfire-sit warps (e.g., Fire Giant forge → Erdtree burning, Maliketh → Ashen Leyndell). FogMod handles these via two mechanisms:
+
+1. **Vanilla event in common.emevd** (e.g., Event 901) — FogMod's EventEditor replaces the region/map in `PlayCutsceneToPlayerAndWarpWithWeatherAndTime`. Fires on the first traversal.
+2. **WarpFlag event in map EMEVD** — FogMod creates a new event triggered by a WarpFlag (set via grace "Repeat warp" menu). Only usable after the first traversal.
+
+Strategies 0-2 can match WarpFlag events (they have entity-based or compound keys), but vanilla events in common.emevd lack `IfActionButtonInArea` and have no source map. When dest maps collide, dest-only matching picks the wrong flag. Strategy 3 uses a dedicated `commonEventLookup` built from connections with `has_common_event: true` in graph.json.
+
+The 3 WarpBonfire gates: `13002500` (Fire Giant → Farum Azula), `13000950` (Maliketh → Ashen Leyndell), `34140950` (Fell Twins). Only the first two have vanilla events in common.emevd; Fell Twins is in a map EMEVD where compound key matching works.
+
 ### Event placement
 
 FogMod's `getEventMap()` decides which EMEVD file hosts each warp event. This may differ from the exit gate's map prefix — e.g., parent maps for open world tiles, or map deduplication. This is why the injector can't assume the EMEVD filename matches the exit gate.
@@ -52,6 +63,7 @@ For each connection in graph.json:
    - Gate name suffix — for numeric gates (e.g., `m34_12_00_00_34122840`), the suffix is the action entity used by FogMod in `IfActionButtonInArea`
 4. **Compound lookup** — `(source_map, dest_map) → flag_id`, with collision tracking
 5. **Dest-only lookup** — `dest_map → flag_id`, with collision tracking
+6. **Common event lookup** — `dest_map → flag_id` for connections with `HasCommonEvent` (WarpBonfire gates whose vanilla events live in common.emevd)
 
 The entity lookup is a **multimap** (one entity → multiple candidates) because two connections can share the same exit fog gate when `allow_entry_as_exit` is used. The old `Dictionary.TryAdd` silently dropped duplicates; the multimap preserves all candidates and disambiguates by destination map at match time.
 
@@ -71,7 +83,8 @@ For each event in each EMEVD file:
    |----------|-----|-----------------|
    | 0. Entity match | IfActionButtonInArea entity → candidates → resolve by dest map | Most reliable. Handles manual fogwarps with vanilla region IDs (e.g., Placidusax). Handles shared gates via dest map disambiguation. |
    | 1. Compound key | (EMEVD filename, warp dest map) → flag | Resolves same-dest collisions when exits come from different maps. On compound collision, falls back to entity resolution. |
-   | 2. Dest-only | warp dest map → flag | Fallback. Skips injection on collisions when source map is known (likely back-portal). Injects when source is common.emevd (forward warps for numeric gates). |
+   | 2. Dest-only | warp dest map → flag | Fallback. Skips injection on collisions when source map is known (likely back-portal) or when common event lookup covers the dest map (let Strategy 3 handle it). |
+   | 3. Common event | warp dest map → flag (common event lookup) | For WarpBonfire gates whose vanilla events live in common.emevd. Only checked when sourceMap is null and strategies 0-2 fail. |
 
 3. **Injection** — insert `SetEventFlag(flag_id, ON)` before each matched warp instruction, from last to first (to preserve instruction indices). Shift Parameter entries accordingly.
 
