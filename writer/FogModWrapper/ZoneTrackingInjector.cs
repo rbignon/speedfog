@@ -417,29 +417,48 @@ public static class ZoneTrackingInjector
 
                     // Strategy 2: Fall back to dest-only matching.
                     // When dest map has a collision AND source map is known (map-specific
-                    // EMEVD), skip injection — these are typically back-portal return warps
-                    // whose source EMEVD doesn't match any registered exit map.
+                    // EMEVD), skip — these are typically back-portal return warps whose
+                    // source EMEVD doesn't match any registered exit map.
                     // When source map is unknown (common.emevd) AND dest map has a common
-                    // event entry, also skip — let Strategy 3 handle it more precisely.
+                    // event entry, skip dest-only — let Strategy 3 handle it more precisely.
                     // When source map is unknown AND no common event entry, inject anyway —
                     // FogMod places forward warps for vanilla gate types in common.emevd.
                     if (!matched)
                     {
                         if (!destOnlyLookup.TryGetValue(destMap, out flagId))
-                            continue;
-                        if (destOnlyCollisions.Contains(destMap))
                         {
-                            if (sourceMap.HasValue || commonEventLookup.ContainsKey(destMap))
+                            // Dest map not in dest-only lookup at all. Fall through to
+                            // Strategy 3 (common event) — don't continue, as the warp
+                            // may still be matchable via common event lookup.
+                        }
+                        else if (destOnlyCollisions.Contains(destMap))
+                        {
+                            if (sourceMap.HasValue)
                             {
-                                if (sourceMap.HasValue)
-                                    Console.WriteLine($"Zone tracking: skipped collided dest-only " +
-                                                      $"on {FormatMap(destMap)} from EMEVD {FormatMap(sourceMap.Value)} (event {evt.ID})");
+                                Console.WriteLine($"Zone tracking: skipped collided dest-only " +
+                                                  $"on {FormatMap(destMap)} from EMEVD {FormatMap(sourceMap.Value)} (event {evt.ID})");
                                 skippedCollisions++;
                                 continue;
                             }
+                            if (commonEventLookup.ContainsKey(destMap))
+                            {
+                                // Dest collision in common.emevd with a common event entry:
+                                // don't match via dest-only, fall through to Strategy 3.
+                                skippedCollisions++;
+                            }
+                            else
+                            {
+                                // Dest collision in common.emevd without common event entry:
+                                // no better strategy available, inject via dest-only.
+                                matched = true;
+                                destOnlyMatches++;
+                            }
                         }
-                        matched = true;
-                        destOnlyMatches++;
+                        else
+                        {
+                            matched = true;
+                            destOnlyMatches++;
+                        }
                     }
 
                     // Strategy 3: Common event matching — for WarpBonfire connections whose
@@ -455,6 +474,9 @@ public static class ZoneTrackingInjector
                             commonEventMatches++;
                         }
                     }
+
+                    if (!matched)
+                        continue;
 
                     warpPositions.Add((i, flagId));
                 }

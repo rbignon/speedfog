@@ -90,7 +90,8 @@ public class GraphDataSerializationTests
             EntranceGate = "m11_00_00_00_AEG099_002_9000",
             FlagId = 9000042,
             ExitEntityId = 13001850,
-            IgnorePair = true
+            IgnorePair = true,
+            HasCommonEvent = true
         };
 
         var json = JsonSerializer.Serialize(original, JsonOptions);
@@ -104,6 +105,7 @@ public class GraphDataSerializationTests
         Assert.Equal(original.FlagId, deserialized.FlagId);
         Assert.Equal(original.ExitEntityId, deserialized.ExitEntityId);
         Assert.Equal(original.IgnorePair, deserialized.IgnorePair);
+        Assert.Equal(original.HasCommonEvent, deserialized.HasCommonEvent);
     }
 
     [Fact]
@@ -134,6 +136,16 @@ public class GraphDataSerializationTests
 
         Assert.NotNull(deserialized);
         Assert.Equal(0, deserialized.ExitEntityId);
+    }
+
+    [Fact]
+    public void Connection_HasCommonEvent_DefaultsFalse()
+    {
+        var json = """{"exit_area":"a","exit_gate":"b","entrance_area":"c","entrance_gate":"d","flag_id":1}""";
+        var deserialized = JsonSerializer.Deserialize<Connection>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.False(deserialized.HasCommonEvent);
     }
 
     [Fact]
@@ -197,7 +209,8 @@ public class GraphDataSerializationTests
             EntranceArea = "c",
             EntranceGate = "d",
             ExitEntityId = 13001850,
-            IgnorePair = true
+            IgnorePair = true,
+            HasCommonEvent = true
         };
 
         var json = JsonSerializer.Serialize(conn);
@@ -208,6 +221,7 @@ public class GraphDataSerializationTests
         Assert.Contains("\"entrance_gate\"", json);
         Assert.Contains("\"exit_entity_id\"", json);
         Assert.Contains("\"ignore_pair\"", json);
+        Assert.Contains("\"has_common_event\"", json);
     }
 
     [Fact]
