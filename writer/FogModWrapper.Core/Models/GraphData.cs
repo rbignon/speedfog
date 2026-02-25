@@ -194,6 +194,14 @@ public class Connection
     [JsonPropertyName("ignore_pair")]
     public bool IgnorePair { get; set; } = false;
 
+    /// <summary>
+    /// When true, this connection's exit is a WarpBonfire gate whose vanilla
+    /// warp event (e.g., Erdtree burning) lives in common.emevd.
+    /// ZoneTrackingInjector uses this for Strategy 3 matching.
+    /// </summary>
+    [JsonPropertyName("has_common_event")]
+    public bool HasCommonEvent { get; set; } = false;
+
     public override string ToString()
     {
         return $"{ExitArea} --[{ExitGate}]--> {EntranceArea} via [{EntranceGate}]";
