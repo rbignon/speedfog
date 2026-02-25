@@ -181,6 +181,7 @@ class Cluster:
     # back from deep zones (e.g. preboss zone with a one-way drop to boss).
     oneway_entry_zones: frozenset[str] = field(default_factory=frozenset)
     proximity_groups: list[list[str]] = field(default_factory=list)
+    primary_zone: str = ""
     allowed_entries: list[str] = field(default_factory=list)
     allowed_exits: list[str] = field(default_factory=list)
 
@@ -1502,6 +1503,7 @@ def filter_and_enrich_clusters(
                     cluster.cluster_type = "legacy_dungeon"
 
         # Update cluster ID to use the type-based primary zone
+        cluster.primary_zone = primary_zone
         hash_input = ",".join(sorted(cluster.zones)).encode("utf-8")
         short_hash = hashlib.md5(hash_input).hexdigest()[:4]
         cluster.cluster_id = f"{primary_zone}_{short_hash}"
@@ -1677,7 +1679,7 @@ def clusters_to_json(
     for c in sorted(clusters, key=lambda x: x.cluster_id):
         entry: dict[str, Any] = {
             "id": c.cluster_id,
-            "zones": sorted(c.zones),
+            "zones": [c.primary_zone] + sorted(c.zones - {c.primary_zone}),
             "type": c.cluster_type,
             "weight": c.weight,
             "entry_fogs": c.entry_fogs,
