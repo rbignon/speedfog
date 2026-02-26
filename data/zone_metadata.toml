@@ -213,6 +213,9 @@ exclude = true  # Elden Beast arena — accessed via leyndell2_erdtree unique fo
 [zones.rauhruins_postromina]
 exclude = true
 
+[zones.fissure_preboss]
+exclude = true  # Funnels player into boss dropdown — fissure_boss has its own cluster (fissure_boss_674e)
+
 [zones.graveyard_cave]
 exclude = true
 
