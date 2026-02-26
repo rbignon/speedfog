@@ -3207,6 +3207,52 @@ class TestMajorBossDowngrade:
         assert len(result) == 1
         assert result[0].cluster_type == "major_boss"
 
+    def test_downgraded_cluster_exit_fogs_pruned(self):
+        """Downgraded legacy_dungeon should not have exit fogs in boss zones.
+
+        When a multi-zone major_boss is downgraded because the boss is
+        skippable, exit fogs in boss zones must be removed. Otherwise
+        the DAG generator may randomly select only boss-zone exits,
+        forcing a mandatory boss fight in what should be a traversal cluster.
+        """
+        areas = self._make_areas(
+            entry_zone={"maps": ["m10_00_00_00"]},
+            boss_zone={"maps": ["m10_00_00_00"], "has_boss": True, "defeat_flag": 999},
+            exploration_zone={"maps": ["m10_00_00_00"]},
+        )
+        wg = WorldGraph()
+        wg.add_edge("entry_zone", "boss_zone", bidirectional=False)
+        wg.add_edge("entry_zone", "exploration_zone", bidirectional=True)
+
+        cluster = Cluster(
+            zones=frozenset({"entry_zone", "boss_zone", "exploration_zone"}),
+            entry_fogs=[{"fog_id": "entry_fog", "zone": "entry_zone"}],
+            exit_fogs=[
+                {"fog_id": "boss_exit", "zone": "boss_zone"},
+                {"fog_id": "explore_exit", "zone": "exploration_zone"},
+                {"fog_id": "entry_fog", "zone": "entry_zone"},
+            ],
+        )
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            {"defaults": {"major_boss": 4, "legacy_dungeon": 5}, "zones": {}},
+            {"boss_zone"},
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+            world_graph=wg,
+        )
+
+        assert len(result) == 1
+        assert result[0].cluster_type == "legacy_dungeon"
+        # Boss-zone exits must be pruned
+        exit_zones = {f["zone"] for f in result[0].exit_fogs}
+        assert "boss_zone" not in exit_zones
+        assert "exploration_zone" in exit_zones
+        assert "entry_zone" in exit_zones
+
 
 # =============================================================================
 # Cluster Constraints Serialization Tests

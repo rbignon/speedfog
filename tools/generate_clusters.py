@@ -1510,6 +1510,11 @@ def filter_and_enrich_clusters(
                 )
                 if has_alternate_exit:
                     cluster.cluster_type = "legacy_dungeon"
+                    # Prune exit fogs in boss zones — these force mandatory
+                    # boss fights in what should be a traversal cluster.
+                    cluster.exit_fogs = [
+                        f for f in cluster.exit_fogs if f["zone"] not in boss_zones
+                    ]
 
         # Update cluster ID to use the type-based primary zone
         cluster.primary_zone = primary_zone
