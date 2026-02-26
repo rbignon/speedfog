@@ -84,7 +84,8 @@ speedfog/
 ├── tools/                   # Standalone scripts
 │   ├── setup_dependencies.py    # Extract FogRando and Item Randomizer dependencies
 │   ├── generate_clusters.py # Generate clusters.json from fog.txt
-│   └── extract_fog_data.py  # Extract fog gate metadata
+│   ├── extract_fog_data.py  # Extract fog gate metadata
+│   └── dump_emevd_warps/    # EMEVD analysis tool (dump warps, search flags, trace inits)
 ├── reference/               # FogRando decompiled code (READ-ONLY)
 │   ├── fogrando-src/        # C# source files
 │   └── fogrando-data/       # Reference data (foglocations.txt)
@@ -100,6 +101,7 @@ speedfog/
 |------|---------|
 | `docs/architecture.md` | System architecture and data formats |
 | `docs/event-flags.md` | Event flag allocation and EMEVD reference |
+| `docs/alternate-warp-patching.md` | AlternateFlag warp patching (flags 300/330) |
 | `reference/fogrando-src/GameDataWriterE.cs` | Main FogRando writer (5639 lines) |
 | `reference/fogrando-src/EldenScaling.cs` | Enemy scaling logic |
 | `config.example.toml` | Example configuration |
@@ -295,7 +297,42 @@ cd writer/test && ./run_integration.sh
 
 3. **Reference-driven debugging**: For any in-game problem (fog gates not working, warps failing, scaling issues), first find the equivalent FogRando implementation in `reference/`.
 
-### Common Issues
+### dump_emevd_warps Tool
+
+`tools/dump_emevd_warps/` is a .NET console app for inspecting compiled EMEVD files. Essential for diagnosing warp, flag, and event issues in mod output.
+
+```bash
+# Build
+cd tools/dump_emevd_warps && dotnet build
+
+# Dump warp instructions from mod output
+dotnet run -- dump output/mods/fogmod/event/
+dotnet run -- dump output/mods/fogmod/event/ --map-filter m61_44_45
+
+# Dump all instructions in a specific event
+dotnet run -- dump output/mods/fogmod/event/ --event 1040290310
+dotnet run -- dump output/mods/fogmod/event/ --event all
+
+# Search for all references to a flag (setters, checkers, brute-force scan)
+dotnet run -- search output/mods/fogmod/event/ --flag 330
+
+# Trace event initialization (find InitializeEvent calls + parameter data)
+dotnet run -- init output/mods/fogmod/event/ --event 1040290310
+```
+
+### Investigation Tips
+
+**Warp destinations wrong (wrong map variant):**
+1. Use `dump_emevd_warps dump --map-filter` to inspect WarpPlayer instructions in the affected map's EMEVD
+2. Check if the warp uses an `AlternateFlag` (see `docs/alternate-warp-patching.md`) — look for two WarpPlayer instructions in the same event targeting different map variants
+3. Use `dump_emevd_warps search --flag <flag_id>` to find all setters/checkers for the controlling flag
+4. Check `fog.txt` Entrances section for `AlternateOf` declarations on the affected zone
+5. If a flag is being set by something outside EMEVD (save state, params), patch the warp destinations directly rather than chasing the flag source
+
+**Identifying FogMod-generated events vs vanilla:**
+- FogMod warp regions are >= 755890000 (`FOGMOD_ENTITY_BASE`)
+- FogMod event IDs are typically in the 1040290xxx range
+- Manual fogwarp events may use parameterized entity IDs (shows as `entity_id=0` in raw instructions) — use `init` mode to resolve actual values from InitializeEvent args
 
 **EMEVD events not triggering:**
 - Check event templates in `data/fogevents.txt` against FogRando source in `reference/`
@@ -305,10 +342,6 @@ cd writer/test && ./run_integration.sh
 **Fog gates not visible:**
 - Compare `fog_data.json` entries with FogRando's gate creation in `GameDataWriterE.cs:L262+`
 - Check model names (AEG099_230/231/232)
-
-**Warp destinations wrong:**
-- Verify warp positions in `fog_data.json` against `fog.txt` Entrances section
-- Check map coordinate encoding (m, area, block, sub bytes)
 
 **Enemy scaling incorrect:**
 - Compare with `EldenScaling.cs` tier definitions
