@@ -463,6 +463,26 @@ Example:
                 erdtreeEntrance.BSide.AlternateSide.Warp.Map);
         }
 
+        // 7f3. Patch Sealing Tree fogwarps to eliminate flag 330 dependency.
+        // FogMod's fogwarp template compiles an alt-warp: primary → m61_44_45_00,
+        // alt (flag 330) → m61_44_45_10. Something outside EMEVD sets flag 330 on
+        // saves with prior DLC progress, warping to the wrong map variant (no Romina).
+        // We replace alt destinations with primary destinations in all compiled events.
+        var sealingTreeEntrances = ann.Entrances.Concat(ann.Warps)
+            .SelectMany(e => e.Sides())
+            .Where(s => s.AlternateFlag == 330 && s.AlternateSide?.Warp != null && s.Warp != null)
+            .Select(s => (
+                altRegion: s.AlternateSide.Warp.Region,
+                primaryRegion: s.Warp.Region,
+                primaryMap: s.Warp.Map
+            ))
+            .ToList();
+
+        if (sealingTreeEntrances.Count > 0)
+        {
+            SealingTreeWarpPatcher.Patch(modDir, sealingTreeEntrances);
+        }
+
         // 7g. Inject "RUN COMPLETE" banner on final boss defeat
         RunCompleteInjector.Inject(modDir, config.GameDir, events, graphData.FinishEvent, graphData.RunCompleteMessage);
 
