@@ -66,6 +66,10 @@ weight = 6
 [zones.volcano_abductors]
 type = "boss_arena"
 
+# Astel is a remembrance boss — override from boss_arena to major_boss
+[zones.ainsel_boss]
+type = "major_boss"
+
 # Boss arenas: disable entry-as-exit (enter from front, exit from back)
 [zones.ainsel_dragonkin]
 allow_entry_as_exit = false
