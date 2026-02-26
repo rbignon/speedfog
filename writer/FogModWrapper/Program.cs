@@ -478,7 +478,13 @@ Example:
             RebirthInjector.Inject(modDir, config.GameDir);
         }
 
-        // 7j. Remove vanilla warp assets that FogMod couldn't properly remove
+        // 7j2. Neutralize vanilla Sealing Tree events to prevent flag 330 contamination.
+        // Event 915 sets flag 330 (Sealing Tree burned) when flag 9140 (Dancing Lion
+        // defeated) is ON. On saves with prior DLC progress, this fires immediately and
+        // causes fogwarps to Romina's area to use the wrong map variant (m61_44_45_10).
+        SealingTreePatcher.Patch(modDir);
+
+        // 7k. Remove vanilla warp assets that FogMod couldn't properly remove
         if (graphData.RemoveEntities.Count > 0)
         {
             VanillaWarpRemover.Remove(modDir, graphData.RemoveEntities);
