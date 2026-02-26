@@ -208,10 +208,21 @@ This gives the start node extra exits, enabling dual-branch starts when `max_bra
 | `leyndell2_` prefix | Ashen capital (use pre-ashen instead) |
 | Overworld zones | Large open areas (optional via `--include-overworld`) |
 | DLC zones | Optional via `--exclude-dlc` |
+| `exclude = true` in zone_metadata.toml | Per-zone exclusion (e.g., `fissure_preboss`, `rauhruins_postromina`) |
 
 ### Cluster-Level
 
 Clusters with no entry_fogs or no exit_fogs are filtered out (unreachable or dead-end).
+
+## Major Boss Downgrade
+
+Multi-zone `major_boss` clusters can be **downgraded** to `legacy_dungeon` when the boss is skippable — i.e., the player can enter and exit the cluster without fighting the boss.
+
+**Detection**: After building the world graph within the cluster, compute which zones are reachable from entry zones via non-boss zones only. If any exit fog exists in a reachable non-boss zone (excluding entry fogs reused as exits), the boss is skippable.
+
+**Exit pruning**: When a cluster is downgraded, exit fogs in boss zones are removed. Without this, the DAG generator could randomly select only boss-zone exits, forcing a mandatory boss fight in what should be a traversal cluster.
+
+**Affected clusters**: `academy_redwolf`, `leyndell_sanctuary`, `leyndell2_sanctuary` (clusters where the boss arena has exits but alternative non-boss routes exist).
 
 ## Output Format
 
