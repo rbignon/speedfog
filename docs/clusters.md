@@ -1,5 +1,8 @@
 # Cluster Generation
 
+**Date:** 2026-02-15
+**Status:** Active
+
 How SpeedFog transforms FogRando's `fog.txt` into curated zone clusters for DAG generation.
 
 ## Overview

@@ -1,5 +1,8 @@
 # Alternate Warp Patching
 
+**Date:** 2026-02-26
+**Status:** Active
+
 How SpeedFog patches FogMod's compiled fogwarp events to eliminate dependencies on AlternateFlag map variants.
 
 ## Background: FogMod's AlternateSide Mechanism

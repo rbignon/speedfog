@@ -1,5 +1,8 @@
 # Item Giving Limitations
 
+**Date:** 2026-02-15
+**Status:** Active
+
 How Elden Ring's EMEVD system constrains item delivery, and how SpeedFog works around them.
 
 ## EMEVD Item Types

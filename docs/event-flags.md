@@ -1,5 +1,8 @@
 # Event Flags & EMEVD Reference
 
+**Date:** 2026-02-10
+**Status:** Active
+
 Quick reference for SpeedFog's event flag allocation and EMEVD event IDs.
 
 ## VirtualMemoryFlag: How Elden Ring Stores Flags

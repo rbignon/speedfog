@@ -1,5 +1,8 @@
 # SpeedFog Architecture
 
+**Date:** 2026-02-02 — **Updated:** 2026-02-26
+**Status:** Active
+
 SpeedFog generates short randomized Elden Ring runs (~1 hour) with a controlled DAG structure.
 
 ## Overview
@@ -420,11 +423,14 @@ Zones have tiers (1-28) based on their layer in the DAG. FogMod applies SpEffect
 
 ## Further Documentation
 
+- [fogmod-emevd-model.md](fogmod-emevd-model.md) — FogMod EMEVD compilation model: template compilation, warp instruction families, event placement, AlternateSide branches
 - [event-flags.md](event-flags.md) — Event flag allocation, EMEVD event IDs, VirtualMemoryFlag constraints
 - [zone-tracking.md](zone-tracking.md) — Zone tracking injection: FogMod event compilation, matching strategies, entity disambiguation
+- [alternate-warp-patching.md](alternate-warp-patching.md) — AlternateFlag warp patching: ErdtreeWarpPatcher (flag 300), SealingTreeWarpPatcher (flag 330)
 - [dag-generation.md](dag-generation.md) — DAG generation algorithm: topology operations, cluster compatibility, retry system
 - [clusters.md](clusters.md) — Cluster generation: zone grouping, fog classification, bidirectional detection
 - [item-giving-limitations.md](item-giving-limitations.md) — EMEVD item type constraints and Ash of War workaround
+- [item-randomizer.md](item-randomizer.md) — ItemRandomizerWrapper: config flow, enemy presets, boss placement capture, FogModWrapper merge
 
 ## References
 
