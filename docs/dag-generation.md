@@ -268,12 +268,12 @@ After the complete DAG is built (start → layers → forced merge → prerequis
 
 **Algorithm:**
 1. Find all eligible (source, target) pairs:
-   - `source.layer == target.layer - 1` (adjacent layers only)
+   - `source.layer == target.layer - 1` (adjacent layers only — no layer-skipping, which would let players bypass content and break racing balance)
    - Source has unused exit fogs (surplus from **cluster's** full exit list)
    - Target has unused entry fogs (surplus from **cluster's** full entry list)
    - No existing edge between them
    - No existing path from source to target (different branches)
-2. Compute count: `max(1, round(len(eligible_pairs) * crosslink_ratio))`
+2. Compute count: `round(len(eligible_pairs) * crosslink_ratio)`; if 0, skip
 3. Shuffle and select that many pairs
 4. For each: re-check surplus (earlier cross-links may have consumed it), pick an unused exit fog from source, unused entry fog from target, add edge
 

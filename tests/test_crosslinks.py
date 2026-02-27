@@ -452,3 +452,28 @@ class TestAddCrosslinks:
 
         added = add_crosslinks(dag, ratio=1.0, rng=random.Random(42))
         assert added == 0  # No cross-branch pairs exist
+
+    def test_deterministic_with_same_seed(self):
+        """Same seed produces identical cross-links across multiple runs."""
+        results = []
+        for _ in range(5):
+            dag = _make_three_layer_dag()
+            add_crosslinks(dag, ratio=1.0, rng=random.Random(99))
+            edges = [(e.source_id, e.target_id) for e in dag.edges]
+            results.append(edges)
+
+        for r in results[1:]:
+            assert r == results[0]
+
+    def test_small_ratio_can_produce_zero(self):
+        """Very small ratio with few pairs produces 0 cross-links."""
+        dag = _make_three_layer_dag()
+        # 2 eligible pairs * 0.1 = 0.2, rounds to 0
+        added = add_crosslinks(dag, ratio=0.1, rng=random.Random(42))
+        assert added == 0
+
+    def test_crosslinks_added_tracked_on_dag(self):
+        """Dag.crosslinks_added is set by add_crosslinks return value."""
+        dag = _make_three_layer_dag()
+        dag.crosslinks_added = add_crosslinks(dag, ratio=1.0, rng=random.Random(42))
+        assert dag.crosslinks_added == 2

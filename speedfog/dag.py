@@ -109,6 +109,7 @@ class Dag:
     edges: list[DagEdge] = field(default_factory=list)
     start_id: str = ""
     end_id: str = ""
+    crosslinks_added: int = 0
 
     def add_node(self, node: DagNode) -> None:
         """Add a node to the DAG."""

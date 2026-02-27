@@ -16,6 +16,7 @@ from itertools import combinations
 
 from speedfog.clusters import ClusterData, ClusterPool, parse_qualified_fog_id
 from speedfog.config import Config, resolve_final_boss_candidates
+from speedfog.crosslinks import add_crosslinks
 from speedfog.dag import Branch, Dag, DagNode, FogRef
 from speedfog.planner import compute_tier, plan_layer_types
 from speedfog.validator import ValidationResult, validate_dag
@@ -1558,9 +1559,9 @@ def generate_dag(
 
     # Cross-link pass (post-hoc): add optional edges between parallel branches
     if config.structure.crosslink_ratio > 0:
-        from speedfog.crosslinks import add_crosslinks
-
-        add_crosslinks(dag, config.structure.crosslink_ratio, rng)
+        dag.crosslinks_added = add_crosslinks(
+            dag, config.structure.crosslink_ratio, rng
+        )
 
     return dag
 

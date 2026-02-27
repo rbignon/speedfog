@@ -220,6 +220,8 @@ def main() -> int:
         print(f"  Layers: {max((n.layer for n in dag.nodes.values()), default=0) + 1}")
         print(f"  Nodes: {len(dag.nodes)}")
         print(f"  Paths: {len(paths)}")
+        if dag.crosslinks_added > 0:
+            print(f"  Cross-links: {dag.crosslinks_added}")
         if paths:
             weights = [dag.path_weight(p) for p in paths]
             print(f"  Path weights: {weights}")

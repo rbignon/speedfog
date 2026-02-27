@@ -68,7 +68,9 @@ def find_eligible_pairs(dag: Dag) -> list[tuple[str, str]]:
     """Find all (source, target) pairs eligible for cross-links.
 
     Eligible pairs satisfy:
-    - source.layer == target.layer - 1 (forward, adjacent layers)
+    - source.layer == target.layer - 1 (forward, adjacent layers only —
+      skipping layers would let players bypass content, which is
+      unacceptable in racing)
     - source has surplus exit fogs
     - target has surplus entry fogs
     - no existing path from source to target (different branches)
@@ -132,7 +134,9 @@ def add_crosslinks(
     if not pairs:
         return 0
 
-    nb = max(1, round(len(pairs) * ratio))
+    nb = round(len(pairs) * ratio)
+    if nb <= 0:
+        return 0
     rng.shuffle(pairs)
 
     added = 0

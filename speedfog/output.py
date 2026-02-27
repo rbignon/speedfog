@@ -993,6 +993,8 @@ def export_spoiler_log(
     lines.append(f"Total zones: {dag.total_zones()}")
     paths = dag.enumerate_paths()
     lines.append(f"Total paths: {len(paths)}")
+    if dag.crosslinks_added > 0:
+        lines.append(f"Cross-links: {dag.crosslinks_added}")
     lines.append("")
 
     # Group nodes by layer
