@@ -694,18 +694,11 @@ class TestFindEligiblePairs:
 
 
 class TestAddCrosslinks:
-    def test_ratio_zero_adds_nothing(self):
-        """crosslink_ratio=0.0 leaves DAG unchanged."""
-        dag = make_diamond_dag()
-        original_edge_count = len(dag.edges)
-        add_crosslinks(dag, ratio=0.0, rng=random.Random(42))
-        assert len(dag.edges) == original_edge_count
-
-    def test_ratio_one_adds_all_eligible(self):
-        """crosslink_ratio=1.0 adds all eligible pairs."""
+    def test_adds_all_eligible(self):
+        """Adds all eligible pairs (surplus is structurally rare)."""
         dag = _make_three_layer_dag()
         original_edge_count = len(dag.edges)
-        added = add_crosslinks(dag, ratio=1.0, rng=random.Random(42))
+        added = add_crosslinks(dag, rng=random.Random(42))
         assert added == 2  # A->C2 and B->C1
         assert len(dag.edges) == original_edge_count + 2
 
@@ -713,7 +706,7 @@ class TestAddCrosslinks:
         """Cross-link edge adds entry_fog to target node."""
         dag = _make_three_layer_dag()
         c2_entries_before = len(dag.nodes["c2"].entry_fogs)
-        add_crosslinks(dag, ratio=1.0, rng=random.Random(42))
+        add_crosslinks(dag, rng=random.Random(42))
         # C2 should have one more entry_fog (from the cross-link)
         c2_entries_after = len(dag.nodes["c2"].entry_fogs)
         assert c2_entries_after == c2_entries_before + 1
@@ -723,7 +716,7 @@ class TestAddCrosslinks:
         dag = _make_three_layer_dag()
         a_exits_before = len(dag.nodes["a"].exit_fogs)
         b_exits_before = len(dag.nodes["b"].exit_fogs)
-        add_crosslinks(dag, ratio=1.0, rng=random.Random(42))
+        add_crosslinks(dag, rng=random.Random(42))
         # Both A and B gain one exit_fog each from cross-links
         assert len(dag.nodes["a"].exit_fogs) == a_exits_before + 1
         assert len(dag.nodes["b"].exit_fogs) == b_exits_before + 1
@@ -731,7 +724,7 @@ class TestAddCrosslinks:
     def test_crosslink_consumes_surplus_fogs(self):
         """After cross-link, used fogs are no longer surplus."""
         dag = _make_three_layer_dag()
-        add_crosslinks(dag, ratio=1.0, rng=random.Random(42))
+        add_crosslinks(dag, rng=random.Random(42))
         # Re-check: no more eligible pairs (all surplus consumed)
         pairs = find_eligible_pairs(dag)
         assert len(pairs) == 0
@@ -791,7 +784,7 @@ class TestAddCrosslinks:
         dag.start_id = "s"
         dag.end_id = "e"
 
-        added = add_crosslinks(dag, ratio=1.0, rng=random.Random(42))
+        added = add_crosslinks(dag, rng=random.Random(42))
         assert added == 0  # No cross-branch pairs exist
 
     def test_deterministic_with_same_seed(self):
@@ -799,22 +792,15 @@ class TestAddCrosslinks:
         results = []
         for _ in range(5):
             dag = _make_three_layer_dag()
-            add_crosslinks(dag, ratio=1.0, rng=random.Random(99))
+            add_crosslinks(dag, rng=random.Random(99))
             edges = [(e.source_id, e.target_id) for e in dag.edges]
             results.append(edges)
 
         for r in results[1:]:
             assert r == results[0]
 
-    def test_small_ratio_guarantees_at_least_one(self):
-        """Small ratio with few pairs still adds at least 1 cross-link."""
-        dag = _make_three_layer_dag()
-        # 2 eligible pairs * 0.1 = 0.2, rounds to 0, but max(1, 0) = 1
-        added = add_crosslinks(dag, ratio=0.1, rng=random.Random(42))
-        assert added == 1
-
     def test_crosslinks_added_tracked_on_dag(self):
         """Dag.crosslinks_added is set by add_crosslinks return value."""
         dag = _make_three_layer_dag()
-        dag.crosslinks_added = add_crosslinks(dag, ratio=1.0, rng=random.Random(42))
+        dag.crosslinks_added = add_crosslinks(dag, rng=random.Random(42))
         assert dag.crosslinks_added == 2

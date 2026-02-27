@@ -273,9 +273,8 @@ After the complete DAG is built (start → layers → forced merge → prerequis
    - Target has unused entry fogs (surplus from **cluster's** full entry list)
    - No existing edge between them
    - No existing path from source to target (different branches)
-2. Compute count: `max(1, round(len(eligible_pairs) * crosslink_ratio))` — guarantees at least 1 cross-link when pairs exist, since typical DAGs have only 1-4 eligible pairs
-3. Shuffle and select that many pairs
-4. For each: re-check surplus (earlier cross-links may have consumed it), pick an unused exit fog from source, unused entry fog from target, add edge
+2. Shuffle eligible pairs and try every one — eligible pairs are structurally rare (typically 0-4 per DAG) because most clusters have just enough fogs for their normal edges
+3. For each: re-check surplus (earlier cross-links may have consumed it), pick an unused exit fog from source, unused entry fog from target, add edge
 
 **Surplus from cluster, not node:** The generator's `_pick_entry_and_exits_for_node()` truncates `node.exit_fogs` to `min_exits` (typically 1 for passant nodes). Cross-link surplus is computed from `node.cluster.exit_fogs` (the full list) minus fogs consumed by outgoing edges. This is why most passant nodes have surplus exits available for cross-links despite `node.exit_fogs` containing only 1.
 
@@ -333,7 +332,7 @@ Config validation runs once before any attempts; invalid config raises `Generati
 | `structure.split_probability` | 0.9 | Chance of split at each layer (if cluster supports it) |
 | `structure.merge_probability` | 0.5 | Chance of merge at each layer (if cluster supports it) |
 | `structure.min_branch_age` | 0 | Minimum layers before a branch can be merged (0=no limit) |
-| `structure.crosslink_ratio` | 0.0 | Fraction of eligible pairs that become cross-links (0.0-1.0) |
+| `structure.crosslink_ratio` | 0.0 | Enable cross-links between parallel branches (> 0 = on, 0.0 = off) |
 | `structure.first_layer_type` | None | Force type for first layer |
 | `structure.major_boss_ratio` | 0.0 | Fraction of layers with major bosses |
 | `structure.final_boss_candidates` | `["leyndell_erdtree", "enirilim_radahn"]` | Possible end bosses |

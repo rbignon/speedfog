@@ -3458,7 +3458,7 @@ class TestCrosslinkPipeline:
         assert errors == [], f"DAG validation failed: {errors}"
 
     def test_crosslinks_add_extra_edges(self):
-        """crosslink_ratio=1.0 adds more edges than ratio=0.0 with same seed.
+        """Enabling cross-links adds more edges than disabled with same seed.
 
         Tries multiple seeds to find one that produces a DAG with eligible
         cross-link pairs (parallel branches at adjacent layers with surplus fogs).

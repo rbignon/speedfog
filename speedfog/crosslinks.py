@@ -128,36 +128,29 @@ def find_eligible_pairs(dag: Dag) -> list[tuple[str, str]]:
 
 def add_crosslinks(
     dag: Dag,
-    ratio: float,
     rng: random.Random,
 ) -> int:
     """Add cross-link edges to a DAG.
 
+    Tries every eligible pair. Eligible pairs are structurally rare
+    (typically 0-4 per DAG) because most clusters have just enough
+    fogs for their normal DAG edges, so we take every opportunity.
+
     Args:
         dag: The DAG to modify (in place).
-        ratio: Fraction of eligible pairs to turn into cross-links (0.0-1.0).
         rng: Random number generator.
 
     Returns:
         Number of cross-links added.
     """
-    if ratio <= 0.0:
-        return 0
-
     pairs = find_eligible_pairs(dag)
     if not pairs:
         return 0
 
-    nb = max(1, round(len(pairs) * ratio))
-    if nb <= 0:
-        return 0
     rng.shuffle(pairs)
 
     added = 0
     for src_id, tgt_id in pairs:
-        if added >= nb:
-            break
-
         # Re-check surplus (may have been consumed by earlier cross-link)
         src_surplus = _surplus_exits(dag, src_id)
         tgt_surplus = _surplus_entries(dag, tgt_id)

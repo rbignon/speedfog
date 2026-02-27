@@ -51,7 +51,7 @@ class StructureConfig:
     merge_probability: float = 0.5
     max_branches: int = 3
     min_branch_age: int = 0  # Min layers before a branch can be merged (0=no limit)
-    crosslink_ratio: float = 0.0  # Fraction of eligible pairs that become cross-links
+    crosslink_ratio: float = 0.0  # Enable cross-links (> 0 = on, 0.0 = off)
     first_layer_type: str | None = None
     major_boss_ratio: float = 0.0
     final_boss_candidates: list[str] = field(default_factory=list)
