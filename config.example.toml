@@ -72,6 +72,11 @@ max_branches = 3
 # Higher values prevent premature merge-after-split, creating wider branching structures.
 # min_branch_age = 0
 
+# Ratio of eligible pairs that become cross-links between branches (0.0-1.0).
+# Cross-links let players switch branches at the next layer.
+# 0.0 = no cross-links (default), 0.2 = ~20% of eligible pairs
+# crosslink_ratio = 0.2
+
 # Force the first layer after start to be a specific cluster type.
 # Options: "legacy_dungeon", "mini_dungeon", "boss_arena", "major_boss"
 # If omitted: random based on requirements (current behavior)

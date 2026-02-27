@@ -556,3 +556,23 @@ def test_enemy_config_partial():
     config = Config.from_dict({"enemy": {"randomize_bosses": True}})
     assert config.enemy.randomize_bosses is True
     assert config.enemy.lock_final_boss is True  # default
+
+
+def test_crosslink_ratio_default():
+    """crosslink_ratio defaults to 0.0 (disabled)."""
+    config = Config.from_dict({})
+    assert config.structure.crosslink_ratio == 0.0
+
+
+def test_crosslink_ratio_from_toml():
+    """crosslink_ratio is parsed from structure section."""
+    config = Config.from_dict({"structure": {"crosslink_ratio": 0.3}})
+    assert config.structure.crosslink_ratio == 0.3
+
+
+def test_crosslink_ratio_validation():
+    """crosslink_ratio must be 0.0-1.0."""
+    with pytest.raises(ValueError, match="crosslink_ratio"):
+        Config.from_dict({"structure": {"crosslink_ratio": 1.5}})
+    with pytest.raises(ValueError, match="crosslink_ratio"):
+        Config.from_dict({"structure": {"crosslink_ratio": -0.1}})
