@@ -76,7 +76,9 @@ def make_diamond_dag() -> Dag:
             layer=1,
             tier=2,
             entry_fogs=[FogRef("a_entry1", "a_c")],
-            exit_fogs=[FogRef("a_exit1", "a_c"), FogRef("a_exit2", "a_c")],
+            # Node exit_fogs truncated to 1 (matches real generator behavior).
+            # Surplus a_exit2 lives only in cluster.exit_fogs.
+            exit_fogs=[FogRef("a_exit1", "a_c")],
         )
     )
 
@@ -99,7 +101,8 @@ def make_diamond_dag() -> Dag:
             layer=1,
             tier=2,
             entry_fogs=[FogRef("b_entry1", "b_c")],
-            exit_fogs=[FogRef("b_exit1", "b_c"), FogRef("b_exit2", "b_c")],
+            # Same truncation as node A above.
+            exit_fogs=[FogRef("b_exit1", "b_c")],
         )
     )
 
@@ -176,7 +179,10 @@ def _make_three_layer_dag() -> Dag:
             layer=1,
             tier=2,
             entry_fogs=[FogRef("a_entry1", "a_c")],
-            exit_fogs=[FogRef("a_exit1", "a_c"), FogRef("a_exit2", "a_c")],
+            # Node exit_fogs truncated to 1 (matches real generator behavior:
+            # _pick_entry_and_exits_for_node trims to min_exits=1 for passant).
+            # Surplus a_exit2 lives only in cluster.exit_fogs.
+            exit_fogs=[FogRef("a_exit1", "a_c")],
         )
     )
 
@@ -197,7 +203,8 @@ def _make_three_layer_dag() -> Dag:
             layer=1,
             tier=2,
             entry_fogs=[FogRef("b_entry1", "b_c")],
-            exit_fogs=[FogRef("b_exit1", "b_c"), FogRef("b_exit2", "b_c")],
+            # Same truncation as node A above.
+            exit_fogs=[FogRef("b_exit1", "b_c")],
         )
     )
 
@@ -369,6 +376,16 @@ class TestAddCrosslinks:
         # C2 should have one more entry_fog (from the cross-link)
         c2_entries_after = len(dag.nodes["c2"].entry_fogs)
         assert c2_entries_after == c2_entries_before + 1
+
+    def test_crosslink_adds_exit_fog_to_source(self):
+        """Cross-link edge adds exit_fog to source node."""
+        dag = _make_three_layer_dag()
+        a_exits_before = len(dag.nodes["a"].exit_fogs)
+        b_exits_before = len(dag.nodes["b"].exit_fogs)
+        add_crosslinks(dag, ratio=1.0, rng=random.Random(42))
+        # Both A and B gain one exit_fog each from cross-links
+        assert len(dag.nodes["a"].exit_fogs) == a_exits_before + 1
+        assert len(dag.nodes["b"].exit_fogs) == b_exits_before + 1
 
     def test_crosslink_consumes_surplus_fogs(self):
         """After cross-link, used fogs are no longer surplus."""

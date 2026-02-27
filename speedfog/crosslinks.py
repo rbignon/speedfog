@@ -7,6 +7,7 @@ giving players the choice to switch branches during a run.
 from __future__ import annotations
 
 import random
+from collections import deque
 
 from speedfog.dag import Dag, FogRef
 
@@ -49,9 +50,9 @@ def _surplus_entries(dag: Dag, node_id: str) -> list[FogRef]:
 def _is_reachable(dag: Dag, source_id: str, target_id: str) -> bool:
     """Check if target is reachable from source via existing edges (BFS)."""
     visited: set[str] = set()
-    queue = [source_id]
+    queue: deque[str] = deque([source_id])
     while queue:
-        current = queue.pop(0)
+        current = queue.popleft()
         if current == target_id:
             return True
         if current in visited:
@@ -149,7 +150,8 @@ def add_crosslinks(
         entry_fog = rng.choice(tgt_surplus)
 
         dag.add_edge(src_id, tgt_id, exit_fog, entry_fog)
-        # Add entry fog to target node's entry_fogs for validator consistency
+        # Update node fog lists for validator consistency and surplus tracking
+        dag.nodes[src_id].exit_fogs.append(exit_fog)
         dag.nodes[tgt_id].entry_fogs.append(entry_fog)
         added += 1
 
