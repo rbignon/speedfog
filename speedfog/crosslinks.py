@@ -29,19 +29,19 @@ def _surplus_exits(dag: Dag, node_id: str) -> list[FogRef]:
     consumed by outgoing edges. The node's exit_fogs may be trimmed
     during generation, so we use the cluster as the source of truth.
 
-    Also excludes exits whose fog_id is already consumed as an entry
-    on this node. Bidirectional fog gates have both an exit and entry
-    side linked via Pair in FogMod's Graph; when Graph.Connect() uses
-    one side, it also marks the Pair as consumed. Using the same
-    fog_id for both exit and entry on the same node would cause
-    "Already matched" errors in FogMod.
+    Also excludes exits whose (fog_id, zone) is already consumed as an
+    entry on this node. Bidirectional fog gates have both an exit and
+    entry side linked via Pair in FogMod's Graph; when Graph.Connect()
+    uses one side, it also marks the Pair as consumed. The Pair is
+    per-zone: the same fog_id on different zones creates independent
+    Pairs, so we match on (fog_id, zone), not bare fog_id.
     """
     node = dag.nodes[node_id]
     used = _get_used_exit_fogs(dag, node_id)
-    # Fog IDs consumed as entry on this node — their exit Pair is also consumed
-    entry_fog_ids = {edge.entry_fog.fog_id for edge in dag.get_incoming_edges(node_id)}
+    # FogRefs consumed as entry on this node — their exit Pair is also consumed
+    entry_fogrefs = {edge.entry_fog for edge in dag.get_incoming_edges(node_id)}
     all_exits = [FogRef(f["fog_id"], f["zone"]) for f in node.cluster.exit_fogs]
-    return [f for f in all_exits if f not in used and f.fog_id not in entry_fog_ids]
+    return [f for f in all_exits if f not in used and f not in entry_fogrefs]
 
 
 def _surplus_entries(dag: Dag, node_id: str) -> list[FogRef]:
@@ -50,15 +50,15 @@ def _surplus_entries(dag: Dag, node_id: str) -> list[FogRef]:
     Checks the cluster's full entry_fogs list against what's already
     consumed by incoming edges.
 
-    Also excludes entries whose fog_id is already consumed as an exit
-    on this node. See _surplus_exits for the Pair chain rationale.
+    Also excludes entries whose (fog_id, zone) is already consumed as
+    an exit on this node. See _surplus_exits for the Pair chain rationale.
     """
     node = dag.nodes[node_id]
     used = _get_used_entry_fogs(dag, node_id)
-    # Fog IDs consumed as exit on this node — their entry Pair is also consumed
-    exit_fog_ids = {edge.exit_fog.fog_id for edge in dag.get_outgoing_edges(node_id)}
+    # FogRefs consumed as exit on this node — their entry Pair is also consumed
+    exit_fogrefs = {edge.exit_fog for edge in dag.get_outgoing_edges(node_id)}
     all_entries = [FogRef(f["fog_id"], f["zone"]) for f in node.cluster.entry_fogs]
-    return [f for f in all_entries if f not in used and f.fog_id not in exit_fog_ids]
+    return [f for f in all_entries if f not in used and f not in exit_fogrefs]
 
 
 def _is_reachable(dag: Dag, source_id: str, target_id: str) -> bool:
@@ -148,7 +148,7 @@ def add_crosslinks(
     if not pairs:
         return 0
 
-    nb = round(len(pairs) * ratio)
+    nb = max(1, round(len(pairs) * ratio))
     if nb <= 0:
         return 0
     rng.shuffle(pairs)

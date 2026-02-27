@@ -273,13 +273,13 @@ After the complete DAG is built (start → layers → forced merge → prerequis
    - Target has unused entry fogs (surplus from **cluster's** full entry list)
    - No existing edge between them
    - No existing path from source to target (different branches)
-2. Compute count: `round(len(eligible_pairs) * crosslink_ratio)`; if 0, skip
+2. Compute count: `max(1, round(len(eligible_pairs) * crosslink_ratio))` — guarantees at least 1 cross-link when pairs exist, since typical DAGs have only 1-4 eligible pairs
 3. Shuffle and select that many pairs
 4. For each: re-check surplus (earlier cross-links may have consumed it), pick an unused exit fog from source, unused entry fog from target, add edge
 
 **Surplus from cluster, not node:** The generator's `_pick_entry_and_exits_for_node()` truncates `node.exit_fogs` to `min_exits` (typically 1 for passant nodes). Cross-link surplus is computed from `node.cluster.exit_fogs` (the full list) minus fogs consumed by outgoing edges. This is why most passant nodes have surplus exits available for cross-links despite `node.exit_fogs` containing only 1.
 
-**Pair chain exclusion:** Bidirectional fog gates (same fog_id in both entry_fogs and exit_fogs of a cluster) are linked via FogMod's Pair chain. When `Graph.Connect()` uses one side, it marks the Pair as consumed. Therefore, surplus exits exclude any fog_id already consumed as entry on the same node (and vice versa), preventing "Already matched" errors in FogMod.
+**Pair chain exclusion:** Bidirectional fog gates have both an exit and entry side linked via FogMod's Pair chain. When `Graph.Connect()` uses one side, it marks the Pair as consumed. The Pair is per-zone: the same fog_id on different zones creates independent Pairs in FogMod's Graph. Therefore, surplus exits exclude any `(fog_id, zone)` already consumed as entry on the same node (and vice versa), preventing "Already matched" errors in FogMod.
 
 **Fog list consistency:** Each cross-link appends the consumed exit fog to the source node's `exit_fogs` and the consumed entry fog to the target node's `entry_fogs`, maintaining the invariant that node fog lists reflect actual edge usage.
 

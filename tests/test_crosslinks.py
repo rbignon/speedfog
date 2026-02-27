@@ -523,6 +523,125 @@ class TestFindEligiblePairs:
         # No eligible pairs exist in this topology
         assert len(pairs) == 0
 
+    def test_same_fog_id_different_zone_not_excluded(self):
+        """Same fog_id on different zones creates independent Pairs — not excluded.
+
+        FogMod's Pair is per-zone. A boundary fog between zone A and zone B
+        creates independent Pairs on each side. Using fog_id X on zone A as
+        exit does NOT consume fog_id X on zone B as entry.
+        """
+        dag = Dag(seed=1)
+
+        # Topology: start -> (A, B) -> (C, D) -> end
+        # C uses "boundary_fog" zone="c_inner" as exit (outgoing to end).
+        # C also has "boundary_fog" zone="c_outer" as entry (different zone = different Pair).
+        # Cross-link B->C SHOULD be eligible because (boundary_fog, c_outer) is independent.
+
+        s_c = make_cluster(
+            "s",
+            "start",
+            entry_fogs=[],
+            exit_fogs=[
+                {"fog_id": "s_exit1", "zone": "s"},
+                {"fog_id": "s_exit2", "zone": "s"},
+            ],
+        )
+        a_c = make_cluster(
+            "a",
+            entry_fogs=[{"fog_id": "a_entry", "zone": "a"}],
+            exit_fogs=[
+                {"fog_id": "a_exit1", "zone": "a"},
+                {"fog_id": "a_exit2", "zone": "a"},
+            ],
+        )
+        b_c = make_cluster(
+            "b",
+            entry_fogs=[{"fog_id": "b_entry", "zone": "b"}],
+            exit_fogs=[
+                {"fog_id": "b_exit1", "zone": "b"},
+                {"fog_id": "b_exit2", "zone": "b"},
+            ],
+        )
+        # C: "boundary_fog" on different zones — independent Pairs
+        c_c = make_cluster(
+            "c",
+            entry_fogs=[
+                {"fog_id": "c_entry", "zone": "c_inner"},
+                {"fog_id": "boundary_fog", "zone": "c_outer"},
+            ],
+            exit_fogs=[
+                {"fog_id": "boundary_fog", "zone": "c_inner"},
+            ],
+        )
+        d_c = make_cluster(
+            "d",
+            entry_fogs=[
+                {"fog_id": "d_entry", "zone": "d"},
+                {"fog_id": "d_entry2", "zone": "d"},
+            ],
+            exit_fogs=[{"fog_id": "d_exit", "zone": "d"}],
+        )
+        e_c = make_cluster(
+            "e",
+            "final_boss",
+            entry_fogs=[
+                {"fog_id": "e_entry1", "zone": "e"},
+                {"fog_id": "e_entry2", "zone": "e"},
+            ],
+            exit_fogs=[],
+        )
+
+        dag.add_node(
+            DagNode(
+                "s", s_c, 0, 1, [], [FogRef("s_exit1", "s"), FogRef("s_exit2", "s")]
+            )
+        )
+        dag.add_node(
+            DagNode("a", a_c, 1, 2, [FogRef("a_entry", "a")], [FogRef("a_exit1", "a")])
+        )
+        dag.add_node(
+            DagNode("b", b_c, 1, 2, [FogRef("b_entry", "b")], [FogRef("b_exit1", "b")])
+        )
+        dag.add_node(
+            DagNode(
+                "c",
+                c_c,
+                2,
+                3,
+                [FogRef("c_entry", "c_inner")],
+                [FogRef("boundary_fog", "c_inner")],
+            )
+        )
+        dag.add_node(
+            DagNode("d", d_c, 2, 3, [FogRef("d_entry", "d")], [FogRef("d_exit", "d")])
+        )
+        dag.add_node(
+            DagNode(
+                "e", e_c, 3, 4, [FogRef("e_entry1", "e"), FogRef("e_entry2", "e")], []
+            )
+        )
+
+        dag.add_edge("s", "a", FogRef("s_exit1", "s"), FogRef("a_entry", "a"))
+        dag.add_edge("s", "b", FogRef("s_exit2", "s"), FogRef("b_entry", "b"))
+        dag.add_edge("a", "c", FogRef("a_exit1", "a"), FogRef("c_entry", "c_inner"))
+        dag.add_edge("b", "d", FogRef("b_exit1", "b"), FogRef("d_entry", "d"))
+        # C uses "boundary_fog" zone="c_inner" as EXIT
+        dag.add_edge(
+            "c", "e", FogRef("boundary_fog", "c_inner"), FogRef("e_entry1", "e")
+        )
+        dag.add_edge("d", "e", FogRef("d_exit", "d"), FogRef("e_entry2", "e"))
+        dag.start_id = "s"
+        dag.end_id = "e"
+
+        pairs = find_eligible_pairs(dag)
+        # B->C: B has surplus b_exit2, C has entry ("boundary_fog", "c_outer")
+        #   Exit uses ("boundary_fog", "c_inner") — different zone, independent Pair
+        #   So ("boundary_fog", "c_outer") is NOT excluded → B->C eligible
+        # A->D: A has surplus a_exit2, D has surplus d_entry2 → eligible
+        assert len(pairs) == 2
+        assert ("a", "d") in pairs
+        assert ("b", "c") in pairs
+
     def test_no_pairs_when_no_surplus(self):
         """Nodes with exactly 1 entry + 1 exit have no surplus."""
         dag = Dag(seed=1)
@@ -687,12 +806,12 @@ class TestAddCrosslinks:
         for r in results[1:]:
             assert r == results[0]
 
-    def test_small_ratio_can_produce_zero(self):
-        """Very small ratio with few pairs produces 0 cross-links."""
+    def test_small_ratio_guarantees_at_least_one(self):
+        """Small ratio with few pairs still adds at least 1 cross-link."""
         dag = _make_three_layer_dag()
-        # 2 eligible pairs * 0.1 = 0.2, rounds to 0
+        # 2 eligible pairs * 0.1 = 0.2, rounds to 0, but max(1, 0) = 1
         added = add_crosslinks(dag, ratio=0.1, rng=random.Random(42))
-        assert added == 0
+        assert added == 1
 
     def test_crosslinks_added_tracked_on_dag(self):
         """Dag.crosslinks_added is set by add_crosslinks return value."""
