@@ -269,14 +269,17 @@ After the complete DAG is built (start → layers → forced merge → prerequis
 **Algorithm:**
 1. Find all eligible (source, target) pairs:
    - `source.layer == target.layer - 1` (adjacent layers only)
-   - Source has unused exit fogs (surplus from cluster's full exit list)
-   - Target has unused entry fogs (surplus from cluster's full entry list)
+   - Source has unused exit fogs (surplus from **cluster's** full exit list)
+   - Target has unused entry fogs (surplus from **cluster's** full entry list)
+   - No existing edge between them
    - No existing path from source to target (different branches)
-2. Compute count: `round(len(eligible_pairs) * crosslink_ratio)`
+2. Compute count: `max(1, round(len(eligible_pairs) * crosslink_ratio))`
 3. Shuffle and select that many pairs
-4. For each: pick an unused exit fog from source, unused entry fog from target, add edge
+4. For each: re-check surplus (earlier cross-links may have consumed it), pick an unused exit fog from source, unused entry fog from target, add edge
 
-**Entry fog consistency:** Each cross-link appends the consumed entry fog to the target node's `entry_fogs` list, maintaining the invariant that `len(incoming_edges) == len(entry_fogs)`.
+**Surplus from cluster, not node:** The generator's `_pick_entry_and_exits_for_node()` truncates `node.exit_fogs` to `min_exits` (typically 1 for passant nodes). Cross-link surplus is computed from `node.cluster.exit_fogs` (the full list) minus fogs consumed by outgoing edges. This is why most passant nodes have surplus exits available for cross-links despite `node.exit_fogs` containing only 1.
+
+**Fog list consistency:** Each cross-link appends the consumed exit fog to the source node's `exit_fogs` and the consumed entry fog to the target node's `entry_fogs`, maintaining the invariant that node fog lists reflect actual edge usage.
 
 **Effect on paths:** Cross-links create additional start→end paths through the DAG. The balance checker considers all paths, including those using cross-links.
 
