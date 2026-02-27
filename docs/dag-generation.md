@@ -264,7 +264,7 @@ This runs after the forced merge (so exactly 1 branch exists) and before the end
 
 After the complete DAG is built (start → layers → forced merge → prerequisite → end), an optional cross-link pass adds edges between parallel branches.
 
-**When:** `crosslink_ratio > 0` (default: 0.0, disabled)
+**When:** `crosslinks = true` (default: false)
 
 **Algorithm:**
 1. Find all eligible (source, target) pairs:
@@ -332,7 +332,7 @@ Config validation runs once before any attempts; invalid config raises `Generati
 | `structure.split_probability` | 0.9 | Chance of split at each layer (if cluster supports it) |
 | `structure.merge_probability` | 0.5 | Chance of merge at each layer (if cluster supports it) |
 | `structure.min_branch_age` | 0 | Minimum layers before a branch can be merged (0=no limit) |
-| `structure.crosslink_ratio` | 0.0 | Enable cross-links between parallel branches (> 0 = on, 0.0 = off) |
+| `structure.crosslinks` | false | Add cross-links between parallel branches |
 | `structure.first_layer_type` | None | Force type for first layer |
 | `structure.major_boss_ratio` | 0.0 | Fraction of layers with major bosses |
 | `structure.final_boss_candidates` | `["leyndell_erdtree", "enirilim_radahn"]` | Possible end bosses |

@@ -3436,12 +3436,12 @@ class TestCrosslinkPipeline:
         return pool
 
     def test_crosslinks_applied_when_configured(self):
-        """generate_dag adds cross-links when crosslink_ratio > 0."""
+        """generate_dag adds cross-links when crosslinks=True."""
         pool = self._make_pool_with_surplus_entries()
         config = Config.from_dict(
             {
                 "structure": {
-                    "crosslink_ratio": 1.0,
+                    "crosslinks": True,
                     "max_parallel_paths": 2,
                     "split_probability": 0.9,
                     "min_layers": 4,
@@ -3452,7 +3452,7 @@ class TestCrosslinkPipeline:
         dag = generate_dag(
             config, pool, seed=42, boss_candidates=_boss_candidates(pool)
         )
-        # With crosslink_ratio=1.0 and surplus fogs, the DAG should
+        # With crosslinks enabled and surplus fogs, the DAG should
         # pass validation and have additional paths from cross-links
         errors = dag.validate_structure()
         assert errors == [], f"DAG validation failed: {errors}"
@@ -3477,7 +3477,7 @@ class TestCrosslinkPipeline:
         found = False
         for seed in range(100):
             config_off = Config.from_dict(
-                {"structure": {**base_structure, "crosslink_ratio": 0.0}}
+                {"structure": {**base_structure, "crosslinks": False}}
             )
             try:
                 dag_off = generate_dag(
@@ -3490,7 +3490,7 @@ class TestCrosslinkPipeline:
                 continue
 
             config_on = Config.from_dict(
-                {"structure": {**base_structure, "crosslink_ratio": 1.0}}
+                {"structure": {**base_structure, "crosslinks": True}}
             )
             dag_on = generate_dag(
                 config_on, pool, seed=seed, boss_candidates=_boss_candidates(pool)
