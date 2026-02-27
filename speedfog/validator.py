@@ -241,11 +241,11 @@ def _check_layers(dag: Dag, config: Config, warnings: list[str]) -> None:
 def _check_zone_tracking_collisions(dag: Dag, clusters: ClusterPool) -> list[str]:
     """Check for exit gate collisions that break zone tracking.
 
-    Two edges can only collide in the C# ZoneTrackingInjector when they
-    share the same exit fog_id AND originate from the same source map
-    (same EMEVD file) AND their entrance zones resolve to the same
-    destination map. Edges with the same fog_id but different source maps
-    are distinct physical gates in separate EMEVD files and never collide.
+    When two edges share the same exit fog_id (same physical gate, e.g., a
+    bidirectional gate between two zones of one dungeon) AND their entrance
+    zones resolve to the same map, the C# ZoneTrackingInjector cannot
+    disambiguate which event flag to inject. Reject the DAG early rather
+    than letting the C# build fail.
 
     Args:
         dag: The DAG to check.
@@ -256,15 +256,12 @@ def _check_zone_tracking_collisions(dag: Dag, clusters: ClusterPool) -> list[str
     """
     errors: list[str] = []
 
-    # Group edges by (exit fog_id, source map). Same fog model on different
-    # maps = different physical gates in different EMEVD files, no collision.
-    by_exit_key: dict[tuple[str, str | None], list[DagEdge]] = {}
+    # Group edges by exit fog_id
+    by_exit_fog: dict[str, list[DagEdge]] = {}
     for edge in dag.edges:
-        source_map = clusters.get_map(edge.exit_fog.zone)
-        key = (edge.exit_fog.fog_id, source_map)
-        by_exit_key.setdefault(key, []).append(edge)
+        by_exit_fog.setdefault(edge.exit_fog.fog_id, []).append(edge)
 
-    for (fog_id, source_map), edges in by_exit_key.items():
+    for fog_id, edges in by_exit_fog.items():
         if len(edges) < 2:
             continue
 
@@ -276,9 +273,8 @@ def _check_zone_tracking_collisions(dag: Dag, clusters: ClusterPool) -> list[str
                 continue
             if entrance_map in seen_entrance_maps:
                 errors.append(
-                    f"Zone tracking collision: gate {fog_id} on {source_map}"
-                    f" exits to {entrance_map} from both"
-                    f" {seen_entrance_maps[entrance_map]}"
+                    f"Zone tracking collision: gate {fog_id} exits to "
+                    f"{entrance_map} from both {seen_entrance_maps[entrance_map]}"
                     f" and {edge.exit_fog.zone}→{edge.entry_fog.zone}"
                     f" (node {edge.target_id})"
                 )
