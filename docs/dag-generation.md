@@ -176,8 +176,8 @@ A cluster may define `proximity_groups`: lists of fog IDs that are spatially clo
 ## Generation Flow
 
 ```
-Start Node → [First Layer] → Plan Types → Execute Layers → Forced Merge → [Prerequisites] → End Node
-   (L0)       (optional)      (shuffle)     (cluster-first)   (converge)    (if required)   (final boss)
+Start Node → [First Layer] → Plan Types → Execute Layers → Forced Merge → [Prerequisites] → End Node → [Cross-Links]
+   (L0)       (optional)      (shuffle)     (cluster-first)   (converge)    (if required)   (final boss) (post-hoc)
                                                  │
                                           ┌──────┼──────┐
                                         SPLIT  MERGE  PASSANT
@@ -260,6 +260,26 @@ This runs after the forced merge (so exactly 1 branch exists) and before the end
 - No exits (terminal node)
 - Connect single remaining branch
 
+### 9. Cross-Links (post-hoc)
+
+After the complete DAG is built (start → layers → forced merge → prerequisite → end), an optional cross-link pass adds edges between parallel branches.
+
+**When:** `crosslink_ratio > 0` (default: 0.0, disabled)
+
+**Algorithm:**
+1. Find all eligible (source, target) pairs:
+   - `source.layer == target.layer - 1` (adjacent layers only)
+   - Source has unused exit fogs (surplus from cluster's full exit list)
+   - Target has unused entry fogs (surplus from cluster's full entry list)
+   - No existing path from source to target (different branches)
+2. Compute count: `round(len(eligible_pairs) * crosslink_ratio)`
+3. Shuffle and select that many pairs
+4. For each: pick an unused exit fog from source, unused entry fog from target, add edge
+
+**Entry fog consistency:** Each cross-link appends the consumed entry fog to the target node's `entry_fogs` list, maintaining the invariant that `len(incoming_edges) == len(entry_fogs)`.
+
+**Effect on paths:** Cross-links create additional start→end paths through the DAG. The balance checker considers all paths, including those using cross-links.
+
 ## Tier Interpolation
 
 Linear interpolation from tier 1 (layer 0) to `final_tier` (last layer, default 28):
@@ -308,6 +328,7 @@ Config validation runs once before any attempts; invalid config raises `Generati
 | `structure.split_probability` | 0.9 | Chance of split at each layer (if cluster supports it) |
 | `structure.merge_probability` | 0.5 | Chance of merge at each layer (if cluster supports it) |
 | `structure.min_branch_age` | 0 | Minimum layers before a branch can be merged (0=no limit) |
+| `structure.crosslink_ratio` | 0.0 | Fraction of eligible pairs that become cross-links (0.0-1.0) |
 | `structure.first_layer_type` | None | Force type for first layer |
 | `structure.major_boss_ratio` | 0.0 | Fraction of layers with major bosses |
 | `structure.final_boss_candidates` | `["leyndell_erdtree", "enirilim_radahn"]` | Possible end bosses |
@@ -334,6 +355,7 @@ The validator (`speedfog/validator.py`) checks:
 ## References
 
 - Generator: `speedfog/generator.py`
+- Cross-links: `speedfog/crosslinks.py`
 - DAG data structures: `speedfog/dag.py`
 - Planner: `speedfog/planner.py`
 - Clusters: `speedfog/clusters.py`
