@@ -1,6 +1,6 @@
 # DAG Generation Algorithm
 
-**Date:** 2026-02-15 — **Updated:** 2026-02-26
+**Date:** 2026-02-15 — **Updated:** 2026-02-27
 **Status:** Active
 
 How SpeedFog generates balanced, randomized DAGs from zone clusters.
@@ -44,6 +44,7 @@ Tracks parallel path state during generation.
 | `id` | str | Branch identifier (e.g., `"b0"`, `"b0_a"`, `"merged_3"`) |
 | `current_node_id` | str | Where this branch is now |
 | `available_exit` | FogRef | Fog gate to use for next connection |
+| `birth_layer` | int | Layer when this branch was created (for `min_branch_age`) |
 
 ### FogRef (`dag.py`)
 
@@ -99,6 +100,8 @@ N branches converge into a single node. Creates convergence in the DAG.
 
 **Anti-micro-merge**: Selected branches must have at least 2 different parent nodes. This prevents trivial split-then-immediate-merge patterns (Y-shapes) that add no meaningful divergence.
 
+**Branch age gate**: When `min_branch_age > 0`, only branches that have existed for at least that many layers are eligible for merging (`current_layer - birth_layer >= min_branch_age`). This prevents premature merges where branches split and immediately reconverge, creating long linear (width=1) sections. Branch age is tracked via `birth_layer`: split and merge operations reset it to the current layer; passant operations preserve it.
+
 **Entry selection**: `select_entries_for_merge()` prefers non-bidirectional entries (preserves exit count for future operations), with main-tagged entries as a soft preference within each group.
 
 **Shared entrance mode**: When `cluster.allow_shared_entrance` is true, all merging branches connect to the same entry fog. Only requires 2+ entries and 1+ exit regardless of fan-in N.
@@ -115,8 +118,9 @@ candidates = clusters.get_by_type(layer_type)
 primary_cluster = pick_cluster_uniform(candidates, used_zones, rng, reserved_zones)
     -> filter by zone overlap and reserved zones, pick uniformly
 
-operation, fan = determine_operation(primary_cluster, branches, config, rng):
+operation, fan = determine_operation(primary_cluster, branches, config, rng, current_layer):
     check cluster capabilities (split, merge, passant)
+    merge eligibility also requires age-eligible branches (see Branch age gate)
     if can_split AND can_merge:
         roll = random()
         if roll < split_prob:                     -> SPLIT
@@ -237,7 +241,7 @@ while len(branches) > 1:
     execute merge layer (converge)
 ```
 
-Inserts passant layers as needed to break micro-merge patterns. Uses N-ary merges (up to `max_branches`) for efficiency.
+Inserts passant layers as needed to break micro-merge patterns. Uses N-ary merges (up to `max_branches`) for efficiency. Forced merges deliberately bypass `min_branch_age` (use `min_age=0`) to guarantee convergence regardless of branch age.
 
 ### 7. Prerequisite Injection
 
@@ -303,6 +307,7 @@ Config validation runs once before any attempts; invalid config raises `Generati
 | `structure.max_layers` | 10 | Maximum intermediate layers |
 | `structure.split_probability` | 0.9 | Chance of split at each layer (if cluster supports it) |
 | `structure.merge_probability` | 0.5 | Chance of merge at each layer (if cluster supports it) |
+| `structure.min_branch_age` | 0 | Minimum layers before a branch can be merged (0=no limit) |
 | `structure.first_layer_type` | None | Force type for first layer |
 | `structure.major_boss_ratio` | 0.0 | Fraction of layers with major bosses |
 | `structure.final_boss_candidates` | `["leyndell_erdtree", "enirilim_radahn"]` | Possible end bosses |

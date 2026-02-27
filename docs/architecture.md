@@ -1,6 +1,6 @@
 # SpeedFog Architecture
 
-**Date:** 2026-02-02 — **Updated:** 2026-02-26
+**Date:** 2026-02-02 — **Updated:** 2026-02-27
 **Status:** Active
 
 SpeedFog generates short randomized Elden Ring runs (~1 hour) with a controlled DAG structure.
@@ -33,7 +33,7 @@ Generates a balanced DAG of zone connections.
 |--------|---------|
 | `config.py` | Parse user config (TOML), 7 dataclasses for all settings |
 | `clusters.py` | Load pre-computed zone clusters, fog gate compatibility |
-| `dag.py` | DAG data structures (Branch, DagNode, DagEdge, Dag) |
+| `dag.py` | DAG data structures (Branch with birth_layer tracking, DagNode, DagEdge, Dag) |
 | `generator.py` | Main generation algorithm (split/merge/passant topology) |
 | `planner.py` | Layer type planning and tier interpolation |
 | `balance.py` | Path weight analysis and balance reporting |
