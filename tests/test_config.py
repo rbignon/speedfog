@@ -499,6 +499,29 @@ def test_max_branches_one_allows_single_path():
     assert config.structure.max_branches == 1
 
 
+def test_min_branch_age_default():
+    """min_branch_age defaults to 0."""
+    config = Config.from_dict({})
+    assert config.structure.min_branch_age == 0
+
+
+def test_min_branch_age_from_toml(tmp_path):
+    """min_branch_age can be set from TOML."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[structure]
+min_branch_age = 3
+""")
+    config = Config.from_toml(config_file)
+    assert config.structure.min_branch_age == 3
+
+
+def test_min_branch_age_validation():
+    """min_branch_age must be >= 0."""
+    with pytest.raises(ValueError, match="min_branch_age must be >= 0"):
+        Config.from_dict({"structure": {"min_branch_age": -1}})
+
+
 def test_enemy_config_defaults():
     """EnemyConfig has correct defaults."""
     config = Config.from_dict({})

@@ -421,6 +421,8 @@ def determine_operation(
     branches: list[Branch],
     config: Config,
     rng: random.Random,
+    *,
+    current_layer: int = 0,
 ) -> tuple[LayerOperation, int]:
     """Determine what operation to perform given a pre-selected cluster.
 
@@ -432,6 +434,7 @@ def determine_operation(
         branches: Current active branches.
         config: Configuration with probabilities and limits.
         rng: Random number generator.
+        current_layer: Current layer index (used for min_branch_age check).
 
     Returns:
         Tuple of (operation, fan_out/fan_in). fan is 1 for PASSANT.
@@ -441,6 +444,7 @@ def determine_operation(
     max_br = config.structure.max_branches
     split_prob = config.structure.split_probability
     merge_prob = config.structure.merge_probability
+    min_age = config.structure.min_branch_age
 
     # Determine split capability
     can_split = False
@@ -454,11 +458,13 @@ def determine_operation(
                 split_fan = n
                 break
 
-    # Determine merge capability
+    # Determine merge capability (respects min_branch_age)
     can_merge = (
         max_br >= 2
         and num_branches >= 2
-        and _has_valid_merge_pair(branches)
+        and _has_valid_merge_pair(
+            branches, min_age=min_age, current_layer=current_layer
+        )
         and can_be_merge_node(cluster, 2)
     )
 
@@ -602,38 +608,65 @@ def execute_passant_layer(
         dag.add_node(node)
         dag.add_edge(branch.current_node_id, node_id, branch.available_exit, entry_fog)
 
-        new_branches.append(Branch(branch.id, node_id, rng.choice(exit_fogs)))
+        new_branches.append(
+            Branch(
+                branch.id,
+                node_id,
+                rng.choice(exit_fogs),
+                birth_layer=branch.birth_layer,
+            )
+        )
 
     return new_branches
 
 
-def _has_valid_merge_pair(branches: list[Branch]) -> bool:
-    """Check if any two branches have different current nodes."""
-    node_ids = {b.current_node_id for b in branches}
+def _has_valid_merge_pair(
+    branches: list[Branch],
+    *,
+    min_age: int = 0,
+    current_layer: int = 0,
+) -> bool:
+    """Check if any two age-eligible branches have different current nodes."""
+    eligible = [b for b in branches if current_layer - b.birth_layer >= min_age]
+    node_ids = {b.current_node_id for b in eligible}
     return len(node_ids) >= 2
 
 
 def _find_valid_merge_indices(
-    branches: list[Branch], rng: random.Random, count: int = 2
+    branches: list[Branch],
+    rng: random.Random,
+    count: int = 2,
+    *,
+    min_age: int = 0,
+    current_layer: int = 0,
 ) -> list[int] | None:
     """Select branch indices with at least 2 different parent nodes for merging.
 
     Prevents micro split-merge where all merging branches come from the same
-    split node, creating a pointless fan-out/fan-in.
+    split node, creating a pointless fan-out/fan-in. When min_age > 0,
+    only branches old enough (current_layer - birth_layer >= min_age) are
+    eligible for merging.
 
     Args:
         branches: Current branches.
         rng: Random number generator.
         count: Number of branches to select for merging.
+        min_age: Minimum age (in layers) for a branch to be merge-eligible.
+        current_layer: Current layer index (used with min_age).
 
     Returns:
         List of branch indices, or None if no valid selection exists.
     """
-    if count > len(branches):
+    # Only consider age-eligible branches
+    eligible_indices = [
+        i for i, b in enumerate(branches) if current_layer - b.birth_layer >= min_age
+    ]
+
+    if count > len(eligible_indices):
         return None
 
     valid_combos: list[list[int]] = []
-    for combo in combinations(range(len(branches)), count):
+    for combo in combinations(eligible_indices, count):
         parents = {branches[i].current_node_id for i in combo}
         if len(parents) >= 2:
             valid_combos.append(list(combo))
@@ -656,6 +689,7 @@ def execute_merge_layer(
     config: Config,
     *,
     reserved_zones: frozenset[str] = frozenset(),
+    min_age: int = 0,
 ) -> list[Branch]:
     """Execute a merge layer where N branches merge into one.
 
@@ -673,6 +707,7 @@ def execute_merge_layer(
         rng: Random number generator.
         config: Configuration with max_branches.
         reserved_zones: Zones reserved for prerequisite placement (excluded).
+        min_age: Minimum branch age for merge eligibility (0=ignore).
 
     Returns:
         Updated list of branches (with fewer branches).
@@ -691,7 +726,9 @@ def execute_merge_layer(
     merge_cluster: ClusterData | None = None
     actual_merge = 2
     for n in range(max_merge, 1, -1):
-        indices = _find_valid_merge_indices(branches, rng, n)
+        indices = _find_valid_merge_indices(
+            branches, rng, n, min_age=min_age, current_layer=layer_idx
+        )
         if indices is None:
             continue
         c = pick_cluster_with_filter(
@@ -782,7 +819,12 @@ def execute_merge_layer(
             "no exits remaining after consuming entries"
         )
     new_branches.append(
-        Branch(f"merged_{layer_idx}", merge_node_id, rng.choice(exit_fogs))
+        Branch(
+            f"merged_{layer_idx}",
+            merge_node_id,
+            rng.choice(exit_fogs),
+            birth_layer=layer_idx,
+        )
     )
 
     # Handle non-merged branches as passant
@@ -822,7 +864,14 @@ def execute_merge_layer(
             branch.current_node_id, node_id, branch.available_exit, passant_entry_fog
         )
 
-        new_branches.append(Branch(branch.id, node_id, rng.choice(exit_fogs)))
+        new_branches.append(
+            Branch(
+                branch.id,
+                node_id,
+                rng.choice(exit_fogs),
+                birth_layer=branch.birth_layer,
+            )
+        )
         letter_offset += 1
 
     return new_branches
@@ -866,6 +915,8 @@ def execute_forced_merge(
     """
     current_layer = layer_idx
     while len(branches) > 1:
+        # Forced merge deliberately uses min_age=0 to guarantee convergence
+        # regardless of branch age.
         if not _has_valid_merge_pair(branches):
             # All branches share the same source; insert passant to diverge
             branches = execute_passant_layer(
@@ -969,7 +1020,9 @@ def _inject_prerequisite(
     branch = branches[0]
     dag.add_edge(branch.current_node_id, node_id, branch.available_exit, ef)
 
-    return [Branch("prereq", node_id, rng.choice(exf))], current_layer + 1
+    return [
+        Branch("prereq", node_id, rng.choice(exf), birth_layer=current_layer)
+    ], current_layer + 1
 
 
 def generate_dag(
@@ -1046,7 +1099,8 @@ def generate_dag(
     # Shuffle exits for randomness
     rng.shuffle(start_exits)
     branches = [
-        Branch(f"b{i}", "start", start_exits[i]) for i in range(num_initial_branches)
+        Branch(f"b{i}", "start", start_exits[i], birth_layer=0)
+        for i in range(num_initial_branches)
     ]
 
     # 3. Pre-select final boss and compute reserved zones
@@ -1114,7 +1168,9 @@ def generate_dag(
             )
             dag.add_node(n)
             dag.add_edge(branch.current_node_id, nid, branch.available_exit, ef)
-            new_branches.append(Branch(branch.id, nid, rng.choice(exf)))
+            new_branches.append(
+                Branch(branch.id, nid, rng.choice(exf), birth_layer=current_layer)
+            )
         branches = new_branches
         current_layer += 1
 
@@ -1174,7 +1230,9 @@ def generate_dag(
             )
 
         # Determine operation from cluster capabilities
-        operation, fan = determine_operation(primary_cluster, branches, config, rng)
+        operation, fan = determine_operation(
+            primary_cluster, branches, config, rng, current_layer=current_layer
+        )
 
         if operation == LayerOperation.SPLIT:
             # Pick which branch to split
@@ -1210,6 +1268,7 @@ def generate_dag(
                                 f"{branch.id}_{chr(97 + j)}",
                                 node_id,
                                 exit_fogs[j],
+                                birth_layer=current_layer,
                             )
                         )
                     letter_offset += 1
@@ -1238,26 +1297,46 @@ def generate_dag(
                     )
                     dag.add_node(n)
                     dag.add_edge(branch.current_node_id, nid, branch.available_exit, ef)
-                    new_branches.append(Branch(branch.id, nid, rng.choice(exf)))
+                    new_branches.append(
+                        Branch(
+                            branch.id,
+                            nid,
+                            rng.choice(exf),
+                            birth_layer=branch.birth_layer,
+                        )
+                    )
                     letter_offset += 1
 
             branches = new_branches
 
         elif operation == LayerOperation.MERGE:
             # Find merge indices and actual fan-in
+            min_age = config.structure.min_branch_age
             max_merge = max(min(config.structure.max_branches, len(branches)), 2)
             merge_indices: list[int] | None = None
             actual_merge = 2
             for merge_n in range(max_merge, 1, -1):
                 if can_be_merge_node(primary_cluster, merge_n):
-                    indices = _find_valid_merge_indices(branches, rng, merge_n)
+                    indices = _find_valid_merge_indices(
+                        branches,
+                        rng,
+                        merge_n,
+                        min_age=min_age,
+                        current_layer=current_layer,
+                    )
                     if indices is not None:
                         merge_indices = indices
                         actual_merge = merge_n
                         break
 
             if merge_indices is None:
-                merge_indices = _find_valid_merge_indices(branches, rng, 2)
+                merge_indices = _find_valid_merge_indices(
+                    branches,
+                    rng,
+                    2,
+                    min_age=min_age,
+                    current_layer=current_layer,
+                )
 
             if merge_indices is None:
                 # Fallback: treat as passant
@@ -1325,6 +1404,7 @@ def generate_dag(
                         f"merged_{current_layer}",
                         merge_node_id,
                         rng.choice(exit_fogs),
+                        birth_layer=current_layer,
                     )
                 ]
 
@@ -1357,7 +1437,14 @@ def generate_dag(
                     )
                     dag.add_node(n)
                     dag.add_edge(branch.current_node_id, nid, branch.available_exit, ef)
-                    new_branches.append(Branch(branch.id, nid, rng.choice(exf)))
+                    new_branches.append(
+                        Branch(
+                            branch.id,
+                            nid,
+                            rng.choice(exf),
+                            birth_layer=branch.birth_layer,
+                        )
+                    )
                     letter += 1
 
                 branches = new_branches
@@ -1392,7 +1479,11 @@ def generate_dag(
                 )
                 dag.add_node(n)
                 dag.add_edge(branch.current_node_id, nid, branch.available_exit, ef)
-                new_branches.append(Branch(branch.id, nid, rng.choice(exf)))
+                new_branches.append(
+                    Branch(
+                        branch.id, nid, rng.choice(exf), birth_layer=branch.birth_layer
+                    )
+                )
             branches = new_branches
 
         current_layer += 1

@@ -30,6 +30,7 @@ class Branch:
     id: str
     current_node_id: str
     available_exit: FogRef
+    birth_layer: int = 0  # Layer when this branch was created (for min_branch_age)
 
 
 @dataclass

@@ -68,6 +68,10 @@ merge_probability = 0.5
 # Actual fan-out depends on available clusters and room under max_parallel_paths.
 max_branches = 3
 
+# Minimum number of layers a branch must exist before it can be merged (0=no limit).
+# Higher values prevent premature merge-after-split, creating wider branching structures.
+# min_branch_age = 0
+
 # Force the first layer after start to be a specific cluster type.
 # Options: "legacy_dungeon", "mini_dungeon", "boss_arena", "major_boss"
 # If omitted: random based on requirements (current behavior)

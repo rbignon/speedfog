@@ -1492,6 +1492,65 @@ class TestMergeGuards:
         rng = random.Random(42)
         assert _find_valid_merge_indices(branches, rng, count=3) is None
 
+    def test_has_valid_merge_pair_young_branches_excluded(self):
+        """Branches younger than min_age are excluded from merge eligibility."""
+        branches = [
+            Branch("b0", "node_a", FogRef("exit_0", "z"), birth_layer=5),
+            Branch("b1", "node_b", FogRef("exit_1", "z"), birth_layer=5),
+        ]
+        # At layer 6, age=1 < min_age=3 → no valid merge
+        assert _has_valid_merge_pair(branches, min_age=3, current_layer=6) is False
+        # At layer 8, age=3 >= min_age=3 → valid merge
+        assert _has_valid_merge_pair(branches, min_age=3, current_layer=8) is True
+
+    def test_has_valid_merge_pair_mixed_ages(self):
+        """Only age-eligible branches are considered for merging."""
+        branches = [
+            Branch("b0", "node_a", FogRef("exit_0", "z"), birth_layer=1),  # old
+            Branch("b1", "node_b", FogRef("exit_1", "z"), birth_layer=5),  # young
+            Branch("b2", "node_c", FogRef("exit_2", "z"), birth_layer=1),  # old
+        ]
+        # At layer 4: b0 age=3, b1 age=-1(not eligible), b2 age=3 → valid (b0+b2)
+        assert _has_valid_merge_pair(branches, min_age=3, current_layer=4) is True
+
+    def test_find_valid_merge_indices_respects_min_age(self):
+        """_find_valid_merge_indices only selects age-eligible branches."""
+        branches = [
+            Branch("b0", "node_a", FogRef("exit_0", "z"), birth_layer=0),  # old
+            Branch("b1", "node_b", FogRef("exit_1", "z"), birth_layer=5),  # young
+            Branch("b2", "node_c", FogRef("exit_2", "z"), birth_layer=0),  # old
+        ]
+        rng = random.Random(42)
+        # At layer 6: b0 age=6, b1 age=1(too young), b2 age=6
+        indices = _find_valid_merge_indices(branches, rng, min_age=3, current_layer=6)
+        assert indices is not None
+        # b1 (index 1) should never be selected
+        assert 1 not in indices
+        assert sorted(indices) == [0, 2]
+
+    def test_find_valid_merge_indices_all_too_young(self):
+        """Returns None when all branches are too young."""
+        branches = [
+            Branch("b0", "node_a", FogRef("exit_0", "z"), birth_layer=5),
+            Branch("b1", "node_b", FogRef("exit_1", "z"), birth_layer=5),
+        ]
+        rng = random.Random(42)
+        assert (
+            _find_valid_merge_indices(branches, rng, min_age=3, current_layer=6) is None
+        )
+
+    def test_min_age_zero_matches_old_behavior(self):
+        """min_age=0 makes all branches eligible regardless of birth_layer."""
+        branches = [
+            Branch("b0", "node_a", FogRef("exit_0", "z"), birth_layer=100),
+            Branch("b1", "node_b", FogRef("exit_1", "z"), birth_layer=100),
+        ]
+        # current_layer=100, age=0, min_age=0 → eligible
+        assert _has_valid_merge_pair(branches, min_age=0, current_layer=100) is True
+        rng = random.Random(42)
+        indices = _find_valid_merge_indices(branches, rng, min_age=0, current_layer=100)
+        assert indices is not None
+
     def test_nary_split_and_merge_in_generated_dag(self):
         """With max_branches=3 and suitable clusters, DAGs produce 3-way splits/merges."""
         pool = ClusterPool()

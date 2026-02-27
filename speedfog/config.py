@@ -50,6 +50,7 @@ class StructureConfig:
     split_probability: float = 0.9
     merge_probability: float = 0.5
     max_branches: int = 3
+    min_branch_age: int = 0  # Min layers before a branch can be merged (0=no limit)
     first_layer_type: str | None = None
     major_boss_ratio: float = 0.0
     final_boss_candidates: list[str] = field(default_factory=list)
@@ -74,6 +75,8 @@ class StructureConfig:
             )
         if self.final_tier < 1 or self.final_tier > 28:
             raise ValueError(f"final_tier must be 1-28, got {self.final_tier}")
+        if self.min_branch_age < 0:
+            raise ValueError(f"min_branch_age must be >= 0, got {self.min_branch_age}")
 
     @property
     def effective_final_boss_candidates(self) -> list[str]:
@@ -386,6 +389,7 @@ class Config:
                 split_probability=structure_section.get("split_probability", 0.9),
                 merge_probability=structure_section.get("merge_probability", 0.5),
                 max_branches=structure_section.get("max_branches", 3),
+                min_branch_age=structure_section.get("min_branch_age", 0),
                 first_layer_type=structure_section.get("first_layer_type"),
                 major_boss_ratio=structure_section.get("major_boss_ratio", 0.0),
                 final_boss_candidates=structure_section.get(
