@@ -301,6 +301,228 @@ class TestFindEligiblePairs:
         assert sources == {"a", "b"}
         assert targets == {"c1", "c2"}
 
+    def test_entry_excluded_when_fog_id_used_as_exit_on_same_node(self):
+        """Entry fog excluded when same fog_id is used as exit on the same node.
+
+        Reproduces the real bug: node N uses fog_id X as exit (outgoing edge),
+        then a cross-link tries to use fog_id X as entry into N — but FogMod's
+        Pair chain already consumed the entry side.
+        """
+        dag = Dag(seed=1)
+
+        # Topology: start -> (A, B) -> (C, D) -> end
+        # Node C uses "shared_fog" as exit to end.
+        # Node C also has "shared_fog" in its cluster's entry_fogs (bidirectional).
+        # Cross-link B->C should NOT pick "shared_fog" as entry into C.
+
+        s_c = make_cluster(
+            "s",
+            "start",
+            entry_fogs=[],
+            exit_fogs=[
+                {"fog_id": "s_exit1", "zone": "s"},
+                {"fog_id": "s_exit2", "zone": "s"},
+            ],
+        )
+        a_c = make_cluster(
+            "a",
+            entry_fogs=[{"fog_id": "a_entry", "zone": "a"}],
+            exit_fogs=[
+                {"fog_id": "a_exit1", "zone": "a"},
+                {"fog_id": "a_exit2", "zone": "a"},
+            ],
+        )
+        b_c = make_cluster(
+            "b",
+            entry_fogs=[{"fog_id": "b_entry", "zone": "b"}],
+            exit_fogs=[
+                {"fog_id": "b_exit1", "zone": "b"},
+                {"fog_id": "b_exit2", "zone": "b"},
+            ],
+        )
+        # C: "shared_fog" is BOTH an exit fog (used by outgoing edge to end)
+        # AND an entry fog (bidirectional boundary). The entry side is consumed
+        # by Graph.Connect()'s Pair chain when the exit side is connected.
+        c_c = make_cluster(
+            "c",
+            entry_fogs=[
+                {"fog_id": "c_entry", "zone": "c"},
+                {"fog_id": "shared_fog", "zone": "c"},
+            ],
+            exit_fogs=[
+                {"fog_id": "shared_fog", "zone": "c"},
+            ],
+        )
+        d_c = make_cluster(
+            "d",
+            entry_fogs=[
+                {"fog_id": "d_entry", "zone": "d"},
+                {"fog_id": "d_entry2", "zone": "d"},
+            ],
+            exit_fogs=[{"fog_id": "d_exit", "zone": "d"}],
+        )
+        e_c = make_cluster(
+            "e",
+            "final_boss",
+            entry_fogs=[
+                {"fog_id": "e_entry1", "zone": "e"},
+                {"fog_id": "e_entry2", "zone": "e"},
+            ],
+            exit_fogs=[],
+        )
+
+        dag.add_node(
+            DagNode(
+                "s", s_c, 0, 1, [], [FogRef("s_exit1", "s"), FogRef("s_exit2", "s")]
+            )
+        )
+        dag.add_node(
+            DagNode("a", a_c, 1, 2, [FogRef("a_entry", "a")], [FogRef("a_exit1", "a")])
+        )
+        dag.add_node(
+            DagNode("b", b_c, 1, 2, [FogRef("b_entry", "b")], [FogRef("b_exit1", "b")])
+        )
+        dag.add_node(
+            DagNode(
+                "c", c_c, 2, 3, [FogRef("c_entry", "c")], [FogRef("shared_fog", "c")]
+            )
+        )
+        dag.add_node(
+            DagNode("d", d_c, 2, 3, [FogRef("d_entry", "d")], [FogRef("d_exit", "d")])
+        )
+        dag.add_node(
+            DagNode(
+                "e", e_c, 3, 4, [FogRef("e_entry1", "e"), FogRef("e_entry2", "e")], []
+            )
+        )
+
+        dag.add_edge("s", "a", FogRef("s_exit1", "s"), FogRef("a_entry", "a"))
+        dag.add_edge("s", "b", FogRef("s_exit2", "s"), FogRef("b_entry", "b"))
+        dag.add_edge("a", "c", FogRef("a_exit1", "a"), FogRef("c_entry", "c"))
+        dag.add_edge("b", "d", FogRef("b_exit1", "b"), FogRef("d_entry", "d"))
+        # C uses "shared_fog" as EXIT
+        dag.add_edge("c", "e", FogRef("shared_fog", "c"), FogRef("e_entry1", "e"))
+        dag.add_edge("d", "e", FogRef("d_exit", "d"), FogRef("e_entry2", "e"))
+        dag.start_id = "s"
+        dag.end_id = "e"
+
+        pairs = find_eligible_pairs(dag)
+        # Eligible cross-links at layer 1->2: A->D, B->C
+        # A->D: A has surplus a_exit2, D has surplus d_entry2 — eligible
+        # B->C: B has surplus b_exit2, C has "shared_fog" entry in cluster
+        #   BUT "shared_fog" is used as exit on C → entry side excluded
+        #   C has no other surplus entry → B->C NOT eligible
+        assert len(pairs) == 1
+        assert ("a", "d") in pairs
+        assert ("b", "c") not in pairs
+
+    def test_exit_excluded_when_fog_id_used_as_entry_on_same_node(self):
+        """Exit fog excluded when same fog_id is used as entry on the same node.
+
+        Symmetric case: a fog_id consumed as entry (incoming edge) means the
+        exit side (Pair) is also consumed by Graph.Connect().
+        """
+        dag = Dag(seed=1)
+
+        # Node C uses "shared_fog" as ENTRY (incoming from A).
+        # C also has "shared_fog" in exit_fogs. The exit side is Pair-consumed.
+        # Cross-link C->D should NOT pick "shared_fog" as exit from C.
+
+        s_c = make_cluster(
+            "s",
+            "start",
+            entry_fogs=[],
+            exit_fogs=[
+                {"fog_id": "s_exit1", "zone": "s"},
+                {"fog_id": "s_exit2", "zone": "s"},
+            ],
+        )
+        a_c = make_cluster(
+            "a",
+            entry_fogs=[{"fog_id": "a_entry", "zone": "a"}],
+            exit_fogs=[{"fog_id": "shared_fog", "zone": "a"}],
+        )
+        b_c = make_cluster(
+            "b",
+            entry_fogs=[{"fog_id": "b_entry", "zone": "b"}],
+            exit_fogs=[{"fog_id": "b_exit", "zone": "b"}],
+        )
+        c_c = make_cluster(
+            "c",
+            entry_fogs=[{"fog_id": "shared_fog", "zone": "c"}],
+            exit_fogs=[
+                {"fog_id": "shared_fog", "zone": "c"},
+                {"fog_id": "c_exit2", "zone": "c"},
+            ],
+        )
+        d_c = make_cluster(
+            "d",
+            entry_fogs=[
+                {"fog_id": "d_entry", "zone": "d"},
+                {"fog_id": "d_entry2", "zone": "d"},
+            ],
+            exit_fogs=[{"fog_id": "d_exit", "zone": "d"}],
+        )
+        e_c = make_cluster(
+            "e",
+            "final_boss",
+            entry_fogs=[
+                {"fog_id": "e_entry1", "zone": "e"},
+                {"fog_id": "e_entry2", "zone": "e"},
+            ],
+            exit_fogs=[],
+        )
+
+        dag.add_node(
+            DagNode(
+                "s", s_c, 0, 1, [], [FogRef("s_exit1", "s"), FogRef("s_exit2", "s")]
+            )
+        )
+        dag.add_node(
+            DagNode(
+                "a", a_c, 1, 2, [FogRef("a_entry", "a")], [FogRef("shared_fog", "a")]
+            )
+        )
+        dag.add_node(
+            DagNode("b", b_c, 1, 2, [FogRef("b_entry", "b")], [FogRef("b_exit", "b")])
+        )
+        # C receives "shared_fog" as ENTRY from A
+        dag.add_node(
+            DagNode(
+                "c",
+                c_c,
+                2,
+                3,
+                [FogRef("shared_fog", "c")],
+                [FogRef("c_exit2", "c")],
+            )
+        )
+        dag.add_node(
+            DagNode("d", d_c, 2, 3, [FogRef("d_entry", "d")], [FogRef("d_exit", "d")])
+        )
+        dag.add_node(
+            DagNode(
+                "e", e_c, 3, 4, [FogRef("e_entry1", "e"), FogRef("e_entry2", "e")], []
+            )
+        )
+
+        dag.add_edge("s", "a", FogRef("s_exit1", "s"), FogRef("a_entry", "a"))
+        dag.add_edge("s", "b", FogRef("s_exit2", "s"), FogRef("b_entry", "b"))
+        # A uses "shared_fog" as exit, C receives it as ENTRY
+        dag.add_edge("a", "c", FogRef("shared_fog", "a"), FogRef("shared_fog", "c"))
+        dag.add_edge("b", "d", FogRef("b_exit", "b"), FogRef("d_entry", "d"))
+        dag.add_edge("c", "e", FogRef("c_exit2", "c"), FogRef("e_entry1", "e"))
+        dag.add_edge("d", "e", FogRef("d_exit", "d"), FogRef("e_entry2", "e"))
+        dag.start_id = "s"
+        dag.end_id = "e"
+
+        pairs = find_eligible_pairs(dag)
+        # C->D at layer 2->3: C has "shared_fog" in cluster exit_fogs (surplus)
+        #   BUT "shared_fog" is used as entry on C → exit side excluded
+        #   C has c_exit2 but it's already used → no surplus exit for C
+        # No eligible pairs exist in this topology
+        assert len(pairs) == 0
+
     def test_no_pairs_when_no_surplus(self):
         """Nodes with exactly 1 entry + 1 exit have no surplus."""
         dag = Dag(seed=1)

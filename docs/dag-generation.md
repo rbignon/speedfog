@@ -279,6 +279,8 @@ After the complete DAG is built (start → layers → forced merge → prerequis
 
 **Surplus from cluster, not node:** The generator's `_pick_entry_and_exits_for_node()` truncates `node.exit_fogs` to `min_exits` (typically 1 for passant nodes). Cross-link surplus is computed from `node.cluster.exit_fogs` (the full list) minus fogs consumed by outgoing edges. This is why most passant nodes have surplus exits available for cross-links despite `node.exit_fogs` containing only 1.
 
+**Pair chain exclusion:** Bidirectional fog gates (same fog_id in both entry_fogs and exit_fogs of a cluster) are linked via FogMod's Pair chain. When `Graph.Connect()` uses one side, it marks the Pair as consumed. Therefore, surplus exits exclude any fog_id already consumed as entry on the same node (and vice versa), preventing "Already matched" errors in FogMod.
+
 **Fog list consistency:** Each cross-link appends the consumed exit fog to the source node's `exit_fogs` and the consumed entry fog to the target node's `entry_fogs`, maintaining the invariant that node fog lists reflect actual edge usage.
 
 **Effect on paths:** Cross-links create additional start→end paths through the DAG. The balance checker considers all paths, including those using cross-links.
