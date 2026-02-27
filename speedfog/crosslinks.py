@@ -22,10 +22,16 @@ def _get_used_entry_fogs(dag: Dag, node_id: str) -> set[FogRef]:
 
 
 def _surplus_exits(dag: Dag, node_id: str) -> list[FogRef]:
-    """Get unused exit FogRefs for a node."""
+    """Get unused exit FogRefs for a node.
+
+    Checks the cluster's full exit_fogs list against what's already
+    consumed by outgoing edges. The node's exit_fogs may be trimmed
+    during generation, so we use the cluster as the source of truth.
+    """
     node = dag.nodes[node_id]
     used = _get_used_exit_fogs(dag, node_id)
-    return [f for f in node.exit_fogs if f not in used]
+    all_exits = [FogRef(f["fog_id"], f["zone"]) for f in node.cluster.exit_fogs]
+    return [f for f in all_exits if f not in used]
 
 
 def _surplus_entries(dag: Dag, node_id: str) -> list[FogRef]:

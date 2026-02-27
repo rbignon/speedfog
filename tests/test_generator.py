@@ -3329,3 +3329,180 @@ class TestAllowedEntriesExits:
         # Only 1 entry → can't merge (needs 2)
         assert can_be_merge_node(cluster, 2) is False
         assert can_be_passant_node(cluster) is True
+
+
+# =============================================================================
+# Cross-link pipeline tests
+# =============================================================================
+
+
+class TestCrosslinkPipeline:
+    """Tests for cross-link integration in generate_dag."""
+
+    def _make_pool_with_surplus_entries(self) -> ClusterPool:
+        """Create a pool where clusters have surplus entry fogs.
+
+        This enables cross-link generation since surplus entries on
+        targets and surplus exits on sources are both needed.
+        """
+        pool = ClusterPool()
+
+        # Start cluster with 2 exits
+        pool.add(
+            make_cluster(
+                "chapel_start",
+                zones=["chapel"],
+                cluster_type="start",
+                weight=1,
+                entry_fogs=[],
+                exit_fogs=[
+                    {"fog_id": "start_exit_1", "zone": "chapel"},
+                    {"fog_id": "start_exit_2", "zone": "chapel"},
+                ],
+            )
+        )
+
+        # Final boss
+        pool.add(
+            make_cluster(
+                "pcr_boss",
+                zones=["enirilim_radahn"],
+                cluster_type="final_boss",
+                weight=5,
+                entry_fogs=[
+                    {"fog_id": "pcr_entry", "zone": "enirilim_radahn"},
+                ],
+                exit_fogs=[],
+            )
+        )
+
+        # Mini dungeons with 2 entries and 2 exits (surplus after 1 consumed)
+        for i in range(10):
+            pool.add(
+                make_cluster(
+                    f"mini_{i}",
+                    zones=[f"mini_{i}_zone"],
+                    cluster_type="mini_dungeon",
+                    weight=5,
+                    entry_fogs=[
+                        {"fog_id": f"mini_{i}_entry", "zone": f"mini_{i}_zone"},
+                        {"fog_id": f"mini_{i}_entry2", "zone": f"mini_{i}_zone"},
+                    ],
+                    exit_fogs=[
+                        {"fog_id": f"mini_{i}_exit", "zone": f"mini_{i}_zone"},
+                        {"fog_id": f"mini_{i}_exit2", "zone": f"mini_{i}_zone"},
+                    ],
+                )
+            )
+
+        # Boss arenas with 2 entries and 2 exits
+        for i in range(6):
+            pool.add(
+                make_cluster(
+                    f"boss_{i}",
+                    zones=[f"boss_{i}_zone"],
+                    cluster_type="boss_arena",
+                    weight=3,
+                    entry_fogs=[
+                        {"fog_id": f"boss_{i}_entry", "zone": f"boss_{i}_zone"},
+                        {"fog_id": f"boss_{i}_entry2", "zone": f"boss_{i}_zone"},
+                    ],
+                    exit_fogs=[
+                        {"fog_id": f"boss_{i}_exit", "zone": f"boss_{i}_zone"},
+                        {"fog_id": f"boss_{i}_exit2", "zone": f"boss_{i}_zone"},
+                    ],
+                )
+            )
+
+        # Legacy dungeons
+        for i in range(3):
+            pool.add(
+                make_cluster(
+                    f"legacy_{i}",
+                    zones=[f"legacy_{i}_zone"],
+                    cluster_type="legacy_dungeon",
+                    weight=10,
+                    entry_fogs=[
+                        {"fog_id": f"legacy_{i}_entry", "zone": f"legacy_{i}_zone"},
+                        {"fog_id": f"legacy_{i}_entry2", "zone": f"legacy_{i}_zone"},
+                    ],
+                    exit_fogs=[
+                        {"fog_id": f"legacy_{i}_exit", "zone": f"legacy_{i}_zone"},
+                        {"fog_id": f"legacy_{i}_exit2", "zone": f"legacy_{i}_zone"},
+                    ],
+                )
+            )
+
+        return pool
+
+    def test_crosslinks_applied_when_configured(self):
+        """generate_dag adds cross-links when crosslink_ratio > 0."""
+        pool = self._make_pool_with_surplus_entries()
+        config = Config.from_dict(
+            {
+                "structure": {
+                    "crosslink_ratio": 1.0,
+                    "max_parallel_paths": 2,
+                    "split_probability": 0.9,
+                    "min_layers": 4,
+                    "max_layers": 4,
+                },
+            }
+        )
+        dag = generate_dag(
+            config, pool, seed=42, boss_candidates=_boss_candidates(pool)
+        )
+        # With crosslink_ratio=1.0 and surplus fogs, the DAG should
+        # pass validation and have additional paths from cross-links
+        errors = dag.validate_structure()
+        assert errors == [], f"DAG validation failed: {errors}"
+
+    def test_crosslinks_add_extra_edges(self):
+        """crosslink_ratio=1.0 adds more edges than ratio=0.0 with same seed.
+
+        Tries multiple seeds to find one that produces a DAG with eligible
+        cross-link pairs (parallel branches at adjacent layers with surplus fogs).
+        """
+        pool = self._make_pool_with_surplus_entries()
+        base_structure = {
+            "max_parallel_paths": 3,
+            "split_probability": 0.9,
+            "merge_probability": 0.2,
+            "min_layers": 6,
+            "max_layers": 6,
+            "min_branch_age": 2,
+        }
+
+        # Try seeds until we find one that produces cross-links
+        found = False
+        for seed in range(100):
+            config_off = Config.from_dict(
+                {"structure": {**base_structure, "crosslink_ratio": 0.0}}
+            )
+            try:
+                dag_off = generate_dag(
+                    config_off,
+                    pool,
+                    seed=seed,
+                    boss_candidates=_boss_candidates(pool),
+                )
+            except Exception:
+                continue
+
+            config_on = Config.from_dict(
+                {"structure": {**base_structure, "crosslink_ratio": 1.0}}
+            )
+            dag_on = generate_dag(
+                config_on, pool, seed=seed, boss_candidates=_boss_candidates(pool)
+            )
+
+            if len(dag_on.edges) > len(dag_off.edges):
+                # Verify node count is the same (cross-links don't add nodes)
+                assert len(dag_on.nodes) == len(dag_off.nodes)
+                # Verify DAG is still valid
+                errors = dag_on.validate_structure()
+                assert errors == [], f"DAG validation failed: {errors}"
+                found = True
+                break
+
+        assert found, "No seed produced cross-links — check pool/config setup"

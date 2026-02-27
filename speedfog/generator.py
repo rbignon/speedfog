@@ -1556,6 +1556,12 @@ def generate_dag(
         entry_fog_end or FogRef("", ""),
     )
 
+    # Cross-link pass (post-hoc): add optional edges between parallel branches
+    if config.structure.crosslink_ratio > 0:
+        from speedfog.crosslinks import add_crosslinks
+
+        add_crosslinks(dag, config.structure.crosslink_ratio, rng)
+
     return dag
 
 
