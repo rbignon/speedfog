@@ -3,7 +3,78 @@
 import random
 
 from speedfog.config import RequirementsConfig
-from speedfog.planner import compute_tier, plan_layer_types
+from speedfog.planner import _distribute_padding, compute_tier, plan_layer_types
+
+
+class TestDistributePadding:
+    """Tests for _distribute_padding function."""
+
+    def test_zero_padding(self):
+        """Zero padding returns empty list."""
+        result = _distribute_padding(0, {}, {"mini_dungeon": 64}, random.Random(42))
+        assert result == []
+
+    def test_all_below_threshold_falls_back(self):
+        """When all types are below threshold, fallback to mini_dungeon."""
+        result = _distribute_padding(
+            5, {}, {"mini_dungeon": 5, "boss_arena": 10}, random.Random(42)
+        )
+        assert result == ["mini_dungeon"] * 5
+
+    def test_single_eligible_type(self):
+        """Only one type above threshold gets all padding."""
+        result = _distribute_padding(
+            10, {}, {"mini_dungeon": 60, "boss_arena": 5}, random.Random(42)
+        )
+        assert all(t == "mini_dungeon" for t in result)
+        assert len(result) == 10
+
+    def test_proportional_distribution(self):
+        """Larger pools get more padding."""
+        result = _distribute_padding(
+            30,
+            {},
+            {"mini_dungeon": 60, "boss_arena": 80, "legacy_dungeon": 40},
+            random.Random(42),
+        )
+        from collections import Counter
+
+        counts = Counter(result)
+        assert len(result) == 30
+        # boss_arena (80) should get the most
+        assert counts["boss_arena"] >= counts["legacy_dungeon"]
+
+    def test_required_counts_reduce_capacity(self):
+        """Required counts reduce remaining capacity for padding."""
+        result = _distribute_padding(
+            10,
+            {"mini_dungeon": 50},  # 64 - 50 = 14, below threshold of 20
+            {"mini_dungeon": 64, "boss_arena": 80},
+            random.Random(42),
+        )
+        from collections import Counter
+
+        counts = Counter(result)
+        # mini_dungeon has only 14 remaining (< 20 threshold), excluded
+        assert counts.get("mini_dungeon", 0) == 0
+        assert counts["boss_arena"] == 10
+
+    def test_caps_exceeded_triggers_fallback(self):
+        """When caps are too restrictive, remainder goes to largest pool."""
+        # Each type has 20 remaining, cap = 10 each, total cap = 30
+        # padding_needed = 40 exceeds total caps
+        result = _distribute_padding(
+            40,
+            {},
+            {"mini_dungeon": 20, "boss_arena": 20, "legacy_dungeon": 40},
+            random.Random(42),
+        )
+        assert len(result) == 40
+        from collections import Counter
+
+        counts = Counter(result)
+        # legacy_dungeon has the largest pool, gets the overflow
+        assert counts["legacy_dungeon"] > counts.get("mini_dungeon", 0)
 
 
 class TestComputeTier:
@@ -143,14 +214,39 @@ class TestPlanLayerTypes:
         result = plan_layer_types(reqs, total_layers=8, rng=rng)
         assert len(result) == 8
 
-    def test_pads_with_mini_dungeons(self):
-        """Should pad with mini_dungeons when requirements < total_layers."""
+    def test_pads_with_mini_dungeons_no_pool(self):
+        """Should pad with mini_dungeons when no pool_sizes provided."""
         reqs = RequirementsConfig(legacy_dungeons=1, bosses=1, mini_dungeons=1)
         rng = random.Random(42)
         result = plan_layer_types(reqs, total_layers=10, rng=rng)
         assert len(result) == 10
         # 1 legacy + 1 boss + 1 mini = 3 required, 7 more mini_dungeons for padding
         assert result.count("mini_dungeon") == 8  # 1 required + 7 padding
+
+    def test_pads_proportionally_with_pool_sizes(self):
+        """Should distribute padding across types based on pool capacity."""
+        reqs = RequirementsConfig(legacy_dungeons=1, bosses=1, mini_dungeons=1)
+        rng = random.Random(42)
+        pool_sizes = {"mini_dungeon": 60, "boss_arena": 80, "legacy_dungeon": 30}
+        result = plan_layer_types(reqs, total_layers=20, rng=rng, pool_sizes=pool_sizes)
+        assert len(result) == 20
+        # All three types should appear (requirements + padding)
+        assert result.count("legacy_dungeon") >= 1
+        assert result.count("boss_arena") >= 1
+        assert result.count("mini_dungeon") >= 1
+        # Padding should be distributed, not all mini_dungeon
+        assert result.count("mini_dungeon") < 17  # not 1 + 16 padding
+
+    def test_pads_proportionally_respects_capacity(self):
+        """Types with larger pools should get more padding."""
+        reqs = RequirementsConfig(legacy_dungeons=0, bosses=0, mini_dungeons=0)
+        rng = random.Random(42)
+        # Realistic pool sizes matching actual clusters.json proportions
+        pool_sizes = {"mini_dungeon": 64, "boss_arena": 80, "legacy_dungeon": 28}
+        result = plan_layer_types(reqs, total_layers=20, rng=rng, pool_sizes=pool_sizes)
+        assert len(result) == 20
+        # boss_arena has the largest pool, should get the most padding
+        assert result.count("boss_arena") > result.count("legacy_dungeon")
 
     def test_trims_if_too_many_requirements(self):
         """Should trim requirements if they exceed total_layers."""

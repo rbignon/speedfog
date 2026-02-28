@@ -1183,11 +1183,18 @@ def generate_dag(
     if config.structure.first_layer_type:
         num_intermediate_layers = max(1, num_intermediate_layers - 1)
 
+    # Compute pool sizes per type for proportional padding
+    pool_sizes = {
+        t: len(clusters.get_by_type(t))
+        for t in ("mini_dungeon", "boss_arena", "legacy_dungeon")
+    }
+
     layer_types = plan_layer_types(
         config.requirements,
         num_intermediate_layers,
         rng,
         major_boss_ratio=config.structure.major_boss_ratio,
+        pool_sizes=pool_sizes,
     )
 
     # Calculate total layers for tier computation
