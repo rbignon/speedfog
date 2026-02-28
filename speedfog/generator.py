@@ -417,6 +417,68 @@ def pick_cluster_uniform(
     return rng.choice(available)
 
 
+# Types eligible for fallback when the planned type is exhausted.
+_FALLBACK_TYPES = ("mini_dungeon", "boss_arena", "legacy_dungeon", "major_boss")
+
+
+def pick_cluster_with_type_fallback(
+    clusters: ClusterPool,
+    preferred_type: str,
+    used_zones: set[str],
+    rng: random.Random,
+    *,
+    reserved_zones: frozenset[str] = frozenset(),
+) -> ClusterData | None:
+    """Pick a cluster of the preferred type, falling back to other types.
+
+    Tries the preferred type first. If exhausted, tries other types in
+    decreasing order of remaining available clusters.
+
+    Args:
+        clusters: Full cluster pool.
+        preferred_type: Desired cluster type (e.g. "legacy_dungeon").
+        used_zones: Set of zone IDs already used.
+        rng: Random number generator.
+        reserved_zones: Zones reserved for prerequisite placement.
+
+    Returns:
+        A random available cluster, or None if all types exhausted.
+    """
+    # Try preferred type first
+    result = pick_cluster_uniform(
+        clusters.get_by_type(preferred_type),
+        used_zones,
+        rng,
+        reserved_zones=reserved_zones,
+    )
+    if result is not None:
+        return result
+
+    # Fallback: try other types sorted by remaining capacity (largest first)
+    fallback_types = [t for t in _FALLBACK_TYPES if t != preferred_type]
+
+    def _available_count(t: str) -> int:
+        return sum(
+            1
+            for c in clusters.get_by_type(t)
+            if not any(z in used_zones or z in reserved_zones for z in c.zones)
+        )
+
+    fallback_types.sort(key=_available_count, reverse=True)
+
+    for t in fallback_types:
+        result = pick_cluster_uniform(
+            clusters.get_by_type(t),
+            used_zones,
+            rng,
+            reserved_zones=reserved_zones,
+        )
+        if result is not None:
+            return result
+
+    return None
+
+
 def determine_operation(
     cluster: ClusterData,
     branches: list[Branch],
@@ -1225,11 +1287,10 @@ def generate_dag(
             )
             continue
 
-        candidates = clusters.get_by_type(layer_type)
-
-        # Pick a cluster uniformly for the "primary" branch action
-        primary_cluster = pick_cluster_uniform(
-            candidates, used_zones, rng, reserved_zones=reserved_zones
+        # Pick a cluster uniformly for the "primary" branch action,
+        # falling back to other types if the planned type is exhausted.
+        primary_cluster = pick_cluster_with_type_fallback(
+            clusters, layer_type, used_zones, rng, reserved_zones=reserved_zones
         )
         if primary_cluster is None:
             raise GenerationError(
@@ -1281,11 +1342,13 @@ def generate_dag(
                         )
                     letter_offset += 1
                 else:
-                    # Passant for non-split branches (uniform pick).
-                    # All candidates are passant-compatible (guaranteed by
-                    # filter_passant_incompatible at load time).
-                    pc = pick_cluster_uniform(
-                        candidates, used_zones, rng, reserved_zones=reserved_zones
+                    # Passant for non-split branches, with type fallback.
+                    pc = pick_cluster_with_type_fallback(
+                        clusters,
+                        layer_type,
+                        used_zones,
+                        rng,
+                        reserved_zones=reserved_zones,
                     )
                     if pc is None:
                         raise GenerationError(
@@ -1416,16 +1479,18 @@ def generate_dag(
                     )
                 ]
 
-                # Non-merged branches get passant (uniform pick).
-                # All candidates are passant-compatible (guaranteed by
-                # filter_passant_incompatible at load time).
+                # Non-merged branches get passant, with type fallback.
                 merge_set = set(merge_indices)
                 letter = 1
                 for i, branch in enumerate(branches):
                     if i in merge_set:
                         continue
-                    pc = pick_cluster_uniform(
-                        candidates, used_zones, rng, reserved_zones=reserved_zones
+                    pc = pick_cluster_with_type_fallback(
+                        clusters,
+                        layer_type,
+                        used_zones,
+                        rng,
+                        reserved_zones=reserved_zones,
                     )
                     if pc is None:
                         raise GenerationError(
@@ -1466,8 +1531,12 @@ def generate_dag(
                     c = primary_cluster
                     first = False
                 else:
-                    c = pick_cluster_uniform(
-                        candidates, used_zones, rng, reserved_zones=reserved_zones
+                    c = pick_cluster_with_type_fallback(
+                        clusters,
+                        layer_type,
+                        used_zones,
+                        rng,
+                        reserved_zones=reserved_zones,
                     )
                     if c is None:
                         raise GenerationError(
