@@ -16,25 +16,24 @@ from pathlib import Path
 
 import tomllib
 
-# ---------------------------------------------------------------------------
-# French contraction rules (mirror of server)
-# ---------------------------------------------------------------------------
-_CONTRACTIONS: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"\bde le\b"), "du"),
-    (re.compile(r"\bde les\b"), "des"),
-    (re.compile(r"\bDe le\b"), "Du"),
-    (re.compile(r"\bDe les\b"), "Des"),
-    (re.compile(r"\bà le\b"), "au"),
-    (re.compile(r"\bà les\b"), "aux"),
-    (re.compile(r"\bÀ le\b"), "Au"),
-    (re.compile(r"\bÀ les\b"), "Aux"),
-]
-
 _PLACEHOLDER_NAMES = {"boss", "zone", "zone1", "zone2", "location", "direction", "name"}
 
 
-def _apply_contractions(text: str) -> str:
-    for pat, repl in _CONTRACTIONS:
+def _load_postprocess_rules(
+    data: dict,
+) -> list[tuple[re.Pattern[str], str]]:
+    """Load postprocess rules from parsed TOML data."""
+    rules: list[tuple[re.Pattern[str], str]] = []
+    for rule_data in data.get("postprocess", {}).get("rules", []):
+        try:
+            rules.append((re.compile(rule_data["pattern"]), rule_data["replacement"]))
+        except (KeyError, re.error):
+            continue
+    return rules
+
+
+def _apply_postprocess(text: str, rules: list[tuple[re.Pattern[str], str]]) -> str:
+    for pat, repl in rules:
         text = pat.sub(repl, text)
     return text
 
@@ -111,6 +110,7 @@ def _try_pattern_match(
     bosses: dict[str, str],
     regions: dict[str, str],
     locations: dict[str, str],
+    pp_rules: list[tuple[re.Pattern[str], str]],
 ) -> str | None:
     """Return the French translation via pattern matching, or None."""
     for en_template, fr_template in patterns.items():
@@ -127,7 +127,7 @@ def _try_pattern_match(
                 if captured is not None:
                     translated = _translate_name(captured, bosses, regions, locations)
                     fr_result = fr_result.replace("{" + ph + "}", translated)
-            fr_result = _apply_contractions(fr_result)
+            fr_result = _apply_postprocess(fr_result, pp_rules)
             return fr_result
     return None
 
@@ -145,12 +145,15 @@ def main() -> int:
     patterns_side_text = data.get("patterns", {}).get("side_text", {})
     overrides_text = data.get("overrides", {}).get("text", {})
     overrides_side_text = data.get("overrides", {}).get("side_text", {})
+    pp_rules = _load_postprocess_rules(data)
 
     redundant: list[
         tuple[str, str, str, str]
     ] = []  # (section, en_key, override_val, pattern_val)
     non_redundant: list[tuple[str, str, str]] = []
 
+    # Check each override against patterns (text then side_text, or vice versa).
+    # An override is redundant only if a pattern produces the same translation.
     for section_name, overrides, pattern_sets in [
         ("overrides.text", overrides_text, [patterns_text, patterns_side_text]),
         (
@@ -163,7 +166,7 @@ def main() -> int:
             matched = None
             for patterns in pattern_sets:
                 matched = _try_pattern_match(
-                    en_key, patterns, bosses, regions, locations
+                    en_key, patterns, bosses, regions, locations, pp_rules
                 )
                 if matched is not None:
                     break

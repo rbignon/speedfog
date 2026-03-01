@@ -10,16 +10,12 @@
 #   [patterns.side_text]- Patterns pour les descriptions de fog gates
 #   [overrides.text]    - Traductions complètes pour labels spéciaux
 #   [overrides.side_text] - Traductions complètes pour descriptions non-formulaïques
+#   [[postprocess.rules]] - Règles regex de post-traitement (contractions, élision)
 #
 # Noms propres:
 #   Les noms incluent l'article défini français quand applicable (le/la/l'/les).
-#   Le code consommateur doit gérer les contractions :
-#     "de" + "le X"  → "du X"
-#     "de" + "les X" → "des X"
-#     "de" + "la X"  → "de la X"  (pas de changement)
-#     "de" + "l'X"   → "de l'X"   (pas de changement)
-#     "à"  + "le X"  → "au X"
-#     "à"  + "les X" → "aux X"
+#   Les contractions et élisions sont définies dans [[postprocess.rules]] ci-dessous
+#   et appliquées automatiquement par le code après substitution des patterns.
 #
 # Patterns:
 #   Utilisent {boss}, {zone}, {location} comme placeholders.
@@ -535,6 +531,54 @@ major_boss = "boss majeur"
 "Above Boss" = "Au-dessus du boss"
 "After Waypoint" = "Après le point de passage"
 "Before Divine Tower" = "Avant la Tour divine"
+
+# =============================================================================
+# Post-traitement — règles regex appliquées après substitution de patterns
+# Contractions grammaticales obligatoires + élision devant voyelle.
+# Les contractions d'articles sont appliquées AVANT l'élision.
+# =============================================================================
+
+# --- Contractions d'articles ---
+[[postprocess.rules]]
+pattern = "\\bde le\\b"
+replacement = "du"
+
+[[postprocess.rules]]
+pattern = "\\bde les\\b"
+replacement = "des"
+
+[[postprocess.rules]]
+pattern = "\\bDe le\\b"
+replacement = "Du"
+
+[[postprocess.rules]]
+pattern = "\\bDe les\\b"
+replacement = "Des"
+
+[[postprocess.rules]]
+pattern = "\\bà le\\b"
+replacement = "au"
+
+[[postprocess.rules]]
+pattern = "\\bà les\\b"
+replacement = "aux"
+
+[[postprocess.rules]]
+pattern = "\\bÀ le\\b"
+replacement = "Au"
+
+[[postprocess.rules]]
+pattern = "\\bÀ les\\b"
+replacement = "Aux"
+
+# --- Élision : de + voyelle → d'voyelle ---
+[[postprocess.rules]]
+pattern = "\\bde ([AEIOUÀÂÉÈÊËÎÏÔÛÜŒaeiouàâéèêëîïôûüœ])"
+replacement = "d'\\1"
+
+[[postprocess.rules]]
+pattern = "\\bDe ([AEIOUÀÂÉÈÊËÎÏÔÛÜŒaeiouàâéèêëîïôûüœ])"
+replacement = "D'\\1"
 
 # =============================================================================
 # Overrides — labels spéciaux (champ text)
