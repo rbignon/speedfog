@@ -195,7 +195,7 @@ Roundtable Hold is a hub accessible via menu teleport, but fog.txt treats it as 
 3. Do **not** update weight (roundtable is a hub, not traversal time)
 4. Remove roundtable from cluster pool
 
-This gives the start node extra exits, enabling dual-branch starts when `max_branches >= 2`.
+This gives the start node extra exits, enabling dual-branch starts when `max_exits >= 2`.
 
 ## Exclusions
 
