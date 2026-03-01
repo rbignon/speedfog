@@ -57,6 +57,9 @@ writer/*/eldendata/
 writer/*/diste/
 writer/*/presets/
 
+# FogRando decompiled reference code (not for redistribution)
+reference/
+
 # FogRando data files (extracted by tools/setup_dependencies.py)
 data/fog.txt
 data/fogevents.txt
