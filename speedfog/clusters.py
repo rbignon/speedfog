@@ -55,6 +55,7 @@ class ClusterData:
     proximity_groups: list[list[str]] = field(
         default_factory=list
     )  # Fogs spatially close — entry and exit cannot share a group
+    display_name: str = ""  # Pre-computed display name from clusters.json
 
     @classmethod
     def from_dict(cls, data: dict) -> ClusterData:
@@ -85,6 +86,7 @@ class ClusterData:
             allow_entry_as_exit=data.get("allow_entry_as_exit", False),
             requires=data.get("requires", ""),
             proximity_groups=data.get("proximity_groups", []),
+            display_name=data.get("display_name", ""),
         )
 
     def available_exits(self, used_entry: dict | None) -> list[dict]:
@@ -145,17 +147,20 @@ class ClusterPool:
         return None
 
     def get_display_name(self, cluster: ClusterData) -> str:
-        """Get the display name from the cluster's primary (first) zone.
+        """Get the display name for a cluster.
 
-        The first zone defines the cluster's identity; other zones are
-        secondary (e.g. roundtable merged into chapel_start).
+        Uses the pre-computed display_name from clusters.json when available.
+        Falls back to zone_names lookup (first zone with a name), then
+        cluster.id.
 
         Args:
             cluster: The cluster to get a display name for
 
         Returns:
-            Display name of the first zone, or cluster.id as fallback
+            Display name for the cluster
         """
+        if cluster.display_name:
+            return cluster.display_name
         for zone in cluster.zones:
             if zone in self.zone_names:
                 return self.zone_names[zone]

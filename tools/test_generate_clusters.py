@@ -12,6 +12,7 @@ from generate_clusters import (
     WorldGraph,
     ZoneFogs,
     _is_side_core,
+    _pick_display_name,
     _resolve_zone_type,
     build_world_graph,
     classify_fogs,
@@ -3335,8 +3336,8 @@ class TestClusterConstraintsSerialization:
         assert "allowed_entries" not in c
         assert "allowed_exits" not in c
 
-    def test_version_is_1_8(self):
-        """clusters.json version bumped to 1.8."""
+    def test_version_is_1_9(self):
+        """clusters.json version bumped to 1.9."""
         cluster = Cluster(
             zones=frozenset({"z1"}),
             entry_fogs=[],
@@ -3349,4 +3350,158 @@ class TestClusterConstraintsSerialization:
             "z1": AreaData(name="z1", text="Zone 1", maps=["m10_00_00_00"], tags=[])
         }
         result = clusters_to_json([cluster], areas)
-        assert result["version"] == "1.8"
+        assert result["version"] == "1.9"
+
+
+class TestPickDisplayName:
+    """Tests for _pick_display_name — choosing cluster display names."""
+
+    def test_legacy_dungeon_prefers_non_boss_zone(self):
+        """Legacy dungeon with a boss zone uses the non-boss zone name."""
+        cluster = Cluster(
+            zones=frozenset({"academy_redwolf", "academy_courtyard"}),
+            entry_fogs=[],
+            exit_fogs=[],
+            cluster_id="academy_redwolf_8733",
+            cluster_type="legacy_dungeon",
+            weight=3,
+            primary_zone="academy_redwolf",
+        )
+        areas = {
+            "academy_redwolf": AreaData(
+                name="academy_redwolf",
+                text="Red Wolf of Radagon",
+                maps=["m14_00_00_00"],
+                tags=[],
+                has_boss=True,
+            ),
+            "academy_courtyard": AreaData(
+                name="academy_courtyard",
+                text="Academy of Raya Lucaria after Red Wolf",
+                maps=["m14_00_00_00"],
+                tags=[],
+            ),
+        }
+        zone_names = {
+            "academy_redwolf": "Red Wolf of Radagon",
+            "academy_courtyard": "Academy of Raya Lucaria after Red Wolf",
+        }
+        result = _pick_display_name(cluster, areas, zone_names)
+        assert result == "Academy of Raya Lucaria after Red Wolf"
+
+    def test_legacy_dungeon_single_non_boss_zone(self):
+        """Legacy dungeon with only non-boss zones uses primary zone."""
+        cluster = Cluster(
+            zones=frozenset({"stormveil"}),
+            entry_fogs=[],
+            exit_fogs=[],
+            cluster_id="stormveil_db4a",
+            cluster_type="legacy_dungeon",
+            weight=8,
+            primary_zone="stormveil",
+        )
+        areas = {
+            "stormveil": AreaData(
+                name="stormveil",
+                text="Stormveil Castle after Gate",
+                maps=["m10_00_00_00"],
+                tags=[],
+            ),
+        }
+        zone_names = {"stormveil": "Stormveil Castle after Gate"}
+        result = _pick_display_name(cluster, areas, zone_names)
+        assert result == "Stormveil Castle after Gate"
+
+    def test_boss_arena_uses_boss_name(self):
+        """Boss arena cluster uses boss name (primary zone)."""
+        cluster = Cluster(
+            zones=frozenset({"godrick_arena"}),
+            entry_fogs=[],
+            exit_fogs=[],
+            cluster_id="godrick_arena_1234",
+            cluster_type="boss_arena",
+            weight=3,
+            primary_zone="godrick_arena",
+        )
+        areas = {
+            "godrick_arena": AreaData(
+                name="godrick_arena",
+                text="Godrick the Grafted",
+                maps=["m10_00_00_00"],
+                tags=[],
+                has_boss=True,
+            ),
+        }
+        zone_names = {"godrick_arena": "Godrick the Grafted"}
+        result = _pick_display_name(cluster, areas, zone_names)
+        assert result == "Godrick the Grafted"
+
+    def test_major_boss_uses_boss_name(self):
+        """Major boss cluster uses boss name."""
+        cluster = Cluster(
+            zones=frozenset({"radahn"}),
+            entry_fogs=[],
+            exit_fogs=[],
+            cluster_id="radahn_5678",
+            cluster_type="major_boss",
+            weight=5,
+            primary_zone="radahn",
+        )
+        areas = {
+            "radahn": AreaData(
+                name="radahn",
+                text="Starscourge Radahn",
+                maps=["m60_00_00_00"],
+                tags=[],
+                has_boss=True,
+            ),
+        }
+        zone_names = {"radahn": "Starscourge Radahn"}
+        result = _pick_display_name(cluster, areas, zone_names)
+        assert result == "Starscourge Radahn"
+
+    def test_legacy_dungeon_all_boss_zones_uses_primary(self):
+        """Legacy dungeon where all zones are boss zones falls back to primary."""
+        cluster = Cluster(
+            zones=frozenset({"boss_a", "boss_b"}),
+            entry_fogs=[],
+            exit_fogs=[],
+            cluster_id="boss_a_abcd",
+            cluster_type="legacy_dungeon",
+            weight=3,
+            primary_zone="boss_a",
+        )
+        areas = {
+            "boss_a": AreaData(
+                name="boss_a", text="Boss A", maps=[], tags=[], has_boss=True
+            ),
+            "boss_b": AreaData(
+                name="boss_b", text="Boss B", maps=[], tags=[], has_boss=True
+            ),
+        }
+        zone_names = {"boss_a": "Boss A", "boss_b": "Boss B"}
+        result = _pick_display_name(cluster, areas, zone_names)
+        assert result == "Boss A"
+
+    def test_clusters_to_json_includes_display_name(self):
+        """clusters_to_json output includes display_name per cluster."""
+        cluster = Cluster(
+            zones=frozenset({"z_boss", "z_area"}),
+            entry_fogs=[],
+            exit_fogs=[],
+            cluster_id="z_boss_1234",
+            cluster_type="legacy_dungeon",
+            weight=5,
+            primary_zone="z_boss",
+        )
+        areas = {
+            "z_boss": AreaData(
+                name="z_boss", text="Big Boss", maps=["m10"], tags=[], has_boss=True
+            ),
+            "z_area": AreaData(
+                name="z_area", text="Nice Dungeon Area", maps=["m10"], tags=[]
+            ),
+        }
+        result = clusters_to_json([cluster], areas)
+        cluster_entry = result["clusters"][0]
+        assert cluster_entry["display_name"] == "Nice Dungeon Area"

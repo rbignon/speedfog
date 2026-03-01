@@ -1681,6 +1681,38 @@ def build_zone_names(
     return zone_names
 
 
+def _pick_display_name(
+    cluster: Cluster,
+    areas: dict[str, AreaData],
+    zone_names: dict[str, str],
+) -> str:
+    """Pick the best display name for a cluster.
+
+    For legacy_dungeon clusters that contain boss zones, prefer a non-boss
+    zone's name (location name like "Academy of Raya Lucaria after Red Wolf")
+    over a boss zone's name (boss name like "Red Wolf of Radagon").
+
+    Only legacy_dungeon gets this treatment. For smaller cluster types
+    (mini_dungeon, boss_arena, major_boss, final_boss), the boss name is
+    a natural display name since it identifies the encounter.
+    """
+    zones = [cluster.primary_zone] + sorted(cluster.zones - {cluster.primary_zone})
+
+    if cluster.cluster_type == "legacy_dungeon":
+        # Prefer non-boss zones for legacy dungeon display names
+        for zone in zones:
+            area = areas.get(zone)
+            if area and not area.has_boss and zone in zone_names:
+                return zone_names[zone]
+
+    # Default: use first zone with a name (primary zone first)
+    for zone in zones:
+        if zone in zone_names:
+            return zone_names[zone]
+
+    return cluster.cluster_id
+
+
 def clusters_to_json(
     clusters: list[Cluster],
     areas: dict[str, AreaData],
@@ -1695,6 +1727,7 @@ def clusters_to_json(
             "id": c.cluster_id,
             "zones": [c.primary_zone] + sorted(c.zones - {c.primary_zone}),
             "type": c.cluster_type,
+            "display_name": _pick_display_name(c, areas, zone_names),
             "weight": c.weight,
             "entry_fogs": c.entry_fogs,
             "exit_fogs": c.exit_fogs,
@@ -1716,7 +1749,7 @@ def clusters_to_json(
         cluster_list.append(entry)
 
     return {
-        "version": "1.8",
+        "version": "1.9",
         "generated_from": "fog.txt",
         "cluster_count": len(clusters),
         "zone_maps": zone_maps,
