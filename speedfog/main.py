@@ -160,9 +160,9 @@ def main() -> int:
         return 1
 
     # Merge roundtable into start cluster for a second exit branch.
-    # Only when branching is enabled (max_branches > 1) and parallel paths
+    # Only when splitting is enabled (max_exits > 1) and parallel paths
     # are allowed (max_parallel_paths > 1), otherwise the extra exit is unused.
-    if config.structure.max_branches > 1 and config.structure.max_parallel_paths > 1:
+    if config.structure.max_exits > 1 and config.structure.max_parallel_paths > 1:
         clusters.merge_roundtable_into_start()
 
     # Snapshot boss clusters before passant filter removes dead-end arenas.

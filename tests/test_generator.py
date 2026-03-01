@@ -3506,3 +3506,187 @@ class TestCrosslinkPipeline:
                 break
 
         assert found, "No seed produced cross-links — check pool/config setup"
+
+
+# =============================================================================
+# Asymmetric max_exits / max_entrances tests
+# =============================================================================
+
+
+class TestAsymmetricExitsEntrances:
+    """Tests for asymmetric max_exits / max_entrances configuration."""
+
+    @staticmethod
+    def _make_wide_pool() -> ClusterPool:
+        """Create a pool with clusters that have 4+ exits for wide splits."""
+        pool = ClusterPool()
+
+        # Start cluster with 4 exits
+        pool.add(
+            make_cluster(
+                "chapel_start",
+                zones=["chapel"],
+                cluster_type="start",
+                weight=1,
+                entry_fogs=[],
+                exit_fogs=[
+                    {"fog_id": f"start_exit_{i}", "zone": "chapel"} for i in range(4)
+                ],
+            )
+        )
+
+        # Final boss
+        pool.add(
+            make_cluster(
+                "erdtree_boss",
+                zones=["leyndell_erdtree"],
+                cluster_type="final_boss",
+                weight=5,
+                entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
+                exit_fogs=[],
+            )
+        )
+
+        # Merge-capable clusters (2+ entries, 2+ exits)
+        for i in range(30):
+            pool.add(
+                make_cluster(
+                    f"mini_{i}",
+                    zones=[f"mini_{i}_zone"],
+                    cluster_type="mini_dungeon",
+                    weight=3,
+                    entry_fogs=[
+                        {"fog_id": f"mini_{i}_entry_{j}", "zone": f"mini_{i}_zone"}
+                        for j in range(3)
+                    ],
+                    exit_fogs=[
+                        {"fog_id": f"mini_{i}_exit_{j}", "zone": f"mini_{i}_zone"}
+                        for j in range(3)
+                    ],
+                )
+            )
+
+        # Legacy dungeons
+        for i in range(5):
+            pool.add(
+                make_cluster(
+                    f"legacy_{i}",
+                    zones=[f"legacy_{i}_zone"],
+                    cluster_type="legacy_dungeon",
+                    weight=8,
+                    entry_fogs=[
+                        {"fog_id": f"legacy_{i}_entry_{j}", "zone": f"legacy_{i}_zone"}
+                        for j in range(3)
+                    ],
+                    exit_fogs=[
+                        {"fog_id": f"legacy_{i}_exit_{j}", "zone": f"legacy_{i}_zone"}
+                        for j in range(3)
+                    ],
+                )
+            )
+
+        # Boss arenas
+        for i in range(10):
+            pool.add(
+                make_cluster(
+                    f"boss_{i}",
+                    zones=[f"boss_{i}_zone"],
+                    cluster_type="boss_arena",
+                    weight=3,
+                    entry_fogs=[
+                        {"fog_id": f"boss_{i}_entry_{j}", "zone": f"boss_{i}_zone"}
+                        for j in range(2)
+                    ],
+                    exit_fogs=[
+                        {"fog_id": f"boss_{i}_exit_{j}", "zone": f"boss_{i}_zone"}
+                        for j in range(2)
+                    ],
+                )
+            )
+
+        return pool
+
+    def test_asymmetric_config_produces_valid_dag(self):
+        """Asymmetric max_exits=4, max_entrances=2 produces a valid DAG."""
+        pool = self._make_wide_pool()
+        pool.filter_passant_incompatible()
+        config = Config.from_dict(
+            {
+                "structure": {
+                    "max_parallel_paths": 4,
+                    "max_branches": 2,
+                    "max_exits": 4,
+                    "max_entrances": 2,
+                    "min_layers": 4,
+                    "max_layers": 8,
+                    "split_probability": 0.9,
+                    "merge_probability": 0.5,
+                },
+                "requirements": {"legacy_dungeons": 0, "bosses": 0, "mini_dungeons": 0},
+            }
+        )
+
+        successes = 0
+        for seed in range(1, 500):
+            try:
+                dag = generate_dag(
+                    config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
+                )
+                errors = dag.validate_structure()
+                assert errors == [], f"Seed {seed}: {errors}"
+                successes += 1
+                if successes >= 5:
+                    break
+            except GenerationError:
+                continue
+
+        assert successes >= 5, f"Only {successes}/5 DAGs generated successfully"
+
+    def test_max_entrances_limits_merge_fan_in(self):
+        """max_entrances=2 with 4 branches forces multi-step merge convergence."""
+        pool = self._make_wide_pool()
+        pool.filter_passant_incompatible()
+        config = Config.from_dict(
+            {
+                "structure": {
+                    "max_parallel_paths": 4,
+                    "max_branches": 2,
+                    "max_exits": 4,
+                    "max_entrances": 2,
+                    "min_layers": 5,
+                    "max_layers": 10,
+                    "split_probability": 0.9,
+                    "merge_probability": 0.5,
+                },
+                "requirements": {"legacy_dungeons": 0, "bosses": 0, "mini_dungeons": 0},
+            }
+        )
+
+        # With max_entrances=2, merging 4 branches requires at least 2 merge steps.
+        # Check that no merge node has more than 2 incoming edges (fan-in ≤ 2).
+        found_multi_branch = False
+        for seed in range(1, 500):
+            try:
+                dag = generate_dag(
+                    config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
+                )
+            except GenerationError:
+                continue
+
+            # Count incoming edges per node
+            in_degree: dict[str, int] = {nid: 0 for nid in dag.nodes}
+            for edge in dag.edges:
+                in_degree[edge.target_id] += 1
+
+            # No node should have fan-in > max_entrances
+            for nid, deg in in_degree.items():
+                assert (
+                    deg <= 2
+                ), f"Seed {seed}: node {nid} has fan-in {deg} > max_entrances=2"
+
+            paths = dag.enumerate_paths()
+            if len(paths) > 1:
+                found_multi_branch = True
+                break
+
+        assert found_multi_branch, "No seed produced a multi-branch DAG"

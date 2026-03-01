@@ -504,7 +504,8 @@ def determine_operation(
     """
     num_branches = len(branches)
     max_paths = config.structure.max_parallel_paths
-    max_br = config.structure.max_branches
+    max_ex = config.structure.max_exits
+    max_en = config.structure.max_entrances
     split_prob = config.structure.split_probability
     merge_prob = config.structure.merge_probability
     min_age = config.structure.min_branch_age
@@ -512,9 +513,9 @@ def determine_operation(
     # Determine split capability
     can_split = False
     split_fan = 2
-    if max_br >= 2 and num_branches < max_paths:
+    if max_ex >= 2 and num_branches < max_paths:
         room = max_paths - num_branches + 1
-        max_fan = min(max_br, room)
+        max_fan = min(max_ex, room)
         for n in range(max_fan, 1, -1):
             if can_be_split_node(cluster, n):
                 can_split = True
@@ -523,7 +524,7 @@ def determine_operation(
 
     # Determine merge capability (respects min_branch_age)
     can_merge = (
-        max_br >= 2
+        max_en >= 2
         and num_branches >= 2
         and _has_valid_merge_pair(
             branches, min_age=min_age, current_layer=current_layer
@@ -756,7 +757,7 @@ def execute_merge_layer(
 ) -> list[Branch]:
     """Execute a merge layer where N branches merge into one.
 
-    The fan-in N is controlled by config.structure.max_branches.
+    The fan-in N is controlled by config.structure.max_entrances.
     Tries from max down to 2.
 
     Args:
@@ -768,7 +769,7 @@ def execute_merge_layer(
         clusters: Pool of available clusters.
         used_zones: Set of already used zones.
         rng: Random number generator.
-        config: Configuration with max_branches.
+        config: Configuration with max_entrances.
         reserved_zones: Zones reserved for prerequisite placement (excluded).
         min_age: Minimum branch age for merge eligibility (0=ignore).
 
@@ -781,7 +782,7 @@ def execute_merge_layer(
     if len(branches) < 2:
         raise GenerationError("Cannot merge with fewer than 2 branches")
 
-    max_merge = max(min(config.structure.max_branches, len(branches)), 2)
+    max_merge = max(min(config.structure.max_entrances, len(branches)), 2)
     candidates = clusters.get_by_type(layer_type)
 
     # Try from max_merge down to 2: find valid indices AND matching cluster
@@ -956,7 +957,7 @@ def execute_forced_merge(
     """Force all branches to merge into one.
 
     Repeatedly merges until only 1 branch remains. With N-ary merges
-    controlled by config.structure.max_branches, this may complete faster.
+    controlled by config.structure.max_entrances, this may complete faster.
 
     Args:
         dag: The DAG being built.
@@ -967,7 +968,7 @@ def execute_forced_merge(
         clusters: Pool of available clusters.
         used_zones: Set of already used zones.
         rng: Random number generator.
-        config: Configuration with max_branches.
+        config: Configuration with max_entrances.
         reserved_zones: Zones reserved for prerequisite placement (excluded).
 
     Returns:
@@ -1153,7 +1154,7 @@ def generate_dag(
     num_initial_branches = min(
         len(start_exits),
         config.structure.max_parallel_paths,
-        config.structure.max_branches,
+        config.structure.max_exits,
     )
 
     if num_initial_branches == 0:
@@ -1383,7 +1384,7 @@ def generate_dag(
         elif operation == LayerOperation.MERGE:
             # Find merge indices and actual fan-in
             min_age = config.structure.min_branch_age
-            max_merge = max(min(config.structure.max_branches, len(branches)), 2)
+            max_merge = max(min(config.structure.max_entrances, len(branches)), 2)
             merge_indices: list[int] | None = None
             actual_merge = 2
             for merge_n in range(max_merge, 1, -1):

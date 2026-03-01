@@ -80,7 +80,7 @@ One branch fans out into N parallel branches. Creates divergence in the DAG.
 5. Non-split branches execute passant in the same layer
 
 **Constraints**:
-- `N` ranges from 2 to `max_branches` (config, default 3)
+- `N` ranges from 2 to `max_exits` (config, default 3)
 - Total branches after split must not exceed `max_parallel_paths` (config, default 3)
 - Room calculation: `max_parallel_paths - len(branches) + 1`
 - Tries max fan-out first, falls back to smaller N (greedy)
@@ -189,7 +189,7 @@ Start Node → [First Layer] → Plan Types → Execute Layers → Forced Merge 
 - Select start cluster (type `"start"`, Chapel of Anticipation)
 - No entry consumed (player spawns here)
 - All exits available
-- Initialize branches from exits (limited by `max_parallel_paths` and `max_branches`)
+- Initialize branches from exits (limited by `max_parallel_paths` and `max_exits`)
 
 ### 2. Pre-select Final Boss and Reserve Zones
 
@@ -241,7 +241,7 @@ while len(branches) > 1:
     execute merge layer (converge)
 ```
 
-Inserts passant layers as needed to break micro-merge patterns. Uses N-ary merges (up to `max_branches`) for efficiency. Forced merges deliberately bypass `min_branch_age` (use `min_age=0`) to guarantee convergence regardless of branch age.
+Inserts passant layers as needed to break micro-merge patterns. Uses N-ary merges (up to `max_entrances`) for efficiency. Forced merges deliberately bypass `min_branch_age` (use `min_age=0`) to guarantee convergence regardless of branch age.
 
 ### 7. Prerequisite Injection
 
@@ -326,7 +326,9 @@ Config validation runs once before any attempts; invalid config raises `Generati
 | Config Key | Default | Description |
 |------------|---------|-------------|
 | `structure.max_parallel_paths` | 3 | Maximum concurrent branches |
-| `structure.max_branches` | 3 | Maximum fan-out/fan-in per operation |
+| `structure.max_exits` | 3 | Maximum split fan-out (1→N branches) |
+| `structure.max_entrances` | 3 | Maximum merge fan-in (N→1 branches) |
+| `structure.max_branches` | 3 | Default for max_exits/max_entrances (backward compat) |
 | `structure.min_layers` | 6 | Minimum intermediate layers |
 | `structure.max_layers` | 10 | Maximum intermediate layers |
 | `structure.split_probability` | 0.9 | Chance of split at each layer (if cluster supports it) |

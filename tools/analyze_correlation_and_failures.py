@@ -64,7 +64,7 @@ def main():
     clusters_path = project_root / "data" / "clusters.json"
     clusters = load_clusters(clusters_path)
 
-    if config.structure.max_branches > 1 and config.structure.max_parallel_paths > 1:
+    if config.structure.max_exits > 1 and config.structure.max_parallel_paths > 1:
         clusters.merge_roundtable_into_start()
     boss_candidates = clusters.get_by_type("major_boss") + clusters.get_by_type(
         "final_boss"

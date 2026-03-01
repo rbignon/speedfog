@@ -568,3 +568,82 @@ def test_crosslinks_from_toml():
     """crosslinks is parsed from structure section."""
     config = Config.from_dict({"structure": {"crosslinks": True}})
     assert config.structure.crosslinks is True
+
+
+def test_max_exits_entrances_default_to_max_branches():
+    """max_exits and max_entrances default to max_branches when not set."""
+    config = Config.from_dict({"structure": {"max_branches": 4}})
+    assert config.structure.max_exits == 4
+    assert config.structure.max_entrances == 4
+
+
+def test_max_exits_entrances_explicit_override():
+    """Explicit max_exits/max_entrances override max_branches independently."""
+    config = Config.from_dict(
+        {"structure": {"max_branches": 3, "max_exits": 4, "max_entrances": 2}}
+    )
+    assert config.structure.max_exits == 4
+    assert config.structure.max_entrances == 2
+    assert config.structure.max_branches == 3  # Unchanged
+
+
+def test_max_exits_partial_override():
+    """Setting only max_exits leaves max_entrances defaulting to max_branches."""
+    config = Config.from_dict({"structure": {"max_branches": 3, "max_exits": 4}})
+    assert config.structure.max_exits == 4
+    assert config.structure.max_entrances == 3
+
+
+def test_max_exits_validation():
+    """max_exits must be >= 1."""
+    with pytest.raises(ValueError, match="max_exits must be >= 1"):
+        Config.from_dict({"structure": {"max_exits": 0}})
+
+
+def test_max_entrances_validation():
+    """max_entrances must be >= 1."""
+    with pytest.raises(ValueError, match="max_entrances must be >= 1"):
+        Config.from_dict({"structure": {"max_entrances": 0}})
+
+
+def test_max_exits_cross_validation():
+    """max_exits >= 2 requires max_parallel_paths >= 2."""
+    with pytest.raises(ValueError, match="max_parallel_paths must be >= 2"):
+        Config.from_dict(
+            {"structure": {"max_parallel_paths": 1, "max_branches": 1, "max_exits": 2}}
+        )
+
+
+def test_max_exits_entrances_from_toml(tmp_path):
+    """max_exits and max_entrances parse from TOML."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[structure]
+max_exits = 4
+max_entrances = 2
+""")
+    config = Config.from_toml(config_file)
+    assert config.structure.max_exits == 4
+    assert config.structure.max_entrances == 2
+
+
+def test_max_branches_mutation_updates_properties():
+    """Mutating max_branches updates max_exits/max_entrances (fallback behavior)."""
+    config = Config.from_dict(
+        {"structure": {"max_parallel_paths": 1, "max_branches": 1}}
+    )
+    assert config.structure.max_exits == 1
+    assert config.structure.max_entrances == 1
+    config.structure.max_branches = 2
+    config.structure.max_parallel_paths = 3
+    assert config.structure.max_exits == 2
+    assert config.structure.max_entrances == 2
+
+
+def test_explicit_override_survives_max_branches_mutation():
+    """Explicit max_exits is not overridden by later max_branches mutation."""
+    config = Config.from_dict({"structure": {"max_exits": 4, "max_entrances": 2}})
+    config.structure.max_branches = 1
+    config.structure.max_parallel_paths = 1
+    assert config.structure.max_exits == 4
+    assert config.structure.max_entrances == 2
