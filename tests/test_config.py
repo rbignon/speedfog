@@ -26,6 +26,7 @@ def test_config_defaults():
     assert config.requirements.bosses == 5
     assert config.requirements.legacy_dungeons == 1
     assert config.requirements.mini_dungeons == 5
+    assert config.requirements.major_bosses == 8
     assert config.structure.max_parallel_paths == 3
 
 
@@ -125,7 +126,6 @@ def test_structure_defaults():
     assert config.structure.min_layers == 6
     assert config.structure.max_layers == 10
     assert config.structure.first_layer_type is None
-    assert config.structure.major_boss_ratio == 0.0
     assert config.structure.final_boss_candidates == []
     assert config.structure.final_tier == 28
     assert config.structure.tier_curve == "linear"
@@ -138,17 +138,32 @@ def test_structure_new_options(tmp_path):
     config_file.write_text("""
 [structure]
 first_layer_type = "legacy_dungeon"
-major_boss_ratio = 0.2
 final_boss_candidates = ["caelid_radahn", "haligtree_malenia", "leyndell_erdtree"]
 """)
     config = Config.from_toml(config_file)
     assert config.structure.first_layer_type == "legacy_dungeon"
-    assert config.structure.major_boss_ratio == 0.2
     assert config.structure.final_boss_candidates == [
         "caelid_radahn",
         "haligtree_malenia",
         "leyndell_erdtree",
     ]
+
+
+def test_major_bosses_from_toml(tmp_path):
+    """major_bosses is parsed from requirements section."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[requirements]
+major_bosses = 5
+""")
+    config = Config.from_toml(config_file)
+    assert config.requirements.major_bosses == 5
+
+
+def test_major_bosses_default():
+    """major_bosses defaults to 8."""
+    config = Config.from_dict({})
+    assert config.requirements.major_bosses == 8
 
 
 def test_effective_final_boss_candidates_default():

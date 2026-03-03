@@ -37,6 +37,7 @@ class RequirementsConfig:
     legacy_dungeons: int = 1
     bosses: int = 5
     mini_dungeons: int = 5
+    major_bosses: int = 8
     zones: list[str] = field(default_factory=list)
 
 
@@ -55,7 +56,6 @@ class StructureConfig:
     min_branch_age: int = 0  # Min layers before a branch can be merged (0=no limit)
     crosslinks: bool = False  # Add cross-links between parallel branches
     first_layer_type: str | None = None
-    major_boss_ratio: float = 0.0
     final_boss_candidates: list[str] = field(default_factory=list)
     final_tier: int = 28  # Enemy scaling tier for final boss (1-28)
     tier_curve: str = "linear"  # "linear" or "power"
@@ -426,6 +426,7 @@ class Config:
                 legacy_dungeons=requirements_section.get("legacy_dungeons", 1),
                 bosses=requirements_section.get("bosses", 5),
                 mini_dungeons=requirements_section.get("mini_dungeons", 5),
+                major_bosses=requirements_section.get("major_bosses", 8),
                 zones=requirements_section.get("zones", []),
             ),
             structure=StructureConfig(
@@ -440,7 +441,6 @@ class Config:
                 min_branch_age=structure_section.get("min_branch_age", 0),
                 crosslinks=bool(structure_section.get("crosslinks", False)),
                 first_layer_type=structure_section.get("first_layer_type"),
-                major_boss_ratio=structure_section.get("major_boss_ratio", 0.0),
                 final_boss_candidates=structure_section.get(
                     "final_boss_candidates", []
                 ),
