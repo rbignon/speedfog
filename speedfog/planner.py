@@ -53,7 +53,7 @@ def compute_tier(
 
     tier = 1 + progress * (final_tier - 1)
 
-    return int(round(tier))
+    return max(1, min(final_tier, int(round(tier))))
 
 
 def _distribute_padding(

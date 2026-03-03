@@ -250,6 +250,24 @@ class TestComputeTier:
                             f"layer {i}/{total}, exp={exp}"
                         )
 
+    def test_layer_beyond_estimated_total_clamped(self):
+        """Tiers must stay within [1, final_tier] even when layer_idx >= total_layers.
+
+        This happens when forced merges or prerequisite injections add extra
+        layers beyond the initial estimate. Before the fix, power curves with
+        progress > 1.0 produced tiers > 28, crashing FogMod's EldenScaling.
+        """
+        for exp in [0.6, 1.0, 1.8, 3.0]:
+            for ft in [12, 20, 28]:
+                for overshoot in range(1, 15):
+                    total = 30
+                    layer = total + overshoot
+                    tier = compute_tier(layer, total, ft, curve="power", exponent=exp)
+                    assert 1 <= tier <= ft, (
+                        f"Tier {tier} out of [1, {ft}] at "
+                        f"layer {layer}/{total}, exp={exp}"
+                    )
+
     def test_power_curve_single_layer(self):
         """Single layer should return tier 1 regardless of curve settings."""
         assert compute_tier(0, 1, curve="power", exponent=0.6) == 1
