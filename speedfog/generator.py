@@ -1026,6 +1026,9 @@ def _inject_prerequisite(
     used_zones: set[str],
     rng: random.Random,
     final_tier: int,
+    *,
+    tier_curve: str = "linear",
+    tier_curve_exponent: float = 0.6,
 ) -> tuple[list[Branch], int]:
     """Inject mandatory prerequisite cluster before final boss if needed.
 
@@ -1065,7 +1068,13 @@ def _inject_prerequisite(
         raise GenerationError(f"Prerequisite cluster not available: {prereq_zone}")
 
     used_zones.update(prereq.zones)
-    tier = compute_tier(current_layer, current_layer + 2, final_tier)
+    tier = compute_tier(
+        current_layer,
+        current_layer + 2,
+        final_tier,
+        curve=tier_curve,
+        exponent=tier_curve_exponent,
+    )
     ef, exf = _pick_entry_and_exits_for_node(prereq, 1, rng)
     node_id = f"node_{current_layer}_a"
     node = DagNode(
@@ -1207,7 +1216,13 @@ def generate_dag(
     current_layer = 1
     if config.structure.first_layer_type:
         first_type = config.structure.first_layer_type
-        tier = compute_tier(current_layer, 10, config.structure.final_tier)
+        tier = compute_tier(
+            current_layer,
+            10,
+            config.structure.final_tier,
+            curve=config.structure.tier_curve,
+            exponent=config.structure.tier_curve_exponent,
+        )
         first_candidates = clusters.get_by_type(first_type)
 
         new_branches: list[Branch] = []
@@ -1270,7 +1285,13 @@ def generate_dag(
     # 6. Execute layers with cluster-first selection
     for layer_idx, layer_type in enumerate(layer_types):
         is_near_end = layer_idx >= len(layer_types) - 2
-        tier = compute_tier(current_layer, estimated_total, config.structure.final_tier)
+        tier = compute_tier(
+            current_layer,
+            estimated_total,
+            config.structure.final_tier,
+            curve=config.structure.tier_curve,
+            exponent=config.structure.tier_curve_exponent,
+        )
 
         # Force merge if near end and multiple branches
         if is_near_end and len(branches) > 1:
@@ -1570,7 +1591,13 @@ def generate_dag(
     if len(branches) > 1:
         # Use the last layer type for final merge operations
         last_layer_type = layer_types[-1] if layer_types else "mini_dungeon"
-        tier = compute_tier(current_layer, estimated_total, config.structure.final_tier)
+        tier = compute_tier(
+            current_layer,
+            estimated_total,
+            config.structure.final_tier,
+            curve=config.structure.tier_curve,
+            exponent=config.structure.tier_curve_exponent,
+        )
         branches, current_layer = execute_forced_merge(
             dag,
             branches,
@@ -1594,6 +1621,8 @@ def generate_dag(
         used_zones,
         rng,
         config.structure.final_tier,
+        tier_curve=config.structure.tier_curve,
+        tier_curve_exponent=config.structure.tier_curve_exponent,
     )
 
     # 9. Create end node (using pre-selected end_cluster)

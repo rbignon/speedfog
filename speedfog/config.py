@@ -58,6 +58,8 @@ class StructureConfig:
     major_boss_ratio: float = 0.0
     final_boss_candidates: list[str] = field(default_factory=list)
     final_tier: int = 28  # Enemy scaling tier for final boss (1-28)
+    tier_curve: str = "linear"  # "linear" or "power"
+    tier_curve_exponent: float = 0.6  # Power curve exponent (only for "power")
 
     @property
     def max_exits(self) -> int:
@@ -113,6 +115,14 @@ class StructureConfig:
             raise ValueError(f"final_tier must be 1-28, got {self.final_tier}")
         if self.min_branch_age < 0:
             raise ValueError(f"min_branch_age must be >= 0, got {self.min_branch_age}")
+        if self.tier_curve not in ("linear", "power"):
+            raise ValueError(
+                f"tier_curve must be 'linear' or 'power', got '{self.tier_curve}'"
+            )
+        if self.tier_curve_exponent <= 0:
+            raise ValueError(
+                f"tier_curve_exponent must be > 0, got {self.tier_curve_exponent}"
+            )
 
     @property
     def effective_final_boss_candidates(self) -> list[str]:
@@ -435,6 +445,8 @@ class Config:
                     "final_boss_candidates", []
                 ),
                 final_tier=structure_section.get("final_tier", 28),
+                tier_curve=structure_section.get("tier_curve", "linear"),
+                tier_curve_exponent=structure_section.get("tier_curve_exponent", 0.6),
             ),
             paths=PathsConfig(
                 game_dir=paths_section.get("game_dir", ""),

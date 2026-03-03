@@ -15,30 +15,42 @@ from speedfog.config import RequirementsConfig
 _MIN_REMAINING_FOR_PADDING = 20
 
 
-def compute_tier(layer_idx: int, total_layers: int, final_tier: int = 28) -> int:
+def compute_tier(
+    layer_idx: int,
+    total_layers: int,
+    final_tier: int = 28,
+    *,
+    curve: str = "linear",
+    exponent: float = 0.6,
+) -> int:
     """Map layer index to difficulty tier.
-
-    Uses linear interpolation to spread tiers across layers.
-    First layer gets tier 1, last layer gets final_tier.
 
     Args:
         layer_idx: Zero-based index of the current layer.
         total_layers: Total number of layers in the DAG.
         final_tier: Maximum tier for the final layer (default 28, range 1-28).
+        curve: Progression curve type ("linear" or "power").
+        exponent: Power curve exponent (only used when curve="power").
+            < 1.0 (e.g. 0.6): front-loaded, harder early, gentler late game.
+            = 1.0: equivalent to linear.
+            > 1.0 (e.g. 1.5): back-loaded, easy early, punitive late game.
 
     Returns:
         Difficulty tier between 1 and final_tier (inclusive).
     """
     if total_layers <= 1:
-        # Single layer gets the starting tier
         return 1
 
     # Clamp final_tier to valid range
     final_tier = max(1, min(28, final_tier))
 
-    # Linear interpolation from tier 1 to final_tier
-    # layer_idx=0 -> tier 1, layer_idx=total_layers-1 -> final_tier
     progress = layer_idx / (total_layers - 1)
+
+    if curve == "power":
+        progress = progress**exponent
+    elif curve != "linear":
+        raise ValueError(f"Unknown tier curve: '{curve}'")
+
     tier = 1 + progress * (final_tier - 1)
 
     return int(round(tier))

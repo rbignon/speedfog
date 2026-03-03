@@ -52,8 +52,20 @@ max_layers = 10
 # - Tier 1: starting area difficulty
 # - Tier 28: maximum difficulty (default, vanilla endgame)
 # - Tier 15-20: mid-game difficulty (good for shorter/easier runs)
-# Intermediate zones scale linearly from 1 to this value.
+# Intermediate zones scale from 1 to this value using the tier curve.
 final_tier = 28
+
+# Tier progression curve: "linear" or "power" (default: "linear")
+# - linear: constant tier increase per layer (vanilla behavior)
+# - power: applies an exponent to the progression, shaping the difficulty curve
+# tier_curve = "power"
+
+# Power curve exponent (only used when tier_curve = "power", default: 0.6)
+# Controls how tiers are distributed across layers:
+# - < 1.0 (e.g. 0.6): front-loaded tiers, harder early, gentler late game plateau
+# - = 1.0: equivalent to linear
+# - > 1.0 (e.g. 1.5): back-loaded tiers, easy early, punitive late game ramp
+# tier_curve_exponent = 0.6
 
 # Probability of splitting into parallel branches at each layer.
 split_probability = 0.9

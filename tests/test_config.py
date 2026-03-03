@@ -128,6 +128,8 @@ def test_structure_defaults():
     assert config.structure.major_boss_ratio == 0.0
     assert config.structure.final_boss_candidates == []
     assert config.structure.final_tier == 28
+    assert config.structure.tier_curve == "linear"
+    assert config.structure.tier_curve_exponent == 0.6
 
 
 def test_structure_new_options(tmp_path):
@@ -471,6 +473,40 @@ def test_structure_final_tier_valid_range():
 
     config_mid = Config.from_dict({"structure": {"final_tier": 15}})
     assert config_mid.structure.final_tier == 15
+
+
+def test_tier_curve_defaults():
+    """tier_curve defaults to linear with exponent 0.6."""
+    config = Config.from_dict({})
+    assert config.structure.tier_curve == "linear"
+    assert config.structure.tier_curve_exponent == 0.6
+
+
+def test_tier_curve_from_toml(tmp_path):
+    """tier_curve settings can be set from TOML."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[structure]
+tier_curve = "power"
+tier_curve_exponent = 1.5
+""")
+    config = Config.from_toml(config_file)
+    assert config.structure.tier_curve == "power"
+    assert config.structure.tier_curve_exponent == 1.5
+
+
+def test_tier_curve_invalid_name():
+    """tier_curve must be 'linear' or 'power'."""
+    with pytest.raises(ValueError, match="tier_curve must be"):
+        Config.from_dict({"structure": {"tier_curve": "sigmoid"}})
+
+
+def test_tier_curve_exponent_must_be_positive():
+    """tier_curve_exponent must be > 0."""
+    with pytest.raises(ValueError, match="tier_curve_exponent must be > 0"):
+        Config.from_dict({"structure": {"tier_curve_exponent": 0}})
+    with pytest.raises(ValueError, match="tier_curve_exponent must be > 0"):
+        Config.from_dict({"structure": {"tier_curve_exponent": -1.0}})
 
 
 def test_chapel_grace_from_toml(tmp_path):

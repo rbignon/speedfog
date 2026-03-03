@@ -181,6 +181,86 @@ class TestComputeTier:
         assert compute_tier(9, 10, final_tier=0) == 1
         assert compute_tier(9, 10, final_tier=-5) == 1
 
+    # Tests for power curve
+
+    def test_power_curve_first_layer_always_1(self):
+        """First layer should always be tier 1 with power curve."""
+        assert compute_tier(0, 10, curve="power", exponent=0.6) == 1
+        assert compute_tier(0, 10, curve="power", exponent=1.5) == 1
+
+    def test_power_curve_last_layer_matches_final_tier(self):
+        """Last layer should always match final_tier with power curve."""
+        assert compute_tier(9, 10, final_tier=20, curve="power", exponent=0.6) == 20
+        assert compute_tier(9, 10, final_tier=17, curve="power", exponent=1.5) == 17
+
+    def test_power_curve_exponent_1_matches_linear(self):
+        """Power curve with exponent=1.0 should be identical to linear."""
+        for total in [5, 10, 20, 30]:
+            for i in range(total):
+                linear_tier = compute_tier(i, total, final_tier=20)
+                power_tier = compute_tier(
+                    i, total, final_tier=20, curve="power", exponent=1.0
+                )
+                assert (
+                    linear_tier == power_tier
+                ), f"layer {i}/{total}: linear={linear_tier} != power(1.0)={power_tier}"
+
+    def test_power_curve_front_loaded(self):
+        """Exponent < 1 should front-load tiers (higher early, lower late vs linear)."""
+        total, ft = 30, 20
+        # Compare midpoint: power(0.6) should be higher than linear at early layers
+        linear_early = compute_tier(5, total, ft)
+        power_early = compute_tier(5, total, ft, curve="power", exponent=0.6)
+        assert (
+            power_early > linear_early
+        ), f"Power(0.6) at layer 5 should exceed linear: {power_early} vs {linear_early}"
+
+    def test_power_curve_back_loaded(self):
+        """Exponent > 1 should back-load tiers (lower early, higher late vs linear)."""
+        total, ft = 30, 20
+        # Early layers should be lower than linear
+        linear_early = compute_tier(5, total, ft)
+        power_early = compute_tier(5, total, ft, curve="power", exponent=2.0)
+        assert (
+            power_early < linear_early
+        ), f"Power(2.0) at layer 5 should be below linear: {power_early} vs {linear_early}"
+
+    def test_power_curve_monotonically_increasing(self):
+        """Power curve tiers should be monotonically increasing."""
+        for exp in [0.4, 0.6, 1.0, 1.5, 2.0]:
+            for total in [5, 10, 20, 30]:
+                tiers = [
+                    compute_tier(i, total, 20, curve="power", exponent=exp)
+                    for i in range(total)
+                ]
+                for i in range(1, len(tiers)):
+                    assert (
+                        tiers[i] >= tiers[i - 1]
+                    ), f"Not monotonic with exp={exp}, total={total}: {tiers}"
+
+    def test_power_curve_bounds(self):
+        """All power curve tiers should be within [1, final_tier]."""
+        for exp in [0.3, 0.6, 1.0, 1.5, 3.0]:
+            for ft in [10, 17, 20, 28]:
+                for total in range(2, 35):
+                    for i in range(total):
+                        tier = compute_tier(i, total, ft, curve="power", exponent=exp)
+                        assert 1 <= tier <= ft, (
+                            f"Tier {tier} out of [1, {ft}] at "
+                            f"layer {i}/{total}, exp={exp}"
+                        )
+
+    def test_power_curve_single_layer(self):
+        """Single layer should return tier 1 regardless of curve settings."""
+        assert compute_tier(0, 1, curve="power", exponent=0.6) == 1
+
+    def test_unknown_curve_raises_error(self):
+        """Unknown curve name should raise ValueError."""
+        import pytest
+
+        with pytest.raises(ValueError, match="Unknown tier curve"):
+            compute_tier(5, 10, curve="sigmoid")
+
 
 class TestPlanLayerTypes:
     """Tests for plan_layer_types function."""
