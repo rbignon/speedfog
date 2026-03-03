@@ -129,14 +129,15 @@ def plan_layer_types(
     requirements: RequirementsConfig,
     total_layers: int,
     rng: random.Random,
-    major_boss_ratio: float = 0.0,
     pool_sizes: dict[str, int] | None = None,
 ) -> list[str]:
     """Plan sequence of cluster types for each layer.
 
     Ensures minimum requirements are met, pads with additional layers if needed,
     trims if requirements exceed total_layers, and shuffles the result.
-    Then replaces some layers with major_boss based on major_boss_ratio.
+
+    Major bosses are included as explicit requirements alongside other types.
+    Padding excludes major_boss (not in pool_sizes).
 
     When pool_sizes is provided, padding is distributed proportionally across
     types based on remaining pool capacity. Otherwise, padding uses mini_dungeon.
@@ -145,7 +146,6 @@ def plan_layer_types(
         requirements: Configuration specifying minimum counts for each type.
         total_layers: Total number of layers to plan.
         rng: Random number generator for shuffling.
-        major_boss_ratio: Ratio of layers that can be major_boss (0.0-1.0).
         pool_sizes: Available clusters per type (e.g. {"mini_dungeon": 64,
             "boss_arena": 80, "legacy_dungeon": 28}). If None, padding
             defaults to mini_dungeon only.
@@ -158,6 +158,7 @@ def plan_layer_types(
     layer_types.extend(["legacy_dungeon"] * requirements.legacy_dungeons)
     layer_types.extend(["boss_arena"] * requirements.bosses)
     layer_types.extend(["mini_dungeon"] * requirements.mini_dungeons)
+    layer_types.extend(["major_boss"] * requirements.major_bosses)
 
     # Trim if we have too many requirements
     if len(layer_types) > total_layers:
@@ -171,6 +172,7 @@ def plan_layer_types(
                     "legacy_dungeon": requirements.legacy_dungeons,
                     "boss_arena": requirements.bosses,
                     "mini_dungeon": requirements.mini_dungeons,
+                    "major_boss": requirements.major_bosses,
                 }
                 layer_types.extend(
                     _distribute_padding(
@@ -182,15 +184,5 @@ def plan_layer_types(
 
     # Shuffle to distribute types randomly across layers
     rng.shuffle(layer_types)
-
-    # Replace some layers with major_boss based on ratio
-    if major_boss_ratio > 0.0 and total_layers > 1:
-        num_major_boss_slots = max(1, int(total_layers * major_boss_ratio))
-        eligible_indices = list(range(total_layers))
-        num_to_replace = min(num_major_boss_slots, len(eligible_indices))
-        major_boss_indices = rng.sample(eligible_indices, num_to_replace)
-
-        for idx in major_boss_indices:
-            layer_types[idx] = "major_boss"
 
     return layer_types

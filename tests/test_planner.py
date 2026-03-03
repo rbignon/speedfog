@@ -267,21 +267,27 @@ class TestPlanLayerTypes:
 
     def test_includes_required_legacy_dungeons(self):
         """Output should include required number of legacy_dungeons."""
-        reqs = RequirementsConfig(legacy_dungeons=2, bosses=0, mini_dungeons=0)
+        reqs = RequirementsConfig(
+            legacy_dungeons=2, bosses=0, mini_dungeons=0, major_bosses=0
+        )
         rng = random.Random(42)
         result = plan_layer_types(reqs, total_layers=5, rng=rng)
         assert result.count("legacy_dungeon") == 2
 
     def test_includes_required_bosses(self):
         """Output should include required number of boss_arenas."""
-        reqs = RequirementsConfig(legacy_dungeons=0, bosses=3, mini_dungeons=0)
+        reqs = RequirementsConfig(
+            legacy_dungeons=0, bosses=3, mini_dungeons=0, major_bosses=0
+        )
         rng = random.Random(42)
         result = plan_layer_types(reqs, total_layers=5, rng=rng)
         assert result.count("boss_arena") == 3
 
     def test_includes_required_mini_dungeons(self):
         """Output should include at least the required number of mini_dungeons."""
-        reqs = RequirementsConfig(legacy_dungeons=0, bosses=0, mini_dungeons=4)
+        reqs = RequirementsConfig(
+            legacy_dungeons=0, bosses=0, mini_dungeons=4, major_bosses=0
+        )
         rng = random.Random(42)
         result = plan_layer_types(reqs, total_layers=5, rng=rng)
         # Padding uses mini_dungeons, so we may have more than required
@@ -289,14 +295,18 @@ class TestPlanLayerTypes:
 
     def test_output_length_matches_total(self):
         """Output list length should match total_layers."""
-        reqs = RequirementsConfig(legacy_dungeons=1, bosses=2, mini_dungeons=1)
+        reqs = RequirementsConfig(
+            legacy_dungeons=1, bosses=2, mini_dungeons=1, major_bosses=0
+        )
         rng = random.Random(42)
         result = plan_layer_types(reqs, total_layers=8, rng=rng)
         assert len(result) == 8
 
     def test_pads_with_mini_dungeons_no_pool(self):
         """Should pad with mini_dungeons when no pool_sizes provided."""
-        reqs = RequirementsConfig(legacy_dungeons=1, bosses=1, mini_dungeons=1)
+        reqs = RequirementsConfig(
+            legacy_dungeons=1, bosses=1, mini_dungeons=1, major_bosses=0
+        )
         rng = random.Random(42)
         result = plan_layer_types(reqs, total_layers=10, rng=rng)
         assert len(result) == 10
@@ -305,7 +315,9 @@ class TestPlanLayerTypes:
 
     def test_pads_proportionally_with_pool_sizes(self):
         """Should distribute padding across types based on pool capacity."""
-        reqs = RequirementsConfig(legacy_dungeons=1, bosses=1, mini_dungeons=1)
+        reqs = RequirementsConfig(
+            legacy_dungeons=1, bosses=1, mini_dungeons=1, major_bosses=0
+        )
         rng = random.Random(42)
         pool_sizes = {"mini_dungeon": 60, "boss_arena": 80, "legacy_dungeon": 30}
         result = plan_layer_types(reqs, total_layers=20, rng=rng, pool_sizes=pool_sizes)
@@ -319,7 +331,9 @@ class TestPlanLayerTypes:
 
     def test_pads_proportionally_respects_capacity(self):
         """Types with larger pools should get more padding."""
-        reqs = RequirementsConfig(legacy_dungeons=0, bosses=0, mini_dungeons=0)
+        reqs = RequirementsConfig(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, major_bosses=0
+        )
         rng = random.Random(42)
         # Realistic pool sizes matching actual clusters.json proportions
         pool_sizes = {"mini_dungeon": 64, "boss_arena": 80, "legacy_dungeon": 28}
@@ -330,14 +344,18 @@ class TestPlanLayerTypes:
 
     def test_trims_if_too_many_requirements(self):
         """Should trim requirements if they exceed total_layers."""
-        reqs = RequirementsConfig(legacy_dungeons=3, bosses=4, mini_dungeons=5)
+        reqs = RequirementsConfig(
+            legacy_dungeons=3, bosses=4, mini_dungeons=5, major_bosses=0
+        )
         rng = random.Random(42)
         result = plan_layer_types(reqs, total_layers=5, rng=rng)
         assert len(result) == 5
 
     def test_shuffled_order(self):
         """Output should be shuffled (not in fixed order)."""
-        reqs = RequirementsConfig(legacy_dungeons=2, bosses=2, mini_dungeons=2)
+        reqs = RequirementsConfig(
+            legacy_dungeons=2, bosses=2, mini_dungeons=2, major_bosses=0
+        )
         rng = random.Random(42)
         result = plan_layer_types(reqs, total_layers=6, rng=rng)
 
@@ -350,7 +368,9 @@ class TestPlanLayerTypes:
 
     def test_different_seeds_different_order(self):
         """Different seeds should produce different orders."""
-        reqs = RequirementsConfig(legacy_dungeons=2, bosses=2, mini_dungeons=2)
+        reqs = RequirementsConfig(
+            legacy_dungeons=2, bosses=2, mini_dungeons=2, major_bosses=0
+        )
 
         rng1 = random.Random(42)
         result1 = plan_layer_types(reqs, total_layers=6, rng=rng1)
@@ -365,7 +385,9 @@ class TestPlanLayerTypes:
 
     def test_same_seed_same_order(self):
         """Same seed should produce reproducible results."""
-        reqs = RequirementsConfig(legacy_dungeons=2, bosses=2, mini_dungeons=2)
+        reqs = RequirementsConfig(
+            legacy_dungeons=2, bosses=2, mini_dungeons=2, major_bosses=0
+        )
 
         rng1 = random.Random(42)
         result1 = plan_layer_types(reqs, total_layers=6, rng=rng1)
@@ -377,7 +399,9 @@ class TestPlanLayerTypes:
 
     def test_all_requirements_present_after_shuffle(self):
         """All required types should be present after shuffling."""
-        reqs = RequirementsConfig(legacy_dungeons=1, bosses=3, mini_dungeons=2)
+        reqs = RequirementsConfig(
+            legacy_dungeons=1, bosses=3, mini_dungeons=2, major_bosses=0
+        )
         rng = random.Random(42)
         result = plan_layer_types(reqs, total_layers=6, rng=rng)
 
@@ -385,35 +409,54 @@ class TestPlanLayerTypes:
         assert result.count("boss_arena") >= 3
         assert result.count("mini_dungeon") >= 2
 
-    def test_major_boss_ratio_zero_no_major_boss(self):
-        """With major_boss_ratio=0, no major_boss should appear."""
-        reqs = RequirementsConfig(legacy_dungeons=1, bosses=2, mini_dungeons=2)
+    def test_major_bosses_zero_no_major_boss(self):
+        """With major_bosses=0, no major_boss should appear."""
+        reqs = RequirementsConfig(
+            legacy_dungeons=1, bosses=2, mini_dungeons=2, major_bosses=0
+        )
         rng = random.Random(42)
-        result = plan_layer_types(reqs, total_layers=10, rng=rng, major_boss_ratio=0.0)
+        result = plan_layer_types(reqs, total_layers=10, rng=rng)
         assert "major_boss" not in result
 
-    def test_major_boss_ratio_adds_major_bosses(self):
-        """With major_boss_ratio > 0, major_boss entries should appear."""
-        reqs = RequirementsConfig(legacy_dungeons=1, bosses=2, mini_dungeons=2)
+    def test_major_bosses_included_in_plan(self):
+        """major_bosses are included in the plan like other types."""
+        reqs = RequirementsConfig(
+            legacy_dungeons=1, bosses=2, mini_dungeons=2, major_bosses=3
+        )
         rng = random.Random(42)
-        result = plan_layer_types(reqs, total_layers=10, rng=rng, major_boss_ratio=0.3)
-        # 0.3 * 10 = 3 major bosses expected
-        assert result.count("major_boss") >= 1
+        result = plan_layer_types(reqs, total_layers=10, rng=rng)
+        assert result.count("major_boss") >= 3
 
-    def test_major_boss_ratio_one_replaces_all_layers(self):
-        """With major_boss_ratio=1.0, all layers should be major_boss."""
-        reqs = RequirementsConfig(legacy_dungeons=0, bosses=0, mini_dungeons=0)
+    def test_major_bosses_do_not_overwrite_requirements(self):
+        """major_bosses should not reduce the count of other required types."""
+        reqs = RequirementsConfig(
+            legacy_dungeons=2, bosses=5, mini_dungeons=10, major_bosses=8
+        )
         rng = random.Random(42)
-        result = plan_layer_types(reqs, total_layers=5, rng=rng, major_boss_ratio=1.0)
-        assert all(
-            t == "major_boss" for t in result
-        ), f"Expected all major_boss, got {result}"
+        result = plan_layer_types(reqs, total_layers=25, rng=rng)
+        assert result.count("legacy_dungeon") >= 2
+        assert result.count("boss_arena") >= 5
+        assert result.count("mini_dungeon") >= 10
+        assert result.count("major_boss") >= 8
 
-    def test_major_boss_ratio_respects_ratio(self):
-        """Number of major bosses should roughly match the ratio."""
-        reqs = RequirementsConfig(legacy_dungeons=0, bosses=0, mini_dungeons=0)
+    def test_major_bosses_exact_count_no_padding(self):
+        """When requirements exactly fill total_layers, counts are exact."""
+        reqs = RequirementsConfig(
+            legacy_dungeons=2, bosses=3, mini_dungeons=3, major_bosses=2
+        )
         rng = random.Random(42)
-        result = plan_layer_types(reqs, total_layers=10, rng=rng, major_boss_ratio=0.3)
-        # Expect about 3 major bosses (0.3 * 10)
-        num_major = result.count("major_boss")
-        assert 1 <= num_major <= 5, f"Expected ~3 major_boss, got {num_major}"
+        result = plan_layer_types(reqs, total_layers=10, rng=rng)
+        assert len(result) == 10
+        assert result.count("legacy_dungeon") == 2
+        assert result.count("boss_arena") == 3
+        assert result.count("mini_dungeon") == 3
+        assert result.count("major_boss") == 2
+
+    def test_major_bosses_excluded_from_padding(self):
+        """Padding should not add extra major_boss layers."""
+        reqs = RequirementsConfig(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, major_bosses=2
+        )
+        rng = random.Random(42)
+        result = plan_layer_types(reqs, total_layers=10, rng=rng)
+        assert result.count("major_boss") == 2  # Only the required ones
