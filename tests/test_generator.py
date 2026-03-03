@@ -340,6 +340,7 @@ class TestGenerateDag:
         config.requirements.legacy_dungeons = 0
         config.requirements.bosses = 0
         config.requirements.mini_dungeons = 0
+        config.requirements.major_bosses = 0
 
         dag = generate_dag(
             config, pool, seed=42, boss_candidates=_boss_candidates(pool)
@@ -1805,6 +1806,7 @@ class TestMergeGuards:
         config.requirements.legacy_dungeons = 0
         config.requirements.bosses = 0
         config.requirements.mini_dungeons = 0
+        config.requirements.major_bosses = 0
 
         successes = 0
         for seed in range(1, 201):
@@ -2283,6 +2285,7 @@ class TestSharedEntranceSimulation:
         config.requirements.legacy_dungeons = 0
         config.requirements.bosses = 0
         config.requirements.mini_dungeons = 0
+        config.requirements.major_bosses = 0
 
         # Run 20 seeds — verify no GenerationError
         for seed in range(20):
@@ -2439,6 +2442,7 @@ class TestEntryAsExitSimulation:
         config.requirements.legacy_dungeons = 0
         config.requirements.bosses = 2  # plan boss_arena layers
         config.requirements.mini_dungeons = 0
+        config.requirements.major_bosses = 0
 
         for seed in range(20):
             try:
@@ -3439,6 +3443,7 @@ class TestCrosslinkPipeline:
         pool = self._make_pool_with_surplus_entries()
         config = Config.from_dict(
             {
+                "requirements": {"major_bosses": 0},
                 "structure": {
                     "crosslinks": True,
                     "max_parallel_paths": 2,
@@ -3621,7 +3626,12 @@ class TestAsymmetricExitsEntrances:
                     "split_probability": 0.9,
                     "merge_probability": 0.5,
                 },
-                "requirements": {"legacy_dungeons": 0, "bosses": 0, "mini_dungeons": 0},
+                "requirements": {
+                    "legacy_dungeons": 0,
+                    "bosses": 0,
+                    "mini_dungeons": 0,
+                    "major_bosses": 0,
+                },
             }
         )
 
@@ -3657,7 +3667,12 @@ class TestAsymmetricExitsEntrances:
                     "split_probability": 0.9,
                     "merge_probability": 0.5,
                 },
-                "requirements": {"legacy_dungeons": 0, "bosses": 0, "mini_dungeons": 0},
+                "requirements": {
+                    "legacy_dungeons": 0,
+                    "bosses": 0,
+                    "mini_dungeons": 0,
+                    "major_bosses": 0,
+                },
             }
         )
 
