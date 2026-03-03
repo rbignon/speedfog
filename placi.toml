@@ -24,52 +24,32 @@ tolerance = 5
 [requirements]
 # Minimum number of legacy dungeons (Stormveil, Raya Lucaria, etc.)
 # that must appear on every possible path.
-legacy_dungeons = 1
+legacy_dungeons = 0
 
 # Minimum number of boss fights before reaching Radagon.
-bosses = 5
+bosses = 3
 
 # Minimum number of mini-dungeons (caves, catacombs, tunnels).
-mini_dungeons = 5
-
-# Number of major boss encounters (Godrick, Radahn, etc.)
-# in intermediate layers.
-major_bosses = 8
-
-# Zones that must appear in the DAG (rerolls until present).
-# Useful for testing specific boss behavior.
-# zones = ["caelid_radahn", "haligtree_malenia"]
+mini_dungeons = 0
 
 [structure]
 # Maximum number of parallel paths at any point.
 # Higher = more choices, but harder to balance.
-max_parallel_paths = 3
+max_parallel_paths = 4
 
 # Minimum number of "layers" (zones in sequence).
-min_layers = 6
+min_layers = 3
 
 # Maximum number of layers.
-max_layers = 10
+max_layers = 3
 
 # Enemy scaling tier for the final boss and end of run (1-28).
 # Tiers control how much enemies are scaled up/down from vanilla.
 # - Tier 1: starting area difficulty
 # - Tier 28: maximum difficulty (default, vanilla endgame)
 # - Tier 15-20: mid-game difficulty (good for shorter/easier runs)
-# Intermediate zones scale from 1 to this value using the tier curve.
+# Intermediate zones scale linearly from 1 to this value.
 final_tier = 28
-
-# Tier progression curve: "linear" or "power" (default: "linear")
-# - linear: constant tier increase per layer (vanilla behavior)
-# - power: applies an exponent to the progression, shaping the difficulty curve
-# tier_curve = "power"
-
-# Power curve exponent (only used when tier_curve = "power", default: 0.6)
-# Controls how tiers are distributed across layers:
-# - < 1.0 (e.g. 0.6): front-loaded tiers, harder early, gentler late game plateau
-# - = 1.0: equivalent to linear
-# - > 1.0 (e.g. 1.5): back-loaded tiers, easy early, punitive late game ramp
-# tier_curve_exponent = 0.6
 
 # Probability of splitting into parallel branches at each layer.
 split_probability = 0.9
@@ -77,23 +57,12 @@ split_probability = 0.9
 # Probability of merging parallel branches back together.
 merge_probability = 0.5
 
-# Maximum fan-out per split operation (1 branch → N branches).
-# Higher values allow wider exploration choices.
+# Maximum fan-out per split/merge operation.
+# Split: 1 entry → N exits (N up to max_branches).
+# Merge: N entries → 1 exit (N up to max_branches).
+# Higher values allow zones with more fog gates to be fully used.
 # Actual fan-out depends on available clusters and room under max_parallel_paths.
-max_exits = 3
-
-# Maximum fan-in per merge operation (N branches → 1 branch).
-# Lower values preserve parallelism longer by forcing gradual convergence.
-max_entrances = 3
-
-# Minimum number of layers a branch must exist before it can be merged (0=no limit).
-# Higher values prevent premature merge-after-split, creating wider branching structures.
-# min_branch_age = 0
-
-# Add cross-links between parallel branches.
-# Cross-links let players switch branches at the next layer.
-# Eligible pairs are structurally rare (0-4 per DAG), so all are taken.
-# crosslinks = true
+max_branches = 4
 
 # Force the first layer after start to be a specific cluster type.
 # Options: "legacy_dungeon", "mini_dungeon", "boss_arena", "major_boss"
@@ -109,7 +78,8 @@ max_entrances = 3
 #   leyndell_erdtree (Radagon), leyndell_throne (Gideon),
 #   enirilim_radahn (Promised Consort Radahn, DLC), etc.
 # final_boss_candidates = ["all"]  # All major bosses
-# final_boss_candidates = ["leyndell_erdtree"]  # Base game only (Radagon)
+final_boss_candidates = ["farumazula_placidusax"]  # Base game only (Radagon)
+#final_boss_candidates = ["leyndell_erdtree"]  # Base game only (Radagon)
 # final_boss_candidates = [
 #     "leyndell_erdtree",
 #     "enirilim_radahn",
@@ -123,7 +93,7 @@ max_entrances = 3
 
 [paths]
 # Path to Elden Ring installation.
-game_dir = "C:/Program Files/Steam/steamapps/common/ELDEN RING/Game"
+game_dir = "/data/thewall/Game"
 
 # Output directory for generated mod files (default: ./seeds).
 output_dir = "./seeds"
@@ -176,14 +146,13 @@ talisman_pouches = 3
 # sacred_tears = 3       # Sacred Tears to upgrade flask potency (0-12)
 # starting_runes = 50000 # Given as Lord's Rune items (50k each, use from inventory)
 # larval_tears = 10      # Larval Tears for rebirth at Sites of Grace (0-99, default: 10)
-# stonesword_keys = 6    # Stonesword Keys to unlock imp statue seals (0-99, default: 6)
 
 [care_package]
 # Randomized starting build - gives a random selection of weapons, armor,
 # spells, and talismans at game start for immediate combat readiness.
 # Items are sampled from data/care_package_items.toml using the run seed.
 # Same seed = same starting build for consistent racing.
-enabled = false
+enabled = true
 
 # Weapon upgrade level (standard smithing stones, 0-25).
 # Somber weapons get floor(weapon_upgrade / 2.5), e.g. +8 -> +3 somber.
@@ -215,7 +184,7 @@ lock_final_boss = true
 [item_randomizer]
 # Enable Item/Enemy Randomizer integration (default: true)
 # Requires: python tools/setup_dependencies.py --itemrando <path>
-enabled = true
+enabled = false
 
 # Item placement difficulty 0-100 (default: 50)
 # Higher = powerful items more dispersed, key items harder to find

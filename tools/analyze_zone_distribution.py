@@ -34,6 +34,7 @@ def load_racing_standard_config() -> Config:
                 "legacy_dungeons": 1,
                 "bosses": 10,
                 "mini_dungeons": 5,
+                "major_bosses": 8,
             },
             "structure": {
                 "max_parallel_paths": 3,
@@ -44,7 +45,6 @@ def load_racing_standard_config() -> Config:
                 "merge_probability": 0.5,
                 "max_branches": 3,
                 "first_layer_type": "legacy_dungeon",
-                "major_boss_ratio": 0.3,
                 "final_boss_candidates": ["all"],
             },
         }
@@ -111,7 +111,7 @@ def run_analysis(
     print(
         f"Split/merge prob: {config.structure.split_probability}/{config.structure.merge_probability}"
     )
-    print(f"Major boss ratio: {config.structure.major_boss_ratio}")
+    print(f"Major bosses: {config.requirements.major_bosses}")
     print()
 
     # --- Per-type summary ---

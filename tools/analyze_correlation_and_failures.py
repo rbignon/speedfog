@@ -22,7 +22,12 @@ def load_racing_standard_config() -> Config:
         {
             "run": {"seed": 0},
             "budget": {"tolerance": 5},
-            "requirements": {"legacy_dungeons": 1, "bosses": 10, "mini_dungeons": 5},
+            "requirements": {
+                "legacy_dungeons": 1,
+                "bosses": 10,
+                "mini_dungeons": 5,
+                "major_bosses": 8,
+            },
             "structure": {
                 "max_parallel_paths": 3,
                 "min_layers": 25,
@@ -32,7 +37,6 @@ def load_racing_standard_config() -> Config:
                 "merge_probability": 0.5,
                 "max_branches": 3,
                 "first_layer_type": "legacy_dungeon",
-                "major_boss_ratio": 0.3,
                 "final_boss_candidates": ["all"],
             },
         }

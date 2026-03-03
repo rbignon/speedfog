@@ -18,6 +18,7 @@ tolerance = 5
 legacy_dungeons = 1
 bosses = 10
 mini_dungeons = 5
+major_bosses = 8
 
 [structure]
 max_parallel_paths = 4
@@ -30,7 +31,6 @@ max_branches = 3
 first_layer_type = "legacy_dungeon"
 min_branch_age = 3
 crosslinks = true
-major_boss_ratio = 0.3
 final_boss_candidates = [
     # Base game remembrance bosses
     "stormveil_godrick",
