@@ -221,7 +221,7 @@ layer_types = plan_layer_types(requirements, num_layers, rng, major_boss_ratio)
 ### 5. Execute Layers (cluster-first)
 
 For each planned layer:
-1. Compute tier via interpolation: `tier = 1 + (layer / (total - 1)) * (final_tier - 1)`
+1. Compute tier via `compute_tier()` (see [Tier Interpolation](#tier-interpolation))
 2. **Near-end check**: if within last 2 layers and multiple branches remain, trigger `execute_forced_merge()` and skip the normal operation
 3. Pick a cluster uniformly from the layer type's candidates (`pick_cluster_uniform()`)
 4. Call `determine_operation()` on the selected cluster to decide split/merge/passant
@@ -286,11 +286,26 @@ After the complete DAG is built (start → layers → forced merge → prerequis
 
 ## Tier Interpolation
 
-Linear interpolation from tier 1 (layer 0) to `final_tier` (last layer, default 28):
+Tiers are computed by `compute_tier()` in `planner.py`. The progression curve is configurable via `tier_curve`:
+
+**Linear** (default): constant tier increase per layer.
 
 ```
-tier(layer) = round(1 + (layer / (total_layers - 1)) * (final_tier - 1))
+progress = layer / (total_layers - 1)
+tier(layer) = round(1 + progress * (final_tier - 1))
 ```
+
+**Power**: applies an exponent to the progress, shaping the difficulty curve.
+
+```
+progress = (layer / (total_layers - 1)) ^ exponent
+tier(layer) = round(1 + progress * (final_tier - 1))
+```
+
+The exponent controls the shape:
+- `< 1.0` (e.g. 0.6): front-loaded tiers — harder early, gentler late game plateau
+- `= 1.0`: equivalent to linear
+- `> 1.0` (e.g. 1.5): back-loaded tiers — easy early, punitive late game ramp
 
 Special cases:
 - Single layer: always tier 1
@@ -339,6 +354,8 @@ Config validation runs once before any attempts; invalid config raises `Generati
 | `structure.major_boss_ratio` | 0.0 | Fraction of layers with major bosses |
 | `structure.final_boss_candidates` | `["leyndell_erdtree", "enirilim_radahn"]` | Possible end bosses |
 | `structure.final_tier` | 28 | Enemy tier for final boss |
+| `structure.tier_curve` | `"linear"` | Tier progression curve (`"linear"` or `"power"`) |
+| `structure.tier_curve_exponent` | 0.6 | Power curve exponent (only for `"power"`) |
 | `budget.tolerance` | 5 | Max allowed spread between paths |
 | `requirements.legacy_dungeons` | 1 | Minimum legacy dungeons |
 | `requirements.bosses` | 5 | Minimum boss arenas |

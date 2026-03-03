@@ -124,7 +124,7 @@ The DAG algorithm:
 2. Plan layer types using configured ratios (legacy_dungeon, mini_dungeon, boss_arena, major_boss)
 3. Build layers with dynamic topology: split (1→N), merge (N→1), passant (1→1 per branch)
 4. Select clusters avoiding zone reuse, respecting fog gate compatibility
-5. Interpolate enemy tiers from 1 to `final_tier` (default 28)
+5. Compute enemy tiers from 1 to `final_tier` using configurable curve (linear or power)
 6. Force merge all branches before the final boss (configurable candidates, default Radagon/PCR)
 7. Validate against budget/requirements, retry with new seeds if needed
 
