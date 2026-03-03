@@ -629,29 +629,28 @@ class TestValidateConfig:
         errors = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
 
-    def test_major_boss_ratio_out_of_range_negative(self):
-        """Negative major_boss_ratio returns error."""
+    def test_major_bosses_negative_validation(self):
+        """Negative major_bosses returns error."""
         pool = make_cluster_pool()
         config = Config()
-        config.structure.major_boss_ratio = -0.1
+        config.requirements.major_bosses = -1
         errors = validate_config(config, pool, _boss_candidates(pool))
         assert len(errors) == 1
-        assert "major_boss_ratio" in errors[0]
+        assert "major_bosses" in errors[0]
 
-    def test_major_boss_ratio_out_of_range_above_one(self):
-        """major_boss_ratio > 1.0 returns error."""
+    def test_major_bosses_zero_valid(self):
+        """major_bosses=0 is valid (no major bosses)."""
         pool = make_cluster_pool()
         config = Config()
-        config.structure.major_boss_ratio = 1.5
+        config.requirements.major_bosses = 0
         errors = validate_config(config, pool, _boss_candidates(pool))
-        assert len(errors) == 1
-        assert "major_boss_ratio" in errors[0]
+        assert errors == []
 
-    def test_valid_major_boss_ratio(self):
-        """Valid major_boss_ratio returns no error."""
+    def test_major_bosses_positive_valid(self):
+        """Positive major_bosses is valid."""
         pool = make_cluster_pool()
         config = Config()
-        config.structure.major_boss_ratio = 0.5
+        config.requirements.major_bosses = 8
         errors = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
 
@@ -686,7 +685,7 @@ class TestValidateConfig:
         pool = make_cluster_pool()
         config = Config()
         config.structure.first_layer_type = "bad_type"
-        config.structure.major_boss_ratio = 2.0
+        config.requirements.major_bosses = -1
         config.structure.final_boss_candidates = ["bad_zone"]
         errors = validate_config(config, pool, _boss_candidates(pool))
         assert len(errors) == 3

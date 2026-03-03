@@ -55,11 +55,10 @@ def validate_config(
                 f"Valid options: {', '.join(sorted(VALID_FIRST_LAYER_TYPES))}"
             )
 
-    # Validate major_boss_ratio
-    if not 0.0 <= config.structure.major_boss_ratio <= 1.0:
+    # Validate major_bosses
+    if config.requirements.major_bosses < 0:
         errors.append(
-            f"major_boss_ratio must be between 0.0 and 1.0, "
-            f"got {config.structure.major_boss_ratio}"
+            f"major_bosses must be >= 0, got {config.requirements.major_bosses}"
         )
 
     # Validate final_boss_candidates
@@ -1203,7 +1202,7 @@ def generate_dag(
 
     # Determine reserved zones: end cluster + prerequisite
     # End cluster zones must be reserved to prevent intermediate layers
-    # from consuming them (e.g. via major_boss_ratio).
+    # from consuming them.
     reserved_zones: frozenset[str] = frozenset(end_cluster.zones)
     if end_cluster.requires:
         prereq_zone = end_cluster.requires
@@ -1271,7 +1270,6 @@ def generate_dag(
         config.requirements,
         num_intermediate_layers,
         rng,
-        major_boss_ratio=config.structure.major_boss_ratio,
         pool_sizes=pool_sizes,
     )
 
