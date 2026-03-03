@@ -209,13 +209,12 @@ If `first_layer_type` is configured (e.g., `"legacy_dungeon"`), execute a passan
 ```python
 num_layers = random(min_layers, max_layers)
 # Reduced by 1 if first_layer_type was used
-layer_types = plan_layer_types(requirements, num_layers, rng, major_boss_ratio)
+layer_types = plan_layer_types(requirements, num_layers, rng)
 ```
 
 `plan_layer_types()` builds a list from:
-- Required legacy dungeons, bosses, mini dungeons (from config)
-- Pad with mini_dungeons or trim to fit `num_layers`
-- Replace some with `major_boss` based on `major_boss_ratio`
+- Required legacy dungeons, bosses, mini dungeons, major bosses (from config)
+- Pad with mini_dungeons/boss_arenas/legacy_dungeons or trim to fit `num_layers`
 - Shuffle for randomness
 
 ### 5. Execute Layers (cluster-first)
@@ -351,7 +350,7 @@ Config validation runs once before any attempts; invalid config raises `Generati
 | `structure.min_branch_age` | 0 | Minimum layers before a branch can be merged (0=no limit) |
 | `structure.crosslinks` | false | Add cross-links between parallel branches |
 | `structure.first_layer_type` | None | Force type for first layer |
-| `structure.major_boss_ratio` | 0.0 | Fraction of layers with major bosses |
+| `requirements.major_bosses` | 8 | Number of major boss layers |
 | `structure.final_boss_candidates` | `["leyndell_erdtree", "enirilim_radahn"]` | Possible end bosses |
 | `structure.final_tier` | 28 | Enemy tier for final boss |
 | `structure.tier_curve` | `"linear"` | Tier progression curve (`"linear"` or `"power"`) |
