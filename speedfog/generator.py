@@ -34,7 +34,7 @@ VALID_FIRST_LAYER_TYPES = {"legacy_dungeon", "mini_dungeon", "boss_arena", "majo
 
 def validate_config(
     config: Config, clusters: ClusterPool, boss_candidates: list[ClusterData]
-) -> list[str]:
+) -> tuple[list[str], list[str]]:
     """Validate configuration options against available clusters.
 
     Args:
@@ -43,9 +43,10 @@ def validate_config(
         boss_candidates: Pre-filtered list of clusters eligible as final boss.
 
     Returns:
-        List of error messages (empty if valid).
+        Tuple of (errors, warnings). Errors are blocking; warnings are informational.
     """
     errors: list[str] = []
+    warnings: list[str] = []
 
     # Validate first_layer_type
     if config.structure.first_layer_type:
@@ -61,6 +62,19 @@ def validate_config(
             f"major_bosses must be >= 0, got {config.requirements.major_bosses}"
         )
 
+    # Warn if total requirements exceed min_layers (some will be trimmed)
+    total_requirements = (
+        config.requirements.legacy_dungeons
+        + config.requirements.bosses
+        + config.requirements.mini_dungeons
+        + config.requirements.major_bosses
+    )
+    if total_requirements > config.structure.min_layers:
+        warnings.append(
+            f"Total requirements ({total_requirements}) exceed min_layers "
+            f"({config.structure.min_layers}); some types may be trimmed"
+        )
+
     # Validate final_boss_candidates
     all_boss_clusters = boss_candidates
     all_boss_zones = {zone for cluster in all_boss_clusters for zone in cluster.zones}
@@ -73,7 +87,7 @@ def validate_config(
         if zone not in all_boss_zones:
             errors.append(f"Unknown final_boss candidate zone: '{zone}'")
 
-    return errors
+    return errors, warnings
 
 
 class LayerOperation(Enum):
@@ -1693,9 +1707,11 @@ def generate_with_retry(
         GenerationError: If generation fails after max_attempts
     """
     # Validate config before attempting generation
-    config_errors = validate_config(config, clusters, boss_candidates)
+    config_errors, config_warnings = validate_config(config, clusters, boss_candidates)
     if config_errors:
         raise GenerationError(f"Invalid configuration: {'; '.join(config_errors)}")
+    for warning in config_warnings:
+        print(f"  Config warning: {warning}")
 
     if config.seed != 0:
         # Fixed seed - single attempt

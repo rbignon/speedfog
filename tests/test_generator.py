@@ -609,7 +609,7 @@ class TestValidateConfig:
         """Valid configuration returns no errors."""
         pool = make_cluster_pool()
         config = Config()
-        errors = validate_config(config, pool, _boss_candidates(pool))
+        errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
 
     def test_invalid_first_layer_type(self):
@@ -617,7 +617,7 @@ class TestValidateConfig:
         pool = make_cluster_pool()
         config = Config()
         config.structure.first_layer_type = "invalid_type"
-        errors = validate_config(config, pool, _boss_candidates(pool))
+        errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert len(errors) == 1
         assert "first_layer_type" in errors[0]
         assert "invalid_type" in errors[0]
@@ -627,7 +627,7 @@ class TestValidateConfig:
         pool = make_cluster_pool()
         config = Config()
         config.structure.first_layer_type = "legacy_dungeon"
-        errors = validate_config(config, pool, _boss_candidates(pool))
+        errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
 
     def test_major_bosses_negative_validation(self):
@@ -635,7 +635,7 @@ class TestValidateConfig:
         pool = make_cluster_pool()
         config = Config()
         config.requirements.major_bosses = -1
-        errors = validate_config(config, pool, _boss_candidates(pool))
+        errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert len(errors) == 1
         assert "major_bosses" in errors[0]
 
@@ -644,7 +644,7 @@ class TestValidateConfig:
         pool = make_cluster_pool()
         config = Config()
         config.requirements.major_bosses = 0
-        errors = validate_config(config, pool, _boss_candidates(pool))
+        errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
 
     def test_major_bosses_positive_valid(self):
@@ -652,7 +652,7 @@ class TestValidateConfig:
         pool = make_cluster_pool()
         config = Config()
         config.requirements.major_bosses = 8
-        errors = validate_config(config, pool, _boss_candidates(pool))
+        errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
 
     def test_unknown_final_boss_candidate(self):
@@ -660,7 +660,7 @@ class TestValidateConfig:
         pool = make_cluster_pool()
         config = Config()
         config.structure.final_boss_candidates = ["nonexistent_zone"]
-        errors = validate_config(config, pool, _boss_candidates(pool))
+        errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert len(errors) == 1
         assert "nonexistent_zone" in errors[0]
 
@@ -670,7 +670,7 @@ class TestValidateConfig:
         config = Config()
         # leyndell_erdtree exists in the fixture
         config.structure.final_boss_candidates = ["leyndell_erdtree"]
-        errors = validate_config(config, pool, _boss_candidates(pool))
+        errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
 
     def test_final_boss_candidates_all_keyword(self):
@@ -678,7 +678,7 @@ class TestValidateConfig:
         pool = make_cluster_pool()
         config = Config()
         config.structure.final_boss_candidates = ["all"]
-        errors = validate_config(config, pool, _boss_candidates(pool))
+        errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
 
     def test_multiple_errors_returned(self):
@@ -688,8 +688,37 @@ class TestValidateConfig:
         config.structure.first_layer_type = "bad_type"
         config.requirements.major_bosses = -1
         config.structure.final_boss_candidates = ["bad_zone"]
-        errors = validate_config(config, pool, _boss_candidates(pool))
+        errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert len(errors) == 3
+
+    def test_requirements_exceed_min_layers_warning(self):
+        """Warning when total requirements exceed min_layers."""
+        pool = make_cluster_pool()
+        config = Config()
+        # 2 + 10 + 10 + 8 = 30, but min_layers = 6 (default)
+        config.requirements.legacy_dungeons = 2
+        config.requirements.bosses = 10
+        config.requirements.mini_dungeons = 10
+        config.requirements.major_bosses = 8
+        config.structure.min_layers = 6
+        errors, warnings = validate_config(config, pool, _boss_candidates(pool))
+        assert errors == []
+        assert len(warnings) == 1
+        assert "requirements" in warnings[0].lower()
+        assert "30" in warnings[0]  # total requirements
+
+    def test_requirements_within_min_layers_no_warning(self):
+        """No warning when requirements fit within min_layers."""
+        pool = make_cluster_pool()
+        config = Config()
+        config.requirements.legacy_dungeons = 1
+        config.requirements.bosses = 2
+        config.requirements.mini_dungeons = 2
+        config.requirements.major_bosses = 1
+        config.structure.min_layers = 10
+        errors, warnings = validate_config(config, pool, _boss_candidates(pool))
+        assert errors == []
+        assert warnings == []
 
     def test_dead_end_major_boss_valid_as_final_boss(self):
         """A major_boss with 0 exits (pruned by passant filter) is valid as final_boss candidate."""
@@ -711,7 +740,7 @@ class TestValidateConfig:
 
         config = Config()
         config.structure.final_boss_candidates = ["placidusax_zone"]
-        errors = validate_config(config, pool, boss_candidates)
+        errors, _ = validate_config(config, pool, boss_candidates)
         assert errors == []
 
 
