@@ -66,7 +66,7 @@ Placements:
   - Tag: missable
 
 - Type: CoreMechanics
-  Mode: Custom
+  Mode: Important
   Items:
   - Name: Talisman Pouch
     ID: goods:10040

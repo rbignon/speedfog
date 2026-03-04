@@ -68,10 +68,6 @@ Set in `options` dictionary, applied via `opt[key] = value`:
 | `weaponreqs` | from config | Remove weapon stat requirements |
 | `sombermode` | from config | Reduce upgrade material costs |
 | `mats` | `true` | Randomize materials (smithing stones, gloveworts, crafting) |
-| `raceloc_health` | `true` | Add seed tree and church locations to placement pool |
-| `raceloc_scadu` | from config (`dlc`) | Add DLC fragment locations to placement pool |
-| `raceloc_shops` | `true` | Add shop locations to placement pool |
-| `raceloc_altboss` | `true` | Add secondary boss locations to placement pool |
 | `nerfgargoyles` | from config | Disable Valiant Gargoyles poison tick |
 
 ## Enemy Preset Building
