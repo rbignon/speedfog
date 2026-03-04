@@ -24,6 +24,11 @@ def test_generate_item_config_basic():
     assert result["options"]["weaponreqs"] is True
     assert result["options"]["dlc"] is True
     assert result["options"]["sombermode"] is True
+    assert result["options"]["mats"] is True
+    assert result["options"]["raceloc_health"] is True
+    assert result["options"]["raceloc_scadu"] is True  # default dlc=True
+    assert result["options"]["raceloc_shops"] is True
+    assert result["options"]["raceloc_altboss"] is True
     assert "preset" not in result
     assert result["enemy_options"]["randomize_bosses"] is False
     assert result["enemy_options"]["lock_final_boss"] is True
@@ -165,6 +170,14 @@ def test_run_item_randomizer_builds_correct_command(tmp_path, monkeypatch):
     assert result is True
     assert str(seed_dir / "item_config.json") in captured_cmd
     assert "--game-dir" in captured_cmd
+
+
+def test_generate_item_config_raceloc_scadu_follows_dlc():
+    """raceloc_scadu is disabled when DLC is off."""
+    config = Config.from_dict({"item_randomizer": {"dlc": False}})
+    result = generate_item_config(config, 42)
+    assert result["options"]["raceloc_scadu"] is False
+    assert result["options"]["raceloc_health"] is True  # unaffected
 
 
 def test_generate_item_config_enemy_options_default():
