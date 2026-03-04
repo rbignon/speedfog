@@ -245,6 +245,10 @@ dlc = true
 # Sets the magic damage of their poison attacks to 0
 nerf_gargoyles = true
 
+# Unlock all crafting recipes at start (default: true)
+# Removes the need to find cookbooks — all recipes available immediately
+allcraft = true
+
 # Enable item placement preset (default: true)
 # Weapons and talismans go to boss drops, seeds/tears to important locations.
 item_preset = true

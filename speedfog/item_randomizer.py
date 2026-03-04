@@ -41,6 +41,7 @@ def generate_item_config(
             "weaponreqs": config.item_randomizer.remove_requirements,
             "sombermode": config.item_randomizer.reduce_upgrade_cost,
             "nerfgargoyles": config.item_randomizer.nerf_gargoyles,
+            "allcraft": config.item_randomizer.allcraft,
         },
         "enemy_options": {
             "randomize_bosses": config.enemy.randomize_bosses,

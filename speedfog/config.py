@@ -320,6 +320,7 @@ class ItemRandomizerConfig:
     nerf_gargoyles: bool = (
         True  # Disable damage tick in Valiant Gargoyles's poison cloud
     )
+    allcraft: bool = True  # Unlock all crafting recipes at start
     item_preset: bool = True  # Enable item placement preset
     item_preset_path: str = ""  # Custom preset path (empty = built-in default)
 
