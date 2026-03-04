@@ -66,7 +66,7 @@ Placements:
   - Tag: missable
 
 - Type: CoreMechanics
-  Mode: Important
+  Mode: Custom
   Items:
   - Name: Talisman Pouch
     ID: goods:10040
@@ -589,9 +589,84 @@ Placements:
   - Tag: missable
 
 - Type: ShadowRealmBlessings
-  Mode: Anywhere
-  Items: []
-  Requires: []
+  Mode: Important
+  Items:
+  # Top-tier talismans — universally useful in short runs
+  - Name: Erdtree's Favor +2
+    ID: accessory:1042
+  - Name: Radagon's Soreseal
+    ID: accessory:1051
+  - Name: Marika's Soreseal
+    ID: accessory:1221
+  - Name: Great-Jar's Arsenal
+    ID: accessory:1032
+  - Name: Dragoncrest Greatshield Talisman
+    ID: accessory:4003
+  - Name: Shard of Alexander
+    ID: accessory:1231
+  - Name: Godfrey Icon
+    ID: accessory:3090
+  - Name: Graven-Mass Talisman
+    ID: accessory:3001
+  - Name: Flock's Canvas Talisman
+    ID: accessory:3050
+  - Name: Rotten Winged Sword Insignia
+    ID: accessory:2081
+  - Name: Millicent's Prosthesis
+    ID: accessory:1250
+  - Name: Green Turtle Talisman
+    ID: accessory:1150
+  - Name: Carian Filigreed Crest
+    ID: accessory:6020
+  - Name: Crimson Amber Medallion +3
+    ID: accessory:7000
+  - Name: Cerulean Amber Medallion +3
+    ID: accessory:7010
+  - Name: Viridian Amber Medallion +3
+    ID: accessory:7020
+  # Scorpion charms — build-defining
+  - Name: Fire Scorpion Charm
+    ID: accessory:2020
+  - Name: Lightning Scorpion Charm
+    ID: accessory:2010
+  - Name: Sacred Scorpion Charm
+    ID: accessory:2030
+  - Name: Magic Scorpion Charm
+    ID: accessory:2000
+  # Iconic weapons
+  - Name: Rivers of Blood
+    ID: weapon:9040000
+  - Name: Moonveil
+    ID: weapon:9060000
+  - Name: Blasphemous Blade
+    ID: weapon:3140000
+  - Name: Dark Moon Greatsword
+    ID: weapon:3090000
+  - Name: Sacred Relic Sword
+    ID: weapon:3100000
+  - Name: Hand of Malenia
+    ID: weapon:9020000
+  - Name: Sword of Night and Flame
+    ID: weapon:2140000
+  - Name: Starscourge Greatsword
+    ID: weapon:4050000
+  - Name: Mohgwyn's Sacred Spear
+    ID: weapon:17010000
+  - Name: Bolt of Gransax
+    ID: weapon:16090000
+  - Name: Wing of Astel
+    ID: weapon:7070000
+  - Name: Bloodhound's Fang
+    ID: weapon:8030000
+  # Crystal tears
+  - Group: crystaltears
+  Requires:
+  - Tag: racemode
+  - Tag: boss
+  - Tag: altboss
+  - Tag: seedtree
+  - Tag: church
+  - Tag: cross
   Excludes:
   - Tag: missable
 
