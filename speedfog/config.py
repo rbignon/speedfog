@@ -167,6 +167,7 @@ class StartingItemsConfig:
     # Key items for progression shortcuts
     academy_key: bool = True  # Academy Glintstone Key (Good ID 8109)
     pureblood_medal: bool = False  # Pureblood Knight's Medal (Good ID 2160)
+    rusty_key: bool = True  # Rusty Key (Good ID 8010) - Stormveil Castle gate
     drawing_room_key: bool = True  # Drawing-Room Key for Volcano Manor (Good ID 8134)
     lantern: bool = True  # Lantern (Good ID 2070) - hands-free light source
     physick_flask: bool = (
@@ -239,6 +240,8 @@ class StartingItemsConfig:
             goods.append(8109)  # Academy Glintstone Key
         if self.pureblood_medal:
             goods.append(2160)  # Pureblood Knight's Medal
+        if self.rusty_key:
+            goods.append(8010)  # Rusty Key (Stormveil Castle gate)
         if self.drawing_room_key:
             goods.append(8134)  # Drawing-Room Key (Volcano Manor)
         if self.lantern:
@@ -457,6 +460,7 @@ class Config:
             starting_items=StartingItemsConfig(
                 academy_key=starting_items_section.get("academy_key", True),
                 pureblood_medal=starting_items_section.get("pureblood_medal", False),
+                rusty_key=starting_items_section.get("rusty_key", True),
                 drawing_room_key=starting_items_section.get("drawing_room_key", True),
                 lantern=starting_items_section.get("lantern", True),
                 physick_flask=starting_items_section.get("physick_flask", True),
