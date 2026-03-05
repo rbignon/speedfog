@@ -257,4 +257,44 @@ public class ConfigDeserializationTests
         Assert.NotNull(config);
         Assert.Null(config.EnemyOptions);
     }
+
+    [Fact]
+    public void EnemyOptions_IgnoreArenaSize_Deserializes()
+    {
+        var json = """
+            {
+                "seed": 123,
+                "enemy_options": {
+                    "randomize_bosses": true,
+                    "ignore_arena_size": true,
+                    "finish_boss_defeat_flag": 0
+                }
+            }
+            """;
+
+        var config = JsonSerializer.Deserialize<RandomizerConfig>(json, JsonOptions);
+
+        Assert.NotNull(config);
+        Assert.NotNull(config.EnemyOptions);
+        Assert.True(config.EnemyOptions.IgnoreArenaSize);
+    }
+
+    [Fact]
+    public void EnemyOptions_IgnoreArenaSize_DefaultsFalse()
+    {
+        var json = """
+            {
+                "seed": 123,
+                "enemy_options": {
+                    "randomize_bosses": true
+                }
+            }
+            """;
+
+        var config = JsonSerializer.Deserialize<RandomizerConfig>(json, JsonOptions);
+
+        Assert.NotNull(config);
+        Assert.NotNull(config.EnemyOptions);
+        Assert.False(config.EnemyOptions.IgnoreArenaSize);
+    }
 }

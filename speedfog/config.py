@@ -339,6 +339,7 @@ class EnemyConfig:
 
     randomize_bosses: bool = False
     lock_final_boss: bool = True
+    ignore_arena_size: bool = False
 
 
 @dataclass
@@ -524,6 +525,7 @@ class Config:
             enemy=EnemyConfig(
                 randomize_bosses=enemy_section.get("randomize_bosses", False),
                 lock_final_boss=enemy_section.get("lock_final_boss", True),
+                ignore_arena_size=enemy_section.get("ignore_arena_size", False),
             ),
         )
 

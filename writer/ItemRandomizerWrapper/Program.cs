@@ -133,8 +133,13 @@ Example:
         if (randoConfig.EnemyOptions != null)
         {
             preset = BuildEnemyPreset(randoConfig.EnemyOptions);
+            if (randoConfig.EnemyOptions.IgnoreArenaSize)
+            {
+                opt["ignoresize"] = true;
+            }
             Console.WriteLine($"Enemy preset: randomize_bosses={randoConfig.EnemyOptions.RandomizeBosses}, "
-                + $"lock_final_boss={randoConfig.EnemyOptions.LockFinalBoss}");
+                + $"lock_final_boss={randoConfig.EnemyOptions.LockFinalBoss}, "
+                + $"ignore_arena_size={randoConfig.EnemyOptions.IgnoreArenaSize}");
         }
         else if (!string.IsNullOrEmpty(randoConfig.Preset))
         {

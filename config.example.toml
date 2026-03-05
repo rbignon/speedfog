@@ -212,6 +212,9 @@ enabled = false
 randomize_bosses = false
 # Keep the final arena's boss in place. Only applies when randomize_bosses = true.
 lock_final_boss = true
+# Allow placing large bosses in small arenas. Only applies when randomize_bosses = true.
+# Default: false (bosses that are too large for an arena are excluded from it).
+ignore_arena_size = false
 
 [item_randomizer]
 # Enable Item/Enemy Randomizer integration (default: true)

@@ -42,6 +42,7 @@ def generate_item_config(
         "enemy_options": {
             "randomize_bosses": config.enemy.randomize_bosses,
             "lock_final_boss": config.enemy.lock_final_boss,
+            "ignore_arena_size": config.enemy.ignore_arena_size,
             "finish_boss_defeat_flag": finish_boss_defeat_flag,
         },
         # RandomizerHelper.dll defaults almost everything to true when not
