@@ -9,7 +9,35 @@ from __future__ import annotations
 import random
 from collections import deque
 
+from speedfog.clusters import ClusterData, parse_qualified_fog_id
 from speedfog.dag import Dag, FogRef
+
+
+def _fog_matches_spec(fog_id: str, fog_zone: str, spec: str) -> bool:
+    """Check if a fog matches a qualified ('zone:fog_id') or plain spec."""
+    spec_zone, spec_fog = parse_qualified_fog_id(spec)
+    return spec_fog == fog_id and (spec_zone is None or spec_zone == fog_zone)
+
+
+def _blocked_by_proximity(
+    cluster_data: ClusterData,
+    candidate: FogRef,
+    consumed: set[FogRef],
+) -> bool:
+    """Check if candidate FogRef shares a proximity group with any consumed FogRef."""
+    if not cluster_data.proximity_groups:
+        return False
+
+    for group in cluster_data.proximity_groups:
+        candidate_in = any(
+            _fog_matches_spec(candidate.fog_id, candidate.zone, spec) for spec in group
+        )
+        if not candidate_in:
+            continue
+        for ref in consumed:
+            if any(_fog_matches_spec(ref.fog_id, ref.zone, spec) for spec in group):
+                return True
+    return False
 
 
 def _get_used_exit_fogs(dag: Dag, node_id: str) -> set[FogRef]:
@@ -41,7 +69,14 @@ def _surplus_exits(dag: Dag, node_id: str) -> list[FogRef]:
     # FogRefs consumed as entry on this node — their exit Pair is also consumed
     entry_fogrefs = {edge.entry_fog for edge in dag.get_incoming_edges(node_id)}
     all_exits = [FogRef(f["fog_id"], f["zone"]) for f in node.cluster.exit_fogs]
-    return [f for f in all_exits if f not in used and f not in entry_fogrefs]
+    result = [f for f in all_exits if f not in used and f not in entry_fogrefs]
+    if node.cluster.proximity_groups:
+        result = [
+            f
+            for f in result
+            if not _blocked_by_proximity(node.cluster, f, entry_fogrefs)
+        ]
+    return result
 
 
 def _surplus_entries(dag: Dag, node_id: str) -> list[FogRef]:
