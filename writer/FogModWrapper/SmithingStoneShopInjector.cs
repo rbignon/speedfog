@@ -21,17 +21,19 @@ public static class SmithingStoneShopInjector
         (10107, "Smithing Stone [8]", 3600),
     };
 
+    // Somber prices scaled so total upgrade cost matches normal weapons
+    // (normal = 3 stones/tier × 8 tiers = 32,400 total; somber = 1 stone/tier × 9 tiers)
     private static readonly (int id, string name, int price)[] SomberStones = new[]
     {
-        (10160, "Somber Smithing Stone [1]", 2000),
-        (10161, "Somber Smithing Stone [2]", 3000),
-        (10162, "Somber Smithing Stone [3]", 4000),
-        (10163, "Somber Smithing Stone [4]", 5000),
-        (10164, "Somber Smithing Stone [5]", 8000),
-        (10165, "Somber Smithing Stone [6]", 12000),
-        (10166, "Somber Smithing Stone [7]", 16000),
-        (10167, "Somber Smithing Stone [8]", 20000),
-        (10200, "Somber Smithing Stone [9]", 25000),
+        (10160, "Somber Smithing Stone [1]", 700),
+        (10161, "Somber Smithing Stone [2]", 1000),
+        (10162, "Somber Smithing Stone [3]", 1400),
+        (10163, "Somber Smithing Stone [4]", 1700),
+        (10164, "Somber Smithing Stone [5]", 2700),
+        (10165, "Somber Smithing Stone [6]", 4100),
+        (10166, "Somber Smithing Stone [7]", 5500),
+        (10167, "Somber Smithing Stone [8]", 6800),
+        (10200, "Somber Smithing Stone [9]", 8500),
     };
 
     // Base shop ID for our entries
