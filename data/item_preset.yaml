@@ -633,31 +633,6 @@ Placements:
     ID: accessory:2030
   - Name: Magic Scorpion Charm
     ID: accessory:2000
-  # Iconic weapons
-  - Name: Rivers of Blood
-    ID: weapon:9040000
-  - Name: Moonveil
-    ID: weapon:9060000
-  - Name: Blasphemous Blade
-    ID: weapon:3140000
-  - Name: Dark Moon Greatsword
-    ID: weapon:3090000
-  - Name: Sacred Relic Sword
-    ID: weapon:3100000
-  - Name: Hand of Malenia
-    ID: weapon:9020000
-  - Name: Sword of Night and Flame
-    ID: weapon:2140000
-  - Name: Starscourge Greatsword
-    ID: weapon:4050000
-  - Name: Mohgwyn's Sacred Spear
-    ID: weapon:17010000
-  - Name: Bolt of Gransax
-    ID: weapon:16090000
-  - Name: Wing of Astel
-    ID: weapon:7070000
-  - Name: Bloodhound's Fang
-    ID: weapon:8030000
   # Crystal tears
   - Group: crystaltears
   Requires:
