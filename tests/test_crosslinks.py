@@ -907,3 +907,41 @@ class TestProximityFiltering:
         # fog_Y blocked by proximity to fog_X, fog_Z is fine
         assert FogRef("fog_Y", "prox2") not in surplus
         assert FogRef("fog_Z", "prox2") in surplus
+
+    def test_no_false_blocking_across_groups(self):
+        """Fogs in different proximity groups are not blocked by each other."""
+        dag = Dag(seed=1)
+
+        # Two independent groups: [fog_A, fog_B] and [fog_C, fog_D]
+        # Entry uses fog_A, so fog_B is blocked but fog_D is NOT.
+        c = make_cluster_with_proximity(
+            "multi",
+            entry_fogs=[
+                {"fog_id": "fog_A", "zone": "multi"},
+            ],
+            exit_fogs=[
+                {"fog_id": "fog_B", "zone": "multi"},
+                {"fog_id": "fog_D", "zone": "multi"},
+            ],
+            proximity_groups=[["fog_A", "fog_B"], ["fog_C", "fog_D"]],
+        )
+
+        dag.add_node(DagNode("n", c, 1, 2, [FogRef("fog_A", "multi")], []))
+
+        s_c = make_cluster(
+            "s",
+            "start",
+            entry_fogs=[],
+            exit_fogs=[
+                {"fog_id": "s_exit", "zone": "s"},
+            ],
+        )
+        dag.add_node(DagNode("s", s_c, 0, 1, [], [FogRef("s_exit", "s")]))
+        dag.add_edge("s", "n", FogRef("s_exit", "s"), FogRef("fog_A", "multi"))
+        dag.start_id = "s"
+
+        from speedfog.crosslinks import _surplus_exits
+
+        surplus = _surplus_exits(dag, "n")
+        assert FogRef("fog_B", "multi") not in surplus  # blocked (same group as A)
+        assert FogRef("fog_D", "multi") in surplus  # not blocked (different group)
