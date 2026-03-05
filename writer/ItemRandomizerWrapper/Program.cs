@@ -273,6 +273,18 @@ Example:
             // "minor" or "all": merge non-major boss classes into the MinorBoss
             // pool so Miniboss, NightMiniboss, DragonMiniboss, Evergaol can all
             // swap with each other.
+            //
+            // MinorBoss needs an explicit entry to prevent inheriting NoRandom
+            // from Boss via DefaultInherit (enemy.txt: MinorBoss.Parent = Boss).
+            // Without this, ProcessEnemyPreset copies Boss.NoRandom → MinorBoss,
+            // which disables the entire MinorBoss silo.
+            preset.Classes[EnemyAnnotations.EnemyClass.MinorBoss] = new Preset.ClassAssignment
+            {
+                Pools = new List<Preset.PoolAssignment>
+                {
+                    new Preset.PoolAssignment { Weight = 1000, Pool = "default" }
+                }
+            };
             foreach (var cls in new[] {
                 EnemyAnnotations.EnemyClass.NightMiniboss,
                 EnemyAnnotations.EnemyClass.DragonMiniboss,
