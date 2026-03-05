@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from itertools import combinations
 
-from speedfog.clusters import ClusterData, ClusterPool, parse_qualified_fog_id
+from speedfog.clusters import ClusterData, ClusterPool, fog_matches_spec
 from speedfog.config import Config, resolve_final_boss_candidates
 from speedfog.crosslinks import add_crosslinks
 from speedfog.dag import Branch, Dag, DagNode, FogRef
@@ -120,12 +120,6 @@ class GenerationResult:
 # =============================================================================
 
 
-def _fog_matches_spec(fog_id: str, fog_zone: str, spec: str) -> bool:
-    """Check if a fog matches a qualified or unqualified spec."""
-    spec_zone, spec_fog = parse_qualified_fog_id(spec)
-    return spec_fog == fog_id and (spec_zone is None or spec_zone == fog_zone)
-
-
 def _filter_exits_by_proximity(
     cluster: ClusterData, entry: dict, exits: list[dict]
 ) -> list[dict]:
@@ -140,7 +134,7 @@ def _filter_exits_by_proximity(
     blocked_specs: set[str] = set()
     for group in cluster.proximity_groups:
         entry_in_group = any(
-            _fog_matches_spec(entry_id, entry_zone, spec) for spec in group
+            fog_matches_spec(entry_id, entry_zone, spec) for spec in group
         )
         if entry_in_group:
             blocked_specs.update(group)
@@ -152,7 +146,7 @@ def _filter_exits_by_proximity(
         f
         for f in exits
         if not any(
-            _fog_matches_spec(f["fog_id"], f["zone"], spec) for spec in blocked_specs
+            fog_matches_spec(f["fog_id"], f["zone"], spec) for spec in blocked_specs
         )
     ]
 

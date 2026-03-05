@@ -15,22 +15,32 @@ def parse_qualified_fog_id(qualified: str) -> tuple[str | None, str]:
     return None, qualified
 
 
+def fog_matches_spec(fog_id: str, fog_zone: str, spec: str) -> bool:
+    """Check if a fog matches a qualified ('zone:fog_id') or plain spec.
+
+    Args:
+        fog_id: The fog gate identifier.
+        fog_zone: The zone the fog belongs to.
+        spec: Either 'fog_id' (matches any zone) or 'zone:fog_id'.
+
+    Returns:
+        True if the fog matches the spec.
+    """
+    spec_zone, spec_fog = parse_qualified_fog_id(spec)
+    return spec_fog == fog_id and (spec_zone is None or spec_zone == fog_zone)
+
+
 def _filter_fogs_by_allowed(fogs: list[dict], allowed: list[str]) -> list[dict]:
     """Filter fog list to only fogs matching allowed specifiers.
 
     Each specifier is either a plain fog_id (matches any zone) or
     'zone:fog_id' (matches only that zone).
     """
-    parsed = [parse_qualified_fog_id(spec) for spec in allowed]
-    result = []
-    for fog in fogs:
-        fog_id = fog["fog_id"]
-        fog_zone = fog["zone"]
-        for spec_zone, spec_fog in parsed:
-            if spec_fog == fog_id and (spec_zone is None or spec_zone == fog_zone):
-                result.append(fog)
-                break
-    return result
+    return [
+        fog
+        for fog in fogs
+        if any(fog_matches_spec(fog["fog_id"], fog["zone"], spec) for spec in allowed)
+    ]
 
 
 @dataclass

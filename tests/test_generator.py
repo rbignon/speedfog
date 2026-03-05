@@ -4,7 +4,7 @@ import random
 
 import pytest
 
-from speedfog.clusters import ClusterData, ClusterPool
+from speedfog.clusters import ClusterData, ClusterPool, fog_matches_spec
 from speedfog.config import Config
 from speedfog.dag import Branch, Dag, DagNode, FogRef
 from speedfog.generator import (
@@ -12,7 +12,6 @@ from speedfog.generator import (
     LayerOperation,
     _filter_exits_by_proximity,
     _find_valid_merge_indices,
-    _fog_matches_spec,
     _has_valid_merge_pair,
     _inject_prerequisite,
     _pick_entry_and_exits_for_node,
@@ -3034,23 +3033,23 @@ class TestPickClusterUniformReservedZones:
 
 
 class TestFogMatchesSpec:
-    """Tests for _fog_matches_spec helper."""
+    """Tests for fog_matches_spec helper."""
 
     def test_unqualified_matches_any_zone(self):
-        assert _fog_matches_spec("fog_A", "zone_x", "fog_A") is True
-        assert _fog_matches_spec("fog_A", "zone_y", "fog_A") is True
+        assert fog_matches_spec("fog_A", "zone_x", "fog_A") is True
+        assert fog_matches_spec("fog_A", "zone_y", "fog_A") is True
 
     def test_unqualified_no_match(self):
-        assert _fog_matches_spec("fog_A", "zone_x", "fog_B") is False
+        assert fog_matches_spec("fog_A", "zone_x", "fog_B") is False
 
     def test_qualified_matches_exact(self):
-        assert _fog_matches_spec("fog_A", "zone_x", "zone_x:fog_A") is True
+        assert fog_matches_spec("fog_A", "zone_x", "zone_x:fog_A") is True
 
     def test_qualified_wrong_zone(self):
-        assert _fog_matches_spec("fog_A", "zone_x", "zone_y:fog_A") is False
+        assert fog_matches_spec("fog_A", "zone_x", "zone_y:fog_A") is False
 
     def test_qualified_wrong_fog(self):
-        assert _fog_matches_spec("fog_A", "zone_x", "zone_x:fog_B") is False
+        assert fog_matches_spec("fog_A", "zone_x", "zone_x:fog_B") is False
 
 
 class TestFilterExitsByProximity:

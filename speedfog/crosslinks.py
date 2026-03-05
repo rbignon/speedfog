@@ -9,14 +9,8 @@ from __future__ import annotations
 import random
 from collections import deque
 
-from speedfog.clusters import ClusterData, parse_qualified_fog_id
+from speedfog.clusters import ClusterData, fog_matches_spec
 from speedfog.dag import Dag, FogRef
-
-
-def _fog_matches_spec(fog_id: str, fog_zone: str, spec: str) -> bool:
-    """Check if a fog matches a qualified ('zone:fog_id') or plain spec."""
-    spec_zone, spec_fog = parse_qualified_fog_id(spec)
-    return spec_fog == fog_id and (spec_zone is None or spec_zone == fog_zone)
 
 
 def _blocked_by_proximity(
@@ -30,12 +24,12 @@ def _blocked_by_proximity(
 
     for group in cluster_data.proximity_groups:
         candidate_in = any(
-            _fog_matches_spec(candidate.fog_id, candidate.zone, spec) for spec in group
+            fog_matches_spec(candidate.fog_id, candidate.zone, spec) for spec in group
         )
         if not candidate_in:
             continue
         for ref in consumed:
-            if any(_fog_matches_spec(ref.fog_id, ref.zone, spec) for spec in group):
+            if any(fog_matches_spec(ref.fog_id, ref.zone, spec) for spec in group):
                 return True
     return False
 
