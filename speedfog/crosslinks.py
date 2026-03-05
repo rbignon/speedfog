@@ -93,7 +93,14 @@ def _surplus_entries(dag: Dag, node_id: str) -> list[FogRef]:
     # FogRefs consumed as exit on this node — their entry Pair is also consumed
     exit_fogrefs = {edge.exit_fog for edge in dag.get_outgoing_edges(node_id)}
     all_entries = [FogRef(f["fog_id"], f["zone"]) for f in node.cluster.entry_fogs]
-    return [f for f in all_entries if f not in used and f not in exit_fogrefs]
+    result = [f for f in all_entries if f not in used and f not in exit_fogrefs]
+    if node.cluster.proximity_groups:
+        result = [
+            f
+            for f in result
+            if not _blocked_by_proximity(node.cluster, f, exit_fogrefs)
+        ]
+    return result
 
 
 def _is_reachable(dag: Dag, source_id: str, target_id: str) -> bool:

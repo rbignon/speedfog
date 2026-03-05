@@ -865,3 +865,45 @@ class TestProximityFiltering:
         # fog_B blocked by proximity to fog_A, fog_C is fine
         assert FogRef("fog_B", "prox") not in surplus
         assert FogRef("fog_C", "prox") in surplus
+
+    def test_surplus_entry_blocked_by_proximity_to_exit(self):
+        """Surplus entry sharing a proximity group with consumed exit is excluded."""
+        dag = Dag(seed=1)
+
+        # Cluster with proximity_groups: exit fog_X and entry fog_Y are proximate.
+        # fog_Z is an independent entry not in any group.
+        c = make_cluster_with_proximity(
+            "prox2",
+            entry_fogs=[
+                {"fog_id": "fog_Y", "zone": "prox2"},
+                {"fog_id": "fog_Z", "zone": "prox2"},
+            ],
+            exit_fogs=[
+                {"fog_id": "fog_X", "zone": "prox2"},
+            ],
+            proximity_groups=[["fog_X", "fog_Y"]],
+        )
+
+        # Node uses fog_X as exit (outgoing edge) and fog_Y as potential surplus entry
+        dag.add_node(DagNode("n", c, 1, 2, [], [FogRef("fog_X", "prox2")]))
+
+        # Wire a dummy outgoing edge so _surplus_entries sees fog_X as consumed exit
+        e_c = make_cluster(
+            "e",
+            "final_boss",
+            entry_fogs=[
+                {"fog_id": "e_entry", "zone": "e"},
+            ],
+            exit_fogs=[],
+        )
+        dag.add_node(DagNode("e", e_c, 2, 3, [FogRef("e_entry", "e")], []))
+        dag.add_edge("n", "e", FogRef("fog_X", "prox2"), FogRef("e_entry", "e"))
+        dag.start_id = "n"
+        dag.end_id = "e"
+
+        from speedfog.crosslinks import _surplus_entries
+
+        surplus = _surplus_entries(dag, "n")
+        # fog_Y blocked by proximity to fog_X, fog_Z is fine
+        assert FogRef("fog_Y", "prox2") not in surplus
+        assert FogRef("fog_Z", "prox2") in surplus
