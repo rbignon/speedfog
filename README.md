@@ -154,7 +154,7 @@ enabled = true                  # Item Randomizer integration
 # dlc = true                    # Include DLC items and enemies
 
 [enemy]
-randomize_bosses = false        # Swap boss entities between arenas
+randomize_bosses = "none"       # "none", "minor", or "all"
 # lock_final_boss = true        # Keep the final boss in place
 ```
 

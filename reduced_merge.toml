@@ -99,7 +99,7 @@ crystal_tears = 5
 ashes_of_war = 3
 
 [enemy]
-randomize_bosses = false
+randomize_bosses = "none"
 
 [item_randomizer]
 enabled = true

@@ -231,7 +231,7 @@ public class ConfigDeserializationTests
             {
                 "seed": 123,
                 "enemy_options": {
-                    "randomize_bosses": true,
+                    "randomize_bosses": "all",
                     "lock_final_boss": false,
                     "finish_boss_defeat_flag": 1052380800
                 }
@@ -242,7 +242,7 @@ public class ConfigDeserializationTests
 
         Assert.NotNull(config);
         Assert.NotNull(config.EnemyOptions);
-        Assert.True(config.EnemyOptions.RandomizeBosses);
+        Assert.Equal("all", config.EnemyOptions.RandomizeBosses);
         Assert.False(config.EnemyOptions.LockFinalBoss);
         Assert.Equal(1052380800, config.EnemyOptions.FinishBossDefeatFlag);
     }
@@ -265,7 +265,7 @@ public class ConfigDeserializationTests
             {
                 "seed": 123,
                 "enemy_options": {
-                    "randomize_bosses": true,
+                    "randomize_bosses": "all",
                     "ignore_arena_size": true,
                     "finish_boss_defeat_flag": 0
                 }
@@ -286,7 +286,7 @@ public class ConfigDeserializationTests
             {
                 "seed": 123,
                 "enemy_options": {
-                    "randomize_bosses": true
+                    "randomize_bosses": "minor"
                 }
             }
             """;
@@ -295,6 +295,7 @@ public class ConfigDeserializationTests
 
         Assert.NotNull(config);
         Assert.NotNull(config.EnemyOptions);
+        Assert.Equal("minor", config.EnemyOptions.RandomizeBosses);
         Assert.False(config.EnemyOptions.IgnoreArenaSize);
     }
 }

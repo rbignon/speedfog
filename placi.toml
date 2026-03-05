@@ -176,9 +176,10 @@ enabled = true
 # Boss entity randomization (requires [item_randomizer] enabled = true).
 # Randomize boss entities among themselves (major with major, minor with minor).
 # The DAG already controls WHICH boss zones you visit — this swaps the actual
-# boss enemy at each location. Default: false (bosses stay in their vanilla arenas).
-randomize_bosses = false
-# Keep the final arena's boss in place. Only applies when randomize_bosses = true.
+# boss enemy at each location.
+#   "none" = stay in place, "minor" = minibosses swap, "all" = all bosses swap
+randomize_bosses = "none"
+# Keep the final arena's boss in place. Only applies when randomize_bosses != "none".
 lock_final_boss = true
 
 [item_randomizer]

@@ -46,7 +46,7 @@ public class RandomizerConfig
 public class EnemyOptionsConfig
 {
     [JsonPropertyName("randomize_bosses")]
-    public bool RandomizeBosses { get; set; }
+    public string RandomizeBosses { get; set; } = "none";
 
     [JsonPropertyName("lock_final_boss")]
     public bool LockFinalBoss { get; set; } = true;

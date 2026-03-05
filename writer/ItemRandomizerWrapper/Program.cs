@@ -248,7 +248,7 @@ Example:
         preset.Classes[EnemyAnnotations.EnemyClass.CaravanTroll] =
             new Preset.ClassAssignment { NoRandom = true };
 
-        if (!options.RandomizeBosses)
+        if (options.RandomizeBosses == "none")
         {
             // Lock all boss classes (current default behavior)
             foreach (var cls in new[] {
@@ -265,9 +265,9 @@ Example:
         }
         else
         {
-            // Merge all non-major boss classes into the MinorBoss pool so
-            // Miniboss, NightMiniboss, DragonMiniboss, Evergaol can all
-            // swap with each other. Major bosses (Boss) stay in their own pool.
+            // "minor" or "all": merge non-major boss classes into the MinorBoss
+            // pool so Miniboss, NightMiniboss, DragonMiniboss, Evergaol can all
+            // swap with each other.
             foreach (var cls in new[] {
                 EnemyAnnotations.EnemyClass.NightMiniboss,
                 EnemyAnnotations.EnemyClass.DragonMiniboss,
@@ -294,6 +294,13 @@ Example:
                     new Preset.PoolAssignment { Weight = 1000, Pool = "default" }
                 }
             };
+
+            if (options.RandomizeBosses == "minor")
+            {
+                // Lock major bosses (Boss class) in place
+                preset.Classes[EnemyAnnotations.EnemyClass.Boss] =
+                    new Preset.ClassAssignment { NoRandom = true };
+            }
 
             if (options.LockFinalBoss && options.FinishBossDefeatFlag > 0)
             {

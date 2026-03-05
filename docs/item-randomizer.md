@@ -74,16 +74,29 @@ Set in `options` dictionary, applied via `opt[key] = value`:
 
 `BuildEnemyPreset()` constructs a `Preset` programmatically (no YAML file needed).
 
-### When `randomize_bosses = false` (default)
+### When `randomize_bosses = "none"` (default)
 
 All boss classes are locked (`NoRandom = true`):
 - `Boss`, `Miniboss`, `MinorBoss`, `NightMiniboss`, `DragonMiniboss`, `Evergaol`
 - `CaravanTroll` is always locked (scripted entity)
 - `HostileNPC` has no preset entry, so it randomizes within its own class
 
-### When `randomize_bosses = true`
+### When `randomize_bosses = "minor"`
 
-Minor boss classes are merged into the `MinorBoss` pool so they can swap with each other:
+Minor boss classes are merged into the `MinorBoss` pool so they can swap with each other.
+Major bosses (`Boss` class) are locked in place:
+
+```
+NightMiniboss  ──┐
+DragonMiniboss ──┼──► MinorBoss pool (MergeParent, Weight=1000)
+Evergaol       ──┘
+Miniboss       ──────► MinorBoss pool (ManualParent=MinorBoss, overrides default Boss parent)
+Boss           ──────► locked (NoRandom = true)
+```
+
+### When `randomize_bosses = "all"`
+
+Same as `"minor"`, but major bosses also swap among themselves:
 
 ```
 NightMiniboss  ──┐

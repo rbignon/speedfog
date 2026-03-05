@@ -576,16 +576,16 @@ def test_min_branch_age_validation():
 def test_enemy_config_defaults():
     """EnemyConfig has correct defaults."""
     config = Config.from_dict({})
-    assert config.enemy.randomize_bosses is False
+    assert config.enemy.randomize_bosses == "none"
     assert config.enemy.lock_final_boss is True
 
 
 def test_enemy_config_from_dict():
     """EnemyConfig parses from config dict."""
     config = Config.from_dict(
-        {"enemy": {"randomize_bosses": True, "lock_final_boss": False}}
+        {"enemy": {"randomize_bosses": "all", "lock_final_boss": False}}
     )
-    assert config.enemy.randomize_bosses is True
+    assert config.enemy.randomize_bosses == "all"
     assert config.enemy.lock_final_boss is False
 
 
@@ -594,19 +594,35 @@ def test_enemy_config_from_toml(tmp_path):
     config_file = tmp_path / "config.toml"
     config_file.write_text("""
 [enemy]
-randomize_bosses = true
+randomize_bosses = "minor"
 lock_final_boss = false
 """)
     config = Config.from_toml(config_file)
-    assert config.enemy.randomize_bosses is True
+    assert config.enemy.randomize_bosses == "minor"
     assert config.enemy.lock_final_boss is False
 
 
 def test_enemy_config_partial():
     """EnemyConfig uses defaults for missing fields."""
-    config = Config.from_dict({"enemy": {"randomize_bosses": True}})
-    assert config.enemy.randomize_bosses is True
+    config = Config.from_dict({"enemy": {"randomize_bosses": "all"}})
+    assert config.enemy.randomize_bosses == "all"
     assert config.enemy.lock_final_boss is True  # default
+
+
+def test_enemy_config_legacy_bool():
+    """EnemyConfig accepts legacy boolean values."""
+    config_true = Config.from_dict({"enemy": {"randomize_bosses": True}})
+    assert config_true.enemy.randomize_bosses == "all"
+    config_false = Config.from_dict({"enemy": {"randomize_bosses": False}})
+    assert config_false.enemy.randomize_bosses == "none"
+
+
+def test_enemy_config_invalid_value():
+    """EnemyConfig rejects invalid randomize_bosses values."""
+    import pytest
+
+    with pytest.raises(ValueError, match="randomize_bosses"):
+        Config.from_dict({"enemy": {"randomize_bosses": "invalid"}})
 
 
 def test_crosslinks_default():

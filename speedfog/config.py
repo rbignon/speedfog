@@ -337,9 +337,20 @@ class ItemRandomizerConfig:
 class EnemyConfig:
     """Enemy randomization configuration."""
 
-    randomize_bosses: bool = False
+    randomize_bosses: str = "none"  # "none", "minor", "all"
     lock_final_boss: bool = True
     ignore_arena_size: bool = False
+
+    def __post_init__(self) -> None:
+        """Validate and normalize enemy config."""
+        # Accept legacy booleans: false→"none", true→"all"
+        if isinstance(self.randomize_bosses, bool):
+            self.randomize_bosses = "all" if self.randomize_bosses else "none"
+        valid = ("none", "minor", "all")
+        if self.randomize_bosses not in valid:
+            raise ValueError(
+                f"randomize_bosses must be one of {valid}, got {self.randomize_bosses!r}"
+            )
 
 
 @dataclass
@@ -523,7 +534,7 @@ class Config:
                 ashes_of_war=care_package_section.get("ashes_of_war", 0),
             ),
             enemy=EnemyConfig(
-                randomize_bosses=enemy_section.get("randomize_bosses", False),
+                randomize_bosses=enemy_section.get("randomize_bosses", "none"),
                 lock_final_boss=enemy_section.get("lock_final_boss", True),
                 ignore_arena_size=enemy_section.get("ignore_arena_size", False),
             ),
