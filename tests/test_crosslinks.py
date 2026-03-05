@@ -945,3 +945,97 @@ class TestProximityFiltering:
         surplus = _surplus_exits(dag, "n")
         assert FogRef("fog_B", "multi") not in surplus  # blocked (same group as A)
         assert FogRef("fog_D", "multi") in surplus  # not blocked (different group)
+
+    def test_add_crosslinks_blocked_by_proximity(self):
+        """add_crosslinks returns 0 when only surplus fog is proximity-blocked.
+
+        Integration test: a cross-link pair (A->C2) exists structurally,
+        but C2's only surplus entry shares a proximity group with C2's
+        consumed exit, so the cross-link cannot be created.
+        """
+        dag = Dag(seed=1)
+
+        s_c = make_cluster(
+            "s",
+            "start",
+            entry_fogs=[],
+            exit_fogs=[
+                {"fog_id": "s_exit1", "zone": "s"},
+                {"fog_id": "s_exit2", "zone": "s"},
+            ],
+        )
+        # A has a surplus exit (a_exit2) — potential cross-link source
+        a_c = make_cluster(
+            "a",
+            entry_fogs=[{"fog_id": "a_entry", "zone": "a"}],
+            exit_fogs=[
+                {"fog_id": "a_exit1", "zone": "a"},
+                {"fog_id": "a_exit2", "zone": "a"},
+            ],
+        )
+        b_c = make_cluster(
+            "b",
+            entry_fogs=[{"fog_id": "b_entry", "zone": "b"}],
+            exit_fogs=[{"fog_id": "b_exit", "zone": "b"}],
+        )
+        # C2 has a surplus entry (c2_spare) but it's in a proximity group
+        # with c2_exit (consumed as outgoing exit). So cross-link A->C2
+        # should be blocked.
+        c2_c = make_cluster_with_proximity(
+            "c2",
+            entry_fogs=[
+                {"fog_id": "c2_entry", "zone": "c2"},
+                {"fog_id": "c2_spare", "zone": "c2"},
+            ],
+            exit_fogs=[{"fog_id": "c2_exit", "zone": "c2"}],
+            proximity_groups=[["c2_spare", "c2_exit"]],
+        )
+        e_c = make_cluster(
+            "e",
+            "final_boss",
+            entry_fogs=[
+                {"fog_id": "e_entry1", "zone": "e"},
+                {"fog_id": "e_entry2", "zone": "e"},
+            ],
+            exit_fogs=[],
+        )
+
+        dag.add_node(
+            DagNode(
+                "s", s_c, 0, 1, [], [FogRef("s_exit1", "s"), FogRef("s_exit2", "s")]
+            )
+        )
+        dag.add_node(
+            DagNode("a", a_c, 1, 2, [FogRef("a_entry", "a")], [FogRef("a_exit1", "a")])
+        )
+        dag.add_node(
+            DagNode("b", b_c, 1, 2, [FogRef("b_entry", "b")], [FogRef("b_exit", "b")])
+        )
+        dag.add_node(
+            DagNode(
+                "c2",
+                c2_c,
+                2,
+                3,
+                [FogRef("c2_entry", "c2")],
+                [FogRef("c2_exit", "c2")],
+            )
+        )
+        dag.add_node(
+            DagNode(
+                "e", e_c, 3, 4, [FogRef("e_entry1", "e"), FogRef("e_entry2", "e")], []
+            )
+        )
+
+        dag.add_edge("s", "a", FogRef("s_exit1", "s"), FogRef("a_entry", "a"))
+        dag.add_edge("s", "b", FogRef("s_exit2", "s"), FogRef("b_entry", "b"))
+        dag.add_edge("a", "c2", FogRef("a_exit1", "a"), FogRef("c2_entry", "c2"))
+        dag.add_edge("b", "e", FogRef("b_exit", "b"), FogRef("e_entry1", "e"))
+        dag.add_edge("c2", "e", FogRef("c2_exit", "c2"), FogRef("e_entry2", "e"))
+        dag.start_id = "s"
+        dag.end_id = "e"
+
+        # Without proximity: A has surplus a_exit2, C2 has surplus c2_spare
+        # But c2_spare is proximity-blocked by c2_exit → no valid entry on C2
+        added = add_crosslinks(dag, rng=random.Random(42))
+        assert added == 0
