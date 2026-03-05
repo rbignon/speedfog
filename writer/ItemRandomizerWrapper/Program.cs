@@ -240,6 +240,11 @@ Example:
     /// </summary>
     static Preset BuildEnemyPreset(EnemyOptionsConfig options)
     {
+        var valid = new[] { "none", "minor", "all" };
+        if (!valid.Contains(options.RandomizeBosses))
+            throw new ArgumentException(
+                $"Invalid randomize_bosses value: '{options.RandomizeBosses}' (expected: {string.Join(", ", valid)})");
+
         var preset = new Preset();
 
         // HostileNPC: NOT listed in preset → default behavior = randomize
