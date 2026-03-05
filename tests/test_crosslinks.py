@@ -3,7 +3,12 @@
 import random
 
 from speedfog.clusters import ClusterData
-from speedfog.crosslinks import add_crosslinks, find_eligible_pairs
+from speedfog.crosslinks import (
+    _surplus_entries,
+    _surplus_exits,
+    add_crosslinks,
+    find_eligible_pairs,
+)
 from speedfog.dag import Dag, DagNode, FogRef
 
 
@@ -858,9 +863,6 @@ class TestProximityFiltering:
         dag.add_node(DagNode("s", s_c, 0, 1, [], [FogRef("s_exit", "s")]))
         dag.add_edge("s", "n", FogRef("s_exit", "s"), FogRef("fog_A", "prox"))
         dag.start_id = "s"
-
-        from speedfog.crosslinks import _surplus_exits
-
         surplus = _surplus_exits(dag, "n")
         # fog_B blocked by proximity to fog_A, fog_C is fine
         assert FogRef("fog_B", "prox") not in surplus
@@ -900,9 +902,6 @@ class TestProximityFiltering:
         dag.add_edge("n", "e", FogRef("fog_X", "prox2"), FogRef("e_entry", "e"))
         dag.start_id = "n"
         dag.end_id = "e"
-
-        from speedfog.crosslinks import _surplus_entries
-
         surplus = _surplus_entries(dag, "n")
         # fog_Y blocked by proximity to fog_X, fog_Z is fine
         assert FogRef("fog_Y", "prox2") not in surplus
@@ -939,9 +938,6 @@ class TestProximityFiltering:
         dag.add_node(DagNode("s", s_c, 0, 1, [], [FogRef("s_exit", "s")]))
         dag.add_edge("s", "n", FogRef("s_exit", "s"), FogRef("fog_A", "multi"))
         dag.start_id = "s"
-
-        from speedfog.crosslinks import _surplus_exits
-
         surplus = _surplus_exits(dag, "n")
         assert FogRef("fog_B", "multi") not in surplus  # blocked (same group as A)
         assert FogRef("fog_D", "multi") in surplus  # not blocked (different group)
