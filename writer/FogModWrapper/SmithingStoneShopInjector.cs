@@ -36,10 +36,8 @@ public static class SmithingStoneShopInjector
         (10200, "Somber Smithing Stone [9]", 8500),
     };
 
-    // Base shop ID for our entries
-    // Kalé's shop is 101800-101899, we use the upper range (101880-101899) for SpeedFog
-    // This allows 20 items which is enough for normal (8) + somber (9) stones
-    private const int BASE_SHOP_ID = 101880;
+    // Base shop ID for our entries in Twin Maiden Husks shop range
+    private const int BASE_SHOP_ID = 101800;
 
     /// <summary>
     /// Inject smithing stones into the shop.
@@ -103,17 +101,14 @@ public static class SmithingStoneShopInjector
             .ToList();
         Console.WriteLine($"  Existing IDs in 101800-101999: {string.Join(", ", twinMaidenIds)}");
 
-        // Use a fixed range that we CLEAR first - we'll take over 101800-101819 for our stones
-        // This should be part of Kalé's shop or Twin Maiden Husks
-        int baseId = 101800;
         int itemCount = NormalStones.Length + SomberStones.Length;
 
         // Remove any existing entries in our target range
-        shopParam.Rows.RemoveAll(r => r.ID >= baseId && r.ID < baseId + itemCount);
-        Console.WriteLine($"  Cleared range {baseId}-{baseId + itemCount - 1} for smithing stones");
+        shopParam.Rows.RemoveAll(r => r.ID >= BASE_SHOP_ID && r.ID < BASE_SHOP_ID + itemCount);
+        Console.WriteLine($"  Cleared range {BASE_SHOP_ID}-{BASE_SHOP_ID + itemCount - 1} for smithing stones");
 
         // Add smithing stones
-        int shopId = baseId;
+        int shopId = BASE_SHOP_ID;
         foreach (var (itemId, name, price) in NormalStones)
         {
             AddShopEntry(shopParam, shopId, itemId, price);
