@@ -114,6 +114,7 @@ allow_entry_as_exit = true
 
 [zones.stormveil_godrick]
 weight = 2
+allow_entry_as_exit = true  # after exit pruning, only Godrick front remains (also the entry)
 
 [zones.leyndell_sanctuary]
 weight = 2

@@ -3079,7 +3079,10 @@ class TestMajorBossDowngrade:
         assert result[0].cluster_type == "legacy_dungeon"
 
     def test_unskippable_boss_entry_in_boss_zone(self):
-        """Cluster with entry directly in boss zone stays major_boss."""
+        """Cluster with entry directly in boss zone stays major_boss.
+
+        Non-boss zone exits (post_boss) are pruned — only boss zone exits remain.
+        """
         # Entry fog is in the boss zone itself → can't avoid the boss
         areas = self._make_areas(
             boss_zone={"maps": ["m10_00_00_00"], "has_boss": True, "defeat_flag": 999},
@@ -3110,6 +3113,9 @@ class TestMajorBossDowngrade:
 
         assert len(result) == 1
         assert result[0].cluster_type == "major_boss"
+        exit_zones = {f["zone"] for f in result[0].exit_fogs}
+        assert "post_boss" not in exit_zones
+        assert "boss_zone" in exit_zones
 
     def test_unskippable_boss_only_entry_fog_as_exit(self):
         """Cluster where only non-boss exit is the entry fog itself stays major_boss.
@@ -3117,6 +3123,7 @@ class TestMajorBossDowngrade:
         Models Godskin Duo: entry on balcony, drop to boss arena. The balcony
         fog is both entry and exit, but taking that exit just goes back through
         the entrance gate — not an alternate route bypassing the boss.
+        Non-boss balcony exit is pruned, only boss arena exits remain.
         """
         areas = self._make_areas(
             balcony={"maps": ["m13_00_00_00"]},
@@ -3147,9 +3154,12 @@ class TestMajorBossDowngrade:
 
         assert len(result) == 1
         assert result[0].cluster_type == "major_boss"
+        exit_zones = {f["zone"] for f in result[0].exit_fogs}
+        assert "balcony" not in exit_zones
+        assert "boss_arena" in exit_zones
 
     def test_no_world_graph_no_downgrade(self):
-        """Without world_graph, skippability check is skipped entirely."""
+        """Without world_graph, skippability check is skipped but exits still pruned."""
         areas = self._make_areas(
             entry_zone={"maps": ["m10_00_00_00"]},
             boss_zone={
@@ -3181,6 +3191,10 @@ class TestMajorBossDowngrade:
 
         assert len(result) == 1
         assert result[0].cluster_type == "major_boss"
+        # Non-boss exits pruned even without world_graph
+        exit_zones = {f["zone"] for f in result[0].exit_fogs}
+        assert "exploration_zone" not in exit_zones
+        assert "boss_zone" in exit_zones
 
     def test_single_zone_major_boss_not_affected(self):
         """Single-zone major_boss cluster is never downgraded."""
@@ -3253,6 +3267,200 @@ class TestMajorBossDowngrade:
         assert "boss_zone" not in exit_zones
         assert "exploration_zone" in exit_zones
         assert "entry_zone" in exit_zones
+
+
+# =============================================================================
+# Boss Cluster Non-Boss Exit Pruning Tests
+# =============================================================================
+
+
+class TestBossClusterNonBossExitPruning:
+    """Multi-zone boss clusters should only have exits from boss zones."""
+
+    def test_major_boss_prunes_non_boss_exits(self):
+        """Models volcano_temple: exits in non-boss zones are removed."""
+        areas = {
+            "boss_zone": AreaData(
+                name="boss_zone",
+                text="Boss",
+                maps=["m16_00_00_00"],
+                tags=[],
+                has_boss=True,
+                defeat_flag=16000850,
+            ),
+            "post_boss": AreaData(
+                name="post_boss", text="Post", maps=["m16_00_00_00"], tags=[]
+            ),
+            "side_area": AreaData(
+                name="side_area", text="Side", maps=["m16_00_00_00"], tags=[]
+            ),
+        }
+        cluster = Cluster(
+            zones=frozenset({"boss_zone", "post_boss", "side_area"}),
+            entry_fogs=[{"fog_id": "entry", "zone": "boss_zone"}],
+            exit_fogs=[
+                {"fog_id": "entry", "zone": "boss_zone"},
+                {"fog_id": "boss_back", "zone": "boss_zone"},
+                {"fog_id": "post_exit", "zone": "post_boss"},
+                {"fog_id": "side_exit", "zone": "side_area"},
+            ],
+        )
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            {"defaults": {"major_boss": 4}, "zones": {}},
+            {"boss_zone"},
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert len(result) == 1
+        exit_fogs = result[0].exit_fogs
+        exit_zones = {f["zone"] for f in exit_fogs}
+        assert exit_zones == {"boss_zone"}
+        assert len(exit_fogs) == 2
+
+    def test_boss_arena_prunes_non_boss_exits(self):
+        """boss_arena clusters also get non-boss exits pruned."""
+        areas = {
+            "boss": AreaData(
+                name="boss",
+                text="Boss",
+                maps=["m43_01_00_00"],
+                tags=[],
+                has_boss=True,
+                defeat_flag=43010800,
+            ),
+            "postboss": AreaData(
+                name="postboss", text="After", maps=["m43_01_00_00"], tags=[]
+            ),
+        }
+        cluster = Cluster(
+            zones=frozenset({"boss", "postboss"}),
+            entry_fogs=[{"fog_id": "front", "zone": "boss"}],
+            exit_fogs=[
+                {"fog_id": "front", "zone": "boss"},
+                {"fog_id": "postboss_exit", "zone": "postboss"},
+            ],
+        )
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            {"defaults": {"boss_arena": 3}, "zones": {"boss": {"type": "boss_arena"}}},
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert len(result) == 1
+        exit_zones = {f["zone"] for f in result[0].exit_fogs}
+        assert "postboss" not in exit_zones
+        assert "boss" in exit_zones
+
+    def test_single_zone_boss_not_affected(self):
+        """Single-zone boss clusters are not touched by pruning."""
+        areas = {
+            "boss": AreaData(
+                name="boss",
+                text="Boss",
+                maps=["m10_00_00_00"],
+                tags=[],
+                has_boss=True,
+                defeat_flag=10000800,
+            ),
+        }
+        cluster = Cluster(
+            zones=frozenset({"boss"}),
+            entry_fogs=[{"fog_id": "gate", "zone": "boss"}],
+            exit_fogs=[{"fog_id": "gate", "zone": "boss"}],
+        )
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            {"defaults": {"major_boss": 4}, "zones": {}},
+            {"boss"},
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert len(result) == 1
+        assert len(result[0].exit_fogs) == 1
+
+    def test_no_pruning_when_no_boss_zone_exits(self):
+        """If no boss-zone exits exist, non-boss exits are kept as fallback."""
+        areas = {
+            "boss": AreaData(
+                name="boss",
+                text="Boss",
+                maps=["m10_00_00_00"],
+                tags=[],
+                has_boss=True,
+                defeat_flag=10000800,
+            ),
+            "other": AreaData(
+                name="other", text="Other", maps=["m10_00_00_00"], tags=[]
+            ),
+        }
+        cluster = Cluster(
+            zones=frozenset({"boss", "other"}),
+            entry_fogs=[{"fog_id": "entry", "zone": "boss"}],
+            exit_fogs=[
+                {"fog_id": "other_exit", "zone": "other"},
+            ],
+        )
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            {"defaults": {"major_boss": 4}, "zones": {}},
+            {"boss"},
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert len(result) == 1
+        # Fallback: non-boss exit kept because no boss-zone exits exist
+        assert len(result[0].exit_fogs) == 1
+        assert result[0].exit_fogs[0]["zone"] == "other"
+
+    def test_legacy_dungeon_not_affected(self):
+        """Non-boss cluster types are not affected by pruning."""
+        areas = {
+            "main": AreaData(name="main", text="Main", maps=["m10_00_00_00"], tags=[]),
+            "side": AreaData(name="side", text="Side", maps=["m10_00_00_00"], tags=[]),
+        }
+        cluster = Cluster(
+            zones=frozenset({"main", "side"}),
+            entry_fogs=[{"fog_id": "entry", "zone": "main"}],
+            exit_fogs=[
+                {"fog_id": "main_exit", "zone": "main"},
+                {"fog_id": "side_exit", "zone": "side"},
+            ],
+        )
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            {
+                "defaults": {"legacy_dungeon": 10},
+                "zones": {"main": {"type": "legacy_dungeon"}},
+            },
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert len(result) == 1
+        exit_zones = {f["zone"] for f in result[0].exit_fogs}
+        assert exit_zones == {"main", "side"}
 
 
 # =============================================================================

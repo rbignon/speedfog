@@ -1483,14 +1483,15 @@ def filter_and_enrich_clusters(
         # without passing through any boss zone (has_boss). This prevents clusters
         # like "Ashen Leyndell" (7 zones, exits in sewers/capital) from being
         # treated as mandatory boss encounters when the boss can be bypassed.
+        boss_zones = frozenset(
+            z for z in cluster.zones if areas.get(z) and areas[z].has_boss
+        )
+
         if (
             cluster.cluster_type == "major_boss"
             and len(cluster.zones) > 1
             and world_graph is not None
         ):
-            boss_zones = frozenset(
-                z for z in cluster.zones if areas.get(z) and areas[z].has_boss
-            )
             entry_fog_zones = {f["zone"] for f in cluster.entry_fogs}
             # Only check when entry is NOT in a boss zone (if it is, the player
             # lands directly in the boss arena and cannot avoid the fight)
@@ -1515,6 +1516,18 @@ def filter_and_enrich_clusters(
                     cluster.exit_fogs = [
                         f for f in cluster.exit_fogs if f["zone"] not in boss_zones
                     ]
+
+        # For multi-zone boss clusters, prune exits from non-boss zones.
+        # Only boss-zone exits are valid — exits in other zones would let the
+        # player bypass the boss fight entirely.
+        if (
+            cluster.cluster_type in ("major_boss", "boss_arena")
+            and len(cluster.zones) > 1
+        ):
+            if boss_zones:
+                pruned = [f for f in cluster.exit_fogs if f["zone"] in boss_zones]
+                if pruned:
+                    cluster.exit_fogs = pruned
 
         # Update cluster ID to use the type-based primary zone
         cluster.primary_zone = primary_zone
