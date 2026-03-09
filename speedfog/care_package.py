@@ -131,24 +131,12 @@ def sample_care_package(
     standard_upgrade = config.weapon_upgrade
     somber_upgrade = _somber_upgrade(standard_upgrade)
 
-    # Helper to sample from a simple pool (no upgrade sub-categories)
-    def sample_simple(
+    # Helper to sample from a pool with optional upgrade
+    def sample_items(
         pool_items: list[dict[str, Any]],
         count: int,
         item_type: int,
-    ) -> None:
-        if count <= 0 or not pool_items:
-            return
-        chosen = rng.sample(pool_items, min(count, len(pool_items)))
-        for item in chosen:
-            items.append(
-                CarePackageItem(type=item_type, id=item["id"], name=item["name"])
-            )
-
-    # Helper to sample from a standard upgrade weapon pool
-    def sample_standard_weapons(
-        pool_items: list[dict[str, Any]],
-        count: int,
+        upgrade: int = 0,
     ) -> None:
         if count <= 0 or not pool_items:
             return
@@ -156,14 +144,14 @@ def sample_care_package(
         for item in chosen:
             base_id = item["id"]
             name = item["name"]
-            if standard_upgrade > 0:
-                final_id = _apply_weapon_upgrade(base_id, standard_upgrade)
-                display_name = _format_upgrade(name, standard_upgrade)
+            if upgrade > 0:
+                final_id = _apply_weapon_upgrade(base_id, upgrade)
+                display_name = _format_upgrade(name, upgrade)
             else:
                 final_id = base_id
                 display_name = name
             items.append(
-                CarePackageItem(type=ITEM_TYPE_WEAPON, id=final_id, name=display_name)
+                CarePackageItem(type=item_type, id=final_id, name=display_name)
             )
 
     # Helper to sample from a merged standard+somber pool with correct upgrade
@@ -196,34 +184,38 @@ def sample_care_package(
             )
 
     # Weapons (flat standard pool)
-    sample_standard_weapons(pool.get("weapons", []), config.weapons)
+    sample_items(
+        pool.get("weapons", []), config.weapons, ITEM_TYPE_WEAPON, standard_upgrade
+    )
 
     # Shields (standard upgrade, Weapon type)
-    sample_standard_weapons(pool.get("shields", []), config.shields)
+    sample_items(
+        pool.get("shields", []), config.shields, ITEM_TYPE_WEAPON, standard_upgrade
+    )
 
     # Catalysts (merged standard + somber pool, Weapon type)
     sample_mixed_weapons(pool.get("catalysts", {}), config.catalysts)
 
     # Armor (Protector type, no upgrade)
     armor = pool.get("armor", {})
-    sample_simple(armor.get("head", []), config.head_armor, ITEM_TYPE_PROTECTOR)
-    sample_simple(armor.get("body", []), config.body_armor, ITEM_TYPE_PROTECTOR)
-    sample_simple(armor.get("arm", []), config.arm_armor, ITEM_TYPE_PROTECTOR)
-    sample_simple(armor.get("leg", []), config.leg_armor, ITEM_TYPE_PROTECTOR)
+    sample_items(armor.get("head", []), config.head_armor, ITEM_TYPE_PROTECTOR)
+    sample_items(armor.get("body", []), config.body_armor, ITEM_TYPE_PROTECTOR)
+    sample_items(armor.get("arm", []), config.arm_armor, ITEM_TYPE_PROTECTOR)
+    sample_items(armor.get("leg", []), config.leg_armor, ITEM_TYPE_PROTECTOR)
 
     # Talismans (Accessory type, no upgrade)
-    sample_simple(pool.get("talismans", []), config.talismans, ITEM_TYPE_ACCESSORY)
+    sample_items(pool.get("talismans", []), config.talismans, ITEM_TYPE_ACCESSORY)
 
     # Sorceries (Goods type)
-    sample_simple(pool.get("sorceries", []), config.sorceries, ITEM_TYPE_GOODS)
+    sample_items(pool.get("sorceries", []), config.sorceries, ITEM_TYPE_GOODS)
 
     # Incantations (Goods type)
-    sample_simple(pool.get("incantations", []), config.incantations, ITEM_TYPE_GOODS)
+    sample_items(pool.get("incantations", []), config.incantations, ITEM_TYPE_GOODS)
 
     # Crystal Tears (Goods type)
-    sample_simple(pool.get("crystal_tears", []), config.crystal_tears, ITEM_TYPE_GOODS)
+    sample_items(pool.get("crystal_tears", []), config.crystal_tears, ITEM_TYPE_GOODS)
 
     # Ashes of War (Gem type, no upgrade)
-    sample_simple(pool.get("ashes_of_war", []), config.ashes_of_war, ITEM_TYPE_GEM)
+    sample_items(pool.get("ashes_of_war", []), config.ashes_of_war, ITEM_TYPE_GEM)
 
     return items

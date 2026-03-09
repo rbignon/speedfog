@@ -225,6 +225,36 @@ class TestSampleCarePackage:
         assert upgrade_in_id == 8, f"Expected +8, got +{upgrade_in_id}"
         assert "+8" in weapon.name
 
+    def test_catalyst_somber_upgrade_applied(self, pool_path: Path):
+        """Somber catalysts should get somber upgrade level in their ID."""
+        config = CarePackageConfig(
+            enabled=True,
+            weapon_upgrade=10,
+            weapons=0,
+            shields=0,
+            catalysts=5,  # Sample enough to likely get a somber catalyst
+            talismans=0,
+            sorceries=0,
+            incantations=0,
+            head_armor=0,
+            body_armor=0,
+            arm_armor=0,
+            leg_armor=0,
+            crystal_tears=0,
+            ashes_of_war=0,
+        )
+        items = sample_care_package(config, seed=42, pool_path=pool_path)
+        assert len(items) > 0
+        for item in items:
+            assert item.type == ITEM_TYPE_WEAPON
+            upgrade_in_id = item.id % 100
+            # Standard +10 or somber +4 (floor(10/2.5))
+            assert upgrade_in_id in (
+                10,
+                4,
+            ), f"Catalyst '{item.name}' has unexpected upgrade +{upgrade_in_id}"
+            assert "+" in item.name
+
     def test_zero_counts_produces_empty(self, pool_path: Path):
         """All zero counts produces empty care package."""
         config = CarePackageConfig(
