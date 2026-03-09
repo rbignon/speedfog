@@ -8,6 +8,8 @@
 
 **Tech Stack:** Python 3.10+, TOML (care_package_items.toml), pytest
 
+**ID source:** All IDs verified against `eldenring_all-in-one_Hexinton-v5.0_ce7.5.ct` (Cheat Engine table).
+
 ---
 
 ### Task 1: Flatten weapon pool in TOML — remove somber, add standard weapons
@@ -21,61 +23,60 @@ Replace the current weapon sections with a flat `[[weapons]]` list. Remove all 1
 
 Keep all 18 existing standard weapons, changing `[[weapons.standard]]` to `[[weapons]]`.
 
-Add new standard weapons to cover missing/underrepresented categories. All IDs are base EquipParamWeapon row IDs (divisible by 10000). Verify IDs against https://eldenring.wiki.fextralife.com or param dumps.
+Add new standard weapons to cover missing/underrepresented categories. All IDs are base EquipParamWeapon row IDs.
 
-New weapons to add (target ~40 total):
+New weapons to add (24 items, target ~42 total):
 
 **Curved Swords** (currently 0):
-- Scimitar: 5000000
-- Falchion: 5010000
-- Shamshir: 5030000
+- Scimitar: 7140000
+- Falchion: 7000000
+- Shamshir: 7030000
 
 **Axes** (currently 0):
-- Battle Axe: 11000000
-- Warped Axe: 11050000
-- Highland Axe: 11070000
+- Battle Axe: 14000000
+- Highland Axe: 14100000
 
 **Great Axes** (currently 0):
-- Greataxe: 16000000
-- Crescent Moon Axe: 16060000
+- Greataxe: 15000000
+- Crescent Moon Axe: 15030000
 
 **Great Hammers** (currently 0):
-- Large Club: 17000000
-- Great Stars: 17040000
+- Large Club: 12000000
+- Great Stars: 12180000
 
 **Colossal Weapons** (currently 0):
-- Giant-Crusher: 23000000
-- Duelist Greataxe: 23050000
+- Giant-Crusher: 23110000
+- Duelist Greataxe: 23040000
 
 **Colossal Swords** (currently 0):
 - Greatsword: 4000000
-- Zweihander: 4010000
+- Zweihander: 4040000
 
 **Curved Greatswords** (currently 0):
-- Dismounter: 8000000
-- Bloodhound Claws: (skip — somber) → Omen Cleaver: 8020000
+- Dismounter: 8020000
+- Omen Cleaver: 8060000
 
 **Whips** (currently 0):
-- Whip: 19000000
-- Thorned Whip: 19010000
+- Whip: 20000000
+- Thorned Whip: 20020000
 
 **Fists** (currently 0):
-- Caestus: 20000000
-- Spiked Caestus: 20020000
+- Caestus: 21000000
+- Spiked Caestus: 21010000
 
 **Halberds** (add 2, currently 1):
-- Nightrider Glaive: 12040000
-- Guardian's Swordspear: 12060000
+- Nightrider Glaive: 18050000
+- Guardian's Swordspear: 18110000
 
 **Spears** (add 2, currently 1):
-- Pike: 15000000
-- Partisan: 15010000
+- Pike: 16070000
+- Partisan: 16050000
 
 **Hammers** (add 1, currently 1):
-- Mace: 14000000
+- Mace: 11000000
 
 **Twinblades** (add 1, currently 1):
-- Twinned Knight Swords: 10020000
+- Twinned Knight Swords: 10030000
 
 Total: 18 existing + 24 new = 42 weapons.
 
@@ -98,48 +99,48 @@ git commit -m "data: remove somber weapons, expand standard pool to 42 weapons"
 Add ~9 new pieces per slot for variety. Mix light/medium/heavy, individual pieces (not full sets). IDs are EquipParamProtector row IDs.
 
 **Head** (6 → 15):
-- Banished Knight Helm: 60000
-- Foot Soldier Cap: 210000
-- Astrologer Hood: 380000
-- Vagabond Knight Helm: 180000
-- Confessor Hood: 350000
-- Carian Knight Helm: 160000
-- Radahn's Redmane Helm: 270000
-- Godrick Soldier Helm: 190000
-- Land of Reeds Helm: 90000
+- Banished Knight Helm: 200000
+- Vagabond Knight Helm: 660000
+- Confessor Hood: 880000
+- Land of Reeds Helm: 870000
+- Carian Knight Helm: 980000
+- Astrologer Hood: 630000
+- Radahn's Redmane Helm: 470000
+- Cleanrot Helm: 340000
+- Twinned Helm: 600000
 
 **Body** (6 → 15):
-- Banished Knight Armor: 60100
-- Foot Soldier Tabard: 210100
-- Astrologer Robe: 380100
-- Vagabond Knight Armor: 180100
-- Confessor Armor: 350100
-- Carian Knight Armor: 160100
-- Radahn's Lion Armor: 270100
-- Godrick Soldier Armor: 190100
-- Land of Reeds Armor: 90100
+- Banished Knight Armor: 200100
+- Vagabond Knight Armor: 660100
+- Confessor Armor: 880100
+- Land of Reeds Armor: 870100
+- Carian Knight Armor: 980100
+- Astrologer Robe: 630100
+- Radahn's Lion Armor: 470100
+- Cleanrot Armor: 340100
+- Twinned Armor: 600100
 
 **Arms** (6 → 15):
-- Banished Knight Gauntlets: 60200
-- Foot Soldier Gauntlets: 210200
-- Astrologer Gloves: 380200
-- Vagabond Knight Gauntlets: 180200
-- Confessor Gloves: 350200
-- Carian Knight Gauntlets: 160200
-- Radahn's Gauntlets: 270200
-- Godrick Soldier Gauntlets: 190200
-- Land of Reeds Gauntlets: 90200
+- Banished Knight Gauntlets: 200200
+- Vagabond Knight Gauntlets: 660200
+- Confessor Gloves: 880200
+- Land of Reeds Gauntlets: 870200
+- Carian Knight Gauntlets: 980200
+- Astrologer Gloves: 630200
+- Radahn's Gauntlets: 470200
+- Cleanrot Gauntlets: 340200
+- Twinned Gauntlets: 600200
 
 **Legs** (6 → 15):
-- Banished Knight Greaves: 60300
-- Foot Soldier Greaves: 210300
-- Astrologer Trousers: 380300
-- Vagabond Knight Greaves: 180300
-- Confessor Boots: 350300
-- Carian Knight Greaves: 160300
-- Radahn's Greaves: 270300
-- Godrick Soldier Greaves: 190300
-- Land of Reeds Greaves: 90300
+- Banished Knight Greaves: 200300
+- Vagabond Knight Greaves: 660300
+- Confessor Boots: 880300
+- Land of Reeds Greaves: 870300
+- Carian Knight Greaves: 980300
+- Astrologer Trousers: 630300
+- Radahn's Greaves: 470300
+- Cleanrot Greaves: 340300
+- Twinned Greaves: 600300
 
 **Step 2: Commit**
 
