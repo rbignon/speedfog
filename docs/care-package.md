@@ -17,8 +17,7 @@ Items are defined in `data/care_package_items.toml`. Each entry has a `name` (di
 
 | Category | Item Type | Upgrade | TOML Key |
 |----------|-----------|---------|----------|
-| Weapons (standard) | 0 (Weapon) | Standard (+0 to +25) | `weapons.standard` |
-| Weapons (somber) | 0 (Weapon) | Somber (+0 to +10) | `weapons.somber` |
+| Weapons | 0 (Weapon) | Standard (+0 to +25) | `weapons` |
 | Shields | 0 (Weapon) | Standard | `shields` |
 | Catalysts (standard) | 0 (Weapon) | Standard | `catalysts.standard` |
 | Catalysts (somber) | 0 (Weapon) | Somber | `catalysts.somber` |
@@ -32,7 +31,7 @@ Items are defined in `data/care_package_items.toml`. Each entry has a `name` (di
 | Crystal Tears | 3 (Goods) | None | `crystal_tears` |
 | Ashes of War | 4 (Gem) | None | `ashes_of_war` |
 
-Weapons and catalysts have sub-pools (`standard`/`somber`) that are merged before sampling. Standard and somber items can appear together in the same roll.
+Catalysts have sub-pools (`standard`/`somber`) that are merged before sampling. Weapons use a flat list of standard-upgrade items.
 
 ## Configuration
 
@@ -59,7 +58,7 @@ Per-category count is clamped to pool size (`min(count, len(pool))`).
 
 ## Weapon Upgrade Calculation
 
-Standard upgrade level is configured directly (`weapon_upgrade`, range 0-25). Somber upgrade is derived:
+Standard upgrade level is configured directly (`weapon_upgrade`, range 0-25). Weapons always use standard upgrade. Catalysts may use somber upgrade, which is derived:
 
 ```
 somber_upgrade = floor(standard_upgrade / 2.5)
