@@ -145,14 +145,34 @@ def sample_care_package(
                 CarePackageItem(type=item_type, id=item["id"], name=item["name"])
             )
 
+    # Helper to sample from a standard upgrade weapon pool
+    def sample_standard_weapons(
+        pool_items: list[dict[str, Any]],
+        count: int,
+    ) -> None:
+        if count <= 0 or not pool_items:
+            return
+        chosen = rng.sample(pool_items, min(count, len(pool_items)))
+        for item in chosen:
+            base_id = item["id"]
+            name = item["name"]
+            if standard_upgrade > 0:
+                final_id = _apply_weapon_upgrade(base_id, standard_upgrade)
+                display_name = _format_upgrade(name, standard_upgrade)
+            else:
+                final_id = base_id
+                display_name = name
+            items.append(
+                CarePackageItem(type=ITEM_TYPE_WEAPON, id=final_id, name=display_name)
+            )
+
     # Helper to sample from a merged standard+somber pool with correct upgrade
-    def sample_weapons(
+    def sample_mixed_weapons(
         pool_dict: dict[str, list[dict[str, Any]]],
         count: int,
     ) -> None:
         if count <= 0:
             return
-        # Tag each item with its upgrade path, then merge and sample
         tagged: list[tuple[dict[str, Any], bool]] = []
         for item in pool_dict.get("standard", []):
             tagged.append((item, False))
@@ -175,34 +195,14 @@ def sample_care_package(
                 CarePackageItem(type=ITEM_TYPE_WEAPON, id=final_id, name=display_name)
             )
 
-    # Weapons (merged standard + somber pool)
-    sample_weapons(pool.get("weapons", {}), config.weapons)
+    # Weapons (flat standard pool)
+    sample_standard_weapons(pool.get("weapons", []), config.weapons)
 
     # Shields (standard upgrade, Weapon type)
-    def sample_standard_weapons(
-        pool_items: list[dict[str, Any]],
-        count: int,
-    ) -> None:
-        if count <= 0 or not pool_items:
-            return
-        chosen = rng.sample(pool_items, min(count, len(pool_items)))
-        for item in chosen:
-            base_id = item["id"]
-            name = item["name"]
-            if standard_upgrade > 0:
-                final_id = _apply_weapon_upgrade(base_id, standard_upgrade)
-                display_name = _format_upgrade(name, standard_upgrade)
-            else:
-                final_id = base_id
-                display_name = name
-            items.append(
-                CarePackageItem(type=ITEM_TYPE_WEAPON, id=final_id, name=display_name)
-            )
-
     sample_standard_weapons(pool.get("shields", []), config.shields)
 
     # Catalysts (merged standard + somber pool, Weapon type)
-    sample_weapons(pool.get("catalysts", {}), config.catalysts)
+    sample_mixed_weapons(pool.get("catalysts", {}), config.catalysts)
 
     # Armor (Protector type, no upgrade)
     armor = pool.get("armor", {})

@@ -94,9 +94,8 @@ class TestLoadItemPool:
             pytest.skip("data/care_package_items.toml not found")
         pool = load_item_pool(pool_path)
         assert "weapons" in pool
-        assert "standard" in pool["weapons"]
-        assert "somber" in pool["weapons"]
-        assert len(pool["weapons"]["standard"]) > 0
+        assert isinstance(pool["weapons"], list)
+        assert len(pool["weapons"]) >= 30
 
     def test_pool_has_all_categories(self):
         """Verify all expected categories exist in the pool."""
@@ -119,7 +118,7 @@ class TestLoadItemPool:
         if not pool_path.exists():
             pytest.skip("data/care_package_items.toml not found")
         pool = load_item_pool(pool_path)
-        for weapon in pool["weapons"]["standard"]:
+        for weapon in pool["weapons"]:
             assert "name" in weapon
             assert "id" in weapon
             assert isinstance(weapon["id"], int)
@@ -221,14 +220,10 @@ class TestSampleCarePackage:
         assert len(items) == 1
         weapon = items[0]
         assert weapon.type == ITEM_TYPE_WEAPON
-        # Weapon could be standard (+8) or somber (+3 = floor(8/2.5))
-        # Either way, the upgrade level should be encoded in the ID
+        # Weapons are always standard upgrade now
         upgrade_in_id = weapon.id % 100
-        assert upgrade_in_id in (
-            8,
-            3,
-        ), f"Expected +8 (standard) or +3 (somber), got +{upgrade_in_id}"
-        assert "+" in weapon.name
+        assert upgrade_in_id == 8, f"Expected +8, got +{upgrade_in_id}"
+        assert "+8" in weapon.name
 
     def test_zero_counts_produces_empty(self, pool_path: Path):
         """All zero counts produces empty care package."""
