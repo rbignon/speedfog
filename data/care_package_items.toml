@@ -17,129 +17,217 @@
 # Weapons - standard upgrade path (infusible, regular smithing stones)
 # =============================================================================
 
-[[weapons.standard]]
+# --- Straight Swords ---
+
+[[weapons]]
 name = "Longsword"
 id = 2000000
 
-[[weapons.standard]]
+[[weapons]]
 name = "Broadsword"
 id = 2020000
 
-[[weapons.standard]]
+[[weapons]]
 name = "Lordsworn's Straight Sword"
 id = 2040000
 
-[[weapons.standard]]
+# --- Greatswords ---
+
+[[weapons]]
 name = "Bastard Sword"
 id = 3000000
 
-[[weapons.standard]]
+[[weapons]]
 name = "Lordsworn's Greatsword"
 id = 3030000
 
-[[weapons.standard]]
+[[weapons]]
 name = "Claymore"
 id = 3180000
 
-[[weapons.standard]]
+# --- Colossal Swords ---
+
+[[weapons]]
+name = "Greatsword"
+id = 4000000
+
+[[weapons]]
+name = "Zweihander"
+id = 4010000
+
+# --- Curved Swords ---
+
+[[weapons]]
+name = "Scimitar"
+id = 5000000
+
+[[weapons]]
+name = "Falchion"
+id = 5010000
+
+[[weapons]]
+name = "Shamshir"
+id = 5030000
+
+# --- Curved Greatswords ---
+
+[[weapons]]
+name = "Dismounter"
+id = 8000000
+
+[[weapons]]
+name = "Omen Cleaver"
+id = 8020000
+
+# --- Katanas ---
+
+[[weapons]]
 name = "Uchigatana"
 id = 9000000
 
-[[weapons.standard]]
+[[weapons]]
 name = "Nagakiba"
 id = 9010000
 
-[[weapons.standard]]
+# --- Daggers ---
+
+[[weapons]]
 name = "Misericorde"
 id = 1030000
 
-[[weapons.standard]]
+[[weapons]]
 name = "Great Knife"
 id = 1090000
 
-[[weapons.standard]]
+[[weapons]]
 name = "Dagger"
 id = 1000000
 
-[[weapons.standard]]
+[[weapons]]
 name = "Celebrant's Sickle"
 id = 1060000
 
-[[weapons.standard]]
-name = "Halberd"
-id = 12000000
+# --- Twinblades ---
 
-[[weapons.standard]]
-name = "Great Epee"
-id = 7010000
-
-[[weapons.standard]]
-name = "Morningstar"
-id = 14020000
-
-[[weapons.standard]]
-name = "Cross-Naginata"
-id = 15050000
-
-[[weapons.standard]]
+[[weapons]]
 name = "Twinblade"
 id = 10000000
 
-[[weapons.standard]]
+[[weapons]]
+name = "Twinned Knight Swords"
+id = 10020000
+
+# --- Axes ---
+
+[[weapons]]
+name = "Battle Axe"
+id = 11000000
+
+[[weapons]]
+name = "Warped Axe"
+id = 11050000
+
+[[weapons]]
+name = "Highland Axe"
+id = 11070000
+
+# --- Halberds ---
+
+[[weapons]]
+name = "Halberd"
+id = 12000000
+
+[[weapons]]
+name = "Nightrider Glaive"
+id = 12040000
+
+[[weapons]]
+name = "Guardian's Swordspear"
+id = 12060000
+
+# --- Hammers ---
+
+[[weapons]]
+name = "Morningstar"
+id = 14020000
+
+[[weapons]]
+name = "Mace"
+id = 14000000
+
+[[weapons]]
 name = "Flail"
 id = 14050000
 
-# =============================================================================
-# Weapons - somber upgrade path (unique weapons, somber smithing stones)
-# =============================================================================
+# --- Spears ---
 
-[[weapons.somber]]
-name = "Reduvia"
-id = 1040000
+[[weapons]]
+name = "Cross-Naginata"
+id = 15050000
 
-[[weapons.somber]]
-name = "Crystal Knife"
-id = 1050000
+[[weapons]]
+name = "Pike"
+id = 15000000
 
-[[weapons.somber]]
-name = "Moonveil"
-id = 9060000
+[[weapons]]
+name = "Partisan"
+id = 15010000
 
-[[weapons.somber]]
-name = "Bloodhound's Fang"
-id = 8030000
+# --- Great Axes ---
 
-[[weapons.somber]]
-name = "Sword of Night and Flame"
-id = 2140000
+[[weapons]]
+name = "Greataxe"
+id = 16000000
 
-[[weapons.somber]]
-name = "Ornamental Straight Sword"
-id = 2060000
+[[weapons]]
+name = "Crescent Moon Axe"
+id = 16060000
 
-[[weapons.somber]]
-name = "Blasphemous Blade"
-id = 4060000
+# --- Great Hammers ---
 
-[[weapons.somber]]
-name = "Rivers of Blood"
-id = 9070000
+[[weapons]]
+name = "Large Club"
+id = 17000000
 
-[[weapons.somber]]
-name = "Wing of Astel"
-id = 8050000
+[[weapons]]
+name = "Great Stars"
+id = 17040000
 
-[[weapons.somber]]
-name = "Bolt of Gransax"
-id = 15080000
+# --- Whips ---
 
-[[weapons.somber]]
-name = "Dark Moon Greatsword"
-id = 3120000
+[[weapons]]
+name = "Whip"
+id = 19000000
 
-[[weapons.somber]]
-name = "Eleonora's Poleblade"
-id = 10060000
+[[weapons]]
+name = "Thorned Whip"
+id = 19010000
+
+# --- Fists ---
+
+[[weapons]]
+name = "Caestus"
+id = 20000000
+
+[[weapons]]
+name = "Spiked Caestus"
+id = 20020000
+
+# --- Thrusting Swords ---
+
+[[weapons]]
+name = "Great Epee"
+id = 7010000
+
+# --- Colossal Weapons ---
+
+[[weapons]]
+name = "Giant-Crusher"
+id = 23000000
+
+[[weapons]]
+name = "Duelist Greataxe"
+id = 23050000
 
 # =============================================================================
 # Shields (type=Weapon in game, standard upgrade)
@@ -245,6 +333,42 @@ id = 140000
 name = "Black Wolf Mask"
 id = 170000
 
+[[armor.head]]
+name = "Banished Knight Helm"
+id = 60000
+
+[[armor.head]]
+name = "Foot Soldier Cap"
+id = 210000
+
+[[armor.head]]
+name = "Astrologer Hood"
+id = 380000
+
+[[armor.head]]
+name = "Vagabond Knight Helm"
+id = 180000
+
+[[armor.head]]
+name = "Confessor Hood"
+id = 350000
+
+[[armor.head]]
+name = "Carian Knight Helm"
+id = 160000
+
+[[armor.head]]
+name = "Radahn's Redmane Helm"
+id = 270000
+
+[[armor.head]]
+name = "Godrick Soldier Helm"
+id = 190000
+
+[[armor.head]]
+name = "Land of Reeds Helm"
+id = 90000
+
 # =============================================================================
 # Armor - Body (type=Protector)
 # =============================================================================
@@ -272,6 +396,42 @@ id = 140100
 [[armor.body]]
 name = "Blaidd's Armor"
 id = 170100
+
+[[armor.body]]
+name = "Banished Knight Armor"
+id = 60100
+
+[[armor.body]]
+name = "Foot Soldier Tabard"
+id = 210100
+
+[[armor.body]]
+name = "Astrologer Robe"
+id = 380100
+
+[[armor.body]]
+name = "Vagabond Knight Armor"
+id = 180100
+
+[[armor.body]]
+name = "Confessor Armor"
+id = 350100
+
+[[armor.body]]
+name = "Carian Knight Armor"
+id = 160100
+
+[[armor.body]]
+name = "Radahn's Lion Armor"
+id = 270100
+
+[[armor.body]]
+name = "Godrick Soldier Armor"
+id = 190100
+
+[[armor.body]]
+name = "Land of Reeds Armor"
+id = 90100
 
 # =============================================================================
 # Armor - Arms (type=Protector)
@@ -301,6 +461,42 @@ id = 140200
 name = "Blaidd's Gauntlets"
 id = 170200
 
+[[armor.arm]]
+name = "Banished Knight Gauntlets"
+id = 60200
+
+[[armor.arm]]
+name = "Foot Soldier Gauntlets"
+id = 210200
+
+[[armor.arm]]
+name = "Astrologer Gloves"
+id = 380200
+
+[[armor.arm]]
+name = "Vagabond Knight Gauntlets"
+id = 180200
+
+[[armor.arm]]
+name = "Confessor Gloves"
+id = 350200
+
+[[armor.arm]]
+name = "Carian Knight Gauntlets"
+id = 160200
+
+[[armor.arm]]
+name = "Radahn's Gauntlets"
+id = 270200
+
+[[armor.arm]]
+name = "Godrick Soldier Gauntlets"
+id = 190200
+
+[[armor.arm]]
+name = "Land of Reeds Gauntlets"
+id = 90200
+
 # =============================================================================
 # Armor - Legs (type=Protector)
 # =============================================================================
@@ -328,6 +524,42 @@ id = 140300
 [[armor.leg]]
 name = "Blaidd's Greaves"
 id = 170300
+
+[[armor.leg]]
+name = "Banished Knight Greaves"
+id = 60300
+
+[[armor.leg]]
+name = "Foot Soldier Greaves"
+id = 210300
+
+[[armor.leg]]
+name = "Astrologer Trousers"
+id = 380300
+
+[[armor.leg]]
+name = "Vagabond Knight Greaves"
+id = 180300
+
+[[armor.leg]]
+name = "Confessor Boots"
+id = 350300
+
+[[armor.leg]]
+name = "Carian Knight Greaves"
+id = 160300
+
+[[armor.leg]]
+name = "Radahn's Greaves"
+id = 270300
+
+[[armor.leg]]
+name = "Godrick Soldier Greaves"
+id = 190300
+
+[[armor.leg]]
+name = "Land of Reeds Greaves"
+id = 90300
 
 # =============================================================================
 # Talismans (type=Accessory)
