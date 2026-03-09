@@ -1703,8 +1703,8 @@ class TestMergeGuards:
             )
 
         config = Config()
-        config.structure.min_layers = 4
-        config.structure.max_layers = 8
+        config.structure.min_layers = 8
+        config.structure.max_layers = 14
         config.structure.max_branches = 3
         config.structure.max_parallel_paths = 4
         config.structure.split_probability = 0.6
@@ -3500,8 +3500,8 @@ class TestCrosslinkPipeline:
             "max_parallel_paths": 3,
             "split_probability": 0.9,
             "merge_probability": 0.2,
-            "min_layers": 6,
-            "max_layers": 6,
+            "min_layers": 8,
+            "max_layers": 12,
             "min_branch_age": 2,
         }
 

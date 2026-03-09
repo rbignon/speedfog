@@ -1261,12 +1261,17 @@ def generate_dag(
         current_layer += 1
 
     # 5. Plan remaining layer types
-    num_intermediate_layers = rng.randint(
-        config.structure.min_layers, config.structure.max_layers
+    # Reserve max_parallel_paths layers for post-loop forced merges.
+    # min_layers/max_layers refer to total layer count (start + end included).
+    merge_reserve = config.structure.max_parallel_paths
+    max_planned = max(
+        config.structure.min_layers,
+        config.structure.max_layers - merge_reserve,
     )
-    # Reduce layer count if first layer was forced
-    if config.structure.first_layer_type:
-        num_intermediate_layers = max(1, num_intermediate_layers - 1)
+    target_total = rng.randint(config.structure.min_layers, max_planned)
+    first_layer_offset = 1 if config.structure.first_layer_type else 0
+    # Subtract start (1), end (1), optional first forced layer
+    num_intermediate_layers = max(1, target_total - 2 - first_layer_offset)
 
     # Compute pool sizes per type for proportional padding
     pool_sizes = {
@@ -1281,12 +1286,8 @@ def generate_dag(
         pool_sizes=pool_sizes,
     )
 
-    # Calculate total layers for tier computation
-    # We might add extra layers for forced merges
-    first_layer_offset = 1 if config.structure.first_layer_type else 0
-    estimated_total = (
-        len(layer_types) + 2 + first_layer_offset
-    )  # +1 start, +1 end, +1 if first forced
+    # Estimated total for tier computation (planned + merge reserve)
+    estimated_total = target_total + merge_reserve
 
     # 6. Execute layers with cluster-first selection
     for layer_idx, layer_type in enumerate(layer_types):
