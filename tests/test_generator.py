@@ -29,6 +29,7 @@ from speedfog.generator import (
     pick_cluster_uniform,
     pick_entry_with_max_exits,
     select_entries_for_merge,
+    update_branch_counters,
     validate_config,
 )
 
@@ -3978,3 +3979,145 @@ def test_execute_merge_layer_carries_counter():
     # Non-merged branch carries its own counter
     source = next(b for b in branches if b.id == passant[0].id)
     assert passant[0].layers_since_last_split == source.layers_since_last_split
+
+
+# =============================================================================
+# update_branch_counters tests
+# =============================================================================
+
+
+def test_counter_update_split():
+    """Split children get 0, other branches get +1."""
+    split_children = [
+        Branch("b0_a", "split", FogRef("a", "z"), layers_since_last_split=999),
+        Branch("b0_b", "split", FogRef("b", "z"), layers_since_last_split=999),
+    ]
+    passant_branches = [
+        Branch("b1", "n2", FogRef("y2", "z"), layers_since_last_split=2),
+    ]
+    update_branch_counters(
+        LayerOperation.SPLIT,
+        split_children=split_children,
+        passant_branches=passant_branches,
+    )
+    assert [b.layers_since_last_split for b in split_children] == [0, 0]
+    assert passant_branches[0].layers_since_last_split == 3
+
+
+def test_counter_update_passant():
+    """All branches get +1."""
+    branches = [
+        Branch("b0", "n0", FogRef("x", "z"), layers_since_last_split=2),
+        Branch("b1", "n1", FogRef("y", "z"), layers_since_last_split=5),
+    ]
+    update_branch_counters(
+        LayerOperation.PASSANT,
+        passant_branches=branches,
+    )
+    assert [b.layers_since_last_split for b in branches] == [3, 6]
+
+
+def test_counter_update_merge():
+    """Merged branch gets max(sources), passant branches get +1."""
+    merged = Branch("merged", "m", FogRef("x", "z"), layers_since_last_split=999)
+    passant = [
+        Branch("b2", "n2", FogRef("y", "z"), layers_since_last_split=1),
+    ]
+    merge_sources = [
+        Branch("b0", "n0", FogRef("a", "z"), layers_since_last_split=3),
+        Branch("b1", "n1", FogRef("b", "z"), layers_since_last_split=7),
+    ]
+    update_branch_counters(
+        LayerOperation.MERGE,
+        passant_branches=passant,
+        merged_branches=(merged, merge_sources),
+    )
+    assert merged.layers_since_last_split == 7
+    assert passant[0].layers_since_last_split == 2
+
+
+# =============================================================================
+# Max branch spacing end-to-end tests
+# =============================================================================
+
+
+def test_forced_split_triggers_at_threshold():
+    """A branch exceeding max_branch_spacing gets a forced split."""
+    start = make_cluster(
+        "start",
+        zones=["start_z"],
+        cluster_type="start",
+        entry_fogs=[],
+        exit_fogs=[{"fog_id": "s_x1", "zone": "start_z"}],
+    )
+    # All clusters are splittable (2+ exits) so the forced split can always fire
+    clusters = []
+    for i in range(20):
+        clusters.append(
+            make_cluster(
+                f"sp{i}",
+                zones=[f"sp{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[{"fog_id": f"sp{i}_e", "zone": f"sp{i}_z"}],
+                exit_fogs=[
+                    {"fog_id": f"sp{i}_x1", "zone": f"sp{i}_z"},
+                    {"fog_id": f"sp{i}_x2", "zone": f"sp{i}_z"},
+                ],
+            )
+        )
+    # Also add merge-capable clusters for the forced merge at near-end
+    for i in range(5):
+        clusters.append(
+            make_cluster(
+                f"mg{i}",
+                zones=[f"mg{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[
+                    {"fog_id": f"mg{i}_e1", "zone": f"mg{i}_z"},
+                    {"fog_id": f"mg{i}_e2", "zone": f"mg{i}_z"},
+                ],
+                exit_fogs=[{"fog_id": f"mg{i}_x", "zone": f"mg{i}_z"}],
+                allow_shared_entrance=True,
+            )
+        )
+    boss = make_cluster(
+        "boss1",
+        zones=["boss_z"],
+        cluster_type="final_boss",
+        entry_fogs=[{"fog_id": "b_e", "zone": "boss_z"}],
+        exit_fogs=[],
+    )
+    pool = ClusterPool()
+    pool.add(start)
+    for c in clusters:
+        pool.add(c)
+    pool.add(boss)
+
+    config = Config()
+    config.structure.final_boss_candidates = ["boss_z"]
+    config.structure.max_branch_spacing = 2
+    config.structure.split_probability = 0.0  # Would never split naturally
+    config.structure.merge_probability = 0.0
+    config.structure.max_parallel_paths = 3
+    config.structure.min_layers = 10
+    config.structure.max_layers = 14
+    config.requirements.mini_dungeons = 8
+    config.requirements.bosses = 0
+    config.requirements.legacy_dungeons = 0
+    config.requirements.major_bosses = 0
+
+    # Try multiple seeds since cluster selection is random
+    found_split = False
+    for seed in range(50):
+        try:
+            dag = generate_dag(
+                config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
+            )
+            paths = dag.enumerate_paths()
+            if len(paths) >= 2:
+                found_split = True
+                break
+        except GenerationError:
+            continue
+
+    assert found_split, "Expected at least one seed to produce a forced split"

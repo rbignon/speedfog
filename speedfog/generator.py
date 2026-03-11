@@ -626,6 +626,42 @@ def _pick_entry_and_exits_for_node(
     return entry_fog, exit_fogs
 
 
+def update_branch_counters(
+    operation: LayerOperation,
+    *,
+    split_children: list[Branch] | None = None,
+    passant_branches: list[Branch] | None = None,
+    merged_branches: tuple[Branch, list[Branch]] | None = None,
+) -> None:
+    """Update layers_since_last_split counters in-place after an operation.
+
+    Args:
+        operation: The operation that was performed.
+        split_children: New branches created by a split (counter set to 0).
+        passant_branches: Branches that did passant this layer (counter += 1).
+        merged_branches: Tuple of (merged_branch, source_branches) for merge.
+            merged_branch gets max(sources). passant_branches get += 1.
+    """
+    if operation == LayerOperation.SPLIT:
+        for b in split_children or []:
+            b.layers_since_last_split = 0
+        for b in passant_branches or []:
+            b.layers_since_last_split += 1
+
+    elif operation == LayerOperation.MERGE:
+        if merged_branches is not None:
+            merged, sources = merged_branches
+            merged.layers_since_last_split = max(
+                s.layers_since_last_split for s in sources
+            )
+        for b in passant_branches or []:
+            b.layers_since_last_split += 1
+
+    elif operation == LayerOperation.PASSANT:
+        for b in passant_branches or []:
+            b.layers_since_last_split += 1
+
+
 def execute_passant_layer(
     dag: Dag,
     branches: list[Branch],
@@ -1329,6 +1365,36 @@ def generate_dag(
             )
             continue
 
+        # --- Max branch spacing enforcement ---
+        max_spacing = config.structure.max_branch_spacing
+        force_op: LayerOperation | None = None
+
+        if max_spacing > 0 and not is_near_end:
+            max_stale = max(b.layers_since_last_split for b in branches)
+            needs_forced_split = max_stale >= max_spacing
+
+            if needs_forced_split:
+                if len(branches) >= config.structure.max_parallel_paths:
+                    # Saturated — force merge to free a slot, then re-enter loop
+                    old_counters = {b.id: b.layers_since_last_split for b in branches}
+                    branches, current_layer = execute_forced_merge(
+                        dag,
+                        branches,
+                        current_layer,
+                        tier,
+                        layer_type,
+                        clusters,
+                        used_zones,
+                        rng,
+                        config,
+                        reserved_zones=reserved_zones,
+                    )
+                    max_old = max(old_counters.values())
+                    branches[0].layers_since_last_split = max_old
+                    continue  # Re-enter loop — now 1 branch, room to split
+                else:
+                    force_op = LayerOperation.SPLIT
+
         # Pick a cluster uniformly for the "primary" branch action,
         # falling back to other types if the planned type is exhausted.
         primary_cluster = pick_cluster_with_type_fallback(
@@ -1342,13 +1408,28 @@ def generate_dag(
 
         # Determine operation from cluster capabilities
         operation, fan = determine_operation(
-            primary_cluster, branches, config, rng, current_layer=current_layer
+            primary_cluster,
+            branches,
+            config,
+            rng,
+            current_layer=current_layer,
+            force=force_op,
         )
 
         if operation == LayerOperation.SPLIT:
-            # Pick which branch to split
-            split_idx = rng.randrange(len(branches))
-            new_branches = []
+            # Pick which branch to split — prefer most stale when forced
+            if force_op == LayerOperation.SPLIT:
+                max_stale_val = max(b.layers_since_last_split for b in branches)
+                stale_indices = [
+                    i
+                    for i, b in enumerate(branches)
+                    if b.layers_since_last_split == max_stale_val
+                ]
+                split_idx = rng.choice(stale_indices)
+            else:
+                split_idx = rng.randrange(len(branches))
+            split_child_branches: list[Branch] = []
+            passant_branches_list: list[Branch] = []
             letter_offset = 0
 
             for i, branch in enumerate(branches):
@@ -1374,7 +1455,7 @@ def generate_dag(
                         entry_fog,
                     )
                     for j in range(fan):
-                        new_branches.append(
+                        split_child_branches.append(
                             Branch(
                                 f"{branch.id}_{chr(97 + j)}",
                                 node_id,
@@ -1410,17 +1491,23 @@ def generate_dag(
                     )
                     dag.add_node(n)
                     dag.add_edge(branch.current_node_id, nid, branch.available_exit, ef)
-                    new_branches.append(
+                    passant_branches_list.append(
                         Branch(
                             branch.id,
                             nid,
                             rng.choice(exf),
                             birth_layer=branch.birth_layer,
+                            layers_since_last_split=branch.layers_since_last_split,
                         )
                     )
                     letter_offset += 1
 
-            branches = new_branches
+            update_branch_counters(
+                LayerOperation.SPLIT,
+                split_children=split_child_branches,
+                passant_branches=passant_branches_list,
+            )
+            branches = split_child_branches + passant_branches_list
 
         elif operation == LayerOperation.MERGE:
             # Find merge indices and actual fan-in
@@ -1558,10 +1645,16 @@ def generate_dag(
                             nid,
                             rng.choice(exf),
                             birth_layer=branch.birth_layer,
+                            layers_since_last_split=branch.layers_since_last_split,
                         )
                     )
                     letter += 1
 
+                update_branch_counters(
+                    LayerOperation.MERGE,
+                    merged_branches=(new_branches[0], merge_branches_list),
+                    passant_branches=new_branches[1:],
+                )
                 branches = new_branches
 
         # Passant fallback (also handles merge-fallback case)
@@ -1600,9 +1693,17 @@ def generate_dag(
                 dag.add_edge(branch.current_node_id, nid, branch.available_exit, ef)
                 new_branches.append(
                     Branch(
-                        branch.id, nid, rng.choice(exf), birth_layer=branch.birth_layer
+                        branch.id,
+                        nid,
+                        rng.choice(exf),
+                        birth_layer=branch.birth_layer,
+                        layers_since_last_split=branch.layers_since_last_split,
                     )
                 )
+            update_branch_counters(
+                LayerOperation.PASSANT,
+                passant_branches=new_branches,
+            )
             branches = new_branches
 
         current_layer += 1
