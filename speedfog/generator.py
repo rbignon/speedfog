@@ -96,6 +96,7 @@ class LayerOperation(Enum):
     PASSANT = auto()  # 1 branch -> 1 branch (per branch)
     SPLIT = auto()  # 1 branch -> N branches
     MERGE = auto()  # N branches -> 1 branch
+    REBALANCE = auto()  # merge 2 + split 1 stale (same layer, N -> N)
 
 
 @dataclass
