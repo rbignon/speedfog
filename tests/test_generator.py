@@ -1,5 +1,6 @@
 """Tests for DAG generation logic."""
 
+import os
 import random
 
 import pytest
@@ -4121,3 +4122,262 @@ def test_forced_split_triggers_at_threshold():
             continue
 
     assert found_split, "Expected at least one seed to produce a forced split"
+
+
+def test_forced_merge_when_saturated():
+    """When max_parallel_paths is reached, force merge before split."""
+    start = make_cluster(
+        "start",
+        zones=["start_z"],
+        cluster_type="start",
+        entry_fogs=[],
+        exit_fogs=[
+            {"fog_id": "s_x1", "zone": "start_z"},
+            {"fog_id": "s_x2", "zone": "start_z"},
+        ],
+    )
+    clusters_list = []
+    for i in range(20):
+        clusters_list.append(
+            make_cluster(
+                f"sp{i}",
+                zones=[f"sp{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[{"fog_id": f"sp{i}_e", "zone": f"sp{i}_z"}],
+                exit_fogs=[
+                    {"fog_id": f"sp{i}_x1", "zone": f"sp{i}_z"},
+                    {"fog_id": f"sp{i}_x2", "zone": f"sp{i}_z"},
+                ],
+            )
+        )
+    for i in range(5):
+        clusters_list.append(
+            make_cluster(
+                f"mg{i}",
+                zones=[f"mg{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[
+                    {"fog_id": f"mg{i}_e1", "zone": f"mg{i}_z"},
+                    {"fog_id": f"mg{i}_e2", "zone": f"mg{i}_z"},
+                ],
+                exit_fogs=[{"fog_id": f"mg{i}_x", "zone": f"mg{i}_z"}],
+                allow_shared_entrance=True,
+            )
+        )
+    boss = make_cluster(
+        "boss1",
+        zones=["boss_z"],
+        cluster_type="final_boss",
+        entry_fogs=[{"fog_id": "b_e", "zone": "boss_z"}],
+        exit_fogs=[],
+    )
+    pool = ClusterPool()
+    pool.add(start)
+    for c in clusters_list:
+        pool.add(c)
+    pool.add(boss)
+
+    config = Config()
+    config.structure.final_boss_candidates = ["boss_z"]
+    config.structure.max_branch_spacing = 3
+    config.structure.split_probability = 0.0
+    config.structure.merge_probability = 0.0
+    config.structure.max_parallel_paths = 2  # Start is already at max with 2 exits
+    config.structure.min_layers = 10
+    config.structure.max_layers = 14
+    config.requirements.mini_dungeons = 8
+    config.requirements.bosses = 0
+    config.requirements.legacy_dungeons = 0
+    config.requirements.major_bosses = 0
+
+    # Should succeed — forced merge frees a slot, then forced split
+    success = False
+    for seed in range(50):
+        try:
+            dag = generate_dag(
+                config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
+            )
+            assert dag.end_id
+            success = True
+            break
+        except GenerationError:
+            continue
+    assert success, "No seed produced a valid DAG with saturated forced merge"
+
+
+def test_forced_merge_bypasses_min_branch_age():
+    """Forced merge for spacing ignores min_branch_age."""
+    start = make_cluster(
+        "start",
+        zones=["start_z"],
+        cluster_type="start",
+        entry_fogs=[],
+        exit_fogs=[
+            {"fog_id": "s_x1", "zone": "start_z"},
+            {"fog_id": "s_x2", "zone": "start_z"},
+        ],
+    )
+    clusters_list = []
+    for i in range(20):
+        clusters_list.append(
+            make_cluster(
+                f"sp{i}",
+                zones=[f"sp{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[{"fog_id": f"sp{i}_e", "zone": f"sp{i}_z"}],
+                exit_fogs=[
+                    {"fog_id": f"sp{i}_x1", "zone": f"sp{i}_z"},
+                    {"fog_id": f"sp{i}_x2", "zone": f"sp{i}_z"},
+                ],
+            )
+        )
+    for i in range(5):
+        clusters_list.append(
+            make_cluster(
+                f"mg{i}",
+                zones=[f"mg{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[
+                    {"fog_id": f"mg{i}_e1", "zone": f"mg{i}_z"},
+                    {"fog_id": f"mg{i}_e2", "zone": f"mg{i}_z"},
+                ],
+                exit_fogs=[{"fog_id": f"mg{i}_x", "zone": f"mg{i}_z"}],
+                allow_shared_entrance=True,
+            )
+        )
+    boss = make_cluster(
+        "boss1",
+        zones=["boss_z"],
+        cluster_type="final_boss",
+        entry_fogs=[{"fog_id": "b_e", "zone": "boss_z"}],
+        exit_fogs=[],
+    )
+    pool = ClusterPool()
+    pool.add(start)
+    for c in clusters_list:
+        pool.add(c)
+    pool.add(boss)
+
+    config = Config()
+    config.structure.final_boss_candidates = ["boss_z"]
+    config.structure.max_branch_spacing = 5
+    config.structure.min_branch_age = 4  # High but < max_branch_spacing
+    config.structure.split_probability = 0.0
+    config.structure.merge_probability = 0.0
+    config.structure.max_parallel_paths = 2
+    config.structure.min_layers = 10
+    config.structure.max_layers = 14
+    config.requirements.mini_dungeons = 8
+    config.requirements.bosses = 0
+    config.requirements.legacy_dungeons = 0
+    config.requirements.major_bosses = 0
+
+    # Should succeed — forced merge bypasses min_branch_age
+    success = False
+    for seed in range(50):
+        try:
+            dag = generate_dag(
+                config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
+            )
+            assert dag.end_id
+            success = True
+            break
+        except GenerationError:
+            continue
+    assert success, "Forced merge should bypass min_branch_age"
+
+
+def test_max_branch_spacing_disabled_regression():
+    """max_branch_spacing=0 produces same linear behavior as before the feature."""
+    start = make_cluster(
+        "start",
+        zones=["start_z"],
+        cluster_type="start",
+        entry_fogs=[],
+        exit_fogs=[{"fog_id": "s_x1", "zone": "start_z"}],
+    )
+    passants = []
+    for i in range(10):
+        passants.append(
+            make_cluster(
+                f"p{i}",
+                zones=[f"p{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[{"fog_id": f"p{i}_e", "zone": f"p{i}_z"}],
+                exit_fogs=[{"fog_id": f"p{i}_x", "zone": f"p{i}_z"}],
+            )
+        )
+    boss = make_cluster(
+        "boss1",
+        zones=["boss_z"],
+        cluster_type="final_boss",
+        entry_fogs=[{"fog_id": "b_e", "zone": "boss_z"}],
+        exit_fogs=[],
+    )
+    pool = ClusterPool()
+    pool.add(start)
+    for c in passants:
+        pool.add(c)
+    pool.add(boss)
+
+    config = Config()
+    config.structure.final_boss_candidates = ["boss_z"]
+    config.structure.max_branch_spacing = 0  # Disabled
+    config.structure.split_probability = 1.0
+    config.structure.min_layers = 6
+    config.structure.max_layers = 6
+    config.requirements.mini_dungeons = 4
+    config.requirements.bosses = 0
+    config.requirements.legacy_dungeons = 0
+    config.requirements.major_bosses = 0
+
+    dag = generate_dag(config, pool, seed=42, boss_candidates=_boss_candidates(pool))
+    paths = dag.enumerate_paths()
+    assert len(paths) == 1  # Linear — no splits possible with 1-exit clusters
+
+
+@pytest.mark.skipif(
+    not os.path.exists("data/clusters.json"),
+    reason="Requires data/clusters.json",
+)
+def test_max_branch_spacing_statistical():
+    """No branch exceeds max_branch_spacing + 2 across many seeds."""
+    from speedfog.clusters import ClusterPool as RealClusterPool
+
+    pool = RealClusterPool.from_json("data/clusters.json")
+    boss_candidates = _boss_candidates(pool)
+    max_spacing = 4
+    violations = []
+
+    for seed in range(50):
+        config = Config()
+        config.seed = seed
+        config.structure.max_branch_spacing = max_spacing
+        try:
+            dag = generate_dag(config, pool, boss_candidates=boss_candidates)
+        except GenerationError:
+            continue
+
+        max_observed = _measure_max_branch_spacing(dag)
+        if max_observed > max_spacing + 2:
+            violations.append((seed, max_observed))
+
+    assert not violations, f"Branches exceeded max_branch_spacing + 2: {violations}"
+
+
+def _measure_max_branch_spacing(dag):
+    """Measure the maximum layers-since-last-split across all paths."""
+    max_spacing = 0
+
+    for path in dag.enumerate_paths():
+        since_last_split = 0
+        for node_id in path:
+            outgoing = dag.get_outgoing_edges(node_id)
+            targets = {e.target_id for e in outgoing}
+            if len(targets) >= 2:
+                since_last_split = 0
+            else:
+                since_last_split += 1
+            max_spacing = max(max_spacing, since_last_split)
+
+    return max_spacing
