@@ -1,13 +1,13 @@
 # DAG Generation Algorithm
 
-**Date:** 2026-02-15 — **Updated:** 2026-02-27
+**Date:** 2026-02-15 — **Updated:** 2026-03-11
 **Status:** Active
 
 How SpeedFog generates balanced, randomized DAGs from zone clusters.
 
 ## Overview
 
-The generator (`speedfog/generator.py`) builds a directed acyclic graph layer by layer, using three topology operations (split, merge, passant) to create parallel branches that converge before the final boss. The result is a graph where all paths have similar total weight (duration), ensuring fair races.
+The generator (`speedfog/generator.py`) builds a directed acyclic graph layer by layer, using four topology operations (split, merge, passant, rebalance) to create parallel branches that converge before the final boss. The result is a graph where all paths have similar total weight (duration), ensuring fair races.
 
 ## Data Structures
 
