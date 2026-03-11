@@ -39,10 +39,12 @@ When any branch reaches `layers_since_last_split >= max_branch_spacing`:
 
 **Case 1 — Room to split (`num_branches < max_parallel_paths`):**
 
-1. **Biased cluster selection:** Filter candidates by planned layer type AND `can_be_split_node(c, 2)`. If no match, relax to any type + split-capable. If still none, fall back to normal type-based selection (best-effort).
-2. **Forced operation:** `determine_operation` bypasses probability roll and returns SPLIT.
+1. **Normal cluster selection:** Use `pick_cluster_with_type_fallback` as usual (no biased filtering). This preserves uniform cluster distribution — no cluster is more likely to appear than any other.
+2. **Forced operation:** If the selected cluster is split-capable, `determine_operation` bypasses probability roll and returns SPLIT.
 3. **Target branch:** The branch with the highest counter (most stale) gets the split. Ties broken randomly.
-4. **Best-effort fallback:** If no split-capable cluster is available (exhausted pool), accept PASSANT, increment counter, retry next layer.
+4. **Best-effort fallback:** If the selected cluster is not split-capable, accept PASSANT, increment counter, retry next layer. The split will happen when a split-capable cluster is naturally drawn.
+
+**Cluster distribution rationale:** Biasing selection toward split-capable clusters would over-represent a small subset of clusters at split points (e.g., only 5 of 66 mini_dungeons and 7 of 36 major_bosses are split-capable). By keeping selection uniform, we accept that the forced split may be delayed 1-2 layers beyond the threshold, but no cluster gains a higher appearance probability than any other.
 
 **Case 2 — Saturated (`num_branches == max_parallel_paths`):**
 
@@ -85,7 +87,7 @@ pick_cluster(type) → determine_operation(cluster, branches) → execute
 ### New flow
 
 ```
-assess_branch_urgency → pick_cluster(type, biased if urgent) → determine_operation(cluster, branches, force?) → execute → update_counters
+assess_branch_urgency → pick_cluster(type, normal) → determine_operation(cluster, branches, force?) → execute → update_counters
 ```
 
 Before cluster selection each layer:
@@ -93,6 +95,8 @@ Before cluster selection each layer:
 1. Compute `max_stale = max(b.layers_since_last_split for b in branches)`
 2. `needs_forced_split = max_stale >= max_branch_spacing and max_branch_spacing > 0`
 3. `needs_forced_merge = needs_forced_split and num_branches >= max_parallel_paths`
+
+Cluster selection remains unchanged (`pick_cluster_with_type_fallback`). The forcing only affects the operation decision, not which cluster is picked.
 
 ### Changes to `determine_operation`
 
@@ -129,7 +133,7 @@ Forced spacing splits increase branch count, potentially requiring more merge la
 ## Testing Strategy
 
 - **Unit tests for counter logic:** Verify counter updates on split/merge/passant.
-- **Unit tests for forced split:** Verify biased selection triggers when threshold reached.
+- **Unit tests for forced split:** Verify forced operation triggers when threshold reached and cluster is split-capable.
 - **Unit tests for saturated case:** Verify merge-then-split sequence.
 - **Config validation:** Verify `min_branch_age >= max_branch_spacing` is rejected.
 - **Statistical test:** Generate N seeds, assert no branch ever exceeds `max_branch_spacing + 2` (accounts for: +1 from saturation delay where a merge must happen first, +1 from best-effort fallback if no split-capable cluster exists on the next layer).
