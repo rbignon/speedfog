@@ -53,7 +53,7 @@ A `NamedTuple(fog_id, zone)` that disambiguates the same `fog_id` across differe
 
 ## Topology Operations
 
-The algorithm decides between three operations at each layer:
+The algorithm decides between four operations at each layer:
 
 ### Passant (1->1 per branch)
 
@@ -103,6 +103,26 @@ N branches converge into a single node. Creates convergence in the DAG.
 
 **Branch age gate**: When `min_branch_age > 0`, only branches that have existed for at least that many layers are eligible for merging (`current_layer - birth_layer >= min_branch_age`). This prevents premature merges where branches split and immediately reconverge, creating long linear (width=1) sections. Branch age is tracked via `birth_layer`: split and merge operations reset it to the current layer; passant operations preserve it.
 
+### Rebalance (N->N branches)
+
+Merges 2 branches and splits 1 stale branch on the same layer, keeping the total branch count constant. Uses 2 clusters: one merge-capable, one split-capable.
+
+**Trigger conditions** (all must be met):
+1. `max_branch_spacing > 0` (feature enabled)
+2. `len(branches) >= max_parallel_paths` (saturated — no room to split)
+3. `max(b.layers_since_last_split for b in branches) >= max_branch_spacing` (threshold reached)
+4. At least one valid merge pair exists among branches other than the split target
+
+**Process**:
+1. Identify the most stale branch (highest `layers_since_last_split`) — split target
+2. Find 2 merge candidates among remaining branches (bypass `min_branch_age`, enforce anti-micro-merge)
+3. Pick a split-capable cluster, then a merge-capable cluster
+4. Execute split on the stale branch → 2 child branches with `layers_since_last_split = 0`
+5. Execute merge on the pair → 1 merged branch with `layers_since_last_split = max(A, B) + 1`
+6. Passant remaining branches (carrying their existing counters)
+
+REBALANCE is internal to the generator — graph.json serializes nodes and edges, not operations. A REBALANCE produces split and merge nodes identical to separate SPLIT and MERGE operations.
+
 ### Max Branch Spacing
 
 When `max_branch_spacing > 0`, the generator guarantees that no branch goes more than ~`max_branch_spacing` layers without a split point. Each branch tracks `layers_since_last_split`, counting layers since the player on that branch last had a choice.
@@ -120,12 +140,11 @@ When `max_branch_spacing > 0`, the generator guarantees that no branch goes more
 
 Merges do NOT reset the counter — a merge doesn't give the player a new choice (fog gates are one-way).
 
-**Forced split:** When any branch reaches `layers_since_last_split >= max_branch_spacing`:
-
-- **Room to split** (`num_branches < max_parallel_paths`): Force SPLIT on the most stale branch. Cluster selection remains uniform (no bias toward split-capable clusters). If the selected cluster can't split, accept passant and retry next layer.
-- **Saturated** (`num_branches == max_parallel_paths`): Force merge first via `execute_forced_merge` to free a slot, then re-enter the loop to split.
-
-**Disabled during near-end convergence** (`is_near_end`): the remaining distance is short enough that backtracking isn't a concern.
+**Priority hierarchy in `determine_operation`:**
+1. **REBALANCE** (highest) — if saturated + stale + merge pair available
+2. **`prefer_merge`** — if convergence phase, bypass probability roll, return MERGE
+3. **Forced split** — if not saturated but stale, force SPLIT on the most stale branch
+4. **Normal probability roll** — split_prob / merge_prob / passant
 
 **Config validation:** `min_branch_age` must be strictly less than `max_branch_spacing` (when both are enabled).
 
@@ -248,24 +267,29 @@ layer_types = plan_layer_types(requirements, num_layers, rng)
 
 For each planned layer:
 1. Compute tier via `compute_tier()` (see [Tier Interpolation](#tier-interpolation))
-2. **Near-end check**: if within last 2 layers and multiple branches remain, trigger `execute_forced_merge()` and skip the normal operation
-3. Pick a cluster uniformly from the layer type's candidates (`pick_cluster_uniform()`)
-4. Call `determine_operation()` on the selected cluster to decide split/merge/passant
-5. Execute the operation:
-   - **SPLIT**: The primary cluster becomes the split node. Non-split branches get their own `pick_cluster_uniform()` call for passant companions.
-   - **MERGE**: The primary cluster becomes the merge node. Non-merged branches get their own `pick_cluster_uniform()` call for passant companions. If merge indices cannot be found (micro-merge), falls back to passant.
-   - **PASSANT**: The primary cluster is assigned to the first branch. Remaining branches get their own `pick_cluster_uniform()` call.
+2. Pick a cluster uniformly from the layer type's candidates (`pick_cluster_with_type_fallback()`)
+3. Call `determine_operation()` on the selected cluster to decide rebalance/split/merge/passant
+4. Execute the operation:
+   - **REBALANCE**: Merge a pair + split the most stale branch on the same layer (N→N).
+   - **SPLIT**: The primary cluster becomes the split node. Non-split branches get their own cluster for passant companions.
+   - **MERGE**: The primary cluster becomes the merge node. Non-merged branches get their own cluster for passant companions.
+   - **PASSANT**: The primary cluster is assigned to the first branch. Remaining branches get their own cluster.
 
-### 6. Forced Merge
+### 6. Convergence
 
-If multiple branches remain after all planned layers:
+If multiple branches remain after all planned layers, a unified convergence loop runs with `prefer_merge=True`:
 
 ```
 while len(branches) > 1:
-    if all branches share same parent:
-        execute passant layer (diverge first)
-    execute merge layer (converge)
+    operation = determine_operation(..., prefer_merge=True)
+    if REBALANCE: execute_rebalance_layer (maintains spacing)
+    elif MERGE: execute_merge_layer (reduces branch count)
+    else: try merge, fallback to passant (diverge nodes for anti-micro-merge)
 ```
+
+REBALANCE can still trigger during convergence when a branch exceeds the staleness threshold while branches are saturated, maintaining spacing even during the final merge phase.
+
+`merge_reserve` is set to `max_parallel_paths + 2` to accommodate REBALANCE layers intercalated with merges. Guard-rail: if convergence exceeds `merge_reserve * 2` layers, a `GenerationError` is raised.
 
 Inserts passant layers as needed to break micro-merge patterns. Uses N-ary merges (up to `max_entrances`) for efficiency. Forced merges deliberately bypass `min_branch_age` (use `min_age=0`) to guarantee convergence regardless of branch age.
 
