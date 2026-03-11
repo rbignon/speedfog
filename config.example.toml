@@ -90,6 +90,8 @@ max_entrances = 3
 # Higher values prevent premature merge-after-split, creating wider branching structures.
 # min_branch_age = 0
 
+# max_branch_spacing = 4  # Max layers a branch can go without a split (0=disabled)
+
 # Add cross-links between parallel branches.
 # Cross-links let players switch branches at the next layer.
 # Eligible pairs are structurally rare (0-4 per DAG), so all are taken.
