@@ -1596,7 +1596,7 @@ def generate_dag(
     # 5. Plan remaining layer types
     # Reserve max_parallel_paths layers for post-loop forced merges.
     # min_layers/max_layers refer to total layer count (start + end included).
-    merge_reserve = config.structure.max_parallel_paths
+    merge_reserve = config.structure.max_parallel_paths + 2
     max_planned = max(
         config.structure.min_layers,
         config.structure.max_layers - merge_reserve,
@@ -1623,8 +1623,7 @@ def generate_dag(
     estimated_total = target_total + merge_reserve
 
     # 6. Execute layers with cluster-first selection
-    for layer_idx, layer_type in enumerate(layer_types):
-        is_near_end = layer_idx >= len(layer_types) - 2
+    for layer_type in layer_types:
         tier = compute_tier(
             current_layer,
             estimated_total,
@@ -1633,107 +1632,9 @@ def generate_dag(
             exponent=config.structure.tier_curve_exponent,
         )
 
-        # Force merge if near end and multiple branches
-        if is_near_end and len(branches) > 1:
-            branches, current_layer = execute_forced_merge(
-                dag,
-                branches,
-                current_layer,
-                tier,
-                layer_type,
-                clusters,
-                used_zones,
-                rng,
-                config,
-                reserved_zones=reserved_zones,
-            )
-            continue
-
-        # --- Max branch spacing enforcement ---
-        max_spacing = config.structure.max_branch_spacing
-        force_op: LayerOperation | None = None
-
-        if max_spacing > 0 and not is_near_end:
-            max_stale = max(b.layers_since_last_split for b in branches)
-            needs_forced_split = max_stale >= max_spacing
-
-            if needs_forced_split:
-                if len(branches) >= config.structure.max_parallel_paths:
-                    # Saturated — merge 2 branches + split the stale
-                    # branch on the same layer to avoid oscillation.
-                    try:
-                        branches = execute_rebalance_layer(
-                            dag,
-                            branches,
-                            current_layer,
-                            tier,
-                            layer_type,
-                            clusters,
-                            used_zones,
-                            rng,
-                            config,
-                            reserved_zones=reserved_zones,
-                        )
-                        current_layer += 1
-                        continue
-                    except GenerationError:
-                        # Fallback: force a merge, split next iteration
-                        force_op = LayerOperation.MERGE
-                else:
-                    force_op = LayerOperation.SPLIT
-
-        # Pick a cluster for the "primary" branch action.
-        # When forcing an operation (split or merge for spacing enforcement),
-        # select a capable cluster to guarantee the operation can proceed.
-        # Without this, random selection may pick incapable clusters for
-        # several consecutive layers, defeating the spacing guarantee.
-        if force_op == LayerOperation.SPLIT:
-            # Try preferred type first, then all types for a split-capable cluster
-            primary_cluster = None
-            for t in [layer_type] + [t for t in clusters.by_type if t != layer_type]:
-                primary_cluster = pick_cluster_with_filter(
-                    clusters.get_by_type(t),
-                    used_zones,
-                    rng,
-                    lambda c: can_be_split_node(c, 2),
-                    reserved_zones=reserved_zones,
-                )
-                if primary_cluster is not None:
-                    break
-            if primary_cluster is None:
-                # No split-capable cluster in any type — accept passant
-                primary_cluster = pick_cluster_with_type_fallback(
-                    clusters,
-                    layer_type,
-                    used_zones,
-                    rng,
-                    reserved_zones=reserved_zones,
-                )
-        elif force_op == LayerOperation.MERGE:
-            # Try preferred type first, then all types for a merge-capable cluster
-            primary_cluster = None
-            for t in [layer_type] + [t for t in clusters.by_type if t != layer_type]:
-                primary_cluster = pick_cluster_with_filter(
-                    clusters.get_by_type(t),
-                    used_zones,
-                    rng,
-                    lambda c: can_be_merge_node(c, 2),
-                    reserved_zones=reserved_zones,
-                )
-                if primary_cluster is not None:
-                    break
-            if primary_cluster is None:
-                primary_cluster = pick_cluster_with_type_fallback(
-                    clusters,
-                    layer_type,
-                    used_zones,
-                    rng,
-                    reserved_zones=reserved_zones,
-                )
-        else:
-            primary_cluster = pick_cluster_with_type_fallback(
-                clusters, layer_type, used_zones, rng, reserved_zones=reserved_zones
-            )
+        primary_cluster = pick_cluster_with_type_fallback(
+            clusters, layer_type, used_zones, rng, reserved_zones=reserved_zones
+        )
         if primary_cluster is None:
             raise GenerationError(
                 f"No cluster available for layer {current_layer} "
@@ -1766,17 +1667,14 @@ def generate_dag(
             continue
 
         if operation == LayerOperation.SPLIT:
-            # Pick which branch to split — prefer most stale when forced
-            if force_op == LayerOperation.SPLIT:
-                max_stale_val = max(b.layers_since_last_split for b in branches)
-                stale_indices = [
-                    i
-                    for i, b in enumerate(branches)
-                    if b.layers_since_last_split == max_stale_val
-                ]
-                split_idx = rng.choice(stale_indices)
-            else:
-                split_idx = rng.randrange(len(branches))
+            # Prefer splitting the most stale branch (best for spacing)
+            max_stale_val = max(b.layers_since_last_split for b in branches)
+            stale_indices = [
+                i
+                for i, b in enumerate(branches)
+                if b.layers_since_last_split == max_stale_val
+            ]
+            split_idx = rng.choice(stale_indices)
             split_child_branches: list[Branch] = []
             passant_branches_list: list[Branch] = []
             letter_offset = 0
@@ -1861,12 +1759,7 @@ def generate_dag(
 
         elif operation == LayerOperation.MERGE:
             # Find merge indices and actual fan-in
-            # Forced merge (saturated spacing) bypasses min_branch_age
-            min_age = (
-                0
-                if force_op == LayerOperation.MERGE
-                else config.structure.min_branch_age
-            )
+            min_age = config.structure.min_branch_age
             max_merge = max(min(config.structure.max_entrances, len(branches)), 2)
             merge_indices: list[int] | None = None
             actual_merge = 2
@@ -2064,10 +1957,10 @@ def generate_dag(
 
         current_layer += 1
 
-    # 7. Final merge if still multiple branches
-    if len(branches) > 1:
-        # Use the last layer type for final merge operations
-        last_layer_type = layer_types[-1] if layer_types else "mini_dungeon"
+    # 7. Converge remaining branches
+    convergence_layers = 0
+    convergence_limit = merge_reserve * 2
+    while len(branches) > 1:
         tier = compute_tier(
             current_layer,
             estimated_total,
@@ -2075,18 +1968,91 @@ def generate_dag(
             curve=config.structure.tier_curve,
             exponent=config.structure.tier_curve_exponent,
         )
-        branches, current_layer = execute_forced_merge(
-            dag,
-            branches,
-            current_layer,
-            tier,
-            last_layer_type,
+        last_layer_type = layer_types[-1] if layer_types else "mini_dungeon"
+
+        # Pick cluster normally
+        conv_cluster = pick_cluster_with_type_fallback(
             clusters,
+            last_layer_type,
             used_zones,
             rng,
-            config,
             reserved_zones=reserved_zones,
         )
+        if conv_cluster is None:
+            raise GenerationError(f"No cluster for convergence layer {current_layer}")
+
+        operation, fan = determine_operation(
+            conv_cluster,
+            branches,
+            config,
+            rng,
+            current_layer=current_layer,
+            prefer_merge=True,
+        )
+
+        if operation == LayerOperation.REBALANCE:
+            branches = execute_rebalance_layer(
+                dag,
+                branches,
+                current_layer,
+                tier,
+                last_layer_type,
+                clusters,
+                used_zones,
+                rng,
+                config,
+                reserved_zones=reserved_zones,
+            )
+        elif operation == LayerOperation.MERGE:
+            branches = execute_merge_layer(
+                dag,
+                branches,
+                current_layer,
+                tier,
+                last_layer_type,
+                clusters,
+                used_zones,
+                rng,
+                config,
+                reserved_zones=reserved_zones,
+            )
+        else:
+            # The selected cluster can't merge — try execute_merge_layer
+            # which picks its own merge-capable cluster from the pool
+            try:
+                branches = execute_merge_layer(
+                    dag,
+                    branches,
+                    current_layer,
+                    tier,
+                    last_layer_type,
+                    clusters,
+                    used_zones,
+                    rng,
+                    config,
+                    reserved_zones=reserved_zones,
+                )
+            except GenerationError:
+                # No merge-capable cluster — passant to diverge nodes
+                branches = execute_passant_layer(
+                    dag,
+                    branches,
+                    current_layer,
+                    tier,
+                    last_layer_type,
+                    clusters,
+                    used_zones,
+                    rng,
+                    reserved_zones=reserved_zones,
+                )
+
+        current_layer += 1
+        convergence_layers += 1
+        if convergence_layers > convergence_limit:
+            raise GenerationError(
+                f"Convergence failed after {convergence_layers} layers "
+                f"(limit: {convergence_limit})"
+            )
 
     # 8. Inject prerequisite if needed (after merge, before final boss)
     branches, current_layer = _inject_prerequisite(
