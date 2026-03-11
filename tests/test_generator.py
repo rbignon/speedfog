@@ -5115,7 +5115,8 @@ def test_convergence_terminates():
             )
             # If we get here, convergence terminated
             assert dag.end_id
-        except GenerationError:
-            # Generation failure is acceptable (cluster exhaustion etc.)
-            # but NOT convergence timeout
-            pass
+        except GenerationError as e:
+            # Cluster exhaustion is acceptable, but convergence timeout is not
+            assert "Convergence failed" not in str(
+                e
+            ), f"Convergence timeout at seed {seed}: {e}"

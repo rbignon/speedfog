@@ -1933,6 +1933,7 @@ def generate_dag(
                 reserved_zones=reserved_zones,
             )
         elif operation == LayerOperation.MERGE:
+            # min_age defaults to 0, bypassing branch age during convergence
             branches = execute_merge_layer(
                 dag,
                 branches,
