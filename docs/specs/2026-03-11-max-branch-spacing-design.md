@@ -26,7 +26,9 @@ Each active branch tracks `layers_since_last_split: int`, counting how many laye
 |-------|--------------|
 | Branch created by split | `0` (player just made a choice) |
 | Branch does a PASSANT | `+= 1` |
+| Non-split branches on a SPLIT layer | `+= 1` (they did a passant, no choice for them) |
 | Two branches merge | Result inherits `max(A, B)` |
+| Branches not participating in a merge | `+= 1` (they did a passant on this layer) |
 | Start node (layer 0) | All initial branches start at `0` |
 
 Merges do NOT reset the counter because a merge doesn't give the player a new choice — they arrived from one side and can't access the other branch's earlier nodes.
@@ -37,16 +39,17 @@ When any branch reaches `layers_since_last_split >= max_branch_spacing`:
 
 **Case 1 — Room to split (`num_branches < max_parallel_paths`):**
 
-1. **Biased cluster selection:** Instead of `pick_cluster_with_type_fallback` (type-only), first filter candidates through `can_be_split_node(c, 2)`. Fall back to normal selection if no split-capable cluster exists.
+1. **Biased cluster selection:** Filter candidates by planned layer type AND `can_be_split_node(c, 2)`. If no match, relax to any type + split-capable. If still none, fall back to normal type-based selection (best-effort).
 2. **Forced operation:** `determine_operation` bypasses probability roll and returns SPLIT.
-3. **Target branch:** The branch with the highest counter (most stale) gets the split.
+3. **Target branch:** The branch with the highest counter (most stale) gets the split. Ties broken randomly.
 4. **Best-effort fallback:** If no split-capable cluster is available (exhausted pool), accept PASSANT, increment counter, retry next layer.
 
 **Case 2 — Saturated (`num_branches == max_parallel_paths`):**
 
-1. **Force merge first** on any valid pair of branches to free a slot. The stale branch does a PASSANT this layer (counter += 1).
-2. **Next layer:** Room is now available; the forced split triggers normally (Case 1).
-3. If the stale branch is itself part of the forced merge, its counter propagates via `max()` into the merged branch, and the split happens on that branch next layer.
+1. **Force merge first** on any valid pair of branches to free a slot. The forced merge bypasses `min_branch_age` (same as the existing `execute_forced_merge` for near-end convergence). If no valid merge pair exists due to the "different parent nodes" constraint, insert a passant layer first to diverge nodes (existing pattern from `execute_forced_merge`).
+2. The stale branch does a PASSANT this layer (counter += 1).
+3. **Next layer:** Room is now available; the forced split triggers normally (Case 1).
+4. If the stale branch is itself part of the forced merge, its counter propagates via `max()` into the merged branch, and the split happens on that branch next layer.
 
 ### Multiple Stale Branches
 
@@ -57,7 +60,7 @@ If multiple branches exceed the threshold simultaneously and only one slot is av
 New field in `StructureConfig`:
 
 ```python
-max_branch_spacing: int = 4  # 0 = disabled
+max_branch_spacing: int = 4  # 0 = disabled (no spacing enforcement)
 ```
 
 **Validation constraint:** `min_branch_age` must be strictly less than `max_branch_spacing` (when both are enabled). If `min_branch_age >= max_branch_spacing`, config validation raises an error. With default values (`min_branch_age=0`, `max_branch_spacing=4`), no conflict is possible.
@@ -101,9 +104,9 @@ Add field: `layers_since_last_split: int = 0`
 
 ### Counter updates after execution
 
-- **SPLIT:** Each child branch → `layers_since_last_split = 0`
+- **SPLIT:** Each child branch of the split → `layers_since_last_split = 0`. All other branches (doing passant on this layer) → `+= 1`.
 - **PASSANT:** Each branch → `layers_since_last_split += 1`
-- **MERGE:** Merged branch → `max(incoming counters)`. Non-merged branches doing passant → `+= 1`.
+- **MERGE:** Merged branch → `max(incoming counters)`. All other branches (doing passant on this layer) → `+= 1`.
 
 ## Interactions with Existing Features
 
@@ -119,11 +122,15 @@ Crosslinks are a complementary mechanism (lateral connections between branches).
 
 When `first_layer_type` is configured, all branches get a PASSANT on the first layer. Counters go to 1. Normal behavior.
 
+### `max_layers` / forced merge reserve
+
+Forced spacing splits increase branch count, potentially requiring more merge layers at the end. This is handled by the `is_near_end` override: spacing enforcement is disabled during the convergence phase, so forced splits cannot happen too close to the end.
+
 ## Testing Strategy
 
 - **Unit tests for counter logic:** Verify counter updates on split/merge/passant.
 - **Unit tests for forced split:** Verify biased selection triggers when threshold reached.
 - **Unit tests for saturated case:** Verify merge-then-split sequence.
 - **Config validation:** Verify `min_branch_age >= max_branch_spacing` is rejected.
-- **Statistical test:** Generate N seeds, assert no branch ever exceeds `max_branch_spacing + 1` (the +1 accounts for the best-effort fallback when no split-capable cluster exists).
+- **Statistical test:** Generate N seeds, assert no branch ever exceeds `max_branch_spacing + 2` (accounts for: +1 from saturation delay where a merge must happen first, +1 from best-effort fallback if no split-capable cluster exists on the next layer).
 - **Regression:** Existing tests pass unchanged when `max_branch_spacing = 0` (disabled).
