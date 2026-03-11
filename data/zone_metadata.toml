@@ -178,11 +178,15 @@ weight = 6
 [zones.scadualtus_forge]
 weight = 6
 
+[zones.scadualtus_catacombs_boss]
+type = "boss_arena"  # fog.txt Entrance has "major" tag, but Jori is a catacomb boss, not a remembrance boss
+
 [zones.scadualtus_gaol]
 weight = 3
 
 # Major bosses: allow entry-as-exit so they can be pass-through nodes
 [zones.altus_elemer]
+type = "boss_arena"  # fog.txt Entrance has "major" tag, but Area has "minor" — Elemer is not a remembrance boss
 allow_entry_as_exit = true
 
 [zones.fissure_boss]
