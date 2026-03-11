@@ -493,6 +493,7 @@ def determine_operation(
     rng: random.Random,
     *,
     current_layer: int = 0,
+    force: LayerOperation | None = None,
 ) -> tuple[LayerOperation, int]:
     """Determine what operation to perform given a pre-selected cluster.
 
@@ -505,6 +506,8 @@ def determine_operation(
         config: Configuration with probabilities and limits.
         rng: Random number generator.
         current_layer: Current layer index (used for min_branch_age check).
+        force: If set, bypass probability roll for this operation type.
+            Falls back to normal logic if the cluster can't perform it.
 
     Returns:
         Tuple of (operation, fan_out/fan_in). fan is 1 for PASSANT.
@@ -538,6 +541,12 @@ def determine_operation(
         )
         and can_be_merge_node(cluster, 2)
     )
+
+    # Forced operation: bypass probability when spacing threshold exceeded
+    if force == LayerOperation.SPLIT and can_split:
+        return LayerOperation.SPLIT, split_fan
+    if force == LayerOperation.MERGE and can_merge:
+        return LayerOperation.MERGE, 2
 
     # Decide based on capabilities.
     # When split_prob + merge_prob >= 1.0 (e.g. 0.9 + 0.5), the probabilities
@@ -685,6 +694,7 @@ def execute_passant_layer(
                 node_id,
                 rng.choice(exit_fogs),
                 birth_layer=branch.birth_layer,
+                layers_since_last_split=branch.layers_since_last_split,
             )
         )
 
@@ -889,12 +899,14 @@ def execute_merge_layer(
             f"Merge node {merge_node_id} ({cluster.id}): "
             "no exits remaining after consuming entries"
         )
+    merged_counter = max(b.layers_since_last_split for b in merge_branches)
     new_branches.append(
         Branch(
             f"merged_{layer_idx}",
             merge_node_id,
             rng.choice(exit_fogs),
             birth_layer=layer_idx,
+            layers_since_last_split=merged_counter,
         )
     )
 
@@ -941,6 +953,7 @@ def execute_merge_layer(
                 node_id,
                 rng.choice(exit_fogs),
                 birth_layer=branch.birth_layer,
+                layers_since_last_split=branch.layers_since_last_split,
             )
         )
         letter_offset += 1

@@ -23,6 +23,7 @@ from speedfog.generator import (
     count_net_exits,
     determine_operation,
     execute_merge_layer,
+    execute_passant_layer,
     generate_dag,
     generate_with_retry,
     pick_cluster_uniform,
@@ -2767,6 +2768,101 @@ class TestDetermineOperation:
         assert counts[LayerOperation.SPLIT] > 800
         assert counts[LayerOperation.MERGE] > 50
 
+    def test_force_split_overrides_probability(self):
+        """force=SPLIT bypasses probability roll when cluster can split."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
+            exit_fogs=[
+                {"fog_id": "x1", "zone": "z1"},
+                {"fog_id": "x2", "zone": "z1"},
+                {"fog_id": "x3", "zone": "z1"},
+            ],
+        )
+        config = Config()
+        config.structure.split_probability = 0.0  # Would normally never split
+        config.structure.max_parallel_paths = 3
+        branches = [Branch("b0", "start", FogRef("x", "z"))]
+        op, fan = determine_operation(
+            cluster,
+            branches,
+            config,
+            random.Random(42),
+            force=LayerOperation.SPLIT,
+        )
+        assert op == LayerOperation.SPLIT
+        assert fan >= 2
+
+    def test_force_split_fallback_when_cant_split(self):
+        """force=SPLIT falls back to normal logic when cluster can't split."""
+        # Cluster with 1 exit -- can't split
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
+            exit_fogs=[{"fog_id": "x1", "zone": "z1"}],
+        )
+        config = Config()
+        config.structure.split_probability = 0.0
+        branches = [Branch("b0", "start", FogRef("x", "z"))]
+        op, fan = determine_operation(
+            cluster,
+            branches,
+            config,
+            random.Random(42),
+            force=LayerOperation.SPLIT,
+        )
+        assert op == LayerOperation.PASSANT
+
+    def test_force_merge_overrides_probability(self):
+        """force=MERGE bypasses probability roll when cluster can merge."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[
+                {"fog_id": "e1", "zone": "z1"},
+                {"fog_id": "e2", "zone": "z1"},
+            ],
+            exit_fogs=[{"fog_id": "x1", "zone": "z1"}],
+            allow_shared_entrance=True,
+        )
+        config = Config()
+        config.structure.merge_probability = 0.0  # Would normally never merge
+        config.structure.max_parallel_paths = 3
+        branches = [
+            Branch("b0", "n0", FogRef("x", "z")),
+            Branch("b1", "n1", FogRef("y", "z")),
+        ]
+        op, fan = determine_operation(
+            cluster,
+            branches,
+            config,
+            random.Random(42),
+            force=LayerOperation.MERGE,
+        )
+        assert op == LayerOperation.MERGE
+
+    def test_force_none_uses_normal_logic(self):
+        """force=None (default) uses normal probability logic."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
+            exit_fogs=[
+                {"fog_id": "x1", "zone": "z1"},
+                {"fog_id": "x2", "zone": "z1"},
+                {"fog_id": "x3", "zone": "z1"},
+            ],
+        )
+        config = Config()
+        config.structure.split_probability = 0.0  # Never split
+        config.structure.max_parallel_paths = 3
+        branches = [Branch("b0", "start", FogRef("x", "z"))]
+        op, fan = determine_operation(
+            cluster,
+            branches,
+            config,
+            random.Random(42),
+        )
+        assert op == LayerOperation.PASSANT
+
 
 # =============================================================================
 # Prerequisite injection tests
@@ -3732,3 +3828,153 @@ class TestAsymmetricExitsEntrances:
                 break
 
         assert found_multi_branch, "No seed produced a multi-branch DAG"
+
+
+def test_execute_passant_layer_carries_counter():
+    """execute_passant_layer preserves layers_since_last_split."""
+    dag = Dag(seed=1)
+    start = DagNode(
+        id="start",
+        cluster=make_cluster(
+            "s",
+            zones=["sz"],
+            cluster_type="start",
+            entry_fogs=[],
+            exit_fogs=[{"fog_id": "sx", "zone": "sz"}],
+        ),
+        layer=0,
+        tier=1,
+        entry_fogs=[],
+        exit_fogs=[FogRef("sx", "sz")],
+    )
+    dag.add_node(start)
+    dag.start_id = "start"
+
+    branches = [
+        Branch("b0", "start", FogRef("sx", "sz"), layers_since_last_split=5),
+    ]
+    passant_cluster = make_cluster(
+        "p1",
+        zones=["p1z"],
+        cluster_type="mini_dungeon",
+        entry_fogs=[{"fog_id": "p1e", "zone": "p1z"}],
+        exit_fogs=[{"fog_id": "p1x", "zone": "p1z"}],
+    )
+    pool = ClusterPool()
+    pool.add(passant_cluster)
+    used_zones: set[str] = {"sz"}
+
+    result = execute_passant_layer(
+        dag,
+        branches,
+        1,
+        1,
+        "mini_dungeon",
+        pool,
+        used_zones,
+        random.Random(42),
+    )
+    assert result[0].layers_since_last_split == 5
+
+
+def test_execute_merge_layer_carries_counter():
+    """execute_merge_layer: merged branch gets max(sources), passant gets carry."""
+    dag = Dag(seed=1)
+    n0 = DagNode(
+        id="n0",
+        cluster=make_cluster(
+            "c0",
+            zones=["z0"],
+            entry_fogs=[{"fog_id": "e0", "zone": "z0"}],
+            exit_fogs=[{"fog_id": "x0", "zone": "z0"}],
+        ),
+        layer=0,
+        tier=1,
+        entry_fogs=[],
+        exit_fogs=[FogRef("x0", "z0")],
+    )
+    n1 = DagNode(
+        id="n1",
+        cluster=make_cluster(
+            "c1",
+            zones=["z1"],
+            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
+            exit_fogs=[{"fog_id": "x1", "zone": "z1"}],
+        ),
+        layer=0,
+        tier=1,
+        entry_fogs=[],
+        exit_fogs=[FogRef("x1", "z1")],
+    )
+    n2 = DagNode(
+        id="n2",
+        cluster=make_cluster(
+            "c2",
+            zones=["z2"],
+            entry_fogs=[{"fog_id": "e2", "zone": "z2"}],
+            exit_fogs=[{"fog_id": "x2", "zone": "z2"}],
+        ),
+        layer=0,
+        tier=1,
+        entry_fogs=[],
+        exit_fogs=[FogRef("x2", "z2")],
+    )
+    dag.add_node(n0)
+    dag.add_node(n1)
+    dag.add_node(n2)
+
+    branches = [
+        Branch("b0", "n0", FogRef("x0", "z0"), layers_since_last_split=3),
+        Branch("b1", "n1", FogRef("x1", "z1"), layers_since_last_split=7),
+        Branch("b2", "n2", FogRef("x2", "z2"), layers_since_last_split=2),
+    ]
+    merge_cluster = make_cluster(
+        "mg",
+        zones=["mgz"],
+        cluster_type="mini_dungeon",
+        entry_fogs=[
+            {"fog_id": "mge1", "zone": "mgz"},
+            {"fog_id": "mge2", "zone": "mgz"},
+        ],
+        exit_fogs=[{"fog_id": "mgx", "zone": "mgz"}],
+        allow_shared_entrance=True,
+    )
+    passant_cluster = make_cluster(
+        "pc",
+        zones=["pcz"],
+        cluster_type="mini_dungeon",
+        entry_fogs=[{"fog_id": "pce", "zone": "pcz"}],
+        exit_fogs=[{"fog_id": "pcx", "zone": "pcz"}],
+    )
+    pool = ClusterPool()
+    pool.add(merge_cluster)
+    pool.add(passant_cluster)
+    used_zones: set[str] = {"z0", "z1", "z2"}
+    config = Config()
+    config.structure.max_entrances = 2  # Force merge of only 2, leaving 1 passant
+    config.structure.max_branch_spacing = 0  # Disabled, just testing carry
+
+    result = execute_merge_layer(
+        dag,
+        branches,
+        1,
+        1,
+        "mini_dungeon",
+        pool,
+        used_zones,
+        random.Random(42),
+        config,
+    )
+    # Result: [merged_branch, passant_branch]
+    assert len(result) == 2
+    merged = [b for b in result if b.id.startswith("merged_")]
+    passant = [b for b in result if not b.id.startswith("merged_")]
+    assert len(merged) == 1
+    assert len(passant) == 1
+    # Merged branch gets max of its source counters
+    assert merged[0].layers_since_last_split == max(
+        b.layers_since_last_split for b in branches if b.id != passant[0].id
+    )
+    # Non-merged branch carries its own counter
+    source = next(b for b in branches if b.id == passant[0].id)
+    assert passant[0].layers_since_last_split == source.layers_since_last_split
