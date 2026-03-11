@@ -1376,7 +1376,8 @@ def generate_dag(
             if needs_forced_split:
                 if len(branches) >= config.structure.max_parallel_paths:
                     # Saturated — force merge to free a slot, then re-enter loop
-                    old_counters = {b.id: b.layers_since_last_split for b in branches}
+                    max_old = max(b.layers_since_last_split for b in branches)
+                    layer_before = current_layer
                     branches, current_layer = execute_forced_merge(
                         dag,
                         branches,
@@ -1389,8 +1390,9 @@ def generate_dag(
                         config,
                         reserved_zones=reserved_zones,
                     )
-                    max_old = max(old_counters.values())
-                    branches[0].layers_since_last_split = max_old
+                    # Account for layers consumed during merging
+                    layers_consumed = current_layer - layer_before
+                    branches[0].layers_since_last_split = max_old + layers_consumed
                     continue  # Re-enter loop — now 1 branch, room to split
                 else:
                     force_op = LayerOperation.SPLIT
@@ -1605,6 +1607,7 @@ def generate_dag(
                         merge_node_id,
                         rng.choice(exit_fogs),
                         birth_layer=current_layer,
+                        layers_since_last_split=0,  # Overwritten by update_branch_counters
                     )
                 ]
 

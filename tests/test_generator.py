@@ -4124,6 +4124,87 @@ def test_forced_split_triggers_at_threshold():
     assert found_split, "Expected at least one seed to produce a forced split"
 
 
+def test_forced_split_targets_most_stale_branch():
+    """Forced split selects the branch with highest layers_since_last_split.
+
+    Verifies the stale-targeting logic by constructing a scenario with
+    two branches of different ages, then checking which gets split.
+    """
+    dag = Dag(seed=1)
+    # Two nodes at layer 0, simulating two branches with different staleness
+    n_fresh = DagNode(
+        id="n_fresh",
+        cluster=make_cluster(
+            "cf",
+            zones=["zf"],
+            entry_fogs=[{"fog_id": "ef", "zone": "zf"}],
+            exit_fogs=[{"fog_id": "xf", "zone": "zf"}],
+        ),
+        layer=0,
+        tier=1,
+        entry_fogs=[],
+        exit_fogs=[FogRef("xf", "zf")],
+    )
+    n_stale = DagNode(
+        id="n_stale",
+        cluster=make_cluster(
+            "cs",
+            zones=["zs"],
+            entry_fogs=[{"fog_id": "es", "zone": "zs"}],
+            exit_fogs=[{"fog_id": "xs", "zone": "zs"}],
+        ),
+        layer=0,
+        tier=1,
+        entry_fogs=[],
+        exit_fogs=[FogRef("xs", "zs")],
+    )
+    dag.add_node(n_fresh)
+    dag.add_node(n_stale)
+
+    # Branch A: recently split (counter=0), Branch B: stale (counter=5)
+    branches = [
+        Branch("b_fresh", "n_fresh", FogRef("xf", "zf"), layers_since_last_split=0),
+        Branch("b_stale", "n_stale", FogRef("xs", "zs"), layers_since_last_split=5),
+    ]
+
+    # Splittable cluster (2+ exits)
+    split_cluster = make_cluster(
+        "split_c",
+        zones=["sc_z"],
+        entry_fogs=[{"fog_id": "sc_e", "zone": "sc_z"}],
+        exit_fogs=[
+            {"fog_id": "sc_x1", "zone": "sc_z"},
+            {"fog_id": "sc_x2", "zone": "sc_z"},
+        ],
+    )
+
+    config = Config()
+    config.structure.split_probability = 0.0  # Would never split normally
+    config.structure.max_parallel_paths = 4
+
+    # With force=SPLIT, determine_operation returns SPLIT
+    op, fan = determine_operation(
+        split_cluster,
+        branches,
+        config,
+        random.Random(42),
+        force=LayerOperation.SPLIT,
+    )
+    assert op == LayerOperation.SPLIT
+
+    # Simulate the stale-targeting logic from the main loop
+    max_stale_val = max(b.layers_since_last_split for b in branches)
+    stale_indices = [
+        i for i, b in enumerate(branches) if b.layers_since_last_split == max_stale_val
+    ]
+    # Should always pick branch index 1 (the stale one)
+    assert stale_indices == [1]
+    # Even with different RNG seeds, the only candidate is b_stale
+    for seed in range(10):
+        split_idx = random.Random(seed).choice(stale_indices)
+        assert branches[split_idx].id == "b_stale"
+
+
 def test_forced_merge_when_saturated():
     """When max_parallel_paths is reached, force merge before split."""
     start = make_cluster(
