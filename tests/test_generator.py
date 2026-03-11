@@ -2771,8 +2771,8 @@ class TestDetermineOperation:
         assert counts[LayerOperation.SPLIT] > 800
         assert counts[LayerOperation.MERGE] > 50
 
-    def test_force_split_overrides_probability(self):
-        """force=SPLIT bypasses probability roll when cluster can split."""
+    def test_forced_split_via_spacing_threshold(self):
+        """max_branch_spacing triggers forced SPLIT when not saturated."""
         cluster = make_cluster(
             "c1",
             entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
@@ -2785,19 +2785,22 @@ class TestDetermineOperation:
         config = Config()
         config.structure.split_probability = 0.0  # Would normally never split
         config.structure.max_parallel_paths = 3
-        branches = [Branch("b0", "start", FogRef("x", "z"))]
+        config.structure.max_branch_spacing = 4
+        # 1 branch with stale counter exceeding threshold, not saturated
+        branches = [
+            Branch("b0", "start", FogRef("x", "z"), layers_since_last_split=5),
+        ]
         op, fan = determine_operation(
             cluster,
             branches,
             config,
             random.Random(42),
-            force=LayerOperation.SPLIT,
         )
         assert op == LayerOperation.SPLIT
         assert fan >= 2
 
-    def test_force_split_fallback_when_cant_split(self):
-        """force=SPLIT falls back to normal logic when cluster can't split."""
+    def test_forced_split_fallback_when_cant_split(self):
+        """Forced split falls back to PASSANT when cluster can't split."""
         # Cluster with 1 exit -- can't split
         cluster = make_cluster(
             "c1",
@@ -2806,18 +2809,20 @@ class TestDetermineOperation:
         )
         config = Config()
         config.structure.split_probability = 0.0
-        branches = [Branch("b0", "start", FogRef("x", "z"))]
+        config.structure.max_branch_spacing = 4
+        branches = [
+            Branch("b0", "start", FogRef("x", "z"), layers_since_last_split=5),
+        ]
         op, fan = determine_operation(
             cluster,
             branches,
             config,
             random.Random(42),
-            force=LayerOperation.SPLIT,
         )
         assert op == LayerOperation.PASSANT
 
-    def test_force_merge_overrides_probability(self):
-        """force=MERGE bypasses probability roll when cluster can merge."""
+    def test_prefer_merge_overrides_probability(self):
+        """prefer_merge=True bypasses probability roll for MERGE."""
         cluster = make_cluster(
             "c1",
             entry_fogs=[
@@ -2839,7 +2844,7 @@ class TestDetermineOperation:
             branches,
             config,
             random.Random(42),
-            force=LayerOperation.MERGE,
+            prefer_merge=True,
         )
         assert op == LayerOperation.MERGE
 
@@ -4182,14 +4187,14 @@ def test_forced_split_targets_most_stale_branch():
     config = Config()
     config.structure.split_probability = 0.0  # Would never split normally
     config.structure.max_parallel_paths = 4
+    config.structure.max_branch_spacing = 4  # Threshold at 4, stale has 5
 
-    # With force=SPLIT, determine_operation returns SPLIT
+    # determine_operation returns forced SPLIT (not REBALANCE — not saturated)
     op, fan = determine_operation(
         split_cluster,
         branches,
         config,
         random.Random(42),
-        force=LayerOperation.SPLIT,
     )
     assert op == LayerOperation.SPLIT
 
@@ -4206,8 +4211,8 @@ def test_forced_split_targets_most_stale_branch():
         assert branches[split_idx].id == "b_stale"
 
 
-def test_forced_merge_when_saturated():
-    """When max_parallel_paths is reached, force merge before split."""
+def test_rebalance_when_saturated():
+    """When max_parallel_paths is reached, REBALANCE merges + splits on same layer."""
     start = make_cluster(
         "start",
         zones=["start_z"],
@@ -4216,10 +4221,11 @@ def test_forced_merge_when_saturated():
         exit_fogs=[
             {"fog_id": "s_x1", "zone": "start_z"},
             {"fog_id": "s_x2", "zone": "start_z"},
+            {"fog_id": "s_x3", "zone": "start_z"},
         ],
     )
     clusters_list = []
-    for i in range(20):
+    for i in range(30):
         clusters_list.append(
             make_cluster(
                 f"sp{i}",
@@ -4232,7 +4238,7 @@ def test_forced_merge_when_saturated():
                 ],
             )
         )
-    for i in range(5):
+    for i in range(10):
         clusters_list.append(
             make_cluster(
                 f"mg{i}",
@@ -4264,7 +4270,7 @@ def test_forced_merge_when_saturated():
     config.structure.max_branch_spacing = 3
     config.structure.split_probability = 0.0
     config.structure.merge_probability = 0.0
-    config.structure.max_parallel_paths = 2  # Start is already at max with 2 exits
+    config.structure.max_parallel_paths = 3  # Start saturates with 3 exits
     config.structure.min_layers = 10
     config.structure.max_layers = 14
     config.requirements.mini_dungeons = 8
@@ -4272,7 +4278,7 @@ def test_forced_merge_when_saturated():
     config.requirements.legacy_dungeons = 0
     config.requirements.major_bosses = 0
 
-    # Should succeed — forced merge frees a slot, then forced split
+    # Should succeed — REBALANCE handles spacing at max branch count
     success = False
     for seed in range(50):
         try:
@@ -4284,7 +4290,7 @@ def test_forced_merge_when_saturated():
             break
         except GenerationError:
             continue
-    assert success, "No seed produced a valid DAG with saturated forced merge"
+    assert success, "No seed produced a valid DAG with REBALANCE when saturated"
 
 
 def test_forced_merge_bypasses_min_branch_age():
@@ -4841,3 +4847,92 @@ def test_execute_rebalance_layer_counter_propagation():
     merged = [b for b in result if "merged" in b.id]
     assert len(merged) == 1
     assert merged[0].layers_since_last_split == 4  # max(3, 1) + 1
+
+
+# ── determine_operation REBALANCE / prefer_merge tests ─────────────────
+
+
+def test_determine_operation_returns_rebalance():
+    """determine_operation returns REBALANCE when saturated + stale."""
+    cluster = make_cluster(
+        "c1",
+        zones=["z1"],
+        entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
+        exit_fogs=[
+            {"fog_id": "x1", "zone": "z1"},
+            {"fog_id": "x2", "zone": "z1"},
+        ],
+    )
+    # 3 branches at max_parallel_paths=3, one stale
+    branches = [
+        Branch("a", "n_a", FogRef("xa", "za"), layers_since_last_split=5),
+        Branch("b", "n_b", FogRef("xb", "zb"), layers_since_last_split=1),
+        Branch("c", "n_c", FogRef("xc", "zc"), layers_since_last_split=1),
+    ]
+    config = Config()
+    config.structure.max_parallel_paths = 3
+    config.structure.max_branch_spacing = 4
+    config.structure.split_probability = 0.0
+    config.structure.merge_probability = 0.0
+
+    op, fan = determine_operation(cluster, branches, config, random.Random(42))
+    assert op == LayerOperation.REBALANCE
+
+
+def test_determine_operation_no_rebalance_when_not_saturated():
+    """REBALANCE only triggers when branches == max_parallel_paths."""
+    cluster = make_cluster(
+        "c1",
+        zones=["z1"],
+        entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
+        exit_fogs=[
+            {"fog_id": "x1", "zone": "z1"},
+            {"fog_id": "x2", "zone": "z1"},
+        ],
+    )
+    # 2 branches, max=3 — not saturated, even though stale
+    branches = [
+        Branch("a", "n_a", FogRef("xa", "za"), layers_since_last_split=5),
+        Branch("b", "n_b", FogRef("xb", "zb"), layers_since_last_split=1),
+    ]
+    config = Config()
+    config.structure.max_parallel_paths = 3
+    config.structure.max_branch_spacing = 4
+    config.structure.split_probability = 0.0
+    config.structure.merge_probability = 0.0
+
+    op, fan = determine_operation(cluster, branches, config, random.Random(42))
+    assert op != LayerOperation.REBALANCE
+
+
+def test_determine_operation_prefer_merge():
+    """prefer_merge=True bypasses probability roll in favor of MERGE."""
+    cluster = make_cluster(
+        "c1",
+        zones=["z1"],
+        entry_fogs=[
+            {"fog_id": "e1", "zone": "z1"},
+            {"fog_id": "e2", "zone": "z1"},
+        ],
+        exit_fogs=[{"fog_id": "x1", "zone": "z1"}],
+        allow_shared_entrance=True,
+    )
+    # 2 branches, different parent nodes
+    branches = [
+        Branch("a", "n_a", FogRef("xa", "za"), layers_since_last_split=0),
+        Branch("b", "n_b", FogRef("xb", "zb"), layers_since_last_split=0),
+    ]
+    config = Config()
+    config.structure.max_parallel_paths = 4
+    config.structure.split_probability = 1.0  # Would always split
+    config.structure.merge_probability = 0.0  # Would never merge
+
+    # With prefer_merge: should merge despite split_probability=1.0
+    op, _ = determine_operation(
+        cluster,
+        branches,
+        config,
+        random.Random(42),
+        prefer_merge=True,
+    )
+    assert op == LayerOperation.MERGE

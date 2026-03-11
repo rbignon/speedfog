@@ -494,24 +494,26 @@ def determine_operation(
     rng: random.Random,
     *,
     current_layer: int = 0,
-    force: LayerOperation | None = None,
+    prefer_merge: bool = False,
 ) -> tuple[LayerOperation, int]:
     """Determine what operation to perform given a pre-selected cluster.
 
-    Checks what the cluster can do (split, merge, passant) and decides
-    based on configured probabilities and current DAG state.
+    Priority hierarchy:
+    1. REBALANCE — if saturated + stale + merge pair available (defensive override)
+    2. prefer_merge — if True, bypass probability roll, return MERGE
+    3. Normal probability roll — split_prob / merge_prob / passant
 
     Args:
         cluster: Pre-selected cluster.
         branches: Current active branches.
         config: Configuration with probabilities and limits.
         rng: Random number generator.
-        current_layer: Current layer index (used for min_branch_age check).
-        force: If set, bypass probability roll for this operation type.
-            Falls back to normal logic if the cluster can't perform it.
+        current_layer: Current layer index (for min_branch_age check).
+        prefer_merge: If True, bypass probability in favor of MERGE
+            (used during convergence). Also bypasses min_branch_age.
 
     Returns:
-        Tuple of (operation, fan_out/fan_in). fan is 1 for PASSANT.
+        Tuple of (operation, fan_out/fan_in). fan is 1 for PASSANT/REBALANCE.
     """
     num_branches = len(branches)
     max_paths = config.structure.max_parallel_paths
@@ -519,7 +521,40 @@ def determine_operation(
     max_en = config.structure.max_entrances
     split_prob = config.structure.split_probability
     merge_prob = config.structure.merge_probability
-    min_age = config.structure.min_branch_age
+    min_age = 0 if prefer_merge else config.structure.min_branch_age
+    max_spacing = config.structure.max_branch_spacing
+
+    # --- Priority 1: REBALANCE (saturated + stale) ---
+    if max_spacing > 0 and num_branches >= max_paths:
+        max_stale = max(b.layers_since_last_split for b in branches)
+        if max_stale >= max_spacing:
+            # Check merge pair exists among non-stale branches
+            stale_idx = max(
+                range(num_branches),
+                key=lambda i: branches[i].layers_since_last_split,
+            )
+            other = [i for i in range(num_branches) if i != stale_idx]
+            has_pair = any(
+                branches[other[i]].current_node_id != branches[other[j]].current_node_id
+                for i in range(len(other))
+                for j in range(i + 1, len(other))
+            )
+            if has_pair:
+                return LayerOperation.REBALANCE, 1
+
+    # --- Priority 2: prefer_merge (convergence) ---
+    if prefer_merge:
+        can_merge_preferred = (
+            max_en >= 2
+            and num_branches >= 2
+            and _has_valid_merge_pair(branches, min_age=0, current_layer=current_layer)
+            and can_be_merge_node(cluster, 2)
+        )
+        if can_merge_preferred:
+            return LayerOperation.MERGE, 2
+        # Can't merge — fall through to normal logic (will likely be PASSANT)
+
+    # --- Priority 3: Normal probability roll ---
 
     # Determine split capability
     can_split = False
@@ -543,19 +578,11 @@ def determine_operation(
         and can_be_merge_node(cluster, 2)
     )
 
-    # Forced operation: bypass probability when spacing threshold exceeded
-    if force == LayerOperation.SPLIT and can_split:
-        return LayerOperation.SPLIT, split_fan
-    if force == LayerOperation.MERGE:
-        # Forced merge (from saturated spacing): bypass min_branch_age
-        can_merge_forced = (
-            max_en >= 2
-            and num_branches >= 2
-            and _has_valid_merge_pair(branches, min_age=0, current_layer=current_layer)
-            and can_be_merge_node(cluster, 2)
-        )
-        if can_merge_forced:
-            return LayerOperation.MERGE, 2
+    # Forced split when not saturated but stale
+    if max_spacing > 0 and num_branches < max_paths and can_split:
+        max_stale = max(b.layers_since_last_split for b in branches)
+        if max_stale >= max_spacing:
+            return LayerOperation.SPLIT, split_fan
 
     # Decide based on capabilities.
     # When split_prob + merge_prob >= 1.0 (e.g. 0.9 + 0.5), the probabilities
@@ -1720,8 +1747,23 @@ def generate_dag(
             config,
             rng,
             current_layer=current_layer,
-            force=force_op,
         )
+
+        if operation == LayerOperation.REBALANCE:
+            branches = execute_rebalance_layer(
+                dag,
+                branches,
+                current_layer,
+                tier,
+                layer_type,
+                clusters,
+                used_zones,
+                rng,
+                config,
+                reserved_zones=reserved_zones,
+            )
+            current_layer += 1
+            continue
 
         if operation == LayerOperation.SPLIT:
             # Pick which branch to split — prefer most stale when forced
