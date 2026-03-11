@@ -545,8 +545,16 @@ def determine_operation(
     # Forced operation: bypass probability when spacing threshold exceeded
     if force == LayerOperation.SPLIT and can_split:
         return LayerOperation.SPLIT, split_fan
-    if force == LayerOperation.MERGE and can_merge:
-        return LayerOperation.MERGE, 2
+    if force == LayerOperation.MERGE:
+        # Forced merge (from saturated spacing): bypass min_branch_age
+        can_merge_forced = (
+            max_en >= 2
+            and num_branches >= 2
+            and _has_valid_merge_pair(branches, min_age=0, current_layer=current_layer)
+            and can_be_merge_node(cluster, 2)
+        )
+        if can_merge_forced:
+            return LayerOperation.MERGE, 2
 
     # Decide based on capabilities.
     # When split_prob + merge_prob >= 1.0 (e.g. 0.9 + 0.5), the probabilities
@@ -660,6 +668,221 @@ def update_branch_counters(
     elif operation == LayerOperation.PASSANT:
         for b in passant_branches or []:
             b.layers_since_last_split += 1
+
+
+def _execute_spacing_rebalance(
+    dag: Dag,
+    branches: list[Branch],
+    current_layer: int,
+    tier: int,
+    layer_type: str,
+    clusters: ClusterPool,
+    used_zones: set[str],
+    rng: random.Random,
+    config: Config,
+    *,
+    reserved_zones: frozenset[str] = frozenset(),
+) -> list[Branch] | None:
+    """Combined merge + split on the same layer for saturated spacing.
+
+    When max_parallel_paths is reached and a branch exceeds the spacing
+    threshold, doing merge-then-split on separate layers causes oscillation
+    (branch count bounces between N and N-1). Instead, this function merges
+    2 branches AND splits the stale branch on the same layer, keeping the
+    total branch count constant.
+
+    Returns updated branches, or None if the rebalance can't be performed
+    (caller should fall back to normal flow).
+    """
+    # 1. Identify the most stale branch (split target)
+    stale_idx = max(
+        range(len(branches)),
+        key=lambda i: branches[i].layers_since_last_split,
+    )
+
+    # 2. Find 2 merge candidates among other branches (bypass min_age,
+    #    enforce anti-micro-merge: different parent nodes)
+    other_indices = [i for i in range(len(branches)) if i != stale_idx]
+    rng.shuffle(other_indices)
+    merge_pair: tuple[int, int] | None = None
+    for i in range(len(other_indices)):
+        for j in range(i + 1, len(other_indices)):
+            a, b = other_indices[i], other_indices[j]
+            if branches[a].current_node_id != branches[b].current_node_id:
+                merge_pair = (a, b)
+                break
+        if merge_pair:
+            break
+    if merge_pair is None:
+        return None
+
+    # 3. Pick a split-capable cluster (try preferred type, then others)
+    split_cluster = None
+    all_types = [layer_type] + [t for t in clusters.by_type if t != layer_type]
+    for t in all_types:
+        split_cluster = pick_cluster_with_filter(
+            clusters.get_by_type(t),
+            used_zones,
+            rng,
+            lambda c: can_be_split_node(c, 2),
+            reserved_zones=reserved_zones,
+        )
+        if split_cluster is not None:
+            break
+    if split_cluster is None:
+        return None
+
+    # 4. Pick a merge-capable cluster (try preferred type, then others)
+    used_after_split = used_zones | set(split_cluster.zones)
+    merge_cluster = None
+    for t in all_types:
+        merge_cluster = pick_cluster_with_filter(
+            clusters.get_by_type(t),
+            used_after_split,
+            rng,
+            lambda c: can_be_merge_node(c, 2),
+            reserved_zones=reserved_zones,
+        )
+        if merge_cluster is not None:
+            break
+    if merge_cluster is None:
+        return None
+
+    new_branches: list[Branch] = []
+    letter = 0
+
+    # A. Split the stale branch
+    stale_branch = branches[stale_idx]
+    used_zones.update(split_cluster.zones)
+    entry_fog, exit_fogs = _pick_entry_and_exits_for_node(split_cluster, 2, rng)
+    split_node_id = f"node_{current_layer}_{chr(97 + letter)}"
+    split_node = DagNode(
+        id=split_node_id,
+        cluster=split_cluster,
+        layer=current_layer,
+        tier=tier,
+        entry_fogs=[entry_fog],
+        exit_fogs=exit_fogs,
+    )
+    dag.add_node(split_node)
+    dag.add_edge(
+        stale_branch.current_node_id,
+        split_node_id,
+        stale_branch.available_exit,
+        entry_fog,
+    )
+    split_children: list[Branch] = []
+    for j in range(2):
+        split_children.append(
+            Branch(
+                f"{stale_branch.id}_{chr(97 + j)}",
+                split_node_id,
+                exit_fogs[j],
+                birth_layer=current_layer,
+                layers_since_last_split=0,
+            )
+        )
+    new_branches.extend(split_children)
+    letter += 1
+
+    # B. Merge the pair
+    merge_a, merge_b = merge_pair
+    merge_branches_list = [branches[merge_a], branches[merge_b]]
+    used_zones.update(merge_cluster.zones)
+
+    if merge_cluster.allow_shared_entrance:
+        entries = select_entries_for_merge(merge_cluster, 1, rng)
+        shared_entry = FogRef(entries[0]["fog_id"], entries[0]["zone"])
+        entry_fogs_list = [shared_entry]
+        exits = compute_net_exits(merge_cluster, entries)
+        for e in entries:
+            exits = _filter_exits_by_proximity(merge_cluster, e, exits)
+    else:
+        entries = select_entries_for_merge(merge_cluster, 2, rng)
+        entry_fogs_list = [FogRef(e["fog_id"], e["zone"]) for e in entries]
+        exits = compute_net_exits(merge_cluster, entries)
+        for e in entries:
+            exits = _filter_exits_by_proximity(merge_cluster, e, exits)
+
+    rng.shuffle(exits)
+    merge_exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits[:1]]
+    if not merge_exit_fogs:
+        return None
+
+    merge_node_id = f"node_{current_layer}_{chr(97 + letter)}"
+    merge_node = DagNode(
+        id=merge_node_id,
+        cluster=merge_cluster,
+        layer=current_layer,
+        tier=tier,
+        entry_fogs=entry_fogs_list,
+        exit_fogs=merge_exit_fogs,
+    )
+    dag.add_node(merge_node)
+
+    if merge_cluster.allow_shared_entrance:
+        for mb in merge_branches_list:
+            dag.add_edge(
+                mb.current_node_id, merge_node_id, mb.available_exit, shared_entry
+            )
+    else:
+        for mb, ef in zip(merge_branches_list, entry_fogs_list, strict=False):
+            dag.add_edge(mb.current_node_id, merge_node_id, mb.available_exit, ef)
+
+    # Merged branch inherits max counter; update_branch_counters will += 1
+    merged_counter = max(b.layers_since_last_split for b in merge_branches_list)
+    merged_branch = Branch(
+        f"merged_{current_layer}",
+        merge_node_id,
+        rng.choice(merge_exit_fogs),
+        birth_layer=current_layer,
+        layers_since_last_split=merged_counter,
+    )
+    new_branches.append(merged_branch)
+    letter += 1
+
+    # C. Passant for remaining branches
+    handled = {stale_idx, merge_a, merge_b}
+    for i, branch in enumerate(branches):
+        if i in handled:
+            continue
+        pc = pick_cluster_with_type_fallback(
+            clusters, layer_type, used_zones, rng, reserved_zones=reserved_zones
+        )
+        if pc is None:
+            return None
+        used_zones.update(pc.zones)
+        ef, exf = _pick_entry_and_exits_for_node(pc, 1, rng)
+        nid = f"node_{current_layer}_{chr(97 + letter)}"
+        n = DagNode(
+            id=nid,
+            cluster=pc,
+            layer=current_layer,
+            tier=tier,
+            entry_fogs=[ef],
+            exit_fogs=exf,
+        )
+        dag.add_node(n)
+        dag.add_edge(branch.current_node_id, nid, branch.available_exit, ef)
+        new_branches.append(
+            Branch(
+                branch.id,
+                nid,
+                rng.choice(exf),
+                birth_layer=branch.birth_layer,
+                layers_since_last_split=branch.layers_since_last_split,
+            )
+        )
+        letter += 1
+
+    # D. Update counters: split children = 0, everyone else += 1
+    update_branch_counters(
+        LayerOperation.SPLIT,
+        split_children=split_children,
+        passant_branches=[b for b in new_branches if b not in split_children],
+    )
+
+    return new_branches
 
 
 def execute_passant_layer(
@@ -1382,10 +1605,9 @@ def generate_dag(
 
             if needs_forced_split:
                 if len(branches) >= config.structure.max_parallel_paths:
-                    # Saturated — force merge to free a slot, then re-enter loop
-                    max_old = max_stale
-                    layer_before = current_layer
-                    branches, current_layer = execute_forced_merge(
+                    # Saturated — merge 2 branches + split the stale
+                    # branch on the same layer to avoid oscillation.
+                    result = _execute_spacing_rebalance(
                         dag,
                         branches,
                         current_layer,
@@ -1397,18 +1619,67 @@ def generate_dag(
                         config,
                         reserved_zones=reserved_zones,
                     )
-                    # Account for layers consumed during merging
-                    layers_consumed = current_layer - layer_before
-                    branches[0].layers_since_last_split = max_old + layers_consumed
-                    continue  # Re-enter loop — now 1 branch, room to split
+                    if result is not None:
+                        branches = result
+                        current_layer += 1
+                        continue
+                    # Fallback: force a merge, split next iteration
+                    force_op = LayerOperation.MERGE
                 else:
                     force_op = LayerOperation.SPLIT
 
-        # Pick a cluster uniformly for the "primary" branch action,
-        # falling back to other types if the planned type is exhausted.
-        primary_cluster = pick_cluster_with_type_fallback(
-            clusters, layer_type, used_zones, rng, reserved_zones=reserved_zones
-        )
+        # Pick a cluster for the "primary" branch action.
+        # When forcing an operation (split or merge for spacing enforcement),
+        # select a capable cluster to guarantee the operation can proceed.
+        # Without this, random selection may pick incapable clusters for
+        # several consecutive layers, defeating the spacing guarantee.
+        if force_op == LayerOperation.SPLIT:
+            # Try preferred type first, then all types for a split-capable cluster
+            primary_cluster = None
+            for t in [layer_type] + [t for t in clusters.by_type if t != layer_type]:
+                primary_cluster = pick_cluster_with_filter(
+                    clusters.get_by_type(t),
+                    used_zones,
+                    rng,
+                    lambda c: can_be_split_node(c, 2),
+                    reserved_zones=reserved_zones,
+                )
+                if primary_cluster is not None:
+                    break
+            if primary_cluster is None:
+                # No split-capable cluster in any type — accept passant
+                primary_cluster = pick_cluster_with_type_fallback(
+                    clusters,
+                    layer_type,
+                    used_zones,
+                    rng,
+                    reserved_zones=reserved_zones,
+                )
+        elif force_op == LayerOperation.MERGE:
+            # Try preferred type first, then all types for a merge-capable cluster
+            primary_cluster = None
+            for t in [layer_type] + [t for t in clusters.by_type if t != layer_type]:
+                primary_cluster = pick_cluster_with_filter(
+                    clusters.get_by_type(t),
+                    used_zones,
+                    rng,
+                    lambda c: can_be_merge_node(c, 2),
+                    reserved_zones=reserved_zones,
+                )
+                if primary_cluster is not None:
+                    break
+            if primary_cluster is None:
+                primary_cluster = pick_cluster_with_type_fallback(
+                    clusters,
+                    layer_type,
+                    used_zones,
+                    rng,
+                    reserved_zones=reserved_zones,
+                )
+        else:
+            primary_cluster = pick_cluster_with_type_fallback(
+                clusters, layer_type, used_zones, rng, reserved_zones=reserved_zones
+            )
         if primary_cluster is None:
             raise GenerationError(
                 f"No cluster available for layer {current_layer} "
@@ -1521,7 +1792,12 @@ def generate_dag(
 
         elif operation == LayerOperation.MERGE:
             # Find merge indices and actual fan-in
-            min_age = config.structure.min_branch_age
+            # Forced merge (saturated spacing) bypasses min_branch_age
+            min_age = (
+                0
+                if force_op == LayerOperation.MERGE
+                else config.structure.min_branch_age
+            )
             max_merge = max(min(config.structure.max_entrances, len(branches)), 2)
             merge_indices: list[int] | None = None
             actual_merge = 2
