@@ -714,3 +714,45 @@ def test_explicit_override_survives_max_branches_mutation():
     config.structure.max_parallel_paths = 1
     assert config.structure.max_exits == 4
     assert config.structure.max_entrances == 2
+
+
+def test_max_branch_spacing_default():
+    """max_branch_spacing defaults to 4."""
+    config = Config.from_dict({})
+    assert config.structure.max_branch_spacing == 4
+
+
+def test_max_branch_spacing_from_toml(tmp_path):
+    """max_branch_spacing parsed from TOML."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[structure]
+max_branch_spacing = 6
+""")
+    config = Config.from_toml(config_file)
+    assert config.structure.max_branch_spacing == 6
+
+
+def test_max_branch_spacing_disabled():
+    """max_branch_spacing = 0 disables enforcement."""
+    config = Config.from_dict({"structure": {"max_branch_spacing": 0}})
+    assert config.structure.max_branch_spacing == 0
+
+
+def test_max_branch_spacing_validation():
+    """min_branch_age >= max_branch_spacing raises ValueError."""
+    with pytest.raises(ValueError, match="min_branch_age"):
+        Config.from_dict(
+            {
+                "structure": {
+                    "min_branch_age": 4,
+                    "max_branch_spacing": 4,
+                }
+            }
+        )
+
+
+def test_max_branch_spacing_negative():
+    """Negative max_branch_spacing raises ValueError."""
+    with pytest.raises(ValueError, match="max_branch_spacing"):
+        Config.from_dict({"structure": {"max_branch_spacing": -1}})

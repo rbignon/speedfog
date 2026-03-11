@@ -31,6 +31,7 @@ class Branch:
     current_node_id: str
     available_exit: FogRef
     birth_layer: int = 0  # Layer when this branch was created (for min_branch_age)
+    layers_since_last_split: int = 0  # Layers since last split on this branch
 
 
 @dataclass
