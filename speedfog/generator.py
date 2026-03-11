@@ -1376,7 +1376,7 @@ def generate_dag(
             if needs_forced_split:
                 if len(branches) >= config.structure.max_parallel_paths:
                     # Saturated — force merge to free a slot, then re-enter loop
-                    max_old = max(b.layers_since_last_split for b in branches)
+                    max_old = max_stale
                     layer_before = current_layer
                     branches, current_layer = execute_forced_merge(
                         dag,
@@ -1463,6 +1463,7 @@ def generate_dag(
                                 node_id,
                                 exit_fogs[j],
                                 birth_layer=current_layer,
+                                layers_since_last_split=0,  # Reset: player just had a choice
                             )
                         )
                     letter_offset += 1
