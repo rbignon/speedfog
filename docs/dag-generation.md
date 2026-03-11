@@ -45,6 +45,7 @@ Tracks parallel path state during generation.
 | `current_node_id` | str | Where this branch is now |
 | `available_exit` | FogRef | Fog gate to use for next connection |
 | `birth_layer` | int | Layer when this branch was created (for `min_branch_age`) |
+| `layers_since_last_split` | int | Layers since this branch last had a split point (for `max_branch_spacing`) |
 
 ### FogRef (`dag.py`)
 
@@ -101,6 +102,32 @@ N branches converge into a single node. Creates convergence in the DAG.
 **Anti-micro-merge**: Selected branches must have at least 2 different parent nodes. This prevents trivial split-then-immediate-merge patterns (Y-shapes) that add no meaningful divergence.
 
 **Branch age gate**: When `min_branch_age > 0`, only branches that have existed for at least that many layers are eligible for merging (`current_layer - birth_layer >= min_branch_age`). This prevents premature merges where branches split and immediately reconverge, creating long linear (width=1) sections. Branch age is tracked via `birth_layer`: split and merge operations reset it to the current layer; passant operations preserve it.
+
+### Max Branch Spacing
+
+When `max_branch_spacing > 0`, the generator guarantees that no branch goes more than ~`max_branch_spacing` layers without a split point. Each branch tracks `layers_since_last_split`, counting layers since the player on that branch last had a choice.
+
+**Counter rules:**
+
+| Event | Counter value |
+|-------|---------------|
+| Branch created by split | `0` (player just had a choice) |
+| Branch does a passant | `+= 1` |
+| Non-split branches on a split layer | `+= 1` (no choice for them) |
+| Two branches merge | Result inherits `max(A, B)` |
+| Branches not participating in a merge | `+= 1` |
+| Start node (layer 0) | All initial branches start at `0` |
+
+Merges do NOT reset the counter — a merge doesn't give the player a new choice (fog gates are one-way).
+
+**Forced split:** When any branch reaches `layers_since_last_split >= max_branch_spacing`:
+
+- **Room to split** (`num_branches < max_parallel_paths`): Force SPLIT on the most stale branch. Cluster selection remains uniform (no bias toward split-capable clusters). If the selected cluster can't split, accept passant and retry next layer.
+- **Saturated** (`num_branches == max_parallel_paths`): Force merge first via `execute_forced_merge` to free a slot, then re-enter the loop to split.
+
+**Disabled during near-end convergence** (`is_near_end`): the remaining distance is short enough that backtracking isn't a concern.
+
+**Config validation:** `min_branch_age` must be strictly less than `max_branch_spacing` (when both are enabled).
 
 **Entry selection**: `select_entries_for_merge()` prefers non-bidirectional entries (preserves exit count for future operations), with main-tagged entries as a soft preference within each group.
 
@@ -348,6 +375,7 @@ Config validation runs once before any attempts; invalid config raises `Generati
 | `structure.split_probability` | 0.9 | Chance of split at each layer (if cluster supports it) |
 | `structure.merge_probability` | 0.5 | Chance of merge at each layer (if cluster supports it) |
 | `structure.min_branch_age` | 0 | Minimum layers before a branch can be merged (0=no limit) |
+| `structure.max_branch_spacing` | 4 | Maximum layers a branch can go without a split (0=disabled) |
 | `structure.crosslinks` | false | Add cross-links between parallel branches |
 | `structure.first_layer_type` | None | Force type for first layer |
 | `requirements.major_bosses` | 8 | Number of major boss layers |

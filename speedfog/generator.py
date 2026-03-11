@@ -1304,9 +1304,16 @@ def generate_dag(
             dag.add_node(n)
             dag.add_edge(branch.current_node_id, nid, branch.available_exit, ef)
             new_branches.append(
-                Branch(branch.id, nid, rng.choice(exf), birth_layer=current_layer)
+                Branch(
+                    branch.id,
+                    nid,
+                    rng.choice(exf),
+                    birth_layer=current_layer,
+                    layers_since_last_split=branch.layers_since_last_split,
+                )
             )
         branches = new_branches
+        update_branch_counters(LayerOperation.PASSANT, passant_branches=branches)
         current_layer += 1
 
     # 5. Plan remaining layer types

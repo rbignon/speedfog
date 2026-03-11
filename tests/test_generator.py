@@ -4417,6 +4417,108 @@ def test_max_branch_spacing_disabled_regression():
     assert len(paths) == 1  # Linear — no splits possible with 1-exit clusters
 
 
+def test_first_layer_type_counter_propagation():
+    """first_layer_type passant correctly initializes layers_since_last_split.
+
+    After first_layer_type passant, counters should be 1 (one passant layer
+    elapsed). The forced split should still trigger at the right threshold.
+    """
+    start = make_cluster(
+        "start",
+        zones=["start_z"],
+        cluster_type="start",
+        entry_fogs=[],
+        exit_fogs=[{"fog_id": "s_x1", "zone": "start_z"}],
+    )
+    # Legacy dungeon for first_layer_type
+    ld = make_cluster(
+        "ld0",
+        zones=["ld0_z"],
+        cluster_type="legacy_dungeon",
+        entry_fogs=[{"fog_id": "ld0_e", "zone": "ld0_z"}],
+        exit_fogs=[
+            {"fog_id": "ld0_x1", "zone": "ld0_z"},
+            {"fog_id": "ld0_x2", "zone": "ld0_z"},
+        ],
+    )
+    # Splittable mini_dungeons
+    clusters = []
+    for i in range(20):
+        clusters.append(
+            make_cluster(
+                f"sp{i}",
+                zones=[f"sp{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[{"fog_id": f"sp{i}_e", "zone": f"sp{i}_z"}],
+                exit_fogs=[
+                    {"fog_id": f"sp{i}_x1", "zone": f"sp{i}_z"},
+                    {"fog_id": f"sp{i}_x2", "zone": f"sp{i}_z"},
+                ],
+            )
+        )
+    # Merge-capable clusters
+    for i in range(5):
+        clusters.append(
+            make_cluster(
+                f"mg{i}",
+                zones=[f"mg{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[
+                    {"fog_id": f"mg{i}_e1", "zone": f"mg{i}_z"},
+                    {"fog_id": f"mg{i}_e2", "zone": f"mg{i}_z"},
+                ],
+                exit_fogs=[{"fog_id": f"mg{i}_x", "zone": f"mg{i}_z"}],
+                allow_shared_entrance=True,
+            )
+        )
+    boss = make_cluster(
+        "boss1",
+        zones=["boss_z"],
+        cluster_type="final_boss",
+        entry_fogs=[{"fog_id": "b_e", "zone": "boss_z"}],
+        exit_fogs=[],
+    )
+    pool = ClusterPool()
+    pool.add(start)
+    pool.add(ld)
+    for c in clusters:
+        pool.add(c)
+    pool.add(boss)
+
+    config = Config()
+    config.structure.final_boss_candidates = ["boss_z"]
+    config.structure.max_branch_spacing = 3
+    config.structure.first_layer_type = "legacy_dungeon"
+    config.structure.split_probability = 0.0  # Only forced splits
+    config.structure.merge_probability = 0.0
+    config.structure.max_parallel_paths = 3
+    config.structure.min_layers = 10
+    config.structure.max_layers = 14
+    config.requirements.mini_dungeons = 8
+    config.requirements.bosses = 0
+    config.requirements.legacy_dungeons = 0
+    config.requirements.major_bosses = 0
+
+    # Try multiple seeds — at least one should produce a forced split.
+    # With split_probability=0.0, splits only happen via max_branch_spacing
+    # enforcement. If first_layer_type correctly increments the counter,
+    # the forced split triggers 1 layer sooner than if counter stayed at 0.
+    found_split = False
+    for seed in range(50):
+        try:
+            dag = generate_dag(
+                config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
+            )
+            paths = dag.enumerate_paths()
+            if len(paths) >= 2:
+                found_split = True
+                break
+        except GenerationError:
+            continue
+
+    assert found_split, "Expected at least one seed to produce a forced split"
+
+
 @pytest.mark.skipif(
     not os.path.exists("data/clusters.json"),
     reason="Requires data/clusters.json",
