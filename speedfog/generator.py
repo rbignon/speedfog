@@ -671,10 +671,10 @@ def update_branch_counters(
             b.layers_since_last_split += 1
 
 
-def _execute_spacing_rebalance(
+def execute_rebalance_layer(
     dag: Dag,
     branches: list[Branch],
-    current_layer: int,
+    layer_idx: int,
     tier: int,
     layer_type: str,
     clusters: ClusterPool,
@@ -683,17 +683,30 @@ def _execute_spacing_rebalance(
     config: Config,
     *,
     reserved_zones: frozenset[str] = frozenset(),
-) -> list[Branch] | None:
-    """Combined merge + split on the same layer for saturated spacing.
+) -> list[Branch]:
+    """Combined merge + split on the same layer (REBALANCE operation).
 
-    When max_parallel_paths is reached and a branch exceeds the spacing
-    threshold, doing merge-then-split on separate layers causes oscillation
-    (branch count bounces between N and N-1). Instead, this function merges
-    2 branches AND splits the stale branch on the same layer, keeping the
-    total branch count constant.
+    Merges 2 branches and splits the most stale branch on the same layer,
+    keeping total branch count constant (N -> N). Uses 2 clusters: one
+    split-capable, one merge-capable.
 
-    Returns updated branches, or None if the rebalance can't be performed
-    (caller should fall back to normal flow).
+    Args:
+        dag: The DAG being built.
+        branches: Current active branches.
+        layer_idx: Current layer index.
+        tier: Difficulty tier.
+        layer_type: Preferred cluster type.
+        clusters: Pool of available clusters.
+        used_zones: Set of already used zones.
+        rng: Random number generator.
+        config: Configuration.
+        reserved_zones: Zones excluded from selection.
+
+    Returns:
+        Updated list of branches (same count as input).
+
+    Raises:
+        GenerationError: If no valid merge pair or no capable clusters found.
     """
     # 1. Identify the most stale branch (split target)
     stale_idx = max(
@@ -715,7 +728,10 @@ def _execute_spacing_rebalance(
         if merge_pair:
             break
     if merge_pair is None:
-        return None
+        raise GenerationError(
+            f"Rebalance failed at layer {layer_idx}: "
+            "no valid merge pair (anti-micro-merge)"
+        )
 
     # 3. Pick a split-capable cluster (try preferred type, then others)
     split_cluster = None
@@ -731,7 +747,10 @@ def _execute_spacing_rebalance(
         if split_cluster is not None:
             break
     if split_cluster is None:
-        return None
+        raise GenerationError(
+            f"Rebalance failed at layer {layer_idx}: "
+            "no split-capable cluster available"
+        )
 
     # 4. Pick a merge-capable cluster (try preferred type, then others)
     used_after_split = used_zones | set(split_cluster.zones)
@@ -747,7 +766,10 @@ def _execute_spacing_rebalance(
         if merge_cluster is not None:
             break
     if merge_cluster is None:
-        return None
+        raise GenerationError(
+            f"Rebalance failed at layer {layer_idx}: "
+            "no merge-capable cluster available"
+        )
 
     new_branches: list[Branch] = []
     letter = 0
@@ -756,11 +778,11 @@ def _execute_spacing_rebalance(
     stale_branch = branches[stale_idx]
     used_zones.update(split_cluster.zones)
     entry_fog, exit_fogs = _pick_entry_and_exits_for_node(split_cluster, 2, rng)
-    split_node_id = f"node_{current_layer}_{chr(97 + letter)}"
+    split_node_id = f"node_{layer_idx}_{chr(97 + letter)}"
     split_node = DagNode(
         id=split_node_id,
         cluster=split_cluster,
-        layer=current_layer,
+        layer=layer_idx,
         tier=tier,
         entry_fogs=[entry_fog],
         exit_fogs=exit_fogs,
@@ -779,7 +801,7 @@ def _execute_spacing_rebalance(
                 f"{stale_branch.id}_{chr(97 + j)}",
                 split_node_id,
                 exit_fogs[j],
-                birth_layer=current_layer,
+                birth_layer=layer_idx,
                 layers_since_last_split=0,
             )
         )
@@ -808,13 +830,15 @@ def _execute_spacing_rebalance(
     rng.shuffle(exits)
     merge_exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits[:1]]
     if not merge_exit_fogs:
-        return None
+        raise GenerationError(
+            f"Rebalance merge at layer {layer_idx}: no exits remaining"
+        )
 
-    merge_node_id = f"node_{current_layer}_{chr(97 + letter)}"
+    merge_node_id = f"node_{layer_idx}_{chr(97 + letter)}"
     merge_node = DagNode(
         id=merge_node_id,
         cluster=merge_cluster,
-        layer=current_layer,
+        layer=layer_idx,
         tier=tier,
         entry_fogs=entry_fogs_list,
         exit_fogs=merge_exit_fogs,
@@ -833,10 +857,10 @@ def _execute_spacing_rebalance(
     # Merged branch inherits max counter; update_branch_counters will += 1
     merged_counter = max(b.layers_since_last_split for b in merge_branches_list)
     merged_branch = Branch(
-        f"merged_{current_layer}",
+        f"merged_{layer_idx}",
         merge_node_id,
         rng.choice(merge_exit_fogs),
-        birth_layer=current_layer,
+        birth_layer=layer_idx,
         layers_since_last_split=merged_counter,
     )
     new_branches.append(merged_branch)
@@ -851,14 +875,16 @@ def _execute_spacing_rebalance(
             clusters, layer_type, used_zones, rng, reserved_zones=reserved_zones
         )
         if pc is None:
-            return None
+            raise GenerationError(
+                f"Rebalance passant at layer {layer_idx}: " f"no cluster for branch {i}"
+            )
         used_zones.update(pc.zones)
         ef, exf = _pick_entry_and_exits_for_node(pc, 1, rng)
-        nid = f"node_{current_layer}_{chr(97 + letter)}"
+        nid = f"node_{layer_idx}_{chr(97 + letter)}"
         n = DagNode(
             id=nid,
             cluster=pc,
-            layer=current_layer,
+            layer=layer_idx,
             tier=tier,
             entry_fogs=[ef],
             exit_fogs=exf,
@@ -1608,24 +1634,24 @@ def generate_dag(
                 if len(branches) >= config.structure.max_parallel_paths:
                     # Saturated — merge 2 branches + split the stale
                     # branch on the same layer to avoid oscillation.
-                    result = _execute_spacing_rebalance(
-                        dag,
-                        branches,
-                        current_layer,
-                        tier,
-                        layer_type,
-                        clusters,
-                        used_zones,
-                        rng,
-                        config,
-                        reserved_zones=reserved_zones,
-                    )
-                    if result is not None:
-                        branches = result
+                    try:
+                        branches = execute_rebalance_layer(
+                            dag,
+                            branches,
+                            current_layer,
+                            tier,
+                            layer_type,
+                            clusters,
+                            used_zones,
+                            rng,
+                            config,
+                            reserved_zones=reserved_zones,
+                        )
                         current_layer += 1
                         continue
-                    # Fallback: force a merge, split next iteration
-                    force_op = LayerOperation.MERGE
+                    except GenerationError:
+                        # Fallback: force a merge, split next iteration
+                        force_op = LayerOperation.MERGE
                 else:
                     force_op = LayerOperation.SPLIT
 

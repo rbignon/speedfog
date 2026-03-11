@@ -25,6 +25,7 @@ from speedfog.generator import (
     determine_operation,
     execute_merge_layer,
     execute_passant_layer,
+    execute_rebalance_layer,
     generate_dag,
     generate_with_retry,
     pick_cluster_uniform,
@@ -4564,3 +4565,279 @@ def _measure_max_branch_spacing(dag):
             max_spacing = max(max_spacing, since_last_split)
 
     return max_spacing
+
+
+# ── execute_rebalance_layer tests ──────────────────────────────────────
+
+
+def test_execute_rebalance_layer_basic():
+    """execute_rebalance_layer splits stale branch and merges another pair."""
+    dag = Dag(seed=1)
+
+    # 3 branches: A (stale), B and C (fresh, different parent nodes)
+    n_a = DagNode(
+        id="n_a",
+        cluster=make_cluster(
+            "ca",
+            zones=["za"],
+            entry_fogs=[{"fog_id": "ea", "zone": "za"}],
+            exit_fogs=[{"fog_id": "xa", "zone": "za"}],
+        ),
+        layer=0,
+        tier=1,
+        entry_fogs=[],
+        exit_fogs=[FogRef("xa", "za")],
+    )
+    n_b = DagNode(
+        id="n_b",
+        cluster=make_cluster(
+            "cb",
+            zones=["zb"],
+            entry_fogs=[{"fog_id": "eb", "zone": "zb"}],
+            exit_fogs=[{"fog_id": "xb", "zone": "zb"}],
+        ),
+        layer=0,
+        tier=1,
+        entry_fogs=[],
+        exit_fogs=[FogRef("xb", "zb")],
+    )
+    n_c = DagNode(
+        id="n_c",
+        cluster=make_cluster(
+            "cc",
+            zones=["zc"],
+            entry_fogs=[{"fog_id": "ec", "zone": "zc"}],
+            exit_fogs=[{"fog_id": "xc", "zone": "zc"}],
+        ),
+        layer=0,
+        tier=1,
+        entry_fogs=[],
+        exit_fogs=[FogRef("xc", "zc")],
+    )
+    dag.add_node(n_a)
+    dag.add_node(n_b)
+    dag.add_node(n_c)
+
+    branches = [
+        Branch("a", "n_a", FogRef("xa", "za"), layers_since_last_split=5),  # stale
+        Branch("b", "n_b", FogRef("xb", "zb"), layers_since_last_split=1),
+        Branch("c", "n_c", FogRef("xc", "zc"), layers_since_last_split=1),
+    ]
+
+    # Pool: split-capable + merge-capable clusters
+    pool = ClusterPool()
+    for i in range(5):
+        pool.add(
+            make_cluster(
+                f"split{i}",
+                zones=[f"s{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[{"fog_id": f"s{i}_e", "zone": f"s{i}_z"}],
+                exit_fogs=[
+                    {"fog_id": f"s{i}_x1", "zone": f"s{i}_z"},
+                    {"fog_id": f"s{i}_x2", "zone": f"s{i}_z"},
+                ],
+            )
+        )
+    for i in range(5):
+        pool.add(
+            make_cluster(
+                f"merge{i}",
+                zones=[f"m{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[
+                    {"fog_id": f"m{i}_e1", "zone": f"m{i}_z"},
+                    {"fog_id": f"m{i}_e2", "zone": f"m{i}_z"},
+                ],
+                exit_fogs=[{"fog_id": f"m{i}_x", "zone": f"m{i}_z"}],
+                allow_shared_entrance=True,
+            )
+        )
+
+    config = Config()
+    config.structure.max_parallel_paths = 3
+
+    result = execute_rebalance_layer(
+        dag,
+        branches,
+        layer_idx=1,
+        tier=2,
+        layer_type="mini_dungeon",
+        clusters=pool,
+        used_zones=set(),
+        rng=random.Random(42),
+        config=config,
+    )
+
+    # Same number of branches (rebalance is N -> N)
+    assert len(result) == 3
+    # At least one branch has counter = 0 (from the split)
+    assert any(b.layers_since_last_split == 0 for b in result)
+    # No branch named "a" remains (it was split into children)
+    assert not any(b.id == "a" for b in result)
+
+
+def test_execute_rebalance_layer_no_merge_pair():
+    """Raises GenerationError when no valid merge pair exists."""
+    dag = Dag(seed=1)
+    # All branches share same parent node → anti-micro-merge blocks merge
+    n = DagNode(
+        id="n_shared",
+        cluster=make_cluster(
+            "cs",
+            zones=["zs"],
+            entry_fogs=[{"fog_id": "es", "zone": "zs"}],
+            exit_fogs=[{"fog_id": "xs", "zone": "zs"}],
+        ),
+        layer=0,
+        tier=1,
+        entry_fogs=[],
+        exit_fogs=[FogRef("xs", "zs")],
+    )
+    dag.add_node(n)
+    branches = [
+        Branch("a", "n_shared", FogRef("xs", "zs"), layers_since_last_split=5),
+        Branch("b", "n_shared", FogRef("xs", "zs"), layers_since_last_split=1),
+        Branch("c", "n_shared", FogRef("xs", "zs"), layers_since_last_split=1),
+    ]
+    pool = ClusterPool()
+    for i in range(5):
+        pool.add(
+            make_cluster(
+                f"sp{i}",
+                zones=[f"s{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[{"fog_id": f"s{i}_e", "zone": f"s{i}_z"}],
+                exit_fogs=[
+                    {"fog_id": f"s{i}_x1", "zone": f"s{i}_z"},
+                    {"fog_id": f"s{i}_x2", "zone": f"s{i}_z"},
+                ],
+            )
+        )
+    config = Config()
+    config.structure.max_parallel_paths = 3
+
+    with pytest.raises(GenerationError, match="no valid merge pair"):
+        execute_rebalance_layer(
+            dag,
+            branches,
+            layer_idx=1,
+            tier=2,
+            layer_type="mini_dungeon",
+            clusters=pool,
+            used_zones=set(),
+            rng=random.Random(42),
+            config=config,
+        )
+
+
+def test_execute_rebalance_layer_counter_propagation():
+    """Merged branch counter ends at max(A, B) + 1 after update."""
+    dag = Dag(seed=1)
+    n_a = DagNode(
+        id="n_a",
+        cluster=make_cluster(
+            "ca",
+            zones=["za"],
+            entry_fogs=[{"fog_id": "ea", "zone": "za"}],
+            exit_fogs=[{"fog_id": "xa", "zone": "za"}],
+        ),
+        layer=0,
+        tier=1,
+        entry_fogs=[],
+        exit_fogs=[FogRef("xa", "za")],
+    )
+    n_b = DagNode(
+        id="n_b",
+        cluster=make_cluster(
+            "cb",
+            zones=["zb"],
+            entry_fogs=[{"fog_id": "eb", "zone": "zb"}],
+            exit_fogs=[{"fog_id": "xb", "zone": "zb"}],
+        ),
+        layer=0,
+        tier=1,
+        entry_fogs=[],
+        exit_fogs=[FogRef("xb", "zb")],
+    )
+    n_c = DagNode(
+        id="n_c",
+        cluster=make_cluster(
+            "cc",
+            zones=["zc"],
+            entry_fogs=[{"fog_id": "ec", "zone": "zc"}],
+            exit_fogs=[{"fog_id": "xc", "zone": "zc"}],
+        ),
+        layer=0,
+        tier=1,
+        entry_fogs=[],
+        exit_fogs=[FogRef("xc", "zc")],
+    )
+    dag.add_node(n_a)
+    dag.add_node(n_b)
+    dag.add_node(n_c)
+
+    branches = [
+        Branch(
+            "a", "n_a", FogRef("xa", "za"), layers_since_last_split=8
+        ),  # stale (split)
+        Branch(
+            "b", "n_b", FogRef("xb", "zb"), layers_since_last_split=3
+        ),  # merge candidate
+        Branch(
+            "c", "n_c", FogRef("xc", "zc"), layers_since_last_split=1
+        ),  # merge candidate
+    ]
+
+    pool = ClusterPool()
+    for i in range(5):
+        pool.add(
+            make_cluster(
+                f"split{i}",
+                zones=[f"s{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[{"fog_id": f"s{i}_e", "zone": f"s{i}_z"}],
+                exit_fogs=[
+                    {"fog_id": f"s{i}_x1", "zone": f"s{i}_z"},
+                    {"fog_id": f"s{i}_x2", "zone": f"s{i}_z"},
+                ],
+            )
+        )
+    for i in range(5):
+        pool.add(
+            make_cluster(
+                f"merge{i}",
+                zones=[f"m{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[
+                    {"fog_id": f"m{i}_e1", "zone": f"m{i}_z"},
+                    {"fog_id": f"m{i}_e2", "zone": f"m{i}_z"},
+                ],
+                exit_fogs=[{"fog_id": f"m{i}_x", "zone": f"m{i}_z"}],
+                allow_shared_entrance=True,
+            )
+        )
+
+    config = Config()
+    config.structure.max_parallel_paths = 3
+
+    result = execute_rebalance_layer(
+        dag,
+        branches,
+        layer_idx=1,
+        tier=2,
+        layer_type="mini_dungeon",
+        clusters=pool,
+        used_zones=set(),
+        rng=random.Random(42),
+        config=config,
+    )
+
+    # Split children have counter = 0
+    split_children = [b for b in result if b.layers_since_last_split == 0]
+    assert len(split_children) == 2
+
+    # Merged branch has counter = max(3, 1) + 1 = 4
+    merged = [b for b in result if "merged" in b.id]
+    assert len(merged) == 1
+    assert merged[0].layers_since_last_split == 4  # max(3, 1) + 1
