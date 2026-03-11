@@ -30,7 +30,7 @@ class LayerOperation(Enum):
 
 A REBALANCE merges 2 branches and splits 1 stale branch on the same layer, keeping the total branch count constant (N → N). It uses 2 clusters: one merge-capable, one split-capable.
 
-REBALANCE is internal to the generator — it does not appear in serialized output (graph.json, spoiler logs). It is purely a control-flow enum variant.
+REBALANCE is internal to the generator — it is purely a control-flow enum variant. The graph.json serialization operates on nodes and edges, not on operations. A REBALANCE produces a split node and a merge node on the same layer, which appear in graph.json identically to nodes produced by separate SPLIT and MERGE operations. Spoiler logs similarly serialize nodes, not operations.
 
 ### determine_operation Changes
 
@@ -107,12 +107,13 @@ while len(branches) > 1:
     else:
         # Can't merge yet (anti-micro-merge) — passant to diverge nodes
         branches = execute_passant_layer(...)
+    # Counter updates happen inside each helper (same as main loop)
     current_layer += 1
 ```
 
 **How convergence is forced:** `prefer_merge=True` bypasses the probability roll in favor of MERGE. REBALANCE can still override when a branch exceeds the staleness threshold.
 
-**Guard-rail:** If the convergence loop exceeds `merge_reserve * 2` layers without converging to 1 branch, raise `GenerationError`.
+**Guard-rail:** If the convergence loop uses more than `merge_reserve * 2` layers (i.e., `layers_used > merge_reserve * 2`, which is > 12 for `max_parallel_paths=4`) without converging to 1 branch, raise `GenerationError`.
 
 Termination argument: REBALANCE maintains branch count (N → N), but resets the split target's counter to 0. On the next iteration, `determine_operation` sees no stale branch (counter just reset), so it returns MERGE (due to `prefer_merge=True`), reducing branch count by 1. The pattern is at worst: REBALANCE → MERGE → REBALANCE → MERGE → ... Each REBALANCE/MERGE pair reduces branch count by 1, so convergence completes in at most `2 * (N - 1)` layers. With `max_parallel_paths=4`, that's 6 layers — well within `merge_reserve * 2 = 12`.
 
