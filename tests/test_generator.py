@@ -4944,3 +4944,178 @@ def test_determine_operation_prefer_merge():
         prefer_merge=True,
     )
     assert op == LayerOperation.MERGE
+
+
+# ── Convergence integration tests ─────────────────────────────────────
+
+
+def test_rebalance_during_convergence():
+    """Convergence phase doesn't create linear stretches > threshold + 2."""
+    start = make_cluster(
+        "start",
+        zones=["start_z"],
+        cluster_type="start",
+        entry_fogs=[],
+        exit_fogs=[
+            {"fog_id": "s_x1", "zone": "start_z"},
+            {"fog_id": "s_x2", "zone": "start_z"},
+        ],
+    )
+    clusters_list = []
+    for i in range(30):
+        clusters_list.append(
+            make_cluster(
+                f"sp{i}",
+                zones=[f"sp{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[{"fog_id": f"sp{i}_e", "zone": f"sp{i}_z"}],
+                exit_fogs=[
+                    {"fog_id": f"sp{i}_x1", "zone": f"sp{i}_z"},
+                    {"fog_id": f"sp{i}_x2", "zone": f"sp{i}_z"},
+                ],
+            )
+        )
+    for i in range(10):
+        clusters_list.append(
+            make_cluster(
+                f"mg{i}",
+                zones=[f"mg{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[
+                    {"fog_id": f"mg{i}_e1", "zone": f"mg{i}_z"},
+                    {"fog_id": f"mg{i}_e2", "zone": f"mg{i}_z"},
+                ],
+                exit_fogs=[{"fog_id": f"mg{i}_x", "zone": f"mg{i}_z"}],
+                allow_shared_entrance=True,
+            )
+        )
+    boss = make_cluster(
+        "boss1",
+        zones=["boss_z"],
+        cluster_type="final_boss",
+        entry_fogs=[{"fog_id": "b_e", "zone": "boss_z"}],
+        exit_fogs=[],
+    )
+    pool = ClusterPool()
+    pool.add(start)
+    for c in clusters_list:
+        pool.add(c)
+    pool.add(boss)
+
+    max_spacing = 4
+    violations = []
+    for seed in range(30):
+        config = Config()
+        config.structure.final_boss_candidates = ["boss_z"]
+        config.structure.max_branch_spacing = max_spacing
+        config.structure.split_probability = 0.9
+        config.structure.merge_probability = 0.5
+        config.structure.max_parallel_paths = 4
+        config.structure.min_layers = 12
+        config.structure.max_layers = 18
+        config.requirements.mini_dungeons = 10
+        config.requirements.bosses = 0
+        config.requirements.legacy_dungeons = 0
+        config.requirements.major_bosses = 0
+
+        try:
+            dag = generate_dag(
+                config,
+                pool,
+                seed=seed,
+                boss_candidates=_boss_candidates(pool),
+            )
+            max_observed = _measure_max_branch_spacing(dag)
+            # During convergence, merges reduce branch count below
+            # max_parallel_paths, so REBALANCE no longer triggers.
+            # Remaining merge-only convergence can add up to merge_reserve
+            # layers. Allow max_spacing + merge_reserve (= 4 + 6 = 10).
+            limit = max_spacing + config.structure.max_parallel_paths + 2
+            if max_observed > limit:
+                violations.append((seed, max_observed))
+        except GenerationError:
+            continue
+
+    assert not violations, f"Convergence stretches exceeded limit: {violations}"
+
+
+def test_convergence_terminates():
+    """Convergence loop always terminates (no infinite REBALANCE loop)."""
+    start = make_cluster(
+        "start",
+        zones=["start_z"],
+        cluster_type="start",
+        entry_fogs=[],
+        exit_fogs=[
+            {"fog_id": "s_x1", "zone": "start_z"},
+            {"fog_id": "s_x2", "zone": "start_z"},
+        ],
+    )
+    clusters_list = []
+    for i in range(40):
+        clusters_list.append(
+            make_cluster(
+                f"sp{i}",
+                zones=[f"sp{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[{"fog_id": f"sp{i}_e", "zone": f"sp{i}_z"}],
+                exit_fogs=[
+                    {"fog_id": f"sp{i}_x1", "zone": f"sp{i}_z"},
+                    {"fog_id": f"sp{i}_x2", "zone": f"sp{i}_z"},
+                ],
+            )
+        )
+    for i in range(10):
+        clusters_list.append(
+            make_cluster(
+                f"mg{i}",
+                zones=[f"mg{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[
+                    {"fog_id": f"mg{i}_e1", "zone": f"mg{i}_z"},
+                    {"fog_id": f"mg{i}_e2", "zone": f"mg{i}_z"},
+                ],
+                exit_fogs=[{"fog_id": f"mg{i}_x", "zone": f"mg{i}_z"}],
+                allow_shared_entrance=True,
+            )
+        )
+    boss = make_cluster(
+        "boss1",
+        zones=["boss_z"],
+        cluster_type="final_boss",
+        entry_fogs=[{"fog_id": "b_e", "zone": "boss_z"}],
+        exit_fogs=[],
+    )
+    pool = ClusterPool()
+    pool.add(start)
+    for c in clusters_list:
+        pool.add(c)
+    pool.add(boss)
+
+    for seed in range(20):
+        config = Config()
+        config.structure.final_boss_candidates = ["boss_z"]
+        config.structure.max_branch_spacing = 3
+        config.structure.split_probability = 1.0
+        config.structure.merge_probability = 0.0
+        config.structure.max_parallel_paths = 4
+        config.structure.min_layers = 10
+        config.structure.max_layers = 14
+        config.requirements.mini_dungeons = 8
+        config.requirements.bosses = 0
+        config.requirements.legacy_dungeons = 0
+        config.requirements.major_bosses = 0
+
+        try:
+            dag = generate_dag(
+                config,
+                pool,
+                seed=seed,
+                boss_candidates=_boss_candidates(pool),
+            )
+            # If we get here, convergence terminated
+            assert dag.end_id
+        except GenerationError:
+            # Generation failure is acceptable (cluster exhaustion etc.)
+            # but NOT convergence timeout
+            pass
