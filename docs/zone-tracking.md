@@ -74,7 +74,8 @@ For each connection in graph.json:
 3. **Entity candidates** — `entityToFlag: Dictionary<int, List<EntityCandidate>>`. Each candidate pairs a flag_id with its destination maps. Two entity sources per connection:
    - `ExitEntityId` — the fog gate asset entity from fog_data.json
    - Gate name suffix — for numeric gates (e.g., `m34_12_00_00_34122840`), the suffix is the action entity used by FogMod in `IfActionButtonInArea`
-4. **Compound lookup** — `(source_map, dest_map) → flag_id`, with collision tracking
+4. **Region candidates** — `regionToFlag: Dictionary<int, List<RegionCandidate>>`. Each candidate pairs a flag_id with its source maps. For numeric entrance gates (e.g., `m60_35_45_00_1035462610`), the suffix is the WarpPlayer region entity. FogMod may warp to adjacent map tiles, so dest map matching fails — region matching bypasses dest_map entirely.
+5. **Compound lookup** — `(source_map, dest_map) → flag_id`, with collision tracking
 5. **Dest-only lookup** — `dest_map → flag_id`, with collision tracking
 6. **Common event lookup** — `dest_map → flag_id` for connections with `HasCommonEvent` (WarpBonfire gates whose vanilla events live in common.emevd)
 
@@ -84,17 +85,18 @@ The entity lookup is a **multimap** (one entity → multiple candidates) because
 
 For each event in each EMEVD file:
 
-1. **Pre-scan** — `TryMatchEntityCandidates()` scans the event's instructions for `IfActionButtonInArea` (bank 3, id 24) with a known entity. Handles both literal entity IDs and parameterized ones (resolved via `InitializeEvent` args + Parameter list). Returns the candidate list or null.
+1. **Pre-scan** — `TryMatchEntityCandidates()` scans the event's instructions for `IfActionButtonInArea` (bank 3, id 24) with a known entity. Handles both literal entity IDs and parameterized ones (resolved via `InitializeEvent` args + Parameter list). Returns the candidate list or null. Also outputs `hasFogModEntity` = true if any IfActionButtonInArea entity is >= `FOGMOD_ENTITY_BASE` (even if not in entityToFlag), signaling the event is FogMod-generated.
 
 2. **Per-warp matching** — for each `WarpPlayer` or `PlayCutsceneToPlayerAndWarp` instruction:
 
-   **FogMod filter**: skip if `region < FOGMOD_ENTITY_BASE` AND no entity candidates found (vanilla event, not FogMod-generated).
+   **FogMod filter**: skip if `region < FOGMOD_ENTITY_BASE` AND no entity candidates found AND `hasFogModEntity` is false (vanilla event, not FogMod-generated). The `hasFogModEntity` flag is needed because FogMod allocates new entities for AEG099 fog gates that aren't in our entityToFlag lookup, but the event IS FogMod-generated and should be processed.
 
-   Then try four strategies in order:
+   Then try five strategies in order:
 
    | Strategy | Key | When it resolves |
    |----------|-----|-----------------|
    | 0. Entity match | IfActionButtonInArea entity → candidates → resolve by dest map | Most reliable. Handles manual fogwarps with vanilla region IDs (e.g., Placidusax). Handles shared gates via dest map disambiguation. |
+   | R. Region match | WarpPlayer region → entrance_gate numeric entity suffix → resolve by source map | For numeric entrance gates (e.g., `m60_35_45_00_1035462610`), WarpPlayer uses the vanilla entity as the region. Maps region back to the connection's flag_id. Handles FogMod events that warp to adjacent map tiles (dest map mismatch). |
    | 1. Compound key | (EMEVD filename, warp dest map) → flag | Resolves same-dest collisions when exits come from different maps. On compound collision, falls back to entity resolution. |
    | 2. Dest-only | warp dest map → flag | Fallback. Skips injection on collisions when source map is known (likely back-portal) or when common event lookup covers the dest map (defers to Strategy 3). |
    | 3. Common event | warp dest map → flag (common event lookup) | For WarpBonfire gates whose vanilla events live in common.emevd. Only checked when sourceMap is null and strategies 0-2 did not match. See details below. |
