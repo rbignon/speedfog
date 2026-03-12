@@ -199,6 +199,19 @@ class TestParseFog:
 
         assert fog.is_norandom is True
 
+    def test_parse_openremove_fog(self):
+        """Openremove fogs are excluded (FogMod removes in crawl mode)."""
+        fog_data = {
+            "Name": "test",
+            "ID": 12345,
+            "ASide": {"Area": "a"},
+            "BSide": {"Area": "b"},
+            "Tags": "uniquegate critical openremove",
+        }
+        fog = parse_fog(fog_data)
+
+        assert fog.is_norandom is True
+
 
 class TestFogSideRequiresOwnZone:
     """Tests for FogSide.requires_own_zone method."""
