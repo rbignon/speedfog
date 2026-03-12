@@ -76,8 +76,8 @@ For each connection in graph.json:
    - Gate name suffix — for numeric gates (e.g., `m34_12_00_00_34122840`), the suffix is the action entity used by FogMod in `IfActionButtonInArea`
 4. **Region candidates** — `regionToFlag: Dictionary<int, List<RegionCandidate>>`. Each candidate pairs a flag_id with its source maps. For numeric entrance gates (e.g., `m60_35_45_00_1035462610`), the suffix is the WarpPlayer region entity. FogMod may warp to adjacent map tiles, so dest map matching fails — region matching bypasses dest_map entirely.
 5. **Compound lookup** — `(source_map, dest_map) → flag_id`, with collision tracking
-5. **Dest-only lookup** — `dest_map → flag_id`, with collision tracking
-6. **Common event lookup** — `dest_map → flag_id` for connections with `HasCommonEvent` (WarpBonfire gates whose vanilla events live in common.emevd)
+6. **Dest-only lookup** — `dest_map → flag_id`, with collision tracking
+7. **Common event lookup** — `dest_map → flag_id` for connections with `HasCommonEvent` (WarpBonfire gates whose vanilla events live in common.emevd)
 
 The entity lookup is a **multimap** (one entity → multiple candidates) because two connections can share the same exit fog gate when `allow_entry_as_exit` is used. The old `Dictionary.TryAdd` silently dropped duplicates; the multimap preserves all candidates and disambiguates by destination map at match time.
 
@@ -98,7 +98,7 @@ For each event in each EMEVD file:
    | 0. Entity match | IfActionButtonInArea entity → candidates → resolve by dest map | Most reliable. Handles manual fogwarps with vanilla region IDs (e.g., Placidusax). Handles shared gates via dest map disambiguation. |
    | R. Region match | WarpPlayer region → entrance_gate numeric entity suffix → resolve by source map | For numeric entrance gates (e.g., `m60_35_45_00_1035462610`), WarpPlayer uses the vanilla entity as the region. Maps region back to the connection's flag_id. Handles FogMod events that warp to adjacent map tiles (dest map mismatch). |
    | 1. Compound key | (EMEVD filename, warp dest map) → flag | Resolves same-dest collisions when exits come from different maps. On compound collision, falls back to entity resolution. |
-   | 2. Dest-only | warp dest map → flag | Fallback. Skips injection on collisions when source map is known (likely back-portal) or when common event lookup covers the dest map (defers to Strategy 3). |
+   | 2. Dest-only | warp dest map → flag | Fallback. Skips injection on all collisions: when source map is known (likely back-portal), when common event lookup covers the dest map (defers to Strategy 3), or in common.emevd without common event entry (avoids injecting a possibly-wrong flag — Phase 3 validation catches the missing flag). |
    | 3. Common event | warp dest map → flag (common event lookup) | For WarpBonfire gates whose vanilla events live in common.emevd. Only checked when sourceMap is null and strategies 0-2 did not match. See details below. |
 
 3. **Injection** — insert `SetEventFlag(flag_id, ON)` before each matched warp instruction, from last to first (to preserve instruction indices). Shift Parameter entries accordingly.
@@ -129,7 +129,7 @@ Strategy 3 only fires when all of these are true:
 
 **Interaction with Strategy 2:**
 
-Strategy 2 explicitly defers to Strategy 3 in one case: when a dest-only collision occurs in common.emevd (`sourceMap` is null) and the collided dest map has an entry in `commonEventLookup`, Strategy 2 skips injection and increments `skippedCollisions`, allowing Strategy 3 to handle the warp with its more precise lookup. Without a common event entry for the dest map, Strategy 2 injects anyway (no better option available).
+Strategy 2 skips injection on all dest-only collisions: in map-specific EMEVDs (likely back-portal return warps), in common.emevd when a `commonEventLookup` entry exists (defers to Strategy 3), and in common.emevd without a common event entry (avoids injecting a possibly-wrong flag). In all cases, if no other strategy matches, the flag remains uninjected and Phase 3 validation aborts the build — preferring a loud failure over silent incorrectness.
 
 ### Entity Disambiguation Detail
 

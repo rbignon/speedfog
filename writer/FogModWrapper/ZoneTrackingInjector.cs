@@ -509,9 +509,14 @@ public static class ZoneTrackingInjector
                             else
                             {
                                 // Dest collision in common.emevd without common event entry:
-                                // no better strategy available, inject via dest-only.
-                                matched = true;
-                                destOnlyMatches++;
+                                // skip rather than inject a possibly-wrong flag. Phase 3
+                                // validation will abort the build if the correct flag is
+                                // never injected by another strategy.
+                                Console.WriteLine($"Zone tracking: skipped collided dest-only " +
+                                                  $"on {FormatMap(destMap)} in common.emevd (event {evt.ID}), " +
+                                                  $"no common event entry to disambiguate");
+                                skippedCollisions++;
+                                continue;
                             }
                         }
                         else
