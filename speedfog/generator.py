@@ -500,11 +500,13 @@ def _pick_cluster_biased_for_split(
     """Pick a cluster biased toward split-capable when spacing enforcement needs it.
 
     When a branch is stale (counter >= max_branch_spacing) and the branch count
-    is below max_parallel_paths, bias cluster selection toward split-capable
-    clusters so that determine_operation can return a forced SPLIT.
+    is below max_parallel_paths, bias cluster selection toward a split-capable
+    cluster of preferred_type so that determine_operation can return a forced
+    SPLIT. Only searches within preferred_type to preserve layer type
+    homogeneity.
 
     Falls back to normal type-fallback selection if no split-capable cluster
-    is available or if biased selection isn't needed.
+    of preferred_type is available or if biased selection isn't needed.
     """
     max_spacing = config.structure.max_branch_spacing
     needs_bias = (
@@ -513,19 +515,18 @@ def _pick_cluster_biased_for_split(
         and max(b.layers_since_last_split for b in branches) >= max_spacing
     )
     if needs_bias:
-        for t in [preferred_type] + [
-            t for t in clusters.by_type if t != preferred_type
-        ]:
-            cluster = pick_cluster_with_filter(
-                clusters.get_by_type(t),
-                used_zones,
-                rng,
-                lambda c: can_be_split_node(c, 2),
-                reserved_zones=reserved_zones,
-            )
-            if cluster is not None:
-                return cluster
-        # No split-capable cluster found — fall through to normal selection
+        cluster = pick_cluster_with_filter(
+            clusters.get_by_type(preferred_type),
+            used_zones,
+            rng,
+            lambda c: can_be_split_node(c, 2),
+            reserved_zones=reserved_zones,
+        )
+        if cluster is not None:
+            return cluster
+        # No split-capable cluster of preferred type — fall through to normal
+        # selection (non-split-capable). The split will happen at a later layer
+        # when a type with split-capable stock is planned.
 
     return pick_cluster_with_type_fallback(
         clusters,
@@ -544,6 +545,7 @@ def determine_operation(
     *,
     current_layer: int = 0,
     prefer_merge: bool = False,
+    skip_rebalance: bool = False,
 ) -> tuple[LayerOperation, int]:
     """Determine what operation to perform given a pre-selected cluster.
 
@@ -560,6 +562,8 @@ def determine_operation(
         current_layer: Current layer index (for min_branch_age check).
         prefer_merge: If True, bypass probability in favor of MERGE
             (used during convergence). Also bypasses min_branch_age.
+        skip_rebalance: If True, skip REBALANCE (used when rebalance
+            failed due to no capable cluster of the planned type).
 
     Returns:
         Tuple of (operation, fan_out/fan_in). fan is 1 for PASSANT/REBALANCE.
@@ -579,7 +583,7 @@ def determine_operation(
         if max_stale >= max_spacing:
             # REBALANCE: merge 2 + split 1 (N -> N). Requires >= 3 branches
             # (1 to split + 2 to merge).
-            if num_branches >= 3:
+            if not skip_rebalance and num_branches >= 3:
                 stale_idx = max(
                     range(num_branches),
                     key=lambda i: branches[i].layers_since_last_split,
@@ -764,12 +768,17 @@ def execute_rebalance_layer(
     config: Config,
     *,
     reserved_zones: frozenset[str] = frozenset(),
-) -> list[Branch]:
+) -> list[Branch] | None:
     """Combined merge + split on the same layer (REBALANCE operation).
 
     Merges 2 branches and splits the most stale branch on the same layer,
     keeping total branch count constant (N -> N). Uses 2 clusters: one
     split-capable, one merge-capable.
+
+    Only selects clusters of layer_type to preserve type homogeneity.
+    Returns None if no split-capable or merge-capable cluster of the
+    planned type is available, allowing the caller to fall back to
+    another operation.
 
     Args:
         dag: The DAG being built.
@@ -784,10 +793,11 @@ def execute_rebalance_layer(
         reserved_zones: Zones excluded from selection.
 
     Returns:
-        Updated list of branches (same count as input).
+        Updated list of branches (same count as input), or None if no
+        capable cluster of the planned type is available.
 
     Raises:
-        GenerationError: If no valid merge pair or no capable clusters found.
+        GenerationError: If no valid merge pair found.
     """
     # 1. Identify the most stale branch (split target)
     stale_idx = max(
@@ -814,43 +824,30 @@ def execute_rebalance_layer(
             "no valid merge pair (anti-micro-merge)"
         )
 
-    # 3. Pick a split-capable cluster (try preferred type, then others)
-    split_cluster = None
-    all_types = [layer_type] + [t for t in clusters.by_type if t != layer_type]
-    for t in all_types:
-        split_cluster = pick_cluster_with_filter(
-            clusters.get_by_type(t),
-            used_zones,
-            rng,
-            lambda c: can_be_split_node(c, 2),
-            reserved_zones=reserved_zones,
-        )
-        if split_cluster is not None:
-            break
+    # 3. Pick a split-capable cluster of the planned type only.
+    # If none available, return None to let the caller fall back to another
+    # operation, preserving type homogeneity within the layer.
+    split_cluster = pick_cluster_with_filter(
+        clusters.get_by_type(layer_type),
+        used_zones,
+        rng,
+        lambda c: can_be_split_node(c, 2),
+        reserved_zones=reserved_zones,
+    )
     if split_cluster is None:
-        raise GenerationError(
-            f"Rebalance failed at layer {layer_idx}: "
-            "no split-capable cluster available"
-        )
+        return None
 
-    # 4. Pick a merge-capable cluster (try preferred type, then others)
+    # 4. Pick a merge-capable cluster of the planned type only.
     used_after_split = used_zones | set(split_cluster.zones)
-    merge_cluster = None
-    for t in all_types:
-        merge_cluster = pick_cluster_with_filter(
-            clusters.get_by_type(t),
-            used_after_split,
-            rng,
-            lambda c: can_be_merge_node(c, 2),
-            reserved_zones=reserved_zones,
-        )
-        if merge_cluster is not None:
-            break
+    merge_cluster = pick_cluster_with_filter(
+        clusters.get_by_type(layer_type),
+        used_after_split,
+        rng,
+        lambda c: can_be_merge_node(c, 2),
+        reserved_zones=reserved_zones,
+    )
     if merge_cluster is None:
-        raise GenerationError(
-            f"Rebalance failed at layer {layer_idx}: "
-            "no merge-capable cluster available"
-        )
+        return None
 
     new_branches: list[Branch] = []
     letter = 0
@@ -1640,7 +1637,7 @@ def generate_dag(
         )
 
         if operation == LayerOperation.REBALANCE:
-            branches = execute_rebalance_layer(
+            result = execute_rebalance_layer(
                 dag,
                 branches,
                 current_layer,
@@ -1652,8 +1649,20 @@ def generate_dag(
                 config,
                 reserved_zones=reserved_zones,
             )
-            current_layer += 1
-            continue
+            if result is not None:
+                branches = result
+                current_layer += 1
+                continue
+            # No capable cluster of the planned type — re-decide without
+            # REBALANCE. The stale branch will be split at a later layer.
+            operation, fan = determine_operation(
+                primary_cluster,
+                branches,
+                config,
+                rng,
+                current_layer=current_layer,
+                skip_rebalance=True,
+            )
 
         if operation == LayerOperation.SPLIT:
             # Prefer splitting the most stale branch (best for spacing)
@@ -1981,7 +1990,7 @@ def generate_dag(
         )
 
         if operation == LayerOperation.REBALANCE:
-            branches = execute_rebalance_layer(
+            result = execute_rebalance_layer(
                 dag,
                 branches,
                 current_layer,
@@ -1993,7 +2002,28 @@ def generate_dag(
                 config,
                 reserved_zones=reserved_zones,
             )
-        elif operation == LayerOperation.MERGE:
+            if result is not None:
+                branches = result
+                current_layer += 1
+                convergence_layers += 1
+                if convergence_layers > convergence_limit:
+                    raise GenerationError(
+                        f"Convergence failed after {convergence_layers} layers "
+                        f"(limit: {convergence_limit})"
+                    )
+                continue
+            # Re-decide without REBALANCE during convergence
+            operation, fan = determine_operation(
+                conv_cluster,
+                branches,
+                config,
+                rng,
+                current_layer=current_layer,
+                prefer_merge=True,
+                skip_rebalance=True,
+            )
+
+        if operation == LayerOperation.MERGE:
             # min_age defaults to 0, bypassing branch age during convergence
             branches = execute_merge_layer(
                 dag,

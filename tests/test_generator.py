@@ -5126,3 +5126,198 @@ def test_convergence_terminates():
             assert "Convergence failed" not in str(
                 e
             ), f"Convergence timeout at seed {seed}: {e}"
+
+
+# ── Type homogeneity: REBALANCE respects layer_type ──────────────────
+
+
+def test_execute_rebalance_returns_none_when_no_split_capable_of_type():
+    """Returns None when split-capable clusters exist but not of layer_type."""
+    dag = Dag(seed=1)
+
+    # 3 branches with different parent nodes
+    for name in ("a", "b", "c"):
+        n = DagNode(
+            id=f"n_{name}",
+            cluster=make_cluster(
+                f"c{name}",
+                zones=[f"z{name}"],
+                entry_fogs=[{"fog_id": f"e{name}", "zone": f"z{name}"}],
+                exit_fogs=[{"fog_id": f"x{name}", "zone": f"z{name}"}],
+            ),
+            layer=0,
+            tier=1,
+            entry_fogs=[],
+            exit_fogs=[FogRef(f"x{name}", f"z{name}")],
+        )
+        dag.add_node(n)
+
+    branches = [
+        Branch("a", "n_a", FogRef("xa", "za"), layers_since_last_split=5),
+        Branch("b", "n_b", FogRef("xb", "zb"), layers_since_last_split=1),
+        Branch("c", "n_c", FogRef("xc", "zc"), layers_since_last_split=1),
+    ]
+
+    # Pool has split-capable clusters but only of type mini_dungeon
+    pool = ClusterPool()
+    for i in range(5):
+        pool.add(
+            make_cluster(
+                f"split{i}",
+                zones=[f"s{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[{"fog_id": f"s{i}_e", "zone": f"s{i}_z"}],
+                exit_fogs=[
+                    {"fog_id": f"s{i}_x1", "zone": f"s{i}_z"},
+                    {"fog_id": f"s{i}_x2", "zone": f"s{i}_z"},
+                ],
+            )
+        )
+    for i in range(5):
+        pool.add(
+            make_cluster(
+                f"merge{i}",
+                zones=[f"m{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[
+                    {"fog_id": f"m{i}_e1", "zone": f"m{i}_z"},
+                    {"fog_id": f"m{i}_e2", "zone": f"m{i}_z"},
+                ],
+                exit_fogs=[{"fog_id": f"m{i}_x", "zone": f"m{i}_z"}],
+                allow_shared_entrance=True,
+            )
+        )
+
+    config = Config()
+    config.structure.max_parallel_paths = 3
+
+    # Request layer_type="major_boss" — no major_boss in pool
+    result = execute_rebalance_layer(
+        dag,
+        branches,
+        layer_idx=1,
+        tier=2,
+        layer_type="major_boss",
+        clusters=pool,
+        used_zones=set(),
+        rng=random.Random(42),
+        config=config,
+    )
+
+    assert result is None
+
+
+def test_execute_rebalance_returns_none_when_no_merge_capable_of_type():
+    """Returns None when merge-capable clusters exist but not of layer_type."""
+    dag = Dag(seed=1)
+
+    for name in ("a", "b", "c"):
+        n = DagNode(
+            id=f"n_{name}",
+            cluster=make_cluster(
+                f"c{name}",
+                zones=[f"z{name}"],
+                entry_fogs=[{"fog_id": f"e{name}", "zone": f"z{name}"}],
+                exit_fogs=[{"fog_id": f"x{name}", "zone": f"z{name}"}],
+            ),
+            layer=0,
+            tier=1,
+            entry_fogs=[],
+            exit_fogs=[FogRef(f"x{name}", f"z{name}")],
+        )
+        dag.add_node(n)
+
+    branches = [
+        Branch("a", "n_a", FogRef("xa", "za"), layers_since_last_split=5),
+        Branch("b", "n_b", FogRef("xb", "zb"), layers_since_last_split=1),
+        Branch("c", "n_c", FogRef("xc", "zc"), layers_since_last_split=1),
+    ]
+
+    pool = ClusterPool()
+    # Split-capable of type major_boss
+    for i in range(3):
+        pool.add(
+            make_cluster(
+                f"split_mb{i}",
+                zones=[f"smb{i}_z"],
+                cluster_type="major_boss",
+                entry_fogs=[{"fog_id": f"smb{i}_e", "zone": f"smb{i}_z"}],
+                exit_fogs=[
+                    {"fog_id": f"smb{i}_x1", "zone": f"smb{i}_z"},
+                    {"fog_id": f"smb{i}_x2", "zone": f"smb{i}_z"},
+                ],
+            )
+        )
+    # Merge-capable but only mini_dungeon (wrong type)
+    for i in range(3):
+        pool.add(
+            make_cluster(
+                f"merge_md{i}",
+                zones=[f"mmd{i}_z"],
+                cluster_type="mini_dungeon",
+                entry_fogs=[
+                    {"fog_id": f"mmd{i}_e1", "zone": f"mmd{i}_z"},
+                    {"fog_id": f"mmd{i}_e2", "zone": f"mmd{i}_z"},
+                ],
+                exit_fogs=[{"fog_id": f"mmd{i}_x", "zone": f"mmd{i}_z"}],
+                allow_shared_entrance=True,
+            )
+        )
+
+    config = Config()
+    config.structure.max_parallel_paths = 3
+
+    result = execute_rebalance_layer(
+        dag,
+        branches,
+        layer_idx=1,
+        tier=2,
+        layer_type="major_boss",
+        clusters=pool,
+        used_zones=set(),
+        rng=random.Random(42),
+        config=config,
+    )
+
+    assert result is None
+
+
+def test_determine_operation_skip_rebalance():
+    """skip_rebalance=True skips REBALANCE even when conditions are met."""
+    cluster = make_cluster(
+        "c1",
+        zones=["z1"],
+        entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
+        exit_fogs=[
+            {"fog_id": "x1", "zone": "z1"},
+            {"fog_id": "x2", "zone": "z1"},
+        ],
+    )
+    config = Config()
+    config.structure.max_parallel_paths = 4
+    config.structure.max_branch_spacing = 3
+
+    branches = [
+        Branch("a", "n_a", FogRef("xa", "za"), layers_since_last_split=5),
+        Branch("b", "n_b", FogRef("xb", "zb"), layers_since_last_split=1),
+        Branch("c", "n_c", FogRef("xc", "zc"), layers_since_last_split=1),
+    ]
+
+    # Without skip_rebalance: should return REBALANCE
+    op, _ = determine_operation(
+        cluster,
+        branches,
+        config,
+        random.Random(42),
+    )
+    assert op == LayerOperation.REBALANCE
+
+    # With skip_rebalance: should NOT return REBALANCE
+    op, _ = determine_operation(
+        cluster,
+        branches,
+        config,
+        random.Random(42),
+        skip_rebalance=True,
+    )
+    assert op != LayerOperation.REBALANCE
