@@ -224,6 +224,9 @@ allow_entry_as_exit = true
 [zones.sewer_mohg]
 allow_entry_as_exit = true
 
+[zones.belurat_boss]
+allow_entry_as_exit = true
+
 [zones.storehouse_messmer]
 weight = 2
 allow_entry_as_exit = true
