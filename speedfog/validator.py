@@ -241,11 +241,14 @@ def _check_layers(dag: Dag, config: Config, warnings: list[str]) -> None:
 def _check_zone_tracking_collisions(dag: Dag, clusters: ClusterPool) -> list[str]:
     """Check for exit gate collisions that break zone tracking.
 
-    When two edges share the same exit fog_id (same physical gate, e.g., a
-    bidirectional gate between two zones of one dungeon) AND their entrance
-    zones resolve to the same map, the C# ZoneTrackingInjector cannot
-    disambiguate which event flag to inject. Reject the DAG early rather
-    than letting the C# build fail.
+    When two edges share the same exit fog_id (same physical gate model) AND
+    their entrance zones resolve to the same map, the C# ZoneTrackingInjector
+    may not be able to disambiguate which event flag to inject.
+
+    This is intentionally conservative: the C# has fallback strategies
+    (entity-based, compound key, dest-only) that can resolve some of these,
+    but a false rejection here only costs a retry (~ms), while a false
+    acceptance costs a full C# build failure (~minutes).
 
     Args:
         dag: The DAG to check.

@@ -2099,7 +2099,7 @@ def generate_dag(
 
     # Cross-link pass (post-hoc): add optional edges between parallel branches
     if config.structure.crosslinks:
-        dag.crosslinks_added = add_crosslinks(dag, rng)
+        dag.crosslinks_added = add_crosslinks(dag, rng, clusters)
 
     return dag
 
