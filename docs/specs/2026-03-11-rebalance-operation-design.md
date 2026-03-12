@@ -37,14 +37,14 @@ REBALANCE is internal to the generator — it is purely a control-flow enum vari
 `determine_operation` gains the logic to return REBALANCE. The conditions are:
 
 1. `max_branch_spacing > 0` (feature enabled)
-2. `len(branches) >= max_parallel_paths` (saturated)
+2. `len(branches) >= 3` (minimum for REBALANCE: 1 split + 2 merge)
 3. `max(b.layers_since_last_split for b in branches) >= max_branch_spacing` (threshold reached)
 4. At least one valid merge pair exists among branches **other than the split target** (anti-micro-merge: different parent nodes)
 
-When all 4 conditions are met, REBALANCE is returned **before** the probability roll for split/merge. It is a defensive override.
+When all 4 conditions are met, REBALANCE is returned **before** the probability roll for split/merge. It is a defensive override. When REBALANCE isn't possible (< 3 branches) and `num_branches < max_parallel_paths`, a forced SPLIT is returned instead.
 
 **Priority hierarchy in `determine_operation`:**
-1. **REBALANCE** (highest) — if saturated + stale + merge pair available
+1. **Spacing enforcement** (highest) — REBALANCE if stale + >= 3 branches + merge pair; forced SPLIT if stale + not saturated
 2. **`prefer_merge`** — if `prefer_merge=True`, bypass probability roll, return MERGE
 3. **Normal probability roll** — split_prob / merge_prob / passant
 
