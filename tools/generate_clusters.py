@@ -148,6 +148,9 @@ class FogData:
             or "unused" in tags_lower
             or "segmentonly" in tags_lower
             or "baseonly" in tags_lower
+            # openremove: FogMod marks these unused+remove in crawl mode
+            # (e.g., Rold Lift uniquegates) — not in FogMod's graph
+            or "openremove" in tags_lower
         )
 
     @property

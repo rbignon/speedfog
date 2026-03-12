@@ -110,9 +110,6 @@ weight = 2.5
 [zones.peninsula_morne]
 weight = 3  # Castle Morne — detected as legacy_dungeon via fortressonly+legacy fog
 
-[zones.mountaintops_start]
-type = "mini_dungeon"  # Forbidden Lands, traversal zone comparable to mini dungeons
-weight = 2
 
 # Multi-phase major bosses (2+ phase transitions)
 [zones.academy_library]
