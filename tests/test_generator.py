@@ -4564,7 +4564,11 @@ def test_max_branch_spacing_statistical():
 
 
 def _measure_max_branch_spacing(dag):
-    """Measure the maximum layers-since-last-split across all paths."""
+    """Measure the maximum layers-since-last-split across all paths.
+
+    Terminal nodes (0 outgoing edges, e.g. the final boss) are excluded:
+    they are the destination, not a traversal with choices.
+    """
     max_spacing = 0
 
     for path in dag.enumerate_paths():
@@ -4572,6 +4576,8 @@ def _measure_max_branch_spacing(dag):
         for node_id in path:
             outgoing = dag.get_outgoing_edges(node_id)
             targets = {e.target_id for e in outgoing}
+            if len(targets) == 0:
+                continue  # terminal node — not a branch-choice point
             if len(targets) >= 2:
                 since_last_split = 0
             else:
@@ -4887,8 +4893,8 @@ def test_determine_operation_returns_rebalance():
     assert op == LayerOperation.REBALANCE
 
 
-def test_determine_operation_no_rebalance_when_not_saturated():
-    """REBALANCE only triggers when branches == max_parallel_paths."""
+def test_determine_operation_no_rebalance_below_3_branches():
+    """REBALANCE requires >= 3 branches (1 split + 2 merge)."""
     cluster = make_cluster(
         "c1",
         zones=["z1"],

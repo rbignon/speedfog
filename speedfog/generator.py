@@ -487,6 +487,55 @@ def pick_cluster_with_type_fallback(
     return None
 
 
+def _pick_cluster_biased_for_split(
+    clusters: ClusterPool,
+    preferred_type: str,
+    branches: list[Branch],
+    config: Config,
+    used_zones: set[str],
+    rng: random.Random,
+    *,
+    reserved_zones: frozenset[str] = frozenset(),
+) -> ClusterData | None:
+    """Pick a cluster biased toward split-capable when spacing enforcement needs it.
+
+    When a branch is stale (counter >= max_branch_spacing) and the branch count
+    is below max_parallel_paths, bias cluster selection toward split-capable
+    clusters so that determine_operation can return a forced SPLIT.
+
+    Falls back to normal type-fallback selection if no split-capable cluster
+    is available or if biased selection isn't needed.
+    """
+    max_spacing = config.structure.max_branch_spacing
+    needs_bias = (
+        max_spacing > 0
+        and len(branches) < config.structure.max_parallel_paths
+        and max(b.layers_since_last_split for b in branches) >= max_spacing
+    )
+    if needs_bias:
+        for t in [preferred_type] + [
+            t for t in clusters.by_type if t != preferred_type
+        ]:
+            cluster = pick_cluster_with_filter(
+                clusters.get_by_type(t),
+                used_zones,
+                rng,
+                lambda c: can_be_split_node(c, 2),
+                reserved_zones=reserved_zones,
+            )
+            if cluster is not None:
+                return cluster
+        # No split-capable cluster found — fall through to normal selection
+
+    return pick_cluster_with_type_fallback(
+        clusters,
+        preferred_type,
+        used_zones,
+        rng,
+        reserved_zones=reserved_zones,
+    )
+
+
 def determine_operation(
     cluster: ClusterData,
     branches: list[Branch],
@@ -524,23 +573,34 @@ def determine_operation(
     min_age = 0 if prefer_merge else config.structure.min_branch_age
     max_spacing = config.structure.max_branch_spacing
 
-    # --- Priority 1: REBALANCE (saturated + stale) ---
-    if max_spacing > 0 and num_branches >= max_paths:
+    # --- Priority 1: Spacing enforcement (stale branch) ---
+    if max_spacing > 0:
         max_stale = max(b.layers_since_last_split for b in branches)
         if max_stale >= max_spacing:
-            # Check merge pair exists among non-stale branches
-            stale_idx = max(
-                range(num_branches),
-                key=lambda i: branches[i].layers_since_last_split,
-            )
-            other = [i for i in range(num_branches) if i != stale_idx]
-            has_pair = any(
-                branches[other[i]].current_node_id != branches[other[j]].current_node_id
-                for i in range(len(other))
-                for j in range(i + 1, len(other))
-            )
-            if has_pair:
-                return LayerOperation.REBALANCE, 1
+            # REBALANCE: merge 2 + split 1 (N -> N). Requires >= 3 branches
+            # (1 to split + 2 to merge).
+            if num_branches >= 3:
+                stale_idx = max(
+                    range(num_branches),
+                    key=lambda i: branches[i].layers_since_last_split,
+                )
+                other = [i for i in range(num_branches) if i != stale_idx]
+                has_pair = any(
+                    branches[other[i]].current_node_id
+                    != branches[other[j]].current_node_id
+                    for i in range(len(other))
+                    for j in range(i + 1, len(other))
+                )
+                if has_pair:
+                    return LayerOperation.REBALANCE, 1
+
+            # Forced SPLIT: when not saturated and REBALANCE isn't possible
+            if num_branches < max_paths and max_ex >= 2:
+                room = max_paths - num_branches + 1
+                max_fan = min(max_ex, room)
+                for n in range(max_fan, 1, -1):
+                    if can_be_split_node(cluster, n):
+                        return LayerOperation.SPLIT, n
 
     # --- Priority 2: prefer_merge (convergence) ---
     if prefer_merge:
@@ -577,12 +637,6 @@ def determine_operation(
         )
         and can_be_merge_node(cluster, 2)
     )
-
-    # Forced split when not saturated but stale
-    if max_spacing > 0 and num_branches < max_paths and can_split:
-        max_stale = max(b.layers_since_last_split for b in branches)
-        if max_stale >= max_spacing:
-            return LayerOperation.SPLIT, split_fan
 
     # Decide based on capabilities.
     # When split_prob + merge_prob >= 1.0 (e.g. 0.9 + 0.5), the probabilities
@@ -1561,8 +1615,14 @@ def generate_dag(
             exponent=config.structure.tier_curve_exponent,
         )
 
-        primary_cluster = pick_cluster_with_type_fallback(
-            clusters, layer_type, used_zones, rng, reserved_zones=reserved_zones
+        primary_cluster = _pick_cluster_biased_for_split(
+            clusters,
+            layer_type,
+            branches,
+            config,
+            used_zones,
+            rng,
+            reserved_zones=reserved_zones,
         )
         if primary_cluster is None:
             raise GenerationError(
@@ -1899,10 +1959,11 @@ def generate_dag(
         )
         last_layer_type = layer_types[-1] if layer_types else "mini_dungeon"
 
-        # Pick cluster normally
-        conv_cluster = pick_cluster_with_type_fallback(
+        conv_cluster = _pick_cluster_biased_for_split(
             clusters,
             last_layer_type,
+            branches,
+            config,
             used_zones,
             rng,
             reserved_zones=reserved_zones,
