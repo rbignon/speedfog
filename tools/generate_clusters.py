@@ -1132,19 +1132,27 @@ def get_major_zones(
     return major_zones
 
 
-def get_fortress_zones(warps: list[FogData]) -> set[str]:
+def get_fortress_zones(
+    warps: list[FogData],
+    entrances: list[FogData] | None = None,
+) -> set[str]:
     """
-    Get zones with 'fortressonly legacy' warps.
+    Get zones with 'fortressonly legacy' fogs.
 
     These are mini-fortresses that should be treated as legacy dungeons:
     - Caria Manor (liurnia_manor)
     - Shaded Castle (altus_shaded)
     - Castle Redmane (caelid_redmane)
     - Castle Sol (mountaintops_sol)
+    - Castle Morne (peninsula_morne)
     """
     fortress_zones: set[str] = set()
 
-    for fog in warps:
+    fogs: list[FogData] = list(warps)
+    if entrances:
+        fogs.extend(entrances)
+
+    for fog in fogs:
         tags_lower = [t.lower() for t in fog.tags]
         if "fortressonly" in tags_lower and "legacy" in tags_lower:
             if fog.aside.area:
@@ -1879,8 +1887,8 @@ def main() -> int:
     if args.verbose:
         print(f"  Major boss zones: {len(major_zones)}")
 
-    # Identify fortress zones (mini-fortresses with fortressonly legacy warps)
-    fortress_zones = get_fortress_zones(warps)
+    # Identify fortress zones (mini-fortresses with fortressonly legacy fogs)
+    fortress_zones = get_fortress_zones(warps, entrances)
     if args.verbose:
         print(f"  Fortress zones: {len(fortress_zones)}")
 

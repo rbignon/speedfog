@@ -178,6 +178,24 @@ weight = 6
 [zones.scadualtus_forge]
 weight = 6
 
+# Type overrides: zones typed "other" in fog.txt but functionally mini_dungeons
+[zones.scadualtus_catacombs]
+type = "mini_dungeon"  # DLC catacomb, not tagged as minidungeon in fog.txt (leads to new zone)
+
+[zones.gravesite_dragonpit]
+type = "mini_dungeon"  # DLC dungeon (Dragon's Pit), not tagged as minidungeon in fog.txt (leads to new zone)
+
+[zones.peninsula_morne]
+weight = 3
+
+[zones.mountaintops_start]
+type = "mini_dungeon"  # Forbidden Lands, traversal zone comparable to mini dungeons
+weight = 2
+
+[zones.westrampart]
+type = "mini_dungeon"  # Shadow Keep West Rampart, dungeon section
+weight = 2
+
 [zones.scadualtus_catacombs_boss]
 type = "boss_arena"  # fog.txt Entrance has "major" tag, but Jori is a catacomb boss, not a remembrance boss
 
