@@ -4,7 +4,7 @@ import random
 
 from speedfog.clusters import ClusterData
 from speedfog.crosslinks import (
-    _surplus_entries,
+    _available_entries,
     _surplus_exits,
     add_crosslinks,
     find_eligible_pairs,
@@ -312,13 +312,18 @@ class TestFindEligiblePairs:
         Reproduces the real bug: node N uses fog_id X as exit (outgoing edge),
         then a cross-link tries to use fog_id X as entry into N — but FogMod's
         Pair chain already consumed the entry side.
+
+        However, c_entry (already used by the normal A->C edge) IS available
+        for cross-links: entries are arrival points, and FogMod handles
+        multiple connections to the same entrance via DuplicateEntrance().
         """
         dag = Dag(seed=1)
 
         # Topology: start -> (A, B) -> (C, D) -> end
         # Node C uses "shared_fog" as exit to end.
         # Node C also has "shared_fog" in its cluster's entry_fogs (bidirectional).
-        # Cross-link B->C should NOT pick "shared_fog" as entry into C.
+        # Cross-link B->C should NOT pick "shared_fog" as entry into C (Pair consumed).
+        # But B->C CAN use "c_entry" even though it's already used by A->C.
 
         s_c = make_cluster(
             "s",
@@ -413,13 +418,14 @@ class TestFindEligiblePairs:
 
         pairs = find_eligible_pairs(dag)
         # Eligible cross-links at layer 1->2: A->D, B->C
-        # A->D: A has surplus a_exit2, D has surplus d_entry2 — eligible
+        # A->D: A has surplus a_exit2, D has d_entry2 available — eligible
         # B->C: B has surplus b_exit2, C has "shared_fog" entry in cluster
-        #   BUT "shared_fog" is used as exit on C → entry side excluded
-        #   C has no other surplus entry → B->C NOT eligible
-        assert len(pairs) == 1
+        #   "shared_fog" is used as exit on C → entry side excluded (Pair chain)
+        #   BUT c_entry is available (already used by A->C, but entries are
+        #   reusable via DuplicateEntrance) → B->C IS eligible
+        assert len(pairs) == 2
         assert ("a", "d") in pairs
-        assert ("b", "c") not in pairs
+        assert ("b", "c") in pairs
 
     def test_exit_excluded_when_fog_id_used_as_entry_on_same_node(self):
         """Exit fog excluded when same fog_id is used as entry on the same node.
@@ -643,6 +649,105 @@ class TestFindEligiblePairs:
         #   Exit uses ("boundary_fog", "c_inner") — different zone, independent Pair
         #   So ("boundary_fog", "c_outer") is NOT excluded → B->C eligible
         # A->D: A has surplus a_exit2, D has surplus d_entry2 → eligible
+        assert len(pairs) == 2
+        assert ("a", "d") in pairs
+        assert ("b", "c") in pairs
+
+    def test_entry_reusable_via_duplicate_entrance(self):
+        """Entry fog already used by incoming edge is still available for cross-links.
+
+        FogMod handles multiple connections to the same entrance via
+        DuplicateEntrance(). Unlike exits (one gate = one destination),
+        entries are arrival points that can receive multiple warps.
+        """
+        dag = Dag(seed=1)
+
+        # Topology: start -> (A, B) -> (C, D) -> end
+        # C has only 1 entry fog (c_entry), already used by A->C.
+        # With entry reuse, B->C is still eligible via c_entry.
+
+        s_c = make_cluster(
+            "s",
+            "start",
+            entry_fogs=[],
+            exit_fogs=[
+                {"fog_id": "s_exit1", "zone": "s"},
+                {"fog_id": "s_exit2", "zone": "s"},
+            ],
+        )
+        a_c = make_cluster(
+            "a",
+            entry_fogs=[{"fog_id": "a_entry", "zone": "a"}],
+            exit_fogs=[
+                {"fog_id": "a_exit1", "zone": "a"},
+                {"fog_id": "a_exit2", "zone": "a"},
+            ],
+        )
+        b_c = make_cluster(
+            "b",
+            entry_fogs=[{"fog_id": "b_entry", "zone": "b"}],
+            exit_fogs=[
+                {"fog_id": "b_exit1", "zone": "b"},
+                {"fog_id": "b_exit2", "zone": "b"},
+            ],
+        )
+        # C: only 1 entry, already consumed by A->C edge
+        c_c = make_cluster(
+            "c",
+            entry_fogs=[{"fog_id": "c_entry", "zone": "c"}],
+            exit_fogs=[{"fog_id": "c_exit", "zone": "c"}],
+        )
+        d_c = make_cluster(
+            "d",
+            entry_fogs=[{"fog_id": "d_entry", "zone": "d"}],
+            exit_fogs=[{"fog_id": "d_exit", "zone": "d"}],
+        )
+        e_c = make_cluster(
+            "e",
+            "final_boss",
+            entry_fogs=[
+                {"fog_id": "e_entry1", "zone": "e"},
+                {"fog_id": "e_entry2", "zone": "e"},
+            ],
+            exit_fogs=[],
+        )
+
+        dag.add_node(
+            DagNode(
+                "s", s_c, 0, 1, [], [FogRef("s_exit1", "s"), FogRef("s_exit2", "s")]
+            )
+        )
+        dag.add_node(
+            DagNode("a", a_c, 1, 2, [FogRef("a_entry", "a")], [FogRef("a_exit1", "a")])
+        )
+        dag.add_node(
+            DagNode("b", b_c, 1, 2, [FogRef("b_entry", "b")], [FogRef("b_exit1", "b")])
+        )
+        dag.add_node(
+            DagNode("c", c_c, 2, 3, [FogRef("c_entry", "c")], [FogRef("c_exit", "c")])
+        )
+        dag.add_node(
+            DagNode("d", d_c, 2, 3, [FogRef("d_entry", "d")], [FogRef("d_exit", "d")])
+        )
+        dag.add_node(
+            DagNode(
+                "e", e_c, 3, 4, [FogRef("e_entry1", "e"), FogRef("e_entry2", "e")], []
+            )
+        )
+
+        dag.add_edge("s", "a", FogRef("s_exit1", "s"), FogRef("a_entry", "a"))
+        dag.add_edge("s", "b", FogRef("s_exit2", "s"), FogRef("b_entry", "b"))
+        dag.add_edge("a", "c", FogRef("a_exit1", "a"), FogRef("c_entry", "c"))
+        dag.add_edge("b", "d", FogRef("b_exit1", "b"), FogRef("d_entry", "d"))
+        dag.add_edge("c", "e", FogRef("c_exit", "c"), FogRef("e_entry1", "e"))
+        dag.add_edge("d", "e", FogRef("d_exit", "d"), FogRef("e_entry2", "e"))
+        dag.start_id = "s"
+        dag.end_id = "e"
+
+        pairs = find_eligible_pairs(dag)
+        # A->D: a_exit2 surplus, d_entry reusable → eligible
+        # B->C: b_exit2 surplus, c_entry reusable (DuplicateEntrance) → eligible
+        # Previously B->C would be blocked because c_entry was "consumed"
         assert len(pairs) == 2
         assert ("a", "d") in pairs
         assert ("b", "c") in pairs
@@ -902,7 +1007,7 @@ class TestProximityFiltering:
         dag.add_edge("n", "e", FogRef("fog_X", "prox2"), FogRef("e_entry", "e"))
         dag.start_id = "n"
         dag.end_id = "e"
-        surplus = _surplus_entries(dag, "n")
+        surplus = _available_entries(dag, "n")
         # fog_Y blocked by proximity to fog_X, fog_Z is fine
         assert FogRef("fog_Y", "prox2") not in surplus
         assert FogRef("fog_Z", "prox2") in surplus

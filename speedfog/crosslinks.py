@@ -72,25 +72,27 @@ def _surplus_exits(dag: Dag, node_id: str) -> list[FogRef]:
     ]
 
 
-def _surplus_entries(dag: Dag, node_id: str) -> list[FogRef]:
-    """Get unused entry FogRefs for a node.
+def _available_entries(dag: Dag, node_id: str) -> list[FogRef]:
+    """Get entry FogRefs available for cross-links on a node.
 
-    Checks the cluster's full entry_fogs list against what's already
-    consumed by incoming edges.
+    Unlike exits (which are physical gates — one gate = one destination),
+    entries are arrival points: multiple exits can all warp to the same
+    entrance. FogMod handles this via DuplicateEntrance(), so entry fogs
+    already used by incoming edges are still available for cross-links.
 
-    Also excludes entries whose (fog_id, zone) is already consumed as
-    an exit on this node. See _surplus_exits for the Pair chain rationale.
+    The only exclusions are:
+    - Bidirectional Pair: if the entry fog is already consumed as an exit
+      on this node, its Pair is taken (see _surplus_exits rationale).
+    - Proximity groups: same spatial exclusion as exits.
     """
     node = dag.nodes[node_id]
-    used = _get_used_entry_fogs(dag, node_id)
     # FogRefs consumed as exit on this node — their entry Pair is also consumed
     exit_fogrefs = _get_used_exit_fogs(dag, node_id)
     all_entries = [FogRef(f["fog_id"], f["zone"]) for f in node.cluster.entry_fogs]
     return [
         f
         for f in all_entries
-        if f not in used
-        and f not in exit_fogrefs
+        if f not in exit_fogrefs
         and not _blocked_by_proximity(node.cluster, f, exit_fogrefs)
     ]
 
@@ -120,7 +122,8 @@ def find_eligible_pairs(dag: Dag) -> list[tuple[str, str]]:
       skipping layers would let players bypass content, which is
       unacceptable in racing)
     - source has surplus exit fogs
-    - target has surplus entry fogs
+    - target has available entry fogs (entries are reusable via
+      DuplicateEntrance — only Pair chain and proximity exclude)
     - no existing path from source to target (different branches)
     - no existing edge between them
 
@@ -145,12 +148,12 @@ def find_eligible_pairs(dag: Dag) -> list[tuple[str, str]]:
         sources_with_surplus = [
             nid for nid in by_layer[layer_n] if _surplus_exits(dag, nid)
         ]
-        targets_with_surplus = [
-            nid for nid in by_layer[layer_n1] if _surplus_entries(dag, nid)
+        targets_with_entries = [
+            nid for nid in by_layer[layer_n1] if _available_entries(dag, nid)
         ]
 
         for src in sources_with_surplus:
-            for tgt in targets_with_surplus:
+            for tgt in targets_with_entries:
                 if (src, tgt) in existing_edges:
                     continue
                 if _is_reachable(dag, src, tgt):
@@ -187,7 +190,7 @@ def add_crosslinks(
     for src_id, tgt_id in pairs:
         # Re-check surplus (may have been consumed by earlier cross-link)
         src_surplus = _surplus_exits(dag, src_id)
-        tgt_surplus = _surplus_entries(dag, tgt_id)
+        tgt_surplus = _available_entries(dag, tgt_id)
         if not src_surplus or not tgt_surplus:
             continue
 

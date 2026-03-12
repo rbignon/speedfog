@@ -320,13 +320,15 @@ After the complete DAG is built (start → layers → forced merge → prerequis
 1. Find all eligible (source, target) pairs:
    - `source.layer == target.layer - 1` (adjacent layers only — no layer-skipping, which would let players bypass content and break racing balance)
    - Source has unused exit fogs (surplus from **cluster's** full exit list)
-   - Target has unused entry fogs (surplus from **cluster's** full entry list)
+   - Target has available entry fogs (from **cluster's** full entry list — entries are reusable since FogMod handles multiple connections to the same entrance via `DuplicateEntrance()`, only Pair chain and proximity exclusions apply)
    - No existing edge between them
    - No existing path from source to target (different branches)
-2. Shuffle eligible pairs and try every one — eligible pairs are structurally rare (typically 0-4 per DAG) because most clusters have just enough fogs for their normal edges
-3. For each: re-check surplus (earlier cross-links may have consumed it), pick an unused exit fog from source, unused entry fog from target, add edge
+2. Shuffle eligible pairs and try every one — eligible pairs are structurally rare (typically 0-4 per DAG) because most clusters have just enough exit fogs for their normal edges
+3. For each: re-check availability (earlier cross-links may have consumed exit surplus), pick an unused exit fog from source, an available entry fog from target, add edge
 
-**Surplus from cluster, not node:** The generator's `_pick_entry_and_exits_for_node()` truncates `node.exit_fogs` to `min_exits` (typically 1 for passant nodes). Cross-link surplus is computed from `node.cluster.exit_fogs` (the full list) minus fogs consumed by outgoing edges. This is why most passant nodes have surplus exits available for cross-links despite `node.exit_fogs` containing only 1.
+**Surplus from cluster, not node:** The generator's `_pick_entry_and_exits_for_node()` truncates `node.exit_fogs` to `min_exits` (typically 1 for passant nodes). Cross-link exit surplus is computed from `node.cluster.exit_fogs` (the full list) minus fogs consumed by outgoing edges. This is why most passant nodes have surplus exits available for cross-links despite `node.exit_fogs` containing only 1.
+
+**Entry reuse via DuplicateEntrance:** Unlike exits (one gate = one destination), entries are arrival points — multiple exits can all warp to the same entrance. FogMod handles this via `DuplicateEntrance()`, which creates independent edge copies. Therefore, entry fogs already used by incoming edges are still available for cross-links. The only exclusions are bidirectional Pair consumption (entry fog used as exit on the same node) and proximity groups.
 
 **Pair chain exclusion:** Bidirectional fog gates have both an exit and entry side linked via FogMod's Pair chain. When `Graph.Connect()` uses one side, it marks the Pair as consumed. The Pair is per-zone: the same fog_id on different zones creates independent Pairs in FogMod's Graph. Therefore, surplus exits exclude any `(fog_id, zone)` already consumed as entry on the same node (and vice versa), preventing "Already matched" errors in FogMod.
 
