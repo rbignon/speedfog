@@ -106,6 +106,14 @@ weight = 6
 [zones.sewer_catacombs]
 weight = 2.5
 
+# Base game type overrides: zones typed "other" but functionally dungeons
+[zones.peninsula_morne]
+weight = 3  # Castle Morne — detected as legacy_dungeon via fortressonly+legacy fog
+
+[zones.mountaintops_start]
+type = "mini_dungeon"  # Forbidden Lands, traversal zone comparable to mini dungeons
+weight = 2
+
 # Multi-phase major bosses (2+ phase transitions)
 [zones.academy_library]
 type = "major_boss"
@@ -178,19 +186,13 @@ weight = 6
 [zones.scadualtus_forge]
 weight = 6
 
-# Type overrides: zones typed "other" in fog.txt but functionally mini_dungeons
+# DLC type overrides: zones not tagged as minidungeon in fog.txt (lead to new zones)
 [zones.scadualtus_catacombs]
-type = "mini_dungeon"  # DLC catacomb, not tagged as minidungeon in fog.txt (leads to new zone)
-
-[zones.gravesite_dragonpit]
-type = "mini_dungeon"  # DLC dungeon (Dragon's Pit), not tagged as minidungeon in fog.txt (leads to new zone)
-
-[zones.peninsula_morne]
+type = "mini_dungeon"
 weight = 3
 
-[zones.mountaintops_start]
-type = "mini_dungeon"  # Forbidden Lands, traversal zone comparable to mini dungeons
-weight = 2
+[zones.gravesite_dragonpit]
+type = "mini_dungeon"
 
 [zones.westrampart]
 type = "mini_dungeon"  # Shadow Keep West Rampart, dungeon section
