@@ -183,13 +183,36 @@ def _build_collision_index(
     return index
 
 
+def _build_compound_index(
+    dag: Dag,
+    clusters: ClusterPool,
+) -> dict[tuple[str, str], int]:
+    """Build an index of (source_node_id, entrance_map) → edge count.
+
+    The C# ZoneTrackingInjector matches warp events using (source_map, dest_map)
+    compound keys. When two edges from the same source node target zones on the
+    same entrance map AND both use AEG099 gates (FogMod-allocated entities that
+    can't be entity-matched), the C# can't disambiguate which flag to inject.
+
+    This index tracks these compound keys so cross-links can avoid creating
+    unresolvable collisions.
+    """
+    index: dict[tuple[str, str], int] = {}
+    for edge in dag.edges:
+        entry_map = clusters.get_map(edge.entry_fog.zone)
+        if entry_map is not None:
+            key = (edge.source_id, entry_map)
+            index[key] = index.get(key, 0) + 1
+    return index
+
+
 def _would_collide(
     exit_fog: FogRef,
     entry_fog: FogRef,
     collision_index: dict[str, set[str]],
     clusters: ClusterPool,
 ) -> bool:
-    """Check if adding an edge with this exit/entry would cause a collision."""
+    """Check if adding an edge with this exit/entry would cause a fog_id collision."""
     entry_map = clusters.get_map(entry_fog.zone)
     if entry_map is None:
         return False
@@ -197,6 +220,24 @@ def _would_collide(
     if existing_maps is None:
         return False
     return entry_map in existing_maps
+
+
+def _would_compound_collide(
+    src_id: str,
+    entry_fog: FogRef,
+    compound_index: dict[tuple[str, str], int],
+    clusters: ClusterPool,
+) -> bool:
+    """Check if adding an edge would create a compound key collision.
+
+    Returns True if the source node already has an edge to a zone on the
+    same entrance map. This prevents the C# ZoneTrackingInjector from
+    failing to disambiguate two edges with the same (source_map, dest_map).
+    """
+    entry_map = clusters.get_map(entry_fog.zone)
+    if entry_map is None:
+        return False
+    return compound_index.get((src_id, entry_map), 0) > 0
 
 
 def add_crosslinks(
@@ -225,6 +266,7 @@ def add_crosslinks(
     rng.shuffle(pairs)
 
     collision_index = _build_collision_index(dag, clusters) if clusters else None
+    compound_index = _build_compound_index(dag, clusters) if clusters else None
 
     added = 0
     for src_id, tgt_id in pairs:
@@ -237,6 +279,7 @@ def add_crosslinks(
         # Try all exit/entry combinations, pick a non-colliding one
         if collision_index is not None:
             assert clusters is not None
+            assert compound_index is not None
             rng.shuffle(src_surplus)
             rng.shuffle(tgt_surplus)
             found = False
@@ -244,6 +287,8 @@ def add_crosslinks(
                 for entry_fog in tgt_surplus:
                     if not _would_collide(
                         exit_fog, entry_fog, collision_index, clusters
+                    ) and not _would_compound_collide(
+                        src_id, entry_fog, compound_index, clusters
                     ):
                         _add_crosslink(
                             dag,
@@ -252,6 +297,7 @@ def add_crosslinks(
                             exit_fog,
                             entry_fog,
                             collision_index,
+                            compound_index,
                             clusters,
                         )
                         added += 1
@@ -277,13 +323,16 @@ def _add_crosslink(
     exit_fog: FogRef,
     entry_fog: FogRef,
     collision_index: dict[str, set[str]],
+    compound_index: dict[tuple[str, str], int],
     clusters: ClusterPool,
 ) -> None:
-    """Add a cross-link edge and update the collision index."""
+    """Add a cross-link edge and update the collision indexes."""
     dag.add_edge(src_id, tgt_id, exit_fog, entry_fog)
     dag.nodes[src_id].exit_fogs.append(exit_fog)
     dag.nodes[tgt_id].entry_fogs.append(entry_fog)
-    # Update collision index with the new edge
+    # Update collision indexes with the new edge
     entry_map = clusters.get_map(entry_fog.zone)
     if entry_map is not None:
         collision_index.setdefault(exit_fog.fog_id, set()).add(entry_map)
+        key = (src_id, entry_map)
+        compound_index[key] = compound_index.get(key, 0) + 1

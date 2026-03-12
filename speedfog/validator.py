@@ -75,6 +75,12 @@ def validate_dag(
         if collision_errors:
             errors.extend(collision_errors)
 
+    # Check compound collisions (same source node + same entrance map)
+    if clusters is not None:
+        compound_errors = _check_compound_collisions(dag, clusters)
+        if compound_errors:
+            errors.extend(compound_errors)
+
     # Check minimum requirements
     _check_requirements(dag, config, errors)
 
@@ -286,5 +292,46 @@ def _check_zone_tracking_collisions(dag: Dag, clusters: ClusterPool) -> list[str
                     f"{edge.exit_fog.zone}→{edge.entry_fog.zone}"
                     f" (node {edge.target_id})"
                 )
+
+    return errors
+
+
+def _check_compound_collisions(dag: Dag, clusters: ClusterPool) -> list[str]:
+    """Check for compound key collisions that break zone tracking.
+
+    When two edges from the same source node target zones on the same entrance
+    map, the C# ZoneTrackingInjector's compound key (source_map, dest_map)
+    can't disambiguate which flag to inject. For AEG099 gates, FogMod allocates
+    new entities that aren't in the entity lookup, so entity-based matching
+    also fails.
+
+    Args:
+        dag: The DAG to check.
+        clusters: ClusterPool for zone→map resolution.
+
+    Returns:
+        List of error messages.
+    """
+    errors: list[str] = []
+
+    # Group edges by (source_id, entrance_map)
+    by_compound: dict[tuple[str, str], list[DagEdge]] = {}
+    for edge in dag.edges:
+        entrance_map = clusters.get_map(edge.entry_fog.zone)
+        if entrance_map is None:
+            continue
+        key = (edge.source_id, entrance_map)
+        by_compound.setdefault(key, []).append(edge)
+
+    for (src_id, entrance_map), edges in by_compound.items():
+        if len(edges) < 2:
+            continue
+        descs = [
+            f"{e.exit_fog.zone}→{e.entry_fog.zone} (node {e.target_id})" for e in edges
+        ]
+        errors.append(
+            f"Compound collision: node {src_id} has {len(edges)} edges "
+            f"to {entrance_map}: {', '.join(descs)}"
+        )
 
     return errors

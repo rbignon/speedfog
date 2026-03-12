@@ -40,6 +40,24 @@ public static class ZoneTrackingInjector
     }
 
     /// <summary>
+    /// A candidate region-to-flag mapping for entrance gates with numeric entity suffixes.
+    /// WarpPlayer region for numeric gates equals the entrance_gate's entity suffix
+    /// (e.g., region=1035462610 for entrance_gate m60_35_45_00_1035462610).
+    /// SourceMaps allow disambiguation when multiple connections share the same entrance gate.
+    /// </summary>
+    internal readonly struct RegionCandidate
+    {
+        public readonly int FlagId;
+        public readonly HashSet<(byte, byte, byte, byte)> SourceMaps;
+
+        public RegionCandidate(int flagId, HashSet<(byte, byte, byte, byte)> sourceMaps)
+        {
+            FlagId = flagId;
+            SourceMaps = sourceMaps;
+        }
+    }
+
+    /// <summary>
     /// Destination map and region extracted from a warp instruction.
     /// </summary>
     private readonly struct WarpInfo
@@ -205,6 +223,12 @@ public static class ZoneTrackingInjector
         // destination maps for disambiguation against the warp instruction's target.
         var entityToFlag = new Dictionary<int, List<EntityCandidate>>();
 
+        // Region-based matching: entrance_gate numeric entity → list of candidates.
+        // For numeric gates (e.g., m60_35_45_00_1035462610), WarpPlayer uses the
+        // vanilla entity (1035462610) as the warp region. This lookup maps that
+        // region back to the connection's flag_id, with source maps for disambiguation.
+        var regionToFlag = new Dictionary<int, List<RegionCandidate>>();
+
         foreach (var conn in connections)
         {
             if (conn.FlagId <= 0)
@@ -237,6 +261,21 @@ public static class ZoneTrackingInjector
             int gateActionEntity = ParseGateActionEntity(conn.ExitGate);
             if (gateActionEntity > 0)
                 RegisterEntity(entityToFlag, gateActionEntity, conn.FlagId, destMapSet);
+
+            // Register entrance region for region-based matching.
+            // For numeric entrance gates, the suffix IS the WarpPlayer region entity.
+            int entranceRegionEntity = ParseGateActionEntity(conn.EntranceGate);
+            if (entranceRegionEntity > 0)
+            {
+                var srcMapSet = new HashSet<(byte, byte, byte, byte)>(
+                    allSourceMaps.Select(b => (b[0], b[1], b[2], b[3])));
+                if (!regionToFlag.TryGetValue(entranceRegionEntity, out var regionList))
+                {
+                    regionList = new List<RegionCandidate>();
+                    regionToFlag[entranceRegionEntity] = regionList;
+                }
+                regionList.Add(new RegionCandidate(conn.FlagId, srcMapSet));
+            }
 
             // Register compound keys (all source × dest combinations)
             // Track collisions where TryAdd would keep a different flag
@@ -286,11 +325,13 @@ public static class ZoneTrackingInjector
                           $"{destOnlyLookup.Count} dest maps ({destOnlyCollisions.Count} dest collisions, " +
                           $"{compoundCollisions.Count} compound collisions, " +
                           $"{entityToFlag.Values.Sum(v => v.Count)} entity candidates across {entityToFlag.Count} entities, " +
+                          $"{regionToFlag.Values.Sum(v => v.Count)} region candidates across {regionToFlag.Count} regions, " +
                           $"{commonEventLookup.Count} common event keys)");
 
         int totalInjected = 0;
         int compoundMatches = 0;
         int entityMatches = 0;
+        int regionMatches = 0;
         int destOnlyMatches = 0;
         int commonEventMatches = 0;
         int skippedCollisions = 0;
@@ -350,7 +391,7 @@ public static class ZoneTrackingInjector
                 // Parameter list and the init args.
                 List<byte[]>? evtInitArgs = null;
                 initArgsMap.TryGetValue(evt.ID, out evtInitArgs);
-                var entityCandidates = TryMatchEntityCandidates(evt, entityToFlag, evtInitArgs);
+                var entityCandidates = TryMatchEntityCandidates(evt, entityToFlag, evtInitArgs, out bool hasFogModEntity);
 
                 for (int i = 0; i < evt.Instructions.Count; i++)
                 {
@@ -363,11 +404,15 @@ public static class ZoneTrackingInjector
                     int region = warpInfo.Value.Region;
 
                     // Filter: only match FogMod-generated warp events, not vanilla ones.
-                    // Two ways an event qualifies as FogMod-generated:
+                    // Three ways an event qualifies as FogMod-generated:
                     // 1. Region >= FOGMOD_ENTITY_BASE (FogMod-allocated warp target entity)
                     // 2. Event contains IfActionButtonInArea with a known exit gate entity
                     //    (FogMod manual fogwarp that reuses vanilla destination regions)
-                    if (region < FOGMOD_ENTITY_BASE && entityCandidates == null)
+                    // 3. Event contains IfActionButtonInArea with a FogMod entity
+                    //    (>= FOGMOD_ENTITY_BASE) even if not in entityToFlag — indicates
+                    //    a FogMod fogwarp event whose exit gate entity wasn't registered
+                    //    (e.g., FogMod allocates new entities for AEG099 gates)
+                    if (region < FOGMOD_ENTITY_BASE && entityCandidates == null && !hasFogModEntity)
                         continue;
 
                     // Strategy 0: Direct entity match — the event's IfActionButtonInArea
@@ -385,6 +430,21 @@ public static class ZoneTrackingInjector
                             matched = true;
                         }
                         // else: multiple candidates, none matched dest map — fall through
+                    }
+
+                    // Strategy R: Region-based matching — WarpPlayer region matches the
+                    // entrance_gate's numeric entity suffix. For numeric gates (e.g.,
+                    // m60_35_45_00_1035462610), FogMod uses the vanilla entity as the
+                    // warp region, which may target an adjacent map tile. This strategy
+                    // bypasses dest_map matching entirely and identifies the connection
+                    // by entrance entity. Source map disambiguates when multiple
+                    // connections share the same entrance gate.
+                    if (!matched && regionToFlag.TryGetValue(region, out var regionCandidates))
+                    {
+                        matched = ResolveRegionCandidate(
+                            regionCandidates, sourceMap, out flagId);
+                        if (matched)
+                            regionMatches++;
                     }
 
                     // Strategy 1: Try compound key (source_map, dest_map) — resolves collisions
@@ -476,7 +536,12 @@ public static class ZoneTrackingInjector
                     }
 
                     if (!matched)
+                    {
+                        Console.WriteLine($"Zone tracking: UNMATCHED warp in EMEVD {(sourceMap.HasValue ? FormatMap(sourceMap.Value) : "common")} " +
+                                          $"event {evt.ID} dest={FormatMap(destMap)} region={region} " +
+                                          $"entityCandidates={(entityCandidates != null ? entityCandidates.Count.ToString() : "null")}");
                         continue;
+                    }
 
                     warpPositions.Add((i, flagId));
                 }
@@ -518,9 +583,9 @@ public static class ZoneTrackingInjector
 
         var expectedFlagSet = connections.Where(c => c.FlagId > 0).Select(c => c.FlagId).Distinct().ToHashSet();
         Console.WriteLine($"Zone tracking: injected {totalInjected} fog gate tracking flags " +
-                          $"(compound: {compoundMatches}, entity: {entityMatches}, dest-only: {destOnlyMatches}, " +
-                          $"common-event: {commonEventMatches}, skipped collisions: {skippedCollisions}, " +
-                          $"expected unique flags: {expectedFlagSet.Count})");
+                          $"(compound: {compoundMatches}, entity: {entityMatches}, region: {regionMatches}, " +
+                          $"dest-only: {destOnlyMatches}, common-event: {commonEventMatches}, " +
+                          $"skipped collisions: {skippedCollisions}, expected unique flags: {expectedFlagSet.Count})");
 
         var missingFlags = expectedFlagSet.Except(injectedFlags).OrderBy(f => f).ToList();
         if (missingFlags.Count > 0)
@@ -710,13 +775,19 @@ public static class ZoneTrackingInjector
     ///    reading the actual value from the InitializeEvent args at the source offset.
     /// </summary>
     /// <returns>The matching candidate list, or null if no entity_id matches.</returns>
+    /// <param name="hasFogModEntity">Set to true if the event contains IfActionButtonInArea with
+    /// an entity >= FOGMOD_ENTITY_BASE, even if that entity is not in entityToFlag. This signals
+    /// the event is FogMod-generated so the filter should let it through for other strategies.</param>
     /// <remarks>
     /// Must be called before any instruction insertions into the event, since
     /// Parameter.InstructionIndex values refer to the original instruction list.
     /// </remarks>
     internal static List<EntityCandidate>? TryMatchEntityCandidates(
-        EMEVD.Event evt, Dictionary<int, List<EntityCandidate>> entityToFlag, List<byte[]>? initArgsList)
+        EMEVD.Event evt, Dictionary<int, List<EntityCandidate>> entityToFlag, List<byte[]>? initArgsList,
+        out bool hasFogModEntity)
     {
+        hasFogModEntity = false;
+
         for (int instrIdx = 0; instrIdx < evt.Instructions.Count; instrIdx++)
         {
             var instr = evt.Instructions[instrIdx];
@@ -725,6 +796,10 @@ public static class ZoneTrackingInjector
                 continue;
 
             int entityId = BitConverter.ToInt32(instr.ArgData, 8);
+
+            // Track FogMod entities even if not in entityToFlag
+            if (entityId >= FOGMOD_ENTITY_BASE)
+                hasFogModEntity = true;
 
             // Case 1: literal entity ID
             if (entityId != 0 && entityToFlag.TryGetValue(entityId, out var candidates))
@@ -750,6 +825,8 @@ public static class ZoneTrackingInjector
                             if (srcOffset + 4 <= initArgs.Length)
                             {
                                 int resolvedEntity = BitConverter.ToInt32(initArgs, srcOffset);
+                                if (resolvedEntity >= FOGMOD_ENTITY_BASE)
+                                    hasFogModEntity = true;
                                 if (resolvedEntity != 0 &&
                                     entityToFlag.TryGetValue(resolvedEntity, out candidates))
                                     return candidates;
@@ -795,6 +872,37 @@ public static class ZoneTrackingInjector
 
         // 0 or N matches — ambiguous, fall through to compound/dest-only strategies.
         return null;
+    }
+
+    /// <summary>
+    /// Resolve a list of region candidates to a single flag ID. When only one candidate
+    /// exists, returns it directly. When multiple exist (shared entrance gate),
+    /// disambiguates by source map (the EMEVD file the warp event lives in).
+    /// </summary>
+    /// <returns>True if resolved, with flagId set. False if disambiguation fails.</returns>
+    internal static bool ResolveRegionCandidate(
+        List<RegionCandidate> candidates, (byte, byte, byte, byte)? sourceMap, out int flagId)
+    {
+        flagId = 0;
+
+        if (candidates.Count == 1)
+        {
+            flagId = candidates[0].FlagId;
+            return true;
+        }
+
+        // Multiple candidates: disambiguate by source map
+        if (sourceMap.HasValue)
+        {
+            var matches = candidates.Where(c => c.SourceMaps.Contains(sourceMap.Value)).ToList();
+            if (matches.Count == 1)
+            {
+                flagId = matches[0].FlagId;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <summary>

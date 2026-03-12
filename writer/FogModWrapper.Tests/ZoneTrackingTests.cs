@@ -149,4 +149,55 @@ public class ZoneTrackingTests
         Assert.Equal(100, candidates[0].FlagId);
         Assert.Equal(200, candidates[1].FlagId);
     }
+
+    [Fact]
+    public void ResolveRegionCandidate_SingleCandidate_ReturnsFlag()
+    {
+        var candidates = new List<ZoneTrackingInjector.RegionCandidate>
+        {
+            new(flagId: 100, sourceMaps: new HashSet<(byte, byte, byte, byte)> { (11, 5, 0, 0) })
+        };
+        Assert.True(ZoneTrackingInjector.ResolveRegionCandidate(candidates, null, out int flagId));
+        Assert.Equal(100, flagId);
+    }
+
+    [Fact]
+    public void ResolveRegionCandidate_TwoCandidates_DisambiguatesBySourceMap()
+    {
+        var candidates = new List<ZoneTrackingInjector.RegionCandidate>
+        {
+            new(flagId: 100, sourceMaps: new HashSet<(byte, byte, byte, byte)> { (11, 5, 0, 0) }),
+            new(flagId: 200, sourceMaps: new HashSet<(byte, byte, byte, byte)> { (13, 0, 0, 0) })
+        };
+        // EMEVD from m11_05 → should pick flag 100
+        Assert.True(ZoneTrackingInjector.ResolveRegionCandidate(candidates, (11, 5, 0, 0), out int flagId));
+        Assert.Equal(100, flagId);
+
+        // EMEVD from m13_00 → should pick flag 200
+        Assert.True(ZoneTrackingInjector.ResolveRegionCandidate(candidates, (13, 0, 0, 0), out flagId));
+        Assert.Equal(200, flagId);
+    }
+
+    [Fact]
+    public void ResolveRegionCandidate_TwoCandidates_NoSourceMap_ReturnsFalse()
+    {
+        var candidates = new List<ZoneTrackingInjector.RegionCandidate>
+        {
+            new(flagId: 100, sourceMaps: new HashSet<(byte, byte, byte, byte)> { (11, 5, 0, 0) }),
+            new(flagId: 200, sourceMaps: new HashSet<(byte, byte, byte, byte)> { (13, 0, 0, 0) })
+        };
+        Assert.False(ZoneTrackingInjector.ResolveRegionCandidate(candidates, null, out _));
+    }
+
+    [Fact]
+    public void ResolveRegionCandidate_TwoCandidates_UnknownSourceMap_ReturnsFalse()
+    {
+        var candidates = new List<ZoneTrackingInjector.RegionCandidate>
+        {
+            new(flagId: 100, sourceMaps: new HashSet<(byte, byte, byte, byte)> { (11, 5, 0, 0) }),
+            new(flagId: 200, sourceMaps: new HashSet<(byte, byte, byte, byte)> { (13, 0, 0, 0) })
+        };
+        // EMEVD from unknown map → cannot disambiguate
+        Assert.False(ZoneTrackingInjector.ResolveRegionCandidate(candidates, (60, 35, 45, 0), out _));
+    }
 }
