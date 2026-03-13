@@ -301,6 +301,20 @@ public static class ZoneTrackingInjector
             RegisterDestKeys(allDestMaps, conn.FlagId, destOnlyLookup, destOnlyCollisions);
         }
 
+        // Track all destination maps from connections — used to filter unmatched warps
+        // to only those relevant to our DAG (vs. unrelated FogMod-modified events).
+        var allKnownDestMaps = new HashSet<(byte, byte, byte, byte)>();
+        foreach (var conn in connections)
+        {
+            if (conn.FlagId <= 0)
+                continue;
+            var destMaps = ParseMapBytesFromGateName(conn.EntranceGate);
+            if (areaMaps.TryGetValue(conn.EntranceArea, out var mapsStr) && !string.IsNullOrEmpty(mapsStr))
+                destMaps.AddRange(ParseMapBytesFromMapString(mapsStr));
+            foreach (var destBytes in destMaps)
+                allKnownDestMaps.Add((destBytes[0], destBytes[1], destBytes[2], destBytes[3]));
+        }
+
         // Common event lookup: for WarpBonfire connections whose vanilla events
         // live in common.emevd. These events have no IfActionButtonInArea and no
         // source map, so Strategies 0-2 can't match them reliably when dest maps
@@ -338,6 +352,7 @@ public static class ZoneTrackingInjector
         int commonEventMatches = 0;
         int skippedCollisions = 0;
         var injectedFlags = new HashSet<int>();
+        var unmatchedWarps = new List<(string emevdPath, long eventId, (byte, byte, byte, byte) destMap)>();
 
         foreach (var emevdPath in Directory.GetFiles(eventDir, "*.emevd.dcx"))
         {
@@ -544,6 +559,10 @@ public static class ZoneTrackingInjector
 
                     if (!matched)
                     {
+                        if (allKnownDestMaps.Contains(destMap))
+                        {
+                            unmatchedWarps.Add((emevdPath, evt.ID, destMap));
+                        }
                         Console.WriteLine($"Zone tracking: UNMATCHED warp in EMEVD {(sourceMap.HasValue ? FormatMap(sourceMap.Value) : "common")} " +
                                           $"event {evt.ID} dest={FormatMap(destMap)} region={region} " +
                                           $"entityCandidates={(entityCandidates != null ? entityCandidates.Count.ToString() : "null")}");
@@ -588,10 +607,101 @@ public static class ZoneTrackingInjector
             }
         }
 
+        // Strategy 4: Residual matching — last resort for unmatched warps.
+        // For each unmatched warp whose dest map corresponds to a connection,
+        // check if there's exactly one uninjected flag targeting that dest map.
+        // If so, pair them (the only remaining possibility).
+        int residualMatches = 0;
+        if (unmatchedWarps.Count > 0)
+        {
+            // Build reverse lookup: dest map → uninjected flags
+            var destMapToUninjectedFlags = new Dictionary<(byte, byte, byte, byte), List<int>>();
+            foreach (var conn in connections)
+            {
+                if (conn.FlagId <= 0 || injectedFlags.Contains(conn.FlagId))
+                    continue;
+                var destMaps = ParseMapBytesFromGateName(conn.EntranceGate);
+                if (areaMaps.TryGetValue(conn.EntranceArea, out var mStr) && !string.IsNullOrEmpty(mStr))
+                    destMaps.AddRange(ParseMapBytesFromMapString(mStr));
+                foreach (var destBytes in destMaps)
+                {
+                    var dk = (destBytes[0], destBytes[1], destBytes[2], destBytes[3]);
+                    if (!destMapToUninjectedFlags.TryGetValue(dk, out var flagList))
+                    {
+                        flagList = new List<int>();
+                        destMapToUninjectedFlags[dk] = flagList;
+                    }
+                    if (!flagList.Contains(conn.FlagId))
+                        flagList.Add(conn.FlagId);
+                }
+            }
+
+            // Group unmatched warps by file for batch re-processing
+            var warpsByFile = unmatchedWarps
+                .GroupBy(w => w.emevdPath)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            foreach (var (filePath, warps) in warpsByFile)
+            {
+                var emevd = EMEVD.Read(filePath);
+                bool fileModified = false;
+
+                foreach (var (_, eventId, destMap) in warps)
+                {
+                    // Find exactly one uninjected flag for this dest map
+                    if (!destMapToUninjectedFlags.TryGetValue(destMap, out var candidates) || candidates.Count != 1)
+                        continue;
+
+                    int flagId = candidates[0];
+                    var evt = emevd.Events.Find(e => e.ID == eventId);
+                    if (evt == null)
+                        continue;
+
+                    // Find warp instructions targeting this dest map and inject flags
+                    var warpPositions = new List<int>();
+                    for (int i = 0; i < evt.Instructions.Count; i++)
+                    {
+                        var warpInfo = TryExtractWarpInfo(evt.Instructions[i]);
+                        if (warpInfo != null && warpInfo.Value.DestMap == destMap)
+                            warpPositions.Add(i);
+                    }
+
+                    for (int j = warpPositions.Count - 1; j >= 0; j--)
+                    {
+                        var setFlagInstr = events.ParseAdd(
+                            $"SetEventFlag(TargetEventFlagType.EventFlag, {flagId}, ON)");
+                        evt.Instructions.Insert(warpPositions[j], setFlagInstr);
+                        foreach (var param in evt.Parameters)
+                        {
+                            if (param.InstructionIndex >= warpPositions[j])
+                                param.InstructionIndex++;
+                        }
+                    }
+
+                    if (warpPositions.Count > 0)
+                    {
+                        injectedFlags.Add(flagId);
+                        totalInjected += warpPositions.Count;
+                        residualMatches += warpPositions.Count;
+                        fileModified = true;
+                        // Don't remove from candidates: multiple events may target the
+                        // same dest map (e.g., Event 900 and 901 both warp to m11_05),
+                        // and we want the flag injected in ALL of them.
+                        Console.WriteLine($"Zone tracking: residual match in event {eventId} " +
+                                          $"dest={FormatMap(destMap)} → flag {flagId}");
+                    }
+                }
+
+                if (fileModified)
+                    emevd.Write(filePath);
+            }
+        }
+
         var expectedFlagSet = connections.Where(c => c.FlagId > 0).Select(c => c.FlagId).Distinct().ToHashSet();
         Console.WriteLine($"Zone tracking: injected {totalInjected} fog gate tracking flags " +
                           $"(compound: {compoundMatches}, entity: {entityMatches}, region: {regionMatches}, " +
                           $"dest-only: {destOnlyMatches}, common-event: {commonEventMatches}, " +
+                          $"residual: {residualMatches}, " +
                           $"skipped collisions: {skippedCollisions}, expected unique flags: {expectedFlagSet.Count})");
 
         var missingFlags = expectedFlagSet.Except(injectedFlags).OrderBy(f => f).ToList();
