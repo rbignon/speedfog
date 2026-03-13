@@ -204,9 +204,11 @@ public static class ZoneTrackingInjector
             return;
         }
 
-        // Build TWO lookups from connections:
+        // Build lookups from connections:
         // 1. Compound key (source_map, dest_map) → flagId  — for collision resolution
         // 2. Dest-only dest_map → flagId  — fallback when compound key doesn't match
+        // 3. allKnownDestMaps — union of all connection dest maps, used to filter
+        //    unmatched warps to only those relevant to our DAG (Strategy 4)
         //
         // FogMod's getEventMap() may place warp events in a different EMEVD file than the
         // exit gate's map prefix (e.g., parent maps for open world tiles, map deduplication).
@@ -216,6 +218,7 @@ public static class ZoneTrackingInjector
         var destOnlyLookup = new Dictionary<(byte, byte, byte, byte), int>();
         var destOnlyCollisions = new HashSet<(byte, byte, byte, byte)>();
         var compoundCollisions = new HashSet<((byte, byte, byte, byte), (byte, byte, byte, byte))>();
+        var allKnownDestMaps = new HashSet<(byte, byte, byte, byte)>();
 
         // Entity-based disambiguation: exit gate entity_id → list of candidates.
         // When two connections share the same exit fog gate (allow_entry_as_exit),
@@ -256,6 +259,7 @@ public static class ZoneTrackingInjector
             //    For AEG099 gates, this is not a valid entity (skipped by TryParse).
             var destMapSet = new HashSet<(byte, byte, byte, byte)>(
                 allDestMaps.Select(b => (b[0], b[1], b[2], b[3])));
+            allKnownDestMaps.UnionWith(destMapSet);
             if (conn.ExitEntityId > 0)
                 RegisterEntity(entityToFlag, conn.ExitEntityId, conn.FlagId, destMapSet);
             int gateActionEntity = ParseGateActionEntity(conn.ExitGate);
@@ -299,20 +303,6 @@ public static class ZoneTrackingInjector
 
             // Register dest-only keys (fallback when compound key doesn't match)
             RegisterDestKeys(allDestMaps, conn.FlagId, destOnlyLookup, destOnlyCollisions);
-        }
-
-        // Track all destination maps from connections — used to filter unmatched warps
-        // to only those relevant to our DAG (vs. unrelated FogMod-modified events).
-        var allKnownDestMaps = new HashSet<(byte, byte, byte, byte)>();
-        foreach (var conn in connections)
-        {
-            if (conn.FlagId <= 0)
-                continue;
-            var destMaps = ParseMapBytesFromGateName(conn.EntranceGate);
-            if (areaMaps.TryGetValue(conn.EntranceArea, out var mapsStr) && !string.IsNullOrEmpty(mapsStr))
-                destMaps.AddRange(ParseMapBytesFromMapString(mapsStr));
-            foreach (var destBytes in destMaps)
-                allKnownDestMaps.Add((destBytes[0], destBytes[1], destBytes[2], destBytes[3]));
         }
 
         // Common event lookup: for WarpBonfire connections whose vanilla events
