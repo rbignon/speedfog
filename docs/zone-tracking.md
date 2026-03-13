@@ -1,6 +1,6 @@
 # Zone Tracking
 
-**Date:** 2026-02-24 — **Updated:** 2026-02-26
+**Date:** 2026-02-24 — **Updated:** 2026-03-13
 **Status:** Active
 
 How SpeedFog injects event flags into fog gate warp events so the racing mod can track which zone the player enters.
@@ -100,6 +100,7 @@ For each event in each EMEVD file:
    | 1. Compound key | (EMEVD filename, warp dest map) → flag | Resolves same-dest collisions when exits come from different maps. On compound collision, falls back to entity resolution. |
    | 2. Dest-only | warp dest map → flag | Fallback. Skips injection on all collisions: when source map is known (likely back-portal), when common event lookup covers the dest map (defers to Strategy 3), or in common.emevd without common event entry (avoids injecting a possibly-wrong flag — Phase 3 validation catches the missing flag). |
    | 3. Common event | warp dest map → flag (common event lookup) | For WarpBonfire gates whose vanilla events live in common.emevd. Only checked when sourceMap is null and strategies 0-2 did not match. See details below. |
+   | 4. Residual | unmatched warp dest map → unique uninjected flag | Last resort. After all strategies run, if exactly one uninjected flag targets a warp's dest map, pair them. See details below. |
 
 3. **Injection** — insert `SetEventFlag(flag_id, ON)` before each matched warp instruction, from last to first (to preserve instruction indices). Shift Parameter entries accordingly.
 
@@ -127,9 +128,30 @@ Strategy 3 only fires when all of these are true:
 - The dest map exists in `commonEventLookup`
 - The dest map is not in `commonEventCollisions`
 
+**Same-zone merge:**
+
+`RegisterCommonEventKeys` now tracks `entranceArea` per dest key. When two connections target the same dest map but the **same** entrance area (e.g., Maliketh→`leyndell2_throne` and Fire Giant→`leyndell2_throne`), this is **not** a real collision — both flags map to the same zone node, so either flag is correct for zone tracking. The lookup keeps the first-registered flag and skips adding to `commonEventCollisions`. Only when connections target **different** entrance areas is it flagged as a true collision.
+
 **Interaction with Strategy 2:**
 
 Strategy 2 skips injection on all dest-only collisions: in map-specific EMEVDs (likely back-portal return warps), in common.emevd when a `commonEventLookup` entry exists (defers to Strategy 3), and in common.emevd without a common event entry (avoids injecting a possibly-wrong flag). In all cases, if no other strategy matches, the flag remains uninjected and Phase 3 validation aborts the build — preferring a loud failure over silent incorrectness.
+
+### Strategy 4: Residual Matching (Detail)
+
+Strategy 4 is a last-resort fallback that runs **after** all per-event strategies (0-3) have completed and EMEVD files have been written. It processes warps that remained unmatched but whose dest map corresponds to a DAG connection (suggesting they should have been matched).
+
+**Algorithm:**
+
+1. During the main event loop, unmatched warps whose dest map exists in `allKnownDestMaps` (the set of all connection dest maps) are collected.
+2. After the loop, build a reverse lookup: `dest_map → list of uninjected flags` (connections whose flags are not yet in `injectedFlags`).
+3. For each unmatched warp, if its dest map maps to exactly **one** uninjected flag, inject `SetEventFlag` before the warp instruction (the only remaining possibility).
+4. Re-read and re-write the EMEVD file for batch processing.
+
+**When it fires:**
+
+Strategy 4 handles the case where Strategies 0-3 all failed for a warp but the same-zone merge in Strategy 3 resolved the collision (keeping one flag). The common event lookup now has an entry, but it was already consumed during the main loop. The residual matcher finds the remaining flag and pairs it with the warp.
+
+Concrete example: two connections to `leyndell2_throne` (Maliketh flag 1040292881, Fire Giant flag 1040292882). Strategy 3 matches one of them. The other flag remains uninjected. Residual matching finds that `m11_05` has exactly one uninjected flag and injects it into the remaining warp events.
 
 ### Entity Disambiguation Detail
 
