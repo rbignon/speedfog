@@ -105,11 +105,13 @@ public class ZoneTrackingTests
 
         // Build common event lookup from connections with HasCommonEvent
         var commonEventLookup = new Dictionary<(byte, byte, byte, byte), int>();
+        var commonEventAreas = new Dictionary<(byte, byte, byte, byte), string>();
         var commonEventCollisions = new HashSet<(byte, byte, byte, byte)>();
 
         // Only the Fire Giant connection has HasCommonEvent
         ZoneTrackingInjector.RegisterCommonEventKeys(
-            new byte[] { 10, 0, 0, 0 }, 1040292829, commonEventLookup, commonEventCollisions);
+            new byte[] { 10, 0, 0, 0 }, 1040292829, "some_area",
+            commonEventLookup, commonEventAreas, commonEventCollisions);
 
         Assert.True(commonEventLookup.ContainsKey(destMap));
         Assert.Equal(1040292829, commonEventLookup[destMap]);
@@ -120,14 +122,56 @@ public class ZoneTrackingTests
     public void CommonEventLookup_TracksCollisions()
     {
         var commonEventLookup = new Dictionary<(byte, byte, byte, byte), int>();
+        var commonEventAreas = new Dictionary<(byte, byte, byte, byte), string>();
         var commonEventCollisions = new HashSet<(byte, byte, byte, byte)>();
 
         ZoneTrackingInjector.RegisterCommonEventKeys(
-            new byte[] { 10, 0, 0, 0 }, 100, commonEventLookup, commonEventCollisions);
+            new byte[] { 10, 0, 0, 0 }, 100, "area_a",
+            commonEventLookup, commonEventAreas, commonEventCollisions);
         ZoneTrackingInjector.RegisterCommonEventKeys(
-            new byte[] { 10, 0, 0, 0 }, 200, commonEventLookup, commonEventCollisions);
+            new byte[] { 10, 0, 0, 0 }, 200, "area_b",
+            commonEventLookup, commonEventAreas, commonEventCollisions);
 
         Assert.Contains(((byte)10, (byte)0, (byte)0, (byte)0), commonEventCollisions);
+    }
+
+    [Fact]
+    public void CommonEventLookup_SameEntranceArea_NotACollision()
+    {
+        var commonEventLookup = new Dictionary<(byte, byte, byte, byte), int>();
+        var commonEventAreas = new Dictionary<(byte, byte, byte, byte), string>();
+        var commonEventCollisions = new HashSet<(byte, byte, byte, byte)>();
+
+        // Two connections to same entrance area (leyndell2_throne) with different flags
+        ZoneTrackingInjector.RegisterCommonEventKeys(
+            new byte[] { 11, 5, 0, 0 }, 1040292881, "leyndell2_throne",
+            commonEventLookup, commonEventAreas, commonEventCollisions);
+        ZoneTrackingInjector.RegisterCommonEventKeys(
+            new byte[] { 11, 5, 0, 0 }, 1040292882, "leyndell2_throne",
+            commonEventLookup, commonEventAreas, commonEventCollisions);
+
+        // Same entrance area → not a real collision
+        Assert.Empty(commonEventCollisions);
+        Assert.True(commonEventLookup.ContainsKey(((byte)11, (byte)5, (byte)0, (byte)0)));
+    }
+
+    [Fact]
+    public void CommonEventLookup_DifferentEntranceArea_IsCollision()
+    {
+        var commonEventLookup = new Dictionary<(byte, byte, byte, byte), int>();
+        var commonEventAreas = new Dictionary<(byte, byte, byte, byte), string>();
+        var commonEventCollisions = new HashSet<(byte, byte, byte, byte)>();
+
+        // Two connections to same dest map but different entrance areas
+        ZoneTrackingInjector.RegisterCommonEventKeys(
+            new byte[] { 11, 5, 0, 0 }, 100, "leyndell2_throne",
+            commonEventLookup, commonEventAreas, commonEventCollisions);
+        ZoneTrackingInjector.RegisterCommonEventKeys(
+            new byte[] { 11, 5, 0, 0 }, 200, "some_other_area",
+            commonEventLookup, commonEventAreas, commonEventCollisions);
+
+        // Different entrance areas → real collision
+        Assert.Contains(((byte)11, (byte)5, (byte)0, (byte)0), commonEventCollisions);
     }
 
     [Fact]

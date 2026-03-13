@@ -306,6 +306,7 @@ public static class ZoneTrackingInjector
         // source map, so Strategies 0-2 can't match them reliably when dest maps
         // collide. Strategy 3 uses this dedicated lookup.
         var commonEventLookup = new Dictionary<(byte, byte, byte, byte), int>();
+        var commonEventAreas = new Dictionary<(byte, byte, byte, byte), string>();
         var commonEventCollisions = new HashSet<(byte, byte, byte, byte)>();
 
         foreach (var conn in connections)
@@ -318,7 +319,8 @@ public static class ZoneTrackingInjector
                 destMaps.AddRange(ParseMapBytesFromMapString(mapsStr));
 
             foreach (var destBytes in destMaps)
-                RegisterCommonEventKeys(destBytes, conn.FlagId, commonEventLookup, commonEventCollisions);
+                RegisterCommonEventKeys(destBytes, conn.FlagId, conn.EntranceArea,
+                    commonEventLookup, commonEventAreas, commonEventCollisions);
         }
 
         Console.WriteLine($"Zone tracking: {compoundLookup.Count} compound keys, " +
@@ -731,20 +733,34 @@ public static class ZoneTrackingInjector
     /// Register map byte tuples in the common event lookup, tracking collisions.
     /// Used for connections whose vanilla warp event lives in common.emevd
     /// (WarpBonfire gates like the Erdtree burning).
+    /// Only marks as collision when two connections target different entrance areas
+    /// (different zones). Same entrance area means both flags map to the same zone
+    /// node — either flag is correct for racing zone tracking.
     /// </summary>
     internal static void RegisterCommonEventKeys(
-        byte[] destBytes, int flagId,
+        byte[] destBytes, int flagId, string entranceArea,
         Dictionary<(byte, byte, byte, byte), int> commonEventLookup,
+        Dictionary<(byte, byte, byte, byte), string> commonEventAreas,
         HashSet<(byte, byte, byte, byte)> commonEventCollisions)
     {
         var destKey = (destBytes[0], destBytes[1], destBytes[2], destBytes[3]);
         if (commonEventLookup.TryGetValue(destKey, out int existing) && existing != flagId)
         {
-            commonEventCollisions.Add(destKey);
-            Console.WriteLine($"Zone tracking: common event collision on {FormatMap(destKey)} " +
-                              $"(flag {flagId} vs {existing})");
+            // Only a real collision if the connections target different entrance areas.
+            if (commonEventAreas.TryGetValue(destKey, out var existingArea) && existingArea != entranceArea)
+            {
+                commonEventCollisions.Add(destKey);
+                Console.WriteLine($"Zone tracking: common event collision on {FormatMap(destKey)} " +
+                                  $"(flag {flagId} [{entranceArea}] vs {existing} [{existingArea}])");
+            }
+            else
+            {
+                Console.WriteLine($"Zone tracking: common event same-zone merge on {FormatMap(destKey)} " +
+                                  $"(flag {flagId} and {existing} both target {entranceArea})");
+            }
         }
         commonEventLookup.TryAdd(destKey, flagId);
+        commonEventAreas.TryAdd(destKey, entranceArea);
     }
 
     /// <summary>
