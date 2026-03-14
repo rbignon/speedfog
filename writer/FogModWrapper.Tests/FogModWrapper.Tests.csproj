@@ -30,6 +30,15 @@
     <Reference Include="SoulsFormats">
       <HintPath>../lib/SoulsFormats.dll</HintPath>
     </Reference>
+    <Reference Include="FogMod">
+      <HintPath>../lib/FogMod.dll</HintPath>
+    </Reference>
+    <Reference Include="SoulsIds">
+      <HintPath>../lib/SoulsIds.dll</HintPath>
+    </Reference>
+    <Reference Include="YamlDotNet">
+      <HintPath>../lib/YamlDotNet.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
 </Project>
