@@ -69,7 +69,7 @@ For each warp instruction (WarpPlayer 2003:14, PlayCutsceneToPlayerAndWarp 2002:
 3. If found, inject `SetEventFlag(flag_id, ON)` for **each** flag_id in the list, before the warp instruction
 4. If not found, skip (not one of our connections' warps)
 
-In the common case (no shared entrance), the list has exactly one flag_id. For shared entrances, all flag_ids in the list map to the same destination cluster, so injecting all of them is semantically correct — the racing mod resolves each flag to the same cluster via `event_map`.
+In the common case (no shared entrance), the list has exactly one flag_id. For shared entrances, all flag_ids in the list map to the same destination cluster. See [Shared entrance analysis](#shared-entrance-analysis) for the semantic implications and [Consumer Impact](#consumer-impact) for how event consumers should handle multi-flag injection.
 
 **Phase 3 — Validation (unchanged):**
 
@@ -174,11 +174,97 @@ An entrance gate is a physical entity in a specific zone. Zones belong to exactl
 
 **Approach: inject all flags for the region.**
 
-When a warp targets region R with flag_ids [F1, F2], inject both `SetEventFlag(F1, ON)` and `SetEventFlag(F2, ON)`. Both flags map to the same cluster in `event_map`, so the racing mod correctly identifies the destination zone regardless of which exit gate the player used.
+When a warp targets region R with flag_ids [F1, F2], inject both `SetEventFlag(F1, ON)` and `SetEventFlag(F2, ON)`. Both flags map to the same cluster in `event_map`, so all event consumers correctly identify the destination zone regardless of which exit gate the player used.
 
-This is not a fallback or compromise — it is correct by construction. Each injected flag truthfully represents "player entered cluster C."
+**Semantic change for shared entrances:** This changes the flag semantic from **per-connection** ("flag F means connection C was traversed") to **per-cluster** ("flag F means cluster X was entered") for connections that share an entrance gate. In the common case (no shared entrance), the list has exactly one flag_id and the semantics are identical. For shared entrances, all flags for the region fire simultaneously on any traversal — the consumer cannot determine which specific exit gate was used.
+
+This is acceptable because:
+
+1. **The per-connection semantic was never consumed.** The racing mod (`handle_event_flag` in speedfog-racing) immediately resolves `flag_id → node_id` via `event_map.get(str(flag_id))` and discards the flag. It tracks `node_id` (cluster-level), not connection-level information. The comment in `output.py:288-290` ("detect re-entry from a different branch") described an allocated capability that no consumer ever implemented.
+
+2. **The lost information is recoverable from context.** Shared entrance means two exit gates (in different source clusters) connecting to the same entrance gate. The racing mod already tracks the sequence of cluster entries in `zone_history` — the previous entry identifies which source cluster the player came from, which determines the branch.
+
+3. **Event flags are one-shot.** EMEVD flags are set once and never reset. Even with per-connection flags, re-entry to the same cluster from a different branch is indistinguishable from the first entry once the flag is already ON. The per-connection granularity only matters for the very first traversal, and only if the consumer inspects individual flags rather than resolving to nodes.
+
+See [Consumer Impact](#consumer-impact) for detailed analysis of the effects on event consumers.
 
 **Safety assertion**: during mapping construction (Phase 1 step 5), verify that all flag_ids for the same region resolve to the same cluster in `event_map`. If this assertion ever fires, it indicates an architectural invariant violation that needs investigation. No Python-side guard is needed because the invariant is structural, not configuration-dependent.
+
+## Consumer Impact
+
+### Semantic contract
+
+The flag contract changes for shared entrances:
+
+| Aspect | Before (heuristic) | After (region-based) |
+|--------|-------------------|---------------------|
+| Non-shared entrance | Flag F fires when connection C is traversed | Same — one flag per region, identical semantic |
+| Shared entrance | Flag F_A fires only when exit gate A is used; F_B only for gate B | F_A **and** F_B both fire on any traversal through the shared entrance |
+| `event_map` resolution | `flag → node_id` (unchanged) | `flag → node_id` (unchanged) |
+
+For non-shared entrances (the vast majority of connections), behavior is identical. The change only affects shared entrances where `DuplicateEntrance` creates a `region → [F_A, F_B]` mapping.
+
+### speedfog-racing analysis
+
+`handle_event_flag` in `speedfog_racing/websocket/mod.py` processes flags as follows:
+
+```python
+node_id = event_map.get(str(flag_id))   # resolve flag → node
+is_first_visit = not any(entry.get("node_id") == node_id for entry in old_history)
+participant.current_zone = node_id       # node-level tracking
+participant.zone_history = [*old_history, {"node_id": node_id, "igt_ms": igt, "type": "fog"}]
+```
+
+**Key observation:** the `flag_id` is discarded immediately after resolving to `node_id`. All downstream logic (`current_zone`, `current_layer`, `zone_history`, `build_leader_splits`, `get_layer_entry_igt`, death attribution) operates on node_id, not flag_id. There is no per-connection logic anywhere in the consumer.
+
+**With multi-flag injection on shared entrances**, the mod sends two `event_flag` messages in rapid succession (F_A and F_B, same EMEVD frame). The server processes them sequentially:
+
+| Call | flag_id | node_id | is_first_visit | Effect |
+|------|---------|---------|----------------|--------|
+| 1st | F_A | N | True | Append `{N, T, "fog"}` to history. Broadcast leaderboard. |
+| 2nd | F_B | N | False | Append `{N, T, "fog"}` (duplicate). Broadcast player_update. |
+
+Downstream functions handle the duplicate gracefully:
+- `build_leader_splits`: `if layer not in splits` — first entry wins, duplicate ignored
+- `get_layer_entry_igt`: returns first match — duplicate invisible
+- `current_layer`: high watermark, idempotent
+- Death attribution: uses `current_zone` (node-level) — unaffected
+
+**The only observable effect is a duplicate entry in `zone_history`** — two identical `{"node_id": N, "igt_ms": T, "type": "fog"}` entries. This is cosmetic (no functional impact) but should be cleaned up.
+
+### Recommended consumer-side deduplication
+
+Event consumers that receive flags from SpeedFog EMEVD injection should handle the case where multiple flags resolve to the same node at the same timestamp. The recommended guard for speedfog-racing:
+
+```python
+# In handle_event_flag, before appending to zone_history:
+if (old_history
+    and old_history[-1].get("node_id") == node_id
+    and old_history[-1].get("igt_ms") == igt):
+    return  # duplicate from multi-flag shared entrance
+```
+
+This dedup guard is optional but recommended for clean `zone_history` data. It should be implemented as a separate change in speedfog-racing, independent of the C# changes in this spec.
+
+### General consumer guidelines
+
+Any system consuming SpeedFog event flags should:
+
+1. **Resolve flags via `event_map`** — treat flags as opaque identifiers that resolve to node_ids, not as connection identifiers.
+2. **Handle duplicate node arrivals** — multiple flags may fire for the same node in the same frame. Consumers should be idempotent on `(node_id, timestamp)`.
+3. **Do not assume flag uniqueness per traversal** — a single fog gate traversal may set 1 or N flags (N > 1 for shared entrances). All resolve to the same node.
+
+### Python-side documentation update
+
+`output.py:288-290` should be updated to reflect the actual consumer contract:
+
+```python
+# Allocate event flag IDs per connection (for zone tracking).
+# Each connection gets a unique flag_id, but for shared entrances (DuplicateEntrance),
+# multiple flags map to the same destination node in event_map.
+# Consumers resolve flags to nodes via event_map — per-connection identity is not guaranteed
+# to be distinguishable at the EMEVD level (see region-based-zone-tracking spec).
+```
 
 ## Changes Required
 
@@ -201,10 +287,14 @@ Once the C# side is validated:
 | `crosslinks.py` | Remove `_build_collision_index`, `_build_compound_index`, `_would_collide`, `_would_compound_collide` and associated filtering |
 | `tests/test_validator.py` | Remove collision test cases |
 | `tests/test_crosslinks.py` | Remove collision filtering test cases |
-| `output.py` | Remove `has_common_event` emission (dead after C# change) |
+| `output.py` | Remove `has_common_event` emission (dead after C# change). Update comment at L288-290 to reflect per-node (not per-connection) consumer contract. |
 | `generate_clusters.py` | Remove `warp_bonfire` propagation to cluster exit_fogs (only used for `has_common_event`) |
 
 ### Test plan
+
+**Prerequisite — Region stability verification** (run before implementation):
+
+0. **Region survives Connect()**: load a real FogMod Graph from game data, read `entranceEdge.Side.Warp.Region` before `Graph.Connect()`, read it again after. Assert the values are identical. Repeat for `Graph.DuplicateEntrance()`. This validates the critical hypothesis that Connect() does not modify Warp data. If this test fails, the entire approach must be reconsidered.
 
 **Unit tests** (ZoneTrackingTests.cs — replace existing tests):
 
@@ -220,6 +310,10 @@ Once the C# side is validated:
 
 - Full build with a known seed, verify all expected flags are injected (Phase 3 validation passes).
 - Compare injected flag count against the previous heuristic approach to confirm equivalence.
+
+### speedfog-racing follow-up (separate repo)
+
+Add a deduplication guard in `handle_event_flag` to prevent duplicate `zone_history` entries from shared-entrance multi-flag injection. This is cosmetic (no functional impact without it) but produces cleaner history data for spectators and analytics.
 
 ### Acceptance criteria for Python follow-up
 
@@ -240,11 +334,15 @@ None. The `has_common_event` field on Connection becomes unused by C# but can re
 
 ### Medium risk
 
-- **Graph iteration correctness**: the region mapping depends on iterating FogMod's Graph edges after connection injection. If FogMod's Graph.Connect() or DuplicateEntrance() modifies Warp.Region (it shouldn't — it only sets Link references), the mapping would be wrong. **Mitigation**: unit test that verifies region values survive connection injection; integration test that runs a full build and verifies all flags are injected.
+- **Critical hypothesis — Region stability through Connect()**: the entire approach depends on `entranceEdge.Side.Warp.Region` being readable and correct after `Graph.Connect()` and `Graph.DuplicateEntrance()`. The claim that `Graph.Connect()` only sets Link/From/To references without modifying Warp data is based on analysis of `Graph.cs:415-458` (decompiled, not authoritative source). If FogMod modified Warp.Region during connection (e.g., entity ID reallocation), the mapping would be silently wrong. **Mitigation (required before implementation)**: write a verification test that reads `Side.Warp.Region` on an entrance edge before and after `Graph.Connect()` on a real FogMod Graph loaded from game data. This transforms the hypothesis into a verified fact. Phase 3 validation provides a second safety net (missing flags abort the build), but silent wrong-region mapping could produce wrong flags rather than missing ones — the verification test catches this.
 
 - **Missing edges**: if a connection's exit gate doesn't match any Graph edge Name (typo, FogMod internal renaming), the region won't be captured and the flag will be missing. Phase 3 validation catches this as a fatal error, same as today. **Mitigation**: log warnings during mapping construction for unmatched connections.
 
 - **Warp instructions not covered**: if FogMod introduces a new warp instruction type (beyond WarpPlayer and PlayCutsceneToPlayerAndWarp) that uses a different region parameter layout, the region extraction would miss it. **Mitigation**: Phase 3 validation catches missing flags. This is the same risk as today.
+
+### Transition risk
+
+- **Rewrite scope**: replacing ~800 lines of working (if complex) matching logic with ~80-100 lines of region lookup. The existing unit tests (ZoneTrackingTests.cs) must be rewritten in parallel. During the transition, test coverage is temporarily reduced. **Mitigation**: keep the old implementation available on a branch or as a commented reference until 3+ integration runs with different seeds confirm equivalence. Do not delete old tests until new tests cover all edge cases in the test plan.
 
 ### Minimal risk
 
