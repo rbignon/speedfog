@@ -1,9 +1,11 @@
 # Zone Tracking
 
-**Date:** 2026-02-24 — **Updated:** 2026-03-13
+**Date:** 2026-02-24 — **Updated:** 2026-03-14
 **Status:** Active
 
 How SpeedFog injects event flags into fog gate warp events so the racing mod can track which zone the player enters.
+
+**Design spec:** `docs/specs/2026-03-12-region-based-zone-tracking.md`
 
 ## Purpose
 
@@ -17,20 +19,17 @@ Understanding FogMod's event compilation is essential to understand how zone tra
 
 ### fogwarp template (9005777)
 
-FogMod's `EventEditor.Process()` compiles the `fogwarp` template from `fogevents.txt` into per-instance events at build time. The template is **never called at runtime** — each instance gets a unique event ID (typically 1040290xxx) with literal values baked in.
+FogMod's `EventEditor.Process()` compiles the `fogwarp` template from `fogevents.txt` into per-instance events at build time. The template is **never called at runtime** -- each instance gets a unique event ID (typically 1040290xxx) with literal values baked in.
 
 A compiled fogwarp event contains:
-- `IfActionButtonInArea` (bank 3, id 24) — checks the player is near the fog gate entity
-- `WarpPlayer` (bank 2003, id 14) — teleports to the destination map + region
+- `IfActionButtonInArea` (bank 3, id 24) -- checks the player is near the fog gate entity
+- `WarpPlayer` (bank 2003, id 14) -- teleports to the destination map + region
 
 The fogwarp template also has built-in alt-warp logic (AlternateFlag, altRegion, altMapBytes) for gates with two destinations depending on game state (e.g., Erdtree pre/post Maliketh).
 
 ### Manual fogwarp events
 
-Some fog gates use hand-crafted events instead of the fogwarp template (e.g., lie-down warps like Placidusax). These events may:
-- Use **parameterized** `IfActionButtonInArea` where entity_id=0 is a placeholder, with the real entity passed via `InitializeEvent` args
-- Use vanilla destination region IDs (below `FOGMOD_ENTITY_BASE = 755890000`)
-- Contain multiple `WarpPlayer` instructions on different execution paths
+Some fog gates use hand-crafted events instead of the fogwarp template (e.g., lie-down warps like Placidusax). These events may contain multiple `WarpPlayer` instructions on different execution paths, but their destination regions are still literal values baked in at compile time.
 
 ### PlayCutsceneToPlayerAndWarp
 
@@ -38,146 +37,109 @@ Cutscene-based transitions (bank 2002, id 11/12) pack the destination map as an 
 
 ### WarpBonfire gates
 
-WarpBonfire gates are bonfire-sit warps triggered by resting at a specific bonfire entity rather than walking through a fog wall. In fog.txt, these are entries with `WarpBonfire: <bonfire_entity>` on their ASide. Examples:
-
-- **Fire Giant forge** (`13002500`) — After defeating Fire Giant, sitting at the forge bonfire warps the player to the Erdtree burning cutscene, then to the next area (Farum Azula by default, randomized by FogMod).
-- **Maliketh** (`13000950`) — After defeating Maliketh, sitting at a bonfire warps to Ashen Leyndell.
-- **Fell Twins** (`34140950`) — A WarpBonfire gate in the Divine Tower of East Altus.
+WarpBonfire gates are bonfire-sit warps triggered by resting at a specific bonfire entity rather than walking through a fog wall. Examples: Fire Giant forge (`13002500`), Maliketh (`13000950`), Fell Twins (`34140950`).
 
 FogMod handles WarpBonfire gates via two mechanisms:
 
-1. **Vanilla event in common.emevd** (e.g., Event 901) — FogMod's EventEditor replaces the region/map in `PlayCutsceneToPlayerAndWarpWithWeatherAndTime`. Fires on the first traversal.
-2. **WarpFlag event in map EMEVD** — FogMod creates a new event triggered by a WarpFlag (set via grace "Repeat warp" menu). Only usable after the first traversal.
+1. **Vanilla event in common.emevd** (e.g., Event 901) -- FogMod's EventEditor replaces the region/map in `PlayCutsceneToPlayerAndWarpWithWeatherAndTime`. Fires on the first traversal.
+2. **WarpFlag event in map EMEVD** -- FogMod creates a new event triggered by a WarpFlag (set via grace "Repeat warp" menu). Only usable after the first traversal.
 
-Only Fire Giant (`13002500`) and Maliketh (`13000950`) have vanilla events in common.emevd; Fell Twins (`34140950`) is handled entirely in a map EMEVD where compound key matching (Strategies 0-1) works fine.
-
-**Why WarpBonfire vanilla events need special handling:**
-
-The vanilla events in common.emevd lack `IfActionButtonInArea` (the player triggers the warp by sitting at a bonfire, not by pressing an action button at a fog gate), so Strategy 0 (entity matching) cannot find them. Additionally, common.emevd has no source map prefix, so Strategy 1 (compound key) has no `sourceMap` to form a key. Strategy 2 (dest-only) might work in isolation, but when another connection targets the same destination map, it produces a collision and either picks the wrong flag or skips injection. Strategy 3 (common event matching) solves this by using a dedicated lookup restricted to connections that declare `has_common_event: true`.
-
-The WarpFlag events (mechanism 2) are placed in map EMEVDs and do have entity-based or compound keys, so Strategies 0-2 handle them normally.
+Both mechanisms write the entrance Region into the compiled warp instructions, so region-based lookup handles them uniformly.
 
 ### Event placement
 
-FogMod's `getEventMap()` decides which EMEVD file hosts each warp event. This may differ from the exit gate's map prefix — e.g., parent maps for open world tiles, or map deduplication. This is why the injector can't assume the EMEVD filename matches the exit gate.
+FogMod's `getEventMap()` decides which EMEVD file hosts each warp event. This may differ from the exit gate's map prefix (e.g., parent maps for open world tiles, or map deduplication).
+
+## Architecture: Region-Based Lookup
+
+Zone tracking uses a single region-based dictionary lookup to match compiled warp instructions back to graph.json connections. The mapping is built **before** FogMod compiles events, eliminating the information-loss problem that previously required heuristic matching.
+
+### Why the region is a reliable key
+
+Every entrance in fog.txt has a unique `Warp.Region` -- either a pre-existing vanilla entity or a FogMod-allocated entity from `FOGMOD_ENTITY_BASE` (755890000). FogMod bakes this region value into all compiled warp instruction types (WarpPlayer, PlayCutsceneToPlayerAndWarp, manual fogwarps, WarpFlag events). The value is always a literal integer, never parameterized.
+
+Both template-compiled and manual event paths read from `edge.Link.Side.Warp.Region`, which is exactly what we capture during mapping construction.
+
+### Data flow
+
+```
+graph.json connections + event_map
+        |
+        v
+ConnectionInjector.InjectAndExtract()
+        |  connects edges in FogMod Graph
+        |  builds regionToFlags mapping inline:
+        |    connection.flag_id + entranceEdge.Side.Warp.Region
+        |    region -> List<flag_id> (multi-flag for shared entrances)
+        |    asserts same-cluster invariant via event_map
+        v
+GameDataWriterE.Write()
+        |  compiles fogwarp events (uses same Region values)
+        v
+ZoneTrackingInjector.Inject(regionToFlags, expectedFlags, ...)
+        |  scan EMEVDs, extract region from warp instructions
+        |  lookup region in dictionary
+        |  inject SetEventFlag for each flag_id in list
+        v
+SetEventFlag injected before each matched warp
+```
 
 ## ZoneTrackingInjector Pipeline
 
-`ZoneTrackingInjector.Inject()` runs after `GameDataWriterE.Write()` and post-processes every EMEVD file. Internally, it calls `InjectFogGateFlags()` for part A (fog gate tracking flags) and `InjectBossDeathEvent()` for part B (boss death monitor).
+`ZoneTrackingInjector.Inject()` runs after `GameDataWriterE.Write()` and post-processes every EMEVD file. It takes `regionToFlags` and `expectedFlags` (built by `ConnectionInjector`) instead of raw connections.
 
-### Phase 1: Build Lookups
+### Phase 1: Mapping (ConnectionInjector)
 
-For each connection in graph.json:
+The `regionToFlags` dictionary is built inside `ConnectionInjector.InjectAndExtract()`, where both the `Connection` (with `flag_id`) and the resolved entrance edge (with `Side.Warp.Region`) are available. For each connection:
 
-1. **Source maps** — from exit_gate name + exit_area's areaMaps (FogMod internal map IDs)
-2. **Dest maps** — from entrance_gate name + entrance_area's areaMaps
-3. **Entity candidates** — `entityToFlag: Dictionary<int, List<EntityCandidate>>`. Each candidate pairs a flag_id with its destination maps. Two entity sources per connection:
-   - `ExitEntityId` — the fog gate asset entity from fog_data.json
-   - Gate name suffix — for numeric gates (e.g., `m34_12_00_00_34122840`), the suffix is the action entity used by FogMod in `IfActionButtonInArea`
-4. **Region candidates** — `regionToFlag: Dictionary<int, List<RegionCandidate>>`. Each candidate pairs a flag_id with its source maps. For numeric entrance gates (e.g., `m60_35_45_00_1035462610`), the suffix is the WarpPlayer region entity. FogMod may warp to adjacent map tiles, so dest map matching fails — region matching bypasses dest_map entirely.
-5. **Compound lookup** — `(source_map, dest_map) → flag_id`, with collision tracking
-6. **Dest-only lookup** — `dest_map → flag_id`, with collision tracking
-7. **Common event lookup** — `dest_map → flag_id` for connections with `HasCommonEvent` (WarpBonfire gates whose vanilla events live in common.emevd)
+1. After `Graph.Connect()` or `Graph.DuplicateEntrance()`, read `entranceEdge.Side.Warp.Region`
+2. Add `region -> flag_id` to the dictionary (appending to the list if the region already exists)
+3. If `entranceEdge.Side.AlternateSide?.Warp?.Region` exists (AlternateFlag warps like flag 300/330), register the alternate region with the same `flag_id`
 
-The entity lookup is a **multimap** (one entity → multiple candidates) because two connections can share the same exit fog gate when `allow_entry_as_exit` is used. The old `Dictionary.TryAdd` silently dropped duplicates; the multimap preserves all candidates and disambiguates by destination map at match time.
+After all connections are processed, validate that all `flag_id`s for the same region map to the same cluster in `event_map`. This invariant is structurally guaranteed (an entrance gate is in one zone, one cluster) but verified as a safety net.
 
-### Phase 2: Scan and Match
+### Phase 2: Scan and Inject
 
-For each event in each EMEVD file:
+For each event in each EMEVD file, scan for `WarpPlayer` (2003:14) and `PlayCutsceneToPlayerAndWarp` (2002:11/12) instructions:
 
-1. **Pre-scan** — `TryMatchEntityCandidates()` scans the event's instructions for `IfActionButtonInArea` (bank 3, id 24) with a known entity. Handles both literal entity IDs and parameterized ones (resolved via `InitializeEvent` args + Parameter list). Returns the candidate list or null. Also outputs `hasFogModEntity` = true if any IfActionButtonInArea entity is >= `FOGMOD_ENTITY_BASE` (even if not in entityToFlag), signaling the event is FogMod-generated.
+1. Extract the region from instruction arguments via `TryExtractWarpInfo()`
+2. Look up region in `regionToFlags`
+3. If found, inject `SetEventFlag(flag_id, ON)` for **each** flag_id in the list, before the warp instruction
+4. If not found, skip (not one of our connections' warps)
 
-2. **Per-warp matching** — for each `WarpPlayer` or `PlayCutsceneToPlayerAndWarp` instruction:
-
-   **FogMod filter**: skip if `region < FOGMOD_ENTITY_BASE` AND no entity candidates found AND `hasFogModEntity` is false (vanilla event, not FogMod-generated). The `hasFogModEntity` flag is needed because FogMod allocates new entities for AEG099 fog gates that aren't in our entityToFlag lookup, but the event IS FogMod-generated and should be processed.
-
-   Then try five strategies in order:
-
-   | Strategy | Key | When it resolves |
-   |----------|-----|-----------------|
-   | 0. Entity match | IfActionButtonInArea entity → candidates → resolve by dest map | Most reliable. Handles manual fogwarps with vanilla region IDs (e.g., Placidusax). Handles shared gates via dest map disambiguation. |
-   | R. Region match | WarpPlayer region → entrance_gate numeric entity suffix → resolve by source map | For numeric entrance gates (e.g., `m60_35_45_00_1035462610`), WarpPlayer uses the vanilla entity as the region. Maps region back to the connection's flag_id. Handles FogMod events that warp to adjacent map tiles (dest map mismatch). |
-   | 1. Compound key | (EMEVD filename, warp dest map) → flag | Resolves same-dest collisions when exits come from different maps. On compound collision, falls back to entity resolution. |
-   | 2. Dest-only | warp dest map → flag | Fallback. Skips injection on all collisions: when source map is known (likely back-portal), when common event lookup covers the dest map (defers to Strategy 3), or in common.emevd without common event entry (avoids injecting a possibly-wrong flag — Phase 3 validation catches the missing flag). |
-   | 3. Common event | warp dest map → flag (common event lookup) | For WarpBonfire gates whose vanilla events live in common.emevd. Only checked when sourceMap is null and strategies 0-2 did not match. See details below. |
-   | 4. Residual | unmatched warp dest map → unique uninjected flag | Last resort. After all strategies run, if exactly one uninjected flag targets a warp's dest map, pair them. See details below. |
-
-3. **Injection** — insert `SetEventFlag(flag_id, ON)` before each matched warp instruction, from last to first (to preserve instruction indices). Shift Parameter entries accordingly.
-
-### Strategy 3: Common Event Matching (Detail)
-
-Strategy 3 exists to handle WarpBonfire gates whose first-traversal vanilla events live in common.emevd, where Strategies 0-2 all fail:
-
-- **Strategy 0 fails** — no `IfActionButtonInArea` in the event (bonfire-sit warp, not fog gate action).
-- **Strategy 1 fails** — common.emevd has no map prefix, so `sourceMap` is null and no compound key can be formed.
-- **Strategy 2 may fail** — if another connection targets the same destination map, the dest-only lookup has a collision. Even without collision, Strategy 2 is imprecise because common.emevd contains many FogMod warp events from different source areas.
-
-**Data flow (`has_common_event`):**
-
-1. **fog.txt** — FogMod's annotation data declares `WarpBonfire: <bonfire_entity>` on the ASide of certain fogs.
-2. **generate_clusters.py** — Parses the `WarpBonfire` field from fog.txt into `FogSide.warp_bonfire`. When building cluster exit_fogs, sets `"warp_bonfire": True` on exit fog entries whose ASide has a WarpBonfire value (`fog.has_warp_bonfire and fog.aside.area == zone`).
-3. **output.py** — When serializing graph.json connections, checks if any exit_fog in the source cluster has `warp_bonfire` set for the matching fog_id. If so, sets `has_common_event: true` on the connection dict. The field is only emitted when true (omitted when false to keep the JSON compact).
-4. **GraphData.cs** — The C# `Connection` model deserializes `has_common_event` into `HasCommonEvent` (bool, defaults to false). Unknown fields are ignored by `System.Text.Json`.
-5. **ZoneTrackingInjector** — During Phase 1, builds `commonEventLookup` by iterating connections where `HasCommonEvent` is true and registering their dest maps. During Phase 2, after Strategies 0-2 fail and `sourceMap` is null, looks up the warp's dest map in this dedicated lookup (skipping collided entries).
-
-**Matching conditions:**
-
-Strategy 3 only fires when all of these are true:
-- `matched` is still false after Strategies 0-2
-- `sourceMap` is null (the EMEVD file is common.emevd or another non-map file)
-- The dest map exists in `commonEventLookup`
-- The dest map is not in `commonEventCollisions`
-
-**Same-zone merge:**
-
-`RegisterCommonEventKeys` now tracks `entranceArea` per dest key. When two connections target the same dest map but the **same** entrance area (e.g., Maliketh→`leyndell2_throne` and Fire Giant→`leyndell2_throne`), this is **not** a real collision — both flags map to the same zone node, so either flag is correct for zone tracking. The lookup keeps the first-registered flag and skips adding to `commonEventCollisions`. Only when connections target **different** entrance areas is it flagged as a true collision.
-
-**Interaction with Strategy 2:**
-
-Strategy 2 skips injection on all dest-only collisions: in map-specific EMEVDs (likely back-portal return warps), in common.emevd when a `commonEventLookup` entry exists (defers to Strategy 3), and in common.emevd without a common event entry (avoids injecting a possibly-wrong flag). In all cases, if no other strategy matches, the flag remains uninjected and Phase 3 validation aborts the build — preferring a loud failure over silent incorrectness.
-
-### Strategy 4: Residual Matching (Detail)
-
-Strategy 4 is a last-resort fallback that runs **after** all per-event strategies (0-3) have completed and EMEVD files have been written. It processes warps that remained unmatched but whose dest map corresponds to a DAG connection (suggesting they should have been matched).
-
-**Algorithm:**
-
-1. During the main event loop, unmatched warps whose dest map exists in `allKnownDestMaps` (the set of all connection dest maps) are collected.
-2. After the loop, build a reverse lookup: `dest_map → list of uninjected flags` (connections whose flags are not yet in `injectedFlags`).
-3. For each unmatched warp, if its dest map maps to exactly **one** uninjected flag, inject `SetEventFlag` before the warp instruction (the only remaining possibility).
-4. Re-read and re-write the EMEVD file for batch processing.
-
-**When it fires:**
-
-Strategy 4 handles the case where Strategies 0-3 all failed for a warp but the same-zone merge in Strategy 3 resolved the collision (keeping one flag). The common event lookup now has an entry, but it was already consumed during the main loop. The residual matcher finds the remaining flag and pairs it with the warp.
-
-Concrete example: two connections to `leyndell2_throne` (Maliketh flag 1040292881, Fire Giant flag 1040292882). Strategy 3 matches one of them. The other flag remains uninjected. Residual matching finds that `m11_05` has exactly one uninjected flag and injects it into the remaining warp events.
-
-**Design limit:** Strategy 3 + Strategy 4 only works for **exactly 2** same-area `HasCommonEvent` connections to the same dest map. With 3+, Strategy 3 consumes one flag and Strategy 4 sees 2+ remaining candidates (`candidates.Count != 1`) — it skips, and Phase 3 aborts the build. This is a safe failure (no silent incorrectness), but it means the DAG generator must not produce 3+ `HasCommonEvent` connections to the same entrance area and dest map.
-
-**File re-read contract:** Strategy 4 re-reads EMEVD files from disk after the main event loop has written them. The main loop **must** write modifications before Strategy 4 runs. If the write is moved or deferred in a refactor, Strategy 4 will lose the main loop's injections.
-
-**Candidate retention:** Strategy 4 does not remove matched flags from the candidate list, so that the same flag can be injected into multiple events targeting the same dest map (e.g., Event 900 and Event 901 both warp to m11_05). This is safe because the `candidates.Count == 1` guard prevents false matches: if a flag appears as a candidate for multiple dest map keys, only dest maps with exactly one candidate will be matched.
-
-### Entity Disambiguation Detail
-
-When `TryMatchEntityCandidates` returns multiple candidates (shared gate), `ResolveEntityCandidate` picks the right one:
-
-| Candidates | Dest map match | Result |
-|-----------|---------------|--------|
-| 1 | (ignored) | Return directly — unambiguous |
-| N | Exactly 1 candidate's DestMaps contains the warp dest map | Return that candidate |
-| N | 0 matches or N matches | Return null — fall through to compound/dest-only |
-
-This works because FogMod compiles a separate warp event per destination, so two connections sharing a gate produce events with different `WarpPlayer` dest maps.
+Insertions proceed from last to first within each event to preserve instruction indices. Parameter entries are shifted accordingly.
 
 ### Phase 3: Validation
 
-After processing all EMEVD files, compare injected flags against expected flags (all connections with `flag_id > 0`). If any flag was not injected, **the build aborts with a fatal exception**. This prevents producing a mod with silent tracking gaps.
+After processing all EMEVD files, compare injected flags against `expectedFlags` (all connections with `flag_id > 0`). If any flag was not injected, **the build aborts with a fatal exception**. This prevents producing a mod with silent tracking gaps.
+
+## Shared Entrances
+
+When two connections share the same entrance gate (`DuplicateEntrance`), they share the same `Warp.Region` but have different `flag_id`s (flags are allocated per-connection in `output.py`). The mapping becomes `region -> [flag_A, flag_B]`, and both `SetEventFlag` instructions are injected before the warp.
+
+### Semantic change: per-connection to per-cluster
+
+This changes the flag semantic from **per-connection** ("flag F means connection C was traversed") to **per-cluster** ("flag F means cluster X was entered") for connections that share an entrance gate. In the common case (no shared entrance), the list has one flag_id and the semantics are identical.
+
+For shared entrances, all flags for the region fire simultaneously on any traversal -- the consumer cannot determine which specific exit gate was used. This is acceptable because:
+
+1. **The per-connection semantic was never consumed.** The racing mod resolves `flag_id -> node_id` via `event_map` and discards the flag. It tracks cluster-level progression.
+2. **The lost information is recoverable from context.** The racing mod tracks `zone_history` -- the previous entry identifies the source cluster.
+3. **Event flags are one-shot.** Re-entry from a different branch is indistinguishable once the flag is already ON.
+
+### Consumer guidelines
+
+Systems consuming SpeedFog event flags should:
+
+1. **Resolve flags via `event_map`** -- treat flags as opaque identifiers that resolve to node_ids.
+2. **Handle duplicate node arrivals** -- multiple flags may fire for the same node in the same frame. Be idempotent on `(node_id, timestamp)`.
+3. **Do not assume flag uniqueness per traversal** -- a single fog gate traversal may set 1 or N flags.
+
+See the design spec for detailed consumer impact analysis and recommended deduplication guard.
 
 ## Boss Death Monitor
 
-In addition to fog gate flags, `ZoneTrackingInjector.InjectBossDeathEvent()` creates event 755862000 in common.emevd:
+`ZoneTrackingInjector.InjectBossDeathEvent()` creates event 755862000 in common.emevd:
 
 ```
 IfEventFlag(MAIN, ON, bossDefeatFlag)
@@ -186,24 +148,13 @@ SetEventFlag(finishEvent, ON)
 
 This translates the boss's vanilla defeat flag into SpeedFog's `finish_event` flag for the racing mod.
 
-## Known Limitations
-
-### Roundtable exit
-
-FogMod's Roundtable exit events use `IfActionButtonInArea` with `entity_id=0` and no `InitializeEvent` args available in the EMEVD file where the event is placed. Entity matching fails (logged as diagnostic). These events are still matched by compound or dest-only strategies, but this is fragile. The diagnostic logging helps identify these cases.
-
-### Per-warp flag injection (future alternative)
-
-Instead of matching warp instructions back to graph.json connections, a future approach could assign a unique flag to every FogMod warp event unconditionally, then export the flag→zone mapping for the racing mod. This would be 100% accurate by construction, but requires changes to the racing mod's flag consumption.
-
 ## File References
 
 | File | Role |
 |------|------|
-| `writer/FogModWrapper/ZoneTrackingInjector.cs` | All injection logic |
+| `writer/FogModWrapper/ZoneTrackingInjector.cs` | Scan/inject logic (Phase 2-3) |
+| `writer/FogModWrapper/ConnectionInjector.cs` | Region-to-flags mapping construction (Phase 1) |
 | `writer/FogModWrapper.Tests/ZoneTrackingTests.cs` | Unit tests |
-| `writer/FogModWrapper.Core/Models/GraphData.cs` | `Connection.HasCommonEvent` model field |
-| `speedfog/output.py` | Flag allocation (EVENT_FLAG_BASE), exit_entity_id lookup, `has_common_event` emission |
-| `tools/generate_clusters.py` | `warp_bonfire` propagation to cluster exit_fogs |
-| `data/fog_data.json` | Fog gate metadata (entity IDs, positions) |
+| `speedfog/output.py` | Flag allocation (EVENT_FLAG_BASE), event_map construction |
 | `docs/event-flags.md` | Flag ranges and EMEVD event ID allocation |
+| `docs/specs/2026-03-12-region-based-zone-tracking.md` | Full design spec (rationale, consumer impact, edge cases) |
