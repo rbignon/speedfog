@@ -221,6 +221,9 @@ allow_entry_as_exit = true
 [zones.scadutree_base]
 allow_entry_as_exit = true
 
+[zones.academy_redwolf]
+allow_entry_as_exit = true
+
 [zones.sewer_mohg]
 allow_entry_as_exit = true
 
