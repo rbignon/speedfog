@@ -68,13 +68,16 @@ graph.json connections + event_map
         v
 ConnectionInjector.InjectAndExtract()
         |  connects edges in FogMod Graph
-        |  builds regionToFlags mapping inline:
-        |    connection.flag_id + entranceEdge.Side.Warp.Region
-        |    region -> List<flag_id> (multi-flag for shared entrances)
-        |    asserts same-cluster invariant via event_map
+        |  saves (flag_id, entranceEdge) references
         v
 GameDataWriterE.Write()
-        |  compiles fogwarp events (uses same Region values)
+        |  populates Side.Warp from MSB data
+        |  compiles fogwarp events (bakes Region into WarpPlayer)
+        v
+InjectionResult.BuildRegionToFlags(eventMap)
+        |  reads entranceEdge.Side.Warp.Region from saved references
+        |  builds region -> List<flag_id> dictionary
+        |  validates same-cluster invariant
         v
 ZoneTrackingInjector.Inject(regionToFlags, expectedFlags, ...)
         |  scan EMEVDs, extract region from warp instructions
@@ -86,17 +89,17 @@ SetEventFlag injected before each matched warp
 
 ## ZoneTrackingInjector Pipeline
 
-`ZoneTrackingInjector.Inject()` runs after `GameDataWriterE.Write()` and post-processes every EMEVD file. It takes `regionToFlags` and `expectedFlags` (built by `ConnectionInjector`) instead of raw connections.
+`ZoneTrackingInjector.Inject()` runs after `GameDataWriterE.Write()` and post-processes every EMEVD file. It takes `regionToFlags` and `expectedFlags` instead of raw connections.
 
-### Phase 1: Mapping (ConnectionInjector)
+### Phase 1: Mapping (deferred)
 
-The `regionToFlags` dictionary is built inside `ConnectionInjector.InjectAndExtract()`, where both the `Connection` (with `flag_id`) and the resolved entrance edge (with `Side.Warp.Region`) are available. For each connection:
+`Side.Warp` is not available during connection injection — `GameDataWriterE.Write()` populates it later from MSB data. The mapping is built in two steps:
 
-1. After `Graph.Connect()` or `Graph.DuplicateEntrance()`, read `entranceEdge.Side.Warp.Region`
-2. Add `region -> flag_id` to the dictionary (appending to the list if the region already exists)
-3. If `entranceEdge.Side.AlternateSide?.Warp?.Region` exists (AlternateFlag warps like flag 300/330), register the alternate region with the same `flag_id`
-
-After all connections are processed, validate that all `flag_id`s for the same region map to the same cluster in `event_map`. This invariant is structurally guaranteed (an entrance gate is in one zone, one cluster) but verified as a safety net.
+1. **During injection** (`ConnectionInjector.InjectAndExtract()`): save `(flag_id, entranceEdge)` references for each connection.
+2. **After Write()** (`InjectionResult.BuildRegionToFlags(eventMap)`): read `entranceEdge.Side.Warp.Region` from the saved references and build the dictionary:
+   - Add `region -> flag_id` (appending to the list if the region already exists for shared entrances)
+   - If `entranceEdge.Side.AlternateSide?.Warp?.Region` exists (AlternateFlag warps like flag 300/330), register the alternate region with the same `flag_id`
+   - Validate that all `flag_id`s for the same region map to the same cluster in `event_map` (structural safety net)
 
 ### Phase 2: Scan and Inject
 
