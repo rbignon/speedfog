@@ -179,9 +179,9 @@ public class Connection
 
     /// <summary>
     /// MSB entity ID of the exit fog gate asset (from fog_data.json).
-    /// Used by ZoneTrackingInjector for entity-based disambiguation when
-    /// compound key (source_map, dest_map) collisions occur.
-    /// Default 0 = not available (backward compatible with old graph.json).
+    /// Retained for backward compatibility; no longer consumed by ZoneTrackingInjector
+    /// (region-based lookup replaced entity-based disambiguation).
+    /// Default 0 = not available.
     /// </summary>
     [JsonPropertyName("exit_entity_id")]
     public int ExitEntityId { get; set; } = 0;
@@ -197,7 +197,8 @@ public class Connection
     /// <summary>
     /// When true, this connection's exit is a WarpBonfire gate whose vanilla
     /// warp event (e.g., Erdtree burning) lives in common.emevd.
-    /// ZoneTrackingInjector uses this for Strategy 3 matching.
+    /// Retained for backward compatibility; no longer consumed by ZoneTrackingInjector
+    /// (region-based lookup handles WarpBonfire gates uniformly).
     /// </summary>
     [JsonPropertyName("has_common_event")]
     public bool HasCommonEvent { get; set; } = false;

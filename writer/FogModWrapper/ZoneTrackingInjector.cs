@@ -182,6 +182,12 @@ public static class ZoneTrackingInjector
                 // Second pass: insert SetEventFlag before each warp, from last to first
                 // to avoid index shifting affecting earlier positions.
                 // For shared entrances, inject ALL flag_ids (all map to the same cluster).
+                //
+                // Parameter shifting correctness: the inner loop inserts N flags at
+                // the same warpIdx, each time incrementing Parameter indices >= warpIdx.
+                // After N insertions, each Parameter is shifted N times — correct because
+                // N instructions were inserted before it. The outer reverse loop ensures
+                // earlier warp positions are unaffected by later insertions.
                 int insertCount = 0;
                 for (int j = warpPositions.Count - 1; j >= 0; j--)
                 {
