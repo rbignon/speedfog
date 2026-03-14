@@ -415,13 +415,6 @@ Example:
         // 7f. Inject zone tracking events for racing support
         if (graphData.FinishEvent > 0)
         {
-            // Build area→maps lookup from FogMod's graph for internal map resolution.
-            // FogMod may warp to dungeon interior maps (e.g., m30_02) that differ from
-            // the overworld entrance tile in graph.json's entrance_gate prefix (e.g., m60_41_37).
-            var areaMaps = graph.Areas
-                .Where(kvp => !string.IsNullOrEmpty(kvp.Value.Maps))
-                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.Maps);
-
             // Use graph.json's FinishBossDefeatFlag (from fog.txt) with priority,
             // falling back to FogMod's Graph extraction. This fixes leyndell_erdtree
             // where the boss zone (erdtree) is reachable via norandom fogs but not
@@ -437,11 +430,18 @@ Example:
                     $"(FogMod Graph had {injectionResult.BossDefeatFlag})");
             }
 
+            // Build expected flags set from connections for Phase 3 validation
+            var expectedFlags = graphData.Connections
+                .Where(c => c.FlagId > 0)
+                .Select(c => c.FlagId)
+                .Distinct()
+                .ToHashSet();
+
             ZoneTrackingInjector.Inject(
                 modDir,
                 events,
-                graphData.Connections,
-                areaMaps,
+                injectionResult.RegionToFlags,
+                expectedFlags,
                 injectionResult.FinishEvent,
                 bossDefeatFlag);
         }

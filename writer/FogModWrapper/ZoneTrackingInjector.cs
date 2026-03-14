@@ -1,4 +1,3 @@
-using FogModWrapper.Models;
 using SoulsFormats;
 using SoulsIds;
 
@@ -6,61 +5,22 @@ namespace FogModWrapper;
 
 /// <summary>
 /// Injects EMEVD events for racing zone tracking:
-/// A) Inject SetEventFlag before warp instructions in FogMod-generated events
+/// A) Inject SetEventFlag before warp instructions using region-based lookup
 /// B) Boss death monitor event that sets finish_event on final boss defeat
+///
+/// The region-to-flags mapping is built by ConnectionInjector from
+/// entranceEdge.Side.Warp.Region after Graph.Connect(), before compilation.
+/// This avoids reverse-engineering compiled events and eliminates all
+/// heuristic matching strategies. See docs/specs/2026-03-12-region-based-zone-tracking.md.
 /// </summary>
 public static class ZoneTrackingInjector
 {
     private const int BOSS_DEATH_EVENT_ID = 755862000;
 
     /// <summary>
-    /// FogMod allocates warp target region entity IDs starting from this base.
-    /// Vanilla WarpPlayer events use map-specific entity IDs (e.g., 14003900, 16002701)
-    /// which are well below this threshold. Filtering on region >= this value ensures
-    /// we only modify FogMod-generated warp events, not vanilla ones.
-    /// </summary>
-    private const int FOGMOD_ENTITY_BASE = 755890000;
-
-    /// <summary>
-    /// A candidate entity-to-flag mapping, enriched with destination maps for disambiguation.
-    /// When two connections share the same exit fog gate (allow_entry_as_exit), the same entity
-    /// maps to multiple flags. The DestMaps allow disambiguation by comparing against the warp
-    /// instruction's actual destination.
-    /// </summary>
-    internal readonly struct EntityCandidate
-    {
-        public readonly int FlagId;
-        public readonly HashSet<(byte, byte, byte, byte)> DestMaps;
-
-        public EntityCandidate(int flagId, HashSet<(byte, byte, byte, byte)> destMaps)
-        {
-            FlagId = flagId;
-            DestMaps = destMaps;
-        }
-    }
-
-    /// <summary>
-    /// A candidate region-to-flag mapping for entrance gates with numeric entity suffixes.
-    /// WarpPlayer region for numeric gates equals the entrance_gate's entity suffix
-    /// (e.g., region=1035462610 for entrance_gate m60_35_45_00_1035462610).
-    /// SourceMaps allow disambiguation when multiple connections share the same entrance gate.
-    /// </summary>
-    internal readonly struct RegionCandidate
-    {
-        public readonly int FlagId;
-        public readonly HashSet<(byte, byte, byte, byte)> SourceMaps;
-
-        public RegionCandidate(int flagId, HashSet<(byte, byte, byte, byte)> sourceMaps)
-        {
-            FlagId = flagId;
-            SourceMaps = sourceMaps;
-        }
-    }
-
-    /// <summary>
     /// Destination map and region extracted from a warp instruction.
     /// </summary>
-    private readonly struct WarpInfo
+    internal readonly struct WarpInfo
     {
         public readonly (byte, byte, byte, byte) DestMap;
         public readonly int Region;
@@ -86,7 +46,7 @@ public static class ZoneTrackingInjector
     ///    Used by cutscene-based transitions (e.g., Erdtree burning at Forge of the Giants).
     ///    FogMod's EventEditor replaces the region and map in these instructions.
     /// </summary>
-    private static WarpInfo? TryExtractWarpInfo(EMEVD.Instruction instr)
+    internal static WarpInfo? TryExtractWarpInfo(EMEVD.Instruction instr)
     {
         var a = instr.ArgData;
 
@@ -102,8 +62,7 @@ public static class ZoneTrackingInjector
             return new WarpInfo(destMap, region);
         }
 
-        // PlayCutsceneToPlayerAndWarp (bank 2002, id 11)
-        // PlayCutsceneToPlayerAndWarpWithWeatherAndTime (bank 2002, id 12)
+        // PlayCutsceneToPlayerAndWarp (bank 2002, id 11 or 12)
         if (instr.Bank == 2002 && (instr.ID == 11 || instr.ID == 12))
         {
             if (a.Length < 16)
@@ -120,40 +79,37 @@ public static class ZoneTrackingInjector
     }
 
     /// <summary>
-    /// Unpack a packed map ID int32 into 4 map bytes.
-    /// Format: area * 1000000 + block * 10000 + sub * 100 + sub2
-    /// (e.g., m13_00_00_00 = 13000000, m31_06_00_00 = 31060000)
+    /// Unpack a packed map ID integer to (area, block, sub, sub2) bytes.
+    /// Packed format: area*1000000 + block*10000 + sub*100 + sub2.
     /// </summary>
     private static (byte, byte, byte, byte) UnpackMapId(int mapInt)
     {
-        byte area = (byte)(mapInt / 1000000);
-        byte block = (byte)((mapInt % 1000000) / 10000);
-        byte sub = (byte)((mapInt % 10000) / 100);
-        byte sub2 = (byte)(mapInt % 100);
-        return (area, block, sub, sub2);
+        int area = mapInt / 1000000;
+        int block = (mapInt % 1000000) / 10000;
+        int sub = (mapInt % 10000) / 100;
+        int sub2 = mapInt % 100;
+        return ((byte)area, (byte)block, (byte)sub, (byte)sub2);
     }
 
     /// <summary>
-    /// Inject zone tracking events into EMEVD files.
+    /// Inject zone tracking events: fog gate flags (Part A) and boss death monitor (Part B).
     /// </summary>
-    /// <param name="modDir">Path to mod output directory (contains event/ subdirectory)</param>
-    /// <param name="events">Events instance for instruction parsing</param>
-    /// <param name="connections">Connections from graph.json with flag_id per connection</param>
-    /// <param name="areaMaps">Maps each area name to its internal map IDs (from FogMod Graph).
-    /// Used to resolve entrance areas to their actual WarpPlayer destination maps,
-    /// which may differ from the entrance_gate's map prefix (e.g., overworld tile vs dungeon interior).</param>
-    /// <param name="finishEvent">The finish_event flag ID</param>
-    /// <param name="bossDefeatFlag">The boss defeat flag from FogMod's Graph</param>
+    /// <param name="modDir">Mod output directory containing event/ subfolder</param>
+    /// <param name="events">SoulsIds Events for parsing EMEVD instructions</param>
+    /// <param name="regionToFlags">Region entity → flag IDs mapping from ConnectionInjector</param>
+    /// <param name="expectedFlags">Set of all flag IDs that must be injected (from connections)</param>
+    /// <param name="finishEvent">Flag ID to set on final boss death</param>
+    /// <param name="bossDefeatFlag">Vanilla flag for final boss defeat</param>
     public static void Inject(
         string modDir,
         Events events,
-        List<Connection> connections,
-        Dictionary<string, string> areaMaps,
+        Dictionary<int, List<int>> regionToFlags,
+        HashSet<int> expectedFlags,
         int finishEvent,
         int bossDefeatFlag)
     {
-        // Part A: Inject SetEventFlag before warp instructions in FogMod-modified events
-        InjectFogGateFlags(modDir, events, connections, areaMaps);
+        // Part A: Inject SetEventFlag before warp instructions using region lookup
+        InjectFogGateFlags(modDir, events, regionToFlags, expectedFlags);
 
         // Part B: Create boss death monitor in common.emevd
         if (finishEvent > 0 && bossDefeatFlag > 0)
@@ -168,34 +124,20 @@ public static class ZoneTrackingInjector
     }
 
     /// <summary>
-    /// Scan all EMEVD files for warp instructions with literal destination map bytes.
-    /// When a destination matches a connection's entrance gate map, inject SetEventFlag before
-    /// the warp to set the zone tracking flag on traversal.
+    /// Scan all EMEVD files for warp instructions. For each WarpPlayer or
+    /// PlayCutsceneToPlayerAndWarp, extract the region parameter and look it up
+    /// in the regionToFlags dictionary. If found, inject SetEventFlag for each
+    /// associated flag_id before the warp instruction.
     ///
-    /// Handles two warp instruction families:
-    /// - WarpPlayer (2003:14): fogwarp template events and WarpBonfire portal events
-    /// - PlayCutsceneToPlayerAndWarp (2002:11/12): cutscene-based transitions like the
-    ///   Erdtree burning at the Forge of the Giants
-    ///
-    /// FogMod's EventEditor compiles the fogwarp template (9005777) into per-instance events
-    /// with unique IDs and literal WarpPlayer values. It also modifies vanilla cutscene warp
-    /// events to redirect to FogMod destinations. Both types are placed in map EMEVD files
-    /// and we post-process them to add zone tracking.
-    ///
-    /// Matching strategy:
-    /// 0. Entity match — if the event contains IfActionButtonInArea with a known exit gate
-    ///    entity, match directly by entity_id. Most reliable, handles cases where FogMod
-    ///    reuses vanilla destination entities (e.g., Placidusax lie-down uses region 13002834).
-    /// 1. Try compound key (source_map, dest_map) — resolves collisions when two connections
-    ///    from different source maps target the same dest map. Source maps include both
-    ///    exit_gate map bytes AND exit_area areaMaps (FogMod may place events in either).
-    ///    Dest maps include entrance_gate map bytes AND entrance_area areaMaps.
-    /// 2. Fall back to dest-only matching — because FogMod's getEventMap() may place events
-    ///    in a different EMEVD file than any known source map.
+    /// This replaces the previous 5-strategy heuristic matching with a single
+    /// dictionary lookup. The mapping is built by ConnectionInjector from
+    /// entranceEdge.Side.Warp.Region — the same value FogMod bakes into
+    /// compiled warp instructions.
     /// </summary>
     private static void InjectFogGateFlags(
-        string modDir, Events events, List<Connection> connections,
-        Dictionary<string, string> areaMaps)
+        string modDir, Events events,
+        Dictionary<int, List<int>> regionToFlags,
+        HashSet<int> expectedFlags)
     {
         var eventDir = Path.Combine(modDir, "event");
         if (!Directory.Exists(eventDir))
@@ -204,362 +146,34 @@ public static class ZoneTrackingInjector
             return;
         }
 
-        // Build lookups from connections:
-        // 1. Compound key (source_map, dest_map) → flagId  — for collision resolution
-        // 2. Dest-only dest_map → flagId  — fallback when compound key doesn't match
-        // 3. allKnownDestMaps — union of all connection dest maps, used to filter
-        //    unmatched warps to only those relevant to our DAG (Strategy 4)
-        //
-        // FogMod's getEventMap() may place warp events in a different EMEVD file than the
-        // exit gate's map prefix (e.g., parent maps for open world tiles, map deduplication).
-        // The compound key works when EMEVD filename matches exit_gate map; dest-only handles
-        // the rest. See docs/zone-tracking.md for design rationale.
-        var compoundLookup = new Dictionary<((byte, byte, byte, byte), (byte, byte, byte, byte)), int>();
-        var destOnlyLookup = new Dictionary<(byte, byte, byte, byte), int>();
-        var destOnlyCollisions = new HashSet<(byte, byte, byte, byte)>();
-        var compoundCollisions = new HashSet<((byte, byte, byte, byte), (byte, byte, byte, byte))>();
-        var allKnownDestMaps = new HashSet<(byte, byte, byte, byte)>();
-
-        // Entity-based disambiguation: exit gate entity_id → list of candidates.
-        // When two connections share the same exit fog gate (allow_entry_as_exit),
-        // the same entity maps to multiple candidates. Each candidate carries its
-        // destination maps for disambiguation against the warp instruction's target.
-        var entityToFlag = new Dictionary<int, List<EntityCandidate>>();
-
-        // Region-based matching: entrance_gate numeric entity → list of candidates.
-        // For numeric gates (e.g., m60_35_45_00_1035462610), WarpPlayer uses the
-        // vanilla entity (1035462610) as the warp region. This lookup maps that
-        // region back to the connection's flag_id, with source maps for disambiguation.
-        var regionToFlag = new Dictionary<int, List<RegionCandidate>>();
-
-        foreach (var conn in connections)
-        {
-            if (conn.FlagId <= 0)
-                continue;
-
-            // Build all possible source maps (exit_gate maps + exit_area areaMaps).
-            // FogMod's getEventMap() may place the warp event in the exit area's internal
-            // map file instead of the gate's tile map, so we need both as potential sources.
-            var allSourceMaps = ParseMapBytesFromGateName(conn.ExitGate);
-            if (areaMaps.TryGetValue(conn.ExitArea, out var exitMapsStr) && !string.IsNullOrEmpty(exitMapsStr))
-                allSourceMaps.AddRange(ParseMapBytesFromMapString(exitMapsStr));
-
-            // Build all possible dest maps (entrance_gate maps + entrance_area areaMaps).
-            // FogMod may warp to the dungeon interior map (e.g., m31_01) instead of the
-            // overworld entrance tile (e.g., m60_44_34).
-            var allDestMaps = ParseMapBytesFromGateName(conn.EntranceGate);
-            if (areaMaps.TryGetValue(conn.EntranceArea, out var entranceMapsStr) && !string.IsNullOrEmpty(entranceMapsStr))
-                allDestMaps.AddRange(ParseMapBytesFromMapString(entranceMapsStr));
-
-            // Build entity lookup for disambiguation (after allDestMaps so we can attach them).
-            // Two entity sources:
-            // 1. ExitEntityId — the fog gate asset entity from fog_data.json
-            // 2. Gate name suffix — for numeric gates (e.g., m34_12_00_00_34122840),
-            //    the suffix IS the action entity used by FogMod in IfActionButtonInArea.
-            //    For AEG099 gates, this is not a valid entity (skipped by TryParse).
-            var destMapSet = new HashSet<(byte, byte, byte, byte)>(
-                allDestMaps.Select(b => (b[0], b[1], b[2], b[3])));
-            allKnownDestMaps.UnionWith(destMapSet);
-            if (conn.ExitEntityId > 0)
-                RegisterEntity(entityToFlag, conn.ExitEntityId, conn.FlagId, destMapSet);
-            int gateActionEntity = ParseGateActionEntity(conn.ExitGate);
-            if (gateActionEntity > 0)
-                RegisterEntity(entityToFlag, gateActionEntity, conn.FlagId, destMapSet);
-
-            // Register entrance region for region-based matching.
-            // For numeric entrance gates, the suffix IS the WarpPlayer region entity.
-            int entranceRegionEntity = ParseGateActionEntity(conn.EntranceGate);
-            if (entranceRegionEntity > 0)
-            {
-                var srcMapSet = new HashSet<(byte, byte, byte, byte)>(
-                    allSourceMaps.Select(b => (b[0], b[1], b[2], b[3])));
-                if (!regionToFlag.TryGetValue(entranceRegionEntity, out var regionList))
-                {
-                    regionList = new List<RegionCandidate>();
-                    regionToFlag[entranceRegionEntity] = regionList;
-                }
-                regionList.Add(new RegionCandidate(conn.FlagId, srcMapSet));
-            }
-
-            // Register compound keys (all source × dest combinations)
-            // Track collisions where TryAdd would keep a different flag
-            foreach (var srcBytes in allSourceMaps)
-            {
-                var srcKey = (srcBytes[0], srcBytes[1], srcBytes[2], srcBytes[3]);
-                foreach (var destBytes in allDestMaps)
-                {
-                    var destKey = (destBytes[0], destBytes[1], destBytes[2], destBytes[3]);
-                    var compoundKey = (srcKey, destKey);
-                    if (compoundLookup.TryGetValue(compoundKey, out int existing) && existing != conn.FlagId)
-                    {
-                        compoundCollisions.Add(compoundKey);
-                        Console.WriteLine($"Zone tracking: compound key collision on " +
-                                          $"{FormatMap(srcKey)} -> {FormatMap(destKey)} " +
-                                          $"(flag {conn.FlagId} vs {existing})");
-                    }
-                    compoundLookup.TryAdd(compoundKey, conn.FlagId);
-                }
-            }
-
-            // Register dest-only keys (fallback when compound key doesn't match)
-            RegisterDestKeys(allDestMaps, conn.FlagId, destOnlyLookup, destOnlyCollisions);
-        }
-
-        // Common event lookup: for WarpBonfire connections whose vanilla events
-        // live in common.emevd. These events have no IfActionButtonInArea and no
-        // source map, so Strategies 0-2 can't match them reliably when dest maps
-        // collide. Strategy 3 uses this dedicated lookup.
-        var commonEventLookup = new Dictionary<(byte, byte, byte, byte), int>();
-        var commonEventAreas = new Dictionary<(byte, byte, byte, byte), string>();
-        var commonEventCollisions = new HashSet<(byte, byte, byte, byte)>();
-
-        foreach (var conn in connections)
-        {
-            if (conn.FlagId <= 0 || !conn.HasCommonEvent)
-                continue;
-
-            var destMaps = ParseMapBytesFromGateName(conn.EntranceGate);
-            if (areaMaps.TryGetValue(conn.EntranceArea, out var mapsStr) && !string.IsNullOrEmpty(mapsStr))
-                destMaps.AddRange(ParseMapBytesFromMapString(mapsStr));
-
-            foreach (var destBytes in destMaps)
-                RegisterCommonEventKeys(destBytes, conn.FlagId, conn.EntranceArea,
-                    commonEventLookup, commonEventAreas, commonEventCollisions);
-        }
-
-        Console.WriteLine($"Zone tracking: {compoundLookup.Count} compound keys, " +
-                          $"{destOnlyLookup.Count} dest maps ({destOnlyCollisions.Count} dest collisions, " +
-                          $"{compoundCollisions.Count} compound collisions, " +
-                          $"{entityToFlag.Values.Sum(v => v.Count)} entity candidates across {entityToFlag.Count} entities, " +
-                          $"{regionToFlag.Values.Sum(v => v.Count)} region candidates across {regionToFlag.Count} regions, " +
-                          $"{commonEventLookup.Count} common event keys)");
+        Console.WriteLine($"Zone tracking: region lookup with {regionToFlags.Count} regions, " +
+            $"{regionToFlags.Values.Sum(f => f.Count)} flag entries");
 
         int totalInjected = 0;
-        int compoundMatches = 0;
-        int entityMatches = 0;
-        int regionMatches = 0;
-        int destOnlyMatches = 0;
-        int commonEventMatches = 0;
-        int skippedCollisions = 0;
         var injectedFlags = new HashSet<int>();
-        var unmatchedWarps = new List<(string emevdPath, long eventId, (byte, byte, byte, byte) destMap)>();
 
         foreach (var emevdPath in Directory.GetFiles(eventDir, "*.emevd.dcx"))
         {
-            // Parse source map from EMEVD filename (e.g., "m10_01_00_00.emevd.dcx")
-            var sourceMapBytes = ParseMapBytesFromFileName(emevdPath);
-            var sourceMap = sourceMapBytes != null
-                ? ((byte, byte, byte, byte)?)(sourceMapBytes[0], sourceMapBytes[1], sourceMapBytes[2], sourceMapBytes[3])
-                : null;
-
             var emevd = EMEVD.Read(emevdPath);
             bool fileModified = false;
 
-            // Build map from event ID → init args for resolving parameterized event values.
-            // FogMod's manual events use InitializeEvent (bank 2000, id 0) to pass
-            // actual entity IDs as parameters. The event template stores 0 as placeholder
-            // and the Parameter list maps init arg offsets to instruction arg offsets.
-            var initArgsMap = new Dictionary<long, List<byte[]>>();
-            var evt0 = emevd.Events.Find(e => e.ID == 0);
-            if (evt0 != null)
-            {
-                foreach (var initInstr in evt0.Instructions)
-                {
-                    if (initInstr.Bank == 2000 && initInstr.ID == 0 && initInstr.ArgData.Length >= 8)
-                    {
-                        int evtId = BitConverter.ToInt32(initInstr.ArgData, 4);
-                        if (!initArgsMap.TryGetValue(evtId, out var list))
-                        {
-                            list = new List<byte[]>();
-                            initArgsMap[evtId] = list;
-                        }
-                        list.Add(initInstr.ArgData);
-                    }
-                }
-            }
-
             foreach (var evt in emevd.Events)
             {
-                // First pass: find all matching warp positions and their flag IDs.
-                // Some events (e.g., lie-down warps like Placidusax teleport) have multiple
-                // warp instructions on different execution paths. We must inject
-                // SetEventFlag before ALL of them, not just the first.
-                var warpPositions = new List<(int index, int flagId)>();
-
-                // Pre-scan: check if this event contains an IfActionButtonInArea with a known
-                // exit gate entity. If so, it's a FogMod-generated manual fogwarp event, even
-                // if it uses vanilla region entity IDs (e.g., Placidusax lie-down uses region
-                // 13002834 which is below FOGMOD_ENTITY_BASE). The entity match gives us the
-                // flag_id directly (or a list of candidates if the gate is shared).
-                //
-                // Also resolves parameterized entity values: FogMod's manual events use
-                // InitializeEvent to pass actual entity IDs as parameters, with 0 as
-                // placeholder in the instruction. We resolve these via the event's
-                // Parameter list and the init args.
-                List<byte[]>? evtInitArgs = null;
-                initArgsMap.TryGetValue(evt.ID, out evtInitArgs);
-                var entityCandidates = TryMatchEntityCandidates(evt, entityToFlag, evtInitArgs, out bool hasFogModEntity);
+                // First pass: find all warp positions with matching regions.
+                var warpPositions = new List<(int index, List<int> flagIds)>();
 
                 for (int i = 0; i < evt.Instructions.Count; i++)
                 {
-                    var instr = evt.Instructions[i];
-                    var warpInfo = TryExtractWarpInfo(instr);
+                    var warpInfo = TryExtractWarpInfo(evt.Instructions[i]);
                     if (warpInfo == null)
                         continue;
 
-                    var destMap = warpInfo.Value.DestMap;
                     int region = warpInfo.Value.Region;
 
-                    // Filter: only match FogMod-generated warp events, not vanilla ones.
-                    // Three ways an event qualifies as FogMod-generated:
-                    // 1. Region >= FOGMOD_ENTITY_BASE (FogMod-allocated warp target entity)
-                    // 2. Event contains IfActionButtonInArea with a known exit gate entity
-                    //    (FogMod manual fogwarp that reuses vanilla destination regions)
-                    // 3. Event contains IfActionButtonInArea with a FogMod entity
-                    //    (>= FOGMOD_ENTITY_BASE) even if not in entityToFlag — indicates
-                    //    a FogMod fogwarp event whose exit gate entity wasn't registered
-                    //    (e.g., FogMod allocates new entities for AEG099 gates)
-                    if (region < FOGMOD_ENTITY_BASE && entityCandidates == null && !hasFogModEntity)
-                        continue;
-
-                    // Strategy 0: Direct entity match — the event's IfActionButtonInArea
-                    // references a known exit gate. Resolve candidates against the warp
-                    // destination map for disambiguation when the gate is shared.
-                    int flagId = 0;
-                    bool matched = false;
-                    if (entityCandidates != null)
+                    if (regionToFlags.TryGetValue(region, out var flagIds))
                     {
-                        var resolved = ResolveEntityCandidate(entityCandidates, destMap);
-                        if (resolved.HasValue)
-                        {
-                            flagId = resolved.Value;
-                            entityMatches++;
-                            matched = true;
-                        }
-                        // else: multiple candidates, none matched dest map — fall through
+                        warpPositions.Add((i, flagIds));
                     }
-
-                    // Strategy R: Region-based matching — WarpPlayer region matches the
-                    // entrance_gate's numeric entity suffix. For numeric gates (e.g.,
-                    // m60_35_45_00_1035462610), FogMod uses the vanilla entity as the
-                    // warp region, which may target an adjacent map tile. This strategy
-                    // bypasses dest_map matching entirely and identifies the connection
-                    // by entrance entity. Source map disambiguates when multiple
-                    // connections share the same entrance gate.
-                    if (!matched && regionToFlag.TryGetValue(region, out var regionCandidates))
-                    {
-                        matched = ResolveRegionCandidate(
-                            regionCandidates, sourceMap, out flagId);
-                        if (matched)
-                            regionMatches++;
-                    }
-
-                    // Strategy 1: Try compound key (source_map, dest_map) — resolves collisions
-                    if (!matched && sourceMap.HasValue)
-                    {
-                        var compoundKey = (sourceMap.Value, destMap);
-                        if (compoundLookup.TryGetValue(compoundKey, out flagId))
-                        {
-                            // If this compound key has a collision, try entity-based matching
-                            // for more precise disambiguation. Reuse entityCandidates from
-                            // the pre-scan rather than re-scanning the event's instructions.
-                            if (compoundCollisions.Contains(compoundKey) && entityCandidates != null)
-                            {
-                                var resolved = ResolveEntityCandidate(entityCandidates, destMap);
-                                if (resolved.HasValue)
-                                {
-                                    flagId = resolved.Value;
-                                    entityMatches++;
-                                    matched = true;
-                                }
-                                // else: fall through to use the compound-matched flag
-                            }
-                            if (!matched)
-                            {
-                                matched = true;
-                                compoundMatches++;
-                            }
-                        }
-                    }
-
-                    // Strategy 2: Fall back to dest-only matching.
-                    // When dest map has a collision AND source map is known (map-specific
-                    // EMEVD), skip — these are typically back-portal return warps whose
-                    // source EMEVD doesn't match any registered exit map.
-                    // When source map is unknown (common.emevd) AND dest map has a common
-                    // event entry, skip dest-only — let Strategy 3 handle it more precisely.
-                    // When source map is unknown AND no common event entry, inject anyway —
-                    // FogMod places forward warps for vanilla gate types in common.emevd.
-                    if (!matched)
-                    {
-                        if (!destOnlyLookup.TryGetValue(destMap, out flagId))
-                        {
-                            // Dest map not in dest-only lookup at all. Fall through to
-                            // Strategy 3 (common event) — don't continue, as the warp
-                            // may still be matchable via common event lookup.
-                        }
-                        else if (destOnlyCollisions.Contains(destMap))
-                        {
-                            if (sourceMap.HasValue)
-                            {
-                                Console.WriteLine($"Zone tracking: skipped collided dest-only " +
-                                                  $"on {FormatMap(destMap)} from EMEVD {FormatMap(sourceMap.Value)} (event {evt.ID})");
-                                skippedCollisions++;
-                                continue;
-                            }
-                            if (commonEventLookup.ContainsKey(destMap))
-                            {
-                                // Dest collision in common.emevd with a common event entry:
-                                // don't match via dest-only, fall through to Strategy 3.
-                                skippedCollisions++;
-                            }
-                            else
-                            {
-                                // Dest collision in common.emevd without common event entry:
-                                // skip rather than inject a possibly-wrong flag. Phase 3
-                                // validation will abort the build if the correct flag is
-                                // never injected by another strategy.
-                                Console.WriteLine($"Zone tracking: skipped collided dest-only " +
-                                                  $"on {FormatMap(destMap)} in common.emevd (event {evt.ID}), " +
-                                                  $"no common event entry to disambiguate");
-                                skippedCollisions++;
-                                continue;
-                            }
-                        }
-                        else
-                        {
-                            matched = true;
-                            destOnlyMatches++;
-                        }
-                    }
-
-                    // Strategy 3: Common event matching — for WarpBonfire connections whose
-                    // vanilla events (e.g., Erdtree burning Event 901) live in common.emevd.
-                    // Only checked when sourceMap is null (common.emevd) and all other
-                    // strategies failed.
-                    if (!matched && !sourceMap.HasValue)
-                    {
-                        if (commonEventLookup.TryGetValue(destMap, out flagId) &&
-                            !commonEventCollisions.Contains(destMap))
-                        {
-                            matched = true;
-                            commonEventMatches++;
-                        }
-                    }
-
-                    if (!matched)
-                    {
-                        if (allKnownDestMaps.Contains(destMap))
-                        {
-                            unmatchedWarps.Add((emevdPath, evt.ID, destMap));
-                        }
-                        Console.WriteLine($"Zone tracking: UNMATCHED warp in EMEVD {(sourceMap.HasValue ? FormatMap(sourceMap.Value) : "common")} " +
-                                          $"event {evt.ID} dest={FormatMap(destMap)} region={region} " +
-                                          $"entityCandidates={(entityCandidates != null ? entityCandidates.Count.ToString() : "null")}");
-                        continue;
-                    }
-
-                    warpPositions.Add((i, flagId));
                 }
 
                 if (warpPositions.Count == 0)
@@ -567,27 +181,36 @@ public static class ZoneTrackingInjector
 
                 // Second pass: insert SetEventFlag before each warp, from last to first
                 // to avoid index shifting affecting earlier positions.
+                // For shared entrances, inject ALL flag_ids (all map to the same cluster).
+                int insertCount = 0;
                 for (int j = warpPositions.Count - 1; j >= 0; j--)
                 {
-                    var (warpIdx, flagId) = warpPositions[j];
+                    var (warpIdx, flagIds) = warpPositions[j];
 
-                    var setFlagInstr = events.ParseAdd(
-                        $"SetEventFlag(TargetEventFlagType.EventFlag, {flagId}, ON)");
-                    evt.Instructions.Insert(warpIdx, setFlagInstr);
-
-                    // Shift Parameter entries for instructions at or after insertion point
-                    foreach (var param in evt.Parameters)
+                    // Insert flags in reverse order so they appear in original order
+                    // before the warp instruction.
+                    for (int k = flagIds.Count - 1; k >= 0; k--)
                     {
-                        if (param.InstructionIndex >= warpIdx)
+                        var setFlagInstr = events.ParseAdd(
+                            $"SetEventFlag(TargetEventFlagType.EventFlag, {flagIds[k]}, ON)");
+                        evt.Instructions.Insert(warpIdx, setFlagInstr);
+                        insertCount++;
+
+                        // Shift Parameter entries for instructions at or after insertion point
+                        foreach (var param in evt.Parameters)
                         {
-                            param.InstructionIndex++;
+                            if (param.InstructionIndex >= warpIdx)
+                            {
+                                param.InstructionIndex++;
+                            }
                         }
                     }
+
+                    foreach (var fid in flagIds)
+                        injectedFlags.Add(fid);
                 }
 
-                foreach (var (_, fid) in warpPositions)
-                    injectedFlags.Add(fid);
-                totalInjected += warpPositions.Count;
+                totalInjected += insertCount;
                 fileModified = true;
             }
 
@@ -597,121 +220,11 @@ public static class ZoneTrackingInjector
             }
         }
 
-        // Strategy 4: Residual matching — last resort for unmatched warps.
-        // For each unmatched warp whose dest map corresponds to a connection,
-        // check if there's exactly one uninjected flag targeting that dest map.
-        // If so, pair them (the only remaining possibility).
-        //
-        // CONTRACT: Strategy 4 re-reads EMEVD files from disk. The main event
-        // loop above MUST have already written its modifications (line ~596)
-        // before this code runs. If the write is moved or deferred, Strategy 4
-        // will lose the main loop's injections.
-        //
-        // DESIGN LIMIT: This mechanism only works when exactly 2 same-area
-        // HasCommonEvent connections target the same dest map. Strategy 3
-        // consumes one flag; Strategy 4 finds the other as the sole remaining
-        // candidate. With 3+ such connections, candidates.Count > 1 and
-        // Strategy 4 skips — Phase 3 validation then aborts the build.
-        int residualMatches = 0;
-        if (unmatchedWarps.Count > 0)
-        {
-            // Build reverse lookup: dest map → uninjected flags
-            var destMapToUninjectedFlags = new Dictionary<(byte, byte, byte, byte), List<int>>();
-            foreach (var conn in connections)
-            {
-                if (conn.FlagId <= 0 || injectedFlags.Contains(conn.FlagId))
-                    continue;
-                var destMaps = ParseMapBytesFromGateName(conn.EntranceGate);
-                if (areaMaps.TryGetValue(conn.EntranceArea, out var mStr) && !string.IsNullOrEmpty(mStr))
-                    destMaps.AddRange(ParseMapBytesFromMapString(mStr));
-                foreach (var destBytes in destMaps)
-                {
-                    var dk = (destBytes[0], destBytes[1], destBytes[2], destBytes[3]);
-                    if (!destMapToUninjectedFlags.TryGetValue(dk, out var flagList))
-                    {
-                        flagList = new List<int>();
-                        destMapToUninjectedFlags[dk] = flagList;
-                    }
-                    if (!flagList.Contains(conn.FlagId))
-                        flagList.Add(conn.FlagId);
-                }
-            }
+        Console.WriteLine($"Zone tracking: injected {totalInjected} SetEventFlag instructions " +
+            $"({injectedFlags.Count} unique flags)");
 
-            // Group unmatched warps by file for batch re-processing
-            var warpsByFile = unmatchedWarps
-                .GroupBy(w => w.emevdPath)
-                .ToDictionary(g => g.Key, g => g.ToList());
-
-            foreach (var (filePath, warps) in warpsByFile)
-            {
-                var emevd = EMEVD.Read(filePath);
-                bool fileModified = false;
-
-                foreach (var (_, eventId, destMap) in warps)
-                {
-                    // Find exactly one uninjected flag for this dest map
-                    if (!destMapToUninjectedFlags.TryGetValue(destMap, out var candidates) || candidates.Count != 1)
-                        continue;
-
-                    int flagId = candidates[0];
-                    var evt = emevd.Events.Find(e => e.ID == eventId);
-                    if (evt == null)
-                        continue;
-
-                    // Find warp instructions targeting this dest map and inject flags
-                    var warpPositions = new List<int>();
-                    for (int i = 0; i < evt.Instructions.Count; i++)
-                    {
-                        var warpInfo = TryExtractWarpInfo(evt.Instructions[i]);
-                        if (warpInfo != null && warpInfo.Value.DestMap == destMap)
-                            warpPositions.Add(i);
-                    }
-
-                    for (int j = warpPositions.Count - 1; j >= 0; j--)
-                    {
-                        var setFlagInstr = events.ParseAdd(
-                            $"SetEventFlag(TargetEventFlagType.EventFlag, {flagId}, ON)");
-                        evt.Instructions.Insert(warpPositions[j], setFlagInstr);
-                        foreach (var param in evt.Parameters)
-                        {
-                            if (param.InstructionIndex >= warpPositions[j])
-                                param.InstructionIndex++;
-                        }
-                    }
-
-                    if (warpPositions.Count > 0)
-                    {
-                        injectedFlags.Add(flagId);
-                        totalInjected += warpPositions.Count;
-                        residualMatches += warpPositions.Count;
-                        fileModified = true;
-                        // Don't remove from candidates: multiple events may target the
-                        // same dest map (e.g., Event 900 and 901 both warp to m11_05),
-                        // and we want the flag injected in ALL of them.
-                        // SAFETY: This is safe because the candidates.Count == 1 guard
-                        // (line ~642) prevents false matches. If a flag appears as a
-                        // candidate for multiple dest maps, it can only be injected when
-                        // it's the SOLE candidate — other dest maps with 2+ candidates
-                        // are skipped. Worst case: an uninjected flag triggers Phase 3
-                        // abort, never a wrong flag injection.
-                        Console.WriteLine($"Zone tracking: residual match in event {eventId} " +
-                                          $"dest={FormatMap(destMap)} → flag {flagId}");
-                    }
-                }
-
-                if (fileModified)
-                    emevd.Write(filePath);
-            }
-        }
-
-        var expectedFlagSet = connections.Where(c => c.FlagId > 0).Select(c => c.FlagId).Distinct().ToHashSet();
-        Console.WriteLine($"Zone tracking: injected {totalInjected} fog gate tracking flags " +
-                          $"(compound: {compoundMatches}, entity: {entityMatches}, region: {regionMatches}, " +
-                          $"dest-only: {destOnlyMatches}, common-event: {commonEventMatches}, " +
-                          $"residual: {residualMatches}, " +
-                          $"skipped collisions: {skippedCollisions}, expected unique flags: {expectedFlagSet.Count})");
-
-        var missingFlags = expectedFlagSet.Except(injectedFlags).OrderBy(f => f).ToList();
+        // Phase 3 validation: every expected flag must have been injected.
+        var missingFlags = expectedFlags.Except(injectedFlags).OrderBy(f => f).ToList();
         if (missingFlags.Count > 0)
         {
             throw new Exception(
@@ -721,393 +234,9 @@ public static class ZoneTrackingInjector
         }
     }
 
-    /// <summary>
-    /// Parse map bytes from a gate name.
-    /// Simple gate: "m31_05_00_00_AEG099_230_9001" → [[31, 5, 0, 0]]
-    /// Cross-tile gate: "m60_13_13_02_m60_52_53_00-AEG099_003_9001" → [[60,13,13,2], [60,52,53,0]]
-    /// Returns all possible map byte arrays so the caller can register each in the lookup.
-    /// </summary>
-    private static List<byte[]> ParseMapBytesFromGateName(string gateName)
-    {
-        var results = new List<byte[]>();
-        if (string.IsNullOrEmpty(gateName))
-            return results;
-
-        // Split on 'm' prefix boundaries to find all map coordinate groups.
-        // Cross-tile gates encode two tiles: "m60_13_13_02_m60_52_53_00-AEG099..."
-        // The second tile starts at "_m" within the name.
-        var mapParts = new List<string>();
-        var rest = gateName;
-        while (rest.Length > 0)
-        {
-            if (!rest.StartsWith("m", StringComparison.OrdinalIgnoreCase))
-                break;
-
-            // Find next "_m" boundary (start of another map prefix)
-            int nextM = rest.IndexOf("_m", 1, StringComparison.OrdinalIgnoreCase);
-            if (nextM > 0)
-            {
-                mapParts.Add(rest.Substring(0, nextM));
-                rest = rest.Substring(nextM + 1); // skip the underscore, keep the 'm'
-            }
-            else
-            {
-                mapParts.Add(rest);
-                break;
-            }
-        }
-
-        foreach (var mapPart in mapParts)
-        {
-            // Strip leading 'm', split, take first 4 as bytes
-            var name = mapPart.TrimStart('m');
-            // Remove anything after a hyphen (entity suffix on last map part)
-            var hyphen = name.IndexOf('-');
-            if (hyphen >= 0)
-                name = name.Substring(0, hyphen);
-            var parts = name.Split('_');
-            if (parts.Length < 4)
-                continue;
-            try
-            {
-                results.Add(new byte[]
-                {
-                    byte.Parse(parts[0]),
-                    byte.Parse(parts[1]),
-                    byte.Parse(parts[2]),
-                    byte.Parse(parts[3]),
-                });
-            }
-            catch (FormatException)
-            {
-                Console.WriteLine($"Warning: Could not parse map bytes from gate part: {mapPart} (gate: {gateName})");
-            }
-        }
-
-        if (results.Count == 0)
-            Console.WriteLine($"Warning: No map bytes parsed from gate name: {gateName}");
-
-        return results;
-    }
-
-    /// <summary>
-    /// Parse map bytes from an EMEVD filename (e.g., "m10_01_00_00.emevd.dcx" → [10,1,0,0]).
-    /// Returns null for non-map files (e.g., "common.emevd.dcx").
-    /// </summary>
-    private static byte[]? ParseMapBytesFromFileName(string emevdPath)
-    {
-        // Strip extensions: "m10_01_00_00.emevd.dcx" → "m10_01_00_00"
-        var fileName = Path.GetFileNameWithoutExtension(emevdPath);  // "m10_01_00_00.emevd"
-        fileName = Path.GetFileNameWithoutExtension(fileName);        // "m10_01_00_00"
-
-        if (!fileName.StartsWith("m", StringComparison.OrdinalIgnoreCase))
-            return null;
-
-        var name = fileName.TrimStart('m');
-        var parts = name.Split('_');
-        if (parts.Length < 4)
-            return null;
-
-        try
-        {
-            return new byte[]
-            {
-                byte.Parse(parts[0]),
-                byte.Parse(parts[1]),
-                byte.Parse(parts[2]),
-                byte.Parse(parts[3]),
-            };
-        }
-        catch (FormatException)
-        {
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Register map byte tuples in the dest-only lookup, tracking collisions.
-    /// </summary>
-    private static void RegisterDestKeys(
-        List<byte[]> mapBytesList, int flagId,
-        Dictionary<(byte, byte, byte, byte), int> destOnlyLookup,
-        HashSet<(byte, byte, byte, byte)> destOnlyCollisions)
-    {
-        foreach (var bytes in mapBytesList)
-        {
-            var destKey = (bytes[0], bytes[1], bytes[2], bytes[3]);
-            if (destOnlyLookup.TryGetValue(destKey, out int existing) && existing != flagId)
-            {
-                destOnlyCollisions.Add(destKey);
-                var destMapStr = $"m{destKey.Item1}_{destKey.Item2:D2}_{destKey.Item3:D2}_{destKey.Item4:D2}";
-                Console.WriteLine($"Zone tracking: dest-only collision on {destMapStr} " +
-                                  $"(flag {flagId} vs {existing})");
-            }
-            destOnlyLookup.TryAdd(destKey, flagId);
-        }
-    }
-
-    /// <summary>
-    /// Register map byte tuples in the common event lookup, tracking collisions.
-    /// Used for connections whose vanilla warp event lives in common.emevd
-    /// (WarpBonfire gates like the Erdtree burning).
-    /// Only marks as collision when two connections target different entrance areas
-    /// (different zones). Same entrance area means both flags map to the same zone
-    /// node — either flag is correct for racing zone tracking.
-    /// </summary>
-    internal static void RegisterCommonEventKeys(
-        byte[] destBytes, int flagId, string entranceArea,
-        Dictionary<(byte, byte, byte, byte), int> commonEventLookup,
-        Dictionary<(byte, byte, byte, byte), string> commonEventAreas,
-        HashSet<(byte, byte, byte, byte)> commonEventCollisions)
-    {
-        var destKey = (destBytes[0], destBytes[1], destBytes[2], destBytes[3]);
-        if (commonEventLookup.TryGetValue(destKey, out int existing) && existing != flagId)
-        {
-            // Only a real collision if the connections target different entrance areas.
-            if (commonEventAreas.TryGetValue(destKey, out var existingArea) && existingArea != entranceArea)
-            {
-                commonEventCollisions.Add(destKey);
-                Console.WriteLine($"Zone tracking: common event collision on {FormatMap(destKey)} " +
-                                  $"(flag {flagId} [{entranceArea}] vs {existing} [{existingArea}])");
-            }
-            else
-            {
-                Console.WriteLine($"Zone tracking: common event same-zone merge on {FormatMap(destKey)} " +
-                                  $"(flag {flagId} and {existing} both target {entranceArea})");
-            }
-        }
-        commonEventLookup.TryAdd(destKey, flagId);
-        commonEventAreas.TryAdd(destKey, entranceArea);
-    }
-
-    /// <summary>
-    /// Register an entity ID → candidate mapping, appending to the list for shared entities.
-    /// </summary>
-    internal static void RegisterEntity(
-        Dictionary<int, List<EntityCandidate>> entityToFlag,
-        int entityId, int flagId, HashSet<(byte, byte, byte, byte)> destMaps)
-    {
-        if (!entityToFlag.TryGetValue(entityId, out var list))
-        {
-            list = new List<EntityCandidate>();
-            entityToFlag[entityId] = list;
-        }
-        list.Add(new EntityCandidate(flagId, destMaps));
-    }
-
-    /// <summary>
-    /// Try to match an event to connection candidates by scanning its instructions for a known
-    /// exit gate entity ID in IfActionButtonInArea (bank 3, id 24).
-    ///
-    /// ArgData layout for IfActionButtonInArea (3:24):
-    ///   [0..3] Condition Group (int)
-    ///   [4..7] Action Button Parameter ID (int)
-    ///   [8..11] Target Entity ID (uint) ← the fog gate entity
-    ///
-    /// Handles two cases:
-    /// 1. Literal entity ID baked directly into the instruction (non-parameterized events).
-    /// 2. Parameterized entity ID: the instruction stores 0 as placeholder, and the actual
-    ///    value is passed via InitializeEvent args. FogMod's manual fogwarp events for
-    ///    numeric-named gates (e.g., 34122840) use this pattern. We resolve the parameter
-    ///    by finding the Parameter entry that targets this instruction's offset 8, then
-    ///    reading the actual value from the InitializeEvent args at the source offset.
-    /// </summary>
-    /// <returns>The matching candidate list, or null if no entity_id matches.</returns>
-    /// <param name="hasFogModEntity">Set to true if the event contains IfActionButtonInArea with
-    /// an entity >= FOGMOD_ENTITY_BASE, even if that entity is not in entityToFlag. This signals
-    /// the event is FogMod-generated so the filter should let it through for other strategies.</param>
-    /// <remarks>
-    /// Must be called before any instruction insertions into the event, since
-    /// Parameter.InstructionIndex values refer to the original instruction list.
-    /// </remarks>
-    internal static List<EntityCandidate>? TryMatchEntityCandidates(
-        EMEVD.Event evt, Dictionary<int, List<EntityCandidate>> entityToFlag, List<byte[]>? initArgsList,
-        out bool hasFogModEntity)
-    {
-        hasFogModEntity = false;
-
-        for (int instrIdx = 0; instrIdx < evt.Instructions.Count; instrIdx++)
-        {
-            var instr = evt.Instructions[instrIdx];
-            // IfActionButtonInArea (bank 3, id 24): entity_id at ArgData offset 8
-            if (instr.Bank != 3 || instr.ID != 24 || instr.ArgData.Length < 12)
-                continue;
-
-            int entityId = BitConverter.ToInt32(instr.ArgData, 8);
-
-            // Track FogMod entities even if not in entityToFlag
-            if (entityId >= FOGMOD_ENTITY_BASE)
-                hasFogModEntity = true;
-
-            // Case 1: literal entity ID
-            if (entityId != 0 && entityToFlag.TryGetValue(entityId, out var candidates))
-                return candidates;
-
-            // Case 2: parameterized entity (placeholder = 0). Resolve from init args.
-            if (entityId == 0 && initArgsList != null)
-            {
-                // Find the Parameter entry that maps to this instruction's offset 8
-                foreach (var param in evt.Parameters)
-                {
-                    if (param.InstructionIndex == instrIdx &&
-                        param.TargetStartByte == 8 &&
-                        param.ByteCount == 4)
-                    {
-                        // Read the actual entity value from each init args set
-                        foreach (var initArgs in initArgsList)
-                        {
-                            // InitializeEvent args layout: [slot(4), eventId(4), params...]
-                            // param.SourceStartByte is offset into the params portion,
-                            // which starts at byte 8 in the init instruction's ArgData.
-                            int srcOffset = 8 + (int)param.SourceStartByte;
-                            if (srcOffset + 4 <= initArgs.Length)
-                            {
-                                int resolvedEntity = BitConverter.ToInt32(initArgs, srcOffset);
-                                if (resolvedEntity >= FOGMOD_ENTITY_BASE)
-                                    hasFogModEntity = true;
-                                if (resolvedEntity != 0 &&
-                                    entityToFlag.TryGetValue(resolvedEntity, out candidates))
-                                    return candidates;
-                            }
-                        }
-                    }
-                }
-
-                // Diagnostic: parameterized entity with no init args to resolve.
-                // This happens for roundtable exit events where entity_id=0 but no
-                // InitializeEvent args are available in this EMEVD file.
-                if (initArgsList.Count == 0)
-                {
-                    Console.WriteLine($"Zone tracking: event {evt.ID} has IfActionButtonInArea " +
-                                      $"with entity_id=0 but no init args to resolve (possible roundtable exit)");
-                }
-            }
-            else if (entityId == 0 && initArgsList == null)
-            {
-                Console.WriteLine($"Zone tracking: event {evt.ID} has IfActionButtonInArea " +
-                                  $"with entity_id=0 and no init args map entry (possible roundtable exit)");
-            }
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// Resolve a list of entity candidates to a single flag ID by matching against the
-    /// warp instruction's destination map. When only one candidate exists, returns it
-    /// directly. When multiple exist (shared exit gate), disambiguates by destination map.
-    /// </summary>
-    /// <returns>The matched flag_id, or null if disambiguation fails.</returns>
-    internal static int? ResolveEntityCandidate(
-        List<EntityCandidate> candidates, (byte, byte, byte, byte) warpDestMap)
-    {
-        if (candidates.Count == 1)
-            return candidates[0].FlagId;
-
-        // Multiple candidates: find the one whose DestMaps contains the warp destination.
-        var matches = candidates.Where(c => c.DestMaps.Contains(warpDestMap)).ToList();
-        if (matches.Count == 1)
-            return matches[0].FlagId;
-
-        // 0 or N matches — ambiguous, fall through to compound/dest-only strategies.
-        return null;
-    }
-
-    /// <summary>
-    /// Resolve a list of region candidates to a single flag ID. When only one candidate
-    /// exists, returns it directly. When multiple exist (shared entrance gate),
-    /// disambiguates by source map (the EMEVD file the warp event lives in).
-    /// </summary>
-    /// <returns>True if resolved, with flagId set. False if disambiguation fails.</returns>
-    internal static bool ResolveRegionCandidate(
-        List<RegionCandidate> candidates, (byte, byte, byte, byte)? sourceMap, out int flagId)
-    {
-        flagId = 0;
-
-        if (candidates.Count == 1)
-        {
-            flagId = candidates[0].FlagId;
-            return true;
-        }
-
-        // Multiple candidates: disambiguate by source map
-        if (sourceMap.HasValue)
-        {
-            var matches = candidates.Where(c => c.SourceMaps.Contains(sourceMap.Value)).ToList();
-            if (matches.Count == 1)
-            {
-                flagId = matches[0].FlagId;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /// <summary>
-    /// Extract the action entity ID from a gate name's numeric suffix.
-    /// For numeric-named gates (e.g., "m34_12_00_00_34122840"), the suffix after the
-    /// 4-part map prefix IS the action entity used by FogMod in IfActionButtonInArea.
-    /// For AEG099 gates (e.g., "m10_01_00_00_AEG099_001_9000"), returns 0 (not numeric).
-    /// Assumes numeric gates are always single-tile (no cross-tile "mXX_..._mXX_..." format).
-    /// </summary>
-    internal static int ParseGateActionEntity(string gateName)
-    {
-        if (string.IsNullOrEmpty(gateName))
-            return 0;
-
-        // Gate format: "m{area}_{block}_{sub}_{sub2}_{suffix}"
-        // Split and take everything after the 4th underscore
-        var parts = gateName.Split('_');
-        if (parts.Length < 5)
-            return 0;
-
-        // The suffix is the 5th part (index 4). For numeric gates it's a pure number.
-        // For AEG099 gates it's "AEG099" which won't parse as int.
-        if (int.TryParse(parts[4], out int entityId))
-            return entityId;
-
-        return 0;
-    }
-
-    /// <summary>
-    /// Format a map byte tuple as a human-readable string (e.g., "m10_01_00_00").
-    /// </summary>
     private static string FormatMap((byte, byte, byte, byte) map)
     {
         return $"m{map.Item1}_{map.Item2:D2}_{map.Item3:D2}_{map.Item4:D2}";
-    }
-
-    /// <summary>
-    /// Parse map bytes from a space-separated map string (e.g., "m31_19_00_00 m31_19_00_01").
-    /// Used to resolve FogMod's internal area maps, which may differ from gate name prefixes.
-    /// </summary>
-    private static List<byte[]> ParseMapBytesFromMapString(string mapsStr)
-    {
-        var results = new List<byte[]>();
-        foreach (var mapId in mapsStr.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-        {
-            if (!mapId.StartsWith("m", StringComparison.OrdinalIgnoreCase))
-                continue;
-            var name = mapId.TrimStart('m');
-            var parts = name.Split('_');
-            if (parts.Length < 4)
-                continue;
-            try
-            {
-                results.Add(new byte[]
-                {
-                    byte.Parse(parts[0]),
-                    byte.Parse(parts[1]),
-                    byte.Parse(parts[2]),
-                    byte.Parse(parts[3]),
-                });
-            }
-            catch (FormatException)
-            {
-                // Skip unparseable map IDs
-            }
-        }
-        return results;
     }
 
     /// <summary>
