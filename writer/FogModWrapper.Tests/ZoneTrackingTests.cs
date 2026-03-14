@@ -1,359 +1,282 @@
-using FogModWrapper;
+using SoulsFormats;
 using Xunit;
 
 namespace FogModWrapper.Tests;
 
 public class ZoneTrackingTests
 {
-    [Theory]
-    [InlineData("m34_12_00_00_34122840", 34122840)]
-    [InlineData("m30_14_00_00_30142840", 30142840)]
-    [InlineData("m35_00_00_00_35002840", 35002840)]
-    [InlineData("m30_18_00_00_30182840", 30182840)]
-    public void ParseGateActionEntity_NumericGate_ReturnsEntityId(string gateName, int expected)
-    {
-        Assert.Equal(expected, ZoneTrackingInjector.ParseGateActionEntity(gateName));
-    }
+    // --- TryExtractWarpInfo tests ---
 
-    [Theory]
-    [InlineData("m10_01_00_00_AEG099_001_9000")]
-    [InlineData("m31_05_00_00_AEG099_230_9001")]
-    [InlineData("m11_10_00_00_AEG099_231_9000")]
-    [InlineData("m34_12_00_00_AEG099_003_9000")]
-    public void ParseGateActionEntity_AEG099Gate_ReturnsZero(string gateName)
+    [Fact]
+    public void TryExtractWarpInfo_WarpPlayer_ExtractsRegionAndMap()
     {
-        Assert.Equal(0, ZoneTrackingInjector.ParseGateActionEntity(gateName));
-    }
+        // WarpPlayer (2003:14): [area(1), block(1), sub(1), sub2(1), region(4), ...]
+        var argData = new byte[12];
+        argData[0] = 31; // area
+        argData[1] = 5;  // block
+        argData[2] = 0;  // sub
+        argData[3] = 0;  // sub2
+        BitConverter.GetBytes(755890042).CopyTo(argData, 4); // region
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("m10_01_00")]
-    public void ParseGateActionEntity_InvalidInput_ReturnsZero(string gateName)
-    {
-        Assert.Equal(0, ZoneTrackingInjector.ParseGateActionEntity(gateName));
+        var instr = new EMEVD.Instruction(2003, 14, argData);
+        var result = ZoneTrackingInjector.TryExtractWarpInfo(instr);
+
+        Assert.NotNull(result);
+        Assert.Equal((31, 5, 0, 0), result.Value.DestMap);
+        Assert.Equal(755890042, result.Value.Region);
     }
 
     [Fact]
-    public void ParseGateActionEntity_CrossTileGate_ReturnsZero()
+    public void TryExtractWarpInfo_WarpPlayer_ZeroMap_ReturnsNull()
     {
-        // Cross-tile gates have a second map prefix at parts[4], not a numeric entity
-        Assert.Equal(0, ZoneTrackingInjector.ParseGateActionEntity(
-            "m60_13_13_02_m60_52_53_00-AEG099_003_9001"));
+        // Parameterized template: map bytes are all zero
+        var argData = new byte[12];
+        BitConverter.GetBytes(755890042).CopyTo(argData, 4);
+
+        var instr = new EMEVD.Instruction(2003, 14, argData);
+        Assert.Null(ZoneTrackingInjector.TryExtractWarpInfo(instr));
     }
 
     [Fact]
-    public void ResolveEntityCandidate_SingleCandidate_ReturnsFlag()
+    public void TryExtractWarpInfo_PlayCutsceneToPlayerAndWarp_ExtractsRegionAndMap()
     {
-        var candidates = new List<ZoneTrackingInjector.EntityCandidate>
+        // PlayCutsceneToPlayerAndWarp (2002:11): [cutscene(4), playback(4), region(4), mapId(4), ...]
+        var argData = new byte[20];
+        BitConverter.GetBytes(123456).CopyTo(argData, 0);    // cutscene ID
+        BitConverter.GetBytes(0).CopyTo(argData, 4);          // playback
+        BitConverter.GetBytes(755890099).CopyTo(argData, 8);  // region
+        // Packed map: 11*1000000 + 5*10000 + 0*100 + 0 = 11050000
+        BitConverter.GetBytes(11050000).CopyTo(argData, 12);
+
+        var instr = new EMEVD.Instruction(2002, 11, argData);
+        var result = ZoneTrackingInjector.TryExtractWarpInfo(instr);
+
+        Assert.NotNull(result);
+        Assert.Equal((11, 5, 0, 0), result.Value.DestMap);
+        Assert.Equal(755890099, result.Value.Region);
+    }
+
+    [Fact]
+    public void TryExtractWarpInfo_UnrelatedInstruction_ReturnsNull()
+    {
+        var instr = new EMEVD.Instruction(3, 24, new byte[12]);
+        Assert.Null(ZoneTrackingInjector.TryExtractWarpInfo(instr));
+    }
+
+    // --- Region-based injection tests (using real EMEVD structures) ---
+
+    /// <summary>
+    /// Build a minimal EMEVD with one event containing a WarpPlayer instruction.
+    /// </summary>
+    private static EMEVD MakeEmevdWithWarp(int region, byte area = 31, byte block = 5)
+    {
+        var argData = new byte[12];
+        argData[0] = area;
+        argData[1] = block;
+        argData[2] = 0;
+        argData[3] = 0;
+        BitConverter.GetBytes(region).CopyTo(argData, 4);
+
+        var emevd = new EMEVD();
+        var evt = new EMEVD.Event(1040290310);
+        // Add a dummy instruction before the warp (simulates IfActionButtonInArea)
+        evt.Instructions.Add(new EMEVD.Instruction(3, 24, new byte[12]));
+        // The warp instruction
+        evt.Instructions.Add(new EMEVD.Instruction(2003, 14, argData));
+        emevd.Events.Add(evt);
+        return emevd;
+    }
+
+    [Fact]
+    public void RegionLookup_SingleFlag_InjectsOneSetEventFlag()
+    {
+        int region = 755890042;
+        int flagId = 1040292800;
+
+        var regionToFlags = new Dictionary<int, List<int>>
         {
-            new(flagId: 100, destMaps: new HashSet<(byte, byte, byte, byte)> { (31, 5, 0, 0) })
-        };
-        // Even with a non-matching dest map, single candidate returns directly
-        var result = ZoneTrackingInjector.ResolveEntityCandidate(candidates, (10, 1, 0, 0));
-        Assert.Equal(100, result);
-    }
-
-    [Fact]
-    public void ResolveEntityCandidate_TwoCandidates_DisambiguatesByDestMap()
-    {
-        var candidates = new List<ZoneTrackingInjector.EntityCandidate>
-        {
-            new(flagId: 100, destMaps: new HashSet<(byte, byte, byte, byte)> { (31, 5, 0, 0) }),
-            new(flagId: 200, destMaps: new HashSet<(byte, byte, byte, byte)> { (10, 1, 0, 0) })
-        };
-        // Warp targets m10_01 → should pick flag 200
-        var result = ZoneTrackingInjector.ResolveEntityCandidate(candidates, (10, 1, 0, 0));
-        Assert.Equal(200, result);
-
-        // Warp targets m31_05 → should pick flag 100
-        result = ZoneTrackingInjector.ResolveEntityCandidate(candidates, (31, 5, 0, 0));
-        Assert.Equal(100, result);
-    }
-
-    [Fact]
-    public void ResolveEntityCandidate_TwoCandidates_BothMatch_ReturnsNull()
-    {
-        // When both candidates share the same dest map, disambiguation is impossible
-        var sharedMap = ((byte)31, (byte)5, (byte)0, (byte)0);
-        var candidates = new List<ZoneTrackingInjector.EntityCandidate>
-        {
-            new(flagId: 100, destMaps: new HashSet<(byte, byte, byte, byte)> { sharedMap }),
-            new(flagId: 200, destMaps: new HashSet<(byte, byte, byte, byte)> { sharedMap })
-        };
-        var result = ZoneTrackingInjector.ResolveEntityCandidate(candidates, sharedMap);
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public void ResolveEntityCandidate_TwoCandidates_NoMatch_ReturnsNull()
-    {
-        var candidates = new List<ZoneTrackingInjector.EntityCandidate>
-        {
-            new(flagId: 100, destMaps: new HashSet<(byte, byte, byte, byte)> { (31, 5, 0, 0) }),
-            new(flagId: 200, destMaps: new HashSet<(byte, byte, byte, byte)> { (10, 1, 0, 0) })
-        };
-        // Warp targets a map not in either candidate's DestMaps
-        var result = ZoneTrackingInjector.ResolveEntityCandidate(candidates, (60, 44, 34, 0));
-        Assert.Null(result);
-    }
-
-    [Fact]
-    public void CommonEventLookup_ResolvesWhenDestOnlyCollides()
-    {
-        // Simulate: Fire Giant exit (has_common_event) + Margit exit both target m10
-        var destMap = ((byte)10, (byte)0, (byte)0, (byte)0);
-
-        // Build common event lookup from connections with HasCommonEvent
-        var commonEventLookup = new Dictionary<(byte, byte, byte, byte), int>();
-        var commonEventAreas = new Dictionary<(byte, byte, byte, byte), string>();
-        var commonEventCollisions = new HashSet<(byte, byte, byte, byte)>();
-
-        // Only the Fire Giant connection has HasCommonEvent
-        ZoneTrackingInjector.RegisterCommonEventKeys(
-            new byte[] { 10, 0, 0, 0 }, 1040292829, "some_area",
-            commonEventLookup, commonEventAreas, commonEventCollisions);
-
-        Assert.True(commonEventLookup.ContainsKey(destMap));
-        Assert.Equal(1040292829, commonEventLookup[destMap]);
-        Assert.Empty(commonEventCollisions);
-    }
-
-    [Fact]
-    public void CommonEventLookup_TracksCollisions()
-    {
-        var commonEventLookup = new Dictionary<(byte, byte, byte, byte), int>();
-        var commonEventAreas = new Dictionary<(byte, byte, byte, byte), string>();
-        var commonEventCollisions = new HashSet<(byte, byte, byte, byte)>();
-
-        ZoneTrackingInjector.RegisterCommonEventKeys(
-            new byte[] { 10, 0, 0, 0 }, 100, "area_a",
-            commonEventLookup, commonEventAreas, commonEventCollisions);
-        ZoneTrackingInjector.RegisterCommonEventKeys(
-            new byte[] { 10, 0, 0, 0 }, 200, "area_b",
-            commonEventLookup, commonEventAreas, commonEventCollisions);
-
-        Assert.Contains(((byte)10, (byte)0, (byte)0, (byte)0), commonEventCollisions);
-    }
-
-    [Fact]
-    public void CommonEventLookup_SameEntranceArea_NotACollision()
-    {
-        var commonEventLookup = new Dictionary<(byte, byte, byte, byte), int>();
-        var commonEventAreas = new Dictionary<(byte, byte, byte, byte), string>();
-        var commonEventCollisions = new HashSet<(byte, byte, byte, byte)>();
-
-        // Two connections to same entrance area (leyndell2_throne) with different flags
-        ZoneTrackingInjector.RegisterCommonEventKeys(
-            new byte[] { 11, 5, 0, 0 }, 1040292881, "leyndell2_throne",
-            commonEventLookup, commonEventAreas, commonEventCollisions);
-        ZoneTrackingInjector.RegisterCommonEventKeys(
-            new byte[] { 11, 5, 0, 0 }, 1040292882, "leyndell2_throne",
-            commonEventLookup, commonEventAreas, commonEventCollisions);
-
-        // Same entrance area → not a real collision
-        Assert.Empty(commonEventCollisions);
-        Assert.True(commonEventLookup.ContainsKey(((byte)11, (byte)5, (byte)0, (byte)0)));
-    }
-
-    [Fact]
-    public void CommonEventLookup_DifferentEntranceArea_IsCollision()
-    {
-        var commonEventLookup = new Dictionary<(byte, byte, byte, byte), int>();
-        var commonEventAreas = new Dictionary<(byte, byte, byte, byte), string>();
-        var commonEventCollisions = new HashSet<(byte, byte, byte, byte)>();
-
-        // Two connections to same dest map but different entrance areas
-        ZoneTrackingInjector.RegisterCommonEventKeys(
-            new byte[] { 11, 5, 0, 0 }, 100, "leyndell2_throne",
-            commonEventLookup, commonEventAreas, commonEventCollisions);
-        ZoneTrackingInjector.RegisterCommonEventKeys(
-            new byte[] { 11, 5, 0, 0 }, 200, "some_other_area",
-            commonEventLookup, commonEventAreas, commonEventCollisions);
-
-        // Different entrance areas → real collision
-        Assert.Contains(((byte)11, (byte)5, (byte)0, (byte)0), commonEventCollisions);
-    }
-
-    [Fact]
-    public void SameZoneMerge_Strategy3ThenResidual_LeavesExactlyOneCandidate()
-    {
-        // Simulates the Erdtree scenario: two connections to leyndell2_throne
-        // (same entrance_area, same dest map m11_05) with HasCommonEvent.
-        //
-        // Strategy 3 consumes the first flag via commonEventLookup.
-        // Strategy 4 must find exactly 1 uninjected flag remaining for the dest map.
-
-        var commonEventLookup = new Dictionary<(byte, byte, byte, byte), int>();
-        var commonEventAreas = new Dictionary<(byte, byte, byte, byte), string>();
-        var commonEventCollisions = new HashSet<(byte, byte, byte, byte)>();
-
-        int flag1 = 1040292881; // Maliketh
-        int flag2 = 1040292882; // Fire Giant
-        var destKey = ((byte)11, (byte)5, (byte)0, (byte)0); // m11_05
-
-        // Phase 1: Register both — same-zone merge, no collision
-        ZoneTrackingInjector.RegisterCommonEventKeys(
-            new byte[] { 11, 5, 0, 0 }, flag1, "leyndell2_throne",
-            commonEventLookup, commonEventAreas, commonEventCollisions);
-        ZoneTrackingInjector.RegisterCommonEventKeys(
-            new byte[] { 11, 5, 0, 0 }, flag2, "leyndell2_throne",
-            commonEventLookup, commonEventAreas, commonEventCollisions);
-
-        Assert.Empty(commonEventCollisions);
-        // TryAdd keeps flag1 — Strategy 3 will inject this one
-        Assert.Equal(flag1, commonEventLookup[destKey]);
-
-        // Phase 2 (simulated): Strategy 3 injects flag1
-        var injectedFlags = new HashSet<int> { flag1 };
-
-        // Phase 3 (simulated): Build residual lookup — dest map → uninjected flags
-        // This mirrors the Strategy 4 algorithm in InjectFogGateFlags
-        var connections = new[]
-        {
-            new { FlagId = flag1, DestMap = destKey },
-            new { FlagId = flag2, DestMap = destKey },
+            [region] = new List<int> { flagId }
         };
 
-        var destMapToUninjectedFlags = new Dictionary<(byte, byte, byte, byte), List<int>>();
-        foreach (var conn in connections)
+        var emevd = MakeEmevdWithWarp(region);
+        var evt = emevd.Events[0];
+        Assert.Equal(2, evt.Instructions.Count); // dummy + warp
+
+        // Simulate the injection logic inline (since InjectFogGateFlags works on files)
+        var warpPositions = new List<(int index, List<int> flagIds)>();
+        for (int i = 0; i < evt.Instructions.Count; i++)
         {
-            if (injectedFlags.Contains(conn.FlagId))
-                continue;
-            if (!destMapToUninjectedFlags.TryGetValue(conn.DestMap, out var flagList))
+            var warpInfo = ZoneTrackingInjector.TryExtractWarpInfo(evt.Instructions[i]);
+            if (warpInfo != null && regionToFlags.TryGetValue(warpInfo.Value.Region, out var flags))
             {
-                flagList = new List<int>();
-                destMapToUninjectedFlags[conn.DestMap] = flagList;
+                warpPositions.Add((i, flags));
             }
-            if (!flagList.Contains(conn.FlagId))
-                flagList.Add(conn.FlagId);
         }
 
-        // Strategy 4 should find exactly 1 candidate for m11_05
-        Assert.True(destMapToUninjectedFlags.ContainsKey(destKey));
-        Assert.Single(destMapToUninjectedFlags[destKey]);
-        Assert.Equal(flag2, destMapToUninjectedFlags[destKey][0]);
+        Assert.Single(warpPositions);
+        Assert.Single(warpPositions[0].flagIds);
+        Assert.Equal(flagId, warpPositions[0].flagIds[0]);
     }
 
     [Fact]
-    public void SameZoneMerge_ThreeConnections_ResidualHasTwoCandidates_Skips()
+    public void RegionLookup_MultipleFlags_SharedEntrance_InjectsAll()
     {
-        // With 3 same-area HasCommonEvent connections, Strategy 3 consumes 1,
-        // leaving 2 uninjected — Strategy 4 must refuse (candidates.Count != 1).
+        int region = 755890042;
+        int flagA = 1040292800;
+        int flagB = 1040292801;
 
-        var commonEventLookup = new Dictionary<(byte, byte, byte, byte), int>();
-        var commonEventAreas = new Dictionary<(byte, byte, byte, byte), string>();
-        var commonEventCollisions = new HashSet<(byte, byte, byte, byte)>();
-        var destKey = ((byte)11, (byte)5, (byte)0, (byte)0);
-
-        ZoneTrackingInjector.RegisterCommonEventKeys(
-            new byte[] { 11, 5, 0, 0 }, 100, "leyndell2_throne",
-            commonEventLookup, commonEventAreas, commonEventCollisions);
-        ZoneTrackingInjector.RegisterCommonEventKeys(
-            new byte[] { 11, 5, 0, 0 }, 200, "leyndell2_throne",
-            commonEventLookup, commonEventAreas, commonEventCollisions);
-        ZoneTrackingInjector.RegisterCommonEventKeys(
-            new byte[] { 11, 5, 0, 0 }, 300, "leyndell2_throne",
-            commonEventLookup, commonEventAreas, commonEventCollisions);
-
-        Assert.Empty(commonEventCollisions); // All same area — no collision
-
-        // Strategy 3 injects flag 100 (first registered)
-        var injectedFlags = new HashSet<int> { 100 };
-
-        // Build residual lookup
-        var connections = new[]
+        var regionToFlags = new Dictionary<int, List<int>>
         {
-            new { FlagId = 100, DestMap = destKey },
-            new { FlagId = 200, DestMap = destKey },
-            new { FlagId = 300, DestMap = destKey },
+            [region] = new List<int> { flagA, flagB }
         };
 
-        var destMapToUninjectedFlags = new Dictionary<(byte, byte, byte, byte), List<int>>();
-        foreach (var conn in connections)
+        var emevd = MakeEmevdWithWarp(region);
+        var evt = emevd.Events[0];
+
+        var warpPositions = new List<(int index, List<int> flagIds)>();
+        for (int i = 0; i < evt.Instructions.Count; i++)
         {
-            if (injectedFlags.Contains(conn.FlagId))
-                continue;
-            if (!destMapToUninjectedFlags.TryGetValue(conn.DestMap, out var flagList))
+            var warpInfo = ZoneTrackingInjector.TryExtractWarpInfo(evt.Instructions[i]);
+            if (warpInfo != null && regionToFlags.TryGetValue(warpInfo.Value.Region, out var flags))
             {
-                flagList = new List<int>();
-                destMapToUninjectedFlags[conn.DestMap] = flagList;
+                warpPositions.Add((i, flags));
             }
-            if (!flagList.Contains(conn.FlagId))
-                flagList.Add(conn.FlagId);
         }
 
-        // 2 candidates → Strategy 4 must skip (would need Phase 3 to abort)
-        Assert.Equal(2, destMapToUninjectedFlags[destKey].Count);
+        Assert.Single(warpPositions);
+        Assert.Equal(2, warpPositions[0].flagIds.Count);
+        Assert.Contains(flagA, warpPositions[0].flagIds);
+        Assert.Contains(flagB, warpPositions[0].flagIds);
     }
 
     [Fact]
-    public void RegisterEntity_SharedEntity_CreatesTwoCandidates()
+    public void RegionLookup_UnknownRegion_Skipped()
     {
-        var entityToFlag = new Dictionary<int, List<ZoneTrackingInjector.EntityCandidate>>();
-
-        // Register two connections that share entity 12345
-        ZoneTrackingInjector.RegisterEntity(
-            entityToFlag, 12345, 100,
-            new HashSet<(byte, byte, byte, byte)> { (31, 5, 0, 0) });
-        ZoneTrackingInjector.RegisterEntity(
-            entityToFlag, 12345, 200,
-            new HashSet<(byte, byte, byte, byte)> { (10, 1, 0, 0) });
-
-        Assert.True(entityToFlag.ContainsKey(12345));
-        var candidates = entityToFlag[12345];
-        Assert.Equal(2, candidates.Count);
-        Assert.Equal(100, candidates[0].FlagId);
-        Assert.Equal(200, candidates[1].FlagId);
-    }
-
-    [Fact]
-    public void ResolveRegionCandidate_SingleCandidate_ReturnsFlag()
-    {
-        var candidates = new List<ZoneTrackingInjector.RegionCandidate>
+        int unknownRegion = 14003900; // vanilla region, not in our dict
+        var regionToFlags = new Dictionary<int, List<int>>
         {
-            new(flagId: 100, sourceMaps: new HashSet<(byte, byte, byte, byte)> { (11, 5, 0, 0) })
+            [755890042] = new List<int> { 1040292800 }
         };
-        Assert.True(ZoneTrackingInjector.ResolveRegionCandidate(candidates, null, out int flagId));
-        Assert.Equal(100, flagId);
+
+        var emevd = MakeEmevdWithWarp(unknownRegion);
+        var evt = emevd.Events[0];
+
+        var warpPositions = new List<(int index, List<int> flagIds)>();
+        for (int i = 0; i < evt.Instructions.Count; i++)
+        {
+            var warpInfo = ZoneTrackingInjector.TryExtractWarpInfo(evt.Instructions[i]);
+            if (warpInfo != null && regionToFlags.TryGetValue(warpInfo.Value.Region, out var flags))
+            {
+                warpPositions.Add((i, flags));
+            }
+        }
+
+        Assert.Empty(warpPositions);
     }
 
     [Fact]
-    public void ResolveRegionCandidate_TwoCandidates_DisambiguatesBySourceMap()
+    public void RegionLookup_MultipleWarpsInEvent_AllMatched()
     {
-        var candidates = new List<ZoneTrackingInjector.RegionCandidate>
-        {
-            new(flagId: 100, sourceMaps: new HashSet<(byte, byte, byte, byte)> { (11, 5, 0, 0) }),
-            new(flagId: 200, sourceMaps: new HashSet<(byte, byte, byte, byte)> { (13, 0, 0, 0) })
-        };
-        // EMEVD from m11_05 → should pick flag 100
-        Assert.True(ZoneTrackingInjector.ResolveRegionCandidate(candidates, (11, 5, 0, 0), out int flagId));
-        Assert.Equal(100, flagId);
+        // An event with two WarpPlayer instructions (different execution paths,
+        // same destination — e.g., alt-warp events)
+        int region = 755890042;
+        int flagId = 1040292800;
 
-        // EMEVD from m13_00 → should pick flag 200
-        Assert.True(ZoneTrackingInjector.ResolveRegionCandidate(candidates, (13, 0, 0, 0), out flagId));
-        Assert.Equal(200, flagId);
+        var regionToFlags = new Dictionary<int, List<int>>
+        {
+            [region] = new List<int> { flagId }
+        };
+
+        var argData = new byte[12];
+        argData[0] = 31;
+        argData[1] = 5;
+        BitConverter.GetBytes(region).CopyTo(argData, 4);
+
+        var emevd = new EMEVD();
+        var evt = new EMEVD.Event(1040290310);
+        evt.Instructions.Add(new EMEVD.Instruction(3, 24, new byte[12])); // dummy
+        evt.Instructions.Add(new EMEVD.Instruction(2003, 14, (byte[])argData.Clone())); // warp 1
+        evt.Instructions.Add(new EMEVD.Instruction(1003, 2, new byte[4])); // some other instruction
+        evt.Instructions.Add(new EMEVD.Instruction(2003, 14, (byte[])argData.Clone())); // warp 2
+        emevd.Events.Add(evt);
+
+        var warpPositions = new List<(int index, List<int> flagIds)>();
+        for (int i = 0; i < evt.Instructions.Count; i++)
+        {
+            var warpInfo = ZoneTrackingInjector.TryExtractWarpInfo(evt.Instructions[i]);
+            if (warpInfo != null && regionToFlags.TryGetValue(warpInfo.Value.Region, out var flags))
+            {
+                warpPositions.Add((i, flags));
+            }
+        }
+
+        Assert.Equal(2, warpPositions.Count);
+    }
+
+    // --- ConnectionInjector region mapping tests ---
+
+    [Fact]
+    public void SameClusterInvariant_SameCluster_NoError()
+    {
+        // Two flags for the same region, both mapping to the same cluster
+        var regionToFlags = new Dictionary<int, List<int>>
+        {
+            [755890042] = new List<int> { 100, 200 }
+        };
+        var eventMap = new Dictionary<string, string>
+        {
+            ["100"] = "stormveil_c1",
+            ["200"] = "stormveil_c1"
+        };
+
+        // Verify assertion logic: all flags for the same region map to the same cluster
+        foreach (var (region, flags) in regionToFlags)
+        {
+            string? firstCluster = null;
+            foreach (var flag in flags)
+            {
+                if (eventMap.TryGetValue(flag.ToString(), out var cluster))
+                {
+                    if (firstCluster == null)
+                        firstCluster = cluster;
+                    else
+                        Assert.Equal(firstCluster, cluster);
+                }
+            }
+        }
     }
 
     [Fact]
-    public void ResolveRegionCandidate_TwoCandidates_NoSourceMap_ReturnsFalse()
+    public void SameClusterInvariant_DifferentClusters_Detects()
     {
-        var candidates = new List<ZoneTrackingInjector.RegionCandidate>
+        // Two flags for the same region mapping to DIFFERENT clusters
+        // (architecturally impossible, but the safety net should catch it)
+        var regionToFlags = new Dictionary<int, List<int>>
         {
-            new(flagId: 100, sourceMaps: new HashSet<(byte, byte, byte, byte)> { (11, 5, 0, 0) }),
-            new(flagId: 200, sourceMaps: new HashSet<(byte, byte, byte, byte)> { (13, 0, 0, 0) })
+            [755890042] = new List<int> { 100, 200 }
         };
-        Assert.False(ZoneTrackingInjector.ResolveRegionCandidate(candidates, null, out _));
-    }
+        var eventMap = new Dictionary<string, string>
+        {
+            ["100"] = "stormveil_c1",
+            ["200"] = "liurnia_c2"  // different cluster!
+        };
 
-    [Fact]
-    public void ResolveRegionCandidate_TwoCandidates_UnknownSourceMap_ReturnsFalse()
-    {
-        var candidates = new List<ZoneTrackingInjector.RegionCandidate>
+        bool violationDetected = false;
+        foreach (var (region, flags) in regionToFlags)
         {
-            new(flagId: 100, sourceMaps: new HashSet<(byte, byte, byte, byte)> { (11, 5, 0, 0) }),
-            new(flagId: 200, sourceMaps: new HashSet<(byte, byte, byte, byte)> { (13, 0, 0, 0) })
-        };
-        // EMEVD from unknown map → cannot disambiguate
-        Assert.False(ZoneTrackingInjector.ResolveRegionCandidate(candidates, (60, 35, 45, 0), out _));
+            string? firstCluster = null;
+            foreach (var flag in flags)
+            {
+                if (eventMap.TryGetValue(flag.ToString(), out var cluster))
+                {
+                    if (firstCluster == null)
+                        firstCluster = cluster;
+                    else if (cluster != firstCluster)
+                        violationDetected = true;
+                }
+            }
+        }
+
+        Assert.True(violationDetected);
     }
 }
