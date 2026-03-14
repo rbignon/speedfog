@@ -175,6 +175,118 @@ public class ZoneTrackingTests
     }
 
     [Fact]
+    public void SameZoneMerge_Strategy3ThenResidual_LeavesExactlyOneCandidate()
+    {
+        // Simulates the Erdtree scenario: two connections to leyndell2_throne
+        // (same entrance_area, same dest map m11_05) with HasCommonEvent.
+        //
+        // Strategy 3 consumes the first flag via commonEventLookup.
+        // Strategy 4 must find exactly 1 uninjected flag remaining for the dest map.
+
+        var commonEventLookup = new Dictionary<(byte, byte, byte, byte), int>();
+        var commonEventAreas = new Dictionary<(byte, byte, byte, byte), string>();
+        var commonEventCollisions = new HashSet<(byte, byte, byte, byte)>();
+
+        int flag1 = 1040292881; // Maliketh
+        int flag2 = 1040292882; // Fire Giant
+        var destKey = ((byte)11, (byte)5, (byte)0, (byte)0); // m11_05
+
+        // Phase 1: Register both — same-zone merge, no collision
+        ZoneTrackingInjector.RegisterCommonEventKeys(
+            new byte[] { 11, 5, 0, 0 }, flag1, "leyndell2_throne",
+            commonEventLookup, commonEventAreas, commonEventCollisions);
+        ZoneTrackingInjector.RegisterCommonEventKeys(
+            new byte[] { 11, 5, 0, 0 }, flag2, "leyndell2_throne",
+            commonEventLookup, commonEventAreas, commonEventCollisions);
+
+        Assert.Empty(commonEventCollisions);
+        // TryAdd keeps flag1 — Strategy 3 will inject this one
+        Assert.Equal(flag1, commonEventLookup[destKey]);
+
+        // Phase 2 (simulated): Strategy 3 injects flag1
+        var injectedFlags = new HashSet<int> { flag1 };
+
+        // Phase 3 (simulated): Build residual lookup — dest map → uninjected flags
+        // This mirrors the Strategy 4 algorithm in InjectFogGateFlags
+        var connections = new[]
+        {
+            new { FlagId = flag1, DestMap = destKey },
+            new { FlagId = flag2, DestMap = destKey },
+        };
+
+        var destMapToUninjectedFlags = new Dictionary<(byte, byte, byte, byte), List<int>>();
+        foreach (var conn in connections)
+        {
+            if (injectedFlags.Contains(conn.FlagId))
+                continue;
+            if (!destMapToUninjectedFlags.TryGetValue(conn.DestMap, out var flagList))
+            {
+                flagList = new List<int>();
+                destMapToUninjectedFlags[conn.DestMap] = flagList;
+            }
+            if (!flagList.Contains(conn.FlagId))
+                flagList.Add(conn.FlagId);
+        }
+
+        // Strategy 4 should find exactly 1 candidate for m11_05
+        Assert.True(destMapToUninjectedFlags.ContainsKey(destKey));
+        Assert.Single(destMapToUninjectedFlags[destKey]);
+        Assert.Equal(flag2, destMapToUninjectedFlags[destKey][0]);
+    }
+
+    [Fact]
+    public void SameZoneMerge_ThreeConnections_ResidualHasTwoCandidates_Skips()
+    {
+        // With 3 same-area HasCommonEvent connections, Strategy 3 consumes 1,
+        // leaving 2 uninjected — Strategy 4 must refuse (candidates.Count != 1).
+
+        var commonEventLookup = new Dictionary<(byte, byte, byte, byte), int>();
+        var commonEventAreas = new Dictionary<(byte, byte, byte, byte), string>();
+        var commonEventCollisions = new HashSet<(byte, byte, byte, byte)>();
+        var destKey = ((byte)11, (byte)5, (byte)0, (byte)0);
+
+        ZoneTrackingInjector.RegisterCommonEventKeys(
+            new byte[] { 11, 5, 0, 0 }, 100, "leyndell2_throne",
+            commonEventLookup, commonEventAreas, commonEventCollisions);
+        ZoneTrackingInjector.RegisterCommonEventKeys(
+            new byte[] { 11, 5, 0, 0 }, 200, "leyndell2_throne",
+            commonEventLookup, commonEventAreas, commonEventCollisions);
+        ZoneTrackingInjector.RegisterCommonEventKeys(
+            new byte[] { 11, 5, 0, 0 }, 300, "leyndell2_throne",
+            commonEventLookup, commonEventAreas, commonEventCollisions);
+
+        Assert.Empty(commonEventCollisions); // All same area — no collision
+
+        // Strategy 3 injects flag 100 (first registered)
+        var injectedFlags = new HashSet<int> { 100 };
+
+        // Build residual lookup
+        var connections = new[]
+        {
+            new { FlagId = 100, DestMap = destKey },
+            new { FlagId = 200, DestMap = destKey },
+            new { FlagId = 300, DestMap = destKey },
+        };
+
+        var destMapToUninjectedFlags = new Dictionary<(byte, byte, byte, byte), List<int>>();
+        foreach (var conn in connections)
+        {
+            if (injectedFlags.Contains(conn.FlagId))
+                continue;
+            if (!destMapToUninjectedFlags.TryGetValue(conn.DestMap, out var flagList))
+            {
+                flagList = new List<int>();
+                destMapToUninjectedFlags[conn.DestMap] = flagList;
+            }
+            if (!flagList.Contains(conn.FlagId))
+                flagList.Add(conn.FlagId);
+        }
+
+        // 2 candidates → Strategy 4 must skip (would need Phase 3 to abort)
+        Assert.Equal(2, destMapToUninjectedFlags[destKey].Count);
+    }
+
+    [Fact]
     public void RegisterEntity_SharedEntity_CreatesTwoCandidates()
     {
         var entityToFlag = new Dictionary<int, List<ZoneTrackingInjector.EntityCandidate>>();

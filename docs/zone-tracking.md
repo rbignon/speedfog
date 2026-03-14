@@ -153,6 +153,12 @@ Strategy 4 handles the case where Strategies 0-3 all failed for a warp but the s
 
 Concrete example: two connections to `leyndell2_throne` (Maliketh flag 1040292881, Fire Giant flag 1040292882). Strategy 3 matches one of them. The other flag remains uninjected. Residual matching finds that `m11_05` has exactly one uninjected flag and injects it into the remaining warp events.
 
+**Design limit:** Strategy 3 + Strategy 4 only works for **exactly 2** same-area `HasCommonEvent` connections to the same dest map. With 3+, Strategy 3 consumes one flag and Strategy 4 sees 2+ remaining candidates (`candidates.Count != 1`) — it skips, and Phase 3 aborts the build. This is a safe failure (no silent incorrectness), but it means the DAG generator must not produce 3+ `HasCommonEvent` connections to the same entrance area and dest map.
+
+**File re-read contract:** Strategy 4 re-reads EMEVD files from disk after the main event loop has written them. The main loop **must** write modifications before Strategy 4 runs. If the write is moved or deferred in a refactor, Strategy 4 will lose the main loop's injections.
+
+**Candidate retention:** Strategy 4 does not remove matched flags from the candidate list, so that the same flag can be injected into multiple events targeting the same dest map (e.g., Event 900 and Event 901 both warp to m11_05). This is safe because the `candidates.Count == 1` guard prevents false matches: if a flag appears as a candidate for multiple dest map keys, only dest maps with exactly one candidate will be matched.
+
 ### Entity Disambiguation Detail
 
 When `TryMatchEntityCandidates` returns multiple candidates (shared gate), `ResolveEntityCandidate` picks the right one:

@@ -817,6 +817,134 @@ class TestRequiredZones:
         assert zone_errors == []
 
 
+class TestEntryZoneMembership:
+    """Tests for entry zone membership validation."""
+
+    def test_entry_zone_in_target_cluster_passes(self):
+        """Edge whose entry_fog zone is in target cluster zones = ok."""
+        dag = Dag(seed=42)
+        dag.add_node(
+            DagNode(
+                id="start",
+                cluster=make_cluster("start_c", cluster_type="start", weight=0),
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+            )
+        )
+        dag.add_node(
+            DagNode(
+                id="end",
+                cluster=make_cluster(
+                    "castle",
+                    zones=["castle_front", "castle_back"],
+                    cluster_type="final_boss",
+                ),
+                layer=1,
+                tier=1,
+                entry_fogs=[FogRef("castle_entry", "castle_front")],
+            )
+        )
+        dag.add_edge(
+            "start",
+            "end",
+            FogRef("start_exit", "start_c_zone"),
+            FogRef("castle_entry", "castle_front"),
+        )
+        dag.start_id = "start"
+        dag.end_id = "end"
+
+        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+        result = validate_dag(dag, config)
+
+        zone_errors = [e for e in result.errors if "Entry zone mismatch" in e]
+        assert zone_errors == []
+
+    def test_entry_zone_not_in_target_cluster_fails(self):
+        """Edge whose entry_fog zone is NOT in target cluster = error."""
+        dag = Dag(seed=42)
+        dag.add_node(
+            DagNode(
+                id="start",
+                cluster=make_cluster("start_c", cluster_type="start", weight=0),
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+            )
+        )
+        # Target cluster has zones ["castle_front"] but edge entry_fog uses "sewer"
+        dag.add_node(
+            DagNode(
+                id="end",
+                cluster=make_cluster(
+                    "castle",
+                    zones=["castle_front"],
+                    cluster_type="final_boss",
+                ),
+                layer=1,
+                tier=1,
+                entry_fogs=[FogRef("sewer_entry", "sewer")],
+            )
+        )
+        dag.add_edge(
+            "start",
+            "end",
+            FogRef("start_exit", "start_c_zone"),
+            FogRef("sewer_entry", "sewer"),  # zone "sewer" not in target cluster
+        )
+        dag.start_id = "start"
+        dag.end_id = "end"
+
+        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+        result = validate_dag(dag, config)
+
+        assert result.is_valid is False
+        zone_errors = [e for e in result.errors if "Entry zone mismatch" in e]
+        assert len(zone_errors) == 1
+        assert "sewer" in zone_errors[0]
+        assert "castle" in zone_errors[0]
+
+    def test_empty_entry_zone_skipped(self):
+        """Edge with empty entry_fog zone is not checked."""
+        dag = Dag(seed=42)
+        dag.add_node(
+            DagNode(
+                id="start",
+                cluster=make_cluster("start_c", cluster_type="start", weight=0),
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+            )
+        )
+        dag.add_node(
+            DagNode(
+                id="end",
+                cluster=make_cluster(
+                    "boss",
+                    zones=["boss_zone"],
+                    cluster_type="final_boss",
+                ),
+                layer=1,
+                tier=1,
+                entry_fogs=[FogRef("", "")],
+            )
+        )
+        dag.add_edge(
+            "start",
+            "end",
+            FogRef("start_exit", "start_c_zone"),
+            FogRef("", ""),  # empty zone — final boss edge case
+        )
+        dag.start_id = "start"
+        dag.end_id = "end"
+
+        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+        result = validate_dag(dag, config)
+
+        zone_errors = [e for e in result.errors if "Entry zone mismatch" in e]
+        assert zone_errors == []
+
+
 class TestZoneTrackingCollisions:
     """Tests for zone tracking collision detection."""
 

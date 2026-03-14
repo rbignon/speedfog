@@ -601,6 +601,17 @@ public static class ZoneTrackingInjector
         // For each unmatched warp whose dest map corresponds to a connection,
         // check if there's exactly one uninjected flag targeting that dest map.
         // If so, pair them (the only remaining possibility).
+        //
+        // CONTRACT: Strategy 4 re-reads EMEVD files from disk. The main event
+        // loop above MUST have already written its modifications (line ~596)
+        // before this code runs. If the write is moved or deferred, Strategy 4
+        // will lose the main loop's injections.
+        //
+        // DESIGN LIMIT: This mechanism only works when exactly 2 same-area
+        // HasCommonEvent connections target the same dest map. Strategy 3
+        // consumes one flag; Strategy 4 finds the other as the sole remaining
+        // candidate. With 3+ such connections, candidates.Count > 1 and
+        // Strategy 4 skips — Phase 3 validation then aborts the build.
         int residualMatches = 0;
         if (unmatchedWarps.Count > 0)
         {
@@ -677,6 +688,12 @@ public static class ZoneTrackingInjector
                         // Don't remove from candidates: multiple events may target the
                         // same dest map (e.g., Event 900 and 901 both warp to m11_05),
                         // and we want the flag injected in ALL of them.
+                        // SAFETY: This is safe because the candidates.Count == 1 guard
+                        // (line ~642) prevents false matches. If a flag appears as a
+                        // candidate for multiple dest maps, it can only be injected when
+                        // it's the SOLE candidate — other dest maps with 2+ candidates
+                        // are skipped. Worst case: an uninjected flag triggers Phase 3
+                        // abort, never a wrong flag injection.
                         Console.WriteLine($"Zone tracking: residual match in event {eventId} " +
                                           $"dest={FormatMap(destMap)} → flag {flagId}");
                     }

@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 
 from speedfog.clusters import ClusterPool
 from speedfog.config import Config
-from speedfog.dag import Dag, DagEdge
+from speedfog.dag import Dag, DagEdge, FogRef
 
 
 @dataclass
@@ -36,6 +36,7 @@ def validate_dag(
     Checks:
     - Structural validity (uses dag.validate_structure())
     - Entry fog consistency (incoming edges match entry_fogs count)
+    - Entry zone membership (entry_fog.zone ∈ target cluster zones)
     - Minimum requirements (bosses, legacy_dungeons, mini_dungeons)
     - Zone tracking collisions (shared exit gate + same entrance map)
     - Path count (no paths = error, single path = warning)
@@ -68,6 +69,11 @@ def validate_dag(
     duplicate_errors = _check_no_duplicate_edges(dag)
     if duplicate_errors:
         errors.extend(duplicate_errors)
+
+    # Check entry zone membership (entry_fog.zone ∈ target cluster zones)
+    entry_zone_errors = _check_entry_zone_membership(dag)
+    if entry_zone_errors:
+        errors.extend(entry_zone_errors)
 
     # Check zone tracking collisions (shared exit gate + same entrance map)
     if clusters is not None:
@@ -242,6 +248,37 @@ def _check_layers(dag: Dag, config: Config, warnings: list[str]) -> None:
         warnings.append(
             f"Few layers: {layer_count} < {config.structure.min_layers} minimum"
         )
+
+
+def _check_entry_zone_membership(dag: Dag) -> list[str]:
+    """Check that each edge's entry_fog zone belongs to the target cluster.
+
+    If entry_fog.zone is not in target_node.cluster.zones, the C#
+    ZoneTrackingInjector's same-zone merge logic may produce false negatives:
+    two connections with the same entrance_area string but targeting different
+    clusters would be treated as a same-zone merge instead of a real collision.
+
+    Args:
+        dag: The DAG to check.
+
+    Returns:
+        List of error messages.
+    """
+    errors: list[str] = []
+    for edge in dag.edges:
+        target_node = dag.nodes.get(edge.target_id)
+        if target_node is None:
+            continue
+        if not isinstance(edge.entry_fog, FogRef):
+            continue  # Test helpers may pass plain strings; skip gracefully
+        entry_zone = edge.entry_fog.zone
+        if entry_zone and entry_zone not in target_node.cluster.zones:
+            errors.append(
+                f"Entry zone mismatch: edge {edge.source_id}→{edge.target_id} "
+                f"has entry_fog zone '{entry_zone}' not in target cluster "
+                f"'{target_node.cluster.id}' zones {target_node.cluster.zones}"
+            )
+    return errors
 
 
 def _check_zone_tracking_collisions(dag: Dag, clusters: ClusterPool) -> list[str]:
