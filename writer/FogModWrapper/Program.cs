@@ -334,7 +334,8 @@ Example:
 
         // 5. Inject OUR connections (replaces GraphConnector.Connect())
         var injectionResult = ConnectionInjector.InjectAndExtract(
-            graph, graphData.Connections, graphData.FinishEvent, graphData.FinalNodeFlag);
+            graph, graphData.Connections, graphData.FinishEvent, graphData.FinalNodeFlag,
+            graphData.EventMap);
 
         // 6. Apply tiers for scaling
         ConnectionInjector.ApplyAreaTiers(graph, graphData.AreaTiers);
