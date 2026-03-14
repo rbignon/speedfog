@@ -27,7 +27,6 @@ def test_generate_item_config_basic():
     assert result["options"]["mats"] is True
     assert "preset" not in result
     assert result["enemy_options"]["randomize_bosses"] == "none"
-    assert result["enemy_options"]["lock_final_boss"] is True
     assert result["helper_options"]["autoUpgradeWeapons"] is True
     # All 14 bool options must be explicitly set (DLL defaults most to true)
     helper = result["helper_options"]
@@ -175,27 +174,13 @@ def test_generate_item_config_enemy_options_default():
 
     assert "enemy_options" in result
     assert result["enemy_options"]["randomize_bosses"] == "none"
-    assert result["enemy_options"]["lock_final_boss"] is True
-    assert result["enemy_options"]["finish_boss_defeat_flag"] == 0
     # preset key should no longer be present
     assert "preset" not in result
 
 
 def test_generate_item_config_enemy_options_enabled():
     """generate_item_config passes through enemy randomization settings."""
-    config = Config.from_dict(
-        {"enemy": {"randomize_bosses": "all", "lock_final_boss": False}}
-    )
-    result = generate_item_config(config, 42, finish_boss_defeat_flag=1042380520)
+    config = Config.from_dict({"enemy": {"randomize_bosses": "all"}})
+    result = generate_item_config(config, 42)
 
     assert result["enemy_options"]["randomize_bosses"] == "all"
-    assert result["enemy_options"]["lock_final_boss"] is False
-    assert result["enemy_options"]["finish_boss_defeat_flag"] == 1042380520
-
-
-def test_generate_item_config_finish_boss_defeat_flag():
-    """generate_item_config propagates finish_boss_defeat_flag correctly."""
-    config = Config.from_dict({"enemy": {"randomize_bosses": "all"}})
-    result = generate_item_config(config, 42, finish_boss_defeat_flag=1234567890)
-
-    assert result["enemy_options"]["finish_boss_defeat_flag"] == 1234567890

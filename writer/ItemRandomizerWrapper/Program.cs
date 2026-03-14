@@ -138,7 +138,6 @@ Example:
                 opt["ignoresize"] = true;
             }
             Console.WriteLine($"Enemy preset: randomize_bosses={randoConfig.EnemyOptions.RandomizeBosses}, "
-                + $"lock_final_boss={randoConfig.EnemyOptions.LockFinalBoss}, "
                 + $"ignore_arena_size={randoConfig.EnemyOptions.IgnoreArenaSize}");
         }
         else if (!string.IsNullOrEmpty(randoConfig.Preset))
@@ -319,17 +318,6 @@ Example:
                     new Preset.ClassAssignment { NoRandom = true };
             }
 
-            if (options.LockFinalBoss && options.FinishBossDefeatFlag > 0)
-            {
-                // Lock only the final boss via DontRandomizeIDs.
-                var flag = (uint)options.FinishBossDefeatFlag;
-                preset.DontRandomizeIDs.Add(flag);
-
-                // Radahn and Fire Giant (base game): DefeatFlag = entity_id + 200M.
-                // DLC bosses (>= 2B): DefeatFlag IS the entity ID directly.
-                if (flag >= 1_200_000_000 && flag < 2_000_000_000)
-                    preset.DontRandomizeIDs.Add(flag - 200_000_000);
-            }
         }
 
         return preset;

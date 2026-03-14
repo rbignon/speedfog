@@ -319,9 +319,7 @@ def main() -> int:
         print("Running Item Randomizer...")
 
         # Generate item_config.json
-        end_node = dag.nodes[dag.end_id]
-        finish_boss_defeat_flag = end_node.cluster.defeat_flag or 0
-        item_config = generate_item_config(config, actual_seed, finish_boss_defeat_flag)
+        item_config = generate_item_config(config, actual_seed)
         item_config_path = seed_dir / "item_config.json"
         with item_config_path.open("w") as f:
             json.dump(item_config, f, indent=2)

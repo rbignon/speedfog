@@ -215,8 +215,6 @@ enabled = false
 #   "minor" = minibosses/evergaols swap among themselves, major bosses stay in place
 #   "all"   = all boss classes swap (major bosses swap with major, minor with minor)
 randomize_bosses = "none"
-# Keep the final arena's boss in place. Only applies when randomize_bosses != "none".
-lock_final_boss = true
 # Allow placing large bosses in small arenas. Only applies when randomize_bosses != "none".
 # Default: false (bosses that are too large for an arena are excluded from it).
 ignore_arena_size = false

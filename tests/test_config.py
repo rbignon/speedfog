@@ -577,16 +577,12 @@ def test_enemy_config_defaults():
     """EnemyConfig has correct defaults."""
     config = Config.from_dict({})
     assert config.enemy.randomize_bosses == "none"
-    assert config.enemy.lock_final_boss is True
 
 
 def test_enemy_config_from_dict():
     """EnemyConfig parses from config dict."""
-    config = Config.from_dict(
-        {"enemy": {"randomize_bosses": "all", "lock_final_boss": False}}
-    )
+    config = Config.from_dict({"enemy": {"randomize_bosses": "all"}})
     assert config.enemy.randomize_bosses == "all"
-    assert config.enemy.lock_final_boss is False
 
 
 def test_enemy_config_from_toml(tmp_path):
@@ -595,18 +591,15 @@ def test_enemy_config_from_toml(tmp_path):
     config_file.write_text("""
 [enemy]
 randomize_bosses = "minor"
-lock_final_boss = false
 """)
     config = Config.from_toml(config_file)
     assert config.enemy.randomize_bosses == "minor"
-    assert config.enemy.lock_final_boss is False
 
 
 def test_enemy_config_partial():
     """EnemyConfig uses defaults for missing fields."""
     config = Config.from_dict({"enemy": {"randomize_bosses": "all"}})
     assert config.enemy.randomize_bosses == "all"
-    assert config.enemy.lock_final_boss is True  # default
 
 
 def test_enemy_config_legacy_bool():

@@ -351,7 +351,6 @@ class EnemyConfig:
     """Enemy randomization configuration."""
 
     randomize_bosses: str = "none"  # "none", "minor", "all"
-    lock_final_boss: bool = True
     ignore_arena_size: bool = False
 
     def __post_init__(self) -> None:
@@ -549,7 +548,6 @@ class Config:
             ),
             enemy=EnemyConfig(
                 randomize_bosses=enemy_section.get("randomize_bosses", "none"),
-                lock_final_boss=enemy_section.get("lock_final_boss", True),
                 ignore_arena_size=enemy_section.get("ignore_arena_size", False),
             ),
         )

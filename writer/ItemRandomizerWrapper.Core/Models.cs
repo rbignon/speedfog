@@ -48,12 +48,6 @@ public class EnemyOptionsConfig
     [JsonPropertyName("randomize_bosses")]
     public string RandomizeBosses { get; set; } = "none";
 
-    [JsonPropertyName("lock_final_boss")]
-    public bool LockFinalBoss { get; set; } = true;
-
     [JsonPropertyName("ignore_arena_size")]
     public bool IgnoreArenaSize { get; set; }
-
-    [JsonPropertyName("finish_boss_defeat_flag")]
-    public int FinishBossDefeatFlag { get; set; }
 }
