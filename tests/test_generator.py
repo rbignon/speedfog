@@ -3828,7 +3828,7 @@ class TestAsymmetricExitsEntrances:
                 continue
 
             # Count incoming edges per node
-            in_degree: dict[str, int] = {nid: 0 for nid in dag.nodes}
+            in_degree: dict[str, int] = dict.fromkeys(dag.nodes, 0)
             for edge in dag.edges:
                 in_degree[edge.target_id] += 1
 

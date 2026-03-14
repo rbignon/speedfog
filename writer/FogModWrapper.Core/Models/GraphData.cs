@@ -178,30 +178,12 @@ public class Connection
     public int FlagId { get; set; } = 0;
 
     /// <summary>
-    /// MSB entity ID of the exit fog gate asset (from fog_data.json).
-    /// Retained for backward compatibility; no longer consumed by ZoneTrackingInjector
-    /// (region-based lookup replaced entity-based disambiguation).
-    /// Default 0 = not available.
-    /// </summary>
-    [JsonPropertyName("exit_entity_id")]
-    public int ExitEntityId { get; set; } = 0;
-
-    /// <summary>
     /// When true, tells FogMod to not remove the entrance edge's bidirectional pair.
     /// Used for entry-as-exit boss arenas where the entry fog's return direction
     /// serves as a forward exit to another area.
     /// </summary>
     [JsonPropertyName("ignore_pair")]
     public bool IgnorePair { get; set; } = false;
-
-    /// <summary>
-    /// When true, this connection's exit is a WarpBonfire gate whose vanilla
-    /// warp event (e.g., Erdtree burning) lives in common.emevd.
-    /// Retained for backward compatibility; no longer consumed by ZoneTrackingInjector
-    /// (region-based lookup handles WarpBonfire gates uniformly).
-    /// </summary>
-    [JsonPropertyName("has_common_event")]
-    public bool HasCommonEvent { get; set; } = false;
 
     public override string ToString()
     {

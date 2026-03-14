@@ -337,20 +337,6 @@ def dag_to_dict(
             is_entry=False,
         )
 
-        # Look up entity_id from fog_data for entity-based disambiguation
-        # in ZoneTrackingInjector (resolves compound key collisions).
-        exit_entity_id = 0
-        if fog_data and exit_gate_str in fog_data:
-            exit_entity_id = fog_data[exit_gate_str].get("entity_id", 0)
-
-        # Detect WarpBonfire exits: clusters.json exit_fogs with "warp_bonfire"
-        # are bonfire-sit warps whose vanilla event lives in common.emevd.
-        # ZoneTrackingInjector needs this to match the vanilla warp event.
-        has_common_event = any(
-            ef["fog_id"] == edge.exit_fog.fog_id and ef.get("warp_bonfire")
-            for ef in source_node.cluster.exit_fogs
-        )
-
         conn_dict: dict[str, str | int | bool] = {
             "exit_area": exit_zone,
             "exit_gate": exit_gate_str,
@@ -363,10 +349,7 @@ def dag_to_dict(
                 is_entry=True,
             ),
             "flag_id": flag_id,
-            "exit_entity_id": exit_entity_id,
         }
-        if has_common_event:
-            conn_dict["has_common_event"] = True
         if target_node.cluster.allow_entry_as_exit:
             conn_dict["ignore_pair"] = True
         connections.append(conn_dict)
@@ -684,8 +667,8 @@ def _build_connection_lines(
 
     # For merges: count sources from each side and track landing positions
     # This allows spacing multiple sources from the same side
-    merge_left_count: dict[int, int] = {i: 0 for i in range(n_curr)}
-    merge_right_count: dict[int, int] = {i: 0 for i in range(n_curr)}
+    merge_left_count: dict[int, int] = dict.fromkeys(range(n_curr), 0)
+    merge_right_count: dict[int, int] = dict.fromkeys(range(n_curr), 0)
     for tgt_idx in range(n_curr):
         tgt_pos = curr_centers[tgt_idx]
         for src_idx in tgt_sources[tgt_idx]:
@@ -733,8 +716,8 @@ def _build_connection_lines(
 
     # Track how many sources from each side we've already processed per target
     # Used to space landing positions for merges with multiple sources from same side
-    merge_left_placed: dict[int, int] = {i: 0 for i in range(n_curr)}
-    merge_right_placed: dict[int, int] = {i: 0 for i in range(n_curr)}
+    merge_left_placed: dict[int, int] = dict.fromkeys(range(n_curr), 0)
+    merge_right_placed: dict[int, int] = dict.fromkeys(range(n_curr), 0)
 
     # Row 1: Vertical lines from sources
     # Always show │ at source position if it goes anywhere

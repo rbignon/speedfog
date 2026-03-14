@@ -56,8 +56,6 @@ Each `Connection` in `graph.json` specifies one fog gate link:
 | `entrance_gate` | FullName of the entrance fog on destination side |
 | `flag_id` | Event flag set when the player traverses this fog gate |
 | `ignore_pair` | Preserve the entrance's bidirectional Pair edge on connect |
-| `exit_entity_id` | MSB entity ID of exit fog asset (for zone tracking disambiguation) |
-| `has_common_event` | Exit is a WarpBonfire gate with a vanilla warp event in common.emevd |
 
 ## Connection Strategies
 
