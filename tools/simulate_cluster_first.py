@@ -132,7 +132,14 @@ def generate_dag_cluster_first(
     current_layer = 1
     if config.structure.first_layer_type:
         first_type = config.structure.first_layer_type
-        tier = compute_tier(current_layer, 10, config.structure.final_tier)
+        tier = compute_tier(
+            current_layer,
+            10,
+            config.structure.final_tier,
+            start_tier=config.structure.start_tier,
+            curve=config.structure.tier_curve,
+            exponent=config.structure.tier_curve_exponent,
+        )
         # Use cluster-first for first layer too
         candidates = clusters.get_by_type(first_type)
         new_branches = []
@@ -175,7 +182,14 @@ def generate_dag_cluster_first(
     # Execute layers with cluster-first logic
     for layer_idx, layer_type in enumerate(layer_types):
         is_near_end = layer_idx >= len(layer_types) - 2
-        tier = compute_tier(current_layer, estimated_total, config.structure.final_tier)
+        tier = compute_tier(
+            current_layer,
+            estimated_total,
+            config.structure.final_tier,
+            start_tier=config.structure.start_tier,
+            curve=config.structure.tier_curve,
+            exponent=config.structure.tier_curve_exponent,
+        )
 
         # Force merge near end
         if is_near_end and len(branches) > 1:
@@ -666,7 +680,14 @@ def generate_dag_cluster_first(
     # Final merge
     if len(branches) > 1:
         last_type = layer_types[-1] if layer_types else "mini_dungeon"
-        tier = compute_tier(current_layer, estimated_total, config.structure.final_tier)
+        tier = compute_tier(
+            current_layer,
+            estimated_total,
+            config.structure.final_tier,
+            start_tier=config.structure.start_tier,
+            curve=config.structure.tier_curve,
+            exponent=config.structure.tier_curve_exponent,
+        )
         branches, current_layer = execute_forced_merge(
             dag,
             branches,
