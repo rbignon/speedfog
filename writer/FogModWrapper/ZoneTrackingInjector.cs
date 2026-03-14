@@ -170,6 +170,12 @@ public static class ZoneTrackingInjector
 
                     int region = warpInfo.Value.Region;
 
+                    // Region 0 with a valid dest map suggests an unresolved parameterized
+                    // region — TryExtractWarpInfo already filters zero dest maps (template
+                    // placeholders), but a zero region with non-zero map is unexpected.
+                    if (region == 0)
+                        continue;
+
                     if (regionToFlags.TryGetValue(region, out var flagIds))
                     {
                         warpPositions.Add((i, flagIds));
@@ -238,11 +244,6 @@ public static class ZoneTrackingInjector
                 string.Join(", ", missingFlags) +
                 ". Cannot produce a valid mod output.");
         }
-    }
-
-    private static string FormatMap((byte, byte, byte, byte) map)
-    {
-        return $"m{map.Item1}_{map.Item2:D2}_{map.Item3:D2}_{map.Item4:D2}";
     }
 
     /// <summary>
