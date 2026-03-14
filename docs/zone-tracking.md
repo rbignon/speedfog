@@ -115,27 +115,19 @@ After processing all EMEVD files, compare injected flags against `expectedFlags`
 
 ## Shared Entrances
 
-When two connections share the same entrance gate (`DuplicateEntrance`), they share the same `Warp.Region` but have different `flag_id`s (flags are allocated per-connection in `output.py`). The mapping becomes `region -> [flag_A, flag_B]`, and both `SetEventFlag` instructions are injected before the warp.
+When two connections share the same entrance gate (`DuplicateEntrance`), they share the same `Warp.Region` but have different `flag_id`s (flags are allocated per-connection in `output.py`). The mapping becomes `region -> [flag_A, flag_B]`, and **all** `SetEventFlag` instructions are injected before the warp. All flags for a shared region map to the same cluster in `event_map` (enforced by the same-cluster assertion in ConnectionInjector).
 
-### Semantic change: per-connection to per-cluster
-
-This changes the flag semantic from **per-connection** ("flag F means connection C was traversed") to **per-cluster** ("flag F means cluster X was entered") for connections that share an entrance gate. In the common case (no shared entrance), the list has one flag_id and the semantics are identical.
-
-For shared entrances, all flags for the region fire simultaneously on any traversal -- the consumer cannot determine which specific exit gate was used. This is acceptable because:
-
-1. **The per-connection semantic was never consumed.** The racing mod resolves `flag_id -> node_id` via `event_map` and discards the flag. It tracks cluster-level progression.
-2. **The lost information is recoverable from context.** The racing mod tracks `zone_history` -- the previous entry identifies the source cluster.
-3. **Event flags are one-shot.** Re-entry from a different branch is indistinguishable once the flag is already ON.
+In the common case (no shared entrance), each region maps to exactly one flag. For shared entrances, a single fog gate traversal sets N flags — all resolving to the same node via `event_map`.
 
 ### Consumer guidelines
 
 Systems consuming SpeedFog event flags should:
 
-1. **Resolve flags via `event_map`** -- treat flags as opaque identifiers that resolve to node_ids.
-2. **Handle duplicate node arrivals** -- multiple flags may fire for the same node in the same frame. Be idempotent on `(node_id, timestamp)`.
-3. **Do not assume flag uniqueness per traversal** -- a single fog gate traversal may set 1 or N flags.
+1. **Resolve flags via `event_map`** — treat flags as opaque identifiers that resolve to node_ids, not as connection identifiers.
+2. **Handle duplicate node arrivals** — multiple flags may fire for the same node in the same frame. Be idempotent on `(node_id, timestamp)`.
+3. **Do not assume flag uniqueness per traversal** — a single fog gate traversal may set 1 or N flags (N > 1 for shared entrances). All resolve to the same node.
 
-See the design spec for detailed consumer impact analysis and recommended deduplication guard.
+See the [design spec](specs/2026-03-12-region-based-zone-tracking.md#consumer-impact) for detailed consumer impact analysis and recommended deduplication guard.
 
 ## Boss Death Monitor
 
@@ -158,3 +150,7 @@ This translates the boss's vanilla defeat flag into SpeedFog's `finish_event` fl
 | `speedfog/output.py` | Flag allocation (EVENT_FLAG_BASE), event_map construction |
 | `docs/event-flags.md` | Flag ranges and EMEVD event ID allocation |
 | `docs/specs/2026-03-12-region-based-zone-tracking.md` | Full design spec (rationale, consumer impact, edge cases) |
+
+## Design History
+
+The original ZoneTrackingInjector (pre-March 2026) reverse-engineered compiled EMEVD events to match warp instructions back to graph.json connections using five heuristic strategies (entity matching, region suffix, compound key, dest-only, common event) plus a residual fallback. This was inherently fragile because FogMod's compilation discards connection identity. Collision-prone configurations required conservative Python-side validators that limited seed diversity. The region-based approach captures the mapping before compilation, eliminating the information loss. See the [design spec](specs/2026-03-12-region-based-zone-tracking.md) for the full rationale.
