@@ -58,6 +58,7 @@ class StructureConfig:
     crosslinks: bool = False  # Add cross-links between parallel branches
     first_layer_type: str | None = None
     final_boss_candidates: list[str] = field(default_factory=list)
+    start_tier: int = 1  # Enemy scaling tier for first layer (1-28)
     final_tier: int = 28  # Enemy scaling tier for final boss (1-28)
     tier_curve: str = "linear"  # "linear" or "power"
     tier_curve_exponent: float = 0.6  # Power curve exponent (only for "power")
@@ -108,12 +109,22 @@ class StructureConfig:
                 f"max_parallel_paths must be >= 2 when max_branches >= 2, "
                 f"got max_parallel_paths={self.max_parallel_paths}"
             )
+        if not isinstance(self.start_tier, int):
+            raise TypeError(
+                f"start_tier must be int, got {type(self.start_tier).__name__}"
+            )
+        if self.start_tier < 1 or self.start_tier > 28:
+            raise ValueError(f"start_tier must be 1-28, got {self.start_tier}")
         if not isinstance(self.final_tier, int):
             raise TypeError(
                 f"final_tier must be int, got {type(self.final_tier).__name__}"
             )
         if self.final_tier < 1 or self.final_tier > 28:
             raise ValueError(f"final_tier must be 1-28, got {self.final_tier}")
+        if self.start_tier > self.final_tier:
+            raise ValueError(
+                f"start_tier ({self.start_tier}) must be <= final_tier ({self.final_tier})"
+            )
         if self.min_branch_age < 0:
             raise ValueError(f"min_branch_age must be >= 0, got {self.min_branch_age}")
         if self.max_branch_spacing < 0:
@@ -473,6 +484,7 @@ class Config:
                 final_boss_candidates=structure_section.get(
                     "final_boss_candidates", []
                 ),
+                start_tier=structure_section.get("start_tier", 1),
                 final_tier=structure_section.get("final_tier", 28),
                 tier_curve=structure_section.get("tier_curve", "linear"),
                 tier_curve_exponent=structure_section.get("tier_curve_exponent", 0.6),

@@ -1340,6 +1340,7 @@ def _inject_prerequisite(
     rng: random.Random,
     final_tier: int,
     *,
+    start_tier: int = 1,
     tier_curve: str = "linear",
     tier_curve_exponent: float = 0.6,
 ) -> tuple[list[Branch], int]:
@@ -1385,6 +1386,7 @@ def _inject_prerequisite(
         current_layer,
         current_layer + 2,
         final_tier,
+        start_tier=start_tier,
         curve=tier_curve,
         exponent=tier_curve_exponent,
     )
@@ -1462,7 +1464,7 @@ def generate_dag(
         id="start",
         cluster=start_cluster,
         layer=0,
-        tier=1,
+        tier=config.structure.start_tier,
         entry_fogs=[],  # Player spawns here, no entry fog consumed
         exit_fogs=[FogRef(f["fog_id"], f["zone"]) for f in start_cluster.exit_fogs],
     )
@@ -1533,6 +1535,7 @@ def generate_dag(
             current_layer,
             10,
             config.structure.final_tier,
+            start_tier=config.structure.start_tier,
             curve=config.structure.tier_curve,
             exponent=config.structure.tier_curve_exponent,
         )
@@ -1608,6 +1611,7 @@ def generate_dag(
             current_layer,
             estimated_total,
             config.structure.final_tier,
+            start_tier=config.structure.start_tier,
             curve=config.structure.tier_curve,
             exponent=config.structure.tier_curve_exponent,
         )
@@ -1963,6 +1967,7 @@ def generate_dag(
             current_layer,
             estimated_total,
             config.structure.final_tier,
+            start_tier=config.structure.start_tier,
             curve=config.structure.tier_curve,
             exponent=config.structure.tier_curve_exponent,
         )
@@ -2085,6 +2090,7 @@ def generate_dag(
         used_zones,
         rng,
         config.structure.final_tier,
+        start_tier=config.structure.start_tier,
         tier_curve=config.structure.tier_curve,
         tier_curve_exponent=config.structure.tier_curve_exponent,
     )

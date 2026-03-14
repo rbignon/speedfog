@@ -279,6 +279,88 @@ class TestComputeTier:
         with pytest.raises(ValueError, match="Unknown tier curve"):
             compute_tier(5, 10, curve="sigmoid")
 
+    # Tests for start_tier
+
+    def test_start_tier_first_layer(self):
+        """First layer should match start_tier."""
+        assert compute_tier(0, 10, start_tier=5) == 5
+        assert compute_tier(0, 10, start_tier=10) == 10
+
+    def test_start_tier_last_layer_matches_final_tier(self):
+        """Last layer should still match final_tier."""
+        assert compute_tier(9, 10, final_tier=28, start_tier=5) == 28
+        assert compute_tier(9, 10, final_tier=20, start_tier=10) == 20
+
+    def test_start_tier_interpolation(self):
+        """Middle layers should interpolate between start_tier and final_tier."""
+        # With start_tier=5, final_tier=28, 10 layers:
+        # layer 0 -> 5, layer 9 -> 28, midpoint ~16-17
+        tier_mid = compute_tier(5, 10, final_tier=28, start_tier=5)
+        assert 5 < tier_mid < 28
+
+    def test_start_tier_single_layer(self):
+        """Single layer should return start_tier."""
+        assert compute_tier(0, 1, start_tier=5) == 5
+
+    def test_start_tier_two_layers(self):
+        """Two layers should be start_tier and final_tier."""
+        assert compute_tier(0, 2, final_tier=20, start_tier=5) == 5
+        assert compute_tier(1, 2, final_tier=20, start_tier=5) == 20
+
+    def test_start_tier_bounds(self):
+        """All tiers should be within [start_tier, final_tier]."""
+        for st in [1, 3, 5, 10]:
+            for ft in [st, st + 5, 28]:
+                if ft > 28:
+                    continue
+                for total in range(2, 15):
+                    for i in range(total):
+                        tier = compute_tier(i, total, ft, start_tier=st)
+                        assert st <= tier <= ft, (
+                            f"Tier {tier} out of [{st}, {ft}] " f"for layer {i}/{total}"
+                        )
+
+    def test_start_tier_monotonic(self):
+        """Tiers should be monotonically increasing with start_tier."""
+        for st in [3, 5, 10]:
+            for ft in [st + 5, 28]:
+                if ft > 28:
+                    continue
+                for total in [5, 10, 20]:
+                    tiers = [
+                        compute_tier(i, total, ft, start_tier=st) for i in range(total)
+                    ]
+                    for i in range(1, len(tiers)):
+                        assert tiers[i] >= tiers[i - 1], (
+                            f"Not monotonic: {tiers} "
+                            f"for start_tier={st}, final_tier={ft}, total={total}"
+                        )
+
+    def test_start_tier_with_power_curve(self):
+        """start_tier should work with power curve."""
+        tier_first = compute_tier(0, 30, 28, start_tier=5, curve="power", exponent=0.7)
+        tier_last = compute_tier(29, 30, 28, start_tier=5, curve="power", exponent=0.7)
+        assert tier_first == 5
+        assert tier_last == 28
+
+    def test_start_tier_clamped(self):
+        """start_tier below 1 should be clamped to 1."""
+        assert compute_tier(0, 10, start_tier=0) == 1
+        assert compute_tier(0, 10, start_tier=-5) == 1
+
+    def test_start_tier_equal_final_tier(self):
+        """When start_tier == final_tier, all layers should have that tier."""
+        for i in range(10):
+            assert compute_tier(i, 10, final_tier=15, start_tier=15) == 15
+
+    def test_start_tier_default_backward_compatible(self):
+        """Default start_tier=1 should produce identical results to old behavior."""
+        for total in [5, 10, 20]:
+            for i in range(total):
+                assert compute_tier(i, total, 20) == compute_tier(
+                    i, total, 20, start_tier=1
+                )
+
 
 class TestPlanLayerTypes:
     """Tests for plan_layer_types function."""

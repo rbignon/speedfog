@@ -20,6 +20,7 @@ def compute_tier(
     total_layers: int,
     final_tier: int = 28,
     *,
+    start_tier: int = 1,
     curve: str = "linear",
     exponent: float = 0.6,
 ) -> int:
@@ -29,6 +30,8 @@ def compute_tier(
         layer_idx: Zero-based index of the current layer.
         total_layers: Total number of layers in the DAG.
         final_tier: Maximum tier for the final layer (default 28, range 1-28).
+        start_tier: Minimum tier for the first layer (default 1, range 1-28).
+            Must be <= final_tier.
         curve: Progression curve type ("linear" or "power").
         exponent: Power curve exponent (only used when curve="power").
             < 1.0 (e.g. 0.6): front-loaded, harder early, gentler late game.
@@ -36,13 +39,14 @@ def compute_tier(
             > 1.0 (e.g. 1.5): back-loaded, easy early, punitive late game.
 
     Returns:
-        Difficulty tier between 1 and final_tier (inclusive).
+        Difficulty tier between start_tier and final_tier (inclusive).
     """
     if total_layers <= 1:
-        return 1
+        return start_tier
 
-    # Clamp final_tier to valid range
-    final_tier = max(1, min(28, final_tier))
+    # Clamp to valid range
+    start_tier = max(1, min(28, start_tier))
+    final_tier = max(start_tier, min(28, final_tier))
 
     progress = layer_idx / (total_layers - 1)
 
@@ -51,9 +55,9 @@ def compute_tier(
     elif curve != "linear":
         raise ValueError(f"Unknown tier curve: '{curve}'")
 
-    tier = 1 + progress * (final_tier - 1)
+    tier = start_tier + progress * (final_tier - start_tier)
 
-    return max(1, min(final_tier, int(round(tier))))
+    return max(start_tier, min(final_tier, int(round(tier))))
 
 
 def _distribute_padding(

@@ -433,6 +433,37 @@ def test_item_randomizer_validation_difficulty():
         Config.from_dict({"item_randomizer": {"difficulty": -1}})
 
 
+def test_structure_start_tier_from_toml(tmp_path):
+    """start_tier can be set from TOML."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[structure]
+start_tier = 5
+final_tier = 20
+""")
+    config = Config.from_toml(config_file)
+    assert config.structure.start_tier == 5
+    assert config.structure.final_tier == 20
+
+
+def test_structure_start_tier_default():
+    """start_tier defaults to 1."""
+    config = Config.from_dict({})
+    assert config.structure.start_tier == 1
+
+
+def test_structure_start_tier_validation():
+    """start_tier must be 1-28 and <= final_tier."""
+    import pytest
+
+    with pytest.raises(ValueError, match="start_tier must be 1-28"):
+        Config.from_dict({"structure": {"start_tier": 0}})
+    with pytest.raises(ValueError, match="start_tier must be 1-28"):
+        Config.from_dict({"structure": {"start_tier": 29}})
+    with pytest.raises(ValueError, match="start_tier.*must be <= final_tier"):
+        Config.from_dict({"structure": {"start_tier": 20, "final_tier": 10}})
+
+
 def test_structure_final_tier_from_toml(tmp_path):
     """final_tier can be set from TOML."""
     config_file = tmp_path / "config.toml"
