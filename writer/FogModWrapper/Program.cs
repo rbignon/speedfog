@@ -334,8 +334,7 @@ Example:
 
         // 5. Inject OUR connections (replaces GraphConnector.Connect())
         var injectionResult = ConnectionInjector.InjectAndExtract(
-            graph, graphData.Connections, graphData.FinishEvent, graphData.FinalNodeFlag,
-            graphData.EventMap);
+            graph, graphData.Connections, graphData.FinishEvent, graphData.FinalNodeFlag);
 
         // 6. Apply tiers for scaling
         ConnectionInjector.ApplyAreaTiers(graph, graphData.AreaTiers);
@@ -356,7 +355,11 @@ Example:
         var writer = new GameDataWriterE();
         writer.Write(opt, ann, graph, mergedMods, modDir, events, eventConfig, Console.WriteLine);
 
-        // 7a2. Copy non-English FMG files from Item Randomizer output.
+        // 7a2. Build region-to-flags mapping for zone tracking.
+        // Side.Warp is now populated by Write() (reads from MSB data).
+        injectionResult.BuildRegionToFlags(graphData.EventMap);
+
+        // 7a3. Copy non-English FMG files from Item Randomizer output.
         // FogMod only loads and writes msg/engus/ FMGs. When Item Randomizer
         // generates localized content (e.g., class descriptions in French),
         // those files are in the merge-dir but FogMod never writes them out.

@@ -15,12 +15,88 @@ public class InjectionResult
     public int FinishEvent { get; set; }
 
     /// <summary>
+    /// Entrance edge references saved during connection injection.
+    /// Side.Warp is NOT available at injection time (populated later by GameDataWriterE.Write()),
+    /// so we defer region reading to BuildRegionToFlags().
+    /// </summary>
+    internal List<(int FlagId, Graph.Edge EntranceEdge, string ConnDesc)> DeferredEdges { get; } = new();
+
+    /// <summary>
     /// Region entity → list of flag IDs for zone tracking injection.
-    /// Built from entranceEdge.Side.Warp.Region after Graph.Connect().
+    /// Built by BuildRegionToFlags() after GameDataWriterE.Write() populates Side.Warp.
     /// Single flag per region for most connections; multiple flags for shared entrances
     /// (DuplicateEntrance), all mapping to the same cluster in event_map.
     /// </summary>
     public Dictionary<int, List<int>> RegionToFlags { get; set; } = new();
+
+    /// <summary>
+    /// Read Warp.Region from deferred entrance edges and build the region-to-flags mapping.
+    /// Must be called AFTER GameDataWriterE.Write() (which populates Side.Warp from MSB data).
+    /// </summary>
+    public void BuildRegionToFlags(Dictionary<string, string> eventMap)
+    {
+        RegionToFlags.Clear();
+
+        foreach (var (flagId, entranceEdge, connDesc) in DeferredEdges)
+        {
+            var side = entranceEdge.Side;
+            if (side?.Warp == null)
+            {
+                Console.WriteLine($"  Warning: No Warp data on entrance edge for {connDesc}, " +
+                    "region-to-flag mapping skipped");
+                continue;
+            }
+
+            int region = side.Warp.Region;
+            AddRegionFlag(RegionToFlags, region, flagId);
+
+            // AlternateSide handles AlternateFlag warps (e.g., flag 300/330)
+            var altSide = side.AlternateSide;
+            if (altSide?.Warp != null)
+            {
+                AddRegionFlag(RegionToFlags, altSide.Warp.Region, flagId);
+            }
+        }
+
+        // Validate same-cluster invariant: all flags for the same region must
+        // map to the same cluster in event_map.
+        foreach (var (region, flags) in RegionToFlags)
+        {
+            string? firstCluster = null;
+            int firstFlag = 0;
+            foreach (var flag in flags)
+            {
+                if (eventMap.TryGetValue(flag.ToString(), out var cluster))
+                {
+                    if (firstCluster == null)
+                    {
+                        firstCluster = cluster;
+                        firstFlag = flag;
+                    }
+                    else if (cluster != firstCluster)
+                    {
+                        throw new Exception(
+                            $"Region {region} maps to flags in different clusters: " +
+                            $"flag {firstFlag}→{firstCluster}, flag {flag}→{cluster}. " +
+                            $"This violates the shared-entrance same-cluster invariant.");
+                    }
+                }
+            }
+        }
+
+        Console.WriteLine($"Region mapping: {RegionToFlags.Count} regions, " +
+            $"{RegionToFlags.Values.Sum(f => f.Count)} flags.");
+    }
+
+    private static void AddRegionFlag(Dictionary<int, List<int>> dict, int region, int flagId)
+    {
+        if (!dict.TryGetValue(region, out var flags))
+        {
+            flags = new List<int>();
+            dict[region] = flags;
+        }
+        flags.Add(flagId);
+    }
 }
 
 /// <summary>
@@ -30,24 +106,16 @@ public static class ConnectionInjector
 {
     /// <summary>
     /// Inject connections and extract boss defeat flag for EMEVD post-processing.
-    /// Also builds the region-to-flags mapping for zone tracking by reading
-    /// entranceEdge.Side.Warp.Region after each Graph.Connect()/DuplicateEntrance().
+    /// Saves entrance edge references for deferred region mapping (Side.Warp is
+    /// not yet populated — GameDataWriterE.Write() does that later).
+    /// Call result.BuildRegionToFlags() after Write() to build the mapping.
     /// </summary>
-    /// <param name="graph">FogMod Graph with nodes/edges constructed but not connected</param>
-    /// <param name="connections">List of connections from graph.json</param>
-    /// <param name="finishEvent">The finish_event flag ID (0 if not using v4)</param>
-    /// <param name="finalNodeFlag">Zone-tracking flag for the final boss node, used to identify
-    /// which connections lead to the final boss area and extract its DefeatFlag</param>
-    /// <param name="eventMap">Flag ID (string) → cluster ID mapping for same-cluster validation</param>
-    /// <returns>InjectionResult with boss defeat flag and region-to-flags mapping</returns>
     public static InjectionResult InjectAndExtract(
-        Graph graph, List<Connection> connections, int finishEvent, int finalNodeFlag,
-        Dictionary<string, string> eventMap)
+        Graph graph, List<Connection> connections, int finishEvent, int finalNodeFlag)
     {
         Console.WriteLine($"Injecting {connections.Count} connections...");
 
         var result = new InjectionResult { FinishEvent = finishEvent };
-        var regionToFlags = new Dictionary<int, List<int>>();
 
         // Group connections by (entrance_area, entrance_gate) to detect shared entrances.
         // Shared entrance = multiple exits connecting to the same entrance fog gate.
@@ -72,8 +140,7 @@ public static class ConnectionInjector
                 bool isSecondaryConnection = connectedEntrances.ContainsKey(key);
 
                 ConnectAndExtract(graph, conn, finalNodeFlag, result,
-                    isSharedEntrance, isSecondaryConnection, connectedEntrances,
-                    regionToFlags);
+                    isSharedEntrance, isSecondaryConnection, connectedEntrances);
             }
             catch (Exception ex)
             {
@@ -81,37 +148,8 @@ public static class ConnectionInjector
             }
         }
 
-        // Validate same-cluster invariant: all flags for the same region must map
-        // to the same cluster in event_map. This is structurally guaranteed (an entrance
-        // gate is in one zone, one cluster) but verified as a safety net.
-        foreach (var (region, flags) in regionToFlags)
-        {
-            string? firstCluster = null;
-            int firstFlag = 0;
-            foreach (var flag in flags)
-            {
-                if (eventMap.TryGetValue(flag.ToString(), out var cluster))
-                {
-                    if (firstCluster == null)
-                    {
-                        firstCluster = cluster;
-                        firstFlag = flag;
-                    }
-                    else if (cluster != firstCluster)
-                    {
-                        throw new Exception(
-                            $"Region {region} maps to flags in different clusters: " +
-                            $"flag {firstFlag}→{firstCluster}, flag {flag}→{cluster}. " +
-                            $"This violates the shared-entrance same-cluster invariant.");
-                    }
-                }
-            }
-        }
-
-        result.RegionToFlags = regionToFlags;
         Console.WriteLine($"All connections injected successfully. " +
-            $"Region mapping: {regionToFlags.Count} regions, " +
-            $"{regionToFlags.Values.Sum(f => f.Count)} flags.");
+            $"{result.DeferredEdges.Count} entrance edges saved for region mapping.");
         return result;
     }
 
@@ -122,8 +160,7 @@ public static class ConnectionInjector
     private static void ConnectAndExtract(
         Graph graph, Connection conn, int finalNodeFlag, InjectionResult result,
         bool isSharedEntrance, bool isSecondaryConnection,
-        Dictionary<string, Graph.Edge> connectedEntrances,
-        Dictionary<int, List<int>> regionToFlags)
+        Dictionary<string, Graph.Edge> connectedEntrances)
     {
         // Find the exit edge in the source area's To list
         if (!graph.Nodes.TryGetValue(conn.ExitArea, out var exitNode))
@@ -212,12 +249,11 @@ public static class ConnectionInjector
         if (conn.IgnorePair)
             Console.WriteLine($"  Using ignorePair for entry-as-exit: {conn.EntranceGate}");
 
-        // Build region-to-flags mapping for zone tracking.
-        // Region is read from entranceEdge.Side.Warp.Region — the same value that
-        // FogMod's GameDataWriterE.Write() will bake into compiled WarpPlayer instructions.
+        // Save entrance edge reference for deferred region mapping.
+        // Side.Warp is not yet populated — GameDataWriterE.Write() does that later.
         if (conn.FlagId > 0)
         {
-            RegisterRegionForFlag(regionToFlags, entranceEdge, conn.FlagId, conn);
+            result.DeferredEdges.Add((conn.FlagId, entranceEdge, conn.ToString()));
         }
 
         // Track connected entrance for shared entrance detection
@@ -247,46 +283,6 @@ public static class ConnectionInjector
                     "(will use graph.json finish_boss_defeat_flag if available)");
             }
         }
-    }
-
-    /// <summary>
-    /// Register the entrance edge's warp region(s) in the region-to-flags mapping.
-    /// Handles both primary region and AlternateSide region (for AlternateFlag warps).
-    /// </summary>
-    private static void RegisterRegionForFlag(
-        Dictionary<int, List<int>> regionToFlags, Graph.Edge entranceEdge,
-        int flagId, Connection conn)
-    {
-        var side = entranceEdge.Side;
-        if (side?.Warp == null)
-        {
-            Console.WriteLine($"  Warning: No Warp data on entrance edge for {conn}, " +
-                "region-to-flag mapping skipped");
-            return;
-        }
-
-        int region = side.Warp.Region;
-        AddRegionFlag(regionToFlags, region, flagId);
-
-        // AlternateSide handles AlternateFlag warps (e.g., flag 300/330) where
-        // the same fog gate can warp to two different map variants.
-        var altSide = side.AlternateSide;
-        if (altSide?.Warp != null)
-        {
-            int altRegion = altSide.Warp.Region;
-            AddRegionFlag(regionToFlags, altRegion, flagId);
-        }
-    }
-
-    private static void AddRegionFlag(
-        Dictionary<int, List<int>> regionToFlags, int region, int flagId)
-    {
-        if (!regionToFlags.TryGetValue(region, out var flags))
-        {
-            flags = new List<int>();
-            regionToFlags[region] = flags;
-        }
-        flags.Add(flagId);
     }
 
     /// <summary>
