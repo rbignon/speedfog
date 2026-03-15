@@ -141,15 +141,16 @@ class FogData:
         tags_lower = [t.lower() for t in self.tags]
         # norandom/unused: explicitly non-randomizable
         # segmentonly: only valid within a connected segment, not as independent connections
-        # baseonly: special progression warps (Pureblood Knight's Medal,
-        #   DLC entry) unsuitable for DAG randomization
+        # openremove: FogMod marks these unused+remove in crawl mode
+        #   (e.g., Rold Lift uniquegates) — not in FogMod's graph
+        # Note: "baseonly" is NOT filtered here. FogMod only marks baseonly
+        # entrances unused when ExcludeMode == Base (Graph.cs:1279-1283),
+        # which SpeedFog doesn't set. These entrances create valid edges
+        # in FogMod's graph (e.g., 12052021 Pureblood Knight's Medal → mohgwyn).
         return (
             "norandom" in tags_lower
             or "unused" in tags_lower
             or "segmentonly" in tags_lower
-            or "baseonly" in tags_lower
-            # openremove: FogMod marks these unused+remove in crawl mode
-            # (e.g., Rold Lift uniquegates) — not in FogMod's graph
             or "openremove" in tags_lower
         )
 
@@ -889,10 +890,24 @@ def classify_fogs(
         if fog.is_unique:
             # Unique fogs are one-way warps (sending gates, abductors, etc.)
             # ASide is exit only - FogMod can redirect where the warp sends you
-            if aside_cond_ok:
-                zone_fogs[aside_area].exit_fogs.append(fog)
             # BSide is an entry_fog when its condition is met — zones that
             # shouldn't appear (e.g., underground) are filtered downstream
+            #
+            # In crawl mode, FogMod marks unique warps as unused when exactly
+            # one side is core and the other is non-core (Graph.cs:1251-1271).
+            # e.g., Entrance 12052020 (snowfield→mohgwyn): ASide has tag "open"
+            # → non-core in crawl mode → entire entrance marked unused+remove.
+            # We must skip these to avoid generating connections to non-existent
+            # edges in FogMod's graph.
+            if not is_warp_edge_active(fog):
+                continue
+            # baseonly warps (e.g., Pureblood Knight's Medal) are special
+            # progression items usable "from anywhere" — not physical gates.
+            # Only add BSide (entry into destination) for DAG connections,
+            # not ASide (would create a non-physical exit from ASide zone).
+            is_baseonly = "baseonly" in tags_lower
+            if aside_cond_ok and not is_baseonly:
+                zone_fogs[aside_area].exit_fogs.append(fog)
             if bside_cond_ok:
                 zone_fogs[bside_area].entry_fogs.append(fog)
         elif fog.is_uniquegate:

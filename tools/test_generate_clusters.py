@@ -191,7 +191,12 @@ class TestParseFog:
         assert fog.is_norandom is True
 
     def test_parse_baseonly_fog(self):
-        """Baseonly fogs are excluded (special progression warps)."""
+        """Baseonly fogs are NOT excluded — FogMod includes them unless ExcludeMode==Base.
+
+        SpeedFog doesn't set ExcludeMode, so baseonly entrances create valid edges.
+        e.g., 12052021 (Pureblood Knight's Medal -> mohgwyn).
+        See Graph.cs:1279-1283.
+        """
         fog_data = {
             "Name": "test",
             "ID": 12345,
@@ -201,7 +206,7 @@ class TestParseFog:
         }
         fog = parse_fog(fog_data)
 
-        assert fog.is_norandom is True
+        assert fog.is_norandom is False
 
     def test_parse_openremove_fog(self):
         """Openremove fogs are excluded (FogMod removes in crawl mode)."""
