@@ -11,9 +11,11 @@ from generate_clusters import (
     WorldConnection,
     WorldGraph,
     ZoneFogs,
+    KEY_ITEMS,
     _is_side_core,
     _pick_display_name,
     _resolve_zone_type,
+    apply_cluster_merges,
     build_world_graph,
     classify_fogs,
     clusters_to_json,
@@ -28,8 +30,10 @@ from generate_clusters import (
     get_zone_type,
     is_condition_guaranteed,
     is_warp_edge_active,
+    load_metadata,
     parse_area,
     parse_fog,
+    parse_fog_txt,
     parse_tags,
     should_exclude_area,
 )
@@ -3710,3 +3714,101 @@ class TestPickDisplayName:
         result = clusters_to_json([cluster], areas)
         cluster_entry = result["clusters"][0]
         assert cluster_entry["display_name"] == "Nice Dungeon Area"
+
+
+class TestApplyClusterMerges:
+    """Tests for apply_cluster_merges function."""
+
+    def test_basic_merge(self):
+        """Merging zone A's cluster into zone B's cluster unions their zones."""
+        cluster_a = Cluster(zones=frozenset({"zone_a"}))
+        cluster_b = Cluster(zones=frozenset({"zone_b"}))
+        metadata = {"zones": {"zone_a": {"merge_into": "zone_b"}}}
+
+        result = apply_cluster_merges([cluster_a, cluster_b], metadata)
+
+        assert len(result) == 1
+        assert result[0].zones == frozenset({"zone_a", "zone_b"})
+
+    def test_no_merges(self):
+        """Without merge_into, clusters remain unchanged."""
+        cluster_a = Cluster(zones=frozenset({"zone_a"}))
+        cluster_b = Cluster(zones=frozenset({"zone_b"}))
+        metadata = {"zones": {}}
+
+        result = apply_cluster_merges([cluster_a, cluster_b], metadata)
+
+        assert len(result) == 2
+
+    def test_merge_target_not_found(self):
+        """merge_into referencing unknown zone logs warning, keeps cluster."""
+        cluster_a = Cluster(zones=frozenset({"zone_a"}))
+        metadata = {"zones": {"zone_a": {"merge_into": "nonexistent"}}}
+
+        result = apply_cluster_merges([cluster_a], metadata)
+
+        # Cluster kept as-is when target not found
+        assert len(result) == 1
+        assert result[0].zones == frozenset({"zone_a"})
+
+    def test_merge_multizone_source(self):
+        """Source cluster with multiple zones merges all into target."""
+        cluster_a = Cluster(zones=frozenset({"zone_a", "zone_a2"}))
+        cluster_b = Cluster(zones=frozenset({"zone_b"}))
+        metadata = {"zones": {"zone_a": {"merge_into": "zone_b"}}}
+
+        result = apply_cluster_merges([cluster_a, cluster_b], metadata)
+
+        assert len(result) == 1
+        assert result[0].zones == frozenset({"zone_a", "zone_a2", "zone_b"})
+
+    def test_merge_does_not_affect_other_clusters(self):
+        """Unrelated clusters are preserved."""
+        cluster_a = Cluster(zones=frozenset({"zone_a"}))
+        cluster_b = Cluster(zones=frozenset({"zone_b"}))
+        cluster_c = Cluster(zones=frozenset({"zone_c"}))
+        metadata = {"zones": {"zone_a": {"merge_into": "zone_b"}}}
+
+        result = apply_cluster_merges([cluster_a, cluster_b, cluster_c], metadata)
+
+        assert len(result) == 2
+        merged = next(c for c in result if "zone_b" in c.zones)
+        assert merged.zones == frozenset({"zone_a", "zone_b"})
+        other = next(c for c in result if "zone_c" in c.zones)
+        assert other.zones == frozenset({"zone_c"})
+
+    def test_duplicate_clusters_containing_merged_zone_are_removed(self):
+        """If zone_a appears in multiple clusters, all are consumed by merge."""
+        cluster_a1 = Cluster(zones=frozenset({"zone_a"}))
+        cluster_a2 = Cluster(zones=frozenset({"zone_a", "zone_extra"}))
+        cluster_b = Cluster(zones=frozenset({"zone_b"}))
+        metadata = {"zones": {"zone_a": {"merge_into": "zone_b"}}}
+
+        result = apply_cluster_merges([cluster_a1, cluster_a2, cluster_b], metadata)
+
+        merged = next(c for c in result if "zone_b" in c.zones)
+        assert "zone_a" in merged.zones
+        assert "zone_extra" in merged.zones
+        assert len(result) == 1
+        # No leftover cluster containing zone_a
+        assert all("zone_a" not in c.zones or "zone_b" in c.zones for c in result)
+
+    def test_already_same_cluster_is_noop(self):
+        """If source and target are already in the same cluster, nothing changes."""
+        cluster_ab = Cluster(zones=frozenset({"zone_a", "zone_b"}))
+        metadata = {"zones": {"zone_a": {"merge_into": "zone_b"}}}
+
+        result = apply_cluster_merges([cluster_ab], metadata)
+
+        assert len(result) == 1
+        assert result[0].zones == frozenset({"zone_a", "zone_b"})
+
+    def test_source_zone_not_in_any_cluster(self):
+        """If source zone doesn't exist in any cluster, merge is silently skipped."""
+        cluster_b = Cluster(zones=frozenset({"zone_b"}))
+        metadata = {"zones": {"zone_missing": {"merge_into": "zone_b"}}}
+
+        result = apply_cluster_merges([cluster_b], metadata)
+
+        assert len(result) == 1
+        assert result[0].zones == frozenset({"zone_b"})
