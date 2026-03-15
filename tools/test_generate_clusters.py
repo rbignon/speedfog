@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 from generate_clusters import (
+    KEY_ITEMS,
     AreaData,
     Cluster,
     FogData,
@@ -11,7 +12,6 @@ from generate_clusters import (
     WorldConnection,
     WorldGraph,
     ZoneFogs,
-    KEY_ITEMS,
     _is_side_core,
     _pick_display_name,
     _resolve_zone_type,
@@ -3812,3 +3812,79 @@ class TestApplyClusterMerges:
 
         assert len(result) == 1
         assert result[0].zones == frozenset({"zone_b"})
+
+
+class TestApplyClusterMergesIntegration:
+    """Integration tests using real fog.txt data (skipped if unavailable)."""
+
+    @pytest.fixture
+    def real_data(self):
+        """Load real fog.txt and metadata if available."""
+        from pathlib import Path
+
+        fog_txt = Path(__file__).parent.parent / "data" / "fog.txt"
+        metadata_path = Path(__file__).parent.parent / "data" / "zone_metadata.toml"
+        if not fog_txt.exists():
+            pytest.skip("data/fog.txt not available")
+
+        parsed = parse_fog_txt(fog_txt)
+        areas = parsed["areas"]
+        key_items = parsed["key_items"] | KEY_ITEMS
+        zones_to_process = {
+            name
+            for name, area in areas.items()
+            if not should_exclude_area(area, exclude_dlc=False, exclude_overworld=True)
+            and name not in get_evergaol_zones(parsed["entrances"], parsed["warps"])
+        }
+        world_graph = build_world_graph(
+            areas, key_items, allowed_zones=zones_to_process
+        )
+        zone_fogs = classify_fogs(parsed["entrances"], parsed["warps"], areas)
+        metadata = load_metadata(metadata_path)
+
+        clusters = generate_clusters(zones_to_process, world_graph)
+        return clusters, metadata, world_graph, zone_fogs
+
+    def test_preradahn_merged_into_radahn(self, real_data):
+        """caelid_preradahn should be merged into caelid_radahn's cluster."""
+        clusters, metadata, world_graph, zone_fogs = real_data
+
+        merged = apply_cluster_merges(clusters, metadata, zone_fogs=zone_fogs)
+
+        # After merge, no cluster should contain only caelid_preradahn
+        preradahn_clusters = [c for c in merged if "caelid_preradahn" in c.zones]
+        assert len(preradahn_clusters) == 1
+        assert "caelid_radahn" in preradahn_clusters[0].zones
+
+    def test_sending_gate_becomes_internal_after_merge(self, real_data):
+        """The sending gate 1051382300 should not be an exit/entry fog after merge."""
+        clusters, metadata, world_graph, zone_fogs = real_data
+
+        merged = apply_cluster_merges(clusters, metadata, zone_fogs=zone_fogs)
+
+        # Compute fogs on the merged cluster
+        for cluster in merged:
+            compute_cluster_fogs(cluster, world_graph, zone_fogs)
+
+        radahn_cluster = next(c for c in merged if "caelid_radahn" in c.zones)
+
+        # The sending gate should not appear in exit_fogs or entry_fogs
+        exit_fog_ids = {f["fog_id"] for f in radahn_cluster.exit_fogs}
+        entry_fog_ids = {f["fog_id"] for f in radahn_cluster.entry_fogs}
+        assert (
+            "1051382300" not in exit_fog_ids
+        ), "Sending gate should be internal, not an exit"
+        assert (
+            "1051382300" not in entry_fog_ids
+        ), "Sending gate should be internal, not an entry"
+
+    def test_radahn_cluster_has_entries(self, real_data):
+        """Merged radahn cluster should still have entry fogs."""
+        clusters, metadata, world_graph, zone_fogs = real_data
+
+        merged = apply_cluster_merges(clusters, metadata, zone_fogs=zone_fogs)
+        for cluster in merged:
+            compute_cluster_fogs(cluster, world_graph, zone_fogs)
+
+        radahn_cluster = next(c for c in merged if "caelid_radahn" in c.zones)
+        assert len(radahn_cluster.entry_fogs) > 0, "Radahn cluster must have entry fogs"

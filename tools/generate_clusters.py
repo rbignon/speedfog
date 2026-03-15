@@ -972,6 +972,7 @@ def generate_clusters(
 def apply_cluster_merges(
     clusters: list[Cluster],
     metadata: dict,
+    zone_fogs: dict[str, ZoneFogs] | None = None,
 ) -> list[Cluster]:
     """
     Merge clusters based on merge_into declarations in zone metadata.
@@ -1042,6 +1043,34 @@ def apply_cluster_merges(
                 f"  Merged cluster ({', '.join(sorted(source_cluster.zones))}) "
                 f"into ({', '.join(sorted(target_cluster.zones))})"
             )
+
+    # Remove fogs between merged zones from zone_fogs so that
+    # compute_cluster_fogs() treats them as internal (not entry/exit).
+    # This only affects newly merged zone pairs, not pre-existing multi-zone clusters.
+    if zone_fogs is not None:
+        for _source_zone, target_zone in merges.items():
+            target_cluster = zone_to_cluster.get(target_zone)
+            if target_cluster is None:
+                continue
+            merged_zones = target_cluster.zones
+            for zone in merged_zones:
+                if zone not in zone_fogs:
+                    continue
+                zf = zone_fogs[zone]
+                zf.entry_fogs = [
+                    f
+                    for f in zf.entry_fogs
+                    if not (
+                        f.aside.area in merged_zones and f.bside.area in merged_zones
+                    )
+                ]
+                zf.exit_fogs = [
+                    f
+                    for f in zf.exit_fogs
+                    if not (
+                        f.aside.area in merged_zones and f.bside.area in merged_zones
+                    )
+                ]
 
     # Return clusters excluding consumed ones
     return [c for c in clusters if id(c) not in consumed]
@@ -1982,7 +2011,7 @@ def main() -> int:
     metadata = load_metadata(args.metadata)
 
     # Apply cluster merges (must happen before fog computation)
-    clusters = apply_cluster_merges(clusters, metadata)
+    clusters = apply_cluster_merges(clusters, metadata, zone_fogs=zone_fogs)
 
     # Compute fogs for each cluster
     for cluster in clusters:
