@@ -141,47 +141,6 @@ class Dag:
         """Get all edges targeting a node."""
         return [e for e in self.edges if e.target_id == node_id]
 
-    def enumerate_paths(self) -> list[list[str]]:
-        """Enumerate all unique paths from start to end.
-
-        A path is a sequence of node IDs. Multiple edges between the same
-        pair of nodes (different fog gates) are treated as a single connection
-        for path enumeration purposes.
-
-        Returns:
-            List of paths, where each path is a list of node IDs.
-            Returns empty list if start_id or end_id is not set.
-        """
-        if not self.start_id or not self.end_id:
-            return []
-
-        paths: list[list[str]] = []
-
-        def dfs(node_id: str, current_path: list[str]) -> None:
-            current_path = current_path + [node_id]
-            if node_id == self.end_id:
-                paths.append(current_path)
-                return
-            # Get unique target nodes (ignore multiple edges to same target)
-            targets = {edge.target_id for edge in self.get_outgoing_edges(node_id)}
-            for target_id in sorted(targets):
-                dfs(target_id, current_path)
-
-        dfs(self.start_id, [])
-        return paths
-
-    def path_weight(self, path: list[str]) -> int:
-        """Calculate total weight of a path.
-
-        Args:
-            path: List of node IDs in the path
-
-        Returns:
-            Sum of cluster weights for all nodes in the path.
-            Returns 0 for empty path.
-        """
-        return sum(self.nodes[nid].cluster.weight for nid in path if nid in self.nodes)
-
     def total_nodes(self) -> int:
         """Return the total number of nodes in the DAG."""
         return len(self.nodes)

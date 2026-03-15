@@ -274,16 +274,16 @@ class TestExportSpoilerLog:
         # Should have weight annotations
         assert "(w:" in content
 
-    def test_contains_paths_section(self, tmp_path: Path):
-        """export_spoiler_log output contains paths section."""
+    def test_contains_node_details_section(self, tmp_path: Path):
+        """export_spoiler_log output contains node details section."""
         dag = make_test_dag()
         output_file = tmp_path / "spoiler.txt"
 
         export_spoiler_log(dag, output_file)
 
         content = output_file.read_text(encoding="utf-8")
-        # Should have paths information
-        assert "path" in content.lower()
+        # Should have node details information
+        assert "NODE DETAILS" in content
 
     def test_major_boss_end_shows_final_boss(self, tmp_path: Path):
         """Spoiler log shows [final_boss] for end node even if cluster is major_boss."""

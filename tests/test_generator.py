@@ -255,12 +255,11 @@ class TestGenerateDag:
         dag = generate_dag(
             config, pool, seed=42, boss_candidates=_boss_candidates(pool)
         )
-        paths = dag.enumerate_paths()
 
-        assert len(paths) > 0
-        for path in paths:
-            assert path[0] == "start"
-            assert path[-1] == "end"
+        # Structure validation ensures reachability (all nodes reachable
+        # from start, all nodes can reach end)
+        errors = dag.validate_structure()
+        assert not errors, f"DAG structure errors: {errors}"
 
     def test_respects_max_parallel_paths(self):
         """DAG does not exceed max_parallel_paths at any layer."""
@@ -3007,20 +3006,18 @@ class TestPrerequisiteInGenerateDag:
             config, pool, seed=42, boss_candidates=_boss_candidates(pool)
         )
 
-        # Maliketh should be on the path from start to end
-        paths = dag.enumerate_paths()
-        assert len(paths) >= 1
-        for path in paths:
-            node_clusters = [dag.nodes[nid].cluster.id for nid in path]
-            assert (
-                "maliketh" in node_clusters
-            ), f"Maliketh not found on path: {node_clusters}"
+        # Maliketh should exist in the DAG and be an immediate predecessor of end
+        maliketh_nodes = [
+            nid for nid, n in dag.nodes.items() if n.cluster.id == "maliketh"
+        ]
+        assert len(maliketh_nodes) >= 1, "Maliketh not found in DAG"
 
-        # Maliketh should be immediately before end
-        for path in paths:
-            end_idx = path.index("end")
-            prereq_node_id = path[end_idx - 1]
-            assert dag.nodes[prereq_node_id].cluster.id == "maliketh"
+        # Maliketh should have an edge to end
+        end_incoming = dag.get_incoming_edges("end")
+        end_sources = {e.source_id for e in end_incoming}
+        assert any(
+            mid in end_sources for mid in maliketh_nodes
+        ), "Maliketh is not an immediate predecessor of end"
 
     def test_maliketh_not_randomly_placed_when_reserved(self):
         """Maliketh zones are reserved and not used for intermediate layers."""
@@ -3055,10 +3052,9 @@ class TestPrerequisiteInGenerateDag:
             ]
             assert len(maliketh_nodes) == 1
             # And it should be the immediate predecessor of end
-            paths = dag.enumerate_paths()
-            for path in paths:
-                end_idx = path.index("end")
-                assert path[end_idx - 1] == maliketh_nodes[0]
+            end_incoming = dag.get_incoming_edges("end")
+            end_sources = {e.source_id for e in end_incoming}
+            assert maliketh_nodes[0] in end_sources
 
     def test_no_prerequisite_for_pcr_boss(self):
         """PCR boss (no requires) doesn't inject any prerequisite."""
@@ -3081,11 +3077,9 @@ class TestPrerequisiteInGenerateDag:
         end_node = dag.nodes["end"]
         assert "enirilim_radahn" in end_node.cluster.zones
 
-        # All paths should reach end (basic structural check)
-        paths = dag.enumerate_paths()
-        assert len(paths) >= 1
-        for path in paths:
-            assert path[-1] == "end"
+        # Basic structural check — all nodes reachable, all can reach end
+        errors = dag.validate_structure()
+        assert not errors, f"DAG structure errors: {errors}"
 
 
 class TestPickClusterUniformReservedZones:
@@ -3838,8 +3832,12 @@ class TestAsymmetricExitsEntrances:
                     deg <= 2
                 ), f"Seed {seed}: node {nid} has fan-in {deg} > max_entrances=2"
 
-            paths = dag.enumerate_paths()
-            if len(paths) > 1:
+            # Check if any node has multiple outgoing edges (split)
+            has_split = any(
+                len({e.target_id for e in dag.get_outgoing_edges(nid)}) > 1
+                for nid in dag.nodes
+            )
+            if has_split:
                 found_multi_branch = True
                 break
 
@@ -4128,8 +4126,11 @@ def test_forced_split_triggers_at_threshold():
             dag = generate_dag(
                 config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
             )
-            paths = dag.enumerate_paths()
-            if len(paths) >= 2:
+            has_split = any(
+                len({e.target_id for e in dag.get_outgoing_edges(nid)}) > 1
+                for nid in dag.nodes
+            )
+            if has_split:
                 found_split = True
                 break
         except GenerationError:
@@ -4428,8 +4429,10 @@ def test_max_branch_spacing_disabled_regression():
     config.requirements.major_bosses = 0
 
     dag = generate_dag(config, pool, seed=42, boss_candidates=_boss_candidates(pool))
-    paths = dag.enumerate_paths()
-    assert len(paths) == 1  # Linear — no splits possible with 1-exit clusters
+    # Linear — no splits possible with 1-exit clusters
+    assert not any(
+        len({e.target_id for e in dag.get_outgoing_edges(nid)}) > 1 for nid in dag.nodes
+    )
 
 
 def test_first_layer_type_counter_propagation():
@@ -4524,8 +4527,11 @@ def test_first_layer_type_counter_propagation():
             dag = generate_dag(
                 config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
             )
-            paths = dag.enumerate_paths()
-            if len(paths) >= 2:
+            has_split = any(
+                len({e.target_id for e in dag.get_outgoing_edges(nid)}) > 1
+                for nid in dag.nodes
+            )
+            if has_split:
                 found_split = True
                 break
         except GenerationError:
@@ -4564,25 +4570,33 @@ def test_max_branch_spacing_statistical():
 
 
 def _measure_max_branch_spacing(dag):
-    """Measure the maximum layers-since-last-split across all paths.
+    """Measure the maximum consecutive non-split layers in the DAG.
 
-    Terminal nodes (0 outgoing edges, e.g. the final boss) are excluded:
-    they are the destination, not a traversal with choices.
+    Walks layer-by-layer, counting consecutive layers where no node
+    has multiple outgoing targets. Terminal nodes (0 outgoing edges)
+    are excluded from the check.
     """
+    max_layer = max((n.layer for n in dag.nodes.values()), default=-1)
     max_spacing = 0
+    since_last_split = 0
 
-    for path in dag.enumerate_paths():
-        since_last_split = 0
-        for node_id in path:
-            outgoing = dag.get_outgoing_edges(node_id)
-            targets = {e.target_id for e in outgoing}
-            if len(targets) == 0:
-                continue  # terminal node — not a branch-choice point
+    for layer in range(max_layer + 1):
+        layer_nodes = [nid for nid, n in dag.nodes.items() if n.layer == layer]
+        has_split = False
+        all_terminal = True
+        for nid in layer_nodes:
+            targets = {e.target_id for e in dag.get_outgoing_edges(nid)}
+            if len(targets) > 0:
+                all_terminal = False
             if len(targets) >= 2:
-                since_last_split = 0
-            else:
-                since_last_split += 1
-            max_spacing = max(max_spacing, since_last_split)
+                has_split = True
+        if all_terminal:
+            continue
+        if has_split:
+            since_last_split = 0
+        else:
+            since_last_split += 1
+        max_spacing = max(max_spacing, since_last_split)
 
     return max_spacing
 

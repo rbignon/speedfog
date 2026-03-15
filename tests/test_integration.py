@@ -105,7 +105,7 @@ class TestFullPipeline:
         spoiler_content = spoiler_path.read_text()
         assert "SPEEDFOG SPOILER" in spoiler_content
         assert f"seed: {result.seed}" in spoiler_content
-        assert "PATH SUMMARY" in spoiler_content
+        assert "NODE DETAILS" in spoiler_content
         # ASCII graph should have box-drawing characters
         assert "│" in spoiler_content
 

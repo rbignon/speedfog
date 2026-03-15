@@ -759,13 +759,10 @@ def analyze_dags(
     """Analyze a set of generated DAGs."""
     cluster_counts: Counter[str] = Counter()
     type_counts: Counter[str] = Counter()
-    path_counts: list[int] = []
     node_counts: list[int] = []
     max_branch_counts: list[int] = []
 
     for dag in dags:
-        paths = dag.enumerate_paths()
-        path_counts.append(len(paths))
         node_counts.append(len(dag.nodes))
 
         # Track max parallel branches (max nodes at same layer)
@@ -785,20 +782,10 @@ def analyze_dags(
     )
 
     if dags:
-        avg_paths = sum(path_counts) / len(path_counts)
         avg_nodes = sum(node_counts) / len(node_counts)
         avg_branches = sum(max_branch_counts) / len(max_branch_counts)
-        linear = sum(1 for p in path_counts if p == 1)
-        print(
-            f"  Avg paths: {avg_paths:.1f}  (linear: {linear}/{len(dags)} = {linear/len(dags)*100:.0f}%)"
-        )
         print(f"  Avg nodes: {avg_nodes:.1f}")
         print(f"  Avg max branches: {avg_branches:.1f}")
-        print(
-            f"  Path distribution: 1={sum(1 for p in path_counts if p==1)}, "
-            f"2={sum(1 for p in path_counts if p==2)}, "
-            f"3+={sum(1 for p in path_counts if p>=3)}"
-        )
 
     # Distribution metrics per type
     for ctype in ["mini_dungeon", "boss_arena", "major_boss", "legacy_dungeon"]:

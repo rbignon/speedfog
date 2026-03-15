@@ -9,7 +9,6 @@ import sys
 import time
 from pathlib import Path
 
-from speedfog.balance import report_balance
 from speedfog.care_package import sample_care_package
 from speedfog.clusters import load_clusters
 from speedfog.config import Config, load_config
@@ -216,20 +215,10 @@ def main() -> int:
     # Print summary
     if args.verbose or config.seed == 0:
         print(f"Generated DAG with seed {actual_seed}")
-        paths = dag.enumerate_paths()
         print(f"  Layers: {max((n.layer for n in dag.nodes.values()), default=0) + 1}")
         print(f"  Nodes: {len(dag.nodes)}")
-        print(f"  Paths: {len(paths)}")
         if dag.crosslinks_added > 0:
             print(f"  Cross-links: {dag.crosslinks_added}")
-        if paths:
-            weights = [dag.path_weight(p) for p in paths]
-            print(f"  Path weights: {weights}")
-
-    # Print balance report in verbose mode
-    if args.verbose:
-        print()
-        print(report_balance(dag, config.budget))
 
     # Create output directory: <output>/<seed>/
     seed_dir = output_dir / str(actual_seed)

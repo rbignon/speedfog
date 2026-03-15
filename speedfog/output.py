@@ -269,7 +269,7 @@ def dag_to_dict(
         Dictionary with the following structure:
         - version: "4.1"
         - seed: int
-        - total_layers, total_nodes, total_zones, total_paths: metadata
+        - total_layers, total_nodes, total_zones: metadata
         - options: dict of FogMod options
         - nodes: dict of cluster_id -> {type, display_name, zones, layer, tier, weight}
         - edges: list of {from, to}
@@ -368,7 +368,6 @@ def dag_to_dict(
 
     # Calculate metadata
     total_layers = max((n.layer for n in dag.nodes.values()), default=-1) + 1
-    total_paths = len(dag.enumerate_paths())
 
     # Build nodes section: cluster_id -> metadata
     nodes: dict[str, dict[str, Any]] = {}
@@ -523,7 +522,6 @@ def dag_to_dict(
         "total_layers": total_layers,
         "total_nodes": dag.total_nodes(),
         "total_zones": dag.total_zones(),
-        "total_paths": total_paths,
         "options": options,
         "nodes": nodes,
         "edges": edges_list,
@@ -974,8 +972,6 @@ def export_spoiler_log(
     lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     lines.append("=" * 60)
     lines.append(f"Total zones: {dag.total_zones()}")
-    paths = dag.enumerate_paths()
-    lines.append(f"Total paths: {len(paths)}")
     if dag.crosslinks_added > 0:
         lines.append(f"Cross-links: {dag.crosslinks_added}")
     lines.append("")
@@ -1085,20 +1081,6 @@ def export_spoiler_log(
             info_parts.append(info.center(col_width))
         info_line = " " * offset + "".join(info_parts)
         lines.append(info_line)
-
-    lines.append("")
-    lines.append("=" * 60)
-    lines.append("PATH SUMMARY")
-    lines.append("=" * 60)
-
-    for i, path in enumerate(paths, 1):
-        weight = dag.path_weight(path)
-        # Use cluster IDs, truncated to same length as graph
-        path_str = " → ".join(
-            dag.nodes[nid].cluster.id[:max_name_len] if nid in dag.nodes else nid
-            for nid in path
-        )
-        lines.append(f"Path {i} (weight {weight}): {path_str}")
 
     # NODE DETAILS section
     lines.append("")

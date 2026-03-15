@@ -38,8 +38,6 @@ def validate_dag(
     - Entry fog consistency (incoming edges match entry_fogs count)
     - Entry zone membership (entry_fog.zone ∈ target cluster zones)
     - Minimum requirements (bosses, legacy_dungeons, mini_dungeons)
-    - Path count (no paths = error, single path = warning)
-    - Weight spread (path weight disparity = warnings)
     - Layer count (few layers = warning)
 
     Args:
@@ -76,9 +74,6 @@ def validate_dag(
 
     # Check minimum requirements
     _check_requirements(dag, config, errors)
-
-    # Check paths
-    _check_paths(dag, config, errors, warnings)
 
     # Check layer count
     _check_layers(dag, config, warnings)
@@ -155,38 +150,6 @@ def _check_requirements(dag: Dag, config: Config, errors: list[str]) -> None:
         for zone in req.zones:
             if zone not in all_zones:
                 errors.append(f"Required zone missing: '{zone}'")
-
-
-def _check_paths(
-    dag: Dag, config: Config, errors: list[str], warnings: list[str]
-) -> None:
-    """Check path count and weights.
-
-    Args:
-        dag: The DAG to check.
-        config: Configuration with budget.
-        errors: List to append errors to.
-        warnings: List to append warnings to.
-    """
-    paths = dag.enumerate_paths()
-
-    # No paths = error
-    if len(paths) == 0:
-        errors.append("No paths from start to end")
-        return
-
-    # Single path = warning
-    if len(paths) == 1:
-        warnings.append("Only a single path exists (no parallel branches)")
-
-    # Check weight spread across paths
-    weights = [dag.path_weight(path) for path in paths]
-    spread = max(weights) - min(weights)
-    if spread > config.budget.tolerance:
-        warnings.append(
-            f"Path weight spread {spread} exceeds tolerance {config.budget.tolerance} "
-            f"(min: {min(weights)}, max: {max(weights)})"
-        )
 
 
 def _check_no_duplicate_edges(dag: Dag) -> list[str]:
