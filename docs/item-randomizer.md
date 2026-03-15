@@ -29,9 +29,7 @@ config.toml                    item_config.json                C# Models
                             "enemy_options": {...},          .EnemyOptions
 [enemy]                     "helper_options": {...} }        .HelperOptions
   randomize_bosses                                       EnemyOptionsConfig
-  lock_final_boss                                           .RandomizeBosses
-                                                            .LockFinalBoss
-                                                            .FinishBossDefeatFlag
+                                                            .RandomizeBosses
 ```
 
 ### Python Config Classes
@@ -39,7 +37,7 @@ config.toml                    item_config.json                C# Models
 | Class | TOML Section | Key Fields |
 |-------|-------------|------------|
 | `ItemRandomizerConfig` | `[item_randomizer]` | `enabled`, `difficulty` (0-100), `dlc`, `remove_requirements`, `reduce_upgrade_cost`, `auto_upgrade_weapons`, `auto_upgrade_dropped`, `nerf_gargoyles`, `item_preset` |
-| `EnemyConfig` | `[enemy]` | `randomize_bosses`, `lock_final_boss` |
+| `EnemyConfig` | `[enemy]` | `randomize_bosses` |
 
 ### item_config.json Fields
 
@@ -106,19 +104,6 @@ Miniboss       ──────► MinorBoss pool (ManualParent=MinorBoss, ove
 Boss           ──────► own pool (major bosses swap among themselves only)
 ```
 
-### Final Boss Locking
-
-When `lock_final_boss = true` and `finish_boss_defeat_flag > 0`:
-
-1. The defeat flag is added to `DontRandomizeIDs`
-2. For base game bosses (flag in range 1.2B-2B): also adds `flag - 200_000_000` (the entity ID)
-
-This prevents the run's final boss from being swapped out by enemy randomization.
-
-**DefeatFlag conventions:**
-- Base game bosses: `DefeatFlag = entity_id + 200_000_000` (e.g., entity 1050800 -> defeat flag 1_201_050_800)
-- DLC bosses (entity >= 2B): `DefeatFlag IS entity_id`
-
 ## Boss Placement Capture
 
 RandomizerCommon prints boss swap info to stdout. ItemRandomizerWrapper captures this using `TeeTextWriter` (dual-output to console + StringWriter), then parses it with `BossPlacementParser`.
@@ -152,6 +137,10 @@ In `main.py`, after ItemRandomizerWrapper completes:
 3. `append_boss_placements_to_spoiler()` adds a boss placement section to spoiler.txt
 
 Matching logic (in `_match_boss_placement`): tries `str(defeat_flag)` first, then `str(defeat_flag - 200_000_000)` for base game bosses.
+
+**DefeatFlag conventions:**
+- Base game bosses: `DefeatFlag = entity_id + 200_000_000` (e.g., entity 1050800 -> defeat flag 1_201_050_800)
+- DLC bosses (entity >= 2B): `DefeatFlag IS entity_id`
 
 ## Integration with FogModWrapper
 

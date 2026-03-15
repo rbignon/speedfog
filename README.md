@@ -155,7 +155,6 @@ enabled = true                  # Item Randomizer integration
 
 [enemy]
 randomize_bosses = "none"       # "none", "minor", or "all"
-# lock_final_boss = true        # Keep the final boss in place
 ```
 
 ## How It Works
