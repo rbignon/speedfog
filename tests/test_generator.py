@@ -4177,9 +4177,10 @@ def test_forced_split_targets_most_stale_branch():
     dag.add_node(n_stale)
 
     # Branch A: recently split (counter=0), Branch B: stale (counter=5)
+    # Same parent node — anti-micro-merge blocks REBALANCE, forcing SPLIT
     branches = [
         Branch("b_fresh", "n_fresh", FogRef("xf", "zf"), layers_since_last_split=0),
-        Branch("b_stale", "n_stale", FogRef("xs", "zs"), layers_since_last_split=5),
+        Branch("b_stale", "n_fresh", FogRef("xs", "zs"), layers_since_last_split=5),
     ]
 
     # Splittable cluster (2+ exits)
@@ -4703,12 +4704,14 @@ def test_execute_rebalance_layer_basic():
         config=config,
     )
 
+    result_branches, layers_used = result
     # Same number of branches (rebalance is N -> N)
-    assert len(result) == 3
+    assert len(result_branches) == 3
+    assert layers_used == 1
     # At least one branch has counter = 0 (from the split)
-    assert any(b.layers_since_last_split == 0 for b in result)
+    assert any(b.layers_since_last_split == 0 for b in result_branches)
     # No branch named "a" remains (it was split into children)
-    assert not any(b.id == "a" for b in result)
+    assert not any(b.id == "a" for b in result_branches)
 
 
 def test_execute_rebalance_layer_no_merge_pair():
@@ -4867,12 +4870,15 @@ def test_execute_rebalance_layer_counter_propagation():
         config=config,
     )
 
+    result_branches, layers_used = result
+    assert layers_used == 1
+
     # Split children have counter = 0
-    split_children = [b for b in result if b.layers_since_last_split == 0]
+    split_children = [b for b in result_branches if b.layers_since_last_split == 0]
     assert len(split_children) == 2
 
     # Merged branch has counter = max(3, 1) + 1 = 4
-    merged = [b for b in result if "merged" in b.id]
+    merged = [b for b in result_branches if "merged" in b.id]
     assert len(merged) == 1
     assert merged[0].layers_since_last_split == 4  # max(3, 1) + 1
 
@@ -4907,8 +4913,8 @@ def test_determine_operation_returns_rebalance():
     assert op == LayerOperation.REBALANCE
 
 
-def test_determine_operation_no_rebalance_below_3_branches():
-    """REBALANCE requires >= 3 branches (1 split + 2 merge)."""
+def test_determine_operation_rebalance_at_2_branches():
+    """REBALANCE works with 2 branches (merge-first strategy)."""
     cluster = make_cluster(
         "c1",
         zones=["z1"],
@@ -4918,7 +4924,7 @@ def test_determine_operation_no_rebalance_below_3_branches():
             {"fog_id": "x2", "zone": "z1"},
         ],
     )
-    # 2 branches, max=3 — not saturated, even though stale
+    # 2 branches with different parents, one stale
     branches = [
         Branch("a", "n_a", FogRef("xa", "za"), layers_since_last_split=5),
         Branch("b", "n_b", FogRef("xb", "zb"), layers_since_last_split=1),
@@ -4930,7 +4936,7 @@ def test_determine_operation_no_rebalance_below_3_branches():
     config.structure.merge_probability = 0.0
 
     op, fan = determine_operation(cluster, branches, config, random.Random(42))
-    assert op != LayerOperation.REBALANCE
+    assert op == LayerOperation.REBALANCE
 
 
 def test_determine_operation_prefer_merge():

@@ -581,22 +581,30 @@ def determine_operation(
     if max_spacing > 0:
         max_stale = max(b.layers_since_last_split for b in branches)
         if max_stale >= max_spacing:
-            # REBALANCE: merge 2 + split 1 (N -> N). Requires >= 3 branches
-            # (1 to split + 2 to merge).
-            if not skip_rebalance and num_branches >= 3:
-                stale_idx = max(
-                    range(num_branches),
-                    key=lambda i: branches[i].layers_since_last_split,
-                )
-                other = [i for i in range(num_branches) if i != stale_idx]
-                has_pair = any(
-                    branches[other[i]].current_node_id
-                    != branches[other[j]].current_node_id
-                    for i in range(len(other))
-                    for j in range(i + 1, len(other))
-                )
-                if has_pair:
-                    return LayerOperation.REBALANCE, 1
+            # REBALANCE: merge + split on same layer (N -> N).
+            # N=2: merge both → split merged (merge-first)
+            # N≥3: split stale + merge 2 others (split-first)
+            if not skip_rebalance and num_branches >= 2:
+                if num_branches == 2:
+                    # 2 branches: merge-first rebalance always possible
+                    # (anti-micro-merge check: branches must have different parents)
+                    if branches[0].current_node_id != branches[1].current_node_id:
+                        return LayerOperation.REBALANCE, 1
+                else:
+                    # 3+ branches: split-first, need merge pair among non-stale
+                    stale_idx = max(
+                        range(num_branches),
+                        key=lambda i: branches[i].layers_since_last_split,
+                    )
+                    other = [i for i in range(num_branches) if i != stale_idx]
+                    has_pair = any(
+                        branches[other[i]].current_node_id
+                        != branches[other[j]].current_node_id
+                        for i in range(len(other))
+                        for j in range(i + 1, len(other))
+                    )
+                    if has_pair:
+                        return LayerOperation.REBALANCE, 1
 
             # Forced SPLIT: when not saturated and REBALANCE isn't possible
             if num_branches < max_paths and max_ex >= 2:
@@ -768,21 +776,23 @@ def execute_rebalance_layer(
     config: Config,
     *,
     reserved_zones: frozenset[str] = frozenset(),
-) -> list[Branch] | None:
+) -> tuple[list[Branch], int] | None:
     """Combined merge + split on the same layer (REBALANCE operation).
 
-    Merges 2 branches and splits the most stale branch on the same layer,
-    keeping total branch count constant (N -> N). Uses 2 clusters: one
-    split-capable, one merge-capable.
+    Keeps total branch count constant (N -> N). Two strategies:
+
+    - **N=2 (merge-first)**: merge both branches into one node, then split
+      that merged node into 2 new branches. Uses 2 clusters on the same
+      layer: merge(2→1) then split(1→2).
+    - **N≥3 (split-first)**: split the most stale branch, merge 2 others,
+      passant the rest. Uses 2+ clusters.
 
     Only selects clusters of layer_type to preserve type homogeneity.
-    Returns None if no split-capable or merge-capable cluster of the
-    planned type is available, allowing the caller to fall back to
-    another operation.
+    Returns None if no capable cluster of the planned type is available.
 
     Args:
         dag: The DAG being built.
-        branches: Current active branches.
+        branches: Current active branches (must be >= 2).
         layer_idx: Current layer index.
         tier: Difficulty tier.
         layer_type: Preferred cluster type.
@@ -793,11 +803,185 @@ def execute_rebalance_layer(
         reserved_zones: Zones excluded from selection.
 
     Returns:
-        Updated list of branches (same count as input), or None if no
-        capable cluster of the planned type is available.
+        Tuple of (updated branches, layers consumed), or None if no
+        capable cluster of the planned type is available. layers consumed
+        is 1 for split-first (N≥3) and 2 for merge-first (N=2, uses two
+        consecutive layers for merge then split).
 
     Raises:
-        GenerationError: If no valid merge pair found.
+        GenerationError: If merge/split fails unexpectedly.
+    """
+    if len(branches) == 2:
+        return _rebalance_merge_first(
+            dag,
+            branches,
+            layer_idx,
+            tier,
+            layer_type,
+            clusters,
+            used_zones,
+            rng,
+            reserved_zones=reserved_zones,
+        )
+    return _rebalance_split_first(
+        dag,
+        branches,
+        layer_idx,
+        tier,
+        layer_type,
+        clusters,
+        used_zones,
+        rng,
+        config,
+        reserved_zones=reserved_zones,
+    )
+
+
+def _rebalance_merge_first(
+    dag: Dag,
+    branches: list[Branch],
+    layer_idx: int,
+    tier: int,
+    layer_type: str,
+    clusters: ClusterPool,
+    used_zones: set[str],
+    rng: random.Random,
+    *,
+    reserved_zones: frozenset[str] = frozenset(),
+) -> tuple[list[Branch], int] | None:
+    """Merge-first rebalance for exactly 2 branches (2→1→2).
+
+    Merge node is placed at layer_idx, split node at layer_idx+1.
+    Returns (branches, 2) on success, None if no capable clusters.
+    """
+    candidates = clusters.get_by_type(layer_type)
+
+    # 1. Pick a merge-capable cluster
+    merge_cluster = pick_cluster_with_filter(
+        candidates,
+        used_zones,
+        rng,
+        lambda c: can_be_merge_node(c, 2),
+        reserved_zones=reserved_zones,
+    )
+    if merge_cluster is None:
+        return None
+
+    # 2. Pick a split-capable cluster
+    used_after_merge = used_zones | set(merge_cluster.zones)
+    split_cluster = pick_cluster_with_filter(
+        candidates,
+        used_after_merge,
+        rng,
+        lambda c: can_be_split_node(c, 2),
+        reserved_zones=reserved_zones,
+    )
+    if split_cluster is None:
+        return None
+
+    letter = 0
+
+    # A. Merge both branches
+    used_zones.update(merge_cluster.zones)
+    if merge_cluster.allow_shared_entrance:
+        entries = select_entries_for_merge(merge_cluster, 1, rng)
+        shared_entry = FogRef(entries[0]["fog_id"], entries[0]["zone"])
+        entry_fogs_list = [shared_entry]
+        exits = compute_net_exits(merge_cluster, entries)
+        for e in entries:
+            exits = _filter_exits_by_proximity(merge_cluster, e, exits)
+    else:
+        entries = select_entries_for_merge(merge_cluster, 2, rng)
+        entry_fogs_list = [FogRef(e["fog_id"], e["zone"]) for e in entries]
+        exits = compute_net_exits(merge_cluster, entries)
+        for e in entries:
+            exits = _filter_exits_by_proximity(merge_cluster, e, exits)
+
+    rng.shuffle(exits)
+    merge_exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits[:1]]
+    if not merge_exit_fogs:
+        raise GenerationError(
+            f"Rebalance merge at layer {layer_idx}: no exits remaining"
+        )
+
+    merge_node_id = f"node_{layer_idx}_{chr(97 + letter)}"
+    merge_node = DagNode(
+        id=merge_node_id,
+        cluster=merge_cluster,
+        layer=layer_idx,
+        tier=tier,
+        entry_fogs=entry_fogs_list,
+        exit_fogs=merge_exit_fogs,
+    )
+    dag.add_node(merge_node)
+
+    if merge_cluster.allow_shared_entrance:
+        for b in branches:
+            dag.add_edge(
+                b.current_node_id, merge_node_id, b.available_exit, shared_entry
+            )
+    else:
+        for b, ef in zip(branches, entry_fogs_list, strict=False):
+            dag.add_edge(b.current_node_id, merge_node_id, b.available_exit, ef)
+    letter += 1
+
+    # B. Split the merged node (next layer to avoid intra-layer edge)
+    split_layer = layer_idx + 1
+    used_zones.update(split_cluster.zones)
+    entry_fog, exit_fogs = _pick_entry_and_exits_for_node(split_cluster, 2, rng)
+    split_node_id = f"node_{split_layer}_a"
+    split_node = DagNode(
+        id=split_node_id,
+        cluster=split_cluster,
+        layer=split_layer,
+        tier=tier,
+        entry_fogs=[entry_fog],
+        exit_fogs=exit_fogs,
+    )
+    dag.add_node(split_node)
+    dag.add_edge(
+        merge_node_id,
+        split_node_id,
+        rng.choice(merge_exit_fogs),
+        entry_fog,
+    )
+
+    split_children: list[Branch] = []
+    for j in range(2):
+        split_children.append(
+            Branch(
+                f"rebal_{split_layer}_{chr(97 + j)}",
+                split_node_id,
+                exit_fogs[j],
+                birth_layer=split_layer,
+                layers_since_last_split=0,
+            )
+        )
+
+    update_branch_counters(
+        LayerOperation.SPLIT,
+        split_children=split_children,
+    )
+    return split_children, 2
+
+
+def _rebalance_split_first(
+    dag: Dag,
+    branches: list[Branch],
+    layer_idx: int,
+    tier: int,
+    layer_type: str,
+    clusters: ClusterPool,
+    used_zones: set[str],
+    rng: random.Random,
+    config: Config,
+    *,
+    reserved_zones: frozenset[str] = frozenset(),
+) -> tuple[list[Branch], int] | None:
+    """Split-first rebalance for 3+ branches (N -> N).
+
+    Splits the most stale branch, merges 2 others, passants the rest.
+    Returns (branches, 1) on success, None if no capable clusters.
     """
     # 1. Identify the most stale branch (split target)
     stale_idx = max(
@@ -825,8 +1009,6 @@ def execute_rebalance_layer(
         )
 
     # 3. Pick a split-capable cluster of the planned type only.
-    # If none available, return None to let the caller fall back to another
-    # operation, preserving type homogeneity within the layer.
     split_cluster = pick_cluster_with_filter(
         clusters.get_by_type(layer_type),
         used_zones,
@@ -987,7 +1169,7 @@ def execute_rebalance_layer(
         passant_branches=[b for b in new_branches if b not in split_children],
     )
 
-    return new_branches
+    return new_branches, 1
 
 
 def execute_passant_layer(
@@ -1641,7 +1823,7 @@ def generate_dag(
         )
 
         if operation == LayerOperation.REBALANCE:
-            result = execute_rebalance_layer(
+            rebal_result = execute_rebalance_layer(
                 dag,
                 branches,
                 current_layer,
@@ -1653,9 +1835,9 @@ def generate_dag(
                 config,
                 reserved_zones=reserved_zones,
             )
-            if result is not None:
-                branches = result
-                current_layer += 1
+            if rebal_result is not None:
+                branches = rebal_result[0]
+                current_layer += rebal_result[1]
                 continue
             # No capable cluster of the planned type — re-decide without
             # REBALANCE. The stale branch will be split at a later layer.
@@ -1995,7 +2177,7 @@ def generate_dag(
         )
 
         if operation == LayerOperation.REBALANCE:
-            result = execute_rebalance_layer(
+            rebal_result = execute_rebalance_layer(
                 dag,
                 branches,
                 current_layer,
@@ -2007,10 +2189,10 @@ def generate_dag(
                 config,
                 reserved_zones=reserved_zones,
             )
-            if result is not None:
-                branches = result
-                current_layer += 1
-                convergence_layers += 1
+            if rebal_result is not None:
+                branches = rebal_result[0]
+                current_layer += rebal_result[1]
+                convergence_layers += rebal_result[1]
                 if convergence_layers > convergence_limit:
                     raise GenerationError(
                         f"Convergence failed after {convergence_layers} layers "
