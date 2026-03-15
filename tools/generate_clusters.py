@@ -969,6 +969,84 @@ def generate_clusters(
     return clusters
 
 
+def apply_cluster_merges(
+    clusters: list[Cluster],
+    metadata: dict,
+) -> list[Cluster]:
+    """
+    Merge clusters based on merge_into declarations in zone metadata.
+
+    When a zone has merge_into = "target_zone", the cluster containing that zone
+    is absorbed into the cluster containing the target zone. This is used for
+    trivial antechamber zones (e.g. caelid_preradahn → caelid_radahn) where the
+    internal fog gate should remain vanilla.
+
+    Must be called AFTER generate_clusters() and BEFORE compute_cluster_fogs(),
+    so that internal fog gates between merged zones are correctly classified.
+    """
+    zones_meta = metadata.get("zones", {})
+
+    # Collect merge declarations: source_zone → target_zone
+    merges: dict[str, str] = {}
+    for zone_name, zm in zones_meta.items():
+        if isinstance(zm, dict) and "merge_into" in zm:
+            merges[zone_name] = zm["merge_into"]
+
+    if not merges:
+        return clusters
+
+    # Build zone → cluster index
+    zone_to_cluster: dict[str, Cluster] = {}
+    for cluster in clusters:
+        for zone in cluster.zones:
+            zone_to_cluster[zone] = cluster
+
+    # Apply merges
+    consumed: set[int] = set()  # id() of clusters absorbed into others
+    for source_zone, target_zone in merges.items():
+        if target_zone not in zone_to_cluster:
+            print(f"  Warning: merge_into target '{target_zone}' not found, skipping")
+            continue
+
+        target_cluster = zone_to_cluster[target_zone]
+
+        if id(target_cluster) in consumed:
+            print(
+                f"  Warning: merge target '{target_zone}' is in a cluster already consumed "
+                f"by another merge — check for conflicting merge_into declarations"
+            )
+            continue
+
+        # Find all clusters containing the source zone (may be multiple due to flood-fill)
+        source_clusters = [
+            c
+            for c in clusters
+            if source_zone in c.zones
+            and id(c) != id(target_cluster)
+            and id(c) not in consumed
+        ]
+
+        for source_cluster in source_clusters:
+            # Union zones into target. Existing target zones already point to
+            # target_cluster via object identity, so only source zones need updating.
+            target_cluster.zones = frozenset(
+                target_cluster.zones | source_cluster.zones
+            )
+            consumed.add(id(source_cluster))
+
+            # Update zone→cluster index for merged zones
+            for zone in source_cluster.zones:
+                zone_to_cluster[zone] = target_cluster
+
+            print(
+                f"  Merged cluster ({', '.join(sorted(source_cluster.zones))}) "
+                f"into ({', '.join(sorted(target_cluster.zones))})"
+            )
+
+    # Return clusters excluding consumed ones
+    return [c for c in clusters if id(c) not in consumed]
+
+
 def compute_cluster_fogs(
     cluster: Cluster,
     world_graph: WorldGraph,
