@@ -276,28 +276,148 @@ exclude = true
 exclude = true  # Too small for legacy_dungeon (~30s to traverse)
 
 [clusters.stormveil_db4a]
-proximity_groups = [["AEG099_230_9001", "AEG099_002_9002"]]
+proximity_groups = [
+    ["AEG099_230_9001", # Limgrave Divine Tower boundary
+     "AEG099_002_9002", # Margit back
+    ],
+]
 
 [clusters.storehouse_cc6f]
-proximity_groups = [["AEG099_230_9000", "AEG099_230_9500"]]
+proximity_groups = [
+    ["AEG099_230_9000", # West Rampart entrance
+     "AEG099_230_9500", # Elevator to Storehouse
+    ],
+]
 
 [clusters.altus_sagescave_1646]
-proximity_groups = [["AEG099_001_9000", "AEG099_001_9002"]]
+proximity_groups = [
+    ["AEG099_001_9000", # Black Knife Assassin front
+     "AEG099_001_9002", # Necromancer Garris front
+    ],
+]
 
 [clusters.academy_2a8a]
-proximity_groups = [["1035452610", "1035462611"]]
-
-[clusters.caelid_tower_109e]
-proximity_groups = [["AEG099_230_9000", "AEG099_230_9001", "AEG099_230_9002"]]
+proximity_groups = [
+    ["1035452610",  # Raya Lucaria Main to South
+     "1035462611",  # Raya Lucaria East to Main
+    ],
+]
 
 [clusters.storehouse_6660]
-proximity_groups = [["storehouse_back:AEG099_001_9000", "storehouse_back:AEG099_230_9000"]]
+proximity_groups = [
+    ["storehouse_back:AEG099_001_9000", # Gaius front
+     "storehouse_back:AEG099_230_9000", # Hinterland entrance
+    ],
+]
 
 [clusters.midramanse_1ac8]
-allowed_entries = ["AEG099_230_9500"]
+allowed_entries = [
+    "AEG099_230_9500", # Midra's Manse entrance
+]
 
 [clusters.flamepeak_firegiant_07f0]
-proximity_groups = [["m60_52_53_00-AEG099_002_9000", "m60_52_53_00-AEG099_003_9001"]]
+proximity_groups = [
+    ["m60_52_53_00-AEG099_002_9000", # Fire Giant left front
+     "m60_52_53_00-AEG099_003_9001", # Fire Giant right front
+    ],
+]
 
 [clusters.haligtree_elphael_700b]
-allowed_entries = ["AEG099_230_9000"]
+allowed_entries = [
+    "AEG099_230_9000", # Before Elphael
+]
+
+# Leyndell2 — Hoarah Loux exit + all Gideon entrances are adjacent (throne → sanctuary)
+[clusters.leyndell2_sanctuary_94fb]
+proximity_groups = [
+    ["AEG099_001_9001", # Hoarah Loux front
+     "AEG099_001_9003", # Gideon front
+     "AEG099_001_9007", # Gideon front right
+     "AEG099_001_9005", # Gideon back right
+     "AEG099_001_9006", # Gideon back left
+     "AEG099_002_9000", # Gideon back center
+     "AEG099_001_9004", # Gideon side
+    ],
+]
+
+# Leyndell2 — Gideon front + Gideon side are adjacent (same arena approaches)
+[clusters.leyndell2_e77d]
+proximity_groups = [
+    ["AEG099_001_9003", # Gideon front
+     "AEG099_001_9004", # Gideon side
+    ],
+]
+
+# Leyndell — Morgott exit + all Godfrey entrances are adjacent (throne → sanctuary)
+[clusters.leyndell_sanctuary_25d4]
+proximity_groups = [
+    ["AEG099_001_9000", # Morgott front
+     "AEG099_001_9003", # Godfrey side
+     "AEG099_001_9004", # Godfrey front
+     "AEG099_001_9005", # Godfrey back right
+     "AEG099_001_9006", # Godfrey back left
+     "AEG099_001_9007", # Godfrey front right
+     "AEG099_002_9000", # Godfrey back center
+    ],
+]
+
+# Leyndell — Godfrey front + Godfrey side are adjacent
+[clusters.leyndell_1259]
+proximity_groups = [
+    ["AEG099_001_9004", # Godfrey front
+     "AEG099_001_9003", # Godfrey side
+    ],
+]
+
+# Academy Post Redwolf
+[clusters.academy_redwolf_8733]
+proximity_groups = [
+    ["AEG099_001_9000", # Rennala front
+     "1037462650",      # Sending gate to Church of Vows
+    ],
+    ["AEG099_003_9001", # Red Wolf back
+     "AEG099_231_9000", # Before Raya Lucaria rooftops
+    ],
+]
+
+# Academy Post Redwolf (large) — same spatial groups
+[clusters.academy_redwolf_b9d9]
+proximity_groups = [
+    ["AEG099_001_9000",             # Rennala front
+     "1037462650",                  # Sending gate to Church of Vows
+    ],
+    ["AEG099_003_9001",             # Red Wolf back (academy_courtyard)
+     "academy_courtyard:AEG099_231_9000", # Before rooftops (courtyard side)
+     "academy_rooftops:AEG099_231_9000",  # Before rooftops (rooftops side)
+    ],
+]
+
+# Farum Azula before Godskin Duo
+[clusters.farumazula_lift_979a]
+proximity_groups = [
+    ["AEG099_001_9004", # Godskin Duo balcony (top)
+     "AEG099_001_9000", # Godskin Duo back right (down stairs)
+    ],
+]
+
+[clusters.farumazula_start_f5a0]
+proximity_groups = [
+    ["AEG099_001_9004", # Godskin Duo balcony (top)
+     "AEG099_001_9000", # Godskin Duo back right (down stairs)
+    ],
+]
+
+[clusters.farumazula_temple_0ef3]
+proximity_groups = [
+    ["AEG099_001_9004", # Godskin Duo balcony (top)
+     "AEG099_001_9000", # Godskin Duo back right (down stairs)
+    ],
+]
+
+# Farum Azula after Godskin Duo
+[clusters.farumazula_6a43]
+proximity_groups = [
+    ["AEG099_001_9001", # Godskin Duo front left (after Duo)
+     "AEG099_230_9000", # Before elevator to Dragon Temple Lift
+    ],
+]
