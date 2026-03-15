@@ -81,6 +81,12 @@ allow_entry_as_exit = false
 weight = 5
 allow_entry_as_exit = true
 
+# Merge into caelid_radahn: preradahn is just an elevator + sending gate corridor.
+# Without merge, the Radahn stake respawns in preradahn (outside DAG) → softlock.
+[zones.caelid_preradahn]
+weight = 0
+merge_into = "caelid_radahn"
+
 # Mini dungeons calibrated from race data
 [zones.caelid_gaolcave]
 weight = 2
