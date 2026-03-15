@@ -1978,6 +1978,12 @@ def main() -> int:
     clusters = generate_clusters(zones_to_process, world_graph)
     print(f"  Generated {len(clusters)} raw clusters")
 
+    # Load metadata (needed for merge step before fog computation)
+    metadata = load_metadata(args.metadata)
+
+    # Apply cluster merges (must happen before fog computation)
+    clusters = apply_cluster_merges(clusters, metadata)
+
     # Compute fogs for each cluster
     for cluster in clusters:
         compute_cluster_fogs(cluster, world_graph, zone_fogs)
@@ -1992,9 +1998,6 @@ def main() -> int:
     if len(unique_clusters) < len(clusters):
         print(f"  Deduplicated {len(clusters) - len(unique_clusters)} pruned clusters")
     clusters = unique_clusters
-
-    # Load metadata
-    metadata = load_metadata(args.metadata)
 
     # Filter and enrich
     print("Filtering and enriching clusters...")
