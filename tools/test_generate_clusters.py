@@ -431,7 +431,7 @@ class TestClassifyFogs:
         assert fog in zone_fogs["zone_b"].exit_fogs
 
     def test_unique_fog(self):
-        """Unique fog: ASide=exit only, BSide has no fog gate (spawn point only)."""
+        """Unique fog: ASide=exit only, BSide=entry (one-way warp destination)."""
         fog = FogData(
             name="test",
             fog_id=1,
@@ -445,40 +445,11 @@ class TestClassifyFogs:
         assert fog not in zone_fogs["zone_a"].entry_fogs
         assert fog in zone_fogs["zone_a"].exit_fogs
 
-        # BSide is NOT an entry_fog - there's no physical fog gate at destination
-        # FogMod doesn't have a "To" edge for one-way warp destinations
-        assert "zone_b" not in zone_fogs or fog not in zone_fogs["zone_b"].entry_fogs
+        # BSide is always an entry — filtering happens downstream
+        assert fog in zone_fogs["zone_b"].entry_fogs
 
-    def test_unique_fog_bside_boss_entry(self):
-        """Unique fog BSide becomes entry when destination is a boss zone."""
-        fog = FogData(
-            name="test",
-            fog_id=1,
-            aside=FogSide(area="zone_a", text=""),
-            bside=FogSide(area="boss_zone", text=""),
-            tags=["unique"],
-        )
-        areas = {
-            "zone_a": AreaData(name="zone_a", text="", maps=["m10_00_00_00"], tags=[]),
-            "boss_zone": AreaData(
-                name="boss_zone",
-                text="",
-                maps=["m10_00_00_00"],
-                tags=[],
-                has_boss=True,
-            ),
-        }
-        zone_fogs = classify_fogs([fog], [], areas=areas)
-
-        # ASide is still exit only
-        assert fog not in zone_fogs["zone_a"].entry_fogs
-        assert fog in zone_fogs["zone_a"].exit_fogs
-
-        # BSide IS an entry_fog because destination has a boss
-        assert fog in zone_fogs["boss_zone"].entry_fogs
-
-    def test_unique_fog_bside_no_boss_no_entry(self):
-        """Unique fog BSide is NOT entry when destination has no boss."""
+    def test_unique_fog_bside_always_entry(self):
+        """Unique fog BSide is entry regardless of boss status."""
         fog = FogData(
             name="test",
             fog_id=1,
@@ -494,7 +465,20 @@ class TestClassifyFogs:
         }
         zone_fogs = classify_fogs([fog], [], areas=areas)
 
-        # BSide is NOT entry — no boss at destination
+        # BSide is entry — unwanted zones filtered downstream
+        assert fog in zone_fogs["zone_b"].entry_fogs
+
+    def test_unique_fog_bside_cross_zone_cond_no_entry(self):
+        """Unique fog BSide excluded when it has a cross-zone condition."""
+        fog = FogData(
+            name="test",
+            fog_id=1,
+            aside=FogSide(area="zone_a", text=""),
+            bside=FogSide(area="zone_b", text="", cond="OR other_zone"),
+            tags=["unique"],
+        )
+        zone_fogs = classify_fogs([fog], [])
+
         assert "zone_b" not in zone_fogs or fog not in zone_fogs["zone_b"].entry_fogs
 
     def test_norandom_fog_excluded(self):

@@ -891,9 +891,9 @@ def classify_fogs(
             # ASide is exit only - FogMod can redirect where the warp sends you
             if aside_cond_ok:
                 zone_fogs[aside_area].exit_fogs.append(fog)
-            # BSide is an entry_fog when the destination is a boss zone
-            # (e.g., Placidusax, Radahn, Metyr — accessed via unique warps)
-            if areas and bside_area in areas and areas[bside_area].has_boss:
+            # BSide is an entry_fog when its condition is met — zones that
+            # shouldn't appear (e.g., underground) are filtered downstream
+            if bside_cond_ok:
                 zone_fogs[bside_area].entry_fogs.append(fog)
         elif fog.is_uniquegate:
             # Uniquegate: check if this pair was already processed
