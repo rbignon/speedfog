@@ -242,7 +242,7 @@ class TestFullPipeline:
             assert "entrance_gate" in conn
             assert "flag_id" in conn
             assert isinstance(conn["flag_id"], int)
-            assert conn["flag_id"] >= 1040292800
+            assert conn["flag_id"] >= 1040292400
 
         # Area tiers structure
         assert isinstance(data["area_tiers"], dict)
@@ -260,12 +260,12 @@ class TestFullPipeline:
 
         # Final node flag (zone-tracking flag for the end node)
         assert isinstance(data["final_node_flag"], int)
-        assert data["final_node_flag"] >= 1040292800
+        assert data["final_node_flag"] >= 1040292400
         assert str(data["final_node_flag"]) in data["event_map"]
 
         # Finish event (separate flag for boss death, not in event_map)
         assert isinstance(data["finish_event"], int)
-        assert data["finish_event"] >= 1040292800
+        assert data["finish_event"] >= 1040292400
         assert str(data["finish_event"]) not in data["event_map"]
         assert data["final_node_flag"] != data["finish_event"]
 

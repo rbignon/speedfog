@@ -364,7 +364,7 @@ class TestEventMap:
 
         # It should be a valid flag ID in the expected range
         assert isinstance(result["finish_event"], int)
-        assert result["finish_event"] >= 1040292800
+        assert result["finish_event"] >= 1040292400
 
     def test_finish_event_follows_zone_flags(self):
         """finish_event is allocated after all zone tracking flags."""
@@ -404,7 +404,7 @@ class TestEventMap:
         for conn in result["connections"]:
             assert "flag_id" in conn
             assert isinstance(conn["flag_id"], int)
-            assert conn["flag_id"] >= 1040292800
+            assert conn["flag_id"] >= 1040292400
 
     def test_merge_node_connections_have_unique_flag_ids(self):
         """Two connections to the same node get different flag_ids.

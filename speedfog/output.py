@@ -289,8 +289,8 @@ def dag_to_dict(
     # Each connection gets a unique flag_id so the racing mod can detect re-entry
     # to the same cluster from a different branch (e.g., shared entrance merges).
     # Must land in a category pre-allocated by FogRando in VirtualMemoryFlag.
-    # FogRando's category 1040292 uses offsets ~100-299; we use 800-999 (200 flags).
-    EVENT_FLAG_BASE = 1040292800
+    # FogRando's category 1040292 uses offsets ~100-300; we use 400-999 (600 flags).
+    EVENT_FLAG_BASE = 1040292400
     flag_counter = 0
     event_map: dict[str, str] = {}  # str(flag_id) -> cluster_id
     final_node_flag = 0  # first flag targeting the end node
@@ -459,10 +459,10 @@ def dag_to_dict(
     finish_event = EVENT_FLAG_BASE + flag_counter
     flag_counter += 1
 
-    if flag_counter > 200:
+    if flag_counter > 600:
         raise ValueError(
             f"Event flag budget exceeded: {flag_counter} flags allocated "
-            f"(max 200 in range 1040292800-1040292999)"
+            f"(max 600 in range 1040292400-1040292999)"
         )
 
     # finish_boss_defeat_flag: the DefeatFlag for the final boss, propagated from

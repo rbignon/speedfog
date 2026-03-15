@@ -10,9 +10,9 @@ Quick reference for SpeedFog's event flag allocation and EMEVD event IDs.
 Elden Ring stores event flags in a **sparse tree of category pages**, not a flat address space:
 
 ```
-flag_id  = 1040292800
+flag_id  = 1040292400
 category = flag_id / 1000 = 1040292
-offset   = flag_id % 1000 = 800
+offset   = flag_id % 1000 = 400
 ```
 
 Each category page stores 1000 flags as a bitfield (125 bytes). **Only pre-allocated categories exist at runtime.** Writing to a flag whose category doesn't exist is a **silent no-op** — no crash, no error, just nothing happens.
@@ -25,10 +25,10 @@ SpeedFog piggybacks on **category 1040292**, which FogRando pre-allocates for it
 
 | Range | Offsets | Purpose | Set by |
 |-------|---------|---------|--------|
-| 1040292100-299 | 100-299 | FogRando internal flags | FogMod.dll |
-| 1040292800-999 | 800-999 | Zone tracking (fog gate traversal) | ZoneTrackingInjector |
+| 1040292100-300 | 100-300 | FogRando internal flags | FogMod.dll |
+| 1040292400-999 | 400-999 | Zone tracking (fog gate traversal) | ZoneTrackingInjector |
 
-The 500-offset gap (300-799) avoids collision with FogRando's allocation.
+The 100-offset gap (301-399) avoids collision with FogRando's allocation.
 
 ### Other Flags
 
@@ -70,7 +70,7 @@ All events are registered in Event 0 via `InitializeEvent` (bank 2000, id 0).
 ## Risks & Constraints
 
 - **FogRando dependency**: Category 1040292 only exists because FogRando allocates it. If FogRando changes its allocation layout, SpeedFog flags could collide or stop working. Check on FogRando updates.
-- **200 flag limit**: Offsets 800-999 give 200 zone tracking flags. More than enough for any DAG (typical runs use 10-20).
+- **600 flag limit**: Offsets 400-999 give 600 zone tracking flags. Sufficient for large DAGs (60+ layers).
 - **No arbitrary ranges**: Previous attempt with range 9000000 failed silently because category 9000 doesn't exist. Never use untested flag ranges.
 
 ## References
