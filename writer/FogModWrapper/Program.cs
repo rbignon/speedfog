@@ -514,6 +514,9 @@ Example:
             VanillaWarpRemover.Remove(modDir, graphData.RemoveEntities);
         }
 
+        // 7l. Remove vanilla stakes that respawn in zones outside the DAG
+        StakeRemover.Remove(modDir, config.GameDir);
+
         // 8. Package with ModEngine 2
         var packager = new PackagingWriter(config.OutputDir);
         await packager.WritePackageAsync(config.MergeDir);
