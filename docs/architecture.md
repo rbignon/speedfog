@@ -36,8 +36,8 @@ Generates a balanced DAG of zone connections.
 | `dag.py` | DAG data structures (Branch with birth_layer tracking, DagNode, DagEdge, Dag) |
 | `generator.py` | Main generation algorithm (split/merge/passant topology) |
 | `planner.py` | Layer type planning and tier interpolation |
-| `balance.py` | Path weight analysis and balance reporting |
 | `validator.py` | DAG constraint validation against requirements |
+| `crosslinks.py` | Post-hoc cross-link edges between parallel branches |
 | `output.py` | Export graph.json v4 and spoiler.txt with ASCII graph |
 | `care_package.py` | Randomized starting build (weapons, armor, spells, etc.) |
 | `fog_mod.py` | Wrapper to call FogModWrapper.exe via Wine/native |
@@ -70,8 +70,12 @@ Thin wrapper around FogMod.dll that injects our connections and post-processes g
 | `ZoneTrackingInjector.cs` | Inject zone tracking flags before fog gate warps |
 | `RunCompleteInjector.cs` | Display victory banner on final boss defeat |
 | `ChapelGraceInjector.cs` | Add Site of Grace + player spawn at Chapel of Anticipation |
+| `ErdtreeWarpPatcher.cs` | Patch Erdtree fogwarps to target m11_05 directly (flag 300) |
+| `SealingTreeWarpPatcher.cs` | Patch Sealing Tree fogwarps to eliminate flag 330 dependency |
+| `SealingTreePatcher.cs` | Neutralize Event 915 and clear flag 330 on game start |
 | `RebirthInjector.cs` | Rebirth (stat reallocation) at Sites of Grace via ESD |
 | `VanillaWarpRemover.cs` | Remove vanilla warp assets that FogMod couldn't delete |
+| `StakeRemover.cs` | Remove vanilla stakes that respawn in zones outside the DAG |
 | `Packaging/` | ModEngine download, config generation, launchers |
 
 ### C# Item Writer (`writer/ItemRandomizerWrapper/`)
@@ -160,15 +164,21 @@ FogModWrapper pipeline:
 9. Call `GameDataWriterE.Write()` with MergedMods (game dir + item rando output)
 
 Post-processing (after FogMod writes, step numbers match Program.cs):
+- **7a2** Build region-to-flags mapping for zone tracking
+- **7a3** Copy non-English FMG files from Item Randomizer output
 - **7b** StartingItemInjector: give goods + care package items via EMEVD
 - **7c** StartingResourcesInjector: runes (CharaInitParam), seeds/tears/larval tears (ItemLots)
 - **7d** RoundtableUnlockInjector: set flag 1040292051 to bypass finger pickup
 - **7e** SmithingStoneShopInjector: add smithing stones to Twin Maiden Husks
 - **7f** ZoneTrackingInjector: insert SetEventFlag before each fog gate WarpPlayer
+- **7f2** ErdtreeWarpPatcher: patch Erdtree fogwarps to target m11_05 (flag 300)
+- **7f3** SealingTreeWarpPatcher: patch Sealing Tree fogwarps (flag 330)
 - **7g** RunCompleteInjector: golden banner + jingle on final boss defeat
 - **7h** ChapelGraceInjector: Site of Grace + WarpPlayer for initial spawn
 - **7i** RebirthInjector: rebirth option at graces via ESD editing (ConsistentID 73)
-- **7j** VanillaWarpRemover: delete vanilla warp MSB assets that conflict with fog gates
+- **7j2** SealingTreePatcher: neutralize Event 915, clear flag 330
+- **7k** VanillaWarpRemover: delete vanilla warp MSB assets that conflict with fog gates
+- **7l** StakeRemover: remove vanilla stakes outside the DAG
 
 Packaging: download ModEngine 2, generate config, create launcher scripts.
 
@@ -228,7 +238,7 @@ Pre-computed zone clusters with entry/exit fogs.
 
 ```json
 {
-  "version": "1.5",
+  "version": "1.9",
   "zone_maps": {"stormveil": "m10_00_00_00", ...},
   "zone_names": {"stormveil": "Stormveil Castle", ...},
   "clusters": [
@@ -275,7 +285,7 @@ DAG serialized for C# consumption, visualization tools, and racing.
       "exit_gate": "m10_01_00_00_AEG099_001_9000",
       "entrance_area": "stormveil",
       "entrance_gate": "m10_00_00_00_AEG099_002_9000",
-      "flag_id": 1040292800
+      "flag_id": 1040292400
     }
   ],
   "area_tiers": {"chapel_start": 1, "stormveil": 5},
@@ -321,7 +331,7 @@ SpeedFog gives players a randomized starting build so they can be combat-ready f
 
 **C# side** (`StartingItemInjector.cs`):
 - Weapons (type 0), Armor (1), Accessories (2), Goods (3): given via `DirectlyGivePlayerItem` EMEVD instruction
-- Ashes of War (type 4): given via `ShopLineupParam` with equipType=4, price=0 in Twin Maiden Husks shop (EMEVD's DirectlyGivePlayerItem doesn't support Gem type)
+- Ashes of War (type 4): skipped (EMEVD's DirectlyGivePlayerItem doesn't support Gem type; default count is 0)
 
 ## Key Design Decisions
 
@@ -335,7 +345,7 @@ SpeedFog gives players a randomized starting build so they can be combat-ready f
 | Key items | All given at start | Prevent softlocks |
 | Enemy scaling | Via fog tiers, not item rando | FogMod handles scaling per zone tier |
 | DLC | Included | Shadow of the Erdtree zones, PCR as final boss candidate |
-| Gems via shop | ShopLineupParam | EMEVD can't give Gem type; shop with price=0 works |
+| Gems unsupported | Skipped by StartingItemInjector | EMEVD can't give Gem type; default ashes_of_war count is 0 |
 | Initial spawn | WarpPlayer in EMEVD | Engine controls first spawn, not MSB/SetPlayerRespawnPoint |
 | Rebirth | ESD editing at graces | ConsistentID 73, uses larval tears as currency |
 

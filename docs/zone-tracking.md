@@ -9,7 +9,7 @@ How SpeedFog injects event flags into fog gate warp events so the racing mod can
 
 ## Purpose
 
-Each fog gate traversal sets a unique event flag (range 1040292800-999) that maps to a DAG node via `event_map` in graph.json. The racing mod (speedfog-racing) reads these flags to display real-time zone progression.
+Each fog gate traversal sets a unique event flag (range 1040292400-999) that maps to a DAG node via `event_map` in graph.json. The racing mod (speedfog-racing) reads these flags to display real-time zone progression.
 
 The racing mod has a runtime fallback (detecting WarpPlayer source/dest maps directly), but it's imprecise when multiple DAG nodes share the same map ID. EMEVD flags give exact zone identification.
 

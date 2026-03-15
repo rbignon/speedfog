@@ -95,7 +95,7 @@ Type 4 (Gem) is not supported by the `DirectlyGivePlayerItem` EMEVD instruction.
 foreach (var item in carePackage.Where(i => i.Type < 4))
 ```
 
-Gem items are logged as skipped and must be given via alternative means (e.g., `ShopLineupParam` with `equipType=4` or runtime injection by the racing mod). The default `ashes_of_war` count is 0 for this reason.
+Gem items are logged as skipped. There is no mechanism to give Ashes of War at game start, so the default `ashes_of_war` count is 0.
 
 ## Validation
 

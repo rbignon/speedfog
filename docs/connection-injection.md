@@ -111,7 +111,7 @@ Passed directly to `graph.Connect(exitEdge, entranceEdge, ignorePair: conn.Ignor
 
 ## Boss Defeat Flag Extraction
 
-The injector extracts the final boss's `DefeatFlag` from FogMod's Graph for downstream use by `RunCompleteInjector` and `ZoneTrackingInjector`.
+The injector extracts the final boss's `DefeatFlag` from FogMod's Graph for downstream use by `ZoneTrackingInjector`.
 
 **Matching**: When a connection's `flag_id` equals `finalNodeFlag` (from `graph.json`), the injector looks up the destination area's `DefeatFlag` in `graph.Areas`.
 
@@ -136,8 +136,9 @@ graph.AreaTiers[area] = tier;  // e.g., "stormveil" -> 5
 |----------|------|-------------|
 | `BossDefeatFlag` | `int` | FogMod's DefeatFlag for the final boss area (0 if not found) |
 | `FinishEvent` | `int` | Pass-through of the `finish_event` flag from graph.json |
+| `RegionToFlags` | `Dictionary<int, List<int>>` | Region → flag_id mapping for zone tracking (built after Write) |
 
-These are consumed by `ZoneTrackingInjector` and `RunCompleteInjector` to detect boss death and trigger the "RUN COMPLETE" banner.
+`BossDefeatFlag` and `FinishEvent` are consumed by `ZoneTrackingInjector` to create the boss death monitor event. `RegionToFlags` provides the warp-instruction-to-flag mapping for zone tracking injection.
 
 ## Pre-Connection Cleanup
 

@@ -76,6 +76,10 @@ speedfog/
 │   │   ├── RunCompleteInjector.cs  # Inject "RUN COMPLETE" message on final boss defeat
 │   │   ├── ChapelGraceInjector.cs  # Site of Grace at Chapel of Anticipation
 │   │   ├── RebirthInjector.cs  # Rebirth (stat reallocation) at Sites of Grace
+│   │   ├── SealingTreePatcher.cs  # Neutralize Event 915 / clear flag 330
+│   │   ├── SealingTreeWarpPatcher.cs  # Patch Sealing Tree fogwarps (flag 330)
+│   │   ├── VanillaWarpRemover.cs  # Remove vanilla warp MSB assets
+│   │   ├── StakeRemover.cs  # Remove vanilla stakes outside DAG
 │   │   └── eldendata/       # FogRando game data (gitignored)
 │   ├── FogModWrapper.Tests/  # xUnit tests
 │   └── ItemRandomizerWrapper/  # Item randomizer - thin wrapper calling RandomizerCommon.dll
@@ -95,7 +99,7 @@ speedfog/
 │   ├── clusters.md          # Cluster generation from fog.txt
 │   ├── fogmod-emevd-model.md # FogMod EMEVD compilation model
 │   ├── connection-injection.md # FogMod Graph connection injection
-│   ├── zone-tracking.md     # Zone tracking for racing (4 strategies)
+│   ├── zone-tracking.md     # Zone tracking for racing (region-based lookup)
 │   ├── chapel-grace.md      # Chapel of Anticipation Site of Grace
 │   ├── starting-items.md    # Starting items and auxiliary flags
 │   ├── esd-editing.md       # ESD talk script editing conventions
@@ -116,13 +120,13 @@ speedfog/
 | `docs/dag-generation.md` | DAG generation algorithm (cluster-first selection) |
 | `docs/fogmod-emevd-model.md` | FogMod EMEVD compilation model (critical mental model) |
 | `docs/connection-injection.md` | Connection injection (shared entrance, ignore_pair) |
-| `docs/zone-tracking.md` | Zone tracking for racing (4 strategies) |
+| `docs/zone-tracking.md` | Zone tracking for racing (region-based lookup) |
 | `docs/starting-items.md` | Starting items + auxiliary flags (whetblades, Great Runes) |
 | `docs/chapel-grace.md` | Chapel of Anticipation Site of Grace (4 subsystems) |
 | `docs/esd-editing.md` | ESD editing conventions and ConsistentID allocation |
 | `docs/event-flags.md` | Event flag allocation and EMEVD reference |
 | `docs/alternate-warp-patching.md` | AlternateFlag warp patching (flags 300/330) |
-| `docs/item-randomizer.md` | ItemRandomizerWrapper (preset building, boss locking) |
+| `docs/item-randomizer.md` | ItemRandomizerWrapper (preset building, boss placement capture) |
 | `docs/care-package.md` | Randomized starting build system |
 | `docs/vanilla-warp-removal.md` | FogMod vanilla warp removal workaround |
 | `docs/item-giving-limitations.md` | EMEVD item type constraints and workarounds |
@@ -170,6 +174,10 @@ speedfog/
 | `RunCompleteInjector` | Injects "RUN COMPLETE" golden banner on final boss defeat |
 | `ChapelGraceInjector` | Site of Grace + player spawn relocation at Chapel of Anticipation |
 | `RebirthInjector` | Rebirth (stat reallocation) option at Sites of Grace via ESD |
+| `SealingTreeWarpPatcher` | Patches Sealing Tree fogwarps to eliminate flag 330 dependency |
+| `SealingTreePatcher` | Neutralizes Event 915 and clears flag 330 on game start |
+| `VanillaWarpRemover` | Removes vanilla warp MSB assets that conflict with fog gates |
+| `StakeRemover` | Removes vanilla stakes that respawn outside the DAG |
 
 **ItemRandomizerWrapper** (uses RandomizerCommon.dll directly):
 | Class | Purpose |
@@ -402,11 +410,11 @@ dotnet run -- init output/mods/fogmod/event/ --event 1040290310
   "nodes": {"cluster_id": {"type": "legacy_dungeon", "display_name": "Stormveil Castle", "zones": [...], "layer": 1, "tier": 5, "weight": 15, "exits": [{"fog_id": "AEG099_002_9000", "text": "Godrick front", "from": "stormveil", "to": "other_cluster_id"}], "entrances": [{"text": "before main gate", "from": "source_cluster_id", "to": "stormveil_start", "to_text": "Stormveil Castle Start"}]}},
   "edges": [{"from": "cluster_id_1", "to": "cluster_id_2"}],
   "connections": [
-    {"exit_area": "zone1", "exit_gate": "m10_...", "entrance_area": "zone2", "entrance_gate": "m31_...", "flag_id": 1040292800}
+    {"exit_area": "zone1", "exit_gate": "m10_...", "entrance_area": "zone2", "entrance_gate": "m31_...", "flag_id": 1040292400}
   ],
   "area_tiers": {"zone1": 1, "zone2": 5},
-  "event_map": {"1040292800": "cluster_id"},
-  "finish_event": 1040292802
+  "event_map": {"1040292400": "cluster_id"},
+  "finish_event": 1040292402
 }
 ```
 
@@ -415,7 +423,7 @@ dotnet run -- init output/mods/fogmod/event/ --event 1040290310
 - `event_map`: flag_id (str) → cluster_id mapping for racing zone tracking
 - `finish_event`: flag_id set on final boss defeat
 - `flag_id` per connection: event flag set when fog gate is traversed
-- Event flags allocated sequentially from base 1040292800 (range 1040292800–1040292999)
+- Event flags allocated sequentially from base 1040292400 (range 1040292400–1040292999)
 - Connections use FogMod's edge FullName format: `{map}_{gate_name}` (e.g., `m10_01_00_00_AEG099_001_9000`)
 
 ### fogevents.txt

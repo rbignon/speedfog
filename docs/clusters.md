@@ -17,7 +17,7 @@ fog.txt (FogRando)
          ↓
    Parse → Build world graph → Classify fogs → Generate clusters → Filter → Output
          ↓
-   clusters.json v1.5
+   clusters.json v1.9
 ```
 
 ## Key Concepts
@@ -228,7 +228,7 @@ Multi-zone `major_boss` clusters can be **downgraded** to `legacy_dungeon` when 
 
 ```json
 {
-  "version": "1.5",
+  "version": "1.9",
   "generated_from": "fog.txt",
   "cluster_count": 123,
   "zone_maps": {"stormveil": "m10_00_00_00"},

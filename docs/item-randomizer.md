@@ -36,7 +36,7 @@ config.toml                    item_config.json                C# Models
 
 | Class | TOML Section | Key Fields |
 |-------|-------------|------------|
-| `ItemRandomizerConfig` | `[item_randomizer]` | `enabled`, `difficulty` (0-100), `dlc`, `remove_requirements`, `reduce_upgrade_cost`, `auto_upgrade_weapons`, `auto_upgrade_dropped`, `nerf_gargoyles`, `item_preset` |
+| `ItemRandomizerConfig` | `[item_randomizer]` | `enabled`, `difficulty` (0-100), `dlc`, `remove_requirements`, `reduce_upgrade_cost`, `auto_upgrade_weapons`, `auto_upgrade_dropped`, `nerf_gargoyles`, `allcraft`, `item_preset` |
 | `EnemyConfig` | `[enemy]` | `randomize_bosses` |
 
 ### item_config.json Fields
@@ -67,6 +67,7 @@ Set in `options` dictionary, applied via `opt[key] = value`:
 | `sombermode` | from config | Reduce upgrade material costs |
 | `mats` | `true` | Randomize materials (smithing stones, gloveworts, crafting) |
 | `nerfgargoyles` | from config | Disable Valiant Gargoyles poison tick |
+| `allcraft` | from config | Unlock all crafting recipes at start |
 
 ## Enemy Preset Building
 

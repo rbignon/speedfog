@@ -71,18 +71,7 @@ Event 755860000 (common.emevd):
 
 ### Care Package Ashes of War (type 4)
 
-Items with type=4 are skipped by `StartingItemInjector` and instead added to `ShopLineupParam` in `regulation.bin`:
-
-```
-For each item with type >= 4:
-  Add ShopLineupParam row:
-    equipId = gem_id
-    equipType = 4 (Gem)
-    value = 0 (free)
-    sellQuantity = -1 (unlimited)
-```
-
-Shop ID allocation: 101820+ (SmithingStoneShopInjector uses 101800-101817).
+Items with type >= 4 are skipped by `StartingItemInjector` with a log message. There is no mechanism to give Ashes of War at game start — the default `ashes_of_war` count is 0 for this reason.
 
 ### Smithing Stones
 
@@ -107,8 +96,8 @@ Examples:
 
 1. **EMEVD cannot give Gems** — the instruction enum simply doesn't support it
 2. **ItemLotParam category=4 is broken** — reinterprets Gem as Weapon
-3. **ShopLineupParam is the workaround** — supports equipType=4 (Gem) correctly
-4. **Price=0 makes items free** — effectively "giving" them via shop
+3. **ShopLineupParam supports Gems** — equipType=4 (Gem) works, but SpeedFog does not use this
+4. **SpeedFog skips Gems** — care package `ashes_of_war` count defaults to 0; type >= 4 items are logged and skipped
 5. **RandoCalypse mod** uses runtime memory injection for gems — a different approach entirely
 
 ## References

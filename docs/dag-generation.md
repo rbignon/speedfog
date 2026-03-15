@@ -105,7 +105,7 @@ N branches converge into a single node. Creates convergence in the DAG.
 
 ### Rebalance (N->N branches)
 
-Merges 2 branches and splits 1 stale branch on the same layer, keeping the total branch count constant. Uses 2 clusters: one merge-capable, one split-capable.
+Merges 2 branches and splits 1 stale branch across 2 layers (merge-first: merge at layer N, split at layer N+1), keeping the total branch count constant. Uses 2 clusters: one merge-capable, one split-capable.
 
 **Trigger conditions** (all must be met):
 1. `max_branch_spacing > 0` (feature enabled)
@@ -409,6 +409,7 @@ Config validation runs once before any attempts; invalid config raises `Generati
 | `structure.final_tier` | 28 | Enemy tier for final boss |
 | `structure.tier_curve` | `"linear"` | Tier progression curve (`"linear"` or `"power"`) |
 | `structure.tier_curve_exponent` | 0.6 | Power curve exponent (only for `"power"`) |
+| `structure.start_tier` | 1 | Starting enemy tier (range 1-28) |
 | `budget.tolerance` | 5 | Max allowed spread between paths |
 | `requirements.legacy_dungeons` | 1 | Minimum legacy dungeons |
 | `requirements.bosses` | 5 | Minimum boss arenas |
@@ -436,5 +437,5 @@ The validator (`speedfog/validator.py`) checks:
 - Planner: `speedfog/planner.py`
 - Clusters: `speedfog/clusters.py`
 - Validator: `speedfog/validator.py`
-- Balance analysis: `speedfog/balance.py`
+- Output: `speedfog/output.py`
 - Config: `speedfog/config.py`
