@@ -234,6 +234,11 @@ allow_entry_as_exit = true
 weight = 2
 allow_entry_as_exit = true
 
+# Underground override: Mohgwyn Palace is a compact dungeon, not open exploration
+[zones.mohgwyn]
+type = "legacy_dungeon"
+weight = 6
+
 # Exclusions
 [zones.leyndell2_erdtree]
 exclude = true  # Ashen Erdtree entrance — no usable entry fogs in FogMod graph (AlternateOf + altlogic tags)
