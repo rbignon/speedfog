@@ -151,6 +151,7 @@ pureblood_medal = false  # Pureblood Knight's Medal - disabled (warp destination
 rusty_key = true         # Rusty Key - Stormveil Castle gate (bypass Gostoc)
 drawing_room_key = true  # Drawing-Room Key - access Volcano Manor interior
 lantern = true           # Lantern - hands-free light source for dark areas
+spirit_calling_bell = true  # Spirit Calling Bell - summon spirit ashes
 physick_flask = true     # Flask of Wondrous Physick - mix crystal tears for custom buffs
 whetblades = true        # Whetstone Knife + all Whetblades - unlocks all weapon affinities
 

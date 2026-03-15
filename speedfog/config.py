@@ -194,6 +194,9 @@ class StartingItemsConfig:
     rusty_key: bool = True  # Rusty Key (Good ID 8010) - Stormveil Castle gate
     drawing_room_key: bool = True  # Drawing-Room Key for Volcano Manor (Good ID 8134)
     lantern: bool = True  # Lantern (Good ID 2070) - hands-free light source
+    spirit_calling_bell: bool = (
+        True  # Spirit Calling Bell (Good ID 8158) - summon spirits
+    )
     physick_flask: bool = (
         True  # Flask of Wondrous Physick (Good ID 250) - mix crystal tears
     )
@@ -270,6 +273,8 @@ class StartingItemsConfig:
             goods.append(8134)  # Drawing-Room Key (Volcano Manor)
         if self.lantern:
             goods.append(2070)  # Lantern
+        if self.spirit_calling_bell:
+            goods.append(8158)  # Spirit Calling Bell
         if self.physick_flask:
             goods.append(250)  # Flask of Wondrous Physick
         if self.whetblades:
@@ -500,6 +505,9 @@ class Config:
                 rusty_key=starting_items_section.get("rusty_key", True),
                 drawing_room_key=starting_items_section.get("drawing_room_key", True),
                 lantern=starting_items_section.get("lantern", True),
+                spirit_calling_bell=starting_items_section.get(
+                    "spirit_calling_bell", True
+                ),
                 physick_flask=starting_items_section.get("physick_flask", True),
                 whetblades=starting_items_section.get("whetblades", True),
                 great_runes=starting_items_section.get("great_runes", True),
