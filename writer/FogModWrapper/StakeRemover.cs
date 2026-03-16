@@ -91,9 +91,13 @@ public static class StakeRemover
 
     private static string? FindGameMsbPath(string gameDir, string msbFileName)
     {
-        // Game files use PascalCase MapStudio
-        var path = Path.Combine(gameDir, "map", "MapStudio", msbFileName);
-        return File.Exists(path) ? path : null;
+        foreach (var dirName in MsbDirVariants)
+        {
+            var path = Path.Combine(gameDir, "map", dirName, msbFileName);
+            if (File.Exists(path))
+                return path;
+        }
+        return null;
     }
 
     private static string EnsureModMsbPath(string modDir, string msbFileName)
