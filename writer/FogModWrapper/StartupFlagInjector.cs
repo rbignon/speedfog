@@ -4,10 +4,14 @@ namespace FogModWrapper;
 
 /// <summary>
 /// Injects SetEventFlag instructions at the start of Event 0 in map-specific
-/// or common EMEVDs. Used to force game state at startup (e.g., opening gates,
-/// unlocking doors).
+/// or common EMEVDs. Used to force game state at startup (e.g., opening gates
+/// controlled by ObjAct EventFlagIDs, unlocking doors).
 ///
 /// Flags are grouped by EMEVD file to minimize reads/writes.
+///
+/// Not currently wired in the pipeline — available for future use.
+/// Only works for ObjActs that have an EventFlagID > 0. For ObjActs with
+/// EventFlagID = 0, remove the asset from the MSB instead (via VanillaWarpRemover).
 /// </summary>
 public static class StartupFlagInjector
 {
