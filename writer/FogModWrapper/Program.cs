@@ -513,8 +513,8 @@ Example:
         // Includes warp entities FogMod couldn't delete, plus sewer barred gates.
         var entitiesToRemove = new List<RemoveEntity>(graphData.RemoveEntities)
         {
-            new() { Map = "m35_00_00_00", EntityId = 35003533 },  // Sewer barred gate (AEG027_002_0503)
-            new() { Map = "m35_00_00_00", EntityId = 35003535 },  // Sewer barred gate (AEG027_002_0507)
+            new() { Map = "m35_00_00_00", EntityId = 35001533 },  // Sewer barred gate (AEG027_002_0503)
+            new() { Map = "m35_00_00_00", EntityId = 35001535 },  // Sewer barred gate (AEG027_002_0507)
         };
         VanillaWarpRemover.Remove(modDir, entitiesToRemove);
 
