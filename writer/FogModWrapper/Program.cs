@@ -353,6 +353,13 @@ Example:
         }
         var mergedMods = new MergedMods(modDirs, null);
 
+        // 6b. Tag vanilla stakes for removal by FogMod.
+        // FogMod reads MSBs from BHD archives (not loose files), so we can't
+        // post-process them. Instead, inject RetryPoints with "remove" tag so
+        // FogMod removes them during Write() and writes the modified MSB.
+        // LoadLiteConfig doesn't load RetryPoints, so ann.RetryPoints is null.
+        ann.RetryPoints = StakeRemover.GetRetryPointsToRemove();
+
         var writer = new GameDataWriterE();
         writer.Write(opt, ann, graph, mergedMods, modDir, events, eventConfig, Console.WriteLine);
 
@@ -518,8 +525,8 @@ Example:
         };
         VanillaWarpRemover.Remove(modDir, entitiesToRemove);
 
-        // 7l. Remove vanilla stakes that respawn in zones outside the DAG
-        StakeRemover.Remove(modDir, config.GameDir);
+        // 7l. Vanilla stake removal is handled pre-Write via ann.RetryPoints
+        // (step 6b) — FogMod reads MSBs from BHD archives and removes tagged stakes.
 
         // 8. Package with ModEngine 2
         var packager = new PackagingWriter(config.OutputDir);
