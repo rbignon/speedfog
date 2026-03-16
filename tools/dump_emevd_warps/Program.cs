@@ -330,6 +330,14 @@ static int DoObjActs(List<string> msbFiles)
         var fn = Path.GetFileName(file);
         // Build asset name → position lookup
         var assetPositions = msb.Parts.Assets.ToDictionary(a => a.Name, a => a.Position);
+
+        Console.WriteLine($"\n=== Assets in {fn} ({msb.Parts.Assets.Count} entries) ===");
+        Console.WriteLine($"  {"Name",-35} {"EntityID",-15} {"ModelName",-20} {"Position"}");
+        foreach (var a in msb.Parts.Assets)
+        {
+            Console.WriteLine($"  {a.Name,-35} {a.EntityID,-15} {a.ModelName,-20} {a.Position.X:F0} {a.Position.Y:F0} {a.Position.Z:F0}");
+        }
+
         Console.WriteLine($"\n=== ObjActs in {fn} ({msb.Events.ObjActs.Count} entries) ===");
         Console.WriteLine($"  {"PartName",-35} {"EventFlagID",-15} {"EntityID",-15} {"ObjActID",-10} {"Position",-30} {"Name"}");
         foreach (var oa in msb.Events.ObjActs)

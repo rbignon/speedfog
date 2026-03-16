@@ -79,7 +79,7 @@ speedfog/
 │   │   ├── SealingTreePatcher.cs  # Neutralize Event 915 / clear flag 330
 │   │   ├── SealingTreeWarpPatcher.cs  # Patch Sealing Tree fogwarps (flag 330)
 │   │   ├── VanillaWarpRemover.cs  # Remove vanilla assets: warps + blocking gates
-│   │   ├── StartupFlagInjector.cs  # Set event flags at startup (not wired; future use)
+│   │   ├── StartupFlagInjector.cs  # Set event flags at startup (open gates, etc.)
 │   │   ├── StakeRemover.cs  # Remove vanilla stakes outside DAG
 │   │   └── eldendata/       # FogRando game data (gitignored)
 │   ├── FogModWrapper.Tests/  # xUnit tests
@@ -180,7 +180,7 @@ speedfog/
 | `SealingTreeWarpPatcher` | Patches Sealing Tree fogwarps to eliminate flag 330 dependency |
 | `SealingTreePatcher` | Neutralizes Event 915 and clears flag 330 on game start |
 | `VanillaWarpRemover` | Removes vanilla warp MSB assets that conflict with fog gates |
-| `StartupFlagInjector` | Sets event flags at startup in any EMEVD (not currently wired; available for future use) |
+| `StartupFlagInjector` | Sets event flags at startup in any EMEVD (open gates, etc.) |
 | `StakeRemover` | Removes vanilla stakes that respawn outside the DAG |
 
 **ItemRandomizerWrapper** (uses RandomizerCommon.dll directly):

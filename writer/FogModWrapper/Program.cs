@@ -516,14 +516,18 @@ Example:
         // causes fogwarps to Romina's area to use the wrong map variant (m61_44_45_10).
         SealingTreePatcher.Patch(modDir);
 
-        // 7k. Remove vanilla assets that block traversal or conflict with fog gates.
-        // Includes warp entities FogMod couldn't delete, plus sewer barred gates.
-        var entitiesToRemove = new List<RemoveEntity>(graphData.RemoveEntities)
+        // 7j3. Set startup flags (open gates, etc.)
+        StartupFlagInjector.Inject(modDir, new[]
         {
-            new() { Map = "m35_00_00_00", EntityId = 35001533 },  // Sewer barred gate (AEG027_002_0503)
-            new() { Map = "m35_00_00_00", EntityId = 35001535 },  // Sewer barred gate (AEG027_002_0507)
-        };
-        VanillaWarpRemover.Remove(modDir, entitiesToRemove);
+            ("m35_00_00_00", 35000565, true),  // Sewer barred gate 1 (AEG023_330_1000, lever AEG027_002_0503)
+            ("m35_00_00_00", 35000566, true),  // Sewer barred gate 2 (AEG023_330_1001, lever AEG027_002_0507)
+        });
+
+        // 7k. Remove vanilla assets that conflict with fog gates.
+        if (graphData.RemoveEntities.Count > 0)
+        {
+            VanillaWarpRemover.Remove(modDir, graphData.RemoveEntities);
+        }
 
         // 7l. Vanilla stake removal is handled pre-Write via ann.RetryPoints
         // (step 6b) — FogMod reads MSBs from BHD archives and removes tagged stakes.

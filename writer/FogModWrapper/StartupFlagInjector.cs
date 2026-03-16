@@ -8,10 +8,6 @@ namespace FogModWrapper;
 /// controlled by ObjAct EventFlagIDs, unlocking doors).
 ///
 /// Flags are grouped by EMEVD file to minimize reads/writes.
-///
-/// Not currently wired in the pipeline — available for future use.
-/// Only works for ObjActs that have an EventFlagID > 0. For ObjActs with
-/// EventFlagID = 0, remove the asset from the MSB instead (via VanillaWarpRemover).
 /// </summary>
 public static class StartupFlagInjector
 {

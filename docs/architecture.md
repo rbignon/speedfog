@@ -75,7 +75,7 @@ Thin wrapper around FogMod.dll that injects our connections and post-processes g
 | `SealingTreePatcher.cs` | Neutralize Event 915 and clear flag 330 on game start |
 | `RebirthInjector.cs` | Rebirth (stat reallocation) at Sites of Grace via ESD |
 | `VanillaWarpRemover.cs` | Remove vanilla assets: warp entities + blocking gates ([doc](vanilla-warp-removal.md)) |
-| `StartupFlagInjector.cs` | Set event flags at startup in any EMEVD (not currently wired; available for future use) |
+| `StartupFlagInjector.cs` | Set event flags at startup in any EMEVD (open gates, etc.) |
 | `StakeRemover.cs` | Remove vanilla stakes that respawn in zones outside the DAG ([doc](stake-removal.md)) |
 | `Packaging/` | ModEngine download, config generation, launchers |
 
@@ -178,7 +178,8 @@ Post-processing (after FogMod writes, step numbers match Program.cs):
 - **7h** ChapelGraceInjector: Site of Grace + WarpPlayer for initial spawn
 - **7i** RebirthInjector: rebirth option at graces via ESD editing (ConsistentID 73)
 - **7j2** SealingTreePatcher: neutralize Event 915, clear flag 330
-- **7k** VanillaWarpRemover: remove vanilla warp assets + sewer barred gates from MSBs
+- **7j3** StartupFlagInjector: set event flags at startup (e.g., open sewer gates)
+- **7k** VanillaWarpRemover: delete vanilla warp MSB assets that conflict with fog gates
 - **7l** StakeRemover: remove vanilla stakes outside the DAG
 
 Packaging: download ModEngine 2, generate config, create launcher scripts.
