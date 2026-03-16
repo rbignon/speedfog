@@ -21,6 +21,7 @@ if (args.Length < 2)
     Console.Error.WriteLine("  dump_emevd_warps dump <dir-or-file> [--event ID|all] [--map-filter mAA_BB]");
     Console.Error.WriteLine("  dump_emevd_warps search <dir-or-file> --flag ID");
     Console.Error.WriteLine("  dump_emevd_warps init <dir-or-file> --event ID");
+    Console.Error.WriteLine("  dump_emevd_warps objacts <msb-file-or-dir> [--map-filter mAA_BB]");
     return 1;
 }
 
@@ -44,6 +45,17 @@ for (int i = 2; i < args.Length; i++)
     }
     else if (args[i] == "--flag" && i + 1 < args.Length)
         searchFlag = int.Parse(args[++i]);
+}
+
+if (mode == "objacts")
+{
+    var msbFiles = GetMsbFiles(target, mapFilter);
+    if (msbFiles.Count == 0)
+    {
+        Console.Error.WriteLine($"No MSB files found: {target}");
+        return 1;
+    }
+    return DoObjActs(msbFiles);
 }
 
 var files = GetFiles(target, mapFilter);
@@ -310,6 +322,22 @@ static int DoInit(List<string> files, long eventId)
     return 0;
 }
 
+static int DoObjActs(List<string> msbFiles)
+{
+    foreach (var file in msbFiles)
+    {
+        var msb = MSBE.Read(file);
+        var fn = Path.GetFileName(file);
+        Console.WriteLine($"\n=== ObjActs in {fn} ({msb.Events.ObjActs.Count} entries) ===");
+        Console.WriteLine($"  {"PartName",-35} {"EventFlagID",-15} {"EntityID",-15} {"ObjActID",-10} {"Name"}");
+        foreach (var oa in msb.Events.ObjActs)
+        {
+            Console.WriteLine($"  {oa.ObjActPartName,-35} {oa.EventFlagID,-15} {oa.ObjActEntityID,-15} {oa.ObjActID,-10} {oa.Name}");
+        }
+    }
+    return 0;
+}
+
 // ─── Instruction decoding ──────────────────────────────────────────────
 
 static void PrintAllInstructions(EMEVD.Event evt)
@@ -501,6 +529,21 @@ static bool IsWarpInstruction(EMEVD.Instruction ins)
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────
+
+static List<string> GetMsbFiles(string target, string? mapFilter)
+{
+    var files = new List<string>();
+    if (Directory.Exists(target))
+        files.AddRange(Directory.GetFiles(target, "*.msb.dcx"));
+    else if (File.Exists(target))
+        files.Add(target);
+
+    if (mapFilter != null)
+        files = files.Where(f => Path.GetFileName(f)
+            .StartsWith(mapFilter, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    return files.OrderBy(f => f).ToList();
+}
 
 static List<string> GetFiles(string target, string? mapFilter)
 {

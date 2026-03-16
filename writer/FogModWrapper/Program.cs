@@ -508,6 +508,13 @@ Example:
         // causes fogwarps to Romina's area to use the wrong map variant (m61_44_45_10).
         SealingTreePatcher.Patch(modDir);
 
+        // 7j3. Set startup flags (open gates, unlock doors, etc.)
+        StartupFlagInjector.Inject(modDir, new[]
+        {
+            ("m35_00_00_00", 35008542, true),  // Sewer barred gate 1 (AEG027_031_0500)
+            ("m35_00_00_00", 35008544, true),  // Sewer barred gate 2 (AEG027_031_0501)
+        });
+
         // 7k. Remove vanilla warp assets that FogMod couldn't properly remove
         if (graphData.RemoveEntities.Count > 0)
         {
