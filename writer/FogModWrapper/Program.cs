@@ -1,5 +1,6 @@
 using FogMod;
 using FogModWrapper;
+using FogModWrapper.Models;
 using FogModWrapper.Packaging;
 using SoulsFormats;
 using SoulsIds;
@@ -508,18 +509,14 @@ Example:
         // causes fogwarps to Romina's area to use the wrong map variant (m61_44_45_10).
         SealingTreePatcher.Patch(modDir);
 
-        // 7j3. Set startup flags (open gates, unlock doors, etc.)
-        StartupFlagInjector.Inject(modDir, new[]
+        // 7k. Remove vanilla assets that block traversal or conflict with fog gates.
+        // Includes warp entities FogMod couldn't delete, plus sewer barred gates.
+        var entitiesToRemove = new List<RemoveEntity>(graphData.RemoveEntities)
         {
-            ("m35_00_00_00", 35008542, true),  // Sewer barred gate 1 (AEG027_031_0500)
-            ("m35_00_00_00", 35008544, true),  // Sewer barred gate 2 (AEG027_031_0501)
-        });
-
-        // 7k. Remove vanilla warp assets that FogMod couldn't properly remove
-        if (graphData.RemoveEntities.Count > 0)
-        {
-            VanillaWarpRemover.Remove(modDir, graphData.RemoveEntities);
-        }
+            new() { Map = "m35_00_00_00", EntityId = 35003533 },  // Sewer barred gate (AEG027_002_0503)
+            new() { Map = "m35_00_00_00", EntityId = 35003535 },  // Sewer barred gate (AEG027_002_0507)
+        };
+        VanillaWarpRemover.Remove(modDir, entitiesToRemove);
 
         // 7l. Remove vanilla stakes that respawn in zones outside the DAG
         StakeRemover.Remove(modDir, config.GameDir);
