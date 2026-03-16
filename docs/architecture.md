@@ -74,9 +74,9 @@ Thin wrapper around FogMod.dll that injects our connections and post-processes g
 | `SealingTreeWarpPatcher.cs` | Patch Sealing Tree fogwarps to eliminate flag 330 dependency |
 | `SealingTreePatcher.cs` | Neutralize Event 915 and clear flag 330 on game start |
 | `RebirthInjector.cs` | Rebirth (stat reallocation) at Sites of Grace via ESD |
-| `VanillaWarpRemover.cs` | Remove vanilla warp assets that FogMod couldn't delete |
+| `VanillaWarpRemover.cs` | Remove vanilla warp assets that FogMod couldn't delete ([doc](vanilla-warp-removal.md)) |
 | `StartupFlagInjector.cs` | Set event flags at startup in any EMEVD (open gates, etc.) |
-| `StakeRemover.cs` | Remove vanilla stakes that respawn in zones outside the DAG |
+| `StakeRemover.cs` | Remove vanilla stakes that respawn in zones outside the DAG ([doc](stake-removal.md)) |
 | `Packaging/` | ModEngine download, config generation, launchers |
 
 ### C# Item Writer (`writer/ItemRandomizerWrapper/`)

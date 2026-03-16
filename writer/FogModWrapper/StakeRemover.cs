@@ -10,8 +10,8 @@ namespace FogModWrapper;
 /// creates its own BossTrigger-controlled stake during the fight, but the vanilla
 /// RetryPoint survives and takes over after the boss is defeated, causing a softlock.
 ///
-/// This post-processor removes the vanilla RetryPoint and its associated asset/player
-/// parts so the player has no stake after the boss fight (matching FogMod behavior).
+/// This post-processor removes the vanilla RetryPoint event so the asset is no longer
+/// functional as a stake (matching FogRando's "remove" tag behavior).
 /// </summary>
 public static class StakeRemover
 {

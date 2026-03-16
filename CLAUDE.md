@@ -109,7 +109,8 @@ speedfog/
 │   ├── event-flags.md       # Event flag allocation and EMEVD reference
 │   ├── alternate-warp-patching.md # AlternateFlag warp patching (300/330)
 │   ├── item-giving-limitations.md # EMEVD item type constraints
-│   └── vanilla-warp-removal.md # FogMod warp removal workaround
+│   ├── vanilla-warp-removal.md # FogMod warp removal workaround
+│   └── stake-removal.md     # Vanilla stake removal (RetryPoint softlock prevention)
 └── output/                  # Generated mod (gitignored, self-contained)
 ```
 
@@ -130,6 +131,7 @@ speedfog/
 | `docs/item-randomizer.md` | ItemRandomizerWrapper (preset building, boss placement capture) |
 | `docs/care-package.md` | Randomized starting build system |
 | `docs/vanilla-warp-removal.md` | FogMod vanilla warp removal workaround |
+| `docs/stake-removal.md` | Vanilla stake removal (RetryPoint softlock prevention) |
 | `docs/item-giving-limitations.md` | EMEVD item type constraints and workarounds |
 | `docs/clusters.md` | Cluster generation from fog.txt |
 | `reference/fogrando-src/GameDataWriterE.cs` | Main FogRando writer (5639 lines) |
