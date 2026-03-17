@@ -211,6 +211,7 @@ speedfog/
 - Zone types: `legacy_dungeon`, `mini_dungeon`, `boss_arena`, `major_boss`, `start`, `final_boss`
 - Weight defaults in `data/zone_metadata.toml`, overrides per zone
 - Weight = approximate duration in minutes
+- Zone conflicts declared in `zone_metadata.toml` via `conflicts_with` (e.g., Margit/Morgott mutual exclusion)
 
 ### FogMod Options
 Key options set by FogModWrapper for SpeedFog:
