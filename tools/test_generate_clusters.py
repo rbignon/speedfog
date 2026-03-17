@@ -3852,49 +3852,13 @@ class TestApplyClusterMergesIntegration:
         clusters = generate_clusters(zones_to_process, world_graph)
         return clusters, metadata, world_graph, zone_fogs
 
-    def test_preradahn_merged_into_radahn(self, real_data):
-        """caelid_preradahn should be merged into caelid_radahn's cluster."""
+    def test_no_merge_declarations_is_noop(self, real_data):
+        """apply_cluster_merges is a no-op when no merge_into declarations exist."""
         clusters, metadata, world_graph, zone_fogs = real_data
 
+        original_count = len(clusters)
         merged = apply_cluster_merges(clusters, metadata, zone_fogs=zone_fogs)
-
-        # After merge, no cluster should contain only caelid_preradahn
-        preradahn_clusters = [c for c in merged if "caelid_preradahn" in c.zones]
-        assert len(preradahn_clusters) == 1
-        assert "caelid_radahn" in preradahn_clusters[0].zones
-
-    def test_sending_gate_becomes_internal_after_merge(self, real_data):
-        """The sending gate 1051382300 should not be an exit/entry fog after merge."""
-        clusters, metadata, world_graph, zone_fogs = real_data
-
-        merged = apply_cluster_merges(clusters, metadata, zone_fogs=zone_fogs)
-
-        # Compute fogs on the merged cluster
-        for cluster in merged:
-            compute_cluster_fogs(cluster, world_graph, zone_fogs)
-
-        radahn_cluster = next(c for c in merged if "caelid_radahn" in c.zones)
-
-        # The sending gate should not appear in exit_fogs or entry_fogs
-        exit_fog_ids = {f["fog_id"] for f in radahn_cluster.exit_fogs}
-        entry_fog_ids = {f["fog_id"] for f in radahn_cluster.entry_fogs}
-        assert (
-            "1051382300" not in exit_fog_ids
-        ), "Sending gate should be internal, not an exit"
-        assert (
-            "1051382300" not in entry_fog_ids
-        ), "Sending gate should be internal, not an entry"
-
-    def test_radahn_cluster_has_entries(self, real_data):
-        """Merged radahn cluster should still have entry fogs."""
-        clusters, metadata, world_graph, zone_fogs = real_data
-
-        merged = apply_cluster_merges(clusters, metadata, zone_fogs=zone_fogs)
-        for cluster in merged:
-            compute_cluster_fogs(cluster, world_graph, zone_fogs)
-
-        radahn_cluster = next(c for c in merged if "caelid_radahn" in c.zones)
-        assert len(radahn_cluster.entry_fogs) > 0, "Radahn cluster must have entry fogs"
+        assert len(merged) == original_count
 
 
 class TestBuildZoneConflicts:

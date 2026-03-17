@@ -197,6 +197,24 @@ Roundtable Hold is a hub accessible via menu teleport, but fog.txt treats it as 
 
 This gives the start node extra exits, enabling dual-branch starts when `max_exits >= 2`.
 
+## Zone Merge (`merge_into`)
+
+Trivial zones (e.g., corridors, elevators) can be absorbed into an adjacent cluster via `merge_into` in `zone_metadata.toml`:
+
+```toml
+[zones.corridor_zone]
+weight = 0
+merge_into = "target_zone"
+```
+
+`apply_cluster_merges()` runs after flood-fill but before fog computation:
+1. Find the source cluster (containing `corridor_zone`) and target cluster (containing `target_zone`)
+2. Merge zones into the target cluster
+3. Remove the source cluster
+4. Internal fog gates between merged zones become non-randomized
+
+The target cluster inherits all merged zones. Currently no `merge_into` declarations are active — the mechanism is preserved for future use.
+
 ## Exclusions
 
 ### Area-Level
