@@ -1140,3 +1140,183 @@ class TestProximityFiltering:
         # But c2_spare is proximity-blocked by c2_exit → no valid entry on C2
         added = add_crosslinks(dag, rng=random.Random(42))
         assert added == 0
+
+    def test_allow_entry_as_exit_skips_pair_exclusion(self):
+        """With allow_entry_as_exit, entry fog does NOT consume its exit Pair.
+
+        Boss arenas with bidirectional fogs (same fog_id in both entry_fogs
+        and exit_fogs) and allow_entry_as_exit=True should have surplus
+        exits available for cross-links, since the entry direction is
+        reused as a forward exit rather than consuming the Pair.
+        """
+        dag = Dag(seed=1)
+
+        # Topology: start -> (A, B) -> (C, D) -> end
+        # A is a boss_arena with 2 bidirectional fogs and allow_entry_as_exit.
+        # A enters via bidir1 and exits via bidir2 to C.
+        # Without the fix: bidir1 in entry_fogrefs → excluded as exit → 0 surplus.
+        # With the fix: allow_entry_as_exit skips pair exclusion → bidir1 surplus.
+        # Crosslink A->D eligible (A layer 1, D layer 2, different branches).
+        s_c = make_cluster(
+            "s",
+            "start",
+            entry_fogs=[],
+            exit_fogs=[
+                {"fog_id": "s_exit1", "zone": "s"},
+                {"fog_id": "s_exit2", "zone": "s"},
+            ],
+        )
+        a_c = make_cluster(
+            "a",
+            "boss_arena",
+            entry_fogs=[
+                {"fog_id": "bidir1", "zone": "a"},
+                {"fog_id": "bidir2", "zone": "a"},
+            ],
+            exit_fogs=[
+                {"fog_id": "bidir1", "zone": "a"},
+                {"fog_id": "bidir2", "zone": "a"},
+            ],
+            allow_entry_as_exit=True,
+        )
+        b_c = make_cluster(
+            "b",
+            entry_fogs=[{"fog_id": "b_entry", "zone": "b"}],
+            exit_fogs=[{"fog_id": "b_exit", "zone": "b"}],
+        )
+        c_c = make_cluster(
+            "c",
+            entry_fogs=[{"fog_id": "c_entry", "zone": "c"}],
+            exit_fogs=[{"fog_id": "c_exit", "zone": "c"}],
+        )
+        d_c = make_cluster(
+            "d",
+            entry_fogs=[
+                {"fog_id": "d_entry1", "zone": "d"},
+                {"fog_id": "d_entry2", "zone": "d"},
+            ],
+            exit_fogs=[{"fog_id": "d_exit", "zone": "d"}],
+        )
+        e_c = make_cluster(
+            "e",
+            "final_boss",
+            entry_fogs=[
+                {"fog_id": "e_entry1", "zone": "e"},
+                {"fog_id": "e_entry2", "zone": "e"},
+            ],
+            exit_fogs=[],
+        )
+
+        dag.add_node(
+            DagNode(
+                "s", s_c, 0, 1, [], [FogRef("s_exit1", "s"), FogRef("s_exit2", "s")]
+            )
+        )
+        dag.add_node(
+            DagNode("a", a_c, 1, 2, [FogRef("bidir1", "a")], [FogRef("bidir2", "a")])
+        )
+        dag.add_node(
+            DagNode("b", b_c, 1, 2, [FogRef("b_entry", "b")], [FogRef("b_exit", "b")])
+        )
+        dag.add_node(
+            DagNode("c", c_c, 2, 3, [FogRef("c_entry", "c")], [FogRef("c_exit", "c")])
+        )
+        dag.add_node(
+            DagNode("d", d_c, 2, 3, [FogRef("d_entry1", "d")], [FogRef("d_exit", "d")])
+        )
+        dag.add_node(
+            DagNode(
+                "e", e_c, 3, 4, [FogRef("e_entry1", "e"), FogRef("e_entry2", "e")], []
+            )
+        )
+
+        dag.add_edge("s", "a", FogRef("s_exit1", "s"), FogRef("bidir1", "a"))
+        dag.add_edge("s", "b", FogRef("s_exit2", "s"), FogRef("b_entry", "b"))
+        dag.add_edge("a", "c", FogRef("bidir2", "a"), FogRef("c_entry", "c"))
+        dag.add_edge("b", "d", FogRef("b_exit", "b"), FogRef("d_entry1", "d"))
+        dag.add_edge("c", "e", FogRef("c_exit", "c"), FogRef("e_entry1", "e"))
+        dag.add_edge("d", "e", FogRef("d_exit", "d"), FogRef("e_entry2", "e"))
+        dag.start_id = "s"
+        dag.end_id = "e"
+
+        # A has allow_entry_as_exit: bidir1 used as entry should NOT block
+        # bidir1 as surplus exit
+        surplus = _surplus_exits(dag, "a")
+        assert FogRef("bidir1", "a") in surplus
+
+        # A->D crosslink eligible (layer 1 → layer 2, different branches)
+        pairs = find_eligible_pairs(dag)
+        assert ("a", "d") in pairs
+
+    def test_pair_exclusion_still_applies_without_entry_as_exit(self):
+        """Without allow_entry_as_exit, entry fog DOES consume its exit Pair.
+
+        Same topology as above but without allow_entry_as_exit — the
+        bidirectional Pair exclusion should block the surplus exit.
+        """
+        dag = Dag(seed=1)
+
+        s_c = make_cluster(
+            "s",
+            "start",
+            entry_fogs=[],
+            exit_fogs=[
+                {"fog_id": "s_exit1", "zone": "s"},
+                {"fog_id": "s_exit2", "zone": "s"},
+            ],
+        )
+        a_c = make_cluster(
+            "a",
+            "boss_arena",
+            entry_fogs=[
+                {"fog_id": "bidir1", "zone": "a"},
+                {"fog_id": "bidir2", "zone": "a"},
+            ],
+            exit_fogs=[
+                {"fog_id": "bidir1", "zone": "a"},
+                {"fog_id": "bidir2", "zone": "a"},
+            ],
+            allow_entry_as_exit=False,
+        )
+        b_c = make_cluster(
+            "b",
+            entry_fogs=[{"fog_id": "b_entry", "zone": "b"}],
+            exit_fogs=[{"fog_id": "b_exit", "zone": "b"}],
+        )
+        e_c = make_cluster(
+            "e",
+            "final_boss",
+            entry_fogs=[
+                {"fog_id": "e_entry1", "zone": "e"},
+                {"fog_id": "e_entry2", "zone": "e"},
+            ],
+            exit_fogs=[],
+        )
+
+        dag.add_node(
+            DagNode(
+                "s", s_c, 0, 1, [], [FogRef("s_exit1", "s"), FogRef("s_exit2", "s")]
+            )
+        )
+        dag.add_node(
+            DagNode("a", a_c, 1, 2, [FogRef("bidir1", "a")], [FogRef("bidir2", "a")])
+        )
+        dag.add_node(
+            DagNode("b", b_c, 1, 2, [FogRef("b_entry", "b")], [FogRef("b_exit", "b")])
+        )
+        dag.add_node(
+            DagNode(
+                "e", e_c, 2, 3, [FogRef("e_entry1", "e"), FogRef("e_entry2", "e")], []
+            )
+        )
+
+        dag.add_edge("s", "a", FogRef("s_exit1", "s"), FogRef("bidir1", "a"))
+        dag.add_edge("s", "b", FogRef("s_exit2", "s"), FogRef("b_entry", "b"))
+        dag.add_edge("a", "e", FogRef("bidir2", "a"), FogRef("e_entry1", "e"))
+        dag.add_edge("b", "e", FogRef("b_exit", "b"), FogRef("e_entry2", "e"))
+        dag.start_id = "s"
+        dag.end_id = "e"
+
+        # Without allow_entry_as_exit: bidir1 used as entry BLOCKS bidir1 as exit
+        surplus = _surplus_exits(dag, "a")
+        assert FogRef("bidir1", "a") not in surplus

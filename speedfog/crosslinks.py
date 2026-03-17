@@ -57,12 +57,24 @@ def _surplus_exits(dag: Dag, node_id: str) -> list[FogRef]:
     uses one side, it also marks the Pair as consumed. The Pair is
     per-zone: the same fog_id on different zones creates independent
     Pairs, so we match on (fog_id, zone), not bare fog_id.
+
+    When allow_entry_as_exit is set on the cluster, the entry fog's
+    bidirectional Pair is NOT consumed (the entry direction is reused
+    as a forward exit). In that case, the Pair exclusion is skipped.
     """
     node = dag.nodes[node_id]
     used = _get_used_exit_fogs(dag, node_id)
     # FogRefs consumed as entry on this node — their exit Pair is also consumed
     entry_fogrefs = _get_used_entry_fogs(dag, node_id)
     all_exits = [FogRef(f["fog_id"], f["zone"]) for f in node.cluster.exit_fogs]
+    if node.cluster.allow_entry_as_exit:
+        # Entry fog does not consume its exit Pair — skip Pair exclusion
+        return [
+            f
+            for f in all_exits
+            if f not in used
+            and not _blocked_by_proximity(node.cluster, f, entry_fogrefs)
+        ]
     return [
         f
         for f in all_exits
