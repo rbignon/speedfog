@@ -121,8 +121,14 @@ allow_entry_as_exit = true
 weight = 2
 allow_entry_as_exit = true  # after exit pruning, only Godrick front remains (also the entry)
 
+# Margit is Morgott in disguise — killing Morgott removes Margit from his arena.
+# These zones cannot coexist in the same run.
+[zones.stormveil_margit]
+conflicts_with = ["leyndell_sanctuary"]
+
 [zones.leyndell_sanctuary]
 weight = 2
+conflicts_with = ["stormveil_margit"]
 
 [zones.leyndell_throne]
 weight = 2
