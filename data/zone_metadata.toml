@@ -20,11 +20,12 @@ start = 1
 final_boss = 2.5
 other = 2
 
-# Zone-specific overrides
-# Format: [zones.zone_name]
-#         weight = X
+# =============================================================================
+# Legacy Dungeons & Large Areas
+# =============================================================================
 
-# Base game legacy dungeons
+# --- Base game ---
+
 [zones.stormveil]
 weight = 8
 
@@ -55,101 +56,18 @@ weight = 8
 [zones.farumazula]
 weight = 8
 
-# Large catacombs
-[zones.gelmir_hero_grave]
-weight = 6
-
-[zones.giant_conquering_hero_grave]
-weight = 6
-
-# Type overrides
-[zones.volcano_abductors]
-type = "boss_arena"
-
-# Astel is a remembrance boss — override from boss_arena to major_boss
-[zones.ainsel_boss]
-type = "major_boss"
-
-# Boss arenas: disable entry-as-exit (enter from front, exit from back)
-[zones.ainsel_dragonkin]
-allow_entry_as_exit = false
-
-[zones.deeproot_boss]
-allow_entry_as_exit = false
-
-[zones.haligtree_malenia]
-weight = 5
-allow_entry_as_exit = true
-
-# Mini dungeons calibrated from race data
-[zones.caelid_gaolcave]
-weight = 2
-
-[zones.flamepeak_grave]
-weight = 2.5
-
-[zones.gelmir_grave]
-weight = 2.5
-
-[zones.limgrave_tunnels]
-weight = 2
-
-[zones.liurnia_tunnel]
-weight = 2
-
-[zones.outskirts_grave]
-weight = 2
-
 [zones.sewer]
 weight = 6
 
-[zones.sewer_catacombs]
-weight = 2.5
-
-# Base game type overrides: zones typed "other" but functionally dungeons
 [zones.peninsula_morne]
-weight = 3  # Castle Morne — detected as legacy_dungeon via fortressonly+legacy fog
+weight = 3  # Castle Morne, detected as legacy_dungeon via fortressonly+legacy fog
 
+[zones.mohgwyn]
+type = "legacy_dungeon"
+weight = 6
 
-# Multi-phase major bosses (2+ phase transitions)
-[zones.academy_library]
-type = "major_boss"
-weight = 2
-allow_entry_as_exit = true
+# --- DLC ---
 
-[zones.stormveil_godrick]
-weight = 2
-allow_entry_as_exit = true  # after exit pruning, only Godrick front remains (also the entry)
-
-# Margit is Morgott in disguise — killing Morgott removes Margit from his arena.
-# These zones cannot coexist in the same run.
-[zones.stormveil_margit]
-conflicts_with = ["leyndell_sanctuary"]
-
-[zones.leyndell_sanctuary]
-weight = 2
-conflicts_with = ["stormveil_margit"]
-
-[zones.leyndell_throne]
-weight = 2
-
-[zones.flamepeak_firegiant]
-weight = 2
-allow_entry_as_exit = false
-
-[zones.farumazula_maliketh]
-weight = 2
-
-# =============================================================================
-# DLC - Shadow of the Erdtree
-# =============================================================================
-
-# DLC Final Boss
-[zones.enirilim_radahn]
-type = "final_boss"
-weight = 5
-
-# DLC Legacy Dungeons (type override: m20_ maps not in legacy_prefixes heuristic)
 [zones.belurat]
 type = "legacy_dungeon"
 weight = 6
@@ -170,7 +88,41 @@ type = "legacy_dungeon"
 [zones.midramanse]
 type = "legacy_dungeon"
 
-# DLC Mini Dungeons (calibrated from race data)
+# =============================================================================
+# Mini Dungeons
+# =============================================================================
+
+# --- Base game ---
+
+[zones.gelmir_hero_grave]
+weight = 6
+
+[zones.giant_conquering_hero_grave]
+weight = 6
+
+[zones.caelid_gaolcave]
+weight = 2
+
+[zones.flamepeak_grave]
+weight = 2.5
+
+[zones.gelmir_grave]
+weight = 2.5
+
+[zones.limgrave_tunnels]
+weight = 2
+
+[zones.liurnia_tunnel]
+weight = 2
+
+[zones.outskirts_grave]
+weight = 2
+
+[zones.sewer_catacombs]
+weight = 2.5
+
+# --- DLC ---
+
 [zones.gravesite_catacombs]
 weight = 3.5
 
@@ -189,7 +141,6 @@ weight = 6
 [zones.scadualtus_forge]
 weight = 6
 
-# DLC type overrides: zones not tagged as minidungeon in fog.txt (lead to new zones)
 [zones.scadualtus_catacombs]
 type = "mini_dungeon"
 weight = 3
@@ -201,30 +152,69 @@ type = "mini_dungeon"
 type = "mini_dungeon"  # Shadow Keep West Rampart, dungeon section
 weight = 2
 
-[zones.scadualtus_catacombs_boss]
-type = "boss_arena"  # fog.txt Entrance has "major" tag, but Jori is a catacomb boss, not a remembrance boss
-
 [zones.scadualtus_gaol]
 weight = 3
 
-# Major bosses: allow entry-as-exit so they can be pass-through nodes
+# =============================================================================
+# Boss Arenas & Major Bosses
+# =============================================================================
+
+# --- Base game ---
+
+[zones.volcano_abductors]
+type = "boss_arena"
+
+# Astel is a remembrance boss, override from boss_arena to major_boss
+[zones.ainsel_boss]
+type = "major_boss"
+
+[zones.ainsel_dragonkin]
+allow_entry_as_exit = false
+
+[zones.deeproot_boss]
+allow_entry_as_exit = false
+
+[zones.haligtree_malenia]
+weight = 5
+allow_entry_as_exit = true
+
+# Multi-phase major boss (2+ phase transitions)
+[zones.academy_library]
+type = "major_boss"
+weight = 4
+allow_entry_as_exit = true
+
+[zones.stormveil_godrick]
+weight = 2
+allow_entry_as_exit = true  # after exit pruning, only Godrick front remains (also the entry)
+
+# Margit is Morgott in disguise: killing Morgott removes Margit from his arena.
+# These zones cannot coexist in the same run.
+[zones.stormveil_margit]
+conflicts_with = ["leyndell_throne"]
+
+[zones.leyndell_throne]
+weight = 2
+conflicts_with = ["stormveil_margit"]
+
+[zones.leyndell_sanctuary]
+weight = 2
+
+[zones.leyndell2_throne]
+weight = 4
+
+[zones.flamepeak_firegiant]
+weight = 4
+allow_entry_as_exit = false
+
+[zones.farumazula_maliketh]
+weight = 4
+
 [zones.altus_elemer]
-type = "boss_arena"  # fog.txt Entrance has "major" tag, but Area has "minor" — Elemer is not a remembrance boss
-allow_entry_as_exit = true
-
-[zones.fissure_boss]
-allow_entry_as_exit = true
-
-[zones.jaggedpeak_bayle]
-allow_entry_as_exit = true
-
-[zones.midramanse_boss]
+type = "boss_arena"  # fog.txt Entrance has "major" tag, but Area has "minor"
 allow_entry_as_exit = true
 
 [zones.peninsula_leonine]
-allow_entry_as_exit = true
-
-[zones.scadutree_base]
 allow_entry_as_exit = true
 
 [zones.academy_redwolf]
@@ -233,48 +223,71 @@ allow_entry_as_exit = true
 [zones.sewer_mohg]
 allow_entry_as_exit = true
 
-[zones.belurat_boss]
+# --- DLC ---
+
+[zones.enirilim_radahn]
+type = "final_boss"
+weight = 4
+
+[zones.scadualtus_catacombs_boss]
+type = "boss_arena"  # fog.txt Entrance has "major" tag, but Jori is a catacomb boss, not a remembrance boss
+
+[zones.fissure_boss]
+allow_entry_as_exit = true
+weight = 2
+
+[zones.jaggedpeak_bayle]
+weight = 4
 allow_entry_as_exit = true
 
-[zones.storehouse_messmer]
+[zones.midramanse_boss]
 weight = 2
 allow_entry_as_exit = true
 
-# Underground override: Mohgwyn Palace is a compact dungeon, not open exploration
-[zones.mohgwyn]
-type = "legacy_dungeon"
-weight = 6
+[zones.belurat_boss]
+weight = 2
+allow_entry_as_exit = true
 
+[zones.storehouse_messmer]
+weight = 4
+allow_entry_as_exit = true
+
+# =============================================================================
 # Exclusions
+# =============================================================================
+
+# --- Base game ---
+
 [zones.leyndell2_erdtree]
-exclude = true  # Ashen Erdtree entrance — no usable entry fogs in FogMod graph (AlternateOf + altlogic tags)
+exclude = true  # Ashen Erdtree entrance, no usable entry fogs in FogMod graph (AlternateOf + altlogic tags)
 
 [zones.erdtree]
-exclude = true  # Elden Beast arena — accessed via leyndell2_erdtree unique fog, not standalone
+exclude = true  # Elden Beast arena, accessed via leyndell2_erdtree unique fog, not standalone
 
-# DLC Exclusions (zones that don't work well as independent clusters)
+# Auriza Side Tomb: confusing trap-chest dungeon, monopolizes split(3/4) at mb=4
+[zones.outskirts_sidetomb]
+exclude = true
+
+# --- DLC ---
+
 [zones.rauhruins_postromina]
 exclude = true
 
 [zones.fissure_preboss]
-exclude = true  # Funnels player into boss dropdown — fissure_boss has its own cluster (fissure_boss_674e)
+exclude = true  # Funnels player into boss dropdown, fissure_boss has its own cluster (fissure_boss_674e)
 
 [zones.graveyard_cave]
 exclude = true
 
 [zones.scadualtus_ymir]
-exclude = true  # Cathedral of Manus Metyr interior — accessed via unique warp, not standalone
-
-# Auriza Side Tomb: confusing trap-chest dungeon, monopolizes split(3/4) at mb=4
-[zones.outskirts_sidetomb]
-exclude = true
+exclude = true  # Cathedral of Manus Metyr interior, accessed via unique warp, not standalone
 
 # =============================================================================
 # Cluster-level traversal constraints
 # =============================================================================
 #
 # exclude: remove this cluster entirely from the pool
-# proximity_groups: fogs spatially close — entry and exit cannot share a group
+# proximity_groups: fogs spatially close, entry and exit cannot share a group
 # allowed_entries/allowed_exits: restrict eligible fogs
 # Use "zone:fog_id" when the same fog_id appears in multiple zones
 
@@ -333,7 +346,7 @@ allowed_entries = [
     "AEG099_230_9000", # Before Elphael
 ]
 
-# Leyndell2 — Hoarah Loux exit + all Gideon entrances are adjacent (throne → sanctuary)
+# Leyndell2: Hoarah Loux exit + all Gideon entrances are adjacent (throne -> sanctuary)
 [clusters.leyndell2_sanctuary_94fb]
 proximity_groups = [
     ["AEG099_001_9001", # Hoarah Loux front
@@ -346,7 +359,7 @@ proximity_groups = [
     ],
 ]
 
-# Leyndell2 — Gideon front + Gideon side are adjacent (same arena approaches)
+# Leyndell2: Gideon front + Gideon side are adjacent (same arena approaches)
 [clusters.leyndell2_e77d]
 proximity_groups = [
     ["AEG099_001_9003", # Gideon front
@@ -354,7 +367,7 @@ proximity_groups = [
     ],
 ]
 
-# Leyndell — Morgott exit + all Godfrey entrances are adjacent (throne → sanctuary)
+# Leyndell: Morgott exit + all Godfrey entrances are adjacent (throne -> sanctuary)
 [clusters.leyndell_sanctuary_25d4]
 proximity_groups = [
     ["AEG099_001_9000", # Morgott front
@@ -367,7 +380,7 @@ proximity_groups = [
     ],
 ]
 
-# Leyndell — Godfrey front + Godfrey side are adjacent
+# Leyndell: Godfrey front + Godfrey side are adjacent
 [clusters.leyndell_1259]
 proximity_groups = [
     ["AEG099_001_9004", # Godfrey front
@@ -386,7 +399,7 @@ proximity_groups = [
     ],
 ]
 
-# Academy Post Redwolf (large) — same spatial groups
+# Academy Post Redwolf (large), same spatial groups
 [clusters.academy_redwolf_b9d9]
 proximity_groups = [
     ["AEG099_001_9000",             # Rennala front
