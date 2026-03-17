@@ -17,6 +17,7 @@ from generate_clusters import (
     _resolve_zone_type,
     apply_cluster_merges,
     build_world_graph,
+    build_zone_conflicts,
     classify_fogs,
     clusters_to_json,
     compute_allow_entry_as_exit,
@@ -3550,8 +3551,8 @@ class TestClusterConstraintsSerialization:
         assert "allowed_entries" not in c
         assert "allowed_exits" not in c
 
-    def test_version_is_1_9(self):
-        """clusters.json version bumped to 1.9."""
+    def test_version_is_1_10(self):
+        """clusters.json version bumped to 1.10."""
         cluster = Cluster(
             zones=frozenset({"z1"}),
             entry_fogs=[],
@@ -3564,7 +3565,8 @@ class TestClusterConstraintsSerialization:
             "z1": AreaData(name="z1", text="Zone 1", maps=["m10_00_00_00"], tags=[])
         }
         result = clusters_to_json([cluster], areas)
-        assert result["version"] == "1.9"
+        assert result["version"] == "1.10"
+        assert result["zone_conflicts"] == {}
 
 
 class TestPickDisplayName:
@@ -3893,3 +3895,29 @@ class TestApplyClusterMergesIntegration:
 
         radahn_cluster = next(c for c in merged if "caelid_radahn" in c.zones)
         assert len(radahn_cluster.entry_fogs) > 0, "Radahn cluster must have entry fogs"
+
+
+class TestBuildZoneConflicts:
+    """Tests for build_zone_conflicts extraction from metadata."""
+
+    def test_zone_conflicts_extracted(self):
+        """zone_conflicts from metadata are extracted correctly."""
+        metadata = {
+            "zones": {
+                "zone_a": {"conflicts_with": ["zone_b"]},
+                "zone_b": {"conflicts_with": ["zone_a"]},
+            }
+        }
+        result = build_zone_conflicts(metadata)
+        assert result == {"zone_a": ["zone_b"], "zone_b": ["zone_a"]}
+
+    def test_empty_metadata(self):
+        """No conflicts when metadata has no conflicts_with."""
+        metadata = {"zones": {"zone_a": {"weight": 5}}}
+        result = build_zone_conflicts(metadata)
+        assert result == {}
+
+    def test_no_zones_section(self):
+        """No conflicts when metadata has no zones section."""
+        result = build_zone_conflicts({})
+        assert result == {}

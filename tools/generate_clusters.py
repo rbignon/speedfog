@@ -1794,6 +1794,20 @@ def build_zone_maps(
     return zone_maps
 
 
+def build_zone_conflicts(metadata: dict) -> dict[str, list[str]]:
+    """Extract zone conflicts from metadata.
+
+    Returns a dict mapping zone_name → list of conflicting zone names.
+    Only includes zones that have conflicts declared.
+    """
+    zones_meta = metadata.get("zones", {})
+    conflicts: dict[str, list[str]] = {}
+    for zone_name, zm in zones_meta.items():
+        if isinstance(zm, dict) and "conflicts_with" in zm:
+            conflicts[zone_name] = zm["conflicts_with"]
+    return conflicts
+
+
 def build_zone_names(
     clusters: list[Cluster],
     areas: dict[str, AreaData],
@@ -1862,10 +1876,12 @@ def _pick_display_name(
 def clusters_to_json(
     clusters: list[Cluster],
     areas: dict[str, AreaData],
+    metadata: dict | None = None,
 ) -> dict:
     """Convert clusters to JSON-serializable format with zone→map mapping."""
     zone_maps = build_zone_maps(clusters, areas)
     zone_names = build_zone_names(clusters, areas)
+    zone_conflicts = build_zone_conflicts(metadata or {})
 
     cluster_list = []
     for c in sorted(clusters, key=lambda x: x.cluster_id):
@@ -1895,11 +1911,12 @@ def clusters_to_json(
         cluster_list.append(entry)
 
     return {
-        "version": "1.9",
+        "version": "1.10",
         "generated_from": "fog.txt",
         "cluster_count": len(clusters),
         "zone_maps": zone_maps,
         "zone_names": zone_names,
+        "zone_conflicts": zone_conflicts,
         "clusters": cluster_list,
     }
 
@@ -2069,7 +2086,7 @@ def main() -> int:
             print(f"    {t}: {count}")
 
     # Write output
-    output_data = clusters_to_json(clusters, areas)
+    output_data = clusters_to_json(clusters, areas, metadata)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(output_data, f, indent=2)
