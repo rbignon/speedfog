@@ -596,17 +596,29 @@ def determine_operation(
             # N≥3: split stale + merge 2 others (split-first)
             if not skip_rebalance and num_branches >= 2:
                 if num_branches == 2:
-                    # 2 branches: merge-first rebalance always possible
-                    # (anti-micro-merge check: branches must have different parents)
-                    if branches[0].current_node_id != branches[1].current_node_id:
+                    # 2 branches: merge-first rebalance needs both branches
+                    # old enough and with different parents (anti-micro-merge)
+                    both_old = all(
+                        current_layer - b.birth_layer >= min_age for b in branches
+                    )
+                    if (
+                        both_old
+                        and branches[0].current_node_id != branches[1].current_node_id
+                    ):
                         return LayerOperation.REBALANCE, 1
                 else:
-                    # 3+ branches: split-first, need merge pair among non-stale
+                    # 3+ branches: split-first, need age-eligible merge pair
+                    # among non-stale branches
                     stale_idx = max(
                         range(num_branches),
                         key=lambda i: branches[i].layers_since_last_split,
                     )
-                    other = [i for i in range(num_branches) if i != stale_idx]
+                    other = [
+                        i
+                        for i in range(num_branches)
+                        if i != stale_idx
+                        and current_layer - branches[i].birth_layer >= min_age
+                    ]
                     has_pair = any(
                         branches[other[i]].current_node_id
                         != branches[other[j]].current_node_id
@@ -722,6 +734,11 @@ def _pick_entry_and_exits_for_node(
         rng.shuffle(fallback)
         ordered = preferred + fallback
         ordered = _filter_exits_by_proximity(cluster, entry, ordered)
+        if len(ordered) < min_exits:
+            raise GenerationError(
+                f"Cluster {cluster.id} has only {len(ordered)} exits after "
+                f"proximity filtering (need {min_exits})"
+            )
         exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in ordered[:min_exits]]
         return entry_fog, exit_fogs
 
@@ -733,6 +750,11 @@ def _pick_entry_and_exits_for_node(
     entry_fog = FogRef(picked["fog_id"], picked["zone"])
     exits = compute_net_exits(cluster, [picked])
     exits = _filter_exits_by_proximity(cluster, picked, exits)
+    if len(exits) < min_exits:
+        raise GenerationError(
+            f"Cluster {cluster.id} has only {len(exits)} exits after "
+            f"proximity filtering (need {min_exits})"
+        )
     rng.shuffle(exits)
     exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits[:min_exits]]
     return entry_fog, exit_fogs
@@ -831,6 +853,7 @@ def execute_rebalance_layer(
             clusters,
             used_zones,
             rng,
+            config,
             reserved_zones=reserved_zones,
         )
     return _rebalance_split_first(
@@ -856,6 +879,7 @@ def _rebalance_merge_first(
     clusters: ClusterPool,
     used_zones: set[str],
     rng: random.Random,
+    config: Config,
     *,
     reserved_zones: frozenset[str] = frozenset(),
 ) -> tuple[list[Branch], int] | None:
@@ -864,6 +888,11 @@ def _rebalance_merge_first(
     Merge node is placed at layer_idx, split node at layer_idx+1.
     Returns (branches, 2) on success, None if no capable clusters.
     """
+    # Check min_branch_age: both branches must be old enough to merge
+    min_age = config.structure.min_branch_age
+    if any(layer_idx - b.birth_layer < min_age for b in branches):
+        return None
+
     candidates = clusters.get_by_type(layer_type)
 
     # 1. Pick a merge-capable cluster
@@ -999,9 +1028,14 @@ def _rebalance_split_first(
         key=lambda i: branches[i].layers_since_last_split,
     )
 
-    # 2. Find 2 merge candidates among other branches (bypass min_age,
+    # 2. Find 2 merge candidates among other branches (respects min_age,
     #    enforce anti-micro-merge: different parent nodes)
-    other_indices = [i for i in range(len(branches)) if i != stale_idx]
+    min_age = config.structure.min_branch_age
+    other_indices = [
+        i
+        for i in range(len(branches))
+        if i != stale_idx and layer_idx - branches[i].birth_layer >= min_age
+    ]
     rng.shuffle(other_indices)
     merge_pair: tuple[int, int] | None = None
     for i in range(len(other_indices)):
@@ -1013,10 +1047,7 @@ def _rebalance_split_first(
         if merge_pair:
             break
     if merge_pair is None:
-        raise GenerationError(
-            f"Rebalance failed at layer {layer_idx}: "
-            "no valid merge pair (anti-micro-merge)"
-        )
+        return None
 
     # 3. Pick a split-capable cluster of the planned type only.
     split_cluster = pick_cluster_with_filter(

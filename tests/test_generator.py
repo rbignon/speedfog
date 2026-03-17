@@ -4716,7 +4716,7 @@ def test_execute_rebalance_layer_basic():
 
 
 def test_execute_rebalance_layer_no_merge_pair():
-    """Raises GenerationError when no valid merge pair exists."""
+    """Returns None when no valid merge pair exists."""
     dag = Dag(seed=1)
     # All branches share same parent node → anti-micro-merge blocks merge
     n = DagNode(
@@ -4755,18 +4755,19 @@ def test_execute_rebalance_layer_no_merge_pair():
     config = Config()
     config.structure.max_parallel_paths = 3
 
-    with pytest.raises(GenerationError, match="no valid merge pair"):
-        execute_rebalance_layer(
-            dag,
-            branches,
-            layer_idx=1,
-            tier=2,
-            layer_type="mini_dungeon",
-            clusters=pool,
-            used_zones=set(),
-            rng=random.Random(42),
-            config=config,
-        )
+    result = execute_rebalance_layer(
+        dag,
+        branches,
+        layer_idx=1,
+        tier=2,
+        layer_type="mini_dungeon",
+        clusters=pool,
+        used_zones=set(),
+        rng=random.Random(42),
+        config=config,
+    )
+    # No valid merge pair (anti-micro-merge: all share same parent) → returns None
+    assert result is None
 
 
 def test_execute_rebalance_layer_counter_propagation():
