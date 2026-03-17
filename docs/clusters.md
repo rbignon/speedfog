@@ -228,11 +228,12 @@ Multi-zone `major_boss` clusters can be **downgraded** to `legacy_dungeon` when 
 
 ```json
 {
-  "version": "1.9",
+  "version": "1.10",
   "generated_from": "fog.txt",
   "cluster_count": 123,
   "zone_maps": {"stormveil": "m10_00_00_00"},
   "zone_names": {"stormveil": "Stormveil Castle"},
+  "zone_conflicts": {"stormveil_margit": ["leyndell_sanctuary"], "leyndell_sanctuary": ["stormveil_margit"]},
   "clusters": [
     {
       "id": "stormveil_1a2b",
@@ -255,6 +256,7 @@ Multi-zone `major_boss` clusters can be **downgraded** to `legacy_dungeon` when 
 - `id`: `{primary_zone}_{md5_hash[:4]}` for uniqueness
 - `zone_maps`: zone → primary map ID (from `area.maps[0]`)
 - `zone_names`: zone → display name (from `area.text`)
+- `zone_conflicts`: zone → list of mutually exclusive zones (from `conflicts_with` in `zone_metadata.toml`). When a cluster containing one zone is selected, clusters containing conflicting zones are excluded. Example: Margit (`stormveil_margit`) and Morgott (`leyndell_sanctuary`) are the same character — killing Morgott removes Margit from his arena.
 - `defeat_flag`: boss defeat event flag (0 if none)
 - `main`: entry fog has the `main` tag (preferred for Stake placement)
 

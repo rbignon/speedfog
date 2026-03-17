@@ -246,6 +246,8 @@ Before executing any intermediate layers:
 3. Compute **reserved zones**: the final boss cluster's zones plus the prerequisite cluster's zones (if the boss has a `requires` field)
 4. Reserved zones are excluded from intermediate layer selection, preventing them from being consumed before they are needed
 
+**Zone conflicts**: Some zones are mutually exclusive and cannot both appear in the same run (declared via `conflicts_with` in `zone_metadata.toml`). When a cluster is selected, conflicting zones are added to `used_zones` via `_mark_cluster_used()`, preventing any cluster containing those zones from being picked later. Example: `stormveil_margit` (Margit) and `leyndell_sanctuary` (Morgott) — Margit is Morgott in disguise, and killing Morgott removes Margit from his arena. Conflicts are non-transitive and must be declared symmetrically on both sides.
+
 ### 3. First Layer (optional forced type)
 
 If `first_layer_type` is configured (e.g., `"legacy_dungeon"`), execute a passant layer with only clusters of that type. Uses `pick_cluster_uniform()` (cluster-first, no capability filter -- all clusters passed `filter_passant_incompatible()` at load time). Ensures a consistent opening experience.
