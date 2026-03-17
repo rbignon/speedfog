@@ -1,5 +1,7 @@
 """Tests for ClusterData fields and ClusterPool display name logic."""
 
+import json
+
 from speedfog.clusters import ClusterData, ClusterPool
 
 
@@ -151,3 +153,57 @@ class TestGetDisplayName:
         cluster = self._make_cluster("unknown_1234", ["unknown"], "mini_dungeon")
         pool = ClusterPool()
         assert pool.get_display_name(cluster) == "unknown_1234"
+
+
+class TestZoneConflicts:
+    """Tests for zone conflict loading and lookup."""
+
+    def test_zone_conflicts_loaded_from_json(self, tmp_path):
+        """zone_conflicts dict is loaded from clusters.json."""
+        data = {
+            "version": "1.10",
+            "zone_maps": {},
+            "zone_names": {},
+            "zone_conflicts": {
+                "stormveil_margit": ["leyndell_sanctuary"],
+                "leyndell_sanctuary": ["stormveil_margit"],
+            },
+            "clusters": [],
+        }
+        path = tmp_path / "clusters.json"
+        path.write_text(json.dumps(data))
+        pool = ClusterPool.from_json(path)
+        assert pool.zone_conflicts == {
+            "stormveil_margit": ["leyndell_sanctuary"],
+            "leyndell_sanctuary": ["stormveil_margit"],
+        }
+
+    def test_get_conflicting_zones(self):
+        """get_conflicting_zones returns all zones conflicting with input."""
+        pool = ClusterPool()
+        pool.zone_conflicts = {
+            "zone_a": ["zone_b", "zone_c"],
+            "zone_b": ["zone_a"],
+        }
+        result = pool.get_conflicting_zones(["zone_a"])
+        assert result == {"zone_b", "zone_c"}
+
+    def test_get_conflicting_zones_no_conflicts(self):
+        """get_conflicting_zones returns empty set when no conflicts."""
+        pool = ClusterPool()
+        pool.zone_conflicts = {}
+        result = pool.get_conflicting_zones(["zone_x"])
+        assert result == set()
+
+    def test_zone_conflicts_defaults_empty(self, tmp_path):
+        """zone_conflicts defaults to empty dict if missing from JSON."""
+        data = {
+            "version": "1.9",
+            "zone_maps": {},
+            "zone_names": {},
+            "clusters": [],
+        }
+        path = tmp_path / "clusters.json"
+        path.write_text(json.dumps(data))
+        pool = ClusterPool.from_json(path)
+        assert pool.zone_conflicts == {}

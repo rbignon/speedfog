@@ -127,6 +127,7 @@ class ClusterPool:
     by_id: dict[str, ClusterData] = field(default_factory=dict)
     zone_maps: dict[str, str] = field(default_factory=dict)
     zone_names: dict[str, str] = field(default_factory=dict)
+    zone_conflicts: dict[str, list[str]] = field(default_factory=dict)
 
     def add(self, cluster: ClusterData) -> None:
         """Add a cluster to the pool."""
@@ -175,6 +176,21 @@ class ClusterPool:
             if zone in self.zone_names:
                 return self.zone_names[zone]
         return cluster.id
+
+    def get_conflicting_zones(self, zones: list[str]) -> set[str]:
+        """Get all zones that conflict with the given zones.
+
+        Args:
+            zones: List of zone IDs to check.
+
+        Returns:
+            Set of zone IDs that conflict with any of the input zones.
+        """
+        result: set[str] = set()
+        for zone in zones:
+            if zone in self.zone_conflicts:
+                result.update(self.zone_conflicts[zone])
+        return result
 
     def merge_roundtable_into_start(self) -> None:
         """Merge the roundtable cluster into the start cluster.
@@ -260,6 +276,7 @@ class ClusterPool:
         pool = cls()
         pool.zone_maps = data.get("zone_maps", {})
         pool.zone_names = data.get("zone_names", {})
+        pool.zone_conflicts = data.get("zone_conflicts", {})
 
         for cluster_data in data.get("clusters", []):
             cluster = ClusterData.from_dict(cluster_data)
