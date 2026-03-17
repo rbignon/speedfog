@@ -15,6 +15,7 @@ from speedfog.generator import (
     _find_valid_merge_indices,
     _has_valid_merge_pair,
     _inject_prerequisite,
+    _mark_cluster_used,
     _pick_entry_and_exits_for_node,
     _stable_main_shuffle,
     can_be_merge_node,
@@ -5341,3 +5342,79 @@ def test_determine_operation_skip_rebalance():
         skip_rebalance=True,
     )
     assert op != LayerOperation.REBALANCE
+
+
+class TestZoneConflicts:
+    """Tests for zone conflict exclusion during DAG generation."""
+
+    def test_conflicting_zone_excluded_after_selection(self):
+        """When a cluster is selected, clusters with conflicting zones are excluded."""
+        margit = make_cluster(
+            "margit",
+            zones=["stormveil_margit"],
+            cluster_type="major_boss",
+            weight=2,
+        )
+        morgott = make_cluster(
+            "morgott",
+            zones=["leyndell_sanctuary"],
+            cluster_type="major_boss",
+            weight=2,
+        )
+        other = make_cluster(
+            "other",
+            zones=["other_zone"],
+            cluster_type="major_boss",
+            weight=2,
+        )
+
+        pool = ClusterPool()
+        pool.zone_conflicts = {
+            "stormveil_margit": ["leyndell_sanctuary"],
+            "leyndell_sanctuary": ["stormveil_margit"],
+        }
+        for c in [margit, morgott, other]:
+            pool.add(c)
+
+        used_zones: set[str] = set()
+
+        # Simulate selecting margit
+        _mark_cluster_used(margit, used_zones, pool)
+
+        # Now morgott should be excluded (its zone is in used_zones)
+        result = pick_cluster_uniform(
+            pool.get_by_type("major_boss"), used_zones, random.Random(42)
+        )
+        assert result is not None
+        assert result.id == "other"
+
+    def test_mark_cluster_used_adds_conflicts(self):
+        """_mark_cluster_used adds both cluster zones and conflicting zones."""
+        margit = make_cluster(
+            "margit",
+            zones=["stormveil_margit"],
+            cluster_type="major_boss",
+            weight=2,
+        )
+        pool = ClusterPool()
+        pool.zone_conflicts = {
+            "stormveil_margit": ["leyndell_sanctuary"],
+        }
+        pool.add(margit)
+
+        used_zones: set[str] = set()
+        _mark_cluster_used(margit, used_zones, pool)
+
+        assert "stormveil_margit" in used_zones
+        assert "leyndell_sanctuary" in used_zones
+
+    def test_mark_cluster_used_no_conflicts(self):
+        """_mark_cluster_used works when no conflicts exist."""
+        cluster = make_cluster("test", zones=["zone_a"])
+        pool = ClusterPool()
+        pool.add(cluster)
+
+        used_zones: set[str] = set()
+        _mark_cluster_used(cluster, used_zones, pool)
+
+        assert used_zones == {"zone_a"}

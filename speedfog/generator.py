@@ -394,6 +394,16 @@ def pick_cluster_with_filter(
     return rng.choice(available)
 
 
+def _mark_cluster_used(
+    cluster: ClusterData,
+    used_zones: set[str],
+    clusters: ClusterPool,
+) -> None:
+    """Mark a cluster's zones as used, including conflicting zones."""
+    used_zones.update(cluster.zones)
+    used_zones.update(clusters.get_conflicting_zones(cluster.zones))
+
+
 def pick_cluster_uniform(
     candidates: list[ClusterData],
     used_zones: set[str],
@@ -882,7 +892,7 @@ def _rebalance_merge_first(
     letter = 0
 
     # A. Merge both branches
-    used_zones.update(merge_cluster.zones)
+    _mark_cluster_used(merge_cluster, used_zones, clusters)
     if merge_cluster.allow_shared_entrance:
         entries = select_entries_for_merge(merge_cluster, 1, rng)
         shared_entry = FogRef(entries[0]["fog_id"], entries[0]["zone"])
@@ -927,7 +937,7 @@ def _rebalance_merge_first(
 
     # B. Split the merged node (next layer to avoid intra-layer edge)
     split_layer = layer_idx + 1
-    used_zones.update(split_cluster.zones)
+    _mark_cluster_used(split_cluster, used_zones, clusters)
     entry_fog, exit_fogs = _pick_entry_and_exits_for_node(split_cluster, 2, rng)
     split_node_id = f"node_{split_layer}_a"
     split_node = DagNode(
@@ -1036,7 +1046,7 @@ def _rebalance_split_first(
 
     # A. Split the stale branch
     stale_branch = branches[stale_idx]
-    used_zones.update(split_cluster.zones)
+    _mark_cluster_used(split_cluster, used_zones, clusters)
     entry_fog, exit_fogs = _pick_entry_and_exits_for_node(split_cluster, 2, rng)
     split_node_id = f"node_{layer_idx}_{chr(97 + letter)}"
     split_node = DagNode(
@@ -1071,7 +1081,7 @@ def _rebalance_split_first(
     # B. Merge the pair
     merge_a, merge_b = merge_pair
     merge_branches_list = [branches[merge_a], branches[merge_b]]
-    used_zones.update(merge_cluster.zones)
+    _mark_cluster_used(merge_cluster, used_zones, clusters)
 
     if merge_cluster.allow_shared_entrance:
         entries = select_entries_for_merge(merge_cluster, 1, rng)
@@ -1138,7 +1148,7 @@ def _rebalance_split_first(
             raise GenerationError(
                 f"Rebalance passant at layer {layer_idx}: " f"no cluster for branch {i}"
             )
-        used_zones.update(pc.zones)
+        _mark_cluster_used(pc, used_zones, clusters)
         ef, exf = _pick_entry_and_exits_for_node(pc, 1, rng)
         nid = f"node_{layer_idx}_{chr(97 + letter)}"
         n = DagNode(
@@ -1218,7 +1228,7 @@ def execute_passant_layer(
             raise GenerationError(
                 f"No passant-compatible cluster for layer {layer_idx} branch {i} (type: {layer_type})"
             )
-        used_zones.update(cluster.zones)
+        _mark_cluster_used(cluster, used_zones, clusters)
 
         entry_fog, exit_fogs = _pick_entry_and_exits_for_node(cluster, 1, rng)
 
@@ -1383,7 +1393,7 @@ def execute_merge_layer(
     new_branches: list[Branch] = []
     letter_offset = 0
 
-    used_zones.update(cluster.zones)
+    _mark_cluster_used(cluster, used_zones, clusters)
 
     if cluster.allow_shared_entrance:
         # Shared entrance: all branches connect to the same entry fog.
@@ -1473,7 +1483,7 @@ def execute_merge_layer(
             raise GenerationError(
                 f"No passant-compatible cluster for layer {layer_idx} branch {i} (type: {layer_type})"
             )
-        used_zones.update(passant_cluster.zones)
+        _mark_cluster_used(passant_cluster, used_zones, clusters)
 
         passant_entry_fog, exit_fogs = _pick_entry_and_exits_for_node(
             passant_cluster, 1, rng
@@ -1563,7 +1573,7 @@ def _inject_prerequisite(
     if prereq is None:
         raise GenerationError(f"Prerequisite cluster not available: {prereq_zone}")
 
-    used_zones.update(prereq.zones)
+    _mark_cluster_used(prereq, used_zones, clusters)
     tier = compute_tier(
         current_layer,
         current_layer + 2,
@@ -1652,7 +1662,7 @@ def generate_dag(
     )
     dag.add_node(start_node)
     dag.start_id = "start"
-    used_zones.update(start_cluster.zones)
+    _mark_cluster_used(start_cluster, used_zones, clusters)
 
     # 2. Initialize branches from start exits
     # Natural split at start based on available exits
@@ -1732,7 +1742,7 @@ def generate_dag(
                 raise GenerationError(
                     f"No cluster for first layer branch {i} (type: {first_type})"
                 )
-            used_zones.update(c.zones)
+            _mark_cluster_used(c, used_zones, clusters)
             ef, exf = _pick_entry_and_exits_for_node(c, 1, rng)
             nid = f"node_{current_layer}_{chr(97 + i)}"
             n = DagNode(
@@ -1865,7 +1875,7 @@ def generate_dag(
 
             for i, branch in enumerate(branches):
                 if i == split_idx:
-                    used_zones.update(primary_cluster.zones)
+                    _mark_cluster_used(primary_cluster, used_zones, clusters)
                     entry_fog, exit_fogs = _pick_entry_and_exits_for_node(
                         primary_cluster, fan, rng
                     )
@@ -1910,7 +1920,7 @@ def generate_dag(
                             f"No cluster for layer {current_layer} branch {i} "
                             f"(type: {layer_type})"
                         )
-                    used_zones.update(pc.zones)
+                    _mark_cluster_used(pc, used_zones, clusters)
                     ef, exf = _pick_entry_and_exits_for_node(pc, 1, rng)
                     nid = f"node_{current_layer}_{chr(97 + letter_offset)}"
                     n = DagNode(
@@ -1974,7 +1984,7 @@ def generate_dag(
                 # Fallback: treat as passant
                 operation = LayerOperation.PASSANT
             else:
-                used_zones.update(primary_cluster.zones)
+                _mark_cluster_used(primary_cluster, used_zones, clusters)
                 merge_branches_list = [branches[i] for i in merge_indices]
 
                 if primary_cluster.allow_shared_entrance:
@@ -2059,7 +2069,7 @@ def generate_dag(
                             f"No cluster for layer {current_layer} branch {i} "
                             f"(type: {layer_type})"
                         )
-                    used_zones.update(pc.zones)
+                    _mark_cluster_used(pc, used_zones, clusters)
                     ef, exf = _pick_entry_and_exits_for_node(pc, 1, rng)
                     nid = f"node_{current_layer}_{chr(97 + letter)}"
                     n = DagNode(
@@ -2111,7 +2121,7 @@ def generate_dag(
                             f"No cluster for layer {current_layer} branch {i} "
                             f"(type: {layer_type})"
                         )
-                used_zones.update(c.zones)
+                _mark_cluster_used(c, used_zones, clusters)
                 ef, exf = _pick_entry_and_exits_for_node(c, 1, rng)
                 nid = f"node_{current_layer}_{chr(97 + i)}"
                 n = DagNode(
