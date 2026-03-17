@@ -800,7 +800,6 @@ def execute_rebalance_layer(
     dag: Dag,
     branches: list[Branch],
     layer_idx: int,
-    tier: int,
     layer_type: str,
     clusters: ClusterPool,
     used_zones: set[str],
@@ -822,11 +821,12 @@ def execute_rebalance_layer(
     Only selects clusters of layer_type to preserve type homogeneity.
     Returns None if no capable cluster of the planned type is available.
 
+    Tiers are assigned in a post-pass after DAG construction.
+
     Args:
         dag: The DAG being built.
         branches: Current active branches (must be >= 2).
         layer_idx: Current layer index.
-        tier: Difficulty tier.
         layer_type: Preferred cluster type.
         clusters: Pool of available clusters.
         used_zones: Set of already used zones.
@@ -848,7 +848,6 @@ def execute_rebalance_layer(
             dag,
             branches,
             layer_idx,
-            tier,
             layer_type,
             clusters,
             used_zones,
@@ -860,7 +859,6 @@ def execute_rebalance_layer(
         dag,
         branches,
         layer_idx,
-        tier,
         layer_type,
         clusters,
         used_zones,
@@ -874,7 +872,6 @@ def _rebalance_merge_first(
     dag: Dag,
     branches: list[Branch],
     layer_idx: int,
-    tier: int,
     layer_type: str,
     clusters: ClusterPool,
     used_zones: set[str],
@@ -948,7 +945,7 @@ def _rebalance_merge_first(
         id=merge_node_id,
         cluster=merge_cluster,
         layer=layer_idx,
-        tier=tier,
+        tier=0,
         entry_fogs=entry_fogs_list,
         exit_fogs=merge_exit_fogs,
     )
@@ -973,7 +970,7 @@ def _rebalance_merge_first(
         id=split_node_id,
         cluster=split_cluster,
         layer=split_layer,
-        tier=tier,
+        tier=0,
         entry_fogs=[entry_fog],
         exit_fogs=exit_fogs,
     )
@@ -1008,7 +1005,6 @@ def _rebalance_split_first(
     dag: Dag,
     branches: list[Branch],
     layer_idx: int,
-    tier: int,
     layer_type: str,
     clusters: ClusterPool,
     used_zones: set[str],
@@ -1084,7 +1080,7 @@ def _rebalance_split_first(
         id=split_node_id,
         cluster=split_cluster,
         layer=layer_idx,
-        tier=tier,
+        tier=0,
         entry_fogs=[entry_fog],
         exit_fogs=exit_fogs,
     )
@@ -1140,7 +1136,7 @@ def _rebalance_split_first(
         id=merge_node_id,
         cluster=merge_cluster,
         layer=layer_idx,
-        tier=tier,
+        tier=0,
         entry_fogs=entry_fogs_list,
         exit_fogs=merge_exit_fogs,
     )
@@ -1186,7 +1182,7 @@ def _rebalance_split_first(
             id=nid,
             cluster=pc,
             layer=layer_idx,
-            tier=tier,
+            tier=0,
             entry_fogs=[ef],
             exit_fogs=exf,
         )
@@ -1217,7 +1213,6 @@ def execute_passant_layer(
     dag: Dag,
     branches: list[Branch],
     layer_idx: int,
-    tier: int,
     layer_type: str,
     clusters: ClusterPool,
     used_zones: set[str],
@@ -1227,11 +1222,12 @@ def execute_passant_layer(
 ) -> list[Branch]:
     """Execute a passant layer where each branch advances to its own new node.
 
+    Tiers are assigned in a post-pass after DAG construction.
+
     Args:
         dag: The DAG being built.
         branches: Current branches.
         layer_idx: Current layer index.
-        tier: Difficulty tier for this layer.
         layer_type: Type of cluster to pick.
         clusters: Pool of available clusters.
         used_zones: Set of already used zones.
@@ -1268,7 +1264,7 @@ def execute_passant_layer(
             id=node_id,
             cluster=cluster,
             layer=layer_idx,
-            tier=tier,
+            tier=0,
             entry_fogs=[entry_fog],
             exit_fogs=exit_fogs,
         )
@@ -1349,7 +1345,6 @@ def execute_merge_layer(
     dag: Dag,
     branches: list[Branch],
     layer_idx: int,
-    tier: int,
     layer_type: str,
     clusters: ClusterPool,
     used_zones: set[str],
@@ -1364,11 +1359,12 @@ def execute_merge_layer(
     The fan-in N is controlled by config.structure.max_entrances.
     Tries from max down to 2.
 
+    Tiers are assigned in a post-pass after DAG construction.
+
     Args:
         dag: The DAG being built.
         branches: Current branches (must have at least 2).
         layer_idx: Current layer index.
-        tier: Difficulty tier for this layer.
         layer_type: Type of cluster to pick.
         clusters: Pool of available clusters.
         used_zones: Set of already used zones.
@@ -1453,7 +1449,7 @@ def execute_merge_layer(
         id=merge_node_id,
         cluster=cluster,
         layer=layer_idx,
-        tier=tier,
+        tier=0,
         entry_fogs=entry_fogs_list,
         exit_fogs=exit_fogs,
     )
@@ -1525,7 +1521,7 @@ def execute_merge_layer(
             id=node_id,
             cluster=passant_cluster,
             layer=layer_idx,
-            tier=tier,
+            tier=0,
             entry_fogs=[passant_entry_fog],
             exit_fogs=exit_fogs,
         )
@@ -1561,17 +1557,14 @@ def _inject_prerequisite(
     clusters: ClusterPool,
     used_zones: set[str],
     rng: random.Random,
-    final_tier: int,
-    *,
-    start_tier: int = 1,
-    tier_curve: str = "linear",
-    tier_curve_exponent: float = 0.6,
 ) -> tuple[list[Branch], int]:
     """Inject mandatory prerequisite cluster before final boss if needed.
 
     When the final boss cluster has a `requires` field (e.g. leyndell_erdtree
     requires farumazula_maliketh), this places the prerequisite as a passant
     node on the single merged path just before the final boss.
+
+    Tiers are assigned in a post-pass after DAG construction.
 
     Args:
         dag: The DAG being built.
@@ -1581,7 +1574,6 @@ def _inject_prerequisite(
         clusters: Pool of available clusters.
         used_zones: Set of already used zones.
         rng: Random number generator.
-        final_tier: Final tier for tier computation.
 
     Returns:
         Tuple of (updated branches, updated layer index).
@@ -1605,21 +1597,13 @@ def _inject_prerequisite(
         raise GenerationError(f"Prerequisite cluster not available: {prereq_zone}")
 
     _mark_cluster_used(prereq, used_zones, clusters)
-    tier = compute_tier(
-        current_layer,
-        current_layer + 2,
-        final_tier,
-        start_tier=start_tier,
-        curve=tier_curve,
-        exponent=tier_curve_exponent,
-    )
     ef, exf = _pick_entry_and_exits_for_node(prereq, 1, rng)
     node_id = f"node_{current_layer}_a"
     node = DagNode(
         id=node_id,
         cluster=prereq,
         layer=current_layer,
-        tier=tier,
+        tier=0,
         entry_fogs=[ef],
         exit_fogs=exf,
     )
@@ -1683,11 +1667,12 @@ def generate_dag(
         raise GenerationError("Could not pick start cluster")
 
     # Start node: no entry consumed, all exits available
+    # Tier is assigned in the post-pass after DAG construction.
     start_node = DagNode(
         id="start",
         cluster=start_cluster,
         layer=0,
-        tier=config.structure.start_tier,
+        tier=0,
         entry_fogs=[],  # Player spawns here, no entry fog consumed
         exit_fogs=[FogRef(f["fog_id"], f["zone"]) for f in start_cluster.exit_fogs],
     )
@@ -1754,14 +1739,6 @@ def generate_dag(
     current_layer = 1
     if config.structure.first_layer_type:
         first_type = config.structure.first_layer_type
-        tier = compute_tier(
-            current_layer,
-            10,
-            config.structure.final_tier,
-            start_tier=config.structure.start_tier,
-            curve=config.structure.tier_curve,
-            exponent=config.structure.tier_curve_exponent,
-        )
         first_candidates = clusters.get_by_type(first_type)
 
         new_branches: list[Branch] = []
@@ -1780,7 +1757,7 @@ def generate_dag(
                 id=nid,
                 cluster=c,
                 layer=current_layer,
-                tier=tier,
+                tier=0,
                 entry_fogs=[ef],
                 exit_fogs=exf,
             )
@@ -1825,20 +1802,8 @@ def generate_dag(
         pool_sizes=pool_sizes,
     )
 
-    # Estimated total for tier computation (planned + merge reserve)
-    estimated_total = target_total + merge_reserve
-
     # 6. Execute layers with cluster-first selection
     for layer_type in layer_types:
-        tier = compute_tier(
-            current_layer,
-            estimated_total,
-            config.structure.final_tier,
-            start_tier=config.structure.start_tier,
-            curve=config.structure.tier_curve,
-            exponent=config.structure.tier_curve_exponent,
-        )
-
         primary_cluster = _pick_cluster_biased_for_split(
             clusters,
             layer_type,
@@ -1868,7 +1833,6 @@ def generate_dag(
                 dag,
                 branches,
                 current_layer,
-                tier,
                 layer_type,
                 clusters,
                 used_zones,
@@ -1915,7 +1879,7 @@ def generate_dag(
                         id=node_id,
                         cluster=primary_cluster,
                         layer=current_layer,
-                        tier=tier,
+                        tier=0,
                         entry_fogs=[entry_fog],
                         exit_fogs=exit_fogs,
                     )
@@ -1958,7 +1922,7 @@ def generate_dag(
                         id=nid,
                         cluster=pc,
                         layer=current_layer,
-                        tier=tier,
+                        tier=0,
                         entry_fogs=[ef],
                         exit_fogs=exf,
                     )
@@ -2042,7 +2006,7 @@ def generate_dag(
                     id=merge_node_id,
                     cluster=primary_cluster,
                     layer=current_layer,
-                    tier=tier,
+                    tier=0,
                     entry_fogs=entry_fogs_list,
                     exit_fogs=exit_fogs,
                 )
@@ -2107,7 +2071,7 @@ def generate_dag(
                         id=nid,
                         cluster=pc,
                         layer=current_layer,
-                        tier=tier,
+                        tier=0,
                         entry_fogs=[ef],
                         exit_fogs=exf,
                     )
@@ -2159,7 +2123,7 @@ def generate_dag(
                     id=nid,
                     cluster=c,
                     layer=current_layer,
-                    tier=tier,
+                    tier=0,
                     entry_fogs=[ef],
                     exit_fogs=exf,
                 )
@@ -2186,14 +2150,6 @@ def generate_dag(
     convergence_layers = 0
     convergence_limit = merge_reserve * 2
     while len(branches) > 1:
-        tier = compute_tier(
-            current_layer,
-            estimated_total,
-            config.structure.final_tier,
-            start_tier=config.structure.start_tier,
-            curve=config.structure.tier_curve,
-            exponent=config.structure.tier_curve_exponent,
-        )
         last_layer_type = layer_types[-1] if layer_types else "mini_dungeon"
 
         conv_cluster = _pick_cluster_biased_for_split(
@@ -2222,7 +2178,6 @@ def generate_dag(
                 dag,
                 branches,
                 current_layer,
-                tier,
                 last_layer_type,
                 clusters,
                 used_zones,
@@ -2257,7 +2212,6 @@ def generate_dag(
                 dag,
                 branches,
                 current_layer,
-                tier,
                 last_layer_type,
                 clusters,
                 used_zones,
@@ -2273,7 +2227,6 @@ def generate_dag(
                     dag,
                     branches,
                     current_layer,
-                    tier,
                     last_layer_type,
                     clusters,
                     used_zones,
@@ -2287,7 +2240,6 @@ def generate_dag(
                     dag,
                     branches,
                     current_layer,
-                    tier,
                     last_layer_type,
                     clusters,
                     used_zones,
@@ -2312,10 +2264,6 @@ def generate_dag(
         clusters,
         used_zones,
         rng,
-        config.structure.final_tier,
-        start_tier=config.structure.start_tier,
-        tier_curve=config.structure.tier_curve,
-        tier_curve_exponent=config.structure.tier_curve_exponent,
     )
 
     # 9. Create end node (using pre-selected end_cluster)
@@ -2336,7 +2284,7 @@ def generate_dag(
         id="end",
         cluster=end_cluster,
         layer=current_layer,
-        tier=config.structure.final_tier,
+        tier=0,
         entry_fogs=entry_fogs_end,
         exit_fogs=[],  # No exits from final boss
     )
@@ -2359,6 +2307,21 @@ def generate_dag(
     # Cross-link pass (post-hoc): add optional edges between parallel branches
     if config.structure.crosslinks:
         dag.crosslinks_added = add_crosslinks(dag, rng, clusters)
+
+    # Post-pass: assign tiers based on actual layer count.
+    # This guarantees monotonically non-decreasing tiers across layers,
+    # which was impossible when tiers were estimated during construction.
+    max_layer = max(node.layer for node in dag.nodes.values())
+    total_layers = max_layer + 1
+    for node in dag.nodes.values():
+        node.tier = compute_tier(
+            node.layer,
+            total_layers,
+            config.structure.final_tier,
+            start_tier=config.structure.start_tier,
+            curve=config.structure.tier_curve,
+            exponent=config.structure.tier_curve_exponent,
+        )
 
     return dag
 

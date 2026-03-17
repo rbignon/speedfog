@@ -268,10 +268,9 @@ layer_types = plan_layer_types(requirements, num_layers, rng)
 ### 5. Execute Layers (cluster-first)
 
 For each planned layer:
-1. Compute tier via `compute_tier()` (see [Tier Interpolation](#tier-interpolation))
-2. Pick a cluster uniformly from the layer type's candidates (`pick_cluster_with_type_fallback()`)
-3. Call `determine_operation()` on the selected cluster to decide rebalance/split/merge/passant
-4. Execute the operation:
+1. Pick a cluster uniformly from the layer type's candidates (`pick_cluster_with_type_fallback()`)
+2. Call `determine_operation()` on the selected cluster to decide rebalance/split/merge/passant
+3. Execute the operation:
    - **REBALANCE**: Merge a pair + split the most stale branch on the same layer (N→N).
    - **SPLIT**: The primary cluster becomes the split node. Non-split branches get their own cluster for passant companions.
    - **MERGE**: The primary cluster becomes the merge node. Non-merged branches get their own cluster for passant companions.
@@ -340,7 +339,7 @@ After the complete DAG is built (start → layers → forced merge → prerequis
 
 ## Tier Interpolation
 
-Tiers are computed by `compute_tier()` in `planner.py`. The progression curve is configurable via `tier_curve`:
+Tiers are assigned in a **post-pass** after DAG construction is complete. This ensures `total_layers` is exact (not estimated), guaranteeing monotonically non-decreasing tiers across layers. The computation uses `compute_tier()` from `planner.py`. The progression curve is configurable via `tier_curve`:
 
 **Linear** (default): constant tier increase per layer.
 

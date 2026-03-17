@@ -1947,7 +1947,6 @@ class TestExecuteMergeLayerSharedEntrance:
             dag,
             branches,
             1,
-            2,
             "mini_dungeon",
             pool,
             used_zones,
@@ -2045,7 +2044,7 @@ class TestExecuteMergeLayerSharedEntrance:
         used_zones = {"src_0_zone", "src_1_zone"}
 
         result = execute_merge_layer(
-            dag, branches, 1, 2, "mini_dungeon", pool, used_zones, rng, config
+            dag, branches, 1, "mini_dungeon", pool, used_zones, rng, config
         )
 
         merge_nodes = [
@@ -2909,7 +2908,7 @@ class TestInjectPrerequisite:
         assert end_cluster is not None
 
         result_branches, result_layer = _inject_prerequisite(
-            dag, branches, 6, end_cluster, pool, set(), random.Random(42), 28
+            dag, branches, 6, end_cluster, pool, set(), random.Random(42)
         )
         assert result_branches is branches
         assert result_layer == 6
@@ -2935,7 +2934,7 @@ class TestInjectPrerequisite:
         assert end_cluster.requires == "farumazula_maliketh"
 
         result_branches, result_layer = _inject_prerequisite(
-            dag, branches, 6, end_cluster, pool, set(), random.Random(42), 28
+            dag, branches, 6, end_cluster, pool, set(), random.Random(42)
         )
 
         # New node should be added
@@ -2984,7 +2983,6 @@ class TestInjectPrerequisite:
                 pool,
                 used_zones,
                 random.Random(42),
-                28,
             )
 
 
@@ -3883,7 +3881,6 @@ def test_execute_passant_layer_carries_counter():
         dag,
         branches,
         1,
-        1,
         "mini_dungeon",
         pool,
         used_zones,
@@ -3972,7 +3969,6 @@ def test_execute_merge_layer_carries_counter():
     result = execute_merge_layer(
         dag,
         branches,
-        1,
         1,
         "mini_dungeon",
         pool,
@@ -4697,7 +4693,6 @@ def test_execute_rebalance_layer_basic():
         dag,
         branches,
         layer_idx=1,
-        tier=2,
         layer_type="mini_dungeon",
         clusters=pool,
         used_zones=set(),
@@ -4759,7 +4754,6 @@ def test_execute_rebalance_layer_no_merge_pair():
         dag,
         branches,
         layer_idx=1,
-        tier=2,
         layer_type="mini_dungeon",
         clusters=pool,
         used_zones=set(),
@@ -4864,7 +4858,6 @@ def test_execute_rebalance_layer_counter_propagation():
         dag,
         branches,
         layer_idx=1,
-        tier=2,
         layer_type="mini_dungeon",
         clusters=pool,
         used_zones=set(),
@@ -5218,7 +5211,6 @@ def test_execute_rebalance_returns_none_when_no_split_capable_of_type():
         dag,
         branches,
         layer_idx=1,
-        tier=2,
         layer_type="major_boss",
         clusters=pool,
         used_zones=set(),
@@ -5293,7 +5285,6 @@ def test_execute_rebalance_returns_none_when_no_merge_capable_of_type():
         dag,
         branches,
         layer_idx=1,
-        tier=2,
         layer_type="major_boss",
         clusters=pool,
         used_zones=set(),
