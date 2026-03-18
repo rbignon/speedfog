@@ -18,7 +18,7 @@ from speedfog.clusters import ClusterData, ClusterPool, fog_matches_spec
 from speedfog.config import Config, resolve_final_boss_candidates
 from speedfog.crosslinks import add_crosslinks
 from speedfog.dag import Branch, Dag, DagNode, FogRef
-from speedfog.planner import compute_tier, plan_layer_types
+from speedfog.planner import compute_tier, pick_weighted_type, plan_layer_types
 from speedfog.validator import ValidationResult, validate_dag
 
 
@@ -2158,12 +2158,25 @@ def generate_dag(
     # 7. Converge remaining branches
     convergence_layers = 0
     convergence_limit = merge_reserve * 2
+
+    # Pool sizes for convergence type selection (computed once)
+    conv_pool_sizes = {
+        t: len(clusters.get_by_type(t))
+        for t in ("mini_dungeon", "boss_arena", "legacy_dungeon", "major_boss")
+    }
+
     while len(branches) > 1:
-        last_layer_type = layer_types[-1] if layer_types else "mini_dungeon"
+        # Pick convergence type weighted by remaining pool capacity
+        conv_used: dict[str, int] = {}
+        for node in dag.nodes.values():
+            t = node.cluster.type
+            if t in conv_pool_sizes:
+                conv_used[t] = conv_used.get(t, 0) + 1
+        conv_layer_type = pick_weighted_type(conv_pool_sizes, conv_used, rng)
 
         conv_cluster = _pick_cluster_biased_for_split(
             clusters,
-            last_layer_type,
+            conv_layer_type,
             branches,
             config,
             used_zones,
@@ -2187,7 +2200,7 @@ def generate_dag(
                 dag,
                 branches,
                 current_layer,
-                last_layer_type,
+                conv_layer_type,
                 clusters,
                 used_zones,
                 rng,
@@ -2221,7 +2234,7 @@ def generate_dag(
                 dag,
                 branches,
                 current_layer,
-                last_layer_type,
+                conv_layer_type,
                 clusters,
                 used_zones,
                 rng,
@@ -2236,7 +2249,7 @@ def generate_dag(
                     dag,
                     branches,
                     current_layer,
-                    last_layer_type,
+                    conv_layer_type,
                     clusters,
                     used_zones,
                     rng,
@@ -2249,7 +2262,7 @@ def generate_dag(
                     dag,
                     branches,
                     current_layer,
-                    last_layer_type,
+                    conv_layer_type,
                     clusters,
                     used_zones,
                     rng,
