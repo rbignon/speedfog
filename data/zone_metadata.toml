@@ -327,6 +327,10 @@ proximity_groups = [
     ["storehouse_back:AEG099_001_9000", # Gaius front
      "storehouse_back:AEG099_230_9000", # Hinterland entrance
     ],
+    ["storehouse_back:AEG099_230_9501", # Church District entrance
+     "storehouse:AEG099_230_9500",      # Shadow Keep to Storehouse
+     "storehouse:AEG099_230_9000",      # West Rampart entrance
+    ],
 ]
 
 [clusters.midramanse_1ac8]
