@@ -707,9 +707,9 @@ class TestValidateConfig:
         config.structure.min_layers = 6
         errors, warnings = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
-        assert len(warnings) == 1
-        assert "requirements" in warnings[0].lower()
-        assert "30" in warnings[0]  # total requirements
+        req_warnings = [w for w in warnings if "requirements" in w.lower()]
+        assert len(req_warnings) == 1
+        assert "30" in req_warnings[0]  # total requirements
 
     def test_requirements_within_min_layers_no_warning(self):
         """No warning when requirements fit within min_layers."""
@@ -718,11 +718,90 @@ class TestValidateConfig:
         config.requirements.legacy_dungeons = 1
         config.requirements.bosses = 2
         config.requirements.mini_dungeons = 2
-        config.requirements.major_bosses = 1
+        config.requirements.major_bosses = 0
         config.structure.min_layers = 10
         errors, warnings = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
         assert warnings == []
+
+    def test_warns_when_requirement_exceeds_pool_capacity(self):
+        """Warning when requirement * max_parallel_paths > pool_size."""
+        pool = ClusterPool()
+        pool.add(
+            make_cluster(
+                "chapel_start",
+                zones=["chapel"],
+                cluster_type="start",
+                weight=1,
+                entry_fogs=[],
+                exit_fogs=[
+                    {"fog_id": "exit1", "zone": "chapel"},
+                    {"fog_id": "exit2", "zone": "chapel"},
+                ],
+            )
+        )
+        pool.add(
+            make_cluster(
+                "boss_end",
+                zones=["end_zone"],
+                cluster_type="final_boss",
+                weight=5,
+                entry_fogs=[{"fog_id": "e", "zone": "end_zone"}],
+                exit_fogs=[],
+            )
+        )
+        # Only 5 major_boss clusters
+        for i in range(5):
+            pool.add(
+                make_cluster(
+                    f"major_{i}",
+                    zones=[f"major_{i}_z"],
+                    cluster_type="major_boss",
+                    weight=4,
+                )
+            )
+        # Some other clusters for completeness
+        for i in range(10):
+            pool.add(
+                make_cluster(
+                    f"mini_{i}",
+                    zones=[f"mini_{i}_z"],
+                    cluster_type="mini_dungeon",
+                    weight=3,
+                )
+            )
+
+        config = Config()
+        # Zero out other requirements to isolate major_boss warning
+        config.requirements.legacy_dungeons = 0
+        config.requirements.bosses = 0
+        config.requirements.mini_dungeons = 0
+        config.requirements.major_bosses = 3  # 3 * 3 (default max_parallel) = 9 > 5
+        config.structure.max_parallel_paths = 3
+        errors, warnings = validate_config(config, pool, _boss_candidates(pool))
+        assert any("major_boss" in w and "pool" in w.lower() for w in warnings)
+
+    def test_no_warning_when_pool_sufficient(self):
+        """No warning when pool can satisfy requirement * max_parallel_paths."""
+        pool = make_cluster_pool()
+        # Add extra major_boss so pool has 2 (maliketh + extra)
+        pool.add(
+            make_cluster(
+                "extra_major",
+                zones=["extra_major_z"],
+                cluster_type="major_boss",
+                weight=4,
+            )
+        )
+        config = Config()
+        config.requirements.major_bosses = 1
+        config.requirements.legacy_dungeons = 0
+        config.requirements.bosses = 0
+        config.requirements.mini_dungeons = 0
+        config.structure.max_parallel_paths = 2
+        errors, warnings = validate_config(config, pool, _boss_candidates(pool))
+        pool_warnings = [w for w in warnings if "pool" in w.lower()]
+        assert pool_warnings == []
 
     def test_dead_end_major_boss_valid_as_final_boss(self):
         """A major_boss with 0 exits (pruned by passant filter) is valid as final_boss candidate."""
