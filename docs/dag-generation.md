@@ -1,6 +1,6 @@
 # DAG Generation Algorithm
 
-**Date:** 2026-02-15 — **Updated:** 2026-03-11
+**Date:** 2026-02-15 — **Updated:** 2026-03-18
 **Status:** Active
 
 How SpeedFog generates balanced, randomized DAGs from zone clusters.
@@ -184,7 +184,7 @@ Default probabilities: split=0.9, merge=0.5. When `split_prob + merge_prob >= 1.
 
 Passant-incompatible clusters (those with zero net exits after consuming an entry) are filtered at load time by `ClusterPool.filter_passant_incompatible()`, ensuring every cluster in the pool can serve as at least a passant node.
 
-For the primary branch, the pre-selected `primary_cluster` is used. For non-primary branches (passant companions during split or merge layers), a separate `pick_cluster_uniform()` call selects each companion cluster independently.
+For the primary branch, the pre-selected `primary_cluster` is used. For non-primary branches (passant companions during split or merge layers), `pick_cluster_with_type_fallback()` selects each companion cluster independently: it tries the planned layer type first, then falls back to other types using **weighted random selection** proportional to remaining available cluster counts. This prevents temporal segregation where one type (e.g., `mini_dungeon`) would systematically fill late layers because it had the largest remaining pool.
 
 ## Cluster Compatibility
 
@@ -281,12 +281,18 @@ For each planned layer:
 If multiple branches remain after all planned layers, a unified convergence loop runs with `prefer_merge=True`:
 
 ```
+conv_pool_sizes = {t: pool_size for t in FALLBACK_TYPES}
+
 while len(branches) > 1:
+    conv_used = count types already in dag.nodes
+    conv_layer_type = pick_weighted_type(conv_pool_sizes, conv_used, rng)
     operation = determine_operation(..., prefer_merge=True)
     if REBALANCE: execute_rebalance_layer (maintains spacing)
     elif MERGE: execute_merge_layer (reduces branch count)
     else: try merge, fallback to passant (diverge nodes for anti-micro-merge)
 ```
+
+**Type selection**: each convergence layer picks its type via `pick_weighted_type()`, which draws proportionally from remaining pool capacity. This distributes convergence layers across available types instead of using a single fixed type (previously `layer_types[-1]`).
 
 REBALANCE can still trigger during convergence when a branch exceeds the staleness threshold while branches are saturated, maintaining spacing even during the final merge phase.
 
@@ -418,7 +424,19 @@ Config validation runs once before any attempts; invalid config raises `Generati
 
 ## Validation
 
-The validator (`speedfog/validator.py`) checks:
+### Config Validation (`validate_config`)
+
+Pre-generation checks on configuration vs cluster pool:
+
+1. **first_layer_type**: must be a valid cluster type
+2. **major_bosses**: must be >= 0
+3. **Requirements vs min_layers**: warning if total requirements exceed `min_layers`
+4. **final_boss_candidates**: all zones must exist in the pool
+5. **Pool capacity**: warning when `requirement * max_parallel_paths > pool_size` for any cluster type. With parallel branches, each planned layer consumes up to `max_parallel_paths` clusters of the same type. Example: `major_bosses=12` with `max_parallel_paths=4` requires up to 48 clusters from a pool of 38, which will cause type exhaustion during generation.
+
+### DAG Validation (`validator.py`)
+
+Post-generation checks on the built DAG:
 
 1. **Structural**: start/end exist, all edges valid, no backward edges
 2. **Reachability**: all nodes reachable from start (BFS), all can reach end (reverse BFS)
