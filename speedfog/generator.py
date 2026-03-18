@@ -449,8 +449,8 @@ def pick_cluster_with_type_fallback(
 ) -> ClusterData | None:
     """Pick a cluster of the preferred type, falling back to other types.
 
-    Tries the preferred type first. If exhausted, tries other types in
-    decreasing order of remaining available clusters.
+    Tries the preferred type first. If exhausted, picks from remaining types
+    using weighted random selection proportional to available cluster counts.
 
     Args:
         clusters: Full cluster pool.
@@ -472,7 +472,7 @@ def pick_cluster_with_type_fallback(
     if result is not None:
         return result
 
-    # Fallback: try other types sorted by remaining capacity (largest first)
+    # Fallback: weighted random selection proportional to available counts
     fallback_types = [t for t in _FALLBACK_TYPES if t != preferred_type]
 
     def _available_count(t: str) -> int:
@@ -482,17 +482,26 @@ def pick_cluster_with_type_fallback(
             if not any(z in used_zones or z in reserved_zones for z in c.zones)
         )
 
-    fallback_types.sort(key=_available_count, reverse=True)
+    # Build candidates with positive counts
+    candidates = [(t, _available_count(t)) for t in fallback_types]
+    candidates = [(t, count) for t, count in candidates if count > 0]
 
-    for t in fallback_types:
+    while candidates:
+        types_list = [t for t, _ in candidates]
+        weights = [count for _, count in candidates]
+        pick = rng.choices(types_list, weights=weights, k=1)[0]
+
         result = pick_cluster_uniform(
-            clusters.get_by_type(t),
+            clusters.get_by_type(pick),
             used_zones,
             rng,
             reserved_zones=reserved_zones,
         )
         if result is not None:
             return result
+
+        # This type failed (e.g. all zone-conflicted), remove and retry
+        candidates = [(t, c) for t, c in candidates if t != pick]
 
     return None
 

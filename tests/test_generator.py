@@ -30,6 +30,7 @@ from speedfog.generator import (
     generate_dag,
     generate_with_retry,
     pick_cluster_uniform,
+    pick_cluster_with_type_fallback,
     pick_entry_with_max_exits,
     select_entries_for_merge,
     update_branch_counters,
@@ -5410,3 +5411,46 @@ class TestZoneConflicts:
         _mark_cluster_used(cluster, used_zones, pool)
 
         assert used_zones == {"zone_a"}
+
+
+class TestPickClusterWithTypeFallbackDistribution:
+    """Tests for weighted fallback distribution."""
+
+    def test_fallback_distributes_across_types(self):
+        """Fallback should pick from multiple types, not always the largest pool."""
+        pool = ClusterPool()
+        # No mini_dungeon clusters at all (force fallback)
+        for i in range(20):
+            pool.add(
+                make_cluster(
+                    f"boss_{i}",
+                    cluster_type="boss_arena",
+                    zones=[f"boss_{i}_z"],
+                )
+            )
+        for i in range(15):
+            pool.add(
+                make_cluster(
+                    f"legacy_{i}",
+                    cluster_type="legacy_dungeon",
+                    zones=[f"legacy_{i}_z"],
+                )
+            )
+
+        from collections import Counter
+
+        type_counts: Counter[str] = Counter()
+        for seed in range(100):
+            rng = random.Random(seed)
+            result = pick_cluster_with_type_fallback(
+                pool,
+                "mini_dungeon",
+                set(),
+                rng,
+            )
+            assert result is not None
+            type_counts[result.type] += 1
+
+        # Both types should appear (not just boss_arena every time)
+        assert type_counts["boss_arena"] > 0
+        assert type_counts["legacy_dungeon"] > 0
