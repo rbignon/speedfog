@@ -2180,10 +2180,7 @@ def generate_dag(
     convergence_limit = merge_reserve * 2
 
     # Pool sizes for convergence type selection (computed once)
-    conv_pool_sizes = {
-        t: len(clusters.get_by_type(t))
-        for t in ("mini_dungeon", "boss_arena", "legacy_dungeon", "major_boss")
-    }
+    conv_pool_sizes = {t: len(clusters.get_by_type(t)) for t in _FALLBACK_TYPES}
 
     while len(branches) > 1:
         # Pick convergence type weighted by remaining pool capacity
