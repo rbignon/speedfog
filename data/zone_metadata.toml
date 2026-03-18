@@ -307,6 +307,13 @@ exclude = true  # Cathedral of Manus Metyr interior, accessed via unique warp, n
 [clusters.volcano_ac44]
 exclude = true  # Too small for legacy_dungeon (~30s to traverse)
 
+[clusters.graveyard_grave_65d8]
+proximity_groups = [
+    ["AEG099_230_9000", # Stranded Graveyard first door
+     "AEG099_230_9001", # Stranded Graveyard-Limgrave boundary
+    ],
+]
+
 [clusters.stormveil_db4a]
 proximity_groups = [
     ["AEG099_230_9001", # Limgrave Divine Tower boundary
