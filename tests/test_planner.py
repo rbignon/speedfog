@@ -3,7 +3,12 @@
 import random
 
 from speedfog.config import RequirementsConfig
-from speedfog.planner import _distribute_padding, compute_tier, plan_layer_types
+from speedfog.planner import (
+    _distribute_padding,
+    compute_tier,
+    pick_weighted_type,
+    plan_layer_types,
+)
 
 
 class TestDistributePadding:
@@ -560,3 +565,42 @@ class TestPlanLayerTypes:
         rng = random.Random(42)
         result = plan_layer_types(reqs, total_layers=10, rng=rng)
         assert result.count("major_boss") == 2  # Only the required ones
+
+
+class TestPickWeightedType:
+    """Tests for pick_weighted_type function."""
+
+    def test_picks_from_available_types(self):
+        """Should pick types proportional to remaining capacity."""
+        pool_sizes = {"boss_arena": 80, "mini_dungeon": 60, "legacy_dungeon": 30}
+        used = {"boss_arena": 20, "mini_dungeon": 10, "legacy_dungeon": 5}
+        # Remaining: boss=60, mini=50, legacy=25
+
+        from collections import Counter
+
+        counts: Counter[str] = Counter()
+        for seed in range(300):
+            t = pick_weighted_type(pool_sizes, used, random.Random(seed))
+            counts[t] += 1
+
+        # All three types should appear
+        assert counts["boss_arena"] > 0
+        assert counts["mini_dungeon"] > 0
+        assert counts["legacy_dungeon"] > 0
+        # boss_arena (60 remaining) should be picked most often
+        assert counts["boss_arena"] > counts["legacy_dungeon"]
+
+    def test_empty_pools_returns_mini_dungeon(self):
+        """Falls back to mini_dungeon when all pools are empty."""
+        result = pick_weighted_type(
+            {"boss_arena": 5}, {"boss_arena": 5}, random.Random(42)
+        )
+        assert result == "mini_dungeon"
+
+    def test_excludes_depleted_types(self):
+        """Types with 0 remaining are never picked."""
+        pool_sizes = {"boss_arena": 10, "mini_dungeon": 50}
+        used = {"boss_arena": 10}  # boss_arena fully depleted
+        for seed in range(50):
+            t = pick_weighted_type(pool_sizes, used, random.Random(seed))
+            assert t == "mini_dungeon"
