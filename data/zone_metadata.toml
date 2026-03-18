@@ -168,10 +168,14 @@ type = "boss_arena"
 [zones.ainsel_boss]
 type = "major_boss"
 
+[zones.caelid_redmane_boss]
+allow_entry_as_exit = false
+
 [zones.ainsel_dragonkin]
 allow_entry_as_exit = false
 
 [zones.deeproot_boss]
+type = "major_boss"
 allow_entry_as_exit = false
 
 [zones.haligtree_malenia]
@@ -182,11 +186,12 @@ allow_entry_as_exit = true
 [zones.academy_library]
 type = "major_boss"
 weight = 4
+# TODO check if we can't escape
 allow_entry_as_exit = true
 
 [zones.stormveil_godrick]
 weight = 2
-allow_entry_as_exit = true  # after exit pruning, only Godrick front remains (also the entry)
+allow_entry_as_exit = true
 
 # Margit is Morgott in disguise: killing Morgott removes Margit from his arena.
 # These zones cannot coexist in the same run.
@@ -195,13 +200,18 @@ conflicts_with = ["leyndell_throne"]
 
 [zones.leyndell_throne]
 weight = 2
+allow_entry_as_exit = true
 conflicts_with = ["stormveil_margit"]
 
-[zones.leyndell_sanctuary]
+[zones.leyndell2_sanctuary]
 weight = 2
 
 [zones.leyndell2_throne]
 weight = 4
+allow_entry_as_exit = true
+
+[zones.volcano_temple]
+allow_entry_as_exit = true
 
 [zones.flamepeak_firegiant]
 weight = 4
@@ -220,9 +230,6 @@ allow_entry_as_exit = true
 [zones.academy_redwolf]
 allow_entry_as_exit = true
 
-[zones.sewer_mohg]
-allow_entry_as_exit = true
-
 # --- DLC ---
 
 [zones.enirilim_radahn]
@@ -231,6 +238,12 @@ weight = 4
 
 [zones.scadualtus_catacombs_boss]
 type = "boss_arena"  # fog.txt Entrance has "major" tag, but Jori is a catacomb boss, not a remembrance boss
+
+[zones.scaduview_gaius]
+allow_entry_as_exit = true
+
+[zones.rauhruins_romina]
+allow_entry_as_exit = true
 
 [zones.fissure_boss]
 allow_entry_as_exit = true
