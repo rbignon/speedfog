@@ -306,7 +306,7 @@ wine publish/win-x64/ItemRandomizerWrapper.exe \
 
 # Play! (output is self-contained with ModEngine + launcher)
 ./output/launch_speedfog.bat   # Windows
-./output/launch_speedfog.sh    # Linux/Proton
+./output/linux/launch_speedfog.sh    # Linux/Proton
 ```
 
 ## Testing

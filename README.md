@@ -76,7 +76,7 @@ Output is self-contained in `seeds/<seed>/`:
 - `mods/` - Generated mod files
 - `config_speedfog.toml` - ModEngine config
 - `launch_speedfog.bat` - Windows launcher
-- `launch_speedfog.sh` - Linux/Proton launcher
+- `linux/launch_speedfog.sh` - Linux/Proton launcher
 
 ### CLI Options
 
@@ -108,7 +108,7 @@ The output folder is self-contained with ModEngine 2:
 ./seeds/<seed>/launch_speedfog.bat
 
 # Linux (Proton)
-./seeds/<seed>/launch_speedfog.sh
+./seeds/<seed>/linux/launch_speedfog.sh
 ```
 
 ## Configuration

@@ -103,7 +103,15 @@ output/
 │   └── itemrando/          # Item Randomizer files (if enabled)
 ├── config_speedfog.toml    # ModEngine config
 ├── launch_speedfog.bat     # Windows launcher
-├── launch_speedfog.sh      # Linux/Proton launcher
+├── linux/
+│   ├── launch_speedfog.sh  # Linux/Proton launcher
+│   ├── recovery.sh         # Linux recovery launcher
+│   └── backup_daemon.sh    # Linux backup daemon
+├── backups/
+│   ├── config.ini          # Backup system configuration
+│   ├── backup_daemon.ps1   # Windows backup daemon
+│   ├── launch_helper.ps1   # Windows launcher helper
+│   └── recovery.ps1        # Windows recovery launcher
 └── spoiler.txt             # Path spoiler log
 ```
 
@@ -111,7 +119,7 @@ output/
 
 After generating the mod:
 - **Windows**: Double-click `output/launch_speedfog.bat`
-- **Linux/Proton**: Run `output/launch_speedfog.sh`
+- **Linux/Proton**: Run `output/linux/launch_speedfog.sh`
 
 ## Development
 
