@@ -576,7 +576,7 @@ if (Get-Process -Name eldenring -ErrorAction SilentlyContinue) {
 }
 
 # --- List available backups ---
-$zips = @(Get-ChildItem ""$backupsDir\*.zip"" -ErrorAction SilentlyContinue | Sort-Object Name)
+$zips = @(Get-ChildItem ""$backupsDir\*.zip"" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime)
 if ($zips.Count -eq 0) {
     Write-Host ""No backups found.""
     Read-Host ""Press Enter to exit""
@@ -704,7 +704,7 @@ if pgrep -x eldenring.exe > /dev/null 2>&1; then
 fi
 
 # --- List available backups ---
-mapfile -t zips < <(ls -1 ""$BACKUPS_DIR""/*.zip 2>/dev/null | sort)
+mapfile -t zips < <(ls -1t ""$BACKUPS_DIR""/*.zip 2>/dev/null | tac)
 if [ ${#zips[@]} -eq 0 ]; then
     echo ""No backups found.""
     read -r -p ""Press Enter to exit""
