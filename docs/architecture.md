@@ -452,6 +452,7 @@ Zones have tiers (1-28) based on their layer in the DAG. FogMod applies SpEffect
 - [clusters.md](clusters.md) — Cluster generation: zone grouping, fog classification, bidirectional detection
 - [item-giving-limitations.md](item-giving-limitations.md) — EMEVD item type constraints and Ash of War workaround
 - [item-randomizer.md](item-randomizer.md) — ItemRandomizerWrapper: config flow, enemy presets, boss placement capture, FogModWrapper merge
+- [save-backup.md](save-backup.md) — Save backup system: daemon lifecycle, recovery, compression, config
 
 ## References
 

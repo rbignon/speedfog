@@ -94,6 +94,8 @@ FogModWrapper creates a self-contained mod with ModEngine 2:
 
 ```
 output/
+├── graph.json              # DAG data (always generated)
+├── spoiler.txt             # Path spoiler log (--spoiler)
 ├── ModEngine/              # ModEngine 2 (auto-downloaded)
 ├── mods/
 │   ├── fogmod/             # Fog gate mod files
@@ -101,8 +103,10 @@ output/
 │   │   ├── event/*.emevd.dcx
 │   │   └── map/mapstudio/*.msb.dcx
 │   └── itemrando/          # Item Randomizer files (if enabled)
+├── lib/                    # Runtime DLLs (crash fix, helper)
 ├── config_speedfog.toml    # ModEngine config
 ├── launch_speedfog.bat     # Windows launcher
+├── recovery.bat            # Windows recovery launcher
 ├── linux/
 │   ├── launch_speedfog.sh  # Linux/Proton launcher
 │   ├── recovery.sh         # Linux recovery launcher
@@ -112,7 +116,6 @@ output/
 │   ├── backup_daemon.ps1   # Windows backup daemon
 │   ├── launch_helper.ps1   # Windows launcher helper
 │   └── recovery.ps1        # Windows recovery launcher
-└── spoiler.txt             # Path spoiler log
 ```
 
 ## Playing

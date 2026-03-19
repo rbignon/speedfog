@@ -110,7 +110,8 @@ speedfog/
 │   ├── alternate-warp-patching.md # AlternateFlag warp patching (300/330)
 │   ├── item-giving-limitations.md # EMEVD item type constraints
 │   ├── vanilla-warp-removal.md # FogMod warp removal workaround
-│   └── stake-removal.md     # Vanilla stake removal (RetryPoint softlock prevention)
+│   ├── stake-removal.md     # Vanilla stake removal (RetryPoint softlock prevention)
+│   └── save-backup.md      # Save backup system (daemon, recovery, config)
 └── output/                  # Generated mod (gitignored, self-contained)
 ```
 
@@ -132,6 +133,7 @@ speedfog/
 | `docs/care-package.md` | Randomized starting build system |
 | `docs/vanilla-warp-removal.md` | FogMod vanilla warp removal workaround |
 | `docs/stake-removal.md` | Vanilla stake removal (RetryPoint softlock prevention) |
+| `docs/save-backup.md` | Save backup system (daemon, recovery, config) |
 | `docs/item-giving-limitations.md` | EMEVD item type constraints and workarounds |
 | `docs/clusters.md` | Cluster generation from fog.txt |
 | `reference/fogrando-src/GameDataWriterE.cs` | Main FogRando writer (5639 lines) |
