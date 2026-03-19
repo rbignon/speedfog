@@ -118,20 +118,23 @@ Save file: C:\Users\...\ER0000.sl2
 
 Available backups (newest last):
 
-  [5] pre-run_2026-03-19_14.30.00.zip  (Pre-run backup)
-  [4] ER0000_2026-03-19_14.31.00.zip
+  [1] pre-run_2026-03-19_14.30.00.zip  (Pre-run backup)
+  [2] ER0000_2026-03-19_14.31.00.zip
   [3] ER0000_2026-03-19_14.32.00.zip
-  [2] ER0000_2026-03-19_14.33.00.zip
-  [1] ER0000_2026-03-19_14.34.00.zip
-  [0] ER0000_2026-03-19_14.35.00.zip   (most recent)
+  [4] ER0000_2026-03-19_14.33.00.zip
+  [5] ER0000_2026-03-19_14.34.00.zip
+  [6] ER0000_2026-03-19_14.35.00.zip   (most recent)
 
-Select backup to restore [0]:
+Select backup to restore [6]:
 Restore ER0000_2026-03-19_14.35.00.zip? (y/n) [y]:
+
 Restored successfully.
+You can relaunch the game with launch_speedfog.bat.
 ```
 
-Index 0 = most recent. Default selection is 0, default confirmation is y.
-Double-Enter restores the most recent backup. The script warns if Elden Ring
+Backups are displayed oldest-first with 1-based indexing. The default
+selection is the last item (most recent). Default confirmation is y.
+Enter twice restores the most recent backup. The script warns if Elden Ring
 is currently running.
 
 ## Code Generation

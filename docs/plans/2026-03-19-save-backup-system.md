@@ -286,29 +286,32 @@ Save file: C:\Users\...\AppData\Roaming\EldenRing\76561199058957457\ER0000.sl2
 
 Available backups (newest last):
 
-  [5] pre-run_2026-03-19_14.30.00.zip  (Pre-run backup)
-  [4] ER0000_2026-03-19_14.31.00.zip
+  [1] pre-run_2026-03-19_14.30.00.zip  (Pre-run backup)
+  [2] ER0000_2026-03-19_14.31.00.zip
   [3] ER0000_2026-03-19_14.32.00.zip
-  [2] ER0000_2026-03-19_14.33.00.zip
-  [1] ER0000_2026-03-19_14.34.00.zip
-  [0] ER0000_2026-03-19_14.35.00.zip   (most recent)
+  [4] ER0000_2026-03-19_14.33.00.zip
+  [5] ER0000_2026-03-19_14.34.00.zip
+  [6] ER0000_2026-03-19_14.35.00.zip   (most recent)
 
-Select backup to restore [0]:
+Select backup to restore [6]:
 Restore ER0000_2026-03-19_14.35.00.zip? (y/n) [y]:
+
 Restored successfully.
+You can relaunch the game with launch_speedfog.bat.
 ```
 
-- Index 0 = most recent backup. Default selection is 0.
+- 1-based indexing, oldest first, newest last.
+- Default selection is the last item (most recent).
 - Default confirmation is y.
-- Double-Enter restores the most recent backup.
+- Enter twice restores the most recent backup.
 
 ### Logic
 
 1. Detect save path (same logic as launcher: read `backups/config.ini`,
    auto-detect, prompt if multiple matches).
-2. List `backups/*.zip` sorted oldest-first, assign decremental indices
-   (newest = 0).
-3. Prompt for index (default 0).
+2. List `backups/*.zip` sorted oldest-first by modification time, with
+   1-based indices.
+3. Prompt for index (default = last = most recent).
 4. Prompt for confirmation (default y).
 5. Extract `ER0000.sl2` from the selected zip and overwrite the save file.
 6. Print success or error message.

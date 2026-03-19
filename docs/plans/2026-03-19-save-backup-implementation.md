@@ -177,10 +177,10 @@ The PowerShell script must:
    - None: print error with instructions, `pause`, exit
    - Multiple: display numbered menu, prompt for selection
 4. Warn if `eldenring` process is running
-5. List `$backupsDir\*.zip` sorted oldest-first (by name, since timestamps sort lexicographically)
-6. Display with decremental indices (newest = 0)
-7. Annotate pre-run backups with `(Pre-run backup)`, most recent with `(most recent)`
-8. Prompt for index (default 0), prompt for confirmation (default y)
+5. List `$backupsDir\*.zip` sorted oldest-first by modification time
+6. Display with 1-based indices (oldest = 1, newest = N)
+7. Annotate pre-run backups with `(Pre-run backup)`, last item with `(most recent)`
+8. Prompt for index (default = N = most recent), prompt for confirmation (default y)
 9. `Expand-Archive` selected zip, overwrite save file
 10. Print success, `pause` (so the window stays open)
 
