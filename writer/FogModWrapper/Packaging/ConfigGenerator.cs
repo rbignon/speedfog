@@ -138,12 +138,16 @@ if (-not $savePath) {
         Write-Host ""To enable backups, set save_path in backups\config.ini""
         exit 0
     } else {
+        $candidates = $candidates | Sort-Object LastWriteTime -Descending
         Write-Host ""Multiple Elden Ring save files found:""
         for ($i = 0; $i -lt $candidates.Count; $i++) {
-            Write-Host ""  [$($i + 1)] $($candidates[$i].FullName)""
+            $mod = $candidates[$i].LastWriteTime.ToString(""yyyy-MM-dd HH:mm"")
+            $label = if ($i -eq 0) { "" (most recent)"" } else { """" }
+            Write-Host ""  [$i] $($candidates[$i].FullName)  [$mod]$label""
         }
-        $sel = Read-Host ""Select save file""
-        $idx = [int]$sel - 1
+        $selRaw = Read-Host ""Select save file [0]""
+        if ($selRaw -eq '') { $selRaw = '0' }
+        try { $idx = [int]$selRaw } catch { Write-Host ""Invalid selection. Skipping backups.""; exit 0 }
         if ($idx -lt 0 -or $idx -ge $candidates.Count) {
             Write-Host ""Invalid selection. Skipping backups.""
             exit 0
@@ -209,16 +213,22 @@ if [ ""$enabled"" != ""false"" ]; then
         elif [ ""$_count"" -eq 1 ]; then
             SAVE_PATH=""${_candidates[0]}""
         else
+            # Sort by modification time (most recent first)
+            mapfile -t _candidates < <(ls -1t ""${_candidates[@]}"")
+            _count=${#_candidates[@]}
             echo ""Multiple Elden Ring save files found:""
             for _i in ""${!_candidates[@]}""; do
-                echo ""  [$((_i + 1))] ${_candidates[$_i]}""
+                _mod=$(date -r ""${_candidates[$_i]}"" ""+%Y-%m-%d %H:%M"" 2>/dev/null)
+                _label=""""
+                if [ ""$_i"" -eq 0 ]; then _label="" (most recent)""; fi
+                echo ""  [$_i] ${_candidates[$_i]}  [$_mod]$_label""
             done
-            read -r -p ""Select save file: "" _sel
-            _idx=$((_sel - 1))
-            if ! [[ ""$_sel"" =~ ^[0-9]+$ ]] || [ ""$_idx"" -lt 0 ] || [ ""$_idx"" -ge ""$_count"" ]; then
+            read -r -p ""Select save file [0]: "" _sel
+            if [ -z ""$_sel"" ]; then _sel=0; fi
+            if ! [[ ""$_sel"" =~ ^[0-9]+$ ]] || [ ""$_sel"" -lt 0 ] || [ ""$_sel"" -ge ""$_count"" ]; then
                 echo ""Invalid selection. Skipping backups.""
             else
-                SAVE_PATH=""${_candidates[$_idx]}""
+                SAVE_PATH=""${_candidates[$_sel]}""
             fi
         fi
     fi
@@ -553,12 +563,22 @@ if (-not $savePath) {
         Read-Host ""Press Enter to exit""
         exit 1
     } else {
+        $candidates = $candidates | Sort-Object LastWriteTime -Descending
         Write-Host ""Multiple save files found. Select one:""
         for ($i = 0; $i -lt $candidates.Count; $i++) {
-            Write-Host ""  [$i] $($candidates[$i].FullName)""
+            $mod = $candidates[$i].LastWriteTime.ToString(""yyyy-MM-dd HH:mm"")
+            $label = if ($i -eq 0) { "" (most recent)"" } else { """" }
+            Write-Host ""  [$i] $($candidates[$i].FullName)  [$mod]$label""
         }
-        $sel = Read-Host ""Enter number""
-        $savePath = $candidates[[int]$sel].FullName
+        $selRaw = Read-Host ""Select save file [0]""
+        if ($selRaw -eq '') { $selRaw = '0' }
+        try { $idx = [int]$selRaw } catch { Write-Host ""Invalid selection.""; Read-Host ""Press Enter to exit""; exit 1 }
+        if ($idx -lt 0 -or $idx -ge $candidates.Count) {
+            Write-Host ""Invalid selection.""
+            Read-Host ""Press Enter to exit""
+            exit 1
+        }
+        $savePath = $candidates[$idx].FullName
     }
 }
 
@@ -684,11 +704,23 @@ if [ -z ""$SAVE_PATH"" ]; then
     elif [ ""$count"" -eq 1 ]; then
         SAVE_PATH=""${candidates[0]}""
     else
+        # Sort by modification time (most recent first)
+        mapfile -t candidates < <(ls -1t ""${candidates[@]}"")
+        count=${#candidates[@]}
         echo ""Multiple save files found. Select one:""
         for i in ""${!candidates[@]}""; do
-            echo ""  [$i] ${candidates[$i]}""
+            _mod=$(date -r ""${candidates[$i]}"" ""+%Y-%m-%d %H:%M"" 2>/dev/null)
+            _label=""""
+            if [ ""$i"" -eq 0 ]; then _label="" (most recent)""; fi
+            echo ""  [$i] ${candidates[$i]}  [$_mod]$_label""
         done
-        read -r -p ""Enter number: "" sel
+        read -r -p ""Select save file [0]: "" sel
+        if [ -z ""$sel"" ]; then sel=0; fi
+        if ! [[ ""$sel"" =~ ^[0-9]+$ ]] || [ ""$sel"" -lt 0 ] || [ ""$sel"" -ge ""$count"" ]; then
+            echo ""Invalid selection.""
+            read -r -p ""Press Enter to exit""
+            exit 1
+        fi
         SAVE_PATH=""${candidates[$sel]}""
     fi
 fi
