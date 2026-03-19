@@ -173,23 +173,64 @@ Start-Process -WindowStyle Minimized powershell -ArgumentList ""-ExecutionPolicy
 
     /// <summary>
     /// Writes the Linux/Proton shell launcher script.
+    /// Written to linux/launch_speedfog.sh; references paths via $OUTPUT_DIR (parent of linux/).
+    /// Reads backups/config.ini for enabled/save_path, auto-detects save under Proton prefix,
+    /// launches the backup daemon, then launches ModEngine via Wine.
     /// </summary>
     /// <param name="outputDir">The output directory.</param>
     public static void WriteShellLauncher(string outputDir)
     {
-        var shPath = Path.Combine(outputDir, "launch_speedfog.sh");
+        var shPath = Path.Combine(outputDir, "linux", "launch_speedfog.sh");
+        Directory.CreateDirectory(Path.GetDirectoryName(shPath)!);
 
         var script = @"#!/bin/bash
 # SpeedFog Launcher for Elden Ring (Linux/Proton)
 # Auto-generated - do not edit manually
 
 SCRIPT_DIR=""$(cd ""$(dirname ""${BASH_SOURCE[0]}"")"" && pwd)""
+OUTPUT_DIR=""$SCRIPT_DIR/..""
 
-# Note: For Proton/Wine users, you may need to configure
-# Steam to use this script as a custom launch command
-# or run through protontricks
+# --- Parse backups/config.ini ---
+enabled=true
+SAVE_PATH=""""
+config_path=""$OUTPUT_DIR/backups/config.ini""
+if [ -f ""$config_path"" ]; then
+    _parsed=$(grep -v '^\s*#' ""$config_path"" | grep -v '^\s*$')
+    _enabled=$(echo ""$_parsed"" | grep '^enabled=' | cut -d= -f2 | tr -d '[:space:]')
+    _save_path=$(echo ""$_parsed"" | grep '^save_path=' | cut -d= -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    if [ -n ""$_enabled"" ]; then enabled=""$_enabled""; fi
+    if [ -n ""$_save_path"" ]; then SAVE_PATH=""$_save_path""; fi
+fi
 
-wine ""$SCRIPT_DIR/ModEngine/modengine2_launcher.exe"" -t er -c ""$SCRIPT_DIR/config_speedfog.toml""
+# --- Save detection and backup daemon ---
+if [ ""$enabled"" != ""false"" ]; then
+    if [ -z ""$SAVE_PATH"" ]; then
+        PROTON_APPDATA=""$HOME/.local/share/Steam/steamapps/compatdata/1245620/pfx/drive_c/users/steamuser/AppData/Roaming/EldenRing""
+        mapfile -t _candidates < <(ls ""$PROTON_APPDATA""/*/ER0000.sl2 2>/dev/null)
+        _count=${#_candidates[@]}
+        if [ ""$_count"" -eq 0 ]; then
+            echo ""WARNING: Could not auto-detect Elden Ring save file.""
+            echo ""To enable backups, set save_path in backups/config.ini""
+        elif [ ""$_count"" -eq 1 ]; then
+            SAVE_PATH=""${_candidates[0]}""
+        else
+            echo ""Multiple Elden Ring save files found:""
+            for _i in ""${!_candidates[@]}""; do
+                echo ""  [$((_i + 1))] ${_candidates[$_i]}""
+            done
+            read -r -p ""Select save file: "" _sel
+            _idx=$((_sel - 1))
+            SAVE_PATH=""${_candidates[$_idx]}""
+        fi
+    fi
+
+    if [ -n ""$SAVE_PATH"" ]; then
+        bash ""$SCRIPT_DIR/backup_daemon.sh"" ""$SAVE_PATH"" &
+    fi
+fi
+
+# --- Launch ModEngine ---
+wine ""$OUTPUT_DIR/ModEngine/modengine2_launcher.exe"" -t er -c ""$OUTPUT_DIR/config_speedfog.toml""
 ";
 
         File.WriteAllText(shPath, script);
