@@ -510,4 +510,126 @@ Read-Host ""Press Enter to exit""
 
         File.WriteAllText(batPath, script);
     }
+
+    /// <summary>
+    /// Writes the Linux save recovery bash script.
+    /// </summary>
+    /// <param name="outputDir">The output directory.</param>
+    public static void WriteRecoverySh(string outputDir)
+    {
+        var shPath = Path.Combine(outputDir, "linux", "recovery.sh");
+        Directory.CreateDirectory(Path.GetDirectoryName(shPath)!);
+
+        var script = @"#!/bin/bash
+# SpeedFog Save Recovery
+# Auto-generated - do not edit manually
+
+SCRIPT_DIR=""$(cd ""$(dirname ""${BASH_SOURCE[0]}"")"" && pwd)""
+BACKUPS_DIR=""$SCRIPT_DIR/../backups""
+
+# --- Parse config.ini for save_path ---
+SAVE_PATH=""""
+config_path=""$BACKUPS_DIR/config.ini""
+if [ -f ""$config_path"" ]; then
+    _parsed=$(grep -v '^\s*#' ""$config_path"" | grep -v '^\s*$')
+    _save_path=$(echo ""$_parsed"" | grep '^save_path=' | cut -d= -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    if [ -n ""$_save_path"" ]; then SAVE_PATH=""$_save_path""; fi
+fi
+
+# --- Auto-detect save file if not configured ---
+if [ -z ""$SAVE_PATH"" ]; then
+    PROTON_APPDATA=""$HOME/.local/share/Steam/steamapps/compatdata/1245620/pfx/drive_c/users/steamuser/AppData/Roaming/EldenRing""
+    mapfile -t candidates < <(ls ""$PROTON_APPDATA""/*/ER0000.sl2 2>/dev/null)
+    count=${#candidates[@]}
+    if [ ""$count"" -eq 0 ]; then
+        echo ""ERROR: Could not find ER0000.sl2. Please set save_path in backups/config.ini.""
+        read -r -p ""Press Enter to exit""
+        exit 1
+    elif [ ""$count"" -eq 1 ]; then
+        SAVE_PATH=""${candidates[0]}""
+    else
+        echo ""Multiple save files found. Select one:""
+        for i in ""${!candidates[@]}""; do
+            echo ""  [$i] ${candidates[$i]}""
+        done
+        read -r -p ""Enter number: "" sel
+        SAVE_PATH=""${candidates[$sel]}""
+    fi
+fi
+
+# --- Header ---
+echo ""SpeedFog Save Recovery""
+echo ""======================""
+echo """"
+echo ""Save file: $SAVE_PATH""
+echo """"
+
+# --- Warn if game is running ---
+if pgrep -x eldenring.exe > /dev/null 2>&1; then
+    read -r -p ""Warning: Elden Ring appears to be running. Restoring while the game is running may not work. Continue? (y/n) "" confirm_run
+    if [ ""$confirm_run"" != ""y"" ]; then exit 0; fi
+fi
+
+# --- List available backups ---
+mapfile -t zips < <(ls -1 ""$BACKUPS_DIR""/*.zip 2>/dev/null | sort)
+if [ ${#zips[@]} -eq 0 ]; then
+    echo ""No backups found.""
+    read -r -p ""Press Enter to exit""
+    exit 0
+fi
+
+echo ""Available backups (newest last):""
+echo """"
+max_idx=$(( ${#zips[@]} - 1 ))
+for i in ""${!zips[@]}""; do
+    idx=$(( max_idx - i ))
+    name=$(basename ""${zips[$i]}"")
+    annotation=""""
+    if [[ ""$name"" == pre-run_* ]]; then annotation=""  (Pre-run backup)""; fi
+    if [ ""$idx"" -eq 0 ]; then
+        if [ -n ""$annotation"" ]; then annotation=""$annotation (most recent)""
+        else annotation=""  (most recent)""; fi
+    fi
+    echo ""  [$idx] $name$annotation""
+done
+echo """"
+
+# --- Prompt for selection ---
+read -r -p ""Select backup to restore [0]: "" sel_raw
+if [ -z ""$sel_raw"" ]; then sel_raw=0; fi
+sel_idx=$(( max_idx - sel_raw ))
+zip_path=""${zips[$sel_idx]}""
+zip_name=$(basename ""$zip_path"")
+
+# --- Confirm ---
+read -r -p ""Restore $zip_name? (y/n) [y]: "" confirm_restore
+if [ -z ""$confirm_restore"" ]; then confirm_restore=y; fi
+if [ ""$confirm_restore"" != ""y"" ]; then
+    echo ""Cancelled.""
+    read -r -p ""Press Enter to exit""
+    exit 0
+fi
+
+# --- Restore ---
+save_dir=""$(dirname ""$SAVE_PATH"")""
+if unzip -o -j ""$zip_path"" -d ""$save_dir""; then
+    echo ""Restored successfully.""
+else
+    echo ""ERROR: Failed to restore backup.""
+fi
+
+read -r -p ""Press Enter to exit""
+";
+
+        File.WriteAllText(shPath, script);
+
+        // Make executable on Unix systems
+        if (!OperatingSystem.IsWindows())
+        {
+            File.SetUnixFileMode(shPath,
+                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
+        }
+    }
 }
