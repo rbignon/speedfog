@@ -321,11 +321,11 @@ def main() -> int:
                 item_preset_src = Path(config.item_randomizer.item_preset_path)
             else:
                 item_preset_src = project_root / "data" / "item_preset.yaml"
-            item_preset_dst = seed_dir / "item_preset.yaml"
+            item_preset_path = seed_dir / "item_preset.yaml"
             if item_preset_src.exists():
-                shutil.copy(item_preset_src, item_preset_dst)
+                shutil.copy(item_preset_src, item_preset_path)
                 if args.verbose:
-                    print(f"Copied: {item_preset_dst}")
+                    print(f"Copied: {item_preset_path}")
             else:
                 print(
                     f"Warning: Item preset not found at {item_preset_src}",
@@ -362,6 +362,11 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
+
+        # Clean up transient Item Randomizer config files
+        item_config_path.unlink(missing_ok=True)
+        item_preset_path = seed_dir / "item_preset.yaml"
+        item_preset_path.unlink(missing_ok=True)
 
     # Build mod unless --no-build
     if not args.no_build:
