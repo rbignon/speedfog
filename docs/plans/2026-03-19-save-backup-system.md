@@ -127,14 +127,14 @@ backup_daemon.ps1 -SavePath <path>
   1. Read backups/config.ini (for interval, max_backups)
   2. Wait phase: poll for eldenring.exe every 5 seconds, up to 5 minutes
      - If timeout: print error, exit
-  3. If save file exists: create pre-run backup (backups/pre-run_<timestamp>.sl2)
+  3. If save file exists: create pre-run backup (backups/pre-run_<timestamp>.zip)
      If save file does not exist: skip (first session, no save yet)
   4. Backup loop:
      a. Sleep $interval minutes
      b. If eldenring.exe is not running: print summary, exit
      c. If save file does not exist: skip this iteration
-     d. Copy save to backups/ER0000_<timestamp>.sl2
-     e. If copied file is <1 MB: log warning (possible partial copy)
+     d. Compress save to backups/ER0000_<timestamp>.zip
+     e. If zip file is <100 KB: log warning (possible partial copy)
      f. Delete oldest periodic backups until at most $max_backups remain
 ```
 
@@ -146,20 +146,29 @@ The wait phase (step 2) is necessary because the daemon starts before
 ModEngine has launched the game. The 5-minute timeout covers slow game
 startup.
 
-### Backup naming
+### Backup format
 
-- Pre-run backup: `pre-run_YYYY-MM-DD_HH.mm.ss.sl2`
-- Periodic backups: `ER0000_YYYY-MM-DD_HH.mm.ss.sl2`
+Backups are stored as **ZIP files** (Deflate compression), matching FogMod's
+approach. Elden Ring save files compress well (~30 MB -> ~3 MB, roughly 10:1
+ratio), which matters because pre-run backups accumulate without purge.
 
-Timestamp is the backup creation time (not the save file's modification time).
+- Pre-run backup: `pre-run_YYYY-MM-DD_HH.mm.ss.zip`
+- Periodic backups: `ER0000_YYYY-MM-DD_HH.mm.ss.zip`
+
+Each zip contains a single file (`ER0000.sl2`). Timestamp is the backup
+creation time (not the save file's modification time).
+
+Compression tools:
+- **PowerShell**: `Compress-Archive` / `Expand-Archive` (built-in)
+- **Bash**: `zip` / `unzip` (universally available on Linux)
 
 ### Purge logic
 
 Only periodic backups (prefix `ER0000_`) count toward `max_backups`. After
 creating a new backup, the daemon deletes the oldest periodic backups until at
 most `max_backups` remain. Pre-run backups are never purged automatically.
-They accumulate across runs, but at ~26 MB each this is acceptable for the
-short-lived nature of SpeedFog output folders.
+They accumulate across runs, but at ~3 MB each (compressed) this is
+acceptable.
 
 ### Scope
 
@@ -185,11 +194,11 @@ The log file helps debug issues reported by users.
 [SpeedFog Backup] Save file: C:\Users\...\ER0000.sl2
 [SpeedFog Backup] Waiting for Elden Ring to start...
 [SpeedFog Backup] Game detected.
-[SpeedFog Backup] Pre-run backup: pre-run_2026-03-19_14.30.00.sl2
+[SpeedFog Backup] Pre-run backup: pre-run_2026-03-19_14.30.00.zip
 [SpeedFog Backup] Backup daemon started (interval: 1 min, keep: 10)
-[SpeedFog Backup] Backup: ER0000_2026-03-19_14.31.00.sl2
-[SpeedFog Backup] Backup: ER0000_2026-03-19_14.32.00.sl2 (purged: ER0000_2026-03-19_14.22.00.sl2)
-[SpeedFog Backup] WARNING: Backup ER0000_2026-03-19_14.33.00.sl2 is only 0.5 MB (expected ~26 MB)
+[SpeedFog Backup] Backup: ER0000_2026-03-19_14.31.00.zip (3.1 MB)
+[SpeedFog Backup] Backup: ER0000_2026-03-19_14.32.00.zip (3.1 MB, purged: ER0000_2026-03-19_14.22.00.zip)
+[SpeedFog Backup] WARNING: ER0000_2026-03-19_14.33.00.zip is only 12 KB (expected ~3 MB)
 [SpeedFog Backup] Game exited. Daemon stopping. (12 backups created)
 ```
 
@@ -277,15 +286,15 @@ Save file: C:\Users\...\AppData\Roaming\EldenRing\76561199058957457\ER0000.sl2
 
 Available backups (newest last):
 
-  [5] pre-run_2026-03-19_14.30.00.sl2  (Pre-run backup)
-  [4] ER0000_2026-03-19_14.31.00.sl2
-  [3] ER0000_2026-03-19_14.32.00.sl2
-  [2] ER0000_2026-03-19_14.33.00.sl2
-  [1] ER0000_2026-03-19_14.34.00.sl2
-  [0] ER0000_2026-03-19_14.35.00.sl2   (most recent)
+  [5] pre-run_2026-03-19_14.30.00.zip  (Pre-run backup)
+  [4] ER0000_2026-03-19_14.31.00.zip
+  [3] ER0000_2026-03-19_14.32.00.zip
+  [2] ER0000_2026-03-19_14.33.00.zip
+  [1] ER0000_2026-03-19_14.34.00.zip
+  [0] ER0000_2026-03-19_14.35.00.zip   (most recent)
 
 Select backup to restore [0]:
-Restore ER0000_2026-03-19_14.35.00.sl2? (y/n) [y]:
+Restore ER0000_2026-03-19_14.35.00.zip? (y/n) [y]:
 Restored successfully.
 ```
 
@@ -297,11 +306,11 @@ Restored successfully.
 
 1. Detect save path (same logic as launcher: read `backups/config.ini`,
    auto-detect, prompt if multiple matches).
-2. List `backups/*.sl2` sorted oldest-first, assign decremental indices
+2. List `backups/*.zip` sorted oldest-first, assign decremental indices
    (newest = 0).
 3. Prompt for index (default 0).
 4. Prompt for confirmation (default y).
-5. Copy selected backup over the save file.
+5. Extract `ER0000.sl2` from the selected zip and overwrite the save file.
 6. Print success or error message.
 
 ### Safety
