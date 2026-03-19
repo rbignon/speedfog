@@ -58,6 +58,7 @@ public class PackagingWriter
 
         // 6. Generate launcher scripts
         ConfigGenerator.WriteBatchLauncher(_outputDir);
+        ConfigGenerator.WriteLaunchHelperPs1(_outputDir);
         ConfigGenerator.WriteShellLauncher(_outputDir);
         Console.WriteLine("Generated launcher scripts");
 

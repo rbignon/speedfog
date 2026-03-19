@@ -56,6 +56,7 @@ mods = [
 
     /// <summary>
     /// Writes the Windows batch launcher script.
+    /// Runs the launch helper (save detection + backup daemon) before launching ModEngine.
     /// </summary>
     /// <param name="outputDir">The output directory.</param>
     public static void WriteBatchLauncher(string outputDir)
@@ -71,6 +72,9 @@ setlocal
 REM Get the directory where this script is located
 set SCRIPT_DIR=%~dp0
 
+REM Detect save file and start backup daemon
+powershell -ExecutionPolicy Bypass -NoProfile -File ""%SCRIPT_DIR%backups\launch_helper.ps1"" ""%SCRIPT_DIR%""
+
 REM Launch ModEngine with our config
 ""%SCRIPT_DIR%ModEngine\modengine2_launcher.exe"" -t er -c ""%SCRIPT_DIR%config_speedfog.toml""
 
@@ -78,6 +82,93 @@ endlocal
 ";
 
         File.WriteAllText(batPath, script);
+    }
+
+    /// <summary>
+    /// Writes the PowerShell launch helper script that detects the save file
+    /// and starts the backup daemon before the game launches.
+    /// Called by launch_speedfog.bat before ModEngine starts.
+    /// </summary>
+    /// <param name="outputDir">The output directory.</param>
+    public static void WriteLaunchHelperPs1(string outputDir)
+    {
+        var ps1Path = Path.Combine(outputDir, "backups", "launch_helper.ps1");
+        Directory.CreateDirectory(Path.GetDirectoryName(ps1Path)!);
+
+        var script = @"# SpeedFog Launch Helper
+# Auto-generated - do not edit manually
+# Detects the Elden Ring save file and starts the backup daemon.
+# Called by launch_speedfog.bat with the script directory as $args[0].
+
+$scriptDir = $args[0]
+if (-not $scriptDir) {
+    $scriptDir = $PSScriptRoot + ""\..\""
+}
+
+$configPath = ""$PSScriptRoot\config.ini""
+
+# --- Parse config.ini ---
+$enabled = $true
+$savePath = $null
+
+if (Test-Path $configPath) {
+    foreach ($line in Get-Content $configPath) {
+        $line = $line.Trim()
+        if ($line -match '^\s*#' -or $line -eq '') { continue }
+        if ($line -match '^\s*enabled\s*=\s*(.+)\s*$') {
+            $val = $Matches[1].Trim()
+            if ($val -eq 'false' -or $val -eq 'False' -or $val -eq 'FALSE') {
+                $enabled = $false
+            }
+        }
+        if ($line -match '^\s*save_path\s*=\s*(.+)\s*$') {
+            $savePath = $Matches[1].Trim()
+        }
+    }
+}
+
+# --- Exit early if backups disabled ---
+if (-not $enabled) {
+    exit 0
+}
+
+# --- Resolve save path ---
+if (-not $savePath) {
+    $candidates = @(Get-ChildItem ""$env:APPDATA\EldenRing\*\ER0000.sl2"" -ErrorAction SilentlyContinue)
+
+    if ($candidates.Count -eq 1) {
+        $savePath = $candidates[0].FullName
+    } elseif ($candidates.Count -eq 0) {
+        Write-Host ""WARNING: Could not auto-detect Elden Ring save file.""
+        Write-Host ""To enable backups, set save_path in backups\config.ini""
+        exit 0
+    } else {
+        Write-Host ""Multiple Elden Ring save files found:""
+        for ($i = 0; $i -lt $candidates.Count; $i++) {
+            Write-Host ""  [$($i + 1)] $($candidates[$i].FullName)""
+        }
+        $sel = Read-Host ""Select save file""
+        $idx = [int]$sel - 1
+        if ($idx -lt 0 -or $idx -ge $candidates.Count) {
+            Write-Host ""Invalid selection. Skipping backups.""
+            exit 0
+        }
+        $savePath = $candidates[$idx].FullName
+    }
+}
+
+# --- Start backup daemon ---
+$daemonPath = ""$PSScriptRoot\backup_daemon.ps1""
+if (-not (Test-Path $daemonPath)) {
+    Write-Host ""WARNING: backup_daemon.ps1 not found. Skipping backups.""
+    exit 0
+}
+
+Write-Host ""Starting backup daemon for: $savePath""
+Start-Process -WindowStyle Minimized powershell -ArgumentList ""-ExecutionPolicy Bypass -NoProfile -File """"$daemonPath"""" -SavePath """"$savePath""""""
+";
+
+        File.WriteAllText(ps1Path, script);
     }
 
     /// <summary>
