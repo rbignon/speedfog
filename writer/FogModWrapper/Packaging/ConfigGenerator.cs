@@ -73,7 +73,7 @@ REM Get the directory where this script is located
 set SCRIPT_DIR=%~dp0
 
 REM Detect save file and start backup daemon
-powershell -ExecutionPolicy Bypass -NoProfile -File ""%SCRIPT_DIR%backups\launch_helper.ps1"" ""%SCRIPT_DIR%""
+powershell -ExecutionPolicy Bypass -NoProfile -File ""%SCRIPT_DIR%backups\launch_helper.ps1""
 
 REM Launch ModEngine with our config
 ""%SCRIPT_DIR%ModEngine\modengine2_launcher.exe"" -t er -c ""%SCRIPT_DIR%config_speedfog.toml""
@@ -98,12 +98,7 @@ endlocal
         var script = @"# SpeedFog Launch Helper
 # Auto-generated - do not edit manually
 # Detects the Elden Ring save file and starts the backup daemon.
-# Called by launch_speedfog.bat with the script directory as $args[0].
-
-$scriptDir = $args[0]
-if (-not $scriptDir) {
-    $scriptDir = $PSScriptRoot + ""\..\""
-}
+# Called by launch_speedfog.bat.
 
 $configPath = ""$PSScriptRoot\config.ini""
 
@@ -220,7 +215,11 @@ if [ ""$enabled"" != ""false"" ]; then
             done
             read -r -p ""Select save file: "" _sel
             _idx=$((_sel - 1))
-            SAVE_PATH=""${_candidates[$_idx]}""
+            if ! [[ ""$_sel"" =~ ^[0-9]+$ ]] || [ ""$_idx"" -lt 0 ] || [ ""$_idx"" -ge ""$_count"" ]; then
+                echo ""Invalid selection. Skipping backups.""
+            else
+                SAVE_PATH=""${_candidates[$_idx]}""
+            fi
         fi
     fi
 
@@ -603,7 +602,9 @@ Write-Host """"
 # --- Prompt for selection ---
 $selRaw = Read-Host ""Select backup to restore [0]""
 if ($selRaw -eq '') { $selRaw = '0' }
-$selIdx = $maxIdx - [int]$selRaw
+try { $selNum = [int]$selRaw } catch { Write-Host ""Invalid selection.""; Read-Host ""Press Enter to exit""; exit 1 }
+if ($selNum -lt 0 -or $selNum -gt $maxIdx) { Write-Host ""Invalid selection.""; Read-Host ""Press Enter to exit""; exit 1 }
+$selIdx = $maxIdx - $selNum
 $zipPath = $zips[$selIdx].FullName
 $zipName = $zips[$selIdx].Name
 
@@ -729,6 +730,11 @@ echo """"
 # --- Prompt for selection ---
 read -r -p ""Select backup to restore [0]: "" sel_raw
 if [ -z ""$sel_raw"" ]; then sel_raw=0; fi
+if ! [[ ""$sel_raw"" =~ ^[0-9]+$ ]] || [ ""$sel_raw"" -gt ""$max_idx"" ]; then
+    echo ""Invalid selection.""
+    read -r -p ""Press Enter to exit""
+    exit 1
+fi
 sel_idx=$(( max_idx - sel_raw ))
 zip_path=""${zips[$sel_idx]}""
 zip_name=$(basename ""$zip_path"")
