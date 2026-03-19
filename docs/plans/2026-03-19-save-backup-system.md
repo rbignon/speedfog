@@ -95,29 +95,41 @@ The `<steam_id>` varies per player. Auto-detection logic:
    subdirectories containing `ER0000.sl2`.
 3. If exactly one match: use it automatically.
 4. If zero matches: print an error message explaining how to set `save_path`
-   in the ini file, then exit.
-5. If multiple matches: print the found paths and ask the user to set
-   `save_path` in the ini file, then exit.
+   in `backups/config.ini`, then continue without backup.
+5. If multiple matches: display a numbered menu and let the user pick.
+
+Save file detection runs in the **launcher** (visible console window), not in
+the daemon. This ensures the player sees any errors or prompts. The resolved
+path is passed to the daemon as a command-line argument, so the daemon does
+not need to re-detect.
+
+The recovery script performs its own detection using the same logic (reading
+`backups/config.ini` first, then auto-detection). Since recovery is already
+interactive, prompting for disambiguation is natural there too.
 
 ## Backup Daemon
 
 ### Lifecycle
 
 ```
-launch_speedfog.bat
-  1. Read backups/config.ini; if enabled=false, skip step 2
-  2. Start backup_daemon.ps1 in a minimized window (start /min)
-  3. Launch ModEngine (game starts)
-  4. Script ends (daemon continues independently)
+launch_speedfog.bat (visible console window)
+  1. Read backups/config.ini; if enabled=false, skip to step 4
+  2. Detect save file path:
+     - config.ini has save_path → use it
+     - Auto-detect finds exactly one → use it
+     - Auto-detect finds multiple → display numbered menu, user picks
+     - Auto-detect finds none → print error (edit config.ini), skip to step 4
+  3. Start backup_daemon.ps1 in a minimized window, passing save path as argument
+  4. Launch ModEngine (game starts)
+  5. Script ends (daemon continues independently)
 
-backup_daemon.ps1
-  1. Read backups/config.ini
-  2. Detect save file path (or exit with error)
-  3. Wait phase: poll for eldenring.exe every 5 seconds, up to 5 minutes
+backup_daemon.ps1 -SavePath <path>
+  1. Read backups/config.ini (for interval, max_backups)
+  2. Wait phase: poll for eldenring.exe every 5 seconds, up to 5 minutes
      - If timeout: print error, exit
-  4. If save file exists: create pre-run backup (backups/pre-run_<timestamp>.sl2)
+  3. If save file exists: create pre-run backup (backups/pre-run_<timestamp>.sl2)
      If save file does not exist: skip (first session, no save yet)
-  5. Backup loop:
+  4. Backup loop:
      a. Sleep $interval minutes
      b. If eldenring.exe is not running: print summary, exit
      c. If save file does not exist: skip this iteration
@@ -126,7 +138,11 @@ backup_daemon.ps1
      f. Delete oldest periodic backups until at most $max_backups remain
 ```
 
-The wait phase (step 3) is necessary because the daemon starts before
+The save path is resolved by the launcher (where the user can see prompts)
+and passed to the daemon as an argument. The daemon only reads config.ini
+for interval and max_backups settings.
+
+The wait phase (step 2) is necessary because the daemon starts before
 ModEngine has launched the game. The 5-minute timeout covers slow game
 startup.
 
@@ -188,18 +204,24 @@ The log file helps debug issues reported by users.
 
 ### `launch_speedfog.bat` (Windows)
 
+The batch launcher delegates save detection to a small inline PowerShell
+block (runs in the same visible window), then starts the daemon with the
+resolved path. Pseudocode:
+
 ```batch
 @echo off
-REM SpeedFog Launcher for Elden Ring
-REM Auto-generated - do not edit manually
-
 setlocal
 
-REM Get the directory where this script is located
 set SCRIPT_DIR=%~dp0
 
-REM Start backup daemon in background (minimized window)
-start "SpeedFog Backup" /min powershell -ExecutionPolicy Bypass -NoProfile -File "%SCRIPT_DIR%backups\backup_daemon.ps1"
+REM Detect save file and start backup daemon (PowerShell inline)
+REM - Reads backups/config.ini for enabled flag and save_path
+REM - If enabled=false, skips daemon entirely
+REM - If save_path set, uses it; otherwise auto-detects
+REM - If multiple saves found, displays numbered menu
+REM - If none found, prints warning and skips daemon
+REM - If resolved, starts backup_daemon.ps1 -SavePath <path> minimized
+powershell -ExecutionPolicy Bypass -NoProfile -Command "& { ... }"
 
 REM Launch ModEngine with our config
 "%SCRIPT_DIR%ModEngine\modengine2_launcher.exe" -t er -c "%SCRIPT_DIR%config_speedfog.toml"
@@ -207,24 +229,34 @@ REM Launch ModEngine with our config
 endlocal
 ```
 
+The PowerShell block handles config parsing, auto-detection, user prompting
+(if multiple matches), and daemon launch via `Start-Process -WindowStyle
+Minimized`. The actual logic will be a self-contained inline script.
+
 ### `launch_speedfog.sh` (Linux)
+
+Same logic in bash: read config, auto-detect under the Proton prefix, prompt
+if needed, then launch the daemon in background.
 
 ```bash
 #!/bin/bash
-# SpeedFog Launcher for Elden Ring (Linux/Proton)
-# Auto-generated - do not edit manually
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+OUTPUT_DIR="$SCRIPT_DIR/.."
 
-# Start backup daemon in background
-bash "$SCRIPT_DIR/backup_daemon.sh" &
+# Detect save file (reads config.ini, auto-detects, prompts if needed)
+# ... detection logic ...
+
+# Start backup daemon in background (if save path resolved)
+if [ -n "$SAVE_PATH" ]; then
+    bash "$SCRIPT_DIR/backup_daemon.sh" "$SAVE_PATH" &
+fi
 
 # Launch ModEngine
-wine "$SCRIPT_DIR/../ModEngine/modengine2_launcher.exe" -t er -c "$SCRIPT_DIR/../config_speedfog.toml"
+wine "$OUTPUT_DIR/ModEngine/modengine2_launcher.exe" -t er -c "$OUTPUT_DIR/config_speedfog.toml"
 ```
 
 Note: the Linux launcher lives in `linux/`, so paths to ModEngine and config
-use `../` to reach the output root.
+use `$OUTPUT_DIR` (parent directory) to reach the output root.
 
 ## Recovery Script
 
@@ -263,7 +295,8 @@ Restored successfully.
 
 ### Logic
 
-1. Read `backups/config.ini` and detect save path (same logic as daemon).
+1. Detect save path (same logic as launcher: read `backups/config.ini`,
+   auto-detect, prompt if multiple matches).
 2. List `backups/*.sl2` sorted oldest-first, assign decremental indices
    (newest = 0).
 3. Prompt for index (default 0).
@@ -319,7 +352,10 @@ The recovery scripts use the same path resolution.
 - The scripts are generated as string literals in C#, so unit testing the
   generation itself is not very useful. Focus on integration testing.
 - Edge cases to verify manually:
-  - No save file found (error message + ini instructions)
-  - Multiple Steam IDs (error message + ini instructions)
-  - Game not running when daemon starts (should wait and keep checking)
-  - Save file locked during copy (should warn and retry next interval)
+  - No save file found (warning in launcher, game launches without backup)
+  - Multiple Steam IDs (numbered menu in launcher, user picks)
+  - save_path override in config.ini (skips auto-detection)
+  - enabled=false in config.ini (daemon not started)
+  - Game not running when daemon starts (wait phase, up to 5 min)
+  - Save file locked during copy (warning, retry next interval)
+  - First session, no ER0000.sl2 yet (skip pre-run backup)
