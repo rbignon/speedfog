@@ -56,20 +56,9 @@ public class PackagingWriter
         ConfigGenerator.WriteModEngineConfig(_outputDir, "mods/fogmod", itemRandomizerEnabled);
         Console.WriteLine("Generated config_speedfog.toml");
 
-        // 6. Generate launcher scripts
-        ConfigGenerator.WriteBatchLauncher(_outputDir);
-        ConfigGenerator.WriteLaunchHelperPs1(_outputDir);
-        ConfigGenerator.WriteShellLauncher(_outputDir);
-        Console.WriteLine("Generated launcher scripts");
-
-        // 7. Generate backup system scripts
-        ConfigGenerator.WriteBackupConfig(_outputDir);
-        ConfigGenerator.WriteBackupDaemonPs1(_outputDir);
-        ConfigGenerator.WriteBackupDaemonSh(_outputDir);
-        ConfigGenerator.WriteRecoveryPs1(_outputDir);
-        ConfigGenerator.WriteRecoveryBat(_outputDir);
-        ConfigGenerator.WriteRecoverySh(_outputDir);
-        Console.WriteLine("Generated backup and recovery scripts");
+        // 6. Copy launcher, backup, and recovery scripts
+        ConfigGenerator.CopyScripts(_outputDir);
+        Console.WriteLine("Copied launcher and backup scripts");
 
         Console.WriteLine();
         Console.WriteLine("=== SpeedFog mod ready! ===");
