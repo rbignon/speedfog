@@ -327,31 +327,21 @@ You can relaunch the game with launch_speedfog.bat.
 
 ## Code Changes
 
+### `writer/scripts/`
+
+All scripts are standalone files in `writer/scripts/`, mirroring the output
+directory structure. They are copied (not generated) to the output directory.
+
 ### `ConfigGenerator.cs`
 
-New methods:
-- `WriteBackupDaemonPs1(string outputDir)` - generates `backups/backup_daemon.ps1`
-- `WriteBackupDaemonSh(string outputDir)` - generates `linux/backup_daemon.sh`
-- `WriteRecoveryPs1(string outputDir)` - generates `backups/recovery.ps1`
-- `WriteRecoveryBat(string outputDir)` - generates `recovery.bat` (wrapper)
-- `WriteRecoverySh(string outputDir)` - generates `linux/recovery.sh`
-- `WriteBackupConfig(string outputDir)` - generates `backups/config.ini`
-
-Modified methods:
-- `WriteBatchLauncher(string outputDir)` - add daemon launch before ModEngine,
-  read `backups/config.ini` to check `enabled` flag
-- `WriteShellLauncher(string outputDir)` - add daemon launch, move to `linux/`
-  subfolder, adjust relative paths
+- `WriteModEngineConfig` remains (dynamic content based on item randomizer)
+- `CopyScripts(string outputDir)` copies all scripts from `writer/scripts/`
+  to the output directory and sets executable permissions on shell scripts
 
 ### `PackagingWriter.cs`
 
-`WritePackageAsync` calls the new `ConfigGenerator` methods after generating
-the existing launcher scripts.
-
-### Directory creation
-
-`PackagingWriter` creates `backups/` and `linux/` directories as part of
-packaging, so they exist in the output even before the first run.
+`WritePackageAsync` calls `ConfigGenerator.CopyScripts()` after generating
+the ModEngine config. Directory creation is handled by `CopyScripts`.
 
 Both platforms write backups to `backups/` at the output root. The Linux
 daemon resolves this via `$SCRIPT_DIR/../backups/` since it lives in `linux/`.

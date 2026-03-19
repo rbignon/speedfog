@@ -137,24 +137,30 @@ selection is the last item (most recent). Default confirmation is y.
 Enter twice restores the most recent backup. The script warns if Elden Ring
 is currently running.
 
-## Code Generation
+## Scripts and Packaging
 
-All scripts are generated as C# string literals in
-`writer/FogModWrapper/Packaging/ConfigGenerator.cs`:
+Scripts are standalone files in `writer/scripts/`, copied to the output
+directory by `ConfigGenerator.CopyScripts()` during packaging. Only
+`config_speedfog.toml` is dynamically generated (it depends on item
+randomizer configuration).
 
-| Method | Output |
-|--------|--------|
-| `WriteBackupConfig` | `backups/config.ini` |
-| `WriteBackupDaemonPs1` | `backups/backup_daemon.ps1` |
-| `WriteBackupDaemonSh` | `linux/backup_daemon.sh` |
-| `WriteLaunchHelperPs1` | `backups/launch_helper.ps1` |
-| `WriteRecoveryPs1` | `backups/recovery.ps1` |
-| `WriteRecoveryBat` | `recovery.bat` |
-| `WriteRecoverySh` | `linux/recovery.sh` |
-| `WriteBatchLauncher` | `launch_speedfog.bat` (modified) |
-| `WriteShellLauncher` | `linux/launch_speedfog.sh` (modified) |
+```
+writer/scripts/
+├── launch_speedfog.bat
+├── recovery.bat
+├── backups/
+│   ├── config.ini
+│   ├── launch_helper.ps1
+│   ├── backup_daemon.ps1
+│   └── recovery.ps1
+└── linux/
+    ├── launch_speedfog.sh
+    ├── backup_daemon.sh
+    └── recovery.sh
+```
 
-`PackagingWriter.WritePackageAsync` calls all methods during output packaging.
+`PackagingWriter.WritePackageAsync` calls `ConfigGenerator.CopyScripts()`
+after generating the ModEngine config.
 
 ## FogMod Comparison
 
