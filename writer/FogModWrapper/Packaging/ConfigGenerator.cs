@@ -112,4 +112,32 @@ wine ""$SCRIPT_DIR/ModEngine/modengine2_launcher.exe"" -t er -c ""$SCRIPT_DIR/co
                 UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
         }
     }
+
+    /// <summary>
+    /// Writes the backup configuration file with all values commented out.
+    /// </summary>
+    /// <param name="outputDir">The output directory.</param>
+    public static void WriteBackupConfig(string outputDir)
+    {
+        var configPath = Path.Combine(outputDir, "backups", "config.ini");
+        Directory.CreateDirectory(Path.GetDirectoryName(configPath)!);
+
+        var config = @"# SpeedFog Save Backup Configuration
+# Uncomment and edit to override defaults
+
+# Set to false to disable automatic backups entirely
+# enabled=true
+
+# Path to save file (auto-detected if not set)
+# save_path=C:\Users\...\AppData\Roaming\EldenRing\...\ER0000.sl2
+
+# Backup interval in minutes (default: 1)
+# interval=1
+
+# Number of backups to keep (default: 10)
+# max_backups=10
+";
+
+        File.WriteAllText(configPath, config);
+    }
 }
