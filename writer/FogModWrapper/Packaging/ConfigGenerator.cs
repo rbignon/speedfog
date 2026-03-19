@@ -386,4 +386,128 @@ done
                 UnixFileMode.OtherRead | UnixFileMode.OtherExecute);
         }
     }
+
+    /// <summary>
+    /// Writes the save recovery PowerShell script.
+    /// </summary>
+    /// <param name="outputDir">The output directory.</param>
+    public static void WriteRecoveryPs1(string outputDir)
+    {
+        var ps1Path = Path.Combine(outputDir, "backups", "recovery.ps1");
+        Directory.CreateDirectory(Path.GetDirectoryName(ps1Path)!);
+
+        var script = @"# SpeedFog Save Recovery
+# Auto-generated - do not edit manually
+
+$backupsDir = $PSScriptRoot
+$configPath = ""$PSScriptRoot/config.ini""
+
+# --- Parse config.ini for save_path ---
+$savePath = $null
+if (Test-Path $configPath) {
+    foreach ($line in Get-Content $configPath) {
+        $line = $line.Trim()
+        if ($line -match '^\s*#' -or $line -eq '') { continue }
+        if ($line -match '^\s*save_path\s*=\s*(.+)\s*$') { $savePath = $Matches[1].Trim(); break }
+    }
+}
+
+# --- Auto-detect save file if not configured ---
+if (-not $savePath) {
+    $candidates = @(Get-ChildItem ""$env:APPDATA\EldenRing\*\ER0000.sl2"" -ErrorAction SilentlyContinue)
+    if ($candidates.Count -eq 1) {
+        $savePath = $candidates[0].FullName
+    } elseif ($candidates.Count -eq 0) {
+        Write-Host ""ERROR: Could not find ER0000.sl2. Please set save_path in backups\config.ini.""
+        Read-Host ""Press Enter to exit""
+        exit 1
+    } else {
+        Write-Host ""Multiple save files found. Select one:""
+        for ($i = 0; $i -lt $candidates.Count; $i++) {
+            Write-Host ""  [$i] $($candidates[$i].FullName)""
+        }
+        $sel = Read-Host ""Enter number""
+        $savePath = $candidates[[int]$sel].FullName
+    }
+}
+
+# --- Header ---
+Write-Host ""SpeedFog Save Recovery""
+Write-Host ""======================""
+Write-Host """"
+Write-Host ""Save file: $savePath""
+Write-Host """"
+
+# --- Warn if game is running ---
+if (Get-Process -Name eldenring -ErrorAction SilentlyContinue) {
+    $confirm = Read-Host ""Warning: Elden Ring appears to be running. Restoring while the game is running may not work. Continue? (y/n)""
+    if ($confirm -ne 'y') { exit 0 }
+}
+
+# --- List available backups ---
+$zips = @(Get-ChildItem ""$backupsDir\*.zip"" -ErrorAction SilentlyContinue | Sort-Object Name)
+if ($zips.Count -eq 0) {
+    Write-Host ""No backups found.""
+    Read-Host ""Press Enter to exit""
+    exit 0
+}
+
+Write-Host ""Available backups (newest last):""
+Write-Host """"
+$maxIdx = $zips.Count - 1
+for ($i = 0; $i -lt $zips.Count; $i++) {
+    $idx = $maxIdx - $i
+    $name = $zips[$i].Name
+    $annotation = """"
+    if ($name -match '^pre-run_') { $annotation = ""  (Pre-run backup)"" }
+    if ($idx -eq 0) {
+        if ($annotation -ne """") { $annotation = ""$annotation (most recent)"" }
+        else { $annotation = ""  (most recent)"" }
+    }
+    Write-Host ""  [$idx] $name$annotation""
+}
+Write-Host """"
+
+# --- Prompt for selection ---
+$selRaw = Read-Host ""Select backup to restore [0]""
+if ($selRaw -eq '') { $selRaw = '0' }
+$selIdx = $maxIdx - [int]$selRaw
+$zipPath = $zips[$selIdx].FullName
+$zipName = $zips[$selIdx].Name
+
+# --- Confirm ---
+$confirmRestore = Read-Host ""Restore $zipName? (y/n) [y]""
+if ($confirmRestore -eq '') { $confirmRestore = 'y' }
+if ($confirmRestore -ne 'y') {
+    Write-Host ""Cancelled.""
+    Read-Host ""Press Enter to exit""
+    exit 0
+}
+
+# --- Restore ---
+try {
+    Expand-Archive -Path $zipPath -DestinationPath (Split-Path $savePath -Parent) -Force
+    Write-Host ""Restored successfully.""
+} catch {
+    Write-Host ""ERROR: Failed to restore backup: $_""
+}
+
+Read-Host ""Press Enter to exit""
+";
+
+        File.WriteAllText(ps1Path, script);
+    }
+
+    /// <summary>
+    /// Writes the recovery batch wrapper script.
+    /// </summary>
+    /// <param name="outputDir">The output directory.</param>
+    public static void WriteRecoveryBat(string outputDir)
+    {
+        var batPath = Path.Combine(outputDir, "recovery.bat");
+
+        var script = "@powershell -ExecutionPolicy Bypass -NoProfile -File \"%~dp0backups\\recovery.ps1\"\r\n";
+
+        File.WriteAllText(batPath, script);
+    }
 }
