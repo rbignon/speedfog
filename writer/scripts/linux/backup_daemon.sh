@@ -94,10 +94,10 @@ while true; do
         zip_size_kb=$((zip_size / 1024))
         log "WARNING: $zip_name is only ${zip_size_kb} KB (expected ~3 MB)"
     else
-        zip_size_mb=$(echo "scale=1; $zip_size / 1048576" | bc)
+        zip_size_mb=$(awk "BEGIN {printf \"%.1f\", $zip_size / 1048576}")
         log "Backup: $zip_name ($zip_size_mb MB)"
     fi
 
     # Purge old backups beyond max_backups
-    ls -1t "$BACKUPS_DIR"/ER0000_*.zip 2>/dev/null | tail -n +$((max_backups + 1)) | xargs -r rm -f
+    ls -1 "$BACKUPS_DIR"/ER0000_*.zip 2>/dev/null | sort | head -n -"$max_backups" | xargs -r rm -f
 done
