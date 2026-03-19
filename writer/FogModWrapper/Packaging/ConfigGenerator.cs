@@ -616,15 +616,18 @@ if ($confirmRestore -ne 'y') {
     Read-Host ""Press Enter to exit""
     exit 0
 }
+Write-Host """"
 
 # --- Restore ---
 try {
     Expand-Archive -Path $zipPath -DestinationPath (Split-Path $savePath -Parent) -Force
     Write-Host ""Restored successfully.""
+    Write-Host ""You can relaunch the game with launch_speedfog.bat.""
 } catch {
     Write-Host ""ERROR: Failed to restore backup: $_""
 }
 
+Write-Host """"
 Read-Host ""Press Enter to exit""
 ";
 
@@ -747,15 +750,18 @@ if [ ""$confirm_restore"" != ""y"" ]; then
     read -r -p ""Press Enter to exit""
     exit 0
 fi
+echo """"
 
 # --- Restore ---
 save_dir=""$(dirname ""$SAVE_PATH"")""
 if unzip -o -j ""$zip_path"" -d ""$save_dir""; then
     echo ""Restored successfully.""
+    echo ""You can relaunch the game with linux/launch_speedfog.sh.""
 else
     echo ""ERROR: Failed to restore backup.""
 fi
 
+echo """"
 read -r -p ""Press Enter to exit""
 ";
 
