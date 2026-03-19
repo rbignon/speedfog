@@ -62,11 +62,20 @@ public class PackagingWriter
         ConfigGenerator.WriteShellLauncher(_outputDir);
         Console.WriteLine("Generated launcher scripts");
 
+        // 7. Generate backup system scripts
+        ConfigGenerator.WriteBackupConfig(_outputDir);
+        ConfigGenerator.WriteBackupDaemonPs1(_outputDir);
+        ConfigGenerator.WriteBackupDaemonSh(_outputDir);
+        ConfigGenerator.WriteRecoveryPs1(_outputDir);
+        ConfigGenerator.WriteRecoveryBat(_outputDir);
+        ConfigGenerator.WriteRecoverySh(_outputDir);
+        Console.WriteLine("Generated backup and recovery scripts");
+
         Console.WriteLine();
         Console.WriteLine("=== SpeedFog mod ready! ===");
         Console.WriteLine($"To play:");
         Console.WriteLine($"  Windows: double-click {Path.Combine(_outputDir, "launch_speedfog.bat")}");
-        Console.WriteLine($"  Linux:   run {Path.Combine(_outputDir, "launch_speedfog.sh")}");
+        Console.WriteLine($"  Linux:   run {Path.Combine(_outputDir, "linux", "launch_speedfog.sh")}");
     }
 
     /// <summary>
