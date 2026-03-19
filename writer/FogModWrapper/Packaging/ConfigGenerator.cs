@@ -138,16 +138,17 @@ if (-not $savePath) {
         Write-Host ""To enable backups, set save_path in backups\config.ini""
         exit 0
     } else {
-        $candidates = $candidates | Sort-Object LastWriteTime -Descending
+        $candidates = $candidates | Sort-Object LastWriteTime
         Write-Host ""Multiple Elden Ring save files found:""
         for ($i = 0; $i -lt $candidates.Count; $i++) {
             $mod = $candidates[$i].LastWriteTime.ToString(""yyyy-MM-dd HH:mm"")
-            $label = if ($i -eq 0) { "" (most recent)"" } else { """" }
-            Write-Host ""  [$i] $($candidates[$i].FullName)  [$mod]$label""
+            $label = if ($i -eq $candidates.Count - 1) { "" (most recent)"" } else { """" }
+            Write-Host ""  [$($i + 1)] $($candidates[$i].FullName)  [$mod]$label""
         }
-        $selRaw = Read-Host ""Select save file [0]""
-        if ($selRaw -eq '') { $selRaw = '0' }
-        try { $idx = [int]$selRaw } catch { Write-Host ""Invalid selection. Skipping backups.""; exit 0 }
+        $default = $candidates.Count
+        $selRaw = Read-Host ""Select save file [$default]""
+        if ($selRaw -eq '') { $selRaw = ""$default"" }
+        try { $idx = [int]$selRaw - 1 } catch { Write-Host ""Invalid selection. Skipping backups.""; exit 0 }
         if ($idx -lt 0 -or $idx -ge $candidates.Count) {
             Write-Host ""Invalid selection. Skipping backups.""
             exit 0
@@ -213,22 +214,24 @@ if [ ""$enabled"" != ""false"" ]; then
         elif [ ""$_count"" -eq 1 ]; then
             SAVE_PATH=""${_candidates[0]}""
         else
-            # Sort by modification time (most recent first)
-            mapfile -t _candidates < <(ls -1t ""${_candidates[@]}"")
+            # Sort by modification time (oldest first)
+            mapfile -t _candidates < <(ls -1t ""${_candidates[@]}"" | tac)
             _count=${#_candidates[@]}
             echo ""Multiple Elden Ring save files found:""
             for _i in ""${!_candidates[@]}""; do
                 _mod=$(date -r ""${_candidates[$_i]}"" ""+%Y-%m-%d %H:%M"" 2>/dev/null)
                 _label=""""
-                if [ ""$_i"" -eq 0 ]; then _label="" (most recent)""; fi
-                echo ""  [$_i] ${_candidates[$_i]}  [$_mod]$_label""
+                if [ ""$_i"" -eq $((_count - 1)) ]; then _label="" (most recent)""; fi
+                echo ""  [$((_i + 1))] ${_candidates[$_i]}  [$_mod]$_label""
             done
-            read -r -p ""Select save file [0]: "" _sel
-            if [ -z ""$_sel"" ]; then _sel=0; fi
-            if ! [[ ""$_sel"" =~ ^[0-9]+$ ]] || [ ""$_sel"" -lt 0 ] || [ ""$_sel"" -ge ""$_count"" ]; then
+            _default=""$_count""
+            read -r -p ""Select save file [$_default]: "" _sel
+            if [ -z ""$_sel"" ]; then _sel=""$_default""; fi
+            _idx=$((_sel - 1))
+            if ! [[ ""$_sel"" =~ ^[0-9]+$ ]] || [ ""$_idx"" -lt 0 ] || [ ""$_idx"" -ge ""$_count"" ]; then
                 echo ""Invalid selection. Skipping backups.""
             else
-                SAVE_PATH=""${_candidates[$_sel]}""
+                SAVE_PATH=""${_candidates[$_idx]}""
             fi
         fi
     fi
@@ -563,16 +566,17 @@ if (-not $savePath) {
         Read-Host ""Press Enter to exit""
         exit 1
     } else {
-        $candidates = $candidates | Sort-Object LastWriteTime -Descending
+        $candidates = $candidates | Sort-Object LastWriteTime
         Write-Host ""Multiple save files found. Select one:""
         for ($i = 0; $i -lt $candidates.Count; $i++) {
             $mod = $candidates[$i].LastWriteTime.ToString(""yyyy-MM-dd HH:mm"")
-            $label = if ($i -eq 0) { "" (most recent)"" } else { """" }
-            Write-Host ""  [$i] $($candidates[$i].FullName)  [$mod]$label""
+            $label = if ($i -eq $candidates.Count - 1) { "" (most recent)"" } else { """" }
+            Write-Host ""  [$($i + 1)] $($candidates[$i].FullName)  [$mod]$label""
         }
-        $selRaw = Read-Host ""Select save file [0]""
-        if ($selRaw -eq '') { $selRaw = '0' }
-        try { $idx = [int]$selRaw } catch { Write-Host ""Invalid selection.""; Read-Host ""Press Enter to exit""; exit 1 }
+        $default = $candidates.Count
+        $selRaw = Read-Host ""Select save file [$default]""
+        if ($selRaw -eq '') { $selRaw = ""$default"" }
+        try { $idx = [int]$selRaw - 1 } catch { Write-Host ""Invalid selection.""; Read-Host ""Press Enter to exit""; exit 1 }
         if ($idx -lt 0 -or $idx -ge $candidates.Count) {
             Write-Host ""Invalid selection.""
             Read-Host ""Press Enter to exit""
@@ -605,26 +609,26 @@ if ($zips.Count -eq 0) {
 
 Write-Host ""Available backups (newest last):""
 Write-Host """"
-$maxIdx = $zips.Count - 1
 for ($i = 0; $i -lt $zips.Count; $i++) {
-    $idx = $maxIdx - $i
+    $num = $i + 1
     $name = $zips[$i].Name
     $annotation = """"
     if ($name -match '^pre-run_') { $annotation = ""  (Pre-run backup)"" }
-    if ($idx -eq 0) {
+    if ($i -eq $zips.Count - 1) {
         if ($annotation -ne """") { $annotation = ""$annotation (most recent)"" }
         else { $annotation = ""  (most recent)"" }
     }
-    Write-Host ""  [$idx] $name$annotation""
+    Write-Host ""  [$num] $name$annotation""
 }
 Write-Host """"
 
 # --- Prompt for selection ---
-$selRaw = Read-Host ""Select backup to restore [0]""
-if ($selRaw -eq '') { $selRaw = '0' }
+$default = $zips.Count
+$selRaw = Read-Host ""Select backup to restore [$default]""
+if ($selRaw -eq '') { $selRaw = ""$default"" }
 try { $selNum = [int]$selRaw } catch { Write-Host ""Invalid selection.""; Read-Host ""Press Enter to exit""; exit 1 }
-if ($selNum -lt 0 -or $selNum -gt $maxIdx) { Write-Host ""Invalid selection.""; Read-Host ""Press Enter to exit""; exit 1 }
-$selIdx = $maxIdx - $selNum
+if ($selNum -lt 1 -or $selNum -gt $zips.Count) { Write-Host ""Invalid selection.""; Read-Host ""Press Enter to exit""; exit 1 }
+$selIdx = $selNum - 1
 $zipPath = $zips[$selIdx].FullName
 $zipName = $zips[$selIdx].Name
 
@@ -704,24 +708,26 @@ if [ -z ""$SAVE_PATH"" ]; then
     elif [ ""$count"" -eq 1 ]; then
         SAVE_PATH=""${candidates[0]}""
     else
-        # Sort by modification time (most recent first)
-        mapfile -t candidates < <(ls -1t ""${candidates[@]}"")
+        # Sort by modification time (oldest first)
+        mapfile -t candidates < <(ls -1t ""${candidates[@]}"" | tac)
         count=${#candidates[@]}
         echo ""Multiple save files found. Select one:""
         for i in ""${!candidates[@]}""; do
             _mod=$(date -r ""${candidates[$i]}"" ""+%Y-%m-%d %H:%M"" 2>/dev/null)
             _label=""""
-            if [ ""$i"" -eq 0 ]; then _label="" (most recent)""; fi
-            echo ""  [$i] ${candidates[$i]}  [$_mod]$_label""
+            if [ ""$i"" -eq $((count - 1)) ]; then _label="" (most recent)""; fi
+            echo ""  [$((i + 1))] ${candidates[$i]}  [$_mod]$_label""
         done
-        read -r -p ""Select save file [0]: "" sel
-        if [ -z ""$sel"" ]; then sel=0; fi
-        if ! [[ ""$sel"" =~ ^[0-9]+$ ]] || [ ""$sel"" -lt 0 ] || [ ""$sel"" -ge ""$count"" ]; then
+        _default=""$count""
+        read -r -p ""Select save file [$_default]: "" sel
+        if [ -z ""$sel"" ]; then sel=""$_default""; fi
+        idx=$((sel - 1))
+        if ! [[ ""$sel"" =~ ^[0-9]+$ ]] || [ ""$idx"" -lt 0 ] || [ ""$idx"" -ge ""$count"" ]; then
             echo ""Invalid selection.""
             read -r -p ""Press Enter to exit""
             exit 1
         fi
-        SAVE_PATH=""${candidates[$sel]}""
+        SAVE_PATH=""${candidates[$idx]}""
     fi
 fi
 
@@ -748,29 +754,30 @@ fi
 
 echo ""Available backups (newest last):""
 echo """"
-max_idx=$(( ${#zips[@]} - 1 ))
+zip_count=${#zips[@]}
 for i in ""${!zips[@]}""; do
-    idx=$(( max_idx - i ))
+    num=$(( i + 1 ))
     name=$(basename ""${zips[$i]}"")
     annotation=""""
     if [[ ""$name"" == pre-run_* ]]; then annotation=""  (Pre-run backup)""; fi
-    if [ ""$idx"" -eq 0 ]; then
+    if [ ""$i"" -eq $((zip_count - 1)) ]; then
         if [ -n ""$annotation"" ]; then annotation=""$annotation (most recent)""
         else annotation=""  (most recent)""; fi
     fi
-    echo ""  [$idx] $name$annotation""
+    echo ""  [$num] $name$annotation""
 done
 echo """"
 
 # --- Prompt for selection ---
-read -r -p ""Select backup to restore [0]: "" sel_raw
-if [ -z ""$sel_raw"" ]; then sel_raw=0; fi
-if ! [[ ""$sel_raw"" =~ ^[0-9]+$ ]] || [ ""$sel_raw"" -gt ""$max_idx"" ]; then
+default_sel=""$zip_count""
+read -r -p ""Select backup to restore [$default_sel]: "" sel_raw
+if [ -z ""$sel_raw"" ]; then sel_raw=""$default_sel""; fi
+if ! [[ ""$sel_raw"" =~ ^[0-9]+$ ]] || [ ""$sel_raw"" -lt 1 ] || [ ""$sel_raw"" -gt ""$zip_count"" ]; then
     echo ""Invalid selection.""
     read -r -p ""Press Enter to exit""
     exit 1
 fi
-sel_idx=$(( max_idx - sel_raw ))
+sel_idx=$(( sel_raw - 1 ))
 zip_path=""${zips[$sel_idx]}""
 zip_name=$(basename ""$zip_path"")
 
