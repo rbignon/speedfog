@@ -321,6 +321,10 @@ Gate names use FogMod's FullName format: `{map}_{gate_name}`.
 - `care_package[].type`: 0=Weapon, 1=Protector, 2=Accessory, 3=Goods, 4=Gem (Ash of War)
 - `remove_entities`: vanilla warp MSB assets to delete
 
+**Optional node fields (boss nodes):**
+- `boss_name`: canonical boss name from `enemy.txt` (always present on boss nodes with a defeat_flag). Overridden by `patch_graph_boss_placements()` when boss randomization is active. Used by the racing server for stats.
+- `randomized_bosses`: list of boss names placed by the enemy randomizer (one per phase). Only present when boss randomization is active. Set by `patch_graph_boss_placements()`. Example: `["Beast Clergyman", "Maliketh, the Black Blade"]` for a multi-phase boss.
+
 ## Care Package System
 
 SpeedFog gives players a randomized starting build so they can be combat-ready from the first fog gate.

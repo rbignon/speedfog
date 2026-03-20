@@ -134,10 +134,15 @@ Output: `boss_placements.json` mapping `target_entity_id` (string) to `{name, en
 In `main.py`, after ItemRandomizerWrapper completes:
 
 1. `load_boss_placements()` reads `boss_placements.json`
-2. `patch_graph_boss_placements()` matches each DAG node's `defeat_flag` to a placement entry, adds `randomized_boss` field to graph.json nodes
-3. `append_boss_placements_to_spoiler()` adds a boss placement section to spoiler.txt
+2. `parse_boss_phases()` reads `enemy.txt` to build a reverse `NextPhase` mapping (phase2_entity_id -> phase1_entity_id) for multi-phase bosses
+3. `patch_graph_boss_placements()` matches each DAG node's `defeat_flag` to a placement entry and sets:
+   - `randomized_bosses`: list of boss names (both phases for multi-phase bosses, e.g. `["Beast Clergyman", "Maliketh"]`)
+   - `boss_name`: canonical name from the phase 2 replacement (numeric suffix stripped, e.g. "Fire Giant" not "Fire Giant 2")
+4. `append_boss_placements_to_spoiler()` adds a boss placement section to spoiler.txt
 
-Matching logic (in `_match_boss_placement`): tries `str(defeat_flag)` first, then `str(defeat_flag - 200_000_000)` for base game bosses.
+Matching logic (in `_match_boss_placement`): tries `str(defeat_flag)` first, then `str(defeat_flag - 200_000_000)` for base game bosses. `_resolve_entity_id()` extracts the entity_id from a defeat_flag for phase mapping lookups.
+
+Note: `boss_name` is also set at DAG generation time from the `enemy.txt` mapping (via `clusters.json`), providing a canonical name even when boss randomization is not active. `patch_graph_boss_placements()` overrides it with the randomized boss's name.
 
 **DefeatFlag conventions:**
 - Base game bosses: `DefeatFlag = entity_id + 200_000_000` (e.g., entity 1050800 -> defeat flag 1_201_050_800)
