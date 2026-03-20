@@ -231,6 +231,52 @@ class TestDagToDictEffectiveType:
 
 
 # =============================================================================
+# dag_to_dict boss_name propagation tests
+# =============================================================================
+
+
+class TestDagToDictBossName:
+    """Tests for boss_name propagation in dag_to_dict."""
+
+    def test_dag_to_dict_includes_boss_name(self):
+        """Boss nodes with boss_name propagate it to graph.json."""
+        dag = Dag(seed=42)
+        cluster = make_cluster("boss_a1b2", cluster_type="major_boss", exit_fogs=[])
+        cluster.boss_name = "Godrick the Grafted"
+        dag.add_node(DagNode(id="n1", cluster=cluster, layer=0, tier=1))
+        dag.start_id = "n1"
+        dag.end_id = "n1"
+
+        clusters = ClusterPool(
+            clusters=[cluster],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+
+        assert result["nodes"]["boss_a1b2"]["boss_name"] == "Godrick the Grafted"
+
+    def test_dag_to_dict_omits_empty_boss_name(self):
+        """Nodes without boss_name don't include the field."""
+        dag = Dag(seed=42)
+        cluster = make_cluster(
+            "dungeon_c3d4", cluster_type="legacy_dungeon", exit_fogs=[]
+        )
+        dag.add_node(DagNode(id="n1", cluster=cluster, layer=0, tier=1))
+        dag.start_id = "n1"
+        dag.end_id = "n1"
+
+        clusters = ClusterPool(
+            clusters=[cluster],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+
+        assert "boss_name" not in result["nodes"]["dungeon_c3d4"]
+
+
+# =============================================================================
 # export_spoiler_log tests
 # =============================================================================
 

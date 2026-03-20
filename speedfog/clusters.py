@@ -66,6 +66,7 @@ class ClusterData:
         default_factory=list
     )  # Fogs spatially close — entry and exit cannot share a group
     display_name: str = ""  # Pre-computed display name from clusters.json
+    boss_name: str = ""  # Canonical boss name from enemy.txt (via clusters.json)
 
     @classmethod
     def from_dict(cls, data: dict) -> ClusterData:
@@ -97,6 +98,7 @@ class ClusterData:
             requires=data.get("requires", ""),
             proximity_groups=data.get("proximity_groups", []),
             display_name=data.get("display_name", ""),
+            boss_name=data.get("boss_name", ""),
         )
 
     def available_exits(self, used_entry: dict | None) -> list[dict]:

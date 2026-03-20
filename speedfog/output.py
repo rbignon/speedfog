@@ -392,6 +392,8 @@ def dag_to_dict(
             "exits": [],
             "entrances": [],
         }
+        if node.cluster.boss_name:
+            nodes[node.cluster.id]["boss_name"] = node.cluster.boss_name
 
     # Populate exits from DAG edges
     for edge in dag.edges:
