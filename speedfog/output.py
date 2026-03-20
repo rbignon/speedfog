@@ -14,6 +14,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from speedfog.care_package import CarePackageItem
 from speedfog.clusters import ClusterPool
 from speedfog.dag import Dag, DagNode, FogRef
@@ -1174,8 +1176,6 @@ def parse_boss_phases(enemy_txt_path: Path) -> dict[int, int]:
     if not enemy_txt_path.exists():
         return {}
 
-    import yaml
-
     with open(enemy_txt_path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
@@ -1257,9 +1257,9 @@ def _match_boss_placement(
     if key in placements:
         return str(placements[key]["name"])
 
-    # Radahn/Fire Giant: defeat_flag = entity_id + 200_000_000
-    if 1_200_000_000 <= defeat_flag < 2_000_000_000:
-        key = str(defeat_flag - 200_000_000)
+    entity_id = _resolve_entity_id(defeat_flag)
+    if entity_id != defeat_flag:
+        key = str(entity_id)
         if key in placements:
             return str(placements[key]["name"])
 
