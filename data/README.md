@@ -13,9 +13,11 @@ python tools/setup_dependencies.py /path/to/FogRando.zip
 
 This extracts source files and regenerates derived files automatically.
 
-## Source Files (from FogRando, gitignored)
+## Source Files (gitignored)
 
-These files are extracted from FogRando by `setup_dependencies.py`:
+These files are extracted by `setup_dependencies.py`:
+
+**From FogRando (`eldendata/Base/`):**
 
 | File | Description |
 |------|-------------|
@@ -23,6 +25,12 @@ These files are extracted from FogRando by `setup_dependencies.py`:
 | `fogevents.txt` | EMEVD event templates |
 | `foglocations2.txt` | Enemy areas and scaling tiers (YAML) |
 | `er-common.emedf.json` | EMEVD instruction definitions |
+
+**From Item Randomizer (`diste/Base/`):**
+
+| File | Description |
+|------|-------------|
+| `enemy.txt` | Enemy/boss definitions with entity IDs, defeat flags, display names (YAML) |
 
 ## Generated Files (gitignored)
 

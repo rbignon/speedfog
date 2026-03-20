@@ -70,6 +70,11 @@ FOGRANDO_REQUIRED_DLLS = [
     "DrSwizzler.dll",
 ]
 
+# Data files to extract from Item Randomizer's diste/Base/ to data/
+ITEMRANDO_DATA_FILES = [
+    "enemy.txt",
+]
+
 # DLLs we need from Item Randomizer
 ITEMRANDO_REQUIRED_DLLS = [
     "RandomizerCommon.dll",
@@ -154,6 +159,11 @@ def is_itemrando_installed() -> bool:
     # Check for diste
     if not DISTE_DEST.exists():
         return False
+
+    # Check for data files
+    for filename in ITEMRANDO_DATA_FILES:
+        if not (DATA_DEST / filename).exists():
+            return False
 
     # Check for extra DLLs in assets
     for dll in ITEMRANDO_EXTRA_DLLS:
@@ -278,6 +288,19 @@ def copy_itemrando_files(temp_dir: Path, extracted_dir: Path) -> bool:
         else:
             print_error(f"Missing extra DLL: {dll_name}")
     print_ok(f"writer/assets/ ({extra_count} DLLs)")
+
+    # Copy data files from diste/Base/ to data/
+    base_dir = randomizer_dir / "diste" / "Base"
+    DATA_DEST.mkdir(parents=True, exist_ok=True)
+    data_count = 0
+    for filename in ITEMRANDO_DATA_FILES:
+        src = base_dir / filename
+        if src.exists():
+            shutil.copy2(src, DATA_DEST / filename)
+            data_count += 1
+        else:
+            print_error(f"Missing: {filename}")
+    print_ok(f"data/ (+{data_count} files from Item Randomizer)")
 
     # Copy diste/
     src_diste = randomizer_dir / "diste"

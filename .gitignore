@@ -60,11 +60,12 @@ writer/*/presets/
 # FogRando decompiled reference code (not for redistribution)
 reference/
 
-# FogRando data files (extracted by tools/setup_dependencies.py)
+# Data files (extracted by tools/setup_dependencies.py)
 data/fog.txt
 data/fogevents.txt
 data/foglocations2.txt
 data/er-common.emedf.json
+data/enemy.txt
 data/clusters.json
 data/fog_data.json
 
