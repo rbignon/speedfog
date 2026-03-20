@@ -27,7 +27,20 @@ try:
 except ImportError:
     import tomli as tomllib  # type: ignore[import-not-found]
 
+import re
+
 import yaml
+
+_PHASE_SUFFIX_RE = re.compile(r" \d+$")
+
+_BOSS_CLASSES = {
+    "Boss",
+    "MinorBoss",
+    "Miniboss",
+    "Evergaol",
+    "DragonMiniboss",
+    "NightMiniboss",
+}
 
 # =============================================================================
 # Data Structures
@@ -1871,6 +1884,39 @@ def _pick_display_name(
             return zone_names[zone]
 
     return cluster.cluster_id
+
+
+def parse_boss_names(enemy_txt_path: Path) -> dict[int, str]:
+    """Parse enemy.txt to build a DefeatFlag -> boss display name mapping.
+
+    Reads ItemRandomizer's enemy.txt (YAML) and extracts ExtraName for each
+    boss entity that has a DefeatFlag. Strips numeric phase suffixes
+    ("Fire Giant 2" -> "Fire Giant") so multi-phase bosses get clean names.
+
+    Args:
+        enemy_txt_path: Path to enemy.txt (from ItemRandomizer's diste/Base/)
+
+    Returns:
+        Mapping of DefeatFlag (int) -> canonical boss name (str).
+        Empty dict if file is missing.
+    """
+    if not enemy_txt_path.exists():
+        return {}
+
+    with open(enemy_txt_path, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    boss_names: dict[int, str] = {}
+    for entry in data.get("Enemies", []):
+        defeat_flag = entry.get("DefeatFlag")
+        extra_name = entry.get("ExtraName")
+        entry_class = entry.get("Class", "")
+        if not defeat_flag or not extra_name or entry_class not in _BOSS_CLASSES:
+            continue
+        clean_name = _PHASE_SUFFIX_RE.sub("", extra_name)
+        boss_names[int(defeat_flag)] = clean_name
+
+    return boss_names
 
 
 def clusters_to_json(

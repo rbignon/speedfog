@@ -3885,3 +3885,94 @@ class TestBuildZoneConflicts:
         """No conflicts when metadata has no zones section."""
         result = build_zone_conflicts({})
         assert result == {}
+
+
+class TestParseBossNames:
+    def test_parses_defeat_flag_to_extra_name(self, tmp_path):
+        enemy_txt = tmp_path / "enemy.txt"
+        enemy_txt.write_text(
+            "Classes:\n"
+            "- Class: Boss\n"
+            "Categories:\n"
+            "- Name: AllEnemies\n"
+            "  Classes:\n  - Boss\n"
+            "Enemies:\n"
+            "- ID: 10000800\n"
+            "  Class: Boss\n"
+            "  DefeatFlag: 10000800\n"
+            "  ExtraName: Godrick the Grafted\n"
+            "- ID: 11050850\n"
+            "  Class: Boss\n"
+            "  DefeatFlag: 11050850\n"
+            "  ExtraName: Sir Gideon Ofnir, the All-Knowing\n"
+        )
+        from generate_clusters import parse_boss_names
+
+        result = parse_boss_names(enemy_txt)
+
+        assert result[10000800] == "Godrick the Grafted"
+        assert result[11050850] == "Sir Gideon Ofnir, the All-Knowing"
+
+    def test_strips_phase_suffix(self, tmp_path):
+        enemy_txt = tmp_path / "enemy.txt"
+        enemy_txt.write_text(
+            "Classes:\n"
+            "- Class: Boss\n"
+            "Categories:\n"
+            "- Name: AllEnemies\n  Classes:\n  - Boss\n"
+            "Enemies:\n"
+            "- ID: 1052520800\n"
+            "  Class: Boss\n"
+            "  DefeatFlag: 1252520800\n"
+            "  ExtraName: Fire Giant 2\n"
+        )
+        from generate_clusters import parse_boss_names
+
+        result = parse_boss_names(enemy_txt)
+
+        assert result[1252520800] == "Fire Giant"
+
+    def test_skips_non_boss_class(self, tmp_path):
+        enemy_txt = tmp_path / "enemy.txt"
+        enemy_txt.write_text(
+            "Classes:\n"
+            "- Class: Boss\n"
+            "- Class: None\n"
+            "Categories:\n"
+            "- Name: AllEnemies\n  Classes:\n  - Boss\n"
+            "Enemies:\n"
+            "- ID: 99999\n"
+            "  Class: None\n"
+            "  DefeatFlag: 99999\n"
+            "  ExtraName: Some NPC\n"
+        )
+        from generate_clusters import parse_boss_names
+
+        result = parse_boss_names(enemy_txt)
+
+        assert len(result) == 0
+
+    def test_skips_boss_without_defeat_flag(self, tmp_path):
+        enemy_txt = tmp_path / "enemy.txt"
+        enemy_txt.write_text(
+            "Classes:\n"
+            "- Class: Boss\n"
+            "Categories:\n"
+            "- Name: AllEnemies\n  Classes:\n  - Boss\n"
+            "Enemies:\n"
+            "- ID: 88888\n"
+            "  Class: Boss\n"
+            "  ExtraName: Nameless Boss\n"
+        )
+        from generate_clusters import parse_boss_names
+
+        result = parse_boss_names(enemy_txt)
+
+        assert len(result) == 0
+
+    def test_missing_file_returns_empty(self, tmp_path):
+        from generate_clusters import parse_boss_names
+
+        result = parse_boss_names(tmp_path / "nonexistent.txt")
+
+        assert result == {}
