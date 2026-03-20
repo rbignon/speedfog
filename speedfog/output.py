@@ -397,6 +397,8 @@ def dag_to_dict(
             "exits": [],
             "entrances": [],
         }
+        if node.cluster.defeat_flag:
+            nodes[node.cluster.id]["defeat_flag"] = node.cluster.defeat_flag
         if node.cluster.boss_name:
             nodes[node.cluster.id]["boss_name"] = node.cluster.boss_name
 
