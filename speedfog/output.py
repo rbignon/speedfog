@@ -8,6 +8,7 @@ This module provides functions to export the generated DAG to:
 from __future__ import annotations
 
 import json
+import re
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -16,6 +17,8 @@ from typing import Any
 from speedfog.care_package import CarePackageItem
 from speedfog.clusters import ClusterPool
 from speedfog.dag import Dag, DagNode, FogRef
+
+_PHASE_SUFFIX_RE = re.compile(r" \d+$")
 
 
 def load_vanilla_tiers(path: Path) -> dict[str, int]:
@@ -1155,21 +1158,54 @@ def load_boss_placements(path: Path) -> dict[str, dict[str, Any]]:
     return data
 
 
+def parse_boss_phases(enemy_txt_path: Path) -> dict[int, int]:
+    """Parse enemy.txt to build a reverse NextPhase mapping.
+
+    For multi-phase bosses, enemy.txt links phase 1 to phase 2 via NextPhase.
+    This returns a reverse mapping: phase2_entity_id -> phase1_entity_id.
+
+    Args:
+        enemy_txt_path: Path to enemy.txt
+
+    Returns:
+        Mapping of phase2_entity_id -> phase1_entity_id.
+        Empty dict if file is missing.
+    """
+    if not enemy_txt_path.exists():
+        return {}
+
+    import yaml
+
+    with open(enemy_txt_path, encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    phase_mapping: dict[int, int] = {}
+    for entry in data.get("Enemies", []):
+        next_phase = entry.get("NextPhase")
+        entity_id = entry.get("ID")
+        if next_phase and entity_id:
+            phase_mapping[int(next_phase)] = int(entity_id)
+
+    return phase_mapping
+
+
 def patch_graph_boss_placements(
     graph_path: Path,
     dag: Dag,
     placements: dict[str, dict[str, Any]],
+    phase_mapping: dict[int, int] | None = None,
 ) -> None:
     """Patch graph.json nodes with randomized boss names.
 
-    Matches each node's cluster.defeat_flag against the entity IDs in placements.
-    For most bosses, defeat_flag == entity_id. For Radahn and Fire Giant,
-    defeat_flag == entity_id + 200_000_000.
+    Sets:
+    - randomized_bosses: list of boss names (both phases for multi-phase bosses)
+    - boss_name: canonical name from phase 2 (suffix-stripped)
 
     Args:
         graph_path: Path to existing graph.json to patch
         dag: The DAG with cluster defeat_flags
         placements: Boss placements from load_boss_placements()
+        phase_mapping: Optional reverse NextPhase mapping (phase2_id -> phase1_id)
     """
     if not placements:
         return
@@ -1184,9 +1220,22 @@ def patch_graph_boss_placements(
         if defeat_flag == 0:
             continue
 
-        boss_name = _match_boss_placement(defeat_flag, placements)
-        if boss_name and node.cluster.id in nodes:
-            nodes[node.cluster.id]["randomized_boss"] = boss_name
+        phase2_name = _match_boss_placement(defeat_flag, placements)
+        if phase2_name and node.cluster.id in nodes:
+            boss_list: list[str] = []
+
+            if phase_mapping:
+                entity_id = _resolve_entity_id(defeat_flag)
+                phase1_entity_id = phase_mapping.get(entity_id)
+                if phase1_entity_id:
+                    phase1_key = str(phase1_entity_id)
+                    if phase1_key in placements:
+                        boss_list.append(str(placements[phase1_key]["name"]))
+
+            boss_list.append(phase2_name)
+
+            nodes[node.cluster.id]["randomized_bosses"] = boss_list
+            nodes[node.cluster.id]["boss_name"] = _PHASE_SUFFIX_RE.sub("", phase2_name)
 
     with open(graph_path, "w", encoding="utf-8") as f:
         json.dump(graph, f, indent=2)
@@ -1215,6 +1264,13 @@ def _match_boss_placement(
             return str(placements[key]["name"])
 
     return None
+
+
+def _resolve_entity_id(defeat_flag: int) -> int:
+    """Resolve defeat_flag to entity_id (handles Radahn/Fire Giant 200M offset)."""
+    if 1_200_000_000 <= defeat_flag < 2_000_000_000:
+        return defeat_flag - 200_000_000
+    return defeat_flag
 
 
 def append_boss_placements_to_spoiler(

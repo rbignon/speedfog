@@ -13,6 +13,7 @@ from speedfog.output import (
     export_spoiler_log,
     load_boss_placements,
     load_vanilla_tiers,
+    parse_boss_phases,
     patch_graph_boss_placements,
 )
 
@@ -1774,7 +1775,7 @@ class TestPatchGraphBossPlacements:
         patch_graph_boss_placements(graph_path, dag, placements)
 
         patched = json.loads(graph_path.read_text())
-        assert patched["nodes"]["stormveil_godrick"]["randomized_boss"] == "Rennala"
+        assert patched["nodes"]["stormveil_godrick"]["randomized_bosses"] == ["Rennala"]
 
     def test_patch_200m_offset_match(self, tmp_path):
         """Radahn/Fire Giant: defeat_flag = entity_id + 200_000_000."""
@@ -1809,7 +1810,7 @@ class TestPatchGraphBossPlacements:
         patch_graph_boss_placements(graph_path, dag, placements)
 
         patched = json.loads(graph_path.read_text())
-        assert patched["nodes"]["radahn_arena"]["randomized_boss"] == "Fire Giant"
+        assert patched["nodes"]["radahn_arena"]["randomized_bosses"] == ["Fire Giant"]
 
     def test_patch_no_match_leaves_node_unchanged(self, tmp_path):
         """Node without matching defeat_flag is not modified."""
@@ -1843,7 +1844,7 @@ class TestPatchGraphBossPlacements:
         patch_graph_boss_placements(graph_path, dag, placements)
 
         patched = json.loads(graph_path.read_text())
-        assert "randomized_boss" not in patched["nodes"]["some_dungeon"]
+        assert "randomized_bosses" not in patched["nodes"]["some_dungeon"]
 
     def test_patch_empty_placements_no_change(self, tmp_path):
         """Empty placements dict leaves graph unchanged."""
@@ -1868,7 +1869,147 @@ class TestPatchGraphBossPlacements:
         patch_graph_boss_placements(graph_path, dag, {})
 
         patched = json.loads(graph_path.read_text())
-        assert "randomized_boss" not in patched["nodes"]["a"]
+        assert "randomized_bosses" not in patched["nodes"]["a"]
+
+    def test_patch_sets_boss_name(self, tmp_path):
+        """Patching sets both randomized_bosses and boss_name."""
+        graph = {
+            "nodes": {
+                "stormveil_godrick": {
+                    "type": "major_boss",
+                    "display_name": "Stormveil Castle",
+                    "boss_name": "Godrick the Grafted",
+                }
+            }
+        }
+        graph_path = tmp_path / "graph.json"
+        graph_path.write_text(json.dumps(graph))
+
+        placements = {"14000850": {"name": "Rennala", "entity_id": 14000800}}
+
+        dag = Dag(seed=1)
+        cluster = make_cluster(
+            "stormveil_godrick", cluster_type="major_boss", exit_fogs=[]
+        )
+        cluster.defeat_flag = 14000850
+        dag.add_node(
+            DagNode(
+                id="n1",
+                cluster=cluster,
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+                exit_fogs=[],
+            )
+        )
+
+        patch_graph_boss_placements(graph_path, dag, placements)
+
+        patched = json.loads(graph_path.read_text())
+        assert patched["nodes"]["stormveil_godrick"]["randomized_bosses"] == ["Rennala"]
+        assert patched["nodes"]["stormveil_godrick"]["boss_name"] == "Rennala"
+
+    def test_patch_multi_phase_captures_both(self, tmp_path):
+        """Multi-phase boss captures both phase replacements."""
+        graph = {
+            "nodes": {
+                "fire_giant_arena": {
+                    "type": "major_boss",
+                    "display_name": "Fire Giant",
+                    "boss_name": "Fire Giant",
+                }
+            }
+        }
+        graph_path = tmp_path / "graph.json"
+        graph_path.write_text(json.dumps(graph))
+
+        placements = {
+            "1052520801": {"name": "Godskin Noble", "entity_id": 99},
+            "1052520800": {"name": "Margit", "entity_id": 98},
+        }
+        phase_mapping = {1052520800: 1052520801}
+
+        dag = Dag(seed=1)
+        cluster = make_cluster(
+            "fire_giant_arena", cluster_type="major_boss", exit_fogs=[]
+        )
+        cluster.defeat_flag = 1_252_520_800
+        dag.add_node(
+            DagNode(
+                id="n1",
+                cluster=cluster,
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+                exit_fogs=[],
+            )
+        )
+
+        patch_graph_boss_placements(graph_path, dag, placements, phase_mapping)
+
+        patched = json.loads(graph_path.read_text())
+        node = patched["nodes"]["fire_giant_arena"]
+        assert node["randomized_bosses"] == ["Godskin Noble", "Margit"]
+        assert node["boss_name"] == "Margit"
+
+    def test_patch_strips_phase_suffix_from_boss_name(self, tmp_path):
+        """Phase suffix in placement name is stripped for boss_name."""
+        graph = {
+            "nodes": {
+                "fire_giant_arena": {
+                    "type": "major_boss",
+                    "display_name": "Fire Giant",
+                    "boss_name": "Fire Giant",
+                }
+            }
+        }
+        graph_path = tmp_path / "graph.json"
+        graph_path.write_text(json.dumps(graph))
+
+        placements = {"1052520800": {"name": "Godskin Noble 2", "entity_id": 99}}
+
+        dag = Dag(seed=1)
+        cluster = make_cluster(
+            "fire_giant_arena", cluster_type="major_boss", exit_fogs=[]
+        )
+        cluster.defeat_flag = 1_252_520_800
+        dag.add_node(
+            DagNode(
+                id="n1",
+                cluster=cluster,
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+                exit_fogs=[],
+            )
+        )
+
+        patch_graph_boss_placements(graph_path, dag, placements)
+
+        patched = json.loads(graph_path.read_text())
+        node = patched["nodes"]["fire_giant_arena"]
+        assert node["randomized_bosses"] == ["Godskin Noble 2"]
+        assert node["boss_name"] == "Godskin Noble"
+
+
+class TestParseBossPhases:
+    def test_builds_reverse_next_phase_mapping(self, tmp_path):
+        enemy_txt = tmp_path / "enemy.txt"
+        enemy_txt.write_text(
+            "Enemies:\n"
+            "- ID: 1052520801\n"
+            "  NextPhase: 1052520800\n"
+            "- ID: 1052520800\n"
+            "  DefeatFlag: 1252520800\n"
+        )
+        result = parse_boss_phases(enemy_txt)
+
+        assert result == {1052520800: 1052520801}
+
+    def test_missing_file_returns_empty(self, tmp_path):
+        result = parse_boss_phases(tmp_path / "nonexistent.txt")
+
+        assert result == {}
 
 
 class TestAppendBossPlacementsToSpoiler:
