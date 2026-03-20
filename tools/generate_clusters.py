@@ -1923,6 +1923,7 @@ def clusters_to_json(
     clusters: list[Cluster],
     areas: dict[str, AreaData],
     metadata: dict | None = None,
+    boss_names: dict[int, str] | None = None,
 ) -> dict:
     """Convert clusters to JSON-serializable format with zone→map mapping."""
     zone_maps = build_zone_maps(clusters, areas)
@@ -1942,6 +1943,8 @@ def clusters_to_json(
         }
         if c.defeat_flag > 0:
             entry["defeat_flag"] = c.defeat_flag
+            if boss_names and c.defeat_flag in boss_names:
+                entry["boss_name"] = boss_names[c.defeat_flag]
         if c.allow_shared_entrance:
             entry["allow_shared_entrance"] = True
         if c.allow_entry_as_exit:
@@ -2042,6 +2045,12 @@ def main() -> int:
     print(f"Parsed {len(areas)} areas, {len(entrances)} entrances, {len(warps)} warps")
     print(f"Known key items: {len(key_items)}")
 
+    # Parse boss names from enemy.txt (if available)
+    enemy_txt_path = args.fog_txt.parent / "enemy.txt"
+    boss_names = parse_boss_names(enemy_txt_path)
+    if boss_names:
+        print(f"Boss names: {len(boss_names)} entries from enemy.txt")
+
     # Identify evergaol zones (propagate tag from warps to zones)
     evergaol_zones = get_evergaol_zones(entrances, warps)
     if args.verbose:
@@ -2132,7 +2141,7 @@ def main() -> int:
             print(f"    {t}: {count}")
 
     # Write output
-    output_data = clusters_to_json(clusters, areas, metadata)
+    output_data = clusters_to_json(clusters, areas, metadata, boss_names=boss_names)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(output_data, f, indent=2)

@@ -3976,3 +3976,52 @@ class TestParseBossNames:
         result = parse_boss_names(tmp_path / "nonexistent.txt")
 
         assert result == {}
+
+
+class TestBossNameInClustersJson:
+    def test_boss_name_added_to_matching_cluster(self):
+        """Cluster with defeat_flag matching boss_names gets boss_name field."""
+        from generate_clusters import Cluster, clusters_to_json
+
+        cluster = Cluster(
+            zones=frozenset({"boss_zone"}),
+            cluster_type="major_boss",
+            weight=2,
+            cluster_id="boss_zone_ab12",
+            defeat_flag=10000800,
+            primary_zone="boss_zone",
+        )
+        areas = {
+            "boss_zone": AreaData(
+                name="boss_zone", text="Godrick", maps=["m10_00_00_00"], tags=[]
+            ),
+        }
+        boss_names = {10000800: "Godrick the Grafted"}
+
+        result = clusters_to_json([cluster], areas, boss_names=boss_names)
+
+        entry = result["clusters"][0]
+        assert entry["boss_name"] == "Godrick the Grafted"
+
+    def test_no_boss_name_when_no_match(self):
+        """Cluster without matching defeat_flag gets no boss_name."""
+        from generate_clusters import Cluster, clusters_to_json
+
+        cluster = Cluster(
+            zones=frozenset({"dungeon_zone"}),
+            cluster_type="legacy_dungeon",
+            weight=3,
+            cluster_id="dungeon_ab12",
+            defeat_flag=0,
+            primary_zone="dungeon_zone",
+        )
+        areas = {
+            "dungeon_zone": AreaData(
+                name="dungeon_zone", text="Some Dungeon", maps=["m10_00_00_00"], tags=[]
+            ),
+        }
+
+        result = clusters_to_json([cluster], areas, boss_names={})
+
+        entry = result["clusters"][0]
+        assert "boss_name" not in entry
