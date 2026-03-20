@@ -22,6 +22,7 @@ from speedfog.output import (
     load_boss_placements,
     load_fog_data,
     load_vanilla_tiers,
+    parse_boss_phases,
     patch_graph_boss_placements,
 )
 
@@ -350,7 +351,11 @@ def main() -> int:
             boss_placements_path = item_rando_dir / "boss_placements.json"
             boss_placements = load_boss_placements(boss_placements_path)
             if boss_placements:
-                patch_graph_boss_placements(json_path, dag, boss_placements)
+                enemy_txt_path = clusters_path.parent / "enemy.txt"
+                phase_mapping = parse_boss_phases(enemy_txt_path)
+                patch_graph_boss_placements(
+                    json_path, dag, boss_placements, phase_mapping
+                )
                 print(f"Boss placements: {len(boss_placements)} bosses randomized")
 
                 # Append boss placements to spoiler log
