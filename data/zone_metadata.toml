@@ -192,8 +192,6 @@ allow_entry_as_exit = true
 [zones.academy_library]
 type = "major_boss"
 weight = 4
-# TODO check if we can't escape
-allow_entry_as_exit = true
 
 [zones.stormveil_godrick]
 weight = 2
@@ -261,7 +259,6 @@ allow_entry_as_exit = true
 
 [zones.midramanse_boss]
 weight = 2
-allow_entry_as_exit = true
 
 [zones.belurat_boss]
 weight = 2
