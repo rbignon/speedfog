@@ -34,6 +34,7 @@ def generate_item_config(config: Config, seed: int) -> dict[str, Any]:
             "weaponreqs": config.item_randomizer.remove_requirements,
             "sombermode": config.item_randomizer.reduce_upgrade_cost,
             "nerfgargoyles": config.item_randomizer.nerf_gargoyles,
+            "nerfmalenia": config.item_randomizer.nerf_malenia,
             "allcraft": config.item_randomizer.allcraft,
         },
         "enemy_options": {

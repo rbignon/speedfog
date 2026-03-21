@@ -352,6 +352,7 @@ class ItemRandomizerConfig:
     nerf_gargoyles: bool = (
         True  # Disable damage tick in Valiant Gargoyles's poison cloud
     )
+    nerf_malenia: bool = False  # Remove HP drain from Malenia's attacks
     allcraft: bool = True  # Unlock all crafting recipes at start
     item_preset: bool = True  # Enable item placement preset
     item_preset_path: str = ""  # Custom preset path (empty = built-in default)
@@ -549,6 +550,7 @@ class Config:
                 ),
                 dlc=item_randomizer_section.get("dlc", True),
                 nerf_gargoyles=item_randomizer_section.get("nerf_gargoyles", True),
+                nerf_malenia=item_randomizer_section.get("nerf_malenia", False),
                 item_preset=item_randomizer_section.get("item_preset", True),
                 item_preset_path=item_randomizer_section.get("item_preset_path", ""),
             ),

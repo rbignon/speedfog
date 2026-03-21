@@ -36,7 +36,7 @@ config.toml                    item_config.json                C# Models
 
 | Class | TOML Section | Key Fields |
 |-------|-------------|------------|
-| `ItemRandomizerConfig` | `[item_randomizer]` | `enabled`, `difficulty` (0-100), `dlc`, `remove_requirements`, `reduce_upgrade_cost`, `auto_upgrade_weapons`, `auto_upgrade_dropped`, `nerf_gargoyles`, `allcraft`, `item_preset` |
+| `ItemRandomizerConfig` | `[item_randomizer]` | `enabled`, `difficulty` (0-100), `dlc`, `remove_requirements`, `reduce_upgrade_cost`, `auto_upgrade_weapons`, `auto_upgrade_dropped`, `nerf_gargoyles`, `nerf_malenia`, `allcraft`, `item_preset` |
 | `EnemyConfig` | `[enemy]` | `randomize_bosses` |
 
 ### item_config.json Fields

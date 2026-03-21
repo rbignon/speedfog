@@ -263,6 +263,10 @@ dlc = true
 # Sets the magic damage of their poison attacks to 0
 nerf_gargoyles = true
 
+# Remove HP drain from Malenia's bleed attacks (default: false)
+# Zeroes changeHpRate on SpEffectParam 18400-18419
+nerf_malenia = false
+
 # Unlock all crafting recipes at start (default: true)
 # Removes the need to find cookbooks — all recipes available immediately
 allcraft = true
