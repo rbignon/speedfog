@@ -115,58 +115,7 @@ The output folder is self-contained with ModEngine 2:
 
 ## Configuration
 
-Edit `config.toml` (see `config.example.toml` for all options):
-
-```toml
-[run]
-seed = 0                        # 0 = random seed
-# run_complete_message = "RUN COMPLETE"  # Golden banner on boss defeat
-# chapel_grace = true                    # Site of Grace at starting location
-
-[budget]
-tolerance = 5                   # Max weight spread between paths
-
-[requirements]
-legacy_dungeons = 1             # Minimum legacy dungeons
-bosses = 5                      # Minimum bosses before final boss
-major_bosses = 8                # Minimum major boss encounters
-mini_dungeons = 5               # Minimum caves/catacombs
-# zones = ["caelid_radahn"]     # Force specific zones to appear
-
-[structure]
-max_parallel_paths = 3          # Max concurrent branches
-final_tier = 28                 # Enemy scaling ceiling (1-28)
-# start_tier = 1                # Enemy scaling floor (1-28)
-# tier_curve = "linear"         # "linear" or "power"
-# tier_curve_exponent = 0.6     # Power curve exponent (< 1.0 = front-loaded)
-# crosslinks = true             # Cross-links between parallel branches
-# final_boss_candidates = ["leyndell_erdtree", "enirilim_radahn"]
-
-[paths]
-game_dir = "/path/to/ELDEN RING/Game"
-
-[starting_items]
-# Key items, Great Runes, DLC items, talisman pouches, consumable resources
-# See config.example.toml for the full list
-
-[care_package]
-enabled = false                 # Randomized starting build
-# weapon_upgrade = 8            # Upgrade level for starting weapons
-
-[item_randomizer]
-enabled = true                  # Item Randomizer integration
-# remove_requirements = true    # Drop stat requirements on weapons/spells
-# auto_upgrade_weapons = true   # New weapons match your highest upgrade
-# auto_upgrade_dropped = true   # Dropped items auto-match upgrade level
-# reduce_upgrade_cost = true    # 1 smithing stone per upgrade level
-# allcraft = true               # Unlock all crafting recipes at start
-# item_preset = true            # Weapons to bosses, seeds/tears to key locations
-# dlc = true                    # Include DLC items and enemies
-
-[enemy]
-randomize_bosses = "none"       # "none", "minor", or "all"
-# ignore_arena_size = false     # Allow large bosses in small arenas
-```
+Edit `config.toml` (see `config.example.toml` for all options).
 
 ## How It Works
 
