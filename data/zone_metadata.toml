@@ -178,6 +178,12 @@ allow_entry_as_exit = false
 type = "major_boss"
 allow_entry_as_exit = false
 
+[zones.siofra_nokron_boss]
+type = "major_boss"
+
+[zones.siofra_nokron_gargoyles]
+type = "major_boss"
+
 [zones.haligtree_malenia]
 weight = 5
 allow_entry_as_exit = true
