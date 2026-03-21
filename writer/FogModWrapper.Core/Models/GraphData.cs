@@ -100,6 +100,12 @@ public class GraphData
     public bool ChapelGrace { get; set; } = true;
 
     /// <summary>
+    /// Whether to sell the Sentry's Torch at the Roundtable Hold shop.
+    /// </summary>
+    [JsonPropertyName("sentry_torch_shop")]
+    public bool SentryTorchShop { get; set; } = true;
+
+    /// <summary>
     /// Randomized starting build items (care package).
     /// Each item has a type (Weapon/Protector/Accessory/Goods), param row ID, and display name.
     /// </summary>

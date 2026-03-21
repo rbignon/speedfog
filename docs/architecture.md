@@ -66,7 +66,7 @@ Thin wrapper around FogMod.dll that injects our connections and post-processes g
 | `StartingItemInjector.cs` | Give starting items + care package via EMEVD |
 | `StartingResourcesInjector.cs` | Give runes, golden seeds, sacred tears, larval tears |
 | `RoundtableUnlockInjector.cs` | Unlock Roundtable Hold at game start |
-| `SmithingStoneShopInjector.cs` | Add smithing stones to Twin Maiden Husks shop |
+| `ShopInjector.cs` | Add smithing stones and Sentry's Torch to Twin Maiden Husks shop |
 | `ZoneTrackingInjector.cs` | Inject zone tracking flags before fog gate warps |
 | `RunCompleteInjector.cs` | Display victory banner on final boss defeat |
 | `ChapelGraceInjector.cs` | Add Site of Grace + player spawn at Chapel of Anticipation |
@@ -170,7 +170,7 @@ Post-processing (after FogMod writes, step numbers match Program.cs):
 - **7b** StartingItemInjector: give goods + care package items via EMEVD
 - **7c** StartingResourcesInjector: runes (CharaInitParam), seeds/tears/larval tears (ItemLots)
 - **7d** RoundtableUnlockInjector: set flag 1040292051 to bypass finger pickup
-- **7e** SmithingStoneShopInjector: add smithing stones to Twin Maiden Husks
+- **7e** ShopInjector: add smithing stones + Sentry's Torch to Twin Maiden Husks
 - **7f** ZoneTrackingInjector: insert SetEventFlag before each fog gate WarpPlayer
 - **7f2** ErdtreeWarpPatcher: patch Erdtree fogwarps to target m11_05 (flag 300)
 - **7f3** SealingTreeWarpPatcher: patch Sealing Tree fogwarps (flag 330)
@@ -297,6 +297,7 @@ DAG serialized for C# consumption, visualization tools, and racing.
   "finish_boss_defeat_flag": 9010800,
   "run_complete_message": "RUN COMPLETE",
   "chapel_grace": true,
+  "sentry_torch_shop": true,
   "starting_goods": [8126],
   "starting_runes": 50000,
   "starting_golden_seeds": 5,

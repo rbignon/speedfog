@@ -421,7 +421,7 @@ Example:
         RoundtableUnlockInjector.Inject(modDir);
 
         // 7e. Inject smithing stones into merchant shop
-        SmithingStoneShopInjector.Inject(modDir);
+        ShopInjector.Inject(modDir, graphData.SentryTorchShop);
 
         // 7f. Inject zone tracking events for racing support
         if (graphData.FinishEvent > 0)

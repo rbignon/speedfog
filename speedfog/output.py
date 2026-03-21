@@ -241,6 +241,7 @@ def dag_to_dict(
     care_package: list[CarePackageItem] | None = None,
     run_complete_message: str = "RUN COMPLETE",
     chapel_grace: bool = True,
+    sentry_torch_shop: bool = True,
     starting_larval_tears: int = 10,
     starting_stonesword_keys: int = 6,
     vanilla_tiers: dict[str, int] | None = None,
@@ -265,6 +266,7 @@ def dag_to_dict(
         care_package: List of CarePackageItem for randomized starting build
         run_complete_message: Text for the golden banner after final boss defeat
         chapel_grace: Whether to add a Site of Grace at Chapel of Anticipation
+        sentry_torch_shop: Whether to sell the Sentry's Torch at the Roundtable shop
         starting_larval_tears: Larval Tears to give at start (for rebirth at graces)
         starting_stonesword_keys: Stonesword Keys to give at start (unlock imp seals)
         vanilla_tiers: Optional zone_name → ScalingTier mapping from foglocations2.txt.
@@ -542,6 +544,7 @@ def dag_to_dict(
         "finish_boss_defeat_flag": finish_boss_defeat_flag,
         "run_complete_message": run_complete_message,
         "chapel_grace": chapel_grace,
+        "sentry_torch_shop": sentry_torch_shop,
         "starting_item_lots": starting_item_lots or [],
         "starting_goods": starting_goods or [],
         "starting_runes": starting_runes,
@@ -571,6 +574,7 @@ def export_json(
     care_package: list[CarePackageItem] | None = None,
     run_complete_message: str = "RUN COMPLETE",
     chapel_grace: bool = True,
+    sentry_torch_shop: bool = True,
     starting_larval_tears: int = 10,
     starting_stonesword_keys: int = 6,
     vanilla_tiers: dict[str, int] | None = None,
@@ -591,6 +595,7 @@ def export_json(
         care_package: List of CarePackageItem for randomized starting build
         run_complete_message: Text for the golden banner after final boss defeat
         chapel_grace: Whether to add a Site of Grace at Chapel of Anticipation
+        sentry_torch_shop: Whether to sell the Sentry's Torch at the Roundtable shop
         starting_larval_tears: Larval Tears to give at start (for rebirth at graces)
         starting_stonesword_keys: Stonesword Keys to give at start (unlock imp seals)
         vanilla_tiers: Optional zone_name → ScalingTier mapping from foglocations2.txt
@@ -608,6 +613,7 @@ def export_json(
         care_package,
         run_complete_message,
         chapel_grace,
+        sentry_torch_shop,
         starting_larval_tears,
         starting_stonesword_keys,
         vanilla_tiers,

@@ -2,7 +2,7 @@ namespace FogModWrapper;
 
 /// <summary>
 /// Utility functions for allocating shop IDs.
-/// Currently not used by SmithingStoneShopInjector (which uses fixed ranges),
+/// Currently not used by ShopInjector (which uses a fixed range),
 /// but available for dynamic ID allocation if needed in the future.
 /// </summary>
 public static class ShopIdAllocator

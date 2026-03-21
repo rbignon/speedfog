@@ -3,10 +3,10 @@ using SoulsFormats;
 namespace FogModWrapper;
 
 /// <summary>
-/// Injects smithing stones (normal and somber) into Kalé's shop at game start.
+/// Injects smithing stones and extra items into the Twin Maiden Husks shop.
 /// Modifies regulation.bin after FogMod writes it.
 /// </summary>
-public static class SmithingStoneShopInjector
+public static class ShopInjector
 {
     // Smithing Stone item IDs (from EquipParamGoods)
     private static readonly (int id, string name, int price)[] NormalStones = new[]
@@ -36,13 +36,20 @@ public static class SmithingStoneShopInjector
         (10200, "Somber Smithing Stone [9]", 8500),
     };
 
+    // Extra weapons/tools sold alongside smithing stones
+    // equipType = 0 (Weapon) instead of 3 (Goods)
+    private static readonly (int id, string name, int price, byte equipType)[] ExtraItems = new[]
+    {
+        (24070000, "Sentry's Torch", 10000, (byte)0),
+    };
+
     // Base shop ID for our entries in Twin Maiden Husks shop range
     private const int BASE_SHOP_ID = 101800;
 
     /// <summary>
-    /// Inject smithing stones into the shop.
+    /// Inject smithing stones (and optionally the Sentry's Torch) into the shop.
     /// </summary>
-    public static void Inject(string modDir)
+    public static void Inject(string modDir, bool includeSentryTorch = true)
     {
         var regulationPath = Path.Combine(modDir, "regulation.bin");
         if (!File.Exists(regulationPath))
@@ -101,11 +108,13 @@ public static class SmithingStoneShopInjector
             .ToList();
         Console.WriteLine($"  Existing IDs in 101800-101999: {string.Join(", ", twinMaidenIds)}");
 
-        int itemCount = NormalStones.Length + SomberStones.Length;
+        // Always clear the full potential range to avoid stale entries on config toggle
+        int maxItemCount = NormalStones.Length + SomberStones.Length + ExtraItems.Length;
+        int itemCount = NormalStones.Length + SomberStones.Length + (includeSentryTorch ? ExtraItems.Length : 0);
 
         // Remove any existing entries in our target range
-        shopParam.Rows.RemoveAll(r => r.ID >= BASE_SHOP_ID && r.ID < BASE_SHOP_ID + itemCount);
-        Console.WriteLine($"  Cleared range {BASE_SHOP_ID}-{BASE_SHOP_ID + itemCount - 1} for smithing stones");
+        shopParam.Rows.RemoveAll(r => r.ID >= BASE_SHOP_ID && r.ID < BASE_SHOP_ID + maxItemCount);
+        Console.WriteLine($"  Cleared range {BASE_SHOP_ID}-{BASE_SHOP_ID + maxItemCount - 1} for shop items");
 
         // Add smithing stones
         int shopId = BASE_SHOP_ID;
@@ -123,6 +132,17 @@ public static class SmithingStoneShopInjector
             shopId++;
         }
 
+        // Add extra items (weapons/tools)
+        if (includeSentryTorch)
+        {
+            foreach (var (itemId, name, price, equipType) in ExtraItems)
+            {
+                AddShopEntry(shopParam, shopId, itemId, price, equipType);
+                Console.WriteLine($"  Added {name} for {price} runes (shop ID {shopId})");
+                shopId++;
+            }
+        }
+
         // Sort rows by ID (required for game to read correctly)
         shopParam.Rows = shopParam.Rows.OrderBy(r => r.ID).ToList();
 
@@ -132,12 +152,12 @@ public static class SmithingStoneShopInjector
         // Write back - encrypt for Elden Ring
         SFUtil.EncryptERRegulation(regulationPath, regulation);
 
-        Console.WriteLine($"Smithing stones injected successfully ({NormalStones.Length + SomberStones.Length} items)");
+        Console.WriteLine($"Shop items injected successfully ({itemCount} items)");
     }
 
     // FindContiguousFreeRange is now in ShopIdAllocator (FogModWrapper.Core)
 
-    private static void AddShopEntry(PARAM param, int shopId, int itemId, int price)
+    private static void AddShopEntry(PARAM param, int shopId, int itemId, int price, byte equipType = 3)
     {
         // Create new row
         var row = new PARAM.Row(shopId, "", param.AppliedParamdef);
@@ -148,7 +168,7 @@ public static class SmithingStoneShopInjector
         row["eventFlag_forStock"].Value = 0U;  // No stock flag (always available)
         row["eventFlag_forRelease"].Value = 0U;  // No release flag (always unlocked)
         row["sellQuantity"].Value = (short)-1;  // Unlimited quantity
-        row["equipType"].Value = (byte)3;  // Goods
+        row["equipType"].Value = equipType;  // 0=Weapon, 1=Armor, 2=Accessory, 3=Goods
         row["costType"].Value = (byte)0;  // Runes
         row["setNum"].Value = (ushort)1;  // 1 per purchase
         row["value_Add"].Value = 0;

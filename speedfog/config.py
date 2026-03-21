@@ -435,6 +435,7 @@ class Config:
     seed: int = 0
     run_complete_message: str = "RUN COMPLETE"
     chapel_grace: bool = True
+    sentry_torch_shop: bool = True
     budget: BudgetConfig = field(default_factory=BudgetConfig)
     requirements: RequirementsConfig = field(default_factory=RequirementsConfig)
     structure: StructureConfig = field(default_factory=StructureConfig)
@@ -463,6 +464,7 @@ class Config:
                 "run_complete_message", "RUN COMPLETE"
             ),
             chapel_grace=run_section.get("chapel_grace", True),
+            sentry_torch_shop=run_section.get("sentry_torch_shop", True),
             budget=BudgetConfig(
                 tolerance=budget_section.get("tolerance", 5),
             ),

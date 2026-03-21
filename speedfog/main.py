@@ -256,6 +256,7 @@ def main() -> int:
         care_package=care_package_items,
         run_complete_message=config.run_complete_message,
         chapel_grace=config.chapel_grace,
+        sentry_torch_shop=config.sentry_torch_shop,
         starting_larval_tears=config.starting_items.larval_tears,
         starting_stonesword_keys=config.starting_items.stonesword_keys,
         vanilla_tiers=vanilla_tiers,

@@ -53,7 +53,8 @@ public class GraphDataSerializationTests
             FinishEvent = 9000002,
             FinishBossDefeatFlag = 19000800,
             RunCompleteMessage = "TEST COMPLETE",
-            ChapelGrace = false
+            ChapelGrace = false,
+            SentryTorchShop = false
         };
 
         var json = JsonSerializer.Serialize(original, JsonOptions);
@@ -77,6 +78,7 @@ public class GraphDataSerializationTests
         Assert.Equal(original.FinishBossDefeatFlag, deserialized.FinishBossDefeatFlag);
         Assert.Equal(original.RunCompleteMessage, deserialized.RunCompleteMessage);
         Assert.Equal(original.ChapelGrace, deserialized.ChapelGrace);
+        Assert.Equal(original.SentryTorchShop, deserialized.SentryTorchShop);
     }
 
     [Fact]
@@ -441,6 +443,48 @@ public class GraphDataSerializationTests
         var json = JsonSerializer.Serialize(data);
 
         Assert.Contains("\"chapel_grace\"", json);
+    }
+
+    [Fact]
+    public void GraphData_SentryTorchShop_RoundTrip()
+    {
+        var original = new GraphData
+        {
+            Version = "4.0",
+            Seed = 42,
+            SentryTorchShop = false
+        };
+
+        var json = JsonSerializer.Serialize(original, JsonOptions);
+        var deserialized = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.False(deserialized.SentryTorchShop);
+    }
+
+    [Fact]
+    public void GraphData_SentryTorchShop_DefaultsTrueWhenMissing()
+    {
+        var json = """{"version":"4.0","seed":1}""";
+        var deserialized = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+
+        Assert.NotNull(deserialized);
+        Assert.True(deserialized.SentryTorchShop);
+    }
+
+    [Fact]
+    public void GraphData_SentryTorchShop_JsonPropertyName_UsesSnakeCase()
+    {
+        var data = new GraphData
+        {
+            Version = "4.0",
+            Seed = 1,
+            SentryTorchShop = true
+        };
+
+        var json = JsonSerializer.Serialize(data);
+
+        Assert.Contains("\"sentry_torch_shop\"", json);
     }
 
     [Fact]

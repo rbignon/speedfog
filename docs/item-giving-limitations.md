@@ -75,7 +75,7 @@ Items with type >= 4 are skipped by `StartingItemInjector` with a log message. T
 
 ### Smithing Stones
 
-`SmithingStoneShopInjector.cs` uses the same ShopLineupParam mechanism with `equipType=3` (Goods) for smithing stones. Shop IDs: 101800-101817 (8 normal + 9 somber + 1 Ancient Dragon).
+`ShopInjector.cs` uses the same ShopLineupParam mechanism with `equipType=3` (Goods) for smithing stones and `equipType=0` (Weapon) for the Sentry's Torch. Shop IDs: 101800-101818 (8 normal + 9 somber + 1 Ancient Dragon + 1 Sentry's Torch). The Sentry's Torch (weapon ID 24070000, 10,000 runes) is configurable via `sentry_torch_shop` in `[run]`.
 
 ### Starting Resources
 
@@ -104,6 +104,6 @@ Examples:
 
 - EMEVD instruction definitions: `data/er-common.emedf.json`
 - StartingItemInjector: `writer/FogModWrapper/StartingItemInjector.cs`
-- SmithingStoneShopInjector: `writer/FogModWrapper/SmithingStoneShopInjector.cs`
+- ShopInjector: `writer/FogModWrapper/ShopInjector.cs`
 - Care package sampling: `speedfog/care_package.py`
 - Item pool definitions: `data/care_package_items.toml`

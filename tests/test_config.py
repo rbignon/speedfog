@@ -22,6 +22,7 @@ def test_config_defaults():
     assert config.seed == 0
     assert config.run_complete_message == "RUN COMPLETE"
     assert config.chapel_grace is True
+    assert config.sentry_torch_shop is True
     assert config.budget.tolerance == 5
     assert config.requirements.bosses == 5
     assert config.requirements.legacy_dungeons == 1
@@ -564,6 +565,17 @@ chapel_grace = false
 """)
     config = Config.from_toml(config_file)
     assert config.chapel_grace is False
+
+
+def test_sentry_torch_shop_from_toml(tmp_path):
+    """sentry_torch_shop can be set from TOML."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[run]
+sentry_torch_shop = false
+""")
+    config = Config.from_toml(config_file)
+    assert config.sentry_torch_shop is False
 
 
 def test_max_branches_cross_validation():

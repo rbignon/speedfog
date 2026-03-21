@@ -506,6 +506,22 @@ class TestEventMap:
         result = dag_to_dict(dag, clusters, chapel_grace=False)
         assert result["chapel_grace"] is False
 
+    def test_sentry_torch_shop_default(self):
+        """Default sentry_torch_shop is True."""
+        result = _make_result()
+        assert result["sentry_torch_shop"] is True
+
+    def test_sentry_torch_shop_false(self):
+        """sentry_torch_shop=False is passed through."""
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters, sentry_torch_shop=False)
+        assert result["sentry_torch_shop"] is False
+
     def test_finish_boss_defeat_flag_present(self):
         """finish_boss_defeat_flag is included in the output."""
         result = _make_result()

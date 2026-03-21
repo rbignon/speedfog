@@ -70,7 +70,7 @@ speedfog/
 │   │   ├── StartingItemInjector.cs  # Inject starting item events into EMEVD
 │   │   ├── StartingResourcesInjector.cs  # Inject runes, seeds, tears
 │   │   ├── RoundtableUnlockInjector.cs  # Unlock Roundtable Hold at start
-│   │   ├── SmithingStoneShopInjector.cs  # Add smithing stones to shop
+│   │   ├── ShopInjector.cs           # Add smithing stones + Sentry's Torch to shop
 │   │   ├── ZoneTrackingInjector.cs  # Zone tracking flags for racing
 │   │   ├── ErdtreeWarpPatcher.cs  # Patch Erdtree fogwarp to target m11_05 directly
 │   │   ├── RunCompleteInjector.cs  # Inject "RUN COMPLETE" message on final boss defeat
@@ -173,7 +173,7 @@ speedfog/
 | `StartingItemInjector` | Injects starting item events into common.emevd |
 | `StartingResourcesInjector` | Injects runes (CharaInitParam), seeds/tears (ItemLots) |
 | `RoundtableUnlockInjector` | Unlocks Roundtable Hold at game start |
-| `SmithingStoneShopInjector` | Adds smithing stones to Twin Maiden Husks shop |
+| `ShopInjector` | Adds smithing stones + Sentry's Torch to Twin Maiden Husks shop |
 | `ZoneTrackingInjector` | Injects SetEventFlag before fog gate warps for racing |
 | `ErdtreeWarpPatcher` | Patches all fogwarps targeting leyndell_erdtree to warp to m11_05 directly (no Maliketh/flag 300 dependency) |
 | `RunCompleteInjector` | Injects "RUN COMPLETE" golden banner on final boss defeat |

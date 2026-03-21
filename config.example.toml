@@ -16,6 +16,11 @@ seed = 0
 # Default: true
 # chapel_grace = true
 
+# Sell the Sentry's Torch at the Roundtable Hold shop (10,000 runes).
+# Reveals invisible enemies (Black Knife Assassins, etc.).
+# Default: true
+# sentry_torch_shop = true
+
 [budget]
 # Maximum allowed weight spread between the heaviest and lightest paths.
 # If the spread exceeds this, the DAG is considered imbalanced.
