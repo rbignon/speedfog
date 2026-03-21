@@ -13,7 +13,7 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/user/speedfog.git
+git clone https://github.com/rbignon/speedfog.git
 cd speedfog
 
 # Install Python dependencies (from project root)
@@ -22,14 +22,17 @@ uv pip install -e ".[dev]"
 # Install sfextract
 dotnet tool install -g sfextract
 
-# Download FogRando from Nexusmods (requires account):
-# https://www.nexusmods.com/eldenring/mods/3295
+# Download from Nexusmods (requires account):
+# - FogRando: https://www.nexusmods.com/eldenring/mods/3295
+# - Item Randomizer (optional): https://www.nexusmods.com/eldenring/mods/428
 
-# Extract FogRando dependencies
-python tools/setup_dependencies.py /path/to/FogRando.zip
+# Extract dependencies, generate derived data, and build C# writers
+python tools/setup_dependencies.py \
+  --fogrando /path/to/FogRando.zip \
+  --itemrando /path/to/ItemRandomizer.zip
 
-# Build C# writer
-cd writer/FogModWrapper && dotnet build
+# Or FogRando only (no item randomization)
+python tools/setup_dependencies.py --fogrando /path/to/FogRando.zip
 ```
 
 ### Updating FogRando Dependencies
@@ -37,7 +40,13 @@ cd writer/FogModWrapper && dotnet build
 When a new version of FogRando is released:
 
 ```bash
-python tools/setup_dependencies.py /path/to/NewFogRando.zip --force
+python tools/setup_dependencies.py --fogrando /path/to/NewFogRando.zip --force
+
+# With Item Randomizer
+python tools/setup_dependencies.py \
+  --fogrando /path/to/NewFogRando.zip \
+  --itemrando /path/to/NewItemRandomizer.zip \
+  --force
 ```
 
 ## Project Structure
@@ -57,11 +66,18 @@ speedfog/
 │
 ├── writer/                      # C# - Mod file generation
 │   ├── lib/                     # DLLs (gitignored, from FogRando)
-│   └── FogModWrapper/           # Main writer
-│       ├── Program.cs           # CLI entry point
-│       ├── GraphLoader.cs       # Load graph.json from Python
-│       ├── ConnectionInjector.cs # Inject connections into FogMod
-│       └── eldendata/           # Game data (gitignored, from FogRando)
+│   ├── assets/                  # Extra DLLs (RandomizerCrashFix, etc.)
+│   ├── scripts/                 # Launchers and backup scripts
+│   ├── FogModWrapper.Core/      # Shared library (GraphLoader, models)
+│   ├── FogModWrapper/           # Fog gate writer (calls FogMod.dll)
+│   │   ├── Program.cs           # CLI entry point
+│   │   ├── ConnectionInjector.cs # Inject connections into FogMod
+│   │   └── eldendata/           # Game data (gitignored, from FogRando)
+│   ├── FogModWrapper.Tests/     # xUnit tests
+│   ├── ItemRandomizerWrapper/   # Item randomizer (calls RandomizerCommon.dll)
+│   │   ├── Program.cs           # CLI entry point
+│   │   └── diste/               # Item Randomizer data (gitignored)
+│   └── ItemRandomizerWrapper.Tests/  # xUnit tests
 │
 ├── data/                        # Shared data files
 │   ├── fog.txt                  # FogRando zones (gitignored)
@@ -73,19 +89,18 @@ speedfog/
 │   └── zone_metadata.toml       # Zone weights (tracked)
 │
 ├── tools/                       # Standalone scripts
-│   ├── setup_dependencies.py        # Extract FogRando dependencies
+│   ├── setup_dependencies.py    # Extract FogRando/ItemRando dependencies
 │   ├── generate_clusters.py     # Generate clusters.json
 │   └── extract_fog_data.py      # Generate fog_data.json
 │
-├── reference/                   # FogRando source (READ-ONLY)
-│   └── fogrando-src/            # Decompiled C# for reference
-│
 ├── docs/                        # Documentation
 │   ├── architecture.md          # System architecture
-│   └── plans/                   # Design documents
+│   ├── dag-generation.md        # DAG generation algorithm
+│   ├── item-randomizer.md       # ItemRandomizerWrapper integration
+│   ├── care-package.md          # Randomized starting build system
+│   └── ...                      # See docs/ for full list
 │
-├── seeds/                       # Generated seeds (gitignored)
-└── output/                      # Generated mod (gitignored)
+└── seeds/                       # Generated runs (gitignored)
 ```
 
 ## Architecture
@@ -93,20 +108,17 @@ speedfog/
 SpeedFog uses a hybrid Python + C# architecture:
 
 ```
-Python (speedfog/)          C# (writer/)                 Output
-──────────────────          ──────────────────           ──────────────────
-config.toml            →                                 seeds/<seed>/
-clusters.json          →    graph.json → FogModWrapper → ├── graph.json
-DAG generation         →                                 └── spoiler.txt
-
-                            FogModWrapper + game files → output/
-                                                         ├── mod/
-                                                         ├── ModEngine/
-                                                         └── launch_speedfog.bat
+Python (speedfog/)      C# (writer/)                              Output
+─────────────────       ─────────────────                         ─────────────────
+config.toml        →                                              seeds/<seed>/
+clusters.json      →    graph.json → FogModWrapper ──────────┐    ├── mods/
+DAG generation     →                      ↑                  ├──► ├── ModEngine/
+                        item_config.json → ItemRandomizerWrapper  ├── launch_speedfog.bat
+                                          (optional)              └── spoiler.txt
 ```
 
 - **Python**: Configuration, zone clustering, DAG generation (package at root)
-- **C#**: Thin wrapper around FogMod.dll for mod file generation
+- **C#**: Thin wrappers around FogMod.dll and RandomizerCommon.dll
 - **Interface**: `graph.json` passes DAG from Python to C#
 
 See [docs/architecture.md](docs/architecture.md) for details.
@@ -116,7 +128,8 @@ See [docs/architecture.md](docs/architecture.md) for details.
 1. `fog.txt` → `generate_clusters.py` → `clusters.json`
 2. `fog.txt` → `extract_fog_data.py` → `fog_data.json`
 3. `config.toml` + `clusters.json` → `speedfog` CLI → `graph.json`
-4. `graph.json` + game files → `FogModWrapper` → mod files
+4. `item_config.json` + game files → `ItemRandomizerWrapper` → randomized items (optional)
+5. `graph.json` + game files → `FogModWrapper` (merges item randomizer output) → mod files
 
 ## Running Tests
 
@@ -148,34 +161,18 @@ Pre-commit hooks run automatically on commit.
 
 ## Key Guidelines
 
-### Reference Code
+### FogRando Parity
 
-Files in `reference/` are **read-only** - extracted from FogRando for study.
-
-When implementing features:
-1. First check how FogRando does it in `reference/fogrando-src/`
-2. Document source line numbers when adapting code
-3. Aim for behavioral parity with FogRando
+SpeedFog aims for behavioral parity with FogRando. When implementing features:
+1. Aim to match FogRando's in-game behavior
+2. Event templates come directly from `data/fogevents.txt` (copied from FogRando)
 
 ### Debugging In-Game Issues
 
 For any in-game problem (fog gates, warps, scaling):
-1. Find the equivalent FogRando implementation in `reference/`
-2. Compare our output with FogRando's expected behavior
-3. Check event templates in `data/fogevents.txt`
-
-### FogRando Reference Points
-
-Key sections in `reference/fogrando-src/GameDataWriterE.cs`:
-
-| Feature | Lines | Notes |
-|---------|-------|-------|
-| Load game data | L37-70 | MSBs, EMEVDs, params |
-| Fog models | L190-194 | AEG099_230/231/232 |
-| Create fog gate | L262+ | `addFakeGate` helper |
-| EMEVD events | L1781-1852 | Event creation |
-| Scaling | L1964-1966 | EldenScaling integration |
-| Write output | L4977-5030 | Params, EMEVDs |
+1. Compare our output with FogRando's expected behavior
+2. Check event templates in `data/fogevents.txt`
+3. Use `tools/dump_emevd_warps/` to inspect compiled EMEVD files
 
 ## Commits
 

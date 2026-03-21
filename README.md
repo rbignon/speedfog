@@ -10,10 +10,12 @@ Unlike FogRando which randomizes the entire world, SpeedFog creates a focused pa
 - **Balanced paths**: All routes have similar difficulty/length
 - **No dead ends**: Every path leads to the final boss
 - **Configurable final boss**: Radagon, Promised Consort Radahn, Malenia, or any major boss
+- **Difficulty curve**: Configurable start/end tiers with linear or power curve progression
 - **Cross-links**: Optional connections between parallel branches for more routing options
 - **Seed-based**: Share seeds for identical runs
 - **Self-contained output**: Includes ModEngine 2 and launcher
-- **Item randomization**: Optional integration with Item Randomizer (auto-upgrade, presets, boss randomization)
+- **Item randomization**: Optional integration with Item Randomizer (auto-upgrade, presets, boss randomization, reduced upgrade costs)
+- **All crafting recipes**: Optionally unlock all recipes at start (no cookbook hunting)
 - **Care package**: Optional randomized starting build (weapons, armor, spells, talismans)
 - **Rebirth**: Respec stats at any Site of Grace
 - **Racing support**: Zone tracking flags for competitive play
@@ -36,7 +38,7 @@ From Nexusmods (requires account):
 ### 2. Clone and Setup
 
 ```bash
-git clone https://github.com/user/speedfog.git
+git clone https://github.com/rbignon/speedfog.git
 cd speedfog
 
 # Install Python dependencies
@@ -127,12 +129,16 @@ tolerance = 5                   # Max weight spread between paths
 [requirements]
 legacy_dungeons = 1             # Minimum legacy dungeons
 bosses = 5                      # Minimum bosses before final boss
+major_bosses = 8                # Minimum major boss encounters
 mini_dungeons = 5               # Minimum caves/catacombs
 # zones = ["caelid_radahn"]     # Force specific zones to appear
 
 [structure]
 max_parallel_paths = 3          # Max concurrent branches
 final_tier = 28                 # Enemy scaling ceiling (1-28)
+# start_tier = 1                # Enemy scaling floor (1-28)
+# tier_curve = "linear"         # "linear" or "power"
+# tier_curve_exponent = 0.6     # Power curve exponent (< 1.0 = front-loaded)
 # crosslinks = true             # Cross-links between parallel branches
 # final_boss_candidates = ["leyndell_erdtree", "enirilim_radahn"]
 
@@ -151,10 +157,15 @@ enabled = false                 # Randomized starting build
 enabled = true                  # Item Randomizer integration
 # remove_requirements = true    # Drop stat requirements on weapons/spells
 # auto_upgrade_weapons = true   # New weapons match your highest upgrade
+# auto_upgrade_dropped = true   # Dropped items auto-match upgrade level
+# reduce_upgrade_cost = true    # 1 smithing stone per upgrade level
+# allcraft = true               # Unlock all crafting recipes at start
+# item_preset = true            # Weapons to bosses, seeds/tears to key locations
 # dlc = true                    # Include DLC items and enemies
 
 [enemy]
 randomize_bosses = "none"       # "none", "minor", or "all"
+# ignore_arena_size = false     # Allow large bosses in small arenas
 ```
 
 ## How It Works
@@ -182,22 +193,11 @@ Chapel of Anticipation
          Final Boss       ← Tier 28
 ```
 
-- **Enemy scaling**: Based on zone tier (1-28, configurable ceiling)
+- **Enemy scaling**: Based on zone tier (configurable floor, ceiling, and curve)
 - **Key items**: All given at start to prevent softlocks
 - **Fog gates**: Connect zones via FogRando's fog gate system
 - **Cross-links**: Optional sideways connections between parallel branches
 - **Rebirth**: Respec stats at any Site of Grace (no Larval Tear needed)
-
-## FAQ
-
-**Q: Can I use this with other mods?**
-A: SpeedFog modifies zone connections and enemy scaling. Other mods may conflict.
-
-**Q: Can I change the final boss?**
-A: Yes. Set `final_boss_candidates` in `[structure]` to any combination of major bosses, or use `"all"` to include every major boss in the pool.
-
-**Q: I'm stuck, is this a softlock?**
-A: Check the spoiler log (`seeds/<seed>/spoiler.txt`) for the correct path.
 
 ## Contributing
 
@@ -212,4 +212,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
 ## License
 
-MIT License - See [LICENSE](LICENSE) file.
+MIT License
