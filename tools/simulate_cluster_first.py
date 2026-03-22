@@ -34,6 +34,7 @@ from speedfog.generator import (  # noqa: E402
     pick_cluster,
     pick_cluster_with_filter,
     select_entries_for_merge,
+    select_weighted_final_boss,
 )
 from speedfog.planner import compute_tier, plan_layer_types  # noqa: E402
 
@@ -706,24 +707,9 @@ def generate_dag_cluster_first(
     weighted_candidates = resolve_final_boss_candidates(
         config.structure.effective_final_boss_candidates, all_boss_zones
     )
-
-    remaining = dict(weighted_candidates)
-    end_cluster = None
-    while remaining:
-        zones = list(remaining.keys())
-        weights = [remaining[z] for z in zones]
-        [zone_name] = rng.choices(zones, weights=weights, k=1)
-
-        for c in all_boss:
-            if zone_name in c.zones and not any(z in used_zones for z in c.zones):
-                end_cluster = c
-                break
-        if end_cluster:
-            break
-        del remaining[zone_name]
-
-    if end_cluster is None:
-        raise GenerationError("No available final boss")
+    end_cluster = select_weighted_final_boss(
+        weighted_candidates, all_boss, used_zones, rng
+    )
 
     entry_fog_end = None
     if end_cluster.entry_fogs:

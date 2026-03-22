@@ -33,6 +33,7 @@ from speedfog.generator import (
     pick_cluster_with_type_fallback,
     pick_entry_with_max_exits,
     select_entries_for_merge,
+    select_weighted_final_boss,
     update_branch_counters,
     validate_config,
 )
@@ -685,6 +686,15 @@ class TestValidateConfig:
         errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
 
+    def test_invalid_weight_returns_error(self):
+        """Weight < 1 in final_boss_candidates returns error."""
+        pool = make_cluster_pool()
+        config = Config()
+        config.structure.final_boss_candidates = {"leyndell_erdtree": 0}
+        errors, _ = validate_config(config, pool, _boss_candidates(pool))
+        assert len(errors) == 1
+        assert "invalid weight" in errors[0]
+
     def test_multiple_errors_returned(self):
         """Multiple config errors are all returned."""
         pool = make_cluster_pool()
@@ -825,6 +835,65 @@ class TestValidateConfig:
         config.structure.final_boss_candidates = {"placidusax_zone": 1}
         errors, _ = validate_config(config, pool, boss_candidates)
         assert errors == []
+
+
+# =============================================================================
+# Weighted Final Boss Selection Tests
+# =============================================================================
+
+
+class TestSelectWeightedFinalBoss:
+    """Tests for select_weighted_final_boss."""
+
+    def _make_boss_cluster(self, zone: str) -> ClusterData:
+        return ClusterData(
+            id=zone,
+            zones=[zone],
+            type="major_boss",
+            weight=1,
+            entry_fogs=[{"fog_id": "f1", "zone": zone}],
+            exit_fogs=[],
+        )
+
+    def test_weighted_distribution(self):
+        """Higher weight produces proportionally more selections."""
+        boss_a = self._make_boss_cluster("boss_a")
+        boss_b = self._make_boss_cluster("boss_b")
+        clusters = [boss_a, boss_b]
+        candidates = {"boss_a": 5, "boss_b": 1}
+
+        counts: dict[str, int] = {"boss_a": 0, "boss_b": 0}
+        for seed in range(1000):
+            rng = random.Random(seed)
+            result = select_weighted_final_boss(candidates, clusters, set(), rng)
+            counts[result.zones[0]] += 1
+
+        # With 5:1 ratio over 1000 trials, boss_a should appear ~833 times.
+        # Use a generous margin to avoid flaky tests.
+        assert counts["boss_a"] > counts["boss_b"] * 2
+
+    def test_skips_unavailable_zone(self):
+        """Unavailable zone is skipped, next candidate selected."""
+        boss_a = self._make_boss_cluster("boss_a")
+        boss_b = self._make_boss_cluster("boss_b")
+        clusters = [boss_a, boss_b]
+        candidates = {"boss_a": 10, "boss_b": 1}
+        used_zones = {"boss_a"}  # boss_a blocked
+
+        rng = random.Random(42)
+        result = select_weighted_final_boss(candidates, clusters, used_zones, rng)
+        assert result.zones[0] == "boss_b"
+
+    def test_all_unavailable_raises(self):
+        """GenerationError raised when all candidates are blocked."""
+        boss_a = self._make_boss_cluster("boss_a")
+        clusters = [boss_a]
+        candidates = {"boss_a": 1}
+        used_zones = {"boss_a"}
+
+        rng = random.Random(42)
+        with pytest.raises(GenerationError):
+            select_weighted_final_boss(candidates, clusters, used_zones, rng)
 
 
 # =============================================================================

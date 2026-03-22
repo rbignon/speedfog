@@ -32,6 +32,47 @@ class GenerationError(Exception):
 VALID_FIRST_LAYER_TYPES = {"legacy_dungeon", "mini_dungeon", "boss_arena", "major_boss"}
 
 
+def select_weighted_final_boss(
+    weighted_candidates: dict[str, int],
+    boss_clusters: list[ClusterData],
+    used_zones: set[str],
+    rng: random.Random,
+) -> ClusterData:
+    """Select a final boss cluster using weighted random selection.
+
+    Picks candidates proportional to their weight, retrying with
+    remaining candidates if the selected zone has a conflict.
+
+    Args:
+        weighted_candidates: Zone name -> weight mapping.
+        boss_clusters: Available boss clusters to match against.
+        used_zones: Zones already consumed by other nodes.
+        rng: Seeded random instance.
+
+    Returns:
+        The selected boss cluster.
+
+    Raises:
+        GenerationError: If no candidate is available.
+    """
+    remaining = dict(weighted_candidates)
+    while remaining:
+        zones = list(remaining.keys())
+        weights = [remaining[z] for z in zones]
+        [zone_name] = rng.choices(zones, weights=weights, k=1)
+
+        for cluster in boss_clusters:
+            if zone_name in cluster.zones:
+                if not any(z in used_zones for z in cluster.zones):
+                    return cluster
+        # Zone unavailable (conflict), remove and retry with remaining candidates
+        del remaining[zone_name]
+
+    raise GenerationError(
+        f"No available final boss from candidates: {list(weighted_candidates.keys())}"
+    )
+
+
 def validate_config(
     config: Config, clusters: ClusterPool, boss_candidates: list[ClusterData]
 ) -> tuple[list[str], list[str]]:
@@ -1739,29 +1780,9 @@ def generate_dag(
     weighted_candidates = resolve_final_boss_candidates(
         config.structure.effective_final_boss_candidates, all_boss_zones
     )
-
-    # Weighted selection: pick candidates proportional to weight, retry on conflict
-    remaining = dict(weighted_candidates)
-    end_cluster = None
-    while remaining:
-        zones = list(remaining.keys())
-        weights = [remaining[z] for z in zones]
-        [zone_name] = rng.choices(zones, weights=weights, k=1)
-
-        for cluster in boss_candidates:
-            if zone_name in cluster.zones:
-                if not any(z in used_zones for z in cluster.zones):
-                    end_cluster = cluster
-                    break
-        if end_cluster:
-            break
-        # Zone unavailable (conflict), remove and retry with remaining candidates
-        del remaining[zone_name]
-
-    if end_cluster is None:
-        raise GenerationError(
-            f"No available final boss from candidates: {list(weighted_candidates.keys())}"
-        )
+    end_cluster = select_weighted_final_boss(
+        weighted_candidates, boss_candidates, used_zones, rng
+    )
 
     # Determine reserved zones: end cluster + prerequisite
     # End cluster zones must be reserved to prevent intermediate layers
