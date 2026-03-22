@@ -86,6 +86,11 @@ def validate_config(
     for zone in resolved_candidates:
         if zone not in all_boss_zones:
             errors.append(f"Unknown final_boss candidate zone: '{zone}'")
+    for zone, weight in resolved_candidates.items():
+        if weight < 1:
+            errors.append(
+                f"final_boss candidate '{zone}' has invalid weight {weight} (must be >= 1)"
+            )
 
     # Check pool capacity against requirements with branching
     max_branches = config.structure.max_parallel_paths
@@ -1731,15 +1736,18 @@ def generate_dag(
     # 3. Pre-select final boss and compute reserved zones
     # Must happen before layer execution so prerequisite zones are reserved.
     all_boss_zones = {zone for cluster in boss_candidates for zone in cluster.zones}
-    final_zone_candidates = resolve_final_boss_candidates(
+    weighted_candidates = resolve_final_boss_candidates(
         config.structure.effective_final_boss_candidates, all_boss_zones
     )
-    final_zone_candidates = list(final_zone_candidates)  # Make a copy for shuffling
-    rng.shuffle(final_zone_candidates)
 
-    # Find a cluster matching one of the candidate zones
+    # Weighted selection: pick candidates proportional to weight, retry on conflict
+    remaining = dict(weighted_candidates)
     end_cluster = None
-    for zone_name in final_zone_candidates:
+    while remaining:
+        zones = list(remaining.keys())
+        weights = [remaining[z] for z in zones]
+        [zone_name] = rng.choices(zones, weights=weights, k=1)
+
         for cluster in boss_candidates:
             if zone_name in cluster.zones:
                 if not any(z in used_zones for z in cluster.zones):
@@ -1747,10 +1755,12 @@ def generate_dag(
                     break
         if end_cluster:
             break
+        # Zone unavailable (conflict), remove and retry with remaining candidates
+        del remaining[zone_name]
 
     if end_cluster is None:
         raise GenerationError(
-            f"No available final boss from candidates: {final_zone_candidates}"
+            f"No available final boss from candidates: {list(weighted_candidates.keys())}"
         )
 
     # Determine reserved zones: end cluster + prerequisite

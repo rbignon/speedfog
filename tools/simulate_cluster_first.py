@@ -703,20 +703,24 @@ def generate_dag_cluster_first(
     # End node
     all_boss = clusters.get_by_type("major_boss") + clusters.get_by_type("final_boss")
     all_boss_zones = {z for c in all_boss for z in c.zones}
-    final_candidates = resolve_final_boss_candidates(
+    weighted_candidates = resolve_final_boss_candidates(
         config.structure.effective_final_boss_candidates, all_boss_zones
     )
-    final_candidates = list(final_candidates)
-    rng.shuffle(final_candidates)
 
+    remaining = dict(weighted_candidates)
     end_cluster = None
-    for zone_name in final_candidates:
+    while remaining:
+        zones = list(remaining.keys())
+        weights = [remaining[z] for z in zones]
+        [zone_name] = rng.choices(zones, weights=weights, k=1)
+
         for c in all_boss:
             if zone_name in c.zones and not any(z in used_zones for z in c.zones):
                 end_cluster = c
                 break
         if end_cluster:
             break
+        del remaining[zone_name]
 
     if end_cluster is None:
         raise GenerationError("No available final boss")

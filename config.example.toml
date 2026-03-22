@@ -112,26 +112,27 @@ max_entrances = 3
 # If omitted: random based on requirements (current behavior)
 # first_layer_type = "legacy_dungeon"
 
-# Candidates for the final boss (zone names).
-# One will be chosen randomly. Default: Radagon + Promised Consort Radahn.
-# Use "all" to include all major bosses.
+# Candidates for the final boss (zone names) with optional weights.
+# Higher weight = higher probability of being selected.
+# Default: Radagon + Promised Consort Radahn (equal weight).
+#
+# Format 1 - weighted (recommended):
+# [structure.final_boss_candidates]
+# leyndell_erdtree = 5     # Radagon (high weight)
+# enirilim_radahn = 5      # Promised Consort Radahn (high weight)
+# stormveil_godrick = 1    # Godrick (low weight, appears mid-game too)
+#
+# Format 2 - flat list (all weight 1, backward compatible):
+# final_boss_candidates = ["leyndell_erdtree", "enirilim_radahn"]
+#
+# Use "all" to include all major bosses with equal weight:
+# final_boss_candidates = ["all"]
+#
 # Available major bosses:
 #   caelid_radahn, haligtree_malenia, mohgwyn_boss, volcano_rykard,
 #   stormveil_godrick, farumazula_maliketh, flamepeak_firegiant,
 #   leyndell_erdtree (Radagon), leyndell_throne (Gideon),
 #   enirilim_radahn (Promised Consort Radahn, DLC), etc.
-# final_boss_candidates = ["all"]  # All major bosses
-# final_boss_candidates = ["leyndell_erdtree"]  # Base game only (Radagon)
-# final_boss_candidates = [
-#     "leyndell_erdtree",
-#     "enirilim_radahn",
-#     "caelid_radahn",
-#     "haligtree_malenia",
-#     "mohgwyn_boss",
-#     "volcano_rykard",
-#     "farumazula_maliketh",
-#     "flamepeak_firegiant",
-# ]
 
 [paths]
 # Path to Elden Ring installation.

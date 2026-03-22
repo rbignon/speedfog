@@ -127,7 +127,7 @@ def test_structure_defaults():
     assert config.structure.min_layers == 6
     assert config.structure.max_layers == 10
     assert config.structure.first_layer_type is None
-    assert config.structure.final_boss_candidates == []
+    assert config.structure.final_boss_candidates == {}
     assert config.structure.final_tier == 28
     assert config.structure.tier_curve == "linear"
     assert config.structure.tier_curve_exponent == 0.6
@@ -143,11 +143,28 @@ final_boss_candidates = ["caelid_radahn", "haligtree_malenia", "leyndell_erdtree
 """)
     config = Config.from_toml(config_file)
     assert config.structure.first_layer_type == "legacy_dungeon"
-    assert config.structure.final_boss_candidates == [
-        "caelid_radahn",
-        "haligtree_malenia",
-        "leyndell_erdtree",
-    ]
+    assert config.structure.final_boss_candidates == {
+        "caelid_radahn": 1,
+        "haligtree_malenia": 1,
+        "leyndell_erdtree": 1,
+    }
+
+
+def test_structure_weighted_candidates(tmp_path):
+    """StructureConfig parses weighted final_boss_candidates from TOML table."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[structure.final_boss_candidates]
+leyndell_erdtree = 5
+haligtree_malenia = 3
+stormveil_godrick = 1
+""")
+    config = Config.from_toml(config_file)
+    assert config.structure.final_boss_candidates == {
+        "leyndell_erdtree": 5,
+        "haligtree_malenia": 3,
+        "stormveil_godrick": 1,
+    }
 
 
 def test_major_bosses_from_toml(tmp_path):
@@ -168,48 +185,66 @@ def test_major_bosses_default():
 
 
 def test_effective_final_boss_candidates_default():
-    """effective_final_boss_candidates returns default when list is empty."""
+    """effective_final_boss_candidates returns default when dict is empty."""
     config = Config.from_dict({})
-    assert config.structure.final_boss_candidates == []
-    assert config.structure.effective_final_boss_candidates == [
-        "leyndell_erdtree",
-        "enirilim_radahn",
-    ]
+    assert config.structure.final_boss_candidates == {}
+    assert config.structure.effective_final_boss_candidates == {
+        "leyndell_erdtree": 1,
+        "enirilim_radahn": 1,
+    }
 
 
-def test_effective_final_boss_candidates_custom():
-    """effective_final_boss_candidates returns custom list when set."""
+def test_effective_final_boss_candidates_custom_list():
+    """effective_final_boss_candidates from list format (backward compat)."""
     config = Config.from_dict(
         {"structure": {"final_boss_candidates": ["caelid_radahn", "mohgwyn_boss"]}}
     )
-    assert config.structure.effective_final_boss_candidates == [
-        "caelid_radahn",
-        "mohgwyn_boss",
-    ]
+    assert config.structure.effective_final_boss_candidates == {
+        "caelid_radahn": 1,
+        "mohgwyn_boss": 1,
+    }
 
 
-def test_resolve_final_boss_candidates_explicit_list():
-    """resolve_final_boss_candidates returns explicit list unchanged."""
+def test_effective_final_boss_candidates_weighted():
+    """effective_final_boss_candidates from weighted dict format."""
+    config = Config.from_dict(
+        {
+            "structure": {
+                "final_boss_candidates": {
+                    "leyndell_erdtree": 5,
+                    "stormveil_godrick": 1,
+                }
+            }
+        }
+    )
+    assert config.structure.effective_final_boss_candidates == {
+        "leyndell_erdtree": 5,
+        "stormveil_godrick": 1,
+    }
+
+
+def test_resolve_final_boss_candidates_explicit_dict():
+    """resolve_final_boss_candidates returns explicit dict unchanged."""
     all_zones = {"zone_a", "zone_b", "zone_c"}
-    candidates = ["zone_a", "zone_b"]
+    candidates = {"zone_a": 3, "zone_b": 1}
     result = resolve_final_boss_candidates(candidates, all_zones)
-    assert result == ["zone_a", "zone_b"]
+    assert result == {"zone_a": 3, "zone_b": 1}
 
 
 def test_resolve_final_boss_candidates_all_keyword():
-    """resolve_final_boss_candidates expands 'all' to all zones."""
+    """resolve_final_boss_candidates expands 'all' to all zones with weight 1."""
     all_zones = {"zone_a", "zone_b", "zone_c"}
-    candidates = ["all"]
+    candidates = {"all": 1}
     result = resolve_final_boss_candidates(candidates, all_zones)
-    assert result == ["zone_a", "zone_b", "zone_c"]  # Sorted
+    assert result == {"zone_a": 1, "zone_b": 1, "zone_c": 1}
 
 
-def test_resolve_final_boss_candidates_empty_list():
-    """resolve_final_boss_candidates returns empty list unchanged."""
+def test_resolve_final_boss_candidates_empty_dict():
+    """resolve_final_boss_candidates returns empty dict unchanged."""
     all_zones = {"zone_a", "zone_b"}
-    candidates: list[str] = []
+    candidates: dict[str, int] = {}
     result = resolve_final_boss_candidates(candidates, all_zones)
-    assert result == []
+    assert result == {}
 
 
 def test_starting_items_defaults():

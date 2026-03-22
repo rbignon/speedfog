@@ -663,7 +663,7 @@ class TestValidateConfig:
         """Unknown zone in final_boss_candidates returns error."""
         pool = make_cluster_pool()
         config = Config()
-        config.structure.final_boss_candidates = ["nonexistent_zone"]
+        config.structure.final_boss_candidates = {"nonexistent_zone": 1}
         errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert len(errors) == 1
         assert "nonexistent_zone" in errors[0]
@@ -673,7 +673,7 @@ class TestValidateConfig:
         pool = make_cluster_pool()
         config = Config()
         # leyndell_erdtree exists in the fixture
-        config.structure.final_boss_candidates = ["leyndell_erdtree"]
+        config.structure.final_boss_candidates = {"leyndell_erdtree": 1}
         errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
 
@@ -681,7 +681,7 @@ class TestValidateConfig:
         """'all' keyword in final_boss_candidates is valid."""
         pool = make_cluster_pool()
         config = Config()
-        config.structure.final_boss_candidates = ["all"]
+        config.structure.final_boss_candidates = {"all": 1}
         errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
 
@@ -691,7 +691,7 @@ class TestValidateConfig:
         config = Config()
         config.structure.first_layer_type = "bad_type"
         config.requirements.major_bosses = -1
-        config.structure.final_boss_candidates = ["bad_zone"]
+        config.structure.final_boss_candidates = {"bad_zone": 1}
         errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert len(errors) == 3
 
@@ -822,7 +822,7 @@ class TestValidateConfig:
         pool.filter_passant_incompatible()
 
         config = Config()
-        config.structure.final_boss_candidates = ["placidusax_zone"]
+        config.structure.final_boss_candidates = {"placidusax_zone": 1}
         errors, _ = validate_config(config, pool, boss_candidates)
         assert errors == []
 
@@ -3079,7 +3079,7 @@ class TestPrerequisiteInGenerateDag:
         config.structure.max_branches = 1
         config.structure.split_probability = 0.0
         config.structure.merge_probability = 0.0
-        config.structure.final_boss_candidates = ["leyndell_erdtree"]
+        config.structure.final_boss_candidates = {"leyndell_erdtree": 1}
 
         dag = generate_dag(
             config, pool, seed=42, boss_candidates=_boss_candidates(pool)
@@ -3107,7 +3107,7 @@ class TestPrerequisiteInGenerateDag:
         config.structure.max_branches = 1
         config.structure.split_probability = 0.0
         config.structure.merge_probability = 0.0
-        config.structure.final_boss_candidates = ["leyndell_erdtree"]
+        config.structure.final_boss_candidates = {"leyndell_erdtree": 1}
 
         # Run many seeds to check Maliketh is never on an optional branch
         for seed in range(50):
@@ -3145,7 +3145,7 @@ class TestPrerequisiteInGenerateDag:
         config.structure.max_branches = 1
         config.structure.split_probability = 0.0
         config.structure.merge_probability = 0.0
-        config.structure.final_boss_candidates = ["enirilim_radahn"]
+        config.structure.final_boss_candidates = {"enirilim_radahn": 1}
 
         dag = generate_dag(
             config, pool, seed=42, boss_candidates=_boss_candidates(pool)
@@ -4184,7 +4184,7 @@ def test_forced_split_triggers_at_threshold():
     pool.add(boss)
 
     config = Config()
-    config.structure.final_boss_candidates = ["boss_z"]
+    config.structure.final_boss_candidates = {"boss_z": 1}
     config.structure.max_branch_spacing = 2
     config.structure.split_probability = 0.0  # Would never split naturally
     config.structure.merge_probability = 0.0
@@ -4353,7 +4353,7 @@ def test_rebalance_when_saturated():
     pool.add(boss)
 
     config = Config()
-    config.structure.final_boss_candidates = ["boss_z"]
+    config.structure.final_boss_candidates = {"boss_z": 1}
     config.structure.max_branch_spacing = 3
     config.structure.split_probability = 0.0
     config.structure.merge_probability = 0.0
@@ -4434,7 +4434,7 @@ def test_forced_merge_bypasses_min_branch_age():
     pool.add(boss)
 
     config = Config()
-    config.structure.final_boss_candidates = ["boss_z"]
+    config.structure.final_boss_candidates = {"boss_z": 1}
     config.structure.max_branch_spacing = 5
     config.structure.min_branch_age = 4  # High but < max_branch_spacing
     config.structure.split_probability = 0.0
@@ -4496,7 +4496,7 @@ def test_max_branch_spacing_disabled_regression():
     pool.add(boss)
 
     config = Config()
-    config.structure.final_boss_candidates = ["boss_z"]
+    config.structure.final_boss_candidates = {"boss_z": 1}
     config.structure.max_branch_spacing = 0  # Disabled
     config.structure.split_probability = 1.0
     config.structure.min_layers = 6
@@ -4582,7 +4582,7 @@ def test_first_layer_type_counter_propagation():
     pool.add(boss)
 
     config = Config()
-    config.structure.final_boss_candidates = ["boss_z"]
+    config.structure.final_boss_candidates = {"boss_z": 1}
     config.structure.max_branch_spacing = 3
     config.structure.first_layer_type = "legacy_dungeon"
     config.structure.split_probability = 0.0  # Only forced splits
@@ -5107,7 +5107,7 @@ def test_rebalance_during_convergence():
     violations = []
     for seed in range(30):
         config = Config()
-        config.structure.final_boss_candidates = ["boss_z"]
+        config.structure.final_boss_candidates = {"boss_z": 1}
         config.structure.max_branch_spacing = max_spacing
         config.structure.split_probability = 0.9
         config.structure.merge_probability = 0.5
@@ -5195,7 +5195,7 @@ def test_convergence_terminates():
 
     for seed in range(20):
         config = Config()
-        config.structure.final_boss_candidates = ["boss_z"]
+        config.structure.final_boss_candidates = {"boss_z": 1}
         config.structure.max_branch_spacing = 3
         config.structure.split_probability = 1.0
         config.structure.merge_probability = 0.0

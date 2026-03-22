@@ -57,7 +57,7 @@ class StructureConfig:
     max_branch_spacing: int = 4  # Max layers between splits per branch (0=disabled)
     crosslinks: bool = False  # Add cross-links between parallel branches
     first_layer_type: str | None = None
-    final_boss_candidates: list[str] = field(default_factory=list)
+    final_boss_candidates: dict[str, int] = field(default_factory=dict)
     start_tier: int = 1  # Enemy scaling tier for first layer (1-28)
     final_tier: int = 28  # Enemy scaling tier for final boss (1-28)
     tier_curve: str = "linear"  # "linear" or "power"
@@ -149,26 +149,40 @@ class StructureConfig:
             )
 
     @property
-    def effective_final_boss_candidates(self) -> list[str]:
+    def effective_final_boss_candidates(self) -> dict[str, int]:
         """Return candidates or default if empty."""
-        return self.final_boss_candidates or ["leyndell_erdtree", "enirilim_radahn"]
+        return self.final_boss_candidates or {
+            "leyndell_erdtree": 1,
+            "enirilim_radahn": 1,
+        }
 
 
 def resolve_final_boss_candidates(
-    candidates: list[str], all_boss_zones: set[str]
-) -> list[str]:
+    candidates: dict[str, int], all_boss_zones: set[str]
+) -> dict[str, int]:
     """Expand 'all' keyword to all major/final boss zones.
 
     Args:
-        candidates: List of zone names, may include 'all' keyword.
+        candidates: Dict of zone name -> weight, may include 'all' keyword.
         all_boss_zones: Set of all valid boss zone names.
 
     Returns:
-        List of zone names with 'all' expanded to actual zones.
+        Dict of zone name -> weight with 'all' expanded to actual zones (weight 1).
     """
     if "all" in candidates:
-        return sorted(all_boss_zones)
+        return {zone: 1 for zone in sorted(all_boss_zones)}
     return candidates
+
+
+def _parse_final_boss_candidates(raw: list[str] | dict[str, int]) -> dict[str, int]:
+    """Parse final_boss_candidates from TOML.
+
+    Accepts either a list of zone names (all weight 1) or a dict of
+    zone name -> weight for backward compatibility.
+    """
+    if isinstance(raw, list):
+        return {zone: 1 for zone in raw}
+    return {zone: int(weight) for zone, weight in raw.items()}
 
 
 @dataclass
@@ -489,8 +503,8 @@ class Config:
                 max_branch_spacing=structure_section.get("max_branch_spacing", 4),
                 crosslinks=bool(structure_section.get("crosslinks", False)),
                 first_layer_type=structure_section.get("first_layer_type"),
-                final_boss_candidates=structure_section.get(
-                    "final_boss_candidates", []
+                final_boss_candidates=_parse_final_boss_candidates(
+                    structure_section.get("final_boss_candidates", {})
                 ),
                 start_tier=structure_section.get("start_tier", 1),
                 final_tier=structure_section.get("final_tier", 28),
