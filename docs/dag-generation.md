@@ -241,8 +241,8 @@ Start Node → [First Layer] → Plan Types → Execute Layers → Forced Merge 
 
 Before executing any intermediate layers:
 
-1. Resolve `final_boss_candidates` from config (supports `"all"` keyword)
-2. Find an available final boss cluster from the candidate zones
+1. Resolve `final_boss_candidates` from config (dict of zone -> weight, supports `"all"` keyword)
+2. Select a final boss cluster using weighted random selection (`select_weighted_final_boss`), retrying on zone conflicts
 3. Compute **reserved zones**: the final boss cluster's zones plus the prerequisite cluster's zones (if the boss has a `requires` field)
 4. Reserved zones are excluded from intermediate layer selection, preventing them from being consumed before they are needed
 
@@ -412,7 +412,7 @@ Config validation runs once before any attempts; invalid config raises `Generati
 | `structure.crosslinks` | false | Add cross-links between parallel branches |
 | `structure.first_layer_type` | None | Force type for first layer |
 | `requirements.major_bosses` | 8 | Number of major boss layers |
-| `structure.final_boss_candidates` | `["leyndell_erdtree", "enirilim_radahn"]` | Possible end bosses |
+| `structure.final_boss_candidates` | `{"leyndell_erdtree": 1, "enirilim_radahn": 1}` | Possible end bosses (zone -> weight). Also accepts a flat list (all weight 1). |
 | `structure.final_tier` | 28 | Enemy tier for final boss |
 | `structure.tier_curve` | `"linear"` | Tier progression curve (`"linear"` or `"power"`) |
 | `structure.tier_curve_exponent` | 0.6 | Power curve exponent (only for `"power"`) |
@@ -431,7 +431,7 @@ Pre-generation checks on configuration vs cluster pool:
 1. **first_layer_type**: must be a valid cluster type
 2. **major_bosses**: must be >= 0
 3. **Requirements vs min_layers**: warning if total requirements exceed `min_layers`
-4. **final_boss_candidates**: all zones must exist in the pool
+4. **final_boss_candidates**: all zones must exist in the pool, all weights must be >= 1
 5. **Pool capacity**: warning when `requirement * max_parallel_paths > pool_size` for any cluster type. With parallel branches, each planned layer consumes up to `max_parallel_paths` clusters of the same type. Example: `major_bosses=12` with `max_parallel_paths=4` requires up to 48 clusters from a pool of 38, which will cause type exhaustion during generation.
 
 ### DAG Validation (`validator.py`)
