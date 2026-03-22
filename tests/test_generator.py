@@ -2,11 +2,12 @@
 
 import os
 import random
+from pathlib import Path
 
 import pytest
 
 from speedfog.clusters import ClusterData, ClusterPool, fog_matches_spec
-from speedfog.config import Config
+from speedfog.config import Config, RequirementsConfig, StructureConfig
 from speedfog.dag import Branch, Dag, DagNode, FogRef
 from speedfog.generator import (
     GenerationError,
@@ -5602,3 +5603,81 @@ class TestPickClusterWithTypeFallbackDistribution:
         # Both types should appear (not just boss_arena every time)
         assert type_counts["boss_arena"] > 0
         assert type_counts["legacy_dungeon"] > 0
+
+
+class TestSplitNoClusterReuse:
+    """Ensure SPLIT marks primary_cluster used before passant picks.
+
+    Regression test for a TOCTOU bug where primary_cluster was selected at
+    the top of the main loop but only marked used inside `if i == split_idx`.
+    When split_idx > 0, passant branches processed before the split could
+    pick the same cluster, creating two DAG nodes sharing one cluster.
+    The output then merged their connections, causing entry-as-exit violations
+    and duplicate exit fog assignments.
+    """
+
+    @pytest.mark.skipif(
+        not Path("data/clusters.json").exists(),
+        reason="requires data/clusters.json",
+    )
+    def test_no_duplicate_cluster_across_nodes(self):
+        """No two DAG nodes should reference the same cluster.
+
+        Uses real cluster data with a high-split config to reproduce the
+        TOCTOU collision between primary_cluster and passant picks.
+        """
+        from collections import Counter
+        from copy import deepcopy
+
+        from speedfog.clusters import load_clusters
+
+        clusters_orig = load_clusters(Path("data/clusters.json"))
+
+        structure = StructureConfig(
+            split_probability=0.9,
+            max_parallel_paths=4,
+            merge_probability=0.5,
+            min_branch_age=3,
+            crosslinks=True,
+            max_layers=30,
+            min_layers=25,
+            first_layer_type="legacy_dungeon",
+        )
+        structure.max_exits = 4
+        structure.max_entrances = 2
+        config = Config(
+            seed=0,
+            structure=structure,
+            requirements=RequirementsConfig(
+                legacy_dungeons=2,
+                bosses=7,
+                mini_dungeons=8,
+                major_bosses=8,
+            ),
+        )
+
+        violations = 0
+        tested = 0
+        for seed in range(2000):
+            try:
+                clusters = deepcopy(clusters_orig)
+                clusters.merge_roundtable_into_start()
+                boss_cand = clusters.get_by_type("major_boss") + clusters.get_by_type(
+                    "final_boss"
+                )
+                clusters.filter_passant_incompatible()
+                dag = generate_dag(
+                    config, clusters, seed=seed, boss_candidates=boss_cand
+                )
+                tested += 1
+                uses = Counter(n.cluster.id for n in dag.nodes.values())
+                dupes = {k: v for k, v in uses.items() if v > 1}
+                if dupes:
+                    violations += 1
+            except GenerationError:
+                pass
+
+        assert tested > 100, f"Too few successful generations: {tested}"
+        assert (
+            violations == 0
+        ), f"{violations}/{tested} seeds had duplicate cluster usage"

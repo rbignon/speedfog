@@ -1928,9 +1928,12 @@ def generate_dag(
             passant_branches_list: list[Branch] = []
             letter_offset = 0
 
+            # Mark primary_cluster used BEFORE the loop so passant picks
+            # for branches before split_idx cannot select the same cluster.
+            _mark_cluster_used(primary_cluster, used_zones, clusters)
+
             for i, branch in enumerate(branches):
                 if i == split_idx:
-                    _mark_cluster_used(primary_cluster, used_zones, clusters)
                     entry_fog, exit_fogs = _pick_entry_and_exits_for_node(
                         primary_cluster, fan, rng
                     )
