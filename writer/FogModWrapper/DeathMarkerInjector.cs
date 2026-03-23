@@ -164,8 +164,12 @@ public static class DeathMarkerInjector
 
             foreach (var partName in partNames)
             {
-                // Find the gate asset by part name
+                // Find the gate asset: by name first, then by entity ID if numeric
                 var gateAsset = msb.Parts.Assets.Find(a => a.Name == partName);
+                if (gateAsset == null && uint.TryParse(partName, out uint entityIdLookup))
+                {
+                    gateAsset = msb.Parts.Assets.Find(a => a.EntityID == entityIdLookup);
+                }
                 if (gateAsset == null)
                 {
                     Console.WriteLine($"  Warning: Gate asset '{partName}' not found in {mapId} MSB, skipping");
