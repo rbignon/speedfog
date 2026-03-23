@@ -8,33 +8,27 @@ namespace FogModWrapper;
 /// <summary>
 /// Places bloodstain visual markers near each fog gate in the DAG.
 ///
-/// Each fog gate gets 3 bloodstain assets (AEG099_090 invisible anchor) spread
-/// around it in 120-degree sectors, with a red glow SFX (CreateAssetfollowingSFX
-/// with DummyPolyID 100, SfxID 42) activated in EMEVD event 0.
-///
-/// Two phases:
-/// 1. MSB: clone AEG099_090 assets at random offsets around each gate
-/// 2. EMEVD: enable each asset and attach the bloodstain SFX in event 0
+/// For each fog gate, 3 AEG099_090 anchor assets are placed in a 120-degree arc
+/// in front of the gate, with a red glow SFX (DummyPoly 100, SfxID 42) activated
+/// in EMEVD event 0. See docs/death-markers.md for the full design.
 /// </summary>
 public static class DeathMarkerInjector
 {
     private const string BLOODSTAIN_MODEL = "AEG099_090";
     private const int SFX_DUMMY_POLY = 100;
     private const int SFX_ID = 42;
-    private const uint ENTITY_ID_BASE = 755895000;
+    private const uint FOGMOD_ENTITY_MIN = 755890000;
+    private const uint FOGMOD_ENTITY_MAX = 755900000;
 
-    // Bloodstain placement parameters
     private const int BLOODSTAINS_PER_GATE = 3;
     private const float MIN_RADIUS = 1.5f;
     private const float MAX_RADIUS = 3.0f;
-    private const float SECTOR_DEGREES = 120f;
+    private const float Y_OFFSET = 0.10f;
 
-    // MSB directory name variants (vanilla=PascalCase, FogMod under Wine=lowercase)
     private static readonly string[] MsbDirVariants = { "mapstudio", "MapStudio" };
 
     /// <summary>
     /// Parse a gate FullName like "m10_01_00_00_AEG099_001_9000" into (mapId, partName).
-    /// The map ID is always the first 4 underscore-separated segments.
     /// </summary>
     internal static (string MapId, string PartName) ParseGateFullName(string fullName)
     {
@@ -48,28 +42,34 @@ public static class DeathMarkerInjector
     }
 
     /// <summary>
-    /// Generate 3 Vector3 offsets around a gate, one per 120-degree sector.
-    /// PRNG is seeded on gateEntityId.GetHashCode() for deterministic placement.
-    /// Each bloodstain gets a sector (0-120, 120-240, 240-360) with a random angle
-    /// within it and a random radius between 1.5m and 3.0m.
-    /// Returns offsets as (sin*radius, 0, cos*radius).
+    /// Generate 3 offsets in front of a gate (approach side), spread across
+    /// a 120-degree arc opposite the gate's facing direction.
+    /// PRNG seeded on gateEntityId for deterministic placement.
     /// </summary>
-    internal static Vector3[] GenerateOffsets(uint gateEntityId)
+    internal static Vector3[] GenerateOffsets(uint gateEntityId, float gateRotY)
     {
         var rng = new Random(gateEntityId.GetHashCode());
         var offsets = new Vector3[BLOODSTAINS_PER_GATE];
+        float gateRad = gateRotY * MathF.PI / 180f;
+
+        const float arcSpread = 120f;
+        const float sectorSize = arcSpread / BLOODSTAINS_PER_GATE;
+        float arcStart = 180f - arcSpread / 2f;
 
         for (int i = 0; i < BLOODSTAINS_PER_GATE; i++)
         {
-            float sectorStart = i * SECTOR_DEGREES;
-            float angleDeg = sectorStart + (float)(rng.NextDouble() * SECTOR_DEGREES);
+            float sectorStart = arcStart + i * sectorSize;
+            float angleDeg = sectorStart + (float)(rng.NextDouble() * sectorSize);
             float angleRad = angleDeg * MathF.PI / 180f;
             float radius = MIN_RADIUS + (float)(rng.NextDouble() * (MAX_RADIUS - MIN_RADIUS));
 
-            offsets[i] = new Vector3(
-                MathF.Sin(angleRad) * radius,
-                0.15f,  // Raise slightly above ground to avoid clipping into terrain
-                MathF.Cos(angleRad) * radius);
+            float localX = MathF.Sin(angleRad) * radius;
+            float localZ = MathF.Cos(angleRad) * radius;
+
+            float worldX = localX * MathF.Cos(gateRad) + localZ * MathF.Sin(gateRad);
+            float worldZ = -localX * MathF.Sin(gateRad) + localZ * MathF.Cos(gateRad);
+
+            offsets[i] = new Vector3(worldX, Y_OFFSET, worldZ);
         }
 
         return offsets;
@@ -77,31 +77,32 @@ public static class DeathMarkerInjector
 
     /// <summary>
     /// Inject bloodstain visual markers at all fog gates in the DAG.
-    /// Phase 1: place AEG099_090 assets in MSBs near each gate.
-    /// Phase 2: activate assets and attach SFX in EMEVD event 0.
     /// </summary>
     public static void Inject(string modDir, string gameDir, List<Connection> connections, Events events)
     {
         Console.WriteLine("Injecting death markers at fog gates...");
 
-        // Collect all unique gate FullNames from connections, grouped by map
         var gatesByMap = CollectGatesByMap(connections);
+        int totalAssets = 0;
+        int totalMaps = 0;
 
-        // Phase 1: MSB - place bloodstain assets
-        var (bloodstainsByMap, totalAssets, totalMaps) = InjectMsb(modDir, gameDir, gatesByMap);
+        // Allocate entity IDs above FogMod's highest to avoid collisions.
+        uint nextEntityId = FindMaxFogModEntityId(modDir) + 1;
 
-        Console.WriteLine($"  MSB: placed {totalAssets} bloodstain assets across {totalMaps} maps");
+        foreach (var (mapId, partNames) in gatesByMap)
+        {
+            var (count, nextId) = InjectMap(modDir, gameDir, events, mapId, partNames, nextEntityId);
+            if (count > 0)
+            {
+                totalAssets += count;
+                totalMaps++;
+            }
+            nextEntityId = nextId;
+        }
 
-        // Phase 2: EMEVD - activate bloodstains
-        var (emevdAssets, emevdMaps) = InjectEmevd(modDir, gameDir, events, bloodstainsByMap);
-
-        Console.WriteLine($"  EMEVD: activated {emevdAssets} bloodstains across {emevdMaps} maps");
+        Console.WriteLine($"  Placed {totalAssets} bloodstain markers across {totalMaps} maps");
     }
 
-    /// <summary>
-    /// Collect all unique gate FullNames from connections (both exit and entrance),
-    /// grouped by map ID.
-    /// </summary>
     private static Dictionary<string, HashSet<string>> CollectGatesByMap(List<Connection> connections)
     {
         var gatesByMap = new Dictionary<string, HashSet<string>>();
@@ -125,172 +126,203 @@ public static class DeathMarkerInjector
     }
 
     /// <summary>
-    /// Phase 1: For each map, read the MSB, find gate assets, place bloodstains.
-    /// Returns mapping of map ID to list of bloodstain entity IDs for EMEVD injection.
+    /// Inject bloodstain markers for a single map: MSB assets + EMEVD activation.
     /// </summary>
-    private static (Dictionary<string, List<uint>> BloodstainsByMap, int TotalAssets, int TotalMaps) InjectMsb(
-        string modDir, string gameDir, Dictionary<string, HashSet<string>> gatesByMap)
+    private static (int Count, uint NextEntityId) InjectMap(
+        string modDir, string gameDir, Events events,
+        string mapId, HashSet<string> partNames, uint nextEntityId)
     {
-        var bloodstainsByMap = new Dictionary<string, List<uint>>();
-        uint nextEntityId = ENTITY_ID_BASE;
-        int totalAssets = 0;
-        int totalMaps = 0;
-
-        foreach (var (mapId, partNames) in gatesByMap)
+        var msbFileName = $"{mapId}.msb.dcx";
+        var msbPath = FindMsbPath(modDir, msbFileName) ?? FindMsbPath(gameDir, msbFileName);
+        if (msbPath == null)
         {
-            var msbFileName = $"{mapId}.msb.dcx";
+            Console.WriteLine($"  Warning: {msbFileName} not found, skipping death markers for {mapId}");
+            return (0, nextEntityId);
+        }
 
-            // Try modDir first, then gameDir
-            var msbPath = FindMsbPath(modDir, msbFileName) ?? FindMsbPath(gameDir, msbFileName);
-            if (msbPath == null)
+        var msb = MSBE.Read(msbPath);
+
+        // Skip maps without MapPieces: we cannot determine correct DrawGroups,
+        // and bloodstains will be invisible (known limitation: Roundtable Hold).
+        if (msb.Parts.MapPieces.Count == 0)
+            return (0, nextEntityId);
+
+        var entityIds = new List<uint>();
+        EnsureAssetModel(msb, BLOODSTAIN_MODEL);
+
+        foreach (var partName in partNames)
+        {
+            var gateAsset = msb.Parts.Assets.Find(a => a.Name == partName);
+            if (gateAsset == null && uint.TryParse(partName, out uint entityIdLookup))
+                gateAsset = msb.Parts.Assets.Find(a => a.EntityID == entityIdLookup);
+            if (gateAsset == null)
             {
-                Console.WriteLine($"  Warning: {msbFileName} not found, skipping death markers for {mapId}");
+                Console.WriteLine($"  Warning: Gate asset '{partName}' not found in {mapId} MSB, skipping");
                 continue;
             }
 
-            var msb = MSBE.Read(msbPath);
-            var entityIds = new List<uint>();
-
-            // Find a base asset to clone from (any existing asset in the MSB)
-            var baseAsset = msb.Parts.Assets.FirstOrDefault();
+            var baseAsset = FindNearestVanillaAsset(msb, gateAsset.Position);
             if (baseAsset == null)
             {
-                Console.WriteLine($"  Warning: No asset parts in {mapId} MSB to clone from, skipping");
+                Console.WriteLine($"  Warning: No vanilla asset to clone from in {mapId} MSB, skipping");
                 continue;
             }
 
-            // Ensure AEG099_090 model definition exists
-            EnsureAssetModel(msb, BLOODSTAIN_MODEL);
+            var drawGroups = GetDrawGroupsAtPosition(msb, gateAsset.Position);
+            var offsets = GenerateOffsets(gateAsset.EntityID, gateAsset.Rotation.Y);
 
-            foreach (var partName in partNames)
+            // DeepCopy may share internal arrays with the original asset.
+            // Save and restore to prevent corruption of the source asset's
+            // DrawGroups, EntityGroupIDs, and UnkPartNames.
+            var savedDrawGroups = baseAsset.Unk1.DrawGroups.ToArray();
+            var savedDisplayGroups = baseAsset.Unk1.DisplayGroups.ToArray();
+            var savedCollisionMask = baseAsset.Unk1.CollisionMask.ToArray();
+            var savedEntityGroupIDs = baseAsset.EntityGroupIDs.ToArray();
+            var savedUnkPartNames = baseAsset.UnkPartNames.ToArray();
+            var savedUnkT54 = baseAsset.UnkT54PartName;
+
+            for (int i = 0; i < offsets.Length; i++)
             {
-                // Find the gate asset: by name first, then by entity ID if numeric
-                var gateAsset = msb.Parts.Assets.Find(a => a.Name == partName);
-                if (gateAsset == null && uint.TryParse(partName, out uint entityIdLookup))
-                {
-                    gateAsset = msb.Parts.Assets.Find(a => a.EntityID == entityIdLookup);
-                }
-                if (gateAsset == null)
-                {
-                    Console.WriteLine($"  Warning: Gate asset '{partName}' not found in {mapId} MSB, skipping");
-                    continue;
-                }
+                var bloodstain = (MSBE.Part.Asset)baseAsset.DeepCopy();
+                bloodstain.ModelName = BLOODSTAIN_MODEL;
+                bloodstain.Name = GeneratePartName(
+                    msb.Parts.Assets.Select(a => a.Name), BLOODSTAIN_MODEL);
+                SetNameIdent(bloodstain);
+                bloodstain.Position = gateAsset.Position + offsets[i];
+                bloodstain.Rotation = new Vector3(0f, 0f, 0f);
+                bloodstain.EntityID = nextEntityId;
+                bloodstain.AssetSfxParamRelativeID = -1;
 
-                var offsets = GenerateOffsets(gateAsset.EntityID);
+                for (int j = 0; j < bloodstain.UnkPartNames.Length; j++)
+                    bloodstain.UnkPartNames[j] = null;
+                bloodstain.UnkT54PartName = null;
+                Array.Clear(bloodstain.EntityGroupIDs);
 
-                for (int i = 0; i < offsets.Length; i++)
-                {
-                    // Clone from the gate asset (not baseAsset) to inherit correct
-                    // DrawGroups/DispGroups, ensuring visibility in the same area
-                    var bloodstain = (MSBE.Part.Asset)gateAsset.DeepCopy();
-                    bloodstain.ModelName = BLOODSTAIN_MODEL;
-                    bloodstain.Name = GeneratePartName(
-                        msb.Parts.Assets.Select(a => a.Name), BLOODSTAIN_MODEL);
-                    SetNameIdent(bloodstain);
-                    bloodstain.Position = gateAsset.Position + offsets[i];
-                    bloodstain.Rotation = new Vector3(0f, 0f, 0f);
-                    bloodstain.EntityID = nextEntityId;
-                    bloodstain.AssetSfxParamRelativeID = -1;
+                if (drawGroups != null)
+                    ApplyDrawGroups(bloodstain, drawGroups);
 
-                    // Clear inherited references (FogRando's setAssetName pattern)
-                    for (int j = 0; j < bloodstain.UnkPartNames.Length; j++)
-                        bloodstain.UnkPartNames[j] = null;
-                    bloodstain.UnkT54PartName = null;
-                    Array.Clear(bloodstain.EntityGroupIDs);
-
-                    msb.Parts.Assets.Add(bloodstain);
-                    entityIds.Add(nextEntityId);
-                    nextEntityId++;
-                }
+                msb.Parts.Assets.Add(bloodstain);
+                entityIds.Add(nextEntityId);
+                nextEntityId++;
             }
 
-            if (entityIds.Count > 0)
-            {
-                // Write MSB to modDir
-                var writePath = FindMsbPath(modDir, msbFileName) ?? FindOrCreateMsbDir(modDir, msbFileName);
-                Directory.CreateDirectory(Path.GetDirectoryName(writePath)!);
-                msb.Write(writePath);
-
-                bloodstainsByMap[mapId] = entityIds;
-                totalAssets += entityIds.Count;
-                totalMaps++;
-            }
+            // Restore source asset arrays corrupted by DeepCopy shallow references
+            Array.Copy(savedDrawGroups, baseAsset.Unk1.DrawGroups, savedDrawGroups.Length);
+            Array.Copy(savedDisplayGroups, baseAsset.Unk1.DisplayGroups, savedDisplayGroups.Length);
+            Array.Copy(savedCollisionMask, baseAsset.Unk1.CollisionMask, savedCollisionMask.Length);
+            Array.Copy(savedEntityGroupIDs, baseAsset.EntityGroupIDs, savedEntityGroupIDs.Length);
+            Array.Copy(savedUnkPartNames, baseAsset.UnkPartNames, savedUnkPartNames.Length);
+            baseAsset.UnkT54PartName = savedUnkT54;
         }
 
-        return (bloodstainsByMap, totalAssets, totalMaps);
-    }
+        if (entityIds.Count == 0)
+            return (0, nextEntityId);
 
-    /// <summary>
-    /// Phase 2: For each map with bloodstains, add ChangeAssetEnableState + CreateAssetfollowingSFX
-    /// to EMEVD event 0.
-    /// </summary>
-    private static (int TotalAssets, int TotalMaps) InjectEmevd(
-        string modDir, string gameDir, Events events,
-        Dictionary<string, List<uint>> bloodstainsByMap)
-    {
-        int totalAssets = 0;
-        int totalMaps = 0;
+        var writePath = FindMsbPath(modDir, msbFileName) ?? FindOrCreateMsbDir(modDir, msbFileName);
+        Directory.CreateDirectory(Path.GetDirectoryName(writePath)!);
+        msb.Write(writePath);
 
-        foreach (var (mapId, entityIds) in bloodstainsByMap)
+        // EMEVD: activate bloodstains in event 0
+        var emevdFileName = $"{mapId}.emevd.dcx";
+        var emevdPath = Path.Combine(modDir, "event", emevdFileName);
+        if (!File.Exists(emevdPath))
         {
-            var emevdFileName = $"{mapId}.emevd.dcx";
-            var emevdPath = Path.Combine(modDir, "event", emevdFileName);
-
-            // If not in modDir, copy from gameDir
-            if (!File.Exists(emevdPath))
+            var gameEmevdPath = Path.Combine(gameDir, "event", emevdFileName);
+            if (!File.Exists(gameEmevdPath))
             {
-                var gameEmevdPath = Path.Combine(gameDir, "event", emevdFileName);
-                if (!File.Exists(gameEmevdPath))
-                {
-                    Console.WriteLine($"  Warning: {emevdFileName} not found, skipping EMEVD injection for {mapId}");
-                    continue;
-                }
-                Directory.CreateDirectory(Path.GetDirectoryName(emevdPath)!);
-                File.Copy(gameEmevdPath, emevdPath);
+                Console.WriteLine($"  Warning: {emevdFileName} not found, skipping EMEVD injection for {mapId}");
+                return (entityIds.Count, nextEntityId);
             }
-
-            var emevd = EMEVD.Read(emevdPath);
-            var initEvent = emevd.Events.Find(e => e.ID == 0);
-            if (initEvent == null)
-            {
-                Console.WriteLine($"  Warning: Event 0 not found in {emevdFileName}, skipping");
-                continue;
-            }
-
-            foreach (var entityId in entityIds)
-            {
-                initEvent.Instructions.Add(events.ParseAdd(
-                    $"ChangeAssetEnableState({entityId}, Enabled)"));
-                initEvent.Instructions.Add(events.ParseAdd(
-                    $"CreateAssetfollowingSFX({entityId}, {SFX_DUMMY_POLY}, {SFX_ID})"));
-            }
-
-            emevd.Write(emevdPath);
-            totalAssets += entityIds.Count;
-            totalMaps++;
+            Directory.CreateDirectory(Path.GetDirectoryName(emevdPath)!);
+            File.Copy(gameEmevdPath, emevdPath);
         }
 
-        return (totalAssets, totalMaps);
+        var emevd = EMEVD.Read(emevdPath);
+        var initEvent = emevd.Events.Find(e => e.ID == 0);
+        if (initEvent == null)
+        {
+            Console.WriteLine($"  Warning: Event 0 not found in {emevdFileName}, skipping SFX activation");
+            return (entityIds.Count, nextEntityId);
+        }
+
+        foreach (var entityId in entityIds)
+        {
+            initEvent.Instructions.Add(events.ParseAdd(
+                $"ChangeAssetEnableState({entityId}, Enabled)"));
+            initEvent.Instructions.Add(events.ParseAdd(
+                $"CreateAssetfollowingSFX({entityId}, {SFX_DUMMY_POLY}, {SFX_ID})"));
+        }
+
+        emevd.Write(emevdPath);
+        return (entityIds.Count, nextEntityId);
     }
 
     // --- Helper methods ---
 
+    private static MSBE.Part.Asset? FindNearestVanillaAsset(MSBE msb, Vector3 targetPos)
+    {
+        MSBE.Part.Asset? best = null;
+        float bestDist = float.MaxValue;
+
+        foreach (var asset in msb.Parts.Assets)
+        {
+            if (asset.EntityID >= FOGMOD_ENTITY_MIN && asset.EntityID < FOGMOD_ENTITY_MAX)
+                continue;
+
+            var diff = asset.Position - targetPos;
+            float dist = diff.X * diff.X + diff.Y * diff.Y + diff.Z * diff.Z;
+            if (dist < bestDist)
+            {
+                bestDist = dist;
+                best = asset;
+            }
+        }
+
+        return best;
+    }
+
     /// <summary>
-    /// Set Unk08 from the numeric suffix of a part's Name.
-    /// Replicates FogRando's setNameIdent (GameDataWriterE.cs:5263-5268).
+    /// Get DrawGroups for a position from the nearest MapPiece with non-zero DrawGroups.
+    /// MapPieces are static level geometry whose DrawGroups reliably represent the
+    /// rendering zone at their position.
     /// </summary>
+    private static uint[]? GetDrawGroupsAtPosition(MSBE msb, Vector3 targetPos)
+    {
+        MSBE.Part.MapPiece? best = null;
+        float bestDist = float.MaxValue;
+
+        foreach (var piece in msb.Parts.MapPieces)
+        {
+            if (piece.Unk1.DrawGroups.All(g => g == 0))
+                continue;
+
+            var diff = piece.Position - targetPos;
+            float dist = diff.X * diff.X + diff.Y * diff.Y + diff.Z * diff.Z;
+            if (dist < bestDist)
+            {
+                bestDist = dist;
+                best = piece;
+            }
+        }
+
+        return best?.Unk1.DrawGroups.ToArray();
+    }
+
+    private static void ApplyDrawGroups(MSBE.Part.Asset asset, uint[] drawGroups)
+    {
+        for (int i = 0; i < asset.Unk1.DrawGroups.Length && i < drawGroups.Length; i++)
+            asset.Unk1.DrawGroups[i] = drawGroups[i];
+        for (int i = 0; i < asset.Unk1.DisplayGroups.Length && i < drawGroups.Length; i++)
+            asset.Unk1.DisplayGroups[i] = drawGroups[i];
+    }
+
     private static void SetNameIdent(MSBE.Part part)
     {
         var segments = part.Name.Split('_');
         if (segments.Length > 0 && int.TryParse(segments[^1], out var ident))
-        {
             part.Unk08 = ident;
-        }
     }
 
-    /// <summary>
-    /// Ensure an asset model definition exists in the MSB models list.
-    /// </summary>
     private static void EnsureAssetModel(MSBE msb, string modelName)
     {
         if (msb.Models.Assets.Any(m => m.Name == modelName))
@@ -298,10 +330,6 @@ public static class DeathMarkerInjector
         msb.Models.Assets.Add(new MSBE.Model.Asset { Name = modelName });
     }
 
-    /// <summary>
-    /// Generate a unique MSB part name with incrementing suffix.
-    /// Uses the 9900+ range to avoid conflicts with vanilla and FogMod parts.
-    /// </summary>
     private static string GeneratePartName(IEnumerable<string> existingNames, string modelName)
     {
         var names = new HashSet<string>(existingNames);
@@ -311,7 +339,6 @@ public static class DeathMarkerInjector
             if (!names.Contains(name))
                 return name;
         }
-        // Overflow: continue beyond 9999
         for (int i = 10000; ; i++)
         {
             var name = $"{modelName}_{i}";
@@ -321,9 +348,48 @@ public static class DeathMarkerInjector
     }
 
     /// <summary>
-    /// Find an MSB file under a base directory, trying both "MapStudio" (vanilla)
-    /// and "mapstudio" (FogMod on Linux via Wine) directory names.
+    /// Scan all MSBs in modDir to find the highest entity ID in the FogMod range.
+    /// FogMod's num4 counter allocates IDs across Assets, Enemies, Players, and Regions.
     /// </summary>
+    private static uint FindMaxFogModEntityId(string modDir)
+    {
+        uint maxId = FOGMOD_ENTITY_MIN;
+
+        foreach (var dirName in MsbDirVariants)
+        {
+            var msbDir = Path.Combine(modDir, "map", dirName);
+            if (!Directory.Exists(msbDir))
+                continue;
+
+            foreach (var msbPath in Directory.GetFiles(msbDir, "*.msb.dcx"))
+            {
+                var msb = MSBE.Read(msbPath);
+
+                void CheckId(uint id)
+                {
+                    if (id >= FOGMOD_ENTITY_MIN
+                        && id < FOGMOD_ENTITY_MAX
+                        && id > maxId)
+                        maxId = id;
+                }
+
+                foreach (var p in msb.Parts.Assets)
+                    CheckId(p.EntityID);
+                foreach (var p in msb.Parts.Enemies)
+                    CheckId(p.EntityID);
+                foreach (var p in msb.Parts.Players)
+                    CheckId(p.EntityID);
+                foreach (var r in msb.Regions.GetEntries())
+                    CheckId(r.EntityID);
+            }
+
+            break;
+        }
+
+        Console.WriteLine($"  FogMod max entity ID: {maxId}, bloodstain IDs start at {maxId + 1}");
+        return maxId;
+    }
+
     private static string? FindMsbPath(string baseDir, string msbFileName)
     {
         foreach (var dirName in MsbDirVariants)
@@ -335,10 +401,6 @@ public static class DeathMarkerInjector
         return null;
     }
 
-    /// <summary>
-    /// Find the existing mapstudio directory in modDir, or create one
-    /// matching the convention FogMod used (defaults to "mapstudio").
-    /// </summary>
     private static string FindOrCreateMsbDir(string modDir, string msbFileName)
     {
         var mapDir = Path.Combine(modDir, "map");
@@ -351,7 +413,6 @@ public static class DeathMarkerInjector
                     return Path.Combine(dir, msbFileName);
             }
         }
-        // Default to lowercase (FogMod convention under Wine)
         return Path.Combine(mapDir, "mapstudio", msbFileName);
     }
 }

@@ -75,6 +75,7 @@ speedfog/
 │   │   ├── ErdtreeWarpPatcher.cs  # Patch Erdtree fogwarp to target m11_05 directly
 │   │   ├── RunCompleteInjector.cs  # Inject "RUN COMPLETE" message on final boss defeat
 │   │   ├── ChapelGraceInjector.cs  # Site of Grace at Chapel of Anticipation
+│   │   ├── DeathMarkerInjector.cs  # Bloodstain visuals at fog gates
 │   │   ├── RebirthInjector.cs  # Rebirth (stat reallocation) at Sites of Grace
 │   │   ├── SealingTreePatcher.cs  # Neutralize Event 915 / clear flag 330
 │   │   ├── SealingTreeWarpPatcher.cs  # Patch Sealing Tree fogwarps (flag 330)
@@ -133,6 +134,7 @@ speedfog/
 | `docs/care-package.md` | Randomized starting build system |
 | `docs/vanilla-warp-removal.md` | FogMod vanilla warp removal workaround |
 | `docs/stake-removal.md` | Vanilla stake removal (RetryPoint softlock prevention) |
+| `docs/death-markers.md` | Bloodstain visuals at fog gates (DrawGroups, DeepCopy bug, entity IDs) |
 | `docs/save-backup.md` | Save backup system (daemon, recovery, config) |
 | `docs/item-giving-limitations.md` | EMEVD item type constraints and workarounds |
 | `docs/clusters.md` | Cluster generation from fog.txt |
@@ -184,6 +186,7 @@ speedfog/
 | `VanillaWarpRemover` | Removes vanilla warp MSB assets that conflict with fog gates |
 | `StartupFlagInjector` | Sets event flags at startup in any EMEVD (open gates, etc.) |
 | `StakeRemover` | Removes vanilla stakes that respawn outside the DAG |
+| `DeathMarkerInjector` | Bloodstain markers at fog gates (MSB assets + EMEVD SFX) |
 
 **ItemRandomizerWrapper** (uses RandomizerCommon.dll directly):
 | Class | Purpose |
