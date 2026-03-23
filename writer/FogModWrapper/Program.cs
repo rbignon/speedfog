@@ -504,6 +504,9 @@ Example:
             ChapelGraceInjector.Inject(modDir, config.GameDir, events);
         }
 
+        // 7h2. Death markers at fog gates
+        DeathMarkerInjector.Inject(modDir, config.GameDir, graphData.Connections, events);
+
         // 7i. Inject rebirth option at Sites of Grace
         if (graphData.StartingLarvalTears > 0)
         {
