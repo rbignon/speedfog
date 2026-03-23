@@ -180,7 +180,9 @@ public static class DeathMarkerInjector
 
                 for (int i = 0; i < offsets.Length; i++)
                 {
-                    var bloodstain = (MSBE.Part.Asset)baseAsset.DeepCopy();
+                    // Clone from the gate asset (not baseAsset) to inherit correct
+                    // DrawGroups/DispGroups, ensuring visibility in the same area
+                    var bloodstain = (MSBE.Part.Asset)gateAsset.DeepCopy();
                     bloodstain.ModelName = BLOODSTAIN_MODEL;
                     bloodstain.Name = GeneratePartName(
                         msb.Parts.Assets.Select(a => a.Name), BLOODSTAIN_MODEL);
