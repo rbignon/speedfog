@@ -68,7 +68,7 @@ public static class DeathMarkerInjector
 
             offsets[i] = new Vector3(
                 MathF.Sin(angleRad) * radius,
-                0f,
+                0.15f,  // Raise slightly above ground to avoid clipping into terrain
                 MathF.Cos(angleRad) * radius);
         }
 
