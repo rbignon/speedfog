@@ -218,7 +218,7 @@ weight = 4
 allow_entry_as_exit = true
 
 [zones.volcano_temple]
-allow_entry_as_exit = true
+allow_entry_as_exit = false
 
 [zones.flamepeak_firegiant]
 weight = 4
