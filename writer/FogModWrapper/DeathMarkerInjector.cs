@@ -29,7 +29,6 @@ public static class DeathMarkerInjector
     private const float Y_OFFSET = 0.10f;
 
     private const int DEATH_MARKER_EVENT_BASE = 755862100;
-    private static int _nextEventOffset = 0;
 
     private static readonly string[] MsbDirVariants = { "mapstudio", "MapStudio" };
 
@@ -112,21 +111,22 @@ public static class DeathMarkerInjector
         uint nextEntityId = FindMaxFogModEntityId(modDir) + 1;
         int totalAssets = 0;
         int totalMaps = 0;
-        _nextEventOffset = 0;
+        int nextEventOffset = 0;
 
         if (conditional)
         {
             var specsByMap = CollectConditionalGatesByMap(connections, eventMap, deathFlags);
             foreach (var (mapId, specs) in specsByMap)
             {
-                var (count, nextId) = InjectMapConditional(
-                    modDir, gameDir, events, mapId, specs, nextEntityId);
+                var (count, nextId, nextEvt) = InjectMapConditional(
+                    modDir, gameDir, events, mapId, specs, nextEntityId, nextEventOffset);
                 if (count > 0)
                 {
                     totalAssets += count;
                     totalMaps++;
                 }
                 nextEntityId = nextId;
+                nextEventOffset = nextEvt;
             }
         }
         else
@@ -211,23 +211,24 @@ public static class DeathMarkerInjector
     /// <summary>
     /// Inject conditional bloodstain markers for a single map.
     /// Each bloodstain is activated only when its death flag is set.
+    /// Entity IDs grouped by death flag produce one EMEVD event per (flag, map) pair.
     /// </summary>
-    private static (int Count, uint NextEntityId) InjectMapConditional(
+    private static (int Count, uint NextEntityId, int NextEventOffset) InjectMapConditional(
         string modDir, string gameDir, Events events,
-        string mapId, List<BloodstainSpec> specs, uint nextEntityId)
+        string mapId, List<BloodstainSpec> specs, uint nextEntityId, int eventOffset)
     {
         var msbFileName = $"{mapId}.msb.dcx";
         var msbPath = FindMsbPath(modDir, msbFileName) ?? FindMsbPath(gameDir, msbFileName);
         if (msbPath == null)
         {
             Console.WriteLine($"  Warning: {msbFileName} not found, skipping death markers for {mapId}");
-            return (0, nextEntityId);
+            return (0, nextEntityId, eventOffset);
         }
 
         var msb = MSBE.Read(msbPath);
 
         if (msb.Parts.MapPieces.Count == 0)
-            return (0, nextEntityId);
+            return (0, nextEntityId, eventOffset);
 
         // Group specs by death flag for EMEVD event creation.
         // Each entry maps deathFlag -> list of entity IDs to activate.
@@ -317,7 +318,7 @@ public static class DeathMarkerInjector
         }
 
         if (placedCount == 0)
-            return (0, nextEntityId);
+            return (0, nextEntityId, eventOffset);
 
         var writePath = FindMsbPath(modDir, msbFileName) ?? FindOrCreateMsbDir(modDir, msbFileName);
         Directory.CreateDirectory(Path.GetDirectoryName(writePath)!);
@@ -332,7 +333,7 @@ public static class DeathMarkerInjector
             if (!File.Exists(gameEmevdPath))
             {
                 Console.WriteLine($"  Warning: {emevdFileName} not found, skipping EMEVD injection for {mapId}");
-                return (placedCount, nextEntityId);
+                return (placedCount, nextEntityId, eventOffset);
             }
             Directory.CreateDirectory(Path.GetDirectoryName(emevdPath)!);
             File.Copy(gameEmevdPath, emevdPath);
@@ -343,13 +344,13 @@ public static class DeathMarkerInjector
         if (initEvent == null)
         {
             Console.WriteLine($"  Warning: Event 0 not found in {emevdFileName}, skipping SFX activation");
-            return (placedCount, nextEntityId);
+            return (placedCount, nextEntityId, eventOffset);
         }
 
         foreach (var (deathFlag, entityIds) in entityIdsByFlag)
         {
-            long eventId = DEATH_MARKER_EVENT_BASE + _nextEventOffset;
-            _nextEventOffset++;
+            long eventId = DEATH_MARKER_EVENT_BASE + eventOffset;
+            eventOffset++;
 
             var evt = new EMEVD.Event(eventId);
 
@@ -375,7 +376,7 @@ public static class DeathMarkerInjector
         }
 
         emevd.Write(emevdPath);
-        return (placedCount, nextEntityId);
+        return (placedCount, nextEntityId, eventOffset);
     }
 
     /// <summary>

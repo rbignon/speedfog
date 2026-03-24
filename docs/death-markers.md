@@ -3,10 +3,47 @@
 Bloodstain visual markers placed near fog gates throughout the DAG.
 Implemented in `writer/FogModWrapper/DeathMarkerInjector.cs`.
 
+## Configuration
+
+```toml
+[run]
+death_markers = true   # default: true
+```
+
+When `death_markers = false`, Python sets `death_flags = {}` in graph.json and
+no bloodstain assets or EMEVD events are created.
+
+## Modes
+
+### Conditional mode (death_flags non-empty)
+
+Used when the speedfog-racing mod is active. Each cluster gets 3 event flags
+(low/med/high) allocated in graph.json. Bloodstains appear only when the racing
+mod sets these flags based on real-time death counts from other players.
+
+| Flag | Threshold | Bloodstains visible per gate |
+|------|-----------|----------------------------|
+| low  | 1+ deaths | 1                          |
+| med  | 3+ deaths | 2 (cumulative)             |
+| high | 5+ deaths | 3 (cumulative)             |
+
+Each death flag controls 1 bloodstain at every gate associated with that cluster:
+- Entrance gates of connections whose destination is the cluster
+- Exit gates of connections whose destination is the cluster (in adjacent zones)
+
+EMEVD events wait for the flag (`IfEventFlag(MAIN, ON, ...)`) then activate assets.
+One event per (flag, map) pair, registered via `InitializeEvent` in event 0.
+Event IDs allocated from base 755862100.
+
+### Unconditional mode (death_flags empty)
+
+Used without the racing mod. All bloodstains are activated immediately in event 0.
+Each fog gate gets 3 bloodstains regardless of death counts.
+
 ## Visual
 
-Each fog gate gets 3 bloodstain markers in a 120-degree arc on the approach side
-(1.5-3m from the gate). The visual is the vanilla bloodstain decal model
+Each fog gate gets up to 3 bloodstain markers in a 120-degree arc on the approach
+side (1.5-3m from the gate). The visual is the vanilla bloodstain decal model
 (`AEG099_090`, an invisible anchor) with `CreateAssetfollowingSFX(entity, 100, 42)`
 for the red glow effect. Positions are deterministic: PRNG seeded on the fog gate's
 entity ID.
@@ -17,8 +54,8 @@ Two-phase injection per map, running after FogMod's `Write()`:
 
 1. **MSB phase**: clone `AEG099_090` assets near each fog gate, with DrawGroups
    sourced from the nearest MapPiece
-2. **EMEVD phase**: in event 0, `ChangeAssetEnableState(Enabled)` +
-   `CreateAssetfollowingSFX(entity, 100, 42)` for each bloodstain
+2. **EMEVD phase**: conditional events (with death_flags) or unconditional
+   activation in event 0 (without death_flags)
 
 ## Key Concepts
 
@@ -92,6 +129,27 @@ to world space by the gate's Y rotation.
 - **Backportal gates** (numeric entity IDs like `30022840`): not found by name or
   entity ID in the MSB. These are FogMod-created return warps from boss rooms that
   may use different naming conventions. Bloodstains are skipped for these gates.
+
+## Data Flow (racing integration)
+
+```
+Python (output.py)           graph.json              C# (DeathMarkerInjector)
+------------------           ----------              ------------------------
+Allocate 3 flags/cluster --> death_flags: {           Read death_flags
+                               "cluster_1": [X,Y,Z]  Map connections -> cluster
+                             }                        Place 1 bloodstain per (gate, tier)
+                                                      Create EMEVD event per (flag, map)
+
+Server (speedfog-racing)     WebSocket                Mod (speedfog-racing)
+------------------------     ---------                ---------------------
+Aggregate deaths/zone   --> DeathCounts { counts }    Lookup death_flags for node_id
+On player death:            broadcast to all mods     Apply thresholds (1/3/5)
+  attribute_deaths()                                  set_flag(low/med/high, on/off)
+                                                          |
+                                                          v
+                                                      EMEVD event fires
+                                                      Bloodstains appear in-game
+```
 
 ## Pipeline Position
 
