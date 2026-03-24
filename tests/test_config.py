@@ -827,3 +827,13 @@ def test_max_branch_spacing_negative():
     """Negative max_branch_spacing raises ValueError."""
     with pytest.raises(ValueError, match="max_branch_spacing"):
         Config.from_dict({"structure": {"max_branch_spacing": -1}})
+
+
+def test_death_markers_default_true():
+    config = Config.from_dict({})
+    assert config.death_markers is True
+
+
+def test_death_markers_explicit_false():
+    config = Config.from_dict({"run": {"death_markers": False}})
+    assert config.death_markers is False

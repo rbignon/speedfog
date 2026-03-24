@@ -21,6 +21,11 @@ seed = 0
 # Default: true
 # sentry_torch_shop = true
 
+# Place bloodstain markers at fog gates for racing death count display.
+# When enabled, graph.json includes death_flags for the racing mod.
+# Default: true
+# death_markers = true
+
 [budget]
 # Maximum allowed weight spread between the heaviest and lightest paths.
 # If the spread exceeds this, the DAG is considered imbalanced.
