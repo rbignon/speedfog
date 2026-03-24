@@ -505,7 +505,9 @@ Example:
         }
 
         // 7h2. Death markers at fog gates
-        DeathMarkerInjector.Inject(modDir, config.GameDir, graphData.Connections, events);
+        DeathMarkerInjector.Inject(
+            modDir, config.GameDir, graphData.Connections, events,
+            graphData.EventMap, graphData.DeathFlags);
 
         // 7i. Inject rebirth option at Sites of Grace
         if (graphData.StartingLarvalTears > 0)
