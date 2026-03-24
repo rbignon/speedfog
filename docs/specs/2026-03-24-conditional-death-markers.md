@@ -180,11 +180,32 @@ Base: 755862100 (adjacent to existing boss death event at 755862000).
 One event per (flag, map) pair. With ~30 clusters * 3 flags * ~2 maps average,
 that is ~180 events max. Range 755862100-755862999.
 
+## Configuration
+
+**File:** `config.toml`
+
+New option under `[options]`:
+
+```toml
+[options]
+death_markers = true   # default: true
+```
+
+When `death_markers = false`, Python sets `death_flags = {}` in graph.json.
+The rest of the pipeline is naturally inert:
+- FogModWrapper iterates over 0 clusters, places 0 bloodstains, creates 0 events
+- Server still broadcasts DeathCounts (harmless)
+- Mod finds nothing in death_flags, sets 0 flags
+
+No conditional branches needed in C#, server, or mod code.
+
 ## Changes summary
 
 | Repo | File | Change |
 |------|------|--------|
-| speedfog | `speedfog/output.py` | Allocate death_flags per cluster, add to graph.json |
+| speedfog | `config.example.toml` | Add `death_markers` option |
+| speedfog | `speedfog/config.py` | Read `death_markers` option (default true) |
+| speedfog | `speedfog/output.py` | Allocate death_flags per cluster if enabled, else `{}` |
 | speedfog | `writer/FogModWrapper.Core/Models/GraphData.cs` | Add DeathFlags property |
 | speedfog | `writer/FogModWrapper/DeathMarkerInjector.cs` | Conditional events instead of unconditional |
 | speedfog-racing | `server/.../schemas.py` | DeathCountsMessage type |
