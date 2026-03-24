@@ -119,6 +119,14 @@ public class GraphData
     /// </summary>
     [JsonPropertyName("remove_entities")]
     public List<RemoveEntity> RemoveEntities { get; set; } = new();
+
+    /// <summary>
+    /// Death marker flags per cluster: cluster_id -> [flag_low, flag_med, flag_high].
+    /// When empty, death markers are placed unconditionally (no racing integration).
+    /// Allocated by Python after connection flags and finish_event.
+    /// </summary>
+    [JsonPropertyName("death_flags")]
+    public Dictionary<string, List<int>> DeathFlags { get; set; } = new();
 }
 
 /// <summary>
