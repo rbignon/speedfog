@@ -91,7 +91,8 @@ speedfog/
 │   ├── setup_dependencies.py    # Extract FogRando and Item Randomizer dependencies
 │   ├── generate_clusters.py # Generate clusters.json from fog.txt
 │   ├── extract_fog_data.py  # Extract fog gate metadata
-│   └── dump_emevd_warps/    # EMEVD analysis tool (dump warps, search flags, trace inits)
+│   ├── dump_emevd_warps/    # EMEVD analysis tool (dump warps, search flags, trace inits)
+│   └── list_sfx/            # SFX/MSB inspection tool (list SFX IDs, dump entities, compare assets)
 ├── reference/               # FogRando decompiled code (READ-ONLY)
 │   ├── fogrando-src/        # C# source files
 │   └── fogrando-data/       # Reference data (foglocations.txt)
@@ -112,6 +113,7 @@ speedfog/
 │   ├── item-giving-limitations.md # EMEVD item type constraints
 │   ├── vanilla-warp-removal.md # FogMod warp removal workaround
 │   ├── stake-removal.md     # Vanilla stake removal (RetryPoint softlock prevention)
+│   ├── death-markers.md     # Bloodstain visuals at fog gates (DrawGroups, DeepCopy bug)
 │   └── save-backup.md      # Save backup system (daemon, recovery, config)
 └── output/                  # Generated mod (gitignored, self-contained)
 ```
@@ -361,6 +363,33 @@ dotnet run -- search output/mods/fogmod/event/ --flag 330
 
 # Trace event initialization (find InitializeEvent calls + parameter data)
 dotnet run -- init output/mods/fogmod/event/ --event 1040290310
+```
+
+### list_sfx Tool
+
+`tools/list_sfx/` is a .NET console app for inspecting SFX bundles and MSB assets. Requires Wine on Linux (uses Oodle decompression).
+
+```bash
+# Build and publish (needed for Wine)
+cd tools/list_sfx && dotnet publish -c Release -r win-x64 --self-contained -o publish/win-x64
+
+# List SFX IDs in a range within commoneffects
+wine publish/win-x64/list_sfx.exe /data/thewall/Game/sfx/ --bundle commoneffects --range 800000-810000
+
+# Search for a specific SFX ID across all bundles
+wine publish/win-x64/list_sfx.exe /data/thewall/Game/sfx/ --search 42
+
+# Find MSB entity by ID across all maps in a directory
+wine publish/win-x64/list_sfx.exe dump-entity <msb-dir> <entity-id>
+
+# List all assets matching a model name in an MSB
+wine publish/win-x64/list_sfx.exe find-model <msb-file> AEG099_090
+
+# Compare two assets by entity ID (shows all property differences)
+wine publish/win-x64/list_sfx.exe compare <msb-file> <eid1> <eid2>
+
+# Check EMEVD event 0 for instructions referencing entity IDs in 755895xxx range
+wine publish/win-x64/list_sfx.exe check-emevd <emevd-file> 0
 ```
 
 ### Investigation Tips
