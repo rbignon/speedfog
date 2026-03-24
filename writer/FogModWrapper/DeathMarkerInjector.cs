@@ -117,9 +117,12 @@ public static class DeathMarkerInjector
         foreach (var gate in allGates)
         {
             var (mapId, partName) = ParseGateFullName(gate);
-            if (!gatesByMap.ContainsKey(mapId))
-                gatesByMap[mapId] = new HashSet<string>();
-            gatesByMap[mapId].Add(partName);
+            if (!gatesByMap.TryGetValue(mapId, out var set))
+            {
+                set = new HashSet<string>();
+                gatesByMap[mapId] = set;
+            }
+            set.Add(partName);
         }
 
         return gatesByMap;
@@ -171,9 +174,11 @@ public static class DeathMarkerInjector
             var drawGroups = GetDrawGroupsAtPosition(msb, gateAsset.Position);
             var offsets = GenerateOffsets(gateAsset.EntityID, gateAsset.Rotation.Y);
 
-            // DeepCopy may share internal arrays with the original asset.
-            // Save and restore to prevent corruption of the source asset's
-            // DrawGroups, EntityGroupIDs, and UnkPartNames.
+            // WORKAROUND: SoulsFormats' MSBE.Part.DeepCopy() produces shallow copies
+            // of internal arrays (DrawGroups, DisplayGroups, CollisionMask, EntityGroupIDs,
+            // UnkPartNames). Modifying the clone silently corrupts the original.
+            // Save and restore all known shared arrays around the clone batch.
+            // If SoulsFormats adds new array fields, they may need to be added here too.
             var savedDrawGroups = baseAsset.Unk1.DrawGroups.ToArray();
             var savedDisplayGroups = baseAsset.Unk1.DisplayGroups.ToArray();
             var savedCollisionMask = baseAsset.Unk1.CollisionMask.ToArray();
@@ -355,35 +360,34 @@ public static class DeathMarkerInjector
     {
         uint maxId = FOGMOD_ENTITY_MIN;
 
+        var msbFiles = new List<string>();
         foreach (var dirName in MsbDirVariants)
         {
             var msbDir = Path.Combine(modDir, "map", dirName);
-            if (!Directory.Exists(msbDir))
-                continue;
+            if (Directory.Exists(msbDir))
+                msbFiles.AddRange(Directory.GetFiles(msbDir, "*.msb.dcx"));
+        }
 
-            foreach (var msbPath in Directory.GetFiles(msbDir, "*.msb.dcx"))
+        foreach (var msbPath in msbFiles)
+        {
+            var msb = MSBE.Read(msbPath);
+
+            void CheckId(uint id)
             {
-                var msb = MSBE.Read(msbPath);
-
-                void CheckId(uint id)
-                {
-                    if (id >= FOGMOD_ENTITY_MIN
-                        && id < FOGMOD_ENTITY_MAX
-                        && id > maxId)
-                        maxId = id;
-                }
-
-                foreach (var p in msb.Parts.Assets)
-                    CheckId(p.EntityID);
-                foreach (var p in msb.Parts.Enemies)
-                    CheckId(p.EntityID);
-                foreach (var p in msb.Parts.Players)
-                    CheckId(p.EntityID);
-                foreach (var r in msb.Regions.GetEntries())
-                    CheckId(r.EntityID);
+                if (id >= FOGMOD_ENTITY_MIN
+                    && id < FOGMOD_ENTITY_MAX
+                    && id > maxId)
+                    maxId = id;
             }
 
-            break;
+            foreach (var p in msb.Parts.Assets)
+                CheckId(p.EntityID);
+            foreach (var p in msb.Parts.Enemies)
+                CheckId(p.EntityID);
+            foreach (var p in msb.Parts.Players)
+                CheckId(p.EntityID);
+            foreach (var r in msb.Regions.GetEntries())
+                CheckId(r.EntityID);
         }
 
         Console.WriteLine($"  FogMod max entity ID: {maxId}, bloodstain IDs start at {maxId + 1}");

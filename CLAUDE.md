@@ -92,7 +92,7 @@ speedfog/
 │   ├── generate_clusters.py # Generate clusters.json from fog.txt
 │   ├── extract_fog_data.py  # Extract fog gate metadata
 │   ├── dump_emevd_warps/    # EMEVD analysis tool (dump warps, search flags, trace inits)
-│   └── list_sfx/            # SFX/MSB inspection tool (list SFX IDs, dump entities, compare assets)
+│   └── game_inspect/        # Game data inspection tool (SFX, MSB entities, EMEVD, asset comparison)
 ├── reference/               # FogRando decompiled code (READ-ONLY)
 │   ├── fogrando-src/        # C# source files
 │   └── fogrando-data/       # Reference data (foglocations.txt)
@@ -365,31 +365,31 @@ dotnet run -- search output/mods/fogmod/event/ --flag 330
 dotnet run -- init output/mods/fogmod/event/ --event 1040290310
 ```
 
-### list_sfx Tool
+### game_inspect Tool
 
-`tools/list_sfx/` is a .NET console app for inspecting SFX bundles and MSB assets. Requires Wine on Linux (uses Oodle decompression).
+`tools/game_inspect/` is a .NET console app for inspecting game data (SFX bundles, MSB assets, EMEVD events). Requires Wine on Linux (uses Oodle decompression).
 
 ```bash
 # Build and publish (needed for Wine)
-cd tools/list_sfx && dotnet publish -c Release -r win-x64 --self-contained -o publish/win-x64
+cd tools/game_inspect && dotnet publish -c Release -r win-x64 --self-contained -o publish/win-x64
 
 # List SFX IDs in a range within commoneffects
-wine publish/win-x64/list_sfx.exe /data/thewall/Game/sfx/ --bundle commoneffects --range 800000-810000
+wine publish/win-x64/game_inspect.exe /data/thewall/Game/sfx/ --bundle commoneffects --range 800000-810000
 
 # Search for a specific SFX ID across all bundles
-wine publish/win-x64/list_sfx.exe /data/thewall/Game/sfx/ --search 42
+wine publish/win-x64/game_inspect.exe /data/thewall/Game/sfx/ --search 42
 
 # Find MSB entity by ID across all maps in a directory
-wine publish/win-x64/list_sfx.exe dump-entity <msb-dir> <entity-id>
+wine publish/win-x64/game_inspect.exe dump-entity <msb-dir> <entity-id>
 
 # List all assets matching a model name in an MSB
-wine publish/win-x64/list_sfx.exe find-model <msb-file> AEG099_090
+wine publish/win-x64/game_inspect.exe find-model <msb-file> AEG099_090
 
 # Compare two assets by entity ID (shows all property differences)
-wine publish/win-x64/list_sfx.exe compare <msb-file> <eid1> <eid2>
+wine publish/win-x64/game_inspect.exe compare <msb-file> <eid1> <eid2>
 
 # Check EMEVD event 0 for instructions referencing entity IDs in 755895xxx range
-wine publish/win-x64/list_sfx.exe check-emevd <emevd-file> 0
+wine publish/win-x64/game_inspect.exe check-emevd <emevd-file> 0
 ```
 
 ### Investigation Tips

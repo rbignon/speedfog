@@ -3,25 +3,25 @@ using SoulsFormats;
 // Dispatch subcommand
 if (args.Length >= 1 && args[0] == "dump-entity")
 {
-    if (args.Length < 3) { Console.Error.WriteLine("Usage: list_sfx dump-entity <msb-dir> <entity-id>"); return 1; }
+    if (args.Length < 3) { Console.Error.WriteLine("Usage: game_inspect dump-entity <msb-dir> <entity-id>"); return 1; }
     DumpEntity(args[1], int.Parse(args[2]));
     return 0;
 }
 if (args.Length >= 1 && args[0] == "find-model")
 {
-    if (args.Length < 3) { Console.Error.WriteLine("Usage: list_sfx find-model <msb> <model>"); return 1; }
+    if (args.Length < 3) { Console.Error.WriteLine("Usage: game_inspect find-model <msb> <model>"); return 1; }
     FindModel.Run(args[1], args[2]);
     return 0;
 }
 if (args.Length >= 1 && args[0] == "compare")
 {
-    if (args.Length < 4) { Console.Error.WriteLine("Usage: list_sfx compare <msb> <eid1> <eid2>"); return 1; }
+    if (args.Length < 4) { Console.Error.WriteLine("Usage: game_inspect compare <msb> <eid1> <eid2>"); return 1; }
     CompareAssets.Run(args[1], uint.Parse(args[2]), uint.Parse(args[3]));
     return 0;
 }
 if (args.Length >= 1 && args[0] == "check-emevd")
 {
-    if (args.Length < 2) { Console.Error.WriteLine("Usage: list_sfx check-emevd <emevd> [entity_id]"); return 1; }
+    if (args.Length < 2) { Console.Error.WriteLine("Usage: game_inspect check-emevd <emevd> [entity_id]"); return 1; }
     uint target = args.Length > 2 ? uint.Parse(args[2]) : 0;
     CheckEmevd.Run(args[1], target);
     return 0;
@@ -84,7 +84,7 @@ static int ListSfx(string[] args)
 {
     if (args.Length < 1)
     {
-        Console.Error.WriteLine("Usage: list_sfx <path> [--search <id>] [--range <min>-<max>] [--bundle <pattern>]");
+        Console.Error.WriteLine("Usage: game_inspect list-sfx <path> [--search <id>] [--range <min>-<max>] [--bundle <pattern>]");
         return 1;
     }
 
