@@ -58,6 +58,176 @@ if (mode == "objacts")
     return DoObjActs(msbFiles);
 }
 
+// asset mode: dump MSB asset properties by entity ID
+// Usage: asset <msb-file-or-dir> --entity 755899900 755895000 [--map-filter m10_01]
+if (mode == "asset")
+{
+    var entityIds = new HashSet<uint>();
+    for (int i = 2; i < args.Length; i++)
+    {
+        if (args[i] == "--entity" || args[i] == "-e")
+        {
+            while (i + 1 < args.Length && !args[i + 1].StartsWith("-"))
+                entityIds.Add(uint.Parse(args[++i]));
+        }
+    }
+    // Also support --name to look up by name
+    var nameFilter = new HashSet<string>();
+    for (int j = 2; j < args.Length; j++)
+    {
+        if (args[j] == "--name" || args[j] == "-n")
+        {
+            while (j + 1 < args.Length && !args[j + 1].StartsWith("-"))
+                nameFilter.Add(args[++j]);
+        }
+    }
+    bool dumpFirst = args.Contains("--first");
+
+    if (entityIds.Count == 0 && nameFilter.Count == 0 && !dumpFirst)
+    {
+        Console.Error.WriteLine("Usage: asset <msb-dir> --entity ID1 ID2 ... [--name NAME] [--first] [--map-filter mAA_BB]");
+        return 1;
+    }
+    var msbFiles = GetMsbFiles(target, mapFilter);
+    // Type info mode: dump all nested struct content
+    if (args.Contains("--typeinfo"))
+    {
+        var firstMsb = MSBE.Read(msbFiles[0]);
+        var firstAsset = firstMsb.Parts.Assets.FirstOrDefault();
+        if (firstAsset != null)
+        {
+            Console.WriteLine("=== Type hierarchy ===");
+            for (var t = firstAsset.GetType(); t != null; t = t.BaseType)
+            {
+                Console.WriteLine($"  {t.FullName}");
+                foreach (var m in t.GetMembers(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly))
+                {
+                    if (m.MemberType == System.Reflection.MemberTypes.Property || m.MemberType == System.Reflection.MemberTypes.Field)
+                    {
+                        string typeName = m is System.Reflection.PropertyInfo pi ? pi.PropertyType.Name : ((System.Reflection.FieldInfo)m).FieldType.Name;
+                        Console.WriteLine($"    [{m.MemberType}] {m.Name}: {typeName}");
+                        // If it's a struct/class, dump its members too
+                        if (m is System.Reflection.PropertyInfo p2 && p2.PropertyType.IsClass && p2.PropertyType != typeof(string) && !p2.PropertyType.IsArray)
+                        {
+                            var nested = p2.GetValue(firstAsset);
+                            if (nested != null)
+                            {
+                                foreach (var nm in nested.GetType().GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance))
+                                {
+                                    try
+                                    {
+                                        var val = nm.GetValue(nested);
+                                        if (val is uint[] arr)
+                                            Console.WriteLine($"      .{nm.Name}: [{string.Join(", ", arr.Select(v => $"0x{v:X8}"))}]");
+                                        else if (val is int[] iarr)
+                                            Console.WriteLine($"      .{nm.Name}: [{string.Join(", ", iarr)}]");
+                                        else
+                                            Console.WriteLine($"      .{nm.Name}: {val}");
+                                    }
+                                    catch { }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return 0;
+    }
+
+    foreach (var f in msbFiles)
+    {
+        var msb = MSBE.Read(f);
+        var mapName = Path.GetFileNameWithoutExtension(f).Replace(".msb", "");
+        foreach (var asset in msb.Parts.Assets)
+        {
+            bool match = entityIds.Contains(asset.EntityID)
+                || nameFilter.Contains(asset.Name)
+                || (dumpFirst && msb.Parts.Assets.IndexOf(asset) == 0);
+            if (!match) continue;
+            Console.WriteLine($"=== {mapName} / {asset.Name} (EntityID: {asset.EntityID}) ===");
+            Console.WriteLine($"  ModelName: {asset.ModelName}");
+            Console.WriteLine($"  Position: ({asset.Position.X:F3}, {asset.Position.Y:F3}, {asset.Position.Z:F3})");
+            Console.WriteLine($"  Rotation: ({asset.Rotation.X:F3}, {asset.Rotation.Y:F3}, {asset.Rotation.Z:F3})");
+            Console.WriteLine($"  Unk08: {asset.Unk08}");
+            Console.WriteLine($"  AssetSfxParamRelativeID: {asset.AssetSfxParamRelativeID}");
+            Console.WriteLine($"  EntityGroupIDs: [{string.Join(", ", asset.EntityGroupIDs)}]");
+            Console.WriteLine($"  UnkPartNames: [{string.Join(", ", asset.UnkPartNames.Select(n => n ?? "null"))}]");
+            Console.WriteLine($"  UnkT54PartName: {asset.UnkT54PartName ?? "null"}");
+            // Draw groups are in Unk1 and Unk2 structs
+            Console.WriteLine($"  Unk1.DrawGroups: [{string.Join(", ", asset.Unk1.DrawGroups.Select(g => $"0x{g:X8}"))}]");
+            Console.WriteLine($"  Unk1.DisplayGroups: [{string.Join(", ", asset.Unk1.DisplayGroups.Select(g => $"0x{g:X8}"))}]");
+            Console.WriteLine($"  Unk1.CollisionMask[0-3]: [{string.Join(", ", asset.Unk1.CollisionMask.Take(4).Select(g => $"0x{g:X8}"))}]");
+            Console.WriteLine($"  Unk2.DispGroups: [{string.Join(", ", asset.Unk2.DispGroups.Select(g => $"0x{g:X8}"))}]");
+            // Dump nested struct scalar values
+            foreach (var sn in new[] { "Unk1", "Unk2", "Gparam", "Unk7", "Unk8", "Unk9", "Unk10", "Unk11", "AssetUnk1", "AssetUnk2", "AssetUnk3", "AssetUnk4" })
+            {
+                var sp = asset.GetType().GetProperty(sn) ?? asset.GetType().BaseType?.GetProperty(sn);
+                if (sp == null) continue;
+                var sv = sp.GetValue(asset); if (sv == null) continue;
+                foreach (var np in sv.GetType().GetProperties())
+                {
+                    if (new[] { "DrawGroups", "DisplayGroups", "CollisionMask", "DispGroups" }.Contains(np.Name)) continue;
+                    try { var v = np.GetValue(sv); if (v != null && !v.GetType().IsArray) Console.WriteLine($"  {sn}.{np.Name}: {v}"); } catch { }
+                }
+            }
+            // Dump all properties via reflection for comparison (walk full hierarchy)
+            // Also dump fields (DrawGroups etc. may be fields)
+            var allFields = new Dictionary<string, System.Reflection.FieldInfo>();
+            for (var t = asset.GetType(); t != null; t = t.BaseType)
+            {
+                foreach (var fi in t.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly))
+                    allFields.TryAdd(fi.Name, fi);
+            }
+            foreach (var field in allFields.Values.OrderBy(f => f.Name))
+            {
+                try
+                {
+                    var val = field.GetValue(asset);
+                    if (val is uint[] arr)
+                        Console.WriteLine($"  [F] {field.Name}: [{string.Join(", ", arr.Select(v => $"0x{v:X8}"))}]");
+                    else if (val is int[] iarr)
+                        Console.WriteLine($"  [F] {field.Name}: [{string.Join(", ", iarr)}]");
+                    else if (val is byte[] barr && barr.Length <= 32)
+                        Console.WriteLine($"  [F] {field.Name}: [{string.Join(", ", barr.Select(b => $"0x{b:X2}"))}]");
+                    else if (val != null && !val.GetType().IsClass)
+                        Console.WriteLine($"  [F] {field.Name}: {val}");
+                }
+                catch { }
+            }
+            var allProps = new Dictionary<string, System.Reflection.PropertyInfo>();
+            for (var t = asset.GetType(); t != null; t = t.BaseType)
+            {
+                foreach (var p in t.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.DeclaredOnly))
+                    allProps.TryAdd(p.Name, p);
+            }
+            foreach (var prop in allProps.Values.OrderBy(p => p.Name))
+            {
+                if (new[] { "Name", "ModelName", "Position", "Rotation", "EntityID", "Unk08",
+                    "AssetSfxParamRelativeID", "EntityGroupIDs", "UnkPartNames", "UnkT54PartName" }.Contains(prop.Name))
+                    continue;
+                try
+                {
+                    var val = prop.GetValue(asset);
+                    if (val is uint[] arr)
+                        Console.WriteLine($"  {prop.Name}: [{string.Join(", ", arr.Select(v => $"0x{v:X8}"))}]");
+                    else if (val is int[] iarr)
+                        Console.WriteLine($"  {prop.Name}: [{string.Join(", ", iarr)}]");
+                    else if (val is short[] sarr)
+                        Console.WriteLine($"  {prop.Name}: [{string.Join(", ", sarr)}]");
+                    else if (val is byte[] barr)
+                        Console.WriteLine($"  {prop.Name}: [{string.Join(", ", barr.Select(b => $"0x{b:X2}"))}]");
+                    else if (val != null && !val.GetType().IsClass)
+                        Console.WriteLine($"  {prop.Name}: {val}");
+                }
+                catch { }
+            }
+            Console.WriteLine();
+        }
+    }
+    return 0;
+}
+
 var files = GetFiles(target, mapFilter);
 if (files.Count == 0)
 {
