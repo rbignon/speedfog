@@ -245,6 +245,7 @@ def dag_to_dict(
     starting_larval_tears: int = 10,
     starting_stonesword_keys: int = 6,
     vanilla_tiers: dict[str, int] | None = None,
+    death_markers: bool = True,
 ) -> dict[str, Any]:
     """Convert a DAG to v4 JSON-serializable dictionary.
 
@@ -271,6 +272,7 @@ def dag_to_dict(
         starting_stonesword_keys: Stonesword Keys to give at start (unlock imp seals)
         vanilla_tiers: Optional zone_name → ScalingTier mapping from foglocations2.txt.
             When provided, each node gets an original_tier field (max ScalingTier of its zones).
+        death_markers: Whether to allocate death marker flags (3 per non-start cluster).
 
     Returns:
         Dictionary with the following structure:
@@ -470,6 +472,21 @@ def dag_to_dict(
     finish_event = EVENT_FLAG_BASE + flag_counter
     flag_counter += 1
 
+    # Allocate death marker flags: 3 per cluster (low/med/high)
+    # for racing mod to control bloodstain visibility by death count.
+    death_flags: dict[str, list[int]] = {}
+    if death_markers:
+        start_cluster_id = dag.nodes[dag.start_id].cluster.id
+        for node in dag.nodes.values():
+            cluster_id = node.cluster.id
+            if cluster_id == start_cluster_id:
+                continue
+            if cluster_id in death_flags:
+                continue  # Already allocated (multiple nodes can share a cluster)
+            flags = [EVENT_FLAG_BASE + flag_counter + i for i in range(3)]
+            flag_counter += 3
+            death_flags[cluster_id] = flags
+
     if flag_counter > 600:
         raise ValueError(
             f"Event flag budget exceeded: {flag_counter} flags allocated "
@@ -542,6 +559,7 @@ def dag_to_dict(
         "final_node_flag": final_node_flag,
         "finish_event": finish_event,
         "finish_boss_defeat_flag": finish_boss_defeat_flag,
+        "death_flags": death_flags,
         "run_complete_message": run_complete_message,
         "chapel_grace": chapel_grace,
         "sentry_torch_shop": sentry_torch_shop,
@@ -578,6 +596,7 @@ def export_json(
     starting_larval_tears: int = 10,
     starting_stonesword_keys: int = 6,
     vanilla_tiers: dict[str, int] | None = None,
+    death_markers: bool = True,
 ) -> None:
     """Export a DAG to v4 formatted JSON file.
 
@@ -599,6 +618,7 @@ def export_json(
         starting_larval_tears: Larval Tears to give at start (for rebirth at graces)
         starting_stonesword_keys: Stonesword Keys to give at start (unlock imp seals)
         vanilla_tiers: Optional zone_name → ScalingTier mapping from foglocations2.txt
+        death_markers: Whether to allocate death marker flags (3 per non-start cluster)
     """
     data = dag_to_dict(
         dag,
@@ -617,6 +637,7 @@ def export_json(
         starting_larval_tears,
         starting_stonesword_keys,
         vanilla_tiers,
+        death_markers=death_markers,
     )
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)

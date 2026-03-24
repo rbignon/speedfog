@@ -350,7 +350,7 @@ class TestExportSpoilerLog:
 # =============================================================================
 
 
-def _make_result() -> dict:
+def _make_result(death_markers: bool = True) -> dict:
     """Helper: call dag_to_dict with the standard diamond test DAG."""
     dag = make_test_dag()
     clusters = ClusterPool(
@@ -358,7 +358,7 @@ def _make_result() -> dict:
         zone_maps={},
         zone_names={},
     )
-    return dag_to_dict(dag, clusters)
+    return dag_to_dict(dag, clusters, death_markers=death_markers)
 
 
 class TestEventMap:
@@ -2082,3 +2082,52 @@ class TestAppendBossPlacementsToSpoiler:
         pos_b = content.index("Boss B")
         pos_c = content.index("Boss C")
         assert pos_a < pos_b < pos_c
+
+
+# =============================================================================
+# Death flags tests
+# =============================================================================
+
+
+def test_death_flags_present_when_enabled():
+    """death_flags maps each non-start cluster to 3 flags."""
+    result = _make_result(death_markers=True)
+    assert "death_flags" in result
+    death_flags = result["death_flags"]
+    # Should have entries for all clusters except start
+    node_ids = set(result["nodes"].keys())
+    start_ids = {nid for nid, n in result["nodes"].items() if n["type"] == "start"}
+    expected_ids = node_ids - start_ids
+    assert set(death_flags.keys()) == expected_ids
+    for _cluster_id, flags in death_flags.items():
+        assert len(flags) == 3
+        assert all(isinstance(f, int) for f in flags)
+        assert all(f >= 1040292400 for f in flags)
+
+
+def test_death_flags_empty_when_disabled():
+    """death_flags is empty dict when death_markers=False."""
+    result = _make_result(death_markers=False)
+    assert result["death_flags"] == {}
+
+
+def test_death_flags_are_unique():
+    """All death flag IDs are unique and don't overlap with connection flags."""
+    result = _make_result(death_markers=True)
+    connection_flags = {c["flag_id"] for c in result["connections"]}
+    death_flag_ids = set()
+    for flags in result["death_flags"].values():
+        for f in flags:
+            assert f not in connection_flags, f"death flag {f} overlaps connection flag"
+            assert f not in death_flag_ids, f"duplicate death flag {f}"
+            death_flag_ids.add(f)
+
+
+def test_death_flags_after_finish_event():
+    """Death flags are allocated after finish_event."""
+    result = _make_result(death_markers=True)
+    if result["death_flags"]:
+        min_death_flag = min(
+            f for flags in result["death_flags"].values() for f in flags
+        )
+        assert min_death_flag > result["finish_event"]

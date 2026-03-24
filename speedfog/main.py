@@ -260,6 +260,7 @@ def main() -> int:
         starting_larval_tears=config.starting_items.larval_tears,
         starting_stonesword_keys=config.starting_items.stonesword_keys,
         vanilla_tiers=vanilla_tiers,
+        death_markers=config.death_markers,
     )
     print(f"Written: {json_path}")
     if starting_goods:
