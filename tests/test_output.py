@@ -367,7 +367,7 @@ class TestEventMap:
     def test_version_is_4_1(self):
         """Version string is '4.1'."""
         result = _make_result()
-        assert result["version"] == "4.1"
+        assert result["version"] == "4.2"
 
     def test_event_map_keys_are_string_flag_ids(self):
         """event_map keys are stringified integers."""
@@ -411,7 +411,7 @@ class TestEventMap:
 
         # It should be a valid flag ID in the expected range
         assert isinstance(result["finish_event"], int)
-        assert result["finish_event"] >= 1040292400
+        assert result["finish_event"] >= 1050292000
 
     def test_finish_event_follows_zone_flags(self):
         """finish_event is allocated after all zone tracking flags."""
@@ -451,7 +451,7 @@ class TestEventMap:
         for conn in result["connections"]:
             assert "flag_id" in conn
             assert isinstance(conn["flag_id"], int)
-            assert conn["flag_id"] >= 1040292400
+            assert conn["flag_id"] >= 1050292000
 
     def test_merge_node_connections_have_unique_flag_ids(self):
         """Two connections to the same node get different flag_ids.
@@ -2102,7 +2102,7 @@ def test_death_flags_present_when_enabled():
     for _cluster_id, flags in death_flags.items():
         assert len(flags) == 3
         assert all(isinstance(f, int) for f in flags)
-        assert all(f >= 1040292400 for f in flags)
+        assert all(f >= 1050292000 for f in flags)
 
 
 def test_death_flags_empty_when_disabled():

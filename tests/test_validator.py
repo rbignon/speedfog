@@ -740,9 +740,9 @@ class TestEventFlagBudget:
 
     def test_large_dag_exceeds_budget_with_death_markers(self):
         """DAG with many nodes exceeds budget when death markers are on."""
-        # 200 content nodes = 201 edges + 1 finish + 3*200 death flags = 802 > 600
+        # 300 content nodes = 301 edges + 1 finish + 3*300 death flags = 1202 > 1000
         dag = make_dag_with_content(
-            legacy_count=0, boss_count=0, mini_dungeon_count=200, layer_count=200
+            legacy_count=0, boss_count=0, mini_dungeon_count=300, layer_count=300
         )
         config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
         config.death_markers = True
@@ -755,9 +755,9 @@ class TestEventFlagBudget:
 
     def test_large_dag_within_budget_without_death_markers(self):
         """Same large DAG passes when death markers are off (fewer flags)."""
-        # 200 content nodes = 201 edges + 1 finish = 202 < 600
+        # 300 content nodes = 301 edges + 1 finish = 302 < 1000
         dag = make_dag_with_content(
-            legacy_count=0, boss_count=0, mini_dungeon_count=200, layer_count=200
+            legacy_count=0, boss_count=0, mini_dungeon_count=300, layer_count=300
         )
         config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
         config.death_markers = False
@@ -769,9 +769,9 @@ class TestEventFlagBudget:
 
     def test_death_markers_toggle_changes_count(self):
         """Death markers on vs off changes whether budget is exceeded."""
-        # 150 nodes: 151 edges + 1 = 152 without markers, 152 + 450 = 602 with
+        # 260 nodes: 261 edges + 1 = 262 without markers, 262 + 780 = 1042 with
         dag = make_dag_with_content(
-            legacy_count=0, boss_count=0, mini_dungeon_count=150, layer_count=150
+            legacy_count=0, boss_count=0, mini_dungeon_count=260, layer_count=260
         )
         config_on = make_config(
             legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1

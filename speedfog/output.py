@@ -22,10 +22,15 @@ from speedfog.dag import Dag, DagNode, FogRef
 
 _PHASE_SUFFIX_RE = re.compile(r" \d+$")
 
-# Event flag allocation range: 1040292400-1040292999 (600 flags).
-# FogRando's category 1040292 uses offsets ~100-300; we use 400-999.
-EVENT_FLAG_BASE = 1040292400
-EVENT_FLAG_BUDGET = 600
+# SpeedFog's dedicated flag base: 1050290000 (m60_50_29_00, unclaimed).
+# Temporary flags (2xxx): zone tracking, finish event, death markers.
+EVENT_FLAG_BASE = 1050292000
+EVENT_FLAG_BUDGET = 1000
+
+# Persistent flags (0xxx, saved): mod state that must survive area reloads.
+PERSISTENT_FLAG_BASE = 1050290000
+# Offset 0: items_spawned_flag (racing mod runtime item spawn prevention)
+ITEMS_SPAWNED_FLAG = PERSISTENT_FLAG_BASE + 0
 
 
 def load_vanilla_tiers(path: Path) -> dict[str, int]:
@@ -281,7 +286,7 @@ def dag_to_dict(
 
     Returns:
         Dictionary with the following structure:
-        - version: "4.1"
+        - version: "4.2"
         - seed: int
         - total_layers, total_nodes, total_zones: metadata
         - options: dict of FogMod options
@@ -548,7 +553,7 @@ def dag_to_dict(
                 remove_entities.append({"map": map_id, "entity_id": location})
 
     return {
-        "version": "4.1",
+        "version": "4.2",
         "seed": dag.seed,
         "total_layers": total_layers,
         "total_nodes": dag.total_nodes(),
@@ -563,6 +568,7 @@ def dag_to_dict(
         "finish_event": finish_event,
         "finish_boss_defeat_flag": finish_boss_defeat_flag,
         "death_flags": death_flags,
+        "items_spawned_flag": ITEMS_SPAWNED_FLAG,
         "run_complete_message": run_complete_message,
         "chapel_grace": chapel_grace,
         "sentry_torch_shop": sentry_torch_shop,

@@ -8,7 +8,7 @@ namespace FogModWrapper.Models;
 public class GraphData
 {
     [JsonPropertyName("version")]
-    public string Version { get; set; } = "4.1";
+    public string Version { get; set; } = "4.2";
 
     [JsonPropertyName("seed")]
     public int Seed { get; set; }
@@ -127,6 +127,14 @@ public class GraphData
     /// </summary>
     [JsonPropertyName("death_flags")]
     public Dictionary<string, List<int>> DeathFlags { get; set; } = new();
+
+    /// <summary>
+    /// Persistent flag for item spawn prevention (racing mod).
+    /// Set by the racing mod after items are spawned to prevent duplication on area reload.
+    /// Allocated from the saved flag range (1050290xxx).
+    /// </summary>
+    [JsonPropertyName("items_spawned_flag")]
+    public int ItemsSpawnedFlag { get; set; } = 0;
 }
 
 /// <summary>
