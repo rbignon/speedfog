@@ -364,8 +364,8 @@ def _make_result(death_markers: bool = True) -> dict:
 class TestEventMap:
     """Tests for v4 event_map, finish_event, and flag_id fields."""
 
-    def test_version_is_4_1(self):
-        """Version string is '4.1'."""
+    def test_version_is_4_2(self):
+        """Version string is '4.2'."""
         result = _make_result()
         assert result["version"] == "4.2"
 
