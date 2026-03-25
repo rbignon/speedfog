@@ -2013,14 +2013,23 @@ def generate_dag(
                         )
                     letter_offset += 1
                 else:
-                    # Passant for non-split branches, with type fallback.
-                    pc = pick_cluster_with_type_fallback(
-                        clusters,
-                        layer_type,
+                    # Passant for non-split branches, weight-matched + type fallback.
+                    pc = pick_cluster_weight_matched(
+                        clusters.get_by_type(layer_type),
                         used_zones,
                         rng,
+                        anchor_weight=primary_cluster.weight,
+                        max_tolerance=config.structure.max_weight_tolerance,
                         reserved_zones=reserved_zones,
                     )
+                    if pc is None:
+                        pc = pick_cluster_with_type_fallback(
+                            clusters,
+                            layer_type,
+                            used_zones,
+                            rng,
+                            reserved_zones=reserved_zones,
+                        )
                     if pc is None:
                         raise GenerationError(
                             f"No cluster for layer {current_layer} branch {i} "
@@ -2157,19 +2166,28 @@ def generate_dag(
                     )
                 ]
 
-                # Non-merged branches get passant, with type fallback.
+                # Non-merged branches get passant, weight-matched + type fallback.
                 merge_set = set(merge_indices)
                 letter = 1
                 for i, branch in enumerate(branches):
                     if i in merge_set:
                         continue
-                    pc = pick_cluster_with_type_fallback(
-                        clusters,
-                        layer_type,
+                    pc = pick_cluster_weight_matched(
+                        clusters.get_by_type(layer_type),
                         used_zones,
                         rng,
+                        anchor_weight=primary_cluster.weight,
+                        max_tolerance=config.structure.max_weight_tolerance,
                         reserved_zones=reserved_zones,
                     )
+                    if pc is None:
+                        pc = pick_cluster_with_type_fallback(
+                            clusters,
+                            layer_type,
+                            used_zones,
+                            rng,
+                            reserved_zones=reserved_zones,
+                        )
                     if pc is None:
                         raise GenerationError(
                             f"No cluster for layer {current_layer} branch {i} "
@@ -2215,13 +2233,22 @@ def generate_dag(
                     c = primary_cluster
                     first = False
                 else:
-                    c = pick_cluster_with_type_fallback(
-                        clusters,
-                        layer_type,
+                    c = pick_cluster_weight_matched(
+                        clusters.get_by_type(layer_type),
                         used_zones,
                         rng,
+                        anchor_weight=primary_cluster.weight,
+                        max_tolerance=config.structure.max_weight_tolerance,
                         reserved_zones=reserved_zones,
                     )
+                    if c is None:
+                        c = pick_cluster_with_type_fallback(
+                            clusters,
+                            layer_type,
+                            used_zones,
+                            rng,
+                            reserved_zones=reserved_zones,
+                        )
                     if c is None:
                         raise GenerationError(
                             f"No cluster for layer {current_layer} branch {i} "

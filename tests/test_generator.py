@@ -5839,3 +5839,126 @@ class TestPickClusterWeightMatched:
             reserved_zones=frozenset({"z0"}),
         )
         assert result is None
+
+
+def test_parallel_branches_weight_matched():
+    """On a PASSANT layer with 2+ branches, clusters have similar weights.
+
+    Uses a pool where weight-1 and weight-8 clusters coexist.
+    With weight matching, if branch A gets weight-1, branch B should
+    not get weight-8 (too far at tolerance 3).
+    """
+    # Build a pool with weight variety (large enough for convergence).
+    # Include clusters with 2+ entries so merges can happen.
+    clusters_list = []
+    for i in range(30):
+        clusters_list.append(
+            make_cluster(
+                f"light_{i}",
+                zones=[f"l{i}"],
+                weight=1,
+                cluster_type="mini_dungeon",
+                entry_fogs=[
+                    {"fog_id": f"le1_{i}", "zone": f"l{i}"},
+                    {"fog_id": f"le2_{i}", "zone": f"l{i}"},
+                ],
+                exit_fogs=[
+                    {"fog_id": f"lx1_{i}", "zone": f"l{i}"},
+                    {"fog_id": f"lx2_{i}", "zone": f"l{i}"},
+                ],
+            )
+        )
+    for i in range(10):
+        clusters_list.append(
+            make_cluster(
+                f"heavy_{i}",
+                zones=[f"h{i}"],
+                weight=8,
+                cluster_type="mini_dungeon",
+                entry_fogs=[
+                    {"fog_id": f"he1_{i}", "zone": f"h{i}"},
+                    {"fog_id": f"he2_{i}", "zone": f"h{i}"},
+                ],
+                exit_fogs=[
+                    {"fog_id": f"hx1_{i}", "zone": f"h{i}"},
+                    {"fog_id": f"hx2_{i}", "zone": f"h{i}"},
+                ],
+            )
+        )
+    # Need a start cluster and final boss
+    start = make_cluster(
+        "start_c",
+        zones=["start_z"],
+        cluster_type="start",
+        weight=1,
+        entry_fogs=[],
+        exit_fogs=[
+            {"fog_id": "sx1", "zone": "start_z"},
+            {"fog_id": "sx2", "zone": "start_z"},
+        ],
+    )
+    final = make_cluster(
+        "final_c",
+        zones=["final_z"],
+        cluster_type="final_boss",
+        weight=3,
+        entry_fogs=[
+            {"fog_id": "fe1", "zone": "final_z"},
+            {"fog_id": "fe2", "zone": "final_z"},
+        ],
+        exit_fogs=[],
+    )
+    clusters_list.extend([start, final])
+
+    pool = ClusterPool()
+    for c in clusters_list:
+        pool.add(c)
+
+    config = Config.from_dict(
+        {
+            "structure": {
+                "max_parallel_paths": 3,
+                "min_layers": 4,
+                "max_layers": 6,
+                "split_probability": 1.0,
+                "max_weight_tolerance": 3,
+                "max_branch_spacing": 0,
+                "final_boss_candidates": {"final_z": 1},
+            },
+        }
+    )
+
+    # Generate multiple DAGs, check weight spread on parallel layers
+    max_spreads = []
+    for seed in range(50):
+        try:
+            dag = generate_dag(
+                config,
+                pool,
+                seed=seed,
+                boss_candidates=pool.get_by_type("final_boss"),
+            )
+        except GenerationError:
+            continue
+        # Find layers with multiple nodes
+        layers: dict[int, list[int]] = {}
+        for node in dag.nodes.values():
+            weights = layers.setdefault(node.layer, [])
+            weights.append(node.cluster.weight)
+        for _layer_idx, weights in layers.items():
+            if len(weights) >= 2:
+                max_spreads.append(max(weights) - min(weights))
+
+    # At least some DAGs must have generated successfully
+    assert max_spreads, "No DAGs generated successfully"
+
+    # With weight matching (tolerance 3), spreads should improve over baseline.
+    # The pool has weight-1 and weight-8 clusters, so when weight-8 is primary
+    # (~25% of picks), no secondary matches within tolerance -> fallback.
+    # Expected ratio: ~75% within tolerance (vs ~60% without weight matching).
+    within_tolerance = sum(1 for s in max_spreads if s <= 3)
+    ratio = within_tolerance / len(max_spreads)
+    assert ratio >= 0.65, (
+        f"Only {ratio:.0%} of parallel layers within tolerance 3. "
+        f"Spreads: {sorted(set(max_spreads))}"
+    )
