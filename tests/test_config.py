@@ -837,3 +837,32 @@ def test_death_markers_default_true():
 def test_death_markers_explicit_false():
     config = Config.from_dict({"run": {"death_markers": False}})
     assert config.death_markers is False
+
+
+def test_max_weight_tolerance_default():
+    """max_weight_tolerance defaults to 3."""
+    config = Config.from_dict({})
+    assert config.structure.max_weight_tolerance == 3
+
+
+def test_max_weight_tolerance_from_toml(tmp_path):
+    """max_weight_tolerance parsed from TOML."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[structure]
+max_weight_tolerance = 5
+""")
+    config = Config.from_toml(config_file)
+    assert config.structure.max_weight_tolerance == 5
+
+
+def test_max_weight_tolerance_disabled():
+    """max_weight_tolerance = 0 disables weight matching."""
+    config = Config.from_dict({"structure": {"max_weight_tolerance": 0}})
+    assert config.structure.max_weight_tolerance == 0
+
+
+def test_max_weight_tolerance_negative_raises():
+    """Negative max_weight_tolerance raises ValueError."""
+    with pytest.raises(ValueError, match="max_weight_tolerance"):
+        Config.from_dict({"structure": {"max_weight_tolerance": -1}})

@@ -62,6 +62,9 @@ class StructureConfig:
     final_tier: int = 28  # Enemy scaling tier for final boss (1-28)
     tier_curve: str = "linear"  # "linear" or "power"
     tier_curve_exponent: float = 0.6  # Power curve exponent (only for "power")
+    max_weight_tolerance: int = (
+        3  # Max weight tolerance for parallel branch matching (0=disabled)
+    )
 
     @property
     def max_exits(self) -> int:
@@ -130,6 +133,10 @@ class StructureConfig:
         if self.max_branch_spacing < 0:
             raise ValueError(
                 f"max_branch_spacing must be >= 0, got {self.max_branch_spacing}"
+            )
+        if self.max_weight_tolerance < 0:
+            raise ValueError(
+                f"max_weight_tolerance must be >= 0, got {self.max_weight_tolerance}"
             )
         if (
             self.max_branch_spacing > 0
@@ -512,6 +519,7 @@ class Config:
                 final_tier=structure_section.get("final_tier", 28),
                 tier_curve=structure_section.get("tier_curve", "linear"),
                 tier_curve_exponent=structure_section.get("tier_curve_exponent", 0.6),
+                max_weight_tolerance=structure_section.get("max_weight_tolerance", 3),
             ),
             paths=PathsConfig(
                 game_dir=paths_section.get("game_dir", ""),
