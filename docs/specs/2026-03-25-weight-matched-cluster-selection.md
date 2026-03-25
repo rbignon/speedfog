@@ -1,7 +1,7 @@
 # Weight-Matched Cluster Selection
 
 **Date:** 2026-03-25
-**Status:** Draft
+**Status:** Implemented
 
 ## Problem
 
