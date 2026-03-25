@@ -723,3 +723,85 @@ class TestEntryZoneMembership:
 
         zone_errors = [e for e in result.errors if "Entry zone mismatch" in e]
         assert zone_errors == []
+
+
+class TestEventFlagBudget:
+    """Tests for event flag budget validation."""
+
+    def test_small_dag_within_budget(self):
+        """Simple DAG with few edges passes budget check."""
+        dag = make_simple_dag()
+        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+
+        result = validate_dag(dag, config)
+
+        budget_errors = [e for e in result.errors if "flag budget" in e]
+        assert budget_errors == []
+
+    def test_large_dag_exceeds_budget_with_death_markers(self):
+        """DAG with many nodes exceeds budget when death markers are on."""
+        # 200 content nodes = 201 edges + 1 finish + 3*200 death flags = 802 > 600
+        dag = make_dag_with_content(
+            legacy_count=0, boss_count=0, mini_dungeon_count=200, layer_count=200
+        )
+        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+        config.death_markers = True
+
+        result = validate_dag(dag, config)
+
+        budget_errors = [e for e in result.errors if "flag budget" in e]
+        assert len(budget_errors) == 1
+        assert "exceeded" in budget_errors[0]
+
+    def test_large_dag_within_budget_without_death_markers(self):
+        """Same large DAG passes when death markers are off (fewer flags)."""
+        # 200 content nodes = 201 edges + 1 finish = 202 < 600
+        dag = make_dag_with_content(
+            legacy_count=0, boss_count=0, mini_dungeon_count=200, layer_count=200
+        )
+        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+        config.death_markers = False
+
+        result = validate_dag(dag, config)
+
+        budget_errors = [e for e in result.errors if "flag budget" in e]
+        assert budget_errors == []
+
+    def test_death_markers_toggle_changes_count(self):
+        """Death markers on vs off changes whether budget is exceeded."""
+        # 150 nodes: 151 edges + 1 = 152 without markers, 152 + 450 = 602 with
+        dag = make_dag_with_content(
+            legacy_count=0, boss_count=0, mini_dungeon_count=150, layer_count=150
+        )
+        config_on = make_config(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1
+        )
+        config_on.death_markers = True
+
+        config_off = make_config(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1
+        )
+        config_off.death_markers = False
+
+        result_on = validate_dag(dag, config_on)
+        result_off = validate_dag(dag, config_off)
+
+        on_budget_errors = [e for e in result_on.errors if "flag budget" in e]
+        off_budget_errors = [e for e in result_off.errors if "flag budget" in e]
+        assert len(on_budget_errors) == 1
+        assert off_budget_errors == []
+
+    def test_malformed_dag_skips_budget_check(self):
+        """DAG with start_id not in nodes skips budget check gracefully."""
+        dag = Dag(seed=42)
+        dag.start_id = "nonexistent"
+        dag.end_id = "also_nonexistent"
+
+        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+
+        result = validate_dag(dag, config)
+
+        # Should have structural errors but no budget crash
+        budget_errors = [e for e in result.errors if "flag budget" in e]
+        assert budget_errors == []
+        assert result.is_valid is False

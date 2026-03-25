@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from speedfog.clusters import ClusterPool
 from speedfog.config import Config
 from speedfog.dag import Dag, FogRef
+from speedfog.output import EVENT_FLAG_BUDGET
 
 
 @dataclass
@@ -77,6 +78,9 @@ def validate_dag(
 
     # Check layer count
     _check_layers(dag, config, warnings)
+
+    # Check event flag budget
+    _check_event_flag_budget(dag, config, errors)
 
     return ValidationResult(
         is_valid=len(errors) == 0,
@@ -197,6 +201,40 @@ def _check_layers(dag: Dag, config: Config, warnings: list[str]) -> None:
     if layer_count < config.structure.min_layers:
         warnings.append(
             f"Few layers: {layer_count} < {config.structure.min_layers} minimum"
+        )
+
+
+def _check_event_flag_budget(dag: Dag, config: Config, errors: list[str]) -> None:
+    """Check that the DAG won't exceed the event flag allocation budget.
+
+    Flag allocation: 1 per edge (zone tracking) + 1 (finish event) +
+    3 per non-start cluster (death markers, when enabled).
+
+    Args:
+        dag: The DAG to check.
+        config: Configuration (death_markers flag).
+        errors: List to append errors to.
+    """
+    if dag.start_id not in dag.nodes:
+        return  # Structural errors will catch this
+
+    # Upper bound: dag_to_dict may skip edges with missing nodes/zones,
+    # so the actual allocation can be lower. Conservative is safe here.
+    flag_count = len(dag.edges) + 1  # connections + finish_event
+
+    if config.death_markers:
+        start_cluster_id = dag.nodes[dag.start_id].cluster.id
+        unique_clusters = {
+            node.cluster.id
+            for node in dag.nodes.values()
+            if node.cluster.id != start_cluster_id
+        }
+        flag_count += 3 * len(unique_clusters)
+
+    if flag_count > EVENT_FLAG_BUDGET:
+        errors.append(
+            f"Event flag budget exceeded: {flag_count} flags needed "
+            f"(max {EVENT_FLAG_BUDGET})"
         )
 
 

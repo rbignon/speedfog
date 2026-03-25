@@ -22,6 +22,11 @@ from speedfog.dag import Dag, DagNode, FogRef
 
 _PHASE_SUFFIX_RE = re.compile(r" \d+$")
 
+# Event flag allocation range: 1040292400-1040292999 (600 flags).
+# FogRando's category 1040292 uses offsets ~100-300; we use 400-999.
+EVENT_FLAG_BASE = 1040292400
+EVENT_FLAG_BUDGET = 600
+
 
 def load_vanilla_tiers(path: Path) -> dict[str, int]:
     """Load vanilla scaling tiers from foglocations2.txt EnemyAreas section.
@@ -297,9 +302,6 @@ def dag_to_dict(
     # Allocate event flag IDs per connection (for racing zone tracking).
     # Each connection gets a unique flag_id so the racing mod can detect re-entry
     # to the same cluster from a different branch (e.g., shared entrance merges).
-    # Must land in a category pre-allocated by FogRando in VirtualMemoryFlag.
-    # FogRando's category 1040292 uses offsets ~100-300; we use 400-999 (600 flags).
-    EVENT_FLAG_BASE = 1040292400
     flag_counter = 0
     event_map: dict[str, str] = {}  # str(flag_id) -> cluster_id
     final_node_flag = 0  # first flag targeting the end node
@@ -487,10 +489,11 @@ def dag_to_dict(
             flag_counter += 3
             death_flags[cluster_id] = flags
 
-    if flag_counter > 600:
+    if flag_counter > EVENT_FLAG_BUDGET:
         raise ValueError(
             f"Event flag budget exceeded: {flag_counter} flags allocated "
-            f"(max 600 in range 1040292400-1040292999)"
+            f"(max {EVENT_FLAG_BUDGET} in range "
+            f"{EVENT_FLAG_BASE}-{EVENT_FLAG_BASE + EVENT_FLAG_BUDGET - 1})"
         )
 
     # finish_boss_defeat_flag: the DefeatFlag for the final boss, propagated from
