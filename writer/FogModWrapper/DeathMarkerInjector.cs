@@ -26,7 +26,7 @@ public static class DeathMarkerInjector
     private const int BLOODSTAINS_PER_GATE = 3;
     private const float MIN_RADIUS = 1.5f;
     private const float MAX_RADIUS = 3.0f;
-    private const float Y_OFFSET = 0.10f;
+    private const float Y_OFFSET = 0.15f;
 
     private const int DEATH_MARKER_EVENT_BASE = 755862100;
 
@@ -37,12 +37,14 @@ public static class DeathMarkerInjector
         public readonly string PartName;
         public readonly int DeathFlag;
         public readonly int TierIndex;  // 0=low, 1=med, 2=high
+        public readonly bool IsASide;   // true = approach from ASide (gate facing direction)
 
-        public BloodstainSpec(string partName, int deathFlag, int tierIndex)
+        public BloodstainSpec(string partName, int deathFlag, int tierIndex, bool isASide)
         {
             PartName = partName;
             DeathFlag = deathFlag;
             TierIndex = tierIndex;
+            IsASide = isASide;
         }
     }
 
@@ -61,11 +63,14 @@ public static class DeathMarkerInjector
     }
 
     /// <summary>
-    /// Generate 3 offsets in front of a gate (approach side), spread across
-    /// a 120-degree arc opposite the gate's facing direction.
+    /// Generate 3 offsets on the approach side of a gate, spread across a 120-degree arc.
+    /// FogMod places the ASide warp region in the gate's facing direction (0 degrees).
+    /// The player stands on the opposite side of the warp region to trigger it, so:
+    /// - isASide=true: arc at 180 degrees (opposite the facing direction)
+    /// - isASide=false: arc at 0 degrees (the facing direction)
     /// PRNG seeded on gateEntityId for deterministic placement.
     /// </summary>
-    internal static Vector3[] GenerateOffsets(uint gateEntityId, float gateRotY)
+    internal static Vector3[] GenerateOffsets(uint gateEntityId, float gateRotY, bool isASide)
     {
         var rng = new Random(gateEntityId.GetHashCode());
         var offsets = new Vector3[BLOODSTAINS_PER_GATE];
@@ -73,7 +78,8 @@ public static class DeathMarkerInjector
 
         const float arcSpread = 120f;
         const float sectorSize = arcSpread / BLOODSTAINS_PER_GATE;
-        float arcStart = 180f - arcSpread / 2f;
+        float arcCenter = isASide ? 180f : 0f;
+        float arcStart = arcCenter - arcSpread / 2f;
 
         for (int i = 0; i < BLOODSTAINS_PER_GATE; i++)
         {
@@ -98,24 +104,30 @@ public static class DeathMarkerInjector
     /// Inject bloodstain visual markers at all fog gates in the DAG.
     /// When deathFlags is non-empty, each bloodstain is controlled by a per-cluster
     /// death flag via a dedicated EMEVD event. When empty, unconditional mode is used.
+    /// gateSides maps gate FullName to (ASideArea, BSideArea) from fog.txt, used to
+    /// determine which side of the gate the bloodstains should be placed on.
     /// </summary>
     public static void Inject(
         string modDir, string gameDir,
         List<Connection> connections, Events events,
         Dictionary<string, string> eventMap,
-        Dictionary<string, List<int>> deathFlags)
+        Dictionary<string, List<int>> deathFlags,
+        Dictionary<string, (string ASideArea, string BSideArea)> gateSides)
     {
         Console.WriteLine("Injecting death markers at fog gates...");
 
         bool conditional = deathFlags.Count > 0;
-        uint nextEntityId = FindMaxFogModEntityId(modDir) + 1;
+        // Start above FogMod's entity range to avoid collisions without scanning MSBs.
+        // FogMod allocates from FOGMOD_ENTITY_MIN (755890000) and uses far fewer than
+        // the 10000 available IDs in a typical SpeedFog DAG.
+        uint nextEntityId = FOGMOD_ENTITY_MAX;
         int totalAssets = 0;
         int totalMaps = 0;
         int nextEventOffset = 0;
 
         if (conditional)
         {
-            var specsByMap = CollectConditionalGatesByMap(connections, eventMap, deathFlags);
+            var specsByMap = CollectConditionalGatesByMap(connections, eventMap, deathFlags, gateSides);
             foreach (var (mapId, specs) in specsByMap)
             {
                 var (count, nextId, nextEvt) = InjectMapConditional(
@@ -131,11 +143,11 @@ public static class DeathMarkerInjector
         }
         else
         {
-            var gatesByMap = CollectGatesByMap(connections);
-            foreach (var (mapId, partNames) in gatesByMap)
+            var gatesByMap = CollectGatesByMap(connections, gateSides);
+            foreach (var (mapId, gateSpecs) in gatesByMap)
             {
                 var (count, nextId) = InjectMap(
-                    modDir, gameDir, events, mapId, partNames, nextEntityId);
+                    modDir, gameDir, events, mapId, gateSpecs, nextEntityId);
                 if (count > 0)
                 {
                     totalAssets += count;
@@ -149,26 +161,41 @@ public static class DeathMarkerInjector
             (conditional ? " (conditional)" : " (unconditional)"));
     }
 
-    private static Dictionary<string, HashSet<string>> CollectGatesByMap(List<Connection> connections)
+    private static Dictionary<string, List<(string PartName, bool IsASide)>> CollectGatesByMap(
+        List<Connection> connections,
+        Dictionary<string, (string ASideArea, string BSideArea)> gateSides)
     {
-        var gatesByMap = new Dictionary<string, HashSet<string>>();
-        var allGates = new HashSet<string>();
+        // Track (gate FullName) -> (partName, mapId, isASide), deduplicating by gate
+        var seen = new Dictionary<string, (string MapId, string PartName, bool IsASide)>();
 
         foreach (var conn in connections)
         {
-            allGates.Add(conn.ExitGate);
-            allGates.Add(conn.EntranceGate);
+            // Exit gate: approach from exit_area side
+            if (!seen.ContainsKey(conn.ExitGate))
+            {
+                var (mapId, partName) = ParseGateFullName(conn.ExitGate);
+                bool isASide = ResolveIsASide(conn.ExitGate, conn.ExitArea, gateSides);
+                seen[conn.ExitGate] = (mapId, partName, isASide);
+            }
+
+            // Entrance gate: approach from entrance_area side
+            if (!seen.ContainsKey(conn.EntranceGate))
+            {
+                var (mapId, partName) = ParseGateFullName(conn.EntranceGate);
+                bool isASide = ResolveIsASide(conn.EntranceGate, conn.EntranceArea, gateSides);
+                seen[conn.EntranceGate] = (mapId, partName, isASide);
+            }
         }
 
-        foreach (var gate in allGates)
+        var gatesByMap = new Dictionary<string, List<(string PartName, bool IsASide)>>();
+        foreach (var (_, (mapId, partName, isASide)) in seen)
         {
-            var (mapId, partName) = ParseGateFullName(gate);
-            if (!gatesByMap.TryGetValue(mapId, out var set))
+            if (!gatesByMap.TryGetValue(mapId, out var list))
             {
-                set = new HashSet<string>();
-                gatesByMap[mapId] = set;
+                list = new List<(string, bool)>();
+                gatesByMap[mapId] = list;
             }
-            set.Add(partName);
+            list.Add((partName, isASide));
         }
 
         return gatesByMap;
@@ -177,7 +204,8 @@ public static class DeathMarkerInjector
     private static Dictionary<string, List<BloodstainSpec>> CollectConditionalGatesByMap(
         List<Connection> connections,
         Dictionary<string, string> eventMap,
-        Dictionary<string, List<int>> deathFlags)
+        Dictionary<string, List<int>> deathFlags,
+        Dictionary<string, (string ASideArea, string BSideArea)> gateSides)
     {
         var result = new Dictionary<string, List<BloodstainSpec>>();
 
@@ -188,9 +216,18 @@ public static class DeathMarkerInjector
             if (!deathFlags.TryGetValue(clusterId, out var flags))
                 continue;
 
-            foreach (var gate in new[] { conn.ExitGate, conn.EntranceGate })
+            // Process exit gate (approach from exit_area) and entrance gate (approach from entrance_area)
+            var gates = new[]
+            {
+                (Gate: conn.ExitGate, Area: conn.ExitArea),
+                (Gate: conn.EntranceGate, Area: conn.EntranceArea),
+            };
+
+            foreach (var (gate, area) in gates)
             {
                 var (mapId, partName) = ParseGateFullName(gate);
+                bool isASide = ResolveIsASide(gate, area, gateSides);
+
                 if (!result.TryGetValue(mapId, out var specs))
                 {
                     specs = new List<BloodstainSpec>();
@@ -200,7 +237,7 @@ public static class DeathMarkerInjector
                 for (int tier = 0; tier < flags.Count; tier++)
                 {
                     if (!specs.Any(s => s.PartName == partName && s.DeathFlag == flags[tier]))
-                        specs.Add(new BloodstainSpec(partName, flags[tier], tier));
+                        specs.Add(new BloodstainSpec(partName, flags[tier], tier, isASide));
                 }
             }
         }
@@ -262,7 +299,12 @@ public static class DeathMarkerInjector
             }
 
             var drawGroups = GetDrawGroupsAtPosition(msb, gateAsset.Position);
-            var offsets = GenerateOffsets(gateAsset.EntityID, gateAsset.Rotation.Y);
+
+            // Precompute offsets for both sides. A gate used as both entrance and exit
+            // in different connections may need bloodstains on different sides: the exit
+            // connection approaches from one zone, the entrance connection from another.
+            var offsetsASide = GenerateOffsets(gateAsset.EntityID, gateAsset.Rotation.Y, isASide: true);
+            var offsetsBSide = GenerateOffsets(gateAsset.EntityID, gateAsset.Rotation.Y, isASide: false);
 
             // WORKAROUND: SoulsFormats' MSBE.Part.DeepCopy() produces shallow copies
             // of internal arrays. Save and restore around the clone batch.
@@ -275,6 +317,7 @@ public static class DeathMarkerInjector
 
             foreach (var spec in partSpecs)
             {
+                var offsets = spec.IsASide ? offsetsASide : offsetsBSide;
                 var offset = offsets[spec.TierIndex % 3];
 
                 var bloodstain = (MSBE.Part.Asset)baseAsset.DeepCopy();
@@ -384,7 +427,7 @@ public static class DeathMarkerInjector
     /// </summary>
     private static (int Count, uint NextEntityId) InjectMap(
         string modDir, string gameDir, Events events,
-        string mapId, HashSet<string> partNames, uint nextEntityId)
+        string mapId, List<(string PartName, bool IsASide)> gateSpecs, uint nextEntityId)
     {
         var msbFileName = $"{mapId}.msb.dcx";
         var msbPath = FindMsbPath(modDir, msbFileName) ?? FindMsbPath(gameDir, msbFileName);
@@ -404,7 +447,7 @@ public static class DeathMarkerInjector
         var entityIds = new List<uint>();
         EnsureAssetModel(msb, BLOODSTAIN_MODEL);
 
-        foreach (var partName in partNames)
+        foreach (var (partName, isASide) in gateSpecs)
         {
             var gateAsset = msb.Parts.Assets.Find(a => a.Name == partName);
             if (gateAsset == null && uint.TryParse(partName, out uint entityIdLookup))
@@ -423,7 +466,7 @@ public static class DeathMarkerInjector
             }
 
             var drawGroups = GetDrawGroupsAtPosition(msb, gateAsset.Position);
-            var offsets = GenerateOffsets(gateAsset.EntityID, gateAsset.Rotation.Y);
+            var offsets = GenerateOffsets(gateAsset.EntityID, gateAsset.Rotation.Y, isASide);
 
             // WORKAROUND: SoulsFormats' MSBE.Part.DeepCopy() produces shallow copies
             // of internal arrays (DrawGroups, DisplayGroups, CollisionMask, EntityGroupIDs,
@@ -515,6 +558,30 @@ public static class DeathMarkerInjector
 
     // --- Helper methods ---
 
+    /// <summary>
+    /// Determine if the approach area is on the ASide (gate facing direction) of the gate.
+    /// ASide = forward direction of the fog gate model (based on Y rotation).
+    /// BSide = opposite direction (180 degrees from facing).
+    /// Falls back to BSide (current behavior) if the gate or area is not found.
+    /// </summary>
+    private static bool ResolveIsASide(
+        string gateFullName, string approachArea,
+        Dictionary<string, (string ASideArea, string BSideArea)> gateSides)
+    {
+        if (!gateSides.TryGetValue(gateFullName, out var sides))
+            return false; // default: BSide (legacy behavior)
+
+        if (sides.ASideArea == approachArea)
+            return true;
+        if (sides.BSideArea == approachArea)
+            return false;
+
+        // Area not found on either side (zone name mismatch). Fall back to BSide.
+        Console.WriteLine($"  Warning: Area '{approachArea}' not on either side of gate {gateFullName}" +
+            $" (A={sides.ASideArea}, B={sides.BSideArea}), defaulting to BSide");
+        return false;
+    }
+
     private static MSBE.Part.Asset? FindNearestVanillaAsset(MSBE msb, Vector3 targetPos)
     {
         MSBE.Part.Asset? best = null;
@@ -601,48 +668,6 @@ public static class DeathMarkerInjector
             if (!names.Contains(name))
                 return name;
         }
-    }
-
-    /// <summary>
-    /// Scan all MSBs in modDir to find the highest entity ID in the FogMod range.
-    /// FogMod's num4 counter allocates IDs across Assets, Enemies, Players, and Regions.
-    /// </summary>
-    private static uint FindMaxFogModEntityId(string modDir)
-    {
-        uint maxId = FOGMOD_ENTITY_MIN;
-
-        var msbFiles = new List<string>();
-        foreach (var dirName in MsbDirVariants)
-        {
-            var msbDir = Path.Combine(modDir, "map", dirName);
-            if (Directory.Exists(msbDir))
-                msbFiles.AddRange(Directory.GetFiles(msbDir, "*.msb.dcx"));
-        }
-
-        foreach (var msbPath in msbFiles)
-        {
-            var msb = MSBE.Read(msbPath);
-
-            void CheckId(uint id)
-            {
-                if (id >= FOGMOD_ENTITY_MIN
-                    && id < FOGMOD_ENTITY_MAX
-                    && id > maxId)
-                    maxId = id;
-            }
-
-            foreach (var p in msb.Parts.Assets)
-                CheckId(p.EntityID);
-            foreach (var p in msb.Parts.Enemies)
-                CheckId(p.EntityID);
-            foreach (var p in msb.Parts.Players)
-                CheckId(p.EntityID);
-            foreach (var r in msb.Regions.GetEntries())
-                CheckId(r.EntityID);
-        }
-
-        Console.WriteLine($"  FogMod max entity ID: {maxId}, bloodstain IDs start at {maxId + 1}");
-        return maxId;
     }
 
     private static string? FindMsbPath(string baseDir, string msbFileName)

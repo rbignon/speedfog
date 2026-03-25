@@ -101,23 +101,34 @@ all clones are created.
 
 ### Entity ID Allocation
 
-FogMod allocates entity IDs from a single counter starting at 755890000, shared
-across Assets, Enemies, Players, and Regions. The counter reaches different values
-depending on the graph size.
+FogMod allocates entity IDs from a single counter starting at 755890000
+(`FOGMOD_ENTITY_MIN`), shared across Assets, Enemies, Players, and Regions.
+Bloodstain entity IDs start at 755900000 (`FOGMOD_ENTITY_MAX`), above FogMod's
+range, avoiding collisions without needing to scan MSBs.
 
-`FindMaxFogModEntityId()` scans all MSBs in the mod output to find the highest
-FogMod entity ID. Bloodstain entity IDs are allocated sequentially above this
-maximum. Colliding with FogMod entity IDs causes bloodstains to be invisible or
-fog gates to disappear.
+### Position Offsets (ASide/BSide)
 
-### Position Offsets
+Each fog gate in `fog.txt` has two sides: **ASide** (the zone in the gate model's
+facing direction, based on Y rotation) and **BSide** (the opposite zone). The
+bloodstains are placed on the side where players approach from, which depends on
+the connection direction:
 
-Bloodstains are placed in a 120-degree arc opposite the gate's facing direction
-(the approach side for the player). The arc is split into 3 x 40-degree sectors.
-Each bloodstain gets a random angle within its sector and a random radius (1.5-3m).
+- **Exit gates**: approach from `exit_area`. If `exit_area` matches ASide.Area,
+  bloodstains are placed at 180 degrees from facing (the ASide player stands opposite
+  the ASide warp region). If BSide.Area, at 0 degrees (facing direction).
+- **Entrance gates**: approach from `entrance_area`, same logic.
+
+`BuildGateSideLookup()` in Program.cs builds a mapping from gate FullName to
+(ASideArea, BSideArea) using `ann.Entrances` and `ann.Warps` from fog.txt. This
+is passed to DeathMarkerInjector which calls `ResolveIsASide()` per gate.
+
+Bloodstains are spread across a 120-degree arc on the approach side, split into
+3 x 40-degree sectors. Each bloodstain gets a random angle within its sector and
+a random radius (1.5-3m).
 
 Offsets are computed in local space (relative to the gate's facing) then rotated
-to world space by the gate's Y rotation.
+to world space by the gate's Y rotation. If a gate is not found in the fog.txt
+lookup, the default placement is BSide (180 degrees, legacy behavior).
 
 ## Known Limitations
 
