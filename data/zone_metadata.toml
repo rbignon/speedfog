@@ -48,7 +48,7 @@ weight = 3
 weight = 10
 
 [zones.volcano]
-weight = 0.1
+weight = 0.5
 
 [zones.haligtree]
 weight = 8
@@ -94,6 +94,9 @@ type = "legacy_dungeon"
 
 # --- Base game ---
 
+[zones.altus_grave]
+weight = 4.5
+
 [zones.gelmir_hero_grave]
 weight = 6
 
@@ -103,11 +106,17 @@ weight = 6
 [zones.caelid_gaolcave]
 weight = 2
 
+[zones.dragonbarrow_selliahideaway]
+weight = 2
+
 [zones.flamepeak_grave]
 weight = 2.5
 
 [zones.gelmir_grave]
 weight = 2.5
+
+[zones.gelmir_wyndhamcatacombs]
+weight = 2
 
 [zones.limgrave_tunnels]
 weight = 2
@@ -115,10 +124,19 @@ weight = 2
 [zones.liurnia_tunnel]
 weight = 2
 
+[zones.mountaintops_catacombs]
+weight = 4
+
 [zones.outskirts_grave]
 weight = 2
 
+[zones.precipice]
+weight = 3
+
 [zones.sewer_catacombs]
+weight = 2.5
+
+[zones.snowfield_catacombs]
 weight = 2.5
 
 # --- DLC ---
@@ -127,7 +145,7 @@ weight = 2.5
 weight = 3.5
 
 [zones.gravesite_forge]
-weight = 2.5
+weight = 1.5
 
 [zones.gravesite_gaol]
 weight = 6
@@ -136,10 +154,10 @@ weight = 6
 weight = 3.5
 
 [zones.rauhbase_forge]
-weight = 6
+weight = 3
 
 [zones.scadualtus_forge]
-weight = 6
+weight = 2
 
 [zones.scadualtus_catacombs]
 type = "mini_dungeon"
@@ -163,10 +181,14 @@ weight = 3
 
 [zones.volcano_abductors]
 type = "boss_arena"
+weight = 4
 
 # Astel is a remembrance boss, override from boss_arena to major_boss
 [zones.ainsel_boss]
 type = "major_boss"
+
+[zones.caelid_catacombs_boss]
+weight = 2
 
 [zones.caelid_redmane_boss]
 allow_entry_as_exit = false
@@ -179,13 +201,19 @@ allow_entry_as_exit = false
 
 [zones.deeproot_boss]
 type = "major_boss"
+weight = 2.5
 allow_entry_as_exit = false
+
+[zones.dragonbarrow_selliahideaway_boss]
+weight = 3
 
 [zones.siofra_nokron_boss]
 type = "major_boss"
+weight = 2
 
 [zones.siofra_nokron_gargoyles]
 type = "major_boss"
+weight = 2
 
 [zones.haligtree_malenia]
 weight = 5
@@ -234,6 +262,24 @@ allow_entry_as_exit = true
 [zones.peninsula_leonine]
 allow_entry_as_exit = true
 
+[zones.caelid_radahn]
+weight = 2.5
+
+[zones.farumazula_godskinduo]
+weight = 2
+
+[zones.mohgwyn_boss]
+weight = 2
+
+[zones.mountaintops_sol_boss]
+weight = 2
+
+[zones.scadutree_base]
+weight = 5.5
+
+[zones.sewer_mohg]
+weight = 2
+
 [zones.academy_redwolf]
 allow_entry_as_exit = true
 
@@ -247,6 +293,7 @@ weight = 4
 type = "boss_arena"  # fog.txt Entrance has "major" tag, but Jori is a catacomb boss, not a remembrance boss
 
 [zones.scaduview_gaius]
+weight = 2
 allow_entry_as_exit = true
 
 [zones.rauhruins_romina]
@@ -266,6 +313,9 @@ weight = 2
 [zones.belurat_boss]
 weight = 2
 allow_entry_as_exit = true
+
+[zones.leyndell_erdtree]
+weight = 5
 
 [zones.storehouse_messmer]
 weight = 4
