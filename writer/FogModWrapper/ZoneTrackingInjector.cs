@@ -92,150 +92,102 @@ public static class ZoneTrackingInjector
     }
 
     /// <summary>
-    /// Inject zone tracking events: fog gate flags (Part A) and boss death monitor (Part B).
+    /// Patch a single EMEVD: inject SetEventFlag before warp instructions whose
+    /// region matches an entry in regionToFlags. Returns the number of SetEventFlag
+    /// instructions inserted.
     /// </summary>
-    /// <param name="modDir">Mod output directory containing event/ subfolder</param>
-    /// <param name="events">SoulsIds Events for parsing EMEVD instructions</param>
-    /// <param name="regionToFlags">Region entity → flag IDs mapping from ConnectionInjector</param>
-    /// <param name="expectedFlags">Set of all flag IDs that must be injected (from connections)</param>
-    /// <param name="finishEvent">Flag ID to set on final boss death</param>
-    /// <param name="bossDefeatFlag">Vanilla flag for final boss defeat</param>
-    public static void Inject(
-        string modDir,
-        Events events,
+    /// <param name="emevd">In-memory EMEVD to patch</param>
+    /// <param name="events">Events parser for instruction generation</param>
+    /// <param name="regionToFlags">Region entity -> flag IDs mapping from ConnectionInjector</param>
+    /// <param name="injectedFlags">Accumulator: flag IDs that were injected (for validation)</param>
+    public static int PatchEmevdFile(
+        EMEVD emevd, Events events,
         Dictionary<int, List<int>> regionToFlags,
-        HashSet<int> expectedFlags,
-        int finishEvent,
-        int bossDefeatFlag)
+        HashSet<int> injectedFlags)
     {
-        // Part A: Inject SetEventFlag before warp instructions using region lookup
-        InjectFogGateFlags(modDir, events, regionToFlags, expectedFlags);
+        int totalInjected = 0;
 
-        // Part B: Create boss death monitor in common.emevd
-        if (finishEvent > 0 && bossDefeatFlag > 0)
+        foreach (var evt in emevd.Events)
         {
-            InjectBossDeathEvent(modDir, events, finishEvent, bossDefeatFlag);
+            // First pass: find all warp positions with matching regions.
+            var warpPositions = new List<(int index, List<int> flagIds)>();
+
+            for (int i = 0; i < evt.Instructions.Count; i++)
+            {
+                var warpInfo = TryExtractWarpInfo(evt.Instructions[i]);
+                if (warpInfo == null)
+                    continue;
+
+                int region = warpInfo.Value.Region;
+
+                // Region 0 with a valid dest map suggests an unresolved parameterized
+                // region. TryExtractWarpInfo already filters zero dest maps (template
+                // placeholders), but a zero region with non-zero map is unexpected.
+                if (region == 0)
+                    continue;
+
+                if (regionToFlags.TryGetValue(region, out var flagIds))
+                {
+                    warpPositions.Add((i, flagIds));
+                }
+            }
+
+            if (warpPositions.Count == 0)
+                continue;
+
+            // Second pass: insert SetEventFlag before each warp, from last to first
+            // to avoid index shifting affecting earlier positions.
+            // For shared entrances, inject ALL flag_ids (all map to the same cluster).
+            //
+            // Parameter shifting correctness: the inner loop inserts N flags at
+            // the same warpIdx, each time incrementing Parameter indices >= warpIdx.
+            // After N insertions, each Parameter is shifted N times, correct because
+            // N instructions were inserted before it. The outer reverse loop ensures
+            // earlier warp positions are unaffected by later insertions.
+            int insertCount = 0;
+            for (int j = warpPositions.Count - 1; j >= 0; j--)
+            {
+                var (warpIdx, flagIds) = warpPositions[j];
+
+                // Insert flags in reverse order so they appear in original order
+                // before the warp instruction.
+                for (int k = flagIds.Count - 1; k >= 0; k--)
+                {
+                    var setFlagInstr = events.ParseAdd(
+                        $"SetEventFlag(TargetEventFlagType.EventFlag, {flagIds[k]}, ON)");
+                    evt.Instructions.Insert(warpIdx, setFlagInstr);
+                    insertCount++;
+
+                    // Shift Parameter entries for instructions at or after insertion point
+                    foreach (var param in evt.Parameters)
+                    {
+                        if (param.InstructionIndex >= warpIdx)
+                        {
+                            param.InstructionIndex++;
+                        }
+                    }
+                }
+
+                foreach (var fid in flagIds)
+                    injectedFlags.Add(fid);
+            }
+
+            totalInjected += insertCount;
         }
-        else
-        {
-            Console.WriteLine("Warning: Skipping boss death event (finishEvent={0}, bossDefeatFlag={1})",
-                finishEvent, bossDefeatFlag);
-        }
+
+        return totalInjected;
     }
 
     /// <summary>
-    /// Scan all EMEVD files for warp instructions. For each WarpPlayer or
-    /// PlayCutsceneToPlayerAndWarp, extract the region parameter and look it up
-    /// in the regionToFlags dictionary. If found, inject SetEventFlag for each
-    /// associated flag_id before the warp instruction.
-    ///
-    /// This replaces the previous 5-strategy heuristic matching with a single
-    /// dictionary lookup. The mapping is built by ConnectionInjector from
-    /// entranceEdge.Side.Warp.Region — the same value FogMod bakes into
-    /// compiled warp instructions.
+    /// Validate that every expected flag was injected during the EMEVD scan.
+    /// Throws if any flags are missing.
     /// </summary>
-    private static void InjectFogGateFlags(
-        string modDir, Events events,
-        Dictionary<int, List<int>> regionToFlags,
-        HashSet<int> expectedFlags)
+    public static void ValidateInjectedFlags(
+        HashSet<int> injectedFlags, HashSet<int> expectedFlags, int totalInjected)
     {
-        var eventDir = Path.Combine(modDir, "event");
-        if (!Directory.Exists(eventDir))
-        {
-            Console.WriteLine("Warning: event directory not found, skipping fog gate flag injection");
-            return;
-        }
-
-        Console.WriteLine($"Zone tracking: region lookup with {regionToFlags.Count} regions, " +
-            $"{regionToFlags.Values.Sum(f => f.Count)} flag entries");
-
-        int totalInjected = 0;
-        var injectedFlags = new HashSet<int>();
-
-        foreach (var emevdPath in Directory.GetFiles(eventDir, "*.emevd.dcx"))
-        {
-            var emevd = EMEVD.Read(emevdPath);
-            bool fileModified = false;
-
-            foreach (var evt in emevd.Events)
-            {
-                // First pass: find all warp positions with matching regions.
-                var warpPositions = new List<(int index, List<int> flagIds)>();
-
-                for (int i = 0; i < evt.Instructions.Count; i++)
-                {
-                    var warpInfo = TryExtractWarpInfo(evt.Instructions[i]);
-                    if (warpInfo == null)
-                        continue;
-
-                    int region = warpInfo.Value.Region;
-
-                    // Region 0 with a valid dest map suggests an unresolved parameterized
-                    // region — TryExtractWarpInfo already filters zero dest maps (template
-                    // placeholders), but a zero region with non-zero map is unexpected.
-                    if (region == 0)
-                        continue;
-
-                    if (regionToFlags.TryGetValue(region, out var flagIds))
-                    {
-                        warpPositions.Add((i, flagIds));
-                    }
-                }
-
-                if (warpPositions.Count == 0)
-                    continue;
-
-                // Second pass: insert SetEventFlag before each warp, from last to first
-                // to avoid index shifting affecting earlier positions.
-                // For shared entrances, inject ALL flag_ids (all map to the same cluster).
-                //
-                // Parameter shifting correctness: the inner loop inserts N flags at
-                // the same warpIdx, each time incrementing Parameter indices >= warpIdx.
-                // After N insertions, each Parameter is shifted N times — correct because
-                // N instructions were inserted before it. The outer reverse loop ensures
-                // earlier warp positions are unaffected by later insertions.
-                int insertCount = 0;
-                for (int j = warpPositions.Count - 1; j >= 0; j--)
-                {
-                    var (warpIdx, flagIds) = warpPositions[j];
-
-                    // Insert flags in reverse order so they appear in original order
-                    // before the warp instruction.
-                    for (int k = flagIds.Count - 1; k >= 0; k--)
-                    {
-                        var setFlagInstr = events.ParseAdd(
-                            $"SetEventFlag(TargetEventFlagType.EventFlag, {flagIds[k]}, ON)");
-                        evt.Instructions.Insert(warpIdx, setFlagInstr);
-                        insertCount++;
-
-                        // Shift Parameter entries for instructions at or after insertion point
-                        foreach (var param in evt.Parameters)
-                        {
-                            if (param.InstructionIndex >= warpIdx)
-                            {
-                                param.InstructionIndex++;
-                            }
-                        }
-                    }
-
-                    foreach (var fid in flagIds)
-                        injectedFlags.Add(fid);
-                }
-
-                totalInjected += insertCount;
-                fileModified = true;
-            }
-
-            if (fileModified)
-            {
-                emevd.Write(emevdPath);
-            }
-        }
-
         Console.WriteLine($"Zone tracking: injected {totalInjected} SetEventFlag instructions " +
             $"({injectedFlags.Count} unique flags)");
 
-        // Phase 3 validation: every expected flag must have been injected.
         var missingFlags = expectedFlags.Except(injectedFlags).OrderBy(f => f).ToList();
         if (missingFlags.Count > 0)
         {
@@ -247,21 +199,17 @@ public static class ZoneTrackingInjector
     }
 
     /// <summary>
-    /// Create a boss death monitor event in common.emevd that sets finish_event
-    /// when the final boss defeat flag is triggered.
+    /// Inject boss death monitor event into the provided common EMEVD.
+    /// Sets finish_event when the final boss defeat flag is triggered.
     /// </summary>
-    private static void InjectBossDeathEvent(
-        string modDir, Events events, int finishEvent, int bossDefeatFlag)
+    /// <param name="commonEmevd">In-memory common.emevd to modify</param>
+    /// <param name="events">Events parser for instruction generation</param>
+    /// <param name="finishEvent">Flag ID to set on final boss death</param>
+    /// <param name="bossDefeatFlag">Vanilla flag for final boss defeat</param>
+    public static void InjectBossDeathEvent(
+        EMEVD commonEmevd, Events events, int finishEvent, int bossDefeatFlag)
     {
-        var emevdPath = Path.Combine(modDir, "event", "common.emevd.dcx");
-        if (!File.Exists(emevdPath))
-        {
-            Console.WriteLine("Warning: common.emevd.dcx not found, skipping boss death event");
-            return;
-        }
-
-        var emevd = EMEVD.Read(emevdPath);
-        var initEvent = emevd.Events.Find(e => e.ID == 0);
+        var initEvent = commonEmevd.Events.Find(e => e.ID == 0);
         if (initEvent == null)
         {
             Console.WriteLine("Warning: Event 0 not found in common.emevd, skipping boss death event");
@@ -277,15 +225,13 @@ public static class ZoneTrackingInjector
         evt.Instructions.Add(events.ParseAdd(
             $"SetEventFlag(TargetEventFlagType.EventFlag, {finishEvent}, ON)"));
 
-        emevd.Events.Add(evt);
+        commonEmevd.Events.Add(evt);
 
         // Register in event 0 (InitializeEvent: bank 2000, id 0)
         var initArgs = new byte[8];
         BitConverter.GetBytes(0).CopyTo(initArgs, 0);                     // slot = 0
         BitConverter.GetBytes(BOSS_DEATH_EVENT_ID).CopyTo(initArgs, 4);   // eventId
         initEvent.Instructions.Add(new EMEVD.Instruction(2000, 0, initArgs));
-
-        emevd.Write(emevdPath);
 
         Console.WriteLine($"Zone tracking: boss death monitor event {BOSS_DEATH_EVENT_ID} " +
                           $"(defeat flag {bossDefeatFlag} -> finish event {finishEvent})");

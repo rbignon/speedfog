@@ -34,32 +34,25 @@ public static class SealingTreePatcher
     private const int EVENT_915_ID = 915;
 
     /// <summary>
-    /// Patch common.emevd to neutralize Event 915's SetEventFlag(330, ON).
-    /// Also adds SetEventFlag(330, OFF) at the start of common Event 0 to clear
+    /// Patch the provided common EMEVD to neutralize Event 915's SetEventFlag(330, ON).
+    /// Also adds SetEventFlag(330, OFF) at the start of Event 0 to clear
     /// any leftover flag from a previous save.
     /// </summary>
-    public static void Patch(string modDir)
+    /// <param name="commonEmevd">In-memory common.emevd to modify</param>
+    public static void Patch(EMEVD commonEmevd)
     {
-        var commonPath = Path.Combine(modDir, "event", "common.emevd.dcx");
-        if (!File.Exists(commonPath))
-        {
-            Console.WriteLine("Warning: common.emevd.dcx not found, skipping Sealing Tree patch");
-            return;
-        }
-
-        var emevd = EMEVD.Read(commonPath);
         int nopCount = 0;
         bool cleared = false;
 
         // 1. Find Event 915 and NOP out SetEventFlag(330, ON)
-        var evt915 = emevd.Events.FirstOrDefault(e => e.ID == EVENT_915_ID);
+        var evt915 = commonEmevd.Events.FirstOrDefault(e => e.ID == EVENT_915_ID);
         if (evt915 != null)
         {
             nopCount = NopSetEventFlag(evt915, SEALING_TREE_FLAG);
         }
 
         // 2. Clear flag 330 at game start to handle saves where it's already ON.
-        var evt0 = emevd.Events.FirstOrDefault(e => e.ID == 0);
+        var evt0 = commonEmevd.Events.FirstOrDefault(e => e.ID == 0);
         if (evt0 != null)
         {
             InsertClearFlag(evt0, SEALING_TREE_FLAG);
@@ -68,7 +61,6 @@ public static class SealingTreePatcher
 
         if (nopCount > 0 || cleared)
         {
-            emevd.Write(commonPath);
             Console.WriteLine($"Sealing Tree fix: NOP'd {nopCount} SetEventFlag(330) in Event 915"
                 + (cleared ? ", cleared flag 330 in Event 0" : ""));
         }

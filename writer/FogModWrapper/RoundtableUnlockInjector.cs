@@ -15,27 +15,17 @@ public static class RoundtableUnlockInjector
     private const int UNLOCK_EVENT_ID = 755860100;
 
     /// <summary>
-    /// Inject the Roundtable unlock event into common.emevd.
+    /// Inject the Roundtable unlock event into the provided common EMEVD.
     /// This event activates the START_FLAG immediately, allowing
     /// common_roundtable to enable the Roundtable Hold.
     /// </summary>
-    /// <param name="modDir">Directory containing the mod files (with event/common.emevd)</param>
-    public static void Inject(string modDir)
+    /// <param name="commonEmevd">In-memory common.emevd to modify</param>
+    public static void Inject(EMEVD commonEmevd)
     {
-        var emevdPath = Path.Combine(modDir, "event", "common.emevd.dcx");
-        if (!File.Exists(emevdPath))
-        {
-            Console.WriteLine($"Warning: common.emevd.dcx not found at {emevdPath}, skipping Roundtable unlock injection");
-            return;
-        }
-
         Console.WriteLine("Injecting Roundtable unlock event into common.emevd...");
 
-        // Load the EMEVD
-        var emevd = EMEVD.Read(emevdPath);
-
         // Find the common event initialization (event 0) to add our event call
-        var initEvent = emevd.Events.Find(e => e.ID == 0);
+        var initEvent = commonEmevd.Events.Find(e => e.ID == 0);
         if (initEvent == null)
         {
             Console.WriteLine("Warning: Event 0 (init) not found in common.emevd, skipping Roundtable unlock injection");
@@ -44,14 +34,12 @@ public static class RoundtableUnlockInjector
 
         // Create the event that sets the start flag immediately
         var unlockEvent = CreateUnlockEvent(UNLOCK_EVENT_ID);
-        emevd.Events.Add(unlockEvent);
+        commonEmevd.Events.Add(unlockEvent);
 
         // Add initialization call to event 0
         var initInstruction = CreateInitializeEventInstruction(UNLOCK_EVENT_ID);
         initEvent.Instructions.Add(initInstruction);
 
-        // Save the modified EMEVD
-        emevd.Write(emevdPath);
         Console.WriteLine($"Roundtable unlock event {UNLOCK_EVENT_ID} injected successfully");
     }
 

@@ -49,9 +49,9 @@ Rather than managing the flags at runtime, SpeedFog rewrites the compiled warp i
 
 **Strategy**: Replace primary destination (m11_00) with alternate destination (m11_05).
 
-1. Scan all EMEVD files for WarpPlayer/CutsceneWarp targeting the primary region
+1. For each EMEVD file (via consolidated scan in Program.cs), find WarpPlayer/CutsceneWarp targeting the primary region
 2. Replace map bytes and region with the alternate (m11_05) values
-3. Insert `SetEventFlag(300, ON)` before each patched warp — the engine needs flag 300 ON to load m11_05 tile assets
+3. Insert `SetEventFlag(300, ON)` before each patched warp -- the engine needs flag 300 ON to load m11_05 tile assets
 
 The SetEventFlag insertion is critical: unlike flag 330, flag 300 controls which physical map tile the engine loads at Leyndell coordinates. Setting it only at warp time means Leyndell stays in its primary state during the run, and only switches to Ashen at the moment the player warps to the Erdtree.
 
@@ -72,9 +72,9 @@ var erdtreeEntrance = ann.Entrances.Concat(ann.Warps).FirstOrDefault(e =>
 
 **Strategy**: Replace alternate destination (m61_44_45_10) with primary destination (m61_44_45_00). This is the reverse of ErdtreeWarpPatcher.
 
-1. Scan all EMEVD files for WarpPlayer/CutsceneWarp targeting the alternate region
+1. For each EMEVD file (via consolidated scan in Program.cs), find WarpPlayer/CutsceneWarp targeting the alternate region
 2. Replace map bytes and region with the primary (m61_44_45_00) values
-3. No SetEventFlag insertion — flag 330 only controls the fogwarp destination, not map tile loading. We want it OFF (or irrelevant).
+3. No SetEventFlag insertion -- flag 330 only controls the fogwarp destination, not map tile loading. We want it OFF (or irrelevant).
 
 There are 2 entrance pairs with flag 330 (front + back of Romina's arena). Both are patched if connected.
 
@@ -114,14 +114,12 @@ This is defense-in-depth: even though SealingTreeWarpPatcher makes the warp dest
 
 ## Pipeline Order
 
-Both patchers run after FogMod writes its EMEVD files (step 7 in Program.cs):
+All three patchers run after FogMod writes its EMEVD files. Program.cs performs a single consolidated scan over all EMEVD files, applying ErdtreeWarpPatcher.PatchEmevd(), SealingTreeWarpPatcher.PatchEmevd(), and ZoneTrackingInjector.PatchEmevdFile() to each file in one pass (one Read + one Write per file). SealingTreePatcher operates on common.emevd in memory.
 
 ```
 7.   FogMod GameDataWriterE.Write()    — generates EMEVD with compiled fogwarps
-7f2. ErdtreeWarpPatcher                — primary→alt for Erdtree (flag 300)
-7f3. SealingTreeWarpPatcher            — alt→primary for Sealing Tree (flag 330)
-...
-7j2. SealingTreePatcher                — neutralize Event 915 + clear flag 330
+     Consolidated EMEVD scan           — single pass applies all three patchers per file
+     common.emevd injectors            — includes SealingTreePatcher (neutralize Event 915)
 ```
 
 ## Adding New AlternateFlag Patchers

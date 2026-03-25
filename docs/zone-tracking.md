@@ -79,9 +79,9 @@ InjectionResult.BuildRegionToFlags(eventMap)
         |  builds region -> List<flag_id> dictionary
         |  validates same-cluster invariant
         v
-ZoneTrackingInjector.Inject(regionToFlags, expectedFlags, ...)
-        |  scan EMEVDs, extract region from warp instructions
-        |  lookup region in dictionary
+Program.cs consolidated EMEVD scan
+        |  for each EMEVD file, calls ZoneTrackingInjector.PatchEmevdFile()
+        |  extract region from warp instructions, lookup in dictionary
         |  inject SetEventFlag for each flag_id in list
         v
 SetEventFlag injected before each matched warp
@@ -89,7 +89,7 @@ SetEventFlag injected before each matched warp
 
 ## ZoneTrackingInjector Pipeline
 
-`ZoneTrackingInjector.Inject()` runs after `GameDataWriterE.Write()` and post-processes every EMEVD file. It takes `regionToFlags` and `expectedFlags` instead of raw connections.
+Zone tracking runs after `GameDataWriterE.Write()` and post-processes every EMEVD file. Program.cs calls `ZoneTrackingInjector.PatchEmevdFile()` for each file during a consolidated scan loop (shared with ErdtreeWarpPatcher and SealingTreeWarpPatcher), then `InjectBossDeathEvent()` on the in-memory common.emevd. It takes `regionToFlags` and `expectedFlags` instead of raw connections.
 
 ### Phase 1: Mapping (deferred)
 
@@ -147,7 +147,7 @@ This translates the boss's vanilla defeat flag into SpeedFog's `finish_event` fl
 
 | File | Role |
 |------|------|
-| `writer/FogModWrapper/ZoneTrackingInjector.cs` | Scan/inject logic (Phase 2-3) |
+| `writer/FogModWrapper/ZoneTrackingInjector.cs` | Per-file patching (PatchEmevdFile), validation (ValidateInjectedFlags), boss death event (InjectBossDeathEvent) |
 | `writer/FogModWrapper/ConnectionInjector.cs` | Region-to-flags mapping construction (Phase 1) |
 | `writer/FogModWrapper.Tests/ZoneTrackingTests.cs` | Unit tests |
 | `speedfog/output.py` | Flag allocation (EVENT_FLAG_BASE), event_map construction |

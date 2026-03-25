@@ -57,14 +57,14 @@ public static class StartingItemInjector
     };
 
     /// <summary>
-    /// Inject starting item events into common.emevd.
+    /// Inject starting item events into the provided common EMEVD.
     /// Gives Good IDs (key items) and care package items (typed) at game start.
     /// </summary>
-    /// <param name="modDir">Directory containing the mod files (with event/common.emevd)</param>
+    /// <param name="commonEmevd">In-memory common.emevd to modify</param>
     /// <param name="goodIds">List of Good IDs to award (key items, great runes)</param>
     /// <param name="carePackage">List of typed care package items (weapons, armor, etc.)</param>
     /// <param name="events">Events parser for instruction generation</param>
-    public static void Inject(string modDir, List<int> goodIds, List<CarePackageItem> carePackage, Events events)
+    public static void Inject(EMEVD commonEmevd, List<int> goodIds, List<CarePackageItem> carePackage, Events events)
     {
         var totalItems = goodIds.Count + carePackage.Count;
         if (totalItems == 0)
@@ -73,20 +73,10 @@ public static class StartingItemInjector
             return;
         }
 
-        var emevdPath = Path.Combine(modDir, "event", "common.emevd.dcx");
-        if (!File.Exists(emevdPath))
-        {
-            Console.WriteLine($"Warning: common.emevd.dcx not found at {emevdPath}, skipping starting item injection");
-            return;
-        }
-
         Console.WriteLine($"Injecting {totalItems} starting items into common.emevd...");
 
-        // Load the EMEVD
-        var emevd = EMEVD.Read(emevdPath);
-
         // Find the common event initialization (event 0) to add our event calls
-        var initEvent = emevd.Events.Find(e => e.ID == 0);
+        var initEvent = commonEmevd.Events.Find(e => e.ID == 0);
         if (initEvent == null)
         {
             Console.WriteLine("Warning: Event 0 (init) not found in common.emevd, skipping starting item injection");
@@ -151,7 +141,7 @@ public static class StartingItemInjector
         evt.Instructions.Add(events.ParseAdd($"SetEventFlag(TargetEventFlagType.EventFlag, {ITEMS_GIVEN_FLAG}, ON)"));
 
         // Add event to EMEVD
-        emevd.Events.Add(evt);
+        commonEmevd.Events.Add(evt);
 
         // Add initialization call to event 0 (same pattern as StartingResourcesInjector)
         var initArgs = new byte[12];
@@ -160,8 +150,6 @@ public static class StartingItemInjector
         BitConverter.GetBytes(0).CopyTo(initArgs, 8);              // arg0 = 0 (unused)
         initEvent.Instructions.Add(new EMEVD.Instruction(2000, 0, initArgs));
 
-        // Save the modified EMEVD
-        emevd.Write(emevdPath);
         Console.WriteLine("Starting item events injected successfully");
     }
 }

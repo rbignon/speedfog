@@ -65,11 +65,10 @@ public class ZoneTrackingTests
 
     // --- Region-based injection tests (using real EMEVD structures) ---
     //
-    // NOTE: These tests duplicate the scan/lookup logic from InjectFogGateFlags rather
-    // than calling the real method, because InjectFogGateFlags operates on EMEVD files
-    // on disk. This means the actual insertion logic (reverse iteration, Parameter index
-    // shifting) is NOT unit-tested here — it is covered by integration tests
-    // (run_integration.sh) and Phase 3 validation (missing flags abort the build).
+    // NOTE: These tests verify the region lookup logic by reimplementing it inline.
+    // The actual insertion logic (reverse iteration, Parameter index shifting) in
+    // PatchEmevdFile is covered by integration tests (run_integration.sh) and
+    // Phase 3 validation (missing flags abort the build).
 
     /// <summary>
     /// Build a minimal EMEVD with one event containing a WarpPlayer instruction.
@@ -108,7 +107,7 @@ public class ZoneTrackingTests
         var evt = emevd.Events[0];
         Assert.Equal(2, evt.Instructions.Count); // dummy + warp
 
-        // Simulate the injection logic inline (since InjectFogGateFlags works on files)
+        // Simulate the region lookup logic inline
         var warpPositions = new List<(int index, List<int> flagIds)>();
         for (int i = 0; i < evt.Instructions.Count; i++)
         {

@@ -398,88 +398,30 @@ Example:
             }
         }
 
-        // 7b. Inject starting items (post-process EMEVD)
-        // Use StartingGoods (Good IDs) instead of StartingItemLots (ItemLot IDs)
-        // because Item Randomizer modifies ItemLotParam but not the items themselves
-        if (graphData.StartingGoods.Count > 0 || graphData.CarePackage.Count > 0)
-        {
-            StartingItemInjector.Inject(modDir, graphData.StartingGoods, graphData.CarePackage, events);
-        }
+        // --- Prepare warp patcher data ---
 
-        // 7c. Inject starting resources (runes, golden seeds, sacred tears, larval tears)
-        StartingResourcesInjector.Inject(
-            modDir,
-            events,
-            graphData.StartingRunes,
-            graphData.StartingGoldenSeeds,
-            graphData.StartingSacredTears,
-            graphData.StartingLarvalTears,
-            graphData.StartingStoneswordKeys
-        );
-
-        // 7d. Inject Roundtable unlock (bypasses DLC finger pickup detection)
-        RoundtableUnlockInjector.Inject(modDir);
-
-        // 7e. Inject smithing stones into merchant shop
-        ShopInjector.Inject(modDir, graphData.SentryTorchShop);
-
-        // 7f. Inject zone tracking events for racing support
-        if (graphData.FinishEvent > 0)
-        {
-            // Use graph.json's FinishBossDefeatFlag (from fog.txt) with priority,
-            // falling back to FogMod's Graph extraction. This fixes leyndell_erdtree
-            // where the boss zone (erdtree) is reachable via norandom fogs but not
-            // directly in the cluster, so FogMod's Graph doesn't have the DefeatFlag.
-            int bossDefeatFlag = graphData.FinishBossDefeatFlag > 0
-                ? graphData.FinishBossDefeatFlag
-                : injectionResult.BossDefeatFlag;
-
-            if (graphData.FinishBossDefeatFlag > 0 && injectionResult.BossDefeatFlag > 0
-                && graphData.FinishBossDefeatFlag != injectionResult.BossDefeatFlag)
-            {
-                Console.WriteLine($"Note: Using graph.json defeat flag {graphData.FinishBossDefeatFlag} " +
-                    $"(FogMod Graph had {injectionResult.BossDefeatFlag})");
-            }
-
-            // Build expected flags set from connections for Phase 3 validation
-            var expectedFlags = graphData.Connections
-                .Where(c => c.FlagId > 0)
-                .Select(c => c.FlagId)
-                .Distinct()
-                .ToHashSet();
-
-            ZoneTrackingInjector.Inject(
-                modDir,
-                events,
-                injectionResult.RegionToFlags,
-                expectedFlags,
-                injectionResult.FinishEvent,
-                bossDefeatFlag);
-        }
-
-        // 7f2. Patch Erdtree warp to target Ashen Leyndell (m11_05) directly.
-        // FogMod's fogwarp template compiles an alt-warp: primary → m11_00,
-        // alt (flag 300) → m11_05. We replace the primary with m11_05 so
-        // the Erdtree is reachable without Maliketh defeat / flag 300.
+        // Erdtree warp: patch fogwarps targeting leyndell_erdtree (m11_00) to
+        // warp directly to leyndell2_erdtree (m11_05).
         var erdtreeEntrance = ann.Entrances.Concat(ann.Warps).FirstOrDefault(e =>
             e.BSide?.Area == "leyndell_erdtree" &&
             e.BSide?.AlternateSide?.Warp != null &&
             e.BSide.AlternateFlag > 0);
 
-        if (erdtreeEntrance != null)
+        int erdtreePrimaryRegion = 0, erdtreeAltRegion = 0;
+        byte[]? erdtreeAltMapBytes = null;
+        int erdtreeAltMapPacked = 0;
+        if (erdtreeEntrance != null &&
+            erdtreeEntrance.BSide.Warp.Region != 0 &&
+            erdtreeEntrance.BSide.AlternateSide.Warp.Region != 0)
         {
-            ErdtreeWarpPatcher.Patch(
-                modDir,
-                erdtreeEntrance.BSide.Warp.Region,
-                erdtreeEntrance.BSide.AlternateSide.Warp.Region,
-                erdtreeEntrance.BSide.AlternateSide.Warp.Map);
+            erdtreePrimaryRegion = erdtreeEntrance.BSide.Warp.Region;
+            erdtreeAltRegion = erdtreeEntrance.BSide.AlternateSide.Warp.Region;
+            var altMap = erdtreeEntrance.BSide.AlternateSide.Warp.Map;
+            erdtreeAltMapBytes = ErdtreeWarpPatcher.ParseMapBytes(altMap);
+            erdtreeAltMapPacked = ErdtreeWarpPatcher.PackMapId(altMap);
         }
 
-        // 7f3. Patch Sealing Tree fogwarps to eliminate flag 330 dependency.
-        // FogMod's fogwarp template compiles an alt-warp: primary → m61_44_45_00,
-        // alt (flag 330) → m61_44_45_10. Something outside EMEVD sets flag 330 on
-        // saves with prior DLC progress, warping to the wrong map variant (no Romina).
-        // We replace alt destinations with primary destinations in all compiled events.
+        // Sealing Tree warp: replace alt destinations (flag 330) with primary destinations.
         var sealingTreeEntrances = ann.Entrances.Concat(ann.Warps)
             .SelectMany(e => e.Sides())
             .Where(s => s.AlternateFlag == 330 && s.AlternateSide?.Warp != null && s.Warp != null)
@@ -490,15 +432,209 @@ Example:
             ))
             .ToList();
 
-        if (sealingTreeEntrances.Count > 0)
+        var sealingTreeTargets = sealingTreeEntrances
+            .Where(e => e.altRegion != 0 && e.primaryRegion != 0)
+            .Select(e => (
+                e.altRegion,
+                e.primaryRegion,
+                primaryMapBytes: ErdtreeWarpPatcher.ParseMapBytes(e.primaryMap),
+                primaryMapPacked: ErdtreeWarpPatcher.PackMapId(e.primaryMap)
+            ))
+            .ToList();
+
+        // Zone tracking: prepare region-to-flags mapping and expected flags.
+        bool doZoneTracking = graphData.FinishEvent > 0;
+        int bossDefeatFlag = 0;
+        HashSet<int>? expectedFlags = null;
+
+        if (doZoneTracking)
         {
-            SealingTreeWarpPatcher.Patch(modDir, sealingTreeEntrances);
+            // Use graph.json's FinishBossDefeatFlag (from fog.txt) with priority,
+            // falling back to FogMod's Graph extraction. This fixes leyndell_erdtree
+            // where the boss zone (erdtree) is reachable via norandom fogs but not
+            // directly in the cluster, so FogMod's Graph doesn't have the DefeatFlag.
+            bossDefeatFlag = graphData.FinishBossDefeatFlag > 0
+                ? graphData.FinishBossDefeatFlag
+                : injectionResult.BossDefeatFlag;
+
+            if (graphData.FinishBossDefeatFlag > 0 && injectionResult.BossDefeatFlag > 0
+                && graphData.FinishBossDefeatFlag != injectionResult.BossDefeatFlag)
+            {
+                Console.WriteLine($"Note: Using graph.json defeat flag {graphData.FinishBossDefeatFlag} " +
+                    $"(FogMod Graph had {injectionResult.BossDefeatFlag})");
+            }
+
+            expectedFlags = graphData.Connections
+                .Where(c => c.FlagId > 0)
+                .Select(c => c.FlagId)
+                .Distinct()
+                .ToHashSet();
+
+            Console.WriteLine($"Zone tracking: region lookup with {injectionResult.RegionToFlags.Count} regions, " +
+                $"{injectionResult.RegionToFlags.Values.Sum(f => f.Count)} flag entries");
         }
 
-        // 7g. Inject "RUN COMPLETE" banner on final boss defeat
-        RunCompleteInjector.Inject(modDir, config.GameDir, events, graphData.FinishEvent, graphData.RunCompleteMessage);
+        // --- Single pass over all EMEVD files (zone tracking + warp patches) ---
+        // Loads each file once, applies all applicable patches, writes once if modified.
+        // common.emevd.dcx is handled separately below (also receives 6 injectors).
 
-        // 7h. Inject Site of Grace at Chapel of Anticipation and relocate player spawn
+        var eventDir = Path.Combine(modDir, "event");
+        var commonEmevdPath = Path.Combine(eventDir, "common.emevd.dcx");
+        var commonEmevd = EMEVD.Read(commonEmevdPath);
+
+        var injectedFlags = new HashSet<int>();
+        int totalZoneTrackingInjected = 0;
+        int totalErdtreePatched = 0;
+        int totalSealingTreePatched = 0;
+
+        foreach (var file in Directory.GetFiles(eventDir, "*.emevd.dcx"))
+        {
+            // Skip common.emevd.dcx: handled in-memory below
+            if (Path.GetFullPath(file) == Path.GetFullPath(commonEmevdPath))
+                continue;
+
+            var emevd = EMEVD.Read(file);
+            bool modified = false;
+
+            if (doZoneTracking)
+            {
+                int n = ZoneTrackingInjector.PatchEmevdFile(
+                    emevd, events, injectionResult.RegionToFlags, injectedFlags);
+                if (n > 0)
+                {
+                    totalZoneTrackingInjected += n;
+                    modified = true;
+                }
+            }
+
+            if (erdtreeAltMapBytes != null)
+            {
+                int n = ErdtreeWarpPatcher.PatchEmevd(
+                    emevd, erdtreePrimaryRegion, erdtreeAltRegion, erdtreeAltMapBytes, erdtreeAltMapPacked);
+                if (n > 0)
+                {
+                    Console.WriteLine($"  {Path.GetFileName(file)}: patched {n} erdtree warp(s)");
+                    totalErdtreePatched += n;
+                    modified = true;
+                }
+            }
+
+            if (sealingTreeTargets.Count > 0)
+            {
+                int n = SealingTreeWarpPatcher.PatchEmevd(emevd, sealingTreeTargets);
+                if (n > 0)
+                {
+                    Console.WriteLine($"  {Path.GetFileName(file)}: patched {n} sealing tree warp(s)");
+                    totalSealingTreePatched += n;
+                    modified = true;
+                }
+            }
+
+            if (modified)
+                emevd.Write(file);
+        }
+
+        // Also apply warp patches to common.emevd (already in memory)
+        if (doZoneTracking)
+        {
+            totalZoneTrackingInjected += ZoneTrackingInjector.PatchEmevdFile(
+                commonEmevd, events, injectionResult.RegionToFlags, injectedFlags);
+        }
+        if (erdtreeAltMapBytes != null)
+        {
+            int n = ErdtreeWarpPatcher.PatchEmevd(
+                commonEmevd, erdtreePrimaryRegion, erdtreeAltRegion, erdtreeAltMapBytes, erdtreeAltMapPacked);
+            if (n > 0)
+            {
+                Console.WriteLine($"  common.emevd.dcx: patched {n} erdtree warp(s)");
+                totalErdtreePatched += n;
+            }
+        }
+        if (sealingTreeTargets.Count > 0)
+        {
+            int n = SealingTreeWarpPatcher.PatchEmevd(commonEmevd, sealingTreeTargets);
+            if (n > 0)
+            {
+                Console.WriteLine($"  common.emevd.dcx: patched {n} sealing tree warp(s)");
+                totalSealingTreePatched += n;
+            }
+        }
+
+        // Log scan results
+        if (doZoneTracking)
+        {
+            ZoneTrackingInjector.ValidateInjectedFlags(injectedFlags, expectedFlags!, totalZoneTrackingInjected);
+        }
+        if (erdtreeAltMapBytes != null)
+        {
+            if (totalErdtreePatched > 0)
+                Console.WriteLine($"Erdtree warp fix: patched {totalErdtreePatched} warp(s) " +
+                    $"(region {erdtreePrimaryRegion} -> {erdtreeAltRegion})");
+            else
+                Console.WriteLine($"Erdtree warp fix: no matching warps found " +
+                    $"(region {erdtreePrimaryRegion} may not be connected)");
+        }
+        if (sealingTreeTargets.Count > 0)
+        {
+            if (totalSealingTreePatched > 0)
+                Console.WriteLine($"Sealing Tree warp fix: patched {totalSealingTreePatched} warp(s) across {sealingTreeTargets.Count} entrance(s)");
+            else
+                Console.WriteLine("Sealing Tree warp fix: no matching warps found (entrances may not be connected)");
+        }
+
+        // --- Apply all common.emevd injectors (single Read, single Write) ---
+
+        // 7b. Starting items
+        if (graphData.StartingGoods.Count > 0 || graphData.CarePackage.Count > 0)
+        {
+            StartingItemInjector.Inject(commonEmevd, graphData.StartingGoods, graphData.CarePackage, events);
+        }
+
+        // 7c. Starting resources
+        StartingResourcesInjector.Inject(
+            commonEmevd,
+            events,
+            graphData.StartingRunes,
+            graphData.StartingGoldenSeeds,
+            graphData.StartingSacredTears,
+            graphData.StartingLarvalTears,
+            graphData.StartingStoneswordKeys
+        );
+
+        // 7d. Roundtable unlock
+        RoundtableUnlockInjector.Inject(commonEmevd);
+
+        // 7f. Boss death monitor for zone tracking
+        if (doZoneTracking && bossDefeatFlag > 0)
+        {
+            ZoneTrackingInjector.InjectBossDeathEvent(
+                commonEmevd, events, injectionResult.FinishEvent, bossDefeatFlag);
+        }
+
+        // 7g. "RUN COMPLETE" banner event
+        if (graphData.FinishEvent > 0)
+        {
+            RunCompleteInjector.InjectEmevdEvent(commonEmevd, events, graphData.FinishEvent);
+        }
+
+        // 7j2. Neutralize vanilla Sealing Tree events to prevent flag 330 contamination.
+        SealingTreePatcher.Patch(commonEmevd);
+
+        // Write common.emevd.dcx once (was previously read/written 6+ times)
+        commonEmevd.Write(commonEmevdPath);
+
+        // --- Non-EMEVD injectors and per-map injectors ---
+
+        // 7e. Smithing stones in merchant shop (param file)
+        ShopInjector.Inject(modDir, graphData.SentryTorchShop);
+
+        // 7g-fmg. "RUN COMPLETE" banner FMG entries (all languages)
+        if (graphData.FinishEvent > 0)
+        {
+            RunCompleteInjector.InjectFmgEntries(modDir, config.GameDir, graphData.RunCompleteMessage);
+        }
+
+        // 7h. Site of Grace at Chapel of Anticipation
         if (graphData.ChapelGrace)
         {
             ChapelGraceInjector.Inject(modDir, config.GameDir, events);
@@ -510,17 +646,11 @@ Example:
             modDir, config.GameDir, graphData.Connections, events,
             graphData.EventMap, graphData.DeathFlags, gateSides);
 
-        // 7i. Inject rebirth option at Sites of Grace
+        // 7i. Rebirth option at Sites of Grace
         if (graphData.StartingLarvalTears > 0)
         {
             RebirthInjector.Inject(modDir, config.GameDir);
         }
-
-        // 7j2. Neutralize vanilla Sealing Tree events to prevent flag 330 contamination.
-        // Event 915 sets flag 330 (Sealing Tree burned) when flag 9140 (Dancing Lion
-        // defeated) is ON. On saves with prior DLC progress, this fires immediately and
-        // causes fogwarps to Romina's area to use the wrong map variant (m61_44_45_10).
-        SealingTreePatcher.Patch(modDir);
 
         // 7j3. Set startup flags (open gates, etc.)
         StartupFlagInjector.Inject(modDir, new[]
@@ -536,7 +666,7 @@ Example:
         }
 
         // 7l. Vanilla stake removal is handled pre-Write via ann.RetryPoints
-        // (step 6b) — FogMod reads MSBs from BHD archives and removes tagged stakes.
+        // (step 6b). FogMod reads MSBs from BHD archives and removes tagged stakes.
 
         // 8. Package with ModEngine 2
         var packager = new PackagingWriter(config.OutputDir);

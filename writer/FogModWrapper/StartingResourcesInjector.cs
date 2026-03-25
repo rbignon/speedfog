@@ -28,10 +28,10 @@ public static class StartingResourcesInjector
     private const int RESOURCES_GIVEN_FLAG = 1040299000;
 
     /// <summary>
-    /// Inject starting resources into the mod files via EMEVD.
+    /// Inject starting resources into the provided common EMEVD.
     /// Uses a flag to track if resources were already given (for stackable items).
     /// </summary>
-    public static void Inject(string modDir, Events events, int runes, int goldenSeeds, int sacredTears, int larvalTears = 0, int stoneswordKeys = 0)
+    public static void Inject(EMEVD commonEmevd, Events events, int runes, int goldenSeeds, int sacredTears, int larvalTears = 0, int stoneswordKeys = 0)
     {
         if (runes <= 0 && goldenSeeds <= 0 && sacredTears <= 0 && larvalTears <= 0 && stoneswordKeys <= 0)
         {
@@ -60,17 +60,9 @@ public static class StartingResourcesInjector
             Console.WriteLine($"Warning: starting_runes capped at {maxRunes:N0} ({ResourceCalculations.MaxLordsRunes} Lord's Runes)");
         }
 
-        var emevdPath = Path.Combine(modDir, "event", "common.emevd.dcx");
-        if (!File.Exists(emevdPath))
-        {
-            Console.WriteLine($"Warning: common.emevd.dcx not found, skipping resource injection");
-            return;
-        }
-
         Console.WriteLine("Injecting starting resources via EMEVD...");
 
-        var emevd = EMEVD.Read(emevdPath);
-        var initEvent = emevd.Events.Find(e => e.ID == 0);
+        var initEvent = commonEmevd.Events.Find(e => e.ID == 0);
         if (initEvent == null)
         {
             Console.WriteLine("Warning: Event 0 not found in common.emevd");
@@ -129,7 +121,7 @@ public static class StartingResourcesInjector
         evt.Instructions.Add(events.ParseAdd($"SetEventFlag(TargetEventFlagType.EventFlag, {RESOURCES_GIVEN_FLAG}, ON)"));
 
         // Add event to EMEVD
-        emevd.Events.Add(evt);
+        commonEmevd.Events.Add(evt);
 
         // Add initialization call to event 0 (same pattern as StartingItemInjector)
         var initArgs = new byte[12];
@@ -138,7 +130,6 @@ public static class StartingResourcesInjector
         BitConverter.GetBytes(0).CopyTo(initArgs, 8);              // arg0 = 0 (unused)
         initEvent.Instructions.Add(new EMEVD.Instruction(2000, 0, initArgs));
 
-        emevd.Write(emevdPath);
         Console.WriteLine("Starting resources injected successfully");
     }
 }

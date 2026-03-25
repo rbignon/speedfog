@@ -167,17 +167,22 @@ FogModWrapper pipeline:
 Post-processing (after FogMod writes, step numbers match Program.cs):
 - **7a2** Build region-to-flags mapping for zone tracking
 - **7a3** Copy non-English FMG files from Item Randomizer output
-- **7b** StartingItemInjector: give goods + care package items via EMEVD
-- **7c** StartingResourcesInjector: runes (CharaInitParam), seeds/tears/larval tears (ItemLots)
-- **7d** RoundtableUnlockInjector: set flag 1040292051 to bypass finger pickup
+- **EMEVD scan** Single pass over all map EMEVD files applies three patchers per file:
+  - ZoneTrackingInjector: insert SetEventFlag before each fog gate WarpPlayer
+  - ErdtreeWarpPatcher: patch Erdtree fogwarps to target m11_05 (flag 300)
+  - SealingTreeWarpPatcher: patch Sealing Tree fogwarps (flag 330)
+- **common.emevd** Loaded once, modified in-memory by 6 injectors, written once:
+  - **7b** StartingItemInjector: give goods + care package items
+  - **7c** StartingResourcesInjector: runes, seeds, tears, larval tears
+  - **7d** RoundtableUnlockInjector: set flag 1040292051 to bypass finger pickup
+  - **7f** ZoneTrackingInjector: boss death monitor event
+  - **7g** RunCompleteInjector: golden banner + jingle on final boss defeat
+  - **7j2** SealingTreePatcher: neutralize Event 915, clear flag 330
 - **7e** ShopInjector: add smithing stones + Sentry's Torch to Twin Maiden Husks
-- **7f** ZoneTrackingInjector: insert SetEventFlag before each fog gate WarpPlayer
-- **7f2** ErdtreeWarpPatcher: patch Erdtree fogwarps to target m11_05 (flag 300)
-- **7f3** SealingTreeWarpPatcher: patch Sealing Tree fogwarps (flag 330)
-- **7g** RunCompleteInjector: golden banner + jingle on final boss defeat
+- **7g-fmg** RunCompleteInjector: "RUN COMPLETE" text in FMG files (all languages)
 - **7h** ChapelGraceInjector: Site of Grace + WarpPlayer for initial spawn
+- **7h2** DeathMarkerInjector: bloodstain visuals at fog gates
 - **7i** RebirthInjector: rebirth option at graces via ESD editing (ConsistentID 73)
-- **7j2** SealingTreePatcher: neutralize Event 915, clear flag 330
 - **7j3** StartupFlagInjector: set event flags at startup (e.g., open sewer gates)
 - **7k** VanillaWarpRemover: delete vanilla warp MSB assets that conflict with fog gates
 - **7l** StakeRemover: remove vanilla stakes outside the DAG

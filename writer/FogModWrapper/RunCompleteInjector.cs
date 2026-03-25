@@ -27,25 +27,10 @@ public static class RunCompleteInjector
     private const int PLAYER_ENTITY_ID = 10000;
 
     /// <summary>
-    /// Inject the run complete message display into both FMG and EMEVD.
-    /// </summary>
-    public static void Inject(string modDir, string gameDir, Events events, int finishEvent, string messageText = "RUN COMPLETE")
-    {
-        if (finishEvent <= 0)
-        {
-            Console.WriteLine("Warning: No finish event, skipping run complete message injection");
-            return;
-        }
-
-        InjectFmgEntries(modDir, gameDir, messageText);
-        InjectEmevdEvent(modDir, events, finishEvent);
-    }
-
-    /// <summary>
     /// Overwrite the "VICTORY" banner text in GR_MenuText FMG with the run complete
     /// message for all game languages.
     /// </summary>
-    private static void InjectFmgEntries(string modDir, string gameDir, string messageText)
+    public static void InjectFmgEntries(string modDir, string gameDir, string messageText)
     {
         var gameMsgDir = Path.Combine(gameDir, "msg");
         if (!Directory.Exists(gameMsgDir))
@@ -99,17 +84,12 @@ public static class RunCompleteInjector
     /// Create EMEVD event that waits for finish_event, delays, then plays a victory
     /// jingle and displays the banner.
     /// </summary>
-    private static void InjectEmevdEvent(string modDir, Events events, int finishEvent)
+    /// <param name="commonEmevd">In-memory common.emevd to modify</param>
+    /// <param name="events">Events parser for instruction generation</param>
+    /// <param name="finishEvent">Flag ID that triggers the run complete sequence</param>
+    public static void InjectEmevdEvent(EMEVD commonEmevd, Events events, int finishEvent)
     {
-        var emevdPath = Path.Combine(modDir, "event", "common.emevd.dcx");
-        if (!File.Exists(emevdPath))
-        {
-            Console.WriteLine("Warning: common.emevd.dcx not found, skipping run complete event injection");
-            return;
-        }
-
-        var emevd = EMEVD.Read(emevdPath);
-        var initEvent = emevd.Events.Find(e => e.ID == 0);
+        var initEvent = commonEmevd.Events.Find(e => e.ID == 0);
         if (initEvent == null)
         {
             Console.WriteLine("Warning: Event 0 not found in common.emevd, skipping run complete event");
@@ -134,15 +114,13 @@ public static class RunCompleteInjector
         // 4. Display banner (bank 2007, index 2, single byte arg = banner type)
         evt.Instructions.Add(new EMEVD.Instruction(2007, 2, new[] { BANNER_TYPE }));
 
-        emevd.Events.Add(evt);
+        commonEmevd.Events.Add(evt);
 
         // Register in Event 0 (InitializeEvent: bank 2000, id 0)
         var initArgs = new byte[8];
         BitConverter.GetBytes(0).CopyTo(initArgs, 0);           // slot = 0
         BitConverter.GetBytes(EVENT_ID).CopyTo(initArgs, 4);    // eventId
         initEvent.Instructions.Add(new EMEVD.Instruction(2000, 0, initArgs));
-
-        emevd.Write(emevdPath);
 
         Console.WriteLine($"Run complete: event {EVENT_ID} " +
                           $"(finish flag {finishEvent} -> delay {DELAY_SECONDS}s -> banner type {BANNER_TYPE})");

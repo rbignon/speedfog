@@ -20,57 +20,6 @@ namespace FogModWrapper;
 public static class ErdtreeWarpPatcher
 {
     /// <summary>
-    /// Patch all EMEVD files: replace WarpPlayer/CutsceneWarp instructions targeting
-    /// the primary region (m11_00) with the alt region (m11_05).
-    /// </summary>
-    /// <param name="modDir">Mod output directory containing event/ subdirectory</param>
-    /// <param name="primaryRegion">FogMod region for m11_00 entrance (to match)</param>
-    /// <param name="altRegion">FogMod region for m11_05 entrance (replacement)</param>
-    /// <param name="altMap">Alternate map string, e.g. "m11_05_00_00"</param>
-    public static void Patch(string modDir, int primaryRegion, int altRegion, string altMap)
-    {
-        if (primaryRegion == 0 || altRegion == 0)
-        {
-            Console.WriteLine("Erdtree warp: skipping (no region data)");
-            return;
-        }
-
-        var eventDir = Path.Combine(modDir, "event");
-        if (!Directory.Exists(eventDir))
-        {
-            Console.WriteLine("Warning: event directory not found, skipping Erdtree warp patch");
-            return;
-        }
-
-        byte[] altMapBytes = ParseMapBytes(altMap);
-        int altMapPacked = PackMapId(altMap);
-        int totalPatched = 0;
-
-        foreach (var file in Directory.GetFiles(eventDir, "*.emevd.dcx"))
-        {
-            var emevd = EMEVD.Read(file);
-            int patched = PatchEmevd(emevd, primaryRegion, altRegion, altMapBytes, altMapPacked);
-            if (patched > 0)
-            {
-                emevd.Write(file);
-                Console.WriteLine($"  {Path.GetFileName(file)}: patched {patched} erdtree warp(s)");
-                totalPatched += patched;
-            }
-        }
-
-        if (totalPatched > 0)
-        {
-            Console.WriteLine($"Erdtree warp fix: patched {totalPatched} warp(s) " +
-                $"(region {primaryRegion} -> {altRegion}, map -> {altMap})");
-        }
-        else
-        {
-            Console.WriteLine($"Erdtree warp fix: no matching warps found " +
-                $"(region {primaryRegion} may not be connected)");
-        }
-    }
-
-    /// <summary>
     /// Flag 300 = Erdtree burning. Set before warping so the engine loads m11_05 assets.
     /// </summary>
     private const int ERDTREE_BURNING_FLAG = 300;
@@ -79,7 +28,7 @@ public static class ErdtreeWarpPatcher
     /// Patch all events in an EMEVD. Returns total count of patched instructions.
     /// For each patched warp, inserts SetEventFlag(300, ON) just before it.
     /// </summary>
-    internal static int PatchEmevd(
+    public static int PatchEmevd(
         EMEVD emevd, int primaryRegion, int altRegion, byte[] altMapBytes, int altMapPacked)
     {
         int total = 0;

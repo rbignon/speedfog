@@ -20,71 +20,10 @@ namespace FogModWrapper;
 public static class SealingTreeWarpPatcher
 {
     /// <summary>
-    /// Patch all EMEVD files: replace alt warp destinations with primary destinations
-    /// for all entrances that use AlternateFlag 330.
-    /// </summary>
-    /// <param name="modDir">Mod output directory containing event/ subdirectory</param>
-    /// <param name="entrances">
-    /// List of (altRegion, primaryRegion, primaryMap) tuples.
-    /// altRegion = the AlternateSide warp region to match (m61_44_45_10 side).
-    /// primaryRegion = the primary warp region to replace with (m61_44_45_00 side).
-    /// primaryMap = the primary map string, e.g. "m61_44_45_00".
-    /// </param>
-    public static void Patch(string modDir, List<(int altRegion, int primaryRegion, string primaryMap)> entrances)
-    {
-        var eventDir = Path.Combine(modDir, "event");
-        if (!Directory.Exists(eventDir))
-        {
-            Console.WriteLine("Warning: event directory not found, skipping Sealing Tree warp patch");
-            return;
-        }
-
-        // Pre-compute map bytes/packed for each entrance
-        var patchTargets = entrances
-            .Where(e => e.altRegion != 0 && e.primaryRegion != 0)
-            .Select(e => (
-                e.altRegion,
-                e.primaryRegion,
-                primaryMapBytes: ErdtreeWarpPatcher.ParseMapBytes(e.primaryMap),
-                primaryMapPacked: ErdtreeWarpPatcher.PackMapId(e.primaryMap)
-            ))
-            .ToList();
-
-        if (patchTargets.Count == 0)
-        {
-            Console.WriteLine("Sealing Tree warp fix: skipping (no valid entrances)");
-            return;
-        }
-
-        int totalPatched = 0;
-
-        foreach (var file in Directory.GetFiles(eventDir, "*.emevd.dcx"))
-        {
-            var emevd = EMEVD.Read(file);
-            int patched = PatchEmevd(emevd, patchTargets);
-            if (patched > 0)
-            {
-                emevd.Write(file);
-                Console.WriteLine($"  {Path.GetFileName(file)}: patched {patched} sealing tree warp(s)");
-                totalPatched += patched;
-            }
-        }
-
-        if (totalPatched > 0)
-        {
-            Console.WriteLine($"Sealing Tree warp fix: patched {totalPatched} warp(s) across {patchTargets.Count} entrance(s)");
-        }
-        else
-        {
-            Console.WriteLine("Sealing Tree warp fix: no matching warps found (entrances may not be connected)");
-        }
-    }
-
-    /// <summary>
     /// Patch all events in an EMEVD. Returns total count of patched instructions.
-    /// Unlike ErdtreeWarpPatcher, does NOT insert SetEventFlag — we want flag 330 OFF.
+    /// Unlike ErdtreeWarpPatcher, does NOT insert SetEventFlag, we want flag 330 OFF.
     /// </summary>
-    internal static int PatchEmevd(
+    public static int PatchEmevd(
         EMEVD emevd,
         List<(int altRegion, int primaryRegion, byte[] primaryMapBytes, int primaryMapPacked)> targets)
     {
