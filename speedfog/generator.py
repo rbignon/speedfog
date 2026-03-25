@@ -460,6 +460,54 @@ def pick_cluster_with_filter(
     return rng.choice(available)
 
 
+def pick_cluster_weight_matched(
+    candidates: list[ClusterData],
+    used_zones: set[str],
+    rng: random.Random,
+    anchor_weight: int,
+    filter_fn: Callable[[ClusterData], bool] = lambda c: True,
+    *,
+    reserved_zones: frozenset[str] = frozenset(),
+    max_tolerance: int = 3,
+) -> ClusterData | None:
+    """Pick a cluster with weight close to anchor_weight.
+
+    Filters candidates once (zone availability + filter_fn), then applies
+    progressive weight tolerance starting from exact match.
+    Falls back to any available cluster if no match within max_tolerance.
+
+    Args:
+        candidates: List of candidate clusters.
+        used_zones: Set of zone IDs already used.
+        rng: Random number generator.
+        anchor_weight: Target weight to match.
+        filter_fn: Additional filter (e.g. can_be_passant_node).
+        reserved_zones: Zones reserved for prerequisite placement.
+        max_tolerance: Max tolerance steps (0 = disabled, uniform random).
+
+    Returns:
+        A cluster close to anchor_weight, or None if nothing available.
+    """
+    available = [
+        c
+        for c in candidates
+        if not any(z in used_zones or z in reserved_zones for z in c.zones)
+        and filter_fn(c)
+    ]
+    if not available:
+        return None
+
+    if max_tolerance <= 0:
+        return rng.choice(available)
+
+    for tol in range(0, max_tolerance + 1):
+        matched = [c for c in available if abs(c.weight - anchor_weight) <= tol]
+        if matched:
+            return rng.choice(matched)
+
+    return rng.choice(available)
+
+
 def _mark_cluster_used(
     cluster: ClusterData,
     used_zones: set[str],

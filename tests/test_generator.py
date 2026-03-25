@@ -31,6 +31,7 @@ from speedfog.generator import (
     generate_dag,
     generate_with_retry,
     pick_cluster_uniform,
+    pick_cluster_weight_matched,
     pick_cluster_with_type_fallback,
     pick_entry_with_max_exits,
     select_entries_for_merge,
@@ -5681,3 +5682,160 @@ class TestSplitNoClusterReuse:
         assert (
             violations == 0
         ), f"{violations}/{tested} seeds had duplicate cluster usage"
+
+
+class TestPickClusterWeightMatched:
+    """Tests for pick_cluster_weight_matched."""
+
+    def _make_pool(self, weights: list[int]) -> list[ClusterData]:
+        """Create clusters with distinct zones and specified weights."""
+        return [
+            make_cluster(f"c{i}", zones=[f"z{i}"], weight=w)
+            for i, w in enumerate(weights)
+        ]
+
+    def test_exact_match_preferred(self):
+        """When an exact weight match exists, it is chosen."""
+        candidates = self._make_pool([1, 2, 3, 4, 5])
+        # Run many times: anchor=3 should always pick weight-3 first
+        results = set()
+        for seed in range(50):
+            r = pick_cluster_weight_matched(
+                candidates,
+                set(),
+                random.Random(seed),
+                anchor_weight=3,
+            )
+            assert r is not None
+            results.add(r.weight)
+        assert results == {3}  # Only exact match since only 1 candidate at w=3
+
+    def test_tolerance_widening_prefers_closer(self):
+        """Closer weight matches are preferred over further ones."""
+        # Weights [2, 5]: anchor=3
+        # tol=1: weight 2 matches (|2-3|=1), weight 5 doesn't (|5-3|=2)
+        # So weight 2 is always preferred (picked at tol=1 before tol=2)
+        candidates = self._make_pool([2, 5])
+        results = set()
+        for seed in range(50):
+            r = pick_cluster_weight_matched(
+                candidates,
+                set(),
+                random.Random(seed),
+                anchor_weight=3,
+                max_tolerance=3,
+            )
+            assert r is not None
+            results.add(r.weight)
+        assert results == {2}  # Weight 2 always wins (closer to anchor)
+
+    def test_tolerance_widening_same_distance(self):
+        """Candidates at the same distance from anchor are both reachable."""
+        # Weights [1, 5]: anchor=3, both at distance 2
+        # tol=0: no match, tol=1: no match
+        # tol=2: both match -> either can be picked
+        candidates = self._make_pool([1, 5])
+        results = set()
+        for seed in range(50):
+            r = pick_cluster_weight_matched(
+                candidates,
+                set(),
+                random.Random(seed),
+                anchor_weight=3,
+                max_tolerance=2,
+            )
+            assert r is not None
+            results.add(r.weight)
+        assert results == {1, 5}  # Both reachable at tol=2
+
+    def test_fallback_to_any(self):
+        """When nothing within max_tolerance, falls back to any available."""
+        candidates = self._make_pool([1, 1, 1])
+        result = pick_cluster_weight_matched(
+            candidates,
+            set(),
+            random.Random(42),
+            anchor_weight=10,
+            max_tolerance=2,
+        )
+        assert result is not None
+        assert result.weight == 1
+
+    def test_disabled_when_zero(self):
+        """max_tolerance=0 returns uniform random (no weight preference)."""
+        candidates = self._make_pool([1, 5, 10])
+        weights_seen: set[int] = set()
+        for seed in range(100):
+            r = pick_cluster_weight_matched(
+                candidates,
+                set(),
+                random.Random(seed),
+                anchor_weight=5,
+                max_tolerance=0,
+            )
+            assert r is not None
+            weights_seen.add(r.weight)
+        # With 100 seeds and 3 candidates, all weights should appear
+        assert weights_seen == {1, 5, 10}
+
+    def test_filter_fn_composed(self):
+        """filter_fn is applied alongside weight matching."""
+        c_passant = make_cluster(
+            "ok",
+            zones=["z_ok"],
+            weight=3,
+            entry_fogs=[{"fog_id": "e", "zone": "z_ok"}],
+            exit_fogs=[{"fog_id": "x", "zone": "z_ok"}],
+        )
+        c_no_passant = make_cluster(
+            "bad",
+            zones=["z_bad"],
+            weight=3,
+            entry_fogs=[],
+            exit_fogs=[],
+        )
+        candidates = [c_passant, c_no_passant]
+        result = pick_cluster_weight_matched(
+            candidates,
+            set(),
+            random.Random(42),
+            anchor_weight=3,
+            filter_fn=can_be_passant_node,
+        )
+        assert result is not None
+        assert result.id == "ok"
+
+    def test_zone_exclusion(self):
+        """Candidates with overlapping zones are excluded."""
+        candidates = self._make_pool([3, 3, 3])
+        used = {"z0", "z1"}  # Exclude first two
+        result = pick_cluster_weight_matched(
+            candidates,
+            used,
+            random.Random(42),
+            anchor_weight=3,
+        )
+        assert result is not None
+        assert result.id == "c2"
+
+    def test_returns_none_when_empty(self):
+        """Returns None when no candidates available."""
+        result = pick_cluster_weight_matched(
+            [],
+            set(),
+            random.Random(42),
+            anchor_weight=3,
+        )
+        assert result is None
+
+    def test_reserved_zones_excluded(self):
+        """Reserved zones are excluded like used zones."""
+        candidates = self._make_pool([3])
+        result = pick_cluster_weight_matched(
+            candidates,
+            set(),
+            random.Random(42),
+            anchor_weight=3,
+            reserved_zones=frozenset({"z0"}),
+        )
+        assert result is None
