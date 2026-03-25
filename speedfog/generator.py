@@ -1341,6 +1341,7 @@ def execute_passant_layer(
     used_zones: set[str],
     rng: random.Random,
     *,
+    config: Config | None = None,
     reserved_zones: frozenset[str] = frozenset(),
 ) -> list[Branch]:
     """Execute a passant layer where each branch advances to its own new node.
@@ -1355,6 +1356,7 @@ def execute_passant_layer(
         clusters: Pool of available clusters.
         used_zones: Set of already used zones.
         rng: Random number generator.
+        config: Configuration (for max_weight_tolerance).
         reserved_zones: Zones reserved for prerequisite placement (excluded).
 
     Returns:
@@ -1365,15 +1367,30 @@ def execute_passant_layer(
     """
     new_branches: list[Branch] = []
     candidates = clusters.get_by_type(layer_type)
+    max_tol = config.structure.max_weight_tolerance if config else 0
+    anchor_weight: int | None = None
 
     for i, branch in enumerate(branches):
-        cluster = pick_cluster_with_filter(
-            candidates,
-            used_zones,
-            rng,
-            can_be_passant_node,
-            reserved_zones=reserved_zones,
-        )
+        if anchor_weight is not None and max_tol > 0:
+            cluster = pick_cluster_weight_matched(
+                candidates,
+                used_zones,
+                rng,
+                anchor_weight,
+                filter_fn=can_be_passant_node,
+                reserved_zones=reserved_zones,
+                max_tolerance=max_tol,
+            )
+        else:
+            cluster = pick_cluster_with_filter(
+                candidates,
+                used_zones,
+                rng,
+                can_be_passant_node,
+                reserved_zones=reserved_zones,
+            )
+            if cluster is not None and anchor_weight is None:
+                anchor_weight = cluster.weight
         if cluster is None:
             raise GenerationError(
                 f"No passant-compatible cluster for layer {layer_idx} branch {i} (type: {layer_type})"
@@ -1616,19 +1633,31 @@ def execute_merge_layer(
         )
     )
 
-    # Handle non-merged branches as passant
+    # Handle non-merged branches as passant, weight-matched to merge cluster
     merge_idx_set = set(merge_indices)
+    max_tol = config.structure.max_weight_tolerance
     for i, branch in enumerate(branches):
         if i in merge_idx_set:
             continue
 
-        passant_cluster = pick_cluster_with_filter(
-            candidates,
-            used_zones,
-            rng,
-            can_be_passant_node,
-            reserved_zones=reserved_zones,
-        )
+        if max_tol > 0:
+            passant_cluster = pick_cluster_weight_matched(
+                candidates,
+                used_zones,
+                rng,
+                anchor_weight=cluster.weight,
+                filter_fn=can_be_passant_node,
+                reserved_zones=reserved_zones,
+                max_tolerance=max_tol,
+            )
+        else:
+            passant_cluster = pick_cluster_with_filter(
+                candidates,
+                used_zones,
+                rng,
+                can_be_passant_node,
+                reserved_zones=reserved_zones,
+            )
         if passant_cluster is None:
             raise GenerationError(
                 f"No passant-compatible cluster for layer {layer_idx} branch {i} (type: {layer_type})"
@@ -2392,6 +2421,7 @@ def generate_dag(
                     clusters,
                     used_zones,
                     rng,
+                    config=config,
                     reserved_zones=reserved_zones,
                 )
 

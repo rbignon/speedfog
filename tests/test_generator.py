@@ -5962,3 +5962,173 @@ def test_parallel_branches_weight_matched():
         f"Only {ratio:.0%} of parallel layers within tolerance 3. "
         f"Spreads: {sorted(set(max_spreads))}"
     )
+
+
+def _make_dag_with_start():
+    """Helper: create a Dag with a start node and 2 exit fogs."""
+    dag = Dag(seed=1)
+    start = DagNode(
+        id="start",
+        cluster=make_cluster(
+            "s",
+            zones=["sz"],
+            cluster_type="start",
+            entry_fogs=[],
+            exit_fogs=[
+                {"fog_id": "sx1", "zone": "sz"},
+                {"fog_id": "sx2", "zone": "sz"},
+            ],
+        ),
+        layer=0,
+        tier=1,
+        entry_fogs=[],
+        exit_fogs=[FogRef("sx1", "sz"), FogRef("sx2", "sz")],
+    )
+    dag.add_node(start)
+    dag.start_id = "start"
+    return dag
+
+
+def test_execute_passant_layer_weight_matched():
+    """execute_passant_layer uses weight matching: first branch anchors the rest."""
+    config = Config.from_dict({"structure": {"max_weight_tolerance": 2}})
+
+    # Run multiple seeds: the second branch should be within tolerance
+    # of the first branch when the first pick is not the outlier.
+    for seed in range(20):
+        test_dag = _make_dag_with_start()
+        test_branches = [
+            Branch("b0", "start", FogRef("sx1", "sz"), layers_since_last_split=0),
+            Branch("b1", "start", FogRef("sx2", "sz"), layers_since_last_split=0),
+        ]
+        # Rebuild pool each iteration (clusters get consumed)
+        test_pool = ClusterPool()
+        for i in range(5):
+            test_pool.add(
+                make_cluster(
+                    f"w1_{i}",
+                    zones=[f"w1z{i}"],
+                    weight=1,
+                    cluster_type="mini_dungeon",
+                )
+            )
+        for i in range(5):
+            test_pool.add(
+                make_cluster(
+                    f"w2_{i}",
+                    zones=[f"w2z{i}"],
+                    weight=2,
+                    cluster_type="mini_dungeon",
+                )
+            )
+        test_pool.add(
+            make_cluster(
+                "outlier",
+                zones=["oz"],
+                weight=8,
+                cluster_type="mini_dungeon",
+            )
+        )
+
+        result = execute_passant_layer(
+            test_dag,
+            test_branches,
+            1,
+            "mini_dungeon",
+            test_pool,
+            {"sz"},
+            random.Random(seed),
+            config=config,
+        )
+        node_a = test_dag.nodes[result[0].current_node_id]
+        node_b = test_dag.nodes[result[1].current_node_id]
+        spread = abs(node_a.cluster.weight - node_b.cluster.weight)
+        # First pick is unconstrained. If weight <= 2, second should
+        # match within tol=2 -> spread <= 2.
+        # If first is w=8 (outlier, 1/11 chance): fallback picks any.
+        if node_a.cluster.weight <= 2:
+            assert spread <= 2, (
+                f"seed={seed}: spread={spread} "
+                f"(weights: {node_a.cluster.weight}, {node_b.cluster.weight})"
+            )
+
+
+def test_execute_merge_layer_weight_matched():
+    """execute_merge_layer: non-merged branches weight-match the merge cluster."""
+    dag = Dag(seed=1)
+    # 3 nodes on layer 0
+    for i in range(3):
+        n = DagNode(
+            id=f"n{i}",
+            cluster=make_cluster(
+                f"c{i}",
+                zones=[f"z{i}"],
+                entry_fogs=[{"fog_id": f"e{i}", "zone": f"z{i}"}],
+                exit_fogs=[{"fog_id": f"x{i}", "zone": f"z{i}"}],
+            ),
+            layer=0,
+            tier=1,
+            entry_fogs=[],
+            exit_fogs=[FogRef(f"x{i}", f"z{i}")],
+        )
+        dag.add_node(n)
+
+    branches = [
+        Branch(
+            "b0", "n0", FogRef("x0", "z0"), birth_layer=0, layers_since_last_split=3
+        ),
+        Branch(
+            "b1", "n1", FogRef("x1", "z1"), birth_layer=0, layers_since_last_split=3
+        ),
+        Branch(
+            "b2", "n2", FogRef("x2", "z2"), birth_layer=0, layers_since_last_split=3
+        ),
+    ]
+
+    # Merge cluster (weight 2) + passant candidates
+    merge_c = make_cluster(
+        "merge",
+        zones=["mz"],
+        weight=2,
+        cluster_type="mini_dungeon",
+        entry_fogs=[
+            {"fog_id": "me1", "zone": "mz"},
+            {"fog_id": "me2", "zone": "mz"},
+        ],
+        exit_fogs=[{"fog_id": "mx", "zone": "mz"}],
+    )
+    passant_close = make_cluster(
+        "p_close",
+        zones=["pz1"],
+        weight=2,
+        cluster_type="mini_dungeon",
+    )
+    passant_far = make_cluster(
+        "p_far",
+        zones=["pz2"],
+        weight=10,
+        cluster_type="mini_dungeon",
+    )
+    pool = ClusterPool()
+    pool.add(merge_c)
+    pool.add(passant_close)
+    pool.add(passant_far)
+
+    config = Config.from_dict({"structure": {"max_weight_tolerance": 2}})
+
+    result = execute_merge_layer(
+        dag,
+        branches,
+        1,
+        "mini_dungeon",
+        pool,
+        {"z0", "z1", "z2"},
+        random.Random(42),
+        config,
+    )
+    # The non-merged branch should get passant_close (weight 2),
+    # not passant_far (weight 10), since merge cluster anchor is weight 2
+    passant_branches = [b for b in result if "merged" not in b.id]
+    if passant_branches:
+        passant_node = dag.nodes[passant_branches[0].current_node_id]
+        assert passant_node.cluster.weight == 2
