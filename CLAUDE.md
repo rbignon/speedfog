@@ -439,21 +439,22 @@ wine publish/win-x64/game_inspect.exe check-emevd <emevd-file> 0
 
 ## Data Formats
 
-### graph.json v4.1 (Python → C# + visualization + racing)
+### graph.json v4.2 (Python → C# + visualization + racing)
 
 ```json
 {
-  "version": "4.1",
+  "version": "4.2",
   "seed": 212559448,
   "options": {"scale": true, "crawl": true},
   "nodes": {"cluster_id": {"type": "legacy_dungeon", "display_name": "Stormveil Castle", "zones": [...], "layer": 1, "tier": 5, "weight": 15, "exits": [{"fog_id": "AEG099_002_9000", "text": "Godrick front", "from": "stormveil", "to": "other_cluster_id"}], "entrances": [{"text": "before main gate", "from": "source_cluster_id", "to": "stormveil_start", "to_text": "Stormveil Castle Start"}]}},
   "edges": [{"from": "cluster_id_1", "to": "cluster_id_2"}],
   "connections": [
-    {"exit_area": "zone1", "exit_gate": "m10_...", "entrance_area": "zone2", "entrance_gate": "m31_...", "flag_id": 1040292400}
+    {"exit_area": "zone1", "exit_gate": "m10_...", "entrance_area": "zone2", "entrance_gate": "m31_...", "flag_id": 1050292000}
   ],
   "area_tiers": {"zone1": 1, "zone2": 5},
-  "event_map": {"1040292400": "cluster_id"},
-  "finish_event": 1040292402
+  "event_map": {"1050292000": "cluster_id"},
+  "finish_event": 1050292002,
+  "items_spawned_flag": 1050290000
 }
 ```
 
@@ -461,8 +462,9 @@ wine publish/win-x64/game_inspect.exe check-emevd <emevd-file> 0
 - `connections`/`area_tiers`: FogModWrapper consumption (unchanged from v2)
 - `event_map`: flag_id (str) → cluster_id mapping for racing zone tracking
 - `finish_event`: flag_id set on final boss defeat
+- `items_spawned_flag`: saved flag (1050290000) used as one-shot guard for item delivery
 - `flag_id` per connection: event flag set when fog gate is traversed
-- Event flags allocated sequentially from base 1040292400 (range 1040292400–1040292999)
+- Event flags allocated sequentially from base 1050292000 (range 1050292000-1050292999)
 - Connections use FogMod's edge FullName format: `{map}_{gate_name}` (e.g., `m10_01_00_00_AEG099_001_9000`)
 
 ### fogevents.txt

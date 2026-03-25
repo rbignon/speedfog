@@ -10,27 +10,48 @@ Quick reference for SpeedFog's event flag allocation and EMEVD event IDs.
 Elden Ring stores event flags in a **sparse tree of category pages**, not a flat address space:
 
 ```
-flag_id  = 1040292400
-category = flag_id / 1000 = 1040292
+flag_id  = 1050292400
+category = flag_id / 1000 = 1050292
 offset   = flag_id % 1000 = 400
 ```
 
 Each category page stores 1000 flags as a bitfield (125 bytes). **Only pre-allocated categories exist at runtime.** Writing to a flag whose category doesn't exist is a **silent no-op** — no crash, no error, just nothing happens.
 
-This means you cannot pick arbitrary flag ranges. You must use a category that the game (or a mod) has already allocated.
+Categories are allocated when EMEVD instructions reference them. SpeedFog's use of category 1040299 confirmed this: flags 1040299000-002 work in practice because FogRando's EMEVD references that category. Similarly, SpeedFog's dedicated categories (1050290 and 1050292) become live as soon as our injected EMEVD events reference them.
 
 ## SpeedFog Flag Allocation
 
-SpeedFog piggybacks on **category 1040292**, which FogRando pre-allocates for its own use.
+SpeedFog uses a **dedicated base `1050290000`**, in map coordinates m60_50_29_00 (white/unclaimed in the community flag sheet). This avoids any dependency on FogRando's internal allocation.
 
-| Range | Offsets | Purpose | Set by |
-|-------|---------|---------|--------|
-| 1040292100-300 | 100-300 | FogRando internal flags | FogMod.dll |
-| 1040292400-999 | 400-999 | Zone tracking (fog gate traversal) | ZoneTrackingInjector |
+### Layout
 
-The 100-offset gap (301-399) avoids collision with FogRando's allocation.
+| Range | Offsets | Type | Purpose | Set by |
+|-------|---------|------|---------|--------|
+| 1050290000-1050290099 | 0xxx offsets 0-99 | Saved (persistent) | Mod state flags | Various injectors |
+| 1050292000-1050292999 | 2xxx offsets 0-999 | Temporary (session) | Zone tracking, finish event, death markers | ZoneTrackingInjector, RunCompleteInjector, DeathMarkerInjector |
 
-### Other Flags
+The saved/temporary split is encoded in the thousands digit of the offset:
+- Category 1050290 (offset 0-099): flags that survive across sessions (items given, etc.)
+- Category 1050292 (offset 0-999): flags reset on each new run (zone traversal tracking)
+
+### Saved Flags (1050290xxx)
+
+| Flag | Offset | Purpose | Set by |
+|------|--------|---------|--------|
+| 1050290000 | 0 | `items_spawned_flag`: one-shot guard for starting item/resource delivery | StartingItemInjector, StartingResourcesInjector |
+
+### Temporary Flags (1050292xxx)
+
+| Range | Purpose | Set by |
+|-------|---------|--------|
+| 1050292000-1050292998 | Zone tracking: flag set when player traverses each fog gate | ZoneTrackingInjector |
+| 1050292999 | Finish event: flag set when final boss is defeated | RunCompleteInjector |
+
+Actual flag assignments within 1050292000-1050292999 are allocated sequentially per run and stored in graph.json. The 1000-flag budget is sufficient for large DAGs (60+ layers, hundreds of connections).
+
+### FogRando-Owned Flags (legacy, unchanged)
+
+These flags are defined by FogRando and remain at their original addresses. SpeedFog reads or sets them but does not own their categories.
 
 | Flag | Category | Purpose | Set by |
 |------|----------|---------|--------|
@@ -41,7 +62,7 @@ The 100-offset gap (301-399) avoids collision with FogRando's allocation.
 
 Flag 1040292051 is defined by FogRando (used in `common_roundtable` and `common_fingerstart` templates). SpeedFog's RoundtableUnlockInjector just sets it early to bypass the finger pickup.
 
-Flags 1040299000-001 are in category 1040299, which is also pre-allocated by FogRando.
+Flags 1040299000-002 are in category 1040299, which FogRando allocates via its own EMEVD events.
 
 ### graph.json Fields
 
@@ -51,6 +72,7 @@ Flags 1040299000-001 are in category 1040299, which is also pre-allocated by Fog
 | `event_map` | `{flag_id: cluster_id}` mapping for zone tracking |
 | `final_node_flag` | Flag for entering the final boss zone |
 | `finish_event` | Flag set when final boss is defeated |
+| `items_spawned_flag` | Saved flag (1050290000) used as one-shot guard for item delivery |
 
 ## EMEVD Event IDs
 
@@ -69,9 +91,9 @@ All events are registered in Event 0 via `InitializeEvent` (bank 2000, id 0).
 
 ## Risks & Constraints
 
-- **FogRando dependency**: Category 1040292 only exists because FogRando allocates it. If FogRando changes its allocation layout, SpeedFog flags could collide or stop working. Check on FogRando updates.
-- **600 flag limit**: Offsets 400-999 give 600 zone tracking flags. Sufficient for large DAGs (60+ layers).
-- **No arbitrary ranges**: Previous attempt with range 9000000 failed silently because category 9000 doesn't exist. Never use untested flag ranges.
+- **1000 flag budget**: Offsets 0-999 in category 1050292 give 1000 zone tracking flags. Sufficient for large DAGs (60+ layers).
+- **Category allocation**: Categories 1050290 and 1050292 are activated by our injected EMEVD events. No prior FogRando allocation needed, but if EMEVD injection fails these flags become silent no-ops.
+- **FogRando legacy flags**: Flags 1040292051 and 1040299000-002 depend on FogRando's category allocation. Check on FogRando updates if these stop working.
 
 ## References
 
