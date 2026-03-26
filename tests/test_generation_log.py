@@ -484,3 +484,107 @@ def test_convergence_layers_have_events():
         assert le.operation in ("MERGE", "PASSANT", "REBALANCE")
     # First convergence layer should have pool_snapshot
     assert convergence[0].pool_snapshot is not None
+
+
+def test_fallback_recorded_when_pool_exhausted():
+    """When a type pool is exhausted, fallback is recorded in the log."""
+    pool = ClusterPool()
+    pool.add(
+        ClusterData(
+            id="start",
+            type="start",
+            zones=["start_zone"],
+            entry_fogs=[],
+            exit_fogs=[
+                {"fog_id": "x1", "zone": "start_zone"},
+                {"fog_id": "x2", "zone": "start_zone"},
+            ],
+            weight=1,
+        )
+    )
+    boss = ClusterData(
+        id="final",
+        type="final_boss",
+        zones=["final_zone"],
+        entry_fogs=[{"fog_id": "e1", "zone": "final_zone"}],
+        exit_fogs=[],
+        weight=1,
+    )
+    pool.add(boss)
+    pool.add(
+        ClusterData(
+            id="mb1",
+            type="major_boss",
+            zones=["mb1_zone"],
+            entry_fogs=[{"fog_id": "mb1_e1", "zone": "mb1_zone"}],
+            exit_fogs=[{"fog_id": "mb1_x1", "zone": "mb1_zone"}],
+            weight=2,
+        )
+    )
+    for i in range(30):
+        pool.add(
+            ClusterData(
+                id=f"mini_{i}",
+                type="mini_dungeon",
+                zones=[f"mini_{i}_zone"],
+                entry_fogs=[{"fog_id": f"e{i}", "zone": f"mini_{i}_zone"}],
+                exit_fogs=[{"fog_id": f"x{i}", "zone": f"mini_{i}_zone"}],
+                weight=2,
+            )
+        )
+    config = Config.from_dict(
+        {
+            "structure": {
+                "min_layers": 4,
+                "max_layers": 5,
+                "max_branches": 1,
+                "split_probability": 0.0,
+                "merge_probability": 0.0,
+                "crosslinks": False,
+                "final_boss_candidates": {"final_zone": 1},
+            },
+            "requirements": {
+                "legacy_dungeons": 0,
+                "bosses": 0,
+                "mini_dungeons": 1,
+                "major_bosses": 1,
+            },
+        }
+    )
+    dag, log = generate_dag(config, pool, seed=42, boss_candidates=[boss])
+    all_fallbacks = [fb for le in log.layer_events for fb in le.fallbacks]
+    assert log.summary is not None
+    assert log.summary.fallback_count == len(all_fallbacks)
+
+
+def test_fallback_count_matches_summary():
+    """Summary fallback_count matches actual fallback entries across all layers."""
+    pool, boss_candidates = _make_small_pool()
+    config = Config.from_dict(
+        {
+            "structure": {
+                "min_layers": 4,
+                "max_layers": 5,
+                "max_branches": 1,
+                "split_probability": 0.0,
+                "merge_probability": 0.0,
+                "crosslinks": False,
+                "final_boss_candidates": {"boss_zone": 1},
+            },
+            "requirements": {
+                "legacy_dungeons": 0,
+                "bosses": 0,
+                "mini_dungeons": 2,
+                "major_bosses": 0,
+            },
+        }
+    )
+    dag, log = generate_dag(config, pool, seed=42, boss_candidates=boss_candidates)
+    all_fallbacks = [fb for le in log.layer_events for fb in le.fallbacks]
+    assert log.summary is not None
+    assert log.summary.fallback_count == len(all_fallbacks)
+    # Verify fallback_summary matches too
+    expected_summary = [
+        (le.layer, fb.preferred_type) for le in log.layer_events for fb in le.fallbacks
+    ]
+    assert log.summary.fallback_summary == expected_summary

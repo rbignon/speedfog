@@ -19,6 +19,7 @@ from speedfog.config import Config, resolve_final_boss_candidates
 from speedfog.crosslinks import add_crosslinks
 from speedfog.dag import Branch, Dag, DagNode, FogRef
 from speedfog.generation_log import (
+    FallbackEntry,
     GenerationLog,
     LayerEvent,
     NodeEntry,
@@ -560,6 +561,18 @@ def pick_cluster_uniform(
 
 # Types eligible for fallback when the planned type is exhausted.
 _FALLBACK_TYPES = ("mini_dungeon", "boss_arena", "legacy_dungeon", "major_boss")
+
+
+def _compute_fallback_pool(
+    clusters: ClusterPool,
+    used_zones: set[str],
+    reserved_zones: frozenset[str],
+) -> dict[str, int]:
+    """Compute pool remaining for fallback entries."""
+    all_typed: list[ClusterData] = []
+    for t in ("mini_dungeon", "boss_arena", "legacy_dungeon", "major_boss"):
+        all_typed.extend(clusters.get_by_type(t))
+    return compute_pool_remaining(all_typed, used_zones, reserved_zones)
 
 
 def pick_cluster_with_type_fallback(
@@ -2057,6 +2070,9 @@ def generate_dag(
                 layers_consumed = rebal_result[1]
                 for offset in range(layers_consumed):
                     rebal_layer = current_layer + offset
+                    rebal_dag_nodes = [
+                        n for n in dag.nodes.values() if n.layer == rebal_layer
+                    ]
                     rebal_nodes = [
                         NodeEntry(
                             n.cluster.id,
@@ -2064,8 +2080,22 @@ def generate_dag(
                             n.cluster.weight,
                             "rebalance_split" if offset > 0 else "rebalance_merge",
                         )
-                        for n in dag.nodes.values()
-                        if n.layer == rebal_layer
+                        for n in rebal_dag_nodes
+                    ]
+                    rebal_fallbacks = [
+                        FallbackEntry(
+                            branch_index=idx,
+                            preferred_type=layer_type,
+                            actual_type=n.cluster.type,
+                            reason="pool_exhausted",
+                            pool_remaining=_compute_fallback_pool(
+                                clusters,
+                                used_zones,
+                                reserved_zones,
+                            ),
+                        )
+                        for idx, n in enumerate(rebal_dag_nodes)
+                        if n.cluster.type != layer_type
                     ]
                     log.layer_events.append(
                         LayerEvent(
@@ -2076,6 +2106,7 @@ def generate_dag(
                             branches_before=len(branches),
                             branches_after=len(branches),
                             nodes=rebal_nodes,
+                            fallbacks=rebal_fallbacks,
                         )
                     )
                 current_layer += layers_consumed
@@ -2107,6 +2138,21 @@ def generate_dag(
 
             assert layer_event is not None
             layer_event.operation = "SPLIT"
+
+            if primary_cluster.type != layer_type:
+                layer_event.fallbacks.append(
+                    FallbackEntry(
+                        branch_index=split_idx,
+                        preferred_type=layer_type,
+                        actual_type=primary_cluster.type,
+                        reason="pool_exhausted",
+                        pool_remaining=_compute_fallback_pool(
+                            clusters,
+                            used_zones,
+                            reserved_zones,
+                        ),
+                    )
+                )
 
             # Mark primary_cluster used BEFORE the loop so passant picks
             # for branches before split_idx cannot select the same cluster.
@@ -2174,6 +2220,20 @@ def generate_dag(
                         raise GenerationError(
                             f"No cluster for layer {current_layer} branch {i} "
                             f"(type: {layer_type})"
+                        )
+                    if pc.type != layer_type:
+                        layer_event.fallbacks.append(
+                            FallbackEntry(
+                                branch_index=i,
+                                preferred_type=layer_type,
+                                actual_type=pc.type,
+                                reason="pool_exhausted",
+                                pool_remaining=_compute_fallback_pool(
+                                    clusters,
+                                    used_zones,
+                                    reserved_zones,
+                                ),
+                            )
                         )
                     _mark_cluster_used(pc, used_zones, clusters)
                     ef, exf = _pick_entry_and_exits_for_node(pc, 1, rng)
@@ -2244,6 +2304,22 @@ def generate_dag(
             else:
                 assert layer_event is not None
                 layer_event.operation = "MERGE"
+
+                if primary_cluster.type != layer_type:
+                    layer_event.fallbacks.append(
+                        FallbackEntry(
+                            branch_index=merge_indices[0],
+                            preferred_type=layer_type,
+                            actual_type=primary_cluster.type,
+                            reason="pool_exhausted",
+                            pool_remaining=_compute_fallback_pool(
+                                clusters,
+                                used_zones,
+                                reserved_zones,
+                            ),
+                        )
+                    )
+
                 _mark_cluster_used(primary_cluster, used_zones, clusters)
                 merge_branches_list = [branches[i] for i in merge_indices]
 
@@ -2346,6 +2422,20 @@ def generate_dag(
                             f"No cluster for layer {current_layer} branch {i} "
                             f"(type: {layer_type})"
                         )
+                    if pc.type != layer_type:
+                        layer_event.fallbacks.append(
+                            FallbackEntry(
+                                branch_index=i,
+                                preferred_type=layer_type,
+                                actual_type=pc.type,
+                                reason="pool_exhausted",
+                                pool_remaining=_compute_fallback_pool(
+                                    clusters,
+                                    used_zones,
+                                    reserved_zones,
+                                ),
+                            )
+                        )
                     _mark_cluster_used(pc, used_zones, clusters)
                     ef, exf = _pick_entry_and_exits_for_node(pc, 1, rng)
                     nid = f"node_{current_layer}_{chr(97 + letter)}"
@@ -2410,6 +2500,21 @@ def generate_dag(
                             f"No cluster for layer {current_layer} branch {i} "
                             f"(type: {layer_type})"
                         )
+                if c.type != layer_type:
+                    assert layer_event is not None
+                    layer_event.fallbacks.append(
+                        FallbackEntry(
+                            branch_index=i,
+                            preferred_type=layer_type,
+                            actual_type=c.type,
+                            reason="pool_exhausted",
+                            pool_remaining=_compute_fallback_pool(
+                                clusters,
+                                used_zones,
+                                reserved_zones,
+                            ),
+                        )
+                    )
                 _mark_cluster_used(c, used_zones, clusters)
                 ef, exf = _pick_entry_and_exits_for_node(c, 1, rng)
                 nid = f"node_{current_layer}_{chr(97 + i)}"
@@ -2526,6 +2631,9 @@ def generate_dag(
                 layers_consumed = rebal_result[1]
                 for offset in range(layers_consumed):
                     rebal_layer = current_layer + offset
+                    rebal_dag_nodes = [
+                        n for n in dag.nodes.values() if n.layer == rebal_layer
+                    ]
                     rebal_nodes = [
                         NodeEntry(
                             n.cluster.id,
@@ -2533,8 +2641,22 @@ def generate_dag(
                             n.cluster.weight,
                             "rebalance_merge" if offset == 0 else "rebalance_split",
                         )
-                        for n in dag.nodes.values()
-                        if n.layer == rebal_layer
+                        for n in rebal_dag_nodes
+                    ]
+                    rebal_fallbacks = [
+                        FallbackEntry(
+                            branch_index=idx,
+                            preferred_type=conv_layer_type,
+                            actual_type=n.cluster.type,
+                            reason="pool_exhausted",
+                            pool_remaining=_compute_fallback_pool(
+                                clusters,
+                                used_zones,
+                                reserved_zones,
+                            ),
+                        )
+                        for idx, n in enumerate(rebal_dag_nodes)
+                        if n.cluster.type != conv_layer_type
                     ]
                     log.layer_events.append(
                         LayerEvent(
@@ -2545,6 +2667,7 @@ def generate_dag(
                             branches_before=len(branches),
                             branches_after=len(branches),
                             nodes=rebal_nodes,
+                            fallbacks=rebal_fallbacks,
                         )
                     )
                 current_layer += layers_consumed
@@ -2614,12 +2737,26 @@ def generate_dag(
             conv_nodes_at_layer = [
                 n for n in dag.nodes.values() if n.layer == current_layer
             ]
-            for n in conv_nodes_at_layer:
+            for idx, n in enumerate(conv_nodes_at_layer):
                 incoming = dag.get_incoming_edges(n.id)
                 role = "merge_target" if len(incoming) > 1 else "passant"
                 conv_layer_event.nodes.append(
                     NodeEntry(n.cluster.id, n.cluster.type, n.cluster.weight, role)
                 )
+                if n.cluster.type != conv_layer_type:
+                    conv_layer_event.fallbacks.append(
+                        FallbackEntry(
+                            branch_index=idx,
+                            preferred_type=conv_layer_type,
+                            actual_type=n.cluster.type,
+                            reason="pool_exhausted",
+                            pool_remaining=_compute_fallback_pool(
+                                clusters,
+                                used_zones,
+                                reserved_zones,
+                            ),
+                        )
+                    )
             has_merge = any(
                 len(dag.get_incoming_edges(n.id)) > 1 for n in conv_nodes_at_layer
             )
