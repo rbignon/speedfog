@@ -725,6 +725,148 @@ class TestEntryZoneMembership:
         assert zone_errors == []
 
 
+class TestLayerTypeHomogeneity:
+    """Tests for layer type homogeneity validation."""
+
+    def test_homogeneous_parallel_branches_pass(self):
+        """Layer with multiple nodes of the same type passes."""
+        dag = Dag(seed=42)
+        dag.add_node(
+            DagNode(
+                id="start",
+                cluster=make_cluster("start_c", cluster_type="start", weight=0),
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+                exit_fogs=["exit_a", "exit_b"],
+            )
+        )
+        # Layer 1: two nodes with the SAME type
+        dag.add_node(
+            DagNode(
+                id="node_a",
+                cluster=make_cluster("mini_a", cluster_type="mini_dungeon"),
+                layer=1,
+                tier=1,
+                entry_fogs=["fog_a"],
+                exit_fogs=["fog_a_out"],
+            )
+        )
+        dag.add_node(
+            DagNode(
+                id="node_b",
+                cluster=make_cluster("mini_b", cluster_type="mini_dungeon"),
+                layer=1,
+                tier=1,
+                entry_fogs=["fog_b"],
+                exit_fogs=["fog_b_out"],
+            )
+        )
+        dag.add_edge("start", "node_a", "exit_a", "fog_a")
+        dag.add_edge("start", "node_b", "exit_b", "fog_b")
+
+        end_cluster = make_cluster(
+            "end_c", cluster_type="final_boss", allow_shared_entrance=True
+        )
+        dag.add_node(
+            DagNode(
+                id="end",
+                cluster=end_cluster,
+                layer=2,
+                tier=1,
+                entry_fogs=["fog_end"],
+                exit_fogs=[],
+            )
+        )
+        dag.add_edge("node_a", "end", "fog_a_out", "fog_end")
+        dag.add_edge("node_b", "end", "fog_b_out", "fog_end")
+        dag.start_id = "start"
+        dag.end_id = "end"
+
+        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+        result = validate_dag(dag, config)
+
+        homogeneity_errors = [e for e in result.errors if "mixed types" in e.lower()]
+        assert homogeneity_errors == []
+
+    def test_mixed_types_in_layer_fails(self):
+        """Layer with nodes of different types produces error."""
+        dag = Dag(seed=42)
+        dag.add_node(
+            DagNode(
+                id="start",
+                cluster=make_cluster("start_c", cluster_type="start", weight=0),
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+                exit_fogs=["exit_a", "exit_b"],
+            )
+        )
+        # Layer 1: two nodes with different types
+        dag.add_node(
+            DagNode(
+                id="node_a",
+                cluster=make_cluster("boss_c", cluster_type="boss_arena"),
+                layer=1,
+                tier=1,
+                entry_fogs=["fog_a"],
+                exit_fogs=["fog_a_out"],
+            )
+        )
+        dag.add_node(
+            DagNode(
+                id="node_b",
+                cluster=make_cluster("dungeon_c", cluster_type="legacy_dungeon"),
+                layer=1,
+                tier=1,
+                entry_fogs=["fog_b"],
+                exit_fogs=["fog_b_out"],
+            )
+        )
+        dag.add_edge("start", "node_a", "exit_a", "fog_a")
+        dag.add_edge("start", "node_b", "exit_b", "fog_b")
+
+        # Merge to end
+        end_cluster = make_cluster(
+            "end_c", cluster_type="final_boss", allow_shared_entrance=True
+        )
+        dag.add_node(
+            DagNode(
+                id="end",
+                cluster=end_cluster,
+                layer=2,
+                tier=1,
+                entry_fogs=["fog_end"],
+                exit_fogs=[],
+            )
+        )
+        dag.add_edge("node_a", "end", "fog_a_out", "fog_end")
+        dag.add_edge("node_b", "end", "fog_b_out", "fog_end")
+        dag.start_id = "start"
+        dag.end_id = "end"
+
+        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+        result = validate_dag(dag, config)
+
+        assert result.is_valid is False
+        homogeneity_errors = [e for e in result.errors if "mixed types" in e.lower()]
+        assert len(homogeneity_errors) == 1
+        assert "Layer 1" in homogeneity_errors[0]
+        assert "boss_arena" in homogeneity_errors[0]
+        assert "legacy_dungeon" in homogeneity_errors[0]
+
+    def test_single_node_layers_skipped(self):
+        """Layers with a single node are not checked (trivially homogeneous)."""
+        # make_simple_dag has 2 single-node layers (start, end)
+        dag = make_simple_dag()
+        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+
+        result = validate_dag(dag, config)
+
+        homogeneity_errors = [e for e in result.errors if "mixed types" in e.lower()]
+        assert homogeneity_errors == []
+
+
 class TestEventFlagBudget:
     """Tests for event flag budget validation."""
 

@@ -73,6 +73,11 @@ def validate_dag(
     if entry_zone_errors:
         errors.extend(entry_zone_errors)
 
+    # Check layer type homogeneity (no mixed types within a layer)
+    homogeneity_errors = _check_layer_type_homogeneity(dag)
+    if homogeneity_errors:
+        errors.extend(homogeneity_errors)
+
     # Check minimum requirements
     _check_requirements(dag, config, errors)
 
@@ -236,6 +241,44 @@ def _check_event_flag_budget(dag: Dag, config: Config, errors: list[str]) -> Non
             f"Event flag budget exceeded: {flag_count} flags needed "
             f"(max {EVENT_FLAG_BUDGET})"
         )
+
+
+def _check_layer_type_homogeneity(dag: Dag) -> list[str]:
+    """Check that all nodes within each layer share the same cluster type.
+
+    Mixed types in a layer create unfair asymmetry between parallel branches
+    (e.g., one player faces a major boss while another just traverses a zone).
+
+    Single-node layers (including start and end) are naturally skipped
+    since there is nothing to compare.
+
+    Args:
+        dag: The DAG to check.
+
+    Returns:
+        List of error messages for layers with mixed types.
+    """
+    errors: list[str] = []
+
+    # Group nodes by layer
+    layers: dict[int, list[str]] = {}
+    for node_id, node in dag.nodes.items():
+        layers.setdefault(node.layer, []).append(node_id)
+
+    for layer_idx in sorted(layers):
+        node_ids = layers[layer_idx]
+        if len(node_ids) <= 1:
+            continue
+
+        types = {dag.nodes[nid].cluster.type for nid in node_ids}
+        if len(types) > 1:
+            type_details = ", ".join(
+                f"{dag.nodes[nid].cluster.type}({dag.nodes[nid].cluster.id})"
+                for nid in node_ids
+            )
+            errors.append(f"Layer {layer_idx}: mixed types [{type_details}]")
+
+    return errors
 
 
 def _check_entry_zone_membership(dag: Dag) -> list[str]:
