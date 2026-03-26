@@ -1,6 +1,7 @@
 # tests/test_generation_log.py
 
-from speedfog.clusters import ClusterData
+from speedfog.clusters import ClusterData, ClusterPool
+from speedfog.config import Config
 from speedfog.generation_log import (
     CrosslinkDetail,
     CrosslinkEvent,
@@ -13,6 +14,7 @@ from speedfog.generation_log import (
     compute_pool_remaining,
     export_generation_log,
 )
+from speedfog.generator import generate_dag
 
 
 def test_generation_log_defaults():
@@ -306,3 +308,105 @@ def test_compute_pool_remaining_with_reserved():
     reserved_zones = frozenset({"zone_a"})
     result = compute_pool_remaining(pool, used_zones, reserved_zones)
     assert result == {"major_boss": 0, "boss_arena": 1}
+
+
+def _make_cluster(
+    cluster_id: str,
+    ctype: str,
+    zones: list[str],
+    weight: int = 5,
+    entry_fogs: list[dict] | None = None,
+    exit_fogs: list[dict] | None = None,
+) -> ClusterData:
+    if entry_fogs is None:
+        entry_fogs = [{"fog_id": f"{cluster_id}_entry", "zone": zones[0]}]
+    if exit_fogs is None:
+        exit_fogs = [
+            {"fog_id": f"{cluster_id}_exit", "zone": zones[0]},
+            {"fog_id": f"{cluster_id}_entry", "zone": zones[0]},
+        ]
+    return ClusterData(
+        id=cluster_id,
+        type=ctype,
+        zones=zones,
+        weight=weight,
+        entry_fogs=entry_fogs,
+        exit_fogs=exit_fogs,
+    )
+
+
+def _make_small_pool() -> tuple[ClusterPool, list[ClusterData]]:
+    """Create a minimal ClusterPool and boss_candidates for log tests."""
+    pool = ClusterPool()
+
+    # Start cluster
+    pool.add(
+        _make_cluster(
+            "chapel_start",
+            "start",
+            ["chapel"],
+            weight=1,
+            entry_fogs=[],
+            exit_fogs=[
+                {"fog_id": "start_exit_1", "zone": "chapel"},
+                {"fog_id": "start_exit_2", "zone": "chapel"},
+            ],
+        )
+    )
+
+    # Final boss (zone name matches final_boss_candidates key in test config)
+    pool.add(
+        _make_cluster(
+            "boss_zone",
+            "final_boss",
+            ["boss_zone"],
+            weight=5,
+            entry_fogs=[{"fog_id": "boss_zone_entry", "zone": "boss_zone"}],
+            exit_fogs=[],
+        )
+    )
+
+    # Mini dungeons (enough for all layers including convergence)
+    for i in range(30):
+        pool.add(
+            _make_cluster(
+                f"mini_{i}",
+                "mini_dungeon",
+                [f"mini_{i}_zone"],
+                weight=3,
+            )
+        )
+
+    boss_candidates = pool.get_by_type("final_boss")
+    return pool, boss_candidates
+
+
+def test_planned_layers_have_events():
+    """Each planned layer emits a LayerEvent with operation and nodes."""
+    pool, boss_candidates = _make_small_pool()
+    config = Config.from_dict(
+        {
+            "structure": {
+                "min_layers": 4,
+                "max_layers": 5,
+                "max_branches": 1,
+                "split_probability": 0.0,
+                "merge_probability": 0.0,
+                "crosslinks": False,
+                "final_boss_candidates": {"boss_zone": 1},
+            },
+            "requirements": {
+                "legacy_dungeons": 0,
+                "bosses": 0,
+                "mini_dungeons": 2,
+                "major_bosses": 0,
+            },
+        }
+    )
+    dag, log = generate_dag(config, pool, seed=42, boss_candidates=boss_candidates)
+    planned = [le for le in log.layer_events if le.phase == "planned"]
+    assert len(planned) >= 1
+    for le in planned:
+        assert le.operation in ("PASSANT", "SPLIT", "MERGE", "REBALANCE")
+        assert len(le.nodes) >= 1
+        assert le.planned_type is not None

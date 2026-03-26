@@ -2021,6 +2021,16 @@ def generate_dag(
                 f"(type: {layer_type})"
             )
 
+        # Create layer event for this planned iteration (operation overridden below)
+        layer_event: LayerEvent | None = LayerEvent(
+            layer=current_layer,
+            phase="planned",
+            planned_type=layer_type,
+            operation="PASSANT",  # default; overridden for SPLIT/MERGE/REBALANCE
+            branches_before=len(branches),
+            branches_after=0,
+        )
+
         # Determine operation from cluster capabilities
         operation, fan = determine_operation(
             primary_cluster,
@@ -2044,7 +2054,32 @@ def generate_dag(
             )
             if rebal_result is not None:
                 branches = rebal_result[0]
-                current_layer += rebal_result[1]
+                layers_consumed = rebal_result[1]
+                for offset in range(layers_consumed):
+                    rebal_layer = current_layer + offset
+                    rebal_nodes = [
+                        NodeEntry(
+                            n.cluster.id,
+                            n.cluster.type,
+                            n.cluster.weight,
+                            "rebalance_split" if offset > 0 else "rebalance_merge",
+                        )
+                        for n in dag.nodes.values()
+                        if n.layer == rebal_layer
+                    ]
+                    log.layer_events.append(
+                        LayerEvent(
+                            layer=rebal_layer,
+                            phase="planned",
+                            planned_type=layer_type,
+                            operation="REBALANCE",
+                            branches_before=len(branches),
+                            branches_after=len(branches),
+                            nodes=rebal_nodes,
+                        )
+                    )
+                current_layer += layers_consumed
+                layer_event = None  # skip default append
                 continue
             # No capable cluster of the planned type — re-decide without
             # REBALANCE. The stale branch will be split at a later layer.
@@ -2070,6 +2105,9 @@ def generate_dag(
             passant_branches_list: list[Branch] = []
             letter_offset = 0
 
+            assert layer_event is not None
+            layer_event.operation = "SPLIT"
+
             # Mark primary_cluster used BEFORE the loop so passant picks
             # for branches before split_idx cannot select the same cluster.
             _mark_cluster_used(primary_cluster, used_zones, clusters)
@@ -2089,6 +2127,14 @@ def generate_dag(
                         exit_fogs=exit_fogs,
                     )
                     dag.add_node(node)
+                    layer_event.nodes.append(
+                        NodeEntry(
+                            primary_cluster.id,
+                            primary_cluster.type,
+                            primary_cluster.weight,
+                            "primary",
+                        )
+                    )
                     dag.add_edge(
                         branch.current_node_id,
                         node_id,
@@ -2141,6 +2187,9 @@ def generate_dag(
                         exit_fogs=exf,
                     )
                     dag.add_node(n)
+                    layer_event.nodes.append(
+                        NodeEntry(pc.id, pc.type, pc.weight, "passant")
+                    )
                     dag.add_edge(branch.current_node_id, nid, branch.available_exit, ef)
                     passant_branches_list.append(
                         Branch(
@@ -2193,6 +2242,8 @@ def generate_dag(
                 # Fallback: treat as passant
                 operation = LayerOperation.PASSANT
             else:
+                assert layer_event is not None
+                layer_event.operation = "MERGE"
                 _mark_cluster_used(primary_cluster, used_zones, clusters)
                 merge_branches_list = [branches[i] for i in merge_indices]
 
@@ -2225,6 +2276,14 @@ def generate_dag(
                     exit_fogs=exit_fogs,
                 )
                 dag.add_node(merge_node)
+                layer_event.nodes.append(
+                    NodeEntry(
+                        primary_cluster.id,
+                        primary_cluster.type,
+                        primary_cluster.weight,
+                        "merge_target",
+                    )
+                )
 
                 if primary_cluster.allow_shared_entrance:
                     for branch in merge_branches_list:
@@ -2299,6 +2358,9 @@ def generate_dag(
                         exit_fogs=exf,
                     )
                     dag.add_node(n)
+                    layer_event.nodes.append(
+                        NodeEntry(pc.id, pc.type, pc.weight, "passant")
+                    )
                     dag.add_edge(branch.current_node_id, nid, branch.available_exit, ef)
                     new_branches.append(
                         Branch(
@@ -2360,6 +2422,12 @@ def generate_dag(
                     exit_fogs=exf,
                 )
                 dag.add_node(n)
+                assert layer_event is not None
+                layer_event.nodes.append(
+                    NodeEntry(
+                        c.id, c.type, c.weight, "primary" if i == 0 else "passant"
+                    )
+                )
                 dag.add_edge(branch.current_node_id, nid, branch.available_exit, ef)
                 new_branches.append(
                     Branch(
@@ -2375,6 +2443,10 @@ def generate_dag(
                 passant_branches=new_branches,
             )
             branches = new_branches
+
+        if layer_event is not None:
+            layer_event.branches_after = len(branches)
+            log.layer_events.append(layer_event)
 
         current_layer += 1
 
