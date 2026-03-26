@@ -217,10 +217,10 @@ class TestGenerateDag:
         config.structure.split_probability = 0.0
         config.structure.merge_probability = 0.0
 
-        dag1 = generate_dag(
+        dag1, _log1 = generate_dag(
             config, pool, seed=12345, boss_candidates=_boss_candidates(pool)
         )
-        dag2 = generate_dag(
+        dag2, _log2 = generate_dag(
             config, pool, seed=12345, boss_candidates=_boss_candidates(pool)
         )
 
@@ -238,7 +238,7 @@ class TestGenerateDag:
         config.structure.split_probability = 0.0
         config.structure.merge_probability = 0.0
 
-        dag = generate_dag(
+        dag, _log = generate_dag(
             config, pool, seed=42, boss_candidates=_boss_candidates(pool)
         )
 
@@ -257,7 +257,7 @@ class TestGenerateDag:
         config.structure.split_probability = 0.0
         config.structure.merge_probability = 0.0
 
-        dag = generate_dag(
+        dag, _log = generate_dag(
             config, pool, seed=42, boss_candidates=_boss_candidates(pool)
         )
 
@@ -349,7 +349,7 @@ class TestGenerateDag:
         config.requirements.mini_dungeons = 0
         config.requirements.major_bosses = 0
 
-        dag = generate_dag(
+        dag, _log = generate_dag(
             config, pool, seed=42, boss_candidates=_boss_candidates(pool)
         )
 
@@ -375,7 +375,7 @@ class TestGenerateDag:
         config.structure.split_probability = 0.0
         config.structure.merge_probability = 0.0
 
-        dag = generate_dag(
+        dag, _log = generate_dag(
             config, pool, seed=42, boss_candidates=_boss_candidates(pool)
         )
 
@@ -486,7 +486,7 @@ class TestGenerateDag:
         config.structure.split_probability = 0.0
         config.structure.merge_probability = 0.0
 
-        dag = generate_dag(
+        dag, _log = generate_dag(
             config, pool, seed=42, boss_candidates=_boss_candidates(pool)
         )
 
@@ -1873,7 +1873,7 @@ class TestMergeGuards:
 
         for seed in range(1, 501):
             try:
-                dag = generate_dag(
+                dag, _log = generate_dag(
                     config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
                 )
             except GenerationError:
@@ -1994,7 +1994,7 @@ class TestMergeGuards:
         successes = 0
         for seed in range(1, 201):
             try:
-                dag = generate_dag(
+                dag, _log = generate_dag(
                     config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
                 )
             except GenerationError:
@@ -2473,7 +2473,7 @@ class TestSharedEntranceSimulation:
         success = False
         for seed in range(30):
             try:
-                dag = generate_dag(
+                dag, _log = generate_dag(
                     config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
                 )
                 assert len(dag.nodes) >= 3  # at least start + 1 node + end
@@ -2633,7 +2633,7 @@ class TestEntryAsExitSimulation:
         success = False
         for seed in range(30):
             try:
-                dag = generate_dag(
+                dag, _log = generate_dag(
                     config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
                 )
                 assert len(dag.nodes) >= 3
@@ -2659,7 +2659,7 @@ class TestEntryAsExitSimulation:
         boss_arena_split_count = 0
         for seed in range(50):
             try:
-                dag = generate_dag(
+                dag, _log = generate_dag(
                     config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
                 )
                 for node in dag.nodes.values():
@@ -3152,7 +3152,7 @@ class TestPrerequisiteInGenerateDag:
         config.structure.merge_probability = 0.0
         config.structure.final_boss_candidates = {"leyndell_erdtree": 1}
 
-        dag = generate_dag(
+        dag, _log = generate_dag(
             config, pool, seed=42, boss_candidates=_boss_candidates(pool)
         )
 
@@ -3183,7 +3183,7 @@ class TestPrerequisiteInGenerateDag:
         # Run many seeds to check Maliketh is never on an optional branch
         for seed in range(50):
             try:
-                dag = generate_dag(
+                dag, _log = generate_dag(
                     config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
                 )
             except GenerationError:
@@ -3218,7 +3218,7 @@ class TestPrerequisiteInGenerateDag:
         config.structure.merge_probability = 0.0
         config.structure.final_boss_candidates = {"enirilim_radahn": 1}
 
-        dag = generate_dag(
+        dag, _log = generate_dag(
             config, pool, seed=42, boss_candidates=_boss_candidates(pool)
         )
 
@@ -3737,7 +3737,7 @@ class TestCrosslinkPipeline:
                 },
             }
         )
-        dag = generate_dag(
+        dag, _log = generate_dag(
             config, pool, seed=42, boss_candidates=_boss_candidates(pool)
         )
         # With crosslinks enabled and surplus fogs, the DAG should
@@ -3768,7 +3768,7 @@ class TestCrosslinkPipeline:
                 {"structure": {**base_structure, "crosslinks": False}}
             )
             try:
-                dag_off = generate_dag(
+                dag_off, _log_off = generate_dag(
                     config_off,
                     pool,
                     seed=seed,
@@ -3780,7 +3780,7 @@ class TestCrosslinkPipeline:
             config_on = Config.from_dict(
                 {"structure": {**base_structure, "crosslinks": True}}
             )
-            dag_on = generate_dag(
+            dag_on, _log_on = generate_dag(
                 config_on, pool, seed=seed, boss_candidates=_boss_candidates(pool)
             )
 
@@ -3922,7 +3922,7 @@ class TestAsymmetricExitsEntrances:
         successes = 0
         for seed in range(1, 500):
             try:
-                dag = generate_dag(
+                dag, _log = generate_dag(
                     config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
                 )
                 errors = dag.validate_structure()
@@ -3965,7 +3965,7 @@ class TestAsymmetricExitsEntrances:
         found_multi_branch = False
         for seed in range(1, 500):
             try:
-                dag = generate_dag(
+                dag, _log = generate_dag(
                     config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
                 )
             except GenerationError:
@@ -4271,7 +4271,7 @@ def test_forced_split_triggers_at_threshold():
     found_split = False
     for seed in range(50):
         try:
-            dag = generate_dag(
+            dag, _log = generate_dag(
                 config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
             )
             has_split = any(
@@ -4440,7 +4440,7 @@ def test_rebalance_when_saturated():
     success = False
     for seed in range(50):
         try:
-            dag = generate_dag(
+            dag, _log = generate_dag(
                 config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
             )
             assert dag.end_id
@@ -4522,7 +4522,7 @@ def test_forced_merge_bypasses_min_branch_age():
     success = False
     for seed in range(50):
         try:
-            dag = generate_dag(
+            dag, _log = generate_dag(
                 config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
             )
             assert dag.end_id
@@ -4577,7 +4577,9 @@ def test_max_branch_spacing_disabled_regression():
     config.requirements.legacy_dungeons = 0
     config.requirements.major_bosses = 0
 
-    dag = generate_dag(config, pool, seed=42, boss_candidates=_boss_candidates(pool))
+    dag, _log = generate_dag(
+        config, pool, seed=42, boss_candidates=_boss_candidates(pool)
+    )
     # Linear — no splits possible with 1-exit clusters
     assert not any(
         len({e.target_id for e in dag.get_outgoing_edges(nid)}) > 1 for nid in dag.nodes
@@ -4673,7 +4675,7 @@ def test_first_layer_type_counter_propagation():
     found_split = False
     for seed in range(50):
         try:
-            dag = generate_dag(
+            dag, _log = generate_dag(
                 config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
             )
             has_split = any(
@@ -4707,7 +4709,7 @@ def test_max_branch_spacing_statistical():
         config.seed = seed
         config.structure.max_branch_spacing = max_spacing
         try:
-            dag = generate_dag(config, pool, boss_candidates=boss_candidates)
+            dag, _log = generate_dag(config, pool, boss_candidates=boss_candidates)
         except GenerationError:
             continue
 
@@ -5191,7 +5193,7 @@ def test_rebalance_during_convergence():
         config.requirements.major_bosses = 0
 
         try:
-            dag = generate_dag(
+            dag, _log = generate_dag(
                 config,
                 pool,
                 seed=seed,
@@ -5279,7 +5281,7 @@ def test_convergence_terminates():
         config.requirements.major_bosses = 0
 
         try:
-            dag = generate_dag(
+            dag, _log = generate_dag(
                 config,
                 pool,
                 seed=seed,
@@ -5667,7 +5669,7 @@ class TestSplitNoClusterReuse:
                     "final_boss"
                 )
                 clusters.filter_passant_incompatible()
-                dag = generate_dag(
+                dag, _log = generate_dag(
                     config, clusters, seed=seed, boss_candidates=boss_cand
                 )
                 tested += 1
@@ -5932,7 +5934,7 @@ def test_parallel_branches_weight_matched():
     max_spreads = []
     for seed in range(50):
         try:
-            dag = generate_dag(
+            dag, _log = generate_dag(
                 config,
                 pool,
                 seed=seed,

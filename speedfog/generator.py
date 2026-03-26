@@ -18,7 +18,14 @@ from speedfog.clusters import ClusterData, ClusterPool, fog_matches_spec
 from speedfog.config import Config, resolve_final_boss_candidates
 from speedfog.crosslinks import add_crosslinks
 from speedfog.dag import Branch, Dag, DagNode, FogRef
-from speedfog.generation_log import GenerationLog
+from speedfog.generation_log import (
+    GenerationLog,
+    LayerEvent,
+    NodeEntry,
+    PlanEvent,
+    SummaryEvent,
+    compute_pool_remaining,
+)
 from speedfog.planner import compute_tier, pick_weighted_type, plan_layer_types
 from speedfog.validator import ValidationResult, validate_dag
 
@@ -1780,7 +1787,7 @@ def generate_dag(
     seed: int | None = None,
     *,
     boss_candidates: list[ClusterData],
-) -> Dag:
+) -> tuple[Dag, GenerationLog]:
     """Generate a randomized DAG with dynamic split/merge/passant topology.
 
     Algorithm:
@@ -1798,7 +1805,7 @@ def generate_dag(
         boss_candidates: Pre-filtered list of clusters eligible as final boss.
 
     Returns:
-        Generated DAG
+        Tuple of (Generated DAG, GenerationLog with diagnostic events)
 
     Raises:
         GenerationError: If generation fails (not enough clusters)
@@ -1809,6 +1816,7 @@ def generate_dag(
     rng = random.Random(seed)
     dag = Dag(seed=seed)
     used_zones: set[str] = set()
+    log = GenerationLog()
 
     # 1. Create start node
     start_candidates = clusters.get_by_type("start")
@@ -1852,6 +1860,22 @@ def generate_dag(
         Branch(f"b{i}", "start", start_exits[i], birth_layer=0)
         for i in range(num_initial_branches)
     ]
+
+    log.layer_events.append(
+        LayerEvent(
+            layer=0,
+            phase="start",
+            planned_type=None,
+            operation="START",
+            branches_before=0,
+            branches_after=len(branches),
+            nodes=[
+                NodeEntry(
+                    start_cluster.id, start_cluster.type, start_cluster.weight, "start"
+                )
+            ],
+        )
+    )
 
     # 3. Pre-select final boss and compute reserved zones
     # Must happen before layer execution so prerequisite zones are reserved.
@@ -1915,6 +1939,23 @@ def generate_dag(
         update_branch_counters(LayerOperation.PASSANT, passant_branches=branches)
         current_layer += 1
 
+        first_layer_event = LayerEvent(
+            layer=1,
+            phase="first_layer",
+            planned_type=config.structure.first_layer_type,
+            operation="PASSANT",
+            branches_before=num_initial_branches,
+            branches_after=len(branches),
+        )
+        for b in new_branches:
+            node = dag.nodes[b.current_node_id]
+            first_layer_event.nodes.append(
+                NodeEntry(
+                    node.cluster.id, node.cluster.type, node.cluster.weight, "passant"
+                )
+            )
+        log.layer_events.append(first_layer_event)
+
     # 5. Plan remaining layer types
     # Reserve max_parallel_paths layers for post-loop forced merges.
     # min_layers/max_layers refer to total layer count (start + end included).
@@ -1939,6 +1980,28 @@ def generate_dag(
         num_intermediate_layers,
         rng,
         pool_sizes=pool_sizes,
+    )
+
+    all_pool_sizes = {
+        t: len(clusters.get_by_type(t))
+        for t in ("mini_dungeon", "boss_arena", "legacy_dungeon", "major_boss")
+    }
+    log.plan_event = PlanEvent(
+        seed=seed,
+        requirements={
+            "legacy_dungeon": config.requirements.legacy_dungeons,
+            "boss_arena": config.requirements.bosses,
+            "mini_dungeon": config.requirements.mini_dungeons,
+            "major_boss": config.requirements.major_bosses,
+        },
+        target_total=target_total,
+        merge_reserve=merge_reserve,
+        num_intermediate=num_intermediate_layers,
+        first_layer_type=config.structure.first_layer_type,
+        planned_types=list(layer_types),
+        pool_sizes=all_pool_sizes,
+        final_boss=end_cluster.id,
+        reserved_zones=set(reserved_zones),
     )
 
     # 6. Execute layers with cluster-first selection
@@ -2436,6 +2499,7 @@ def generate_dag(
             )
 
     # 8. Inject prerequisite if needed (after merge, before final boss)
+    old_layer = current_layer
     branches, current_layer = _inject_prerequisite(
         dag,
         branches,
@@ -2445,6 +2509,26 @@ def generate_dag(
         used_zones,
         rng,
     )
+    if current_layer != old_layer:
+        prereq_node = dag.nodes[branches[0].current_node_id]
+        log.layer_events.append(
+            LayerEvent(
+                layer=old_layer,
+                phase="prerequisite",
+                planned_type=None,
+                operation="PASSANT",
+                branches_before=1,
+                branches_after=1,
+                nodes=[
+                    NodeEntry(
+                        prereq_node.cluster.id,
+                        prereq_node.cluster.type,
+                        prereq_node.cluster.weight,
+                        "passant",
+                    )
+                ],
+            )
+        )
 
     # 9. Create end node (using pre-selected end_cluster)
     # Final boss has exactly 1 entry (from the single remaining branch)
@@ -2484,6 +2568,22 @@ def generate_dag(
         entry_fog_end or FogRef("", ""),
     )
 
+    log.layer_events.append(
+        LayerEvent(
+            layer=end_node.layer,
+            phase="final_boss",
+            planned_type=None,
+            operation="FINAL",
+            branches_before=1,
+            branches_after=0,
+            nodes=[
+                NodeEntry(
+                    end_cluster.id, end_cluster.type, end_cluster.weight, "final_boss"
+                )
+            ],
+        )
+    )
+
     # Cross-link pass (post-hoc): add optional edges between parallel branches
     if config.structure.crosslinks:
         dag.crosslinks_added = add_crosslinks(dag, rng, clusters)
@@ -2503,7 +2603,31 @@ def generate_dag(
             exponent=config.structure.tier_curve_exponent,
         )
 
-    return dag
+    # Compute summary
+    all_clusters_typed: list = []
+    for t in ("mini_dungeon", "boss_arena", "legacy_dungeon", "major_boss"):
+        all_clusters_typed.extend(clusters.get_by_type(t))
+    pool_at_end = compute_pool_remaining(all_clusters_typed, used_zones, reserved_zones)
+
+    convergence_count = sum(1 for le in log.layer_events if le.phase == "convergence")
+    planned_count = sum(1 for le in log.layer_events if le.phase == "planned")
+    fallback_count = sum(len(le.fallbacks) for le in log.layer_events)
+    fallback_summary = [
+        (le.layer, fb.preferred_type) for le in log.layer_events for fb in le.fallbacks
+    ]
+
+    log.summary = SummaryEvent(
+        total_layers=total_layers,
+        total_nodes=len(dag.nodes),
+        planned_layers=planned_count,
+        convergence_layers=convergence_count,
+        crosslinks=dag.crosslinks_added,
+        fallback_count=fallback_count,
+        fallback_summary=fallback_summary,
+        pool_at_end=pool_at_end,
+    )
+
+    return dag, log
 
 
 def generate_with_retry(
@@ -2539,7 +2663,7 @@ def generate_with_retry(
 
     if config.seed != 0:
         # Fixed seed - single attempt
-        dag = generate_dag(
+        dag, log = generate_dag(
             config, clusters, config.seed, boss_candidates=boss_candidates
         )
         validation = validate_dag(dag, config, clusters)
@@ -2551,6 +2675,7 @@ def generate_with_retry(
             seed=config.seed,
             validation=validation,
             attempts=1,
+            log=log,
         )
 
     # Auto-reroll mode
@@ -2559,7 +2684,9 @@ def generate_with_retry(
     for attempt in range(max_attempts):
         seed = base_rng.randint(1, 999999999)
         try:
-            dag = generate_dag(config, clusters, seed, boss_candidates=boss_candidates)
+            dag, log = generate_dag(
+                config, clusters, seed, boss_candidates=boss_candidates
+            )
             validation = validate_dag(dag, config, clusters)
             if not validation.is_valid:
                 errors = "; ".join(validation.errors)
@@ -2569,6 +2696,7 @@ def generate_with_retry(
                 seed=seed,
                 validation=validation,
                 attempts=attempt + 1,
+                log=log,
             )
         except GenerationError as e:
             print(f"Attempt {attempt + 1}: seed {seed} failed - {e}")
