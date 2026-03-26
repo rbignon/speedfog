@@ -2457,6 +2457,16 @@ def generate_dag(
     # Pool sizes for convergence type selection (computed once)
     conv_pool_sizes = {t: len(clusters.get_by_type(t)) for t in _FALLBACK_TYPES}
 
+    # Pool snapshot for first convergence event
+    conv_pool_snapshot: dict[str, int] | None = None
+    if len(branches) > 1:
+        all_conv_clusters: list[ClusterData] = []
+        for t in _FALLBACK_TYPES:
+            all_conv_clusters.extend(clusters.get_by_type(t))
+        conv_pool_snapshot = compute_pool_remaining(
+            all_conv_clusters, used_zones, reserved_zones
+        )
+
     while len(branches) > 1:
         # Pick convergence type weighted by remaining pool capacity
         conv_used: dict[str, int] = {}
@@ -2465,6 +2475,18 @@ def generate_dag(
             if t in conv_pool_sizes:
                 conv_used[t] = conv_used.get(t, 0) + 1
         conv_layer_type = pick_weighted_type(conv_pool_sizes, conv_used, rng)
+
+        # Create a layer event (operation and nodes filled in below)
+        conv_layer_event: LayerEvent | None = LayerEvent(
+            layer=current_layer,
+            phase="convergence",
+            planned_type=conv_layer_type,
+            operation="MERGE",  # default; overridden after the operation executes
+            branches_before=len(branches),
+            branches_after=0,
+            pool_snapshot=conv_pool_snapshot,
+        )
+        conv_pool_snapshot = None  # only for the first convergence layer
 
         conv_cluster = _pick_cluster_biased_for_split(
             clusters,
@@ -2501,8 +2523,33 @@ def generate_dag(
             )
             if rebal_result is not None:
                 branches = rebal_result[0]
-                current_layer += rebal_result[1]
-                convergence_layers += rebal_result[1]
+                layers_consumed = rebal_result[1]
+                for offset in range(layers_consumed):
+                    rebal_layer = current_layer + offset
+                    rebal_nodes = [
+                        NodeEntry(
+                            n.cluster.id,
+                            n.cluster.type,
+                            n.cluster.weight,
+                            "rebalance_merge" if offset == 0 else "rebalance_split",
+                        )
+                        for n in dag.nodes.values()
+                        if n.layer == rebal_layer
+                    ]
+                    log.layer_events.append(
+                        LayerEvent(
+                            layer=rebal_layer,
+                            phase="convergence",
+                            planned_type=conv_layer_type,
+                            operation="REBALANCE",
+                            branches_before=len(branches),
+                            branches_after=len(branches),
+                            nodes=rebal_nodes,
+                        )
+                    )
+                current_layer += layers_consumed
+                convergence_layers += layers_consumed
+                conv_layer_event = None  # already appended above
                 if convergence_layers > convergence_limit:
                     raise GenerationError(
                         f"Convergence failed after {convergence_layers} layers "
@@ -2561,6 +2608,24 @@ def generate_dag(
                     config=config,
                     reserved_zones=reserved_zones,
                 )
+
+        # Populate and emit the convergence layer event
+        if conv_layer_event is not None:
+            conv_nodes_at_layer = [
+                n for n in dag.nodes.values() if n.layer == current_layer
+            ]
+            for n in conv_nodes_at_layer:
+                incoming = dag.get_incoming_edges(n.id)
+                role = "merge_target" if len(incoming) > 1 else "passant"
+                conv_layer_event.nodes.append(
+                    NodeEntry(n.cluster.id, n.cluster.type, n.cluster.weight, role)
+                )
+            has_merge = any(
+                len(dag.get_incoming_edges(n.id)) > 1 for n in conv_nodes_at_layer
+            )
+            conv_layer_event.operation = "MERGE" if has_merge else "PASSANT"
+            conv_layer_event.branches_after = len(branches)
+            log.layer_events.append(conv_layer_event)
 
         current_layer += 1
         convergence_layers += 1

@@ -410,3 +410,77 @@ def test_planned_layers_have_events():
         assert le.operation in ("PASSANT", "SPLIT", "MERGE", "REBALANCE")
         assert len(le.nodes) >= 1
         assert le.planned_type is not None
+
+
+def test_convergence_layers_have_events():
+    """Convergence layers emit LayerEvents with phase='convergence'."""
+    pool = ClusterPool()
+    pool.add(
+        ClusterData(
+            id="chapel_start",
+            type="start",
+            zones=["chapel"],
+            entry_fogs=[],
+            exit_fogs=[
+                {"fog_id": "exit1", "zone": "chapel"},
+                {"fog_id": "exit2", "zone": "chapel"},
+            ],
+            weight=1,
+        )
+    )
+    boss = ClusterData(
+        id="test_boss",
+        type="final_boss",
+        zones=["boss_zone"],
+        entry_fogs=[{"fog_id": "entry1", "zone": "boss_zone"}],
+        exit_fogs=[],
+        weight=1,
+    )
+    pool.add(boss)
+    for i in range(30):
+        pool.add(
+            ClusterData(
+                id=f"mini_{i}",
+                type="mini_dungeon",
+                zones=[f"mini_{i}_zone"],
+                entry_fogs=[
+                    {"fog_id": f"e{i}a", "zone": f"mini_{i}_zone"},
+                    {"fog_id": f"e{i}b", "zone": f"mini_{i}_zone"},
+                ],
+                exit_fogs=[
+                    {"fog_id": f"x{i}a", "zone": f"mini_{i}_zone"},
+                    {"fog_id": f"x{i}b", "zone": f"mini_{i}_zone"},
+                ],
+                weight=1,
+            )
+        )
+    config = Config.from_dict(
+        {
+            "structure": {
+                "min_layers": 4,
+                "max_layers": 6,
+                "max_parallel_paths": 2,
+                "max_branches": 2,
+                "crosslinks": False,
+                "final_boss_candidates": {"boss_zone": 1},
+                # Force a split on the first layer then let convergence handle merging
+                "split_probability": 1.0,
+                "merge_probability": 0.5,
+            },
+            "requirements": {
+                "legacy_dungeons": 0,
+                "bosses": 0,
+                "mini_dungeons": 2,
+                "major_bosses": 0,
+            },
+        }
+    )
+    dag, log = generate_dag(config, pool, seed=42, boss_candidates=[boss])
+    convergence = [le for le in log.layer_events if le.phase == "convergence"]
+    # With 2 branches, convergence must happen at least once
+    assert len(convergence) >= 1
+    for le in convergence:
+        assert le.planned_type is not None
+        assert le.operation in ("MERGE", "PASSANT", "REBALANCE")
+    # First convergence layer should have pool_snapshot
+    assert convergence[0].pool_snapshot is not None
