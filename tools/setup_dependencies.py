@@ -591,7 +591,7 @@ def main() -> int:
         print("=" * 50)
         print()
         print("You can now generate runs with:")
-        print("  uv run speedfog config.toml --spoiler")
+        print("  uv run speedfog config.toml --logs")
         return 0
     else:
         print()

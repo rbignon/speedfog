@@ -2073,15 +2073,21 @@ def generate_dag(
                     rebal_dag_nodes = [
                         n for n in dag.nodes.values() if n.layer == rebal_layer
                     ]
-                    rebal_nodes = [
-                        NodeEntry(
-                            n.cluster.id,
-                            n.cluster.type,
-                            n.cluster.weight,
-                            "rebalance_split" if offset > 0 else "rebalance_merge",
+                    rebal_nodes = []
+                    for n in rebal_dag_nodes:
+                        incoming = len(dag.get_incoming_edges(n.id))
+                        outgoing = len(dag.get_outgoing_edges(n.id))
+                        if incoming > 1:
+                            role = "rebalance_merge"
+                        elif outgoing > 1:
+                            role = "rebalance_split"
+                        else:
+                            role = "rebalance_passant"
+                        rebal_nodes.append(
+                            NodeEntry(
+                                n.cluster.id, n.cluster.type, n.cluster.weight, role
+                            )
                         )
-                        for n in rebal_dag_nodes
-                    ]
                     rebal_fallbacks = [
                         FallbackEntry(
                             branch_index=idx,
@@ -2634,15 +2640,21 @@ def generate_dag(
                     rebal_dag_nodes = [
                         n for n in dag.nodes.values() if n.layer == rebal_layer
                     ]
-                    rebal_nodes = [
-                        NodeEntry(
-                            n.cluster.id,
-                            n.cluster.type,
-                            n.cluster.weight,
-                            "rebalance_merge" if offset == 0 else "rebalance_split",
+                    rebal_nodes = []
+                    for n in rebal_dag_nodes:
+                        incoming = len(dag.get_incoming_edges(n.id))
+                        outgoing = len(dag.get_outgoing_edges(n.id))
+                        if incoming > 1:
+                            role = "rebalance_merge"
+                        elif outgoing > 1:
+                            role = "rebalance_split"
+                        else:
+                            role = "rebalance_passant"
+                        rebal_nodes.append(
+                            NodeEntry(
+                                n.cluster.id, n.cluster.type, n.cluster.weight, role
+                            )
                         )
-                        for n in rebal_dag_nodes
-                    ]
                     rebal_fallbacks = [
                         FallbackEntry(
                             branch_index=idx,
@@ -2738,8 +2750,8 @@ def generate_dag(
                 n for n in dag.nodes.values() if n.layer == current_layer
             ]
             for idx, n in enumerate(conv_nodes_at_layer):
-                incoming = dag.get_incoming_edges(n.id)
-                role = "merge_target" if len(incoming) > 1 else "passant"
+                n_incoming = len(dag.get_incoming_edges(n.id))
+                role = "merge_target" if n_incoming > 1 else "passant"
                 conv_layer_event.nodes.append(
                     NodeEntry(n.cluster.id, n.cluster.type, n.cluster.weight, role)
                 )

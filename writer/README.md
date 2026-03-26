@@ -43,7 +43,7 @@ FogModWrapper.exe <seed_dir> --game-dir <game_dir> [options]
 
 ### Arguments
 
-- `seed_dir` - Path to seed directory (contains graph.json, spoiler.txt)
+- `seed_dir` - Path to seed directory (contains graph.json)
 
 ### Options
 
@@ -95,7 +95,9 @@ FogModWrapper creates a self-contained mod with ModEngine 2:
 ```
 output/
 ├── graph.json              # DAG data (always generated)
-├── spoiler.txt             # Path spoiler log (--spoiler)
+├── logs/                   # Diagnostic logs (--logs)
+│   ├── spoiler.txt         # Path spoiler log
+│   └── generation.log      # DAG generation diagnostics
 ├── ModEngine/              # ModEngine 2 (auto-downloaded)
 ├── mods/
 │   ├── fogmod/             # Fog gate mod files
