@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import random
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
 from itertools import combinations
 
@@ -18,6 +18,7 @@ from speedfog.clusters import ClusterData, ClusterPool, fog_matches_spec
 from speedfog.config import Config, resolve_final_boss_candidates
 from speedfog.crosslinks import add_crosslinks
 from speedfog.dag import Branch, Dag, DagNode, FogRef
+from speedfog.generation_log import GenerationLog
 from speedfog.planner import compute_tier, pick_weighted_type, plan_layer_types
 from speedfog.validator import ValidationResult, validate_dag
 
@@ -180,6 +181,7 @@ class GenerationResult:
     seed: int
     validation: ValidationResult
     attempts: int
+    log: GenerationLog = field(default_factory=GenerationLog)
 
 
 # =============================================================================
