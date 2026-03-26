@@ -22,7 +22,7 @@ config.toml        →                                              output/
 clusters.json      →    graph.json → FogModWrapper ──────────┐    ├── mod/
 DAG generation     →                      ↑                  ├──► ├── ModEngine/
                         item_config.json → ItemRandomizerWrapper  ├── launch_speedfog.bat
-                                          (optional)              └── spoiler.txt
+                                          (optional)              └── logs/
 ```
 
 - **Python**: Configuration, cluster/zone data, DAG generation algorithm (package at root)
@@ -48,7 +48,8 @@ speedfog/
 │   ├── main.py              # CLI entry point
 │   ├── config.py            # Configuration loading
 │   ├── dag.py               # DAG data structures
-│   └── generator.py         # DAG generation algorithm
+│   ├── generator.py         # DAG generation algorithm
+│   └── generation_log.py    # Structured generation log (events, summary)
 ├── tests/                   # Python tests
 ├── data/                    # Shared data files
 │   ├── fog.txt              # FogRando zone definitions (gitignored)
@@ -275,8 +276,8 @@ cd writer/ItemRandomizerWrapper && dotnet build
 
 ```bash
 # Generate a run (from project root)
-uv run speedfog config.toml --spoiler
-# Creates seeds/<seed>/graph.json and spoiler.txt
+uv run speedfog config.toml --logs
+# Creates seeds/<seed>/graph.json and logs/spoiler.txt and logs/generation.log
 
 # Python tests
 pytest -v
@@ -294,7 +295,7 @@ wine publish/win-x64/FogModWrapper.exe \
   -o output
 
 # Example paths:
-#   seed_dir: seeds/212559448 (contains graph.json and spoiler.txt)
+#   seed_dir: seeds/212559448 (contains graph.json and logs/)
 #   game_dir: /data/thewall/Game (ELDEN RING/Game folder)
 
 # ItemRandomizerWrapper - build and publish

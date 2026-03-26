@@ -38,7 +38,8 @@ Generates a balanced DAG of zone connections.
 | `planner.py` | Layer type planning and tier interpolation |
 | `validator.py` | DAG constraint validation against requirements |
 | `crosslinks.py` | Post-hoc cross-link edges between parallel branches |
-| `output.py` | Export graph.json v4 and spoiler.txt with ASCII graph |
+| `output.py` | Export graph.json v4, spoiler.txt, and generation.log with ASCII graph |
+| `generation_log.py` | Structured generation log dataclasses and serialization |
 | `care_package.py` | Randomized starting build (weapons, armor, spells, etc.) |
 | `fog_mod.py` | Wrapper to call FogModWrapper.exe via Wine/native |
 | `item_randomizer.py` | Wrapper to call ItemRandomizerWrapper.exe, generate item_config |
@@ -121,7 +122,7 @@ Clusters group connected zones. Once a player enters a cluster via an entry fog,
 ### 2. DAG Generation (per run)
 
 ```
-config.toml + clusters.json ──► speedfog ──► graph.json + spoiler.txt
+config.toml + clusters.json ──► speedfog ──► graph.json + logs/spoiler.txt + logs/generation.log
 ```
 
 The DAG algorithm:
@@ -319,7 +320,7 @@ DAG serialized for C# consumption, visualization tools, and racing.
 Gate names use FogMod's FullName format: `{map}_{gate_name}`.
 
 **Key field groups:**
-- `nodes`/`edges`: DAG topology for visualization and spoiler
+- `nodes`/`edges`: DAG topology for visualization and spoiler log
 - `connections`/`area_tiers`: FogModWrapper consumption (fog gate wiring + enemy scaling)
 - `event_map`/`final_node_flag`/`finish_event`: racing zone tracking
 - `finish_boss_defeat_flag`: boss DefeatFlag from fog.txt (primary source for death detection)
@@ -427,7 +428,9 @@ Zones have tiers (1-28) based on their layer in the DAG. FogMod applies SpEffect
 ```
 <seed_dir>/
 ├── graph.json                # DAG data (always generated)
-├── spoiler.txt               # Path spoiler log (--spoiler)
+├── logs/
+│   ├── spoiler.txt           # Path spoiler log (--logs)
+│   └── generation.log        # Structured generation log (--logs)
 ├── ModEngine/                # ModEngine 2 (auto-downloaded)
 ├── mods/
 │   ├── fogmod/               # FogMod output (fog gates, scaling, events)

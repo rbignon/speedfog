@@ -68,12 +68,13 @@ cp config.example.toml config.toml
 ### Generate and Build a Run
 
 ```bash
-uv run speedfog config.toml --spoiler
+uv run speedfog config.toml --logs
 ```
 
 Output is self-contained in `seeds/<seed>/`:
 - `graph.json` - DAG definition
-- `spoiler.txt` - Spoiler log
+- `logs/spoiler.txt` - Spoiler log
+- `logs/generation.log` - Structured generation log
 - `ModEngine/` - ModEngine 2 (auto-downloaded)
 - `mods/` - Generated mod files
 - `config_speedfog.toml` - ModEngine config
@@ -85,7 +86,7 @@ Output is self-contained in `seeds/<seed>/`:
 ```bash
 uv run speedfog [config_file] [options]
   --output/-o DIR         # Output directory (overrides config)
-  --spoiler               # Generate spoiler log
+  --logs                  # Generate spoiler log and generation log
   --seed INT              # Random seed (overrides config, 0=auto-reroll)
   --max-attempts INT      # Max retries for auto-reroll (default: 100)
   --verbose/-v            # Verbose output
@@ -96,10 +97,10 @@ uv run speedfog [config_file] [options]
 ### Generate Only (no mod build)
 
 ```bash
-uv run speedfog config.toml --no-build --spoiler
+uv run speedfog config.toml --no-build --logs
 ```
 
-This creates only `graph.json` and `spoiler.txt`. To build manually, see `writer/README.md`.
+This creates only `graph.json` and `logs/`. To build manually, see `writer/README.md`.
 
 ### Play
 

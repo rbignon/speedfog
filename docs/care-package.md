@@ -110,7 +110,7 @@ Gem items are logged as skipped. There is no mechanism to give Ashes of War at g
 
 ## Spoiler Log
 
-When `--spoiler` is passed, `export_spoiler_log()` appends a `CARE PACKAGE` section to `spoiler.txt`:
+When `--logs` is passed, `export_spoiler_log()` appends a `CARE PACKAGE` section to `logs/spoiler.txt`:
 
 ```
 ============================================================
