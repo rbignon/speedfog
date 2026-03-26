@@ -2860,7 +2860,9 @@ def generate_dag(
 
     # Cross-link pass (post-hoc): add optional edges between parallel branches
     if config.structure.crosslinks:
-        dag.crosslinks_added = add_crosslinks(dag, rng, clusters)
+        crosslink_count, crosslink_event = add_crosslinks(dag, rng, clusters)
+        dag.crosslinks_added = crosslink_count
+        log.crosslink_event = crosslink_event
 
     # Post-pass: assign tiers based on actual layer count.
     # This guarantees monotonically non-decreasing tiers across layers,

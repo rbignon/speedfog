@@ -808,7 +808,7 @@ class TestAddCrosslinks:
         """Adds all eligible pairs (surplus is structurally rare)."""
         dag = _make_three_layer_dag()
         original_edge_count = len(dag.edges)
-        added = add_crosslinks(dag, rng=random.Random(42))
+        added, _event = add_crosslinks(dag, rng=random.Random(42))
         assert added == 2  # A->C2 and B->C1
         assert len(dag.edges) == original_edge_count + 2
 
@@ -894,7 +894,7 @@ class TestAddCrosslinks:
         dag.start_id = "s"
         dag.end_id = "e"
 
-        added = add_crosslinks(dag, rng=random.Random(42))
+        added, _event = add_crosslinks(dag, rng=random.Random(42))
         assert added == 0  # No cross-branch pairs exist
 
     def test_deterministic_with_same_seed(self):
@@ -912,7 +912,8 @@ class TestAddCrosslinks:
     def test_crosslinks_added_tracked_on_dag(self):
         """Dag.crosslinks_added is set by add_crosslinks return value."""
         dag = _make_three_layer_dag()
-        dag.crosslinks_added = add_crosslinks(dag, rng=random.Random(42))
+        crosslink_count, _event = add_crosslinks(dag, rng=random.Random(42))
+        dag.crosslinks_added = crosslink_count
         assert dag.crosslinks_added == 2
 
 
@@ -1138,7 +1139,7 @@ class TestProximityFiltering:
 
         # Without proximity: A has surplus a_exit2, C2 has surplus c2_spare
         # But c2_spare is proximity-blocked by c2_exit → no valid entry on C2
-        added = add_crosslinks(dag, rng=random.Random(42))
+        added, _event = add_crosslinks(dag, rng=random.Random(42))
         assert added == 0
 
     def test_allow_entry_as_exit_skips_pair_exclusion(self):
@@ -1320,3 +1321,17 @@ class TestProximityFiltering:
         # Without allow_entry_as_exit: bidir1 used as entry BLOCKS bidir1 as exit
         surplus = _surplus_exits(dag, "a")
         assert FogRef("bidir1", "a") not in surplus
+
+
+def test_add_crosslinks_returns_event():
+    """add_crosslinks returns (count, CrosslinkEvent) tuple."""
+    from speedfog.generation_log import CrosslinkEvent
+
+    dag = make_diamond_dag()  # existing fixture in test file
+    rng = random.Random(42)
+    count, event = add_crosslinks(dag, rng)
+    assert isinstance(event, CrosslinkEvent)
+    assert event.added == count
+    assert event.added + event.skipped <= event.eligible_pairs
+    assert len(event.added_details) == event.added
+    assert len(event.skipped_details) == event.skipped

@@ -11,6 +11,7 @@ from collections import deque
 
 from speedfog.clusters import ClusterData, ClusterPool, fog_matches_spec
 from speedfog.dag import Dag, FogRef
+from speedfog.generation_log import CrosslinkDetail, CrosslinkEvent
 
 
 def _blocked_by_proximity(
@@ -179,7 +180,7 @@ def add_crosslinks(
     dag: Dag,
     rng: random.Random,
     clusters: ClusterPool | None = None,
-) -> int:
+) -> tuple[int, CrosslinkEvent]:
     """Add cross-link edges to a DAG.
 
     Tries every eligible pair, picking a random exit/entry fog combination.
@@ -190,11 +191,12 @@ def add_crosslinks(
         clusters: Unused, kept for API compatibility.
 
     Returns:
-        Number of cross-links added.
+        Tuple of (number of cross-links added, CrosslinkEvent with details).
     """
     pairs = find_eligible_pairs(dag)
+    event = CrosslinkEvent(eligible_pairs=len(pairs), added=0, skipped=0)
     if not pairs:
-        return 0
+        return 0, event
 
     rng.shuffle(pairs)
 
@@ -204,6 +206,9 @@ def add_crosslinks(
         src_surplus = _surplus_exits(dag, src_id)
         tgt_surplus = _available_entries(dag, tgt_id)
         if not src_surplus or not tgt_surplus:
+            reason = "no_surplus_exits" if not src_surplus else "no_available_entries"
+            event.skipped += 1
+            event.skipped_details.append(CrosslinkDetail(src_id, tgt_id, reason))
             continue
 
         exit_fog = rng.choice(src_surplus)
@@ -212,5 +217,7 @@ def add_crosslinks(
         dag.nodes[src_id].exit_fogs.append(exit_fog)
         dag.nodes[tgt_id].entry_fogs.append(entry_fog)
         added += 1
+        event.added += 1
+        event.added_details.append(CrosslinkDetail(src_id, tgt_id))
 
-    return added
+    return added, event
