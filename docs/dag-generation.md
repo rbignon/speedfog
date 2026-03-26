@@ -442,11 +442,11 @@ Post-generation checks on the built DAG:
 2. **Reachability**: all nodes reachable from start (BFS), all can reach end (reverse BFS)
 3. **Entry consistency**: entry fog count matches incoming edge count
 4. **No duplicate edges**: prevents trivial Y-patterns
-5. **Requirements**: minimum zone type counts met
-6. **Zone tracking collisions**: shared exit gate + same entrance map (warning)
-7. **Path count**: no paths = error, single path = warning
-8. **Budget**: all paths within `[min_weight, max_weight]`
-9. **Layer count**: few layers = warning
+5. **Entry zone membership**: entry fog zone belongs to target cluster zones
+6. **Layer type homogeneity**: all nodes in a layer share the same cluster type (prevents unfair asymmetry between parallel branches)
+7. **Requirements**: minimum zone type counts met
+8. **Layer count**: few layers = warning
+9. **Event flag budget**: total flag allocation within budget
 
 ## References
 
