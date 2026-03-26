@@ -83,9 +83,9 @@ def main() -> int:
         "Files are written to <output>/<seed>/",
     )
     parser.add_argument(
-        "--spoiler",
+        "--logs",
         action="store_true",
-        help="Generate spoiler log file",
+        help="Generate diagnostic logs (spoiler.txt, generation.log)",
     )
     parser.add_argument(
         "--seed",
@@ -282,11 +282,21 @@ def main() -> int:
                     f"  [{type_names.get(item.type, '?')}] {item.name} (id={item.id})"
                 )
 
-    # Export spoiler if requested using output module
-    if args.spoiler:
-        spoiler_path = seed_dir / "spoiler.txt"
-        export_spoiler_log(dag, spoiler_path, care_package=care_package_items)
-        print(f"Written: {spoiler_path}")
+    # Export logs if requested
+    spoiler_path: Path | None = None
+    if args.logs:
+        logs_dir = seed_dir / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        _spoiler: Path = logs_dir / "spoiler.txt"
+        spoiler_path = _spoiler
+        export_spoiler_log(dag, _spoiler, care_package=care_package_items)
+        print(f"Written: {_spoiler}")
+
+        from speedfog.generation_log import export_generation_log
+
+        gen_log_path = logs_dir / "generation.log"
+        export_generation_log(result.log, gen_log_path, dag=dag)
+        print(f"Written: {gen_log_path}")
 
     # Determine game_dir early (needed for Item Randomizer and FogModWrapper)
     game_dir = args.game_dir or (
@@ -361,7 +371,8 @@ def main() -> int:
                 print(f"Boss placements: {len(boss_placements)} bosses randomized")
 
                 # Append boss placements to spoiler log
-                if args.spoiler:
+                if args.logs:
+                    assert spoiler_path is not None
                     append_boss_placements_to_spoiler(spoiler_path, boss_placements)
         else:
             print(
