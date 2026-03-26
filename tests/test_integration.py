@@ -12,6 +12,7 @@ from speedfog import (
     StructureConfig,
     ValidationResult,
     export_spoiler_log,
+    generate_dag,
     generate_with_retry,
     load_clusters,
 )
@@ -284,3 +285,53 @@ class TestFullPipeline:
         assert isinstance(validation.is_valid, bool)
         assert isinstance(validation.errors, list)
         assert isinstance(validation.warnings, list)
+
+
+def test_generation_log_with_real_clusters(
+    real_clusters, real_boss_candidates, tmp_path
+):
+    """Full generation produces a valid log with all sections."""
+    from speedfog.generation_log import export_generation_log
+
+    config = Config.from_dict(
+        {
+            "structure": {
+                "min_layers": 10,
+                "max_layers": 15,
+                "max_parallel_paths": 2,
+                "crosslinks": True,
+                "final_boss_candidates": {"haligtree_malenia": 1},
+            },
+            "requirements": {
+                "legacy_dungeons": 1,
+                "bosses": 2,
+                "mini_dungeons": 2,
+                "major_bosses": 2,
+            },
+        }
+    )
+    dag, log = generate_dag(
+        config, real_clusters, seed=42, boss_candidates=real_boss_candidates
+    )
+
+    # Verify log structure
+    assert log.plan_event is not None
+    assert len(log.layer_events) >= 10
+    assert log.crosslink_event is not None
+    assert log.summary is not None
+    assert log.summary.total_nodes == len(dag.nodes)
+
+    # Verify serialization
+    log_path = tmp_path / "generation.log"
+    export_generation_log(log, log_path, dag=dag)
+    text = log_path.read_text()
+    assert "PLAN" in text
+    assert "LAYERS" in text
+    assert "CROSSLINKS" in text
+    assert "SUMMARY" in text
+
+    # Every layer in the DAG should have a corresponding LayerEvent
+    max_layer = max(n.layer for n in dag.nodes.values())
+    logged_layers = {le.layer for le in log.layer_events}
+    for layer in range(max_layer + 1):
+        assert layer in logged_layers, f"Layer {layer} missing from log"
