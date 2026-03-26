@@ -8,18 +8,18 @@
 
 ### Data Model
 
-A `GenerationLog` dataclass accumulates structured events during `generate_dag`. Events are appended at key points in the generation flow. The log is attached to `GenerationResult` and serialized to `logs/generation.log` by `export_generation_log()` in `output.py`.
+A `GenerationLog` dataclass accumulates structured events during `generate_dag`. Events are appended at key points in the generation flow. The log is attached to `GenerationResult` and serialized to `logs/generation.log` by `export_generation_log()` in `generation_log.py`.
 
 ```
-generate_dag()          output.py
+generate_dag()          generation_log.py
   |                       |
   |-- GenerationLog       |
   |     .plan_event       |
-  |     .layer_events[]   |-- export_generation_log(log, path)
-  |     .fallbacks[]      |     -> logs/generation.log
-  |     .crosslink_event  |
-  |                       |-- export_spoiler_log(dag, path)
-  v                       |     -> logs/spoiler.txt
+  |     .layer_events[]   |-- export_generation_log(log, dag, path)
+  |     .crosslink_event  |     -> logs/generation.log
+  |     .summary          |
+  |                       |
+  v                       |
 GenerationResult.log      |
 ```
 
@@ -35,21 +35,24 @@ Captures the planner's decisions before any layer execution:
 - `target_total`: total layer count chosen by rng
 - `merge_reserve`: layers reserved for convergence
 - `num_intermediate`: number of planned intermediate layers
+- `first_layer_type`: the forced type for layer 1 (or None if not set)
 - `planned_types`: the ordered list of types returned by `plan_layer_types` (post-shuffle)
-- `pool_sizes`: dict of type -> total cluster count at generation start
+- `pool_sizes`: dict of type -> total cluster count at generation start (all 4 types: boss_arena, legacy_dungeon, mini_dungeon, major_boss)
 - `final_boss`: cluster id of the pre-selected final boss
 - `reserved_zones`: set of zone ids reserved for final boss / prerequisite
 
-#### LayerEvent (emitted once per layer, including start, first_layer, convergence)
+#### LayerEvent (emitted per layer, including start, first_layer, convergence)
+
+A REBALANCE merge-first (N=2) spans two consecutive layers (merge at `layer_idx`, split at `layer_idx+1`); it emits **two** LayerEvents, one per layer. A split-first REBALANCE (N>=3) emits one LayerEvent with all nodes.
 
 Captures what happened at each layer:
 
 - `layer`: layer index
 - `phase`: `"start"`, `"first_layer"`, `"planned"`, `"convergence"`, `"prerequisite"`, `"final_boss"`
-- `planned_type`: the type from `plan_layer_types` (None for start/convergence/final_boss)
+- `planned_type`: the type from `plan_layer_types` for planned layers; the type from `pick_weighted_type` for convergence layers; None for start/final_boss
 - `operation`: `"START"`, `"PASSANT"`, `"SPLIT"`, `"MERGE"`, `"REBALANCE"`
 - `branches_before`: branch count entering this layer
-- `branches_after`: branch count after this layer
+- `branches_after`: branch count after this layer (same as before for PASSANT and REBALANCE)
 - `nodes`: list of `NodeEntry` (one per node created at this layer)
 - `fallbacks`: list of `FallbackEntry` (one per type fallback that occurred)
 
@@ -58,7 +61,7 @@ Captures what happened at each layer:
 - `cluster_id`: cluster id
 - `cluster_type`: cluster type string
 - `weight`: cluster weight
-- `role`: `"primary"`, `"passant"`, `"split_child"`, `"merge_target"`, `"rebalance_split"`, `"rebalance_merge"`
+- `role`: `"start"`, `"primary"`, `"passant"`, `"split_child"`, `"merge_target"`, `"rebalance_split"`, `"rebalance_merge"`, `"rebalance_passant"`, `"final_boss"`
 
 #### FallbackEntry (nested in LayerEvent)
 
@@ -84,6 +87,17 @@ Emitted each time `pick_cluster_with_type_fallback` skips the preferred type:
 - `target_id`: target node id
 - `reason`: None for added, `"no_surplus_exits"` or `"no_available_entries"` for skipped
 
+#### SummaryEvent (populated at end of `generate_dag`, before return)
+
+- `total_layers`: max layer + 1
+- `total_nodes`: len(dag.nodes)
+- `planned_layers`: number of planned intermediate layers executed
+- `convergence_layers`: number of convergence layers
+- `crosslinks`: crosslink count
+- `fallback_count`: total number of FallbackEntry across all LayerEvents
+- `fallback_summary`: list of `(layer, preferred_type)` tuples for quick scanning
+- `pool_at_end`: dict of type -> available count after generation completes
+
 ### Output Format
 
 `generation.log` is a plain text file, human-readable, with sections:
@@ -106,7 +120,7 @@ LAYERS
   L0 [start] START 0->2 branches
     chapel_start [start, w=1] (primary)
 
-  L1 [first_layer] PASSANT 2->2 branches
+  L1 [first_layer=legacy_dungeon] PASSANT 2->2 branches
     stormveil [legacy_dungeon, w=8] (passant)
     caelid_redmane [legacy_dungeon, w=3] (passant)
 
@@ -133,8 +147,9 @@ LAYERS
       b3: wanted major_boss, got boss_arena (pool_exhausted: major_boss=0, boss_arena=60, legacy_dungeon=15, mini_dungeon=47)
 
   --- CONVERGENCE (4 branches remaining) ---
+  Pool: boss_arena=58, legacy_dungeon=12, mini_dungeon=43, major_boss=4
 
-  L24 [convergence] MERGE 4->3 branches
+  L24 [convergence=mini_dungeon] MERGE 4->3 branches
     ...
 
   L28 [final_boss] 1->0 branches
@@ -171,10 +186,11 @@ The `GenerationLog` is instantiated at the top of `generate_dag` and populated a
 | Inside convergence `while len(branches) > 1` (step 7), after each layer | `LayerEvent(phase="convergence")` |
 | After prerequisite injection (step 8) | `LayerEvent(phase="prerequisite")` if injected |
 | After end node (step 9) | `LayerEvent(phase="final_boss")` |
+| Before return (step 10) | `SummaryEvent` |
 
-Fallback events are captured inside `pick_cluster_with_type_fallback` by passing the log object, or by wrapping the call sites in the main loop to detect when the returned cluster type differs from the requested type.
+#### Fallback Detection
 
-**Preferred approach for fallback capture:** Compare the returned cluster's type against the requested type at each call site. This avoids threading the log through utility functions:
+**Preferred approach:** Compare the returned cluster's type against the requested type at each call site. This avoids threading the log through utility functions:
 
 ```python
 pc = pick_cluster_weight_matched(candidates, ...)
@@ -186,6 +202,43 @@ if pc is not None and pc.type != layer_type:
 ```
 
 Pool remaining counts are computed at fallback time using `_available_count()` style logic (filter by used_zones and reserved_zones).
+
+**Fallback detection sites (exhaustive):**
+
+| Operation | Code location | What happens |
+|---|---|---|
+| SPLIT passant | L2046-2061 | `pick_cluster_weight_matched` then `pick_cluster_with_type_fallback` for non-split branches |
+| MERGE passant | L2204-2219 | Same pattern for non-merged branches |
+| PASSANT primary | L2262 via `_pick_cluster_biased_for_split` | Primary may fallback internally; detect by comparing `primary_cluster.type != layer_type` |
+| PASSANT secondary | L2265-2280 | `pick_cluster_weight_matched` then `pick_cluster_with_type_fallback` |
+| Convergence primary | L2332 via `_pick_cluster_biased_for_split` | Same as PASSANT primary; compare `conv_cluster.type != conv_layer_type` |
+| Convergence merge/passant | L2388-2426 via `execute_merge_layer`/`execute_passant_layer` | These helpers call `pick_cluster_with_type_fallback` internally for passant branches |
+| REBALANCE passant | L1294 inside `_rebalance_split_first` | Direct call to `pick_cluster_with_type_fallback` |
+
+For convergence and REBALANCE, the log must be threaded into the helper functions (`execute_merge_layer`, `execute_passant_layer`, `execute_rebalance_layer`) as an optional parameter. This is the exception to the "no threading" principle: these functions create nodes internally, so the caller cannot reconstruct what happened.
+
+```python
+def execute_merge_layer(..., log_event: LayerEvent | None = None) -> list[Branch]:
+def execute_passant_layer(..., log_event: LayerEvent | None = None) -> list[Branch]:
+def execute_rebalance_layer(..., log_event: LayerEvent | None = None) -> ...:
+```
+
+The `log_event` parameter is optional to keep the API backward-compatible. When provided, nodes and fallbacks are appended to it.
+
+#### REBALANCE Layer Logging
+
+- **Split-first (N>=3):** One LayerEvent at `layer_idx`, containing all nodes (split node with role `"rebalance_split"`, merge node with role `"rebalance_merge"`, passant nodes with role `"rebalance_passant"`). Returns `(branches, 1)`.
+- **Merge-first (N=2):** Two LayerEvents. First at `layer_idx` (merge node, role `"rebalance_merge"`), second at `layer_idx+1` (split node, role `"rebalance_split"`). Returns `(branches, 2)`. The caller emits both events after `execute_rebalance_layer` returns, using metadata returned alongside the branches.
+
+To support this, `execute_rebalance_layer` returns an additional list of `LayerEvent` objects:
+
+```python
+def execute_rebalance_layer(...) -> tuple[list[Branch], int, list[LayerEvent]] | None:
+```
+
+#### Retry Behavior
+
+In auto-reroll mode (`seed=0`), only the successful attempt's log is kept. Failed attempts discard their logs, consistent with how the DAG itself is discarded on failure.
 
 ### Integration Points in crosslinks.py
 
@@ -250,13 +303,19 @@ class GenerationResult:
 
 Keeping the log model and serialization in a dedicated file avoids bloating `dag.py` or `output.py`.
 
+### Serialization Notes
+
+`export_generation_log(log, dag, path)` takes both the log and the DAG. The DAG is needed to resolve node IDs to layer numbers and display names for the crosslinks section (e.g., `L3 gravesite_gaol_7342 -> L4 caelid_tower_boss_2e44`). The pool_at_end in SummaryEvent is computed inside `generate_dag` where `used_zones`, `reserved_zones`, and the `ClusterPool` are still in scope.
+
 ### Testing
 
 - **Unit tests for `GenerationLog` serialization**: build a log with known events, call `export_generation_log`, verify output format contains expected sections and values.
 - **Integration test**: run `generate_dag` on a small config, verify `result.log` contains plan event, layer events for each layer, and summary.
-- **Fallback test**: set up a config/cluster pool that forces type fallback, verify fallback entries appear in the log with correct pool counts.
+- **Fallback test**: set up a config/cluster pool that forces a specific pool type to exhaust before a layer that requests it. Verify fallback entries appear in the log with correct pool counts.
+- **REBALANCE test**: verify both merge-first (N=2, two LayerEvents) and split-first (N>=3, one LayerEvent with rebalance_split/rebalance_merge/rebalance_passant roles) are logged correctly.
+- **Convergence test**: verify convergence LayerEvents capture the dynamically chosen type from `pick_weighted_type`.
 - **Crosslink test**: verify crosslink event captures added/skipped counts.
-- **CLI test**: verify `--logs` creates `logs/` directory with both files, and `--spoiler` no longer exists.
+- **CLI test**: verify `--logs` creates `logs/` directory with both files.
 
 ### Documentation Updates
 
