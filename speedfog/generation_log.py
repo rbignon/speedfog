@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from speedfog.clusters import ClusterData
     from speedfog.dag import Dag
 
 
@@ -110,6 +111,30 @@ class GenerationLog:
     layer_events: list[LayerEvent] = field(default_factory=list)
     crosslink_event: CrosslinkEvent | None = None
     summary: SummaryEvent | None = None
+
+
+def compute_pool_remaining(
+    clusters: list[ClusterData],
+    used_zones: set[str],
+    reserved_zones: frozenset[str],
+) -> dict[str, int]:
+    """Count available clusters per type, filtering by used/reserved zones.
+
+    Args:
+        clusters: All clusters to count.
+        used_zones: Zones already consumed.
+        reserved_zones: Zones reserved for final boss / prerequisite.
+
+    Returns:
+        Dict of type -> available count.
+    """
+    counts: dict[str, int] = {}
+    for c in clusters:
+        if c.type not in counts:
+            counts[c.type] = 0
+        if not any(z in used_zones or z in reserved_zones for z in c.zones):
+            counts[c.type] += 1
+    return counts
 
 
 def export_generation_log(

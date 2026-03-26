@@ -1,5 +1,6 @@
 # tests/test_generation_log.py
 
+from speedfog.clusters import ClusterData
 from speedfog.generation_log import (
     CrosslinkDetail,
     CrosslinkEvent,
@@ -9,6 +10,7 @@ from speedfog.generation_log import (
     NodeEntry,
     PlanEvent,
     SummaryEvent,
+    compute_pool_remaining,
     export_generation_log,
 )
 
@@ -270,3 +272,37 @@ def test_export_convergence_pool_snapshot(tmp_path):
     assert "CONVERGENCE (4 branches remaining)" in text
     assert "Pool: boss_arena=58, mini_dungeon=43" in text
     assert "convergence=mini_dungeon" in text
+
+
+def _make_test_cluster(cluster_id, ctype, zones):
+    return ClusterData(
+        id=cluster_id,
+        type=ctype,
+        zones=zones,
+        entry_fogs=[],
+        exit_fogs=[],
+        weight=1,
+    )
+
+
+def test_compute_pool_remaining():
+    pool = [
+        _make_test_cluster("a", "major_boss", ["zone_a"]),
+        _make_test_cluster("b", "major_boss", ["zone_b"]),
+        _make_test_cluster("c", "boss_arena", ["zone_c"]),
+    ]
+    used_zones = {"zone_a"}
+    reserved_zones = frozenset()
+    result = compute_pool_remaining(pool, used_zones, reserved_zones)
+    assert result == {"major_boss": 1, "boss_arena": 1}
+
+
+def test_compute_pool_remaining_with_reserved():
+    pool = [
+        _make_test_cluster("a", "major_boss", ["zone_a"]),
+        _make_test_cluster("b", "boss_arena", ["zone_b"]),
+    ]
+    used_zones: set[str] = set()
+    reserved_zones = frozenset({"zone_a"})
+    result = compute_pool_remaining(pool, used_zones, reserved_zones)
+    assert result == {"major_boss": 0, "boss_arena": 1}
