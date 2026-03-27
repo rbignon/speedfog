@@ -206,7 +206,7 @@ talisman_pouches = 3
 # Same seed = same starting build for consistent racing.
 enabled = false
 
-# Weapon upgrade level (standard smithing stones, 0-25).
+# Weapon upgrade level for care package AND starting class weapons (0-25).
 # Somber weapons get floor(weapon_upgrade / 2.5), e.g. +8 -> +3 somber.
 # weapon_upgrade = 8
 

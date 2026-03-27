@@ -64,6 +64,8 @@ Standard upgrade level is configured directly (`weapon_upgrade`, range 0-25). We
 somber_upgrade = floor(standard_upgrade / 2.5)
 ```
 
+This level is also applied to the starting class weapons (CharaInitParam rows 3000-3009), so the player's initial weapon matches the care package weapon level.
+
 | Standard | Somber |
 |----------|--------|
 | +0 | +0 |
