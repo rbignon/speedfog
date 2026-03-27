@@ -414,6 +414,11 @@ allowed_entries = [
     "AEG099_230_9500", # Midra's Manse entrance
 ]
 
+[clusters.snowfield_tunnel_4d1a]
+allowed_entries = [
+    "AEG099_230_9000", # Entrance from Consecrated Snowfield
+]
+
 [clusters.flamepeak_firegiant_07f0]
 proximity_groups = [
     ["m60_52_53_00-AEG099_002_9000", # Fire Giant left front
