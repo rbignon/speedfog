@@ -255,6 +255,7 @@ def test_starting_items_defaults():
     assert config.starting_items.drawing_room_key is True
     assert config.starting_items.lantern is True
     assert config.starting_items.physick_flask is True
+    assert config.starting_items.whetstone_knife is True
     assert config.starting_items.whetblades is True
     assert config.starting_items.great_runes is True
     assert config.starting_items.talisman_pouches == 3
@@ -316,16 +317,45 @@ def test_starting_items_get_starting_goods_no_pouches():
 
 
 def test_starting_items_lantern_whetblades_from_dict():
-    """lantern and whetblades are parsed from config dict."""
+    """lantern, whetstone_knife, and whetblades are parsed from config dict."""
     config = Config.from_dict(
-        {"starting_items": {"lantern": False, "whetblades": False}}
+        {
+            "starting_items": {
+                "lantern": False,
+                "whetstone_knife": False,
+                "whetblades": False,
+            }
+        }
     )
     assert config.starting_items.lantern is False
+    assert config.starting_items.whetstone_knife is False
     assert config.starting_items.whetblades is False
     goods = config.starting_items.get_starting_goods()
     assert 2070 not in goods  # Lantern disabled
     assert 8590 not in goods  # Whetstone Knife disabled
     assert 8970 not in goods  # Iron Whetblade disabled
+
+
+def test_starting_items_whetstone_knife_without_whetblades():
+    """whetstone_knife can be enabled independently of whetblades."""
+    config = Config.from_dict(
+        {"starting_items": {"whetstone_knife": True, "whetblades": False}}
+    )
+    goods = config.starting_items.get_starting_goods()
+    assert 8590 in goods  # Whetstone Knife enabled
+    assert 8970 not in goods  # Iron Whetblade disabled
+    assert 8974 not in goods  # Black Whetblade disabled
+
+
+def test_starting_items_whetblades_without_whetstone_knife():
+    """whetblades can be enabled independently of whetstone_knife."""
+    config = Config.from_dict(
+        {"starting_items": {"whetstone_knife": False, "whetblades": True}}
+    )
+    goods = config.starting_items.get_starting_goods()
+    assert 8590 not in goods  # Whetstone Knife disabled
+    assert 8970 in goods  # Iron Whetblade enabled
+    assert 8974 in goods  # Black Whetblade enabled
 
 
 def test_starting_items_physick_flask_from_dict():

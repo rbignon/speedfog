@@ -221,8 +221,11 @@ class StartingItemsConfig:
     physick_flask: bool = (
         True  # Flask of Wondrous Physick (Good ID 250) - mix crystal tears
     )
+    whetstone_knife: bool = (
+        True  # Whetstone Knife (Good ID 8590) - enables weapon infusion
+    )
     whetblades: bool = (
-        True  # Whetstone Knife + all Whetblades (Good IDs 8590, 8970-8974)
+        True  # All Whetblades (Good IDs 8970-8974) - unlocks all affinities
     )
 
     # Great Runes (restored versions, equippable at graces)
@@ -298,10 +301,11 @@ class StartingItemsConfig:
             goods.append(8158)  # Spirit Calling Bell
         if self.physick_flask:
             goods.append(250)  # Flask of Wondrous Physick
+        if self.whetstone_knife:
+            goods.append(8590)  # Whetstone Knife
         if self.whetblades:
             goods.extend(
                 [
-                    8590,  # Whetstone Knife
                     8970,  # Iron Whetblade (Heavy, Keen, Quality)
                     8971,  # Red-Hot Whetblade (Fire, Flame Art)
                     8972,  # Sanctified Whetblade (Lightning, Sacred)
@@ -536,6 +540,7 @@ class Config:
                     "spirit_calling_bell", True
                 ),
                 physick_flask=starting_items_section.get("physick_flask", True),
+                whetstone_knife=starting_items_section.get("whetstone_knife", True),
                 whetblades=starting_items_section.get("whetblades", True),
                 great_runes=starting_items_section.get("great_runes", True),
                 rune_godrick=starting_items_section.get("rune_godrick", True),
