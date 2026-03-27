@@ -628,6 +628,9 @@ Example:
         // 7e. Smithing stones in merchant shop (param file)
         ShopInjector.Inject(modDir, graphData.SentryTorchShop);
 
+        // 7e2. Upgrade starting class weapons (param file)
+        WeaponUpgradeInjector.Inject(modDir, graphData.WeaponUpgrade);
+
         // 7g-fmg. "RUN COMPLETE" banner FMG entries (all languages)
         if (graphData.FinishEvent > 0)
         {
