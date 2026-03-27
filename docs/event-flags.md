@@ -39,7 +39,7 @@ The **fourth-from-last digit** of a flag ID determines its persistence behavior:
 **Saved flags** persist across area reloads (save+quit, death, fast travel).
 **Temporary flags** reset on area reload.
 
-This is why SpeedFog uses offset 0xxx (saved) for persistent mod state and offset 2xxx (temporary) for zone tracking.
+SpeedFog uses offset 0xxx (saved) for persistent mod state and offset 4xxx (saved) for zone tracking. Zone tracking flags were originally in the 2xxx (temporary) range but moved to 4xxx to survive area reloads, preventing a race condition during fog gate warps.
 
 Source: [Elden Ring Event Flag Sheet](https://docs.google.com/spreadsheets/d/17sE1a1h87BhpiUwKUyJ9ZjKTeehXA4OuLwmQvTfwo_M/edit) (maintained by thefifthmatt).
 
@@ -52,11 +52,11 @@ SpeedFog uses a **dedicated base `1050290000`**, in map coordinates m60_50_29_00
 | Range | Offsets | Type | Purpose | Set by |
 |-------|---------|------|---------|--------|
 | 1050290000-1050290099 | 0xxx offsets 0-99 | Saved (persistent) | Mod state flags | Various injectors |
-| 1050292000-1050292999 | 2xxx offsets 0-999 | Temporary (session) | Zone tracking, finish event, death markers | ZoneTrackingInjector, RunCompleteInjector, DeathMarkerInjector |
+| 1050294000-1050294999 | 4xxx offsets 0-999 | Saved (persistent) | Zone tracking, finish event, death markers | ZoneTrackingInjector, RunCompleteInjector, DeathMarkerInjector |
 
-The saved/temporary split is encoded in the thousands digit of the offset:
-- Category 1050290 (offset 0-099): flags that survive across sessions (items given, etc.)
-- Category 1050292 (offset 0-999): flags reset on each new run (zone traversal tracking)
+Both ranges use saved flags (persist across area reloads):
+- Category 1050290 (offset 0-099): persistent mod state (items given, etc.)
+- Category 1050294 (offset 0-999): zone tracking, cleared by racing mod after capture
 
 ### Saved Flags (1050290xxx)
 
@@ -64,14 +64,14 @@ The saved/temporary split is encoded in the thousands digit of the offset:
 |------|--------|---------|--------|
 | 1050290000 | 0 | `items_spawned_flag`: one-shot guard for starting item/resource delivery | StartingItemInjector, StartingResourcesInjector |
 
-### Temporary Flags (1050292xxx)
+### Zone Tracking Flags (1050294xxx)
 
 | Range | Purpose | Set by |
 |-------|---------|--------|
-| 1050292000-1050292998 | Zone tracking: flag set when player traverses each fog gate | ZoneTrackingInjector |
-| 1050292999 | Finish event: flag set when final boss is defeated | RunCompleteInjector |
+| 1050294000-1050294998 | Zone tracking: flag set when player traverses each fog gate | ZoneTrackingInjector |
+| 1050294999 | Finish event: flag set when final boss is defeated | RunCompleteInjector |
 
-Actual flag assignments within 1050292000-1050292999 are allocated sequentially per run and stored in graph.json. The 1000-flag budget is sufficient for large DAGs (60+ layers, hundreds of connections).
+Actual flag assignments within 1050294000-1050294999 are allocated sequentially per run and stored in graph.json. The 1000-flag budget is sufficient for large DAGs (60+ layers, hundreds of connections).
 
 ### FogRando-Owned Flags (legacy, unchanged)
 
@@ -115,8 +115,8 @@ All events are registered in Event 0 via `InitializeEvent` (bank 2000, id 0).
 
 ## Risks & Constraints
 
-- **1000 flag budget**: Offsets 0-999 in category 1050292 give 1000 zone tracking flags. Sufficient for large DAGs (60+ layers).
-- **Category allocation**: Categories 1050290 and 1050292 are activated by our injected EMEVD events. No prior FogRando allocation needed, but if EMEVD injection fails these flags become silent no-ops.
+- **1000 flag budget**: Offsets 0-999 in category 1050294 give 1000 zone tracking flags. Sufficient for large DAGs (60+ layers).
+- **Category allocation**: Categories 1050290 and 1050294 are activated by our injected EMEVD events. No prior FogRando allocation needed, but if EMEVD injection fails these flags become silent no-ops.
 - **FogRando legacy flags**: Flags 1040292051 and 1040299000-002 depend on FogRando's category allocation. Check on FogRando updates if these stop working.
 
 ## References
