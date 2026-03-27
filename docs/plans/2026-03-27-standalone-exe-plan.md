@@ -4,7 +4,7 @@
 
 **Goal:** Package SpeedFog as a standalone Windows .exe that generates ready-to-play seed .zip files, with automatic dependency extraction from user-provided Nexusmods zips.
 
-**Architecture:** PyInstaller one-folder distribution. `speedfog.exe` (Python) orchestrates the pipeline: dependency extraction via bundled `sfextract`, DAG generation, C# wrapper invocation, and output zip packaging. All paths resolved via `Path.cwd()` so the same code works in dev mode and .exe mode.
+**Architecture:** PyInstaller one-folder distribution. `speedfog.exe` (Python) orchestrates the pipeline: dependency extraction via `sfextract` (in distribution folder), DAG generation, C# wrapper invocation, and output zip packaging. Path resolution uses `Path(sys.executable).parent` in frozen (.exe) mode and `Path.cwd()` in dev mode.
 
 **Tech Stack:** Python 3.10+, PyInstaller, sfextract (MIT), existing C# wrappers (pre-compiled)
 
@@ -16,7 +16,7 @@
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `speedfog/paths.py` | Create | `get_base_dir()` returning `Path.cwd()` |
+| `speedfog/paths.py` | Create | `get_base_dir()` with frozen/dev mode detection |
 | `speedfog/deps.py` | Create | Dependency detection, extraction, derived data generation |
 | `speedfog/packaging.py` | Create | Zip seed output into `output/<seed>.zip` |
 | `speedfog/main.py` | Modify | Use `get_base_dir()`, integrate deps check, add zip step |
@@ -44,15 +44,27 @@
 # tests/test_paths.py
 """Tests for path resolution."""
 
+import sys
 from pathlib import Path
 
 from speedfog.paths import get_base_dir
 
 
-def test_get_base_dir_returns_cwd(monkeypatch, tmp_path):
-    """get_base_dir() should return the current working directory."""
+def test_get_base_dir_dev_mode_returns_cwd(monkeypatch, tmp_path):
+    """In dev mode (not frozen), get_base_dir() returns cwd."""
     monkeypatch.chdir(tmp_path)
+    monkeypatch.delattr(sys, "frozen", raising=False)
     assert get_base_dir() == tmp_path
+
+
+def test_get_base_dir_frozen_mode_returns_exe_parent(monkeypatch, tmp_path):
+    """In frozen mode (.exe), get_base_dir() returns the exe's parent dir."""
+    fake_exe = tmp_path / "dist" / "speedfog.exe"
+    fake_exe.parent.mkdir(parents=True)
+    fake_exe.touch()
+    monkeypatch.setattr(sys, "frozen", True)
+    monkeypatch.setattr(sys, "executable", str(fake_exe))
+    assert get_base_dir() == fake_exe.parent
 
 
 def test_get_base_dir_returns_path_object():
@@ -72,22 +84,27 @@ Expected: FAIL with "ModuleNotFoundError: No module named 'speedfog.paths'"
 # speedfog/paths.py
 """Path resolution for SpeedFog.
 
-All file lookups use base_dir (= current working directory) as root.
-This works in both dev mode (uv run speedfog from project root) and
-.exe mode (player runs speedfog.exe from distribution folder).
+In dev mode: base_dir = cwd (project root, where uv run speedfog is called).
+In .exe mode: base_dir = directory containing the exe (distribution folder).
+
+This distinction matters because a player might launch the exe from a
+different working directory (e.g., via shortcut with custom "Start in").
 """
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 
 def get_base_dir() -> Path:
     """Return the base directory for all path resolution.
 
-    Returns Path.cwd(), which is the project root in dev mode and the
-    distribution folder in .exe mode.
+    Frozen (.exe): returns the directory containing the executable.
+    Dev mode: returns the current working directory.
     """
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).parent
     return Path.cwd()
 ```
 
@@ -748,7 +765,11 @@ def regenerate_derived_data(base_dir: Path) -> bool:
         print(f"Error: fog.txt not found at {fog_txt}", file=sys.stderr)
         return False
 
-    # Import tools by adding tools/ to sys.path temporarily
+    # Import tools by adding tools/ to sys.path temporarily.
+    # This is safe because: (1) PyInstaller does not bundle these modules
+    # (they are not imported at build time), so no collision risk.
+    # (2) pyyaml and tomli are bundled by PyInstaller as speedfog deps,
+    # so the tools' imports resolve correctly in frozen mode.
     sys.path.insert(0, str(tools_dir))
     try:
         import generate_clusters as gc_mod
@@ -779,13 +800,18 @@ def regenerate_derived_data(base_dir: Path) -> bool:
     return True
 
 
-def ensure_deps(base_dir: Path) -> bool:
+def ensure_deps(base_dir: Path, item_rando_required: bool = True) -> bool:
     """Check and extract dependencies if needed.
+
+    Args:
+        base_dir: Root directory for path resolution.
+        item_rando_required: Whether Item Randomizer deps are needed.
+            Set to False when item_randomizer.enabled is False in config.
 
     Returns True if all dependencies are available, False on error.
     """
     fogrando_ok = check_fogrando_deps(base_dir)
-    itemrando_ok = check_itemrando_deps(base_dir)
+    itemrando_ok = not item_rando_required or check_itemrando_deps(base_dir)
 
     if fogrando_ok and itemrando_ok:
         return True
@@ -817,7 +843,7 @@ def ensure_deps(base_dir: Path) -> bool:
         if not extract_fogrando(base_dir, fogrando_zip, sfextract):
             return False
 
-    if not itemrando_ok:
+    if item_rando_required and not itemrando_ok:
         if itemrando_zip is None:
             print(
                 "Error: Item Randomizer dependencies missing.\n"
@@ -886,7 +912,10 @@ Add the deps check right after config loading (before "Find clusters.json"), aro
 ```python
     # Check dependencies (extract from zips if needed)
     if not args.skip_deps_check and not args.no_build:
-        if not ensure_deps(project_root):
+        if not ensure_deps(
+            project_root,
+            item_rando_required=config.item_randomizer.enabled,
+        ):
             return 1
 ```
 
@@ -1036,27 +1065,35 @@ Expected: PASS
 
 - [ ] **Step 5: Add --zip flag and integrate into main.py**
 
-Add CLI argument:
+Add CLI arguments:
 
 ```python
     parser.add_argument(
         "--zip",
         action="store_true",
-        help="Package output as a zip file in output/ directory",
+        default=None,
+        help="Package output as a zip file in output/ (default in .exe mode)",
+    )
+    parser.add_argument(
+        "--no-zip",
+        action="store_true",
+        help="Disable zip packaging even in .exe mode",
     )
 ```
 
-Add import:
+Add imports:
 
 ```python
+import sys
 from speedfog.packaging import package_seed_zip
 ```
 
 Add zip packaging at the end of main(), just before the timer summary (before `total = timer.stop()`):
 
 ```python
-    # Package as zip if requested
-    if args.zip:
+    # Package as zip: explicit --zip, or auto in frozen (.exe) mode
+    should_zip = args.zip or (getattr(sys, "frozen", False) and not args.no_zip)
+    if should_zip and not args.no_build:
         timer.step("Package zip")
         zip_output_dir = project_root / "output"
         zip_path = package_seed_zip(seed_dir, zip_output_dir)
@@ -1243,6 +1280,7 @@ cp -r writer/ItemRandomizerWrapper/publish/win-x64 "${DIST_DIR}/writer/ItemRando
 mkdir -p "${DIST_DIR}/data/i18n"
 cp data/care_package_items.toml "${DIST_DIR}/data/"
 cp data/zone_metadata.toml "${DIST_DIR}/data/"
+cp data/item_preset.yaml "${DIST_DIR}/data/" 2>/dev/null || true
 cp -r data/i18n/* "${DIST_DIR}/data/i18n/" 2>/dev/null || true
 
 # Create output directory
@@ -1342,7 +1380,66 @@ git commit -m "feat: add game directory validation"
 
 ---
 
-### Task 9: Run Code Review
+### Task 9: Smoke Test Checklist
+
+Manual verification that the distribution works end-to-end. This cannot be fully automated (requires game files and Nexusmods zips).
+
+- [ ] **Step 1: Verify dev mode still works**
+
+Run from project root (all existing tests + a manual generation):
+
+```bash
+pytest tests/ -v
+uv run speedfog config.toml --logs --no-build
+```
+
+Expected: all tests pass, graph.json generated.
+
+- [ ] **Step 2: Verify build script produces distribution**
+
+```bash
+bash tools/build_distribution.sh
+ls -la dist/speedfog-v0.1.0/
+```
+
+Expected: distribution folder contains speedfog.exe, config.toml, deps/, data/, writer/, tools/, output/.
+
+- [ ] **Step 3: Verify .exe launches and shows help**
+
+```bash
+cd dist/speedfog-v0.1.0
+wine speedfog.exe --help
+```
+
+Expected: help text displayed, no import errors.
+
+- [ ] **Step 4: Verify deps extraction (requires Nexusmods zips)**
+
+Place FogRando.zip and ItemRandomizer.zip in `dist/speedfog-v0.1.0/deps/`, then:
+
+```bash
+cd dist/speedfog-v0.1.0
+wine speedfog.exe config.toml --no-build
+```
+
+Expected: deps extracted automatically, graph.json generated.
+
+- [ ] **Step 5: Verify full pipeline (requires game files)**
+
+```bash
+cd dist/speedfog-v0.1.0
+wine speedfog.exe config.toml --game-dir /path/to/Game
+```
+
+Expected: seed .zip created in output/.
+
+- [ ] **Step 6: Document results and commit**
+
+Note any issues found during smoke testing. Fix blockers before proceeding.
+
+---
+
+### Task 10: Run Code Review
 
 Run the code review agent to verify all changes against the spec before finalizing.
 

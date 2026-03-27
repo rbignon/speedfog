@@ -111,11 +111,14 @@ mod files, ModEngine 2, and the launcher script.
 
 ### Path resolution refactor
 
-Replace `Path(__file__).parent.parent` with `Path.cwd()` as `base_dir`. This works
-for both modes: in dev mode the player runs `uv run speedfog` from the project root,
-and in .exe mode the player launches the exe from its own directory. All path
-references throughout the codebase use `base_dir` instead of hardcoded relative
-paths from `__file__`.
+Replace `Path(__file__).parent.parent` with a `get_base_dir()` function that detects
+the execution context:
+- Frozen (.exe) mode: `Path(sys.executable).parent` (distribution folder)
+- Dev mode: `Path.cwd()` (project root)
+
+This ensures the .exe works even when launched from a different working directory
+(e.g., via a Windows shortcut). All path references throughout the codebase use
+`base_dir` instead of hardcoded relative paths from `__file__`.
 
 ### New setup module
 
