@@ -111,23 +111,11 @@ mod files, ModEngine 2, and the launcher script.
 
 ### Path resolution refactor
 
-Replace `Path(__file__).parent.parent` with a `base_dir` that resolves to the
-directory containing the .exe (or the project root in dev mode):
-
-```python
-import sys
-
-def get_base_dir() -> Path:
-    if getattr(sys, 'frozen', False):
-        # PyInstaller: base_dir is the directory containing the .exe
-        return Path(sys.executable).parent
-    else:
-        # Dev mode: base_dir is the project root
-        return Path(__file__).parent.parent
-```
-
-All path references throughout the codebase use `base_dir` instead of hardcoded
-relative paths from `__file__`.
+Replace `Path(__file__).parent.parent` with `Path.cwd()` as `base_dir`. This works
+for both modes: in dev mode the player runs `uv run speedfog` from the project root,
+and in .exe mode the player launches the exe from its own directory. All path
+references throughout the codebase use `base_dir` instead of hardcoded relative
+paths from `__file__`.
 
 ### New setup module
 
