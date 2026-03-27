@@ -23,8 +23,9 @@ from speedfog.dag import Dag, DagNode, FogRef
 _PHASE_SUFFIX_RE = re.compile(r" \d+$")
 
 # SpeedFog's dedicated flag base: 1050290000 (m60_50_29_00, unclaimed).
-# Temporary flags (2xxx): zone tracking, finish event, death markers.
-EVENT_FLAG_BASE = 1050292000
+# Saved flags (4xxx): zone tracking, finish event, death markers.
+# Saved flags persist across area reloads, unlike temporary (2xxx) flags.
+EVENT_FLAG_BASE = 1050294000
 EVENT_FLAG_BUDGET = 1000
 
 # Persistent flags (0xxx, saved): mod state that must survive area reloads.
