@@ -257,6 +257,7 @@ def dag_to_dict(
     starting_stonesword_keys: int = 6,
     vanilla_tiers: dict[str, int] | None = None,
     death_markers: bool = True,
+    weapon_upgrade: int = 0,
 ) -> dict[str, Any]:
     """Convert a DAG to v4 JSON-serializable dictionary.
 
@@ -584,6 +585,7 @@ def dag_to_dict(
             {"type": item.type, "id": item.id, "name": item.name}
             for item in (care_package or [])
         ],
+        "weapon_upgrade": weapon_upgrade,
         "remove_entities": remove_entities,
     }
 
@@ -607,6 +609,7 @@ def export_json(
     starting_stonesword_keys: int = 6,
     vanilla_tiers: dict[str, int] | None = None,
     death_markers: bool = True,
+    weapon_upgrade: int = 0,
 ) -> None:
     """Export a DAG to v4 formatted JSON file.
 
@@ -629,6 +632,7 @@ def export_json(
         starting_stonesword_keys: Stonesword Keys to give at start (unlock imp seals)
         vanilla_tiers: Optional zone_name → ScalingTier mapping from foglocations2.txt
         death_markers: Whether to allocate death marker flags (3 per non-start cluster)
+        weapon_upgrade: Upgrade level applied to the starting class weapon (0-25)
     """
     data = dag_to_dict(
         dag,
@@ -638,16 +642,17 @@ def export_json(
         starting_item_lots,
         starting_goods,
         starting_runes,
-        starting_golden_seeds,
-        starting_sacred_tears,
-        care_package,
-        run_complete_message,
-        chapel_grace,
-        sentry_torch_shop,
-        starting_larval_tears,
-        starting_stonesword_keys,
-        vanilla_tiers,
+        starting_golden_seeds=starting_golden_seeds,
+        starting_sacred_tears=starting_sacred_tears,
+        care_package=care_package,
+        run_complete_message=run_complete_message,
+        chapel_grace=chapel_grace,
+        sentry_torch_shop=sentry_torch_shop,
+        starting_larval_tears=starting_larval_tears,
+        starting_stonesword_keys=starting_stonesword_keys,
+        vanilla_tiers=vanilla_tiers,
         death_markers=death_markers,
+        weapon_upgrade=weapon_upgrade,
     )
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)

@@ -624,4 +624,21 @@ public class GraphDataSerializationTests
         Assert.Contains("\"remove_entities\"", json);
         Assert.Contains("\"entity_id\"", json);
     }
+
+    [Fact]
+    public void GraphData_RoundTrip_PreservesWeaponUpgrade()
+    {
+        var original = new GraphData { WeaponUpgrade = 8 };
+        var json = JsonSerializer.Serialize(original, JsonOptions);
+        var deserialized = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+        Assert.Equal(8, deserialized!.WeaponUpgrade);
+    }
+
+    [Fact]
+    public void GraphData_MissingWeaponUpgrade_DefaultsToZero()
+    {
+        var json = """{"version": "4.2", "seed": 1}""";
+        var data = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
+        Assert.Equal(0, data!.WeaponUpgrade);
+    }
 }

@@ -2131,3 +2131,29 @@ def test_death_flags_after_finish_event():
             f for flags in result["death_flags"].values() for f in flags
         )
         assert min_death_flag > result["finish_event"]
+
+
+class TestWeaponUpgrade:
+    """Tests for weapon_upgrade in dag_to_dict output."""
+
+    def test_weapon_upgrade_included(self):
+        """weapon_upgrade should appear in graph.json output."""
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters, weapon_upgrade=8)
+        assert result["weapon_upgrade"] == 8
+
+    def test_weapon_upgrade_defaults_to_zero(self):
+        """weapon_upgrade defaults to 0 when not provided."""
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+        assert result["weapon_upgrade"] == 0

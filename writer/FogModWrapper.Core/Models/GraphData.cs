@@ -94,6 +94,13 @@ public class GraphData
     public string RunCompleteMessage { get; set; } = "RUN COMPLETE";
 
     /// <summary>
+    /// Upgrade level to apply to starting class weapons in the care package.
+    /// 0 means no upgrade (base level). Values correspond to Elden Ring weapon upgrade tiers.
+    /// </summary>
+    [JsonPropertyName("weapon_upgrade")]
+    public int WeaponUpgrade { get; set; }
+
+    /// <summary>
     /// Whether to add a Site of Grace at Chapel of Anticipation (starting location).
     /// </summary>
     [JsonPropertyName("chapel_grace")]

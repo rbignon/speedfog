@@ -261,6 +261,9 @@ def main() -> int:
         starting_stonesword_keys=config.starting_items.stonesword_keys,
         vanilla_tiers=vanilla_tiers,
         death_markers=config.death_markers,
+        weapon_upgrade=config.care_package.weapon_upgrade
+        if config.care_package.enabled
+        else 0,
     )
     print(f"Written: {json_path}")
     if starting_goods:
