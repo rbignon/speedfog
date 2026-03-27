@@ -10,14 +10,14 @@ Quick reference for SpeedFog's event flag allocation and EMEVD event IDs.
 Elden Ring stores event flags in a **sparse tree of category pages**, not a flat address space:
 
 ```
-flag_id  = 1050292400
-category = flag_id / 1000 = 1050292
+flag_id  = 1050294400
+category = flag_id / 1000 = 1050294
 offset   = flag_id % 1000 = 400
 ```
 
 Each category page stores 1000 flags as a bitfield (125 bytes). **Only pre-allocated categories exist at runtime.** Writing to a flag whose category doesn't exist is a **silent no-op** -- no crash, no error, just nothing happens.
 
-Categories are allocated when EMEVD instructions reference them. SpeedFog's use of category 1040299 confirmed this: flags 1040299000-002 work in practice because FogRando's EMEVD references that category. Similarly, SpeedFog's dedicated categories (1050290 and 1050292) become live as soon as our injected EMEVD events reference them.
+Categories are allocated when EMEVD instructions reference them. SpeedFog's use of category 1040299 confirmed this: flags 1040299000-002 work in practice because FogRando's EMEVD references that category. Similarly, SpeedFog's dedicated categories (1050290 and 1050294) become live as soon as our injected EMEVD events reference them.
 
 ### Flag behavior by last four digits
 
