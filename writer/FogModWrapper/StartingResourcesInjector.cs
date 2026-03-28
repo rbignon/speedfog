@@ -12,7 +12,6 @@ public static class StartingResourcesInjector
     // Good IDs for consumables (from practice tool / game data)
     private const int GOLDEN_SEED_GOOD_ID = 10010;
     private const int SACRED_TEAR_GOOD_ID = 10020;
-    private const int LORDS_RUNE_GOOD_ID = 2919;  // 50,000 runes when used
     private const int LARVAL_TEAR_GOOD_ID = 8185;  // Larval Tear - used for rebirth
     private const int STONESWORD_KEY_GOOD_ID = 8000;  // Stonesword Key - unlocks imp seals
 
@@ -30,10 +29,11 @@ public static class StartingResourcesInjector
     /// <summary>
     /// Inject starting resources into the provided common EMEVD.
     /// Uses a flag to track if resources were already given (for stackable items).
+    /// Starting runes are handled separately by StartingRuneInjector (CharaInitParam).
     /// </summary>
-    public static void Inject(EMEVD commonEmevd, Events events, int runes, int goldenSeeds, int sacredTears, int larvalTears = 0, int stoneswordKeys = 0)
+    public static void Inject(EMEVD commonEmevd, Events events, int goldenSeeds, int sacredTears, int larvalTears = 0, int stoneswordKeys = 0)
     {
-        if (runes <= 0 && goldenSeeds <= 0 && sacredTears <= 0 && larvalTears <= 0 && stoneswordKeys <= 0)
+        if (goldenSeeds <= 0 && sacredTears <= 0 && larvalTears <= 0 && stoneswordKeys <= 0)
         {
             return;
         }
@@ -49,15 +49,6 @@ public static class StartingResourcesInjector
         if (tearsClamped)
         {
             Console.WriteLine($"Warning: sacred_tears capped at {ResourceCalculations.MaxSacredTears}");
-        }
-
-        // Convert runes to Lord's Rune items
-        int lordsRunes = ResourceCalculations.ConvertRunesToLordsRunes(runes);
-        lordsRunes = ResourceCalculations.ClampLordsRunes(lordsRunes, out var runesClamped);
-        if (runesClamped)
-        {
-            int maxRunes = ResourceCalculations.LordsRunesToRunes(ResourceCalculations.MaxLordsRunes);
-            Console.WriteLine($"Warning: starting_runes capped at {maxRunes:N0} ({ResourceCalculations.MaxLordsRunes} Lord's Runes)");
         }
 
         Console.WriteLine("Injecting starting resources via EMEVD...");
@@ -92,16 +83,6 @@ public static class StartingResourcesInjector
         }
         if (sacredTears > 0)
             Console.WriteLine($"  Added {sacredTears} Sacred Tears");
-
-        for (int i = 0; i < lordsRunes; i++)
-        {
-            evt.Instructions.Add(events.ParseAdd($"DirectlyGivePlayerItem(ItemType.Goods, {LORDS_RUNE_GOOD_ID}, 6001, 1)"));
-        }
-        if (lordsRunes > 0)
-        {
-            int actualRunes = lordsRunes * 50000;
-            Console.WriteLine($"  Added {lordsRunes} Lord's Runes ({actualRunes:N0} runes when used)");
-        }
 
         for (int i = 0; i < larvalTears; i++)
         {

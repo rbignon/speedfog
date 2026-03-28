@@ -590,11 +590,10 @@ Example:
             StartingItemInjector.Inject(commonEmevd, graphData.StartingGoods, graphData.CarePackage, events);
         }
 
-        // 7c. Starting resources
+        // 7c. Starting resources (consumables via EMEVD)
         StartingResourcesInjector.Inject(
             commonEmevd,
             events,
-            graphData.StartingRunes,
             graphData.StartingGoldenSeeds,
             graphData.StartingSacredTears,
             graphData.StartingLarvalTears,
@@ -630,6 +629,9 @@ Example:
 
         // 7e2. Upgrade starting class weapons (param file)
         WeaponUpgradeInjector.Inject(modDir, graphData.WeaponUpgrade);
+
+        // 7e3. Starting runes (param file)
+        StartingRuneInjector.Inject(modDir, graphData.StartingRunes);
 
         // 7g-fmg. "RUN COMPLETE" banner FMG entries (all languages)
         if (graphData.FinishEvent > 0)

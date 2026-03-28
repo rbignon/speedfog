@@ -80,19 +80,28 @@ The vanilla game sets flag 182 only when the player activates 2+ Great Runes at 
 
 `StartingItemInjector` counts how many restored Great Runes are in the goods list. If >= 2, it emits `SetEventFlag(182, ON)` so vanilla gate checks pass.
 
+## Starting Runes (StartingRuneInjector)
+
+Starting runes are set directly on all character classes via the `CharaInitParam.soul` field in `regulation.bin`. This gives the player runes immediately at spawn, without requiring item consumption.
+
+| Field | Max | Notes |
+|-------|-----|-------|
+| `soul` (s32) | 10,000,000 | Set on all 10 classes (rows 3000-3009) |
+
+Config: `starting_runes = 500000` sets 500k runes on every class. Clamped to 0-10M.
+
 ## Starting Resources (StartingResourcesInjector)
 
 Consumable resources are given as individual `DirectlyGivePlayerItem` calls (one per item instance).
 
 | Resource | Good ID | Value | Max | Notes |
 |----------|---------|-------|-----|-------|
-| Lord's Rune | 2919 | 50,000 runes each | 200 (10M runes) | `starting_runes` config value is converted via ceiling division |
 | Golden Seed | 10010 | +1 flask use | 99 | Upgrade flask charges at graces |
 | Sacred Tear | 10020 | Flask potency upgrade | 12 | Vanilla max meaningful count |
 | Larval Tear | 8185 | 1 rebirth | 99 | Used for stat reallocation at graces |
 | Stonesword Key | 8000 | Unlock 1 imp seal | 99 | Opens optional sealed areas |
 
-Rune conversion: `starting_runes` (raw value) is converted to Lord's Runes via `ResourceCalculations.ConvertRunesToLordsRunes()` using ceiling division (`(runes + 49999) / 50000`). All values are clamped before injection; warnings are logged if clamped.
+All values are clamped before injection; warnings are logged if clamped.
 
 ## Gift Tracking Flags
 
@@ -127,7 +136,7 @@ great_runes = true          # All restored Great Runes (191-196)
 talisman_pouches = 3        # Talisman Pouch (10040), max 3
 golden_seeds = 0            # Golden Seeds (10010)
 sacred_tears = 0            # Sacred Tears (10020)
-starting_runes = 0          # Converted to Lord's Runes (2919)
+starting_runes = 0          # Set on CharaInitParam.soul (available at spawn)
 larval_tears = 10           # Larval Tears (8185)
 stonesword_keys = 6         # Stonesword Keys (8000)
 ```
@@ -137,6 +146,7 @@ See `speedfog/config.py` `StartingItemsConfig` for full field list including DLC
 ## References
 
 - Starting item injection: `writer/FogModWrapper/StartingItemInjector.cs`
+- Starting rune injection: `writer/FogModWrapper/StartingRuneInjector.cs`
 - Starting resource injection: `writer/FogModWrapper/StartingResourcesInjector.cs`
 - Resource calculations: `writer/FogModWrapper.Core/ResourceCalculations.cs`
 - Python config: `speedfog/config.py` (`StartingItemsConfig`, `CarePackageConfig`)

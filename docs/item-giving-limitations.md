@@ -80,7 +80,7 @@ Items with type >= 4 are skipped by `StartingItemInjector` with a log message. T
 ### Starting Resources
 
 `StartingResourcesInjector.cs` gives consumables via `DirectlyGivePlayerItem` with type=3 (Goods):
-- Golden Seeds (10010), Sacred Tears (10020), Lord's Runes (2919), Larval Tears (8185)
+- Golden Seeds (10010), Sacred Tears (10020), Larval Tears (8185)
 
 ## Weapon Upgrade Encoding
 
