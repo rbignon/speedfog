@@ -38,6 +38,13 @@ public static class StartingItemInjector
         { 8974, 65720 },  // Black Whetblade → Poison, Blood, Occult
     };
 
+    // Event flag checked by the summon monument ESD (t000002100) to determine if
+    // spirit ash summoning is available. DirectlyGivePlayerItem gives the bell but
+    // doesn't set this flag, so the monument won't show the summon option without it.
+    // Source: Item Randomizer itemevents.txt event 2100
+    private const int SPIRIT_CALLING_BELL_GOOD_ID = 8158;
+    private const int SPIRIT_CALLING_BELL_FLAG = 60110;
+
     // Vanilla event flag set when the player has activated 2+ Great Runes at Divine Towers.
     // Checked by sending gate events (e.g. Deeproot→Leyndell, event 12032500 in fogevents.txt)
     // and the Leyndell capital barrier. Giving restored Great Runes via DirectlyGivePlayerItem
@@ -102,6 +109,12 @@ public static class StartingItemInjector
             {
                 evt.Instructions.Add(events.ParseAdd($"SetEventFlag(TargetEventFlagType.EventFlag, {auxFlag}, ON)"));
                 Console.WriteLine($"  Added Good ID {goodId} + infusion flag {auxFlag}");
+            }
+            // Set spirit summoning flag so summon monuments recognize the bell
+            else if (goodId == SPIRIT_CALLING_BELL_GOOD_ID)
+            {
+                evt.Instructions.Add(events.ParseAdd($"SetEventFlag(TargetEventFlagType.EventFlag, {SPIRIT_CALLING_BELL_FLAG}, ON)"));
+                Console.WriteLine($"  Added Good ID {goodId} + spirit summon flag {SPIRIT_CALLING_BELL_FLAG}");
             }
             else
             {

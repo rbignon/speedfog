@@ -58,6 +58,18 @@ Items are given with `DirectlyGivePlayerItem` (EMEDF instruction 2003:43). The E
 
 Source: Item Randomizer `itemevents.txt` event 1450 / `CharacterWriter.cs:2447-2449`.
 
+## Auxiliary Flags -- Spirit Calling Bell
+
+The summon monument ESD (`t000002100`) checks event flag `60110` to determine if the player can summon spirit ashes. Having the Spirit Calling Bell (Good ID 8158) in inventory is not sufficient; the flag must also be ON.
+
+| Good ID | Item | Aux Flag | Effect |
+|---------|------|----------|--------|
+| 8158 | Spirit Calling Bell | 60110 | Enables spirit ash summoning at monuments |
+
+`StartingItemInjector` emits `SetEventFlag(60110, ON)` when giving the Spirit Calling Bell. Without this, summon monuments show no summon option despite the bell being in inventory.
+
+Source: Item Randomizer `itemevents.txt` event 2100.
+
 ## Auxiliary Flags -- Great Runes
 
 Flag `182` controls two vanilla mechanics:
