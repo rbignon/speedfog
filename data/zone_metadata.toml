@@ -441,6 +441,7 @@ proximity_groups = [
      "AEG099_001_9006", # Gideon back left
      "AEG099_002_9000", # Gideon back center
      "AEG099_001_9004", # Gideon side
+     "AEG099_231_9001", # Colosseum entrance
     ],
 ]
 
@@ -449,6 +450,7 @@ proximity_groups = [
 proximity_groups = [
     ["AEG099_001_9003", # Gideon front
      "AEG099_001_9004", # Gideon side
+     "AEG099_231_9001", # Colosseum entrance
     ],
 ]
 
@@ -462,6 +464,7 @@ proximity_groups = [
      "AEG099_001_9006", # Godfrey back left
      "AEG099_001_9007", # Godfrey front right
      "AEG099_002_9000", # Godfrey back center
+     "AEG099_231_9001", # Colosseum entrance
     ],
 ]
 
@@ -470,6 +473,7 @@ proximity_groups = [
 proximity_groups = [
     ["AEG099_001_9004", # Godfrey front
      "AEG099_001_9003", # Godfrey side
+     "AEG099_231_9001", # Colosseum entrance
     ],
 ]
 
