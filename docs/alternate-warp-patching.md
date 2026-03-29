@@ -124,7 +124,7 @@ All three patchers run after FogMod writes its EMEVD files. Program.cs performs 
 ```
 7.   FogMod GameDataWriterE.Write()    — generates EMEVD with compiled fogwarps
      Consolidated EMEVD scan           — single pass applies all three patchers per file
-     common.emevd injectors            — includes AlternateFlagPatcher (neutralize Event 915)
+     common.emevd injectors            — includes AlternateFlagPatcher (neutralize Events 900/915)
 ```
 
 ## Adding New AlternateFlag Patchers
