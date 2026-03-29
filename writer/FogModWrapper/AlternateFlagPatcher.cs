@@ -31,39 +31,73 @@ public static class AlternateFlagPatcher
     private const int EVENT_915_ID = 915;
 
     /// <summary>
-    /// Patch the provided common EMEVD to neutralize Event 915's SetEventFlag(330, ON).
-    /// Also adds SetEventFlag(330, OFF) at the start of Event 0 to clear
-    /// any leftover flag from a previous save.
+    /// Flag 300 = Erdtree burning. Controls m11_00 vs m11_05 map tile loading.
+    /// Set by Event 900 when the Forge bonfire transition fires (flag 9116 trigger).
+    /// </summary>
+    private const int ERDTREE_BURNING_FLAG = 300;
+
+    /// <summary>
+    /// Vanilla Event 900 in common.emevd -- Forge bonfire transition that sets flag 300.
+    /// FogMod repurposes this event for farumazula_maliketh connections.
+    /// </summary>
+    private const int EVENT_900_ID = 900;
+
+    /// <summary>
+    /// Patch the provided common EMEVD to neutralize Event 915's SetEventFlag(330, ON)
+    /// and Event 900's SetEventFlag(300, ON).
+    /// Also adds SetEventFlag(flag, OFF) at the start of Event 0 to clear
+    /// any leftover flags from a previous save.
     /// </summary>
     /// <param name="commonEmevd">In-memory common.emevd to modify</param>
     public static void Patch(EMEVD commonEmevd)
     {
-        int nopCount = 0;
-        bool cleared = false;
+        int nop330 = 0, nop300 = 0;
+        bool cleared330 = false, cleared300 = false;
 
-        // 1. Find Event 915 and NOP out SetEventFlag(330, ON)
+        // 1. NOP SetEventFlag(330, ON) in Event 915
         var evt915 = commonEmevd.Events.FirstOrDefault(e => e.ID == EVENT_915_ID);
         if (evt915 != null)
         {
-            nopCount = NopSetEventFlag(evt915, SEALING_TREE_FLAG);
+            nop330 = NopSetEventFlag(evt915, SEALING_TREE_FLAG);
         }
 
-        // 2. Clear flag 330 at game start to handle saves where it's already ON.
+        // 2. NOP SetEventFlag(300, ON) in Event 900
+        var evt900 = commonEmevd.Events.FirstOrDefault(e => e.ID == EVENT_900_ID);
+        if (evt900 != null)
+        {
+            nop300 = NopSetEventFlag(evt900, ERDTREE_BURNING_FLAG);
+        }
+
+        // 3. Clear both flags at game start
         var evt0 = commonEmevd.Events.FirstOrDefault(e => e.ID == 0);
         if (evt0 != null)
         {
-            InsertClearFlag(evt0, SEALING_TREE_FLAG);
-            cleared = true;
+            if (nop330 > 0 || evt915 != null)
+            {
+                InsertClearFlag(evt0, SEALING_TREE_FLAG);
+                cleared330 = true;
+            }
+            if (nop300 > 0 || evt900 != null)
+            {
+                InsertClearFlag(evt0, ERDTREE_BURNING_FLAG);
+                cleared300 = true;
+            }
         }
 
-        if (nopCount > 0 || cleared)
+        // Log results
+        if (nop330 > 0 || cleared330)
         {
-            Console.WriteLine($"Sealing Tree fix: NOP'd {nopCount} SetEventFlag(330) in Event 915"
-                + (cleared ? ", cleared flag 330 in Event 0" : ""));
+            Console.WriteLine($"AlternateFlag fix: NOP'd {nop330} SetEventFlag(330) in Event 915"
+                + (cleared330 ? ", cleared flag 330 in Event 0" : ""));
         }
-        else
+        if (nop300 > 0 || cleared300)
         {
-            Console.WriteLine("Sealing Tree fix: Event 915 not found in common.emevd");
+            Console.WriteLine($"AlternateFlag fix: NOP'd {nop300} SetEventFlag(300) in Event 900"
+                + (cleared300 ? ", cleared flag 300 in Event 0" : ""));
+        }
+        if (nop330 == 0 && nop300 == 0 && !cleared330 && !cleared300)
+        {
+            Console.WriteLine("AlternateFlag fix: Events 900/915 not found in common.emevd");
         }
     }
 
