@@ -143,4 +143,94 @@ public class AlternateFlagPatcherTests
         Assert.Equal(2003, evt.Instructions[0].Bank);
         Assert.Equal(66, evt.Instructions[0].ID);
     }
+
+    [Fact]
+    public void Patch_NopsFlag300InEvent900()
+    {
+        var emevd = new EMEVD();
+
+        // Event 0 (initialization)
+        var evt0 = new EMEVD.Event(0);
+        evt0.Instructions.Add(MakeFiller());
+        emevd.Events.Add(evt0);
+
+        // Event 900 with SetEventFlag(300, ON)
+        var evt900 = new EMEVD.Event(900);
+        evt900.Instructions.Add(MakeFiller());                    // [0]
+        evt900.Instructions.Add(MakeSetEventFlag(300, true));     // [1] -- target
+        evt900.Instructions.Add(MakeSetEventFlag(301, true));     // [2] -- untouched
+        evt900.Instructions.Add(MakeSetEventFlag(302, false));    // [3] -- untouched
+        emevd.Events.Add(evt900);
+
+        AlternateFlagPatcher.Patch(emevd);
+
+        // SetEventFlag(300, ON) replaced with WaitFixedTime(0)
+        Assert.Equal(1001, evt900.Instructions[1].Bank);
+        Assert.Equal(0, evt900.Instructions[1].ID);
+
+        // SetEventFlag(301) and SetEventFlag(302) untouched
+        Assert.Equal(2003, evt900.Instructions[2].Bank);
+        Assert.Equal(301, BitConverter.ToInt32(evt900.Instructions[2].ArgData, 4));
+        Assert.Equal(2003, evt900.Instructions[3].Bank);
+        Assert.Equal(302, BitConverter.ToInt32(evt900.Instructions[3].ArgData, 4));
+    }
+
+    [Fact]
+    public void Patch_ClearsFlag300InEvent0()
+    {
+        var emevd = new EMEVD();
+
+        var evt0 = new EMEVD.Event(0);
+        evt0.Instructions.Add(MakeFiller());
+        emevd.Events.Add(evt0);
+
+        var evt900 = new EMEVD.Event(900);
+        evt900.Instructions.Add(MakeSetEventFlag(300, true));
+        emevd.Events.Add(evt900);
+
+        AlternateFlagPatcher.Patch(emevd);
+
+        // Event 0 should have a SetEventFlag(300, OFF) inserted at [0]
+        var clearInstr = evt0.Instructions[0];
+        Assert.Equal(2003, clearInstr.Bank);
+        Assert.Equal(66, clearInstr.ID);
+        Assert.Equal(300, BitConverter.ToInt32(clearInstr.ArgData, 4));
+        Assert.Equal(0, clearInstr.ArgData[8]); // OFF
+    }
+
+    [Fact]
+    public void Patch_HandlesBothFlags300And330()
+    {
+        var emevd = new EMEVD();
+
+        var evt0 = new EMEVD.Event(0);
+        evt0.Instructions.Add(MakeFiller());
+        emevd.Events.Add(evt0);
+
+        var evt900 = new EMEVD.Event(900);
+        evt900.Instructions.Add(MakeSetEventFlag(300, true));
+        emevd.Events.Add(evt900);
+
+        var evt915 = new EMEVD.Event(915);
+        evt915.Instructions.Add(MakeSetEventFlag(330, true));
+        emevd.Events.Add(evt915);
+
+        AlternateFlagPatcher.Patch(emevd);
+
+        // Both events NOP'd
+        Assert.Equal(1001, evt900.Instructions[0].Bank);
+        Assert.Equal(1001, evt915.Instructions[0].Bank);
+
+        // Event 0 has two clear flags inserted at [0] and [1]
+        // InsertClearFlag inserts at index 0, so order is: clear(300), clear(330), original filler
+        // (330 inserted first at [0], then 300 inserted at [0] pushing 330 to [1])
+        Assert.Equal(3, evt0.Instructions.Count);
+
+        var flags = new[] {
+            BitConverter.ToInt32(evt0.Instructions[0].ArgData, 4),
+            BitConverter.ToInt32(evt0.Instructions[1].ArgData, 4)
+        };
+        Assert.Contains(300, flags);
+        Assert.Contains(330, flags);
+    }
 }
