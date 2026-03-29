@@ -194,6 +194,7 @@ weight = 2
 allow_entry_as_exit = false
 
 [zones.ainsel_dragonkin]
+type = "major_boss"
 allow_entry_as_exit = false
 
 [zones.peninsula_earthborecave_boss]
