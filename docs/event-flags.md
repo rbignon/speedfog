@@ -63,6 +63,7 @@ Both ranges use saved flags (persist across area reloads):
 | Flag | Offset | Purpose | Set by |
 |------|--------|---------|--------|
 | 1050290000 | 0 | `items_spawned_flag`: one-shot guard for starting item/resource delivery | StartingItemInjector, StartingResourcesInjector |
+| 1050290001 | 1 | `banner_shown_flag`: one-shot guard for run complete banner | RunCompleteInjector |
 
 ### Zone Tracking Flags (1050294xxx)
 

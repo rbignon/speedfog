@@ -7,7 +7,7 @@ namespace FogModWrapper;
 /// Injects a "RUN COMPLETE" banner that displays after the final boss is defeated.
 /// - FMG: Overwrites the "VICTORY" banner text in GR_MenuText (menu_dlc02.msgbnd.dcx)
 ///        for all game languages
-/// - EMEVD: Creates event that waits for finish_event flag, delays 7s, shows banner
+/// - EMEVD: Creates event that waits for finish_event flag, delays, shows banner (one-shot via saved flag)
 ///
 /// Uses the golden banner style (same as "GREAT ENEMY FELLED", "GOD SLAIN", etc.)
 /// by repurposing the "VICTORY" banner type (Colosseum-only, unused in PvE).
@@ -25,6 +25,9 @@ public static class RunCompleteInjector
     // Boss victory jingle (SoundType.SFX=5, same sound used by all major boss defeats)
     private const int VICTORY_SOUND_ID = 888880000;
     private const int PLAYER_ENTITY_ID = 10000;
+
+    // One-shot guard: saved flag to prevent banner replay on zone warp
+    private const int BANNER_SHOWN_FLAG = 1050290001;
 
     /// <summary>
     /// Overwrite the "VICTORY" banner text in GR_MenuText FMG with the run complete
@@ -99,11 +102,15 @@ public static class RunCompleteInjector
         // Create the run complete event
         var evt = new EMEVD.Event(EVENT_ID);
 
+        // 0. One-shot guard: skip if banner was already shown
+        evt.Instructions.Add(events.ParseAdd(
+            $"EndIfEventFlag(EventEndType.End, ON, TargetEventFlagType.EventFlag, {BANNER_SHOWN_FLAG})"));
+
         // 1. Wait for finish_event flag (set by boss death monitor)
         evt.Instructions.Add(events.ParseAdd(
             $"IfEventFlag(MAIN, ON, TargetEventFlagType.EventFlag, {finishEvent})"));
 
-        // 2. Delay for boss death banner to fade (~7 seconds)
+        // 2. Delay for boss death banner to fade
         evt.Instructions.Add(events.ParseAdd(
             $"WaitFixedTimeSeconds({DELAY_SECONDS})"));
 
@@ -113,6 +120,10 @@ public static class RunCompleteInjector
 
         // 4. Display banner (bank 2007, index 2, single byte arg = banner type)
         evt.Instructions.Add(new EMEVD.Instruction(2007, 2, new[] { BANNER_TYPE }));
+
+        // 5. Mark banner as shown so it doesn't replay on zone warp
+        evt.Instructions.Add(events.ParseAdd(
+            $"SetEventFlag(TargetEventFlagType.EventFlag, {BANNER_SHOWN_FLAG}, ON)"));
 
         commonEmevd.Events.Add(evt);
 

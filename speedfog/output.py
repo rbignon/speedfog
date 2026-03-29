@@ -32,6 +32,7 @@ EVENT_FLAG_BUDGET = 1000
 PERSISTENT_FLAG_BASE = 1050290000
 # Offset 0: items_spawned_flag (racing mod runtime item spawn prevention)
 ITEMS_SPAWNED_FLAG = PERSISTENT_FLAG_BASE + 0
+# Offset 1: banner_shown_flag (C#-side only, see RunCompleteInjector.cs)
 
 
 def load_vanilla_tiers(path: Path) -> dict[str, int]:
