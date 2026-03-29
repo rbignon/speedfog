@@ -73,7 +73,7 @@ Thin wrapper around FogMod.dll that injects our connections and post-processes g
 | `ChapelGraceInjector.cs` | Add Site of Grace + player spawn at Chapel of Anticipation |
 | `ErdtreeWarpPatcher.cs` | Patch Erdtree fogwarps to target m11_05 directly (flag 300) |
 | `SealingTreeWarpPatcher.cs` | Patch Sealing Tree fogwarps to eliminate flag 330 dependency |
-| `SealingTreePatcher.cs` | Neutralize Event 915 and clear flag 330 on game start |
+| `AlternateFlagPatcher.cs` | Neutralize Events 900/915, clear AlternateFlags 300/330 |
 | `RebirthInjector.cs` | Rebirth (stat reallocation) at Sites of Grace via ESD |
 | `VanillaWarpRemover.cs` | Remove vanilla assets: warp entities + blocking gates ([doc](vanilla-warp-removal.md)) |
 | `StartupFlagInjector.cs` | Set event flags at startup in any EMEVD (open gates, etc.) |
@@ -178,7 +178,7 @@ Post-processing (after FogMod writes, step numbers match Program.cs):
   - **7d** RoundtableUnlockInjector: set flag 1040292051 to bypass finger pickup
   - **7f** ZoneTrackingInjector: boss death monitor event
   - **7g** RunCompleteInjector: golden banner + jingle on final boss defeat
-  - **7j2** SealingTreePatcher: neutralize Event 915, clear flag 330
+  - **7j2** AlternateFlagPatcher: neutralize Events 900/915, clear flags 300/330
 - **7e** ShopInjector: add smithing stones + Sentry's Torch to Twin Maiden Husks
 - **7g-fmg** RunCompleteInjector: "RUN COMPLETE" text in FMG files (all languages)
 - **7h** ChapelGraceInjector: Site of Grace + WarpPlayer for initial spawn

@@ -197,7 +197,7 @@ Because FogMod compiles templates into literal per-instance events:
 | `ZoneTrackingInjector` | Inserts `SetEventFlag` before warp instructions to track zone entry | Both warp families in all EMEVD files; uses 4-strategy matching (entity, compound, dest-only, common event) |
 | `ErdtreeWarpPatcher` | Replaces primary (m11_00) destination with alternate (m11_05); inserts `SetEventFlag(300, ON)` | Both warp families matching primary region |
 | `SealingTreeWarpPatcher` | Replaces alternate (m61_44_45_10) destination with primary (m61_44_45_00) | Both warp families matching alternate region |
-| `SealingTreePatcher` | Neutralizes Event 915's `SetEventFlag(330, ON)` | Specific event in common.emevd (not a warp scanner) |
+| `AlternateFlagPatcher` | Neutralizes `SetEventFlag(300/330, ON)` in Events 900/915 | Specific events in common.emevd (not a warp scanner) |
 
 All warp-scanning post-processors run after `GameDataWriterE.Write()` (step 7 in Program.cs).
 
@@ -213,7 +213,7 @@ All warp-scanning post-processors run after `GameDataWriterE.Write()` (step 7 in
 | ZoneTrackingInjector | `writer/FogModWrapper/ZoneTrackingInjector.cs` |
 | ErdtreeWarpPatcher | `writer/FogModWrapper/ErdtreeWarpPatcher.cs` |
 | SealingTreeWarpPatcher | `writer/FogModWrapper/SealingTreeWarpPatcher.cs` |
-| SealingTreePatcher | `writer/FogModWrapper/SealingTreePatcher.cs` |
+| AlternateFlagPatcher | `writer/FogModWrapper/AlternateFlagPatcher.cs` |
 | Alternate warp patching doc | `docs/alternate-warp-patching.md` |
 | Zone tracking doc | `docs/zone-tracking.md` |
 | Event flags doc | `docs/event-flags.md` |
