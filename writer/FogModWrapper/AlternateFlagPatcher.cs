@@ -3,25 +3,22 @@ using SoulsFormats;
 namespace FogModWrapper;
 
 /// <summary>
-/// Patches vanilla Event 915 in common.emevd to prevent it from setting flag 330
-/// (Sealing Tree burned / DLC Erdtree gate).
+/// Neutralizes vanilla EMEVD events that set AlternateFlag values (flags 300 and 330)
+/// which interfere with SpeedFog's fogwarp patching and zone tracking.
 ///
-/// In vanilla, Event 915 is a ContinueOnRest event that waits for flag 9140
-/// (Dancing Lion defeated), then sets flag 330 and warps the player to the
-/// post-burning DLC area. If a player loads SpeedFog on a save where flag 9140
-/// is already ON from a previous DLC playthrough, Event 915 immediately fires
-/// and sets flag 330. This causes fogwarps targeting Romina's area (m61_44_45_00)
-/// to use the AlternateOf destination (m61_44_45_10 — the post-burning variant),
-/// where Romina doesn't exist.
+/// Flag 300 (Erdtree burning): Set by Event 900 when the Forge bonfire transition fires.
+/// If ON before the player reaches an Erdtree fogwarp, the compiled SkipIfEventFlag(300)
+/// skips the zone tracking SetEventFlag injected by ZoneTrackingInjector.
+/// Fix: NOP SetEventFlag(300, ON) in Event 900, clear flag 300 in Event 0.
 ///
-/// The fix: replace SetEventFlag(330, ON) in Event 915 with a no-op (WaitFixedTime(0)).
-/// This is safe because SpeedFog never needs the Sealing Tree to burn — the
-/// AlternateOf fogwarp mechanism handles map variant selection via flag 330 checks,
-/// and we always want the primary (non-burned) variant.
+/// Flag 330 (Sealing Tree burned): Set by Event 915 after Dancing Lion defeat.
+/// If ON, fogwarps targeting Romina's area use the post-burning variant where Romina
+/// doesn't exist. Fix: NOP SetEventFlag(330, ON) in Event 915, clear flag 330 in Event 0.
 ///
-/// Analogous to ErdtreeWarpPatcher which handles flag 300 (base game Erdtree).
+/// In both cases, the corresponding warp patcher (ErdtreeWarpPatcher for 300,
+/// SealingTreeWarpPatcher for 330) handles the flag at the correct moment.
 /// </summary>
-public static class SealingTreePatcher
+public static class AlternateFlagPatcher
 {
     /// <summary>
     /// Flag 330 = DLC Sealing Tree burned. Controls m61_44_45_00 vs m61_44_45_10.

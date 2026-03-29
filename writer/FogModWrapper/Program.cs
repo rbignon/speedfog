@@ -616,8 +616,8 @@ Example:
             RunCompleteInjector.InjectEmevdEvent(commonEmevd, events, graphData.FinishEvent);
         }
 
-        // 7j2. Neutralize vanilla Sealing Tree events to prevent flag 330 contamination.
-        SealingTreePatcher.Patch(commonEmevd);
+        // 7j2. Neutralize vanilla events that set AlternateFlag values (flags 300, 330).
+        AlternateFlagPatcher.Patch(commonEmevd);
 
         // Write common.emevd.dcx once (was previously read/written 6+ times)
         commonEmevd.Write(commonEmevdPath);

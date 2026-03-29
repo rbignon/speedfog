@@ -3,7 +3,7 @@ using Xunit;
 
 namespace FogModWrapper.Tests;
 
-public class SealingTreePatcherTests
+public class AlternateFlagPatcherTests
 {
     /// <summary>
     /// Helper to create a SetEventFlag instruction matching Event 915's format.
@@ -34,7 +34,7 @@ public class SealingTreePatcherTests
         evt.Instructions.Add(MakeSetEventFlag(300, true));      // [2] — different flag, untouched
         evt.Instructions.Add(MakeSetEventFlag(330, false));     // [3] — OFF, untouched
 
-        int count = SealingTreePatcher.NopSetEventFlag(evt, 330);
+        int count = AlternateFlagPatcher.NopSetEventFlag(evt, 330);
 
         Assert.Equal(1, count);
 
@@ -56,7 +56,7 @@ public class SealingTreePatcherTests
         evt.Instructions.Add(MakeSetEventFlag(300, true));
         evt.Instructions.Add(MakeSetEventFlag(9140, true));
 
-        int count = SealingTreePatcher.NopSetEventFlag(evt, 330);
+        int count = AlternateFlagPatcher.NopSetEventFlag(evt, 330);
 
         Assert.Equal(0, count);
         // All instructions unchanged
@@ -75,7 +75,7 @@ public class SealingTreePatcherTests
         evt.Instructions.Add(MakeFiller());                   // [1]
         evt.Instructions.Add(MakeSetEventFlag(330, true));   // [2] — target
 
-        int count = SealingTreePatcher.NopSetEventFlag(evt, 330);
+        int count = AlternateFlagPatcher.NopSetEventFlag(evt, 330);
 
         Assert.Equal(2, count);
         Assert.Equal(1001, evt.Instructions[0].Bank);
@@ -91,7 +91,7 @@ public class SealingTreePatcherTests
         evt.Instructions.Add(MakeFiller());
 
         int originalCount = evt.Instructions.Count;
-        SealingTreePatcher.NopSetEventFlag(evt, 330);
+        AlternateFlagPatcher.NopSetEventFlag(evt, 330);
 
         Assert.Equal(originalCount, evt.Instructions.Count);
     }
@@ -102,7 +102,7 @@ public class SealingTreePatcherTests
         var evt = new EMEVD.Event(0);
         evt.Instructions.Add(MakeFiller());  // [0] — will become [1]
 
-        SealingTreePatcher.InsertClearFlag(evt, 330);
+        AlternateFlagPatcher.InsertClearFlag(evt, 330);
 
         Assert.Equal(2, evt.Instructions.Count);
         // Inserted instruction at [0]: SetEventFlag(330, OFF)
@@ -125,7 +125,7 @@ public class SealingTreePatcherTests
         evt.Parameters.Add(new EMEVD.Parameter(0, 0, 0, 4));
         evt.Parameters.Add(new EMEVD.Parameter(1, 0, 0, 4));
 
-        SealingTreePatcher.InsertClearFlag(evt, 330);
+        AlternateFlagPatcher.InsertClearFlag(evt, 330);
 
         // Both parameters should be shifted by +1
         Assert.Equal(1, evt.Parameters[0].InstructionIndex);
@@ -137,7 +137,7 @@ public class SealingTreePatcherTests
     {
         var evt = new EMEVD.Event(0);
 
-        SealingTreePatcher.InsertClearFlag(evt, 330);
+        AlternateFlagPatcher.InsertClearFlag(evt, 330);
 
         Assert.Single(evt.Instructions);
         Assert.Equal(2003, evt.Instructions[0].Bank);
