@@ -90,16 +90,21 @@ var sealingTreeEntrances = ann.Entrances.Concat(ann.Warps)
 
 **Source**: `writer/FogModWrapper/SealingTreeWarpPatcher.cs`
 
-### SealingTreePatcher (defense-in-depth)
+### AlternateFlagPatcher (defense-in-depth)
 
-In addition to rewriting warp destinations, SpeedFog also neutralizes the EMEVD event that sets flag 330:
+In addition to rewriting warp destinations, SpeedFog also neutralizes the EMEVD events that set AlternateFlag values:
 
-1. NOP `SetEventFlag(330, ON)` in Event 915 (common.emevd) — replaced with `WaitFixedTime(0)`
-2. Insert `SetEventFlag(330, OFF)` in Event 0 — clears the flag on game start for stale saves
+**Flag 330 / Event 915 (Sealing Tree):**
+1. NOP `SetEventFlag(330, ON)` in Event 915 (common.emevd) -- replaced with `WaitFixedTime(0)`
+2. Insert `SetEventFlag(330, OFF)` in Event 0 -- clears the flag on game start for stale saves
 
-This is defense-in-depth: even though SealingTreeWarpPatcher makes the warp destinations independent of flag 330, neutralizing the flag prevents any other game systems from reacting to it.
+**Flag 300 / Event 900 (Erdtree burning):**
+1. NOP `SetEventFlag(300, ON)` in Event 900 (common.emevd) -- replaced with `WaitFixedTime(0)`
+2. Insert `SetEventFlag(300, OFF)` in Event 0 -- clears the flag on game start
 
-**Source**: `writer/FogModWrapper/SealingTreePatcher.cs`
+Without this, Event 900 sets flag 300 when the DAG includes `farumazula_maliketh` connections (which use the Forge WarpBonfire transition). This causes the compiled fogwarp's `SkipIfEventFlag(flag=300)` to skip the zone tracking `SetEventFlag` injected by ZoneTrackingInjector.
+
+**Source**: `writer/FogModWrapper/AlternateFlagPatcher.cs`
 
 ## Comparison
 
@@ -110,16 +115,16 @@ This is defense-in-depth: even though SealingTreeWarpPatcher makes the warp dest
 | Inserts SetEventFlag | Yes (300 ON, before warp) | No |
 | Why SetEventFlag | Engine needs flag to load m11_05 tile | Flag only affects fogwarp branch, not tile loading |
 | Entrances | 1 (leyndell_erdtree BSide) | 2 (front + back of Romina arena) |
-| Companion patcher | None needed | SealingTreePatcher (neutralizes Event 915) |
+| Companion patcher | AlternateFlagPatcher (neutralizes Event 900) | AlternateFlagPatcher (neutralizes Event 915) |
 
 ## Pipeline Order
 
-All three patchers run after FogMod writes its EMEVD files. Program.cs performs a single consolidated scan over all EMEVD files, applying ErdtreeWarpPatcher.PatchEmevd(), SealingTreeWarpPatcher.PatchEmevd(), and ZoneTrackingInjector.PatchEmevdFile() to each file in one pass (one Read + one Write per file). SealingTreePatcher operates on common.emevd in memory.
+All three patchers run after FogMod writes its EMEVD files. Program.cs performs a single consolidated scan over all EMEVD files, applying ErdtreeWarpPatcher.PatchEmevd(), SealingTreeWarpPatcher.PatchEmevd(), and ZoneTrackingInjector.PatchEmevdFile() to each file in one pass (one Read + one Write per file). AlternateFlagPatcher operates on common.emevd in memory.
 
 ```
 7.   FogMod GameDataWriterE.Write()    — generates EMEVD with compiled fogwarps
      Consolidated EMEVD scan           — single pass applies all three patchers per file
-     common.emevd injectors            — includes SealingTreePatcher (neutralize Event 915)
+     common.emevd injectors            — includes AlternateFlagPatcher (neutralize Event 915)
 ```
 
 ## Adding New AlternateFlag Patchers

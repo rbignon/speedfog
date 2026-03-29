@@ -79,7 +79,7 @@ speedfog/
 │   │   ├── ChapelGraceInjector.cs  # Site of Grace at Chapel of Anticipation
 │   │   ├── DeathMarkerInjector.cs  # Bloodstain visuals at fog gates
 │   │   ├── RebirthInjector.cs  # Rebirth (stat reallocation) at Sites of Grace
-│   │   ├── SealingTreePatcher.cs  # Neutralize Event 915 / clear flag 330
+│   │   ├── AlternateFlagPatcher.cs  # Neutralize Events 900/915, clear flags 300/330
 │   │   ├── SealingTreeWarpPatcher.cs  # Patch Sealing Tree fogwarps (flag 330)
 │   │   ├── VanillaWarpRemover.cs  # Remove vanilla assets: warps + blocking gates
 │   │   ├── StartupFlagInjector.cs  # Set event flags at startup (open gates, etc.)
@@ -187,7 +187,7 @@ speedfog/
 | `ChapelGraceInjector` | Site of Grace + player spawn relocation at Chapel of Anticipation |
 | `RebirthInjector` | Rebirth (stat reallocation) option at Sites of Grace via ESD |
 | `SealingTreeWarpPatcher` | Patches Sealing Tree fogwarps to eliminate flag 330 dependency |
-| `SealingTreePatcher` | Neutralizes Event 915 and clears flag 330 on game start |
+| `AlternateFlagPatcher` | Neutralizes Events 900/915, clears AlternateFlags 300/330 on game start |
 | `VanillaWarpRemover` | Removes vanilla warp MSB assets that conflict with fog gates |
 | `StartupFlagInjector` | Sets event flags at startup in any EMEVD (open gates, etc.) |
 | `StakeRemover` | Removes vanilla stakes that respawn outside the DAG |
