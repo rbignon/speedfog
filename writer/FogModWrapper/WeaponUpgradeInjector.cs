@@ -12,13 +12,16 @@ public static class WeaponUpgradeInjector
     private const int CLASS_ROW_MIN = 3000;
     private const int CLASS_ROW_MAX = 3009;
 
-    // Weapon equipment fields in CharaInitParam
-    private static readonly string[] WeaponFields = new[]
+    // Weapon equipment fields in CharaInitParam, mapped to their
+    // wepParamType companion fields (0 = EquipParamWeapon, 1 = EquipParamCustomWeapon).
+    // The randomizer also maps Subwep_Right3/Left3, but vanilla base classes (3000-3009)
+    // never use the third slots, so we omit them.
+    private static readonly Dictionary<string, string> WeaponTypeFields = new()
     {
-        "equip_Wep_Right",
-        "equip_Wep_Left",
-        "equip_Subwep_Right",
-        "equip_Subwep_Left",
+        ["equip_Wep_Right"] = "wepParamType_Right1",
+        ["equip_Wep_Left"] = "wepParamType_Left1",
+        ["equip_Subwep_Right"] = "wepParamType_Right2",
+        ["equip_Subwep_Left"] = "wepParamType_Left2",
     };
 
     /// <summary>
@@ -50,8 +53,25 @@ public static class WeaponUpgradeInjector
     }
 
     /// <summary>
+    /// Compute the upgrade level for a custom weapon based on its base weapon type.
+    /// Returns the target reinforceLv, or -1 if the base weapon is unknown.
+    /// </summary>
+    public static int CustomWeaponUpgradeLevel(int baseWepId, int level, HashSet<int> regularWeapons, HashSet<int> somberWeapons)
+    {
+        if (regularWeapons.Contains(baseWepId))
+            return level;
+
+        if (somberWeapons.Contains(baseWepId))
+            return SomberUpgrade(level);
+
+        return -1;
+    }
+
+    /// <summary>
     /// Upgrade starting class weapons in CharaInitParam to the given level.
-    /// Opens regulation.bin, modifies CharaInitParam weapon fields, re-encrypts.
+    /// Handles both standard weapons (EquipParamWeapon, ID-encoded upgrade)
+    /// and custom weapons with ashes of war (EquipParamCustomWeapon, reinforceLv field).
+    /// Opens regulation.bin, modifies params, re-encrypts.
     /// </summary>
     public static void Inject(string modDir, int weaponUpgrade)
     {
@@ -69,6 +89,7 @@ public static class WeaponUpgradeInjector
         var baseDir = AppDomain.CurrentDomain.BaseDirectory;
         var charaDefPath = Path.Combine(baseDir, "eldendata", "Defs", "CharaInitParam.xml");
         var weaponDefPath = Path.Combine(baseDir, "eldendata", "Defs", "EquipParamWeapon.xml");
+        var customWepDefPath = Path.Combine(baseDir, "eldendata", "Defs", "EquipParamCustomWeapon.xml");
 
         if (!File.Exists(charaDefPath) || !File.Exists(weaponDefPath))
         {
@@ -78,6 +99,10 @@ public static class WeaponUpgradeInjector
 
         var charaDef = PARAMDEF.XmlDeserialize(charaDefPath);
         var weaponDef = PARAMDEF.XmlDeserialize(weaponDefPath);
+
+        PARAMDEF? customWepDef = null;
+        if (File.Exists(customWepDefPath))
+            customWepDef = PARAMDEF.XmlDeserialize(customWepDefPath);
 
         // Decrypt regulation.bin
         BND4 regulation;
@@ -112,6 +137,19 @@ public static class WeaponUpgradeInjector
                 somberWeapons.Add(row.ID);
         }
 
+        // Load EquipParamCustomWeapon (for weapons with ashes of war)
+        PARAM? customWepParam = null;
+        BinderFile? customWepFile = null;
+        if (customWepDef != null)
+        {
+            customWepFile = regulation.Files.Find(f => f.Name.EndsWith("EquipParamCustomWeapon.param"));
+            if (customWepFile != null)
+            {
+                customWepParam = PARAM.Read(customWepFile.Bytes);
+                customWepParam.ApplyParamdef(customWepDef);
+            }
+        }
+
         // Load CharaInitParam
         var charaFile = regulation.Files.Find(f => f.Name.EndsWith("CharaInitParam.param"));
         if (charaFile == null)
@@ -126,22 +164,56 @@ public static class WeaponUpgradeInjector
         Console.WriteLine($"Upgrading starting class weapons to +{weaponUpgrade} (somber +{SomberUpgrade(weaponUpgrade)})...");
 
         int upgraded = 0;
+        bool customWepModified = false;
+
         foreach (var row in charaParam.Rows)
         {
             if (row.ID < CLASS_ROW_MIN || row.ID > CLASS_ROW_MAX)
                 continue;
 
-            foreach (var fieldName in WeaponFields)
+            foreach (var (fieldName, typeFieldName) in WeaponTypeFields)
             {
                 int weaponId = (int)row[fieldName].Value;
                 if (weaponId <= 0)
                     continue;
 
-                int newId = UpgradeWeaponId(weaponId, weaponUpgrade, regularWeapons, somberWeapons);
-                if (newId != weaponId)
+                byte wepType = (byte)row[typeFieldName].Value;
+
+                if (wepType == 1 && customWepParam != null)
                 {
-                    row[fieldName].Value = newId;
-                    upgraded++;
+                    // Custom weapon (has ash of war): modify reinforceLv in EquipParamCustomWeapon
+                    var customRow = customWepParam.Rows.Find(r => r.ID == weaponId);
+                    if (customRow == null)
+                    {
+                        Console.WriteLine($"  Warning: custom weapon {weaponId} not found in EquipParamCustomWeapon");
+                        continue;
+                    }
+
+                    int baseWepId = (int)customRow["baseWepId"].Value;
+                    int targetLevel = CustomWeaponUpgradeLevel(baseWepId, weaponUpgrade, regularWeapons, somberWeapons);
+                    if (targetLevel < 0)
+                    {
+                        Console.WriteLine($"  Warning: base weapon {baseWepId} for custom weapon {weaponId} not found in weapon tables");
+                        continue;
+                    }
+
+                    byte currentLevel = (byte)customRow["reinforceLv"].Value;
+                    if (currentLevel != (byte)targetLevel)
+                    {
+                        customRow["reinforceLv"].Value = (byte)targetLevel;
+                        customWepModified = true;
+                        upgraded++;
+                    }
+                }
+                else
+                {
+                    // Standard weapon: upgrade via ID encoding
+                    int newId = UpgradeWeaponId(weaponId, weaponUpgrade, regularWeapons, somberWeapons);
+                    if (newId != weaponId)
+                    {
+                        row[fieldName].Value = newId;
+                        upgraded++;
+                    }
                 }
             }
         }
@@ -152,8 +224,10 @@ public static class WeaponUpgradeInjector
             return;
         }
 
-        // Write back
+        // Write back modified params
         charaFile.Bytes = charaParam.Write();
+        if (customWepModified && customWepFile != null && customWepParam != null)
+            customWepFile.Bytes = customWepParam.Write();
         SFUtil.EncryptERRegulation(regulationPath, regulation);
         Console.WriteLine($"  Upgraded {upgraded} weapon slots across starting classes");
     }

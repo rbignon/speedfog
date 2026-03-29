@@ -72,6 +72,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>eldendata/Defs/EquipParamWeapon.xml</Link>
     </None>
+    <None Include="eldendata/Defs/EquipParamCustomWeapon.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>eldendata/Defs/EquipParamCustomWeapon.xml</Link>
+    </None>
   </ItemGroup>
 
 </Project>
