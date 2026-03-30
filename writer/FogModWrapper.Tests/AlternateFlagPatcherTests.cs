@@ -145,7 +145,7 @@ public class AlternateFlagPatcherTests
     }
 
     [Fact]
-    public void Patch_NopsFlag300InEvent900()
+    public void Patch_DoesNotNopFlag300InEvent900()
     {
         var emevd = new EMEVD();
 
@@ -154,29 +154,24 @@ public class AlternateFlagPatcherTests
         evt0.Instructions.Add(MakeFiller());
         emevd.Events.Add(evt0);
 
-        // Event 900 with SetEventFlag(300, ON)
+        // Event 900 with SetEventFlag(300, ON) -- should be preserved for "Repeat warp"
         var evt900 = new EMEVD.Event(900);
         evt900.Instructions.Add(MakeFiller());                    // [0]
-        evt900.Instructions.Add(MakeSetEventFlag(300, true));     // [1] -- target
+        evt900.Instructions.Add(MakeSetEventFlag(300, true));     // [1] -- preserved
         evt900.Instructions.Add(MakeSetEventFlag(301, true));     // [2] -- untouched
-        evt900.Instructions.Add(MakeSetEventFlag(302, false));    // [3] -- untouched
         emevd.Events.Add(evt900);
 
         AlternateFlagPatcher.Patch(emevd);
 
-        // SetEventFlag(300, ON) replaced with WaitFixedTime(0)
-        Assert.Equal(1001, evt900.Instructions[1].Bank);
-        Assert.Equal(0, evt900.Instructions[1].ID);
-
-        // SetEventFlag(301) and SetEventFlag(302) untouched
-        Assert.Equal(2003, evt900.Instructions[2].Bank);
-        Assert.Equal(301, BitConverter.ToInt32(evt900.Instructions[2].ArgData, 4));
-        Assert.Equal(2003, evt900.Instructions[3].Bank);
-        Assert.Equal(302, BitConverter.ToInt32(evt900.Instructions[3].ArgData, 4));
+        // SetEventFlag(300, ON) should NOT be NOP'd (needed for Repeat warp)
+        Assert.Equal(2003, evt900.Instructions[1].Bank);
+        Assert.Equal(66, evt900.Instructions[1].ID);
+        Assert.Equal(300, BitConverter.ToInt32(evt900.Instructions[1].ArgData, 4));
+        Assert.Equal(1, evt900.Instructions[1].ArgData[8]); // still ON
     }
 
     [Fact]
-    public void Patch_ClearsFlag300InEvent0()
+    public void Patch_ClearsFlag300InEvent0_ForStaleSaves()
     {
         var emevd = new EMEVD();
 
@@ -184,13 +179,9 @@ public class AlternateFlagPatcherTests
         evt0.Instructions.Add(MakeFiller());
         emevd.Events.Add(evt0);
 
-        var evt900 = new EMEVD.Event(900);
-        evt900.Instructions.Add(MakeSetEventFlag(300, true));
-        emevd.Events.Add(evt900);
-
         AlternateFlagPatcher.Patch(emevd);
 
-        // Event 0 should have a SetEventFlag(300, OFF) inserted at [0]
+        // Event 0 should have a SetEventFlag(300, OFF) inserted
         var clearInstr = evt0.Instructions[0];
         Assert.Equal(2003, clearInstr.Bank);
         Assert.Equal(66, clearInstr.ID);
@@ -217,13 +208,14 @@ public class AlternateFlagPatcherTests
 
         AlternateFlagPatcher.Patch(emevd);
 
-        // Both events NOP'd
-        Assert.Equal(1001, evt900.Instructions[0].Bank);
+        // Event 900 SetEventFlag(300, ON) preserved (needed for Repeat warp)
+        Assert.Equal(2003, evt900.Instructions[0].Bank);
+        Assert.Equal(300, BitConverter.ToInt32(evt900.Instructions[0].ArgData, 4));
+
+        // Event 915 SetEventFlag(330, ON) NOP'd
         Assert.Equal(1001, evt915.Instructions[0].Bank);
 
-        // Event 0 has two clear flags inserted at [0] and [1]
-        // InsertClearFlag inserts at index 0, so order is: clear(300), clear(330), original filler
-        // (330 inserted first at [0], then 300 inserted at [0] pushing 330 to [1])
+        // Event 0 has two clear flags inserted
         Assert.Equal(3, evt0.Instructions.Count);
 
         var flags = new[] {

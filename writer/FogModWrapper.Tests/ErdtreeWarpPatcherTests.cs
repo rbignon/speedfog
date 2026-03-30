@@ -240,6 +240,111 @@ public class ErdtreeWarpPatcherTests
         Assert.Equal(1, evt.Parameters[0].InstructionIndex);
     }
 
+    // --- NopSkipIfEventFlag tests ---
+
+    /// <summary>
+    /// SkipIfEventFlag (bank 1003, id 1): [Skip(byte@0), State(byte@1), FlagType(byte@2), pad(1), FlagID(uint32@4)]
+    /// </summary>
+    private static EMEVD.Instruction MakeSkipIfEventFlag(byte skip, byte state, int flagId)
+    {
+        var args = new byte[8];
+        args[0] = skip;
+        args[1] = state;
+        args[2] = 0; // FlagType = EventFlag
+        BitConverter.GetBytes(flagId).CopyTo(args, 4);
+        return new EMEVD.Instruction(1003, 1, args);
+    }
+
+    private static void AssertIsWaitFixedTime(EMEVD.Instruction instr)
+    {
+        Assert.Equal(1001, instr.Bank);
+        Assert.Equal(0, instr.ID);
+    }
+
+    [Fact]
+    public void PatchEmevd_NopsSkipIfEventFlag300InPatchedEvent()
+    {
+        // Simulates compiled fogwarp with alt-warp branch:
+        // [0] SkipIfEventFlag(skip=1, ON, flag=300)
+        // [1] WarpPlayer(m11_00, primaryRegion)  -- primary branch
+        // [2] WarpPlayer(m11_05, altRegion)       -- alt branch (already m11_05)
+        var skip = MakeSkipIfEventFlag(1, 1, 300);
+        var warpPrimary = MakeWarpPlayer(11, 0, 0, 0, PRIMARY_REGION);
+        var warpAlt = MakeWarpPlayer(11, 5, 0, 0, ALT_REGION);
+        var emevd = new EMEVD();
+        var evt = MakeEvent(1040290310, skip, warpPrimary, warpAlt);
+        emevd.Events.Add(evt);
+
+        ErdtreeWarpPatcher.PatchEmevd(emevd, PRIMARY_REGION, ALT_REGION, AltMapBytes, AltMapPacked);
+
+        // SkipIfEventFlag should be NOP'd to WaitFixedTime(0)
+        AssertIsWaitFixedTime(evt.Instructions[0]);
+    }
+
+    [Fact]
+    public void PatchEmevd_DoesNotNopSkipIfEventFlagInUnpatchedEvent()
+    {
+        // Event with SkipIfEventFlag(300) but no matching WarpPlayer
+        var skip = MakeSkipIfEventFlag(1, 1, 300);
+        var otherWarp = MakeWarpPlayer(31, 6, 0, 0, 755890099); // non-matching region
+        var emevd = new EMEVD();
+        var evt = MakeEvent(1040290311, skip, otherWarp);
+        emevd.Events.Add(evt);
+
+        ErdtreeWarpPatcher.PatchEmevd(emevd, PRIMARY_REGION, ALT_REGION, AltMapBytes, AltMapPacked);
+
+        // SkipIfEventFlag should be untouched (event had no matching warps)
+        Assert.Equal(1003, evt.Instructions[0].Bank);
+        Assert.Equal(1, evt.Instructions[0].ID);
+    }
+
+    [Fact]
+    public void PatchEmevd_DoesNotNopSkipIfEventFlagForOtherFlags()
+    {
+        // SkipIfEventFlag(330) in an event with matching WarpPlayer
+        var skip = MakeSkipIfEventFlag(1, 1, 330); // flag 330, not 300
+        var warp = MakeWarpPlayer(11, 0, 0, 0, PRIMARY_REGION);
+        var emevd = new EMEVD();
+        var evt = MakeEvent(1040290310, skip, warp);
+        emevd.Events.Add(evt);
+
+        ErdtreeWarpPatcher.PatchEmevd(emevd, PRIMARY_REGION, ALT_REGION, AltMapBytes, AltMapPacked);
+
+        // SkipIfEventFlag(330) should be untouched
+        Assert.Equal(1003, evt.Instructions[0].Bank);
+        Assert.Equal(1, evt.Instructions[0].ID);
+        Assert.Equal(330, (int)BitConverter.ToUInt32(evt.Instructions[0].ArgData, 4));
+    }
+
+    [Fact]
+    public void NopSkipIfEventFlag_ReplacesFlag300On_WithWaitFixedTime()
+    {
+        var evt = new EMEVD.Event(100);
+        evt.Instructions.Add(MakeSkipIfEventFlag(2, 1, 300));  // [0] ON, target
+        evt.Instructions.Add(MakeSkipIfEventFlag(1, 0, 300));  // [1] OFF, untouched
+        evt.Instructions.Add(MakeSkipIfEventFlag(1, 1, 330));  // [2] different flag, untouched
+
+        int count = ErdtreeWarpPatcher.NopSkipIfEventFlag(evt, 300);
+
+        Assert.Equal(1, count);
+        AssertIsWaitFixedTime(evt.Instructions[0]);
+        Assert.Equal(1003, evt.Instructions[1].Bank); // OFF untouched
+        Assert.Equal(1003, evt.Instructions[2].Bank); // flag 330 untouched
+    }
+
+    [Fact]
+    public void NopSkipIfEventFlag_PreservesInstructionCount()
+    {
+        var evt = new EMEVD.Event(100);
+        evt.Instructions.Add(MakeSkipIfEventFlag(2, 1, 300));
+        evt.Instructions.Add(MakeWarpPlayer(11, 0, 0, 0, PRIMARY_REGION));
+
+        int originalCount = evt.Instructions.Count;
+        ErdtreeWarpPatcher.NopSkipIfEventFlag(evt, 300);
+
+        Assert.Equal(originalCount, evt.Instructions.Count);
+    }
+
     // --- MakeSetEventFlag tests ---
 
     [Fact]

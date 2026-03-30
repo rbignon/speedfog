@@ -47,13 +47,16 @@ Rather than managing the flags at runtime, SpeedFog rewrites the compiled warp i
 
 **Goal**: Make Erdtree warps always go to m11_05 (Ashen Leyndell).
 
-**Strategy**: Replace primary destination (m11_00) with alternate destination (m11_05).
+**Strategy**: Replace primary destination (m11_00) with alternate destination (m11_05), and eliminate the compiled alt-warp branch.
 
 1. For each EMEVD file (via consolidated scan in Program.cs), find WarpPlayer/CutsceneWarp targeting the primary region
 2. Replace map bytes and region with the alternate (m11_05) values
-3. Insert `SetEventFlag(300, ON)` before each patched warp -- the engine needs flag 300 ON to load m11_05 tile assets
+3. Insert `SetEventFlag(300, ON)` before each patched warp, the engine needs flag 300 ON to load m11_05 tile assets
+4. NOP `SkipIfEventFlag(flag=300, ON)` in patched events, since both branches now target m11_05 and the skip is vestigial
 
 The SetEventFlag insertion is critical: unlike flag 330, flag 300 controls which physical map tile the engine loads at Leyndell coordinates. Setting it only at warp time means Leyndell stays in its primary state during the run, and only switches to Ashen at the moment the player warps to the Erdtree.
+
+The SkipIfEventFlag NOP is equally critical: without it, flag 300 (set by Event 900 during the Maliketh WarpBonfire transition) causes the compiled fogwarp's skip to jump past zone tracking SetEventFlag instructions injected by ZoneTrackingInjector. Event 900's SetEventFlag(300, ON) is intentionally preserved by AlternateFlagPatcher because FogMod's "Repeat warp" grace menu checks `WarpBonfireFlag(300)` as a display condition.
 
 **Wired in Program.cs** at step 7f2. Entrance discovery:
 ```csharp
@@ -92,17 +95,18 @@ var sealingTreeEntrances = ann.Entrances.Concat(ann.Warps)
 
 ### AlternateFlagPatcher (defense-in-depth)
 
-In addition to rewriting warp destinations, SpeedFog also neutralizes the EMEVD events that set AlternateFlag values:
+In addition to rewriting warp destinations, SpeedFog also neutralizes EMEVD events and clears stale flags:
 
 **Flag 330 / Event 915 (Sealing Tree):**
-1. NOP `SetEventFlag(330, ON)` in Event 915 (common.emevd) -- replaced with `WaitFixedTime(0)`
-2. Insert `SetEventFlag(330, OFF)` in Event 0 -- clears the flag on game start for stale saves
+1. NOP `SetEventFlag(330, ON)` in Event 915 (common.emevd), replaced with `WaitFixedTime(0)`
+2. Insert `SetEventFlag(330, OFF)` in Event 0, clears the flag on game start for stale saves
 
-**Flag 300 / Event 900 (Erdtree burning):**
-1. NOP `SetEventFlag(300, ON)` in Event 900 (common.emevd) -- replaced with `WaitFixedTime(0)`
-2. Insert `SetEventFlag(300, OFF)` in Event 0 -- clears the flag on game start
+**Flag 300 (Erdtree burning):**
+1. Insert `SetEventFlag(300, OFF)` in Event 0, clears the flag on game start for stale saves
 
-Without this, Event 900 sets flag 300 when the DAG includes `farumazula_maliketh` connections (which use the Forge WarpBonfire transition). This causes the compiled fogwarp's `SkipIfEventFlag(flag=300)` to skip the zone tracking `SetEventFlag` injected by ZoneTrackingInjector.
+Event 900's `SetEventFlag(300, ON)` is intentionally **not** neutralized: it is needed by FogMod's "Repeat warp" grace menu, whose condition checks `WarpBonfireFlag(300)`. Without it, the "Repeat warp" option never appears after the Maliketh WarpBonfire transition.
+
+The zone tracking skip caused by flag 300 is instead handled by ErdtreeWarpPatcher, which NOPs the `SkipIfEventFlag(flag=300)` in compiled fogwarp events (see below).
 
 **Source**: `writer/FogModWrapper/AlternateFlagPatcher.cs`
 
@@ -113,9 +117,11 @@ Without this, Event 900 sets flag 300 when the DAG includes `farumazula_maliketh
 | Flag | 300 (Erdtree burning) | 330 (Sealing Tree burned) |
 | Direction | Primary → Alternate | Alternate → Primary |
 | Inserts SetEventFlag | Yes (300 ON, before warp) | No |
+| NOPs SkipIfEventFlag | Yes (300 ON, in patched events) | No |
 | Why SetEventFlag | Engine needs flag to load m11_05 tile | Flag only affects fogwarp branch, not tile loading |
+| Why NOP SkipIfEventFlag | Prevents flag 300 from skipping zone tracking | N/A (flag 330 neutralized in Event 915) |
 | Entrances | 1 (leyndell_erdtree BSide) | 2 (front + back of Romina arena) |
-| Companion patcher | AlternateFlagPatcher (neutralizes Event 900) | AlternateFlagPatcher (neutralizes Event 915) |
+| Companion patcher | AlternateFlagPatcher (clears flag 300 at startup) | AlternateFlagPatcher (neutralizes Event 915, clears flag 330 at startup) |
 
 ## Pipeline Order
 

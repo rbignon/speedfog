@@ -25,8 +25,11 @@ public static class ErdtreeWarpPatcher
     private const int ERDTREE_BURNING_FLAG = 300;
 
     /// <summary>
-    /// Patch all events in an EMEVD. Returns total count of patched instructions.
+    /// Patch all events in an EMEVD. Returns total count of patched warp instructions.
     /// For each patched warp, inserts SetEventFlag(300, ON) just before it.
+    /// Also NOPs any SkipIfEventFlag(300, ON) in patched events, since the alt-warp
+    /// branch is vestigial after both branches are rewritten to target m11_05.
+    /// This prevents flag 300 from skipping zone tracking injections.
     /// </summary>
     public static int PatchEmevd(
         EMEVD emevd, int primaryRegion, int altRegion, byte[] altMapBytes, int altMapPacked)
@@ -45,6 +48,15 @@ public static class ErdtreeWarpPatcher
                     insertions.Add(i);
             }
 
+            if (insertions.Count == 0)
+                continue;
+
+            // NOP SkipIfEventFlag(300, ON) in this event. Both branches now target
+            // m11_05, so the alt-warp skip is vestigial. Removing it prevents flag 300
+            // (set by Event 900 during Maliketh WarpBonfire) from skipping zone
+            // tracking SetEventFlag instructions injected by ZoneTrackingInjector.
+            NopSkipIfEventFlag(evt, ERDTREE_BURNING_FLAG);
+
             // Insert SetEventFlag(300, ON) before each patched warp (reverse to keep indices valid)
             for (int j = insertions.Count - 1; j >= 0; j--)
             {
@@ -60,6 +72,41 @@ public static class ErdtreeWarpPatcher
             total += insertions.Count;
         }
         return total;
+    }
+
+    /// <summary>
+    /// Replace SkipIfEventFlag(flagId, ON) instructions with WaitFixedTime(0).
+    /// SkipIfEventFlag (bank 1003, id 1): [Skip(byte@0), State(byte@1), FlagType(byte@2), pad(1), FlagID(uint32@4)]
+    /// </summary>
+    internal static int NopSkipIfEventFlag(EMEVD.Event evt, int flagId)
+    {
+        int count = 0;
+        for (int i = 0; i < evt.Instructions.Count; i++)
+        {
+            var instr = evt.Instructions[i];
+            if (instr.Bank == 1003 && instr.ID == 1 && instr.ArgData.Length >= 8)
+            {
+                uint flag = BitConverter.ToUInt32(instr.ArgData, 4);
+                byte state = instr.ArgData[1];
+                if (flag == (uint)flagId && state == 1) // ON
+                {
+                    evt.Instructions[i] = MakeWaitFixedTime(0f);
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    /// <summary>
+    /// Create a WaitFixedTime(seconds) instruction: bank 1001, id 0.
+    /// Used as a harmless no-op that preserves instruction count and parameter offsets.
+    /// </summary>
+    private static EMEVD.Instruction MakeWaitFixedTime(float seconds)
+    {
+        var args = new byte[4];
+        BitConverter.GetBytes(seconds).CopyTo(args, 0);
+        return new EMEVD.Instruction(1001, 0, args);
     }
 
     /// <summary>
