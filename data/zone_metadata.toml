@@ -192,6 +192,7 @@ weight = 2
 
 [zones.caelid_redmane_boss]
 allow_entry_as_exit = false
+conflicts_with = ["caelid_radahn"]
 
 [zones.ainsel_dragonkin]
 type = "major_boss"
@@ -265,6 +266,7 @@ allow_entry_as_exit = true
 
 [zones.caelid_radahn]
 weight = 2.5
+conflicts_with = ["caelid_redmane_boss"]
 
 [zones.farumazula_godskinduo]
 weight = 2
