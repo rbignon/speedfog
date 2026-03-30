@@ -1,13 +1,20 @@
-# SpeedFog default item placement preset for Elden Ring Item Randomizer.
+# SpeedFog item placement preset for Elden Ring Item Randomizer.
 #
-# Controls WHERE items end up in the randomized world:
-# - Notable somber weapons, talismans and crystal tears at boss/important locations (CoreMechanics)
-# - Golden Seeds and Sacred Tears prioritized at key locations (SacredFlaskUpgrades)
-# - ShadowRealmBlessings: empty (FogMod scaling makes them useless)
-# - Key items at racemode/boss locations (KeyItems)
+# Controls WHERE randomized items end up in the world.
 #
-# Adapted from FogRando config. Uses Item Randomizer's ItemPreset.ParsePreset().
-# Must include all 9 PlacementTypes + LocationGroups or Resolve() throws.
+# IMPORTANT: Only CoreMechanics allows customizing both items AND locations
+# (EditItems=true, EditLocs=true). Other placement types have either fixed
+# items or fixed locations enforced by the randomizer's PlacementMeta.
+# Custom items listed under types with EditItems=false are silently replaced
+# by defaults during Resolve(). See ItemPreset.cs:614-617.
+#
+# Placement priority:
+#   1. Important mode (KeyItems, SacredFlaskUpgrades, ShadowRealmBlessings)
+#      - first-pass placement, inherits LocationGroups for location tags
+#   2. Custom mode (CoreMechanics) - placed after Important items
+#   3. Anywhere mode (QuestItems, UpgradeBellBearings) - unrestricted
+#
+# Uses Item Randomizer's ItemPreset.ParsePreset().
 
 NorandomItems:
 
@@ -29,15 +36,14 @@ NorandomItems:
   ID: goods:2008005
 - Name: O Mother
   ID: goods:2009004
-- Name: Hole-Laden Necklace
-  ID: goods:2008008
 - Name: Well Depths Key
   ID: goods:2008004
-- Name: Messmer's Kindling
-  ID: goods:2008021
 
 Placements:
 
+# Key items at major boss/racemode locations.
+# Items: fixed by randomizer (EditItems=false). Locations: editable.
+# FixedLocs adds "boss" and "racemode" automatically.
 - Type: KeyItems
   Mode: Important
   Items:
@@ -45,357 +51,37 @@ Placements:
   Requires:
   - Tag: racemode
   - Tag: boss
-  - Tag: altboss
-  - Tag: seedtree
-  - Tag: church
-  - Tag: cross
   Excludes:
   - Tag: missable
 
+# Quest items placed freely.
+# Items: fixed by randomizer (EditItems=false). Locations: editable.
 - Type: QuestItems
   Mode: Anywhere
   Items:
   - Group: questitems
-  - Name: Shabriri Grape
-    ID: goods:1240
-  - Name: Seedbed Curse
-    ID: goods:8193
-  - Name: Deathroot
-    ID: goods:2090
   Excludes:
   - Tag: missable
 
+# Weapons, talismans, crystal tears, and ashes of war at key locations.
+# This is the ONLY placement type where both items and locations are customizable.
+# Items that overflow tagged locations fall back to the general random pool.
 - Type: CoreMechanics
   Mode: Custom
   Items:
+  # Core progression items
   - Name: Talisman Pouch
     ID: goods:10040
   - Name: Memory Stone
     ID: goods:10030
-  - Name: Iron Whetblade
-    ID: goods:8970
-  - Name: Red-Hot Whetblade
-    ID: goods:8971
-  - Name: Sanctified Whetblade
-    ID: goods:8972
-  - Name: Glintstone Whetblade
-    ID: goods:8973
-  - Name: Black Whetblade
-    ID: goods:8974
+  # All talismans
+  - Group: accessories
+  # All crystal tears
   - Group: crystaltears
-  - Name: Mohg's Shackle
-    ID: goods:2150
-  - Name: Margit's Shackle
-    ID: goods:2140
-  - Name: Cerulean Amber Medallion
-    ID: accessory:1010
-  - Name: Cerulean Amber Medallion +1
-    ID: accessory:1011
-  - Name: Cerulean Amber Medallion +2
-    ID: accessory:1012
-  - Name: Cerulean Amber Medallion +3
-    ID: accessory:7010
-  - Name: Crimson Amber Medallion
-    ID: accessory:1000
-  - Name: Crimson Amber Medallion +1
-    ID: accessory:1001
-  - Name: Crimson Amber Medallion +2
-    ID: accessory:1002
-  - Name: Crimson Amber Medallion +3
-    ID: accessory:7000
-  - Name: Cerulean Seed Talisman
-    ID: accessory:5010
-  - Name: Cerulean Seed Talisman +1
-    ID: accessory:7150
-  - Name: Crimson Seed Talisman
-    ID: accessory:5000
-  - Name: Crimson Seed Talisman +1
-    ID: accessory:7140
-  - Name: Viridian Amber Medallion
-    ID: accessory:1020
-  - Name: Viridian Amber Medallion +1
-    ID: accessory:1021
-  - Name: Viridian Amber Medallion +2
-    ID: accessory:1022
-  - Name: Viridian Amber Medallion +3
-    ID: accessory:7020
-  - Name: Erdtree's Favor
-    ID: accessory:1040
-  - Name: Erdtree's Favor +1
-    ID: accessory:1041
-  - Name: Erdtree's Favor +2
-    ID: accessory:1042
-  - Name: Blue Dancer Charm
-    ID: accessory:2110
-  - Name: Boltdrake Talisman
-    ID: accessory:4030
-  - Name: Boltdrake Talisman +1
-    ID: accessory:4031
-  - Name: Boltdrake Talisman +2
-    ID: accessory:4032
-  - Name: Boltdrake Talisman +3
-    ID: accessory:7110
-  - Name: Flamedrake Talisman
-    ID: accessory:4020
-  - Name: Flamedrake Talisman +1
-    ID: accessory:4021
-  - Name: Flamedrake Talisman +2
-    ID: accessory:4022
-  - Name: Flamedrake Talisman +3
-    ID: accessory:7100
-  - Name: Haligdrake Talisman
-    ID: accessory:4040
-  - Name: Haligdrake Talisman +1
-    ID: accessory:4041
-  - Name: Haligdrake Talisman +2
-    ID: accessory:4042
-  - Name: Golden Braid
-    ID: accessory:7120
-  - Name: Spelldrake Talisman
-    ID: accessory:4010
-  - Name: Spelldrake Talisman +1
-    ID: accessory:4011
-  - Name: Spelldrake Talisman +2
-    ID: accessory:4012
-  - Name: Spelldrake Talisman +3
-    ID: accessory:7090
-  - Name: Pearldrake Talisman
-    ID: accessory:4050
-  - Name: Pearldrake Talisman +1
-    ID: accessory:4051
-  - Name: Pearldrake Talisman +2
-    ID: accessory:4052
-  - Name: Pearldrake Talisman +3
-    ID: accessory:7130
-  - Name: Dragoncrest Shield Talisman
-    ID: accessory:4000
-  - Name: Dragoncrest Shield Talisman +1
-    ID: accessory:4001
-  - Name: Dragoncrest Shield Talisman +2
-    ID: accessory:4002
-  - Name: Dragoncrest Greatshield Talisman
-    ID: accessory:4003
-  - Name: Clarifying Horn Charm
-    ID: accessory:1180
-  - Name: Clarifying Horn Charm +1
-    ID: accessory:1181
-  - Name: Clarifying Horn Charm +2
-    ID: accessory:7060
-  - Name: Immunizing Horn Charm
-    ID: accessory:1170
-  - Name: Immunizing Horn Charm +1
-    ID: accessory:1171
-  - Name: Immunizing Horn Charm +2
-    ID: accessory:7050
-  - Name: Stalwart Horn Charm
-    ID: accessory:1160
-  - Name: Stalwart Horn Charm +1
-    ID: accessory:1161
-  - Name: Stalwart Horn Charm +2
-    ID: accessory:7040
-  - Name: Mottled Necklace
-    ID: accessory:1200
-  - Name: Mottled Necklace +1
-    ID: accessory:1201
-  - Name: Mottled Necklace +2
-    ID: accessory:7080
-  - Name: Arsenal Charm
-    ID: accessory:1030
-  - Name: Arsenal Charm +1
-    ID: accessory:1031
-  - Name: Great-Jar's Arsenal
-    ID: accessory:1032
-  - Name: Verdigris Discus
-    ID: accessory:8210
-  - Name: Marika's Scarseal
-    ID: accessory:1220
-  - Name: Radagon's Scarseal
-    ID: accessory:1050
-  - Name: Marika's Soreseal
-    ID: accessory:1221
-  - Name: Radagon's Soreseal
-    ID: accessory:1051
-  - Name: Stargazer Heirloom
-    ID: accessory:1080
-  - Name: Two Fingers Heirloom
-    ID: accessory:1090
-  - Name: Starscourge Heirloom
-    ID: accessory:1060
-  - Name: Prosthesis-Wearer Heirloom
-    ID: accessory:1070
-  - Name: Outer God Heirloom
-    ID: accessory:8020
-  - Name: Crusade Insignia
-    ID: accessory:8050
-  - Name: Green Turtle Talisman
-    ID: accessory:1150
-  - Name: Two-Headed Turtle Talisman
-    ID: accessory:7030
-  - Name: Blessed Blue Dew Talisman
-    ID: accessory:8000
-  - Name: Blessed Dew Talisman
-    ID: accessory:5020
-  - Name: Retaliatory Crossed-Tree
-    ID: accessory:8130
-  - Name: Lacerating Crossed-Tree
-    ID: accessory:8140
-  - Name: Aged One's Exultation
-    ID: accessory:8060
-  - Name: Talisman of Lord's Bestowal
-    ID: accessory:8200
-  - Name: Ailment Talisman
-    ID: accessory:8120
-  - Name: Dried Bouquet
-    ID: accessory:8100
-  - Name: Rellana's Cameo
-    ID: accessory:8220
-  - Name: Pearl Shield Talisman
-    ID: accessory:8090
-  - Name: Blade of Mercy
-    ID: accessory:8230
-  - Name: Smithing Talisman
-    ID: accessory:8110
-  - Name: St. Trina's Smile
-    ID: accessory:8160
-  - Name: Enraged Divine Beast
-    ID: accessory:8180
-  - Name: Prince of Death's Pustule
-    ID: accessory:1190
-  - Name: Prince of Death's Cyst
-    ID: accessory:1191
-  - Name: Two-Handed Sword Talisman
-    ID: accessory:8040
-  - Name: Dagger Talisman
-    ID: accessory:2090
-  - Name: Curved Sword Talisman
-    ID: accessory:2200
-  - Name: Twinblade Talisman
-    ID: accessory:2120
-  - Name: Axe Talisman
-    ID: accessory:2130
-  - Name: Hammer Talisman
-    ID: accessory:2070
-  - Name: Spear Talisman
-    ID: accessory:2060
-  - Name: Lance Talisman
-    ID: accessory:2140
-  - Name: Claw Talisman
-    ID: accessory:2180
-  - Name: Greatshield Talisman
-    ID: accessory:4100
-  - Name: Sharpshot Talisman
-    ID: accessory:8150
-  - Name: Arrow's Sting Talisman
-    ID: accessory:2150
-  - Name: Arrow's Reach Talisman
-    ID: accessory:2100
-  - Name: Arrow's Soaring Sting Talisman
-    ID: accessory:8070
-  - Name: Shattered Stone Talisman
-    ID: accessory:8030
-  - Name: Talisman of the Dread
-    ID: accessory:8170
-  - Name: Graven-School Talisman
-    ID: accessory:3000
-  - Name: Graven-Mass Talisman
-    ID: accessory:3001
-  - Name: Faithful's Canvas Talisman
-    ID: accessory:3040
-  - Name: Flock's Canvas Talisman
-    ID: accessory:3050
-  - Name: Primal Glintstone Blade
-    ID: accessory:3080
-  - Name: Moon of Nokstella
-    ID: accessory:1140
-  - Name: Old Lord's Talisman
-    ID: accessory:3060
-  - Name: Radagon Icon
-    ID: accessory:3070
-  - Name: Godfrey Icon
-    ID: accessory:3090
-  - Name: Beloved Stardust
-    ID: accessory:8190
-  - Name: Perfumer's Talisman
-    ID: accessory:2220
-  - Name: Carian Filigreed Crest
-    ID: accessory:6020
-  - Name: Warrior Jar Shard
-    ID: accessory:1230
-  - Name: Shard of Alexander
-    ID: accessory:1231
-  - Name: Crucible Scale Talisman
-    ID: accessory:4060
-  - Name: Crucible Knot Talisman
-    ID: accessory:4110
-  - Name: Talisman of All Crucibles
-    ID: accessory:8240
-  - Name: Fine Crucible Feather Talisman
-    ID: accessory:8010
-  - Name: Crucible Feather Talisman
-    ID: accessory:4070
-  - Name: Bull-Goat's Talisman
-    ID: accessory:1210
-  - Name: Blue-Feathered Branchsword
-    ID: accessory:4080
-  - Name: Red-Feathered Branchsword
-    ID: accessory:2040
-  - Name: Ritual Sword Talisman
-    ID: accessory:2050
-  - Name: Ritual Shield Talisman
-    ID: accessory:4090
-  - Name: Assassin's Crimson Dagger
-    ID: accessory:5050
-  - Name: Assassin's Cerulean Dagger
-    ID: accessory:5060
-  - Name: Fire Scorpion Charm
-    ID: accessory:2020
-  - Name: Lightning Scorpion Charm
-    ID: accessory:2010
-  - Name: Sacred Scorpion Charm
-    ID: accessory:2030
-  - Name: Magic Scorpion Charm
-    ID: accessory:2000
-  - Name: Winged Sword Insignia
-    ID: accessory:2080
-  - Name: Rotten Winged Sword Insignia
-    ID: accessory:2081
-  - Name: Millicent's Prosthesis
-    ID: accessory:1250
-  - Name: Godskin Swaddling Cloth
-    ID: accessory:5040
-  - Name: Kindred of Rot's Exultation
-    ID: accessory:2170
-  - Name: Lord of Blood's Exultation
-    ID: accessory:2160
-  - Name: Taker's Cameo
-    ID: accessory:5030
-  - Name: Ancestral Spirit's Horn
-    ID: accessory:6110
-  - Name: Gold Scarab
-    ID: accessory:1110
-  - Name: Silver Scarab
-    ID: accessory:1100
-  - Name: Crepus's Vial
-    ID: accessory:6000
-  - Name: Concealing Veil
-    ID: accessory:6010
-  - Name: Furled Finger's Trick-Mirror
-    ID: accessory:6080
-  - Name: Host's Trick-Mirror
-    ID: accessory:6090
-  - Name: Companion Jar
-    ID: accessory:2210
-  - Name: Daedicar's Woe
-    ID: accessory:6060
-  - Name: Shabriri's Woe
-    ID: accessory:6050
-  - Name: Roar Medallion
-    ID: accessory:2190
-  - Name: Longtail Cat Talisman
-    ID: accessory:6040
-  # Notable somber weapons — curated subset of boss/remembrance/popular uniques.
-  # Full "Group: weapons" is too large (~500+) and overflows boss locations,
-  # triggering a bug in RandomizerCommon's fodder code (MakeSpecialScope).
+  # All ashes of war (requires copydrops option to avoid fodder scope bug)
+  - Group: gems
+  # Curated somber/unique weapons (notable uniques only; Group: weapons
+  # includes ~500+ items but most are standard weapons not worth prioritizing)
   # Daggers
   - Name: Black Knife
     ID: weapon:1010000
@@ -417,7 +103,13 @@ Placements:
     ID: weapon:3140000
   - Name: Marais Executioner's Sword
     ID: weapon:3150000
+  - Name: Sword of Milos
+    ID: weapon:3160000
+  - Name: Death's Poker
+    ID: weapon:3200000
   # Colossal Swords
+  - Name: Maliketh's Black Blade
+    ID: weapon:4020000
   - Name: Starscourge Greatsword
     ID: weapon:4050000
   - Name: Royal Greatsword
@@ -432,13 +124,25 @@ Placements:
     ID: weapon:4530000
   - Name: Greatsword of Radahn (Light)
     ID: weapon:4550000
+  # Heavy Thrusting Swords
+  - Name: Bloody Helice
+    ID: weapon:6000000
+  - Name: Dragon King's Cragblade
+    ID: weapon:6040000
   # Curved Swords
+  - Name: Magma Blade
+    ID: weapon:7050000
   - Name: Wing of Astel
     ID: weapon:7070000
+  - Name: Dancing Blade of Ranah
+    ID: weapon:7520000
+  # Curved Greatswords
   - Name: Bloodhound's Fang
     ID: weapon:8030000
   - Name: Morgott's Cursed Sword
     ID: weapon:8100000
+  - Name: Putrescence Cleaver
+    ID: weapon:8500000
   # Katanas
   - Name: Hand of Malenia
     ID: weapon:9020000
@@ -448,6 +152,12 @@ Placements:
     ID: weapon:9040000
   - Name: Moonveil
     ID: weapon:9060000
+  - Name: Dragonscale Blade
+    ID: weapon:9070000
+  - Name: Dragon-Hunter's Great Katana
+    ID: weapon:66510000
+  - Name: Rakshasa's Great Katana
+    ID: weapon:66520000
   # Twinblades
   - Name: Eleonora's Poleblade
     ID: weapon:10050000
@@ -458,129 +168,116 @@ Placements:
     ID: weapon:11150000
   - Name: Ringed Finger
     ID: weapon:11130000
+  # Great Hammers
+  - Name: Beastclaw Greathammer
+    ID: weapon:12150000
+  - Name: Envoy's Long Horn
+    ID: weapon:12160000
+  - Name: Devourer's Scepter
+    ID: weapon:12200000
+  # Flails
+  - Name: Bastard's Stars
+    ID: weapon:13030000
+  # Axes
+  - Name: Icerind Hatchet
+    ID: weapon:14080000
   # Greataxes
   - Name: Axe of Godrick
     ID: weapon:15040000
   - Name: Winged Greathorn
     ID: weapon:15110000
   # Spears
+  - Name: Cleanrot Spear
+    ID: weapon:16040000
   - Name: Bolt of Gransax
     ID: weapon:16090000
   # Great Spears
   - Name: Mohgwyn's Sacred Spear
     ID: weapon:17010000
+  - Name: Serpent-Hunter
+    ID: weapon:17030000
   - Name: Vyke's War Spear
     ID: weapon:17050000
   # Halberds
   - Name: Golden Halberd
     ID: weapon:18080000
+  - Name: Dragon Halberd
+    ID: weapon:18140000
+  # Reapers
+  - Name: Halo Scythe
+    ID: weapon:19020000
+  - Name: Winged Scythe
+    ID: weapon:19060000
+  # Whips
+  - Name: Giant's Red Braid
+    ID: weapon:20060000
   # Fists/Claws
   - Name: Grafted Dragon
     ID: weapon:21060000
+  - Name: Veteran's Prosthesis
+    ID: weapon:21120000
+  - Name: Red Bear's Claw
+    ID: weapon:68510000
   # Colossal Weapons
+  - Name: Envoy's Greathorn
+    ID: weapon:23030000
   - Name: Axe of Godfrey
     ID: weapon:23050000
+  - Name: Dragon Greatclaw
+    ID: weapon:23060000
   - Name: Fallingstar Beast Jaw
     ID: weapon:23080000
   - Name: Ghiza's Wheel
     ID: weapon:23100000
-  # DLC
   - Name: Gazing Finger
     ID: weapon:23520000
-  - Name: Dragon-Hunter's Great Katana
-    ID: weapon:66510000
+  # DLC Swords/Blades
+  - Name: Curseblade's Cirque
+    ID: weapon:64520000
   - Name: Rellana's Twin Blades
     ID: weapon:67520000
   - Name: Leda's Sword
     ID: weapon:67510000
-  - Name: Red Bear's Claw
-    ID: weapon:68510000
-  - Name: Rakshasa's Great Katana
-    ID: weapon:66520000
-  - Name: Curseblade's Cirque
-    ID: weapon:64520000
-  - Name: Dancing Blade of Ranah
-    ID: weapon:7520000
-  - Name: Putrescence Cleaver
-    ID: weapon:8500000
-  # Remembrance weapons (missed in first pass)
-  - Name: Maliketh's Black Blade
-    ID: weapon:4020000
-  - Name: Dragon King's Cragblade
-    ID: weapon:6040000
-  - Name: Beastclaw Greathammer
-    ID: weapon:12150000
-  - Name: Bastard's Stars
-    ID: weapon:13030000
-  - Name: Giant's Red Braid
-    ID: weapon:20060000
-  - Name: Envoy's Greathorn
-    ID: weapon:23030000
-  # Popular/meta
-  - Name: Bloody Helice
-    ID: weapon:6000000
-  - Name: Magma Blade
-    ID: weapon:7050000
-  - Name: Sword of Milos
-    ID: weapon:3160000
-  - Name: Death's Poker
-    ID: weapon:3200000
-  - Name: Winged Scythe
-    ID: weapon:19060000
-  - Name: Dragonscale Blade
-    ID: weapon:9070000
-  - Name: Envoy's Long Horn
-    ID: weapon:12160000
-  - Name: Cleanrot Spear
-    ID: weapon:16040000
-  - Name: Halo Scythe
-    ID: weapon:19020000
-  - Name: Icerind Hatchet
-    ID: weapon:14080000
-  - Name: Devourer's Scepter
-    ID: weapon:12200000
-  - Name: Dragon Halberd
-    ID: weapon:18140000
-  - Name: Veteran's Prosthesis
-    ID: weapon:21120000
-  - Name: Dragon Greatclaw
-    ID: weapon:23060000
-  - Name: Serpent-Hunter
-    ID: weapon:17030000
   Requires:
-  - Tag: racemode
   - Tag: boss
   - Tag: altboss
-  - Tag: catacombboss
-  - Tag: caveboss
-  - Tag: night
-  - Tag: evergaol
-  - Tag: gaolboss
-  - Tag: graveboss
-  - Tag: minidungeonboss
-  - Tag: namelessmausoleum
+  - Tag: racemode
   - Tag: criticalpath
+  - Tag: caveboss
+  - Tag: catacombboss
   - Tag: tunnelboss
-  Excludes:
-  - Tag: missable
-
-- Type: SacredFlaskUpgrades
-  Mode: Important
-  Items:
-  - Name: Golden Seed
-    ID: goods:10010
-  - Name: Sacred Tear
-    ID: goods:10020
-  Requires:
-  - Tag: racemode
-  - Tag: boss
-  - Tag: altboss
+  - Tag: graveboss
+  - Tag: gaolboss
+  - Tag: minidungeonboss
+  - Tag: evergaol
+  - Tag: night
+  - Tag: dragonboss
+  - Tag: overworldboss
+  - Tag: namelessmausoleum
   - Tag: seedtree
   - Tag: church
   - Tag: cross
   Excludes:
   - Tag: missable
 
+# Golden Seeds and Sacred Tears at flask upgrade locations.
+# Items: fixed by randomizer (EditItems=false). Locations: editable.
+- Type: SacredFlaskUpgrades
+  Mode: Custom
+  Items:
+  - Name: Golden Seed
+    ID: goods:10010
+  - Name: Sacred Tear
+    ID: goods:10020
+  Requires:
+  - Tag: seedtree
+  - Tag: church
+  - Tag: cross
+  Excludes:
+  - Tag: missable
+
+# Upgrade Bell Bearings placed freely.
+# Items: fixed by randomizer (EditItems=false). Locations: editable.
 - Type: UpgradeBellBearings
   Mode: Anywhere
   Items:
@@ -588,62 +285,19 @@ Placements:
   Excludes:
   - Tag: missable
 
+# Shadow Realm Blessings (Scadutree Fragments, Revered Spirit Ashes).
+# Items: fixed by randomizer (EditItems=false). Locations: editable.
 - Type: ShadowRealmBlessings
   Mode: Important
-  Items:
-  # Top-tier talismans — universally useful in short runs
-  - Name: Erdtree's Favor +2
-    ID: accessory:1042
-  - Name: Radagon's Soreseal
-    ID: accessory:1051
-  - Name: Marika's Soreseal
-    ID: accessory:1221
-  - Name: Great-Jar's Arsenal
-    ID: accessory:1032
-  - Name: Dragoncrest Greatshield Talisman
-    ID: accessory:4003
-  - Name: Shard of Alexander
-    ID: accessory:1231
-  - Name: Godfrey Icon
-    ID: accessory:3090
-  - Name: Graven-Mass Talisman
-    ID: accessory:3001
-  - Name: Flock's Canvas Talisman
-    ID: accessory:3050
-  - Name: Rotten Winged Sword Insignia
-    ID: accessory:2081
-  - Name: Millicent's Prosthesis
-    ID: accessory:1250
-  - Name: Green Turtle Talisman
-    ID: accessory:1150
-  - Name: Carian Filigreed Crest
-    ID: accessory:6020
-  - Name: Crimson Amber Medallion +3
-    ID: accessory:7000
-  - Name: Cerulean Amber Medallion +3
-    ID: accessory:7010
-  - Name: Viridian Amber Medallion +3
-    ID: accessory:7020
-  # Scorpion charms — build-defining
-  - Name: Fire Scorpion Charm
-    ID: accessory:2020
-  - Name: Lightning Scorpion Charm
-    ID: accessory:2010
-  - Name: Sacred Scorpion Charm
-    ID: accessory:2030
-  - Name: Magic Scorpion Charm
-    ID: accessory:2000
-  # Crystal tears
-  - Group: crystaltears
+  Items: []
   Requires:
-  - Tag: racemode
+  - Tag: cross
   - Tag: boss
   - Tag: altboss
-  - Tag: seedtree
-  - Tag: church
-  - Tag: cross
   Excludes:
   - Tag: missable
+
+# Unused placement types (required by Resolve(), kept empty).
 
 - Type: BossTools
   Mode: Custom
@@ -651,32 +305,10 @@ Placements:
   Requires: []
   Excludes:
   - Tag: missable
-  - Tag: boss
-  - Tag: altboss
 
 - Type: BaseOnlyItems
   Mode: Custom
-  Items:
-  - Name: Black Whetblade
-    ID: goods:8974
-  - Name: Glintstone Whetblade
-    ID: goods:8973
-  - Name: Iron Whetblade
-    ID: goods:8970
-  - Name: Red-Hot Whetblade
-    ID: goods:8971
-  - Name: Sanctified Whetblade
-    ID: goods:8972
-  - Name: Whetstone Knife
-    ID: goods:8590
-  - Name: Golden Seed
-    ID: goods:10010
-  - Name: Sacred Tear
-    ID: goods:10020
-  - Name: Margit's Shackle
-    ID: goods:2140
-  - Name: Mohg's Shackle
-    ID: goods:2150
+  Items: []
   Requires: []
   Excludes:
   - Tag: dlc
@@ -688,15 +320,18 @@ Placements:
   Excludes:
   - Tag: nodlc
 
+# LocationGroups: defines the location pool for Important mode placements.
+# Important items (key items, seeds/tears, DLC blessings) get first-pass
+# priority at these locations before CoreMechanics fills the rest.
 LocationGroups:
 
 - Requires:
-  - Tag: racemode
   - Tag: boss
+  - Tag: altboss
+  - Tag: racemode
   - Tag: seedtree
   - Tag: church
   - Tag: cross
-  - Tag: altboss
   Excludes:
   - Tag: missable
 

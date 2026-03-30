@@ -30,6 +30,7 @@ def generate_item_config(config: Config, seed: int) -> dict[str, Any]:
             "fog": True,
             "crawl": True,
             "mats": True,
+            "copydrops": True,
             "dlc": config.item_randomizer.dlc,
             "weaponreqs": config.item_randomizer.remove_requirements,
             "sombermode": config.item_randomizer.reduce_upgrade_cost,
