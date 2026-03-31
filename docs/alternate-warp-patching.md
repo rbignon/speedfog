@@ -102,11 +102,12 @@ In addition to rewriting warp destinations, SpeedFog also neutralizes EMEVD even
 2. Insert `SetEventFlag(330, OFF)` in Event 0, clears the flag on game start for stale saves
 
 **Flag 300 (Erdtree burning):**
-1. Insert `SetEventFlag(300, OFF)` in Event 0, clears the flag on game start for stale saves
 
-Event 900's `SetEventFlag(300, ON)` is intentionally **not** neutralized: it is needed by FogMod's "Repeat warp" grace menu, whose condition checks `WarpBonfireFlag(300)`. Without it, the "Repeat warp" option never appears after the Maliketh WarpBonfire transition.
+Flag 300 is intentionally **not** neutralized in Event 900 and **not** cleared in Event 0:
+- Event 900's `SetEventFlag(300, ON)` is needed by FogMod's "Repeat warp" grace menu, whose condition checks `WarpBonfireFlag(300)`.
+- Clearing flag 300 in Event 0 breaks this because Event 0 re-executes after WarpBonfire warps, resetting flag 300 before the player reaches a grace.
 
-The zone tracking skip caused by flag 300 is instead handled by ErdtreeWarpPatcher, which NOPs the `SkipIfEventFlag(flag=300)` in compiled fogwarp events (see below).
+The zone tracking skip caused by flag 300 is handled by ErdtreeWarpPatcher, which NOPs the `SkipIfEventFlag(flag=300)` in compiled fogwarp events (see below).
 
 **Source**: `writer/FogModWrapper/AlternateFlagPatcher.cs`
 

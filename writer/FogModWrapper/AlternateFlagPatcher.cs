@@ -6,11 +6,13 @@ namespace FogModWrapper;
 /// Neutralizes vanilla EMEVD events that set AlternateFlag values and clears
 /// stale flags at game start.
 ///
-/// Flag 300 (Erdtree burning): Cleared in Event 0 for stale saves (a prior playthrough
-/// may have set it). ErdtreeWarpPatcher sets it at the correct moment before each warp,
-/// and also NOPs the SkipIfEventFlag(300) in fogwarp events to prevent zone tracking skips.
-/// Event 900's SetEventFlag(300, ON) is intentionally preserved: it is needed by FogMod's
-/// "Repeat warp" grace menu, whose condition checks WarpBonfireFlag(300).
+/// Flag 300 (Erdtree burning): NOT cleared in Event 0 and NOT neutralized in Event 900.
+/// Event 900's SetEventFlag(300, ON) is needed by FogMod's "Repeat warp" grace menu,
+/// whose condition checks WarpBonfireFlag(300). Clearing flag 300 in Event 0 breaks
+/// this because Event 0 re-executes after the WarpBonfire warp, resetting flag 300
+/// before the player reaches a grace. ErdtreeWarpPatcher handles flag 300 at the
+/// correct moment (just before each Erdtree warp) and NOPs SkipIfEventFlag(300) in
+/// fogwarp events to prevent zone tracking skips.
 ///
 /// Flag 330 (Sealing Tree burned): Set by Event 915 after Dancing Lion defeat.
 /// If ON, fogwarps targeting Romina's area use the post-burning variant where Romina
@@ -30,15 +32,8 @@ public static class AlternateFlagPatcher
     private const int EVENT_915_ID = 915;
 
     /// <summary>
-    /// Flag 300 = Erdtree burning. Controls m11_00 vs m11_05 map tile loading.
-    /// Cleared at startup for stale saves. Event 900's SetEventFlag(300, ON) is
-    /// intentionally preserved for FogMod's "Repeat warp" grace menu condition.
-    /// </summary>
-    private const int ERDTREE_BURNING_FLAG = 300;
-
-    /// <summary>
     /// Patch the provided common EMEVD to neutralize Event 915's SetEventFlag(330, ON)
-    /// and clear both flags 300 and 330 in Event 0 for stale saves.
+    /// and clear flag 330 in Event 0 for stale saves.
     ///
     /// Event 900's SetEventFlag(300, ON) is NOT neutralized: it is needed by FogMod's
     /// "Repeat warp" grace menu, whose condition checks WarpBonfireFlag(300).
@@ -49,7 +44,7 @@ public static class AlternateFlagPatcher
     public static void Patch(EMEVD commonEmevd)
     {
         int nop330 = 0;
-        bool cleared330 = false, cleared300 = false;
+        bool cleared330 = false;
 
         // 1. NOP SetEventFlag(330, ON) in Event 915
         var evt915 = commonEmevd.Events.FirstOrDefault(e => e.ID == EVENT_915_ID);
@@ -58,7 +53,12 @@ public static class AlternateFlagPatcher
             nop330 = NopSetEventFlag(evt915, SEALING_TREE_FLAG);
         }
 
-        // 2. Clear both flags at game start for stale saves
+        // 2. Clear flag 330 at game start for stale saves.
+        // Flag 300 is NOT cleared here: clearing it in Event 0 breaks the
+        // "Repeat warp" grace menu for WarpBonfire transitions (Maliketh),
+        // because Event 0 re-executes after the WarpBonfire warp and resets
+        // flag 300 before the player reaches a grace. ErdtreeWarpPatcher
+        // handles flag 300 at the correct moment (just before each warp).
         var evt0 = commonEmevd.Events.FirstOrDefault(e => e.ID == 0);
         if (evt0 != null)
         {
@@ -67,10 +67,6 @@ public static class AlternateFlagPatcher
                 InsertClearFlag(evt0, SEALING_TREE_FLAG);
                 cleared330 = true;
             }
-            // Always clear flag 300 for stale saves (controls map tile loading).
-            // ErdtreeWarpPatcher sets it at the correct moment before each warp.
-            InsertClearFlag(evt0, ERDTREE_BURNING_FLAG);
-            cleared300 = true;
         }
 
         // Log results
@@ -79,11 +75,7 @@ public static class AlternateFlagPatcher
             Console.WriteLine($"AlternateFlag fix: NOP'd {nop330} SetEventFlag(330) in Event 915"
                 + (cleared330 ? ", cleared flag 330 in Event 0" : ""));
         }
-        if (cleared300)
-        {
-            Console.WriteLine("AlternateFlag fix: cleared flag 300 in Event 0 (stale save protection)");
-        }
-        if (nop330 == 0 && !cleared330 && !cleared300)
+        if (nop330 == 0 && !cleared330)
         {
             Console.WriteLine("AlternateFlag fix: Event 915 not found in common.emevd");
         }
@@ -134,7 +126,7 @@ public static class AlternateFlagPatcher
     /// Create a WaitFixedTime(seconds) instruction: bank 1001, id 0.
     /// Args: [seconds(4 float)]
     /// </summary>
-    private static EMEVD.Instruction MakeWaitFixedTime(float seconds)
+    internal static EMEVD.Instruction MakeWaitFixedTime(float seconds)
     {
         var args = new byte[4];
         BitConverter.GetBytes(seconds).CopyTo(args, 0);

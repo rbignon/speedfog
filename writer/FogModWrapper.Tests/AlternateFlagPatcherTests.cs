@@ -171,7 +171,7 @@ public class AlternateFlagPatcherTests
     }
 
     [Fact]
-    public void Patch_ClearsFlag300InEvent0_ForStaleSaves()
+    public void Patch_DoesNotClearFlag300InEvent0()
     {
         var emevd = new EMEVD();
 
@@ -181,16 +181,14 @@ public class AlternateFlagPatcherTests
 
         AlternateFlagPatcher.Patch(emevd);
 
-        // Event 0 should have a SetEventFlag(300, OFF) inserted
-        var clearInstr = evt0.Instructions[0];
-        Assert.Equal(2003, clearInstr.Bank);
-        Assert.Equal(66, clearInstr.ID);
-        Assert.Equal(300, BitConverter.ToInt32(clearInstr.ArgData, 4));
-        Assert.Equal(0, clearInstr.ArgData[8]); // OFF
+        // Event 0 should NOT have a SetEventFlag(300, OFF) inserted.
+        // Clearing flag 300 in Event 0 breaks the "Repeat warp" grace menu
+        // because Event 0 re-executes after WarpBonfire warps.
+        Assert.Single(evt0.Instructions); // only the original filler
     }
 
     [Fact]
-    public void Patch_HandlesBothFlags300And330()
+    public void Patch_HandlesBothFlags()
     {
         var emevd = new EMEVD();
 
@@ -215,14 +213,10 @@ public class AlternateFlagPatcherTests
         // Event 915 SetEventFlag(330, ON) NOP'd
         Assert.Equal(1001, evt915.Instructions[0].Bank);
 
-        // Event 0 has two clear flags inserted
-        Assert.Equal(3, evt0.Instructions.Count);
-
-        var flags = new[] {
-            BitConverter.ToInt32(evt0.Instructions[0].ArgData, 4),
-            BitConverter.ToInt32(evt0.Instructions[1].ArgData, 4)
-        };
-        Assert.Contains(300, flags);
-        Assert.Contains(330, flags);
+        // Event 0 has only flag 330 clear (NOT flag 300)
+        Assert.Equal(2, evt0.Instructions.Count);
+        var clearInstr = evt0.Instructions[0];
+        Assert.Equal(330, BitConverter.ToInt32(clearInstr.ArgData, 4));
+        Assert.Equal(0, clearInstr.ArgData[8]); // OFF
     }
 }
