@@ -420,6 +420,23 @@ def main() -> int:
             )
             return 1
 
+        # Copy overlay files (e.g. modified animations) into mod output
+        overlay_dir = project_root / "data" / "overlay"
+        if overlay_dir.is_dir():
+            mod_dir = seed_dir / "mods" / "fogmod"
+            count = 0
+            for src in overlay_dir.rglob("*"):
+                if src.is_file():
+                    rel = src.relative_to(overlay_dir)
+                    dest = mod_dir / rel
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(src, dest)
+                    count += 1
+                    if args.verbose:
+                        print(f"Overlay: {rel}")
+            if count > 0:
+                print(f"Overlay: copied {count} file(s) from data/overlay/")
+
         print(f"Mod ready: {seed_dir}")
 
     total = timer.stop()

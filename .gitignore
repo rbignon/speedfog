@@ -69,6 +69,9 @@ data/enemy.txt
 data/clusters.json
 data/fog_data.json
 
+# Overlay files (user-provided game file overrides, e.g. modified animations)
+data/overlay/
+
 # Generated i18n data (from tools/update_i18n_names.py)
 data/i18n/fmg_names.json
 

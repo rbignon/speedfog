@@ -58,7 +58,8 @@ speedfog/
 │   ├── er-common.emedf.json # EMEVD instruction definitions (gitignored)
 │   ├── clusters.json        # Generated zone clusters (gitignored)
 │   ├── fog_data.json        # Generated fog gate metadata (gitignored)
-│   └── zone_metadata.toml   # Zone weight config (tracked)
+│   ├── zone_metadata.toml   # Zone weight config (tracked)
+│   └── overlay/             # User-provided game file overrides (gitignored)
 ├── writer/                  # C# - Mod file generation
 │   ├── lib/                 # DLLs (FogMod, RandomizerCommon, SoulsFormats, etc.)
 │   ├── assets/              # Extra DLLs (RandomizerCrashFix, RandomizerHelper)
