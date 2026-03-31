@@ -84,6 +84,7 @@ speedfog/
 │   │   ├── VanillaWarpRemover.cs  # Remove vanilla assets: warps + blocking gates
 │   │   ├── StartupFlagInjector.cs  # Set event flags at startup (open gates, etc.)
 │   │   ├── StakeRemover.cs  # Remove vanilla stakes outside DAG
+│   │   ├── HeavyDoorMessagePatcher.cs  # Suppress "heavy door" popup in common_func
 │   │   └── eldendata/       # FogRando game data (gitignored)
 │   ├── FogModWrapper.Tests/  # xUnit tests
 │   └── ItemRandomizerWrapper/  # Item randomizer - thin wrapper calling RandomizerCommon.dll
@@ -191,6 +192,7 @@ speedfog/
 | `VanillaWarpRemover` | Removes vanilla warp MSB assets that conflict with fog gates |
 | `StartupFlagInjector` | Sets event flags at startup in any EMEVD (open gates, etc.) |
 | `StakeRemover` | Removes vanilla stakes that respawn outside the DAG |
+| `HeavyDoorMessagePatcher` | Suppresses "heavy door" popup (text 4200) in common_func |
 | `DeathMarkerInjector` | Bloodstain markers at fog gates (MSB assets + EMEVD SFX) |
 
 **ItemRandomizerWrapper** (uses RandomizerCommon.dll directly):

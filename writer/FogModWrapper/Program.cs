@@ -530,6 +530,13 @@ Example:
                 }
             }
 
+            // Suppress "Somewhere, a heavy door has opened" popup in common_func
+            if (Path.GetFileName(file).Equals("common_func.emevd.dcx", StringComparison.OrdinalIgnoreCase))
+            {
+                if (HeavyDoorMessagePatcher.Patch(emevd) > 0)
+                    modified = true;
+            }
+
             if (modified)
                 emevd.Write(file);
         }
