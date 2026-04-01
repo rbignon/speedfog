@@ -27,7 +27,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../SoulsFormats/SoulsFormats/SoulsFormats.csproj" />
+    <Reference Include="SoulsFormats">
+      <HintPath>../lib/SoulsFormats.dll</HintPath>
+    </Reference>
     <Reference Include="FogMod">
       <HintPath>../lib/FogMod.dll</HintPath>
     </Reference>

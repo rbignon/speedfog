@@ -1,6 +1,6 @@
 using SoulsFormats;
 
-namespace FogModWrapper;
+namespace ModPatcher;
 
 /// <summary>
 /// Speeds up grace animations by injecting TAE event type 608 (AnimSpeedGradient)

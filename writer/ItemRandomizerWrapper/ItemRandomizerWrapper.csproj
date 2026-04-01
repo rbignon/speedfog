@@ -21,7 +21,12 @@
     <Reference Include="RandomizerCommon">
       <HintPath>../lib/RandomizerCommon.dll</HintPath>
     </Reference>
-    <ProjectReference Include="../../SoulsFormats/SoulsFormats/SoulsFormats.csproj" />
+    <!-- Uses FogMod's SoulsFormats.dll (not SoulsFormatsNEXT) because
+         SoulsIds.dll depends on SFUtil.DecryptNRRegulation which was
+         removed in SoulsFormatsNEXT -->
+    <Reference Include="SoulsFormats">
+      <HintPath>../lib/SoulsFormats.dll</HintPath>
+    </Reference>
     <Reference Include="SoulsIds">
       <HintPath>../lib/SoulsIds.dll</HintPath>
     </Reference>
@@ -31,7 +36,12 @@
     <Reference Include="Newtonsoft.Json">
       <HintPath>../lib/Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <!-- BouncyCastle, ZstdNet come as transitive deps from SoulsFormatsNEXT -->
+    <Reference Include="BouncyCastle.Cryptography">
+      <HintPath>../lib/BouncyCastle.Cryptography.dll</HintPath>
+    </Reference>
+    <Reference Include="ZstdNet">
+      <HintPath>../lib/ZstdNet.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
   <!-- Copy native compression libraries and dependencies to output -->

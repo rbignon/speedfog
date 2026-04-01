@@ -75,8 +75,8 @@ public static class ShopInjector
         BND4 regulation;
         try
         {
-            // SoulsFormats.Cryptography.RegulationDecryptor.DecryptERRegulation returns BND4 directly
-            regulation = SoulsFormats.Cryptography.RegulationDecryptor.DecryptERRegulation(regulationPath);
+            // SFUtil.DecryptERRegulation returns BND4 directly
+            regulation = SFUtil.DecryptERRegulation(regulationPath);
         }
         catch (Exception ex)
         {
@@ -150,7 +150,7 @@ public static class ShopInjector
         shopFile.Bytes = shopParam.Write();
 
         // Write back - encrypt for Elden Ring
-        SoulsFormats.Cryptography.RegulationDecryptor.EncryptERRegulation(regulationPath, regulation);
+        SFUtil.EncryptERRegulation(regulationPath, regulation);
 
         Console.WriteLine($"Shop items injected successfully ({itemCount} items)");
     }

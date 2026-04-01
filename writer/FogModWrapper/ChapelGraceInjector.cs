@@ -290,7 +290,7 @@ public static class ChapelGraceInjector
         BND4 regulation;
         try
         {
-            regulation = SoulsFormats.Cryptography.RegulationDecryptor.DecryptERRegulation(regulationPath);
+            regulation = SFUtil.DecryptERRegulation(regulationPath);
         }
         catch (Exception ex)
         {
@@ -375,7 +375,7 @@ public static class ChapelGraceInjector
         bonfireParam.Rows = bonfireParam.Rows.OrderBy(r => r.ID).ToList();
 
         bonfireFile.Bytes = bonfireParam.Write();
-        SoulsFormats.Cryptography.RegulationDecryptor.EncryptERRegulation(regulationPath, regulation);
+        SFUtil.EncryptERRegulation(regulationPath, regulation);
 
         Console.WriteLine($"  BonfireWarpParam: row {rowId}, flag {flagId}, entity {bonfireEntityId}");
         return flagId;
@@ -552,7 +552,7 @@ public static class ChapelGraceInjector
         var segments = part.Name.Split('_');
         if (segments.Length > 0 && int.TryParse(segments[^1], out var ident))
         {
-            part.InstanceID = ident;
+            part.Unk08 = ident;
         }
     }
 

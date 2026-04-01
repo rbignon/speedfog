@@ -108,7 +108,7 @@ public static class WeaponUpgradeInjector
         BND4 regulation;
         try
         {
-            regulation = SoulsFormats.Cryptography.RegulationDecryptor.DecryptERRegulation(regulationPath);
+            regulation = SFUtil.DecryptERRegulation(regulationPath);
         }
         catch (Exception ex)
         {
@@ -228,7 +228,7 @@ public static class WeaponUpgradeInjector
         charaFile.Bytes = charaParam.Write();
         if (customWepModified && customWepFile != null && customWepParam != null)
             customWepFile.Bytes = customWepParam.Write();
-        SoulsFormats.Cryptography.RegulationDecryptor.EncryptERRegulation(regulationPath, regulation);
+        SFUtil.EncryptERRegulation(regulationPath, regulation);
         Console.WriteLine($"  Upgraded {upgraded} weapon slots across starting classes");
     }
 }

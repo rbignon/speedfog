@@ -61,12 +61,14 @@ FOGRANDO_DATA_FILES = [
 # DLLs we need from FogMod (subset of what sfextract produces)
 FOGRANDO_REQUIRED_DLLS = [
     "FogMod.dll",
-    # SoulsFormats.dll is no longer extracted here; it comes from
-    # the SoulsFormatsNEXT git submodule (referenced as a project).
+    "SoulsFormats.dll",  # Needed by ItemRandomizerWrapper (SoulsIds.dll depends on old API)
     "SoulsIds.dll",
+    "BouncyCastle.Cryptography.dll",
     "Newtonsoft.Json.dll",
     "YamlDotNet.dll",
-    # BouncyCastle, DrSwizzler, ZstdNet come as transitive deps from SoulsFormatsNEXT.
+    "ZstdNet.dll",
+    "DrSwizzler.dll",
+    # FogModWrapper uses SoulsFormatsNEXT (git submodule) instead of this DLL.
 ]
 
 # Data files to extract from Item Randomizer's diste/Base/ to data/
@@ -459,6 +461,10 @@ def setup_fogrando(sfextract: Path, zip_path: Path, force: bool) -> bool:
 
         # Compile FogModWrapper
         if not compile_wrapper("FogModWrapper"):
+            return False
+
+        # Compile ModPatcher (post-processing, uses SoulsFormatsNEXT submodule)
+        if not compile_wrapper("ModPatcher"):
             return False
 
     finally:
