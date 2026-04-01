@@ -227,7 +227,7 @@ def main() -> None:
         if not MSG_DIR.exists():
             print(f"FMG data not found: {MSG_DIR}", file=sys.stderr)
             print(
-                "Run tools/setup_dependencies.py first to extract eldendata.",
+                "Run tools/bootstrap.py first to extract eldendata.",
                 file=sys.stderr,
             )
             sys.exit(1)

@@ -8,14 +8,14 @@ Most data files are extracted from FogRando and are **not tracked in git**.
 Run the setup script after downloading FogRando from Nexusmods:
 
 ```bash
-python tools/setup_dependencies.py /path/to/FogRando.zip
+python tools/bootstrap.py /path/to/FogRando.zip
 ```
 
 This extracts source files and regenerates derived files automatically.
 
 ## Source Files (gitignored)
 
-These files are extracted by `setup_dependencies.py`:
+These files are extracted by `bootstrap.py`:
 
 **From FogRando (`eldendata/Base/`):**
 

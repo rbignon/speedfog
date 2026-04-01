@@ -60,7 +60,7 @@ writer/*/presets/
 # FogRando decompiled reference code (not for redistribution)
 reference/
 
-# Data files (extracted by tools/setup_dependencies.py)
+# Data files (extracted by tools/bootstrap.py)
 data/fog.txt
 data/fogevents.txt
 data/foglocations2.txt
@@ -82,6 +82,6 @@ data/i18n/fmg_names.json
 !writer/lib/
 writer/lib/*.dll
 
-# Track writer/assets/ directory but not DLLs (extracted by setup_dependencies.py)
+# Track writer/assets/ directory but not DLLs (extracted by bootstrap.py)
 !writer/assets/
 writer/assets/*.dll

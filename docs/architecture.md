@@ -20,7 +20,7 @@ item_config.json ─────────────────────
                                                   RandomizerCommon.dll
                                                 (reuses Item Randomizer)
 
-                                                  ModPatcher (overlay, at setup)
+                                                  GamePatcher (overlay, at setup)
                                                   SoulsFormatsNEXT submodule
                                                   (grace animations, etc.)
 ```
@@ -105,11 +105,11 @@ Standalone scripts for setup and data generation.
 
 | Script | Purpose |
 |--------|---------|
-| `setup_dependencies.py` | Extract dependencies, generate derived data, build C# writers |
+| `bootstrap.py` | Extract dependencies, generate derived data, build C# writers |
 | `generate_clusters.py` | Parse fog.txt → clusters.json |
 | `extract_fog_data.py` | Extract fog gate metadata |
 
-**setup_dependencies.py** extracts:
+**bootstrap.py** extracts:
 - From FogRando ZIP: FogMod.dll, SoulsFormats.dll, eldendata/, data files
 - From Item Randomizer ZIP: RandomizerCommon.dll, diste/, crash fix DLLs
 
@@ -193,9 +193,9 @@ Post-processing (after FogMod writes, step numbers match Program.cs):
 - **7k** VanillaWarpRemover: delete vanilla warp MSB assets that conflict with fog gates
 - **7l** StakeRemover: remove vanilla stakes outside the DAG
 
-### 5. Overlay Generation (ModPatcher, at setup time)
+### 5. Overlay Generation (GamePatcher, at setup time)
 
-ModPatcher runs during `setup_dependencies.py` (not per-seed) as a **separate process**.
+GamePatcher runs during `bootstrap.py` (not per-seed) as a **separate process**.
 It uses SoulsFormatsNEXT (git submodule) which provides TAE support not available in the
 old SoulsFormats.dll. FogMod.dll and SoulsIds.dll are compiled against the old SoulsFormats
 API, so they cannot coexist with SoulsFormatsNEXT in the same process.
@@ -209,7 +209,7 @@ Output goes to `data/overlay/`, which the per-seed pipeline copies into each mod
 ### 6. Overlay and Packaging
 
 - **Overlay**: Files from `data/overlay/` are copied over the mod output. Contains both
-  ModPatcher-generated files and user-provided overrides.
+  GamePatcher-generated files and user-provided overrides.
 
 Packaging: download ModEngine 2, generate config, create launcher scripts.
 

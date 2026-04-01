@@ -1,4 +1,4 @@
-namespace ModPatcher;
+namespace GamePatcher;
 
 class Program
 {
@@ -25,7 +25,7 @@ class Program
             return 1;
         }
 
-        Console.WriteLine("=== ModPatcher ===");
+        Console.WriteLine("=== GamePatcher ===");
         Console.WriteLine($"Game dir: {gameDir}");
         Console.WriteLine($"Mod dir:  {outputDir}");
 
@@ -34,15 +34,15 @@ class Program
         // Grace animation speedup
         total += GraceAnimationPatcher.Patch(gameDir, outputDir);
 
-        Console.WriteLine($"ModPatcher: {total} patch(es) applied");
+        Console.WriteLine($"GamePatcher: {total} patch(es) applied");
         return 0;
     }
 
     static void PrintUsage()
     {
-        Console.WriteLine(@"ModPatcher - Post-processing patches for SpeedFog
+        Console.WriteLine(@"GamePatcher - Pre-process game files for SpeedFog
 
-Usage: ModPatcher <game-dir> <output-dir>
+Usage: GamePatcher <game-dir> <output-dir>
 
 Arguments:
   <game-dir>    Path to Elden Ring Game directory

@@ -13,7 +13,7 @@ C# components of SpeedFog - thin wrappers around FogMod.dll and RandomizerCommon
 
 - .NET 8.0 SDK
 - Elden Ring game files (regulation.bin, MSBs, EMEVDs)
-- Dependencies extracted via `tools/setup_dependencies.py`
+- Dependencies extracted via `tools/bootstrap.py`
 
 ## Building
 

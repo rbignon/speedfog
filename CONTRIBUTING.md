@@ -27,12 +27,12 @@ dotnet tool install -g sfextract
 # - Item Randomizer (optional): https://www.nexusmods.com/eldenring/mods/428
 
 # Extract dependencies, generate derived data, and build C# writers
-python tools/setup_dependencies.py \
+python tools/bootstrap.py \
   --fogrando /path/to/FogRando.zip \
   --itemrando /path/to/ItemRandomizer.zip
 
 # Or FogRando only (no item randomization)
-python tools/setup_dependencies.py --fogrando /path/to/FogRando.zip
+python tools/bootstrap.py --fogrando /path/to/FogRando.zip
 ```
 
 ### Updating FogRando Dependencies
@@ -40,10 +40,10 @@ python tools/setup_dependencies.py --fogrando /path/to/FogRando.zip
 When a new version of FogRando is released:
 
 ```bash
-python tools/setup_dependencies.py --fogrando /path/to/NewFogRando.zip --force
+python tools/bootstrap.py --fogrando /path/to/NewFogRando.zip --force
 
 # With Item Randomizer
-python tools/setup_dependencies.py \
+python tools/bootstrap.py \
   --fogrando /path/to/NewFogRando.zip \
   --itemrando /path/to/NewItemRandomizer.zip \
   --force
@@ -89,7 +89,7 @@ speedfog/
 │   └── zone_metadata.toml       # Zone weights (tracked)
 │
 ├── tools/                       # Standalone scripts
-│   ├── setup_dependencies.py    # Extract FogRando/ItemRando dependencies
+│   ├── bootstrap.py             # Project bootstrap (extract deps, build, generate data)
 │   ├── generate_clusters.py     # Generate clusters.json
 │   └── extract_fog_data.py      # Generate fog_data.json
 │

@@ -100,7 +100,7 @@ def run_item_randomizer(
             f"Error: ItemRandomizerWrapper not found at {wrapper_exe}", file=sys.stderr
         )
         print(
-            "Run: python tools/setup_dependencies.py --fogrando <path> --itemrando <path>",
+            "Run: python tools/bootstrap.py --fogrando <path> --itemrando <path>",
             file=sys.stderr,
         )
         return False

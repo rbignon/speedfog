@@ -200,7 +200,7 @@ The INI file is copied to `output/lib/` during packaging. `RandomizerHelper.dll`
 
 ## Data Directory
 
-`writer/ItemRandomizerWrapper/diste/` contains Item Randomizer game data (gitignored). Extracted by `tools/setup_dependencies.py` from the Item Randomizer ZIP.
+`writer/ItemRandomizerWrapper/diste/` contains Item Randomizer game data (gitignored). Extracted by `tools/bootstrap.py` from the Item Randomizer ZIP.
 
 Resolution order for `diste/`:
 1. `--data-dir` CLI argument

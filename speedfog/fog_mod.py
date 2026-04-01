@@ -35,7 +35,7 @@ def run_fogmodwrapper(
     if not wrapper_exe.exists():
         print(f"Error: FogModWrapper not found at {wrapper_exe}", file=sys.stderr)
         print(
-            "Run: python tools/setup_dependencies.py --fogrando <path> --itemrando <path>",
+            "Run: python tools/bootstrap.py --fogrando <path> --itemrando <path>",
             file=sys.stderr,
         )
         return False
