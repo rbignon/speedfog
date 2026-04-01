@@ -463,7 +463,7 @@ def setup_fogrando(sfextract: Path, zip_path: Path, force: bool) -> bool:
         if not compile_wrapper("FogModWrapper"):
             return False
 
-        # Compile ModPatcher (post-processing, uses SoulsFormatsNEXT submodule)
+        # Compile ModPatcher (overlay generator, uses SoulsFormatsNEXT submodule)
         if not compile_wrapper("ModPatcher"):
             return False
 
@@ -531,6 +531,56 @@ def setup_itemrando(sfextract: Path, zip_path: Path, force: bool) -> bool:
     return True
 
 
+def run_modpatcher(game_dir: Path) -> bool:
+    """Run ModPatcher to generate overlay files (e.g., patched animations).
+
+    Outputs to data/overlay/ so the main pipeline copies them into each mod build.
+    """
+    print("\n" + "=" * 50)
+    print("Running ModPatcher (overlay generation)")
+    print("=" * 50)
+
+    patcher_dir = PROJECT_ROOT / "writer" / "ModPatcher"
+    patcher_exe = patcher_dir / "publish" / "win-x64" / "ModPatcher.exe"
+
+    if not patcher_exe.exists():
+        print_error("ModPatcher not published, skipping overlay generation")
+        return True
+
+    overlay_dir = DATA_DEST / "overlay"
+    overlay_dir.mkdir(parents=True, exist_ok=True)
+
+    # Detect platform
+    if sys.platform == "win32":
+        cmd = [str(patcher_exe)]
+    else:
+        if not shutil.which("wine"):
+            print_error("Wine not found, skipping ModPatcher")
+            return True
+        cmd = ["wine", str(patcher_exe)]
+
+    cmd.extend([str(game_dir.resolve()), str(overlay_dir.resolve())])
+
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            cwd=patcher_dir,
+        )
+        for line in result.stdout.strip().splitlines():
+            print(f"      {line}")
+        if result.returncode != 0:
+            print_error(f"ModPatcher failed: {result.stderr}")
+            return False
+    except FileNotFoundError:
+        print_error("Failed to run ModPatcher")
+        return False
+
+    print_ok("Overlay files generated in data/overlay/")
+    return True
+
+
 def main() -> int:
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -551,6 +601,11 @@ def main() -> int:
         "--itemrando",
         type=Path,
         help="Path to Item Randomizer ZIP file (Elden Ring Randomizer)",
+    )
+    parser.add_argument(
+        "--game-dir",
+        type=Path,
+        help="Path to Elden Ring Game directory (for ModPatcher overlay generation)",
     )
     parser.add_argument(
         "--force",
@@ -587,6 +642,11 @@ def main() -> int:
     # Set up Item Randomizer
     if args.itemrando:
         if not setup_itemrando(sfextract, args.itemrando, args.force):
+            success = False
+
+    # Run ModPatcher to generate overlay files
+    if success and args.game_dir:
+        if not run_modpatcher(args.game_dir):
             success = False
 
     if success:

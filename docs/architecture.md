@@ -20,7 +20,7 @@ item_config.json ─────────────────────
                                                   RandomizerCommon.dll
                                                 (reuses Item Randomizer)
 
-                                                  ModPatcher (post-processing)
+                                                  ModPatcher (overlay, at setup)
                                                   SoulsFormatsNEXT submodule
                                                   (grace animations, etc.)
 ```
@@ -46,7 +46,6 @@ Generates a balanced DAG of zone connections.
 | `generation_log.py` | Structured generation log dataclasses and serialization |
 | `care_package.py` | Randomized starting build (weapons, armor, spells, etc.) |
 | `fog_mod.py` | Wrapper to call FogModWrapper.exe via Wine/native |
-| `mod_patcher.py` | Wrapper to call ModPatcher.exe via Wine/native |
 | `item_randomizer.py` | Wrapper to call ItemRandomizerWrapper.exe, generate item_config |
 | `main.py` | CLI entry point, orchestrates full pipeline |
 
@@ -194,20 +193,23 @@ Post-processing (after FogMod writes, step numbers match Program.cs):
 - **7k** VanillaWarpRemover: delete vanilla warp MSB assets that conflict with fog gates
 - **7l** StakeRemover: remove vanilla stakes outside the DAG
 
-### 5. Post-Processing (ModPatcher)
+### 5. Overlay Generation (ModPatcher, at setup time)
 
-ModPatcher runs as a **separate process** after FogModWrapper. It uses SoulsFormatsNEXT
-(git submodule) which provides TAE support not available in the old SoulsFormats.dll.
-FogMod.dll and SoulsIds.dll are compiled against the old SoulsFormats API, so they
-cannot coexist with SoulsFormatsNEXT in the same process.
+ModPatcher runs during `setup_dependencies.py` (not per-seed) as a **separate process**.
+It uses SoulsFormatsNEXT (git submodule) which provides TAE support not available in the
+old SoulsFormats.dll. FogMod.dll and SoulsIds.dll are compiled against the old SoulsFormats
+API, so they cannot coexist with SoulsFormatsNEXT in the same process.
+
+Output goes to `data/overlay/`, which the per-seed pipeline copies into each mod build.
 
 - **GraceAnimationPatcher**: Injects TAE event type 608 (AnimSpeedGradient) into
-  c0000.anibnd.dcx to speed up grace sit (anim 63000, 1.5x) and grace discovery
+  c0000.anibnd.dcx to speed up grace sit (anim 63000, 150x) and grace discovery
   (anim 68000, ~4.67x).
 
 ### 6. Overlay and Packaging
 
-- **Overlay**: Files from `data/overlay/` are copied over the mod output (user overrides).
+- **Overlay**: Files from `data/overlay/` are copied over the mod output. Contains both
+  ModPatcher-generated files and user-provided overrides.
 
 Packaging: download ModEngine 2, generate config, create launcher scripts.
 

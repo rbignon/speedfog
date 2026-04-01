@@ -23,14 +23,14 @@ clusters.json      →    graph.json → FogModWrapper ────────�
 DAG generation     →                      ↑                  ├──► ├── ModEngine/
                         item_config.json → ItemRandomizerWrapper  ├── launch_speedfog.bat
                                           (optional)              └── logs/
-                                     ModPatcher (post-processing)
+                                     ModPatcher (overlay, at setup)
 ```
 
 - **Python**: Configuration, cluster/zone data, DAG generation algorithm (package at root)
 - **C#**:
   - FogModWrapper - thin wrapper calling FogMod.dll with our graph connections (uses old SoulsFormats.dll)
   - ItemRandomizerWrapper - thin wrapper calling RandomizerCommon.dll for item randomization (optional, uses old SoulsFormats.dll)
-  - ModPatcher - standalone post-processing patches using SoulsFormatsNEXT (git submodule)
+  - ModPatcher - standalone overlay generator using SoulsFormatsNEXT (runs at setup, not per-seed)
 - **Output**: Self-contained folder with ModEngine 2 (auto-downloaded)
 
 ### Item Randomization Workflow
@@ -61,7 +61,7 @@ speedfog/
 │   ├── clusters.json        # Generated zone clusters (gitignored)
 │   ├── fog_data.json        # Generated fog gate metadata (gitignored)
 │   ├── zone_metadata.toml   # Zone weight config (tracked)
-│   └── overlay/             # User-provided game file overrides (gitignored)
+│   └── overlay/             # ModPatcher output + user-provided overrides (gitignored)
 ├── writer/                  # C# - Mod file generation
 │   ├── lib/                 # DLLs (FogMod, RandomizerCommon, SoulsFormats, etc.)
 │   ├── assets/              # Extra DLLs (RandomizerCrashFix, RandomizerHelper)
@@ -93,7 +93,7 @@ speedfog/
 │   ├── ItemRandomizerWrapper/  # Item randomizer - thin wrapper calling RandomizerCommon.dll
 │   │   ├── Program.cs       # CLI entry point
 │   │   └── diste/           # Item Randomizer game data (gitignored)
-│   └── ModPatcher/          # Post-processing patches (uses SoulsFormatsNEXT submodule)
+│   └── ModPatcher/          # Overlay generator, runs at setup (uses SoulsFormatsNEXT submodule)
 │       ├── Program.cs       # CLI entry point
 │       └── GraceAnimationPatcher.cs  # Speed up grace sit/discover animations
 ├── tools/                   # Standalone scripts
@@ -280,13 +280,18 @@ dotnet tool install -g sfextract
 #    - FogRando: https://www.nexusmods.com/eldenring/mods/3295
 #    - Item Randomizer (optional): https://www.nexusmods.com/eldenring/mods/428
 
-# 5. Extract dependencies (both mods recommended)
+# 5. Extract dependencies and generate overlay (both mods recommended)
 python tools/setup_dependencies.py \
   --fogrando /path/to/FogRando.zip \
-  --itemrando /path/to/ItemRandomizer.zip
+  --itemrando /path/to/ItemRandomizer.zip \
+  --game-dir /path/to/ELDEN_RING/Game
 
 # Or extract only FogRando (legacy mode)
-python tools/setup_dependencies.py /path/to/FogRando.zip
+python tools/setup_dependencies.py --fogrando /path/to/FogRando.zip \
+  --game-dir /path/to/ELDEN_RING/Game
+
+# --game-dir is optional but needed for ModPatcher overlay generation
+# (grace animation speedup, etc.). Without it, overlay is skipped.
 
 # 6. Build C# writers (done automatically by setup, or manually)
 cd writer/FogModWrapper && dotnet build

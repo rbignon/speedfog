@@ -28,10 +28,10 @@ public static class GraceAnimationPatcher
     };
 
     /// <summary>
-    /// Read c0000.anibnd.dcx from gameDir, patch grace animations, write to modDir.
+    /// Read c0000.anibnd.dcx from gameDir, patch grace animations, write to outputDir.
     /// Returns the number of animations patched, or 0 if the file wasn't found.
     /// </summary>
-    public static int Patch(string gameDir, string modDir)
+    public static int Patch(string gameDir, string outputDir)
     {
         var srcPath = Path.Combine(gameDir, ANIBND_PATH);
         if (!File.Exists(srcPath))
@@ -107,7 +107,7 @@ public static class GraceAnimationPatcher
             taeFile.Bytes = tae.Write();
 
             // Write patched BND to mod output
-            var destPath = Path.Combine(modDir, ANIBND_PATH);
+            var destPath = Path.Combine(outputDir, ANIBND_PATH);
             Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
             bnd.Write(destPath);
 

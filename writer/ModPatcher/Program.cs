@@ -11,7 +11,7 @@ class Program
         }
 
         var gameDir = args[0];
-        var modDir = args[1];
+        var outputDir = args[1];
 
         if (!Directory.Exists(gameDir))
         {
@@ -19,20 +19,20 @@ class Program
             return 1;
         }
 
-        if (!Directory.Exists(modDir))
+        if (!Directory.Exists(outputDir))
         {
-            Console.Error.WriteLine($"Error: mod directory not found: {modDir}");
+            Console.Error.WriteLine($"Error: mod directory not found: {outputDir}");
             return 1;
         }
 
         Console.WriteLine("=== ModPatcher ===");
         Console.WriteLine($"Game dir: {gameDir}");
-        Console.WriteLine($"Mod dir:  {modDir}");
+        Console.WriteLine($"Mod dir:  {outputDir}");
 
         int total = 0;
 
         // Grace animation speedup
-        total += GraceAnimationPatcher.Patch(gameDir, modDir);
+        total += GraceAnimationPatcher.Patch(gameDir, outputDir);
 
         Console.WriteLine($"ModPatcher: {total} patch(es) applied");
         return 0;
@@ -42,14 +42,14 @@ class Program
     {
         Console.WriteLine(@"ModPatcher - Post-processing patches for SpeedFog
 
-Usage: ModPatcher <game-dir> <mod-dir>
+Usage: ModPatcher <game-dir> <output-dir>
 
 Arguments:
-  <game-dir>   Path to Elden Ring Game directory
-  <mod-dir>    Path to mod output directory (mods/fogmod/)
+  <game-dir>    Path to Elden Ring Game directory
+  <output-dir>  Output directory for patched files (e.g. data/overlay/)
 
 Patches applied:
-  - Grace animation speedup (c0000.anibnd.dcx)
+  - Grace animation speedup (chr/c0000.anibnd.dcx)
 ");
     }
 }

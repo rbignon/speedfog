@@ -15,7 +15,6 @@ from speedfog.config import Config, load_config
 from speedfog.fog_mod import run_fogmodwrapper
 from speedfog.generator import GenerationError, generate_with_retry
 from speedfog.item_randomizer import generate_item_config, run_item_randomizer
-from speedfog.mod_patcher import run_modpatcher
 from speedfog.output import (
     append_boss_placements_to_spoiler,
     export_json,
@@ -421,11 +420,7 @@ def main() -> int:
             )
             return 1
 
-        # Post-processing patches (grace animations, etc.)
-        if not run_modpatcher(seed_dir, game_dir, config.paths.platform, args.verbose):
-            print("Warning: ModPatcher failed (non-fatal)", file=sys.stderr)
-
-        # Copy overlay files (e.g. modified animations) into mod output
+        # Copy overlay files (e.g. patched animations from setup) into mod output
         overlay_dir = project_root / "data" / "overlay"
         if overlay_dir.is_dir():
             mod_dir = seed_dir / "mods" / "fogmod"
