@@ -23,12 +23,14 @@ clusters.json      →    graph.json → FogModWrapper ────────�
 DAG generation     →                      ↑                  ├──► ├── ModEngine/
                         item_config.json → ItemRandomizerWrapper  ├── launch_speedfog.bat
                                           (optional)              └── logs/
+                                     ModPatcher (post-processing)
 ```
 
 - **Python**: Configuration, cluster/zone data, DAG generation algorithm (package at root)
 - **C#**:
-  - FogModWrapper - thin wrapper calling FogMod.dll with our graph connections
-  - ItemRandomizerWrapper - thin wrapper calling RandomizerCommon.dll for item randomization (optional)
+  - FogModWrapper - thin wrapper calling FogMod.dll with our graph connections (uses old SoulsFormats.dll)
+  - ItemRandomizerWrapper - thin wrapper calling RandomizerCommon.dll for item randomization (optional, uses old SoulsFormats.dll)
+  - ModPatcher - standalone post-processing patches using SoulsFormatsNEXT (git submodule)
 - **Output**: Self-contained folder with ModEngine 2 (auto-downloaded)
 
 ### Item Randomization Workflow
@@ -88,9 +90,12 @@ speedfog/
 │   │   ├── HeavyDoorMessagePatcher.cs  # Suppress "heavy door" popup in common_func
 │   │   └── eldendata/       # FogRando game data (gitignored)
 │   ├── FogModWrapper.Tests/  # xUnit tests
-│   └── ItemRandomizerWrapper/  # Item randomizer - thin wrapper calling RandomizerCommon.dll
+│   ├── ItemRandomizerWrapper/  # Item randomizer - thin wrapper calling RandomizerCommon.dll
+│   │   ├── Program.cs       # CLI entry point
+│   │   └── diste/           # Item Randomizer game data (gitignored)
+│   └── ModPatcher/          # Post-processing patches (uses SoulsFormatsNEXT submodule)
 │       ├── Program.cs       # CLI entry point
-│       └── diste/           # Item Randomizer game data (gitignored)
+│       └── GraceAnimationPatcher.cs  # Speed up grace sit/discover animations
 ├── tools/                   # Standalone scripts
 │   ├── setup_dependencies.py    # Extract FogRando and Item Randomizer dependencies
 │   ├── generate_clusters.py # Generate clusters.json from fog.txt
@@ -119,6 +124,7 @@ speedfog/
 │   ├── stake-removal.md     # Vanilla stake removal (RetryPoint softlock prevention)
 │   ├── death-markers.md     # Bloodstain visuals at fog gates (DrawGroups, DeepCopy bug)
 │   └── save-backup.md      # Save backup system (daemon, recovery, config)
+├── SoulsFormats/            # SoulsFormatsNEXT git submodule (used by ModPatcher)
 └── output/                  # Generated mod (gitignored, self-contained)
 ```
 
@@ -168,8 +174,9 @@ speedfog/
 - Package at root, use `uv run speedfog` from project root
 
 ### C# (writer/)
-- .NET 8.0
-- Reference DLLs from `writer/lib/`
+- .NET 10.0
+- FogModWrapper and ItemRandomizerWrapper reference pre-built DLLs from `writer/lib/` (old SoulsFormats)
+- ModPatcher references SoulsFormatsNEXT as a ProjectReference (git submodule at `SoulsFormats/`)
 - Follow FogRando patterns for EMEVD/param manipulation
 
 **FogModWrapper** (uses FogMod.dll directly):
@@ -208,6 +215,12 @@ speedfog/
 | `Graph` | Nodes/edges representing fog connections |
 | `RandomizerOptions` | Configuration options (crawl, scale, etc.) |
 | `AnnotationData` | Parsed fog.txt data |
+
+**ModPatcher** (uses SoulsFormatsNEXT, runs as separate process):
+| Class | Purpose |
+|-------|---------|
+| `Program.cs` | CLI entry, runs all post-processing patches |
+| `GraceAnimationPatcher` | Speeds up grace sit/discover animations via TAE event 608 |
 
 **Key RandomizerCommon classes** (from RandomizerCommon.dll):
 | Class | Purpose |
@@ -257,14 +270,17 @@ When implementing features, refer to these sections in `GameDataWriterE.cs`:
 # 1. Install Python dependencies (from project root)
 uv pip install -e ".[dev]"
 
-# 2. Install sfextract (for extracting DLLs from .NET single-file executables)
+# 2. Initialize SoulsFormatsNEXT submodule (used by ModPatcher)
+git submodule update --init
+
+# 3. Install sfextract (for extracting DLLs from .NET single-file executables)
 dotnet tool install -g sfextract
 
-# 3. Download mods from Nexusmods (requires account):
+# 4. Download mods from Nexusmods (requires account):
 #    - FogRando: https://www.nexusmods.com/eldenring/mods/3295
 #    - Item Randomizer (optional): https://www.nexusmods.com/eldenring/mods/428
 
-# 4. Extract dependencies (both mods recommended)
+# 5. Extract dependencies (both mods recommended)
 python tools/setup_dependencies.py \
   --fogrando /path/to/FogRando.zip \
   --itemrando /path/to/ItemRandomizer.zip
@@ -272,8 +288,9 @@ python tools/setup_dependencies.py \
 # Or extract only FogRando (legacy mode)
 python tools/setup_dependencies.py /path/to/FogRando.zip
 
-# 5. Build C# writers (done automatically by setup, or manually)
+# 6. Build C# writers (done automatically by setup, or manually)
 cd writer/FogModWrapper && dotnet build
+cd writer/ModPatcher && dotnet build
 cd writer/ItemRandomizerWrapper && dotnet build
 ```
 

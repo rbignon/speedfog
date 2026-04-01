@@ -19,6 +19,10 @@ item_config.json ─────────────────────
                                                           │              (merge)
                                                   RandomizerCommon.dll
                                                 (reuses Item Randomizer)
+
+                                                  ModPatcher (post-processing)
+                                                  SoulsFormatsNEXT submodule
+                                                  (grace animations, etc.)
 ```
 
 **Key insight**: SpeedFog reuses 100% of FogRando's game writer (`FogMod.dll`) and optionally 100% of Item Randomizer's writer (`RandomizerCommon.dll`). We only generate the graph connections and item config differently.
@@ -42,6 +46,7 @@ Generates a balanced DAG of zone connections.
 | `generation_log.py` | Structured generation log dataclasses and serialization |
 | `care_package.py` | Randomized starting build (weapons, armor, spells, etc.) |
 | `fog_mod.py` | Wrapper to call FogModWrapper.exe via Wine/native |
+| `mod_patcher.py` | Wrapper to call ModPatcher.exe via Wine/native |
 | `item_randomizer.py` | Wrapper to call ItemRandomizerWrapper.exe, generate item_config |
 | `main.py` | CLI entry point, orchestrates full pipeline |
 
@@ -185,8 +190,24 @@ Post-processing (after FogMod writes, step numbers match Program.cs):
 - **7h2** DeathMarkerInjector: bloodstain visuals at fog gates
 - **7i** RebirthInjector: rebirth option at graces via ESD editing (ConsistentID 73)
 - **7j3** StartupFlagInjector: set event flags at startup (e.g., open sewer gates)
+- **EMEVD scan (common_func)** HeavyDoorMessagePatcher: NOP "heavy door" popup (text 4200)
 - **7k** VanillaWarpRemover: delete vanilla warp MSB assets that conflict with fog gates
 - **7l** StakeRemover: remove vanilla stakes outside the DAG
+
+### 5. Post-Processing (ModPatcher)
+
+ModPatcher runs as a **separate process** after FogModWrapper. It uses SoulsFormatsNEXT
+(git submodule) which provides TAE support not available in the old SoulsFormats.dll.
+FogMod.dll and SoulsIds.dll are compiled against the old SoulsFormats API, so they
+cannot coexist with SoulsFormatsNEXT in the same process.
+
+- **GraceAnimationPatcher**: Injects TAE event type 608 (AnimSpeedGradient) into
+  c0000.anibnd.dcx to speed up grace sit (anim 63000, 1.5x) and grace discovery
+  (anim 68000, ~4.67x).
+
+### 6. Overlay and Packaging
+
+- **Overlay**: Files from `data/overlay/` are copied over the mod output (user overrides).
 
 Packaging: download ModEngine 2, generate config, create launcher scripts.
 

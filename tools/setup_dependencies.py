@@ -61,14 +61,14 @@ FOGRANDO_DATA_FILES = [
 # DLLs we need from FogMod (subset of what sfextract produces)
 FOGRANDO_REQUIRED_DLLS = [
     "FogMod.dll",
-    "SoulsFormats.dll",  # Needed by ItemRandomizerWrapper (SoulsIds.dll depends on old API)
+    "SoulsFormats.dll",  # Used by FogModWrapper + ItemRandomizerWrapper (FogMod/SoulsIds depend on old API)
     "SoulsIds.dll",
     "BouncyCastle.Cryptography.dll",
     "Newtonsoft.Json.dll",
     "YamlDotNet.dll",
     "ZstdNet.dll",
     "DrSwizzler.dll",
-    # FogModWrapper uses SoulsFormatsNEXT (git submodule) instead of this DLL.
+    # ModPatcher uses SoulsFormatsNEXT (git submodule) instead of these DLLs.
 ]
 
 # Data files to extract from Item Randomizer's diste/Base/ to data/
