@@ -47,7 +47,7 @@ public static class StartingRuneInjector
         BND4 regulation;
         try
         {
-            regulation = SFUtil.DecryptERRegulation(regulationPath);
+            regulation = SoulsFormats.Cryptography.RegulationDecryptor.DecryptERRegulation(regulationPath);
         }
         catch (Exception ex)
         {
@@ -92,7 +92,7 @@ public static class StartingRuneInjector
 
         // Write back
         charaFile.Bytes = charaParam.Write();
-        SFUtil.EncryptERRegulation(regulationPath, regulation);
+        SoulsFormats.Cryptography.RegulationDecryptor.EncryptERRegulation(regulationPath, regulation);
         Console.WriteLine($"  Set {clampedRunes:N0} starting runes on {updated} classes");
     }
 }

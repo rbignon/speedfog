@@ -680,6 +680,9 @@ Example:
         // 7l. Vanilla stake removal is handled pre-Write via ann.RetryPoints
         // (step 6b). FogMod reads MSBs from BHD archives and removes tagged stakes.
 
+        // 7m. Speed up grace sit/discover animations
+        GraceAnimationPatcher.Patch(config.GameDir, modDir);
+
         // 8. Package with ModEngine 2
         var packager = new PackagingWriter(config.OutputDir);
         await packager.WritePackageAsync(config.MergeDir);

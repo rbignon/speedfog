@@ -643,7 +643,7 @@ public static class DeathMarkerInjector
     {
         var segments = part.Name.Split('_');
         if (segments.Length > 0 && int.TryParse(segments[^1], out var ident))
-            part.Unk08 = ident;
+            part.InstanceID = ident;
     }
 
     private static void EnsureAssetModel(MSBE msb, string modelName)
