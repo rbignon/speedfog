@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -27,9 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Reference Include="SoulsFormats">
-      <HintPath>../lib/SoulsFormats.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="../../SoulsFormats/SoulsFormats/SoulsFormats.csproj" />
     <Reference Include="FogMod">
       <HintPath>../lib/FogMod.dll</HintPath>
     </Reference>

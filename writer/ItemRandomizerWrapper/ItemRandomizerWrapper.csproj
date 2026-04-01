@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -21,9 +21,7 @@
     <Reference Include="RandomizerCommon">
       <HintPath>../lib/RandomizerCommon.dll</HintPath>
     </Reference>
-    <Reference Include="SoulsFormats">
-      <HintPath>../lib/SoulsFormats.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="../../SoulsFormats/SoulsFormats/SoulsFormats.csproj" />
     <Reference Include="SoulsIds">
       <HintPath>../lib/SoulsIds.dll</HintPath>
     </Reference>
@@ -33,12 +31,7 @@
     <Reference Include="Newtonsoft.Json">
       <HintPath>../lib/Newtonsoft.Json.dll</HintPath>
     </Reference>
-    <Reference Include="BouncyCastle.Cryptography">
-      <HintPath>../lib/BouncyCastle.Cryptography.dll</HintPath>
-    </Reference>
-    <Reference Include="ZstdNet">
-      <HintPath>../lib/ZstdNet.dll</HintPath>
-    </Reference>
+    <!-- BouncyCastle, ZstdNet come as transitive deps from SoulsFormatsNEXT -->
   </ItemGroup>
 
   <!-- Copy native compression libraries and dependencies to output -->

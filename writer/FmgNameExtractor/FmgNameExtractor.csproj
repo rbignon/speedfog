@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -10,9 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Reference Include="SoulsFormats">
-      <HintPath>../lib/SoulsFormats.dll</HintPath>
-    </Reference>
+    <ProjectReference Include="../../SoulsFormats/SoulsFormats/SoulsFormats.csproj" />
   </ItemGroup>
 
   <!-- Native compression libraries required for DCX decompression -->

@@ -61,13 +61,12 @@ FOGRANDO_DATA_FILES = [
 # DLLs we need from FogMod (subset of what sfextract produces)
 FOGRANDO_REQUIRED_DLLS = [
     "FogMod.dll",
-    "SoulsFormats.dll",
+    # SoulsFormats.dll is no longer extracted here; it comes from
+    # the SoulsFormatsNEXT git submodule (referenced as a project).
     "SoulsIds.dll",
-    "BouncyCastle.Cryptography.dll",
     "Newtonsoft.Json.dll",
     "YamlDotNet.dll",
-    "ZstdNet.dll",
-    "DrSwizzler.dll",
+    # BouncyCastle, DrSwizzler, ZstdNet come as transitive deps from SoulsFormatsNEXT.
 ]
 
 # Data files to extract from Item Randomizer's diste/Base/ to data/
