@@ -413,7 +413,34 @@ def compile_wrapper(wrapper_name: str) -> bool:
         print_error(f"dotnet publish failed: {e.stderr}")
         return False
     except FileNotFoundError:
-        print_error("dotnet not found - install .NET 8.0 SDK")
+        print_error("dotnet not found - install .NET 10.0 SDK")
+        return False
+
+
+def ensure_submodule() -> bool:
+    """Initialize the SoulsFormatsNEXT git submodule if needed."""
+    submodule_dir = PROJECT_ROOT / "SoulsFormats"
+    # Check if already populated (has at least a .git or source files)
+    if (submodule_dir / "SoulsFormats").exists():
+        print_ok("SoulsFormatsNEXT submodule already initialized")
+        return True
+
+    print_info("Initializing SoulsFormatsNEXT submodule...")
+    try:
+        subprocess.run(
+            ["git", "submodule", "update", "--init", "SoulsFormats"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        print_ok("SoulsFormatsNEXT submodule initialized")
+        return True
+    except subprocess.CalledProcessError as e:
+        print_error(f"git submodule update --init failed: {e.stderr}")
+        return False
+    except FileNotFoundError:
+        print_error("git not found")
         return False
 
 
@@ -464,6 +491,10 @@ def setup_fogrando(sfextract: Path, zip_path: Path, force: bool) -> bool:
 
         # Compile FogModWrapper
         if not compile_wrapper("FogModWrapper"):
+            return False
+
+        # Initialize SoulsFormatsNEXT submodule (needed by GamePatcher)
+        if not ensure_submodule():
             return False
 
         # Compile GamePatcher (overlay generator, uses SoulsFormatsNEXT submodule)
