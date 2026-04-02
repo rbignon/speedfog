@@ -17,19 +17,15 @@ This script extracts:
 
 Prerequisites:
 - sfextract (dotnet tool): dotnet tool install -g sfextract
+- Elden Ring game directory (for oo2core_6_win64.dll, needed by dotnet publish)
 
 Usage:
     # Extract both (recommended)
-    python tools/bootstrap.py --fogrando /path/to/FogRando.zip --itemrando /path/to/ItemRandomizer.zip
+    python tools/bootstrap.py --game-dir /path/to/Game \
+        --fogrando /path/to/FogRando.zip --itemrando /path/to/ItemRandomizer.zip
 
     # Extract only FogRando
-    python tools/bootstrap.py --fogrando /path/to/FogRando.zip
-
-    # Extract only Item Randomizer
-    python tools/bootstrap.py --itemrando /path/to/ItemRandomizer.zip
-
-    # Legacy single-argument mode (FogRando only)
-    python tools/bootstrap.py /path/to/FogRando.zip
+    python tools/bootstrap.py --game-dir /path/to/Game --fogrando /path/to/FogRando.zip
 """
 
 from __future__ import annotations
@@ -565,6 +561,34 @@ def setup_itemrando(sfextract: Path, zip_path: Path, force: bool) -> bool:
     return True
 
 
+def copy_oodle_dll(game_dir: Path, force: bool = False) -> bool:
+    """Copy oo2core_6_win64.dll from the game directory to writer/lib/.
+
+    This DLL is required by FogMod/SoulsFormats for Oodle decompression
+    of game files. It ships with Elden Ring, not with FogRando.
+    """
+    dll_name = "oo2core_6_win64.dll"
+    src = game_dir / dll_name
+    dest = WRITER_LIB / dll_name
+
+    if dest.exists() and not force:
+        print_ok(f"{dll_name} already in writer/lib/")
+        return True
+
+    if not game_dir.is_dir():
+        print_error(f"Game directory does not exist: {game_dir}")
+        return False
+
+    if not src.exists():
+        print_error(f"{dll_name} not found in {game_dir}")
+        return False
+
+    WRITER_LIB.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src, dest)
+    print_ok(f"Copied {dll_name} from game directory")
+    return True
+
+
 def run_modpatcher(game_dir: Path) -> bool:
     """Run GamePatcher to generate overlay files (e.g., patched animations).
 
@@ -621,12 +645,6 @@ def main() -> int:
         description="Extract FogRando and Item Randomizer dependencies from Nexusmods downloads."
     )
     parser.add_argument(
-        "zip_path",
-        type=Path,
-        nargs="?",
-        help="(Legacy) Path to FogRando ZIP file",
-    )
-    parser.add_argument(
         "--fogrando",
         type=Path,
         help="Path to FogRando ZIP file (Fog Gate Randomizer)",
@@ -639,7 +657,8 @@ def main() -> int:
     parser.add_argument(
         "--game-dir",
         type=Path,
-        help="Path to Elden Ring Game directory (for GamePatcher overlay generation)",
+        required=True,
+        help="Path to Elden Ring Game directory (for Oodle DLL and GamePatcher overlay)",
     )
     parser.add_argument(
         "--force",
@@ -648,16 +667,12 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    # Handle legacy single-argument mode
-    if args.zip_path and not args.fogrando:
-        args.fogrando = args.zip_path
-
     # Check that at least one ZIP is provided
     if not args.fogrando and not args.itemrando:
         parser.error("At least one of --fogrando or --itemrando must be provided")
 
     # Check prerequisites
-    print_step(1, 1, "Checking prerequisites...")
+    print_step(1, 3, "Checking prerequisites...")
     sfextract = find_sfextract()
     if not sfextract:
         print_error("sfextract not found")
@@ -665,6 +680,13 @@ def main() -> int:
         print("Install it with: dotnet tool install -g sfextract")
         return 1
     print_ok("sfextract found")
+
+    # Copy oo2core_6_win64.dll from game directory (needed by dotnet publish)
+    print_step(2, 3, "Copying Oodle DLL from game directory...")
+    if not copy_oodle_dll(args.game_dir, args.force):
+        return 1
+
+    print_step(3, 3, "Setting up mod dependencies...")
 
     success = True
 
@@ -679,7 +701,7 @@ def main() -> int:
             success = False
 
     # Run GamePatcher to generate overlay files
-    if success and args.game_dir:
+    if success:
         if not run_modpatcher(args.game_dir):
             success = False
 

@@ -5,7 +5,7 @@
 ### Prerequisites
 
 - Python 3.10+ with [uv](https://github.com/astral-sh/uv)
-- .NET 8.0 SDK
+- .NET 10.0 SDK
 - Wine (Linux only, for running the C# writer)
 - [sfextract](https://github.com/Droppers/SingleFileExtractor) dotnet tool
 
@@ -28,11 +28,14 @@ dotnet tool install -g sfextract
 
 # Extract dependencies, generate derived data, and build C# writers
 python tools/bootstrap.py \
+  --game-dir /path/to/ELDEN_RING/Game \
   --fogrando /path/to/FogRando.zip \
   --itemrando /path/to/ItemRandomizer.zip
 
 # Or FogRando only (no item randomization)
-python tools/bootstrap.py --fogrando /path/to/FogRando.zip
+python tools/bootstrap.py \
+  --game-dir /path/to/ELDEN_RING/Game \
+  --fogrando /path/to/FogRando.zip
 ```
 
 ### Updating FogRando Dependencies
@@ -40,10 +43,13 @@ python tools/bootstrap.py --fogrando /path/to/FogRando.zip
 When a new version of FogRando is released:
 
 ```bash
-python tools/bootstrap.py --fogrando /path/to/NewFogRando.zip --force
+python tools/bootstrap.py \
+  --game-dir /path/to/ELDEN_RING/Game \
+  --fogrando /path/to/NewFogRando.zip --force
 
 # With Item Randomizer
 python tools/bootstrap.py \
+  --game-dir /path/to/ELDEN_RING/Game \
   --fogrando /path/to/NewFogRando.zip \
   --itemrando /path/to/NewItemRandomizer.zip \
   --force

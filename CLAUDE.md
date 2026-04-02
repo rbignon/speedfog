@@ -282,16 +282,17 @@ dotnet tool install -g sfextract
 
 # 5. Extract dependencies and generate overlay (both mods recommended)
 python tools/bootstrap.py \
+  --game-dir /path/to/ELDEN_RING/Game \
   --fogrando /path/to/FogRando.zip \
-  --itemrando /path/to/ItemRandomizer.zip \
-  --game-dir /path/to/ELDEN_RING/Game
+  --itemrando /path/to/ItemRandomizer.zip
 
 # Or extract only FogRando (legacy mode)
-python tools/bootstrap.py --fogrando /path/to/FogRando.zip \
-  --game-dir /path/to/ELDEN_RING/Game
+python tools/bootstrap.py \
+  --game-dir /path/to/ELDEN_RING/Game \
+  --fogrando /path/to/FogRando.zip
 
-# --game-dir is optional but needed for GamePatcher overlay generation
-# (grace animation speedup, etc.). Without it, overlay is skipped.
+# --game-dir is required (provides oo2core_6_win64.dll for dotnet publish
+# and enables GamePatcher overlay generation).
 
 # 6. Build C# writers (done automatically by setup, or manually)
 cd writer/FogModWrapper && dotnet build

@@ -49,11 +49,14 @@ dotnet tool install -g sfextract
 
 # Extract dependencies, generate derived data, and build C# writers
 python tools/bootstrap.py \
+  --game-dir /path/to/ELDEN_RING/Game \
   --fogrando /path/to/FogRando.zip \
   --itemrando /path/to/ItemRandomizer.zip
 
 # Or FogRando only (no item randomization)
-python tools/bootstrap.py --fogrando /path/to/FogRando.zip
+python tools/bootstrap.py \
+  --game-dir /path/to/ELDEN_RING/Game \
+  --fogrando /path/to/FogRando.zip
 ```
 
 ### 3. Configure

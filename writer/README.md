@@ -11,7 +11,7 @@ C# components of SpeedFog - thin wrappers around FogMod.dll and RandomizerCommon
 
 ## Requirements
 
-- .NET 8.0 SDK
+- .NET 10.0 SDK
 - Elden Ring game files (regulation.bin, MSBs, EMEVDs)
 - Dependencies extracted via `tools/bootstrap.py`
 
