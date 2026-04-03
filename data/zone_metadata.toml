@@ -444,7 +444,6 @@ proximity_groups = [
      "AEG099_001_9006", # Gideon back left
      "AEG099_002_9000", # Gideon back center
      "AEG099_001_9004", # Gideon side
-     "AEG099_231_9000", # Colosseum entrance
     ],
 ]
 
