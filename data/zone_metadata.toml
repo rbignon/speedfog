@@ -209,6 +209,10 @@ allow_entry_as_exit = false
 [zones.dragonbarrow_selliahideaway_boss]
 weight = 3
 
+[zones.siofra_boss]
+type = "major_boss"
+weight = 2
+
 [zones.siofra_nokron_boss]
 type = "major_boss"
 weight = 2
