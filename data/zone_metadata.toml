@@ -217,6 +217,9 @@ weight = 2
 type = "major_boss"
 weight = 2
 
+[zones.siofra_nokron_mimic]
+type = "major_boss"
+
 [zones.siofra_nokron_gargoyles]
 type = "major_boss"
 weight = 2
