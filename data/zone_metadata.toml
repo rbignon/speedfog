@@ -427,6 +427,11 @@ allowed_entries = [
     "AEG099_230_9500", # Midra's Manse entrance
 ]
 
+[clusters.mountaintops_sol_30e9]
+allowed_entries = [
+    "755894503", # Castle Sol entrance
+]
+
 [clusters.snowfield_tunnel_4d1a]
 allowed_entries = [
     "AEG099_230_9000", # Entrance from Consecrated Snowfield
