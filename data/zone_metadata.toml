@@ -549,3 +549,20 @@ proximity_groups = [
      "AEG099_230_9000", # Before elevator to Dragon Temple Lift
     ],
 ]
+
+[clusters.farumazula_godskinduo_3b41]
+proximity_groups = [
+    ["AEG099_001_9004", # Balcony
+     "AEG099_001_9000", # Back right
+     "AEG099_001_9002", # Front right
+     "AEG099_001_9003", # Back left
+    ],
+]
+
+[clusters.farumazula_godskinduo_5406]
+proximity_groups = [
+    ["AEG099_001_9000", # Back right
+     "AEG099_001_9002", # Front right
+     "AEG099_001_9003", # Back left
+    ],
+]
