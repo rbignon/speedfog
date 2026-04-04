@@ -318,7 +318,7 @@ weight = 2
 
 [zones.jaggedpeak_bayle]
 weight = 4
-allow_entry_as_exit = true
+allow_entry_as_exit = false
 
 [zones.midramanse_boss]
 weight = 2
