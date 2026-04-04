@@ -190,6 +190,9 @@ type = "major_boss"
 [zones.caelid_catacombs_boss]
 weight = 2
 
+[zones.chapel_boss]
+allow_entry_as_exit = false
+
 [zones.caelid_redmane_boss]
 allow_entry_as_exit = false
 conflicts_with = ["caelid_radahn"]
