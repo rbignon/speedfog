@@ -89,8 +89,11 @@ included; the `.sl2` alone is sufficient for recovery.
 ### Compression
 
 Backups use ZIP (Deflate). Save files compress ~10:1 (~30 MB to ~3 MB).
-PowerShell uses `Compress-Archive`, bash uses `zip -j` (the `-j` flag strips
-directory paths so the archive contains only `ER0000.sl2`).
+The daemon copies the save file to a temporary `ER0000.sl2` in the backups
+directory before compressing, so that no read handle is held on the live
+save file during the slower compression step. This avoids potential
+interference with Elden Ring's autosave. PowerShell uses `Copy-Item` +
+`Compress-Archive`, bash uses `cp` + `zip -j`.
 
 ### Logging
 

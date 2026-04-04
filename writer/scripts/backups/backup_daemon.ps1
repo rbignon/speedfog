@@ -53,11 +53,15 @@ Log "Game detected."
 if (Test-Path $SavePath) {
     $ts = Get-Date -Format "yyyy-MM-dd_HH.mm.ss"
     $preRunZip = "$backupsDir/pre-run_$ts.zip"
+    $tempCopy = "$backupsDir/ER0000.sl2"
     try {
-        Compress-Archive -Path $SavePath -DestinationPath $preRunZip -Force
+        Copy-Item -Path $SavePath -Destination $tempCopy -Force
+        Compress-Archive -Path $tempCopy -DestinationPath $preRunZip -Force
         Log "Pre-run backup: $(Split-Path $preRunZip -Leaf)"
     } catch {
         Log "WARNING: Failed to create pre-run backup: $_"
+    } finally {
+        Remove-Item $tempCopy -Force -ErrorAction SilentlyContinue
     }
 }
 
@@ -82,11 +86,15 @@ while ($true) {
     $zipName = "ER0000_$ts.zip"
     $zipPath = "$backupsDir/$zipName"
 
+    $tempCopy = "$backupsDir/ER0000.sl2"
     try {
-        Compress-Archive -Path $SavePath -DestinationPath $zipPath -Force
+        Copy-Item -Path $SavePath -Destination $tempCopy -Force
+        Compress-Archive -Path $tempCopy -DestinationPath $zipPath -Force
     } catch {
         Log "WARNING: Failed to create backup: $_"
         continue
+    } finally {
+        Remove-Item $tempCopy -Force -ErrorAction SilentlyContinue
     }
 
     $backupCount++

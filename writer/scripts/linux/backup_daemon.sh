@@ -54,11 +54,13 @@ log "Game detected."
 if [ -f "$SAVE_PATH" ]; then
     ts=$(date +%Y-%m-%d_%H.%M.%S)
     pre_run_zip="$BACKUPS_DIR/pre-run_$ts.zip"
-    if ! zip -j "$pre_run_zip" "$SAVE_PATH"; then
-        log "WARNING: Failed to create pre-run backup."
-    else
+    temp_copy="$BACKUPS_DIR/ER0000.sl2"
+    if cp "$SAVE_PATH" "$temp_copy" && zip -j "$pre_run_zip" "$temp_copy"; then
         log "Pre-run backup: pre-run_$ts.zip"
+    else
+        log "WARNING: Failed to create pre-run backup."
     fi
+    rm -f "$temp_copy"
 fi
 
 log "Backup daemon started (interval: $interval min, keep: $max_backups)"
@@ -82,10 +84,13 @@ while true; do
     zip_name="ER0000_$ts.zip"
     zip_path="$BACKUPS_DIR/$zip_name"
 
-    if ! zip -j "$zip_path" "$SAVE_PATH"; then
+    temp_copy="$BACKUPS_DIR/ER0000.sl2"
+    if ! cp "$SAVE_PATH" "$temp_copy" || ! zip -j "$zip_path" "$temp_copy"; then
         log "WARNING: Failed to create backup: $zip_name"
+        rm -f "$temp_copy"
         continue
     fi
+    rm -f "$temp_copy"
 
     backup_count=$((backup_count + 1))
 
