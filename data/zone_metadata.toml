@@ -471,6 +471,18 @@ proximity_groups = [
     ],
 ]
 
+# Leyndell2: Gideon arena
+[clusters.leyndell2_sanctuary_1ffc]
+allowed_entries = [
+    "AEG099_001_9003", # Front of Gideon's arena
+    "AEG099_001_9004", # South entrance
+]
+proximity_groups = [
+    "AEG099_001_9003", # Front of Gideon's arena
+    "AEG099_001_9007", # Front right
+    "AEG099_001_9008", # Front left
+]
+
 # Leyndell: Morgott exit + all Godfrey entrances are adjacent (throne -> sanctuary)
 [clusters.leyndell_sanctuary_25d4]
 proximity_groups = [
@@ -500,6 +512,12 @@ proximity_groups = [
     ["AEG099_001_9003", # Godfrey front
      "AEG099_231_9001", # Colosseum entrance
     ],
+]
+
+# Leyndell: Godfrey arena
+[clusters.leyndell_sanctuary_d3e5]
+allowed_entries = [
+    "AEG099_001_9003", # Entrance from the branches
 ]
 
 # Academy Post Redwolf
