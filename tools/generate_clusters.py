@@ -1767,6 +1767,8 @@ def filter_and_enrich_clusters(
             cm = clusters_meta[cluster.cluster_id]
             if cm.get("exclude"):
                 continue
+            if "weight" in cm:
+                cluster.weight = int(cm["weight"])
             cluster.proximity_groups = cm.get("proximity_groups", [])
             cluster.allowed_entries = cm.get("allowed_entries", [])
             cluster.allowed_exits = cm.get("allowed_exits", [])

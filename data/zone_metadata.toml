@@ -5,9 +5,10 @@
 #
 # weight = relative traversal difficulty (data-driven for dungeons, phase-based for bosses)
 #
-# Multi-zone cluster weights use logarithmic aggregation:
+# Multi-zone cluster weights use logarithmic aggregation by default:
 #   cluster_weight = round(avg_zone_weight * (1 + 0.5 * ln(n_zones)))
 # This reflects that players traverse a path through zones, not all of them.
+# Override with [clusters.<id>] weight = X to use observed race data directly.
 
 [defaults]
 # Default weights by zone type
@@ -368,6 +369,7 @@ exclude = true  # Cathedral of Manus Metyr interior, accessed via unique warp, n
 # Cluster-level traversal constraints
 # =============================================================================
 #
+# weight: override computed cluster weight with observed race data
 # exclude: remove this cluster entirely from the pool
 # proximity_groups: fogs spatially close, entry and exit cannot share a group
 # allowed_entries/allowed_exits: restrict eligible fogs
