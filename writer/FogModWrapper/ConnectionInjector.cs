@@ -19,7 +19,7 @@ public class InjectionResult
     /// Side.Warp is NOT available at injection time (populated later by GameDataWriterE.Write()),
     /// so we defer region reading to BuildRegionToFlags().
     /// </summary>
-    internal List<(int FlagId, Graph.Edge EntranceEdge, string ConnDesc)> DeferredEdges { get; } = new();
+    public List<(int FlagId, Graph.Edge EntranceEdge, string ConnDesc)> DeferredEdges { get; } = new();
 
     /// <summary>
     /// Region entity → list of flag IDs for zone tracking injection.
