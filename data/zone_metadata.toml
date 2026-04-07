@@ -80,7 +80,7 @@ type = "legacy_dungeon"
 # --- Base game ---
 
 [zones.altus_grave]
-weight = 4.5
+exclude = true
 
 [zones.gelmir_hero_grave]
 weight = 6
