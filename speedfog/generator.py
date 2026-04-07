@@ -794,9 +794,9 @@ def determine_operation(
             return LayerOperation.MERGE, 2
         # Can't merge — fall through to normal logic (will likely be PASSANT)
 
-    # --- Priority 3: Normal probability roll ---
+    # --- Priority 3: Force split on single branch ---
 
-    # Determine split capability
+    # Determine split capability (shared with Priority 4)
     can_split = False
     split_fan = 2
     if max_ex >= 2 and num_branches < max_paths:
@@ -812,6 +812,8 @@ def determine_operation(
     # linear segments where the player has no choice.
     if num_branches == 1 and not prefer_merge and can_split:
         return LayerOperation.SPLIT, split_fan
+
+    # --- Priority 4: Normal probability roll ---
 
     # Determine merge capability (respects min_branch_age)
     can_merge = (
