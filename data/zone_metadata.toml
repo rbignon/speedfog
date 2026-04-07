@@ -179,19 +179,13 @@ weight = 2.5
 [zones.caelid_catacombs_boss]
 weight = 0.5
 
-[zones.chapel_boss]
-allow_entry_as_exit = false
-
 [zones.caelid_redmane_boss]
-allow_entry_as_exit = false
+allow_entry_as_exit = true
 conflicts_with = ["caelid_radahn"]
 
 [zones.ainsel_dragonkin]
 type = "major_boss"
-allow_entry_as_exit = false
-
-[zones.peninsula_earthborecave_boss]
-allow_entry_as_exit = false
+allow_entry_as_exit = true
 
 [zones.deeproot_boss]
 type = "major_boss"
@@ -204,17 +198,21 @@ weight = 3
 [zones.siofra_boss]
 type = "major_boss"
 weight = 2
+allow_entry_as_exit = true
 
 [zones.siofra_nokron_boss]
 type = "major_boss"
 weight = 2
+allow_entry_as_exit = true
 
 [zones.siofra_nokron_mimic]
 type = "major_boss"
+allow_entry_as_exit = true
 
 [zones.siofra_nokron_gargoyles]
 type = "major_boss"
 weight = 2
+allow_entry_as_exit = true
 
 [zones.haligtree_malenia]
 weight = 5
@@ -224,6 +222,7 @@ allow_entry_as_exit = true
 [zones.academy_library]
 type = "major_boss"
 weight = 4
+allow_entry_as_exit = true
 
 [zones.stormveil_godrick]
 weight = 2
@@ -233,6 +232,7 @@ allow_entry_as_exit = true
 # These zones cannot coexist in the same run.
 [zones.stormveil_margit]
 conflicts_with = ["leyndell_throne"]
+allow_entry_as_exit = true
 
 [zones.leyndell_throne]
 weight = 2
@@ -247,14 +247,14 @@ weight = 4
 allow_entry_as_exit = true
 
 [zones.volcano_temple]
-allow_entry_as_exit = false
+allow_entry_as_exit = true
 
 [zones.volcano_rykard]
 weight = 3
 
 [zones.flamepeak_firegiant]
 weight = 4
-allow_entry_as_exit = false
+allow_entry_as_exit = true
 
 [zones.farumazula_maliketh]
 weight = 4
@@ -275,18 +275,23 @@ conflicts_with = ["caelid_redmane_boss"]
 
 [zones.farumazula_godskinduo]
 weight = 2
+allow_entry_as_exit = true
 
 [zones.mohgwyn_boss]
 weight = 2
+allow_entry_as_exit = true
 
 [zones.mountaintops_sol_boss]
 weight = 2
+allow_entry_as_exit = true
 
 [zones.scadutree_base]
 weight = 5.5
+allow_entry_as_exit = true
 
 [zones.sewer_mohg]
 weight = 2
+allow_entry_as_exit = true
 
 [zones.academy_redwolf]
 allow_entry_as_exit = true
@@ -313,7 +318,7 @@ weight = 2
 
 [zones.jaggedpeak_bayle]
 weight = 4
-allow_entry_as_exit = false
+allow_entry_as_exit = true
 
 [zones.midramanse_boss]
 weight = 2
@@ -446,13 +451,6 @@ allowed_entries = [
     "AEG099_230_9000", # Entrance from Consecrated Snowfield
 ]
 
-[clusters.flamepeak_firegiant_07f0]
-proximity_groups = [
-    ["m60_52_53_00-AEG099_002_9000", # Fire Giant left front
-     "m60_52_53_00-AEG099_003_9001", # Fire Giant right front
-    ],
-]
-
 [clusters.haligtree_elphael_700b]
 allowed_entries = [
     "AEG099_230_9000", # Before Elphael
@@ -479,18 +477,6 @@ proximity_groups = [
      "AEG099_001_9004", # Gideon side
      "AEG099_231_9000", # Colosseum entrance
     ],
-]
-
-# Leyndell2: Gideon arena
-[clusters.leyndell2_sanctuary_1ffc]
-allowed_entries = [
-    "AEG099_001_9003", # Front of Gideon's arena
-    "AEG099_001_9004", # South entrance
-]
-proximity_groups = [
-    "AEG099_001_9003", # Front of Gideon's arena
-    "AEG099_001_9007", # Front right
-    "AEG099_001_9008", # Front left
 ]
 
 # Leyndell: Morgott exit + all Godfrey entrances are adjacent (throne -> sanctuary)
@@ -585,22 +571,5 @@ proximity_groups = [
 proximity_groups = [
     ["AEG099_001_9001", # Godskin Duo front left (after Duo)
      "AEG099_230_9000", # Before elevator to Dragon Temple Lift
-    ],
-]
-
-[clusters.farumazula_godskinduo_3b41]
-proximity_groups = [
-    ["AEG099_001_9004", # Balcony
-     "AEG099_001_9000", # Back right
-     "AEG099_001_9002", # Front right
-     "AEG099_001_9003", # Back left
-    ],
-]
-
-[clusters.farumazula_godskinduo_5406]
-proximity_groups = [
-    ["AEG099_001_9000", # Back right
-     "AEG099_001_9002", # Front right
-     "AEG099_001_9003", # Back left
     ],
 ]
