@@ -78,10 +78,86 @@ Placements:
   - Group: accessories
   # All crystal tears
   - Group: crystaltears
-  # All ashes of war (requires copydrops option to avoid fodder scope bug)
-  - Group: gems
-  # Curated somber/unique weapons (notable uniques only; Group: weapons
-  # includes ~500+ items but most are standard weapons not worth prioritizing)
+  # Curated ashes of war (build-defining skills with useful affinities)
+  # Attack skills
+  - Name: Lion's Claw
+    ID: gem:10000
+  - Name: Giant Hunt
+    ID: gem:11600
+  - Name: Sword Dance
+    ID: gem:12400
+  - Name: Double Slash
+    ID: gem:11200
+  - Name: Unsheathe
+    ID: gem:11400
+  - Name: Square Off
+    ID: gem:11500
+  - Name: Prelate's Charge
+    ID: gem:11300
+  - Name: Phantom Slash
+    ID: gem:22500
+  # Elemental / magic skills
+  - Name: Ice Spear
+    ID: gem:20200
+  - Name: Glintstone Pebble
+    ID: gem:20300
+  - Name: Sacred Blade
+    ID: gem:20100
+  - Name: Bloody Slash
+    ID: gem:20400
+  - Name: Thunderbolt
+    ID: gem:21600
+  - Name: Lightning Slash
+    ID: gem:21700
+  - Name: Flaming Strike
+    ID: gem:21400
+  - Name: Carian Grandeur
+    ID: gem:21800
+  - Name: Black Flame Tornado
+    ID: gem:22100
+  - Name: Storm Blade
+    ID: gem:21000
+  - Name: Prayerful Strike
+    ID: gem:20800
+  # Ground / stomp skills
+  - Name: Hoarfrost Stomp
+    ID: gem:50100
+  - Name: Flame of the Redmanes
+    ID: gem:50500
+  - Name: Waves of Darkness
+    ID: gem:50800
+  - Name: Hoarah Loux's Earthshaker
+    ID: gem:50900
+  # Buff skills
+  - Name: Royal Knight's Resolve
+    ID: gem:60100
+  - Name: Golden Vow
+    ID: gem:60300
+  - Name: Seppuku
+    ID: gem:60600
+  # Roar skills
+  - Name: War Cry
+    ID: gem:65100
+  - Name: Barbaric Roar
+    ID: gem:65000
+  # Movement skills
+  - Name: Bloodhound's Step
+    ID: gem:80100
+  - Name: Raptor of the Mists
+    ID: gem:80200
+  # Shield skills
+  - Name: Carian Retaliation
+    ID: gem:30500
+  - Name: Golden Parry
+    ID: gem:30700
+  # DLC ashes of war
+  - Name: Wing Stance
+    ID: gem:412000
+  - Name: Savage Lion's Claw
+    ID: gem:415000
+  - Name: Divine Beast Frost Stomp
+    ID: gem:416000
+  # Curated weapons (notable uniques, catalysts, and unique shields)
   # Daggers
   - Name: Black Knife
     ID: weapon:1010000
@@ -305,6 +381,190 @@ Placements:
     ID: weapon:19500000
   - Name: Thiollier's Hidden Needle
     ID: weapon:21500000
+  # Additional melee weapons
+  # Daggers
+  - Name: Glintstone Kris
+    ID: weapon:1070000
+  - Name: Scorpion's Stinger
+    ID: weapon:1080000
+  - Name: Blade of Calling
+    ID: weapon:1160000
+  # Straight Swords
+  - Name: Golden Epitaph
+    ID: weapon:2070000
+  - Name: Carian Knight's Sword
+    ID: weapon:2180000
+  # Greatswords
+  - Name: Flamberge
+    ID: weapon:3050000
+  - Name: Alabaster Lord's Sword
+    ID: weapon:3070000
+  # Colossal Swords
+  - Name: Ancient Meteoric Ore Greatsword
+    ID: weapon:4500000
+  # Thrusting Swords
+  - Name: Cleanrot Knight's Sword
+    ID: weapon:5010000
+  # Heavy Thrusting Swords
+  - Name: Godskin Stitcher
+    ID: weapon:6010000
+  # Curved Swords
+  - Name: Flowing Curved Sword
+    ID: weapon:7060000
+  - Name: Scavenger's Curved Sword
+    ID: weapon:7080000
+  - Name: Falx
+    ID: weapon:7510000
+  # Curved Greatswords
+  - Name: Onyx Lord's Greatsword
+    ID: weapon:8010000
+  - Name: Monk's Flameblade
+    ID: weapon:8070000
+  # Katanas
+  - Name: Serpentbone Blade
+    ID: weapon:9080000
+  - Name: Sword of Night
+    ID: weapon:9500000
+  # Twinblades
+  - Name: Black Steel Twinblade
+    ID: weapon:10510000
+  # Hammers
+  - Name: Envoy's Horn
+    ID: weapon:11100000
+  - Name: Scepter of the All-Knowing
+    ID: weapon:11110000
+  # Flails
+  - Name: Nightrider Flail
+    ID: weapon:13000000
+  - Name: Family Heads
+    ID: weapon:13020000
+  - Name: Serpent Flail
+    ID: weapon:13500000
+  # Axes
+  - Name: Sacrificial Axe
+    ID: weapon:14110000
+  - Name: Stormhawk Axe
+    ID: weapon:14140000
+  - Name: Death Knight's Twin Axes
+    ID: weapon:14510000
+  # Greataxes
+  - Name: Rusted Anchor
+    ID: weapon:15060000
+  - Name: Executioner's Greataxe
+    ID: weapon:15080000
+  # Spears
+  - Name: Clayman's Harpoon
+    ID: weapon:16030000
+  # Great Spears
+  - Name: Lance
+    ID: weapon:17060000
+  - Name: Treespear
+    ID: weapon:17070000
+  # Halberds
+  - Name: Lucerne
+    ID: weapon:18020000
+  - Name: Banished Knight's Halberd
+    ID: weapon:18030000
+  - Name: Spirit Glaive
+    ID: weapon:18500000
+  # Reapers
+  - Name: Grave Scythe
+    ID: weapon:19010000
+  # Whips
+  - Name: Tooth Whip
+    ID: weapon:20500000
+  # Fists
+  - Name: Star Fist
+    ID: weapon:21080000
+  - Name: Katar
+    ID: weapon:21100000
+  # Claws
+  - Name: Venomous Fang
+    ID: weapon:22010000
+  - Name: Raptor Talons
+    ID: weapon:22030000
+  # Colossal Weapons
+  - Name: Great Club
+    ID: weapon:23020000
+  - Name: Troll's Hammer
+    ID: weapon:23130000
+  # Torches
+  - Name: St. Trina's Torch
+    ID: weapon:24040000
+  - Name: Ghostflame Torch
+    ID: weapon:24050000
+  # DLC new weapon types
+  - Name: Dryleaf Arts
+    ID: weapon:60500000
+  - Name: Milady
+    ID: weapon:67500000
+  - Name: Great Katana
+    ID: weapon:66500000
+  - Name: Dueling Shield
+    ID: weapon:62500000
+  - Name: Beast Claw
+    ID: weapon:68500000
+  # Staves
+  - Name: Carian Regal Scepter
+    ID: weapon:33090000
+  - Name: Lusat's Glintstone Staff
+    ID: weapon:33240000
+  - Name: Azur's Glintstone Staff
+    ID: weapon:33230000
+  - Name: Meteorite Staff
+    ID: weapon:33250000
+  - Name: Prince of Death's Staff
+    ID: weapon:33180000
+  - Name: Staff of Loss
+    ID: weapon:33280000
+  - Name: Staff of the Guilty
+    ID: weapon:33260000
+  - Name: Carian Glintblade Staff
+    ID: weapon:33170000
+  - Name: Staff of the Great Beyond
+    ID: weapon:33510000
+  - Name: Maternal Staff
+    ID: weapon:33520000
+  # Seals
+  - Name: Erdtree Seal
+    ID: weapon:34070000
+  - Name: Dragon Communion Seal
+    ID: weapon:34080000
+  - Name: Godslayer's Seal
+    ID: weapon:34010000
+  - Name: Giant's Seal
+    ID: weapon:34020000
+  - Name: Gravel Stone Seal
+    ID: weapon:34030000
+  - Name: Clawmark Seal
+    ID: weapon:34040000
+  - Name: Golden Order Seal
+    ID: weapon:34060000
+  - Name: Frenzied Flame Seal
+    ID: weapon:34090000
+  - Name: Dryleaf Seal
+    ID: weapon:34500000
+  - Name: Spiraltree Seal
+    ID: weapon:34520000
+  # Unique shields
+  - Name: Jellyfish Shield
+    ID: weapon:32120000
+  - Name: One-Eyed Shield
+    ID: weapon:32150000
+  - Name: Visage Shield
+    ID: weapon:32160000
+  - Name: Erdtree Greatshield
+    ID: weapon:32080000
+  - Name: Fingerprint Stone Shield
+    ID: weapon:32130000
+  - Name: Briar Greatshield
+    ID: weapon:32050000
+  - Name: Shield of the Guilty
+    ID: weapon:31170000
+  - Name: Coil Shield
+    ID: weapon:30200000
+  - Name: Verdigris Greatshield
+    ID: weapon:32520000
   Requires:
   - Tag: boss
   - Tag: altboss
