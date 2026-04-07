@@ -27,35 +27,20 @@ other = 2
 
 # --- Base game ---
 
-[zones.stormveil]
-weight = 8
-
-[zones.stormveil_start]
-weight = 4
-
 [zones.academy]
-weight = 6
+weight = 1.5
 
 [zones.academy_entrance]
 weight = 3
 
-[zones.academy_rooftops]
-weight = 4
-
 [zones.academy_courtyard]
 weight = 3
-
-[zones.leyndell]
-weight = 10
-
-[zones.volcano]
-weight = 0.5
 
 [zones.haligtree]
 weight = 8
 
 [zones.farumazula]
-weight = 8
+weight = 2.5
 
 [zones.sewer]
 weight = 6
@@ -65,20 +50,19 @@ weight = 3  # Castle Morne, detected as legacy_dungeon via fortressonly+legacy f
 
 [zones.mohgwyn]
 type = "legacy_dungeon"
-weight = 6
+weight = 2
 
 # --- DLC ---
 
 [zones.belurat]
 type = "legacy_dungeon"
-weight = 6
 
 [zones.ensis]
 type = "legacy_dungeon"
 
 [zones.shadowkeep]
 type = "legacy_dungeon"
-weight = 6
+weight = 1
 
 [zones.shadowkeep_church]
 type = "legacy_dungeon"
@@ -128,6 +112,9 @@ weight = 2
 [zones.mountaintops_catacombs]
 weight = 4
 
+[zones.mountaintops_sol]
+weight = 1
+
 [zones.outskirts_grave]
 weight = 2
 
@@ -149,7 +136,7 @@ weight = 3.5
 weight = 1.5
 
 [zones.gravesite_gaol]
-weight = 6
+weight = 2.5
 
 [zones.rauhbase_catacombs]
 weight = 3.5
@@ -182,14 +169,15 @@ weight = 3
 
 [zones.volcano_abductors]
 type = "boss_arena"
-weight = 4
+weight = 1.5
 
 # Astel is a remembrance boss, override from boss_arena to major_boss
 [zones.ainsel_boss]
 type = "major_boss"
+weight = 2.5
 
 [zones.caelid_catacombs_boss]
-weight = 2
+weight = 0.5
 
 [zones.chapel_boss]
 allow_entry_as_exit = false
@@ -261,12 +249,18 @@ allow_entry_as_exit = true
 [zones.volcano_temple]
 allow_entry_as_exit = false
 
+[zones.volcano_rykard]
+weight = 3
+
 [zones.flamepeak_firegiant]
 weight = 4
 allow_entry_as_exit = false
 
 [zones.farumazula_maliketh]
 weight = 4
+
+[zones.farumazula_placidusax]
+weight = 5.5
 
 [zones.altus_elemer]
 type = "boss_arena"  # fog.txt Entrance has "major" tag, but Area has "minor"
@@ -378,6 +372,18 @@ exclude = true  # Cathedral of Manus Metyr interior, accessed via unique warp, n
 [clusters.volcano_ac44]
 exclude = true  # Too small for legacy_dungeon (~30s to traverse)
 
+[clusters.belurat_d88b]
+weight = 2
+
+[clusters.caelid_gaeltunnel_1599]
+weight = 1
+
+[clusters.sewer_46d2]
+weight = 1
+
+[clusters.volcano_808b]
+weight = 1
+
 [clusters.graveyard_grave_65d8]
 proximity_groups = [
     ["AEG099_230_9000", # Stranded Graveyard first door
@@ -386,6 +392,7 @@ proximity_groups = [
 ]
 
 [clusters.stormveil_db4a]
+weight = 2
 proximity_groups = [
     ["AEG099_230_9001", # Limgrave Divine Tower boundary
      "AEG099_002_9002", # Margit back
@@ -466,6 +473,7 @@ proximity_groups = [
 
 # Leyndell2: Gideon front + Gideon side are adjacent (same arena approaches)
 [clusters.leyndell2_e77d]
+weight = 2
 proximity_groups = [
     ["AEG099_001_9003", # Gideon front
      "AEG099_001_9004", # Gideon side
@@ -487,6 +495,7 @@ proximity_groups = [
 
 # Leyndell: Morgott exit + all Godfrey entrances are adjacent (throne -> sanctuary)
 [clusters.leyndell_sanctuary_25d4]
+weight = 2
 proximity_groups = [
     ["AEG099_001_9000", # Morgott front
      "AEG099_001_9003", # Godfrey side
@@ -501,6 +510,7 @@ proximity_groups = [
 
 # Leyndell (from Marika exit): Godfrey front + Godfrey side are adjacent
 [clusters.leyndell_1259]
+weight = 3
 proximity_groups = [
     ["AEG099_001_9004", # Godfrey Marika exit
      "AEG099_001_9003", # Godfrey front
@@ -510,6 +520,7 @@ proximity_groups = [
 
 # Leyndell: Godfrey front + Godfrey side are adjacent
 [clusters.leyndell_47cb]
+weight = 2
 proximity_groups = [
     ["AEG099_001_9003", # Godfrey front
      "AEG099_231_9001", # Colosseum entrance
@@ -535,6 +546,7 @@ proximity_groups = [
 
 # Academy Post Redwolf (large), same spatial groups
 [clusters.academy_redwolf_b9d9]
+weight = 2
 proximity_groups = [
     ["AEG099_001_9000",             # Rennala front
      "1037462650",                  # Sending gate to Church of Vows
@@ -561,6 +573,7 @@ proximity_groups = [
 ]
 
 [clusters.farumazula_temple_0ef3]
+weight = 1
 proximity_groups = [
     ["AEG099_001_9004", # Godskin Duo balcony (top)
      "AEG099_001_9000", # Godskin Duo back right (down stairs)
