@@ -442,6 +442,10 @@ Example:
             ))
             .ToList();
 
+        // Boss trigger: build region-to-TrapFlag mapping for warp patching.
+        var regionToTrapFlag = BossTriggerInjector.BuildRegionToTrapFlag(injectionResult, graph.Areas);
+        Console.WriteLine($"Boss trigger: {regionToTrapFlag.Count} boss arena warp region(s) mapped");
+
         // Zone tracking: prepare region-to-flags mapping and expected flags.
         bool doZoneTracking = graphData.FinishEvent > 0;
         int bossDefeatFlag = 0;
@@ -484,6 +488,7 @@ Example:
 
         var injectedFlags = new HashSet<int>();
         int totalZoneTrackingInjected = 0;
+        int totalBossTriggerInjected = 0;
         int totalErdtreePatched = 0;
         int totalSealingTreePatched = 0;
 
@@ -503,6 +508,16 @@ Example:
                 if (n > 0)
                 {
                     totalZoneTrackingInjected += n;
+                    modified = true;
+                }
+            }
+
+            if (regionToTrapFlag.Count > 0)
+            {
+                int n = BossTriggerInjector.PatchEmevdFile(emevd, events, regionToTrapFlag);
+                if (n > 0)
+                {
+                    totalBossTriggerInjected += n;
                     modified = true;
                 }
             }
@@ -547,6 +562,11 @@ Example:
             totalZoneTrackingInjected += ZoneTrackingInjector.PatchEmevdFile(
                 commonEmevd, events, injectionResult.RegionToFlags, injectedFlags);
         }
+        if (regionToTrapFlag.Count > 0)
+        {
+            totalBossTriggerInjected += BossTriggerInjector.PatchEmevdFile(
+                commonEmevd, events, regionToTrapFlag);
+        }
         if (erdtreeAltMapBytes != null)
         {
             int n = ErdtreeWarpPatcher.PatchEmevd(
@@ -568,6 +588,11 @@ Example:
         }
 
         // Log scan results
+        if (regionToTrapFlag.Count > 0)
+        {
+            Console.WriteLine($"Boss trigger: injected {totalBossTriggerInjected} SetEventFlag(TrapFlag) " +
+                $"before warp instructions ({regionToTrapFlag.Count} boss arena regions)");
+        }
         if (doZoneTracking)
         {
             ZoneTrackingInjector.ValidateInjectedFlags(injectedFlags, expectedFlags!, totalZoneTrackingInjected);
@@ -615,13 +640,6 @@ Example:
         {
             ZoneTrackingInjector.InjectBossDeathEvent(
                 commonEmevd, events, injectionResult.FinishEvent, bossDefeatFlag);
-        }
-
-        // 7f2. Boss trigger on arena entry (set BossTrigger at fog gate warp regions)
-        var bossEntrances = BossTriggerInjector.CollectBossEntrances(injectionResult, graph.Areas);
-        if (bossEntrances.Count > 0)
-        {
-            BossTriggerInjector.Inject(commonEmevd, events, bossEntrances);
         }
 
         // 7g. "RUN COMPLETE" banner event

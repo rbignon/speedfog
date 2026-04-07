@@ -96,7 +96,7 @@ speedfog/
 │   │   ├── RunCompleteInjector.cs  # Inject "RUN COMPLETE" message on final boss defeat
 │   │   ├── ChapelGraceInjector.cs  # Site of Grace at Chapel of Anticipation
 │   │   ├── DeathMarkerInjector.cs  # Bloodstain visuals at fog gates
-│   │   ├── BossTriggerInjector.cs  # Force boss activation on arena entry via warp region
+│   │   ├── BossTriggerInjector.cs  # Lock boss arena exits by setting TrapFlag before warp
 │   │   ├── RebirthInjector.cs  # Rebirth (stat reallocation) at Sites of Grace
 │   │   ├── AlternateFlagPatcher.cs  # Neutralize Event 915, clear flags 300/330 at startup
 │   │   ├── SealingTreeWarpPatcher.cs  # Patch Sealing Tree fogwarps (flag 330)
@@ -149,6 +149,7 @@ speedfog/
 │   ├── vanilla-warp-removal.md # FogMod warp removal workaround
 │   ├── stake-removal.md     # Vanilla stake removal (RetryPoint softlock prevention)
 │   ├── death-markers.md     # Bloodstain visuals at fog gates (DrawGroups, DeepCopy bug)
+│   ├── boss-trigger-lock.md # Boss arena exit locking (TrapFlag before warp)
 │   └── save-backup.md      # Save backup system (daemon, recovery, config)
 ├── SoulsFormats/            # SoulsFormatsNEXT git submodule (used by GamePatcher)
 └── output/                  # Generated mod (gitignored, self-contained)
@@ -173,6 +174,7 @@ speedfog/
 | `docs/vanilla-warp-removal.md` | FogMod vanilla warp removal workaround |
 | `docs/stake-removal.md` | Vanilla stake removal (RetryPoint softlock prevention) |
 | `docs/death-markers.md` | Bloodstain visuals at fog gates (DrawGroups, DeepCopy bug, entity IDs) |
+| `docs/boss-trigger-lock.md` | Boss arena exit locking (TrapFlag vs BossTrigger, warp patching) |
 | `docs/save-backup.md` | Save backup system (daemon, recovery, config) |
 | `docs/item-giving-limitations.md` | EMEVD item type constraints and workarounds |
 | `docs/clusters.md` | Cluster generation from fog.txt |
@@ -232,7 +234,7 @@ speedfog/
 | `StakeRemover` | Removes vanilla stakes that respawn outside the DAG |
 | `HeavyDoorMessagePatcher` | Suppresses "heavy door" popup (text 4200) in common_func |
 | `DeathMarkerInjector` | Bloodstain markers at fog gates (MSB assets + EMEVD SFX) |
-| `BossTriggerInjector` | Forces boss activation at fog gate warp regions (prevents exit bypass) |
+| `BossTriggerInjector` | Locks boss arena exit fog gates by setting TrapFlag before entrance warp |
 | `WeaponUpgradeInjector` | Weapon upgrade initialization for starting weapons with ashes of war |
 
 **ItemRandomizerWrapper** (uses RandomizerCommon.dll directly):

@@ -5,38 +5,30 @@ using SoulsIds;
 namespace FogModWrapper;
 
 /// <summary>
-/// Injects startboss-equivalent events that trigger boss activation when the player
-/// lands in a fog gate's warp region. This prevents bypassing the exit fog gate
-/// before the boss fight starts (BossTrapName/TrapFlag exploit).
+/// Injects SetEventFlag(TrapFlag, ON) before WarpPlayer instructions that target
+/// boss arena warp regions. This locks the exit fog gate (which checks TrapFlag via
+/// BossTrapName) before the player even arrives in the arena.
 ///
-/// The vanilla startboss trigger regions are positioned inside the arena, but when
-/// SpeedFog randomizes connections, the player may enter from a direction that
-/// misses these regions. By adding a trigger at the warp landing point, the boss
-/// activates immediately on arrival.
+/// Uses the same warp-patching pattern as ZoneTrackingInjector: scan all EMEVD files
+/// for WarpPlayer instructions, match destination regions against a lookup, and insert
+/// SetEventFlag before matching warps.
 ///
-/// Chain: warp region entry -> BossTrigger flag set -> vanilla boss event activates
-/// -> TrapFlag set -> exit fogwarp locked behind DefeatFlag.
+/// The fogwarp exit template checks TrapFlag (X20_4, from BossTrapName -> area.TrapFlag).
+/// When TrapFlag is ON, the exit is locked behind DefeatFlag. By setting TrapFlag before
+/// the entrance warp, the exit is already locked when the player arrives.
 /// </summary>
 public static class BossTriggerInjector
 {
-    private const int EVENT_BASE = 755865000;
-
     /// <summary>
-    /// A boss arena entrance identified from graph connections.
-    /// </summary>
-    public readonly record struct BossEntrance(
-        int WarpRegion, int DefeatFlag, int BossTrigger, string Description);
-
-    /// <summary>
-    /// Collect boss arena entrances from deferred edges and area data.
+    /// Build a mapping of warp regions to TrapFlag values for boss arena entrances.
+    /// The fogwarp exit template checks TrapFlag (from BossTrapName -> area.TrapFlag).
     /// Must be called after GameDataWriterE.Write() (Side.Warp is populated).
     /// </summary>
-    public static List<BossEntrance> CollectBossEntrances(
+    public static Dictionary<int, int> BuildRegionToTrapFlag(
         InjectionResult injectionResult,
         Dictionary<string, AnnotationData.Area> areas)
     {
-        var entrances = new List<BossEntrance>();
-        var seen = new HashSet<(int region, int trigger)>();
+        var mapping = new Dictionary<int, int>();
 
         foreach (var (flagId, edge, desc) in injectionResult.DeferredEdges)
         {
@@ -46,91 +38,79 @@ public static class BossTriggerInjector
 
             if (!areas.TryGetValue(side.Area, out var area))
                 continue;
-            if (area.DefeatFlag <= 0 || area.BossTrigger <= 0)
+            if (area.TrapFlag <= 0)
                 continue;
 
-            AddEntrance(entrances, seen, side.Warp.Region, area, desc);
+            if (side.Warp.Region > 0)
+                mapping.TryAdd(side.Warp.Region, area.TrapFlag);
 
             // Handle AlternateFlag warps (e.g., flag 300/330) with different warp regions
-            if (side.AlternateSide?.Warp != null)
-            {
-                AddEntrance(entrances, seen, side.AlternateSide.Warp.Region, area, $"{desc} (alt)");
-            }
+            if (side.AlternateSide?.Warp != null && side.AlternateSide.Warp.Region > 0)
+                mapping.TryAdd(side.AlternateSide.Warp.Region, area.TrapFlag);
         }
 
-        return entrances;
-    }
-
-    private static void AddEntrance(
-        List<BossEntrance> entrances,
-        HashSet<(int, int)> seen,
-        int warpRegion,
-        AnnotationData.Area area,
-        string desc)
-    {
-        if (warpRegion <= 0)
-            return;
-
-        // Deduplicate: same warp region + same boss trigger = redundant event
-        var key = (warpRegion, area.BossTrigger);
-        if (!seen.Add(key))
-            return;
-
-        entrances.Add(new BossEntrance(warpRegion, area.DefeatFlag, area.BossTrigger, desc));
+        return mapping;
     }
 
     /// <summary>
-    /// Inject startboss-equivalent events into common.emevd for each boss arena entrance.
-    /// Each event monitors a fog gate warp region and sets BossTrigger when the player lands.
+    /// Patch a single EMEVD: insert SetEventFlag(TrapFlag, ON) before WarpPlayer
+    /// instructions whose destination region matches a boss arena entrance.
+    /// Returns the number of SetEventFlag instructions inserted.
+    ///
+    /// Same pattern as ZoneTrackingInjector.PatchEmevdFile: scan events for warp
+    /// instructions, match regions, insert flags before warps in reverse order.
     /// </summary>
-    /// <returns>Number of events injected.</returns>
-    public static int Inject(EMEVD commonEmevd, Events events, List<BossEntrance> entrances)
+    public static int PatchEmevdFile(
+        EMEVD emevd, Events events,
+        Dictionary<int, int> regionToTrapFlag)
     {
-        if (entrances.Count == 0)
-            return 0;
+        int totalInjected = 0;
 
-        var initEvent = commonEmevd.Events.Find(e => e.ID == 0);
-        if (initEvent == null)
+        foreach (var evt in emevd.Events)
         {
-            Console.WriteLine("Warning: Event 0 not found in common.emevd, skipping boss trigger injection");
-            return 0;
+            // First pass: find warp positions with matching boss arena regions.
+            var warpPositions = new List<(int index, int trapFlag)>();
+
+            for (int i = 0; i < evt.Instructions.Count; i++)
+            {
+                var warpInfo = ZoneTrackingInjector.TryExtractWarpInfo(evt.Instructions[i]);
+                if (warpInfo == null)
+                    continue;
+
+                int region = warpInfo.Value.Region;
+                if (region == 0)
+                    continue;
+
+                if (regionToTrapFlag.TryGetValue(region, out var trapFlag))
+                {
+                    warpPositions.Add((i, trapFlag));
+                }
+            }
+
+            if (warpPositions.Count == 0)
+                continue;
+
+            // Second pass: insert SetEventFlag before each warp, from last to first
+            // to avoid index shifting affecting earlier positions.
+            for (int j = warpPositions.Count - 1; j >= 0; j--)
+            {
+                var (warpIdx, trapFlag) = warpPositions[j];
+
+                var setFlagInstr = events.ParseAdd(
+                    $"SetEventFlag(TargetEventFlagType.EventFlag, {trapFlag}, ON)");
+                evt.Instructions.Insert(warpIdx, setFlagInstr);
+
+                // Shift Parameter entries for instructions at or after insertion point
+                foreach (var param in evt.Parameters)
+                {
+                    if (param.InstructionIndex >= warpIdx)
+                        param.InstructionIndex++;
+                }
+            }
+
+            totalInjected += warpPositions.Count;
         }
 
-        for (int i = 0; i < entrances.Count; i++)
-        {
-            var entry = entrances[i];
-            int eventId = EVENT_BASE + i;
-
-            var evt = new EMEVD.Event(eventId);
-
-            // End permanently if boss already defeated
-            evt.Instructions.Add(events.ParseAdd(
-                $"EndIfEventFlag(EventEndType.End, ON, TargetEventFlagType.EventFlag, {entry.DefeatFlag})"));
-
-            // Wait for player in warp region (10000 = player entity)
-            evt.Instructions.Add(events.ParseAdd(
-                $"IfInoutsideArea(MAIN, InsideOutsideState.Inside, 10000, {entry.WarpRegion}, 1)"));
-
-            // 1-frame delay (let standing-up animation start)
-            evt.Instructions.Add(events.ParseAdd("WaitFixedTimeFrames(1)"));
-
-            // Set BossTrigger -> vanilla boss event activates -> TrapFlag set
-            evt.Instructions.Add(events.ParseAdd(
-                $"SetEventFlag(TargetEventFlagType.EventFlag, {entry.BossTrigger}, ON)"));
-
-            // Restart: re-check on next arena entry (e.g., after player death)
-            evt.Instructions.Add(events.ParseAdd("EndUnconditionally(EventEndType.Restart)"));
-
-            commonEmevd.Events.Add(evt);
-
-            // Register in event 0 (InitializeEvent: bank 2000, id 0)
-            var initArgs = new byte[8];
-            BitConverter.GetBytes(0).CopyTo(initArgs, 0);           // slot = 0
-            BitConverter.GetBytes(eventId).CopyTo(initArgs, 4);     // eventId
-            initEvent.Instructions.Add(new EMEVD.Instruction(2000, 0, initArgs));
-        }
-
-        Console.WriteLine($"Boss trigger: injected {entrances.Count} warp-region trigger(s)");
-        return entrances.Count;
+        return totalInjected;
     }
 }
