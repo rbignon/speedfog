@@ -58,11 +58,6 @@ public class ConfigGeneratorTests : IDisposable
         Assert.True(File.Exists(Path.Combine(_tempDir, "backups", "launch_helper.ps1")));
         Assert.True(File.Exists(Path.Combine(_tempDir, "backups", "backup_daemon.ps1")));
         Assert.True(File.Exists(Path.Combine(_tempDir, "backups", "recovery.ps1")));
-
-        // linux/ directory
-        Assert.True(File.Exists(Path.Combine(_tempDir, "linux", "launch_speedfog.sh")));
-        Assert.True(File.Exists(Path.Combine(_tempDir, "linux", "backup_daemon.sh")));
-        Assert.True(File.Exists(Path.Combine(_tempDir, "linux", "recovery.sh")));
     }
 
     [Fact]
@@ -117,16 +112,6 @@ public class ConfigGeneratorTests : IDisposable
     }
 
     [Fact]
-    public void CopyScripts_BackupDaemonSh_AcceptsSavePathArg()
-    {
-        ConfigGenerator.CopyScripts(_tempDir);
-
-        var content = File.ReadAllText(Path.Combine(_tempDir, "linux", "backup_daemon.sh"));
-        Assert.Contains("SAVE_PATH=\"$1\"", content);
-        Assert.Contains("zip -j", content);
-    }
-
-    [Fact]
     public void CopyScripts_LaunchHelperPs1_HasSteamRegistryDetection()
     {
         ConfigGenerator.CopyScripts(_tempDir);
@@ -134,16 +119,6 @@ public class ConfigGeneratorTests : IDisposable
         var content = File.ReadAllText(Path.Combine(_tempDir, "backups", "launch_helper.ps1"));
         Assert.Contains("HKCU:\\Software\\Valve\\Steam\\ActiveProcess", content);
         Assert.Contains("76561197960265728", content);
-    }
-
-    [Fact]
-    public void CopyScripts_ShellLauncher_HasSteamVdfDetection()
-    {
-        ConfigGenerator.CopyScripts(_tempDir);
-
-        var content = File.ReadAllText(Path.Combine(_tempDir, "linux", "launch_speedfog.sh"));
-        Assert.Contains("loginusers.vdf", content);
-        Assert.Contains("MostRecent", content);
     }
 
     [Fact]
@@ -155,29 +130,6 @@ public class ConfigGeneratorTests : IDisposable
         Assert.Contains("Expand-Archive", content);
         Assert.Contains("Restored successfully", content);
         Assert.Contains("launch_speedfog.bat", content);
-    }
-
-    [Fact]
-    public void CopyScripts_RecoverySh_HasRestoreFlow()
-    {
-        ConfigGenerator.CopyScripts(_tempDir);
-
-        var content = File.ReadAllText(Path.Combine(_tempDir, "linux", "recovery.sh"));
-        Assert.Contains("unzip -o -j", content);
-        Assert.Contains("Restored successfully", content);
-        Assert.Contains("launch_speedfog.sh", content);
-    }
-
-    [Fact]
-    public void CopyScripts_ShellScriptsHaveShebang()
-    {
-        ConfigGenerator.CopyScripts(_tempDir);
-
-        foreach (var sh in Directory.GetFiles(Path.Combine(_tempDir, "linux"), "*.sh"))
-        {
-            var firstLine = File.ReadLines(sh).First();
-            Assert.Equal("#!/bin/bash", firstLine);
-        }
     }
 
     [Fact]

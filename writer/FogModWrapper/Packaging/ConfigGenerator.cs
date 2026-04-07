@@ -78,26 +78,6 @@ mods = [
         CopyFile(scriptsDir, outputDir, Path.Combine("backups", "backup_daemon.ps1"));
         CopyFile(scriptsDir, outputDir, Path.Combine("backups", "recovery.ps1"));
 
-        // linux/ directory
-        var linuxOut = Path.Combine(outputDir, "linux");
-        Directory.CreateDirectory(linuxOut);
-        CopyFile(scriptsDir, outputDir, Path.Combine("linux", "launch_speedfog.sh"));
-        CopyFile(scriptsDir, outputDir, Path.Combine("linux", "backup_daemon.sh"));
-        CopyFile(scriptsDir, outputDir, Path.Combine("linux", "recovery.sh"));
-
-        // Make shell scripts executable on Unix
-        if (!OperatingSystem.IsWindows())
-        {
-            var execMode =
-                UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
-                UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
-                UnixFileMode.OtherRead | UnixFileMode.OtherExecute;
-
-            foreach (var sh in Directory.GetFiles(linuxOut, "*.sh"))
-            {
-                File.SetUnixFileMode(sh, execMode);
-            }
-        }
     }
 
     private static void CopyFile(string scriptsDir, string outputDir, string relativePath)

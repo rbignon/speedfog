@@ -467,10 +467,6 @@ Zones have tiers (1-28) based on their layer in the DAG. FogMod applies SpEffect
 ├── config_speedfog.toml      # ModEngine config
 ├── launch_speedfog.bat       # Windows launcher
 ├── recovery.bat              # Windows recovery launcher
-├── linux/                    # Linux launchers
-│   ├── launch_speedfog.sh    # Linux/Proton launcher
-│   ├── recovery.sh           # Linux recovery launcher
-│   └── backup_daemon.sh      # Linux backup daemon
 └── backups/                  # Backup system files
     ├── config.ini            # Backup configuration
     ├── backup_daemon.ps1     # Windows backup daemon

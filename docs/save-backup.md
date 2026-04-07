@@ -23,10 +23,6 @@ A separate recovery script lets the player restore any backup interactively.
 output/
 ├── launch_speedfog.bat        # Detects save, starts daemon, launches game
 ├── recovery.bat               # Wrapper → backups/recovery.ps1
-├── linux/
-│   ├── launch_speedfog.sh     # Same flow for Linux/Proton
-│   ├── recovery.sh            # Linux recovery
-│   └── backup_daemon.sh       # Linux daemon
 └── backups/
     ├── config.ini             # Optional config overrides
     ├── launch_helper.ps1      # Save detection + daemon launch (Windows)
@@ -36,8 +32,7 @@ output/
 ```
 
 The output root contains only files the player interacts with directly
-(`launch_speedfog.bat`, `recovery.bat`). Internal scripts live in `backups/`
-and `linux/`.
+(`launch_speedfog.bat`, `recovery.bat`). Internal scripts live in `backups/`.
 
 ## Configuration
 
@@ -52,8 +47,8 @@ and `linux/`.
 
 ## Save File Detection
 
-The save file is at `%APPDATA%\EldenRing\<steam_id>\ER0000.sl2` (Windows) or
-under the Proton prefix (Linux). The `<steam_id>` varies per player.
+The save file is at `%APPDATA%\EldenRing\<steam_id>\ER0000.sl2`.
+The `<steam_id>` varies per player.
 
 Detection runs in the **launcher** (visible console window):
 
@@ -66,8 +61,7 @@ The resolved path is passed to the daemon as an argument.
 
 ## Backup Daemon
 
-Launched by the launcher in a minimized window (Windows) or background process
-(Linux). Lifecycle:
+Launched by the launcher in a minimized window. Lifecycle:
 
 1. **Wait phase**: poll for `eldenring.exe` every 5 seconds, up to 5 minutes.
 2. **Pre-run backup**: if save file exists, zip it as `pre-run_<timestamp>.zip`.
@@ -93,7 +87,7 @@ The daemon copies the save file to a temporary `ER0000.sl2` in the backups
 directory before compressing, so that no read handle is held on the live
 save file during the slower compression step. This avoids potential
 interference with Elden Ring's autosave. PowerShell uses `Copy-Item` +
-`Compress-Archive`, bash uses `cp` + `zip -j`.
+`Compress-Archive`.
 
 ### Logging
 
@@ -111,7 +105,7 @@ The daemon logs to both console and `backups/backup.log` (append mode).
 
 ## Recovery
 
-The player runs `recovery.bat` (Windows) or `linux/recovery.sh`.
+The player runs `recovery.bat`.
 
 ```
 SpeedFog Save Recovery
@@ -151,15 +145,11 @@ randomizer configuration).
 writer/scripts/
 ├── launch_speedfog.bat
 ├── recovery.bat
-├── backups/
-│   ├── config.ini
-│   ├── launch_helper.ps1
-│   ├── backup_daemon.ps1
-│   └── recovery.ps1
-└── linux/
-    ├── launch_speedfog.sh
-    ├── backup_daemon.sh
-    └── recovery.sh
+└── backups/
+    ├── config.ini
+    ├── launch_helper.ps1
+    ├── backup_daemon.ps1
+    └── recovery.ps1
 ```
 
 `PackagingWriter.WritePackageAsync` calls `ConfigGenerator.CopyScripts()`
@@ -170,7 +160,7 @@ after generating the ModEngine config.
 FogMod has a similar system (`SaveBackupService.cs`) with a WinForms UI. Our
 implementation differs:
 
-- Scripts instead of GUI (no WinForms dependency, works on Linux)
+- Scripts instead of GUI (no WinForms dependency)
 - ZIP compression like FogMod (same ~10:1 ratio)
 - Save detection in the launcher (visible window) instead of in the daemon
 - Pre-run backup equivalent to FogMod's `.randobak`

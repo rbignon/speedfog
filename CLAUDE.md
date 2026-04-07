@@ -118,8 +118,7 @@ speedfog/
 │   ├── scripts/             # Launch, recovery, and backup scripts
 │   │   ├── launch_speedfog.bat  # Windows launcher
 │   │   ├── recovery.bat     # Windows save recovery
-│   │   ├── linux/           # Linux/Proton scripts (launch, backup, recovery)
-│   │   └── backups/         # Save backup daemon (PowerShell + bash)
+│   │   └── backups/         # Save backup daemon (PowerShell)
 │   └── GamePatcher/          # Overlay generator, runs at setup (uses SoulsFormatsNEXT submodule)
 │       ├── Program.cs       # CLI entry point
 │       └── GraceAnimationPatcher.cs  # Speed up grace sit/discover animations
@@ -385,8 +384,7 @@ wine publish/win-x64/ItemRandomizerWrapper.exe \
 # {"seed": 12345, "difficulty": 50, "options": {"item": true, "enemy": false}}
 
 # Play! (output is self-contained with ModEngine + launcher)
-./output/launch_speedfog.bat   # Windows
-./output/linux/launch_speedfog.sh    # Linux/Proton
+./output/launch_speedfog.bat
 ```
 
 ## Testing
