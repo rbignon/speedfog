@@ -707,7 +707,8 @@ def determine_operation(
     Priority hierarchy:
     1. REBALANCE — if saturated + stale + merge pair available (defensive override)
     2. prefer_merge — if True, bypass probability roll, return MERGE
-    3. Normal probability roll — split_prob / merge_prob / passant
+    3. Force SPLIT when single branch (outside convergence) to avoid linear segments
+    4. Normal probability roll — split_prob / merge_prob / passant
 
     Args:
         cluster: Pre-selected cluster.
@@ -806,6 +807,11 @@ def determine_operation(
                 can_split = True
                 split_fan = n
                 break
+
+    # Force split when single branch outside convergence to avoid
+    # linear segments where the player has no choice.
+    if num_branches == 1 and not prefer_merge and can_split:
+        return LayerOperation.SPLIT, split_fan
 
     # Determine merge capability (respects min_branch_age)
     can_merge = (

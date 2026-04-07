@@ -3007,7 +3007,7 @@ class TestDetermineOperation:
         assert op == LayerOperation.MERGE
 
     def test_force_none_uses_normal_logic(self):
-        """force=None (default) uses normal probability logic."""
+        """force=None (default) uses normal probability logic for multi-branch."""
         cluster = make_cluster(
             "c1",
             entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
@@ -3019,6 +3019,81 @@ class TestDetermineOperation:
         )
         config = Config()
         config.structure.split_probability = 0.0  # Never split
+        config.structure.merge_probability = 0.0
+        config.structure.max_parallel_paths = 3
+        # Need 2+ branches to test probability roll (single branch forces split)
+        branches = [
+            Branch("b0", "n0", FogRef("x", "z")),
+            Branch("b1", "n1", FogRef("y", "z")),
+        ]
+        op, fan = determine_operation(
+            cluster,
+            branches,
+            config,
+            random.Random(42),
+        )
+        assert op == LayerOperation.PASSANT
+
+    def test_single_branch_forces_split(self):
+        """Single branch outside convergence forces SPLIT when cluster can split."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
+            exit_fogs=[
+                {"fog_id": "x1", "zone": "z1"},
+                {"fog_id": "x2", "zone": "z1"},
+                {"fog_id": "x3", "zone": "z1"},
+            ],
+        )
+        config = Config()
+        config.structure.split_probability = 0.0  # Would normally never split
+        config.structure.max_parallel_paths = 3
+        branches = [Branch("b0", "start", FogRef("x", "z"))]
+        op, fan = determine_operation(
+            cluster,
+            branches,
+            config,
+            random.Random(42),
+        )
+        assert op == LayerOperation.SPLIT
+        assert fan >= 2
+
+    def test_single_branch_no_force_during_convergence(self):
+        """Single branch during convergence (prefer_merge) does not force split."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
+            exit_fogs=[
+                {"fog_id": "x1", "zone": "z1"},
+                {"fog_id": "x2", "zone": "z1"},
+                {"fog_id": "x3", "zone": "z1"},
+            ],
+        )
+        config = Config()
+        config.structure.split_probability = 0.0
+        config.structure.max_parallel_paths = 3
+        branches = [Branch("b0", "start", FogRef("x", "z"))]
+        op, fan = determine_operation(
+            cluster,
+            branches,
+            config,
+            random.Random(42),
+            prefer_merge=True,
+        )
+        assert op == LayerOperation.PASSANT
+
+    def test_single_branch_passant_when_cant_split(self):
+        """Single branch falls back to PASSANT when cluster can't split."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
+            exit_fogs=[
+                {"fog_id": "e1", "zone": "z1"},
+                {"fog_id": "x1", "zone": "z1"},
+            ],
+        )
+        config = Config()
+        config.structure.split_probability = 0.0
         config.structure.max_parallel_paths = 3
         branches = [Branch("b0", "start", FogRef("x", "z"))]
         op, fan = determine_operation(
