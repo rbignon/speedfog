@@ -685,6 +685,8 @@ def test_enemy_config_defaults():
     """EnemyConfig has correct defaults."""
     config = Config.from_dict({})
     assert config.enemy.randomize_bosses == "none"
+    assert config.enemy.ignore_arena_size is False
+    assert config.enemy.swap_boss is False
 
 
 def test_enemy_config_from_dict():
@@ -708,6 +710,15 @@ def test_enemy_config_partial():
     """EnemyConfig uses defaults for missing fields."""
     config = Config.from_dict({"enemy": {"randomize_bosses": "all"}})
     assert config.enemy.randomize_bosses == "all"
+    assert config.enemy.ignore_arena_size is False
+    assert config.enemy.swap_boss is False
+
+
+def test_enemy_config_swap_boss():
+    """EnemyConfig parses swap_boss from config dict."""
+    config = Config.from_dict({"enemy": {"swap_boss": True}})
+    assert config.enemy.swap_boss is True
+    assert config.enemy.randomize_bosses == "none"
 
 
 def test_enemy_config_legacy_bool():

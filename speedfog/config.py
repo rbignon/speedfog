@@ -394,6 +394,7 @@ class EnemyConfig:
 
     randomize_bosses: str = "none"  # "none", "minor", "all"
     ignore_arena_size: bool = False
+    swap_boss: bool = False  # Swap multi-phase boss entities (swappable tag)
 
     def __post_init__(self) -> None:
         """Validate and normalize enemy config."""
@@ -602,6 +603,7 @@ class Config:
             enemy=EnemyConfig(
                 randomize_bosses=enemy_section.get("randomize_bosses", "none"),
                 ignore_arena_size=enemy_section.get("ignore_arena_size", False),
+                swap_boss=enemy_section.get("swap_boss", False),
             ),
         )
 

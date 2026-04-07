@@ -137,8 +137,13 @@ Example:
             {
                 opt["ignoresize"] = true;
             }
+            if (randoConfig.EnemyOptions.SwapBoss)
+            {
+                opt["swapboss"] = true;
+            }
             Console.WriteLine($"Enemy preset: randomize_bosses={randoConfig.EnemyOptions.RandomizeBosses}, "
-                + $"ignore_arena_size={randoConfig.EnemyOptions.IgnoreArenaSize}");
+                + $"ignore_arena_size={randoConfig.EnemyOptions.IgnoreArenaSize}, "
+                + $"swap_boss={randoConfig.EnemyOptions.SwapBoss}");
         }
         else if (!string.IsNullOrEmpty(randoConfig.Preset))
         {

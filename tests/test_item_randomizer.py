@@ -174,13 +174,16 @@ def test_generate_item_config_enemy_options_default():
 
     assert "enemy_options" in result
     assert result["enemy_options"]["randomize_bosses"] == "none"
+    assert result["enemy_options"]["ignore_arena_size"] is False
+    assert result["enemy_options"]["swap_boss"] is False
     # preset key should no longer be present
     assert "preset" not in result
 
 
 def test_generate_item_config_enemy_options_enabled():
     """generate_item_config passes through enemy randomization settings."""
-    config = Config.from_dict({"enemy": {"randomize_bosses": "all"}})
+    config = Config.from_dict({"enemy": {"randomize_bosses": "all", "swap_boss": True}})
     result = generate_item_config(config, 42)
 
     assert result["enemy_options"]["randomize_bosses"] == "all"
+    assert result["enemy_options"]["swap_boss"] is True

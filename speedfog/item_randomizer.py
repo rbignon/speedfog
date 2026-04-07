@@ -41,6 +41,7 @@ def generate_item_config(config: Config, seed: int) -> dict[str, Any]:
         "enemy_options": {
             "randomize_bosses": config.enemy.randomize_bosses,
             "ignore_arena_size": config.enemy.ignore_arena_size,
+            "swap_boss": config.enemy.swap_boss,
         },
         # RandomizerHelper.dll defaults almost everything to true when not
         # specified in the INI.  We must be exhaustive to avoid surprises

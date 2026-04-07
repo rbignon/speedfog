@@ -236,6 +236,10 @@ randomize_bosses = "none"
 # Allow placing large bosses in small arenas. Only applies when randomize_bosses != "none".
 # Default: false (bosses that are too large for an arena are excluded from it).
 ignore_arena_size = false
+# Swap multi-phase boss entities (e.g. phase 1/phase 2 transitions).
+# Applies to enemies tagged "swappable" in the randomizer's enemy annotations.
+# Default: false
+# swap_boss = false
 
 [item_randomizer]
 # Enable Item/Enemy Randomizer integration (default: true)

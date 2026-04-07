@@ -50,4 +50,7 @@ public class EnemyOptionsConfig
 
     [JsonPropertyName("ignore_arena_size")]
     public bool IgnoreArenaSize { get; set; }
+
+    [JsonPropertyName("swap_boss")]
+    public bool SwapBoss { get; set; }
 }
