@@ -617,6 +617,13 @@ Example:
                 commonEmevd, events, injectionResult.FinishEvent, bossDefeatFlag);
         }
 
+        // 7f2. Boss trigger on arena entry (set BossTrigger at fog gate warp regions)
+        var bossEntrances = BossTriggerInjector.CollectBossEntrances(injectionResult, graph.Areas);
+        if (bossEntrances.Count > 0)
+        {
+            BossTriggerInjector.Inject(commonEmevd, events, bossEntrances);
+        }
+
         // 7g. "RUN COMPLETE" banner event
         if (graphData.FinishEvent > 0)
         {
