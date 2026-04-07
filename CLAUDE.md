@@ -96,6 +96,7 @@ speedfog/
 │   │   ├── RunCompleteInjector.cs  # Inject "RUN COMPLETE" message on final boss defeat
 │   │   ├── ChapelGraceInjector.cs  # Site of Grace at Chapel of Anticipation
 │   │   ├── DeathMarkerInjector.cs  # Bloodstain visuals at fog gates
+│   │   ├── BossTriggerInjector.cs  # Force boss activation on arena entry via warp region
 │   │   ├── RebirthInjector.cs  # Rebirth (stat reallocation) at Sites of Grace
 │   │   ├── AlternateFlagPatcher.cs  # Neutralize Event 915, clear flags 300/330 at startup
 │   │   ├── SealingTreeWarpPatcher.cs  # Patch Sealing Tree fogwarps (flag 330)
@@ -232,6 +233,7 @@ speedfog/
 | `StakeRemover` | Removes vanilla stakes that respawn outside the DAG |
 | `HeavyDoorMessagePatcher` | Suppresses "heavy door" popup (text 4200) in common_func |
 | `DeathMarkerInjector` | Bloodstain markers at fog gates (MSB assets + EMEVD SFX) |
+| `BossTriggerInjector` | Forces boss activation at fog gate warp regions (prevents exit bypass) |
 | `WeaponUpgradeInjector` | Weapon upgrade initialization for starting weapons with ashes of war |
 
 **ItemRandomizerWrapper** (uses RandomizerCommon.dll directly):

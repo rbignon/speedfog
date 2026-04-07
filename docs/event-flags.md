@@ -111,6 +111,7 @@ SpeedFog injects custom events into EMEVD files:
 | 755862000 | ZoneTrackingInjector | common.emevd | Monitor final boss defeat flag |
 | 755863000 | RunCompleteInjector | common.emevd | Display victory banner + jingle |
 | 755864000 | ChapelGraceInjector | m10_01_00_00.emevd | One-shot warp to chapel grace (initial spawn) |
+| 755865000+ | BossTriggerInjector | common.emevd | Force boss activation at fog gate warp regions |
 
 All events are registered in Event 0 via `InitializeEvent` (bank 2000, id 0).
 
