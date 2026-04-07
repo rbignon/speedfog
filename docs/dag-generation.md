@@ -143,8 +143,9 @@ Merges do NOT reset the counter — a merge doesn't give the player a new choice
 **Priority hierarchy in `determine_operation`:**
 1. **REBALANCE** (highest) — if saturated + stale + merge pair available
 2. **`prefer_merge`** — if convergence phase, bypass probability roll, return MERGE
-3. **Forced split** — if not saturated but stale, force SPLIT on the most stale branch
-4. **Normal probability roll** — split_prob / merge_prob / passant
+3. **Forced split (stale)** — if not saturated but stale, force SPLIT on the most stale branch
+4. **Forced split (single branch)** — if only 1 branch exists outside convergence, force SPLIT to avoid linear segments
+5. **Normal probability roll** — split_prob / merge_prob / passant
 
 **Config validation:** `min_branch_age` must be strictly less than `max_branch_spacing` (when both are enabled).
 
@@ -167,7 +168,9 @@ primary_cluster = pick_cluster_uniform(candidates, used_zones, rng, reserved_zon
 operation, fan = determine_operation(primary_cluster, branches, config, rng, current_layer):
     check cluster capabilities (split, merge, passant)
     merge eligibility also requires age-eligible branches (see Branch age gate)
-    if can_split AND can_merge:
+    if num_branches == 1 AND not converging AND can_split:
+        -> SPLIT (forced, avoid linear segments)
+    elif can_split AND can_merge:
         roll = random()
         if roll < split_prob:                     -> SPLIT
         elif roll < split_prob + merge_prob:       -> MERGE
