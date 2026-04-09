@@ -190,7 +190,7 @@ public static class DeathMarkerInjector
     }
 
     /// <summary>
-    /// Inject conditional bloodstain markers for a single map.
+    /// Inject bloodstain markers for a single map.
     /// Each bloodstain is activated only when its death flag is set.
     /// Entity IDs grouped by death flag produce one EMEVD event per (flag, map) pair.
     /// </summary>
