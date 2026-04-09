@@ -55,7 +55,6 @@ public static class ChapelGraceInjector
     private const string GRACE_ASSET_MODEL = "AEG099_060";
 
     // MSB directory name variants (vanilla=PascalCase, FogMod under Wine=lowercase)
-    private static readonly string[] MSB_DIR_VARIANTS = { "mapstudio", "MapStudio" };
 
     // Preferred source entities to clone from (fog.txt CustomBonfires)
     private const string PREFERRED_ASSET = "AEG217_237_0501";
@@ -117,8 +116,8 @@ public static class ChapelGraceInjector
 
         // FogMod writes "mapstudio" (lowercase) but vanilla game uses "MapStudio" (PascalCase).
         // On Linux (case-sensitive fs), we must check both.
-        var modMsbPath = FindMsbPath(modDir, msbFileName);
-        var gameMsbPath = FindMsbPath(gameDir, msbFileName);
+        var modMsbPath = MsbHelper.FindMsbPath(modDir, msbFileName);
+        var gameMsbPath = MsbHelper.FindMsbPath(gameDir, msbFileName);
 
         string msbPath;
         if (modMsbPath != null)
@@ -147,7 +146,7 @@ public static class ChapelGraceInjector
 
             // Still create spawn region even if grace was pre-created
             var earlySpawnRegion = CreateGraceSpawnRegion(msb);
-            var earlyWritePath = modMsbPath ?? FindOrCreateMsbDir(modDir, msbFileName);
+            var earlyWritePath = modMsbPath ?? MsbHelper.FindOrCreateMsbDir(modDir, msbFileName);
             Directory.CreateDirectory(Path.GetDirectoryName(earlyWritePath)!);
             msb.Write(earlyWritePath);
 
@@ -179,8 +178,8 @@ public static class ChapelGraceInjector
         uint playerEntity = bonfireEntity - 970;
 
         // Ensure model definitions exist in MSB
-        EnsureAssetModel(msb, GRACE_ASSET_MODEL);
-        EnsureEnemyModel(msb, GRACE_NPC_MODEL);
+        MsbHelper.EnsureAssetModel(msb, GRACE_ASSET_MODEL);
+        MsbHelper.EnsureEnemyModel(msb, GRACE_NPC_MODEL);
 
         // 1. Grace asset (AEG099_060 - the visual flame model)
         var baseAsset = msb.Parts.Assets.Find(a => a.Name == PREFERRED_ASSET)
@@ -193,8 +192,8 @@ public static class ChapelGraceInjector
 
         var graceAsset = (MSBE.Part.Asset)baseAsset.DeepCopy();
         graceAsset.ModelName = GRACE_ASSET_MODEL;
-        graceAsset.Name = GeneratePartName(msb.Parts.Assets.Select(a => a.Name), GRACE_ASSET_MODEL);
-        SetNameIdent(graceAsset);
+        graceAsset.Name = MsbHelper.GeneratePartName(msb.Parts.Assets.Select(a => a.Name), GRACE_ASSET_MODEL);
+        MsbHelper.SetNameIdent(graceAsset);
         graceAsset.Position = new System.Numerics.Vector3(POS_X, POS_Y, POS_Z);
         graceAsset.Rotation = new System.Numerics.Vector3(0f, ROT_Y, 0f);
         graceAsset.EntityID = bonfireEntity;
@@ -215,8 +214,8 @@ public static class ChapelGraceInjector
 
         var graceNpc = (MSBE.Part.Enemy)baseEnemy.DeepCopy();
         graceNpc.ModelName = GRACE_NPC_MODEL;
-        graceNpc.Name = GeneratePartName(msb.Parts.Enemies.Select(e => e.Name), GRACE_NPC_MODEL);
-        SetNameIdent(graceNpc);
+        graceNpc.Name = MsbHelper.GeneratePartName(msb.Parts.Enemies.Select(e => e.Name), GRACE_NPC_MODEL);
+        MsbHelper.SetNameIdent(graceNpc);
         graceNpc.Position = new System.Numerics.Vector3(POS_X, POS_Y, POS_Z);
         graceNpc.Rotation = new System.Numerics.Vector3(0f, ROT_Y, 0f);
         graceNpc.EntityID = chrEntity;
@@ -239,8 +238,8 @@ public static class ChapelGraceInjector
 
         var playerPos = MoveInDirection(POS_X, POS_Y, POS_Z, ROT_Y, 2f);
         var gracePlayer = (MSBE.Part.Player)basePlayer.DeepCopy();
-        gracePlayer.Name = GeneratePartName(msb.Parts.Players.Select(p => p.Name), "c0000");
-        SetNameIdent(gracePlayer);
+        gracePlayer.Name = MsbHelper.GeneratePartName(msb.Parts.Players.Select(p => p.Name), "c0000");
+        MsbHelper.SetNameIdent(gracePlayer);
         gracePlayer.Position = playerPos;
         gracePlayer.Rotation = new System.Numerics.Vector3(0f, ROT_Y, 0f);
         gracePlayer.EntityID = playerEntity;
@@ -253,7 +252,7 @@ public static class ChapelGraceInjector
 
         // Write to modDir (always write to mod output, not game dir).
         // Use the same directory case that FogMod used (mapstudio vs MapStudio).
-        var writePath = modMsbPath ?? FindOrCreateMsbDir(modDir, msbFileName);
+        var writePath = modMsbPath ?? MsbHelper.FindOrCreateMsbDir(modDir, msbFileName);
         Directory.CreateDirectory(Path.GetDirectoryName(writePath)!);
         msb.Write(writePath);
 
@@ -543,20 +542,6 @@ public static class ChapelGraceInjector
     }
 
     /// <summary>
-    /// Set Unk08 from the numeric suffix of a part's Name.
-    /// Replicates FogRando's setNameIdent (GameDataWriterE.cs:5263-5268).
-    /// Required for all MSB parts - the game uses Unk08 for entity identity resolution.
-    /// </summary>
-    private static void SetNameIdent(MSBE.Part part)
-    {
-        var segments = part.Name.Split('_');
-        if (segments.Length > 0 && int.TryParse(segments[^1], out var ident))
-        {
-            part.Unk08 = ident;
-        }
-    }
-
-    /// <summary>
     /// Move a position forward by 'dist' meters in the direction of Y-axis rotation.
     /// Replicates FogRando's moveInDirection (GameDataWriterE.cs:5326-5330).
     /// </summary>
@@ -570,81 +555,4 @@ public static class ChapelGraceInjector
             z + MathF.Cos(rad) * dist);
     }
 
-    /// <summary>
-    /// Ensure an asset model definition exists in the MSB models list.
-    /// </summary>
-    private static void EnsureAssetModel(MSBE msb, string modelName)
-    {
-        if (msb.Models.Assets.Any(m => m.Name == modelName))
-            return;
-        msb.Models.Assets.Add(new MSBE.Model.Asset { Name = modelName });
-    }
-
-    /// <summary>
-    /// Ensure an enemy model definition exists in the MSB models list.
-    /// </summary>
-    private static void EnsureEnemyModel(MSBE msb, string modelName)
-    {
-        if (msb.Models.Enemies.Any(m => m.Name == modelName))
-            return;
-        msb.Models.Enemies.Add(new MSBE.Model.Enemy { Name = modelName });
-    }
-
-    /// <summary>
-    /// Generate a unique MSB part name with incrementing suffix.
-    /// Uses the 9900+ range to avoid conflicts with vanilla and FogMod parts.
-    /// </summary>
-    private static string GeneratePartName(IEnumerable<string> existingNames, string modelName)
-    {
-        var names = new HashSet<string>(existingNames);
-        for (int i = 9900; i < 10000; i++)
-        {
-            var name = $"{modelName}_{i:D4}";
-            if (!names.Contains(name))
-                return name;
-        }
-        // Overflow: continue beyond 9999
-        for (int i = 10000; ; i++)
-        {
-            var name = $"{modelName}_{i}";
-            if (!names.Contains(name))
-                return name;
-        }
-    }
-
-    /// <summary>
-    /// Find an MSB file under a base directory, trying both "MapStudio" (vanilla)
-    /// and "mapstudio" (FogMod on Linux via Wine) directory names.
-    /// Returns the full path if found, null otherwise.
-    /// </summary>
-    private static string? FindMsbPath(string baseDir, string msbFileName)
-    {
-        foreach (var dirName in MSB_DIR_VARIANTS)
-        {
-            var path = Path.Combine(baseDir, "map", dirName, msbFileName);
-            if (File.Exists(path))
-                return path;
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// Find the existing mapstudio directory in modDir, or create one
-    /// matching the convention FogMod used (defaults to "mapstudio").
-    /// </summary>
-    private static string FindOrCreateMsbDir(string modDir, string msbFileName)
-    {
-        var mapDir = Path.Combine(modDir, "map");
-        if (Directory.Exists(mapDir))
-        {
-            foreach (var dirName in MSB_DIR_VARIANTS)
-            {
-                var dir = Path.Combine(mapDir, dirName);
-                if (Directory.Exists(dir))
-                    return Path.Combine(dir, msbFileName);
-            }
-        }
-        // Default to lowercase (FogMod convention under Wine)
-        return Path.Combine(mapDir, "mapstudio", msbFileName);
-    }
 }

@@ -14,8 +14,6 @@ namespace FogModWrapper;
 /// </summary>
 public static class VanillaWarpRemover
 {
-    // MSB directory name variants (vanilla=PascalCase, FogMod under Wine=lowercase)
-    private static readonly string[] MsbDirVariants = { "mapstudio", "MapStudio" };
 
     /// <summary>
     /// Remove vanilla warp assets from MSBs for the given entities.
@@ -46,7 +44,7 @@ public static class VanillaWarpRemover
     private static int RemoveFromMap(string modDir, string mapId, List<RemoveEntity> entities)
     {
         var msbFileName = $"{mapId}.msb.dcx";
-        var msbPath = FindMsbPath(modDir, msbFileName);
+        var msbPath = MsbHelper.FindMsbPath(modDir, msbFileName);
 
         if (msbPath == null)
         {
@@ -85,14 +83,4 @@ public static class VanillaWarpRemover
         return removed;
     }
 
-    private static string? FindMsbPath(string baseDir, string msbFileName)
-    {
-        foreach (var dirName in MsbDirVariants)
-        {
-            var path = Path.Combine(baseDir, "map", dirName, msbFileName);
-            if (File.Exists(path))
-                return path;
-        }
-        return null;
-    }
 }

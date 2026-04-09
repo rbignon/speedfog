@@ -35,8 +35,6 @@ public static class DeathMarkerInjector
 
     private const int DEATH_MARKER_EVENT_BASE = 755862100;
 
-    private static readonly string[] MsbDirVariants = { "mapstudio", "MapStudio" };
-
     private readonly struct BloodstainSpec
     {
         public readonly string PartName;
@@ -199,7 +197,7 @@ public static class DeathMarkerInjector
         string mapId, List<BloodstainSpec> specs, uint nextEntityId, int eventOffset)
     {
         var msbFileName = $"{mapId}.msb.dcx";
-        var msbPath = FindMsbPath(modDir, msbFileName) ?? FindMsbPath(gameDir, msbFileName);
+        var msbPath = MsbHelper.FindMsbPath(modDir, msbFileName) ?? MsbHelper.FindMsbPath(gameDir, msbFileName);
         if (msbPath == null)
         {
             Console.WriteLine($"  Warning: {msbFileName} not found, skipping death markers for {mapId}");
@@ -216,7 +214,7 @@ public static class DeathMarkerInjector
         var entityIdsByFlag = new Dictionary<int, List<uint>>();
         int placedCount = 0;
 
-        EnsureAssetModel(msb, BLOODSTAIN_MODEL);
+        MsbHelper.EnsureAssetModel(msb, BLOODSTAIN_MODEL);
 
         // Group specs by part name to share the DeepCopy workaround per gate asset
         var specsByPart = specs.GroupBy(s => s.PartName);
@@ -266,9 +264,9 @@ public static class DeathMarkerInjector
 
                 var bloodstain = (MSBE.Part.Asset)baseAsset.DeepCopy();
                 bloodstain.ModelName = BLOODSTAIN_MODEL;
-                bloodstain.Name = GeneratePartName(
+                bloodstain.Name = MsbHelper.GeneratePartName(
                     msb.Parts.Assets.Select(a => a.Name), BLOODSTAIN_MODEL);
-                SetNameIdent(bloodstain);
+                MsbHelper.SetNameIdent(bloodstain);
                 bloodstain.Position = gateAsset.Position + offset;
                 bloodstain.Rotation = new Vector3(0f, 0f, 0f);
                 bloodstain.EntityID = nextEntityId;
@@ -307,7 +305,7 @@ public static class DeathMarkerInjector
         if (placedCount == 0)
             return (0, nextEntityId, eventOffset);
 
-        var writePath = FindMsbPath(modDir, msbFileName) ?? FindOrCreateMsbDir(modDir, msbFileName);
+        var writePath = MsbHelper.FindMsbPath(modDir, msbFileName) ?? MsbHelper.FindOrCreateMsbDir(modDir, msbFileName);
         Directory.CreateDirectory(Path.GetDirectoryName(writePath)!);
         msb.Write(writePath);
 
@@ -449,60 +447,4 @@ public static class DeathMarkerInjector
             asset.Unk1.DisplayGroups[i] = drawGroups[i];
     }
 
-    private static void SetNameIdent(MSBE.Part part)
-    {
-        var segments = part.Name.Split('_');
-        if (segments.Length > 0 && int.TryParse(segments[^1], out var ident))
-            part.Unk08 = ident;
-    }
-
-    private static void EnsureAssetModel(MSBE msb, string modelName)
-    {
-        if (msb.Models.Assets.Any(m => m.Name == modelName))
-            return;
-        msb.Models.Assets.Add(new MSBE.Model.Asset { Name = modelName });
-    }
-
-    private static string GeneratePartName(IEnumerable<string> existingNames, string modelName)
-    {
-        var names = new HashSet<string>(existingNames);
-        for (int i = 9900; i < 10000; i++)
-        {
-            var name = $"{modelName}_{i:D4}";
-            if (!names.Contains(name))
-                return name;
-        }
-        for (int i = 10000; ; i++)
-        {
-            var name = $"{modelName}_{i}";
-            if (!names.Contains(name))
-                return name;
-        }
-    }
-
-    private static string? FindMsbPath(string baseDir, string msbFileName)
-    {
-        foreach (var dirName in MsbDirVariants)
-        {
-            var path = Path.Combine(baseDir, "map", dirName, msbFileName);
-            if (File.Exists(path))
-                return path;
-        }
-        return null;
-    }
-
-    private static string FindOrCreateMsbDir(string modDir, string msbFileName)
-    {
-        var mapDir = Path.Combine(modDir, "map");
-        if (Directory.Exists(mapDir))
-        {
-            foreach (var dirName in MsbDirVariants)
-            {
-                var dir = Path.Combine(mapDir, dirName);
-                if (Directory.Exists(dir))
-                    return Path.Combine(dir, msbFileName);
-            }
-        }
-        return Path.Combine(mapDir, "mapstudio", msbFileName);
-    }
 }
