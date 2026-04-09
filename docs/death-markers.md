@@ -13,13 +13,14 @@ death_markers = true   # default: true
 When `death_markers = false`, Python sets `death_flags = {}` in graph.json and
 no bloodstain assets or EMEVD events are created.
 
-## Modes
+## Mode
 
-### Conditional mode (death_flags non-empty)
+Requires death flags from the racing mod (`death_flags` non-empty in graph.json).
+When `death_flags` is empty, no bloodstains are placed.
 
-Used when the speedfog-racing mod is active. Each cluster gets 3 event flags
-(low/med/high) allocated in graph.json. Bloodstains appear only when the racing
-mod sets these flags based on real-time death counts from other players.
+Each cluster gets 3 event flags (low/med/high) allocated in graph.json.
+Bloodstains appear only when the racing mod sets these flags based on real-time
+death counts from other players.
 
 | Flag | Threshold | Bloodstains visible per gate |
 |------|-----------|----------------------------|
@@ -27,23 +28,18 @@ mod sets these flags based on real-time death counts from other players.
 | med  | 3+ deaths | 2 (cumulative)             |
 | high | 5+ deaths | 3 (cumulative)             |
 
-Each death flag controls 1 bloodstain at every gate associated with that cluster:
-- Entrance gates of connections whose destination is the cluster
-- Exit gates of connections whose destination is the cluster (in adjacent zones)
+Each death flag controls 1 bloodstain at every **exit gate** leading to the
+cluster (the fog the player sees before entering the dangerous zone). Entrance
+gates inside the destination zone do not receive bloodstains.
 
 EMEVD events wait for the flag (`IfEventFlag(MAIN, ON, ...)`) then activate assets.
 One event per (flag, map) pair, registered via `InitializeEvent` in event 0.
 Event IDs allocated from base 755862100.
 
-### Unconditional mode (death_flags empty)
-
-Used without the racing mod. All bloodstains are activated immediately in event 0.
-Each fog gate gets 3 bloodstains regardless of death counts.
-
 ## Visual
 
-Each fog gate gets up to 3 bloodstain markers in a 120-degree arc on the approach
-side (1.5-3m from the gate). The visual is the vanilla bloodstain decal model
+Each exit fog gate gets up to 3 bloodstain markers in a 120-degree arc on the
+approach side (1.5-3m from the gate). The visual is the vanilla bloodstain decal model
 (`AEG099_090`, an invisible anchor) with `CreateAssetfollowingSFX(entity, 100, 42)`
 for the red glow effect. Positions are deterministic: PRNG seeded on the fog gate's
 entity ID.
@@ -52,10 +48,10 @@ entity ID.
 
 Two-phase injection per map, running after FogMod's `Write()`:
 
-1. **MSB phase**: clone `AEG099_090` assets near each fog gate, with DrawGroups
-   sourced from the nearest MapPiece
-2. **EMEVD phase**: conditional events (with death_flags) or unconditional
-   activation in event 0 (without death_flags)
+1. **MSB phase**: clone `AEG099_090` assets near each exit fog gate, with
+   DrawGroups sourced from the nearest MapPiece
+2. **EMEVD phase**: dedicated events per (death_flag, map) pair, registered
+   via `InitializeEvent` in event 0
 
 ## Key Concepts
 
@@ -113,10 +109,10 @@ facing direction, based on Y rotation) and **BSide** (the opposite zone). The
 bloodstains are placed on the side where players approach from, which depends on
 the connection direction:
 
-- **Exit gates**: approach from `exit_area`. If `exit_area` matches ASide.Area,
-  bloodstains are placed at 180 degrees from facing (the ASide player stands opposite
-  the ASide warp region). If BSide.Area, at 0 degrees (facing direction).
-- **Entrance gates**: approach from `entrance_area`, same logic.
+- **Exit gates** (the only gates receiving bloodstains): approach from `exit_area`.
+  If `exit_area` matches ASide.Area, bloodstains are placed at 180 degrees from
+  facing (the ASide player stands opposite the ASide warp region). If BSide.Area,
+  at 0 degrees (facing direction).
 
 `BuildGateSideLookup()` in Program.cs builds a mapping from gate FullName to
 (ASideArea, BSideArea) using `ann.Entrances` and `ann.Warps` from fog.txt. This
