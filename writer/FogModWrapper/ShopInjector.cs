@@ -49,52 +49,13 @@ public static class ShopInjector
     /// <summary>
     /// Inject smithing stones (and optionally the Sentry's Torch) into the shop.
     /// </summary>
-    public static void Inject(string modDir, bool includeSentryTorch = true)
+    public static void ApplyTo(RegulationEditor reg, bool includeSentryTorch = true)
     {
-        var regulationPath = Path.Combine(modDir, "regulation.bin");
-        if (!File.Exists(regulationPath))
-        {
-            Console.WriteLine("Warning: regulation.bin not found, skipping smithing stone injection");
+        var shopParam = reg.GetParam("ShopLineupParam");
+        if (shopParam == null)
             return;
-        }
-
-        // Paramdefs are in eldendata/Defs/ next to the executable
-        var defPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "eldendata", "Defs", "ShopLineupParam.xml");
-        if (!File.Exists(defPath))
-        {
-            Console.WriteLine($"Warning: ShopLineupParam.xml not found at {defPath}, skipping smithing stone injection");
-            return;
-        }
 
         Console.WriteLine("Injecting smithing stones into merchant shop...");
-
-        // Load the paramdef
-        var paramdef = PARAMDEF.XmlDeserialize(defPath);
-
-        // Load regulation.bin - Elden Ring uses AES encryption
-        BND4 regulation;
-        try
-        {
-            // SFUtil.DecryptERRegulation returns BND4 directly
-            regulation = SFUtil.DecryptERRegulation(regulationPath);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Warning: Failed to decrypt regulation.bin: {ex.Message}");
-            return;
-        }
-
-        // Find ShopLineupParam
-        var shopFile = regulation.Files.Find(f => f.Name.EndsWith("ShopLineupParam.param"));
-        if (shopFile == null)
-        {
-            Console.WriteLine("Warning: ShopLineupParam.param not found in regulation.bin");
-            return;
-        }
-
-        // Parse the param
-        var shopParam = PARAM.Read(shopFile.Bytes);
-        shopParam.ApplyParamdef(paramdef);
 
         // Find existing IDs to avoid conflicts
         var existingIds = new HashSet<int>(shopParam.Rows.Select(r => r.ID));
@@ -145,12 +106,6 @@ public static class ShopInjector
 
         // Sort rows by ID (required for game to read correctly)
         shopParam.Rows = shopParam.Rows.OrderBy(r => r.ID).ToList();
-
-        // Write back to regulation
-        shopFile.Bytes = shopParam.Write();
-
-        // Write back - encrypt for Elden Ring
-        SFUtil.EncryptERRegulation(regulationPath, regulation);
 
         Console.WriteLine($"Shop items injected successfully ({itemCount} items)");
     }

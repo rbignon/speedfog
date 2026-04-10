@@ -656,8 +656,14 @@ Example:
 
         // --- Non-EMEVD injectors and per-map injectors ---
 
-        // 7e. Smithing stones in merchant shop (param file)
-        ShopInjector.Inject(modDir, graphData.SentryTorchShop);
+        // 7e. Consolidated regulation.bin modifications begin here.
+        // Additional injectors will migrate into this block in subsequent commits.
+        var reg = RegulationEditor.Open(modDir);
+        if (reg != null)
+        {
+            ShopInjector.ApplyTo(reg, graphData.SentryTorchShop);
+            reg.Save();
+        }
 
         // 7e2. Upgrade starting class weapons (param file)
         WeaponUpgradeInjector.Inject(modDir, graphData.WeaponUpgrade);
