@@ -662,11 +662,9 @@ Example:
         if (reg != null)
         {
             ShopInjector.ApplyTo(reg, graphData.SentryTorchShop);
+            WeaponUpgradeInjector.ApplyTo(reg, graphData.WeaponUpgrade);
             reg.Save();
         }
-
-        // 7e2. Upgrade starting class weapons (param file)
-        WeaponUpgradeInjector.Inject(modDir, graphData.WeaponUpgrade);
 
         // 7e3. Starting runes (param file)
         StartingRuneInjector.Inject(modDir, graphData.StartingRunes);

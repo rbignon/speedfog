@@ -1,10 +1,8 @@
-using SoulsFormats;
-
 namespace FogModWrapper;
 
 /// <summary>
 /// Upgrades starting class weapons in CharaInitParam to a target upgrade level.
-/// Modifies regulation.bin after FogMod writes it (same pattern as ShopInjector).
+/// Applied via the shared <see cref="RegulationEditor"/>.
 /// </summary>
 public static class WeaponUpgradeInjector
 {
@@ -71,61 +69,16 @@ public static class WeaponUpgradeInjector
     /// Upgrade starting class weapons in CharaInitParam to the given level.
     /// Handles both standard weapons (EquipParamWeapon, ID-encoded upgrade)
     /// and custom weapons with ashes of war (EquipParamCustomWeapon, reinforceLv field).
-    /// Opens regulation.bin, modifies params, re-encrypts.
     /// </summary>
-    public static void Inject(string modDir, int weaponUpgrade)
+    public static void ApplyTo(RegulationEditor reg, int weaponUpgrade)
     {
         if (weaponUpgrade <= 0)
             return;
 
-        var regulationPath = Path.Combine(modDir, "regulation.bin");
-        if (!File.Exists(regulationPath))
-        {
-            Console.WriteLine("Warning: regulation.bin not found, skipping weapon upgrade injection");
-            return;
-        }
-
-        // Load paramdefs
-        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
-        var charaDefPath = Path.Combine(baseDir, "eldendata", "Defs", "CharaInitParam.xml");
-        var weaponDefPath = Path.Combine(baseDir, "eldendata", "Defs", "EquipParamWeapon.xml");
-        var customWepDefPath = Path.Combine(baseDir, "eldendata", "Defs", "EquipParamCustomWeapon.xml");
-
-        if (!File.Exists(charaDefPath) || !File.Exists(weaponDefPath))
-        {
-            Console.WriteLine("Warning: Required paramdefs not found, skipping weapon upgrade injection");
-            return;
-        }
-
-        var charaDef = PARAMDEF.XmlDeserialize(charaDefPath);
-        var weaponDef = PARAMDEF.XmlDeserialize(weaponDefPath);
-
-        PARAMDEF? customWepDef = null;
-        if (File.Exists(customWepDefPath))
-            customWepDef = PARAMDEF.XmlDeserialize(customWepDefPath);
-
-        // Decrypt regulation.bin
-        BND4 regulation;
-        try
-        {
-            regulation = SFUtil.DecryptERRegulation(regulationPath);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Warning: Failed to decrypt regulation.bin: {ex.Message}");
-            return;
-        }
-
         // Load EquipParamWeapon to build regular/somber sets
-        var weaponFile = regulation.Files.Find(f => f.Name.EndsWith("EquipParamWeapon.param"));
-        if (weaponFile == null)
-        {
-            Console.WriteLine("Warning: EquipParamWeapon.param not found in regulation.bin");
+        var weaponParam = reg.GetParam("EquipParamWeapon");
+        if (weaponParam == null)
             return;
-        }
-
-        var weaponParam = PARAM.Read(weaponFile.Bytes);
-        weaponParam.ApplyParamdef(weaponDef);
 
         var regularWeapons = new HashSet<int>();
         var somberWeapons = new HashSet<int>();
@@ -138,33 +91,16 @@ public static class WeaponUpgradeInjector
         }
 
         // Load EquipParamCustomWeapon (for weapons with ashes of war)
-        PARAM? customWepParam = null;
-        BinderFile? customWepFile = null;
-        if (customWepDef != null)
-        {
-            customWepFile = regulation.Files.Find(f => f.Name.EndsWith("EquipParamCustomWeapon.param"));
-            if (customWepFile != null)
-            {
-                customWepParam = PARAM.Read(customWepFile.Bytes);
-                customWepParam.ApplyParamdef(customWepDef);
-            }
-        }
+        var customWepParam = reg.GetParam("EquipParamCustomWeapon");
 
         // Load CharaInitParam
-        var charaFile = regulation.Files.Find(f => f.Name.EndsWith("CharaInitParam.param"));
-        if (charaFile == null)
-        {
-            Console.WriteLine("Warning: CharaInitParam.param not found in regulation.bin");
+        var charaParam = reg.GetParam("CharaInitParam");
+        if (charaParam == null)
             return;
-        }
-
-        var charaParam = PARAM.Read(charaFile.Bytes);
-        charaParam.ApplyParamdef(charaDef);
 
         Console.WriteLine($"Upgrading starting class weapons to +{weaponUpgrade} (somber +{SomberUpgrade(weaponUpgrade)})...");
 
         int upgraded = 0;
-        bool customWepModified = false;
 
         foreach (var row in charaParam.Rows)
         {
@@ -201,7 +137,6 @@ public static class WeaponUpgradeInjector
                     if (currentLevel != (byte)targetLevel)
                     {
                         customRow["reinforceLv"].Value = (byte)targetLevel;
-                        customWepModified = true;
                         upgraded++;
                     }
                 }
@@ -224,11 +159,6 @@ public static class WeaponUpgradeInjector
             return;
         }
 
-        // Write back modified params
-        charaFile.Bytes = charaParam.Write();
-        if (customWepModified && customWepFile != null && customWepParam != null)
-            customWepFile.Bytes = customWepParam.Write();
-        SFUtil.EncryptERRegulation(regulationPath, regulation);
         Console.WriteLine($"  Upgraded {upgraded} weapon slots across starting classes");
     }
 }
