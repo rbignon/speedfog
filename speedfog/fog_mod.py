@@ -82,12 +82,17 @@ def run_fogmodwrapper(
         print(f"Working directory: {wrapper_dir}")
 
     # Run from wrapper_dir so FogModWrapper finds eldendata/
-    # Stream output in real-time
+    # Stream output in real-time.
+    # errors="replace": FogModWrapper log lines may contain non-UTF-8 bytes
+    # (e.g. Windows-1252 characters in item names) when the output is captured
+    # through a pipe. Replace rather than crash on decode failure.
     process = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         cwd=wrapper_dir,
         bufsize=1,  # Line buffered
     )
