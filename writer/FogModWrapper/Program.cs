@@ -663,11 +663,9 @@ Example:
         {
             ShopInjector.ApplyTo(reg, graphData.SentryTorchShop);
             WeaponUpgradeInjector.ApplyTo(reg, graphData.WeaponUpgrade);
+            StartingRuneInjector.ApplyTo(reg, graphData.StartingRunes);
             reg.Save();
         }
-
-        // 7e3. Starting runes (param file)
-        StartingRuneInjector.Inject(modDir, graphData.StartingRunes);
 
         // 7g-fmg. "RUN COMPLETE" banner FMG entries (all languages)
         if (graphData.FinishEvent > 0)
