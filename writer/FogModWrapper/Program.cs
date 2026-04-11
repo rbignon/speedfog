@@ -656,27 +656,29 @@ Example:
 
         // --- Non-EMEVD injectors and per-map injectors ---
 
-        // 7e. Consolidated regulation.bin modifications begin here.
-        // Additional injectors will migrate into this block in subsequent commits.
+        // 7e. Consolidated regulation.bin modifications:
+        // single decrypt, single encrypt, shared PARAM cache.
         var reg = RegulationEditor.Open(modDir);
         if (reg != null)
         {
             ShopInjector.ApplyTo(reg, graphData.SentryTorchShop);
             WeaponUpgradeInjector.ApplyTo(reg, graphData.WeaponUpgrade);
             StartingRuneInjector.ApplyTo(reg, graphData.StartingRunes);
+
+            if (graphData.ChapelGrace)
+                ChapelGraceInjector.Inject(modDir, config.GameDir, events, reg);
+
             reg.Save();
+        }
+        else
+        {
+            Console.WriteLine("Warning: regulation.bin unavailable, skipping all regulation injections");
         }
 
         // 7g-fmg. "RUN COMPLETE" banner FMG entries (all languages)
         if (graphData.FinishEvent > 0)
         {
             RunCompleteInjector.InjectFmgEntries(modDir, config.GameDir, graphData.RunCompleteMessage);
-        }
-
-        // 7h. Site of Grace at Chapel of Anticipation
-        if (graphData.ChapelGrace)
-        {
-            ChapelGraceInjector.Inject(modDir, config.GameDir, events);
         }
 
         // 7h2. Death markers at fog gates

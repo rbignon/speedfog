@@ -79,7 +79,7 @@ public static class ChapelGraceInjector
     /// Skips gracefully if the grace already exists (e.g., added by Item Randomizer).
     /// Also relocates the vanilla player spawn to the grace so the player starts there directly.
     /// </summary>
-    public static void Inject(string modDir, string gameDir, Events events)
+    public static void Inject(string modDir, string gameDir, Events events, RegulationEditor reg)
     {
         Console.WriteLine("Injecting Chapel of Anticipation grace...");
 
@@ -88,8 +88,8 @@ public static class ChapelGraceInjector
         if (msbResult == null)
             return;
 
-        // Step 2: BonfireWarpParam - add fast travel entry
-        var bonfireFlag = InjectBonfireWarpParam(modDir, msbResult.Value.BonfireEntityId);
+        // Step 2: BonfireWarpParam - add fast travel entry (via shared editor)
+        var bonfireFlag = InjectBonfireWarpParam(reg, msbResult.Value.BonfireEntityId);
         if (bonfireFlag == null)
             return;
 
@@ -267,45 +267,11 @@ public static class ChapelGraceInjector
     /// Add bonfire warp entry to regulation.bin for fast travel support.
     /// Returns the allocated event flag ID, or null on failure.
     /// </summary>
-    private static uint? InjectBonfireWarpParam(string modDir, uint bonfireEntityId)
+    private static uint? InjectBonfireWarpParam(RegulationEditor reg, uint bonfireEntityId)
     {
-        var regulationPath = Path.Combine(modDir, "regulation.bin");
-        if (!File.Exists(regulationPath))
-        {
-            Console.WriteLine("Warning: regulation.bin not found, skipping bonfire param injection");
+        var bonfireParam = reg.GetParam("BonfireWarpParam");
+        if (bonfireParam == null)
             return null;
-        }
-
-        var defPath = Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory, "eldendata", "Defs", "BonfireWarpParam.xml");
-        if (!File.Exists(defPath))
-        {
-            Console.WriteLine($"Warning: BonfireWarpParam.xml not found at {defPath}");
-            return null;
-        }
-
-        var paramdef = PARAMDEF.XmlDeserialize(defPath);
-
-        BND4 regulation;
-        try
-        {
-            regulation = SFUtil.DecryptERRegulation(regulationPath);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Warning: Failed to decrypt regulation.bin: {ex.Message}");
-            return null;
-        }
-
-        var bonfireFile = regulation.Files.Find(f => f.Name.EndsWith("BonfireWarpParam.param"));
-        if (bonfireFile == null)
-        {
-            Console.WriteLine("Warning: BonfireWarpParam.param not found in regulation.bin");
-            return null;
-        }
-
-        var bonfireParam = PARAM.Read(bonfireFile.Bytes);
-        bonfireParam.ApplyParamdef(paramdef);
 
         // Check if a row already exists for this bonfire entity
         var existingRow = bonfireParam.Rows.Find(r =>
@@ -372,9 +338,6 @@ public static class ChapelGraceInjector
 
         bonfireParam.Rows.Add(newRow);
         bonfireParam.Rows = bonfireParam.Rows.OrderBy(r => r.ID).ToList();
-
-        bonfireFile.Bytes = bonfireParam.Write();
-        SFUtil.EncryptERRegulation(regulationPath, regulation);
 
         Console.WriteLine($"  BonfireWarpParam: row {rowId}, flag {flagId}, entity {bonfireEntityId}");
         return flagId;
