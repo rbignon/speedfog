@@ -322,6 +322,7 @@ allow_entry_as_exit = true
 
 [zones.midramanse_boss]
 weight = 2
+allow_entry_as_exit = true
 
 [zones.belurat_boss]
 weight = 2
