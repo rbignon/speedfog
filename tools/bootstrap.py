@@ -665,6 +665,11 @@ def main() -> int:
         action="store_true",
         help="Overwrite existing files",
     )
+    parser.add_argument(
+        "--skip-overlay",
+        action="store_true",
+        help="Skip GamePatcher overlay generation",
+    )
     args = parser.parse_args()
 
     # Check that at least one ZIP is provided
@@ -701,7 +706,7 @@ def main() -> int:
             success = False
 
     # Run GamePatcher to generate overlay files
-    if success:
+    if success and not args.skip_overlay:
         if not run_modpatcher(args.game_dir):
             success = False
 
