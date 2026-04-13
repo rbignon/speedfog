@@ -947,3 +947,112 @@ class TestEventFlagBudget:
         budget_errors = [e for e in result.errors if "flag budget" in e]
         assert budget_errors == []
         assert result.is_valid is False
+
+
+class TestValidatorAllowedTypes:
+    """Validator honors allowed_types."""
+
+    def _boss_rush_config(self) -> Config:
+        import warnings as _w
+
+        with _w.catch_warnings():
+            _w.simplefilter("ignore")
+            return Config.from_dict(
+                {
+                    "requirements": {
+                        "allowed_types": ["boss_arena", "major_boss"],
+                        "legacy_dungeons": 0,
+                        "bosses": 2,
+                        "mini_dungeons": 0,
+                        "major_bosses": 1,
+                    },
+                    "structure": {"min_layers": 1, "max_layers": 5},
+                }
+            )
+
+    def test_excluded_types_skipped_in_requirements_check(self):
+        """Excluded types produce no 'insufficient' error even if count is 0."""
+        dag = make_dag_with_content(
+            legacy_count=0,
+            mini_dungeon_count=0,
+            boss_count=2,
+            path_weight=10,
+            layer_count=3,
+        )
+        config = self._boss_rush_config()
+        result = validate_dag(dag, config)
+        assert not any(
+            "legacy_dungeons" in e or "mini_dungeons" in e for e in result.errors
+        )
+
+    def test_zone_in_excluded_type_flagged(self):
+        """A required zone whose cluster type is excluded raises an error."""
+        from speedfog.clusters import ClusterPool
+
+        pool = ClusterPool()
+        pool.add(
+            make_cluster(
+                "mini_cluster",
+                zones=["unreachable_mini_zone"],
+                cluster_type="mini_dungeon",
+            )
+        )
+
+        import warnings as _w
+
+        with _w.catch_warnings():
+            _w.simplefilter("ignore")
+            config = Config.from_dict(
+                {
+                    "requirements": {
+                        "allowed_types": ["boss_arena", "major_boss"],
+                        "zones": ["unreachable_mini_zone"],
+                        "legacy_dungeons": 0,
+                        "bosses": 0,
+                        "mini_dungeons": 0,
+                        "major_bosses": 0,
+                    },
+                    "structure": {"min_layers": 1, "max_layers": 5},
+                }
+            )
+
+        dag = make_simple_dag()
+        result = validate_dag(dag, config, pool)
+        assert any("unreachable_mini_zone" in e for e in result.errors)
+        assert any("not in allowed_types" in e for e in result.errors)
+
+    def test_zone_in_allowed_type_not_flagged(self):
+        """A required zone whose cluster type is allowed does not trigger the check."""
+        from speedfog.clusters import ClusterPool
+
+        pool = ClusterPool()
+        pool.add(
+            make_cluster(
+                "boss_cluster",
+                zones=["reachable_boss_zone"],
+                cluster_type="boss_arena",
+            )
+        )
+
+        import warnings as _w
+
+        with _w.catch_warnings():
+            _w.simplefilter("ignore")
+            config = Config.from_dict(
+                {
+                    "requirements": {
+                        "allowed_types": ["boss_arena", "major_boss"],
+                        "zones": ["reachable_boss_zone"],
+                        "legacy_dungeons": 0,
+                        "bosses": 0,
+                        "mini_dungeons": 0,
+                        "major_bosses": 0,
+                    },
+                    "structure": {"min_layers": 1, "max_layers": 5},
+                }
+            )
+
+        dag = make_simple_dag()
+        result = validate_dag(dag, config, pool)
+        # Zone-type check must not flag this (but the zone missing error is fine).
+        assert not any("not in allowed_types" in e for e in result.errors)

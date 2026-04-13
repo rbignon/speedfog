@@ -81,6 +81,10 @@ def validate_dag(
     # Check minimum requirements
     _check_requirements(dag, config, errors)
 
+    # Check zone-type reachability (needs cluster data)
+    if clusters is not None:
+        _check_zone_types_allowed(config, clusters, errors)
+
     # Check layer count
     _check_layers(dag, config, warnings)
 
@@ -127,29 +131,26 @@ def _check_entry_fog_consistency(dag: Dag) -> list[str]:
 def _check_requirements(dag: Dag, config: Config, errors: list[str]) -> None:
     """Check that DAG meets minimum zone requirements.
 
+    Types outside `requirements.allowed_types` are skipped: their minima
+    are ignored so no "insufficient" error is emitted.
+
     Args:
         dag: The DAG to check.
         config: Configuration with requirements.
         errors: List to append errors to.
     """
     req = config.requirements
-
-    # Check legacy dungeons
-    legacy_count = dag.count_by_type("legacy_dungeon")
-    if legacy_count < req.legacy_dungeons:
-        errors.append(
-            f"Insufficient legacy_dungeons: {legacy_count} < {req.legacy_dungeons}"
-        )
-
-    # Check bosses (boss_arena type)
-    boss_count = dag.count_by_type("boss_arena")
-    if boss_count < req.bosses:
-        errors.append(f"Insufficient bosses: {boss_count} < {req.bosses}")
-
-    # Check mini_dungeons
-    mini_count = dag.count_by_type("mini_dungeon")
-    if mini_count < req.mini_dungeons:
-        errors.append(f"Insufficient mini_dungeons: {mini_count} < {req.mini_dungeons}")
+    type_checks = [
+        ("legacy_dungeon", req.legacy_dungeons, "legacy_dungeons"),
+        ("boss_arena", req.bosses, "bosses"),
+        ("mini_dungeon", req.mini_dungeons, "mini_dungeons"),
+    ]
+    for cluster_type, required, label in type_checks:
+        if cluster_type not in req.allowed_types:
+            continue
+        actual = dag.count_by_type(cluster_type)
+        if actual < required:
+            errors.append(f"Insufficient {label}: {actual} < {required}")
 
     # Check required zones
     if req.zones:
@@ -159,6 +160,28 @@ def _check_requirements(dag: Dag, config: Config, errors: list[str]) -> None:
         for zone in req.zones:
             if zone not in all_zones:
                 errors.append(f"Required zone missing: '{zone}'")
+
+
+def _check_zone_types_allowed(
+    config: Config, clusters: ClusterPool, errors: list[str]
+) -> None:
+    """Ensure every required zone belongs to a cluster with an allowed type.
+
+    A zone listed in `requirements.zones` whose cluster type is excluded by
+    `allowed_types` is unreachable: the DAG can never include it. Flag this
+    as an early configuration error so the user sees it before a generation
+    attempt fails obscurely.
+    """
+    allowed = set(config.requirements.allowed_types)
+    for zone in config.requirements.zones:
+        for cluster in clusters.clusters:
+            if zone in cluster.zones:
+                if cluster.type not in allowed:
+                    errors.append(
+                        f"Required zone '{zone}' has type '{cluster.type}' "
+                        f"which is not in allowed_types={sorted(allowed)}"
+                    )
+                break
 
 
 def _check_no_duplicate_edges(dag: Dag) -> list[str]:
