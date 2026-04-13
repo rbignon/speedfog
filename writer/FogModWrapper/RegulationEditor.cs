@@ -13,6 +13,12 @@ namespace FogModWrapper;
 /// current consumer set (WeaponUpgradeInjector writes weapon fields;
 /// StartingRuneInjector writes the soul field).
 /// </summary>
+/// <remarks>
+/// Any future consumer that mutates a PARAM already accessed by another
+/// injector in the same Open/Save block must verify its field writes are
+/// disjoint from the existing consumers, otherwise the last writer wins
+/// silently.
+/// </remarks>
 public sealed class RegulationEditor
 {
     private readonly string? _regulationPath;
@@ -99,7 +105,10 @@ public sealed class RegulationEditor
     public void Save()
     {
         if (_params.Count == 0)
+        {
+            Console.WriteLine("Regulation: no params accessed, skipping save");
             return;
+        }
 
         foreach (var kvp in _params)
         {
