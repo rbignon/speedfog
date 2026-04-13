@@ -554,6 +554,10 @@ class Config:
                 mini_dungeons=requirements_section.get("mini_dungeons", 5),
                 major_bosses=requirements_section.get("major_bosses", 8),
                 zones=requirements_section.get("zones", []),
+                allowed_types=requirements_section.get(
+                    "allowed_types",
+                    list(_VALID_CLUSTER_TYPES),
+                ),
             ),
             structure=StructureConfig(
                 max_parallel_paths=structure_section.get("max_parallel_paths", 3),

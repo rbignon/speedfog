@@ -990,3 +990,29 @@ class TestAllowedTypes:
             major_bosses=2,
         )
         assert len(recwarn.list) == 0
+
+
+def test_config_from_dict_parses_allowed_types():
+    config = Config.from_dict(
+        {
+            "requirements": {
+                "allowed_types": ["boss_arena", "major_boss"],
+                "legacy_dungeons": 0,
+                "bosses": 10,
+                "mini_dungeons": 0,
+                "major_bosses": 3,
+            }
+        }
+    )
+    assert config.requirements.allowed_types == ["boss_arena", "major_boss"]
+    assert config.requirements.bosses == 10
+
+
+def test_config_from_dict_default_allowed_types():
+    config = Config.from_dict({})
+    assert set(config.requirements.allowed_types) == {
+        "legacy_dungeon",
+        "mini_dungeon",
+        "boss_arena",
+        "major_boss",
+    }
