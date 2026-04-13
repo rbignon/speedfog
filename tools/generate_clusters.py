@@ -1453,7 +1453,7 @@ def compute_allow_shared_entrance(
 ) -> bool:
     """Compute allow_shared_entrance default for a cluster.
 
-    Default: True if 2+ entry fogs.
+    Default: True.
     Per-zone overrides from zone_metadata.toml take priority.
 
     Args:
@@ -1464,7 +1464,7 @@ def compute_allow_shared_entrance(
     Returns:
         Whether this cluster allows shared entrance merges.
     """
-    allow = len(entry_fogs) >= 2
+    allow = True
 
     # Per-zone overrides (any zone in cluster can override)
     for zone_name in zones:

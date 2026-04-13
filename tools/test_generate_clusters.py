@@ -2506,16 +2506,16 @@ class TestComputeAllowSharedEntrance:
         result = compute_allow_shared_entrance(entry_fogs, {}, frozenset({"z1", "z2"}))
         assert result is True
 
-    def test_false_when_one_entry(self):
-        """Clusters with 1 entry fog get allow_shared_entrance=False."""
+    def test_true_when_one_entry(self):
+        """Clusters with 1 entry fog still get allow_shared_entrance=True."""
         entry_fogs = [{"fog_id": "fog_a", "zone": "z1"}]
         result = compute_allow_shared_entrance(entry_fogs, {}, frozenset({"z1"}))
-        assert result is False
+        assert result is True
 
-    def test_false_when_no_entries(self):
-        """Clusters with 0 entry fogs get allow_shared_entrance=False."""
+    def test_true_when_no_entries(self):
+        """Clusters with 0 entry fogs still get allow_shared_entrance=True."""
         result = compute_allow_shared_entrance([], {}, frozenset({"z1"}))
-        assert result is False
+        assert result is True
 
     def test_override_false(self):
         """zone_metadata.toml can override allow_shared_entrance to false."""
@@ -2572,8 +2572,8 @@ class TestFogReuseInFilterAndEnrich:
         assert len(result) == 1
         assert result[0].allow_shared_entrance is True
 
-    def test_shared_entrance_false_on_single_entry_cluster(self):
-        """Cluster with 1 entry gets allow_shared_entrance=False after enrichment."""
+    def test_shared_entrance_true_on_single_entry_cluster(self):
+        """Cluster with 1 entry still gets allow_shared_entrance=True after enrichment."""
         areas = {
             "zone_a": AreaData(
                 name="zone_a", text="Zone A", maps=["m10_00_00_00"], tags=[]
@@ -2597,7 +2597,7 @@ class TestFogReuseInFilterAndEnrich:
         )
 
         assert len(result) == 1
-        assert result[0].allow_shared_entrance is False
+        assert result[0].allow_shared_entrance is True
 
 
 class TestComputeAllowEntryAsExit:
@@ -2713,8 +2713,8 @@ class TestEntryAsExitInFilterAndEnrich:
         assert len(result) == 1
         assert result[0].allow_entry_as_exit is True
 
-    def test_boss_arena_one_exit_gets_false(self):
-        """boss_arena with 1 exit gets allow_entry_as_exit=False."""
+    def test_boss_arena_one_exit_gets_true(self):
+        """boss_arena with 1 exit still gets allow_entry_as_exit=True."""
         areas = {
             "zone_a": AreaData(
                 name="zone_a", text="Zone A", maps=["m10_00_00_00"], tags=[]
@@ -2741,7 +2741,7 @@ class TestEntryAsExitInFilterAndEnrich:
         )
 
         assert len(result) == 1
-        assert result[0].allow_entry_as_exit is False
+        assert result[0].allow_entry_as_exit is True
 
 
 class TestBossArenaOnewayExitPruning:
