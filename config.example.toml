@@ -55,7 +55,7 @@ major_bosses = 8
 # The final boss is always a major_boss regardless of this list.
 #
 # Default: all four types.
-# allowed_types = ["legacy_dungeon", "mini_dungeon", "boss_arena", "major_boss"]
+# allowed_types = ["boss_arena", "mini_dungeon", "legacy_dungeon", "major_boss"]
 #
 # Example modes:
 #   Boss rush:        ["boss_arena", "major_boss"]

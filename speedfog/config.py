@@ -32,9 +32,9 @@ class BudgetConfig:
 
 
 _VALID_CLUSTER_TYPES = (
-    "legacy_dungeon",
-    "mini_dungeon",
     "boss_arena",
+    "mini_dungeon",
+    "legacy_dungeon",
     "major_boss",
 )
 
