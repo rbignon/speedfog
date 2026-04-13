@@ -524,6 +524,15 @@ class Config:
     care_package: CarePackageConfig = field(default_factory=CarePackageConfig)
     enemy: EnemyConfig = field(default_factory=EnemyConfig)
 
+    def __post_init__(self) -> None:
+        """Validate cross-field constraints."""
+        first = self.structure.first_layer_type
+        if first is not None and first not in self.requirements.allowed_types:
+            raise ValueError(
+                f"first_layer_type = {first!r} not in allowed_types = "
+                f"{self.requirements.allowed_types!r}"
+            )
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Config:
         """Create Config from a dictionary (e.g., parsed TOML)."""

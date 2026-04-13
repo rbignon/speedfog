@@ -1016,3 +1016,40 @@ def test_config_from_dict_default_allowed_types():
         "boss_arena",
         "major_boss",
     }
+
+
+def test_first_layer_type_must_be_in_allowed_types():
+    with pytest.raises(ValueError, match="first_layer_type.*not in allowed_types"):
+        Config.from_dict(
+            {
+                "requirements": {
+                    "allowed_types": ["boss_arena", "major_boss"],
+                    "legacy_dungeons": 0,
+                    "mini_dungeons": 0,
+                },
+                "structure": {"first_layer_type": "legacy_dungeon"},
+            }
+        )
+
+
+def test_first_layer_type_in_allowed_types_ok():
+    config = Config.from_dict(
+        {
+            "requirements": {
+                "allowed_types": ["boss_arena", "major_boss"],
+                "legacy_dungeons": 0,
+                "mini_dungeons": 0,
+            },
+            "structure": {"first_layer_type": "boss_arena"},
+        }
+    )
+    assert config.structure.first_layer_type == "boss_arena"
+
+
+def test_first_layer_type_none_is_ok():
+    config = Config.from_dict(
+        {
+            "requirements": {"allowed_types": ["boss_arena", "major_boss"]},
+        }
+    )
+    assert config.structure.first_layer_type is None
