@@ -5,6 +5,7 @@ import pytest
 from speedfog.config import (
     BudgetConfig,
     Config,
+    RequirementsConfig,
     load_config,
     resolve_final_boss_candidates,
 )
@@ -907,3 +908,38 @@ def test_max_weight_tolerance_negative_raises():
     """Negative max_weight_tolerance raises ValueError."""
     with pytest.raises(ValueError, match="max_weight_tolerance"):
         Config.from_dict({"structure": {"max_weight_tolerance": -1}})
+
+
+class TestAllowedTypes:
+    """Tests for RequirementsConfig.allowed_types."""
+
+    def test_default_contains_all_four_types(self):
+        req = RequirementsConfig()
+        assert set(req.allowed_types) == {
+            "legacy_dungeon",
+            "mini_dungeon",
+            "boss_arena",
+            "major_boss",
+        }
+
+    def test_custom_subset(self):
+        req = RequirementsConfig(
+            allowed_types=["boss_arena", "major_boss"],
+            legacy_dungeons=0,
+            bosses=5,
+            mini_dungeons=0,
+            major_bosses=3,
+        )
+        assert req.allowed_types == ["boss_arena", "major_boss"]
+
+    def test_empty_list_raises(self):
+        with pytest.raises(ValueError, match="allowed_types must be non-empty"):
+            RequirementsConfig(allowed_types=[])
+
+    def test_unknown_type_raises(self):
+        with pytest.raises(ValueError, match="invalid cluster type"):
+            RequirementsConfig(allowed_types=["boss_arena", "dragons"])
+
+    def test_duplicate_entries_raises(self):
+        with pytest.raises(ValueError, match="duplicate"):
+            RequirementsConfig(allowed_types=["boss_arena", "boss_arena", "major_boss"])

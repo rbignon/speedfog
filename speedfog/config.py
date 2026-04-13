@@ -30,6 +30,14 @@ class BudgetConfig:
     tolerance: int = 5
 
 
+_VALID_CLUSTER_TYPES = (
+    "legacy_dungeon",
+    "mini_dungeon",
+    "boss_arena",
+    "major_boss",
+)
+
+
 @dataclass
 class RequirementsConfig:
     """Zone requirements configuration."""
@@ -39,6 +47,21 @@ class RequirementsConfig:
     mini_dungeons: int = 5
     major_bosses: int = 8
     zones: list[str] = field(default_factory=list)
+    allowed_types: list[str] = field(default_factory=lambda: list(_VALID_CLUSTER_TYPES))
+
+    def __post_init__(self) -> None:
+        if not self.allowed_types:
+            raise ValueError("allowed_types must be non-empty")
+        seen: set[str] = set()
+        for t in self.allowed_types:
+            if t not in _VALID_CLUSTER_TYPES:
+                raise ValueError(
+                    f"invalid cluster type in allowed_types: {t!r} "
+                    f"(valid: {_VALID_CLUSTER_TYPES})"
+                )
+            if t in seen:
+                raise ValueError(f"duplicate entry in allowed_types: {t!r}")
+            seen.add(t)
 
 
 @dataclass
