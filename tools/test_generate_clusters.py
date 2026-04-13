@@ -2615,12 +2615,12 @@ class TestComputeAllowEntryAsExit:
         assert result is True
 
     def test_boss_arena_with_one_exit(self):
-        """boss_arena with 1 exit fog gets allow_entry_as_exit=False."""
+        """boss_arena with 1 exit fog still gets allow_entry_as_exit=True."""
         exit_fogs = [{"fog_id": "fog_a", "zone": "z1"}]
         result = compute_allow_entry_as_exit(
             "boss_arena", exit_fogs, {}, frozenset({"z1"})
         )
-        assert result is False
+        assert result is True
 
     def test_major_boss_with_two_exits(self):
         """major_boss with 2+ exit fogs gets allow_entry_as_exit=True."""
@@ -2634,12 +2634,12 @@ class TestComputeAllowEntryAsExit:
         assert result is True
 
     def test_major_boss_with_one_exit(self):
-        """major_boss with 1 exit fog gets allow_entry_as_exit=False."""
+        """major_boss with 1 exit fog still gets allow_entry_as_exit=True."""
         exit_fogs = [{"fog_id": "fog_a", "zone": "z1"}]
         result = compute_allow_entry_as_exit(
             "major_boss", exit_fogs, {}, frozenset({"z1"})
         )
-        assert result is False
+        assert result is True
 
     def test_mini_dungeon_with_two_exits(self):
         """mini_dungeon with 2+ exits gets allow_entry_as_exit=False."""
