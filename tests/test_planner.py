@@ -628,3 +628,74 @@ class TestPickWeightedTypeFallback:
             fallback="legacy_dungeon",
         )
         assert result in {"boss_arena", "major_boss"}
+
+
+class TestPlanLayerTypesAllowedTypes:
+    """Tests for plan_layer_types honoring allowed_types."""
+
+    def test_only_allowed_types_appear(self):
+        req = RequirementsConfig(
+            allowed_types=["boss_arena", "major_boss"],
+            legacy_dungeons=0,
+            bosses=6,
+            mini_dungeons=0,
+            major_bosses=2,
+        )
+        pool_sizes = {
+            "mini_dungeon": 60,
+            "boss_arena": 80,
+            "legacy_dungeon": 28,
+        }
+        result = plan_layer_types(req, 10, random.Random(42), pool_sizes)
+        assert set(result) <= {"boss_arena", "major_boss"}
+
+    def test_excluded_type_min_ignored_even_if_nonzero(self):
+        """mini_dungeons=5 must be ignored when mini_dungeon not allowed."""
+        import warnings
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            req = RequirementsConfig(
+                allowed_types=["boss_arena", "major_boss"],
+                legacy_dungeons=0,
+                bosses=3,
+                mini_dungeons=5,
+                major_bosses=2,
+            )
+        pool_sizes = {"mini_dungeon": 60, "boss_arena": 80}
+        result = plan_layer_types(req, 8, random.Random(42), pool_sizes)
+        assert "mini_dungeon" not in result
+
+    def test_padding_filtered_by_allowed_types(self):
+        req = RequirementsConfig(
+            allowed_types=["boss_arena"],
+            legacy_dungeons=0,
+            bosses=2,
+            mini_dungeons=0,
+            major_bosses=0,
+        )
+        pool_sizes = {
+            "mini_dungeon": 60,
+            "boss_arena": 80,
+            "legacy_dungeon": 28,
+        }
+        result = plan_layer_types(req, 10, random.Random(42), pool_sizes)
+        assert set(result) == {"boss_arena"}
+
+    def test_default_allowed_types_reproduces_old_behavior(self):
+        req = RequirementsConfig(
+            legacy_dungeons=1,
+            bosses=3,
+            mini_dungeons=2,
+            major_bosses=1,
+        )
+        pool_sizes = {
+            "mini_dungeon": 60,
+            "boss_arena": 80,
+            "legacy_dungeon": 28,
+        }
+        result = plan_layer_types(req, 10, random.Random(42), pool_sizes)
+        assert result.count("legacy_dungeon") >= 1
+        assert result.count("boss_arena") >= 3
+        assert result.count("mini_dungeon") >= 2
+        assert result.count("major_boss") >= 1

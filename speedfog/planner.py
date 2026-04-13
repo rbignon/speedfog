@@ -173,34 +173,27 @@ def plan_layer_types(
 ) -> list[str]:
     """Plan sequence of cluster types for each layer.
 
-    Ensures minimum requirements are met, pads with additional layers if needed,
-    trims if requirements exceed total_layers, and shuffles the result.
-
-    Major bosses are included as explicit requirements alongside other types.
-    Padding excludes major_boss (not in pool_sizes).
-
-    When pool_sizes is provided, padding is distributed proportionally across
-    types based on remaining pool capacity. Otherwise, padding uses mini_dungeon.
+    Iterates over requirements.allowed_types; types outside it are excluded
+    entirely (no minimum count, no padding). The minimum for each allowed
+    type is read via requirements.required_count().
 
     Args:
-        requirements: Configuration specifying minimum counts for each type.
+        requirements: Configuration with per-type minimums and the
+            allowed_types whitelist.
         total_layers: Total number of layers to plan.
         rng: Random number generator for shuffling.
         pool_sizes: Available clusters per type (e.g. {"mini_dungeon": 64,
-            "boss_arena": 80, "legacy_dungeon": 28}). If None, padding
-            defaults to mini_dungeon only.
+            "boss_arena": 80, "legacy_dungeon": 28}). Filtered by
+            allowed_types inside this function. If None, padding falls back
+            to a single allowed type.
 
     Returns:
         List of cluster type strings, one per layer.
     """
-    # Build list of required types
     layer_types: list[str] = []
-    layer_types.extend(["legacy_dungeon"] * requirements.legacy_dungeons)
-    layer_types.extend(["boss_arena"] * requirements.bosses)
-    layer_types.extend(["mini_dungeon"] * requirements.mini_dungeons)
-    layer_types.extend(["major_boss"] * requirements.major_bosses)
+    for cluster_type in requirements.allowed_types:
+        layer_types.extend([cluster_type] * requirements.required_count(cluster_type))
 
-    # Trim if we have too many requirements
     if len(layer_types) > total_layers:
         rng.shuffle(layer_types)
         layer_types = layer_types[:total_layers]
@@ -208,21 +201,34 @@ def plan_layer_types(
         padding_needed = total_layers - len(layer_types)
         if padding_needed > 0:
             if pool_sizes is not None:
-                required_counts = {
-                    "legacy_dungeon": requirements.legacy_dungeons,
-                    "boss_arena": requirements.bosses,
-                    "mini_dungeon": requirements.mini_dungeons,
-                    "major_boss": requirements.major_bosses,
+                # Filter pool_sizes by allowed_types, excluding major_boss
+                # from padding (the final boss is terminal, handled
+                # separately by the generator).
+                filtered_pool = {
+                    t: size
+                    for t, size in pool_sizes.items()
+                    if t in requirements.allowed_types and t != "major_boss"
                 }
-                layer_types.extend(
-                    _distribute_padding(
-                        padding_needed, required_counts, pool_sizes, rng
+                if filtered_pool:
+                    required_counts = {
+                        t: requirements.required_count(t) for t in filtered_pool
+                    }
+                    layer_types.extend(
+                        _distribute_padding(
+                            padding_needed, required_counts, filtered_pool, rng
+                        )
                     )
-                )
+                else:
+                    fallback = requirements.allowed_types[0]
+                    layer_types.extend([fallback] * padding_needed)
             else:
-                layer_types.extend(["mini_dungeon"] * padding_needed)
+                pad_type = (
+                    "mini_dungeon"
+                    if "mini_dungeon" in requirements.allowed_types
+                    else requirements.allowed_types[0]
+                )
+                layer_types.extend([pad_type] * padding_needed)
 
-    # Shuffle to distribute types randomly across layers
     rng.shuffle(layer_types)
 
     return layer_types
