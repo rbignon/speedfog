@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -37,6 +38,13 @@ _VALID_CLUSTER_TYPES = (
     "major_boss",
 )
 
+_CLUSTER_TYPE_TO_FIELD = {
+    "legacy_dungeon": "legacy_dungeons",
+    "mini_dungeon": "mini_dungeons",
+    "boss_arena": "bosses",
+    "major_boss": "major_bosses",
+}
+
 
 @dataclass
 class RequirementsConfig:
@@ -62,6 +70,26 @@ class RequirementsConfig:
             if t in seen:
                 raise ValueError(f"duplicate entry in allowed_types: {t!r}")
             seen.add(t)
+
+        # Warn about non-zero minima on excluded types
+        for cluster_type, field_name in _CLUSTER_TYPE_TO_FIELD.items():
+            if cluster_type in self.allowed_types:
+                continue
+            value = getattr(self, field_name)
+            if value > 0:
+                warnings.warn(
+                    f"requirements.{field_name} = {value} ignored: "
+                    f"'{cluster_type}' not in allowed_types",
+                    UserWarning,
+                    stacklevel=2,
+                )
+
+    def required_count(self, cluster_type: str) -> int:
+        """Return minimum count for a cluster type, 0 if excluded."""
+        if cluster_type not in self.allowed_types:
+            return 0
+        field_name = _CLUSTER_TYPE_TO_FIELD[cluster_type]
+        return int(getattr(self, field_name))
 
 
 @dataclass

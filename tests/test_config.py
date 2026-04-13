@@ -943,3 +943,50 @@ class TestAllowedTypes:
     def test_duplicate_entries_raises(self):
         with pytest.raises(ValueError, match="duplicate"):
             RequirementsConfig(allowed_types=["boss_arena", "boss_arena", "major_boss"])
+
+    def test_required_count_for_allowed_type(self):
+        req = RequirementsConfig(
+            allowed_types=["boss_arena", "major_boss"],
+            legacy_dungeons=0,
+            bosses=7,
+            mini_dungeons=0,
+            major_bosses=2,
+        )
+        assert req.required_count("boss_arena") == 7
+        assert req.required_count("major_boss") == 2
+
+    def test_required_count_for_excluded_type_returns_zero(self):
+        req = RequirementsConfig(
+            allowed_types=["boss_arena", "major_boss"],
+            legacy_dungeons=3,
+            bosses=5,
+            mini_dungeons=0,
+            major_bosses=2,
+        )
+        # mini_dungeon not in allowed_types, even though default min is 5
+        assert req.required_count("mini_dungeon") == 0
+        # legacy_dungeon not in allowed_types, even with explicit 3
+        assert req.required_count("legacy_dungeon") == 0
+
+    def test_nonzero_min_for_excluded_type_emits_warning(self, recwarn):
+        RequirementsConfig(
+            allowed_types=["boss_arena", "major_boss"],
+            legacy_dungeons=3,
+            bosses=5,
+            mini_dungeons=0,
+            major_bosses=2,
+        )
+        messages = [str(w.message) for w in recwarn.list]
+        assert any(
+            "legacy_dungeons" in m and "not in allowed_types" in m for m in messages
+        )
+
+    def test_zero_min_for_excluded_type_no_warning(self, recwarn):
+        RequirementsConfig(
+            allowed_types=["boss_arena", "major_boss"],
+            legacy_dungeons=0,
+            bosses=5,
+            mini_dungeons=0,
+            major_bosses=2,
+        )
+        assert len(recwarn.list) == 0
