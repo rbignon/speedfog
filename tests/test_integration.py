@@ -335,3 +335,52 @@ def test_generation_log_with_real_clusters(
     logged_layers = {le.layer for le in log.layer_events}
     for layer in range(max_layer + 1):
         assert layer in logged_layers, f"Layer {layer} missing from log"
+
+
+def test_boss_rush_integration(real_clusters, real_boss_candidates):
+    """End-to-end: a boss-rush config produces a DAG whose intermediate
+    nodes are all boss_arena or major_boss, and whose final node is
+    major_boss."""
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        config = Config.from_dict(
+            {
+                "run": {"seed": 0},
+                "requirements": {
+                    "allowed_types": ["boss_arena", "major_boss"],
+                    "legacy_dungeons": 0,
+                    "bosses": 4,
+                    "mini_dungeons": 0,
+                    "major_bosses": 1,
+                },
+                "structure": {
+                    "min_layers": 4,
+                    "max_layers": 8,
+                    "max_parallel_paths": 2,
+                },
+            }
+        )
+
+    result = generate_with_retry(
+        config,
+        real_clusters,
+        max_attempts=200,
+        boss_candidates=real_boss_candidates,
+    )
+    assert result.validation.is_valid, f"Validation failed: {result.validation.errors}"
+
+    dag = result.dag
+    intermediate_types = {
+        node.cluster.type
+        for node_id, node in dag.nodes.items()
+        if node_id not in (dag.start_id, dag.end_id)
+    }
+    assert intermediate_types <= {
+        "boss_arena",
+        "major_boss",
+    }, f"Forbidden types in intermediate nodes: {intermediate_types}"
+
+    end_node = dag.nodes[dag.end_id]
+    assert end_node.cluster.type in ("major_boss", "final_boss")
