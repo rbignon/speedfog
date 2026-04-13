@@ -50,6 +50,22 @@ major_bosses = 8
 # Useful for testing specific boss behavior.
 # zones = ["caelid_radahn", "haligtree_malenia"]
 
+# Cluster types allowed in the DAG. Types not listed are excluded
+# entirely: no minimum count, no padding, no convergence pick.
+# The final boss is always a major_boss regardless of this list.
+#
+# Default: all four types.
+# allowed_types = ["legacy_dungeon", "mini_dungeon", "boss_arena", "major_boss"]
+#
+# Example modes:
+#   Boss rush:        ["boss_arena", "major_boss"]
+#   Legacy marathon:  ["legacy_dungeon"]
+#   Dungeon crawl:    ["mini_dungeon", "boss_arena", "major_boss"]
+#   No minis:         ["legacy_dungeon", "boss_arena", "major_boss"]
+#
+# When a type is excluded, set its min_* to 0 (or leave at default; a
+# warning is emitted if a non-zero min is ignored).
+
 [structure]
 # Maximum number of parallel paths at any point.
 # Higher = more choices, but harder to balance.

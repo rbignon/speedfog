@@ -451,6 +451,33 @@ Post-generation checks on the built DAG:
 8. **Layer count**: few layers = warning
 9. **Event flag budget**: total flag allocation within budget
 
+## Allowed cluster types
+
+By default, the DAG can include any of four cluster types:
+`legacy_dungeon`, `mini_dungeon`, `boss_arena`, `major_boss`. The
+`requirements.allowed_types` setting restricts this to a subset,
+enabling modes such as boss-rush (`["boss_arena", "major_boss"]`) or
+legacy-marathon (`["legacy_dungeon"]`).
+
+Semantics:
+
+- Only types listed in `allowed_types` participate in the DAG: they
+  appear in the initial requirement list, in padding, and in
+  convergence type selection.
+- The per-type minimums (`legacy_dungeons`, `bosses`, `mini_dungeons`,
+  `major_bosses`) apply only to types present in `allowed_types`.
+  Minimums for excluded types are silently ignored; a warning is
+  emitted at config load if a non-zero minimum is ignored.
+- The final boss is selected from `final_boss_candidates` and is
+  always a major_boss, independent of `allowed_types`. A config like
+  `allowed_types = ["mini_dungeon", "boss_arena"]` produces a DAG
+  whose intermediate layers contain no major bosses but which still
+  ends on a major-boss node.
+- `structure.first_layer_type`, if set, must be in `allowed_types`.
+- A required zone (`requirements.zones`) whose cluster type is
+  excluded from `allowed_types` is reported as a validator error
+  (the zone would be unreachable).
+
 ## References
 
 - Generator: `speedfog/generator.py`
