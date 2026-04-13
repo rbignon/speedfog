@@ -567,10 +567,15 @@ def _compute_fallback_pool(
     clusters: ClusterPool,
     used_zones: set[str],
     reserved_zones: frozenset[str],
+    allowed_types: tuple[str, ...] = _FALLBACK_TYPES,
 ) -> dict[str, int]:
-    """Compute pool remaining for fallback entries."""
+    """Compute pool remaining for fallback entries.
+
+    Only types in `allowed_types` contribute to the pool. Defaults to all
+    four cluster types for backward compatibility.
+    """
     all_typed: list[ClusterData] = []
-    for t in ("mini_dungeon", "boss_arena", "legacy_dungeon", "major_boss"):
+    for t in allowed_types:
         all_typed.extend(clusters.get_by_type(t))
     return compute_pool_remaining(all_typed, used_zones, reserved_zones)
 
@@ -582,6 +587,7 @@ def pick_cluster_with_type_fallback(
     rng: random.Random,
     *,
     reserved_zones: frozenset[str] = frozenset(),
+    allowed_types: tuple[str, ...] | None = None,
 ) -> ClusterData | None:
     """Pick a cluster of the preferred type, falling back to other types.
 
@@ -609,7 +615,10 @@ def pick_cluster_with_type_fallback(
         return result
 
     # Fallback: weighted random selection proportional to available counts
-    fallback_types = [t for t in _FALLBACK_TYPES if t != preferred_type]
+    effective_allowed = allowed_types if allowed_types is not None else _FALLBACK_TYPES
+    fallback_types = [
+        t for t in _FALLBACK_TYPES if t != preferred_type and t in effective_allowed
+    ]
 
     def _available_count(t: str) -> int:
         return sum(
@@ -689,6 +698,7 @@ def _pick_cluster_biased_for_split(
         used_zones,
         rng,
         reserved_zones=reserved_zones,
+        allowed_types=tuple(config.requirements.allowed_types),
     )
 
 
@@ -1322,7 +1332,12 @@ def _rebalance_split_first(
         if i in handled:
             continue
         pc = pick_cluster_with_type_fallback(
-            clusters, layer_type, used_zones, rng, reserved_zones=reserved_zones
+            clusters,
+            layer_type,
+            used_zones,
+            rng,
+            reserved_zones=reserved_zones,
+            allowed_types=tuple(config.requirements.allowed_types),
         )
         if pc is None:
             raise GenerationError(
@@ -1838,6 +1853,7 @@ def generate_dag(
     dag = Dag(seed=seed)
     used_zones: set[str] = set()
     log = GenerationLog()
+    allowed_types_tuple = tuple(config.requirements.allowed_types)
 
     # 1. Create start node
     start_candidates = clusters.get_by_type("start")
@@ -1990,10 +2006,12 @@ def generate_dag(
     # Subtract start (1), end (1), optional first forced layer
     num_intermediate_layers = max(1, target_total - 2 - first_layer_offset)
 
-    # Compute pool sizes per type for proportional padding
+    # Compute pool sizes per type for proportional padding (filtered by
+    # allowed_types so excluded types never contribute padding).
     pool_sizes = {
         t: len(clusters.get_by_type(t))
         for t in ("mini_dungeon", "boss_arena", "legacy_dungeon")
+        if t in config.requirements.allowed_types
     }
 
     layer_types = plan_layer_types(
@@ -2229,6 +2247,7 @@ def generate_dag(
                             used_zones,
                             rng,
                             reserved_zones=reserved_zones,
+                            allowed_types=allowed_types_tuple,
                         )
                     if pc is None:
                         raise GenerationError(
@@ -2430,6 +2449,7 @@ def generate_dag(
                             used_zones,
                             rng,
                             reserved_zones=reserved_zones,
+                            allowed_types=allowed_types_tuple,
                         )
                     if pc is None:
                         raise GenerationError(
@@ -2508,6 +2528,7 @@ def generate_dag(
                             used_zones,
                             rng,
                             reserved_zones=reserved_zones,
+                            allowed_types=allowed_types_tuple,
                         )
                     if c is None:
                         raise GenerationError(
@@ -2573,15 +2594,22 @@ def generate_dag(
     convergence_layers = 0
     convergence_limit = merge_reserve * 2
 
-    # Pool sizes for convergence type selection (computed once)
-    conv_pool_sizes = {t: len(clusters.get_by_type(t)) for t in _FALLBACK_TYPES}
+    # Pool sizes for convergence type selection (filtered by allowed_types
+    # so excluded types are never picked during convergence).
+    conv_pool_sizes = {
+        t: len(clusters.get_by_type(t))
+        for t in _FALLBACK_TYPES
+        if t in config.requirements.allowed_types
+    }
+    conv_fallback = config.requirements.allowed_types[0]
 
     # Pool snapshot for first convergence event
     conv_pool_snapshot: dict[str, int] | None = None
     if len(branches) > 1:
         all_conv_clusters: list[ClusterData] = []
         for t in _FALLBACK_TYPES:
-            all_conv_clusters.extend(clusters.get_by_type(t))
+            if t in config.requirements.allowed_types:
+                all_conv_clusters.extend(clusters.get_by_type(t))
         conv_pool_snapshot = compute_pool_remaining(
             all_conv_clusters, used_zones, reserved_zones
         )
@@ -2593,7 +2621,9 @@ def generate_dag(
             t = node.cluster.type
             if t in conv_pool_sizes:
                 conv_used[t] = conv_used.get(t, 0) + 1
-        conv_layer_type = pick_weighted_type(conv_pool_sizes, conv_used, rng)
+        conv_layer_type = pick_weighted_type(
+            conv_pool_sizes, conv_used, rng, fallback=conv_fallback
+        )
 
         # Create a layer event (operation and nodes filled in below)
         conv_layer_event: LayerEvent | None = LayerEvent(
