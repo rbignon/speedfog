@@ -527,7 +527,7 @@ class Config:
     def __post_init__(self) -> None:
         """Validate cross-field constraints."""
         first = self.structure.first_layer_type
-        if first is not None and first not in self.requirements.allowed_types:
+        if first and first not in self.requirements.allowed_types:
             raise ValueError(
                 f"first_layer_type = {first!r} not in allowed_types = "
                 f"{self.requirements.allowed_types!r}"
