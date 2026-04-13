@@ -384,3 +384,90 @@ def test_boss_rush_integration(real_clusters, real_boss_candidates):
 
     end_node = dag.nodes[dag.end_id]
     assert end_node.cluster.type in ("major_boss", "final_boss")
+
+
+def test_dungeon_crawl_integration(real_clusters, real_boss_candidates):
+    """allowed_types = [mini_dungeon, boss_arena, major_boss] excludes legacy
+    dungeons from all intermediate nodes."""
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        config = Config.from_dict(
+            {
+                "run": {"seed": 0},
+                "requirements": {
+                    "allowed_types": ["mini_dungeon", "boss_arena", "major_boss"],
+                    "legacy_dungeons": 0,
+                    "bosses": 2,
+                    "mini_dungeons": 3,
+                    "major_bosses": 1,
+                },
+                "structure": {
+                    "min_layers": 5,
+                    "max_layers": 9,
+                    "max_parallel_paths": 2,
+                },
+            }
+        )
+
+    result = generate_with_retry(
+        config,
+        real_clusters,
+        max_attempts=200,
+        boss_candidates=real_boss_candidates,
+    )
+    assert result.validation.is_valid, f"Validation failed: {result.validation.errors}"
+
+    dag = result.dag
+    intermediate_types = {
+        node.cluster.type
+        for node_id, node in dag.nodes.items()
+        if node_id not in (dag.start_id, dag.end_id)
+    }
+    assert "legacy_dungeon" not in intermediate_types
+
+
+def test_legacy_marathon_integration(real_clusters, real_boss_candidates):
+    """allowed_types = [legacy_dungeon] produces a DAG with only legacy
+    dungeons in intermediate nodes (final boss still major_boss)."""
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        config = Config.from_dict(
+            {
+                "run": {"seed": 0},
+                "requirements": {
+                    "allowed_types": ["legacy_dungeon"],
+                    "legacy_dungeons": 2,
+                    "bosses": 0,
+                    "mini_dungeons": 0,
+                    "major_bosses": 0,
+                },
+                "structure": {
+                    "min_layers": 3,
+                    "max_layers": 5,
+                    "max_parallel_paths": 2,
+                },
+            }
+        )
+
+    result = generate_with_retry(
+        config,
+        real_clusters,
+        max_attempts=200,
+        boss_candidates=real_boss_candidates,
+    )
+    assert result.validation.is_valid, f"Validation failed: {result.validation.errors}"
+
+    dag = result.dag
+    intermediate_types = {
+        node.cluster.type
+        for node_id, node in dag.nodes.items()
+        if node_id not in (dag.start_id, dag.end_id)
+    }
+    assert intermediate_types <= {"legacy_dungeon"}
+
+    end_node = dag.nodes[dag.end_id]
+    assert end_node.cluster.type in ("major_boss", "final_boss")

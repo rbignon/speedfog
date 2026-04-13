@@ -2124,6 +2124,7 @@ def generate_dag(
                                 clusters,
                                 used_zones,
                                 reserved_zones,
+                                allowed_types=allowed_types_tuple,
                             ),
                         )
                         for idx, n in enumerate(rebal_dag_nodes)
@@ -2182,6 +2183,7 @@ def generate_dag(
                             clusters,
                             used_zones,
                             reserved_zones,
+                            allowed_types=allowed_types_tuple,
                         ),
                     )
                 )
@@ -2265,6 +2267,7 @@ def generate_dag(
                                     clusters,
                                     used_zones,
                                     reserved_zones,
+                                    allowed_types=allowed_types_tuple,
                                 ),
                             )
                         )
@@ -2349,6 +2352,7 @@ def generate_dag(
                                 clusters,
                                 used_zones,
                                 reserved_zones,
+                                allowed_types=allowed_types_tuple,
                             ),
                         )
                     )
@@ -2467,6 +2471,7 @@ def generate_dag(
                                     clusters,
                                     used_zones,
                                     reserved_zones,
+                                    allowed_types=allowed_types_tuple,
                                 ),
                             )
                         )
@@ -2547,6 +2552,7 @@ def generate_dag(
                                 clusters,
                                 used_zones,
                                 reserved_zones,
+                                allowed_types=allowed_types_tuple,
                             ),
                         )
                     )
@@ -2601,7 +2607,12 @@ def generate_dag(
         for t in _FALLBACK_TYPES
         if t in config.requirements.allowed_types
     }
-    conv_fallback = config.requirements.allowed_types[0]
+    # Prefer a non-major_boss fallback during convergence: major_boss clusters
+    # are scarce and one is already reserved for the final node.
+    conv_fallback = next(
+        (t for t in config.requirements.allowed_types if t != "major_boss"),
+        config.requirements.allowed_types[0],
+    )
 
     # Pool snapshot for first convergence event
     conv_pool_snapshot: dict[str, int] | None = None
@@ -2703,6 +2714,7 @@ def generate_dag(
                                 clusters,
                                 used_zones,
                                 reserved_zones,
+                                allowed_types=allowed_types_tuple,
                             ),
                         )
                         for idx, n in enumerate(rebal_dag_nodes)
@@ -2804,6 +2816,7 @@ def generate_dag(
                                 clusters,
                                 used_zones,
                                 reserved_zones,
+                                allowed_types=allowed_types_tuple,
                             ),
                         )
                     )
