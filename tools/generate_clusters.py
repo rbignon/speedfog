@@ -1485,7 +1485,7 @@ def compute_allow_entry_as_exit(
 ) -> bool:
     """Determine if a cluster's entry fog can be reused as a forward exit.
 
-    Default: True for boss_arena clusters with 2+ exit fogs.
+    Default: True for boss_arena and major_boss clusters with 2+ exit fogs.
     Overridable per zone in zone_metadata.toml.
 
     Args:
@@ -1497,7 +1497,7 @@ def compute_allow_entry_as_exit(
     Returns:
         Whether this cluster allows entry-as-exit reuse.
     """
-    allow = cluster_type == "boss_arena" and len(exit_fogs) >= 2
+    allow = cluster_type in ("boss_arena", "major_boss") and len(exit_fogs) >= 2
 
     # Per-zone overrides (any zone in cluster can override)
     for zone_name in zones:
