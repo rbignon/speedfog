@@ -604,3 +604,27 @@ class TestPickWeightedType:
         for seed in range(50):
             t = pick_weighted_type(pool_sizes, used, random.Random(seed))
             assert t == "mini_dungeon"
+
+
+class TestPickWeightedTypeFallback:
+    """Tests for pick_weighted_type fallback parameter."""
+
+    def test_fallback_used_when_all_exhausted(self):
+        """All pool sizes exhausted by used_counts, fallback is returned."""
+        result = pick_weighted_type(
+            pool_sizes={"boss_arena": 3, "major_boss": 2},
+            used_counts={"boss_arena": 3, "major_boss": 2},
+            rng=random.Random(42),
+            fallback="boss_arena",
+        )
+        assert result == "boss_arena"
+
+    def test_normal_pick_ignores_fallback(self):
+        """Pool not exhausted, fallback is not picked."""
+        result = pick_weighted_type(
+            pool_sizes={"boss_arena": 10, "major_boss": 2},
+            used_counts={},
+            rng=random.Random(42),
+            fallback="legacy_dungeon",
+        )
+        assert result in {"boss_arena", "major_boss"}

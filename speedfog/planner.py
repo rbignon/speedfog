@@ -64,6 +64,8 @@ def pick_weighted_type(
     pool_sizes: dict[str, int],
     used_counts: dict[str, int],
     rng: random.Random,
+    *,
+    fallback: str = "mini_dungeon",
 ) -> str:
     """Pick a type weighted by remaining pool capacity.
 
@@ -74,10 +76,12 @@ def pick_weighted_type(
         pool_sizes: Total available clusters per type.
         used_counts: How many of each type have been consumed so far.
         rng: Random number generator.
+        fallback: Type returned when every pool is exhausted. Caller
+            should pass a type known to be allowed in the current run.
 
     Returns:
-        A type string chosen proportionally to remaining capacity.
-        Falls back to "mini_dungeon" if all pools are empty.
+        A type string chosen proportionally to remaining capacity, or
+        `fallback` if every pool is empty.
     """
     remaining = {
         t: max(0, pool - used_counts.get(t, 0)) for t, pool in pool_sizes.items()
@@ -85,7 +89,7 @@ def pick_weighted_type(
     candidates = {t: r for t, r in remaining.items() if r > 0}
 
     if not candidates:
-        return "mini_dungeon"
+        return fallback
 
     types_list = list(candidates.keys())
     weights = [candidates[t] for t in types_list]
