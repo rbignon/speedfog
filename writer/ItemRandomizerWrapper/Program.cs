@@ -248,11 +248,34 @@ Example:
     // etc.) that play well as non-major boss encounters.
     internal static readonly uint[] ExtraMinorBossPoolIds =
     {
-        2053480290, 1051400299, 1051570310, 1050540300, 1052550250, 2810395,
-        20010451, 20010450, 20010453, 20010455, 1035430230, 35000366, 35000361,
-        1044530450, 2820478, 21010459, 21020450, 21010464, 11000495, 13000295,
-        42000200, 42030302, 42030304, 42030300, 2045470200, 1039510800,
-        1043370340, 1047400800,
+        2053480290, // Colossal Fingercreeper
+        1051400299, // Guardian Golem
+        1051570310, // Elder Lion
+        1050540300, // Fire Prelate
+        1052550250, // Fire Prelate
+        2810395, // Giant Death Crab
+        20010451, // Divine Bird Warrior (Lightning)
+        20010450, // Hornsent
+        20010453, // Divine Bird Warrior (Frost)
+        20010455, // Divine Bird Warrior (Wind)
+        1035430230, // Lobster
+        35000366, // Omen
+        35000361, // Omen
+        1044530450, // Omen
+        2820478, // Runebear
+        21010459, // Fire Knight
+        21020450, // Fire Knight
+        21010464, // Fire Knight
+        11000495, // Crucible Knight
+        13000295, // Crucible Knight
+        42000200, // Smith Golem
+        42030302, // Smith Golem
+        42030304, // Smith Golem
+        42030300, // Smith Golem
+        2045470200, // Crucible Knight Devonia
+        1039510800, // Death Rite Bird
+        1043370340, // Deathbird
+        1047400800, // Night's cavalry
     };
 
     // Subset of ExtraMinorBossPoolIds that are classified Basic in enemy.txt
@@ -285,6 +308,7 @@ Example:
         "Fire Erdtree Burial Watchdog Boss",
         "Lightning Erdtree Burial Watchdog Boss",
         "Scepter Erdtree Burial Watchdog Boss",
+        "2046460800", // Divine Beast Dancing Lion and Basilisks
     };
 
     /// <summary>
