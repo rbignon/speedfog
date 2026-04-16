@@ -320,6 +320,10 @@ exclude = true  # Elden Beast arena, accessed via leyndell2_erdtree unique fog, 
 [zones.outskirts_sidetomb]
 exclude = true
 
+# Patches
+[zones.limgrave_murkwatercave_boss]
+exclude = true
+
 # --- DLC ---
 
 [zones.rauhruins_postromina]
