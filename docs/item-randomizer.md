@@ -105,6 +105,31 @@ Miniboss       ──────► MinorBoss pool (ManualParent=MinorBoss, ove
 Boss           ──────► own pool (major bosses swap among themselves only)
 ```
 
+### Extra enemies promoted into the MinorBoss pool
+
+In both `"minor"` and `"all"` modes, a curated list of beefy field enemies
+(trolls, elite knights, crucible knights, etc.) is appended to the `MinorBoss`
+pool string (format `"default; <id1>; <id2>; ..."`, parsed by
+`Preset.PhraseRe`). The IDs come from the community preset
+`ABND_UWYG_Pirl_BossModifiésBETA.randomizeopt` and live in
+`Program.ExtraMinorBossPoolIds` (28 entries). The subset of those IDs that
+are classified `Basic` in enemy.txt (25 out of 28, in
+`Program.BasicRemoveSourceIds`) is also added to `Basic.RemoveSource` so they
+do not keep appearing as random basic mobs alongside their new boss role.
+
+### `bosshp` / `regularhp` options
+
+In both `"minor"` and `"all"` modes, the preset sets `bosshp = false`.
+
+- `bosshp` (RandomizerCommon default: true) inflates HP via
+  `sqrt(basic_hp × boss_hp)` when a `Basic`-class enemy is placed in an
+  important-target slot (Boss / MinorBoss / ...). Combined with speedfog's
+  `scale = true` (tier-based scaling), this causes promoted Basic enemies to
+  be double-boosted and far too tanky in high tiers.
+- `regularhp` is left at its default (true). It only fires boss → basic
+  placements (source is fixed-source, target is not), which do not occur in
+  speedfog's configuration because all boss-class slots are fixed-source.
+
 ## Boss Placement Capture
 
 RandomizerCommon prints boss swap info to stdout. ItemRandomizerWrapper captures this using `TeeTextWriter` (dual-output to console + StringWriter), then parses it with `BossPlacementParser`.

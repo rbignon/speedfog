@@ -26,4 +26,10 @@
     <ProjectReference Include="../ItemRandomizerWrapper/ItemRandomizerWrapper.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="RandomizerCommon">
+      <HintPath>../lib/RandomizerCommon.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

@@ -1,7 +1,10 @@
 using System.Drawing;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 using RandomizerCommon;
 using SoulsIds;
+
+[assembly: InternalsVisibleTo("ItemRandomizerWrapper.Tests")]
 
 namespace ItemRandomizerWrapper;
 
@@ -239,10 +242,38 @@ Example:
         Console.WriteLine($"Output written to: {config.OutputDir}");
     }
 
+    // Extra enemy IDs promoted from Basic class into the MinorBoss pool,
+    // sourced from community preset ABND_UWYG_Pirl_BossModifiésBETA.randomizeopt.
+    // These are beefy field enemies (trolls, elite knights, crucible knights,
+    // etc.) that play well as non-major boss encounters.
+    internal static readonly uint[] ExtraMinorBossPoolIds =
+    {
+        2053480290, 1051400299, 1051570310, 1050540300, 1052550250, 2810395,
+        20010451, 20010450, 20010453, 20010455, 1035430230, 35000366, 35000361,
+        1044530450, 2820478, 21010459, 21020450, 21010464, 11000495, 13000295,
+        42000200, 42030302, 42030304, 42030300, 2045470200, 1039510800,
+        1043370340, 1047400800,
+    };
+
+    // Subset of ExtraMinorBossPoolIds that are classified Basic in enemy.txt
+    // and therefore must be removed from the Basic pool (otherwise they would
+    // also appear as random basic mobs, on top of being boss candidates).
+    // The last 3 IDs from ExtraMinorBossPoolIds (1039510800, 1043370340,
+    // 1047400800) are not Basic-class so they are intentionally absent here.
+    internal static readonly uint[] BasicRemoveSourceIds =
+    {
+        2053480290, 1051400299, 1051570310, 1050540300, 1052550250, 2810395,
+        20010451, 20010450, 20010453, 20010455, 1035430230, 35000366, 35000361,
+        1044530450, 2820478, 21010459, 21020450, 21010464, 11000495, 13000295,
+        42000200, 42030302, 42030304, 42030300, 2045470200,
+    };
+
     /// <summary>
     /// Build an enemy Preset programmatically from EnemyOptionsConfig.
+    /// Pool / RemoveSource values are semicolon-separated strings, parsed by
+    /// Preset.PhraseRe (see Preset.cs:107, getPoolMultiIds / getMultiIds).
     /// </summary>
-    static Preset BuildEnemyPreset(EnemyOptionsConfig options)
+    internal static Preset BuildEnemyPreset(EnemyOptionsConfig options)
     {
         var valid = new[] { "none", "minor", "all" };
         if (!valid.Contains(options.RandomizeBosses))
@@ -282,11 +313,18 @@ Example:
             // from Boss via DefaultInherit (enemy.txt: MinorBoss.Parent = Boss).
             // Without this, ProcessEnemyPreset copies Boss.NoRandom → MinorBoss,
             // which disables the entire MinorBoss silo.
+            //
+            // The pool string "default; <ids>" keeps the vanilla MinorBoss pool
+            // and adds extra promoted enemies on top.
             preset.Classes[EnemyAnnotations.EnemyClass.MinorBoss] = new Preset.ClassAssignment
             {
                 Pools = new List<Preset.PoolAssignment>
                 {
-                    new Preset.PoolAssignment { Weight = 1000, Pool = "default" }
+                    new Preset.PoolAssignment
+                    {
+                        Weight = 1000,
+                        Pool = "default; " + string.Join("; ", ExtraMinorBossPoolIds),
+                    }
                 }
             };
             foreach (var cls in new[] {
@@ -315,6 +353,23 @@ Example:
                     new Preset.PoolAssignment { Weight = 1000, Pool = "default" }
                 }
             };
+
+            // Remove the promoted Basic enemies from the Basic pool so they
+            // don't keep appearing as random basic mobs alongside their new
+            // role as MinorBoss candidates.
+            preset.Classes[EnemyAnnotations.EnemyClass.Basic] = new Preset.ClassAssignment
+            {
+                RemoveSource = string.Join("; ", BasicRemoveSourceIds),
+            };
+
+            // Disable bosshp: when a Basic enemy is placed in an important-target
+            // slot (Boss/MinorBoss/Miniboss/...), default behavior is to inflate
+            // its HP via geom-mean(basic_hp, boss_hp). Combined with speedfog's
+            // scale=true (tier-based scaling on top), this double-boost makes
+            // promoted basics overly tanky in high tiers. regularhp is left at
+            // its default (true); it only fires boss→basic placements, which
+            // never happen in speedfog's configuration.
+            preset["bosshp"] = false;
 
             if (options.RandomizeBosses == "minor")
             {
