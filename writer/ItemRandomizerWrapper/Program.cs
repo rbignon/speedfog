@@ -268,6 +268,25 @@ Example:
         42000200, 42030302, 42030304, 42030300, 2045470200,
     };
 
+    // Category names (resolved through Preset.getIds → enemiesForName) that
+    // should not be candidates in the MinorBoss pool. These are field-boss
+    // archetypes whose gameplay doesn't translate well into randomized minor-
+    // boss arenas (roaming-on-mount encounters, mini-dungeon bespoke fights,
+    // etc.). Sourced from the same community preset.
+    internal static readonly string[] MinorBossRemoveSourceNames =
+    {
+        "Night's Cavalry",
+        "Cemetery Shade Boss",
+        "Guardian Golem Boss",
+        "Tibia Mariner Boss",
+        "Erdtree Avatar Boss",
+        "Ulcerated Tree Spirit Boss",
+        "Putrid Avatar Boss",
+        "Fire Erdtree Burial Watchdog Boss",
+        "Lightning Erdtree Burial Watchdog Boss",
+        "Scepter Erdtree Burial Watchdog Boss",
+    };
+
     /// <summary>
     /// Build an enemy Preset programmatically from EnemyOptionsConfig.
     /// Pool / RemoveSource values are semicolon-separated strings, parsed by
@@ -325,7 +344,8 @@ Example:
                         Weight = 1000,
                         Pool = "default; " + string.Join("; ", ExtraMinorBossPoolIds),
                     }
-                }
+                },
+                RemoveSource = string.Join("; ", MinorBossRemoveSourceNames),
             };
             foreach (var cls in new[] {
                 EnemyAnnotations.EnemyClass.NightMiniboss,

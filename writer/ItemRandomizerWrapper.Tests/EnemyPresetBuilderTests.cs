@@ -50,6 +50,21 @@ public class EnemyPresetBuilderTests
     [Theory]
     [InlineData("minor")]
     [InlineData("all")]
+    public void MinorBossClass_HasNamedRemoveSource(string mode)
+    {
+        var preset = Program.BuildEnemyPreset(new EnemyOptionsConfig { RandomizeBosses = mode });
+
+        var minorBoss = preset.Classes[EnemyAnnotations.EnemyClass.MinorBoss];
+        Assert.NotNull(minorBoss.RemoveSource);
+        foreach (var name in Program.MinorBossRemoveSourceNames)
+        {
+            Assert.Contains(name, minorBoss.RemoveSource);
+        }
+    }
+
+    [Theory]
+    [InlineData("minor")]
+    [InlineData("all")]
     public void BasicClass_HasRemoveSource(string mode)
     {
         var preset = Program.BuildEnemyPreset(new EnemyOptionsConfig { RandomizeBosses = mode });

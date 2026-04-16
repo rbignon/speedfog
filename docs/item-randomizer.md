@@ -117,6 +117,15 @@ are classified `Basic` in enemy.txt (25 out of 28, in
 `Program.BasicRemoveSourceIds`) is also added to `Basic.RemoveSource` so they
 do not keep appearing as random basic mobs alongside their new boss role.
 
+A complementary `MinorBoss.RemoveSource` holds category names
+(`Program.MinorBossRemoveSourceNames`, resolved by `Preset.getIds` via
+`enemiesForName`) for field-boss archetypes that don't translate well into
+randomized arenas: Night's Cavalry, Cemetery Shade Boss, Guardian Golem Boss,
+Tibia Mariner Boss, Erdtree Avatar Boss, Ulcerated Tree Spirit Boss, Putrid
+Avatar Boss, and the three Burial Watchdog variants. They're excluded from
+the MinorBoss pool so promoted enemies don't end up inheriting those archetypes
+as source candidates.
+
 ### `bosshp` / `regularhp` options
 
 In both `"minor"` and `"all"` modes, the preset sets `bosshp = false`.
