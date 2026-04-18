@@ -1893,6 +1893,76 @@ class TestFilterAndEnrichMetadataTypeOverride:
         assert len(result) == 1
         assert result[0].cluster_type == "legacy_dungeon"
 
+    def test_orphan_cluster_declaration_warns(self, capsys):
+        """Declarations under [clusters.<id>] that match no cluster warn.
+
+        Cluster IDs are content-addressed by zone set; if a zone set changes
+        (e.g., after a generator fix), the old ID stops matching and its
+        overrides silently no-op. The generator emits a warning to surface
+        these drifts.
+        """
+        areas = {
+            "stormveil": AreaData(
+                name="stormveil", text="Stormveil", maps=["m10_00_00_00"], tags=[]
+            ),
+        }
+        metadata = {
+            "defaults": {"legacy_dungeon": 10},
+            "zones": {},
+            "clusters": {"does_not_exist_zzzz": {"weight": 99}},
+        }
+        cluster = _make_cluster_with_fogs(frozenset({"stormveil"}))
+
+        filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+        captured = capsys.readouterr()
+        assert "does_not_exist_zzzz" in captured.out
+        assert "Warning" in captured.out
+
+    def test_matched_cluster_declaration_does_not_warn(self, capsys):
+        """A declaration matching a real cluster ID does not trigger a warning."""
+        areas = {
+            "stormveil": AreaData(
+                name="stormveil", text="Stormveil", maps=["m10_00_00_00"], tags=[]
+            ),
+        }
+        cluster = _make_cluster_with_fogs(frozenset({"stormveil"}))
+        metadata = {
+            "defaults": {"legacy_dungeon": 10},
+            "zones": {},
+        }
+        # First pass to learn the generated cluster_id, then rebuild metadata
+        filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+        metadata["clusters"] = {cluster.cluster_id: {"weight": 42}}
+        cluster2 = _make_cluster_with_fogs(frozenset({"stormveil"}))
+
+        filter_and_enrich_clusters(
+            [cluster2],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+        captured = capsys.readouterr()
+        assert "Warning" not in captured.out
+
 
 class TestFilterAndEnrichMetadataExclude:
     """Tests for metadata exclude flag in filter_and_enrich_clusters."""
@@ -3652,37 +3722,45 @@ class TestPickDisplayName:
     """Tests for _pick_display_name — choosing cluster display names."""
 
     def test_legacy_dungeon_prefers_non_boss_zone(self):
-        """Legacy dungeon with a boss zone uses the non-boss zone name."""
+        """Legacy dungeon with a boss zone uses the non-boss zone name.
+
+        Defensive coverage of _pick_display_name: after the drop-into-boss
+        fix the generator no longer produces mixed legacy_dungeon+major_boss
+        clusters, but the function keeps this fallback for other paths
+        (e.g., mini-fortress downgrades) that can still yield such mixes.
+        Uses synthetic zone names to decouple the test from cluster generator
+        invariants.
+        """
         cluster = Cluster(
-            zones=frozenset({"academy_redwolf", "academy_courtyard"}),
+            zones=frozenset({"boss_zone", "normal_zone"}),
             entry_fogs=[],
             exit_fogs=[],
-            cluster_id="academy_redwolf_8733",
+            cluster_id="test_cluster_0000",
             cluster_type="legacy_dungeon",
             weight=3,
-            primary_zone="academy_redwolf",
+            primary_zone="boss_zone",
         )
         areas = {
-            "academy_redwolf": AreaData(
-                name="academy_redwolf",
-                text="Red Wolf of Radagon",
-                maps=["m14_00_00_00"],
+            "boss_zone": AreaData(
+                name="boss_zone",
+                text="Boss Name",
+                maps=["m10_00_00_00"],
                 tags=[],
                 has_boss=True,
             ),
-            "academy_courtyard": AreaData(
-                name="academy_courtyard",
-                text="Academy of Raya Lucaria after Red Wolf",
-                maps=["m14_00_00_00"],
+            "normal_zone": AreaData(
+                name="normal_zone",
+                text="Dungeon Location",
+                maps=["m10_00_00_00"],
                 tags=[],
             ),
         }
         zone_names = {
-            "academy_redwolf": "Red Wolf of Radagon",
-            "academy_courtyard": "Academy of Raya Lucaria after Red Wolf",
+            "boss_zone": "Boss Name",
+            "normal_zone": "Dungeon Location",
         }
         result = _pick_display_name(cluster, areas, zone_names)
-        assert result == "Academy of Raya Lucaria after Red Wolf"
+        assert result == "Dungeon Location"
 
     def test_legacy_dungeon_single_non_boss_zone(self):
         """Legacy dungeon with only non-boss zones uses primary zone."""

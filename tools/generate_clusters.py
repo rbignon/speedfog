@@ -1598,6 +1598,7 @@ def filter_and_enrich_clusters(
     """
     filtered: list[Cluster] = []
     zones_meta = metadata.get("zones", {})
+    matched_cluster_meta_ids: set[str] = set()
 
     for cluster in clusters:
         # Check if any zone should be excluded (via area tags or metadata)
@@ -1778,6 +1779,7 @@ def filter_and_enrich_clusters(
         # Read cluster-level constraints from [clusters.<id>] section
         clusters_meta = metadata.get("clusters", {})
         if cluster.cluster_id in clusters_meta:
+            matched_cluster_meta_ids.add(cluster.cluster_id)
             cm = clusters_meta[cluster.cluster_id]
             if cm.get("exclude"):
                 continue
@@ -1788,6 +1790,18 @@ def filter_and_enrich_clusters(
             cluster.allowed_exits = cm.get("allowed_exits", [])
 
         filtered.append(cluster)
+
+    # Warn about orphaned [clusters.<id>] declarations: entries in the metadata
+    # file that never matched a generated cluster. Usually caused by a cluster's
+    # zone set changing (content-addressed IDs rotate), silently no-opping the
+    # proximity_groups/weight/exclude overrides.
+    declared_ids = set(metadata.get("clusters", {}).keys())
+    orphans = declared_ids - matched_cluster_meta_ids
+    for orphan_id in sorted(orphans):
+        print(
+            f"  Warning: [clusters.{orphan_id}] in metadata does not match "
+            f"any generated cluster (override ignored)"
+        )
 
     return filtered
 
