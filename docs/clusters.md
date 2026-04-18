@@ -236,11 +236,15 @@ Clusters with no entry_fogs or no exit_fogs are filtered out (unreachable or dea
 
 Multi-zone `major_boss` clusters can be **downgraded** to `legacy_dungeon` when the boss is skippable — i.e., the player can enter and exit the cluster without fighting the boss.
 
-**Detection**: After building the world graph within the cluster, compute which zones are reachable from entry zones via non-boss zones only. If any exit fog exists in a reachable non-boss zone (excluding entry fogs reused as exits), the boss is skippable.
+**Detection**: After building the world graph within the cluster, compute which zones are reachable from entry zones via non-boss zones only. An exit fog is an "alternate exit" when it sits in a reachable non-boss zone AND either:
+- has a different `(fog_id, zone)` than any entry fog (classic bypass: distinct gate leading elsewhere), OR
+- is a bidirectional fog reused as entry whose **other side lands outside the cluster** (the player can turn around and leave through the same gate, ending up in an outside zone).
+
+**Cardinality guard**: Even with an alternate exit identified, the downgrade is rejected if the cluster would end up with fewer than 2 distinct `fog_id`s across its entries and non-boss exits. This prevents pathological downgrades like `farumazula_godskinduo_3b41`, which has a single bidi balcony gate leading to a wider zone: downgrading would leave 1 entry = 1 exit sharing the same `fog_id`, and `allow_entry_as_exit` defaults to `False` for `legacy_dungeon` so the planner couldn't pick a meaningful (entry, exit) pair.
 
 **Exit pruning**: When a cluster is downgraded, exit fogs in boss zones are removed. Without this, the DAG generator could randomly select only boss-zone exits, forcing a mandatory boss fight in what should be a traversal cluster.
 
-**Affected clusters**: `academy_redwolf`, `leyndell_sanctuary`, `leyndell2_sanctuary` (clusters where the boss arena has exits but alternative non-boss routes exist).
+**Affected clusters**: `academy_redwolf`, `leyndell_sanctuary`, `leyndell2_sanctuary`. The first uses the bidi-outside rule (all entries are bidi gates in `academy_courtyard` whose other sides lead to `academy_rennala`/`academy_rooftops`). The last two use the classic rule (many distinct non-boss exits in `leyndell`, `leyndell_bedchamber`, etc.).
 
 ## Output Format
 

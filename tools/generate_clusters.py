@@ -1562,6 +1562,25 @@ def get_primary_zone(
     return min(zones, key=sort_key)
 
 
+def _fog_leads_outside_cluster(
+    fog_by_name: dict[str, FogData],
+    cluster_zones: frozenset[str],
+    fog_id: str,
+    zone: str,
+) -> bool:
+    """Return True when a fog's "other side" lies outside the cluster.
+
+    Used by the major_boss downgrade to decide whether a bidi entry fog
+    reused as an exit is a legitimate alternate exit (player leaves the
+    cluster via that gate) or merely a backtrack through the same zone.
+    """
+    fog = fog_by_name.get(fog_id)
+    if fog is None:
+        return False
+    other = fog.bside.area if fog.aside.area == zone else fog.aside.area
+    return bool(other) and other not in cluster_zones
+
+
 def filter_and_enrich_clusters(
     clusters: list[Cluster],
     areas: dict[str, AreaData],
@@ -1585,6 +1604,11 @@ def filter_and_enrich_clusters(
     filtered: list[Cluster] = []
     zones_meta = metadata.get("zones", {})
     matched_cluster_meta_ids: set[str] = set()
+    # Lookup from fog name to parsed FogData, used by the major_boss downgrade
+    # to resolve the "other side" of bidirectional entry gates (see below).
+    # Empty when all_fogs is None: the downgrade then falls back to the classic
+    # rule (exit's fog_id must differ from all entries').
+    fog_by_name: dict[str, FogData] = {f.name: f for f in all_fogs} if all_fogs else {}
 
     for cluster in clusters:
         # Check if any zone should be excluded (via area tags or metadata)
@@ -1645,18 +1669,48 @@ def filter_and_enrich_clusters(
             if boss_zones and not (entry_fog_zones & boss_zones):
                 non_boss = frozenset(cluster.zones) - boss_zones
                 reachable = world_graph.get_reachable_within(entry_fog_zones, non_boss)
-                # Exclude exits that share a fog_id with an entry fog in the
-                # same zone — these are bidirectional gates used as the entry
-                # point itself (e.g., Godskin Duo balcony fog). Taking that
-                # exit just means going back through the same gate, not
-                # bypassing the boss via an alternate route.
+                # Exits that share a fog_id with an entry fog in the same
+                # zone are bidirectional gates used as the entry point.
+                # Normally taking such an exit means backtracking through
+                # the same gate, not a real bypass (e.g. Godskin Duo balcony:
+                # the entry fog is the drop itself, only 4 exits exist, all
+                # in the boss arena, so no legitimate alternate path exists).
+                #
+                # BUT a bidi entry is a genuine alternate exit when its other
+                # side leads to a zone outside the cluster: the player can
+                # turn around and leave through the same gate they entered
+                # through, ending up elsewhere in the world. This matters
+                # for small hub clusters like {academy_courtyard, redwolf}
+                # whose only non-boss fogs are bidi gates to academy_rennala,
+                # academy_rooftops, etc.: all genuinely outside the cluster.
                 entry_fog_ids = {(f["fog_id"], f["zone"]) for f in cluster.entry_fogs}
+
                 has_alternate_exit = any(
                     f["zone"] in reachable
-                    and (f["fog_id"], f["zone"]) not in entry_fog_ids
+                    and (
+                        (f["fog_id"], f["zone"]) not in entry_fog_ids
+                        or _fog_leads_outside_cluster(
+                            fog_by_name, cluster.zones, f["fog_id"], f["zone"]
+                        )
+                    )
                     for f in cluster.exit_fogs
                 )
-                if has_alternate_exit:
+
+                # Reject the downgrade when the post-prune cluster would have
+                # fewer than 2 distinct fog_ids across entries and non-boss
+                # exits: the DAG planner needs to pick an (entry, exit) pair
+                # with different fog_ids, and legacy_dungeon defaults
+                # allow_entry_as_exit to False. This rules out tiny hub
+                # clusters like {farumazula_balcony, godskinduo} where the
+                # only non-boss fog is a single bidi gate (player would
+                # enter and exit through it, no actual traversal).
+                post_prune_fog_ids = {f["fog_id"] for f in cluster.entry_fogs} | {
+                    f["fog_id"]
+                    for f in cluster.exit_fogs
+                    if f["zone"] not in boss_zones
+                }
+
+                if has_alternate_exit and len(post_prune_fog_ids) >= 2:
                     cluster.cluster_type = "legacy_dungeon"
                     # Prune exit fogs in boss zones — these force mandatory
                     # boss fights in what should be a traversal cluster.

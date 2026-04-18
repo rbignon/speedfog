@@ -3254,6 +3254,178 @@ class TestMajorBossDowngrade:
         assert "balcony" not in exit_zones
         assert "boss_arena" in exit_zones
 
+    def test_bidi_entry_fogs_leading_outside_downgrade(self):
+        """Multi-zone major_boss downgrades when bidi entries lead outside.
+
+        Models academy_redwolf_8733: a small hub cluster {courtyard, redwolf}
+        whose only entries are bidirectional fog gates in courtyard. Each
+        gate's other side is a zone outside the cluster (rennala, rooftops),
+        so the player can traverse the cluster (enter by one gate, leave by
+        another) without fighting the boss. The boss becomes optional, which
+        is the definition of legacy_dungeon.
+        """
+        areas = self._make_areas(
+            courtyard={"maps": ["m14_00_00_00"]},
+            redwolf={"maps": ["m14_00_00_00"], "has_boss": True, "defeat_flag": 999},
+        )
+        wg = WorldGraph()
+        wg.add_edge("courtyard", "redwolf", bidirectional=False)
+
+        # Three bidi fogs in courtyard, each connecting to a zone outside.
+        all_fogs = [
+            FogData(
+                name="gate_rennala",
+                fog_id=1,
+                aside=FogSide(area="courtyard", text=""),
+                bside=FogSide(area="rennala", text=""),
+            ),
+            FogData(
+                name="gate_rooftops",
+                fog_id=2,
+                aside=FogSide(area="courtyard", text=""),
+                bside=FogSide(area="rooftops", text=""),
+            ),
+            FogData(
+                name="gate_back",
+                fog_id=3,
+                aside=FogSide(area="rooftops", text=""),
+                bside=FogSide(area="courtyard", text=""),
+            ),
+        ]
+        cluster = Cluster(
+            zones=frozenset({"courtyard", "redwolf"}),
+            entry_fogs=[
+                {"fog_id": "gate_rennala", "zone": "courtyard"},
+                {"fog_id": "gate_rooftops", "zone": "courtyard"},
+                {"fog_id": "gate_back", "zone": "courtyard"},
+            ],
+            exit_fogs=[
+                {"fog_id": "redwolf_front", "zone": "redwolf"},
+                {"fog_id": "gate_rennala", "zone": "courtyard"},
+                {"fog_id": "gate_rooftops", "zone": "courtyard"},
+                {"fog_id": "gate_back", "zone": "courtyard"},
+            ],
+        )
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            {"defaults": {"major_boss": 4, "legacy_dungeon": 5}, "zones": {}},
+            {"redwolf"},
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+            all_fogs=all_fogs,
+            world_graph=wg,
+        )
+
+        assert len(result) == 1
+        assert result[0].cluster_type == "legacy_dungeon"
+        exit_zones = {f["zone"] for f in result[0].exit_fogs}
+        assert "redwolf" not in exit_zones
+        # All three bidi courtyard fogs are preserved as exits
+        exit_fog_ids = {f["fog_id"] for f in result[0].exit_fogs}
+        assert exit_fog_ids == {"gate_rennala", "gate_rooftops", "gate_back"}
+
+    def test_bidi_entry_single_fog_stays_major_boss(self):
+        """Cardinality guard: cluster with a single bidi entry stays major_boss.
+
+        Models farumazula_godskinduo_3b41: entry = single bidi fog on the
+        balcony whose other side is the wider temple (outside the cluster).
+        Without the guard this would spuriously downgrade to legacy_dungeon,
+        but post-prune the cluster would have only one fog_id for both entry
+        and exit — the DAG planner couldn't pick a meaningful (entry, exit)
+        pair since allow_entry_as_exit defaults to False for legacy_dungeon.
+        """
+        areas = self._make_areas(
+            balcony={"maps": ["m13_00_00_00"]},
+            boss_arena={"maps": ["m13_00_00_00"], "has_boss": True, "defeat_flag": 888},
+        )
+        wg = WorldGraph()
+        wg.add_edge("balcony", "boss_arena", bidirectional=False)
+
+        all_fogs = [
+            FogData(
+                name="balcony_fog",
+                fog_id=1,
+                aside=FogSide(area="balcony", text=""),
+                bside=FogSide(area="temple", text=""),  # outside cluster
+            ),
+        ]
+        cluster = Cluster(
+            zones=frozenset({"balcony", "boss_arena"}),
+            entry_fogs=[{"fog_id": "balcony_fog", "zone": "balcony"}],
+            exit_fogs=[
+                {"fog_id": "balcony_fog", "zone": "balcony"},
+                {"fog_id": "arena_exit_1", "zone": "boss_arena"},
+                {"fog_id": "arena_exit_2", "zone": "boss_arena"},
+            ],
+        )
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            {"defaults": {"major_boss": 4}, "zones": {}},
+            {"boss_arena"},
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+            all_fogs=all_fogs,
+            world_graph=wg,
+        )
+
+        assert len(result) == 1
+        assert result[0].cluster_type == "major_boss"
+
+    def test_bidi_entry_fog_back_inside_cluster_stays_major_boss(self):
+        """Bidi entry whose other side is inside the cluster is not an exit.
+
+        If the "other side" of an entry gate lands in another cluster zone,
+        taking that gate still keeps the player inside the cluster (no
+        bypass). The downgrade must not trigger on such a fog.
+        """
+        areas = self._make_areas(
+            hall={"maps": ["m10_00_00_00"]},
+            antechamber={"maps": ["m10_00_00_00"]},
+            boss_arena={"maps": ["m10_00_00_00"], "has_boss": True, "defeat_flag": 777},
+        )
+        wg = WorldGraph()
+        wg.add_edge("hall", "antechamber", bidirectional=True)
+        wg.add_edge("antechamber", "boss_arena", bidirectional=False)
+
+        # Only bidi gate connects hall <-> antechamber, both inside cluster.
+        all_fogs = [
+            FogData(
+                name="internal_gate",
+                fog_id=1,
+                aside=FogSide(area="hall", text=""),
+                bside=FogSide(area="antechamber", text=""),
+            ),
+        ]
+        cluster = Cluster(
+            zones=frozenset({"hall", "antechamber", "boss_arena"}),
+            entry_fogs=[{"fog_id": "internal_gate", "zone": "hall"}],
+            exit_fogs=[
+                {"fog_id": "internal_gate", "zone": "hall"},
+                {"fog_id": "arena_exit", "zone": "boss_arena"},
+            ],
+        )
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            {"defaults": {"major_boss": 4}, "zones": {}},
+            {"boss_arena"},
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+            all_fogs=all_fogs,
+            world_graph=wg,
+        )
+
+        assert len(result) == 1
+        assert result[0].cluster_type == "major_boss"
+
     def test_no_world_graph_no_downgrade(self):
         """Without world_graph, skippability check is skipped but exits still pruned."""
         areas = self._make_areas(
