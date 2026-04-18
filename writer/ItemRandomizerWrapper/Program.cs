@@ -248,31 +248,34 @@ Example:
     // etc.) that play well as non-major boss encounters.
     internal static readonly uint[] ExtraMinorBossPoolIds =
     {
-        2053480290, // Colossal Fingercreeper
         1051400299, // Guardian Golem
         1051570310, // Elder Lion
-        1050540300, // Fire Prelate
-        1052550250, // Fire Prelate
-        2810395, // Giant Death Crab
         20010451, // Divine Bird Warrior (Lightning)
         20010450, // Hornsent
         20010453, // Divine Bird Warrior (Frost)
         20010455, // Divine Bird Warrior (Wind)
         1035430230, // Lobster
-        35000366, // Omen
-        35000361, // Omen
-        1044530450, // Omen
-        2820478, // Runebear
-        21010459, // Fire Knight
-        21020450, // Fire Knight
-        21010464, // Fire Knight
+        21000453, // Fire Knight (Drained Church District)
+        21010461, // Fire Knight (before Messmer)
+        21010450, // Fire Knight (First Floor)
         11000495, // Crucible Knight
         13000295, // Crucible Knight
         42000200, // Smith Golem
-        42030302, // Smith Golem
-        42030304, // Smith Golem
         42030300, // Smith Golem
+
+        1051530322, // Colossal Fingercreeper
+        1051530324, // Colossal Fingercreeper
+        11000394, // Colossal Fingercreeper
+        12010715, // Blaidd
+        14000499, // Moongrum
+        2047440360, // Moonrithyll
+        2048380800, // DLC's Tibia Mariner
+        22000460, // Golden Leonine Misbegotten
+        35000486, // Omen
+        40010301, // Large Bigmouth Imp
         2045470200, // Crucible Knight Devonia
+        1035540200, // Fire Prelate
+
         1039510800, // Death Rite Bird
         1043370340, // Deathbird
         1047400800, // Night's cavalry
