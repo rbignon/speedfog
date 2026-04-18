@@ -9,8 +9,11 @@
 seed = 0
 
 # Text displayed as a golden banner after defeating the final boss.
+# Accepts either a single string or a list of strings; when a list is given,
+# one entry is picked at random (deterministic per seed).
 # Default: "RUN COMPLETE"
 # run_complete_message = "RUN COMPLETE"
+# run_complete_message = ["RUN COMPLETE", "GG EZ", "TARNISHED VICTORIOUS"]
 
 # Add a Site of Grace at Chapel of Anticipation (starting location).
 # Default: true

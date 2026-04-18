@@ -241,6 +241,9 @@ def main() -> int:
                 file=sys.stderr,
             )
 
+    # Resolve run_complete_message (seeded pick when a list is configured).
+    run_complete_message = config.resolve_run_complete_message(actual_seed)
+
     # Export JSON v4 format (for FogModWrapper and visualization)
     json_path = seed_dir / "graph.json"
     starting_goods = config.starting_items.get_starting_goods()
@@ -254,7 +257,7 @@ def main() -> int:
         starting_golden_seeds=config.starting_items.golden_seeds,
         starting_sacred_tears=config.starting_items.sacred_tears,
         care_package=care_package_items,
-        run_complete_message=config.run_complete_message,
+        run_complete_message=run_complete_message,
         chapel_grace=config.chapel_grace,
         sentry_torch_shop=config.sentry_torch_shop,
         starting_larval_tears=config.starting_items.larval_tears,

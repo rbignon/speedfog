@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 import sys
 import warnings
 from dataclasses import dataclass, field
@@ -511,7 +512,7 @@ class Config:
     """Main configuration container."""
 
     seed: int = 0
-    run_complete_message: str = "RUN COMPLETE"
+    run_complete_message: str | list[str] = "RUN COMPLETE"
     chapel_grace: bool = True
     sentry_torch_shop: bool = True
     death_markers: bool = True
@@ -533,6 +534,16 @@ class Config:
                 f"{self.requirements.allowed_types!r}"
             )
 
+    def resolve_run_complete_message(self, seed: int) -> str:
+        """Resolve run_complete_message to a single string.
+
+        When the field is a list, picks one entry using a seeded RNG so the
+        same seed yields the same message.
+        """
+        if isinstance(self.run_complete_message, list):
+            return random.Random(seed).choice(self.run_complete_message)
+        return self.run_complete_message
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Config:
         """Create Config from a dictionary (e.g., parsed TOML)."""
@@ -546,11 +557,20 @@ class Config:
         care_package_section = data.get("care_package", {})
         enemy_section = data.get("enemy", {})
 
+        run_complete_message = run_section.get("run_complete_message", "RUN COMPLETE")
+        if isinstance(run_complete_message, list):
+            if not run_complete_message:
+                raise ValueError("run_complete_message list must not be empty")
+            if not all(isinstance(m, str) for m in run_complete_message):
+                raise TypeError("run_complete_message list must contain only strings")
+        elif not isinstance(run_complete_message, str):
+            raise TypeError(
+                "run_complete_message must be a string or a list of strings"
+            )
+
         return cls(
             seed=run_section.get("seed", 0),
-            run_complete_message=run_section.get(
-                "run_complete_message", "RUN COMPLETE"
-            ),
+            run_complete_message=run_complete_message,
             chapel_grace=run_section.get("chapel_grace", True),
             sentry_torch_shop=run_section.get("sentry_torch_shop", True),
             death_markers=run_section.get("death_markers", True),

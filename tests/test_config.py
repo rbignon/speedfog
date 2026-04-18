@@ -575,6 +575,62 @@ run_complete_message = "GG EZ"
     assert config.run_complete_message == "GG EZ"
 
 
+def test_run_complete_message_list_from_toml(tmp_path):
+    """run_complete_message can be a list of strings in TOML."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[run]
+run_complete_message = ["A", "B", "C"]
+""")
+    config = Config.from_toml(config_file)
+    assert config.run_complete_message == ["A", "B", "C"]
+
+
+def test_run_complete_message_empty_list_rejected():
+    """run_complete_message must not be an empty list."""
+    with pytest.raises(ValueError, match="run_complete_message list must not be empty"):
+        Config.from_dict({"run": {"run_complete_message": []}})
+
+
+def test_run_complete_message_non_string_list_rejected():
+    """run_complete_message list must contain only strings."""
+    with pytest.raises(TypeError, match="list must contain only strings"):
+        Config.from_dict({"run": {"run_complete_message": ["ok", 42]}})
+
+
+def test_run_complete_message_wrong_type_rejected():
+    """run_complete_message must be a string or a list."""
+    with pytest.raises(TypeError, match="must be a string or a list of strings"):
+        Config.from_dict({"run": {"run_complete_message": 42}})
+
+
+def test_resolve_run_complete_message_string_passthrough():
+    """A scalar run_complete_message is returned unchanged."""
+    config = Config.from_dict({"run": {"run_complete_message": "STATIC"}})
+    assert config.resolve_run_complete_message(42) == "STATIC"
+
+
+def test_resolve_run_complete_message_single_element_list():
+    """A single-element list always resolves to its only entry."""
+    config = Config.from_dict({"run": {"run_complete_message": ["ONLY"]}})
+    assert config.resolve_run_complete_message(0) == "ONLY"
+    assert config.resolve_run_complete_message(999) == "ONLY"
+
+
+def test_resolve_run_complete_message_deterministic():
+    """Same seed yields the same message; different seeds can yield different ones."""
+    messages = ["A", "B", "C", "D", "E"]
+    config = Config.from_dict({"run": {"run_complete_message": messages}})
+
+    first = config.resolve_run_complete_message(12345)
+    second = config.resolve_run_complete_message(12345)
+    assert first == second
+    assert first in messages
+
+    picks = {config.resolve_run_complete_message(s) for s in range(50)}
+    assert len(picks) > 1
+
+
 def test_structure_final_tier_valid_range():
     """final_tier accepts valid values 1-28."""
     # Test boundary values
