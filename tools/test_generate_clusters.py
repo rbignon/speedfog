@@ -415,6 +415,66 @@ class TestBuildWorldGraph:
 
         assert graph.has_unidirectional_edge("top", "bottom") is True
 
+    def test_drop_into_major_boss_zone_skipped(self):
+        """Drop edges targeting a major_boss zone are excluded from the graph.
+
+        Without this, flood-fill from the upstream zone would form a mixed
+        {upstream, boss} cluster that keeps major_boss type (e.g.,
+        academy_courtyard pulling academy_redwolf into the same cluster).
+        """
+        areas = {
+            "courtyard": AreaData(
+                name="courtyard",
+                text="Courtyard",
+                maps=[],
+                tags=[],
+                to_connections=[
+                    WorldConnection(
+                        target_area="redwolf", text="back drop", tags=["drop"]
+                    )
+                ],
+            ),
+            "redwolf": AreaData(name="redwolf", text="Red Wolf", maps=[], tags=[]),
+        }
+
+        graph = build_world_graph(areas, set(), major_boss_zones={"redwolf"})
+        assert ("redwolf", False) not in graph.edges["courtyard"]
+        assert graph.get_reachable("courtyard") == set()
+
+        graph = build_world_graph(areas, set())
+        assert graph.has_unidirectional_edge("courtyard", "redwolf") is True
+
+    def test_non_drop_into_major_boss_zone_preserved(self):
+        """Only drops are filtered; bidirectional edges to a major_boss zone stay.
+
+        Prevents a regression where dropping the `is_drop` guard would also
+        strip vanilla fog-gate entries into boss arenas.
+        """
+        areas = {
+            "entrance": AreaData(
+                name="entrance",
+                text="",
+                maps=[],
+                tags=[],
+                to_connections=[
+                    WorldConnection(target_area="redwolf", text="", tags=[])
+                ],
+            ),
+            "redwolf": AreaData(
+                name="redwolf",
+                text="",
+                maps=[],
+                tags=[],
+                to_connections=[
+                    WorldConnection(target_area="entrance", text="", tags=[])
+                ],
+            ),
+        }
+
+        graph = build_world_graph(areas, set(), major_boss_zones={"redwolf"})
+        assert ("redwolf", True) in graph.edges["entrance"]
+        assert ("entrance", True) in graph.edges["redwolf"]
+
 
 # =============================================================================
 # Fog Classification Tests

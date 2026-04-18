@@ -611,12 +611,16 @@ def build_world_graph(
     areas: dict[str, AreaData],
     key_items: set[str],
     allowed_zones: set[str] | None = None,
+    major_boss_zones: set[str] | None = None,
 ) -> WorldGraph:
     """
     Build a directed graph of world connections.
 
     Rules:
     - Drop tag -> unidirectional
+    - Drop targeting a major_boss arena -> skipped (would pull the boss into
+      a cluster anchored on the upstream zone, producing a mixed major_boss
+      cluster; see docs/clusters.md "Drops into major boss zones")
     - Cond with zone -> skip (not relevant for clusters)
     - Cond with items only -> bidirectional (items are given)
     - No cond -> check if reverse connection exists
@@ -646,6 +650,16 @@ def build_world_graph(
 
             # Check if it's a drop (unidirectional)
             is_drop = conn.is_drop
+
+            # Skip drops into major_boss arenas: they merge the upstream zone
+            # into the boss cluster and bypass the normal legacy_dungeon
+            # downgrade (which needs entry fogs outside the boss zone).
+            if (
+                is_drop
+                and major_boss_zones is not None
+                and conn.target_area in major_boss_zones
+            ):
+                continue
 
             # Check condition
             if conn.cond:
@@ -2068,23 +2082,35 @@ def main() -> int:
 
     print(f"Zones to process: {len(zones_to_process)}")
 
-    # Build world graph (only include edges between allowed zones)
-    print("Building world graph...")
-    world_graph = build_world_graph(areas, key_items, allowed_zones=zones_to_process)
-
-    if args.verbose:
-        edge_count = sum(len(edges) for edges in world_graph.edges.values())
-        print(f"  Graph has {len(world_graph.edges)} nodes, {edge_count} edges")
-
     # Classify fogs
     print("Classifying fogs...")
     zone_fogs = classify_fogs(entrances, warps, areas)
     print(f"  Found fogs for {len(zone_fogs)} zones")
 
-    # Identify major boss zones (connected to fog gates with 'major' tag)
+    # Identify major boss zones (connected to fog gates with 'major' tag).
+    # Must be computed before build_world_graph so the graph can drop
+    # unwanted drop edges INTO major_boss arenas.
     major_zones = get_major_zones(entrances, warps)
     if args.verbose:
         print(f"  Major boss zones: {len(major_zones)}")
+
+    # Subset of major_zones that are actual boss arenas (have BossTrigger).
+    # get_major_zones returns both sides of 'major' fogs, including non-boss
+    # overworld zones like stormveil or volcano_town; we only want the arenas.
+    major_boss_zones = {z for z in major_zones if z in areas and areas[z].has_boss}
+
+    # Build world graph (only include edges between allowed zones)
+    print("Building world graph...")
+    world_graph = build_world_graph(
+        areas,
+        key_items,
+        allowed_zones=zones_to_process,
+        major_boss_zones=major_boss_zones,
+    )
+
+    if args.verbose:
+        edge_count = sum(len(edges) for edges in world_graph.edges.values())
+        print(f"  Graph has {len(world_graph.edges)} nodes, {edge_count} edges")
 
     # Identify fortress zones (mini-fortresses with fortressonly legacy fogs)
     fortress_zones = get_fortress_zones(warps, entrances)
