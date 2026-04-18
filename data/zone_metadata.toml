@@ -431,7 +431,7 @@ allowed_entries = [
 ]
 
 # Leyndell2: Hoarah Loux exit + all Gideon entrances are adjacent (throne -> sanctuary)
-[clusters.leyndell2_43aa]
+[clusters.leyndell2_sanctuary_94fb]
 proximity_groups = [
     ["AEG099_001_9001", # Hoarah Loux front
      "AEG099_001_9003", # Gideon front
@@ -454,7 +454,7 @@ proximity_groups = [
 ]
 
 # Leyndell: Morgott exit + all Godfrey entrances are adjacent (throne -> sanctuary)
-[clusters.leyndell_10b5]
+[clusters.leyndell_sanctuary_25d4]
 weight = 2
 proximity_groups = [
     ["AEG099_001_9000", # Morgott front
@@ -493,19 +493,18 @@ allowed_entries = [
     "AEG099_001_9003", # Entrance from the branches
 ]
 
-# Academy Post Redwolf
-[clusters.academy_courtyard_f475]
-proximity_groups = [
-    ["AEG099_001_9000", # Rennala front
-     "1037462650",      # Sending gate to Church of Vows
-    ],
-    ["AEG099_003_9001", # Red Wolf back
-     "AEG099_231_9000", # Before Raya Lucaria rooftops
-    ],
-]
+# Academy with Red Wolf (mixed major_boss): excluded because the only entry
+# into Red Wolf's arena in this cluster is a drop from academy_courtyard
+# after ~1 minute of navigation, which is confusing for speedrun pacing.
+# The mono-zone academy_redwolf_c434 cluster still provides a clean
+# major_boss entry via the standard fog gate, and academy_redwolf_b9d9 keeps
+# academy_redwolf as a passed-through zone in a legacy_dungeon context
+# (no boss fight expected).
+[clusters.academy_redwolf_8733]
+exclude = true
 
 # Academy Post Redwolf (large), same spatial groups
-[clusters.academy_fac2]
+[clusters.academy_redwolf_b9d9]
 weight = 2
 proximity_groups = [
     ["AEG099_001_9000",             # Rennala front

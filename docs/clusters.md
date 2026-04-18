@@ -53,16 +53,9 @@ Connections with zone-based conditions (e.g., "requires reaching zone X") are **
 
 1. Collect all `Area.To` connections from fog.txt
 2. Skip if condition requires zone progression (not guaranteed)
-3. Skip drops whose target is a `major_boss` arena (see below)
-4. Mark `drop`-tagged connections as unidirectional
-5. Check for reverse connections → bidirectional edges
-6. Build adjacency graph
-
-### Drops into major boss zones
-
-When a non-boss zone has a `drop` connection into a `major_boss` arena (e.g., `academy_courtyard` → `academy_redwolf`, `leyndell_bedchamber` → `leyndell_sanctuary`), flood-fill from the upstream zone would otherwise form a mixed `{upstream, boss}` cluster. The primary-zone selection picks the boss (highest type priority), so the cluster inherits `major_boss` type while still containing a non-boss zone. The multi-zone downgrade to `legacy_dungeon` does not apply because at least one entry fog lives in the boss arena.
-
-These incoming drops are therefore filtered out at graph-build time. The boss arena still forms a clean single-zone `major_boss` cluster via flood-fill from itself; the upstream zone forms its own cluster without the boss. "Major boss arena" here means a zone that has `BossTrigger` AND sits on a fog tagged `major` (i.e., the subset of `get_major_zones()` with `has_boss=True`).
+3. Mark `drop`-tagged connections as unidirectional
+4. Check for reverse connections → bidirectional edges
+5. Build adjacency graph
 
 ## Cluster Generation
 

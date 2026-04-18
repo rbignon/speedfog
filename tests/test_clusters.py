@@ -95,8 +95,13 @@ class TestClusterDataDisplayName:
     def test_display_name_loaded_from_dict(self):
         """display_name is loaded from source dict when present."""
         data = {
-            "id": "academy_courtyard_f475",
-            "zones": ["academy_courtyard"],
+            "id": "academy_redwolf_b9d9",
+            "zones": [
+                "academy_redwolf",
+                "academy",
+                "academy_courtyard",
+                "academy_rooftops",
+            ],
             "type": "legacy_dungeon",
             "weight": 3,
             "display_name": "Academy of Raya Lucaria after Red Wolf",
