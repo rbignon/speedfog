@@ -31,7 +31,7 @@ public static class DeathMarkerInjector
     private const int BLOODSTAINS_PER_GATE = 3;
     private const float MIN_RADIUS = 1.5f;
     private const float MAX_RADIUS = 3.0f;
-    private const float Y_OFFSET = 0.12f;
+    private const float Y_OFFSET = 0.13f;
 
     private const int DEATH_MARKER_EVENT_BASE = 755862100;
 
