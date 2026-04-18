@@ -431,7 +431,7 @@ allowed_entries = [
 ]
 
 # Leyndell2: Hoarah Loux exit + all Gideon entrances are adjacent (throne -> sanctuary)
-[clusters.leyndell2_sanctuary_94fb]
+[clusters.leyndell2_43aa]
 proximity_groups = [
     ["AEG099_001_9001", # Hoarah Loux front
      "AEG099_001_9003", # Gideon front
@@ -454,7 +454,7 @@ proximity_groups = [
 ]
 
 # Leyndell: Morgott exit + all Godfrey entrances are adjacent (throne -> sanctuary)
-[clusters.leyndell_sanctuary_25d4]
+[clusters.leyndell_10b5]
 weight = 2
 proximity_groups = [
     ["AEG099_001_9000", # Morgott front
@@ -494,7 +494,7 @@ allowed_entries = [
 ]
 
 # Academy Post Redwolf
-[clusters.academy_redwolf_8733]
+[clusters.academy_courtyard_f475]
 proximity_groups = [
     ["AEG099_001_9000", # Rennala front
      "1037462650",      # Sending gate to Church of Vows
@@ -505,7 +505,7 @@ proximity_groups = [
 ]
 
 # Academy Post Redwolf (large), same spatial groups
-[clusters.academy_redwolf_b9d9]
+[clusters.academy_fac2]
 weight = 2
 proximity_groups = [
     ["AEG099_001_9000",             # Rennala front
