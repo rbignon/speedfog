@@ -25,6 +25,7 @@ def test_generate_item_config_basic():
     assert result["options"]["dlc"] is True
     assert result["options"]["sombermode"] is True
     assert result["options"]["mats"] is True
+    assert result["options"]["editnames"] is True
     assert "preset" not in result
     assert result["enemy_options"]["randomize_bosses"] == "none"
     assert result["helper_options"]["autoUpgradeWeapons"] is True

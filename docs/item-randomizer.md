@@ -66,6 +66,7 @@ Set in `options` dictionary, applied via `opt[key] = value`:
 | `weaponreqs` | from config | Remove weapon stat requirements |
 | `sombermode` | from config | Reduce upgrade material costs |
 | `mats` | `true` | Randomize materials (smithing stones, gloveworts, crafting) |
+| `editnames` | `true` | Rewrite boss healthbar names to match randomized enemy |
 | `nerfgargoyles` | from config | Disable Valiant Gargoyles poison tick |
 | `allcraft` | from config | Unlock all crafting recipes at start |
 
