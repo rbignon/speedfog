@@ -38,6 +38,9 @@ public class RandomizerConfig
 
     [JsonPropertyName("enemy_options")]
     public EnemyOptionsConfig? EnemyOptions { get; set; }
+
+    [JsonPropertyName("enemy_assignments")]
+    public Dictionary<string, string>? EnemyAssignments { get; set; }
 }
 
 /// <summary>

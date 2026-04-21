@@ -293,4 +293,25 @@ public class ConfigDeserializationTests
         Assert.Equal("minor", config.EnemyOptions.RandomizeBosses);
         Assert.False(config.EnemyOptions.IgnoreArenaSize);
     }
+
+    [Fact]
+    public void EnemyAssignments_DeserializesFromSnakeCaseJson()
+    {
+        const string json = """
+            {
+                "seed": 1,
+                "enemy_assignments": {
+                    "18000850": "10000850",
+                    "1042360800": "1043360800"
+                }
+            }
+            """;
+        var config = JsonSerializer.Deserialize<RandomizerConfig>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        Assert.NotNull(config);
+        Assert.Equal(2, config!.EnemyAssignments!.Count);
+        Assert.Equal("10000850", config.EnemyAssignments["18000850"]);
+        Assert.Equal("1043360800", config.EnemyAssignments["1042360800"]);
+    }
 }
