@@ -306,11 +306,11 @@ public class ConfigDeserializationTests
                 }
             }
             """;
-        var config = JsonSerializer.Deserialize<RandomizerConfig>(json,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        var config = JsonSerializer.Deserialize<RandomizerConfig>(json, JsonOptions);
 
         Assert.NotNull(config);
-        Assert.Equal(2, config!.EnemyAssignments!.Count);
+        Assert.NotNull(config.EnemyAssignments);
+        Assert.Equal(2, config.EnemyAssignments.Count);
         Assert.Equal("10000850", config.EnemyAssignments["18000850"]);
         Assert.Equal("1043360800", config.EnemyAssignments["1042360800"]);
     }
