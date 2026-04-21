@@ -1,0 +1,5910 @@
+{
+  "10000800": {
+    "name": "Godrick the Grafted",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 5,
+    "dlc": false
+  },
+  "10000850": {
+    "name": "Margit The Fell Omen",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 4,
+    "dlc": false
+  },
+  "10010800": {
+    "name": "Grafted Scion Boss",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 7,
+    "dlc": false
+  },
+  "11000394": {
+    "name": "Colossal Fingercreeper",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "11000495": {
+    "name": "Crucible Knight",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "11000800": {
+    "name": "Morgott the Omen King",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 12,
+    "dlc": false
+  },
+  "11000850": {
+    "name": "Goldfrey First Elden Lord",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 12,
+    "dlc": false
+  },
+  "11050800": {
+    "name": "Hoarah Loux",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 8,
+    "scaling": 17,
+    "dlc": false
+  },
+  "11050801": {
+    "name": "Godfrey First Elden Lord",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 8,
+    "scaling": 17,
+    "dlc": false
+  },
+  "11050850": {
+    "name": "Sir Gideon Ofnir the All-Knowing",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": true,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 8,
+    "scaling": 16,
+    "dlc": false
+  },
+  "12010715": {
+    "name": "Blaidd",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "12010800": {
+    "name": "Dragonkin Soldier of Nokstella",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": true,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 11,
+    "scaling": 6,
+    "dlc": false
+  },
+  "12010850": {
+    "name": "Dragonkin Soldier Lake of Rot",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": true,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 13,
+    "scaling": 14,
+    "dlc": false
+  },
+  "12020800": {
+    "name": "Valiant Gargoyles",
+    "boss": {
+      "size": 4,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 10,
+    "scaling": 10,
+    "dlc": false
+  },
+  "12020830": {
+    "name": "Dragonkin Soldier Siofra",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": true,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 9,
+    "scaling": 12,
+    "dlc": false
+  },
+  "12020850": {
+    "name": "Mimic Tear",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": true,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 10,
+    "scaling": 10,
+    "dlc": false
+  },
+  "12030390": {
+    "name": "Crucible Knight Siluria",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 13,
+    "scaling": 14,
+    "dlc": false
+  },
+  "12030800": {
+    "name": "Fia's Champions",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": true,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 13,
+    "scaling": 12,
+    "dlc": false
+  },
+  "12030850": {
+    "name": "Lichdragon Fortissax",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": true,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 13,
+    "scaling": 12,
+    "dlc": false
+  },
+  "12040800": {
+    "name": "Astel Naturalborn of the Void",
+    "boss": {
+      "size": 4,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 12,
+    "scaling": 12,
+    "dlc": false
+  },
+  "12050800": {
+    "name": "Mohg Lord of Blood",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 15,
+    "scaling": 19,
+    "dlc": false
+  },
+  "12080800": {
+    "name": "Ancestor Spirit",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 9,
+    "scaling": 7,
+    "dlc": false
+  },
+  "12090800": {
+    "name": "Regal Ancestor Spirit",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 10,
+    "scaling": 10,
+    "dlc": false
+  },
+  "13000295": {
+    "name": "Crucible Knight",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "13000800": {
+    "name": "Maliketh the Black Blade",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 7,
+    "scaling": 15,
+    "dlc": false
+  },
+  "13000801": {
+    "name": "Beast Clergyman",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 7,
+    "scaling": 15,
+    "dlc": false
+  },
+  "13000830": {
+    "name": "Dragonlord Placidusax",
+    "boss": {
+      "size": 4,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": true,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 7,
+    "scaling": 18,
+    "dlc": false
+  },
+  "13000850": {
+    "name": "Godskin Duo",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 7,
+    "scaling": 15,
+    "dlc": false
+  },
+  "14000499": {
+    "name": "Moongrum",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "14000800": {
+    "name": "Rennala 2",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 8,
+    "dlc": false
+  },
+  "14000801": {
+    "name": "Rennala 1",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 8,
+    "dlc": false
+  },
+  "14000850": {
+    "name": "Red Wolf of Radagon",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 7,
+    "dlc": false
+  },
+  "15000800": {
+    "name": "Malenia Blade of Miquella",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": true,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 16,
+    "scaling": 21,
+    "dlc": false
+  },
+  "15000850": {
+    "name": "Loretta Knight of the Haligtree",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 16,
+    "scaling": 19,
+    "dlc": false
+  },
+  "16000800": {
+    "name": "Rykard 2",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 4,
+    "scaling": 13,
+    "dlc": false
+  },
+  "16000801": {
+    "name": "Rykard 1",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 4,
+    "scaling": 13,
+    "dlc": false
+  },
+  "16000850": {
+    "name": "Godskin Noble",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 4,
+    "scaling": 12,
+    "dlc": false
+  },
+  "16000860": {
+    "name": "Abductor Virgins",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 4,
+    "scaling": 9,
+    "dlc": false
+  },
+  "18000800": {
+    "name": "Ulcerated Tree Spirit",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": true
+    },
+    "arena": {
+      "size": 4,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 7,
+    "dlc": false
+  },
+  "18000850": {
+    "name": "Soldier of Godrick",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 1,
+    "dlc": false
+  },
+  "19000800": {
+    "name": "Elden Beast",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 8,
+    "scaling": 18,
+    "dlc": false
+  },
+  "19000810": {
+    "name": "Radagon of the Golden Order",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 8,
+    "scaling": 18,
+    "dlc": false
+  },
+  "20000800": {
+    "name": "Divine Beast Dancing Lion",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 18,
+    "scaling": 25,
+    "dlc": true
+  },
+  "20010450": {
+    "name": "Hornsent",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "20010451": {
+    "name": "Lightning Divine Warrior",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 25,
+    "scaling": 33,
+    "dlc": true
+  },
+  "20010453": {
+    "name": "Divine Bird Warrior (Frost)",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "20010455": {
+    "name": "Divine Bird Warrior (Wind)",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "20010720": {
+    "name": "Leda (Leda Fight)",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 25,
+    "scaling": 33,
+    "dlc": true
+  },
+  "20010722": {
+    "name": "Hornsent (Leda Fight)",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 25,
+    "scaling": 33,
+    "dlc": true
+  },
+  "20010724": {
+    "name": "Dryleaf Dane (Leda Fight)",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 25,
+    "scaling": 33,
+    "dlc": true
+  },
+  "20010800": {
+    "name": "PCR 2",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 25,
+    "scaling": 33,
+    "dlc": true
+  },
+  "20010801": {
+    "name": "PCR 1",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 25,
+    "scaling": 33,
+    "dlc": true
+  },
+  "21000453": {
+    "name": "Fire Knight (Drained Church District)",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "21000850": {
+    "name": "Golden Hippopotamus",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 20,
+    "scaling": 28,
+    "dlc": true
+  },
+  "21010450": {
+    "name": "Fire Knight (First Floor)",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "21010461": {
+    "name": "Fire Knight (before Messmer)",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "21010800": {
+    "name": "Base Serpent Messmer",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 20,
+    "scaling": 31,
+    "dlc": true
+  },
+  "21010801": {
+    "name": "Messmer the Impaler",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 20,
+    "scaling": 31,
+    "dlc": true
+  },
+  "22000460": {
+    "name": "Golden Leonine Misbegotten",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "22000800": {
+    "name": "Putrescent Knight",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 19,
+    "scaling": 29,
+    "dlc": true
+  },
+  "25000800": {
+    "name": "Metyr Mother of Fingers",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 21,
+    "scaling": 33,
+    "dlc": true
+  },
+  "28000800": {
+    "name": "Midra Lord of Frenzied Flame",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 23,
+    "scaling": 33,
+    "dlc": true
+  },
+  "30000800": {
+    "name": "Cemetery Shade Boss",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": true
+    },
+    "arena": {
+      "size": 3,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 3,
+    "dlc": false
+  },
+  "30010800": {
+    "name": "Erdtree Burial Watchdog and Imps",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": true
+    },
+    "arena": {
+      "size": 3,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 3,
+    "dlc": false
+  },
+  "30020800": {
+    "name": "Fire Erdtree Burial Watchdog",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": true
+    },
+    "arena": {
+      "size": 3,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 2,
+    "dlc": false
+  },
+  "30030800": {
+    "name": "Crucible Spiritcaller Snail",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 7,
+    "dlc": false
+  },
+  "30040800": {
+    "name": "Grave Warden Duelist Boss",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 2,
+    "dlc": false
+  },
+  "30050800": {
+    "name": "Cemetery Shade and Skeletons",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 7,
+    "dlc": false
+  },
+  "30050850": {
+    "name": "Black Knife Assassin Liurnia",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 7,
+    "dlc": false
+  },
+  "30060800": {
+    "name": "Scepter Erdtree Burial Watchdog",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 7,
+    "dlc": false
+  },
+  "30070800": {
+    "name": "Lightning Erdtree Burial Watchdog",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 10,
+    "dlc": false
+  },
+  "30080800": {
+    "name": "Ancient Hero of Zamor",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 9,
+    "dlc": false
+  },
+  "30090800": {
+    "name": "Red Wolf of the Champion",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 4,
+    "scaling": 10,
+    "dlc": false
+  },
+  "30100800": {
+    "name": "Crucible Knight Duo",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 10,
+    "dlc": false
+  },
+  "30110800": {
+    "name": "Black Knife Assassin",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 2,
+    "dlc": false
+  },
+  "30120800": {
+    "name": "Misbegotten Perfumer Duo",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 9,
+    "dlc": false
+  },
+  "30130800": {
+    "name": "Grave Warden Duelist",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 10,
+    "dlc": false
+  },
+  "30140800": {
+    "name": "Erdtree Burial Watchdog Duo",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 8,
+    "dlc": false
+  },
+  "30150800": {
+    "name": "Cemetery Shade Caelid",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 8,
+    "dlc": false
+  },
+  "30160800": {
+    "name": "Putrid Tree Spirit",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 16,
+    "dlc": false
+  },
+  "30170800": {
+    "name": "Ancient Hero of Zamor MT",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 6,
+    "scaling": 13,
+    "dlc": false
+  },
+  "30180800": {
+    "name": "Ulcerated Tree Spirit MT",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 6,
+    "scaling": 13,
+    "dlc": false
+  },
+  "30190800": {
+    "name": "Putrid Grave Warden Duelist",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 16,
+    "scaling": 17,
+    "dlc": false
+  },
+  "30200800": {
+    "name": "Stray Mimic Tear",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": true,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 16,
+    "scaling": 17,
+    "dlc": false
+  },
+  "31010800": {
+    "name": "Runebear Boss",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 3,
+    "dlc": false
+  },
+  "31020800": {
+    "name": "Miranda Blossom and Sprouts",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 1,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 3,
+    "dlc": false
+  },
+  "31030800": {
+    "name": "Beastman of Farum Azula",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 2,
+    "dlc": false
+  },
+  "31040800": {
+    "name": "Cleanrot Knight Boss",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 7,
+    "dlc": false
+  },
+  "31050800": {
+    "name": "Bloodhound Knight Boss",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 7,
+    "dlc": false
+  },
+  "31060800": {
+    "name": "Crystalian Staff Spear Duo",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 7,
+    "dlc": false
+  },
+  "31070800": {
+    "name": "Kindred of Rot Duo",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 4,
+    "scaling": 10,
+    "dlc": false
+  },
+  "31090800": {
+    "name": "Demi-Human Queen Margot",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 4,
+    "scaling": 10,
+    "dlc": false
+  },
+  "31100800": {
+    "name": "Beastman of Farum Azula Duo",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 16,
+    "dlc": false
+  },
+  "31110800": {
+    "name": "Putrid Crystalian Trio",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 8,
+    "dlc": false
+  },
+  "31120800": {
+    "name": "Misbegotten Crusader",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 16,
+    "scaling": 19,
+    "dlc": false
+  },
+  "31150800": {
+    "name": "Demi-Human Chief Duo",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 2,
+    "dlc": false
+  },
+  "31170800": {
+    "name": "Guardian Golem Boss",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": true
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 2,
+    "dlc": false
+  },
+  "31180800": {
+    "name": "Miranda Omenkiller Duo",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 9,
+    "dlc": false
+  },
+  "31190800": {
+    "name": "Invisible Black Knife Assassin",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 9,
+    "dlc": false
+  },
+  "31190850": {
+    "name": "Necromancer Garris",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": true,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 9,
+    "dlc": false
+  },
+  "31200800": {
+    "name": "Cleanrot Knight Duo",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 8,
+    "dlc": false
+  },
+  "31210800": {
+    "name": "Frenzied Duelist",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 8,
+    "dlc": false
+  },
+  "31220800": {
+    "name": "Godskin Spiritcaller Snail",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 6,
+    "scaling": 13,
+    "dlc": false
+  },
+  "32000800": {
+    "name": "Scaly Misbegotten Boss",
+    "boss": {
+      "size": 1,
+      "type": 6,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 6,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 3,
+    "dlc": false
+  },
+  "32010800": {
+    "name": "Stonedigger Troll",
+    "boss": {
+      "size": 1,
+      "type": 6,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 6,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 2,
+    "dlc": false
+  },
+  "32020800": {
+    "name": "Ringblade Crystallian Boss",
+    "boss": {
+      "size": 1,
+      "type": 6,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 6,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 7,
+    "dlc": false
+  },
+  "32040800": {
+    "name": "Stonedigger Troll Altus",
+    "boss": {
+      "size": 1,
+      "type": 6,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 6,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 9,
+    "dlc": false
+  },
+  "32050800": {
+    "name": "Crystalian Ringblade Spear Duo",
+    "boss": {
+      "size": 1,
+      "type": 6,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 6,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 9,
+    "dlc": false
+  },
+  "32070800": {
+    "name": "Magma Wyrm Gael Tunnel",
+    "boss": {
+      "size": 1,
+      "type": 6,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 6,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 8,
+    "dlc": false
+  },
+  "32080800": {
+    "name": "Fallingstar Beast Sellia",
+    "boss": {
+      "size": 1,
+      "type": 6,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 6,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 8,
+    "dlc": false
+  },
+  "32110800": {
+    "name": "Astel Stars of Darkness",
+    "boss": {
+      "size": 4,
+      "type": 6,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 6,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 16,
+    "scaling": 17,
+    "dlc": false
+  },
+  "34120800": {
+    "name": "Onyx Lord Tunnel",
+    "boss": {
+      "size": 1,
+      "type": 6,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 6,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 10,
+    "dlc": false
+  },
+  "34130800": {
+    "name": "Godskin Apostle Divine Tower",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 16,
+    "dlc": false
+  },
+  "34140850": {
+    "name": "Fell Twins",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 13,
+    "dlc": false
+  },
+  "35000486": {
+    "name": "Omen",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "35000800": {
+    "name": "Mohg The Omen",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 14,
+    "dlc": false
+  },
+  "35000850": {
+    "name": "Esgar Priest of Blood",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": true,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 11,
+    "dlc": false
+  },
+  "39200800": {
+    "name": "Magma Wyrm Makar",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 8,
+    "dlc": false
+  },
+  "40000800": {
+    "name": "Twin Axe Death Knight",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 18,
+    "scaling": 24,
+    "dlc": true
+  },
+  "40010301": {
+    "name": "Large Bigmouth Imp",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "40010800": {
+    "name": "Longhaft Death Knight",
+    "boss": {
+      "size": 1,
+      "type": 5,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 5,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 20,
+    "scaling": 27,
+    "dlc": true
+  },
+  "41000800": {
+    "name": "Demi-Human Swordmaster Onze",
+    "boss": {
+      "size": 1,
+      "type": 8,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 8,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 18,
+    "scaling": 22,
+    "dlc": true
+  },
+  "41010800": {
+    "name": "Curseblade Labirith",
+    "boss": {
+      "size": 1,
+      "type": 8,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 8,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 20,
+    "scaling": 26,
+    "dlc": true
+  },
+  "41020800": {
+    "name": "Lamenter",
+    "boss": {
+      "size": 1,
+      "type": 8,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 8,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 22,
+    "scaling": 29,
+    "dlc": true
+  },
+  "42000200": {
+    "name": "Smith Golem",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "42030300": {
+    "name": "Smith Golem",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "43000800": {
+    "name": "Chief Bloodfiend",
+    "boss": {
+      "size": 1,
+      "type": 4,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 4,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 18,
+    "scaling": 26,
+    "dlc": true
+  },
+  "43010800": {
+    "name": "Ancient Dragon-Man",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": true,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 18,
+    "scaling": 25,
+    "dlc": true
+  },
+  "1033420800": {
+    "name": "Alecto Black Knife Ringleader",
+    "boss": {
+      "size": 1,
+      "type": 7,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 7,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 14,
+    "scaling": 16,
+    "dlc": false
+  },
+  "1033430800": {
+    "name": "Erdtree Avatar Converted Tower",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 9,
+    "dlc": false
+  },
+  "1033450800": {
+    "name": "Bols Carian Knight",
+    "boss": {
+      "size": 1,
+      "type": 7,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 7,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 9,
+    "dlc": false
+  },
+  "1034420800": {
+    "name": "Glintstone Dragon Adula",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": true,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 14,
+    "scaling": 18,
+    "dlc": false
+  },
+  "1034450800": {
+    "name": "Glintstone Dragon Smarag",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": true,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 11,
+    "dlc": false
+  },
+  "1034480800": {
+    "name": "Royal Revenant Boss",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 1,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 7,
+    "dlc": false
+  },
+  "1035420800": {
+    "name": "Omenkiller Boss",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 9,
+    "dlc": false
+  },
+  "1035430230": {
+    "name": "Lobster",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "1035500800": {
+    "name": "Royal Knight Loretta",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 7,
+    "dlc": false
+  },
+  "1035530800": {
+    "name": "Magma Wyrm Gelmir",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 4,
+    "scaling": 12,
+    "dlc": false
+  },
+  "1035540200": {
+    "name": "Fire Prelate",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "1036450340": {
+    "name": "Death Rite Bird Gate Town",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": true
+    },
+    "region": 2,
+    "scaling": 9,
+    "dlc": false
+  },
+  "1036480340": {
+    "name": "Night's Cavalry Bellum",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": true
+    },
+    "region": 2,
+    "scaling": 9,
+    "dlc": false
+  },
+  "1036500800": {
+    "name": "Onyx Lord Evergaol",
+    "boss": {
+      "size": 1,
+      "type": 7,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 7,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 9,
+    "dlc": false
+  },
+  "1036540800": {
+    "name": "Full-Grown Fallingstar Beast",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 4,
+    "scaling": 12,
+    "dlc": false
+  },
+  "1037420340": {
+    "name": "Deathbird Scenic Isle",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": true
+    },
+    "region": 2,
+    "scaling": 9,
+    "dlc": false
+  },
+  "1037460800": {
+    "name": "Bell Bearing Hunter Vows",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": true
+    },
+    "region": 2,
+    "scaling": 9,
+    "dlc": false
+  },
+  "1037530800": {
+    "name": "Demi-Human Queen Maggie",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 4,
+    "scaling": 12,
+    "dlc": false
+  },
+  "1037540810": {
+    "name": "Ulcerated Tree Spirit Gelmir",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 4,
+    "scaling": 12,
+    "dlc": false
+  },
+  "1038410800": {
+    "name": "Adan Thief of Fire",
+    "boss": {
+      "size": 1,
+      "type": 7,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": true,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 7,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 7,
+    "dlc": false
+  },
+  "1038480800": {
+    "name": "Erdtree Avatar Bellum",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 9,
+    "dlc": false
+  },
+  "1038510800": {
+    "name": "Demi-Human Queen Gilika",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 1,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 9,
+    "dlc": false
+  },
+  "1038520340": {
+    "name": "Tibia Mariner Altus",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 12,
+    "dlc": false
+  },
+  "1039430340": {
+    "name": "Night's Cavalry Liurnia Highway",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": true
+    },
+    "region": 2,
+    "scaling": 9,
+    "dlc": false
+  },
+  "1039440800": {
+    "name": "Tibia Mariner Jarburg",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 2,
+    "scaling": 9,
+    "dlc": false
+  },
+  "1039500800": {
+    "name": "Godefroy the Grafted",
+    "boss": {
+      "size": 1,
+      "type": 7,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 7,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 11,
+    "dlc": false
+  },
+  "1039510800": {
+    "name": "Night's Cavalry Altus",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": true
+    },
+    "region": 5,
+    "scaling": 11,
+    "dlc": false
+  },
+  "1039540800": {
+    "name": "Elemer of the Briar",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 10,
+    "dlc": false
+  },
+  "1040520800": {
+    "name": "Black Knife Assassin Hero's Grave",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 11,
+    "dlc": false
+  },
+  "1040530800": {
+    "name": "Sanguine Noble",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 1,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 9,
+    "dlc": false
+  },
+  "1041500800": {
+    "name": "Fallingstar Beast",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 11,
+    "dlc": false
+  },
+  "1041510800": {
+    "name": "Tree Sentinel Duo 2",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 11,
+    "dlc": false
+  },
+  "1041510801": {
+    "name": "Tree Sentinel Duo 1",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 11,
+    "dlc": false
+  },
+  "1041520800": {
+    "name": "Ancient Dragon Lansseax",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": true,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 13,
+    "dlc": false
+  },
+  "1041530800": {
+    "name": "Wormface",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 11,
+    "dlc": false
+  },
+  "1042330800": {
+    "name": "Ancient Hero of Zamor Weeping",
+    "boss": {
+      "size": 1,
+      "type": 7,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 7,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 5,
+    "dlc": false
+  },
+  "1042360800": {
+    "name": "Tree Sentinel",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 4,
+    "dlc": false
+  },
+  "1042370800": {
+    "name": "Crucible Knight Evergaol",
+    "boss": {
+      "size": 1,
+      "type": 7,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 7,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 4,
+    "dlc": false
+  },
+  "1042380800": {
+    "name": "Deathbird Limgrave",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": true
+    },
+    "region": 1,
+    "scaling": 4,
+    "dlc": false
+  },
+  "1042380850": {
+    "name": "Bell Bearing Hunter",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": true
+    },
+    "region": 1,
+    "scaling": 4,
+    "dlc": false
+  },
+  "1042550800": {
+    "name": "Godskin Apostle",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 11,
+    "dlc": false
+  },
+  "1043300800": {
+    "name": "Leonine Misbegotten",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 4,
+    "dlc": false
+  },
+  "1043330800": {
+    "name": "Erdtree Avatar Weeping",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": true
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 5,
+    "dlc": false
+  },
+  "1043360800": {
+    "name": "Flying Dragon Agheel",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": true,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 6,
+    "dlc": false
+  },
+  "1043370340": {
+    "name": "Night's Cavalry Limgrave",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": true
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": true
+    },
+    "region": 1,
+    "scaling": 4,
+    "dlc": false
+  },
+  "1043530800": {
+    "name": "Bell Bearing Hunter Altus",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": true
+    },
+    "region": 5,
+    "scaling": 12,
+    "dlc": false
+  },
+  "1044320340": {
+    "name": "Deathbird Weeping",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": true
+    },
+    "region": 1,
+    "scaling": 5,
+    "dlc": false
+  },
+  "1044320342": {
+    "name": "Night's Cavalry Weeping",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": true
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": true
+    },
+    "region": 1,
+    "scaling": 5,
+    "dlc": false
+  },
+  "1044350800": {
+    "name": "Bloodhound Knight Darriwil",
+    "boss": {
+      "size": 1,
+      "type": 7,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 7,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 4,
+    "dlc": false
+  },
+  "1044360800": {
+    "name": "Mad Pumpkin Head Boss",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 1,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 2,
+    "dlc": false
+  },
+  "1044530800": {
+    "name": "Deathbird Altus",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": true
+    },
+    "region": 5,
+    "scaling": 12,
+    "dlc": false
+  },
+  "1045390800": {
+    "name": "Tibia Mariner Boss",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": true
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 1,
+    "scaling": 4,
+    "dlc": false
+  },
+  "1045520800": {
+    "name": "Draconic Tree Sentinel",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 5,
+    "scaling": 12,
+    "dlc": false
+  },
+  "1047400800": {
+    "name": "Putrid Avatar Caelid",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": true
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 10,
+    "dlc": false
+  },
+  "1048370800": {
+    "name": "Decaying Ekzykes",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": true,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 12,
+    "dlc": false
+  },
+  "1048400800": {
+    "name": "Mad Pumpkin Head Duo",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 1,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 8,
+    "dlc": false
+  },
+  "1048410800": {
+    "name": "Bell Bearing Hunter Dragonbarrow",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": true
+    },
+    "region": 3,
+    "scaling": 18,
+    "dlc": false
+  },
+  "1048510800": {
+    "name": "Night's Cavalry Forbbiden",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": true
+    },
+    "region": 6,
+    "scaling": 15,
+    "dlc": false
+  },
+  "1048570800": {
+    "name": "Death Rite Bird Consecrated",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": true
+    },
+    "region": 16,
+    "scaling": 19,
+    "dlc": false
+  },
+  "1049370800": {
+    "name": "Night's Cavalry Caelid",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": true
+    },
+    "region": 3,
+    "scaling": 10,
+    "dlc": false
+  },
+  "1049370850": {
+    "name": "Death Rite Bird",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": true
+    },
+    "region": 3,
+    "scaling": 10,
+    "dlc": false
+  },
+  "1049380800": {
+    "name": "Commander O'Neil",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 10,
+    "dlc": false
+  },
+  "1049390800": {
+    "name": "Nox Duo",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 8,
+    "dlc": false
+  },
+  "1049390850": {
+    "name": "Battlemage Hugues",
+    "boss": {
+      "size": 1,
+      "type": 7,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 7,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 10,
+    "dlc": false
+  },
+  "1049520800": {
+    "name": "Black Blade Kindred Axe",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 6,
+    "scaling": 13,
+    "dlc": false
+  },
+  "1050560800": {
+    "name": "Great Wyrm Theodorix",
+    "boss": {
+      "size": 4,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 16,
+    "scaling": 19,
+    "dlc": false
+  },
+  "1050570800": {
+    "name": "Death Rite Bird Sol",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 6,
+    "scaling": 15,
+    "dlc": false
+  },
+  "1050570850": {
+    "name": "Purtid Avatar Consecrated",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 16,
+    "scaling": 19,
+    "dlc": false
+  },
+  "1051360800": {
+    "name": "Crucible Misbegotten Duo",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 9,
+    "dlc": false
+  },
+  "1051400299": {
+    "name": "Guardian Golem",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "1051400800": {
+    "name": "Putrid Avatar Dragonbarrow",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 18,
+    "dlc": false
+  },
+  "1051430800": {
+    "name": "Black Blade Kindred Sword",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 18,
+    "dlc": false
+  },
+  "1051530322": {
+    "name": "Colossal Fingercreeper",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "1051530324": {
+    "name": "Colossal Fingercreeper",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "1051570310": {
+    "name": "Elder Lion",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "1051570800": {
+    "name": "Commander Niall",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": true,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 6,
+    "scaling": 14,
+    "dlc": false
+  },
+  "1052380800": {
+    "name": "Starscourge Radahn",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 11,
+    "dlc": false
+  },
+  "1052410800": {
+    "name": "Flying Dragon Greyll",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": true,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 3,
+    "scaling": 18,
+    "dlc": false
+  },
+  "1052410850": {
+    "name": "Night's Cavalry Dragonbarrow",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": true
+    },
+    "region": 3,
+    "scaling": 18,
+    "dlc": false
+  },
+  "1052520800": {
+    "name": "Fire Giant 2",
+    "boss": {
+      "size": 4,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 6,
+    "scaling": 15,
+    "dlc": false
+  },
+  "1052520801": {
+    "name": "Fire Giant 1",
+    "boss": {
+      "size": 4,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 6,
+    "scaling": 15,
+    "dlc": false
+  },
+  "1052560800": {
+    "name": "Erdtree Avatar Duo",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 6,
+    "scaling": 15,
+    "dlc": false
+  },
+  "1053560800": {
+    "name": "Roundtable Knight Vyke",
+    "boss": {
+      "size": 1,
+      "type": 7,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": true,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 7,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 6,
+    "scaling": 13,
+    "dlc": false
+  },
+  "1054560800": {
+    "name": "Borealis the Freezing Fog",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 6,
+    "scaling": 17,
+    "dlc": false
+  },
+  "1248550800": {
+    "name": "Night's Cavalry Duo 2",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": true
+    },
+    "region": 16,
+    "scaling": 17,
+    "dlc": false
+  },
+  "1248550801": {
+    "name": "Night's Cavalry Duo 1",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": true,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": true
+    },
+    "region": 16,
+    "scaling": 17,
+    "dlc": false
+  },
+  "2044450800": {
+    "name": "Romina Saint of the Bud",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 24,
+    "scaling": 33,
+    "dlc": true
+  },
+  "2044470800": {
+    "name": "Rugalea the Great Red Bear",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 20,
+    "scaling": 29,
+    "dlc": true
+  },
+  "2045440800": {
+    "name": "Ghostflame Dragon Gravesite",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": true,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 18,
+    "scaling": 24,
+    "dlc": true
+  },
+  "2045470200": {
+    "name": "Devonia",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 2,
+      "two_phase_not_allowed": true,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 25,
+    "scaling": 33,
+    "dlc": true
+  },
+  "2046380800": {
+    "name": "Dancer of Ranah",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": true,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 1,
+      "type": 1,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 19,
+    "scaling": 25,
+    "dlc": true
+  },
+  "2046400800": {
+    "name": "Demi-Human Queen Marigga",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 19,
+    "scaling": 27,
+    "dlc": true
+  },
+  "2046410800": {
+    "name": "Knight of the Solitary Gaol",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": true,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 1,
+      "type": 1,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 18,
+    "scaling": 22,
+    "dlc": true
+  },
+  "2046450800": {
+    "name": "Red Bear Mausoleum",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": true,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 1,
+      "type": 1,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 20,
+    "scaling": 27,
+    "dlc": true
+  },
+  "2046460800": {
+    "name": "Deathblight Beast Dancing Lion",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": true
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 24,
+    "scaling": 33,
+    "dlc": true
+  },
+  "2047390800": {
+    "name": "Death Rite Bird Charos",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": true,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 22,
+    "scaling": 29,
+    "dlc": true
+  },
+  "2047440360": {
+    "name": "Moonrithyll",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "2047450800": {
+    "name": "Black Knight Garrew",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 20,
+    "scaling": 28,
+    "dlc": true
+  },
+  "2048380800": {
+    "name": "DLC's Tibia Mariner",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": false
+  },
+  "2048380850": {
+    "name": "Ghostflame Dragon and Skeletons",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": true,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 19,
+    "scaling": 27,
+    "dlc": true
+  },
+  "2048440800": {
+    "name": "Rellana Twin Moon Knight",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 18,
+    "scaling": 27,
+    "dlc": true
+  },
+  "2049410800": {
+    "name": "Jagged Peak Drake 1",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": true,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 22,
+    "scaling": 29,
+    "dlc": true
+  },
+  "2049430800": {
+    "name": "Ghostflame Dragon Reprimand",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": true,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 20,
+    "scaling": 28,
+    "dlc": true
+  },
+  "2049430850": {
+    "name": "Black Knight Edredd",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 20,
+    "scaling": 28,
+    "dlc": true
+  },
+  "2049440710": {
+    "name": "Dryleaf Dane",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": true,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 3,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 20,
+    "scaling": 27,
+    "dlc": true
+  },
+  "2049450800": {
+    "name": "Ralva the Great Red Bear",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 20,
+    "scaling": 28,
+    "dlc": true
+  },
+  "2049480800": {
+    "name": "Commander Gaius",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 20,
+    "scaling": 30,
+    "dlc": true
+  },
+  "2050470800": {
+    "name": "Tree Sentinel 2",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 21,
+    "scaling": 33,
+    "dlc": true
+  },
+  "2050480800": {
+    "name": "Scadutree Avatar",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": true,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 20,
+    "scaling": 29,
+    "dlc": true
+  },
+  "2050480860": {
+    "name": "Tree Sentinel 1",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 21,
+    "scaling": 33,
+    "dlc": true
+  },
+  "2051440800": {
+    "name": "Rakshasa",
+    "boss": {
+      "size": 1,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": true,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 1,
+      "type": 1,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 23,
+    "scaling": 32,
+    "dlc": true
+  },
+  "2052400800": {
+    "name": "Jagged Peak Drake 2",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": true,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 22,
+    "scaling": 33,
+    "dlc": true
+  },
+  "2052430800": {
+    "name": "Jori Elder Inquisitor",
+    "boss": {
+      "size": 1,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": true,
+      "npc_not_allowed": false,
+      "is_escapable": true,
+      "night_boss": false
+    },
+    "region": 23,
+    "scaling": 32,
+    "dlc": true
+  },
+  "2052480800": {
+    "name": "Fallingstar Beast Hinterlands",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 21,
+    "scaling": 33,
+    "dlc": true
+  },
+  "2054390800": {
+    "name": "Bayle the Dread",
+    "boss": {
+      "size": 4,
+      "type": 2,
+      "is_two_phase": false,
+      "is_dragon": true,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 2,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 22,
+    "scaling": 34,
+    "dlc": true
+  },
+  "2054390850": {
+    "name": "Ancient Dragon Senessax",
+    "boss": {
+      "size": 1,
+      "type": 3,
+      "is_two_phase": false,
+      "is_dragon": true,
+      "is_npc": false,
+      "can_escape": true,
+      "night_boss": false,
+      "exclude_from_pool": false
+    },
+    "arena": {
+      "size": 4,
+      "type": 3,
+      "two_phase_not_allowed": false,
+      "dragon_not_allowed": false,
+      "npc_not_allowed": false,
+      "is_escapable": false,
+      "night_boss": false
+    },
+    "region": 22,
+    "scaling": 33,
+    "dlc": true
+  }
+}
