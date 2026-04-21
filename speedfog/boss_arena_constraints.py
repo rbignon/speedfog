@@ -116,7 +116,8 @@ def match_arenas_to_bosses(
     if missing:
         raise KeyError(f"tags missing entries: {missing}")
 
-    # Source/arena asymmetry: excluded bosses can still receive other bosses.
+    # Excluded bosses never appear as sources, but their own arenas remain valid
+    # targets (they can receive a replacement from the pool).
     eligible_sources = [b for b in bosses if not tags[b].boss.exclude_from_pool]
 
     shuffled_arenas = arenas[:]

@@ -397,8 +397,6 @@ def main() -> int:
             boss_placements_path = item_rando_dir / "boss_placements.json"
             boss_placements = load_boss_placements(boss_placements_path)
             if boss_placements:
-                enemy_txt_path = clusters_path.parent / "enemy.txt"
-                phase_mapping = parse_boss_phases(enemy_txt_path)
                 patch_graph_boss_placements(
                     json_path, dag, boss_placements, phase_mapping
                 )

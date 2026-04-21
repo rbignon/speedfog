@@ -34,6 +34,12 @@ BAR's C# code declares additional flags (`isMessmer`, `isMaliketh`,
 populates them. They are omitted here. Use the future `exclude_bosses`
 mechanism if per-boss arena restrictions become necessary.
 
+**Unused-but-loaded fields.** The dataclasses also carry `type` (both sides),
+`night_boss` (both sides), `region`, and `scaling`. These are preserved for
+round-trip fidelity with BossArenaRandomizer but are not consulted by the
+current compatibility check. Future rules can reference them without schema
+migration.
+
 ## Matching algorithm
 
 `speedfog/boss_arena_constraints.py::match_arenas_to_bosses` runs a random

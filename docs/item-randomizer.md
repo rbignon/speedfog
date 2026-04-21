@@ -115,24 +115,9 @@ See `docs/boss-arena-constraints.md` for the rules and
 
 ### Extra enemies promoted into the MinorBoss pool
 
-In both `"minor"` and `"all"` modes, a curated list of beefy field enemies
-(trolls, elite knights, crucible knights, etc.) is appended to the `MinorBoss`
-pool string (format `"default; <id1>; <id2>; ..."`, parsed by
-`Preset.PhraseRe`). The IDs come from the community preset
-`ABND_UWYG_Pirl_BossModifiésBETA.randomizeopt` and live in
-`Program.ExtraMinorBossPoolIds` (28 entries). The subset of those IDs that
-are classified `Basic` in enemy.txt (25 out of 28, in
-`Program.BasicRemoveSourceIds`) is also added to `Basic.RemoveSource` so they
-do not keep appearing as random basic mobs alongside their new boss role.
-
-A complementary `MinorBoss.RemoveSource` holds category names
-(`Program.MinorBossRemoveSourceNames`, resolved by `Preset.getIds` via
-`enemiesForName`) for field-boss archetypes that don't translate well into
-randomized arenas: Night's Cavalry, Cemetery Shade Boss, Guardian Golem Boss,
-Tibia Mariner Boss, Erdtree Avatar Boss, Ulcerated Tree Spirit Boss, Putrid
-Avatar Boss, and the three Burial Watchdog variants. They're excluded from
-the MinorBoss pool so promoted enemies don't end up inheriting those archetypes
-as source candidates.
+The set of promoted field enemies, the per-boss `exclude_from_pool` flags, and
+the source/target pool composition now live in `data/boss_arena_tags.json`.
+See `docs/boss-arena-constraints.md` for the current model.
 
 ### `bosshp` / `regularhp` options
 
