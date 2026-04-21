@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import random
 from pathlib import Path
 
 import pytest
@@ -11,8 +12,10 @@ from speedfog.boss_arena_constraints import (
     ArenaTags,
     BossTags,
     EntityTags,
+    MatchingError,
     is_compatible,
     load_tags,
+    match_arenas_to_bosses,
 )
 
 
@@ -158,3 +161,151 @@ def test_can_escape_in_escapable_arena_is_incompatible() -> None:
         exclude_from_pool=False,
     )
     assert not is_compatible(arena, boss, check_size=False)
+
+
+def _entity(
+    eid: int,
+    *,
+    arena_forbids_dragon: bool = False,
+    is_dragon: bool = False,
+    arena_size: int = 3,
+    boss_size: int = 1,
+    source_only: bool = False,
+    exclude_from_pool: bool = False,
+) -> EntityTags:
+    arena = (
+        None
+        if source_only
+        else ArenaTags(
+            size=arena_size,
+            type=1,
+            two_phase_not_allowed=False,
+            dragon_not_allowed=arena_forbids_dragon,
+            npc_not_allowed=False,
+            is_escapable=False,
+            night_boss=False,
+        )
+    )
+    return EntityTags(
+        entity_id=eid,
+        name=f"e{eid}",
+        boss=BossTags(
+            size=boss_size,
+            type=1,
+            is_two_phase=False,
+            is_dragon=is_dragon,
+            is_npc=False,
+            can_escape=False,
+            night_boss=False,
+            exclude_from_pool=exclude_from_pool,
+        ),
+        arena=arena,
+        pool="minor" if source_only else None,
+        region=1,
+        scaling=1,
+        dlc=False,
+    )
+
+
+def test_match_returns_perfect_assignment() -> None:
+    tags = {
+        1: _entity(1),
+        2: _entity(2),
+        3: _entity(3),
+    }
+    arenas = [1, 2]
+    bosses = [1, 2, 3]
+    rng = random.Random(42)
+    result = match_arenas_to_bosses(
+        arena_ids=arenas,
+        boss_ids=bosses,
+        tags=tags,
+        rng=rng,
+        check_size=False,
+    )
+    assert set(result.keys()) == {1, 2}
+    assert set(result.values()) <= {1, 2, 3}
+    assert len(set(result.values())) == 2  # no duplicates
+
+
+def test_match_is_deterministic_for_same_seed() -> None:
+    tags = {i: _entity(i) for i in range(1, 6)}
+    r1 = match_arenas_to_bosses(
+        arena_ids=[1, 2, 3],
+        boss_ids=[1, 2, 3, 4, 5],
+        tags=tags,
+        rng=random.Random(123),
+        check_size=False,
+    )
+    r2 = match_arenas_to_bosses(
+        arena_ids=[1, 2, 3],
+        boss_ids=[1, 2, 3, 4, 5],
+        tags=tags,
+        rng=random.Random(123),
+        check_size=False,
+    )
+    assert r1 == r2
+
+
+def test_match_respects_dragon_constraint() -> None:
+    tags = {
+        1: _entity(1, arena_forbids_dragon=True),  # arena forbids dragon
+        2: _entity(2, is_dragon=True),  # only this boss is dragon
+        3: _entity(3),
+    }
+    result = match_arenas_to_bosses(
+        arena_ids=[1],
+        boss_ids=[2, 3],
+        tags=tags,
+        rng=random.Random(0),
+        check_size=False,
+    )
+    # Arena 1 cannot host boss 2 (dragon); must get boss 3.
+    assert result == {1: 3}
+
+
+def test_match_raises_when_unsatisfiable() -> None:
+    tags = {
+        1: _entity(1, arena_forbids_dragon=True),
+        2: _entity(2, is_dragon=True),
+    }
+    with pytest.raises(MatchingError):
+        match_arenas_to_bosses(
+            arena_ids=[1],
+            boss_ids=[2],
+            tags=tags,
+            rng=random.Random(0),
+            check_size=False,
+        )
+
+
+def test_match_does_not_repeat_bosses() -> None:
+    tags = {i: _entity(i) for i in range(1, 6)}
+    result = match_arenas_to_bosses(
+        arena_ids=[1, 2, 3],
+        boss_ids=[1, 2, 3, 4, 5],
+        tags=tags,
+        rng=random.Random(7),
+        check_size=False,
+    )
+    assert len(set(result.values())) == 3
+
+
+def test_match_filters_exclude_from_pool_sources() -> None:
+    """Bosses with exclude_from_pool=True are never picked as sources,
+    even though they remain valid arenas."""
+    tags = {
+        1: _entity(1),
+        2: _entity(2, exclude_from_pool=True),  # cannot be a source
+        3: _entity(3),
+    }
+    result = match_arenas_to_bosses(
+        arena_ids=[1, 2],
+        boss_ids=[1, 2, 3],
+        tags=tags,
+        rng=random.Random(99),
+        check_size=False,
+    )
+    assert 2 not in set(result.values())
+    # Arena 2 still got SOME boss:
+    assert 2 in result
