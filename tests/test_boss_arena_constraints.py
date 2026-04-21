@@ -307,5 +307,33 @@ def test_match_filters_exclude_from_pool_sources() -> None:
         check_size=False,
     )
     assert 2 not in set(result.values())
-    # Arena 2 still got SOME boss:
-    assert 2 in result
+    assert result[2] in {1, 3}
+
+
+def test_match_raises_keyerror_when_tags_missing_ids() -> None:
+    """arena_ids and boss_ids must have entries in tags."""
+    tags = {1: _entity(1)}
+    with pytest.raises(KeyError, match="tags missing entries"):
+        match_arenas_to_bosses(
+            arena_ids=[1],
+            boss_ids=[2],  # not in tags
+            tags=tags,
+            rng=random.Random(0),
+            check_size=False,
+        )
+
+
+def test_match_raises_valueerror_for_source_only_arena() -> None:
+    """An arena_id pointing to a source-only entity (no arena block) is invalid."""
+    tags = {
+        1: _entity(1, source_only=True),  # no arena block
+        2: _entity(2),
+    }
+    with pytest.raises(ValueError, match="no arena block"):
+        match_arenas_to_bosses(
+            arena_ids=[1],
+            boss_ids=[2],
+            tags=tags,
+            rng=random.Random(0),
+            check_size=False,
+        )

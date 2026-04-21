@@ -116,14 +116,12 @@ def match_arenas_to_bosses(
     if missing:
         raise KeyError(f"tags missing entries: {missing}")
 
-    # Exclude bosses flagged exclude_from_pool from sources. They can still
-    # appear as arenas (their own slot can receive another boss).
+    # Source/arena asymmetry: excluded bosses can still receive other bosses.
     eligible_sources = [b for b in bosses if not tags[b].boss.exclude_from_pool]
 
     shuffled_arenas = arenas[:]
     rng.shuffle(shuffled_arenas)
 
-    # Per-arena candidate list, shuffled independently.
     candidates: dict[int, list[int]] = {}
     for arena_id in shuffled_arenas:
         arena = tags[arena_id].arena
