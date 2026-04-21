@@ -135,7 +135,11 @@ Example:
         Preset? preset = null;
         if (randoConfig.EnemyOptions != null)
         {
-            preset = BuildEnemyPreset(randoConfig.EnemyOptions);
+            preset = BuildEnemyPreset(randoConfig.EnemyOptions, randoConfig.EnemyAssignments);
+            if (preset.Enemies != null)
+            {
+                Console.WriteLine($"Arena assignments: {preset.Enemies.Count} fixed placements");
+            }
             if (randoConfig.EnemyOptions.IgnoreArenaSize)
             {
                 opt["ignoresize"] = true;
@@ -242,84 +246,14 @@ Example:
         Console.WriteLine($"Output written to: {config.OutputDir}");
     }
 
-    // Extra enemy IDs promoted from Basic class into the MinorBoss pool,
-    // sourced from community preset ABND_UWYG_Pirl_BossModifiésBETA.randomizeopt.
-    // These are beefy field enemies (trolls, elite knights, crucible knights,
-    // etc.) that play well as non-major boss encounters.
-    internal static readonly uint[] ExtraMinorBossPoolIds =
-    {
-        1051400299, // Guardian Golem
-        1051570310, // Elder Lion
-        20010451, // Divine Bird Warrior (Lightning)
-        20010450, // Hornsent
-        20010453, // Divine Bird Warrior (Frost)
-        20010455, // Divine Bird Warrior (Wind)
-        1035430230, // Lobster
-        21000453, // Fire Knight (Drained Church District)
-        21010461, // Fire Knight (before Messmer)
-        21010450, // Fire Knight (First Floor)
-        11000495, // Crucible Knight
-        13000295, // Crucible Knight
-        42000200, // Smith Golem
-        42030300, // Smith Golem
-
-        1051530322, // Colossal Fingercreeper
-        1051530324, // Colossal Fingercreeper
-        11000394, // Colossal Fingercreeper
-        12010715, // Blaidd
-        14000499, // Moongrum
-        2047440360, // Moonrithyll
-        2048380800, // DLC's Tibia Mariner
-        22000460, // Golden Leonine Misbegotten
-        35000486, // Omen
-        40010301, // Large Bigmouth Imp
-        2045470200, // Crucible Knight Devonia
-        1035540200, // Fire Prelate
-
-        1039510800, // Death Rite Bird
-        1043370340, // Deathbird
-        1047400800, // Night's cavalry
-    };
-
-    // Subset of ExtraMinorBossPoolIds that are classified Basic in enemy.txt
-    // and therefore must be removed from the Basic pool (otherwise they would
-    // also appear as random basic mobs, on top of being boss candidates).
-    // The last 3 IDs from ExtraMinorBossPoolIds (1039510800, 1043370340,
-    // 1047400800) are not Basic-class so they are intentionally absent here.
-    internal static readonly uint[] BasicRemoveSourceIds =
-    {
-        2053480290, 1051400299, 1051570310, 1050540300, 1052550250, 2810395,
-        20010451, 20010450, 20010453, 20010455, 1035430230, 35000366, 35000361,
-        1044530450, 2820478, 21010459, 21020450, 21010464, 11000495, 13000295,
-        42000200, 42030302, 42030304, 42030300, 2045470200,
-    };
-
-    // Category names (resolved through Preset.getIds → enemiesForName) that
-    // should not be candidates in the MinorBoss pool. These are field-boss
-    // archetypes whose gameplay doesn't translate well into randomized minor-
-    // boss arenas (roaming-on-mount encounters, mini-dungeon bespoke fights,
-    // etc.). Sourced from the same community preset.
-    internal static readonly string[] MinorBossRemoveSourceNames =
-    {
-        "Night's Cavalry",
-        "Cemetery Shade Boss",
-        "Guardian Golem Boss",
-        "Tibia Mariner Boss",
-        "Erdtree Avatar Boss",
-        "Ulcerated Tree Spirit Boss",
-        "Putrid Avatar Boss",
-        "Fire Erdtree Burial Watchdog Boss",
-        "Lightning Erdtree Burial Watchdog Boss",
-        "Scepter Erdtree Burial Watchdog Boss",
-        "2046460800", // Divine Beast Dancing Lion and Basilisks
-    };
-
     /// <summary>
     /// Build an enemy Preset programmatically from EnemyOptionsConfig.
     /// Pool / RemoveSource values are semicolon-separated strings, parsed by
     /// Preset.PhraseRe (see Preset.cs:107, getPoolMultiIds / getMultiIds).
     /// </summary>
-    internal static Preset BuildEnemyPreset(EnemyOptionsConfig options)
+    internal static Preset BuildEnemyPreset(
+        EnemyOptionsConfig options,
+        Dictionary<string, string>? enemyAssignments)
     {
         var valid = new[] { "none", "minor", "all" };
         if (!valid.Contains(options.RandomizeBosses))
@@ -359,20 +293,12 @@ Example:
             // from Boss via DefaultInherit (enemy.txt: MinorBoss.Parent = Boss).
             // Without this, ProcessEnemyPreset copies Boss.NoRandom → MinorBoss,
             // which disables the entire MinorBoss silo.
-            //
-            // The pool string "default; <ids>" keeps the vanilla MinorBoss pool
-            // and adds extra promoted enemies on top.
             preset.Classes[EnemyAnnotations.EnemyClass.MinorBoss] = new Preset.ClassAssignment
             {
                 Pools = new List<Preset.PoolAssignment>
                 {
-                    new Preset.PoolAssignment
-                    {
-                        Weight = 1000,
-                        Pool = "default; " + string.Join("; ", ExtraMinorBossPoolIds),
-                    }
-                },
-                RemoveSource = string.Join("; ", MinorBossRemoveSourceNames),
+                    new Preset.PoolAssignment { Weight = 1000, Pool = "default" }
+                }
             };
             foreach (var cls in new[] {
                 EnemyAnnotations.EnemyClass.NightMiniboss,
@@ -401,14 +327,6 @@ Example:
                 }
             };
 
-            // Remove the promoted Basic enemies from the Basic pool so they
-            // don't keep appearing as random basic mobs alongside their new
-            // role as MinorBoss candidates.
-            preset.Classes[EnemyAnnotations.EnemyClass.Basic] = new Preset.ClassAssignment
-            {
-                RemoveSource = string.Join("; ", BasicRemoveSourceIds),
-            };
-
             // Disable bosshp: when a Basic enemy is placed in an important-target
             // slot (Boss/MinorBoss/Miniboss/...), default behavior is to inflate
             // its HP via geom-mean(basic_hp, boss_hp). Combined with speedfog's
@@ -425,6 +343,13 @@ Example:
                     new Preset.ClassAssignment { NoRandom = true };
             }
 
+        }
+
+        if (options.RandomizeBosses != "none"
+            && enemyAssignments != null
+            && enemyAssignments.Count > 0)
+        {
+            preset.Enemies = new Dictionary<string, string>(enemyAssignments);
         }
 
         return preset;
