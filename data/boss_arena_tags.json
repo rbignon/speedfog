@@ -1488,7 +1488,7 @@
       "is_npc": false,
       "can_escape": false,
       "night_boss": false,
-      "exclude_from_pool": true
+      "exclude_from_pool": false
     },
     "arena": {
       "size": 3,
@@ -3340,7 +3340,7 @@
       "is_npc": false,
       "can_escape": false,
       "night_boss": true,
-      "exclude_from_pool": false
+      "exclude_from_pool": true
     },
     "arena": {
       "size": 4,
@@ -3365,7 +3365,7 @@
       "is_npc": false,
       "can_escape": false,
       "night_boss": true,
-      "exclude_from_pool": false
+      "exclude_from_pool": true
     },
     "arena": {
       "size": 3,
@@ -3440,7 +3440,7 @@
       "is_npc": false,
       "can_escape": false,
       "night_boss": true,
-      "exclude_from_pool": false
+      "exclude_from_pool": true
     },
     "arena": {
       "size": 4,
@@ -3615,7 +3615,7 @@
       "is_npc": false,
       "can_escape": false,
       "night_boss": false,
-      "exclude_from_pool": false
+      "exclude_from_pool": true
     },
     "arena": {
       "size": 4,
@@ -3640,7 +3640,7 @@
       "is_npc": false,
       "can_escape": false,
       "night_boss": true,
-      "exclude_from_pool": false
+      "exclude_from_pool": true
     },
     "arena": {
       "size": 4,
@@ -3665,7 +3665,7 @@
       "is_npc": false,
       "can_escape": false,
       "night_boss": false,
-      "exclude_from_pool": false
+      "exclude_from_pool": true
     },
     "arena": {
       "size": 4,
@@ -3715,7 +3715,7 @@
       "is_npc": false,
       "can_escape": false,
       "night_boss": true,
-      "exclude_from_pool": false
+      "exclude_from_pool": true
     },
     "arena": {
       "size": 4,
@@ -4015,7 +4015,7 @@
       "is_npc": false,
       "can_escape": false,
       "night_boss": true,
-      "exclude_from_pool": false
+      "exclude_from_pool": true
     },
     "arena": {
       "size": 4,
@@ -4215,7 +4215,7 @@
       "is_npc": false,
       "can_escape": false,
       "night_boss": true,
-      "exclude_from_pool": false
+      "exclude_from_pool": true
     },
     "arena": {
       "size": 4,
@@ -4340,7 +4340,7 @@
       "is_npc": false,
       "can_escape": false,
       "night_boss": false,
-      "exclude_from_pool": true
+      "exclude_from_pool": false
     },
     "arena": {
       "size": 4,
@@ -4390,7 +4390,7 @@
       "is_npc": false,
       "can_escape": false,
       "night_boss": false,
-      "exclude_from_pool": true
+      "exclude_from_pool": false
     },
     "arena": {
       "size": 3,
@@ -4490,7 +4490,7 @@
       "is_npc": false,
       "can_escape": false,
       "night_boss": true,
-      "exclude_from_pool": false
+      "exclude_from_pool": true
     },
     "arena": {
       "size": 3,
@@ -4515,7 +4515,7 @@
       "is_npc": false,
       "can_escape": false,
       "night_boss": true,
-      "exclude_from_pool": false
+      "exclude_from_pool": true
     },
     "arena": {
       "size": 4,
@@ -4540,7 +4540,7 @@
       "is_npc": false,
       "can_escape": false,
       "night_boss": true,
-      "exclude_from_pool": false
+      "exclude_from_pool": true
     },
     "arena": {
       "size": 4,
@@ -4565,7 +4565,7 @@
       "is_npc": false,
       "can_escape": false,
       "night_boss": true,
-      "exclude_from_pool": false
+      "exclude_from_pool": true
     },
     "arena": {
       "size": 4,
@@ -4715,7 +4715,7 @@
       "is_npc": false,
       "can_escape": false,
       "night_boss": false,
-      "exclude_from_pool": false
+      "exclude_from_pool": true
     },
     "arena": {
       "size": 4,
@@ -4983,7 +4983,7 @@
       "is_npc": false,
       "can_escape": false,
       "night_boss": true,
-      "exclude_from_pool": false
+      "exclude_from_pool": true
     },
     "arena": {
       "size": 3,
