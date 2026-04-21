@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from tools.port_boss_arena_tags import build_entities, port
 
 
@@ -53,15 +55,30 @@ def test_vanilla_entity_has_both_boss_and_arena() -> None:
 
 
 def test_arena_without_matching_boss_raises() -> None:
-    try:
+    with pytest.raises(KeyError, match="Phantom"):
         build_entities({}, {"Phantom": _arena("99999")})
-    except KeyError as err:
-        assert "Phantom" in str(err)
-    else:
-        raise AssertionError("Expected KeyError")
 
 
-def test_promoted_id_without_bar_entry_becomes_source_only(tmp_path: Path) -> None:
+def test_id_mismatch_between_boss_and_arena_raises() -> None:
+    """Arena id must match its paired boss id."""
+    bosses = {"Rennala": _boss("14000800")}
+    arenas = {"Rennala": _arena("14000801")}  # mismatched id
+    with pytest.raises(ValueError, match="ID mismatch"):
+        build_entities(bosses, arenas)
+
+
+def test_source_only_bar_entry_stays_without_pool_field() -> None:
+    """A bosses.json entry without a matching arena stays source-only and,
+    if it is not in EXTRA_MINOR_POOL_ENTRIES, gets no pool field.
+    """
+    bosses = {"Obscure": _boss("99999")}
+    entities = build_entities(bosses, {})
+    entry = entities["99999"]
+    assert "arena" not in entry
+    assert "pool" not in entry
+
+
+def test_promoted_id_without_bar_entry_becomes_source_only() -> None:
     """IDs in EXTRA_MINOR_POOL_ENTRIES that are NOT in BAR become source-only."""
     # 1051400299 ("Guardian Golem") is a promoted ID not in BAR.
     entities = build_entities({}, {})

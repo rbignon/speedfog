@@ -113,7 +113,7 @@ EXCLUDE_FROM_POOL_IDS: frozenset[int] = frozenset(
 
 
 def _as_bool(v: Any) -> bool:
-    return bool(int(v)) if v is not None else False
+    return bool(int(v))
 
 
 def _boss_block(boss: dict[str, Any], exclude_from_pool: bool) -> dict[str, Any]:
@@ -210,6 +210,7 @@ def build_entities(
 
 
 def port(bar_dir: Path, out_path: Path) -> None:
+    """Read BAR JSON files and write the merged entity-tag data file."""
     bosses = json.loads((bar_dir / "bosses.json").read_text())
     arenas = json.loads((bar_dir / "bossArena.json").read_text())
     entities = build_entities(bosses, arenas)
