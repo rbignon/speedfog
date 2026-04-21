@@ -106,6 +106,13 @@ Miniboss       ──────► MinorBoss pool (ManualParent=MinorBoss, ove
 Boss           ──────► own pool (major bosses swap among themselves only)
 ```
 
+### Arena compatibility constraints
+
+When `randomize_bosses != "none"`, SpeedFog computes an arena-compatible
+assignment in Python and passes it as `enemy_assignments` in `item_config.json`.
+See `docs/boss-arena-constraints.md` for the rules and
+`speedfog/boss_arena_constraints.py` for the implementation.
+
 ### Extra enemies promoted into the MinorBoss pool
 
 In both `"minor"` and `"all"` modes, a curated list of beefy field enemies
