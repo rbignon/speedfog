@@ -4,8 +4,64 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock
 
+from speedfog.boss_arena_constraints import ArenaTags, BossTags, EntityTags
+from speedfog.clusters import ClusterData
 from speedfog.config import Config
 from speedfog.item_randomizer import generate_item_config, run_item_randomizer
+
+
+def _boss_cluster(
+    cid: str, ctype: str, defeat_flag: int, zone: str = "z"
+) -> ClusterData:
+    """Build a minimal boss cluster matching the DAG's ClusterData shape."""
+    return ClusterData(
+        id=cid,
+        zones=[zone],
+        type=ctype,
+        weight=0,
+        entry_fogs=[],
+        exit_fogs=[],
+        defeat_flag=defeat_flag,
+    )
+
+
+def _entity(
+    eid: int,
+    *,
+    is_dragon: bool = False,
+    arena_forbids_dragon: bool = False,
+    arena_size: int = 5,
+    boss_size: int = 1,
+    exclude_from_pool: bool = False,
+    pool: str | None = None,
+) -> EntityTags:
+    return EntityTags(
+        entity_id=eid,
+        name=f"e{eid}",
+        region=1,
+        scaling=1,
+        dlc=False,
+        pool=pool,
+        boss=BossTags(
+            size=boss_size,
+            type=1,
+            is_two_phase=False,
+            is_dragon=is_dragon,
+            is_npc=False,
+            can_escape=False,
+            night_boss=False,
+            exclude_from_pool=exclude_from_pool,
+        ),
+        arena=ArenaTags(
+            size=arena_size,
+            type=1,
+            two_phase_not_allowed=False,
+            dragon_not_allowed=arena_forbids_dragon,
+            npc_not_allowed=False,
+            is_escapable=False,
+            night_boss=False,
+        ),
+    )
 
 
 def test_generate_item_config_basic():
@@ -184,7 +240,65 @@ def test_generate_item_config_enemy_options_default():
 def test_generate_item_config_enemy_options_enabled():
     """generate_item_config passes through enemy randomization settings."""
     config = Config.from_dict({"enemy": {"randomize_bosses": "all", "swap_boss": True}})
-    result = generate_item_config(config, 42)
+    # tags must be provided whenever randomize_bosses != "none"; empty map
+    # means no DAG boss clusters to assign.
+    result = generate_item_config(config, 42, tags={})
 
     assert result["enemy_options"]["randomize_bosses"] == "all"
     assert result["enemy_options"]["swap_boss"] is True
+
+
+def test_generate_item_config_no_assignments_when_randomize_bosses_none():
+    """No enemy_assignments when boss randomization is disabled."""
+    config = Config.from_dict({})
+    result = generate_item_config(config, seed=1, boss_clusters=[], tags={})
+    assert "enemy_assignments" not in result
+
+
+def test_generate_item_config_includes_assignments_for_major():
+    """Compatibility filters shrink the pool before the greedy matcher picks."""
+    config = Config.from_dict({"enemy": {"randomize_bosses": "all"}})
+    # Single major_boss cluster; defeat_flag 1000 maps to entity_id 1000.
+    boss_clusters = [_boss_cluster("c1", "major_boss", defeat_flag=1000)]
+    # Arena 1000 forbids dragons. Among {2000, 3000}, only 2000 is non-dragon.
+    tags = {
+        1000: _entity(1000, arena_forbids_dragon=True),
+        2000: _entity(2000),
+        3000: _entity(3000, is_dragon=True),
+    }
+    result = generate_item_config(
+        config,
+        seed=42,
+        boss_clusters=boss_clusters,
+        tags=tags,
+        vanilla_major_ids=[2000, 3000],
+        vanilla_minor_ids=[],
+        phase_mapping={},
+    )
+    assert "enemy_assignments" in result
+    assert result["enemy_assignments"] == {"1000": "2000"}
+
+
+def test_generate_item_config_expands_multi_phase_slots():
+    """Multi-phase majors must produce one entry per phase, independently."""
+    config = Config.from_dict({"enemy": {"randomize_bosses": "all"}})
+    # Fire Giant-shaped cluster: leader entity 1052520800, phase1 at 1052520801.
+    boss_clusters = [
+        _boss_cluster("fg", "major_boss", defeat_flag=1052520800),
+    ]
+
+    tags = {eid: _entity(eid) for eid in (1052520800, 1052520801, 2000, 3000)}
+    result = generate_item_config(
+        config,
+        seed=1,
+        boss_clusters=boss_clusters,
+        tags=tags,
+        vanilla_major_ids=[2000, 3000],
+        vanilla_minor_ids=[],
+        phase_mapping={1052520800: 1052520801},
+    )
+    assignments = result["enemy_assignments"]
+    assert set(assignments.keys()) == {"1052520800", "1052520801"}
+    # Both slots get distinct sources drawn from the major pool.
+    assert len(set(assignments.values())) == 2
+    assert set(assignments.values()) <= {"2000", "3000"}

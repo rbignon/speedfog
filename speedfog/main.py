@@ -9,6 +9,7 @@ import sys
 import time
 from pathlib import Path
 
+from speedfog.boss_arena_constraints import load_tags
 from speedfog.care_package import sample_care_package
 from speedfog.clusters import load_clusters
 from speedfog.config import Config, load_config
@@ -16,6 +17,7 @@ from speedfog.fog_mod import run_fogmodwrapper
 from speedfog.generator import GenerationError, generate_with_retry
 from speedfog.item_randomizer import generate_item_config, run_item_randomizer
 from speedfog.output import (
+    _resolve_entity_id,
     append_boss_placements_to_spoiler,
     export_json,
     export_spoiler_log,
@@ -327,7 +329,33 @@ def main() -> int:
         print("Running Item Randomizer...")
 
         # Generate item_config.json
-        item_config = generate_item_config(config, actual_seed)
+        tags = load_tags(project_root / "data" / "boss_arena_tags.json")
+
+        enemy_txt_path = clusters_path.parent / "enemy.txt"
+        phase_mapping = parse_boss_phases(enemy_txt_path)
+
+        def _vanilla_ids_of_type(t: str) -> list[int]:
+            out: list[int] = []
+            for c in clusters.get_by_type(t):
+                eid = _resolve_entity_id(c.defeat_flag)
+                if eid:
+                    out.append(eid)
+            return out
+
+        boss_clusters_for_assignment = [
+            n.cluster
+            for n in dag.nodes.values()
+            if n.cluster.type in ("boss_arena", "major_boss") and n.cluster.defeat_flag
+        ]
+        item_config = generate_item_config(
+            config,
+            actual_seed,
+            boss_clusters=boss_clusters_for_assignment,
+            tags=tags,
+            vanilla_major_ids=_vanilla_ids_of_type("major_boss"),
+            vanilla_minor_ids=_vanilla_ids_of_type("boss_arena"),
+            phase_mapping=phase_mapping,
+        )
         item_config_path = seed_dir / "item_config.json"
         with item_config_path.open("w") as f:
             json.dump(item_config, f, indent=2)
