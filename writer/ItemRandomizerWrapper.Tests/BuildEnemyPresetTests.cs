@@ -35,8 +35,40 @@ public class BuildEnemyPresetTests
         var options = new EnemyOptionsConfig { RandomizeBosses = "none" };
         var assignments = new Dictionary<string, string> { ["x"] = "y" };
         var preset = Program.BuildEnemyPreset(options, assignments);
+        var lockedClasses = new[]
+        {
+            EnemyAnnotations.EnemyClass.Boss,
+            EnemyAnnotations.EnemyClass.Miniboss,
+            EnemyAnnotations.EnemyClass.MinorBoss,
+            EnemyAnnotations.EnemyClass.NightMiniboss,
+            EnemyAnnotations.EnemyClass.DragonMiniboss,
+            EnemyAnnotations.EnemyClass.Evergaol,
+        };
+        foreach (var cls in lockedClasses)
+        {
+            Assert.True(preset.Classes[cls].NoRandom, $"{cls} should be NoRandom in 'none' mode");
+        }
         Assert.Null(preset.Enemies);
-        Assert.True(preset.Classes[EnemyAnnotations.EnemyClass.MinorBoss].NoRandom);
+    }
+
+    [Theory]
+    [InlineData("minor")]
+    [InlineData("all")]
+    public void BuildEnemyPreset_RandomizationEnabled_DisablesBosshp(string mode)
+    {
+        var options = new EnemyOptionsConfig { RandomizeBosses = mode };
+        var preset = Program.BuildEnemyPreset(options, null);
+        Assert.False(preset["bosshp"]);
+        // regularhp stays at its default (true): only boss -> basic placements use it,
+        // and speedfog never triggers those.
+        Assert.True(preset["regularhp"]);
+    }
+
+    [Fact]
+    public void BuildEnemyPreset_InvalidRandomizeBosses_Throws()
+    {
+        var options = new EnemyOptionsConfig { RandomizeBosses = "bogus" };
+        Assert.Throws<ArgumentException>(() => Program.BuildEnemyPreset(options, null));
     }
 
     [Fact]
