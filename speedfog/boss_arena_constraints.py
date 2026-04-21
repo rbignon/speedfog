@@ -160,5 +160,6 @@ def match_arenas_to_bosses(
             f"{len(arenas)} arenas against {len(bosses)} candidates"
         )
 
-    # Return in original arena order for stability in downstream output.
+    # Callers iterate this dict for logging and spoiler output; preserving
+    # the caller's arena_ids order keeps those outputs stable.
     return {aid: assignment[aid] for aid in arenas}

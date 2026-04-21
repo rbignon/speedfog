@@ -17,7 +17,6 @@ from speedfog.fog_mod import run_fogmodwrapper
 from speedfog.generator import GenerationError, generate_with_retry
 from speedfog.item_randomizer import generate_item_config, run_item_randomizer
 from speedfog.output import (
-    _resolve_entity_id,
     append_boss_placements_to_spoiler,
     export_json,
     export_spoiler_log,
@@ -26,6 +25,7 @@ from speedfog.output import (
     load_vanilla_tiers,
     parse_boss_phases,
     patch_graph_boss_placements,
+    resolve_entity_id,
 )
 
 
@@ -329,18 +329,25 @@ def main() -> int:
         print("Running Item Randomizer...")
 
         # Generate item_config.json
-        tags = load_tags(project_root / "data" / "boss_arena_tags.json")
-
         enemy_txt_path = clusters_path.parent / "enemy.txt"
         phase_mapping = parse_boss_phases(enemy_txt_path)
 
         def _vanilla_ids_of_type(t: str) -> list[int]:
             out: list[int] = []
             for c in clusters.get_by_type(t):
-                eid = _resolve_entity_id(c.defeat_flag)
+                eid = resolve_entity_id(c.defeat_flag)
                 if eid:
                     out.append(eid)
             return out
+
+        if config.enemy.randomize_bosses != "none":
+            tags = load_tags(project_root / "data" / "boss_arena_tags.json")
+            vanilla_major_ids = _vanilla_ids_of_type("major_boss")
+            vanilla_minor_ids = _vanilla_ids_of_type("boss_arena")
+        else:
+            tags = None
+            vanilla_major_ids = []
+            vanilla_minor_ids = []
 
         boss_clusters_for_assignment = [
             n.cluster
@@ -352,8 +359,8 @@ def main() -> int:
             actual_seed,
             boss_clusters=boss_clusters_for_assignment,
             tags=tags,
-            vanilla_major_ids=_vanilla_ids_of_type("major_boss"),
-            vanilla_minor_ids=_vanilla_ids_of_type("boss_arena"),
+            vanilla_major_ids=vanilla_major_ids,
+            vanilla_minor_ids=vanilla_minor_ids,
             phase_mapping=phase_mapping,
         )
         item_config_path = seed_dir / "item_config.json"

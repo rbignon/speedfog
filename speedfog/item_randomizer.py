@@ -16,7 +16,7 @@ from speedfog.boss_arena_constraints import (
 )
 from speedfog.clusters import ClusterData
 from speedfog.config import Config
-from speedfog.output import _resolve_entity_id
+from speedfog.output import resolve_entity_id
 
 
 def generate_item_config(
@@ -137,6 +137,12 @@ def _compose_pool(
     return sorted(ids)
 
 
+# Seed salt to decorrelate the matcher RNG stream from the main run seed
+# (ensures changes to the matcher logic don't perturb unrelated seeded
+# consumers that share the same base seed).
+BOSS_ASSIGNMENT_SEED_SALT = 0xBA7A5A5A
+
+
 def _build_enemy_assignments(
     *,
     boss_clusters: Iterable[ClusterData],
@@ -158,7 +164,7 @@ def _build_enemy_assignments(
     majors: list[int] = []
     minors: list[int] = []
     for cluster in boss_clusters:
-        leader = _resolve_entity_id(cluster.defeat_flag)
+        leader = resolve_entity_id(cluster.defeat_flag)
         if leader == 0 or leader not in tags:
             continue
         slots = [leader]
@@ -170,7 +176,7 @@ def _build_enemy_assignments(
         elif cluster.type == "boss_arena":
             minors.extend(slots)
 
-    rng = random.Random(seed ^ 0xBA7A5A5A)
+    rng = random.Random(seed ^ BOSS_ASSIGNMENT_SEED_SALT)
     out: dict[int, int] = {}
     if minors:
         out.update(

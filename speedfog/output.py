@@ -1270,7 +1270,7 @@ def patch_graph_boss_placements(
             boss_list: list[str] = []
 
             if phase_mapping:
-                entity_id = _resolve_entity_id(defeat_flag)
+                entity_id = resolve_entity_id(defeat_flag)
                 phase1_entity_id = phase_mapping.get(entity_id)
                 if phase1_entity_id:
                     phase1_key = str(phase1_entity_id)
@@ -1302,7 +1302,7 @@ def _match_boss_placement(
     if key in placements:
         return str(placements[key]["name"])
 
-    entity_id = _resolve_entity_id(defeat_flag)
+    entity_id = resolve_entity_id(defeat_flag)
     if entity_id != defeat_flag:
         key = str(entity_id)
         if key in placements:
@@ -1311,7 +1311,7 @@ def _match_boss_placement(
     return None
 
 
-def _resolve_entity_id(defeat_flag: int) -> int:
+def resolve_entity_id(defeat_flag: int) -> int:
     """Resolve defeat_flag to entity_id (handles Radahn/Fire Giant 200M offset)."""
     if 1_200_000_000 <= defeat_flag < 2_000_000_000:
         return defeat_flag - 200_000_000
