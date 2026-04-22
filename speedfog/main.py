@@ -109,7 +109,7 @@ def main() -> int:
     parser.add_argument(
         "--no-build",
         action="store_true",
-        help="Skip mod building (only generate graph.json)",
+        help="Skip mod building and ItemRandomizer (inputs still written)",
     )
     parser.add_argument(
         "--game-dir",
@@ -311,22 +311,10 @@ def main() -> int:
         Path(config.paths.game_dir) if config.paths.game_dir else None
     )
 
-    # Run Item Randomizer if enabled
+    # Generate Item Randomizer inputs if enabled (even with --no-build)
     item_rando_output: Path | None = None
-    if config.item_randomizer.enabled and not args.no_build:
-        if not game_dir:
-            print(
-                "Error: --game-dir required for Item Randomizer",
-                file=sys.stderr,
-            )
-            return 1
-
-        if not game_dir.exists():
-            print(f"Error: Game directory not found: {game_dir}", file=sys.stderr)
-            return 1
-
-        timer.step("Item Randomizer")
-        print("Running Item Randomizer...")
+    if config.item_randomizer.enabled:
+        timer.step("Item Randomizer inputs" if args.no_build else "Item Randomizer")
 
         # Generate item_config.json
         enemy_txt_path = clusters_path.parent / "enemy.txt"
@@ -370,12 +358,12 @@ def main() -> int:
             print(f"Written: {item_config_path}")
 
         # Copy item preset
+        item_preset_path = seed_dir / "item_preset.yaml"
         if config.item_randomizer.item_preset:
             if config.item_randomizer.item_preset_path:
                 item_preset_src = Path(config.item_randomizer.item_preset_path)
             else:
                 item_preset_src = project_root / "data" / "item_preset.yaml"
-            item_preset_path = seed_dir / "item_preset.yaml"
             if item_preset_src.exists():
                 shutil.copy(item_preset_src, item_preset_path)
                 if args.verbose:
@@ -386,44 +374,57 @@ def main() -> int:
                     file=sys.stderr,
                 )
 
-        # Run ItemRandomizerWrapper
-        # Output directly to mods/itemrando so ModEngine can load it
-        item_rando_dir = seed_dir / "mods" / "itemrando"
-        item_rando_dir.mkdir(parents=True, exist_ok=True)
-
-        if run_item_randomizer(
-            seed_dir=seed_dir,
-            game_dir=game_dir,
-            output_dir=item_rando_dir,
-            platform=config.paths.platform,
-            verbose=args.verbose,
-        ):
-            item_rando_output = item_rando_dir
-
-            # Patch graph.json with boss placements if available
-            boss_placements_path = item_rando_dir / "boss_placements.json"
-            boss_placements = load_boss_placements(boss_placements_path)
-            if boss_placements:
-                patch_graph_boss_placements(
-                    json_path, dag, boss_placements, phase_mapping
+        # Run ItemRandomizerWrapper (skipped with --no-build)
+        if not args.no_build:
+            if not game_dir:
+                print(
+                    "Error: --game-dir required for Item Randomizer",
+                    file=sys.stderr,
                 )
-                print(f"Boss placements: {len(boss_placements)} bosses randomized")
+                return 1
 
-                # Append boss placements to spoiler log
-                if args.logs:
-                    assert spoiler_path is not None
-                    append_boss_placements_to_spoiler(spoiler_path, boss_placements)
-        else:
-            print(
-                "Error: Item Randomizer failed",
-                file=sys.stderr,
-            )
-            return 1
+            if not game_dir.exists():
+                print(f"Error: Game directory not found: {game_dir}", file=sys.stderr)
+                return 1
 
-        # Clean up transient Item Randomizer config files
-        item_config_path.unlink(missing_ok=True)
-        item_preset_path = seed_dir / "item_preset.yaml"
-        item_preset_path.unlink(missing_ok=True)
+            print("Running Item Randomizer...")
+
+            # Output directly to mods/itemrando so ModEngine can load it
+            item_rando_dir = seed_dir / "mods" / "itemrando"
+            item_rando_dir.mkdir(parents=True, exist_ok=True)
+
+            if run_item_randomizer(
+                seed_dir=seed_dir,
+                game_dir=game_dir,
+                output_dir=item_rando_dir,
+                platform=config.paths.platform,
+                verbose=args.verbose,
+            ):
+                item_rando_output = item_rando_dir
+
+                # Patch graph.json with boss placements if available
+                boss_placements_path = item_rando_dir / "boss_placements.json"
+                boss_placements = load_boss_placements(boss_placements_path)
+                if boss_placements:
+                    patch_graph_boss_placements(
+                        json_path, dag, boss_placements, phase_mapping
+                    )
+                    print(f"Boss placements: {len(boss_placements)} bosses randomized")
+
+                    # Append boss placements to spoiler log
+                    if args.logs:
+                        assert spoiler_path is not None
+                        append_boss_placements_to_spoiler(spoiler_path, boss_placements)
+            else:
+                print(
+                    "Error: Item Randomizer failed",
+                    file=sys.stderr,
+                )
+                return 1
+
+            # Clean up transient Item Randomizer config files
+            item_config_path.unlink(missing_ok=True)
+            item_preset_path.unlink(missing_ok=True)
 
     # Build mod unless --no-build
     if not args.no_build:
