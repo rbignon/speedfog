@@ -9,13 +9,107 @@ feasibility, two-phase space, NPC terrain, Evergaol specifics).
 
 ## Source of truth
 
-Tags are ported from [BossArenaRandomizer](https://github.com/thefifthmatt/BossArenaRandomizer)'s
+Tags are ported from [BossArenaRandomizer](https://github.com/ignitesouls/BossArenaRandomize)'s
 `bosses.json` and `bossArena.json`. The merged form lives in
 `data/boss_arena_tags.json`. Re-run the porter with:
 
     uv run python tools/port_boss_arena_tags.py \
         --bar-dir ../BossArenaRandomizer/BossArenaRandomizer \
         --out data/boss_arena_tags.json
+
+## Data model
+
+`data/boss_arena_tags.json` is a JSON object keyed by **entity ID string**
+(the ID found in the game's MSB, e.g. `"18000850"`). Each value is a per-entity
+record.
+
+### Entity record
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | yes | Human-readable name (from BAR, or the `ExtraMinorBossPoolIds` C# comment for source-only entries). |
+| `boss` | object | yes | Boss tags, see below. Describes the entity in its "source" role. |
+| `arena` | object | no | Arena tags, see below. Present only for entities that also correspond to an arena slot in the MSB (vanilla boss bindings). Absent for source-only promoted entries. |
+| `pool` | string | no | `"minor"` or `"major"`. Declares pool membership for source-only entries (no `arena`). Absent for entries with an `arena` block: their pool is derived from `cluster.type` in `clusters.json`. |
+| `region` | int | yes | BAR's region identifier (1-15). Loaded but not consulted by the current compatibility check. |
+| `scaling` | int | yes | BAR's scaling tier. Loaded but not consulted by the current compatibility check. |
+| `dlc` | bool | yes | True for DLC entities. Loaded but not consulted by the current compatibility check. |
+
+### `boss` block
+
+Describes what the entity **is**, for compat-filtering when it is a source.
+
+| Field | Type | Used by compat? | Description |
+|-------|------|-----------------|-------------|
+| `size` | int (1-5) | yes (size gate) | Boss physical footprint. |
+| `type` | int (1-7) | no | BAR category. Loaded but not consulted. |
+| `is_two_phase` | bool | yes | Boss scripts a phase transition in place. |
+| `is_dragon` | bool | yes | Boss is a dragon-type encounter. |
+| `is_npc` | bool | yes | Boss is an NPC invader. |
+| `can_escape` | bool | yes | Boss has scripted flee/despawn behavior. |
+| `night_boss` | bool | no | Boss is a night-only encounter. Loaded but not consulted. |
+| `exclude_from_pool` | bool | yes (source filter) | When `true`, this entity is never chosen as a source by the matcher. Its own arena can still receive another boss. |
+
+### `arena` block
+
+Describes what the slot **requires**, for compat-filtering when it is a target.
+
+| Field | Type | Used by compat? | Description |
+|-------|------|-----------------|-------------|
+| `size` | int (1-5) | yes (size gate) | Arena physical capacity (boss size must fit). |
+| `type` | int (1-7) | no | BAR category. Loaded but not consulted. |
+| `two_phase_not_allowed` | bool | yes | Arena geometry or scripting cannot host a two-phase boss. |
+| `dragon_not_allowed` | bool | yes | Arena too confined or mis-shaped for a dragon. |
+| `npc_not_allowed` | bool | yes | Arena cannot host an NPC invader fight. |
+| `is_escapable` | bool | yes | Arena has an exit path the player can use; a boss that can flee would break the encounter. |
+| `night_boss` | bool | no | Arena is a night-only trigger. Loaded but not consulted. |
+
+### Examples
+
+Vanilla binding (entity is both a source and a target):
+
+```json
+"18000850": {
+  "name": "Soldier of Godrick",
+  "boss": {"size": 1, "type": 4, "is_two_phase": false, "is_dragon": false,
+           "is_npc": false, "can_escape": false, "night_boss": false,
+           "exclude_from_pool": false},
+  "arena": {"size": 3, "type": 4, "two_phase_not_allowed": false,
+            "dragon_not_allowed": false, "npc_not_allowed": false,
+            "is_escapable": false, "night_boss": false},
+  "region": 1, "scaling": 1, "dlc": false
+}
+```
+
+Source-only promoted entry (field enemy tagged for minor-boss placement, no
+arena of its own, neutral boss defaults that fit everywhere):
+
+```json
+"1051400299": {
+  "name": "Guardian Golem",
+  "boss": {"size": 1, "type": 1, "is_two_phase": false, "is_dragon": false,
+           "is_npc": false, "can_escape": false, "night_boss": false,
+           "exclude_from_pool": false},
+  "pool": "minor",
+  "region": 0, "scaling": 0, "dlc": false
+}
+```
+
+Excluded archetype (vanilla boss whose archetype does not replay well as a
+random replacement; still a valid target for other bosses):
+
+```json
+"1043370340": {
+  "name": "Night's Cavalry Limgrave",
+  "boss": {"size": 1, "type": 3, "is_two_phase": false, "is_dragon": false,
+           "is_npc": false, "can_escape": false, "night_boss": true,
+           "exclude_from_pool": true},
+  "arena": {"size": 3, "type": 3, "two_phase_not_allowed": false,
+            "dragon_not_allowed": false, "npc_not_allowed": false,
+            "is_escapable": false, "night_boss": true},
+  "region": 1, "scaling": 4, "dlc": false
+}
+```
 
 ## Compatibility rules
 
@@ -34,11 +128,10 @@ BAR's C# code declares additional flags (`isMessmer`, `isMaliketh`,
 populates them. They are omitted here. Use the future `exclude_bosses`
 mechanism if per-boss arena restrictions become necessary.
 
-**Unused-but-loaded fields.** The dataclasses also carry `type` (both sides),
-`night_boss` (both sides), `region`, and `scaling`. These are preserved for
-round-trip fidelity with BossArenaRandomizer but are not consulted by the
-current compatibility check. Future rules can reference them without schema
-migration.
+Fields marked "no" in the per-block tables above (`type`, `night_boss`,
+`region`, `scaling`, plus the entity-level `dlc`) are preserved for
+round-trip fidelity with BossArenaRandomizer. Future rules can reference them
+without schema migration.
 
 ## Matching algorithm
 
