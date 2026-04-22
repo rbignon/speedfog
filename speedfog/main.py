@@ -311,10 +311,9 @@ def main() -> int:
         Path(config.paths.game_dir) if config.paths.game_dir else None
     )
 
-    # Generate Item Randomizer inputs if enabled (even with --no-build)
     item_rando_output: Path | None = None
     if config.item_randomizer.enabled:
-        timer.step("Item Randomizer inputs" if args.no_build else "Item Randomizer")
+        timer.step("Item Randomizer")
 
         # Generate item_config.json
         enemy_txt_path = clusters_path.parent / "enemy.txt"
@@ -374,7 +373,6 @@ def main() -> int:
                     file=sys.stderr,
                 )
 
-        # Run ItemRandomizerWrapper (skipped with --no-build)
         if not args.no_build:
             if not game_dir:
                 print(
