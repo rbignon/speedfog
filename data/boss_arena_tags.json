@@ -74,23 +74,6 @@
     "scaling": 7,
     "dlc": false
   },
-  "11000394": {
-    "name": "Colossal Fingercreeper",
-    "boss": {
-      "size": 1,
-      "type": 1,
-      "is_two_phase": false,
-      "is_dragon": false,
-      "is_npc": false,
-      "can_escape": false,
-      "night_boss": false,
-      "exclude_from_pool": false
-    },
-    "pool": "minor",
-    "region": 0,
-    "scaling": 0,
-    "dlc": false
-  },
   "11000495": {
     "name": "Crucible Knight",
     "boss": {
