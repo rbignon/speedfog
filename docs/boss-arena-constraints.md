@@ -136,12 +136,12 @@ without schema migration.
 ## Matching algorithm
 
 `speedfog/boss_arena_constraints.py::match_arenas_to_bosses` runs a random
-perfect matching via greedy + backtracking under MRV (most-constrained arena
-first): it shuffles both sides for seed-driven variety, then stable-sorts
-arenas by ascending candidate count so tightly constrained slots are resolved
-before permissive ones. Stable sort preserves the shuffle order on ties, so
-variety across seeds is preserved. Raises ``MatchingError`` if no perfect
-matching exists.
+perfect matching via augmenting-path bipartite matching (Hungarian-style): it
+shuffles both sides for seed-driven variety, then for each arena finds an
+augmenting path, re-routing earlier assignments when needed. Runs in O(V*E),
+so tight or unsatisfiable compatibility graphs no longer trigger the
+exponential blow-up the previous backtracking version could hit. Raises
+``MatchingError`` if no perfect matching exists.
 
 The signature is narrowed to the tag blocks the matcher actually needs:
 

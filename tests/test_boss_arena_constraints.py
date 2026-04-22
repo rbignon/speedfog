@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import random
+import time
 from pathlib import Path
 
 import pytest
@@ -13,7 +14,6 @@ from speedfog.boss_arena_constraints import (
     BossTags,
     EntityTags,
     MatchingError,
-    _mrv_sort,
     is_compatible,
     load_tags,
     match_arenas_to_bosses,
@@ -298,19 +298,45 @@ def test_match_does_not_repeat_bosses() -> None:
     assert len(set(result.values())) == 3
 
 
-def test_mrv_sort_orders_by_ascending_candidate_count() -> None:
-    """Fewest-candidates arena goes first."""
-    arena_ids = [1, 2, 3]
-    candidates = {1: [10, 20, 30], 2: [10], 3: [10, 20]}
-    _mrv_sort(arena_ids, candidates)
-    assert arena_ids == [2, 3, 1]
+def test_match_reroutes_to_satisfy_constrained_arena() -> None:
+    """Exercise the augmenting path: when a permissive arena would greedily
+    claim the only candidate of a constrained one, the matcher must re-route
+    the earlier assignment. The unique valid matching below is reached only if
+    that re-routing works, regardless of which arena the shuffle processes
+    first.
+    """
+    tags = {
+        1: _entity(1, arena_forbids_dragon=True),  # arena 1: only boss 3 fits
+        2: _entity(2, is_dragon=True),  # boss 2 is a dragon
+        3: _entity(3),  # boss 3 fits anywhere
+    }
+    arenas = _arenas_of(tags, [1, 2])
+    bosses = _bosses_of(tags, [2, 3])
+    # Try several seeds so we cover both shuffle orders; every seed must yield
+    # the one valid perfect matching {1: 3, 2: 2}, otherwise the augmenting
+    # logic is broken.
+    for seed in range(32):
+        result = match_arenas_to_bosses(
+            arenas=arenas, bosses=bosses, rng=random.Random(seed), check_size=False
+        )
+        assert result == {1: 3, 2: 2}, f"seed {seed} returned {result}"
 
 
-def test_mrv_sort_is_stable_on_ties() -> None:
-    """Stable sort preserves input order (shuffle order) for ties. The input
-    order [3, 1, 2] must survive the sort because all three have the same
-    candidate count."""
-    arena_ids = [3, 1, 2]
-    candidates = {1: [10, 20], 2: [10, 20], 3: [10, 20]}
-    _mrv_sort(arena_ids, candidates)
-    assert arena_ids == [3, 1, 2]
+def test_match_fails_fast_when_arenas_exceed_pool() -> None:
+    """Regression: backtracking with static MRV used to explore exponentially
+    when no perfect matching could exist (|arenas| > |bosses|). The augmenting
+    path matcher must detect unsatisfiability in polynomial time.
+    """
+    tags = {i: _entity(i) for i in range(1, 101)}
+    # 40 arenas, 20 bosses, every boss compatible with every arena: no perfect
+    # matching possible, but the dense compatibility would blow up a naive
+    # backtracker.
+    arenas = _arenas_of(tags, list(range(1, 41)))
+    bosses = _bosses_of(tags, list(range(50, 70)))
+    t0 = time.perf_counter()
+    with pytest.raises(MatchingError):
+        match_arenas_to_bosses(
+            arenas=arenas, bosses=bosses, rng=random.Random(0), check_size=False
+        )
+    elapsed = time.perf_counter() - t0
+    assert elapsed < 1.0, f"matcher took {elapsed:.2f}s on an unsatisfiable case"

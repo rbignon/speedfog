@@ -85,15 +85,6 @@ class MatchingError(RuntimeError):
     """Raised when no valid arena-boss assignment exists."""
 
 
-def _mrv_sort(arena_ids: list[int], candidates: Mapping[int, list[int]]) -> None:
-    """Reorder ``arena_ids`` in-place: most-constrained (fewest candidates) first.
-
-    Stable sort preserves the caller's input order for ties, so a prior shuffle
-    still drives variety between arenas with the same candidate count.
-    """
-    arena_ids.sort(key=lambda a: len(candidates[a]))
-
-
 def match_arenas_to_bosses(
     *,
     arenas: Mapping[int, ArenaTags],
@@ -103,11 +94,11 @@ def match_arenas_to_bosses(
 ) -> dict[int, int]:
     """Randomly assign each arena a compatible boss, no boss used twice.
 
-    Greedy with backtracking under MRV (most constrained arena first): shuffles
-    both sides for seed-driven variety, then orders arenas by ascending
-    candidate count so pathological branches are pruned early. The stable sort
-    preserves the shuffle order for ties, keeping variety across seeds. Raises
-    ``MatchingError`` if no perfect matching exists.
+    Augmenting-path bipartite matching (Hungarian-style): shuffles both sides
+    for seed-driven variety, then for each arena finds an augmenting path,
+    re-routing earlier assignments when needed. Runs in O(V*E), so tight or
+    unsatisfiable compatibility graphs no longer trigger exponential search.
+    Raises ``MatchingError`` if no perfect matching exists.
 
     Args:
         arenas: arena_id -> ArenaTags for every slot to fill. Iteration order
@@ -135,30 +126,25 @@ def match_arenas_to_bosses(
         rng.shuffle(compat)
         candidates[arena_id] = compat
 
-    _mrv_sort(arena_ids, candidates)
+    boss_to_arena: dict[int, int] = {}
 
-    assignment: dict[int, int] = {}
-    used: set[int] = set()
-
-    def backtrack(idx: int) -> bool:
-        if idx == len(arena_ids):
-            return True
-        arena_id = arena_ids[idx]
+    def try_augment(arena_id: int, visited: set[int]) -> bool:
         for boss_id in candidates[arena_id]:
-            if boss_id in used:
+            if boss_id in visited:
                 continue
-            assignment[arena_id] = boss_id
-            used.add(boss_id)
-            if backtrack(idx + 1):
+            visited.add(boss_id)
+            prev = boss_to_arena.get(boss_id)
+            if prev is None or try_augment(prev, visited):
+                boss_to_arena[boss_id] = arena_id
                 return True
-            used.remove(boss_id)
-            del assignment[arena_id]
         return False
 
-    if not backtrack(0):
-        raise MatchingError(
-            f"No valid arena-boss matching for "
-            f"{len(arenas)} arenas against {len(bosses)} candidates"
-        )
+    for arena_id in arena_ids:
+        if not try_augment(arena_id, set()):
+            raise MatchingError(
+                f"No valid arena-boss matching for "
+                f"{len(arenas)} arenas against {len(bosses)} candidates"
+            )
 
+    assignment = {aid: bid for bid, aid in boss_to_arena.items()}
     return {aid: assignment[aid] for aid in arenas}
