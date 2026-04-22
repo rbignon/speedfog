@@ -405,7 +405,7 @@
     "boss": {
       "size": 1,
       "type": 3,
-      "is_two_phase": false,
+      "is_two_phase": true,
       "is_dragon": false,
       "is_npc": true,
       "can_escape": false,
