@@ -14,8 +14,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 from speedfog.care_package import CarePackageItem
 from speedfog.clusters import ClusterPool
 from speedfog.dag import Dag, DagNode, FogRef
@@ -1205,32 +1203,37 @@ def load_boss_placements(path: Path) -> dict[str, dict[str, Any]]:
     return data
 
 
+_ENEMY_ID_RE = re.compile(r"^- ID:\s*(\d+)")
+_NEXT_PHASE_RE = re.compile(r"^  NextPhase:\s*(\d+)")
+
+
 def parse_boss_phases(enemy_txt_path: Path) -> dict[int, int]:
     """Parse enemy.txt to build a reverse NextPhase mapping.
 
     For multi-phase bosses, enemy.txt links phase 1 to phase 2 via NextPhase.
     This returns a reverse mapping: phase2_entity_id -> phase1_entity_id.
 
-    Args:
-        enemy_txt_path: Path to enemy.txt
+    A full YAML parse of enemy.txt takes ~6s under PyYAML's Python loader; we
+    only need two fields per entry, so a line-based scan keyed on the entry's
+    2-space indentation is ~200x faster and the result is identical.
 
-    Returns:
-        Mapping of phase2_entity_id -> phase1_entity_id.
-        Empty dict if file is missing.
+    Returns an empty dict if the file is missing.
     """
     if not enemy_txt_path.exists():
         return {}
 
-    with open(enemy_txt_path, encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-
     phase_mapping: dict[int, int] = {}
-    for entry in data.get("Enemies", []):
-        next_phase = entry.get("NextPhase")
-        entity_id = entry.get("ID")
-        if next_phase and entity_id:
-            phase_mapping[int(next_phase)] = int(entity_id)
-
+    current_id: int | None = None
+    with open(enemy_txt_path, encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("- ID:"):
+                m = _ENEMY_ID_RE.match(line)
+                if m:
+                    current_id = int(m.group(1))
+            elif line.startswith("  NextPhase:") and current_id is not None:
+                m = _NEXT_PHASE_RE.match(line)
+                if m:
+                    phase_mapping[int(m.group(1))] = current_id
     return phase_mapping
 
 

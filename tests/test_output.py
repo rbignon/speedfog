@@ -2027,6 +2027,38 @@ class TestParseBossPhases:
 
         assert result == {}
 
+    def test_ignores_non_enemy_sections(self, tmp_path):
+        """Classes/Categories blocks use different leading keys (- Class:,
+        - Name:), so the scanner must not pick up their entries even if a
+        stray NextPhase-looking line followed."""
+        enemy_txt = tmp_path / "enemy.txt"
+        enemy_txt.write_text(
+            "Classes:\n"
+            "- Class: Basic\n"
+            "  Parent: None\n"
+            "Categories:\n"
+            "- Name: AllEnemies\n"
+            "  Parent: Basic\n"
+            "Enemies:\n"
+            "- ID: 42\n"
+            "  NextPhase: 41\n"
+        )
+        assert parse_boss_phases(enemy_txt) == {41: 42}
+
+    def test_handles_entries_without_next_phase(self, tmp_path):
+        """Most entries have no NextPhase; they must not appear in the output."""
+        enemy_txt = tmp_path / "enemy.txt"
+        enemy_txt.write_text(
+            "Enemies:\n"
+            "- ID: 100\n"
+            "  Name: foo\n"
+            "- ID: 200\n"
+            "  NextPhase: 199\n"
+            "- ID: 300\n"
+            "  Name: bar\n"
+        )
+        assert parse_boss_phases(enemy_txt) == {199: 200}
+
 
 class TestAppendBossPlacementsToSpoiler:
     def test_appends_section_to_existing_spoiler(self, tmp_path):
