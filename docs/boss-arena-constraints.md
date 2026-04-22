@@ -136,10 +136,39 @@ without schema migration.
 ## Matching algorithm
 
 `speedfog/boss_arena_constraints.py::match_arenas_to_bosses` runs a random
-perfect matching via greedy + backtracking. Majors (``major_boss`` clusters)
-and minors (``boss_arena`` clusters) are matched independently so their pools
-do not mix. The RNG is derived from ``run_seed ^ 0xBA7A5A5A`` so the matching
-is deterministic per run seed while orthogonal to RandomizerCommon's own RNG.
+perfect matching via greedy + backtracking under MRV (most-constrained arena
+first): it shuffles both sides for seed-driven variety, then stable-sorts
+arenas by ascending candidate count so tightly constrained slots are resolved
+before permissive ones. Stable sort preserves the shuffle order on ties, so
+variety across seeds is preserved. Raises ``MatchingError`` if no perfect
+matching exists.
+
+The signature is narrowed to the tag blocks the matcher actually needs:
+
+```python
+match_arenas_to_bosses(
+    *,
+    arenas: Mapping[int, ArenaTags],
+    bosses: Mapping[int, BossTags],
+    rng: random.Random,
+    check_size: bool,
+) -> dict[int, int]
+```
+
+The caller is responsible for any pool pre-filtering (``exclude_from_pool`` is
+applied by ``item_randomizer._compose_pool`` before the matcher runs).
+
+Majors (``major_boss`` clusters) and minors (``boss_arena`` clusters) are
+matched independently so their pools do not mix. The RNG is derived from
+``run_seed ^ 0xBA7A5A5A`` so the matching is deterministic per run seed
+while orthogonal to RandomizerCommon's own RNG.
+
+Strict-error policy: both ``_build_enemy_assignments`` and ``_compose_pool``
+raise ``KeyError`` when an entity ID from the DAG or ``clusters.json`` is
+missing from ``boss_arena_tags.json`` (or has no ``arena`` block when used as
+an arena target). A silent skip there would either leave a vanilla boss in
+the run or quietly shrink the source pool, both without any user-visible
+signal.
 
 ## Multi-phase bosses
 

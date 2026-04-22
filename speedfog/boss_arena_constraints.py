@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import random
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -85,64 +85,65 @@ class MatchingError(RuntimeError):
     """Raised when no valid arena-boss assignment exists."""
 
 
+def _mrv_sort(arena_ids: list[int], candidates: Mapping[int, list[int]]) -> None:
+    """Reorder ``arena_ids`` in-place: most-constrained (fewest candidates) first.
+
+    Stable sort preserves the caller's input order for ties, so a prior shuffle
+    still drives variety between arenas with the same candidate count.
+    """
+    arena_ids.sort(key=lambda a: len(candidates[a]))
+
+
 def match_arenas_to_bosses(
     *,
-    arena_ids: Iterable[int],
-    boss_ids: Iterable[int],
-    tags: Mapping[int, EntityTags],
+    arenas: Mapping[int, ArenaTags],
+    bosses: Mapping[int, BossTags],
     rng: random.Random,
     check_size: bool,
 ) -> dict[int, int]:
     """Randomly assign each arena a compatible boss, no boss used twice.
 
-    Greedy with backtracking: shuffles both sides, then at each step picks the
-    first compatible candidate that has not been used. Backtracks when no
-    candidate works. Raises ``MatchingError`` if no perfect matching exists.
+    Greedy with backtracking under MRV (most constrained arena first): shuffles
+    both sides for seed-driven variety, then orders arenas by ascending
+    candidate count so pathological branches are pruned early. The stable sort
+    preserves the shuffle order for ties, keeping variety across seeds. Raises
+    ``MatchingError`` if no perfect matching exists.
 
     Args:
-        arena_ids: Entity IDs of arenas to fill (order preserved only for
-            logging; the matcher shuffles internally).
-        boss_ids: Candidate boss entity IDs (superset allowed).
-        tags: Tag map covering every id in ``arena_ids`` and ``boss_ids``.
+        arenas: arena_id -> ArenaTags for every slot to fill. Iteration order
+            of the caller's mapping is preserved in the result for stable
+            logging and spoilers.
+        bosses: boss_id -> BossTags candidate pool. Any pre-filtering (e.g.
+            ``exclude_from_pool``) must be applied by the caller.
         rng: Seeded RNG for deterministic output.
         check_size: Apply the size constraint (``boss.size <= arena.size``).
 
     Returns:
         Mapping arena_id -> boss_id.
     """
-    arenas = list(arena_ids)
-    bosses = list(boss_ids)
-    missing = [i for i in (*arenas, *bosses) if i not in tags]
-    if missing:
-        raise KeyError(f"tags missing entries: {missing}")
-
-    # Excluded bosses never appear as sources, but their own arenas remain valid
-    # targets (they can receive a replacement from the pool).
-    eligible_sources = [b for b in bosses if not tags[b].boss.exclude_from_pool]
-
-    shuffled_arenas = arenas[:]
-    rng.shuffle(shuffled_arenas)
+    arena_ids = list(arenas.keys())
+    rng.shuffle(arena_ids)
 
     candidates: dict[int, list[int]] = {}
-    for arena_id in shuffled_arenas:
-        arena = tags[arena_id].arena
-        if arena is None:
-            raise ValueError(f"arena_id {arena_id} has no arena block in tags")
+    for arena_id in arena_ids:
+        arena = arenas[arena_id]
         compat = [
             bid
-            for bid in eligible_sources
-            if is_compatible(arena, tags[bid].boss, check_size=check_size)
+            for bid, btags in bosses.items()
+            if is_compatible(arena, btags, check_size=check_size)
         ]
         rng.shuffle(compat)
         candidates[arena_id] = compat
+
+    _mrv_sort(arena_ids, candidates)
 
     assignment: dict[int, int] = {}
     used: set[int] = set()
 
     def backtrack(idx: int) -> bool:
-        if idx == len(shuffled_arenas):
+        if idx == len(arena_ids):
             return True
-        arena_id = shuffled_arenas[idx]
+        arena_id = arena_ids[idx]
         for boss_id in candidates[arena_id]:
             if boss_id in used:
                 continue
@@ -160,6 +161,4 @@ def match_arenas_to_bosses(
             f"{len(arenas)} arenas against {len(bosses)} candidates"
         )
 
-    # Callers iterate this dict for logging and spoiler output; preserving
-    # the caller's arena_ids order keeps those outputs stable.
     return {aid: assignment[aid] for aid in arenas}

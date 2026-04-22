@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import Any
 
 from speedfog.boss_arena_constraints import (
+    ArenaTags,
+    BossTags,
     EntityTags,
     match_arenas_to_bosses,
 )
@@ -40,9 +42,9 @@ def generate_item_config(
     ``vanilla_major_ids`` / ``vanilla_minor_ids`` are the entity IDs from the
     current ``clusters.json`` whose ``cluster.type`` is ``major_boss`` /
     ``boss_arena`` respectively. They are combined with the source-only
-    entries from ``tags`` (entities with ``pool = "minor" | "major"``) to form
-    the matcher's source pools. Entities with ``boss.exclude_from_pool = True``
-    are filtered out of the source pool by ``match_arenas_to_bosses``.
+    entries from ``tags`` (entities with ``pool = "minor" | "major"``) by
+    ``_compose_pool``, which also drops entries with
+    ``boss.exclude_from_pool = True`` before the matcher runs.
 
     ``phase_mapping`` (from ``speedfog.output.parse_boss_phases``) maps
     ``phase2_entity_id -> phase1_entity_id`` for multi-phase bosses. When a
@@ -128,13 +130,34 @@ def generate_item_config(
 
 def _compose_pool(
     tags: Mapping[int, EntityTags], kind: str, vanilla_ids: Iterable[int]
-) -> list[int]:
-    """Combine vanilla IDs of a given ``cluster.type`` with source-only
-    entries whose ``pool`` field matches ``kind``.
+) -> dict[int, BossTags]:
+    """Combine vanilla IDs of a given ``cluster.type`` with source-only entries
+    whose ``pool`` field matches ``kind``. Entries with
+    ``boss.exclude_from_pool = True`` are dropped here: the filter belongs at
+    pool composition, not inside the matcher.
+
+    Raises ``KeyError`` for any ``vanilla_ids`` entry missing from ``tags``:
+    those come from ``clusters.json`` boss clusters, so an untagged vanilla
+    boss is a data gap worth surfacing (consistent with the strict check in
+    ``_build_enemy_assignments``).
+
+    The returned dict is key-sorted so seed-to-result stability does not
+    depend on the iteration order of ``tags`` or ``vanilla_ids``.
     """
-    ids = {eid for eid in vanilla_ids if eid in tags}
-    ids.update(eid for eid, entry in tags.items() if entry.pool == kind)
-    return sorted(ids)
+    pool: dict[int, BossTags] = {}
+    for eid in vanilla_ids:
+        entry = tags.get(eid)
+        if entry is None:
+            raise KeyError(
+                f"vanilla {kind} boss entity {eid} missing from "
+                f"boss_arena_tags.json"
+            )
+        if not entry.boss.exclude_from_pool:
+            pool[eid] = entry.boss
+    for eid, entry in tags.items():
+        if entry.pool == kind and not entry.boss.exclude_from_pool:
+            pool[eid] = entry.boss
+    return dict(sorted(pool.items()))
 
 
 # Seed salt to decorrelate the matcher RNG stream from the main run seed
@@ -147,8 +170,8 @@ def _build_enemy_assignments(
     *,
     boss_clusters: Iterable[ClusterData],
     tags: Mapping[int, EntityTags],
-    major_pool: list[int],
-    minor_pool: list[int],
+    major_pool: dict[int, BossTags],
+    minor_pool: dict[int, BossTags],
     phase_mapping: Mapping[int, int],
     randomize_majors: bool,
     check_size: bool,
@@ -160,30 +183,51 @@ def _build_enemy_assignments(
     receive majors and vice versa. Multi-phase bosses with separate phase
     entities (per ``phase_mapping``) get one independent slot per phase, both
     drawn from the same pool without pairing.
+
+    Raises ``KeyError`` if a DAG boss cluster's leader (or its phase-1
+    sibling) has no entry in ``tags`` or no ``arena`` block. A silent skip
+    there would leave a vanilla boss in the run without any signal.
     """
-    majors: list[int] = []
-    minors: list[int] = []
+    majors: dict[int, ArenaTags] = {}
+    minors: dict[int, ArenaTags] = {}
     for cluster in boss_clusters:
         leader = resolve_entity_id(cluster.defeat_flag)
-        if leader == 0 or leader not in tags:
-            continue
         slots = [leader]
         phase1 = phase_mapping.get(leader)
-        if phase1 is not None and phase1 in tags:
+        if phase1 is not None:
             slots.append(phase1)
+
+        target: dict[int, ArenaTags] | None
         if cluster.type == "major_boss":
-            majors.extend(slots)
+            target = majors
         elif cluster.type == "boss_arena":
-            minors.extend(slots)
+            target = minors
+        else:
+            target = None
+        if target is None:
+            continue
+
+        for eid in slots:
+            entry = tags.get(eid)
+            if entry is None:
+                raise KeyError(
+                    f"cluster {cluster.id!r} entity {eid} missing from "
+                    f"boss_arena_tags.json"
+                )
+            if entry.arena is None:
+                raise KeyError(
+                    f"cluster {cluster.id!r} entity {eid} has no arena block "
+                    f"in boss_arena_tags.json"
+                )
+            target[eid] = entry.arena
 
     rng = random.Random(seed ^ BOSS_ASSIGNMENT_SEED_SALT)
     out: dict[int, int] = {}
     if minors:
         out.update(
             match_arenas_to_bosses(
-                arena_ids=minors,
-                boss_ids=minor_pool,
-                tags=tags,
+                arenas=minors,
+                bosses=minor_pool,
                 rng=rng,
                 check_size=check_size,
             )
@@ -191,9 +235,8 @@ def _build_enemy_assignments(
     if randomize_majors and majors:
         out.update(
             match_arenas_to_bosses(
-                arena_ids=majors,
-                boss_ids=major_pool,
-                tags=tags,
+                arenas=majors,
+                bosses=major_pool,
                 rng=rng,
                 check_size=check_size,
             )

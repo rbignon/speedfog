@@ -13,6 +13,7 @@ from speedfog.boss_arena_constraints import (
     BossTags,
     EntityTags,
     MatchingError,
+    _mrv_sort,
     is_compatible,
     load_tags,
     match_arenas_to_bosses,
@@ -207,20 +208,29 @@ def _entity(
     )
 
 
+def _arenas_of(tags: dict[int, EntityTags], ids: list[int]) -> dict[int, ArenaTags]:
+    result: dict[int, ArenaTags] = {}
+    for i in ids:
+        arena = tags[i].arena
+        assert arena is not None, f"entity {i} has no arena block"
+        result[i] = arena
+    return result
+
+
+def _bosses_of(tags: dict[int, EntityTags], ids: list[int]) -> dict[int, BossTags]:
+    return {i: tags[i].boss for i in ids}
+
+
 def test_match_returns_perfect_assignment() -> None:
     tags = {
         1: _entity(1),
         2: _entity(2),
         3: _entity(3),
     }
-    arenas = [1, 2]
-    bosses = [1, 2, 3]
-    rng = random.Random(42)
     result = match_arenas_to_bosses(
-        arena_ids=arenas,
-        boss_ids=bosses,
-        tags=tags,
-        rng=rng,
+        arenas=_arenas_of(tags, [1, 2]),
+        bosses=_bosses_of(tags, [1, 2, 3]),
+        rng=random.Random(42),
         check_size=False,
     )
     assert set(result.keys()) == {1, 2}
@@ -230,17 +240,17 @@ def test_match_returns_perfect_assignment() -> None:
 
 def test_match_is_deterministic_for_same_seed() -> None:
     tags = {i: _entity(i) for i in range(1, 6)}
+    arenas = _arenas_of(tags, [1, 2, 3])
+    bosses = _bosses_of(tags, [1, 2, 3, 4, 5])
     r1 = match_arenas_to_bosses(
-        arena_ids=[1, 2, 3],
-        boss_ids=[1, 2, 3, 4, 5],
-        tags=tags,
+        arenas=arenas,
+        bosses=bosses,
         rng=random.Random(123),
         check_size=False,
     )
     r2 = match_arenas_to_bosses(
-        arena_ids=[1, 2, 3],
-        boss_ids=[1, 2, 3, 4, 5],
-        tags=tags,
+        arenas=arenas,
+        bosses=bosses,
         rng=random.Random(123),
         check_size=False,
     )
@@ -254,9 +264,8 @@ def test_match_respects_dragon_constraint() -> None:
         3: _entity(3),
     }
     result = match_arenas_to_bosses(
-        arena_ids=[1],
-        boss_ids=[2, 3],
-        tags=tags,
+        arenas=_arenas_of(tags, [1]),
+        bosses=_bosses_of(tags, [2, 3]),
         rng=random.Random(0),
         check_size=False,
     )
@@ -271,9 +280,8 @@ def test_match_raises_when_unsatisfiable() -> None:
     }
     with pytest.raises(MatchingError):
         match_arenas_to_bosses(
-            arena_ids=[1],
-            boss_ids=[2],
-            tags=tags,
+            arenas=_arenas_of(tags, [1]),
+            bosses=_bosses_of(tags, [2]),
             rng=random.Random(0),
             check_size=False,
         )
@@ -282,58 +290,27 @@ def test_match_raises_when_unsatisfiable() -> None:
 def test_match_does_not_repeat_bosses() -> None:
     tags = {i: _entity(i) for i in range(1, 6)}
     result = match_arenas_to_bosses(
-        arena_ids=[1, 2, 3],
-        boss_ids=[1, 2, 3, 4, 5],
-        tags=tags,
+        arenas=_arenas_of(tags, [1, 2, 3]),
+        bosses=_bosses_of(tags, [1, 2, 3, 4, 5]),
         rng=random.Random(7),
         check_size=False,
     )
     assert len(set(result.values())) == 3
 
 
-def test_match_filters_exclude_from_pool_sources() -> None:
-    """Bosses with exclude_from_pool=True are never picked as sources,
-    even though they remain valid arenas."""
-    tags = {
-        1: _entity(1),
-        2: _entity(2, exclude_from_pool=True),  # cannot be a source
-        3: _entity(3),
-    }
-    result = match_arenas_to_bosses(
-        arena_ids=[1, 2],
-        boss_ids=[1, 2, 3],
-        tags=tags,
-        rng=random.Random(99),
-        check_size=False,
-    )
-    assert 2 not in set(result.values())
-    assert result[2] in {1, 3}
+def test_mrv_sort_orders_by_ascending_candidate_count() -> None:
+    """Fewest-candidates arena goes first."""
+    arena_ids = [1, 2, 3]
+    candidates = {1: [10, 20, 30], 2: [10], 3: [10, 20]}
+    _mrv_sort(arena_ids, candidates)
+    assert arena_ids == [2, 3, 1]
 
 
-def test_match_raises_keyerror_when_tags_missing_ids() -> None:
-    """arena_ids and boss_ids must have entries in tags."""
-    tags = {1: _entity(1)}
-    with pytest.raises(KeyError, match="tags missing entries"):
-        match_arenas_to_bosses(
-            arena_ids=[1],
-            boss_ids=[2],  # not in tags
-            tags=tags,
-            rng=random.Random(0),
-            check_size=False,
-        )
-
-
-def test_match_raises_valueerror_for_source_only_arena() -> None:
-    """An arena_id pointing to a source-only entity (no arena block) is invalid."""
-    tags = {
-        1: _entity(1, source_only=True),  # no arena block
-        2: _entity(2),
-    }
-    with pytest.raises(ValueError, match="no arena block"):
-        match_arenas_to_bosses(
-            arena_ids=[1],
-            boss_ids=[2],
-            tags=tags,
-            rng=random.Random(0),
-            check_size=False,
-        )
+def test_mrv_sort_is_stable_on_ties() -> None:
+    """Stable sort preserves input order (shuffle order) for ties. The input
+    order [3, 1, 2] must survive the sort because all three have the same
+    candidate count."""
+    arena_ids = [3, 1, 2]
+    candidates = {1: [10, 20], 2: [10, 20], 3: [10, 20]}
+    _mrv_sort(arena_ids, candidates)
+    assert arena_ids == [3, 1, 2]

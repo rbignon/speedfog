@@ -4,10 +4,16 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock
 
+import pytest
+
 from speedfog.boss_arena_constraints import ArenaTags, BossTags, EntityTags
 from speedfog.clusters import ClusterData
 from speedfog.config import Config
-from speedfog.item_randomizer import generate_item_config, run_item_randomizer
+from speedfog.item_randomizer import (
+    _compose_pool,
+    generate_item_config,
+    run_item_randomizer,
+)
 
 
 def _boss_cluster(
@@ -277,6 +283,109 @@ def test_generate_item_config_includes_assignments_for_major():
     )
     assert "enemy_assignments" in result
     assert result["enemy_assignments"] == {"1000": "2000"}
+
+
+def test_compose_pool_merges_vanilla_and_source_only_entries():
+    """Vanilla IDs for ``kind`` plus source-only entries with matching ``pool``
+    are unioned; the filter ``exclude_from_pool`` drops entries from either
+    source; the result is key-sorted for stable iteration."""
+    tags = {
+        100: _entity(100, pool="major"),  # source-only major
+        200: _entity(200),  # vanilla, not excluded
+        300: _entity(300, exclude_from_pool=True),  # vanilla, excluded
+        400: _entity(400, pool="minor"),  # source-only minor (wrong kind)
+    }
+    pool = _compose_pool(tags, "major", vanilla_ids=[200, 300])
+    assert list(pool.keys()) == [100, 200]
+    # Filter scope: excluded (300) absent, wrong-kind source-only (400) absent.
+    assert 300 not in pool
+    assert 400 not in pool
+
+
+def test_compose_pool_raises_when_vanilla_id_missing_from_tags():
+    """A vanilla boss entity from clusters.json that is absent from
+    boss_arena_tags.json is a data gap, not a silent skip."""
+    tags = {100: _entity(100)}
+    with pytest.raises(KeyError, match="9999"):
+        _compose_pool(tags, "major", vanilla_ids=[9999])
+
+
+def test_generate_item_config_raises_when_cluster_leader_missing_from_tags():
+    """A DAG boss cluster whose entity has no tag entry is a config error,
+    not something to silently skip (the run would keep a vanilla boss)."""
+    config = Config.from_dict({"enemy": {"randomize_bosses": "all"}})
+    boss_clusters = [_boss_cluster("c1", "major_boss", defeat_flag=9999)]
+    tags = {2000: _entity(2000)}  # 9999 is absent
+    with pytest.raises(KeyError, match="9999"):
+        generate_item_config(
+            config,
+            seed=1,
+            boss_clusters=boss_clusters,
+            tags=tags,
+            vanilla_major_ids=[2000],
+            vanilla_minor_ids=[],
+            phase_mapping={},
+        )
+
+
+def test_generate_item_config_raises_when_cluster_leader_has_no_arena_block():
+    """An entity that is source-only (no arena block) cannot be an arena target."""
+    config = Config.from_dict({"enemy": {"randomize_bosses": "all"}})
+    boss_clusters = [_boss_cluster("c1", "major_boss", defeat_flag=1000)]
+    source_only = EntityTags(
+        entity_id=1000,
+        name="orphan",
+        region=1,
+        scaling=1,
+        dlc=False,
+        pool="major",
+        boss=BossTags(
+            size=1,
+            type=1,
+            is_two_phase=False,
+            is_dragon=False,
+            is_npc=False,
+            can_escape=False,
+            night_boss=False,
+            exclude_from_pool=False,
+        ),
+        arena=None,
+    )
+    tags = {1000: source_only, 2000: _entity(2000)}
+    with pytest.raises(KeyError, match="no arena block"):
+        generate_item_config(
+            config,
+            seed=1,
+            boss_clusters=boss_clusters,
+            tags=tags,
+            vanilla_major_ids=[2000],
+            vanilla_minor_ids=[],
+            phase_mapping={},
+        )
+
+
+def test_generate_item_config_pool_excludes_from_pool_entries():
+    """Entities with boss.exclude_from_pool=True are filtered at pool
+    composition: they never appear as sources, but their arena can still
+    receive a replacement."""
+    config = Config.from_dict({"enemy": {"randomize_bosses": "all"}})
+    boss_clusters = [_boss_cluster("c1", "major_boss", defeat_flag=1000)]
+    tags = {
+        1000: _entity(1000),  # arena target, also self-source
+        2000: _entity(2000, exclude_from_pool=True),  # never a source
+        3000: _entity(3000),
+    }
+    result = generate_item_config(
+        config,
+        seed=42,
+        boss_clusters=boss_clusters,
+        tags=tags,
+        vanilla_major_ids=[1000, 2000, 3000],
+        vanilla_minor_ids=[],
+        phase_mapping={},
+    )
+    # Arena 1000 can receive any non-excluded source, but never 2000.
+    assert result["enemy_assignments"]["1000"] in {"1000", "3000"}
 
 
 def test_generate_item_config_expands_multi_phase_slots():
