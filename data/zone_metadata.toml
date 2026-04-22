@@ -194,7 +194,6 @@ allow_entry_as_exit = false
 weight = 3
 
 [zones.siofra_boss]
-type = "major_boss"
 weight = 2
 
 [zones.siofra_nokron_boss]
