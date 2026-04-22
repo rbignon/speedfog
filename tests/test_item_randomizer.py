@@ -309,6 +309,74 @@ def test_compose_pool_raises_when_vanilla_id_missing_from_tags():
         _compose_pool(tags, "major", vanilla_ids=[9999])
 
 
+def test_compose_pool_includes_phase1_siblings_of_vanilla_leaders():
+    """Phase-1 entities are independent arena slots (see
+    ``_build_enemy_assignments``) but share the pool of their phase-2 leader.
+    Without symmetrising the pool here the matcher can hit ``|arenas| >
+    |pool|`` purely because of phase expansion. Matches BossArenaRandomizer,
+    where every entity is both arena and boss.
+    """
+    tags = {
+        100: _entity(100),  # vanilla leader, two-phase boss
+        101: _entity(101),  # its phase-1 sibling
+        200: _entity(200),  # another vanilla leader, single phase
+        999: _entity(999, exclude_from_pool=True),  # excluded phase-1
+        998: _entity(998),  # phase-1 of a leader not in vanilla_ids
+    }
+    phase_mapping = {100: 101, 200: 999, 500: 998}
+    pool = _compose_pool(
+        tags, "major", vanilla_ids=[100, 200], phase_mapping=phase_mapping
+    )
+    # 101 added because its leader 100 is a vanilla major.
+    assert 101 in pool
+    # 999 rejected by exclude_from_pool, same rule as leaders.
+    assert 999 not in pool
+    # 998 skipped because leader 500 is not in vanilla_ids (its cluster would
+    # not be in the DAG either).
+    assert 998 not in pool
+    assert sorted(pool) == [100, 101, 200]
+
+
+def test_compose_pool_phase1_with_matching_source_pool_not_double_counted():
+    """A phase-1 entity tagged ``pool = "major"`` reaches the pool through
+    both the phase-mapping branch and the source-only sweep. Dict semantics
+    prevent a duplicate; the entry appears exactly once with its real
+    ``BossTags``.
+    """
+    tags = {
+        100: _entity(100),  # vanilla major leader
+        101: _entity(101, pool="major"),  # phase-1 sibling also source-tagged
+    }
+    pool = _compose_pool(tags, "major", vanilla_ids=[100], phase_mapping={100: 101})
+    assert list(pool) == [100, 101]
+    assert pool[101] is tags[101].boss
+
+
+def test_compose_pool_minor_kind_ignores_major_only_phase_mapping():
+    """Both call sites pass the full ``phase_mapping`` to both pools. When
+    ``kind`` is minor and every mapped leader is a major (as in real data),
+    the minor pool stays unchanged.
+    """
+    tags = {
+        100: _entity(100),  # major leader
+        101: _entity(101),  # its phase-1 sibling
+        200: _entity(200, pool="minor"),  # source-only minor
+    }
+    pool = _compose_pool(tags, "minor", vanilla_ids=[], phase_mapping={100: 101})
+    assert list(pool) == [200]
+
+
+def test_compose_pool_phase1_missing_from_tags_is_silent():
+    """A leader may have a phase mapping whose phase-1 entity is absent from
+    the tag file (partial data). That's a tolerable gap, not fatal: the
+    leader's own slot still gets an assignment. The strict check stays on
+    ``vanilla_ids`` where a gap indicates a misconfigured cluster.
+    """
+    tags = {100: _entity(100)}
+    pool = _compose_pool(tags, "major", vanilla_ids=[100], phase_mapping={100: 777})
+    assert list(pool) == [100]
+
+
 def test_generate_item_config_raises_when_cluster_leader_missing_from_tags():
     """A DAG boss cluster whose entity has no tag entry is a config error,
     not something to silently skip (the run would keep a vanilla boss)."""

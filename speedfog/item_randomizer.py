@@ -107,8 +107,12 @@ def generate_item_config(
         if tags is None:
             raise ValueError("tags required when randomize_bosses != 'none'")
 
-        major_pool = _compose_pool(tags, "major", vanilla_major_ids)
-        minor_pool = _compose_pool(tags, "minor", vanilla_minor_ids)
+        major_pool = _compose_pool(
+            tags, "major", vanilla_major_ids, phase_mapping=phase_mapping
+        )
+        minor_pool = _compose_pool(
+            tags, "minor", vanilla_minor_ids, phase_mapping=phase_mapping
+        )
 
         assignments = _build_enemy_assignments(
             boss_clusters=boss_clusters,
@@ -129,12 +133,27 @@ def generate_item_config(
 
 
 def _compose_pool(
-    tags: Mapping[int, EntityTags], kind: str, vanilla_ids: Iterable[int]
+    tags: Mapping[int, EntityTags],
+    kind: str,
+    vanilla_ids: Iterable[int],
+    phase_mapping: Mapping[int, int] | None = None,
 ) -> dict[int, BossTags]:
     """Combine vanilla IDs of a given ``cluster.type`` with source-only entries
     whose ``pool`` field matches ``kind``. Entries with
     ``boss.exclude_from_pool = True`` are dropped here: the filter belongs at
     pool composition, not inside the matcher.
+
+    When ``phase_mapping`` is provided, the phase-1 sibling of each vanilla
+    leader is also added to the pool. ``_build_enemy_assignments`` already
+    expands phase-1 slots on the arena side; without the matching pool
+    expansion the matcher can hit ``|arenas| > |pool|`` purely from phase
+    splits. This mirrors BossArenaRandomizer where every entity is both an
+    arena and a boss. Phase-1 IDs absent from ``tags`` are silently skipped
+    (tolerable partial data); the strict missing-tag error stays on
+    ``vanilla_ids`` where a gap signals a misconfigured cluster. The leader
+    membership test uses the full ``vanilla_ids`` set rather than ``pool``
+    so an ``exclude_from_pool`` leader still gates inclusion of its phase-1
+    sibling (the sibling is an independent entity with its own exclude flag).
 
     Raises ``KeyError`` for any ``vanilla_ids`` entry missing from ``tags``:
     those come from ``clusters.json`` boss clusters, so an untagged vanilla
@@ -145,6 +164,7 @@ def _compose_pool(
     depend on the iteration order of ``tags`` or ``vanilla_ids``.
     """
     pool: dict[int, BossTags] = {}
+    vanilla_set: set[int] = set()
     for eid in vanilla_ids:
         entry = tags.get(eid)
         if entry is None:
@@ -152,8 +172,18 @@ def _compose_pool(
                 f"vanilla {kind} boss entity {eid} missing from "
                 f"boss_arena_tags.json"
             )
+        vanilla_set.add(eid)
         if not entry.boss.exclude_from_pool:
             pool[eid] = entry.boss
+    if phase_mapping:
+        for leader, phase1 in phase_mapping.items():
+            if leader not in vanilla_set:
+                continue
+            entry = tags.get(phase1)
+            if entry is None:
+                continue
+            if not entry.boss.exclude_from_pool:
+                pool[phase1] = entry.boss
     for eid, entry in tags.items():
         if entry.pool == kind and not entry.boss.exclude_from_pool:
             pool[eid] = entry.boss

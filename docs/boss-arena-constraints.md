@@ -187,6 +187,13 @@ When a cluster's leader has a phase-1 sibling in that mapping,
 arena slot. Both slots are drawn from the same pool without pairing
 constraint: Fire Giant's phase 1 can legally receive a single-phase boss.
 
+For symmetry, ``_compose_pool`` also adds each phase-1 entity whose
+phase-2 leader is in ``vanilla_ids`` to the pool. This mirrors
+BossArenaRandomizer, where every entity is both arena and boss, and
+prevents ``|arenas| > |pool|`` deficits caused purely by the phase-1
+arena expansion above (e.g. six phase-1 majors widening both sides of the
+bipartite graph instead of only the arena side).
+
 ## Config flags
 
 | Flag | Effect |
