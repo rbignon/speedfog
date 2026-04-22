@@ -297,7 +297,6 @@ def test_compose_pool_merges_vanilla_and_source_only_entries():
     }
     pool = _compose_pool(tags, "major", vanilla_ids=[200, 300])
     assert list(pool.keys()) == [100, 200]
-    # Filter scope: excluded (300) absent, wrong-kind source-only (400) absent.
     assert 300 not in pool
     assert 400 not in pool
 

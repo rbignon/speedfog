@@ -190,23 +190,16 @@ def _build_enemy_assignments(
     """
     majors: dict[int, ArenaTags] = {}
     minors: dict[int, ArenaTags] = {}
+    buckets = {"major_boss": majors, "boss_arena": minors}
     for cluster in boss_clusters:
+        target = buckets.get(cluster.type)
+        if target is None:
+            continue
         leader = resolve_entity_id(cluster.defeat_flag)
         slots = [leader]
         phase1 = phase_mapping.get(leader)
         if phase1 is not None:
             slots.append(phase1)
-
-        target: dict[int, ArenaTags] | None
-        if cluster.type == "major_boss":
-            target = majors
-        elif cluster.type == "boss_arena":
-            target = minors
-        else:
-            target = None
-        if target is None:
-            continue
-
         for eid in slots:
             entry = tags.get(eid)
             if entry is None:
@@ -223,24 +216,14 @@ def _build_enemy_assignments(
 
     rng = random.Random(seed ^ BOSS_ASSIGNMENT_SEED_SALT)
     out: dict[int, int] = {}
-    if minors:
-        out.update(
-            match_arenas_to_bosses(
-                arenas=minors,
-                bosses=minor_pool,
-                rng=rng,
-                check_size=check_size,
+    jobs = [(minors, minor_pool, True), (majors, major_pool, randomize_majors)]
+    for arenas, pool, enabled in jobs:
+        if enabled and arenas:
+            out.update(
+                match_arenas_to_bosses(
+                    arenas=arenas, bosses=pool, rng=rng, check_size=check_size
+                )
             )
-        )
-    if randomize_majors and majors:
-        out.update(
-            match_arenas_to_bosses(
-                arenas=majors,
-                bosses=major_pool,
-                rng=rng,
-                check_size=check_size,
-            )
-        )
     return out
 
 
