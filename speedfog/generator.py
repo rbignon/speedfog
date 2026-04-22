@@ -2975,6 +2975,7 @@ def generate_with_retry(
     max_attempts: int = 100,
     *,
     boss_candidates: list[ClusterData],
+    post_validate: Callable[[Dag, int], None] | None = None,
 ) -> GenerationResult:
     """Generate DAG with automatic retry on failure.
 
@@ -2986,6 +2987,12 @@ def generate_with_retry(
         clusters: Cluster pool
         max_attempts: Maximum retry attempts (only for seed=0)
         boss_candidates: Pre-filtered list of clusters eligible as final boss.
+        post_validate: Optional hook run after structural validation. Receives
+            ``(dag, seed)``. Raising ``GenerationError`` triggers a reroll in
+            auto mode, or propagates under a fixed seed. Used by callers to
+            reject DAGs that survive structural checks but fail a downstream
+            constraint (e.g. no feasible boss-arena matching). Its outcome is
+            not reflected in the returned ``GenerationResult.validation``.
 
     Returns:
         GenerationResult with DAG, seed, validation, and attempt count.
@@ -3009,6 +3016,8 @@ def generate_with_retry(
         if not validation.is_valid:
             errors = "; ".join(validation.errors)
             raise GenerationError(f"Validation failed: {errors}")
+        if post_validate is not None:
+            post_validate(dag, config.seed)
         return GenerationResult(
             dag=dag,
             seed=config.seed,
@@ -3030,6 +3039,8 @@ def generate_with_retry(
             if not validation.is_valid:
                 errors = "; ".join(validation.errors)
                 raise GenerationError(f"Validation failed: {errors}")
+            if post_validate is not None:
+                post_validate(dag, seed)
             return GenerationResult(
                 dag=dag,
                 seed=seed,

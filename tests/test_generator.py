@@ -608,6 +608,70 @@ class TestGenerateWithRetry:
         with pytest.raises(GenerationError):
             generate_with_retry(config, pool, boss_candidates=_boss_candidates(pool))
 
+    def test_post_validate_triggers_retry_in_auto_mode(self):
+        """post_validate rejecting the first N seeds forces the loop to keep
+        rerolling, and the accepted (dag, seed) is what the hook last saw."""
+        pool = make_cluster_pool()
+        config = Config()
+        config.seed = 0
+        config.structure.min_layers = 3
+        config.structure.max_layers = 3
+        config.structure.max_branches = 1
+        config.structure.split_probability = 0.0
+        config.structure.merge_probability = 0.0
+        config.requirements.legacy_dungeons = 0
+        config.requirements.bosses = 0
+        config.requirements.mini_dungeons = 0
+
+        seen: list[tuple[object, int]] = []
+
+        def post_validate(dag, seed):
+            seen.append((dag, seed))
+            if len(seen) < 3:
+                raise GenerationError("simulated matcher failure")
+
+        result = generate_with_retry(
+            config,
+            pool,
+            max_attempts=20,
+            boss_candidates=_boss_candidates(pool),
+            post_validate=post_validate,
+        )
+
+        assert len(seen) == 3
+        assert result.attempts == 3
+        # The returned DAG/seed must match the last (dag, seed) the hook
+        # accepted, not an earlier rejected one.
+        last_dag, last_seed = seen[-1]
+        assert result.seed == last_seed
+        assert result.dag is last_dag
+
+    def test_post_validate_fixed_seed_propagates(self):
+        """post_validate failing under a fixed seed surfaces the error instead
+        of silently passing."""
+        pool = make_cluster_pool()
+        config = Config()
+        config.seed = 99999
+        config.structure.min_layers = 3
+        config.structure.max_layers = 3
+        config.structure.max_branches = 1
+        config.structure.split_probability = 0.0
+        config.structure.merge_probability = 0.0
+        config.requirements.legacy_dungeons = 0
+        config.requirements.bosses = 0
+        config.requirements.mini_dungeons = 0
+
+        def post_validate(dag, seed):
+            raise GenerationError("matcher infeasible")
+
+        with pytest.raises(GenerationError, match="matcher infeasible"):
+            generate_with_retry(
+                config,
+                pool,
+                boss_candidates=_boss_candidates(pool),
+                post_validate=post_validate,
+            )
+
 
 class TestValidateConfig:
     """Tests for validate_config function."""

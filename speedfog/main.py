@@ -9,7 +9,7 @@ import sys
 import time
 from pathlib import Path
 
-from speedfog.boss_arena_constraints import load_tags
+from speedfog.boss_arena_constraints import MatchingError, load_tags
 from speedfog.care_package import sample_care_package
 from speedfog.clusters import load_clusters
 from speedfog.config import Config, load_config
@@ -196,12 +196,66 @@ def main() -> int:
         mode = "fixed seed" if config.seed != 0 else "auto-reroll"
         print(f"Generating DAG ({mode})...")
 
+    def _vanilla_ids_of_type(t: str) -> list[int]:
+        out: list[int] = []
+        for c in clusters.get_by_type(t):
+            eid = resolve_entity_id(c.defeat_flag)
+            if eid:
+                out.append(eid)
+        return out
+
+    # Pre-load boss-arena matching inputs so we can reject DAGs whose
+    # selected arenas admit no feasible boss assignment. Without this check
+    # MatchingError escapes after all the per-seed files have been written,
+    # instead of rerolling into a satisfiable topology.
+    enemy_txt_path = clusters_path.parent / "enemy.txt"
+    assignment_tags = None
+    assignment_major_ids: list[int] = []
+    assignment_minor_ids: list[int] = []
+    assignment_phase_mapping: dict[int, int] = {}
+    post_validate = None
+    if config.item_randomizer.enabled:
+        # Phase mapping is also consumed by patch_graph_boss_placements,
+        # regardless of the randomize_bosses setting.
+        assignment_phase_mapping = parse_boss_phases(enemy_txt_path)
+    if config.item_randomizer.enabled and config.enemy.randomize_bosses != "none":
+        assignment_tags = load_tags(project_root / "data" / "boss_arena_tags.json")
+        assignment_major_ids = _vanilla_ids_of_type("major_boss")
+        assignment_minor_ids = _vanilla_ids_of_type("boss_arena")
+
+        # Cache the accepted item_config so the downstream writer step
+        # doesn't re-run the matcher on the same inputs.
+        accepted_item_config: dict = {}
+
+        def post_validate(dag, seed):
+            boss_clusters = [
+                n.cluster
+                for n in dag.nodes.values()
+                if n.cluster.type in ("boss_arena", "major_boss")
+                and n.cluster.defeat_flag
+            ]
+            try:
+                cfg = generate_item_config(
+                    config,
+                    seed,
+                    boss_clusters=boss_clusters,
+                    tags=assignment_tags,
+                    vanilla_major_ids=assignment_major_ids,
+                    vanilla_minor_ids=assignment_minor_ids,
+                    phase_mapping=assignment_phase_mapping,
+                )
+            except MatchingError as e:
+                raise GenerationError(f"boss-arena matching infeasible: {e}") from e
+            accepted_item_config.clear()
+            accepted_item_config.update(cfg)
+
     try:
         result = generate_with_retry(
             config,
             clusters,
             max_attempts=args.max_attempts,
             boss_candidates=boss_candidates,
+            post_validate=post_validate,
         )
     except GenerationError as e:
         print(f"Error: Generation failed: {e}", file=sys.stderr)
@@ -315,41 +369,27 @@ def main() -> int:
     if config.item_randomizer.enabled:
         timer.step("Item Randomizer")
 
-        # Generate item_config.json
-        enemy_txt_path = clusters_path.parent / "enemy.txt"
-        phase_mapping = parse_boss_phases(enemy_txt_path)
-
-        def _vanilla_ids_of_type(t: str) -> list[int]:
-            out: list[int] = []
-            for c in clusters.get_by_type(t):
-                eid = resolve_entity_id(c.defeat_flag)
-                if eid:
-                    out.append(eid)
-            return out
-
-        if config.enemy.randomize_bosses != "none":
-            tags = load_tags(project_root / "data" / "boss_arena_tags.json")
-            vanilla_major_ids = _vanilla_ids_of_type("major_boss")
-            vanilla_minor_ids = _vanilla_ids_of_type("boss_arena")
+        # When boss randomization is active the accepted item_config was
+        # already computed by post_validate; reuse it. Otherwise the matcher
+        # never runs and we build a fresh config here.
+        if post_validate is not None:
+            item_config = dict(accepted_item_config)
         else:
-            tags = None
-            vanilla_major_ids = []
-            vanilla_minor_ids = []
-
-        boss_clusters_for_assignment = [
-            n.cluster
-            for n in dag.nodes.values()
-            if n.cluster.type in ("boss_arena", "major_boss") and n.cluster.defeat_flag
-        ]
-        item_config = generate_item_config(
-            config,
-            actual_seed,
-            boss_clusters=boss_clusters_for_assignment,
-            tags=tags,
-            vanilla_major_ids=vanilla_major_ids,
-            vanilla_minor_ids=vanilla_minor_ids,
-            phase_mapping=phase_mapping,
-        )
+            boss_clusters_for_assignment = [
+                n.cluster
+                for n in dag.nodes.values()
+                if n.cluster.type in ("boss_arena", "major_boss")
+                and n.cluster.defeat_flag
+            ]
+            item_config = generate_item_config(
+                config,
+                actual_seed,
+                boss_clusters=boss_clusters_for_assignment,
+                tags=assignment_tags,
+                vanilla_major_ids=assignment_major_ids,
+                vanilla_minor_ids=assignment_minor_ids,
+                phase_mapping=assignment_phase_mapping,
+            )
         item_config_path = seed_dir / "item_config.json"
         with item_config_path.open("w") as f:
             json.dump(item_config, f, indent=2)
@@ -405,7 +445,7 @@ def main() -> int:
                 boss_placements = load_boss_placements(boss_placements_path)
                 if boss_placements:
                     patch_graph_boss_placements(
-                        json_path, dag, boss_placements, phase_mapping
+                        json_path, dag, boss_placements, assignment_phase_mapping
                     )
                     print(f"Boss placements: {len(boss_placements)} bosses randomized")
 
