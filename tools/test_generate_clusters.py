@@ -4293,3 +4293,37 @@ class TestBossNameInClustersJson:
 
         entry = result["clusters"][0]
         assert "boss_name" not in entry
+
+    def test_downgraded_cluster_strips_boss_fields(self):
+        """Multi-zone major_boss clusters demoted to legacy_dungeon keep
+        their defeat_flag on the Cluster object, but it must not leak into
+        clusters.json. Same rule for boss_name.
+        """
+        from generate_clusters import Cluster, clusters_to_json
+
+        cluster = Cluster(
+            zones=frozenset({"leyndell", "leyndell_sanctuary"}),
+            cluster_type="legacy_dungeon",
+            weight=2,
+            cluster_id="leyndell_sanctuary_25d4",
+            defeat_flag=11000850,
+            primary_zone="leyndell",
+        )
+        areas = {
+            "leyndell": AreaData(
+                name="leyndell", text="Leyndell", maps=["m11_00_00_00"], tags=[]
+            ),
+            "leyndell_sanctuary": AreaData(
+                name="leyndell_sanctuary",
+                text="Sanctuary",
+                maps=["m11_00_00_00"],
+                tags=[],
+            ),
+        }
+        boss_names = {11000850: "Godfrey, First Elden Lord"}
+
+        result = clusters_to_json([cluster], areas, boss_names=boss_names)
+
+        entry = result["clusters"][0]
+        assert "defeat_flag" not in entry
+        assert "boss_name" not in entry

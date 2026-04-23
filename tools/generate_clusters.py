@@ -2011,7 +2011,18 @@ def clusters_to_json(
             "entry_fogs": c.entry_fogs,
             "exit_fogs": c.exit_fogs,
         }
-        if c.defeat_flag > 0:
+        # Only emit defeat_flag / boss_name for clusters that actually
+        # represent a boss fight. A non-boss cluster can still carry a
+        # defeat_flag either via traversal during flag assignment (L1797)
+        # or via a major_boss → legacy_dungeon downgrade when the boss is
+        # skippable (L1714). In both cases the flag must not leak into
+        # clusters.json: patch_graph_boss_placements would otherwise treat
+        # the node as a boss node.
+        if c.defeat_flag > 0 and c.cluster_type in (
+            "boss_arena",
+            "major_boss",
+            "final_boss",
+        ):
             entry["defeat_flag"] = c.defeat_flag
             if boss_names and c.defeat_flag in boss_names:
                 entry["boss_name"] = boss_names[c.defeat_flag]
