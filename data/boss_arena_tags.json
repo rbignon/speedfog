@@ -386,7 +386,7 @@
   "12030800": {
     "name": "Fia's Champions",
     "boss": {
-      "size": 1,
+      "size": 3,
       "type": 3,
       "is_two_phase": true,
       "is_dragon": false,
@@ -411,7 +411,7 @@
   "12030850": {
     "name": "Lichdragon Fortissax",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 2,
       "is_two_phase": false,
       "is_dragon": true,
@@ -628,7 +628,7 @@
   "13000850": {
     "name": "Godskin Duo",
     "boss": {
-      "size": 1,
+      "size": 3,
       "type": 2,
       "is_two_phase": false,
       "is_dragon": false,
@@ -695,7 +695,7 @@
   "14000801": {
     "name": "Rennala 1",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 2,
       "is_two_phase": false,
       "is_dragon": false,
@@ -745,7 +745,7 @@
   "15000800": {
     "name": "Malenia Blade of Miquella",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 2,
       "is_two_phase": true,
       "is_dragon": false,
@@ -795,7 +795,7 @@
   "16000800": {
     "name": "Rykard 2",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 2,
       "is_two_phase": false,
       "is_dragon": false,
@@ -820,7 +820,7 @@
   "16000801": {
     "name": "Rykard 1",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 2,
       "is_two_phase": false,
       "is_dragon": false,
@@ -870,7 +870,7 @@
   "16000860": {
     "name": "Abductor Virgins",
     "boss": {
-      "size": 1,
+      "size": 3,
       "type": 4,
       "is_two_phase": false,
       "is_dragon": false,
@@ -995,7 +995,7 @@
   "20000800": {
     "name": "Divine Beast Dancing Lion",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 2,
       "is_two_phase": false,
       "is_dragon": false,
@@ -1238,7 +1238,7 @@
   "21000850": {
     "name": "Golden Hippopotamus",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 2,
       "is_two_phase": false,
       "is_dragon": false,
@@ -1297,7 +1297,7 @@
   "21010800": {
     "name": "Base Serpent Messmer",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 2,
       "is_two_phase": false,
       "is_dragon": false,
@@ -1322,7 +1322,7 @@
   "21010801": {
     "name": "Messmer the Impaler",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 2,
       "is_two_phase": false,
       "is_dragon": false,
@@ -1364,7 +1364,7 @@
   "22000800": {
     "name": "Putrescent Knight",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 2,
       "is_two_phase": false,
       "is_dragon": false,
@@ -1389,7 +1389,7 @@
   "25000800": {
     "name": "Metyr Mother of Fingers",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 2,
       "is_two_phase": false,
       "is_dragon": false,
@@ -1464,7 +1464,7 @@
   "30010800": {
     "name": "Erdtree Burial Watchdog and Imps",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 5,
       "is_two_phase": false,
       "is_dragon": false,
@@ -1714,7 +1714,7 @@
   "30100800": {
     "name": "Crucible Knight Duo",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 5,
       "is_two_phase": false,
       "is_dragon": false,
@@ -1764,7 +1764,7 @@
   "30120800": {
     "name": "Misbegotten Perfumer Duo",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 5,
       "is_two_phase": false,
       "is_dragon": false,
@@ -1814,7 +1814,7 @@
   "30140800": {
     "name": "Erdtree Burial Watchdog Duo",
     "boss": {
-      "size": 1,
+      "size": 3,
       "type": 5,
       "is_two_phase": false,
       "is_dragon": false,
@@ -2026,7 +2026,7 @@
     "arena": {
       "size": 1,
       "type": 4,
-      "two_phase_not_allowed": false,
+      "two_phase_not_allowed": true,
       "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": true,
@@ -2114,7 +2114,7 @@
   "31060800": {
     "name": "Crystalian Staff Spear Duo",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 4,
       "is_two_phase": false,
       "is_dragon": false,
@@ -2139,7 +2139,7 @@
   "31070800": {
     "name": "Kindred of Rot Duo",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 4,
       "is_two_phase": false,
       "is_dragon": false,
@@ -2189,7 +2189,7 @@
   "31100800": {
     "name": "Beastman of Farum Azula Duo",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 4,
       "is_two_phase": false,
       "is_dragon": false,
@@ -2214,7 +2214,7 @@
   "31110800": {
     "name": "Putrid Crystalian Trio",
     "boss": {
-      "size": 1,
+      "size": 3,
       "type": 4,
       "is_two_phase": false,
       "is_dragon": false,
@@ -2264,7 +2264,7 @@
   "31150800": {
     "name": "Demi-Human Chief Duo",
     "boss": {
-      "size": 1,
+      "size": 3,
       "type": 4,
       "is_two_phase": false,
       "is_dragon": false,
@@ -2314,7 +2314,7 @@
   "31180800": {
     "name": "Miranda Omenkiller Duo",
     "boss": {
-      "size": 1,
+      "size": 3,
       "type": 4,
       "is_two_phase": false,
       "is_dragon": false,
@@ -2389,7 +2389,7 @@
   "31200800": {
     "name": "Cleanrot Knight Duo",
     "boss": {
-      "size": 1,
+      "size": 3,
       "type": 4,
       "is_two_phase": false,
       "is_dragon": false,
@@ -2564,7 +2564,7 @@
   "32050800": {
     "name": "Crystalian Ringblade Spear Duo",
     "boss": {
-      "size": 1,
+      "size": 3,
       "type": 6,
       "is_two_phase": false,
       "is_dragon": false,
@@ -3891,7 +3891,7 @@
   "1041530800": {
     "name": "Wormface",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": false,
@@ -4391,7 +4391,7 @@
   "1048370800": {
     "name": "Decaying Ekzykes",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": true,
@@ -4416,7 +4416,7 @@
   "1048400800": {
     "name": "Mad Pumpkin Head Duo",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 1,
       "is_two_phase": false,
       "is_dragon": false,
@@ -4566,7 +4566,7 @@
   "1049380800": {
     "name": "Commander O'Neil",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": false,
@@ -4591,7 +4591,7 @@
   "1049390800": {
     "name": "Nox Duo",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": false,
@@ -4741,7 +4741,7 @@
   "1051360800": {
     "name": "Crucible Misbegotten Duo",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": false,
@@ -4884,7 +4884,7 @@
   "1051570800": {
     "name": "Commander Niall",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 2,
       "is_two_phase": false,
       "is_dragon": true,
@@ -4909,7 +4909,7 @@
   "1052380800": {
     "name": "Starscourge Radahn",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 2,
       "is_two_phase": false,
       "is_dragon": false,
@@ -5084,7 +5084,7 @@
   "1054560800": {
     "name": "Borealis the Freezing Fog",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": false,
@@ -5159,7 +5159,7 @@
   "2044450800": {
     "name": "Romina Saint of the Bud",
     "boss": {
-      "size": 1,
+      "size": 3,
       "type": 2,
       "is_two_phase": false,
       "is_dragon": false,
@@ -5269,7 +5269,7 @@
       "exclude_from_pool": false
     },
     "arena": {
-      "size": 1,
+      "size": 2,
       "type": 1,
       "two_phase_not_allowed": false,
       "dragon_not_allowed": true,
@@ -5319,7 +5319,7 @@
       "exclude_from_pool": false
     },
     "arena": {
-      "size": 1,
+      "size": 2,
       "type": 1,
       "two_phase_not_allowed": false,
       "dragon_not_allowed": true,
@@ -5344,7 +5344,7 @@
       "exclude_from_pool": false
     },
     "arena": {
-      "size": 1,
+      "size": 2,
       "type": 1,
       "two_phase_not_allowed": false,
       "dragon_not_allowed": true,
@@ -5359,7 +5359,7 @@
   "2046460800": {
     "name": "Deathblight Beast Dancing Lion",
     "boss": {
-      "size": 1,
+      "size": 3,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": false,
@@ -5468,7 +5468,7 @@
   "2048380850": {
     "name": "Ghostflame Dragon and Skeletons",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": true,
@@ -5643,7 +5643,7 @@
   "2049480800": {
     "name": "Commander Gaius",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 2,
       "is_two_phase": false,
       "is_dragon": false,
@@ -5693,7 +5693,7 @@
   "2050480800": {
     "name": "Scadutree Avatar",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 2,
       "is_two_phase": true,
       "is_dragon": false,
@@ -5753,7 +5753,7 @@
       "exclude_from_pool": false
     },
     "arena": {
-      "size": 1,
+      "size": 2,
       "type": 1,
       "two_phase_not_allowed": false,
       "dragon_not_allowed": true,
