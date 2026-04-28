@@ -142,6 +142,27 @@ public class ConfigGeneratorTests : IDisposable
     }
 
     [Fact]
+    public void CopyScripts_CopiesLinuxScripts()
+    {
+        ConfigGenerator.CopyScripts(_tempDir);
+
+        Assert.True(File.Exists(Path.Combine(_tempDir, "linux", "launch_speedfog.sh")));
+        Assert.True(File.Exists(Path.Combine(_tempDir, "linux", "backup_daemon.sh")));
+        Assert.True(File.Exists(Path.Combine(_tempDir, "linux", "recovery.sh")));
+    }
+
+    [Fact]
+    public void CopyScripts_LinuxLaunchScript_HasMe3Invocation()
+    {
+        ConfigGenerator.CopyScripts(_tempDir);
+
+        var content = File.ReadAllText(Path.Combine(_tempDir, "linux", "launch_speedfog.sh"));
+        Assert.Contains("me3/bin/me3", content);
+        Assert.Contains("--windows-binaries-dir", content);
+        Assert.Contains("config_speedfog.me3", content);
+    }
+
+    [Fact]
     public void CopyScripts_OverwritesExistingFiles()
     {
         // First copy
