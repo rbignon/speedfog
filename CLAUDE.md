@@ -20,7 +20,7 @@ Python (speedfog/)      C# (writer/)                              Output
 ─────────────────       ─────────────────                         ─────────────────
 config.toml        →                                              output/
 clusters.json      →    graph.json → FogModWrapper ──────────┐    ├── mod/
-DAG generation     →                      ↑                  ├──► ├── ModEngine/
+DAG generation     →                      ↑                  ├──► ├── me3/
                         item_config.json → ItemRandomizerWrapper  ├── launch_speedfog.bat
                                           (optional)              └── logs/
                                      GamePatcher (overlay, at setup)
@@ -31,7 +31,7 @@ DAG generation     →                      ↑                  ├──► �
   - FogModWrapper - thin wrapper calling FogMod.dll with our graph connections (uses old SoulsFormats.dll)
   - ItemRandomizerWrapper - thin wrapper calling RandomizerCommon.dll for item randomization (optional, uses old SoulsFormats.dll)
   - GamePatcher - standalone overlay generator using SoulsFormatsNEXT (runs at setup, not per-seed)
-- **Output**: Self-contained folder with ModEngine 2 (auto-downloaded)
+- **Output**: Self-contained folder with ME3 (auto-downloaded, includes Linux launcher)
 
 ### Item Randomization Workflow
 
@@ -389,7 +389,7 @@ wine publish/win-x64/ItemRandomizerWrapper.exe \
 # item_config.json format:
 # {"seed": 12345, "difficulty": 50, "options": {"item": true, "enemy": false}}
 
-# Play! (output is self-contained with ModEngine + launcher)
+# Play! (output is self-contained with ME3 + launcher)
 ./output/launch_speedfog.bat
 ```
 

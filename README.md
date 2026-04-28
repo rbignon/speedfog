@@ -13,7 +13,7 @@ Unlike FogRando which randomizes the entire world, SpeedFog creates a focused pa
 - **Difficulty curve**: Configurable start/end tiers with linear or power curve progression
 - **Cross-links**: Optional connections between parallel branches for more routing options
 - **Seed-based**: Share seeds for identical runs
-- **Self-contained output**: Includes ModEngine 2 and launcher
+- **Self-contained output**: Includes ME3 and launcher
 - **Item randomization**: Optional integration with Item Randomizer (auto-upgrade, presets, boss randomization, reduced upgrade costs)
 - **All crafting recipes**: Optionally unlock all recipes at start (no cookbook hunting)
 - **Care package**: Optional randomized starting build (weapons, armor, spells, talismans)
@@ -78,9 +78,9 @@ Output is self-contained in `seeds/<seed>/`:
 - `graph.json` - DAG definition
 - `logs/spoiler.txt` - Spoiler log
 - `logs/generation.log` - Structured generation log
-- `ModEngine/` - ModEngine 2 (auto-downloaded)
+- `me3/` - ME3 (auto-downloaded)
 - `mods/` - Generated mod files
-- `config_speedfog.toml` - ModEngine config
+- `config_speedfog.me3` - ME3 profile
 - `launch_speedfog.bat` - Windows launcher
 
 ### CLI Options
@@ -106,11 +106,13 @@ This creates only `graph.json` and `logs/`. To build manually, see `writer/READM
 
 ### Play
 
-The output folder is self-contained with ModEngine 2:
+The output folder is self-contained with ME3:
 
 ```bash
 ./seeds/<seed>/launch_speedfog.bat
 ```
+
+Linux users: run `linux/launch_speedfog.sh` instead of the .bat.
 
 ## Configuration
 
@@ -156,7 +158,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 - [FogRando](https://www.nexusmods.com/eldenring/mods/3295) by thefifthmatt - Core fog gate system
 - [Item Randomizer](https://www.nexusmods.com/eldenring/mods/428) by thefifthmatt - Item/enemy randomization
 - [SoulsFormats](https://github.com/soulsmods/SoulsFormatsNEXT) - File format library
-- [ModEngine 2](https://github.com/soulsmods/ModEngine2) - Mod loading
+- [ME3](https://github.com/soulsmods/me3) - Mod loading
 
 ## License
 

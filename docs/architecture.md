@@ -82,7 +82,7 @@ Thin wrapper around FogMod.dll that injects our connections and post-processes g
 | `VanillaWarpRemover.cs` | Remove vanilla assets: warp entities + blocking gates ([doc](vanilla-warp-removal.md)) |
 | `StartupFlagInjector.cs` | Set event flags at startup in any EMEVD (open gates, etc.) |
 | `StakeRemover.cs` | Remove vanilla stakes that respawn in zones outside the DAG ([doc](stake-removal.md)) |
-| `Packaging/` | ModEngine download, config generation, launchers |
+| `Packaging/` | ME3 download, profile generation, launchers |
 
 ### C# Item Writer (`writer/ItemRandomizerWrapper/`)
 
@@ -211,7 +211,7 @@ Output goes to `data/overlay/`, which the per-seed pipeline copies into each mod
 - **Overlay**: Files from `data/overlay/` are copied over the mod output. Contains both
   GamePatcher-generated files and user-provided overrides.
 
-Packaging: download ModEngine 2, generate config, create launcher scripts.
+Packaging: download ME3, generate profile, create launcher scripts (Windows + Linux).
 
 **Merge order matters**: Item Randomizer runs first, FogMod merges on top. This matches the official FogRando documentation.
 
@@ -454,7 +454,7 @@ Zones have tiers (1-28) based on their layer in the DAG. FogMod applies SpEffect
 ├── logs/
 │   ├── spoiler.txt           # Path spoiler log (--logs)
 │   └── generation.log        # Structured generation log (--logs)
-├── ModEngine/                # ModEngine 2 (auto-downloaded)
+├── me3/                      # ME3 (auto-downloaded)
 ├── mods/
 │   ├── fogmod/               # FogMod output (fog gates, scaling, events)
 │   │   ├── param/gameparam/regulation.bin
@@ -464,9 +464,13 @@ Zones have tiers (1-28) based on their layer in the DAG. FogMod applies SpEffect
 │   │   └── msg/engus/*.fmg
 │   └── itemrando/            # Item Randomizer output (optional)
 ├── lib/                      # Runtime DLLs (crash fix, helper)
-├── config_speedfog.toml      # ModEngine config
+├── config_speedfog.me3       # ME3 profile
 ├── launch_speedfog.bat       # Windows launcher
 ├── recovery.bat              # Windows recovery launcher
+├── linux/                    # Linux launchers
+│   ├── launch_speedfog.sh    # Linux launcher
+│   ├── backup_daemon.sh      # Linux backup daemon
+│   └── recovery.sh           # Linux recovery
 └── backups/                  # Backup system files
     ├── config.ini            # Backup configuration
     ├── backup_daemon.ps1     # Windows backup daemon
@@ -491,4 +495,4 @@ Zones have tiers (1-28) based on their layer in the DAG. FogMod applies SpEffect
 - FogRando: https://www.nexusmods.com/eldenring/mods/3295
 - Item Randomizer: https://www.nexusmods.com/eldenring/mods/428
 - SoulsFormats: https://github.com/soulsmods/SoulsFormatsNEXT
-- ModEngine 2: https://github.com/soulsmods/ModEngine2
+- ME3: https://github.com/soulsmods/me3

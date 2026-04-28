@@ -23,6 +23,10 @@ A separate recovery script lets the player restore any backup interactively.
 output/
 ├── launch_speedfog.bat        # Detects save, starts daemon, launches game
 ├── recovery.bat               # Wrapper → backups/recovery.ps1
+├── linux/
+│   ├── launch_speedfog.sh     # Linux launcher
+│   ├── backup_daemon.sh       # Linux backup daemon
+│   └── recovery.sh            # Linux recovery
 └── backups/
     ├── config.ini             # Optional config overrides
     ├── launch_helper.ps1      # Save detection + daemon launch (Windows)
@@ -48,7 +52,7 @@ The output root contains only files the player interacts with directly
 ## Save File Detection
 
 The save file is at `%APPDATA%\EldenRing\<steam_id>\ER0000.sl2`.
-The `<steam_id>` varies per player.
+The `<steam_id>` varies per player. Save detection on Linux scans Proton's compatdata directory; ME3 does not isolate saves either, so the backup target is the same vanilla ER0000.sl2.
 
 Detection runs in the **launcher** (visible console window):
 
@@ -138,7 +142,7 @@ is currently running.
 
 Scripts are standalone files in `writer/scripts/`, copied to the output
 directory by `ConfigGenerator.CopyScripts()` during packaging. Only
-`config_speedfog.toml` is dynamically generated (it depends on item
+`config_speedfog.me3` is dynamically generated (it depends on item
 randomizer configuration).
 
 ```
@@ -153,7 +157,7 @@ writer/scripts/
 ```
 
 `PackagingWriter.WritePackageAsync` calls `ConfigGenerator.CopyScripts()`
-after generating the ModEngine config.
+after generating the ME3 profile.
 
 ## FogMod Comparison
 

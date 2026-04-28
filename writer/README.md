@@ -51,8 +51,8 @@ FogModWrapper.exe <seed_dir> --game-dir <game_dir> [options]
 - `--data-dir <path>` - Custom path to data directory (default: ../data)
 - `-o, --output <path>` - Where to write mod files (default: ./output)
 - `--merge-dir <path>` - Merge files from another mod (e.g., Item Randomizer output)
-- `--no-package` - Skip ModEngine packaging (output mod files only)
-- `--update-modengine` - Force re-download of ModEngine 2
+- `--no-package` - Skip ME3 packaging (output mod files only)
+- `--update-modengine` - Force re-download of ME3
 
 ## ItemRandomizerWrapper
 
@@ -90,7 +90,7 @@ ItemRandomizerWrapper.exe <config_path> --game-dir <game_dir> [options]
 
 ## Output
 
-FogModWrapper creates a self-contained mod with ModEngine 2:
+FogModWrapper creates a self-contained mod with ME3:
 
 ```
 output/
@@ -98,7 +98,7 @@ output/
 ├── logs/                   # Diagnostic logs (--logs)
 │   ├── spoiler.txt         # Path spoiler log
 │   └── generation.log      # DAG generation diagnostics
-├── ModEngine/              # ModEngine 2 (auto-downloaded)
+├── me3/                    # ME3 (auto-downloaded)
 ├── mods/
 │   ├── fogmod/             # Fog gate mod files
 │   │   ├── param/gameparam/regulation.bin
@@ -106,9 +106,13 @@ output/
 │   │   └── map/mapstudio/*.msb.dcx
 │   └── itemrando/          # Item Randomizer files (if enabled)
 ├── lib/                    # Runtime DLLs (crash fix, helper)
-├── config_speedfog.toml    # ModEngine config
+├── config_speedfog.me3     # ME3 profile
 ├── launch_speedfog.bat     # Windows launcher
 ├── recovery.bat            # Windows recovery launcher
+├── linux/                  # Linux launchers
+│   ├── launch_speedfog.sh  # Linux launcher
+│   ├── backup_daemon.sh    # Linux backup daemon
+│   └── recovery.sh         # Linux recovery
 ├── backups/
 │   ├── config.ini          # Backup system configuration
 │   ├── backup_daemon.ps1   # Windows backup daemon
@@ -118,7 +122,7 @@ output/
 
 ## Playing
 
-After generating the mod, double-click `output/launch_speedfog.bat`.
+After generating the mod, double-click `output/launch_speedfog.bat` (Windows) or run `output/linux/launch_speedfog.sh` (Linux).
 
 ## Development
 
