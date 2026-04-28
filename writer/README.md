@@ -88,7 +88,9 @@ ItemRandomizerWrapper.exe <config_path> --game-dir <game_dir> [options]
 
 ## Output
 
-FogModWrapper creates a self-contained mod with ME3:
+FogModWrapper writes only the fog mod files under `mods/fogmod/`.
+The Python `speedfog` pipeline assembles the self-contained ME3 package from
+`data/packaging/`:
 
 ```
 output/
@@ -96,7 +98,7 @@ output/
 ├── logs/                   # Diagnostic logs (--logs)
 │   ├── spoiler.txt         # Path spoiler log
 │   └── generation.log      # DAG generation diagnostics
-├── me3/                    # ME3 (auto-downloaded)
+├── me3/                    # ME3 (installed by tools/bootstrap.py)
 ├── mods/
 │   ├── fogmod/             # Fog gate mod files
 │   │   ├── param/gameparam/regulation.bin

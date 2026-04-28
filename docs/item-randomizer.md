@@ -203,7 +203,7 @@ Additionally, FogModWrapper:
 
 ## RandomizerHelper
 
-`RandomizerHelper.dll` (in `writer/assets/`) is an optional runtime DLL loaded by ME3. It provides in-game quality-of-life features like auto-upgrading weapons.
+`RandomizerHelper.dll` (in `data/packaging/lib/`) is an optional runtime DLL loaded by ME3. It provides in-game quality-of-life features like auto-upgrading weapons.
 
 ### config.ini Generation
 
@@ -250,7 +250,7 @@ writer/
 │   └── ArgParserTests.cs
 └── assets/
     ├── RandomizerHelper.dll         # Runtime DLL (auto-upgrade, etc.)
-    └── RandomizerCrashFix.dll       # Runtime DLL (always included)
+    └── RandomizerCrashFix.dll       # Runtime DLL for Item Randomizer
 ```
 
 ## CLI Usage

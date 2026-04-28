@@ -47,7 +47,7 @@ uv pip install -e .
 # Install sfextract (extracts DLLs from FogRando)
 dotnet tool install -g sfextract
 
-# Extract dependencies, generate derived data, and build C# writers
+# Extract dependencies, generate derived data, build C# writers, and install ME3
 python tools/bootstrap.py \
   --game-dir /path/to/ELDEN_RING/Game \
   --fogrando /path/to/FogRando.zip \
@@ -78,7 +78,7 @@ Output is self-contained in `seeds/<seed>/`:
 - `graph.json` - DAG definition
 - `logs/spoiler.txt` - Spoiler log
 - `logs/generation.log` - Structured generation log
-- `me3/` - ME3 (auto-downloaded)
+- `me3/` - ME3 (installed by `tools/bootstrap.py`)
 - `mods/` - Generated mod files
 - `config_speedfog.me3` - ME3 profile
 - `launch_speedfog.bat` - Windows launcher
@@ -106,7 +106,7 @@ This creates only `graph.json` and `logs/`. To build manually, see `writer/READM
 
 ### Play
 
-The output folder is self-contained with ME3:
+The output folder is self-contained with ME3 copied from `data/packaging/`:
 
 ```bash
 ./seeds/<seed>/launch_speedfog.bat

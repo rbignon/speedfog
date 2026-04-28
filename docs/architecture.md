@@ -1,6 +1,6 @@
 # SpeedFog Architecture
 
-**Date:** 2026-02-02 — **Updated:** 2026-02-27
+**Date:** 2026-02-02 — **Updated:** 2026-04-28
 **Status:** Active
 
 SpeedFog generates short randomized Elden Ring runs (~1 hour) with a controlled DAG structure.
@@ -8,21 +8,31 @@ SpeedFog generates short randomized Elden Ring runs (~1 hour) with a controlled 
 ## Overview
 
 ```
-User Config                Python                      C# Writers                     Output
-───────────                ──────                      ──────────                     ──────
-config.toml ──────► speedfog ──────► graph.json ──────► FogModWrapper ─────────┐
-                        │                                     │                 ├───► mod/
-                  clusters.json                         FogMod.dll              │
-                  (pre-generated)                  (reuses FogRando writer)     │
-                                                                                │
-item_config.json ─────────────────────────────────► ItemRandomizerWrapper ─────┘
-                                                          │              (merge)
-                                                  RandomizerCommon.dll
-                                                (reuses Item Randomizer)
+Bootstrap (one-time)              Per-seed generation                         Output
+────────────────────              ───────────────────                         ──────
+FogRando ZIP ─┐
+ItemRando ZIP ├──► tools/bootstrap.py ───────┐
+ME3 release ──┘                              ├──► data/packaging/
+                                             ├──► data/overlay/
+                                             ├──► data/clusters.json
+                                             └──► writer/*/publish/
 
-                                                  GamePatcher (overlay, at setup)
-                                                  SoulsFormatsNEXT submodule
-                                                  (grace animations, etc.)
+config.toml + data/clusters.json ───► speedfog ───► graph.json
+                                           │
+                                           ├──► ItemRandomizerWrapper ──► mods/itemrando/ (optional)
+                                           │          RandomizerCommon.dll
+                                           │
+                                           ├──► FogModWrapper ───────────► mods/fogmod/
+                                           │          FogMod.dll
+                                           │          merges itemrando when present
+                                           │
+                                           └──► copy data/overlay/ + data/packaging/
+                                                generate config_speedfog.me3
+
+Final built seed: seeds/<seed>/ with mods/, me3/, launchers, backups/, logs/.
+
+GamePatcher runs during bootstrap as a separate process using the
+SoulsFormatsNEXT submodule. Its output is copied from data/overlay/ per seed.
 ```
 
 **Key insight**: SpeedFog reuses 100% of FogRando's game writer (`FogMod.dll`) and optionally 100% of Item Randomizer's writer (`RandomizerCommon.dll`). We only generate the graph connections and item config differently.
@@ -47,6 +57,7 @@ Generates a balanced DAG of zone connections.
 | `care_package.py` | Randomized starting build (weapons, armor, spells, etc.) |
 | `fog_mod.py` | Wrapper to call FogModWrapper.exe via Wine/native |
 | `item_randomizer.py` | Wrapper to call ItemRandomizerWrapper.exe, generate item_config |
+| `packaging.py` | Copy `data/packaging/`, copy helper config, generate `config_speedfog.me3` |
 | `main.py` | CLI entry point, orchestrates full pipeline |
 
 ### C# Shared Library (`writer/FogModWrapper.Core/`)
@@ -82,7 +93,6 @@ Thin wrapper around FogMod.dll that injects our connections and post-processes g
 | `VanillaWarpRemover.cs` | Remove vanilla assets: warp entities + blocking gates ([doc](vanilla-warp-removal.md)) |
 | `StartupFlagInjector.cs` | Set event flags at startup in any EMEVD (open gates, etc.) |
 | `StakeRemover.cs` | Remove vanilla stakes that respawn in zones outside the DAG ([doc](stake-removal.md)) |
-| `Packaging/` | ME3 download, profile generation, launchers |
 
 ### C# Item Writer (`writer/ItemRandomizerWrapper/`)
 
@@ -105,13 +115,14 @@ Standalone scripts for setup and data generation.
 
 | Script | Purpose |
 |--------|---------|
-| `bootstrap.py` | Extract dependencies, generate derived data, build C# writers |
+| `bootstrap.py` | Extract dependencies, generate derived data, build C# writers, install packaging assets |
 | `generate_clusters.py` | Parse fog.txt → clusters.json |
 | `extract_fog_data.py` | Extract fog gate metadata |
 
-**bootstrap.py** extracts:
+**bootstrap.py** extracts and installs:
 - From FogRando ZIP: FogMod.dll, SoulsFormats.dll, eldendata/, data files
-- From Item Randomizer ZIP: RandomizerCommon.dll, diste/, crash fix DLLs
+- From Item Randomizer ZIP: RandomizerCommon.dll, diste/, runtime DLLs in `data/packaging/lib/`
+- From ME3 releases: ME3 binaries in `data/packaging/me3/`
 
 ## Data Flow
 
@@ -141,7 +152,7 @@ The DAG algorithm:
 ### 3. Item Randomization (optional)
 
 ```
-item_config.json ──► ItemRandomizerWrapper ──► RandomizerCommon.dll ──► temp/item-randomizer/
+item_config.json ──► ItemRandomizerWrapper ──► RandomizerCommon.dll ──► mods/itemrando/
 ```
 
 ItemRandomizerWrapper:
@@ -153,9 +164,9 @@ ItemRandomizerWrapper:
 ### 4. Fog Gate Generation
 
 ```
-graph.json ──► FogModWrapper ──► FogMod.dll ──► mod files
+graph.json ──► FogModWrapper ──► FogMod.dll ──► mods/fogmod/
                     ↑
-              (--merge-dir temp/item-randomizer/)
+              (--merge-dir mods/itemrando/)
 ```
 
 FogModWrapper pipeline:
@@ -211,7 +222,9 @@ Output goes to `data/overlay/`, which the per-seed pipeline copies into each mod
 - **Overlay**: Files from `data/overlay/` are copied over the mod output. Contains both
   GamePatcher-generated files and user-provided overrides.
 
-Packaging: download ME3, generate profile, create launcher scripts (Windows + Linux).
+Packaging: `speedfog` copies `data/packaging/*` into the seed directory and
+generates `config_speedfog.me3`. `tools/bootstrap.py` is responsible for
+populating `data/packaging/` before any run generation.
 
 **Merge order matters**: Item Randomizer runs first, FogMod merges on top. This matches the official FogRando documentation.
 
@@ -448,13 +461,18 @@ Zones have tiers (1-28) based on their layer in the DAG. FogMod applies SpEffect
 
 ## Output Structure
 
+This is the built seed layout. `--no-build` stops before `mods/`, `me3/`,
+launchers, and runtime packaging are created.
+
 ```
 <seed_dir>/
 ├── graph.json                # DAG data (always generated)
 ├── logs/
 │   ├── spoiler.txt           # Path spoiler log (--logs)
 │   └── generation.log        # Structured generation log (--logs)
-├── me3/                      # ME3 (auto-downloaded)
+├── me3/                      # ME3 (copied from data/packaging/)
+│   ├── bin/me3               # Linux ME3 launcher
+│   └── bin/win64/me3.exe     # Windows ME3 launcher
 ├── mods/
 │   ├── fogmod/               # FogMod output (fog gates, scaling, events)
 │   │   ├── param/gameparam/regulation.bin
@@ -463,7 +481,8 @@ Zones have tiers (1-28) based on their layer in the DAG. FogMod applies SpEffect
 │   │   ├── script/talk/*.talkesdbnd.dcx
 │   │   └── msg/engus/*.fmg
 │   └── itemrando/            # Item Randomizer output (optional)
-├── lib/                      # Runtime DLLs (crash fix, helper)
+├── lib/                      # Runtime DLLs from data/packaging/lib/ (loaded by ME3 when profiled)
+│   └── RandomizerHelper_config.ini  # Copied from itemrando output when present
 ├── config_speedfog.me3       # ME3 profile
 ├── launch_speedfog.bat       # Windows launcher
 ├── recovery.bat              # Windows recovery launcher

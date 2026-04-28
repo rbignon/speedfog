@@ -140,15 +140,15 @@ is currently running.
 
 ## Scripts and Packaging
 
-Scripts are standalone files in `writer/scripts/`, copied to the output
-directory by `ConfigGenerator.CopyScripts()` during packaging. Only
-`config_speedfog.me3` is dynamically generated (it depends on item
-randomizer configuration).
+Scripts are standalone files in `data/packaging/`, copied to the seed
+directory by the Python packaging step. Only `config_speedfog.me3` is
+dynamically generated (it depends on item randomizer configuration).
 
 ```
-writer/scripts/
+data/packaging/
 ├── launch_speedfog.bat
 ├── recovery.bat
+├── linux/
 └── backups/
     ├── config.ini
     ├── launch_helper.ps1
@@ -156,8 +156,8 @@ writer/scripts/
     └── recovery.ps1
 ```
 
-`PackagingWriter.WritePackageAsync` calls `ConfigGenerator.CopyScripts()`
-after generating the ME3 profile.
+`tools/bootstrap.py` populates the rest of `data/packaging/`, including
+`me3/` and runtime DLLs in `lib/`.
 
 ## FogMod Comparison
 
