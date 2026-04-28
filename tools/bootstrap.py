@@ -13,7 +13,8 @@ This script extracts:
 - Item Randomizer:
   - DLLs from EldenRingRandomizer.exe → writer/lib/
   - diste/ → writer/ItemRandomizerWrapper/diste/
-  - RandomizerCrashFix.dll → writer/assets/
+  - Runtime DLLs → data/packaging/lib/
+  - ME3 → data/packaging/me3/
 
 Prerequisites:
 - sfextract (dotnet tool): dotnet tool install -g sfextract
@@ -24,8 +25,8 @@ Usage:
     python tools/bootstrap.py --game-dir /path/to/Game \
         --fogrando /path/to/FogRando.zip --itemrando /path/to/ItemRandomizer.zip
 
-    # Extract only FogRando
-    python tools/bootstrap.py --game-dir /path/to/Game --fogrando /path/to/FogRando.zip
+    # Refresh only shared setup assets such as ME3 and Oodle
+    python tools/bootstrap.py --game-dir /path/to/Game
 """
 
 from __future__ import annotations
@@ -35,7 +36,9 @@ import json
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
+import urllib.request
 import zipfile
 from pathlib import Path
 
@@ -44,10 +47,12 @@ PROJECT_ROOT = Path(__file__).parent.parent
 
 # Destination paths
 WRITER_LIB = PROJECT_ROOT / "writer" / "lib"
-WRITER_ASSETS = PROJECT_ROOT / "writer" / "assets"
 ELDENDATA_DEST = PROJECT_ROOT / "writer" / "FogModWrapper" / "eldendata"
 DISTE_DEST = PROJECT_ROOT / "writer" / "ItemRandomizerWrapper" / "diste"
 DATA_DEST = PROJECT_ROOT / "data"
+PACKAGING_DEST = DATA_DEST / "packaging"
+PACKAGING_LIB_DEST = PACKAGING_DEST / "lib"
+ME3_DEST = PACKAGING_DEST / "me3"
 
 # Files to extract from eldendata/Base/ to data/
 FOGRANDO_DATA_FILES = [
@@ -88,6 +93,9 @@ ITEMRANDO_EXTRA_DLLS = [
     "RandomizerCrashFix.dll",
     "RandomizerHelper.dll",
 ]
+
+ME3_RELEASE_API = "https://api.github.com/repos/garyttierney/me3/releases/latest"
+ME3_ASSET_NAME = "me3-linux-amd64.tar.gz"
 
 
 def print_step(step: int, total: int, message: str) -> None:
@@ -165,9 +173,9 @@ def is_itemrando_installed() -> bool:
         if not (DATA_DEST / filename).exists():
             return False
 
-    # Check for extra DLLs in assets
+    # Check for runtime DLLs in packaging assets
     for dll in ITEMRANDO_EXTRA_DLLS:
-        if not (WRITER_ASSETS / dll).exists():
+        if not (PACKAGING_LIB_DEST / dll).exists():
             return False
 
     return True
@@ -276,18 +284,18 @@ def copy_itemrando_files(temp_dir: Path, extracted_dir: Path) -> bool:
             return False
     print_ok(f"writer/lib/ (+{dll_count} DLLs)")
 
-    # Copy extra DLLs from randomizer/dll/ to writer/assets/
-    WRITER_ASSETS.mkdir(parents=True, exist_ok=True)
+    # Copy runtime DLLs from randomizer/dll/ to data/packaging/lib/.
+    PACKAGING_LIB_DEST.mkdir(parents=True, exist_ok=True)
     dll_dir = randomizer_dir / "dll"
     extra_count = 0
     for dll_name in ITEMRANDO_EXTRA_DLLS:
         src = dll_dir / dll_name
         if src.exists():
-            shutil.copy2(src, WRITER_ASSETS / dll_name)
+            shutil.copy2(src, PACKAGING_LIB_DEST / dll_name)
             extra_count += 1
         else:
             print_error(f"Missing extra DLL: {dll_name}")
-    print_ok(f"writer/assets/ ({extra_count} DLLs)")
+    print_ok(f"data/packaging/lib/ ({extra_count} DLLs)")
 
     # Copy data files from diste/Base/ to data/
     base_dir = randomizer_dir / "diste" / "Base"
@@ -561,6 +569,103 @@ def setup_itemrando(sfextract: Path, zip_path: Path, force: bool) -> bool:
     return True
 
 
+def is_me3_installed() -> bool:
+    """Check if ME3 is present in data/packaging/me3/."""
+    return (ME3_DEST / "bin" / "me3").exists() and (
+        ME3_DEST / "bin" / "win64" / "me3.exe"
+    ).exists()
+
+
+def ensure_me3(force: bool = False) -> bool:
+    """Download and extract ME3 into data/packaging/me3/."""
+    print("\n" + "=" * 50)
+    print("Setting up ME3")
+    print("=" * 50)
+
+    if is_me3_installed() and not force:
+        print_ok(
+            "ME3 already installed in data/packaging/me3/ (use --force to reinstall)"
+        )
+        return True
+
+    try:
+        print_info("Fetching latest ME3 release metadata...")
+        req = urllib.request.Request(
+            ME3_RELEASE_API,
+            headers={"User-Agent": "SpeedFog/1.0"},
+        )
+        with urllib.request.urlopen(req, timeout=60) as response:
+            release = json.loads(response.read().decode("utf-8"))
+    except OSError as e:
+        print_error(f"Failed to query ME3 release: {e}")
+        return False
+
+    asset = next(
+        (a for a in release.get("assets", []) if a.get("name") == ME3_ASSET_NAME),
+        None,
+    )
+    if asset is None:
+        print_error(f"Could not find {ME3_ASSET_NAME} in latest ME3 release")
+        return False
+
+    archive_path = Path(tempfile.gettempdir()) / ME3_ASSET_NAME
+    try:
+        print_info(f"Downloading {ME3_ASSET_NAME}...")
+        req = urllib.request.Request(
+            asset["browser_download_url"],
+            headers={"User-Agent": "SpeedFog/1.0"},
+        )
+        with urllib.request.urlopen(req, timeout=600) as response:
+            with archive_path.open("wb") as out:
+                shutil.copyfileobj(response, out)
+
+        print_info("Extracting ME3...")
+        extract_dir = Path(tempfile.mkdtemp(prefix="me3_extract_"))
+        try:
+            with tarfile.open(archive_path, "r:gz") as tar:
+                tar.extractall(extract_dir, filter="data")
+
+            bin_src = extract_dir / "bin"
+            if not bin_src.is_dir():
+                candidates = [
+                    path for path in extract_dir.rglob("bin") if path.is_dir()
+                ]
+                bin_src = candidates[0] if candidates else bin_src
+
+            if not bin_src.is_dir():
+                print_error("ME3 archive does not contain a bin/ directory")
+                return False
+
+            if ME3_DEST.exists():
+                shutil.rmtree(ME3_DEST)
+            ME3_DEST.mkdir(parents=True, exist_ok=True)
+            shutil.copytree(bin_src, ME3_DEST / "bin")
+        finally:
+            shutil.rmtree(extract_dir, ignore_errors=True)
+
+        version = release.get("tag_name", "unknown")
+        (ME3_DEST / "version.txt").write_text(f"{version}\n", encoding="utf-8")
+
+        linux_bin = ME3_DEST / "bin" / "me3"
+        if linux_bin.exists() and sys.platform != "win32":
+            linux_bin.chmod(0o755)
+
+    except (OSError, tarfile.TarError, KeyError) as e:
+        print_error(f"Failed to install ME3: {e}")
+        return False
+    finally:
+        archive_path.unlink(missing_ok=True)
+
+    if not is_me3_installed():
+        print_error("ME3 extraction completed but required binaries are missing")
+        return False
+
+    print_ok(
+        f"ME3 {release.get('tag_name', 'unknown')} installed in data/packaging/me3/"
+    )
+    return True
+
+
 def copy_oodle_dll(game_dir: Path, force: bool = False) -> bool:
     """Copy oo2core_6_win64.dll from the game directory to writer/lib/.
 
@@ -642,7 +747,7 @@ def run_modpatcher(game_dir: Path) -> bool:
 def main() -> int:
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Extract FogRando and Item Randomizer dependencies from Nexusmods downloads."
+        description="Install SpeedFog local dependencies and packaging assets."
     )
     parser.add_argument(
         "--fogrando",
@@ -672,38 +777,44 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    # Check that at least one ZIP is provided
-    if not args.fogrando and not args.itemrando:
-        parser.error("At least one of --fogrando or --itemrando must be provided")
-
     # Check prerequisites
-    print_step(1, 3, "Checking prerequisites...")
-    sfextract = find_sfextract()
-    if not sfextract:
-        print_error("sfextract not found")
-        print()
-        print("Install it with: dotnet tool install -g sfextract")
-        return 1
-    print_ok("sfextract found")
+    print_step(1, 4, "Checking prerequisites...")
+    sfextract = None
+    if args.fogrando or args.itemrando:
+        sfextract = find_sfextract()
+        if not sfextract:
+            print_error("sfextract not found")
+            print()
+            print("Install it with: dotnet tool install -g sfextract")
+            return 1
+        print_ok("sfextract found")
+    else:
+        print_info("No mod archive provided; skipping sfextract check")
 
     # Copy oo2core_6_win64.dll from game directory (needed by dotnet publish)
-    print_step(2, 3, "Copying Oodle DLL from game directory...")
+    print_step(2, 4, "Copying Oodle DLL from game directory...")
     if not copy_oodle_dll(args.game_dir, args.force):
         return 1
 
-    print_step(3, 3, "Setting up mod dependencies...")
+    print_step(3, 4, "Setting up mod dependencies...")
 
     success = True
 
     # Set up FogRando
     if args.fogrando:
+        assert sfextract is not None
         if not setup_fogrando(sfextract, args.fogrando, args.force):
             success = False
 
     # Set up Item Randomizer
     if args.itemrando:
+        assert sfextract is not None
         if not setup_itemrando(sfextract, args.itemrando, args.force):
             success = False
+
+    print_step(4, 4, "Setting up packaging assets...")
+    if success and not ensure_me3(args.force):
+        success = False
 
     # Run GamePatcher to generate overlay files
     if success and not args.skip_overlay:

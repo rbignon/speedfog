@@ -27,6 +27,7 @@ from speedfog.output import (
     patch_graph_boss_placements,
     resolve_entity_id,
 )
+from speedfog.packaging import PackagingError, package_seed
 
 
 class StepTimer:
@@ -511,6 +512,17 @@ def main() -> int:
                         print(f"Overlay: {rel}")
             if count > 0:
                 print(f"Overlay: copied {count} file(s) from data/overlay/")
+
+        try:
+            package_seed(
+                project_root,
+                seed_dir,
+                item_randomizer_enabled=merge_dir is not None,
+                item_randomizer_dir=merge_dir,
+            )
+        except PackagingError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
 
         print(f"Mod ready: {seed_dir}")
 

@@ -57,11 +57,4 @@
     </None>
   </ItemGroup>
 
-  <!-- Copy crash fix DLL -->
-  <ItemGroup>
-    <None Include="../assets/RandomizerCrashFix.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>

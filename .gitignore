@@ -72,6 +72,10 @@ data/fog_data.json
 # Overlay files (user-provided game file overrides, e.g. modified animations)
 data/overlay/
 
+# Packaging files populated by tools/bootstrap.py
+data/packaging/me3/
+data/packaging/lib/*.dll
+
 # Generated i18n data (from tools/update_i18n_names.py)
 data/i18n/fmg_names.json
 
@@ -81,7 +85,3 @@ data/i18n/fmg_names.json
 # Track writer/lib/ for README but not DLLs
 !writer/lib/
 writer/lib/*.dll
-
-# Track writer/assets/ directory but not DLLs (extracted by bootstrap.py)
-!writer/assets/
-writer/assets/*.dll

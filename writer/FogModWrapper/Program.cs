@@ -1,19 +1,18 @@
 using FogMod;
 using FogModWrapper;
 using FogModWrapper.Models;
-using FogModWrapper.Packaging;
 using SoulsFormats;
 using SoulsIds;
 using YamlDotNet.Serialization;
 
 class Program
 {
-    static async Task<int> Main(string[] args)
+    static int Main(string[] args)
     {
         try
         {
             var config = ParseArgs(args);
-            await RunAsync(config);
+            Run(config);
             return 0;
         }
         catch (Exception ex)
@@ -98,7 +97,7 @@ Example:
 ");
     }
 
-    static async Task RunAsync(Config config)
+    static void Run(Config config)
     {
         Console.WriteLine("=== FogModWrapper ===");
         Console.WriteLine($"Seed dir: {config.SeedDir}");
@@ -709,9 +708,7 @@ Example:
         // 7l. Vanilla stake removal is handled pre-Write via ann.RetryPoints
         // (step 6b). FogMod reads MSBs from BHD archives and removes tagged stakes.
 
-        // 8. Package with ME3
-        var packager = new PackagingWriter(config.OutputDir);
-        await packager.WritePackageAsync(config.MergeDir);
+        // 8. Final ME3 packaging is handled by the Python speedfog pipeline.
     }
 
     class Config
