@@ -24,14 +24,21 @@ public class ConfigGeneratorTests : IDisposable
     {
         ConfigGenerator.WriteModEngineConfig(_tempDir);
 
-        var configPath = Path.Combine(_tempDir, "config_speedfog.toml");
+        var configPath = Path.Combine(_tempDir, "config_speedfog.me3");
         Assert.True(File.Exists(configPath));
 
         var content = File.ReadAllText(configPath);
-        Assert.Contains("[modengine]", content);
-        Assert.Contains("[extension.mod_loader]", content);
-        Assert.Contains("fogmod", content);
+        Assert.Contains("profileVersion = \"v1\"", content);
+        Assert.Contains("[[supports]]", content);
+        Assert.Contains("game = \"eldenring\"", content);
+        Assert.Contains("[[packages]]", content);
+        Assert.Contains("path = \"mods/fogmod\"", content);
+        Assert.Contains("[[natives]]", content);
+        Assert.Contains("RandomizerCrashFix.dll", content);
         Assert.DoesNotContain("itemrando", content);
+        Assert.DoesNotContain("RandomizerHelper.dll", content);
+        Assert.DoesNotContain("[modengine]", content);
+        Assert.DoesNotContain("[extension.mod_loader]", content);
     }
 
     [Fact]
@@ -39,8 +46,8 @@ public class ConfigGeneratorTests : IDisposable
     {
         ConfigGenerator.WriteModEngineConfig(_tempDir, itemRandomizerEnabled: true);
 
-        var content = File.ReadAllText(Path.Combine(_tempDir, "config_speedfog.toml"));
-        Assert.Contains("itemrando", content);
+        var content = File.ReadAllText(Path.Combine(_tempDir, "config_speedfog.me3"));
+        Assert.Contains("path = \"mods/itemrando\"", content);
         Assert.Contains("RandomizerHelper.dll", content);
     }
 
@@ -87,7 +94,9 @@ public class ConfigGeneratorTests : IDisposable
 
         var content = File.ReadAllText(Path.Combine(_tempDir, "launch_speedfog.bat"));
         Assert.Contains("launch_helper.ps1", content);
-        Assert.Contains("modengine2_launcher.exe", content);
+        Assert.Contains("me3.exe", content);
+        Assert.Contains("config_speedfog.me3", content);
+        Assert.DoesNotContain("modengine2_launcher.exe", content);
     }
 
     [Fact]
