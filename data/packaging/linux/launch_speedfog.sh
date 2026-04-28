@@ -90,4 +90,4 @@ fi
 # --- Launch ME3 ---
 "$OUTPUT_DIR/me3/bin/me3" \
     --windows-binaries-dir "$OUTPUT_DIR/me3/bin/win64" \
-    launch -p "$OUTPUT_DIR/config_speedfog.me3"
+    launch -p "$OUTPUT_DIR/me3/config_speedfog.me3"

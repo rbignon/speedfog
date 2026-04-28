@@ -14,19 +14,20 @@ class PackagingError(RuntimeError):
 def write_me3_config(
     output_dir: Path,
     *,
-    mod_path: str = "mods/fogmod",
+    mod_path: str = "../mods/fogmod",
     item_randomizer_enabled: bool = False,
     include_crash_fix: bool = False,
 ) -> Path:
     """Write the ME3 profile consumed by the launch scripts."""
-    output_dir.mkdir(parents=True, exist_ok=True)
-    config_path = output_dir / "config_speedfog.me3"
+    config_dir = output_dir / "me3"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    config_path = config_dir / "config_speedfog.me3"
 
     natives: list[str] = []
     if include_crash_fix:
-        natives.append("lib/RandomizerCrashFix.dll")
+        natives.append("../lib/RandomizerCrashFix.dll")
     if item_randomizer_enabled:
-        natives.append("lib/RandomizerHelper.dll")
+        natives.append("../lib/RandomizerHelper.dll")
 
     natives_block = "\n\n".join(f'[[natives]]\npath = "{path}"' for path in natives)
 
@@ -36,7 +37,7 @@ def write_me3_config(
             [
                 "[[packages]]",
                 'id = "itemrando"',
-                'path = "mods/itemrando"',
+                'path = "../mods/itemrando"',
                 "",
             ]
         )

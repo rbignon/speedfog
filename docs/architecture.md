@@ -27,7 +27,7 @@ config.toml + data/clusters.json ───► speedfog ───► graph.json
                                            │          merges itemrando when present
                                            │
                                            └──► copy data/overlay/ + data/packaging/
-                                                generate config_speedfog.me3
+                                                generate me3/config_speedfog.me3
 
 Final built seed: seeds/<seed>/ with mods/, me3/, launchers, backups/, logs/.
 
@@ -57,7 +57,7 @@ Generates a balanced DAG of zone connections.
 | `care_package.py` | Randomized starting build (weapons, armor, spells, etc.) |
 | `fog_mod.py` | Wrapper to call FogModWrapper.exe via Wine/native |
 | `item_randomizer.py` | Wrapper to call ItemRandomizerWrapper.exe, generate item_config |
-| `packaging.py` | Copy `data/packaging/`, copy helper config, generate `config_speedfog.me3` |
+| `packaging.py` | Copy `data/packaging/`, copy helper config, generate `me3/config_speedfog.me3` |
 | `main.py` | CLI entry point, orchestrates full pipeline |
 
 ### C# Shared Library (`writer/FogModWrapper.Core/`)
@@ -223,7 +223,7 @@ Output goes to `data/overlay/`, which the per-seed pipeline copies into each mod
   GamePatcher-generated files and user-provided overrides.
 
 Packaging: `speedfog` copies `data/packaging/*` into the seed directory and
-generates `config_speedfog.me3`. `tools/bootstrap.py` is responsible for
+generates `me3/config_speedfog.me3`. `tools/bootstrap.py` is responsible for
 populating `data/packaging/` before any run generation.
 
 **Merge order matters**: Item Randomizer runs first, FogMod merges on top. This matches the official FogRando documentation.
@@ -473,6 +473,7 @@ launchers, and runtime packaging are created.
 ├── me3/                      # ME3 (copied from data/packaging/)
 │   ├── bin/me3               # Linux ME3 launcher
 │   └── bin/win64/me3.exe     # Windows ME3 launcher
+│   └── config_speedfog.me3   # ME3 profile
 ├── mods/
 │   ├── fogmod/               # FogMod output (fog gates, scaling, events)
 │   │   ├── param/gameparam/regulation.bin
@@ -483,7 +484,6 @@ launchers, and runtime packaging are created.
 │   └── itemrando/            # Item Randomizer output (optional)
 ├── lib/                      # Runtime DLLs from data/packaging/lib/ (loaded by ME3 when profiled)
 │   └── RandomizerHelper_config.ini  # Copied from itemrando output when present
-├── config_speedfog.me3       # ME3 profile
 ├── launch_speedfog.bat       # Windows launcher
 ├── recovery.bat              # Windows recovery launcher
 ├── linux/                    # Linux launchers

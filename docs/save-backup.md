@@ -141,7 +141,7 @@ is currently running.
 ## Scripts and Packaging
 
 Scripts are standalone files in `data/packaging/`, copied to the seed
-directory by the Python packaging step. Only `config_speedfog.me3` is
+directory by the Python packaging step. Only `me3/config_speedfog.me3` is
 dynamically generated (it depends on item randomizer configuration).
 
 ```

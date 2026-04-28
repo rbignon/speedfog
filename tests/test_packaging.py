@@ -37,11 +37,11 @@ def _make_packaging_tree(root: Path) -> None:
 def test_write_me3_config_without_item_randomizer(tmp_path: Path) -> None:
     write_me3_config(tmp_path)
 
-    content = (tmp_path / "config_speedfog.me3").read_text(encoding="utf-8")
+    content = (tmp_path / "me3" / "config_speedfog.me3").read_text(encoding="utf-8")
     assert 'profileVersion = "v1"' in content
     assert "[[supports]]" in content
     assert 'game = "eldenring"' in content
-    assert 'path = "mods/fogmod"' in content
+    assert 'path = "../mods/fogmod"' in content
     assert "[[natives]]" not in content
     assert "RandomizerCrashFix.dll" not in content
     assert "RandomizerHelper.dll" not in content
@@ -58,12 +58,12 @@ def test_write_me3_config_with_item_randomizer_loads_fogmod_last(
         include_crash_fix=True,
     )
 
-    content = (tmp_path / "config_speedfog.me3").read_text(encoding="utf-8")
-    assert 'path = "mods/itemrando"' in content
-    assert "RandomizerCrashFix.dll" in content
-    assert "RandomizerHelper.dll" in content
-    assert content.index('path = "mods/itemrando"') < content.index(
-        'path = "mods/fogmod"'
+    content = (tmp_path / "me3" / "config_speedfog.me3").read_text(encoding="utf-8")
+    assert 'path = "../mods/itemrando"' in content
+    assert "../lib/RandomizerCrashFix.dll" in content
+    assert "../lib/RandomizerHelper.dll" in content
+    assert content.index('path = "../mods/itemrando"') < content.index(
+        'path = "../mods/fogmod"'
     )
 
 
@@ -112,3 +112,4 @@ def test_package_seed_copies_randomizer_helper_config(tmp_path: Path) -> None:
     assert (seed_dir / "lib" / "RandomizerHelper_config.ini").read_text(
         encoding="utf-8"
     ) == "autoUpgrade=true\n"
+    assert (seed_dir / "me3" / "config_speedfog.me3").exists()

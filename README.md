@@ -78,9 +78,8 @@ Output is self-contained in `seeds/<seed>/`:
 - `graph.json` - DAG definition
 - `logs/spoiler.txt` - Spoiler log
 - `logs/generation.log` - Structured generation log
-- `me3/` - ME3 (installed by `tools/bootstrap.py`)
+- `me3/` - ME3 and `config_speedfog.me3` profile
 - `mods/` - Generated mod files
-- `config_speedfog.me3` - ME3 profile
 - `launch_speedfog.bat` - Windows launcher
 
 ### CLI Options

@@ -98,7 +98,7 @@ output/
 ├── logs/                   # Diagnostic logs (--logs)
 │   ├── spoiler.txt         # Path spoiler log
 │   └── generation.log      # DAG generation diagnostics
-├── me3/                    # ME3 (installed by tools/bootstrap.py)
+├── me3/                    # ME3 + config_speedfog.me3 profile
 ├── mods/
 │   ├── fogmod/             # Fog gate mod files
 │   │   ├── param/gameparam/regulation.bin
@@ -106,7 +106,6 @@ output/
 │   │   └── map/mapstudio/*.msb.dcx
 │   └── itemrando/          # Item Randomizer files (if enabled)
 ├── lib/                    # Runtime DLLs (crash fix, helper)
-├── config_speedfog.me3     # ME3 profile
 ├── launch_speedfog.bat     # Windows launcher
 ├── recovery.bat            # Windows recovery launcher
 ├── linux/                  # Linux launchers
