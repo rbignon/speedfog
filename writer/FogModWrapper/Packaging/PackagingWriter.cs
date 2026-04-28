@@ -149,8 +149,8 @@ public class PackagingWriter
         if (File.Exists(srcVersion))
             File.Copy(srcVersion, Path.Combine(destDir, "version.txt"), overwrite: true);
 
-        // Make Linux binary executable on Unix host (zip preserves it on extraction by ME3 user,
-        // but we want it executable from the output dir on Linux dev machines too).
+        // Make Linux binary executable on Unix host. Tar preserves the +x bit on extraction,
+        // but this restores it if the cache was populated on a host that dropped mode bits.
         if (!OperatingSystem.IsWindows())
         {
             var linuxBin = Path.Combine(binDst, "me3");
