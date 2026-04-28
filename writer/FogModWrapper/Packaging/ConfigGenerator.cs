@@ -24,19 +24,22 @@ public static class ConfigGenerator
         var nativesBlock = string.Join("\n\n", natives.Select(p =>
             $"[[natives]]\npath = \"{p}\""));
 
-        var packagesLines = new List<string>
-        {
-            "[[packages]]",
-            "id = \"fogmod\"",
-            $"path = \"{modPath}\""
-        };
+        // ME3 uses last-wins overlay semantics (later packages override earlier on file collisions).
+        // itemrando ships a regulation.bin with item randomization only; fogmod ships a merged regulation
+        // (item rando + fog gates) thanks to --merge-dir. fogmod must therefore load LAST so its merged
+        // regulation overrides itemrando's standalone one. itemrando still wins for map/msg/sfx files
+        // that fogmod doesn't carry.
+        var packagesLines = new List<string>();
         if (itemRandomizerEnabled)
         {
-            packagesLines.Add("");
             packagesLines.Add("[[packages]]");
             packagesLines.Add("id = \"itemrando\"");
             packagesLines.Add("path = \"mods/itemrando\"");
+            packagesLines.Add("");
         }
+        packagesLines.Add("[[packages]]");
+        packagesLines.Add("id = \"fogmod\"");
+        packagesLines.Add($"path = \"{modPath}\"");
         var packagesBlock = string.Join("\n", packagesLines);
 
         var config = $@"# SpeedFog ME3 Profile

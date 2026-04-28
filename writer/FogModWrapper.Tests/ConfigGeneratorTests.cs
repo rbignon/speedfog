@@ -49,6 +49,12 @@ public class ConfigGeneratorTests : IDisposable
         var content = File.ReadAllText(Path.Combine(_tempDir, "config_speedfog.me3"));
         Assert.Contains("path = \"mods/itemrando\"", content);
         Assert.Contains("RandomizerHelper.dll", content);
+
+        // ME3 last-wins: fogmod must come AFTER itemrando so fogmod's merged regulation.bin overrides.
+        var itemrandoIdx = content.IndexOf("path = \"mods/itemrando\"");
+        var fogmodIdx = content.IndexOf("path = \"mods/fogmod\"");
+        Assert.True(itemrandoIdx < fogmodIdx,
+            $"itemrando ({itemrandoIdx}) must appear before fogmod ({fogmodIdx}) in the .me3 profile so fogmod's merged regulation overrides itemrando's at runtime");
     }
 
     [Fact]
