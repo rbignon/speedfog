@@ -1,7 +1,7 @@
 namespace FogModWrapper.Packaging;
 
 /// <summary>
-/// Orchestrates the final output packaging: ModEngine download, config generation, and launchers.
+/// Orchestrates the final output packaging: ME3 download, config generation, and launchers.
 /// </summary>
 public class PackagingWriter
 {
@@ -13,11 +13,11 @@ public class PackagingWriter
     }
 
     /// <summary>
-    /// Writes the complete package: downloads ModEngine 2, copies it to output,
+    /// Writes the complete package: downloads ME3, copies it to output,
     /// and generates config and launcher scripts.
     /// </summary>
     /// <param name="mergeDir">Optional merge directory (Item Randomizer output) - if set, includes RandomizerHelper.dll.</param>
-    /// <param name="forceUpdate">Force re-download of ModEngine 2.</param>
+    /// <param name="forceUpdate">Force re-download of ME3.</param>
     public async Task WritePackageAsync(string? mergeDir = null, bool forceUpdate = false)
     {
         Console.WriteLine();
@@ -27,13 +27,13 @@ public class PackagingWriter
 
         using var downloader = new ModEngineDownloader(CacheHelper.GetCacheDirectory());
 
-        // 1. Ensure ModEngine 2 is downloaded
+        // 1. Ensure ME3 is downloaded
         var modEngineCachePath = await downloader.EnsureModEngineAsync(forceUpdate);
 
-        // 2. Copy ModEngine to output (runtime files only, skip dev assets)
-        var modEngineOutputPath = Path.Combine(_outputDir, "ModEngine");
-        CopyModEngine(modEngineCachePath, modEngineOutputPath);
-        Console.WriteLine($"Copied ModEngine 2 to {modEngineOutputPath}");
+        // 2. Copy ME3 binaries to output (bin/ tree only)
+        var me3OutputPath = Path.Combine(_outputDir, "me3");
+        CopyModEngine(modEngineCachePath, me3OutputPath);
+        Console.WriteLine($"Copied ME3 to {me3OutputPath}");
 
         // 3. Copy runtime assets (crash fix DLL, etc.)
         CopyAssets();
@@ -54,7 +54,7 @@ public class PackagingWriter
 
         // 5. Generate config file (using path relative to output dir)
         ConfigGenerator.WriteModEngineConfig(_outputDir, "mods/fogmod", itemRandomizerEnabled);
-        Console.WriteLine("Generated config_speedfog.toml");
+        Console.WriteLine("Generated config_speedfog.me3");
 
         // 6. Copy launcher, backup, and recovery scripts
         ConfigGenerator.CopyScripts(_outputDir);
@@ -125,44 +125,43 @@ public class PackagingWriter
     }
 
     /// <summary>
-    /// Copies only the runtime-essential ModEngine 2 files to the output directory.
-    /// Skips development files (C++ headers, debug menus, locale data) and configs
-    /// for other games. This reduces the output by ~17 MB compared to a full copy.
+    /// Copies only the runtime-essential ME3 files (bin/ tree) to the output directory.
+    /// The cache contains the full Linux tar.gz contents; we keep just the binaries.
     /// </summary>
     private static void CopyModEngine(string cacheDir, string destDir)
     {
         Directory.CreateDirectory(destDir);
 
-        // Top-level files: only the launcher and our version marker
-        string[] allowedFiles = ["modengine2_launcher.exe", "version.txt"];
-        foreach (var name in allowedFiles)
-        {
-            var src = Path.Combine(cacheDir, name);
-            if (File.Exists(src))
-                File.Copy(src, Path.Combine(destDir, name), overwrite: true);
-        }
+        var binSrc = Path.Combine(cacheDir, "bin");
+        var binDst = Path.Combine(destDir, "bin");
 
-        // modengine2/ subdirectories: only runtime essentials
-        // Skips: assets/ (debug menu), include/ (C++ headers),
-        //        lib/ (.lib linker files), share/ (cmake configs)
-        string[] allowedSubDirs = ["bin", "crashpad", "tools"];
-        var me2Src = Path.Combine(cacheDir, "modengine2");
-        var me2Dst = Path.Combine(destDir, "modengine2");
-
-        if (Directory.Exists(me2Src))
-        {
-            Directory.CreateDirectory(me2Dst);
-            foreach (var name in allowedSubDirs)
-            {
-                var src = Path.Combine(me2Src, name);
-                if (Directory.Exists(src))
-                    CopyDirectory(src, Path.Combine(me2Dst, name));
-            }
-        }
-        else
+        if (!Directory.Exists(binSrc))
         {
             Console.WriteLine(
-                "Warning: modengine2/ directory not found in cache, mod may not launch correctly");
+                "Warning: bin/ directory not found in ME3 cache, mod may not launch correctly");
+            return;
+        }
+
+        CopyDirectory(binSrc, binDst);
+
+        // Persist version marker for visibility
+        var srcVersion = Path.Combine(cacheDir, "version.txt");
+        if (File.Exists(srcVersion))
+            File.Copy(srcVersion, Path.Combine(destDir, "version.txt"), overwrite: true);
+
+        // Make Linux binary executable on Unix host (zip preserves it on extraction by ME3 user,
+        // but we want it executable from the output dir on Linux dev machines too).
+        if (!OperatingSystem.IsWindows())
+        {
+            var linuxBin = Path.Combine(binDst, "me3");
+            if (File.Exists(linuxBin))
+            {
+                var execMode =
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute |
+                    UnixFileMode.GroupRead | UnixFileMode.GroupExecute |
+                    UnixFileMode.OtherRead | UnixFileMode.OtherExecute;
+                File.SetUnixFileMode(linuxBin, execMode);
+            }
         }
     }
 
