@@ -45,7 +45,6 @@ obj/
 *~
 
 # SpeedFog specific
-output/
 seeds/
 config.toml
 graph.json
