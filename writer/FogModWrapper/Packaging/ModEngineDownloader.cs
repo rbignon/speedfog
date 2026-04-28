@@ -13,7 +13,7 @@ namespace FogModWrapper.Packaging;
 public class ModEngineDownloader : IDisposable
 {
     private const string GitHubApiUrl =
-        "https://api.github.com/repos/soulsmods/me3/releases/latest";
+        "https://api.github.com/repos/garyttierney/me3/releases/latest";
 
     private readonly HttpClient _httpClient;
     private readonly string _cacheDir;

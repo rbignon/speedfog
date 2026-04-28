@@ -495,4 +495,4 @@ Zones have tiers (1-28) based on their layer in the DAG. FogMod applies SpEffect
 - FogRando: https://www.nexusmods.com/eldenring/mods/3295
 - Item Randomizer: https://www.nexusmods.com/eldenring/mods/428
 - SoulsFormats: https://github.com/soulsmods/SoulsFormatsNEXT
-- ME3: https://github.com/soulsmods/me3
+- ME3: https://github.com/garyttierney/me3

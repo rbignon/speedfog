@@ -158,7 +158,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 - [FogRando](https://www.nexusmods.com/eldenring/mods/3295) by thefifthmatt - Core fog gate system
 - [Item Randomizer](https://www.nexusmods.com/eldenring/mods/428) by thefifthmatt - Item/enemy randomization
 - [SoulsFormats](https://github.com/soulsmods/SoulsFormatsNEXT) - File format library
-- [ME3](https://github.com/soulsmods/me3) - Mod loading
+- [ME3](https://github.com/garyttierney/me3) - Mod loading
 
 ## License
 
