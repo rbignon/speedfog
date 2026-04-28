@@ -62,7 +62,9 @@ public class PackagingWriter
 
         Console.WriteLine();
         Console.WriteLine("=== SpeedFog mod ready! ===");
-        Console.WriteLine($"To play: double-click {Path.Combine(_outputDir, "launch_speedfog.bat")}");
+        Console.WriteLine("To play:");
+        Console.WriteLine($"  Windows: double-click {Path.Combine(_outputDir, "launch_speedfog.bat")}");
+        Console.WriteLine($"  Linux:   run {Path.Combine(_outputDir, "linux", "launch_speedfog.sh")}");
     }
 
     /// <summary>
