@@ -111,7 +111,7 @@ Example:
         }
         Console.WriteLine();
 
-        // Mod files go in mods/fogmod/ subdirectory for ModEngine
+        // Mod files go in mods/fogmod/ subdirectory for ME3
         var modDir = Path.Combine(config.OutputDir, "mods", "fogmod");
         Directory.CreateDirectory(modDir);
 
@@ -709,7 +709,7 @@ Example:
         // 7l. Vanilla stake removal is handled pre-Write via ann.RetryPoints
         // (step 6b). FogMod reads MSBs from BHD archives and removes tagged stakes.
 
-        // 8. Package with ModEngine 2
+        // 8. Package with ME3
         var packager = new PackagingWriter(config.OutputDir);
         await packager.WritePackageAsync(config.MergeDir);
     }

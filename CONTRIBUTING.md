@@ -118,7 +118,7 @@ Python (speedfog/)      C# (writer/)                              Output
 ─────────────────       ─────────────────                         ─────────────────
 config.toml        →                                              seeds/<seed>/
 clusters.json      →    graph.json → FogModWrapper ──────────┐    ├── mods/
-DAG generation     →                      ↑                  ├──► ├── ModEngine/
+DAG generation     →                      ↑                  ├──► ├── me3/
                         item_config.json → ItemRandomizerWrapper  ├── launch_speedfog.bat
                                           (optional)              └── spoiler.txt
 ```

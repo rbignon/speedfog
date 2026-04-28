@@ -51,8 +51,6 @@ FogModWrapper.exe <seed_dir> --game-dir <game_dir> [options]
 - `--data-dir <path>` - Custom path to data directory (default: ../data)
 - `-o, --output <path>` - Where to write mod files (default: ./output)
 - `--merge-dir <path>` - Merge files from another mod (e.g., Item Randomizer output)
-- `--no-package` - Skip ME3 packaging (output mod files only)
-- `--update-modengine` - Force re-download of ME3
 
 ## ItemRandomizerWrapper
 

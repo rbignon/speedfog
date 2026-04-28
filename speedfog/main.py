@@ -427,7 +427,7 @@ def main() -> int:
 
             print("Running Item Randomizer...")
 
-            # Output directly to mods/itemrando so ModEngine can load it
+            # Output directly to mods/itemrando so ME3 can load it
             item_rando_dir = seed_dir / "mods" / "itemrando"
             item_rando_dir.mkdir(parents=True, exist_ok=True)
 
