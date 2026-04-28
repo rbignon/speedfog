@@ -1,54 +1,54 @@
 namespace FogModWrapper.Packaging;
 
 /// <summary>
-/// Generates ModEngine 2 configuration files and copies launcher/backup scripts to output.
+/// Generates the ME3 profile and copies launcher/backup scripts to output.
 /// </summary>
 public static class ConfigGenerator
 {
     /// <summary>
-    /// Writes the ModEngine 2 TOML configuration file.
+    /// Writes the ME3 profile (.me3 TOML) describing packages and natives.
     /// </summary>
     /// <param name="outputDir">The output directory.</param>
     /// <param name="modPath">The relative path to the mod folder (default: "mods/fogmod").</param>
-    /// <param name="itemRandomizerEnabled">Whether item randomizer was used (adds RandomizerHelper.dll).</param>
+    /// <param name="itemRandomizerEnabled">Whether item randomizer was used (adds itemrando package and RandomizerHelper.dll).</param>
     public static void WriteModEngineConfig(string outputDir, string modPath = "mods/fogmod", bool itemRandomizerEnabled = false)
     {
-        var configPath = Path.Combine(outputDir, "config_speedfog.toml");
+        var configPath = Path.Combine(outputDir, "config_speedfog.me3");
 
-        var externalDlls = new List<string> { @"lib\\RandomizerCrashFix.dll" };
+        var natives = new List<string> { "lib/RandomizerCrashFix.dll" };
         if (itemRandomizerEnabled)
         {
-            externalDlls.Add(@"lib\\RandomizerHelper.dll");
+            natives.Add("lib/RandomizerHelper.dll");
         }
 
-        var dllsString = string.Join(",\n    ", externalDlls.Select(d => $"\"{d}\""));
+        var nativesBlock = string.Join("\n\n", natives.Select(p =>
+            $"[[natives]]\npath = \"{p}\""));
 
-        // Build mods list - fogmod first (higher priority), then itemrando for non-merged files
-        // MergedMods merges regulation.bin and EMEVD, but map/msg/sfx need separate loading
-        var modsLines = new List<string>
+        var packagesLines = new List<string>
         {
-            $"    {{ enabled = true, name = \"fogmod\", path = \"{modPath}\" }}"
+            "[[packages]]",
+            "id = \"fogmod\"",
+            $"path = \"{modPath}\""
         };
         if (itemRandomizerEnabled)
         {
-            modsLines.Add("    { enabled = true, name = \"itemrando\", path = \"mods/itemrando\" }");
+            packagesLines.Add("");
+            packagesLines.Add("[[packages]]");
+            packagesLines.Add("id = \"itemrando\"");
+            packagesLines.Add("path = \"mods/itemrando\"");
         }
+        var packagesBlock = string.Join("\n", packagesLines);
 
-        var config = $@"# SpeedFog ModEngine 2 Configuration
-# Auto-generated - do not edit manually
+        var config = $@"# SpeedFog ME3 Profile
+# Auto-generated, do not edit manually
+profileVersion = ""v1""
 
-[modengine]
-debug = false
-external_dlls = [
-    {dllsString},
-]
+[[supports]]
+game = ""eldenring""
 
-[extension.mod_loader]
-enabled = true
-loose_params = false
-mods = [
-{string.Join(",\n", modsLines)}
-]
+{nativesBlock}
+
+{packagesBlock}
 ";
 
         File.WriteAllText(configPath, config);
