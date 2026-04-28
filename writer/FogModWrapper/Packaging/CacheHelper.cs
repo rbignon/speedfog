@@ -6,7 +6,7 @@ namespace FogModWrapper.Packaging;
 public static class CacheHelper
 {
     /// <summary>
-    /// Gets the cache directory for ModEngine 2 storage.
+    /// Gets the cache directory for ME3 storage.
     /// </summary>
     /// <returns>Platform-specific cache path.</returns>
     /// <exception cref="PlatformNotSupportedException">Thrown on unsupported platforms.</exception>
@@ -14,28 +14,28 @@ public static class CacheHelper
     {
         if (OperatingSystem.IsWindows())
         {
-            // Windows: %LOCALAPPDATA%\SpeedFog\modengine2\
+            // Windows: %LOCALAPPDATA%\SpeedFog\me3\
             return Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "SpeedFog", "modengine2");
+                "SpeedFog", "me3");
         }
 
         if (OperatingSystem.IsLinux())
         {
-            // Linux: $XDG_CACHE_HOME/speedfog/modengine2/ or ~/.cache/speedfog/modengine2/
+            // Linux: $XDG_CACHE_HOME/speedfog/me3/ or ~/.cache/speedfog/me3/
             var xdgCache = Environment.GetEnvironmentVariable("XDG_CACHE_HOME");
             var basePath = !string.IsNullOrEmpty(xdgCache)
                 ? xdgCache
                 : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cache");
-            return Path.Combine(basePath, "speedfog", "modengine2");
+            return Path.Combine(basePath, "speedfog", "me3");
         }
 
         if (OperatingSystem.IsMacOS())
         {
-            // macOS: ~/Library/Caches/SpeedFog/modengine2/
+            // macOS: ~/Library/Caches/SpeedFog/me3/
             return Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                "Library", "Caches", "SpeedFog", "modengine2");
+                "Library", "Caches", "SpeedFog", "me3");
         }
 
         throw new PlatformNotSupportedException(
