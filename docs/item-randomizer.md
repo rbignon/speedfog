@@ -203,7 +203,7 @@ Additionally, FogModWrapper:
 
 ## RandomizerHelper
 
-`RandomizerHelper.dll` (in `writer/assets/`) is an optional runtime DLL loaded by ModEngine 2. It provides in-game quality-of-life features like auto-upgrading weapons.
+`RandomizerHelper.dll` (in `writer/assets/`) is an optional runtime DLL loaded by ME3. It provides in-game quality-of-life features like auto-upgrading weapons.
 
 ### config.ini Generation
 
@@ -223,7 +223,7 @@ SpeedFog defaults are deliberately exhaustive to avoid surprising defaults from 
 - **Auto-equip**: disabled (SpeedFog provides a care package instead)
 - **Auto-upgrade**: enabled (weapons auto-upgrade as the player progresses)
 
-The INI file is copied to `output/lib/` during packaging. `RandomizerHelper.dll` is registered as an external DLL in ModEngine's config when item randomization is active.
+The INI file is copied to `output/lib/` during packaging. `RandomizerHelper.dll` is registered as a native in the ME3 profile when item randomization is active.
 
 ## Data Directory
 
