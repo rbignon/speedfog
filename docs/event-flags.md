@@ -114,6 +114,14 @@ SpeedFog injects custom events into EMEVD files:
 
 All events are registered in Event 0 via `InitializeEvent` (bank 2000, id 0).
 
+## Reserved Param ID Ranges (non-flag)
+
+Allocations in regulation.bin params (not event flags). Listed here so future contributors do not collide.
+
+| Range | Param(s) | Owner | Reference |
+|-------|----------|-------|-----------|
+| 1450700-1450799 | PhantomParam, SpEffectVfxParam, SpEffectParam | Phantom skins catalog | `docs/phantom-skins.md` |
+
 ## Risks & Constraints
 
 - **1000 flag budget**: Offsets 0-999 in category 1050294 give 1000 zone tracking flags. Sufficient for large DAGs (60+ layers).

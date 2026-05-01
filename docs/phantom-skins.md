@@ -40,6 +40,8 @@ alpha = 1.0                 # overall opacity 0-1
 
 To add a preset: add a new `[[skins]]` block, regenerate a seed, test in-game.
 
+Note on alpha: the V1 schema exposes a single `alpha` value that the injector writes to both `PhantomParam.alpha` (overall) and `PhantomParam.edgeColorA` (edge alpha). If a future preset needs distinct overall and edge opacities, the schema would need an explicit `edge_alpha` field.
+
 ## Build-Time Flow
 
 1. `PhantomCatalogLoader` reads and validates the TOML (id range, uniqueness).
