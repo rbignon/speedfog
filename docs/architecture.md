@@ -199,7 +199,7 @@ Post-processing (after FogMod writes, step numbers match Program.cs):
 - **7h** ChapelGraceInjector: Site of Grace + WarpPlayer for initial spawn
 - **7h2** DeathMarkerInjector: bloodstain visuals at fog gates
 - **7i** RebirthInjector: rebirth option at graces via ESD editing (ConsistentID 73)
-- **7j3** StartupFlagInjector: set event flags at startup (e.g., open sewer gates)
+- **7j3** StartupFlagInjector: set event flags at startup to force gates open (sewer + Stormveil); see `docs/startup-flag-injection.md`
 - **EMEVD scan (common_func)** HeavyDoorMessagePatcher: NOP "heavy door" popup (text 4200)
 - **7k** VanillaWarpRemover: delete vanilla warp MSB assets that conflict with fog gates
 - **7l** StakeRemover: remove vanilla stakes outside the DAG

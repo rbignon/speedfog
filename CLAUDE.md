@@ -151,6 +151,7 @@ speedfog/
 │   ├── item-giving-limitations.md # EMEVD item type constraints
 │   ├── vanilla-warp-removal.md # FogMod warp removal workaround
 │   ├── stake-removal.md     # Vanilla stake removal (RetryPoint softlock prevention)
+│   ├── startup-flag-injection.md # Forcing event flags ON at map load (open gates)
 │   ├── death-markers.md     # Bloodstain visuals at fog gates (DrawGroups, DeepCopy bug)
 │   ├── boss-trigger-lock.md # Boss arena exit locking (TrapFlag before warp)
 │   └── save-backup.md      # Save backup system (daemon, recovery, config)
@@ -177,6 +178,7 @@ speedfog/
 | `docs/care-package.md` | Randomized starting build system |
 | `docs/vanilla-warp-removal.md` | FogMod vanilla warp removal workaround |
 | `docs/stake-removal.md` | Vanilla stake removal (RetryPoint softlock prevention) |
+| `docs/startup-flag-injection.md` | StartupFlagInjector mechanism + methodology to find new gate flags |
 | `docs/death-markers.md` | Bloodstain visuals at fog gates (DrawGroups, DeepCopy bug, entity IDs) |
 | `docs/boss-trigger-lock.md` | Boss arena exit locking (TrapFlag vs BossTrigger, warp patching) |
 | `docs/save-backup.md` | Save backup system (daemon, recovery, config) |
