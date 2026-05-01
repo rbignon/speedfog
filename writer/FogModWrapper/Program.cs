@@ -284,6 +284,10 @@ Example:
             eventConfig.MakeWarpCommands(events);
         }
 
+        // 3b. Load phantom skins catalog (optional; absent file = no-op).
+        var phantomCatalogPath = Path.Combine(config.DataDir, "phantom_skins.toml");
+        var phantomSkins = PhantomCatalogLoader.Load(phantomCatalogPath);
+
         // 4. Build FogMod Graph (unconnected nodes/edges)
         Console.WriteLine("Constructing FogMod graph...");
         var graph = new Graph();
@@ -666,6 +670,8 @@ Example:
 
             if (graphData.ChapelGrace)
                 ChapelGraceInjector.Inject(modDir, config.GameDir, events, reg);
+
+            PhantomCatalogInjector.ApplyTo(reg, phantomSkins);
 
             reg.Save();
         }
