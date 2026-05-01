@@ -84,6 +84,9 @@ public static class PhantomCatalogLoader
 
         foreach (var skin in skins)
         {
+            if (string.IsNullOrWhiteSpace(skin.Name))
+                throw new InvalidDataException($"phantom_skins: skin id {skin.Id} has empty name");
+
             if (skin.Id < IdRangeStart || skin.Id > IdRangeEnd)
                 throw new InvalidDataException(
                     $"phantom_skins: skin '{skin.Name}' id {skin.Id} outside reserved range {IdRangeStart}-{IdRangeEnd}");
@@ -93,9 +96,6 @@ public static class PhantomCatalogLoader
 
             if (!seenNames.Add(skin.Name))
                 throw new InvalidDataException($"phantom_skins: duplicate name '{skin.Name}'");
-
-            if (string.IsNullOrWhiteSpace(skin.Name))
-                throw new InvalidDataException($"phantom_skins: skin id {skin.Id} has empty name");
         }
     }
 
