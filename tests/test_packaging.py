@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from speedfog import packaging
 from speedfog.packaging import (
     PackagingError,
     copy_packaging_assets,
@@ -113,3 +114,30 @@ def test_package_seed_copies_randomizer_helper_config(tmp_path: Path) -> None:
         encoding="utf-8"
     ) == "autoUpgrade=true\n"
     assert (seed_dir / "me3" / "config_speedfog.me3").exists()
+
+
+def test_copy_phantom_catalog_copies_when_present(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    seed_dir = tmp_path / "seed"
+    (project_root / "data").mkdir(parents=True)
+    seed_dir.mkdir()
+    catalog_src = project_root / "data" / "phantom_skins.toml"
+    catalog_src.write_text("# stub catalog\n", encoding="utf-8")
+
+    packaging.copy_phantom_catalog(project_root, seed_dir)
+
+    catalog_dest = seed_dir / "phantom_skins.toml"
+    assert catalog_dest.exists()
+    assert catalog_dest.read_text(encoding="utf-8") == "# stub catalog\n"
+
+
+def test_copy_phantom_catalog_skips_when_absent(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    seed_dir = tmp_path / "seed"
+    (project_root / "data").mkdir(parents=True)
+    seed_dir.mkdir()
+
+    # No catalog source. Should not raise; should not create dest.
+    packaging.copy_phantom_catalog(project_root, seed_dir)
+
+    assert not (seed_dir / "phantom_skins.toml").exists()

@@ -88,6 +88,19 @@ def copy_packaging_assets(
     _make_linux_scripts_executable(output_dir / "linux")
 
 
+def copy_phantom_catalog(project_root: Path, seed_dir: Path) -> None:
+    """Copy data/phantom_skins.toml to seed_dir if present.
+
+    The phantom skins catalog is consumed at runtime by speedfog-racing's mod
+    to resolve skin name to SpEffect id. Skipped silently when absent so seeds
+    built without the feature still work.
+    """
+    src = project_root / "data" / "phantom_skins.toml"
+    if not src.exists():
+        return
+    shutil.copy2(src, seed_dir / "phantom_skins.toml")
+
+
 def package_seed(
     project_root: Path,
     seed_dir: Path,
@@ -105,6 +118,10 @@ def package_seed(
         item_randomizer_enabled=item_randomizer_enabled,
     )
     print("Copied packaging assets from data/packaging/")
+
+    copy_phantom_catalog(project_root, seed_dir)
+    if (seed_dir / "phantom_skins.toml").exists():
+        print("Copied phantom_skins.toml")
 
     if item_randomizer_enabled and item_randomizer_dir is not None:
         helper_config = item_randomizer_dir / "RandomizerHelper_config.ini"
