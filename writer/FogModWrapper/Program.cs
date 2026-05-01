@@ -693,10 +693,12 @@ Example:
         }
 
         // 7j3. Set startup flags (open gates, etc.)
+        // See docs/startup-flag-injection.md for the methodology used to find these flags.
         StartupFlagInjector.Inject(modDir, new[]
         {
             ("m35_00_00_00", 35000565, true),  // Sewer barred gate 1 (AEG023_330_1000, lever AEG027_002_0503)
             ("m35_00_00_00", 35000566, true),  // Sewer barred gate 2 (AEG023_330_1001, lever AEG027_002_0507)
+            ("m10_00_00_00", 10000500, true),  // Stormveil barred gate (AEG219_050_0500, lever AEG219_030_0500)
         });
 
         // 7k. Remove vanilla assets that conflict with fog gates.
