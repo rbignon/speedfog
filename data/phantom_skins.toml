@@ -1,0 +1,57 @@
+# Phantom skins catalog. Each entry is baked into regulation.bin as one row
+# in PhantomParam, SpEffectVfxParam, and SpEffectParam, all sharing the same
+# id. Reserved id range: 1450700-1450799.
+#
+# Field reference (see docs/phantom-skins.md):
+#   id           Reserved range 1450700-1450799, unique
+#   name         Stable identifier consumed by speedfog-racing config
+#   display_name Human-readable label
+#   edge_color   RGB array, integers 0-255
+#   edge_power   Outline thickness/intensity (float)
+#   glow_scale   Bloom scale around outline (float, usually 0)
+#   alpha        Overall opacity (float 0-1)
+
+[[skins]]
+id = 1450700
+name = "gold-aura"
+display_name = "Golden Phantom"
+edge_color = [255, 215, 0]
+edge_power = 0.5
+glow_scale = 0.0
+alpha = 1.0
+
+[[skins]]
+id = 1450701
+name = "cyan-aura"
+display_name = "Cyan Phantom"
+edge_color = [0, 220, 255]
+edge_power = 0.5
+glow_scale = 0.0
+alpha = 1.0
+
+[[skins]]
+id = 1450702
+name = "crimson-aura"
+display_name = "Crimson Phantom"
+edge_color = [255, 30, 60]
+edge_power = 0.5
+glow_scale = 0.0
+alpha = 1.0
+
+[[skins]]
+id = 1450703
+name = "emerald-aura"
+display_name = "Emerald Phantom"
+edge_color = [50, 220, 110]
+edge_power = 0.5
+glow_scale = 0.0
+alpha = 1.0
+
+[[skins]]
+id = 1450704
+name = "violet-aura"
+display_name = "Violet Phantom"
+edge_color = [180, 60, 240]
+edge_power = 0.5
+glow_scale = 0.0
+alpha = 1.0
