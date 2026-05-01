@@ -68,6 +68,7 @@ public class PhantomCatalogInjectorTests
         Assert.Equal((byte)255, row["edgeColorR"].Value);
         Assert.Equal((byte)215, row["edgeColorG"].Value);
         Assert.Equal((byte)0, row["edgeColorB"].Value);
+        Assert.Equal(1.0f, row["edgeColorA"].Value);  // alpha is written to edge alpha too
         Assert.Equal(0.5f, row["edgePower"].Value);
         Assert.Equal(0.0f, row["glowScale"].Value);
         Assert.Equal(1.0f, row["alpha"].Value);
@@ -125,9 +126,11 @@ public class PhantomCatalogInjectorTests
         var spParam = BuildParamFromDef(Path.Combine(DefsDir(), "SpEffect.xml"), 13177);
 
         // Pre-fill template row 260 with non-zero values to simulate a "dirty" template.
+        // diffMulColor* defaults to 255 in vanilla, so this simulates real game data.
         var template = phantomParam[260]!;
         template["frontColorR"].Value = (byte)200;
         template["diffMulColorR"].Value = (byte)100;
+        template["specMulColorR"].Value = (byte)180;
 
         var skin = new PhantomSkin(1450700, "gold", "Gold", 255, 215, 0, 0.5f, 0.0f, 1.0f);
         PhantomCatalogInjector.Apply(phantomParam, vfxParam, spParam, new[] { skin });
@@ -135,5 +138,7 @@ public class PhantomCatalogInjectorTests
         var row = phantomParam[1450700]!;
         Assert.Equal((byte)0, row["frontColorR"].Value);
         Assert.Equal((byte)0, row["diffMulColorR"].Value);
+        // specMulColor is also zeroed (different field group; proves the full array is iterated)
+        Assert.Equal((byte)0, row["specMulColorR"].Value);
     }
 }
