@@ -71,6 +71,7 @@ speedfog/
 │   ├── fog_data.json        # Generated fog gate metadata (gitignored)
 │   ├── zone_metadata.toml   # Zone weight config (tracked)
 │   ├── care_package_items.toml  # Curated item pools for care package (tracked)
+│   ├── phantom_skins.toml   # Phantom skins catalog (cosmetic auras, tracked)
 │   ├── boss_arena_tags.json # Boss/arena tags for compatibility matching (tracked)
 │   ├── item_preset.yaml     # Item preset configuration (tracked)
 │   ├── i18n/                # Localization
@@ -184,6 +185,7 @@ speedfog/
 | `docs/save-backup.md` | Save backup system (daemon, recovery, config) |
 | `docs/item-giving-limitations.md` | EMEVD item type constraints and workarounds |
 | `docs/clusters.md` | Cluster generation from fog.txt |
+| `docs/phantom-skins.md` | Phantom skins catalog (cosmetic player auras for racing rewards) |
 | `reference/fogrando-src/GameDataWriterE.cs` | Main FogRando writer (5639 lines) |
 | `reference/fogrando-src/EldenScaling.cs` | Enemy scaling logic |
 | `data/care_package_items.toml` | Curated item pools for care package |
@@ -220,6 +222,7 @@ speedfog/
 |-------|---------|
 | `Program.cs` | CLI entry, loads options, calls FogMod's GameDataWriterE |
 | `GraphLoader` | Parses graph.json v4 format from Python |
+| `PhantomCatalogLoader` | Loads and validates `data/phantom_skins.toml` |
 | `ResourceCalculations` | Pure calculation functions for starting resources |
 | `ShopIdAllocator` | Shop ID allocation utilities |
 | `ConnectionInjector` | Injects connections into FogMod's Graph, extracts warp data |
@@ -242,6 +245,7 @@ speedfog/
 | `DeathMarkerInjector` | Bloodstain markers at fog gates (MSB assets + EMEVD SFX) |
 | `BossTriggerInjector` | Locks boss arena exit fog gates by setting TrapFlag before entrance warp |
 | `WeaponUpgradeInjector` | Weapon upgrade initialization for starting weapons with ashes of war |
+| `PhantomCatalogInjector` | Bakes phantom skin catalog (cosmetic auras) into PhantomParam/SpEffectVfxParam/SpEffectParam |
 
 **ItemRandomizerWrapper** (uses RandomizerCommon.dll directly):
 | Class | Purpose |
