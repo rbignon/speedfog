@@ -74,7 +74,13 @@ public sealed class RegulationEditor
     /// Returns null (and logs a warning) if the matching binder file or
     /// paramdef XML cannot be found.
     /// </summary>
-    public PARAM? GetParam(string name)
+    /// <param name="name">PARAM name (matches the binder file's <c>{name}.param</c>).</param>
+    /// <param name="defName">
+    /// Optional paramdef XML basename when it differs from <paramref name="name"/>
+    /// (e.g. PARAM "SpEffectParam" with def file "SpEffect.xml"). Defaults to
+    /// <paramref name="name"/>.
+    /// </param>
+    public PARAM? GetParam(string name, string? defName = null)
     {
         if (_params.TryGetValue(name, out var cached))
             return cached;
@@ -86,7 +92,7 @@ public sealed class RegulationEditor
             return null;
         }
 
-        var def = LoadParamdef(name);
+        var def = LoadParamdef(defName ?? name);
         if (def == null)
             return null;
 

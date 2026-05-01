@@ -47,4 +47,33 @@ public class RegulationEditorTests
         var exception = Record.Exception(() => editor.Save());
         Assert.Null(exception);
     }
+
+    [Fact]
+    public void GetParam_WithDefName_LooksUpDifferentXmlName()
+    {
+        // BND4 has a binder file for "SpEffectParam"; defsDir contains "SpEffect.xml"
+        // (no Param suffix). The def name overload should bridge the mismatch.
+        var bnd = CreateBndWithFile("N:/GR/data/Param/GameParam/SpEffectParam.param", new byte[0]);
+        var defsDir = EmptyDefsDir();
+        // We do not write a real paramdef; we only assert the lookup uses the right filename.
+        // The expected outcome here is that LoadParamdef logs "paramdef SpEffect.xml not found at <defsDir>/SpEffect.xml"
+        // and returns null. Without the overload, the lookup would target SpEffectParam.xml.
+        var editor = new RegulationEditor(bnd, defsDir);
+
+        var captured = new StringWriter();
+        var prev = Console.Out;
+        Console.SetOut(captured);
+        try
+        {
+            var result = editor.GetParam("SpEffectParam", "SpEffect");
+            Assert.Null(result);
+        }
+        finally
+        {
+            Console.SetOut(prev);
+        }
+
+        Assert.Contains("SpEffect.xml", captured.ToString());
+        Assert.DoesNotContain("SpEffectParam.xml", captured.ToString());
+    }
 }
