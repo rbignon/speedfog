@@ -76,6 +76,18 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>eldendata/Defs/EquipParamCustomWeapon.xml</Link>
     </None>
+    <None Include="eldendata/Defs/PhantomParam.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>eldendata/Defs/PhantomParam.xml</Link>
+    </None>
+    <None Include="eldendata/Defs/SpEffect.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>eldendata/Defs/SpEffect.xml</Link>
+    </None>
+    <None Include="eldendata/Defs/SpEffectVfx.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>eldendata/Defs/SpEffectVfx.xml</Link>
+    </None>
   </ItemGroup>
 
 </Project>
