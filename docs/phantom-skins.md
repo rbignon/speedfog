@@ -44,23 +44,38 @@ Note on alpha: the V1 schema exposes a single `alpha` value that the injector wr
 
 ## Build-Time Flow
 
-1. `PhantomCatalogLoader` reads and validates the TOML (id range, uniqueness).
-2. `PhantomCatalogInjector` adds three rows per skin to `regulation.bin`, copying templates from PhantomParam[260], SpEffectVfxParam[51508], SpEffectParam[13177].
-3. `speedfog/packaging.py` copies the TOML into the seed output as `<seed_dir>/phantom_skins.toml`.
+1. **Python (`speedfog/output.py:load_phantom_skins_catalog`)** reads `data/phantom_skins.toml` and builds a `name -> id` mapping. The mapping is embedded in `graph.json` under the `phantom_skins` field (graph.json v4.3+).
+2. **C# (`PhantomCatalogLoader`)** reads and validates the TOML (id range, uniqueness).
+3. **C# (`PhantomCatalogInjector`)** adds three rows per skin to `regulation.bin`, copying templates from PhantomParam[260], SpEffectVfxParam[51508], SpEffectParam[13177].
 
-If the catalog file is absent, both steps are silent no-ops.
+If the catalog file is absent, all three steps are silent no-ops (graph.json gets `"phantom_skins": {}`, no params injected).
 
 ## Runtime Contract (speedfog-racing)
 
-The Rust mod is expected to:
+The Rust mod resolves the skin via the per-seed mapping shipped in `graph.json` (v4.3+). Each entry is a structured object so the schema can grow without breaking older mods:
 
-1. Load `<seed_dir>/phantom_skins.toml` at startup.
-2. Read the local per-player config to obtain a `name`.
-3. Resolve `name -> id` via the loaded catalog.
-4. Apply `SpEffectParam[id]` to the player `ChrIns` after spawn or save load.
+```json
+{
+  "version": "4.3",
+  "phantom_skins": {
+    "gold-aura": { "speffects": [1450700] },
+    "cyan-aura": { "speffects": [1450701] },
+    "...": "..."
+  }
+}
+```
+
+V1 ships a single directive per skin: `speffects: [int]`. Future skins can add other directives (e.g. `fxr_ids`, `emote_id`) without breaking compatibility: older mods ignore unknown keys, newer mods see absent keys as "no-op for that mechanism".
+
+The flow:
+
+1. Mod loads `graph.json` at startup (already does this for connections, etc.).
+2. WebSocket auth_ok from speedfog-racing server includes the user's chosen skin name.
+3. Mod looks up `name` in `graph.json.phantom_skins`. Missing name = log warn, feature off.
+4. Mod iterates the directives it knows. For each id in `speffects`, hook player `ChrIns` and apply `SpEffectParam[id]` after spawn / save load.
 5. Re-apply on save reload if the SpEffect template proves non-persistent.
 
-The catalog file is the only contract surface; the Rust mod does not depend on the speedfog source layout.
+`graph.json` is the only contract surface; the Rust mod does not need to read `data/phantom_skins.toml` directly. See `speedfog-racing/docs/specs/2026-05-01-phantom-skins-integration.md` for the full integration design (server side included).
 
 ## Iterative Calibration with Cheat Engine
 
