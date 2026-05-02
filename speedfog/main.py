@@ -22,6 +22,7 @@ from speedfog.output import (
     export_spoiler_log,
     load_boss_placements,
     load_fog_data,
+    load_phantom_skins_catalog,
     load_vanilla_tiers,
     parse_boss_phases,
     patch_graph_boss_placements,
@@ -301,6 +302,13 @@ def main() -> int:
     # Resolve run_complete_message (seeded pick when a list is configured).
     run_complete_message = config.resolve_run_complete_message(actual_seed)
 
+    # Load phantom skins catalog (name -> SpEffect id) for embedding in graph.json.
+    # Consumed at runtime by speedfog-racing's mod (server pushes name via WS, mod
+    # resolves to id). Empty dict if the catalog file is absent.
+    phantom_skins = load_phantom_skins_catalog(
+        project_root / "data" / "phantom_skins.toml"
+    )
+
     # Export JSON v4 format (for FogModWrapper and visualization)
     json_path = seed_dir / "graph.json"
     starting_goods = config.starting_items.get_starting_goods()
@@ -324,6 +332,7 @@ def main() -> int:
         weapon_upgrade=config.care_package.weapon_upgrade
         if config.care_package.enabled
         else 0,
+        phantom_skins=phantom_skins,
     )
     print(f"Written: {json_path}")
     if starting_goods:

@@ -12,6 +12,7 @@ from speedfog.output import (
     dag_to_dict,
     export_spoiler_log,
     load_boss_placements,
+    load_phantom_skins_catalog,
     load_vanilla_tiers,
     parse_boss_phases,
     patch_graph_boss_placements,
@@ -364,10 +365,10 @@ def _make_result(death_markers: bool = True) -> dict:
 class TestEventMap:
     """Tests for v4 event_map, finish_event, and flag_id fields."""
 
-    def test_version_is_4_2(self):
-        """Version string is '4.2'."""
+    def test_version_is_4_3(self):
+        """Version string is '4.3'."""
         result = _make_result()
-        assert result["version"] == "4.2"
+        assert result["version"] == "4.3"
 
     def test_event_map_keys_are_string_flag_ids(self):
         """event_map keys are stringified integers."""
@@ -2189,3 +2190,107 @@ class TestWeaponUpgrade:
         )
         result = dag_to_dict(dag, clusters)
         assert result["weapon_upgrade"] == 0
+
+
+class TestPhantomSkins:
+    """Tests for phantom skins catalog loading and graph.json embedding."""
+
+    def test_load_catalog_returns_name_to_id_mapping(self, tmp_path: Path):
+        catalog = tmp_path / "phantom_skins.toml"
+        catalog.write_text(
+            """
+            [[skins]]
+            id = 1450700
+            name = "gold-aura"
+            display_name = "Golden Phantom"
+            edge_color = [255, 215, 0]
+            edge_power = 0.5
+            glow_scale = 0.0
+            alpha = 1.0
+
+            [[skins]]
+            id = 1450701
+            name = "cyan-aura"
+            display_name = "Cyan Phantom"
+            edge_color = [0, 220, 255]
+            edge_power = 0.5
+            glow_scale = 0.0
+            alpha = 1.0
+            """,
+            encoding="utf-8",
+        )
+        mapping = load_phantom_skins_catalog(catalog)
+        assert mapping == {"gold-aura": 1450700, "cyan-aura": 1450701}
+
+    def test_load_catalog_returns_empty_when_file_missing(self, tmp_path: Path):
+        mapping = load_phantom_skins_catalog(tmp_path / "absent.toml")
+        assert mapping == {}
+
+    def test_load_catalog_rejects_duplicate_names(self, tmp_path: Path):
+        catalog = tmp_path / "phantom_skins.toml"
+        catalog.write_text(
+            """
+            [[skins]]
+            id = 1450700
+            name = "dup"
+            display_name = "A"
+            edge_color = [1, 2, 3]
+            edge_power = 0.5
+            glow_scale = 0.0
+            alpha = 1.0
+
+            [[skins]]
+            id = 1450701
+            name = "dup"
+            display_name = "B"
+            edge_color = [1, 2, 3]
+            edge_power = 0.5
+            glow_scale = 0.0
+            alpha = 1.0
+            """,
+            encoding="utf-8",
+        )
+        try:
+            load_phantom_skins_catalog(catalog)
+        except ValueError as exc:
+            assert "duplicate name 'dup'" in str(exc)
+        else:
+            raise AssertionError("expected ValueError")
+
+    def test_dag_to_dict_includes_phantom_skins_structured(self):
+        """phantom_skins is wrapped in a per-skin object for forward-compat."""
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(
+            dag,
+            clusters,
+            phantom_skins={"gold-aura": 1450700, "cyan-aura": 1450701},
+        )
+        assert result["phantom_skins"] == {
+            "gold-aura": {"speffects": [1450700]},
+            "cyan-aura": {"speffects": [1450701]},
+        }
+
+    def test_dag_to_dict_phantom_skins_defaults_to_empty(self):
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+        assert result["phantom_skins"] == {}
+
+    def test_version_bumped_to_4_3(self):
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+        assert result["version"] == "4.3"

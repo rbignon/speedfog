@@ -14,11 +14,53 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import tomllib
+
 from speedfog.care_package import CarePackageItem
 from speedfog.clusters import ClusterPool
 from speedfog.dag import Dag, DagNode, FogRef
 
 _PHASE_SUFFIX_RE = re.compile(r" \d+$")
+
+
+def load_phantom_skins_catalog(path: Path) -> dict[str, int]:
+    """Load the phantom skins catalog and return a name -> id mapping.
+
+    The catalog is consumed by the speedfog-racing runtime mod (read from
+    graph.json) to resolve skin names pushed by the server into SpEffect ids.
+    Returns an empty dict if the catalog file is absent.
+    """
+    if not path.exists():
+        return {}
+
+    with path.open("rb") as fp:
+        data = tomllib.load(fp)
+
+    skins = data.get("skins", [])
+    if not isinstance(skins, list):
+        raise ValueError(
+            f"phantom_skins: 'skins' must be an array, got {type(skins).__name__}"
+        )
+
+    mapping: dict[str, int] = {}
+    for entry in skins:
+        if not isinstance(entry, dict):
+            raise ValueError("phantom_skins: each [[skins]] entry must be a table")
+        try:
+            name = entry["name"]
+            skin_id = entry["id"]
+        except KeyError as exc:
+            raise ValueError(
+                f"phantom_skins: entry missing required field {exc}"
+            ) from None
+        if not isinstance(name, str) or not isinstance(skin_id, int):
+            raise ValueError(f"phantom_skins: invalid types in entry {entry!r}")
+        if name in mapping:
+            raise ValueError(f"phantom_skins: duplicate name '{name}'")
+        mapping[name] = skin_id
+
+    return mapping
+
 
 # SpeedFog's dedicated flag base: 1050290000 (m60_50_29_00, unclaimed).
 # Saved flags (4xxx): zone tracking, finish event, death markers.
@@ -257,6 +299,7 @@ def dag_to_dict(
     vanilla_tiers: dict[str, int] | None = None,
     death_markers: bool = True,
     weapon_upgrade: int = 0,
+    phantom_skins: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     """Convert a DAG to v4 JSON-serializable dictionary.
 
@@ -287,7 +330,7 @@ def dag_to_dict(
 
     Returns:
         Dictionary with the following structure:
-        - version: "4.2"
+        - version: "4.3"
         - seed: int
         - total_layers, total_nodes, total_zones: metadata
         - options: dict of FogMod options
@@ -554,7 +597,7 @@ def dag_to_dict(
                 remove_entities.append({"map": map_id, "entity_id": location})
 
     return {
-        "version": "4.2",
+        "version": "4.3",
         "seed": dag.seed,
         "total_layers": total_layers,
         "total_nodes": dag.total_nodes(),
@@ -586,6 +629,10 @@ def dag_to_dict(
         ],
         "weapon_upgrade": weapon_upgrade,
         "remove_entities": remove_entities,
+        "phantom_skins": {
+            name: {"speffects": [skin_id]}
+            for name, skin_id in (phantom_skins or {}).items()
+        },
     }
 
 
@@ -609,6 +656,7 @@ def export_json(
     vanilla_tiers: dict[str, int] | None = None,
     death_markers: bool = True,
     weapon_upgrade: int = 0,
+    phantom_skins: dict[str, int] | None = None,
 ) -> None:
     """Export a DAG to v4 formatted JSON file.
 
@@ -652,6 +700,7 @@ def export_json(
         vanilla_tiers=vanilla_tiers,
         death_markers=death_markers,
         weapon_upgrade=weapon_upgrade,
+        phantom_skins=phantom_skins,
     )
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)

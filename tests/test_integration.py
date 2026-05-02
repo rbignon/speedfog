@@ -195,7 +195,7 @@ class TestFullPipeline:
             data = json.load(f)
 
         # Top-level keys (v4 format)
-        assert data["version"] == "4.2"
+        assert data["version"] == "4.3"
         assert "seed" in data
         assert "options" in data
         assert "connections" in data
