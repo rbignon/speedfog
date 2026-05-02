@@ -55,3 +55,12 @@ edge_color = [180, 60, 240]
 edge_power = 0.5
 glow_scale = 0.0
 alpha = 1.0
+
+[[skins]]
+id = 1450705
+name = "silver-aura"
+display_name = "Silver Phantom"
+edge_color = [100, 150, 230]
+edge_power = 0.5
+glow_scale = 0.1
+alpha = 1.0
