@@ -23,6 +23,7 @@ from generate_clusters import (
     compute_allow_entry_as_exit,
     compute_allow_shared_entrance,
     compute_cluster_fogs,
+    extract_opensplit_warp_ids,
     filter_and_enrich_clusters,
     find_defeat_flag,
     generate_clusters,
@@ -2436,6 +2437,170 @@ class TestIsWarpEdgeActive:
             tags=["unique"],
         )
         assert is_warp_edge_active(fog) is True
+
+
+class TestClassifyFogsOpensplitOverride:
+    """Tests for opensplit override on unique warps with one open side.
+
+    FogMod's `opensplit` tag (Graph.cs:1257-1266) allows a unique warp where
+    one side is `open` (non-core in crawl mode) to keep its core side as a
+    usable graph edge. The non-core side is dropped (added to Ignore).
+
+    SpeedFog mirrors this via a per-warp override (zone_metadata.toml
+    `[warps."<id>"] opensplit = true`) so we can promote warps that FogRando
+    did not tag opensplit upstream (e.g., Sending Gate to Haligtree).
+    """
+
+    @staticmethod
+    def _haligtree_warp() -> FogData:
+        # 15002600: snowfield (open, ASide) -> haligtree (core, BSide)
+        return FogData(
+            name="15002600",
+            fog_id=15002600,
+            aside=FogSide(
+                area="snowfield",
+                text="using the Sending Gate in Ordina",
+                tags=["open"],
+            ),
+            bside=FogSide(area="haligtree", text="arriving at the start of Haligtree"),
+            tags=["unique", "legacy"],
+        )
+
+    def test_without_override_warp_is_skipped(self):
+        """Without override, a unique warp with an open side is filtered out
+        (current FogMod-parity behavior: the entire warp is marked unused)."""
+        fog = self._haligtree_warp()
+
+        zone_fogs = classify_fogs([], [fog])
+
+        assert (
+            "haligtree" not in zone_fogs or fog not in zone_fogs["haligtree"].entry_fogs
+        )
+        assert (
+            "snowfield" not in zone_fogs or fog not in zone_fogs["snowfield"].exit_fogs
+        )
+
+    def test_override_makes_core_bside_an_entry(self):
+        """With override, BSide (core) becomes a valid entry into haligtree."""
+        fog = self._haligtree_warp()
+
+        zone_fogs = classify_fogs([], [fog], opensplit_warp_ids={"15002600"})
+
+        assert fog in zone_fogs["haligtree"].entry_fogs
+
+    def test_override_does_not_make_non_core_aside_an_exit(self):
+        """With override, ASide (open, non-core) is dropped — no exit from snowfield.
+
+        This mirrors FogMod's `Ignore.Add((e.FullName, side3.Area))` for the
+        non-core side under opensplit (Graph.cs:1259-1261).
+        """
+        fog = self._haligtree_warp()
+
+        zone_fogs = classify_fogs([], [fog], opensplit_warp_ids={"15002600"})
+
+        assert (
+            "snowfield" not in zone_fogs or fog not in zone_fogs["snowfield"].exit_fogs
+        )
+
+    def test_override_does_not_make_core_bside_an_exit(self):
+        """BSide is an entry only, never an exit (one-way warp semantics)."""
+        fog = self._haligtree_warp()
+
+        zone_fogs = classify_fogs([], [fog], opensplit_warp_ids={"15002600"})
+
+        assert (
+            "haligtree" not in zone_fogs or fog not in zone_fogs["haligtree"].exit_fogs
+        )
+
+    def test_override_with_unrelated_id_does_not_affect_warp(self):
+        """An override id that doesn't match any warp leaves the filter unchanged."""
+        fog = self._haligtree_warp()
+
+        zone_fogs = classify_fogs([], [fog], opensplit_warp_ids={"99999999"})
+
+        assert (
+            "haligtree" not in zone_fogs or fog not in zone_fogs["haligtree"].entry_fogs
+        )
+
+    def test_override_aside_core_makes_aside_an_exit(self):
+        """Symmetric case: when ASide is core and BSide carries 'open',
+        opensplit promotes ASide as a valid exit_fog (no entry on either side)."""
+        # Hypothetical: ASide.zone_a (core), BSide.zone_b ('open').
+        fog = FogData(
+            name="hypothetical",
+            fog_id=88888888,
+            aside=FogSide(area="zone_a", text="leaving zone_a"),
+            bside=FogSide(area="zone_b", text="arriving in zone_b", tags=["open"]),
+            tags=["unique", "legacy"],
+        )
+
+        zone_fogs = classify_fogs([], [fog], opensplit_warp_ids={"hypothetical"})
+
+        assert fog in zone_fogs["zone_a"].exit_fogs
+        # Non-core BSide is dropped — no entry to zone_b via this warp.
+        assert "zone_b" not in zone_fogs or fog not in zone_fogs["zone_b"].entry_fogs
+
+    def test_aside_core_opensplit_exit_not_filtered_as_unique(self):
+        """An opensplit-overridden warp in exit_fogs must not be marked
+        ``unique: true`` by compute_cluster_fogs.
+
+        Regression guard for a latent bug: ``is_warp_edge_active`` still
+        returns False for an opensplit warp (one side is non-core), so the
+        unique-disabled branch in compute_cluster_fogs would otherwise tag
+        the fog and downstream pruning would drop it from exit_fogs.
+        """
+        graph = WorldGraph()
+        fog = FogData(
+            name="hypothetical",
+            fog_id=88888888,
+            aside=FogSide(area="zone_a", text="leaving zone_a"),
+            bside=FogSide(area="zone_b", text="arriving", tags=["open"]),
+            tags=["unique", "legacy"],
+            location=88888888,
+        )
+        zone_fogs = {"zone_a": ZoneFogs(entry_fogs=[], exit_fogs=[fog])}
+
+        cluster = Cluster(zones=frozenset({"zone_a"}))
+        compute_cluster_fogs(
+            cluster, graph, zone_fogs, opensplit_warp_ids={"hypothetical"}
+        )
+
+        assert len(cluster.exit_fogs) == 1
+        assert "unique" not in cluster.exit_fogs[0]
+
+
+class TestExtractOpensplitWarpIds:
+    """Tests for extract_opensplit_warp_ids metadata helper."""
+
+    def test_empty_metadata(self):
+        """No [warps] section yields an empty set."""
+        assert extract_opensplit_warp_ids({}) == set()
+
+    def test_single_opensplit_warp(self):
+        """[warps."<id>"] opensplit=true yields the id."""
+        meta = {"warps": {"15002600": {"opensplit": True}}}
+        assert extract_opensplit_warp_ids(meta) == {"15002600"}
+
+    def test_opensplit_false_excluded(self):
+        """[warps."<id>"] opensplit=false is not in the set."""
+        meta = {"warps": {"12052020": {"opensplit": False}}}
+        assert extract_opensplit_warp_ids(meta) == set()
+
+    def test_warp_without_opensplit_key_excluded(self):
+        """A warp entry without an opensplit key is not in the set."""
+        meta = {"warps": {"12052020": {"note": "kept for future use"}}}
+        assert extract_opensplit_warp_ids(meta) == set()
+
+    def test_multiple_warps_filtered(self):
+        """Only warps with opensplit=true are returned."""
+        meta = {
+            "warps": {
+                "15002600": {"opensplit": True},
+                "12052020": {"opensplit": False},
+                "99999999": {"opensplit": True},
+            }
+        }
+        assert extract_opensplit_warp_ids(meta) == {"15002600", "99999999"}
 
 
 class TestComputeClusterFogsUniqueClassification:

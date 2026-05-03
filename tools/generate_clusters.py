@@ -780,6 +780,7 @@ def classify_fogs(
     entrances: list[FogData],
     warps: list[FogData],
     areas: dict[str, AreaData] | None = None,
+    opensplit_warp_ids: set[str] | None = None,
 ) -> dict[str, ZoneFogs]:
     """
     Classify fogs as entry/exit for each zone.
@@ -789,7 +790,19 @@ def classify_fogs(
     - Unique fogs: ASide = exit only, BSide = entry only
     - Uniquegate pairs: coupled as single bidirectional connection
     - Normal fogs: both sides are entry + exit
+
+    Args:
+        entrances: bidirectional fog gates from fog.txt Entrances
+        warps: one-way warps from fog.txt Warps
+        areas: optional area dict for downstream filtering
+        opensplit_warp_ids: warp Names to treat as if tagged 'opensplit'.
+            Mirrors FogMod's opensplit handling (Graph.cs:1257-1266): for a
+            unique warp with one core and one non-core side, only the core
+            side keeps an edge in the graph, instead of dropping the entire
+            warp. Used to promote sending gates that FogRando did not tag
+            opensplit upstream (e.g., 15002600 to Haligtree).
     """
+    opensplit_warp_ids = opensplit_warp_ids or set()
     zone_fogs: dict[str, ZoneFogs] = defaultdict(ZoneFogs)
 
     all_fogs = entrances + warps
@@ -913,6 +926,25 @@ def classify_fogs(
             # We must skip these to avoid generating connections to non-existent
             # edges in FogMod's graph.
             if not is_warp_edge_active(fog):
+                # opensplit override: keep the core side as an edge, drop the
+                # non-core side. Mirrors FogMod's opensplit branch
+                # (Graph.cs:1257-1266) which the C# wrapper applies at runtime.
+                #
+                # Note: this branch does not replicate the regular unique
+                # branch's `baseonly` filter (lines below). `baseonly` warps
+                # are non-physical "from anywhere" gates, while `opensplit`
+                # is a crawl-mode side-selection mechanism — combining the
+                # two on the same warp is improbable in practice. Add a
+                # `not is_baseonly` guard here if this assumption changes.
+                if fog.name in opensplit_warp_ids:
+                    aside_core = _is_side_core(fog, fog.aside)
+                    bside_core = _is_side_core(fog, fog.bside)
+                    if aside_core and not bside_core:
+                        if aside_cond_ok:
+                            zone_fogs[aside_area].exit_fogs.append(fog)
+                    elif bside_core and not aside_core:
+                        if bside_cond_ok:
+                            zone_fogs[bside_area].entry_fogs.append(fog)
                 continue
             # baseonly warps (e.g., Pureblood Knight's Medal) are special
             # progression items usable "from anywhere" — not physical gates.
@@ -1108,6 +1140,7 @@ def compute_cluster_fogs(
     cluster: Cluster,
     world_graph: WorldGraph,
     zone_fogs: dict[str, ZoneFogs],
+    opensplit_warp_ids: set[str] | None = None,
 ) -> None:
     """
     Compute entry_fogs and exit_fogs for a cluster.
@@ -1115,7 +1148,13 @@ def compute_cluster_fogs(
     Entry zones: zones without unidirectional incoming edges from other cluster zones
     entry_fogs: union of entry_fogs from entry zones
     exit_fogs: union of exit_fogs from all zones
+
+    opensplit_warp_ids: warp Names treated as opensplit (see classify_fogs).
+        ``is_warp_edge_active`` still returns False for these warps (one side
+        is non-core), but FogMod will keep an edge for the core side under
+        opensplit, so we must not mark them as ``unique`` for pruning.
     """
+    opensplit_warp_ids = opensplit_warp_ids or set()
     # Find entry zones (no unidirectional incoming edge from cluster)
     entry_zones = set(cluster.zones)
 
@@ -1207,8 +1246,14 @@ def compute_cluster_fogs(
                 if fog.text:
                     fog_entry["text"] = fog.text
                 if fog.is_unique:
-                    if not is_warp_edge_active(fog):
-                        # Disabled: FogMod won't create an edge for this warp
+                    if (
+                        not is_warp_edge_active(fog)
+                        and fog.name not in opensplit_warp_ids
+                    ):
+                        # Disabled: FogMod won't create an edge for this warp.
+                        # Opensplit-overridden warps are intentionally excluded:
+                        # FogMod keeps an edge for their core side, so they are
+                        # genuinely usable despite is_warp_edge_active=False.
                         fog_entry["unique"] = True
                     # Always preserve location for entity removal tracking
                     if fog.location is not None:
@@ -1424,6 +1469,21 @@ def load_metadata(path: Path | None) -> dict:
 
     with open(path, "rb") as f:
         return tomllib.load(f)
+
+
+def extract_opensplit_warp_ids(metadata: dict) -> set[str]:
+    """Extract the set of warp Names flagged ``opensplit = true`` in metadata.
+
+    Reads the ``[warps."<name>"]`` section of zone_metadata.toml. The same
+    list is consumed by FogModWrapper to tag the matching entrances with
+    ``opensplit`` before FogMod's Graph.Construct runs.
+    """
+    warps = metadata.get("warps") or {}
+    return {
+        name
+        for name, entry in warps.items()
+        if isinstance(entry, dict) and entry.get("opensplit") is True
+    }
 
 
 def get_zone_weight(
@@ -2155,9 +2215,17 @@ def main() -> int:
         edge_count = sum(len(edges) for edges in world_graph.edges.values())
         print(f"  Graph has {len(world_graph.edges)} nodes, {edge_count} edges")
 
+    # Load metadata early — opensplit overrides feed into classify_fogs
+    metadata = load_metadata(args.metadata)
+    opensplit_warp_ids = extract_opensplit_warp_ids(metadata)
+    if opensplit_warp_ids:
+        print(f"  Opensplit overrides: {sorted(opensplit_warp_ids)}")
+
     # Classify fogs
     print("Classifying fogs...")
-    zone_fogs = classify_fogs(entrances, warps, areas)
+    zone_fogs = classify_fogs(
+        entrances, warps, areas, opensplit_warp_ids=opensplit_warp_ids
+    )
     print(f"  Found fogs for {len(zone_fogs)} zones")
 
     # Identify major boss zones (connected to fog gates with 'major' tag)
@@ -2175,15 +2243,14 @@ def main() -> int:
     clusters = generate_clusters(zones_to_process, world_graph)
     print(f"  Generated {len(clusters)} raw clusters")
 
-    # Load metadata (needed for merge step before fog computation)
-    metadata = load_metadata(args.metadata)
-
     # Apply cluster merges (must happen before fog computation)
     clusters = apply_cluster_merges(clusters, metadata, zone_fogs=zone_fogs)
 
     # Compute fogs for each cluster
     for cluster in clusters:
-        compute_cluster_fogs(cluster, world_graph, zone_fogs)
+        compute_cluster_fogs(
+            cluster, world_graph, zone_fogs, opensplit_warp_ids=opensplit_warp_ids
+        )
 
     # Deduplicate clusters (pruning may have made some zone sets identical)
     seen_pruned: set[frozenset[str]] = set()
