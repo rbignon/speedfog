@@ -145,6 +145,10 @@ Exit fogs tagged `"unique": true` (coffins, DLC warps) are separated in `Cluster
 - `exit_fogs`: bidirectional exits only (for standard DAG connections)
 - `unique_exit_fogs`: one-way exits (cannot be used as DAG edges, but their MSB entities need removal by `VanillaWarpRemover`)
 
+## Opensplit Warp Overrides
+
+Some unique warps with one `open`-tagged side are dropped by FogMod in crawl mode and lose their core-side entrance edge. SpeedFog promotes selected warps to FogMod's `opensplit` behaviour via `data/zone_metadata.toml` so the core side stays usable. See `docs/opensplit-overrides.md` for the rationale, the consumer wiring on both sides (Python cluster gen + C# FogModWrapper), and the procedure to add a new override.
+
 ## Zone Type Assignment
 
 Heuristic classification based on map IDs and fog.txt tags:

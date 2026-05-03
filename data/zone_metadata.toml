@@ -9,6 +9,13 @@
 #   cluster_weight = round(avg_zone_weight * (1 + 0.5 * ln(n_zones)))
 # This reflects that players traverse a path through zones, not all of them.
 # Override with [clusters.<id>] weight = X to use observed race data directly.
+#
+# [warps."<name>"] entries opt specific FogMod warps into 'opensplit' handling
+# at runtime (see Graph.cs:1257-1266). Used for unique warps where one side
+# carries the 'open' tag (non-core in crawl mode), so the core side keeps
+# an edge in FogMod's graph instead of the whole warp being dropped.
+# The same list is read by FogModWrapper to tag the entrance before
+# Graph.Construct.
 
 [defaults]
 # Default weights by zone type
@@ -546,3 +553,17 @@ proximity_groups = [
      "AEG099_230_9000", # Before elevator to Dragon Temple Lift
     ],
 ]
+
+# =============================================================================
+# Warp-level overrides (consumed by both Python cluster generation and
+# the C# FogModWrapper at runtime via OpenSplitInjector)
+# =============================================================================
+
+# Sending Gate to Haligtree (snowfield -> haligtree). Tagged 'open' on ASide
+# upstream, so FogMod marks it unused in crawl mode and the core haligtree
+# entrance edge is dropped, leaving haligtree reachable only via Loretta's fog.
+# Promoting it to 'opensplit' keeps the haligtree-side edge available for DAG
+# connections (the snowfield exit is dropped, which we don't need anyway since
+# SpeedFog starts at Chapel of Anticipation).
+[warps."15002600"]
+opensplit = true
