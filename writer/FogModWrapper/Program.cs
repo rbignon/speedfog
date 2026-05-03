@@ -288,6 +288,13 @@ Example:
         var phantomCatalogPath = Path.Combine(config.DataDir, "phantom_skins.toml");
         var phantomSkins = PhantomCatalogLoader.Load(phantomCatalogPath);
 
+        // 3c. Apply opensplit overrides (zone_metadata.toml -> entrance tags).
+        // Must run before Graph.Construct: FogMod's IsCore + opensplit logic
+        // (Graph.cs:1167-1272) consumes these tags during graph construction.
+        var zoneMetadataPath = Path.Combine(config.DataDir, "zone_metadata.toml");
+        var openSplitIds = OpenSplitOverrideLoader.Load(zoneMetadataPath);
+        OpenSplitInjector.Apply(ann, openSplitIds);
+
         // 4. Build FogMod Graph (unconnected nodes/edges)
         Console.WriteLine("Constructing FogMod graph...");
         var graph = new Graph();
