@@ -44,7 +44,7 @@ weight = 3
 weight = 3
 
 [zones.haligtree]
-weight = 8
+weight = 3
 
 [zones.farumazula]
 weight = 2.5
@@ -197,9 +197,6 @@ type = "major_boss"
 weight = 2.5
 allow_entry_as_exit = false
 
-[zones.dragonbarrow_selliahideaway_boss]
-weight = 3
-
 [zones.siofra_boss]
 weight = 2
 
@@ -307,7 +304,8 @@ weight = 2
 [zones.storehouse_messmer]
 weight = 4
 
-[zones.fingergrounds_e157]
+[zones.fingergrounds]
+weight = 3.5
 allow_entry_as_exit = false
 
 # =============================================================================
@@ -354,17 +352,50 @@ exclude = true  # Cathedral of Manus Metyr interior, accessed via unique warp, n
 # allowed_entries/allowed_exits: restrict eligible fogs
 # Use "zone:fog_id" when the same fog_id appears in multiple zones
 
+[clusters.caelid_gaeltunnel_befe]
+exclude = true
+
+[clusters.caelid_gaeltunnel_1599]
+weight = 1
+
+[zones.caelid_redmane]
+weight = 1.5
+
+[clusters.charo_gaol_5c86]
+weight = 1
+
+[zones.gelmir_volcanocave]
+weight = 0.5
+
+[clusters.gravesite_dragonpit_1f37]
+weight = 1
+
+[zones.limgrave_coastalcave]
+weight = 0.5
+
+[zones.limgrave_grovesidecave]
+weight = 0.5
+
+[zones.limgrave_murkwatercatacombs]
+weight = 0.5
+
+[zones.limgrave_murkwatercave]
+weight = 0.5
+
+[clusters.snowfield_hiddenpath_8ef0]
+weight = 1
+
+[zones.peninsula_earthborecave]
+weight = 0.5
+
 [clusters.volcano_ac44]
 exclude = true  # Too small for legacy_dungeon (~30s to traverse)
 
 [clusters.belurat_d88b]
 weight = 2
 
-[clusters.caelid_gaeltunnel_1599]
-weight = 1
-
 [clusters.sewer_46d2]
-weight = 1
+weight = 2
 
 [clusters.volcano_808b]
 weight = 1
