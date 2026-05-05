@@ -98,8 +98,7 @@ output/
 ├── logs/                   # Diagnostic logs (--logs)
 │   ├── spoiler.txt         # Path spoiler log
 │   └── generation.log      # DAG generation diagnostics
-├── config_speedfog.toml    # ModEngine 2 configuration
-├── modengine2/             # ModEngine 2 launcher + runtime
+├── modengine2/             # ModEngine 2 launcher + runtime + config_speedfog.toml
 ├── mods/
 │   ├── fogmod/             # Fog gate mod files
 │   │   ├── param/gameparam/regulation.bin

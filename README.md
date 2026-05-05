@@ -78,8 +78,7 @@ Output is self-contained in `seeds/<seed>/`:
 - `graph.json` - DAG definition
 - `logs/spoiler.txt` - Spoiler log
 - `logs/generation.log` - Structured generation log
-- `modengine2/` - ModEngine 2 binaries
-- `config_speedfog.toml` - ModEngine 2 configuration
+- `modengine2/` - ModEngine 2 binaries + `config_speedfog.toml`
 - `mods/` - Generated mod files
 - `launch_speedfog.bat` - Windows launcher
 

@@ -572,7 +572,49 @@ def setup_itemrando(sfextract: Path, zip_path: Path, force: bool) -> bool:
 
 def is_modengine_installed() -> bool:
     """Check if ModEngine 2 is present in data/packaging/modengine2/."""
-    return (MODENGINE_DEST / "modengine2_launcher.exe").exists()
+    return (MODENGINE_DEST / "modengine2_launcher.exe").exists() and (
+        MODENGINE_DEST / "modengine2" / "bin" / "modengine2.dll"
+    ).exists()
+
+
+# Runtime essentials to keep when copying the extracted ModEngine 2 archive.
+# Drops other-game launchers/configs, README, C++ headers, debug menu assets,
+# .lib linker files and cmake configs (~17 MB saved).
+MODENGINE_RUNTIME_FILES = frozenset({"modengine2_launcher.exe"})
+MODENGINE_RUNTIME_SUBDIRS = frozenset({"bin", "crashpad", "tools"})
+
+
+def install_modengine_runtime(staging_root: Path, dest: Path) -> None:
+    """Copy only runtime essentials from the extracted archive into dest."""
+    if dest.exists():
+        shutil.rmtree(dest)
+    dest.mkdir(parents=True, exist_ok=True)
+
+    runtime_src = staging_root / "modengine2"
+    if not runtime_src.is_dir():
+        raise FileNotFoundError(
+            f"ModEngine 2 archive missing modengine2/ subdirectory under {staging_root}"
+        )
+
+    for entry in staging_root.iterdir():
+        if entry.is_file():
+            if entry.name in MODENGINE_RUNTIME_FILES:
+                shutil.copy2(entry, dest / entry.name)
+            else:
+                print_info(f"Skipping non-runtime file: {entry.name}")
+            continue
+        if entry.name != "modengine2":
+            print_info(f"Skipping non-runtime directory: {entry.name}/")
+
+    runtime_dst = dest / "modengine2"
+    runtime_dst.mkdir(exist_ok=True)
+    for subdir in runtime_src.iterdir():
+        if not subdir.is_dir():
+            continue
+        if subdir.name in MODENGINE_RUNTIME_SUBDIRS:
+            shutil.copytree(subdir, runtime_dst / subdir.name)
+        else:
+            print_info(f"Skipping non-runtime directory: modengine2/{subdir.name}/")
 
 
 def ensure_modengine(force: bool = False) -> bool:
@@ -648,17 +690,7 @@ def ensure_modengine(force: bool = False) -> bool:
                     return False
                 launcher_src = candidates[0]
 
-            staging_root = launcher_src.parent
-
-            if MODENGINE_DEST.exists():
-                shutil.rmtree(MODENGINE_DEST)
-            MODENGINE_DEST.mkdir(parents=True, exist_ok=True)
-            for entry in staging_root.iterdir():
-                dest = MODENGINE_DEST / entry.name
-                if entry.is_dir():
-                    shutil.copytree(entry, dest)
-                else:
-                    shutil.copy2(entry, dest)
+            install_modengine_runtime(launcher_src.parent, MODENGINE_DEST)
         finally:
             shutil.rmtree(extract_dir, ignore_errors=True)
 

@@ -27,7 +27,7 @@ config.toml + data/clusters.json ───► speedfog ───► graph.json
                                            │          merges itemrando when present
                                            │
                                            └──► copy data/overlay/ + data/packaging/
-                                                generate config_speedfog.toml
+                                                generate modengine2/config_speedfog.toml
 
 Final built seed: seeds/<seed>/ with mods/, modengine2/, launchers, backups/, logs/.
 
@@ -57,7 +57,7 @@ Generates a balanced DAG of zone connections.
 | `care_package.py` | Randomized starting build (weapons, armor, spells, etc.) |
 | `fog_mod.py` | Wrapper to call FogModWrapper.exe via Wine/native |
 | `item_randomizer.py` | Wrapper to call ItemRandomizerWrapper.exe, generate item_config |
-| `packaging.py` | Copy `data/packaging/`, copy helper config, generate `config_speedfog.toml` |
+| `packaging.py` | Copy `data/packaging/`, copy helper config, generate `modengine2/config_speedfog.toml` |
 | `main.py` | CLI entry point, orchestrates full pipeline |
 
 ### C# Shared Library (`writer/FogModWrapper.Core/`)
@@ -223,8 +223,8 @@ Output goes to `data/overlay/`, which the per-seed pipeline copies into each mod
   GamePatcher-generated files and user-provided overrides.
 
 Packaging: `speedfog` copies `data/packaging/*` into the seed directory and
-generates `config_speedfog.toml`. `tools/bootstrap.py` is responsible for
-populating `data/packaging/` before any run generation.
+generates `modengine2/config_speedfog.toml`. `tools/bootstrap.py` is
+responsible for populating `data/packaging/` before any run generation.
 
 **Merge order matters**: Item Randomizer runs first, FogMod merges on top. This matches the official FogRando documentation.
 
@@ -470,12 +470,10 @@ launchers, and runtime packaging are created.
 ├── logs/
 │   ├── spoiler.txt           # Path spoiler log (--logs)
 │   └── generation.log        # Structured generation log (--logs)
-├── config_speedfog.toml      # ModEngine 2 configuration
-├── modengine2/               # ModEngine 2 (copied from data/packaging/)
+├── modengine2/               # ModEngine 2 (copied from data/packaging/, stripped to runtime essentials)
 │   ├── modengine2_launcher.exe
-│   └── modengine2/           # ModEngine 2 runtime
-│       ├── bin/modengine2.dll
-│       └── crashpad/, lib/, include/
+│   ├── config_speedfog.toml  # ModEngine 2 configuration
+│   └── modengine2/           # Runtime: bin/, crashpad/, tools/
 ├── mods/
 │   ├── fogmod/               # FogMod output (fog gates, scaling, events)
 │   │   ├── param/gameparam/regulation.bin

@@ -17,17 +17,24 @@ def write_modengine_config(
     item_randomizer_enabled: bool = False,
     include_crash_fix: bool = False,
 ) -> Path:
-    """Write the ModEngine 2 TOML config consumed by the launcher."""
-    output_dir.mkdir(parents=True, exist_ok=True)
-    config_path = output_dir / "config_speedfog.toml"
+    """Write the ModEngine 2 TOML config consumed by the launcher.
 
-    # Backslashes are doubled because TOML parses "\\" as a single backslash;
-    # ModEngine 2 then sees the Windows path "lib\RandomizerCrashFix.dll".
+    The config lives next to the ModEngine 2 binaries to avoid polluting the
+    seed root, so paths are expressed relative to the modengine2/ directory.
+    """
+    config_dir = output_dir / "modengine2"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    config_path = config_dir / "config_speedfog.toml"
+
+    # Backslashes are doubled so that the TOML parser yields "..\lib\X.dll"
+    # before the value reaches ModEngine 2. The resulting path is resolved
+    # against the config file's parent directory by the loader, so the .dll
+    # next to the seed at <seed>/lib/ is reachable from <seed>/modengine2/.
     external_dlls: list[str] = []
     if include_crash_fix:
-        external_dlls.append(r"lib\\RandomizerCrashFix.dll")
+        external_dlls.append(r"..\\lib\\RandomizerCrashFix.dll")
     if item_randomizer_enabled:
-        external_dlls.append(r"lib\\RandomizerHelper.dll")
+        external_dlls.append(r"..\\lib\\RandomizerHelper.dll")
 
     if external_dlls:
         dlls_inner = ",\n    ".join(f'"{path}"' for path in external_dlls)
@@ -38,11 +45,11 @@ def write_modengine_config(
     # ModEngine 2 loads mods in declaration order; first wins. Keep fogmod
     # ahead of itemrando so fog gate edits override the randomizer.
     mods_lines: list[str] = [
-        '    { enabled = true, name = "fogmod", path = "mods/fogmod" }'
+        '    { enabled = true, name = "fogmod", path = "../mods/fogmod" }'
     ]
     if item_randomizer_enabled:
         mods_lines.append(
-            '    { enabled = true, name = "itemrando", path = "mods/itemrando" }'
+            '    { enabled = true, name = "itemrando", path = "../mods/itemrando" }'
         )
     mods_block = ",\n".join(mods_lines)
 
@@ -121,7 +128,7 @@ def package_seed(
             and (seed_dir / "lib" / "RandomizerCrashFix.dll").exists()
         ),
     )
-    print("Generated config_speedfog.toml")
+    print("Generated modengine2/config_speedfog.toml")
 
     print()
     print("=== SpeedFog mod ready! ===")

@@ -10,6 +10,6 @@ REM Detect save file and start backup daemon
 powershell -ExecutionPolicy Bypass -NoProfile -File "%SCRIPT_DIR%backups\launch_helper.ps1"
 
 REM Launch ModEngine 2 with our config
-"%SCRIPT_DIR%modengine2\modengine2_launcher.exe" -t er -c "%SCRIPT_DIR%config_speedfog.toml"
+"%SCRIPT_DIR%modengine2\modengine2_launcher.exe" -t er -c "%SCRIPT_DIR%modengine2\config_speedfog.toml"
 
 endlocal
