@@ -12,7 +12,7 @@ Bootstrap (one-time)              Per-seed generation                         Ou
 ────────────────────              ───────────────────                         ──────
 FogRando ZIP ─┐
 ItemRando ZIP ├──► tools/bootstrap.py ───────┐
-ME3 release ──┘                              ├──► data/packaging/
+ModEngine 2 ──┘                              ├──► data/packaging/
                                              ├──► data/overlay/
                                              ├──► data/clusters.json
                                              └──► writer/*/publish/
@@ -27,9 +27,9 @@ config.toml + data/clusters.json ───► speedfog ───► graph.json
                                            │          merges itemrando when present
                                            │
                                            └──► copy data/overlay/ + data/packaging/
-                                                generate me3/config_speedfog.me3
+                                                generate config_speedfog.toml
 
-Final built seed: seeds/<seed>/ with mods/, me3/, launchers, backups/, logs/.
+Final built seed: seeds/<seed>/ with mods/, modengine2/, launchers, backups/, logs/.
 
 GamePatcher runs during bootstrap as a separate process using the
 SoulsFormatsNEXT submodule. Its output is copied from data/overlay/ per seed.
@@ -57,7 +57,7 @@ Generates a balanced DAG of zone connections.
 | `care_package.py` | Randomized starting build (weapons, armor, spells, etc.) |
 | `fog_mod.py` | Wrapper to call FogModWrapper.exe via Wine/native |
 | `item_randomizer.py` | Wrapper to call ItemRandomizerWrapper.exe, generate item_config |
-| `packaging.py` | Copy `data/packaging/`, copy helper config, generate `me3/config_speedfog.me3` |
+| `packaging.py` | Copy `data/packaging/`, copy helper config, generate `config_speedfog.toml` |
 | `main.py` | CLI entry point, orchestrates full pipeline |
 
 ### C# Shared Library (`writer/FogModWrapper.Core/`)
@@ -122,7 +122,7 @@ Standalone scripts for setup and data generation.
 **bootstrap.py** extracts and installs:
 - From FogRando ZIP: FogMod.dll, SoulsFormats.dll, eldendata/, data files
 - From Item Randomizer ZIP: RandomizerCommon.dll, diste/, runtime DLLs in `data/packaging/lib/`
-- From ME3 releases: ME3 binaries in `data/packaging/me3/`
+- From ModEngine 2 releases: launcher and runtime in `data/packaging/modengine2/`
 
 ## Data Flow
 
@@ -223,7 +223,7 @@ Output goes to `data/overlay/`, which the per-seed pipeline copies into each mod
   GamePatcher-generated files and user-provided overrides.
 
 Packaging: `speedfog` copies `data/packaging/*` into the seed directory and
-generates `me3/config_speedfog.me3`. `tools/bootstrap.py` is responsible for
+generates `config_speedfog.toml`. `tools/bootstrap.py` is responsible for
 populating `data/packaging/` before any run generation.
 
 **Merge order matters**: Item Randomizer runs first, FogMod merges on top. This matches the official FogRando documentation.
@@ -461,7 +461,7 @@ Zones have tiers (1-28) based on their layer in the DAG. FogMod applies SpEffect
 
 ## Output Structure
 
-This is the built seed layout. `--no-build` stops before `mods/`, `me3/`,
+This is the built seed layout. `--no-build` stops before `mods/`, `modengine2/`,
 launchers, and runtime packaging are created.
 
 ```
@@ -470,10 +470,12 @@ launchers, and runtime packaging are created.
 ├── logs/
 │   ├── spoiler.txt           # Path spoiler log (--logs)
 │   └── generation.log        # Structured generation log (--logs)
-├── me3/                      # ME3 (copied from data/packaging/)
-│   ├── bin/me3               # Linux ME3 launcher
-│   └── bin/win64/me3.exe     # Windows ME3 launcher
-│   └── config_speedfog.me3   # ME3 profile
+├── config_speedfog.toml      # ModEngine 2 configuration
+├── modengine2/               # ModEngine 2 (copied from data/packaging/)
+│   ├── modengine2_launcher.exe
+│   └── modengine2/           # ModEngine 2 runtime
+│       ├── bin/modengine2.dll
+│       └── crashpad/, lib/, include/
 ├── mods/
 │   ├── fogmod/               # FogMod output (fog gates, scaling, events)
 │   │   ├── param/gameparam/regulation.bin
@@ -482,12 +484,11 @@ launchers, and runtime packaging are created.
 │   │   ├── script/talk/*.talkesdbnd.dcx
 │   │   └── msg/engus/*.fmg
 │   └── itemrando/            # Item Randomizer output (optional)
-├── lib/                      # Runtime DLLs from data/packaging/lib/ (loaded by ME3 when profiled)
+├── lib/                      # Runtime DLLs from data/packaging/lib/ (external_dlls in config)
 │   └── RandomizerHelper_config.ini  # Copied from itemrando output when present
 ├── launch_speedfog.bat       # Windows launcher
 ├── recovery.bat              # Windows recovery launcher
-├── linux/                    # Linux launchers
-│   ├── launch_speedfog.sh    # Linux launcher
+├── linux/                    # Engine-neutral helper scripts
 │   ├── backup_daemon.sh      # Linux backup daemon
 │   └── recovery.sh           # Linux recovery
 └── backups/                  # Backup system files
@@ -514,4 +515,4 @@ launchers, and runtime packaging are created.
 - FogRando: https://www.nexusmods.com/eldenring/mods/3295
 - Item Randomizer: https://www.nexusmods.com/eldenring/mods/428
 - SoulsFormats: https://github.com/soulsmods/SoulsFormatsNEXT
-- ME3: https://github.com/garyttierney/me3
+- ModEngine 2: https://github.com/soulsmods/ModEngine2

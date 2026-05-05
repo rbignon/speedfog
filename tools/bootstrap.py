@@ -14,7 +14,8 @@ This script extracts:
   - DLLs from EldenRingRandomizer.exe → writer/lib/
   - diste/ → writer/ItemRandomizerWrapper/diste/
   - Runtime DLLs → data/packaging/lib/
-  - ME3 → data/packaging/me3/
+- ModEngine 2:
+  - launcher + runtime → data/packaging/modengine2/
 
 Prerequisites:
 - sfextract (dotnet tool): dotnet tool install -g sfextract
@@ -25,7 +26,7 @@ Usage:
     python tools/bootstrap.py --game-dir /path/to/Game \
         --fogrando /path/to/FogRando.zip --itemrando /path/to/ItemRandomizer.zip
 
-    # Refresh only shared setup assets such as ME3 and Oodle
+    # Refresh only shared setup assets such as ModEngine 2 and Oodle
     python tools/bootstrap.py --game-dir /path/to/Game
 """
 
@@ -36,7 +37,6 @@ import json
 import shutil
 import subprocess
 import sys
-import tarfile
 import tempfile
 import urllib.request
 import zipfile
@@ -52,7 +52,7 @@ DISTE_DEST = PROJECT_ROOT / "writer" / "ItemRandomizerWrapper" / "diste"
 DATA_DEST = PROJECT_ROOT / "data"
 PACKAGING_DEST = DATA_DEST / "packaging"
 PACKAGING_LIB_DEST = PACKAGING_DEST / "lib"
-ME3_DEST = PACKAGING_DEST / "me3"
+MODENGINE_DEST = PACKAGING_DEST / "modengine2"
 
 # Files to extract from eldendata/Base/ to data/
 FOGRANDO_DATA_FILES = [
@@ -94,8 +94,9 @@ ITEMRANDO_EXTRA_DLLS = [
     "RandomizerHelper.dll",
 ]
 
-ME3_RELEASE_API = "https://api.github.com/repos/garyttierney/me3/releases/latest"
-ME3_ASSET_NAME = "me3-linux-amd64.tar.gz"
+MODENGINE_RELEASE_API = (
+    "https://api.github.com/repos/soulsmods/ModEngine2/releases/latest"
+)
 
 
 def print_step(step: int, total: int, message: str) -> None:
@@ -569,48 +570,55 @@ def setup_itemrando(sfextract: Path, zip_path: Path, force: bool) -> bool:
     return True
 
 
-def is_me3_installed() -> bool:
-    """Check if ME3 is present in data/packaging/me3/."""
-    return (ME3_DEST / "bin" / "me3").exists() and (
-        ME3_DEST / "bin" / "win64" / "me3.exe"
-    ).exists()
+def is_modengine_installed() -> bool:
+    """Check if ModEngine 2 is present in data/packaging/modengine2/."""
+    return (MODENGINE_DEST / "modengine2_launcher.exe").exists()
 
 
-def ensure_me3(force: bool = False) -> bool:
-    """Download and extract ME3 into data/packaging/me3/."""
+def ensure_modengine(force: bool = False) -> bool:
+    """Download and extract ModEngine 2 into data/packaging/modengine2/."""
     print("\n" + "=" * 50)
-    print("Setting up ME3")
+    print("Setting up ModEngine 2")
     print("=" * 50)
 
-    if is_me3_installed() and not force:
+    if is_modengine_installed() and not force:
         print_ok(
-            "ME3 already installed in data/packaging/me3/ (use --force to reinstall)"
+            "ModEngine 2 already installed in data/packaging/modengine2/"
+            " (use --force to reinstall)"
         )
         return True
 
     try:
-        print_info("Fetching latest ME3 release metadata...")
+        print_info("Fetching latest ModEngine 2 release metadata...")
         req = urllib.request.Request(
-            ME3_RELEASE_API,
+            MODENGINE_RELEASE_API,
             headers={"User-Agent": "SpeedFog/1.0"},
         )
         with urllib.request.urlopen(req, timeout=60) as response:
             release = json.loads(response.read().decode("utf-8"))
     except OSError as e:
-        print_error(f"Failed to query ME3 release: {e}")
+        print_error(f"Failed to query ModEngine 2 release: {e}")
         return False
 
-    asset = next(
-        (a for a in release.get("assets", []) if a.get("name") == ME3_ASSET_NAME),
-        None,
-    )
-    if asset is None:
-        print_error(f"Could not find {ME3_ASSET_NAME} in latest ME3 release")
+    candidates = [
+        a
+        for a in release.get("assets", [])
+        if a.get("name", "").startswith("ModEngine-")
+        and a.get("name", "").endswith("-win64.zip")
+    ]
+    if not candidates:
+        print_error(
+            "Could not find a ModEngine-*-win64.zip asset in latest ModEngine 2 release"
+        )
         return False
+    if len(candidates) > 1:
+        names = ", ".join(c.get("name", "") for c in candidates)
+        print_info(f"Multiple win64 zip assets matched ({names}); using the first")
+    asset = candidates[0]
 
-    archive_path = Path(tempfile.gettempdir()) / ME3_ASSET_NAME
+    archive_path = Path(tempfile.gettempdir()) / asset["name"]
     try:
-        print_info(f"Downloading {ME3_ASSET_NAME}...")
+        print_info(f"Downloading {asset['name']}...")
         req = urllib.request.Request(
             asset["browser_download_url"],
             headers={"User-Agent": "SpeedFog/1.0"},
@@ -619,49 +627,59 @@ def ensure_me3(force: bool = False) -> bool:
             with archive_path.open("wb") as out:
                 shutil.copyfileobj(response, out)
 
-        print_info("Extracting ME3...")
-        extract_dir = Path(tempfile.mkdtemp(prefix="me3_extract_"))
+        print_info("Extracting ModEngine 2...")
+        extract_dir = Path(tempfile.mkdtemp(prefix="modengine_extract_"))
         try:
-            with tarfile.open(archive_path, "r:gz") as tar:
-                tar.extractall(extract_dir, filter="data")
+            with zipfile.ZipFile(archive_path, "r") as zf:
+                zf.extractall(extract_dir)
 
-            bin_src = extract_dir / "bin"
-            if not bin_src.is_dir():
+            # ModEngine zip contains a single top-level directory; flatten it.
+            launcher_src = extract_dir / "modengine2_launcher.exe"
+            if not launcher_src.exists():
                 candidates = [
-                    path for path in extract_dir.rglob("bin") if path.is_dir()
+                    path
+                    for path in extract_dir.rglob("modengine2_launcher.exe")
+                    if path.is_file()
                 ]
-                bin_src = candidates[0] if candidates else bin_src
+                if not candidates:
+                    print_error(
+                        "ModEngine 2 archive does not contain modengine2_launcher.exe"
+                    )
+                    return False
+                launcher_src = candidates[0]
 
-            if not bin_src.is_dir():
-                print_error("ME3 archive does not contain a bin/ directory")
-                return False
+            staging_root = launcher_src.parent
 
-            if ME3_DEST.exists():
-                shutil.rmtree(ME3_DEST)
-            ME3_DEST.mkdir(parents=True, exist_ok=True)
-            shutil.copytree(bin_src, ME3_DEST / "bin")
+            if MODENGINE_DEST.exists():
+                shutil.rmtree(MODENGINE_DEST)
+            MODENGINE_DEST.mkdir(parents=True, exist_ok=True)
+            for entry in staging_root.iterdir():
+                dest = MODENGINE_DEST / entry.name
+                if entry.is_dir():
+                    shutil.copytree(entry, dest)
+                else:
+                    shutil.copy2(entry, dest)
         finally:
             shutil.rmtree(extract_dir, ignore_errors=True)
 
         version = release.get("tag_name", "unknown")
-        (ME3_DEST / "version.txt").write_text(f"{version}\n", encoding="utf-8")
+        (MODENGINE_DEST / "version.txt").write_text(f"{version}\n", encoding="utf-8")
 
-        linux_bin = ME3_DEST / "bin" / "me3"
-        if linux_bin.exists() and sys.platform != "win32":
-            linux_bin.chmod(0o755)
-
-    except (OSError, tarfile.TarError, KeyError) as e:
-        print_error(f"Failed to install ME3: {e}")
+    except (OSError, zipfile.BadZipFile, KeyError) as e:
+        print_error(f"Failed to install ModEngine 2: {e}")
         return False
     finally:
         archive_path.unlink(missing_ok=True)
 
-    if not is_me3_installed():
-        print_error("ME3 extraction completed but required binaries are missing")
+    if not is_modengine_installed():
+        print_error(
+            "ModEngine 2 extraction completed but required binaries are missing"
+        )
         return False
 
     print_ok(
-        f"ME3 {release.get('tag_name', 'unknown')} installed in data/packaging/me3/"
+        f"ModEngine 2 {release.get('tag_name', 'unknown')}"
+        " installed in data/packaging/modengine2/"
     )
     return True
 
@@ -813,7 +831,7 @@ def main() -> int:
             success = False
 
     print_step(4, 4, "Setting up packaging assets...")
-    if success and not ensure_me3(args.force):
+    if success and not ensure_modengine(args.force):
         success = False
 
     # Run GamePatcher to generate overlay files

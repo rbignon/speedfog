@@ -11,56 +11,55 @@ class PackagingError(RuntimeError):
     """Raised when bootstrap-managed packaging assets are missing."""
 
 
-def write_me3_config(
+def write_modengine_config(
     output_dir: Path,
     *,
-    mod_path: str = "../mods/fogmod",
     item_randomizer_enabled: bool = False,
     include_crash_fix: bool = False,
 ) -> Path:
-    """Write the ME3 profile consumed by the launch scripts."""
-    config_dir = output_dir / "me3"
-    config_dir.mkdir(parents=True, exist_ok=True)
-    config_path = config_dir / "config_speedfog.me3"
+    """Write the ModEngine 2 TOML config consumed by the launcher."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+    config_path = output_dir / "config_speedfog.toml"
 
-    natives: list[str] = []
+    # Backslashes are doubled because TOML parses "\\" as a single backslash;
+    # ModEngine 2 then sees the Windows path "lib\RandomizerCrashFix.dll".
+    external_dlls: list[str] = []
     if include_crash_fix:
-        natives.append("../lib/RandomizerCrashFix.dll")
+        external_dlls.append(r"lib\\RandomizerCrashFix.dll")
     if item_randomizer_enabled:
-        natives.append("../lib/RandomizerHelper.dll")
+        external_dlls.append(r"lib\\RandomizerHelper.dll")
 
-    natives_block = "\n\n".join(f'[[natives]]\npath = "{path}"' for path in natives)
+    if external_dlls:
+        dlls_inner = ",\n    ".join(f'"{path}"' for path in external_dlls)
+        dlls_block = f"external_dlls = [\n    {dlls_inner},\n]"
+    else:
+        dlls_block = "external_dlls = []"
 
-    packages: list[str] = []
+    # ModEngine 2 loads mods in declaration order; first wins. Keep fogmod
+    # ahead of itemrando so fog gate edits override the randomizer.
+    mods_lines: list[str] = [
+        '    { enabled = true, name = "fogmod", path = "mods/fogmod" }'
+    ]
     if item_randomizer_enabled:
-        packages.extend(
-            [
-                "[[packages]]",
-                'id = "itemrando"',
-                'path = "../mods/itemrando"',
-                "",
-            ]
+        mods_lines.append(
+            '    { enabled = true, name = "itemrando", path = "mods/itemrando" }'
         )
-    packages.extend(
-        [
-            "[[packages]]",
-            'id = "fogmod"',
-            f'path = "{mod_path}"',
-        ]
-    )
-    packages_block = "\n".join(packages)
+    mods_block = ",\n".join(mods_lines)
 
     config_path.write_text(
-        f"""# SpeedFog ME3 Profile
+        f"""# SpeedFog ModEngine 2 Configuration
 # Auto-generated, do not edit manually
-profileVersion = "v1"
 
-[[supports]]
-game = "eldenring"
+[modengine]
+debug = false
+{dlls_block}
 
-{natives_block}
-
-{packages_block}
+[extension.mod_loader]
+enabled = true
+loose_params = false
+mods = [
+{mods_block}
+]
 """,
         encoding="utf-8",
     )
@@ -95,7 +94,7 @@ def package_seed(
     item_randomizer_enabled: bool = False,
     item_randomizer_dir: Path | None = None,
 ) -> None:
-    """Assemble ME3, launchers, native DLLs, and config for a generated seed."""
+    """Assemble ModEngine 2, launcher, native DLLs, and config for a seed."""
     print()
     print("=== Packaging SpeedFog Mod ===")
 
@@ -114,7 +113,7 @@ def package_seed(
             shutil.copy2(helper_config, lib_dir / "RandomizerHelper_config.ini")
             print("Copied RandomizerHelper_config.ini to lib/")
 
-    write_me3_config(
+    write_modengine_config(
         seed_dir,
         item_randomizer_enabled=item_randomizer_enabled,
         include_crash_fix=(
@@ -122,13 +121,11 @@ def package_seed(
             and (seed_dir / "lib" / "RandomizerCrashFix.dll").exists()
         ),
     )
-    print("Generated config_speedfog.me3")
+    print("Generated config_speedfog.toml")
 
     print()
     print("=== SpeedFog mod ready! ===")
-    print("To play:")
-    print(f"  Windows: double-click {seed_dir / 'launch_speedfog.bat'}")
-    print(f"  Linux:   run {seed_dir / 'linux' / 'launch_speedfog.sh'}")
+    print(f"To play: double-click {seed_dir / 'launch_speedfog.bat'}")
 
 
 def _validate_packaging_assets(
@@ -142,11 +139,7 @@ def _validate_packaging_assets(
         packaging_dir / "backups" / "launch_helper.ps1",
         packaging_dir / "backups" / "backup_daemon.ps1",
         packaging_dir / "backups" / "recovery.ps1",
-        packaging_dir / "linux" / "launch_speedfog.sh",
-        packaging_dir / "linux" / "backup_daemon.sh",
-        packaging_dir / "linux" / "recovery.sh",
-        packaging_dir / "me3" / "bin" / "me3",
-        packaging_dir / "me3" / "bin" / "win64" / "me3.exe",
+        packaging_dir / "modengine2" / "modengine2_launcher.exe",
     ]
     if item_randomizer_enabled:
         required.append(packaging_dir / "lib" / "RandomizerCrashFix.dll")

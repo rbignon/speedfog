@@ -100,9 +100,9 @@ speedfog/
 │   │   ├── launch_speedfog.bat   # Windows launcher
 │   │   ├── recovery.bat          # Windows recovery launcher
 │   │   ├── backups/              # Windows backup scripts/config
-│   │   ├── linux/                # Linux launcher/recovery scripts
+│   │   ├── linux/                # Engine-neutral helper scripts (backup daemon, recovery)
 │   │   ├── lib/                  # Runtime DLLs from bootstrap (gitignored)
-│   │   └── me3/                  # ME3 bin/ from bootstrap (gitignored)
+│   │   └── modengine2/           # ModEngine 2 binaries from bootstrap (gitignored)
 │   ├── overlay/                 # GamePatcher/user file overrides (gitignored)
 │   ├── i18n/                    # Localization data
 │   └── zone_metadata.toml       # Zone weights (tracked)

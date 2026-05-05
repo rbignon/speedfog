@@ -9,7 +9,7 @@ set SCRIPT_DIR=%~dp0
 REM Detect save file and start backup daemon
 powershell -ExecutionPolicy Bypass -NoProfile -File "%SCRIPT_DIR%backups\launch_helper.ps1"
 
-REM Launch ME3 with our profile
-"%SCRIPT_DIR%me3\bin\win64\me3.exe" launch -p "%SCRIPT_DIR%me3\config_speedfog.me3"
+REM Launch ModEngine 2 with our config
+"%SCRIPT_DIR%modengine2\modengine2_launcher.exe" -t er -c "%SCRIPT_DIR%config_speedfog.toml"
 
 endlocal

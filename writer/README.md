@@ -89,7 +89,7 @@ ItemRandomizerWrapper.exe <config_path> --game-dir <game_dir> [options]
 ## Output
 
 FogModWrapper writes only the fog mod files under `mods/fogmod/`.
-The Python `speedfog` pipeline assembles the self-contained ME3 package from
+The Python `speedfog` pipeline assembles the self-contained ModEngine 2 package from
 `data/packaging/`:
 
 ```
@@ -98,7 +98,8 @@ output/
 ├── logs/                   # Diagnostic logs (--logs)
 │   ├── spoiler.txt         # Path spoiler log
 │   └── generation.log      # DAG generation diagnostics
-├── me3/                    # ME3 + config_speedfog.me3 profile
+├── config_speedfog.toml    # ModEngine 2 configuration
+├── modengine2/             # ModEngine 2 launcher + runtime
 ├── mods/
 │   ├── fogmod/             # Fog gate mod files
 │   │   ├── param/gameparam/regulation.bin
@@ -108,8 +109,7 @@ output/
 ├── lib/                    # Runtime DLLs (crash fix, helper)
 ├── launch_speedfog.bat     # Windows launcher
 ├── recovery.bat            # Windows recovery launcher
-├── linux/                  # Linux launchers
-│   ├── launch_speedfog.sh  # Linux launcher
+├── linux/                  # Engine-neutral helper scripts
 │   ├── backup_daemon.sh    # Linux backup daemon
 │   └── recovery.sh         # Linux recovery
 ├── backups/

@@ -13,7 +13,7 @@ Unlike FogRando which randomizes the entire world, SpeedFog creates a focused pa
 - **Difficulty curve**: Configurable start/end tiers with linear or power curve progression
 - **Cross-links**: Optional connections between parallel branches for more routing options
 - **Seed-based**: Share seeds for identical runs
-- **Self-contained output**: Includes ME3 and launcher
+- **Self-contained output**: Includes ModEngine 2 and launcher
 - **Item randomization**: Optional integration with Item Randomizer (auto-upgrade, presets, boss randomization, reduced upgrade costs)
 - **All crafting recipes**: Optionally unlock all recipes at start (no cookbook hunting)
 - **Care package**: Optional randomized starting build (weapons, armor, spells, talismans)
@@ -47,7 +47,7 @@ uv pip install -e .
 # Install sfextract (extracts DLLs from FogRando)
 dotnet tool install -g sfextract
 
-# Extract dependencies, generate derived data, build C# writers, and install ME3
+# Extract dependencies, generate derived data, build C# writers, and install ModEngine 2
 python tools/bootstrap.py \
   --game-dir /path/to/ELDEN_RING/Game \
   --fogrando /path/to/FogRando.zip \
@@ -78,7 +78,8 @@ Output is self-contained in `seeds/<seed>/`:
 - `graph.json` - DAG definition
 - `logs/spoiler.txt` - Spoiler log
 - `logs/generation.log` - Structured generation log
-- `me3/` - ME3 and `config_speedfog.me3` profile
+- `modengine2/` - ModEngine 2 binaries
+- `config_speedfog.toml` - ModEngine 2 configuration
 - `mods/` - Generated mod files
 - `launch_speedfog.bat` - Windows launcher
 
@@ -105,13 +106,13 @@ This creates only `graph.json` and `logs/`. To build manually, see `writer/READM
 
 ### Play
 
-The output folder is self-contained with ME3 copied from `data/packaging/`:
+The output folder is self-contained with ModEngine 2 copied from `data/packaging/`:
 
 ```bash
 ./seeds/<seed>/launch_speedfog.bat
 ```
 
-Linux users: run `linux/launch_speedfog.sh` instead of the .bat.
+Linux users: ModEngine 2 has no native Linux binary, run the launcher under Wine, e.g. `wine cmd /c launch_speedfog.bat`.
 
 ## Configuration
 
@@ -157,7 +158,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 - [FogRando](https://www.nexusmods.com/eldenring/mods/3295) by thefifthmatt - Core fog gate system
 - [Item Randomizer](https://www.nexusmods.com/eldenring/mods/428) by thefifthmatt - Item/enemy randomization
 - [SoulsFormats](https://github.com/soulsmods/SoulsFormatsNEXT) - File format library
-- [ME3](https://github.com/garyttierney/me3) - Mod loading
+- [ModEngine 2](https://github.com/soulsmods/ModEngine2) - Mod loading
 
 ## License
 

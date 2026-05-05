@@ -52,7 +52,7 @@ The output root contains only files the player interacts with directly
 ## Save File Detection
 
 The save file is at `%APPDATA%\EldenRing\<steam_id>\ER0000.sl2`.
-The `<steam_id>` varies per player. Save detection on Linux scans Proton's compatdata directory; ME3 does not isolate saves either, so the backup target is the same vanilla ER0000.sl2.
+The `<steam_id>` varies per player. Save detection on Linux scans Proton's compatdata directory; ModEngine 2 does not isolate saves either, so the backup target is the same vanilla ER0000.sl2.
 
 Detection runs in the **launcher** (visible console window):
 
@@ -141,7 +141,7 @@ is currently running.
 ## Scripts and Packaging
 
 Scripts are standalone files in `data/packaging/`, copied to the seed
-directory by the Python packaging step. Only `me3/config_speedfog.me3` is
+directory by the Python packaging step. Only `config_speedfog.toml` is
 dynamically generated (it depends on item randomizer configuration).
 
 ```
@@ -157,7 +157,7 @@ data/packaging/
 ```
 
 `tools/bootstrap.py` populates the rest of `data/packaging/`, including
-`me3/` and runtime DLLs in `lib/`.
+`modengine2/` and runtime DLLs in `lib/`.
 
 ## FogMod Comparison
 

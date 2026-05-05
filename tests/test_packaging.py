@@ -8,7 +8,7 @@ from speedfog.packaging import (
     PackagingError,
     copy_packaging_assets,
     package_seed,
-    write_me3_config,
+    write_modengine_config,
 )
 
 
@@ -21,50 +21,49 @@ def _make_packaging_tree(root: Path) -> None:
         "backups/launch_helper.ps1",
         "backups/backup_daemon.ps1",
         "backups/recovery.ps1",
-        "linux/launch_speedfog.sh",
         "linux/backup_daemon.sh",
         "linux/recovery.sh",
         "lib/RandomizerCrashFix.dll",
         "lib/RandomizerHelper.dll",
-        "me3/bin/me3",
-        "me3/bin/win64/me3.exe",
+        "modengine2/modengine2_launcher.exe",
+        "modengine2/modengine2/bin/modengine2.dll",
     ]:
         file = packaging / path
         file.parent.mkdir(parents=True, exist_ok=True)
         file.write_text(path, encoding="utf-8")
 
 
-def test_write_me3_config_without_item_randomizer(tmp_path: Path) -> None:
-    write_me3_config(tmp_path)
+def test_write_modengine_config_without_item_randomizer(tmp_path: Path) -> None:
+    write_modengine_config(tmp_path)
 
-    content = (tmp_path / "me3" / "config_speedfog.me3").read_text(encoding="utf-8")
-    assert 'profileVersion = "v1"' in content
-    assert "[[supports]]" in content
-    assert 'game = "eldenring"' in content
-    assert 'path = "../mods/fogmod"' in content
-    assert "[[natives]]" not in content
+    content = (tmp_path / "config_speedfog.toml").read_text(encoding="utf-8")
+    assert "[modengine]" in content
+    assert "debug = false" in content
+    assert "[extension.mod_loader]" in content
+    assert "loose_params = false" in content
+    assert 'name = "fogmod"' in content
+    assert 'path = "mods/fogmod"' in content
     assert "RandomizerCrashFix.dll" not in content
     assert "RandomizerHelper.dll" not in content
     assert "itemrando" not in content
-    assert "[modengine]" not in content
 
 
-def test_write_me3_config_with_item_randomizer_loads_fogmod_last(
+def test_write_modengine_config_with_item_randomizer_loads_fogmod_first(
     tmp_path: Path,
 ) -> None:
-    write_me3_config(
+    write_modengine_config(
         tmp_path,
         item_randomizer_enabled=True,
         include_crash_fix=True,
     )
 
-    content = (tmp_path / "me3" / "config_speedfog.me3").read_text(encoding="utf-8")
-    assert 'path = "../mods/itemrando"' in content
-    assert "../lib/RandomizerCrashFix.dll" in content
-    assert "../lib/RandomizerHelper.dll" in content
-    assert content.index('path = "../mods/itemrando"') < content.index(
-        'path = "../mods/fogmod"'
-    )
+    content = (tmp_path / "config_speedfog.toml").read_text(encoding="utf-8")
+    assert 'name = "itemrando"' in content
+    assert 'path = "mods/itemrando"' in content
+    assert "RandomizerCrashFix.dll" in content
+    assert "RandomizerHelper.dll" in content
+    # ModEngine 2: first mod wins, fogmod must be listed before itemrando.
+    assert content.index('name = "fogmod"') < content.index('name = "itemrando"')
 
 
 def test_copy_packaging_assets_copies_tree_shape(tmp_path: Path) -> None:
@@ -77,11 +76,12 @@ def test_copy_packaging_assets_copies_tree_shape(tmp_path: Path) -> None:
     assert (seed_dir / "launch_speedfog.bat").exists()
     assert (seed_dir / "recovery.bat").exists()
     assert (seed_dir / "backups" / "config.ini").exists()
-    assert (seed_dir / "linux" / "launch_speedfog.sh").exists()
+    assert (seed_dir / "linux" / "backup_daemon.sh").exists()
+    assert (seed_dir / "linux" / "recovery.sh").exists()
     assert (seed_dir / "lib" / "RandomizerCrashFix.dll").exists()
     assert (seed_dir / "lib" / "RandomizerHelper.dll").exists()
-    assert (seed_dir / "me3" / "bin" / "me3").exists()
-    assert (seed_dir / "me3" / "bin" / "win64" / "me3.exe").exists()
+    assert (seed_dir / "modengine2" / "modengine2_launcher.exe").exists()
+    assert (seed_dir / "modengine2" / "modengine2" / "bin" / "modengine2.dll").exists()
 
 
 def test_copy_packaging_assets_reports_missing_bootstrap_assets(
@@ -112,4 +112,4 @@ def test_package_seed_copies_randomizer_helper_config(tmp_path: Path) -> None:
     assert (seed_dir / "lib" / "RandomizerHelper_config.ini").read_text(
         encoding="utf-8"
     ) == "autoUpgrade=true\n"
-    assert (seed_dir / "me3" / "config_speedfog.me3").exists()
+    assert (seed_dir / "config_speedfog.toml").exists()
