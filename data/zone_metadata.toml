@@ -189,6 +189,9 @@ weight = 0.5
 [zones.caelid_redmane_boss]
 exclude = true
 
+[zones.farumazula_balcony]
+exclude = true
+
 [zones.ainsel_dragonkin]
 type = "major_boss"
 
