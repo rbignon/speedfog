@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import shutil
 from pathlib import Path
 
@@ -91,8 +90,6 @@ def copy_packaging_assets(
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, dest)
 
-    _make_linux_scripts_executable(output_dir / "linux")
-
 
 def package_seed(
     project_root: Path,
@@ -161,11 +158,3 @@ def _validate_packaging_assets(
             "Packaging assets are missing. Run tools/bootstrap.py before speedfog.\n"
             f"{rel}"
         )
-
-
-def _make_linux_scripts_executable(linux_dir: Path) -> None:
-    if os.name == "nt" or not linux_dir.is_dir():
-        return
-    exec_mode = 0o755
-    for script in linux_dir.glob("*.sh"):
-        script.chmod(exec_mode)

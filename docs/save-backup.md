@@ -23,10 +23,6 @@ A separate recovery script lets the player restore any backup interactively.
 output/
 ├── launch_speedfog.bat        # Detects save, starts daemon, launches game
 ├── recovery.bat               # Wrapper → backups/recovery.ps1
-├── linux/
-│   ├── launch_speedfog.sh     # Linux launcher
-│   ├── backup_daemon.sh       # Linux backup daemon
-│   └── recovery.sh            # Linux recovery
 └── backups/
     ├── config.ini             # Optional config overrides
     ├── launch_helper.ps1      # Save detection + daemon launch (Windows)
@@ -52,7 +48,7 @@ The output root contains only files the player interacts with directly
 ## Save File Detection
 
 The save file is at `%APPDATA%\EldenRing\<steam_id>\ER0000.sl2`.
-The `<steam_id>` varies per player. Save detection on Linux scans Proton's compatdata directory; ModEngine 2 does not isolate saves either, so the backup target is the same vanilla ER0000.sl2.
+The `<steam_id>` varies per player. ModEngine 2 does not isolate saves, so the backup target is the same vanilla ER0000.sl2.
 
 Detection runs in the **launcher** (visible console window):
 
@@ -148,7 +144,6 @@ dynamically generated (it depends on item randomizer configuration).
 data/packaging/
 ├── launch_speedfog.bat
 ├── recovery.bat
-├── linux/
 └── backups/
     ├── config.ini
     ├── launch_helper.ps1

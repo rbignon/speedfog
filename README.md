@@ -111,8 +111,6 @@ The output folder is self-contained with ModEngine 2 copied from `data/packaging
 ./seeds/<seed>/launch_speedfog.bat
 ```
 
-Linux users: ModEngine 2 has no native Linux binary, run the launcher under Wine, e.g. `wine cmd /c launch_speedfog.bat`.
-
 ## Configuration
 
 Edit `config.toml` (see `config.example.toml` for all options).

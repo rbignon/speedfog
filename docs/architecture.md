@@ -486,9 +486,6 @@ launchers, and runtime packaging are created.
 │   └── RandomizerHelper_config.ini  # Copied from itemrando output when present
 ├── launch_speedfog.bat       # Windows launcher
 ├── recovery.bat              # Windows recovery launcher
-├── linux/                    # Engine-neutral helper scripts
-│   ├── backup_daemon.sh      # Linux backup daemon
-│   └── recovery.sh           # Linux recovery
 └── backups/                  # Backup system files
     ├── config.ini            # Backup configuration
     ├── backup_daemon.ps1     # Windows backup daemon

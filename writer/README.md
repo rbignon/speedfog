@@ -108,9 +108,6 @@ output/
 ├── lib/                    # Runtime DLLs (crash fix, helper)
 ├── launch_speedfog.bat     # Windows launcher
 ├── recovery.bat            # Windows recovery launcher
-├── linux/                  # Engine-neutral helper scripts
-│   ├── backup_daemon.sh    # Linux backup daemon
-│   └── recovery.sh         # Linux recovery
 ├── backups/
 │   ├── config.ini          # Backup system configuration
 │   ├── backup_daemon.ps1   # Windows backup daemon
@@ -120,7 +117,7 @@ output/
 
 ## Playing
 
-After generating the mod, double-click `output/launch_speedfog.bat` (Windows) or run `output/linux/launch_speedfog.sh` (Linux).
+After generating the mod, double-click `output/launch_speedfog.bat`.
 
 ## Development
 

@@ -100,7 +100,6 @@ speedfog/
 │   │   ├── launch_speedfog.bat   # Windows launcher
 │   │   ├── recovery.bat          # Windows recovery launcher
 │   │   ├── backups/              # Windows backup scripts/config
-│   │   ├── linux/                # Engine-neutral helper scripts (backup daemon, recovery)
 │   │   ├── lib/                  # Runtime DLLs from bootstrap (gitignored)
 │   │   └── modengine2/           # ModEngine 2 binaries from bootstrap (gitignored)
 │   ├── overlay/                 # GamePatcher/user file overrides (gitignored)

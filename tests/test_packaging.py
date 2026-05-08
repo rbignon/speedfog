@@ -21,8 +21,6 @@ def _make_packaging_tree(root: Path) -> None:
         "backups/launch_helper.ps1",
         "backups/backup_daemon.ps1",
         "backups/recovery.ps1",
-        "linux/backup_daemon.sh",
-        "linux/recovery.sh",
         "lib/RandomizerCrashFix.dll",
         "lib/RandomizerHelper.dll",
         "modengine2/modengine2_launcher.exe",
@@ -80,8 +78,6 @@ def test_copy_packaging_assets_copies_tree_shape(tmp_path: Path) -> None:
     assert (seed_dir / "launch_speedfog.bat").exists()
     assert (seed_dir / "recovery.bat").exists()
     assert (seed_dir / "backups" / "config.ini").exists()
-    assert (seed_dir / "linux" / "backup_daemon.sh").exists()
-    assert (seed_dir / "linux" / "recovery.sh").exists()
     assert (seed_dir / "lib" / "RandomizerCrashFix.dll").exists()
     assert (seed_dir / "lib" / "RandomizerHelper.dll").exists()
     assert (seed_dir / "modengine2" / "modengine2_launcher.exe").exists()
