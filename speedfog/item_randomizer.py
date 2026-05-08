@@ -63,6 +63,11 @@ def generate_item_config(
             "copydrops": True,
             # Rewrite boss healthbar names to match the randomized enemy.
             "editnames": True,
+            # RandomizerOptions returns false for unset bool keys; scale and
+            # phasehp must be set explicitly or relocated bosses keep their
+            # native HP (no tier->tier rescaling SpEffect injected).
+            "scale": True,
+            "phasehp": True,
             "nohand": config.item_randomizer.remove_requirements,
             "dlc": config.item_randomizer.dlc,
             "weaponreqs": config.item_randomizer.remove_requirements,
