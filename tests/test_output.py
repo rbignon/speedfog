@@ -1740,6 +1740,117 @@ class TestIgnorePairInConnections:
         for conn in result["connections"]:
             assert "ignore_pair" not in conn
 
+    def test_ignore_pair_set_when_source_reuses_entry_as_exit(self):
+        """When a source cluster uses one of its own entry-as-exit fogs as the
+        exit of an outgoing edge, that connection must carry ignore_pair=True.
+
+        Without this, FogMod's Graph.Connect rejects the connection with
+        "Already matched pair" because the same physical fog gate is referenced
+        by both an inbound entrance edge (from a previous connection into the
+        cluster) and an outbound exit edge.
+
+        Regression test for the failure observed on seed 860611284 where
+        ``liurnia_blackknifecatacombs_boss --[F]--> academy`` failed because F
+        was the entry-as-exit fog used by the previous
+        ``precipice_boss --> liurnia_blackknifecatacombs_boss`` connection.
+        """
+        # Source cluster with allow_entry_as_exit=True and one entry/exit pair
+        # sharing fog "F", plus a second exit "G" with no entry counterpart.
+        source_cluster = ClusterData(
+            id="c_src",
+            zones=["z_src"],
+            type="boss_arena",
+            weight=3,
+            entry_fogs=[{"fog_id": "F", "zone": "z_src", "text": "front"}],
+            exit_fogs=[
+                {"fog_id": "F", "zone": "z_src", "text": "front (back out)"},
+                {"fog_id": "G", "zone": "z_src", "text": "side"},
+            ],
+            allow_entry_as_exit=True,
+        )
+        upstream_cluster = make_cluster(
+            "c_up",
+            zones=["z_up"],
+            cluster_type="mini_dungeon",
+            entry_fogs=[],
+            exit_fogs=[{"fog_id": "U", "zone": "z_up", "text": "out"}],
+        )
+        downstream_normal = make_cluster(
+            "c_dn",
+            zones=["z_dn"],
+            cluster_type="mini_dungeon",
+            entry_fogs=[{"fog_id": "D", "zone": "z_dn", "text": "in"}],
+            exit_fogs=[],
+        )
+
+        dag = Dag(seed=0)
+        dag.add_node(
+            DagNode(
+                id="up",
+                cluster=upstream_cluster,
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+                exit_fogs=[FogRef("U", "z_up")],
+            )
+        )
+        dag.add_node(
+            DagNode(
+                id="src",
+                cluster=source_cluster,
+                layer=1,
+                tier=2,
+                entry_fogs=[FogRef("F", "z_src")],
+                exit_fogs=[FogRef("F", "z_src"), FogRef("G", "z_src")],
+            )
+        )
+        dag.add_node(
+            DagNode(
+                id="dn",
+                cluster=downstream_normal,
+                layer=2,
+                tier=3,
+                entry_fogs=[FogRef("D", "z_dn")],
+                exit_fogs=[],
+            )
+        )
+        dag.start_id = "up"
+        dag.end_id = "dn"
+
+        # Edge 1: up -> src, src enters through its entry-as-exit fog F.
+        dag.add_edge("up", "src", FogRef("U", "z_up"), FogRef("F", "z_src"))
+        # Edge 2: src -> dn, src exits through the SAME fog F it entered through.
+        dag.add_edge("src", "dn", FogRef("F", "z_src"), FogRef("D", "z_dn"))
+
+        clusters = ClusterPool(
+            clusters=[upstream_cluster, source_cluster, downstream_normal],
+            zone_maps={
+                "z_up": "m10_00_00_00",
+                "z_src": "m11_00_00_00",
+                "z_dn": "m12_00_00_00",
+            },
+            zone_names={},
+        )
+
+        result = dag_to_dict(dag, clusters)
+
+        # Find the src -> dn connection; it must carry ignore_pair=True even
+        # though the target (c_dn) does not have allow_entry_as_exit.
+        src_to_dn = next(
+            c
+            for c in result["connections"]
+            if c["exit_area"] == "z_src" and c["entrance_area"] == "z_dn"
+        )
+        assert src_to_dn.get("ignore_pair") is True
+
+        # Sanity: edge up -> src also gets ignore_pair (target has allow_entry_as_exit).
+        up_to_src = next(
+            c
+            for c in result["connections"]
+            if c["exit_area"] == "z_up" and c["entrance_area"] == "z_src"
+        )
+        assert up_to_src.get("ignore_pair") is True
+
 
 class TestBossPlacementLoading:
     def test_load_boss_placements_returns_dict(self, tmp_path):

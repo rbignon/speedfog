@@ -410,7 +410,19 @@ def dag_to_dict(
             ),
             "flag_id": flag_id,
         }
-        if target_node.cluster.allow_entry_as_exit:
+        # ignore_pair is required whenever the underlying physical fog gate is
+        # also reused by another connection (FogMod's Pair tracking refuses
+        # double-matching). Two cases trigger this:
+        #   1. Target uses entry-as-exit: the entrance side may also serve as
+        #      this cluster's outgoing exit in another connection.
+        #   2. Source uses one of its own entry fogs as this exit (only possible
+        #      when source has allow_entry_as_exit), meaning the same physical
+        #      gate already has an incoming connection on this cluster.
+        source_uses_entry_as_exit = source_node.cluster.allow_entry_as_exit and any(
+            ef["fog_id"] == edge.exit_fog.fog_id and ef["zone"] == edge.exit_fog.zone
+            for ef in source_node.cluster.entry_fogs
+        )
+        if target_node.cluster.allow_entry_as_exit or source_uses_entry_as_exit:
             conn_dict["ignore_pair"] = True
         connections.append(conn_dict)
 
