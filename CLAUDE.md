@@ -136,7 +136,7 @@ speedfog/
 │   └── fogrando-data/       # Reference data (foglocations.txt)
 ├── docs/                    # Documentation
 │   ├── architecture.md      # System architecture
-│   ├── dag-generation.md    # DAG generation algorithm (cluster-first)
+│   ├── dag-generation.md    # DAG generation algorithm (exit-driven)
 │   ├── clusters.md          # Cluster generation from fog.txt
 │   ├── fogmod-emevd-model.md # FogMod EMEVD compilation model
 │   ├── connection-injection.md # FogMod Graph connection injection
@@ -164,7 +164,7 @@ speedfog/
 | File | Purpose |
 |------|---------|
 | `docs/architecture.md` | System architecture and data formats |
-| `docs/dag-generation.md` | DAG generation algorithm (cluster-first selection) |
+| `docs/dag-generation.md` | DAG generation algorithm (exit-driven routing) |
 | `docs/fogmod-emevd-model.md` | FogMod EMEVD compilation model (critical mental model) |
 | `docs/connection-injection.md` | Connection injection (shared entrance, ignore_pair) |
 | `docs/zone-tracking.md` | Zone tracking for racing (region-based lookup) |

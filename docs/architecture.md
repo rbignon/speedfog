@@ -47,8 +47,8 @@ Generates a balanced DAG of zone connections.
 |--------|---------|
 | `config.py` | Parse user config (TOML), 7 dataclasses for all settings |
 | `clusters.py` | Load pre-computed zone clusters, fog gate compatibility |
-| `dag.py` | DAG data structures (Branch with birth_layer tracking, DagNode, DagEdge, Dag) |
-| `generator.py` | Main generation algorithm (split/merge/passant topology) |
+| `dag.py` | DAG data structures (DagNode, DagEdge, FogRef, Dag) |
+| `generator.py` | Main generation algorithm (exit-driven routing, width model) |
 | `planner.py` | Layer type planning and tier interpolation |
 | `validator.py` | DAG constraint validation against requirements |
 | `output.py` | Export graph.json v4, spoiler.txt, and generation.log with ASCII graph |

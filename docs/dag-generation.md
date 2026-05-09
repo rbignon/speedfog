@@ -1,13 +1,19 @@
 # DAG Generation Algorithm
 
-**Date:** 2026-02-15 — **Updated:** 2026-03-18
+**Date:** 2026-02-15 -- **Updated:** 2026-05-09
 **Status:** Active
 
 How SpeedFog generates balanced, randomized DAGs from zone clusters.
 
 ## Overview
 
-The generator (`speedfog/generator.py`) builds a directed acyclic graph layer by layer, using four topology operations (split, merge, passant, rebalance) to create parallel branches that converge before the final boss. The result is a graph where all paths have similar total weight (duration), ensuring fair races.
+The generator (`speedfog/generator.py`) builds a directed acyclic graph layer by layer using an
+exit-driven routing model. The total number of layers is fixed by `layers_count` (inclusive of
+start and final boss). At each layer the algorithm picks a set of clusters and routes source exits
+to them; splits, merges, and cross-links emerge from this routing rather than being scheduled
+explicitly. All paths through the DAG have similar total weight (duration), ensuring fair races.
+
+For full design rationale see `docs/specs/2026-04-25-exit-driven-dag-generation.md`.
 
 ## Data Structures
 
@@ -35,303 +41,179 @@ A connection between two nodes via specific fog gates.
 | `exit_fog` | FogRef | Fog gate used to exit source |
 | `entry_fog` | FogRef | Fog gate used to enter target |
 
-### Branch (`dag.py`)
-
-Tracks parallel path state during generation.
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `id` | str | Branch identifier (e.g., `"b0"`, `"b0_a"`, `"merged_3"`) |
-| `current_node_id` | str | Where this branch is now |
-| `available_exit` | FogRef | Fog gate to use for next connection |
-| `birth_layer` | int | Layer when this branch was created |
-| `layers_since_last_split` | int | Layers since this branch last had a split point |
-
 ### FogRef (`dag.py`)
 
 A `NamedTuple(fog_id, zone)` that disambiguates the same `fog_id` across different zones.
 
-## Topology Operations
+## Width Model
 
-The algorithm decides between four operations at each layer:
-
-### Passant (1->1 per branch)
-
-Each branch independently advances through its own node. The simplest operation.
-
-**Filter**: `can_be_passant_node(cluster)` -- cluster must have at least 1 net exit after consuming 1 entry fog. Extra exits are left unmapped.
-
-**Process**:
-1. For each branch, find a compatible cluster
-2. Pick entry fog that maximizes remaining exits (prefer non-bidirectional)
-3. Create node, connect edge from branch's current node
-4. Update branch to point to new node
-
-### Split (1->N branches)
-
-One branch fans out into N parallel branches. Creates divergence in the DAG.
-
-**Filter**: `can_be_split_node(cluster, N)` -- cluster must have at least N net exits after consuming 1 entry fog. Extra exits beyond N are left unmapped.
-
-**Process**:
-1. Pick a branch to split (random selection)
-2. Find a cluster with N+ available exits
-3. Create one node with N outgoing edges
-4. Replace the single branch with N new branches (named `{parent}_{a..z}`)
-5. Non-split branches execute passant in the same layer
-
-**Constraints**:
-- `N` ranges from 2 to `max_exits` (config, default 3)
-- Total branches after split must not exceed `max_parallel_paths` (config, default 3)
-- Room calculation: `max_parallel_paths - len(branches) + 1`
-- Tries max fan-out first, falls back to smaller N (greedy)
-
-### Merge (N->1 branches)
-
-N branches converge into a single node. Creates convergence in the DAG.
-
-**Filter**: `can_be_merge_node(cluster, N)` -- cluster must have N+ entry fogs and at least 1 net exit after consuming N entries. Extra exits are left unmapped.
-
-**Process**:
-1. Select N branches to merge (random subset)
-2. Find a cluster with enough entries and 1+ net exit
-3. Create one node with N incoming edges
-4. Replace N branches with 1 new branch (named `merged_{layer}`)
-5. Non-merged branches execute passant in the same layer
-
-**Anti-micro-merge**: Selected branches must have at least 2 different parent nodes. This prevents trivial split-then-immediate-merge patterns (Y-shapes) that add no meaningful divergence.
-
-**Branch age gate**: The `birth_layer` field tracks when each branch was created, but the generator no longer enforces a minimum age before merging. Anti-micro-merge alone guards against trivial split-then-immediate-merge patterns.
-
-### Rebalance (N->N branches)
-
-Merges 2 branches and splits 1 stale branch across 2 layers (merge-first: merge at layer N, split at layer N+1), keeping the total branch count constant. Uses 2 clusters: one merge-capable, one split-capable.
-
-**Trigger conditions** (all must be met):
-1. `len(branches) >= max_parallel_paths` (saturated — no room to split)
-2. `max(b.layers_since_last_split for b in branches)` is high (stale branch detected)
-3. At least one valid merge pair exists among branches other than the split target
-
-**Process**:
-1. Identify the most stale branch (highest `layers_since_last_split`) — split target
-2. Find 2 merge candidates among remaining branches (enforce anti-micro-merge)
-3. Pick a split-capable cluster, then a merge-capable cluster
-4. Execute split on the stale branch → 2 child branches with `layers_since_last_split = 0`
-5. Execute merge on the pair → 1 merged branch with `layers_since_last_split = max(A, B) + 1`
-6. Passant remaining branches (carrying their existing counters)
-
-REBALANCE is internal to the generator — graph.json serializes nodes and edges, not operations. A REBALANCE produces split and merge nodes identical to separate SPLIT and MERGE operations.
-
-### Max Branch Spacing
-
-The generator avoids stale branches (long linear segments without choices). Each branch tracks `layers_since_last_split`, counting layers since the player on that branch last had a choice.
-
-**Counter rules:**
-
-| Event | Counter value |
-|-------|---------------|
-| Branch created by split | `0` (player just had a choice) |
-| Branch does a passant | `+= 1` |
-| Non-split branches on a split layer | `+= 1` (no choice for them) |
-| Two branches merge | Result inherits `max(A, B)` |
-| Branches not participating in a merge | `+= 1` |
-| Start node (layer 0) | All initial branches start at `0` |
-
-Merges do NOT reset the counter — a merge doesn't give the player a new choice (fog gates are one-way).
-
-**Priority hierarchy in `determine_operation`:**
-1. **REBALANCE** (highest) — if saturated + stale + merge pair available
-2. **`prefer_merge`** — if convergence phase, bypass probability roll, return MERGE
-3. **Forced split (stale)** — if not saturated but stale, force SPLIT on the most stale branch
-4. **Forced split (single branch)** — if only 1 branch exists outside convergence, force SPLIT to avoid linear segments
-5. **Normal probability roll** — split_prob / merge_prob / passant
-
-**Entry selection**: `select_entries_for_merge()` prefers non-bidirectional entries (preserves exit count for future operations), with main-tagged entries as a soft preference within each group.
-
-**Shared entrance mode**: When `cluster.allow_shared_entrance` is true, all merging branches connect to the same entry fog. Only requires 2+ entries and 1+ exit regardless of fan-in N.
-
-## Cluster-First Selection
-
-The generator uses a **cluster-first** model: pick a cluster uniformly at random, then determine what operation it supports based on its fog gate structure.
-
-For each layer in the main loop:
+The generator runs a single unified loop from layer 1 to `layers_count - 1`. At each step the
+width (number of nodes) of the next layer is determined by a pure function of the current layer:
 
 ```
-candidates = clusters.get_by_type(layer_type)
+remaining = layers_count - current_layer   # layers left, including the boss layer
 
-primary_cluster = pick_cluster_uniform(candidates, used_zones, rng, reserved_zones)
-    -> filter by zone overlap and reserved zones, pick uniformly
-
-operation, fan = determine_operation(primary_cluster, branches, config, rng, current_layer):
-    check cluster capabilities (split, merge, passant)
-    merge eligibility also requires age-eligible branches (see Branch age gate)
-    if num_branches == 1 AND not converging AND can_split:
-        -> SPLIT (forced, avoid linear segments)
-    elif can_split AND can_merge:
-        roll = random()
-        if roll < split_prob:                     -> SPLIT
-        elif roll < split_prob + merge_prob:       -> MERGE
-        else:                                      -> PASSANT
-    elif can_split:
-        -> SPLIT (split_prob) or PASSANT (1 - split_prob)
-    elif can_merge:
-        -> MERGE (merge_prob) or PASSANT (1 - merge_prob)
-    else:
-        -> PASSANT (always)
+if remaining > current_width:              # saturation phase
+    target_width = min(max_parallel_paths, sum_net_exits(current_layer))
+else:                                      # convergence phase
+    target_width = current_width - 1       # strict countdown to 1
 ```
 
-Default probabilities: split=0.9, merge=0.5. When `split_prob + merge_prob >= 1.0` (as with the defaults, 0.9 + 0.5 = 1.4), the probabilities act as a priority cascade: split is tried first, then merge gets the remainder, and passant is only reached if the sum < 1.0. Because operations are gated by the cluster's capability (many clusters only support passant), these values are higher than they appear -- the effective rate is `P(cluster supports op) * configured_prob`.
+`sum_net_exits` is the sum of net exits across all nodes in the current layer (see
+`count_node_net_exits`). Convergence triggers when `remaining == current_width`, giving exactly
+`current_width - 1` convergence layers before the boss. Example: with `max_parallel_paths=4` and
+`layers_count=30`, roughly 25 saturation layers produce width up to 4, then 3 convergence layers
+reduce width 4 -> 3 -> 2 -> 1, then the boss.
 
-Passant-incompatible clusters (those with zero net exits after consuming an entry) are filtered at load time by `ClusterPool.filter_passant_incompatible()`, ensuring every cluster in the pool can serve as at least a passant node.
+## Routing
 
-For the primary branch, the pre-selected `primary_cluster` is used. For non-primary branches (passant companions during split or merge layers), `pick_cluster_with_type_fallback()` selects each companion cluster independently: it tries the planned layer type first, then falls back to other types using **weighted random selection** proportional to remaining available cluster counts. This prevents temporal segregation where one type (e.g., `mini_dungeon`) would systematically fill late layers because it had the largest remaining pool.
+After picking `target_width` clusters for the next layer, `route_exits()` distributes source exits
+to the new target nodes in three phases:
+
+**Phase 1 (no orphans):** every target receives at least one incoming edge. For each target, a
+source is selected that still has free exits and has not yet been connected to that target.
+Preference is given to source-target pairings where the target will still have exits remaining
+after the new entry (preventing dead ends in the next routing step).
+
+**Phase 1b (no avoidable dead ends):** every source that still has free exits after Phase 1 must
+emit at least one outgoing edge. Sources whose sole fog gate was consumed as an entry (bidirectional
+pair) are natural terminals and are skipped.
+
+**Phase 2 (saturation):** any remaining (source, target) pair that would not leave the target with
+zero exits is connected. This creates cross-links between every source that still has exits and every
+reachable target.
+
+Splits, merges, and cross-links emerge from this routing. A source with two exits routed to two
+different targets acts as a split; two sources routed to one target act as a merge; a source with
+enough exits connected to every target on the next layer creates cross-links.
+
+Multi-edges (two fog gates from the same source to the same target) are forbidden.
+
+## Exit Selection and Proximity
+
+When choosing which exit to use for a new edge, `_exits_ordered_by_diversity()` sorts the cluster's
+free exits to maximise proximity-group diversity. Exits are grouped by `proximity_groups`
+membership and round-robined across groups (largest groups first), so successive edges from the
+same source spread across geographically distinct fog gates.
+
+When an entry fog belongs to a proximity group, exits in the same group on the target are excluded
+from `_free_entries()`. This prevents the player from exiting through a fog gate physically adjacent
+to where they entered.
+
+Entry selection prefers entries that leave the target with at least one remaining exit (non-
+destructive entries). The generator falls back to any free entry only when no safe choice exists.
 
 ## Cluster Compatibility
-
-### Bidirectional Fogs
-
-A fog gate is **bidirectional** if the same `(fog_id, zone)` pair appears in both a cluster's `entry_fogs` and `exit_fogs`. This means using it as an entry consumes a potential exit (and vice versa).
 
 ### Net Exits
 
 `count_net_exits(cluster, N)` calculates the minimum exits remaining after consuming N entry fogs:
 
 1. Classify entries as bidirectional or non-bidirectional
-2. Greedily consume non-bidirectional entries first (they don't reduce exits)
-3. If more entries needed, consume bidirectional (each reduces exits by 1)
+2. Greedily consume non-bidirectional entries first (they do not reduce exits)
+3. If more entries are needed, consume bidirectional entries (each reduces exits by 1)
 4. Return `total_exits - bidirectional_consumed`
 
-When `proximity_groups` are present, the function evaluates all entry combinations and returns the worst-case (minimum) net exits, accounting for proximity-blocked exits.
+When `proximity_groups` are present, all entry combinations are evaluated and the worst-case
+(minimum) net exits is returned.
 
-This determines which topology operations are compatible:
+`count_node_net_exits(dag, node_id)` adapts this for mid-routing: it also subtracts exits already
+used by outgoing edges so that the count stays accurate as edges are added incrementally.
+
+This determines the compatibility rules used at load time:
 
 | Operation | Compatibility Rule |
 |-----------|-------------------|
 | Passant | `count_net_exits(cluster, 1) >= 1` |
-| Split(N) | `count_net_exits(cluster, 1) >= N` |
-| Merge(N) | `len(entry_fogs) >= N` AND `count_net_exits(cluster, N) >= 1` |
+| Split (fan-out N) | `count_net_exits(cluster, 1) >= N` |
+| Merge (fan-in N) | `len(entry_fogs) >= N` AND `count_net_exits(cluster, N) >= 1` |
 
-Special cluster flags override the standard checks:
-- `allow_entry_as_exit`: The entry fog's bidirectional pair is NOT consumed. Passant needs `>=1` entry and `>=1` exit. Split(N) needs `>=1` entry and `>=N` exits.
-- `allow_shared_entrance`: All merging branches share one entry fog. Merge needs `>=2` entries and `>=1` exit, regardless of fan-in N.
+Passant-incompatible clusters (zero net exits after consuming one entry) are filtered at load time
+by `ClusterPool.filter_passant_incompatible()`.
+
+### Bidirectional Fogs
+
+A fog gate is **bidirectional** if the same `(fog_id, zone)` pair appears in both `entry_fogs` and
+`exit_fogs`. Using it as an entry consumes that potential exit (and vice versa).
+
+Special cluster flag: `allow_entry_as_exit` -- the entry fog's bidirectional pair is NOT consumed.
+The same gate is entered from one side and exited from the other. Net-exit computation skips the
+bidirectional subtraction for these clusters.
 
 ### Proximity Groups
 
-A cluster may define `proximity_groups`: lists of fog IDs that are spatially close in-game. When an entry fog belongs to a proximity group, exits in the same group are excluded. This prevents the player from exiting through a fog gate that is physically adjacent to where they entered.
+A cluster may define `proximity_groups`: lists of fog IDs that are spatially close in-game. When
+an entry fog belongs to a proximity group, exits in the same group are excluded. This prevents the
+player from exiting through a fog gate physically adjacent to where they entered.
 
 ## Generation Flow
 
 ```
-Start Node → [First Layer] → Plan Types → Execute Layers → Forced Merge → [Prerequisites] → End Node → [Cross-Links]
-   (L0)       (optional)      (shuffle)     (cluster-first)   (converge)    (if required)   (final boss) (post-hoc)
-                                                 │
-                                          ┌──────┼──────┐
-                                        SPLIT  MERGE  PASSANT
-                                       (1→N)  (N→1)   (1→1)
+Start Node → Execute Layers (routing) → End Node
+   (L0)      L1..layers_count-2         (final boss)
+                    |
+        [saturation] [convergence]
+         width ↑ to max      width -1 per layer
+              |                     |
+         route_exits           route_exits
+         (cross-links           (merges emergent)
+          emergent)
 ```
 
-### 1. Start Node (layer 0)
+### 1. Pre-select Final Boss
 
-- Select start cluster (type `"start"`, Chapel of Anticipation)
-- No entry consumed (player spawns here)
-- All exits available
-- Initialize branches from exits (limited by `max_parallel_paths` and `max_exits`)
+Before executing any layers, a final boss cluster is selected by weighted random from
+`final_boss_candidates`. Its zones are added to `used_zones` so they cannot be consumed by
+intermediate layers.
 
-### 2. Pre-select Final Boss and Reserve Zones
+**Zone conflicts**: Some zones are mutually exclusive and cannot both appear in the same run
+(declared via `conflicts_with` in `zone_metadata.toml`). When a cluster is selected, conflicting
+zones are added to `used_zones` via `_mark_cluster_used()`. Example: `stormveil_margit` (Margit)
+and `leyndell_sanctuary` (Morgott) are mutually exclusive.
 
-Before executing any intermediate layers:
+### 2. Start Node (layer 0)
 
-1. Resolve `final_boss_candidates` from config (dict of zone -> weight, supports `"all"` keyword)
-2. Select a final boss cluster using weighted random selection (`select_weighted_final_boss`), retrying on zone conflicts
-3. Compute **reserved zones**: the final boss cluster's zones plus the prerequisite cluster's zones (if the boss has a `requires` field)
-4. Reserved zones are excluded from intermediate layer selection, preventing them from being consumed before they are needed
+The start cluster (type `"start"`, Chapel of Anticipation) is placed at layer 0. No entry is
+consumed; all exits are available. The node is the sole member of `current_layer_nodes`.
 
-**Zone conflicts**: Some zones are mutually exclusive and cannot both appear in the same run (declared via `conflicts_with` in `zone_metadata.toml`). When a cluster is selected, conflicting zones are added to `used_zones` via `_mark_cluster_used()`, preventing any cluster containing those zones from being picked later. Example: `stormveil_margit` (Margit) and `leyndell_sanctuary` (Morgott) — Margit is Morgott in disguise, and killing Morgott removes Margit from his arena. Conflicts are non-transitive and must be declared symmetrically on both sides.
-
-### 3. First Layer (optional forced type)
-
-If `first_layer_type` is configured (e.g., `"legacy_dungeon"`), execute a passant layer with only clusters of that type. Uses `pick_cluster_uniform()` (cluster-first, no capability filter -- all clusters passed `filter_passant_incompatible()` at load time). Ensures a consistent opening experience.
-
-### 4. Plan Layer Types
+### 3. Plan Layer Types
 
 ```python
 num_layers = layers_count - 2  # exclude start and final boss
-# Reduced by 1 if first_layer_type was used
 layer_types = plan_layer_types(requirements, num_layers, rng)
 ```
 
-`plan_layer_types()` builds a list from:
-- Required legacy dungeons, bosses, mini dungeons, major bosses (from config)
-- Pad with mini_dungeons/boss_arenas/legacy_dungeons or trim to fit `num_layers`
-- Shuffle for randomness
+`plan_layer_types()` builds a list from required legacy dungeons, bosses, mini dungeons, and major
+bosses (from config), pads with available types to fill `num_layers`, then shuffles. If
+`first_layer_type` is set, it is locked to layer 1.
 
-### 5. Execute Layers (cluster-first)
+### 4. Main Loop (layers 1 to layers_count - 2)
 
-For each planned layer:
-1. Pick a cluster uniformly from the layer type's candidates (`pick_cluster_with_type_fallback()`)
-2. Call `determine_operation()` on the selected cluster to decide rebalance/split/merge/passant
-3. Execute the operation:
-   - **REBALANCE**: Merge a pair + split the most stale branch on the same layer (N→N).
-   - **SPLIT**: The primary cluster becomes the split node. Non-split branches get their own cluster for passant companions.
-   - **MERGE**: The primary cluster becomes the merge node. Non-merged branches get their own cluster for passant companions.
-   - **PASSANT**: The primary cluster is assigned to the first branch. Remaining branches get their own cluster.
+For each intermediate layer:
 
-### 6. Convergence
+1. Compute `target_width` from the width model above.
+2. Pick `target_width` clusters of the planned type via `pick_layer_clusters()`, with type fallback
+   when the requested pool is exhausted. Each fallback is recorded as a `FallbackEntry` in the
+   generation log.
+3. Create `DagNode` instances, mark their zones used.
+4. Call `route_exits(dag, current_layer_nodes, next_nodes, rng)` to connect the layers.
+5. Advance `current_layer_nodes = next_nodes`.
 
-If multiple branches remain after all planned layers, a unified convergence loop runs with `prefer_merge=True`:
+### 5. End Node
 
-```
-conv_pool_sizes = {t: pool_size for t in FALLBACK_TYPES}
+The pre-selected final boss cluster is placed at `layers_count - 1`. `route_exits` connects the
+single remaining node (convergence has reduced width to 1) to the boss.
 
-while len(branches) > 1:
-    conv_used = count types already in dag.nodes
-    conv_layer_type = pick_weighted_type(conv_pool_sizes, conv_used, rng)
-    operation = determine_operation(..., prefer_merge=True)
-    if REBALANCE: execute_rebalance_layer (maintains spacing)
-    elif MERGE: execute_merge_layer (reduces branch count)
-    else: try merge, fallback to passant (diverge nodes for anti-micro-merge)
-```
+### 6. Tier Assignment
 
-**Type selection**: each convergence layer picks its type via `pick_weighted_type()`, which draws proportionally from remaining pool capacity. This distributes convergence layers across available types instead of using a single fixed type (previously `layer_types[-1]`).
-
-REBALANCE can still trigger during convergence when a branch exceeds the staleness threshold while branches are saturated, maintaining spacing even during the final merge phase.
-
-`merge_reserve` is set to `max_parallel_paths + 2` to accommodate REBALANCE layers intercalated with merges. Guard-rail: if convergence exceeds `merge_reserve * 2` layers, a `GenerationError` is raised.
-
-Inserts passant layers as needed to break micro-merge patterns. Uses N-ary merges (up to `max_entrances`) for efficiency. Forced merges deliberately bypass `min_branch_age` (use `min_age=0`) to guarantee convergence regardless of branch age.
-
-### 7. Prerequisite Injection
-
-If the final boss cluster has a `requires` field (e.g., `leyndell_erdtree` requires `farumazula_maliketh`):
-
-1. Find the cluster containing the prerequisite zone
-2. Insert it as a passant node on the single merged path
-3. Connect the branch through the prerequisite to the final boss
-
-This runs after the forced merge (so exactly 1 branch exists) and before the end node.
-
-### 8. End Node
-
-- Use the pre-selected final boss cluster
-- Prefer main-tagged entry fog (correct Stake of Marika placement)
-- No exits (terminal node)
-- Connect single remaining branch
-
-### 9. Cross-Branch Saturation
-
-The exit-driven generator naturally saturates all available fog gates during routing. Surplus exits from each node are connected to additional targets in the same layer-to-layer step, giving players implicit branch-switching opportunities without a separate post-hoc pass.
-
-This replaces the former `crosslinks.py` post-processing step (removed in the exit-driven cutover).
-
-**Pair chain exclusion:** Bidirectional fog gates have both an exit and entry side linked via FogMod's Pair chain. When `Graph.Connect()` uses one side, it marks the Pair as consumed. The Pair is per-zone: the same fog_id on different zones creates independent Pairs in FogMod's Graph. Therefore, surplus exits exclude any `(fog_id, zone)` already consumed as entry on the same node (and vice versa), preventing "Already matched" errors in FogMod.
-
-**Fog list consistency:** Each cross-link appends the consumed exit fog to the source node's `exit_fogs` and the consumed entry fog to the target node's `entry_fogs`, maintaining the invariant that node fog lists reflect actual edge usage.
-
-**Effect on paths:** Cross-links create additional start→end paths through the DAG. The balance checker considers all paths, including those using cross-links.
+Tiers are assigned in a post-pass after DAG construction is complete. This ensures `total_layers`
+is exact (not estimated), guaranteeing monotonically non-decreasing tiers across layers. See "Tier
+Interpolation" below.
 
 ## Tier Interpolation
 
-Tiers are assigned in a **post-pass** after DAG construction is complete. This ensures `total_layers` is exact (not estimated), guaranteeing monotonically non-decreasing tiers across layers. The computation uses `compute_tier()` from `planner.py`. The progression curve is configurable via `tier_curve`:
+Tiers are assigned in a **post-pass** after DAG construction is complete. The progression curve is
+configurable via `tier_curve`:
 
 **Linear** (default): constant tier increase per layer.
 
@@ -348,9 +230,9 @@ tier(layer) = round(1 + progress * (final_tier - 1))
 ```
 
 The exponent controls the shape:
-- `< 1.0` (e.g. 0.6): front-loaded tiers — harder early, gentler late game plateau
+- `< 1.0` (e.g. 0.6): front-loaded tiers -- harder early, gentler late game plateau
 - `= 1.0`: equivalent to linear
-- `> 1.0` (e.g. 1.5): back-loaded tiers — easy early, punitive late game ramp
+- `> 1.0` (e.g. 1.5): back-loaded tiers -- easy early, punitive late game ramp
 
 Special cases:
 - Single layer: always tier 1
@@ -360,12 +242,14 @@ This maps to FogMod's enemy scaling SpEffects.
 
 ## Budget and Weight
 
-Each cluster has a **weight** (approximate traversal time in minutes). Each path through the DAG has a total weight = sum of node weights along the path.
+Each cluster has a **weight** (approximate traversal time in minutes). Each path through the DAG
+has a total weight = sum of node weights along the path.
 
 **Balance constraint** (from config):
 - `tolerance`: maximum allowed weight spread between heaviest and lightest paths (default 5)
 
-The validator checks that all paths have similar weights. If the spread exceeds tolerance, a warning is produced (not a hard error).
+The validator checks that all paths have similar weights. If the spread exceeds tolerance, a
+warning is produced (not a hard error).
 
 ## Retry System (`generate_with_retry`)
 
@@ -385,13 +269,13 @@ Config validation runs once before any attempts; invalid config raises `Generati
 
 | Config Key | Default | Description |
 |------------|---------|-------------|
-| `structure.max_parallel_paths` | 3 | Maximum concurrent branches |
-| `structure.max_exits` | 3 | Maximum split fan-out (1→N branches) |
-| `structure.max_entrances` | 3 | Maximum merge fan-in (N→1 branches) |
+| `structure.max_parallel_paths` | 3 | Maximum concurrent nodes per layer |
+| `structure.max_exits` | 3 | Maximum fan-out when routing (caps exit count per source) |
+| `structure.max_entrances` | 3 | Maximum fan-in per target node |
 | `structure.max_branches` | 3 | Default for max_exits/max_entrances (backward compat) |
 | `structure.layers_count` | 30 | Total layers (start + intermediates + final boss) |
-| `structure.split_probability` | 0.9 | Chance of split at each layer (if cluster supports it) |
-| `structure.merge_probability` | 0.5 | Chance of merge at each layer (if cluster supports it) |
+| `structure.split_probability` | 0.9 | (retained for compat; not used by the exit-driven loop) |
+| `structure.merge_probability` | 0.5 | (retained for compat; not used by the exit-driven loop) |
 | `structure.first_layer_type` | None | Force type for first layer |
 | `requirements.major_bosses` | 8 | Number of major boss layers |
 | `structure.final_boss_candidates` | `{"leyndell_erdtree": 1, "enirilim_radahn": 1}` | Possible end bosses (zone -> weight). Also accepts a flat list (all weight 1). |
@@ -414,7 +298,7 @@ Pre-generation checks on configuration vs cluster pool:
 2. **major_bosses**: must be >= 0
 3. **Requirements vs layers_count**: error if total requirements exceed `layers_count - 2` (the intermediate layer budget)
 4. **final_boss_candidates**: all zones must exist in the pool, all weights must be >= 1
-5. **Pool capacity**: warning when `requirement * max_parallel_paths > pool_size` for any cluster type. With parallel branches, each planned layer consumes up to `max_parallel_paths` clusters of the same type. Example: `major_bosses=12` with `max_parallel_paths=4` requires up to 48 clusters from a pool of 38, which will cause type exhaustion during generation.
+5. **Pool capacity**: warning when `requirement * max_parallel_paths > pool_size` for any cluster type. With parallel nodes, each planned layer consumes up to `max_parallel_paths` clusters of the same type. Example: `major_bosses=12` with `max_parallel_paths=4` requires up to 48 clusters from a pool of 38, which will cause type exhaustion during generation.
 
 ### DAG Validation (`validator.py`)
 
@@ -430,7 +314,7 @@ Post-generation checks on the built DAG:
 8. **Layer count**: few layers = warning
 9. **Event flag budget**: total flag allocation within budget
 
-## Allowed cluster types
+## Allowed Cluster Types
 
 By default, the DAG can include any of four cluster types:
 `legacy_dungeon`, `mini_dungeon`, `boss_arena`, `major_boss`. The
@@ -466,3 +350,4 @@ Semantics:
 - Validator: `speedfog/validator.py`
 - Output: `speedfog/output.py`
 - Config: `speedfog/config.py`
+- Spec: `docs/specs/2026-04-25-exit-driven-dag-generation.md`
