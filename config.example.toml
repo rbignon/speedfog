@@ -126,11 +126,6 @@ max_entrances = 3
 
 # max_branch_spacing = 4  # Max layers a branch can go without a split (0=disabled)
 
-# Add cross-links between parallel branches.
-# Cross-links let players switch branches at the next layer.
-# Eligible pairs are structurally rare (0-4 per DAG), so all are taken.
-# crosslinks = true
-
 # Force the first layer after start to be a specific cluster type.
 # Options: "legacy_dungeon", "mini_dungeon", "boss_arena", "major_boss"
 # If omitted: random based on requirements (current behavior)
