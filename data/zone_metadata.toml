@@ -394,6 +394,9 @@ weight = 0.5
 [clusters.volcano_ac44]
 exclude = true  # Too small for legacy_dungeon (~30s to traverse)
 
+[clusters.farumazula_temple_0ef3]
+exclude = true # only fogs around Godskin's Duo, use farumazula_start_f5a0 to include start
+
 [clusters.belurat_d88b]
 weight = 2
 
@@ -566,14 +569,6 @@ proximity_groups = [
 ]
 
 [clusters.farumazula_start_f5a0]
-proximity_groups = [
-    ["AEG099_001_9004", # Godskin Duo balcony (top)
-     "AEG099_001_9000", # Godskin Duo back right (down stairs)
-    ],
-]
-
-[clusters.farumazula_temple_0ef3]
-weight = 1
 proximity_groups = [
     ["AEG099_001_9004", # Godskin Duo balcony (top)
      "AEG099_001_9000", # Godskin Duo back right (down stairs)
