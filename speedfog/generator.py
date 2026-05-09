@@ -125,6 +125,13 @@ def validate_config(
             f"({config.structure.min_layers}); some types may be trimmed"
         )
 
+    budget = config.structure.layers_count - 2  # exclude start and final boss
+    if total_requirements > budget:
+        errors.append(
+            f"sum of requirements ({total_requirements}) exceeds layers_count - 2 "
+            f"({budget}). Increase layers_count or reduce per-type minimums."
+        )
+
     # Validate final_boss_candidates
     all_boss_clusters = boss_candidates
     all_boss_zones = {zone for cluster in all_boss_clusters for zone in cluster.zones}

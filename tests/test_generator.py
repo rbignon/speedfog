@@ -781,6 +781,8 @@ class TestValidateConfig:
         config.requirements.mini_dungeons = 10
         config.requirements.major_bosses = 8
         config.structure.min_layers = 6
+        # Set layers_count high enough so the requirements do not exceed its budget
+        config.structure.layers_count = 50
         errors, warnings = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
         req_warnings = [w for w in warnings if "requirements" in w.lower()]
@@ -6273,3 +6275,26 @@ def test_execute_merge_layer_weight_matched():
     if passant_branches:
         passant_node = dag.nodes[passant_branches[0].current_node_id]
         assert passant_node.cluster.weight == 2
+
+
+def test_validate_config_rejects_oversubscribed_layers_count():
+    from speedfog.clusters import ClusterPool
+    from speedfog.config import (
+        BudgetConfig,
+        Config,
+        RequirementsConfig,
+        StructureConfig,
+    )
+    from speedfog.generator import validate_config
+
+    cfg = Config(
+        seed=1,
+        requirements=RequirementsConfig(
+            legacy_dungeons=4, bosses=4, mini_dungeons=4, major_bosses=0
+        ),
+        structure=StructureConfig(layers_count=10),  # budget = 8
+        budget=BudgetConfig(),
+    )
+    pool = ClusterPool()
+    errors, _warnings = validate_config(cfg, pool, boss_candidates=[])
+    assert any("layers_count" in e and "requirements" in e for e in errors)
