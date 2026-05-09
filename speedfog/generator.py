@@ -1074,7 +1074,6 @@ def generate_dag(config: Config, clusters: ClusterPool) -> tuple[Dag, Generation
         convergence_layers=sum(
             1 for le in log.layer_events if le.phase == "convergence"
         ),
-        crosslinks=0,  # always 0 (saturating routing makes them inline)
         fallback_count=len(all_fallbacks),
         fallback_summary=fallback_summary,
         pool_at_end={},

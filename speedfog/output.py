@@ -1071,8 +1071,6 @@ def export_spoiler_log(
     lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     lines.append("=" * 60)
     lines.append(f"Total zones: {dag.total_zones()}")
-    if dag.crosslinks_added > 0:
-        lines.append(f"Cross-links: {dag.crosslinks_added}")
     lines.append("")
 
     # Group nodes by layer

@@ -875,3 +875,10 @@ def test_branch_layers_since_last_split_custom():
 
     branch = Branch("b0", "start", FogRef("x", "z"), layers_since_last_split=3)
     assert branch.layers_since_last_split == 3
+
+
+def test_dag_drops_crosslinks_added_field():
+    from speedfog.dag import Dag
+
+    d = Dag(seed=0)
+    assert not hasattr(d, "crosslinks_added")

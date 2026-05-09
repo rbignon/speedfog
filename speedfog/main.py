@@ -276,8 +276,6 @@ def main() -> int:
         print(f"Generated DAG with seed {actual_seed}")
         print(f"  Layers: {max((n.layer for n in dag.nodes.values()), default=0) + 1}")
         print(f"  Nodes: {len(dag.nodes)}")
-        if dag.crosslinks_added > 0:
-            print(f"  Cross-links: {dag.crosslinks_added}")
 
     # Create output directory: <output>/<seed>/
     seed_dir = output_dir / str(actual_seed)

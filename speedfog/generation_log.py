@@ -1,8 +1,7 @@
 """Generation log data model and serialization for SpeedFog.
 
 Captures diagnostic events during DAG generation: planner decisions,
-per-layer operations, type fallbacks with pool state, crosslink
-decisions, and summary statistics.
+per-layer operations, type fallbacks with pool state, and summary statistics.
 """
 
 from __future__ import annotations
@@ -70,26 +69,6 @@ class PlanEvent:
 
 
 @dataclass
-class CrosslinkDetail:
-    """A single crosslink attempt (added or skipped)."""
-
-    source_id: str
-    target_id: str
-    reason: str | None = None  # None=added, "no_surplus_exits", "no_available_entries"
-
-
-@dataclass
-class CrosslinkEvent:
-    """Summary of crosslink pass."""
-
-    eligible_pairs: int
-    added: int
-    skipped: int
-    added_details: list[CrosslinkDetail] = field(default_factory=list)
-    skipped_details: list[CrosslinkDetail] = field(default_factory=list)
-
-
-@dataclass
 class SummaryEvent:
     """End-of-generation summary statistics."""
 
@@ -97,7 +76,6 @@ class SummaryEvent:
     total_nodes: int
     planned_layers: int
     convergence_layers: int
-    crosslinks: int
     fallback_count: int
     fallback_summary: list[tuple[int, str]]  # (layer, preferred_type)
     pool_at_end: dict[str, int]
@@ -109,7 +87,6 @@ class GenerationLog:
 
     plan_event: PlanEvent | None = None
     layer_events: list[LayerEvent] = field(default_factory=list)
-    crosslink_event: CrosslinkEvent | None = None
     summary: SummaryEvent | None = None
 
 
@@ -147,7 +124,7 @@ def export_generation_log(
     Args:
         log: The generation log to serialize.
         output_path: Path to write the log file.
-        dag: Optional DAG for resolving node layer numbers in crosslinks.
+        dag: Optional DAG (currently unused, kept for API compatibility).
     """
     lines: list[str] = []
 
@@ -258,56 +235,12 @@ def export_generation_log(
             lines.append("")
         lines.append("")
 
-    # CROSSLINKS section
-    if log.crosslink_event:
-        ce = log.crosslink_event
-        lines.append("CROSSLINKS")
-        lines.append(
-            f"  Eligible pairs: {ce.eligible_pairs}, "
-            f"Added: {ce.added}, Skipped: {ce.skipped}"
-        )
-        if ce.added_details:
-            lines.append("  Added:")
-            for d in ce.added_details:
-                src_layer = (
-                    f"L{dag.nodes[d.source_id].layer} "
-                    if dag and d.source_id in dag.nodes
-                    else ""
-                )
-                tgt_layer = (
-                    f"L{dag.nodes[d.target_id].layer} "
-                    if dag and d.target_id in dag.nodes
-                    else ""
-                )
-                lines.append(
-                    f"    {src_layer}{d.source_id} -> {tgt_layer}{d.target_id}"
-                )
-        if ce.skipped_details:
-            lines.append("  Skipped:")
-            for d in ce.skipped_details:
-                src_layer = (
-                    f"L{dag.nodes[d.source_id].layer} "
-                    if dag and d.source_id in dag.nodes
-                    else ""
-                )
-                tgt_layer = (
-                    f"L{dag.nodes[d.target_id].layer} "
-                    if dag and d.target_id in dag.nodes
-                    else ""
-                )
-                lines.append(
-                    f"    {src_layer}{d.source_id} -> {tgt_layer}{d.target_id}: {d.reason}"
-                )
-        lines.append("")
-
     # SUMMARY section
     if log.summary:
         s = log.summary
         lines.append("SUMMARY")
         lines.append(f"  Layers: {s.total_layers}")
         lines.append(f"  Nodes: {s.total_nodes}")
-        if s.crosslinks:
-            lines.append(f"  Crosslinks: {s.crosslinks}")
         lines.append(f"  Fallbacks: {s.fallback_count}")
         if s.fallback_summary:
             parts = [f"L{layer}: {ptype}" for layer, ptype in s.fallback_summary]

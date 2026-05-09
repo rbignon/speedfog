@@ -3,8 +3,6 @@
 from speedfog.clusters import ClusterData, ClusterPool
 from speedfog.config import Config
 from speedfog.generation_log import (
-    CrosslinkDetail,
-    CrosslinkEvent,
     FallbackEntry,
     GenerationLog,
     LayerEvent,
@@ -21,7 +19,6 @@ def test_generation_log_defaults():
     log = GenerationLog()
     assert log.plan_event is None
     assert log.layer_events == []
-    assert log.crosslink_event is None
     assert log.summary is None
 
 
@@ -76,23 +73,12 @@ def test_fallback_entry():
     assert fe.reason == "pool_exhausted"
 
 
-def test_crosslink_event():
-    ce = CrosslinkEvent(
-        eligible_pairs=45,
-        added=32,
-        skipped=13,
-    )
-    assert ce.added_details == []
-    assert ce.skipped_details == []
-
-
 def test_summary_event():
     se = SummaryEvent(
         total_layers=29,
         total_nodes=92,
         planned_layers=22,
         convergence_layers=4,
-        crosslinks=32,
         fallback_count=3,
         fallback_summary=[(22, "major_boss")],
         pool_at_end={"boss_arena": 58},
@@ -153,7 +139,6 @@ def _make_minimal_log():
         total_nodes=5,
         planned_layers=1,
         convergence_layers=0,
-        crosslinks=0,
         fallback_count=0,
         fallback_summary=[],
         pool_at_end={},
@@ -235,24 +220,6 @@ def test_export_fallback_details(tmp_path):
     assert "b1: wanted major_boss, got boss_arena" in text
     assert "pool_exhausted" in text
     assert "major_boss=0" in text
-
-
-def test_export_crosslinks(tmp_path):
-    log = _make_minimal_log()
-    log.crosslink_event = CrosslinkEvent(
-        eligible_pairs=10,
-        added=7,
-        skipped=3,
-        added_details=[CrosslinkDetail("node_a", "node_b")],
-        skipped_details=[CrosslinkDetail("node_c", "node_d", "no_surplus_exits")],
-    )
-    path = tmp_path / "generation.log"
-    export_generation_log(log, path)
-    text = path.read_text()
-    assert "CROSSLINKS" in text
-    assert "Eligible pairs: 10, Added: 7, Skipped: 3" in text
-    assert "node_a -> node_b" in text
-    assert "node_c -> node_d: no_surplus_exits" in text
 
 
 def test_export_convergence_pool_snapshot(tmp_path):
