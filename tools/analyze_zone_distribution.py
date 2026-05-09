@@ -38,8 +38,7 @@ def load_racing_standard_config() -> Config:
             },
             "structure": {
                 "max_parallel_paths": 3,
-                "min_layers": 25,
-                "max_layers": 30,
+                "layers_count": 30,
                 "final_tier": 20,
                 "split_probability": 0.9,
                 "merge_probability": 0.5,
@@ -103,7 +102,7 @@ def run_analysis(
     print(f"{'='*80}")
     print(f"Seeds generated: {successful}/{num_seeds} ({failed} failed)")
     print(
-        f"Config: layers={config.structure.min_layers}-{config.structure.max_layers}, "
+        f"Config: layers={config.structure.layers_count}, "
         f"bosses={config.requirements.bosses}, "
         f"legacy={config.requirements.legacy_dungeons}, "
         f"mini={config.requirements.mini_dungeons}"

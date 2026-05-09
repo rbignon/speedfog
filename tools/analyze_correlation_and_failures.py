@@ -30,8 +30,7 @@ def load_racing_standard_config() -> Config:
             },
             "structure": {
                 "max_parallel_paths": 3,
-                "min_layers": 25,
-                "max_layers": 30,
+                "layers_count": 30,
                 "final_tier": 20,
                 "split_probability": 0.9,
                 "merge_probability": 0.5,

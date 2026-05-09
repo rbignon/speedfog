@@ -203,8 +203,7 @@ def make_config(
     legacy_dungeons: int = 1,
     bosses: int = 5,
     mini_dungeons: int = 5,
-    min_layers: int = 6,
-    max_layers: int = 10,
+    layers_count: int = 8,
 ) -> Config:
     """Create a Config with specified requirements."""
     return Config.from_dict(
@@ -216,8 +215,7 @@ def make_config(
                 "mini_dungeons": mini_dungeons,
             },
             "structure": {
-                "min_layers": min_layers,
-                "max_layers": max_layers,
+                "layers_count": layers_count,
             },
         }
     )
@@ -345,7 +343,7 @@ class TestLayerValidation:
     """Tests for layer count validation."""
 
     def test_few_layers_warning(self):
-        """DAG with fewer layers than min_layers produces warning."""
+        """DAG with fewer layers than layers_count produces warning."""
         dag = make_dag_with_content(
             legacy_count=0,
             mini_dungeon_count=1,
@@ -354,7 +352,7 @@ class TestLayerValidation:
             layer_count=2,  # Very few layers
         )
         config = make_config(
-            min_layers=6,  # Require at least 6 layers
+            layers_count=6,  # Require at least 6 layers
             legacy_dungeons=0,
             bosses=0,
             mini_dungeons=0,
@@ -588,7 +586,9 @@ class TestRequiredZones:
     def test_empty_required_zones_passes(self):
         """Empty zones list imposes no constraint."""
         dag = make_simple_dag()
-        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+        config = make_config(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, layers_count=1
+        )
         config.requirements.zones = []
 
         result = validate_dag(dag, config)
@@ -634,7 +634,9 @@ class TestEntryZoneMembership:
         dag.start_id = "start"
         dag.end_id = "end"
 
-        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+        config = make_config(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, layers_count=1
+        )
         result = validate_dag(dag, config)
 
         zone_errors = [e for e in result.errors if "Entry zone mismatch" in e]
@@ -675,7 +677,9 @@ class TestEntryZoneMembership:
         dag.start_id = "start"
         dag.end_id = "end"
 
-        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+        config = make_config(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, layers_count=1
+        )
         result = validate_dag(dag, config)
 
         assert result.is_valid is False
@@ -718,7 +722,9 @@ class TestEntryZoneMembership:
         dag.start_id = "start"
         dag.end_id = "end"
 
-        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+        config = make_config(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, layers_count=1
+        )
         result = validate_dag(dag, config)
 
         zone_errors = [e for e in result.errors if "Entry zone mismatch" in e]
@@ -783,7 +789,9 @@ class TestLayerTypeHomogeneity:
         dag.start_id = "start"
         dag.end_id = "end"
 
-        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+        config = make_config(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, layers_count=1
+        )
         result = validate_dag(dag, config)
 
         homogeneity_errors = [e for e in result.errors if "mixed types" in e.lower()]
@@ -845,7 +853,9 @@ class TestLayerTypeHomogeneity:
         dag.start_id = "start"
         dag.end_id = "end"
 
-        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+        config = make_config(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, layers_count=1
+        )
         result = validate_dag(dag, config)
 
         assert result.is_valid is False
@@ -859,7 +869,9 @@ class TestLayerTypeHomogeneity:
         """Layers with a single node are not checked (trivially homogeneous)."""
         # make_simple_dag has 2 single-node layers (start, end)
         dag = make_simple_dag()
-        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+        config = make_config(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, layers_count=1
+        )
 
         result = validate_dag(dag, config)
 
@@ -873,7 +885,9 @@ class TestEventFlagBudget:
     def test_small_dag_within_budget(self):
         """Simple DAG with few edges passes budget check."""
         dag = make_simple_dag()
-        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+        config = make_config(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, layers_count=1
+        )
 
         result = validate_dag(dag, config)
 
@@ -886,7 +900,9 @@ class TestEventFlagBudget:
         dag = make_dag_with_content(
             legacy_count=0, boss_count=0, mini_dungeon_count=300, layer_count=300
         )
-        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+        config = make_config(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, layers_count=1
+        )
         config.death_markers = True
 
         result = validate_dag(dag, config)
@@ -901,7 +917,9 @@ class TestEventFlagBudget:
         dag = make_dag_with_content(
             legacy_count=0, boss_count=0, mini_dungeon_count=300, layer_count=300
         )
-        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+        config = make_config(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, layers_count=1
+        )
         config.death_markers = False
 
         result = validate_dag(dag, config)
@@ -916,12 +934,12 @@ class TestEventFlagBudget:
             legacy_count=0, boss_count=0, mini_dungeon_count=260, layer_count=260
         )
         config_on = make_config(
-            legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, layers_count=1
         )
         config_on.death_markers = True
 
         config_off = make_config(
-            legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, layers_count=1
         )
         config_off.death_markers = False
 
@@ -939,7 +957,9 @@ class TestEventFlagBudget:
         dag.start_id = "nonexistent"
         dag.end_id = "also_nonexistent"
 
-        config = make_config(legacy_dungeons=0, bosses=0, mini_dungeons=0, min_layers=1)
+        config = make_config(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, layers_count=1
+        )
 
         result = validate_dag(dag, config)
 
@@ -966,7 +986,7 @@ class TestValidatorAllowedTypes:
                         "mini_dungeons": 0,
                         "major_bosses": 1,
                     },
-                    "structure": {"min_layers": 1, "max_layers": 5},
+                    "structure": {"layers_count": 5},
                 }
             )
 
@@ -1012,7 +1032,7 @@ class TestValidatorAllowedTypes:
                         "mini_dungeons": 0,
                         "major_bosses": 0,
                     },
-                    "structure": {"min_layers": 1, "max_layers": 5},
+                    "structure": {"layers_count": 5},
                 }
             )
 
@@ -1048,7 +1068,7 @@ class TestValidatorAllowedTypes:
                         "mini_dungeons": 0,
                         "major_bosses": 0,
                     },
-                    "structure": {"min_layers": 1, "max_layers": 5},
+                    "structure": {"layers_count": 5},
                 }
             )
 

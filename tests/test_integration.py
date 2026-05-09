@@ -354,8 +354,7 @@ def test_boss_rush_integration(real_clusters, real_boss_candidates):
                     "major_bosses": 1,
                 },
                 "structure": {
-                    "min_layers": 4,
-                    "max_layers": 8,
+                    "layers_count": 10,
                     "max_parallel_paths": 2,
                     "final_boss_candidates": {"leyndell_throne": 1},
                 },
@@ -403,8 +402,7 @@ def test_dungeon_crawl_integration(real_clusters, real_boss_candidates):
                     "major_bosses": 1,
                 },
                 "structure": {
-                    "min_layers": 5,
-                    "max_layers": 9,
+                    "layers_count": 12,
                     "max_parallel_paths": 2,
                     "final_boss_candidates": {"leyndell_throne": 1},
                 },

@@ -52,8 +52,7 @@ def load_racing_standard_config() -> Config:
             },
             "structure": {
                 "max_parallel_paths": 3,
-                "min_layers": 25,
-                "max_layers": 30,
+                "layers_count": 30,
                 "final_tier": 20,
                 "split_probability": 0.5,
                 "merge_probability": 0.5,
@@ -172,7 +171,7 @@ def generate_dag_cluster_first(
         current_layer += 1
 
     # Plan layer types
-    num_layers = rng.randint(config.structure.min_layers, config.structure.max_layers)
+    num_layers = config.structure.layers_count
     if config.structure.first_layer_type:
         num_layers = max(1, num_layers - 1)
     layer_types = plan_layer_types(config.requirements, num_layers, rng)
