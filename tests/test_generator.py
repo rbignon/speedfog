@@ -1,51 +1,29 @@
 """Tests for DAG generation logic."""
 
-import os
 import random
-from pathlib import Path
 
 import pytest
 
 from speedfog.clusters import ClusterData, ClusterPool, fog_matches_spec
 from speedfog.config import Config, RequirementsConfig, StructureConfig
-from speedfog.dag import Branch, Dag, DagNode, FogRef
 from speedfog.generator import (
     GenerationError,
-    LayerOperation,
     _filter_exits_by_proximity,
-    _find_valid_merge_indices,
-    _has_valid_merge_pair,
-    _inject_prerequisite,
     _mark_cluster_used,
-    _pick_entry_and_exits_for_node,
-    _stable_main_shuffle,
     can_be_merge_node,
     can_be_passant_node,
     can_be_split_node,
     compute_net_exits,
     count_net_exits,
-    determine_operation,
-    execute_merge_layer,
-    execute_passant_layer,
-    execute_rebalance_layer,
     generate_dag,
     generate_with_retry,
     pick_cluster_uniform,
     pick_cluster_weight_matched,
-    pick_cluster_with_type_fallback,
-    pick_entry_with_max_exits,
-    select_entries_for_merge,
     select_weighted_final_boss,
-    update_branch_counters,
     validate_config,
 )
 
 _SENTINEL = object()
-
-
-def _boss_candidates(pool: ClusterPool) -> list[ClusterData]:
-    """Return boss candidates from a pool (major_boss + final_boss)."""
-    return pool.get_by_type("major_boss") + pool.get_by_type("final_boss")
 
 
 def make_cluster(
@@ -85,10 +63,15 @@ def make_cluster(
 def make_cluster_pool() -> ClusterPool:
     """Create a minimal cluster pool for testing.
 
+    The pool uses a major_boss cluster (``test_final_boss``) as the canonical
+    end node so the exit-driven generator can select it via
+    ``clusters.get_by_type("major_boss")``. Tests configure
+    ``final_boss_candidates={"test_final_boss_zone": 1}`` to point at it.
+
     Includes:
-    - 1 start cluster (with multiple exits)
-    - 1 final_boss cluster
-    - Several legacy_dungeon, mini_dungeon, boss_arena clusters
+    - 1 start cluster (with 2 exits)
+    - 1 major_boss cluster as the final boss target
+    - Several legacy_dungeon, mini_dungeon, boss_arena, and major_boss clusters
     """
     pool = ClusterPool()
 
@@ -107,30 +90,25 @@ def make_cluster_pool() -> ClusterPool:
         )
     )
 
-    # Final bosses
+    # Canonical final boss (major_boss, terminal - no exits so it won't be used
+    # as an intermediate node).  Provide 2 entries so route_exits can fan in
+    # multiple sources if the DAG converges here with width > 1.
     pool.add(
         make_cluster(
-            "erdtree_boss",
-            zones=["leyndell_erdtree"],
-            cluster_type="final_boss",
+            "test_final_boss",
+            zones=["test_final_boss_zone"],
+            cluster_type="major_boss",
             weight=5,
-            entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
-            exit_fogs=[],
-            requires="farumazula_maliketh",
-        )
-    )
-    pool.add(
-        make_cluster(
-            "pcr_boss",
-            zones=["enirilim_radahn"],
-            cluster_type="final_boss",
-            weight=5,
-            entry_fogs=[{"fog_id": "pcr_entry", "zone": "enirilim_radahn"}],
+            entry_fogs=[
+                {"fog_id": "final_entry_a", "zone": "test_final_boss_zone"},
+                {"fog_id": "final_entry_b", "zone": "test_final_boss_zone"},
+                {"fog_id": "final_entry_c", "zone": "test_final_boss_zone"},
+            ],
             exit_fogs=[],
         )
     )
 
-    # Maliketh (prerequisite for erdtree, passant-capable major_boss)
+    # Additional major_boss clusters (passant-capable, used as intermediate)
     pool.add(
         make_cluster(
             "maliketh",
@@ -198,31 +176,45 @@ def make_cluster_pool() -> ClusterPool:
     return pool
 
 
+def _make_test_config(seed: int = 42, *, layers_count: int = 6) -> Config:
+    """Return a Config pointing at the test_final_boss_zone with small layers_count.
+
+    All per-type requirements are zeroed so the small test pool can satisfy them.
+    """
+    cfg = Config(seed=seed)
+    cfg.structure.final_boss_candidates = {"test_final_boss_zone": 1}
+    cfg.structure.layers_count = layers_count
+    cfg.requirements.legacy_dungeons = 0
+    cfg.requirements.bosses = 0
+    cfg.requirements.mini_dungeons = 0
+    cfg.requirements.major_bosses = 0
+    return cfg
+
+
+def _boss_candidates(pool: ClusterPool) -> list:
+    """Return boss candidate clusters (major_boss + final_boss) from pool.
+
+    Mirrors the logic in main.py: boss_candidates is captured before
+    filter_passant_incompatible removes dead-end major_boss clusters.
+    """
+    return pool.get_by_type("major_boss") + pool.get_by_type("final_boss")
+
+
 # =============================================================================
 # generate_dag tests
 # =============================================================================
 
 
 class TestGenerateDag:
-    """Tests for generate_dag function."""
+    """Tests for generate_dag (exit-driven implementation)."""
 
     def test_generates_dag_with_fixed_seed(self):
         """Generates a DAG reproducibly with a fixed seed."""
         pool = make_cluster_pool()
-        config = Config()
-        config.seed = 12345
-        config.structure.min_layers = 3
-        config.structure.max_layers = 5
-        config.structure.max_branches = 1  # Single branch avoids merge requirement
-        config.structure.split_probability = 0.0
-        config.structure.merge_probability = 0.0
+        config = _make_test_config(seed=12345)
 
-        dag1, _log1 = generate_dag(
-            config, pool, seed=12345, boss_candidates=_boss_candidates(pool)
-        )
-        dag2, _log2 = generate_dag(
-            config, pool, seed=12345, boss_candidates=_boss_candidates(pool)
-        )
+        dag1, _log1 = generate_dag(config, pool)
+        dag2, _log2 = generate_dag(config, pool)
 
         assert dag1.seed == dag2.seed == 12345
         assert len(dag1.nodes) == len(dag2.nodes)
@@ -231,153 +223,59 @@ class TestGenerateDag:
     def test_has_start_and_end_nodes(self):
         """Generated DAG has start and end nodes."""
         pool = make_cluster_pool()
-        config = Config()
-        config.structure.min_layers = 3
-        config.structure.max_layers = 3
-        config.structure.max_branches = 1  # Single branch avoids merge requirement
-        config.structure.split_probability = 0.0
-        config.structure.merge_probability = 0.0
+        config = _make_test_config()
 
-        dag, _log = generate_dag(
-            config, pool, seed=42, boss_candidates=_boss_candidates(pool)
-        )
+        dag, _log = generate_dag(config, pool)
 
-        assert dag.start_id == "start"
-        assert dag.end_id == "end"
-        assert "start" in dag.nodes
-        assert "end" in dag.nodes
+        assert dag.start_id is not None
+        assert dag.end_id is not None
+        assert dag.start_id in dag.nodes
+        assert dag.end_id in dag.nodes
+
+    def test_end_is_final_boss(self):
+        """The end node uses the chosen final boss cluster."""
+        pool = make_cluster_pool()
+        config = _make_test_config()
+
+        dag, _log = generate_dag(config, pool)
+
+        end_node = dag.nodes[dag.end_id]
+        assert "test_final_boss_zone" in end_node.cluster.zones
 
     def test_all_paths_reach_end(self):
         """All paths in the DAG lead from start to end."""
         pool = make_cluster_pool()
-        config = Config()
-        config.structure.min_layers = 3
-        config.structure.max_layers = 5
-        config.structure.max_branches = 1  # Single branch avoids merge requirement
-        config.structure.split_probability = 0.0
-        config.structure.merge_probability = 0.0
+        config = _make_test_config()
 
-        dag, _log = generate_dag(
-            config, pool, seed=42, boss_candidates=_boss_candidates(pool)
-        )
+        dag, _log = generate_dag(config, pool)
 
-        # Structure validation ensures reachability (all nodes reachable
-        # from start, all nodes can reach end)
         errors = dag.validate_structure()
         assert not errors, f"DAG structure errors: {errors}"
 
     def test_respects_max_parallel_paths(self):
         """DAG does not exceed max_parallel_paths at any layer."""
-        # Create pool with merge-compatible clusters (2+ entries)
-        pool = ClusterPool()
+        pool = make_cluster_pool()
+        config = _make_test_config(layers_count=8)
+        config.structure.max_parallel_paths = 2
 
-        # Start cluster with 2 exits
-        pool.add(
-            make_cluster(
-                "chapel_start",
-                zones=["chapel"],
-                cluster_type="start",
-                weight=1,
-                entry_fogs=[],
-                exit_fogs=[
-                    {"fog_id": "start_exit_1", "zone": "chapel"},
-                    {"fog_id": "start_exit_2", "zone": "chapel"},
-                ],
-            )
-        )
+        dag, _log = generate_dag(config, pool)
 
-        # Final boss
-        pool.add(
-            make_cluster(
-                "erdtree_boss",
-                zones=["leyndell_erdtree"],
-                cluster_type="final_boss",
-                weight=5,
-                entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
-                exit_fogs=[],
-            )
-        )
-
-        # Add merge-compatible clusters (2 entries, 1 net exit after merge)
-        for i in range(5):
-            pool.add(
-                make_cluster(
-                    f"merge_{i}",
-                    zones=[f"merge_{i}_zone"],
-                    cluster_type="mini_dungeon",
-                    weight=5,
-                    entry_fogs=[
-                        {"fog_id": f"merge_{i}_entry_a", "zone": f"merge_{i}_zone"},
-                        {"fog_id": f"merge_{i}_entry_b", "zone": f"merge_{i}_zone"},
-                    ],
-                    exit_fogs=[
-                        # 2 entries (bidir) + 1 pure exit = 1 net exit after consuming 2
-                        {"fog_id": f"merge_{i}_entry_a", "zone": f"merge_{i}_zone"},
-                        {"fog_id": f"merge_{i}_entry_b", "zone": f"merge_{i}_zone"},
-                        {"fog_id": f"merge_{i}_exit", "zone": f"merge_{i}_zone"},
-                    ],
-                )
-            )
-
-        # Add passant-compatible clusters (1 entry bidir + 1 pure exit = 1 net exit)
-        for i in range(20):
-            pool.add(
-                make_cluster(
-                    f"passant_{i}",
-                    zones=[f"passant_{i}_zone"],
-                    cluster_type="mini_dungeon",
-                    weight=5,
-                    entry_fogs=[
-                        {"fog_id": f"passant_{i}_entry", "zone": f"passant_{i}_zone"},
-                    ],
-                    exit_fogs=[
-                        {"fog_id": f"passant_{i}_entry", "zone": f"passant_{i}_zone"},
-                        {"fog_id": f"passant_{i}_exit", "zone": f"passant_{i}_zone"},
-                    ],
-                )
-            )
-
-        config = Config()
-        config.structure.max_branches = 2
-        config.structure.max_parallel_paths = 3
-        config.structure.min_layers = 6
-        config.structure.max_layers = 8
-        config.structure.split_probability = 0.2
-        config.structure.merge_probability = 0.2
-        config.requirements.legacy_dungeons = 0
-        config.requirements.bosses = 0
-        config.requirements.mini_dungeons = 0
-        config.requirements.major_bosses = 0
-
-        dag, _log = generate_dag(
-            config, pool, seed=42, boss_candidates=_boss_candidates(pool)
-        )
-
-        # Count nodes per layer
         nodes_by_layer: dict[int, int] = {}
         for node in dag.nodes.values():
             layer = node.layer
             nodes_by_layer[layer] = nodes_by_layer.get(layer, 0) + 1
 
-        # Each layer should have at most max_parallel_paths nodes
         for layer, count in nodes_by_layer.items():
             assert (
                 count <= config.structure.max_parallel_paths
-            ), f"Layer {layer} has {count} nodes > max_parallel_paths {config.structure.max_parallel_paths}"
+            ), f"Layer {layer} has {count} nodes > max_parallel_paths"
 
     def test_no_zone_overlap(self):
         """Each zone appears in exactly one node."""
         pool = make_cluster_pool()
-        config = Config()
-        config.structure.min_layers = 4
-        config.structure.max_layers = 6
-        config.structure.max_branches = 1  # Single branch avoids merge requirement
-        config.structure.split_probability = 0.0
-        config.structure.merge_probability = 0.0
+        config = _make_test_config()
 
-        dag, _log = generate_dag(
-            config, pool, seed=42, boss_candidates=_boss_candidates(pool)
-        )
+        dag, _log = generate_dag(config, pool)
 
         all_zones: set[str] = set()
         for node in dag.nodes.values():
@@ -390,18 +288,22 @@ class TestGenerateDag:
         pool = ClusterPool()
         pool.add(
             make_cluster(
-                "erdtree_boss",
-                zones=["leyndell_erdtree"],
-                cluster_type="final_boss",
+                "some_boss",
+                zones=["some_zone"],
+                cluster_type="major_boss",
+                entry_fogs=[{"fog_id": "e", "zone": "some_zone"}],
+                exit_fogs=[],
             )
         )
-        config = Config()
+        config = Config(seed=42)
+        config.structure.final_boss_candidates = {"some_zone": 1}
+        config.structure.layers_count = 4
 
         with pytest.raises(GenerationError, match="[Ss]tart"):
-            generate_dag(config, pool, seed=42, boss_candidates=_boss_candidates(pool))
+            generate_dag(config, pool)
 
-    def test_raises_if_no_final_boss(self):
-        """Raises GenerationError if no final_boss cluster exists."""
+    def test_raises_if_no_final_boss_candidate(self):
+        """Raises GenerationError when no major_boss cluster matches candidates."""
         pool = ClusterPool()
         pool.add(
             make_cluster(
@@ -415,82 +317,37 @@ class TestGenerateDag:
                 ],
             )
         )
-        # Add enough intermediate clusters to satisfy requirements
-        # We need legacy_dungeons, mini_dungeons, and boss_arenas
         for i in range(5):
-            pool.add(
-                make_cluster(
-                    f"legacy_{i}",
-                    zones=[f"legacy_{i}_zone"],
-                    cluster_type="legacy_dungeon",
-                    entry_fogs=[
-                        {"fog_id": f"legacy_{i}_entry", "zone": f"legacy_{i}_zone"}
-                    ],
-                    exit_fogs=[
-                        {"fog_id": f"legacy_{i}_entry", "zone": f"legacy_{i}_zone"},
-                        {"fog_id": f"legacy_{i}_exit", "zone": f"legacy_{i}_zone"},
-                    ],
-                )
-            )
-        for i in range(10):
             pool.add(
                 make_cluster(
                     f"mini_{i}",
                     zones=[f"mini_{i}_zone"],
                     cluster_type="mini_dungeon",
-                    entry_fogs=[
-                        {"fog_id": f"mini_{i}_entry", "zone": f"mini_{i}_zone"}
-                    ],
+                    entry_fogs=[{"fog_id": f"mini_{i}_e", "zone": f"mini_{i}_zone"}],
                     exit_fogs=[
-                        {"fog_id": f"mini_{i}_entry", "zone": f"mini_{i}_zone"},
-                        {"fog_id": f"mini_{i}_exit", "zone": f"mini_{i}_zone"},
+                        {"fog_id": f"mini_{i}_e", "zone": f"mini_{i}_zone"},
+                        {"fog_id": f"mini_{i}_x", "zone": f"mini_{i}_zone"},
                     ],
                 )
             )
-        for i in range(10):
-            pool.add(
-                make_cluster(
-                    f"boss_{i}",
-                    zones=[f"boss_{i}_zone"],
-                    cluster_type="boss_arena",
-                    entry_fogs=[
-                        {"fog_id": f"boss_{i}_entry", "zone": f"boss_{i}_zone"}
-                    ],
-                    exit_fogs=[
-                        {"fog_id": f"boss_{i}_entry", "zone": f"boss_{i}_zone"},
-                        {"fog_id": f"boss_{i}_exit", "zone": f"boss_{i}_zone"},
-                    ],
-                )
-            )
-        # Note: No final_boss cluster added!
-        config = Config()
-        config.structure.min_layers = 3
-        config.structure.max_layers = 3
-        config.structure.max_branches = 1  # Single branch avoids merge requirement
-        config.structure.split_probability = 0.0
-        config.structure.merge_probability = 0.0
-        config.requirements.legacy_dungeons = 1
-        config.requirements.mini_dungeons = 1
-        config.requirements.bosses = 1
+        # No cluster has zone "nonexistent_zone", so selection fails.
+        config = Config(seed=42)
+        config.structure.final_boss_candidates = {"nonexistent_zone": 1}
+        config.structure.layers_count = 4
+        config.requirements.legacy_dungeons = 0
+        config.requirements.bosses = 0
+        config.requirements.mini_dungeons = 0
 
         with pytest.raises(GenerationError, match="[Ff]inal"):
-            generate_dag(config, pool, seed=42, boss_candidates=_boss_candidates(pool))
+            generate_dag(config, pool)
 
     def test_layer_tiers_increase(self):
-        """Difficulty tier increases with layer index."""
+        """Difficulty tier (weakly) increases with layer index."""
         pool = make_cluster_pool()
-        config = Config()
-        config.structure.min_layers = 4
-        config.structure.max_layers = 4
-        config.structure.max_branches = 1  # Single branch avoids merge requirement
-        config.structure.split_probability = 0.0
-        config.structure.merge_probability = 0.0
+        config = _make_test_config(layers_count=8)
 
-        dag, _log = generate_dag(
-            config, pool, seed=42, boss_candidates=_boss_candidates(pool)
-        )
+        dag, _log = generate_dag(config, pool)
 
-        # Group tiers by layer
         tiers_by_layer: dict[int, list[int]] = {}
         for node in dag.nodes.values():
             layer = node.layer
@@ -498,16 +355,15 @@ class TestGenerateDag:
                 tiers_by_layer[layer] = []
             tiers_by_layer[layer].append(node.tier)
 
-        # Check tiers increase (on average) with layers
         layers = sorted(tiers_by_layer.keys())
         for i in range(len(layers) - 1):
-            avg_tier_current = sum(tiers_by_layer[layers[i]]) / len(
+            avg_current = sum(tiers_by_layer[layers[i]]) / len(
                 tiers_by_layer[layers[i]]
             )
-            avg_tier_next = sum(tiers_by_layer[layers[i + 1]]) / len(
+            avg_next = sum(tiers_by_layer[layers[i + 1]]) / len(
                 tiers_by_layer[layers[i + 1]]
             )
-            assert avg_tier_next >= avg_tier_current
+            assert avg_next >= avg_current
 
 
 # =============================================================================
@@ -516,22 +372,12 @@ class TestGenerateDag:
 
 
 class TestGenerateWithRetry:
-    """Tests for generate_with_retry function."""
+    """Tests for generate_with_retry (exit-driven implementation)."""
 
     def test_fixed_seed_single_attempt(self):
         """With non-zero seed, uses that seed directly (single attempt)."""
         pool = make_cluster_pool()
-        config = Config()
-        config.seed = 99999
-        config.structure.min_layers = 3
-        config.structure.max_layers = 3
-        config.structure.max_branches = 1  # Single branch avoids merge requirement
-        config.structure.split_probability = 0.0
-        config.structure.merge_probability = 0.0
-        # Relax requirements so test pool can satisfy them
-        config.requirements.legacy_dungeons = 0
-        config.requirements.bosses = 0
-        config.requirements.mini_dungeons = 0
+        config = _make_test_config(seed=99999)
 
         result = generate_with_retry(
             config, pool, boss_candidates=_boss_candidates(pool)
@@ -545,47 +391,36 @@ class TestGenerateWithRetry:
     def test_auto_reroll_finds_valid_seed(self):
         """With seed=0, tries random seeds until success."""
         pool = make_cluster_pool()
-        config = Config()
-        config.seed = 0  # Auto-reroll mode
-        config.structure.min_layers = 3
-        config.structure.max_layers = 3
-        config.structure.max_branches = 1  # Single branch avoids merge requirement
-        config.structure.split_probability = 0.0
-        config.structure.merge_probability = 0.0
-        # Relax requirements so test pool can satisfy them
-        config.requirements.legacy_dungeons = 0
-        config.requirements.bosses = 0
-        config.requirements.mini_dungeons = 0
+        config = _make_test_config(seed=0)
 
         result = generate_with_retry(
             config, pool, max_attempts=100, boss_candidates=_boss_candidates(pool)
         )
 
-        assert result.seed != 0  # Should have found a random seed
+        assert result.seed != 0
         assert result.dag.seed == result.seed
         assert len(result.dag.nodes) > 0
         assert result.validation.is_valid
 
     def test_raises_after_max_attempts(self):
-        """Raises GenerationError after max_attempts failures."""
-        # Create a pool that will always fail (no start cluster)
+        """Raises GenerationError after max_attempts failures (no start cluster)."""
         pool = ClusterPool()
         pool.add(
             make_cluster(
-                "erdtree_boss",
-                zones=["leyndell_erdtree"],
-                cluster_type="final_boss",
+                "some_boss",
+                zones=["some_zone"],
+                cluster_type="major_boss",
+                entry_fogs=[{"fog_id": "e", "zone": "some_zone"}],
+                exit_fogs=[],
             )
         )
-        pool.add(
-            make_cluster(
-                "pcr_boss",
-                zones=["enirilim_radahn"],
-                cluster_type="final_boss",
-            )
-        )
-        config = Config()
-        config.seed = 0
+        config = Config(seed=0)
+        config.structure.final_boss_candidates = {"some_zone": 1}
+        config.structure.layers_count = 4
+        config.requirements.legacy_dungeons = 0
+        config.requirements.bosses = 0
+        config.requirements.mini_dungeons = 0
+        config.requirements.major_bosses = 0
 
         with pytest.raises(GenerationError, match="after.*attempts"):
             generate_with_retry(
@@ -597,13 +432,20 @@ class TestGenerateWithRetry:
         pool = ClusterPool()
         pool.add(
             make_cluster(
-                "erdtree_boss",
-                zones=["leyndell_erdtree"],
-                cluster_type="final_boss",
+                "some_boss",
+                zones=["some_zone"],
+                cluster_type="major_boss",
+                entry_fogs=[{"fog_id": "e", "zone": "some_zone"}],
+                exit_fogs=[],
             )
         )
-        config = Config()
-        config.seed = 42  # Fixed seed
+        config = Config(seed=42)
+        config.structure.final_boss_candidates = {"some_zone": 1}
+        config.structure.layers_count = 4
+        config.requirements.legacy_dungeons = 0
+        config.requirements.bosses = 0
+        config.requirements.mini_dungeons = 0
+        config.requirements.major_bosses = 0
 
         with pytest.raises(GenerationError):
             generate_with_retry(config, pool, boss_candidates=_boss_candidates(pool))
@@ -612,16 +454,7 @@ class TestGenerateWithRetry:
         """post_validate rejecting the first N seeds forces the loop to keep
         rerolling, and the accepted (dag, seed) is what the hook last saw."""
         pool = make_cluster_pool()
-        config = Config()
-        config.seed = 0
-        config.structure.min_layers = 3
-        config.structure.max_layers = 3
-        config.structure.max_branches = 1
-        config.structure.split_probability = 0.0
-        config.structure.merge_probability = 0.0
-        config.requirements.legacy_dungeons = 0
-        config.requirements.bosses = 0
-        config.requirements.mini_dungeons = 0
+        config = _make_test_config(seed=0)
 
         seen: list[tuple[object, int]] = []
 
@@ -650,16 +483,7 @@ class TestGenerateWithRetry:
         """post_validate failing under a fixed seed surfaces the error instead
         of silently passing."""
         pool = make_cluster_pool()
-        config = Config()
-        config.seed = 99999
-        config.structure.min_layers = 3
-        config.structure.max_layers = 3
-        config.structure.max_branches = 1
-        config.structure.split_probability = 0.0
-        config.structure.merge_probability = 0.0
-        config.requirements.legacy_dungeons = 0
-        config.requirements.bosses = 0
-        config.requirements.mini_dungeons = 0
+        config = _make_test_config(seed=99999)
 
         def post_validate(dag, seed):
             raise GenerationError("matcher infeasible")
@@ -676,17 +500,29 @@ class TestGenerateWithRetry:
 class TestValidateConfig:
     """Tests for validate_config function."""
 
+    def _cfg(self) -> Config:
+        """Return a minimally valid Config for the test pool.
+
+        Points at test_final_boss_zone (exists in make_cluster_pool()) and
+        zeros all requirements so the small pool doesn't trigger oversubscription
+        errors that would obscure what each test is actually checking.
+        """
+        cfg = Config()
+        cfg.structure.final_boss_candidates = {"test_final_boss_zone": 1}
+        cfg.requirements.major_bosses = 0
+        return cfg
+
     def test_valid_config_returns_empty_list(self):
         """Valid configuration returns no errors."""
         pool = make_cluster_pool()
-        config = Config()
+        config = self._cfg()
         errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
 
     def test_invalid_first_layer_type(self):
         """Invalid first_layer_type returns error."""
         pool = make_cluster_pool()
-        config = Config()
+        config = self._cfg()
         config.structure.first_layer_type = "invalid_type"
         errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert len(errors) == 1
@@ -696,7 +532,7 @@ class TestValidateConfig:
     def test_valid_first_layer_type(self):
         """Valid first_layer_type returns no error."""
         pool = make_cluster_pool()
-        config = Config()
+        config = self._cfg()
         config.structure.first_layer_type = "legacy_dungeon"
         errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
@@ -704,7 +540,7 @@ class TestValidateConfig:
     def test_major_bosses_negative_validation(self):
         """Negative major_bosses returns error."""
         pool = make_cluster_pool()
-        config = Config()
+        config = self._cfg()
         config.requirements.major_bosses = -1
         errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert len(errors) == 1
@@ -713,23 +549,23 @@ class TestValidateConfig:
     def test_major_bosses_zero_valid(self):
         """major_bosses=0 is valid (no major bosses)."""
         pool = make_cluster_pool()
-        config = Config()
-        config.requirements.major_bosses = 0
+        config = self._cfg()
         errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
 
     def test_major_bosses_positive_valid(self):
         """Positive major_bosses is valid."""
         pool = make_cluster_pool()
-        config = Config()
+        config = self._cfg()
         config.requirements.major_bosses = 8
+        config.structure.layers_count = 50
         errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
 
     def test_unknown_final_boss_candidate(self):
         """Unknown zone in final_boss_candidates returns error."""
         pool = make_cluster_pool()
-        config = Config()
+        config = self._cfg()
         config.structure.final_boss_candidates = {"nonexistent_zone": 1}
         errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert len(errors) == 1
@@ -738,16 +574,15 @@ class TestValidateConfig:
     def test_valid_final_boss_candidate(self):
         """Valid zone in final_boss_candidates returns no error."""
         pool = make_cluster_pool()
-        config = Config()
-        # leyndell_erdtree exists in the fixture
-        config.structure.final_boss_candidates = {"leyndell_erdtree": 1}
+        config = self._cfg()
+        # test_final_boss_zone exists in the fixture (already set by _cfg)
         errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
 
     def test_final_boss_candidates_all_keyword(self):
         """'all' keyword in final_boss_candidates is valid."""
         pool = make_cluster_pool()
-        config = Config()
+        config = self._cfg()
         config.structure.final_boss_candidates = {"all": 1}
         errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
@@ -755,8 +590,8 @@ class TestValidateConfig:
     def test_invalid_weight_returns_error(self):
         """Weight < 1 in final_boss_candidates returns error."""
         pool = make_cluster_pool()
-        config = Config()
-        config.structure.final_boss_candidates = {"leyndell_erdtree": 0}
+        config = self._cfg()
+        config.structure.final_boss_candidates = {"test_final_boss_zone": 0}
         errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert len(errors) == 1
         assert "invalid weight" in errors[0]
@@ -764,7 +599,7 @@ class TestValidateConfig:
     def test_multiple_errors_returned(self):
         """Multiple config errors are all returned."""
         pool = make_cluster_pool()
-        config = Config()
+        config = self._cfg()
         config.structure.first_layer_type = "bad_type"
         config.requirements.major_bosses = -1
         config.structure.final_boss_candidates = {"bad_zone": 1}
@@ -774,7 +609,7 @@ class TestValidateConfig:
     def test_requirements_exceed_min_layers_warning(self):
         """Warning when total requirements exceed min_layers."""
         pool = make_cluster_pool()
-        config = Config()
+        config = self._cfg()
         # 2 + 10 + 10 + 8 = 30, but min_layers = 6 (default)
         config.requirements.legacy_dungeons = 2
         config.requirements.bosses = 10
@@ -792,7 +627,7 @@ class TestValidateConfig:
     def test_requirements_within_min_layers_no_warning(self):
         """No warning when requirements fit within min_layers."""
         pool = make_cluster_pool()
-        config = Config()
+        config = self._cfg()
         config.requirements.legacy_dungeons = 1
         config.requirements.bosses = 2
         config.requirements.mini_dungeons = 2
@@ -818,16 +653,6 @@ class TestValidateConfig:
                 ],
             )
         )
-        pool.add(
-            make_cluster(
-                "boss_end",
-                zones=["end_zone"],
-                cluster_type="final_boss",
-                weight=5,
-                entry_fogs=[{"fog_id": "e", "zone": "end_zone"}],
-                exit_fogs=[],
-            )
-        )
         # Only 5 major_boss clusters
         for i in range(5):
             pool.add(
@@ -835,6 +660,8 @@ class TestValidateConfig:
                     f"major_{i}",
                     zones=[f"major_{i}_z"],
                     cluster_type="major_boss",
+                    entry_fogs=[{"fog_id": f"e{i}", "zone": f"major_{i}_z"}],
+                    exit_fogs=[],
                     weight=4,
                 )
             )
@@ -849,7 +676,9 @@ class TestValidateConfig:
                 )
             )
 
-        config = Config()
+        config = self._cfg()
+        # Override final_boss_candidates to a zone in this pool
+        config.structure.final_boss_candidates = {"major_0_z": 1}
         # Zero out other requirements to isolate major_boss warning
         config.requirements.legacy_dungeons = 0
         config.requirements.bosses = 0
@@ -871,7 +700,7 @@ class TestValidateConfig:
                 weight=4,
             )
         )
-        config = Config()
+        config = self._cfg()
         config.requirements.major_bosses = 1
         config.requirements.legacy_dungeons = 0
         config.requirements.bosses = 0
@@ -899,7 +728,7 @@ class TestValidateConfig:
         boss_candidates = _boss_candidates(pool)
         pool.filter_passant_incompatible()
 
-        config = Config()
+        config = self._cfg()
         config.structure.final_boss_candidates = {"placidusax_zone": 1}
         errors, _ = validate_config(config, pool, boss_candidates)
         assert errors == []
@@ -1266,349 +1095,6 @@ class TestCountNetExits:
         assert net_exits == 2  # Both exits preserved
 
 
-class TestSelectEntriesForMerge:
-    """Tests for select_entries_for_merge returning dicts."""
-
-    def test_returns_dicts_with_fog_id_and_zone(self):
-        """Selected entries are dicts with fog_id and zone."""
-        cluster = make_cluster(
-            "test",
-            entry_fogs=[
-                {"fog_id": "fog1", "zone": "zone_a"},
-                {"fog_id": "fog2", "zone": "zone_b"},
-            ],
-            exit_fogs=[],
-        )
-
-        rng = random.Random(42)
-        entries = select_entries_for_merge(cluster, 2, rng)
-
-        assert len(entries) == 2
-        assert all(isinstance(e, dict) for e in entries)
-        assert all("fog_id" in e and "zone" in e for e in entries)
-
-    def test_prefers_non_bidirectional_entries(self):
-        """Non-bidirectional entries (different zone from exits) are preferred."""
-        cluster = make_cluster(
-            "test",
-            entry_fogs=[
-                {"fog_id": "bidir", "zone": "zone_a"},  # same zone as exit
-                {"fog_id": "non_bidir", "zone": "zone_b"},  # different zone
-            ],
-            exit_fogs=[
-                {"fog_id": "bidir", "zone": "zone_a"},
-            ],
-        )
-
-        rng = random.Random(42)
-        entries = select_entries_for_merge(cluster, 1, rng)
-
-        # Should pick non_bidir first since it doesn't consume an exit
-        assert len(entries) == 1
-        assert entries[0]["fog_id"] == "non_bidir"
-
-
-class TestPickEntryWithMaxExits:
-    """Tests for pick_entry_with_max_exits returning dicts."""
-
-    def test_returns_dict_with_fog_id_and_zone(self):
-        """Selected entry is a dict with fog_id and zone."""
-        cluster = make_cluster(
-            "test",
-            entry_fogs=[
-                {"fog_id": "fog1", "zone": "zone_a"},
-            ],
-            exit_fogs=[
-                {"fog_id": "exit1", "zone": "zone_a"},
-            ],
-        )
-
-        rng = random.Random(42)
-        entry = pick_entry_with_max_exits(cluster, 1, rng)
-
-        assert entry is not None
-        assert isinstance(entry, dict)
-        assert entry["fog_id"] == "fog1"
-        assert entry["zone"] == "zone_a"
-
-    def test_picks_entry_preserving_opposite_side_exits(self):
-        """Entry that preserves exits from other zones is valid."""
-        cluster = make_cluster(
-            "test",
-            entry_fogs=[
-                {"fog_id": "shared", "zone": "zone_a"},
-            ],
-            exit_fogs=[
-                {"fog_id": "shared", "zone": "zone_b"},  # Different zone
-            ],
-        )
-
-        rng = random.Random(42)
-        entry = pick_entry_with_max_exits(cluster, 1, rng)
-
-        # Entry from zone_a should be valid since exit is in zone_b
-        assert entry is not None
-        assert entry["fog_id"] == "shared"
-
-    def test_returns_none_when_no_valid_entry(self):
-        """Returns None when no entry leaves enough exits."""
-        cluster = make_cluster(
-            "test",
-            entry_fogs=[
-                {"fog_id": "fog1", "zone": "zone_a"},
-            ],
-            exit_fogs=[
-                {"fog_id": "fog1", "zone": "zone_a"},  # Will be consumed
-            ],
-        )
-
-        rng = random.Random(42)
-        entry = pick_entry_with_max_exits(cluster, 1, rng)
-
-        # Entry consumes the only exit, so no valid entry for min_exits=1
-        assert entry is None
-
-
-class TestPickEntryAndExitsForNode:
-    """Tests for _pick_entry_and_exits_for_node exit trimming."""
-
-    def test_trims_excess_exits_to_min_exits(self):
-        """Cluster with 4 exits returns exactly min_exits=1 exit."""
-        cluster = make_cluster(
-            "big",
-            zones=["zone_a", "zone_b"],
-            entry_fogs=[{"fog_id": "entry1", "zone": "zone_a"}],
-            exit_fogs=[
-                {"fog_id": "exit1", "zone": "zone_a"},
-                {"fog_id": "exit2", "zone": "zone_b"},
-                {"fog_id": "exit3", "zone": "zone_b"},
-                {"fog_id": "exit4", "zone": "zone_b"},
-            ],
-        )
-        rng = random.Random(42)
-        entry, exits = _pick_entry_and_exits_for_node(cluster, 1, rng)
-        assert entry.fog_id == "entry1"
-        assert len(exits) == 1
-
-    def test_trims_exits_for_split(self):
-        """Cluster with 5 exits returns exactly min_exits=2 for split."""
-        cluster = make_cluster(
-            "big",
-            zones=["zone_a", "zone_b"],
-            entry_fogs=[{"fog_id": "entry1", "zone": "zone_a"}],
-            exit_fogs=[
-                {"fog_id": "exit1", "zone": "zone_a"},
-                {"fog_id": "exit2", "zone": "zone_b"},
-                {"fog_id": "exit3", "zone": "zone_b"},
-                {"fog_id": "exit4", "zone": "zone_b"},
-                {"fog_id": "exit5", "zone": "zone_b"},
-            ],
-        )
-        rng = random.Random(42)
-        entry, exits = _pick_entry_and_exits_for_node(cluster, 2, rng)
-        assert len(exits) == 2
-
-    def test_entry_as_exit_trims_exits(self):
-        """Entry-as-exit cluster also trims excess exits."""
-        cluster = make_cluster(
-            "eae",
-            zones=["zone_a"],
-            entry_fogs=[{"fog_id": "shared", "zone": "zone_a", "main": True}],
-            exit_fogs=[
-                {"fog_id": "exit1", "zone": "zone_a"},
-                {"fog_id": "exit2", "zone": "zone_a"},
-                {"fog_id": "exit3", "zone": "zone_a"},
-            ],
-            allow_entry_as_exit=True,
-        )
-        rng = random.Random(42)
-        entry, exits = _pick_entry_and_exits_for_node(cluster, 1, rng)
-        assert len(exits) == 1
-
-    def test_entry_as_exit_prefers_non_entry_exit(self):
-        """Entry-as-exit cluster prefers exits that differ from the consumed entry."""
-        cluster = make_cluster(
-            "boss",
-            zones=["boss_zone"],
-            entry_fogs=[
-                {"fog_id": "gate_front", "zone": "boss_zone", "main": True},
-            ],
-            exit_fogs=[
-                {"fog_id": "gate_front", "zone": "boss_zone"},  # same as entry
-                {"fog_id": "gate_back", "zone": "boss_zone"},  # different
-            ],
-            allow_entry_as_exit=True,
-        )
-        # With min_exits=1, should always pick gate_back (preferred), never gate_front
-        for seed in range(20):
-            rng = random.Random(seed)
-            entry, exits = _pick_entry_and_exits_for_node(cluster, 1, rng)
-            assert entry.fog_id == "gate_front"
-            assert len(exits) == 1
-            assert exits[0].fog_id == "gate_back"
-
-    def test_entry_as_exit_uses_entry_fog_for_split(self):
-        """Entry-as-exit cluster uses entry fog as fallback when split needs it."""
-        cluster = make_cluster(
-            "boss",
-            zones=["boss_zone"],
-            entry_fogs=[
-                {"fog_id": "gate_front", "zone": "boss_zone", "main": True},
-            ],
-            exit_fogs=[
-                {"fog_id": "gate_front", "zone": "boss_zone"},
-                {"fog_id": "gate_back", "zone": "boss_zone"},
-            ],
-            allow_entry_as_exit=True,
-        )
-        # With min_exits=2, must use both; preferred (gate_back) comes first
-        rng = random.Random(42)
-        entry, exits = _pick_entry_and_exits_for_node(cluster, 2, rng)
-        assert entry.fog_id == "gate_front"
-        assert len(exits) == 2
-        assert exits[0].fog_id == "gate_back"
-        assert exits[1].fog_id == "gate_front"
-
-    def test_entry_as_exit_all_exits_match_entry(self):
-        """When only exit matches entry, it is still used (no alternative)."""
-        cluster = make_cluster(
-            "boss",
-            zones=["boss_zone"],
-            entry_fogs=[{"fog_id": "only_gate", "zone": "boss_zone", "main": True}],
-            exit_fogs=[{"fog_id": "only_gate", "zone": "boss_zone"}],
-            allow_entry_as_exit=True,
-        )
-        rng = random.Random(42)
-        entry, exits = _pick_entry_and_exits_for_node(cluster, 1, rng)
-        assert exits[0].fog_id == "only_gate"
-
-    def test_exact_exits_not_trimmed(self):
-        """Cluster with exactly min_exits returns all of them."""
-        cluster = make_cluster(
-            "exact",
-            zones=["zone_a", "zone_b"],
-            entry_fogs=[{"fog_id": "entry1", "zone": "zone_a"}],
-            exit_fogs=[
-                {"fog_id": "exit1", "zone": "zone_b"},
-            ],
-        )
-        rng = random.Random(42)
-        entry, exits = _pick_entry_and_exits_for_node(cluster, 1, rng)
-        assert len(exits) == 1
-
-
-class TestStableMainShuffle:
-    """Tests for _stable_main_shuffle helper."""
-
-    def test_main_entries_come_first(self):
-        """Main-tagged entries appear before non-main entries."""
-        entries = [
-            {"fog_id": "a", "zone": "z1"},
-            {"fog_id": "b", "zone": "z2", "main": True},
-            {"fog_id": "c", "zone": "z3"},
-        ]
-        result = _stable_main_shuffle(entries, random.Random(42))
-        assert result[0]["fog_id"] == "b"
-        assert {e["fog_id"] for e in result[1:]} == {"a", "c"}
-
-    def test_no_main_entries(self):
-        """All entries returned when none are main-tagged."""
-        entries = [
-            {"fog_id": "a", "zone": "z1"},
-            {"fog_id": "b", "zone": "z2"},
-        ]
-        result = _stable_main_shuffle(entries, random.Random(42))
-        assert len(result) == 2
-
-    def test_all_main_entries(self):
-        """All main entries shuffled and returned."""
-        entries = [
-            {"fog_id": "a", "zone": "z1", "main": True},
-            {"fog_id": "b", "zone": "z2", "main": True},
-        ]
-        result = _stable_main_shuffle(entries, random.Random(42))
-        assert len(result) == 2
-        assert all(e.get("main") for e in result)
-
-
-class TestMainPreference:
-    """Tests for main-tagged entry preference in selection functions."""
-
-    def test_pick_entry_prefers_main(self):
-        """pick_entry_with_max_exits prefers main-tagged entry."""
-        cluster = make_cluster(
-            "boss",
-            entry_fogs=[
-                {"fog_id": "back_gate", "zone": "boss_room"},
-                {"fog_id": "main_gate", "zone": "boss_room", "main": True},
-            ],
-            exit_fogs=[
-                {"fog_id": "exit1", "zone": "boss_room"},
-            ],
-        )
-
-        # Run many times to verify consistency
-        for seed in range(20):
-            entry = pick_entry_with_max_exits(cluster, 1, random.Random(seed))
-            assert entry is not None
-            assert entry["fog_id"] == "main_gate"
-
-    def test_pick_entry_falls_back_when_no_main(self):
-        """pick_entry_with_max_exits falls back to any valid entry."""
-        cluster = make_cluster(
-            "boss",
-            entry_fogs=[
-                {"fog_id": "gate_a", "zone": "boss_room"},
-                {"fog_id": "gate_b", "zone": "boss_room"},
-            ],
-            exit_fogs=[
-                {"fog_id": "exit1", "zone": "boss_room"},
-            ],
-        )
-
-        entry = pick_entry_with_max_exits(cluster, 1, random.Random(42))
-        assert entry is not None
-        assert entry["fog_id"] in ("gate_a", "gate_b")
-
-    def test_pick_entry_falls_back_when_main_violates_exit_constraint(self):
-        """Falls back to non-main when main entry would consume the only exit."""
-        cluster = make_cluster(
-            "boss",
-            entry_fogs=[
-                # main entry is bidirectional and would consume the only exit
-                {"fog_id": "main_gate", "zone": "boss_room", "main": True},
-                # non-main entry doesn't consume any exit
-                {"fog_id": "back_gate", "zone": "other_zone"},
-            ],
-            exit_fogs=[
-                {"fog_id": "main_gate", "zone": "boss_room"},
-            ],
-        )
-
-        entry = pick_entry_with_max_exits(cluster, 1, random.Random(42))
-        assert entry is not None
-        # main_gate consumes the only exit -> 0 remaining, below min_exits=1
-        # back_gate preserves the exit -> 1 remaining, meets min_exits=1
-        assert entry["fog_id"] == "back_gate"
-
-    def test_select_entries_for_merge_prefers_main(self):
-        """select_entries_for_merge prefers main within each group."""
-        cluster = make_cluster(
-            "boss",
-            entry_fogs=[
-                {"fog_id": "non_main", "zone": "z1"},
-                {"fog_id": "main_entry", "zone": "z2", "main": True},
-            ],
-            exit_fogs=[],  # all non-bidir
-        )
-
-        # Selecting 1 should get the main one
-        for seed in range(20):
-            entries = select_entries_for_merge(cluster, 1, random.Random(seed))
-            assert len(entries) == 1
-            assert entries[0]["fog_id"] == "main_entry"
-
-
 class TestClusterDataAvailableExits:
     """Tests for ClusterData.available_exits with (fog_id, zone) logic."""
 
@@ -1641,645 +1127,6 @@ class TestClusterDataAvailableExits:
 
         available = cluster.available_exits(None)
         assert len(available) == 2
-
-
-# =============================================================================
-# Merge guard tests
-# =============================================================================
-
-
-class TestMergeGuards:
-    """Tests for _has_valid_merge_pair and _find_valid_merge_indices."""
-
-    def test_merge_rejects_same_source_branches(self):
-        """_find_valid_merge_indices returns None when all branches share the same node."""
-        branches = [
-            Branch("b0", "node_1_a", FogRef("exit_0", "z")),
-            Branch("b1", "node_1_a", FogRef("exit_1", "z")),
-        ]
-        rng = random.Random(42)
-
-        assert _has_valid_merge_pair(branches) is False
-        assert _find_valid_merge_indices(branches, rng) is None
-
-    def test_merge_selects_different_source_branches(self):
-        """_find_valid_merge_indices selects branches with different current nodes."""
-        branches = [
-            Branch("b0", "node_1_a", FogRef("exit_0", "z")),
-            Branch("b1", "node_1_a", FogRef("exit_1", "z")),
-            Branch("b2", "node_1_b", FogRef("exit_2", "z")),
-        ]
-        rng = random.Random(42)
-
-        assert _has_valid_merge_pair(branches) is True
-        indices = _find_valid_merge_indices(branches, rng)
-
-        assert len(indices) == 2
-        # The selected pair must have different current nodes
-        assert (
-            branches[indices[0]].current_node_id != branches[indices[1]].current_node_id
-        )
-
-    def test_has_valid_merge_pair_all_different(self):
-        """All branches from different nodes: valid merge possible."""
-        branches = [
-            Branch("b0", "node_a", FogRef("exit_0", "z")),
-            Branch("b1", "node_b", FogRef("exit_1", "z")),
-        ]
-        assert _has_valid_merge_pair(branches) is True
-
-    def test_find_valid_merge_indices_randomness(self):
-        """Different seeds select different valid pairs."""
-        branches = [
-            Branch("b0", "node_a", FogRef("exit_0", "z")),
-            Branch("b1", "node_b", FogRef("exit_1", "z")),
-            Branch("b2", "node_c", FogRef("exit_2", "z")),
-        ]
-
-        selected_pairs = set()
-        for seed in range(100):
-            rng = random.Random(seed)
-            indices = _find_valid_merge_indices(branches, rng)
-            selected_pairs.add(tuple(sorted(indices)))
-
-        # With 3 branches all from different nodes, there are 3 valid pairs
-        assert len(selected_pairs) > 1
-
-    def test_find_valid_merge_indices_ternary(self):
-        """_find_valid_merge_indices with count=3 selects 3-way merges."""
-        branches = [
-            Branch("b0", "node_a", FogRef("exit_0", "z")),
-            Branch("b1", "node_b", FogRef("exit_1", "z")),
-            Branch("b2", "node_c", FogRef("exit_2", "z")),
-        ]
-        rng = random.Random(42)
-        indices = _find_valid_merge_indices(branches, rng, count=3)
-
-        assert indices is not None
-        assert len(indices) == 3
-        # All 3 nodes are different, so the only combo is [0, 1, 2]
-        assert sorted(indices) == [0, 1, 2]
-
-    def test_find_valid_merge_indices_ternary_needs_two_parents(self):
-        """3-way merge requires at least 2 distinct parent nodes."""
-        # 3 branches but only 1 distinct parent → no valid 3-way merge
-        branches = [
-            Branch("b0", "same_node", FogRef("exit_0", "z")),
-            Branch("b1", "same_node", FogRef("exit_1", "z")),
-            Branch("b2", "same_node", FogRef("exit_2", "z")),
-        ]
-        rng = random.Random(42)
-        indices = _find_valid_merge_indices(branches, rng, count=3)
-        assert indices is None
-
-    def test_find_valid_merge_indices_count_exceeds_branches(self):
-        """count > len(branches) returns None."""
-        branches = [
-            Branch("b0", "node_a", FogRef("exit_0", "z")),
-            Branch("b1", "node_b", FogRef("exit_1", "z")),
-        ]
-        rng = random.Random(42)
-        assert _find_valid_merge_indices(branches, rng, count=3) is None
-
-    def test_has_valid_merge_pair_young_branches_excluded(self):
-        """Branches younger than min_age are excluded from merge eligibility."""
-        branches = [
-            Branch("b0", "node_a", FogRef("exit_0", "z"), birth_layer=5),
-            Branch("b1", "node_b", FogRef("exit_1", "z"), birth_layer=5),
-        ]
-        # At layer 6, age=1 < min_age=3 → no valid merge
-        assert _has_valid_merge_pair(branches, min_age=3, current_layer=6) is False
-        # At layer 8, age=3 >= min_age=3 → valid merge
-        assert _has_valid_merge_pair(branches, min_age=3, current_layer=8) is True
-
-    def test_has_valid_merge_pair_mixed_ages(self):
-        """Only age-eligible branches are considered for merging."""
-        branches = [
-            Branch("b0", "node_a", FogRef("exit_0", "z"), birth_layer=1),  # old
-            Branch("b1", "node_b", FogRef("exit_1", "z"), birth_layer=5),  # young
-            Branch("b2", "node_c", FogRef("exit_2", "z"), birth_layer=1),  # old
-        ]
-        # At layer 4: b0 age=3, b1 age=-1(not eligible), b2 age=3 → valid (b0+b2)
-        assert _has_valid_merge_pair(branches, min_age=3, current_layer=4) is True
-
-    def test_find_valid_merge_indices_respects_min_age(self):
-        """_find_valid_merge_indices only selects age-eligible branches."""
-        branches = [
-            Branch("b0", "node_a", FogRef("exit_0", "z"), birth_layer=0),  # old
-            Branch("b1", "node_b", FogRef("exit_1", "z"), birth_layer=5),  # young
-            Branch("b2", "node_c", FogRef("exit_2", "z"), birth_layer=0),  # old
-        ]
-        rng = random.Random(42)
-        # At layer 6: b0 age=6, b1 age=1(too young), b2 age=6
-        indices = _find_valid_merge_indices(branches, rng, min_age=3, current_layer=6)
-        assert indices is not None
-        # b1 (index 1) should never be selected
-        assert 1 not in indices
-        assert sorted(indices) == [0, 2]
-
-    def test_find_valid_merge_indices_all_too_young(self):
-        """Returns None when all branches are too young."""
-        branches = [
-            Branch("b0", "node_a", FogRef("exit_0", "z"), birth_layer=5),
-            Branch("b1", "node_b", FogRef("exit_1", "z"), birth_layer=5),
-        ]
-        rng = random.Random(42)
-        assert (
-            _find_valid_merge_indices(branches, rng, min_age=3, current_layer=6) is None
-        )
-
-    def test_min_age_zero_matches_old_behavior(self):
-        """min_age=0 makes all branches eligible regardless of birth_layer."""
-        branches = [
-            Branch("b0", "node_a", FogRef("exit_0", "z"), birth_layer=100),
-            Branch("b1", "node_b", FogRef("exit_1", "z"), birth_layer=100),
-        ]
-        # current_layer=100, age=0, min_age=0 → eligible
-        assert _has_valid_merge_pair(branches, min_age=0, current_layer=100) is True
-        rng = random.Random(42)
-        indices = _find_valid_merge_indices(branches, rng, min_age=0, current_layer=100)
-        assert indices is not None
-
-    def test_nary_split_and_merge_in_generated_dag(self):
-        """With max_branches=3 and suitable clusters, DAGs produce 3-way splits/merges."""
-        pool = ClusterPool()
-
-        # Start cluster with 3 exits (enables 3-way initial split)
-        pool.add(
-            make_cluster(
-                "chapel_start",
-                zones=["chapel"],
-                cluster_type="start",
-                weight=1,
-                entry_fogs=[],
-                exit_fogs=[
-                    {"fog_id": "start_exit_1", "zone": "chapel"},
-                    {"fog_id": "start_exit_2", "zone": "chapel"},
-                    {"fog_id": "start_exit_3", "zone": "chapel"},
-                ],
-            )
-        )
-
-        # Final boss
-        pool.add(
-            make_cluster(
-                "erdtree_boss",
-                zones=["leyndell_erdtree"],
-                cluster_type="final_boss",
-                weight=5,
-                entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
-                exit_fogs=[],
-            )
-        )
-
-        # 3-entry merge clusters (3 entries, 1 net exit after merge)
-        for i in range(5):
-            pool.add(
-                make_cluster(
-                    f"merge3_{i}",
-                    zones=[f"merge3_{i}_zone"],
-                    cluster_type="mini_dungeon",
-                    weight=5,
-                    entry_fogs=[
-                        {"fog_id": f"merge3_{i}_entry_a", "zone": f"merge3_{i}_zone"},
-                        {"fog_id": f"merge3_{i}_entry_b", "zone": f"merge3_{i}_zone"},
-                        {"fog_id": f"merge3_{i}_entry_c", "zone": f"merge3_{i}_zone"},
-                    ],
-                    exit_fogs=[
-                        {"fog_id": f"merge3_{i}_exit", "zone": f"merge3_{i}_zone"},
-                        {"fog_id": f"merge3_{i}_entry_a", "zone": f"merge3_{i}_zone"},
-                        {"fog_id": f"merge3_{i}_entry_b", "zone": f"merge3_{i}_zone"},
-                        {"fog_id": f"merge3_{i}_entry_c", "zone": f"merge3_{i}_zone"},
-                    ],
-                )
-            )
-
-        # 3-exit split clusters (1 entry, 3 net exits)
-        for i in range(5):
-            pool.add(
-                make_cluster(
-                    f"split3_{i}",
-                    zones=[f"split3_{i}_zone"],
-                    cluster_type="mini_dungeon",
-                    weight=5,
-                    entry_fogs=[
-                        {"fog_id": f"split3_{i}_entry", "zone": f"split3_{i}_zone"},
-                    ],
-                    exit_fogs=[
-                        {"fog_id": f"split3_{i}_exit_a", "zone": f"split3_{i}_zone"},
-                        {"fog_id": f"split3_{i}_exit_b", "zone": f"split3_{i}_zone"},
-                        {"fog_id": f"split3_{i}_exit_c", "zone": f"split3_{i}_zone"},
-                    ],
-                )
-            )
-
-        # Passant clusters covering all types used by pick_layer_type
-        for i in range(10):
-            pool.add(
-                make_cluster(
-                    f"mini_p_{i}",
-                    zones=[f"mini_p_{i}_zone"],
-                    cluster_type="mini_dungeon",
-                    weight=5,
-                    entry_fogs=[
-                        {"fog_id": f"mini_p_{i}_entry", "zone": f"mini_p_{i}_zone"},
-                    ],
-                    exit_fogs=[
-                        {"fog_id": f"mini_p_{i}_exit", "zone": f"mini_p_{i}_zone"},
-                        {"fog_id": f"mini_p_{i}_entry", "zone": f"mini_p_{i}_zone"},
-                    ],
-                )
-            )
-        for i in range(5):
-            pool.add(
-                make_cluster(
-                    f"boss_p_{i}",
-                    zones=[f"boss_p_{i}_zone"],
-                    cluster_type="boss_arena",
-                    weight=3,
-                    entry_fogs=[
-                        {"fog_id": f"boss_p_{i}_entry", "zone": f"boss_p_{i}_zone"},
-                    ],
-                    exit_fogs=[
-                        {"fog_id": f"boss_p_{i}_exit", "zone": f"boss_p_{i}_zone"},
-                        {"fog_id": f"boss_p_{i}_entry", "zone": f"boss_p_{i}_zone"},
-                    ],
-                )
-            )
-        for i in range(3):
-            pool.add(
-                make_cluster(
-                    f"legacy_p_{i}",
-                    zones=[f"legacy_p_{i}_zone"],
-                    cluster_type="legacy_dungeon",
-                    weight=10,
-                    entry_fogs=[
-                        {"fog_id": f"legacy_p_{i}_entry", "zone": f"legacy_p_{i}_zone"},
-                    ],
-                    exit_fogs=[
-                        {"fog_id": f"legacy_p_{i}_exit", "zone": f"legacy_p_{i}_zone"},
-                        {"fog_id": f"legacy_p_{i}_entry", "zone": f"legacy_p_{i}_zone"},
-                    ],
-                )
-            )
-
-        config = Config()
-        config.structure.min_layers = 8
-        config.structure.max_layers = 14
-        config.structure.max_branches = 3
-        config.structure.max_parallel_paths = 4
-        config.structure.split_probability = 0.6
-        config.structure.merge_probability = 0.6
-        config.requirements.legacy_dungeons = 0
-        config.requirements.bosses = 0
-        config.requirements.mini_dungeons = 0
-
-        found_3way_split = False
-        found_3way_merge = False
-
-        for seed in range(1, 501):
-            try:
-                dag, _log = generate_dag(
-                    config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
-                )
-            except GenerationError:
-                continue
-
-            for node_id in dag.nodes:
-                in_edges = [e for e in dag.edges if e.target_id == node_id]
-                out_edges = [e for e in dag.edges if e.source_id == node_id]
-                if len(out_edges) >= 3:
-                    found_3way_split = True
-                if len(in_edges) >= 3:
-                    found_3way_merge = True
-
-            if found_3way_split and found_3way_merge:
-                break
-
-        assert found_3way_split, "No 3-way split found in 500 seeds"
-        assert found_3way_merge, "No 3-way merge found in 500 seeds"
-
-    def test_no_duplicate_edges_in_generated_dag(self):
-        """Generated DAGs with splits/merges have no duplicate (source, target) edges."""
-        # Build a pool with split-, merge-, and passant-compatible clusters
-        pool = ClusterPool()
-
-        pool.add(
-            make_cluster(
-                "chapel_start",
-                zones=["chapel"],
-                cluster_type="start",
-                weight=1,
-                entry_fogs=[],
-                exit_fogs=[
-                    {"fog_id": "start_exit_1", "zone": "chapel"},
-                    {"fog_id": "start_exit_2", "zone": "chapel"},
-                ],
-            )
-        )
-
-        pool.add(
-            make_cluster(
-                "erdtree_boss",
-                zones=["leyndell_erdtree"],
-                cluster_type="final_boss",
-                weight=5,
-                entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
-                exit_fogs=[],
-            )
-        )
-
-        # Split-compatible (1 entry bidir + 2 pure exits = 2 net exits)
-        for i in range(8):
-            pool.add(
-                make_cluster(
-                    f"split_{i}",
-                    zones=[f"split_{i}_zone"],
-                    cluster_type="mini_dungeon",
-                    weight=5,
-                    entry_fogs=[
-                        {"fog_id": f"split_{i}_entry", "zone": f"split_{i}_zone"},
-                    ],
-                    exit_fogs=[
-                        {"fog_id": f"split_{i}_entry", "zone": f"split_{i}_zone"},
-                        {"fog_id": f"split_{i}_exit_a", "zone": f"split_{i}_zone"},
-                        {"fog_id": f"split_{i}_exit_b", "zone": f"split_{i}_zone"},
-                    ],
-                )
-            )
-
-        # Merge-compatible (2 entries bidir + 1 pure exit = 1 net exit)
-        for i in range(8):
-            pool.add(
-                make_cluster(
-                    f"merge_{i}",
-                    zones=[f"merge_{i}_zone"],
-                    cluster_type="mini_dungeon",
-                    weight=5,
-                    entry_fogs=[
-                        {"fog_id": f"merge_{i}_entry_a", "zone": f"merge_{i}_zone"},
-                        {"fog_id": f"merge_{i}_entry_b", "zone": f"merge_{i}_zone"},
-                    ],
-                    exit_fogs=[
-                        {"fog_id": f"merge_{i}_entry_a", "zone": f"merge_{i}_zone"},
-                        {"fog_id": f"merge_{i}_entry_b", "zone": f"merge_{i}_zone"},
-                        {"fog_id": f"merge_{i}_exit", "zone": f"merge_{i}_zone"},
-                    ],
-                )
-            )
-
-        # Passant-compatible (1 entry bidir + 1 pure exit = 1 net exit)
-        for i in range(15):
-            pool.add(
-                make_cluster(
-                    f"passant_{i}",
-                    zones=[f"passant_{i}_zone"],
-                    cluster_type="mini_dungeon",
-                    weight=5,
-                    entry_fogs=[
-                        {"fog_id": f"passant_{i}_entry", "zone": f"passant_{i}_zone"},
-                    ],
-                    exit_fogs=[
-                        {"fog_id": f"passant_{i}_entry", "zone": f"passant_{i}_zone"},
-                        {"fog_id": f"passant_{i}_exit", "zone": f"passant_{i}_zone"},
-                    ],
-                )
-            )
-
-        config = Config()
-        config.structure.min_layers = 4
-        config.structure.max_layers = 6
-        config.structure.max_branches = 2
-        config.structure.split_probability = 0.4
-        config.structure.merge_probability = 0.4
-        config.requirements.legacy_dungeons = 0
-        config.requirements.bosses = 0
-        config.requirements.mini_dungeons = 0
-        config.requirements.major_bosses = 0
-
-        successes = 0
-        for seed in range(1, 201):
-            try:
-                dag, _log = generate_dag(
-                    config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
-                )
-            except GenerationError:
-                continue
-            successes += 1
-
-            # Check for duplicate (source_id, target_id) pairs
-            edge_pairs = [(e.source_id, e.target_id) for e in dag.edges]
-            assert len(edge_pairs) == len(
-                set(edge_pairs)
-            ), f"Seed {seed}: duplicate edge pair found in {edge_pairs}"
-
-        # Ensure we actually tested some successful generations
-        assert successes >= 10, f"Only {successes} seeds succeeded out of 200"
-
-
-# =============================================================================
-# Shared entrance merge layer tests
-# =============================================================================
-
-
-class TestExecuteMergeLayerSharedEntrance:
-    """Tests for execute_merge_layer with shared entrance clusters."""
-
-    def _make_merge_pool(self):
-        """Build a minimal pool where the ONLY merge-capable mini_dungeon
-        is a shared-entrance cluster. This ensures deterministic testing."""
-        pool = ClusterPool()
-
-        # Source clusters (passant-capable, 1 entry + 2 exits with bidir)
-        for i in range(2):
-            pool.add(
-                make_cluster(
-                    f"src_{i}",
-                    zones=[f"src_{i}_zone"],
-                    cluster_type="mini_dungeon",
-                    entry_fogs=[{"fog_id": f"src_{i}_entry", "zone": f"src_{i}_zone"}],
-                    exit_fogs=[
-                        {"fog_id": f"src_{i}_exit", "zone": f"src_{i}_zone"},
-                        {"fog_id": f"src_{i}_entry", "zone": f"src_{i}_zone"},
-                    ],
-                )
-            )
-
-        # The only merge-capable cluster (shared entrance: 2 entries + 1 exit)
-        pool.add(
-            make_cluster(
-                "shared_merge",
-                zones=["shared_merge_zone"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[
-                    {"fog_id": "shared_entry_a", "zone": "shared_merge_zone"},
-                    {"fog_id": "shared_entry_b", "zone": "shared_merge_zone"},
-                ],
-                exit_fogs=[
-                    {"fog_id": "shared_exit", "zone": "shared_merge_zone"},
-                ],
-                allow_shared_entrance=True,
-            )
-        )
-
-        return pool
-
-    def test_shared_entrance_merge_creates_single_entry_node(self):
-        """Shared entrance merge creates a node with 1 entry_fog, not N."""
-        pool = self._make_merge_pool()
-        dag = Dag(seed=42)
-
-        # Create two source nodes from different parents
-        src_a_cluster = pool.get_by_id("src_0")
-        src_b_cluster = pool.get_by_id("src_1")
-        src_a = DagNode(
-            id="src_a",
-            cluster=src_a_cluster,
-            layer=0,
-            tier=1,
-            entry_fogs=[],
-            exit_fogs=[FogRef("src_0_exit", "src_0_zone")],
-        )
-        src_b = DagNode(
-            id="src_b",
-            cluster=src_b_cluster,
-            layer=0,
-            tier=1,
-            entry_fogs=[],
-            exit_fogs=[FogRef("src_1_exit", "src_1_zone")],
-        )
-        dag.add_node(src_a)
-        dag.add_node(src_b)
-
-        branches = [
-            Branch("a", "src_a", FogRef("src_0_exit", "src_0_zone")),
-            Branch("b", "src_b", FogRef("src_1_exit", "src_1_zone")),
-        ]
-
-        rng = random.Random(42)
-        config = Config()
-        used_zones = {"src_0_zone", "src_1_zone"}
-
-        result = execute_merge_layer(
-            dag,
-            branches,
-            1,
-            "mini_dungeon",
-            pool,
-            used_zones,
-            rng,
-            config,
-        )
-
-        # Find the merge node
-        merge_nodes = [n for n in dag.nodes.values() if n.cluster.id == "shared_merge"]
-        assert len(merge_nodes) == 1
-        merge_node = merge_nodes[0]
-
-        # Shared entrance: node has 1 entry_fog, not 2
-        assert len(merge_node.entry_fogs) == 1
-
-        # Both edges point to the same entry_fog
-        merge_edges = [e for e in dag.edges if e.target_id == merge_node.id]
-        assert len(merge_edges) == 2
-        assert merge_edges[0].entry_fog == merge_edges[1].entry_fog
-
-        # Result should have 1 branch (merged)
-        assert len(result) == 1
-
-    def test_shared_entrance_prefers_non_bidir_entry(self):
-        """Shared entrance selects non-bidirectional entry to preserve exits.
-
-        Regression test: if a random entry is chosen and it's bidirectional,
-        it may consume all exits, leading to an empty exit_fogs list.
-        """
-        pool = ClusterPool()
-
-        # Source clusters
-        for i in range(2):
-            pool.add(
-                make_cluster(
-                    f"src_{i}",
-                    zones=[f"src_{i}_zone"],
-                    cluster_type="mini_dungeon",
-                    entry_fogs=[{"fog_id": f"src_{i}_entry", "zone": f"src_{i}_zone"}],
-                    exit_fogs=[
-                        {"fog_id": f"src_{i}_exit", "zone": f"src_{i}_zone"},
-                        {"fog_id": f"src_{i}_entry", "zone": f"src_{i}_zone"},
-                    ],
-                )
-            )
-
-        # Asymmetric shared entrance: entry_a is bidirectional (also an exit),
-        # entry_b is not. The only exit is entry_a's pair. If entry_a is chosen,
-        # exits become empty. select_entries_for_merge should prefer entry_b.
-        pool.add(
-            make_cluster(
-                "asymmetric_merge",
-                zones=["asym_zone"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[
-                    {"fog_id": "bidir_fog", "zone": "asym_zone"},
-                    {"fog_id": "nonbidir_fog", "zone": "asym_zone"},
-                ],
-                exit_fogs=[
-                    {"fog_id": "bidir_fog", "zone": "asym_zone"},
-                ],
-                allow_shared_entrance=True,
-            )
-        )
-
-        dag = Dag(seed=42)
-        src_a_cluster = pool.get_by_id("src_0")
-        src_b_cluster = pool.get_by_id("src_1")
-        src_a = DagNode(
-            id="src_a",
-            cluster=src_a_cluster,
-            layer=0,
-            tier=1,
-            entry_fogs=[],
-            exit_fogs=[FogRef("src_0_exit", "src_0_zone")],
-        )
-        src_b = DagNode(
-            id="src_b",
-            cluster=src_b_cluster,
-            layer=0,
-            tier=1,
-            entry_fogs=[],
-            exit_fogs=[FogRef("src_1_exit", "src_1_zone")],
-        )
-        dag.add_node(src_a)
-        dag.add_node(src_b)
-
-        branches = [
-            Branch("a", "src_a", FogRef("src_0_exit", "src_0_zone")),
-            Branch("b", "src_b", FogRef("src_1_exit", "src_1_zone")),
-        ]
-
-        rng = random.Random(42)
-        config = Config()
-        used_zones = {"src_0_zone", "src_1_zone"}
-
-        result = execute_merge_layer(
-            dag, branches, 1, "mini_dungeon", pool, used_zones, rng, config
-        )
-
-        merge_nodes = [
-            n for n in dag.nodes.values() if n.cluster.id == "asymmetric_merge"
-        ]
-        assert len(merge_nodes) == 1
-        merge_node = merge_nodes[0]
-
-        # Should have selected the non-bidirectional entry to preserve the exit
-        assert merge_node.entry_fogs[0] == FogRef("nonbidir_fog", "asym_zone")
-        # Exit preserved (bidir_fog not consumed)
-        assert len(merge_node.exit_fogs) == 1
-        assert len(result) == 1
-
-
-# =============================================================================
-# Roundtable merge into start
-# =============================================================================
 
 
 class TestMergeRoundtableIntoStart:
@@ -2394,357 +1241,6 @@ class TestMergeRoundtableIntoStart:
 
         # Roundtable should still be in the pool
         assert pool.get_by_id("roundtable_dacf") is not None
-
-
-# =============================================================================
-# Shared entrance simulation tests
-# =============================================================================
-
-
-def make_cluster_pool_with_shared_entrance() -> ClusterPool:
-    """Create a cluster pool with shared-entrance merge-capable clusters.
-
-    Includes clusters with 2 bidir entries + no pure exit, which:
-    - Cannot be merge(2) in the old model (0 net exits after consuming 2)
-    - CAN be merge(N) with shared entrance (2+ entries, 1+ exits)
-
-    This pool demonstrates the key benefit of the fog reuse model.
-    """
-    pool = ClusterPool()
-
-    # Start with 2 exits
-    pool.add(
-        make_cluster(
-            "chapel_start",
-            zones=["chapel"],
-            cluster_type="start",
-            weight=1,
-            entry_fogs=[],
-            exit_fogs=[
-                {"fog_id": "start_exit_1", "zone": "chapel"},
-                {"fog_id": "start_exit_2", "zone": "chapel"},
-            ],
-        )
-    )
-
-    # Final boss
-    pool.add(
-        make_cluster(
-            "erdtree_boss",
-            zones=["leyndell_erdtree"],
-            cluster_type="final_boss",
-            weight=5,
-            entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
-            exit_fogs=[],
-        )
-    )
-
-    # Shared-entrance merge clusters: 2 bidir entries, no pure exit.
-    # Old model: count_net_exits(2) = 0 → NOT merge(2).
-    # Shared entrance: 2+ entries, 1+ exits → merge-capable.
-    for i in range(5):
-        pool.add(
-            make_cluster(
-                f"shared_{i}",
-                zones=[f"shared_{i}_zone"],
-                cluster_type="mini_dungeon",
-                weight=5,
-                entry_fogs=[
-                    {"fog_id": f"shared_{i}_entry_a", "zone": f"shared_{i}_zone"},
-                    {"fog_id": f"shared_{i}_entry_b", "zone": f"shared_{i}_zone"},
-                ],
-                exit_fogs=[
-                    {"fog_id": f"shared_{i}_entry_a", "zone": f"shared_{i}_zone"},
-                    {"fog_id": f"shared_{i}_entry_b", "zone": f"shared_{i}_zone"},
-                ],
-                allow_shared_entrance=True,
-            )
-        )
-
-    # Passant clusters (1 entry bidir + 1 pure exit = 1 net exit)
-    for i in range(25):
-        pool.add(
-            make_cluster(
-                f"passant_{i}",
-                zones=[f"passant_{i}_zone"],
-                cluster_type="mini_dungeon",
-                weight=5,
-                entry_fogs=[
-                    {"fog_id": f"passant_{i}_entry", "zone": f"passant_{i}_zone"},
-                ],
-                exit_fogs=[
-                    {"fog_id": f"passant_{i}_entry", "zone": f"passant_{i}_zone"},
-                    {"fog_id": f"passant_{i}_exit", "zone": f"passant_{i}_zone"},
-                ],
-            )
-        )
-
-    # Boss arenas (passant-capable)
-    for i in range(6):
-        pool.add(
-            make_cluster(
-                f"boss_{i}",
-                zones=[f"boss_{i}_zone"],
-                cluster_type="boss_arena",
-                weight=3,
-                entry_fogs=[
-                    {"fog_id": f"boss_{i}_entry", "zone": f"boss_{i}_zone"},
-                ],
-                exit_fogs=[
-                    {"fog_id": f"boss_{i}_entry", "zone": f"boss_{i}_zone"},
-                    {"fog_id": f"boss_{i}_exit", "zone": f"boss_{i}_zone"},
-                ],
-            )
-        )
-
-    # Legacy dungeons (passant-capable)
-    for i in range(3):
-        pool.add(
-            make_cluster(
-                f"legacy_{i}",
-                zones=[f"legacy_{i}_zone"],
-                cluster_type="legacy_dungeon",
-                weight=10,
-                entry_fogs=[
-                    {"fog_id": f"legacy_{i}_entry", "zone": f"legacy_{i}_zone"},
-                ],
-                exit_fogs=[
-                    {"fog_id": f"legacy_{i}_entry", "zone": f"legacy_{i}_zone"},
-                    {"fog_id": f"legacy_{i}_exit", "zone": f"legacy_{i}_zone"},
-                ],
-            )
-        )
-
-    return pool
-
-
-class TestSharedEntranceSimulation:
-    """Verify shared entrance merges work in full DAG generation."""
-
-    def test_generation_succeeds_with_shared_entrance_clusters(self):
-        """DAG generation succeeds when merge pool includes shared-entrance clusters."""
-        pool = make_cluster_pool_with_shared_entrance()
-        config = Config()
-        config.structure.split_probability = 0.0
-        config.structure.merge_probability = 0.5
-        config.structure.min_layers = 6
-        config.structure.max_layers = 10
-        # Relax requirements for the test pool
-        config.requirements.legacy_dungeons = 0
-        config.requirements.bosses = 0
-        config.requirements.mini_dungeons = 0
-        config.requirements.major_bosses = 0
-
-        # Run seeds — at least one should succeed with shared entrance merges
-        success = False
-        for seed in range(30):
-            try:
-                dag, _log = generate_dag(
-                    config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
-                )
-                assert len(dag.nodes) >= 3  # at least start + 1 node + end
-                success = True
-                break
-            except GenerationError:
-                continue
-        assert success, "No seed produced a valid DAG with shared entrance merges"
-
-
-class TestEntryAsExitSimulation:
-    """Verify entry-as-exit boss arenas work in full DAG generation."""
-
-    def _make_pool_with_entry_as_exit(self) -> ClusterPool:
-        """Create a pool with entry-as-exit boss arenas."""
-        pool = ClusterPool()
-
-        # Start with 2 exits
-        pool.add(
-            make_cluster(
-                "chapel_start",
-                zones=["chapel"],
-                cluster_type="start",
-                weight=1,
-                entry_fogs=[],
-                exit_fogs=[
-                    {"fog_id": "start_exit_1", "zone": "chapel"},
-                    {"fog_id": "start_exit_2", "zone": "chapel"},
-                ],
-            )
-        )
-
-        # Final boss
-        pool.add(
-            make_cluster(
-                "erdtree_boss",
-                zones=["leyndell_erdtree"],
-                cluster_type="final_boss",
-                weight=5,
-                entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
-                exit_fogs=[],
-            )
-        )
-
-        # Boss arenas with entry-as-exit (split-capable via the mechanism)
-        for i in range(6):
-            pool.add(
-                make_cluster(
-                    f"eae_boss_{i}",
-                    zones=[f"eae_boss_{i}_zone"],
-                    cluster_type="boss_arena",
-                    weight=3,
-                    entry_fogs=[
-                        {"fog_id": f"eae_boss_{i}_entry", "zone": f"eae_boss_{i}_zone"},
-                    ],
-                    exit_fogs=[
-                        {"fog_id": f"eae_boss_{i}_entry", "zone": f"eae_boss_{i}_zone"},
-                        {"fog_id": f"eae_boss_{i}_exit", "zone": f"eae_boss_{i}_zone"},
-                    ],
-                    allow_entry_as_exit=True,
-                )
-            )
-
-        # Merge-compatible boss arenas (2 entries + shared entrance)
-        # Need enough to survive passant consumption (they're now also passant-eligible)
-        for i in range(8):
-            pool.add(
-                make_cluster(
-                    f"merge_boss_{i}",
-                    zones=[f"merge_boss_{i}_zone"],
-                    cluster_type="boss_arena",
-                    weight=3,
-                    entry_fogs=[
-                        {
-                            "fog_id": f"merge_boss_{i}_entry_a",
-                            "zone": f"merge_boss_{i}_zone",
-                        },
-                        {
-                            "fog_id": f"merge_boss_{i}_entry_b",
-                            "zone": f"merge_boss_{i}_zone",
-                        },
-                    ],
-                    exit_fogs=[
-                        {
-                            "fog_id": f"merge_boss_{i}_entry_a",
-                            "zone": f"merge_boss_{i}_zone",
-                        },
-                        {
-                            "fog_id": f"merge_boss_{i}_entry_b",
-                            "zone": f"merge_boss_{i}_zone",
-                        },
-                        {
-                            "fog_id": f"merge_boss_{i}_exit",
-                            "zone": f"merge_boss_{i}_zone",
-                        },
-                    ],
-                    allow_shared_entrance=True,
-                )
-            )
-
-        # Mini dungeons (passant-capable)
-        for i in range(10):
-            pool.add(
-                make_cluster(
-                    f"mini_{i}",
-                    zones=[f"mini_{i}_zone"],
-                    cluster_type="mini_dungeon",
-                    weight=5,
-                    entry_fogs=[
-                        {"fog_id": f"mini_{i}_entry", "zone": f"mini_{i}_zone"},
-                    ],
-                    exit_fogs=[
-                        {"fog_id": f"mini_{i}_entry", "zone": f"mini_{i}_zone"},
-                        {"fog_id": f"mini_{i}_exit", "zone": f"mini_{i}_zone"},
-                    ],
-                )
-            )
-
-        # Merge-compatible clusters (shared entrance)
-        # Need enough to survive passant consumption (they're now also passant-eligible)
-        for i in range(10):
-            pool.add(
-                make_cluster(
-                    f"merge_{i}",
-                    zones=[f"merge_{i}_zone"],
-                    cluster_type="mini_dungeon",
-                    weight=5,
-                    entry_fogs=[
-                        {"fog_id": f"merge_{i}_entry_a", "zone": f"merge_{i}_zone"},
-                        {"fog_id": f"merge_{i}_entry_b", "zone": f"merge_{i}_zone"},
-                    ],
-                    exit_fogs=[
-                        {"fog_id": f"merge_{i}_entry_a", "zone": f"merge_{i}_zone"},
-                        {"fog_id": f"merge_{i}_entry_b", "zone": f"merge_{i}_zone"},
-                        {"fog_id": f"merge_{i}_exit", "zone": f"merge_{i}_zone"},
-                    ],
-                    allow_shared_entrance=True,
-                )
-            )
-
-        return pool
-
-    def test_generation_succeeds_with_entry_as_exit(self):
-        """DAG generation succeeds with entry-as-exit boss arenas."""
-        pool = self._make_pool_with_entry_as_exit()
-        config = Config()
-        config.structure.split_probability = 0.3
-        config.structure.merge_probability = 0.3
-        config.structure.min_layers = 6
-        config.structure.max_layers = 10
-        config.structure.max_branches = 2
-        config.requirements.legacy_dungeons = 0
-        config.requirements.bosses = 2  # plan boss_arena layers
-        config.requirements.mini_dungeons = 0
-        config.requirements.major_bosses = 0
-
-        success = False
-        for seed in range(30):
-            try:
-                dag, _log = generate_dag(
-                    config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
-                )
-                assert len(dag.nodes) >= 3
-                success = True
-                break
-            except GenerationError:
-                continue
-        assert success, "No seed produced a valid DAG with entry-as-exit arenas"
-
-    def test_boss_arena_used_as_split_node(self):
-        """At least some seeds produce a DAG where a boss_arena acts as split node."""
-        pool = self._make_pool_with_entry_as_exit()
-        config = Config()
-        config.structure.split_probability = 1.0  # force splits
-        config.structure.merge_probability = 0.3
-        config.structure.min_layers = 4
-        config.structure.max_layers = 6
-        config.structure.max_branches = 2
-        config.requirements.legacy_dungeons = 0
-        config.requirements.bosses = 3  # plan boss_arena layers so splits can use them
-        config.requirements.mini_dungeons = 0
-
-        boss_arena_split_count = 0
-        for seed in range(50):
-            try:
-                dag, _log = generate_dag(
-                    config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
-                )
-                for node in dag.nodes.values():
-                    if node.cluster.type == "boss_arena" and len(node.exit_fogs) >= 2:
-                        # Count outgoing edges to verify it's actually a split
-                        out_edges = [e for e in dag.edges if e.source_id == node.id]
-                        if len(out_edges) >= 2:
-                            boss_arena_split_count += 1
-            except GenerationError:
-                pass  # Some seeds may fail, that's OK
-
-        assert (
-            boss_arena_split_count > 0
-        ), "No seeds produced a boss_arena split node (expected at least 1 in 50 seeds)"
-
-
-# =============================================================================
-# Cluster-first selection tests
-# =============================================================================
 
 
 class TestFilterPassantIncompatible:
@@ -2863,514 +1359,6 @@ class TestPickClusterUniform:
         # Each should be roughly 1000 +/- 200
         for count in counts.values():
             assert 800 < count < 1200
-
-
-class TestDetermineOperation:
-    """Tests for determine_operation."""
-
-    def test_passant_when_cluster_cant_split_or_merge(self):
-        """Returns PASSANT when cluster has no split/merge capability."""
-        cluster = make_cluster(
-            "c1",
-            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
-            exit_fogs=[
-                {"fog_id": "e1", "zone": "z1"},
-                {"fog_id": "x1", "zone": "z1"},
-            ],
-        )
-        config = Config()
-        config.structure.split_probability = 1.0
-        config.structure.merge_probability = 1.0
-        branches = [Branch("b0", "start", FogRef("x", "z"))]
-        op, fan = determine_operation(cluster, branches, config, random.Random(42))
-        assert op == LayerOperation.PASSANT
-
-    def test_split_when_cluster_can_split(self):
-        """Returns SPLIT when cluster has 2+ exits and probability hits."""
-        cluster = make_cluster(
-            "c1",
-            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
-            exit_fogs=[
-                {"fog_id": "x1", "zone": "z1"},
-                {"fog_id": "x2", "zone": "z1"},
-                {"fog_id": "x3", "zone": "z1"},
-            ],
-        )
-        config = Config()
-        config.structure.split_probability = 1.0
-        config.structure.max_branches = 3
-        config.structure.max_parallel_paths = 3
-        branches = [Branch("b0", "start", FogRef("x", "z"))]
-        op, fan = determine_operation(cluster, branches, config, random.Random(42))
-        assert op == LayerOperation.SPLIT
-        assert fan >= 2
-
-    def test_no_split_at_max_paths(self):
-        """Never returns SPLIT when already at max_parallel_paths."""
-        cluster = make_cluster(
-            "c1",
-            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
-            exit_fogs=[
-                {"fog_id": "x1", "zone": "z1"},
-                {"fog_id": "x2", "zone": "z1"},
-            ],
-        )
-        config = Config()
-        config.structure.split_probability = 1.0
-        config.structure.merge_probability = 0.0
-        config.structure.max_parallel_paths = 2
-        branches = [
-            Branch("b0", "n0", FogRef("x", "z")),
-            Branch("b1", "n1", FogRef("y", "z")),
-        ]
-        op, fan = determine_operation(cluster, branches, config, random.Random(42))
-        assert op == LayerOperation.PASSANT
-
-    def test_merge_when_cluster_can_merge(self):
-        """Returns MERGE when cluster has 2+ entries and valid merge pair."""
-        cluster = make_cluster(
-            "c1",
-            entry_fogs=[
-                {"fog_id": "e1", "zone": "z1"},
-                {"fog_id": "e2", "zone": "z1"},
-            ],
-            exit_fogs=[
-                {"fog_id": "x1", "zone": "z1"},
-            ],
-            allow_shared_entrance=True,
-        )
-        config = Config()
-        config.structure.merge_probability = 1.0
-        config.structure.split_probability = 0.0
-        config.structure.max_branches = 2
-        config.structure.max_parallel_paths = 3
-        branches = [
-            Branch("b0", "n0", FogRef("x", "z")),
-            Branch("b1", "n1", FogRef("y", "z")),
-        ]
-        op, fan = determine_operation(cluster, branches, config, random.Random(42))
-        assert op == LayerOperation.MERGE
-
-    def test_both_split_and_merge_priority_cascade(self):
-        """When split_prob + merge_prob > 1.0, acts as priority cascade."""
-        # Cluster that can both split (3 exits) and merge (2 entries, shared)
-        cluster = make_cluster(
-            "c1",
-            entry_fogs=[
-                {"fog_id": "e1", "zone": "z1"},
-                {"fog_id": "e2", "zone": "z1"},
-            ],
-            exit_fogs=[
-                {"fog_id": "x1", "zone": "z1"},
-                {"fog_id": "x2", "zone": "z1"},
-                {"fog_id": "x3", "zone": "z1"},
-            ],
-            allow_shared_entrance=True,
-        )
-        config = Config()
-        config.structure.split_probability = 0.9
-        config.structure.merge_probability = 0.5
-        config.structure.max_branches = 3
-        config.structure.max_parallel_paths = 4
-        branches = [
-            Branch("b0", "n0", FogRef("x", "z")),
-            Branch("b1", "n1", FogRef("y", "z")),
-        ]
-
-        # Run many times and check distribution
-        counts: dict[LayerOperation, int] = {
-            LayerOperation.SPLIT: 0,
-            LayerOperation.MERGE: 0,
-            LayerOperation.PASSANT: 0,
-        }
-        for seed in range(1000):
-            op, _fan = determine_operation(
-                cluster, branches, config, random.Random(seed)
-            )
-            counts[op] += 1
-
-        # With 0.9 + 0.5 = 1.4, passant should never be reached
-        assert counts[LayerOperation.PASSANT] == 0
-        # Split should get ~90%, merge ~10%
-        assert counts[LayerOperation.SPLIT] > 800
-        assert counts[LayerOperation.MERGE] > 50
-
-    def test_forced_split_via_spacing_threshold(self):
-        """max_branch_spacing triggers forced SPLIT when not saturated."""
-        cluster = make_cluster(
-            "c1",
-            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
-            exit_fogs=[
-                {"fog_id": "x1", "zone": "z1"},
-                {"fog_id": "x2", "zone": "z1"},
-                {"fog_id": "x3", "zone": "z1"},
-            ],
-        )
-        config = Config()
-        config.structure.split_probability = 0.0  # Would normally never split
-        config.structure.max_parallel_paths = 3
-        config.structure.max_branch_spacing = 4
-        # 1 branch with stale counter exceeding threshold, not saturated
-        branches = [
-            Branch("b0", "start", FogRef("x", "z"), layers_since_last_split=5),
-        ]
-        op, fan = determine_operation(
-            cluster,
-            branches,
-            config,
-            random.Random(42),
-        )
-        assert op == LayerOperation.SPLIT
-        assert fan >= 2
-
-    def test_forced_split_fallback_when_cant_split(self):
-        """Forced split falls back to PASSANT when cluster can't split."""
-        # Cluster with 1 exit -- can't split
-        cluster = make_cluster(
-            "c1",
-            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
-            exit_fogs=[{"fog_id": "x1", "zone": "z1"}],
-        )
-        config = Config()
-        config.structure.split_probability = 0.0
-        config.structure.max_branch_spacing = 4
-        branches = [
-            Branch("b0", "start", FogRef("x", "z"), layers_since_last_split=5),
-        ]
-        op, fan = determine_operation(
-            cluster,
-            branches,
-            config,
-            random.Random(42),
-        )
-        assert op == LayerOperation.PASSANT
-
-    def test_prefer_merge_overrides_probability(self):
-        """prefer_merge=True bypasses probability roll for MERGE."""
-        cluster = make_cluster(
-            "c1",
-            entry_fogs=[
-                {"fog_id": "e1", "zone": "z1"},
-                {"fog_id": "e2", "zone": "z1"},
-            ],
-            exit_fogs=[{"fog_id": "x1", "zone": "z1"}],
-            allow_shared_entrance=True,
-        )
-        config = Config()
-        config.structure.merge_probability = 0.0  # Would normally never merge
-        config.structure.max_parallel_paths = 3
-        branches = [
-            Branch("b0", "n0", FogRef("x", "z")),
-            Branch("b1", "n1", FogRef("y", "z")),
-        ]
-        op, fan = determine_operation(
-            cluster,
-            branches,
-            config,
-            random.Random(42),
-            prefer_merge=True,
-        )
-        assert op == LayerOperation.MERGE
-
-    def test_force_none_uses_normal_logic(self):
-        """force=None (default) uses normal probability logic for multi-branch."""
-        cluster = make_cluster(
-            "c1",
-            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
-            exit_fogs=[
-                {"fog_id": "x1", "zone": "z1"},
-                {"fog_id": "x2", "zone": "z1"},
-                {"fog_id": "x3", "zone": "z1"},
-            ],
-        )
-        config = Config()
-        config.structure.split_probability = 0.0  # Never split
-        config.structure.merge_probability = 0.0
-        config.structure.max_parallel_paths = 3
-        # Need 2+ branches to test probability roll (single branch forces split)
-        branches = [
-            Branch("b0", "n0", FogRef("x", "z")),
-            Branch("b1", "n1", FogRef("y", "z")),
-        ]
-        op, fan = determine_operation(
-            cluster,
-            branches,
-            config,
-            random.Random(42),
-        )
-        assert op == LayerOperation.PASSANT
-
-    def test_single_branch_forces_split(self):
-        """Single branch outside convergence forces SPLIT when cluster can split."""
-        cluster = make_cluster(
-            "c1",
-            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
-            exit_fogs=[
-                {"fog_id": "x1", "zone": "z1"},
-                {"fog_id": "x2", "zone": "z1"},
-                {"fog_id": "x3", "zone": "z1"},
-            ],
-        )
-        config = Config()
-        config.structure.split_probability = 0.0  # Would normally never split
-        config.structure.max_parallel_paths = 3
-        branches = [Branch("b0", "start", FogRef("x", "z"))]
-        op, fan = determine_operation(
-            cluster,
-            branches,
-            config,
-            random.Random(42),
-        )
-        assert op == LayerOperation.SPLIT
-        assert fan >= 2
-
-    def test_single_branch_no_force_during_convergence(self):
-        """Single branch during convergence (prefer_merge) does not force split."""
-        cluster = make_cluster(
-            "c1",
-            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
-            exit_fogs=[
-                {"fog_id": "x1", "zone": "z1"},
-                {"fog_id": "x2", "zone": "z1"},
-                {"fog_id": "x3", "zone": "z1"},
-            ],
-        )
-        config = Config()
-        config.structure.split_probability = 0.0
-        config.structure.max_parallel_paths = 3
-        branches = [Branch("b0", "start", FogRef("x", "z"))]
-        op, fan = determine_operation(
-            cluster,
-            branches,
-            config,
-            random.Random(42),
-            prefer_merge=True,
-        )
-        assert op == LayerOperation.PASSANT
-
-    def test_single_branch_passant_when_cant_split(self):
-        """Single branch falls back to PASSANT when cluster can't split."""
-        cluster = make_cluster(
-            "c1",
-            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
-            exit_fogs=[
-                {"fog_id": "e1", "zone": "z1"},
-                {"fog_id": "x1", "zone": "z1"},
-            ],
-        )
-        config = Config()
-        config.structure.split_probability = 0.0
-        config.structure.max_parallel_paths = 3
-        branches = [Branch("b0", "start", FogRef("x", "z"))]
-        op, fan = determine_operation(
-            cluster,
-            branches,
-            config,
-            random.Random(42),
-        )
-        assert op == LayerOperation.PASSANT
-
-
-# =============================================================================
-# Prerequisite injection tests
-# =============================================================================
-
-
-class TestInjectPrerequisite:
-    """Tests for _inject_prerequisite function."""
-
-    def test_no_prerequisite_is_noop(self):
-        """No prerequisite → returns branches and layer unchanged."""
-        pool = make_cluster_pool()
-        dag = Dag(seed=1)
-        dag.add_node(
-            DagNode(
-                id="merge_node",
-                cluster=pool.get_by_type("mini_dungeon")[0],
-                layer=5,
-                tier=10,
-                entry_fogs=[FogRef("e", "z")],
-                exit_fogs=[FogRef("x", "z")],
-            )
-        )
-        branches = [Branch("b0", "merge_node", FogRef("x", "z"))]
-
-        # pcr_boss has no requires
-        end_cluster = pool.get_by_id("pcr_boss")
-        assert end_cluster is not None
-
-        result_branches, result_layer = _inject_prerequisite(
-            dag, branches, 6, end_cluster, pool, set(), random.Random(42)
-        )
-        assert result_branches is branches
-        assert result_layer == 6
-
-    def test_prerequisite_injects_node(self):
-        """Prerequisite cluster is injected as passant node."""
-        pool = make_cluster_pool()
-        dag = Dag(seed=1)
-        dag.add_node(
-            DagNode(
-                id="merge_node",
-                cluster=pool.get_by_type("mini_dungeon")[0],
-                layer=5,
-                tier=10,
-                entry_fogs=[FogRef("e", "z")],
-                exit_fogs=[FogRef("x", "z")],
-            )
-        )
-        branches = [Branch("b0", "merge_node", FogRef("x", "z"))]
-
-        end_cluster = pool.get_by_id("erdtree_boss")
-        assert end_cluster is not None
-        assert end_cluster.requires == "farumazula_maliketh"
-
-        result_branches, result_layer = _inject_prerequisite(
-            dag, branches, 6, end_cluster, pool, set(), random.Random(42)
-        )
-
-        # New node should be added
-        assert "node_6_a" in dag.nodes
-        prereq_node = dag.nodes["node_6_a"]
-        assert "farumazula_maliketh" in prereq_node.cluster.zones
-
-        # Branch updated
-        assert len(result_branches) == 1
-        assert result_branches[0].current_node_id == "node_6_a"
-        assert result_layer == 7
-
-        # Edge from merge_node to prereq
-        assert any(
-            e.source_id == "merge_node" and e.target_id == "node_6_a" for e in dag.edges
-        )
-
-    def test_prerequisite_unavailable_raises(self):
-        """Raises GenerationError if prerequisite zones already used."""
-        pool = make_cluster_pool()
-        dag = Dag(seed=1)
-        dag.add_node(
-            DagNode(
-                id="merge_node",
-                cluster=pool.get_by_type("mini_dungeon")[0],
-                layer=5,
-                tier=10,
-                entry_fogs=[FogRef("e", "z")],
-                exit_fogs=[FogRef("x", "z")],
-            )
-        )
-        branches = [Branch("b0", "merge_node", FogRef("x", "z"))]
-
-        end_cluster = pool.get_by_id("erdtree_boss")
-        assert end_cluster is not None
-
-        # Mark maliketh zones as used
-        used_zones = {"farumazula_maliketh"}
-
-        with pytest.raises(GenerationError, match="Prerequisite cluster not available"):
-            _inject_prerequisite(
-                dag,
-                branches,
-                6,
-                end_cluster,
-                pool,
-                used_zones,
-                random.Random(42),
-            )
-
-
-class TestPrerequisiteInGenerateDag:
-    """Tests for prerequisite behavior in full generate_dag."""
-
-    def test_erdtree_boss_has_maliketh_on_path(self):
-        """When leyndell_erdtree is final boss, Maliketh appears on mandatory path."""
-        pool = make_cluster_pool()
-        config = Config()
-        config.seed = 42
-        config.structure.min_layers = 3
-        config.structure.max_layers = 3
-        config.structure.max_branches = 1
-        config.structure.split_probability = 0.0
-        config.structure.merge_probability = 0.0
-        config.structure.final_boss_candidates = {"leyndell_erdtree": 1}
-
-        dag, _log = generate_dag(
-            config, pool, seed=42, boss_candidates=_boss_candidates(pool)
-        )
-
-        # Maliketh should exist in the DAG and be an immediate predecessor of end
-        maliketh_nodes = [
-            nid for nid, n in dag.nodes.items() if n.cluster.id == "maliketh"
-        ]
-        assert len(maliketh_nodes) >= 1, "Maliketh not found in DAG"
-
-        # Maliketh should have an edge to end
-        end_incoming = dag.get_incoming_edges("end")
-        end_sources = {e.source_id for e in end_incoming}
-        assert any(
-            mid in end_sources for mid in maliketh_nodes
-        ), "Maliketh is not an immediate predecessor of end"
-
-    def test_maliketh_not_randomly_placed_when_reserved(self):
-        """Maliketh zones are reserved and not used for intermediate layers."""
-        pool = make_cluster_pool()
-        config = Config()
-        config.structure.min_layers = 3
-        config.structure.max_layers = 5
-        config.structure.max_branches = 1
-        config.structure.split_probability = 0.0
-        config.structure.merge_probability = 0.0
-        config.structure.final_boss_candidates = {"leyndell_erdtree": 1}
-
-        # Run many seeds to check Maliketh is never on an optional branch
-        for seed in range(50):
-            try:
-                dag, _log = generate_dag(
-                    config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
-                )
-            except GenerationError:
-                continue
-
-            # Verify end is erdtree
-            end_node = dag.nodes["end"]
-            if "leyndell_erdtree" not in end_node.cluster.zones:
-                continue
-
-            # Maliketh should appear exactly once: as the prereq node
-            maliketh_nodes = [
-                nid
-                for nid, n in dag.nodes.items()
-                if "farumazula_maliketh" in n.cluster.zones
-            ]
-            assert len(maliketh_nodes) == 1
-            # And it should be the immediate predecessor of end
-            end_incoming = dag.get_incoming_edges("end")
-            end_sources = {e.source_id for e in end_incoming}
-            assert maliketh_nodes[0] in end_sources
-
-    def test_no_prerequisite_for_pcr_boss(self):
-        """PCR boss (no requires) doesn't inject any prerequisite."""
-        pool = make_cluster_pool()
-        config = Config()
-        config.seed = 42
-        config.structure.min_layers = 3
-        config.structure.max_layers = 3
-        config.structure.max_branches = 1
-        config.structure.split_probability = 0.0
-        config.structure.merge_probability = 0.0
-        config.structure.final_boss_candidates = {"enirilim_radahn": 1}
-
-        dag, _log = generate_dag(
-            config, pool, seed=42, boss_candidates=_boss_candidates(pool)
-        )
-
-        # Maliketh should NOT be on the path (it's available as major_boss
-        # but not required)
-        end_node = dag.nodes["end"]
-        assert "enirilim_radahn" in end_node.cluster.zones
-
-        # Basic structural check — all nodes reachable, all can reach end
-        errors = dag.validate_structure()
-        assert not errors, f"DAG structure errors: {errors}"
 
 
 class TestPickClusterUniformReservedZones:
@@ -3601,62 +1589,10 @@ class TestProximityGroups:
         # Both entries block the only exit → can't merge
         assert can_be_merge_node(cluster, 2) is False
 
-    def test_pick_entry_with_max_exits_respects_proximity(self):
-        """pick_entry_with_max_exits skips entries where proximity blocks exits."""
-        cluster = make_cluster(
-            "c1",
-            entry_fogs=[
-                {"fog_id": "e1", "zone": "z"},
-                {"fog_id": "e2", "zone": "z"},
-            ],
-            exit_fogs=[
-                {"fog_id": "x1", "zone": "z"},
-                {"fog_id": "x2", "zone": "z"},
-            ],
-            proximity_groups=[["e1", "x1", "x2"]],
-        )
-        rng = random.Random(42)
-        # e1 blocks both exits; e2 blocks neither
-        result = pick_entry_with_max_exits(cluster, 2, rng)
-        assert result is not None
-        assert result["fog_id"] == "e2"
-
-    def test_pick_entry_and_exits_filters_proximity(self):
-        """_pick_entry_and_exits_for_node excludes proximity-blocked exits."""
-        cluster = make_cluster(
-            "c1",
-            entry_fogs=[{"fog_id": "e1", "zone": "z"}],
-            exit_fogs=[
-                {"fog_id": "x1", "zone": "z"},
-                {"fog_id": "x2", "zone": "z"},
-            ],
-            proximity_groups=[["e1", "x1"]],
-        )
-        rng = random.Random(42)
-        entry, exits = _pick_entry_and_exits_for_node(cluster, 1, rng)
-        assert entry.fog_id == "e1"
-        assert len(exits) == 1
-        assert exits[0].fog_id == "x2"
-
-    def test_entry_as_exit_proximity_partial_block(self):
-        """Entry-as-exit: proximity blocks some but not all exits."""
-        cluster = make_cluster(
-            "c1",
-            entry_fogs=[{"fog_id": "e1", "zone": "z"}],
-            exit_fogs=[
-                {"fog_id": "x1", "zone": "z"},
-                {"fog_id": "x2", "zone": "z"},
-                {"fog_id": "e1", "zone": "z"},
-            ],
-            allow_entry_as_exit=True,
-            proximity_groups=[["e1", "x1"]],
-        )
-        rng = random.Random(42)
-        entry, exits = _pick_entry_and_exits_for_node(cluster, 1, rng)
-        assert entry.fog_id == "e1"
-        # x1 and e1 blocked by proximity with e1; only x2 survives
-        assert len(exits) == 1
-        assert exits[0].fog_id == "x2"
+    # NOTE: test_pick_entry_with_max_exits_respects_proximity and
+    # test_pick_entry_and_exits_filters_proximity deleted -- those functions
+    # (pick_entry_with_max_exits, _pick_entry_and_exits_for_node) no longer
+    # exist in generator.py after the exit-driven cutover.
 
 
 class TestAllowedEntriesExits:
@@ -3759,1877 +1695,6 @@ class TestAllowedEntriesExits:
         assert can_be_passant_node(cluster) is True
 
 
-# =============================================================================
-# Cross-link pipeline tests
-# =============================================================================
-
-
-class TestCrosslinkPipeline:
-    """Tests for cross-link integration in generate_dag."""
-
-    def _make_pool_with_surplus_entries(self) -> ClusterPool:
-        """Create a pool where clusters have surplus entry fogs.
-
-        This enables cross-link generation since surplus entries on
-        targets and surplus exits on sources are both needed.
-        """
-        pool = ClusterPool()
-
-        # Start cluster with 2 exits
-        pool.add(
-            make_cluster(
-                "chapel_start",
-                zones=["chapel"],
-                cluster_type="start",
-                weight=1,
-                entry_fogs=[],
-                exit_fogs=[
-                    {"fog_id": "start_exit_1", "zone": "chapel"},
-                    {"fog_id": "start_exit_2", "zone": "chapel"},
-                ],
-            )
-        )
-
-        # Final boss
-        pool.add(
-            make_cluster(
-                "pcr_boss",
-                zones=["enirilim_radahn"],
-                cluster_type="final_boss",
-                weight=5,
-                entry_fogs=[
-                    {"fog_id": "pcr_entry", "zone": "enirilim_radahn"},
-                ],
-                exit_fogs=[],
-            )
-        )
-
-        # Mini dungeons with 2 entries and 2 exits (surplus after 1 consumed)
-        for i in range(10):
-            pool.add(
-                make_cluster(
-                    f"mini_{i}",
-                    zones=[f"mini_{i}_zone"],
-                    cluster_type="mini_dungeon",
-                    weight=5,
-                    entry_fogs=[
-                        {"fog_id": f"mini_{i}_entry", "zone": f"mini_{i}_zone"},
-                        {"fog_id": f"mini_{i}_entry2", "zone": f"mini_{i}_zone"},
-                    ],
-                    exit_fogs=[
-                        {"fog_id": f"mini_{i}_exit", "zone": f"mini_{i}_zone"},
-                        {"fog_id": f"mini_{i}_exit2", "zone": f"mini_{i}_zone"},
-                    ],
-                )
-            )
-
-        # Boss arenas with 2 entries and 2 exits
-        for i in range(6):
-            pool.add(
-                make_cluster(
-                    f"boss_{i}",
-                    zones=[f"boss_{i}_zone"],
-                    cluster_type="boss_arena",
-                    weight=3,
-                    entry_fogs=[
-                        {"fog_id": f"boss_{i}_entry", "zone": f"boss_{i}_zone"},
-                        {"fog_id": f"boss_{i}_entry2", "zone": f"boss_{i}_zone"},
-                    ],
-                    exit_fogs=[
-                        {"fog_id": f"boss_{i}_exit", "zone": f"boss_{i}_zone"},
-                        {"fog_id": f"boss_{i}_exit2", "zone": f"boss_{i}_zone"},
-                    ],
-                )
-            )
-
-        # Legacy dungeons
-        for i in range(3):
-            pool.add(
-                make_cluster(
-                    f"legacy_{i}",
-                    zones=[f"legacy_{i}_zone"],
-                    cluster_type="legacy_dungeon",
-                    weight=10,
-                    entry_fogs=[
-                        {"fog_id": f"legacy_{i}_entry", "zone": f"legacy_{i}_zone"},
-                        {"fog_id": f"legacy_{i}_entry2", "zone": f"legacy_{i}_zone"},
-                    ],
-                    exit_fogs=[
-                        {"fog_id": f"legacy_{i}_exit", "zone": f"legacy_{i}_zone"},
-                        {"fog_id": f"legacy_{i}_exit2", "zone": f"legacy_{i}_zone"},
-                    ],
-                )
-            )
-
-        return pool
-
-    def test_crosslinks_applied_when_configured(self):
-        """generate_dag adds cross-links when crosslinks=True."""
-        pool = self._make_pool_with_surplus_entries()
-        config = Config.from_dict(
-            {
-                "requirements": {"major_bosses": 0},
-                "structure": {
-                    "crosslinks": True,
-                    "max_parallel_paths": 2,
-                    "split_probability": 0.9,
-                    "min_layers": 4,
-                    "max_layers": 4,
-                },
-            }
-        )
-        dag, _log = generate_dag(
-            config, pool, seed=42, boss_candidates=_boss_candidates(pool)
-        )
-        # With crosslinks enabled and surplus fogs, the DAG should
-        # pass validation and have additional paths from cross-links
-        errors = dag.validate_structure()
-        assert errors == [], f"DAG validation failed: {errors}"
-
-    def test_crosslinks_add_extra_edges(self):
-        """Enabling cross-links adds more edges than disabled with same seed.
-
-        Tries multiple seeds to find one that produces a DAG with eligible
-        cross-link pairs (parallel branches at adjacent layers with surplus fogs).
-        """
-        pool = self._make_pool_with_surplus_entries()
-        base_structure = {
-            "max_parallel_paths": 3,
-            "split_probability": 0.9,
-            "merge_probability": 0.2,
-            "min_layers": 8,
-            "max_layers": 12,
-            "min_branch_age": 2,
-        }
-
-        # Try seeds until we find one that produces cross-links
-        found = False
-        for seed in range(100):
-            config_off = Config.from_dict(
-                {"structure": {**base_structure, "crosslinks": False}}
-            )
-            try:
-                dag_off, _log_off = generate_dag(
-                    config_off,
-                    pool,
-                    seed=seed,
-                    boss_candidates=_boss_candidates(pool),
-                )
-            except Exception:
-                continue
-
-            config_on = Config.from_dict(
-                {"structure": {**base_structure, "crosslinks": True}}
-            )
-            dag_on, _log_on = generate_dag(
-                config_on, pool, seed=seed, boss_candidates=_boss_candidates(pool)
-            )
-
-            if len(dag_on.edges) > len(dag_off.edges):
-                # Verify node count is the same (cross-links don't add nodes)
-                assert len(dag_on.nodes) == len(dag_off.nodes)
-                # Verify DAG is still valid
-                errors = dag_on.validate_structure()
-                assert errors == [], f"DAG validation failed: {errors}"
-                found = True
-                break
-
-        assert found, "No seed produced cross-links — check pool/config setup"
-
-
-# =============================================================================
-# Asymmetric max_exits / max_entrances tests
-# =============================================================================
-
-
-class TestAsymmetricExitsEntrances:
-    """Tests for asymmetric max_exits / max_entrances configuration."""
-
-    @staticmethod
-    def _make_wide_pool() -> ClusterPool:
-        """Create a pool with clusters that have 4+ exits for wide splits."""
-        pool = ClusterPool()
-
-        # Start cluster with 4 exits
-        pool.add(
-            make_cluster(
-                "chapel_start",
-                zones=["chapel"],
-                cluster_type="start",
-                weight=1,
-                entry_fogs=[],
-                exit_fogs=[
-                    {"fog_id": f"start_exit_{i}", "zone": "chapel"} for i in range(4)
-                ],
-            )
-        )
-
-        # Final boss
-        pool.add(
-            make_cluster(
-                "erdtree_boss",
-                zones=["leyndell_erdtree"],
-                cluster_type="final_boss",
-                weight=5,
-                entry_fogs=[{"fog_id": "final_entry", "zone": "leyndell_erdtree"}],
-                exit_fogs=[],
-            )
-        )
-
-        # Merge-capable clusters (2+ entries, 2+ exits)
-        for i in range(30):
-            pool.add(
-                make_cluster(
-                    f"mini_{i}",
-                    zones=[f"mini_{i}_zone"],
-                    cluster_type="mini_dungeon",
-                    weight=3,
-                    entry_fogs=[
-                        {"fog_id": f"mini_{i}_entry_{j}", "zone": f"mini_{i}_zone"}
-                        for j in range(3)
-                    ],
-                    exit_fogs=[
-                        {"fog_id": f"mini_{i}_exit_{j}", "zone": f"mini_{i}_zone"}
-                        for j in range(3)
-                    ],
-                )
-            )
-
-        # Legacy dungeons
-        for i in range(5):
-            pool.add(
-                make_cluster(
-                    f"legacy_{i}",
-                    zones=[f"legacy_{i}_zone"],
-                    cluster_type="legacy_dungeon",
-                    weight=8,
-                    entry_fogs=[
-                        {"fog_id": f"legacy_{i}_entry_{j}", "zone": f"legacy_{i}_zone"}
-                        for j in range(3)
-                    ],
-                    exit_fogs=[
-                        {"fog_id": f"legacy_{i}_exit_{j}", "zone": f"legacy_{i}_zone"}
-                        for j in range(3)
-                    ],
-                )
-            )
-
-        # Boss arenas
-        for i in range(10):
-            pool.add(
-                make_cluster(
-                    f"boss_{i}",
-                    zones=[f"boss_{i}_zone"],
-                    cluster_type="boss_arena",
-                    weight=3,
-                    entry_fogs=[
-                        {"fog_id": f"boss_{i}_entry_{j}", "zone": f"boss_{i}_zone"}
-                        for j in range(2)
-                    ],
-                    exit_fogs=[
-                        {"fog_id": f"boss_{i}_exit_{j}", "zone": f"boss_{i}_zone"}
-                        for j in range(2)
-                    ],
-                )
-            )
-
-        return pool
-
-    def test_asymmetric_config_produces_valid_dag(self):
-        """Asymmetric max_exits=4, max_entrances=2 produces a valid DAG."""
-        pool = self._make_wide_pool()
-        pool.filter_passant_incompatible()
-        config = Config.from_dict(
-            {
-                "structure": {
-                    "max_parallel_paths": 4,
-                    "max_branches": 2,
-                    "max_exits": 4,
-                    "max_entrances": 2,
-                    "min_layers": 4,
-                    "max_layers": 8,
-                    "split_probability": 0.9,
-                    "merge_probability": 0.5,
-                },
-                "requirements": {
-                    "legacy_dungeons": 0,
-                    "bosses": 0,
-                    "mini_dungeons": 0,
-                    "major_bosses": 0,
-                },
-            }
-        )
-
-        successes = 0
-        for seed in range(1, 500):
-            try:
-                dag, _log = generate_dag(
-                    config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
-                )
-                errors = dag.validate_structure()
-                assert errors == [], f"Seed {seed}: {errors}"
-                successes += 1
-                if successes >= 5:
-                    break
-            except GenerationError:
-                continue
-
-        assert successes >= 5, f"Only {successes}/5 DAGs generated successfully"
-
-    def test_max_entrances_limits_merge_fan_in(self):
-        """max_entrances=2 with 4 branches forces multi-step merge convergence."""
-        pool = self._make_wide_pool()
-        pool.filter_passant_incompatible()
-        config = Config.from_dict(
-            {
-                "structure": {
-                    "max_parallel_paths": 4,
-                    "max_branches": 2,
-                    "max_exits": 4,
-                    "max_entrances": 2,
-                    "min_layers": 5,
-                    "max_layers": 10,
-                    "split_probability": 0.9,
-                    "merge_probability": 0.5,
-                },
-                "requirements": {
-                    "legacy_dungeons": 0,
-                    "bosses": 0,
-                    "mini_dungeons": 0,
-                    "major_bosses": 0,
-                },
-            }
-        )
-
-        # With max_entrances=2, merging 4 branches requires at least 2 merge steps.
-        # Check that no merge node has more than 2 incoming edges (fan-in ≤ 2).
-        found_multi_branch = False
-        for seed in range(1, 500):
-            try:
-                dag, _log = generate_dag(
-                    config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
-                )
-            except GenerationError:
-                continue
-
-            # Count incoming edges per node
-            in_degree: dict[str, int] = dict.fromkeys(dag.nodes, 0)
-            for edge in dag.edges:
-                in_degree[edge.target_id] += 1
-
-            # No node should have fan-in > max_entrances
-            for nid, deg in in_degree.items():
-                assert (
-                    deg <= 2
-                ), f"Seed {seed}: node {nid} has fan-in {deg} > max_entrances=2"
-
-            # Check if any node has multiple outgoing edges (split)
-            has_split = any(
-                len({e.target_id for e in dag.get_outgoing_edges(nid)}) > 1
-                for nid in dag.nodes
-            )
-            if has_split:
-                found_multi_branch = True
-                break
-
-        assert found_multi_branch, "No seed produced a multi-branch DAG"
-
-
-def test_execute_passant_layer_carries_counter():
-    """execute_passant_layer preserves layers_since_last_split."""
-    dag = Dag(seed=1)
-    start = DagNode(
-        id="start",
-        cluster=make_cluster(
-            "s",
-            zones=["sz"],
-            cluster_type="start",
-            entry_fogs=[],
-            exit_fogs=[{"fog_id": "sx", "zone": "sz"}],
-        ),
-        layer=0,
-        tier=1,
-        entry_fogs=[],
-        exit_fogs=[FogRef("sx", "sz")],
-    )
-    dag.add_node(start)
-    dag.start_id = "start"
-
-    branches = [
-        Branch("b0", "start", FogRef("sx", "sz"), layers_since_last_split=5),
-    ]
-    passant_cluster = make_cluster(
-        "p1",
-        zones=["p1z"],
-        cluster_type="mini_dungeon",
-        entry_fogs=[{"fog_id": "p1e", "zone": "p1z"}],
-        exit_fogs=[{"fog_id": "p1x", "zone": "p1z"}],
-    )
-    pool = ClusterPool()
-    pool.add(passant_cluster)
-    used_zones: set[str] = {"sz"}
-
-    result = execute_passant_layer(
-        dag,
-        branches,
-        1,
-        "mini_dungeon",
-        pool,
-        used_zones,
-        random.Random(42),
-    )
-    assert result[0].layers_since_last_split == 5
-
-
-def test_execute_merge_layer_carries_counter():
-    """execute_merge_layer: merged branch gets max(sources), passant gets carry."""
-    dag = Dag(seed=1)
-    n0 = DagNode(
-        id="n0",
-        cluster=make_cluster(
-            "c0",
-            zones=["z0"],
-            entry_fogs=[{"fog_id": "e0", "zone": "z0"}],
-            exit_fogs=[{"fog_id": "x0", "zone": "z0"}],
-        ),
-        layer=0,
-        tier=1,
-        entry_fogs=[],
-        exit_fogs=[FogRef("x0", "z0")],
-    )
-    n1 = DagNode(
-        id="n1",
-        cluster=make_cluster(
-            "c1",
-            zones=["z1"],
-            entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
-            exit_fogs=[{"fog_id": "x1", "zone": "z1"}],
-        ),
-        layer=0,
-        tier=1,
-        entry_fogs=[],
-        exit_fogs=[FogRef("x1", "z1")],
-    )
-    n2 = DagNode(
-        id="n2",
-        cluster=make_cluster(
-            "c2",
-            zones=["z2"],
-            entry_fogs=[{"fog_id": "e2", "zone": "z2"}],
-            exit_fogs=[{"fog_id": "x2", "zone": "z2"}],
-        ),
-        layer=0,
-        tier=1,
-        entry_fogs=[],
-        exit_fogs=[FogRef("x2", "z2")],
-    )
-    dag.add_node(n0)
-    dag.add_node(n1)
-    dag.add_node(n2)
-
-    branches = [
-        Branch("b0", "n0", FogRef("x0", "z0"), layers_since_last_split=3),
-        Branch("b1", "n1", FogRef("x1", "z1"), layers_since_last_split=7),
-        Branch("b2", "n2", FogRef("x2", "z2"), layers_since_last_split=2),
-    ]
-    merge_cluster = make_cluster(
-        "mg",
-        zones=["mgz"],
-        cluster_type="mini_dungeon",
-        entry_fogs=[
-            {"fog_id": "mge1", "zone": "mgz"},
-            {"fog_id": "mge2", "zone": "mgz"},
-        ],
-        exit_fogs=[{"fog_id": "mgx", "zone": "mgz"}],
-        allow_shared_entrance=True,
-    )
-    passant_cluster = make_cluster(
-        "pc",
-        zones=["pcz"],
-        cluster_type="mini_dungeon",
-        entry_fogs=[{"fog_id": "pce", "zone": "pcz"}],
-        exit_fogs=[{"fog_id": "pcx", "zone": "pcz"}],
-    )
-    pool = ClusterPool()
-    pool.add(merge_cluster)
-    pool.add(passant_cluster)
-    used_zones: set[str] = {"z0", "z1", "z2"}
-    config = Config()
-    config.structure.max_entrances = 2  # Force merge of only 2, leaving 1 passant
-    config.structure.max_branch_spacing = 0  # Disabled, just testing carry
-
-    result = execute_merge_layer(
-        dag,
-        branches,
-        1,
-        "mini_dungeon",
-        pool,
-        used_zones,
-        random.Random(42),
-        config,
-    )
-    # Result: [merged_branch, passant_branch]
-    assert len(result) == 2
-    merged = [b for b in result if b.id.startswith("merged_")]
-    passant = [b for b in result if not b.id.startswith("merged_")]
-    assert len(merged) == 1
-    assert len(passant) == 1
-    # Merged branch gets max of its source counters
-    assert merged[0].layers_since_last_split == max(
-        b.layers_since_last_split for b in branches if b.id != passant[0].id
-    )
-    # Non-merged branch carries its own counter
-    source = next(b for b in branches if b.id == passant[0].id)
-    assert passant[0].layers_since_last_split == source.layers_since_last_split
-
-
-# =============================================================================
-# update_branch_counters tests
-# =============================================================================
-
-
-def test_counter_update_split():
-    """Split children get 0, other branches get +1."""
-    split_children = [
-        Branch("b0_a", "split", FogRef("a", "z"), layers_since_last_split=999),
-        Branch("b0_b", "split", FogRef("b", "z"), layers_since_last_split=999),
-    ]
-    passant_branches = [
-        Branch("b1", "n2", FogRef("y2", "z"), layers_since_last_split=2),
-    ]
-    update_branch_counters(
-        LayerOperation.SPLIT,
-        split_children=split_children,
-        passant_branches=passant_branches,
-    )
-    assert [b.layers_since_last_split for b in split_children] == [0, 0]
-    assert passant_branches[0].layers_since_last_split == 3
-
-
-def test_counter_update_passant():
-    """All branches get +1."""
-    branches = [
-        Branch("b0", "n0", FogRef("x", "z"), layers_since_last_split=2),
-        Branch("b1", "n1", FogRef("y", "z"), layers_since_last_split=5),
-    ]
-    update_branch_counters(
-        LayerOperation.PASSANT,
-        passant_branches=branches,
-    )
-    assert [b.layers_since_last_split for b in branches] == [3, 6]
-
-
-def test_counter_update_merge():
-    """Merged branch gets max(sources), passant branches get +1."""
-    merged = Branch("merged", "m", FogRef("x", "z"), layers_since_last_split=999)
-    passant = [
-        Branch("b2", "n2", FogRef("y", "z"), layers_since_last_split=1),
-    ]
-    merge_sources = [
-        Branch("b0", "n0", FogRef("a", "z"), layers_since_last_split=3),
-        Branch("b1", "n1", FogRef("b", "z"), layers_since_last_split=7),
-    ]
-    update_branch_counters(
-        LayerOperation.MERGE,
-        passant_branches=passant,
-        merged_branches=(merged, merge_sources),
-    )
-    assert merged.layers_since_last_split == 7
-    assert passant[0].layers_since_last_split == 2
-
-
-# =============================================================================
-# Max branch spacing end-to-end tests
-# =============================================================================
-
-
-def test_forced_split_triggers_at_threshold():
-    """A branch exceeding max_branch_spacing gets a forced split."""
-    start = make_cluster(
-        "start",
-        zones=["start_z"],
-        cluster_type="start",
-        entry_fogs=[],
-        exit_fogs=[{"fog_id": "s_x1", "zone": "start_z"}],
-    )
-    # All clusters are splittable (2+ exits) so the forced split can always fire
-    clusters = []
-    for i in range(20):
-        clusters.append(
-            make_cluster(
-                f"sp{i}",
-                zones=[f"sp{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[{"fog_id": f"sp{i}_e", "zone": f"sp{i}_z"}],
-                exit_fogs=[
-                    {"fog_id": f"sp{i}_x1", "zone": f"sp{i}_z"},
-                    {"fog_id": f"sp{i}_x2", "zone": f"sp{i}_z"},
-                ],
-            )
-        )
-    # Also add merge-capable clusters for the forced merge at near-end
-    for i in range(5):
-        clusters.append(
-            make_cluster(
-                f"mg{i}",
-                zones=[f"mg{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[
-                    {"fog_id": f"mg{i}_e1", "zone": f"mg{i}_z"},
-                    {"fog_id": f"mg{i}_e2", "zone": f"mg{i}_z"},
-                ],
-                exit_fogs=[{"fog_id": f"mg{i}_x", "zone": f"mg{i}_z"}],
-                allow_shared_entrance=True,
-            )
-        )
-    boss = make_cluster(
-        "boss1",
-        zones=["boss_z"],
-        cluster_type="final_boss",
-        entry_fogs=[{"fog_id": "b_e", "zone": "boss_z"}],
-        exit_fogs=[],
-    )
-    pool = ClusterPool()
-    pool.add(start)
-    for c in clusters:
-        pool.add(c)
-    pool.add(boss)
-
-    config = Config()
-    config.structure.final_boss_candidates = {"boss_z": 1}
-    config.structure.max_branch_spacing = 2
-    config.structure.split_probability = 0.0  # Would never split naturally
-    config.structure.merge_probability = 0.0
-    config.structure.max_parallel_paths = 3
-    config.structure.min_layers = 10
-    config.structure.max_layers = 14
-    config.requirements.mini_dungeons = 8
-    config.requirements.bosses = 0
-    config.requirements.legacy_dungeons = 0
-    config.requirements.major_bosses = 0
-
-    # Try multiple seeds since cluster selection is random
-    found_split = False
-    for seed in range(50):
-        try:
-            dag, _log = generate_dag(
-                config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
-            )
-            has_split = any(
-                len({e.target_id for e in dag.get_outgoing_edges(nid)}) > 1
-                for nid in dag.nodes
-            )
-            if has_split:
-                found_split = True
-                break
-        except GenerationError:
-            continue
-
-    assert found_split, "Expected at least one seed to produce a forced split"
-
-
-def test_forced_split_targets_most_stale_branch():
-    """Forced split selects the branch with highest layers_since_last_split.
-
-    Verifies the stale-targeting logic by constructing a scenario with
-    two branches of different ages, then checking which gets split.
-    """
-    dag = Dag(seed=1)
-    # Two nodes at layer 0, simulating two branches with different staleness
-    n_fresh = DagNode(
-        id="n_fresh",
-        cluster=make_cluster(
-            "cf",
-            zones=["zf"],
-            entry_fogs=[{"fog_id": "ef", "zone": "zf"}],
-            exit_fogs=[{"fog_id": "xf", "zone": "zf"}],
-        ),
-        layer=0,
-        tier=1,
-        entry_fogs=[],
-        exit_fogs=[FogRef("xf", "zf")],
-    )
-    n_stale = DagNode(
-        id="n_stale",
-        cluster=make_cluster(
-            "cs",
-            zones=["zs"],
-            entry_fogs=[{"fog_id": "es", "zone": "zs"}],
-            exit_fogs=[{"fog_id": "xs", "zone": "zs"}],
-        ),
-        layer=0,
-        tier=1,
-        entry_fogs=[],
-        exit_fogs=[FogRef("xs", "zs")],
-    )
-    dag.add_node(n_fresh)
-    dag.add_node(n_stale)
-
-    # Branch A: recently split (counter=0), Branch B: stale (counter=5)
-    # Same parent node — anti-micro-merge blocks REBALANCE, forcing SPLIT
-    branches = [
-        Branch("b_fresh", "n_fresh", FogRef("xf", "zf"), layers_since_last_split=0),
-        Branch("b_stale", "n_fresh", FogRef("xs", "zs"), layers_since_last_split=5),
-    ]
-
-    # Splittable cluster (2+ exits)
-    split_cluster = make_cluster(
-        "split_c",
-        zones=["sc_z"],
-        entry_fogs=[{"fog_id": "sc_e", "zone": "sc_z"}],
-        exit_fogs=[
-            {"fog_id": "sc_x1", "zone": "sc_z"},
-            {"fog_id": "sc_x2", "zone": "sc_z"},
-        ],
-    )
-
-    config = Config()
-    config.structure.split_probability = 0.0  # Would never split normally
-    config.structure.max_parallel_paths = 4
-    config.structure.max_branch_spacing = 4  # Threshold at 4, stale has 5
-
-    # determine_operation returns forced SPLIT (not REBALANCE — not saturated)
-    op, fan = determine_operation(
-        split_cluster,
-        branches,
-        config,
-        random.Random(42),
-    )
-    assert op == LayerOperation.SPLIT
-
-    # Simulate the stale-targeting logic from the main loop
-    max_stale_val = max(b.layers_since_last_split for b in branches)
-    stale_indices = [
-        i for i, b in enumerate(branches) if b.layers_since_last_split == max_stale_val
-    ]
-    # Should always pick branch index 1 (the stale one)
-    assert stale_indices == [1]
-    # Even with different RNG seeds, the only candidate is b_stale
-    for seed in range(10):
-        split_idx = random.Random(seed).choice(stale_indices)
-        assert branches[split_idx].id == "b_stale"
-
-
-def test_rebalance_when_saturated():
-    """When max_parallel_paths is reached, REBALANCE merges + splits on same layer."""
-    start = make_cluster(
-        "start",
-        zones=["start_z"],
-        cluster_type="start",
-        entry_fogs=[],
-        exit_fogs=[
-            {"fog_id": "s_x1", "zone": "start_z"},
-            {"fog_id": "s_x2", "zone": "start_z"},
-            {"fog_id": "s_x3", "zone": "start_z"},
-        ],
-    )
-    clusters_list = []
-    for i in range(30):
-        clusters_list.append(
-            make_cluster(
-                f"sp{i}",
-                zones=[f"sp{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[{"fog_id": f"sp{i}_e", "zone": f"sp{i}_z"}],
-                exit_fogs=[
-                    {"fog_id": f"sp{i}_x1", "zone": f"sp{i}_z"},
-                    {"fog_id": f"sp{i}_x2", "zone": f"sp{i}_z"},
-                ],
-            )
-        )
-    for i in range(10):
-        clusters_list.append(
-            make_cluster(
-                f"mg{i}",
-                zones=[f"mg{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[
-                    {"fog_id": f"mg{i}_e1", "zone": f"mg{i}_z"},
-                    {"fog_id": f"mg{i}_e2", "zone": f"mg{i}_z"},
-                ],
-                exit_fogs=[{"fog_id": f"mg{i}_x", "zone": f"mg{i}_z"}],
-                allow_shared_entrance=True,
-            )
-        )
-    boss = make_cluster(
-        "boss1",
-        zones=["boss_z"],
-        cluster_type="final_boss",
-        entry_fogs=[{"fog_id": "b_e", "zone": "boss_z"}],
-        exit_fogs=[],
-    )
-    pool = ClusterPool()
-    pool.add(start)
-    for c in clusters_list:
-        pool.add(c)
-    pool.add(boss)
-
-    config = Config()
-    config.structure.final_boss_candidates = {"boss_z": 1}
-    config.structure.max_branch_spacing = 3
-    config.structure.split_probability = 0.0
-    config.structure.merge_probability = 0.0
-    config.structure.max_parallel_paths = 3  # Start saturates with 3 exits
-    config.structure.min_layers = 10
-    config.structure.max_layers = 14
-    config.requirements.mini_dungeons = 8
-    config.requirements.bosses = 0
-    config.requirements.legacy_dungeons = 0
-    config.requirements.major_bosses = 0
-
-    # Should succeed — REBALANCE handles spacing at max branch count
-    success = False
-    for seed in range(50):
-        try:
-            dag, _log = generate_dag(
-                config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
-            )
-            assert dag.end_id
-            success = True
-            break
-        except GenerationError:
-            continue
-    assert success, "No seed produced a valid DAG with REBALANCE when saturated"
-
-
-def test_forced_merge_bypasses_min_branch_age():
-    """Forced merge for spacing ignores min_branch_age."""
-    start = make_cluster(
-        "start",
-        zones=["start_z"],
-        cluster_type="start",
-        entry_fogs=[],
-        exit_fogs=[
-            {"fog_id": "s_x1", "zone": "start_z"},
-            {"fog_id": "s_x2", "zone": "start_z"},
-        ],
-    )
-    clusters_list = []
-    for i in range(20):
-        clusters_list.append(
-            make_cluster(
-                f"sp{i}",
-                zones=[f"sp{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[{"fog_id": f"sp{i}_e", "zone": f"sp{i}_z"}],
-                exit_fogs=[
-                    {"fog_id": f"sp{i}_x1", "zone": f"sp{i}_z"},
-                    {"fog_id": f"sp{i}_x2", "zone": f"sp{i}_z"},
-                ],
-            )
-        )
-    for i in range(5):
-        clusters_list.append(
-            make_cluster(
-                f"mg{i}",
-                zones=[f"mg{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[
-                    {"fog_id": f"mg{i}_e1", "zone": f"mg{i}_z"},
-                    {"fog_id": f"mg{i}_e2", "zone": f"mg{i}_z"},
-                ],
-                exit_fogs=[{"fog_id": f"mg{i}_x", "zone": f"mg{i}_z"}],
-                allow_shared_entrance=True,
-            )
-        )
-    boss = make_cluster(
-        "boss1",
-        zones=["boss_z"],
-        cluster_type="final_boss",
-        entry_fogs=[{"fog_id": "b_e", "zone": "boss_z"}],
-        exit_fogs=[],
-    )
-    pool = ClusterPool()
-    pool.add(start)
-    for c in clusters_list:
-        pool.add(c)
-    pool.add(boss)
-
-    config = Config()
-    config.structure.final_boss_candidates = {"boss_z": 1}
-    config.structure.max_branch_spacing = 5
-    config.structure.min_branch_age = 4  # High but < max_branch_spacing
-    config.structure.split_probability = 0.0
-    config.structure.merge_probability = 0.0
-    config.structure.max_parallel_paths = 2
-    config.structure.min_layers = 10
-    config.structure.max_layers = 14
-    config.requirements.mini_dungeons = 8
-    config.requirements.bosses = 0
-    config.requirements.legacy_dungeons = 0
-    config.requirements.major_bosses = 0
-
-    # Should succeed — forced merge bypasses min_branch_age
-    success = False
-    for seed in range(50):
-        try:
-            dag, _log = generate_dag(
-                config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
-            )
-            assert dag.end_id
-            success = True
-            break
-        except GenerationError:
-            continue
-    assert success, "Forced merge should bypass min_branch_age"
-
-
-def test_max_branch_spacing_disabled_regression():
-    """max_branch_spacing=0 produces same linear behavior as before the feature."""
-    start = make_cluster(
-        "start",
-        zones=["start_z"],
-        cluster_type="start",
-        entry_fogs=[],
-        exit_fogs=[{"fog_id": "s_x1", "zone": "start_z"}],
-    )
-    passants = []
-    for i in range(10):
-        passants.append(
-            make_cluster(
-                f"p{i}",
-                zones=[f"p{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[{"fog_id": f"p{i}_e", "zone": f"p{i}_z"}],
-                exit_fogs=[{"fog_id": f"p{i}_x", "zone": f"p{i}_z"}],
-            )
-        )
-    boss = make_cluster(
-        "boss1",
-        zones=["boss_z"],
-        cluster_type="final_boss",
-        entry_fogs=[{"fog_id": "b_e", "zone": "boss_z"}],
-        exit_fogs=[],
-    )
-    pool = ClusterPool()
-    pool.add(start)
-    for c in passants:
-        pool.add(c)
-    pool.add(boss)
-
-    config = Config()
-    config.structure.final_boss_candidates = {"boss_z": 1}
-    config.structure.max_branch_spacing = 0  # Disabled
-    config.structure.split_probability = 1.0
-    config.structure.min_layers = 6
-    config.structure.max_layers = 6
-    config.requirements.mini_dungeons = 4
-    config.requirements.bosses = 0
-    config.requirements.legacy_dungeons = 0
-    config.requirements.major_bosses = 0
-
-    dag, _log = generate_dag(
-        config, pool, seed=42, boss_candidates=_boss_candidates(pool)
-    )
-    # Linear — no splits possible with 1-exit clusters
-    assert not any(
-        len({e.target_id for e in dag.get_outgoing_edges(nid)}) > 1 for nid in dag.nodes
-    )
-
-
-def test_first_layer_type_counter_propagation():
-    """first_layer_type passant correctly initializes layers_since_last_split.
-
-    After first_layer_type passant, counters should be 1 (one passant layer
-    elapsed). The forced split should still trigger at the right threshold.
-    """
-    start = make_cluster(
-        "start",
-        zones=["start_z"],
-        cluster_type="start",
-        entry_fogs=[],
-        exit_fogs=[{"fog_id": "s_x1", "zone": "start_z"}],
-    )
-    # Legacy dungeon for first_layer_type
-    ld = make_cluster(
-        "ld0",
-        zones=["ld0_z"],
-        cluster_type="legacy_dungeon",
-        entry_fogs=[{"fog_id": "ld0_e", "zone": "ld0_z"}],
-        exit_fogs=[
-            {"fog_id": "ld0_x1", "zone": "ld0_z"},
-            {"fog_id": "ld0_x2", "zone": "ld0_z"},
-        ],
-    )
-    # Splittable mini_dungeons
-    clusters = []
-    for i in range(20):
-        clusters.append(
-            make_cluster(
-                f"sp{i}",
-                zones=[f"sp{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[{"fog_id": f"sp{i}_e", "zone": f"sp{i}_z"}],
-                exit_fogs=[
-                    {"fog_id": f"sp{i}_x1", "zone": f"sp{i}_z"},
-                    {"fog_id": f"sp{i}_x2", "zone": f"sp{i}_z"},
-                ],
-            )
-        )
-    # Merge-capable clusters
-    for i in range(5):
-        clusters.append(
-            make_cluster(
-                f"mg{i}",
-                zones=[f"mg{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[
-                    {"fog_id": f"mg{i}_e1", "zone": f"mg{i}_z"},
-                    {"fog_id": f"mg{i}_e2", "zone": f"mg{i}_z"},
-                ],
-                exit_fogs=[{"fog_id": f"mg{i}_x", "zone": f"mg{i}_z"}],
-                allow_shared_entrance=True,
-            )
-        )
-    boss = make_cluster(
-        "boss1",
-        zones=["boss_z"],
-        cluster_type="final_boss",
-        entry_fogs=[{"fog_id": "b_e", "zone": "boss_z"}],
-        exit_fogs=[],
-    )
-    pool = ClusterPool()
-    pool.add(start)
-    pool.add(ld)
-    for c in clusters:
-        pool.add(c)
-    pool.add(boss)
-
-    config = Config()
-    config.structure.final_boss_candidates = {"boss_z": 1}
-    config.structure.max_branch_spacing = 3
-    config.structure.first_layer_type = "legacy_dungeon"
-    config.structure.split_probability = 0.0  # Only forced splits
-    config.structure.merge_probability = 0.0
-    config.structure.max_parallel_paths = 3
-    config.structure.min_layers = 10
-    config.structure.max_layers = 14
-    config.requirements.mini_dungeons = 8
-    config.requirements.bosses = 0
-    config.requirements.legacy_dungeons = 0
-    config.requirements.major_bosses = 0
-
-    # Try multiple seeds — at least one should produce a forced split.
-    # With split_probability=0.0, splits only happen via max_branch_spacing
-    # enforcement. If first_layer_type correctly increments the counter,
-    # the forced split triggers 1 layer sooner than if counter stayed at 0.
-    found_split = False
-    for seed in range(50):
-        try:
-            dag, _log = generate_dag(
-                config, pool, seed=seed, boss_candidates=_boss_candidates(pool)
-            )
-            has_split = any(
-                len({e.target_id for e in dag.get_outgoing_edges(nid)}) > 1
-                for nid in dag.nodes
-            )
-            if has_split:
-                found_split = True
-                break
-        except GenerationError:
-            continue
-
-    assert found_split, "Expected at least one seed to produce a forced split"
-
-
-@pytest.mark.skipif(
-    not os.path.exists("data/clusters.json"),
-    reason="Requires data/clusters.json",
-)
-def test_max_branch_spacing_statistical():
-    """No branch exceeds max_branch_spacing + 2 across many seeds."""
-    from speedfog.clusters import ClusterPool as RealClusterPool
-
-    pool = RealClusterPool.from_json("data/clusters.json")
-    boss_candidates = _boss_candidates(pool)
-    max_spacing = 4
-    violations = []
-
-    for seed in range(50):
-        config = Config()
-        config.seed = seed
-        config.structure.max_branch_spacing = max_spacing
-        try:
-            dag, _log = generate_dag(config, pool, boss_candidates=boss_candidates)
-        except GenerationError:
-            continue
-
-        max_observed = _measure_max_branch_spacing(dag)
-        if max_observed > max_spacing + 2:
-            violations.append((seed, max_observed))
-
-    assert not violations, f"Branches exceeded max_branch_spacing + 2: {violations}"
-
-
-def _measure_max_branch_spacing(dag):
-    """Measure the maximum consecutive non-split layers in the DAG.
-
-    Walks layer-by-layer, counting consecutive layers where no node
-    has multiple outgoing targets. Terminal nodes (0 outgoing edges)
-    are excluded from the check.
-    """
-    max_layer = max((n.layer for n in dag.nodes.values()), default=-1)
-    max_spacing = 0
-    since_last_split = 0
-
-    for layer in range(max_layer + 1):
-        layer_nodes = [nid for nid, n in dag.nodes.items() if n.layer == layer]
-        has_split = False
-        all_terminal = True
-        for nid in layer_nodes:
-            targets = {e.target_id for e in dag.get_outgoing_edges(nid)}
-            if len(targets) > 0:
-                all_terminal = False
-            if len(targets) >= 2:
-                has_split = True
-        if all_terminal:
-            continue
-        if has_split:
-            since_last_split = 0
-        else:
-            since_last_split += 1
-        max_spacing = max(max_spacing, since_last_split)
-
-    return max_spacing
-
-
-# ── execute_rebalance_layer tests ──────────────────────────────────────
-
-
-def test_execute_rebalance_layer_basic():
-    """execute_rebalance_layer splits stale branch and merges another pair."""
-    dag = Dag(seed=1)
-
-    # 3 branches: A (stale), B and C (fresh, different parent nodes)
-    n_a = DagNode(
-        id="n_a",
-        cluster=make_cluster(
-            "ca",
-            zones=["za"],
-            entry_fogs=[{"fog_id": "ea", "zone": "za"}],
-            exit_fogs=[{"fog_id": "xa", "zone": "za"}],
-        ),
-        layer=0,
-        tier=1,
-        entry_fogs=[],
-        exit_fogs=[FogRef("xa", "za")],
-    )
-    n_b = DagNode(
-        id="n_b",
-        cluster=make_cluster(
-            "cb",
-            zones=["zb"],
-            entry_fogs=[{"fog_id": "eb", "zone": "zb"}],
-            exit_fogs=[{"fog_id": "xb", "zone": "zb"}],
-        ),
-        layer=0,
-        tier=1,
-        entry_fogs=[],
-        exit_fogs=[FogRef("xb", "zb")],
-    )
-    n_c = DagNode(
-        id="n_c",
-        cluster=make_cluster(
-            "cc",
-            zones=["zc"],
-            entry_fogs=[{"fog_id": "ec", "zone": "zc"}],
-            exit_fogs=[{"fog_id": "xc", "zone": "zc"}],
-        ),
-        layer=0,
-        tier=1,
-        entry_fogs=[],
-        exit_fogs=[FogRef("xc", "zc")],
-    )
-    dag.add_node(n_a)
-    dag.add_node(n_b)
-    dag.add_node(n_c)
-
-    branches = [
-        Branch("a", "n_a", FogRef("xa", "za"), layers_since_last_split=5),  # stale
-        Branch("b", "n_b", FogRef("xb", "zb"), layers_since_last_split=1),
-        Branch("c", "n_c", FogRef("xc", "zc"), layers_since_last_split=1),
-    ]
-
-    # Pool: split-capable + merge-capable clusters
-    pool = ClusterPool()
-    for i in range(5):
-        pool.add(
-            make_cluster(
-                f"split{i}",
-                zones=[f"s{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[{"fog_id": f"s{i}_e", "zone": f"s{i}_z"}],
-                exit_fogs=[
-                    {"fog_id": f"s{i}_x1", "zone": f"s{i}_z"},
-                    {"fog_id": f"s{i}_x2", "zone": f"s{i}_z"},
-                ],
-            )
-        )
-    for i in range(5):
-        pool.add(
-            make_cluster(
-                f"merge{i}",
-                zones=[f"m{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[
-                    {"fog_id": f"m{i}_e1", "zone": f"m{i}_z"},
-                    {"fog_id": f"m{i}_e2", "zone": f"m{i}_z"},
-                ],
-                exit_fogs=[{"fog_id": f"m{i}_x", "zone": f"m{i}_z"}],
-                allow_shared_entrance=True,
-            )
-        )
-
-    config = Config()
-    config.structure.max_parallel_paths = 3
-
-    result = execute_rebalance_layer(
-        dag,
-        branches,
-        layer_idx=1,
-        layer_type="mini_dungeon",
-        clusters=pool,
-        used_zones=set(),
-        rng=random.Random(42),
-        config=config,
-    )
-
-    result_branches, layers_used = result
-    # Same number of branches (rebalance is N -> N)
-    assert len(result_branches) == 3
-    assert layers_used == 1
-    # At least one branch has counter = 0 (from the split)
-    assert any(b.layers_since_last_split == 0 for b in result_branches)
-    # No branch named "a" remains (it was split into children)
-    assert not any(b.id == "a" for b in result_branches)
-
-
-def test_execute_rebalance_layer_no_merge_pair():
-    """Returns None when no valid merge pair exists."""
-    dag = Dag(seed=1)
-    # All branches share same parent node → anti-micro-merge blocks merge
-    n = DagNode(
-        id="n_shared",
-        cluster=make_cluster(
-            "cs",
-            zones=["zs"],
-            entry_fogs=[{"fog_id": "es", "zone": "zs"}],
-            exit_fogs=[{"fog_id": "xs", "zone": "zs"}],
-        ),
-        layer=0,
-        tier=1,
-        entry_fogs=[],
-        exit_fogs=[FogRef("xs", "zs")],
-    )
-    dag.add_node(n)
-    branches = [
-        Branch("a", "n_shared", FogRef("xs", "zs"), layers_since_last_split=5),
-        Branch("b", "n_shared", FogRef("xs", "zs"), layers_since_last_split=1),
-        Branch("c", "n_shared", FogRef("xs", "zs"), layers_since_last_split=1),
-    ]
-    pool = ClusterPool()
-    for i in range(5):
-        pool.add(
-            make_cluster(
-                f"sp{i}",
-                zones=[f"s{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[{"fog_id": f"s{i}_e", "zone": f"s{i}_z"}],
-                exit_fogs=[
-                    {"fog_id": f"s{i}_x1", "zone": f"s{i}_z"},
-                    {"fog_id": f"s{i}_x2", "zone": f"s{i}_z"},
-                ],
-            )
-        )
-    config = Config()
-    config.structure.max_parallel_paths = 3
-
-    result = execute_rebalance_layer(
-        dag,
-        branches,
-        layer_idx=1,
-        layer_type="mini_dungeon",
-        clusters=pool,
-        used_zones=set(),
-        rng=random.Random(42),
-        config=config,
-    )
-    # No valid merge pair (anti-micro-merge: all share same parent) → returns None
-    assert result is None
-
-
-def test_execute_rebalance_layer_counter_propagation():
-    """Merged branch counter ends at max(A, B) + 1 after update."""
-    dag = Dag(seed=1)
-    n_a = DagNode(
-        id="n_a",
-        cluster=make_cluster(
-            "ca",
-            zones=["za"],
-            entry_fogs=[{"fog_id": "ea", "zone": "za"}],
-            exit_fogs=[{"fog_id": "xa", "zone": "za"}],
-        ),
-        layer=0,
-        tier=1,
-        entry_fogs=[],
-        exit_fogs=[FogRef("xa", "za")],
-    )
-    n_b = DagNode(
-        id="n_b",
-        cluster=make_cluster(
-            "cb",
-            zones=["zb"],
-            entry_fogs=[{"fog_id": "eb", "zone": "zb"}],
-            exit_fogs=[{"fog_id": "xb", "zone": "zb"}],
-        ),
-        layer=0,
-        tier=1,
-        entry_fogs=[],
-        exit_fogs=[FogRef("xb", "zb")],
-    )
-    n_c = DagNode(
-        id="n_c",
-        cluster=make_cluster(
-            "cc",
-            zones=["zc"],
-            entry_fogs=[{"fog_id": "ec", "zone": "zc"}],
-            exit_fogs=[{"fog_id": "xc", "zone": "zc"}],
-        ),
-        layer=0,
-        tier=1,
-        entry_fogs=[],
-        exit_fogs=[FogRef("xc", "zc")],
-    )
-    dag.add_node(n_a)
-    dag.add_node(n_b)
-    dag.add_node(n_c)
-
-    branches = [
-        Branch(
-            "a", "n_a", FogRef("xa", "za"), layers_since_last_split=8
-        ),  # stale (split)
-        Branch(
-            "b", "n_b", FogRef("xb", "zb"), layers_since_last_split=3
-        ),  # merge candidate
-        Branch(
-            "c", "n_c", FogRef("xc", "zc"), layers_since_last_split=1
-        ),  # merge candidate
-    ]
-
-    pool = ClusterPool()
-    for i in range(5):
-        pool.add(
-            make_cluster(
-                f"split{i}",
-                zones=[f"s{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[{"fog_id": f"s{i}_e", "zone": f"s{i}_z"}],
-                exit_fogs=[
-                    {"fog_id": f"s{i}_x1", "zone": f"s{i}_z"},
-                    {"fog_id": f"s{i}_x2", "zone": f"s{i}_z"},
-                ],
-            )
-        )
-    for i in range(5):
-        pool.add(
-            make_cluster(
-                f"merge{i}",
-                zones=[f"m{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[
-                    {"fog_id": f"m{i}_e1", "zone": f"m{i}_z"},
-                    {"fog_id": f"m{i}_e2", "zone": f"m{i}_z"},
-                ],
-                exit_fogs=[{"fog_id": f"m{i}_x", "zone": f"m{i}_z"}],
-                allow_shared_entrance=True,
-            )
-        )
-
-    config = Config()
-    config.structure.max_parallel_paths = 3
-
-    result = execute_rebalance_layer(
-        dag,
-        branches,
-        layer_idx=1,
-        layer_type="mini_dungeon",
-        clusters=pool,
-        used_zones=set(),
-        rng=random.Random(42),
-        config=config,
-    )
-
-    result_branches, layers_used = result
-    assert layers_used == 1
-
-    # Split children have counter = 0
-    split_children = [b for b in result_branches if b.layers_since_last_split == 0]
-    assert len(split_children) == 2
-
-    # Merged branch has counter = max(3, 1) + 1 = 4
-    merged = [b for b in result_branches if "merged" in b.id]
-    assert len(merged) == 1
-    assert merged[0].layers_since_last_split == 4  # max(3, 1) + 1
-
-
-# ── determine_operation REBALANCE / prefer_merge tests ─────────────────
-
-
-def test_determine_operation_returns_rebalance():
-    """determine_operation returns REBALANCE when saturated + stale."""
-    cluster = make_cluster(
-        "c1",
-        zones=["z1"],
-        entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
-        exit_fogs=[
-            {"fog_id": "x1", "zone": "z1"},
-            {"fog_id": "x2", "zone": "z1"},
-        ],
-    )
-    # 3 branches at max_parallel_paths=3, one stale
-    branches = [
-        Branch("a", "n_a", FogRef("xa", "za"), layers_since_last_split=5),
-        Branch("b", "n_b", FogRef("xb", "zb"), layers_since_last_split=1),
-        Branch("c", "n_c", FogRef("xc", "zc"), layers_since_last_split=1),
-    ]
-    config = Config()
-    config.structure.max_parallel_paths = 3
-    config.structure.max_branch_spacing = 4
-    config.structure.split_probability = 0.0
-    config.structure.merge_probability = 0.0
-
-    op, fan = determine_operation(cluster, branches, config, random.Random(42))
-    assert op == LayerOperation.REBALANCE
-
-
-def test_determine_operation_rebalance_at_2_branches():
-    """REBALANCE works with 2 branches (merge-first strategy)."""
-    cluster = make_cluster(
-        "c1",
-        zones=["z1"],
-        entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
-        exit_fogs=[
-            {"fog_id": "x1", "zone": "z1"},
-            {"fog_id": "x2", "zone": "z1"},
-        ],
-    )
-    # 2 branches with different parents, one stale
-    branches = [
-        Branch("a", "n_a", FogRef("xa", "za"), layers_since_last_split=5),
-        Branch("b", "n_b", FogRef("xb", "zb"), layers_since_last_split=1),
-    ]
-    config = Config()
-    config.structure.max_parallel_paths = 3
-    config.structure.max_branch_spacing = 4
-    config.structure.split_probability = 0.0
-    config.structure.merge_probability = 0.0
-
-    op, fan = determine_operation(cluster, branches, config, random.Random(42))
-    assert op == LayerOperation.REBALANCE
-
-
-def test_determine_operation_prefer_merge():
-    """prefer_merge=True bypasses probability roll in favor of MERGE."""
-    cluster = make_cluster(
-        "c1",
-        zones=["z1"],
-        entry_fogs=[
-            {"fog_id": "e1", "zone": "z1"},
-            {"fog_id": "e2", "zone": "z1"},
-        ],
-        exit_fogs=[{"fog_id": "x1", "zone": "z1"}],
-        allow_shared_entrance=True,
-    )
-    # 2 branches, different parent nodes
-    branches = [
-        Branch("a", "n_a", FogRef("xa", "za"), layers_since_last_split=0),
-        Branch("b", "n_b", FogRef("xb", "zb"), layers_since_last_split=0),
-    ]
-    config = Config()
-    config.structure.max_parallel_paths = 4
-    config.structure.split_probability = 1.0  # Would always split
-    config.structure.merge_probability = 0.0  # Would never merge
-
-    # With prefer_merge: should merge despite split_probability=1.0
-    op, _ = determine_operation(
-        cluster,
-        branches,
-        config,
-        random.Random(42),
-        prefer_merge=True,
-    )
-    assert op == LayerOperation.MERGE
-
-
-# ── Convergence integration tests ─────────────────────────────────────
-
-
-def test_rebalance_during_convergence():
-    """Convergence phase doesn't create linear stretches > threshold + 2."""
-    start = make_cluster(
-        "start",
-        zones=["start_z"],
-        cluster_type="start",
-        entry_fogs=[],
-        exit_fogs=[
-            {"fog_id": "s_x1", "zone": "start_z"},
-            {"fog_id": "s_x2", "zone": "start_z"},
-        ],
-    )
-    clusters_list = []
-    for i in range(30):
-        clusters_list.append(
-            make_cluster(
-                f"sp{i}",
-                zones=[f"sp{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[{"fog_id": f"sp{i}_e", "zone": f"sp{i}_z"}],
-                exit_fogs=[
-                    {"fog_id": f"sp{i}_x1", "zone": f"sp{i}_z"},
-                    {"fog_id": f"sp{i}_x2", "zone": f"sp{i}_z"},
-                ],
-            )
-        )
-    for i in range(10):
-        clusters_list.append(
-            make_cluster(
-                f"mg{i}",
-                zones=[f"mg{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[
-                    {"fog_id": f"mg{i}_e1", "zone": f"mg{i}_z"},
-                    {"fog_id": f"mg{i}_e2", "zone": f"mg{i}_z"},
-                ],
-                exit_fogs=[{"fog_id": f"mg{i}_x", "zone": f"mg{i}_z"}],
-                allow_shared_entrance=True,
-            )
-        )
-    boss = make_cluster(
-        "boss1",
-        zones=["boss_z"],
-        cluster_type="final_boss",
-        entry_fogs=[{"fog_id": "b_e", "zone": "boss_z"}],
-        exit_fogs=[],
-    )
-    pool = ClusterPool()
-    pool.add(start)
-    for c in clusters_list:
-        pool.add(c)
-    pool.add(boss)
-
-    max_spacing = 4
-    violations = []
-    for seed in range(30):
-        config = Config()
-        config.structure.final_boss_candidates = {"boss_z": 1}
-        config.structure.max_branch_spacing = max_spacing
-        config.structure.split_probability = 0.9
-        config.structure.merge_probability = 0.5
-        config.structure.max_parallel_paths = 4
-        config.structure.min_layers = 12
-        config.structure.max_layers = 18
-        config.requirements.mini_dungeons = 10
-        config.requirements.bosses = 0
-        config.requirements.legacy_dungeons = 0
-        config.requirements.major_bosses = 0
-
-        try:
-            dag, _log = generate_dag(
-                config,
-                pool,
-                seed=seed,
-                boss_candidates=_boss_candidates(pool),
-            )
-            max_observed = _measure_max_branch_spacing(dag)
-            # During convergence, merges reduce branch count below
-            # max_parallel_paths, so REBALANCE no longer triggers.
-            # Remaining merge-only convergence can add up to merge_reserve
-            # layers. Allow max_spacing + merge_reserve (= 4 + 6 = 10).
-            limit = max_spacing + config.structure.max_parallel_paths + 2
-            if max_observed > limit:
-                violations.append((seed, max_observed))
-        except GenerationError:
-            continue
-
-    assert not violations, f"Convergence stretches exceeded limit: {violations}"
-
-
-def test_convergence_terminates():
-    """Convergence loop always terminates (no infinite REBALANCE loop)."""
-    start = make_cluster(
-        "start",
-        zones=["start_z"],
-        cluster_type="start",
-        entry_fogs=[],
-        exit_fogs=[
-            {"fog_id": "s_x1", "zone": "start_z"},
-            {"fog_id": "s_x2", "zone": "start_z"},
-        ],
-    )
-    clusters_list = []
-    for i in range(40):
-        clusters_list.append(
-            make_cluster(
-                f"sp{i}",
-                zones=[f"sp{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[{"fog_id": f"sp{i}_e", "zone": f"sp{i}_z"}],
-                exit_fogs=[
-                    {"fog_id": f"sp{i}_x1", "zone": f"sp{i}_z"},
-                    {"fog_id": f"sp{i}_x2", "zone": f"sp{i}_z"},
-                ],
-            )
-        )
-    for i in range(10):
-        clusters_list.append(
-            make_cluster(
-                f"mg{i}",
-                zones=[f"mg{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[
-                    {"fog_id": f"mg{i}_e1", "zone": f"mg{i}_z"},
-                    {"fog_id": f"mg{i}_e2", "zone": f"mg{i}_z"},
-                ],
-                exit_fogs=[{"fog_id": f"mg{i}_x", "zone": f"mg{i}_z"}],
-                allow_shared_entrance=True,
-            )
-        )
-    boss = make_cluster(
-        "boss1",
-        zones=["boss_z"],
-        cluster_type="final_boss",
-        entry_fogs=[{"fog_id": "b_e", "zone": "boss_z"}],
-        exit_fogs=[],
-    )
-    pool = ClusterPool()
-    pool.add(start)
-    for c in clusters_list:
-        pool.add(c)
-    pool.add(boss)
-
-    for seed in range(20):
-        config = Config()
-        config.structure.final_boss_candidates = {"boss_z": 1}
-        config.structure.max_branch_spacing = 3
-        config.structure.split_probability = 1.0
-        config.structure.merge_probability = 0.0
-        config.structure.max_parallel_paths = 4
-        config.structure.min_layers = 10
-        config.structure.max_layers = 14
-        config.requirements.mini_dungeons = 8
-        config.requirements.bosses = 0
-        config.requirements.legacy_dungeons = 0
-        config.requirements.major_bosses = 0
-
-        try:
-            dag, _log = generate_dag(
-                config,
-                pool,
-                seed=seed,
-                boss_candidates=_boss_candidates(pool),
-            )
-            # If we get here, convergence terminated
-            assert dag.end_id
-        except GenerationError as e:
-            # Cluster exhaustion is acceptable, but convergence timeout is not
-            assert "Convergence failed" not in str(
-                e
-            ), f"Convergence timeout at seed {seed}: {e}"
-
-
-# ── Type homogeneity: REBALANCE respects layer_type ──────────────────
-
-
-def test_execute_rebalance_returns_none_when_no_split_capable_of_type():
-    """Returns None when split-capable clusters exist but not of layer_type."""
-    dag = Dag(seed=1)
-
-    # 3 branches with different parent nodes
-    for name in ("a", "b", "c"):
-        n = DagNode(
-            id=f"n_{name}",
-            cluster=make_cluster(
-                f"c{name}",
-                zones=[f"z{name}"],
-                entry_fogs=[{"fog_id": f"e{name}", "zone": f"z{name}"}],
-                exit_fogs=[{"fog_id": f"x{name}", "zone": f"z{name}"}],
-            ),
-            layer=0,
-            tier=1,
-            entry_fogs=[],
-            exit_fogs=[FogRef(f"x{name}", f"z{name}")],
-        )
-        dag.add_node(n)
-
-    branches = [
-        Branch("a", "n_a", FogRef("xa", "za"), layers_since_last_split=5),
-        Branch("b", "n_b", FogRef("xb", "zb"), layers_since_last_split=1),
-        Branch("c", "n_c", FogRef("xc", "zc"), layers_since_last_split=1),
-    ]
-
-    # Pool has split-capable clusters but only of type mini_dungeon
-    pool = ClusterPool()
-    for i in range(5):
-        pool.add(
-            make_cluster(
-                f"split{i}",
-                zones=[f"s{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[{"fog_id": f"s{i}_e", "zone": f"s{i}_z"}],
-                exit_fogs=[
-                    {"fog_id": f"s{i}_x1", "zone": f"s{i}_z"},
-                    {"fog_id": f"s{i}_x2", "zone": f"s{i}_z"},
-                ],
-            )
-        )
-    for i in range(5):
-        pool.add(
-            make_cluster(
-                f"merge{i}",
-                zones=[f"m{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[
-                    {"fog_id": f"m{i}_e1", "zone": f"m{i}_z"},
-                    {"fog_id": f"m{i}_e2", "zone": f"m{i}_z"},
-                ],
-                exit_fogs=[{"fog_id": f"m{i}_x", "zone": f"m{i}_z"}],
-                allow_shared_entrance=True,
-            )
-        )
-
-    config = Config()
-    config.structure.max_parallel_paths = 3
-
-    # Request layer_type="major_boss" — no major_boss in pool
-    result = execute_rebalance_layer(
-        dag,
-        branches,
-        layer_idx=1,
-        layer_type="major_boss",
-        clusters=pool,
-        used_zones=set(),
-        rng=random.Random(42),
-        config=config,
-    )
-
-    assert result is None
-
-
-def test_execute_rebalance_returns_none_when_no_merge_capable_of_type():
-    """Returns None when merge-capable clusters exist but not of layer_type."""
-    dag = Dag(seed=1)
-
-    for name in ("a", "b", "c"):
-        n = DagNode(
-            id=f"n_{name}",
-            cluster=make_cluster(
-                f"c{name}",
-                zones=[f"z{name}"],
-                entry_fogs=[{"fog_id": f"e{name}", "zone": f"z{name}"}],
-                exit_fogs=[{"fog_id": f"x{name}", "zone": f"z{name}"}],
-            ),
-            layer=0,
-            tier=1,
-            entry_fogs=[],
-            exit_fogs=[FogRef(f"x{name}", f"z{name}")],
-        )
-        dag.add_node(n)
-
-    branches = [
-        Branch("a", "n_a", FogRef("xa", "za"), layers_since_last_split=5),
-        Branch("b", "n_b", FogRef("xb", "zb"), layers_since_last_split=1),
-        Branch("c", "n_c", FogRef("xc", "zc"), layers_since_last_split=1),
-    ]
-
-    pool = ClusterPool()
-    # Split-capable of type major_boss
-    for i in range(3):
-        pool.add(
-            make_cluster(
-                f"split_mb{i}",
-                zones=[f"smb{i}_z"],
-                cluster_type="major_boss",
-                entry_fogs=[{"fog_id": f"smb{i}_e", "zone": f"smb{i}_z"}],
-                exit_fogs=[
-                    {"fog_id": f"smb{i}_x1", "zone": f"smb{i}_z"},
-                    {"fog_id": f"smb{i}_x2", "zone": f"smb{i}_z"},
-                ],
-            )
-        )
-    # Merge-capable but only mini_dungeon (wrong type)
-    for i in range(3):
-        pool.add(
-            make_cluster(
-                f"merge_md{i}",
-                zones=[f"mmd{i}_z"],
-                cluster_type="mini_dungeon",
-                entry_fogs=[
-                    {"fog_id": f"mmd{i}_e1", "zone": f"mmd{i}_z"},
-                    {"fog_id": f"mmd{i}_e2", "zone": f"mmd{i}_z"},
-                ],
-                exit_fogs=[{"fog_id": f"mmd{i}_x", "zone": f"mmd{i}_z"}],
-                allow_shared_entrance=True,
-            )
-        )
-
-    config = Config()
-    config.structure.max_parallel_paths = 3
-
-    result = execute_rebalance_layer(
-        dag,
-        branches,
-        layer_idx=1,
-        layer_type="major_boss",
-        clusters=pool,
-        used_zones=set(),
-        rng=random.Random(42),
-        config=config,
-    )
-
-    assert result is None
-
-
-def test_determine_operation_skip_rebalance():
-    """skip_rebalance=True skips REBALANCE even when conditions are met."""
-    cluster = make_cluster(
-        "c1",
-        zones=["z1"],
-        entry_fogs=[{"fog_id": "e1", "zone": "z1"}],
-        exit_fogs=[
-            {"fog_id": "x1", "zone": "z1"},
-            {"fog_id": "x2", "zone": "z1"},
-        ],
-    )
-    config = Config()
-    config.structure.max_parallel_paths = 4
-    config.structure.max_branch_spacing = 3
-
-    branches = [
-        Branch("a", "n_a", FogRef("xa", "za"), layers_since_last_split=5),
-        Branch("b", "n_b", FogRef("xb", "zb"), layers_since_last_split=1),
-        Branch("c", "n_c", FogRef("xc", "zc"), layers_since_last_split=1),
-    ]
-
-    # Without skip_rebalance: should return REBALANCE
-    op, _ = determine_operation(
-        cluster,
-        branches,
-        config,
-        random.Random(42),
-    )
-    assert op == LayerOperation.REBALANCE
-
-    # With skip_rebalance: should NOT return REBALANCE
-    op, _ = determine_operation(
-        cluster,
-        branches,
-        config,
-        random.Random(42),
-        skip_rebalance=True,
-    )
-    assert op != LayerOperation.REBALANCE
-
-
 class TestZoneConflicts:
     """Tests for zone conflict exclusion during DAG generation."""
 
@@ -5704,127 +1769,6 @@ class TestZoneConflicts:
         _mark_cluster_used(cluster, used_zones, pool)
 
         assert used_zones == {"zone_a"}
-
-
-class TestPickClusterWithTypeFallbackDistribution:
-    """Tests for weighted fallback distribution."""
-
-    def test_fallback_distributes_across_types(self):
-        """Fallback should pick from multiple types, not always the largest pool."""
-        pool = ClusterPool()
-        # No mini_dungeon clusters at all (force fallback)
-        for i in range(20):
-            pool.add(
-                make_cluster(
-                    f"boss_{i}",
-                    cluster_type="boss_arena",
-                    zones=[f"boss_{i}_z"],
-                )
-            )
-        for i in range(15):
-            pool.add(
-                make_cluster(
-                    f"legacy_{i}",
-                    cluster_type="legacy_dungeon",
-                    zones=[f"legacy_{i}_z"],
-                )
-            )
-
-        from collections import Counter
-
-        type_counts: Counter[str] = Counter()
-        for seed in range(100):
-            rng = random.Random(seed)
-            result = pick_cluster_with_type_fallback(
-                pool,
-                "mini_dungeon",
-                set(),
-                rng,
-            )
-            assert result is not None
-            type_counts[result.type] += 1
-
-        # Both types should appear (not just boss_arena every time)
-        assert type_counts["boss_arena"] > 0
-        assert type_counts["legacy_dungeon"] > 0
-
-
-class TestSplitNoClusterReuse:
-    """Ensure SPLIT marks primary_cluster used before passant picks.
-
-    Regression test for a TOCTOU bug where primary_cluster was selected at
-    the top of the main loop but only marked used inside `if i == split_idx`.
-    When split_idx > 0, passant branches processed before the split could
-    pick the same cluster, creating two DAG nodes sharing one cluster.
-    The output then merged their connections, causing entry-as-exit violations
-    and duplicate exit fog assignments.
-    """
-
-    @pytest.mark.skipif(
-        not Path("data/clusters.json").exists(),
-        reason="requires data/clusters.json",
-    )
-    def test_no_duplicate_cluster_across_nodes(self):
-        """No two DAG nodes should reference the same cluster.
-
-        Uses real cluster data with a high-split config to reproduce the
-        TOCTOU collision between primary_cluster and passant picks.
-        """
-        from collections import Counter
-        from copy import deepcopy
-
-        from speedfog.clusters import load_clusters
-
-        clusters_orig = load_clusters(Path("data/clusters.json"))
-
-        structure = StructureConfig(
-            split_probability=0.9,
-            max_parallel_paths=4,
-            merge_probability=0.5,
-            min_branch_age=3,
-            crosslinks=True,
-            max_layers=30,
-            min_layers=25,
-            first_layer_type="legacy_dungeon",
-        )
-        structure.max_exits = 4
-        structure.max_entrances = 2
-        config = Config(
-            seed=0,
-            structure=structure,
-            requirements=RequirementsConfig(
-                legacy_dungeons=2,
-                bosses=7,
-                mini_dungeons=8,
-                major_bosses=8,
-            ),
-        )
-
-        violations = 0
-        tested = 0
-        for seed in range(2000):
-            try:
-                clusters = deepcopy(clusters_orig)
-                clusters.merge_roundtable_into_start()
-                boss_cand = clusters.get_by_type("major_boss") + clusters.get_by_type(
-                    "final_boss"
-                )
-                clusters.filter_passant_incompatible()
-                dag, _log = generate_dag(
-                    config, clusters, seed=seed, boss_candidates=boss_cand
-                )
-                tested += 1
-                uses = Counter(n.cluster.id for n in dag.nodes.values())
-                dupes = {k: v for k, v in uses.items() if v > 1}
-                if dupes:
-                    violations += 1
-            except GenerationError:
-                pass
-
-        assert tested > 100, f"Too few successful generations: {tested}"
-        assert (
-            violations == 0
-        ), f"{violations}/{tested} seeds had duplicate cluster usage"
 
 
 class TestPickClusterWeightMatched:
@@ -5984,306 +1928,11 @@ class TestPickClusterWeightMatched:
         assert result is None
 
 
-def test_parallel_branches_weight_matched():
-    """On a PASSANT layer with 2+ branches, clusters have similar weights.
-
-    Uses a pool where weight-1 and weight-8 clusters coexist.
-    With weight matching, if branch A gets weight-1, branch B should
-    not get weight-8 (too far at tolerance 3).
-    """
-    # Build a pool with weight variety (large enough for convergence).
-    # Include clusters with 2+ entries so merges can happen.
-    clusters_list = []
-    for i in range(30):
-        clusters_list.append(
-            make_cluster(
-                f"light_{i}",
-                zones=[f"l{i}"],
-                weight=1,
-                cluster_type="mini_dungeon",
-                entry_fogs=[
-                    {"fog_id": f"le1_{i}", "zone": f"l{i}"},
-                    {"fog_id": f"le2_{i}", "zone": f"l{i}"},
-                ],
-                exit_fogs=[
-                    {"fog_id": f"lx1_{i}", "zone": f"l{i}"},
-                    {"fog_id": f"lx2_{i}", "zone": f"l{i}"},
-                ],
-            )
-        )
-    for i in range(10):
-        clusters_list.append(
-            make_cluster(
-                f"heavy_{i}",
-                zones=[f"h{i}"],
-                weight=8,
-                cluster_type="mini_dungeon",
-                entry_fogs=[
-                    {"fog_id": f"he1_{i}", "zone": f"h{i}"},
-                    {"fog_id": f"he2_{i}", "zone": f"h{i}"},
-                ],
-                exit_fogs=[
-                    {"fog_id": f"hx1_{i}", "zone": f"h{i}"},
-                    {"fog_id": f"hx2_{i}", "zone": f"h{i}"},
-                ],
-            )
-        )
-    # Need a start cluster and final boss
-    start = make_cluster(
-        "start_c",
-        zones=["start_z"],
-        cluster_type="start",
-        weight=1,
-        entry_fogs=[],
-        exit_fogs=[
-            {"fog_id": "sx1", "zone": "start_z"},
-            {"fog_id": "sx2", "zone": "start_z"},
-        ],
-    )
-    final = make_cluster(
-        "final_c",
-        zones=["final_z"],
-        cluster_type="final_boss",
-        weight=3,
-        entry_fogs=[
-            {"fog_id": "fe1", "zone": "final_z"},
-            {"fog_id": "fe2", "zone": "final_z"},
-        ],
-        exit_fogs=[],
-    )
-    clusters_list.extend([start, final])
-
-    pool = ClusterPool()
-    for c in clusters_list:
-        pool.add(c)
-
-    config = Config.from_dict(
-        {
-            "structure": {
-                "max_parallel_paths": 3,
-                "min_layers": 4,
-                "max_layers": 6,
-                "split_probability": 1.0,
-                "max_weight_tolerance": 3,
-                "max_branch_spacing": 0,
-                "final_boss_candidates": {"final_z": 1},
-            },
-        }
-    )
-
-    # Generate multiple DAGs, check weight spread on parallel layers
-    max_spreads = []
-    for seed in range(50):
-        try:
-            dag, _log = generate_dag(
-                config,
-                pool,
-                seed=seed,
-                boss_candidates=pool.get_by_type("final_boss"),
-            )
-        except GenerationError:
-            continue
-        # Find layers with multiple nodes
-        layers: dict[int, list[int]] = {}
-        for node in dag.nodes.values():
-            weights = layers.setdefault(node.layer, [])
-            weights.append(node.cluster.weight)
-        for _layer_idx, weights in layers.items():
-            if len(weights) >= 2:
-                max_spreads.append(max(weights) - min(weights))
-
-    # At least some DAGs must have generated successfully
-    assert max_spreads, "No DAGs generated successfully"
-
-    # With weight matching (tolerance 3), spreads should improve over baseline.
-    # The pool has weight-1 and weight-8 clusters, so when weight-8 is primary
-    # (~25% of picks), no secondary matches within tolerance -> fallback.
-    # Expected ratio: ~75% within tolerance (vs ~60% without weight matching).
-    within_tolerance = sum(1 for s in max_spreads if s <= 3)
-    ratio = within_tolerance / len(max_spreads)
-    assert ratio >= 0.65, (
-        f"Only {ratio:.0%} of parallel layers within tolerance 3. "
-        f"Spreads: {sorted(set(max_spreads))}"
-    )
-
-
-def _make_dag_with_start():
-    """Helper: create a Dag with a start node and 2 exit fogs."""
-    dag = Dag(seed=1)
-    start = DagNode(
-        id="start",
-        cluster=make_cluster(
-            "s",
-            zones=["sz"],
-            cluster_type="start",
-            entry_fogs=[],
-            exit_fogs=[
-                {"fog_id": "sx1", "zone": "sz"},
-                {"fog_id": "sx2", "zone": "sz"},
-            ],
-        ),
-        layer=0,
-        tier=1,
-        entry_fogs=[],
-        exit_fogs=[FogRef("sx1", "sz"), FogRef("sx2", "sz")],
-    )
-    dag.add_node(start)
-    dag.start_id = "start"
-    return dag
-
-
-def test_execute_passant_layer_weight_matched():
-    """execute_passant_layer uses weight matching: first branch anchors the rest."""
-    config = Config.from_dict({"structure": {"max_weight_tolerance": 2}})
-
-    # Run multiple seeds: the second branch should be within tolerance
-    # of the first branch when the first pick is not the outlier.
-    for seed in range(20):
-        test_dag = _make_dag_with_start()
-        test_branches = [
-            Branch("b0", "start", FogRef("sx1", "sz"), layers_since_last_split=0),
-            Branch("b1", "start", FogRef("sx2", "sz"), layers_since_last_split=0),
-        ]
-        # Rebuild pool each iteration (clusters get consumed)
-        test_pool = ClusterPool()
-        for i in range(5):
-            test_pool.add(
-                make_cluster(
-                    f"w1_{i}",
-                    zones=[f"w1z{i}"],
-                    weight=1,
-                    cluster_type="mini_dungeon",
-                )
-            )
-        for i in range(5):
-            test_pool.add(
-                make_cluster(
-                    f"w2_{i}",
-                    zones=[f"w2z{i}"],
-                    weight=2,
-                    cluster_type="mini_dungeon",
-                )
-            )
-        test_pool.add(
-            make_cluster(
-                "outlier",
-                zones=["oz"],
-                weight=8,
-                cluster_type="mini_dungeon",
-            )
-        )
-
-        result = execute_passant_layer(
-            test_dag,
-            test_branches,
-            1,
-            "mini_dungeon",
-            test_pool,
-            {"sz"},
-            random.Random(seed),
-            config=config,
-        )
-        node_a = test_dag.nodes[result[0].current_node_id]
-        node_b = test_dag.nodes[result[1].current_node_id]
-        spread = abs(node_a.cluster.weight - node_b.cluster.weight)
-        # First pick is unconstrained. If weight <= 2, second should
-        # match within tol=2 -> spread <= 2.
-        # If first is w=8 (outlier, 1/11 chance): fallback picks any.
-        if node_a.cluster.weight <= 2:
-            assert spread <= 2, (
-                f"seed={seed}: spread={spread} "
-                f"(weights: {node_a.cluster.weight}, {node_b.cluster.weight})"
-            )
-
-
-def test_execute_merge_layer_weight_matched():
-    """execute_merge_layer: non-merged branches weight-match the merge cluster."""
-    dag = Dag(seed=1)
-    # 3 nodes on layer 0
-    for i in range(3):
-        n = DagNode(
-            id=f"n{i}",
-            cluster=make_cluster(
-                f"c{i}",
-                zones=[f"z{i}"],
-                entry_fogs=[{"fog_id": f"e{i}", "zone": f"z{i}"}],
-                exit_fogs=[{"fog_id": f"x{i}", "zone": f"z{i}"}],
-            ),
-            layer=0,
-            tier=1,
-            entry_fogs=[],
-            exit_fogs=[FogRef(f"x{i}", f"z{i}")],
-        )
-        dag.add_node(n)
-
-    branches = [
-        Branch(
-            "b0", "n0", FogRef("x0", "z0"), birth_layer=0, layers_since_last_split=3
-        ),
-        Branch(
-            "b1", "n1", FogRef("x1", "z1"), birth_layer=0, layers_since_last_split=3
-        ),
-        Branch(
-            "b2", "n2", FogRef("x2", "z2"), birth_layer=0, layers_since_last_split=3
-        ),
-    ]
-
-    # Merge cluster (weight 2) + passant candidates
-    merge_c = make_cluster(
-        "merge",
-        zones=["mz"],
-        weight=2,
-        cluster_type="mini_dungeon",
-        entry_fogs=[
-            {"fog_id": "me1", "zone": "mz"},
-            {"fog_id": "me2", "zone": "mz"},
-        ],
-        exit_fogs=[{"fog_id": "mx", "zone": "mz"}],
-    )
-    passant_close = make_cluster(
-        "p_close",
-        zones=["pz1"],
-        weight=2,
-        cluster_type="mini_dungeon",
-    )
-    passant_far = make_cluster(
-        "p_far",
-        zones=["pz2"],
-        weight=10,
-        cluster_type="mini_dungeon",
-    )
-    pool = ClusterPool()
-    pool.add(merge_c)
-    pool.add(passant_close)
-    pool.add(passant_far)
-
-    config = Config.from_dict({"structure": {"max_weight_tolerance": 2}})
-
-    result = execute_merge_layer(
-        dag,
-        branches,
-        1,
-        "mini_dungeon",
-        pool,
-        {"z0", "z1", "z2"},
-        random.Random(42),
-        config,
-    )
-    # The non-merged branch should get passant_close (weight 2),
-    # not passant_far (weight 10), since merge cluster anchor is weight 2
-    passant_branches = [b for b in result if "merged" not in b.id]
-    if passant_branches:
-        passant_node = dag.nodes[passant_branches[0].current_node_id]
-        assert passant_node.cluster.weight == 2
-
-
 def test_validate_config_rejects_oversubscribed_layers_count():
     from speedfog.clusters import ClusterPool
     from speedfog.config import (
         BudgetConfig,
         Config,
-        RequirementsConfig,
-        StructureConfig,
     )
     from speedfog.generator import validate_config
 
