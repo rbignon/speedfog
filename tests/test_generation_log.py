@@ -335,8 +335,12 @@ def _make_cluster(
     )
 
 
-def _make_small_pool() -> tuple[ClusterPool, list[ClusterData]]:
-    """Create a minimal ClusterPool and boss_candidates for log tests."""
+def _make_small_pool() -> ClusterPool:
+    """Create a minimal ClusterPool for log tests.
+
+    Uses a major_boss cluster as the final boss so the exit-driven generator
+    can select it via ``clusters.get_by_type("major_boss")``.
+    """
     pool = ClusterPool()
 
     # Start cluster
@@ -354,11 +358,11 @@ def _make_small_pool() -> tuple[ClusterPool, list[ClusterData]]:
         )
     )
 
-    # Final boss (zone name matches final_boss_candidates key in test config)
+    # Final boss as major_boss (zone matches final_boss_candidates key in test config)
     pool.add(
         _make_cluster(
             "boss_zone",
-            "final_boss",
+            "major_boss",
             ["boss_zone"],
             weight=5,
             entry_fogs=[{"fog_id": "boss_zone_entry", "zone": "boss_zone"}],
@@ -377,22 +381,17 @@ def _make_small_pool() -> tuple[ClusterPool, list[ClusterData]]:
             )
         )
 
-    boss_candidates = pool.get_by_type("final_boss")
-    return pool, boss_candidates
+    return pool
 
 
-def test_planned_layers_have_events():
-    """Each planned layer emits a LayerEvent with operation and nodes."""
-    pool, boss_candidates = _make_small_pool()
+def test_saturation_layers_have_events():
+    """Saturation layers emit LayerEvents with phase='saturation' and nodes."""
+    pool = _make_small_pool()
     config = Config.from_dict(
         {
             "structure": {
-                "min_layers": 4,
-                "max_layers": 5,
-                "max_branches": 1,
-                "split_probability": 0.0,
-                "merge_probability": 0.0,
-                "crosslinks": False,
+                "layers_count": 6,
+                "max_parallel_paths": 2,
                 "final_boss_candidates": {"boss_zone": 1},
             },
             "requirements": {
@@ -403,11 +402,12 @@ def test_planned_layers_have_events():
             },
         }
     )
-    dag, log = generate_dag(config, pool, seed=42, boss_candidates=boss_candidates)
-    planned = [le for le in log.layer_events if le.phase == "planned"]
-    assert len(planned) >= 1
-    for le in planned:
-        assert le.operation in ("PASSANT", "SPLIT", "MERGE", "REBALANCE")
+    config.seed = 42
+    dag, log = generate_dag(config, pool)
+    saturation = [le for le in log.layer_events if le.phase == "saturation"]
+    assert len(saturation) >= 1
+    for le in saturation:
+        assert le.operation == "ROUTE"
         assert len(le.nodes) >= 1
         assert le.planned_type is not None
 
@@ -428,15 +428,20 @@ def test_convergence_layers_have_events():
             weight=1,
         )
     )
-    boss = ClusterData(
-        id="test_boss",
-        type="final_boss",
-        zones=["boss_zone"],
-        entry_fogs=[{"fog_id": "entry1", "zone": "boss_zone"}],
-        exit_fogs=[],
-        weight=1,
+    # Major boss with entries so route_exits can connect to it
+    pool.add(
+        ClusterData(
+            id="test_boss",
+            type="major_boss",
+            zones=["boss_zone"],
+            entry_fogs=[
+                {"fog_id": "entry1", "zone": "boss_zone"},
+                {"fog_id": "entry2", "zone": "boss_zone"},
+            ],
+            exit_fogs=[],
+            weight=1,
+        )
     )
-    pool.add(boss)
     for i in range(30):
         pool.add(
             ClusterData(
@@ -457,15 +462,9 @@ def test_convergence_layers_have_events():
     config = Config.from_dict(
         {
             "structure": {
-                "min_layers": 4,
-                "max_layers": 6,
+                "layers_count": 6,
                 "max_parallel_paths": 2,
-                "max_branches": 2,
-                "crosslinks": False,
                 "final_boss_candidates": {"boss_zone": 1},
-                # Force a split on the first layer then let convergence handle merging
-                "split_probability": 1.0,
-                "merge_probability": 0.5,
             },
             "requirements": {
                 "legacy_dungeons": 0,
@@ -475,15 +474,14 @@ def test_convergence_layers_have_events():
             },
         }
     )
-    dag, log = generate_dag(config, pool, seed=42, boss_candidates=[boss])
+    config.seed = 42
+    dag, log = generate_dag(config, pool)
     convergence = [le for le in log.layer_events if le.phase == "convergence"]
-    # With 2 branches, convergence must happen at least once
+    # With max_parallel_paths=2 and layers_count=6, convergence must occur
     assert len(convergence) >= 1
     for le in convergence:
         assert le.planned_type is not None
-        assert le.operation in ("MERGE", "PASSANT", "REBALANCE")
-    # First convergence layer should have pool_snapshot
-    assert convergence[0].pool_snapshot is not None
+        assert le.operation == "ROUTE"
 
 
 def test_fallback_recorded_when_pool_exhausted():
@@ -502,23 +500,18 @@ def test_fallback_recorded_when_pool_exhausted():
             weight=1,
         )
     )
-    boss = ClusterData(
-        id="final",
-        type="final_boss",
-        zones=["final_zone"],
-        entry_fogs=[{"fog_id": "e1", "zone": "final_zone"}],
-        exit_fogs=[],
-        weight=1,
-    )
-    pool.add(boss)
+    # The final boss must be major_boss so the exit-driven generator can select it
     pool.add(
         ClusterData(
-            id="mb1",
+            id="mb_boss",
             type="major_boss",
-            zones=["mb1_zone"],
-            entry_fogs=[{"fog_id": "mb1_e1", "zone": "mb1_zone"}],
-            exit_fogs=[{"fog_id": "mb1_x1", "zone": "mb1_zone"}],
-            weight=2,
+            zones=["mb_boss_zone"],
+            entry_fogs=[
+                {"fog_id": "mb_e1", "zone": "mb_boss_zone"},
+                {"fog_id": "mb_e2", "zone": "mb_boss_zone"},
+            ],
+            exit_fogs=[],
+            weight=1,
         )
     )
     for i in range(30):
@@ -535,23 +528,20 @@ def test_fallback_recorded_when_pool_exhausted():
     config = Config.from_dict(
         {
             "structure": {
-                "min_layers": 4,
-                "max_layers": 5,
-                "max_branches": 1,
-                "split_probability": 0.0,
-                "merge_probability": 0.0,
-                "crosslinks": False,
-                "final_boss_candidates": {"final_zone": 1},
+                "layers_count": 6,
+                "max_parallel_paths": 2,
+                "final_boss_candidates": {"mb_boss_zone": 1},
             },
             "requirements": {
                 "legacy_dungeons": 0,
                 "bosses": 0,
                 "mini_dungeons": 1,
-                "major_bosses": 1,
+                "major_bosses": 0,
             },
         }
     )
-    dag, log = generate_dag(config, pool, seed=42, boss_candidates=[boss])
+    config.seed = 42
+    dag, log = generate_dag(config, pool)
     all_fallbacks = [fb for le in log.layer_events for fb in le.fallbacks]
     assert log.summary is not None
     assert log.summary.fallback_count == len(all_fallbacks)
@@ -559,16 +549,12 @@ def test_fallback_recorded_when_pool_exhausted():
 
 def test_fallback_count_matches_summary():
     """Summary fallback_count matches actual fallback entries across all layers."""
-    pool, boss_candidates = _make_small_pool()
+    pool = _make_small_pool()
     config = Config.from_dict(
         {
             "structure": {
-                "min_layers": 4,
-                "max_layers": 5,
-                "max_branches": 1,
-                "split_probability": 0.0,
-                "merge_probability": 0.0,
-                "crosslinks": False,
+                "layers_count": 6,
+                "max_parallel_paths": 2,
                 "final_boss_candidates": {"boss_zone": 1},
             },
             "requirements": {
@@ -579,7 +565,8 @@ def test_fallback_count_matches_summary():
             },
         }
     )
-    dag, log = generate_dag(config, pool, seed=42, boss_candidates=boss_candidates)
+    config.seed = 42
+    dag, log = generate_dag(config, pool)
     all_fallbacks = [fb for le in log.layer_events for fb in le.fallbacks]
     assert log.summary is not None
     assert log.summary.fallback_count == len(all_fallbacks)

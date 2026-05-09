@@ -56,6 +56,8 @@ def relaxed_config():
     """Create a config with relaxed requirements for testing.
 
     Uses minimal requirements to ensure generation succeeds with most seeds.
+    Specifies a major_boss zone as the final boss candidate (the new generator
+    uses major_boss clusters, not the legacy final_boss type).
     """
     return Config(
         seed=3,
@@ -69,6 +71,7 @@ def relaxed_config():
             max_parallel_paths=2,
             min_layers=3,
             max_layers=5,
+            final_boss_candidates={"leyndell_throne": 1},
         ),
     )
 
@@ -296,10 +299,8 @@ def test_generation_log_with_real_clusters(
     config = Config.from_dict(
         {
             "structure": {
-                "min_layers": 10,
-                "max_layers": 15,
+                "layers_count": 14,
                 "max_parallel_paths": 2,
-                "crosslinks": True,
                 "final_boss_candidates": {"haligtree_malenia": 1},
             },
             "requirements": {
@@ -310,16 +311,14 @@ def test_generation_log_with_real_clusters(
             },
         }
     )
-    dag, log = generate_dag(
-        config, real_clusters, seed=42, boss_candidates=real_boss_candidates
-    )
+    config.seed = 42
+    dag, log = generate_dag(config, real_clusters)
 
     # Verify log structure
     assert log.plan_event is not None
     assert len(log.layer_events) >= 10
-    assert log.crosslink_event is not None
     assert log.summary is not None
-    assert log.summary.total_nodes == len(dag.nodes)
+    assert log.summary.total_nodes == dag.total_nodes()
 
     # Verify serialization
     log_path = tmp_path / "generation.log"
@@ -327,13 +326,13 @@ def test_generation_log_with_real_clusters(
     text = log_path.read_text()
     assert "PLAN" in text
     assert "LAYERS" in text
-    assert "CROSSLINKS" in text
     assert "SUMMARY" in text
 
-    # Every layer in the DAG should have a corresponding LayerEvent
+    # Every intermediate layer should have a corresponding LayerEvent.
+    # Layer 0 (start) and the final boss layer have no log event.
     max_layer = max(n.layer for n in dag.nodes.values())
     logged_layers = {le.layer for le in log.layer_events}
-    for layer in range(max_layer + 1):
+    for layer in range(1, max_layer):
         assert layer in logged_layers, f"Layer {layer} missing from log"
 
 
@@ -359,6 +358,7 @@ def test_boss_rush_integration(real_clusters, real_boss_candidates):
                     "min_layers": 4,
                     "max_layers": 8,
                     "max_parallel_paths": 2,
+                    "final_boss_candidates": {"leyndell_throne": 1},
                 },
             }
         )
@@ -407,6 +407,7 @@ def test_dungeon_crawl_integration(real_clusters, real_boss_candidates):
                     "min_layers": 5,
                     "max_layers": 9,
                     "max_parallel_paths": 2,
+                    "final_boss_candidates": {"leyndell_throne": 1},
                 },
             }
         )
@@ -446,9 +447,9 @@ def test_legacy_marathon_integration(real_clusters, real_boss_candidates):
                     "major_bosses": 0,
                 },
                 "structure": {
-                    "min_layers": 3,
-                    "max_layers": 5,
+                    "layers_count": 7,
                     "max_parallel_paths": 2,
+                    "final_boss_candidates": {"leyndell_throne": 1},
                 },
             }
         )
