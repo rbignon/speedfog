@@ -2217,6 +2217,85 @@ def test_connect_nodes_returns_false_when_source_has_no_free_exit():
     assert len(dag.edges) == 1  # no new edge added
 
 
+def test_connect_nodes_prefers_main_tagged_entry_on_target():
+    """Boss arenas with multiple gates tag the canonical entry with main:true.
+
+    FogMod's getMainSpawnPoint() requires that gate's entrance edge to be
+    connected, otherwise dying in the arena and using the Marika effigy can
+    respawn the player outside the arena (softlock). connect_nodes must prefer
+    main-tagged entries over non-main alternatives.
+
+    Regression test for the mechanic introduced in commit f94842f, which was
+    inadvertently dropped during the exit-driven cutover.
+    """
+    from speedfog.generator import connect_nodes
+
+    src_c = _mk_cluster_re("s", entries=[], exits=[("F1", "z1")])
+    # Target boss arena with 3 entries: one main, two non-main.
+    tgt_c = ClusterData(
+        id="t",
+        zones=["t_zone"],
+        type="boss_arena",
+        weight=5,
+        entry_fogs=[
+            {"fog_id": "side_a", "zone": "t_zone"},
+            {"fog_id": "main_gate", "zone": "t_zone", "main": True},
+            {"fog_id": "side_b", "zone": "t_zone"},
+        ],
+        exit_fogs=[],
+    )
+    src = _mk_node_re(src_c, layer=0)
+    tgt = _mk_node_re(tgt_c, layer=1)
+    dag = Dag(seed=0)
+    dag.add_node(src)
+    dag.add_node(tgt)
+
+    # Repeat with several rng seeds to confirm main is always picked when present.
+    for seed in range(20):
+        edge_dag = Dag(seed=0)
+        edge_dag.add_node(src)
+        edge_dag.add_node(tgt)
+        ok = connect_nodes(edge_dag, src, tgt, random.Random(seed))
+        assert ok is True
+        assert edge_dag.edges[0].entry_fog.fog_id == "main_gate", (
+            f"seed={seed}: expected main_gate, got "
+            f"{edge_dag.edges[0].entry_fog.fog_id}"
+        )
+
+
+def test_connect_nodes_falls_back_to_non_main_when_main_unavailable():
+    """When no main-tagged entry is available, connect_nodes uses any free entry.
+
+    This covers two scenarios: targets without any main-tagged entry, and
+    targets where the main entry is already consumed by an earlier connection
+    that doesn't allow re-use.
+    """
+    from speedfog.generator import connect_nodes
+
+    src_c = _mk_cluster_re("s", entries=[], exits=[("F1", "z1"), ("F2", "z1")])
+    # Target with no main-tagged entries.
+    tgt_c = ClusterData(
+        id="t",
+        zones=["t_zone"],
+        type="boss_arena",
+        weight=5,
+        entry_fogs=[
+            {"fog_id": "alt_a", "zone": "t_zone"},
+            {"fog_id": "alt_b", "zone": "t_zone"},
+        ],
+        exit_fogs=[],
+    )
+    src = _mk_node_re(src_c, layer=0)
+    tgt = _mk_node_re(tgt_c, layer=1)
+    dag = Dag(seed=0)
+    dag.add_node(src)
+    dag.add_node(tgt)
+
+    ok = connect_nodes(dag, src, tgt, random.Random(0))
+    assert ok is True
+    assert dag.edges[0].entry_fog.fog_id in {"alt_a", "alt_b"}
+
+
 def test_route_exits_phase1_each_target_gets_one_edge():
     from speedfog.generator import route_exits
 

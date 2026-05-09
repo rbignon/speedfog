@@ -680,7 +680,13 @@ def connect_nodes(
     # (e.g., terminal nodes with no exits, or when called from Phase 1 fallback
     # where we accept some dead ends to avoid orphaned targets).
     entry_pool = safe_entries if safe_entries else tgt_entries
-    entry_fog = rng.choice(entry_pool)
+    # Boss arenas (and other clusters with multiple gates) tag the canonical
+    # entrance with `main: true`. FogMod's getMainSpawnPoint() requires that
+    # gate's edge to be connected, otherwise dying in the arena and using the
+    # Marika effigy can respawn the player outside the arena (softlock). Prefer
+    # main-tagged entries when any are present in the pool.
+    main_entries = [e for e in entry_pool if e.get("main")]
+    entry_fog = rng.choice(main_entries if main_entries else entry_pool)
     dag.add_edge(
         source.id,
         target.id,
