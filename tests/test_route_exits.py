@@ -49,3 +49,49 @@ def test_count_node_net_exits_subtracts_consumed_entry():
     dag = Dag(seed=0)
     dag.add_node(node)
     assert count_node_net_exits(dag, node.id) == 1
+
+
+def test_compute_target_width_saturation_under_cap():
+    from speedfog.generator_v2 import compute_target_width
+
+    # remaining > current_width -> saturation, capped at max_parallel_paths
+    assert (
+        compute_target_width(
+            remaining=20, current_width=2, sum_exits=4, max_parallel_paths=5
+        )
+        == 4
+    )
+
+
+def test_compute_target_width_saturation_at_cap():
+    from speedfog.generator_v2 import compute_target_width
+
+    assert (
+        compute_target_width(
+            remaining=20, current_width=3, sum_exits=12, max_parallel_paths=5
+        )
+        == 5
+    )
+
+
+def test_compute_target_width_convergence_decrements_one():
+    from speedfog.generator_v2 import compute_target_width
+
+    # remaining == current_width -> countdown
+    assert (
+        compute_target_width(
+            remaining=4, current_width=4, sum_exits=99, max_parallel_paths=5
+        )
+        == 3
+    )
+
+
+def test_compute_target_width_convergence_terminates_at_one():
+    from speedfog.generator_v2 import compute_target_width
+
+    assert (
+        compute_target_width(
+            remaining=2, current_width=2, sum_exits=99, max_parallel_paths=5
+        )
+        == 1
+    )

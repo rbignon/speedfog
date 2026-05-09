@@ -31,3 +31,21 @@ def count_node_net_exits(dag: Dag, node_id: str) -> int:
         (e.exit_fog.fog_id, e.exit_fog.zone) for e in dag.get_outgoing_edges(node_id)
     }
     return sum(1 for f in net if (f["fog_id"], f["zone"]) not in used_exit_keys)
+
+
+def compute_target_width(
+    *,
+    remaining: int,
+    current_width: int,
+    sum_exits: int,
+    max_parallel_paths: int,
+) -> int:
+    """Width of the next layer.
+
+    Saturation phase (``remaining > current_width``) caps at
+    ``max_parallel_paths``. Convergence phase (``remaining <= current_width``)
+    is a strict ``current_width - 1`` countdown.
+    """
+    if remaining > current_width:
+        return min(max_parallel_paths, sum_exits)
+    return current_width - 1
