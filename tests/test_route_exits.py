@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import random
+
 from speedfog.clusters import ClusterData
 from speedfog.dag import Dag, DagNode, FogRef
 
@@ -95,3 +97,44 @@ def test_compute_target_width_convergence_terminates_at_one():
         )
         == 1
     )
+
+
+def test_connect_nodes_creates_edge_with_unique_fogs():
+    from speedfog.generator_v2 import connect_nodes
+
+    src_c = _mk_cluster("s", entries=[], exits=[("F1", "z1"), ("F2", "z1")])
+    tgt_c = _mk_cluster("t", entries=[("E1", "z2")], exits=[])
+    src = _mk_node(src_c, layer=0)
+    tgt = _mk_node(tgt_c, layer=1)
+    dag = Dag(seed=0)
+    dag.add_node(src)
+    dag.add_node(tgt)
+    rng = random.Random(42)
+
+    ok = connect_nodes(dag, src, tgt, rng)
+    assert ok is True
+    assert len(dag.edges) == 1
+    edge = dag.edges[0]
+    assert edge.source_id == src.id
+    assert edge.target_id == tgt.id
+    assert (edge.exit_fog.fog_id, edge.exit_fog.zone) in {("F1", "z1"), ("F2", "z1")}
+    assert (edge.entry_fog.fog_id, edge.entry_fog.zone) == ("E1", "z2")
+
+
+def test_connect_nodes_returns_false_when_source_has_no_free_exit():
+    from speedfog.generator_v2 import connect_nodes
+
+    src_c = _mk_cluster("s", entries=[], exits=[("F1", "z1")])
+    tgt_c = _mk_cluster("t", entries=[("E1", "z2")], exits=[])
+    src = _mk_node(src_c, layer=0)
+    tgt = _mk_node(tgt_c, layer=1)
+    dag = Dag(seed=0)
+    dag.add_node(src)
+    dag.add_node(tgt)
+    # Pre-consume F1 by adding an outgoing edge.
+    dag.add_edge(src.id, tgt.id, FogRef("F1", "z1"), FogRef("E1", "z2"))
+    rng = random.Random(42)
+
+    ok = connect_nodes(dag, src, tgt, rng)
+    assert ok is False
+    assert len(dag.edges) == 1  # no new edge added
