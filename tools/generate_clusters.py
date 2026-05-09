@@ -199,7 +199,6 @@ class Cluster:
     defeat_flag: int = 0
     allow_shared_entrance: bool = False
     allow_entry_as_exit: bool = False
-    requires: str = ""  # Zone that must be defeated before this cluster
     # Zones that are entry-only: reachable as entry but not reachable
     # back from deep zones (e.g. preboss zone with a one-way drop to boss).
     oneway_entry_zones: frozenset[str] = field(default_factory=frozenset)
@@ -1869,13 +1868,6 @@ def filter_and_enrich_clusters(
                     cluster.defeat_flag = flag
                     break
 
-        # Read prerequisite from metadata
-        for zone_name in sorted(cluster.zones):
-            zm = zones_meta.get(zone_name, {})
-            if isinstance(zm, dict) and "requires" in zm:
-                cluster.requires = zm["requires"]
-                break
-
         # Read cluster-level constraints from [clusters.<id>] section
         clusters_meta = metadata.get("clusters", {})
         if cluster.cluster_id in clusters_meta:
@@ -2090,8 +2082,6 @@ def clusters_to_json(
             entry["allow_shared_entrance"] = True
         if c.allow_entry_as_exit:
             entry["allow_entry_as_exit"] = True
-        if c.requires:
-            entry["requires"] = c.requires
         if c.proximity_groups:
             entry["proximity_groups"] = c.proximity_groups
         if c.allowed_entries:

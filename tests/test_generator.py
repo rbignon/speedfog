@@ -35,7 +35,6 @@ def make_cluster(
     exit_fogs: list[dict] | object = _SENTINEL,
     allow_shared_entrance: bool = False,
     allow_entry_as_exit: bool = False,
-    requires: str = "",
     proximity_groups: list[list[str]] | None = None,
 ) -> ClusterData:
     """Helper to create test ClusterData objects.
@@ -55,7 +54,6 @@ def make_cluster(
         exit_fogs=exit_fogs,  # type: ignore[arg-type]
         allow_shared_entrance=allow_shared_entrance,
         allow_entry_as_exit=allow_entry_as_exit,
-        requires=requires,
         proximity_groups=proximity_groups or [],
     )
 

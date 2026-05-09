@@ -45,37 +45,6 @@ class TestClusterDataReuseFields:
         assert cluster.allow_entry_as_exit is True
 
 
-class TestClusterDataRequiresField:
-    """Tests for the requires field on ClusterData."""
-
-    def test_requires_default_empty(self):
-        """requires defaults to empty string when not in source dict."""
-        data = {
-            "id": "test_1234",
-            "zones": ["zone_a"],
-            "type": "mini_dungeon",
-            "weight": 5,
-            "entry_fogs": [{"fog_id": "fog_a", "zone": "zone_a"}],
-            "exit_fogs": [{"fog_id": "fog_b", "zone": "zone_a"}],
-        }
-        cluster = ClusterData.from_dict(data)
-        assert cluster.requires == ""
-
-    def test_requires_loaded_from_dict(self):
-        """requires field is loaded from source dict when present."""
-        data = {
-            "id": "erdtree_boss",
-            "zones": ["leyndell_erdtree"],
-            "type": "final_boss",
-            "weight": 5,
-            "entry_fogs": [{"fog_id": "fog_a", "zone": "leyndell_erdtree"}],
-            "exit_fogs": [],
-            "requires": "farumazula_maliketh",
-        }
-        cluster = ClusterData.from_dict(data)
-        assert cluster.requires == "farumazula_maliketh"
-
-
 class TestClusterDataDisplayName:
     """Tests for display_name field on ClusterData."""
 
@@ -212,3 +181,12 @@ class TestZoneConflicts:
         path.write_text(json.dumps(data))
         pool = ClusterPool.from_json(path)
         assert pool.zone_conflicts == {}
+
+
+def test_cluster_data_drops_requires_field():
+    from speedfog.clusters import ClusterData
+
+    c = ClusterData(
+        id="x", zones=[], type="mini_dungeon", weight=1, entry_fogs=[], exit_fogs=[]
+    )
+    assert not hasattr(c, "requires")

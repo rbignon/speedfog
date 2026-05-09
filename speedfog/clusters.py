@@ -61,7 +61,6 @@ class ClusterData:
     allow_entry_as_exit: bool = (
         False  # Entry fog's return direction used as forward exit
     )
-    requires: str = ""  # Zone that must be defeated before this cluster
     proximity_groups: list[list[str]] = field(
         default_factory=list
     )  # Fogs spatially close — entry and exit cannot share a group
@@ -95,7 +94,6 @@ class ClusterData:
             defeat_flag=data.get("defeat_flag", 0),
             allow_shared_entrance=data.get("allow_shared_entrance", False),
             allow_entry_as_exit=data.get("allow_entry_as_exit", False),
-            requires=data.get("requires", ""),
             proximity_groups=data.get("proximity_groups", []),
             display_name=data.get("display_name", ""),
             boss_name=data.get("boss_name", ""),
