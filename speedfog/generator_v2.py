@@ -112,6 +112,51 @@ def _free_entries(dag: Dag, node_id: str) -> list[dict]:
     return candidates
 
 
+def _exits_ordered_by_diversity(
+    cluster: ClusterData,
+    free_exits: list[dict],
+) -> list[dict]:
+    """Reorder free exits so picks favour proximity-group diversity.
+
+    Groups exits by proximity_groups membership and round-robins, putting one
+    representative of each group first, then over-represented groups last.
+    Exits with no group are interleaved.
+    """
+    if not cluster.proximity_groups:
+        return free_exits
+
+    from speedfog.clusters import fog_matches_spec
+
+    groups: list[list[dict]] = []
+    seen: set[tuple[str, str]] = set()
+    for group in cluster.proximity_groups:
+        in_group = [
+            f
+            for f in free_exits
+            if any(fog_matches_spec(f["fog_id"], f["zone"], s) for s in group)
+            and (f["fog_id"], f["zone"]) not in seen
+        ]
+        if in_group:
+            groups.append(in_group)
+            seen.update((f["fog_id"], f["zone"]) for f in in_group)
+    ungrouped = [f for f in free_exits if (f["fog_id"], f["zone"]) not in seen]
+    if ungrouped:
+        groups.append(ungrouped)
+
+    # Sort groups largest-first so under-represented groups (more free exits)
+    # are picked before over-represented groups (fewer free exits remaining).
+    groups.sort(key=len, reverse=True)
+
+    # Round-robin: one per group, then a second pass, ...
+    result: list[dict] = []
+    while any(groups):
+        for g in groups:
+            if g:
+                result.append(g.pop(0))
+        groups = [g for g in groups if g]
+    return result
+
+
 def connect_nodes(
     dag: Dag, source: DagNode, target: DagNode, rng: random.Random
 ) -> bool:
@@ -126,7 +171,8 @@ def connect_nodes(
     tgt_entries = _free_entries(dag, target.id)
     if not src_exits or not tgt_entries:
         return False
-    exit_fog = rng.choice(src_exits)
+    ordered = _exits_ordered_by_diversity(source.cluster, src_exits)
+    exit_fog = ordered[0]
     entry_fog = rng.choice(tgt_entries)
     dag.add_edge(
         source.id,
@@ -180,4 +226,10 @@ def route_exits(
                 f"Failed to connect source {source.id} to target {target.id}"
             )
 
-    # Phase 2 added in next task.
+    # Phase 2: saturate remaining (source, target) pairs.
+    for source in sources:
+        already_targeted = {e.target_id for e in dag.get_outgoing_edges(source.id)}
+        available_targets = [t for t in targets if t.id not in already_targeted]
+        rng.shuffle(available_targets)
+        for target in available_targets:
+            connect_nodes(dag, source, target, rng)

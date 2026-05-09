@@ -181,3 +181,87 @@ def test_route_exits_raises_when_target_unreachable():
 
     with pytest.raises(GenerationError, match="orphan"):
         route_exits(dag, sources=[s], targets=[t], rng=random.Random(0))
+
+
+def test_route_exits_phase2_saturates_to_all_targets():
+    from speedfog.generator_v2 import route_exits
+
+    # Source with 3 exits, 3 targets -- every (source, target) pair gets an edge.
+    s_c = _mk_cluster("s", entries=[], exits=[("F1", "z1"), ("F2", "z1"), ("F3", "z1")])
+    t1_c = _mk_cluster("t1", entries=[("E1", "z2")], exits=[])
+    t2_c = _mk_cluster("t2", entries=[("E2", "z3")], exits=[])
+    t3_c = _mk_cluster("t3", entries=[("E3", "z4")], exits=[])
+    s = _mk_node(s_c, layer=0)
+    t1, t2, t3 = (_mk_node(c, layer=1) for c in (t1_c, t2_c, t3_c))
+    dag = Dag(seed=0)
+    for n in (s, t1, t2, t3):
+        dag.add_node(n)
+    rng = random.Random(0)
+
+    route_exits(dag, sources=[s], targets=[t1, t2, t3], rng=rng)
+
+    pairs = {(e.source_id, e.target_id) for e in dag.edges}
+    assert pairs == {(s.id, t1.id), (s.id, t2.id), (s.id, t3.id)}
+
+
+def test_route_exits_phase2_drops_surplus_when_more_exits_than_targets():
+    from speedfog.generator_v2 import route_exits
+
+    # Source has 5 exits, 3 targets -- drop 2 exits (keep 3 unique pairs).
+    s_c = _mk_cluster(
+        "s",
+        entries=[],
+        exits=[("F1", "z1"), ("F2", "z1"), ("F3", "z1"), ("F4", "z1"), ("F5", "z1")],
+    )
+    t1_c = _mk_cluster("t1", entries=[("E1", "z2")], exits=[])
+    t2_c = _mk_cluster("t2", entries=[("E2", "z3")], exits=[])
+    t3_c = _mk_cluster("t3", entries=[("E3", "z4")], exits=[])
+    s = _mk_node(s_c, layer=0)
+    t1, t2, t3 = (_mk_node(c, layer=1) for c in (t1_c, t2_c, t3_c))
+    dag = Dag(seed=0)
+    for n in (s, t1, t2, t3):
+        dag.add_node(n)
+    rng = random.Random(0)
+
+    route_exits(dag, sources=[s], targets=[t1, t2, t3], rng=rng)
+
+    out_edges = dag.get_outgoing_edges(s.id)
+    assert len(out_edges) == 3
+    # No multi-edges
+    pairs = {(e.source_id, e.target_id) for e in out_edges}
+    assert len(pairs) == 3
+
+
+def test_route_exits_phase2_proximity_diversity_kept():
+    from speedfog.generator_v2 import route_exits
+
+    # Source has 4 exits in 2 proximity groups (F1-F2, F3-F4), 2 targets:
+    # The kept pair should be one from each group.
+    s_c = ClusterData(
+        id="s",
+        zones=["s_zone"],
+        type="mini_dungeon",
+        weight=10,
+        entry_fogs=[],
+        exit_fogs=[
+            {"fog_id": "F1", "zone": "z1"},
+            {"fog_id": "F2", "zone": "z1"},
+            {"fog_id": "F3", "zone": "z1"},
+            {"fog_id": "F4", "zone": "z1"},
+        ],
+        proximity_groups=[["F1", "F2"], ["F3", "F4"]],
+    )
+    t1_c = _mk_cluster("t1", entries=[("E1", "z2")], exits=[])
+    t2_c = _mk_cluster("t2", entries=[("E2", "z3")], exits=[])
+    s = _mk_node(s_c, layer=0)
+    t1, t2 = _mk_node(t1_c, layer=1), _mk_node(t2_c, layer=1)
+    dag = Dag(seed=0)
+    for n in (s, t1, t2):
+        dag.add_node(n)
+
+    route_exits(dag, sources=[s], targets=[t1, t2], rng=random.Random(0))
+    used_fogs = {e.exit_fog.fog_id for e in dag.get_outgoing_edges(s.id)}
+    # The two kept exits are from different groups
+    in_group_a = used_fogs & {"F1", "F2"}
+    in_group_b = used_fogs & {"F3", "F4"}
+    assert len(in_group_a) == 1 and len(in_group_b) == 1
