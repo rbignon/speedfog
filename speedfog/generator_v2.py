@@ -116,11 +116,16 @@ def _exits_ordered_by_diversity(
     cluster: ClusterData,
     free_exits: list[dict],
 ) -> list[dict]:
-    """Reorder free exits so picks favour proximity-group diversity.
+    """Order free exits to maximise proximity-group diversity at the front.
 
-    Groups exits by proximity_groups membership and round-robins, putting one
-    representative of each group first, then over-represented groups last.
-    Exits with no group are interleaved.
+    Groups exits by ``proximity_groups`` membership, sorts groups by size
+    (largest first), then round-robins one from each group per pass. The
+    largest-first ordering biases picks toward larger groups across
+    successive calls: after a small group's only exit is consumed, the
+    larger group still goes first on the next call, so picks stay
+    distributed across groups instead of clustering in the small one.
+
+    Exits with no group membership are appended as a final pseudo-group.
     """
     if not cluster.proximity_groups:
         return free_exits
@@ -143,8 +148,9 @@ def _exits_ordered_by_diversity(
     if ungrouped:
         groups.append(ungrouped)
 
-    # Sort groups largest-first so under-represented groups (more free exits)
-    # are picked before over-represented groups (fewer free exits remaining).
+    # Sort groups largest-first so that across successive calls (as exits
+    # get consumed), the bigger group stays at the front and surplus picks
+    # are biased toward it, keeping smaller groups represented.
     groups.sort(key=len, reverse=True)
 
     # Round-robin: one per group, then a second pass, ...
