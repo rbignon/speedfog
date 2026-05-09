@@ -135,3 +135,49 @@ def connect_nodes(
         FogRef(entry_fog["fog_id"], entry_fog["zone"]),
     )
     return True
+
+
+class GenerationError(Exception):
+    """Error during DAG generation (v2)."""
+
+
+def _pick_source_with_compatible_exit(
+    dag: Dag,
+    sources: list[DagNode],
+    target: DagNode,
+    rng: random.Random,
+) -> DagNode | None:
+    """Pick a source that has at least one free exit and isn't already linked
+    to the target."""
+    candidates = [
+        s
+        for s in sources
+        if _free_exits(dag, s.id)
+        and not any(e.source_id == s.id and e.target_id == target.id for e in dag.edges)
+    ]
+    if not candidates:
+        return None
+    return rng.choice(candidates)
+
+
+def route_exits(
+    dag: Dag, sources: list[DagNode], targets: list[DagNode], rng: random.Random
+) -> None:
+    """Distribute source exits across target slots.
+
+    Phase 1: every target receives at least one incoming edge (no orphans).
+    Phase 2: route remaining surplus exits, one edge per (source, target).
+    """
+    # Phase 1
+    shuffled_targets = list(targets)
+    rng.shuffle(shuffled_targets)
+    for target in shuffled_targets:
+        source = _pick_source_with_compatible_exit(dag, sources, target, rng)
+        if source is None:
+            raise GenerationError(f"No source can reach orphan target {target.id}")
+        if not connect_nodes(dag, source, target, rng):
+            raise GenerationError(
+                f"Failed to connect source {source.id} to target {target.id}"
+            )
+
+    # Phase 2 added in next task.

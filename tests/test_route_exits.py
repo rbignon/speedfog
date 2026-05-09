@@ -138,3 +138,46 @@ def test_connect_nodes_returns_false_when_source_has_no_free_exit():
     ok = connect_nodes(dag, src, tgt, rng)
     assert ok is False
     assert len(dag.edges) == 1  # no new edge added
+
+
+def test_route_exits_phase1_each_target_gets_one_edge():
+    from speedfog.generator_v2 import route_exits
+
+    s1_c = _mk_cluster("s1", entries=[], exits=[("F1", "z1")])
+    s2_c = _mk_cluster("s2", entries=[], exits=[("F2", "z2")])
+    t1_c = _mk_cluster("t1", entries=[("E1", "z3")], exits=[])
+    t2_c = _mk_cluster("t2", entries=[("E2", "z4")], exits=[])
+    s1 = _mk_node(s1_c, layer=0)
+    s2 = _mk_node(s2_c, layer=0)
+    t1 = _mk_node(t1_c, layer=1)
+    t2 = _mk_node(t2_c, layer=1)
+    dag = Dag(seed=0)
+    for n in (s1, s2, t1, t2):
+        dag.add_node(n)
+    rng = random.Random(0)
+
+    route_exits(dag, sources=[s1, s2], targets=[t1, t2], rng=rng)
+
+    incoming_t1 = dag.get_incoming_edges(t1.id)
+    incoming_t2 = dag.get_incoming_edges(t2.id)
+    assert len(incoming_t1) >= 1
+    assert len(incoming_t2) >= 1
+
+
+def test_route_exits_raises_when_target_unreachable():
+    from speedfog.generator_v2 import GenerationError, route_exits
+
+    # Source has 0 free exits, target has no incoming edge possible.
+    s_c = _mk_cluster(
+        "s", entries=[("F1", "z1")], exits=[("F1", "z1")]
+    )  # bidirectional
+    t_c = _mk_cluster("t", entries=[("E1", "z2")], exits=[])
+    s = _mk_node(s_c, layer=0, entry=FogRef("F1", "z1"))  # consumes the only exit
+    t = _mk_node(t_c, layer=1)
+    dag = Dag(seed=0)
+    dag.add_node(s)
+    dag.add_node(t)
+    import pytest
+
+    with pytest.raises(GenerationError, match="orphan"):
+        route_exits(dag, sources=[s], targets=[t], rng=random.Random(0))
