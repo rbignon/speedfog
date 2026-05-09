@@ -8,11 +8,15 @@ from __future__ import annotations
 
 import random
 
-from speedfog.clusters import ClusterData
+from speedfog.clusters import ClusterData, ClusterPool
 from speedfog.dag import Dag, DagNode, FogRef
+from speedfog.generation_log import FallbackEntry
 from speedfog.generator import (
     _filter_exits_by_proximity,
+    _mark_cluster_used,
     compute_net_exits,
+    pick_cluster_uniform,
+    pick_cluster_weight_matched,
 )
 
 
@@ -239,3 +243,67 @@ def route_exits(
         rng.shuffle(available_targets)
         for target in available_targets:
             connect_nodes(dag, source, target, rng)
+
+
+def pick_layer_clusters(
+    *,
+    width: int,
+    layer_type: str,
+    clusters: ClusterPool,
+    used_zones: set[str],
+    rng: random.Random,
+    allowed_types: tuple[str, ...] = (
+        "mini_dungeon",
+        "boss_arena",
+        "legacy_dungeon",
+        "major_boss",
+    ),
+    anchor_weight: int | None = None,
+) -> tuple[list[ClusterData], list[FallbackEntry]]:
+    """Pick `width` clusters for a layer, falling back to other allowed types.
+
+    Returns (picks, fallbacks). Picks are weight-matched when possible.
+    Each pick of the wrong type yields a FallbackEntry (reason='pool_exhausted').
+    Raises GenerationError if no compatible cluster remains in any allowed type.
+    """
+    primary_pool = clusters.get_by_type(layer_type)
+    fallback_types = [t for t in allowed_types if t != layer_type]
+
+    picks: list[ClusterData] = []
+    fallbacks: list[FallbackEntry] = []
+    local_used = set(used_zones)
+    for slot in range(width):
+        c = pick_cluster_weight_matched(
+            primary_pool,
+            local_used,
+            rng,
+            anchor_weight=anchor_weight
+            if anchor_weight is not None
+            else (picks[0].weight if picks else 10),
+        )
+        if c is None:
+            for ft in fallback_types:
+                c = pick_cluster_uniform(
+                    clusters.get_by_type(ft),
+                    local_used,
+                    rng,
+                )
+                if c is not None:
+                    fallbacks.append(
+                        FallbackEntry(
+                            branch_index=slot,
+                            preferred_type=layer_type,
+                            actual_type=ft,
+                            reason="pool_exhausted",
+                            pool_remaining={},
+                        )
+                    )
+                    break
+        if c is None:
+            raise GenerationError(
+                f"No cluster available for layer type '{layer_type}' or any "
+                f"fallback type at slot {slot}/{width}"
+            )
+        picks.append(c)
+        _mark_cluster_used(c, local_used, clusters)
+    return picks, fallbacks
