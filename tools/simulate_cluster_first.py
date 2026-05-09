@@ -329,48 +329,26 @@ def generate_dag_cluster_first(
                 used_zones.update(cluster.zones)
                 merge_branches_list = [branches[i] for i in indices]
 
-                if cluster.allow_shared_entrance:
-                    entries = select_entries_for_merge(cluster, 1, rng)
-                    shared_entry = FogRef(entries[0]["fog_id"], entries[0]["zone"])
-                    exits = compute_net_exits(cluster, entries)
-                    rng.shuffle(exits)
-                    exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits[:1]]
+                entries = select_entries_for_merge(cluster, 1, rng)
+                shared_entry = FogRef(entries[0]["fog_id"], entries[0]["zone"])
+                exits = compute_net_exits(cluster, entries)
+                rng.shuffle(exits)
+                exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits[:1]]
 
-                    node_id = f"node_{current_layer}_a"
-                    node = DagNode(
-                        id=node_id,
-                        cluster=cluster,
-                        layer=current_layer,
-                        tier=tier,
-                        entry_fogs=[shared_entry],
-                        exit_fogs=exit_fogs,
+                node_id = f"node_{current_layer}_a"
+                node = DagNode(
+                    id=node_id,
+                    cluster=cluster,
+                    layer=current_layer,
+                    tier=tier,
+                    entry_fogs=[shared_entry],
+                    exit_fogs=exit_fogs,
+                )
+                dag.add_node(node)
+                for b in merge_branches_list:
+                    dag.add_edge(
+                        b.current_node_id, node_id, b.available_exit, shared_entry
                     )
-                    dag.add_node(node)
-                    for b in merge_branches_list:
-                        dag.add_edge(
-                            b.current_node_id, node_id, b.available_exit, shared_entry
-                        )
-                else:
-                    entries = select_entries_for_merge(cluster, actual_merge, rng)
-                    entry_fogs_list = [FogRef(e["fog_id"], e["zone"]) for e in entries]
-                    exits = compute_net_exits(cluster, entries)
-                    rng.shuffle(exits)
-                    exit_fogs = [FogRef(f["fog_id"], f["zone"]) for f in exits[:1]]
-
-                    node_id = f"node_{current_layer}_a"
-                    node = DagNode(
-                        id=node_id,
-                        cluster=cluster,
-                        layer=current_layer,
-                        tier=tier,
-                        entry_fogs=entry_fogs_list,
-                        exit_fogs=exit_fogs,
-                    )
-                    dag.add_node(node)
-                    for b, ef in zip(
-                        merge_branches_list, entry_fogs_list, strict=False
-                    ):
-                        dag.add_edge(b.current_node_id, node_id, b.available_exit, ef)
 
                 new_branches = [
                     Branch(f"merged_{current_layer}", node_id, rng.choice(exit_fogs))
@@ -542,13 +520,11 @@ def generate_dag_cluster_first(
 
             elif operation == "merge":
                 max_merge = max(min(max_en, len(branches)), 2)
-                actual_m = 2
                 indices = None
                 for n in range(max_merge, 1, -1):
                     if can_be_merge_node(cluster, n):
                         idx = _find_valid_merge_indices(branches, rng, n)
                         if idx is not None:
-                            actual_m = n
                             indices = idx
                             break
                 if indices is None:
@@ -561,48 +537,27 @@ def generate_dag_cluster_first(
                     used_zones.update(cluster.zones)
                     merge_branches_list = [branches[i] for i in indices]
 
-                    if cluster.allow_shared_entrance:
-                        entries = select_entries_for_merge(cluster, 1, rng)
-                        shared_entry = FogRef(entries[0]["fog_id"], entries[0]["zone"])
-                        exits_remaining = compute_net_exits(cluster, entries)
-                        rng.shuffle(exits_remaining)
-                        exit_fogs = [
-                            FogRef(f["fog_id"], f["zone"]) for f in exits_remaining[:1]
-                        ]
-                        nid = f"node_{current_layer}_a"
-                        n = DagNode(
-                            id=nid,
-                            cluster=cluster,
-                            layer=current_layer,
-                            tier=tier,
-                            entry_fogs=[shared_entry],
-                            exit_fogs=exit_fogs,
+                    entries = select_entries_for_merge(cluster, 1, rng)
+                    shared_entry = FogRef(entries[0]["fog_id"], entries[0]["zone"])
+                    exits_remaining = compute_net_exits(cluster, entries)
+                    rng.shuffle(exits_remaining)
+                    exit_fogs = [
+                        FogRef(f["fog_id"], f["zone"]) for f in exits_remaining[:1]
+                    ]
+                    nid = f"node_{current_layer}_a"
+                    n = DagNode(
+                        id=nid,
+                        cluster=cluster,
+                        layer=current_layer,
+                        tier=tier,
+                        entry_fogs=[shared_entry],
+                        exit_fogs=exit_fogs,
+                    )
+                    dag.add_node(n)
+                    for b in merge_branches_list:
+                        dag.add_edge(
+                            b.current_node_id, nid, b.available_exit, shared_entry
                         )
-                        dag.add_node(n)
-                        for b in merge_branches_list:
-                            dag.add_edge(
-                                b.current_node_id, nid, b.available_exit, shared_entry
-                            )
-                    else:
-                        entries = select_entries_for_merge(cluster, actual_m, rng)
-                        efl = [FogRef(e["fog_id"], e["zone"]) for e in entries]
-                        exits_remaining = compute_net_exits(cluster, entries)
-                        rng.shuffle(exits_remaining)
-                        exit_fogs = [
-                            FogRef(f["fog_id"], f["zone"]) for f in exits_remaining[:1]
-                        ]
-                        nid = f"node_{current_layer}_a"
-                        n = DagNode(
-                            id=nid,
-                            cluster=cluster,
-                            layer=current_layer,
-                            tier=tier,
-                            entry_fogs=efl,
-                            exit_fogs=exit_fogs,
-                        )
-                        dag.add_node(n)
-                        for b, ef in zip(merge_branches_list, efl, strict=False):
-                            dag.add_edge(b.current_node_id, nid, b.available_exit, ef)
 
                     new_branches = [
                         Branch(f"merged_{current_layer}", nid, rng.choice(exit_fogs))

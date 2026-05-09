@@ -952,13 +952,11 @@ def generate_dag(config: Config, clusters: ClusterPool) -> tuple[Dag, Generation
             "major_boss": config.requirements.major_bosses,
         },
         target_total=total_target,
-        merge_reserve=0,  # legacy field, no longer used
         num_intermediate=intermediate_count,
         first_layer_type=config.structure.first_layer_type,
         planned_types=list(layer_types),
         pool_sizes=pool_sizes,
         final_boss=final_boss.id,
-        reserved_zones=set(),
     )
 
     # 4. Main loop: saturation -> convergence

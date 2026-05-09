@@ -27,13 +27,11 @@ def test_plan_event_construction():
         seed=12345,
         requirements={"legacy_dungeon": 2, "boss_arena": 7},
         target_total=25,
-        merge_reserve=6,
         num_intermediate=22,
         first_layer_type="legacy_dungeon",
         planned_types=["legacy_dungeon", "boss_arena"],
         pool_sizes={"boss_arena": 84, "major_boss": 40},
         final_boss="jaggedpeak_bayle_f21a",
-        reserved_zones={"jaggedpeak_bayle"},
     )
     assert pe.target_total == 25
     assert pe.first_layer_type == "legacy_dungeon"
@@ -98,7 +96,6 @@ def _make_minimal_log():
             "major_boss": 2,
         },
         target_total=15,
-        merge_reserve=4,
         num_intermediate=12,
         first_layer_type="legacy_dungeon",
         planned_types=["legacy_dungeon", "boss_arena", "mini_dungeon"],
@@ -109,7 +106,6 @@ def _make_minimal_log():
             "major_boss": 40,
         },
         final_boss="jaggedpeak_bayle_f21a",
-        reserved_zones={"jaggedpeak_bayle"},
     )
     log.layer_events = [
         LayerEvent(
@@ -157,7 +153,7 @@ def test_export_plan_section(tmp_path):
     assert "Final boss: jaggedpeak_bayle_f21a" in text
     assert "legacy_dungeon=2" in text
     assert "Target layers: 15" in text
-    assert "merge_reserve=4" in text
+    assert "layers=15" in text
     assert "Intermediate layers: 12" in text
     assert "major_boss=40" in text
     assert "First layer type: legacy_dungeon" in text

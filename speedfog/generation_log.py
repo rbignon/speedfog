@@ -59,13 +59,11 @@ class PlanEvent:
     seed: int
     requirements: dict[str, int]
     target_total: int
-    merge_reserve: int
     num_intermediate: int
     first_layer_type: str | None
     planned_types: list[str]
     pool_sizes: dict[str, int]
     final_boss: str
-    reserved_zones: set[str]
 
 
 @dataclass
@@ -142,14 +140,9 @@ def export_generation_log(
         pe = log.plan_event
         lines.append("PLAN")
         lines.append(f"  Final boss: {pe.final_boss}")
-        if pe.reserved_zones:
-            lines.append(f"  Reserved zones: {', '.join(sorted(pe.reserved_zones))}")
         req_parts = [f"{t}={c}" for t, c in sorted(pe.requirements.items())]
         lines.append(f"  Requirements: {', '.join(req_parts)}")
-        lines.append(
-            f"  Target layers: {pe.target_total} "
-            f"(min={pe.target_total}, merge_reserve={pe.merge_reserve})"
-        )
+        lines.append(f"  Target layers: {pe.target_total} (layers={pe.target_total})")
         lines.append(f"  Intermediate layers: {pe.num_intermediate}")
         if pe.first_layer_type:
             lines.append(f"  First layer type: {pe.first_layer_type}")

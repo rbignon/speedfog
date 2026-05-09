@@ -57,8 +57,6 @@ def compute_fog_stats(cluster) -> dict:
             len(cluster.exit_fogs)
             - (1 if len(bidir) > 0 and len(entry_keys - bidir) == 0 else 0),
         ),
-        "shared_entrance": cluster.allow_shared_entrance,
-        "entry_as_exit": cluster.allow_entry_as_exit,
     }
 
 
