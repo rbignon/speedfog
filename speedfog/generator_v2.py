@@ -177,35 +177,31 @@ def _exits_ordered_by_diversity(
     return result
 
 
-def _target_has_exit_after_entry(dag: Dag, source: DagNode, target: DagNode) -> bool:
-    """Return True if target will still have at least one free exit after
-    receiving a new incoming edge from source.
+def _safe_entry_candidates(dag: Dag, target: DagNode) -> list[dict]:
+    """Return the free entries of target that, when consumed, leave at least one exit.
 
-    Simulates the effect of adding a new entry to the target and checks
-    whether the net exits would be > 0. Used in Phase 1 and Phase 2 of
-    route_exits to prevent over-consuming a node's entry capacity.
+    Simulates adding each free entry to the current set of consumed entries and
+    returns only those where the resulting net exits (after proximity filtering
+    and already-used-exit subtraction) is non-empty.
 
     Note: uses dag.get_incoming_edges() (not target.entry_fogs) because
     entry_fogs is only populated after route_exits returns.
+    Multiple sources may share the same entry fog (allow_shared_entrance is
+    universal). compute_net_exits uses set semantics, so repeating the same
+    entry fog does not compound exit consumption.
     """
-    # What entries does target currently have (from edges already created)?
+    free_entries = _free_entries(dag, target.id)
+    if not free_entries:
+        return []
     current_incoming = dag.get_incoming_edges(target.id)
     current_entries = [
         {"fog_id": e.entry_fog.fog_id, "zone": e.entry_fog.zone}
         for e in current_incoming
     ]
-    # Check if ANY free entry would leave the target with at least 1 free exit
-    # when added to the current set of consumed entries.
-    # Multiple sources can share the same entry fog (allow_shared_entrance is
-    # universal). ``compute_net_exits`` uses set semantics, so re-using the same
-    # entry fog doesn't compound exit consumption.
-    free_entries = _free_entries(dag, target.id)
-    if not free_entries:
-        return False
-    # Also subtract already-used exit keys
     used_exit_keys = {
         (e.exit_fog.fog_id, e.exit_fog.zone) for e in dag.get_outgoing_edges(target.id)
     }
+    safe: list[dict] = []
     for candidate_entry in free_entries:
         simulated_entries = current_entries + [candidate_entry]
         net = compute_net_exits(target.cluster, simulated_entries)
@@ -213,8 +209,18 @@ def _target_has_exit_after_entry(dag: Dag, source: DagNode, target: DagNode) -> 
             net = _filter_exits_by_proximity(target.cluster, entry, net)
         remaining = [f for f in net if (f["fog_id"], f["zone"]) not in used_exit_keys]
         if remaining:
-            return True
-    return False
+            safe.append(candidate_entry)
+    return safe
+
+
+def _target_has_free_exit_remaining(dag: Dag, target: DagNode) -> bool:
+    """Return True if target will still have at least one free exit after
+    receiving a new incoming edge.
+
+    Used in Phase 1 and Phase 2 of route_exits to prevent over-consuming a
+    node's exit capacity. Delegates to _safe_entry_candidates.
+    """
+    return bool(_safe_entry_candidates(dag, target))
 
 
 def connect_nodes(
@@ -238,27 +244,7 @@ def connect_nodes(
     ordered = _exits_ordered_by_diversity(source.cluster, src_exits)
     exit_fog = ordered[0]
     # Prefer entries that leave target with at least 1 exit remaining.
-    current_incoming = dag.get_incoming_edges(target.id)
-    current_entries_list = [
-        {"fog_id": e.entry_fog.fog_id, "zone": e.entry_fog.zone}
-        for e in current_incoming
-    ]
-    used_exit_keys = {
-        (e.exit_fog.fog_id, e.exit_fog.zone) for e in dag.get_outgoing_edges(target.id)
-    }
-    # Select a safe entry: one that leaves the target with >= 1 exit after use.
-    # Multiple sources can share the same entry fog (allow_shared_entrance is
-    # universal). compute_net_exits uses set semantics, so re-using the same
-    # entry fog doesn't compound exit consumption - it's free to repeat.
-    safe_entries = []
-    for e in tgt_entries:
-        sim = current_entries_list + [e]
-        net = compute_net_exits(target.cluster, sim)
-        for entry in sim:
-            net = _filter_exits_by_proximity(target.cluster, entry, net)
-        remaining = [f for f in net if (f["fog_id"], f["zone"]) not in used_exit_keys]
-        if remaining:
-            safe_entries.append(e)
+    safe_entries = _safe_entry_candidates(dag, target)
     # Prefer safe entries. Fall back to any free entry when none are safe
     # (e.g., terminal nodes with no exits, or when called from Phase 1 fallback
     # where we accept some dead ends to avoid orphaned targets).
@@ -320,7 +306,7 @@ def route_exits(
             and not any(
                 e.source_id == s.id and e.target_id == target.id for e in dag.edges
             )
-            and _target_has_exit_after_entry(dag, s, target)
+            and _target_has_free_exit_remaining(dag, target)
         ]
         if candidates:
             source: DagNode | None = rng.choice(candidates)
@@ -352,7 +338,7 @@ def route_exits(
         ]
         # Prefer targets that won't become dead ends
         preferred = [
-            t for t in not_yet_targeted if _target_has_exit_after_entry(dag, source, t)
+            t for t in not_yet_targeted if _target_has_free_exit_remaining(dag, t)
         ]
         candidates_1b = preferred if preferred else not_yet_targeted
         rng.shuffle(candidates_1b)
@@ -375,7 +361,7 @@ def route_exits(
         rng.shuffle(available_targets)
         for target in available_targets:
             # Guard: would this new entry leave the target with 0 exits?
-            if not _target_has_exit_after_entry(dag, source, target):
+            if not _target_has_free_exit_remaining(dag, target):
                 continue
             connect_nodes(dag, source, target, rng)
 
