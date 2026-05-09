@@ -77,3 +77,49 @@ def test_pick_layer_clusters_fails_when_no_compatible_remaining():
             rng=rng,
             allowed_types=("mini_dungeon",),
         )
+
+
+def test_generate_dag_v2_produces_exact_layers_count():
+    from pathlib import Path
+
+    from speedfog.clusters import load_clusters
+    from speedfog.config import (
+        BudgetConfig,
+        Config,
+        RequirementsConfig,
+        StructureConfig,
+    )
+    from speedfog.generator_v2 import generate_dag
+
+    pool = load_clusters(Path(__file__).parent.parent / "data" / "clusters.json")
+    pool.merge_roundtable_into_start()
+    pool.filter_passant_incompatible()
+
+    cfg = Config(
+        seed=12345,
+        requirements=RequirementsConfig(
+            legacy_dungeons=1,
+            bosses=3,
+            mini_dungeons=3,
+            major_bosses=1,
+            allowed_types=[
+                "mini_dungeon",
+                "boss_arena",
+                "legacy_dungeon",
+                "major_boss",
+            ],
+        ),
+        structure=StructureConfig(
+            layers_count=15,
+            max_parallel_paths=4,
+            final_boss_candidates={"leyndell_throne": 1},
+        ),
+        budget=BudgetConfig(),
+    )
+    dag, log = generate_dag(cfg, pool)
+
+    layers = {n.layer for n in dag.nodes.values()}
+    assert layers == set(range(15)), f"Expected 15 layers, got {sorted(layers)}"
+    # Validator
+    errors = dag.validate_structure()
+    assert errors == [], errors

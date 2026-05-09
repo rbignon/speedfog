@@ -173,6 +173,9 @@ def plan_layer_types(
 ) -> list[str]:
     """Plan sequence of cluster types for each layer.
 
+    Note: callers in generator_v2 size ``total_layers`` to ``layers_count - 2``
+    (exclude start and final boss).
+
     Iterates over requirements.allowed_types; types outside it are excluded
     entirely (no minimum count, no padding). The minimum for each allowed
     type is read via requirements.required_count().
