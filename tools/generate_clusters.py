@@ -197,7 +197,6 @@ class Cluster:
     weight: int = 0
     cluster_id: str = ""
     defeat_flag: int = 0
-    allow_shared_entrance: bool = False
     allow_entry_as_exit: bool = False
     # Zones that are entry-only: reachable as entry but not reachable
     # back from deep zones (e.g. preboss zone with a one-way drop to boss).
@@ -1505,37 +1504,6 @@ def get_zone_weight(
     return float(defaults.get(zone_type, 4))
 
 
-def compute_allow_shared_entrance(
-    entry_fogs: list[dict],
-    zones_meta: dict,
-    zones: frozenset[str],
-) -> bool:
-    """Compute allow_shared_entrance default for a cluster.
-
-    Default: True.
-    Per-zone overrides from zone_metadata.toml take priority.
-
-    Args:
-        entry_fogs: List of entry fog dicts
-        zones_meta: The [zones] section from zone_metadata.toml
-        zones: Set of zone names in this cluster
-
-    Returns:
-        Whether this cluster allows shared entrance merges.
-    """
-    allow = True
-
-    # Per-zone overrides (any zone in cluster can override)
-    for zone_name in zones:
-        if zone_name not in zones_meta:
-            continue
-        zm = zones_meta[zone_name]
-        if isinstance(zm, dict) and "allow_shared_entrance" in zm:
-            allow = bool(zm["allow_shared_entrance"])
-
-    return allow
-
-
 def compute_allow_entry_as_exit(
     cluster_type: str,
     exit_fogs: list[dict],
@@ -1841,11 +1809,6 @@ def filter_and_enrich_clusters(
                     continue  # No reachable exits after pruning
 
         # Compute fog reuse flags
-        cluster.allow_shared_entrance = compute_allow_shared_entrance(
-            cluster.entry_fogs,
-            zones_meta,
-            cluster.zones,
-        )
         cluster.allow_entry_as_exit = compute_allow_entry_as_exit(
             cluster.cluster_type,
             cluster.exit_fogs,
@@ -2078,8 +2041,6 @@ def clusters_to_json(
             entry["defeat_flag"] = c.defeat_flag
             if boss_names and c.defeat_flag in boss_names:
                 entry["boss_name"] = boss_names[c.defeat_flag]
-        if c.allow_shared_entrance:
-            entry["allow_shared_entrance"] = True
         if c.allow_entry_as_exit:
             entry["allow_entry_as_exit"] = True
         if c.proximity_groups:

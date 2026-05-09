@@ -183,9 +183,9 @@ def can_be_split_node(cluster: ClusterData, num_out: int) -> bool:
 def can_be_merge_node(cluster: ClusterData, num_in: int) -> bool:
     """Check if cluster can be a merge node (num_in entries -> 1+ exit).
 
-    With shared entrance enabled, multiple branches connect to the same
-    entrance fog gate. Only needs 2+ entries + 1+ exit regardless of fan-in.
-    Extra exits beyond 1 are left unmapped.
+    Multiple branches connect to the same entrance fog gate (shared entrance).
+    Requires 2+ entries + 1+ exit regardless of fan-in. Extra exits beyond 1
+    are left unmapped.
 
     Args:
         cluster: The cluster to check.
@@ -194,9 +194,7 @@ def can_be_merge_node(cluster: ClusterData, num_in: int) -> bool:
     Returns:
         True if cluster can serve as a merge node.
     """
-    if cluster.allow_shared_entrance:
-        return len(cluster.entry_fogs) >= 2 and len(cluster.exit_fogs) >= 1
-    return len(cluster.entry_fogs) >= num_in and count_net_exits(cluster, num_in) >= 1
+    return len(cluster.entry_fogs) >= 2 and len(cluster.exit_fogs) >= 1
 
 
 def can_be_passant_node(cluster: ClusterData) -> bool:
@@ -538,8 +536,7 @@ def _entry_blocked_by_used_exits(
 def _free_entries(dag: Dag, node_id: str) -> list[dict]:
     """Cluster entries available for a new incoming edge.
 
-    With ``allow_shared_entrance`` universal across the data, an entry can be
-    reused by multiple incoming edges (DuplicateEntrance). The only exclusions
+    An entry can be reused by multiple incoming edges (DuplicateEntrance). The only exclusions
     are: bidirectional pair already consumed as an exit on this node, and
     proximity exclusion against already-used exits.
     """
@@ -618,8 +615,7 @@ def _safe_entry_candidates(dag: Dag, target: DagNode) -> list[dict]:
 
     Note: uses dag.get_incoming_edges() (not target.entry_fogs) because
     entry_fogs is only populated after route_exits returns.
-    Multiple sources may share the same entry fog (allow_shared_entrance is
-    universal). compute_net_exits uses set semantics, so repeating the same
+    Multiple sources may share the same entry fog. compute_net_exits uses set semantics, so repeating the same
     entry fog does not compound exit consumption.
     """
     free_entries = _free_entries(dag, target.id)

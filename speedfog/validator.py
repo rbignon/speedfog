@@ -101,8 +101,8 @@ def validate_dag(
 def _check_entry_fog_consistency(dag: Dag) -> list[str]:
     """Check that entry_fogs count matches incoming edge count.
 
-    For shared entrance nodes (allow_shared_entrance=True), multiple incoming
-    edges share a single entry fog, so we only require entry_fogs >= 1.
+    Multiple incoming edges may share a single entry fog, so we only require
+    entry_fogs >= 1 for any non-start node.
 
     Args:
         dag: The DAG to check.
@@ -115,16 +115,8 @@ def _check_entry_fog_consistency(dag: Dag) -> list[str]:
         if node_id == dag.start_id:
             # Start node has no incoming edges
             continue
-        incoming = dag.get_incoming_edges(node_id)
-        if node.cluster.allow_shared_entrance:
-            # Shared entrance: multiple branches connect to the same entry fog
-            if len(node.entry_fogs) < 1:
-                errors.append(f"Node {node_id}: shared entrance but no entry_fogs")
-        elif len(incoming) != len(node.entry_fogs):
-            errors.append(
-                f"Node {node_id}: {len(incoming)} incoming edges "
-                f"but {len(node.entry_fogs)} entry_fogs"
-            )
+        if len(node.entry_fogs) < 1:
+            errors.append(f"Node {node_id}: has incoming edges but no entry_fogs")
     return errors
 
 

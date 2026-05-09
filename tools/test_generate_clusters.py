@@ -21,7 +21,6 @@ from generate_clusters import (
     classify_fogs,
     clusters_to_json,
     compute_allow_entry_as_exit,
-    compute_allow_shared_entrance,
     compute_cluster_fogs,
     extract_opensplit_warp_ids,
     filter_and_enrich_clusters,
@@ -2727,112 +2726,6 @@ class TestComputeClusterFogsUniqueClassification:
 # =============================================================================
 # Fog Reuse Default Tests
 # =============================================================================
-
-
-class TestComputeAllowSharedEntrance:
-    """Tests for compute_allow_shared_entrance function."""
-
-    def test_true_when_two_plus_entries(self):
-        """Clusters with 2+ entry fogs get allow_shared_entrance=True."""
-        entry_fogs = [
-            {"fog_id": "fog_a", "zone": "z1"},
-            {"fog_id": "fog_b", "zone": "z2"},
-        ]
-        result = compute_allow_shared_entrance(entry_fogs, {}, frozenset({"z1", "z2"}))
-        assert result is True
-
-    def test_true_when_one_entry(self):
-        """Clusters with 1 entry fog still get allow_shared_entrance=True."""
-        entry_fogs = [{"fog_id": "fog_a", "zone": "z1"}]
-        result = compute_allow_shared_entrance(entry_fogs, {}, frozenset({"z1"}))
-        assert result is True
-
-    def test_true_when_no_entries(self):
-        """Clusters with 0 entry fogs still get allow_shared_entrance=True."""
-        result = compute_allow_shared_entrance([], {}, frozenset({"z1"}))
-        assert result is True
-
-    def test_override_false(self):
-        """zone_metadata.toml can override allow_shared_entrance to false."""
-        entry_fogs = [
-            {"fog_id": "fog_a", "zone": "z1"},
-            {"fog_id": "fog_b", "zone": "z2"},
-        ]
-        zones_meta = {"z1": {"allow_shared_entrance": False}}
-        result = compute_allow_shared_entrance(
-            entry_fogs, zones_meta, frozenset({"z1", "z2"})
-        )
-        assert result is False
-
-    def test_override_true(self):
-        """zone_metadata.toml can force allow_shared_entrance to true on 1-entry cluster."""
-        entry_fogs = [{"fog_id": "fog_a", "zone": "z1"}]
-        zones_meta = {"z1": {"allow_shared_entrance": True}}
-        result = compute_allow_shared_entrance(
-            entry_fogs, zones_meta, frozenset({"z1"})
-        )
-        assert result is True
-
-
-class TestFogReuseInFilterAndEnrich:
-    """Tests for fog reuse flags flowing through filter_and_enrich_clusters."""
-
-    def test_shared_entrance_set_on_multi_entry_cluster(self):
-        """Cluster with 2+ entries gets allow_shared_entrance=True after enrichment."""
-        areas = {
-            "zone_a": AreaData(
-                name="zone_a", text="Zone A", maps=["m10_00_00_00"], tags=[]
-            ),
-        }
-        metadata = {"defaults": {"mini_dungeon": 5}, "zones": {}}
-        cluster = Cluster(
-            zones=frozenset({"zone_a"}),
-            entry_fogs=[
-                {"fog_id": "entry_a", "zone": "zone_a"},
-                {"fog_id": "entry_b", "zone": "zone_a"},
-            ],
-            exit_fogs=[{"fog_id": "exit_a", "zone": "zone_a"}],
-        )
-
-        result = filter_and_enrich_clusters(
-            [cluster],
-            areas,
-            metadata,
-            set(),
-            set(),
-            exclude_dlc=False,
-            exclude_overworld=False,
-        )
-
-        assert len(result) == 1
-        assert result[0].allow_shared_entrance is True
-
-    def test_shared_entrance_true_on_single_entry_cluster(self):
-        """Cluster with 1 entry still gets allow_shared_entrance=True after enrichment."""
-        areas = {
-            "zone_a": AreaData(
-                name="zone_a", text="Zone A", maps=["m10_00_00_00"], tags=[]
-            ),
-        }
-        metadata = {"defaults": {"mini_dungeon": 5}, "zones": {}}
-        cluster = Cluster(
-            zones=frozenset({"zone_a"}),
-            entry_fogs=[{"fog_id": "entry_a", "zone": "zone_a"}],
-            exit_fogs=[{"fog_id": "exit_a", "zone": "zone_a"}],
-        )
-
-        result = filter_and_enrich_clusters(
-            [cluster],
-            areas,
-            metadata,
-            set(),
-            set(),
-            exclude_dlc=False,
-            exclude_overworld=False,
-        )
-
-        assert len(result) == 1
-        assert result[0].allow_shared_entrance is True
 
 
 class TestComputeAllowEntryAsExit:

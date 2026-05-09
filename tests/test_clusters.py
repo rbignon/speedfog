@@ -6,10 +6,10 @@ from speedfog.clusters import ClusterData, ClusterPool
 
 
 class TestClusterDataReuseFields:
-    """Tests for allow_shared_entrance and allow_entry_as_exit fields."""
+    """Tests for allow_entry_as_exit field."""
 
     def test_default_values_false(self):
-        """Reuse fields default to False when not in source dict."""
+        """allow_entry_as_exit defaults to False when not in source dict."""
         data = {
             "id": "test_1234",
             "zones": ["zone_a"],
@@ -19,7 +19,6 @@ class TestClusterDataReuseFields:
             "exit_fogs": [{"fog_id": "fog_b", "zone": "zone_a"}],
         }
         cluster = ClusterData.from_dict(data)
-        assert cluster.allow_shared_entrance is False
         assert cluster.allow_entry_as_exit is False
 
     def test_fields_loaded_from_dict(self):
@@ -37,11 +36,9 @@ class TestClusterDataReuseFields:
                 {"fog_id": "fog_c", "zone": "zone_a"},
                 {"fog_id": "fog_d", "zone": "zone_a"},
             ],
-            "allow_shared_entrance": True,
             "allow_entry_as_exit": True,
         }
         cluster = ClusterData.from_dict(data)
-        assert cluster.allow_shared_entrance is True
         assert cluster.allow_entry_as_exit is True
 
 
@@ -190,3 +187,12 @@ def test_cluster_data_drops_requires_field():
         id="x", zones=[], type="mini_dungeon", weight=1, entry_fogs=[], exit_fogs=[]
     )
     assert not hasattr(c, "requires")
+
+
+def test_cluster_data_drops_allow_shared_entrance_field():
+    from speedfog.clusters import ClusterData
+
+    c = ClusterData(
+        id="x", zones=[], type="mini_dungeon", weight=1, entry_fogs=[], exit_fogs=[]
+    )
+    assert not hasattr(c, "allow_shared_entrance")

@@ -33,7 +33,6 @@ def make_cluster(
     weight: int = 5,
     entry_fogs: list[dict] | object = _SENTINEL,
     exit_fogs: list[dict] | object = _SENTINEL,
-    allow_shared_entrance: bool = False,
     allow_entry_as_exit: bool = False,
     proximity_groups: list[list[str]] | None = None,
 ) -> ClusterData:
@@ -52,7 +51,6 @@ def make_cluster(
         weight=weight,
         entry_fogs=entry_fogs,  # type: ignore[arg-type]
         exit_fogs=exit_fogs,  # type: ignore[arg-type]
-        allow_shared_entrance=allow_shared_entrance,
         allow_entry_as_exit=allow_entry_as_exit,
         proximity_groups=proximity_groups or [],
     )
@@ -968,11 +966,11 @@ class TestCanBePassantNodeEntryAsExit:
         assert can_be_passant_node(cluster) is False
 
 
-class TestCanBeMergeNodeSharedEntrance:
-    """Tests for can_be_merge_node with allow_shared_entrance."""
+class TestCanBeMergeNode:
+    """Tests for can_be_merge_node."""
 
-    def test_shared_entrance_two_entries_one_exit(self):
-        """With shared entrance, 2 entries + 1 exit qualifies for merge(2+)."""
+    def test_two_entries_one_exit_qualifies(self):
+        """2 entries + 1 exit qualifies for merge(2+); fan-in doesn't matter."""
         cluster = make_cluster(
             "merge_test",
             entry_fogs=[
@@ -980,23 +978,21 @@ class TestCanBeMergeNodeSharedEntrance:
                 {"fog_id": "entry_b", "zone": "merge_test"},
             ],
             exit_fogs=[{"fog_id": "exit_a", "zone": "merge_test"}],
-            allow_shared_entrance=True,
         )
         assert can_be_merge_node(cluster, 2) is True
         assert can_be_merge_node(cluster, 3) is True  # fan-in doesn't matter
 
-    def test_shared_entrance_needs_at_least_two_entries(self):
-        """Shared entrance still requires 2+ entries (spec constraint)."""
+    def test_needs_at_least_two_entries(self):
+        """Requires 2+ entries (spec constraint)."""
         cluster = make_cluster(
             "merge_test",
             entry_fogs=[{"fog_id": "entry_a", "zone": "merge_test"}],
             exit_fogs=[{"fog_id": "exit_a", "zone": "merge_test"}],
-            allow_shared_entrance=True,
         )
         assert can_be_merge_node(cluster, 2) is False
 
-    def test_shared_entrance_needs_at_least_one_exit(self):
-        """With shared entrance, still needs at least 1 exit."""
+    def test_needs_at_least_one_exit(self):
+        """Still needs at least 1 exit."""
         cluster = make_cluster(
             "merge_test",
             entry_fogs=[
@@ -1004,12 +1000,11 @@ class TestCanBeMergeNodeSharedEntrance:
                 {"fog_id": "entry_b", "zone": "merge_test"},
             ],
             exit_fogs=[],
-            allow_shared_entrance=True,
         )
         assert can_be_merge_node(cluster, 2) is False
 
-    def test_shared_entrance_bidirectional_entry(self):
-        """Shared entrance with bidirectional entry still qualifies."""
+    def test_bidirectional_entry_still_qualifies(self):
+        """Bidirectional entry fog still qualifies when 2+ entries present."""
         cluster = make_cluster(
             "merge_test",
             entry_fogs=[
@@ -1020,18 +1015,15 @@ class TestCanBeMergeNodeSharedEntrance:
                 {"fog_id": "bidir", "zone": "merge_test"},
                 {"fog_id": "exit_a", "zone": "merge_test"},
             ],
-            allow_shared_entrance=True,
         )
         assert can_be_merge_node(cluster, 2) is True
 
-    def test_without_shared_entrance_original_behavior(self):
-        """Without shared entrance, original strict merge rules apply."""
-        # 1 entry, 1 exit (bidirectional) — net exits = 0 → not merge(2)
+    def test_single_entry_single_exit_bidirectional_fails(self):
+        """1 entry, 1 exit (bidirectional) - only 1 entry, not merge-eligible."""
         cluster = make_cluster(
             "merge_test",
             entry_fogs=[{"fog_id": "bidir", "zone": "merge_test"}],
             exit_fogs=[{"fog_id": "bidir", "zone": "merge_test"}],
-            allow_shared_entrance=False,
         )
         assert can_be_merge_node(cluster, 2) is False
 
@@ -1551,22 +1543,6 @@ class TestProximityGroups:
         )
         # With 2 entries: e1 blocks x1, e2 blocks x2, only x3 survives
         assert count_net_exits(cluster, 2) == 1
-
-    def test_merge_blocked_by_proximity(self):
-        """Merge fails if proximity blocks all exits for some entry combo."""
-        cluster = make_cluster(
-            "c1",
-            entry_fogs=[
-                {"fog_id": "e1", "zone": "z"},
-                {"fog_id": "e2", "zone": "z"},
-            ],
-            exit_fogs=[
-                {"fog_id": "x1", "zone": "z"},
-            ],
-            proximity_groups=[["e1", "x1"], ["e2", "x1"]],
-        )
-        # Both entries block the only exit → can't merge
-        assert can_be_merge_node(cluster, 2) is False
 
     # NOTE: test_pick_entry_with_max_exits_respects_proximity and
     # test_pick_entry_and_exits_filters_proximity deleted -- those functions
