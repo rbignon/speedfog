@@ -320,25 +320,11 @@ This runs after the forced merge (so exactly 1 branch exists) and before the end
 - No exits (terminal node)
 - Connect single remaining branch
 
-### 9. Cross-Links (post-hoc)
+### 9. Cross-Branch Saturation
 
-After the complete DAG is built (start → layers → forced merge → prerequisite → end), an optional cross-link pass adds edges between parallel branches.
+The exit-driven generator naturally saturates all available fog gates during routing. Surplus exits from each node are connected to additional targets in the same layer-to-layer step, giving players implicit branch-switching opportunities without a separate post-hoc pass.
 
-**When:** `crosslinks = true` (default: false)
-
-**Algorithm:**
-1. Find all eligible (source, target) pairs:
-   - `source.layer == target.layer - 1` (adjacent layers only — no layer-skipping, which would let players bypass content and break racing balance)
-   - Source has unused exit fogs (surplus from **cluster's** full exit list)
-   - Target has available entry fogs (from **cluster's** full entry list — entries are reusable since FogMod handles multiple connections to the same entrance via `DuplicateEntrance()`, only Pair chain and proximity exclusions apply)
-   - No existing edge between them
-   - No existing path from source to target (different branches)
-2. Shuffle eligible pairs and try every one — eligible pairs are structurally rare (typically 0-4 per DAG) because most clusters have just enough exit fogs for their normal edges
-3. For each: re-check availability (earlier cross-links may have consumed exit surplus), pick an unused exit fog from source, an available entry fog from target, add edge
-
-**Surplus from cluster, not node:** The generator's `_pick_entry_and_exits_for_node()` truncates `node.exit_fogs` to `min_exits` (typically 1 for passant nodes). Cross-link exit surplus is computed from `node.cluster.exit_fogs` (the full list) minus fogs consumed by outgoing edges. This is why most passant nodes have surplus exits available for cross-links despite `node.exit_fogs` containing only 1.
-
-**Entry reuse via DuplicateEntrance:** Unlike exits (one gate = one destination), entries are arrival points — multiple exits can all warp to the same entrance. FogMod handles this via `DuplicateEntrance()`, which creates independent edge copies. Therefore, entry fogs already used by incoming edges are still available for cross-links. The only exclusions are bidirectional Pair consumption (entry fog used as exit on the same node) and proximity groups.
+This replaces the former `crosslinks.py` post-processing step (removed in the exit-driven cutover).
 
 **Pair chain exclusion:** Bidirectional fog gates have both an exit and entry side linked via FogMod's Pair chain. When `Graph.Connect()` uses one side, it marks the Pair as consumed. The Pair is per-zone: the same fog_id on different zones creates independent Pairs in FogMod's Graph. Therefore, surplus exits exclude any `(fog_id, zone)` already consumed as entry on the same node (and vice versa), preventing "Already matched" errors in FogMod.
 
@@ -412,7 +398,6 @@ Config validation runs once before any attempts; invalid config raises `Generati
 | `structure.merge_probability` | 0.5 | Chance of merge at each layer (if cluster supports it) |
 | `structure.min_branch_age` | 0 | Minimum layers before a branch can be merged (0=no limit) |
 | `structure.max_branch_spacing` | 4 | Maximum layers a branch can go without a split (0=disabled) |
-| `structure.crosslinks` | false | Add cross-links between parallel branches |
 | `structure.first_layer_type` | None | Force type for first layer |
 | `requirements.major_bosses` | 8 | Number of major boss layers |
 | `structure.final_boss_candidates` | `{"leyndell_erdtree": 1, "enirilim_radahn": 1}` | Possible end bosses (zone -> weight). Also accepts a flat list (all weight 1). |
@@ -481,7 +466,6 @@ Semantics:
 ## References
 
 - Generator: `speedfog/generator.py`
-- Cross-links: `speedfog/crosslinks.py`
 - DAG data structures: `speedfog/dag.py`
 - Planner: `speedfog/planner.py`
 - Clusters: `speedfog/clusters.py`

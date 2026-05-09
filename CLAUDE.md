@@ -54,7 +54,6 @@ speedfog/
 │   ├── generation_log.py    # Structured generation log (events, summary)
 │   ├── clusters.py          # Load and manage clusters from clusters.json
 │   ├── planner.py           # Layer planning (cluster type distribution)
-│   ├── crosslinks.py        # Post-hoc cross-link generation for DAG branches
 │   ├── validator.py         # DAG validation against configuration
 │   ├── output.py            # DAG export to JSON and spoiler logs
 │   ├── care_package.py      # Randomized starting build system
