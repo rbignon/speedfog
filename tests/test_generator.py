@@ -1947,3 +1947,444 @@ def test_validate_config_rejects_oversubscribed_layers_count():
     pool = ClusterPool()
     errors, _warnings = validate_config(cfg, pool, boss_candidates=[])
     assert any("layers_count" in e and "requirements" in e for e in errors)
+
+
+# ---------------------------------------------------------------------------
+# Tests migrated from test_generator_v2.py
+# ---------------------------------------------------------------------------
+
+
+def _mk_cluster_v2(cid: str, ctype: str, weight: int = 10) -> ClusterData:
+    return ClusterData(
+        id=cid,
+        zones=[cid],
+        type=ctype,
+        weight=weight,
+        entry_fogs=[{"fog_id": "E", "zone": cid}],
+        exit_fogs=[{"fog_id": "X", "zone": cid}],
+    )
+
+
+def test_pick_layer_clusters_returns_requested_type_when_available():
+    from speedfog.generator import pick_layer_clusters
+
+    pool = ClusterPool()
+    for i in range(5):
+        pool.add(_mk_cluster_v2(f"md_{i}", "mini_dungeon", weight=10))
+    rng = random.Random(0)
+    picked, fallbacks = pick_layer_clusters(
+        width=3,
+        layer_type="mini_dungeon",
+        clusters=pool,
+        used_zones=set(),
+        rng=rng,
+    )
+    assert len(picked) == 3
+    assert all(c.type == "mini_dungeon" for c in picked)
+    assert fallbacks == []
+
+
+def test_pick_layer_clusters_falls_back_when_type_pool_exhausted():
+    from speedfog.generator import pick_layer_clusters
+
+    pool = ClusterPool()
+    pool.add(_mk_cluster_v2("md_0", "mini_dungeon"))
+    pool.add(_mk_cluster_v2("ba_0", "boss_arena"))
+    pool.add(_mk_cluster_v2("ba_1", "boss_arena"))
+    rng = random.Random(0)
+    picked, fallbacks = pick_layer_clusters(
+        width=3,
+        layer_type="mini_dungeon",
+        clusters=pool,
+        used_zones=set(),
+        rng=rng,
+        allowed_types=("mini_dungeon", "boss_arena"),
+    )
+    assert len(picked) == 3
+    types = sorted(c.type for c in picked)
+    assert types == ["boss_arena", "boss_arena", "mini_dungeon"]
+    assert len(fallbacks) == 2  # two boss_arenas were fallbacks
+    assert all(f.preferred_type == "mini_dungeon" for f in fallbacks)
+
+
+def test_pick_layer_clusters_fails_when_no_compatible_remaining():
+    from speedfog.generator import GenerationError, pick_layer_clusters
+
+    pool = ClusterPool()
+    pool.add(_mk_cluster_v2("md_0", "mini_dungeon"))
+    rng = random.Random(0)
+
+    with pytest.raises(GenerationError):
+        pick_layer_clusters(
+            width=3,
+            layer_type="mini_dungeon",
+            clusters=pool,
+            used_zones=set(),
+            rng=rng,
+            allowed_types=("mini_dungeon",),
+        )
+
+
+def test_generator_v2_corpus_validity_50_seeds():
+    from pathlib import Path
+
+    from speedfog.clusters import load_clusters
+    from speedfog.config import (
+        BudgetConfig,
+        Config,
+        RequirementsConfig,
+        StructureConfig,
+    )
+    from speedfog.generator import generate_dag
+    from speedfog.validator import validate_dag
+
+    pool = load_clusters(Path(__file__).parent.parent / "data" / "clusters.json")
+    pool.merge_roundtable_into_start()
+    pool.filter_passant_incompatible()
+
+    failures: list[tuple[int, str]] = []
+    for seed in range(1000, 1050):
+        cfg = Config(
+            seed=seed,
+            requirements=RequirementsConfig(
+                legacy_dungeons=1,
+                bosses=3,
+                mini_dungeons=3,
+                major_bosses=1,
+            ),
+            structure=StructureConfig(
+                layers_count=20,
+                max_parallel_paths=4,
+                final_boss_candidates={"leyndell_throne": 1},
+            ),
+            budget=BudgetConfig(),
+        )
+        try:
+            dag, _ = generate_dag(cfg, pool)
+        except Exception as e:
+            failures.append((seed, f"GENERATION: {e}"))
+            continue
+        struct_errors = dag.validate_structure()
+        if struct_errors:
+            failures.append((seed, f"STRUCT: {struct_errors[:3]}"))
+            continue
+        result = validate_dag(dag, cfg)
+        if not result.is_valid:
+            failures.append((seed, f"VALIDATOR: {result.errors[:3]}"))
+
+    assert not failures, f"{len(failures)}/50 seeds failed: {failures[:5]}"
+
+
+def test_generate_dag_v2_produces_exact_layers_count():
+    from pathlib import Path
+
+    from speedfog.clusters import load_clusters
+    from speedfog.config import (
+        BudgetConfig,
+        Config,
+        RequirementsConfig,
+        StructureConfig,
+    )
+    from speedfog.generator import generate_dag
+
+    pool = load_clusters(Path(__file__).parent.parent / "data" / "clusters.json")
+    pool.merge_roundtable_into_start()
+    pool.filter_passant_incompatible()
+
+    cfg = Config(
+        seed=12345,
+        requirements=RequirementsConfig(
+            legacy_dungeons=1,
+            bosses=3,
+            mini_dungeons=3,
+            major_bosses=1,
+            allowed_types=[
+                "mini_dungeon",
+                "boss_arena",
+                "legacy_dungeon",
+                "major_boss",
+            ],
+        ),
+        structure=StructureConfig(
+            layers_count=15,
+            max_parallel_paths=4,
+            final_boss_candidates={"leyndell_throne": 1},
+        ),
+        budget=BudgetConfig(),
+    )
+    dag, log = generate_dag(cfg, pool)
+
+    layers = {n.layer for n in dag.nodes.values()}
+    assert layers == set(range(15)), f"Expected 15 layers, got {sorted(layers)}"
+    # Validator
+    errors = dag.validate_structure()
+    assert errors == [], errors
+
+
+# ---------------------------------------------------------------------------
+# Tests migrated from test_route_exits.py
+# ---------------------------------------------------------------------------
+
+from speedfog.dag import Dag, DagNode, FogRef  # noqa: E402
+
+
+def _mk_cluster_re(
+    cid: str, entries: list[tuple[str, str]], exits: list[tuple[str, str]]
+) -> ClusterData:
+    return ClusterData(
+        id=cid,
+        zones=[cid],
+        type="mini_dungeon",
+        weight=10,
+        entry_fogs=[{"fog_id": fid, "zone": z} for fid, z in entries],
+        exit_fogs=[{"fog_id": fid, "zone": z} for fid, z in exits],
+    )
+
+
+def _mk_node_re(
+    cluster: ClusterData, layer: int, entry: FogRef | None = None
+) -> DagNode:
+    return DagNode(
+        id=f"node_{cluster.id}",
+        cluster=cluster,
+        layer=layer,
+        tier=1,
+        entry_fogs=[entry] if entry else [],
+        exit_fogs=[],
+    )
+
+
+def test_count_node_net_exits_no_entry_returns_all_exits():
+    from speedfog.generator import count_node_net_exits
+
+    c = _mk_cluster_re("a", entries=[], exits=[("F1", "z1"), ("F2", "z1")])
+    node = _mk_node_re(c, layer=0)
+    dag = Dag(seed=0)
+    dag.add_node(node)
+    assert count_node_net_exits(dag, node.id) == 2
+
+
+def test_count_node_net_exits_subtracts_consumed_entry():
+    from speedfog.generator import count_node_net_exits
+
+    # Same fog appears as entry and exit (bidirectional) -- entry consumes it.
+    c = _mk_cluster_re("a", entries=[("F1", "z1")], exits=[("F1", "z1"), ("F2", "z1")])
+    node = _mk_node_re(c, layer=1, entry=FogRef("F1", "z1"))
+    dag = Dag(seed=0)
+    dag.add_node(node)
+    assert count_node_net_exits(dag, node.id) == 1
+
+
+def test_compute_target_width_saturation_under_cap():
+    from speedfog.generator import compute_target_width
+
+    # remaining > current_width -> saturation, capped at max_parallel_paths
+    assert (
+        compute_target_width(
+            remaining=20, current_width=2, sum_exits=4, max_parallel_paths=5
+        )
+        == 4
+    )
+
+
+def test_compute_target_width_saturation_at_cap():
+    from speedfog.generator import compute_target_width
+
+    assert (
+        compute_target_width(
+            remaining=20, current_width=3, sum_exits=12, max_parallel_paths=5
+        )
+        == 5
+    )
+
+
+def test_compute_target_width_convergence_decrements_one():
+    from speedfog.generator import compute_target_width
+
+    # remaining == current_width -> countdown
+    assert (
+        compute_target_width(
+            remaining=4, current_width=4, sum_exits=99, max_parallel_paths=5
+        )
+        == 3
+    )
+
+
+def test_compute_target_width_convergence_terminates_at_one():
+    from speedfog.generator import compute_target_width
+
+    assert (
+        compute_target_width(
+            remaining=2, current_width=2, sum_exits=99, max_parallel_paths=5
+        )
+        == 1
+    )
+
+
+def test_connect_nodes_creates_edge_with_unique_fogs():
+    from speedfog.generator import connect_nodes
+
+    src_c = _mk_cluster_re("s", entries=[], exits=[("F1", "z1"), ("F2", "z1")])
+    tgt_c = _mk_cluster_re("t", entries=[("E1", "z2")], exits=[])
+    src = _mk_node_re(src_c, layer=0)
+    tgt = _mk_node_re(tgt_c, layer=1)
+    dag = Dag(seed=0)
+    dag.add_node(src)
+    dag.add_node(tgt)
+    rng = random.Random(42)
+
+    ok = connect_nodes(dag, src, tgt, rng)
+    assert ok is True
+    assert len(dag.edges) == 1
+    edge = dag.edges[0]
+    assert edge.source_id == src.id
+    assert edge.target_id == tgt.id
+    assert (edge.exit_fog.fog_id, edge.exit_fog.zone) in {("F1", "z1"), ("F2", "z1")}
+    assert (edge.entry_fog.fog_id, edge.entry_fog.zone) == ("E1", "z2")
+
+
+def test_connect_nodes_returns_false_when_source_has_no_free_exit():
+    from speedfog.generator import connect_nodes
+
+    src_c = _mk_cluster_re("s", entries=[], exits=[("F1", "z1")])
+    tgt_c = _mk_cluster_re("t", entries=[("E1", "z2")], exits=[])
+    src = _mk_node_re(src_c, layer=0)
+    tgt = _mk_node_re(tgt_c, layer=1)
+    dag = Dag(seed=0)
+    dag.add_node(src)
+    dag.add_node(tgt)
+    # Pre-consume F1 by adding an outgoing edge.
+    dag.add_edge(src.id, tgt.id, FogRef("F1", "z1"), FogRef("E1", "z2"))
+    rng = random.Random(42)
+
+    ok = connect_nodes(dag, src, tgt, rng)
+    assert ok is False
+    assert len(dag.edges) == 1  # no new edge added
+
+
+def test_route_exits_phase1_each_target_gets_one_edge():
+    from speedfog.generator import route_exits
+
+    s1_c = _mk_cluster_re("s1", entries=[], exits=[("F1", "z1")])
+    s2_c = _mk_cluster_re("s2", entries=[], exits=[("F2", "z2")])
+    t1_c = _mk_cluster_re("t1", entries=[("E1", "z3")], exits=[])
+    t2_c = _mk_cluster_re("t2", entries=[("E2", "z4")], exits=[])
+    s1 = _mk_node_re(s1_c, layer=0)
+    s2 = _mk_node_re(s2_c, layer=0)
+    t1 = _mk_node_re(t1_c, layer=1)
+    t2 = _mk_node_re(t2_c, layer=1)
+    dag = Dag(seed=0)
+    for n in (s1, s2, t1, t2):
+        dag.add_node(n)
+    rng = random.Random(0)
+
+    route_exits(dag, sources=[s1, s2], targets=[t1, t2], rng=rng)
+
+    incoming_t1 = dag.get_incoming_edges(t1.id)
+    incoming_t2 = dag.get_incoming_edges(t2.id)
+    assert len(incoming_t1) >= 1
+    assert len(incoming_t2) >= 1
+
+
+def test_route_exits_raises_when_target_unreachable():
+    from speedfog.generator import GenerationError, route_exits
+
+    # Source has 0 free exits, target has no incoming edge possible.
+    s_c = _mk_cluster_re(
+        "s", entries=[("F1", "z1")], exits=[("F1", "z1")]
+    )  # bidirectional
+    t_c = _mk_cluster_re("t", entries=[("E1", "z2")], exits=[])
+    s = _mk_node_re(s_c, layer=0, entry=FogRef("F1", "z1"))  # consumes the only exit
+    t = _mk_node_re(t_c, layer=1)
+    dag = Dag(seed=0)
+    dag.add_node(s)
+    dag.add_node(t)
+
+    with pytest.raises(GenerationError, match="orphan"):
+        route_exits(dag, sources=[s], targets=[t], rng=random.Random(0))
+
+
+def test_route_exits_phase2_saturates_to_all_targets():
+    from speedfog.generator import route_exits
+
+    # Source with 3 exits, 3 targets -- every (source, target) pair gets an edge.
+    s_c = _mk_cluster_re(
+        "s", entries=[], exits=[("F1", "z1"), ("F2", "z1"), ("F3", "z1")]
+    )
+    t1_c = _mk_cluster_re("t1", entries=[("E1", "z2")], exits=[])
+    t2_c = _mk_cluster_re("t2", entries=[("E2", "z3")], exits=[])
+    t3_c = _mk_cluster_re("t3", entries=[("E3", "z4")], exits=[])
+    s = _mk_node_re(s_c, layer=0)
+    t1, t2, t3 = (_mk_node_re(c, layer=1) for c in (t1_c, t2_c, t3_c))
+    dag = Dag(seed=0)
+    for n in (s, t1, t2, t3):
+        dag.add_node(n)
+    rng = random.Random(0)
+
+    route_exits(dag, sources=[s], targets=[t1, t2, t3], rng=rng)
+
+    pairs = {(e.source_id, e.target_id) for e in dag.edges}
+    assert pairs == {(s.id, t1.id), (s.id, t2.id), (s.id, t3.id)}
+
+
+def test_route_exits_phase2_drops_surplus_when_more_exits_than_targets():
+    from speedfog.generator import route_exits
+
+    # Source has 5 exits, 3 targets -- drop 2 exits (keep 3 unique pairs).
+    s_c = _mk_cluster_re(
+        "s",
+        entries=[],
+        exits=[("F1", "z1"), ("F2", "z1"), ("F3", "z1"), ("F4", "z1"), ("F5", "z1")],
+    )
+    t1_c = _mk_cluster_re("t1", entries=[("E1", "z2")], exits=[])
+    t2_c = _mk_cluster_re("t2", entries=[("E2", "z3")], exits=[])
+    t3_c = _mk_cluster_re("t3", entries=[("E3", "z4")], exits=[])
+    s = _mk_node_re(s_c, layer=0)
+    t1, t2, t3 = (_mk_node_re(c, layer=1) for c in (t1_c, t2_c, t3_c))
+    dag = Dag(seed=0)
+    for n in (s, t1, t2, t3):
+        dag.add_node(n)
+    rng = random.Random(0)
+
+    route_exits(dag, sources=[s], targets=[t1, t2, t3], rng=rng)
+
+    out_edges = dag.get_outgoing_edges(s.id)
+    assert len(out_edges) == 3
+    # No multi-edges
+    pairs = {(e.source_id, e.target_id) for e in out_edges}
+    assert len(pairs) == 3
+
+
+def test_route_exits_phase2_proximity_diversity_kept():
+    from speedfog.generator import route_exits
+
+    # Source has 4 exits in 2 proximity groups (F1-F2, F3-F4), 2 targets:
+    # The kept pair should be one from each group.
+    s_c = ClusterData(
+        id="s",
+        zones=["s_zone"],
+        type="mini_dungeon",
+        weight=10,
+        entry_fogs=[],
+        exit_fogs=[
+            {"fog_id": "F1", "zone": "z1"},
+            {"fog_id": "F2", "zone": "z1"},
+            {"fog_id": "F3", "zone": "z1"},
+            {"fog_id": "F4", "zone": "z1"},
+        ],
+        proximity_groups=[["F1", "F2"], ["F3", "F4"]],
+    )
+    t1_c = _mk_cluster_re("t1", entries=[("E1", "z2")], exits=[])
+    t2_c = _mk_cluster_re("t2", entries=[("E2", "z3")], exits=[])
+    s = _mk_node_re(s_c, layer=0)
+    t1, t2 = _mk_node_re(t1_c, layer=1), _mk_node_re(t2_c, layer=1)
+    dag = Dag(seed=0)
+    for n in (s, t1, t2):
+        dag.add_node(n)
+
+    route_exits(dag, sources=[s], targets=[t1, t2], rng=random.Random(0))
+    used_fogs = {e.exit_fog.fog_id for e in dag.get_outgoing_edges(s.id)}
+    # The two kept exits are from different groups
+    in_group_a = used_fogs & {"F1", "F2"}
+    in_group_b = used_fogs & {"F3", "F4"}
+    assert len(in_group_a) == 1 and len(in_group_b) == 1
