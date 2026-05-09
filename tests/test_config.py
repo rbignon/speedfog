@@ -1109,3 +1109,10 @@ def test_first_layer_type_none_is_ok():
         }
     )
     assert config.structure.first_layer_type is None
+
+
+def test_structure_config_layers_count_default():
+    from speedfog.config import StructureConfig
+
+    cfg = StructureConfig()
+    assert cfg.layers_count == 30

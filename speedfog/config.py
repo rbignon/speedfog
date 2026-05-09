@@ -117,6 +117,7 @@ class StructureConfig:
     max_weight_tolerance: int = (
         3  # Max weight tolerance for parallel branch matching (0=disabled)
     )
+    layers_count: int = 30  # Total layers (start + intermediates + final boss)
 
     @property
     def max_exits(self) -> int:
@@ -609,6 +610,7 @@ class Config:
                 tier_curve=structure_section.get("tier_curve", "linear"),
                 tier_curve_exponent=structure_section.get("tier_curve_exponent", 0.6),
                 max_weight_tolerance=structure_section.get("max_weight_tolerance", 3),
+                layers_count=int(structure_section.get("layers_count", 30)),
             ),
             paths=PathsConfig(
                 game_dir=paths_section.get("game_dir", ""),
