@@ -606,33 +606,14 @@ class TestValidateConfig:
         errors, _ = validate_config(config, pool, _boss_candidates(pool))
         assert len(errors) == 3
 
-    def test_requirements_exceed_min_layers_warning(self):
-        """Warning when total requirements exceed min_layers."""
-        pool = make_cluster_pool()
-        config = self._cfg()
-        # 2 + 10 + 10 + 8 = 30, but min_layers = 6 (default)
-        config.requirements.legacy_dungeons = 2
-        config.requirements.bosses = 10
-        config.requirements.mini_dungeons = 10
-        config.requirements.major_bosses = 8
-        config.structure.min_layers = 6
-        # Set layers_count high enough so the requirements do not exceed its budget
-        config.structure.layers_count = 50
-        errors, warnings = validate_config(config, pool, _boss_candidates(pool))
-        assert errors == []
-        req_warnings = [w for w in warnings if "requirements" in w.lower()]
-        assert len(req_warnings) == 1
-        assert "30" in req_warnings[0]  # total requirements
-
-    def test_requirements_within_min_layers_no_warning(self):
-        """No warning when requirements fit within min_layers."""
+    def test_requirements_within_layers_no_warning(self):
+        """No warning when requirements fit within layers_count."""
         pool = make_cluster_pool()
         config = self._cfg()
         config.requirements.legacy_dungeons = 1
         config.requirements.bosses = 2
         config.requirements.mini_dungeons = 2
         config.requirements.major_bosses = 0
-        config.structure.min_layers = 10
         errors, warnings = validate_config(config, pool, _boss_candidates(pool))
         assert errors == []
         assert warnings == []

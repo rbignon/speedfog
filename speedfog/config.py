@@ -98,16 +98,11 @@ class StructureConfig:
     """DAG structure configuration."""
 
     max_parallel_paths: int = 3
-    min_layers: int = 6
-    max_layers: int = 10
     split_probability: float = 0.9
     merge_probability: float = 0.5
     max_branches: int = 3
     _max_exits: int | None = field(default=None, repr=False)  # Split fan-out
     _max_entrances: int | None = field(default=None, repr=False)  # Merge fan-in
-    min_branch_age: int = 0  # Min layers before a branch can be merged (0=no limit)
-    max_branch_spacing: int = 4  # Max layers between splits per branch (0=disabled)
-    crosslinks: bool = False  # Add cross-links between parallel branches
     first_layer_type: str | None = None
     final_boss_candidates: dict[str, int] = field(default_factory=dict)
     start_tier: int = 1  # Enemy scaling tier for first layer (1-28)
@@ -181,23 +176,9 @@ class StructureConfig:
             raise ValueError(
                 f"start_tier ({self.start_tier}) must be <= final_tier ({self.final_tier})"
             )
-        if self.min_branch_age < 0:
-            raise ValueError(f"min_branch_age must be >= 0, got {self.min_branch_age}")
-        if self.max_branch_spacing < 0:
-            raise ValueError(
-                f"max_branch_spacing must be >= 0, got {self.max_branch_spacing}"
-            )
         if self.max_weight_tolerance < 0:
             raise ValueError(
                 f"max_weight_tolerance must be >= 0, got {self.max_weight_tolerance}"
-            )
-        if (
-            self.max_branch_spacing > 0
-            and self.min_branch_age >= self.max_branch_spacing
-        ):
-            raise ValueError(
-                f"min_branch_age ({self.min_branch_age}) must be < "
-                f"max_branch_spacing ({self.max_branch_spacing})"
             )
         if self.tier_curve not in ("linear", "power"):
             raise ValueError(
@@ -591,16 +572,11 @@ class Config:
             ),
             structure=StructureConfig(
                 max_parallel_paths=structure_section.get("max_parallel_paths", 3),
-                min_layers=structure_section.get("min_layers", 6),
-                max_layers=structure_section.get("max_layers", 10),
                 split_probability=structure_section.get("split_probability", 0.9),
                 merge_probability=structure_section.get("merge_probability", 0.5),
                 max_branches=structure_section.get("max_branches", 3),
                 _max_exits=structure_section.get("max_exits"),
                 _max_entrances=structure_section.get("max_entrances"),
-                min_branch_age=structure_section.get("min_branch_age", 0),
-                max_branch_spacing=structure_section.get("max_branch_spacing", 4),
-                crosslinks=bool(structure_section.get("crosslinks", False)),
                 first_layer_type=structure_section.get("first_layer_type"),
                 final_boss_candidates=_parse_final_boss_candidates(
                     structure_section.get("final_boss_candidates", {})

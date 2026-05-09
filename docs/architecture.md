@@ -51,7 +51,6 @@ Generates a balanced DAG of zone connections.
 | `generator.py` | Main generation algorithm (split/merge/passant topology) |
 | `planner.py` | Layer type planning and tier interpolation |
 | `validator.py` | DAG constraint validation against requirements |
-| `crosslinks.py` | Post-hoc cross-link edges between parallel branches |
 | `output.py` | Export graph.json v4, spoiler.txt, and generation.log with ASCII graph |
 | `generation_log.py` | Structured generation log dataclasses and serialization |
 | `care_package.py` | Randomized starting build (weapons, armor, spells, etc.) |

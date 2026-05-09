@@ -70,8 +70,7 @@ mini_dungeons = 6
 
 [structure]
 max_parallel_paths = 4
-min_layers = 5
-max_layers = 12
+layers_count = 25
 
 [paths]
 game_dir = "/path/to/game"
@@ -89,8 +88,7 @@ platform = "linux"
     assert config.requirements.mini_dungeons == 6
     # Structure section
     assert config.structure.max_parallel_paths == 4
-    assert config.structure.min_layers == 5
-    assert config.structure.max_layers == 12
+    assert config.structure.layers_count == 25
     # Paths section
     assert config.paths.game_dir == "/path/to/game"
     assert config.paths.output_dir == "./custom_output"
@@ -125,8 +123,7 @@ def test_structure_defaults():
     """StructureConfig has correct defaults."""
     config = Config.from_dict({})
     assert config.structure.max_parallel_paths == 3
-    assert config.structure.min_layers == 6
-    assert config.structure.max_layers == 10
+    assert config.structure.layers_count == 30
     assert config.structure.first_layer_type is None
     assert config.structure.final_boss_candidates == {}
     assert config.structure.final_tier == 28
@@ -715,29 +712,6 @@ def test_max_branches_one_allows_single_path():
     assert config.structure.max_branches == 1
 
 
-def test_min_branch_age_default():
-    """min_branch_age defaults to 0."""
-    config = Config.from_dict({})
-    assert config.structure.min_branch_age == 0
-
-
-def test_min_branch_age_from_toml(tmp_path):
-    """min_branch_age can be set from TOML."""
-    config_file = tmp_path / "config.toml"
-    config_file.write_text("""
-[structure]
-min_branch_age = 3
-""")
-    config = Config.from_toml(config_file)
-    assert config.structure.min_branch_age == 3
-
-
-def test_min_branch_age_validation():
-    """min_branch_age must be >= 0."""
-    with pytest.raises(ValueError, match="min_branch_age must be >= 0"):
-        Config.from_dict({"structure": {"min_branch_age": -1}})
-
-
 def test_enemy_config_defaults():
     """EnemyConfig has correct defaults."""
     config = Config.from_dict({})
@@ -792,18 +766,6 @@ def test_enemy_config_invalid_value():
 
     with pytest.raises(ValueError, match="randomize_bosses"):
         Config.from_dict({"enemy": {"randomize_bosses": "invalid"}})
-
-
-def test_crosslinks_default():
-    """crosslinks defaults to False (disabled)."""
-    config = Config.from_dict({})
-    assert config.structure.crosslinks is False
-
-
-def test_crosslinks_from_toml():
-    """crosslinks is parsed from structure section."""
-    config = Config.from_dict({"structure": {"crosslinks": True}})
-    assert config.structure.crosslinks is True
 
 
 def test_max_exits_entrances_default_to_max_branches():
@@ -883,48 +845,6 @@ def test_explicit_override_survives_max_branches_mutation():
     config.structure.max_parallel_paths = 1
     assert config.structure.max_exits == 4
     assert config.structure.max_entrances == 2
-
-
-def test_max_branch_spacing_default():
-    """max_branch_spacing defaults to 4."""
-    config = Config.from_dict({})
-    assert config.structure.max_branch_spacing == 4
-
-
-def test_max_branch_spacing_from_toml(tmp_path):
-    """max_branch_spacing parsed from TOML."""
-    config_file = tmp_path / "config.toml"
-    config_file.write_text("""
-[structure]
-max_branch_spacing = 6
-""")
-    config = Config.from_toml(config_file)
-    assert config.structure.max_branch_spacing == 6
-
-
-def test_max_branch_spacing_disabled():
-    """max_branch_spacing = 0 disables enforcement."""
-    config = Config.from_dict({"structure": {"max_branch_spacing": 0}})
-    assert config.structure.max_branch_spacing == 0
-
-
-def test_max_branch_spacing_validation():
-    """min_branch_age >= max_branch_spacing raises ValueError."""
-    with pytest.raises(ValueError, match="min_branch_age"):
-        Config.from_dict(
-            {
-                "structure": {
-                    "min_branch_age": 4,
-                    "max_branch_spacing": 4,
-                }
-            }
-        )
-
-
-def test_max_branch_spacing_negative():
-    """Negative max_branch_spacing raises ValueError."""
-    with pytest.raises(ValueError, match="max_branch_spacing"):
-        Config.from_dict({"structure": {"max_branch_spacing": -1}})
 
 
 def test_death_markers_default_true():
@@ -1116,3 +1036,17 @@ def test_structure_config_layers_count_default():
 
     cfg = StructureConfig()
     assert cfg.layers_count == 30
+
+
+def test_structure_config_drops_legacy_fields():
+    from speedfog.config import StructureConfig
+
+    cfg = StructureConfig()
+    for legacy in (
+        "min_layers",
+        "max_layers",
+        "min_branch_age",
+        "max_branch_spacing",
+        "crosslinks",
+    ):
+        assert not hasattr(cfg, legacy), f"{legacy} still present"

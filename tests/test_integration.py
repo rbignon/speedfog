@@ -69,8 +69,7 @@ def relaxed_config():
         ),
         structure=StructureConfig(
             max_parallel_paths=2,
-            min_layers=3,
-            max_layers=5,
+            layers_count=10,
             final_boss_candidates={"leyndell_throne": 1},
         ),
     )

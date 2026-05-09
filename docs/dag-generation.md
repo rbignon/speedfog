@@ -44,8 +44,8 @@ Tracks parallel path state during generation.
 | `id` | str | Branch identifier (e.g., `"b0"`, `"b0_a"`, `"merged_3"`) |
 | `current_node_id` | str | Where this branch is now |
 | `available_exit` | FogRef | Fog gate to use for next connection |
-| `birth_layer` | int | Layer when this branch was created (for `min_branch_age`) |
-| `layers_since_last_split` | int | Layers since this branch last had a split point (for `max_branch_spacing`) |
+| `birth_layer` | int | Layer when this branch was created |
+| `layers_since_last_split` | int | Layers since this branch last had a split point |
 
 ### FogRef (`dag.py`)
 
@@ -101,21 +101,20 @@ N branches converge into a single node. Creates convergence in the DAG.
 
 **Anti-micro-merge**: Selected branches must have at least 2 different parent nodes. This prevents trivial split-then-immediate-merge patterns (Y-shapes) that add no meaningful divergence.
 
-**Branch age gate**: When `min_branch_age > 0`, only branches that have existed for at least that many layers are eligible for merging (`current_layer - birth_layer >= min_branch_age`). This prevents premature merges where branches split and immediately reconverge, creating long linear (width=1) sections. Branch age is tracked via `birth_layer`: split and merge operations reset it to the current layer; passant operations preserve it.
+**Branch age gate**: The `birth_layer` field tracks when each branch was created, but the generator no longer enforces a minimum age before merging. Anti-micro-merge alone guards against trivial split-then-immediate-merge patterns.
 
 ### Rebalance (N->N branches)
 
 Merges 2 branches and splits 1 stale branch across 2 layers (merge-first: merge at layer N, split at layer N+1), keeping the total branch count constant. Uses 2 clusters: one merge-capable, one split-capable.
 
 **Trigger conditions** (all must be met):
-1. `max_branch_spacing > 0` (feature enabled)
-2. `len(branches) >= max_parallel_paths` (saturated — no room to split)
-3. `max(b.layers_since_last_split for b in branches) >= max_branch_spacing` (threshold reached)
-4. At least one valid merge pair exists among branches other than the split target
+1. `len(branches) >= max_parallel_paths` (saturated — no room to split)
+2. `max(b.layers_since_last_split for b in branches)` is high (stale branch detected)
+3. At least one valid merge pair exists among branches other than the split target
 
 **Process**:
 1. Identify the most stale branch (highest `layers_since_last_split`) — split target
-2. Find 2 merge candidates among remaining branches (bypass `min_branch_age`, enforce anti-micro-merge)
+2. Find 2 merge candidates among remaining branches (enforce anti-micro-merge)
 3. Pick a split-capable cluster, then a merge-capable cluster
 4. Execute split on the stale branch → 2 child branches with `layers_since_last_split = 0`
 5. Execute merge on the pair → 1 merged branch with `layers_since_last_split = max(A, B) + 1`
@@ -125,7 +124,7 @@ REBALANCE is internal to the generator — graph.json serializes nodes and edges
 
 ### Max Branch Spacing
 
-When `max_branch_spacing > 0`, the generator guarantees that no branch goes more than ~`max_branch_spacing` layers without a split point. Each branch tracks `layers_since_last_split`, counting layers since the player on that branch last had a choice.
+The generator avoids stale branches (long linear segments without choices). Each branch tracks `layers_since_last_split`, counting layers since the player on that branch last had a choice.
 
 **Counter rules:**
 
@@ -146,8 +145,6 @@ Merges do NOT reset the counter — a merge doesn't give the player a new choice
 3. **Forced split (stale)** — if not saturated but stale, force SPLIT on the most stale branch
 4. **Forced split (single branch)** — if only 1 branch exists outside convergence, force SPLIT to avoid linear segments
 5. **Normal probability roll** — split_prob / merge_prob / passant
-
-**Config validation:** `min_branch_age` must be strictly less than `max_branch_spacing` (when both are enabled).
 
 **Entry selection**: `select_entries_for_merge()` prefers non-bidirectional entries (preserves exit count for future operations), with main-tagged entries as a soft preference within each group.
 
@@ -258,7 +255,7 @@ If `first_layer_type` is configured (e.g., `"legacy_dungeon"`), execute a passan
 ### 4. Plan Layer Types
 
 ```python
-num_layers = random(min_layers, max_layers)
+num_layers = layers_count - 2  # exclude start and final boss
 # Reduced by 1 if first_layer_type was used
 layer_types = plan_layer_types(requirements, num_layers, rng)
 ```
@@ -392,12 +389,9 @@ Config validation runs once before any attempts; invalid config raises `Generati
 | `structure.max_exits` | 3 | Maximum split fan-out (1→N branches) |
 | `structure.max_entrances` | 3 | Maximum merge fan-in (N→1 branches) |
 | `structure.max_branches` | 3 | Default for max_exits/max_entrances (backward compat) |
-| `structure.min_layers` | 6 | Minimum intermediate layers |
-| `structure.max_layers` | 10 | Maximum intermediate layers |
+| `structure.layers_count` | 30 | Total layers (start + intermediates + final boss) |
 | `structure.split_probability` | 0.9 | Chance of split at each layer (if cluster supports it) |
 | `structure.merge_probability` | 0.5 | Chance of merge at each layer (if cluster supports it) |
-| `structure.min_branch_age` | 0 | Minimum layers before a branch can be merged (0=no limit) |
-| `structure.max_branch_spacing` | 4 | Maximum layers a branch can go without a split (0=disabled) |
 | `structure.first_layer_type` | None | Force type for first layer |
 | `requirements.major_bosses` | 8 | Number of major boss layers |
 | `structure.final_boss_candidates` | `{"leyndell_erdtree": 1, "enirilim_radahn": 1}` | Possible end bosses (zone -> weight). Also accepts a flat list (all weight 1). |
@@ -418,7 +412,7 @@ Pre-generation checks on configuration vs cluster pool:
 
 1. **first_layer_type**: must be a valid cluster type
 2. **major_bosses**: must be >= 0
-3. **Requirements vs min_layers**: warning if total requirements exceed `min_layers`
+3. **Requirements vs layers_count**: error if total requirements exceed `layers_count - 2` (the intermediate layer budget)
 4. **final_boss_candidates**: all zones must exist in the pool, all weights must be >= 1
 5. **Pool capacity**: warning when `requirement * max_parallel_paths > pool_size` for any cluster type. With parallel branches, each planned layer consumes up to `max_parallel_paths` clusters of the same type. Example: `major_bosses=12` with `max_parallel_paths=4` requires up to 48 clusters from a pool of 38, which will cause type exhaustion during generation.
 

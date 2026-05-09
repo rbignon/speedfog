@@ -287,18 +287,12 @@ def validate_config(
             f"major_bosses must be >= 0, got {config.requirements.major_bosses}"
         )
 
-    # Warn if total requirements exceed min_layers (some will be trimmed)
     total_requirements = (
         config.requirements.legacy_dungeons
         + config.requirements.bosses
         + config.requirements.mini_dungeons
         + config.requirements.major_bosses
     )
-    if total_requirements > config.structure.min_layers:
-        warnings.append(
-            f"Total requirements ({total_requirements}) exceed min_layers "
-            f"({config.structure.min_layers}); some types may be trimmed"
-        )
 
     budget = config.structure.layers_count - 2  # exclude start and final boss
     if total_requirements > budget:

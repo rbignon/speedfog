@@ -72,13 +72,10 @@ major_bosses = 8
 [structure]
 # Maximum number of parallel paths at any point.
 # Higher = more choices, but harder to balance.
-max_parallel_paths = 3
+max_parallel_paths = 4
 
-# Minimum number of "layers" (zones in sequence).
-min_layers = 6
-
-# Maximum number of layers.
-max_layers = 10
+# Total number of layers in the DAG (start + intermediates + final boss).
+layers_count = 30
 
 # Enemy scaling tier for the first layer (1-28, default: 1).
 # Raises the minimum difficulty floor so early zones aren't trivially easy.
@@ -119,12 +116,6 @@ max_exits = 3
 # Maximum fan-in per merge operation (N branches → 1 branch).
 # Lower values preserve parallelism longer by forcing gradual convergence.
 max_entrances = 3
-
-# Minimum number of layers a branch must exist before it can be merged (0=no limit).
-# Higher values prevent premature merge-after-split, creating wider branching structures.
-# min_branch_age = 0
-
-# max_branch_spacing = 4  # Max layers a branch can go without a split (0=disabled)
 
 # Force the first layer after start to be a specific cluster type.
 # Options: "legacy_dungeon", "mini_dungeon", "boss_arena", "major_boss"

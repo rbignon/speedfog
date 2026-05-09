@@ -226,9 +226,9 @@ def _check_layers(dag: Dag, config: Config, warnings: list[str]) -> None:
     # Layer count is max_layer + 1 (layers are 0-indexed)
     layer_count = max_layer + 1
 
-    if layer_count < config.structure.min_layers:
+    if layer_count < config.structure.layers_count:
         warnings.append(
-            f"Few layers: {layer_count} < {config.structure.min_layers} minimum"
+            f"Few layers: {layer_count} < {config.structure.layers_count} target"
         )
 
 
