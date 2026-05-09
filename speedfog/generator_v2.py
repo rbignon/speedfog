@@ -36,17 +36,27 @@ def count_node_net_exits(dag: Dag, node_id: str) -> int:
     Reuses ``compute_net_exits`` (same-side-pair semantics) and proximity-group
     exclusion. Already-used outgoing edges are also subtracted so this can be
     called mid-routing.
+
+    For ``allow_entry_as_exit`` clusters, entries do not reduce exit capacity
+    (the same gate is used from both sides), so only already-claimed outgoing
+    edges are subtracted.
     """
     node = dag.nodes[node_id]
+    used_exit_keys = {
+        (e.exit_fog.fog_id, e.exit_fog.zone) for e in dag.get_outgoing_edges(node_id)
+    }
+    if node.cluster.allow_entry_as_exit:
+        return sum(
+            1
+            for f in node.cluster.exit_fogs
+            if (f["fog_id"], f["zone"]) not in used_exit_keys
+        )
     consumed_entries = [
         {"fog_id": ef.fog_id, "zone": ef.zone} for ef in node.entry_fogs
     ]
     net = compute_net_exits(node.cluster, consumed_entries)
     for entry in consumed_entries:
         net = _filter_exits_by_proximity(node.cluster, entry, net)
-    used_exit_keys = {
-        (e.exit_fog.fog_id, e.exit_fog.zone) for e in dag.get_outgoing_edges(node_id)
-    }
     return sum(1 for f in net if (f["fog_id"], f["zone"]) not in used_exit_keys)
 
 
@@ -69,11 +79,24 @@ def compute_target_width(
 
 
 def _free_exits(dag: Dag, node_id: str) -> list[dict]:
-    """Cluster exits not yet consumed by an outgoing edge or by an entry pair."""
+    """Cluster exits not yet consumed by an outgoing edge or by an entry pair.
+
+    For ``allow_entry_as_exit`` clusters the entry fog and exit fog share the
+    same physical gate (the player enters from one side and exits from the
+    other).  Consuming an entry does NOT reduce the exit capacity in that
+    case, so we skip the ``compute_net_exits`` subtraction and only filter
+    out exits already claimed by an outgoing edge.
+    """
     node = dag.nodes[node_id]
     used_exit = {
         (e.exit_fog.fog_id, e.exit_fog.zone) for e in dag.get_outgoing_edges(node_id)
     }
+    if node.cluster.allow_entry_as_exit:
+        return [
+            f
+            for f in node.cluster.exit_fogs
+            if (f["fog_id"], f["zone"]) not in used_exit
+        ]
     consumed_entries = [
         {"fog_id": ef.fog_id, "zone": ef.zone} for ef in node.entry_fogs
     ]
@@ -184,6 +207,9 @@ def _safe_entry_candidates(dag: Dag, target: DagNode) -> list[dict]:
     returns only those where the resulting net exits (after proximity filtering
     and already-used-exit subtraction) is non-empty.
 
+    For ``allow_entry_as_exit`` clusters entries do not reduce exit capacity
+    (different sides of the same gate), so every free entry is safe.
+
     Note: uses dag.get_incoming_edges() (not target.entry_fogs) because
     entry_fogs is only populated after route_exits returns.
     Multiple sources may share the same entry fog (allow_shared_entrance is
@@ -193,6 +219,9 @@ def _safe_entry_candidates(dag: Dag, target: DagNode) -> list[dict]:
     free_entries = _free_entries(dag, target.id)
     if not free_entries:
         return []
+    if target.cluster.allow_entry_as_exit:
+        # Entries don't consume exits for these clusters; all free entries are safe.
+        return free_entries
     current_incoming = dag.get_incoming_edges(target.id)
     current_entries = [
         {"fog_id": e.entry_fog.fog_id, "zone": e.entry_fog.zone}
@@ -321,12 +350,19 @@ def route_exits(
                 f"Failed to connect source {source.id} to target {target.id}"
             )
 
-    # Phase 1b: every source must have at least one outgoing edge (no dead ends)
+    # Phase 1b: every source with available exits must have at least one
+    # outgoing edge (no avoidable dead ends).
+    # Sources whose single fog gate was consumed as an incoming entry are
+    # natural terminals (bidirectional pairing via compute_net_exits leaves
+    # them with 0 free exits). Those are skipped; only sources that still
+    # have exits but failed to connect to any target raise an error.
     shuffled_sources = list(sources)
     rng.shuffle(shuffled_sources)
     for source in shuffled_sources:
         if dag.get_outgoing_edges(source.id):
             continue  # already has an outgoing edge from Phase 1
+        if not _free_exits(dag, source.id):
+            continue  # natural terminal: all exits consumed by bidirectional pairing
         # Find a target this source can connect to.
         # Prefer targets that still have exits remaining after the new entry.
         not_yet_targeted = [

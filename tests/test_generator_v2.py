@@ -79,6 +79,56 @@ def test_pick_layer_clusters_fails_when_no_compatible_remaining():
         )
 
 
+def test_generator_v2_corpus_validity_50_seeds():
+    from pathlib import Path
+
+    from speedfog.clusters import load_clusters
+    from speedfog.config import (
+        BudgetConfig,
+        Config,
+        RequirementsConfig,
+        StructureConfig,
+    )
+    from speedfog.generator_v2 import generate_dag
+    from speedfog.validator import validate_dag
+
+    pool = load_clusters(Path(__file__).parent.parent / "data" / "clusters.json")
+    pool.merge_roundtable_into_start()
+    pool.filter_passant_incompatible()
+
+    failures: list[tuple[int, str]] = []
+    for seed in range(1000, 1050):
+        cfg = Config(
+            seed=seed,
+            requirements=RequirementsConfig(
+                legacy_dungeons=1,
+                bosses=3,
+                mini_dungeons=3,
+                major_bosses=1,
+            ),
+            structure=StructureConfig(
+                layers_count=20,
+                max_parallel_paths=4,
+                final_boss_candidates={"leyndell_throne": 1},
+            ),
+            budget=BudgetConfig(),
+        )
+        try:
+            dag, _ = generate_dag(cfg, pool)
+        except Exception as e:
+            failures.append((seed, f"GENERATION: {e}"))
+            continue
+        struct_errors = dag.validate_structure()
+        if struct_errors:
+            failures.append((seed, f"STRUCT: {struct_errors[:3]}"))
+            continue
+        result = validate_dag(dag, cfg)
+        if not result.is_valid:
+            failures.append((seed, f"VALIDATOR: {result.errors[:3]}"))
+
+    assert not failures, f"{len(failures)}/50 seeds failed: {failures[:5]}"
+
+
 def test_generate_dag_v2_produces_exact_layers_count():
     from pathlib import Path
 
