@@ -2246,21 +2246,17 @@ def test_connect_nodes_prefers_main_tagged_entry_on_target():
     )
     src = _mk_node_re(src_c, layer=0)
     tgt = _mk_node_re(tgt_c, layer=1)
-    dag = Dag(seed=0)
-    dag.add_node(src)
-    dag.add_node(tgt)
 
     # Repeat with several rng seeds to confirm main is always picked when present.
     for seed in range(20):
-        edge_dag = Dag(seed=0)
-        edge_dag.add_node(src)
-        edge_dag.add_node(tgt)
-        ok = connect_nodes(edge_dag, src, tgt, random.Random(seed))
+        dag = Dag(seed=0)
+        dag.add_node(src)
+        dag.add_node(tgt)
+        ok = connect_nodes(dag, src, tgt, random.Random(seed))
         assert ok is True
-        assert edge_dag.edges[0].entry_fog.fog_id == "main_gate", (
-            f"seed={seed}: expected main_gate, got "
-            f"{edge_dag.edges[0].entry_fog.fog_id}"
-        )
+        assert (
+            dag.edges[0].entry_fog.fog_id == "main_gate"
+        ), f"seed={seed}: expected main_gate, got {dag.edges[0].entry_fog.fog_id}"
 
 
 def test_connect_nodes_falls_back_to_non_main_when_main_unavailable():
