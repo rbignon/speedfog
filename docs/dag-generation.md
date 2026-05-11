@@ -195,6 +195,16 @@ For each intermediate layer:
 2. Pick `target_width` clusters of the planned type via `pick_layer_clusters()`, with type fallback
    when the requested pool is exhausted. Each fallback is recorded as a `FallbackEntry` in the
    generation log.
+
+   **Intra-layer weight balance.** The first slot is picked uniformly from the primary pool. Its
+   weight becomes the anchor for the remaining slots, which use `pick_cluster_weight_matched` with
+   a progressive tolerance (0 → `max_tolerance`, default 3, then falls back to any available
+   cluster). Each matched pick records its `weight_delta` (absolute distance to the anchor) in the
+   generation log, so degraded matches are visible. Because the matcher only takes the
+   "any available" branch when no candidate is within `max_tolerance`, the rule
+   `weight_delta > max_tolerance ⇔ matcher gave up` holds, which is how the diagnostic
+   distinguishes degraded picks from tolerated ones. Type fallbacks bypass weight matching and
+   have `weight_delta = None`. Layers are independent: no anchor is carried across layers.
 3. Create `DagNode` instances, mark their zones used.
 4. Call `route_exits(dag, current_layer_nodes, next_nodes, rng)` to connect the layers.
 5. Advance `current_layer_nodes = next_nodes`.

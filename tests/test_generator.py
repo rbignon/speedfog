@@ -1939,6 +1939,95 @@ def test_pick_layer_clusters_returns_requested_type_when_available():
     assert fallbacks == []
 
 
+def test_pick_layer_clusters_matches_intra_layer_anchor():
+    """Subsequent slots match the first pick's weight within tolerance."""
+    from speedfog.generator import pick_layer_clusters
+
+    # First pick is uniform among weights {5, 20}. Whichever wins,
+    # all other slots must match it within tolerance 3 if any candidate
+    # of similar weight is available.
+    pool = ClusterPool()
+    for i in range(3):
+        pool.add(_mk_cluster_v2(f"light_{i}", "mini_dungeon", weight=5))
+    for i in range(3):
+        pool.add(_mk_cluster_v2(f"heavy_{i}", "mini_dungeon", weight=20))
+
+    for seed in range(20):
+        rng = random.Random(seed)
+        picked, fallbacks = pick_layer_clusters(
+            width=3,
+            layer_type="mini_dungeon",
+            clusters=pool,
+            used_zones=set(),
+            rng=rng,
+        )
+        assert fallbacks == []
+        anchor = picked[0].weight
+        for c in picked[1:]:
+            assert abs(c.weight - anchor) <= 3, (
+                f"seed={seed}: pick {c.id} weight={c.weight} far from "
+                f"anchor={anchor}"
+            )
+
+
+def test_pick_layer_clusters_matches_degrade_beyond_max_tolerance():
+    """When no candidate is within max_tolerance, the matcher still returns one."""
+    from speedfog.generator import pick_layer_clusters
+
+    # Lone weight-5 cluster, all others weight 20. Force slot 0 onto the
+    # weight-5 by pre-marking all heavies as used. Then slots 1+ must come
+    # from a fresh pool that contains only heavies, and degrade.
+    pool = ClusterPool()
+    pool.add(_mk_cluster_v2("light_0", "mini_dungeon", weight=5))
+    for i in range(3):
+        pool.add(_mk_cluster_v2(f"heavy_{i}", "mini_dungeon", weight=20))
+
+    # Trick: build a second pool for slots 1+ that excludes the light.
+    # Simpler: rerun the pick with multiple seeds and find one that picks
+    # light first - this exercises the degraded branch deterministically.
+    for seed in range(50):
+        rng = random.Random(seed)
+        picked, fallbacks = pick_layer_clusters(
+            width=3,
+            layer_type="mini_dungeon",
+            clusters=pool,
+            used_zones=set(),
+            rng=rng,
+        )
+        if picked[0].weight == 5:
+            assert fallbacks == []
+            assert all(c.weight == 20 for c in picked[1:])
+            # Distance well beyond default max_tolerance=3: the matcher took
+            # the "fall back to any" branch.
+            for c in picked[1:]:
+                assert abs(c.weight - picked[0].weight) > 3
+            return
+    raise AssertionError("No seed in [0,50) picked the light cluster first")
+
+
+def test_pick_layer_clusters_slot0_type_fallback():
+    """Primary pool empty at slot 0: layer is filled entirely from fallback type."""
+    from speedfog.generator import pick_layer_clusters
+
+    pool = ClusterPool()
+    for i in range(3):
+        pool.add(_mk_cluster_v2(f"ba_{i}", "boss_arena", weight=15))
+
+    rng = random.Random(0)
+    picked, fallbacks = pick_layer_clusters(
+        width=2,
+        layer_type="mini_dungeon",
+        clusters=pool,
+        used_zones=set(),
+        rng=rng,
+        allowed_types=("mini_dungeon", "boss_arena"),
+    )
+    assert len(picked) == 2
+    assert all(c.type == "boss_arena" for c in picked)
+    assert len(fallbacks) == 2
+    assert {fb.branch_index for fb in fallbacks} == {0, 1}
+
+
 def test_pick_layer_clusters_falls_back_when_type_pool_exhausted():
     from speedfog.generator import pick_layer_clusters
 

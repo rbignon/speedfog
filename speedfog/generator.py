@@ -819,13 +819,16 @@ def pick_layer_clusters(
         "legacy_dungeon",
         "major_boss",
     ),
-    anchor_weight: int | None = None,
 ) -> tuple[list[ClusterData], list[FallbackEntry]]:
     """Pick `width` clusters for a layer, falling back to other allowed types.
 
-    Returns (picks, fallbacks). Picks are weight-matched when possible.
-    Each pick of the wrong type yields a FallbackEntry (reason='pool_exhausted').
-    Raises GenerationError if no compatible cluster remains in any allowed type.
+    The first slot is picked uniformly from the primary pool; it sets the
+    intra-layer weight anchor. Subsequent slots are weight-matched against
+    that anchor so all branches at this layer have a comparable weight.
+
+    Returns (picks, fallbacks). Each pick of the wrong type yields a
+    FallbackEntry (reason='pool_exhausted'). Raises GenerationError if no
+    compatible cluster remains in any allowed type.
     """
     primary_pool = clusters.get_by_type(layer_type)
     fallback_types = [t for t in allowed_types if t != layer_type]
@@ -834,14 +837,15 @@ def pick_layer_clusters(
     fallbacks: list[FallbackEntry] = []
     local_used = set(used_zones)
     for slot in range(width):
-        c = pick_cluster_weight_matched(
-            primary_pool,
-            local_used,
-            rng,
-            anchor_weight=anchor_weight
-            if anchor_weight is not None
-            else (picks[0].weight if picks else 10),
-        )
+        if not picks:
+            c = pick_cluster_uniform(primary_pool, local_used, rng)
+        else:
+            c = pick_cluster_weight_matched(
+                primary_pool,
+                local_used,
+                rng,
+                anchor_weight=picks[0].weight,
+            )
         if c is None:
             for ft in fallback_types:
                 c = pick_cluster_uniform(
@@ -988,7 +992,6 @@ def generate_dag(config: Config, clusters: ClusterPool) -> tuple[Dag, Generation
             if layer_idx == 1 and config.structure.first_layer_type
             else layer_types[layer_idx - 1]
         )
-        anchor_weight = current_layer_nodes[0].cluster.weight
         picked, fallbacks = pick_layer_clusters(
             width=target_width,
             layer_type=layer_type,
@@ -996,7 +999,6 @@ def generate_dag(config: Config, clusters: ClusterPool) -> tuple[Dag, Generation
             used_zones=used_zones,
             rng=rng,
             allowed_types=allowed_types,
-            anchor_weight=anchor_weight,
         )
 
         next_nodes: list[DagNode] = []
@@ -1020,6 +1022,24 @@ def generate_dag(config: Config, clusters: ClusterPool) -> tuple[Dag, Generation
             n.entry_fogs = [e.entry_fog for e in dag.get_incoming_edges(n.id)]
 
         phase = "saturation" if remaining > current_width else "convergence"
+        fallback_slots = {fb.branch_index for fb in fallbacks}
+        anchor = picked[0].weight
+        node_entries: list[NodeEntry] = []
+        for i, n in enumerate(next_nodes):
+            delta: int | None
+            if i == 0 or i in fallback_slots:
+                delta = None
+            else:
+                delta = abs(n.cluster.weight - anchor)
+            node_entries.append(
+                NodeEntry(
+                    n.cluster.id,
+                    n.cluster.type,
+                    n.cluster.weight,
+                    "routed",
+                    weight_delta=delta,
+                )
+            )
         log.layer_events.append(
             LayerEvent(
                 layer=layer_idx,
@@ -1028,10 +1048,7 @@ def generate_dag(config: Config, clusters: ClusterPool) -> tuple[Dag, Generation
                 operation="ROUTE",
                 branches_before=current_width,
                 branches_after=len(next_nodes),
-                nodes=[
-                    NodeEntry(n.cluster.id, n.cluster.type, n.cluster.weight, "routed")
-                    for n in next_nodes
-                ],
+                nodes=node_entries,
                 fallbacks=fallbacks,
             )
         )

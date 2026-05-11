@@ -24,6 +24,10 @@ class NodeEntry:
     weight: int
     role: str  # start, primary, passant, split_child, merge_target,
     # rebalance_split, rebalance_merge, rebalance_passant, final_boss
+    weight_delta: int | None = None
+    # abs(weight - layer anchor) for slots matched against the layer's first
+    # pick. None for the layer's first node, type fallbacks, start, and
+    # final_boss (no intra-layer matching applies).
 
 
 @dataclass
@@ -208,9 +212,12 @@ def export_generation_log(
                         if fb.actual_type == node.cluster_type:
                             fallback_mark = " *** FALLBACK ***"
                             break
+                delta_part = (
+                    f", dw={node.weight_delta}" if node.weight_delta is not None else ""
+                )
                 lines.append(
-                    f"    {node.cluster_id} [{node.cluster_type}, w={node.weight}] "
-                    f"({node.role}){fallback_mark}"
+                    f"    {node.cluster_id} [{node.cluster_type}, w={node.weight}"
+                    f"{delta_part}] ({node.role}){fallback_mark}"
                 )
 
             # Fallback details

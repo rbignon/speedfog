@@ -58,6 +58,18 @@ def test_node_entry():
         role="primary",
     )
     assert ne.role == "primary"
+    assert ne.weight_delta is None
+
+
+def test_node_entry_weight_delta():
+    ne = NodeEntry(
+        cluster_id="caelid_a51c",
+        cluster_type="legacy_dungeon",
+        weight=11,
+        role="routed",
+        weight_delta=3,
+    )
+    assert ne.weight_delta == 3
 
 
 def test_fallback_entry():
@@ -182,6 +194,29 @@ def test_export_summary_section(tmp_path):
     assert "Layers: 3" in text
     assert "Nodes: 5" in text
     assert "Fallbacks: 0" in text
+
+
+def test_export_node_with_weight_delta(tmp_path):
+    log = _make_minimal_log()
+    log.layer_events.append(
+        LayerEvent(
+            layer=3,
+            phase="planned",
+            planned_type="mini_dungeon",
+            operation="ROUTE",
+            branches_before=2,
+            branches_after=2,
+            nodes=[
+                NodeEntry("first_pick", "mini_dungeon", 10, "routed"),
+                NodeEntry("matched_pick", "mini_dungeon", 12, "routed", weight_delta=2),
+            ],
+        ),
+    )
+    path = tmp_path / "generation.log"
+    export_generation_log(log, path)
+    text = path.read_text()
+    assert "first_pick [mini_dungeon, w=10] (routed)" in text
+    assert "matched_pick [mini_dungeon, w=12, dw=2] (routed)" in text
 
 
 def test_export_fallback_details(tmp_path):
