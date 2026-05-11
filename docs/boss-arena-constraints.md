@@ -10,8 +10,9 @@ feasibility, two-phase space, NPC terrain, Evergaol specifics).
 ## Source of truth
 
 Tags are ported from [BossArenaRandomizer](https://github.com/ignitesouls/BossArenaRandomize)'s
-`bosses.json` and `bossArena.json`. The merged form lives in
-`data/boss_arena_tags.json`. Re-run the porter with:
+`Data/bosses.json` and `Data/arenas.json` (formerly `bossArena.json` at the
+project root, relocated under `Data/` in the post-overhaul layout). The merged
+form lives in `data/boss_arena_tags.json`. Re-run the porter with:
 
     uv run python tools/port_boss_arena_tags.py \
         --bar-dir ../BossArenaRandomizer/BossArenaRandomizer \

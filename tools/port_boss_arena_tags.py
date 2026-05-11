@@ -1,14 +1,15 @@
 """Port BossArenaRandomizer tag JSON into a merged speedfog data file.
 
 Reads:
-  <bar_dir>/bosses.json      (boss tags keyed by display name)
-  <bar_dir>/bossArena.json   (arena tags keyed by display name)
+  <bar_dir>/Data/bosses.json (boss tags keyed by display name)
+  <bar_dir>/Data/arenas.json (arena tags keyed by display name; BAR's former
+                              ``bossArena.json``, relocated under ``Data/``)
 
 Writes:
   <out_path>                 (JSON dict keyed by entity id string, values
                               describe boss/arena/pool tags)
 
-- Entries in bossArena.json carry BOTH ``boss`` and ``arena`` blocks. The
+- Entries in arenas.json carry BOTH ``boss`` and ``arena`` blocks. The
   ``boss.exclude_from_pool`` flag is set to ``True`` if the entity ID is in
   ``EXCLUDE_FROM_POOL_IDS`` (replaces the C# MinorBossRemoveSourceNames list,
   manually resolved to entity IDs below).
@@ -100,7 +101,7 @@ EXCLUDE_FROM_POOL_IDS: frozenset[int] = frozenset(
         # Ulcerated Tree Spirit Boss
         18000800,
         # Putrid Avatar / Burial Watchdog Boss variants (cross-check against
-        # BAR bossArena.json; extend this set when porting finds new IDs).
+        # BAR Data/arenas.json; extend this set when porting finds new IDs).
         30020800,  # Fire Erdtree Burial Watchdog
         30010800,  # Erdtree Burial Watchdog and Imps
         # Divine Beast Dancing Lion and Basilisks
@@ -208,8 +209,8 @@ def build_entities(
 
 def port(bar_dir: Path, out_path: Path) -> None:
     """Read BAR JSON files and write the merged entity-tag data file."""
-    bosses = json.loads((bar_dir / "bosses.json").read_text())
-    arenas = json.loads((bar_dir / "bossArena.json").read_text())
+    bosses = json.loads((bar_dir / "Data" / "bosses.json").read_text())
+    arenas = json.loads((bar_dir / "Data" / "arenas.json").read_text())
     entities = build_entities(bosses, arenas)
     sorted_data = {k: entities[k] for k in sorted(entities.keys(), key=int)}
     out_path.write_text(json.dumps(sorted_data, indent=2) + "\n")

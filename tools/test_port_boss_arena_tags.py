@@ -119,9 +119,12 @@ def test_exclude_from_pool_flag_on_matching_bar_entries() -> None:
 
 def test_port_writes_sorted_json(tmp_path: Path) -> None:
     bar_dir = tmp_path / "bar"
-    bar_dir.mkdir()
-    (bar_dir / "bosses.json").write_text(json.dumps({"B": _boss("2"), "A": _boss("1")}))
-    (bar_dir / "bossArena.json").write_text(
+    data_dir = bar_dir / "Data"
+    data_dir.mkdir(parents=True)
+    (data_dir / "bosses.json").write_text(
+        json.dumps({"B": _boss("2"), "A": _boss("1")})
+    )
+    (data_dir / "arenas.json").write_text(
         json.dumps({"B": _arena("2"), "A": _arena("1")})
     )
     out = tmp_path / "boss_arena_tags.json"
