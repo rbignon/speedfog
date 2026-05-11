@@ -938,13 +938,14 @@ class TestAllowedTypes:
         assert req.required_count("major_boss") == 2
 
     def test_required_count_for_excluded_type_returns_zero(self):
-        req = RequirementsConfig(
-            allowed_types=["boss_arena", "major_boss"],
-            legacy_dungeons=3,
-            bosses=5,
-            mini_dungeons=0,
-            major_bosses=2,
-        )
+        with pytest.warns(UserWarning, match="legacy_dungeons.*not in allowed_types"):
+            req = RequirementsConfig(
+                allowed_types=["boss_arena", "major_boss"],
+                legacy_dungeons=3,
+                bosses=5,
+                mini_dungeons=0,
+                major_bosses=2,
+            )
         # mini_dungeon not in allowed_types, even though default min is 5
         assert req.required_count("mini_dungeon") == 0
         # legacy_dungeon not in allowed_types, even with explicit 3
@@ -1031,7 +1032,11 @@ def test_first_layer_type_in_allowed_types_ok():
 def test_first_layer_type_none_is_ok():
     config = Config.from_dict(
         {
-            "requirements": {"allowed_types": ["boss_arena", "major_boss"]},
+            "requirements": {
+                "allowed_types": ["boss_arena", "major_boss"],
+                "legacy_dungeons": 0,
+                "mini_dungeons": 0,
+            },
         }
     )
     assert config.structure.first_layer_type is None
