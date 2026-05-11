@@ -933,7 +933,9 @@ def generate_dag(config: Config, clusters: ClusterPool) -> tuple[Dag, Generation
     total_target = config.structure.layers_count
 
     # 1. Pick final boss
-    boss_cluster_list = clusters.get_by_type("major_boss")
+    boss_cluster_list = clusters.get_by_type("major_boss") + clusters.get_by_type(
+        "final_boss"
+    )
     all_boss_zones = {zone for c in boss_cluster_list for zone in c.zones}
     weighted_candidates = resolve_final_boss_candidates(
         config.structure.effective_final_boss_candidates, all_boss_zones

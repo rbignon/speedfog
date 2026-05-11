@@ -337,6 +337,71 @@ class TestGenerateDag:
         with pytest.raises(GenerationError, match="[Ff]inal"):
             generate_dag(config, pool)
 
+    def test_final_boss_candidate_can_be_final_boss_typed_cluster(self):
+        """Regression: a zone belonging to a ``final_boss``-typed cluster must
+        be selectable as the final boss.
+
+        The real data places the default candidates (``leyndell_erdtree``,
+        ``enirilim_radahn``) on ``final_boss``-typed clusters, not on
+        ``major_boss`` clusters, so generate_dag must include both types when
+        resolving the final boss. Without that union, generation aborts with
+        ``GenerationError("No available final boss from candidates...")``
+        on the default config.
+        """
+        pool = ClusterPool()
+        pool.add(
+            make_cluster(
+                "chapel_start",
+                zones=["chapel"],
+                cluster_type="start",
+                entry_fogs=[],
+                exit_fogs=[
+                    {"fog_id": "start_exit_1", "zone": "chapel"},
+                    {"fog_id": "start_exit_2", "zone": "chapel"},
+                ],
+            )
+        )
+        # The sole valid endpoint is a final_boss-typed cluster.
+        pool.add(
+            make_cluster(
+                "erdtree_endpoint",
+                zones=["leyndell_erdtree"],
+                cluster_type="final_boss",
+                entry_fogs=[
+                    {"fog_id": "erdtree_entry_a", "zone": "leyndell_erdtree"},
+                    {"fog_id": "erdtree_entry_b", "zone": "leyndell_erdtree"},
+                ],
+                exit_fogs=[],
+            )
+        )
+        for i in range(4):
+            pool.add(
+                make_cluster(
+                    f"mini_{i}",
+                    zones=[f"mini_{i}_zone"],
+                    cluster_type="mini_dungeon",
+                    entry_fogs=[{"fog_id": f"mini_{i}_e", "zone": f"mini_{i}_zone"}],
+                    exit_fogs=[
+                        {"fog_id": f"mini_{i}_e", "zone": f"mini_{i}_zone"},
+                        {"fog_id": f"mini_{i}_x", "zone": f"mini_{i}_zone"},
+                    ],
+                )
+            )
+
+        config = Config(seed=42)
+        config.structure.final_boss_candidates = {"leyndell_erdtree": 1}
+        config.structure.layers_count = 4
+        config.requirements.legacy_dungeons = 0
+        config.requirements.bosses = 0
+        config.requirements.mini_dungeons = 0
+        config.requirements.major_bosses = 0
+
+        dag, _log = generate_dag(config, pool)
+
+        end_node = dag.nodes[dag.end_id]
+        assert end_node.cluster.type == "final_boss"
+        assert "leyndell_erdtree" in end_node.cluster.zones
+
     def test_layer_tiers_increase(self):
         """Difficulty tier (weakly) increases with layer index."""
         pool = make_cluster_pool()
