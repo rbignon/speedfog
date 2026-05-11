@@ -21,20 +21,6 @@ class FogRef(NamedTuple):
 
 
 @dataclass
-class Branch:
-    """A branch in the DAG during generation.
-
-    Tracks the current position and available exit fog for a parallel path.
-    """
-
-    id: str
-    current_node_id: str
-    available_exit: FogRef
-    birth_layer: int = 0  # Layer when this branch was created
-    layers_since_last_split: int = 0  # Layers since last split on this branch
-
-
-@dataclass
 class DagNode:
     """A node in the DAG representing a cluster instance.
 

@@ -861,22 +861,6 @@ class TestDagValidation:
         assert any("nonexistent" in e for e in errors)
 
 
-def test_branch_layers_since_last_split_default():
-    """Branch.layers_since_last_split defaults to 0."""
-    from speedfog.dag import Branch, FogRef
-
-    branch = Branch("b0", "start", FogRef("x", "z"))
-    assert branch.layers_since_last_split == 0
-
-
-def test_branch_layers_since_last_split_custom():
-    """Branch.layers_since_last_split can be set."""
-    from speedfog.dag import Branch, FogRef
-
-    branch = Branch("b0", "start", FogRef("x", "z"), layers_since_last_split=3)
-    assert branch.layers_since_last_split == 3
-
-
 def test_dag_drops_crosslinks_added_field():
     from speedfog.dag import Dag
 
