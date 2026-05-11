@@ -4830,40 +4830,6 @@
     "scaling": 18,
     "dlc": false
   },
-  "1051530322": {
-    "name": "Colossal Fingercreeper",
-    "boss": {
-      "size": 1,
-      "type": 1,
-      "is_two_phase": false,
-      "is_dragon": false,
-      "is_npc": false,
-      "can_escape": false,
-      "night_boss": false,
-      "exclude_from_pool": false
-    },
-    "pool": "minor",
-    "region": 0,
-    "scaling": 0,
-    "dlc": false
-  },
-  "1051530324": {
-    "name": "Colossal Fingercreeper",
-    "boss": {
-      "size": 1,
-      "type": 1,
-      "is_two_phase": false,
-      "is_dragon": false,
-      "is_npc": false,
-      "can_escape": false,
-      "night_boss": false,
-      "exclude_from_pool": false
-    },
-    "pool": "minor",
-    "region": 0,
-    "scaling": 0,
-    "dlc": false
-  },
   "1051570310": {
     "name": "Elder Lion",
     "boss": {
