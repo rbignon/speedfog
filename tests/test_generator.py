@@ -1855,18 +1855,39 @@ class TestPickClusterWeightMatched:
             results.add(r.weight)
         assert results == {1, 5}  # Both reachable at tol=2
 
-    def test_fallback_to_any(self):
-        """When nothing within max_tolerance, falls back to any available."""
-        candidates = self._make_pool([1, 1, 1])
-        result = pick_cluster_weight_matched(
-            candidates,
-            set(),
-            random.Random(42),
-            anchor_weight=10,
-            max_tolerance=2,
-        )
-        assert result is not None
-        assert result.weight == 1
+    def test_fallback_picks_nearest(self):
+        """Beyond max_tolerance, the nearest cluster is picked (not random)."""
+        # anchor=10, tolerance=2 covers [8..12]: nothing in pool.
+        # Pool has weights {1, 5, 7}: nearest is 7 (delta 3), then 5 (5), 1 (9).
+        candidates = self._make_pool([1, 5, 7])
+        for seed in range(50):
+            r = pick_cluster_weight_matched(
+                candidates,
+                set(),
+                random.Random(seed),
+                anchor_weight=10,
+                max_tolerance=2,
+            )
+            assert r is not None
+            assert r.weight == 7, f"seed={seed}: expected nearest=7, got {r.weight}"
+
+    def test_fallback_nearest_breaks_ties_randomly(self):
+        """When several clusters share the minimum delta, ties are randomized."""
+        # anchor=10, tolerance=1 covers [9..11]: nothing in pool.
+        # Pool weights {5, 15}: both at delta 5. Both must be reachable.
+        candidates = self._make_pool([5, 15])
+        results = set()
+        for seed in range(50):
+            r = pick_cluster_weight_matched(
+                candidates,
+                set(),
+                random.Random(seed),
+                anchor_weight=10,
+                max_tolerance=1,
+            )
+            assert r is not None
+            results.add(r.weight)
+        assert results == {5, 15}
 
     def test_half_step_tolerance(self):
         """Half-integer anchors match candidates within 0.5 before widening."""

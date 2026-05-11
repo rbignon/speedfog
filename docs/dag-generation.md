@@ -201,13 +201,16 @@ For each intermediate layer:
    Subsequent slots use `pick_cluster_weight_matched` against the running mean of the picks
    already made for this layer, so the anchor self-corrects toward the layer's centroid instead
    of being pinned to the first (possibly off-center) pick. The matcher widens its tolerance in
-   0.5 steps (0 → `max_tolerance`, default 3.0), then falls back to any available cluster.
-   `pick_layer_clusters` returns a `weight_deltas` list (one entry per slot, `None` for slot 0
-   and for type fallbacks); the generator records each non-None value as `NodeEntry.weight_delta`
-   and the spoiler log surfaces it as `dw=<n>` next to `w=<n>`. Because the matcher only takes
-   the "any available" branch when no candidate is within `max_tolerance`, the rule
-   `weight_delta > max_tolerance ⇔ matcher gave up` holds. Layers are independent: no anchor is
-   carried across layers.
+   0.5 steps (0 → `max_tolerance`, default 3.0); a uniform pick within the matching tier is made
+   as soon as one candidate fits. If no candidate fits within `max_tolerance`, the matcher
+   degrades gracefully: it picks the cluster nearest to the anchor (ties broken randomly), so
+   `max_tolerance` is a randomization knob (how much variety inside the matching band) rather
+   than a quality cliff. `pick_layer_clusters` returns a `weight_deltas` list (one entry per
+   slot, `None` for slot 0 and for type fallbacks); the generator records each non-None value as
+   `NodeEntry.weight_delta` and the spoiler log surfaces it as `dw=<n>` next to `w=<n>`. Since
+   the matcher only takes the nearest-pick branch when no candidate is within `max_tolerance`,
+   `weight_delta > max_tolerance` flags those degraded picks. Layers are independent: no anchor
+   is carried across layers.
 3. Create `DagNode` instances, mark their zones used.
 4. Call `route_exits(dag, current_layer_nodes, next_nodes, rng)` to connect the layers.
 5. Advance `current_layer_nodes = next_nodes`.

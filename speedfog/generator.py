@@ -361,8 +361,9 @@ def pick_cluster_weight_matched(
 
     Filters candidates once (zone availability + filter_fn), then applies
     progressive weight tolerance in 0.5 steps from exact match up to
-    max_tolerance. Falls back to any available cluster if no match within
-    max_tolerance.
+    max_tolerance. If no candidate fits within max_tolerance, picks the
+    cluster nearest to anchor_weight (ties broken randomly) - graceful
+    degradation instead of uniform random.
 
     Args:
         candidates: List of candidate clusters.
@@ -395,7 +396,14 @@ def pick_cluster_weight_matched(
             return rng.choice(matched)
         tol += _TOLERANCE_STEP
 
-    return rng.choice(available)
+    # Beyond max_tolerance: pick the cluster nearest to the anchor instead
+    # of a uniform random one, so degradation is graceful (smallest possible
+    # deviation given what the pool offers). Ties are broken randomly.
+    min_delta = min(abs(c.weight - anchor_weight) for c in available)
+    nearest = [
+        c for c in available if abs(c.weight - anchor_weight) <= min_delta + 1e-9
+    ]
+    return rng.choice(nearest)
 
 
 def _mark_cluster_used(
