@@ -109,8 +109,9 @@ class StructureConfig:
     final_tier: int = 28  # Enemy scaling tier for final boss (1-28)
     tier_curve: str = "linear"  # "linear" or "power"
     tier_curve_exponent: float = 0.6  # Power curve exponent (only for "power")
-    max_weight_tolerance: int = (
-        3  # Max weight tolerance for parallel branch matching (0=disabled)
+    max_weight_tolerance: float = (
+        3.0  # Max weight tolerance for parallel branch matching (0=disabled).
+        # Must be a non-negative multiple of 0.5 (matcher widens by 0.5 steps).
     )
     layers_count: int = 30  # Total layers (start + intermediates + final boss)
 
@@ -179,6 +180,13 @@ class StructureConfig:
         if self.max_weight_tolerance < 0:
             raise ValueError(
                 f"max_weight_tolerance must be >= 0, got {self.max_weight_tolerance}"
+            )
+        # Matcher widens tolerance in 0.5 steps; non-multiples would silently
+        # truncate (e.g. 2.7 would behave like 2.5).
+        if (self.max_weight_tolerance * 2) % 1 != 0:
+            raise ValueError(
+                f"max_weight_tolerance must be a multiple of 0.5, "
+                f"got {self.max_weight_tolerance}"
             )
         if self.tier_curve not in ("linear", "power"):
             raise ValueError(
@@ -585,7 +593,9 @@ class Config:
                 final_tier=structure_section.get("final_tier", 28),
                 tier_curve=structure_section.get("tier_curve", "linear"),
                 tier_curve_exponent=structure_section.get("tier_curve_exponent", 0.6),
-                max_weight_tolerance=structure_section.get("max_weight_tolerance", 3),
+                max_weight_tolerance=float(
+                    structure_section.get("max_weight_tolerance", 3.0)
+                ),
                 layers_count=structure_section.get("layers_count", 30),
             ),
             paths=PathsConfig(

@@ -858,20 +858,20 @@ def test_death_markers_explicit_false():
 
 
 def test_max_weight_tolerance_default():
-    """max_weight_tolerance defaults to 3."""
+    """max_weight_tolerance defaults to 3.0."""
     config = Config.from_dict({})
-    assert config.structure.max_weight_tolerance == 3
+    assert config.structure.max_weight_tolerance == 3.0
 
 
 def test_max_weight_tolerance_from_toml(tmp_path):
-    """max_weight_tolerance parsed from TOML."""
+    """max_weight_tolerance parsed from TOML (float accepted)."""
     config_file = tmp_path / "config.toml"
     config_file.write_text("""
 [structure]
-max_weight_tolerance = 5
+max_weight_tolerance = 2.5
 """)
     config = Config.from_toml(config_file)
-    assert config.structure.max_weight_tolerance == 5
+    assert config.structure.max_weight_tolerance == 2.5
 
 
 def test_max_weight_tolerance_disabled():
@@ -884,6 +884,12 @@ def test_max_weight_tolerance_negative_raises():
     """Negative max_weight_tolerance raises ValueError."""
     with pytest.raises(ValueError, match="max_weight_tolerance"):
         Config.from_dict({"structure": {"max_weight_tolerance": -1}})
+
+
+def test_max_weight_tolerance_non_half_step_raises():
+    """max_weight_tolerance must be a multiple of 0.5."""
+    with pytest.raises(ValueError, match="multiple of 0.5"):
+        Config.from_dict({"structure": {"max_weight_tolerance": 2.7}})
 
 
 class TestAllowedTypes:

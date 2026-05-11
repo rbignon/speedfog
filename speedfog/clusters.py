@@ -50,7 +50,7 @@ class ClusterData:
     id: str
     zones: list[str]
     type: str  # start, final_boss, legacy_dungeon, mini_dungeon, boss_arena
-    weight: int
+    weight: float
     entry_fogs: list[dict]  # [{"fog_id": str, "zone": str}, ...]
     exit_fogs: list[dict]  # [{"fog_id": str, "zone": str, "unique"?: bool}, ...]
     unique_exit_fogs: list[dict] = field(
@@ -86,7 +86,7 @@ class ClusterData:
             id=data["id"],
             zones=data["zones"],
             type=data["type"],
-            weight=data["weight"],
+            weight=float(data["weight"]),
             entry_fogs=entry_fogs,
             exit_fogs=exit_fogs,
             unique_exit_fogs=[f for f in all_exits if f.get("unique")],

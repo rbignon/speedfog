@@ -225,7 +225,7 @@ class TestFullPipeline:
             assert isinstance(node_data["zones"], list)
             assert isinstance(node_data["layer"], int)
             assert isinstance(node_data["tier"], int)
-            assert isinstance(node_data["weight"], int)
+            assert isinstance(node_data["weight"], int | float)
 
         # Edges structure
         assert isinstance(data["edges"], list)

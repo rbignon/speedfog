@@ -21,13 +21,13 @@ class NodeEntry:
 
     cluster_id: str
     cluster_type: str
-    weight: int
+    weight: float
     role: str  # start, primary, passant, split_child, merge_target,
     # rebalance_split, rebalance_merge, rebalance_passant, final_boss
-    weight_delta: int | None = None
-    # abs(weight - layer anchor) for slots matched against the layer's first
-    # pick. None for the layer's first node, type fallbacks, start, and
-    # final_boss (no intra-layer matching applies).
+    weight_delta: float | None = None
+    # abs(weight - running-mean anchor of prior picks in the layer). None for
+    # the layer's first node, type fallbacks, start, and final_boss (no
+    # intra-layer matching applies).
 
 
 @dataclass
@@ -213,11 +213,14 @@ def export_generation_log(
                             fallback_mark = " *** FALLBACK ***"
                             break
                 delta_part = (
-                    f", dw={node.weight_delta}" if node.weight_delta is not None else ""
+                    f", dw={round(node.weight_delta, 2):g}"
+                    if node.weight_delta is not None
+                    else ""
                 )
                 lines.append(
-                    f"    {node.cluster_id} [{node.cluster_type}, w={node.weight}"
-                    f"{delta_part}] ({node.role}){fallback_mark}"
+                    f"    {node.cluster_id} [{node.cluster_type}, "
+                    f"w={round(node.weight, 2):g}{delta_part}] "
+                    f"({node.role}){fallback_mark}"
                 )
 
             # Fallback details

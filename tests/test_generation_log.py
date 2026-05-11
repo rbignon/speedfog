@@ -207,16 +207,19 @@ def test_export_node_with_weight_delta(tmp_path):
             branches_before=2,
             branches_after=2,
             nodes=[
-                NodeEntry("first_pick", "mini_dungeon", 10, "routed"),
-                NodeEntry("matched_pick", "mini_dungeon", 12, "routed", weight_delta=2),
+                NodeEntry("first_pick", "mini_dungeon", 10.0, "routed"),
+                NodeEntry(
+                    "matched_pick", "mini_dungeon", 12.5, "routed", weight_delta=2.5
+                ),
             ],
         ),
     )
     path = tmp_path / "generation.log"
     export_generation_log(log, path)
     text = path.read_text()
+    # :g format drops trailing .0 for integral floats.
     assert "first_pick [mini_dungeon, w=10] (routed)" in text
-    assert "matched_pick [mini_dungeon, w=12, dw=2] (routed)" in text
+    assert "matched_pick [mini_dungeon, w=12.5, dw=2.5] (routed)" in text
 
 
 def test_export_fallback_details(tmp_path):

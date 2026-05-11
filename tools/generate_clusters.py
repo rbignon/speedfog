@@ -194,7 +194,7 @@ class Cluster:
     entry_fogs: list[dict] = field(default_factory=list)
     exit_fogs: list[dict] = field(default_factory=list)
     cluster_type: str = ""
-    weight: int = 0
+    weight: float = 0.0
     cluster_id: str = ""
     defeat_flag: int = 0
     allow_entry_as_exit: bool = False
@@ -1787,7 +1787,9 @@ def filter_and_enrich_clusters(
 
         n_zones = len(zone_weights)
         avg_weight = sum(zone_weights) / n_zones
-        cluster.weight = round(avg_weight * (1 + 0.5 * math.log(n_zones)))
+        # Keep one decimal of precision: matcher uses 0.5 tolerance steps,
+        # finer floats add noise without helping intra-layer balance.
+        cluster.weight = round(avg_weight * (1 + 0.5 * math.log(n_zones)), 1)
 
         # For boss_arena clusters with one-way internal links, remove
         # exit fogs from zones that become unreachable after traversal.
@@ -1839,7 +1841,7 @@ def filter_and_enrich_clusters(
             if cm.get("exclude"):
                 continue
             if "weight" in cm:
-                cluster.weight = int(cm["weight"])
+                cluster.weight = float(cm["weight"])
             cluster.proximity_groups = cm.get("proximity_groups", [])
             cluster.allowed_entries = cm.get("allowed_entries", [])
             cluster.allowed_exits = cm.get("allowed_exits", [])

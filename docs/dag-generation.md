@@ -196,15 +196,18 @@ For each intermediate layer:
    when the requested pool is exhausted. Each fallback is recorded as a `FallbackEntry` in the
    generation log.
 
-   **Intra-layer weight balance.** The first slot is picked uniformly from the primary pool. Its
-   weight becomes the anchor for the remaining slots, which use `pick_cluster_weight_matched` with
-   a progressive tolerance (0 → `max_tolerance`, default 3, then falls back to any available
-   cluster). Each matched pick records its `weight_delta` (absolute distance to the anchor) in the
-   generation log, so degraded matches are visible. Because the matcher only takes the
-   "any available" branch when no candidate is within `max_tolerance`, the rule
-   `weight_delta > max_tolerance ⇔ matcher gave up` holds, which is how the diagnostic
-   distinguishes degraded picks from tolerated ones. Type fallbacks bypass weight matching and
-   have `weight_delta = None`. Layers are independent: no anchor is carried across layers.
+   **Intra-layer weight balance.** Cluster weights are floats (1 decimal of precision, computed in
+   `tools/generate_clusters.py`). The first slot is picked uniformly from the primary pool.
+   Subsequent slots use `pick_cluster_weight_matched` against the running mean of the picks
+   already made for this layer, so the anchor self-corrects toward the layer's centroid instead
+   of being pinned to the first (possibly off-center) pick. The matcher widens its tolerance in
+   0.5 steps (0 → `max_tolerance`, default 3.0), then falls back to any available cluster.
+   `pick_layer_clusters` returns a `weight_deltas` list (one entry per slot, `None` for slot 0
+   and for type fallbacks); the generator records each non-None value as `NodeEntry.weight_delta`
+   and the spoiler log surfaces it as `dw=<n>` next to `w=<n>`. Because the matcher only takes
+   the "any available" branch when no candidate is within `max_tolerance`, the rule
+   `weight_delta > max_tolerance ⇔ matcher gave up` holds. Layers are independent: no anchor is
+   carried across layers.
 3. Create `DagNode` instances, mark their zones used.
 4. Call `route_exits(dag, current_layer_nodes, next_nodes, rng)` to connect the layers.
 5. Advance `current_layer_nodes = next_nodes`.

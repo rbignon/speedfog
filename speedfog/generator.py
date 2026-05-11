@@ -344,21 +344,25 @@ def validate_config(
 # =============================================================================
 
 
+_TOLERANCE_STEP = 0.5
+
+
 def pick_cluster_weight_matched(
     candidates: list[ClusterData],
     used_zones: set[str],
     rng: random.Random,
-    anchor_weight: int,
+    anchor_weight: float,
     filter_fn: Callable[[ClusterData], bool] = lambda c: True,
     *,
     reserved_zones: frozenset[str] = frozenset(),
-    max_tolerance: int = 3,
+    max_tolerance: float = 3.0,
 ) -> ClusterData | None:
     """Pick a cluster with weight close to anchor_weight.
 
     Filters candidates once (zone availability + filter_fn), then applies
-    progressive weight tolerance starting from exact match.
-    Falls back to any available cluster if no match within max_tolerance.
+    progressive weight tolerance in 0.5 steps from exact match up to
+    max_tolerance. Falls back to any available cluster if no match within
+    max_tolerance.
 
     Args:
         candidates: List of candidate clusters.
@@ -367,7 +371,7 @@ def pick_cluster_weight_matched(
         anchor_weight: Target weight to match.
         filter_fn: Additional filter (e.g. can_be_passant_node).
         reserved_zones: Zones reserved for prerequisite placement.
-        max_tolerance: Max tolerance steps (0 = disabled, uniform random).
+        max_tolerance: Max tolerance (<= 0 disables matching - uniform random).
 
     Returns:
         A cluster close to anchor_weight, or None if nothing available.
@@ -384,10 +388,12 @@ def pick_cluster_weight_matched(
     if max_tolerance <= 0:
         return rng.choice(available)
 
-    for tol in range(0, max_tolerance + 1):
-        matched = [c for c in available if abs(c.weight - anchor_weight) <= tol]
+    tol = 0.0
+    while tol <= max_tolerance + 1e-9:
+        matched = [c for c in available if abs(c.weight - anchor_weight) <= tol + 1e-9]
         if matched:
             return rng.choice(matched)
+        tol += _TOLERANCE_STEP
 
     return rng.choice(available)
 
@@ -819,32 +825,46 @@ def pick_layer_clusters(
         "legacy_dungeon",
         "major_boss",
     ),
-) -> tuple[list[ClusterData], list[FallbackEntry]]:
+    max_tolerance: float = 3.0,
+) -> tuple[list[ClusterData], list[FallbackEntry], list[float | None]]:
     """Pick `width` clusters for a layer, falling back to other allowed types.
 
-    The first slot is picked uniformly from the primary pool; it sets the
-    intra-layer weight anchor. Subsequent slots are weight-matched against
-    that anchor so all branches at this layer have a comparable weight.
+    The first slot is picked uniformly from the primary pool. Subsequent
+    slots are weight-matched against the running mean of the picks already
+    made for this layer, so the anchor self-corrects toward the layer's
+    centroid instead of being pinned to the first (possibly off-center)
+    pick.
 
-    Returns (picks, fallbacks). Each pick of the wrong type yields a
-    FallbackEntry (reason='pool_exhausted'). Raises GenerationError if no
-    compatible cluster remains in any allowed type.
+    Returns (picks, fallbacks, weight_deltas). `weight_deltas[i]` is the
+    distance between picks[i].weight and the anchor used to match it
+    (None for slot 0 and for type fallbacks, which bypass matching). Each
+    pick of the wrong type yields a FallbackEntry (reason='pool_exhausted').
+    Raises GenerationError if no compatible cluster remains in any allowed
+    type.
     """
     primary_pool = clusters.get_by_type(layer_type)
     fallback_types = [t for t in allowed_types if t != layer_type]
 
     picks: list[ClusterData] = []
     fallbacks: list[FallbackEntry] = []
+    weight_deltas: list[float | None] = []
     local_used = set(used_zones)
     for slot in range(width):
+        anchor: float | None
+        is_fallback = False
         if not picks:
             c = pick_cluster_uniform(primary_pool, local_used, rng)
+            anchor = None
         else:
+            # Anchor = mean of ALL prior picks, including type fallbacks:
+            # each contributes a real weight to the layer's centroid.
+            anchor = sum(p.weight for p in picks) / len(picks)
             c = pick_cluster_weight_matched(
                 primary_pool,
                 local_used,
                 rng,
-                anchor_weight=picks[0].weight,
+                anchor_weight=anchor,
+                max_tolerance=max_tolerance,
             )
         if c is None:
             for ft in fallback_types:
@@ -863,6 +883,7 @@ def pick_layer_clusters(
                             pool_remaining={},
                         )
                     )
+                    is_fallback = True
                     break
         if c is None:
             raise GenerationError(
@@ -870,8 +891,12 @@ def pick_layer_clusters(
                 f"fallback type at slot {slot}/{width}"
             )
         picks.append(c)
+        if anchor is None or is_fallback:
+            weight_deltas.append(None)
+        else:
+            weight_deltas.append(abs(c.weight - anchor))
         _mark_cluster_used(c, local_used, clusters)
-    return picks, fallbacks
+    return picks, fallbacks, weight_deltas
 
 
 # =============================================================================
@@ -992,13 +1017,14 @@ def generate_dag(config: Config, clusters: ClusterPool) -> tuple[Dag, Generation
             if layer_idx == 1 and config.structure.first_layer_type
             else layer_types[layer_idx - 1]
         )
-        picked, fallbacks = pick_layer_clusters(
+        picked, fallbacks, weight_deltas = pick_layer_clusters(
             width=target_width,
             layer_type=layer_type,
             clusters=clusters,
             used_zones=used_zones,
             rng=rng,
             allowed_types=allowed_types,
+            max_tolerance=config.structure.max_weight_tolerance,
         )
 
         next_nodes: list[DagNode] = []
@@ -1022,22 +1048,15 @@ def generate_dag(config: Config, clusters: ClusterPool) -> tuple[Dag, Generation
             n.entry_fogs = [e.entry_fog for e in dag.get_incoming_edges(n.id)]
 
         phase = "saturation" if remaining > current_width else "convergence"
-        fallback_slots = {fb.branch_index for fb in fallbacks}
-        anchor = picked[0].weight
         node_entries: list[NodeEntry] = []
         for i, n in enumerate(next_nodes):
-            delta: int | None
-            if i == 0 or i in fallback_slots:
-                delta = None
-            else:
-                delta = abs(n.cluster.weight - anchor)
             node_entries.append(
                 NodeEntry(
                     n.cluster.id,
                     n.cluster.type,
                     n.cluster.weight,
                     "routed",
-                    weight_delta=delta,
+                    weight_delta=weight_deltas[i],
                 )
             )
         log.layer_events.append(

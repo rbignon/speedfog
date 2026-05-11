@@ -1803,6 +1803,28 @@ class TestPickClusterWeightMatched:
         assert result is not None
         assert result.weight == 1
 
+    def test_half_step_tolerance(self):
+        """Half-integer anchors match candidates within 0.5 before widening."""
+        # Anchor=3.5, candidates [3.0, 5.0]:
+        #   tol=0.0 -> no match, tol=0.5 -> weight 3.0 matches (delta 0.5)
+        # weight 5.0 only matches at tol=1.5, so weight 3.0 always wins.
+        candidates = [
+            make_cluster("c0", zones=["z0"], weight=3.0),
+            make_cluster("c1", zones=["z1"], weight=5.0),
+        ]
+        results = set()
+        for seed in range(50):
+            r = pick_cluster_weight_matched(
+                candidates,
+                set(),
+                random.Random(seed),
+                anchor_weight=3.5,
+                max_tolerance=2.0,
+            )
+            assert r is not None
+            results.add(r.weight)
+        assert results == {3.0}
+
     def test_disabled_when_zero(self):
         """max_tolerance=0 returns uniform random (no weight preference)."""
         candidates = self._make_pool([1, 5, 10])
@@ -1927,7 +1949,7 @@ def test_pick_layer_clusters_returns_requested_type_when_available():
     for i in range(5):
         pool.add(_mk_cluster_v2(f"md_{i}", "mini_dungeon", weight=10))
     rng = random.Random(0)
-    picked, fallbacks = pick_layer_clusters(
+    picked, fallbacks, deltas = pick_layer_clusters(
         width=3,
         layer_type="mini_dungeon",
         clusters=pool,
@@ -1937,15 +1959,14 @@ def test_pick_layer_clusters_returns_requested_type_when_available():
     assert len(picked) == 3
     assert all(c.type == "mini_dungeon" for c in picked)
     assert fallbacks == []
+    assert deltas[0] is None
+    assert all(d == 0.0 for d in deltas[1:])
 
 
-def test_pick_layer_clusters_matches_intra_layer_anchor():
-    """Subsequent slots match the first pick's weight within tolerance."""
+def test_pick_layer_clusters_matches_running_mean_anchor():
+    """Subsequent slots are matched against the running mean of prior picks."""
     from speedfog.generator import pick_layer_clusters
 
-    # First pick is uniform among weights {5, 20}. Whichever wins,
-    # all other slots must match it within tolerance 3 if any candidate
-    # of similar weight is available.
     pool = ClusterPool()
     for i in range(3):
         pool.add(_mk_cluster_v2(f"light_{i}", "mini_dungeon", weight=5))
@@ -1954,7 +1975,7 @@ def test_pick_layer_clusters_matches_intra_layer_anchor():
 
     for seed in range(20):
         rng = random.Random(seed)
-        picked, fallbacks = pick_layer_clusters(
+        picked, fallbacks, deltas = pick_layer_clusters(
             width=3,
             layer_type="mini_dungeon",
             clusters=pool,
@@ -1962,32 +1983,25 @@ def test_pick_layer_clusters_matches_intra_layer_anchor():
             rng=rng,
         )
         assert fallbacks == []
-        anchor = picked[0].weight
-        for c in picked[1:]:
-            assert abs(c.weight - anchor) <= 3, (
-                f"seed={seed}: pick {c.id} weight={c.weight} far from "
-                f"anchor={anchor}"
-            )
+        assert deltas[0] is None
+        # Reconstruct the anchors and verify the recorded deltas match.
+        for i in range(1, len(picked)):
+            anchor = sum(p.weight for p in picked[:i]) / i
+            assert deltas[i] == abs(picked[i].weight - anchor)
 
 
 def test_pick_layer_clusters_matches_degrade_beyond_max_tolerance():
     """When no candidate is within max_tolerance, the matcher still returns one."""
     from speedfog.generator import pick_layer_clusters
 
-    # Lone weight-5 cluster, all others weight 20. Force slot 0 onto the
-    # weight-5 by pre-marking all heavies as used. Then slots 1+ must come
-    # from a fresh pool that contains only heavies, and degrade.
     pool = ClusterPool()
     pool.add(_mk_cluster_v2("light_0", "mini_dungeon", weight=5))
     for i in range(3):
         pool.add(_mk_cluster_v2(f"heavy_{i}", "mini_dungeon", weight=20))
 
-    # Trick: build a second pool for slots 1+ that excludes the light.
-    # Simpler: rerun the pick with multiple seeds and find one that picks
-    # light first - this exercises the degraded branch deterministically.
     for seed in range(50):
         rng = random.Random(seed)
-        picked, fallbacks = pick_layer_clusters(
+        picked, fallbacks, deltas = pick_layer_clusters(
             width=3,
             layer_type="mini_dungeon",
             clusters=pool,
@@ -1998,9 +2012,8 @@ def test_pick_layer_clusters_matches_degrade_beyond_max_tolerance():
             assert fallbacks == []
             assert all(c.weight == 20 for c in picked[1:])
             # Distance well beyond default max_tolerance=3: the matcher took
-            # the "fall back to any" branch.
-            for c in picked[1:]:
-                assert abs(c.weight - picked[0].weight) > 3
+            # the "fall back to any" branch. deltas[1] uses anchor=5, so dw=15.
+            assert deltas[1] is not None and deltas[1] > 3.0
             return
     raise AssertionError("No seed in [0,50) picked the light cluster first")
 
@@ -2014,7 +2027,7 @@ def test_pick_layer_clusters_slot0_type_fallback():
         pool.add(_mk_cluster_v2(f"ba_{i}", "boss_arena", weight=15))
 
     rng = random.Random(0)
-    picked, fallbacks = pick_layer_clusters(
+    picked, fallbacks, deltas = pick_layer_clusters(
         width=2,
         layer_type="mini_dungeon",
         clusters=pool,
@@ -2026,6 +2039,8 @@ def test_pick_layer_clusters_slot0_type_fallback():
     assert all(c.type == "boss_arena" for c in picked)
     assert len(fallbacks) == 2
     assert {fb.branch_index for fb in fallbacks} == {0, 1}
+    # Both slots were type fallbacks - matching bypassed.
+    assert deltas == [None, None]
 
 
 def test_pick_layer_clusters_falls_back_when_type_pool_exhausted():
@@ -2036,7 +2051,7 @@ def test_pick_layer_clusters_falls_back_when_type_pool_exhausted():
     pool.add(_mk_cluster_v2("ba_0", "boss_arena"))
     pool.add(_mk_cluster_v2("ba_1", "boss_arena"))
     rng = random.Random(0)
-    picked, fallbacks = pick_layer_clusters(
+    picked, fallbacks, _deltas = pick_layer_clusters(
         width=3,
         layer_type="mini_dungeon",
         clusters=pool,

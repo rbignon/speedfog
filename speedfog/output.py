@@ -1186,7 +1186,7 @@ def export_spoiler_log(
         info_parts = []
         for node_id in node_ids:
             node = dag.nodes[node_id]
-            info = f"(w:{node.cluster.weight} t:{node.tier})"
+            info = f"(w:{round(node.cluster.weight, 2):g} t:{node.tier})"
             info_parts.append(info.center(col_width))
         info_line = " " * offset + "".join(info_parts)
         lines.append(info_line)
@@ -1213,7 +1213,7 @@ def export_spoiler_log(
         lines.append(f"  Zones: {', '.join(node.cluster.zones)}")
         lines.append(f"  Tier: {node.tier}")
         lines.append(f"  Layer: {node.layer}")
-        lines.append(f"  Weight: {node.cluster.weight}")
+        lines.append(f"  Weight: {round(node.cluster.weight, 2):g}")
 
         # Exits with fog_id and text
         exits = outgoing_edges.get(node.id, [])
