@@ -481,6 +481,20 @@ wine publish/win-x64/game_inspect.exe compare <msb-file> <eid1> <eid2>
 
 # Check EMEVD event 0 for instructions referencing entity IDs in 755895xxx range
 wine publish/win-x64/game_inspect.exe check-emevd <emevd-file> 0
+
+# List all enemy parts in an MSB with model, NpcParam, entity ID, position, groups
+wine publish/win-x64/game_inspect.exe list-enemies <msb-file>
+
+# Dump a row from regulation.bin (decrypts ER regulation, applies paramdef XML).
+# Use --def-name when the paramdef basename differs from the param (e.g. SpEffect
+# for SpEffectParam). Use --field to restrict output to fields containing a
+# substring (repeatable).
+wine publish/win-x64/game_inspect.exe dump-param <regulation.bin> NpcParam --row 44200120 \
+  --defs ../../writer/FogModWrapper/eldendata/Defs --field hp --field spEffectID
+wine publish/win-x64/game_inspect.exe dump-param <regulation.bin> SpEffectParam --row 7800254 \
+  --defs ../../writer/FogModWrapper/eldendata/Defs --def-name SpEffect --field maxHpRate
+wine publish/win-x64/game_inspect.exe dump-param <regulation.bin> NpcParam --prefix 4420 \
+  --defs ../../writer/FogModWrapper/eldendata/Defs
 ```
 
 ### Investigation Tips

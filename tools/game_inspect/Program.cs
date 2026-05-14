@@ -26,6 +26,22 @@ if (args.Length >= 1 && args[0] == "check-emevd")
     CheckEmevd.Run(args[1], target);
     return 0;
 }
+if (args.Length >= 1 && args[0] == "dump-param")
+{
+    return DumpParam.Run(args);
+}
+if (args.Length >= 1 && args[0] == "list-enemies")
+{
+    if (args.Length < 2) { Console.Error.WriteLine("Usage: game_inspect list-enemies <msb>"); return 1; }
+    var msb = MSBE.Read(args[1]);
+    Console.WriteLine($"=== Enemies in {Path.GetFileName(args[1])} ({msb.Parts.Enemies.Count}) ===");
+    foreach (var e in msb.Parts.Enemies.OrderBy(e => e.Name))
+    {
+        var groups = string.Join(",", (e.EntityGroupIDs ?? Array.Empty<uint>()).Where(g => g > 0));
+        Console.WriteLine($"  {e.Name,-30} model={e.ModelName,-7} npc={e.NPCParamID,-10} entity={e.EntityID,-12} pos=({e.Position.X:F0},{e.Position.Y:F0},{e.Position.Z:F0}) groups=[{groups}]");
+    }
+    return 0;
+}
 
 // Default: list SFX
 return ListSfx(args);
