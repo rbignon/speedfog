@@ -2608,3 +2608,43 @@ def test_route_exits_phase2_proximity_diversity_kept():
     in_group_a = used_fogs & {"F1", "F2"}
     in_group_b = used_fogs & {"F3", "F4"}
     assert len(in_group_a) == 1 and len(in_group_b) == 1
+
+
+def test_connect_nodes_merge_reuses_canonical_entry_fog():
+    """When a target already has an incoming edge, a new edge reuses
+    the same entry_fog (canonical-entry rule for merges)."""
+    from speedfog.generator import connect_nodes
+
+    s1_c = _mk_cluster_re("s1", entries=[], exits=[("F1", "z1")])
+    s2_c = _mk_cluster_re("s2", entries=[], exits=[("F2", "z2")])
+    # Target has multiple entries to make random picks likely to differ
+    # without the canonical-entry rule.
+    tgt_c = _mk_cluster_re(
+        "t",
+        entries=[
+            ("E1", "t_zone"),
+            ("E2", "t_zone"),
+            ("E3", "t_zone"),
+            ("E4", "t_zone"),
+            ("E5", "t_zone"),
+            ("E6", "t_zone"),
+        ],
+        exits=[("OUT", "t_zone")],
+    )
+    s1 = _mk_node_re(s1_c, layer=0)
+    s2 = _mk_node_re(s2_c, layer=0)
+    tgt = _mk_node_re(tgt_c, layer=1)
+    dag = Dag(seed=0)
+    for n in (s1, s2, tgt):
+        dag.add_node(n)
+    # Use seed=1 to force different random choices that expose the bug
+    rng = random.Random(1)
+
+    assert connect_nodes(dag, s1, tgt, rng) is True
+    assert connect_nodes(dag, s2, tgt, rng) is True
+
+    incoming = dag.get_incoming_edges(tgt.id)
+    assert len(incoming) == 2
+    assert (
+        incoming[0].entry_fog == incoming[1].entry_fog
+    ), f"merge entries differ: {incoming[0].entry_fog} vs {incoming[1].entry_fog}"

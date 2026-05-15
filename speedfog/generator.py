@@ -688,19 +688,22 @@ def connect_nodes(
         return False
     ordered = _exits_ordered_by_diversity(source.cluster, src_exits)
     exit_fog = ordered[0]
-    # Prefer entries that leave target with at least 1 exit remaining.
-    safe_entries = _safe_entry_candidates(dag, target)
-    # Prefer safe entries. Fall back to any free entry when none are safe
-    # (e.g., terminal nodes with no exits, or when called from Phase 1 fallback
-    # where we accept some dead ends to avoid orphaned targets).
-    entry_pool = safe_entries if safe_entries else tgt_entries
-    # Boss arenas (and other clusters with multiple gates) tag the canonical
-    # entrance with `main: true`. FogMod's getMainSpawnPoint() requires that
-    # gate's edge to be connected, otherwise dying in the arena and using the
-    # Marika effigy can respawn the player outside the arena (softlock). Prefer
-    # main-tagged entries when any are present in the pool.
-    main_entries = [e for e in entry_pool if e.get("main")]
-    entry_fog = rng.choice(main_entries if main_entries else entry_pool)
+    # Merges share a single physical entrance: when the target already has an
+    # incoming edge, reuse that edge's entry_fog (the canonical entry). This
+    # matches FogMod's DuplicateEntrance model and preserves the target's exit
+    # capacity since compute_net_exits uses set semantics on consumed entries.
+    existing_incoming = dag.get_incoming_edges(target.id)
+    if existing_incoming:
+        canonical = existing_incoming[0].entry_fog
+        entry_fog = {"fog_id": canonical.fog_id, "zone": canonical.zone}
+    else:
+        # First edge to this target: pick a safe entry, preferring main-tagged
+        # entries (FogMod's getMainSpawnPoint requires the main entrance to be
+        # connected to prevent Marika-effigy softlocks in boss arenas).
+        safe_entries = _safe_entry_candidates(dag, target)
+        entry_pool = safe_entries if safe_entries else tgt_entries
+        main_entries = [e for e in entry_pool if e.get("main")]
+        entry_fog = rng.choice(main_entries if main_entries else entry_pool)
     dag.add_edge(
         source.id,
         target.id,
