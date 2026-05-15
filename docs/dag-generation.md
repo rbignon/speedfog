@@ -103,6 +103,15 @@ to where they entered.
 Entry selection prefers entries that leave the target with at least one remaining exit (non-
 destructive entries). The generator falls back to any free entry only when no safe choice exists.
 
+**Canonical entry on merges.** When a target already has an incoming edge, any
+new edge to the same target reuses that first edge's `entry_fog` (the canonical
+entry). The first edge's selection above therefore locks the arrival gate for
+every later merge into this target. Because `compute_net_exits` uses set
+semantics on consumed entries, reusing the canonical entry is free for the
+target's exit capacity, and the merge is rendered in-game as multiple paths
+physically converging on the same fog gate (see "Shared Entrance Handling" in
+`docs/connection-injection.md`).
+
 ## Cluster Compatibility
 
 ### Net Exits
