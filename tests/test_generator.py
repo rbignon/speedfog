@@ -2648,3 +2648,69 @@ def test_connect_nodes_merge_reuses_canonical_entry_fog():
     assert (
         incoming[0].entry_fog == incoming[1].entry_fog
     ), f"merge entries differ: {incoming[0].entry_fog} vs {incoming[1].entry_fog}"
+
+
+def test_route_exits_merge_shares_entry_fog():
+    """End-to-end via route_exits: 2 sources fanning into 1 target both
+    use the same entry_fog on the target."""
+    from speedfog.generator import route_exits
+
+    s1_c = _mk_cluster_re("s1", entries=[], exits=[("F1", "z1")])
+    s2_c = _mk_cluster_re("s2", entries=[], exits=[("F2", "z2")])
+    tgt_c = _mk_cluster_re(
+        "t",
+        entries=[("E1", "t_zone"), ("E2", "t_zone")],
+        exits=[("OUT", "t_zone")],
+    )
+    s1 = _mk_node_re(s1_c, layer=0)
+    s2 = _mk_node_re(s2_c, layer=0)
+    tgt = _mk_node_re(tgt_c, layer=1)
+    dag = Dag(seed=0)
+    for n in (s1, s2, tgt):
+        dag.add_node(n)
+
+    route_exits(dag, sources=[s1, s2], targets=[tgt], rng=random.Random(0))
+
+    incoming = dag.get_incoming_edges(tgt.id)
+    assert len(incoming) == 2
+    entries = {e.entry_fog for e in incoming}
+    assert len(entries) == 1, f"expected shared entry, got {entries}"
+
+
+def test_merge_preserves_target_free_exits():
+    """A merge consumes only one entry, so the target's free-exit count
+    after the merge equals the count after a single incoming edge."""
+    from speedfog.generator import connect_nodes, count_node_net_exits
+
+    s1_c = _mk_cluster_re("s1", entries=[], exits=[("F1", "z1")])
+    s2_c = _mk_cluster_re("s2", entries=[], exits=[("F2", "z2")])
+    # Target with 2 entries, both bidirectional with the 2 exits: consuming
+    # both distinct entries would leave zero free exits, but reusing one
+    # entry must leave one exit free.
+    tgt_c = _mk_cluster_re(
+        "t",
+        entries=[("E1", "t_zone"), ("E2", "t_zone")],
+        exits=[("E1", "t_zone"), ("E2", "t_zone")],
+    )
+    s1 = _mk_node_re(s1_c, layer=0)
+    s2 = _mk_node_re(s2_c, layer=0)
+    tgt = _mk_node_re(tgt_c, layer=1)
+    dag = Dag(seed=0)
+    for n in (s1, s2, tgt):
+        dag.add_node(n)
+    rng = random.Random(0)
+
+    assert connect_nodes(dag, s1, tgt, rng) is True
+    # Mirror what route_exits does after Phase 1: populate entry_fogs from
+    # incoming edges so count_node_net_exits sees the consumed entry.
+    tgt.entry_fogs = [e.entry_fog for e in dag.get_incoming_edges(tgt.id)]
+    exits_after_one = count_node_net_exits(dag, tgt.id)
+
+    assert connect_nodes(dag, s2, tgt, rng) is True
+    tgt.entry_fogs = [e.entry_fog for e in dag.get_incoming_edges(tgt.id)]
+    exits_after_merge = count_node_net_exits(dag, tgt.id)
+
+    assert exits_after_merge == exits_after_one, (
+        f"merge consumed extra exit capacity: {exits_after_one} -> "
+        f"{exits_after_merge}"
+    )
