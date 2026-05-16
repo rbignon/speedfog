@@ -71,5 +71,5 @@ name = "molten-aura"
 display_name = "Molten Phantom"
 edge_color = [255, 80, 0]
 edge_power = 0.5
-glow_scale = 0.3
+glow_scale = 0.1
 alpha = 1.0
