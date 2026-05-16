@@ -2942,8 +2942,8 @@ def test_merge_preserves_target_free_exits():
     )
 
 
-def test_generate_dag_places_required_zone_in_single_attempt():
-    """A required zone is placed by generate_dag in one attempt (no retry)."""
+def test_generate_dag_places_required_zone_in_dag():
+    """A required zone is placed by generate_dag and recorded in the log."""
     from pathlib import Path
 
     from speedfog.clusters import load_clusters
@@ -3025,3 +3025,55 @@ def test_generate_dag_without_required_zones_emits_no_events():
 
     _, log = generate_dag(cfg, pool)
     assert log.required_zone_placements == []
+
+
+def test_generate_with_retry_places_multiple_required_zones_without_retry():
+    """Multiple required zones placed in a single attempt via generate_with_retry."""
+    from pathlib import Path
+
+    from speedfog.clusters import load_clusters
+    from speedfog.config import (
+        BudgetConfig,
+        Config,
+        RequirementsConfig,
+        StructureConfig,
+    )
+    from speedfog.generator import generate_with_retry
+
+    pool = load_clusters(Path(__file__).parent.parent / "data" / "clusters.json")
+    pool.merge_roundtable_into_start()
+    pool.filter_passant_incompatible()
+
+    # Two stable single-zone mini_dungeon clusters from different regions:
+    # altus_catacombs (Altus Plateau) and dragonbarrow_cave (Dragonbarrow).
+    required_zones = ["altus_catacombs", "dragonbarrow_cave"]
+
+    cfg = Config(
+        seed=1234,
+        requirements=RequirementsConfig(
+            legacy_dungeons=1,
+            bosses=3,
+            mini_dungeons=3,
+            major_bosses=1,
+            zones=required_zones,
+        ),
+        structure=StructureConfig(
+            layers_count=20,
+            max_parallel_paths=4,
+            final_boss_candidates={"leyndell_throne": 1},
+        ),
+        budget=BudgetConfig(),
+    )
+
+    boss_candidates = pool.get_by_type("major_boss") + pool.get_by_type("final_boss")
+    result = generate_with_retry(cfg, pool, boss_candidates=boss_candidates)
+    assert result.attempts == 1, (
+        f"required-zones priority should place all zones in one attempt, "
+        f"got {result.attempts} attempts"
+    )
+    all_zones = {z for node in result.dag.nodes.values() for z in node.cluster.zones}
+    for zone in required_zones:
+        assert zone in all_zones, f"zone {zone!r} missing from DAG"
+    placed = {rzp.zone for rzp in result.log.required_zone_placements}
+    for zone in required_zones:
+        assert zone in placed, f"zone {zone!r} missing from log placements"

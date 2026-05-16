@@ -1097,8 +1097,6 @@ def generate_dag(config: Config, clusters: ClusterPool) -> tuple[Dag, Generation
             dag.add_node(node)
             next_nodes.append(node)
             _mark_cluster_used(c, used_zones, clusters)
-
-        for i, c in enumerate(picked):
             placed_required = required_zones_remaining.intersection(c.zones)
             for zone in sorted(placed_required):
                 log.required_zone_placements.append(
