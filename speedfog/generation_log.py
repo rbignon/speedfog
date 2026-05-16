@@ -84,12 +84,23 @@ class SummaryEvent:
 
 
 @dataclass
+class RequiredZonePlaced:
+    """A zone from `requirements.zones` was placed during generation."""
+
+    zone: str
+    cluster_id: str
+    layer: int
+    slot: int
+
+
+@dataclass
 class GenerationLog:
     """Accumulates structured events during DAG generation."""
 
     plan_event: PlanEvent | None = None
     layer_events: list[LayerEvent] = field(default_factory=list)
     summary: SummaryEvent | None = None
+    required_zone_placements: list[RequiredZonePlaced] = field(default_factory=list)
 
 
 def compute_pool_remaining(
@@ -236,6 +247,15 @@ def export_generation_log(
                     )
 
             lines.append("")
+        lines.append("")
+
+    # REQUIRED ZONES section
+    if log.required_zone_placements:
+        lines.append("REQUIRED ZONES")
+        for rzp in log.required_zone_placements:
+            lines.append(
+                f"  {rzp.zone} -> {rzp.cluster_id} (L{rzp.layer}, slot {rzp.slot})"
+            )
         lines.append("")
 
     # SUMMARY section

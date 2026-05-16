@@ -576,3 +576,49 @@ def test_fallback_count_matches_summary():
         (le.layer, fb.preferred_type) for le in log.layer_events for fb in le.fallbacks
     ]
     assert log.summary.fallback_summary == expected_summary
+
+
+def test_required_zone_placed_event_in_log():
+    """RequiredZonePlaced events are stored on the GenerationLog."""
+    from speedfog.generation_log import GenerationLog, RequiredZonePlaced
+
+    log = GenerationLog()
+    log.required_zone_placements.append(
+        RequiredZonePlaced(
+            zone="caelid_radahn", cluster_id="caelid_radahn_cluster", layer=7, slot=1
+        )
+    )
+    assert len(log.required_zone_placements) == 1
+    assert log.required_zone_placements[0].zone == "caelid_radahn"
+
+
+def test_export_generation_log_renders_required_zone_section(tmp_path):
+    """The exported log contains a REQUIRED ZONES section when events exist."""
+    from speedfog.generation_log import (
+        GenerationLog,
+        RequiredZonePlaced,
+        export_generation_log,
+    )
+
+    log = GenerationLog()
+    log.required_zone_placements.append(
+        RequiredZonePlaced(
+            zone="caelid_radahn", cluster_id="caelid_radahn_cluster", layer=7, slot=1
+        )
+    )
+    out = tmp_path / "log.txt"
+    export_generation_log(log, out)
+    content = out.read_text()
+    assert "REQUIRED ZONES" in content
+    assert "caelid_radahn" in content
+    assert "L7" in content
+
+
+def test_export_generation_log_omits_section_when_empty(tmp_path):
+    """No REQUIRED ZONES section when no placements occurred."""
+    from speedfog.generation_log import GenerationLog, export_generation_log
+
+    log = GenerationLog()
+    out = tmp_path / "log.txt"
+    export_generation_log(log, out)
+    assert "REQUIRED ZONES" not in out.read_text()
