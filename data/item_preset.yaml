@@ -8,11 +8,13 @@
 # Custom items listed under types with EditItems=false are silently replaced
 # by defaults during Resolve(). See ItemPreset.cs:614-617.
 #
-# Placement priority:
-#   1. Important mode (KeyItems, SacredFlaskUpgrades, ShadowRealmBlessings)
-#      - first-pass placement, inherits LocationGroups for location tags
-#   2. Custom mode (CoreMechanics) - placed after Important items
-#   3. Anywhere mode (QuestItems, UpgradeBellBearings) - unrestricted
+# Placement modes:
+#   - Important (KeyItems, ShadowRealmBlessings): inherits LocationGroups for
+#     location tags, and items are added to RaceModeItems (race-mode tagging).
+#   - Custom (CoreMechanics, SacredFlaskUpgrades): per-item Requires/Excludes
+#     tags. Constrained items are queued and matched to compatible slots; no
+#     separate pass between Custom placements.
+#   - Anywhere (QuestItems, UpgradeBellBearings): unrestricted (Excludes only).
 #
 # Uses Item Randomizer's ItemPreset.ParsePreset().
 
@@ -605,6 +607,11 @@ Placements:
 
 # Golden Seeds and Sacred Tears at flask upgrade locations.
 # Items: fixed by randomizer (EditItems=false). Locations: editable.
+# Requires is broader than the thematic seedtree/church/cross set: speedfog
+# runs rarely touch those slot types, so we extend to major bosses (boss)
+# and DLC scadu/revered spots to ensure ~1.5-3 seeds/tears land per run.
+# altboss and sub-dungeon boss tags are intentionally omitted to keep flask
+# upgrades on milestone encounters rather than every random catacomb boss.
 - Type: SacredFlaskUpgrades
   Mode: Custom
   Items:
@@ -613,9 +620,12 @@ Placements:
   - Name: Sacred Tear
     ID: goods:10020
   Requires:
+  - Tag: boss
   - Tag: seedtree
   - Tag: church
   - Tag: cross
+  - Tag: forgereward
+  - Tag: revered
   Excludes:
   - Tag: missable
 
