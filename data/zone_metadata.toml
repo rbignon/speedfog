@@ -151,6 +151,13 @@ weight = 3.5
 [zones.rauhbase_forge]
 weight = 3
 
+# Ancient Ruins of Rauh: overworld with `crawlclosed` tag, integrated as a closed
+# dungeon (req_rauhruins). Primary cluster is anchored on rauhruins_east; the
+# other Rauh primary, rauhruins_limited, lacks an override and stays `other`,
+# so it is filtered out naturally.
+[zones.rauhruins_east]
+type = "mini_dungeon"
+
 [zones.scadualtus_forge]
 weight = 2
 

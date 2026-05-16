@@ -1640,6 +1640,39 @@ class TestShouldExcludeArea:
             is True
         )
 
+    def test_crawlclosed_bypasses_overworld_filter(self):
+        """Overworld areas tagged `crawlclosed` are kept even when overworld is excluded.
+
+        `crawlclosed` marks overworld zones bounded by fog gates that behave
+        like closed dungeons (the Rauh ruins). FogMod itself does not read the
+        tag, but it captures the property we need at the area-filter level.
+        """
+        area = AreaData(
+            name="rauhruins_west",
+            text="",
+            maps=[],
+            tags=["dlc", "overworld", "crawlclosed"],
+        )
+        assert (
+            should_exclude_area(area, exclude_dlc=False, exclude_overworld=True)
+            is False
+        )
+        # Sanity: a plain overworld area without crawlclosed is still excluded.
+        plain = AreaData(name="limgrave", text="", maps=[], tags=["overworld"])
+        assert (
+            should_exclude_area(plain, exclude_dlc=False, exclude_overworld=True)
+            is True
+        )
+        # Sanity: `crawlclosed` without `overworld` does not change anything
+        # (the bypass only applies inside the overworld branch).
+        no_overworld = AreaData(
+            name="hypothetical", text="", maps=[], tags=["crawlclosed"]
+        )
+        assert (
+            should_exclude_area(no_overworld, exclude_dlc=False, exclude_overworld=True)
+            is False
+        )
+
 
 class TestGetZoneType:
     """Tests for get_zone_type function."""
@@ -2360,6 +2393,17 @@ class TestIsSideCore:
             tags=["unique"],
         )
         assert _is_side_core(fog, fog.bside) is False
+
+    def test_rauhruins_tag_core_with_req(self):
+        """Side with 'rauhruins' tag is core (req_rauhruins is in SpeedFog options)."""
+        fog = FogData(
+            name="test",
+            fog_id=999,
+            aside=FogSide(area="scadualtus", text="", tags=["open"]),
+            bside=FogSide(area="rauhruins_limited", text="", tags=["rauhruins"]),
+            tags=["unique", "critical", "opensplit"],
+        )
+        assert _is_side_core(fog, fog.bside) is True
 
     def test_side_tags_combined_with_fog_tags(self):
         """Side tags and fog-level tags are combined for IsCore check."""

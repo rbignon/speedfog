@@ -257,6 +257,10 @@ DLC_TAGS = {"dlc", "dlc1", "dlc2", "dlconly"}
 
 # Tags that mark overworld areas
 OVERWORLD_TAG = "overworld"
+# `crawlclosed` marks overworld zones bounded by fog gates (currently the Rauh
+# ruins). Mirrors author intent from fog.txt; FogMod itself does not read this
+# tag, but its semantics align with our area-level filter bypass.
+CRAWLCLOSED_TAG = "crawlclosed"
 
 # Tags to exclude areas (note: crawlonly AREAS are evergaol-style internal selfwarp
 # destinations, not regular zones — different from crawlonly WARPS which are valid fogs)
@@ -309,6 +313,7 @@ SPEEDFOG_REQ_OPTIONS = frozenset(
         "req_major",
         "req_underground",
         "req_minorwarp",
+        "req_rauhruins",
     }
 )
 
@@ -1280,8 +1285,14 @@ def should_exclude_area(
     if exclude_dlc and (tags_lower & DLC_TAGS):
         return True
 
-    # Check overworld
-    if exclude_overworld and OVERWORLD_TAG in tags_lower:
+    # Check overworld. Zones additionally tagged `crawlclosed` (currently the
+    # Rauh ruins) are bounded by fog gates and behave like closed dungeons, so
+    # we keep them even when overworld is excluded.
+    if (
+        exclude_overworld
+        and OVERWORLD_TAG in tags_lower
+        and CRAWLCLOSED_TAG not in tags_lower
+    ):
         return True
 
     # Check excluded zone prefixes (e.g., ashen Leyndell uses alternative fog gates)

@@ -228,7 +228,7 @@ The target cluster inherits all merged zones. Currently no `merge_into` declarat
 | Tag `unused`, `crawlonly` | Not usable in SpeedFog |
 | Tag `evergaol` | Unpaired entry/exit, no StakeAsset |
 | `leyndell2_` prefix | Ashen capital (use pre-ashen instead) |
-| Overworld zones | Large open areas (optional via `--include-overworld`) |
+| Overworld zones | Large open areas (optional via `--include-overworld`). Zones additionally tagged `crawlclosed` (currently the Rauh ruins) are kept — they are bounded by fog gates and behave like closed dungeons. Paired on the C# side with `opt["req_rauhruins"] = true` in `FogModWrapper/Program.cs`; both must stay in sync. |
 | DLC zones | Optional via `--exclude-dlc` |
 | `exclude = true` in zone_metadata.toml | Per-zone exclusion (e.g., `fissure_preboss`, `rauhruins_postromina`) |
 
