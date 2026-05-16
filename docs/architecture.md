@@ -213,8 +213,8 @@ API, so they cannot coexist with SoulsFormatsNEXT in the same process.
 Output goes to `data/overlay/`, which the per-seed pipeline copies into each mod build.
 
 - **GraceAnimationPatcher**: Injects TAE event type 608 (AnimSpeedGradient) into
-  c0000.anibnd.dcx to skip grace sit (anim 63000) and grace discovery (anim 68000)
-  by playing them at 1000x speed.
+  c0000.anibnd.dcx to speed up grace sit (anim 63000, 150x) and grace discovery
+  (anim 68000, ~4.67x).
 
 ### 6. Overlay and Packaging
 

@@ -21,10 +21,10 @@ public static class GraceAnimationPatcher
 
     private static readonly (long animId, float speed, float duration)[] Patches =
     {
-        // Grace sit: skip animation (very high speed)
-        (63000, 1000f, 2.0f),
-        // Grace discovery: skip animation (very high speed)
-        (68000, 1000f, 4.6666665f),
+        // Grace sit: 150% speed for 2 seconds
+        (63000, 150f, 2.0f),
+        // Grace discovery: ~467% speed for the full animation (~4.67 seconds)
+        (68000, 4.667f, 4.6666665f),
     };
 
     /// <summary>
