@@ -2334,7 +2334,7 @@ def test_pick_layer_clusters_places_required_zone_first():
         pool.add(_mk_cluster_v2(f"md_{i}", "mini_dungeon", weight=10))
     pool.add(_mk_cluster_v2("md_required", "mini_dungeon", weight=10))
 
-    for seed in range(20):
+    for seed in range(50):
         rng = random.Random(seed)
         picked, fallbacks, _ = pick_layer_clusters(
             width=3,

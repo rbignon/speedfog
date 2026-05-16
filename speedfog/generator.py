@@ -893,6 +893,7 @@ def pick_layer_clusters(
     local_used = set(used_zones)
     local_required = set(required_zones)
     for slot in range(width):
+        req_frozen = frozenset(local_required)
         anchor: float | None
         is_fallback = False
         if not picks:
@@ -900,7 +901,7 @@ def pick_layer_clusters(
                 primary_pool,
                 local_used,
                 rng,
-                required_zones=frozenset(local_required),
+                required_zones=req_frozen,
             )
             anchor = None
         else:
@@ -913,7 +914,7 @@ def pick_layer_clusters(
                 rng,
                 anchor_weight=anchor,
                 max_tolerance=max_tolerance,
-                required_zones=frozenset(local_required),
+                required_zones=req_frozen,
             )
         if c is None:
             for ft in fallback_types:
@@ -921,7 +922,7 @@ def pick_layer_clusters(
                     clusters.get_by_type(ft),
                     local_used,
                     rng,
-                    required_zones=frozenset(local_required),
+                    required_zones=req_frozen,
                 )
                 if c is not None:
                     fallbacks.append(
