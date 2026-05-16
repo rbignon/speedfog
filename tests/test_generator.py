@@ -1453,30 +1453,9 @@ class TestPickClusterUniformRequiredZones:
 
     def test_restricts_to_candidates_with_required_zone(self):
         """When any candidate has a required zone, only those are eligible."""
-        c1 = ClusterData(
-            id="c1",
-            zones=["z1"],
-            type="mini_dungeon",
-            weight=10,
-            entry_fogs=[],
-            exit_fogs=[],
-        )
-        c2 = ClusterData(
-            id="c2",
-            zones=["z_required"],
-            type="mini_dungeon",
-            weight=10,
-            entry_fogs=[],
-            exit_fogs=[],
-        )
-        c3 = ClusterData(
-            id="c3",
-            zones=["z3"],
-            type="mini_dungeon",
-            weight=10,
-            entry_fogs=[],
-            exit_fogs=[],
-        )
+        c1 = make_cluster("c1", zones=["z1"])
+        c2 = make_cluster("c2", zones=["z_required"])
+        c3 = make_cluster("c3", zones=["z3"])
         # Run many seeds: c2 must always be picked.
         for seed in range(50):
             result = pick_cluster_uniform(
@@ -1489,22 +1468,8 @@ class TestPickClusterUniformRequiredZones:
 
     def test_no_required_match_uses_full_candidate_pool(self):
         """When no candidate has a required zone, behavior is unchanged."""
-        c1 = ClusterData(
-            id="c1",
-            zones=["z1"],
-            type="mini_dungeon",
-            weight=10,
-            entry_fogs=[],
-            exit_fogs=[],
-        )
-        c2 = ClusterData(
-            id="c2",
-            zones=["z2"],
-            type="mini_dungeon",
-            weight=10,
-            entry_fogs=[],
-            exit_fogs=[],
-        )
+        c1 = make_cluster("c1", zones=["z1"])
+        c2 = make_cluster("c2", zones=["z2"])
         seen = set()
         for seed in range(50):
             r = pick_cluster_uniform(
@@ -1518,30 +1483,9 @@ class TestPickClusterUniformRequiredZones:
 
     def test_multiple_required_candidates_restricts_to_subset(self):
         """Multiple required candidates: draw uniform over the required subset."""
-        c1 = ClusterData(
-            id="c1",
-            zones=["z1"],
-            type="mini_dungeon",
-            weight=10,
-            entry_fogs=[],
-            exit_fogs=[],
-        )
-        c2 = ClusterData(
-            id="c2",
-            zones=["z_req_a"],
-            type="mini_dungeon",
-            weight=10,
-            entry_fogs=[],
-            exit_fogs=[],
-        )
-        c3 = ClusterData(
-            id="c3",
-            zones=["z_req_b"],
-            type="mini_dungeon",
-            weight=10,
-            entry_fogs=[],
-            exit_fogs=[],
-        )
+        c1 = make_cluster("c1", zones=["z1"])
+        c2 = make_cluster("c2", zones=["z_req_a"])
+        c3 = make_cluster("c3", zones=["z_req_b"])
         seen = set()
         for seed in range(50):
             r = pick_cluster_uniform(
@@ -1555,27 +1499,27 @@ class TestPickClusterUniformRequiredZones:
 
     def test_default_required_zones_is_empty(self):
         """Absent required_zones keyword: behavior unchanged."""
-        c1 = ClusterData(
-            id="c1",
-            zones=["z1"],
-            type="mini_dungeon",
-            weight=10,
-            entry_fogs=[],
-            exit_fogs=[],
-        )
-        c2 = ClusterData(
-            id="c2",
-            zones=["z2"],
-            type="mini_dungeon",
-            weight=10,
-            entry_fogs=[],
-            exit_fogs=[],
-        )
+        c1 = make_cluster("c1", zones=["z1"])
+        c2 = make_cluster("c2", zones=["z2"])
         seen = set()
         for seed in range(50):
             r = pick_cluster_uniform([c1, c2], set(), random.Random(seed))
             seen.add(r.id)
         assert seen == {"c1", "c2"}
+
+    def test_required_zone_excluded_by_reserved_falls_back_to_full_pool(self):
+        """If the only required candidate is reserved, the full pool is used."""
+        c_req = make_cluster("c_req", zones=["z_required"])
+        c_other = make_cluster("c_other", zones=["z_other"])
+        result = pick_cluster_uniform(
+            [c_req, c_other],
+            set(),
+            random.Random(42),
+            reserved_zones=frozenset({"z_required"}),
+            required_zones=frozenset({"z_required"}),
+        )
+        # c_req is excluded by reserved_zones; preferred is empty -> full pool used
+        assert result is c_other
 
 
 # =============================================================================
