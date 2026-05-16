@@ -2940,3 +2940,88 @@ def test_merge_preserves_target_free_exits():
         f"merge consumed extra exit capacity: {exits_after_one} -> "
         f"{exits_after_merge}"
     )
+
+
+def test_generate_dag_places_required_zone_in_single_attempt():
+    """A required zone is placed by generate_dag in one attempt (no retry)."""
+    from pathlib import Path
+
+    from speedfog.clusters import load_clusters
+    from speedfog.config import (
+        BudgetConfig,
+        Config,
+        RequirementsConfig,
+        StructureConfig,
+    )
+    from speedfog.generator import generate_dag
+
+    pool = load_clusters(Path(__file__).parent.parent / "data" / "clusters.json")
+    pool.merge_roundtable_into_start()
+    pool.filter_passant_incompatible()
+
+    # `caelid_erdtreecatacombs` is a stable single-zone mini_dungeon in data/clusters.json.
+    required_zone = "caelid_erdtreecatacombs"
+
+    cfg = Config(
+        seed=1234,
+        requirements=RequirementsConfig(
+            legacy_dungeons=1,
+            bosses=3,
+            mini_dungeons=3,
+            major_bosses=1,
+            zones=[required_zone],
+        ),
+        structure=StructureConfig(
+            layers_count=20,
+            max_parallel_paths=4,
+            final_boss_candidates={"leyndell_throne": 1},
+        ),
+        budget=BudgetConfig(),
+    )
+
+    dag, log = generate_dag(cfg, pool)
+    all_zones = {z for node in dag.nodes.values() for z in node.cluster.zones}
+    assert (
+        required_zone in all_zones
+    ), f"required zone {required_zone!r} not in generated DAG zones"
+    placed = {rzp.zone for rzp in log.required_zone_placements}
+    assert (
+        required_zone in placed
+    ), f"required zone {required_zone!r} not in log.required_zone_placements"
+
+
+def test_generate_dag_without_required_zones_emits_no_events():
+    """No requirements.zones -> no RequiredZonePlaced events."""
+    from pathlib import Path
+
+    from speedfog.clusters import load_clusters
+    from speedfog.config import (
+        BudgetConfig,
+        Config,
+        RequirementsConfig,
+        StructureConfig,
+    )
+    from speedfog.generator import generate_dag
+
+    pool = load_clusters(Path(__file__).parent.parent / "data" / "clusters.json")
+    pool.merge_roundtable_into_start()
+    pool.filter_passant_incompatible()
+
+    cfg = Config(
+        seed=1234,
+        requirements=RequirementsConfig(
+            legacy_dungeons=1,
+            bosses=3,
+            mini_dungeons=3,
+            major_bosses=1,
+        ),
+        structure=StructureConfig(
+            layers_count=20,
+            max_parallel_paths=4,
+            final_boss_candidates={"leyndell_throne": 1},
+        ),
+        budget=BudgetConfig(),
+    )
+
+    _, log = generate_dag(cfg, pool)
+    assert log.required_zone_placements == []

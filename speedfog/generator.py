@@ -25,6 +25,7 @@ from speedfog.generation_log import (
     LayerEvent,
     NodeEntry,
     PlanEvent,
+    RequiredZonePlaced,
     SummaryEvent,
 )
 from speedfog.planner import compute_tier, plan_layer_types
@@ -982,6 +983,7 @@ def generate_dag(config: Config, clusters: ClusterPool) -> tuple[Dag, Generation
     dag = Dag(seed=seed)
     log = GenerationLog()
     used_zones: set[str] = set()
+    required_zones_remaining: set[str] = set(config.requirements.zones)
     total_target = config.structure.layers_count
 
     # 1. Pick final boss
@@ -1079,6 +1081,7 @@ def generate_dag(config: Config, clusters: ClusterPool) -> tuple[Dag, Generation
             rng=rng,
             allowed_types=allowed_types,
             max_tolerance=config.structure.max_weight_tolerance,
+            required_zones=frozenset(required_zones_remaining),
         )
 
         next_nodes: list[DagNode] = []
@@ -1094,6 +1097,19 @@ def generate_dag(config: Config, clusters: ClusterPool) -> tuple[Dag, Generation
             dag.add_node(node)
             next_nodes.append(node)
             _mark_cluster_used(c, used_zones, clusters)
+
+        for i, c in enumerate(picked):
+            placed_required = required_zones_remaining.intersection(c.zones)
+            for zone in sorted(placed_required):
+                log.required_zone_placements.append(
+                    RequiredZonePlaced(
+                        zone=zone,
+                        cluster_id=c.id,
+                        layer=layer_idx,
+                        slot=i,
+                    )
+                )
+            required_zones_remaining.difference_update(c.zones)
 
         route_exits(dag, current_layer_nodes, next_nodes, rng)
 
