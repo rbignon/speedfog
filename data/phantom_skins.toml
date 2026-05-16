@@ -64,3 +64,12 @@ edge_color = [100, 150, 230]
 edge_power = 0.5
 glow_scale = 0.1
 alpha = 1.0
+
+[[skins]]
+id = 1450706
+name = "molten-aura"
+display_name = "Molten Phantom"
+edge_color = [255, 80, 0]
+edge_power = 0.5
+glow_scale = 0.3
+alpha = 1.0
