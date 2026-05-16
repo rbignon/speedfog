@@ -1448,6 +1448,136 @@ class TestPickClusterUniformReservedZones:
         assert result is None
 
 
+class TestPickClusterUniformRequiredZones:
+    """Tests for required_zones parameter in pick_cluster_uniform."""
+
+    def test_restricts_to_candidates_with_required_zone(self):
+        """When any candidate has a required zone, only those are eligible."""
+        c1 = ClusterData(
+            id="c1",
+            zones=["z1"],
+            type="mini_dungeon",
+            weight=10,
+            entry_fogs=[],
+            exit_fogs=[],
+        )
+        c2 = ClusterData(
+            id="c2",
+            zones=["z_required"],
+            type="mini_dungeon",
+            weight=10,
+            entry_fogs=[],
+            exit_fogs=[],
+        )
+        c3 = ClusterData(
+            id="c3",
+            zones=["z3"],
+            type="mini_dungeon",
+            weight=10,
+            entry_fogs=[],
+            exit_fogs=[],
+        )
+        # Run many seeds: c2 must always be picked.
+        for seed in range(50):
+            result = pick_cluster_uniform(
+                [c1, c2, c3],
+                set(),
+                random.Random(seed),
+                required_zones=frozenset({"z_required"}),
+            )
+            assert result is c2
+
+    def test_no_required_match_uses_full_candidate_pool(self):
+        """When no candidate has a required zone, behavior is unchanged."""
+        c1 = ClusterData(
+            id="c1",
+            zones=["z1"],
+            type="mini_dungeon",
+            weight=10,
+            entry_fogs=[],
+            exit_fogs=[],
+        )
+        c2 = ClusterData(
+            id="c2",
+            zones=["z2"],
+            type="mini_dungeon",
+            weight=10,
+            entry_fogs=[],
+            exit_fogs=[],
+        )
+        seen = set()
+        for seed in range(50):
+            r = pick_cluster_uniform(
+                [c1, c2],
+                set(),
+                random.Random(seed),
+                required_zones=frozenset({"z_unmatched"}),
+            )
+            seen.add(r.id)
+        assert seen == {"c1", "c2"}
+
+    def test_multiple_required_candidates_restricts_to_subset(self):
+        """Multiple required candidates: draw uniform over the required subset."""
+        c1 = ClusterData(
+            id="c1",
+            zones=["z1"],
+            type="mini_dungeon",
+            weight=10,
+            entry_fogs=[],
+            exit_fogs=[],
+        )
+        c2 = ClusterData(
+            id="c2",
+            zones=["z_req_a"],
+            type="mini_dungeon",
+            weight=10,
+            entry_fogs=[],
+            exit_fogs=[],
+        )
+        c3 = ClusterData(
+            id="c3",
+            zones=["z_req_b"],
+            type="mini_dungeon",
+            weight=10,
+            entry_fogs=[],
+            exit_fogs=[],
+        )
+        seen = set()
+        for seed in range(50):
+            r = pick_cluster_uniform(
+                [c1, c2, c3],
+                set(),
+                random.Random(seed),
+                required_zones=frozenset({"z_req_a", "z_req_b"}),
+            )
+            seen.add(r.id)
+        assert seen == {"c2", "c3"}  # c1 never selected
+
+    def test_default_required_zones_is_empty(self):
+        """Absent required_zones keyword: behavior unchanged."""
+        c1 = ClusterData(
+            id="c1",
+            zones=["z1"],
+            type="mini_dungeon",
+            weight=10,
+            entry_fogs=[],
+            exit_fogs=[],
+        )
+        c2 = ClusterData(
+            id="c2",
+            zones=["z2"],
+            type="mini_dungeon",
+            weight=10,
+            entry_fogs=[],
+            exit_fogs=[],
+        )
+        seen = set()
+        for seed in range(50):
+            r = pick_cluster_uniform([c1, c2], set(), random.Random(seed))
+            seen.add(r.id)
+        assert seen == {"c1", "c2"}
+
+
 # =============================================================================
 # Proximity Groups tests
 # =============================================================================

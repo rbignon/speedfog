@@ -422,17 +422,24 @@ def pick_cluster_uniform(
     rng: random.Random,
     *,
     reserved_zones: frozenset[str] = frozenset(),
+    required_zones: frozenset[str] = frozenset(),
 ) -> ClusterData | None:
     """Pick a cluster uniformly at random (no capability filter).
 
     Only checks zone overlap and reserved zones. Capability is determined
     after selection.
 
+    If ``required_zones`` is non-empty and at least one candidate covers a
+    required zone, the draw is restricted to that subset. Otherwise the full
+    candidate list is used.
+
     Args:
         candidates: List of candidate clusters.
         used_zones: Set of zone IDs already used.
         rng: Random number generator.
         reserved_zones: Zones reserved for prerequisite placement (excluded).
+        required_zones: Zones that must appear in the DAG; candidates covering
+            any of them are preferred when present.
 
     Returns:
         A random available cluster, or None if all zones overlap.
@@ -444,6 +451,10 @@ def pick_cluster_uniform(
     ]
     if not available:
         return None
+    if required_zones:
+        preferred = [c for c in available if any(z in required_zones for z in c.zones)]
+        if preferred:
+            available = preferred
     return rng.choice(available)
 
 
