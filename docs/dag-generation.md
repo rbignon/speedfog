@@ -339,6 +339,31 @@ Post-generation checks on the built DAG:
 8. **Layer count**: few layers = warning
 9. **Event flag budget**: total flag allocation within budget
 
+## Required Zones
+
+`requirements.zones` lists zones that must appear in the generated DAG.
+They are prioritized at construction time: when the cluster picker for
+a layer slot has at least one candidate covering a still-needed required
+zone, the draw is restricted to that subset. Weight matching is bypassed
+for that pick.
+
+Properties:
+
+- Greedy placement: each required zone is consumed by the first
+  compatible slot encountered.
+- Per-zone consumption: between slots of the same layer, the set of
+  remaining required zones shrinks so a single zone is not
+  over-prioritized.
+- Post-process validation (`_check_requirements`) remains as a safety
+  net for pathological cases (e.g. a required zone whose cluster
+  conflicts with one already placed earlier).
+- A required zone whose cluster type is excluded from `allowed_types`
+  is reported by `_check_zone_types_allowed` as a config error before
+  generation starts.
+
+The generation log records each placement under a `REQUIRED ZONES`
+section, useful for debugging when the safety-net validator fires.
+
 ## Allowed Cluster Types
 
 By default, the DAG can include any of four cluster types:
