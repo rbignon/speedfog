@@ -20,6 +20,7 @@ def test_generation_log_defaults():
     assert log.plan_event is None
     assert log.layer_events == []
     assert log.summary is None
+    assert log.required_zone_placements == []
 
 
 def test_plan_event_construction():
