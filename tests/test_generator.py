@@ -2325,6 +2325,77 @@ def test_pick_layer_clusters_fails_when_no_compatible_remaining():
         )
 
 
+def test_pick_layer_clusters_places_required_zone_first():
+    """A cluster covering a required zone is picked before others of the same type."""
+    from speedfog.generator import pick_layer_clusters
+
+    pool = ClusterPool()
+    for i in range(4):
+        pool.add(_mk_cluster_v2(f"md_{i}", "mini_dungeon", weight=10))
+    pool.add(_mk_cluster_v2("md_required", "mini_dungeon", weight=10))
+
+    for seed in range(20):
+        rng = random.Random(seed)
+        picked, fallbacks, _ = pick_layer_clusters(
+            width=3,
+            layer_type="mini_dungeon",
+            clusters=pool,
+            used_zones=set(),
+            rng=rng,
+            required_zones=frozenset({"md_required"}),
+        )
+        assert fallbacks == []
+        assert any(c.id == "md_required" for c in picked)
+
+
+def test_pick_layer_clusters_required_zone_consumed_across_slots():
+    """Once placed in slot N, the zone is no longer prioritized in slot N+1."""
+    from speedfog.generator import pick_layer_clusters
+
+    pool = ClusterPool()
+    # Two required clusters, plus filler. Width 3 so all three slots are filled.
+    pool.add(_mk_cluster_v2("md_req_a", "mini_dungeon", weight=10))
+    pool.add(_mk_cluster_v2("md_req_b", "mini_dungeon", weight=10))
+    for i in range(5):
+        pool.add(_mk_cluster_v2(f"md_filler_{i}", "mini_dungeon", weight=10))
+
+    for seed in range(20):
+        rng = random.Random(seed)
+        picked, _, _ = pick_layer_clusters(
+            width=3,
+            layer_type="mini_dungeon",
+            clusters=pool,
+            used_zones=set(),
+            rng=rng,
+            required_zones=frozenset({"md_req_a", "md_req_b"}),
+        )
+        ids = {c.id for c in picked}
+        # Both required zones should be present (greedy consumption).
+        assert "md_req_a" in ids
+        assert "md_req_b" in ids
+        # The third slot is a filler.
+        assert len(ids - {"md_req_a", "md_req_b"}) == 1
+
+
+def test_pick_layer_clusters_default_required_zones_is_empty():
+    """No required_zones kwarg: behavior unchanged."""
+    from speedfog.generator import pick_layer_clusters
+
+    pool = ClusterPool()
+    for i in range(5):
+        pool.add(_mk_cluster_v2(f"md_{i}", "mini_dungeon", weight=10))
+    rng = random.Random(0)
+    picked, fallbacks, _ = pick_layer_clusters(
+        width=3,
+        layer_type="mini_dungeon",
+        clusters=pool,
+        used_zones=set(),
+        rng=rng,
+    )
+    assert len(picked) == 3
+    assert fallbacks == []
+
+
 def test_generator_v2_corpus_validity_50_seeds():
     from pathlib import Path
 

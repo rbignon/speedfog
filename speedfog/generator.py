@@ -862,6 +862,7 @@ def pick_layer_clusters(
         "major_boss",
     ),
     max_tolerance: float = 3.0,
+    required_zones: frozenset[str] = frozenset(),
 ) -> tuple[list[ClusterData], list[FallbackEntry], list[float | None]]:
     """Pick `width` clusters for a layer, falling back to other allowed types.
 
@@ -870,6 +871,11 @@ def pick_layer_clusters(
     made for this layer, so the anchor self-corrects toward the layer's
     centroid instead of being pinned to the first (possibly off-center)
     pick.
+
+    If ``required_zones`` is non-empty, each picker call receives the set
+    of zones still to be placed; a candidate covering one of them is
+    preferred over weight matching. The set shrinks between slots so the
+    same zone is not over-prioritized once placed.
 
     Returns (picks, fallbacks, weight_deltas). `weight_deltas[i]` is the
     distance between picks[i].weight and the anchor used to match it
@@ -885,11 +891,17 @@ def pick_layer_clusters(
     fallbacks: list[FallbackEntry] = []
     weight_deltas: list[float | None] = []
     local_used = set(used_zones)
+    local_required = set(required_zones)
     for slot in range(width):
         anchor: float | None
         is_fallback = False
         if not picks:
-            c = pick_cluster_uniform(primary_pool, local_used, rng)
+            c = pick_cluster_uniform(
+                primary_pool,
+                local_used,
+                rng,
+                required_zones=frozenset(local_required),
+            )
             anchor = None
         else:
             # Anchor = mean of ALL prior picks, including type fallbacks:
@@ -901,6 +913,7 @@ def pick_layer_clusters(
                 rng,
                 anchor_weight=anchor,
                 max_tolerance=max_tolerance,
+                required_zones=frozenset(local_required),
             )
         if c is None:
             for ft in fallback_types:
@@ -908,6 +921,7 @@ def pick_layer_clusters(
                     clusters.get_by_type(ft),
                     local_used,
                     rng,
+                    required_zones=frozenset(local_required),
                 )
                 if c is not None:
                     fallbacks.append(
@@ -932,6 +946,7 @@ def pick_layer_clusters(
         else:
             weight_deltas.append(abs(c.weight - anchor))
         _mark_cluster_used(c, local_used, clusters)
+        local_required.difference_update(c.zones)
     return picks, fallbacks, weight_deltas
 
 
