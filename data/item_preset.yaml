@@ -38,6 +38,20 @@ NorandomItems:
   ID: goods:2009004
 - Name: Well Depths Key
   ID: goods:2008004
+- Name: Rusty Key
+  ID: goods:8010
+- Name: Academy Glintstone Key
+  ID: goods:8109
+- Name: Dectus Medallion (Left)
+  ID: goods:8105
+- Name: Dectus Medallion (Right)
+  ID: goods:8106
+- Name: Haligtree Secret Medallion (Left)
+  ID: goods:8175
+- Name: Haligtree Secret Medallion (Right)
+  ID: goods:8176
+- Name: Hole-Laden Necklace
+  ID: goods:2008008
 
 Placements:
 
