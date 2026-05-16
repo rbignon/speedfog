@@ -2127,6 +2127,24 @@ class TestPickClusterWeightMatchedRequiredZones:
         # c_req is reserved -> excluded; preferred is empty -> weight matching on c_other only
         assert r is c_other
 
+    def test_multiple_required_candidates_weight_matching_still_applies(self):
+        """When multiple candidates match required_zones, weight matching still picks the closer one."""
+        c_close_required = make_cluster("c_close", zones=["z_req_a"], weight=5)
+        c_far_required = make_cluster("c_far", zones=["z_req_b"], weight=25)
+        c_non_required = make_cluster("c_nr", zones=["z_other"], weight=5)
+        seen = set()
+        for seed in range(50):
+            r = pick_cluster_weight_matched(
+                [c_close_required, c_far_required, c_non_required],
+                used_zones=set(),
+                rng=random.Random(seed),
+                anchor_weight=5.0,
+                required_zones=frozenset({"z_req_a", "z_req_b"}),
+            )
+            seen.add(r.id)
+        # c_non_required is never eligible; c_close_required wins every time (exact match).
+        assert seen == {"c_close"}
+
 
 def test_validate_config_rejects_oversubscribed_layers_count():
     from speedfog.clusters import ClusterPool
