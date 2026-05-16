@@ -355,6 +355,7 @@ def pick_cluster_weight_matched(
     filter_fn: Callable[[ClusterData], bool] = lambda c: True,
     *,
     reserved_zones: frozenset[str] = frozenset(),
+    required_zones: frozenset[str] = frozenset(),
     max_tolerance: float = 3.0,
 ) -> ClusterData | None:
     """Pick a cluster with weight close to anchor_weight.
@@ -365,6 +366,11 @@ def pick_cluster_weight_matched(
     cluster nearest to anchor_weight (ties broken randomly) - graceful
     degradation instead of uniform random.
 
+    If ``required_zones`` is non-empty and at least one filtered candidate
+    covers a required zone, the draw is restricted to that subset before
+    weight matching is applied. The required preference overrides weight
+    proximity.
+
     Args:
         candidates: List of candidate clusters.
         used_zones: Set of zone IDs already used.
@@ -372,6 +378,9 @@ def pick_cluster_weight_matched(
         anchor_weight: Target weight to match.
         filter_fn: Additional filter (e.g. can_be_passant_node).
         reserved_zones: Zones reserved for prerequisite placement.
+        required_zones: Zones that must appear in the DAG; the draw is
+            restricted to candidates covering one of them when at least
+            one such candidate is available.
         max_tolerance: Max tolerance (<= 0 disables matching - uniform random).
 
     Returns:
@@ -385,6 +394,11 @@ def pick_cluster_weight_matched(
     ]
     if not available:
         return None
+
+    if required_zones:
+        preferred = [c for c in available if any(z in required_zones for z in c.zones)]
+        if preferred:
+            available = preferred
 
     if max_tolerance <= 0:
         return rng.choice(available)

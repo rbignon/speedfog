@@ -2065,6 +2065,69 @@ class TestPickClusterWeightMatched:
         assert result is None
 
 
+class TestPickClusterWeightMatchedRequiredZones:
+    """Tests for required_zones parameter in pick_cluster_weight_matched."""
+
+    def test_required_cluster_chosen_even_when_weight_far_from_anchor(self):
+        """A required candidate overrides weight matching."""
+        c_light_1 = make_cluster("c1", zones=["z1"], weight=5)
+        c_light_2 = make_cluster("c2", zones=["z2"], weight=5)
+        c_heavy_required = make_cluster("c3", zones=["z_required"], weight=25)
+        # Anchor is 5 (matches the light clusters). Without required_zones,
+        # the heavy one is far from anchor and would not be picked.
+        for seed in range(50):
+            result = pick_cluster_weight_matched(
+                [c_light_1, c_light_2, c_heavy_required],
+                used_zones=set(),
+                rng=random.Random(seed),
+                anchor_weight=5.0,
+                required_zones=frozenset({"z_required"}),
+            )
+            assert result is c_heavy_required
+
+    def test_no_required_match_falls_back_to_weight_matching(self):
+        """No candidate has a required zone -> standard weight matching."""
+        c1 = make_cluster("c1", zones=["z1"], weight=5)
+        c2 = make_cluster("c2", zones=["z2"], weight=25)
+        for seed in range(50):
+            r = pick_cluster_weight_matched(
+                [c1, c2],
+                used_zones=set(),
+                rng=random.Random(seed),
+                anchor_weight=5.0,
+                required_zones=frozenset({"z_unmatched"}),
+            )
+            # Anchor=5, tolerance defaults to 3.0 -> c1 selected every time.
+            assert r is c1
+
+    def test_default_required_zones_is_empty(self):
+        """Absent required_zones keyword: behavior unchanged."""
+        c1 = make_cluster("c1", zones=["z1"], weight=5)
+        c2 = make_cluster("c2", zones=["z2"], weight=25)
+        r = pick_cluster_weight_matched(
+            [c1, c2],
+            used_zones=set(),
+            rng=random.Random(0),
+            anchor_weight=5.0,
+        )
+        assert r is c1
+
+    def test_required_zone_excluded_by_reserved_falls_back_to_weight_matching(self):
+        """If the only required candidate is reserved, weight matching applies normally."""
+        c_req = make_cluster("c_req", zones=["z_required"], weight=25)
+        c_other = make_cluster("c_other", zones=["z_other"], weight=5)
+        r = pick_cluster_weight_matched(
+            [c_req, c_other],
+            used_zones=set(),
+            rng=random.Random(42),
+            anchor_weight=5.0,
+            reserved_zones=frozenset({"z_required"}),
+            required_zones=frozenset({"z_required"}),
+        )
+        # c_req is reserved -> excluded; preferred is empty -> weight matching on c_other only
+        assert r is c_other
+
+
 def test_validate_config_rejects_oversubscribed_layers_count():
     from speedfog.clusters import ClusterPool
     from speedfog.config import (
