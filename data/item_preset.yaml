@@ -598,6 +598,8 @@ Placements:
   - Tag: seedtree
   - Tag: church
   - Tag: cross
+  - Tag: forgereward
+  - Tag: revered
   Excludes:
   - Tag: missable
 
