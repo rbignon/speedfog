@@ -610,8 +610,7 @@ def test_export_generation_log_renders_required_zone_section(tmp_path):
     export_generation_log(log, out)
     content = out.read_text()
     assert "REQUIRED ZONES" in content
-    assert "caelid_radahn" in content
-    assert "L7" in content
+    assert "  caelid_radahn -> caelid_radahn_cluster (L7, slot 1)\n" in content
 
 
 def test_export_generation_log_omits_section_when_empty(tmp_path):
