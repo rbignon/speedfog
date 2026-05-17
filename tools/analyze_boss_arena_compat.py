@@ -13,12 +13,23 @@ it. The partition into major/minor pools follows
 * Phase-1 siblings of multi-phase leaders (from ``enemy.txt``) get their
   own slot on both sides.
 * Source-only entries with ``pool == "minor"`` (or ``"major"``) are added
-  to the matching boss pool.
+  to the matching boss pool (``pool`` is authoritative when present).
+* Orphan arena entries (have an ``arena`` block, no ``pool`` field, and
+  no slot in ``clusters.json``) are routed by ``arena.type``: ``2`` →
+  major pool, anything else → minor pool. This covers DLC field bosses
+  without ``BossTrigger``, evergaol variants, alternate-trigger IDs, and
+  multi-phase splits of fights absent from the DAG.
 * Entries with ``boss.exclude_from_pool = True`` are dropped from the
   boss pool but kept on the arena side (BAR semantics).
 
-The boss/arena ``type`` field in the tags file is *not* consulted by
-``is_compatible``, so it never participates in the matching.
+Note that the orphan-arena rule only affects the boss-side pool. Arenas
+still come exclusively from vanilla cluster leaders + their phase-1
+siblings (``collect_arenas`` below), so orphan entries are usable as
+candidates without becoming targets.
+
+The boss/arena ``type`` field is not consulted by ``is_compatible`` and
+does not participate in the matching itself; ``arena.type`` is only used
+by the orphan-arena routing rule above.
 
 Reports per-boss compatibility (sorted) and a global distribution summary,
 both with and without the size constraint.
@@ -117,14 +128,28 @@ def build_pools(
         eid: entry for eid, entry in tags.items() if include_dlc or not entry.dlc
     }
 
-    bosses: dict[str, dict[int, EntityTags]] = {}
-    arenas: dict[str, dict[int, EntityTags]] = {}
-    for pool_kind, cluster_type in CLUSTER_TYPE_BY_POOL.items():
-        vanilla_ids = [
+    vanilla_per_kind: dict[str, list[int]] = {
+        pool_kind: [
             eid for eid in vanilla_ids_of_type(clusters, cluster_type) if keep(eid)
         ]
+        for pool_kind, cluster_type in CLUSTER_TYPE_BY_POOL.items()
+    }
+    bosses: dict[str, dict[int, EntityTags]] = {}
+    arenas: dict[str, dict[int, EntityTags]] = {}
+    for pool_kind in CLUSTER_TYPE_BY_POOL:
+        vanilla_ids = vanilla_per_kind[pool_kind]
+        # Pass the other kind's vanilla IDs so the orphan-arena branch in
+        # ``_compose_pool`` doesn't leak a vanilla minor into the major
+        # pool (and vice versa) via its ``arena.type``.
+        other_vanilla = [
+            eid for k, ids in vanilla_per_kind.items() if k != pool_kind for eid in ids
+        ]
         composed = _compose_pool(
-            filtered_tags, pool_kind, vanilla_ids, phase_mapping=phase_mapping
+            filtered_tags,
+            pool_kind,
+            vanilla_ids,
+            other_vanilla_ids=other_vanilla,
+            phase_mapping=phase_mapping,
         )
         bosses[pool_kind] = {
             eid: filtered_tags[eid] for eid in composed if eid in filtered_tags

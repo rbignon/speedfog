@@ -37,10 +37,25 @@ def _entity(
     is_dragon: bool = False,
     arena_forbids_dragon: bool = False,
     arena_size: int = 5,
+    arena_type: int = 1,
     boss_size: int = 1,
     exclude_from_pool: bool = False,
     pool: str | None = None,
+    has_arena: bool = True,
 ) -> EntityTags:
+    arena = (
+        ArenaTags(
+            size=arena_size,
+            type=arena_type,
+            two_phase_not_allowed=False,
+            dragon_not_allowed=arena_forbids_dragon,
+            npc_not_allowed=False,
+            is_escapable=False,
+            night_boss=False,
+        )
+        if has_arena
+        else None
+    )
     return EntityTags(
         entity_id=eid,
         name=f"e{eid}",
@@ -58,15 +73,7 @@ def _entity(
             night_boss=False,
             exclude_from_pool=exclude_from_pool,
         ),
-        arena=ArenaTags(
-            size=arena_size,
-            type=1,
-            two_phase_not_allowed=False,
-            dragon_not_allowed=arena_forbids_dragon,
-            npc_not_allowed=False,
-            is_escapable=False,
-            night_boss=False,
-        ),
+        arena=arena,
     )
 
 
@@ -356,16 +363,118 @@ def test_compose_pool_phase1_with_matching_source_pool_not_double_counted():
 
 def test_compose_pool_minor_kind_ignores_major_only_phase_mapping():
     """Both call sites pass the full ``phase_mapping`` to both pools. When
-    ``kind`` is minor and every mapped leader is a major (as in real data),
-    the minor pool stays unchanged.
+    ``kind`` is minor and a mapped leader is a major (not in the minor
+    vanilla list), the phase-mapping branch must not pull the phase-1
+    sibling into the minor pool. Verifies the leader-membership guard
+    (``leader not in vanilla_set``).
+
+    Source-only entries (no arena) keep the orphan-arena rule out of the
+    way so the assertion isolates the phase-mapping branch.
     """
     tags = {
-        100: _entity(100),  # major leader
-        101: _entity(101),  # its phase-1 sibling
-        200: _entity(200, pool="minor"),  # source-only minor
+        100: _entity(100, pool="major", has_arena=False),  # source-only major leader
+        101: _entity(101, pool="major", has_arena=False),  # its phase-1 sibling
+        200: _entity(200, pool="minor", has_arena=False),  # source-only minor
+        300: _entity(
+            300, pool="minor", has_arena=False
+        ),  # vanilla minor (per the call)
     }
-    pool = _compose_pool(tags, "minor", vanilla_ids=[], phase_mapping={100: 101})
-    assert list(pool) == [200]
+    # vanilla_ids=[300] makes the phase-mapping branch run (vanilla_set is
+    # non-empty); 100 is intentionally absent so the leader-membership
+    # guard skips 101.
+    pool = _compose_pool(tags, "minor", vanilla_ids=[300], phase_mapping={100: 101})
+    assert 101 not in pool
+    assert list(pool) == [200, 300]
+
+
+def test_compose_pool_orphan_arena_type2_joins_major_pool():
+    """An entry with an arena block, no ``pool`` field, and not in
+    ``vanilla_ids`` is an "orphan" arena binding (DLC field bosses, evergaol
+    variants, phase entities for fights absent from clusters.json). The
+    orphan rule routes ``arena.type == 2`` orphans to the major pool so
+    they can serve as replacement candidates in major slots.
+    """
+    tags = {
+        100: _entity(100, arena_type=2),  # orphan, type=2 → major
+        200: _entity(200, arena_type=3),  # orphan, type≠2 → minor (not here)
+    }
+    major = _compose_pool(tags, "major", vanilla_ids=[])
+    minor = _compose_pool(tags, "minor", vanilla_ids=[])
+    assert list(major) == [100]
+    assert 100 not in minor
+    assert list(minor) == [200]
+
+
+def test_compose_pool_orphan_arena_other_types_join_minor_pool():
+    """Every ``arena.type`` other than 2 routes an orphan to the minor pool
+    (covers field bosses with type=3, evergaols with type=7, tombs with
+    type=5, etc.). Verifies the catch-all branch of the orphan rule.
+    """
+    tags = {
+        100: _entity(100, arena_type=1),
+        300: _entity(300, arena_type=3),
+        500: _entity(500, arena_type=5),
+        700: _entity(700, arena_type=7),
+    }
+    pool = _compose_pool(tags, "minor", vanilla_ids=[])
+    assert list(pool) == [100, 300, 500, 700]
+    assert _compose_pool(tags, "major", vanilla_ids=[]) == {}
+
+
+def test_compose_pool_orphan_respects_exclude_from_pool():
+    """The orphan branch reuses the same ``exclude_from_pool`` filter as the
+    vanilla and source-only branches: variants tagged as duplicates
+    (``Night's Cavalry`` / ``Deathbird`` / ``Death Rite Bird`` aliases) stay
+    out of the pool even when their arena block would otherwise admit them.
+    """
+    tags = {
+        100: _entity(
+            100, arena_type=2, exclude_from_pool=True
+        ),  # excluded major orphan
+        200: _entity(
+            200, arena_type=3, exclude_from_pool=True
+        ),  # excluded minor orphan
+        300: _entity(300, arena_type=3),  # kept minor orphan
+    }
+    assert _compose_pool(tags, "major", vanilla_ids=[]) == {}
+    minor = _compose_pool(tags, "minor", vanilla_ids=[])
+    assert list(minor) == [300]
+
+
+def test_compose_pool_vanilla_entry_does_not_leak_via_orphan_branch():
+    """A vanilla entry whose ``arena.type`` would route to the *other* kind
+    must stay out of that other pool: the orphan branch is gated by the
+    union ``vanilla_ids | other_vanilla_ids``. Without that guard, a
+    ``boss_arena`` cluster with ``arena.type == 2`` would silently end up
+    in the major pool as well (real-data regression: 4 such entries exist
+    in the live ``boss_arena_tags.json``).
+    """
+    tags = {
+        # Vanilla minor (boss_arena cluster) that happens to have arena.type=2.
+        100: _entity(100, arena_type=2),
+    }
+    minor = _compose_pool(tags, "minor", vanilla_ids=[100])
+    major = _compose_pool(tags, "major", vanilla_ids=[], other_vanilla_ids=[100])
+    assert list(minor) == [100]  # vanilla branch keeps it where it belongs
+    assert 100 not in major  # orphan branch must not pick it up
+
+
+def test_compose_pool_pool_field_overrides_arena_type():
+    """An entry with both a ``pool`` field and an ``arena`` block routes by
+    ``pool``, not by ``arena.type``. This matters for entries explicitly
+    tagged into a pool different from what their arena type would suggest
+    (the ``pool`` field is authoritative).
+    """
+    tags = {
+        # arena.type=2 would route to major, but pool="minor" wins.
+        100: _entity(100, arena_type=2, pool="minor"),
+        # arena.type=3 would route to minor, but pool="major" wins.
+        200: _entity(200, arena_type=3, pool="major"),
+    }
+    major = _compose_pool(tags, "major", vanilla_ids=[])
+    minor = _compose_pool(tags, "minor", vanilla_ids=[])
+    assert list(major) == [200]
+    assert list(minor) == [100]
 
 
 def test_compose_pool_phase1_missing_from_tags_is_silent():

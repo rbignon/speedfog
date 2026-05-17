@@ -31,7 +31,7 @@ record.
 | `name` | string | yes | Human-readable name (from BAR, or the `ExtraMinorBossPoolIds` C# comment for source-only entries). |
 | `boss` | object | yes | Boss tags, see below. Describes the entity in its "source" role. |
 | `arena` | object | no | Arena tags, see below. Present only for entities that also correspond to an arena slot in the MSB (vanilla boss bindings). Absent for source-only promoted entries. |
-| `pool` | string | no | `"minor"` or `"major"`. Declares pool membership for source-only entries (no `arena`). Absent for entries with an `arena` block: their pool is derived from `cluster.type` in `clusters.json`. |
+| `pool` | string | no | `"minor"` or `"major"`. When present, it pins the entry to that pool regardless of any `arena` block. Absent for entries that derive their pool from `clusters.json` (or, when no slot exists there, from `arena.type` via the orphan rule below). |
 | `region` | int | yes | BAR's region identifier (1-15). Loaded but not consulted by the current compatibility check. |
 | `scaling` | int | yes | BAR's scaling tier. Loaded but not consulted by the current compatibility check. |
 | `dlc` | bool | yes | True for DLC entities. Loaded but not consulted by the current compatibility check. |
@@ -194,6 +194,34 @@ BossArenaRandomizer, where every entity is both arena and boss, and
 prevents ``|arenas| > |pool|`` deficits caused purely by the phase-1
 arena expansion above (e.g. six phase-1 majors widening both sides of the
 bipartite graph instead of only the arena side).
+
+## Pool composition
+
+``_compose_pool`` routes each entity into the major or minor candidate
+pool with four ranked branches:
+
+1. **Vanilla IDs** for the requested ``kind``: entity IDs of
+   ``clusters.json`` bosses whose ``cluster.type`` is ``major_boss`` (→
+   major) or ``boss_arena`` (→ minor).
+2. **Phase-1 siblings** of vanilla leaders, via ``phase_mapping`` from
+   ``enemy.txt`` (see the multi-phase section below).
+3. **Source-only entries** with an explicit ``pool`` field. ``pool`` is
+   authoritative: it overrides ``arena.type`` for entries that carry both
+   blocks.
+4. **Orphan arena fallback**: an entry with an ``arena`` block but no
+   ``pool`` field and no slot in ``clusters.json`` joins the major pool
+   when ``arena.type == 2`` (BAR's "walled arena" category) and the minor
+   pool otherwise. This is what brings BAR vanilla bindings that have no
+   matching SpeedFog cluster (DLC field bosses without ``BossTrigger``,
+   evergaol variants, alternate-trigger IDs, Leda fight phases, multi-
+   phase final boss splits, etc.) into the candidate pool. Entries with
+   ``boss.exclude_from_pool = true`` stay out, which is how duplicates
+   (Night's Cavalry, Deathbird, Death Rite Bird aliases) are kept from
+   polluting the pool.
+
+``boss.exclude_from_pool`` applies to every branch. A boss can be both
+a vanilla arena target and excluded as a candidate, in which case its
+arena slot is still filled by *some other* compatible boss.
 
 ## Config flags
 

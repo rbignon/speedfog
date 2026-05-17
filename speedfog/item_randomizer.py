@@ -113,10 +113,18 @@ def generate_item_config(
             raise ValueError("tags required when randomize_bosses != 'none'")
 
         major_pool = _compose_pool(
-            tags, "major", vanilla_major_ids, phase_mapping=phase_mapping
+            tags,
+            "major",
+            vanilla_major_ids,
+            other_vanilla_ids=vanilla_minor_ids,
+            phase_mapping=phase_mapping,
         )
         minor_pool = _compose_pool(
-            tags, "minor", vanilla_minor_ids, phase_mapping=phase_mapping
+            tags,
+            "minor",
+            vanilla_minor_ids,
+            other_vanilla_ids=vanilla_major_ids,
+            phase_mapping=phase_mapping,
         )
 
         assignments = _build_enemy_assignments(
@@ -141,29 +149,46 @@ def _compose_pool(
     tags: Mapping[int, EntityTags],
     kind: str,
     vanilla_ids: Iterable[int],
+    *,
+    other_vanilla_ids: Iterable[int] = (),
     phase_mapping: Mapping[int, int] | None = None,
 ) -> dict[int, BossTags]:
-    """Combine vanilla IDs of a given ``cluster.type`` with source-only entries
-    whose ``pool`` field matches ``kind``. Entries with
-    ``boss.exclude_from_pool = True`` are dropped here: the filter belongs at
-    pool composition, not inside the matcher.
+    """Compose the candidate boss pool for ``kind`` (``"major"`` or ``"minor"``).
 
-    When ``phase_mapping`` is provided, the phase-1 sibling of each vanilla
-    leader is also added to the pool. ``_build_enemy_assignments`` already
-    expands phase-1 slots on the arena side; without the matching pool
-    expansion the matcher can hit ``|arenas| > |pool|`` purely from phase
-    splits. This mirrors BossArenaRandomizer where every entity is both an
-    arena and a boss. Phase-1 IDs absent from ``tags`` are silently skipped
-    (tolerable partial data); the strict missing-tag error stays on
-    ``vanilla_ids`` where a gap signals a misconfigured cluster. The leader
-    membership test uses the full ``vanilla_ids`` set rather than ``pool``
-    so an ``exclude_from_pool`` leader still gates inclusion of its phase-1
-    sibling (the sibling is an independent entity with its own exclude flag).
+    Entries are routed by priority:
 
-    Raises ``KeyError`` for any ``vanilla_ids`` entry missing from ``tags``:
-    those come from ``clusters.json`` boss clusters, so an untagged vanilla
-    boss is a data gap worth surfacing (consistent with the strict check in
-    ``_build_enemy_assignments``).
+    1. **Vanilla IDs** for ``kind`` (entity IDs of ``clusters.json`` bosses
+       whose ``cluster.type`` matches): always added unless
+       ``exclude_from_pool``.
+    2. **Phase-1 siblings** of vanilla leaders (via ``phase_mapping``):
+       added to mirror the arena-side expansion in
+       ``_build_enemy_assignments``; otherwise the matcher can hit
+       ``|arenas| > |pool|`` purely from phase splits.
+    3. **Source-only entries** with an explicit ``pool`` field equal to
+       ``kind`` (``pool`` is authoritative when present).
+    4. **Orphan arena entries**: have an ``arena`` block but no ``pool``
+       field and no slot in ``clusters.json`` (checked against the union
+       of ``vanilla_ids`` and ``other_vanilla_ids`` so a vanilla minor
+       doesn't leak into the major pool when its ``arena.type`` would
+       otherwise map there). ``arena.type == 2`` routes to the major pool,
+       every other type routes to the minor pool. This captures BAR
+       entries that are vanilla bindings in BAR's worldview but lack a
+       corresponding fog-gate arena in SpeedFog (DLC field bosses without
+       ``BossTrigger``, multi-phase splits of fights absent from the DAG,
+       evergaol variants, etc.).
+
+    ``exclude_from_pool`` filters at every branch (the variants tagged as
+    duplicates stay out of the pool here, while still being valid arena
+    targets in the matcher's other input).
+
+    Phase-1 IDs absent from ``tags`` are silently skipped (tolerable partial
+    data); the strict missing-tag error stays on ``vanilla_ids`` where a gap
+    signals a misconfigured cluster. The phase-mapping leader check uses
+    ``vanilla_set`` (full vanilla list, including excluded entries) so an
+    ``exclude_from_pool`` leader still gates inclusion of its phase-1
+    sibling.
+
+    Raises ``KeyError`` for any ``vanilla_ids`` entry missing from ``tags``.
 
     The returned dict is key-sorted so seed-to-result stability does not
     depend on the iteration order of ``tags`` or ``vanilla_ids``.
@@ -189,9 +214,26 @@ def _compose_pool(
                 continue
             if not entry.boss.exclude_from_pool:
                 pool[phase1] = entry.boss
+    # Union with the other kind's vanilla IDs so the orphan branch below
+    # doesn't promote (say) a vanilla minor with arena.type=2 into the
+    # major pool. The vanilla branch above already handles each entry in
+    # its own pool; the orphan branch must only fire for entities that
+    # are vanilla in neither pool.
+    all_vanilla = vanilla_set | set(other_vanilla_ids)
     for eid, entry in tags.items():
-        if entry.pool == kind and not entry.boss.exclude_from_pool:
+        if entry.boss.exclude_from_pool:
+            continue
+        if entry.pool == kind:
             pool[eid] = entry.boss
+            continue
+        # Orphan arena fallback: tagged with an arena but neither pinned by
+        # a ``pool`` field nor matched in ``clusters.json``. arena.type==2 is
+        # BAR's "walled arena" category (major), everything else routes to
+        # minor. See docs/boss-arena-constraints.md, "Pool composition".
+        if entry.pool is None and entry.arena is not None and eid not in all_vanilla:
+            derived = "major" if entry.arena.type == 2 else "minor"
+            if derived == kind:
+                pool[eid] = entry.boss
     return dict(sorted(pool.items()))
 
 
