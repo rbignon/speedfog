@@ -6,7 +6,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from speedfog.boss_arena_constraints import ArenaTags, BossTags, EntityTags
+from speedfog.boss_arena_constraints import (
+    ArenaTags,
+    BossTags,
+    EntityTags,
+    MatchingError,
+)
 from speedfog.clusters import ClusterData
 from speedfog.config import Config
 from speedfog.item_randomizer import (
@@ -42,6 +47,7 @@ def _entity(
     exclude_from_pool: bool = False,
     pool: str | None = None,
     has_arena: bool = True,
+    dlc: bool = False,
 ) -> EntityTags:
     arena = (
         ArenaTags(
@@ -61,7 +67,7 @@ def _entity(
         name=f"e{eid}",
         region=1,
         scaling=1,
-        dlc=False,
+        dlc=dlc,
         pool=pool,
         boss=BossTags(
             size=boss_size,
@@ -589,3 +595,151 @@ def test_generate_item_config_expands_multi_phase_slots():
     # Both slots get distinct sources drawn from the major pool.
     assert len(set(assignments.values())) == 2
     assert set(assignments.values()) <= {"2000", "3000"}
+
+
+def test_compose_pool_exclude_dlc_filters_vanilla_branch():
+    """When ``exclude_dlc=True``, DLC-tagged vanilla entries drop from the pool
+    (the matcher will pick a non-DLC replacement for their arena instead)."""
+    tags = {
+        100: _entity(100),
+        200: _entity(200, dlc=True),
+    }
+    pool = _compose_pool(tags, "major", vanilla_ids=[100, 200], exclude_dlc=True)
+    assert list(pool) == [100]
+
+
+def test_compose_pool_exclude_dlc_filters_phase1_branch():
+    """``exclude_dlc=True`` skips DLC-tagged phase-1 siblings even when their
+    leader is a vanilla pool entry."""
+    tags = {
+        100: _entity(100),  # vanilla leader, non-DLC
+        101: _entity(101, dlc=True),  # DLC phase-1 sibling
+    }
+    pool = _compose_pool(
+        tags, "major", vanilla_ids=[100], phase_mapping={100: 101}, exclude_dlc=True
+    )
+    assert list(pool) == [100]
+
+
+def test_compose_pool_exclude_dlc_filters_source_only_branch():
+    """``exclude_dlc=True`` skips DLC-tagged source-only entries (``pool`` set)."""
+    tags = {
+        100: _entity(100, pool="major"),
+        200: _entity(200, pool="major", dlc=True),
+    }
+    pool = _compose_pool(tags, "major", vanilla_ids=[], exclude_dlc=True)
+    assert list(pool) == [100]
+
+
+def test_compose_pool_exclude_dlc_filters_orphan_branch():
+    """``exclude_dlc=True`` skips DLC-tagged orphan arena entries (no ``pool``
+    field, not in vanilla_ids, routed by ``arena.type``)."""
+    tags = {
+        100: _entity(100, arena_type=3),  # non-DLC orphan minor
+        200: _entity(200, arena_type=3, dlc=True),  # DLC orphan minor
+    }
+    pool = _compose_pool(tags, "minor", vanilla_ids=[], exclude_dlc=True)
+    assert list(pool) == [100]
+
+
+def test_compose_pool_exclude_dlc_default_off_keeps_dlc_entries():
+    """Default behaviour (``exclude_dlc=False``) is unchanged: DLC entries
+    remain eligible. Regression guard against silently flipping the default."""
+    tags = {
+        100: _entity(100),
+        200: _entity(200, dlc=True),
+    }
+    pool = _compose_pool(tags, "major", vanilla_ids=[100, 200])
+    assert list(pool) == [100, 200]
+
+
+def test_generate_item_config_enemy_dlc_bosses_filters_pool():
+    """``enemy.dlc_bosses = false`` removes DLC bosses from the candidate
+    pool, so a DLC vanilla arena receives a non-DLC replacement."""
+    config = Config.from_dict(
+        {"enemy": {"randomize_bosses": "all", "dlc_bosses": False}}
+    )
+    # Cluster leader 1000 is itself DLC; its arena must still be filled, but
+    # from the non-DLC subset of the pool (only 3000 qualifies).
+    boss_clusters = [_boss_cluster("c1", "major_boss", defeat_flag=1000)]
+    tags = {
+        1000: _entity(1000, dlc=True),
+        2000: _entity(2000, dlc=True),
+        3000: _entity(3000),
+    }
+    result = generate_item_config(
+        config,
+        seed=42,
+        boss_clusters=boss_clusters,
+        tags=tags,
+        vanilla_major_ids=[1000, 2000, 3000],
+        vanilla_minor_ids=[],
+        phase_mapping={},
+    )
+    # Arena 1000 is preserved (only the pool was filtered, not the arena set).
+    assert result["enemy_assignments"] == {"1000": "3000"}
+
+
+def test_generate_item_config_enemy_dlc_bosses_default_keeps_dlc():
+    """Default ``enemy.dlc_bosses = true`` is non-restrictive: DLC bosses
+    remain in the candidate pool."""
+    config = Config.from_dict({"enemy": {"randomize_bosses": "all"}})
+    boss_clusters = [_boss_cluster("c1", "major_boss", defeat_flag=1000)]
+    tags = {
+        1000: _entity(1000),
+        2000: _entity(2000, dlc=True),
+    }
+    result = generate_item_config(
+        config,
+        seed=42,
+        boss_clusters=boss_clusters,
+        tags=tags,
+        vanilla_major_ids=[1000, 2000],
+        vanilla_minor_ids=[],
+        phase_mapping={},
+    )
+    # Either source is acceptable; the DLC one must not be filtered.
+    assert result["enemy_assignments"]["1000"] in {"1000", "2000"}
+
+
+def test_generate_item_config_enemy_dlc_bosses_empty_pool_raises():
+    """When ``enemy.dlc_bosses=False`` strips the pool below what arenas
+    require, the matcher raises ``MatchingError`` rather than silently
+    leaving the arena vanilla. Locks the failure-surface contract for this
+    code path."""
+    config = Config.from_dict(
+        {"enemy": {"randomize_bosses": "all", "dlc_bosses": False}}
+    )
+    boss_clusters = [_boss_cluster("c1", "major_boss", defeat_flag=1000)]
+    # Sole pool candidate is DLC; the filter empties the pool entirely.
+    tags = {1000: _entity(1000, dlc=True)}
+    with pytest.raises(MatchingError):
+        generate_item_config(
+            config,
+            seed=42,
+            boss_clusters=boss_clusters,
+            tags=tags,
+            vanilla_major_ids=[1000],
+            vanilla_minor_ids=[],
+            phase_mapping={},
+        )
+
+
+def test_compose_pool_exclude_dlc_dlc_leader_keeps_non_dlc_phase1():
+    """The leader filter and the phase-1 filter act independently: a DLC
+    vanilla leader is dropped from the pool, but its non-DLC phase-1 sibling
+    is still inserted (the phase-1 branch gates on ``leader in vanilla_set``,
+    not on the leader's presence in the resulting pool). Locks this against
+    a future "tidy-up" refactor that would couple the two filters."""
+    tags = {
+        100: _entity(100, dlc=True),  # DLC vanilla leader
+        101: _entity(101),  # non-DLC phase-1 sibling
+    }
+    pool = _compose_pool(
+        tags,
+        "major",
+        vanilla_ids=[100],
+        phase_mapping={100: 101},
+        exclude_dlc=True,
+    )
+    assert list(pool) == [101]

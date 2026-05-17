@@ -44,7 +44,10 @@ def generate_item_config(
     ``boss_arena`` respectively. They are combined with the source-only
     entries from ``tags`` (entities with ``pool = "minor" | "major"``) by
     ``_compose_pool``, which also drops entries with
-    ``boss.exclude_from_pool = True`` before the matcher runs.
+    ``boss.exclude_from_pool = True`` before the matcher runs. When
+    ``config.enemy.dlc_bosses`` is False, DLC-tagged entries are also dropped
+    from the pool; arena selection is unchanged, so a DLC vanilla arena in
+    the DAG still receives a non-DLC replacement boss.
 
     ``phase_mapping`` (from ``speedfog.output.parse_boss_phases``) maps
     ``phase2_entity_id -> phase1_entity_id`` for multi-phase bosses. When a
@@ -112,12 +115,14 @@ def generate_item_config(
         if tags is None:
             raise ValueError("tags required when randomize_bosses != 'none'")
 
+        exclude_dlc = not config.enemy.dlc_bosses
         major_pool = _compose_pool(
             tags,
             "major",
             vanilla_major_ids,
             other_vanilla_ids=vanilla_minor_ids,
             phase_mapping=phase_mapping,
+            exclude_dlc=exclude_dlc,
         )
         minor_pool = _compose_pool(
             tags,
@@ -125,6 +130,7 @@ def generate_item_config(
             vanilla_minor_ids,
             other_vanilla_ids=vanilla_major_ids,
             phase_mapping=phase_mapping,
+            exclude_dlc=exclude_dlc,
         )
 
         assignments = _build_enemy_assignments(
@@ -152,6 +158,7 @@ def _compose_pool(
     *,
     other_vanilla_ids: Iterable[int] = (),
     phase_mapping: Mapping[int, int] | None = None,
+    exclude_dlc: bool = False,
 ) -> dict[int, BossTags]:
     """Compose the candidate boss pool for ``kind`` (``"major"`` or ``"minor"``).
 
@@ -181,6 +188,12 @@ def _compose_pool(
     duplicates stay out of the pool here, while still being valid arena
     targets in the matcher's other input).
 
+    ``exclude_dlc`` applies the same "drop from pool but keep arena
+    addressable" semantics for DLC entries: when True, any entry with
+    ``entry.dlc`` is skipped at every insertion branch. The arena side
+    (``_build_enemy_assignments``) is untouched, so a DLC vanilla arena in
+    the DAG still receives a non-DLC replacement.
+
     Phase-1 IDs absent from ``tags`` are silently skipped (tolerable partial
     data); the strict missing-tag error stays on ``vanilla_ids`` where a gap
     signals a misconfigured cluster. The phase-mapping leader check uses
@@ -203,8 +216,11 @@ def _compose_pool(
                 f"boss_arena_tags.json"
             )
         vanilla_set.add(eid)
-        if not entry.boss.exclude_from_pool:
-            pool[eid] = entry.boss
+        if entry.boss.exclude_from_pool:
+            continue
+        if exclude_dlc and entry.dlc:
+            continue
+        pool[eid] = entry.boss
     if phase_mapping:
         for leader, phase1 in phase_mapping.items():
             if leader not in vanilla_set:
@@ -212,8 +228,11 @@ def _compose_pool(
             entry = tags.get(phase1)
             if entry is None:
                 continue
-            if not entry.boss.exclude_from_pool:
-                pool[phase1] = entry.boss
+            if entry.boss.exclude_from_pool:
+                continue
+            if exclude_dlc and entry.dlc:
+                continue
+            pool[phase1] = entry.boss
     # Union with the other kind's vanilla IDs so the orphan branch below
     # doesn't promote (say) a vanilla minor with arena.type=2 into the
     # major pool. The vanilla branch above already handles each entry in
@@ -222,6 +241,8 @@ def _compose_pool(
     all_vanilla = vanilla_set | set(other_vanilla_ids)
     for eid, entry in tags.items():
         if entry.boss.exclude_from_pool:
+            continue
+        if exclude_dlc and entry.dlc:
             continue
         if entry.pool == kind:
             pool[eid] = entry.boss

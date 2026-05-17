@@ -714,6 +714,25 @@ def test_enemy_config_defaults():
     assert config.enemy.randomize_bosses == "none"
     assert config.enemy.ignore_arena_size is False
     assert config.enemy.swap_boss is False
+    # dlc_bosses defaults to True (non-restrictive: DLC bosses eligible).
+    assert config.enemy.dlc_bosses is True
+
+
+def test_enemy_config_dlc_bosses_from_dict():
+    """enemy.dlc_bosses parses from config dict."""
+    config = Config.from_dict({"enemy": {"dlc_bosses": False}})
+    assert config.enemy.dlc_bosses is False
+
+
+def test_enemy_config_dlc_bosses_from_toml(tmp_path):
+    """enemy.dlc_bosses parses from a TOML file."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[enemy]
+dlc_bosses = false
+""")
+    config = Config.from_toml(config_file)
+    assert config.enemy.dlc_bosses is False
 
 
 def test_enemy_config_from_dict():

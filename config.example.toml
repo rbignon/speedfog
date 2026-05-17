@@ -242,6 +242,12 @@ ignore_arena_size = false
 # Applies to enemies tagged "swappable" in the randomizer's enemy annotations.
 # Default: false
 # swap_boss = false
+# Allow DLC (Shadow of the Erdtree) bosses in the randomization candidate pool.
+# Independent of [item_randomizer].dlc, which controls item-randomizer scope.
+# When false, DLC bosses are filtered from the pool only; arena selection is
+# unchanged, so a DLC arena in the DAG still gets a non-DLC replacement.
+# Default: true
+# dlc_bosses = true
 
 [item_randomizer]
 # Enable Item/Enemy Randomizer integration (default: true)

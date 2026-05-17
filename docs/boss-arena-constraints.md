@@ -34,7 +34,7 @@ record.
 | `pool` | string | no | `"minor"` or `"major"`. When present, it pins the entry to that pool regardless of any `arena` block. Absent for entries that derive their pool from `clusters.json` (or, when no slot exists there, from `arena.type` via the orphan rule below). |
 | `region` | int | yes | BAR's region identifier (1-15). Loaded but not consulted by the current compatibility check. |
 | `scaling` | int | yes | BAR's scaling tier. Loaded but not consulted by the current compatibility check. |
-| `dlc` | bool | yes | True for DLC entities. Loaded but not consulted by the current compatibility check. |
+| `dlc` | bool | yes | True for DLC (Shadow of the Erdtree) entities. Consulted by `_compose_pool` when `enemy.dlc_bosses = false`: DLC entries are filtered from the candidate pool. Arena selection and per-fight compat checks (size, type, etc.) are unaffected. |
 
 ### `boss` block
 
@@ -223,6 +223,13 @@ pool with four ranked branches:
 a vanilla arena target and excluded as a candidate, in which case its
 arena slot is still filled by *some other* compatible boss.
 
+The same "drop-from-pool, keep-as-arena" rule applies to the entity-
+level ``dlc`` flag when ``[enemy].dlc_bosses = false``: DLC entries are
+skipped at every insertion branch above, but arena selection in
+``_build_enemy_assignments`` is untouched. A DLC arena that ends up in
+the DAG (because its cluster was selected by ``clusters.json``) still
+gets a non-DLC replacement boss.
+
 ## Config flags
 
 | Flag | Effect |
@@ -231,6 +238,7 @@ arena slot is still filled by *some other* compatible boss.
 | ``[enemy].randomize_bosses = "minor"`` | Only ``boss_arena`` clusters receive arena-matched bosses. Majors stay vanilla. |
 | ``[enemy].randomize_bosses = "all"`` | Both majors and minors receive arena-matched bosses. |
 | ``[enemy].ignore_arena_size`` | Skip the size gate. Other rules still apply. |
+| ``[enemy].dlc_bosses = false`` | Filter DLC entries from the candidate pool. Arena selection is untouched (DLC arenas still get a non-DLC replacement). Independent of ``[item_randomizer].dlc``, which controls item-randomizer scope. |
 
 ## Wire format
 

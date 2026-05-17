@@ -409,6 +409,10 @@ class EnemyConfig:
     randomize_bosses: str = "none"  # "none", "minor", "all"
     ignore_arena_size: bool = False
     swap_boss: bool = False  # Swap multi-phase boss entities (swappable tag)
+    # When False, DLC bosses are removed from the boss randomization candidate
+    # pool (arena selection is untouched). Independent from
+    # item_randomizer.dlc, which controls item-randomizer scope.
+    dlc_bosses: bool = True
 
     def __post_init__(self) -> None:
         """Validate and normalize enemy config."""
@@ -655,6 +659,7 @@ class Config:
                 randomize_bosses=enemy_section.get("randomize_bosses", "none"),
                 ignore_arena_size=enemy_section.get("ignore_arena_size", False),
                 swap_boss=enemy_section.get("swap_boss", False),
+                dlc_bosses=enemy_section.get("dlc_bosses", True),
             ),
         )
 
