@@ -436,7 +436,7 @@
   "12040800": {
     "name": "Astel Naturalborn of the Void",
     "boss": {
-      "size": 4,
+      "size": 3,
       "type": 2,
       "is_two_phase": false,
       "is_dragon": false,
@@ -1017,23 +1017,6 @@
     "scaling": 25,
     "dlc": true
   },
-  "20010450": {
-    "name": "Hornsent",
-    "boss": {
-      "size": 1,
-      "type": 1,
-      "is_two_phase": false,
-      "is_dragon": false,
-      "is_npc": false,
-      "can_escape": false,
-      "night_boss": false,
-      "exclude_from_pool": false
-    },
-    "pool": "minor",
-    "region": 0,
-    "scaling": 0,
-    "dlc": false
-  },
   "20010451": {
     "name": "Lightning Divine Warrior",
     "boss": {
@@ -1097,7 +1080,7 @@
     "name": "Leda (Leda Fight)",
     "boss": {
       "size": 1,
-      "type": 2,
+      "type": 1,
       "is_two_phase": false,
       "is_dragon": false,
       "is_npc": false,
@@ -1107,7 +1090,7 @@
     },
     "arena": {
       "size": 3,
-      "type": 2,
+      "type": 3,
       "two_phase_not_allowed": true,
       "dragon_not_allowed": true,
       "npc_not_allowed": false,
@@ -1122,7 +1105,7 @@
     "name": "Hornsent (Leda Fight)",
     "boss": {
       "size": 1,
-      "type": 2,
+      "type": 1,
       "is_two_phase": false,
       "is_dragon": false,
       "is_npc": false,
@@ -1132,7 +1115,7 @@
     },
     "arena": {
       "size": 3,
-      "type": 2,
+      "type": 3,
       "two_phase_not_allowed": true,
       "dragon_not_allowed": true,
       "npc_not_allowed": false,
@@ -1147,7 +1130,7 @@
     "name": "Dryleaf Dane (Leda Fight)",
     "boss": {
       "size": 1,
-      "type": 2,
+      "type": 3,
       "is_two_phase": false,
       "is_dragon": false,
       "is_npc": false,
@@ -1260,23 +1243,6 @@
     "scaling": 28,
     "dlc": true
   },
-  "21010450": {
-    "name": "Fire Knight (First Floor)",
-    "boss": {
-      "size": 1,
-      "type": 1,
-      "is_two_phase": false,
-      "is_dragon": false,
-      "is_npc": false,
-      "can_escape": false,
-      "night_boss": false,
-      "exclude_from_pool": false
-    },
-    "pool": "minor",
-    "region": 0,
-    "scaling": 0,
-    "dlc": false
-  },
   "21010461": {
     "name": "Fire Knight (before Messmer)",
     "boss": {
@@ -1343,23 +1309,6 @@
     "region": 20,
     "scaling": 31,
     "dlc": true
-  },
-  "22000460": {
-    "name": "Golden Leonine Misbegotten",
-    "boss": {
-      "size": 1,
-      "type": 1,
-      "is_two_phase": false,
-      "is_dragon": false,
-      "is_npc": false,
-      "can_escape": false,
-      "night_boss": false,
-      "exclude_from_pool": false
-    },
-    "pool": "minor",
-    "region": 0,
-    "scaling": 0,
-    "dlc": false
   },
   "22000800": {
     "name": "Putrescent Knight",
@@ -2639,7 +2588,7 @@
   "32110800": {
     "name": "Astel Stars of Darkness",
     "boss": {
-      "size": 4,
+      "size": 3,
       "type": 6,
       "is_two_phase": false,
       "is_dragon": false,
@@ -2734,23 +2683,6 @@
     },
     "region": 5,
     "scaling": 13,
-    "dlc": false
-  },
-  "35000486": {
-    "name": "Omen",
-    "boss": {
-      "size": 1,
-      "type": 1,
-      "is_two_phase": false,
-      "is_dragon": false,
-      "is_npc": false,
-      "can_escape": false,
-      "night_boss": false,
-      "exclude_from_pool": false
-    },
-    "pool": "minor",
-    "region": 0,
-    "scaling": 0,
     "dlc": false
   },
   "35000800": {
@@ -2952,23 +2884,6 @@
     "region": 22,
     "scaling": 29,
     "dlc": true
-  },
-  "42000200": {
-    "name": "Smith Golem",
-    "boss": {
-      "size": 1,
-      "type": 1,
-      "is_two_phase": false,
-      "is_dragon": false,
-      "is_npc": false,
-      "can_escape": false,
-      "night_boss": false,
-      "exclude_from_pool": false
-    },
-    "pool": "minor",
-    "region": 0,
-    "scaling": 0,
-    "dlc": false
   },
   "42030300": {
     "name": "Smith Golem",
@@ -4632,7 +4547,7 @@
   "1050560800": {
     "name": "Great Wyrm Theodorix",
     "boss": {
-      "size": 4,
+      "size": 2,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": false,
@@ -5520,31 +5435,6 @@
     },
     "region": 20,
     "scaling": 28,
-    "dlc": true
-  },
-  "2049440710": {
-    "name": "Dryleaf Dane",
-    "boss": {
-      "size": 1,
-      "type": 3,
-      "is_two_phase": false,
-      "is_dragon": false,
-      "is_npc": true,
-      "can_escape": false,
-      "night_boss": false,
-      "exclude_from_pool": false
-    },
-    "arena": {
-      "size": 3,
-      "type": 3,
-      "two_phase_not_allowed": false,
-      "dragon_not_allowed": true,
-      "npc_not_allowed": false,
-      "is_escapable": true,
-      "night_boss": false
-    },
-    "region": 20,
-    "scaling": 27,
     "dlc": true
   },
   "2049450800": {
