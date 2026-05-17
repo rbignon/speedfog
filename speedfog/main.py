@@ -468,9 +468,10 @@ def main() -> int:
                 )
                 return 1
 
-            # Clean up transient Item Randomizer config files
-            item_config_path.unlink(missing_ok=True)
-            item_preset_path.unlink(missing_ok=True)
+            if not args.logs:
+                # Clean up transient Item Randomizer config files
+                item_config_path.unlink(missing_ok=True)
+                item_preset_path.unlink(missing_ok=True)
 
     # Build mod unless --no-build
     if not args.no_build:
