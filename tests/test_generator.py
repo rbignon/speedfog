@@ -1683,6 +1683,92 @@ class TestProximityGroups:
         # With 2 entries: e1 blocks x1, e2 blocks x2, only x3 survives
         assert count_net_exits(cluster, 2) == 1
 
+    def test_count_net_exits_caps_by_exit_group(self):
+        """Exits sharing a proximity group are mutually exclusive: at most one
+        can be picked, so capacity caps at 1 for a single multi-exit group."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "e1", "zone": "z"}],
+            exit_fogs=[
+                {"fog_id": "x1", "zone": "z"},
+                {"fog_id": "x2", "zone": "z"},
+                {"fog_id": "x3", "zone": "z"},
+            ],
+            proximity_groups=[["x1", "x2", "x3"]],
+        )
+        # e1 not in any group: consuming it doesn't block any exit. But the
+        # three exits share a group, so at most one is usable.
+        assert count_net_exits(cluster, 1) == 1
+
+    def test_count_net_exits_mixes_grouped_and_ungrouped(self):
+        """Capacity = (distinct groups with a free exit) + (ungrouped exits)."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "e1", "zone": "z"}],
+            exit_fogs=[
+                {"fog_id": "x1", "zone": "z"},
+                {"fog_id": "x2", "zone": "z"},
+                {"fog_id": "x3", "zone": "z"},
+            ],
+            proximity_groups=[["x1", "x2"]],
+        )
+        # x1,x2 share a group (1 slot), x3 is ungrouped (1 slot) -> total 2.
+        assert count_net_exits(cluster, 1) == 2
+
+    def test_split_blocked_and_passant_allowed_when_all_exits_in_one_group(self):
+        """One proximity group covering every exit caps capacity at 1:
+        can_be_split_node(_, 2) is False, can_be_passant_node stays True."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "e1", "zone": "z"}],
+            exit_fogs=[
+                {"fog_id": "x1", "zone": "z"},
+                {"fog_id": "x2", "zone": "z"},
+                {"fog_id": "x3", "zone": "z"},
+            ],
+            proximity_groups=[["x1", "x2", "x3"]],
+        )
+        assert can_be_split_node(cluster, 2) is False
+        assert can_be_passant_node(cluster) is True
+
+    def test_max_independent_exits_overlapping_groups(self):
+        """A fog belonging to multiple groups must not inflate the count.
+        Forward-looking guard: current data has no overlaps but the helper
+        must return a safe (non-overcounting) bound."""
+        from speedfog.generator import _max_independent_exits
+
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[],
+            exit_fogs=[
+                {"fog_id": "A", "zone": "z"},
+                {"fog_id": "B", "zone": "z"},
+                {"fog_id": "C", "zone": "z"},
+            ],
+            # Triangle: every pair of exits shares a group. Max independent
+            # set is 1, but a naive "count groups with members" gives 3.
+            proximity_groups=[["A", "B"], ["B", "C"], ["A", "C"]],
+        )
+        assert _max_independent_exits(cluster, cluster.exit_fogs) == 1
+
+    def test_allow_entry_as_exit_capped_by_exit_group(self):
+        """allow_entry_as_exit clusters must also enforce the exit-vs-exit cap
+        in can_be_split_node / can_be_passant_node."""
+        cluster = make_cluster(
+            "c1",
+            entry_fogs=[{"fog_id": "x1", "zone": "z"}],
+            exit_fogs=[
+                {"fog_id": "x1", "zone": "z"},
+                {"fog_id": "x2", "zone": "z"},
+                {"fog_id": "x3", "zone": "z"},
+            ],
+            allow_entry_as_exit=True,
+            proximity_groups=[["x1", "x2", "x3"]],
+        )
+        # All exits share one group -> at most 1 usable outgoing.
+        assert can_be_split_node(cluster, 2) is False
+        assert can_be_passant_node(cluster) is True
+
     # NOTE: test_pick_entry_with_max_exits_respects_proximity and
     # test_pick_entry_and_exits_filters_proximity deleted -- those functions
     # (pick_entry_with_max_exits, _pick_entry_and_exits_for_node) no longer
@@ -2546,6 +2632,54 @@ def test_count_node_net_exits_subtracts_consumed_entry():
     assert count_node_net_exits(dag, node.id) == 1
 
 
+def test_count_node_net_exits_caps_by_exit_group():
+    """Mid-routing count must respect exit-vs-exit mutual exclusion, otherwise
+    the planner overestimates a layer's outgoing capacity."""
+    from speedfog.generator import count_node_net_exits
+
+    c = ClusterData(
+        id="a",
+        zones=["a"],
+        type="mini_dungeon",
+        weight=10,
+        entry_fogs=[],
+        exit_fogs=[
+            {"fog_id": "F1", "zone": "z1"},
+            {"fog_id": "F2", "zone": "z1"},
+            {"fog_id": "F3", "zone": "z1"},
+        ],
+        proximity_groups=[["F1", "F2", "F3"]],
+    )
+    node = _mk_node_re(c, layer=0)
+    dag = Dag(seed=0)
+    dag.add_node(node)
+    assert count_node_net_exits(dag, node.id) == 1
+
+
+def test_count_node_net_exits_caps_allow_entry_as_exit():
+    """allow_entry_as_exit clusters must also honor exit-vs-exit grouping."""
+    from speedfog.generator import count_node_net_exits
+
+    c = ClusterData(
+        id="a",
+        zones=["a"],
+        type="boss_arena",
+        weight=10,
+        entry_fogs=[{"fog_id": "F1", "zone": "z1"}],
+        exit_fogs=[
+            {"fog_id": "F1", "zone": "z1"},
+            {"fog_id": "F2", "zone": "z1"},
+        ],
+        allow_entry_as_exit=True,
+        proximity_groups=[["F1", "F2"]],
+    )
+    node = _mk_node_re(c, layer=1, entry=FogRef("F1", "z1"))
+    dag = Dag(seed=0)
+    dag.add_node(node)
+    # F1 and F2 share a group -> only one is usable as an outgoing exit.
+    assert count_node_net_exits(dag, node.id) == 1
+
+
 def test_compute_target_width_saturation_under_cap():
     from speedfog.generator import compute_target_width
 
@@ -2799,6 +2933,69 @@ def test_route_exits_phase2_drops_surplus_when_more_exits_than_targets():
     # No multi-edges
     pairs = {(e.source_id, e.target_id) for e in out_edges}
     assert len(pairs) == 3
+
+
+def test_free_exits_excludes_same_group_after_used():
+    """Once an exit is consumed, other exits in the same proximity group
+    are no longer eligible (per-source exit-vs-exit mutual exclusion)."""
+    from speedfog.generator import _free_exits
+
+    s_c = ClusterData(
+        id="s",
+        zones=["s_zone"],
+        type="mini_dungeon",
+        weight=10,
+        entry_fogs=[],
+        exit_fogs=[
+            {"fog_id": "F1", "zone": "z1"},
+            {"fog_id": "F2", "zone": "z1"},
+            {"fog_id": "F3", "zone": "z1"},
+        ],
+        proximity_groups=[["F1", "F2"]],
+    )
+    t_c = _mk_cluster_re("t", entries=[("E1", "z2")], exits=[])
+    s = _mk_node_re(s_c, layer=0)
+    t = _mk_node_re(t_c, layer=1)
+    dag = Dag(seed=0)
+    for n in (s, t):
+        dag.add_node(n)
+    dag.add_edge(s.id, t.id, FogRef("F1", "z1"), FogRef("E1", "z2"))
+
+    remaining = {f["fog_id"] for f in _free_exits(dag, s.id)}
+    # F2 shares a group with F1 -> filtered out. F3 is ungrouped -> available.
+    assert remaining == {"F3"}
+
+
+def test_connect_nodes_does_not_repeat_proximity_group():
+    """Successive connect_nodes calls on the same source cannot pick two
+    exits from the same proximity group."""
+    from speedfog.generator import connect_nodes
+
+    s_c = ClusterData(
+        id="s",
+        zones=["s_zone"],
+        type="mini_dungeon",
+        weight=10,
+        entry_fogs=[],
+        exit_fogs=[
+            {"fog_id": "F1", "zone": "z1"},
+            {"fog_id": "F2", "zone": "z1"},
+            {"fog_id": "F3", "zone": "z1"},
+        ],
+        proximity_groups=[["F1", "F2", "F3"]],
+    )
+    t1_c = _mk_cluster_re("t1", entries=[("E1", "z2")], exits=[])
+    t2_c = _mk_cluster_re("t2", entries=[("E2", "z3")], exits=[])
+    s = _mk_node_re(s_c, layer=0)
+    t1, t2 = _mk_node_re(t1_c, layer=1), _mk_node_re(t2_c, layer=1)
+    dag = Dag(seed=0)
+    for n in (s, t1, t2):
+        dag.add_node(n)
+    rng = random.Random(0)
+
+    assert connect_nodes(dag, s, t1, rng) is True
+    # All remaining exits share a group with the consumed one: no edge possible.
+    assert connect_nodes(dag, s, t2, rng) is False
 
 
 def test_route_exits_phase2_proximity_diversity_kept():

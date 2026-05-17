@@ -91,10 +91,16 @@ Multi-edges (two fog gates from the same source to the same target) are forbidde
 
 ## Exit Selection and Proximity
 
-When choosing which exit to use for a new edge, `_exits_ordered_by_diversity()` sorts the cluster's
-free exits to maximise proximity-group diversity. Exits are grouped by `proximity_groups`
-membership and round-robined across groups (largest groups first), so successive edges from the
-same source spread across geographically distinct fog gates.
+When choosing which exit to use for a new edge, `connect_nodes()` picks uniformly at random from
+`_free_exits()`. The pool itself enforces proximity-group constraints, so any choice is admissible
+and no ordering heuristic is needed.
+
+`_free_exits()` excludes:
+- exits already claimed by an outgoing edge on the source;
+- exits filtered out by `compute_net_exits` / `_filter_exits_by_proximity` (entry-vs-exit
+  constraint);
+- exits sharing a proximity group with an already-used exit on the same source (exit-vs-exit
+  mutual exclusion).
 
 When an entry fog belongs to a proximity group, exits in the same group on the target are excluded
 from `_free_entries()`. This prevents the player from exiting through a fog gate physically adjacent
@@ -124,7 +130,9 @@ physically converging on the same fog gate (see "Shared Entrance Handling" in
 4. Return `total_exits - bidirectional_consumed`
 
 When `proximity_groups` are present, all entry combinations are evaluated and the worst-case
-(minimum) net exits is returned.
+(minimum) net exits is returned. The count is then capped by `_max_independent_exits`: exits
+sharing a proximity group are mutually exclusive on a given source, so each group contributes at
+most one slot to the capacity.
 
 `count_node_net_exits(dag, node_id)` adapts this for mid-routing: it also subtracts exits already
 used by outgoing edges so that the count stays accurate as edges are added incrementally.
@@ -151,9 +159,15 @@ bidirectional subtraction for these clusters.
 
 ### Proximity Groups
 
-A cluster may define `proximity_groups`: lists of fog IDs that are spatially close in-game. When
-an entry fog belongs to a proximity group, exits in the same group are excluded. This prevents the
-player from exiting through a fog gate physically adjacent to where they entered.
+A cluster may define `proximity_groups`: lists of fog IDs that are spatially close in-game. Two
+constraints apply:
+
+- **Entry-vs-exit**: when an entry fog belongs to a proximity group, exits in the same group are
+  excluded. This prevents the player from exiting through a fog gate physically adjacent to where
+  they entered.
+- **Exit-vs-exit**: on a given source, exits sharing a proximity group are mutually exclusive,
+  i.e. only one fog gate per group can be used as an outgoing edge. This keeps successive edges
+  from the same source geographically spread instead of clustered on adjacent gates.
 
 ## Generation Flow
 
