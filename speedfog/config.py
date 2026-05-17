@@ -98,11 +98,8 @@ class StructureConfig:
     """DAG structure configuration."""
 
     max_parallel_paths: int = 3
-    split_probability: float = 0.9
-    merge_probability: float = 0.5
-    max_branches: int = 3
-    _max_exits: int | None = field(default=None, repr=False)  # Split fan-out
-    _max_entrances: int | None = field(default=None, repr=False)  # Merge fan-in
+    max_exits: int = 3  # Split fan-out
+    max_entrances: int = 3  # Merge fan-in
     first_layer_type: str | None = None
     final_boss_candidates: dict[str, int] = field(default_factory=dict)
     start_tier: int = 1  # Enemy scaling tier for first layer (1-28)
@@ -115,50 +112,25 @@ class StructureConfig:
     )
     layers_count: int = 30  # Total layers (start + intermediates + final boss)
 
-    @property
-    def max_exits(self) -> int:
-        """Split fan-out. Falls back to max_branches when not explicitly set."""
-        return self._max_exits if self._max_exits is not None else self.max_branches
-
-    @max_exits.setter
-    def max_exits(self, value: int | None) -> None:
-        object.__setattr__(self, "_max_exits", value)
-
-    @property
-    def max_entrances(self) -> int:
-        """Merge fan-in. Falls back to max_branches when not explicitly set."""
-        return (
-            self._max_entrances
-            if self._max_entrances is not None
-            else self.max_branches
-        )
-
-    @max_entrances.setter
-    def max_entrances(self, value: int | None) -> None:
-        object.__setattr__(self, "_max_entrances", value)
-
     def __post_init__(self) -> None:
         """Validate structure configuration."""
-        if self.max_branches < 1:
-            raise ValueError(f"max_branches must be >= 1, got {self.max_branches}")
         if self.max_parallel_paths < 1:
             raise ValueError(
                 f"max_parallel_paths must be >= 1, got {self.max_parallel_paths}"
             )
-        # Validate individual bounds (properties resolve None → max_branches)
         if self.max_exits < 1:
             raise ValueError(f"max_exits must be >= 1, got {self.max_exits}")
         if self.max_entrances < 1:
             raise ValueError(f"max_entrances must be >= 1, got {self.max_entrances}")
-        # Cross-validation: splits need room for parallel paths
+        # Cross-validation: splits and merges both need room for parallel paths
         if self.max_exits >= 2 and self.max_parallel_paths < 2:
             raise ValueError(
                 f"max_parallel_paths must be >= 2 when max_exits >= 2, "
                 f"got max_parallel_paths={self.max_parallel_paths}"
             )
-        if self.max_branches >= 2 and self.max_parallel_paths < 2:
+        if self.max_entrances >= 2 and self.max_parallel_paths < 2:
             raise ValueError(
-                f"max_parallel_paths must be >= 2 when max_branches >= 2, "
+                f"max_parallel_paths must be >= 2 when max_entrances >= 2, "
                 f"got max_parallel_paths={self.max_parallel_paths}"
             )
         if not isinstance(self.start_tier, int):
@@ -541,6 +513,15 @@ class Config:
         budget_section = data.get("budget", {})
         requirements_section = data.get("requirements", {})
         structure_section = data.get("structure", {})
+        for legacy in ("split_probability", "merge_probability", "max_branches"):
+            if legacy in structure_section:
+                warnings.warn(
+                    f"structure.{legacy} is no longer supported and will be ignored; "
+                    "remove it from your config. "
+                    "(max_branches was replaced by max_exits + max_entrances.)",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
         paths_section = data.get("paths", {})
         starting_items_section = data.get("starting_items", {})
         item_randomizer_section = data.get("item_randomizer", {})
@@ -580,11 +561,8 @@ class Config:
             ),
             structure=StructureConfig(
                 max_parallel_paths=structure_section.get("max_parallel_paths", 3),
-                split_probability=structure_section.get("split_probability", 0.9),
-                merge_probability=structure_section.get("merge_probability", 0.5),
-                max_branches=structure_section.get("max_branches", 3),
-                _max_exits=structure_section.get("max_exits"),
-                _max_entrances=structure_section.get("max_entrances"),
+                max_exits=structure_section.get("max_exits", 3),
+                max_entrances=structure_section.get("max_entrances", 3),
                 first_layer_type=structure_section.get("first_layer_type"),
                 final_boss_candidates=_parse_final_boss_candidates(
                     structure_section.get("final_boss_candidates", {})
@@ -653,6 +631,7 @@ class Config:
                 dlc=item_randomizer_section.get("dlc", True),
                 nerf_gargoyles=item_randomizer_section.get("nerf_gargoyles", True),
                 nerf_malenia=item_randomizer_section.get("nerf_malenia", False),
+                allcraft=item_randomizer_section.get("allcraft", True),
                 item_preset=item_randomizer_section.get("item_preset", True),
                 item_preset_path=item_randomizer_section.get("item_preset_path", ""),
             ),

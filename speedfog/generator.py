@@ -318,7 +318,7 @@ def validate_config(
             )
 
     # Check pool capacity against requirements with branching
-    max_branches = config.structure.max_parallel_paths
+    max_parallel = config.structure.max_parallel_paths
     requirement_map = {
         "legacy_dungeon": config.requirements.legacy_dungeons,
         "boss_arena": config.requirements.bosses,
@@ -329,11 +329,11 @@ def validate_config(
         if required == 0:
             continue
         pool_size = len(clusters.get_by_type(cluster_type))
-        max_consumption = required * max_branches
+        max_consumption = required * max_parallel
         if max_consumption > pool_size:
             warnings.append(
                 f"{cluster_type}: requirement ({required}) x max_parallel_paths "
-                f"({max_branches}) = {max_consumption} exceeds pool size "
+                f"({max_parallel}) = {max_consumption} exceeds pool size "
                 f"({pool_size}); type may be exhausted during generation"
             )
 

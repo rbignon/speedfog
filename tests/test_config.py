@@ -474,6 +474,17 @@ auto_upgrade_weapons = false
     assert config.item_randomizer.auto_upgrade_weapons is False
 
 
+def test_item_randomizer_allcraft_from_toml(tmp_path):
+    """allcraft parses from TOML (regression: was silently ignored)."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[item_randomizer]
+allcraft = false
+""")
+    config = Config.from_toml(config_file)
+    assert config.item_randomizer.allcraft is False
+
+
 def test_item_randomizer_item_preset_from_toml(tmp_path):
     """item_preset and item_preset_path parse from TOML."""
     config_file = tmp_path / "config.toml"
@@ -697,21 +708,6 @@ sentry_torch_shop = false
     assert config.sentry_torch_shop is False
 
 
-def test_max_branches_cross_validation():
-    """max_parallel_paths=1 with max_branches>=2 raises ValueError."""
-    with pytest.raises(ValueError, match="max_parallel_paths must be >= 2"):
-        Config.from_dict({"structure": {"max_parallel_paths": 1, "max_branches": 2}})
-
-
-def test_max_branches_one_allows_single_path():
-    """max_branches=1 with max_parallel_paths=1 is valid (linear only)."""
-    config = Config.from_dict(
-        {"structure": {"max_parallel_paths": 1, "max_branches": 1}}
-    )
-    assert config.structure.max_parallel_paths == 1
-    assert config.structure.max_branches == 1
-
-
 def test_enemy_config_defaults():
     """EnemyConfig has correct defaults."""
     config = Config.from_dict({})
@@ -768,26 +764,23 @@ def test_enemy_config_invalid_value():
         Config.from_dict({"enemy": {"randomize_bosses": "invalid"}})
 
 
-def test_max_exits_entrances_default_to_max_branches():
-    """max_exits and max_entrances default to max_branches when not set."""
-    config = Config.from_dict({"structure": {"max_branches": 4}})
-    assert config.structure.max_exits == 4
-    assert config.structure.max_entrances == 4
+def test_max_exits_entrances_defaults():
+    """max_exits and max_entrances default to 3."""
+    config = Config.from_dict({})
+    assert config.structure.max_exits == 3
+    assert config.structure.max_entrances == 3
 
 
-def test_max_exits_entrances_explicit_override():
-    """Explicit max_exits/max_entrances override max_branches independently."""
-    config = Config.from_dict(
-        {"structure": {"max_branches": 3, "max_exits": 4, "max_entrances": 2}}
-    )
+def test_max_exits_entrances_explicit():
+    """max_exits/max_entrances parse independently from TOML."""
+    config = Config.from_dict({"structure": {"max_exits": 4, "max_entrances": 2}})
     assert config.structure.max_exits == 4
     assert config.structure.max_entrances == 2
-    assert config.structure.max_branches == 3  # Unchanged
 
 
-def test_max_exits_partial_override():
-    """Setting only max_exits leaves max_entrances defaulting to max_branches."""
-    config = Config.from_dict({"structure": {"max_branches": 3, "max_exits": 4}})
+def test_max_exits_partial_keeps_entrances_default():
+    """Setting only max_exits leaves max_entrances at the default."""
+    config = Config.from_dict({"structure": {"max_exits": 4}})
     assert config.structure.max_exits == 4
     assert config.structure.max_entrances == 3
 
@@ -807,9 +800,24 @@ def test_max_entrances_validation():
 def test_max_exits_cross_validation():
     """max_exits >= 2 requires max_parallel_paths >= 2."""
     with pytest.raises(ValueError, match="max_parallel_paths must be >= 2"):
+        Config.from_dict({"structure": {"max_parallel_paths": 1, "max_exits": 2}})
+
+
+def test_max_entrances_cross_validation():
+    """max_entrances >= 2 requires max_parallel_paths >= 2."""
+    with pytest.raises(ValueError, match="max_parallel_paths must be >= 2"):
         Config.from_dict(
-            {"structure": {"max_parallel_paths": 1, "max_branches": 1, "max_exits": 2}}
+            {"structure": {"max_parallel_paths": 1, "max_exits": 1, "max_entrances": 2}}
         )
+
+
+@pytest.mark.parametrize(
+    "legacy_key", ["split_probability", "merge_probability", "max_branches"]
+)
+def test_removed_structure_keys_emit_deprecation_warning(legacy_key):
+    """Legacy structure keys emit DeprecationWarning instead of silently being ignored."""
+    with pytest.warns(DeprecationWarning, match=legacy_key):
+        Config.from_dict({"structure": {legacy_key: 1}})
 
 
 def test_max_exits_entrances_from_toml(tmp_path):
@@ -821,28 +829,6 @@ max_exits = 4
 max_entrances = 2
 """)
     config = Config.from_toml(config_file)
-    assert config.structure.max_exits == 4
-    assert config.structure.max_entrances == 2
-
-
-def test_max_branches_mutation_updates_properties():
-    """Mutating max_branches updates max_exits/max_entrances (fallback behavior)."""
-    config = Config.from_dict(
-        {"structure": {"max_parallel_paths": 1, "max_branches": 1}}
-    )
-    assert config.structure.max_exits == 1
-    assert config.structure.max_entrances == 1
-    config.structure.max_branches = 2
-    config.structure.max_parallel_paths = 3
-    assert config.structure.max_exits == 2
-    assert config.structure.max_entrances == 2
-
-
-def test_explicit_override_survives_max_branches_mutation():
-    """Explicit max_exits is not overridden by later max_branches mutation."""
-    config = Config.from_dict({"structure": {"max_exits": 4, "max_entrances": 2}})
-    config.structure.max_branches = 1
-    config.structure.max_parallel_paths = 1
     assert config.structure.max_exits == 4
     assert config.structure.max_entrances == 2
 
@@ -1059,5 +1045,8 @@ def test_structure_config_drops_legacy_fields():
         "min_branch_age",
         "max_branch_spacing",
         "crosslinks",
+        "max_branches",
+        "split_probability",
+        "merge_probability",
     ):
         assert not hasattr(cfg, legacy), f"{legacy} still present"

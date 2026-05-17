@@ -297,10 +297,7 @@ Config validation runs once before any attempts; invalid config raises `Generati
 | `structure.max_parallel_paths` | 3 | Maximum concurrent nodes per layer |
 | `structure.max_exits` | 3 | Maximum fan-out when routing (caps exit count per source) |
 | `structure.max_entrances` | 3 | Maximum fan-in per target node |
-| `structure.max_branches` | 3 | Default for max_exits/max_entrances (backward compat) |
 | `structure.layers_count` | 30 | Total layers (start + intermediates + final boss) |
-| `structure.split_probability` | 0.9 | (retained for compat; not used by the exit-driven loop) |
-| `structure.merge_probability` | 0.5 | (retained for compat; not used by the exit-driven loop) |
 | `structure.first_layer_type` | None | Force type for first layer |
 | `requirements.major_bosses` | 8 | Number of major boss layers |
 | `structure.final_boss_candidates` | `{"leyndell_erdtree": 1, "enirilim_radahn": 1}` | Possible end bosses (zone -> weight). Also accepts a flat list (all weight 1). |
