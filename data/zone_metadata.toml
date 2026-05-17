@@ -44,7 +44,12 @@ weight = 3
 weight = 3
 
 [zones.haligtree]
+type = "mini_dungeon"
 weight = 3
+
+[zones.haligtree_elphael]
+type = "mini_dungeon"
+weight = 4
 
 [zones.farumazula]
 weight = 2.5
@@ -134,7 +139,26 @@ weight = 2.5
 [zones.snowfield_catacombs]
 weight = 2.5
 
+[zones.siofrabank_prenokron]
+type = "mini_dungeon"
+
+[zones.ainsel]
+type = "mini_dungeon"
+
+[zones.ainsel_abovestart]
+type = "mini_dungeon"
+
+[zones.deeproot]
+weight = 2
+type = "mini_dungeon"
+
+[zones.siofra_nokron]
+type = "mini_dungeon"
+
 # --- DLC ---
+
+[zones.fissure]
+type = "mini_dungeon"
 
 [zones.gravesite_catacombs]
 weight = 3.5
@@ -588,6 +612,34 @@ proximity_groups = [
     ["AEG099_001_9001", # Godskin Duo front left (after Duo)
      "AEG099_230_9000", # Before elevator to Dragon Temple Lift
     ],
+]
+
+[clusters.ainsel_253f]
+allowed_exits = [
+  "AEG099_231_9002",
+]
+
+[clusters.ainsel_abovestart_fccd]
+allowed_exits = [
+  "AEG099_002_9000",
+]
+
+[clusters.rauhruins_east_aa23]
+weight = 4
+
+[clusters.fissure_e510]
+weight = 3
+
+[clusters.siofra_nokron_8a39]
+weight = 2.5
+allowed_exits = [
+    "12022670",
+    "AEG099_002_9002",
+]
+
+[clusters.deeproot_bd58]
+allowed_entries = [
+  "12032502",
 ]
 
 # =============================================================================
