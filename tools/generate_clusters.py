@@ -1774,10 +1774,6 @@ def filter_and_enrich_clusters(
         short_hash = hashlib.md5(hash_input).hexdigest()[:4]
         cluster.cluster_id = f"{primary_zone}_{short_hash}"
 
-        # Skip underground clusters (large empty exploration areas)
-        if cluster.cluster_type == "underground":
-            continue
-
         # Calculate cluster weight with logarithmic aggregation.
         # Players traverse a path through zones, not all of them,
         # so additional zones have diminishing impact on traversal time.
