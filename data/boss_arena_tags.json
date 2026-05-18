@@ -236,7 +236,7 @@
   "12010800": {
     "name": "Dragonkin Soldier of Nokstella",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 2,
       "is_two_phase": false,
       "is_dragon": true,
@@ -261,7 +261,7 @@
   "12010850": {
     "name": "Dragonkin Soldier Lake of Rot",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": true,
@@ -311,7 +311,7 @@
   "12020830": {
     "name": "Dragonkin Soldier Siofra",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": true,
@@ -1663,7 +1663,7 @@
   "30100800": {
     "name": "Crucible Knight Duo",
     "boss": {
-      "size": 2,
+      "size": 4,
       "type": 5,
       "is_two_phase": false,
       "is_dragon": false,
@@ -3030,7 +3030,7 @@
   "1034420800": {
     "name": "Glintstone Dragon Adula",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": true,
@@ -3055,7 +3055,7 @@
   "1034450800": {
     "name": "Glintstone Dragon Smarag",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": true,
@@ -3747,7 +3747,7 @@
   "1041520800": {
     "name": "Ancient Dragon Lansseax",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": true,
@@ -3997,7 +3997,7 @@
   "1043360800": {
     "name": "Flying Dragon Agheel",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": true,
@@ -4272,7 +4272,7 @@
   "1048370800": {
     "name": "Decaying Ekzykes",
     "boss": {
-      "size": 2,
+      "size": 3,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": true,
@@ -4781,7 +4781,7 @@
   "1052410800": {
     "name": "Flying Dragon Greyll",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": true,
@@ -4931,7 +4931,7 @@
   "1054560800": {
     "name": "Borealis the Freezing Fog",
     "boss": {
-      "size": 2,
+      "size": 3,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": false,
@@ -5056,7 +5056,7 @@
   "2045440800": {
     "name": "Ghostflame Dragon Gravesite",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": true,
@@ -5365,7 +5365,7 @@
   "2049410800": {
     "name": "Jagged Peak Drake 1",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": true,
@@ -5390,7 +5390,7 @@
   "2049430800": {
     "name": "Ghostflame Dragon Reprimand",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": true,
@@ -5590,7 +5590,7 @@
   "2052400800": {
     "name": "Jagged Peak Drake 2",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": true,
@@ -5690,7 +5690,7 @@
   "2054390850": {
     "name": "Ancient Dragon Senessax",
     "boss": {
-      "size": 1,
+      "size": 2,
       "type": 3,
       "is_two_phase": false,
       "is_dragon": true,
