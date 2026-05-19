@@ -436,9 +436,6 @@ weight = 2
 [clusters.sewer_46d2]
 weight = 2
 
-[clusters.volcano_808b]
-weight = 1
-
 [clusters.graveyard_grave_65d8]
 proximity_groups = [
     ["AEG099_230_9000", # Stranded Graveyard first door
@@ -642,6 +639,13 @@ allowed_exits = [
 [clusters.deeproot_bd58]
 allowed_entries = [
   "12032502",
+]
+
+[clusters.volcano_808b]
+weight = 1
+allowed_exits = [
+    "AEG099_003_0501", # after Godskin Noble's arena to the back left, down the shortcut elevator
+    "AEG099_232_9005", # at the end of the dark hallway leading to Prison Town
 ]
 
 # =============================================================================
