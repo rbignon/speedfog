@@ -71,6 +71,7 @@ def generate_item_config(
             # native HP (no tier->tier rescaling SpEffect injected).
             "scale": True,
             "phasehp": True,
+            "nerflantern": True,
             "nohand": config.item_randomizer.remove_requirements,
             "dlc": config.item_randomizer.dlc,
             "weaponreqs": config.item_randomizer.remove_requirements,
