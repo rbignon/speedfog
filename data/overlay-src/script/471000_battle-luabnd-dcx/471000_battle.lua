@@ -1,3 +1,8 @@
+-- Rykard Script
+--
+-- Changes:
+-- - Remove the P2 midlife Mega attack (do not handle SpEffect 11941)
+
 RegisterTableGoal(GOAL_KingGhoul_471000_Battle, "KingGhoul_471000_Battle")
 REGISTER_GOAL_NO_SUB_GOAL(GOAL_KingGhoul_471000_Battle, true)
 
@@ -16,7 +21,8 @@ Goal.Activate = function (self, ai, goal)
     local hasEffect11900 = ai:HasSpecialEffectId(TARGET_SELF, 11900)
     local hasEffect11901 = ai:HasSpecialEffectId(TARGET_SELF, 11901)
     local hasEffect11902 = ai:HasSpecialEffectId(TARGET_SELF, 11902)
-    local hasEffect11941 = ai:HasSpecialEffectId(TARGET_SELF, 11941)
+    -- Do not handle SpEffect 11941 to prevent Mega attack
+    local hasEffect11941 = false
     local hasEffect11945 = ai:HasSpecialEffectId(TARGET_SELF, 11945)
     local hasEffect11947 = ai:HasSpecialEffectId(TARGET_SELF, 11947)
     local hasEffect5030 = ai:HasSpecialEffectId(TARGET_SELF, 5030)
@@ -1024,7 +1030,8 @@ Goal.Interrupt = function (self, ai, goal)
     local hasEffect11900 = ai:HasSpecialEffectId(TARGET_SELF, 11900)
     local hasEffect11901 = ai:HasSpecialEffectId(TARGET_SELF, 11901)
     local hasEffect11902 = ai:HasSpecialEffectId(TARGET_SELF, 11902)
-    local hasEffect11941 = ai:HasSpecialEffectId(TARGET_SELF, 11941)
+    -- Do not handle SpEffect 11941 to prevent Mega attack
+    local hasEffect11941 = false
     local hasEffect11945 = ai:HasSpecialEffectId(TARGET_SELF, 11945)
     local hasEffect5030 = ai:HasSpecialEffectId(TARGET_SELF, 5030)
     if ai:IsLadderAct(TARGET_SELF) then
