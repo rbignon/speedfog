@@ -620,12 +620,12 @@ proximity_groups = [
 
 [clusters.ainsel_253f]
 allowed_exits = [
-  "AEG099_231_9002",
+  "AEG099_231_9002",    # Path to side Ainsel river
 ]
 
 [clusters.ainsel_abovestart_fccd]
 allowed_exits = [
-  "AEG099_002_9000",
+  "AEG099_002_9000",    # Before Dragonkin
 ]
 
 [clusters.rauhruins_east_aa23]
@@ -637,20 +637,33 @@ weight = 3
 [clusters.siofra_nokron_8a39]
 weight = 2.5
 allowed_exits = [
-    "12022670",
-    "AEG099_002_9002",
+    "12022670",          # Waygate
+    "AEG099_002_9002",   # Before Gargoyles
 ]
 
 [clusters.deeproot_bd58]
 allowed_entries = [
-  "12032502",
+  "12032502",  # Start
 ]
 
 [clusters.volcano_808b]
-weight = 1
+weight = 2
 allowed_exits = [
     "AEG099_003_0501", # after Godskin Noble's arena to the back left, down the shortcut elevator
     "AEG099_232_9005", # at the end of the dark hallway leading to Prison Town
+]
+
+[clusters.volcano_town_d40f]
+weight = 2
+
+[clusters.scadualtus_catacombs_7a82]
+allowed_entries = [
+    "AEG099_230_9000", # Main entrance
+]
+
+[clusters.rauhbase_catacombs_0072]
+allowed_entries = [
+    "AEG099_230_9000", # Main entrance
 ]
 
 # =============================================================================
