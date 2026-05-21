@@ -68,8 +68,11 @@ data/enemy.txt
 data/clusters.json
 data/fog_data.json
 
-# Overlay files (user-provided game file overrides, e.g. modified animations)
+# Overlay files (built by tools/bootstrap.py: GamePatcher + WitchyBND repack)
 data/overlay/
+
+# WitchyBND (downloaded by tools/bootstrap.py for overlay script repack)
+tools/witchybnd/
 
 # Packaging files populated by tools/bootstrap.py
 data/packaging/me3/

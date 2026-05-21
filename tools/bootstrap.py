@@ -3,7 +3,7 @@
 Bootstrap the SpeedFog project from Nexusmods mod archives.
 
 Extracts dependencies, generates derived data, builds C# wrappers,
-and runs GamePatcher for overlay generation.
+and runs GamePatcher and WitchyBND for overlay generation.
 
 This script extracts:
 - FogRando:
@@ -16,6 +16,9 @@ This script extracts:
   - Runtime DLLs → data/packaging/lib/
 - ModEngine 2:
   - launcher + runtime → data/packaging/modengine2/
+- WitchyBND (Windows build, run via Wine on Linux):
+  - extracted to tools/witchybnd/ (downloaded lazily when scripts need repacking)
+  - repacks data/overlay-src/script/*-luabnd-dcx/ into data/overlay/script/
 
 Prerequisites:
 - sfextract (dotnet tool): dotnet tool install -g sfextract
@@ -53,6 +56,9 @@ DATA_DEST = PROJECT_ROOT / "data"
 PACKAGING_DEST = DATA_DEST / "packaging"
 PACKAGING_LIB_DEST = PACKAGING_DEST / "lib"
 MODENGINE_DEST = PACKAGING_DEST / "modengine2"
+WITCHYBND_DEST = PROJECT_ROOT / "tools" / "witchybnd"
+OVERLAY_SRC_DEST = DATA_DEST / "overlay-src"
+OVERLAY_DEST = DATA_DEST / "overlay"
 
 # Files to extract from eldendata/Base/ to data/
 FOGRANDO_DATA_FILES = [
@@ -97,6 +103,9 @@ ITEMRANDO_EXTRA_DLLS = [
 MODENGINE_RELEASE_API = (
     "https://api.github.com/repos/soulsmods/ModEngine2/releases/latest"
 )
+
+WITCHYBND_RELEASE_API = "https://api.github.com/repos/ividyon/WitchyBND/releases/latest"
+WITCHYBND_ASSET_SUFFIX = "-win-x64.zip"
 
 
 def print_step(step: int, total: int, message: str) -> None:
@@ -760,8 +769,7 @@ def run_modpatcher(game_dir: Path) -> bool:
         print_error("GamePatcher not published, skipping overlay generation")
         return True
 
-    overlay_dir = DATA_DEST / "overlay"
-    overlay_dir.mkdir(parents=True, exist_ok=True)
+    OVERLAY_DEST.mkdir(parents=True, exist_ok=True)
 
     # Detect platform
     if sys.platform == "win32":
@@ -772,7 +780,7 @@ def run_modpatcher(game_dir: Path) -> bool:
             return True
         cmd = ["wine", str(patcher_exe)]
 
-    cmd.extend([str(game_dir.resolve()), str(overlay_dir.resolve())])
+    cmd.extend([str(game_dir.resolve()), str(OVERLAY_DEST.resolve())])
 
     try:
         result = subprocess.run(
@@ -791,6 +799,191 @@ def run_modpatcher(game_dir: Path) -> bool:
         return False
 
     print_ok("Overlay files generated in data/overlay/")
+    return True
+
+
+def is_witchybnd_installed() -> bool:
+    """Check if WitchyBND has been extracted under tools/witchybnd/."""
+    return (WITCHYBND_DEST / "WitchyBND.exe").exists() and (
+        WITCHYBND_DEST / "oo2core_6_win64.dll"
+    ).exists()
+
+
+def select_witchybnd_asset(release: dict) -> dict | None:
+    """Pick the Windows x64 asset from a WitchyBND GitHub release payload."""
+    candidates = [
+        a
+        for a in release.get("assets", [])
+        if a.get("name", "").endswith(WITCHYBND_ASSET_SUFFIX)
+    ]
+    if not candidates:
+        return None
+    if len(candidates) > 1:
+        names = ", ".join(c.get("name", "") for c in candidates)
+        print_info(f"Multiple win-x64 zip assets matched ({names}); using the first")
+    return candidates[0]
+
+
+def ensure_witchybnd(force: bool = False) -> bool:
+    """Download and extract WitchyBND (Windows build) into tools/witchybnd/.
+
+    Also copies oo2core_6_win64.dll next to WitchyBND.exe so Wine can resolve
+    Oodle from the standard DLL search path.
+    """
+    print("\n" + "=" * 50)
+    print("Setting up WitchyBND")
+    print("=" * 50)
+
+    oodle_src = WRITER_LIB / "oo2core_6_win64.dll"
+    if not oodle_src.exists():
+        print_error(
+            f"{oodle_src.name} missing in writer/lib/;"
+            " --game-dir must point to an Elden Ring install that provides it"
+        )
+        return False
+
+    if is_witchybnd_installed() and not force:
+        print_ok(
+            "WitchyBND already installed in tools/witchybnd/"
+            " (use --force to reinstall)"
+        )
+        return True
+
+    try:
+        print_info("Fetching latest WitchyBND release metadata...")
+        req = urllib.request.Request(
+            WITCHYBND_RELEASE_API,
+            headers={"User-Agent": "SpeedFog/1.0"},
+        )
+        with urllib.request.urlopen(req, timeout=60) as response:
+            release = json.loads(response.read().decode("utf-8"))
+    except OSError as e:
+        print_error(f"Failed to query WitchyBND release: {e}")
+        return False
+
+    asset = select_witchybnd_asset(release)
+    if asset is None:
+        print_error(
+            f"Could not find a *{WITCHYBND_ASSET_SUFFIX} asset"
+            " in latest WitchyBND release"
+        )
+        return False
+
+    archive_path = Path(tempfile.gettempdir()) / asset["name"]
+    try:
+        print_info(f"Downloading {asset['name']}...")
+        req = urllib.request.Request(
+            asset["browser_download_url"],
+            headers={"User-Agent": "SpeedFog/1.0"},
+        )
+        with urllib.request.urlopen(req, timeout=600) as response:
+            with archive_path.open("wb") as out:
+                shutil.copyfileobj(response, out)
+
+        print_info("Extracting WitchyBND...")
+        if WITCHYBND_DEST.exists():
+            shutil.rmtree(WITCHYBND_DEST)
+        WITCHYBND_DEST.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(archive_path, "r") as zf:
+            zf.extractall(WITCHYBND_DEST)
+
+        shutil.copy2(oodle_src, WITCHYBND_DEST / oodle_src.name)
+        version = release.get("tag_name", "unknown")
+        (WITCHYBND_DEST / "version.txt").write_text(f"{version}\n", encoding="utf-8")
+    except (OSError, zipfile.BadZipFile, KeyError) as e:
+        print_error(f"Failed to install WitchyBND: {e}")
+        return False
+    finally:
+        archive_path.unlink(missing_ok=True)
+
+    if not is_witchybnd_installed():
+        print_error("WitchyBND extraction completed but required files are missing")
+        return False
+
+    print_ok(
+        f"WitchyBND {release.get('tag_name', 'unknown')}"
+        " installed in tools/witchybnd/"
+    )
+    return True
+
+
+def _overlay_script_sources() -> list[Path]:
+    """Return repackable source directories under data/overlay-src/script/.
+
+    A repackable source is a directory ending in `-luabnd-dcx` that contains
+    a WitchyBND manifest (`_witchy-bnd4.xml`).
+    """
+    script_src = OVERLAY_SRC_DEST / "script"
+    if not script_src.is_dir():
+        return []
+    sources = []
+    for entry in sorted(script_src.iterdir()):
+        if not entry.is_dir() or not entry.name.endswith("-luabnd-dcx"):
+            continue
+        if not (entry / "_witchy-bnd4.xml").is_file():
+            continue
+        sources.append(entry)
+    return sources
+
+
+def build_overlay_scripts(force: bool = False) -> bool:
+    """Repack `data/overlay-src/script/*-luabnd-dcx/` into `data/overlay/script/`.
+
+    Each source directory is packed via WitchyBND (run through Wine on Linux).
+    The resulting `*.luabnd.dcx` file is moved into `data/overlay/script/`.
+    Silent no-op if there are no sources.
+    """
+    sources = _overlay_script_sources()
+    if not sources:
+        return True
+
+    print("\n" + "=" * 50)
+    print("Building overlay scripts (WitchyBND)")
+    print("=" * 50)
+
+    if not ensure_witchybnd(force):
+        return False
+
+    witchy_exe = WITCHYBND_DEST / "WitchyBND.exe"
+    if sys.platform == "win32":
+        cmd_prefix: list[str] = [str(witchy_exe)]
+    else:
+        if not shutil.which("wine"):
+            print_error(
+                "Wine not found but overlay scripts need repacking;"
+                " install wine or remove sources under data/overlay-src/script/"
+            )
+            return False
+        cmd_prefix = ["wine", str(witchy_exe)]
+
+    script_dst = OVERLAY_DEST / "script"
+    script_dst.mkdir(parents=True, exist_ok=True)
+
+    for src in sources:
+        produced_name = src.name.replace("-luabnd-dcx", ".luabnd.dcx")
+        produced = src.parent / produced_name
+        produced.unlink(missing_ok=True)
+
+        cmd = cmd_prefix + ["--passive", str(src.resolve())]
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                cwd=WITCHYBND_DEST,
+            )
+        except FileNotFoundError:
+            print_error("Failed to run WitchyBND")
+            return False
+
+        if result.returncode != 0 or not produced.exists():
+            stderr = result.stderr.strip() or result.stdout.strip()
+            print_error(f"WitchyBND failed for {src.name}: {stderr}")
+            return False
+
+        produced.replace(script_dst / produced_name)
+        print_ok(f"Built {produced_name}")
+
     return True
 
 
@@ -823,7 +1016,7 @@ def main() -> int:
     parser.add_argument(
         "--skip-overlay",
         action="store_true",
-        help="Skip GamePatcher overlay generation",
+        help="Skip overlay generation (GamePatcher and WitchyBND script repack)",
     )
     args = parser.parse_args()
 
@@ -866,9 +1059,11 @@ def main() -> int:
     if success and not ensure_modengine(args.force):
         success = False
 
-    # Run GamePatcher to generate overlay files
+    # Run GamePatcher and WitchyBND to generate overlay files
     if success and not args.skip_overlay:
         if not run_modpatcher(args.game_dir):
+            success = False
+        if success and not build_overlay_scripts(args.force):
             success = False
 
     if success:
