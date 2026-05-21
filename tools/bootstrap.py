@@ -830,10 +830,6 @@ def ensure_witchybnd(force: bool = False) -> bool:
     Also copies oo2core_6_win64.dll next to WitchyBND.exe so Wine can resolve
     Oodle from the standard DLL search path.
     """
-    print("\n" + "=" * 50)
-    print("Setting up WitchyBND")
-    print("=" * 50)
-
     oodle_src = WRITER_LIB / "oo2core_6_win64.dll"
     if not oodle_src.exists():
         print_error(
@@ -964,21 +960,20 @@ def build_overlay_scripts(force: bool = False) -> bool:
         produced = src.parent / produced_name
         produced.unlink(missing_ok=True)
 
+        # WitchyBND uses PromptPlus which requires a real TTY; inherit stdio
+        # rather than capturing, otherwise it aborts with
+        # "PromptPlus requires a terminal/console environment!".
         cmd = cmd_prefix + ["--passive", str(src.resolve())]
         try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                cwd=WITCHYBND_DEST,
-            )
+            result = subprocess.run(cmd, cwd=WITCHYBND_DEST)
         except FileNotFoundError:
             print_error("Failed to run WitchyBND")
             return False
 
         if result.returncode != 0 or not produced.exists():
-            stderr = result.stderr.strip() or result.stdout.strip()
-            print_error(f"WitchyBND failed for {src.name}: {stderr}")
+            print_error(
+                f"WitchyBND failed for {src.name}" f" (exit code {result.returncode})"
+            )
             return False
 
         produced.replace(script_dst / produced_name)
