@@ -1031,7 +1031,7 @@
     },
     "arena": {
       "size": 3,
-      "type": 2,
+      "type": 3,
       "two_phase_not_allowed": true,
       "dragon_not_allowed": true,
       "npc_not_allowed": false,
