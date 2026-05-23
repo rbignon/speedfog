@@ -24,6 +24,12 @@ public static class StakeRemover
         // caelid_radahn: vanilla stake respawns in caelid_preradahn (outside DAG).
         // RetryPoint in m60_12_09_02, asset m60_51_36_00-AEG099_502_2000.
         ("m60_12_09_02", "m60_51_36_00-AEG099_502_2000"),
+
+        // mohgwyn_boss: activation region is inside the boss arena, but the
+        // respawn position is just outside, in the mohgwyn portion of the
+        // shared MSB m12_05_00_00. Bypasses the SpeedFog fog gate, so we
+        // remove it even when mohgwyn is in the DAG.
+        ("m12_05_00_00", "AEG099_503_9001"),
     };
 
     /// <summary>

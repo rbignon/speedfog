@@ -3,18 +3,32 @@
 **Date:** 2026-03-16
 **Status:** Active
 
-Removes vanilla Stakes of Marika whose RetryPoints respawn the player outside the SpeedFog DAG.
+Removes vanilla Stakes of Marika whose RetryPoints respawn the player outside the boss arena that owns them, breaking the SpeedFog progression.
 
 ## Problem
 
-Some boss zones have a vanilla RetryPoint (Stake of Marika) that respawns the player in an adjacent zone. If that zone is not in the SpeedFog DAG, the player is softlocked after dying at the boss.
+Some boss zones have a vanilla RetryPoint (Stake of Marika) whose respawn position is not inside the boss arena. Two sub-cases:
 
-**Example — caelid_radahn:**
+1. **Cross-map respawn (DAG-aware):** the stake's `PlayerMap` points to a different map than the stake itself, in a zone outside the SpeedFog DAG. The player is softlocked after dying at the boss.
+2. **Shared-MSB respawn (intra-map bypass):** the activation region and the respawn position live in the same MSB but in different fog.txt areas (e.g., a boss arena MSB shared with its "pre" zone). The respawn position bypasses the SpeedFog fog gate, breaking the run flow even when both zones are in the DAG.
+
+In both cases the activation is **conditional on a region trigger**: the stake only takes effect if the player crosses a specific area inside the arena, so the symptom is intermittent.
+
+**Example 1 — caelid_radahn (cross-map):**
 
 - Vanilla RetryPoint in MSB `m60_12_09_02` (LOD level 2 tile covering Redmane Castle area)
 - Asset: `m60_51_36_00-AEG099_502_2000` (the Stake of Marika 3D model)
 - PlayerMap: `m60_51_36_00` (respawn position is in `caelid_preradahn`)
 - `caelid_preradahn` is NOT in the SpeedFog DAG → player softlocked after boss death
+
+**Example 2 — mohgwyn_boss (shared MSB):**
+
+- Vanilla RetryPoint in MSB `m12_05_00_00` (shared between `mohgwyn` and `mohgwyn_boss`)
+- Asset: `AEG099_503_9001`
+- fog.txt tags it as `Area: mohgwyn_boss` (activation region labelled "ボス部屋" / boss room)
+- But the respawn `c0000` Part.Player is positioned just outside the boss-room region (verified in-game: the player respawns in front of the arena, not inside)
+- Triggers only when the player crosses a specific spot in the arena (e.g., near the right wall close to the entrance), hence intermittent reports
+- Even with `mohgwyn` in the DAG, the respawn bypasses the SpeedFog fog gate that controls entry to the boss arena
 
 ## Why FogMod Doesn't Handle This Automatically
 
@@ -54,8 +68,21 @@ Removing the **RetryPoint event** is sufficient to disable the stake. The asset 
 
 | Zone | Map | Asset (RetryPartName) | Reason |
 |------|-----|----------------------|--------|
-| caelid_radahn | m60_12_09_02 | m60_51_36_00-AEG099_502_2000 | Respawns in caelid_preradahn (outside DAG) |
+| caelid_radahn | m60_12_09_02 | m60_51_36_00-AEG099_502_2000 | Cross-map: respawns in caelid_preradahn (outside DAG) |
+| mohgwyn_boss | m12_05_00_00 | AEG099_503_9001 | Shared MSB: respawn position falls outside the arena, bypasses fog gate |
 
-## Adding New Stakes
+## Investigation Methodology
 
-To remove additional vanilla stakes, add entries to `StakesToRemove` in `StakeRemover.cs`. The map and asset name can be found in fog.txt's `RetryPoints` section.
+To identify additional vanilla stakes that need removal:
+
+1. **Grep fog.txt RetryPoints by area:** locate the entry with `Area: <boss_zone>` and note `Map`, `Name`, optional `PlayerMap`, and the DebugInfo region label.
+2. **Classify the risk:**
+   - `PlayerMap` ≠ `Map` and the `PlayerMap` zone is not in the DAG → cross-map case.
+   - Same `Map`, but several fog.txt areas list it under `Maps:` → shared-MSB case, requires geometric verification. Enumerate the sharing areas with:
+     ```bash
+     awk '/^- Name:/{name=$0} /Maps:.*<map>/{print name}' data/fog.txt
+     ```
+3. **Geometric verification (shared-MSB case):** use `tools/game_inspect` to dump the asset and its associated `c0000` Part.Player. The player entity ID is given by the RetryPoint's DebugInfo `player` line in fog.txt (it also equals the asset entity ID minus 970, per FogMod source). Compare its `Position` to the `BossPos` of each area sharing the map. If the position is closer to a non-boss area, the stake is a candidate.
+4. **In-game confirmation:** with a minimal seed including only the target boss arena, die at the boss from multiple positions inside the arena to reproduce the intermittent activation, and observe the respawn point.
+
+Once confirmed, add the `(Map, Name)` tuple to `StakesToRemove` in `StakeRemover.cs`.
