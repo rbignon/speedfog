@@ -99,6 +99,25 @@ Example:
 
     static void Run(Config config)
     {
+        PrintBanner(config);
+
+        var ctx = new Context(config);
+        Directory.CreateDirectory(ctx.ModDir);
+
+        LoadInputs(ctx);
+        ConstructGraph(ctx);
+        InjectConnections(ctx);
+        WriteFogMod(ctx);
+        PatchEmevd(ctx);
+        ApplyCommonInjectors(ctx);
+        ApplyRegulation(ctx);
+        ApplyModDirInjectors(ctx);
+
+        // Final ME3 packaging is handled by the Python speedfog pipeline.
+    }
+
+    static void PrintBanner(Config config)
+    {
         Console.WriteLine("=== FogModWrapper ===");
         Console.WriteLine($"Seed dir: {config.SeedDir}");
         Console.WriteLine($"Game dir: {config.GameDir}");
@@ -109,20 +128,108 @@ Example:
             Console.WriteLine($"Merge dir: {config.MergeDir}");
         }
         Console.WriteLine();
+    }
 
-        // Mod files go in mods/fogmod/ subdirectory for ME3
-        var modDir = Path.Combine(config.OutputDir, "mods", "fogmod");
-        Directory.CreateDirectory(modDir);
+    // ====================================================================
+    // Phase 1: Load all input files (graph.json + fog.txt + events + ...)
+    // ====================================================================
+    static void LoadInputs(Context ctx)
+    {
+        ctx.GraphData = GraphLoader.Load(ctx.Config.GraphPath);
 
-        // 1. Load our graph.json
-        var graphData = GraphLoader.Load(config.GraphPath);
+        var fogPath = Path.Combine(ctx.Config.DataDir, "fog.txt");
+        var fogeventsPath = Path.Combine(ctx.Config.DataDir, "fogevents.txt");
+        var emedfPath = Path.Combine(ctx.Config.DataDir, "er-common.emedf.json");
+        var foglocationsPath = Path.Combine(ctx.Config.DataDir, "foglocations2.txt");
+        var phantomCatalogPath = Path.Combine(ctx.Config.DataDir, "phantom_skins.toml");
+        var zoneMetadataPath = Path.Combine(ctx.Config.DataDir, "zone_metadata.toml");
 
-        // 2. Build FogMod options
+        Console.WriteLine($"Loading fog.txt from: {fogPath}");
+        ctx.Ann = AnnotationData.LoadLiteConfig(fogPath);
+
+        // LoadLiteConfig only loads Areas/Warps/Entrances/DungeonItems (via internal LiteConfig class).
+        // CustomBonfires are needed for newgraces - load them separately.
+        LoadCustomBonfires(ctx.Ann, fogPath);
+
+        // Initialize ConfigVars - LoadLiteConfig doesn't load them, but Graph.Construct needs them
+        // for condition evaluation. These are FogRando's dungeon crawler mode variables.
+        ctx.Ann.ConfigVars = BuildConfigVars();
+
+        // Load foglocations for enemy area info (needed for scaling).
+        LoadFoglocations(ctx.Ann, foglocationsPath);
+
+        Console.WriteLine($"Loading events from: {emedfPath}");
+        ctx.Events = new Events(emedfPath, darkScriptMode: true, paramAwareMode: true);
+
+        Console.WriteLine($"Loading event config from: {fogeventsPath}");
+        using (var input = File.OpenText(fogeventsPath))
+        {
+            var deserializer = new DeserializerBuilder().Build();
+            ctx.EventConfig = deserializer.Deserialize<EventConfig>(input);
+            ctx.EventConfig.MakeWarpCommands(ctx.Events);
+        }
+
+        // Phantom skins catalog (optional; absent file = no-op).
+        ctx.PhantomSkins = PhantomCatalogLoader.Load(phantomCatalogPath);
+
+        // Opensplit overrides (zone_metadata.toml -> entrance tags).
+        // Must run before Graph.Construct: FogMod's IsCore + opensplit logic
+        // (Graph.cs:1167-1272) consumes these tags during graph construction.
+        var openSplitIds = OpenSplitOverrideLoader.Load(zoneMetadataPath);
+        OpenSplitInjector.Apply(ctx.Ann, openSplitIds);
+    }
+
+    static void LoadCustomBonfires(AnnotationData ann, string fogPath)
+    {
+        var deserializer = new DeserializerBuilder().IgnoreUnmatchedProperties().Build();
+        using var input = File.OpenText(fogPath);
+        var bonfireConfig = deserializer.Deserialize<BonfireConfig>(input);
+        ann.CustomBonfires = bonfireConfig?.CustomBonfires;
+        if (ann.CustomBonfires != null)
+        {
+            Console.WriteLine($"Loaded {ann.CustomBonfires.Count} custom bonfires for newgraces");
+        }
+        else
+        {
+            Console.WriteLine("Warning: No CustomBonfires found in fog.txt - newgraces will have no effect");
+        }
+    }
+
+    static void LoadFoglocations(AnnotationData ann, string path)
+    {
+        if (!File.Exists(path))
+            return;
+        Console.WriteLine($"Loading foglocations from: {path}");
+        var deserializer = new DeserializerBuilder().IgnoreUnmatchedProperties().Build();
+        using var input = File.OpenText(path);
+        ann.Locations = deserializer.Deserialize<AnnotationData.FogLocations>(input);
+    }
+
+    // ====================================================================
+    // Phase 2: Build FogMod RandomizerOptions and construct the Graph.
+    // ====================================================================
+    static void ConstructGraph(Context ctx)
+    {
+        ctx.Opt = BuildRandomizerOptions(ctx.GraphData.Seed, ctx.GraphData.Options);
+
+        Console.WriteLine($"Options: seed={ctx.Opt.Seed}, crawl={ctx.Opt["crawl"]}, scale={ctx.Opt["scale"]}, newgraces={ctx.Opt["newgraces"]}");
+
+        Console.WriteLine("Constructing FogMod graph...");
+        ctx.Graph = new Graph();
+        ctx.Graph.Construct(ctx.Opt, ctx.Ann);
+        Console.WriteLine($"Graph constructed: {ctx.Graph.Nodes.Count} nodes");
+
+        DisconnectTrivialEdges(ctx.Graph);
+        ExcludeEvergaolZones(ctx.Ann, ctx.Graph);
+    }
+
+    static RandomizerOptions BuildRandomizerOptions(int seed, Dictionary<string, bool> graphOptions)
+    {
         var opt = new RandomizerOptions(GameSpec.FromGame.ER);
-        opt.Seed = graphData.Seed;
+        opt.Seed = seed;
 
         // Apply options from graph.json
-        foreach (var (key, value) in graphData.Options)
+        foreach (var (key, value) in graphOptions)
         {
             opt[key] = value;
         }
@@ -164,36 +271,12 @@ Example:
         opt[Feature.ForceUnlinked] = true;  // Force unlinked mode
         opt[Feature.SegmentFortresses] = true;  // Treat fortresses as segments
 
-        Console.WriteLine($"Options: seed={opt.Seed}, crawl={opt["crawl"]}, scale={opt["scale"]}, newgraces={opt["newgraces"]}");
+        return opt;
+    }
 
-        // 3. Load FogMod data files
-        var fogPath = Path.Combine(config.DataDir, "fog.txt");
-        var fogeventsPath = Path.Combine(config.DataDir, "fogevents.txt");
-        var emedfPath = Path.Combine(config.DataDir, "er-common.emedf.json");
-
-        Console.WriteLine($"Loading fog.txt from: {fogPath}");
-        var ann = AnnotationData.LoadLiteConfig(fogPath);
-
-        // LoadLiteConfig only loads Areas/Warps/Entrances/DungeonItems (via internal LiteConfig class).
-        // CustomBonfires are needed for newgraces - load them separately.
-        {
-            var deserializer = new DeserializerBuilder().IgnoreUnmatchedProperties().Build();
-            using var input = File.OpenText(fogPath);
-            var bonfireConfig = deserializer.Deserialize<BonfireConfig>(input);
-            ann.CustomBonfires = bonfireConfig?.CustomBonfires;
-            if (ann.CustomBonfires != null)
-            {
-                Console.WriteLine($"Loaded {ann.CustomBonfires.Count} custom bonfires for newgraces");
-            }
-            else
-            {
-                Console.WriteLine("Warning: No CustomBonfires found in fog.txt - newgraces will have no effect");
-            }
-        }
-
-        // Initialize ConfigVars - LoadLiteConfig doesn't load them, but Graph.Construct needs them
-        // for condition evaluation. These are FogRando's dungeon crawler mode variables.
-        ann.ConfigVars = new Dictionary<string, string>
+    static Dictionary<string, string> BuildConfigVars()
+    {
+        return new Dictionary<string, string>
         {
             // Scaling/logic pass control (not used in SpeedFog)
             { "scalepass", "FALSE" },
@@ -262,54 +345,15 @@ Example:
             // Boss defeat conditions used in world edges
             { "farumazula_maliketh", "TRUE" },
         };
+    }
 
-        // Load foglocations for enemy area info (needed for scaling)
-        var foglocationsPath = Path.Combine(config.DataDir, "foglocations2.txt");
-        if (File.Exists(foglocationsPath))
-        {
-            Console.WriteLine($"Loading foglocations from: {foglocationsPath}");
-            var deserializer = new DeserializerBuilder().IgnoreUnmatchedProperties().Build();
-            using var input = File.OpenText(foglocationsPath);
-            ann.Locations = deserializer.Deserialize<AnnotationData.FogLocations>(input);
-        }
-
-        Console.WriteLine($"Loading events from: {emedfPath}");
-        var events = new Events(emedfPath, darkScriptMode: true, paramAwareMode: true);
-
-        Console.WriteLine($"Loading event config from: {fogeventsPath}");
-        EventConfig eventConfig;
-        using (var input = File.OpenText(fogeventsPath))
-        {
-            var deserializer = new DeserializerBuilder().Build();
-            eventConfig = deserializer.Deserialize<EventConfig>(input);
-            eventConfig.MakeWarpCommands(events);
-        }
-
-        // 3b. Load phantom skins catalog (optional; absent file = no-op).
-        var phantomCatalogPath = Path.Combine(config.DataDir, "phantom_skins.toml");
-        var phantomSkins = PhantomCatalogLoader.Load(phantomCatalogPath);
-
-        // 3c. Apply opensplit overrides (zone_metadata.toml -> entrance tags).
-        // Must run before Graph.Construct: FogMod's IsCore + opensplit logic
-        // (Graph.cs:1167-1272) consumes these tags during graph construction.
-        var zoneMetadataPath = Path.Combine(config.DataDir, "zone_metadata.toml");
-        var openSplitIds = OpenSplitOverrideLoader.Load(zoneMetadataPath);
-        OpenSplitInjector.Apply(ann, openSplitIds);
-
-        // 4. Build FogMod Graph (unconnected nodes/edges)
-        Console.WriteLine("Constructing FogMod graph...");
-        var graph = new Graph();
-        graph.Construct(opt, ann);
-
-        Console.WriteLine($"Graph constructed: {graph.Nodes.Count} nodes");
-
-        // 4b. Disconnect trivial edges that were pre-connected by Graph.Construct()
-        // In crawl mode, FogMod marks entrances with "trivial" tag as IsFixed and connects them.
-        // SpeedFog needs these edges available for our custom graph, so we disconnect them.
+    // In crawl mode, FogMod marks entrances with "trivial" tag as IsFixed and connects them.
+    // SpeedFog needs these edges available for our custom graph, so we disconnect them.
+    static void DisconnectTrivialEdges(Graph graph)
+    {
         var disconnectedCount = 0;
         foreach (var node in graph.Nodes.Values)
         {
-            // Find exit edges that are fixed, connected, and from trivial entrances
             var edgesToDisconnect = node.To
                 .Where(e => e.IsFixed && e.Link != null && !e.IsWorld && e.Name != null)
                 .Where(e => graph.EntranceIds.TryGetValue(e.Name, out var entrance) && entrance.HasTag("trivial"))
@@ -325,17 +369,19 @@ Example:
         {
             Console.WriteLine($"Disconnected {disconnectedCount} trivial edges for SpeedFog graph");
         }
+    }
 
-        // 4c. Exclude evergaol zones from stake processing
-        // In crawl mode, FogRando replaces evergaols with "fake evergaol" connections,
-        // but SpeedFog doesn't use evergaols. Without StakeAsset in fog.txt, they cause errors.
-        // Setting BossTrigger=0 prevents FogMod from trying to create Stakes for these zones.
-        var evergaolCount = 0;
+    // In crawl mode, FogRando replaces evergaols with "fake evergaol" connections,
+    // but SpeedFog doesn't use evergaols. Without StakeAsset in fog.txt, they cause errors.
+    // Setting BossTrigger=0 prevents FogMod from trying to create Stakes for these zones.
+    static void ExcludeEvergaolZones(AnnotationData ann, Graph graph)
+    {
         foreach (var area in ann.Areas.Where(a => a.Name.Contains("evergaol")))
         {
             area.IsExcluded = true;
             area.BossTrigger = 0;
         }
+        var evergaolCount = 0;
         foreach (var kvp in graph.Areas.Where(a => a.Key.Contains("evergaol")))
         {
             kvp.Value.IsExcluded = true;
@@ -343,123 +389,101 @@ Example:
             evergaolCount++;
         }
         Console.WriteLine($"Excluded {evergaolCount} evergaol zones from stake processing");
+    }
 
-        // 5. Inject OUR connections (replaces GraphConnector.Connect())
-        var injectionResult = ConnectionInjector.InjectAndExtract(
-            graph, graphData.Connections, graphData.FinishEvent, graphData.FinalNodeFlag);
+    // ====================================================================
+    // Phase 3: Inject our connections and area tiers into FogMod's Graph.
+    // ====================================================================
+    static void InjectConnections(Context ctx)
+    {
+        ctx.InjectionResult = ConnectionInjector.InjectAndExtract(
+            ctx.Graph, ctx.GraphData.Connections, ctx.GraphData.FinishEvent, ctx.GraphData.FinalNodeFlag);
 
-        // 6. Apply tiers for scaling
-        ConnectionInjector.ApplyAreaTiers(graph, graphData.AreaTiers);
+        ConnectionInjector.ApplyAreaTiers(ctx.Graph, ctx.GraphData.AreaTiers);
+    }
 
-        // 7. Call FogMod writer
-        Console.WriteLine($"Writing mod files to: {modDir}");
+    // ====================================================================
+    // Phase 4: Call FogMod's writer to emit mod files, then copy localized
+    // FMGs from the merge directory (FogMod only writes msg/engus/).
+    // ====================================================================
+    static void WriteFogMod(Context ctx)
+    {
+        Console.WriteLine($"Writing mod files to: {ctx.ModDir}");
 
-        // Create MergedMods to merge Item Randomizer output files
-        // MergedMods.Resolve() looks in these directories for files to merge
+        // Create MergedMods to merge Item Randomizer output files.
+        // MergedMods.Resolve() looks in these directories for files to merge.
         List<string>? modDirs = null;
-        if (!string.IsNullOrEmpty(config.MergeDir))
+        if (!string.IsNullOrEmpty(ctx.Config.MergeDir))
         {
-            Console.WriteLine($"Merging with: {config.MergeDir}");
-            modDirs = new List<string> { config.MergeDir };
+            Console.WriteLine($"Merging with: {ctx.Config.MergeDir}");
+            modDirs = new List<string> { ctx.Config.MergeDir };
         }
         var mergedMods = new MergedMods(modDirs, null);
 
-        // 6b. Tag vanilla stakes for removal by FogMod.
+        // Tag vanilla stakes for removal by FogMod.
         // FogMod reads MSBs from BHD archives (not loose files), so we can't
         // post-process them. Instead, inject RetryPoints with "remove" tag so
         // FogMod removes them during Write() and writes the modified MSB.
         // LoadLiteConfig doesn't load RetryPoints, so ann.RetryPoints is null.
-        ann.RetryPoints = StakeRemover.GetRetryPointsToRemove();
+        ctx.Ann.RetryPoints = StakeRemover.GetRetryPointsToRemove();
 
         var writer = new GameDataWriterE();
-        writer.Write(opt, ann, graph, mergedMods, modDir, events, eventConfig, Console.WriteLine);
+        writer.Write(ctx.Opt, ctx.Ann, ctx.Graph, mergedMods, ctx.ModDir, ctx.Events, ctx.EventConfig, Console.WriteLine);
 
-        // 7a2. Build region-to-flags mapping for zone tracking.
         // Side.Warp is now populated by Write() (reads from MSB data).
-        injectionResult.BuildRegionToFlags(graphData.EventMap);
+        ctx.InjectionResult.BuildRegionToFlags(ctx.GraphData.EventMap);
 
-        // 7a3. Copy non-English FMG files from Item Randomizer output.
+        // Copy non-English FMG files from Item Randomizer output.
         // FogMod only loads and writes msg/engus/ FMGs. When Item Randomizer
         // generates localized content (e.g., class descriptions in French),
         // those files are in the merge-dir but FogMod never writes them out.
         // This must run BEFORE other injectors (e.g., RunCompleteInjector) so
         // they can layer their changes on top of the copied files.
-        if (!string.IsNullOrEmpty(config.MergeDir))
+        if (!string.IsNullOrEmpty(ctx.Config.MergeDir))
         {
-            var mergeMsgDir = Path.Combine(config.MergeDir, "msg");
-            if (Directory.Exists(mergeMsgDir))
+            CopyLocalizedFmgs(ctx.Config.MergeDir, ctx.ModDir);
+        }
+    }
+
+    static void CopyLocalizedFmgs(string mergeDir, string modDir)
+    {
+        var mergeMsgDir = Path.Combine(mergeDir, "msg");
+        if (!Directory.Exists(mergeMsgDir))
+            return;
+
+        foreach (var langDir in Directory.GetDirectories(mergeMsgDir))
+        {
+            var langName = Path.GetFileName(langDir);
+            if (langName == "engus")
+                continue; // FogMod already merges English FMGs
+
+            var destDir = Path.Combine(modDir, "msg", langName);
+            Directory.CreateDirectory(destDir);
+
+            var files = Directory.GetFiles(langDir);
+            foreach (var srcFile in files)
             {
-                foreach (var langDir in Directory.GetDirectories(mergeMsgDir))
-                {
-                    var langName = Path.GetFileName(langDir);
-                    if (langName == "engus")
-                        continue; // FogMod already merges English FMGs
-
-                    var destDir = Path.Combine(modDir, "msg", langName);
-                    Directory.CreateDirectory(destDir);
-
-                    var files = Directory.GetFiles(langDir);
-                    foreach (var srcFile in files)
-                    {
-                        var destFile = Path.Combine(destDir, Path.GetFileName(srcFile));
-                        File.Copy(srcFile, destFile, overwrite: true);
-                    }
-                    Console.WriteLine($"Copied {files.Length} localized FMGs: msg/{langName}/");
-                }
+                var destFile = Path.Combine(destDir, Path.GetFileName(srcFile));
+                File.Copy(srcFile, destFile, overwrite: true);
             }
+            Console.WriteLine($"Copied {files.Length} localized FMGs: msg/{langName}/");
         }
+    }
 
-        // --- Prepare warp patcher data ---
-
-        // Erdtree warp: patch fogwarps targeting leyndell_erdtree (m11_00) to
-        // warp directly to leyndell2_erdtree (m11_05).
-        var erdtreeEntrance = ann.Entrances.Concat(ann.Warps).FirstOrDefault(e =>
-            e.BSide?.Area == "leyndell_erdtree" &&
-            e.BSide?.AlternateSide?.Warp != null &&
-            e.BSide.AlternateFlag > 0);
-
-        int erdtreePrimaryRegion = 0, erdtreeAltRegion = 0;
-        byte[]? erdtreeAltMapBytes = null;
-        int erdtreeAltMapPacked = 0;
-        if (erdtreeEntrance != null &&
-            erdtreeEntrance.BSide.Warp.Region != 0 &&
-            erdtreeEntrance.BSide.AlternateSide.Warp.Region != 0)
-        {
-            erdtreePrimaryRegion = erdtreeEntrance.BSide.Warp.Region;
-            erdtreeAltRegion = erdtreeEntrance.BSide.AlternateSide.Warp.Region;
-            var altMap = erdtreeEntrance.BSide.AlternateSide.Warp.Map;
-            erdtreeAltMapBytes = ErdtreeWarpPatcher.ParseMapBytes(altMap);
-            erdtreeAltMapPacked = ErdtreeWarpPatcher.PackMapId(altMap);
-        }
-
-        // Sealing Tree warp: replace alt destinations (flag 330) with primary destinations.
-        var sealingTreeEntrances = ann.Entrances.Concat(ann.Warps)
-            .SelectMany(e => e.Sides())
-            .Where(s => s.AlternateFlag == 330 && s.AlternateSide?.Warp != null && s.Warp != null)
-            .Select(s => (
-                altRegion: s.AlternateSide.Warp.Region,
-                primaryRegion: s.Warp.Region,
-                primaryMap: s.Warp.Map
-            ))
-            .ToList();
-
-        var sealingTreeTargets = sealingTreeEntrances
-            .Where(e => e.altRegion != 0 && e.primaryRegion != 0)
-            .Select(e => (
-                e.altRegion,
-                e.primaryRegion,
-                primaryMapBytes: ErdtreeWarpPatcher.ParseMapBytes(e.primaryMap),
-                primaryMapPacked: ErdtreeWarpPatcher.PackMapId(e.primaryMap)
-            ))
-            .ToList();
-
-        // Boss trigger: build region-to-TrapFlag mapping for warp patching.
-        var regionToTrapFlag = BossTriggerInjector.BuildRegionToTrapFlag(injectionResult, graph.Areas);
+    // ====================================================================
+    // Phase 5: Single-pass EMEVD patches.
+    // Each per-map file is loaded once, all applicable patches run, then
+    // written once if modified. common.emevd.dcx receives the same warp
+    // patches in-memory and is written later (after ApplyCommonInjectors).
+    // ====================================================================
+    static void PatchEmevd(Context ctx)
+    {
+        var erdtree = BuildErdtreeWarpData(ctx.Ann);
+        var sealingTreeTargets = BuildSealingTreeTargets(ctx.Ann);
+        var regionToTrapFlag = BossTriggerInjector.BuildRegionToTrapFlag(ctx.InjectionResult, ctx.Graph.Areas);
         Console.WriteLine($"Boss trigger: {regionToTrapFlag.Count} boss arena warp region(s) mapped");
 
-        // Zone tracking: prepare region-to-flags mapping and expected flags.
-        bool doZoneTracking = graphData.FinishEvent > 0;
-        int bossDefeatFlag = 0;
+        bool doZoneTracking = ctx.GraphData.FinishEvent > 0;
         HashSet<int>? expectedFlags = null;
 
         if (doZoneTracking)
@@ -468,34 +492,28 @@ Example:
             // falling back to FogMod's Graph extraction. This fixes leyndell_erdtree
             // where the boss zone (erdtree) is reachable via norandom fogs but not
             // directly in the cluster, so FogMod's Graph doesn't have the DefeatFlag.
-            bossDefeatFlag = graphData.FinishBossDefeatFlag > 0
-                ? graphData.FinishBossDefeatFlag
-                : injectionResult.BossDefeatFlag;
+            ctx.BossDefeatFlag = ctx.GraphData.FinishBossDefeatFlag > 0
+                ? ctx.GraphData.FinishBossDefeatFlag
+                : ctx.InjectionResult.BossDefeatFlag;
 
-            if (graphData.FinishBossDefeatFlag > 0 && injectionResult.BossDefeatFlag > 0
-                && graphData.FinishBossDefeatFlag != injectionResult.BossDefeatFlag)
+            if (ctx.GraphData.FinishBossDefeatFlag > 0 && ctx.InjectionResult.BossDefeatFlag > 0
+                && ctx.GraphData.FinishBossDefeatFlag != ctx.InjectionResult.BossDefeatFlag)
             {
-                Console.WriteLine($"Note: Using graph.json defeat flag {graphData.FinishBossDefeatFlag} " +
-                    $"(FogMod Graph had {injectionResult.BossDefeatFlag})");
+                Console.WriteLine($"Note: Using graph.json defeat flag {ctx.GraphData.FinishBossDefeatFlag} " +
+                    $"(FogMod Graph had {ctx.InjectionResult.BossDefeatFlag})");
             }
 
-            expectedFlags = graphData.Connections
+            expectedFlags = ctx.GraphData.Connections
                 .Where(c => c.FlagId > 0)
                 .Select(c => c.FlagId)
                 .Distinct()
                 .ToHashSet();
 
-            Console.WriteLine($"Zone tracking: region lookup with {injectionResult.RegionToFlags.Count} regions, " +
-                $"{injectionResult.RegionToFlags.Values.Sum(f => f.Count)} flag entries");
+            Console.WriteLine($"Zone tracking: region lookup with {ctx.InjectionResult.RegionToFlags.Count} regions, " +
+                $"{ctx.InjectionResult.RegionToFlags.Values.Sum(f => f.Count)} flag entries");
         }
 
-        // --- Single pass over all EMEVD files (zone tracking + warp patches) ---
-        // Loads each file once, applies all applicable patches, writes once if modified.
-        // common.emevd.dcx is handled separately below (also receives 6 injectors).
-
-        var eventDir = Path.Combine(modDir, "event");
-        var commonEmevdPath = Path.Combine(eventDir, "common.emevd.dcx");
-        var commonEmevd = EMEVD.Read(commonEmevdPath);
+        ctx.CommonEmevd = EMEVD.Read(ctx.CommonEmevdPath);
 
         var injectedFlags = new HashSet<int>();
         int totalZoneTrackingInjected = 0;
@@ -503,10 +521,10 @@ Example:
         int totalErdtreePatched = 0;
         int totalSealingTreePatched = 0;
 
-        foreach (var file in Directory.GetFiles(eventDir, "*.emevd.dcx"))
+        foreach (var file in Directory.GetFiles(ctx.EventDir, "*.emevd.dcx"))
         {
             // Skip common.emevd.dcx: handled in-memory below
-            if (Path.GetFullPath(file) == Path.GetFullPath(commonEmevdPath))
+            if (Path.GetFullPath(file) == Path.GetFullPath(ctx.CommonEmevdPath))
                 continue;
 
             var emevd = EMEVD.Read(file);
@@ -515,7 +533,7 @@ Example:
             if (doZoneTracking)
             {
                 int n = ZoneTrackingInjector.PatchEmevdFile(
-                    emevd, events, injectionResult.RegionToFlags, injectedFlags);
+                    emevd, ctx.Events, ctx.InjectionResult.RegionToFlags, injectedFlags);
                 if (n > 0)
                 {
                     totalZoneTrackingInjected += n;
@@ -525,7 +543,7 @@ Example:
 
             if (regionToTrapFlag.Count > 0)
             {
-                int n = BossTriggerInjector.PatchEmevdFile(emevd, events, regionToTrapFlag);
+                int n = BossTriggerInjector.PatchEmevdFile(emevd, ctx.Events, regionToTrapFlag);
                 if (n > 0)
                 {
                     totalBossTriggerInjected += n;
@@ -533,10 +551,10 @@ Example:
                 }
             }
 
-            if (erdtreeAltMapBytes != null)
+            if (erdtree != null)
             {
                 int n = ErdtreeWarpPatcher.PatchEmevd(
-                    emevd, erdtreePrimaryRegion, erdtreeAltRegion, erdtreeAltMapBytes, erdtreeAltMapPacked);
+                    emevd, erdtree.PrimaryRegion, erdtree.AltRegion, erdtree.AltMapBytes, erdtree.AltMapPacked);
                 if (n > 0)
                 {
                     Console.WriteLine($"  {Path.GetFileName(file)}: patched {n} erdtree warp(s)");
@@ -567,21 +585,21 @@ Example:
                 emevd.Write(file);
         }
 
-        // Also apply warp patches to common.emevd (already in memory)
+        // Apply the same warp patches to common.emevd (in memory).
         if (doZoneTracking)
         {
             totalZoneTrackingInjected += ZoneTrackingInjector.PatchEmevdFile(
-                commonEmevd, events, injectionResult.RegionToFlags, injectedFlags);
+                ctx.CommonEmevd, ctx.Events, ctx.InjectionResult.RegionToFlags, injectedFlags);
         }
         if (regionToTrapFlag.Count > 0)
         {
             totalBossTriggerInjected += BossTriggerInjector.PatchEmevdFile(
-                commonEmevd, events, regionToTrapFlag);
+                ctx.CommonEmevd, ctx.Events, regionToTrapFlag);
         }
-        if (erdtreeAltMapBytes != null)
+        if (erdtree != null)
         {
             int n = ErdtreeWarpPatcher.PatchEmevd(
-                commonEmevd, erdtreePrimaryRegion, erdtreeAltRegion, erdtreeAltMapBytes, erdtreeAltMapPacked);
+                ctx.CommonEmevd, erdtree.PrimaryRegion, erdtree.AltRegion, erdtree.AltMapBytes, erdtree.AltMapPacked);
             if (n > 0)
             {
                 Console.WriteLine($"  common.emevd.dcx: patched {n} erdtree warp(s)");
@@ -590,7 +608,7 @@ Example:
         }
         if (sealingTreeTargets.Count > 0)
         {
-            int n = SealingTreeWarpPatcher.PatchEmevd(commonEmevd, sealingTreeTargets);
+            int n = SealingTreeWarpPatcher.PatchEmevd(ctx.CommonEmevd, sealingTreeTargets);
             if (n > 0)
             {
                 Console.WriteLine($"  common.emevd.dcx: patched {n} sealing tree warp(s)");
@@ -608,14 +626,14 @@ Example:
         {
             ZoneTrackingInjector.ValidateInjectedFlags(injectedFlags, expectedFlags!, totalZoneTrackingInjected);
         }
-        if (erdtreeAltMapBytes != null)
+        if (erdtree != null)
         {
             if (totalErdtreePatched > 0)
                 Console.WriteLine($"Erdtree warp fix: patched {totalErdtreePatched} warp(s) " +
-                    $"(region {erdtreePrimaryRegion} -> {erdtreeAltRegion})");
+                    $"(region {erdtree.PrimaryRegion} -> {erdtree.AltRegion})");
             else
                 Console.WriteLine($"Erdtree warp fix: no matching warps found " +
-                    $"(region {erdtreePrimaryRegion} may not be connected)");
+                    $"(region {erdtree.PrimaryRegion} may not be connected)");
         }
         if (sealingTreeTargets.Count > 0)
         {
@@ -624,117 +642,166 @@ Example:
             else
                 Console.WriteLine("Sealing Tree warp fix: no matching warps found (entrances may not be connected)");
         }
+    }
 
-        // --- Apply all common.emevd injectors (single Read, single Write) ---
+    // Erdtree warp: patch fogwarps targeting leyndell_erdtree (m11_00) to
+    // warp directly to leyndell2_erdtree (m11_05).
+    static ErdtreeWarpData? BuildErdtreeWarpData(AnnotationData ann)
+    {
+        var entrance = ann.Entrances.Concat(ann.Warps).FirstOrDefault(e =>
+            e.BSide?.Area == "leyndell_erdtree" &&
+            e.BSide?.AlternateSide?.Warp != null &&
+            e.BSide.AlternateFlag > 0);
 
-        // 7b. Starting items
-        if (graphData.StartingGoods.Count > 0 || graphData.CarePackage.Count > 0)
+        if (entrance == null ||
+            entrance.BSide.Warp.Region == 0 ||
+            entrance.BSide.AlternateSide.Warp.Region == 0)
         {
-            StartingItemInjector.Inject(commonEmevd, graphData.StartingGoods, graphData.CarePackage, events);
+            return null;
         }
 
-        // 7c. Starting resources (consumables via EMEVD)
+        var altMap = entrance.BSide.AlternateSide.Warp.Map;
+        return new ErdtreeWarpData
+        {
+            PrimaryRegion = entrance.BSide.Warp.Region,
+            AltRegion = entrance.BSide.AlternateSide.Warp.Region,
+            AltMapBytes = ErdtreeWarpPatcher.ParseMapBytes(altMap),
+            AltMapPacked = ErdtreeWarpPatcher.PackMapId(altMap),
+        };
+    }
+
+    // Sealing Tree warp: replace alt destinations (flag 330) with primary destinations.
+    static List<(int altRegion, int primaryRegion, byte[] primaryMapBytes, int primaryMapPacked)>
+        BuildSealingTreeTargets(AnnotationData ann)
+    {
+        return ann.Entrances.Concat(ann.Warps)
+            .SelectMany(e => e.Sides())
+            .Where(s => s.AlternateFlag == 330 && s.AlternateSide?.Warp != null && s.Warp != null)
+            .Select(s => (
+                altRegion: s.AlternateSide.Warp.Region,
+                primaryRegion: s.Warp.Region,
+                primaryMap: s.Warp.Map
+            ))
+            .Where(e => e.altRegion != 0 && e.primaryRegion != 0)
+            .Select(e => (
+                e.altRegion,
+                e.primaryRegion,
+                primaryMapBytes: ErdtreeWarpPatcher.ParseMapBytes(e.primaryMap),
+                primaryMapPacked: ErdtreeWarpPatcher.PackMapId(e.primaryMap)
+            ))
+            .ToList();
+    }
+
+    // ====================================================================
+    // Phase 6: All common.emevd injectors (single Read in PatchEmevd,
+    // single Write at the end of this phase).
+    // ====================================================================
+    static void ApplyCommonInjectors(Context ctx)
+    {
+        // Starting items
+        if (ctx.GraphData.StartingGoods.Count > 0 || ctx.GraphData.CarePackage.Count > 0)
+        {
+            StartingItemInjector.Inject(ctx.CommonEmevd, ctx.GraphData.StartingGoods, ctx.GraphData.CarePackage, ctx.Events);
+        }
+
+        // Starting resources (consumables via EMEVD)
         StartingResourcesInjector.Inject(
-            commonEmevd,
-            events,
-            graphData.StartingGoldenSeeds,
-            graphData.StartingSacredTears,
-            graphData.StartingLarvalTears,
-            graphData.StartingStoneswordKeys
+            ctx.CommonEmevd,
+            ctx.Events,
+            ctx.GraphData.StartingGoldenSeeds,
+            ctx.GraphData.StartingSacredTears,
+            ctx.GraphData.StartingLarvalTears,
+            ctx.GraphData.StartingStoneswordKeys
         );
 
-        // 7d. Roundtable unlock
-        RoundtableUnlockInjector.Inject(commonEmevd);
+        // Roundtable unlock
+        RoundtableUnlockInjector.Inject(ctx.CommonEmevd);
 
-        // 7f. Boss death monitor for zone tracking
-        if (doZoneTracking && bossDefeatFlag > 0)
+        // Boss death monitor for zone tracking (BossDefeatFlag resolved in PatchEmevd).
+        if (ctx.GraphData.FinishEvent > 0 && ctx.BossDefeatFlag > 0)
         {
             ZoneTrackingInjector.InjectBossDeathEvent(
-                commonEmevd, events, injectionResult.FinishEvent, bossDefeatFlag);
+                ctx.CommonEmevd, ctx.Events, ctx.InjectionResult.FinishEvent, ctx.BossDefeatFlag);
         }
 
-        // 7g. "RUN COMPLETE" banner event
-        if (graphData.FinishEvent > 0)
+        // "RUN COMPLETE" banner event
+        if (ctx.GraphData.FinishEvent > 0)
         {
-            RunCompleteInjector.InjectEmevdEvent(commonEmevd, events, graphData.FinishEvent);
+            RunCompleteInjector.InjectEmevdEvent(ctx.CommonEmevd, ctx.Events, ctx.GraphData.FinishEvent);
         }
 
-        // 7j2. Neutralize vanilla events that set AlternateFlag values (flags 300, 330).
-        AlternateFlagPatcher.Patch(commonEmevd);
+        // Neutralize vanilla events that set AlternateFlag values (flags 300, 330).
+        AlternateFlagPatcher.Patch(ctx.CommonEmevd);
 
-        // Write common.emevd.dcx once (was previously read/written 6+ times)
-        commonEmevd.Write(commonEmevdPath);
+        // Write common.emevd.dcx once (was previously read/written 6+ times).
+        ctx.CommonEmevd.Write(ctx.CommonEmevdPath);
+    }
 
-        // --- Non-EMEVD injectors and per-map injectors ---
-
-        // 7e. Consolidated regulation.bin modifications:
-        // single decrypt, single encrypt, shared PARAM cache.
-        var reg = RegulationEditor.Open(modDir);
-        if (reg != null)
-        {
-            ShopInjector.ApplyTo(reg, graphData.SentryTorchShop);
-            WeaponUpgradeInjector.ApplyTo(reg, graphData.WeaponUpgrade);
-            StartingRuneInjector.ApplyTo(reg, graphData.StartingRunes);
-
-            if (graphData.ChapelGrace)
-                ChapelGraceInjector.Inject(modDir, config.GameDir, events, reg);
-
-            PhantomCatalogInjector.ApplyTo(reg, phantomSkins);
-
-            reg.Save();
-        }
-        else
+    // ====================================================================
+    // Phase 7: All regulation.bin modifications batched behind a single
+    // decrypt/encrypt cycle.
+    // ====================================================================
+    static void ApplyRegulation(Context ctx)
+    {
+        var reg = RegulationEditor.Open(ctx.ModDir);
+        if (reg == null)
         {
             Console.WriteLine("Warning: regulation.bin unavailable, skipping all regulation injections");
+            return;
         }
 
-        // 7g-fmg. "RUN COMPLETE" banner FMG entries (all languages)
-        if (graphData.FinishEvent > 0)
+        ShopInjector.ApplyTo(reg, ctx.GraphData.SentryTorchShop);
+        WeaponUpgradeInjector.ApplyTo(reg, ctx.GraphData.WeaponUpgrade);
+        StartingRuneInjector.ApplyTo(reg, ctx.GraphData.StartingRunes);
+
+        if (ctx.GraphData.ChapelGrace)
+            ChapelGraceInjector.Inject(ctx.ModDir, ctx.Config.GameDir, ctx.Events, reg);
+
+        PhantomCatalogInjector.ApplyTo(reg, ctx.PhantomSkins);
+
+        reg.Save();
+    }
+
+    // ====================================================================
+    // Phase 8: Remaining mod-directory injectors (FMG, MSB, per-map EMEVD).
+    // Vanilla stake removal is handled pre-Write via ann.RetryPoints in
+    // WriteFogMod (FogMod reads MSBs from BHD archives and removes tagged
+    // stakes during Write()).
+    // ====================================================================
+    static void ApplyModDirInjectors(Context ctx)
+    {
+        // "RUN COMPLETE" banner FMG entries (all languages)
+        if (ctx.GraphData.FinishEvent > 0)
         {
-            RunCompleteInjector.InjectFmgEntries(modDir, config.GameDir, graphData.RunCompleteMessage);
+            RunCompleteInjector.InjectFmgEntries(ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.RunCompleteMessage);
         }
 
-        // 7h2. Death markers at fog gates
-        var gateSides = BuildGateSideLookup(ann);
+        // Death markers at fog gates
+        var gateSides = BuildGateSideLookup(ctx.Ann);
         DeathMarkerInjector.Inject(
-            modDir, config.GameDir, graphData.Connections, events,
-            graphData.EventMap, graphData.DeathFlags, gateSides);
+            ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.Connections, ctx.Events,
+            ctx.GraphData.EventMap, ctx.GraphData.DeathFlags, gateSides);
 
-        // 7i. Rebirth option at Sites of Grace
-        if (graphData.StartingLarvalTears > 0)
+        // Rebirth option at Sites of Grace
+        if (ctx.GraphData.StartingLarvalTears > 0)
         {
-            RebirthInjector.Inject(modDir, config.GameDir);
+            RebirthInjector.Inject(ctx.ModDir, ctx.Config.GameDir);
         }
 
-        // 7j3. Set startup flags (open gates, etc.)
+        // Set startup flags (open gates, etc.).
         // See docs/startup-flag-injection.md for the methodology used to find these flags.
-        StartupFlagInjector.Inject(modDir, new[]
+        StartupFlagInjector.Inject(ctx.ModDir, new[]
         {
             ("m35_00_00_00", 35000565, true),  // Sewer barred gate 1 (AEG023_330_1000, lever AEG027_002_0503)
             ("m35_00_00_00", 35000566, true),  // Sewer barred gate 2 (AEG023_330_1001, lever AEG027_002_0507)
             ("m10_00_00_00", 10000500, true),  // Stormveil barred gate (AEG219_050_0500, lever AEG219_030_0500)
         });
 
-        // 7k. Remove vanilla assets that conflict with fog gates.
-        if (graphData.RemoveEntities.Count > 0)
+        // Remove vanilla assets that conflict with fog gates.
+        if (ctx.GraphData.RemoveEntities.Count > 0)
         {
-            VanillaWarpRemover.Remove(modDir, graphData.RemoveEntities);
+            VanillaWarpRemover.Remove(ctx.ModDir, ctx.GraphData.RemoveEntities);
         }
-
-        // 7l. Vanilla stake removal is handled pre-Write via ann.RetryPoints
-        // (step 6b). FogMod reads MSBs from BHD archives and removes tagged stakes.
-
-        // 8. Final ME3 packaging is handled by the Python speedfog pipeline.
-    }
-
-    class Config
-    {
-        public string SeedDir { get; set; } = "";
-        public string GraphPath => Path.Combine(SeedDir, "graph.json");
-        public string GameDir { get; set; } = "";
-        public string DataDir { get; set; } = "";
-        public string OutputDir { get; set; } = "";
-        public string? MergeDir { get; set; }
     }
 
     /// <summary>
@@ -761,6 +828,65 @@ Example:
 
         Console.WriteLine($"Gate side lookup: {lookup.Count} entries from fog.txt");
         return lookup;
+    }
+
+    class Config
+    {
+        public string SeedDir { get; set; } = "";
+        public string GraphPath => Path.Combine(SeedDir, "graph.json");
+        public string GameDir { get; set; } = "";
+        public string DataDir { get; set; } = "";
+        public string OutputDir { get; set; } = "";
+        public string? MergeDir { get; set; }
+    }
+
+    /// <summary>
+    /// Mutable state shared across the pipeline phases.
+    /// Each field is populated by exactly one phase and read by later phases.
+    /// </summary>
+    class Context
+    {
+        public Config Config { get; }
+        public string ModDir { get; }
+        public string EventDir { get; }
+        public string CommonEmevdPath { get; }
+
+        // Populated by LoadInputs
+        public GraphData GraphData = null!;
+        public AnnotationData Ann = null!;
+        public Events Events = null!;
+        public EventConfig EventConfig = null!;
+        public List<PhantomSkin> PhantomSkins = new();
+
+        // Populated by ConstructGraph
+        public RandomizerOptions Opt = null!;
+        public Graph Graph = null!;
+
+        // Populated by InjectConnections
+        public InjectionResult InjectionResult = null!;
+
+        // Populated by PatchEmevd, written by ApplyCommonInjectors
+        public EMEVD CommonEmevd = null!;
+
+        // Resolved by PatchEmevd, consumed by ApplyCommonInjectors.
+        // 0 when zone tracking is disabled or no defeat flag is known.
+        public int BossDefeatFlag;
+
+        public Context(Config config)
+        {
+            Config = config;
+            ModDir = Path.Combine(config.OutputDir, "mods", "fogmod");
+            EventDir = Path.Combine(ModDir, "event");
+            CommonEmevdPath = Path.Combine(EventDir, "common.emevd.dcx");
+        }
+    }
+
+    class ErdtreeWarpData
+    {
+        public int PrimaryRegion;
+        public int AltRegion;
+        public byte[] AltMapBytes = null!;
+        public int AltMapPacked;
     }
 
     /// <summary>
