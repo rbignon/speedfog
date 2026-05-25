@@ -70,6 +70,7 @@ Removing the **RetryPoint event** is sufficient to disable the stake. The asset 
 |------|-----|----------------------|--------|
 | caelid_radahn | m60_12_09_02 | m60_51_36_00-AEG099_502_2000 | Cross-map: respawns in caelid_preradahn (outside DAG) |
 | mohgwyn_boss | m12_05_00_00 | AEG099_503_9001 | Shared MSB: respawn position falls outside the arena, bypasses fog gate |
+| ainsel_boss | m12_04_00_00 | AEG099_504_9001 | Shared MSB: respawn ~140 units south of Astel's arena, in ainsel_preboss section |
 
 ## Investigation Methodology
 

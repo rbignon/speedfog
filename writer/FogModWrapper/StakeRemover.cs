@@ -30,6 +30,12 @@ public static class StakeRemover
         // shared MSB m12_05_00_00. Bypasses the SpeedFog fog gate, so we
         // remove it even when mohgwyn is in the DAG.
         ("m12_05_00_00", "AEG099_503_9001"),
+
+        // ainsel_boss: respawn c0000_9015 at z=-276 sits ~140 units south of
+        // Astel's arena (boss at z=-134), in the ainsel_preboss portion of
+        // the shared MSB m12_04_00_00. Bypasses the SpeedFog fog gate to
+        // Astel, same signature as mohgwyn_boss.
+        ("m12_04_00_00", "AEG099_504_9001"),
     };
 
     /// <summary>
