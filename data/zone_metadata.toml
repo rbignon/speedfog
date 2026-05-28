@@ -232,7 +232,7 @@ exclude = true
 type = "major_boss"
 
 [zones.deeproot_boss]
-type = "major_boss"
+type = "boss_arena"
 weight = 2.5
 allow_entry_as_exit = false
 
