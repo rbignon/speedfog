@@ -107,8 +107,15 @@ class StructureConfig:
     tier_curve: str = "linear"  # "linear" or "power"
     tier_curve_exponent: float = 0.6  # Power curve exponent (only for "power")
     max_weight_tolerance: float = (
-        3.0  # Max weight tolerance for parallel branch matching (0=disabled).
+        3.0  # Soft preference radius around the anchor weight (0=disabled).
         # Must be a non-negative multiple of 0.5 (matcher widens by 0.5 steps).
+        # Independent of max_layer_spread: even at 3.0, the layer's hard
+        # window still clamps the actual spread to max_layer_spread.
+    )
+    max_layer_spread: float = (
+        2.0  # Hard cap on weight spread (max - min) within a single layer.
+        # Enforces balanced parallel branches; violations either trigger a
+        # type fallback during generation or get the seed rerolled.
     )
     layers_count: int = 30  # Total layers (start + intermediates + final boss)
 
@@ -159,6 +166,10 @@ class StructureConfig:
             raise ValueError(
                 f"max_weight_tolerance must be a multiple of 0.5, "
                 f"got {self.max_weight_tolerance}"
+            )
+        if self.max_layer_spread < 0:
+            raise ValueError(
+                f"max_layer_spread must be >= 0, got {self.max_layer_spread}"
             )
         if self.tier_curve not in ("linear", "power"):
             raise ValueError(
@@ -578,6 +589,7 @@ class Config:
                 max_weight_tolerance=float(
                     structure_section.get("max_weight_tolerance", 3.0)
                 ),
+                max_layer_spread=float(structure_section.get("max_layer_spread", 2.0)),
                 layers_count=structure_section.get("layers_count", 30),
             ),
             paths=PathsConfig(

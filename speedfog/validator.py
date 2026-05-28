@@ -78,6 +78,13 @@ def validate_dag(
     if homogeneity_errors:
         errors.extend(homogeneity_errors)
 
+    # Check layer weight spread (parallel branches must be balanced)
+    spread_errors = _check_layer_weight_spread(
+        dag, max_spread=config.structure.max_layer_spread
+    )
+    if spread_errors:
+        errors.extend(spread_errors)
+
     # Check minimum requirements
     _check_requirements(dag, config, errors)
 
@@ -256,6 +263,48 @@ def _check_event_flag_budget(dag: Dag, config: Config, errors: list[str]) -> Non
             f"Event flag budget exceeded: {flag_count} flags needed "
             f"(max {EVENT_FLAG_BUDGET})"
         )
+
+
+def _check_layer_weight_spread(dag: Dag, max_spread: float = 2.0) -> list[str]:
+    """Check that no layer's weight spread exceeds ``max_spread``.
+
+    Parallel branches in the same layer must have comparable weights so
+    that no path is disadvantaged. Generation enforces this as a hard
+    window; this validator is a safety net against regressions.
+
+    Single-node layers are skipped (spread is 0 by definition).
+
+    Args:
+        dag: The DAG to check.
+        max_spread: Maximum ``max(weights) - min(weights)`` permitted.
+
+    Returns:
+        List of error messages for layers with excessive spread.
+    """
+    errors: list[str] = []
+
+    layers: dict[int, list[str]] = {}
+    for node_id, node in dag.nodes.items():
+        layers.setdefault(node.layer, []).append(node_id)
+
+    for layer_idx in sorted(layers):
+        node_ids = layers[layer_idx]
+        if len(node_ids) <= 1:
+            continue
+
+        weights = [dag.nodes[nid].cluster.weight for nid in node_ids]
+        spread = max(weights) - min(weights)
+        if spread > max_spread + 1e-9:
+            details = ", ".join(
+                f"{dag.nodes[nid].cluster.id}(w={dag.nodes[nid].cluster.weight})"
+                for nid in node_ids
+            )
+            errors.append(
+                f"Layer {layer_idx}: weight spread {spread} > {max_spread} "
+                f"[{details}]"
+            )
+
+    return errors
 
 
 def _check_layer_type_homogeneity(dag: Dag) -> list[str]:

@@ -390,6 +390,11 @@ def validate_config(
 
 _TOLERANCE_STEP = 0.5
 
+# Default maximum spread (max - min) allowed for weights within a single
+# layer. Enforced as a hard window in pick_cluster_weight_matched when
+# layer_bounds is provided. Also used by the validator as a safety net.
+DEFAULT_MAX_LAYER_SPREAD = 2.0
+
 
 def pick_cluster_weight_matched(
     candidates: list[ClusterData],
@@ -400,35 +405,46 @@ def pick_cluster_weight_matched(
     *,
     reserved_zones: frozenset[str] = frozenset(),
     required_zones: frozenset[str] = frozenset(),
-    max_tolerance: float = 3.0,
+    anchor_tolerance: float = 3.0,
+    layer_bounds: tuple[float, float] | None = None,
+    max_layer_spread: float = DEFAULT_MAX_LAYER_SPREAD,
 ) -> ClusterData | None:
-    """Pick a cluster with weight close to anchor_weight.
+    """Pick a cluster compatible with the layer's weight window.
 
-    Filters candidates once (zone availability + filter_fn), then applies
-    progressive weight tolerance in 0.5 steps from exact match up to
-    max_tolerance. If no candidate fits within max_tolerance, picks the
-    cluster nearest to anchor_weight (ties broken randomly) - graceful
-    degradation instead of uniform random.
+    Two complementary mechanisms:
+    - **Hard window** (``layer_bounds`` + ``max_layer_spread``): if
+      ``layer_bounds`` is provided, candidates that would push the layer's
+      spread (``max - min``) above ``max_layer_spread`` are filtered out.
+      This is the invariant guaranteeing balanced parallel branches.
+    - **Soft preference** (``anchor_tolerance``): within the window, the
+      function prefers candidates close to ``anchor_weight`` by widening
+      a 0.5-step band up to ``anchor_tolerance``. If no candidate matches
+      at any step, falls through to a uniform pick within the window
+      (no "nearest fallback" outside the window).
 
     If ``required_zones`` is non-empty and at least one filtered candidate
     covers a required zone, the draw is restricted to that subset before
-    weight matching is applied. The required preference overrides weight
-    proximity.
+    weight matching is applied. The required preference overrides both the
+    window and the soft preference.
 
     Args:
         candidates: List of candidate clusters.
         used_zones: Set of zone IDs already used.
         rng: Random number generator.
-        anchor_weight: Target weight to match.
+        anchor_weight: Target weight (typically running mean of prior picks).
         filter_fn: Additional filter (e.g. can_be_passant_node).
         reserved_zones: Zones reserved for prerequisite placement.
-        required_zones: Zones that must appear in the DAG; the draw is
-            restricted to candidates covering one of them when at least
-            one such candidate is available.
-        max_tolerance: Max tolerance (<= 0 disables matching - uniform random).
+        required_zones: Zones that must appear in the DAG.
+        anchor_tolerance: Soft preference radius around ``anchor_weight``
+            (<= 0 disables the preference, falling straight through to
+            uniform pick within the window).
+        layer_bounds: Running ``(layer_min, layer_max)`` of weights already
+            picked in this layer. ``None`` disables the window check.
+        max_layer_spread: Maximum ``max - min`` allowed in the layer when
+            ``layer_bounds`` is provided.
 
     Returns:
-        A cluster close to anchor_weight, or None if nothing available.
+        A cluster from the windowed pool, or None if nothing fits.
     """
     available = [
         c
@@ -444,24 +460,30 @@ def pick_cluster_weight_matched(
         if preferred:
             available = preferred
 
-    if max_tolerance <= 0:
+    if layer_bounds is not None:
+        lo, hi = layer_bounds
+        available = [
+            c
+            for c in available
+            if max(hi, c.weight) - min(lo, c.weight) <= max_layer_spread + 1e-9
+        ]
+        if not available:
+            return None
+
+    if anchor_tolerance <= 0:
         return rng.choice(available)
 
     tol = 0.0
-    while tol <= max_tolerance + 1e-9:
+    while tol <= anchor_tolerance + 1e-9:
         matched = [c for c in available if abs(c.weight - anchor_weight) <= tol + 1e-9]
         if matched:
             return rng.choice(matched)
         tol += _TOLERANCE_STEP
 
-    # Beyond max_tolerance: pick the cluster nearest to the anchor instead
-    # of a uniform random one, so degradation is graceful (smallest possible
-    # deviation given what the pool offers). Ties are broken randomly.
-    min_delta = min(abs(c.weight - anchor_weight) for c in available)
-    nearest = [
-        c for c in available if abs(c.weight - anchor_weight) <= min_delta + 1e-9
-    ]
-    return rng.choice(nearest)
+    # No candidate within anchor_tolerance: fall back to uniform pick
+    # within the window-filtered set. With layer_bounds set, this is still
+    # bounded by max_layer_spread; without it, the legacy "anywhere" behavior.
+    return rng.choice(available)
 
 
 def _mark_cluster_used(
@@ -853,16 +875,16 @@ def pick_layer_clusters(
         "legacy_dungeon",
         "major_boss",
     ),
-    max_tolerance: float = 3.0,
+    anchor_tolerance: float = 3.0,
+    max_layer_spread: float = DEFAULT_MAX_LAYER_SPREAD,
     required_zones: frozenset[str] = frozenset(),
 ) -> tuple[list[ClusterData], list[FallbackEntry], list[float | None]]:
     """Pick `width` clusters for a layer, falling back to other allowed types.
 
     The first slot is picked uniformly from the primary pool. Subsequent
     slots are weight-matched against the running mean of the picks already
-    made for this layer, so the anchor self-corrects toward the layer's
-    centroid instead of being pinned to the first (possibly off-center)
-    pick.
+    made for this layer (soft preference) AND constrained to keep the
+    layer's weight spread within ``max_layer_spread`` (hard window).
 
     If ``required_zones`` is non-empty, each picker call receives the set
     of zones still to be placed; a candidate covering one of them is
@@ -900,12 +922,18 @@ def pick_layer_clusters(
             # Anchor = mean of ALL prior picks, including type fallbacks:
             # each contributes a real weight to the layer's centroid.
             anchor = sum(p.weight for p in picks) / len(picks)
+            layer_bounds = (
+                min(p.weight for p in picks),
+                max(p.weight for p in picks),
+            )
             c = pick_cluster_weight_matched(
                 primary_pool,
                 local_used,
                 rng,
                 anchor_weight=anchor,
-                max_tolerance=max_tolerance,
+                anchor_tolerance=anchor_tolerance,
+                layer_bounds=layer_bounds,
+                max_layer_spread=max_layer_spread,
                 required_zones=req_frozen,
             )
         if c is None:
@@ -1071,7 +1099,8 @@ def generate_dag(config: Config, clusters: ClusterPool) -> tuple[Dag, Generation
             used_zones=used_zones,
             rng=rng,
             allowed_types=allowed_types,
-            max_tolerance=config.structure.max_weight_tolerance,
+            anchor_tolerance=config.structure.max_weight_tolerance,
+            max_layer_spread=config.structure.max_layer_spread,
             required_zones=frozenset(required_zones_remaining),
         )
 

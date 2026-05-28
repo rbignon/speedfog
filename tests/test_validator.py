@@ -1036,3 +1036,100 @@ class TestValidatorAllowedTypes:
         result = validate_dag(dag, config, pool)
         # Zone-type check must not flag this (but the zone missing error is fine).
         assert not any("not in allowed_types" in e for e in result.errors)
+
+
+class TestLayerWeightSpread:
+    """Tests for the strict layer-spread invariant in validator."""
+
+    def _make_dag_with_layer(self, weights: list[int]) -> Dag:
+        """Build a 3-layer DAG: start -> [width=len(weights) nodes] -> end.
+
+        Each parallel node in layer 1 carries the requested weight.
+        """
+        dag = Dag(seed=42)
+        dag.add_node(
+            DagNode(
+                id="start",
+                cluster=make_cluster("start_c", cluster_type="start", weight=0),
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+                exit_fogs=[f"exit_{i}" for i in range(len(weights))],
+            )
+        )
+        for i, w in enumerate(weights):
+            dag.add_node(
+                DagNode(
+                    id=f"n{i}",
+                    cluster=make_cluster(
+                        f"mini_{i}", cluster_type="mini_dungeon", weight=w
+                    ),
+                    layer=1,
+                    tier=1,
+                    entry_fogs=[f"in_{i}"],
+                    exit_fogs=[f"out_{i}"],
+                )
+            )
+            dag.add_edge("start", f"n{i}", f"exit_{i}", f"in_{i}")
+        dag.add_node(
+            DagNode(
+                id="end",
+                cluster=make_cluster("end_c", cluster_type="final_boss", weight=5),
+                layer=2,
+                tier=1,
+                entry_fogs=[f"end_in_{i}" for i in range(len(weights))],
+                exit_fogs=[],
+            )
+        )
+        for i in range(len(weights)):
+            dag.add_edge(f"n{i}", "end", f"out_{i}", f"end_in_{i}")
+        dag.start_id = "start"
+        dag.end_id = "end"
+        return dag
+
+    def test_narrow_spread_passes(self):
+        """spread == max_layer_spread: validation passes."""
+        dag = self._make_dag_with_layer([2, 3, 4])  # spread = 2
+        config = make_config(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, layers_count=1
+        )
+        result = validate_dag(dag, config)
+        assert not any("spread" in e.lower() for e in result.errors)
+
+    def test_wide_spread_fails(self):
+        """spread > max_layer_spread: validation reports an error."""
+        dag = self._make_dag_with_layer([1, 2, 4])  # spread = 3
+        config = make_config(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, layers_count=1
+        )
+        result = validate_dag(dag, config)
+        spread_errors = [e for e in result.errors if "spread" in e.lower()]
+        assert spread_errors, f"Expected a spread error, got: {result.errors}"
+
+    def test_single_node_layer_ignored(self):
+        """Single-node layers cannot have spread > 0 by definition."""
+        dag = make_simple_dag()  # only start (w=0) and end (w=5) layers
+        config = make_config(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, layers_count=1
+        )
+        result = validate_dag(dag, config)
+        assert not any("spread" in e.lower() for e in result.errors)
+
+    def test_threshold_read_from_config(self):
+        """Validator must honor config.structure.max_layer_spread, not a hard-coded 2.0."""
+        # Spread = 3 (weights 1, 4): fails at default 2.0, passes at relaxed 5.0.
+        dag = self._make_dag_with_layer([1, 4])
+        strict_config = make_config(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, layers_count=1
+        )
+        assert any(
+            "spread" in e.lower() for e in validate_dag(dag, strict_config).errors
+        )
+
+        relaxed_config = make_config(
+            legacy_dungeons=0, bosses=0, mini_dungeons=0, layers_count=1
+        )
+        relaxed_config.structure.max_layer_spread = 5.0
+        assert not any(
+            "spread" in e.lower() for e in validate_dag(dag, relaxed_config).errors
+        )

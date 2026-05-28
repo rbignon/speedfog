@@ -221,19 +221,27 @@ For each intermediate layer:
 
    **Intra-layer weight balance.** Cluster weights are floats (1 decimal of precision, computed in
    `tools/generate_clusters.py`). The first slot is picked uniformly from the primary pool.
-   Subsequent slots use `pick_cluster_weight_matched` against the running mean of the picks
-   already made for this layer, so the anchor self-corrects toward the layer's centroid instead
-   of being pinned to the first (possibly off-center) pick. The matcher widens its tolerance in
-   0.5 steps (0 → `max_tolerance`, default 3.0); a uniform pick within the matching tier is made
-   as soon as one candidate fits. If no candidate fits within `max_tolerance`, the matcher
-   degrades gracefully: it picks the cluster nearest to the anchor (ties broken randomly), so
-   `max_tolerance` is a randomization knob (how much variety inside the matching band) rather
-   than a quality cliff. `pick_layer_clusters` returns a `weight_deltas` list (one entry per
-   slot, `None` for slot 0 and for type fallbacks); the generator records each non-None value as
-   `NodeEntry.weight_delta` and the spoiler log surfaces it as `dw=<n>` next to `w=<n>`. Since
-   the matcher only takes the nearest-pick branch when no candidate is within `max_tolerance`,
-   `weight_delta > max_tolerance` flags those degraded picks. Layers are independent: no anchor
-   is carried across layers.
+   Subsequent slots use `pick_cluster_weight_matched` with two complementary mechanisms:
+
+   - **Hard window** (`max_layer_spread`, default 2.0): candidates whose weight would push the
+     layer's `max - min` spread above this threshold are filtered out before any preference is
+     applied. This guarantees that parallel branches stay comparable; with `max_layer_spread=2`,
+     a layer cannot mix a w=1 cluster with a w=4 cluster.
+   - **Soft preference** (`anchor_tolerance`, default 3.0, exposed as `max_weight_tolerance` in
+     the TOML config): inside the window, the matcher widens an anchor band in 0.5 steps around
+     the running mean of prior picks. As soon as one candidate fits the current band, a uniform
+     pick is made within it. If no band matches up to `anchor_tolerance`, the function falls
+     back to a uniform pick across the window-filtered set, never beyond it.
+
+   When the window leaves no in-type candidate, `pick_layer_clusters` falls through to other
+   `allowed_types` (recorded as a `FallbackEntry`); the resulting mixed-type layer is then
+   rejected by `_check_layer_type_homogeneity` so the seed is rerolled in auto mode.
+   `pick_layer_clusters` returns a `weight_deltas` list (one entry per slot, `None` for slot 0
+   and for type fallbacks); the generator records each non-None value as `NodeEntry.weight_delta`
+   and the spoiler log surfaces it as `dw=<n>` next to `w=<n>`. A `weight_delta > anchor_tolerance`
+   flags picks that landed in the window-uniform fallback rather than within an anchor band.
+   Layers are independent: no anchor is carried across layers. A safety net in the validator
+   (`_check_layer_weight_spread`) re-asserts the invariant on the final DAG.
 3. Create `DagNode` instances, mark their zones used.
 4. Call `route_exits(dag, current_layer_nodes, next_nodes, rng)` to connect the layers.
 5. Advance `current_layer_nodes = next_nodes`.
