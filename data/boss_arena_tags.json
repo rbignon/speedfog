@@ -2123,10 +2123,10 @@
       "exclude_from_pool": false
     },
     "arena": {
-      "size": 3,
+      "size": 1,
       "type": 4,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -3357,7 +3357,7 @@
       "exclude_from_pool": false
     },
     "arena": {
-      "size": 3,
+      "size": 1,
       "type": 3,
       "two_phase_not_allowed": false,
       "dragon_not_allowed": true,
@@ -3457,10 +3457,10 @@
       "exclude_from_pool": false
     },
     "arena": {
-      "size": 3,
+      "size": 1,
       "type": 1,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -5141,7 +5141,7 @@
       "exclude_from_pool": false
     },
     "arena": {
-      "size": 4,
+      "size": 1,
       "type": 3,
       "two_phase_not_allowed": false,
       "dragon_not_allowed": true,
