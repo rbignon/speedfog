@@ -398,6 +398,9 @@ class ItemRandomizerConfig:
     auto_upgrade_weapons: bool = True
     auto_upgrade_dropped: bool = True
     reduce_upgrade_cost: bool = True
+    # Auto-equip best gear at start (item randomizer helper). Disabled by
+    # default: SpeedFog gives a care package instead.
+    auto_equip: bool = False
     dlc: bool = True
     nerf_gargoyles: bool = (
         True  # Disable damage tick in Valiant Gargoyles's poison cloud
@@ -644,6 +647,7 @@ class Config:
                 reduce_upgrade_cost=item_randomizer_section.get(
                     "reduce_upgrade_cost", True
                 ),
+                auto_equip=item_randomizer_section.get("auto_equip", False),
                 dlc=item_randomizer_section.get("dlc", True),
                 nerf_gargoyles=item_randomizer_section.get("nerf_gargoyles", True),
                 nerf_malenia=item_randomizer_section.get("nerf_malenia", False),

@@ -274,6 +274,12 @@ auto_upgrade_dropped = true
 # Somber weapons already cost 1 per level; this makes regular weapons match
 reduce_upgrade_cost = true
 
+# Auto-equip the best randomized gear at start (default: false)
+# Enables the item randomizer helper's autoEquip/equipWeapons/equipArmor/etc.
+# Disabled by default because SpeedFog gives a curated care package instead;
+# enable for a no-fuss "just play" start. Independent of [care_package].
+auto_equip = false
+
 # Randomize DLC (Shadow of the Erdtree) items and enemies (default: true)
 # DLC enemies are mixed with base game (no separate silo)
 dlc = true

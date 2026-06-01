@@ -54,6 +54,7 @@ def generate_item_config(
     DAG cluster's leader is in ``phase_mapping`` keys, the phase-1 slot is
     added as an additional independent arena (same pool, no phase pairing).
     """
+    auto_equip = config.item_randomizer.auto_equip
     result: dict[str, Any] = {
         "seed": seed,
         "difficulty": config.item_randomizer.difficulty,
@@ -90,16 +91,18 @@ def generate_item_config(
         # (e.g. auto-equip activating silently).  Int options like
         # weaponLevelsBelowMax/weaponLevelRange default to 0 which is fine.
         "helper_options": {
-            # Auto-equip: disabled — SpeedFog gives a care package instead
-            "autoEquip": False,
+            # Auto-equip: driven by config.item_randomizer.auto_equip. Disabled
+            # by default since SpeedFog gives a care package instead. equipShop
+            # stays disabled (not covered by the auto_equip toggle).
+            "autoEquip": auto_equip,
             "equipShop": False,
-            "equipWeapons": False,
-            "bowLeft": False,
-            "castLeft": False,
-            "equipArmor": False,
-            "equipAccessory": False,
-            "equipSpells": False,
-            "equipCrystalTears": False,
+            "equipWeapons": auto_equip,
+            "bowLeft": auto_equip,
+            "castLeft": auto_equip,
+            "equipArmor": auto_equip,
+            "equipAccessory": auto_equip,
+            "equipSpells": auto_equip,
+            "equipCrystalTears": auto_equip,
             # Auto-upgrade: enabled
             "autoUpgrade": True,
             "autoUpgradeWeapons": config.item_randomizer.auto_upgrade_weapons,

@@ -36,7 +36,7 @@ config.toml                    item_config.json                C# Models
 
 | Class | TOML Section | Key Fields |
 |-------|-------------|------------|
-| `ItemRandomizerConfig` | `[item_randomizer]` | `enabled`, `difficulty` (0-100), `dlc`, `remove_requirements`, `reduce_upgrade_cost`, `auto_upgrade_weapons`, `auto_upgrade_dropped`, `nerf_gargoyles`, `nerf_malenia`, `allcraft`, `item_preset` |
+| `ItemRandomizerConfig` | `[item_randomizer]` | `enabled`, `difficulty` (0-100), `dlc`, `remove_requirements`, `reduce_upgrade_cost`, `auto_upgrade_weapons`, `auto_upgrade_dropped`, `auto_equip`, `nerf_gargoyles`, `nerf_malenia`, `allcraft`, `item_preset` |
 | `EnemyConfig` | `[enemy]` | `randomize_bosses` |
 
 ### item_config.json Fields
@@ -220,7 +220,7 @@ autoUpgradeWeapons = true
 
 SpeedFog defaults are deliberately exhaustive to avoid surprising defaults from RandomizerHelper (which enables most features when not specified). Key choices:
 
-- **Auto-equip**: disabled (SpeedFog provides a care package instead)
+- **Auto-equip**: disabled by default (SpeedFog provides a care package instead). Set `[item_randomizer] auto_equip = true` to flip `autoEquip`, `equipWeapons`, `bowLeft`, `castLeft`, `equipArmor`, `equipAccessory`, `equipSpells`, and `equipCrystalTears` to `true` in one go. `equipShop` is left disabled. Independent of `[care_package]`.
 - **Auto-upgrade**: enabled (weapons auto-upgrade as the player progresses)
 
 The INI file is copied to `output/lib/` during packaging. `RandomizerHelper.dll` is listed under `external_dlls` in `config_speedfog.toml` when item randomization is active.

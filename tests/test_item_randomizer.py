@@ -149,6 +149,41 @@ def test_generate_item_config_custom_settings():
     assert result["helper_options"]["autoEquip"] is False
 
 
+AUTO_EQUIP_KEYS = (
+    "autoEquip",
+    "equipWeapons",
+    "bowLeft",
+    "castLeft",
+    "equipArmor",
+    "equipAccessory",
+    "equipSpells",
+    "equipCrystalTears",
+)
+
+
+def test_generate_item_config_auto_equip_enabled():
+    """auto_equip=True flips the eight auto-equip helper options to True."""
+    config = Config.from_dict({"item_randomizer": {"auto_equip": True}})
+    result = generate_item_config(config, 42)
+
+    helper = result["helper_options"]
+    for key in AUTO_EQUIP_KEYS:
+        assert helper[key] is True, key
+    # equipShop is not part of auto_equip and stays disabled.
+    assert helper["equipShop"] is False
+
+
+def test_generate_item_config_auto_equip_default_disabled():
+    """auto_equip defaults to False, keeping the eight options disabled."""
+    config = Config.from_dict({})
+    result = generate_item_config(config, 42)
+
+    helper = result["helper_options"]
+    for key in AUTO_EQUIP_KEYS:
+        assert helper[key] is False, key
+    assert helper["equipShop"] is False
+
+
 def test_generate_item_config_with_item_preset():
     """generate_item_config includes item_preset_path when item_preset enabled."""
     config = Config.from_dict({"item_randomizer": {"item_preset": True}})

@@ -453,6 +453,7 @@ def test_item_randomizer_defaults():
     assert config.item_randomizer.difficulty == 50
     assert config.item_randomizer.remove_requirements is True
     assert config.item_randomizer.auto_upgrade_weapons is True
+    assert config.item_randomizer.auto_equip is False
     assert config.item_randomizer.item_preset is True
     assert config.item_randomizer.item_preset_path == ""
 
@@ -472,6 +473,17 @@ auto_upgrade_weapons = false
     assert config.item_randomizer.difficulty == 75
     assert config.item_randomizer.remove_requirements is False
     assert config.item_randomizer.auto_upgrade_weapons is False
+
+
+def test_item_randomizer_auto_equip_from_toml(tmp_path):
+    """auto_equip parses from TOML."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[item_randomizer]
+auto_equip = true
+""")
+    config = Config.from_toml(config_file)
+    assert config.item_randomizer.auto_equip is True
 
 
 def test_item_randomizer_allcraft_from_toml(tmp_path):
