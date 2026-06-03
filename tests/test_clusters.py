@@ -196,3 +196,55 @@ def test_cluster_data_drops_allow_shared_entrance_field():
         id="x", zones=[], type="mini_dungeon", weight=1, entry_fogs=[], exit_fogs=[]
     )
     assert not hasattr(c, "allow_shared_entrance")
+
+
+class TestExcludeZones:
+    """Tests for ClusterPool.exclude_zones()."""
+
+    def _make_cluster(self, cluster_id, zones, cluster_type):
+        return ClusterData(
+            id=cluster_id,
+            zones=zones,
+            type=cluster_type,
+            weight=5,
+            entry_fogs=[],
+            exit_fogs=[],
+        )
+
+    def _pool(self):
+        pool = ClusterPool()
+        pool.add(self._make_cluster("a", ["zone_a"], "mini_dungeon"))
+        pool.add(self._make_cluster("b", ["zone_b1", "zone_b2"], "legacy_dungeon"))
+        pool.add(self._make_cluster("c", ["zone_c"], "boss_arena"))
+        return pool
+
+    def test_removes_matching_cluster(self):
+        """A cluster whose zones contain an excluded zone is removed."""
+        pool = self._pool()
+        removed = pool.exclude_zones(["zone_a"])
+        assert [c.id for c in removed] == ["a"]
+        assert "a" not in pool.by_id
+        assert all(c.id != "a" for c in pool.clusters)
+        assert all(c.id != "a" for c in pool.by_type["mini_dungeon"])
+
+    def test_multi_zone_cluster_removed_on_any_match(self):
+        """Excluding one zone of a multi-zone cluster removes the whole cluster."""
+        pool = self._pool()
+        removed = pool.exclude_zones(["zone_b2"])
+        assert [c.id for c in removed] == ["b"]
+        assert "b" not in pool.by_id
+        assert pool.by_type["legacy_dungeon"] == []
+
+    def test_unmatched_zone_removes_nothing(self):
+        """An excluded zone present in no cluster removes nothing."""
+        pool = self._pool()
+        removed = pool.exclude_zones(["does_not_exist"])
+        assert removed == []
+        assert len(pool.clusters) == 3
+
+    def test_empty_exclusion_is_noop(self):
+        """An empty exclusion list leaves the pool untouched."""
+        pool = self._pool()
+        removed = pool.exclude_zones([])
+        assert removed == []
+        assert len(pool.clusters) == 3

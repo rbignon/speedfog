@@ -265,6 +265,32 @@ class ClusterPool:
 
         return to_remove
 
+    def exclude_zones(self, zones: list[str]) -> list[ClusterData]:
+        """Remove every cluster whose zones intersect the excluded set.
+
+        Mirrors the removal bookkeeping of filter_passant_incompatible:
+        keeps clusters / by_type / by_id consistent. Returns the removed
+        clusters (for verbose logging).
+
+        Args:
+            zones: Zone IDs to exclude. A cluster is removed if any of its
+                zones appears in this set (cluster-level granularity).
+
+        Returns:
+            List of removed clusters.
+        """
+        excluded = set(zones)
+        if not excluded:
+            return []
+        to_remove = [c for c in self.clusters if excluded.intersection(c.zones)]
+        for cluster in to_remove:
+            self.clusters.remove(cluster)
+            del self.by_id[cluster.id]
+            type_list = self.by_type.get(cluster.type)
+            if type_list and cluster in type_list:
+                type_list.remove(cluster)
+        return to_remove
+
     @classmethod
     def from_json(cls, path: Path) -> ClusterPool:
         """Load cluster pool from JSON file."""
