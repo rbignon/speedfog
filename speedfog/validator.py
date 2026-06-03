@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from speedfog.clusters import ClusterPool
-from speedfog.config import Config
+from speedfog.config import Config, resolve_final_boss_candidates
 from speedfog.dag import Dag, FogRef
 from speedfog.output import EVENT_FLAG_BUDGET
 
@@ -408,23 +408,33 @@ def validate_exclusions(config: Config, clusters: ClusterPool) -> list[str]:
     for zone in sorted(excluded_set & set(config.requirements.zones)):
         errors.append(f"Zone '{zone}' is both required and excluded")
 
-    # 3. Conflict with final boss candidates
-    effective = config.structure.effective_final_boss_candidates
-    explicit = set(effective) - {"all"}
+    # 3. Conflict with final boss candidates.
+    # 3a. An explicitly listed candidate that is also excluded is a
+    #     contradiction. Use the RAW candidates (empty when unset): the
+    #     synthesized defaults are not an explicit user choice. The 'all'
+    #     keyword is not an explicit zone.
+    explicit = set(config.structure.final_boss_candidates) - {"all"}
     for zone in sorted(excluded_set & explicit):
         errors.append(f"Zone '{zone}' is both a final_boss candidate and excluded")
-    if "all" in effective:
-        boss_zones = {
-            z
-            for c in (
-                clusters.get_by_type("major_boss") + clusters.get_by_type("final_boss")
-            )
-            for z in c.zones
-        }
-        if boss_zones and not (boss_zones - excluded_set):
-            errors.append(
-                "exclude_zones removes every final boss "
-                "(final_boss_candidates = 'all')"
-            )
+    # 3b. At least one final boss must survive exclusion. Survival is judged at
+    #     CLUSTER granularity (a cluster is removed if ANY of its zones is
+    #     excluded), matching ClusterPool.exclude_zones.
+    boss_clusters = clusters.get_by_type("major_boss") + clusters.get_by_type(
+        "final_boss"
+    )
+    all_boss_zones = {z for c in boss_clusters for z in c.zones}
+    candidate_zones = set(
+        resolve_final_boss_candidates(
+            config.structure.effective_final_boss_candidates, all_boss_zones
+        )
+    )
+    if candidate_zones:
+        survives = any(
+            candidate_zones.intersection(c.zones)
+            and not excluded_set.intersection(c.zones)
+            for c in boss_clusters
+        )
+        if not survives:
+            errors.append("exclude_zones removes every final boss candidate")
 
     return errors

@@ -1195,3 +1195,36 @@ class TestValidateExclusions:
         cfg.requirements.exclude_zones = ["haligtree_malenia", "caelid_radahn"]
         errors = validate_exclusions(cfg, self._pool())
         assert any("every final boss" in e for e in errors)
+
+    def test_excluding_one_default_final_boss_is_valid(self):
+        """Excluding one default finale zone is fine while the other survives."""
+        pool = ClusterPool()
+        pool.add(make_cluster("erdtree", ["leyndell_erdtree"], "major_boss"))
+        pool.add(make_cluster("pcr", ["enirilim_radahn"], "major_boss"))
+        cfg = Config()  # no final_boss_candidates -> defaults apply
+        cfg.requirements.exclude_zones = ["leyndell_erdtree"]
+        assert validate_exclusions(cfg, pool) == []
+
+    def test_excluding_all_default_final_bosses_errors(self):
+        """Excluding every default finale zone fails fast."""
+        pool = ClusterPool()
+        pool.add(make_cluster("erdtree", ["leyndell_erdtree"], "major_boss"))
+        pool.add(make_cluster("pcr", ["enirilim_radahn"], "major_boss"))
+        cfg = Config()  # defaults apply
+        cfg.requirements.exclude_zones = ["leyndell_erdtree", "enirilim_radahn"]
+        errors = validate_exclusions(cfg, pool)
+        assert any("every final boss" in e for e in errors)
+
+    def test_all_keyword_multizone_boss_cluster_errors(self):
+        """Excluding a secondary zone removes the whole multi-zone boss cluster."""
+        pool = ClusterPool()
+        pool.add(
+            make_cluster(
+                "godrick", ["stormveil_godrick", "stormveil_throne"], "major_boss"
+            )
+        )
+        cfg = Config()
+        cfg.structure.final_boss_candidates = {"all": 1}
+        cfg.requirements.exclude_zones = ["stormveil_throne"]
+        errors = validate_exclusions(cfg, pool)
+        assert any("every final boss" in e for e in errors)
