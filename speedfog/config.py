@@ -56,6 +56,7 @@ class RequirementsConfig:
     mini_dungeons: int = 5
     major_bosses: int = 8
     zones: list[str] = field(default_factory=list)
+    exclude_zones: list[str] = field(default_factory=list)
     allowed_types: list[str] = field(default_factory=lambda: list(_VALID_CLUSTER_TYPES))
 
     def __post_init__(self) -> None:
@@ -572,6 +573,7 @@ class Config:
                 mini_dungeons=requirements_section.get("mini_dungeons", 5),
                 major_bosses=requirements_section.get("major_bosses", 8),
                 zones=requirements_section.get("zones", []),
+                exclude_zones=requirements_section.get("exclude_zones", []),
                 allowed_types=requirements_section.get(
                     "allowed_types",
                     list(_VALID_CLUSTER_TYPES),

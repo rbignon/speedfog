@@ -32,6 +32,23 @@ def test_config_defaults():
     assert config.structure.max_parallel_paths == 3
 
 
+def test_exclude_zones_default_empty():
+    """exclude_zones defaults to an empty list."""
+    config = Config.from_dict({})
+    assert config.requirements.exclude_zones == []
+
+
+def test_exclude_zones_parsed_from_dict():
+    """exclude_zones is parsed from the requirements section."""
+    config = Config.from_dict(
+        {"requirements": {"exclude_zones": ["haligtree_malenia", "caelid_radahn"]}}
+    )
+    assert config.requirements.exclude_zones == [
+        "haligtree_malenia",
+        "caelid_radahn",
+    ]
+
+
 def test_config_from_toml(tmp_path):
     """Config.from_toml parses TOML file correctly."""
     config_file = tmp_path / "config.toml"
