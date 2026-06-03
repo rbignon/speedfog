@@ -374,3 +374,57 @@ def _check_entry_zone_membership(dag: Dag) -> list[str]:
                 f"'{target_node.cluster.id}' zones {target_node.cluster.zones}"
             )
     return errors
+
+
+def validate_exclusions(config: Config, clusters: ClusterPool) -> list[str]:
+    """Validate requirements.exclude_zones against the cluster pool.
+
+    Must run on the UNFILTERED pool, before ClusterPool.exclude_zones mutates
+    it. Returns blocking error messages (empty list if valid). Exclusion is a
+    hard pool filter, so any problem here is a configuration error.
+
+    Checks:
+      1. Existence: every excluded zone matches some cluster zone (typo guard;
+         a missing zone would otherwise be a silent no-op).
+      2. No zone is both required (requirements.zones) and excluded.
+      3. No zone is both an explicit final_boss candidate and excluded. The
+         'all' keyword is exempt ("all except X"); we only ensure at least one
+         boss survives.
+    """
+    excluded = config.requirements.exclude_zones
+    if not excluded:
+        return []
+
+    errors: list[str] = []
+    excluded_set = set(excluded)
+
+    # 1. Existence
+    pool_zones = {z for c in clusters.clusters for z in c.zones}
+    for zone in sorted(excluded_set):
+        if zone not in pool_zones:
+            errors.append(f"Unknown exclude_zone: '{zone}' (not in any cluster)")
+
+    # 2. Conflict with requirements.zones
+    for zone in sorted(excluded_set & set(config.requirements.zones)):
+        errors.append(f"Zone '{zone}' is both required and excluded")
+
+    # 3. Conflict with final boss candidates
+    effective = config.structure.effective_final_boss_candidates
+    explicit = set(effective) - {"all"}
+    for zone in sorted(excluded_set & explicit):
+        errors.append(f"Zone '{zone}' is both a final_boss candidate and excluded")
+    if "all" in effective:
+        boss_zones = {
+            z
+            for c in (
+                clusters.get_by_type("major_boss") + clusters.get_by_type("final_boss")
+            )
+            for z in c.zones
+        }
+        if boss_zones and not (boss_zones - excluded_set):
+            errors.append(
+                "exclude_zones removes every final boss "
+                "(final_boss_candidates = 'all')"
+            )
+
+    return errors

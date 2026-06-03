@@ -1,9 +1,9 @@
 """Tests for DAG validator."""
 
-from speedfog.clusters import ClusterData
+from speedfog.clusters import ClusterData, ClusterPool
 from speedfog.config import Config
 from speedfog.dag import Dag, DagNode, FogRef
-from speedfog.validator import ValidationResult, validate_dag
+from speedfog.validator import ValidationResult, validate_dag, validate_exclusions
 
 
 def make_cluster(
@@ -1133,3 +1133,65 @@ class TestLayerWeightSpread:
         assert not any(
             "spread" in e.lower() for e in validate_dag(dag, relaxed_config).errors
         )
+
+
+class TestValidateExclusions:
+    """Tests for validate_exclusions()."""
+
+    def _pool(self) -> ClusterPool:
+        pool = ClusterPool()
+        pool.add(make_cluster("mini_a", ["mini_a_zone"], "mini_dungeon"))
+        pool.add(make_cluster("boss_a", ["boss_a_zone"], "boss_arena"))
+        pool.add(make_cluster("malenia", ["haligtree_malenia"], "major_boss"))
+        pool.add(make_cluster("radahn", ["caelid_radahn"], "major_boss"))
+        return pool
+
+    def _config(self) -> Config:
+        cfg = Config()
+        # Point final boss at a real pool zone so defaults don't interfere.
+        cfg.structure.final_boss_candidates = {"caelid_radahn": 1}
+        return cfg
+
+    def test_no_exclusions_returns_empty(self):
+        cfg = self._config()
+        assert validate_exclusions(cfg, self._pool()) == []
+
+    def test_valid_exclusion_returns_empty(self):
+        cfg = self._config()
+        cfg.requirements.exclude_zones = ["haligtree_malenia"]
+        assert validate_exclusions(cfg, self._pool()) == []
+
+    def test_unknown_zone_errors(self):
+        cfg = self._config()
+        cfg.requirements.exclude_zones = ["typo_zone"]
+        errors = validate_exclusions(cfg, self._pool())
+        assert len(errors) == 1
+        assert "typo_zone" in errors[0]
+
+    def test_conflict_with_required_zone_errors(self):
+        cfg = self._config()
+        cfg.requirements.zones = ["haligtree_malenia"]
+        cfg.requirements.exclude_zones = ["haligtree_malenia"]
+        errors = validate_exclusions(cfg, self._pool())
+        assert any("required and excluded" in e for e in errors)
+
+    def test_conflict_with_explicit_final_boss_errors(self):
+        cfg = self._config()
+        cfg.structure.final_boss_candidates = {"caelid_radahn": 1}
+        cfg.requirements.exclude_zones = ["caelid_radahn"]
+        errors = validate_exclusions(cfg, self._pool())
+        assert any("final_boss candidate and excluded" in e for e in errors)
+
+    def test_all_keyword_plus_exclusion_is_valid(self):
+        """final_boss_candidates='all' minus one boss is the 'all except X' idiom."""
+        cfg = self._config()
+        cfg.structure.final_boss_candidates = {"all": 1}
+        cfg.requirements.exclude_zones = ["haligtree_malenia"]
+        assert validate_exclusions(cfg, self._pool()) == []
+
+    def test_all_keyword_excluding_every_boss_errors(self):
+        cfg = self._config()
+        cfg.structure.final_boss_candidates = {"all": 1}
+        cfg.requirements.exclude_zones = ["haligtree_malenia", "caelid_radahn"]
+        errors = validate_exclusions(cfg, self._pool())
+        assert any("every final boss" in e for e in errors)
