@@ -647,7 +647,7 @@ allowed_entries = [
 ]
 
 [clusters.volcano_808b]
-weight = 2
+weight = 1
 allowed_exits = [
     "AEG099_003_0501", # after Godskin Noble's arena to the back left, down the shortcut elevator
     "AEG099_232_9005", # at the end of the dark hallway leading to Prison Town
