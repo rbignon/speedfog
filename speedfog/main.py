@@ -29,6 +29,7 @@ from speedfog.output import (
     resolve_entity_id,
 )
 from speedfog.packaging import PackagingError, package_seed
+from speedfog.validator import validate_exclusions
 
 
 class StepTimer:
@@ -162,6 +163,24 @@ def main() -> int:
     except FileNotFoundError:
         print(f"Error: Clusters file not found: {clusters_path}", file=sys.stderr)
         return 1
+
+    # Apply zone exclusions (hard pool filter). Validate against the
+    # unfiltered pool first so typos / conflicts fail fast, then remove the
+    # matching clusters before any other pool processing.
+    if config.requirements.exclude_zones:
+        exclusion_errors = validate_exclusions(config, clusters)
+        if exclusion_errors:
+            print(
+                "Error: invalid exclude_zones: " + "; ".join(exclusion_errors),
+                file=sys.stderr,
+            )
+            return 1
+        removed = clusters.exclude_zones(config.requirements.exclude_zones)
+        if args.verbose:
+            print(
+                f"Excluded {len(removed)} clusters via exclude_zones: "
+                f"{[c.id for c in removed]}"
+            )
 
     # Merge roundtable into start cluster for a second exit branch.
     # Only when splitting is enabled (max_exits > 1) and parallel paths
