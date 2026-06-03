@@ -383,6 +383,26 @@ Properties:
 The generation log records each placement under a `REQUIRED ZONES`
 section, useful for debugging when the safety-net validator fires.
 
+## Excluded Zones
+
+`requirements.exclude_zones` is the hard counterpart of `requirements.zones`.
+Where required zones are a *soft* picker preference (validated post-hoc),
+excluded zones are a *hard* pool filter: every cluster whose zones intersect
+the excluded set is removed from the pool once at load (`ClusterPool.exclude_zones`,
+called from `main.py`), before roundtable merge and passant filtering. The
+removed clusters can never appear anywhere in the DAG, including as the final
+boss, because all downstream stages read from the filtered pool.
+
+`validate_exclusions` (`validator.py`) runs first, on the unfiltered pool, and
+rejects the config (fail-fast) when an excluded zone is unknown, is also
+required (`zones`), or is also an explicit `final_boss_candidates` entry. The
+`"all"` keyword is exempt from the final-boss conflict check ("all except X");
+only the case where exclusion removes every possible final boss is an error.
+
+Granularity is cluster-level: excluding any zone drops the entire cluster that
+contains it. Boss zones (the main use case) are typically single-zone clusters,
+so this is intuitive; a multi-zone cluster is removed as a whole.
+
 ## Allowed Cluster Types
 
 By default, the DAG can include any of four cluster types:
