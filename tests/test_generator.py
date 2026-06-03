@@ -3405,3 +3405,40 @@ def test_generate_with_retry_places_multiple_required_zones_without_retry():
     placed = {rzp.zone for rzp in result.log.required_zone_placements}
     for zone in required_zones:
         assert zone in placed, f"zone {zone!r} missing from log placements"
+
+
+class TestExcludeZonesGeneration:
+    """End-to-end: a reachable zone, once excluded, never appears in the DAG.
+
+    Non-vacuous by construction. A control run first proves the target zone is
+    actually placed by the generator in some seeds; the treatment run then
+    proves exclusion removes it from every seed, including the control seeds
+    where it appeared. A no-op exclude_zones would fail the treatment loop.
+    """
+
+    _SEEDS = list(range(1, 31))
+
+    def _zones_for(self, pool, seed):
+        dag, _log = generate_dag(_make_test_config(seed=seed), pool)
+        return {z for n in dag.nodes.values() for z in n.cluster.zones}
+
+    def test_excluded_reachable_zone_never_appears(self):
+        # Control: collect the zones the generator places per seed (no exclusion).
+        baseline = {
+            seed: self._zones_for(make_cluster_pool(), seed) for seed in self._SEEDS
+        }
+        placed_minis = sorted(
+            {z for zones in baseline.values() for z in zones if z.startswith("mini_")}
+        )
+        assert placed_minis, "control failed: generator never placed a mini zone"
+        target = placed_minis[0]
+        control_seeds = [s for s in self._SEEDS if target in baseline[s]]
+        assert control_seeds, f"control failed: {target} placed in no seed"
+
+        # Treatment: with target excluded, it must vanish from EVERY seed,
+        # including the control seeds where it appeared in the baseline.
+        for seed in self._SEEDS:
+            pool = make_cluster_pool()
+            removed = pool.exclude_zones([target])
+            assert removed, f"exclude_zones removed nothing for {target!r}"
+            assert target not in self._zones_for(pool, seed)
