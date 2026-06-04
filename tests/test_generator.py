@@ -3427,3 +3427,90 @@ class TestExcludeZonesGeneration:
             removed = pool.exclude_zones([target])
             assert removed, f"exclude_zones removed nothing for {target!r}"
             assert target not in self._zones_for(pool, seed)
+
+    def test_excluded_explicit_final_boss_is_pruned_then_generates(self):
+        """Excluding an explicit final_boss candidate prunes it (no crash).
+
+        Without the prune the run aborts in validate_config ("Unknown final_boss
+        candidate zone"), so the prune is load-bearing: the first sub-assertion
+        proves the crash, the second proves _apply_exclusions fixes it and the
+        excluded boss never appears.
+        """
+        from speedfog.main import _apply_exclusions
+        from speedfog.validator import validate_exclusions
+
+        excluded = "farumazula_maliketh"  # the maliketh major_boss cluster
+
+        def fresh_config():
+            cfg = _make_test_config(seed=4242)
+            cfg.structure.final_boss_candidates = {
+                "test_final_boss_zone": 1,
+                excluded: 1,
+            }
+            cfg.requirements.exclude_zones = [excluded]
+            return cfg
+
+        # Pre-filter validation passes (another candidate survives).
+        assert validate_exclusions(fresh_config(), make_cluster_pool()) == []
+
+        # Load-bearing check: filtering the cluster but leaving the stale
+        # candidate makes validate_config reject it.
+        crash_pool = make_cluster_pool()
+        crash_pool.exclude_zones([excluded])
+        with pytest.raises(GenerationError, match=excluded):
+            generate_with_retry(
+                fresh_config(),
+                crash_pool,
+                boss_candidates=_boss_candidates(crash_pool),
+            )
+
+        # _apply_exclusions prunes the candidate, so generation succeeds and the
+        # excluded boss never appears.
+        pool = make_cluster_pool()
+        cfg = fresh_config()
+        _apply_exclusions(cfg, pool)
+        result = generate_with_retry(cfg, pool, boss_candidates=_boss_candidates(pool))
+        zones = {z for n in result.dag.nodes.values() for z in n.cluster.zones}
+        assert excluded not in zones
+        end_node = result.dag.nodes[result.dag.end_id]
+        assert "test_final_boss_zone" in end_node.cluster.zones
+
+    def test_apply_exclusions_prunes_multizone_boss_candidate(self):
+        """Excluding a SECONDARY zone of a multi-zone boss cluster prunes its
+        primary candidate too (cluster granularity).
+
+        exclude_zones drops the whole cluster on any-zone match (real data has
+        clusters like stormveil_godrick + stormveil_throne). A zone-name-only
+        prune would orphan the primary candidate and crash validate_config with
+        "Unknown final_boss candidate zone".
+        """
+        from speedfog.main import _apply_exclusions
+
+        pool = ClusterPool()
+        pool.add(
+            make_cluster(
+                "godrick",
+                ["stormveil_godrick", "stormveil_throne"],
+                "major_boss",
+                exit_fogs=[],
+            )
+        )
+        pool.add(
+            make_cluster("erdtree", ["leyndell_erdtree"], "major_boss", exit_fogs=[])
+        )
+        cfg = _make_test_config(seed=1)
+        cfg.structure.final_boss_candidates = {
+            "stormveil_godrick": 1,
+            "leyndell_erdtree": 1,
+        }
+        cfg.requirements.exclude_zones = ["stormveil_throne"]  # secondary zone
+
+        removed = _apply_exclusions(cfg, pool)
+
+        assert {c.id for c in removed} == {"godrick"}
+        # The orphaned primary candidate is pruned; the survivor stays.
+        assert "stormveil_godrick" not in cfg.structure.final_boss_candidates
+        assert "leyndell_erdtree" in cfg.structure.final_boss_candidates
+        # validate_config (where the orphan would crash) now accepts the config.
+        errors, _ = validate_config(cfg, pool, _boss_candidates(pool))
+        assert not any("final_boss candidate" in e for e in errors), errors

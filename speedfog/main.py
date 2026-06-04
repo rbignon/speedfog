@@ -11,8 +11,8 @@ from pathlib import Path
 
 from speedfog.boss_arena_constraints import MatchingError, load_tags
 from speedfog.care_package import sample_care_package
-from speedfog.clusters import load_clusters
-from speedfog.config import Config, load_config
+from speedfog.clusters import ClusterData, ClusterPool, load_clusters
+from speedfog.config import Config, load_config, prune_final_boss_candidates
 from speedfog.fog_mod import run_fogmodwrapper
 from speedfog.generator import GenerationError, generate_with_retry
 from speedfog.item_randomizer import generate_item_config, run_item_randomizer
@@ -30,6 +30,25 @@ from speedfog.output import (
 )
 from speedfog.packaging import PackagingError, package_seed
 from speedfog.validator import validate_exclusions
+
+
+def _apply_exclusions(config: Config, clusters: ClusterPool) -> list[ClusterData]:
+    """Filter excluded-zone clusters from the pool and prune them from the
+    final-boss candidate set. Returns the removed clusters (for logging).
+
+    Assumes ``validate_exclusions`` already passed. Pruning uses every zone of
+    the removed clusters (not just the literal ``exclude_zones`` entries) to
+    match the pool filter's cluster granularity, so excluding one zone of a
+    multi-zone boss cluster also drops its siblings from the candidates. The
+    effective candidates are materialized (defaults included); zones from no
+    removed cluster (e.g. a typo) are left for the generator to report.
+    """
+    removed = clusters.exclude_zones(config.requirements.exclude_zones)
+    removed_zones = {zone for cluster in removed for zone in cluster.zones}
+    config.structure.final_boss_candidates = prune_final_boss_candidates(
+        config.structure.effective_final_boss_candidates, removed_zones
+    )
+    return removed
 
 
 class StepTimer:
@@ -175,7 +194,7 @@ def main() -> int:
                 file=sys.stderr,
             )
             return 1
-        removed = clusters.exclude_zones(config.requirements.exclude_zones)
+        removed = _apply_exclusions(config, clusters)
         if args.verbose:
             print(
                 f"Excluded {len(removed)} clusters via exclude_zones: "

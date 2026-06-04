@@ -401,10 +401,17 @@ removed clusters can never appear anywhere in the DAG, including as the final
 boss, because all downstream stages read from the filtered pool.
 
 `validate_exclusions` (`validator.py`) runs first, on the unfiltered pool, and
-rejects the config (fail-fast) when an excluded zone is unknown, is also
-required (`zones`), or is also an explicit `final_boss_candidates` entry. The
-`"all"` keyword is exempt from the final-boss conflict check ("all except X");
-only the case where exclusion removes every possible final boss is an error.
+rejects the config (fail-fast) when an excluded zone is unknown or is also
+required (`zones`). An excluded zone that is also a `final_boss_candidates`
+entry is **not** an error: `main.py` (`_apply_exclusions`) prunes it from the
+candidate set after filtering the pool, via `prune_final_boss_candidates`. It
+materializes the effective candidates (defaults included) and prunes at the
+same cluster granularity as the pool filter: every zone of a removed cluster is
+dropped, so excluding a multi-zone boss cluster through one of its zones cannot
+leave another of its zones orphaned in the candidate set. Candidate zones that
+belong to no removed cluster (e.g. a typo) are left untouched so the generator
+still reports them. The `"all"` keyword resolves against the filtered pool. The
+only blocking final-boss case is exclusion removing every possible final boss.
 
 Granularity is cluster-level: excluding any zone drops the entire cluster that
 contains it. Boss zones (the main use case) are typically single-zone clusters,

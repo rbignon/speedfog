@@ -387,9 +387,10 @@ def validate_exclusions(config: Config, clusters: ClusterPool) -> list[str]:
       1. Existence: every excluded zone matches some cluster zone (typo guard;
          a missing zone would otherwise be a silent no-op).
       2. No zone is both required (requirements.zones) and excluded.
-      3. No zone is both an explicit final_boss candidate and excluded. The
-         'all' keyword is exempt ("all except X"); we only ensure at least one
-         boss survives.
+      3. At least one final boss candidate survives exclusion. Excluded zones
+         are pruned from final_boss_candidates by main (not an error), so the
+         only blocking case is excluding every candidate. The 'all' keyword is
+         handled the same way: it resolves against the filtered pool.
     """
     excluded = config.requirements.exclude_zones
     if not excluded:
@@ -408,17 +409,12 @@ def validate_exclusions(config: Config, clusters: ClusterPool) -> list[str]:
     for zone in sorted(excluded_set & set(config.requirements.zones)):
         errors.append(f"Zone '{zone}' is both required and excluded")
 
-    # 3. Conflict with final boss candidates.
-    # 3a. An explicitly listed candidate that is also excluded is a
-    #     contradiction. Use the RAW candidates (empty when unset): the
-    #     synthesized defaults are not an explicit user choice. The 'all'
-    #     keyword is not an explicit zone.
-    explicit = set(config.structure.final_boss_candidates) - {"all"}
-    for zone in sorted(excluded_set & explicit):
-        errors.append(f"Zone '{zone}' is both a final_boss candidate and excluded")
-    # 3b. At least one final boss must survive exclusion. Survival is judged at
-    #     CLUSTER granularity (a cluster is removed if ANY of its zones is
-    #     excluded), matching ClusterPool.exclude_zones.
+    # 3. At least one final boss must survive exclusion. Excluded zones are
+    #    dropped from final_boss_candidates rather than erroring (see
+    #    _apply_exclusions in main), so the only blocking case is removing every
+    #    candidate. Survival is judged at CLUSTER granularity (a
+    #    cluster is removed if ANY of its zones is excluded), matching
+    #    ClusterPool.exclude_zones.
     boss_clusters = clusters.get_by_type("major_boss") + clusters.get_by_type(
         "final_boss"
     )

@@ -59,8 +59,9 @@ major_bosses = 8
 # Zones that must NEVER appear in the DAG (hard guarantee), including as the
 # final boss. Any cluster containing an excluded zone is removed from the pool
 # before generation. Useful to skip a specific boss (e.g. Malenia, Radahn).
-# Validated at load: an unknown zone name, or a zone that is also in `zones`
-# or an explicit `final_boss_candidates` entry, is a hard error.
+# An excluded zone listed in `final_boss_candidates` is simply pruned from that
+# list (not an error). Validated at load: an unknown zone name, a zone also in
+# `zones`, or exclusion that removes every final boss candidate, is a hard error.
 # exclude_zones = ["haligtree_malenia"]
 
 # Cluster types allowed in the DAG. Types not listed are excluded

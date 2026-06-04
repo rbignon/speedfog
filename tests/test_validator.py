@@ -1175,12 +1175,24 @@ class TestValidateExclusions:
         errors = validate_exclusions(cfg, self._pool())
         assert any("required and excluded" in e for e in errors)
 
-    def test_conflict_with_explicit_final_boss_errors(self):
+    def test_excluded_explicit_final_boss_not_error_when_other_survives(self):
+        """An excluded explicit candidate is pruned, not a hard error, as long
+        as another explicit candidate survives."""
+        cfg = self._config()
+        cfg.structure.final_boss_candidates = {
+            "caelid_radahn": 1,
+            "haligtree_malenia": 1,
+        }
+        cfg.requirements.exclude_zones = ["haligtree_malenia"]
+        assert validate_exclusions(cfg, self._pool()) == []
+
+    def test_excluding_only_explicit_final_boss_errors(self):
+        """Excluding the sole explicit candidate leaves no final boss."""
         cfg = self._config()
         cfg.structure.final_boss_candidates = {"caelid_radahn": 1}
         cfg.requirements.exclude_zones = ["caelid_radahn"]
         errors = validate_exclusions(cfg, self._pool())
-        assert any("final_boss candidate and excluded" in e for e in errors)
+        assert any("every final boss" in e for e in errors)
 
     def test_all_keyword_plus_exclusion_is_valid(self):
         """final_boss_candidates='all' minus one boss is the 'all except X' idiom."""

@@ -7,6 +7,7 @@ from speedfog.config import (
     Config,
     RequirementsConfig,
     load_config,
+    prune_final_boss_candidates,
     resolve_final_boss_candidates,
 )
 
@@ -260,6 +261,28 @@ def test_resolve_final_boss_candidates_empty_dict():
     candidates: dict[str, int] = {}
     result = resolve_final_boss_candidates(candidates, all_zones)
     assert result == {}
+
+
+def test_prune_final_boss_candidates_drops_excluded():
+    """prune_final_boss_candidates removes excluded zones, keeps weights."""
+    candidates = {"zone_a": 3, "zone_b": 1, "zone_c": 2}
+    result = prune_final_boss_candidates(candidates, {"zone_b"})
+    assert result == {"zone_a": 3, "zone_c": 2}
+
+
+def test_prune_final_boss_candidates_preserves_all_keyword():
+    """The 'all' keyword survives pruning (it resolves against the live pool)."""
+    candidates = {"all": 1}
+    result = prune_final_boss_candidates(candidates, {"zone_b"})
+    assert result == {"all": 1}
+
+
+def test_prune_final_boss_candidates_no_excluded_match():
+    """Excluding zones absent from the candidates is a no-op copy."""
+    candidates = {"zone_a": 1}
+    result = prune_final_boss_candidates(candidates, {"zone_x"})
+    assert result == {"zone_a": 1}
+    assert result is not candidates  # returns a fresh dict, never mutates input
 
 
 def test_starting_items_defaults():

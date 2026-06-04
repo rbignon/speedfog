@@ -207,6 +207,17 @@ def resolve_final_boss_candidates(
     return candidates
 
 
+def prune_final_boss_candidates(
+    candidates: dict[str, int], excluded: set[str]
+) -> dict[str, int]:
+    """Drop excluded zones from a final_boss candidate mapping (fresh dict).
+
+    The 'all' keyword has no zone name to match, so it is preserved and later
+    resolves against the already-filtered pool.
+    """
+    return {zone: weight for zone, weight in candidates.items() if zone not in excluded}
+
+
 def _parse_final_boss_candidates(raw: list[str] | dict[str, int]) -> dict[str, int]:
     """Parse final_boss_candidates from TOML.
 
