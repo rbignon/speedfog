@@ -387,9 +387,11 @@ exclude = true  # Cathedral of Manus Metyr interior, accessed via unique warp, n
 #
 # weight: override computed cluster weight with observed race data
 # exclude: remove this cluster entirely from the pool
-# proximity_groups: fogs spatially close. Two constraints:
-#   - an entry and an exit in the same group are mutually exclusive;
-#   - on a given source, two outgoing exits in the same group are mutually exclusive.
+# proximity_groups: fogs spatially close. One constraint:
+#   - an entry and an exit in the same group are mutually exclusive
+#     (prevents exiting next to where you entered, which would skip the zone).
+# Two outgoing exits in the same group are NOT mutually exclusive: adjacent
+# branch gates are allowed (intentional racing divergence).
 # allowed_entries/allowed_exits: restrict eligible fogs
 # Use "zone:fog_id" when the same fog_id appears in multiple zones
 

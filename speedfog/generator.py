@@ -116,50 +116,14 @@ def compute_net_exits(cluster: ClusterData, consumed_entries: list[dict]) -> lis
     ]
 
 
-def _max_independent_exits(cluster: ClusterData, exits: list[dict]) -> int:
-    """Maximum exits selectable such that no two share a proximity group.
-
-    Exits in the same proximity group are mutually exclusive (only one can
-    be used on a given source). Computed as a max-independent-set on the
-    conflict graph (two exits conflict if they share any group). Brute-forced
-    over bitmasks of exits, which is fine because per-cluster exit counts
-    stay small.
-    """
-    if not cluster.proximity_groups or not exits:
-        return len(exits)
-    n = len(exits)
-    conflict = [0] * n
-    for group in cluster.proximity_groups:
-        members_mask = 0
-        for i, f in enumerate(exits):
-            if any(fog_matches_spec(f["fog_id"], f["zone"], s) for s in group):
-                members_mask |= 1 << i
-        for i in range(n):
-            if members_mask & (1 << i):
-                conflict[i] |= members_mask & ~(1 << i)
-    best = 0
-    for mask in range(1 << n):
-        ok = True
-        m = mask
-        while m:
-            i = (m & -m).bit_length() - 1
-            if conflict[i] & mask:
-                ok = False
-                break
-            m &= m - 1
-        if ok:
-            best = max(best, bin(mask).count("1"))
-    return best
-
-
 def count_net_exits(cluster: ClusterData, num_entries: int) -> int:
     """Minimum net exits when consuming num_entries (greedy: prefer non-bidirectional).
 
     This calculates the worst-case net exits by greedily selecting entries
     that cost the least (non-bidirectional entries have zero cost).
     Also accounts for proximity_groups: exits sharing a proximity group
-    with any consumed entry are excluded, and exits sharing a group with
-    each other are mutually exclusive (only one usable per group).
+    with any consumed entry are excluded (entry-vs-exit). Exits sharing a
+    group only with each other stay independently usable.
 
     A fog is bidirectional only if the same (fog_id, zone) pair appears
     in both entry and exit lists - meaning the same side of the gate.
@@ -187,15 +151,15 @@ def count_net_exits(cluster: ClusterData, num_entries: int) -> int:
         return len(compute_net_exits(cluster, consumed))
 
     # With proximity: worst-case across all entry combinations.
-    # For each combination, compute net exits, filter by entry proximity,
-    # then cap by within-group mutual exclusion among the surviving exits.
+    # For each combination, compute net exits and filter by entry proximity
+    # (entry-vs-exit). Exits sharing a group only with each other still count.
     min_exits = len(cluster.exit_fogs)
     for combo in combinations(cluster.entry_fogs, num_entries):
         consumed = list(combo)
         net = compute_net_exits(cluster, consumed)
         for entry in consumed:
             net = _filter_exits_by_proximity(cluster, entry, net)
-        min_exits = min(min_exits, _max_independent_exits(cluster, net))
+        min_exits = min(min_exits, len(net))
 
     return min_exits
 
@@ -214,10 +178,7 @@ def can_be_split_node(cluster: ClusterData, num_out: int) -> bool:
         True if cluster has enough exits for num_out branches.
     """
     if cluster.allow_entry_as_exit:
-        return (
-            len(cluster.entry_fogs) >= 1
-            and _max_independent_exits(cluster, cluster.exit_fogs) >= num_out
-        )
+        return len(cluster.entry_fogs) >= 1 and len(cluster.exit_fogs) >= num_out
     return count_net_exits(cluster, 1) >= num_out
 
 
@@ -251,10 +212,7 @@ def can_be_passant_node(cluster: ClusterData) -> bool:
         True if cluster has at least 1 exit available after using 1 entry.
     """
     if cluster.allow_entry_as_exit:
-        return (
-            len(cluster.entry_fogs) >= 1
-            and _max_independent_exits(cluster, cluster.exit_fogs) >= 1
-        )
+        return len(cluster.entry_fogs) >= 1 and len(cluster.exit_fogs) >= 1
     return count_net_exits(cluster, 1) >= 1
 
 
@@ -546,14 +504,12 @@ def pick_cluster_uniform(
 def count_node_net_exits(dag: Dag, node_id: str) -> int:
     """Max additional outgoing edges achievable from a node, mid-routing.
 
-    Starts from ``_free_exits`` (which already subtracts consumed entries,
-    claimed outgoing edges, and group conflicts with used exits) then caps
-    by ``_max_independent_exits`` so the count never exceeds what can
-    actually be picked: two free exits sharing a proximity group still
-    count as one slot, since picking either retires the other.
+    Returns the number of free exits from ``_free_exits`` (which already
+    subtracts consumed entries and claimed outgoing edges). Exits that share a
+    proximity group only with each other are NOT mutually exclusive, so each
+    free exit counts as one available outgoing slot.
     """
-    cluster = dag.nodes[node_id].cluster
-    return _max_independent_exits(cluster, _free_exits(dag, node_id))
+    return len(_free_exits(dag, node_id))
 
 
 def compute_target_width(
@@ -577,9 +533,10 @@ def compute_target_width(
 def _free_exits(dag: Dag, node_id: str) -> list[dict]:
     """Cluster exits not yet consumed by an outgoing edge or by an entry pair.
 
-    Also enforces exit-vs-exit mutual exclusion: once an exit from a
-    proximity group is consumed, other exits in the same group become
-    ineligible.
+    Only the entry-vs-exit proximity constraint applies: exits sharing a
+    proximity group with a consumed entry are excluded. Exits sharing a group
+    only with each other are NOT mutually exclusive, so two adjacent gates may
+    both be used as outgoing edges from the same source.
 
     For ``allow_entry_as_exit`` clusters the entry fog and exit fog share the
     same physical gate (the player enters from one side and exits from the
@@ -605,11 +562,7 @@ def _free_exits(dag: Dag, node_id: str) -> list[dict]:
         for entry in consumed_entries:
             net = _filter_exits_by_proximity(node.cluster, entry, net)
         candidates = [f for f in net if (f["fog_id"], f["zone"]) not in used_exit]
-    return [
-        f
-        for f in candidates
-        if not _fog_blocked_by_used_exits(f, node.cluster, used_exit)
-    ]
+    return candidates
 
 
 def _fog_blocked_by_used_exits(
@@ -617,9 +570,8 @@ def _fog_blocked_by_used_exits(
 ) -> bool:
     """True if fog shares a proximity group with any used exit.
 
-    Applies to both entries (entry-vs-exit constraint) and exits
-    (exit-vs-exit mutual exclusion: per source, two exits cannot share a
-    proximity group).
+    Used for the entry-vs-exit constraint: an entry fog cannot be picked when
+    it shares a proximity group with an exit already used on the same source.
     """
     for group in cluster.proximity_groups:
         fog_in = any(
@@ -640,8 +592,8 @@ def _free_entries(dag: Dag, node_id: str) -> list[dict]:
     """Cluster entries available for a new incoming edge.
 
     An entry can be reused by multiple incoming edges (DuplicateEntrance). The only exclusions
-    are: bidirectional pair already consumed as an exit on this node, and
-    proximity exclusion against already-used exits.
+    are: bidirectional pair already consumed as an exit on this node, and the
+    entry-vs-exit proximity constraint against already-used exits.
     """
     node = dag.nodes[node_id]
     used_exit_keys = {

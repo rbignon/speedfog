@@ -98,9 +98,10 @@ and no ordering heuristic is needed.
 `_free_exits()` excludes:
 - exits already claimed by an outgoing edge on the source;
 - exits filtered out by `compute_net_exits` / `_filter_exits_by_proximity` (entry-vs-exit
-  constraint);
-- exits sharing a proximity group with an already-used exit on the same source (exit-vs-exit
-  mutual exclusion).
+  constraint).
+
+Exits sharing a proximity group only with each other are NOT excluded: two adjacent gates may both
+be used as outgoing edges from the same source (see "Proximity Groups" below).
 
 When an entry fog belongs to a proximity group, exits in the same group on the target are excluded
 from `_free_entries()`. This prevents the player from exiting through a fog gate physically adjacent
@@ -130,9 +131,8 @@ physically converging on the same fog gate (see "Shared Entrance Handling" in
 4. Return `total_exits - bidirectional_consumed`
 
 When `proximity_groups` are present, all entry combinations are evaluated and the worst-case
-(minimum) net exits is returned. The count is then capped by `_max_independent_exits`: exits
-sharing a proximity group are mutually exclusive on a given source, so each group contributes at
-most one slot to the capacity.
+(minimum) net exits is returned. Only the entry-vs-exit filter applies; exits sharing a proximity
+group with each other still each count toward the capacity.
 
 `count_node_net_exits(dag, node_id)` adapts this for mid-routing: it also subtracts exits already
 used by outgoing edges so that the count stays accurate as edges are added incrementally.
@@ -144,6 +144,10 @@ This determines the compatibility rules used at load time:
 | Passant | `count_net_exits(cluster, 1) >= 1` |
 | Split (fan-out N) | `count_net_exits(cluster, 1) >= N` |
 | Merge (fan-in N) | `len(entry_fogs) >= N` AND `count_net_exits(cluster, N) >= 1` |
+
+`allow_entry_as_exit` clusters bypass `count_net_exits` for Passant/Split: entry and exit are
+opposite sides of one physical gate, so an entry does not consume exit capacity and the rule
+becomes `len(exit_fogs) >= N` (with `len(entry_fogs) >= 1`).
 
 Passant-incompatible clusters (zero net exits after consuming one entry) are filtered at load time
 by `ClusterPool.filter_passant_incompatible()`.
@@ -159,15 +163,18 @@ bidirectional subtraction for these clusters.
 
 ### Proximity Groups
 
-A cluster may define `proximity_groups`: lists of fog IDs that are spatially close in-game. Two
-constraints apply:
+A cluster may define `proximity_groups`: lists of fog IDs that are spatially close in-game. A single
+constraint applies:
 
 - **Entry-vs-exit**: when an entry fog belongs to a proximity group, exits in the same group are
   excluded. This prevents the player from exiting through a fog gate physically adjacent to where
-  they entered.
-- **Exit-vs-exit**: on a given source, exits sharing a proximity group are mutually exclusive,
-  i.e. only one fog gate per group can be used as an outgoing edge. This keeps successive edges
-  from the same source geographically spread instead of clustered on adjacent gates.
+  they entered, which would skip most of the zone (the traversability guarantee).
+
+There is deliberately **no exit-vs-exit constraint**: two exits in the same proximity group may both
+be used as outgoing branches from the same source. Adjacent branch gates are desirable for racing.
+Because parallel branches are balanced (~equal duration), runners are not all funneled to the
+geographically nearest gate, so two adjacent exits produce genuine non-deterministic path divergence
+between players rather than a forced choice driven by distance.
 
 ## Generation Flow
 
