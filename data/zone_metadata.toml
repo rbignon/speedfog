@@ -347,6 +347,20 @@ weight = 3
 weight = 3.5
 allow_entry_as_exit = false
 
+# Exclude all mausoleums
+[zones.cerulean_mausoleum_boss]
+exclude = true
+
+[zones.gravesite_mausoleum_boss]
+exclude = true
+
+[zones.rauhbase_mausoleum_boss]
+exclude = true
+
+[zones.scadualtus_mausoleum_boss]
+exclude = true
+
+
 # =============================================================================
 # Exclusions
 # =============================================================================
