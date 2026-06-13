@@ -2,6 +2,8 @@
 name = "speedfog"
 version = "0.1.0"
 description = "SpeedFog DAG generator for Elden Ring zone randomization"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 dependencies = [
     "tomli>=2.0.0;python_version<'3.11'",
@@ -21,7 +23,7 @@ dev = [
 speedfog = "speedfog.main:main"
 
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
