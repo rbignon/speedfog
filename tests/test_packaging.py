@@ -23,6 +23,7 @@ def _make_packaging_tree(root: Path) -> None:
         "backups/recovery.ps1",
         "lib/RandomizerCrashFix.dll",
         "lib/RandomizerHelper.dll",
+        "lib/MenuInputDelayFix.dll",
         "modengine2/modengine2_launcher.exe",
         "modengine2/modengine2/bin/modengine2.dll",
     ]:
@@ -46,6 +47,7 @@ def test_write_modengine_config_without_item_randomizer(tmp_path: Path) -> None:
     assert "RandomizerCrashFix.dll" not in content
     assert "RandomizerHelper.dll" not in content
     assert "itemrando" not in content
+    assert r"..\\lib\\MenuInputDelayFix.dll" in content
 
 
 def test_write_modengine_config_with_item_randomizer_loads_fogmod_first(
@@ -80,6 +82,7 @@ def test_copy_packaging_assets_copies_tree_shape(tmp_path: Path) -> None:
     assert (seed_dir / "backups" / "config.ini").exists()
     assert (seed_dir / "lib" / "RandomizerCrashFix.dll").exists()
     assert (seed_dir / "lib" / "RandomizerHelper.dll").exists()
+    assert (seed_dir / "lib" / "MenuInputDelayFix.dll").exists()
     assert (seed_dir / "modengine2" / "modengine2_launcher.exe").exists()
     assert (seed_dir / "modengine2" / "modengine2" / "bin" / "modengine2.dll").exists()
 

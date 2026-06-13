@@ -29,17 +29,17 @@ def write_modengine_config(
     # before the value reaches ModEngine 2. The resulting path is resolved
     # against the config file's parent directory by the loader, so the .dll
     # next to the seed at <seed>/lib/ is reachable from <seed>/modengine2/.
-    external_dlls: list[str] = []
+    # MenuInputDelayFix.dll removes the 1.12+ menu input-accept delay; it is
+    # universal (unlike the item-randomizer-gated DLLs below), so it ships in
+    # every seed.
+    external_dlls: list[str] = [r"..\\lib\\MenuInputDelayFix.dll"]
     if include_crash_fix:
         external_dlls.append(r"..\\lib\\RandomizerCrashFix.dll")
     if item_randomizer_enabled:
         external_dlls.append(r"..\\lib\\RandomizerHelper.dll")
 
-    if external_dlls:
-        dlls_inner = ",\n    ".join(f'"{path}"' for path in external_dlls)
-        dlls_block = f"external_dlls = [\n    {dlls_inner},\n]"
-    else:
-        dlls_block = "external_dlls = []"
+    dlls_inner = ",\n    ".join(f'"{path}"' for path in external_dlls)
+    dlls_block = f"external_dlls = [\n    {dlls_inner},\n]"
 
     # ModEngine 2 loads mods in declaration order; first wins. Keep fogmod
     # ahead of itemrando so fog gate edits override the randomizer.
@@ -144,6 +144,7 @@ def _validate_packaging_assets(
         packaging_dir / "backups" / "backup_daemon.ps1",
         packaging_dir / "backups" / "recovery.ps1",
         packaging_dir / "modengine2" / "modengine2_launcher.exe",
+        packaging_dir / "lib" / "MenuInputDelayFix.dll",
     ]
     if item_randomizer_enabled:
         required.append(packaging_dir / "lib" / "RandomizerCrashFix.dll")

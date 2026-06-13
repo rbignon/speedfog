@@ -79,6 +79,7 @@ Output is self-contained in `seeds/<seed>/`:
 - `logs/spoiler.txt` - Spoiler log
 - `logs/generation.log` - Structured generation log
 - `modengine2/` - ModEngine 2 binaries + `config_speedfog.toml`
+- `lib/` - runtime DLLs loaded by ModEngine 2 (always `MenuInputDelayFix.dll`; item randomizer DLLs when enabled)
 - `mods/` - Generated mod files
 - `launch_speedfog.bat` - Windows launcher
 
@@ -159,4 +160,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
 ## License
 
-MIT License
+SpeedFog is licensed under the GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later). See [LICENSE](LICENSE) for the full text.
+
+Copyright (C) 2026 Romain Bignon
+
+SpeedFog adapts logic from FogRando (credited above) and links against third-party binaries (FogMod, RandomizerCommon, SoulsFormats, ModEngine 2) that users download at setup time. Those binaries are not redistributed in this repository and remain under their respective licenses.
