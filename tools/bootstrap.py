@@ -107,6 +107,9 @@ MODENGINE_RELEASE_API = (
 WITCHYBND_RELEASE_API = "https://api.github.com/repos/ividyon/WitchyBND/releases/latest"
 WITCHYBND_ASSET_SUFFIX = "-win-x64.zip"
 
+MENU_FIX_RELEASE_API = "https://api.github.com/repos/rbignon/eldenring-menu-input-delay-fix/releases/latest"
+MENU_FIX_DLL_NAME = "MenuInputDelayFix.dll"
+
 
 def print_step(step: int, total: int, message: str) -> None:
     """Print a step header."""
@@ -903,6 +906,71 @@ def ensure_witchybnd(force: bool = False) -> bool:
     return True
 
 
+def is_menu_fix_installed() -> bool:
+    """Check if MenuInputDelayFix.dll is present in data/packaging/lib/."""
+    return (PACKAGING_LIB_DEST / MENU_FIX_DLL_NAME).exists()
+
+
+def ensure_menu_fix(force: bool = False) -> bool:
+    """Download MenuInputDelayFix.dll into data/packaging/lib/.
+
+    The menu input-delay fix is a standalone ModEngine 2 external DLL
+    (github.com/rbignon/eldenring-menu-input-delay-fix). It is fetched from that
+    repo's latest GitHub Release, like ModEngine 2 and WitchyBND, and shipped in
+    every seed (unconditional, unlike the item-randomizer DLLs).
+    """
+    if is_menu_fix_installed() and not force:
+        print_ok(
+            f"{MENU_FIX_DLL_NAME} already installed in data/packaging/lib/"
+            " (use --force to reinstall)"
+        )
+        return True
+
+    try:
+        print_info(f"Fetching latest {MENU_FIX_DLL_NAME} release metadata...")
+        req = urllib.request.Request(
+            MENU_FIX_RELEASE_API,
+            headers={"User-Agent": "SpeedFog/1.0"},
+        )
+        with urllib.request.urlopen(req, timeout=60) as response:
+            release = json.loads(response.read().decode("utf-8"))
+    except OSError as e:
+        print_error(f"Failed to query {MENU_FIX_DLL_NAME} release: {e}")
+        return False
+
+    asset = next(
+        (a for a in release.get("assets", []) if a.get("name") == MENU_FIX_DLL_NAME),
+        None,
+    )
+    if asset is None:
+        print_error(f"Could not find a {MENU_FIX_DLL_NAME} asset in the latest release")
+        return False
+
+    PACKAGING_LIB_DEST.mkdir(parents=True, exist_ok=True)
+    dest = PACKAGING_LIB_DEST / MENU_FIX_DLL_NAME
+    tmp = dest.with_name(f"{dest.name}.tmp")
+    try:
+        print_info(f"Downloading {MENU_FIX_DLL_NAME}...")
+        req = urllib.request.Request(
+            asset["browser_download_url"],
+            headers={"User-Agent": "SpeedFog/1.0"},
+        )
+        with (
+            urllib.request.urlopen(req, timeout=600) as response,
+            tmp.open("wb") as out,
+        ):
+            shutil.copyfileobj(response, out)
+        tmp.replace(dest)
+    except (OSError, KeyError) as e:
+        tmp.unlink(missing_ok=True)
+        print_error(f"Failed to download {MENU_FIX_DLL_NAME}: {e}")
+        return False
+
+    version = release.get("tag_name", "unknown")
+    print_ok(f"{MENU_FIX_DLL_NAME} ({version}) installed in data/packaging/lib/")
+    return True
+
+
 def _overlay_script_sources() -> list[Path]:
     """Return repackable source directories under data/overlay-src/script/.
 
@@ -1052,6 +1120,9 @@ def main() -> int:
 
     print_step(4, 4, "Setting up packaging assets...")
     if success and not ensure_modengine(args.force):
+        success = False
+
+    if success and not ensure_menu_fix(args.force):
         success = False
 
     # Run GamePatcher and WitchyBND to generate overlay files
