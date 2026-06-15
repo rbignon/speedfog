@@ -146,8 +146,12 @@ weight = 2.5
 type = "mini_dungeon"
 weight = 2
 
+[clusters.siofrabank_prenokron_e3f3]
+weight = 2
+
 [zones.ainsel]
 type = "mini_dungeon"
+weight = 2
 
 [zones.ainsel_abovestart]
 type = "mini_dungeon"
@@ -638,11 +642,13 @@ proximity_groups = [
 allowed_exits = [
   "AEG099_231_9002",    # Path to side Ainsel river
 ]
+weight = 2
 
 [clusters.ainsel_abovestart_fccd]
 allowed_exits = [
   "AEG099_002_9000",    # Before Dragonkin
 ]
+weight = 2
 
 [clusters.rauhruins_east_aa23]
 weight = 4
