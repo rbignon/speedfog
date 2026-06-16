@@ -214,6 +214,9 @@ weight = 3
 
 # --- Base game ---
 
+[zones.peninsula_leonine]
+weight = 0.5
+
 [zones.volcano_abductors]
 type = "boss_arena"
 weight = 1.5
