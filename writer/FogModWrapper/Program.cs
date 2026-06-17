@@ -788,6 +788,10 @@ Example:
             RebirthInjector.Inject(ctx.ModDir, ctx.Config.GameDir);
         }
 
+        // Remove the DLC "Shadow Realm Blessing" entry from the grace menu
+        // (Scadutree leveling is irrelevant under SpeedFog's tier scaling).
+        ShadowRealmBlessingRemover.Inject(ctx.ModDir, ctx.Config.GameDir);
+
         // Set startup flags (open gates, etc.).
         // See docs/startup-flag-injection.md for the methodology used to find these flags.
         StartupFlagInjector.Inject(ctx.ModDir, new[]

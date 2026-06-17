@@ -34,11 +34,7 @@ public static class RebirthInjector
     private const int MSG_LEAVE = 20000009;          // "Leave" option
 
     // Grace ESD identifiers
-    private const int MEMORIZE_SPELL_MSG = 15000390; // Anchor: "Memorize spell" talk data
     private const int CONSISTENT_ID = 73;            // FogMod uses 70, randomizer uses 72
-
-    // Talk script directory variants (vanilla=PascalCase, FogMod under Wine=lowercase)
-    private static readonly string[] TALK_DIR_VARIANTS = { "talk", "Talk" };
 
     /// <summary>
     /// Inject the rebirth menu option into the grace talk ESD.
@@ -49,39 +45,12 @@ public static class RebirthInjector
     {
         Console.WriteLine("Injecting rebirth option at Sites of Grace...");
 
-        // Load the grace talk BND (FogMod always writes this)
-        var bndFileName = "m00_00_00_00.talkesdbnd.dcx";
-        var bndPath = FindTalkBnd(modDir, bndFileName)
-                      ?? FindTalkBnd(gameDir, bndFileName);
-
-        if (bndPath == null)
-        {
-            Console.WriteLine($"Warning: {bndFileName} not found, skipping rebirth injection");
+        // Load the grace talk ESD + menu machine (FogMod always writes this BND).
+        var grace = GraceTalkEsd.Load(modDir, gameDir);
+        if (grace == null)
             return;
-        }
 
-        var bnd = BND4.Read(bndPath);
-
-        // Find the grace talk script (t000001000.esd)
-        var binderFile = bnd.Files.Find(f => f.Name.Contains("t000001000"));
-        if (binderFile == null)
-        {
-            Console.WriteLine("Warning: t000001000.esd not found in talk BND, skipping rebirth injection");
-            return;
-        }
-
-        var esd = ESD.Read(binderFile.Bytes);
-
-        // Find the grace state machine by anchoring on the "Memorize spell" message
-        var machines = ESDEdits.FindMachinesWithTalkData(esd, MEMORIZE_SPELL_MSG);
-        if (machines.Count != 1)
-        {
-            Console.WriteLine($"Warning: Expected 1 grace machine with talk data {MEMORIZE_SPELL_MSG}, " +
-                              $"found {machines.Count}. Skipping rebirth injection.");
-            return;
-        }
-
-        var graceMachine = esd.StateGroups[machines[0]];
+        var graceMachine = grace.GraceMachine;
 
         // Add "Rebirth" as a custom talk entry in the grace menu
         var rebirthTalkData = new ESDEdits.CustomTalkData
@@ -104,13 +73,8 @@ public static class RebirthInjector
         // This reproduces CharacterWriter.cs lines 2595-2623.
         BuildRebirthStateMachine(graceMachine, menuState, ref menuStateId);
 
-        // Write modified ESD back
-        binderFile.Bytes = esd.Write();
-
-        // Write the BND to modDir (always write to mod output)
-        var writePath = FindTalkBnd(modDir, bndFileName) ?? CreateTalkBndPath(modDir, bndFileName);
-        Directory.CreateDirectory(Path.GetDirectoryName(writePath)!);
-        bnd.Write(writePath);
+        // Write the modified ESD back to the mod output.
+        grace.Save();
 
         Console.WriteLine("Rebirth option injected successfully");
     }
@@ -204,28 +168,5 @@ public static class RebirthInjector
     private static ESD.CommandCall GiveItemCommand(int goodId, int quantity)
     {
         return AST.MakeCommand(1, 52, new object[] { 3, goodId, quantity });
-    }
-
-    /// <summary>
-    /// Find a talk BND file under a base directory, trying both case variants.
-    /// </summary>
-    private static string? FindTalkBnd(string baseDir, string bndFileName)
-    {
-        foreach (var dirName in TALK_DIR_VARIANTS)
-        {
-            var path = Path.Combine(baseDir, "script", dirName, bndFileName);
-            if (File.Exists(path))
-                return path;
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// Create the expected path for a talk BND in the mod directory.
-    /// Uses lowercase "talk" (FogMod convention under Wine).
-    /// </summary>
-    private static string CreateTalkBndPath(string modDir, string bndFileName)
-    {
-        return Path.Combine(modDir, "script", "talk", bndFileName);
     }
 }

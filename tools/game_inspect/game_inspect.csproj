@@ -11,6 +11,9 @@
     <Reference Include="SoulsFormats">
       <HintPath>../../writer/lib/SoulsFormats.dll</HintPath>
     </Reference>
+    <Reference Include="SoulsIds">
+      <HintPath>../../writer/lib/SoulsIds.dll</HintPath>
+    </Reference>
   </ItemGroup>
 
   <!-- Native compression libraries -->

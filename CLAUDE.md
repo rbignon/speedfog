@@ -103,6 +103,7 @@ speedfog/
 │   │   ├── DeathMarkerInjector.cs  # Bloodstain visuals at fog gates
 │   │   ├── BossTriggerInjector.cs  # Lock boss arena exits by setting TrapFlag before warp
 │   │   ├── RebirthInjector.cs  # Rebirth (stat reallocation) at Sites of Grace
+│   │   ├── ShadowRealmBlessingRemover.cs  # Remove DLC "Shadow Realm Blessing" grace menu entry
 │   │   ├── AlternateFlagPatcher.cs  # Neutralize Event 915, clear flags 300/330 at startup
 │   │   ├── SealingTreeWarpPatcher.cs  # Patch Sealing Tree fogwarps (flag 330)
 │   │   ├── VanillaWarpRemover.cs  # Remove vanilla assets: warps + blocking gates
@@ -240,6 +241,7 @@ speedfog/
 | `RunCompleteInjector` | Injects "RUN COMPLETE" golden banner on final boss defeat |
 | `ChapelGraceInjector` | Site of Grace + player spawn relocation at Chapel of Anticipation |
 | `RebirthInjector` | Rebirth (stat reallocation) option at Sites of Grace via ESD |
+| `ShadowRealmBlessingRemover` | Removes the DLC "Shadow Realm Blessing" entry from the grace menu ESD |
 | `SealingTreeWarpPatcher` | Patches Sealing Tree fogwarps to eliminate flag 330 dependency |
 | `AlternateFlagPatcher` | Neutralizes Event 915, clears AlternateFlags 300/330 on game start |
 | `VanillaWarpRemover` | Removes vanilla warp MSB assets that conflict with fog gates |

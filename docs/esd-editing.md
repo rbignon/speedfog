@@ -147,6 +147,48 @@ The `RebirthInjector` builds this dialog flow (source: `RandomizerCommon/Charact
 
 Tear check covers both base game (Good 8185) and DLC (Good 2008033).
 
+## Removing a Vanilla Menu Entry (Shadow Realm Blessing)
+
+`ShadowRealmBlessingRemover` deletes the DLC "Shadow Realm Blessing" option from the
+grace menu. It is the top-level entry that opens the Scadutree Blessing / Revered
+Spirit Ash Blessing submenu. SpeedFog enables DLC areas (`opt["dlc"]=true`) so the
+entry appears, but enemies are scaled via FogMod tiers and Scadutree leveling is
+never relevant, so the option is removed to avoid confusing players.
+
+The strings live in `EventTextForTalk_dlc01.fmg`:
+
+| Message | Text |
+|---------|------|
+| `20010001` | Shadow Realm Blessing (top-level entry) |
+| `20010002` | Scadutree Blessing (submenu) |
+| `20010003` | Revered Spirit Ash Blessing (submenu) |
+
+In `t000001000.esd`, the grace menu machine (same anchor as Rebirth, talk data
+`15000390`) contains one state that adds the entry via a **bank-6** talk command
+carrying `20010001` as an argument:
+
+```
+State 41: [entry] cmd(6, ...)  50 | 20010001 | 2010000 | 2010100
+             cond -> (sub) if <wait for talk call> -> cond -> 17 if 1
+```
+
+The submenu is reachable only by selecting this entry (the selection branch keys off
+list id `50`), so neutralizing this one state removes the feature entirely. The state
+is turned into a passthrough:
+
+```csharp
+// Find the state with a bank-6 entry command whose argument == 20010001,
+// resolve its original downstream target (descending through subconditions),
+// then drop the entry command and the wait.
+state.EntryCommands.Clear();
+state.Conditions.Clear();
+state.Conditions.Add(new ESD.Condition(downstreamTarget, AST.AssembleExpression(AST.Pass)));
+```
+
+The leftover `GetREG0() == 50` selection branch becomes dead but harmless: the player
+can never select an entry that is not shown. Detection mirrors FogRando's bank-6
+idiom (`AST.DisassembleExpression(arg).TryAsInt(out v) && v == msg`).
+
 ## Filesystem Path Variants
 
 Talk BND archives live under `script/` but the subdirectory casing varies:
@@ -167,6 +209,7 @@ When writing, use lowercase `talk` (FogMod convention).
 ## References
 
 - Rebirth injection: `writer/FogModWrapper/RebirthInjector.cs`
+- Shadow Realm Blessing removal: `writer/FogModWrapper/ShadowRealmBlessingRemover.cs`
 - FogRando grace menu edits: `reference/fogrando-src/GameDataWriterE.cs:3900-3954`
 - FogRando shadow mart: `reference/fogrando-src/GameDataWriterE.cs:4098-4147`
 - Item Randomizer rebirth logic: `RandomizerCommon/CharacterWriter.cs:2595-2623`

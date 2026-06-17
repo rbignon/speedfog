@@ -30,6 +30,14 @@ if (args.Length >= 1 && args[0] == "dump-param")
 {
     return DumpParam.Run(args);
 }
+if (args.Length >= 1 && args[0] == "dump-fmg")
+{
+    return DumpFmg.Run(args);
+}
+if (args.Length >= 1 && args[0] == "dump-esd")
+{
+    return DumpEsd.Run(args);
+}
 if (args.Length >= 1 && args[0] == "list-enemies")
 {
     if (args.Length < 2) { Console.Error.WriteLine("Usage: game_inspect list-enemies <msb>"); return 1; }
