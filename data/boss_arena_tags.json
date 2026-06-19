@@ -1468,7 +1468,7 @@
       "is_two_phase": false,
       "is_dragon": false,
       "is_npc": false,
-      "can_escape": false,
+      "can_escape": true,
       "night_boss": false,
       "exclude_from_pool": false
     },
