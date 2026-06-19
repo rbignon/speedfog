@@ -65,8 +65,6 @@ def generate_item_config(
             "crawl": True,
             "mats": True,
             "copydrops": True,
-            # Rewrite boss healthbar names to match the randomized enemy.
-            "editnames": True,
             # RandomizerOptions returns false for unset bool keys; scale and
             # phasehp must be set explicitly or relocated bosses keep their
             # native HP (no tier->tier rescaling SpEffect injected).
