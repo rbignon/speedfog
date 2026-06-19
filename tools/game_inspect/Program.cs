@@ -50,6 +50,19 @@ if (args.Length >= 1 && args[0] == "list-enemies")
     }
     return 0;
 }
+if (args.Length >= 1 && args[0] == "list-collisions")
+{
+    if (args.Length < 2) { Console.Error.WriteLine("Usage: game_inspect list-collisions <msb> [--torrent-only]"); return 1; }
+    bool torrentOnly = args.Contains("--torrent-only");
+    var msb = MSBE.Read(args[1]);
+    Console.WriteLine($"=== Collisions in {Path.GetFileName(args[1])} ({msb.Parts.Collisions.Count}) ===");
+    foreach (var c in msb.Parts.Collisions.OrderBy(c => c.Name))
+    {
+        if (torrentOnly && !c.DisableTorrent) continue;
+        Console.WriteLine($"  {c.Name,-12} DisableTorrent={c.DisableTorrent,-5} pos=({c.Position.X,7:F1},{c.Position.Y,7:F1},{c.Position.Z,7:F1}) entity={c.EntityID}");
+    }
+    return 0;
+}
 
 // Default: list SFX
 return ListSfx(args);

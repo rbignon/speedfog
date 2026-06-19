@@ -110,6 +110,7 @@ speedfog/
 │   │   ├── StartupFlagInjector.cs  # Set event flags at startup (open gates, etc.)
 │   │   ├── StakeRemover.cs  # Remove vanilla stakes outside DAG
 │   │   ├── HeavyDoorMessagePatcher.cs  # Suppress "heavy door" popup in common_func
+│   │   ├── TorrentArenaPatcher.cs  # Re-enable Torrent inside selected boss arenas
 │   │   ├── WeaponUpgradeInjector.cs  # Weapon upgrade initialization for starting weapons
 │   │   └── eldendata/       # FogRando game data (gitignored)
 │   ├── FogModWrapper.Tests/  # xUnit tests
@@ -158,6 +159,7 @@ speedfog/
 │   ├── startup-flag-injection.md # Forcing event flags ON at map load (open gates)
 │   ├── death-markers.md     # Bloodstain visuals at fog gates (DrawGroups, DeepCopy bug)
 │   ├── boss-trigger-lock.md # Boss arena exit locking (TrapFlag before warp)
+│   ├── torrent-arena-patcher.md # Re-enable Torrent in selected boss arenas (DisableTorrent flag)
 │   └── save-backup.md      # Save backup system (daemon, recovery, config)
 ├── SoulsFormats/            # SoulsFormatsNEXT git submodule (used by GamePatcher)
 └── output/                  # Generated mod (gitignored, self-contained)
@@ -185,6 +187,7 @@ speedfog/
 | `docs/startup-flag-injection.md` | StartupFlagInjector mechanism + methodology to find new gate flags |
 | `docs/death-markers.md` | Bloodstain visuals at fog gates (DrawGroups, DeepCopy bug, entity IDs) |
 | `docs/boss-trigger-lock.md` | Boss arena exit locking (TrapFlag vs BossTrigger, warp patching) |
+| `docs/torrent-arena-patcher.md` | Re-enable Torrent in selected boss arenas (DisableTorrent collision flag) |
 | `docs/save-backup.md` | Save backup system (daemon, recovery, config) |
 | `docs/item-giving-limitations.md` | EMEVD item type constraints and workarounds |
 | `docs/clusters.md` | Cluster generation from fog.txt |
@@ -250,6 +253,7 @@ speedfog/
 | `HeavyDoorMessagePatcher` | Suppresses "heavy door" popup (text 4200) in common_func |
 | `DeathMarkerInjector` | Bloodstain markers at fog gates (MSB assets + EMEVD SFX) |
 | `BossTriggerInjector` | Locks boss arena exit fog gates by setting TrapFlag before entrance warp |
+| `TorrentArenaPatcher` | Re-enables Torrent in selected boss arenas by flipping `Collision.DisableTorrent` |
 | `WeaponUpgradeInjector` | Weapon upgrade initialization for starting weapons with ashes of war |
 | `PhantomCatalogInjector` | Bakes phantom skin catalog (cosmetic auras) into PhantomParam/SpEffectVfxParam/SpEffectParam |
 | `OpenSplitInjector` | Tags entrances with `opensplit` before `Graph.Construct` (see `docs/opensplit-overrides.md`) |

@@ -806,6 +806,10 @@ Example:
         {
             VanillaWarpRemover.Remove(ctx.ModDir, ctx.GraphData.RemoveEntities);
         }
+
+        // Re-enable Torrent inside boss arenas where vanilla blocks it via
+        // collision DisableTorrent flags. See docs/torrent-arena-patcher.md.
+        TorrentArenaPatcher.Patch(ctx.ModDir, ctx.Config.GameDir);
     }
 
     /// <summary>
