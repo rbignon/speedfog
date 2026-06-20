@@ -19,8 +19,11 @@ Independent of the item/enemy randomizer; applies to every run.
 (required), `fr` (optional).
 `[[ui]]`: `bnd`, `fmg`, `id`, `en` (required), `fr` (optional).
 
-`en` is required; `fr` is written to `frafr` (falls back to `en`). Every other
-language gets `en`. Missing file = silent no-op.
+`en` is required; `fr` is optional. Only the English (`engus`) and French
+(`frafr`) archives are edited: `engus` gets `en`, `frafr` gets `fr` (falling
+back to `en`). All other game languages keep their vanilla names. Editing only
+two languages instead of all ~15 keeps the per-seed cost low. Missing file =
+silent no-op.
 
 **Reserved:** `GR_MenuText[331314]` (VICTORY) is used by `RunCompleteInjector`;
 the loader rejects it.

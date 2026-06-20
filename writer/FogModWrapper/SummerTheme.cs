@@ -9,10 +9,18 @@ namespace FogModWrapper;
 /// banners to a summer theme by editing FMG entries, mirroring
 /// RunCompleteInjector. Runs only when [plugin.summer] enabled = true. Bosses
 /// or UI ids absent from the game's FMGs are skipped (tolerant).
+///
+/// Only the English (engus) and French (frafr) message archives are edited;
+/// the catalogue carries content for those two languages only, and touching
+/// all ~15 game languages tripled the per-seed cost for no benefit. Other
+/// languages keep their vanilla names.
 /// </summary>
 public static class SummerTheme
 {
     private static readonly string[] BossBnds = { "item.msgbnd.dcx", "item_dlc02.msgbnd.dcx" };
+
+    // Only languages we actually author for. engus -> en, frafr -> fr (else en).
+    private static readonly HashSet<string> TargetLanguages = new() { "engus", "frafr" };
 
     /// <summary>frafr gets fr when present; every other language (incl. engus) gets en.</summary>
     public static string LocalizedText(string langName, string en, string? fr)
@@ -36,6 +44,8 @@ public static class SummerTheme
         foreach (var langDir in Directory.GetDirectories(gameMsgDir))
         {
             var lang = Path.GetFileName(langDir);
+            if (!TargetLanguages.Contains(lang))
+                continue;
             int n = ApplyBossEpithets(modDir, langDir, lang, bossById)
                   + ApplyUiStrings(modDir, langDir, lang, catalog.Ui);
             if (n > 0)
