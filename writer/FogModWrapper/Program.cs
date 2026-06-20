@@ -776,6 +776,12 @@ Example:
             RunCompleteInjector.InjectFmgEntries(ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.RunCompleteMessage);
         }
 
+        // "summer" plugin: cosmetic boss/UI text reskin (opt-in via [plugin.summer]).
+        if (ctx.GraphData.IsPluginEnabled("summer"))
+        {
+            SummerTheme.Apply(ctx.ModDir, ctx.Config.GameDir, ctx.Config.DataDir);
+        }
+
         // Death markers at fog gates
         var gateSides = BuildGateSideLookup(ctx.Ann);
         DeathMarkerInjector.Inject(
