@@ -643,6 +643,14 @@ public class GraphDataSerializationTests
     }
 
     [Fact]
+    public void IsPluginEnabled_NullPluginsJson_ReturnsFalse()
+    {
+        var json = """{"version": "4.4", "seed": 1, "plugins": null}""";
+        var data = GraphLoader.Parse(json);
+        Assert.False(data.IsPluginEnabled("anything"));
+    }
+
+    [Fact]
     public void IsPluginEnabled_TrueOnlyWhenPresentAndEnabled()
     {
         var json = """

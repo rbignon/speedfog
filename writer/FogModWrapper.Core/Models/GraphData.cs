@@ -153,7 +153,7 @@ public class GraphData
 
     /// <summary>True when the named plugin is present and enabled.</summary>
     public bool IsPluginEnabled(string name)
-        => (Plugins?.TryGetValue(name, out var p) ?? false) && p!.Enabled;
+        => Plugins != null && Plugins.TryGetValue(name, out var p) && p.Enabled;
 }
 
 /// <summary>
