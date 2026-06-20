@@ -216,8 +216,8 @@ fr = "Sueur imitatrice"
 [[bosses]]
 npc_name_id = 905130001
 name = "Base Serpent Messmer"
-en = "Base Serpent of Summer"
-fr = "Messmer, méduse maléfique"
+en = "Garden Hose Messmer"
+fr = "Messmer, le Tuyau d'Arrosage"
 
 [[bosses]]
 npc_name_id = 904750000
