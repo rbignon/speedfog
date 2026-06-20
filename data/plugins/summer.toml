@@ -4,48 +4,252 @@
 # `name` is a human-readable label only, not written to game data.
 # Bosses absent here keep their vanilla names. Generate more boss skeletons
 # with tools/seed_summer_catalog.py.
+#
+# en/fr values below are first-draft proposals, free to edit.
 
 # ---- Boss epithets (NpcName) ----
 
 [[bosses]]
-npc_name_id = 902130000
-name = "Margit"
-en = "Margit, the Sun-Scorched"
+npc_name_id = 902030001
+name = "Rennala"
+en = "Rennala, Queen of the Full Sun"
+fr = "Rennala, Reine du Plein Soleil"
 
 [[bosses]]
-npc_name_id = 904750000
-name = "Godrick"
-en = "Godrick the Sunburnt"
+npc_name_id = 903181000
+name = "Red Wolf of Radagon"
+en = "Hot Dog of Radagon"
+fr = "Hot-Dog de Radagon"
 
 [[bosses]]
-npc_name_id = 902130003
-name = "Morgott"
-en = "Morgott, the Beach King"
+npc_name_id = 904620001
+name = "Astel, Naturalborn of the Void"
+en = "Astel, Naturalborn of the Deep End"
+fr = "Astel, Né du Grand Bain"
 
 [[bosses]]
-npc_name_id = 904710001
-name = "Rykard"
-en = "Rykard, Lord of the Barbecue"
+npc_name_id = 904650000
+name = "Dragonkin Soldier of Nokstella"
+en = "Dragonkin Lifeguard of Nokstella"
+fr = "Maître-Nageur Dragonné de Nokstella"
+
+[[bosses]]
+npc_name_id = 905210000
+name = "Divine Beast Dancing Lion"
+en = "Divine Beast Conga Lion"
+fr = "Bête Divine, Lion de la Conga"
+
+[[bosses]]
+npc_name_id = 904730000
+name = "Starscourge Radahn"
+en = "Sunscourge Radahn"
+fr = "Radahn, Fléau du Soleil"
+
+[[bosses]]
+npc_name_id = 905300000
+name = "Rellana, Twin Moon Knight"
+en = "Rellana, Twin Sun Knight"
+fr = "Rellana, Chevalier des Deux Soleils"
+
+[[bosses]]
+npc_name_id = 903575000
+name = "Godskin Duo"
+en = "Sunkissed Duo"
+fr = "Duo Ensoleillé"
 
 [[bosses]]
 npc_name_id = 902110001
-name = "Maliketh"
+name = "Maliketh, the Black Blade"
 en = "Maliketh, the Sunblade"
+fr = "Maliketh, la Lame de Soleil"
+
+[[bosses]]
+npc_name_id = 904520000
+name = "Dragonlord Placidusax"
+en = "Sunlord Placidusax"
+fr = "Seigneur Soleil Placidusax"
+
+[[bosses]]
+npc_name_id = 905200000
+name = "Metyr, Mother of Fingers"
+en = "Metyr, Mother of Sunscreen"
+fr = "Metyr, Mère de la Crème Solaire"
+
+[[bosses]]
+npc_name_id = 905020000
+name = "Putrescent Knight"
+en = "Sunbaked Knight"
+fr = "Chevalier Cuit au Soleil"
+
+[[bosses]]
+npc_name_id = 904760000
+name = "Fire Giant"
+en = "Beach Bonfire Giant"
+fr = "Géant du Feu de Plage"
+
+[[bosses]]
+npc_name_id = 903252000
+name = "Loretta, Knight of the Haligtree"
+en = "Loretta, Knight of the Palm Tree"
+fr = "Loretta, Chevalier du Palmier"
 
 [[bosses]]
 npc_name_id = 902120000
-name = "Malenia"
+name = "Malenia, Blade of Miquella"
 en = "Malenia, Blade of Sunflowers"
+fr = "Malenia, Lame des Tournesols"
+
+[[bosses]]
+npc_name_id = 905120000
+name = "Bayle the Dread"
+en = "Bayle the Sunbaked"
+fr = "Bayle le Cramé"
+
+[[bosses]]
+npc_name_id = 132400
+name = "Sir Gideon Ofnir, the All-Knowing"
+en = "Sir Gideon Ofnir, the All-Tanning"
+fr = "Sire Gideon Ofnir, le Tout-Bronzant"
+
+[[bosses]]
+npc_name_id = 904720001
+name = "Hoarah Loux, Warrior"
+en = "Hoarah Loux, Beach Wrestler"
+fr = "Hoarah Loux, Lutteur de Plage"
 
 [[bosses]]
 npc_name_id = 904720002
-name = "Godfrey"
-en = "Godfrey, First Beach Lord"
+name = "Goldfrey, First Elden Lord"
+en = "Goldfrey, First Beach Lord"
+fr = "Goldfrey, Premier Seigneur de la Plage"
 
+[[bosses]]
+npc_name_id = 902130003
+name = "Morgott, the Omen King"
+en = "Morgott, the Beach King"
+fr = "Morgott, le Roi de la Plage"
+
+[[bosses]]
+npc_name_id = 903253500
+name = "Royal Knight Loretta"
+en = "Royal Beach Knight Loretta"
+fr = "Loretta, Chevalier Royal de Plage"
+
+[[bosses]]
+npc_name_id = 905051000
+name = "Midra, Lord of Frenzied Flame"
+en = "Midra, Lord of Frenzied Sunshine"
+fr = "Midra, Seigneur du Soleil Frénétique"
+
+[[bosses]]
+npc_name_id = 904800000
+name = "Mohg, Lord of Blood"
+en = "Mohg, Lord of Sangria"
+fr = "Mohg, Seigneur de la Sangria"
+
+[[bosses]]
+npc_name_id = 903050500
+name = "Commander Niall"
+en = "Beach Commander Niall"
+fr = "Commandant de Plage Niall"
+
+[[bosses]]
+npc_name_id = 903460500
+name = "Leonine Misbegotten Boss"
+en = "Sunburnt Misbegotten"
+fr = "Malenfant Insolé"
+
+[[bosses]]
+npc_name_id = 904910000
+name = "Magma Wyrm Makar"
+en = "Hot Spring Wyrm Makar"
+fr = "Guivre des Sources Chaudes Makar"
+
+[[bosses]]
+npc_name_id = 905030000
+name = "Romina, Saint of the Bud"
+en = "Romina, Saint of the Sunflower"
+fr = "Romina, Sainte du Tournesol"
+
+[[bosses]]
+npc_name_id = 905230000
+name = "Scadutree Avatar"
+en = "Beach Parasol Avatar"
+fr = "Avatar du Parasol"
+
+[[bosses]]
+npc_name_id = 905000000
+name = "Commander Gaius"
+en = "Beachboar Commander Gaius"
+fr = "Commandant Gaius, Sanglier de Plage"
+
+[[bosses]]
+npc_name_id = 904800002
+name = "Mohg, the Omen"
+en = "Mohg, the Sunburnt Omen"
+fr = "Mohg, le Présage Insolé"
+
+[[bosses]]
+npc_name_id = 905010000
+name = "Golden Hippopotamus"
+en = "Sun-Tanned Hippopotamus"
+fr = "Hippopotame Bronzé"
+
+[[bosses]]
+npc_name_id = 904670001
+name = "Regal Ancestor Spirit"
+en = "Regal Sunburst Spirit"
+fr = "Esprit Ancestral Ensoleillé"
+
+[[bosses]]
+npc_name_id = 904770000
+name = "Valiant Gargoyles"
+en = "Valiant Sunbathers"
+fr = "Vaillants Bronzeurs"
+
+[[bosses]]
+npc_name_id = 903320000
+name = "Mimic Tear"
+en = "Mimic Sweat"
+fr = "Sueur Mimétique"
+
+[[bosses]]
+npc_name_id = 905130001
+name = "Base Serpent Messmer"
+en = "Base Serpent of Summer"
+fr = "Serpent Primordial de l'Été"
+
+[[bosses]]
+npc_name_id = 904750000
+name = "Godrick the Grafted"
+en = "Godrick the Sunburnt"
+fr = "Godrick le Cramé"
+
+[[bosses]]
+npc_name_id = 902130000
+name = "Margit, the Fell Omen"
+en = "Margit, the Sun-Scorched"
+fr = "Margit, le Brûlé par le Soleil"
+
+[[bosses]]
+npc_name_id = 904710001
+name = "Rykard, Lord of Blasphemy"
+en = "Rykard, Lord of the Barbecue"
+fr = "Rykard, Seigneur du Barbecue"
+
+[[bosses]]
+npc_name_id = 903570000
+name = "Godskin Noble Boss"
+en = "Sunkissed Noble"
+fr = "Noble Ensoleillé"
+
+# Final boss (not a major_boss cluster, so not emitted by the seeding tool;
+# kept here so the final fight is themed too).
 [[bosses]]
 npc_name_id = 902190000
 name = "Radagon"
 en = "Radagon of the Sunny Order"
+fr = "Radagon de l'Ordre Ensoleillé"
 
 # ---- Universal UI banners (GR_MenuText in menu_dlc02.msgbnd.dcx) ----
 # IDs sorted ascending; 331314 is reserved (vanilla) and must not appear here.
@@ -55,39 +259,46 @@ bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331301
 en = "DEMIGOD SUNBATHED"
+fr = "DEMI-DIEU BRONZÉ"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331302
 en = "LEGEND SUNBATHED"
+fr = "LÉGENDE BRONZÉE"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331303
 en = "GREAT TAN ACQUIRED"
+fr = "GRAND BRONZAGE OBTENU"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331304
 en = "TAN ACQUIRED"
+fr = "BRONZAGE OBTENU"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331305
 en = "SUNSTROKE"
+fr = "INSOLATION"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331311
 en = "SUNNY SPOT DISCOVERED"
+fr = "COIN ENSOLEILLÉ DÉCOUVERT"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331322
 en = "GOD SUNBURNT"
+fr = "DIEU INSOLÉ"
