@@ -1130,3 +1130,18 @@ def test_plugin_tables_passthrough():
 
 def test_plugins_default_empty():
     assert Config.from_dict({}).plugins == {}
+
+
+def test_plugin_non_table_rejected():
+    with pytest.raises(ValueError, match=r"\[plugin\.bad\] must be a table"):
+        Config.from_dict({"plugin": {"bad": 3}})
+
+
+def test_plugin_non_bool_enabled_rejected():
+    with pytest.raises(ValueError, match=r"enabled must be a boolean"):
+        Config.from_dict({"plugin": {"summer": {"enabled": "yes"}}})
+
+
+def test_plugin_enabled_omitted_is_allowed():
+    cfg = Config.from_dict({"plugin": {"summer": {"intensity": 3}}})
+    assert cfg.plugins == {"summer": {"intensity": 3}}

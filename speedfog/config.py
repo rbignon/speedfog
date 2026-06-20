@@ -527,6 +527,20 @@ class Config:
                 f"{self.requirements.allowed_types!r}"
             )
 
+        # Validate the [plugin.*] envelope. The values are forwarded verbatim
+        # into graph.json and consumed by C# (Dictionary<string, PluginConfig>
+        # with a typed bool `enabled`), so a malformed entry must fail here with
+        # a clear message rather than as an opaque C# JSON error later. This is
+        # envelope-only validation (no per-plugin schema): each entry must be a
+        # table, and `enabled`, if present, must be a boolean.
+        if not isinstance(self.plugins, dict):
+            raise ValueError("[plugin] must be a table of plugin tables")
+        for name, cfg in self.plugins.items():
+            if not isinstance(cfg, dict):
+                raise ValueError(f"[plugin.{name}] must be a table")
+            if "enabled" in cfg and not isinstance(cfg["enabled"], bool):
+                raise ValueError(f"[plugin.{name}].enabled must be a boolean")
+
     def resolve_run_complete_message(self, seed: int) -> str:
         """Resolve run_complete_message to a single string.
 

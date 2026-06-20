@@ -17,7 +17,7 @@ _ID_RE = re.compile(r"^- ID:\s*(\d+)\s*$")
 _NPC_RE = re.compile(r"^\s*NpcName:\s*(\d+)\s*$")
 
 
-def parse_npc_names(enemy_txt_path: Path) -> dict[int, int]:
+def parse_npc_names(enemy_txt_path: str | Path) -> dict[int, int]:
     """Map entity id -> NpcName FMG id from enemy.txt."""
     result: dict[int, int] = {}
     current: int | None = None

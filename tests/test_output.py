@@ -2396,7 +2396,7 @@ class TestPhantomSkins:
         result = dag_to_dict(dag, clusters)
         assert result["phantom_skins"] == {}
 
-    def test_version_bumped_to_4_3(self):
+    def test_version_bumped_to_4_4(self):
         dag = make_test_dag()
         clusters = ClusterPool(
             clusters=[node.cluster for node in dag.nodes.values()],

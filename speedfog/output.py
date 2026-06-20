@@ -328,6 +328,8 @@ def dag_to_dict(
         vanilla_tiers: Optional zone_name → ScalingTier mapping from foglocations2.txt.
             When provided, each node gets an original_tier field (max ScalingTier of its zones).
         death_markers: Whether to allocate death marker flags (3 per non-start cluster).
+        plugins: Optional plugin config tables from [plugin.*] in config.toml;
+            forwarded verbatim into graph.json["plugins"].
 
     Returns:
         Dictionary with the following structure:
