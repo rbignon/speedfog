@@ -43,7 +43,7 @@ fr = "Lion dansant de la boîte de nuit"
 npc_name_id = 904730000
 name = "Starscourge Radahn"
 en = "Sunscourge Radahn"
-fr = "Radahn, Fléau du Soleil"
+fr = "Radahn, Fléau de la Canicule"
 
 [[bosses]]
 npc_name_id = 905300000
@@ -150,7 +150,7 @@ fr = "Mohg, Seigneur de la Sangria"
 [[bosses]]
 npc_name_id = 903050500
 name = "Commander Niall"
-en = "Captain Niall"
+en = "Cruise Director Niall"
 fr = "GO Niall"
 
 [[bosses]]
@@ -192,8 +192,8 @@ fr = "Mohg, le Réprouvé Bronzé"
 [[bosses]]
 npc_name_id = 905010000
 name = "Golden Hippopotamus"
-en = "Sun-Tanned Hippopotamus"
-fr = "Hippopotame Bronzé"
+en = "Pool Hippopotamus"
+fr = "Hippopotame de la Piscine"
 
 [[bosses]]
 npc_name_id = 904670001
@@ -289,14 +289,14 @@ fr = "Clerc du pique-nique"
 [[bosses]]
 npc_name_id = 902120001
 name = "Malenia, Goddess of Rot"
-en = "Malenia, Goddess of Sandcastle"
-fr = "Malenia, Déesse du château de sable"
+en = "Malenia, Goddess of Sunstroke"
+fr = "Malenia, Déesse de l'Insolation"
 
 [[bosses]]
 npc_name_id = 905130000
 name = "Messmer the Impaler"
-en = "Messmer the Griller"
-fr = "Messmer le jardinier"
+en = "Messmer the Skewer King"
+fr = "Messmer le Roi de la Brochette"
 
 [[bosses]]
 npc_name_id = 902030000
@@ -336,28 +336,28 @@ bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331301
 en = "DEMIGOD ROASTED"
-fr = "DEMI-DIEU NOYÉ"
+fr = "DEMI-DIEU GRILLÉ"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331302
 en = "LEGEND ROASTED"
-fr = "LÉGENDE NOYÉE"
+fr = "LÉGENDE GRILLÉE"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331303
 en = "GREAT ENEMY ROASTED"
-fr = "ENNEMI MAJEUR NOYÉ"
+fr = "ENNEMI MAJEUR GRILLÉ"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331304
 en = "ENEMY ROASTED"
-fr = "ENNEMI NOYÉ"
+fr = "ENNEMI GRILLÉ"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
@@ -378,4 +378,4 @@ bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331322
 en = "GOD ROASTED"
-fr = "DIEU SUBMERGÉ"
+fr = "DIEU GRILLÉ"
