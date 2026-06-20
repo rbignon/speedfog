@@ -1,0 +1,93 @@
+# Summer theme text catalogue. Consumed by SummerTheme (C#) when
+# [plugin.summer] enabled = true in the seed config. `en` is required;
+# `fr` is optional (written to the frafr FMG, falls back to en when absent).
+# `name` is a human-readable label only, not written to game data.
+# Bosses absent here keep their vanilla names. Generate more boss skeletons
+# with tools/seed_summer_catalog.py.
+
+# ---- Boss epithets (NpcName) ----
+
+[[bosses]]
+npc_name_id = 902130000
+name = "Margit"
+en = "Margit, the Sun-Scorched"
+
+[[bosses]]
+npc_name_id = 904750000
+name = "Godrick"
+en = "Godrick the Sunburnt"
+
+[[bosses]]
+npc_name_id = 902130003
+name = "Morgott"
+en = "Morgott, the Beach King"
+
+[[bosses]]
+npc_name_id = 904710001
+name = "Rykard"
+en = "Rykard, Lord of the Barbecue"
+
+[[bosses]]
+npc_name_id = 902110001
+name = "Maliketh"
+en = "Maliketh, the Sunblade"
+
+[[bosses]]
+npc_name_id = 902120000
+name = "Malenia"
+en = "Malenia, Blade of Sunflowers"
+
+[[bosses]]
+npc_name_id = 904720002
+name = "Godfrey"
+en = "Godfrey, First Beach Lord"
+
+[[bosses]]
+npc_name_id = 902190000
+name = "Radagon"
+en = "Radagon of the Sunny Order"
+
+# ---- Universal UI banners (GR_MenuText in menu_dlc02.msgbnd.dcx) ----
+# IDs sorted ascending; 331314 is reserved (vanilla) and must not appear here.
+
+[[ui]]
+bnd = "menu_dlc02.msgbnd.dcx"
+fmg = "GR_MenuText"
+id = 331301
+en = "DEMIGOD SUNBATHED"
+
+[[ui]]
+bnd = "menu_dlc02.msgbnd.dcx"
+fmg = "GR_MenuText"
+id = 331302
+en = "LEGEND SUNBATHED"
+
+[[ui]]
+bnd = "menu_dlc02.msgbnd.dcx"
+fmg = "GR_MenuText"
+id = 331303
+en = "GREAT TAN ACQUIRED"
+
+[[ui]]
+bnd = "menu_dlc02.msgbnd.dcx"
+fmg = "GR_MenuText"
+id = 331304
+en = "TAN ACQUIRED"
+
+[[ui]]
+bnd = "menu_dlc02.msgbnd.dcx"
+fmg = "GR_MenuText"
+id = 331305
+en = "SUNSTROKE"
+
+[[ui]]
+bnd = "menu_dlc02.msgbnd.dcx"
+fmg = "GR_MenuText"
+id = 331311
+en = "SUNNY SPOT DISCOVERED"
+
+[[ui]]
+bnd = "menu_dlc02.msgbnd.dcx"
+fmg = "GR_MenuText"
+id = 331322
+en = "GOD SUNBURNT"

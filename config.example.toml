@@ -309,3 +309,8 @@ allcraft = true
 item_preset = true
 # Custom item preset YAML (default: built-in data/item_preset.yaml)
 # item_preset_path = "/path/to/custom_preset.yaml"
+
+# Thematic plugins (opt-in cosmetic layers). Each [plugin.<name>] block is
+# forwarded verbatim into graph.json and read by its feature in the writer.
+[plugin.summer]
+enabled = false  # set true to reskin boss names + victory/death banners
