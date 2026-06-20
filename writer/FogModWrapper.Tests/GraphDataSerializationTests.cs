@@ -641,4 +641,22 @@ public class GraphDataSerializationTests
         var data = JsonSerializer.Deserialize<GraphData>(json, JsonOptions);
         Assert.Equal(0, data!.WeaponUpgrade);
     }
+
+    [Fact]
+    public void IsPluginEnabled_TrueOnlyWhenPresentAndEnabled()
+    {
+        var json = """
+        {
+          "version": "4.4",
+          "seed": 1,
+          "plugins": { "summer": { "enabled": true, "intensity": 3 }, "off": { "enabled": false } }
+        }
+        """;
+
+        var data = GraphLoader.Parse(json);
+
+        Assert.True(data.IsPluginEnabled("summer"));
+        Assert.False(data.IsPluginEnabled("off"));
+        Assert.False(data.IsPluginEnabled("missing"));
+    }
 }

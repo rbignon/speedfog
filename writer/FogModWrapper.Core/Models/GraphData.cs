@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace FogModWrapper.Models;
@@ -142,6 +143,30 @@ public class GraphData
     /// </summary>
     [JsonPropertyName("items_spawned_flag")]
     public int ItemsSpawnedFlag { get; set; } = 0;
+
+    /// <summary>
+    /// Opt-in plugin config blocks keyed by plugin name (graph.json "plugins").
+    /// Generic passthrough of config.toml [plugin.*]; unknown params preserved.
+    /// </summary>
+    [JsonPropertyName("plugins")]
+    public Dictionary<string, PluginConfig> Plugins { get; set; } = new();
+
+    /// <summary>True when the named plugin is present and enabled.</summary>
+    public bool IsPluginEnabled(string name)
+        => (Plugins?.TryGetValue(name, out var p) ?? false) && p!.Enabled;
+}
+
+/// <summary>
+/// A single [plugin.&lt;name&gt;] config block. `enabled` is typed; any other
+/// params are preserved verbatim in Extra (no per-plugin schema).
+/// </summary>
+public class PluginConfig
+{
+    [JsonPropertyName("enabled")]
+    public bool Enabled { get; set; }
+
+    [JsonExtensionData]
+    public Dictionary<string, JsonElement> Extra { get; set; } = new();
 }
 
 /// <summary>
