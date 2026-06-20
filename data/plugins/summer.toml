@@ -251,6 +251,83 @@ name = "Radagon"
 en = "Radagon of the Sunny Order"
 fr = "Radagon de l'Ordre Ensoleillé"
 
+# ---- Final bosses + distinct phase / alternate-instance forms ----
+# These share a defeat flag with their main form (or have none), so the seeding
+# tool cannot emit them; ids found via game_inspect dump-fmg. Phase ids are
+# usually adjacent to the main id (e.g. 904710000 / 904710001).
+
+[[bosses]]
+npc_name_id = 902200000
+name = "Elden Beast"
+en = "Elden Beach"
+fr = "Bête de la Plage"
+
+[[bosses]]
+npc_name_id = 905220000
+name = "Promised Consort Radahn"
+en = "Promised Beach Radahn"
+fr = "Radahn de Plage Promis"
+
+[[bosses]]
+npc_name_id = 905220001
+name = "Radahn, Consort of Miquella"
+en = "Radahn, Consort of the Sun"
+fr = "Radahn, Consort du Soleil"
+
+[[bosses]]
+npc_name_id = 904710000
+name = "God-Devouring Serpent"
+en = "Sausage-Devouring Serpent"
+fr = "Serpent Dévoreur de Saucisses"
+
+[[bosses]]
+npc_name_id = 902110000
+name = "Beast Clergyman"
+en = "Beach Clergyman"
+fr = "Prêtre de Plage"
+
+[[bosses]]
+npc_name_id = 902120001
+name = "Malenia, Goddess of Rot"
+en = "Malenia, Goddess of Tan Lines"
+fr = "Malenia, Déesse du Bronzage"
+
+[[bosses]]
+npc_name_id = 905130000
+name = "Messmer the Impaler"
+en = "Messmer the Sunbather"
+fr = "Messmer le Bronzeur"
+
+[[bosses]]
+npc_name_id = 902030000
+name = "Rennala (alternate)"
+en = "Rennala, Queen of the Full Sun"
+fr = "Rennala, Reine du Plein Soleil"
+
+[[bosses]]
+npc_name_id = 902130002
+name = "Morgott (alternate)"
+en = "Morgott, the Beach King"
+fr = "Morgott, le Roi de la Plage"
+
+[[bosses]]
+npc_name_id = 904720000
+name = "Godfrey (golden shade)"
+en = "Godfrey, First Beach Lord"
+fr = "Godfrey, Premier Seigneur de la Plage"
+
+[[bosses]]
+npc_name_id = 904770001
+name = "Valiant Gargoyle (Twinblade)"
+en = "Valiant Sunbather (Twinblade)"
+fr = "Vaillant Bronzeur (Doubles Lames)"
+
+[[bosses]]
+npc_name_id = 905230001
+name = "Scadutree Avatar (alternate)"
+en = "Beach Parasol Avatar"
+fr = "Avatar du Parasol"
+
 # ---- Universal UI banners (GR_MenuText in menu_dlc02.msgbnd.dcx) ----
 # IDs sorted ascending; 331314 is reserved (vanilla) and must not appear here.
 
