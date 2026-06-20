@@ -1,11 +1,18 @@
 """Seed data/plugins/summer.toml boss skeleton from generated game data.
 
-Joins clusters.json (major-boss clusters, each carrying `defeat_flag` and
-`boss_name`) with the randomizer enemy.txt (which carries both `DefeatFlag`
-and `NpcName` per entity). The defeat flag is the join key: a major-boss
-cluster's `defeat_flag` matches an enemy.txt entity's `DefeatFlag`, whose
+Joins clusters.json (major_boss and final_boss clusters, each carrying
+`defeat_flag` and `boss_name`) with the randomizer enemy.txt (which carries
+both `DefeatFlag` and `NpcName` per entity). The defeat flag is the join key:
+a cluster's `defeat_flag` matches an enemy.txt entity's `DefeatFlag`, whose
 `NpcName` is the FMG id to theme. Emits boss entries with npc_name_id + name
 for a human to fill `en`/`fr`.
+
+Note: distinct phase-1 healthbar names (e.g. "God-Devouring Serpent",
+"Beast Clergyman", "Messmer the Impaler") are SEPARATE NpcName FMG entries
+that the randomizer's enemy.txt does not reference (they have no DefeatFlag),
+so this tool cannot discover them. Add those by hand: find the id with
+`game_inspect dump-fmg <item.msgbnd.dcx> "<name>"` (they are usually adjacent
+to the main phase id).
 """
 
 from __future__ import annotations
@@ -51,8 +58,13 @@ def parse_defeat_flag_npc_names(enemy_txt_path: str | Path) -> dict[int, int]:
     return result
 
 
-def major_boss_entries(clusters_path: str | Path) -> list[dict]:
-    """Return [{defeat_flag, name}] for clusters whose type is major_boss.
+# Cluster types whose boss should be themed. final_boss covers Elden Beast and
+# the Promised Consort Radahn final fight (special-cased away from major_boss).
+_ROSTER_TYPES = {"major_boss", "final_boss"}
+
+
+def roster_boss_entries(clusters_path: str | Path) -> list[dict]:
+    """Return [{defeat_flag, name}] for major_boss and final_boss clusters.
 
     Name comes from the cluster's `boss_name`, falling back to `display_name`.
     Clusters without a `defeat_flag` are skipped.
@@ -60,7 +72,7 @@ def major_boss_entries(clusters_path: str | Path) -> list[dict]:
     data = json.loads(Path(clusters_path).read_text(encoding="utf-8"))
     out: list[dict] = []
     for cluster in data.get("clusters", []):
-        if cluster.get("type") != "major_boss":
+        if cluster.get("type") not in _ROSTER_TYPES:
             continue
         flag = cluster.get("defeat_flag")
         if not isinstance(flag, int):
@@ -96,8 +108,8 @@ def main(argv: list[str]) -> int:
         return 1
     root = Path(__file__).resolve().parent.parent
     defeat_to_npc = parse_defeat_flag_npc_names(Path(argv[1]))
-    majors = major_boss_entries(root / "data" / "clusters.json")
-    skeleton = build_summer_skeleton(majors, defeat_to_npc)
+    roster = roster_boss_entries(root / "data" / "clusters.json")
+    skeleton = build_summer_skeleton(roster, defeat_to_npc)
     for row in skeleton:
         print(
             f'[[bosses]]\nnpc_name_id = {row["npc_name_id"]}'

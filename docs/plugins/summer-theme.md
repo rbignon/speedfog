@@ -42,10 +42,16 @@ Resolved v1 ids (GR_MenuText): 331301 DEMIGOD FELLED, 331302 LEGEND FELLED,
 ## Adding boss epithets
 
 `tools/seed_summer_catalog.py <path-to-enemy.txt>` prints `[[bosses]]`
-skeletons for major bosses. It joins `clusters.json` (each `major_boss`
-cluster carries `defeat_flag` and `boss_name`) with `enemy.txt` (each entity
-carries both `DefeatFlag` and `NpcName`), using the defeat flag as the join
-key to resolve each boss's `NpcName` FMG id. Fill `en`/`fr`, paste into the
-catalogue.
+skeletons for major-boss and final-boss clusters. It joins `clusters.json`
+(each such cluster carries `defeat_flag` and `boss_name`) with `enemy.txt`
+(each entity carries both `DefeatFlag` and `NpcName`), using the defeat flag
+as the join key to resolve each boss's `NpcName` FMG id. Fill `en`/`fr`, paste
+into the catalogue.
+
+Distinct phase-1 healthbar names (e.g. `God-Devouring Serpent`, `Beast
+Clergyman`, `Messmer the Impaler`) are SEPARATE `NpcName` FMG entries with no
+`DefeatFlag`, so the tool cannot find them. Add them by hand: find the id with
+`game_inspect dump-fmg <item.msgbnd.dcx> "<name>"` (the phase ids are usually
+adjacent, e.g. `904710000`/`904710001`).
 
 See the design spec: `docs/superpowers/specs/2026-06-19-summer-theme-plugin-design.md`.

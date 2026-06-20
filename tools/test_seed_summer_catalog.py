@@ -9,8 +9,8 @@ plain zone-name strings, not objects, and major-boss clusters carry
 
 from seed_summer_catalog import (
     build_summer_skeleton,
-    major_boss_entries,
     parse_defeat_flag_npc_names,
+    roster_boss_entries,
 )
 
 
@@ -58,22 +58,25 @@ def test_parse_defeat_flag_first_wins_on_duplicate(tmp_path):
     assert parse_defeat_flag_npc_names(enemy) == {500: 111}
 
 
-def test_major_boss_entries_filters_and_reads_boss_name(tmp_path):
+def test_roster_entries_includes_major_and_final_excludes_others(tmp_path):
     clusters = tmp_path / "clusters.json"
     clusters.write_text(
         '{"clusters": ['
         '{"type": "major_boss", "defeat_flag": 14000800, "boss_name": "Rennala",'
         ' "zones": ["academy_library", "academy_chest"]},'
+        '{"type": "final_boss", "defeat_flag": 19000800, "boss_name": "Elden Beast",'
+        ' "zones": ["leyndell_erdtree"]},'
         '{"type": "boss_arena", "defeat_flag": 99, "boss_name": "Minor",'
         ' "zones": ["x"]}'
         "]}"
     )
-    assert major_boss_entries(clusters) == [
-        {"defeat_flag": 14000800, "name": "Rennala"}
+    assert roster_boss_entries(clusters) == [
+        {"defeat_flag": 14000800, "name": "Rennala"},
+        {"defeat_flag": 19000800, "name": "Elden Beast"},
     ]
 
 
-def test_major_boss_entries_falls_back_to_display_name(tmp_path):
+def test_roster_entries_falls_back_to_display_name(tmp_path):
     clusters = tmp_path / "clusters.json"
     clusters.write_text(
         '{"clusters": ['
@@ -81,7 +84,7 @@ def test_major_boss_entries_falls_back_to_display_name(tmp_path):
         ' "zones": ["z"]}'
         "]}"
     )
-    assert major_boss_entries(clusters) == [{"defeat_flag": 7, "name": "Some Arena"}]
+    assert roster_boss_entries(clusters) == [{"defeat_flag": 7, "name": "Some Arena"}]
 
 
 def test_build_skeleton_joins_on_defeat_flag():
