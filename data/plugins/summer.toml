@@ -25,19 +25,19 @@ fr = "Hot-Dog de Radagon"
 npc_name_id = 904620001
 name = "Astel, Naturalborn of the Void"
 en = "Astel, Naturalborn of the Deep End"
-fr = "Astel, Né du Grand Bain"
+fr = "Astel, Rejeton du Grand Bain"
 
 [[bosses]]
 npc_name_id = 904650000
 name = "Dragonkin Soldier of Nokstella"
 en = "Dragonkin Lifeguard of Nokstella"
-fr = "Maître-Nageur Dragonné de Nokstella"
+fr = "Maître-Nageur de Nokstella"
 
 [[bosses]]
 npc_name_id = 905210000
 name = "Divine Beast Dancing Lion"
-en = "Divine Beast Conga Lion"
-fr = "Bête Divine, Lion de la Conga"
+en = "Nightclub Dancing Lion"
+fr = "Lion dansant de la boîte de nuit"
 
 [[bosses]]
 npc_name_id = 904730000
@@ -49,25 +49,25 @@ fr = "Radahn, Fléau du Soleil"
 npc_name_id = 905300000
 name = "Rellana, Twin Moon Knight"
 en = "Rellana, Twin Sun Knight"
-fr = "Rellana, Chevalier des Deux Soleils"
+fr = "Rellana, chevalière des Deux Soleils"
 
 [[bosses]]
 npc_name_id = 903575000
 name = "Godskin Duo"
-en = "Sunkissed Duo"
-fr = "Duo Ensoleillé"
+en = "Beach Volley Duo"
+fr = "Duo de la pétanque"
 
 [[bosses]]
 npc_name_id = 902110001
 name = "Maliketh, the Black Blade"
 en = "Maliketh, the Sunblade"
-fr = "Maliketh, la Lame de Soleil"
+fr = "Maliketh, la Lame tropicale"
 
 [[bosses]]
 npc_name_id = 904520000
 name = "Dragonlord Placidusax"
 en = "Sunlord Placidusax"
-fr = "Seigneur Soleil Placidusax"
+fr = "Seigneur Caniculaire Placidusax"
 
 [[bosses]]
 npc_name_id = 905200000
@@ -84,20 +84,20 @@ fr = "Chevalier Cuit au Soleil"
 [[bosses]]
 npc_name_id = 904760000
 name = "Fire Giant"
-en = "Beach Bonfire Giant"
-fr = "Géant du Feu de Plage"
+en = "Bonfire Giant"
+fr = "Géant du Feu de Camp"
 
 [[bosses]]
 npc_name_id = 903252000
 name = "Loretta, Knight of the Haligtree"
 en = "Loretta, Knight of the Palm Tree"
-fr = "Loretta, Chevalier du Palmier"
+fr = "Loretta, chevalière du Palmier"
 
 [[bosses]]
 npc_name_id = 902120000
 name = "Malenia, Blade of Miquella"
-en = "Malenia, Blade of Sunflowers"
-fr = "Malenia, Lame des Tournesols"
+en = "Malenia, Sunglasses of Miquella"
+fr = "Malenia, lunettes de soleil de Miquella"
 
 [[bosses]]
 npc_name_id = 905120000
@@ -115,25 +115,25 @@ fr = "Sire Gideon Ofnir, le Tout-Bronzant"
 npc_name_id = 904720001
 name = "Hoarah Loux, Warrior"
 en = "Hoarah Loux, Beach Wrestler"
-fr = "Hoarah Loux, Lutteur de Plage"
+fr = "Hoarah Loux, Caïd de la Plage"
 
 [[bosses]]
 npc_name_id = 904720002
 name = "Goldfrey, First Elden Lord"
-en = "Goldfrey, First Beach Lord"
-fr = "Goldfrey, Premier Seigneur de la Plage"
+en = "Goldfrey, First Fishing Lord"
+fr = "Goldfrey, Premier Seigneur de la Pêche"
 
 [[bosses]]
 npc_name_id = 902130003
 name = "Morgott, the Omen King"
-en = "Morgott, the Beach King"
-fr = "Morgott, le Roi de la Plage"
+en = "Morgott, the Camping King"
+fr = "Morgott, le Roi du camping"
 
 [[bosses]]
 npc_name_id = 903253500
 name = "Royal Knight Loretta"
 en = "Royal Beach Knight Loretta"
-fr = "Loretta, Chevalier Royal de Plage"
+fr = "Loretta, chevalière royale de la plage"
 
 [[bosses]]
 npc_name_id = 905051000
@@ -150,20 +150,20 @@ fr = "Mohg, Seigneur de la Sangria"
 [[bosses]]
 npc_name_id = 903050500
 name = "Commander Niall"
-en = "Beach Commander Niall"
-fr = "Commandant de Plage Niall"
+en = "Captain Niall"
+fr = "GO Niall"
 
 [[bosses]]
 npc_name_id = 903460500
 name = "Leonine Misbegotten Boss"
 en = "Sunburnt Misbegotten"
-fr = "Malenfant Insolé"
+fr = "Chimère Bronzée"
 
 [[bosses]]
 npc_name_id = 904910000
 name = "Magma Wyrm Makar"
 en = "Hot Spring Wyrm Makar"
-fr = "Guivre des Sources Chaudes Makar"
+fr = "Makar, le Dragon des Sources Chaudes"
 
 [[bosses]]
 npc_name_id = 905030000
@@ -174,20 +174,20 @@ fr = "Romina, Sainte du Tournesol"
 [[bosses]]
 npc_name_id = 905230000
 name = "Scadutree Avatar"
-en = "Beach Parasol Avatar"
-fr = "Avatar du Parasol"
+en = "Scadutree Sunflower"
+fr = "Tournesol à l'ombre de l'arbre"
 
 [[bosses]]
 npc_name_id = 905000000
 name = "Commander Gaius"
 en = "Beachboar Commander Gaius"
-fr = "Commandant Gaius, Sanglier de Plage"
+fr = "Commandant Gaius, Sanglier de la Plage"
 
 [[bosses]]
 npc_name_id = 904800002
 name = "Mohg, the Omen"
-en = "Mohg, the Sunburnt Omen"
-fr = "Mohg, le Présage Insolé"
+en = "Mohg, the Ocean"
+fr = "Mohg, le Réprouvé Bronzé"
 
 [[bosses]]
 npc_name_id = 905010000
@@ -204,20 +204,20 @@ fr = "Esprit Ancestral Ensoleillé"
 [[bosses]]
 npc_name_id = 904770000
 name = "Valiant Gargoyles"
-en = "Valiant Sunbathers"
-fr = "Vaillants Bronzeurs"
+en = "Valiant Seagull"
+fr = "Mouette Vaillante"
 
 [[bosses]]
 npc_name_id = 903320000
 name = "Mimic Tear"
 en = "Mimic Sweat"
-fr = "Sueur Mimétique"
+fr = "Sueur imitatrice"
 
 [[bosses]]
 npc_name_id = 905130001
 name = "Base Serpent Messmer"
 en = "Base Serpent of Summer"
-fr = "Serpent Primordial de l'Été"
+fr = "Messmer, méduse maléfique"
 
 [[bosses]]
 npc_name_id = 904750000
@@ -240,8 +240,8 @@ fr = "Rykard, Seigneur du Barbecue"
 [[bosses]]
 npc_name_id = 903570000
 name = "Godskin Noble Boss"
-en = "Sunkissed Noble"
-fr = "Noble Ensoleillé"
+en = "Swimsuit Noble"
+fr = "Noble en Maillot"
 
 # Final boss (not a major_boss cluster, so not emitted by the seeding tool;
 # kept here so the final fight is themed too).
@@ -260,19 +260,19 @@ fr = "Radagon de l'Ordre Ensoleillé"
 npc_name_id = 902200000
 name = "Elden Beast"
 en = "Elden Beach"
-fr = "Bête de la Plage"
+fr = "Limace de l'océan"
 
 [[bosses]]
 npc_name_id = 905220000
 name = "Promised Consort Radahn"
-en = "Promised Beach Radahn"
-fr = "Radahn de Plage Promis"
+en = "Promised Diver Radahn"
+fr = "Radahn, futur plongeur"
 
 [[bosses]]
 npc_name_id = 905220001
 name = "Radahn, Consort of Miquella"
-en = "Radahn, Consort of the Sun"
-fr = "Radahn, Consort du Soleil"
+en = "Radahn, Sunscreen of Miquella"
+fr = "Radahn, crème solaire de Miquella"
 
 [[bosses]]
 npc_name_id = 904710000
@@ -284,19 +284,19 @@ fr = "Serpent Dévoreur de Saucisses"
 npc_name_id = 902110000
 name = "Beast Clergyman"
 en = "Beach Clergyman"
-fr = "Prêtre de Plage"
+fr = "Clerc du pique-nique"
 
 [[bosses]]
 npc_name_id = 902120001
 name = "Malenia, Goddess of Rot"
-en = "Malenia, Goddess of Tan Lines"
-fr = "Malenia, Déesse du Bronzage"
+en = "Malenia, Goddess of Sandcastle"
+fr = "Malenia, Déesse du château de sable"
 
 [[bosses]]
 npc_name_id = 905130000
 name = "Messmer the Impaler"
-en = "Messmer the Sunbather"
-fr = "Messmer le Bronzeur"
+en = "Messmer the Griller"
+fr = "Messmer le jardinier"
 
 [[bosses]]
 npc_name_id = 902030000
@@ -313,20 +313,20 @@ fr = "Morgott, le Roi de la Plage"
 [[bosses]]
 npc_name_id = 904720000
 name = "Godfrey (golden shade)"
-en = "Godfrey, First Beach Lord"
-fr = "Godfrey, Premier Seigneur de la Plage"
+en = "Godfrey, First Beach Volley Lord"
+fr = "Godfrey, Premier seigneur de la pétanque"
 
 [[bosses]]
 npc_name_id = 904770001
 name = "Valiant Gargoyle (Twinblade)"
-en = "Valiant Sunbather (Twinblade)"
-fr = "Vaillant Bronzeur (Doubles Lames)"
+en = "Valiant Seagull"
+fr = "Mouette Vaillante"
 
 [[bosses]]
 npc_name_id = 905230001
 name = "Scadutree Avatar (alternate)"
-en = "Beach Parasol Avatar"
-fr = "Avatar du Parasol"
+en = "Scadutree Sunflower"
+fr = "Tournesol à l'ombre de l'arbre"
 
 # ---- Universal UI banners (GR_MenuText in menu_dlc02.msgbnd.dcx) ----
 # IDs sorted ascending; 331314 is reserved (vanilla) and must not appear here.
@@ -336,28 +336,28 @@ bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331301
 en = "DEMIGOD SUNBATHED"
-fr = "DEMI-DIEU BRONZÉ"
+fr = "DEMI-DIEU NOYÉ"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331302
 en = "LEGEND SUNBATHED"
-fr = "LÉGENDE BRONZÉE"
+fr = "LÉGENDE NOYÉE"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331303
-en = "GREAT TAN ACQUIRED"
-fr = "GRAND BRONZAGE OBTENU"
+en = "GREAT ENEMY SUNBATHED"
+fr = "ENNEMI MAJEUR NOYÉ"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331304
-en = "TAN ACQUIRED"
-fr = "BRONZAGE OBTENU"
+en = "ENEMY SUNBATHED"
+fr = "ENNEMI NOYÉ"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
@@ -378,4 +378,4 @@ bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331322
 en = "GOD SUNBURNT"
-fr = "DIEU INSOLÉ"
+fr = "DIEU SUBMERGÉ"
