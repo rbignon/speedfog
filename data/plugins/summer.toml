@@ -335,28 +335,28 @@ fr = "Tournesol à l'ombre de l'arbre"
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331301
-en = "DEMIGOD SUNBATHED"
+en = "DEMIGOD ROASTED"
 fr = "DEMI-DIEU NOYÉ"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331302
-en = "LEGEND SUNBATHED"
+en = "LEGEND ROASTED"
 fr = "LÉGENDE NOYÉE"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331303
-en = "GREAT ENEMY SUNBATHED"
+en = "GREAT ENEMY ROASTED"
 fr = "ENNEMI MAJEUR NOYÉ"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331304
-en = "ENEMY SUNBATHED"
+en = "ENEMY ROASTED"
 fr = "ENNEMI NOYÉ"
 
 [[ui]]
@@ -377,5 +377,5 @@ fr = "COIN ENSOLEILLÉ DÉCOUVERT"
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331322
-en = "GOD SUNBURNT"
+en = "GOD ROASTED"
 fr = "DIEU SUBMERGÉ"
