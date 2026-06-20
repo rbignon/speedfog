@@ -100,7 +100,8 @@ def test_generate_item_config_basic():
     assert result["options"]["dlc"] is True
     assert result["options"]["sombermode"] is True
     assert result["options"]["mats"] is True
-    assert result["options"]["editnames"] is True
+    # editnames was intentionally removed (596cad7): boss names are no longer edited.
+    assert "editnames" not in result["options"]
     assert result["options"]["scale"] is True
     assert result["options"]["phasehp"] is True
     assert "preset" not in result
