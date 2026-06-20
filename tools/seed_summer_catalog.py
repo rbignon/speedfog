@@ -1,8 +1,10 @@
 """Seed data/plugins/summer.toml boss skeleton from generated game data.
 
-Joins boss_arena_tags.json (roster + names, keyed by entity id as decimal string),
-clusters.json (major-boss filter), and the randomizer enemy.txt
-(entity id -> NpcName FMG id). Emits boss entries with npc_name_id + name
+Joins clusters.json (major-boss clusters, each carrying `defeat_flag` and
+`boss_name`) with the randomizer enemy.txt (which carries both `DefeatFlag`
+and `NpcName` per entity). The defeat flag is the join key: a major-boss
+cluster's `defeat_flag` matches an enemy.txt entity's `DefeatFlag`, whose
+`NpcName` is the FMG id to theme. Emits boss entries with npc_name_id + name
 for a human to fill `en`/`fr`.
 """
 
@@ -13,62 +15,78 @@ import re
 import sys
 from pathlib import Path
 
-_ID_RE = re.compile(r"^- ID:\s*(\d+)\s*$")
+_ID_RE = re.compile(r"^- ID:\s*\d+\s*$")
+_DEFEAT_RE = re.compile(r"^\s*DefeatFlag:\s*(\d+)\s*$")
 _NPC_RE = re.compile(r"^\s*NpcName:\s*(\d+)\s*$")
 
 
-def parse_npc_names(enemy_txt_path: str | Path) -> dict[int, int]:
-    """Map entity id -> NpcName FMG id from enemy.txt."""
+def parse_defeat_flag_npc_names(enemy_txt_path: str | Path) -> dict[int, int]:
+    """Map DefeatFlag -> NpcName FMG id from enemy.txt.
+
+    Only entities carrying both fields are included. On a duplicate DefeatFlag,
+    the first occurrence wins (later ones are ignored).
+    """
     result: dict[int, int] = {}
-    current: int | None = None
+    defeat: int | None = None
+    npc: int | None = None
+
+    def flush() -> None:
+        if defeat is not None and npc is not None and defeat not in result:
+            result[defeat] = npc
+
     for line in Path(enemy_txt_path).read_text(encoding="utf-8").splitlines():
-        m = _ID_RE.match(line)
+        if _ID_RE.match(line):
+            flush()
+            defeat = None
+            npc = None
+            continue
+        m = _DEFEAT_RE.match(line)
         if m:
-            current = int(m.group(1))
+            defeat = int(m.group(1))
             continue
         m = _NPC_RE.match(line)
-        if m and current is not None:
-            result[current] = int(m.group(1))
-            current = None
+        if m:
+            npc = int(m.group(1))
+    flush()
     return result
 
 
-def major_entity_ids(clusters_path: Path) -> set[int]:
-    """Entity ids of clusters whose type is major_boss."""
+def major_boss_entries(clusters_path: str | Path) -> list[dict]:
+    """Return [{defeat_flag, name}] for clusters whose type is major_boss.
+
+    Name comes from the cluster's `boss_name`, falling back to `display_name`.
+    Clusters without a `defeat_flag` are skipped.
+    """
     data = json.loads(Path(clusters_path).read_text(encoding="utf-8"))
-    ids: set[int] = set()
+    out: list[dict] = []
     for cluster in data.get("clusters", []):
         if cluster.get("type") != "major_boss":
             continue
-        for zone in cluster.get("zones", []):
-            eid = zone.get("entity_id")
-            if isinstance(eid, int):
-                ids.add(eid)
-    return ids
+        flag = cluster.get("defeat_flag")
+        if not isinstance(flag, int):
+            continue
+        name = cluster.get("boss_name") or cluster.get("display_name", "")
+        out.append({"defeat_flag": flag, "name": name})
+    return out
 
 
 def build_summer_skeleton(
-    boss_tags: dict[str, dict],
-    npc_name_by_entity: dict[int, int],
-    major_entity_ids: set[int],
+    major_bosses: list[dict],
+    defeat_flag_to_npc: dict[int, int],
 ) -> list[dict]:
-    """Return [{npc_name_id, name}] for major bosses that have an NpcName.
+    """Return [{npc_name_id, name}] for major bosses that resolve to an NpcName.
 
-    boss_tags keys are entity ids as decimal strings.
-    Deduplicates by npc_name_id; when two entity ids share a name id, the
-    lower entity id wins (iteration is sorted ascending).
+    Joins each major boss's `defeat_flag` to its NpcName id. Bosses whose flag
+    has no NpcName are dropped. Deduplicates by npc_name_id (first wins).
     """
     out: list[dict] = []
     seen: set[int] = set()
-    for eid in sorted(major_entity_ids):
-        tag = boss_tags.get(str(eid))
-        if tag is None:
-            continue
-        npc = npc_name_by_entity.get(eid)
+    for boss in major_bosses:
+        npc = defeat_flag_to_npc.get(boss["defeat_flag"])
         if npc is None or npc in seen:
             continue
         seen.add(npc)
-        out.append({"npc_name_id": npc, "name": tag.get("name", "")})
+        out.append({"npc_name_id": npc, "name": boss["name"]})
     return out
 
 
@@ -77,10 +95,9 @@ def main(argv: list[str]) -> int:
         print("usage: seed_summer_catalog.py <path/to/enemy.txt>", file=sys.stderr)
         return 1
     root = Path(__file__).resolve().parent.parent
-    boss_tags = json.loads((root / "data" / "boss_arena_tags.json").read_text())
-    npc_by_entity = parse_npc_names(Path(argv[1]))
-    major = major_entity_ids(root / "data" / "clusters.json")
-    skeleton = build_summer_skeleton(boss_tags, npc_by_entity, major)
+    defeat_to_npc = parse_defeat_flag_npc_names(Path(argv[1]))
+    majors = major_boss_entries(root / "data" / "clusters.json")
+    skeleton = build_summer_skeleton(majors, defeat_to_npc)
     for row in skeleton:
         print(
             f'[[bosses]]\nnpc_name_id = {row["npc_name_id"]}'
