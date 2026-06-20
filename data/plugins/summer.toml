@@ -363,8 +363,8 @@ fr = "ENNEMI NOYÉ"
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331305
-en = "SUNSTROKE"
-fr = "INSOLATION"
+en = "YOU DROWNED"
+fr = "VOUS ÊTES NOYÉ"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
