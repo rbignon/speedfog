@@ -516,6 +516,7 @@ class Config:
     item_randomizer: ItemRandomizerConfig = field(default_factory=ItemRandomizerConfig)
     care_package: CarePackageConfig = field(default_factory=CarePackageConfig)
     enemy: EnemyConfig = field(default_factory=EnemyConfig)
+    plugins: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         """Validate cross-field constraints."""
@@ -690,6 +691,7 @@ class Config:
                 swap_boss=enemy_section.get("swap_boss", False),
                 dlc_bosses=enemy_section.get("dlc_bosses", True),
             ),
+            plugins=data.get("plugin", {}),
         )
 
     @classmethod

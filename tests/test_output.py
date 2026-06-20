@@ -365,10 +365,10 @@ def _make_result(death_markers: bool = True) -> dict:
 class TestEventMap:
     """Tests for v4 event_map, finish_event, and flag_id fields."""
 
-    def test_version_is_4_3(self):
-        """Version string is '4.3'."""
+    def test_version_is_4_4(self):
+        """Version string is '4.4'."""
         result = _make_result()
-        assert result["version"] == "4.3"
+        assert result["version"] == "4.4"
 
     def test_event_map_keys_are_string_flag_ids(self):
         """event_map keys are stringified integers."""
@@ -2404,4 +2404,29 @@ class TestPhantomSkins:
             zone_names={},
         )
         result = dag_to_dict(dag, clusters)
-        assert result["version"] == "4.3"
+        assert result["version"] == "4.4"
+
+
+class TestDagToDictPlugins:
+    def test_plugins_passthrough_and_version(self):
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(
+            dag, clusters, plugins={"summer": {"enabled": True, "intensity": 3}}
+        )
+        assert result["version"] == "4.4"
+        assert result["plugins"] == {"summer": {"enabled": True, "intensity": 3}}
+
+    def test_plugins_default_empty(self):
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters)
+        assert result["plugins"] == {}

@@ -369,6 +369,7 @@ def main() -> int:
         if config.care_package.enabled
         else 0,
         phantom_skins=phantom_skins,
+        plugins=config.plugins,
     )
     print(f"Written: {json_path}")
     if starting_goods:

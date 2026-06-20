@@ -300,6 +300,7 @@ def dag_to_dict(
     death_markers: bool = True,
     weapon_upgrade: int = 0,
     phantom_skins: dict[str, int] | None = None,
+    plugins: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Convert a DAG to v4 JSON-serializable dictionary.
 
@@ -330,7 +331,7 @@ def dag_to_dict(
 
     Returns:
         Dictionary with the following structure:
-        - version: "4.3"
+        - version: "4.4"
         - seed: int
         - total_layers, total_nodes, total_zones: metadata
         - options: dict of FogMod options
@@ -609,7 +610,7 @@ def dag_to_dict(
                 remove_entities.append({"map": map_id, "entity_id": location})
 
     return {
-        "version": "4.3",
+        "version": "4.4",
         "seed": dag.seed,
         "total_layers": total_layers,
         "total_nodes": dag.total_nodes(),
@@ -645,6 +646,7 @@ def dag_to_dict(
             name: {"speffects": [skin_id]}
             for name, skin_id in (phantom_skins or {}).items()
         },
+        "plugins": plugins or {},
     }
 
 
@@ -669,6 +671,7 @@ def export_json(
     death_markers: bool = True,
     weapon_upgrade: int = 0,
     phantom_skins: dict[str, int] | None = None,
+    plugins: dict[str, Any] | None = None,
 ) -> None:
     """Export a DAG to v4 formatted JSON file.
 
@@ -713,6 +716,7 @@ def export_json(
         death_markers=death_markers,
         weapon_upgrade=weapon_upgrade,
         phantom_skins=phantom_skins,
+        plugins=plugins,
     )
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)

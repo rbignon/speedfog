@@ -1121,3 +1121,12 @@ def test_structure_config_drops_legacy_fields():
         "merge_probability",
     ):
         assert not hasattr(cfg, legacy), f"{legacy} still present"
+
+
+def test_plugin_tables_passthrough():
+    cfg = Config.from_dict({"plugin": {"summer": {"enabled": True, "intensity": 3}}})
+    assert cfg.plugins == {"summer": {"enabled": True, "intensity": 3}}
+
+
+def test_plugins_default_empty():
+    assert Config.from_dict({}).plugins == {}
