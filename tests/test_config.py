@@ -1175,7 +1175,7 @@ def test_enemy_bosses_rejects_empty_entry():
 
 def test_enemy_bosses_rejects_non_string_entry():
     """Non-string allowlist entries are rejected."""
-    with pytest.raises((ValueError, TypeError)):
+    with pytest.raises(TypeError, match="enemy.bosses entries must be strings"):
         Config.from_dict({"enemy": {"randomize_bosses": "all", "bosses": [123]}})
 
 

@@ -288,8 +288,9 @@ When `enemy.bosses` is non-empty, boss assignment switches to a uniform mode:
 - The allowlist is authoritative: a listed boss is included even if tagged
   `exclude_from_pool` or DLC with `dlc_bosses = false`.
 - `ignore_arena_size` stays orthogonal. Non-size constraints
-  (`two_phase_not_allowed`, `dragon_not_allowed`, `npc_not_allowed`, `is_escapable`) still apply, so an arena
-  that cannot host the pinned boss triggers a reroll (auto) or a clear
+  (`two_phase_not_allowed`, `dragon_not_allowed`, `npc_not_allowed`,
+  `is_escapable`) still apply, so an arena that cannot host the pinned boss
+  triggers a reroll (auto) or a clear
   `MatchingError` (fixed seed). Malenia is two-phase, so arenas tagged
   `two_phase_not_allowed` reject her even with `ignore_arena_size`.
 

@@ -362,7 +362,7 @@ def test_resolve_allowlist_is_case_insensitive() -> None:
 
 def test_resolve_allowlist_zero_matches_raises() -> None:
     tags = {15000800: _entity(15000800, name="Malenia Blade of Miquella")}
-    with pytest.raises(ValueError, match="no boss matches"):
+    with pytest.raises(ValueError, match="no boss matches 'Godfrey'"):
         resolve_boss_allowlist(tags, ["Godfrey"])
 
 
@@ -371,7 +371,7 @@ def test_resolve_allowlist_ambiguous_raises() -> None:
         1: _entity(1, name="Crucible Knight"),
         2: _entity(2, name="Crucible Knight Ordovis"),
     }
-    with pytest.raises(ValueError, match="ambiguous"):
+    with pytest.raises(ValueError, match="'Crucible Knight' is ambiguous"):
         resolve_boss_allowlist(tags, ["Crucible Knight"])
 
 
@@ -431,7 +431,7 @@ def test_uniform_raises_when_arena_has_no_compatible_boss() -> None:
         1: _entity(1, arena_size=1),
         2: _entity(2, boss_size=5),
     }
-    with pytest.raises(MatchingError):
+    with pytest.raises(MatchingError, match="no compatible boss in the allowlist"):
         assign_bosses_uniform(
             arenas=_arenas_of(tags, [1]),
             pool=_bosses_of(tags, [2]),
