@@ -39,6 +39,7 @@ def _boss_cluster(
 def _entity(
     eid: int,
     *,
+    name: str | None = None,
     is_dragon: bool = False,
     arena_forbids_dragon: bool = False,
     arena_size: int = 5,
@@ -64,7 +65,7 @@ def _entity(
     )
     return EntityTags(
         entity_id=eid,
-        name=f"e{eid}",
+        name=name if name is not None else f"e{eid}",
         region=1,
         scaling=1,
         dlc=dlc,
@@ -779,3 +780,187 @@ def test_compose_pool_exclude_dlc_dlc_leader_keeps_non_dlc_phase1():
         exclude_dlc=True,
     )
     assert list(pool) == [101]
+
+
+def test_generate_item_config_allowlist_pins_single_boss():
+    """enemy.bosses=['Malenia'] pins every randomized arena to Malenia."""
+    config = Config.from_dict(
+        {
+            "enemy": {
+                "randomize_bosses": "all",
+                "ignore_arena_size": True,
+                "bosses": ["Malenia"],
+            }
+        }
+    )
+    # One major arena + one minor arena; Malenia (15000800) is the only allowed
+    # boss and lives outside the arena set.
+    boss_clusters = [
+        _boss_cluster("major1", "major_boss", defeat_flag=1000),
+        _boss_cluster("minor1", "boss_arena", defeat_flag=2000),
+    ]
+    tags = {
+        1000: _entity(1000, arena_size=5),
+        2000: _entity(2000, arena_size=1),  # small arena
+        15000800: _entity(
+            15000800, name="Malenia Blade of Miquella", boss_size=5
+        ),  # large boss, no arena slot needed
+    }
+    result = generate_item_config(
+        config,
+        seed=7,
+        boss_clusters=boss_clusters,
+        tags=tags,
+        vanilla_major_ids=[1000],
+        vanilla_minor_ids=[2000],
+        phase_mapping={},
+    )
+    assert result["enemy_assignments"] == {"1000": "15000800", "2000": "15000800"}
+
+
+def test_generate_item_config_allowlist_minor_only_skips_majors():
+    """With randomize_bosses='minor', only minor arenas are pinned."""
+    config = Config.from_dict(
+        {
+            "enemy": {
+                "randomize_bosses": "minor",
+                "ignore_arena_size": True,
+                "bosses": ["Malenia"],
+            }
+        }
+    )
+    boss_clusters = [
+        _boss_cluster("major1", "major_boss", defeat_flag=1000),
+        _boss_cluster("minor1", "boss_arena", defeat_flag=2000),
+    ]
+    tags = {
+        1000: _entity(1000),
+        2000: _entity(2000, arena_size=1),
+        15000800: _entity(15000800, name="Malenia Blade of Miquella", boss_size=5),
+    }
+    result = generate_item_config(
+        config,
+        seed=7,
+        boss_clusters=boss_clusters,
+        tags=tags,
+        vanilla_major_ids=[1000],
+        vanilla_minor_ids=[2000],
+        phase_mapping={},
+    )
+    # Major arena 1000 is untouched; only minor arena 2000 is pinned.
+    assert result["enemy_assignments"] == {"2000": "15000800"}
+
+
+def test_generate_item_config_allowlist_unsatisfiable_raises():
+    """A large pinned boss in a small arena with size checks on fails."""
+    config = Config.from_dict(
+        {"enemy": {"randomize_bosses": "all", "bosses": ["Malenia"]}}
+    )
+    boss_clusters = [_boss_cluster("minor1", "boss_arena", defeat_flag=2000)]
+    tags = {
+        2000: _entity(2000, arena_size=1),
+        15000800: _entity(15000800, name="Malenia Blade of Miquella", boss_size=5),
+    }
+    with pytest.raises(MatchingError):
+        generate_item_config(
+            config,
+            seed=7,
+            boss_clusters=boss_clusters,
+            tags=tags,
+            vanilla_major_ids=[],
+            vanilla_minor_ids=[2000],
+            phase_mapping={},
+        )
+
+
+def test_generate_item_config_allowlist_expands_phase_slots():
+    """Allowlist path expands multi-phase clusters into one slot per phase."""
+    config = Config.from_dict(
+        {
+            "enemy": {
+                "randomize_bosses": "all",
+                "ignore_arena_size": True,
+                "bosses": ["Malenia"],
+            }
+        }
+    )
+    # Two-phase major cluster: leader 500, phase-1 sibling 501.
+    boss_clusters = [_boss_cluster("two_phase", "major_boss", defeat_flag=500)]
+    tags = {
+        500: _entity(500),
+        501: _entity(501),
+        15000800: _entity(15000800, name="Malenia Blade of Miquella"),
+    }
+    result = generate_item_config(
+        config,
+        seed=3,
+        boss_clusters=boss_clusters,
+        tags=tags,
+        vanilla_major_ids=[500],
+        vanilla_minor_ids=[],
+        phase_mapping={500: 501},
+    )
+    # Both phase slots should be assigned to Malenia (only pool candidate).
+    assert result["enemy_assignments"] == {"500": "15000800", "501": "15000800"}
+
+
+def test_generate_item_config_allowlist_raises_when_cluster_leader_missing_from_tags():
+    """Allowlist path raises KeyError for a cluster leader absent from tags."""
+    config = Config.from_dict(
+        {"enemy": {"randomize_bosses": "all", "bosses": ["Malenia"]}}
+    )
+    boss_clusters = [_boss_cluster("c1", "boss_arena", defeat_flag=9999)]
+    tags = {
+        15000800: _entity(15000800, name="Malenia Blade of Miquella"),
+    }
+    with pytest.raises(KeyError, match="9999"):
+        generate_item_config(
+            config,
+            seed=1,
+            boss_clusters=boss_clusters,
+            tags=tags,
+            vanilla_major_ids=[],
+            vanilla_minor_ids=[9999],
+            phase_mapping={},
+        )
+
+
+def test_generate_item_config_allowlist_raises_when_cluster_leader_has_no_arena_block():
+    """Allowlist path raises KeyError for a cluster leader with no arena block."""
+    config = Config.from_dict(
+        {"enemy": {"randomize_bosses": "all", "bosses": ["Malenia"]}}
+    )
+    boss_clusters = [_boss_cluster("c1", "boss_arena", defeat_flag=2000)]
+    source_only = EntityTags(
+        entity_id=2000,
+        name="orphan",
+        region=1,
+        scaling=1,
+        dlc=False,
+        pool="minor",
+        boss=BossTags(
+            size=1,
+            type=1,
+            is_two_phase=False,
+            is_dragon=False,
+            is_npc=False,
+            can_escape=False,
+            night_boss=False,
+            exclude_from_pool=False,
+        ),
+        arena=None,
+    )
+    tags = {
+        2000: source_only,
+        15000800: _entity(15000800, name="Malenia Blade of Miquella"),
+    }
+    with pytest.raises(KeyError, match="no arena block"):
+        generate_item_config(
+            config,
+            seed=1,
+            boss_clusters=boss_clusters,
+            tags=tags,
+            vanilla_major_ids=[],
+            vanilla_minor_ids=[2000],
+            phase_mapping={},
+        )

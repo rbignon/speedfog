@@ -14,7 +14,9 @@ from speedfog.boss_arena_constraints import (
     ArenaTags,
     BossTags,
     EntityTags,
+    assign_bosses_uniform,
     match_arenas_to_bosses,
+    resolve_boss_allowlist,
 )
 from speedfog.clusters import ClusterData
 from speedfog.config import Config
@@ -39,6 +41,19 @@ def generate_item_config(
     assignment is threaded into ``Preset.Enemies`` by ItemRandomizerWrapper.
 
     ``tags`` must be provided when boss randomization is active.
+
+    **Allowlist path** (``config.enemy.bosses`` is non-empty): the pool is
+    resolved via ``resolve_boss_allowlist(tags, config.enemy.bosses)``, which
+    matches each name as a case-insensitive substring and raises on ambiguity or
+    zero matches. All in-scope arenas are matched from this single pool with
+    reuse permitted (``assign_bosses_uniform``). The ``dlc_bosses``,
+    ``exclude_from_pool``, and pool-composition rules that apply to the standard
+    path do not apply here: the allowlist is authoritative. Phase-1 slots are
+    still expanded per the ``phase_mapping`` (one independent slot per phase
+    entity), and size compatibility is still enforced unless
+    ``ignore_arena_size`` is set.
+
+    **Standard path** (``config.enemy.bosses`` is empty):
     ``vanilla_major_ids`` / ``vanilla_minor_ids`` are the entity IDs from the
     current ``clusters.json`` whose ``cluster.type`` is ``major_boss`` /
     ``boss_arena`` respectively. They are combined with the source-only
@@ -117,34 +132,45 @@ def generate_item_config(
         if tags is None:
             raise ValueError("tags required when randomize_bosses != 'none'")
 
-        exclude_dlc = not config.enemy.dlc_bosses
-        major_pool = _compose_pool(
-            tags,
-            "major",
-            vanilla_major_ids,
-            other_vanilla_ids=vanilla_minor_ids,
-            phase_mapping=phase_mapping,
-            exclude_dlc=exclude_dlc,
-        )
-        minor_pool = _compose_pool(
-            tags,
-            "minor",
-            vanilla_minor_ids,
-            other_vanilla_ids=vanilla_major_ids,
-            phase_mapping=phase_mapping,
-            exclude_dlc=exclude_dlc,
-        )
-
-        assignments = _build_enemy_assignments(
-            boss_clusters=boss_clusters,
-            tags=tags,
-            major_pool=major_pool,
-            minor_pool=minor_pool,
-            phase_mapping=phase_mapping or {},
-            randomize_majors=(config.enemy.randomize_bosses == "all"),
-            check_size=not config.enemy.ignore_arena_size,
-            seed=seed,
-        )
+        if config.enemy.bosses:
+            pool = resolve_boss_allowlist(tags, config.enemy.bosses)
+            assignments = _build_uniform_assignments(
+                boss_clusters=boss_clusters,
+                tags=tags,
+                pool=pool,
+                phase_mapping=phase_mapping or {},
+                randomize_majors=(config.enemy.randomize_bosses == "all"),
+                check_size=not config.enemy.ignore_arena_size,
+                seed=seed,
+            )
+        else:
+            exclude_dlc = not config.enemy.dlc_bosses
+            major_pool = _compose_pool(
+                tags,
+                "major",
+                vanilla_major_ids,
+                other_vanilla_ids=vanilla_minor_ids,
+                phase_mapping=phase_mapping,
+                exclude_dlc=exclude_dlc,
+            )
+            minor_pool = _compose_pool(
+                tags,
+                "minor",
+                vanilla_minor_ids,
+                other_vanilla_ids=vanilla_major_ids,
+                phase_mapping=phase_mapping,
+                exclude_dlc=exclude_dlc,
+            )
+            assignments = _build_enemy_assignments(
+                boss_clusters=boss_clusters,
+                tags=tags,
+                major_pool=major_pool,
+                minor_pool=minor_pool,
+                phase_mapping=phase_mapping or {},
+                randomize_majors=(config.enemy.randomize_bosses == "all"),
+                check_size=not config.enemy.ignore_arena_size,
+                seed=seed,
+            )
         if assignments:
             result["enemy_assignments"] = {
                 str(aid): str(bid) for aid, bid in assignments.items()
@@ -325,6 +351,62 @@ def _build_enemy_assignments(
                 )
             )
     return out
+
+
+def _build_uniform_assignments(
+    *,
+    boss_clusters: Iterable[ClusterData],
+    tags: Mapping[int, EntityTags],
+    pool: dict[int, BossTags],
+    phase_mapping: Mapping[int, int],
+    randomize_majors: bool,
+    check_size: bool,
+    seed: int,
+) -> dict[int, int]:
+    """Match every randomized boss arena against a single allowlist pool.
+
+    Collapses the major/minor distinction (uniform mode for ``enemy.bosses``):
+    minor arenas are always included; major arenas only when ``randomize_majors``
+    is set (``randomize_bosses == "all"``). Multi-phase arenas contribute one
+    slot per phase entity, mirroring ``_build_enemy_assignments``. Reuse is
+    permitted via ``assign_bosses_uniform``.
+
+    Raises ``KeyError`` if a DAG boss cluster's leader (or phase-1 sibling) has
+    no entry in ``tags`` or no ``arena`` block, matching the strictness of
+    ``_build_enemy_assignments``.
+    """
+    arenas: dict[int, ArenaTags] = {}
+    for cluster in boss_clusters:
+        if cluster.type not in ("major_boss", "boss_arena"):
+            continue
+        if cluster.type == "major_boss" and not randomize_majors:
+            continue
+        leader = resolve_entity_id(cluster.defeat_flag)
+        slots = [leader]
+        phase1 = phase_mapping.get(leader)
+        if phase1 is not None:
+            slots.append(phase1)
+        for eid in slots:
+            entry = tags.get(eid)
+            if entry is None:
+                raise KeyError(
+                    f"cluster {cluster.id!r} entity {eid} missing from "
+                    f"boss_arena_tags.json"
+                )
+            if entry.arena is None:
+                raise KeyError(
+                    f"cluster {cluster.id!r} entity {eid} has no arena block "
+                    f"in boss_arena_tags.json"
+                )
+            arenas[eid] = entry.arena
+
+    if not arenas:
+        return {}
+
+    rng = random.Random(seed ^ BOSS_ASSIGNMENT_SEED_SALT)
+    return assign_bosses_uniform(
+        arenas=arenas, pool=pool, rng=rng, check_size=check_size
+    )
 
 
 def run_item_randomizer(
