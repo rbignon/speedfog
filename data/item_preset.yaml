@@ -54,12 +54,8 @@ NorandomItems:
   ID: goods:8176
 - Name: Hole-Laden Necklace
   ID: goods:2008008
-
 Placements:
 
-# Key items at major boss/racemode locations.
-# Items: fixed by randomizer (EditItems=false). Locations: editable.
-# FixedLocs adds "boss" and "racemode" automatically.
 - Type: KeyItems
   Mode: Important
   Items:
@@ -67,128 +63,110 @@ Placements:
   Requires:
   - Tag: racemode
   - Tag: boss
+  - Tag: seedtree
+  - Tag: church
+  - Tag: cross
+  - Tag: fragment
+  - Tag: revered
+  - Tag: altboss
   Excludes:
   - Tag: missable
-
-# Quest items placed freely.
-# Items: fixed by randomizer (EditItems=false). Locations: editable.
 - Type: QuestItems
   Mode: Anywhere
   Items:
   - Group: questitems
+  Requires: []
   Excludes:
   - Tag: missable
-
-# Weapons, talismans, crystal tears, and ashes of war at key locations.
-# This is the ONLY placement type where both items and locations are customizable.
-# Items that overflow tagged locations fall back to the general random pool.
 - Type: CoreMechanics
   Mode: Custom
   Items:
-  # Core progression items
   - Name: Talisman Pouch
     ID: goods:10040
   - Name: Memory Stone
     ID: goods:10030
-  # All talismans
   - Group: accessories
-  # All crystal tears
   - Group: crystaltears
-  # Curated ashes of war (build-defining skills with useful affinities)
-  # Attack skills
-  - Name: Lion's Claw
+  - Name: "Ash of War: Lion's Claw"
     ID: gem:10000
-  - Name: Giant Hunt
+  - Name: 'Ash of War: Giant Hunt'
     ID: gem:11600
-  - Name: Sword Dance
+  - Name: 'Ash of War: Sword Dance'
     ID: gem:12400
-  - Name: Double Slash
+  - Name: 'Ash of War: Double Slash'
     ID: gem:11200
-  - Name: Unsheathe
+  - Name: 'Ash of War: Unsheathe'
     ID: gem:11400
-  - Name: Square Off
+  - Name: 'Ash of War: Square Off'
     ID: gem:11500
-  - Name: Prelate's Charge
+  - Name: "Ash of War: Prelate's Charge"
     ID: gem:11300
-  - Name: Phantom Slash
+  - Name: 'Ash of War: Phantom Slash'
     ID: gem:22500
-  # Elemental / magic skills
-  - Name: Ice Spear
+  - Name: 'Ash of War: Ice Spear'
     ID: gem:20200
-  - Name: Glintstone Pebble
+  - Name: 'Ash of War: Glintstone Pebble'
     ID: gem:20300
-  - Name: Sacred Blade
+  - Name: 'Ash of War: Sacred Blade'
     ID: gem:20100
-  - Name: Bloody Slash
+  - Name: 'Ash of War: Bloody Slash'
     ID: gem:20400
-  - Name: Thunderbolt
+  - Name: 'Ash of War: Thunderbolt'
     ID: gem:21600
-  - Name: Lightning Slash
+  - Name: 'Ash of War: Lightning Slash'
     ID: gem:21700
-  - Name: Flaming Strike
+  - Name: 'Ash of War: Flaming Strike'
     ID: gem:21400
-  - Name: Carian Grandeur
+  - Name: 'Ash of War: Carian Grandeur'
     ID: gem:21800
-  - Name: Black Flame Tornado
+  - Name: 'Ash of War: Black Flame Tornado'
     ID: gem:22100
-  - Name: Storm Blade
+  - Name: 'Ash of War: Storm Blade'
     ID: gem:21000
-  - Name: Prayerful Strike
+  - Name: 'Ash of War: Prayerful Strike'
     ID: gem:20800
-  # Ground / stomp skills
-  - Name: Hoarfrost Stomp
+  - Name: 'Ash of War: Hoarfrost Stomp'
     ID: gem:50100
-  - Name: Flame of the Redmanes
+  - Name: 'Ash of War: Flame of the Redmanes'
     ID: gem:50500
-  - Name: Waves of Darkness
+  - Name: 'Ash of War: Waves of Darkness'
     ID: gem:50800
-  - Name: Hoarah Loux's Earthshaker
+  - Name: "Ash of War: Hoarah Loux's Earthshaker"
     ID: gem:50900
-  # Buff skills
-  - Name: Royal Knight's Resolve
+  - Name: "Ash of War: Royal Knight's Resolve"
     ID: gem:60100
-  - Name: Golden Vow
+  - Name: 'Ash of War: Golden Vow'
     ID: gem:60300
-  - Name: Seppuku
+  - Name: 'Ash of War: Seppuku'
     ID: gem:60600
-  # Roar skills
-  - Name: War Cry
+  - Name: 'Ash of War: War Cry'
     ID: gem:65100
-  - Name: Barbaric Roar
+  - Name: 'Ash of War: Barbaric Roar'
     ID: gem:65000
-  # Movement skills
-  - Name: Bloodhound's Step
+  - Name: "Ash of War: Bloodhound's Step"
     ID: gem:80100
-  - Name: Raptor of the Mists
+  - Name: 'Ash of War: Raptor of the Mists'
     ID: gem:80200
-  # Shield skills
-  - Name: Carian Retaliation
+  - Name: 'Ash of War: Carian Retaliation'
     ID: gem:30500
-  - Name: Golden Parry
+  - Name: 'Ash of War: Golden Parry'
     ID: gem:30700
-  # DLC ashes of war
-  - Name: Wing Stance
+  - Name: 'Ash of War: Wing Stance'
     ID: gem:412000
-  - Name: Savage Lion's Claw
+  - Name: "Ash of War: Savage Lion's Claw"
     ID: gem:415000
-  - Name: Divine Beast Frost Stomp
+  - Name: 'Ash of War: Divine Beast Frost Stomp'
     ID: gem:416000
-  # Curated weapons (notable uniques, catalysts, and unique shields)
-  # Daggers
   - Name: Black Knife
     ID: weapon:1010000
   - Name: Reduvia
     ID: weapon:1040000
-  # Straight Swords
   - Name: Nox Flowing Sword
     ID: weapon:2080000
   - Name: Regalia of Eochaid
     ID: weapon:2220000
-  - Name: Coded Sword
-    ID: weapon:2110000
   - Name: Sword of Night and Flame
     ID: weapon:2140000
-  # Greatswords
   - Name: Ordovis's Greatsword
     ID: weapon:3060000
   - Name: Dark Moon Greatsword
@@ -207,7 +185,6 @@ Placements:
     ID: weapon:3170000
   - Name: Death's Poker
     ID: weapon:3200000
-  # Colossal Swords
   - Name: Maliketh's Black Blade
     ID: weapon:4020000
   - Name: Starscourge Greatsword
@@ -224,26 +201,18 @@ Placements:
     ID: weapon:4530000
   - Name: Greatsword of Radahn (Light)
     ID: weapon:4550000
-  # Thrusting Swords
   - Name: Antspur Rapier
     ID: weapon:5040000
-  - Name: Frozen Needle
-    ID: weapon:5050000
-  # Heavy Thrusting Swords
   - Name: Bloody Helice
     ID: weapon:6000000
   - Name: Dragon King's Cragblade
     ID: weapon:6040000
-  # Curved Swords
   - Name: Eclipse Shotel
     ID: weapon:7100000
   - Name: Magma Blade
     ID: weapon:7050000
   - Name: Wing of Astel
     ID: weapon:7070000
-  - Name: Dancing Blade of Ranah
-    ID: weapon:7520000
-  # Curved Greatswords
   - Name: Magma Wyrm's Scalesword
     ID: weapon:8040000
   - Name: Bloodhound's Fang
@@ -252,7 +221,6 @@ Placements:
     ID: weapon:8100000
   - Name: Putrescence Cleaver
     ID: weapon:8500000
-  # Katanas
   - Name: Hand of Malenia
     ID: weapon:9020000
   - Name: Meteoric Ore Blade
@@ -267,21 +235,18 @@ Placements:
     ID: weapon:66510000
   - Name: Rakshasa's Great Katana
     ID: weapon:66520000
-  # Twinblades
   - Name: Godskin Peeler
     ID: weapon:10010000
   - Name: Eleonora's Poleblade
     ID: weapon:10050000
   - Name: Euporia
     ID: weapon:10500000
-  # Hammers
   - Name: Marika's Hammer
     ID: weapon:11150000
   - Name: Nox Flowing Hammer
     ID: weapon:11120000
   - Name: Ringed Finger
     ID: weapon:11130000
-  # Great Hammers
   - Name: Great Stars
     ID: weapon:12180000
   - Name: Beastclaw Greathammer
@@ -290,18 +255,14 @@ Placements:
     ID: weapon:12160000
   - Name: Devourer's Scepter
     ID: weapon:12200000
-  # Flails
   - Name: Bastard's Stars
     ID: weapon:13030000
-  # Axes
   - Name: Icerind Hatchet
     ID: weapon:14080000
-  # Greataxes
   - Name: Axe of Godrick
     ID: weapon:15040000
   - Name: Winged Greathorn
     ID: weapon:15110000
-  # Spears
   - Name: Cleanrot Spear
     ID: weapon:16040000
   - Name: Bolt of Gransax
@@ -310,16 +271,12 @@ Placements:
     ID: weapon:16120000
   - Name: Inquisitor's Girandole
     ID: weapon:16130000
-  # Great Spears
   - Name: Mohgwyn's Sacred Spear
     ID: weapon:17010000
-  - Name: Serpent-Hunter
-    ID: weapon:17030000
   - Name: Vyke's War Spear
     ID: weapon:17050000
   - Name: Siluria's Tree
     ID: weapon:17020000
-  # Halberds
   - Name: Commander's Standard
     ID: weapon:18040000
   - Name: Nightrider Glaive
@@ -332,42 +289,22 @@ Placements:
     ID: weapon:18110000
   - Name: Dragon Halberd
     ID: weapon:18140000
-  # Reapers
   - Name: Halo Scythe
     ID: weapon:19020000
   - Name: Winged Scythe
     ID: weapon:19060000
-  # Whips
-  - Name: Magma Whip Candlestick
-    ID: weapon:20030000
-  - Name: Hoslow's Petal Whip
-    ID: weapon:20050000
-  - Name: Giant's Red Braid
-    ID: weapon:20060000
-  - Name: Urumi
-    ID: weapon:20070000
-  # Fists/Claws
   - Name: Grafted Dragon
     ID: weapon:21060000
   - Name: Veteran's Prosthesis
     ID: weapon:21120000
-  - Name: Cipher Pata
-    ID: weapon:21130000
   - Name: Bloodhound Claws
     ID: weapon:22020000
-  - Name: Red Bear's Claw
-    ID: weapon:68510000
-  # Colossal Weapons
   - Name: Prelate's Inferno Crozier
     ID: weapon:23000000
   - Name: Envoy's Greathorn
     ID: weapon:23030000
   - Name: Staff of the Avatar
     ID: weapon:23070000
-  - Name: Axe of Godfrey
-    ID: weapon:23050000
-  - Name: Dragon Greatclaw
-    ID: weapon:23060000
   - Name: Fallingstar Beast Jaw
     ID: weapon:23080000
   - Name: Ghiza's Wheel
@@ -376,140 +313,96 @@ Placements:
     ID: weapon:23520000
   - Name: Golem's Halberd
     ID: weapon:23120000
-  # DLC
-  - Name: Velvet Sword of St. Trina
-    ID: weapon:2510000
-  - Name: Star-Lined Sword
-    ID: weapon:2520000
   - Name: Backhand Blade
     ID: weapon:64500000
-  - Name: Smithscript Cirque
-    ID: weapon:64510000
   - Name: Curseblade's Cirque
     ID: weapon:64520000
-  - Name: Rellana's Twin Blades
-    ID: weapon:67520000
   - Name: Leda's Sword
     ID: weapon:67510000
   - Name: Poleblade of the Bud
     ID: weapon:18510000
   - Name: Obsidian Lamina
     ID: weapon:19500000
-  - Name: Thiollier's Hidden Needle
-    ID: weapon:21500000
-  # Additional melee weapons
-  # Daggers
   - Name: Glintstone Kris
     ID: weapon:1070000
-  - Name: Scorpion's Stinger
-    ID: weapon:1080000
-  - Name: Blade of Calling
-    ID: weapon:1160000
-  # Straight Swords
   - Name: Golden Epitaph
     ID: weapon:2070000
   - Name: Carian Knight's Sword
     ID: weapon:2180000
-  # Greatswords
   - Name: Flamberge
     ID: weapon:3050000
   - Name: Alabaster Lord's Sword
     ID: weapon:3070000
-  # Colossal Swords
   - Name: Ancient Meteoric Ore Greatsword
     ID: weapon:4500000
-  # Thrusting Swords
   - Name: Cleanrot Knight's Sword
     ID: weapon:5010000
-  # Heavy Thrusting Swords
   - Name: Godskin Stitcher
     ID: weapon:6010000
-  # Curved Swords
   - Name: Flowing Curved Sword
     ID: weapon:7060000
   - Name: Scavenger's Curved Sword
     ID: weapon:7080000
   - Name: Falx
     ID: weapon:7510000
-  # Curved Greatswords
   - Name: Onyx Lord's Greatsword
     ID: weapon:8010000
   - Name: Monk's Flameblade
     ID: weapon:8070000
-  # Katanas
   - Name: Serpentbone Blade
     ID: weapon:9080000
   - Name: Sword of Night
     ID: weapon:9500000
-  # Twinblades
   - Name: Black Steel Twinblade
     ID: weapon:10510000
-  # Hammers
   - Name: Envoy's Horn
     ID: weapon:11100000
   - Name: Scepter of the All-Knowing
     ID: weapon:11110000
-  # Flails
   - Name: Nightrider Flail
     ID: weapon:13000000
   - Name: Family Heads
     ID: weapon:13020000
   - Name: Serpent Flail
     ID: weapon:13500000
-  # Axes
   - Name: Sacrificial Axe
     ID: weapon:14110000
   - Name: Stormhawk Axe
     ID: weapon:14140000
   - Name: Death Knight's Twin Axes
     ID: weapon:14510000
-  # Greataxes
   - Name: Rusted Anchor
     ID: weapon:15060000
   - Name: Executioner's Greataxe
     ID: weapon:15080000
-  # Spears
   - Name: Clayman's Harpoon
     ID: weapon:16030000
-  # Great Spears
   - Name: Lance
     ID: weapon:17060000
   - Name: Treespear
     ID: weapon:17070000
-  # Halberds
   - Name: Lucerne
     ID: weapon:18020000
   - Name: Banished Knight's Halberd
     ID: weapon:18030000
   - Name: Spirit Glaive
     ID: weapon:18500000
-  # Reapers
   - Name: Grave Scythe
     ID: weapon:19010000
-  # Whips
-  - Name: Tooth Whip
-    ID: weapon:20500000
-  # Fists
   - Name: Star Fist
     ID: weapon:21080000
   - Name: Katar
     ID: weapon:21100000
-  # Claws
   - Name: Venomous Fang
     ID: weapon:22010000
   - Name: Raptor Talons
     ID: weapon:22030000
-  # Colossal Weapons
   - Name: Great Club
     ID: weapon:23020000
   - Name: Troll's Hammer
     ID: weapon:23130000
-  # Torches
-  - Name: St. Trina's Torch
-    ID: weapon:24040000
   - Name: Ghostflame Torch
     ID: weapon:24050000
-  # DLC new weapon types
   - Name: Dryleaf Arts
     ID: weapon:60500000
   - Name: Milady
@@ -520,7 +413,6 @@ Placements:
     ID: weapon:62500000
   - Name: Beast Claw
     ID: weapon:68500000
-  # Staves
   - Name: Carian Regal Scepter
     ID: weapon:33090000
   - Name: Lusat's Glintstone Staff
@@ -541,7 +433,6 @@ Placements:
     ID: weapon:33510000
   - Name: Maternal Staff
     ID: weapon:33520000
-  # Seals
   - Name: Erdtree Seal
     ID: weapon:34070000
   - Name: Dragon Communion Seal
@@ -562,15 +453,10 @@ Placements:
     ID: weapon:34500000
   - Name: Spiraltree Seal
     ID: weapon:34520000
-  # Unique shields
   - Name: Jellyfish Shield
     ID: weapon:32120000
   - Name: One-Eyed Shield
     ID: weapon:32150000
-  - Name: Visage Shield
-    ID: weapon:32160000
-  - Name: Erdtree Greatshield
-    ID: weapon:32080000
   - Name: Fingerprint Stone Shield
     ID: weapon:32130000
   - Name: Briar Greatshield
@@ -581,6 +467,388 @@ Placements:
     ID: weapon:30200000
   - Name: Verdigris Greatshield
     ID: weapon:32520000
+  - Name: Banished Knight's Greatsword
+    ID: weapon:3080000
+  - Name: Carian Greatsword
+    ID: goods:4430
+  - Name: Fire Knight's Greatsword
+    ID: weapon:4520000
+  - Name: Forked Greatsword
+    ID: weapon:3010000
+  - Name: Freyja's Greatsword
+    ID: weapon:8510000
+  - Name: Gargoyle's Greatsword
+    ID: weapon:3190000
+  - Name: Greatsword
+    ID: weapon:4000000
+  - Name: Greatsword of Damnation
+    ID: weapon:3510000
+  - Name: Greatsword of Solitude
+    ID: weapon:3550000
+  - Name: Horned Warrior's Greatsword
+    ID: weapon:8520000
+  - Name: Iron Greatsword
+    ID: weapon:3020000
+  - Name: Knight's Greatsword
+    ID: weapon:3040000
+  - Name: Lizard Greatsword
+    ID: weapon:3520000
+  - Name: Lordsworn's Greatsword
+    ID: weapon:3030000
+  - Name: Queelign's Greatsword
+    ID: weapon:6500000
+  - Name: Bandit's Curved Sword
+    ID: weapon:7040000
+  - Name: Bastard Sword
+    ID: weapon:3000000
+  - Name: Beastman's Curved Sword
+    ID: weapon:7010000
+  - Name: Cane Sword
+    ID: weapon:2210000
+  - Name: Carian Sorcery Sword
+    ID: weapon:2530000
+  - Name: Crystal Sword
+    ID: weapon:2150000
+  - Name: Horned Warrior's Sword
+    ID: weapon:7530000
+  - Name: Inseparable Sword
+    ID: weapon:2090000
+  - Name: Lazuli Glintstone Sword
+    ID: weapon:2250000
+  - Name: Lordsworn's Straight Sword
+    ID: weapon:2040000
+  - Name: Miquellan Knight's Sword
+    ID: weapon:2200000
+  - Name: Moonrithyll's Knight Sword
+    ID: weapon:4540000
+  - Name: Noble's Slender Sword
+    ID: weapon:2230000
+  - Name: Ornamental Straight Sword
+    ID: weapon:2060000
+  - Name: Ritual Sword Talisman
+    ID: accessory:2050
+  - Name: Rotten Crystal Sword
+    ID: weapon:2260000
+  - Name: Rotten Winged Sword Insignia
+    ID: accessory:2081
+  - Name: Serpent-God's Curved Sword
+    ID: weapon:7110000
+  - Name: Short Sword
+    ID: weapon:2010000
+  - Name: Spirit Sword
+    ID: weapon:7500000
+  - Name: Sword Lance
+    ID: weapon:3500000
+  - Name: Troll Knight's Sword
+    ID: weapon:4110000
+  - Name: Twinned Knight Swords
+    ID: weapon:10030000
+  - Name: Two-Handed Sword Talisman
+    ID: accessory:8040
+  - Name: Weathered Straight Sword
+    ID: weapon:2050000
+  - Name: Winged Sword Insignia
+    ID: accessory:2080
+  - Name: Zamor Curved Sword
+    ID: weapon:8050000
+  - Name: Black Steel Greathammer
+    ID: weapon:12520000
+  - Name: Smithscript Greathammer
+    ID: weapon:12500000
+  - Name: Anvil Hammer
+    ID: weapon:12510000
+  - Name: Battle Hammer
+    ID: weapon:12020000
+  - Name: Brick Hammer
+    ID: weapon:12190000
+  - Name: Devonia's Hammer
+    ID: weapon:23500000
+  - Name: Greathorn Hammer
+    ID: weapon:12010000
+  - Name: Hammer
+    ID: weapon:11080000
+  - Name: Rotten Battle Hammer
+    ID: weapon:12210000
+  - Name: Duelist Greataxe
+    ID: weapon:23040000
+  - Name: Greataxe
+    ID: weapon:15000000
+  - Name: Rotten Greataxe
+    ID: weapon:23150000
+  - Name: Axe Talisman
+    ID: accessory:2130
+  - Name: Battle Axe
+    ID: weapon:14000000
+  - Name: Crescent Moon Axe
+    ID: weapon:15030000
+  - Name: Death Knight's Longhaft Axe
+    ID: weapon:15500000
+  - Name: Gargoyle's Black Axe
+    ID: weapon:15140000
+  - Name: Gargoyle's Great Axe
+    ID: weapon:15130000
+  - Name: Hand Axe
+    ID: weapon:14020000
+  - Name: Highland Axe
+    ID: weapon:14100000
+  - Name: Jawbone Axe
+    ID: weapon:14030000
+  - Name: Longhaft Axe
+    ID: weapon:15050000
+  - Name: Messmer Soldier's Axe
+    ID: weapon:14520000
+  - Name: Rosus' Axe
+    ID: weapon:14120000
+  - Name: Smithscript Axe
+    ID: weapon:14500000
+  - Name: Warped Axe
+    ID: weapon:15010000
+  - Name: Chainlink Flail
+    ID: weapon:13040000
+  - Name: Flail
+    ID: weapon:13010000
+  - Name: Scythe
+    ID: weapon:19000000
+  - Name: Golem Fist
+    ID: weapon:21540000
+  - Name: Caestus
+    ID: weapon:21000000
+  - Name: Spiked Caestus
+    ID: weapon:21010000
+  - Name: Iron Ball
+    ID: weapon:21070000
+  - Name: Gargoyle's Black Halberd
+    ID: weapon:18160000
+  - Name: Gargoyle's Halberd
+    ID: weapon:18150000
+  - Name: Halberd
+    ID: weapon:18000000
+  - Name: Ripple Crescent Halberd
+    ID: weapon:18060000
+  - Name: Albinauric Bow
+    ID: weapon:41010000
+  - Name: Black Bow
+    ID: weapon:41070000
+  - Name: Bone Bow
+    ID: weapon:40500000
+  - Name: Composite Bow
+    ID: weapon:40050000
+  - Name: Erdtree Bow
+    ID: weapon:41030000
+  - Name: Harp Bow
+    ID: weapon:40030000
+  - Name: Horn Bow
+    ID: weapon:41020000
+  - Name: Pulley Bow
+    ID: weapon:41060000
+  - Name: Serpent Bow
+    ID: weapon:41040000
+  - Name: Fire Knight's Seal
+    ID: weapon:34510000
+  - Name: Finger Seal
+    ID: weapon:34000000
+  - Name: 'Note: Sealed Spiritsprings'
+    ID: goods:2008031
+  - Name: Academy Glintstone Staff
+    ID: weapon:33200000
+  - Name: Albinauric Staff
+    ID: weapon:33190000
+  - Name: Astrologer's Staff
+    ID: weapon:33130000
+  - Name: Barbed Staff-Spear
+    ID: weapon:17520000
+  - Name: Carian Glintstone Staff
+    ID: weapon:33210000
+  - Name: Crystal Staff
+    ID: weapon:33040000
+  - Name: Demi-Human Queen's Staff
+    ID: weapon:33060000
+  - Name: Digger's Staff
+    ID: weapon:33120000
+  - Name: Gelmir Glintstone Staff
+    ID: weapon:33050000
+  - Name: Glintstone Staff
+    ID: weapon:33000000
+  - Name: Rotten Staff
+    ID: weapon:23140000
+  - Name: Rotten Crystal Staff
+    ID: weapon:33270000
+  - Name: Watchdog's Staff
+    ID: weapon:23010000
+  - Name: Full Moon Crossbow
+    ID: weapon:43060000
+  - Name: Crepus's Black-Key Crossbow
+    ID: weapon:43110000
+  - Name: Heavy Crossbow
+    ID: weapon:43030000
+  - Name: Pulley Crossbow
+    ID: weapon:43050000
+  - Name: Light Crossbow
+    ID: weapon:43020000
+  - Name: Repeating Crossbow
+    ID: weapon:43500000
+  - Name: Soldier's Crossbow
+    ID: weapon:43000000
+  - Name: Spread Crossbow
+    ID: weapon:43510000
+  - Name: Uchigatana
+    ID: weapon:9000000
+  - Name: Nagakiba
+    ID: weapon:9010000
+  - Name: Blade of Mercy
+    ID: accessory:8230
+  - Name: Bloodflame Blade
+    ID: goods:6320
+  - Name: Gargoyle's Black Blades
+    ID: weapon:10090000
+  - Name: Mantis Blade
+    ID: weapon:7120000
+  - Name: Ripple Blade
+    ID: weapon:14050000
+  - Name: Bloodfiend's Arm
+    ID: weapon:12530000
+  - Name: Bloodfiend's Sacred Spear
+    ID: weapon:16550000
+  - Name: Giant-Crusher
+    ID: weapon:23110000
+  - Name: Club
+    ID: weapon:11010000
+  - Name: Curved Club
+    ID: weapon:11030000
+  - Name: Curved Great Club
+    ID: weapon:12080000
+  - Name: Large Club
+    ID: weapon:12000000
+  - Name: Spiked Club
+    ID: weapon:11070000
+  - Name: Stone Club
+    ID: weapon:11140000
+  - Name: Greathelm
+    ID: protector:1101000
+  - Name: Beastman's Cleaver
+    ID: weapon:8080000
+  - Name: Celebrant's Cleaver
+    ID: weapon:14060000
+  - Name: Great Omenkiller Cleaver
+    ID: weapon:15020000
+  - Name: Iron Cleaver
+    ID: weapon:14040000
+  - Name: Omen Cleaver
+    ID: weapon:8060000
+  - Name: Forked Hatchet
+    ID: weapon:14010000
+  - Name: Forked-Tongue Hatchet
+    ID: weapon:14540000
+  - Name: Albinauric Shield
+    ID: weapon:31040000
+  - Name: Banished Knight's Shield
+    ID: weapon:31030000
+  - Name: Beast Crest Heater Shield
+    ID: weapon:31280000
+  - Name: Black Leather Shield
+    ID: weapon:31340000
+  - Name: Blue Crest Heater Shield
+    ID: weapon:31300000
+  - Name: Blue-Gold Kite Shield
+    ID: weapon:31100000
+  - Name: Blue-White Wooden Shield
+    ID: weapon:30100000
+  - Name: Brass Shield
+    ID: weapon:31130000
+  - Name: Candletree Wooden Shield
+    ID: weapon:31250000
+  - Name: Carian Knight's Shield
+    ID: weapon:31190000
+  - Name: Carian Thrusting Shield
+    ID: weapon:62510000
+  - Name: Dragonclaw Shield
+    ID: weapon:32040000
+  - Name: Eclipse Crest Heater Shield
+    ID: weapon:31310000
+  - Name: Wolf Crest Shield
+    ID: weapon:31510000
+  - Name: Twinbird Kite Shield
+    ID: weapon:31090000
+  - Name: Sun Realm Shield
+    ID: weapon:31050000
+  - Name: Spiralhorn Shield
+    ID: weapon:30190000
+  - Name: Spiked Palisade Shield
+    ID: weapon:32170000
+  - Name: Smoldering Shield
+    ID: weapon:30150000
+  - Name: Smithscript Shield
+    ID: weapon:30510000
+  - Name: Shield of Night
+    ID: weapon:21550000
+  - Name: Glintstone Nail
+    ID: goods:2004500
+  - Name: Glintstone Nails
+    ID: goods:2004510
+  - Name: Impenetrable Thorns
+    ID: goods:2004910
+  - Name: Rings of Spectral Light
+    ID: goods:2005000
+  - Name: Blades of Stone
+    ID: goods:2004700
+  - Name: Carian Slicer
+    ID: goods:4440
+  - Name: Comet
+    ID: goods:4021
+  - Name: Glintstone Cometshard
+    ID: goods:4020
+  - Name: Glintstone Icecrag
+    ID: goods:4400
+  - Name: Glintstone Pebble
+    ID: goods:4000
+  - Name: Gravitational Missile
+    ID: goods:2004710
+  - Name: Great Glintstone Shard
+    ID: goods:4001
+  - Name: Magic Glintblade
+    ID: goods:4390
+  - Name: Night Comet
+    ID: goods:4620
+  - Name: Shard Spiral
+    ID: goods:4030
+  - Name: Zamor Ice Storm
+    ID: goods:4410
+  - Name: Beast Claw (Incantation)
+    ID: goods:6820
+  - Name: Bestial Sling
+    ID: goods:6800
+  - Name: Black Flame
+    ID: goods:6210
+  - Name: Catch Flame
+    ID: goods:6000
+  - Name: Discus of Light
+    ID: goods:6700
+  - Name: Fire Serpent
+    ID: goods:2007800
+  - Name: Flame Sling
+    ID: goods:6010
+  - Name: Flame, Grant Me Strength
+    ID: goods:6050
+  - Name: Frenzied Burst
+    ID: goods:7320
+  - Name: Golden Vow (Incantation)
+    ID: goods:6600
+  - Name: Great Heal
+    ID: goods:6422
+  - Name: Heal
+    ID: goods:6421
+  - Name: Heal from Afar
+    ID: goods:2006400
+  - Name: Honed Bolt
+    ID: goods:6930
+  - Name: Knight's Lightning Spear
+    ID: goods:2006900
+  - Name: Lightning Spear
+    ID: goods:6900
+  - Name: Order's Blade
+    ID: goods:6770
+  - Name: Pest-Thread Spears
+    ID: goods:2007210
   Requires:
   - Tag: boss
   - Tag: altboss
@@ -592,26 +860,19 @@ Placements:
   - Tag: graveboss
   - Tag: gaolboss
   - Tag: minidungeonboss
-  - Tag: evergaol
-  - Tag: night
-  - Tag: dragonboss
-  - Tag: overworldboss
   - Tag: namelessmausoleum
   - Tag: seedtree
   - Tag: church
   - Tag: cross
   - Tag: forgereward
   - Tag: revered
+  - Tag: fragment
   Excludes:
   - Tag: missable
-
-# Golden Seeds and Sacred Tears at flask upgrade locations.
-# Items: fixed by randomizer (EditItems=false). Locations: editable.
-# Requires is broader than the thematic seedtree/church/cross set: speedfog
-# runs rarely touch those slot types, so we extend to major bosses (boss)
-# and DLC scadu/revered spots to ensure ~1.5-3 seeds/tears land per run.
-# altboss and sub-dungeon boss tags are intentionally omitted to keep flask
-# upgrades on milestone encounters rather than every random catacomb boss.
+  - Tag: night
+  - Tag: dragonboss
+  - Tag: overworldboss
+  - Tag: evergaol
 - Type: SacredFlaskUpgrades
   Mode: Custom
   Items:
@@ -626,66 +887,78 @@ Placements:
   - Tag: cross
   - Tag: forgereward
   - Tag: revered
+  - Tag: fragment
+  - Tag: altboss
   Excludes:
   - Tag: missable
-
-# Upgrade Bell Bearings placed freely.
-# Items: fixed by randomizer (EditItems=false). Locations: editable.
+  - Tag: dragonboss
+  - Tag: overworldboss
 - Type: UpgradeBellBearings
   Mode: Anywhere
   Items:
   - Group: upgradeashes
+  Requires: []
   Excludes:
   - Tag: missable
-
-# Shadow Realm Blessings (Scadutree Fragments, Revered Spirit Ashes).
-# Items: fixed by randomizer (EditItems=false). Locations: editable.
 - Type: ShadowRealmBlessings
-  Mode: Important
+  Mode: Anywhere
   Items: []
-  Requires:
-  - Tag: cross
-  - Tag: boss
-  - Tag: altboss
+  Requires: []
   Excludes:
   - Tag: missable
-
-# Unused placement types (required by Resolve(), kept empty).
-
+  - Tag: catacomb
+  - Tag: caveboss
+  - Tag: cave
+  - Tag: catacombboss
+  - Tag: evergaol
+  - Tag: forge
+  - Tag: forgereward
+  - Tag: gaolboss
+  - Tag: gaol
+  - Tag: seedtree
+  - Tag: graveboss
+  - Tag: grave
+  - Tag: boss
+  - Tag: racemode
+  - Tag: namelessmausoleum
+  - Tag: altboss
+  - Tag: tunnelboss
+  - Tag: tunnel
+  - Tag: minidungeon
+  - Tag: minidungeonboss
 - Type: BossTools
   Mode: Custom
   Items: []
   Requires: []
   Excludes:
   - Tag: missable
-
 - Type: BaseOnlyItems
   Mode: Custom
   Items: []
   Requires: []
   Excludes:
   - Tag: dlc
-
 - Type: DlcOnlyItems
   Mode: Custom
-  Items: []
+  Items:
+  - Name: Scadutree Fragment
+    ID: goods:2010000
+  - Name: Revered Spirit Ash
+    ID: goods:2010100
   Requires: []
   Excludes:
   - Tag: nodlc
-
-# LocationGroups: defines the location pool for Important mode placements.
-# Important items (key items, seeds/tears, DLC blessings) get first-pass
-# priority at these locations before CoreMechanics fills the rest.
 LocationGroups:
 
 - Requires:
-  - Tag: boss
-  - Tag: altboss
   - Tag: racemode
+  - Tag: boss
   - Tag: seedtree
   - Tag: church
   - Tag: cross
+  - Tag: fragment
+  - Tag: revered
+  - Tag: altboss
   Excludes:
   - Tag: missable
-
 Version: 1
