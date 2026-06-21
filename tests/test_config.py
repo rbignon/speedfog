@@ -1145,3 +1145,41 @@ def test_plugin_non_bool_enabled_rejected():
 def test_plugin_enabled_omitted_is_allowed():
     cfg = Config.from_dict({"plugin": {"summer": {"intensity": 3}}})
     assert cfg.plugins == {"summer": {"intensity": 3}}
+
+
+def test_enemy_bosses_default_empty():
+    """enemy.bosses defaults to an empty list."""
+    config = Config.from_dict({})
+    assert config.enemy.bosses == []
+
+
+def test_enemy_bosses_parsed_and_stripped():
+    """enemy.bosses is parsed and each entry is stripped."""
+    config = Config.from_dict(
+        {"enemy": {"randomize_bosses": "all", "bosses": ["Malenia", "  Radahn "]}}
+    )
+    assert config.enemy.bosses == ["Malenia", "Radahn"]
+
+
+def test_enemy_bosses_requires_randomization():
+    """A non-empty allowlist with randomize_bosses='none' is a hard error."""
+    with pytest.raises(ValueError, match="randomize_bosses"):
+        Config.from_dict({"enemy": {"randomize_bosses": "none", "bosses": ["Malenia"]}})
+
+
+def test_enemy_bosses_rejects_empty_entry():
+    """Blank allowlist entries are rejected."""
+    with pytest.raises(ValueError, match="bosses"):
+        Config.from_dict({"enemy": {"randomize_bosses": "all", "bosses": ["  "]}})
+
+
+def test_enemy_bosses_rejects_non_string_entry():
+    """Non-string allowlist entries are rejected."""
+    with pytest.raises((ValueError, TypeError)):
+        Config.from_dict({"enemy": {"randomize_bosses": "all", "bosses": [123]}})
+
+
+def test_enemy_bosses_rejects_bare_string():
+    """A bare string (not a list) is rejected with a clear error."""
+    with pytest.raises(ValueError, match="bosses"):
+        Config.from_dict({"enemy": {"randomize_bosses": "all", "bosses": "Malenia"}})

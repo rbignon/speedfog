@@ -439,6 +439,12 @@ class EnemyConfig:
     # pool (arena selection is untouched). Independent from
     # item_randomizer.dlc, which controls item-randomizer scope.
     dlc_bosses: bool = True
+    # Allowlist of bosses that may appear (case-insensitive substring of the
+    # boss display name, resolved against data/boss_arena_tags.json at item
+    # config generation). Empty = current behavior. When set, every randomized
+    # boss slot (minor and major) draws uniformly from this list, with reuse
+    # permitted, so e.g. bosses = ["Malenia"] yields a Malenia-only run.
+    bosses: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         """Validate and normalize enemy config."""
@@ -449,6 +455,21 @@ class EnemyConfig:
         if self.randomize_bosses not in valid:
             raise ValueError(
                 f"randomize_bosses must be one of {valid}, got {self.randomize_bosses!r}"
+            )
+        if not isinstance(self.bosses, list):
+            raise ValueError("enemy.bosses must be a list of strings")
+        cleaned: list[str] = []
+        for entry in self.bosses:
+            if not isinstance(entry, str):
+                raise TypeError(f"enemy.bosses entries must be strings, got {entry!r}")
+            stripped = entry.strip()
+            if not stripped:
+                raise ValueError("enemy.bosses entries must be non-empty")
+            cleaned.append(stripped)
+        self.bosses = cleaned
+        if self.bosses and self.randomize_bosses == "none":
+            raise ValueError(
+                "enemy.bosses requires randomize_bosses to be 'minor' or 'all'"
             )
 
 
@@ -704,6 +725,7 @@ class Config:
                 ignore_arena_size=enemy_section.get("ignore_arena_size", False),
                 swap_boss=enemy_section.get("swap_boss", False),
                 dlc_bosses=enemy_section.get("dlc_bosses", True),
+                bosses=enemy_section.get("bosses", []),
             ),
             plugins=data.get("plugin", {}),
         )
