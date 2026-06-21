@@ -178,6 +178,18 @@ en = "Scadutree Sunflower"
 fr = "Tournesol à l'ombre de l'arbre"
 
 [[bosses]]
+npc_name_id = 905230001
+name = "Scadutree Avatar (P2)"
+en = "Scadutree Sunflower"
+fr = "Tournesol à l'ombre de l'arbre"
+
+[[bosses]]
+npc_name_id = 905230002
+name = "Scadutree Avatar (P3)"
+en = "Scadutree Sunflower"
+fr = "Tournesol à l'ombre de l'arbre"
+
+[[bosses]]
 npc_name_id = 905000000
 name = "Commander Gaius"
 en = "Beachboar Commander Gaius"
@@ -204,6 +216,12 @@ fr = "Esprit Ancestral Ensoleillé"
 [[bosses]]
 npc_name_id = 904770000
 name = "Valiant Gargoyles"
+en = "Valiant Seagull"
+fr = "Mouette Vaillante"
+
+[[bosses]]
+npc_name_id = 904770001
+name = "Valiant Gargoyle (Twinblade)"
 en = "Valiant Seagull"
 fr = "Mouette Vaillante"
 
@@ -315,18 +333,6 @@ npc_name_id = 904720000
 name = "Godfrey (golden shade)"
 en = "Godfrey, First Beach Volley Lord"
 fr = "Godfrey, Premier seigneur de la pétanque"
-
-[[bosses]]
-npc_name_id = 904770001
-name = "Valiant Gargoyle (Twinblade)"
-en = "Valiant Seagull"
-fr = "Mouette Vaillante"
-
-[[bosses]]
-npc_name_id = 905230001
-name = "Scadutree Avatar (alternate)"
-en = "Scadutree Sunflower"
-fr = "Tournesol à l'ombre de l'arbre"
 
 # ---- Universal UI banners (GR_MenuText in menu_dlc02.msgbnd.dcx) ----
 # IDs sorted ascending; 331314 is reserved (vanilla) and must not appear here.
