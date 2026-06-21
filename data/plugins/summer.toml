@@ -4,8 +4,6 @@
 # `name` is a human-readable label only, not written to game data.
 # Bosses absent here keep their vanilla names. Generate more boss skeletons
 # with tools/seed_summer_catalog.py.
-#
-# en/fr values below are first-draft proposals, free to edit.
 
 # ---- Boss epithets (NpcName) ----
 
