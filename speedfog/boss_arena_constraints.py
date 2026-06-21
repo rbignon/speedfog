@@ -150,6 +150,57 @@ def match_arenas_to_bosses(
     return {aid: assignment[aid] for aid in arenas}
 
 
+def assign_bosses_uniform(
+    *,
+    arenas: Mapping[int, ArenaTags],
+    pool: Mapping[int, BossTags],
+    rng: random.Random,
+    check_size: bool,
+) -> dict[int, int]:
+    """Assign each arena a compatible boss from ``pool``, reuse permitted.
+
+    Used for the ``enemy.bosses`` allowlist (uniform mode): the major/minor
+    distinction is already collapsed by the caller, so every arena draws from
+    one pool. Because reuse is allowed, each arena chooses independently; the
+    least-used compatible boss is picked (ties broken by ``rng``) so a
+    multi-boss allowlist spreads evenly. With a single boss, it fills every
+    arena.
+
+    Raises ``MatchingError`` if any arena has no compatible boss in ``pool``;
+    the message names the arena and points at ``ignore_arena_size`` /
+    broadening ``enemy.bosses``.
+
+    Returns ``{arena_id: boss_id}`` in the original ``arenas`` iteration order
+    for stable spoilers.
+    """
+    usage: dict[int, int] = {bid: 0 for bid in pool}
+    arena_ids = list(arenas.keys())
+    rng.shuffle(arena_ids)
+
+    out: dict[int, int] = {}
+    for arena_id in arena_ids:
+        arena = arenas[arena_id]
+        compat = [
+            bid
+            for bid, btags in pool.items()
+            if is_compatible(arena, btags, check_size=check_size)
+        ]
+        if not compat:
+            raise MatchingError(
+                f"arena {arena_id} has no compatible boss in the allowlist "
+                f"(size or fight constraints). Set enemy.ignore_arena_size = "
+                f"true or broaden enemy.bosses."
+            )
+        min_use = min(usage[bid] for bid in compat)
+        choices = [bid for bid in compat if usage[bid] == min_use]
+        rng.shuffle(choices)
+        pick = choices[0]
+        out[arena_id] = pick
+        usage[pick] += 1
+
+    return {aid: out[aid] for aid in arenas}
+
+
 def resolve_boss_allowlist(
     tags: Mapping[int, EntityTags], names: Iterable[str]
 ) -> dict[int, BossTags]:

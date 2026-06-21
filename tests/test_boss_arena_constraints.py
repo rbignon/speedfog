@@ -14,6 +14,7 @@ from speedfog.boss_arena_constraints import (
     BossTags,
     EntityTags,
     MatchingError,
+    assign_bosses_uniform,
     is_compatible,
     load_tags,
     match_arenas_to_bosses,
@@ -386,3 +387,94 @@ def test_resolve_allowlist_multiple_names() -> None:
 def test_resolve_allowlist_empty_names_returns_empty() -> None:
     tags = {15000800: _entity(15000800, name="Malenia Blade of Miquella")}
     assert resolve_boss_allowlist(tags, []) == {}
+
+
+def test_uniform_single_boss_fills_all_arenas() -> None:
+    """A one-boss pool assigns that boss to every arena (Malenia only)."""
+    tags = {i: _entity(i) for i in range(1, 6)}
+    arenas = _arenas_of(tags, [1, 2, 3, 4, 5])
+    pool = _bosses_of(tags, [1])
+    result = assign_bosses_uniform(
+        arenas=arenas, pool=pool, rng=random.Random(0), check_size=False
+    )
+    assert set(result.keys()) == {1, 2, 3, 4, 5}
+    assert set(result.values()) == {1}
+
+
+def test_uniform_distinct_when_pool_at_least_arenas() -> None:
+    """With pool >= arenas and full compatibility, no boss is reused."""
+    tags = {i: _entity(i) for i in range(1, 9)}
+    arenas = _arenas_of(tags, [1, 2, 3])
+    pool = _bosses_of(tags, [4, 5, 6, 7, 8])
+    result = assign_bosses_uniform(
+        arenas=arenas, pool=pool, rng=random.Random(3), check_size=False
+    )
+    assert len(set(result.values())) == 3
+
+
+def test_uniform_spreads_reuse_evenly() -> None:
+    """With 2 bosses over 4 arenas, each boss is used about twice."""
+    tags = {i: _entity(i) for i in range(1, 7)}
+    arenas = _arenas_of(tags, [1, 2, 3, 4])
+    pool = _bosses_of(tags, [5, 6])
+    result = assign_bosses_uniform(
+        arenas=arenas, pool=pool, rng=random.Random(1), check_size=False
+    )
+    counts = {bid: list(result.values()).count(bid) for bid in (5, 6)}
+    assert counts == {5: 2, 6: 2}
+
+
+def test_uniform_raises_when_arena_has_no_compatible_boss() -> None:
+    """A size-incompatible arena with check_size on has no candidate."""
+    # Arena size 1, boss size 5: too big.
+    tags = {
+        1: _entity(1, arena_size=1),
+        2: _entity(2, boss_size=5),
+    }
+    with pytest.raises(MatchingError):
+        assign_bosses_uniform(
+            arenas=_arenas_of(tags, [1]),
+            pool=_bosses_of(tags, [2]),
+            rng=random.Random(0),
+            check_size=True,
+        )
+
+
+def test_uniform_size_relaxed_when_check_disabled() -> None:
+    """Disabling the size check rescues the oversized pin."""
+    tags = {
+        1: _entity(1, arena_size=1),
+        2: _entity(2, boss_size=5),
+    }
+    result = assign_bosses_uniform(
+        arenas=_arenas_of(tags, [1]),
+        pool=_bosses_of(tags, [2]),
+        rng=random.Random(0),
+        check_size=False,
+    )
+    assert result == {1: 2}
+
+
+def test_uniform_is_deterministic_for_same_seed() -> None:
+    tags = {i: _entity(i) for i in range(1, 7)}
+    arenas = _arenas_of(tags, [1, 2, 3, 4])
+    pool = _bosses_of(tags, [5, 6])
+    r1 = assign_bosses_uniform(
+        arenas=arenas, pool=pool, rng=random.Random(99), check_size=False
+    )
+    r2 = assign_bosses_uniform(
+        arenas=arenas, pool=pool, rng=random.Random(99), check_size=False
+    )
+    assert r1 == r2
+
+
+def test_uniform_preserves_arenas_iteration_order() -> None:
+    """Result keys must appear in the original arenas iteration order (spoiler stability)."""
+    tags = {i: _entity(i) for i in range(1, 8)}
+    # Non-trivial insertion order: not 1..4 in sequence.
+    arenas = _arenas_of(tags, [3, 1, 4, 2])
+    pool = _bosses_of(tags, [5, 6, 7])
+    result = assign_bosses_uniform(
+        arenas=arenas, pool=pool, rng=random.Random(0), check_size=False
+    )
+    assert list(result.keys()) == [3, 1, 4, 2]
