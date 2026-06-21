@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import random
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -148,3 +148,33 @@ def match_arenas_to_bosses(
 
     assignment = {aid: bid for bid, aid in boss_to_arena.items()}
     return {aid: assignment[aid] for aid in arenas}
+
+
+def resolve_boss_allowlist(
+    tags: Mapping[int, EntityTags], names: Iterable[str]
+) -> dict[int, BossTags]:
+    """Resolve allowlist names to a boss pool.
+
+    Each name is matched case-insensitively as a substring of
+    ``EntityTags.name``. Every name must resolve to exactly one entity, else a
+    ``ValueError`` is raised (zero matches: typo; multiple: ambiguous). The
+    allowlist is authoritative: ``exclude_from_pool`` and DLC flags are NOT
+    applied here, because the user named the boss explicitly.
+
+    Returns ``{entity_id: BossTags}`` for the matched entities, key-sorted so
+    the result is independent of ``tags`` iteration order.
+    """
+    pool: dict[int, BossTags] = {}
+    for name in names:
+        needle = name.strip().lower()
+        matches = [
+            (eid, entry) for eid, entry in tags.items() if needle in entry.name.lower()
+        ]
+        if not matches:
+            raise ValueError(f"enemy.bosses: no boss matches {name!r}")
+        if len(matches) > 1:
+            found = ", ".join(sorted(entry.name for _, entry in matches))
+            raise ValueError(f"enemy.bosses: {name!r} is ambiguous: matches [{found}]")
+        eid, entry = matches[0]
+        pool[eid] = entry.boss
+    return dict(sorted(pool.items()))

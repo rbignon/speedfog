@@ -17,6 +17,7 @@ from speedfog.boss_arena_constraints import (
     is_compatible,
     load_tags,
     match_arenas_to_bosses,
+    resolve_boss_allowlist,
 )
 
 
@@ -167,6 +168,7 @@ def test_can_escape_in_escapable_arena_is_incompatible() -> None:
 def _entity(
     eid: int,
     *,
+    name: str | None = None,
     arena_forbids_dragon: bool = False,
     is_dragon: bool = False,
     arena_size: int = 3,
@@ -189,7 +191,7 @@ def _entity(
     )
     return EntityTags(
         entity_id=eid,
-        name=f"e{eid}",
+        name=name if name is not None else f"e{eid}",
         boss=BossTags(
             size=boss_size,
             type=1,
@@ -340,3 +342,47 @@ def test_match_fails_fast_when_arenas_exceed_pool() -> None:
         )
     elapsed = time.perf_counter() - t0
     assert elapsed < 1.0, f"matcher took {elapsed:.2f}s on an unsatisfiable case"
+
+
+def test_resolve_allowlist_single_substring_match() -> None:
+    tags = {
+        15000800: _entity(15000800, name="Malenia Blade of Miquella"),
+        16000800: _entity(16000800, name="Maliketh the Black Blade"),
+    }
+    pool = resolve_boss_allowlist(tags, ["malenia"])
+    assert set(pool.keys()) == {15000800}
+    assert pool[15000800] is tags[15000800].boss
+
+
+def test_resolve_allowlist_is_case_insensitive() -> None:
+    tags = {15000800: _entity(15000800, name="Malenia Blade of Miquella")}
+    assert set(resolve_boss_allowlist(tags, ["MALENIA"]).keys()) == {15000800}
+
+
+def test_resolve_allowlist_zero_matches_raises() -> None:
+    tags = {15000800: _entity(15000800, name="Malenia Blade of Miquella")}
+    with pytest.raises(ValueError, match="no boss matches"):
+        resolve_boss_allowlist(tags, ["Godfrey"])
+
+
+def test_resolve_allowlist_ambiguous_raises() -> None:
+    tags = {
+        1: _entity(1, name="Crucible Knight"),
+        2: _entity(2, name="Crucible Knight Ordovis"),
+    }
+    with pytest.raises(ValueError, match="ambiguous"):
+        resolve_boss_allowlist(tags, ["Crucible Knight"])
+
+
+def test_resolve_allowlist_multiple_names() -> None:
+    tags = {
+        15000800: _entity(15000800, name="Malenia Blade of Miquella"),
+        310000: _entity(310000, name="Starscourge Radahn"),
+    }
+    pool = resolve_boss_allowlist(tags, ["malenia", "radahn"])
+    assert set(pool.keys()) == {15000800, 310000}
+
+
+def test_resolve_allowlist_empty_names_returns_empty() -> None:
+    tags = {15000800: _entity(15000800, name="Malenia Blade of Miquella")}
+    assert resolve_boss_allowlist(tags, []) == {}
