@@ -9,7 +9,11 @@ import sys
 import time
 from pathlib import Path
 
-from speedfog.boss_arena_constraints import MatchingError, load_tags
+from speedfog.boss_arena_constraints import (
+    MatchingError,
+    load_tags,
+    resolve_boss_allowlist,
+)
 from speedfog.care_package import sample_care_package
 from speedfog.clusters import ClusterData, ClusterPool, load_clusters
 from speedfog.config import Config, load_config, prune_final_boss_candidates
@@ -260,6 +264,14 @@ def main() -> int:
         assignment_phase_mapping = parse_boss_phases(enemy_txt_path)
     if config.item_randomizer.enabled and config.enemy.randomize_bosses != "none":
         assignment_tags = load_tags(project_root / "data" / "boss_arena_tags.json")
+        if config.enemy.bosses:
+            # Validate the allowlist once, before the reroll loop.
+            # generate_item_config re-resolves it inside post_validate.
+            try:
+                resolve_boss_allowlist(assignment_tags, config.enemy.bosses)
+            except ValueError as e:
+                print(f"Error: {e}", file=sys.stderr)
+                return 1
         assignment_major_ids = _vanilla_ids_of_type("major_boss")
         assignment_minor_ids = _vanilla_ids_of_type("boss_arena")
 

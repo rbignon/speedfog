@@ -273,3 +273,29 @@ resolves to ``forceMap[target_entity_id] = source_entity_id``, short-circuiting
 the class-based pool randomization for those specific slots. The MinorBoss
 class merge logic in ``BuildEnemyPreset`` still applies to arenas NOT listed
 in ``Enemies``.
+
+## Boss allowlist / pinning (`enemy.bosses`)
+
+When `enemy.bosses` is non-empty, boss assignment switches to a uniform mode:
+
+- The allowlist names are resolved by case-insensitive substring against the
+  boss display name (`resolve_boss_allowlist`); each name must match exactly
+  one entity, else generation aborts with a clear error.
+- The major/minor split is collapsed: every randomized arena (minor always,
+  major when `randomize_bosses = "all"`) draws from the single allowlist pool.
+- Reuse is permitted (`assign_bosses_uniform`, least-used-first), so a one-boss
+  allowlist fills every arena (a "Malenia only" run).
+- The allowlist is authoritative: a listed boss is included even if tagged
+  `exclude_from_pool` or DLC with `dlc_bosses = false`.
+- `ignore_arena_size` stays orthogonal. Non-size constraints
+  (`two_phase_not_allowed`, `dragon_not_allowed`, `npc_not_allowed`, `is_escapable`) still apply, so an arena
+  that cannot host the pinned boss triggers a reroll (auto) or a clear
+  `MatchingError` (fixed seed). Malenia is two-phase, so arenas tagged
+  `two_phase_not_allowed` reject her even with `ignore_arena_size`.
+
+Example "Malenia only":
+
+    [enemy]
+    randomize_bosses = "all"
+    ignore_arena_size = true
+    bosses = ["Malenia"]

@@ -256,6 +256,14 @@ ignore_arena_size = false
 # unchanged, so a DLC arena in the DAG still gets a non-DLC replacement.
 # Default: true
 # dlc_bosses = true
+#
+# Restrict boss randomization to specific bosses. Each entry is a
+# case-insensitive substring of the boss name and must match exactly one boss.
+# Any allowed boss can fill any randomized slot (minor or major), and a boss is
+# reused as needed, so a single entry produces a "<boss> only" run.
+# Requires randomize_bosses = "minor" or "all". Large bosses (e.g. Malenia)
+# usually need ignore_arena_size = true to fit small arenas.
+# bosses = ["Malenia"]
 
 [item_randomizer]
 # Enable Item/Enemy Randomizer integration (default: true)
