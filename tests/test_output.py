@@ -14,6 +14,7 @@ from speedfog.output import (
     load_boss_placements,
     load_phantom_skins_catalog,
     load_vanilla_tiers,
+    parse_boss_extra_names,
     parse_boss_phases,
     patch_graph_boss_placements,
 )
@@ -2170,6 +2171,29 @@ class TestParseBossPhases:
             "  Name: bar\n"
         )
         assert parse_boss_phases(enemy_txt) == {199: 200}
+
+
+class TestParseBossExtraNames:
+    def test_parse_boss_extra_names_reads_extraname(self, tmp_path):
+        enemy_txt = tmp_path / "enemy.txt"
+        enemy_txt.write_text(
+            "- ID: 10000800\n"
+            "  Map: m10_00_00_00\n"
+            "  Name: c0000_9000\n"
+            "  ExtraName: Godrick the Grafted\n"
+            "  Class: Boss\n"
+            "- ID: 11000800\n"
+            "  Map: m11_00_00_00\n"
+            "  Name: c0000_9001\n"
+            "  Class: Boss\n",
+            encoding="utf-8",
+        )
+
+        result = parse_boss_extra_names(enemy_txt)
+        assert result == {10000800: "Godrick the Grafted"}
+
+    def test_parse_boss_extra_names_missing_file_returns_empty(self, tmp_path):
+        assert parse_boss_extra_names(tmp_path / "nope.txt") == {}
 
 
 class TestAppendBossPlacementsToSpoiler:

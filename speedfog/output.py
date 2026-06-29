@@ -1270,6 +1270,7 @@ def load_boss_placements(path: Path) -> dict[str, dict[str, Any]]:
 
 _ENEMY_ID_RE = re.compile(r"^- ID:\s*(\d+)")
 _NEXT_PHASE_RE = re.compile(r"^  NextPhase:\s*(\d+)")
+_EXTRA_NAME_RE = re.compile(r"^\s+ExtraName:\s*(.+)")
 
 
 def parse_boss_phases(enemy_txt_path: Path) -> dict[int, int]:
@@ -1300,6 +1301,38 @@ def parse_boss_phases(enemy_txt_path: Path) -> dict[int, int]:
                 if m:
                     phase_mapping[int(m.group(1))] = current_id
     return phase_mapping
+
+
+def parse_boss_extra_names(enemy_txt_path: Path) -> dict[int, str]:
+    """Parse enemy.txt to build an entity_id -> ExtraName mapping.
+
+    ExtraName is the game-canonical display name (e.g. "Margit, the Fell
+    Omen"), the same field used for the vanilla boss_name via
+    tools/generate_clusters.py::parse_boss_names. Here we key by entity ID so
+    a randomized boss source can be named consistently with non-randomized
+    bosses. Line-based scan, mirroring parse_boss_phases (~200x faster than a
+    full YAML parse, identical result for the two fields we need).
+
+    Returns an empty dict if the file is missing.
+    """
+    if not enemy_txt_path.exists():
+        return {}
+
+    extra_names: dict[int, str] = {}
+    current_id: int | None = None
+    with open(enemy_txt_path, encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("- ID:"):
+                m = _ENEMY_ID_RE.match(line)
+                if m:
+                    current_id = int(m.group(1))
+            elif current_id is not None:
+                m = _EXTRA_NAME_RE.match(line)
+                if m:
+                    name = m.group(1).strip()
+                    if name:
+                        extra_names[current_id] = name
+    return extra_names
 
 
 def patch_graph_boss_placements(
