@@ -285,7 +285,7 @@ Multi-zone `major_boss` clusters can be **downgraded** to `legacy_dungeon` when 
 - `zone_names`: zone → display name (from `area.text`)
 - `zone_conflicts`: zone → list of mutually exclusive zones (from `conflicts_with` in `zone_metadata.toml`). When a cluster containing one zone is selected, clusters containing conflicting zones are excluded. Example: Margit (`stormveil_margit`) and Morgott (`leyndell_sanctuary`) are the same character — killing Morgott removes Margit from his arena.
 - `defeat_flag`: boss defeat event flag (0 if none)
-- `boss_name`: canonical boss name from ItemRandomizer's `enemy.txt` (via `DefeatFlag -> ExtraName` mapping). Only present on boss clusters with a matching defeat_flag. Phase suffixes are stripped ("Fire Giant 2" -> "Fire Giant"). Used by the racing server for consistent stats naming across seeds with and without boss randomization.
+- `boss_name`: canonical boss name from ItemRandomizer's `enemy.txt` (via `DefeatFlag -> ExtraName` mapping). Only present on boss clusters with a matching defeat_flag. Phase suffixes are stripped ("Fire Giant 2" -> "Fire Giant"). Used by the racing server for consistent stats naming across seeds with and without boss randomization. When boss randomization is active, `patch_graph_boss_placements()` in `main.py` overrides `boss_name` on graph nodes with the randomized boss's name, resolved through the same `enemy.txt` ExtraName source (with `boss_arena_tags.json` name as fallback), so naming is consistent across seeds regardless of whether boss randomization is enabled.
 - `main`: entry fog has the `main` tag (preferred for Stake placement)
 
 ## References

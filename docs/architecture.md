@@ -364,8 +364,8 @@ Gate names use FogMod's FullName format: `{map}_{gate_name}`.
 - `remove_entities`: vanilla warp MSB assets to delete
 
 **Optional node fields (boss nodes):**
-- `boss_name`: canonical boss name from `enemy.txt` (always present on boss nodes with a defeat_flag). Overridden by `patch_graph_boss_placements()` when boss randomization is active. Used by the racing server for stats.
-- `randomized_bosses`: list of boss names placed by the enemy randomizer (one per phase). Only present when boss randomization is active. Set by `patch_graph_boss_placements()`. Example: `["Beast Clergyman", "Maliketh, the Black Blade"]` for a multi-phase boss.
+- `boss_name`: canonical boss name from `enemy.txt` ExtraName (always present on boss nodes with a defeat_flag; phase suffixes stripped). Set at DAG generation time from `clusters.json`. When boss randomization is active, `patch_graph_boss_placements()` (called from `main.py`, fed by `build_boss_placements(enemy_assignments, ...)`) overrides it with the randomized boss's name, resolved via the same `enemy.txt` ExtraName source with a `boss_arena_tags.json` fallback. Used by the racing server for stats.
+- `randomized_bosses`: list of boss names placed by the enemy randomizer (one per phase). Only present when boss randomization is active. Set by `patch_graph_boss_placements()` from `enemy_assignments` in-memory; no C# round-trip or `boss_placements.json` file is involved. Example: `["Beast Clergyman", "Maliketh, the Black Blade"]` for a multi-phase boss. Both randomized and non-randomized seeds use the same `enemy.txt` ExtraName naming convention.
 
 ## Care Package System
 
