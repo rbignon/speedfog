@@ -22,14 +22,16 @@ from speedfog.generator import GenerationError, generate_with_retry
 from speedfog.item_randomizer import generate_item_config, run_item_randomizer
 from speedfog.output import (
     append_boss_placements_to_spoiler,
+    build_boss_placements,
     export_json,
     export_spoiler_log,
-    load_boss_placements,
     load_fog_data,
     load_phantom_skins_catalog,
     load_vanilla_tiers,
+    parse_boss_extra_names,
     parse_boss_phases,
     patch_graph_boss_placements,
+    resolve_boss_name,
     resolve_entity_id,
 )
 from speedfog.packaging import PackagingError, package_seed
@@ -419,6 +421,27 @@ def main() -> int:
         export_generation_log(result.log, gen_log_path, dag=dag)
         print(f"Written: {gen_log_path}")
 
+    # Populate randomized boss names from the assignment computed by
+    # boss_arena_constraints (single source of truth; no C# round-trip). Runs
+    # regardless of --no-build, so graph.json carries the names even when the
+    # randomizer is not executed. accepted_item_config was filled by
+    # post_validate during generation under the same guard.
+    if config.item_randomizer.enabled and config.enemy.randomize_bosses != "none":
+        enemy_assignments = accepted_item_config.get("enemy_assignments")
+        if enemy_assignments:
+            extra_names = parse_boss_extra_names(enemy_txt_path)
+            tag_names = {eid: t.name for eid, t in (assignment_tags or {}).items()}
+            placements = build_boss_placements(
+                enemy_assignments,
+                lambda eid: resolve_boss_name(eid, extra_names, tag_names),
+            )
+            patch_graph_boss_placements(
+                json_path, dag, placements, assignment_phase_mapping
+            )
+            print(f"Boss placements: {len(placements)} bosses randomized")
+            if args.logs and spoiler_path is not None:
+                append_boss_placements_to_spoiler(spoiler_path, placements)
+
     # Determine game_dir early (needed for Item Randomizer and FogModWrapper)
     game_dir = args.game_dir or (
         Path(config.paths.game_dir) if config.paths.game_dir else None
@@ -498,20 +521,6 @@ def main() -> int:
                 verbose=args.verbose,
             ):
                 item_rando_output = item_rando_dir
-
-                # Patch graph.json with boss placements if available
-                boss_placements_path = item_rando_dir / "boss_placements.json"
-                boss_placements = load_boss_placements(boss_placements_path)
-                if boss_placements:
-                    patch_graph_boss_placements(
-                        json_path, dag, boss_placements, assignment_phase_mapping
-                    )
-                    print(f"Boss placements: {len(boss_placements)} bosses randomized")
-
-                    # Append boss placements to spoiler log
-                    if args.logs:
-                        assert spoiler_path is not None
-                        append_boss_placements_to_spoiler(spoiler_path, boss_placements)
             else:
                 print(
                     "Error: Item Randomizer failed",

@@ -12,7 +12,6 @@ from speedfog.output import (
     build_boss_placements,
     dag_to_dict,
     export_spoiler_log,
-    load_boss_placements,
     load_phantom_skins_catalog,
     load_vanilla_tiers,
     parse_boss_extra_names,
@@ -1855,21 +1854,6 @@ class TestIgnorePairInConnections:
         assert up_to_src.get("ignore_pair") is True
 
 
-class TestBossPlacementLoading:
-    def test_load_boss_placements_returns_dict(self, tmp_path):
-        path = tmp_path / "boss_placements.json"
-        path.write_text('{"14000850": {"name": "Rennala", "entity_id": 14000800}}')
-
-        result = load_boss_placements(path)
-
-        assert result == {"14000850": {"name": "Rennala", "entity_id": 14000800}}
-
-    def test_load_boss_placements_missing_file_returns_empty(self, tmp_path):
-        result = load_boss_placements(tmp_path / "nonexistent.json")
-
-        assert result == {}
-
-
 class TestPatchGraphBossPlacements:
     def test_patch_matches_defeat_flag(self, tmp_path):
         """Node with defeat_flag matching a placement key gets randomized_boss."""
@@ -2481,3 +2465,43 @@ def test_build_boss_placements_maps_assignment_to_names():
         "10000800": {"name": "Rennala", "entity_id": 14000800},
         "10000850": {"name": "Guardian Golem", "entity_id": 999},
     }
+
+
+def test_python_population_end_to_end(tmp_path):
+    """enemy_assignments + enemy.txt + tags -> randomized_bosses/boss_name."""
+    enemy_txt = tmp_path / "enemy.txt"
+    enemy_txt.write_text(
+        "- ID: 14000800\n  ExtraName: Rennala, Queen of the Full Moon\n"
+        "- ID: 1052520801\n  ExtraName: Godskin Noble\n",
+        encoding="utf-8",
+    )
+    # Phase-2 source 1052520800 has no ExtraName -> tag fallback.
+    extra_names = parse_boss_extra_names(enemy_txt)
+    tag_names = {1052520800: "Margit (tag)"}
+
+    # Arena leader entity_id 1052520800 (defeat_flag 1252520800) + phase-1 slot.
+    # _build_enemy_assignments keys by entity_id (resolve_entity_id(defeat_flag)).
+    enemy_assignments = {"1052520800": "1052520800", "1052520801": "1052520801"}
+    phase_mapping = {1052520800: 1052520801}
+
+    placements = build_boss_placements(
+        enemy_assignments,
+        lambda eid: resolve_boss_name(eid, extra_names, tag_names),
+    )
+
+    graph = {"nodes": {"arena": {"type": "major_boss", "boss_name": "Fire Giant"}}}
+    graph_path = tmp_path / "graph.json"
+    graph_path.write_text(json.dumps(graph))
+
+    dag = Dag(seed=1)
+    cluster = make_cluster("arena", cluster_type="major_boss", exit_fogs=[])
+    cluster.defeat_flag = 1_252_520_800
+    dag.add_node(
+        DagNode(id="n1", cluster=cluster, layer=0, tier=1, entry_fogs=[], exit_fogs=[])
+    )
+
+    patch_graph_boss_placements(graph_path, dag, placements, phase_mapping)
+
+    node = json.loads(graph_path.read_text())["nodes"]["arena"]
+    assert node["randomized_bosses"] == ["Godskin Noble", "Margit (tag)"]
+    assert node["boss_name"] == "Margit (tag)"

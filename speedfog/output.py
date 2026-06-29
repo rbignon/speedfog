@@ -1251,23 +1251,6 @@ def export_spoiler_log(
         f.write("\n".join(lines))
 
 
-def load_boss_placements(path: Path) -> dict[str, dict[str, Any]]:
-    """Load boss_placements.json written by ItemRandomizerWrapper.
-
-    Args:
-        path: Path to boss_placements.json
-
-    Returns:
-        Dictionary of target_entity_id (str) -> {"name": str, "entity_id": int}
-        Empty dict if file doesn't exist.
-    """
-    if not path.exists():
-        return {}
-    with open(path, encoding="utf-8") as f:
-        data: dict[str, Any] = json.load(f)
-    return data
-
-
 _ENEMY_ID_RE = re.compile(r"^- ID:\s*(\d+)")
 _NEXT_PHASE_RE = re.compile(r"^  NextPhase:\s*(\d+)")
 _EXTRA_NAME_RE = re.compile(r"^\s+ExtraName:\s*(.+)")
@@ -1355,8 +1338,8 @@ def build_boss_placements(
 ) -> dict[str, dict[str, Any]]:
     """Reshape {arena_id: boss_id} into the placements dict format.
 
-    The result is keyed by arena entity ID (as in load_boss_placements), so it
-    is consumed unchanged by patch_graph_boss_placements and
+    The result is keyed by arena entity ID string, consumed unchanged by
+    patch_graph_boss_placements and
     append_boss_placements_to_spoiler. Both keys and the boss IDs arrive as
     strings from enemy_assignments; the boss ID is resolved to a name and
     stored as an int entity_id.
@@ -1383,7 +1366,7 @@ def patch_graph_boss_placements(
     Args:
         graph_path: Path to existing graph.json to patch
         dag: The DAG with cluster defeat_flags
-        placements: Boss placements from load_boss_placements()
+        placements: Boss placements from build_boss_placements()
         phase_mapping: Optional reverse NextPhase mapping (phase2_id -> phase1_id)
     """
     if not placements:
@@ -1460,7 +1443,7 @@ def append_boss_placements_to_spoiler(
 
     Args:
         spoiler_path: Path to existing spoiler.txt
-        placements: Boss placements from load_boss_placements()
+        placements: Boss placements from build_boss_placements()
     """
     if not placements or not spoiler_path.exists():
         return

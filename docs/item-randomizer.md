@@ -13,7 +13,7 @@ ItemRandomizerWrapper does not reimplement any randomization logic. It:
 2. Builds `RandomizerOptions` and an enemy `Preset` from the config
 3. Calls `Randomizer.Randomize()` from RandomizerCommon.dll
 4. Captures console output to parse boss placements
-5. Writes `boss_placements.json` and optionally `RandomizerHelper_config.ini`
+5. Writes `boss_placements.json` (debug artifact, no longer consumed by Python) and optionally `RandomizerHelper_config.ini`
 
 Output is written to a temp directory, then merged into FogModWrapper via `--merge-dir`.
 
@@ -158,14 +158,15 @@ Output: `boss_placements.json` mapping `target_entity_id` (string) to `{name, en
 
 ### Graph Patching
 
-In `main.py`, after ItemRandomizerWrapper completes:
+In `main.py`, immediately after the logs block (before the build step, so it runs even with `--no-build`):
 
-1. `load_boss_placements()` reads `boss_placements.json`
-2. `parse_boss_phases()` reads `enemy.txt` to build a reverse `NextPhase` mapping (phase2_entity_id -> phase1_entity_id) for multi-phase bosses
-3. `patch_graph_boss_placements()` matches each DAG node's `defeat_flag` to a placement entry and sets:
+1. `accepted_item_config["enemy_assignments"]` provides the arena-to-boss mapping computed in-memory by `post_validate` during DAG generation (no file I/O needed).
+2. `parse_boss_extra_names()` reads `enemy.txt` to build an `entity_id -> ExtraName` mapping for canonical boss display names.
+3. `build_boss_placements()` reshapes the assignments into `{arena_entity_id: {name, entity_id}}`, resolving each boss name via ExtraName (preferred) or boss_arena_tags name (fallback).
+4. `patch_graph_boss_placements()` matches each DAG node's `defeat_flag` to a placement entry and sets:
    - `randomized_bosses`: list of boss names (both phases for multi-phase bosses, e.g. `["Beast Clergyman", "Maliketh"]`)
    - `boss_name`: canonical name from the phase 2 replacement (numeric suffix stripped, e.g. "Fire Giant" not "Fire Giant 2")
-4. `append_boss_placements_to_spoiler()` adds a boss placement section to spoiler.txt
+5. `append_boss_placements_to_spoiler()` adds a boss placement section to spoiler.txt
 
 Matching logic (in `_match_boss_placement`): tries `str(defeat_flag)` first, then `str(defeat_flag - 200_000_000)` for base game bosses. `_resolve_entity_id()` extracts the entity_id from a defeat_flag for phase mapping lookups.
 
@@ -184,7 +185,7 @@ Note: `boss_name` is also set at DAG generation time from the `enemy.txt` mappin
                                   ├── param/gameparam/regulation.bin
                                   ├── event/*.emevd.dcx
                                   ├── msg/engus/*.fmg
-                                  ├── boss_placements.json
+                                  ├── boss_placements.json          (debug artifact; Python no longer reads it)
                                   └── RandomizerHelper_config.ini
 
 2. FogModWrapper --merge-dir temp/item-randomizer/
