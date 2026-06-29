@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -1333,6 +1333,39 @@ def parse_boss_extra_names(enemy_txt_path: Path) -> dict[int, str]:
                     if name:
                         extra_names[current_id] = name
     return extra_names
+
+
+def resolve_boss_name(
+    entity_id: int,
+    extra_names: Mapping[int, str],
+    tag_names: Mapping[int, str],
+) -> str:
+    """Resolve a boss source entity to a display name.
+
+    enemy.txt ExtraName first (game-canonical, unifies naming with
+    non-randomized bosses), then the boss_arena_tags.json name (covers the
+    handful of promoted sources with no ExtraName), then the raw ID string.
+    """
+    return extra_names.get(entity_id) or tag_names.get(entity_id) or str(entity_id)
+
+
+def build_boss_placements(
+    enemy_assignments: Mapping[str, str],
+    resolve_name: Callable[[int], str],
+) -> dict[str, dict[str, Any]]:
+    """Reshape {arena_id: boss_id} into the placements dict format.
+
+    The result is keyed by arena entity ID (as in load_boss_placements), so it
+    is consumed unchanged by patch_graph_boss_placements and
+    append_boss_placements_to_spoiler. Both keys and the boss IDs arrive as
+    strings from enemy_assignments; the boss ID is resolved to a name and
+    stored as an int entity_id.
+    """
+    placements: dict[str, dict[str, Any]] = {}
+    for arena_id, boss_id in enemy_assignments.items():
+        bid = int(boss_id)
+        placements[str(arena_id)] = {"name": resolve_name(bid), "entity_id": bid}
+    return placements
 
 
 def patch_graph_boss_placements(

@@ -9,6 +9,7 @@ from speedfog.output import (
     _effective_type,
     _make_fullname,
     append_boss_placements_to_spoiler,
+    build_boss_placements,
     dag_to_dict,
     export_spoiler_log,
     load_boss_placements,
@@ -17,6 +18,7 @@ from speedfog.output import (
     parse_boss_extra_names,
     parse_boss_phases,
     patch_graph_boss_placements,
+    resolve_boss_name,
 )
 
 
@@ -2454,3 +2456,28 @@ class TestDagToDictPlugins:
         )
         result = dag_to_dict(dag, clusters)
         assert result["plugins"] == {}
+
+
+def test_resolve_boss_name_prefers_extra_name():
+    assert resolve_boss_name(
+        100, {100: "Margit, the Fell Omen"}, {100: "BAR name"}
+    ) == ("Margit, the Fell Omen")
+
+
+def test_resolve_boss_name_falls_back_to_tag_name():
+    assert resolve_boss_name(100, {}, {100: "Crucible Knight"}) == "Crucible Knight"
+
+
+def test_resolve_boss_name_falls_back_to_id_string():
+    assert resolve_boss_name(100, {}, {}) == "100"
+
+
+def test_build_boss_placements_maps_assignment_to_names():
+    enemy_assignments = {"10000800": "14000800", "10000850": "999"}
+    names = {14000800: "Rennala", 999: "Guardian Golem"}
+    result = build_boss_placements(enemy_assignments, lambda eid: names[eid])
+
+    assert result == {
+        "10000800": {"name": "Rennala", "entity_id": 14000800},
+        "10000850": {"name": "Guardian Golem", "entity_id": 999},
+    }
