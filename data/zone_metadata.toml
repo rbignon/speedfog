@@ -61,7 +61,7 @@ weight = 6
 weight = 3  # Castle Morne, detected as legacy_dungeon via fortressonly+legacy fog
 
 [zones.mohgwyn]
-type = "legacy_dungeon"
+type = "mini_dungeon"
 weight = 2
 
 # --- DLC ---
