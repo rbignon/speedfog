@@ -316,7 +316,7 @@ def _build_enemy_assignments(
     """
     majors: dict[int, ArenaTags] = {}
     minors: dict[int, ArenaTags] = {}
-    buckets = {"major_boss": majors, "boss_arena": minors}
+    buckets = {"major_boss": majors, "boss_arena": minors, "final_boss": majors}
     for cluster in boss_clusters:
         target = buckets.get(cluster.type)
         if target is None:
@@ -377,9 +377,9 @@ def _build_uniform_assignments(
     """
     arenas: dict[int, ArenaTags] = {}
     for cluster in boss_clusters:
-        if cluster.type not in ("major_boss", "boss_arena"):
+        if cluster.type not in ("major_boss", "boss_arena", "final_boss"):
             continue
-        if cluster.type == "major_boss" and not randomize_majors:
+        if cluster.type in ("major_boss", "final_boss") and not randomize_majors:
             continue
         leader = resolve_entity_id(cluster.defeat_flag)
         slots = [leader]

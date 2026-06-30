@@ -285,7 +285,7 @@ def main() -> int:
             boss_clusters = [
                 n.cluster
                 for n in dag.nodes.values()
-                if n.cluster.type in ("boss_arena", "major_boss")
+                if n.cluster.type in ("boss_arena", "major_boss", "final_boss")
                 and n.cluster.defeat_flag
             ]
             try:
@@ -460,7 +460,7 @@ def main() -> int:
             boss_clusters_for_assignment = [
                 n.cluster
                 for n in dag.nodes.values()
-                if n.cluster.type in ("boss_arena", "major_boss")
+                if n.cluster.type in ("boss_arena", "major_boss", "final_boss")
                 and n.cluster.defeat_flag
             ]
             item_config = generate_item_config(

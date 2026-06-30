@@ -964,3 +964,69 @@ def test_generate_item_config_allowlist_raises_when_cluster_leader_has_no_arena_
             vanilla_minor_ids=[2000],
             phase_mapping={},
         )
+
+
+def test_generate_item_config_force_maps_final_boss_in_all_mode():
+    """A final_boss arena is force-mapped from the major pool in "all" mode."""
+    config = Config.from_dict({"enemy": {"randomize_bosses": "all"}})
+    # final_boss cluster; defeat_flag 1000 -> entity_id 1000 is the arena.
+    boss_clusters = [_boss_cluster("final", "final_boss", defeat_flag=1000)]
+    # Arena 1000 forbids dragons. Among sources {2000, 3000}, only 2000 fits.
+    tags = {
+        1000: _entity(1000, arena_forbids_dragon=True),
+        2000: _entity(2000),
+        3000: _entity(3000, is_dragon=True),
+    }
+    result = generate_item_config(
+        config,
+        seed=42,
+        boss_clusters=boss_clusters,
+        tags=tags,
+        vanilla_major_ids=[2000, 3000],
+        vanilla_minor_ids=[],
+        phase_mapping={},
+    )
+    assert result["enemy_assignments"] == {"1000": "2000"}
+
+
+def test_generate_item_config_final_boss_not_assigned_in_minor_mode():
+    """final_boss is gated by randomize_majors: untouched in "minor" mode."""
+    config = Config.from_dict({"enemy": {"randomize_bosses": "minor"}})
+    boss_clusters = [_boss_cluster("final", "final_boss", defeat_flag=1000)]
+    tags = {1000: _entity(1000), 2000: _entity(2000)}
+    result = generate_item_config(
+        config,
+        seed=42,
+        boss_clusters=boss_clusters,
+        tags=tags,
+        vanilla_major_ids=[2000],
+        vanilla_minor_ids=[],
+        phase_mapping={},
+    )
+    assert "enemy_assignments" not in result
+
+
+def test_generate_item_config_force_maps_final_boss_uniform_allowlist():
+    """final_boss arena is matched in the allowlist (uniform) path too."""
+    config = Config.from_dict(
+        {
+            "enemy": {
+                "randomize_bosses": "all",
+                "bosses": ["Target"],
+                "ignore_arena_size": True,
+            }
+        }
+    )
+    boss_clusters = [_boss_cluster("final", "final_boss", defeat_flag=1000)]
+    tags = {
+        1000: _entity(1000, name="Final Arena"),
+        5000: _entity(5000, name="Target Boss"),
+    }
+    result = generate_item_config(
+        config,
+        seed=42,
+        boss_clusters=boss_clusters,
+        tags=tags,
+        phase_mapping={},
+    )
+    assert result["enemy_assignments"] == {"1000": "5000"}
