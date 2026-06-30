@@ -33,6 +33,7 @@ from speedfog.output import (
     load_phantom_skins_catalog,
     load_vanilla_tiers,
     parse_boss_extra_names,
+    parse_boss_key_names,
     parse_boss_phases,
     patch_graph_boss_placements,
     resolve_boss_name,
@@ -432,11 +433,12 @@ def main() -> int:
     if config.item_randomizer.enabled and config.enemy.randomize_bosses != "none":
         enemy_assignments = accepted_item_config.get("enemy_assignments")
         if enemy_assignments:
+            key_names = parse_boss_key_names(enemy_txt_path)
             extra_names = parse_boss_extra_names(enemy_txt_path)
             tag_names = {eid: t.name for eid, t in (assignment_tags or {}).items()}
             placements = build_boss_placements(
                 enemy_assignments,
-                lambda eid: resolve_boss_name(eid, extra_names, tag_names),
+                lambda eid: resolve_boss_name(eid, key_names, extra_names, tag_names),
             )
             patch_graph_boss_placements(
                 json_path, dag, placements, assignment_phase_mapping

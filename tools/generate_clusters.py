@@ -2003,11 +2003,16 @@ def parse_boss_names(enemy_txt_path: Path) -> dict[int, str]:
     boss_names: dict[int, str] = {}
     for entry in data.get("Enemies", []):
         defeat_flag = entry.get("DefeatFlag")
-        extra_name = entry.get("ExtraName")
         entry_class = entry.get("Class", "")
-        if not defeat_flag or not extra_name or entry_class not in _BOSS_CLASSES:
+        # Prefer the canonical Important.Names.Key (cleaner than the legacy
+        # ExtraName: no Boss/Duo suffixes, proper full names, typo fixes);
+        # fall back to ExtraName when no Key is present.
+        important = entry.get("Important") or {}
+        key_name = (important.get("Names") or {}).get("Key")
+        name = key_name or entry.get("ExtraName")
+        if not defeat_flag or not name or entry_class not in _BOSS_CLASSES:
             continue
-        clean_name = _PHASE_SUFFIX_RE.sub("", extra_name)
+        clean_name = _PHASE_SUFFIX_RE.sub("", name)
         boss_names[int(defeat_flag)] = clean_name
 
     return boss_names

@@ -268,7 +268,8 @@ emission. The C# side no longer carries hardcoded promoted-pool data.
 The ``randomized_bosses`` and ``boss_name`` fields on graph nodes are populated
 in Python from the same ``enemy_assignments`` map (via ``output.build_boss_placements``
 and ``patch_graph_boss_placements`` in ``main.py``). Boss display names resolve
-through ``enemy.txt`` ExtraName with a ``boss_arena_tags.json`` name as fallback.
+through ``enemy.txt`` ``Important.Names.Key`` (the canonical name), then the
+legacy ``ExtraName``, then a ``boss_arena_tags.json`` name as final fallback.
 The C# ``ItemRandomizerWrapper`` consumes ``enemy_assignments`` only for ``forceMap``
 wiring and emits no placement data back to Python.
 

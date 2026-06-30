@@ -15,6 +15,7 @@ from speedfog.output import (
     load_phantom_skins_catalog,
     load_vanilla_tiers,
     parse_boss_extra_names,
+    parse_boss_key_names,
     parse_boss_phases,
     patch_graph_boss_placements,
     resolve_boss_name,
@@ -2182,6 +2183,46 @@ class TestParseBossExtraNames:
         assert parse_boss_extra_names(tmp_path / "nope.txt") == {}
 
 
+class TestParseBossKeyNames:
+    def test_parse_boss_key_names_reads_important_names_key(self, tmp_path):
+        # The new enemy.txt nests the canonical display name under
+        # Important: Names: Key (6-space indent), alongside the legacy ExtraName.
+        enemy_txt = tmp_path / "enemy.txt"
+        enemy_txt.write_text(
+            "- ID: 10000800\n"
+            "  Class: Boss\n"
+            "  Important:\n"
+            "    Names:\n"
+            "      Key: Godrick the Grafted\n"
+            "      ProperName: Godrick\n"
+            "  ExtraName: Godrick the Grafted Boss\n"
+            "- ID: 11000800\n"
+            "  Class: Boss\n",
+            encoding="utf-8",
+        )
+
+        result = parse_boss_key_names(enemy_txt)
+        assert result == {10000800: "Godrick the Grafted"}
+
+    def test_parse_boss_key_names_first_key_wins(self, tmp_path):
+        # First Key per entity wins (guard against a second nested Key block).
+        enemy_txt = tmp_path / "enemy.txt"
+        enemy_txt.write_text(
+            "- ID: 10000800\n"
+            "  Important:\n"
+            "    Names:\n"
+            "      Key: First Name\n"
+            "  Other:\n"
+            "    Names:\n"
+            "      Key: Second Name\n",
+            encoding="utf-8",
+        )
+        assert parse_boss_key_names(enemy_txt) == {10000800: "First Name"}
+
+    def test_parse_boss_key_names_missing_file_returns_empty(self, tmp_path):
+        assert parse_boss_key_names(tmp_path / "nope.txt") == {}
+
+
 class TestAppendBossPlacementsToSpoiler:
     def test_appends_section_to_existing_spoiler(self, tmp_path):
         """Boss placements section is appended to an existing spoiler file."""
@@ -2442,18 +2483,28 @@ class TestDagToDictPlugins:
         assert result["plugins"] == {}
 
 
-def test_resolve_boss_name_prefers_extra_name():
+def test_resolve_boss_name_prefers_key_name():
+    # Names.Key wins over the legacy ExtraName (here fixing the Goldfrey typo).
     assert resolve_boss_name(
-        100, {100: "Margit, the Fell Omen"}, {100: "BAR name"}
+        100,
+        {100: "Godfrey, First Elden Lord"},
+        {100: "Goldfrey, First Elden Lord"},
+        {100: "BAR name"},
+    ) == ("Godfrey, First Elden Lord")
+
+
+def test_resolve_boss_name_prefers_extra_name_when_no_key():
+    assert resolve_boss_name(
+        100, {}, {100: "Margit, the Fell Omen"}, {100: "BAR name"}
     ) == ("Margit, the Fell Omen")
 
 
 def test_resolve_boss_name_falls_back_to_tag_name():
-    assert resolve_boss_name(100, {}, {100: "Crucible Knight"}) == "Crucible Knight"
+    assert resolve_boss_name(100, {}, {}, {100: "Crucible Knight"}) == "Crucible Knight"
 
 
 def test_resolve_boss_name_falls_back_to_id_string():
-    assert resolve_boss_name(100, {}, {}) == "100"
+    assert resolve_boss_name(100, {}, {}, {}) == "100"
 
 
 def test_build_boss_placements_maps_assignment_to_names():
@@ -2475,7 +2526,8 @@ def test_python_population_end_to_end(tmp_path):
         "- ID: 1052520801\n  ExtraName: Godskin Noble\n",
         encoding="utf-8",
     )
-    # Phase-2 source 1052520800 has no ExtraName -> tag fallback.
+    # Phase-2 source 1052520800 has no Key/ExtraName -> tag fallback.
+    key_names = parse_boss_key_names(enemy_txt)
     extra_names = parse_boss_extra_names(enemy_txt)
     tag_names = {1052520800: "Margit (tag)"}
 
@@ -2486,7 +2538,7 @@ def test_python_population_end_to_end(tmp_path):
 
     placements = build_boss_placements(
         enemy_assignments,
-        lambda eid: resolve_boss_name(eid, extra_names, tag_names),
+        lambda eid: resolve_boss_name(eid, key_names, extra_names, tag_names),
     )
 
     graph = {"nodes": {"arena": {"type": "major_boss", "boss_name": "Fire Giant"}}}

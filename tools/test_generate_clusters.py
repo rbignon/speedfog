@@ -4170,6 +4170,27 @@ class TestParseBossNames:
         assert result[10000800] == "Godrick the Grafted"
         assert result[11050850] == "Sir Gideon Ofnir, the All-Knowing"
 
+    def test_prefers_names_key_over_extra_name(self, tmp_path):
+        # The post-update enemy.txt carries the canonical name under
+        # Important.Names.Key; it is cleaner than ExtraName (here the Key fixes
+        # the "Goldfrey" typo). Key wins; ExtraName remains the fallback.
+        enemy_txt = tmp_path / "enemy.txt"
+        enemy_txt.write_text(
+            "Enemies:\n"
+            "- ID: 11000850\n"
+            "  Class: Boss\n"
+            "  DefeatFlag: 11000850\n"
+            "  Important:\n"
+            "    Names:\n"
+            "      Key: Godfrey, First Elden Lord\n"
+            "  ExtraName: Goldfrey, First Elden Lord\n"
+        )
+        from generate_clusters import parse_boss_names
+
+        result = parse_boss_names(enemy_txt)
+
+        assert result[11000850] == "Godfrey, First Elden Lord"
+
     def test_strips_phase_suffix(self, tmp_path):
         enemy_txt = tmp_path / "enemy.txt"
         enemy_txt.write_text(

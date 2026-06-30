@@ -133,15 +133,15 @@ In both `"minor"` and `"all"` modes, the preset sets `bosshp = false`.
 
 ## Boss Name Population
 
-Boss names for randomized runs are populated entirely in Python, with no stdout capture or file round-trip through C#. The `enemy_assignments` mapping (arena entity ID to boss source entity ID) is computed in-memory by `post_validate` during DAG generation and carried in `item_config.json`. Python resolves display names from `enemy.txt` ExtraName entries (with `boss_arena_tags.json` name as fallback), then writes `randomized_bosses` and `boss_name` directly onto the graph nodes. `ItemRandomizerWrapper` consumes `enemy_assignments` only for `forceMap` wiring and emits no placement data back.
+Boss names for randomized runs are populated entirely in Python, with no stdout capture or file round-trip through C#. The `enemy_assignments` mapping (arena entity ID to boss source entity ID) is computed in-memory by `post_validate` during DAG generation and carried in `item_config.json`. Python resolves display names from `enemy.txt` `Important.Names.Key` entries (the canonical name, preferred over the legacy `ExtraName`, with `boss_arena_tags.json` name as final fallback), then writes `randomized_bosses` and `boss_name` directly onto the graph nodes. `ItemRandomizerWrapper` consumes `enemy_assignments` only for `forceMap` wiring and emits no placement data back.
 
 ### Graph Patching
 
 In `main.py`, immediately after the logs block (before the build step, so it runs even with `--no-build`):
 
 1. `accepted_item_config["enemy_assignments"]` provides the arena-to-boss mapping computed in-memory by `post_validate` during DAG generation (no file I/O needed).
-2. `parse_boss_extra_names()` reads `enemy.txt` to build an `entity_id -> ExtraName` mapping for canonical boss display names.
-3. `build_boss_placements()` reshapes the assignments into `{arena_entity_id: {name, entity_id}}`, resolving each boss name via ExtraName (preferred) or boss_arena_tags name (fallback).
+2. `parse_boss_key_names()` and `parse_boss_extra_names()` read `enemy.txt` to build `entity_id -> name` mappings (`Important.Names.Key` and the legacy `ExtraName` respectively).
+3. `build_boss_placements()` reshapes the assignments into `{arena_entity_id: {name, entity_id}}`, resolving each boss name via `resolve_boss_name`: `Names.Key` (preferred), then `ExtraName`, then the boss_arena_tags name (fallback).
 4. `patch_graph_boss_placements()` matches each DAG node's `defeat_flag` to a placement entry and sets:
    - `randomized_bosses`: list of boss names (both phases for multi-phase bosses, e.g. `["Beast Clergyman", "Maliketh"]`)
    - `boss_name`: canonical name from the phase 2 replacement (numeric suffix stripped, e.g. "Fire Giant" not "Fire Giant 2")

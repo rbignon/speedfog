@@ -1254,6 +1254,7 @@ def export_spoiler_log(
 _ENEMY_ID_RE = re.compile(r"^- ID:\s*(\d+)")
 _NEXT_PHASE_RE = re.compile(r"^  NextPhase:\s*(\d+)")
 _EXTRA_NAME_RE = re.compile(r"^\s+ExtraName:\s*(.+)")
+_KEY_NAME_RE = re.compile(r"^      Key:\s*(.+)")
 
 
 def parse_boss_phases(enemy_txt_path: Path) -> dict[int, int]:
@@ -1289,12 +1290,14 @@ def parse_boss_phases(enemy_txt_path: Path) -> dict[int, int]:
 def parse_boss_extra_names(enemy_txt_path: Path) -> dict[int, str]:
     """Parse enemy.txt to build an entity_id -> ExtraName mapping.
 
-    ExtraName is the game-canonical display name (e.g. "Margit, the Fell
-    Omen"), the same field used for the vanilla boss_name via
-    tools/generate_clusters.py::parse_boss_names. Here we key by entity ID so
-    a randomized boss source can be named consistently with non-randomized
+    ExtraName is the legacy display name (e.g. "Margit, the Fell Omen"), now
+    secondary to the canonical Important.Names.Key (see parse_boss_key_names).
+    Retained as a fallback by resolve_boss_name for entities that carry an
+    ExtraName but no Key. tools/generate_clusters.py::parse_boss_names
+    similarly prefers Names.Key with ExtraName as fallback. Keyed by entity ID
+    so a randomized boss source is named consistently with non-randomized
     bosses. Line-based scan, mirroring parse_boss_phases (~200x faster than a
-    full YAML parse, identical result for the two fields we need).
+    full YAML parse).
 
     Returns an empty dict if the file is missing.
     """
@@ -1318,18 +1321,61 @@ def parse_boss_extra_names(enemy_txt_path: Path) -> dict[int, str]:
     return extra_names
 
 
+def parse_boss_key_names(enemy_txt_path: Path) -> dict[int, str]:
+    """Parse enemy.txt to build an entity_id -> Important.Names.Key mapping.
+
+    ``Key`` is the canonical display name in the post-update enemy.txt format
+    (nested under ``Important: Names:`` at 6-space indent). It is cleaner than
+    the legacy ``ExtraName``: no ``Boss``/``Duo`` suffixes or phase numbers,
+    proper full names ("Rennala, Queen of the Full Moon" rather than
+    "Rennala 2"), and it fixes typos ("Godfrey" not "Goldfrey"). Preferred over
+    ExtraName by ``resolve_boss_name``. First Key per entity wins.
+
+    Line-based scan, mirroring parse_boss_extra_names. Returns an empty dict if
+    the file is missing.
+    """
+    if not enemy_txt_path.exists():
+        return {}
+
+    key_names: dict[int, str] = {}
+    current_id: int | None = None
+    with open(enemy_txt_path, encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("- ID:"):
+                m = _ENEMY_ID_RE.match(line)
+                if m:
+                    current_id = int(m.group(1))
+            elif line.startswith("      Key:") and current_id is not None:
+                if current_id in key_names:
+                    continue
+                m = _KEY_NAME_RE.match(line)
+                if m:
+                    name = m.group(1).strip()
+                    if name:
+                        key_names[current_id] = name
+    return key_names
+
+
 def resolve_boss_name(
     entity_id: int,
+    key_names: Mapping[int, str],
     extra_names: Mapping[int, str],
     tag_names: Mapping[int, str],
 ) -> str:
     """Resolve a boss source entity to a display name.
 
-    enemy.txt ExtraName first (game-canonical, unifies naming with
-    non-randomized bosses), then the boss_arena_tags.json name (covers the
-    handful of promoted sources with no ExtraName), then the raw ID string.
+    Names.Key (the post-update canonical name) first, then the legacy enemy.txt
+    ExtraName, then the boss_arena_tags.json name (covers promoted sources with
+    neither), then the raw ID string. Using Key first unifies naming with the
+    non-randomized boss_name and yields cleaner strings (no ``Boss``/``Duo``
+    suffixes, proper full names, typo fixes).
     """
-    return extra_names.get(entity_id) or tag_names.get(entity_id) or str(entity_id)
+    return (
+        key_names.get(entity_id)
+        or extra_names.get(entity_id)
+        or tag_names.get(entity_id)
+        or str(entity_id)
+    )
 
 
 def build_boss_placements(
