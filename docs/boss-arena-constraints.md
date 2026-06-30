@@ -236,7 +236,7 @@ gets a non-DLC replacement boss.
 |------|--------|
 | ``[enemy].randomize_bosses = "none"`` | No assignment computed. Boss randomization disabled entirely. |
 | ``[enemy].randomize_bosses = "minor"`` | Only ``boss_arena`` clusters receive arena-matched bosses. Majors stay vanilla. |
-| ``[enemy].randomize_bosses = "all"`` | Both majors and minors receive arena-matched bosses. ``final_boss`` terminals (Elden Beast / Promised Consort Radahn) are also treated as major arena targets: each receives an arena-compatible boss and is reported in ``randomized_bosses``/``boss_name``. The final bosses are not added to the source pool (they do not appear as mid-run replacements). |
+| ``[enemy].randomize_bosses = "all"`` | Both majors and minors receive arena-matched bosses. ``final_boss`` terminals (Elden Beast / Promised Consort Radahn) are also treated as major arena targets: each receives an arena-compatible boss and is reported in ``randomized_bosses``/``boss_name``. (They also remain candidate sources in the major pool via the orphan-arena fallback, as before, so they may appear as mid-run replacements like any other major.) |
 | ``[enemy].ignore_arena_size`` | Skip the size gate. Other rules still apply. |
 | ``[enemy].dlc_bosses = false`` | Filter DLC entries from the candidate pool. Arena selection is untouched (DLC arenas still get a non-DLC replacement). Independent of ``[item_randomizer].dlc``, which controls item-randomizer scope. |
 
