@@ -291,6 +291,14 @@ def _compose_pool(
 # consumers that share the same base seed).
 BOSS_ASSIGNMENT_SEED_SALT = 0xBA7A5A5A
 
+# Cluster types that receive an arena-matched boss. final_boss terminals
+# (Elden Beast / Promised Consort Radahn) are treated as major arenas in "all"
+# mode (see docs/boss-arena-constraints.md); boss_arena clusters are the minors.
+# Centralized so adding a new arena type is a single edit.
+MAJOR_ARENA_TYPES = {"major_boss", "final_boss"}
+MINOR_ARENA_TYPES = {"boss_arena"}
+ASSIGNABLE_ARENA_TYPES = MAJOR_ARENA_TYPES | MINOR_ARENA_TYPES
+
 
 def _build_enemy_assignments(
     *,
@@ -316,10 +324,12 @@ def _build_enemy_assignments(
     """
     majors: dict[int, ArenaTags] = {}
     minors: dict[int, ArenaTags] = {}
-    buckets = {"major_boss": majors, "boss_arena": minors, "final_boss": majors}
     for cluster in boss_clusters:
-        target = buckets.get(cluster.type)
-        if target is None:
+        if cluster.type in MAJOR_ARENA_TYPES:
+            target = majors
+        elif cluster.type in MINOR_ARENA_TYPES:
+            target = minors
+        else:
             continue
         leader = resolve_entity_id(cluster.defeat_flag)
         slots = [leader]
@@ -377,9 +387,9 @@ def _build_uniform_assignments(
     """
     arenas: dict[int, ArenaTags] = {}
     for cluster in boss_clusters:
-        if cluster.type not in ("major_boss", "boss_arena", "final_boss"):
+        if cluster.type not in ASSIGNABLE_ARENA_TYPES:
             continue
-        if cluster.type in ("major_boss", "final_boss") and not randomize_majors:
+        if cluster.type in MAJOR_ARENA_TYPES and not randomize_majors:
             continue
         leader = resolve_entity_id(cluster.defeat_flag)
         slots = [leader]

@@ -19,7 +19,11 @@ from speedfog.clusters import ClusterData, ClusterPool, load_clusters
 from speedfog.config import Config, load_config, prune_final_boss_candidates
 from speedfog.fog_mod import run_fogmodwrapper
 from speedfog.generator import GenerationError, generate_with_retry
-from speedfog.item_randomizer import generate_item_config, run_item_randomizer
+from speedfog.item_randomizer import (
+    ASSIGNABLE_ARENA_TYPES,
+    generate_item_config,
+    run_item_randomizer,
+)
 from speedfog.output import (
     append_boss_placements_to_spoiler,
     build_boss_placements,
@@ -285,8 +289,7 @@ def main() -> int:
             boss_clusters = [
                 n.cluster
                 for n in dag.nodes.values()
-                if n.cluster.type in ("boss_arena", "major_boss", "final_boss")
-                and n.cluster.defeat_flag
+                if n.cluster.type in ASSIGNABLE_ARENA_TYPES and n.cluster.defeat_flag
             ]
             try:
                 cfg = generate_item_config(
@@ -460,8 +463,7 @@ def main() -> int:
             boss_clusters_for_assignment = [
                 n.cluster
                 for n in dag.nodes.values()
-                if n.cluster.type in ("boss_arena", "major_boss", "final_boss")
-                and n.cluster.defeat_flag
+                if n.cluster.type in ASSIGNABLE_ARENA_TYPES and n.cluster.defeat_flag
             ]
             item_config = generate_item_config(
                 config,

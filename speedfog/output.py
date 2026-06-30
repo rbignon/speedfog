@@ -1309,7 +1309,7 @@ def parse_boss_extra_names(enemy_txt_path: Path) -> dict[int, str]:
                 m = _ENEMY_ID_RE.match(line)
                 if m:
                     current_id = int(m.group(1))
-            elif current_id is not None:
+            elif line.startswith("  ExtraName:") and current_id is not None:
                 m = _EXTRA_NAME_RE.match(line)
                 if m:
                     name = m.group(1).strip()
@@ -1347,7 +1347,7 @@ def build_boss_placements(
     placements: dict[str, dict[str, Any]] = {}
     for arena_id, boss_id in enemy_assignments.items():
         bid = int(boss_id)
-        placements[str(arena_id)] = {"name": resolve_name(bid), "entity_id": bid}
+        placements[arena_id] = {"name": resolve_name(bid), "entity_id": bid}
     return placements
 
 
