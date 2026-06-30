@@ -50,6 +50,14 @@ PROJECT_ROOT = Path(__file__).parent.parent
 
 # Destination paths
 WRITER_LIB = PROJECT_ROOT / "writer" / "lib"
+# The Item Randomizer's own builds of SoulsIds.dll and SoulsFormats.dll live in
+# a subdir, kept apart from FogRando's copies in WRITER_LIB. These builds have
+# diverged from FogRando's and are not interchangeable (e.g. Instr.Callee is int
+# in FogRando's SoulsIds, uint in the Item Randomizer's, and only the latter has
+# Events.RelocMap; the two SoulsFormats.dll builds also differ byte-for-byte).
+# FogModWrapper and ItemRandomizerWrapper must each link their matching set, so
+# ItemRandomizerWrapper points at this subdir. See ItemRandomizerWrapper.csproj.
+WRITER_LIB_ITEMRANDO = WRITER_LIB / "itemrando"
 ELDENDATA_DEST = PROJECT_ROOT / "writer" / "FogModWrapper" / "eldendata"
 DISTE_DEST = PROJECT_ROOT / "writer" / "ItemRandomizerWrapper" / "diste"
 DATA_DEST = PROJECT_ROOT / "data"
@@ -72,7 +80,7 @@ FOGRANDO_DATA_FILES = [
 FOGRANDO_REQUIRED_DLLS = [
     "FogMod.dll",
     "SoulsFormats.dll",  # Used by FogModWrapper + ItemRandomizerWrapper (FogMod/SoulsIds depend on old API)
-    "SoulsIds.dll",
+    "SoulsIds.dll",  # FogModWrapper links this build; Item Randomizer ships its own in WRITER_LIB_ITEMRANDO
     "BouncyCastle.Cryptography.dll",
     "Newtonsoft.Json.dll",
     "YamlDotNet.dll",
@@ -90,8 +98,20 @@ ITEMRANDO_DATA_FILES = [
 ITEMRANDO_REQUIRED_DLLS = [
     "RandomizerCommon.dll",
     "Pidgin.dll",  # Parser library used by RandomizerCommon
-    # Shared with FogRando (already extracted):
-    # SoulsFormats.dll, SoulsIds.dll, YamlDotNet.dll, etc.
+    "LightInject.dll",  # DI container RandomizerCommon uses at runtime (added in v0.12; headless-required, see ItemRandomizerWrapper.csproj <None> copy)
+    "LightInject.Annotation.dll",  # LightInject companion it loads at runtime
+    # SoulsIds.dll / SoulsFormats.dll are NOT listed here: their Item Randomizer
+    # builds are incompatible with FogRando's, so they go in WRITER_LIB_ITEMRANDO
+    # (see ITEMRANDO_PRIVATE_DLLS) instead of overwriting the shared copies.
+    # YamlDotNet/Newtonsoft.Json/BouncyCastle/ZstdNet are byte-identical between
+    # the two mods, so they stay shared from FogRando.
+]
+
+# Item Randomizer DLLs that conflict with FogRando's shared copies and must be
+# isolated in WRITER_LIB_ITEMRANDO (linked only by ItemRandomizerWrapper).
+ITEMRANDO_PRIVATE_DLLS = [
+    "SoulsIds.dll",
+    "SoulsFormats.dll",
 ]
 
 # Extra DLLs to copy from Item Randomizer zip (not from sfextract)
@@ -173,9 +193,18 @@ def is_fogrando_installed() -> bool:
 
 def is_itemrando_installed() -> bool:
     """Check if Item Randomizer dependencies are already installed."""
-    # Check for RandomizerCommon.dll
-    if not (WRITER_LIB / "RandomizerCommon.dll").exists():
-        return False
+    # Check for required DLLs in writer/lib/ (RandomizerCommon, Pidgin,
+    # LightInject*). Iterating the list keeps this in sync when deps change,
+    # so a non-forced re-run self-heals after a version bump adds a DLL.
+    for dll in ITEMRANDO_REQUIRED_DLLS:
+        if not (WRITER_LIB / dll).exists():
+            return False
+
+    # Check for the Item Randomizer's own DLLs kept in their own subdir, apart
+    # from FogRando's copies in WRITER_LIB (see WRITER_LIB_ITEMRANDO).
+    for dll in ITEMRANDO_PRIVATE_DLLS:
+        if not (WRITER_LIB_ITEMRANDO / dll).exists():
+            return False
 
     # Check for diste
     if not DISTE_DEST.exists():
@@ -284,7 +313,8 @@ def copy_itemrando_files(temp_dir: Path, extracted_dir: Path) -> bool:
 
     randomizer_dir = temp_dir / "randomizer"
 
-    # Copy DLLs to writer/lib/ (only RandomizerCommon.dll, others are shared)
+    # Copy DLLs to writer/lib/ (RandomizerCommon.dll, Pidgin, and the newer
+    # SoulsIds; SoulsFormats/YamlDotNet stay shared from FogRando)
     WRITER_LIB.mkdir(parents=True, exist_ok=True)
     dll_count = 0
     for dll_name in ITEMRANDO_REQUIRED_DLLS:
@@ -296,6 +326,18 @@ def copy_itemrando_files(temp_dir: Path, extracted_dir: Path) -> bool:
             print_error(f"Missing DLL: {dll_name}")
             return False
     print_ok(f"writer/lib/ (+{dll_count} DLLs)")
+
+    # DLLs that conflict with FogRando's shared copies go in their own subdir,
+    # not WRITER_LIB (see WRITER_LIB_ITEMRANDO). ItemRandomizerWrapper links
+    # these; FogModWrapper keeps FogRando's copies in WRITER_LIB.
+    WRITER_LIB_ITEMRANDO.mkdir(parents=True, exist_ok=True)
+    for dll_name in ITEMRANDO_PRIVATE_DLLS:
+        src = extracted_dir / dll_name
+        if not src.exists():
+            print_error(f"Missing DLL: {dll_name}")
+            return False
+        shutil.copy2(src, WRITER_LIB_ITEMRANDO / dll_name)
+    print_ok(f"writer/lib/itemrando/ ({', '.join(ITEMRANDO_PRIVATE_DLLS)})")
 
     # Copy runtime DLLs from randomizer/dll/ to data/packaging/lib/.
     PACKAGING_LIB_DEST.mkdir(parents=True, exist_ok=True)
@@ -405,6 +447,16 @@ def compile_wrapper(wrapper_name: str) -> bool:
     if not csproj.exists():
         print_info(f"{wrapper_name}.csproj not found, skipping compilation")
         return True
+
+    # Wipe build outputs first. The wrappers reference mod DLLs from
+    # writer/lib/ via <Reference HintPath>; when only those DLLs change (e.g. a
+    # mod version bump) but the wrapper sources do not, an incremental
+    # `dotnet publish` skips re-copying them and silently keeps the stale DLLs
+    # in bin/ and the published exe. Clearing bin/obj/publish forces a clean
+    # publish that picks up the freshly extracted DLLs.
+    for stale in (publish_dir, wrapper_dir / "bin", wrapper_dir / "obj"):
+        if stale.exists():
+            shutil.rmtree(stale)
 
     try:
         subprocess.run(

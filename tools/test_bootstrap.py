@@ -9,6 +9,7 @@ from bootstrap import (
     _overlay_script_sources,
     build_overlay_scripts,
     install_modengine_runtime,
+    is_itemrando_installed,
     select_witchybnd_asset,
 )
 
@@ -197,3 +198,70 @@ def test_build_overlay_scripts_silent_skip_when_no_sources(
     captured = capsys.readouterr()
     assert "WitchyBND" not in captured.out
     assert not (tmp_path / "overlay").exists()
+
+
+def _make_itemrando_install(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> dict[str, Path]:
+    """Create a complete Item Randomizer install layout under tmp_path and
+    point bootstrap's destination constants at it. Returns the named paths so
+    a test can delete one and assert the freshness check notices."""
+    writer_lib = tmp_path / "writer" / "lib"
+    itemrando = writer_lib / "itemrando"
+    diste = tmp_path / "diste"
+    data = tmp_path / "data"
+    packaging_lib = data / "packaging" / "lib"
+    for d in (writer_lib, itemrando, diste, data, packaging_lib):
+        d.mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setattr(bootstrap, "WRITER_LIB", writer_lib)
+    monkeypatch.setattr(bootstrap, "WRITER_LIB_ITEMRANDO", itemrando)
+    monkeypatch.setattr(bootstrap, "DISTE_DEST", diste)
+    monkeypatch.setattr(bootstrap, "DATA_DEST", data)
+    monkeypatch.setattr(bootstrap, "PACKAGING_LIB_DEST", packaging_lib)
+
+    artifacts: dict[str, Path] = {}
+    for dll in bootstrap.ITEMRANDO_REQUIRED_DLLS:
+        p = writer_lib / dll
+        p.write_bytes(b"dll")
+        artifacts[dll] = p
+    for dll in bootstrap.ITEMRANDO_PRIVATE_DLLS:
+        p = itemrando / dll
+        p.write_bytes(b"dll")
+        artifacts[f"itemrando/{dll}"] = p
+    for filename in bootstrap.ITEMRANDO_DATA_FILES:
+        p = data / filename
+        p.write_text("data")
+        artifacts[filename] = p
+    for dll in bootstrap.ITEMRANDO_EXTRA_DLLS:
+        p = packaging_lib / dll
+        p.write_bytes(b"dll")
+        artifacts[f"packaging/{dll}"] = p
+    return artifacts
+
+
+def test_is_itemrando_installed_true_when_complete(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _make_itemrando_install(tmp_path, monkeypatch)
+    assert is_itemrando_installed() is True
+
+
+@pytest.mark.parametrize(
+    "missing",
+    [
+        "itemrando/SoulsIds.dll",
+        "itemrando/SoulsFormats.dll",
+        "LightInject.dll",
+        "LightInject.Annotation.dll",
+        "RandomizerCommon.dll",
+    ],
+)
+def test_is_itemrando_installed_false_when_artifact_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, missing: str
+) -> None:
+    # A non-forced re-run must self-heal after a version bump adds a dependency,
+    # so the freshness check has to fail when any required artifact is absent.
+    artifacts = _make_itemrando_install(tmp_path, monkeypatch)
+    artifacts[missing].unlink()
+    assert is_itemrando_installed() is False

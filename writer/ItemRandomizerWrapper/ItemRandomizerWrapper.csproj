@@ -21,14 +21,19 @@
     <Reference Include="RandomizerCommon">
       <HintPath>../lib/RandomizerCommon.dll</HintPath>
     </Reference>
-    <!-- Uses FogMod's SoulsFormats.dll (not SoulsFormatsNEXT) because
-         SoulsIds.dll depends on SFUtil.DecryptNRRegulation which was
-         removed in SoulsFormatsNEXT -->
+    <!-- Item Randomizer's own SoulsFormats + SoulsIds builds, kept apart from
+         FogRando's copies in ../lib/. The two mods' builds have diverged and
+         are not interchangeable: SoulsIds.Instr.Callee is int (FogRando) vs uint
+         (Item Randomizer), only the Item Randomizer's has Events.RelocMap
+         (needed by v0.12+ RandomizerCommon), and the two SoulsFormats.dll builds
+         differ byte-for-byte. FogModWrapper links ../lib/{SoulsFormats,SoulsIds}.dll
+         instead. (Still the SoulsFormats lineage, not SoulsFormatsNEXT, because
+         SoulsIds depends on SFUtil.DecryptNRRegulation, removed in NEXT.) -->
     <Reference Include="SoulsFormats">
-      <HintPath>../lib/SoulsFormats.dll</HintPath>
+      <HintPath>../lib/itemrando/SoulsFormats.dll</HintPath>
     </Reference>
     <Reference Include="SoulsIds">
-      <HintPath>../lib/SoulsIds.dll</HintPath>
+      <HintPath>../lib/itemrando/SoulsIds.dll</HintPath>
     </Reference>
     <Reference Include="YamlDotNet">
       <HintPath>../lib/YamlDotNet.dll</HintPath>
@@ -53,6 +58,14 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="../lib/Pidgin.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- DI container loaded at runtime by RandomizerCommon (added in v0.12);
+         not a compile-time reference, just needs to sit next to the exe -->
+    <None Include="../lib/LightInject.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="../lib/LightInject.Annotation.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

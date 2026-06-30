@@ -213,6 +213,48 @@ Resolution order for `diste/`:
 2. `AppContext.BaseDirectory/diste/`
 3. Assembly location directory `/diste/`
 
+## Managed Dependencies (`writer/lib/`)
+
+`tools/bootstrap.py` extracts the Item Randomizer DLLs from its single-file
+`EldenRingRandomizer.exe` (via `sfextract`) into `writer/lib/` (gitignored).
+ItemRandomizerWrapper references them by `HintPath`:
+
+| DLL | Notes |
+|-----|-------|
+| `RandomizerCommon.dll` | The randomization engine. As of v0.12 the WinForms UI was split into a separate `RandomizerCommon.WinForms.dll` (not used headless). |
+| `Pidgin.dll` | Parser library used by RandomizerCommon (runtime copy). |
+| `LightInject.dll` + `LightInject.Annotation.dll` | DI container RandomizerCommon loads at runtime (added in v0.12). Not compile-time references; bundled via `<None>` copy. Both are needed: LightInject pulls in its `.Annotation` companion. |
+| `YamlDotNet.dll`, `Newtonsoft.Json.dll`, `BouncyCastle.Cryptography.dll`, `ZstdNet.dll` | Shared with FogRando; byte-identical builds, taken from FogRando. |
+| `SoulsFormats.dll`, `SoulsIds.dll` | **Not** shared: the FogRando and Item Randomizer builds diverged. See below. |
+
+### Split `SoulsFormats.dll` / `SoulsIds.dll` (FogRando vs Item Randomizer)
+
+These two are the shared dependencies whose FogRando and Item Randomizer builds
+have **diverged and are not interchangeable**:
+
+- `SoulsIds.dll`: FogRando's build has `Instr.Callee` as `int` and no
+  `Events.RelocMap`; `FogMod.dll` is compiled against it (`int
+  Instr.get_Callee()`). Item Randomizer v0.12's build has `Instr.Callee` as
+  `uint` and adds `Events.RelocMap`, which v0.12 `RandomizerCommon` references
+  in its enemy-rando path. Loading the wrong one throws at runtime
+  (`MissingMethodException: 'Int32 Instr.get_Callee()'` for FogMod on the new
+  build; missing-type for RandomizerCommon on the old build).
+- `SoulsFormats.dll`: the two builds are the same size but differ
+  byte-for-byte. Rather than risk a latent runtime mismatch, each wrapper links
+  its own matching build so the Item Randomizer's
+  `RandomizerCommon`/`SoulsIds`/`SoulsFormats` stay a coherent set.
+
+Since FogModWrapper and ItemRandomizerWrapper are separate processes that each
+bundle their own copies, the fix is to keep both versions:
+
+- `writer/lib/{SoulsFormats,SoulsIds}.dll` (FogRando's) → referenced by **FogModWrapper**.
+- `writer/lib/itemrando/{SoulsFormats,SoulsIds}.dll` (Item Randomizer's) →
+  referenced by **ItemRandomizerWrapper** (see its `.csproj`).
+
+`bootstrap.py` copies the Item Randomizer's builds (`ITEMRANDO_PRIVATE_DLLS`) into
+the `itemrando/` subdir (`WRITER_LIB_ITEMRANDO`) so they never overwrite
+FogRando's. The other shared libs above are byte-identical, so they stay shared.
+
 ## Project Structure
 
 ```
