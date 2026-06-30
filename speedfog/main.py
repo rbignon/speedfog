@@ -215,7 +215,7 @@ def main() -> int:
 
     # Snapshot boss clusters before passant filter removes dead-end arenas.
     # Dead-end bosses (0 exits) are invalid as passant nodes but valid as
-    # final boss endpoints — the run terminates there.
+    # final boss endpoints: the run terminates there.
     boss_candidates = clusters.get_by_type("major_boss") + clusters.get_by_type(
         "final_boss"
     )
