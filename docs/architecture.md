@@ -299,14 +299,15 @@ Pre-computed zone clusters with entry/exit fogs.
 
 ### graph.json v4.4
 
-DAG serialized for C# consumption, visualization tools, and racing. Abridged: see
-`writer/FogModWrapper.Core/Models/GraphData.cs` for the full v4.4 field set.
+DAG serialized for C# consumption, visualization tools, and racing. Shows every
+top-level field; see `writer/FogModWrapper.Core/Models/GraphData.cs` for exact
+types and the optional node-level fields documented below.
 
 ```json
 {
   "version": "4.4",
   "seed": 212559448,
-  "total_layers": 8, "total_nodes": 12, "total_zones": 24, "total_paths": 3,
+  "total_layers": 8, "total_nodes": 12, "total_zones": 24,
   "options": {"scale": true, "shuffle": true},
   "nodes": {
     "stormveil_c1d3": {
@@ -337,19 +338,26 @@ DAG serialized for C# consumption, visualization tools, and racing. Abridged: se
   "final_node_flag": 1050294801,
   "finish_event": 1050294802,
   "finish_boss_defeat_flag": 9010800,
+  "death_flags": {"stormveil_c1d3": [1050294803, 1050294804, 1050294805]},
+  "items_spawned_flag": 1050290000,
   "run_complete_message": "RUN COMPLETE",
   "chapel_grace": true,
   "sentry_torch_shop": true,
+  "starting_item_lots": [],
   "starting_goods": [8126],
   "starting_runes": 50000,
   "starting_golden_seeds": 5,
   "starting_sacred_tears": 3,
   "starting_larval_tears": 10,
+  "starting_stonesword_keys": 6,
   "care_package": [
     {"type": 0, "id": 1130008, "name": "Uchigatana +8"},
     {"type": 4, "id": 10100, "name": "Bloodhound's Step"}
   ],
-  "remove_entities": [{"map": "m12_05_00_00", "entity_id": 12051500}]
+  "weapon_upgrade": 8,
+  "remove_entities": [{"map": "m12_05_00_00", "entity_id": 12051500}],
+  "phantom_skins": {"gold-aura": {"speffects": [1450700]}},
+  "plugins": {"summer": {"enabled": false}}
 }
 ```
 
@@ -358,11 +366,21 @@ Gate names use FogMod's FullName format: `{map}_{gate_name}`.
 **Key field groups:**
 - `nodes`/`edges`: DAG topology for visualization and spoiler log
 - `connections`/`area_tiers`: FogModWrapper consumption (fog gate wiring + enemy scaling)
-- `event_map`/`final_node_flag`/`finish_event`: racing zone tracking
+- `event_map`/`final_node_flag`/`finish_event`/`death_flags`: racing zone tracking, final-node detection, and per-cluster death markers (3 flags each)
 - `finish_boss_defeat_flag`: boss DefeatFlag from fog.txt (primary source for death detection)
-- `starting_*`/`care_package`: player starting loadout
+- `items_spawned_flag`: persistent one-shot guard preventing duplicate starting-item delivery
+- `starting_*`/`care_package`/`weapon_upgrade`: player starting loadout
 - `care_package[].type`: 0=Weapon, 1=Protector, 2=Accessory, 3=Goods, 4=Gem (Ash of War)
 - `remove_entities`: vanilla warp MSB assets to delete
+- `phantom_skins`: cosmetic aura catalog (skin name -> SpEffect), baked for the racing platform
+- `plugins`: verbatim `[plugin]` config passthrough (C# reads via `GraphData.IsPluginEnabled`)
+
+Flag allocation: connection flags (`connections[].flag_id`, mirrored as `event_map` keys),
+`finish_event`, and `death_flags` are drawn sequentially from `EVENT_FLAG_BASE` (1050294000, budget
+1000). `final_node_flag` is not a fresh allocation: it reuses the connection flag that targets the
+end node (one of the `event_map` values). Persistent mod state (`items_spawned_flag`) comes from
+`PERSISTENT_FLAG_BASE` (1050290000). `finish_boss_defeat_flag` is a vanilla flag from fog.txt,
+outside these ranges.
 
 **Optional node fields (boss nodes):**
 - `boss_name`: canonical boss name from `enemy.txt` `Important.Names.Key` (preferred over the legacy `ExtraName`; always present on boss nodes with a defeat_flag; phase suffixes stripped). Set at DAG generation time from `clusters.json`. When boss randomization is active, `patch_graph_boss_placements()` (called from `main.py`, fed by `build_boss_placements(enemy_assignments, ...)`) overrides it with the randomized boss's name, resolved via the same `Names.Key` source (then `ExtraName`, then a `boss_arena_tags.json` fallback). Used by the racing server for stats.
