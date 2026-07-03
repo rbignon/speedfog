@@ -657,7 +657,7 @@ weight = 2
 weight = 4
 
 [clusters.fissure_e510]
-weight = 3
+weight = 3.5
 
 [clusters.siofra_nokron_8a39]
 weight = 2.5
