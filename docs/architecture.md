@@ -297,13 +297,14 @@ Pre-computed zone clusters with entry/exit fogs.
 }
 ```
 
-### graph.json v4.1
+### graph.json v4.4
 
-DAG serialized for C# consumption, visualization tools, and racing.
+DAG serialized for C# consumption, visualization tools, and racing. Abridged: see
+`writer/FogModWrapper.Core/Models/GraphData.cs` for the full v4.4 field set.
 
 ```json
 {
-  "version": "4.1",
+  "version": "4.4",
   "seed": 212559448,
   "total_layers": 8, "total_nodes": 12, "total_zones": 24, "total_paths": 3,
   "options": {"scale": true, "shuffle": true},
@@ -328,13 +329,13 @@ DAG serialized for C# consumption, visualization tools, and racing.
       "exit_gate": "m10_01_00_00_AEG099_001_9000",
       "entrance_area": "stormveil",
       "entrance_gate": "m10_00_00_00_AEG099_002_9000",
-      "flag_id": 1040292400
+      "flag_id": 1050294400
     }
   ],
   "area_tiers": {"chapel_start": 1, "stormveil": 5},
-  "event_map": {"1040292800": "stormveil_c1d3"},
-  "final_node_flag": 1040292801,
-  "finish_event": 1040292802,
+  "event_map": {"1050294800": "stormveil_c1d3"},
+  "final_node_flag": 1050294801,
+  "finish_event": 1050294802,
   "finish_boss_defeat_flag": 9010800,
   "run_complete_message": "RUN COMPLETE",
   "chapel_grace": true,

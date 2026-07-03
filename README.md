@@ -6,23 +6,33 @@ Unlike FogRando which randomizes the entire world, SpeedFog creates a focused pa
 
 ## Features
 
+**Run structure**
 - **Short runs**: ~1 hour target duration (configurable)
-- **Balanced paths**: All routes have similar difficulty/length
-- **No dead ends**: Every path leads to the final boss
-- **Configurable final boss**: Radagon, Promised Consort Radahn, Malenia, or any major boss
-- **Difficulty curve**: Configurable start/end tiers with linear or power curve progression
-- **Cross-links**: Optional connections between parallel branches for more routing options
-- **Seed-based**: Share seeds for identical runs
-- **Self-contained output**: Includes ModEngine 2 and launcher
-- **Item randomization**: Optional integration with Item Randomizer (auto-upgrade, presets, boss randomization, reduced upgrade costs)
-- **All crafting recipes**: Optionally unlock all recipes at start (no cookbook hunting)
-- **Care package**: Optional randomized starting build (weapons, armor, spells, talismans)
-- **Rebirth**: Respec stats at any Site of Grace
-- **Racing support**: Zone tracking flags for competitive play
+- **Balanced paths, no dead ends**: parallel routes have similar length/difficulty, and every path leads to the final boss
+- **Run modes**: restrict cluster types for a boss rush, legacy-dungeon marathon, dungeon crawl, and more (`allowed_types`)
+- **Configurable final boss**: Radagon, Promised Consort Radahn, or any major boss (weighted candidates)
+- **Zone control**: force specific zones/bosses to appear, or exclude them entirely
+- **Difficulty curve**: configurable start/end tiers with linear or power progression
+- **Seed-based**: share seeds for identical runs
+
+**Gameplay**
+- **Item randomization**: optional Item Randomizer integration (auto-upgrade, placement presets, reduced upgrade costs, all crafting recipes)
+- **Boss randomization**: optionally swap boss entities across arenas (minor-only or all), with arena-size constraints and "boss-only" run support
+- **Care package**: optional randomized starting build (weapons, armor, spells, talismans)
+- **Starting loadout**: key items, Great Runes, whetblades, talisman pouches, and consumables given at start (no softlocks)
+- **Rebirth**: respec stats at any Site of Grace (consumes a Larval Tear; a stack is given at start)
+
+**Quality of life & cosmetics**
+- **QoL tweaks**: Chapel Site of Grace, faster grace animations, menu input delay removed, etc.
+- **Cosmetic themes**: customizable victory banner and opt-in summer theme
+- **Racing support**: zone-tracking flags, death markers, and phantom-skin rewards for competitive play
+
+**Packaging**
+- **Self-contained output**: includes ModEngine 2 and a launcher
 
 ## Requirements
 
-- Elden Ring (Steam version, with or without DLC)
+- Elden Ring (Steam version)
 - Python 3.10+
 - .NET 10.0 SDK
 - Wine (Linux only)
@@ -118,34 +128,41 @@ Edit `config.toml` (see `config.example.toml` for all options).
 
 ## How It Works
 
-SpeedFog generates a DAG (Directed Acyclic Graph) of zones:
+SpeedFog builds a DAG (Directed Acyclic Graph) of zones with an **exit-driven**
+algorithm.
+
+Layer by layer, it picks a set of clusters of the same type and routes the
+previous layer's fog-gate exits into them, reusing spare exits to widen the
+graph toward `max_parallel_paths` and to weave cross-links between the parallel
+branches, until a convergence phase narrows the width back down to a single
+node before the final boss.
 
 ```
-Chapel of Anticipation
-         │
-    ┌────┴────┐
-    ▼         ▼
- Catacomb   Cave         ← Tier 5
-    │         │
-    ▼         │
-  Boss    ┌───┘
-    │     ▼
-    └──►Legacy Dungeon   ← Tier 10
-              │
-         ┌────┴────┐
-         ▼         ▼
-       Cave      Tunnel  ← Tier 15
-         │         │
-         └────┬────┘
-              ▼
-         Final Boss       ← Tier 28
+        Chapel of Anticipation
+                 │
+            ┌────┴────┐        ← Chapel and Roundtable fogs
+            ▼         ▼
+         Legacy     Legacy     ← saturation: use most exits to open
+         Dungeon    Dungeon      parallel branches (up to max_parallel_paths)
+            │  \   /  │          and cross-link them
+            │   \ /   │
+            ▼  /   \  ▼
+          Boss       Boss      ← reuse entrance as exits on boss arenas
+            │  \   /  │          to prevent dead ends
+            │   \ /   │
+            ▼  /   \  ▼
+          Cave     Catacombs
+            │         │
+            └────┬────┘        ← convergence: funnel the branches back
+                 ▼               down to a single node
+            Final Boss         ← final boss (final tier)
 ```
 
-- **Enemy scaling**: Based on zone tier (configurable floor, ceiling, and curve)
-- **Key items**: All given at start to prevent softlocks
-- **Fog gates**: Connect zones via FogRando's fog gate system
-- **Cross-links**: Optional sideways connections between parallel branches
-- **Rebirth**: Respec stats at any Site of Grace (no Larval Tear needed)
+- **Exit-driven routing**: each layer's clusters are fed by the previous layer's fog-gate exits; splits, merges, and cross-links all emerge from this routing rather than being scheduled
+- **Fog-gate reuse**: arena's entrance fogs double as exits toward the next layer, so the same gates that let you in can carry you onward (bidirectional gates)
+- **Balanced branches**: cluster weights (≈ traversal time) are weight-matched within each layer, so parallel routes stay comparable and races stay fair
+- **Enemy scaling**: each layer carries a tier from `start_tier` to `final_tier` (linear or power curve), applied through FogRando's per-zone scaling
+- **Key items at start**: progression items are granted up front to prevent softlocks
 
 ## Contributing
 
