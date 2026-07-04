@@ -59,7 +59,7 @@ if (args.Length >= 1 && args[0] == "list-collisions")
     foreach (var c in msb.Parts.Collisions.OrderBy(c => c.Name))
     {
         if (torrentOnly && !c.DisableTorrent) continue;
-        Console.WriteLine($"  {c.Name,-12} DisableTorrent={c.DisableTorrent,-5} pos=({c.Position.X,7:F1},{c.Position.Y,7:F1},{c.Position.Z,7:F1}) entity={c.EntityID}");
+        Console.WriteLine($"  {c.Name,-12} DisableTorrent={c.DisableTorrent,-5} playRegion={c.PlayRegionID,-9} pos=({c.Position.X,7:F1},{c.Position.Y,7:F1},{c.Position.Z,7:F1}) entity={c.EntityID}");
     }
     return 0;
 }

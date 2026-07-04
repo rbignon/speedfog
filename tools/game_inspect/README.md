@@ -80,6 +80,18 @@ wine publish/win-x64/game_inspect.exe compare <msb-file> <eid1> <eid2>
 
 Loads the MSB, finds both assets by entity ID, and walks every public property of `MSBE.Part.Asset` via reflection. For each property that differs between the two, prints a line `DIFF <name>: <value1> vs <value2>`. This is how we figured out which fields to override when cloning a vanilla asset's visual behavior, which DrawGroups mask to copy, which SfxParam to use, and which nested struct fields matter.
 
+### `list-collisions`: list collision parts in one MSB
+
+```bash
+wine publish/win-x64/game_inspect.exe list-collisions <msb-file> [--torrent-only]
+```
+
+Prints every `Part.Collision` with its `DisableTorrent` flag, `PlayRegionID`
+(the raw ID from the MSB, which keys into `PlayRegionParam` rows, e.g. to see
+which collisions are gated by `pcPositionSaveLimitEventFlagId`), position, and
+entity ID. `--torrent-only` restricts output to collisions where Torrent is
+disabled.
+
 ### `check-emevd`: scan event 0 for FogMod entity references
 
 ```bash
