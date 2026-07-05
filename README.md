@@ -23,7 +23,7 @@ Unlike FogRando which randomizes the entire world, SpeedFog creates a focused pa
 - **Rebirth**: respec stats at any Site of Grace (consumes a Larval Tear; a stack is given at start)
 
 **Quality of life & cosmetics**
-- **QoL tweaks**: Chapel Site of Grace, faster grace animations, menu input delay removed, etc.
+- **QoL tweaks**: Chapel Site of Grace, faster grace animations, menu input delay removed (by the item randomizer's `RandomizerCrashFix.dll`, when item randomization is enabled), etc.
 - **Cosmetic themes**: customizable victory banner and opt-in summer theme
 - **Racing support**: zone-tracking flags, death markers, and phantom-skin rewards for competitive play
 
@@ -89,7 +89,7 @@ Output is self-contained in `seeds/<seed>/`:
 - `logs/spoiler.txt` - Spoiler log
 - `logs/generation.log` - Structured generation log
 - `modengine2/` - ModEngine 2 binaries + `config_speedfog.toml`
-- `lib/` - runtime DLLs loaded by ModEngine 2 (always `MenuInputDelayFix.dll`; item randomizer DLLs when enabled)
+- `lib/` - runtime DLLs loaded by ModEngine 2 (item randomizer DLLs, when enabled)
 - `mods/` - Generated mod files
 - `launch_speedfog.bat` - Windows launcher
 
