@@ -8,6 +8,7 @@ from __future__ import annotations
 import random
 
 from speedfog.config import RequirementsConfig
+from speedfog.constants import MAX_TIER
 
 # Types need at least this many remaining clusters to receive padding.
 # Parallel branches can consume ~2 clusters per layer, so we need
@@ -18,7 +19,7 @@ _MIN_REMAINING_FOR_PADDING = 20
 def compute_tier(
     layer_idx: int,
     total_layers: int,
-    final_tier: int = 28,
+    final_tier: int = MAX_TIER,
     *,
     start_tier: int = 1,
     curve: str = "linear",
@@ -45,8 +46,8 @@ def compute_tier(
         return start_tier
 
     # Clamp to valid range
-    start_tier = max(1, min(28, start_tier))
-    final_tier = max(start_tier, min(28, final_tier))
+    start_tier = max(1, min(MAX_TIER, start_tier))
+    final_tier = max(start_tier, min(MAX_TIER, final_tier))
 
     progress = layer_idx / (total_layers - 1)
 

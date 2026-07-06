@@ -15,7 +15,7 @@ FogMod tags unique warps with `"remove"` in its graph data, but its removal logi
 
 ## Data Flow
 
-1. **Python** (`output.py`): Collects `unique_exit_fogs` and unused regular exit fogs from each cluster. Emits `remove_entities` in `graph.json` as `[{"map": "m12_05_00_00", "entity_id": 2046402020}, ...]`.
+1. **Python** (`graph_export.py`): Collects `unique_exit_fogs` and unused regular exit fogs from each cluster. Emits `remove_entities` in `graph.json` as `[{"map": "m12_05_00_00", "entity_id": 2046402020}, ...]`.
 2. **C#** (`GraphData.RemoveEntities`): Deserializes the list into `List<RemoveEntity>`.
 3. **C#** (`VanillaWarpRemover.Remove()`): Groups entities by map, reads each MSB once, removes matching Part.Asset entries, and writes the MSB back.
 

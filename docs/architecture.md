@@ -51,7 +51,10 @@ Generates a balanced DAG of zone connections.
 | `generator.py` | Main generation algorithm (exit-driven routing, width model) |
 | `planner.py` | Layer type planning and tier interpolation |
 | `validator.py` | DAG constraint validation against requirements |
-| `output.py` | Export graph.json v4, spoiler.txt, and generation.log with ASCII graph |
+| `constants.py` | Shared constants (graph.json version, flag bases, cluster types) |
+| `graph_export.py` | Export graph.json v4 (Python → C# contract) + input loaders |
+| `spoiler.py` | Spoiler log with ASCII graph visualization |
+| `enemy_data.py` | enemy.txt parsing, boss name resolution, placement patching |
 | `generation_log.py` | Structured generation log dataclasses and serialization |
 | `care_package.py` | Randomized starting build (weapons, armor, spells, etc.) |
 | `fog_mod.py` | Wrapper to call FogModWrapper.exe via Wine/native |
@@ -433,7 +436,7 @@ FogModWrapper configures FogMod for SpeedFog:
 | `coupledminor` | true | Keep transporter chest warps as coupled pairs |
 | `req_dungeon/cave/tunnel/catacomb/grave/graveyard/forge/gaol/legacy/major/underground/minorwarp` | true | Include all dungeon types in fog graph |
 
-**From graph.json `options`** (set by Python `output.py`):
+**From graph.json `options`** (set by Python `graph_export.py`):
 
 | Option | Default | Purpose |
 |--------|---------|---------|

@@ -5,21 +5,22 @@ from pathlib import Path
 
 from speedfog.clusters import ClusterData, ClusterPool
 from speedfog.dag import Dag, DagNode, FogRef
-from speedfog.output import (
-    _effective_type,
-    _make_fullname,
-    append_boss_placements_to_spoiler,
+from speedfog.enemy_data import (
     build_boss_placements,
-    dag_to_dict,
-    export_spoiler_log,
-    load_phantom_skins_catalog,
-    load_vanilla_tiers,
     parse_boss_extra_names,
     parse_boss_key_names,
     parse_boss_phases,
     patch_graph_boss_placements,
     resolve_boss_name,
 )
+from speedfog.graph_export import (
+    _make_fullname,
+    dag_to_dict,
+    effective_type,
+    load_phantom_skins_catalog,
+    load_vanilla_tiers,
+)
+from speedfog.spoiler import append_boss_placements_to_spoiler, export_spoiler_log
 
 
 def make_cluster(
@@ -168,12 +169,12 @@ def make_test_dag() -> Dag:
 
 
 # =============================================================================
-# _effective_type tests
+# effective_type tests
 # =============================================================================
 
 
 class TestEffectiveType:
-    """Tests for _effective_type helper."""
+    """Tests for effective_type helper."""
 
     def test_end_node_major_boss_becomes_final_boss(self):
         """End node with major_boss cluster type returns 'final_boss'."""
@@ -181,29 +182,29 @@ class TestEffectiveType:
         # Override end node's cluster type to major_boss
         dag.nodes["end"].cluster.type = "major_boss"
 
-        assert _effective_type(dag.nodes["end"], dag) == "final_boss"
+        assert effective_type(dag.nodes["end"], dag) == "final_boss"
 
     def test_end_node_already_final_boss(self):
         """End node with final_boss cluster type still returns 'final_boss'."""
         dag = make_test_dag()
         assert dag.nodes["end"].cluster.type == "final_boss"
 
-        assert _effective_type(dag.nodes["end"], dag) == "final_boss"
+        assert effective_type(dag.nodes["end"], dag) == "final_boss"
 
     def test_non_end_node_keeps_original_type(self):
         """Non-end nodes keep their original cluster type."""
         dag = make_test_dag()
 
-        assert _effective_type(dag.nodes["start"], dag) == "start"
-        assert _effective_type(dag.nodes["a"], dag) == "legacy_dungeon"
-        assert _effective_type(dag.nodes["b"], dag) == "mini_dungeon"
+        assert effective_type(dag.nodes["start"], dag) == "start"
+        assert effective_type(dag.nodes["a"], dag) == "legacy_dungeon"
+        assert effective_type(dag.nodes["b"], dag) == "mini_dungeon"
 
     def test_non_end_major_boss_stays_major_boss(self):
         """A major_boss node that is NOT the end node keeps 'major_boss'."""
         dag = make_test_dag()
         dag.nodes["a"].cluster.type = "major_boss"
 
-        assert _effective_type(dag.nodes["a"], dag) == "major_boss"
+        assert effective_type(dag.nodes["a"], dag) == "major_boss"
 
 
 # =============================================================================

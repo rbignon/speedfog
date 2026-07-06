@@ -18,6 +18,11 @@ from itertools import combinations
 
 from speedfog.clusters import ClusterData, ClusterPool, fog_matches_spec
 from speedfog.config import Config, resolve_final_boss_candidates
+from speedfog.constants import (
+    DEFAULT_MAX_LAYER_SPREAD,
+    INTERMEDIATE_CLUSTER_TYPES,
+    MAX_TIER,
+)
 from speedfog.dag import Dag, DagNode, FogRef
 from speedfog.generation_log import (
     FallbackEntry,
@@ -39,7 +44,7 @@ class GenerationError(Exception):
 
 
 # Valid cluster types for first_layer_type
-VALID_FIRST_LAYER_TYPES = {"legacy_dungeon", "mini_dungeon", "boss_arena", "major_boss"}
+VALID_FIRST_LAYER_TYPES = set(INTERMEDIATE_CLUSTER_TYPES)
 
 
 @dataclass
@@ -347,11 +352,6 @@ def validate_config(
 
 
 _TOLERANCE_STEP = 0.5
-
-# Default maximum spread (max - min) allowed for weights within a single
-# layer. Enforced as a hard window in pick_cluster_weight_matched when
-# layer_bounds is provided. Also used by the validator as a safety net.
-DEFAULT_MAX_LAYER_SPREAD = 2.0
 
 
 def pick_cluster_weight_matched(
@@ -821,12 +821,7 @@ def pick_layer_clusters(
     clusters: ClusterPool,
     used_zones: set[str],
     rng: random.Random,
-    allowed_types: tuple[str, ...] = (
-        "mini_dungeon",
-        "boss_arena",
-        "legacy_dungeon",
-        "major_boss",
-    ),
+    allowed_types: tuple[str, ...] = INTERMEDIATE_CLUSTER_TYPES,
     anchor_tolerance: float = 3.0,
     max_layer_spread: float = DEFAULT_MAX_LAYER_SPREAD,
     required_zones: frozenset[str] = frozenset(),
@@ -1118,7 +1113,7 @@ def generate_dag(config: Config, clusters: ClusterPool) -> tuple[Dag, Generation
         id=f"node_{total_target - 1}_a",
         cluster=final_boss,
         layer=total_target - 1,
-        tier=28,
+        tier=MAX_TIER,
         entry_fogs=[],
         exit_fogs=[],
     )

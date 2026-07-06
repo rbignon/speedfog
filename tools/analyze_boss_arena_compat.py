@@ -64,8 +64,8 @@ from speedfog.boss_arena_constraints import (  # noqa: E402
     match_arenas_to_bosses,
 )
 from speedfog.clusters import ClusterPool, load_clusters  # noqa: E402
+from speedfog.enemy_data import parse_boss_phases, resolve_entity_id  # noqa: E402
 from speedfog.item_randomizer import _compose_pool  # noqa: E402
-from speedfog.output import parse_boss_phases, resolve_entity_id  # noqa: E402
 
 CLUSTER_TYPE_BY_POOL = {"major": "major_boss", "minor": "boss_arena"}
 

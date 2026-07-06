@@ -9,6 +9,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from speedfog.constants import (
+    DEFAULT_MAX_LAYER_SPREAD,
+    INTERMEDIATE_CLUSTER_TYPES,
+    MAX_TIER,
+)
+
 
 @dataclass
 class BudgetConfig:
@@ -21,12 +27,7 @@ class BudgetConfig:
     tolerance: int = 5
 
 
-_VALID_CLUSTER_TYPES = (
-    "boss_arena",
-    "mini_dungeon",
-    "legacy_dungeon",
-    "major_boss",
-)
+_VALID_CLUSTER_TYPES = INTERMEDIATE_CLUSTER_TYPES
 
 _CLUSTER_TYPE_TO_FIELD = {
     "legacy_dungeon": "legacy_dungeons",
@@ -92,8 +93,8 @@ class StructureConfig:
     max_entrances: int = 3  # Merge fan-in
     first_layer_type: str | None = None
     final_boss_candidates: dict[str, int] = field(default_factory=dict)
-    start_tier: int = 1  # Enemy scaling tier for first layer (1-28)
-    final_tier: int = 28  # Enemy scaling tier for final boss (1-28)
+    start_tier: int = 1  # Enemy scaling tier for first layer (1-MAX_TIER)
+    final_tier: int = MAX_TIER  # Enemy scaling tier for final boss (1-MAX_TIER)
     tier_curve: str = "linear"  # "linear" or "power"
     tier_curve_exponent: float = 0.6  # Power curve exponent (only for "power")
     max_weight_tolerance: float = (
@@ -103,9 +104,10 @@ class StructureConfig:
         # window still clamps the actual spread to max_layer_spread.
     )
     max_layer_spread: float = (
-        2.0  # Hard cap on weight spread (max - min) within a single layer.
-        # Enforces balanced parallel branches; violations either trigger a
-        # type fallback during generation or get the seed rerolled.
+        DEFAULT_MAX_LAYER_SPREAD  # Hard cap on weight spread (max - min)
+        # within a single layer. Enforces balanced parallel branches;
+        # violations either trigger a type fallback during generation or get
+        # the seed rerolled.
     )
     layers_count: int = 30  # Total layers (start + intermediates + final boss)
 
@@ -134,14 +136,14 @@ class StructureConfig:
             raise TypeError(
                 f"start_tier must be int, got {type(self.start_tier).__name__}"
             )
-        if self.start_tier < 1 or self.start_tier > 28:
-            raise ValueError(f"start_tier must be 1-28, got {self.start_tier}")
+        if self.start_tier < 1 or self.start_tier > MAX_TIER:
+            raise ValueError(f"start_tier must be 1-{MAX_TIER}, got {self.start_tier}")
         if not isinstance(self.final_tier, int):
             raise TypeError(
                 f"final_tier must be int, got {type(self.final_tier).__name__}"
             )
-        if self.final_tier < 1 or self.final_tier > 28:
-            raise ValueError(f"final_tier must be 1-28, got {self.final_tier}")
+        if self.final_tier < 1 or self.final_tier > MAX_TIER:
+            raise ValueError(f"final_tier must be 1-{MAX_TIER}, got {self.final_tier}")
         if self.start_tier > self.final_tier:
             raise ValueError(
                 f"start_tier ({self.start_tier}) must be <= final_tier ({self.final_tier})"
@@ -630,7 +632,9 @@ class Config:
                 max_weight_tolerance=float(
                     structure_section.get("max_weight_tolerance", 3.0)
                 ),
-                max_layer_spread=float(structure_section.get("max_layer_spread", 2.0)),
+                max_layer_spread=float(
+                    structure_section.get("max_layer_spread", DEFAULT_MAX_LAYER_SPREAD)
+                ),
                 layers_count=structure_section.get("layers_count", 30),
             ),
             paths=PathsConfig(

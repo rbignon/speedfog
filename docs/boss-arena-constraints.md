@@ -182,7 +182,7 @@ randomized incoherently (or remaining vanilla) by RandomizerCommon's
 class-based logic.
 
 Phase relationships come from ``writer/ItemRandomizerWrapper/diste/Base/enemy.txt``
-(``NextPhase`` field), parsed by ``speedfog/output.py::parse_boss_phases``.
+(``NextPhase`` field), parsed by ``speedfog/enemy_data.py::parse_boss_phases``.
 When a cluster's leader has a phase-1 sibling in that mapping,
 ``_build_enemy_assignments`` adds the phase-1 entity ID as an additional
 arena slot. Both slots are drawn from the same pool without pairing

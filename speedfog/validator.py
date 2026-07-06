@@ -10,8 +10,8 @@ from dataclasses import dataclass, field
 
 from speedfog.clusters import ClusterPool
 from speedfog.config import Config, resolve_final_boss_candidates
+from speedfog.constants import DEFAULT_MAX_LAYER_SPREAD, EVENT_FLAG_BUDGET
 from speedfog.dag import Dag, FogRef
-from speedfog.output import EVENT_FLAG_BUDGET
 
 
 @dataclass
@@ -265,7 +265,9 @@ def _check_event_flag_budget(dag: Dag, config: Config, errors: list[str]) -> Non
         )
 
 
-def _check_layer_weight_spread(dag: Dag, max_spread: float = 2.0) -> list[str]:
+def _check_layer_weight_spread(
+    dag: Dag, max_spread: float = DEFAULT_MAX_LAYER_SPREAD
+) -> list[str]:
     """Check that no layer's weight spread exceeds ``max_spread``.
 
     Parallel branches in the same layer must have comparable weights so

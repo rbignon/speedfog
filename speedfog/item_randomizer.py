@@ -20,7 +20,7 @@ from speedfog.boss_arena_constraints import (
 )
 from speedfog.clusters import ClusterData
 from speedfog.config import Config
-from speedfog.output import resolve_entity_id
+from speedfog.enemy_data import resolve_entity_id
 
 
 def generate_item_config(
@@ -64,7 +64,7 @@ def generate_item_config(
     from the pool; arena selection is unchanged, so a DLC vanilla arena in
     the DAG still receives a non-DLC replacement boss.
 
-    ``phase_mapping`` (from ``speedfog.output.parse_boss_phases``) maps
+    ``phase_mapping`` (from ``speedfog.enemy_data.parse_boss_phases``) maps
     ``phase2_entity_id -> phase1_entity_id`` for multi-phase bosses. When a
     DAG cluster's leader is in ``phase_mapping`` keys, the phase-1 slot is
     added as an additional independent arena (same pool, no phase pairing).

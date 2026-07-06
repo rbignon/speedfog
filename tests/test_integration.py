@@ -16,7 +16,7 @@ from speedfog import (
     generate_with_retry,
     load_clusters,
 )
-from speedfog.output import export_json
+from speedfog.graph_export import export_json
 
 
 @pytest.fixture

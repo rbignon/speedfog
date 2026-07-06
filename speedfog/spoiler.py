@@ -1,0 +1,566 @@
+"""Human-readable spoiler log with ASCII graph visualization."""
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+from speedfog.care_package import CarePackageItem
+from speedfog.dag import Dag, FogRef
+from speedfog.graph_export import effective_type, get_fog_text
+
+
+def _build_connection_lines(
+    dag: Dag,
+    prev_node_ids: list[str],
+    curr_node_ids: list[str],
+    col_width: int,
+    total_width: int,
+) -> list[str]:
+    """Build ASCII lines showing connections between two layers.
+
+    Uses diagonal characters (╲ ╱) and box-drawing to show cross-connections.
+
+    Visual style for cross-connections (e.g., snowfield → both flamepeak and siofra):
+        caelid_gaolcave    snowfield_catacombs
+             │                  │ ╲
+             │    ╭─────────────╯  │
+             │    │                │
+        flamepeak_firegiant  siofra_nokron_mimic
+
+    Args:
+        dag: The DAG with edges
+        prev_node_ids: Sorted node IDs in the previous layer
+        curr_node_ids: Sorted node IDs in the current layer
+        col_width: Width of each column
+        total_width: Total width of the output
+
+    Returns:
+        List of strings representing the connection lines
+    """
+    # Build edge list as (src_idx, tgt_idx) pairs
+    edges: list[tuple[int, int]] = []
+    for edge in dag.edges:
+        if edge.source_id in prev_node_ids and edge.target_id in curr_node_ids:
+            src_idx = prev_node_ids.index(edge.source_id)
+            tgt_idx = curr_node_ids.index(edge.target_id)
+            if (src_idx, tgt_idx) not in edges:
+                edges.append((src_idx, tgt_idx))
+
+    n_prev = len(prev_node_ids)
+    n_curr = len(curr_node_ids)
+
+    # Calculate center positions for each column
+    def col_center(idx: int, n_cols: int) -> int:
+        cols_width = col_width * n_cols
+        offset = (total_width - cols_width) // 2
+        return offset + idx * col_width + col_width // 2
+
+    prev_centers = [col_center(i, n_prev) for i in range(n_prev)]
+    curr_centers = [col_center(i, n_curr) for i in range(n_curr)]
+
+    # Build maps for analysis
+    src_targets: dict[int, list[int]] = {i: [] for i in range(n_prev)}
+    tgt_sources: dict[int, list[int]] = {i: [] for i in range(n_curr)}
+    for src, tgt in edges:
+        src_targets[src].append(tgt)
+        tgt_sources[tgt].append(src)
+
+    # For merges: count sources from each side and track landing positions
+    # This allows spacing multiple sources from the same side
+    merge_left_count: dict[int, int] = dict.fromkeys(range(n_curr), 0)
+    merge_right_count: dict[int, int] = dict.fromkeys(range(n_curr), 0)
+    for tgt_idx in range(n_curr):
+        tgt_pos = curr_centers[tgt_idx]
+        for src_idx in tgt_sources[tgt_idx]:
+            src_pos = prev_centers[src_idx]
+            if src_pos < tgt_pos:
+                merge_left_count[tgt_idx] += 1
+            elif src_pos > tgt_pos:
+                merge_right_count[tgt_idx] += 1
+
+    # Check if all connections are simple 1:1 at same positions
+    is_simple = (
+        n_prev == n_curr
+        and all(len(targets) == 1 for targets in src_targets.values())
+        and all(len(sources) == 1 for sources in tgt_sources.values())
+        and all(
+            prev_centers[src] == curr_centers[targets[0]]
+            for src, targets in src_targets.items()
+            if targets
+        )
+    )
+
+    lines: list[str] = []
+
+    if is_simple:
+        # Simple case: just vertical lines
+        line_chars = [" "] * total_width
+        for i in range(n_prev):
+            pos = prev_centers[i]
+            if 0 <= pos < total_width:
+                line_chars[pos] = "│"
+        lines.append("".join(line_chars))
+        return lines
+
+    # Complex case with cross-connections
+    # Identify diagonal connections (source goes to target in different column)
+    diagonals: list[
+        tuple[int, int, int, int]
+    ] = []  # (src_idx, tgt_idx, src_pos, tgt_pos)
+    for src_idx, targets in src_targets.items():
+        src_pos = prev_centers[src_idx]
+        for tgt_idx in targets:
+            tgt_pos = curr_centers[tgt_idx]
+            if src_pos != tgt_pos:
+                diagonals.append((src_idx, tgt_idx, src_pos, tgt_pos))
+
+    # Track how many sources from each side we've already processed per target
+    # Used to space landing positions for merges with multiple sources from same side
+    merge_left_placed: dict[int, int] = dict.fromkeys(range(n_curr), 0)
+    merge_right_placed: dict[int, int] = dict.fromkeys(range(n_curr), 0)
+
+    # Row 1: Vertical lines from sources
+    # Always show │ at source position if it goes anywhere
+    # If source splits (goes to multiple targets), show extra │ at offset for diagonals
+    row1 = [" "] * total_width
+    for src_idx in range(n_prev):
+        src_pos = prev_centers[src_idx]
+        targets = src_targets[src_idx]
+        if not targets:
+            continue
+
+        has_straight = any(curr_centers[t] == src_pos for t in targets)
+        has_diagonal = any(curr_centers[t] != src_pos for t in targets)
+        is_split = len(targets) > 1  # Source goes to multiple targets
+
+        # Show │ at source position if straight connection
+        if has_straight and 0 <= src_pos < total_width:
+            row1[src_pos] = "│"
+
+        if has_diagonal:
+            if is_split:
+                # Split: show extra │ at offset for diagonal paths
+                for tgt_idx in targets:
+                    tgt_pos = curr_centers[tgt_idx]
+                    if tgt_pos < src_pos:
+                        extra_pos = src_pos - 2
+                        if 0 <= extra_pos < total_width and row1[extra_pos] == " ":
+                            row1[extra_pos] = "│"
+                    elif tgt_pos > src_pos:
+                        extra_pos = src_pos + 2
+                        if 0 <= extra_pos < total_width and row1[extra_pos] == " ":
+                            row1[extra_pos] = "│"
+            else:
+                # Single diagonal (merge or 1:1 diagonal): show │ at source position
+                if 0 <= src_pos < total_width and row1[src_pos] == " ":
+                    row1[src_pos] = "│"
+
+    lines.append("".join(row1))
+
+    # Row 2: Horizontal routing with corners
+    row2 = [" "] * total_width
+
+    # For each diagonal, draw the horizontal portion with corners
+    for src_idx, tgt_idx, src_pos, tgt_pos in diagonals:
+        is_split = len(src_targets[src_idx]) > 1  # Source splits to multiple targets
+        is_merge = (
+            len(tgt_sources[tgt_idx]) > 1
+        )  # Target receives from multiple sources
+
+        if is_split:
+            # Split case: source has offset │ in row1, corner lands at offset
+            # If target is also a merge, offset the arrival corner to avoid collision
+            if tgt_pos < src_pos:
+                # Goes left: ╭ near target, ─── horizontal, ╯ at offset
+                landing_pos = src_pos - 2
+                if 0 <= landing_pos < total_width:
+                    row2[landing_pos] = "╯"
+                # Corner near target - offset if target is also a merge
+                corner_pos = tgt_pos + 2 if is_merge else tgt_pos
+                if 0 <= corner_pos < total_width and row2[corner_pos] == " ":
+                    row2[corner_pos] = "╭"
+                # Horizontal bar from corner+1 to landing
+                for p in range(corner_pos + 1, landing_pos):
+                    if 0 <= p < total_width and row2[p] == " ":
+                        row2[p] = "─"
+            else:
+                # Goes right: ╰ at offset, ─── horizontal, ╮ near target
+                landing_pos = src_pos + 2
+                if 0 <= landing_pos < total_width:
+                    row2[landing_pos] = "╰"
+                # Corner near target - offset if target is also a merge
+                corner_pos = tgt_pos - 2 if is_merge else tgt_pos
+                if 0 <= corner_pos < total_width and row2[corner_pos] == " ":
+                    row2[corner_pos] = "╮"
+                # Horizontal bar from landing+1 to corner
+                for p in range(landing_pos + 1, corner_pos):
+                    if 0 <= p < total_width and row2[p] == " ":
+                        row2[p] = "─"
+        elif is_merge:
+            # Merge case: mirror of split - corners land at offset positions near target
+            # Pattern: sources → ╯/╰ at source, ─── horizontal, ╮/╭ at offset near target
+            # Space landing positions when multiple sources come from the same side
+            if tgt_pos < src_pos:
+                # Source is to the right, goes left toward target
+                # Offset landing position based on how many from right already placed
+                offset = 2 + merge_right_placed[tgt_idx] * 2
+                landing_pos = tgt_pos + offset
+                merge_right_placed[tgt_idx] += 1
+                if 0 <= src_pos < total_width:
+                    row2[src_pos] = "╯"
+                if 0 <= landing_pos < total_width:
+                    row2[landing_pos] = "╭"
+                # Horizontal bar from landing+1 to source
+                for p in range(landing_pos + 1, src_pos):
+                    if 0 <= p < total_width and row2[p] == " ":
+                        row2[p] = "─"
+            else:
+                # Source is to the left, goes right toward target
+                # Offset landing position based on how many from left already placed
+                offset = 2 + merge_left_placed[tgt_idx] * 2
+                landing_pos = tgt_pos - offset
+                merge_left_placed[tgt_idx] += 1
+                if 0 <= src_pos < total_width:
+                    row2[src_pos] = "╰"
+                if 0 <= landing_pos < total_width:
+                    row2[landing_pos] = "╮"
+                # Horizontal bar from source+1 to landing
+                for p in range(src_pos + 1, landing_pos):
+                    if 0 <= p < total_width and row2[p] == " ":
+                        row2[p] = "─"
+        else:
+            # 1:1 diagonal (no split, no merge): corner at source position
+            if tgt_pos < src_pos:
+                # Goes left: ╯ at source
+                if 0 <= src_pos < total_width:
+                    row2[src_pos] = "╯"
+                for p in range(tgt_pos + 1, src_pos):
+                    if 0 <= p < total_width and row2[p] == " ":
+                        row2[p] = "─"
+            else:
+                # Goes right: ╰ at source
+                if 0 <= src_pos < total_width:
+                    row2[src_pos] = "╰"
+                for p in range(src_pos + 1, tgt_pos):
+                    if 0 <= p < total_width and row2[p] == " ":
+                        row2[p] = "─"
+
+        # Handle target position corner/junction for non-merge cases
+        if not is_merge and 0 <= tgt_pos < total_width:
+            has_straight_incoming = any(
+                prev_centers[s] == tgt_pos for s in tgt_sources[tgt_idx]
+            )
+            from_left = tgt_pos > src_pos
+            from_right = tgt_pos < src_pos
+
+            # Check existing character and merge appropriately
+            existing = row2[tgt_pos]
+            if has_straight_incoming:
+                if from_right and existing in [" ", "│"]:
+                    row2[tgt_pos] = "├"
+                elif from_left and existing in [" ", "│"]:
+                    row2[tgt_pos] = "┤"
+                elif existing == "─":
+                    row2[tgt_pos] = "┬"
+            else:
+                # Single diagonal incoming
+                if existing == " ":
+                    row2[tgt_pos] = "╭" if from_right else "╮"
+
+    # Add vertical lines for straight-down connections
+    for tgt_idx in range(n_curr):
+        tgt_pos = curr_centers[tgt_idx]
+        sources = tgt_sources[tgt_idx]
+        if not sources:
+            continue
+
+        has_straight = any(prev_centers[s] == tgt_pos for s in sources)
+        has_diagonal = any(prev_centers[s] != tgt_pos for s in sources)
+
+        if 0 <= tgt_pos < total_width:
+            if has_straight and has_diagonal:
+                if row2[tgt_pos] == "╭":
+                    row2[tgt_pos] = "├"
+                elif row2[tgt_pos] == "╮":
+                    row2[tgt_pos] = "┤"
+                elif row2[tgt_pos] == "─":
+                    row2[tgt_pos] = "┬"
+                elif row2[tgt_pos] == " ":
+                    row2[tgt_pos] = "│"
+            elif has_straight:
+                if row2[tgt_pos] == " ":
+                    row2[tgt_pos] = "│"
+                elif row2[tgt_pos] == "─":
+                    row2[tgt_pos] = "┬"
+
+    # Also add verticals for sources that go straight down
+    for src_idx in range(n_prev):
+        src_pos = prev_centers[src_idx]
+        targets = src_targets[src_idx]
+        has_straight = any(curr_centers[t] == src_pos for t in targets)
+        if has_straight and 0 <= src_pos < total_width:
+            if row2[src_pos] == " ":
+                row2[src_pos] = "│"
+            elif row2[src_pos] == "─":
+                row2[src_pos] = "┼"
+
+    lines.append("".join(row2))
+
+    # Row 3: Vertical lines going down to targets
+    # Mirror the split logic: if target receives from multiple sources (merge),
+    # show extra │ at offset positions
+    row3 = [" "] * total_width
+    for tgt_idx in range(n_curr):
+        tgt_pos = curr_centers[tgt_idx]
+        sources = tgt_sources[tgt_idx]
+        if not sources:
+            continue
+
+        is_merge = len(sources) > 1  # Target receives from multiple sources
+
+        if is_merge:
+            # Merge: show │ for each incoming branch
+            # Bars align with the corners in row2
+            has_straight_source = any(prev_centers[s] == tgt_pos for s in sources)
+
+            if has_straight_source:
+                if 0 <= tgt_pos < total_width:
+                    row3[tgt_pos] = "│"
+
+            # Count sources from each side and place bars at spaced positions
+            left_sources = [s for s in sources if prev_centers[s] < tgt_pos]
+            right_sources = [s for s in sources if prev_centers[s] > tgt_pos]
+
+            # Place bars for sources from the left (at tgt_pos - 2, -4, -6, ...)
+            for i in range(len(left_sources)):
+                offset = 2 + i * 2
+                bar_pos = tgt_pos - offset
+                if 0 <= bar_pos < total_width and row3[bar_pos] == " ":
+                    row3[bar_pos] = "│"
+
+            # Place bars for sources from the right (at tgt_pos + 2, +4, +6, ...)
+            for i in range(len(right_sources)):
+                offset = 2 + i * 2
+                bar_pos = tgt_pos + offset
+                if 0 <= bar_pos < total_width and row3[bar_pos] == " ":
+                    row3[bar_pos] = "│"
+        else:
+            # Single source: just one vertical line
+            if 0 <= tgt_pos < total_width:
+                row3[tgt_pos] = "│"
+
+    lines.append("".join(row3))
+
+    return lines
+
+
+def export_spoiler_log(
+    dag: Dag,
+    output_path: Path,
+    care_package: list[CarePackageItem] | None = None,
+) -> None:
+    """Export human-readable spoiler log with ASCII graph visualization.
+
+    Args:
+        dag: The DAG to export
+        output_path: Path to write the spoiler log
+        care_package: Optional care package items to include in spoiler
+    """
+    lines: list[str] = []
+
+    # Header
+    lines.append("=" * 60)
+    lines.append(f"SPEEDFOG SPOILER (seed: {dag.seed})")
+    lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    lines.append("=" * 60)
+    lines.append(f"Total zones: {dag.total_zones()}")
+    lines.append("")
+
+    # Group nodes by layer
+    nodes_by_layer: dict[int, list[str]] = {}
+    for node_id, node in dag.nodes.items():
+        layer = node.layer
+        if layer not in nodes_by_layer:
+            nodes_by_layer[layer] = []
+        nodes_by_layer[layer].append(node_id)
+
+    # Sort layers and node IDs within each layer using barycentric ordering
+    # This minimizes edge crossings by placing nodes near their parents/children
+    sorted_layers = sorted(nodes_by_layer.keys())
+
+    # Build parent map: node_id -> list of parent node_ids
+    parents: dict[str, list[str]] = {nid: [] for nid in dag.nodes}
+    for edge in dag.edges:
+        if edge.target_id in parents:
+            parents[edge.target_id].append(edge.source_id)
+
+    # First pass: sort first layer alphabetically (no parents to reference)
+    if sorted_layers:
+        nodes_by_layer[sorted_layers[0]] = sorted(nodes_by_layer[sorted_layers[0]])
+
+    # Subsequent layers: sort by average position of parents in previous layer
+    for i in range(1, len(sorted_layers)):
+        layer = sorted_layers[i]
+        prev_layer = sorted_layers[i - 1]
+        prev_nodes = nodes_by_layer[prev_layer]
+
+        # Map parent node_id to its position in previous layer
+        prev_pos = {nid: idx for idx, nid in enumerate(prev_nodes)}
+
+        def make_sort_key(
+            prev_pos: dict[str, int],
+        ) -> Callable[[str], tuple[float, str]]:
+            """Create sort key function that captures prev_pos."""
+
+            def sort_key(node_id: str) -> tuple[float, str]:
+                node_parents = [p for p in parents[node_id] if p in prev_pos]
+                if not node_parents:
+                    barycenter = float("inf")
+                else:
+                    barycenter = sum(prev_pos[p] for p in node_parents) / len(
+                        node_parents
+                    )
+                return (barycenter, node_id)
+
+            return sort_key
+
+        # Sort by barycenter, then by node_id for stability
+        nodes_by_layer[layer] = sorted(
+            nodes_by_layer[layer], key=make_sort_key(prev_pos)
+        )
+
+    # Fixed column width and name truncation for consistent alignment
+    col_width = 24
+    max_name_len = col_width - 2  # Leave some padding
+
+    # Find max branches across all layers for consistent total width
+    max_branches = max(len(nodes_by_layer[layer]) for layer in sorted_layers)
+    total_width = col_width * max_branches
+
+    # Build ASCII graph visualization
+    for layer_idx, layer in enumerate(sorted_layers):
+        node_ids = nodes_by_layer[layer]
+        n_nodes = len(node_ids)
+
+        # Calculate offset to center this layer's columns
+        layer_width = col_width * n_nodes
+        offset = (total_width - layer_width) // 2
+
+        # Draw connection lines from previous layer using actual edges
+        if layer_idx > 0:
+            prev_layer = sorted_layers[layer_idx - 1]
+            prev_node_ids = nodes_by_layer[prev_layer]
+            connection_lines = _build_connection_lines(
+                dag, prev_node_ids, node_ids, col_width, total_width
+            )
+            lines.extend(connection_lines)
+
+        # Draw cluster names (truncated)
+        name_parts = []
+        for node_id in node_ids:
+            node = dag.nodes[node_id]
+            name = node.cluster.id[:max_name_len]
+            name_parts.append(name.center(col_width))
+        name_line = " " * offset + "".join(name_parts)
+        lines.append(name_line)
+
+        # Draw cluster type
+        type_parts = []
+        for node_id in node_ids:
+            node = dag.nodes[node_id]
+            type_str = f"[{effective_type(node, dag)}]"
+            type_parts.append(type_str.center(col_width))
+        type_line = " " * offset + "".join(type_parts)
+        lines.append(type_line)
+
+        # Draw weights and tier info
+        info_parts = []
+        for node_id in node_ids:
+            node = dag.nodes[node_id]
+            info = f"(w:{round(node.cluster.weight, 2):g} t:{node.tier})"
+            info_parts.append(info.center(col_width))
+        info_line = " " * offset + "".join(info_parts)
+        lines.append(info_line)
+
+    # NODE DETAILS section
+    lines.append("")
+    lines.append("=" * 60)
+    lines.append("NODE DETAILS")
+    lines.append("=" * 60)
+
+    # Build edge lookup: source_id -> list of (target_id, exit_fog FogRef)
+    outgoing_edges: dict[str, list[tuple[str, FogRef]]] = {}
+    for edge in dag.edges:
+        if edge.source_id not in outgoing_edges:
+            outgoing_edges[edge.source_id] = []
+        outgoing_edges[edge.source_id].append((edge.target_id, edge.exit_fog))
+
+    # Print node details sorted by tier then by cluster ID
+    sorted_nodes = sorted(dag.nodes.values(), key=lambda n: (n.tier, n.cluster.id))
+    for node in sorted_nodes:
+        lines.append("")
+        lines.append(f"[{node.cluster.id}]")
+        lines.append(f"  Type: {effective_type(node, dag)}")
+        lines.append(f"  Zones: {', '.join(node.cluster.zones)}")
+        lines.append(f"  Tier: {node.tier}")
+        lines.append(f"  Layer: {node.layer}")
+        lines.append(f"  Weight: {round(node.cluster.weight, 2):g}")
+
+        # Exits with fog_id and text
+        exits = outgoing_edges.get(node.id, [])
+        if exits:
+            lines.append("  Exits:")
+            for target_id, fog_ref in exits:
+                target_node = dag.nodes.get(target_id)
+                target_name = target_node.cluster.id if target_node else target_id
+                text = get_fog_text(node, fog_ref)
+                fog_display = fog_ref.fog_id
+                if text and text != fog_display:
+                    lines.append(f"    -> {target_name} via {fog_display} ({text})")
+                else:
+                    lines.append(f"    -> {target_name} via {fog_display}")
+
+    # Care package section
+    if care_package:
+        lines.append("")
+        lines.append("=" * 60)
+        lines.append("CARE PACKAGE (starting build)")
+        lines.append("=" * 60)
+        type_names = {0: "Weapon", 1: "Armor", 2: "Talisman", 3: "Spell/Item"}
+        for item in care_package:
+            type_label = type_names.get(item.type, "Unknown")
+            lines.append(f"  [{type_label}] {item.name} (id={item.id})")
+
+    # Write to file
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+
+
+def append_boss_placements_to_spoiler(
+    spoiler_path: Path,
+    placements: dict[str, dict[str, Any]],
+) -> None:
+    """Append boss placement section to an existing spoiler log.
+
+    Args:
+        spoiler_path: Path to existing spoiler.txt
+        placements: Boss placements from enemy_data.build_boss_placements()
+    """
+    if not placements or not spoiler_path.exists():
+        return
+
+    lines: list[str] = []
+    lines.append("")
+    lines.append("=" * 60)
+    lines.append("BOSS PLACEMENTS (randomized)")
+    lines.append("=" * 60)
+
+    for target_id, info in sorted(placements.items()):
+        lines.append(f"  Arena #{target_id} -> {info['name']} (#{info['entity_id']})")
+
+    with open(spoiler_path, "a", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+        f.write("\n")

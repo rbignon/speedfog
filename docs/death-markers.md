@@ -140,7 +140,7 @@ lookup, the default placement is BSide (180 degrees, legacy behavior).
 ## Data Flow (racing integration)
 
 ```
-Python (output.py)           graph.json              C# (DeathMarkerInjector)
+Python (graph_export.py)           graph.json              C# (DeathMarkerInjector)
 ------------------           ----------              ------------------------
 Allocate 3 flags/cluster --> death_flags: {           Read death_flags
                                "cluster_1": [X,Y,Z]  Map connections -> cluster

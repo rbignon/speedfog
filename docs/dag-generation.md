@@ -451,6 +451,6 @@ Semantics:
 - Planner: `speedfog/planner.py`
 - Clusters: `speedfog/clusters.py`
 - Validator: `speedfog/validator.py`
-- Output: `speedfog/output.py`
+- Output: `speedfog/graph_export.py` (graph.json), `speedfog/spoiler.py` (spoiler log)
 - Config: `speedfog/config.py`
 - Spec: `docs/specs/2026-04-25-exit-driven-dag-generation.md`

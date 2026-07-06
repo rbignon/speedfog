@@ -56,7 +56,10 @@ speedfog/
 │   ├── clusters.py          # Load and manage clusters from clusters.json
 │   ├── planner.py           # Layer planning (cluster type distribution)
 │   ├── validator.py         # DAG validation against configuration
-│   ├── output.py            # DAG export to JSON and spoiler logs
+│   ├── constants.py         # Shared constants (graph.json version, flag bases, cluster types)
+│   ├── graph_export.py      # DAG export to graph.json (Python → C# contract)
+│   ├── spoiler.py           # Spoiler log with ASCII graph
+│   ├── enemy_data.py        # enemy.txt parsing, boss placement patching
 │   ├── care_package.py      # Randomized starting build system
 │   ├── boss_arena_constraints.py  # Boss/arena tag model, compat check, matcher
 │   ├── fog_mod.py           # FogMod wrapper (runs FogModWrapper.exe)

@@ -130,7 +130,7 @@ Allocations in regulation.bin params (not event flags). Listed here so future co
 
 ## References
 
-- Flag allocation in Python: `speedfog/output.py` (`EVENT_FLAG_BASE`)
+- Flag allocation in Python: `speedfog/graph_export.py` (`EVENT_FLAG_BASE` from `speedfog/constants.py`)
 - Zone tracking injection: `writer/FogModWrapper/ZoneTrackingInjector.cs`
 - FogRando flag allocation: `reference/fogrando-src/GameDataWriterE.cs` L124-135
 - VirtualMemoryFlag reader (racing mod): `speedfog-racing/mod/src/eldenring/event_flags.rs`

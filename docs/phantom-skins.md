@@ -44,7 +44,7 @@ Note on alpha: the V1 schema exposes a single `alpha` value that the injector wr
 
 ## Build-Time Flow
 
-1. **Python (`speedfog/output.py:load_phantom_skins_catalog`)** reads `data/phantom_skins.toml` and builds a `name -> id` mapping. The mapping is embedded in `graph.json` under the `phantom_skins` field (graph.json v4.3+).
+1. **Python (`speedfog/graph_export.py:load_phantom_skins_catalog`)** reads `data/phantom_skins.toml` and builds a `name -> id` mapping. The mapping is embedded in `graph.json` under the `phantom_skins` field (graph.json v4.3+).
 2. **C# (`PhantomCatalogLoader`)** reads and validates the TOML (id range, uniqueness).
 3. **C# (`PhantomCatalogInjector`)** adds three rows per skin to `regulation.bin`, copying templates from PhantomParam[260], SpEffectVfxParam[51508], SpEffectParam[13177].
 

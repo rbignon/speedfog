@@ -474,7 +474,7 @@ class TestCarePackageInOutput:
     def test_empty_care_package(self):
         """dag_to_dict with no care_package produces empty list."""
         from speedfog.clusters import ClusterPool
-        from speedfog.output import dag_to_dict
+        from speedfog.graph_export import dag_to_dict
         from tests.test_output import make_test_dag
 
         dag = make_test_dag()
@@ -489,7 +489,7 @@ class TestCarePackageInOutput:
     def test_care_package_serialization(self):
         """dag_to_dict serializes care package items correctly."""
         from speedfog.clusters import ClusterPool
-        from speedfog.output import dag_to_dict
+        from speedfog.graph_export import dag_to_dict
         from tests.test_output import make_test_dag
 
         dag = make_test_dag()

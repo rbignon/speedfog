@@ -106,7 +106,7 @@ Gem items are logged as skipped. There is no mechanism to give Ashes of War at g
 ## Pipeline
 
 1. **Python** (`care_package.py`): `sample_care_package()` samples items from the TOML pool using seed-based RNG.
-2. **Python** (`output.py`): Items are serialized into `graph.json` under `care_package` as `[{type, id, name}, ...]`.
+2. **Python** (`graph_export.py`): Items are serialized into `graph.json` under `care_package` as `[{type, id, name}, ...]`.
 3. **C#** (`GraphData.cs`): Deserialized into `List<CarePackageItem>`.
 4. **C#** (`StartingItemInjector.cs`): Injected into `common.emevd` as `DirectlyGivePlayerItem` instructions. Items are given once (guarded by flag 1040299001) after the player picks up the Tarnished's Wizened Finger (flag 1040292051).
 
@@ -131,7 +131,8 @@ CARE PACKAGE (starting build)
 | `speedfog/care_package.py` | Pool loading, validation, sampling logic |
 | `speedfog/config.py` | `CarePackageConfig` dataclass |
 | `data/care_package_items.toml` | Item pool definitions |
-| `speedfog/output.py` | Serialization to `graph.json` and spoiler log |
+| `speedfog/graph_export.py` | Serialization to `graph.json` |
+| `speedfog/spoiler.py` | Spoiler log |
 | `writer/FogModWrapper.Core/Models/GraphData.cs` | C# `CarePackageItem` model |
 | `writer/FogModWrapper/StartingItemInjector.cs` | EMEVD injection (gives items in-game) |
 

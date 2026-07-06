@@ -18,8 +18,8 @@ from speedfog.generator import (
     generate_dag,
     generate_with_retry,
 )
-from speedfog.output import export_spoiler_log
 from speedfog.planner import compute_tier, plan_layer_types
+from speedfog.spoiler import export_spoiler_log
 from speedfog.validator import ValidationResult, validate_dag
 
 __all__ = [

@@ -17,21 +17,8 @@ from speedfog.boss_arena_constraints import (
 from speedfog.care_package import sample_care_package
 from speedfog.clusters import ClusterData, ClusterPool, load_clusters
 from speedfog.config import Config, load_config, prune_final_boss_candidates
-from speedfog.fog_mod import run_fogmodwrapper
-from speedfog.generator import GenerationError, generate_with_retry
-from speedfog.item_randomizer import (
-    ASSIGNABLE_ARENA_TYPES,
-    generate_item_config,
-    run_item_randomizer,
-)
-from speedfog.output import (
-    append_boss_placements_to_spoiler,
+from speedfog.enemy_data import (
     build_boss_placements,
-    export_json,
-    export_spoiler_log,
-    load_fog_data,
-    load_phantom_skins_catalog,
-    load_vanilla_tiers,
     parse_boss_extra_names,
     parse_boss_key_names,
     parse_boss_phases,
@@ -39,7 +26,21 @@ from speedfog.output import (
     resolve_boss_name,
     resolve_entity_id,
 )
+from speedfog.fog_mod import run_fogmodwrapper
+from speedfog.generator import GenerationError, generate_with_retry
+from speedfog.graph_export import (
+    export_json,
+    load_fog_data,
+    load_phantom_skins_catalog,
+    load_vanilla_tiers,
+)
+from speedfog.item_randomizer import (
+    ASSIGNABLE_ARENA_TYPES,
+    generate_item_config,
+    run_item_randomizer,
+)
 from speedfog.packaging import PackagingError, package_seed
+from speedfog.spoiler import append_boss_placements_to_spoiler, export_spoiler_log
 from speedfog.validator import validate_exclusions
 
 

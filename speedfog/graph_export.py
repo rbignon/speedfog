@@ -1,0 +1,678 @@
+"""graph.json export: the Python -> C# / visualization / racing contract.
+
+Converts a generated DAG into the versioned graph.json format consumed by
+writer/FogModWrapper (see docs/architecture.md for the full format), and
+provides the input loaders used to enrich it (fog_data.json, vanilla tiers,
+phantom skins catalog).
+"""
+
+from __future__ import annotations
+
+import json
+import tomllib
+from pathlib import Path
+from typing import Any
+
+from speedfog.care_package import CarePackageItem
+from speedfog.clusters import ClusterPool
+from speedfog.constants import (
+    EVENT_FLAG_BASE,
+    EVENT_FLAG_BUDGET,
+    GRAPH_JSON_VERSION,
+    ITEMS_SPAWNED_FLAG,
+)
+from speedfog.dag import Dag, DagNode, FogRef
+
+
+def load_phantom_skins_catalog(path: Path) -> dict[str, int]:
+    """Load the phantom skins catalog and return a name -> id mapping.
+
+    The catalog is consumed by the speedfog-racing runtime mod (read from
+    graph.json) to resolve skin names pushed by the server into SpEffect ids.
+    Returns an empty dict if the catalog file is absent.
+    """
+    if not path.exists():
+        return {}
+
+    with path.open("rb") as fp:
+        data = tomllib.load(fp)
+
+    skins = data.get("skins", [])
+    if not isinstance(skins, list):
+        raise ValueError(
+            f"phantom_skins: 'skins' must be an array, got {type(skins).__name__}"
+        )
+
+    mapping: dict[str, int] = {}
+    for entry in skins:
+        if not isinstance(entry, dict):
+            raise ValueError("phantom_skins: each [[skins]] entry must be a table")
+        try:
+            name = entry["name"]
+            skin_id = entry["id"]
+        except KeyError as exc:
+            raise ValueError(
+                f"phantom_skins: entry missing required field {exc}"
+            ) from None
+        if not isinstance(name, str) or not isinstance(skin_id, int):
+            raise ValueError(f"phantom_skins: invalid types in entry {entry!r}")
+        if name in mapping:
+            raise ValueError(f"phantom_skins: duplicate name '{name}'")
+        mapping[name] = skin_id
+
+    return mapping
+
+
+def load_vanilla_tiers(path: Path) -> dict[str, int]:
+    """Load vanilla scaling tiers from foglocations2.txt EnemyAreas section.
+
+    Parses the YAML-like file format to extract zone name → ScalingTier mapping.
+
+    Args:
+        path: Path to foglocations2.txt
+
+    Returns:
+        Dictionary of zone_name → scaling_tier (int)
+    """
+    tiers: dict[str, int] = {}
+    if not path.exists():
+        return tiers
+
+    current_name: str | None = None
+    in_enemy_areas = False
+
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            stripped = line.strip()
+            if stripped == "EnemyAreas:":
+                in_enemy_areas = True
+                continue
+            if not in_enemy_areas:
+                continue
+            # A new top-level section (non-indented, non-list line with colon)
+            if stripped and not line[0].isspace() and not line.startswith("-"):
+                break
+            if stripped.startswith("- Name:"):
+                current_name = stripped.split(":", 1)[1].strip()
+            elif stripped.startswith("ScalingTier:") and current_name is not None:
+                tiers[current_name] = int(stripped.split(":", 1)[1].strip())
+                current_name = None
+
+    return tiers
+
+
+def effective_type(node: DagNode, dag: Dag) -> str:
+    """Return the node's effective type, overriding to 'final_boss' for the end node."""
+    if node.id == dag.end_id:
+        return "final_boss"
+    return node.cluster.type
+
+
+def _get_fog_text_from_list(fogs: list[dict[str, str]], fog_ref: FogRef) -> str:
+    """Get the human-readable text for a fog gate from a list of fog dicts.
+
+    Prefers exact (fog_id, zone) match, then falls back to fog_id-only match.
+    Prefers side_text (zone-specific description) over gate-level text.
+
+    Args:
+        fogs: List of fog dicts (entry_fogs or exit_fogs)
+        fog_ref: The FogRef to find
+
+    Returns:
+        Text string, or fog_id itself as fallback
+    """
+    for fog in fogs:
+        if fog["fog_id"] == fog_ref.fog_id and fog["zone"] == fog_ref.zone:
+            return str(fog.get("side_text", fog.get("text", fog_ref.fog_id)))
+    # Fallback: match just fog_id
+    for fog in fogs:
+        if fog["fog_id"] == fog_ref.fog_id:
+            return str(fog.get("side_text", fog.get("text", fog_ref.fog_id)))
+    return fog_ref.fog_id
+
+
+def get_fog_text(node: DagNode, fog_ref: FogRef) -> str:
+    """Get the human-readable text for a fog gate from a node's exit_fogs."""
+    return _get_fog_text_from_list(node.cluster.exit_fogs, fog_ref)
+
+
+def get_entry_fog_text(node: DagNode, fog_ref: FogRef) -> str:
+    """Get the human-readable text for a fog gate from a node's entry_fogs."""
+    return _get_fog_text_from_list(node.cluster.entry_fogs, fog_ref)
+
+
+def load_fog_data(path: Path) -> dict[str, dict[str, Any]]:
+    """Load fog_data.json for fog→map lookups.
+
+    Args:
+        path: Path to fog_data.json
+
+    Returns:
+        Dictionary of fog_id → fog data (with "map" field)
+    """
+    if not path.exists():
+        return {}
+    with open(path, encoding="utf-8") as f:
+        data: dict[str, Any] = json.load(f)
+    fogs: dict[str, dict[str, Any]] = data.get("fogs", {})
+    return fogs
+
+
+def _make_fullname(
+    fog_id: str,
+    zone: str,
+    clusters: ClusterPool,
+    fog_data: dict[str, dict[str, Any]] | None = None,
+    is_entry: bool = False,
+) -> str:
+    """Convert a fog_id to FogMod FullName format: {map}_{fog_id}.
+
+    Args:
+        fog_id: The fog ID (e.g., "AEG099_001_9000" or "1035452610")
+        zone: The zone the fog connects to
+        clusters: ClusterPool with zone_maps
+        fog_data: Optional fog_data.json lookup for map resolution
+        is_entry: Whether this is an entrance gate (affects warp resolution)
+
+    Returns:
+        FogMod FullName (e.g., "m10_01_00_00_AEG099_001_9000")
+
+    Note:
+        fog_data.json stores fogs with both short names and fully-qualified
+        names (e.g., "AEG099_230_9000" and "m60_43_50_00_AEG099_230_9000").
+        For dungeon entrances, the fog gate may be in a different map than
+        the destination zone (e.g., overworld entrance to a dungeon).
+        We search fog_data for a fullname that contains the destination zone.
+
+        FogMod edge names are always based on the map where the asset physically
+        exists (the "map" field), NOT the destination_map. The destination_map
+        field is informational only.
+
+        For warps at cross-map boundaries, the entity in fog_data may be on
+        the wrong side for the operation. Entry gates need the external-side
+        entity (FogMod From edge), exit gates need the internal-side entity
+        (FogMod To edge). When the entity is on the wrong side, we look up
+        the paired entity in the destination map.
+    """
+    # For warps (numeric IDs), fog_data has the authoritative map
+    if fog_data and fog_id in fog_data and fog_id.isdigit():
+        data = fog_data[fog_id]
+        map_id = data.get("map")
+
+        # For cross-map boundary warps, check if the entity is on the wrong
+        # side. Entry needs external (zones[0] != zone), exit needs internal
+        # (zones[0] == zone). If on wrong side, find the paired entity.
+        if map_id:
+            dest_map = data.get("destination_map")
+            fog_zones = data.get("zones", [])
+            # zones[0] is always the ASide zone — the zone where the entity
+            # physically exists (per extract_fog_data.py FogEntry.zones).
+            is_internal = fog_zones and fog_zones[0] == zone
+            on_wrong_side = (is_entry and is_internal) or (
+                not is_entry and not is_internal
+            )
+            if dest_map and dest_map != map_id and on_wrong_side:
+                fog_zones_set = set(fog_zones)
+                for key, fdata in fog_data.items():
+                    if (
+                        not key.startswith("m")
+                        and fdata.get("map") == dest_map
+                        and set(fdata.get("zones", [])) == fog_zones_set
+                        and key != fog_id
+                    ):
+                        return f"{dest_map}_{key}"
+                side = "entry" if is_entry else "exit"
+                print(
+                    f"Warning: No paired {side} entity for cross-map warp "
+                    f"{fog_id} (dest_map={dest_map})"
+                )
+
+        if map_id:
+            return f"{map_id}_{fog_id}"
+
+    # Get zone's map
+    zone_map = clusters.get_map(zone)
+
+    if fog_data:
+        # Strategy 1: Try fully-qualified name with zone's map
+        # Verify the zone is actually in this fog entry's zones, since the same
+        # fog_id (e.g., AEG099_002_9000) can exist on many different maps.
+        if zone_map:
+            fullname = f"{zone_map}_{fog_id}"
+            if fullname in fog_data:
+                entry_zones = fog_data[fullname].get("zones", [])
+                if zone in entry_zones:
+                    return fullname
+
+        # Strategy 2: Search for any fullname ending with fog_id that contains zone
+        # This handles cases where the fog gate is in a different map (e.g., dungeon entrance)
+        for key, data in fog_data.items():
+            if key.endswith(f"_{fog_id}") and zone in data.get("zones", []):
+                return key
+
+    # Fallback to zone's map
+    if zone_map:
+        return f"{zone_map}_{fog_id}"
+
+    # Last resort: check fog_data for short name
+    if fog_data and fog_id in fog_data:
+        map_id = fog_data[fog_id].get("map")
+        if map_id:
+            return f"{map_id}_{fog_id}"
+
+    return f"unknown_{fog_id}"
+
+
+def dag_to_dict(
+    dag: Dag,
+    clusters: ClusterPool,
+    options: dict[str, bool] | None = None,
+    fog_data: dict[str, dict[str, Any]] | None = None,
+    starting_item_lots: list[int] | None = None,
+    starting_goods: list[int] | None = None,
+    starting_runes: int = 0,
+    starting_golden_seeds: int = 0,
+    starting_sacred_tears: int = 0,
+    care_package: list[CarePackageItem] | None = None,
+    run_complete_message: str = "RUN COMPLETE",
+    chapel_grace: bool = True,
+    sentry_torch_shop: bool = True,
+    starting_larval_tears: int = 10,
+    starting_stonesword_keys: int = 6,
+    vanilla_tiers: dict[str, int] | None = None,
+    death_markers: bool = True,
+    weapon_upgrade: int = 0,
+    phantom_skins: dict[str, int] | None = None,
+    plugins: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Convert a DAG to v4 JSON-serializable dictionary.
+
+    The v4 format extends v3 with event flag tracking for racing support:
+    - `event_map`: mapping of flag_id (str) -> cluster_id for zone tracking
+    - `finish_event`: flag_id for final boss death detection
+    - Each connection includes a `flag_id` for its destination node
+
+    Args:
+        dag: The DAG to convert
+        clusters: ClusterPool with zone_maps and zone_names
+        options: FogMod options to include (default: scale=True)
+        fog_data: Optional fog_data.json lookup for accurate map IDs (esp. for warps)
+        starting_item_lots: DEPRECATED - ItemLot IDs (randomized by Item Randomizer)
+        starting_goods: Good IDs to award at game start (not affected by randomization)
+        starting_runes: Runes to add to starting classes (via CharaInitParam)
+        starting_golden_seeds: Golden Seeds to give at start
+        starting_sacred_tears: Sacred Tears to give at start
+        care_package: List of CarePackageItem for randomized starting build
+        run_complete_message: Text for the golden banner after final boss defeat
+        chapel_grace: Whether to add a Site of Grace at Chapel of Anticipation
+        sentry_torch_shop: Whether to sell the Sentry's Torch at the Roundtable shop
+        starting_larval_tears: Larval Tears to give at start (for rebirth at graces)
+        starting_stonesword_keys: Stonesword Keys to give at start (unlock imp seals)
+        vanilla_tiers: Optional zone_name → ScalingTier mapping from foglocations2.txt.
+            When provided, each node gets an original_tier field (max ScalingTier of its zones).
+        death_markers: Whether to allocate death marker flags (3 per non-start cluster).
+        plugins: Optional plugin config tables from [plugin.*] in config.toml;
+            forwarded verbatim into graph.json["plugins"].
+
+    Returns:
+        Dictionary with the structure documented in docs/architecture.md
+        (version GRAPH_JSON_VERSION).
+    """
+    if options is None:
+        options = {
+            "scale": True,
+            "shuffle": True,
+        }
+
+    # Allocate event flag IDs per connection (for racing zone tracking).
+    # Each connection gets a unique flag_id so the racing mod can detect re-entry
+    # to the same cluster from a different branch (e.g., shared entrance merges).
+    flag_counter = 0
+    event_map: dict[str, str] = {}  # str(flag_id) -> cluster_id
+    final_node_flag = 0  # first flag targeting the end node
+
+    # Build connections list — zone info comes directly from FogRef
+    connections: list[dict[str, str | int]] = []
+    end_cluster_id = dag.nodes[dag.end_id].cluster.id
+    for edge in dag.edges:
+        source_node = dag.nodes.get(edge.source_id)
+        target_node = dag.nodes.get(edge.target_id)
+
+        if source_node is None or target_node is None:
+            continue
+
+        exit_zone = edge.exit_fog.zone
+        entry_zone = edge.entry_fog.zone
+
+        # Handle final boss edge case: empty entry_fog means use first zone of target
+        if not entry_zone and not edge.entry_fog.fog_id:
+            if target_node.cluster.zones:
+                entry_zone = target_node.cluster.zones[0]
+
+        # Skip if zones not found (shouldn't happen in valid DAG)
+        if not exit_zone or not entry_zone:
+            print(
+                f"Warning: Could not find zones for edge {edge.source_id} -> "
+                f"{edge.target_id}: exit_fog={edge.exit_fog}, entry_fog={edge.entry_fog}"
+            )
+            continue
+
+        # Handle empty entry_fog by using exit_fog (for one-way connections)
+        effective_entry_fog = (
+            edge.entry_fog.fog_id if edge.entry_fog.fog_id else edge.exit_fog.fog_id
+        )
+
+        flag_id = EVENT_FLAG_BASE + flag_counter
+        flag_counter += 1
+
+        exit_gate_str = _make_fullname(
+            edge.exit_fog.fog_id,
+            exit_zone,
+            clusters,
+            fog_data,
+            is_entry=False,
+        )
+
+        conn_dict: dict[str, str | int | bool] = {
+            "exit_area": exit_zone,
+            "exit_gate": exit_gate_str,
+            "entrance_area": entry_zone,
+            "entrance_gate": _make_fullname(
+                effective_entry_fog,
+                entry_zone,
+                clusters,
+                fog_data,
+                is_entry=True,
+            ),
+            "flag_id": flag_id,
+        }
+        # ignore_pair is required whenever the underlying physical fog gate is
+        # also reused by another connection (FogMod's Pair tracking refuses
+        # double-matching). Two cases trigger this:
+        #   1. Target uses entry-as-exit: the entrance side may also serve as
+        #      this cluster's outgoing exit in another connection.
+        #   2. Source uses one of its own entry fogs as this exit (only possible
+        #      when source has allow_entry_as_exit), meaning the same physical
+        #      gate already has an incoming connection on this cluster.
+        source_uses_entry_as_exit = source_node.cluster.allow_entry_as_exit and any(
+            ef["fog_id"] == edge.exit_fog.fog_id and ef["zone"] == edge.exit_fog.zone
+            for ef in source_node.cluster.entry_fogs
+        )
+        if target_node.cluster.allow_entry_as_exit or source_uses_entry_as_exit:
+            conn_dict["ignore_pair"] = True
+        connections.append(conn_dict)
+
+        cluster_id = target_node.cluster.id
+        event_map[str(flag_id)] = cluster_id
+
+        if cluster_id == end_cluster_id and final_node_flag == 0:
+            final_node_flag = flag_id
+
+    # Build area_tiers: zone -> tier
+    area_tiers: dict[str, int] = {}
+    for node in dag.nodes.values():
+        for zone in node.cluster.zones:
+            area_tiers[zone] = node.tier
+
+    # Calculate metadata
+    total_layers = max((n.layer for n in dag.nodes.values()), default=-1) + 1
+
+    # Build nodes section: cluster_id -> metadata
+    nodes: dict[str, dict[str, Any]] = {}
+    for node in dag.nodes.values():
+        # Compute original_tier: max ScalingTier of the node's zones
+        original_tier: int | None = None
+        if vanilla_tiers:
+            zone_tiers = [
+                vanilla_tiers[z] for z in node.cluster.zones if z in vanilla_tiers
+            ]
+            if zone_tiers:
+                original_tier = max(zone_tiers)
+
+        nodes[node.cluster.id] = {
+            "type": effective_type(node, dag),
+            "display_name": clusters.get_display_name(node.cluster),
+            "zones": node.cluster.zones,
+            "layer": node.layer,
+            "tier": node.tier,
+            "original_tier": original_tier,
+            "weight": node.cluster.weight,
+            "exits": [],
+            "entrances": [],
+        }
+        if node.cluster.defeat_flag:
+            nodes[node.cluster.id]["defeat_flag"] = node.cluster.defeat_flag
+        if node.cluster.boss_name:
+            nodes[node.cluster.id]["boss_name"] = node.cluster.boss_name
+
+    # Populate exits from DAG edges
+    for edge in dag.edges:
+        source_node = dag.nodes.get(edge.source_id)
+        target_node = dag.nodes.get(edge.target_id)
+        if source_node is None or target_node is None:
+            continue
+        source_cluster_id = source_node.cluster.id
+        target_cluster_id = target_node.cluster.id
+        text = get_fog_text(source_node, edge.exit_fog)
+        from_zone = edge.exit_fog.zone
+        exit_entry: dict[str, str] = {
+            "fog_id": edge.exit_fog.fog_id,
+            "text": text,
+        }
+        if from_zone:
+            exit_entry["from"] = from_zone
+            from_text = clusters.zone_names.get(from_zone)
+            if from_text:
+                exit_entry["from_text"] = from_text
+        exit_entry["to"] = target_cluster_id
+        nodes[source_cluster_id]["exits"].append(exit_entry)
+
+    # Populate entrances from DAG edges (mirror of exits)
+    for edge in dag.edges:
+        source_node = dag.nodes.get(edge.source_id)
+        target_node = dag.nodes.get(edge.target_id)
+        if source_node is None or target_node is None:
+            continue
+        source_cluster_id = source_node.cluster.id
+        target_cluster_id = target_node.cluster.id
+        text = get_entry_fog_text(target_node, edge.entry_fog)
+        to_zone = edge.entry_fog.zone
+        # Handle final boss edge case: empty entry_fog means use first zone of target
+        if not to_zone and not edge.entry_fog.fog_id:
+            if target_node.cluster.zones:
+                to_zone = target_node.cluster.zones[0]
+        entrance_entry: dict[str, str] = {
+            "text": text,
+            "from": source_cluster_id,
+        }
+        if to_zone:
+            entrance_entry["to"] = to_zone
+            to_text = clusters.zone_names.get(to_zone)
+            if to_text:
+                entrance_entry["to_text"] = to_text
+        nodes[target_cluster_id]["entrances"].append(entrance_entry)
+
+    # Build edges section: unique (from, to) pairs by cluster_id
+    seen_edges: set[tuple[str, str]] = set()
+    edges_list: list[dict[str, str]] = []
+    for edge in dag.edges:
+        source_node = dag.nodes.get(edge.source_id)
+        target_node = dag.nodes.get(edge.target_id)
+        if source_node is None or target_node is None:
+            continue
+        pair = (source_node.cluster.id, target_node.cluster.id)
+        if pair not in seen_edges:
+            seen_edges.add(pair)
+            edges_list.append({"from": pair[0], "to": pair[1]})
+
+    # finish_event: a SEPARATE flag for final boss death detection.
+    # Must not reuse a zone-tracking flag, otherwise traversing the fog gate
+    # into the final zone would prematurely trigger "RUN COMPLETE".
+    finish_event = EVENT_FLAG_BASE + flag_counter
+    flag_counter += 1
+
+    # Allocate death marker flags: 3 per cluster (low/med/high)
+    # for racing mod to control bloodstain visibility by death count.
+    death_flags: dict[str, list[int]] = {}
+    if death_markers:
+        start_cluster_id = dag.nodes[dag.start_id].cluster.id
+        for node in dag.nodes.values():
+            cluster_id = node.cluster.id
+            if cluster_id == start_cluster_id:
+                continue
+            if cluster_id in death_flags:
+                continue  # Already allocated (multiple nodes can share a cluster)
+            flags = [EVENT_FLAG_BASE + flag_counter + i for i in range(3)]
+            flag_counter += 3
+            death_flags[cluster_id] = flags
+
+    if flag_counter > EVENT_FLAG_BUDGET:
+        raise ValueError(
+            f"Event flag budget exceeded: {flag_counter} flags allocated "
+            f"(max {EVENT_FLAG_BUDGET} in range "
+            f"{EVENT_FLAG_BASE}-{EVENT_FLAG_BASE + EVENT_FLAG_BUDGET - 1})"
+        )
+
+    # finish_boss_defeat_flag: the DefeatFlag for the final boss, propagated from
+    # fog.txt through clusters.json. Used by C# as primary source for boss death
+    # detection, with FogMod Graph extraction as fallback.
+    end_node = dag.nodes[dag.end_id]
+    finish_boss_defeat_flag = end_node.cluster.defeat_flag
+
+    # Collect vanilla warp entities to remove from MSBs.
+    # Unique exits (coffins, DLC warps) are one-way teleporters that FogMod marks
+    # as "remove" but can't actually delete (name mismatch). We propagate entity IDs
+    # so C# can remove them from the MSB, preventing vanilla warps from persisting.
+    remove_entities: list[dict[str, str | int]] = []
+    seen_entities: set[tuple[str, int]] = set()
+    for node in dag.nodes.values():
+        for fog in node.cluster.unique_exit_fogs:
+            location = fog.get("location")
+            if location is None:
+                continue
+            zone = fog["zone"]
+            map_id = clusters.get_map(zone)
+            if map_id is None:
+                continue
+            key = (map_id, location)
+            if key not in seen_entities:
+                seen_entities.add(key)
+                remove_entities.append({"map": map_id, "entity_id": location})
+
+    # Also remove vanilla entities for regular exits that have a location
+    # but are not used in any connection (e.g., end node drops all exits,
+    # or usable unique exits that weren't picked by the generator).
+    used_exit_keys: set[tuple[str, str, str]] = set()
+    for edge in dag.edges:
+        source = dag.nodes.get(edge.source_id)
+        if source:
+            used_exit_keys.add((source.id, edge.exit_fog.fog_id, edge.exit_fog.zone))
+
+    for node in dag.nodes.values():
+        for fog in node.cluster.exit_fogs:
+            location = fog.get("location")
+            if location is None:
+                continue
+            if (node.id, fog["fog_id"], fog["zone"]) in used_exit_keys:
+                continue  # Used as connection — FogMod handles redirection
+            zone = fog["zone"]
+            map_id = clusters.get_map(zone)
+            if map_id is None:
+                continue
+            key = (map_id, location)
+            if key not in seen_entities:
+                seen_entities.add(key)
+                remove_entities.append({"map": map_id, "entity_id": location})
+
+    return {
+        "version": GRAPH_JSON_VERSION,
+        "seed": dag.seed,
+        "total_layers": total_layers,
+        "total_nodes": dag.total_nodes(),
+        "total_zones": dag.total_zones(),
+        "options": options,
+        "nodes": nodes,
+        "edges": edges_list,
+        "connections": connections,
+        "area_tiers": area_tiers,
+        "event_map": event_map,
+        "final_node_flag": final_node_flag,
+        "finish_event": finish_event,
+        "finish_boss_defeat_flag": finish_boss_defeat_flag,
+        "death_flags": death_flags,
+        "items_spawned_flag": ITEMS_SPAWNED_FLAG,
+        "run_complete_message": run_complete_message,
+        "chapel_grace": chapel_grace,
+        "sentry_torch_shop": sentry_torch_shop,
+        "starting_item_lots": starting_item_lots or [],
+        "starting_goods": starting_goods or [],
+        "starting_runes": starting_runes,
+        "starting_golden_seeds": starting_golden_seeds,
+        "starting_sacred_tears": starting_sacred_tears,
+        "starting_larval_tears": starting_larval_tears,
+        "starting_stonesword_keys": starting_stonesword_keys,
+        "care_package": [
+            {"type": item.type, "id": item.id, "name": item.name}
+            for item in (care_package or [])
+        ],
+        "weapon_upgrade": weapon_upgrade,
+        "remove_entities": remove_entities,
+        "phantom_skins": {
+            name: {"speffects": [skin_id]}
+            for name, skin_id in (phantom_skins or {}).items()
+        },
+        "plugins": plugins or {},
+    }
+
+
+def export_json(
+    dag: Dag,
+    clusters: ClusterPool,
+    output_path: Path,
+    options: dict[str, bool] | None = None,
+    fog_data: dict[str, dict[str, Any]] | None = None,
+    starting_item_lots: list[int] | None = None,
+    starting_goods: list[int] | None = None,
+    starting_runes: int = 0,
+    starting_golden_seeds: int = 0,
+    starting_sacred_tears: int = 0,
+    care_package: list[CarePackageItem] | None = None,
+    run_complete_message: str = "RUN COMPLETE",
+    chapel_grace: bool = True,
+    sentry_torch_shop: bool = True,
+    starting_larval_tears: int = 10,
+    starting_stonesword_keys: int = 6,
+    vanilla_tiers: dict[str, int] | None = None,
+    death_markers: bool = True,
+    weapon_upgrade: int = 0,
+    phantom_skins: dict[str, int] | None = None,
+    plugins: dict[str, Any] | None = None,
+) -> None:
+    """Export a DAG to v4 formatted JSON file.
+
+    See dag_to_dict for parameter documentation.
+    """
+    data = dag_to_dict(
+        dag,
+        clusters,
+        options,
+        fog_data,
+        starting_item_lots,
+        starting_goods,
+        starting_runes,
+        starting_golden_seeds=starting_golden_seeds,
+        starting_sacred_tears=starting_sacred_tears,
+        care_package=care_package,
+        run_complete_message=run_complete_message,
+        chapel_grace=chapel_grace,
+        sentry_torch_shop=sentry_torch_shop,
+        starting_larval_tears=starting_larval_tears,
+        starting_stonesword_keys=starting_stonesword_keys,
+        vanilla_tiers=vanilla_tiers,
+        death_markers=death_markers,
+        weapon_upgrade=weapon_upgrade,
+        phantom_skins=phantom_skins,
+        plugins=plugins,
+    )
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
