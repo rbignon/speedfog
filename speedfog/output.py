@@ -9,12 +9,11 @@ from __future__ import annotations
 
 import json
 import re
+import tomllib
 from collections.abc import Callable, Mapping
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-
-import tomllib
 
 from speedfog.care_package import CarePackageItem
 from speedfog.clusters import ClusterPool

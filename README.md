@@ -33,7 +33,7 @@ Unlike FogRando which randomizes the entire world, SpeedFog creates a focused pa
 ## Requirements
 
 - Elden Ring (Steam version)
-- Python 3.10+
+- Python 3.11+
 - .NET 10.0 SDK
 - Wine (Linux only)
 

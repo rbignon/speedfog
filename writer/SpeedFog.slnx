@@ -1,4 +1,6 @@
 <Solution>
   <Project Path="FogModWrapper/FogModWrapper.csproj" />
+  <Project Path="FogModWrapper.Tests/FogModWrapper.Tests.csproj" />
   <Project Path="ItemRandomizerWrapper/ItemRandomizerWrapper.csproj" />
+  <Project Path="ItemRandomizerWrapper.Tests/ItemRandomizerWrapper.Tests.csproj" />
 </Solution>

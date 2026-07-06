@@ -220,7 +220,7 @@ speedfog/
 - Only add C# logic when FogRando templates cannot express the behavior
 
 ### Python (speedfog/)
-- Python 3.10+
+- Python 3.11+
 - TOML for configuration
 - JSON for graph output (Python → C# interface)
 - Package at root, use `uv run speedfog` from project root
@@ -431,15 +431,12 @@ pytest --cov=speedfog
 # Tools tests (generate_clusters.py)
 cd tools && pytest test_generate_clusters.py -v
 
-# C# - FogModWrapper unit tests
-cd writer/FogModWrapper.Tests && dotnet test
-
-# C# - ItemRandomizerWrapper unit tests
-cd writer/ItemRandomizerWrapper.Tests && dotnet test
-
-# C# - integration test
-cd writer/test && ./run_integration.sh
+# C# - all unit tests
+dotnet test writer/SpeedFog.slnx
 ```
+
+There is no automated end-to-end test of the generated mod: build a seed and
+verify it in-game (see Debugging below).
 
 ## Debugging
 

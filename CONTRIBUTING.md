@@ -4,7 +4,7 @@
 
 ### Prerequisites
 
-- Python 3.10+ with [uv](https://github.com/astral-sh/uv)
+- Python 3.11+ with [uv](https://github.com/astral-sh/uv)
 - .NET 10.0 SDK
 - Wine (Linux only, for running the C# writer)
 - [sfextract](https://github.com/Droppers/SingleFileExtractor) dotnet tool
@@ -153,10 +153,10 @@ uv run pytest --cov=speedfog
 
 # C# - all unit tests
 dotnet test writer/SpeedFog.slnx
-
-# C# - integration smoke test
-writer/test/run_integration.sh
 ```
+
+There is no automated end-to-end test of the generated mod: build a seed and
+verify it in-game (see "Debugging" in CLAUDE.md).
 
 ## Code Style
 

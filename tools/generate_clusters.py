@@ -16,18 +16,13 @@ import argparse
 import hashlib
 import json
 import math
+import re
 import sys
+import tomllib
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-
-try:
-    import tomllib
-except ImportError:
-    import tomli as tomllib  # type: ignore[import-not-found]
-
-import re
 
 import yaml
 

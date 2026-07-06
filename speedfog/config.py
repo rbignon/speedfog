@@ -3,22 +3,11 @@
 from __future__ import annotations
 
 import random
-import sys
+import tomllib
 import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-
-# Use tomllib (Python 3.11+) with fallback to tomli
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    try:
-        import tomli as tomllib
-    except ImportError as e:
-        raise ImportError(
-            "tomli is required for Python < 3.11. Install with: pip install tomli"
-        ) from e
 
 
 @dataclass
@@ -203,7 +192,7 @@ def resolve_final_boss_candidates(
         Dict of zone name -> weight with 'all' expanded to actual zones (weight 1).
     """
     if "all" in candidates:
-        return {zone: 1 for zone in sorted(all_boss_zones)}
+        return dict.fromkeys(sorted(all_boss_zones), 1)
     return candidates
 
 
@@ -225,7 +214,7 @@ def _parse_final_boss_candidates(raw: list[str] | dict[str, int]) -> dict[str, i
     zone name -> weight for backward compatibility.
     """
     if isinstance(raw, list):
-        return {zone: 1 for zone in raw}
+        return dict.fromkeys(raw, 1)
     return {zone: int(weight) for zone, weight in raw.items()}
 
 

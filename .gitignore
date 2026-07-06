@@ -50,11 +50,26 @@ config.toml
 graph.json
 spoiler.txt
 *.log
+*.before
+.codex
 writer/*/publish/
 writer/*/run.txt
 writer/*/eldendata/
 writer/*/diste/
 writer/*/presets/
+tools/*/publish/
+
+# Local run-config presets at repo root (config.example.toml stays tracked)
+/*.toml
+!/pyproject.toml
+!/config.example.toml
+/data.json
+
+# Local one-off analysis scripts (kept for reference, not tracked)
+tools/analysis/
+
+# Working notes from brainstorming/planning workflows (not project docs)
+docs/superpowers/
 
 # FogRando decompiled reference code (not for redistribution)
 reference/
@@ -76,6 +91,7 @@ tools/witchybnd/
 
 # Packaging files populated by tools/bootstrap.py
 data/packaging/me3/
+data/packaging/modengine2/
 data/packaging/lib/*.dll
 
 # Generated i18n data (from tools/update_i18n_names.py)

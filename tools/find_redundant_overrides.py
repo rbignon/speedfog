@@ -12,9 +12,8 @@ from __future__ import annotations
 
 import re
 import sys
-from pathlib import Path
-
 import tomllib
+from pathlib import Path
 
 _PLACEHOLDER_NAMES = {"boss", "zone", "zone1", "zone2", "location", "direction", "name"}
 

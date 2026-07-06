@@ -67,8 +67,8 @@ public class ZoneTrackingTests
     //
     // NOTE: These tests verify the region lookup logic by reimplementing it inline.
     // The actual insertion logic (reverse iteration, Parameter index shifting) in
-    // PatchEmevdFile is covered by integration tests (run_integration.sh) and
-    // Phase 3 validation (missing flags abort the build).
+    // PatchEmevdFile is only covered by Phase 3 validation (missing flags abort
+    // the build) and in-game verification.
 
     /// <summary>
     /// Build a minimal EMEVD with one event containing a WarpPlayer instruction.

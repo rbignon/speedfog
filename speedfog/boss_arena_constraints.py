@@ -173,7 +173,7 @@ def assign_bosses_uniform(
     Returns ``{arena_id: boss_id}`` in the original ``arenas`` iteration order
     for stable spoilers.
     """
-    usage: dict[int, int] = {bid: 0 for bid in pool}
+    usage: dict[int, int] = dict.fromkeys(pool, 0)
     arena_ids = list(arenas.keys())
     rng.shuffle(arena_ids)
 

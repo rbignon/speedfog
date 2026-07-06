@@ -1,0 +1,36 @@
+name: CI
+
+# Only what runs without game data can run here: bootstrap needs --game-dir
+# and the FogRando/ItemRandomizer zips, and the C# projects reference DLLs
+# extracted by bootstrap (writer/lib/, gitignored). Tests that depend on
+# generated data files (data/clusters.json, data/fog.txt) skip themselves.
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync --locked --extra dev
+
+      - name: Lint and type-check (pre-commit, pinned tool versions)
+        env:
+          SKIP: dotnet-format
+        run: uv run pre-commit run --all-files
+
+      - name: Python tests
+        run: uv run pytest tests/ tools/

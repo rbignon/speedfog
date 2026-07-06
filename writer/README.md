@@ -128,6 +128,5 @@ See [Architecture](../docs/architecture.md) for details.
 ### Running Tests
 
 ```bash
-cd writer/test
-./run_integration.sh
+dotnet test SpeedFog.slnx
 ```

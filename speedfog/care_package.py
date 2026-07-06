@@ -8,20 +8,10 @@ from __future__ import annotations
 
 import math
 import random
-import sys
+import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
-
-if sys.version_info >= (3, 11):
-    import tomllib
-else:
-    try:
-        import tomli as tomllib
-    except ImportError as e:
-        raise ImportError(
-            "tomli is required for Python < 3.11. Install with: pip install tomli"
-        ) from e
 
 if TYPE_CHECKING:
     from speedfog.config import CarePackageConfig
