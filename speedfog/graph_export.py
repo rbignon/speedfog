@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import tomllib
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,36 @@ from speedfog.constants import (
     ITEMS_SPAWNED_FLAG,
 )
 from speedfog.dag import Dag, DagNode, FogRef
+
+
+@dataclass
+class GraphExportOptions:
+    """Everything dag_to_dict/export_json need beyond the DAG itself.
+
+    Adding a graph.json field means adding one dataclass field here and
+    using it in dag_to_dict; call sites (main.py, tests) construct this
+    object instead of threading ~20 keyword arguments through three
+    signatures.
+    """
+
+    options: dict[str, bool] | None = None  # FogMod options (scale/shuffle)
+    fog_data: dict[str, dict[str, Any]] | None = None
+    starting_item_lots: list[int] = field(default_factory=list)  # DEPRECATED
+    starting_goods: list[int] = field(default_factory=list)
+    starting_runes: int = 0
+    starting_golden_seeds: int = 0
+    starting_sacred_tears: int = 0
+    starting_larval_tears: int = 10
+    starting_stonesword_keys: int = 6
+    care_package: list[CarePackageItem] = field(default_factory=list)
+    run_complete_message: str = "RUN COMPLETE"
+    chapel_grace: bool = True
+    sentry_torch_shop: bool = True
+    vanilla_tiers: dict[str, int] | None = None
+    death_markers: bool = True
+    weapon_upgrade: int = 0
+    phantom_skins: dict[str, int] = field(default_factory=dict)
+    plugins: dict[str, Any] = field(default_factory=dict)
 
 
 def load_phantom_skins_catalog(path: Path) -> dict[str, int]:
@@ -266,24 +297,7 @@ def _make_fullname(
 def dag_to_dict(
     dag: Dag,
     clusters: ClusterPool,
-    options: dict[str, bool] | None = None,
-    fog_data: dict[str, dict[str, Any]] | None = None,
-    starting_item_lots: list[int] | None = None,
-    starting_goods: list[int] | None = None,
-    starting_runes: int = 0,
-    starting_golden_seeds: int = 0,
-    starting_sacred_tears: int = 0,
-    care_package: list[CarePackageItem] | None = None,
-    run_complete_message: str = "RUN COMPLETE",
-    chapel_grace: bool = True,
-    sentry_torch_shop: bool = True,
-    starting_larval_tears: int = 10,
-    starting_stonesword_keys: int = 6,
-    vanilla_tiers: dict[str, int] | None = None,
-    death_markers: bool = True,
-    weapon_upgrade: int = 0,
-    phantom_skins: dict[str, int] | None = None,
-    plugins: dict[str, Any] | None = None,
+    export: GraphExportOptions | None = None,
 ) -> dict[str, Any]:
     """Convert a DAG to v4 JSON-serializable dictionary.
 
@@ -295,29 +309,19 @@ def dag_to_dict(
     Args:
         dag: The DAG to convert
         clusters: ClusterPool with zone_maps and zone_names
-        options: FogMod options to include (default: scale=True)
-        fog_data: Optional fog_data.json lookup for accurate map IDs (esp. for warps)
-        starting_item_lots: DEPRECATED - ItemLot IDs (randomized by Item Randomizer)
-        starting_goods: Good IDs to award at game start (not affected by randomization)
-        starting_runes: Runes to add to starting classes (via CharaInitParam)
-        starting_golden_seeds: Golden Seeds to give at start
-        starting_sacred_tears: Sacred Tears to give at start
-        care_package: List of CarePackageItem for randomized starting build
-        run_complete_message: Text for the golden banner after final boss defeat
-        chapel_grace: Whether to add a Site of Grace at Chapel of Anticipation
-        sentry_torch_shop: Whether to sell the Sentry's Torch at the Roundtable shop
-        starting_larval_tears: Larval Tears to give at start (for rebirth at graces)
-        starting_stonesword_keys: Stonesword Keys to give at start (unlock imp seals)
-        vanilla_tiers: Optional zone_name → ScalingTier mapping from foglocations2.txt.
-            When provided, each node gets an original_tier field (max ScalingTier of its zones).
-        death_markers: Whether to allocate death marker flags (3 per non-start cluster).
-        plugins: Optional plugin config tables from [plugin.*] in config.toml;
-            forwarded verbatim into graph.json["plugins"].
+        export: All optional export inputs; see GraphExportOptions.
 
     Returns:
         Dictionary with the structure documented in docs/architecture.md
         (version GRAPH_JSON_VERSION).
     """
+    if export is None:
+        export = GraphExportOptions()
+
+    options = export.options
+    fog_data = export.fog_data
+    vanilla_tiers = export.vanilla_tiers
+
     if options is None:
         options = {
             "scale": True,
@@ -514,7 +518,7 @@ def dag_to_dict(
     # Allocate death marker flags: 3 per cluster (low/med/high)
     # for racing mod to control bloodstain visibility by death count.
     death_flags: dict[str, list[int]] = {}
-    if death_markers:
+    if export.death_markers:
         start_cluster_id = dag.nodes[dag.start_id].cluster.id
         for node in dag.nodes.values():
             cluster_id = node.cluster.id
@@ -601,78 +605,125 @@ def dag_to_dict(
         "finish_boss_defeat_flag": finish_boss_defeat_flag,
         "death_flags": death_flags,
         "items_spawned_flag": ITEMS_SPAWNED_FLAG,
-        "run_complete_message": run_complete_message,
-        "chapel_grace": chapel_grace,
-        "sentry_torch_shop": sentry_torch_shop,
-        "starting_item_lots": starting_item_lots or [],
-        "starting_goods": starting_goods or [],
-        "starting_runes": starting_runes,
-        "starting_golden_seeds": starting_golden_seeds,
-        "starting_sacred_tears": starting_sacred_tears,
-        "starting_larval_tears": starting_larval_tears,
-        "starting_stonesword_keys": starting_stonesword_keys,
+        "run_complete_message": export.run_complete_message,
+        "chapel_grace": export.chapel_grace,
+        "sentry_torch_shop": export.sentry_torch_shop,
+        "starting_item_lots": export.starting_item_lots,
+        "starting_goods": export.starting_goods,
+        "starting_runes": export.starting_runes,
+        "starting_golden_seeds": export.starting_golden_seeds,
+        "starting_sacred_tears": export.starting_sacred_tears,
+        "starting_larval_tears": export.starting_larval_tears,
+        "starting_stonesword_keys": export.starting_stonesword_keys,
         "care_package": [
             {"type": item.type, "id": item.id, "name": item.name}
-            for item in (care_package or [])
+            for item in export.care_package
         ],
-        "weapon_upgrade": weapon_upgrade,
+        "weapon_upgrade": export.weapon_upgrade,
         "remove_entities": remove_entities,
         "phantom_skins": {
             name: {"speffects": [skin_id]}
-            for name, skin_id in (phantom_skins or {}).items()
+            for name, skin_id in export.phantom_skins.items()
         },
-        "plugins": plugins or {},
+        "plugins": export.plugins,
     }
+
+
+# Required top-level graph.json keys and their expected Python types.
+# Mirrors what writer/FogModWrapper.Core/GraphLoader.cs consumes; extend it
+# together with GRAPH_JSON_VERSION when the format grows.
+_GRAPH_SCHEMA: dict[str, type | tuple[type, ...]] = {
+    "version": str,
+    "seed": int,
+    "total_layers": int,
+    "total_nodes": int,
+    "total_zones": int,
+    "options": dict,
+    "nodes": dict,
+    "edges": list,
+    "connections": list,
+    "area_tiers": dict,
+    "event_map": dict,
+    "final_node_flag": int,
+    "finish_event": int,
+    "finish_boss_defeat_flag": int,
+    "death_flags": dict,
+    "items_spawned_flag": int,
+    "run_complete_message": str,
+    "chapel_grace": bool,
+    "sentry_torch_shop": bool,
+    "starting_item_lots": list,
+    "starting_goods": list,
+    "starting_runes": int,
+    "starting_golden_seeds": int,
+    "starting_sacred_tears": int,
+    "starting_larval_tears": int,
+    "starting_stonesword_keys": int,
+    "care_package": list,
+    "weapon_upgrade": int,
+    "remove_entities": list,
+    "phantom_skins": dict,
+    "plugins": dict,
+}
+
+_CONNECTION_REQUIRED_KEYS = (
+    "exit_area",
+    "exit_gate",
+    "entrance_area",
+    "entrance_gate",
+    "flag_id",
+)
+
+
+def validate_graph_dict(data: dict[str, Any]) -> None:
+    """Validate an exported graph dict against the graph.json contract.
+
+    Guards the Python -> C# seam: a missing or mistyped top-level field
+    fails here, at export time, instead of surfacing as an obscure
+    GraphLoader error (or silent default) in FogModWrapper.
+
+    Raises:
+        ValueError: listing every violation found.
+    """
+    errors: list[str] = []
+
+    if data.get("version") != GRAPH_JSON_VERSION:
+        errors.append(
+            f"version mismatch: {data.get('version')!r} != {GRAPH_JSON_VERSION!r}"
+        )
+
+    for key, expected in _GRAPH_SCHEMA.items():
+        if key not in data:
+            errors.append(f"missing key: {key}")
+        elif not isinstance(data[key], expected):
+            # bool is an int subclass: reject bools where int is expected
+            errors.append(
+                f"key {key}: expected {expected}, got {type(data[key]).__name__}"
+            )
+        elif expected is int and isinstance(data[key], bool):
+            errors.append(f"key {key}: expected int, got bool")
+
+    for i, conn in enumerate(data.get("connections", [])):
+        for key in _CONNECTION_REQUIRED_KEYS:
+            if key not in conn:
+                errors.append(f"connections[{i}]: missing key {key}")
+
+    if errors:
+        raise ValueError("graph.json validation failed:\n  " + "\n  ".join(errors))
 
 
 def export_json(
     dag: Dag,
     clusters: ClusterPool,
     output_path: Path,
-    options: dict[str, bool] | None = None,
-    fog_data: dict[str, dict[str, Any]] | None = None,
-    starting_item_lots: list[int] | None = None,
-    starting_goods: list[int] | None = None,
-    starting_runes: int = 0,
-    starting_golden_seeds: int = 0,
-    starting_sacred_tears: int = 0,
-    care_package: list[CarePackageItem] | None = None,
-    run_complete_message: str = "RUN COMPLETE",
-    chapel_grace: bool = True,
-    sentry_torch_shop: bool = True,
-    starting_larval_tears: int = 10,
-    starting_stonesword_keys: int = 6,
-    vanilla_tiers: dict[str, int] | None = None,
-    death_markers: bool = True,
-    weapon_upgrade: int = 0,
-    phantom_skins: dict[str, int] | None = None,
-    plugins: dict[str, Any] | None = None,
+    export: GraphExportOptions | None = None,
 ) -> None:
     """Export a DAG to v4 formatted JSON file.
 
-    See dag_to_dict for parameter documentation.
+    Validates the emitted dict against the graph.json contract before
+    writing. See GraphExportOptions for the optional inputs.
     """
-    data = dag_to_dict(
-        dag,
-        clusters,
-        options,
-        fog_data,
-        starting_item_lots,
-        starting_goods,
-        starting_runes,
-        starting_golden_seeds=starting_golden_seeds,
-        starting_sacred_tears=starting_sacred_tears,
-        care_package=care_package,
-        run_complete_message=run_complete_message,
-        chapel_grace=chapel_grace,
-        sentry_torch_shop=sentry_torch_shop,
-        starting_larval_tears=starting_larval_tears,
-        starting_stonesword_keys=starting_stonesword_keys,
-        vanilla_tiers=vanilla_tiers,
-        death_markers=death_markers,
-        weapon_upgrade=weapon_upgrade,
-        phantom_skins=phantom_skins,
-        plugins=plugins,
-    )
+    data = dag_to_dict(dag, clusters, export)
+    validate_graph_dict(data)
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)

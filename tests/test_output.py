@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from speedfog.clusters import ClusterData, ClusterPool
 from speedfog.dag import Dag, DagNode, FogRef
 from speedfog.enemy_data import (
@@ -14,11 +16,13 @@ from speedfog.enemy_data import (
     resolve_boss_name,
 )
 from speedfog.graph_export import (
+    GraphExportOptions,
     _make_fullname,
     dag_to_dict,
     effective_type,
     load_phantom_skins_catalog,
     load_vanilla_tiers,
+    validate_graph_dict,
 )
 from speedfog.spoiler import append_boss_placements_to_spoiler, export_spoiler_log
 
@@ -363,7 +367,7 @@ def _make_result(death_markers: bool = True) -> dict:
         zone_maps={},
         zone_names={},
     )
-    return dag_to_dict(dag, clusters, death_markers=death_markers)
+    return dag_to_dict(dag, clusters, GraphExportOptions(death_markers=death_markers))
 
 
 class TestEventMap:
@@ -492,7 +496,9 @@ class TestEventMap:
             zone_maps={},
             zone_names={},
         )
-        result = dag_to_dict(dag, clusters, run_complete_message="GG")
+        result = dag_to_dict(
+            dag, clusters, GraphExportOptions(run_complete_message="GG")
+        )
         assert result["run_complete_message"] == "GG"
 
     def test_chapel_grace_default(self):
@@ -508,7 +514,7 @@ class TestEventMap:
             zone_maps={},
             zone_names={},
         )
-        result = dag_to_dict(dag, clusters, chapel_grace=False)
+        result = dag_to_dict(dag, clusters, GraphExportOptions(chapel_grace=False))
         assert result["chapel_grace"] is False
 
     def test_sentry_torch_shop_default(self):
@@ -524,7 +530,7 @@ class TestEventMap:
             zone_maps={},
             zone_names={},
         )
-        result = dag_to_dict(dag, clusters, sentry_torch_shop=False)
+        result = dag_to_dict(dag, clusters, GraphExportOptions(sentry_torch_shop=False))
         assert result["sentry_torch_shop"] is False
 
     def test_finish_boss_defeat_flag_present(self):
@@ -1155,7 +1161,7 @@ class TestStartingLarvalTears:
             zone_maps={},
             zone_names={},
         )
-        result = dag_to_dict(dag, clusters, starting_larval_tears=5)
+        result = dag_to_dict(dag, clusters, GraphExportOptions(starting_larval_tears=5))
         assert result["starting_larval_tears"] == 5
 
     def test_zero_value(self):
@@ -1166,7 +1172,7 @@ class TestStartingLarvalTears:
             zone_maps={},
             zone_names={},
         )
-        result = dag_to_dict(dag, clusters, starting_larval_tears=0)
+        result = dag_to_dict(dag, clusters, GraphExportOptions(starting_larval_tears=0))
         assert result["starting_larval_tears"] == 0
 
 
@@ -1623,7 +1629,9 @@ class TestOriginalTier:
             zone_names={},
         )
         vanilla_tiers = {"z_start": 1, "z_a": 5, "z_b1": 8, "z_b2": 12, "z_end": 20}
-        result = dag_to_dict(dag, clusters, vanilla_tiers=vanilla_tiers)
+        result = dag_to_dict(
+            dag, clusters, GraphExportOptions(vanilla_tiers=vanilla_tiers)
+        )
 
         assert result["nodes"]["c_start"]["original_tier"] == 1
         assert result["nodes"]["c_a"]["original_tier"] == 5
@@ -1641,7 +1649,9 @@ class TestOriginalTier:
         )
         # Only provide tiers for the multi-zone node (c_b has z_b1, z_b2)
         vanilla_tiers = {"z_b1": 3, "z_b2": 7}
-        result = dag_to_dict(dag, clusters, vanilla_tiers=vanilla_tiers)
+        result = dag_to_dict(
+            dag, clusters, GraphExportOptions(vanilla_tiers=vanilla_tiers)
+        )
 
         assert result["nodes"]["c_b"]["original_tier"] == 7
         # Nodes with no matching zones get None
@@ -1657,7 +1667,9 @@ class TestOriginalTier:
         )
         # Only z_b2 has a tier, z_b1 doesn't
         vanilla_tiers = {"z_b2": 15}
-        result = dag_to_dict(dag, clusters, vanilla_tiers=vanilla_tiers)
+        result = dag_to_dict(
+            dag, clusters, GraphExportOptions(vanilla_tiers=vanilla_tiers)
+        )
 
         assert result["nodes"]["c_b"]["original_tier"] == 15
 
@@ -2340,7 +2352,7 @@ class TestWeaponUpgrade:
             zone_maps={},
             zone_names={},
         )
-        result = dag_to_dict(dag, clusters, weapon_upgrade=8)
+        result = dag_to_dict(dag, clusters, GraphExportOptions(weapon_upgrade=8))
         assert result["weapon_upgrade"] == 8
 
     def test_weapon_upgrade_defaults_to_zero(self):
@@ -2431,7 +2443,9 @@ class TestPhantomSkins:
         result = dag_to_dict(
             dag,
             clusters,
-            phantom_skins={"gold-aura": 1450700, "cyan-aura": 1450701},
+            GraphExportOptions(
+                phantom_skins={"gold-aura": 1450700, "cyan-aura": 1450701}
+            ),
         )
         assert result["phantom_skins"] == {
             "gold-aura": {"speffects": [1450700]},
@@ -2468,7 +2482,9 @@ class TestDagToDictPlugins:
             zone_names={},
         )
         result = dag_to_dict(
-            dag, clusters, plugins={"summer": {"enabled": True, "intensity": 3}}
+            dag,
+            clusters,
+            GraphExportOptions(plugins={"summer": {"enabled": True, "intensity": 3}}),
         )
         assert result["version"] == "4.4"
         assert result["plugins"] == {"summer": {"enabled": True, "intensity": 3}}
@@ -2558,3 +2574,49 @@ def test_python_population_end_to_end(tmp_path):
     node = json.loads(graph_path.read_text())["nodes"]["arena"]
     assert node["randomized_bosses"] == ["Godskin Noble", "Margit (tag)"]
     assert node["boss_name"] == "Margit (tag)"
+
+
+# =============================================================================
+# validate_graph_dict (graph.json contract guard)
+# =============================================================================
+
+
+class TestValidateGraphDict:
+    """Tests for the graph.json schema validation at export time."""
+
+    def _valid_graph(self) -> dict:
+        return _make_result()
+
+    def test_exported_dict_is_valid(self):
+        validate_graph_dict(self._valid_graph())  # must not raise
+
+    def test_missing_key_raises(self):
+        graph = self._valid_graph()
+        del graph["event_map"]
+        with pytest.raises(ValueError, match="missing key: event_map"):
+            validate_graph_dict(graph)
+
+    def test_wrong_type_raises(self):
+        graph = self._valid_graph()
+        graph["starting_runes"] = "50000"
+        with pytest.raises(ValueError, match="starting_runes"):
+            validate_graph_dict(graph)
+
+    def test_bool_where_int_expected_raises(self):
+        graph = self._valid_graph()
+        graph["finish_event"] = True
+        with pytest.raises(ValueError, match="finish_event"):
+            validate_graph_dict(graph)
+
+    def test_version_mismatch_raises(self):
+        graph = self._valid_graph()
+        graph["version"] = "3.9"
+        with pytest.raises(ValueError, match="version mismatch"):
+            validate_graph_dict(graph)
+
+    def test_connection_missing_flag_id_raises(self):
+        graph = self._valid_graph()
+        assert graph["connections"], "fixture must produce connections"
+        del graph["connections"][0]["flag_id"]
+        with pytest.raises(ValueError, match=r"connections\[0\]: missing key flag_id"):
+            validate_graph_dict(graph)

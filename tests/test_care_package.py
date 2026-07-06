@@ -489,7 +489,7 @@ class TestCarePackageInOutput:
     def test_care_package_serialization(self):
         """dag_to_dict serializes care package items correctly."""
         from speedfog.clusters import ClusterPool
-        from speedfog.graph_export import dag_to_dict
+        from speedfog.graph_export import GraphExportOptions, dag_to_dict
         from tests.test_output import make_test_dag
 
         dag = make_test_dag()
@@ -506,7 +506,7 @@ class TestCarePackageInOutput:
             CarePackageItem(type=3, id=4000, name="Glintstone Pebble"),
         ]
 
-        result = dag_to_dict(dag, clusters, care_package=care_items)
+        result = dag_to_dict(dag, clusters, GraphExportOptions(care_package=care_items))
         assert len(result["care_package"]) == 4
         assert result["care_package"][0] == {
             "type": 0,

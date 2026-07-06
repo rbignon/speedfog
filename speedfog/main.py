@@ -29,6 +29,7 @@ from speedfog.enemy_data import (
 from speedfog.fog_mod import run_fogmodwrapper
 from speedfog.generator import GenerationError, generate_with_retry
 from speedfog.graph_export import (
+    GraphExportOptions,
     export_json,
     load_fog_data,
     load_phantom_skins_catalog,
@@ -367,21 +368,18 @@ def main() -> int:
     # Export JSON v4 format (for FogModWrapper and visualization)
     json_path = seed_dir / "graph.json"
     starting_goods = config.starting_items.get_starting_goods()
-    export_json(
-        dag,
-        clusters,
-        json_path,
+    export_options = GraphExportOptions(
         fog_data=fog_data,
         starting_goods=starting_goods,
         starting_runes=config.starting_items.starting_runes,
         starting_golden_seeds=config.starting_items.golden_seeds,
         starting_sacred_tears=config.starting_items.sacred_tears,
-        care_package=care_package_items,
+        starting_larval_tears=config.starting_items.larval_tears,
+        starting_stonesword_keys=config.starting_items.stonesword_keys,
+        care_package=care_package_items or [],
         run_complete_message=run_complete_message,
         chapel_grace=config.chapel_grace,
         sentry_torch_shop=config.sentry_torch_shop,
-        starting_larval_tears=config.starting_items.larval_tears,
-        starting_stonesword_keys=config.starting_items.stonesword_keys,
         vanilla_tiers=vanilla_tiers,
         death_markers=config.death_markers,
         weapon_upgrade=config.care_package.weapon_upgrade
@@ -390,6 +388,7 @@ def main() -> int:
         phantom_skins=phantom_skins,
         plugins=config.plugins,
     )
+    export_json(dag, clusters, json_path, export_options)
     print(f"Written: {json_path}")
     if starting_goods:
         print(f"Starting items: {len(starting_goods)} goods configured")
