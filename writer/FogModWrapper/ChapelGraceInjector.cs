@@ -100,7 +100,7 @@ public static class ChapelGraceInjector
         Console.WriteLine("Chapel of Anticipation grace injected successfully");
     }
 
-    private struct MsbResult
+    internal struct MsbResult
     {
         public uint BonfireEntityId;
         public uint SpawnRegionEntityId;
@@ -136,6 +136,26 @@ public static class ChapelGraceInjector
 
         var msb = MSBE.Read(msbPath);
 
+        var result = ApplyToMsb(msb);
+        if (result == null)
+            return null;
+
+        // Write to modDir (always write to mod output, not game dir).
+        // Use the same directory case that FogMod used (mapstudio vs MapStudio).
+        var writePath = modMsbPath ?? MsbHelper.FindOrCreateMsbDir(modDir, msbFileName);
+        Directory.CreateDirectory(Path.GetDirectoryName(writePath)!);
+        msb.Write(writePath);
+
+        return result;
+    }
+
+    /// <summary>
+    /// In-memory MSB transformation: add the grace asset, NPC, player warp target,
+    /// and spawn region. Returns the allocated entity IDs, or null when the MSB
+    /// has no source parts to clone from. Exposed internal for testing.
+    /// </summary>
+    internal static MsbResult? ApplyToMsb(MSBE msb)
+    {
         // Check if grace already exists (e.g., Item Randomizer or FogMod already created it)
         var existingGrace = msb.Parts.Assets.Find(a =>
             a.ModelName == GRACE_ASSET_MODEL &&
@@ -146,9 +166,6 @@ public static class ChapelGraceInjector
 
             // Still create spawn region even if grace was pre-created
             var earlySpawnRegion = CreateGraceSpawnRegion(msb);
-            var earlyWritePath = modMsbPath ?? MsbHelper.FindOrCreateMsbDir(modDir, msbFileName);
-            Directory.CreateDirectory(Path.GetDirectoryName(earlyWritePath)!);
-            msb.Write(earlyWritePath);
 
             return new MsbResult
             {
@@ -250,12 +267,6 @@ public static class ChapelGraceInjector
         //    we'll patch it in InjectEmevd to use this region instead of the vanilla one
         var spawnRegion = CreateGraceSpawnRegion(msb);
 
-        // Write to modDir (always write to mod output, not game dir).
-        // Use the same directory case that FogMod used (mapstudio vs MapStudio).
-        var writePath = modMsbPath ?? MsbHelper.FindOrCreateMsbDir(modDir, msbFileName);
-        Directory.CreateDirectory(Path.GetDirectoryName(writePath)!);
-        msb.Write(writePath);
-
         Console.WriteLine($"  MSB: asset {graceAsset.Name} (entity {bonfireEntity}), " +
                           $"NPC {graceNpc.Name} (entity {chrEntity}), " +
                           $"player {gracePlayer.Name} (entity {playerEntity})");
@@ -273,6 +284,17 @@ public static class ChapelGraceInjector
         if (bonfireParam == null)
             return null;
 
+        return AddBonfireWarpRow(bonfireParam, bonfireEntityId);
+    }
+
+    /// <summary>
+    /// In-memory BonfireWarpParam transformation: allocate a row ID and event flag,
+    /// create the row, and copy cosmetic fields from the template bonfire row.
+    /// Returns the allocated event flag ID, or null when the template row is missing.
+    /// Exposed internal for testing.
+    /// </summary>
+    internal static uint? AddBonfireWarpRow(PARAM bonfireParam, uint bonfireEntityId)
+    {
         // Check if a row already exists for this bonfire entity
         var existingRow = bonfireParam.Rows.Find(r =>
             (uint)r["bonfireEntityId"].Value == bonfireEntityId);
@@ -439,7 +461,7 @@ public static class ChapelGraceInjector
     /// from the vanilla region (10012020) to our grace spawn region.
     /// SetPlayerRespawnPoint = bank 2003, id 23, single uint32 arg (region entity ID).
     /// </summary>
-    private static void PatchGameStartEvent(EMEVD emevd, uint newRegionEntity)
+    internal static void PatchGameStartEvent(EMEVD emevd, uint newRegionEntity)
     {
         var gameStartEvent = emevd.Events.Find(e => e.ID == GAME_START_EVENT_ID);
         if (gameStartEvent == null)
@@ -477,7 +499,7 @@ public static class ChapelGraceInjector
     /// player directly at the grace on first load, instead of the vanilla Grafted Scion area.
     /// Returns the entity ID of the created region.
     /// </summary>
-    private static uint CreateGraceSpawnRegion(MSBE msb)
+    internal static uint CreateGraceSpawnRegion(MSBE msb)
     {
         // Check if already created
         var existing = msb.Regions.SpawnPoints.Find(r => r.EntityID == GRACE_SPAWN_REGION);
@@ -505,7 +527,7 @@ public static class ChapelGraceInjector
     /// Move a position forward by 'dist' meters in the direction of Y-axis rotation.
     /// Replicates FogRando's moveInDirection (GameDataWriterE.cs:5326-5330).
     /// </summary>
-    private static System.Numerics.Vector3 MoveInDirection(
+    internal static System.Numerics.Vector3 MoveInDirection(
         float x, float y, float z, float rotY, float dist)
     {
         float rad = rotY * MathF.PI / 180f;
