@@ -3,7 +3,6 @@
 import pytest
 
 from speedfog.config import (
-    BudgetConfig,
     Config,
     RequirementsConfig,
     load_config,
@@ -12,10 +11,28 @@ from speedfog.config import (
 )
 
 
-def test_budget_tolerance():
-    """BudgetConfig stores tolerance for max allowed spread."""
-    budget = BudgetConfig(tolerance=5)
-    assert budget.tolerance == 5
+def test_budget_section_is_deprecated():
+    """A [budget] section warns (deprecated) instead of failing strict mode."""
+    with pytest.warns(DeprecationWarning, match="budget"):
+        Config.from_dict({"budget": {"tolerance": 5}})
+
+
+def test_unknown_section_rejected():
+    """Unknown top-level sections fail loudly."""
+    with pytest.raises(ValueError, match=r"unknown section \[requirments\]"):
+        Config.from_dict({"requirments": {"bosses": 3}})
+
+
+def test_unknown_key_rejected():
+    """Typo'd keys inside known sections fail loudly."""
+    with pytest.raises(ValueError, match="unknown key run.starting_runs"):
+        Config.from_dict({"run": {"starting_runs": 50000}})
+
+
+def test_display_section_is_passthrough():
+    """[display] (speedfog-racing preset metadata) is accepted verbatim."""
+    config = Config.from_dict({"display": {"sort_order": 1, "description": "x"}})
+    assert config.seed == 0
 
 
 def test_config_defaults():
@@ -25,7 +42,6 @@ def test_config_defaults():
     assert config.run_complete_message == "RUN COMPLETE"
     assert config.chapel_grace is True
     assert config.sentry_torch_shop is True
-    assert config.budget.tolerance == 5
     assert config.requirements.bosses == 5
     assert config.requirements.legacy_dungeons == 1
     assert config.requirements.mini_dungeons == 5
@@ -57,15 +73,11 @@ def test_config_from_toml(tmp_path):
 [run]
 seed = 42
 
-[budget]
-tolerance = 3
-
 [requirements]
 bosses = 7
 """)
     config = Config.from_toml(config_file)
     assert config.seed == 42
-    assert config.budget.tolerance == 3
     assert config.requirements.bosses == 7
     # Defaults for unspecified values
     assert config.requirements.legacy_dungeons == 1
@@ -77,9 +89,6 @@ def test_config_full_toml(tmp_path):
     config_file.write_text("""
 [run]
 seed = 12345
-
-[budget]
-tolerance = 10
 
 [requirements]
 legacy_dungeons = 2
@@ -98,8 +107,6 @@ platform = "linux"
     config = Config.from_toml(config_file)
     # Run section
     assert config.seed == 12345
-    # Budget section
-    assert config.budget.tolerance == 10
     # Requirements section
     assert config.requirements.legacy_dungeons == 2
     assert config.requirements.bosses == 8
@@ -119,13 +126,9 @@ def test_load_config_helper(tmp_path):
     config_file.write_text("""
 [run]
 seed = 99
-
-[budget]
-tolerance = 8
 """)
     config = load_config(config_file)
     assert config.seed == 99
-    assert config.budget.tolerance == 8
     assert config.requirements.bosses == 5
 
 

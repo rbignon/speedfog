@@ -61,42 +61,6 @@ def compute_tier(
     return max(start_tier, min(final_tier, int(round(tier))))
 
 
-def pick_weighted_type(
-    pool_sizes: dict[str, int],
-    used_counts: dict[str, int],
-    rng: random.Random,
-    *,
-    fallback: str = "mini_dungeon",
-) -> str:
-    """Pick a type weighted by remaining pool capacity.
-
-    Used for convergence layers and other contexts where a type must be
-    chosen proportionally to remaining availability.
-
-    Args:
-        pool_sizes: Total available clusters per type.
-        used_counts: How many of each type have been consumed so far.
-        rng: Random number generator.
-        fallback: Type returned when every pool is exhausted. Caller
-            should pass a type known to be allowed in the current run.
-
-    Returns:
-        A type string chosen proportionally to remaining capacity, or
-        `fallback` if every pool is empty.
-    """
-    remaining = {
-        t: max(0, pool - used_counts.get(t, 0)) for t, pool in pool_sizes.items()
-    }
-    candidates = {t: r for t, r in remaining.items() if r > 0}
-
-    if not candidates:
-        return fallback
-
-    types_list = list(candidates.keys())
-    weights = [candidates[t] for t in types_list]
-    return rng.choices(types_list, weights=weights, k=1)[0]
-
-
 def _distribute_padding(
     padding_needed: int,
     required_counts: dict[str, int],

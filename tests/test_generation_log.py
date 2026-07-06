@@ -9,7 +9,6 @@ from speedfog.generation_log import (
     NodeEntry,
     PlanEvent,
     SummaryEvent,
-    compute_pool_remaining,
     export_generation_log,
 )
 from speedfog.generator import generate_dag
@@ -79,7 +78,6 @@ def test_fallback_entry():
         preferred_type="major_boss",
         actual_type="boss_arena",
         reason="pool_exhausted",
-        pool_remaining={"major_boss": 0, "boss_arena": 61},
     )
     assert fe.reason == "pool_exhausted"
 
@@ -92,7 +90,6 @@ def test_summary_event():
         convergence_layers=4,
         fallback_count=3,
         fallback_summary=[(22, "major_boss")],
-        pool_at_end={"boss_arena": 58},
     )
     assert se.fallback_count == 3
 
@@ -150,7 +147,6 @@ def _make_minimal_log():
         convergence_layers=0,
         fallback_count=0,
         fallback_summary=[],
-        pool_at_end={},
     )
     return log
 
@@ -243,7 +239,6 @@ def test_export_fallback_details(tmp_path):
                     preferred_type="major_boss",
                     actual_type="boss_arena",
                     reason="pool_exhausted",
-                    pool_remaining={"major_boss": 0, "boss_arena": 61},
                 ),
             ],
         ),
@@ -254,10 +249,9 @@ def test_export_fallback_details(tmp_path):
     assert "*** FALLBACK ***" in text
     assert "b1: wanted major_boss, got boss_arena" in text
     assert "pool_exhausted" in text
-    assert "major_boss=0" in text
 
 
-def test_export_convergence_pool_snapshot(tmp_path):
+def test_export_convergence_header(tmp_path):
     log = _make_minimal_log()
     log.layer_events.append(
         LayerEvent(
@@ -267,49 +261,13 @@ def test_export_convergence_pool_snapshot(tmp_path):
             operation="MERGE",
             branches_before=4,
             branches_after=3,
-            pool_snapshot={"boss_arena": 58, "mini_dungeon": 43},
         ),
     )
     path = tmp_path / "generation.log"
     export_generation_log(log, path)
     text = path.read_text()
     assert "CONVERGENCE (4 branches remaining)" in text
-    assert "Pool: boss_arena=58, mini_dungeon=43" in text
     assert "convergence=mini_dungeon" in text
-
-
-def _make_test_cluster(cluster_id, ctype, zones):
-    return ClusterData(
-        id=cluster_id,
-        type=ctype,
-        zones=zones,
-        entry_fogs=[],
-        exit_fogs=[],
-        weight=1,
-    )
-
-
-def test_compute_pool_remaining():
-    pool = [
-        _make_test_cluster("a", "major_boss", ["zone_a"]),
-        _make_test_cluster("b", "major_boss", ["zone_b"]),
-        _make_test_cluster("c", "boss_arena", ["zone_c"]),
-    ]
-    used_zones = {"zone_a"}
-    reserved_zones = frozenset()
-    result = compute_pool_remaining(pool, used_zones, reserved_zones)
-    assert result == {"major_boss": 1, "boss_arena": 1}
-
-
-def test_compute_pool_remaining_with_reserved():
-    pool = [
-        _make_test_cluster("a", "major_boss", ["zone_a"]),
-        _make_test_cluster("b", "boss_arena", ["zone_b"]),
-    ]
-    used_zones: set[str] = set()
-    reserved_zones = frozenset({"zone_a"})
-    result = compute_pool_remaining(pool, used_zones, reserved_zones)
-    assert result == {"major_boss": 0, "boss_arena": 1}
 
 
 def _make_cluster(

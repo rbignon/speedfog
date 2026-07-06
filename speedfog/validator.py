@@ -44,8 +44,8 @@ def validate_dag(
     Args:
         dag: The DAG to validate.
         config: Configuration with requirements and budget.
-        clusters: Optional ClusterPool (currently unused, kept for API
-            compatibility).
+        clusters: Optional ClusterPool; when provided, required zones are
+            checked against cluster types (allowed_types reachability).
 
     Returns:
         ValidationResult with errors and warnings.

@@ -4,7 +4,6 @@ __version__ = "0.1.0"
 
 from speedfog.clusters import ClusterData, ClusterPool, load_clusters
 from speedfog.config import (
-    BudgetConfig,
     Config,
     PathsConfig,
     RequirementsConfig,
@@ -24,7 +23,6 @@ from speedfog.validator import ValidationResult, validate_dag
 
 __all__ = [
     # Config
-    "BudgetConfig",
     "Config",
     "PathsConfig",
     "RequirementsConfig",

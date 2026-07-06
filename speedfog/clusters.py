@@ -97,24 +97,6 @@ class ClusterData:
             boss_name=data.get("boss_name", ""),
         )
 
-    def available_exits(self, used_entry: dict | None) -> list[dict]:
-        """Get exit fogs available after using an entry fog.
-
-        A fog gate has two sides. Using an entry from zone A only removes
-        the exit from zone A (same side), not exits from other zones.
-
-        Args:
-            used_entry: Entry fog dict {"fog_id", "zone"}, or None.
-
-        Returns:
-            List of exit fog dicts still available.
-        """
-        if used_entry is None:
-            return list(self.exit_fogs)
-
-        used_key = (used_entry["fog_id"], used_entry["zone"])
-        return [f for f in self.exit_fogs if (f["fog_id"], f["zone"]) != used_key]
-
 
 @dataclass
 class ClusterPool:
@@ -146,14 +128,6 @@ class ClusterPool:
     def get_map(self, zone: str) -> str | None:
         """Get the map ID for a zone."""
         return self.zone_maps.get(zone)
-
-    def get_map_for_cluster(self, cluster: ClusterData) -> str | None:
-        """Get the primary map for a cluster (from first zone with a map)."""
-        for zone in cluster.zones:
-            map_id = self.zone_maps.get(zone)
-            if map_id:
-                return map_id
-        return None
 
     def get_display_name(self, cluster: ClusterData) -> str:
         """Get the display name for a cluster.

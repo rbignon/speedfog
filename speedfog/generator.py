@@ -898,7 +898,6 @@ def pick_layer_clusters(
                             preferred_type=layer_type,
                             actual_type=ft,
                             reason="pool_exhausted",
-                            pool_remaining={},
                         )
                     )
                     is_fallback = True
@@ -1147,7 +1146,6 @@ def generate_dag(config: Config, clusters: ClusterPool) -> tuple[Dag, Generation
         ),
         fallback_count=len(all_fallbacks),
         fallback_summary=fallback_summary,
-        pool_at_end={},
     )
     return dag, log
 

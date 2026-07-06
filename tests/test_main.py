@@ -68,6 +68,28 @@ def test_main_missing_config_file_returns_1(tmp_path, monkeypatch, capsys):
     assert "Config file not found" in capsys.readouterr().err
 
 
+def test_main_malformed_toml_returns_1(tmp_path, monkeypatch, capsys):
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("[run\nseed = ")
+
+    rc = _run_main(monkeypatch, str(config_path))
+
+    assert rc == 1
+    assert "Invalid TOML" in capsys.readouterr().err
+
+
+def test_main_unknown_config_key_returns_1(tmp_path, monkeypatch, capsys):
+    config_path = tmp_path / "config.toml"
+    config_path.write_text("[run]\nsead = 42\n")
+
+    rc = _run_main(monkeypatch, str(config_path))
+
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "Invalid config" in err
+    assert "unknown key run.sead" in err
+
+
 # --- main(): full pipeline against the real cluster pool ---
 
 

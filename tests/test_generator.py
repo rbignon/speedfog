@@ -1147,40 +1147,6 @@ class TestCountNetExits:
         assert net_exits == 2  # Both exits preserved
 
 
-class TestClusterDataAvailableExits:
-    """Tests for ClusterData.available_exits with (fog_id, zone) logic."""
-
-    def test_removes_only_same_side_exit(self):
-        """Using entry from zone A only removes exit from zone A."""
-        cluster = make_cluster(
-            "test",
-            zones=["zone_a", "zone_b"],
-            exit_fogs=[
-                {"fog_id": "shared", "zone": "zone_a"},
-                {"fog_id": "shared", "zone": "zone_b"},
-            ],
-        )
-
-        used_entry = {"fog_id": "shared", "zone": "zone_a"}
-        available = cluster.available_exits(used_entry)
-
-        assert len(available) == 1
-        assert available[0]["zone"] == "zone_b"
-
-    def test_none_entry_returns_all_exits(self):
-        """None entry returns all exits."""
-        cluster = make_cluster(
-            "test",
-            exit_fogs=[
-                {"fog_id": "fog1", "zone": "zone_a"},
-                {"fog_id": "fog2", "zone": "zone_b"},
-            ],
-        )
-
-        available = cluster.available_exits(None)
-        assert len(available) == 2
-
-
 class TestMergeRoundtableIntoStart:
     """Tests for ClusterPool.merge_roundtable_into_start."""
 
@@ -2220,7 +2186,6 @@ class TestPickClusterWeightMatchedRequiredZones:
 def test_validate_config_rejects_oversubscribed_layers_count():
     from speedfog.clusters import ClusterPool
     from speedfog.config import (
-        BudgetConfig,
         Config,
     )
     from speedfog.generator import validate_config
@@ -2231,7 +2196,6 @@ def test_validate_config_rejects_oversubscribed_layers_count():
             legacy_dungeons=4, bosses=4, mini_dungeons=4, major_bosses=0
         ),
         structure=StructureConfig(layers_count=10),  # budget = 8
-        budget=BudgetConfig(),
     )
     pool = ClusterPool()
     errors, _warnings = validate_config(cfg, pool, boss_candidates=[])
@@ -2601,7 +2565,6 @@ def test_pick_layer_clusters_enforces_max_layer_spread():
 
 def test_generator_v2_corpus_validity_50_seeds():
     from speedfog.config import (
-        BudgetConfig,
         Config,
         RequirementsConfig,
         StructureConfig,
@@ -2627,7 +2590,6 @@ def test_generator_v2_corpus_validity_50_seeds():
                 max_parallel_paths=4,
                 final_boss_candidates={"leyndell_throne": 1},
             ),
-            budget=BudgetConfig(),
         )
         try:
             dag, _ = generate_dag(cfg, pool)
@@ -2657,7 +2619,6 @@ def test_generator_v2_corpus_validity_50_seeds():
 
 def test_generate_dag_v2_produces_exact_layers_count():
     from speedfog.config import (
-        BudgetConfig,
         Config,
         RequirementsConfig,
         StructureConfig,
@@ -2685,7 +2646,6 @@ def test_generate_dag_v2_produces_exact_layers_count():
             max_parallel_paths=4,
             final_boss_candidates={"leyndell_throne": 1},
         ),
-        budget=BudgetConfig(),
     )
     dag, log = generate_dag(cfg, pool)
 
@@ -3265,7 +3225,6 @@ def test_generate_dag_places_required_zone_in_dag():
     """A required zone is placed by generate_dag and recorded in the log."""
 
     from speedfog.config import (
-        BudgetConfig,
         Config,
         RequirementsConfig,
         StructureConfig,
@@ -3291,7 +3250,6 @@ def test_generate_dag_places_required_zone_in_dag():
             max_parallel_paths=4,
             final_boss_candidates={"leyndell_throne": 1},
         ),
-        budget=BudgetConfig(),
     )
 
     dag, log = generate_dag(cfg, pool)
@@ -3309,7 +3267,6 @@ def test_generate_dag_without_required_zones_emits_no_events():
     """No requirements.zones -> no RequiredZonePlaced events."""
 
     from speedfog.config import (
-        BudgetConfig,
         Config,
         RequirementsConfig,
         StructureConfig,
@@ -3331,7 +3288,6 @@ def test_generate_dag_without_required_zones_emits_no_events():
             max_parallel_paths=4,
             final_boss_candidates={"leyndell_throne": 1},
         ),
-        budget=BudgetConfig(),
     )
 
     _, log = generate_dag(cfg, pool)
@@ -3342,7 +3298,6 @@ def test_generate_with_retry_places_multiple_required_zones_without_retry():
     """Multiple required zones placed in a single attempt via generate_with_retry."""
 
     from speedfog.config import (
-        BudgetConfig,
         Config,
         RequirementsConfig,
         StructureConfig,
@@ -3369,7 +3324,6 @@ def test_generate_with_retry_places_multiple_required_zones_without_retry():
             max_parallel_paths=4,
             final_boss_candidates={"leyndell_throne": 1},
         ),
-        budget=BudgetConfig(),
     )
 
     boss_candidates = pool.get_by_type("major_boss") + pool.get_by_type("final_boss")

@@ -206,7 +206,6 @@ def make_config(
     """Create a Config with specified requirements."""
     return Config.from_dict(
         {
-            "budget": {},
             "requirements": {
                 "legacy_dungeons": legacy_dungeons,
                 "bosses": bosses,

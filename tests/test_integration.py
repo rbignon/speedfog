@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 
 from speedfog import (
-    BudgetConfig,
     Config,
     RequirementsConfig,
     StructureConfig,
@@ -61,7 +60,6 @@ def relaxed_config():
     """
     return Config(
         seed=3,
-        budget=BudgetConfig(tolerance=30),  # Wide tolerance for spread
         requirements=RequirementsConfig(
             legacy_dungeons=0,
             bosses=0,
@@ -135,7 +133,6 @@ class TestFullPipeline:
         config1.seed = 3
         config2 = Config(
             seed=5,
-            budget=relaxed_config.budget,
             requirements=relaxed_config.requirements,
             structure=relaxed_config.structure,
         )
@@ -321,7 +318,7 @@ def test_generation_log_with_real_clusters(
 
     # Verify serialization
     log_path = tmp_path / "generation.log"
-    export_generation_log(log, log_path, dag=dag)
+    export_generation_log(log, log_path)
     text = log_path.read_text()
     assert "PLAN" in text
     assert "LAYERS" in text

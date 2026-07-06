@@ -149,7 +149,7 @@ The DAG algorithm:
 4. Select clusters avoiding zone reuse, respecting fog gate compatibility
 5. Compute enemy tiers from 1 to `final_tier` using configurable curve (linear or power)
 6. Force merge all branches before the final boss (configurable candidates, default Radagon/PCR)
-7. Validate against budget/requirements, retry with new seeds if needed
+7. Validate against requirements, retry with new seeds if needed
 
 ### 3. Item Randomization (optional)
 
@@ -265,9 +265,6 @@ User configuration for DAG generation.
 ```toml
 [run]
 seed = 0                    # 0 = random, N = force seed
-
-[budget]
-tolerance = 5               # Max allowed spread between paths
 
 [requirements]
 legacy_dungeons = 1         # Minimum per run

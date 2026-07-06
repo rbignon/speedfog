@@ -15,18 +15,6 @@ from speedfog.constants import (
     MAX_TIER,
 )
 
-
-@dataclass
-class BudgetConfig:
-    """Path balance configuration.
-
-    tolerance: maximum allowed weight spread between the heaviest and
-    lightest paths through the DAG.
-    """
-
-    tolerance: int = 5
-
-
 _VALID_CLUSTER_TYPES = INTERMEDIATE_CLUSTER_TYPES
 
 _CLUSTER_TYPE_TO_FIELD = {
@@ -511,6 +499,168 @@ class CarePackageConfig:
                 raise ValueError(f"{field_name} must be >= 0, got {value}")
 
 
+# Known config sections and their accepted keys. None means the section's
+# content is free-form (validated elsewhere). Keep in sync with from_dict;
+# _reject_unknown_keys uses this to fail loudly on typos instead of letting
+# them be silent no-ops.
+_KNOWN_SECTION_KEYS: dict[str, frozenset[str] | None] = {
+    "run": frozenset(
+        {
+            "seed",
+            "run_complete_message",
+            "chapel_grace",
+            "sentry_torch_shop",
+            "death_markers",
+        }
+    ),
+    "requirements": frozenset(
+        {
+            "legacy_dungeons",
+            "bosses",
+            "mini_dungeons",
+            "major_bosses",
+            "zones",
+            "exclude_zones",
+            "allowed_types",
+        }
+    ),
+    "structure": frozenset(
+        {
+            "max_parallel_paths",
+            "max_exits",
+            "max_entrances",
+            "first_layer_type",
+            "final_boss_candidates",
+            "start_tier",
+            "final_tier",
+            "tier_curve",
+            "tier_curve_exponent",
+            "max_weight_tolerance",
+            "max_layer_spread",
+            "layers_count",
+            # Legacy keys: accepted with a DeprecationWarning in from_dict
+            "split_probability",
+            "merge_probability",
+            "max_branches",
+            "min_layers",
+            "max_layers",
+            "min_branch_age",
+            "crosslinks",
+        }
+    ),
+    "paths": frozenset({"game_dir", "output_dir", "platform"}),
+    "starting_items": frozenset(
+        {
+            "academy_key",
+            "pureblood_medal",
+            "rusty_key",
+            "drawing_room_key",
+            "lantern",
+            "spirit_calling_bell",
+            "physick_flask",
+            "whetstone_knife",
+            "whetblades",
+            "great_runes",
+            "rune_godrick",
+            "rune_radahn",
+            "rune_morgott",
+            "rune_mohg",
+            "rune_rykard",
+            "rune_malenia",
+            "omother",
+            "welldepthskey",
+            "gaolupperlevelkey",
+            "gaollowerlevelkey",
+            "holeladennecklace",
+            "messmerskindling",
+            "talisman_pouches",
+            "golden_seeds",
+            "sacred_tears",
+            "starting_runes",
+            "larval_tears",
+            "stonesword_keys",
+        }
+    ),
+    "item_randomizer": frozenset(
+        {
+            "enabled",
+            "difficulty",
+            "remove_requirements",
+            "auto_upgrade_weapons",
+            "auto_upgrade_dropped",
+            "reduce_upgrade_cost",
+            "auto_equip",
+            "dlc",
+            "nerf_gargoyles",
+            "nerf_malenia",
+            "allcraft",
+            "item_preset",
+            "item_preset_path",
+        }
+    ),
+    "care_package": frozenset(
+        {
+            "enabled",
+            "weapon_upgrade",
+            "weapons",
+            "shields",
+            "catalysts",
+            "talismans",
+            "sorceries",
+            "incantations",
+            "head_armor",
+            "body_armor",
+            "arm_armor",
+            "leg_armor",
+            "crystal_tears",
+            "ashes_of_war",
+        }
+    ),
+    "enemy": frozenset(
+        {
+            "randomize_bosses",
+            "ignore_arena_size",
+            "swap_boss",
+            "dlc_bosses",
+            "bosses",
+        }
+    ),
+    # Free-form plugin tables, envelope-validated in Config.__post_init__
+    "plugin": None,
+    # Preset metadata consumed by the speedfog-racing platform, not by
+    # speedfog itself (sort_order, description, estimated_duration, ...)
+    "display": None,
+}
+
+
+def _reject_unknown_keys(data: dict[str, Any]) -> None:
+    """Reject unknown sections and unknown keys within known sections.
+
+    The removed [budget] section only warns (deprecated, ignored) so old
+    configs keep loading.
+    """
+    errors: list[str] = []
+    for section, content in data.items():
+        if section == "budget":
+            warnings.warn(
+                "[budget] is no longer used and will be ignored; "
+                "remove it from your config",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+            continue
+        if section not in _KNOWN_SECTION_KEYS:
+            errors.append(f"unknown section [{section}]")
+            continue
+        known = _KNOWN_SECTION_KEYS[section]
+        if known is not None and isinstance(content, dict):
+            for key in content:
+                if key not in known:
+                    errors.append(f"unknown key {section}.{key}")
+    if errors:
+        raise ValueError("invalid config: " + "; ".join(errors))
+
+
 @dataclass
 class Config:
     """Main configuration container."""
@@ -520,7 +670,6 @@ class Config:
     chapel_grace: bool = True
     sentry_torch_shop: bool = True
     death_markers: bool = True
-    budget: BudgetConfig = field(default_factory=BudgetConfig)
     requirements: RequirementsConfig = field(default_factory=RequirementsConfig)
     structure: StructureConfig = field(default_factory=StructureConfig)
     paths: PathsConfig = field(default_factory=PathsConfig)
@@ -565,17 +714,30 @@ class Config:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Config:
-        """Create Config from a dictionary (e.g., parsed TOML)."""
+        """Create Config from a dictionary (e.g., parsed TOML).
+
+        Unknown sections and unknown keys within known sections raise
+        ValueError so a typo fails loudly instead of being a silent no-op.
+        """
+        _reject_unknown_keys(data)
         run_section = data.get("run", {})
-        budget_section = data.get("budget", {})
         requirements_section = data.get("requirements", {})
         structure_section = data.get("structure", {})
-        for legacy in ("split_probability", "merge_probability", "max_branches"):
+        for legacy in (
+            "split_probability",
+            "merge_probability",
+            "max_branches",
+            "min_layers",
+            "max_layers",
+            "min_branch_age",
+            "crosslinks",
+        ):
             if legacy in structure_section:
                 warnings.warn(
                     f"structure.{legacy} is no longer supported and will be ignored; "
                     "remove it from your config. "
-                    "(max_branches was replaced by max_exits + max_entrances.)",
+                    "(max_branches was replaced by max_exits + max_entrances; "
+                    "min_layers/max_layers by layers_count.)",
                     DeprecationWarning,
                     stacklevel=2,
                 )
@@ -602,9 +764,6 @@ class Config:
             chapel_grace=run_section.get("chapel_grace", True),
             sentry_torch_shop=run_section.get("sentry_torch_shop", True),
             death_markers=run_section.get("death_markers", True),
-            budget=BudgetConfig(
-                tolerance=budget_section.get("tolerance", 5),
-            ),
             requirements=RequirementsConfig(
                 legacy_dungeons=requirements_section.get("legacy_dungeons", 1),
                 bosses=requirements_section.get("bosses", 5),
@@ -626,7 +785,7 @@ class Config:
                     structure_section.get("final_boss_candidates", {})
                 ),
                 start_tier=structure_section.get("start_tier", 1),
-                final_tier=structure_section.get("final_tier", 28),
+                final_tier=structure_section.get("final_tier", MAX_TIER),
                 tier_curve=structure_section.get("tier_curve", "linear"),
                 tier_curve_exponent=structure_section.get("tier_curve_exponent", 0.6),
                 max_weight_tolerance=float(

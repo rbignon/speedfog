@@ -7,6 +7,7 @@ import json
 import shutil
 import sys
 import time
+import tomllib
 from pathlib import Path
 
 from speedfog.boss_arena_constraints import (
@@ -154,10 +155,8 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    timer = StepTimer()
-    timer.step("Generate DAG")
-
-    # Load or create config
+    # Load or create config, reporting config mistakes as clean errors
+    # instead of tracebacks.
     if args.config:
         try:
             config = load_config(args.config)
@@ -165,6 +164,12 @@ def main() -> int:
                 print(f"Loaded config from {args.config}")
         except FileNotFoundError:
             print(f"Error: Config file not found: {args.config}", file=sys.stderr)
+            return 1
+        except tomllib.TOMLDecodeError as e:
+            print(f"Error: Invalid TOML in {args.config}: {e}", file=sys.stderr)
+            return 1
+        except (ValueError, TypeError) as e:
+            print(f"Error: Invalid config {args.config}: {e}", file=sys.stderr)
             return 1
     else:
         config = Config()
@@ -174,6 +179,18 @@ def main() -> int:
     # Override seed if provided
     if args.seed is not None:
         config.seed = args.seed
+
+    return run_pipeline(config, args)
+
+
+def run_pipeline(config: Config, args: argparse.Namespace) -> int:
+    """Run the full generation pipeline for an already-loaded config.
+
+    Generates the DAG, exports graph.json (and optional logs), then runs
+    the Item Randomizer and FogModWrapper build unless args.no_build.
+    """
+    timer = StepTimer()
+    timer.step("Generate DAG")
 
     # Determine output directory: CLI > config > default
     if args.output is not None:
@@ -422,7 +439,7 @@ def main() -> int:
         from speedfog.generation_log import export_generation_log
 
         gen_log_path = logs_dir / "generation.log"
-        export_generation_log(result.log, gen_log_path, dag=dag)
+        export_generation_log(result.log, gen_log_path)
         print(f"Written: {gen_log_path}")
 
     # Populate randomized boss names from the assignment computed by

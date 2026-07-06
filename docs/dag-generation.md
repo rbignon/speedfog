@@ -334,7 +334,6 @@ Config validation runs once before any attempts; invalid config raises `Generati
 | `structure.tier_curve` | `"linear"` | Tier progression curve (`"linear"` or `"power"`) |
 | `structure.tier_curve_exponent` | 0.6 | Power curve exponent (only for `"power"`) |
 | `structure.start_tier` | 1 | Starting enemy tier (range 1-28) |
-| `budget.tolerance` | 5 | Max allowed spread between paths |
 | `requirements.legacy_dungeons` | 1 | Minimum legacy dungeons |
 | `requirements.bosses` | 5 | Minimum boss arenas |
 | `requirements.mini_dungeons` | 5 | Minimum mini dungeons |

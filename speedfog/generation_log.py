@@ -8,11 +8,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from speedfog.clusters import ClusterData
-    from speedfog.dag import Dag
 
 
 @dataclass
@@ -38,7 +33,6 @@ class FallbackEntry:
     preferred_type: str
     actual_type: str
     reason: str  # pool_exhausted, zone_conflict
-    pool_remaining: dict[str, int]
 
 
 @dataclass
@@ -53,7 +47,6 @@ class LayerEvent:
     branches_after: int
     nodes: list[NodeEntry] = field(default_factory=list)
     fallbacks: list[FallbackEntry] = field(default_factory=list)
-    pool_snapshot: dict[str, int] | None = None  # pool state at convergence start
 
 
 @dataclass
@@ -80,7 +73,6 @@ class SummaryEvent:
     convergence_layers: int
     fallback_count: int
     fallback_summary: list[tuple[int, str]]  # (layer, preferred_type)
-    pool_at_end: dict[str, int]
 
 
 @dataclass
@@ -103,41 +95,15 @@ class GenerationLog:
     required_zone_placements: list[RequiredZonePlaced] = field(default_factory=list)
 
 
-def compute_pool_remaining(
-    clusters: list[ClusterData],
-    used_zones: set[str],
-    reserved_zones: frozenset[str],
-) -> dict[str, int]:
-    """Count available clusters per type, filtering by used/reserved zones.
-
-    Args:
-        clusters: All clusters to count.
-        used_zones: Zones already consumed.
-        reserved_zones: Zones reserved for final boss / prerequisite.
-
-    Returns:
-        Dict of type -> available count.
-    """
-    counts: dict[str, int] = {}
-    for c in clusters:
-        if c.type not in counts:
-            counts[c.type] = 0
-        if not any(z in used_zones or z in reserved_zones for z in c.zones):
-            counts[c.type] += 1
-    return counts
-
-
 def export_generation_log(
     log: GenerationLog,
     output_path: Path,
-    dag: Dag | None = None,
 ) -> None:
     """Serialize a GenerationLog to a human-readable text file.
 
     Args:
         log: The generation log to serialize.
         output_path: Path to write the log file.
-        dag: Optional DAG (currently unused, kept for API compatibility).
     """
     lines: list[str] = []
 
@@ -178,11 +144,6 @@ def export_generation_log(
                 lines.append(
                     f"  --- CONVERGENCE ({le.branches_before} branches remaining) ---"
                 )
-                if le.pool_snapshot:
-                    pool_parts = [
-                        f"{t}={c}" for t, c in sorted(le.pool_snapshot.items())
-                    ]
-                    lines.append(f"  Pool: {', '.join(pool_parts)}")
 
             # Layer header
             if le.phase == "start":
@@ -238,12 +199,9 @@ def export_generation_log(
             if le.fallbacks:
                 lines.append("    Fallbacks:")
                 for fb in le.fallbacks:
-                    pool_parts = [
-                        f"{t}={c}" for t, c in sorted(fb.pool_remaining.items())
-                    ]
                     lines.append(
                         f"      b{fb.branch_index}: wanted {fb.preferred_type}, "
-                        f"got {fb.actual_type} ({fb.reason}: {', '.join(pool_parts)})"
+                        f"got {fb.actual_type} ({fb.reason})"
                     )
 
             lines.append("")
@@ -268,9 +226,6 @@ def export_generation_log(
         if s.fallback_summary:
             parts = [f"L{layer}: {ptype}" for layer, ptype in s.fallback_summary]
             lines.append(f"    {', '.join(parts)}")
-        if s.pool_at_end:
-            pool_parts = [f"{t}={c}" for t, c in sorted(s.pool_at_end.items())]
-            lines.append(f"  Pool at end: {', '.join(pool_parts)}")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
