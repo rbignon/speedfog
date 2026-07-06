@@ -16,15 +16,15 @@ public static class StartingResourcesInjector
     private const int STONESWORD_KEY_GOOD_ID = 8000;  // Stonesword Key - unlocks imp seals
 
     // Base event ID for resource events
-    private const int BASE_EVENT_ID = 755861000;
+    private static readonly int BASE_EVENT_ID = SpeedFogIds.StartingResourceEvents.Base;
 
     // Flag set when player picks up the Tarnished's Wizened Finger
-    private const int FINGER_PICKUP_FLAG = 1040292051;
+    private const int FINGER_PICKUP_FLAG = SpeedFogIds.FingerPickupFlag;
 
     // Flag to track if we already gave the starting resources (prevents re-giving on reload)
     // Using a flag in the 10402XXXXX range (same as FINGER_PICKUP_FLAG and FogRando's custom flags)
     // FogRando uses offsets up to +5200, so we use +9000 to avoid conflicts
-    private const int RESOURCES_GIVEN_FLAG = 1040299000;
+    private const int RESOURCES_GIVEN_FLAG = SpeedFogIds.ResourcesGivenFlag;
 
     /// <summary>
     /// Inject starting resources into the provided common EMEVD.
@@ -105,11 +105,8 @@ public static class StartingResourcesInjector
         commonEmevd.Events.Add(evt);
 
         // Add initialization call to event 0 (same pattern as StartingItemInjector)
-        var initArgs = new byte[12];
-        BitConverter.GetBytes(0).CopyTo(initArgs, 0);              // slot = 0
-        BitConverter.GetBytes(BASE_EVENT_ID).CopyTo(initArgs, 4);  // eventId
-        BitConverter.GetBytes(0).CopyTo(initArgs, 8);              // arg0 = 0 (unused)
-        initEvent.Instructions.Add(new EMEVD.Instruction(2000, 0, initArgs));
+        // arg0 = 0 (unused)
+        initEvent.Instructions.Add(EmevdHelper.InitializeEvent(BASE_EVENT_ID, 0));
 
         Console.WriteLine("Starting resources injected successfully");
     }

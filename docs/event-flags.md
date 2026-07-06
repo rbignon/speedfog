@@ -101,18 +101,22 @@ Flags 1040299000-002 are in category 1040299, which FogRando allocates via its o
 
 ## EMEVD Event IDs
 
-SpeedFog injects custom events into EMEVD files:
+Event ID ranges and auxiliary flags are declared centrally in
+`writer/FogModWrapper.Core/SpeedFogIds.cs` (injectors reference it;
+`SpeedFogIdsTests` asserts the ranges never overlap). Current allocation:
 
-| Event ID | Injector | EMEVD File | Purpose |
-|----------|----------|------------|---------|
+| Event ID base | Injector | EMEVD File | Purpose |
+|---------------|----------|------------|---------|
 | 755860000 | StartingItemInjector | common.emevd | Give starting goods + care package |
 | 755860100 | RoundtableUnlockInjector | common.emevd | Set start flag to unlock Roundtable |
 | 755861000 | StartingResourcesInjector | common.emevd | Give runes, golden seeds, sacred tears |
 | 755862000 | ZoneTrackingInjector | common.emevd | Monitor final boss defeat flag |
+| 755862100 | DeathMarkerInjector | map emevds | Bloodstain SFX events (sequential, capacity 900) |
 | 755863000 | RunCompleteInjector | common.emevd | Display victory banner + jingle |
 | 755864000 | ChapelGraceInjector | m10_01_00_00.emevd | One-shot warp to chapel grace (initial spawn) |
 
-All events are registered in Event 0 via `InitializeEvent` (bank 2000, id 0).
+All events are registered in Event 0 via `InitializeEvent` (bank 2000, id 0),
+built by `EmevdHelper.InitializeEvent`.
 
 ## Reserved Param ID Ranges (non-flag)
 

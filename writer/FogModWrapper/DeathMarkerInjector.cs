@@ -33,7 +33,7 @@ public static class DeathMarkerInjector
     private const float MAX_RADIUS = 3.0f;
     private const float Y_OFFSET = 0.13f;
 
-    private const int DEATH_MARKER_EVENT_BASE = 755862100;
+    private static readonly int DEATH_MARKER_EVENT_BASE = SpeedFogIds.DeathMarkerEvents.Base;
 
     private readonly struct BloodstainSpec
     {
@@ -334,6 +334,13 @@ public static class DeathMarkerInjector
 
         foreach (var (deathFlag, entityIds) in entityIdsByFlag)
         {
+            if (eventOffset >= SpeedFogIds.DeathMarkerEvents.Capacity)
+            {
+                throw new Exception(
+                    $"Death marker event budget exceeded: {eventOffset} events " +
+                    $"(max {SpeedFogIds.DeathMarkerEvents.Capacity}, " +
+                    $"next range starts at {SpeedFogIds.DeathMarkerEvents.End})");
+            }
             long eventId = DEATH_MARKER_EVENT_BASE + eventOffset;
             eventOffset++;
 
@@ -354,10 +361,7 @@ public static class DeathMarkerInjector
             emevd.Events.Add(evt);
 
             // Register in event 0 via InitializeEvent (bank 2000, id 0)
-            var initArgs = new byte[8];
-            BitConverter.GetBytes((int)0).CopyTo(initArgs, 0);        // slot = 0
-            BitConverter.GetBytes((int)eventId).CopyTo(initArgs, 4);  // event ID
-            initEvent.Instructions.Add(new EMEVD.Instruction(2000, 0, initArgs));
+            initEvent.Instructions.Add(EmevdHelper.InitializeEvent((int)eventId));
         }
 
         emevd.Write(emevdPath);

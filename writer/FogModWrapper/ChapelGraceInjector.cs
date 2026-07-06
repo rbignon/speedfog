@@ -71,8 +71,8 @@ public static class ChapelGraceInjector
     // SetPlayerRespawnPoint only controls *re*spawns (after death/loading), not the initial
     // new-character spawn which is engine/cutscene-controlled. An explicit WarpPlayer is the
     // only way to move the player on first load.
-    private const int WARP_EVENT_ID = 755864000;
-    private const int SPAWN_DONE_FLAG = 1040299002;
+    private static readonly int WARP_EVENT_ID = SpeedFogIds.ChapelGraceEvents.Base;
+    private const int SPAWN_DONE_FLAG = SpeedFogIds.ChapelSpawnDoneFlag;
 
     /// <summary>
     /// Inject a Site of Grace at Chapel of Anticipation.
@@ -423,10 +423,7 @@ public static class ChapelGraceInjector
         emevd.Events.Add(warpEvt);
 
         // Register warp event in Event 0 (InitializeEvent: bank 2000, id 0)
-        var warpInitArgs = new byte[8];
-        BitConverter.GetBytes(0).CopyTo(warpInitArgs, 0);              // slot = 0
-        BitConverter.GetBytes(WARP_EVENT_ID).CopyTo(warpInitArgs, 4);  // eventId
-        initEvent.Instructions.Add(new EMEVD.Instruction(2000, 0, warpInitArgs));
+        initEvent.Instructions.Add(EmevdHelper.InitializeEvent(WARP_EVENT_ID));
 
         emevd.Write(emevdPath);
         Console.WriteLine($"  EMEVD: RegisterBonfire(flag={bonfireFlag}, entity={bonfireEntity}), " +

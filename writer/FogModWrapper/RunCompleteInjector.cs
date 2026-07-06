@@ -14,7 +14,7 @@ namespace FogModWrapper;
 /// </summary>
 public static class RunCompleteInjector
 {
-    private const int EVENT_ID = 755863000;
+    private static readonly int EVENT_ID = SpeedFogIds.RunCompleteEvents.Base;
     private const float DELAY_SECONDS = 4.0f;
 
     // TextBannerType.Victory (33) - Colosseum-only, safe to repurpose in PvE
@@ -27,7 +27,7 @@ public static class RunCompleteInjector
     private const int PLAYER_ENTITY_ID = 10000;
 
     // One-shot guard: saved flag to prevent banner replay on zone warp
-    private const int BANNER_SHOWN_FLAG = 1050290001;
+    private const int BANNER_SHOWN_FLAG = SpeedFogIds.BannerShownFlag;
 
     /// <summary>
     /// Overwrite the "VICTORY" banner text in GR_MenuText FMG with the run complete
@@ -128,10 +128,7 @@ public static class RunCompleteInjector
         commonEmevd.Events.Add(evt);
 
         // Register in Event 0 (InitializeEvent: bank 2000, id 0)
-        var initArgs = new byte[8];
-        BitConverter.GetBytes(0).CopyTo(initArgs, 0);           // slot = 0
-        BitConverter.GetBytes(EVENT_ID).CopyTo(initArgs, 4);    // eventId
-        initEvent.Instructions.Add(new EMEVD.Instruction(2000, 0, initArgs));
+        initEvent.Instructions.Add(EmevdHelper.InitializeEvent(EVENT_ID));
 
         Console.WriteLine($"Run complete: event {EVENT_ID} " +
                           $"(finish flag {finishEvent} -> delay {DELAY_SECONDS}s -> banner type {BANNER_TYPE})");

@@ -9,10 +9,10 @@ namespace FogModWrapper;
 public static class RoundtableUnlockInjector
 {
     // Flag that common_roundtable waits for before enabling Roundtable
-    private const int START_FLAG = 1040292051;
+    private const int START_FLAG = SpeedFogIds.FingerPickupFlag;
 
     // Event ID for our unlock event (using a safe range)
-    private const int UNLOCK_EVENT_ID = 755860100;
+    private static readonly int UNLOCK_EVENT_ID = SpeedFogIds.RoundtableUnlockEvents.Base;
 
     /// <summary>
     /// Inject the Roundtable unlock event into the provided common EMEVD.
@@ -37,7 +37,7 @@ public static class RoundtableUnlockInjector
         commonEmevd.Events.Add(unlockEvent);
 
         // Add initialization call to event 0
-        var initInstruction = CreateInitializeEventInstruction(UNLOCK_EVENT_ID);
+        var initInstruction = EmevdHelper.InitializeEvent(UNLOCK_EVENT_ID);
         initEvent.Instructions.Add(initInstruction);
 
         Console.WriteLine($"Roundtable unlock event {UNLOCK_EVENT_ID} injected successfully");
@@ -68,20 +68,5 @@ public static class RoundtableUnlockInjector
         evt.Instructions.Add(new EMEVD.Instruction(2003, 66, setFlagArgs));
 
         return evt;
-    }
-
-    /// <summary>
-    /// Create an InitializeEvent instruction to call from event 0.
-    /// </summary>
-    private static EMEVD.Instruction CreateInitializeEventInstruction(int eventId)
-    {
-        // InitializeEvent(slot, eventId)
-        // Bank 2000, ID 0
-        // Args: slot (4 bytes), eventId (4 bytes)
-        var args = new byte[8];
-        BitConverter.GetBytes(0).CopyTo(args, 0);        // slot = 0
-        BitConverter.GetBytes(eventId).CopyTo(args, 4);  // eventId
-
-        return new EMEVD.Instruction(2000, 0, args);
     }
 }

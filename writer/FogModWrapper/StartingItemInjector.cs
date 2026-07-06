@@ -13,13 +13,13 @@ namespace FogModWrapper;
 public static class StartingItemInjector
 {
     // Base event ID for our starting item events (using a safe range)
-    private const int BASE_EVENT_ID = 755860000;
+    private static readonly int BASE_EVENT_ID = SpeedFogIds.StartingItemEvents.Base;
 
     // Flag set when player picks up the Tarnished's Wizened Finger
-    private const int FINGER_PICKUP_FLAG = 1040292051;
+    private const int FINGER_PICKUP_FLAG = SpeedFogIds.FingerPickupFlag;
 
     // Flag to track if we already gave the starting items (prevents re-giving on reload)
-    private const int ITEMS_GIVEN_FLAG = 1040299001;
+    private const int ITEMS_GIVEN_FLAG = SpeedFogIds.ItemsGivenFlag;
 
     // ItemType enum names for DirectlyGivePlayerItem instruction
     // Must match EMEDF enum: Weapon=0, Armor=1, Ring=2, Goods=3
@@ -157,11 +157,8 @@ public static class StartingItemInjector
         commonEmevd.Events.Add(evt);
 
         // Add initialization call to event 0 (same pattern as StartingResourcesInjector)
-        var initArgs = new byte[12];
-        BitConverter.GetBytes(0).CopyTo(initArgs, 0);              // slot = 0
-        BitConverter.GetBytes(BASE_EVENT_ID).CopyTo(initArgs, 4);  // eventId
-        BitConverter.GetBytes(0).CopyTo(initArgs, 8);              // arg0 = 0 (unused)
-        initEvent.Instructions.Add(new EMEVD.Instruction(2000, 0, initArgs));
+        // arg0 = 0 (unused)
+        initEvent.Instructions.Add(EmevdHelper.InitializeEvent(BASE_EVENT_ID, 0));
 
         Console.WriteLine("Starting item events injected successfully");
     }

@@ -15,7 +15,7 @@ namespace FogModWrapper;
 /// </summary>
 public static class ZoneTrackingInjector
 {
-    private const int BOSS_DEATH_EVENT_ID = 755862000;
+    private static readonly int BOSS_DEATH_EVENT_ID = SpeedFogIds.BossDeathMonitorEvents.Base;
 
     /// <summary>
     /// Destination map and region extracted from a warp instruction.
@@ -228,10 +228,7 @@ public static class ZoneTrackingInjector
         commonEmevd.Events.Add(evt);
 
         // Register in event 0 (InitializeEvent: bank 2000, id 0)
-        var initArgs = new byte[8];
-        BitConverter.GetBytes(0).CopyTo(initArgs, 0);                     // slot = 0
-        BitConverter.GetBytes(BOSS_DEATH_EVENT_ID).CopyTo(initArgs, 4);   // eventId
-        initEvent.Instructions.Add(new EMEVD.Instruction(2000, 0, initArgs));
+        initEvent.Instructions.Add(EmevdHelper.InitializeEvent(BOSS_DEATH_EVENT_ID));
 
         Console.WriteLine($"Zone tracking: boss death monitor event {BOSS_DEATH_EVENT_ID} " +
                           $"(defeat flag {bossDefeatFlag} -> finish event {finishEvent})");
