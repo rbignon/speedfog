@@ -1,0 +1,91 @@
+# Game-knowledge tables consumed by FogModWrapper (loaded via --data-dir).
+# Previously hardcoded in Program.cs; see GameTweaksLoader.cs.
+
+# FogMod ConfigVars: logic variables referenced by fog.txt edge conditions.
+# Graph.Construct needs them all defined. Key items and progression flags are
+# true because SpeedFog gives every key item at start (softlock prevention).
+[config_vars]
+# Scaling/logic pass control (not used in SpeedFog)
+scalepass = false
+logicpass = true
+# Great rune requirements (always true: SpeedFog gives all items)
+runes_leyndell = true
+runes_rold = true
+runes_end = true
+# Dungeon crawler tier variables (all false: SpeedFog manages its own tiers)
+tier1 = false
+tier2 = false
+tier3 = false
+tier4 = false
+tier5 = false
+tier6 = false
+tier7 = false
+tier8 = false
+tier9 = false
+# DLC kindling/imbued requirements (all true: SpeedFog gives all items)
+treekindling = true
+imbued_base = true
+imbued_base_any = true
+imbued_dlc = true
+imbued_dlc_any = true
+# DLC high seal conditions (areas reached via seals, all true)
+rauhruins_high_seal = true
+rauhbase_high_seal = true
+gravesite_seal = true
+scadualtus_high_seal = true
+ymir_open = true
+# Key items (all true: given at start)
+academyglintstonekey = true
+carianinvertedstatue = true
+cursemarkofdeath = true
+darkmoonring = true
+dectusmedallionleft = true
+dectusmedallionright = true
+discardedpalacekey = true
+drawingroomkey = true
+haligtreesecretmedallionleft = true
+haligtreesecretmedallionright = true
+imbuedswordkey = true
+imbuedswordkey1 = true
+imbuedswordkey2 = true
+imbuedswordkey3 = true
+imbuedswordkey4 = true  # DLC key
+purebloodknightsmedal = true
+roldmedallion = true
+runegodrick = true
+runemalenia = true
+runemohg = true
+runemorgott = true
+runeradahn = true
+runerennala = true
+runerykard = true
+rustykey = true
+# DLC keys (all true: given at start)
+omother = true
+welldepthskey = true
+gaolupperlevelkey = true
+gaollowerlevelkey = true
+holeladennecklace = true
+messmerskindling = true
+messmerskindling1 = true
+# Boss defeat conditions used in world edges
+farumazula_maliketh = true
+
+# Event flags forced ON at map load (open gates locked behind levers).
+# See docs/startup-flag-injection.md for how to find new gate flags.
+# map can be a map ID ("m35_00_00_00") or "common".
+
+[[startup_flags]]
+map = "m35_00_00_00"
+flag = 35000565
+on = true  # Sewer barred gate 1 (AEG023_330_1000, lever AEG027_002_0503)
+
+[[startup_flags]]
+map = "m35_00_00_00"
+flag = 35000566
+on = true  # Sewer barred gate 2 (AEG023_330_1001, lever AEG027_002_0507)
+
+[[startup_flags]]
+map = "m10_00_00_00"
+flag = 10000500
+on = true  # Stormveil barred gate (AEG219_050_0500, lever AEG219_030_0500)

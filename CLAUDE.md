@@ -73,6 +73,7 @@ speedfog/
 │   ├── clusters.json        # Generated zone clusters (gitignored)
 │   ├── fog_data.json        # Generated fog gate metadata (gitignored)
 │   ├── zone_metadata.toml   # Zone weight config (tracked)
+│   ├── game_tweaks.toml     # FogMod ConfigVars + startup gate flags (tracked)
 │   ├── care_package_items.toml  # Curated item pools for care package (tracked)
 │   ├── phantom_skins.toml   # Phantom skins catalog (cosmetic auras, tracked)
 │   ├── boss_arena_tags.json # Boss/arena tags for compatibility matching (tracked)
@@ -241,6 +242,7 @@ speedfog/
 | `GraphLoader` | Parses graph.json v4 format from Python |
 | `PhantomCatalogLoader` | Loads and validates `data/phantom_skins.toml` |
 | `OpenSplitOverrideLoader` | Reads `[warps."<id>"] opensplit = true` from `data/zone_metadata.toml` |
+| `GameTweaksLoader` | Loads FogMod ConfigVars + startup gate flags from `data/game_tweaks.toml` |
 | `ResourceCalculations` | Pure calculation functions for starting resources |
 | `ShopIdAllocator` | Shop ID allocation utilities |
 | `ConnectionInjector` | Injects connections into FogMod's Graph, extracts warp data |

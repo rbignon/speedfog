@@ -153,7 +153,8 @@ Example:
 
         // Initialize ConfigVars - LoadLiteConfig doesn't load them, but Graph.Construct needs them
         // for condition evaluation. These are FogRando's dungeon crawler mode variables.
-        ctx.Ann.ConfigVars = BuildConfigVars();
+        ctx.Tweaks = GameTweaksLoader.Load(Path.Combine(ctx.Config.DataDir, "game_tweaks.toml"));
+        ctx.Ann.ConfigVars = ctx.Tweaks.ConfigVars;
 
         // Load foglocations for enemy area info (needed for scaling).
         LoadFoglocations(ctx.Ann, foglocationsPath);
@@ -272,79 +273,6 @@ Example:
         opt[Feature.SegmentFortresses] = true;  // Treat fortresses as segments
 
         return opt;
-    }
-
-    static Dictionary<string, string> BuildConfigVars()
-    {
-        return new Dictionary<string, string>
-        {
-            // Scaling/logic pass control (not used in SpeedFog)
-            { "scalepass", "FALSE" },
-            { "logicpass", "TRUE" },
-            // Great rune requirements (set to always true for SpeedFog - we give all items)
-            { "runes_leyndell", "TRUE" },
-            { "runes_rold", "TRUE" },
-            { "runes_end", "TRUE" },
-            // Dungeon crawler tier variables - all FALSE since we don't use crawl mode
-            { "tier1", "FALSE" },
-            { "tier2", "FALSE" },
-            { "tier3", "FALSE" },
-            { "tier4", "FALSE" },
-            { "tier5", "FALSE" },
-            { "tier6", "FALSE" },
-            { "tier7", "FALSE" },
-            { "tier8", "FALSE" },
-            { "tier9", "FALSE" },
-            // DLC kindling/imbued requirements (all TRUE - SpeedFog gives all items)
-            { "treekindling", "TRUE" },
-            { "imbued_base", "TRUE" },
-            { "imbued_base_any", "TRUE" },
-            { "imbued_dlc", "TRUE" },
-            { "imbued_dlc_any", "TRUE" },
-            // DLC high seal conditions (areas reached via seals - all TRUE)
-            { "rauhruins_high_seal", "TRUE" },
-            { "rauhbase_high_seal", "TRUE" },
-            { "gravesite_seal", "TRUE" },
-            { "scadualtus_high_seal", "TRUE" },
-            { "ymir_open", "TRUE" },
-            // Key items - all TRUE since SpeedFog gives all items at start
-            // Base game keys
-            { "academyglintstonekey", "TRUE" },
-            { "carianinvertedstatue", "TRUE" },
-            { "cursemarkofdeath", "TRUE" },
-            { "darkmoonring", "TRUE" },
-            { "dectusmedallionleft", "TRUE" },
-            { "dectusmedallionright", "TRUE" },
-            { "discardedpalacekey", "TRUE" },
-            { "drawingroomkey", "TRUE" },
-            { "haligtreesecretmedallionleft", "TRUE" },
-            { "haligtreesecretmedallionright", "TRUE" },
-            { "imbuedswordkey", "TRUE" },
-            { "imbuedswordkey1", "TRUE" },
-            { "imbuedswordkey2", "TRUE" },
-            { "imbuedswordkey3", "TRUE" },
-            { "imbuedswordkey4", "TRUE" },  // DLC key
-            { "purebloodknightsmedal", "TRUE" },
-            { "roldmedallion", "TRUE" },
-            { "runegodrick", "TRUE" },
-            { "runemalenia", "TRUE" },
-            { "runemohg", "TRUE" },
-            { "runemorgott", "TRUE" },
-            { "runeradahn", "TRUE" },
-            { "runerennala", "TRUE" },
-            { "runerykard", "TRUE" },
-            { "rustykey", "TRUE" },
-            // DLC keys (all TRUE - SpeedFog gives all items at start)
-            { "omother", "TRUE" },
-            { "welldepthskey", "TRUE" },
-            { "gaolupperlevelkey", "TRUE" },
-            { "gaollowerlevelkey", "TRUE" },
-            { "holeladennecklace", "TRUE" },
-            { "messmerskindling", "TRUE" },
-            { "messmerskindling1", "TRUE" },
-            // Boss defeat conditions used in world edges
-            { "farumazula_maliketh", "TRUE" },
-        };
     }
 
     // In crawl mode, FogMod marks entrances with "trivial" tag as IsFixed and connects them.
@@ -798,14 +726,9 @@ Example:
         // (Scadutree leveling is irrelevant under SpeedFog's tier scaling).
         ShadowRealmBlessingRemover.Inject(ctx.ModDir, ctx.Config.GameDir);
 
-        // Set startup flags (open gates, etc.).
+        // Set startup flags (open gates, etc.) from data/game_tweaks.toml.
         // See docs/startup-flag-injection.md for the methodology used to find these flags.
-        StartupFlagInjector.Inject(ctx.ModDir, new[]
-        {
-            ("m35_00_00_00", 35000565, true),  // Sewer barred gate 1 (AEG023_330_1000, lever AEG027_002_0503)
-            ("m35_00_00_00", 35000566, true),  // Sewer barred gate 2 (AEG023_330_1001, lever AEG027_002_0507)
-            ("m10_00_00_00", 10000500, true),  // Stormveil barred gate (AEG219_050_0500, lever AEG219_030_0500)
-        });
+        StartupFlagInjector.Inject(ctx.ModDir, ctx.Tweaks.StartupFlags);
 
         // Remove vanilla assets that conflict with fog gates.
         if (ctx.GraphData.RemoveEntities.Count > 0)
@@ -867,6 +790,7 @@ Example:
 
         // Populated by LoadInputs
         public GraphData GraphData = null!;
+        public GameTweaks Tweaks = null!;
         public AnnotationData Ann = null!;
         public Events Events = null!;
         public EventConfig EventConfig = null!;

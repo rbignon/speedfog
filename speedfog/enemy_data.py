@@ -29,6 +29,11 @@ def parse_boss_phases(enemy_txt_path: Path) -> dict[int, int]:
     For multi-phase bosses, enemy.txt links phase 1 to phase 2 via NextPhase.
     This returns a reverse mapping: phase2_entity_id -> phase1_entity_id.
 
+    A full YAML parse of enemy.txt takes ~6s under PyYAML's Python loader; we
+    only need two fields per entry, so a line-based scan keyed on the entry's
+    2-space indentation is ~200x faster and the result is identical (the same
+    applies to the other parse_boss_* scanners below).
+
     Returns an empty dict if the file is missing.
     """
     if not enemy_txt_path.exists():

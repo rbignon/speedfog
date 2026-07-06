@@ -652,8 +652,11 @@ def _reject_unknown_keys(data: dict[str, Any]) -> None:
         if section not in _KNOWN_SECTION_KEYS:
             errors.append(f"unknown section [{section}]")
             continue
+        if not isinstance(content, dict):
+            errors.append(f"section [{section}] must be a table")
+            continue
         known = _KNOWN_SECTION_KEYS[section]
-        if known is not None and isinstance(content, dict):
+        if known is not None:
             for key in content:
                 if key not in known:
                     errors.append(f"unknown key {section}.{key}")

@@ -632,7 +632,7 @@ def dag_to_dict(
 # Required top-level graph.json keys and their expected Python types.
 # Mirrors what writer/FogModWrapper.Core/GraphLoader.cs consumes; extend it
 # together with GRAPH_JSON_VERSION when the format grows.
-_GRAPH_SCHEMA: dict[str, type | tuple[type, ...]] = {
+_GRAPH_SCHEMA: dict[str, type] = {
     "version": str,
     "seed": int,
     "total_layers": int,
@@ -696,11 +696,13 @@ def validate_graph_dict(data: dict[str, Any]) -> None:
         if key not in data:
             errors.append(f"missing key: {key}")
         elif not isinstance(data[key], expected):
-            # bool is an int subclass: reject bools where int is expected
             errors.append(
-                f"key {key}: expected {expected}, got {type(data[key]).__name__}"
+                f"key {key}: expected {expected.__name__}, "
+                f"got {type(data[key]).__name__}"
             )
         elif expected is int and isinstance(data[key], bool):
+            # bool is an int subclass, so isinstance passes above: reject
+            # bools where int is expected
             errors.append(f"key {key}: expected int, got bool")
 
     for i, conn in enumerate(data.get("connections", [])):

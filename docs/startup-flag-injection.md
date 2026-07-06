@@ -51,7 +51,7 @@ The same `objacts` command also dumps `MSB.Event.ObjAct` records:
 PartName  EventFlagID  EntityID  ObjActID  Position  Name
 ```
 
-If the asset name appears here with `EventFlagID > 0`, that flag controls the ObjAct interaction directly. Set it ON in `StartupFlagInjector.Inject(...)` and you're done.
+If the asset name appears here with `EventFlagID > 0`, that flag controls the ObjAct interaction directly. Add it to `[[startup_flags]]` in `data/game_tweaks.toml` and you're done.
 
 If the asset has no ObjAct entry (or `EventFlagID = 0`), continue to step 3.
 
@@ -85,7 +85,7 @@ The flag set in the open branch is the one to inject ON at startup. When several
 
 ### Step 4. Verify in-game
 
-Add the entry to `StartupFlagInjector.Inject(...)` in `writer/FogModWrapper/Program.cs`, run `speedfog` end-to-end, and confirm the gate is open from the player's first approach. If only one of several candidate flags actually opens the gate visually, drop the others — extra flags are harmless functionally but pollute the diff.
+Add the entry to `[[startup_flags]]` in `data/game_tweaks.toml`, run `speedfog` end-to-end, and confirm the gate is open from the player's first approach. If only one of several candidate flags actually opens the gate visually, drop the others — extra flags are harmless functionally but pollute the diff.
 
 ## Pitfalls
 
@@ -97,6 +97,7 @@ Add the entry to `StartupFlagInjector.Inject(...)` in `writer/FogModWrapper/Prog
 ## References
 
 - Injector: `writer/FogModWrapper/StartupFlagInjector.cs`
+- Flag entries: `data/game_tweaks.toml` (`[[startup_flags]]`, loaded by `GameTweaksLoader`)
 - Call site: `writer/FogModWrapper/Program.cs` (step 7j3)
 - Tests: `writer/FogModWrapper.Tests/StartupFlagInjectorTests.cs`
 - Tool: `tools/dump_emevd_warps/`

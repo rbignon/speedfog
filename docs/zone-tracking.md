@@ -118,7 +118,7 @@ After processing all EMEVD files, compare injected flags against `expectedFlags`
 
 ## Shared Entrances
 
-When two connections share the same entrance gate (`DuplicateEntrance`), they share the same `Warp.Region` but have different `flag_id`s (flags are allocated per-connection in `output.py`). The mapping becomes `region -> [flag_A, flag_B]`, and **all** `SetEventFlag` instructions are injected before the warp. All flags for a shared region map to the same cluster in `event_map` (enforced by the same-cluster assertion in ConnectionInjector).
+When two connections share the same entrance gate (`DuplicateEntrance`), they share the same `Warp.Region` but have different `flag_id`s (flags are allocated per-connection in `graph_export.py`). The mapping becomes `region -> [flag_A, flag_B]`, and **all** `SetEventFlag` instructions are injected before the warp. All flags for a shared region map to the same cluster in `event_map` (enforced by the same-cluster assertion in ConnectionInjector).
 
 In the common case (no shared entrance), each region maps to exactly one flag. For shared entrances, a single fog gate traversal sets N flags — all resolving to the same node via `event_map`.
 
@@ -150,7 +150,7 @@ This translates the boss's vanilla defeat flag into SpeedFog's `finish_event` fl
 | `writer/FogModWrapper/ZoneTrackingInjector.cs` | Per-file patching (PatchEmevdFile), validation (ValidateInjectedFlags), boss death event (InjectBossDeathEvent) |
 | `writer/FogModWrapper/ConnectionInjector.cs` | Region-to-flags mapping construction (Phase 1) |
 | `writer/FogModWrapper.Tests/ZoneTrackingTests.cs` | Unit tests |
-| `speedfog/output.py` | Flag allocation (EVENT_FLAG_BASE), event_map construction |
+| `speedfog/graph_export.py` | Flag allocation (EVENT_FLAG_BASE from `constants.py`), event_map construction |
 | `docs/event-flags.md` | Flag ranges and EMEVD event ID allocation |
 | `docs/specs/2026-03-12-region-based-zone-tracking.md` | Full design spec (rationale, consumer impact, edge cases) |
 
