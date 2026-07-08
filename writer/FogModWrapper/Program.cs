@@ -355,6 +355,16 @@ Example:
         // LoadLiteConfig doesn't load RetryPoints, so ann.RetryPoints is null.
         ctx.Ann.RetryPoints = StakeRemover.GetRetryPointsToRemove();
 
+        // Resolve scaling areas for enemy-randomizer helper parts (e.g. the
+        // Godskin Duo respawning backups). Without this they fall through to
+        // the map's default area and get scaled to an unrelated DAG tier.
+        // Must run after ApplyAreaTiers (uses Graph.AreaTiers) and before
+        // Write (mutates ann.Locations.Enemies).
+        if (!string.IsNullOrEmpty(ctx.Config.MergeDir))
+        {
+            HelperAreaResolver.Resolve(ctx.Ann, ctx.Graph, ctx.Config.MergeDir, Console.WriteLine);
+        }
+
         var writer = new GameDataWriterE();
         writer.Write(ctx.Opt, ctx.Ann, ctx.Graph, mergedMods, ctx.ModDir, ctx.Events, ctx.EventConfig, Console.WriteLine);
 

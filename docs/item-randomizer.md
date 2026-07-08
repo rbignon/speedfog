@@ -180,6 +180,41 @@ Additionally, FogModWrapper:
 
 **Merge order matters**: Item Randomizer runs first, FogMod merges on top. This matches official FogRando documentation.
 
+### Helper enemy scaling (HelperAreaResolver)
+
+FogMod rescales enemies moved by the enemy randomizer by rewriting the
+randomizer's `scale2` common-event inits (events 9005890/9005891) whose
+SpEffect argument belongs to the shared tier-transfer SpEffect space (base
+7800000, 4 rows per ordered `(source tier, target tier)` pair; both mods
+allocate them in the same deterministic order, so FogMod recognizes and
+overwrites the randomizer's values). The replacement SpEffect is computed as
+`(enemy's native tier from NpcParam spEffectID3) -> (fog DAG tier of the
+enemy's area)`.
+
+The target area is resolved per enemy part in this order (GameDataWriterE.cs
+~L2081): part name in foglocations2 `Enemies`, entity group in an area's
+`Groups`, collision in an area's `Cols`, then the map's default area
+(`MainMap`). Helper parts created by the enemy randomizer (e.g. the Godskin
+Duo respawning backups) defeat the three specific lookups: new part names,
+vanilla boss group cleared and replaced by a randomizer-allocated one, and
+some arenas (volcano_rykard) declare `Groups` only. They fall through to the
+map default, whose DAG tier can be wildly different from the arena's (tier 4
+vs 15 on a real seed: adds at ~1.3k HP instead of ~4.7k, damage x0.42, runes
+x0.099).
+
+`HelperAreaResolver` (FogModWrapper) runs before `GameDataWriterE.Write`:
+it scans the merge-dir MSBs restricted to maps hosting an eligible boss slot
+(area with a defeat flag, present in the DAG's `AreaTiers`), and for every
+part that is unresolvable by name or known groups but shares a non-vanilla
+entity group with a name-resolved boss slot, appends an `EnemyLoc` entry
+pointing at the boss arena. FogMod's name lookup (highest priority) then
+scales the helper exactly like the boss slot (arena tier, unique boss
+scaling). Collisions are deliberately ignored: the boss-group signal
+outranks them and name entries win anyway.
+
+Measured on a real seed: 11 entries added, 47 of 510 merge-dir maps scanned,
+~4 s under Wine (dominated by MSB parsing).
+
 ## RandomizerHelper
 
 `RandomizerHelper.dll` (in `data/packaging/lib/`) is an optional runtime DLL loaded by ModEngine 2 via `external_dlls`. It provides in-game quality-of-life features like auto-upgrading weapons.
