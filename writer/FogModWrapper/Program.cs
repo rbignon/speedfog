@@ -706,6 +706,10 @@ Example:
         // Neutralize vanilla events that set AlternateFlag values (flags 300, 330).
         AlternateFlagPatcher.Patch(ctx.CommonEmevd);
 
+        // Lengthen the makestable stable-position pulse so quit-outs inside
+        // boss arenas reliably respawn at the arena entrance, not the last grace.
+        MakestablePulsePatcher.Patch(ctx.CommonEmevd);
+
         // Write common.emevd.dcx once (was previously read/written 6+ times).
         ctx.CommonEmevd.Write(ctx.CommonEmevdPath);
     }
@@ -731,6 +735,10 @@ Example:
             ChapelGraceInjector.Inject(ctx.ModDir, ctx.Config.GameDir, ctx.Events, reg);
 
         PhantomCatalogInjector.ApplyTo(reg, ctx.PhantomSkins);
+
+        // Undo FogMod's makestable remap on the constant-flag play regions
+        // (row 0 = all default ground); see docs/quitout-respawn.md.
+        PlayRegionPatcher.ApplyTo(reg, ctx.Config.GameDir);
 
         reg.Save();
     }
