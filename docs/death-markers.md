@@ -102,6 +102,14 @@ FogMod allocates entity IDs from a single counter starting at 755890000
 Bloodstain entity IDs start at 755900000 (`FOGMOD_ENTITY_MAX`), above FogMod's
 range, avoiding collisions without needing to scan MSBs.
 
+Maps are processed in parallel (independent MSB/EMEVD files), so entity IDs and
+event IDs are pre-partitioned per map by `PlanAllocations()` in map order: one
+entity ID per spec, one event slot per distinct death flag. Specs skipped at
+injection time (missing gate assets) leave unused gaps in the map's block; the
+IDs stay deterministic regardless of thread scheduling. The event budget
+(`SpeedFogIds.DeathMarkerEvents`) is checked upfront against the summed upper
+bounds.
+
 ### Position Offsets (ASide/BSide)
 
 Each fog gate in `fog.txt` has two sides: **ASide** (the zone in the gate model's

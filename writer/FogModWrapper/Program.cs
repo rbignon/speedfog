@@ -15,6 +15,20 @@ class Program
             Run(config);
             return 0;
         }
+        catch (AggregateException ex)
+        {
+            // Parallel.ForEach wraps worker exceptions; report each inner
+            // one directly or field failures become undiagnosable.
+            foreach (var inner in ex.Flatten().InnerExceptions)
+            {
+                Console.Error.WriteLine($"Error: {inner.Message}");
+                if (Environment.GetEnvironmentVariable("DEBUG") != null)
+                {
+                    Console.Error.WriteLine(inner.StackTrace);
+                }
+            }
+            return 1;
+        }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Error: {ex.Message}");
@@ -823,6 +837,8 @@ Example:
         public GraphData GraphData = null!;
         public GameTweaks Tweaks = null!;
         public AnnotationData Ann = null!;
+        // Not thread-safe: parallel callers must serialize ParseAdd calls
+        // with lock(Events) (see DeathMarkerInjector).
         public Events Events = null!;
         public EventConfig EventConfig = null!;
         public List<PhantomSkin> PhantomSkins = new();

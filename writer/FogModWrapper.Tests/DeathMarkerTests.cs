@@ -70,4 +70,55 @@ public class DeathMarkerTests
             sum += v;
         return sum / vectors.Length;
     }
+
+    [Fact]
+    public void PlanAllocations_AssignsContiguousDisjointBlocks()
+    {
+        var plans = DeathMarkerInjector.PlanAllocations(new[]
+        {
+            (MapId: "m10_00_00_00", SpecCount: 3, DistinctFlagCount: 2),
+            (MapId: "m11_00_00_00", SpecCount: 5, DistinctFlagCount: 1),
+            (MapId: "m12_00_00_00", SpecCount: 1, DistinctFlagCount: 1),
+        });
+
+        Assert.Equal(3, plans.Count);
+        // Entity IDs start above FogMod's range and advance by SpecCount.
+        Assert.Equal(755900000u, plans[0].EntityIdBase);
+        Assert.Equal(755900003u, plans[1].EntityIdBase);
+        Assert.Equal(755900008u, plans[2].EntityIdBase);
+        // Event offsets advance by DistinctFlagCount (one event per flag per map).
+        Assert.Equal(0, plans[0].EventOffsetBase);
+        Assert.Equal(2, plans[1].EventOffsetBase);
+        Assert.Equal(3, plans[2].EventOffsetBase);
+        Assert.Equal("m11_00_00_00", plans[1].MapId);
+    }
+
+    [Fact]
+    public void PlanAllocations_ThrowsWhenEventBudgetExceeded()
+    {
+        var maps = Enumerable.Range(0, SpeedFogIds.DeathMarkerEvents.Capacity + 1)
+            .Select(i => (MapId: $"m{i:D2}_00_00_00", SpecCount: 1, DistinctFlagCount: 1));
+
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => DeathMarkerInjector.PlanAllocations(maps));
+        Assert.Contains("budget", ex.Message);
+    }
+
+    [Fact]
+    public void PlanAllocations_AcceptsExactlyFullEventBudget()
+    {
+        var maps = Enumerable.Range(0, SpeedFogIds.DeathMarkerEvents.Capacity)
+            .Select(i => (MapId: $"m{i:D2}_00_00_00", SpecCount: 1, DistinctFlagCount: 1));
+
+        var plans = DeathMarkerInjector.PlanAllocations(maps);
+
+        Assert.Equal(SpeedFogIds.DeathMarkerEvents.Capacity, plans.Count);
+    }
+
+    [Fact]
+    public void PlanAllocations_EmptyInputYieldsEmptyPlan()
+    {
+        Assert.Empty(DeathMarkerInjector.PlanAllocations(
+            Array.Empty<(string, int, int)>()));
+    }
 }

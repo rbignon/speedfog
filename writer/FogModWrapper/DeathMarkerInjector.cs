@@ -109,6 +109,8 @@ public static class DeathMarkerInjector
     /// Each bloodstain is controlled by a per-cluster death flag via a dedicated
     /// EMEVD event. gateSides maps gate FullName to (ASideArea, BSideArea) from
     /// fog.txt, used to determine which side of the gate the bloodstains are on.
+    /// Maps are processed in parallel (independent MSB/EMEVD files); entity and
+    /// event IDs are pre-partitioned per map so the output stays deterministic.
     /// </summary>
     public static void Inject(
         string modDir, string gameDir,
@@ -125,29 +127,70 @@ public static class DeathMarkerInjector
 
         Console.WriteLine("Injecting death markers at fog gates...");
 
-        // Start above FogMod's entity range to avoid collisions without scanning MSBs.
-        // FogMod allocates from FOGMOD_ENTITY_MIN (755890000) and uses far fewer than
-        // the 10000 available IDs in a typical SpeedFog DAG.
-        uint nextEntityId = FOGMOD_ENTITY_MAX;
+        var specsByMap = CollectExitGatesByMap(connections, eventMap, deathFlags, gateSides);
+        var work = specsByMap.ToList();
+        var plans = PlanAllocations(work.Select(kv =>
+            (kv.Key, kv.Value.Count, kv.Value.Select(s => s.DeathFlag).Distinct().Count())));
+
         int totalAssets = 0;
         int totalMaps = 0;
-        int nextEventOffset = 0;
+        var consoleLock = new object();
 
-        var specsByMap = CollectExitGatesByMap(connections, eventMap, deathFlags, gateSides);
-        foreach (var (mapId, specs) in specsByMap)
+        Parallel.ForEach(work.Zip(plans), pair =>
         {
-            var (count, nextId, nextEvt) = InjectMap(
-                modDir, gameDir, events, mapId, specs, nextEntityId, nextEventOffset);
+            var (mapId, specs) = pair.First;
+            var plan = pair.Second;
+            var log = new List<string>();
+            int count = InjectMap(
+                modDir, gameDir, events, mapId, specs,
+                plan.EntityIdBase, plan.EventOffsetBase, log.Add);
+            lock (consoleLock)
+            {
+                foreach (var line in log)
+                    Console.WriteLine(line);
+            }
             if (count > 0)
             {
-                totalAssets += count;
-                totalMaps++;
+                Interlocked.Add(ref totalAssets, count);
+                Interlocked.Increment(ref totalMaps);
             }
-            nextEntityId = nextId;
-            nextEventOffset = nextEvt;
-        }
+        });
 
         Console.WriteLine($"  Placed {totalAssets} bloodstain markers across {totalMaps} maps");
+    }
+
+    internal sealed record MapAllocation(string MapId, uint EntityIdBase, int EventOffsetBase);
+
+    /// <summary>
+    /// Partition the entity ID and event ID spaces per map, in map order,
+    /// so parallel processing cannot change the generated IDs. Each map gets
+    /// one entity ID per spec and one event slot per distinct death flag
+    /// (upper bounds: specs skipped for missing gates leave unused gaps).
+    /// Throws upfront when the summed event slots exceed the range budget.
+    /// </summary>
+    internal static List<MapAllocation> PlanAllocations(
+        IEnumerable<(string MapId, int SpecCount, int DistinctFlagCount)> maps)
+    {
+        // Entity IDs start above FogMod's range to avoid collisions without
+        // scanning MSBs. FogMod allocates from FOGMOD_ENTITY_MIN (755890000)
+        // and uses far fewer than the 10000 available IDs in a typical DAG.
+        uint entityBase = FOGMOD_ENTITY_MAX;
+        int eventBase = 0;
+        var plans = new List<MapAllocation>();
+        foreach (var (mapId, specCount, distinctFlagCount) in maps)
+        {
+            plans.Add(new MapAllocation(mapId, entityBase, eventBase));
+            entityBase += (uint)specCount;
+            eventBase += distinctFlagCount;
+        }
+        if (eventBase > SpeedFogIds.DeathMarkerEvents.Capacity)
+        {
+            throw new InvalidOperationException(
+                $"Death marker event budget exceeded: {eventBase} events " +
+                $"(max {SpeedFogIds.DeathMarkerEvents.Capacity}, " +
+                $"next range starts at {SpeedFogIds.DeathMarkerEvents.End})");
+        }
+        return plans;
     }
 
     private static Dictionary<string, List<BloodstainSpec>> CollectExitGatesByMap(
@@ -191,23 +234,26 @@ public static class DeathMarkerInjector
     /// Inject bloodstain markers for a single map.
     /// Each bloodstain is activated only when its death flag is set.
     /// Entity IDs grouped by death flag produce one EMEVD event per (flag, map) pair.
+    /// Runs on a worker thread: log via <paramref name="log"/> (flushed grouped
+    /// per map), IDs come from the map's pre-allocated block.
     /// </summary>
-    private static (int Count, uint NextEntityId, int NextEventOffset) InjectMap(
+    private static int InjectMap(
         string modDir, string gameDir, Events events,
-        string mapId, List<BloodstainSpec> specs, uint nextEntityId, int eventOffset)
+        string mapId, List<BloodstainSpec> specs, uint nextEntityId, int eventOffset,
+        Action<string> log)
     {
         var msbFileName = $"{mapId}.msb.dcx";
         var msbPath = MsbHelper.FindMsbPath(modDir, msbFileName) ?? MsbHelper.FindMsbPath(gameDir, msbFileName);
         if (msbPath == null)
         {
-            Console.WriteLine($"  Warning: {msbFileName} not found, skipping death markers for {mapId}");
-            return (0, nextEntityId, eventOffset);
+            log($"  Warning: {msbFileName} not found, skipping death markers for {mapId}");
+            return 0;
         }
 
         var msb = MSBE.Read(msbPath);
 
         if (msb.Parts.MapPieces.Count == 0)
-            return (0, nextEntityId, eventOffset);
+            return 0;
 
         // Group specs by death flag for EMEVD event creation.
         // Each entry maps deathFlag -> list of entity IDs to activate.
@@ -229,14 +275,14 @@ public static class DeathMarkerInjector
                 gateAsset = msb.Parts.Assets.Find(a => a.EntityID == entityIdLookup);
             if (gateAsset == null)
             {
-                Console.WriteLine($"  Warning: Gate asset '{partName}' not found in {mapId} MSB, skipping");
+                log($"  Warning: Gate asset '{partName}' not found in {mapId} MSB, skipping");
                 continue;
             }
 
             var baseAsset = FindNearestVanillaAsset(msb, gateAsset.Position);
             if (baseAsset == null)
             {
-                Console.WriteLine($"  Warning: No vanilla asset to clone from in {mapId} MSB, skipping");
+                log($"  Warning: No vanilla asset to clone from in {mapId} MSB, skipping");
                 continue;
             }
 
@@ -303,7 +349,7 @@ public static class DeathMarkerInjector
         }
 
         if (placedCount == 0)
-            return (0, nextEntityId, eventOffset);
+            return 0;
 
         var writePath = MsbHelper.FindMsbPath(modDir, msbFileName) ?? MsbHelper.FindOrCreateMsbDir(modDir, msbFileName);
         Directory.CreateDirectory(Path.GetDirectoryName(writePath)!);
@@ -317,8 +363,8 @@ public static class DeathMarkerInjector
             var gameEmevdPath = Path.Combine(gameDir, "event", emevdFileName);
             if (!File.Exists(gameEmevdPath))
             {
-                Console.WriteLine($"  Warning: {emevdFileName} not found, skipping EMEVD injection for {mapId}");
-                return (placedCount, nextEntityId, eventOffset);
+                log($"  Warning: {emevdFileName} not found, skipping EMEVD injection for {mapId}");
+                return placedCount;
             }
             Directory.CreateDirectory(Path.GetDirectoryName(emevdPath)!);
             File.Copy(gameEmevdPath, emevdPath);
@@ -328,34 +374,35 @@ public static class DeathMarkerInjector
         var initEvent = emevd.Events.Find(e => e.ID == 0);
         if (initEvent == null)
         {
-            Console.WriteLine($"  Warning: Event 0 not found in {emevdFileName}, skipping SFX activation");
-            return (placedCount, nextEntityId, eventOffset);
+            log($"  Warning: Event 0 not found in {emevdFileName}, skipping SFX activation");
+            return placedCount;
         }
 
+        // The event budget was checked upfront by PlanAllocations;
+        // entityIdsByFlag.Count never exceeds the map's DistinctFlagCount.
         foreach (var (deathFlag, entityIds) in entityIdsByFlag)
         {
-            if (eventOffset >= SpeedFogIds.DeathMarkerEvents.Capacity)
-            {
-                throw new Exception(
-                    $"Death marker event budget exceeded: {eventOffset} events " +
-                    $"(max {SpeedFogIds.DeathMarkerEvents.Capacity}, " +
-                    $"next range starts at {SpeedFogIds.DeathMarkerEvents.End})");
-            }
             long eventId = DEATH_MARKER_EVENT_BASE + eventOffset;
             eventOffset++;
 
             var evt = new EMEVD.Event(eventId);
 
-            // IfEventFlag(MAIN, ON, TargetEventFlagType.EventFlag, deathFlag)
-            evt.Instructions.Add(events.ParseAdd(
-                $"IfEventFlag(MAIN, ON, TargetEventFlagType.EventFlag, {deathFlag})"));
-
-            foreach (var entityId in entityIds)
+            // events is shared across the parallel map workers and its parse
+            // caches are not known to be thread-safe; instruction building is
+            // cheap next to MSB/DCX work, so serialize it.
+            lock (events)
             {
+                // IfEventFlag(MAIN, ON, TargetEventFlagType.EventFlag, deathFlag)
                 evt.Instructions.Add(events.ParseAdd(
-                    $"ChangeAssetEnableState({entityId}, Enabled)"));
-                evt.Instructions.Add(events.ParseAdd(
-                    $"CreateAssetfollowingSFX({entityId}, {SFX_DUMMY_POLY}, {SFX_ID})"));
+                    $"IfEventFlag(MAIN, ON, TargetEventFlagType.EventFlag, {deathFlag})"));
+
+                foreach (var entityId in entityIds)
+                {
+                    evt.Instructions.Add(events.ParseAdd(
+                        $"ChangeAssetEnableState({entityId}, Enabled)"));
+                    evt.Instructions.Add(events.ParseAdd(
+                        $"CreateAssetfollowingSFX({entityId}, {SFX_DUMMY_POLY}, {SFX_ID})"));
+                }
             }
 
             emevd.Events.Add(evt);
@@ -365,7 +412,7 @@ public static class DeathMarkerInjector
         }
 
         emevd.Write(emevdPath);
-        return (placedCount, nextEntityId, eventOffset);
+        return placedCount;
     }
 
     // --- Helper methods ---

@@ -42,13 +42,14 @@ public static class RunCompleteInjector
             return;
         }
 
+        // Languages touch disjoint files; process them in parallel.
         int count = 0;
-        foreach (var langDir in Directory.GetDirectories(gameMsgDir))
+        Parallel.ForEach(Directory.GetDirectories(gameMsgDir), langDir =>
         {
             var langName = Path.GetFileName(langDir);
             var vanillaPath = Path.Combine(langDir, "menu_dlc02.msgbnd.dcx");
             if (!File.Exists(vanillaPath))
-                continue;
+                return;
 
             // For English, FogMod already created the file in modDir - modify that.
             // For other languages, read from vanilla and write a new file to modDir.
@@ -59,7 +60,7 @@ public static class RunCompleteInjector
 
             var fmgFile = bnd.Files.Find(f => f.Name.Contains("GR_MenuText"));
             if (fmgFile == null)
-                continue;
+                return;
 
             var fmg = FMG.Read(fmgFile.Bytes);
 
@@ -77,8 +78,8 @@ public static class RunCompleteInjector
 
             Directory.CreateDirectory(Path.GetDirectoryName(modMsgPath)!);
             bnd.Write(modMsgPath);
-            count++;
-        }
+            Interlocked.Increment(ref count);
+        });
 
         Console.WriteLine($"Run complete: set GR_MenuText[{BANNER_FMG_ID}] = \"{messageText}\" in {count} languages");
     }

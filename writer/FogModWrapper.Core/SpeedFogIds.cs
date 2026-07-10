@@ -37,8 +37,8 @@ public static class SpeedFogIds
     public static readonly IdRange BossDeathMonitorEvents =
         new("ZoneTrackingInjector", 755862000, 100);
 
-    /// <summary>One event per fog gate with death markers, allocated
-    /// sequentially across all maps (DeathMarkerInjector threads the offset).</summary>
+    /// <summary>One event per (death flag, map) pair; slots are pre-partitioned
+    /// per map by DeathMarkerInjector.PlanAllocations (maps run in parallel).</summary>
     public static readonly IdRange DeathMarkerEvents =
         new("DeathMarkerInjector", 755862100, 900);
 

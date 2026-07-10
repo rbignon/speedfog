@@ -7,6 +7,9 @@
     <Nullable>enable</Nullable>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
+    <!-- Batch tool doing allocation-heavy parallel MSB/DCX work: workstation
+         GC serializes it badly; server GC scales with cores. -->
+    <ServerGarbageCollection>true</ServerGarbageCollection>
   </PropertyGroup>
 
   <ItemGroup>

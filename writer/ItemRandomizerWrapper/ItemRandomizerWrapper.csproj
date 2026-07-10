@@ -7,6 +7,9 @@
     <Nullable>enable</Nullable>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
+    <!-- RandomizerCommon's allocation-heavy game-data work is GC-bound
+         under the default workstation GC; server GC scales with cores. -->
+    <ServerGarbageCollection>true</ServerGarbageCollection>
   </PropertyGroup>
 
   <ItemGroup>

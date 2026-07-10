@@ -41,16 +41,17 @@ public static class SummerTheme
 
         var bossById = catalog.Bosses.ToDictionary(b => b.NpcNameId);
         int touchedLangs = 0;
-        foreach (var langDir in Directory.GetDirectories(gameMsgDir))
+        // Languages touch disjoint files; process them in parallel.
+        Parallel.ForEach(Directory.GetDirectories(gameMsgDir), langDir =>
         {
             var lang = Path.GetFileName(langDir);
             if (!TargetLanguages.Contains(lang))
-                continue;
+                return;
             int n = ApplyBossEpithets(modDir, langDir, lang, bossById)
                   + ApplyUiStrings(modDir, langDir, lang, catalog.Ui);
             if (n > 0)
-                touchedLangs++;
-        }
+                Interlocked.Increment(ref touchedLangs);
+        });
 
         Console.WriteLine(
             $"Summer theme: applied {catalog.Bosses.Count} boss + {catalog.Ui.Count} UI overrides across {touchedLangs} languages");
