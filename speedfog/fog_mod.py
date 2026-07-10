@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import shutil
-import subprocess
 import sys
 from pathlib import Path
+
+from speedfog.proc import stream_command
 
 
 def run_fogmodwrapper(
@@ -82,25 +83,4 @@ def run_fogmodwrapper(
         print(f"Working directory: {wrapper_dir}")
 
     # Run from wrapper_dir so FogModWrapper finds eldendata/
-    # Stream output in real-time.
-    # errors="replace": FogModWrapper log lines may contain non-UTF-8 bytes
-    # (e.g. Windows-1252 characters in item names) when the output is captured
-    # through a pipe. Replace rather than crash on decode failure.
-    process = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        cwd=wrapper_dir,
-        bufsize=1,  # Line buffered
-    )
-
-    # Print output as it arrives
-    assert process.stdout is not None
-    for line in process.stdout:
-        print(line, end="")
-
-    process.wait()
-    return process.returncode == 0
+    return stream_command(cmd, cwd=wrapper_dir) == 0

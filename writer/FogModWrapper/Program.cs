@@ -104,14 +104,35 @@ Example:
         var ctx = new Context(config);
         Directory.CreateDirectory(ctx.ModDir);
 
-        LoadInputs(ctx);
-        ConstructGraph(ctx);
-        InjectConnections(ctx);
-        WriteFogMod(ctx);
-        PatchEmevd(ctx);
-        ApplyCommonInjectors(ctx);
-        ApplyRegulation(ctx);
-        ApplyModDirInjectors(ctx);
+        var timer = new PhaseTimer();
+        try
+        {
+            timer.Phase("Load inputs");
+            LoadInputs(ctx);
+            timer.Phase("Construct graph");
+            ConstructGraph(ctx);
+            timer.Phase("Inject connections");
+            InjectConnections(ctx);
+            timer.Phase("Write fogmod");
+            WriteFogMod(ctx);
+            timer.Phase("Patch EMEVD");
+            PatchEmevd(ctx);
+            timer.Phase("Common injectors");
+            ApplyCommonInjectors(ctx);
+            timer.Phase("Regulation");
+            ApplyRegulation(ctx);
+            timer.Phase("Mod-dir injectors");
+            ApplyModDirInjectors(ctx);
+        }
+        finally
+        {
+            // Printed even on failure: a phase that hangs or dies slowly is
+            // exactly the one worth seeing in the breakdown.
+            var total = timer.Stop();
+            Console.WriteLine();
+            Console.WriteLine($"Timing breakdown ({total.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)}s total):");
+            Console.WriteLine(timer.FormatSummary());
+        }
 
         // Final ME3 packaging is handled by the Python speedfog pipeline.
     }

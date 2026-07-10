@@ -63,7 +63,8 @@ speedfog/
 │   ├── care_package.py      # Randomized starting build system
 │   ├── boss_arena_constraints.py  # Boss/arena tag model, compat check, matcher
 │   ├── fog_mod.py           # FogMod wrapper (runs FogModWrapper.exe)
-│   └── item_randomizer.py   # Item Randomizer integration
+│   ├── item_randomizer.py   # Item Randomizer integration
+│   └── proc.py              # Subprocess streaming with elapsed-time prefixes
 ├── tests/                   # Python tests
 ├── data/                    # Shared data files
 │   ├── fog.txt              # FogRando zone definitions (gitignored)
@@ -93,7 +94,8 @@ speedfog/
 │   │   ├── GraphLoader.cs   # Load graph.json v4
 │   │   ├── Models/GraphData.cs  # GraphData, Connection, CarePackageItem
 │   │   ├── ResourceCalculations.cs  # Pure calculation functions for starting resources
-│   │   └── ShopIdAllocator.cs  # Shop ID allocation utilities
+│   │   ├── ShopIdAllocator.cs  # Shop ID allocation utilities
+│   │   └── PhaseTimer.cs    # Per-phase timing (standard timer, no ad-hoc Stopwatches)
 │   ├── FogModWrapper/       # Fog gate writer - thin wrapper calling FogMod.dll
 │   │   ├── Program.cs       # CLI entry point
 │   │   ├── ConnectionInjector.cs  # Inject connections into FogMod Graph
@@ -246,6 +248,7 @@ speedfog/
 | `GameTweaksLoader` | Loads FogMod ConfigVars + startup gate flags from `data/game_tweaks.toml` |
 | `ResourceCalculations` | Pure calculation functions for starting resources |
 | `ShopIdAllocator` | Shop ID allocation utilities |
+| `PhaseTimer` | Per-phase timing of Program.cs pipeline steps (use this, not ad-hoc Stopwatches) |
 | `ConnectionInjector` | Injects connections into FogMod's Graph, extracts warp data |
 | `HelperAreaResolver` | Resolves scaling areas for enemy-randomizer helper parts (boss adds) before FogMod's writer |
 | `StartingItemInjector` | Injects starting item events into common.emevd |
@@ -454,6 +457,10 @@ verify it in-game (see Debugging below).
 2. **Prefer FogRando parity**: Fix issues by consulting FogRando sources first. Event templates come directly from `data/fogevents.txt` (copied from FogRando).
 
 3. **Reference-driven debugging**: For any in-game problem (fog gates not working, warps failing, scaling issues), first find the equivalent FogRando implementation in `reference/`.
+
+### Generation Timing
+
+Every line streamed from the C# wrappers is prefixed with elapsed time (`[+  12.3s]`, see `speedfog/proc.py`), turning phase-boundary log lines (including FogMod's and RandomizerCommon's `notify` output) into a phase-level profile. FogModWrapper additionally prints a per-phase "Timing breakdown" summary at the end (`PhaseTimer` in FogModWrapper.Core), and the Python pipeline prints its own step breakdown with `-v`. To time a new pipeline step in C#, add a `timer.Phase(...)` call in `Program.cs` instead of an ad-hoc Stopwatch.
 
 ### dump_emevd_warps Tool
 

@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using FogMod;
 using SoulsFormats;
 using static FogMod.AnnotationData;
@@ -54,7 +53,6 @@ public static class HelperAreaResolver
             && graph.AreaTiers != null
             && graph.AreaTiers.ContainsKey(area);
 
-        var sw = Stopwatch.StartNew();
         var eligibleMaps = EligibleMaps(ann.Locations, isEligibleBossArea);
         int total = 0, maps = 0;
         foreach (var msbPath in Directory.EnumerateFiles(msbDir, "*.msb.dcx").Order())
@@ -89,7 +87,7 @@ public static class HelperAreaResolver
         }
 
         log($"HelperAreaResolver: added {total} enemy location entries " +
-            $"({maps} maps scanned in {sw.ElapsedMilliseconds} ms)");
+            $"({maps} maps scanned)");
         return total;
     }
 

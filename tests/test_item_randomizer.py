@@ -2,7 +2,6 @@
 
 import json
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -253,13 +252,9 @@ def test_run_item_randomizer_builds_correct_command(tmp_path, monkeypatch):
 
     captured_cmd = []
 
-    def mock_popen(cmd, **kwargs):
+    def mock_stream(cmd, cwd=None):
         captured_cmd.extend(cmd)
-        mock_process = MagicMock()
-        mock_process.stdout = iter([])
-        mock_process.wait.return_value = None
-        mock_process.returncode = 0
-        return mock_process
+        return 0
 
     # Only run if wrapper exists (skip in CI)
     if not wrapper_exe.exists():
@@ -267,7 +262,7 @@ def test_run_item_randomizer_builds_correct_command(tmp_path, monkeypatch):
 
         pytest.skip("ItemRandomizerWrapper not built")
 
-    monkeypatch.setattr("subprocess.Popen", mock_popen)
+    monkeypatch.setattr("speedfog.item_randomizer.stream_command", mock_stream)
 
     result = run_item_randomizer(
         seed_dir=seed_dir,

@@ -10,29 +10,18 @@ from speedfog import fog_mod
 from speedfog.fog_mod import run_fogmodwrapper
 
 
-class FakeProcess:
-    """Stand-in for subprocess.Popen capturing the invocation."""
-
-    def __init__(self, returncode: int = 0, output: list[str] | None = None):
-        self.returncode = returncode
-        self.stdout = iter(output or ["FogModWrapper output line\n"])
-
-    def wait(self) -> int:
-        return self.returncode
-
-
 @pytest.fixture
-def fake_popen(monkeypatch):
-    """Replace subprocess.Popen in fog_mod, recording cmd and kwargs."""
+def fake_stream(monkeypatch):
+    """Replace stream_command in fog_mod, recording cmd and cwd."""
     calls: list[dict] = []
 
-    def popen(cmd, **kwargs):
-        calls.append({"cmd": cmd, **kwargs})
-        return FakeProcess(returncode=popen.returncode)  # type: ignore[attr-defined]
+    def stream(cmd, cwd=None):
+        calls.append({"cmd": cmd, "cwd": cwd})
+        return stream.returncode  # type: ignore[attr-defined]
 
-    popen.returncode = 0  # type: ignore[attr-defined]
-    monkeypatch.setattr(fog_mod.subprocess, "Popen", popen)
-    return popen, calls
+    stream.returncode = 0  # type: ignore[attr-defined]
+    monkeypatch.setattr(fog_mod, "stream_command", stream)
+    return stream, calls
 
 
 @pytest.fixture
@@ -78,8 +67,8 @@ def test_missing_wine_on_linux_returns_false(
     assert "Wine not found" in capsys.readouterr().err
 
 
-def test_windows_platform_runs_exe_natively(tmp_path, wrapper_exists, fake_popen):
-    _, calls = fake_popen
+def test_windows_platform_runs_exe_natively(tmp_path, wrapper_exists, fake_stream):
+    _, calls = fake_stream
     seed_dir = tmp_path / "seed"
     game_dir = tmp_path / "game"
 
@@ -93,9 +82,9 @@ def test_windows_platform_runs_exe_natively(tmp_path, wrapper_exists, fake_popen
 
 
 def test_linux_platform_prepends_wine(
-    tmp_path, wrapper_exists, wine_available, fake_popen
+    tmp_path, wrapper_exists, wine_available, fake_stream
 ):
-    _, calls = fake_popen
+    _, calls = fake_stream
 
     ok = run_fogmodwrapper(tmp_path, tmp_path, platform="linux", verbose=False)
 
@@ -107,9 +96,9 @@ def test_linux_platform_prepends_wine(
 
 @pytest.mark.parametrize("platform", [None, "auto"])
 def test_auto_platform_detects_from_sys_platform(
-    tmp_path, monkeypatch, wrapper_exists, wine_available, fake_popen, platform
+    tmp_path, monkeypatch, wrapper_exists, wine_available, fake_stream, platform
 ):
-    _, calls = fake_popen
+    _, calls = fake_stream
     monkeypatch.setattr(fog_mod.sys, "platform", "linux")
 
     run_fogmodwrapper(tmp_path, tmp_path, platform=platform, verbose=False)
@@ -120,8 +109,8 @@ def test_auto_platform_detects_from_sys_platform(
     assert calls[-1]["cmd"][0] != "wine"
 
 
-def test_command_arguments_and_cwd(tmp_path, wrapper_exists, fake_popen):
-    _, calls = fake_popen
+def test_command_arguments_and_cwd(tmp_path, wrapper_exists, fake_stream):
+    _, calls = fake_stream
     seed_dir = tmp_path / "seeds" / "123"
     game_dir = tmp_path / "Game"
 
@@ -139,8 +128,8 @@ def test_command_arguments_and_cwd(tmp_path, wrapper_exists, fake_popen):
     assert str(calls[0]["cwd"]).endswith("writer/FogModWrapper")
 
 
-def test_merge_dir_appended_when_given(tmp_path, wrapper_exists, fake_popen):
-    _, calls = fake_popen
+def test_merge_dir_appended_when_given(tmp_path, wrapper_exists, fake_stream):
+    _, calls = fake_stream
     merge_dir = tmp_path / "mods" / "itemrando"
 
     run_fogmodwrapper(
@@ -151,9 +140,9 @@ def test_merge_dir_appended_when_given(tmp_path, wrapper_exists, fake_popen):
     assert cmd[cmd.index("--merge-dir") + 1] == str(merge_dir.resolve())
 
 
-def test_nonzero_exit_code_returns_false(tmp_path, wrapper_exists, fake_popen):
-    popen, _ = fake_popen
-    popen.returncode = 1
+def test_nonzero_exit_code_returns_false(tmp_path, wrapper_exists, fake_stream):
+    stream, _ = fake_stream
+    stream.returncode = 1
 
     ok = run_fogmodwrapper(tmp_path, tmp_path, platform="windows", verbose=False)
 

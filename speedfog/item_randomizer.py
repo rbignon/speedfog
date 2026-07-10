@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import random
 import shutil
-import subprocess
 import sys
 from collections.abc import Iterable, Mapping
 from pathlib import Path
@@ -21,6 +20,7 @@ from speedfog.boss_arena_constraints import (
 from speedfog.clusters import ClusterData
 from speedfog.config import Config
 from speedfog.enemy_data import resolve_entity_id
+from speedfog.proc import stream_command
 
 
 def generate_item_config(
@@ -492,18 +492,4 @@ def run_item_randomizer(
         print(f"Working directory: {wrapper_dir}")
 
     # Run from wrapper_dir so it finds diste/
-    # Don't use text=True - Wine output may contain non-UTF-8 bytes
-    process = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        cwd=wrapper_dir,
-    )
-
-    assert process.stdout is not None
-    for line in process.stdout:
-        # Decode with error replacement for Wine's binary output
-        print(line.decode("utf-8", errors="replace"), end="")
-
-    process.wait()
-    return process.returncode == 0
+    return stream_command(cmd, cwd=wrapper_dir) == 0
