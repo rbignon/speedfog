@@ -290,6 +290,12 @@ weight = 4.5
 [zones.flamepeak_firegiant]
 weight = 4
 
+[clusters.flamepeak_firegiant_07f0]
+allowed_exits = [
+    "m60_52_53_00-AEG099_002_9000", # Left entrance
+    "m60_52_53_00-AEG099_003_9001", # Right entrance
+]
+
 [zones.farumazula_maliketh]
 weight = 3
 allow_entry_as_exit = false
