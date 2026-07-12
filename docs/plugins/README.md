@@ -33,3 +33,4 @@ runs.
 ## Plugins
 
 - [summer-theme.md](summer-theme.md) - cosmetic summer text reskin.
+- [weather.md](weather.md) - force a fixed weather, freeze the clock.
