@@ -97,7 +97,7 @@ public class WeatherInjectorTests
     // in data/fogevents.txt).
 
     [Fact]
-    public void BuildEventBody_FreezeTime_SetsClockOnceThenLoops()
+    public void BuildEventBody_FreezeTime_SetsClockAndReappliesInLoop()
     {
         var s = new WeatherInjector.Settings("cloudless", "Cloudless", 12, FreezeTime: true);
 
@@ -108,6 +108,7 @@ public class WeatherInjectorTests
             "ChangeWeather(Weather.Cloudless, -1, true)",
             "Label0()",
             "WaitFixedTimeSeconds(30)",
+            "SetCurrentTime(12, 0, 0, false, false, false, 0, 0, 0)",
             "FreezeTime(true)",
             "ChangeWeather(Weather.Cloudless, -1, false)",
             "GotoUnconditionally(Label.Label0)",

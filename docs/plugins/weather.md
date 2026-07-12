@@ -43,7 +43,8 @@ FreezeTime(true)                                            # if freeze_time
 ChangeWeather(Weather.X, -1, true)      # first application: immediate
 Label0()
 WaitFixedTimeSeconds(30)
-FreezeTime(true)                        # re-arm, if freeze_time
+SetCurrentTime(hour, 0, 0, false, false, false, 0, 0, 0)   # re-apply, if freeze_time
+FreezeTime(true)                                           # re-arm, if freeze_time
 ChangeWeather(Weather.X, -1, false)     # re-apply: smooth transition
 GotoUnconditionally(Label.Label0)
 ```
@@ -52,9 +53,9 @@ GotoUnconditionally(Label.Label0)
 - The 30 s loop is insurance against vanilla events and cutscenes that
   change weather or unfreeze time (e.g. cutscene instructions 2002[10]/[12]
   carry their own weather/time). Re-applications are idempotent.
-- `SetCurrentTime` is deliberately not in the loop: if a cutscene changes
-  the hour, `FreezeTime` re-freezes it as-is, avoiding a visible sun jump
-  every 30 s.
+- `SetCurrentTime` is also re-applied in the loop: re-setting the same hour
+  is a visual no-op, so any drift (a cutscene, the grace "pass time" menu)
+  is corrected within one interval.
 - Common events keep running across map loads, so one event covers the
   whole run.
 
@@ -66,9 +67,9 @@ and forces weather 7. FogRando itself emits
 
 ## Known limitations
 
-- If a cutscene forces a different hour, the clock stays frozen at the
-  post-cutscene hour (weather recovers within 30 s). Rare in a SpeedFog run;
-  accepted.
+- If a cutscene or the grace "pass time" menu changes the hour, it is
+  corrected within 30 s (one loop interval); the off-hour window is at most
+  that long.
 - Night-only overworld spawns (Night's Cavalry, Deathbird) never appear
   with a frozen day. For racing this is a consistency feature.
 - Underground skyboxes (Siofra, Ainsel): verify visually when changing the

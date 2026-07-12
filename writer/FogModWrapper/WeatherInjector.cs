@@ -98,8 +98,8 @@ public static class WeatherInjector
         var lines = new List<string>();
         if (s.FreezeTime)
         {
-            // Set the clock once, outside the loop: if a cutscene changes the
-            // hour, re-freezing as-is avoids a visible sun jump every 30 s.
+            // Set the clock immediately at event start; the loop below
+            // re-applies it every interval.
             lines.Add($"SetCurrentTime({s.Hour}, 0, 0, false, false, false, 0, 0, 0)");
             lines.Add("FreezeTime(true)");
         }
@@ -109,6 +109,10 @@ public static class WeatherInjector
         lines.Add($"WaitFixedTimeSeconds({REAPPLY_INTERVAL_SECONDS})");
         if (s.FreezeTime)
         {
+            // Re-applying the same hour is a visual no-op, so any drift (a
+            // cutscene, the grace "pass time" menu) is corrected within one
+            // interval instead of persisting until the next map load.
+            lines.Add($"SetCurrentTime({s.Hour}, 0, 0, false, false, false, 0, 0, 0)");
             lines.Add("FreezeTime(true)");
         }
         lines.Add($"ChangeWeather(Weather.{s.WeatherToken}, -1, false)");
