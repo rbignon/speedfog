@@ -40,22 +40,23 @@ unknown weather names, wrong types, or an hour outside 0-23 abort the build.
 ```
 SetCurrentTime(hour, 0, 0, false, false, false, 0, 0, 0)   # if freeze_time
 FreezeTime(true)                                            # if freeze_time
-ChangeWeather(Weather.X, -1, true)      # first application: immediate
-Label0()
+ChangeWeather(Weather.X, -1, true)
 WaitFixedTimeSeconds(30)
-SetCurrentTime(hour, 0, 0, false, false, false, 0, 0, 0)   # re-apply, if freeze_time
-FreezeTime(true)                                           # re-arm, if freeze_time
-ChangeWeather(Weather.X, -1, false)     # re-apply: smooth transition
-GotoUnconditionally(Label.Label0)
+EndUnconditionally(EventEndType.Restart)
 ```
 
 - `ChangeWeather` lifespan -1 means "until the next change".
 - The 30 s loop is insurance against vanilla events and cutscenes that
   change weather or unfreeze time (e.g. cutscene instructions 2002[10]/[12]
-  carry their own weather/time). Re-applications are idempotent.
-- `SetCurrentTime` is also re-applied in the loop: re-setting the same hour
-  is a visual no-op, so any drift (a cutscene, the grace "pass time" menu)
-  is corrected within one interval.
+  carry their own weather/time). Re-applications are idempotent, hence
+  invisible when nothing drifted.
+- `SetCurrentTime` is also re-applied every restart: re-setting the same
+  hour is a visual no-op, so any drift (a cutscene, the grace "pass time"
+  menu) is corrected within one interval.
+- The loop uses `EndUnconditionally(EventEndType.Restart)` (the event
+  restarts from instruction 0 every interval), the same idiom as FogRando's
+  `scale` template. EMEVD `Goto` only jumps forward, so a backward
+  Goto-to-label loop would silently end the event after one pass.
 - Common events keep running across map loads, so one event covers the
   whole run.
 

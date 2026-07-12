@@ -95,28 +95,23 @@ public static class WeatherInjector
     /// Pure so tests can assert the sequence without an Events parser.</summary>
     public static List<string> BuildEventBody(Settings s)
     {
+        // Apply, wait, restart: the same periodic-reapply idiom as FogRando's
+        // "scale" template (data/fogevents.txt). EMEVD Goto/Label only jumps
+        // FORWARD (every vanilla unconditional goto does; vanilla and FogMod
+        // loops use EventEndType.Restart), so a backward Goto would silently
+        // end the event instead of looping.
         var lines = new List<string>();
-        if (s.FreezeTime)
-        {
-            // Set the clock immediately at event start; the loop below
-            // re-applies it every interval.
-            lines.Add($"SetCurrentTime({s.Hour}, 0, 0, false, false, false, 0, 0, 0)");
-            lines.Add("FreezeTime(true)");
-        }
-        // Lifespan -1 = until the next change; first application is immediate.
-        lines.Add($"ChangeWeather(Weather.{s.WeatherToken}, -1, true)");
-        lines.Add("Label0()");
-        lines.Add($"WaitFixedTimeSeconds({REAPPLY_INTERVAL_SECONDS})");
         if (s.FreezeTime)
         {
             // Re-applying the same hour is a visual no-op, so any drift (a
             // cutscene, the grace "pass time" menu) is corrected within one
-            // interval instead of persisting until the next map load.
+            // interval.
             lines.Add($"SetCurrentTime({s.Hour}, 0, 0, false, false, false, 0, 0, 0)");
             lines.Add("FreezeTime(true)");
         }
-        lines.Add($"ChangeWeather(Weather.{s.WeatherToken}, -1, false)");
-        lines.Add("GotoUnconditionally(Label.Label0)");
+        lines.Add($"ChangeWeather(Weather.{s.WeatherToken}, -1, true)");
+        lines.Add($"WaitFixedTimeSeconds({REAPPLY_INTERVAL_SECONDS})");
+        lines.Add("EndUnconditionally(EventEndType.Restart)");
         return lines;
     }
 
