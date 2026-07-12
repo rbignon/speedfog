@@ -7,7 +7,7 @@ namespace FogModWrapper;
 /// SpeedFogIdsTests asserts they never overlap.
 ///
 /// Bands:
-/// - Event IDs live in the 7558600xx-7558649xx band, safely below FogMod's
+/// - Event IDs live in the 7558600xx-7558650xx band, safely below FogMod's
 ///   entity/region base (755890000, see DeathMarkerInjector.FOGMOD_ENTITY_MIN).
 /// - Auxiliary flags live at the top of FogMod's 104029xxxx flag band
 ///   (9000+), which FogMod's own allocator does not reach.
@@ -48,6 +48,9 @@ public static class SpeedFogIds
     public static readonly IdRange ChapelGraceEvents =
         new("ChapelGraceInjector", 755864000, 1000);
 
+    public static readonly IdRange WeatherEvents =
+        new("WeatherInjector", 755865000, 100);
+
     /// <summary>All event ranges, for the disjointness test.</summary>
     public static readonly IReadOnlyList<IdRange> EventRanges = new[]
     {
@@ -58,6 +61,7 @@ public static class SpeedFogIds
         DeathMarkerEvents,
         RunCompleteEvents,
         ChapelGraceEvents,
+        WeatherEvents,
     };
 
     // --- Auxiliary one-shot flags (FogMod band 104029xxxx, top slice) ---

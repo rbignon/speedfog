@@ -1,5 +1,7 @@
 using System.Text.Json;
 using FogModWrapper.Models;
+using SoulsFormats;
+using SoulsIds;
 
 namespace FogModWrapper;
 
@@ -10,6 +12,8 @@ namespace FogModWrapper;
 /// </summary>
 public static class WeatherInjector
 {
+    private static readonly int EVENT_ID = SpeedFogIds.WeatherEvents.Base;
+
     /// <summary>Config name (snake_case) -> EMEVD Weather enum token
     /// (er-common.emedf.json, instruction 2003[68] arg 0). The parser strips
     /// non-word chars from emedf value names ("Default 2" -> "Default2").
@@ -110,5 +114,30 @@ public static class WeatherInjector
         lines.Add($"ChangeWeather(Weather.{s.WeatherToken}, -1, false)");
         lines.Add("GotoUnconditionally(Label.Label0)");
         return lines;
+    }
+
+    /// <summary>Create the looping weather event in common.emevd and
+    /// register it in event 0.</summary>
+    public static void InjectEmevdEvent(EMEVD commonEmevd, Events events, Settings settings)
+    {
+        var initEvent = commonEmevd.Events.Find(e => e.ID == 0);
+        if (initEvent == null)
+        {
+            Console.WriteLine("Warning: Event 0 not found in common.emevd, skipping weather event");
+            return;
+        }
+
+        var evt = new EMEVD.Event(EVENT_ID);
+        foreach (var line in BuildEventBody(settings))
+        {
+            evt.Instructions.Add(events.ParseAdd(line));
+        }
+        commonEmevd.Events.Add(evt);
+        initEvent.Instructions.Add(EmevdHelper.InitializeEvent(EVENT_ID));
+
+        Console.WriteLine(
+            $"Weather plugin: event {EVENT_ID} (weather={settings.WeatherName}, " +
+            $"hour={(settings.FreezeTime ? settings.Hour.ToString() : "not frozen")}, " +
+            $"reapply every {REAPPLY_INTERVAL_SECONDS}s)");
     }
 }

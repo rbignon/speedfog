@@ -703,6 +703,13 @@ Example:
             RunCompleteInjector.InjectEmevdEvent(ctx.CommonEmevd, ctx.Events, ctx.GraphData.FinishEvent);
         }
 
+        // "weather" plugin: force weather / freeze clock (opt-in via [plugin.weather]).
+        if (ctx.GraphData.IsPluginEnabled("weather"))
+        {
+            WeatherInjector.InjectEmevdEvent(
+                ctx.CommonEmevd, ctx.Events, WeatherInjector.Parse(ctx.GraphData.Plugins["weather"]));
+        }
+
         // Neutralize vanilla events that set AlternateFlag values (flags 300, 330).
         AlternateFlagPatcher.Patch(ctx.CommonEmevd);
 
