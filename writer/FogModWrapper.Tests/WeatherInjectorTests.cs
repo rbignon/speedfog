@@ -89,4 +89,51 @@ public class WeatherInjectorTests
         Assert.Throws<InvalidDataException>(() =>
             WeatherInjector.Parse(LoadWeatherConfig(", \"freeze_time\": 1")));
     }
+
+    // --- BuildEventBody ---
+    //
+    // The exact strings are the contract: each line must parse through
+    // FogMod's Events.ParseAdd (instruction names and enum tokens as used
+    // in data/fogevents.txt).
+
+    [Fact]
+    public void BuildEventBody_FreezeTime_SetsClockOnceThenLoops()
+    {
+        var s = new WeatherInjector.Settings("cloudless", "Cloudless", 12, FreezeTime: true);
+
+        Assert.Equal(new[]
+        {
+            "SetCurrentTime(12, 0, 0, false, false, false, 0, 0, 0)",
+            "FreezeTime(true)",
+            "ChangeWeather(Weather.Cloudless, -1, true)",
+            "Label0()",
+            "WaitFixedTimeSeconds(30)",
+            "FreezeTime(true)",
+            "ChangeWeather(Weather.Cloudless, -1, false)",
+            "GotoUnconditionally(Label.Label0)",
+        }, WeatherInjector.BuildEventBody(s));
+    }
+
+    [Fact]
+    public void BuildEventBody_NoFreezeTime_NeverTouchesClock()
+    {
+        var s = new WeatherInjector.Settings("rain", "Rain", 12, FreezeTime: false);
+
+        Assert.Equal(new[]
+        {
+            "ChangeWeather(Weather.Rain, -1, true)",
+            "Label0()",
+            "WaitFixedTimeSeconds(30)",
+            "ChangeWeather(Weather.Rain, -1, false)",
+            "GotoUnconditionally(Label.Label0)",
+        }, WeatherInjector.BuildEventBody(s));
+    }
+
+    [Fact]
+    public void BuildEventBody_CustomHour_UsedInSetCurrentTime()
+    {
+        var s = new WeatherInjector.Settings("fog", "Fog", 20, FreezeTime: true);
+        Assert.Equal("SetCurrentTime(20, 0, 0, false, false, false, 0, 0, 0)",
+                     WeatherInjector.BuildEventBody(s)[0]);
+    }
 }

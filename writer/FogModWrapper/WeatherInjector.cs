@@ -37,6 +37,11 @@ public static class WeatherInjector
             ["scattered_rain"] = "ScatteredRain",
         };
 
+    /// <summary>Re-application period. Insurance against vanilla events and
+    /// cutscenes that change weather or unfreeze time; re-applications are
+    /// idempotent, hence invisible when nothing drifted.</summary>
+    private const int REAPPLY_INTERVAL_SECONDS = 30;
+
     /// <summary>Validated [plugin.weather] settings.</summary>
     public sealed record Settings(string WeatherName, string WeatherToken, int Hour, bool FreezeTime);
 
@@ -80,5 +85,30 @@ public static class WeatherInjector
             throw new InvalidDataException($"weather: 'hour' must be in 0-23, got {hour}");
 
         return new Settings(weatherName, token, hour, freezeTime);
+    }
+
+    /// <summary>Instruction lines of the weather event body, in order.
+    /// Pure so tests can assert the sequence without an Events parser.</summary>
+    public static List<string> BuildEventBody(Settings s)
+    {
+        var lines = new List<string>();
+        if (s.FreezeTime)
+        {
+            // Set the clock once, outside the loop: if a cutscene changes the
+            // hour, re-freezing as-is avoids a visible sun jump every 30 s.
+            lines.Add($"SetCurrentTime({s.Hour}, 0, 0, false, false, false, 0, 0, 0)");
+            lines.Add("FreezeTime(true)");
+        }
+        // Lifespan -1 = until the next change; first application is immediate.
+        lines.Add($"ChangeWeather(Weather.{s.WeatherToken}, -1, true)");
+        lines.Add("Label0()");
+        lines.Add($"WaitFixedTimeSeconds({REAPPLY_INTERVAL_SECONDS})");
+        if (s.FreezeTime)
+        {
+            lines.Add("FreezeTime(true)");
+        }
+        lines.Add($"ChangeWeather(Weather.{s.WeatherToken}, -1, false)");
+        lines.Add("GotoUnconditionally(Label.Label0)");
+        return lines;
     }
 }
