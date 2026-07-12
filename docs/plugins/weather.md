@@ -72,7 +72,7 @@ and forces weather 7. FogRando itself emits
 - Night-only overworld spawns (Night's Cavalry, Deathbird) never appear
   with a frozen day. For racing this is a consistency feature.
 - Underground skyboxes (Siofra, Ainsel): verify visually when changing the
-  default weather; `cloudless` was checked in-game.
+  weather; not yet confirmed in-game (checklist step 4 below).
 
 ## In-game verification checklist
 
