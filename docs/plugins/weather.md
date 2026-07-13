@@ -75,6 +75,12 @@ and forces weather 7. FogRando itself emits
   with a frozen day. For racing this is a consistency feature.
 - Underground skyboxes (Siofra, Ainsel): verify visually when changing the
   weather; not yet confirmed in-game (checklist step 4 below).
+- The frozen clock keeps the engine's "world clock stopped" state (event
+  flag 2200, the byte the Hexinton CE table labels "In cut-scene/loading
+  screen") permanently ON. Tools using that byte as a loading-screen
+  indicator misbehave: speedfog-racing's overlay stalled zone reveals on a
+  15 s timeout until it switched to a position-readable fade grace
+  (speedfog-racing mod releases after 1.18.0).
 
 ## In-game verification checklist
 
