@@ -122,7 +122,7 @@ speedfog/
 │   │   ├── StakeRemover.cs  # Remove vanilla stakes outside DAG
 │   │   ├── HeavyDoorMessagePatcher.cs  # Suppress "heavy door" popup in common_func
 │   │   ├── TorrentArenaPatcher.cs  # Re-enable Torrent inside selected boss arenas
-│   │   ├── WeatherInjector.cs  # Force weather / freeze clock ([plugin.weather])
+│   │   ├── WeatherInjector.cs  # Force weather / pin clock hour ([plugin.weather])
 │   │   ├── WeaponUpgradeInjector.cs  # Weapon upgrade initialization for starting weapons
 │   │   └── eldendata/       # FogRando game data (gitignored)
 │   ├── FogModWrapper.Tests/  # xUnit tests
@@ -177,7 +177,7 @@ speedfog/
 │   └── plugins/             # Plugin documentation
 │       ├── README.md        # Plugin config convention
 │       ├── summer-theme.md  # Summer theme specifics
-│       └── weather.md       # Weather plugin: force weather + freeze clock
+│       └── weather.md       # Weather plugin: force weather + pin clock hour
 ├── SoulsFormats/            # SoulsFormatsNEXT git submodule (used by GamePatcher)
 └── output/                  # Generated mod (gitignored, self-contained)
 ```
@@ -213,7 +213,7 @@ speedfog/
 | `docs/phantom-skins.md` | Phantom skins catalog (cosmetic player auras for racing rewards) |
 | `docs/plugins/README.md` | Plugin config convention (Python passthrough + C# IsPluginEnabled) |
 | `docs/plugins/summer-theme.md` | Summer theme: boss epithets + UI banners, catalogue format, discovery |
-| `docs/plugins/weather.md` | Weather plugin: force weather + freeze clock, accepted names, event mechanism |
+| `docs/plugins/weather.md` | Weather plugin: force weather + pin clock hour, accepted names, event mechanism |
 | `reference/fogrando-src/GameDataWriterE.cs` | Main FogRando writer (5639 lines) |
 | `reference/fogrando-src/EldenScaling.cs` | Enemy scaling logic |
 | `data/care_package_items.toml` | Curated item pools for care package |
@@ -280,7 +280,7 @@ speedfog/
 | `DeathMarkerInjector` | Bloodstain markers at fog gates (MSB assets + EMEVD SFX) |
 | `BossTriggerInjector` | Locks boss arena exit fog gates by setting TrapFlag before entrance warp |
 | `TorrentArenaPatcher` | Re-enables Torrent in selected boss arenas by flipping `Collision.DisableTorrent` |
-| `WeatherInjector` | Forces a fixed weather and optionally freezes the clock via a looping common.emevd event (opt-in via `[plugin.weather]`) |
+| `WeatherInjector` | Forces a fixed weather and optionally pins the clock hour via a looping common.emevd event (opt-in via `[plugin.weather]`) |
 | `WeaponUpgradeInjector` | Weapon upgrade initialization for starting weapons with ashes of war |
 | `PhantomCatalogInjector` | Bakes phantom skin catalog (cosmetic auras) into PhantomParam/SpEffectVfxParam/SpEffectParam |
 | `OpenSplitInjector` | Tags entrances with `opensplit` before `Graph.Construct` (see `docs/opensplit-overrides.md`) |

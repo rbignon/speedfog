@@ -6,8 +6,8 @@ using SoulsIds;
 namespace FogModWrapper;
 
 /// <summary>
-/// "weather" plugin: forces a fixed weather and optionally freezes the
-/// in-game clock at a fixed hour, via a looping event in common.emevd
+/// "weather" plugin: forces a fixed weather and optionally pins the
+/// in-game clock to a fixed hour, via a looping event in common.emevd
 /// (opt-in via [plugin.weather], see docs/plugins/weather.md).
 /// </summary>
 public static class WeatherInjector
@@ -42,9 +42,16 @@ public static class WeatherInjector
         };
 
     /// <summary>Re-application period. Insurance against vanilla events and
-    /// cutscenes that change weather or unfreeze time; re-applications are
-    /// idempotent, hence invisible when nothing drifted.</summary>
-    private const int REAPPLY_INTERVAL_SECONDS = 30;
+    /// cutscenes that change weather or time, and the time-lock resolution:
+    /// the hour is pinned by periodic SetCurrentTime rather than
+    /// FreezeTime(true), because a frozen clock keeps engine flag 2200
+    /// ("world clock stopped") permanently ON, which breaks external tools
+    /// reading it as a loading-screen indicator (the racing mod's zone
+    /// reveal). 10 real seconds is ~3-4 in-game minutes of drift before the
+    /// snap-back: invisible at noon, and night stays unreachable.
+    /// Re-applications are idempotent, hence invisible when nothing
+    /// drifted.</summary>
+    private const int REAPPLY_INTERVAL_SECONDS = 10;
 
     /// <summary>Validated [plugin.weather] settings.</summary>
     public sealed record Settings(string WeatherName, string WeatherToken, int Hour, bool FreezeTime);
@@ -103,11 +110,10 @@ public static class WeatherInjector
         var lines = new List<string>();
         if (s.FreezeTime)
         {
-            // Re-applying the same hour is a visual no-op, so any drift (a
-            // cutscene, the grace "pass time" menu) is corrected within one
-            // interval.
+            // Re-applying the same hour is a visual no-op, so any drift (the
+            // running clock, a cutscene, the grace "pass time" menu) is
+            // corrected within one interval.
             lines.Add($"SetCurrentTime({s.Hour}, 0, 0, false, false, false, 0, 0, 0)");
-            lines.Add("FreezeTime(true)");
         }
         lines.Add($"ChangeWeather(Weather.{s.WeatherToken}, -1, true)");
         lines.Add($"WaitFixedTimeSeconds({REAPPLY_INTERVAL_SECONDS})");
@@ -136,7 +142,7 @@ public static class WeatherInjector
 
         Console.WriteLine(
             $"Weather plugin: event {EVENT_ID} (weather={settings.WeatherName}, " +
-            $"hour={(settings.FreezeTime ? settings.Hour.ToString() : "not frozen")}, " +
+            $"hour={(settings.FreezeTime ? settings.Hour.ToString() : "not pinned")}, " +
             $"reapply every {REAPPLY_INTERVAL_SECONDS}s)");
     }
 }

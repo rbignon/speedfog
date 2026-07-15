@@ -97,16 +97,15 @@ public class WeatherInjectorTests
     // in data/fogevents.txt).
 
     [Fact]
-    public void BuildEventBody_FreezeTime_AppliesThenRestarts()
+    public void BuildEventBody_FreezeTime_PinsHourWithoutFreezingClock()
     {
         var s = new WeatherInjector.Settings("cloudless", "Cloudless", 12, FreezeTime: true);
 
         Assert.Equal(new[]
         {
             "SetCurrentTime(12, 0, 0, false, false, false, 0, 0, 0)",
-            "FreezeTime(true)",
             "ChangeWeather(Weather.Cloudless, -1, true)",
-            "WaitFixedTimeSeconds(30)",
+            "WaitFixedTimeSeconds(10)",
             "EndUnconditionally(EventEndType.Restart)",
         }, WeatherInjector.BuildEventBody(s));
     }
@@ -119,7 +118,7 @@ public class WeatherInjectorTests
         Assert.Equal(new[]
         {
             "ChangeWeather(Weather.Rain, -1, true)",
-            "WaitFixedTimeSeconds(30)",
+            "WaitFixedTimeSeconds(10)",
             "EndUnconditionally(EventEndType.Restart)",
         }, WeatherInjector.BuildEventBody(s));
     }

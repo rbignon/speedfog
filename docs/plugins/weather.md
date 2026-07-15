@@ -1,8 +1,8 @@
 # Weather Plugin
 
-Forces a fixed weather and optionally freezes the in-game clock at a fixed
-hour, so every run happens under identical conditions (default: cloudless
-noon). Opt-in via config:
+Forces a fixed weather and optionally pins the in-game clock to a fixed hour
+(periodic re-set, not a frozen clock), so every run happens under identical
+conditions (default: cloudless noon). Opt-in via config:
 
 ```toml
 [plugin.weather]
@@ -39,20 +39,25 @@ unknown weather names, wrong types, or an hour outside 0-23 abort the build.
 
 ```
 SetCurrentTime(hour, 0, 0, false, false, false, 0, 0, 0)   # if freeze_time
-FreezeTime(true)                                            # if freeze_time
 ChangeWeather(Weather.X, -1, true)
-WaitFixedTimeSeconds(30)
+WaitFixedTimeSeconds(10)
 EndUnconditionally(EventEndType.Restart)
 ```
 
 - `ChangeWeather` lifespan -1 means "until the next change".
-- The 30 s loop is insurance against vanilla events and cutscenes that
-  change weather or unfreeze time (e.g. cutscene instructions 2002[10]/[12]
+- The 10 s loop is insurance against vanilla events and cutscenes that
+  change weather or change time (e.g. cutscene instructions 2002[10]/[12]
   carry their own weather/time). Re-applications are idempotent, hence
   invisible when nothing drifted.
 - `SetCurrentTime` is also re-applied every restart: re-setting the same
   hour is a visual no-op, so any drift (a cutscene, the grace "pass time"
   menu) is corrected within one interval.
+- `freeze_time` pins the hour by re-setting it every interval instead of
+  `FreezeTime(true)`: a frozen clock keeps engine flag 2200 ("world clock
+  stopped") permanently ON, which breaks external tools reading that byte
+  as a loading-screen indicator (the racing mod's zone reveal). The clock
+  drifts up to ~3-4 in-game minutes between re-sets, invisible at noon;
+  night stays unreachable, so night-only spawns are still excluded.
 - The loop uses `EndUnconditionally(EventEndType.Restart)` (the event
   restarts from instruction 0 every interval), the same idiom as FogRando's
   `scale` template. EMEVD `Goto` only jumps forward, so a backward
@@ -69,24 +74,23 @@ and forces weather 7. FogRando itself emits
 ## Known limitations
 
 - If a cutscene or the grace "pass time" menu changes the hour, it is
-  corrected within 30 s (one loop interval); the off-hour window is at most
+  corrected within 10 s (one loop interval); the off-hour window is at most
   that long.
 - Night-only overworld spawns (Night's Cavalry, Deathbird) never appear
-  with a frozen day. For racing this is a consistency feature.
+  with a pinned day. For racing this is a consistency feature.
 - Underground skyboxes (Siofra, Ainsel): verify visually when changing the
   weather; not yet confirmed in-game (checklist step 4 below).
-- The frozen clock keeps the engine's "world clock stopped" state (event
-  flag 2200, the byte the Hexinton CE table labels "In cut-scene/loading
-  screen") permanently ON. Tools using that byte as a loading-screen
-  indicator misbehave: speedfog-racing's overlay stalled zone reveals on a
-  15 s timeout until it switched to a position-readable fade grace
-  (speedfog-racing mod releases after 1.18.0).
+- The pinned clock still drifts up to one interval's worth of in-game
+  minutes before snapping back; at hours near dawn/dusk the periodic
+  re-set may be noticeable in the sky lighting. Verified invisible at the
+  default noon.
 
 ## In-game verification checklist
 
 1. Generate a seed with the plugin enabled (defaults).
-2. At Chapel spawn: clear sky, noon lighting, clock frozen.
+2. At Chapel spawn: clear sky, noon lighting, clock pinned (hour stays put
+   across a few minutes of play).
 3. Traverse several zones including an overworld cluster: no rain/snow.
 4. Enter an underground map (Siofra-type starry sky): visuals intact.
-5. Quit-out and reload: weather and hour re-forced within 30 s.
+5. Quit-out and reload: weather and hour re-forced within 10 s.
 6. One run with `freeze_time = false`: clock advances, weather still forced.

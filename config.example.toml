@@ -318,7 +318,7 @@ item_preset = true
 [plugin.summer]
 enabled = false  # set true to reskin boss names + victory/death banners
 
-# Force a fixed weather and freeze the in-game clock (racing consistency).
+# Force a fixed weather and pin the in-game clock hour (racing consistency).
 [plugin.weather]
 enabled = false
 # weather = "cloudless"  # default; accepted values:
@@ -326,5 +326,5 @@ enabled = false
 #   puffy_clouds, rainy_clouds, windy_fog, heavy_snow, heavy_fog,
 #   windy_puffy_clouds, default_2, default_3, rainy_heavy_fog,
 #   snowy_heavy_fog, scattered_rain
-# hour = 12              # 0-23, clock frozen at this hour (default 12)
+# hour = 12              # 0-23, clock pinned to this hour (default 12)
 # freeze_time = true     # false = leave the clock untouched (default true)
