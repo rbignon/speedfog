@@ -55,7 +55,10 @@ EndUnconditionally(EventEndType.Restart)
 - `freeze_time` pins the hour by re-setting it every interval instead of
   `FreezeTime(true)`: a frozen clock keeps engine flag 2200 ("world clock
   stopped") permanently ON, which breaks external tools reading that byte
-  as a loading-screen indicator (the racing mod's zone reveal). The clock
+  as a loading-screen indicator (the racing mod's zone reveal) and stalls
+  the makestable load-end gate (`MakestablePulsePatcher` waits for 2200 to
+  drop before its stable-position pulse; a 5 s timeout limits the damage,
+  see `docs/quitout-respawn.md`). The clock
   drifts up to ~3-4 in-game minutes between re-sets, invisible at noon;
   night stays unreachable, so night-only spawns are still excluded.
 - The loop uses `EndUnconditionally(EventEndType.Restart)` (the event

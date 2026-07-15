@@ -114,7 +114,7 @@ speedfog/
 │   │   ├── RebirthInjector.cs  # Rebirth (stat reallocation) at Sites of Grace
 │   │   ├── ShadowRealmBlessingRemover.cs  # Remove DLC "Shadow Realm Blessing" grace menu entry
 │   │   ├── AlternateFlagPatcher.cs  # Neutralize Event 915, clear flags 300/330 at startup
-│   │   ├── MakestablePulsePatcher.cs  # Extend makestable stable-position pulse (quit-out respawn)
+│   │   ├── MakestablePulsePatcher.cs  # Gate makestable stable-position pulse on load end (quit-out respawn)
 │   │   ├── PlayRegionPatcher.cs  # Restore vanilla 6000/6001 play region save-limit flags
 │   │   ├── SealingTreeWarpPatcher.cs  # Patch Sealing Tree fogwarps (flag 330)
 │   │   ├── VanillaWarpRemover.cs  # Remove vanilla assets: warps + blocking gates
@@ -271,7 +271,7 @@ speedfog/
 | `ShadowRealmBlessingRemover` | Removes the DLC "Shadow Realm Blessing" entry from the grace menu ESD |
 | `SealingTreeWarpPatcher` | Patches Sealing Tree fogwarps to eliminate flag 330 dependency |
 | `AlternateFlagPatcher` | Neutralizes Event 915, clears AlternateFlags 300/330 on game start |
-| `MakestablePulsePatcher` | Extends the makestable stable-position pulse so arena quit-outs respawn at the entrance |
+| `MakestablePulsePatcher` | Gates the makestable stable-position pulse on load end (flag 2200) so arena quit-outs respawn at the entrance |
 | `PlayRegionPatcher` | Restores vanilla 6000/6001 play region save-limit flags that FogMod needlessly remapped |
 | `VanillaWarpRemover` | Removes vanilla warp MSB assets that conflict with fog gates |
 | `StartupFlagInjector` | Sets event flags at startup in any EMEVD (open gates, etc.) |

@@ -82,13 +82,49 @@ in common.emevd; it just pulses a flag no row references anymore.
 
 ## Fix 2: MakestablePulsePatcher (common.emevd phase)
 
-`MakestablePulsePatcher.Patch` rewrites the compiled event 755850000,
-extending `WaitFixedTimeFrames(10)` to 150 frames (5 s at 30 fps). The
-FogRando semantics are preserved (anchor at region entry, no saving deeper
-into the fight; the player cannot leave a trapped arena within the window
-anyway), but the capture window comfortably covers the post-warp fade-in.
-Only the exact vanilla duration (10) is rewritten: if a future FogRando
-version changes the template, the patcher logs and leaves it alone.
+A first iteration extended `WaitFixedTimeFrames(10)` to 150 frames (5 s at
+30 fps). That made the capture reliable but broke the anchor semantics: the
+engine keeps re-saving the position while the flag is ON, so the quit-out
+anchor became "wherever the player stood 5 s after entry", not the arena
+entrance. A racer could sprint toward the boss during the window and then
+use quit-outs to skip the run-back.
+
+`MakestablePulsePatcher.Patch` instead gates the pulse start on the end of
+the loading screen, keeping FogRando's original 10-frame pulse. It inserts
+three instructions before the wait in the compiled event 755850000:
+
+```
+SetEventFlag(temp, ON)
+EndIfEventFlag(End, ON, vanilla_flag)
+IfEventFlag(OR_01, OFF, EventFlag, 2200)   <- inserted: fade-in finished
+IfElapsedSeconds(OR_01, 5)                 <- inserted: or safety timeout
+IfConditionGroup(MAIN, ON, OR_01)          <- inserted
+WaitFixedTimeFrames(10)
+SetEventFlag(temp, OFF)
+...
+```
+
+Engine flag 2200 means "world clock stopped": ON during loading screens and
+cutscenes, it drops about 0.9 s after the player position becomes readable,
+at fade-in end (characterized 2026-07 by instrumenting the racing overlay's
+read of the flag byte; the Hexinton CE table mislabels it "In cut-scene/
+loading screen", see the `freeze_time` note in `docs/plugins/weather.md`).
+The pulse therefore starts once the player is placed and grounded, and the
+anchor lands at the arena entrance with at most 10 frames of drift. When an
+entry cutscene plays, 2200 stays ON through it and the anchor becomes the
+post-cutscene position, which is the desirable behavior.
+
+The `IfElapsedSeconds` timeout is a safety net for anything that keeps the
+world clock stopped indefinitely (an EMEVD `FreezeTime(true)`, which the
+weather plugin deliberately avoids): after 5 s the pulse runs anyway,
+degrading to the fixed-window behavior of the first iteration.
+
+The event is parameterized (X0_4/X4_4 substituted via the event's
+`Parameters` table, keyed by instruction index), so the patcher shifts the
+entries pointing past the insertion point by the number of inserted
+instructions. The patch only applies when the event contains exactly one
+`WaitFixedTimeFrames(10)`: if a future FogRando version changes the
+template, the patcher logs and leaves it alone.
 
 Patching the compiled event (rather than `data/fogevents.txt`) is deliberate:
 the template file is overwritten at bootstrap.
@@ -101,10 +137,25 @@ wine tools/game_inspect/publish/win-x64/game_inspect.exe dump-param \
   output/mods/fogmod/regulation.bin PlayRegionParam --row 0 \
   --defs writer/FogModWrapper/eldendata/Defs --field pcPositionSaveLimitEventFlagId
 
-# Extended pulse in the compiled makestable event (expect WaitFixedTimeFrames(150))
+# Gated pulse in the compiled makestable event (expect IfEventFlag(OR_01, OFF, 2200),
+# IfElapsedSeconds(OR_01, 5), IfConditionGroup before WaitFixedTimeFrames(10))
 cd tools/dump_emevd_warps && dotnet run -- dump ../../output/mods/fogmod/event/ --event 755850000
 ```
 
 In-game: warp into a boss arena through a fog gate, quit out immediately
 (before the fight) and again mid-fight; both should reload at the arena
 entrance, never at the last grace.
+
+The 2200 gate itself needs two in-game discriminants, because an unreadable
+flag can degrade two ways (no vanilla script reads the 2200-2207 range, so
+EMEVD readability rests on these tests):
+
+- **Sprint test** (catches "condition never true" → timeout path): warp into
+  an arena, sprint toward the boss, quit out after ~20 s. Respawning at the
+  entrance means EMEVD read the flag; respawning where you stood ~5 s after
+  entry means only the timeout fired and the anchor drift is back.
+- **Repeated immediate quit-outs** (catches "flag reads constant OFF" → gate
+  passes instantly, reintroducing the original 10-frame race): warp into an
+  arena and quit out right away, several times across different loads. Any
+  respawn at the last grace instead of the entrance means the pulse raced
+  the fade-in again.

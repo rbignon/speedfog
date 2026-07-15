@@ -713,8 +713,8 @@ Example:
         // Neutralize vanilla events that set AlternateFlag values (flags 300, 330).
         AlternateFlagPatcher.Patch(ctx.CommonEmevd);
 
-        // Lengthen the makestable stable-position pulse so quit-outs inside
-        // boss arenas reliably respawn at the arena entrance, not the last grace.
+        // Gate the makestable stable-position pulse on load end so quit-outs
+        // inside boss arenas respawn at the arena entrance, not the last grace.
         MakestablePulsePatcher.Patch(ctx.CommonEmevd);
 
         // Write common.emevd.dcx once (was previously read/written 6+ times).
