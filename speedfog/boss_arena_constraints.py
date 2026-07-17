@@ -91,6 +91,7 @@ def match_arenas_to_bosses(
     bosses: Mapping[int, BossTags],
     rng: random.Random,
     check_size: bool,
+    forbidden: Mapping[int, frozenset[int]] | None = None,
 ) -> dict[int, int]:
     """Randomly assign each arena a compatible boss, no boss used twice.
 
@@ -108,6 +109,10 @@ def match_arenas_to_bosses(
             ``exclude_from_pool``) must be applied by the caller.
         rng: Seeded RNG for deterministic output.
         check_size: Apply the size constraint (``boss.size <= arena.size``).
+        forbidden: Optional arena_id -> boss IDs that must not be placed in
+            that arena (no-vanilla-placement rule: an arena's own entity and
+            its multi-phase siblings). Strictly enforced; exclusions can make
+            the matching unsatisfiable.
 
     Returns:
         Mapping arena_id -> boss_id.
@@ -115,13 +120,15 @@ def match_arenas_to_bosses(
     arena_ids = list(arenas.keys())
     rng.shuffle(arena_ids)
 
+    forbidden = forbidden or {}
     candidates: dict[int, list[int]] = {}
     for arena_id in arena_ids:
         arena = arenas[arena_id]
+        blocked = forbidden.get(arena_id, frozenset())
         compat = [
             bid
             for bid, btags in bosses.items()
-            if is_compatible(arena, btags, check_size=check_size)
+            if bid not in blocked and is_compatible(arena, btags, check_size=check_size)
         ]
         rng.shuffle(compat)
         candidates[arena_id] = compat
@@ -141,9 +148,10 @@ def match_arenas_to_bosses(
 
     for arena_id in arena_ids:
         if not try_augment(arena_id, set()):
+            hint = ", self/family placement excluded" if forbidden else ""
             raise MatchingError(
                 f"No valid arena-boss matching for "
-                f"{len(arenas)} arenas against {len(bosses)} candidates"
+                f"{len(arenas)} arenas against {len(bosses)} candidates{hint}"
             )
 
     assignment = {aid: bid for bid, aid in boss_to_arena.items()}

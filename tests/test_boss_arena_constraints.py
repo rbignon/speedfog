@@ -345,6 +345,54 @@ def test_match_fails_fast_when_arenas_exceed_pool() -> None:
     assert elapsed < 1.0, f"matcher took {elapsed:.2f}s on an unsatisfiable case"
 
 
+def test_match_never_assigns_forbidden_boss() -> None:
+    """An arena whose own ID is in the pool must never receive itself."""
+    tags = {1: _entity(1), 2: _entity(2)}
+    for seed in range(32):
+        result = match_arenas_to_bosses(
+            arenas=_arenas_of(tags, [1]),
+            bosses=_bosses_of(tags, [1, 2]),
+            rng=random.Random(seed),
+            check_size=False,
+            forbidden={1: frozenset({1})},
+        )
+        assert result == {1: 2}, f"seed {seed} returned {result}"
+
+
+def test_match_forbidden_covers_phase_family_both_directions() -> None:
+    """Leader arena must not receive the phase-1 boss and vice versa."""
+    leader, phase1 = 100, 101
+    tags = {
+        leader: _entity(leader),
+        phase1: _entity(phase1),
+        2: _entity(2),
+        3: _entity(3),
+    }
+    family = frozenset({leader, phase1})
+    for seed in range(32):
+        result = match_arenas_to_bosses(
+            arenas=_arenas_of(tags, [leader, phase1]),
+            bosses=_bosses_of(tags, [leader, phase1, 2, 3]),
+            rng=random.Random(seed),
+            check_size=False,
+            forbidden={leader: family, phase1: family},
+        )
+        assert set(result.values()) == {2, 3}, f"seed {seed} returned {result}"
+
+
+def test_match_raises_when_only_candidate_is_forbidden() -> None:
+    """Self-exclusion can make the graph unsatisfiable; the error says so."""
+    tags = {1: _entity(1)}
+    with pytest.raises(MatchingError, match="placement excluded"):
+        match_arenas_to_bosses(
+            arenas=_arenas_of(tags, [1]),
+            bosses=_bosses_of(tags, [1]),
+            rng=random.Random(0),
+            check_size=False,
+            forbidden={1: frozenset({1})},
+        )
+
+
 def test_resolve_allowlist_single_substring_match() -> None:
     tags = {
         15000800: _entity(15000800, name="Malenia Blade of Miquella"),
