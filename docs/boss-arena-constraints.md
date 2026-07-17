@@ -153,8 +153,20 @@ match_arenas_to_bosses(
     bosses: Mapping[int, BossTags],
     rng: random.Random,
     check_size: bool,
+    forbidden: Mapping[int, frozenset[int]] | None = None,
 ) -> dict[int, int]
 ```
+
+Both matchers also enforce a **no-vanilla-placement rule**, always active:
+a boss is never assigned to its own original arena, and a multi-phase
+family counts as one identity (Fire Giant phase 2 is forbidden in the
+phase-1 slot and vice versa). The ``forbidden`` map (arena_id -> excluded
+boss IDs) is built by ``item_randomizer._family_forbidden`` from the
+``enemy.txt`` phase mapping. ``match_arenas_to_bosses`` applies it
+strictly; an unsatisfiable graph raises ``MatchingError`` (in practice the
+pools far exceed the DAG's arena count, so this only matters for
+pathological hand-built inputs). Assignments for a given seed differ from
+pre-rule versions; the seed derivation (``run_seed ^ 0xBA7A5A5A``) is unchanged.
 
 The caller is responsible for any pool pre-filtering (``exclude_from_pool`` is
 applied by ``item_randomizer._compose_pool`` before the matcher runs).
@@ -301,6 +313,11 @@ When `enemy.bosses` is non-empty, boss assignment switches to a uniform mode:
   triggers a reroll (auto) or a clear
   `MatchingError` (fixed seed). Malenia is two-phase, so arenas tagged
   `two_phase_not_allowed` reject her even with `ignore_arena_size`.
+- The no-vanilla-placement rule is best-effort in this mode: a non-self
+  candidate is preferred when one is compatible, but when every compatible
+  candidate is forbidden the rule is waived for that arena instead of
+  failing. A "Malenia only" run stays generable even when Malenia's own
+  arena is in the DAG.
 
 Example "Malenia only":
 
