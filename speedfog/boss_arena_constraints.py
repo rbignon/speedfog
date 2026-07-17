@@ -164,6 +164,7 @@ def assign_bosses_uniform(
     pool: Mapping[int, BossTags],
     rng: random.Random,
     check_size: bool,
+    forbidden: Mapping[int, frozenset[int]] | None = None,
 ) -> dict[int, int]:
     """Assign each arena a compatible boss from ``pool``, reuse permitted.
 
@@ -173,6 +174,12 @@ def assign_bosses_uniform(
     least-used compatible boss is picked (ties broken by ``rng``) so a
     multi-boss allowlist spreads evenly. With a single boss, it fills every
     arena.
+
+    ``forbidden`` (arena_id -> boss IDs) is best-effort in this mode: a
+    non-forbidden compatible candidate is preferred, but when every
+    compatible candidate is forbidden the rule is waived for that arena
+    instead of failing (the allowlist is authoritative, so a "Malenia only"
+    run can still place Malenia in her own arena).
 
     Raises ``MatchingError`` if any arena has no compatible boss in ``pool``;
     the message names the arena and points at ``ignore_arena_size`` /
@@ -199,6 +206,10 @@ def assign_bosses_uniform(
                 f"(size or fight constraints). Set enemy.ignore_arena_size = "
                 f"true or broaden enemy.bosses."
             )
+        blocked = forbidden.get(arena_id, frozenset()) if forbidden else frozenset()
+        preferred = [bid for bid in compat if bid not in blocked]
+        if preferred:
+            compat = preferred
         min_use = min(usage[bid] for bid in compat)
         choices = [bid for bid in compat if usage[bid] == min_use]
         rng.shuffle(choices)

@@ -526,3 +526,48 @@ def test_uniform_preserves_arenas_iteration_order() -> None:
         arenas=arenas, pool=pool, rng=random.Random(0), check_size=False
     )
     assert list(result.keys()) == [3, 1, 4, 2]
+
+
+def test_uniform_prefers_non_forbidden_candidate() -> None:
+    """With an alternative available, the arena's own boss is avoided."""
+    tags = {1: _entity(1), 2: _entity(2)}
+    for seed in range(32):
+        result = assign_bosses_uniform(
+            arenas=_arenas_of(tags, [1]),
+            pool=_bosses_of(tags, [1, 2]),
+            rng=random.Random(seed),
+            check_size=False,
+            forbidden={1: frozenset({1})},
+        )
+        assert result == {1: 2}, f"seed {seed} returned {result}"
+
+
+def test_uniform_falls_back_to_forbidden_when_no_alternative() -> None:
+    """Malenia-only: her own arena still gets her rather than failing."""
+    tags = {1: _entity(1)}
+    result = assign_bosses_uniform(
+        arenas=_arenas_of(tags, [1]),
+        pool=_bosses_of(tags, [1]),
+        rng=random.Random(0),
+        check_size=False,
+        forbidden={1: frozenset({1})},
+    )
+    assert result == {1: 1}
+
+
+def test_uniform_falls_back_when_alternatives_are_incompatible() -> None:
+    """Fallback also fires when the only non-forbidden candidates fail
+    compatibility (dragon in a dragon-forbidding arena), not just when the
+    pool is a single entry."""
+    tags = {
+        1: _entity(1, arena_forbids_dragon=True),
+        2: _entity(2, is_dragon=True),
+    }
+    result = assign_bosses_uniform(
+        arenas=_arenas_of(tags, [1]),
+        pool=_bosses_of(tags, [1, 2]),
+        rng=random.Random(0),
+        check_size=False,
+        forbidden={1: frozenset({1})},
+    )
+    assert result == {1: 1}
