@@ -300,6 +300,31 @@ MINOR_ARENA_TYPES = {"boss_arena"}
 ASSIGNABLE_ARENA_TYPES = MAJOR_ARENA_TYPES | MINOR_ARENA_TYPES
 
 
+def _family_forbidden(
+    arena_ids: Iterable[int], phase_mapping: Mapping[int, int]
+) -> dict[int, frozenset[int]]:
+    """Forbidden boss IDs per arena: the arena's own phase family.
+
+    A boss must never be placed in its original arena, and a multi-phase
+    boss counts as one identity: no family member may land in any family
+    slot (Fire Giant phase 2 is forbidden in the phase-1 arena and vice
+    versa). Single-phase bosses have a family of one. ``phase_mapping``
+    maps leader (phase 2) -> phase 1; both directions are resolved here.
+    """
+    phase1_to_leader = {p1: leader for leader, p1 in phase_mapping.items()}
+    out: dict[int, frozenset[int]] = {}
+    for eid in arena_ids:
+        family = {eid}
+        phase1 = phase_mapping.get(eid)
+        if phase1 is not None:
+            family.add(phase1)
+        leader = phase1_to_leader.get(eid)
+        if leader is not None:
+            family.add(leader)
+        out[eid] = frozenset(family)
+    return out
+
+
 def _build_enemy_assignments(
     *,
     boss_clusters: Iterable[ClusterData],
@@ -317,6 +342,9 @@ def _build_enemy_assignments(
     receive majors and vice versa. Multi-phase bosses with separate phase
     entities (per ``phase_mapping``) get one independent slot per phase, both
     drawn from the same pool without pairing.
+
+    A boss is never assigned to its own arena, and multi-phase families are
+    excluded as a unit (strict; see _family_forbidden).
 
     Raises ``KeyError`` if a DAG boss cluster's leader (or its phase-1
     sibling) has no entry in ``tags`` or no ``arena`` block. A silent skip
@@ -357,7 +385,11 @@ def _build_enemy_assignments(
         if enabled and arenas:
             out.update(
                 match_arenas_to_bosses(
-                    arenas=arenas, bosses=pool, rng=rng, check_size=check_size
+                    arenas=arenas,
+                    bosses=pool,
+                    rng=rng,
+                    check_size=check_size,
+                    forbidden=_family_forbidden(arenas, phase_mapping),
                 )
             )
     return out
@@ -380,6 +412,9 @@ def _build_uniform_assignments(
     is set (``randomize_bosses == "all"``). Multi-phase arenas contribute one
     slot per phase entity, mirroring ``_build_enemy_assignments``. Reuse is
     permitted via ``assign_bosses_uniform``.
+
+    Self/family placement is avoided best-effort: the allowlist stays
+    authoritative when it offers no alternative.
 
     Raises ``KeyError`` if a DAG boss cluster's leader (or phase-1 sibling) has
     no entry in ``tags`` or no ``arena`` block, matching the strictness of
@@ -415,7 +450,11 @@ def _build_uniform_assignments(
 
     rng = random.Random(seed ^ BOSS_ASSIGNMENT_SEED_SALT)
     return assign_bosses_uniform(
-        arenas=arenas, pool=pool, rng=rng, check_size=check_size
+        arenas=arenas,
+        pool=pool,
+        rng=rng,
+        check_size=check_size,
+        forbidden=_family_forbidden(arenas, phase_mapping),
     )
 
 

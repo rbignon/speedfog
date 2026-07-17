@@ -15,6 +15,7 @@ from speedfog.clusters import ClusterData
 from speedfog.config import Config
 from speedfog.item_randomizer import (
     _compose_pool,
+    _family_forbidden,
     generate_item_config,
     run_item_randomizer,
 )
@@ -1025,3 +1026,97 @@ def test_generate_item_config_force_maps_final_boss_uniform_allowlist():
         phase_mapping={},
     )
     assert result["enemy_assignments"] == {"1000": "5000"}
+
+
+def test_family_forbidden_single_phase_is_self_only():
+    assert _family_forbidden([1000], {}) == {1000: frozenset({1000})}
+
+
+def test_family_forbidden_multi_phase_covers_both_directions():
+    """Leader and phase-1 arenas each forbid the whole family."""
+    result = _family_forbidden([100, 101, 2000], {100: 101})
+    assert result == {
+        100: frozenset({100, 101}),
+        101: frozenset({100, 101}),
+        2000: frozenset({2000}),
+    }
+
+
+def test_generate_item_config_never_places_boss_in_own_arena():
+    """The vanilla pool contains the arena's own entity; it must never stay."""
+    config = Config.from_dict({"enemy": {"randomize_bosses": "all"}})
+    boss_clusters = [_boss_cluster("c1", "major_boss", defeat_flag=1000)]
+    tags = {1000: _entity(1000), 2000: _entity(2000)}
+    for seed in range(32):
+        result = generate_item_config(
+            config,
+            seed=seed,
+            boss_clusters=boss_clusters,
+            tags=tags,
+            vanilla_major_ids=[1000, 2000],
+            vanilla_minor_ids=[],
+            phase_mapping={},
+        )
+        assert result["enemy_assignments"] == {"1000": "2000"}, f"seed {seed}"
+
+
+def test_generate_item_config_multi_phase_excludes_whole_family():
+    """No family member may land in any family slot (leader or phase 1)."""
+    config = Config.from_dict({"enemy": {"randomize_bosses": "all"}})
+    boss_clusters = [_boss_cluster("fg", "major_boss", defeat_flag=1052520800)]
+    tags = {eid: _entity(eid) for eid in (1052520800, 1052520801, 2000, 3000)}
+    for seed in range(32):
+        result = generate_item_config(
+            config,
+            seed=seed,
+            boss_clusters=boss_clusters,
+            tags=tags,
+            vanilla_major_ids=[1052520800, 2000, 3000],
+            vanilla_minor_ids=[],
+            phase_mapping={1052520800: 1052520801},
+        )
+        assignments = result["enemy_assignments"]
+        assert set(assignments.keys()) == {"1052520800", "1052520801"}
+        assert set(assignments.values()) == {"2000", "3000"}, f"seed {seed}"
+
+
+def test_generate_item_config_allowlist_prefers_non_self():
+    """Allowlist mode avoids self when another pinned boss is compatible."""
+    config = Config.from_dict(
+        {"enemy": {"randomize_bosses": "all", "bosses": ["Malenia", "Radahn"]}}
+    )
+    boss_clusters = [_boss_cluster("c1", "major_boss", defeat_flag=1000)]
+    tags = {
+        1000: _entity(1000, name="Malenia Blade of Miquella"),
+        2000: _entity(2000, name="Starscourge Radahn"),
+    }
+    for seed in range(32):
+        result = generate_item_config(
+            config,
+            seed=seed,
+            boss_clusters=boss_clusters,
+            tags=tags,
+            vanilla_major_ids=[1000],
+            vanilla_minor_ids=[],
+            phase_mapping={},
+        )
+        assert result["enemy_assignments"] == {"1000": "2000"}, f"seed {seed}"
+
+
+def test_generate_item_config_allowlist_self_fallback():
+    """A single-boss allowlist naming the arena's own boss still generates."""
+    config = Config.from_dict(
+        {"enemy": {"randomize_bosses": "all", "bosses": ["Malenia"]}}
+    )
+    boss_clusters = [_boss_cluster("c1", "major_boss", defeat_flag=1000)]
+    tags = {1000: _entity(1000, name="Malenia Blade of Miquella")}
+    result = generate_item_config(
+        config,
+        seed=1,
+        boss_clusters=boss_clusters,
+        tags=tags,
+        vanilla_major_ids=[1000],
+        vanilla_minor_ids=[],
+        phase_mapping={},
+    )
+    assert result["enemy_assignments"] == {"1000": "1000"}
