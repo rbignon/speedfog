@@ -26,6 +26,37 @@ FogMod tags unique warps with `"remove"` in its graph data, but its removal logi
 - **MSB directory casing**: Handles both `MapStudio` (vanilla) and `mapstudio` (Wine/FogMod) directory names.
 - **Missing maps**: Maps not in the mod output (not part of this seed's graph) are silently skipped.
 
+## Matching by EntityGroup (`match_group`)
+
+Besides the data-driven `remove_entities` from `graph.json`, `EnirilimAssetRemover`
+(`writer/FogModWrapper/EnirilimAssetRemover.cs`) contributes a small hardcoded
+`(map, entityId, matchGroup)` list (pattern mirrored from `StakeRemover`) merged
+into the `VanillaWarpRemover.Remove` call in `Program.cs`:
+
+- `m20_01_00_00 / 20006662` (by EntityGroup, `matchGroup = true`): the Outer Wall
+  thorns barrier in Enir-Ilim (part of the map-splits climb, see
+  `docs/map-splits.md`). FogMod CREATES this barrier as two assets
+  (`AEG410_901`, `AEG410_905`) sharing EntityGroup `20006662`, and only disables
+  it when flag 330 is ON, which SpeedFog keeps off. It has no per-asset EntityID
+  to match (FogMod assigns it dynamically during its own write pass), so the
+  removal uses `RemoveEntity.MatchGroup` to match `EntityGroupIDs` instead of
+  `EntityID`.
+
+`RemoveEntity.MatchGroup` (`writer/FogModWrapper.Core/Models/GraphData.cs`)
+selects between the two matching strategies in `VanillaWarpRemover.RemoveFromMap`:
+entries with `MatchGroup = false` (the `graph.json`-sourced default) are matched
+by `EntityID`; entries with `MatchGroup = true` are matched against the asset's
+`EntityGroupIDs` array instead. Both matching strategies run in the same
+`Remove()` pass, since `EnirilimAssetRemover.GetEntities()` is concatenated onto
+`graph.json`'s `RemoveEntities` before the call (`Program.cs`).
+
+This runs post-`Write`, i.e. after FogMod's `GameDataWriterE.Write()` has
+already created the thorns assets: `VanillaWarpRemover` operates on the MSBs
+FogMod just wrote, not on `AnnotationData` before construction.
+
+This is a no-op when `m20_01` is absent from the seed (`VanillaWarpRemover`
+skips maps not present in the output).
+
 ## Future
 
 If FogMod fixes the upstream `o.Name == e.Name` comparison to use EntityID, this workaround can be removed entirely.

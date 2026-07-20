@@ -74,6 +74,7 @@ speedfog/
 │   ├── clusters.json        # Generated zone clusters (gitignored)
 │   ├── fog_data.json        # Generated fog gate metadata (gitignored)
 │   ├── zone_metadata.toml   # Zone weight config (tracked)
+│   ├── map_splits.toml      # Synthetic zones/fogs splitting oversized maps (tracked)
 │   ├── game_tweaks.toml     # FogMod ConfigVars + startup gate flags (tracked)
 │   ├── care_package_items.toml  # Curated item pools for care package (tracked)
 │   ├── phantom_skins.toml   # Phantom skins catalog (cosmetic auras, tracked)
@@ -95,6 +96,7 @@ speedfog/
 │   │   ├── Models/GraphData.cs  # GraphData, Connection, CarePackageItem
 │   │   ├── ResourceCalculations.cs  # Pure calculation functions for starting resources
 │   │   ├── ShopIdAllocator.cs  # Shop ID allocation utilities
+│   │   ├── MapSplitsLoader.cs  # Load data/map_splits.toml (synthetic zones/fogs)
 │   │   └── PhaseTimer.cs    # Per-phase timing (standard timer, no ad-hoc Stopwatches)
 │   ├── FogModWrapper/       # Fog gate writer - thin wrapper calling FogMod.dll
 │   │   ├── Program.cs       # CLI entry point
@@ -210,6 +212,7 @@ speedfog/
 | `docs/item-giving-limitations.md` | EMEVD item type constraints and workarounds |
 | `docs/clusters.md` | Cluster generation from fog.txt |
 | `docs/opensplit-overrides.md` | Per-warp opensplit overrides (zone_metadata.toml -> Python cluster gen + C# tag injection) |
+| `docs/map-splits.md` | Splitting oversized maps with synthetic zones/fogs (map_splits.toml, Enir-Ilim instance) |
 | `docs/phantom-skins.md` | Phantom skins catalog (cosmetic player auras for racing rewards) |
 | `docs/plugins/README.md` | Plugin config convention (Python passthrough + C# IsPluginEnabled) |
 | `docs/plugins/summer-theme.md` | Summer theme: boss epithets + UI banners, catalogue format, discovery |
@@ -274,6 +277,7 @@ speedfog/
 | `MakestablePulsePatcher` | Gates the makestable stable-position pulse on load end (flag 2200) so arena quit-outs respawn at the entrance |
 | `PlayRegionPatcher` | Restores vanilla 6000/6001 play region save-limit flags that FogMod needlessly remapped |
 | `VanillaWarpRemover` | Removes vanilla warp MSB assets that conflict with fog gates |
+| `EnirilimAssetRemover` | Hardcoded removal of FogMod-created Enir-Ilim thorns (EntityGroup match, via VanillaWarpRemover) |
 | `StartupFlagInjector` | Sets event flags at startup in any EMEVD (open gates, etc.) |
 | `StakeRemover` | Removes vanilla stakes that respawn outside the DAG |
 | `HeavyDoorMessagePatcher` | Suppresses "heavy door" popup (text 4200) in common_func |
@@ -284,6 +288,7 @@ speedfog/
 | `WeaponUpgradeInjector` | Weapon upgrade initialization for starting weapons with ashes of war |
 | `PhantomCatalogInjector` | Bakes phantom skin catalog (cosmetic auras) into PhantomParam/SpEffectVfxParam/SpEffectParam |
 | `OpenSplitInjector` | Tags entrances with `opensplit` before `Graph.Construct` (see `docs/opensplit-overrides.md`) |
+| `MapSplitsInjector` | Injects map_splits.toml synthetic zones/fogs into AnnotationData before `Graph.Construct`, splits EnemyAreas (see `docs/map-splits.md`) |
 | `SummerTheme` | Cosmetic summer text reskin (boss NpcName + UI banners), opt-in via `[plugin.summer]` |
 | `SummerCatalogLoader` | Loads and validates `data/plugins/summer.toml` |
 
