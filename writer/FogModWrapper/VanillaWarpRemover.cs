@@ -10,7 +10,9 @@ namespace FogModWrapper;
 /// logic uses o.Name == e.Name where e.Name is a region entity ID string (e.g., "2046402020"),
 /// not an MSB Part.Asset name. The comparison is always false, so vanilla warps persist.
 ///
-/// This post-processor removes the actual MSB Part.Asset entries by EntityID.
+/// This post-processor removes the actual MSB Part.Asset entries by EntityID, or by
+/// EntityGroup when the RemoveEntity is flagged MatchGroup (e.g. the FogMod-created
+/// Enir-Ilim thorns, which share a group rather than a per-asset EntityID).
 /// </summary>
 public static class VanillaWarpRemover
 {
@@ -54,15 +56,17 @@ public static class VanillaWarpRemover
 
         var msb = MSBE.Read(msbPath);
         var entityIds = new HashSet<uint>(
-            entities.Where(e => e.EntityId > 0).Select(e => (uint)e.EntityId));
+            entities.Where(e => !e.MatchGroup && e.EntityId > 0).Select(e => (uint)e.EntityId));
+        var groupIds = new HashSet<uint>(
+            entities.Where(e => e.MatchGroup && e.EntityId > 0).Select(e => (uint)e.EntityId));
 
-        // Collect names of assets to remove (for cleaning up event references)
-        var removedNames = new HashSet<string>(
-            msb.Parts.Assets
-                .Where(a => entityIds.Contains(a.EntityID))
-                .Select(a => a.Name));
+        bool Matches(MSBE.Part.Asset a) =>
+            entityIds.Contains(a.EntityID) ||
+            a.EntityGroupIDs.Any(g => groupIds.Contains(g));
 
-        var removed = msb.Parts.Assets.RemoveAll(a => entityIds.Contains(a.EntityID));
+        // Collect names of assets to remove (one pass: drives both RemoveAll and ObjAct cleanup)
+        var removedNames = msb.Parts.Assets.Where(Matches).Select(a => a.Name).ToHashSet();
+        int removed = msb.Parts.Assets.RemoveAll(a => removedNames.Contains(a.Name));
 
         if (removed > 0)
         {

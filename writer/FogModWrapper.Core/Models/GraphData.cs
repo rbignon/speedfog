@@ -261,4 +261,13 @@ public class RemoveEntity
     /// </summary>
     [JsonPropertyName("entity_id")]
     public int EntityId { get; set; }
+
+    /// <summary>
+    /// When true, EntityId is matched against the asset's EntityGroupIDs array instead
+    /// of its EntityID. Use for FogMod-created assets that share a group ID but have no
+    /// stable individual EntityID (e.g., the Enir-Ilim thorns barrier group 20006662).
+    /// Default false keeps graph.json-sourced entries (EntityID-based) unchanged.
+    /// </summary>
+    [JsonPropertyName("match_group")]
+    public bool MatchGroup { get; set; } = false;
 }

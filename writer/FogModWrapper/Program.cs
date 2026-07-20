@@ -796,10 +796,14 @@ Example:
         // See docs/startup-flag-injection.md for the methodology used to find these flags.
         StartupFlagInjector.Inject(ctx.ModDir, ctx.Tweaks.StartupFlags);
 
-        // Remove vanilla assets that conflict with fog gates.
-        if (ctx.GraphData.RemoveEntities.Count > 0)
+        // Remove vanilla assets that conflict with fog gates: graph.json entities
+        // plus the hardcoded Enir-Ilim list (thorns barrier).
+        var removeEntities = ctx.GraphData.RemoveEntities
+            .Concat(EnirilimAssetRemover.GetEntities())
+            .ToList();
+        if (removeEntities.Count > 0)
         {
-            VanillaWarpRemover.Remove(ctx.ModDir, ctx.GraphData.RemoveEntities);
+            VanillaWarpRemover.Remove(ctx.ModDir, removeEntities);
         }
 
         // Re-enable Torrent inside boss arenas where vanilla blocks it via
