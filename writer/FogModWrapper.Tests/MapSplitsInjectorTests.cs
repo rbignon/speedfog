@@ -222,5 +222,17 @@ public class MapSplitsInjectorTests
         MapSplitsInjector.Apply(ann, splits);
         Assert.Contains(ann.Areas, a => a.Name == "enirilim_upper");
         Assert.Equal(2, ann.Entrances.Count);
+
+        // Both real fogs live in m20_01_00_00: InjectShowSfx must aggregate
+        // them into the same map EMEVD (drift guard for the fog 'map' field
+        // vs. the EMEVD filename convention).
+        var emevd = MakeEmevdWithEvent0();
+        int n = MapSplitsInjector.InjectShowSfx(emevd, "m20_01_00_00", splits, 9005775);
+        Assert.Equal(2, n);
+        Assert.Equal(2, emevd.Events[0].Instructions.Count);
+        var entities = emevd.Events[0].Instructions
+            .Select(i => BitConverter.ToInt32(i.ArgData, 8))
+            .ToList();
+        Assert.Equal(new List<int> { 20011960, 20011961 }, entities);
     }
 }

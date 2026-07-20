@@ -45,7 +45,7 @@ name = "AEG099_002_9100"
 map = "m20_01_00_00"
 id = 20011960
 text = "Spiral Rise ascent"
-make_from = "AEG099_002 AEG099_002_9000 -281.566 66.082 -85.637 -159.1"
+make_from = "AEG099_002 AEG099_002_9000 -281.566 66.082 -85.637 -69.1"
 aside = { area = "enirilim", text = "climbing toward the Spiral Rise" }
 bside = { area = "enirilim_upper", text = "arriving at the Spiral Rise" }
 ```
@@ -62,6 +62,11 @@ bside = { area = "enirilim_upper", text = "arriving at the Spiral Rise" }
   `Write` methods, ~L256-262): `"<model> <source-asset-to-copy> <x> <y> <z> <yaw>"`.
   The source asset must already exist in the target map (Enir-Ilim's fogs copy
   `AEG099_002_9000`, the existing Radahn-arena gate in `m20_01_00_00`).
+  Yaw convention (in-game validated): `yaw = atan2(dx, dz)` of the captured
+  edge-to-edge doorway segment `+ 90°`. The `AEG099_002` model's width axis
+  runs perpendicular to the direction its yaw points, so plain
+  `atan2(dx, dz)` leaves the gate lying along the corridor instead of
+  spanning the doorway.
 - **Required keys**: `[[zones]]` requires non-empty strings `name`, `map`,
   `display_name`, `split_from`; `cols`/`tags` are optional and, if present,
   must be lists of strings. `[[fogs]]` requires non-empty strings `name`,
@@ -302,10 +307,8 @@ still pending, part of the broader in-game validation pass.
    EnemyArea split is inactive (both halves scale under the single inherited
    `enirilim` tier baseline).
 
-The yaw axis convention has been validated in-game: `yaw = atan2(dx, dz)` of
-the captured doorway segment `+ 90°`. The `AEG099_002` model's width axis runs
-perpendicular to the direction its yaw points, so plain `atan2(dx, dz)` leaves
-the gate lying along the corridor instead of spanning the doorway.
+(The yaw axis convention, formerly listed here as an open input, has been
+validated in-game; see the `make_from` yaw convention under "File Format".)
 
 ## Reference points
 
