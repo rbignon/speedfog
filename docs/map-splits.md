@@ -39,6 +39,7 @@ display_name = "Enir-Ilim Spiral Rise"
 tags = ["dlc"]
 split_from = "enirilim"
 cols = []
+drops_to = ["enirilim"]
 
 [[fogs]]
 name = "AEG099_002_9100"
@@ -68,9 +69,11 @@ bside = { area = "enirilim_upper", text = "arriving at the Spiral Rise" }
   `atan2(dx, dz)` leaves the gate lying along the corridor instead of
   spanning the doorway.
 - **Required keys**: `[[zones]]` requires non-empty strings `name`, `map`,
-  `display_name`, `split_from`; `cols`/`tags` are optional and, if present,
-  must be lists of strings. `[[fogs]]` requires non-empty strings `name`,
-  `map`, `text`, `make_from`, plus an integer `id`; `aside`/`bside` are
+  `display_name`, `split_from`; `cols`/`tags`/`drops_to` are optional and, if
+  present, must be lists of strings (`drops_to` is Python-only, see "Drops"
+  below; the C# `MapSplitsLoader` does not read it). `[[fogs]]` requires
+  non-empty strings `name`, `map`, `text`, `make_from`, plus an integer `id`;
+  `aside`/`bside` are
   required tables each requiring non-empty strings `area`/`text`. Both
   pipelines validate this before use, independently: C#'s `MapSplitsLoader`
   (`RequireString`/`ReadStringList`) throws `InvalidDataException`, Python's
@@ -84,6 +87,29 @@ bside = { area = "enirilim_upper", text = "arriving at the Spiral Rise" }
   choice, not a physical one: the `MakeFrom` gate itself is an ordinary
   walkable fog wall with no inherent direction. See "Two Injection Points"
   for how each pipeline enforces (or doesn't enforce) that one-way-ness.
+
+### Drops (`drops_to`)
+
+A `[[zones]]` entry may declare `drops_to = ["target_zone", ...]`: a
+physical, walkable one-way drop from the synthetic zone down into each
+listed target zone (a hole, a ledge, a staircase you can't climb back up),
+as opposed to the fog gates in `[[fogs]]`, which are DAG-topology
+constructs. Python-only: `inject_map_splits` turns each entry into a
+`WorldConnection(target_area=target, text="dropping down", tags=["drop"])`
+on the synthetic zone's `AreaData.to_connections`, so
+`build_world_graph`/`generate_clusters` flood-fill it exactly like an
+ordinary drop declared in `fog.txt`'s `Areas` section. The effect is the
+same *academy-style overlapping clusters* pattern `fog.txt` itself already
+produces via ordinary drops (e.g. `academy_courtyard -> academy_redwolf`,
+tagged `drop`, in the Academy of Raya Lucaria): flood-fill from the target
+zone alone yields a cluster with just that zone (no way back up), and
+flood-fill from the synthetic zone yields a cluster merging both zones (the
+drop is reachable once you're up top). The DAG generator's existing
+zone-overlap check (`used_zones` in `speedfog/generator.py`) already treats
+any two clusters sharing a zone as mutually exclusive, so both overlapping
+clusters are valid candidates but never both appear in the same run. The C#
+side reads nothing for `drops_to`: world links only affect Python-side
+clustering, never the fog gates FogMod's writer compiles.
 
 ## Two Injection Points
 
@@ -178,8 +204,11 @@ gates sharing an identity FogMod uses as a dictionary key.
 source `EnemyArea`'s enemies into a new `EnemyArea` named after the split
 zone, so each half of a split map can carry its own scaling tier. It only
 runs for zones with a non-empty `cols` list; `cols = []` is a documented
-no-op (used today, since Enir-Ilim's col partition hasn't been captured
-in-game yet).
+no-op. Enir-Ilim keeps it empty by design, not as a pending capture: once
+the split is modeled via `drops_to` (see "Drops" above), the two zones never
+occupy two separate DAG nodes in the same run (they're either the standalone
+`enirilim` cluster, or merged together as one node), so they always share a
+single tier and no EnemyArea partition is needed.
 
 - **Prefixed vs unprefixed collision names**: `AnnotationData.EnemyLocArea.Cols`
   (the space-separated string on the *area*, e.g. `enirilim`'s Cols) stores
@@ -211,8 +240,8 @@ in-game yet).
   `Name`, `Cols`, and `ScalingTier`; it does not copy `MainMap` or `Groups`
   from the source. These fields (used by `GameDataWriterE` to build
   area-name -> map / area-name -> group lookups) are left unset on the split
-  zone — a known simplification, not yet exercised since Enir-Ilim's split
-  is currently a no-op (`cols = []`).
+  zone — a known simplification, not exercised by Enir-Ilim's split, which
+  is a permanent no-op (`cols = []`) by design (see "The Enir-Ilim Instance").
 - **Why missing tiers are safe**: if a synthetic zone somehow ends up without
   an entry in `Graph.AreaTiers` (e.g. `area_tiers` missing it in `graph.json`),
   FogRando does not throw. `GameDataWriterE`'s enemy-scaling loop looks the
@@ -226,26 +255,44 @@ in-game yet).
 
 ## The Enir-Ilim Instance
 
-The Outer Wall climb, split into two clusters by two synthetic one-way fogs:
+The Outer Wall climb is modeled with two synthetic fogs plus a `drops_to`
+world-graph edge (see "Drops" above), which together produce two
+overlapping clusters, academy-style: a standalone `{enirilim}` and a merged
+`{enirilim_upper, enirilim}`. The DAG generator's zone-overlap check
+(`used_zones` in `speedfog/generator.py`) makes them mutually exclusive per
+run — only one of the two is ever wired into a given seed's DAG.
 
 ```
 warp 20012020 (Outer Wall)
    |  enirilim (lower): Outer Wall + First Rise
    v
-FOG 2 (synthetic, AEG099_002_9100, id 20011960)      <- boundary between the two clusters
+FOG 2 (synthetic, AEG099_002_9100, id 20011960)      <- one-way: ASide=enirilim exit, BSide=enirilim_upper entry
    |  enirilim_upper: Spiral Rise + Cleansing Chamber Anteroom
-   v
-FOG 1 (synthetic, AEG099_002_9101, id 20011961)      <- exit, before Leda
-   :  unused tail: Leda's plateau, lift, Divine Gate, enirilim_stairs (excluded)
+   |
+   +--> FOG 1 (synthetic, AEG099_002_9101, id 20011961)   <- exit, before Leda
+   |       :  unused tail: Leda's plateau, lift, Divine Gate, enirilim_stairs (excluded)
+   |
+   +--> drops_to = ["enirilim"]   <- physical one-way drop back down into enirilim,
+            floods "enirilim" (and FOG 2's ASide exit) into the SAME cluster
 ------
 AEG099_002_9000 BSide -> enirilim_radahn (final_boss)   <- unchanged, DAG-wired
 ```
 
-- `enirilim` (lower half, name kept from the original single-zone design):
-  entry = warp `20012020`, exit = ASide of fog 2.
-- `enirilim_upper` (new synthetic zone): entry = BSide of fog 2, exit = ASide
-  of fog 1.
-- Both fogs are one-way (`unique` pattern): fog 1's BSide targets
+- **Standalone `{enirilim}`**: entry = warp `20012020`, exit = FOG 2's ASide
+  only. `enirilim_upper` is absent from this cluster entirely; nothing in
+  the run reaches it. Picked whenever the DAG never routes a predecessor
+  into FOG 2's BSide.
+- **Merged `{enirilim_upper, enirilim}`**: entry = FOG 2's BSide only, into
+  `enirilim_upper` (`enirilim` is never an entry zone here: the only path
+  into it, the `drops_to` edge, is a one-way drop *from* `enirilim_upper`,
+  so `compute_cluster_fogs`'s unidirectional-incoming-edge check excludes
+  it). Two exits: FOG 1's ASide (`enirilim_upper`, "before Leda's arena")
+  and FOG 2's ASide (`enirilim`, "climbing toward the Spiral Rise"). The
+  same physical fog wall (FOG 2) is thus both this cluster's entrance
+  (BSide) and one of its exits (ASide): its two sides are independently
+  redirectable "unique" warp endpoints, same as any FogRando sending gate,
+  even though physically they sit at the same doorway.
+- Both fogs are one-way (`unique` pattern): FOG 1's BSide targets
   `enirilim_stairs`, which is never a graph entry (see below), so it's not
   reachable as an *entrance* from anywhere in the randomized run.
 - Each half keeps at least one Site of Grace.
@@ -290,25 +337,26 @@ still pending, part of the broader in-game validation pass.
 
 - `no_drop_to` cuts on `enirilim`: `belurat_enirilim` (unconditional drop into
   Belurat), `belurat_stairs` (treekindling-gated passage back), and
-  `enirilim_stairs` (the excluded tail) — keeping the climb a standalone,
-  warp-entered cluster. `belurat_stairs` also cuts `no_drop_to = ["enirilim"]`
-  in the reverse direction.
+  `enirilim_stairs` (the excluded tail) — keeping both of the climb's
+  clusters (standalone `{enirilim}` and merged `{enirilim_upper, enirilim}`)
+  from spilling into Belurat or the sealed tail via flood-fill.
+  `belurat_stairs` also cuts `no_drop_to = ["enirilim"]` in the reverse
+  direction.
 - `[zones.enirilim_stairs] exclude = true` — the tail must never surface as a
   playable cluster.
 - `weight` on `enirilim` (2) and `enirilim_upper` (2) are placeholders
   pending playtesting calibration (comments in `zone_metadata.toml` call
   this out explicitly).
 
-**Remaining in-game inputs** (per the design spec):
-
-1. The exact `cols` partition between `enirilim` and `enirilim_upper` — which
-   `h00xx00` collision groups sit below vs. above the fog 2 plane. Until
-   captured, `map_splits.toml`'s `enirilim_upper.cols` stays `[]` and the
-   EnemyArea split is inactive (both halves scale under the single inherited
-   `enirilim` tier baseline).
-
-(The yaw axis convention, formerly listed here as an open input, has been
-validated in-game; see the `make_from` yaw convention under "File Format".)
+**Remaining in-game inputs** (per the design spec): none outstanding. The
+yaw axis convention, formerly listed here as an open input, has been
+validated in-game (see the `make_from` yaw convention under "File Format").
+The `cols` partition between `enirilim` and `enirilim_upper` — which
+`h00xx00` collision groups sit below vs. above the fog 2 plane — is no
+longer needed either: now that the split is modeled via `drops_to` (see
+"Drops" above and "EnemyArea Split Mechanics"), the two zones are never
+separate DAG nodes in the same run, so `enirilim_upper.cols` stays `[]` by
+design rather than pending capture.
 
 ## Reference points
 
@@ -316,7 +364,10 @@ validated in-game; see the `make_from` yaw convention under "File Format".)
   fogs, header comment cross-references this doc and the design spec.
 - `tools/generate_clusters.py`: `load_map_splits`, `inject_map_splits`,
   `_validate_map_splits` (required-key checks), `classify_fogs` (`is_unique`
-  branch), `KEY_ITEMS` (`treekindling`).
+  branch), `KEY_ITEMS` (`treekindling`), `build_world_graph`/
+  `generate_clusters` (`drops_to` flood-fill).
+- `speedfog/generator.py`: `used_zones` zone-overlap check that makes the
+  standalone/merged Enir-Ilim clusters mutually exclusive per run.
 - `writer/FogModWrapper.Core/MapSplitsLoader.cs`: TOML reader (`SplitZone`,
   `SplitFog` records).
 - `writer/FogModWrapper/MapSplitsInjector.cs`: `Apply` (Areas/Entrances),

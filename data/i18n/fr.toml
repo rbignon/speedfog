@@ -531,6 +531,11 @@ major_boss = "boss majeur"
 "Above Boss" = "Au-dessus du boss"
 "After Waypoint" = "Après le point de passage"
 "Before Divine Tower" = "Avant la Tour divine"
+# Nom complet littéral (display_name de map_splits.toml) : cette zone
+# synthétique n'a pas d'entrée dans [names.locations] car "Enir-Ilim Spiral
+# Rise" n'apparaît que comme display_name de cluster, jamais comme segment
+# {location} substitué dans un pattern text/side_text.
+"Enir-Ilim Spiral Rise" = "Tour hélicoïdale d'Enir-Ilim"
 
 # =============================================================================
 # Post-traitement — règles regex appliquées après substitution de patterns
@@ -648,14 +653,6 @@ replacement = "D'\\1"
 "Caelid Divine Tower left entrance" = "Tour Divine de Caelid (entrée gauche)"
 "Caelid Divine Tower middle entrance" = "Tour Divine de Caelid (entrée centrale)"
 "Caelid Divine Tower right entrance" = "Tour Divine de Caelid (entrée droite)"
-# Enir-Ilim split (portes synthétiques map_splits.toml)
-# Note: "Montée en spirale" est un équivalent approximatif — à confirmer via le nom officiel
-# de la grâce "Spiral Rise" dans la version française du jeu (fmg_names.json ne couvre pas la DLC).
-# Note: pour la même raison, le nom de zone "Enir-Ilim Spiral Rise" (display_name de
-# map_splits.toml) n'a pas non plus d'entrée dans [names.locations] ; à ajouter une fois
-# le nom officiel de la grâce confirmé.
-"Spiral Rise ascent" = "Ascension de la tour hélicoïdale"
-"Before Leda" = "Avant Leda"
 
 # =============================================================================
 # Overrides — descriptions non-formulaïques (champ side_text)
@@ -842,7 +839,7 @@ replacement = "D'\\1"
 "getting abducted at the bottom of the elevator. this requires dying in the bottom 30 meters, not above that" = "en se faisant enlever au bas de l'ascenseur: il faut mourir dans les 30 derniers mètres, pas au-dessus"
 
 # --- Enir-Ilim split (portes synthétiques map_splits.toml) ---
-# Note: "Montée en spirale" est un équivalent approximatif — à confirmer via le nom officiel
+# Note: "tour hélicoïdale" est un équivalent approximatif — à confirmer via le nom officiel
 # de la grâce "Spiral Rise" dans la version française du jeu (fmg_names.json ne couvre pas la DLC).
 "climbing toward the Spiral Rise" = "en montant vers la tour hélicoïdale"
 "arriving at the Spiral Rise" = "en arrivant à la tour hélicoïdale"
