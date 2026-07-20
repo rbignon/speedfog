@@ -1486,6 +1486,49 @@ def load_metadata(path: Path | None) -> dict:
         return tomllib.load(f)
 
 
+def load_map_splits(path: Path | None) -> dict[str, Any]:
+    """Load the synthetic zones/fogs supplement (map_splits.toml).
+
+    Missing file -> empty supplement (the mechanism is optional).
+    """
+    if path is None or not path.exists():
+        return {"zones": [], "fogs": []}
+    with open(path, "rb") as f:
+        data = tomllib.load(f)
+    return {"zones": data.get("zones", []), "fogs": data.get("fogs", [])}
+
+
+def inject_map_splits(parsed: dict[str, Any], splits: dict[str, Any]) -> None:
+    """Inject synthetic zones and fog gates into parsed fog.txt structures.
+
+    Zones become AreaData entries (clusters, zone_maps, display names follow).
+    Fogs become one-way FogData entries tagged "unique" (ASide exit only,
+    BSide entry only), mirroring the C# MapSplitsInjector which adds the same
+    gates to FogMod's AnnotationData (docs/map-splits.md).
+    """
+    for zone in splits["zones"]:
+        name = zone["name"]
+        if name in parsed["areas"]:
+            raise ValueError(f"map_splits: zone '{name}' already exists in fog.txt")
+        parsed["areas"][name] = AreaData(
+            name=name,
+            text=zone["display_name"],
+            maps=[zone["map"]],
+            tags=list(zone.get("tags", [])),
+        )
+    for fog in splits["fogs"]:
+        parsed["entrances"].append(
+            FogData(
+                name=fog["name"],
+                fog_id=fog["id"],
+                aside=FogSide(area=fog["aside"]["area"], text=fog["aside"]["text"]),
+                bside=FogSide(area=fog["bside"]["area"], text=fog["bside"]["text"]),
+                text=fog.get("text", ""),
+                tags=["unique"],
+            )
+        )
+
+
 def extract_no_drop_to(metadata: dict[str, Any]) -> dict[str, set[str]]:
     """Per-zone world-connection cuts from zone_metadata.toml.
 
@@ -2124,6 +2167,12 @@ def main() -> int:
         help="Path to zone_metadata.toml (optional)",
     )
     parser.add_argument(
+        "--map-splits",
+        type=Path,
+        default=None,
+        help="Path to map_splits.toml (default: <fog_txt dir>/map_splits.toml)",
+    )
+    parser.add_argument(
         "--exclude-dlc",
         action="store_true",
         default=False,
@@ -2171,6 +2220,15 @@ def main() -> int:
 
     print(f"Parsed {len(areas)} areas, {len(entrances)} entrances, {len(warps)} warps")
     print(f"Known key items: {len(key_items)}")
+
+    # Inject synthetic zones/fogs (map splits) before any downstream pass
+    map_splits_path = args.map_splits or args.fog_txt.parent / "map_splits.toml"
+    splits = load_map_splits(map_splits_path)
+    if splits["zones"] or splits["fogs"]:
+        inject_map_splits(parsed, splits)
+        areas = parsed["areas"]  # re-alias after mutation
+        entrances = parsed["entrances"]
+        print(f"Map splits: +{len(splits['zones'])} zones, +{len(splits['fogs'])} fogs")
 
     # Parse boss names from enemy.txt (if available)
     enemy_txt_path = args.fog_txt.parent / "enemy.txt"

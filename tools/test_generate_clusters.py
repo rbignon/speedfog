@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from generate_clusters import (
     KEY_ITEMS,
@@ -30,8 +32,10 @@ from generate_clusters import (
     get_evergaol_zones,
     get_primary_zone,
     get_zone_type,
+    inject_map_splits,
     is_condition_guaranteed,
     is_warp_edge_active,
+    load_map_splits,
     load_metadata,
     parse_area,
     parse_fog,
@@ -4399,3 +4403,78 @@ class TestBossNameInClustersJson:
         entry = result["clusters"][0]
         assert "defeat_flag" not in entry
         assert "boss_name" not in entry
+
+
+# =============================================================================
+# Map Splits Tests
+# =============================================================================
+
+
+class TestMapSplits:
+    @staticmethod
+    def _splits():
+        return {
+            "zones": [
+                {
+                    "name": "upper",
+                    "map": "m99_00_00_00",
+                    "display_name": "Upper Half",
+                    "tags": ["dlc"],
+                    "split_from": "lower",
+                    "cols": [],
+                }
+            ],
+            "fogs": [
+                {
+                    "name": "AEG099_002_9900",
+                    "map": "m99_00_00_00",
+                    "id": 990001,
+                    "text": "Split gate",
+                    "make_from": "AEG099_002 AEG099_002_9000 1.0 2.0 3.0 90.0",
+                    "aside": {"area": "lower", "text": "going up"},
+                    "bside": {"area": "upper", "text": "arriving up"},
+                }
+            ],
+        }
+
+    def test_inject_adds_area_and_one_way_fog(self):
+        parsed = {
+            "areas": {
+                "lower": AreaData(
+                    name="lower", text="Lower", maps=["m99_00_00_00"], tags=["dlc"]
+                )
+            },
+            "entrances": [],
+            "warps": [],
+            "key_items": set(),
+        }
+        inject_map_splits(parsed, self._splits())
+        assert "upper" in parsed["areas"]
+        assert parsed["areas"]["upper"].maps == ["m99_00_00_00"]
+        fog = parsed["entrances"][-1]
+        zone_fogs = classify_fogs(parsed["entrances"], [])
+        # one-way "unique" semantics: aside = exit only, bside = entry only
+        assert fog in zone_fogs["lower"].exit_fogs
+        assert fog not in zone_fogs["lower"].entry_fogs
+        assert fog in zone_fogs["upper"].entry_fogs
+        assert fog not in zone_fogs["upper"].exit_fogs
+
+    def test_inject_rejects_existing_zone(self):
+        parsed = {
+            "areas": {"upper": AreaData(name="upper", text="X", maps=["m99"], tags=[])},
+            "entrances": [],
+            "warps": [],
+            "key_items": set(),
+        }
+        with pytest.raises(ValueError):
+            inject_map_splits(parsed, self._splits())
+
+    def test_load_map_splits_missing_file(self, tmp_path):
+        assert load_map_splits(tmp_path / "absent.toml") == {"zones": [], "fogs": []}
+
+    def test_load_map_splits_real_file(self):
+        splits = load_map_splits(
+            Path(__file__).parent.parent / "data" / "map_splits.toml"
+        )
+        names = {f["name"] for f in splits["fogs"]}
+        assert {"AEG099_002_9100", "AEG099_002_9101"} <= names
