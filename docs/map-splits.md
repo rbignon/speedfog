@@ -113,6 +113,30 @@ treating these fogs as `unique` (or a caller passed `warps` instead of
 connection that FogMod's untagged `Entrance` would happily wire, silently
 reopening a path the split was built to seal (see "sealed Leda tail" below).
 
+## Gate Visibility (showsfx)
+
+A fog gate's mist is not part of the `AEG099_002` model: it is an
+asset-following SFX attached by EMEVD. Vanilla white fogs (and FogMod's
+randomized ones) all carry `AssetSfxParamRelativeID = -1` and all-zero
+DrawGroups in the MSB; what makes them visible is FogMod's `showsfx` common
+event (`fogevents.txt`, ID 9005775: `ChangeAssetEnableState(gate, Enabled)` +
+`CreateAssetfollowingSFX(gate, 101, sfx)`), initialized once per gate from the
+map's constructor event.
+
+FogMod only emits those inits for gates in `EventEditor.FogEdits`, built from
+vanilla events carrying `Fog:`/`Sfx:` template annotations in `fogevents.txt`
+(`EventEditor.cs` ~L180), plus a hardcoded three-gate list
+(`GameDataWriterE.cs` ~L3211-3234). A synthetic `MakeFrom` gate has no vanilla
+event, so FogMod leaves it interactable but invisible.
+
+`MapSplitsInjector.InjectShowSfx` (called from `Program.cs`'s `PatchEmevd`
+per-map loop) closes the gap: for each map-splits fog it appends
+`InitializeCommonEvent(0, showsfx, <gate entity>, 5)` to the owning map's
+Event 0, mirroring FogRando's own hardcoded pattern. Sfx 5 is the standard
+white-fog mist FogRando uses for `AEG099_001`/`AEG099_002` gates without a
+vanilla-captured sfx id. The showsfx event ID is resolved by name from
+`fogevents.txt` (`EventConfig.NewEvents`), not hardcoded.
+
 ## Collision Guards
 
 Both pipelines must check the injected fog names against the real fog.txt
@@ -292,8 +316,8 @@ the gate lying along the corridor instead of spanning the doorway.
   branch), `KEY_ITEMS` (`treekindling`).
 - `writer/FogModWrapper.Core/MapSplitsLoader.cs`: TOML reader (`SplitZone`,
   `SplitFog` records).
-- `writer/FogModWrapper/MapSplitsInjector.cs`: `Apply` (Areas/Entrances) and
-  `SplitEnemyAreas` (EnemyArea split).
+- `writer/FogModWrapper/MapSplitsInjector.cs`: `Apply` (Areas/Entrances),
+  `SplitEnemyAreas` (EnemyArea split), `InjectShowSfx` (fog-wall mist).
 - `writer/FogModWrapper/EnirilimAssetRemover.cs`: hardcoded thorns removal.
 - `writer/FogModWrapper/VanillaWarpRemover.cs`: `MatchGroup` removal path.
 - `data/zone_metadata.toml`: `[zones.enirilim]`, `[zones.enirilim_upper]`,

@@ -1,4 +1,5 @@
 using FogMod;
+using SoulsFormats;
 
 namespace FogModWrapper;
 
@@ -58,6 +59,48 @@ public static class MapSplitsInjector
         }
 
         SplitEnemyAreas(ann, splits);
+    }
+
+    /// <summary>
+    /// SFX id of the standard white fog-wall mist. FogRando uses this value
+    /// for the AEG099_001/AEG099_002 gates in its own hardcoded showsfx list
+    /// (GameDataWriterE.cs ~L3211-3234) when no vanilla sfx id was captured.
+    /// </summary>
+    public const int WhiteFogSfx = 5;
+
+    /// <summary>
+    /// Appends one showsfx init (ChangeAssetEnableState + CreateAssetfollowingSFX,
+    /// i.e. the fog-wall mist) per map-splits gate to the owning map's
+    /// constructor event. FogMod only emits showsfx for gates captured in
+    /// EventEditor.FogEdits, which is built from vanilla events carrying
+    /// Fog:/Sfx: template annotations in fogevents.txt (EventEditor.cs ~L180),
+    /// plus a hardcoded three-gate list (GameDataWriterE.cs ~L3211-3234).
+    /// Synthetic gates have no vanilla event, so without this step they are
+    /// interactable but invisible. Mirrors FogRando's hardcoded pattern:
+    /// InitializeCommonEvent(0, showsfx, gate entity, sfx).
+    /// Returns the number of inits added.
+    /// </summary>
+    public static int InjectShowSfx(EMEVD emevd, string mapName, MapSplits splits, int showSfxEventId)
+    {
+        var fogs = splits.Fogs.Where(f => f.Map == mapName).ToList();
+        if (fogs.Count == 0)
+            return 0;
+        var evt0 = emevd.Events.FirstOrDefault(e => e.ID == 0);
+        if (evt0 == null)
+        {
+            Console.WriteLine(
+                $"Warning: Event 0 not found in {mapName}, cannot inject showsfx for map-splits gates");
+            return 0;
+        }
+        foreach (var fog in fogs)
+        {
+            // Appended at the end of Event 0: no Parameter index shifting needed.
+            evt0.Instructions.Add(
+                EmevdHelper.InitializeCommonEvent(showSfxEventId, fog.Id, WhiteFogSfx));
+            Console.WriteLine(
+                $"MapSplits: showsfx({fog.Id}, sfx={WhiteFogSfx}) injected in {mapName} for '{fog.Name}'");
+        }
+        return fogs.Count;
     }
 
     /// <summary>

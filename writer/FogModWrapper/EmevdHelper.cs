@@ -13,6 +13,20 @@ public static class EmevdHelper
     /// </summary>
     public static EMEVD.Instruction InitializeEvent(int eventId, params int[] args)
     {
+        return new EMEVD.Instruction(2000, 0, InitArgBytes(eventId, args));
+    }
+
+    /// <summary>
+    /// Build an InitializeCommonEvent instruction (bank 2000, id 6): slot 0,
+    /// the given common event ID, plus optional extra int arguments.
+    /// </summary>
+    public static EMEVD.Instruction InitializeCommonEvent(int eventId, params int[] args)
+    {
+        return new EMEVD.Instruction(2000, 6, InitArgBytes(eventId, args));
+    }
+
+    private static byte[] InitArgBytes(int eventId, int[] args)
+    {
         var bytes = new byte[8 + args.Length * 4];
         BitConverter.GetBytes(0).CopyTo(bytes, 0);        // slot = 0
         BitConverter.GetBytes(eventId).CopyTo(bytes, 4);  // eventId
@@ -20,6 +34,6 @@ public static class EmevdHelper
         {
             BitConverter.GetBytes(args[i]).CopyTo(bytes, 8 + i * 4);
         }
-        return new EMEVD.Instruction(2000, 0, bytes);
+        return bytes;
     }
 }

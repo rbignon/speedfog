@@ -1,5 +1,6 @@
 using FogMod;
 using FogModWrapper;
+using SoulsFormats;
 using Xunit;
 
 namespace FogModWrapper.Tests;
@@ -153,6 +154,46 @@ public class MapSplitsInjectorTests
         MapSplitsInjector.Apply(ann, MakeSplits());
         Assert.Single(ann.Locations.EnemyAreas);
         Assert.Equal("m99_00_00_00_h001000", ann.Locations.EnemyAreas[0].Cols);
+    }
+
+    private static EMEVD MakeEmevdWithEvent0()
+    {
+        var emevd = new EMEVD();
+        emevd.Events.Add(new EMEVD.Event(0));
+        return emevd;
+    }
+
+    [Fact]
+    public void InjectShowSfx_AppendsInitCommonEventToEvent0()
+    {
+        var emevd = MakeEmevdWithEvent0();
+        int n = MapSplitsInjector.InjectShowSfx(emevd, "m99_00_00_00", MakeSplits(), 9005775);
+
+        Assert.Equal(1, n);
+        var ins = Assert.Single(emevd.Events[0].Instructions);
+        Assert.Equal(2000, ins.Bank);
+        Assert.Equal(6, ins.ID); // InitializeCommonEvent
+        Assert.Equal(0, BitConverter.ToInt32(ins.ArgData, 0));       // slot
+        Assert.Equal(9005775, BitConverter.ToInt32(ins.ArgData, 4)); // showsfx event
+        Assert.Equal(990001, BitConverter.ToInt32(ins.ArgData, 8));  // fog gate entity
+        Assert.Equal(MapSplitsInjector.WhiteFogSfx, BitConverter.ToInt32(ins.ArgData, 12));
+    }
+
+    [Fact]
+    public void InjectShowSfx_OtherMap_NoOp()
+    {
+        var emevd = MakeEmevdWithEvent0();
+        int n = MapSplitsInjector.InjectShowSfx(emevd, "m35_00_00_00", MakeSplits(), 9005775);
+        Assert.Equal(0, n);
+        Assert.Empty(emevd.Events[0].Instructions);
+    }
+
+    [Fact]
+    public void InjectShowSfx_MissingEvent0_ReturnsZero()
+    {
+        var emevd = new EMEVD();
+        int n = MapSplitsInjector.InjectShowSfx(emevd, "m99_00_00_00", MakeSplits(), 9005775);
+        Assert.Equal(0, n);
     }
 
     [Fact]

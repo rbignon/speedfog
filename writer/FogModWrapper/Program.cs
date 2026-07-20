@@ -218,7 +218,8 @@ Example:
         // Graph.Construct sees them like any fog.txt gate. Also splits
         // EnemyAreas for per-half scaling. See docs/map-splits.md.
         var mapSplitsPath = Path.Combine(ctx.Config.DataDir, "map_splits.toml");
-        MapSplitsInjector.Apply(ctx.Ann, MapSplitsLoader.Load(mapSplitsPath));
+        ctx.MapSplits = MapSplitsLoader.Load(mapSplitsPath);
+        MapSplitsInjector.Apply(ctx.Ann, ctx.MapSplits);
     }
 
     static void LoadCustomBonfires(AnnotationData ann, string fogPath)
@@ -494,11 +495,26 @@ Example:
 
         ctx.CommonEmevd = EMEVD.Read(ctx.CommonEmevdPath);
 
+        // Synthetic map-splits gates get no showsfx (fog-wall mist) from
+        // FogMod: no vanilla event means no FogEdits entry. Inject the inits
+        // ourselves, using the showsfx common event FogMod wrote from
+        // fogevents.txt (see MapSplitsInjector.InjectShowSfx).
+        int showSfxEventId = 0;
+        if (ctx.MapSplits.Fogs.Count > 0)
+        {
+            showSfxEventId = ctx.EventConfig.NewEvents?
+                .FirstOrDefault(e => e.Name == "showsfx")?.ID ?? 0;
+            if (showSfxEventId == 0)
+                Console.WriteLine(
+                    "Warning: showsfx event not found in fogevents.txt; map-splits gates will be invisible");
+        }
+
         var injectedFlags = new HashSet<int>();
         int totalZoneTrackingInjected = 0;
         int totalBossTriggerInjected = 0;
         int totalErdtreePatched = 0;
         int totalSealingTreePatched = 0;
+        int totalShowSfxInjected = 0;
 
         foreach (var file in Directory.GetFiles(ctx.EventDir, "*.emevd.dcx"))
         {
@@ -560,8 +576,26 @@ Example:
                     modified = true;
             }
 
+            if (showSfxEventId > 0)
+            {
+                var mapName = Path.GetFileName(file).Replace(".emevd.dcx", "");
+                int n = MapSplitsInjector.InjectShowSfx(emevd, mapName, ctx.MapSplits, showSfxEventId);
+                if (n > 0)
+                {
+                    totalShowSfxInjected += n;
+                    modified = true;
+                }
+            }
+
             if (modified)
                 emevd.Write(file);
+        }
+
+        if (showSfxEventId > 0 && totalShowSfxInjected != ctx.MapSplits.Fogs.Count)
+        {
+            Console.WriteLine(
+                $"Warning: injected showsfx for {totalShowSfxInjected}/{ctx.MapSplits.Fogs.Count} " +
+                "map-splits gates (missing map EMEVD or Event 0?)");
         }
 
         // Apply the same warp patches to common.emevd (in memory).
@@ -867,6 +901,7 @@ Example:
         public Events Events = null!;
         public EventConfig EventConfig = null!;
         public List<PhantomSkin> PhantomSkins = new();
+        public MapSplits MapSplits = MapSplits.Empty;
 
         // Populated by ConstructGraph
         public RandomizerOptions Opt = null!;
