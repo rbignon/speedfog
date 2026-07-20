@@ -89,3 +89,8 @@ on = true  # Sewer barred gate 2 (AEG023_330_1001, lever AEG027_002_0507)
 map = "m10_00_00_00"
 flag = 10000500
 on = true  # Stormveil barred gate (AEG219_050_0500, lever AEG219_030_0500)
+
+[[startup_flags]]
+map = "m20_01_00_00"
+flag = 20018540
+on = true  # Enir-Ilim Spiral Rise split door (AEG417_012_0501, ObjAct 417012)
