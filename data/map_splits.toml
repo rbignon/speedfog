@@ -1,0 +1,45 @@
+# Synthetic zones and fog gates that split oversized maps into smaller clusters.
+# Consumed by BOTH pipelines:
+#   - tools/generate_clusters.py: injected into parsed fog.txt structures
+#     (one-way semantics: aside = exit only, bside = entry only)
+#   - writer/FogModWrapper (MapSplitsInjector): injected into FogMod's
+#     AnnotationData before Graph.Construct, plus EnemyArea split for scaling
+# See docs/map-splits.md and docs/superpowers/specs/2026-07-20-enirilim-split-synthetic-fogs-design.md.
+
+[[zones]]
+name = "enirilim_upper"
+map = "m20_01_00_00"
+display_name = "Enir-Ilim Spiral Rise"
+tags = ["dlc"]
+# EnemyArea split: collision names moved from split_from's EnemyArea so this
+# zone gets its own scaling tier. Unprefixed ("h004400"); empty = split inactive.
+# To fill after in-game capture of the col partition (spec: remaining input #2).
+split_from = "enirilim"
+cols = []
+
+# Fog 2 of the spec: doorway before the Spiral Rise stairs.
+# Captured edge-to-edge segment: (-280.792, 66.078, -83.610) -> (-282.340, 66.086, -87.664)
+# MakeFrom = "<model> <source-asset-to-copy> <x> <y> <z> <yaw>"; position is the
+# segment midpoint. Yaw from atan2(dx, dz) of the segment; if the gate spawns
+# perpendicular to the doorway in-game, add or subtract 90 here (axis convention).
+[[fogs]]
+name = "AEG099_002_9100"
+map = "m20_01_00_00"
+id = 20011960
+text = "Spiral Rise ascent"
+make_from = "AEG099_002 AEG099_002_9000 -281.566 66.082 -85.637 -159.1"
+aside = { area = "enirilim", text = "climbing toward the Spiral Rise" }
+bside = { area = "enirilim_upper", text = "arriving at the Spiral Rise" }
+
+# Fog 1 of the spec: passage after the Cleansing Chamber Anteroom, before the
+# Leda ambush. Captured segment: (-307.417, 169.778, -308.869) -> (-306.769, 169.778, -306.992)
+# (~2.0 m; the AEG099_002 model is wider and will clip into the walls, harmless).
+# BSide targets the excluded tail zone (never an entry).
+[[fogs]]
+name = "AEG099_002_9101"
+map = "m20_01_00_00"
+id = 20011961
+text = "Before Leda"
+make_from = "AEG099_002 AEG099_002_9000 -307.093 169.778 -307.931 19.0"
+aside = { area = "enirilim_upper", text = "leaving Enir-Ilim before Leda" }
+bside = { area = "enirilim_stairs", text = "arriving on the stairs before Leda" }
