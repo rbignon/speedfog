@@ -48,7 +48,7 @@ id = 20011960
 text = "Spiral Rise ascent"
 make_from = "AEG099_002 AEG099_002_9000 -281.566 66.082 -85.637 -69.1"
 aside = { area = "enirilim", text = "climbing toward the Spiral Rise" }
-bside = { area = "enirilim_upper", text = "arriving at the Spiral Rise" }
+bside = { area = "enirilim_upper", text = "arriving at the Spiral Rise", exit = true }
 ```
 
 - `[[zones]]`: a new `AreaData`/`AnnotationData.Area`. `name`/`map`/`display_name`
@@ -87,6 +87,30 @@ bside = { area = "enirilim_upper", text = "arriving at the Spiral Rise" }
   choice, not a physical one: the `MakeFrom` gate itself is an ordinary
   walkable fog wall with no inherent direction. See "Two Injection Points"
   for how each pipeline enforces (or doesn't enforce) that one-way-ness.
+- **Side-role grants (`entry`/`exit`)**: a side table may set an optional
+  boolean to grant an EXTRA role on top of the one-way default, without
+  making the gate fully bidirectional:
+  - `aside = { area = ..., text = ..., entry = true }`: `aside` ALSO becomes
+    an entry of its area (in addition to its default exit role).
+  - `bside = { area = ..., text = ..., exit = true }`: `bside` ALSO becomes
+    an exit of its area (in addition to its default entry role).
+
+  Both default to absent/`false` (no change from the plain one-way
+  behaviour). `aside` only accepts `entry`; `bside` only accepts `exit` — the
+  opposite key on either side (`aside.exit`, `bside.entry`) is rejected by
+  `_require_side` rather than silently ignored, since
+  `apply_map_splits_side_roles` never reads it and a stray key there would
+  otherwise be a silent no-op. Validated by `_validate_map_splits`/
+  `inject_map_splits`'s `_require_side` (present-but-non-bool, or the wrong
+  side's key, is a `ValueError`); applied by `apply_map_splits_side_roles`,
+  called from `main()` right after `classify_fogs()` (Python-only — the C#
+  side has no equivalent grant since its `Entrance` is already an ordinary
+  two-sided gate, see "Two Injection Points"). Used to open a reverse route
+  through a split zone: the ascending path uses each gate's default one-way
+  role, while a descending path needs an extra entry into one gate's
+  normally-exit-only side and an extra exit out of another gate's
+  normally-entry-only side. See "The Enir-Ilim Instance" below for the
+  concrete case.
 
 ### Drops (`drops_to`)
 
@@ -266,11 +290,16 @@ run — only one of the two is ever wired into a given seed's DAG.
 warp 20012020 (Outer Wall)
    |  enirilim (lower): Outer Wall + First Rise
    v
-FOG 2 (synthetic, AEG099_002_9100, id 20011960)      <- one-way: ASide=enirilim exit, BSide=enirilim_upper entry
-   |  enirilim_upper: Spiral Rise + Cleansing Chamber Anteroom
+FOG 2 (synthetic, AEG099_002_9100, id 20011960)
+   |  ASide=enirilim: exit only (ascending path)
+   |  BSide=enirilim_upper: entry (ascending) + exit (reverse route, bside.exit)
+   v
+   enirilim_upper: Spiral Rise + Cleansing Chamber Anteroom
    |
-   +--> FOG 1 (synthetic, AEG099_002_9101, id 20011961)   <- exit, before Leda
-   |       :  unused tail: Leda's plateau, lift, Divine Gate, enirilim_stairs (excluded)
+   +--> FOG 1 (synthetic, AEG099_002_9101, id 20011961)
+   |       ASide=enirilim_upper: exit (ascending) + entry (reverse route, aside.entry)
+   |       BSide=enirilim_stairs: entry only; unused tail (Leda's plateau, lift,
+   |                              Divine Gate, enirilim_stairs — excluded)
    |
    +--> drops_to = ["enirilim"]   <- physical one-way drop back down into enirilim,
             floods "enirilim" (and FOG 2's ASide exit) into the SAME cluster
@@ -281,20 +310,55 @@ AEG099_002_9000 BSide -> enirilim_radahn (final_boss)   <- unchanged, DAG-wired
 - **Standalone `{enirilim}`**: entry = warp `20012020`, exit = FOG 2's ASide
   only. `enirilim_upper` is absent from this cluster entirely; nothing in
   the run reaches it. Picked whenever the DAG never routes a predecessor
-  into FOG 2's BSide.
-- **Merged `{enirilim_upper, enirilim}`**: entry = FOG 2's BSide only, into
+  into FOG 2's BSide. Unaffected by the side-role grants below (both target
+  `enirilim_upper` sides).
+- **Merged `{enirilim_upper, enirilim}`**: **two entries**, both into
   `enirilim_upper` (`enirilim` is never an entry zone here: the only path
   into it, the `drops_to` edge, is a one-way drop *from* `enirilim_upper`,
   so `compute_cluster_fogs`'s unidirectional-incoming-edge check excludes
-  it). Two exits: FOG 1's ASide (`enirilim_upper`, "before Leda's arena")
-  and FOG 2's ASide (`enirilim`, "climbing toward the Spiral Rise"). The
-  same physical fog wall (FOG 2) is thus both this cluster's entrance
-  (BSide) and one of its exits (ASide): its two sides are independently
-  redirectable "unique" warp endpoints, same as any FogRando sending gate,
-  even though physically they sit at the same doorway.
-- Both fogs are one-way (`unique` pattern): FOG 1's BSide targets
-  `enirilim_stairs`, which is never a graph entry (see below), so it's not
-  reachable as an *entrance* from anywhere in the randomized run.
+  it):
+  - FOG 2's BSide ("arriving at the Spiral Rise") — the default ascending
+    entry.
+  - FOG 1's ASide ("before Leda's arena") — granted via `aside.entry = true`
+    on FOG 1's `map_splits.toml` entry, for the reverse (descending) route.
+
+  **Three exits**:
+  - FOG 2's BSide ("arriving at the Spiral Rise") — granted via
+    `bside.exit = true` on FOG 2's entry, so the reverse route can leave
+    back down through the same doorway it arrived through going up.
+  - FOG 2's ASide (`enirilim`, "climbing toward the Spiral Rise") — the
+    default ascending exit, continuing down into `enirilim`.
+  - FOG 1's ASide ("before Leda's arena") — the default ascending exit.
+
+  FOG 2's BSide and FOG 1's ASide are thus each both an entry *and* an exit
+  for `enirilim_upper` at once: the same physical doorway, independently
+  redirectable in either direction (see "Side-role grants" under "File
+  Format"), same as any FogRando sending gate even though physically they
+  sit at fixed doorways.
+- Both fogs stay one-way at their *default* roles (`unique` pattern): FOG
+  1's BSide targets `enirilim_stairs`, which is never a graph entry (see
+  below), so it's not reachable as an *entrance* from anywhere in the
+  randomized run. The side-role grants add roles on specific sides; they
+  never touch `enirilim_stairs`.
+- `[clusters.enirilim_9820]` in `zone_metadata.toml` declares
+  `proximity_groups = [["AEG099_002_9100"], ["AEG099_002_9101"]]`: each gate
+  is now both an entry and an exit candidate for the merged cluster, and
+  without this constraint the DAG planner could pick an (entry, exit) pair
+  that both resolve to the *same physical doorway* (a zero-length
+  placement — entering and immediately exiting through the same gate). One
+  fog_id per group is enough to cover both its `aside`/`bside` instances:
+  `_filter_exits_by_proximity` (`speedfog/generator.py`) matches group
+  members via `fog_matches_spec`, and a plain (unqualified) fog_id spec
+  matches any zone.
+- The same `[clusters.enirilim_9820]` block also sets
+  `display_name = "Enir-Ilim Spiral Rise"`, distinguishing the merged
+  cluster from the standalone `{enirilim}` cluster in the spoiler/racing UI
+  (both would otherwise display the zone-derived "Enir-Ilim" via
+  `_pick_display_name`). This is the general `[clusters.<id>] display_name`
+  override (documented alongside `weight`/`exclude`/`proximity_groups`/
+  `allowed_entries`/`allowed_exits` in `zone_metadata.toml`'s "Cluster-level
+  traversal constraints" header, and in `docs/clusters.md`'s Output Format
+  section), not an Enir-Ilim-specific mechanism.
 - Each half keeps at least one Site of Grace.
 
 **Entity IDs**: fog 2 is `AEG099_002_9100` / `20011960`; fog 1 is
@@ -333,7 +397,8 @@ commit `ef36403`). In-game confirmation that the door actually renders open is
 still pending, part of the broader in-game validation pass.
 
 **`zone_metadata.toml` pieces** (see `data/zone_metadata.toml` around
-`[zones.enirilim]`/`[zones.enirilim_upper]`/`[zones.enirilim_stairs]`):
+`[zones.enirilim]`/`[zones.enirilim_upper]`/`[zones.enirilim_stairs]`/
+`[zones.belurat_stairs]`/`[clusters.enirilim_9820]`):
 
 - `no_drop_to` cuts on `enirilim`: `belurat_enirilim` (unconditional drop into
   Belurat), `belurat_stairs` (treekindling-gated passage back), and
@@ -347,6 +412,14 @@ still pending, part of the broader in-game validation pass.
 - `weight` on `enirilim` (2) and `enirilim_upper` (2) are placeholders
   pending playtesting calibration (comments in `zone_metadata.toml` call
   this out explicitly).
+- `[clusters.enirilim_9820]` (declared right after `[zones.belurat_stairs]`,
+  content-addressed by the merged cluster's zone set — see "Merged
+  `{enirilim_upper, enirilim}`" above): `proximity_groups` and
+  `display_name` overrides for the merged cluster specifically. If the
+  underlying FogRando extraction ever changes and this ID stops matching,
+  `generate_clusters.py` prints an "orphaned `[clusters.<id>]` declaration"
+  warning naming it — re-derive the new ID from the cluster whose `zones`
+  set is `{enirilim, enirilim_upper}`.
 
 **Remaining in-game inputs** (per the design spec): none outstanding. The
 yaw axis convention, formerly listed here as an open input, has been
@@ -363,11 +436,16 @@ design rather than pending capture.
 - `data/map_splits.toml`: source of truth for the supplement, both zones and
   fogs, header comment cross-references this doc and the design spec.
 - `tools/generate_clusters.py`: `load_map_splits`, `inject_map_splits`,
-  `_validate_map_splits` (required-key checks), `classify_fogs` (`is_unique`
-  branch), `KEY_ITEMS` (`treekindling`), `build_world_graph`/
+  `_validate_map_splits` (required-key checks, including the `entry`/`exit`
+  side-role booleans), `apply_map_splits_side_roles` (side-role grants,
+  called from `main()` right after `classify_fogs`), `classify_fogs`
+  (`is_unique` branch), `KEY_ITEMS` (`treekindling`), `build_world_graph`/
   `generate_clusters` (`drops_to` flood-fill).
 - `speedfog/generator.py`: `used_zones` zone-overlap check that makes the
-  standalone/merged Enir-Ilim clusters mutually exclusive per run.
+  standalone/merged Enir-Ilim clusters mutually exclusive per run;
+  `_filter_exits_by_proximity`/`fog_matches_spec` (`speedfog/clusters.py`)
+  for how `proximity_groups` fog_id specs match both a gate's `aside` and
+  `bside` instances.
 - `writer/FogModWrapper.Core/MapSplitsLoader.cs`: TOML reader (`SplitZone`,
   `SplitFog` records).
 - `writer/FogModWrapper/MapSplitsInjector.cs`: `Apply` (Areas/Entrances),
@@ -375,7 +453,7 @@ design rather than pending capture.
 - `writer/FogModWrapper/EnirilimAssetRemover.cs`: hardcoded thorns removal.
 - `writer/FogModWrapper/VanillaWarpRemover.cs`: `MatchGroup` removal path.
 - `data/zone_metadata.toml`: `[zones.enirilim]`, `[zones.enirilim_upper]`,
-  `[zones.enirilim_stairs]`.
+  `[zones.enirilim_stairs]`, `[clusters.enirilim_9820]`.
 - `reference/fogrando-src/GameDataWriterE.cs`: `MakeFrom` gate creation
   (~L256-262), enemy scaling / `AreaTiers.TryGetValue` (~L2126-2140).
 - `reference/fogrando-src/AnnotationData.cs`: `EnemyLocArea`, `EnemyLoc`

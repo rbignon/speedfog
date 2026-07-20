@@ -39,7 +39,9 @@ id = 20011960
 text = "Spiral Rise ascent"
 make_from = "AEG099_002 AEG099_002_9000 -281.566 66.082 -85.637 -69.1"
 aside = { area = "enirilim", text = "climbing toward the Spiral Rise" }
-bside = { area = "enirilim_upper", text = "arriving at the Spiral Rise" }
+# bside.exit: upper-side exit enables the reverse (descending) route through
+# the merged cluster, on top of the default bside=entry-only role.
+bside = { area = "enirilim_upper", text = "arriving at the Spiral Rise", exit = true }
 
 # Fog 1 of the spec: passage after the Cleansing Chamber Anteroom, before the
 # Leda ambush. Captured segment: (-307.417, 169.778, -308.869) -> (-306.769, 169.778, -306.992)
@@ -52,5 +54,7 @@ map = "m20_01_00_00"
 id = 20011961
 text = "Before Leda"
 make_from = "AEG099_002 AEG099_002_9000 -307.093 169.778 -307.931 104.0"
-aside = { area = "enirilim_upper", text = "before Leda's arena" }
+# aside.entry: entry for the reverse route (arrive at the before-Leda
+# doorway, descend), on top of the default aside=exit-only role.
+aside = { area = "enirilim_upper", text = "before Leda's arena", entry = true }
 bside = { area = "enirilim_stairs", text = "arriving on the stairs before Leda" }

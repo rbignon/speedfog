@@ -360,6 +360,14 @@ exclude = true
 # Reverse direction of the treekindling passage cut above.
 no_drop_to = ["enirilim"]
 
+[clusters.enirilim_9820]
+# Merged Enir-Ilim cluster ({enirilim_upper, enirilim} via the drops_to edge).
+# Distinguish it from the lower-only cluster (both would otherwise display "Enir-Ilim").
+display_name = "Enir-Ilim Spiral Rise"
+# Each synthetic gate's two sides share one doorway: entering through a gate
+# must not allow exiting through the same gate (zero-length placement).
+proximity_groups = [["AEG099_002_9100"], ["AEG099_002_9101"]]
+
 [zones.scadualtus_catacombs_boss]
 type = "boss_arena"  # fog.txt Entrance has "major" tag, but Jori is a catacomb boss, not a remembrance boss
 
@@ -445,6 +453,10 @@ exclude = true  # Cathedral of Manus Metyr interior, accessed via unique warp, n
 # Two outgoing exits in the same group are NOT mutually exclusive: adjacent
 # branch gates are allowed (intentional racing divergence).
 # allowed_entries/allowed_exits: restrict eligible fogs
+# display_name: override the cluster's display name (spoiler/racing UI),
+#   superseding _pick_display_name's heuristic. Useful when two clusters
+#   would otherwise share the same zone-derived name (e.g. a merged cluster
+#   vs. its lower-only variant, see [clusters.enirilim_9820] above).
 # Use "zone:fog_id" when the same fog_id appears in multiple zones
 
 [clusters.caelid_gaeltunnel_befe]

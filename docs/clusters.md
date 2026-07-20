@@ -281,6 +281,15 @@ Multi-zone `major_boss` clusters can be **downgraded** to `legacy_dungeon` when 
 ```
 
 - `id`: `{primary_zone}_{md5_hash[:4]}` for uniqueness
+- `display_name`: display name shown in the spoiler log and racing UI. Picked
+  by `_pick_display_name()` (prefers a non-boss zone's name for
+  `legacy_dungeon` clusters that contain a boss zone; otherwise falls back to
+  the primary zone's name). Overridable per cluster via
+  `[clusters.<id>] display_name` in `zone_metadata.toml`'s "Cluster-level
+  traversal constraints" section (alongside `weight`/`exclude`/
+  `proximity_groups`/`allowed_entries`/`allowed_exits`) — used when two
+  clusters would otherwise share the same zone-derived name, e.g. the merged
+  Enir-Ilim cluster vs. its lower-only variant (`docs/map-splits.md`).
 - `zone_maps`: zone → primary map ID (from `area.maps[0]`)
 - `zone_names`: zone → display name (from `area.text`)
 - `zone_conflicts`: zone → list of mutually exclusive zones (from `conflicts_with` in `zone_metadata.toml`). When a cluster containing one zone is selected, clusters containing conflicting zones are excluded. Example: Margit (`stormveil_margit`) and Morgott (`leyndell_sanctuary`) are the same character — killing Morgott removes Margit from his arena.
