@@ -62,6 +62,17 @@ bside = { area = "enirilim_upper", text = "arriving at the Spiral Rise" }
   `Write` methods, ~L256-262): `"<model> <source-asset-to-copy> <x> <y> <z> <yaw>"`.
   The source asset must already exist in the target map (Enir-Ilim's fogs copy
   `AEG099_002_9000`, the existing Radahn-arena gate in `m20_01_00_00`).
+- **Required keys**: `[[zones]]` requires non-empty strings `name`, `map`,
+  `display_name`, `split_from`; `cols`/`tags` are optional and, if present,
+  must be lists of strings. `[[fogs]]` requires non-empty strings `name`,
+  `map`, `text`, `make_from`, plus an integer `id`; `aside`/`bside` are
+  required tables each requiring non-empty strings `area`/`text`. Both
+  pipelines validate this before use, independently: C#'s `MapSplitsLoader`
+  (`RequireString`/`ReadStringList`) throws `InvalidDataException`, Python's
+  `_validate_map_splits` (called at the top of `inject_map_splits`) throws
+  `ValueError` naming the offending entry and key. This means a malformed
+  `map_splits.toml` fails at cluster-gen time (closest to the edit) instead
+  of only surfacing later at seed-build time.
 - **One-way semantics**: `aside` is the exit side only, `bside` is the entry
   side only, matching FogRando's `unique` tag pattern (sending gates,
   abductor virgins, etc.) used throughout `fog.txt`. This is a DAG-topology
@@ -235,11 +246,15 @@ removes it post-`Write` by `EntityGroup` match (`MatchGroup = true`) via
 to key on before the write pass. See `docs/vanilla-warp-removal.md` for the
 `match_group` mechanism.
 
-**Fog-2 door (pending discovery)**: a vanilla closed door blocks the passage
-at fog 2, before the Spiral Rise stairs. It needs a `[[startup_flags]]` entry
-in `data/game_tweaks.toml` to force it open at map load, following the
-methodology in `docs/startup-flag-injection.md`. The controlling flag has not
-yet been identified in-game.
+**Fog-2 door**: a vanilla closed door blocks the passage at fog 2, before the
+Spiral Rise stairs. The controlling flag is `20018540`, on door asset
+`AEG417_012_0501` (ObjAct `20013540`, ObjActID `417012`), the same
+model/ObjActID family as the `m20_00` Dancing Lion door. It has zero EMEVD
+references: it's a pure ObjAct-driven door, found via the position -> MSB
+objacts -> ObjAct flag shortcut in `docs/startup-flag-injection.md`. Forced ON
+at map load via the `[[startup_flags]]` entry in `data/game_tweaks.toml` (see
+commit `ef36403`). In-game confirmation that the door actually renders open is
+still pending, part of the broader in-game validation pass.
 
 **`zone_metadata.toml` pieces** (see `data/zone_metadata.toml` around
 `[zones.enirilim]`/`[zones.enirilim_upper]`/`[zones.enirilim_stairs]`):
@@ -257,13 +272,12 @@ yet been identified in-game.
 
 **Remaining in-game inputs** (per the design spec):
 
-1. The fog-2 door's controlling flag (startup-flag-injection methodology).
-2. The exact `cols` partition between `enirilim` and `enirilim_upper` — which
+1. The exact `cols` partition between `enirilim` and `enirilim_upper` — which
    `h00xx00` collision groups sit below vs. above the fog 2 plane. Until
    captured, `map_splits.toml`'s `enirilim_upper.cols` stays `[]` and the
    EnemyArea split is inactive (both halves scale under the single inherited
    `enirilim` tier baseline).
-3. In-game yaw validation for both `MakeFrom` gates: the yaw is derived from
+2. In-game yaw validation for both `MakeFrom` gates: the yaw is derived from
    `atan2(dx, dz)` of the captured doorway segment, with the model's own axis
    convention (±90°) unverified until seen in-game.
 
@@ -272,7 +286,8 @@ yet been identified in-game.
 - `data/map_splits.toml`: source of truth for the supplement, both zones and
   fogs, header comment cross-references this doc and the design spec.
 - `tools/generate_clusters.py`: `load_map_splits`, `inject_map_splits`,
-  `classify_fogs` (`is_unique` branch), `KEY_ITEMS` (`treekindling`).
+  `_validate_map_splits` (required-key checks), `classify_fogs` (`is_unique`
+  branch), `KEY_ITEMS` (`treekindling`).
 - `writer/FogModWrapper.Core/MapSplitsLoader.cs`: TOML reader (`SplitZone`,
   `SplitFog` records).
 - `writer/FogModWrapper/MapSplitsInjector.cs`: `Apply` (Areas/Entrances) and
@@ -289,6 +304,6 @@ yet been identified in-game.
   from `crawl`/`bossrush`/`endless`.
 - `docs/superpowers/specs/2026-07-20-enirilim-split-synthetic-fogs-design.md`:
   design rationale, topology, in-game capture notes (French).
-- `docs/startup-flag-injection.md`: methodology for the pending fog-2 door
-  flag.
+- `docs/startup-flag-injection.md`: methodology used to find the fog-2 door
+  flag (`20018540`).
 - `docs/vanilla-warp-removal.md`: `match_group` removal mechanism.

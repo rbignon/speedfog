@@ -651,6 +651,9 @@ replacement = "D'\\1"
 # Enir-Ilim split (portes synthétiques map_splits.toml)
 # Note: "Montée en spirale" est un équivalent approximatif — à confirmer via le nom officiel
 # de la grâce "Spiral Rise" dans la version française du jeu (fmg_names.json ne couvre pas la DLC).
+# Note: pour la même raison, le nom de zone "Enir-Ilim Spiral Rise" (display_name de
+# map_splits.toml) n'a pas non plus d'entrée dans [names.locations] ; à ajouter une fois
+# le nom officiel de la grâce confirmé.
 "Spiral Rise ascent" = "Ascension vers la Montée en spirale"
 "Before Leda" = "Avant Leda"
 
