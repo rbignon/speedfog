@@ -4598,3 +4598,71 @@ class TestMapSplits:
         )
         names = {f["name"] for f in splits["fogs"]}
         assert {"AEG099_002_9100", "AEG099_002_9101"} <= names
+
+    def test_drops_to_creates_overlapping_clusters(self):
+        """A drops_to link floods the lower zone into the upper cluster (academy pattern)."""
+        splits = self._splits()
+        splits["zones"][0]["drops_to"] = ["lower"]
+        parsed = {
+            "areas": {
+                "lower": AreaData(
+                    name="lower", text="Lower", maps=["m99_00_00_00"], tags=["dlc"]
+                )
+            },
+            "entrances": [],
+            "warps": [],
+            "key_items": set(),
+        }
+        inject_map_splits(parsed, splits)
+        graph = build_world_graph(parsed["areas"], set())
+        clusters = generate_clusters({"lower", "upper"}, graph)
+        zone_sets = {c.zones for c in clusters}
+        assert frozenset({"lower"}) in zone_sets
+        assert frozenset({"upper", "lower"}) in zone_sets
+
+    def test_drops_to_merged_cluster_exits_both_fog_sides(self):
+        """Merged {upper, lower} cluster: entry comes only from the synthetic
+        gate's bside into 'upper' (the drop itself has no fog gate). Exits
+        include both the lower-side exit of the first gate and the
+        upper-side exit of a second gate, mirroring the real Enir-Ilim
+        topology where fog 9100 exits via 'enirilim' and fog 9101 exits via
+        'enirilim_upper'."""
+        splits = self._splits()
+        splits["zones"][0]["drops_to"] = ["lower"]
+        splits["fogs"].append(
+            {
+                "name": "AEG099_002_9901",
+                "map": "m99_00_00_00",
+                "id": 990002,
+                "text": "Second gate",
+                "make_from": "AEG099_002 AEG099_002_9000 4.0 5.0 6.0 90.0",
+                "aside": {"area": "upper", "text": "leaving before the tail"},
+                "bside": {"area": "tail", "text": "arriving at the tail"},
+            }
+        )
+        parsed = {
+            "areas": {
+                "lower": AreaData(
+                    name="lower", text="Lower", maps=["m99_00_00_00"], tags=["dlc"]
+                )
+            },
+            "entrances": [],
+            "warps": [],
+            "key_items": set(),
+        }
+        inject_map_splits(parsed, splits)
+        graph = build_world_graph(parsed["areas"], set())
+        clusters = generate_clusters({"lower", "upper"}, graph)
+        merged = next(c for c in clusters if c.zones == frozenset({"upper", "lower"}))
+
+        zone_fogs = classify_fogs(parsed["entrances"], [])
+        compute_cluster_fogs(merged, graph, zone_fogs)
+
+        entry_keys = {(f["fog_id"], f["zone"]) for f in merged.entry_fogs}
+        assert entry_keys == {("AEG099_002_9900", "upper")}
+
+        exit_keys = {(f["fog_id"], f["zone"]) for f in merged.exit_fogs}
+        assert exit_keys == {
+            ("AEG099_002_9900", "lower"),
+            ("AEG099_002_9901", "upper"),
+        }

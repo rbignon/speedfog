@@ -13,9 +13,16 @@ display_name = "Enir-Ilim Spiral Rise"
 tags = ["dlc"]
 # EnemyArea split: collision names moved from split_from's EnemyArea so this
 # zone gets its own scaling tier. Unprefixed ("h004400"); empty = split inactive.
-# To fill after in-game capture of the col partition (spec: remaining input #2).
+# Left empty by design for Enir-Ilim: the two zones never occupy two separate
+# DAG nodes anymore (see drops_to below), so they always share a tier and no
+# EnemyArea partition is needed. The key stays for the generic mechanism.
 split_from = "enirilim"
 cols = []
+# Physical one-way drop from the upper half down into the lower half
+# (in-game geometry, validated by Roger). Modeled as a world-graph drop edge so
+# cluster-gen produces academy-style overlapping clusters: {enirilim} alone and
+# {enirilim_upper, enirilim} merged (mutually exclusive per run).
+drops_to = ["enirilim"]
 
 # Fog 2 of the spec: doorway before the Spiral Rise stairs.
 # Captured edge-to-edge segment: (-280.792, 66.078, -83.610) -> (-282.340, 66.086, -87.664)

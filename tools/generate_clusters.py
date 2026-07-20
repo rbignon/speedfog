@@ -1541,7 +1541,9 @@ def _validate_map_splits(splits: dict[str, Any]) -> None:
     separately-worded C# InvalidDataException at seed-build time:
 
     - zones: 'name', 'map', 'display_name', 'split_from' are required
-      non-empty strings; 'cols'/'tags' are optional lists of strings.
+      non-empty strings; 'cols'/'tags'/'drops_to' are optional lists of
+      strings. 'drops_to' is Python-only (world-graph drop edges for
+      cluster-gen); the C# MapSplitsLoader does not read it.
     - fogs: 'name', 'map', 'id' (int), 'text', 'make_from' are required;
       'aside'/'bside' are tables with required 'area' and 'text'.
     """
@@ -1552,6 +1554,7 @@ def _validate_map_splits(splits: dict[str, Any]) -> None:
             _require_str(zone, key, "zones", name)
         _require_str_list(zone, "cols", "zones", name)
         _require_str_list(zone, "tags", "zones", name)
+        _require_str_list(zone, "drops_to", "zones", name)
 
     for fog in splits.get("fogs", []):
         raw_name = fog.get("name")
@@ -1573,6 +1576,14 @@ def inject_map_splits(parsed: dict[str, Any], splits: dict[str, Any]) -> None:
     malformed supplement fails here instead of at every seed build.
 
     Zones become AreaData entries (clusters, zone_maps, display names follow).
+    A zone's optional 'drops_to' list becomes world-graph drop connections
+    (WorldConnection tagged "drop") to the listed target zones, so
+    build_world_graph()/generate_clusters() flood-fill the same
+    academy-style overlap as a physical one-way drop in fog.txt: a cluster
+    with just the target zone, and a cluster merging the synthetic zone with
+    the target (mutually exclusive per run). This is a Python-only,
+    cluster-gen-time mechanism; FogMod's writer never sees it (world links
+    only affect clustering, not the fog gates it compiles).
     Fogs become one-way FogData entries tagged "unique" (ASide exit only,
     BSide entry only), mirroring the C# MapSplitsInjector which adds the same
     gates to FogMod's AnnotationData (docs/map-splits.md).
@@ -1599,6 +1610,10 @@ def inject_map_splits(parsed: dict[str, Any], splits: dict[str, Any]) -> None:
             text=zone["display_name"],
             maps=[zone["map"]],
             tags=list(zone.get("tags", [])),
+            to_connections=[
+                WorldConnection(target_area=t, text="dropping down", tags=["drop"])
+                for t in zone.get("drops_to", [])
+            ],
         )
 
     existing_by_name: dict[str, list[FogData]] = {}
