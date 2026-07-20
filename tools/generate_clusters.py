@@ -1498,8 +1498,79 @@ def load_map_splits(path: Path | None) -> dict[str, Any]:
     return {"zones": data.get("zones", []), "fogs": data.get("fogs", [])}
 
 
+def _require_str(
+    entry: dict[str, Any], key: str, kind: str, name: str, path: str | None = None
+) -> None:
+    """Require entry[key] to be a non-empty string, mirroring C#'s
+    MapSplitsLoader.RequireString (writer/FogModWrapper.Core/MapSplitsLoader.cs),
+    which also rejects missing, non-string, and empty-string values alike."""
+    value = entry.get(key)
+    if not isinstance(value, str) or not value:
+        label = f"{path}.{key}" if path else key
+        raise ValueError(f"map_splits: [[{kind}]] '{name}' missing '{label}'")
+
+
+def _require_str_list(entry: dict[str, Any], key: str, kind: str, name: str) -> None:
+    """Optional list-of-strings field, mirroring C#'s ReadStringList: absent
+    is fine (defaults to empty), present-but-wrong-shape is an error."""
+    if key not in entry:
+        return
+    value = entry[key]
+    if not isinstance(value, list) or not all(isinstance(v, str) for v in value):
+        raise ValueError(
+            f"map_splits: [[{kind}]] '{name}' '{key}' must be a list of strings"
+        )
+
+
+def _require_side(fog: dict[str, Any], key: str, name: str) -> None:
+    """Require fog[key] ("aside"/"bside") to be a table with 'area'/'text'."""
+    side = fog.get(key)
+    if not isinstance(side, dict):
+        raise ValueError(f"map_splits: [[fogs]] '{name}' missing '{key}' table")
+    for sub_key in ("area", "text"):
+        _require_str(side, sub_key, "fogs", name, path=key)
+
+
+def _validate_map_splits(splits: dict[str, Any]) -> None:
+    """Validate map_splits.toml entries before injection.
+
+    Mirrors the required-key checks in C#'s MapSplitsLoader.Parse (used by
+    MapSplitsInjector, see writer/FogModWrapper.Core/MapSplitsLoader.cs), so a
+    malformed supplement fails at cluster-gen time with a ValueError naming
+    the offending entry and key, rather than a raw KeyError here or a
+    separately-worded C# InvalidDataException at seed-build time:
+
+    - zones: 'name', 'map', 'display_name', 'split_from' are required
+      non-empty strings; 'cols'/'tags' are optional lists of strings.
+    - fogs: 'name', 'map', 'id' (int), 'text', 'make_from' are required;
+      'aside'/'bside' are tables with required 'area' and 'text'.
+    """
+    for zone in splits.get("zones", []):
+        raw_name = zone.get("name")
+        name = raw_name if isinstance(raw_name, str) and raw_name else "<unnamed>"
+        for key in ("name", "map", "display_name", "split_from"):
+            _require_str(zone, key, "zones", name)
+        _require_str_list(zone, "cols", "zones", name)
+        _require_str_list(zone, "tags", "zones", name)
+
+    for fog in splits.get("fogs", []):
+        raw_name = fog.get("name")
+        name = raw_name if isinstance(raw_name, str) and raw_name else "<unnamed>"
+        for key in ("name", "map", "text", "make_from"):
+            _require_str(fog, key, "fogs", name)
+        fog_id = fog.get("id")
+        if not isinstance(fog_id, int) or isinstance(fog_id, bool):
+            raise ValueError(f"map_splits: [[fogs]] '{name}' missing integer 'id'")
+        _require_side(fog, "aside", name)
+        _require_side(fog, "bside", name)
+
+
 def inject_map_splits(parsed: dict[str, Any], splits: dict[str, Any]) -> None:
     """Inject synthetic zones and fog gates into parsed fog.txt structures.
+
+    Validates required keys first (see `_validate_map_splits`), mirroring the
+    checks C#'s MapSplitsLoader performs when parsing the same file, so a
+    malformed supplement fails here instead of at every seed build.
 
     Zones become AreaData entries (clusters, zone_maps, display names follow).
     Fogs become one-way FogData entries tagged "unique" (ASide exit only,
@@ -1517,6 +1588,8 @@ def inject_map_splits(parsed: dict[str, Any], splits: dict[str, Any]) -> None:
     fog is registered into the lookup immediately so later fogs in the same
     splits["fogs"] list are checked against earlier ones too.
     """
+    _validate_map_splits(splits)
+
     for zone in splits["zones"]:
         name = zone["name"]
         if name in parsed["areas"]:

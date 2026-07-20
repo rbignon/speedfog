@@ -4540,6 +4540,55 @@ class TestMapSplits:
         with pytest.raises(ValueError):
             inject_map_splits(parsed, splits)
 
+    def test_inject_rejects_fog_missing_required_key(self):
+        parsed = {
+            "areas": {"lower": AreaData(name="lower", text="L", maps=["m99"], tags=[])},
+            "entrances": [],
+            "warps": [],
+            "key_items": set(),
+        }
+        splits = self._splits()
+        del splits["fogs"][0]["make_from"]
+        with pytest.raises(ValueError, match="make_from"):
+            inject_map_splits(parsed, splits)
+
+    def test_inject_rejects_zone_missing_required_key(self):
+        parsed = {"areas": {}, "entrances": [], "warps": [], "key_items": set()}
+        splits = self._splits()
+        del splits["zones"][0]["split_from"]
+        with pytest.raises(ValueError, match="split_from"):
+            inject_map_splits(parsed, splits)
+
+    def test_inject_rejects_empty_string_value(self):
+        parsed = {"areas": {}, "entrances": [], "warps": [], "key_items": set()}
+        splits = self._splits()
+        splits["fogs"][0]["text"] = ""
+        with pytest.raises(ValueError, match="text"):
+            inject_map_splits(parsed, splits)
+
+    def test_inject_rejects_fog_missing_side_table(self):
+        parsed = {"areas": {}, "entrances": [], "warps": [], "key_items": set()}
+        splits = self._splits()
+        del splits["fogs"][0]["aside"]
+        with pytest.raises(ValueError, match="aside"):
+            inject_map_splits(parsed, splits)
+
+    def test_inject_rejects_fog_non_integer_id(self):
+        parsed = {"areas": {}, "entrances": [], "warps": [], "key_items": set()}
+        splits = self._splits()
+        splits["fogs"][0]["id"] = (
+            True  # bool is a Python int subclass, must be rejected
+        )
+        with pytest.raises(ValueError, match="id"):
+            inject_map_splits(parsed, splits)
+
+    def test_inject_rejects_zone_non_list_cols(self):
+        parsed = {"areas": {}, "entrances": [], "warps": [], "key_items": set()}
+        splits = self._splits()
+        splits["zones"][0]["cols"] = "h001800"
+        with pytest.raises(ValueError, match="cols"):
+            inject_map_splits(parsed, splits)
+
     def test_load_map_splits_missing_file(self, tmp_path):
         assert load_map_splits(tmp_path / "absent.toml") == {"zones": [], "fogs": []}
 
