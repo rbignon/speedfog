@@ -277,9 +277,11 @@ still pending, part of the broader in-game validation pass.
    captured, `map_splits.toml`'s `enirilim_upper.cols` stays `[]` and the
    EnemyArea split is inactive (both halves scale under the single inherited
    `enirilim` tier baseline).
-2. In-game yaw validation for both `MakeFrom` gates: the yaw is derived from
-   `atan2(dx, dz)` of the captured doorway segment, with the model's own axis
-   convention (±90°) unverified until seen in-game.
+
+The yaw axis convention has been validated in-game: `yaw = atan2(dx, dz)` of
+the captured doorway segment `+ 90°`. The `AEG099_002` model's width axis runs
+perpendicular to the direction its yaw points, so plain `atan2(dx, dz)` leaves
+the gate lying along the corridor instead of spanning the doorway.
 
 ## Reference points
 
