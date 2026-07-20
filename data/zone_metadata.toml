@@ -339,7 +339,9 @@ weight = 4
 [zones.enirilim]
 type = "legacy_dungeon"
 weight = 2  # lower half of the climb (Outer Wall + First Rise); calibrate after playtesting
-# Cut world links so the climb is a standalone warp-entered cluster:
+# Cut world links so the climb stays warp-entered and detached from Belurat
+# and the Leda tail (it still merges with enirilim_upper via that zone's
+# declared drops_to, forming the overlapping cluster variant):
 # - belurat_enirilim: unconditional drop down into Belurat
 # - belurat_stairs: treekindling-gated passage, stays closed while flag 330 (Sealing Tree burned) is OFF
 # - enirilim_stairs: "defeating Leda" transition; the tail is never played (spec 2026-07-20)
