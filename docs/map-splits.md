@@ -73,8 +73,8 @@ bside = { area = "enirilim_upper", text = "arriving at the Spiral Rise" }
   present, must be lists of strings (`drops_to` is Python-only, see "Drops"
   below; the C# `MapSplitsLoader` does not read it). `[[fogs]]` requires
   non-empty strings `name`, `map`, `text`, `make_from`, plus an integer `id`;
-  `aside`/`bside` are
-  required tables each requiring non-empty strings `area`/`text`. Both
+  `aside`/`bside` are required tables each requiring non-empty strings
+  `area`/`text`. Both
   pipelines validate this before use, independently: C#'s `MapSplitsLoader`
   (`RequireString`/`ReadStringList`) throws `InvalidDataException`, Python's
   `_validate_map_splits` (called at the top of `inject_map_splits`) throws
