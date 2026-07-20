@@ -213,6 +213,12 @@ Example:
         // (Graph.cs:1167-1272) consumes these tags during graph construction.
         var openSplitIds = OpenSplitOverrideLoader.Load(zoneMetadataPath);
         OpenSplitInjector.Apply(ctx.Ann, openSplitIds);
+
+        // Inject synthetic zones/fogs (map splits) into the annotation data so
+        // Graph.Construct sees them like any fog.txt gate. Also splits
+        // EnemyAreas for per-half scaling. See docs/map-splits.md.
+        var mapSplitsPath = Path.Combine(ctx.Config.DataDir, "map_splits.toml");
+        MapSplitsInjector.Apply(ctx.Ann, MapSplitsLoader.Load(mapSplitsPath));
     }
 
     static void LoadCustomBonfires(AnnotationData ann, string fogPath)

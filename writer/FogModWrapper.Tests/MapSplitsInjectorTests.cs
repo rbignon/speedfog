@@ -1,0 +1,152 @@
+using FogMod;
+using FogModWrapper;
+using Xunit;
+
+namespace FogModWrapper.Tests;
+
+public class MapSplitsInjectorTests
+{
+    private static MapSplits MakeSplits(List<string>? cols = null) => new(
+        new List<SplitZone>
+        {
+            new("upper", "m99_00_00_00", "Upper Half", new List<string> { "dlc" },
+                "lower", cols ?? new List<string>()),
+        },
+        new List<SplitFog>
+        {
+            new("AEG099_002_9900", "m99_00_00_00", 990001, "Split gate",
+                "AEG099_002 AEG099_002_9000 1.0 2.0 3.0 90.0",
+                "lower", "going up", "upper", "arriving up"),
+        });
+
+    private static AnnotationData MakeAnn() => new()
+    {
+        Areas = new List<AnnotationData.Area>
+        {
+            new() { Name = "lower", Text = "Lower", Maps = "m99_00_00_00" },
+        },
+        Entrances = new List<AnnotationData.Entrance>(),
+        Warps = new List<AnnotationData.Entrance>(),
+    };
+
+    [Fact]
+    public void Apply_AddsAreaAndEntrance()
+    {
+        var ann = MakeAnn();
+        MapSplitsInjector.Apply(ann, MakeSplits());
+        var area = ann.Areas.Single(a => a.Name == "upper");
+        Assert.Equal("m99_00_00_00", area.Maps);
+        Assert.Equal("Upper Half", area.Text);
+        Assert.True(area.HasTag("dlc"));
+        var e = ann.Entrances.Single(x => x.Name == "AEG099_002_9900");
+        Assert.Equal(990001, e.ID);
+        Assert.Equal("m99_00_00_00", e.Area);
+        Assert.StartsWith("AEG099_002 ", e.MakeFrom);
+        Assert.Equal("lower", e.ASide.Area);
+        Assert.Equal("going up", e.ASide.Text);
+        Assert.Equal("upper", e.BSide.Area);
+    }
+
+    [Fact]
+    public void Apply_ExistingZone_Throws()
+    {
+        var ann = MakeAnn();
+        ann.Areas.Add(new AnnotationData.Area { Name = "upper" });
+        Assert.Throws<InvalidDataException>(() => MapSplitsInjector.Apply(ann, MakeSplits()));
+    }
+
+    [Fact]
+    public void Apply_TaglessZone_LeavesTagsNull()
+    {
+        var ann = MakeAnn();
+        var splits = new MapSplits(
+            new List<SplitZone>
+            {
+                new("upper", "m99_00_00_00", "Upper Half", new List<string>(),
+                    "lower", new List<string>()),
+            },
+            new List<SplitFog>());
+        MapSplitsInjector.Apply(ann, splits);
+        var area = ann.Areas.Single(a => a.Name == "upper");
+        Assert.Null(area.Tags);
+        Assert.False(area.HasTag(""));
+    }
+
+    [Fact]
+    public void Apply_SplitsEnemyArea()
+    {
+        var ann = MakeAnn();
+        ann.Locations = new AnnotationData.FogLocations
+        {
+            EnemyAreas = new List<AnnotationData.EnemyLocArea>
+            {
+                new()
+                {
+                    Name = "lower",
+                    Cols = "m99_00_00_00_h001000 m99_00_00_00_h002000",
+                    MainMap = "m99_00_00_00",
+                    ScalingTier = 20,
+                },
+            },
+            Enemies = new List<AnnotationData.EnemyLoc>
+            {
+                new() { Map = "m99_00_00_00", ID = "c1000_0001", Col = "h001000", AArea = "lower" },
+                new() { Map = "m99_00_00_00", ID = "c1000_0002", Col = "h002000", AArea = "lower" },
+            },
+        };
+        MapSplitsInjector.Apply(ann, MakeSplits(new List<string> { "h002000" }));
+
+        var src = ann.Locations.EnemyAreas.Single(a => a.Name == "lower");
+        Assert.Equal("m99_00_00_00_h001000", src.Cols);
+        var dst = ann.Locations.EnemyAreas.Single(a => a.Name == "upper");
+        Assert.Equal("m99_00_00_00_h002000", dst.Cols);
+        Assert.Equal(20, dst.ScalingTier);
+        Assert.Equal("upper", ann.Locations.Enemies.Single(e => e.ID == "c1000_0002").Area);
+        Assert.Null(ann.Locations.Enemies.Single(e => e.ID == "c1000_0001").Area);
+    }
+
+    [Fact]
+    public void Apply_EmptyCols_LeavesEnemyAreasUntouched()
+    {
+        var ann = MakeAnn();
+        ann.Locations = new AnnotationData.FogLocations
+        {
+            EnemyAreas = new List<AnnotationData.EnemyLocArea>
+            {
+                new() { Name = "lower", Cols = "m99_00_00_00_h001000", ScalingTier = 20 },
+            },
+            Enemies = new List<AnnotationData.EnemyLoc>(),
+        };
+        MapSplitsInjector.Apply(ann, MakeSplits());
+        Assert.Single(ann.Locations.EnemyAreas);
+        Assert.Equal("m99_00_00_00_h001000", ann.Locations.EnemyAreas[0].Cols);
+    }
+
+    [Fact]
+    public void RealDataFile_ParsesAndInjects()
+    {
+        // Guard against drift between data/map_splits.toml and the loader/injector.
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        var path = Path.GetFullPath(
+            Path.Combine(baseDir, "../../../../..", "data", "map_splits.toml"));
+        Assert.True(File.Exists(path), $"tracked data file missing: {path}");
+
+        var splits = MapSplitsLoader.Load(path);
+        Assert.Equal(2, splits.Fogs.Count);
+        Assert.All(splits.Fogs, f => Assert.Equal(6, f.MakeFrom.Split(' ').Length));
+
+        var ann = new AnnotationData
+        {
+            Areas = new List<AnnotationData.Area>
+            {
+                new() { Name = "enirilim" },
+                new() { Name = "enirilim_stairs" },
+            },
+            Entrances = new List<AnnotationData.Entrance>(),
+            Warps = new List<AnnotationData.Entrance>(),
+        };
+        MapSplitsInjector.Apply(ann, splits);
+        Assert.Contains(ann.Areas, a => a.Name == "enirilim_upper");
+        Assert.Equal(2, ann.Entrances.Count);
+    }
+}

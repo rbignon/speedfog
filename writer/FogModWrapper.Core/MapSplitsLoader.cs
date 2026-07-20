@@ -27,7 +27,10 @@ public static class MapSplitsLoader
     public static MapSplits Load(string path)
     {
         if (!File.Exists(path))
+        {
+            Console.WriteLine($"Map splits: no map_splits.toml at {path}, skipping");
             return MapSplits.Empty;
+        }
         return Parse(File.ReadAllText(path));
     }
 
@@ -76,7 +79,7 @@ public static class MapSplitsLoader
     private static string RequireString(TomlTable entry, string key)
     {
         if (!entry.TryGetValue(key, out var obj) || obj is not string s || string.IsNullOrEmpty(s))
-            throw new InvalidDataException($"map_splits.toml: entry missing '{key}'");
+            throw new InvalidDataException($"map_splits.toml: entry missing or non-string '{key}'");
         return s;
     }
 
