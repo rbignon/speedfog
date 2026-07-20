@@ -4469,6 +4469,77 @@ class TestMapSplits:
         with pytest.raises(ValueError):
             inject_map_splits(parsed, self._splits())
 
+    def test_inject_rejects_fog_name_collision_in_same_areas(self):
+        parsed = {
+            "areas": {"lower": AreaData(name="lower", text="L", maps=["m99"], tags=[])},
+            "entrances": [
+                FogData(
+                    name="AEG099_002_9900",
+                    fog_id=1,
+                    aside=FogSide(area="lower", text=""),
+                    bside=FogSide(area="elsewhere", text=""),
+                )
+            ],
+            "warps": [],
+            "key_items": set(),
+        }
+        with pytest.raises(ValueError):
+            inject_map_splits(parsed, self._splits())
+
+    def test_inject_allows_same_fog_name_in_other_map(self):
+        parsed = {
+            "areas": {"lower": AreaData(name="lower", text="L", maps=["m99"], tags=[])},
+            "entrances": [
+                FogData(
+                    name="AEG099_002_9900",
+                    fog_id=1,
+                    aside=FogSide(area="unrelated_zone_a", text=""),
+                    bside=FogSide(area="unrelated_zone_b", text=""),
+                )
+            ],
+            "warps": [],
+            "key_items": set(),
+        }
+        inject_map_splits(parsed, self._splits())  # must not raise
+        assert any(
+            f.name == "AEG099_002_9900" and f.aside.area == "lower"
+            for f in parsed["entrances"]
+        )
+
+    def test_inject_rejects_fog_name_collision_against_warp(self):
+        parsed = {
+            "areas": {"lower": AreaData(name="lower", text="L", maps=["m99"], tags=[])},
+            "entrances": [],
+            "warps": [
+                FogData(
+                    name="AEG099_002_9900",
+                    fog_id=1,
+                    aside=FogSide(area="lower", text=""),
+                    bside=FogSide(area="elsewhere", text=""),
+                )
+            ],
+            "key_items": set(),
+        }
+        with pytest.raises(ValueError):
+            inject_map_splits(parsed, self._splits())
+
+    def test_inject_rejects_collision_between_two_synthetic_fogs(self):
+        """Two synthetic fogs sharing a name/area within the same
+        map_splits.toml must collide, mirroring the C# side which rechecks
+        against its own growing Entrances list as it injects."""
+        parsed = {
+            "areas": {"lower": AreaData(name="lower", text="L", maps=["m99"], tags=[])},
+            "entrances": [],
+            "warps": [],
+            "key_items": set(),
+        }
+        splits = self._splits()
+        splits["zones"] = []  # avoid the "upper" zone being added twice
+        duplicate_fog = dict(splits["fogs"][0])
+        splits["fogs"] = [splits["fogs"][0], duplicate_fog]
+        with pytest.raises(ValueError):
+            inject_map_splits(parsed, splits)
+
     def test_load_map_splits_missing_file(self, tmp_path):
         assert load_map_splits(tmp_path / "absent.toml") == {"zones": [], "fogs": []}
 

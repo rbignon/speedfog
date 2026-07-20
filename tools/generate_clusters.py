@@ -1505,6 +1505,17 @@ def inject_map_splits(parsed: dict[str, Any], splits: dict[str, Any]) -> None:
     Fogs become one-way FogData entries tagged "unique" (ASide exit only,
     BSide entry only), mirroring the C# MapSplitsInjector which adds the same
     gates to FogMod's AnnotationData (docs/map-splits.md).
+
+    Collision guard: the C# side scopes the Name collision check to the fog's
+    map (Entrance.Area == fog.Map), since the same asset-derived Name (e.g.
+    "AEG099_002_9100") is reused across dozens of unrelated maps in fog.txt.
+    Python's parsed FogData has no map field on entrances (only ASide/BSide
+    zone names), so the map is approximated here by the pair of zones a fog
+    connects: a same-named fog.txt gate is a collision only if it shares a
+    zone with either side of the synthetic fog. Like the C# side (which
+    rechecks against its own growing Entrances list), each injected synthetic
+    fog is registered into the lookup immediately so later fogs in the same
+    splits["fogs"] list are checked against earlier ones too.
     """
     for zone in splits["zones"]:
         name = zone["name"]
@@ -1516,17 +1527,29 @@ def inject_map_splits(parsed: dict[str, Any], splits: dict[str, Any]) -> None:
             maps=[zone["map"]],
             tags=list(zone.get("tags", [])),
         )
+
+    existing_by_name: dict[str, list[FogData]] = {}
+    for f in parsed["entrances"] + parsed["warps"]:
+        existing_by_name.setdefault(f.name, []).append(f)
+
     for fog in splits["fogs"]:
-        parsed["entrances"].append(
-            FogData(
-                name=fog["name"],
-                fog_id=fog["id"],
-                aside=FogSide(area=fog["aside"]["area"], text=fog["aside"]["text"]),
-                bside=FogSide(area=fog["bside"]["area"], text=fog["bside"]["text"]),
-                text=fog.get("text", ""),
-                tags=["unique"],
-            )
+        new_areas = {fog["aside"]["area"], fog["bside"]["area"]}
+        for existing in existing_by_name.get(fog["name"], []):
+            if {existing.aside.area, existing.bside.area} & new_areas:
+                raise ValueError(
+                    f"map_splits: fog '{fog['name']}' already exists in fog.txt "
+                    f"with overlapping areas"
+                )
+        injected = FogData(
+            name=fog["name"],
+            fog_id=fog["id"],
+            aside=FogSide(area=fog["aside"]["area"], text=fog["aside"]["text"]),
+            bside=FogSide(area=fog["bside"]["area"], text=fog["bside"]["text"]),
+            text=fog.get("text", ""),
+            tags=["unique"],
         )
+        parsed["entrances"].append(injected)
+        existing_by_name.setdefault(injected.name, []).append(injected)
 
 
 def extract_no_drop_to(metadata: dict[str, Any]) -> dict[str, set[str]]:
