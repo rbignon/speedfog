@@ -34,9 +34,15 @@ public static class MapSplitsInjector
 
         foreach (var fog in splits.Fogs)
         {
-            if (ann.Entrances.Any(x => x.Name == fog.Name) || ann.Warps.Any(x => x.Name == fog.Name))
+            // FogMod keys entrances by FullName = Area + "_" + Name (see
+            // Graph.cs's EntranceIds construction), not by Name alone: the
+            // same asset-derived Name (e.g. "AEG099_002_9000") is reused
+            // across dozens of unrelated maps in fog.txt. Scope the
+            // collision check to the target map to match that invariant.
+            if (ann.Entrances.Any(x => x.Name == fog.Name && x.Area == fog.Map)
+                || ann.Warps.Any(x => x.Name == fog.Name && x.Area == fog.Map))
                 throw new InvalidDataException(
-                    $"map_splits: fog '{fog.Name}' already exists in fog.txt");
+                    $"map_splits: fog '{fog.Name}' already exists in fog.txt for area '{fog.Map}'");
             ann.Entrances.Add(new AnnotationData.Entrance
             {
                 Name = fog.Name,

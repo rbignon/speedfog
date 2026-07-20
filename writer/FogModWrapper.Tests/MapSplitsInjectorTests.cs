@@ -56,6 +56,39 @@ public class MapSplitsInjectorTests
     }
 
     [Fact]
+    public void Apply_ExistingFogNameInSameArea_Throws()
+    {
+        // FogMod keys entrances by FullName = Area + "_" + Name (Graph.cs),
+        // so a same-map collision is a genuine duplicate.
+        var ann = MakeAnn();
+        ann.Entrances.Add(new AnnotationData.Entrance { Name = "AEG099_002_9900", Area = "m99_00_00_00" });
+        Assert.Throws<InvalidDataException>(() => MapSplitsInjector.Apply(ann, MakeSplits()));
+    }
+
+    [Fact]
+    public void Apply_SameFogNameInDifferentArea_DoesNotThrow()
+    {
+        // fog.txt reuses asset-derived Names (e.g. "AEG099_002_9000") across
+        // dozens of unrelated maps: only the (Area, Name) pair is unique, not
+        // Name alone. A collision in an unrelated map must not block injection.
+        var ann = MakeAnn();
+        ann.Entrances.Add(new AnnotationData.Entrance { Name = "AEG099_002_9900", Area = "m35_00_00_00" });
+        MapSplitsInjector.Apply(ann, MakeSplits());
+        Assert.Contains(ann.Entrances, x => x.Name == "AEG099_002_9900" && x.Area == "m99_00_00_00");
+    }
+
+    [Fact]
+    public void Apply_ExistingFogNameInSameArea_InWarps_Throws()
+    {
+        // FogMod's Graph.Construct keys entrances by FullName across BOTH
+        // Entrances and Warps (EntranceIds built from ann.Entrances.Concat(ann.Warps)
+        // in Graph.cs), so a same-map collision living in Warps must be caught too.
+        var ann = MakeAnn();
+        ann.Warps.Add(new AnnotationData.Entrance { Name = "AEG099_002_9900", Area = "m99_00_00_00" });
+        Assert.Throws<InvalidDataException>(() => MapSplitsInjector.Apply(ann, MakeSplits()));
+    }
+
+    [Fact]
     public void Apply_TaglessZone_LeavesTagsNull()
     {
         var ann = MakeAnn();
