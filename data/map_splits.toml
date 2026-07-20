@@ -44,6 +44,6 @@ name = "AEG099_002_9101"
 map = "m20_01_00_00"
 id = 20011961
 text = "Before Leda"
-make_from = "AEG099_002 AEG099_002_9000 -307.093 169.778 -307.931 109.0"
-aside = { area = "enirilim_upper", text = "leaving Enir-Ilim before Leda" }
+make_from = "AEG099_002 AEG099_002_9000 -307.093 169.778 -307.931 104.0"
+aside = { area = "enirilim_upper", text = "before Leda's arena" }
 bside = { area = "enirilim_stairs", text = "arriving on the stairs before Leda" }
