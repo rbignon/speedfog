@@ -238,6 +238,8 @@ KEY_ITEMS = {
     "gaollowerlevelkey",
     "holeladennecklace",
     "messmerskindling",
+    # treekindling gates warp 20012020 (Enir-Ilim entry); SpeedFog wires connections explicitly, so treat it as guaranteed (matches [config_vars] treekindling=true in game_tweaks.toml)
+    "treekindling",
     # Special pass items (always available)
     "scalepass",
     "logicpass",

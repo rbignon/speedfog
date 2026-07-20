@@ -1024,6 +1024,19 @@ class TestClassifyFogs:
         # runes_leyndell is guaranteed → ASide is a valid exit
         assert fog in zone_fogs["deeproot_boss"].exit_fogs
 
+    def test_treekindling_cond_not_excluded(self):
+        """treekindling is guaranteed at start: warp 20012020's sides stay usable."""
+        fog = FogData(
+            name="20012020",
+            fog_id=20012020,
+            aside=FogSide(area="rauhruins_postromina", text="", cond="treekindling"),
+            bside=FogSide(area="enirilim", text="", cond="treekindling"),
+            tags=["unique"],
+        )
+        zone_fogs = classify_fogs([], [fog])
+        # unique warp: treekindling guaranteed -> BSide is a valid entry
+        assert fog in zone_fogs["enirilim"].entry_fogs
+
 
 # =============================================================================
 # Cluster Generation Tests
