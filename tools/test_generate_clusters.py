@@ -22,6 +22,7 @@ from generate_clusters import (
     clusters_to_json,
     compute_allow_entry_as_exit,
     compute_cluster_fogs,
+    extract_no_drop_to,
     extract_opensplit_warp_ids,
     filter_and_enrich_clusters,
     find_defeat_flag,
@@ -414,6 +415,54 @@ class TestBuildWorldGraph:
         graph = build_world_graph(areas, set())
 
         assert graph.has_unidirectional_edge("top", "bottom") is True
+
+    @staticmethod
+    def _reciprocal_areas():
+        return {
+            "top": AreaData(
+                name="top",
+                text="Top",
+                maps=[],
+                tags=[],
+                to_connections=[
+                    WorldConnection(target_area="bottom", text="", tags=[])
+                ],
+            ),
+            "bottom": AreaData(
+                name="bottom",
+                text="Bottom",
+                maps=[],
+                tags=[],
+                to_connections=[WorldConnection(target_area="top", text="", tags=[])],
+            ),
+        }
+
+    def test_no_drop_to_cuts_outgoing_edge(self):
+        """A no_drop_to entry removes the outgoing connection entirely."""
+        graph = build_world_graph(
+            self._reciprocal_areas(), set(), no_drop_to={"top": {"bottom"}}
+        )
+        assert ("bottom", True) not in graph.edges["top"]
+        assert ("bottom", False) not in graph.edges["top"]
+
+    def test_no_drop_to_demotes_reverse_to_unidirectional(self):
+        """Cutting top->bottom leaves bottom->top as a one-way edge."""
+        graph = build_world_graph(
+            self._reciprocal_areas(), set(), no_drop_to={"top": {"bottom"}}
+        )
+        assert ("top", False) in graph.edges["bottom"]
+        assert ("top", True) not in graph.edges["bottom"]
+
+
+class TestExtractNoDropTo:
+    """Tests for extract_no_drop_to function."""
+
+    def test_extract_no_drop_to(self):
+        metadata = {"zones": {"top": {"no_drop_to": ["bottom", "side"]}, "other": {}}}
+        assert extract_no_drop_to(metadata) == {"top": {"bottom", "side"}}
+
+    def test_empty_metadata(self):
+        assert extract_no_drop_to({}) == {}
 
 
 # =============================================================================

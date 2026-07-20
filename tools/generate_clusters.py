@@ -611,6 +611,7 @@ def build_world_graph(
     areas: dict[str, AreaData],
     key_items: set[str],
     allowed_zones: set[str] | None = None,
+    no_drop_to: dict[str, set[str]] | None = None,
 ) -> WorldGraph:
     """
     Build a directed graph of world connections.
@@ -621,6 +622,8 @@ def build_world_graph(
     - Cond with items only -> bidirectional (items are given)
     - No cond -> check if reverse connection exists
     - Only include edges where both zones are in allowed_zones (if specified)
+    - no_drop_to cut -> outgoing connection removed entirely; reverse edge
+      loses its bidirectional counterpart and becomes unidirectional
     """
     graph = WorldGraph()
 
@@ -642,6 +645,12 @@ def build_world_graph(
 
             # Skip connections with crawlonly tag
             if "crawlonly" in [t.lower() for t in conn.tags]:
+                continue
+
+            # Per-zone metadata cut (no_drop_to): skip outgoing connections
+            # to listed targets. Cutting here also demotes the reverse edge
+            # to unidirectional via the conn_set reverse lookup below.
+            if no_drop_to and conn.target_area in no_drop_to.get(area_name, ()):
                 continue
 
             # Check if it's a drop (unidirectional)
@@ -1477,6 +1486,21 @@ def load_metadata(path: Path | None) -> dict:
         return tomllib.load(f)
 
 
+def extract_no_drop_to(metadata: dict[str, Any]) -> dict[str, set[str]]:
+    """Per-zone world-connection cuts from zone_metadata.toml.
+
+    [zones.<name>] no_drop_to = ["target", ...] removes the outgoing world
+    connections <name> -> target before cluster flood-fill. Despite the "drop"
+    in the name, it cuts ANY outgoing connection, not only literal drops
+    (including Cond-gated walk-up links).
+    """
+    result: dict[str, set[str]] = {}
+    for zone, zm in metadata.get("zones", {}).items():
+        if isinstance(zm, dict) and zm.get("no_drop_to"):
+            result[zone] = set(zm["no_drop_to"])
+    return result
+
+
 def extract_opensplit_warp_ids(metadata: dict) -> set[str]:
     """Extract the set of warp Names flagged ``opensplit = true`` in metadata.
 
@@ -2169,19 +2193,25 @@ def main() -> int:
 
     print(f"Zones to process: {len(zones_to_process)}")
 
-    # Build world graph (only include edges between allowed zones)
-    print("Building world graph...")
-    world_graph = build_world_graph(areas, key_items, allowed_zones=zones_to_process)
-
-    if args.verbose:
-        edge_count = sum(len(edges) for edges in world_graph.edges.values())
-        print(f"  Graph has {len(world_graph.edges)} nodes, {edge_count} edges")
-
-    # Load metadata early — opensplit overrides feed into classify_fogs
+    # Load metadata early — opensplit overrides feed into classify_fogs and
+    # no_drop_to cuts feed into the world graph before flood-fill.
     metadata = load_metadata(args.metadata)
     opensplit_warp_ids = extract_opensplit_warp_ids(metadata)
     if opensplit_warp_ids:
         print(f"  Opensplit overrides: {sorted(opensplit_warp_ids)}")
+
+    # Build world graph (only include edges between allowed zones)
+    print("Building world graph...")
+    world_graph = build_world_graph(
+        areas,
+        key_items,
+        allowed_zones=zones_to_process,
+        no_drop_to=extract_no_drop_to(metadata),
+    )
+
+    if args.verbose:
+        edge_count = sum(len(edges) for edges in world_graph.edges.values())
+        print(f"  Graph has {len(world_graph.edges)} nodes, {edge_count} edges")
 
     # Classify fogs
     print("Classifying fogs...")
