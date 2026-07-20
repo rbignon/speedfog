@@ -18,6 +18,7 @@ from generate_clusters import (
     _pick_display_name,
     _resolve_zone_type,
     apply_cluster_merges,
+    apply_map_splits_side_roles,
     build_world_graph,
     build_zone_conflicts,
     classify_fogs,
@@ -2001,6 +2002,95 @@ class TestFilterAndEnrichMetadataTypeOverride:
         )
         captured = capsys.readouterr()
         assert "Warning" not in captured.out
+
+
+class TestFilterAndEnrichDisplayNameOverride:
+    """Tests for the [clusters.<id>] display_name override."""
+
+    def test_display_name_override_used_in_json(self):
+        """A display_name override lands on the cluster and in clusters_to_json,
+        superseding _pick_display_name's heuristic result."""
+        areas = {
+            "stormveil": AreaData(
+                name="stormveil",
+                text="Stormveil Castle",
+                maps=["m10_00_00_00"],
+                tags=[],
+            ),
+        }
+        metadata = {"defaults": {"legacy_dungeon": 10}, "zones": {}}
+        cluster = _make_cluster_with_fogs(frozenset({"stormveil"}))
+
+        # First pass to learn the generated (content-addressed) cluster_id,
+        # then rebuild metadata keyed on it (see
+        # test_matched_cluster_declaration_does_not_warn above).
+        filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+        metadata["clusters"] = {cluster.cluster_id: {"display_name": "Custom Name"}}
+        cluster2 = _make_cluster_with_fogs(frozenset({"stormveil"}))
+
+        result = filter_and_enrich_clusters(
+            [cluster2],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert result[0].display_name_override == "Custom Name"
+
+        json_out = clusters_to_json(result, areas)
+        assert json_out["clusters"][0]["display_name"] == "Custom Name"
+
+    def test_display_name_override_absent_falls_back(self):
+        """Without a display_name override, clusters_to_json still uses
+        _pick_display_name's heuristic result."""
+        areas = {
+            "stormveil": AreaData(
+                name="stormveil",
+                text="Stormveil Castle",
+                maps=["m10_00_00_00"],
+                tags=[],
+            ),
+        }
+        metadata = {"defaults": {"legacy_dungeon": 10}, "zones": {}}
+        cluster = _make_cluster_with_fogs(frozenset({"stormveil"}))
+
+        filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+        metadata["clusters"] = {cluster.cluster_id: {"weight": 5}}
+        cluster2 = _make_cluster_with_fogs(frozenset({"stormveil"}))
+
+        result = filter_and_enrich_clusters(
+            [cluster2],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert result[0].display_name_override == ""
+
+        json_out = clusters_to_json(result, areas)
+        assert json_out["clusters"][0]["display_name"] == "Stormveil Castle"
 
 
 class TestFilterAndEnrichMetadataExclude:
@@ -4573,6 +4663,42 @@ class TestMapSplits:
         with pytest.raises(ValueError, match="aside"):
             inject_map_splits(parsed, splits)
 
+    def test_inject_rejects_non_bool_side_entry_flag(self):
+        """aside.entry / bside.exit are optional role-grant booleans; a
+        non-bool value must be rejected, mirroring the other typed keys."""
+        parsed = {"areas": {}, "entrances": [], "warps": [], "key_items": set()}
+        splits = self._splits()
+        splits["fogs"][0]["aside"]["entry"] = "yes"
+        with pytest.raises(ValueError, match="entry"):
+            inject_map_splits(parsed, splits)
+
+    def test_inject_rejects_non_bool_side_exit_flag(self):
+        parsed = {"areas": {}, "entrances": [], "warps": [], "key_items": set()}
+        splits = self._splits()
+        splits["fogs"][0]["bside"]["exit"] = "yes"
+        with pytest.raises(ValueError, match="exit"):
+            inject_map_splits(parsed, splits)
+
+    def test_inject_rejects_exit_key_on_aside(self):
+        """'exit' only means something on 'bside'; on 'aside' it would
+        silently do nothing (apply_map_splits_side_roles never reads it), so
+        it must be rejected rather than silently ignored."""
+        parsed = {"areas": {}, "entrances": [], "warps": [], "key_items": set()}
+        splits = self._splits()
+        splits["fogs"][0]["aside"]["exit"] = True
+        with pytest.raises(ValueError, match="not applicable"):
+            inject_map_splits(parsed, splits)
+
+    def test_inject_rejects_entry_key_on_bside(self):
+        """'entry' only means something on 'aside'; on 'bside' it would
+        silently do nothing, so it must be rejected rather than silently
+        ignored."""
+        parsed = {"areas": {}, "entrances": [], "warps": [], "key_items": set()}
+        splits = self._splits()
+        splits["fogs"][0]["bside"]["entry"] = True
+        with pytest.raises(ValueError, match="not applicable"):
+            inject_map_splits(parsed, splits)
+
     def test_inject_rejects_fog_non_integer_id(self):
         parsed = {"areas": {}, "entrances": [], "warps": [], "key_items": set()}
         splits = self._splits()
@@ -4666,3 +4792,90 @@ class TestMapSplits:
             ("AEG099_002_9900", "lower"),
             ("AEG099_002_9901", "upper"),
         }
+
+    @staticmethod
+    def _fogs_by_name(entrances: list[FogData]) -> dict[str, list[FogData]]:
+        fogs_by_name: dict[str, list[FogData]] = {}
+        for f in entrances:
+            fogs_by_name.setdefault(f.name, []).append(f)
+        return fogs_by_name
+
+    def test_apply_side_roles_bside_exit_grant(self):
+        """bside.exit=true makes bside ALSO an exit of its area, on top of
+        its default entry-only role."""
+        splits = self._splits()
+        splits["fogs"][0]["bside"]["exit"] = True
+        parsed = {
+            "areas": {
+                "lower": AreaData(
+                    name="lower", text="Lower", maps=["m99_00_00_00"], tags=["dlc"]
+                )
+            },
+            "entrances": [],
+            "warps": [],
+            "key_items": set(),
+        }
+        inject_map_splits(parsed, splits)
+        fog = parsed["entrances"][-1]
+        zone_fogs = classify_fogs(parsed["entrances"], [])
+        assert fog not in zone_fogs["upper"].exit_fogs  # default, before grant
+
+        apply_map_splits_side_roles(
+            zone_fogs, splits, self._fogs_by_name(parsed["entrances"])
+        )
+
+        assert fog in zone_fogs["upper"].exit_fogs
+        assert fog in zone_fogs["upper"].entry_fogs  # default role kept
+
+    def test_apply_side_roles_aside_entry_grant(self):
+        """aside.entry=true makes aside ALSO an entry of its area, on top of
+        its default exit-only role."""
+        splits = self._splits()
+        splits["fogs"][0]["aside"]["entry"] = True
+        parsed = {
+            "areas": {
+                "lower": AreaData(
+                    name="lower", text="Lower", maps=["m99_00_00_00"], tags=["dlc"]
+                )
+            },
+            "entrances": [],
+            "warps": [],
+            "key_items": set(),
+        }
+        inject_map_splits(parsed, splits)
+        fog = parsed["entrances"][-1]
+        zone_fogs = classify_fogs(parsed["entrances"], [])
+        assert fog not in zone_fogs["lower"].entry_fogs  # default, before grant
+
+        apply_map_splits_side_roles(
+            zone_fogs, splits, self._fogs_by_name(parsed["entrances"])
+        )
+
+        assert fog in zone_fogs["lower"].entry_fogs
+        assert fog in zone_fogs["lower"].exit_fogs  # default role kept
+
+    def test_apply_side_roles_defaults_unchanged_without_keys(self):
+        """Without entry/exit keys on the side tables, applying side roles
+        is a no-op: strictly one-way semantics are preserved."""
+        splits = self._splits()
+        parsed = {
+            "areas": {
+                "lower": AreaData(
+                    name="lower", text="Lower", maps=["m99_00_00_00"], tags=["dlc"]
+                )
+            },
+            "entrances": [],
+            "warps": [],
+            "key_items": set(),
+        }
+        inject_map_splits(parsed, splits)
+        zone_fogs = classify_fogs(parsed["entrances"], [])
+        before_lower_entries = list(zone_fogs["lower"].entry_fogs)
+        before_upper_exits = list(zone_fogs["upper"].exit_fogs)
+
+        apply_map_splits_side_roles(
+            zone_fogs, splits, self._fogs_by_name(parsed["entrances"])
+        )
+
+        assert zone_fogs["lower"].entry_fogs == before_lower_entries
+        assert zone_fogs["upper"].exit_fogs == before_upper_exits

@@ -200,6 +200,9 @@ class Cluster:
     primary_zone: str = ""
     allowed_entries: list[str] = field(default_factory=list)
     allowed_exits: list[str] = field(default_factory=list)
+    # [clusters.<id>] display_name override; empty means fall back to
+    # _pick_display_name's heuristic (see clusters_to_json).
+    display_name_override: str = ""
 
 
 # =============================================================================
@@ -1522,13 +1525,41 @@ def _require_str_list(entry: dict[str, Any], key: str, kind: str, name: str) -> 
         )
 
 
+# Side-role grant booleans (see apply_map_splits_side_roles): each side only
+# accepts the key that role-grants it something. 'aside' is exit-only by
+# default, so 'entry' grants it an extra role; 'bside' is entry-only by
+# default, so 'exit' grants it an extra role. The opposite key on either side
+# would silently do nothing (apply_map_splits_side_roles never reads it), so
+# _require_side rejects it instead of accepting a no-op typo.
+_SIDE_ROLE_KEY = {"aside": "entry", "bside": "exit"}
+
+
 def _require_side(fog: dict[str, Any], key: str, name: str) -> None:
-    """Require fog[key] ("aside"/"bside") to be a table with 'area'/'text'."""
+    """Require fog[key] ("aside"/"bside") to be a table with 'area'/'text'.
+
+    Also validates the side's role-grant boolean (see
+    apply_map_splits_side_roles and _SIDE_ROLE_KEY above): present-but-wrong-
+    type is an error, as is the *other* side's role key showing up here
+    (would silently no-op); absent is fine (defaults unchanged).
+    """
     side = fog.get(key)
     if not isinstance(side, dict):
         raise ValueError(f"map_splits: [[fogs]] '{name}' missing '{key}' table")
     for sub_key in ("area", "text"):
         _require_str(side, sub_key, "fogs", name, path=key)
+
+    valid_role_key = _SIDE_ROLE_KEY[key]
+    other_role_key = "exit" if valid_role_key == "entry" else "entry"
+    if other_role_key in side:
+        raise ValueError(
+            f"map_splits: [[fogs]] '{name}' '{key}.{other_role_key}' is not "
+            f"applicable ('{other_role_key}' only grants a role on the other "
+            f"side); did you mean '{key}.{valid_role_key}'?"
+        )
+    if valid_role_key in side and not isinstance(side[valid_role_key], bool):
+        raise ValueError(
+            f"map_splits: [[fogs]] '{name}' '{key}.{valid_role_key}' must be a boolean"
+        )
 
 
 def _validate_map_splits(splits: dict[str, Any]) -> None:
@@ -1545,7 +1576,11 @@ def _validate_map_splits(splits: dict[str, Any]) -> None:
       strings. 'drops_to' is Python-only (world-graph drop edges for
       cluster-gen); the C# MapSplitsLoader does not read it.
     - fogs: 'name', 'map', 'id' (int), 'text', 'make_from' are required;
-      'aside'/'bside' are tables with required 'area' and 'text'.
+      'aside'/'bside' are tables with required 'area' and 'text', plus one
+      optional role-grant boolean each (see apply_map_splits_side_roles and
+      _SIDE_ROLE_KEY): 'aside.entry' / 'bside.exit'. If present, it must be
+      bool; the *other* side's key (e.g. 'aside.exit') is rejected outright
+      rather than silently ignored.
     """
     for zone in splits.get("zones", []):
         raw_name = zone.get("name")
@@ -1586,7 +1621,10 @@ def inject_map_splits(parsed: dict[str, Any], splits: dict[str, Any]) -> None:
     only affect clustering, not the fog gates it compiles).
     Fogs become one-way FogData entries tagged "unique" (ASide exit only,
     BSide entry only), mirroring the C# MapSplitsInjector which adds the same
-    gates to FogMod's AnnotationData (docs/map-splits.md).
+    gates to FogMod's AnnotationData (docs/map-splits.md). A fog's optional
+    side-role booleans ('aside.entry' / 'bside.exit') do NOT change that
+    default here; they are applied afterward by apply_map_splits_side_roles,
+    once classify_fogs() has built its zone_fogs mapping.
 
     Collision guard: the C# side scopes the Name collision check to the fog's
     map (Entrance.Area == fog.Map), since the same asset-derived Name (e.g.
@@ -1638,6 +1676,75 @@ def inject_map_splits(parsed: dict[str, Any], splits: dict[str, Any]) -> None:
         )
         parsed["entrances"].append(injected)
         existing_by_name.setdefault(injected.name, []).append(injected)
+
+
+def _find_injected_fog(
+    fogs_by_name: dict[str, list[FogData]],
+    name: str,
+    aside_area: str,
+    bside_area: str,
+) -> FogData | None:
+    """Resolve a map_splits.toml fog spec back to its injected FogData.
+
+    Matches on name + both side areas (not name alone): the same asset-derived
+    Name is reused across unrelated maps in fog.txt (see inject_map_splits'
+    collision guard), so name alone could pick the wrong fog.
+    """
+    for candidate in fogs_by_name.get(name, []):
+        if candidate.aside.area == aside_area and candidate.bside.area == bside_area:
+            return candidate
+    return None
+
+
+def apply_map_splits_side_roles(
+    zone_fogs: dict[str, ZoneFogs],
+    splits: dict[str, Any],
+    fogs_by_name: dict[str, list[FogData]],
+) -> None:
+    """Grant extra entry/exit roles to map_splits synthetic fog sides.
+
+    classify_fogs() gives map_splits synthetic fogs (tags=["unique"]) strict
+    one-way semantics: aside = exit only, bside = entry only. This function
+    does NOT change that default; it layers optional EXTRA roles on top, read
+    from booleans on the fog's side tables in map_splits.toml:
+      - aside.entry = true: aside ALSO becomes an entry of its area.
+      - bside.exit = true: bside ALSO becomes an exit of its area.
+
+    Used for reverse routes through split zones (e.g. the merged Enir-Ilim
+    cluster): the ascending path uses the default one-way roles, while the
+    descending path needs an entry into the upper doorway and an exit out of
+    the lower one, granted here without touching classify_fogs.
+
+    Must run after classify_fogs(); mutates zone_fogs in place.
+
+    Args:
+        zone_fogs: classify_fogs() output.
+        splits: parsed map_splits.toml supplement (from load_map_splits).
+        fogs_by_name: fog Name -> injected FogData objects sharing that name,
+            as appended by inject_map_splits into parsed["entrances"].
+    """
+    for fog in splits.get("fogs", []):
+        aside = fog.get("aside", {})
+        bside = fog.get("bside", {})
+        wants_aside_entry = bool(aside.get("entry"))
+        wants_bside_exit = bool(bside.get("exit"))
+        if not wants_aside_entry and not wants_bside_exit:
+            continue
+
+        injected = _find_injected_fog(
+            fogs_by_name, fog["name"], aside["area"], bside["area"]
+        )
+        if injected is None:
+            continue
+
+        if wants_aside_entry:
+            entries = zone_fogs[aside["area"]].entry_fogs
+            if injected not in entries:
+                entries.append(injected)
+        if wants_bside_exit:
+            exits = zone_fogs[bside["area"]].exit_fogs
+            if injected not in exits:
+                exits.append(injected)
 
 
 def extract_no_drop_to(metadata: dict[str, Any]) -> dict[str, set[str]]:
@@ -2027,6 +2134,7 @@ def filter_and_enrich_clusters(
             cluster.proximity_groups = cm.get("proximity_groups", [])
             cluster.allowed_entries = cm.get("allowed_entries", [])
             cluster.allowed_exits = cm.get("allowed_exits", [])
+            cluster.display_name_override = cm.get("display_name", "")
 
         filtered.append(cluster)
 
@@ -2210,7 +2318,8 @@ def clusters_to_json(
             "id": c.cluster_id,
             "zones": [c.primary_zone] + sorted(c.zones - {c.primary_zone}),
             "type": c.cluster_type,
-            "display_name": _pick_display_name(c, areas, zone_names),
+            "display_name": c.display_name_override
+            or _pick_display_name(c, areas, zone_names),
             "weight": c.weight,
             "entry_fogs": c.entry_fogs,
             "exit_fogs": c.exit_fogs,
@@ -2388,6 +2497,14 @@ def main() -> int:
         entrances, warps, areas, opensplit_warp_ids=opensplit_warp_ids
     )
     print(f"  Found fogs for {len(zone_fogs)} zones")
+
+    # Grant optional extra entry/exit roles to map_splits synthetic fog sides
+    # (e.g. reverse routes through a split zone). Must run after classify_fogs.
+    if splits["fogs"]:
+        fogs_by_name: dict[str, list[FogData]] = defaultdict(list)
+        for f in entrances:
+            fogs_by_name[f.name].append(f)
+        apply_map_splits_side_roles(zone_fogs, splits, fogs_by_name)
 
     # Identify major boss zones (connected to fog gates with 'major' tag)
     major_zones = get_major_zones(entrances, warps)
