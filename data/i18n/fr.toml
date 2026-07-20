@@ -648,6 +648,11 @@ replacement = "D'\\1"
 "Caelid Divine Tower left entrance" = "Tour Divine de Caelid (entrée gauche)"
 "Caelid Divine Tower middle entrance" = "Tour Divine de Caelid (entrée centrale)"
 "Caelid Divine Tower right entrance" = "Tour Divine de Caelid (entrée droite)"
+# Enir-Ilim split (portes synthétiques map_splits.toml)
+# Note: "Montée en spirale" est un équivalent approximatif — à confirmer via le nom officiel
+# de la grâce "Spiral Rise" dans la version française du jeu (fmg_names.json ne couvre pas la DLC).
+"Spiral Rise ascent" = "Ascension vers la Montée en spirale"
+"Before Leda" = "Avant Leda"
 
 # =============================================================================
 # Overrides — descriptions non-formulaïques (champ side_text)
@@ -832,3 +837,11 @@ replacement = "D'\\1"
 
 # --- Abduction ---
 "getting abducted at the bottom of the elevator. this requires dying in the bottom 30 meters, not above that" = "en se faisant enlever au bas de l'ascenseur: il faut mourir dans les 30 derniers mètres, pas au-dessus"
+
+# --- Enir-Ilim split (portes synthétiques map_splits.toml) ---
+# Note: "Montée en spirale" est un équivalent approximatif — à confirmer via le nom officiel
+# de la grâce "Spiral Rise" dans la version française du jeu (fmg_names.json ne couvre pas la DLC).
+"climbing toward the Spiral Rise" = "en montant vers la Montée en spirale"
+"arriving at the Spiral Rise" = "en arrivant à la Montée en spirale"
+"leaving Enir-Ilim before Leda" = "en quittant Enir-Ilim avant Leda"
+"arriving on the stairs before Leda" = "en arrivant sur les marches avant Leda"
