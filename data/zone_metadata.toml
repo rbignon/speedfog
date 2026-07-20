@@ -336,6 +336,28 @@ allow_entry_as_exit = false
 type = "final_boss"
 weight = 4
 
+[zones.enirilim]
+type = "legacy_dungeon"
+weight = 2  # lower half of the climb (Outer Wall + First Rise); calibrate after playtesting
+# Cut world links so the climb is a standalone warp-entered cluster:
+# - belurat_enirilim: unconditional drop down into Belurat
+# - belurat_stairs: treekindling-gated passage, stays closed while flag 330 (Sealing Tree burned) is OFF
+# - enirilim_stairs: "defeating Leda" transition; the tail is never played (spec 2026-07-20)
+no_drop_to = ["belurat_enirilim", "belurat_stairs", "enirilim_stairs"]
+
+[zones.enirilim_upper]
+type = "legacy_dungeon"
+weight = 2  # upper half (Spiral Rise + Cleansing Chamber Anteroom); calibrate after playtesting
+
+[zones.enirilim_stairs]
+# Leda tail: sealed behind a synthetic fog gate (defined in data/map_splits.toml)
+# and the vanilla After-Leda wall; must never form a playable cluster.
+exclude = true
+
+[zones.belurat_stairs]
+# Reverse direction of the treekindling passage cut above.
+no_drop_to = ["enirilim"]
+
 [zones.scadualtus_catacombs_boss]
 type = "boss_arena"  # fog.txt Entrance has "major" tag, but Jori is a catacomb boss, not a remembrance boss
 
