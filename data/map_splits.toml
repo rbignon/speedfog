@@ -64,9 +64,12 @@ bside = { area = "enirilim_stairs", text = "arriving on the stairs before Leda" 
 # `scadualtus` overworld zone; Fog 2's BSide gives the orphan fog.txt area
 # scadualtus_edredd_boss (Black Knight Edredd, DefeatFlag 2049430850) its
 # first fog boundary, which turns it into a boss_arena cluster.
-# Roger's captures have Z sign-inverted vs the MSB frame on overworld tiles
-# (calibrated at Edredd's spawn (69, 396, -96)); coordinates below are
-# already converted. See the spec 2026-07-21-fort-reprimand-map-splits-design.md.
+# Coordinate caution: on overworld tiles the capture tool's Z sign proved
+# unreliable per point (Fog 2 and the removed spiritspring needed Z negated
+# to match the MSB; Fog 1 did not). All positions below were tuned and
+# validated in-game (2026-07-22); verify any new capture against MSB
+# architecture with `game_inspect near` before trusting it.
+# See the spec 2026-07-21-fort-reprimand-map-splits-design.md.
 [[zones]]
 name = "reprimand"
 map = "m61_49_43_00"
@@ -86,26 +89,34 @@ enemies = [
 ]
 
 # Fog 1: the fort's front gate, ~5.2 m opening.
-# Captured segment (Z negated): (15.456, 385.934, -19.050) -> (20.596, 385.934, -18.119)
-# Yaw = atan2(dx, dz) + 90 (see the Enir-Ilim entries above).
+# Position and yaw tuned in-game (the raw capture frame matched the MSB here,
+# unlike Fog 2; see the header note above).
 [[fogs]]
 name = "AEG099_003_9100"
 map = "m61_49_43_00"
 id = 2049431960
 text = "Fort of Reprimand gate"
-make_from = "AEG099_003 AEG099_090_9000 18.026 385.934 -18.585 169.7"
+make_from = "AEG099_003 AEG099_090_9000 18.026 386.934 29.585 165.0"
 aside = { area = "scadualtus", text = "outside the Fort of Reprimand gate" }
 bside = { area = "reprimand", text = "inside the Fort of Reprimand gate" }
 
 # Fog 2: the doorway into Edredd's chapel (the dead-end boss room), ~1.0 m.
 # Captured segment (Z negated): (55.411, 396.481, -86.473) -> (54.884, 396.481, -87.314)
-# bside.exit: the boss cluster's only exit, back through this gate after the
-# DefeatFlag (allow_entry_as_exit on the cluster).
+# Sides ordered so ASide = chapel: the gate's front physically faces the
+# chapel (validated in-game 2026-07-22). Roles with this orientation:
+# - aside default (exit of the boss area) = the boss cluster's only exit,
+#   back through this gate; MapSplitsInjector gates it on DefeatFlag
+#   2049430850 via BossDefeatName since the area is a boss area.
+# - aside.entry grant = the boss cluster's entry (warp into the chapel).
+# - bside.exit grant = the reprimand cluster's exit (before the chapel).
+# - bside default (entry into reprimand at the chapel door) is unwanted for
+#   the one-way ascent; filtered by [clusters.reprimand_77e7]
+#   allowed_entries in zone_metadata.toml.
 [[fogs]]
 name = "AEG099_001_9101"
 map = "m61_49_43_00"
 id = 2049431961
 text = "Before Edredd"
 make_from = "AEG099_001 AEG099_090_9000 55.148 396.481 -86.894 -57.9"
-aside = { area = "reprimand", text = "before Black Knight Edredd's chapel" }
-bside = { area = "scadualtus_edredd_boss", text = "in Black Knight Edredd's chapel", exit = true }
+aside = { area = "scadualtus_edredd_boss", text = "in Black Knight Edredd's chapel", entry = true }
+bside = { area = "reprimand", text = "before Black Knight Edredd's chapel", exit = true }

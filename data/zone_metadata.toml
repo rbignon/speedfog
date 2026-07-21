@@ -377,6 +377,14 @@ proximity_groups = [
 # the fort instead.
 display_name = "Fort of Reprimand - Black Knight Edredd"
 
+[clusters.reprimand_77e7]
+# One-way ascent: the fort is entered at the front gate only. The chapel-door
+# side of AEG099_001_9101 classifies as a default entry (bside of the swapped
+# gate, see data/map_splits.toml) and is filtered out here.
+allowed_entries = [
+    "AEG099_003_9100", # Fort of Reprimand front gate
+]
+
 [zones.scadualtus_catacombs_boss]
 type = "boss_arena"  # fog.txt Entrance has "major" tag, but Jori is a catacomb boss, not a remembrance boss
 
