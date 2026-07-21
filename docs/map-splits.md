@@ -470,29 +470,48 @@ scadualtus (overworld, excluded: type "other")
    v
 reprimand (mini_dungeon, synthetic): Fort of Reprimand interior
    |  FOG 2 (synthetic, AEG099_001_9101, id 2049431961)
-   |  ASide=reprimand: exit only
-   |  BSide=scadualtus_edredd_boss: entry (default) + exit (bside.exit grant)
+   |  BSide=reprimand: entry (default, filtered out) + exit (bside.exit grant)
+   |  ASide=scadualtus_edredd_boss: exit (default) + entry (aside.entry grant)
    v
 scadualtus_edredd_boss (boss_arena, existing fog.txt area): Black Knight
 Edredd's chapel, dead end
 ```
 
+FOG 2's sides are ordered boss-first (ASide = chapel) because the created
+gate's front physically faces the chapel; the initial reprimand-first
+ordering left the gate's interaction sides inverted in-game (found and
+swapped during the 2026-07-22 playtest).
+
 - **Cluster `{reprimand}`** (mini_dungeon): entry = FOG 1's BSide ("inside
-  the Fort of Reprimand gate"), exit = FOG 2's ASide ("before Black Knight
-  Edredd's chapel"). No side-role grant on either reprimand-side role; the
-  only grant on these two fogs is `bside.exit` on FOG 2's boss side, so there
-  is exactly one entry fog and one exit fog: no `proximity_groups`
-  disambiguation needed, unlike the merged Enir-Ilim cluster.
+  the Fort of Reprimand gate"), exit = FOG 2's BSide ("before Black Knight
+  Edredd's chapel", the `bside.exit` grant). The swap gives FOG 2's BSide an
+  unwanted default entry role (arriving at the chapel door inside the fort),
+  which `[clusters.reprimand_77e7] allowed_entries` in `zone_metadata.toml`
+  filters back out to keep the strict one-way ascent: one entry fog, one
+  exit fog, no `proximity_groups` needed.
 - **Cluster `{scadualtus_edredd_boss}`** (boss_arena, single gate): entry =
-  FOG 2's BSide ("in Black Knight Edredd's chapel"); the same BSide is also
-  granted the exit role (`bside.exit = true`), so the cluster's only way out
-  is back through the same doorway after the fight (the general single-gate
-  `allow_entry_as_exit` mechanism, `[zones.scadualtus_edredd_boss]` in
-  `zone_metadata.toml`; see `docs/dag-generation.md`), not something new to
-  this instance. `defeat_flag` (2049430850) and `boss_name` ("Black Knight
-  Edredd") are picked up automatically from `fog.txt`'s existing
-  `DefeatFlag` and `enemy.txt`, the same generic mechanism every other boss
-  cluster uses.
+  FOG 2's ASide via the `aside.entry` grant ("in Black Knight Edredd's
+  chapel"); the same ASide keeps its default exit role, so the cluster's
+  only way out is back through the same doorway after the fight (the general
+  single-gate `allow_entry_as_exit` mechanism,
+  `[zones.scadualtus_edredd_boss]` in `zone_metadata.toml`; see
+  `docs/dag-generation.md`), not something new to this instance.
+  `defeat_flag` (2049430850) and `boss_name` ("Black Knight Edredd") are
+  picked up automatically from `fog.txt`'s existing `DefeatFlag` and
+  `enemy.txt`, the same generic mechanism every other boss cluster uses.
+
+**Boss-side defeat gating (`BossDefeatName`)**: every vanilla fog side that
+sits inside a boss area carries `BossDefeatName: area` in `fog.txt` (Grafted
+Scion, Rellana's front AND back gates, ...): FogMod resolves it to the
+area's `DefeatFlag` and prepends an `IfEventFlag(MAIN, ON, defeatFlag)` wait
+to that side's fogwarp event, so the gate only becomes traversable outward
+once the boss is dead. `MapSplitsInjector` mirrors the convention
+automatically: any synthetic side whose area has `DefeatFlag > 0` gets
+`BossDefeatName = "area"` (no TOML key needed). Without this, FOG 2's chapel
+side compiled ungated and the player could leave before fighting Edredd (the
+2026-07-22 playtest bug). `BossTrapName`/`BossTriggerName` are deliberately
+NOT mirrored: they drive trap-flag locks and MSB trigger regions that only
+apply to areas declaring those flags.
 
 **Entity IDs**: FOG 1 is `AEG099_003_9100` / `2049431960` (wide gate, ~5.2m
 opening); FOG 2 is `AEG099_001_9101` / `2049431961` (narrow gate, ~1.0m
@@ -530,22 +549,22 @@ following the same policy as `EnirilimAssetRemover`. It only runs when
 Reprimand cluster is actually in this run's DAG), leaving other seeds'
 `m61_49_42_00` untouched.
 
-**Capture-frame Z inversion**: this is the first map-splits instance on an
-overworld tile, and it surfaced a capture-tool quirk that Enir-Ilim's closed
-map never hit: on `m60`/`m61` tiles, Roger's in-game position capture
-reports Z with the opposite sign of the tile's MSB frame (X and height
-match). Raw captures pointed 120-180m away from Edredd; negating Z landed
-FOG 2's segment 16m from his MSB spawn `(69, 396, -96)`, inside his chapel,
-and made the spiritspring capture match `m61_49_42_00`'s MSB. All
-coordinates in `data/map_splits.toml`'s Fort of Reprimand entries are
-already Z-corrected. Negating Z also flips the `make_from` yaw convention
-from "File Format" above: yaw `θ` becomes `180-θ`. See the
-`overworld-capture-z-inversion` memory entry for the general rule and
-calibration method.
+**Capture-frame caution on overworld tiles**: this is the first map-splits
+instance on an overworld tile, and it surfaced a capture quirk that
+Enir-Ilim's closed map never hit: on `m60`/`m61` tiles, the Z sign of
+in-game position captures proved unreliable PER POINT (X and height always
+matched the MSB). FOG 2's capture and the spiritspring needed Z negated to
+match the MSB (negating Z landed FOG 2's segment 16m from Edredd's MSB spawn
+`(69, 396, -96)`, inside his chapel), while FOG 1's raw positive-Z capture
+turned out to be the correct one and was tuned in-game from there. There is
+no blanket conversion rule: verify every overworld capture against MSB
+architecture with `game_inspect near` before trusting it, and expect to tune
+in-game. When Z is negated, the `make_from` yaw convention from "File
+Format" above flips: yaw `θ` becomes `180-θ`.
 
 **`zone_metadata.toml` pieces** (see `data/zone_metadata.toml` around
 `[zones.reprimand]`, `[zones.scadualtus_edredd_boss]`,
-`[clusters.scadualtus_edredd_boss_8c7d]`):
+`[clusters.reprimand_77e7]`, `[clusters.scadualtus_edredd_boss_8c7d]`):
 
 - `[zones.reprimand] type = "mini_dungeon", weight = 2` and
   `[zones.scadualtus_edredd_boss] type = "boss_arena", weight = 1,
@@ -560,14 +579,16 @@ calibration method.
 - Weights (`reprimand` 2, boss 1) are placeholders pending playtesting, the
   same caveat as Enir-Ilim's.
 
-**Remaining in-game inputs**: per the design spec's validation checklist,
-fort containment (no other way over the walls once the spiritspring is
-gone), gate coverage and orientation for both models, boss-room retraversal
-after the `DefeatFlag`, effective scaling of the reassigned mobs, and the
-two fort graces (76909/76910) are not yet run against a live build as of
-this writing; see
-`docs/superpowers/specs/2026-07-21-fort-reprimand-map-splits-design.md`'s
-"Reste à valider in-game" for the full list.
+**In-game validation status** (first playtest 2026-07-22): spiritspring
+removal confirmed working, FOG 2 position confirmed, FOG 1 repositioned and
+FOG 2's sides swapped in-game (both folded back into `map_splits.toml`), and
+the ungated chapel side fixed via the `BossDefeatName` mechanism above.
+Still pending: gate coverage with the final positions, boss-room retraversal
+after the `DefeatFlag`, effective scaling of the reassigned mobs, the
+gatehouse `c5401` trio (now inside the zone span after FOG 1 moved to
+z=+29.6; currently NOT in the `enemies` list), and the two fort graces
+(76909/76910); see the design spec's "Reste à valider in-game" for the full
+list.
 
 ## Reference points
 
@@ -586,8 +607,9 @@ this writing; see
   `bside` instances.
 - `writer/FogModWrapper.Core/MapSplitsLoader.cs`: TOML reader (`SplitZone`,
   `SplitFog` records).
-- `writer/FogModWrapper/MapSplitsInjector.cs`: `Apply` (Areas/Entrances),
-  `SplitEnemyAreas` (EnemyArea split), `InjectShowSfx` (fog-wall mist).
+- `writer/FogModWrapper/MapSplitsInjector.cs`: `Apply` (Areas/Entrances,
+  `BossDefeatName` mirroring for boss-area sides), `SplitEnemyAreas`
+  (EnemyArea split), `InjectShowSfx` (fog-wall mist).
 - `writer/FogModWrapper/EnirilimAssetRemover.cs`: hardcoded thorns removal.
 - `writer/FogModWrapper/SpiritspringRemover.cs`: hardcoded spiritspring
   region removal (Fort of Reprimand), gated on `reprimand`'s presence in
@@ -595,7 +617,8 @@ this writing; see
 - `writer/FogModWrapper/VanillaWarpRemover.cs`: `MatchGroup` removal path.
 - `data/zone_metadata.toml`: `[zones.enirilim]`, `[zones.enirilim_upper]`,
   `[zones.enirilim_stairs]`, `[clusters.enirilim_9820]`; `[zones.reprimand]`,
-  `[zones.scadualtus_edredd_boss]`, `[clusters.scadualtus_edredd_boss_8c7d]`.
+  `[zones.scadualtus_edredd_boss]`, `[clusters.reprimand_77e7]`,
+  `[clusters.scadualtus_edredd_boss_8c7d]`.
 - `reference/fogrando-src/GameDataWriterE.cs`: `MakeFrom` gate creation
   (~L256-262), enemy scaling / `AreaTiers.TryGetValue` (~L2126-2140).
 - `reference/fogrando-src/AnnotationData.cs`: `EnemyLocArea`, `EnemyLoc`
@@ -605,7 +628,7 @@ this writing; see
 - `docs/superpowers/specs/2026-07-20-enirilim-split-synthetic-fogs-design.md`:
   design rationale, topology, in-game capture notes (French).
 - `docs/superpowers/specs/2026-07-21-fort-reprimand-map-splits-design.md`:
-  design rationale, topology, the overworld capture Z-inversion discovery
+  design rationale, topology, the overworld capture-frame investigation
   (French).
 - `docs/startup-flag-injection.md`: methodology used to find the fog-2 door
   flag (`20018540`).
