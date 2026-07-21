@@ -841,7 +841,7 @@ replacement = "D'\\1"
 # --- Enir-Ilim split (portes synthétiques map_splits.toml) ---
 # Note: "tour hélicoïdale" est un équivalent approximatif — à confirmer via le nom officiel
 # de la grâce "Spiral Rise" dans la version française du jeu (fmg_names.json ne couvre pas la DLC).
-"climbing toward the Spiral Rise" = "en montant vers la tour hélicoïdale"
+"in front of the door at the top of the stairs before the Spiral Rise" = "devant la porte en haut des escaliers avant la tour hélicoïdale"
 "arriving at the Spiral Rise" = "en arrivant à la tour hélicoïdale"
 "before Leda's arena" = "devant l'arène de Leda"
 "arriving on the stairs before Leda" = "en arrivant sur les marches avant Leda"

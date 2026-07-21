@@ -38,7 +38,7 @@ map = "m20_01_00_00"
 id = 20011960
 text = "Spiral Rise ascent"
 make_from = "AEG099_002 AEG099_002_9000 -281.566 66.082 -85.637 -69.1"
-aside = { area = "enirilim", text = "climbing toward the Spiral Rise" }
+aside = { area = "enirilim", text = "in front of the door at the top of the stairs before the Spiral Rise" }
 # bside.exit: upper-side exit enables the reverse (descending) route through
 # the merged cluster, on top of the default bside=entry-only role.
 bside = { area = "enirilim_upper", text = "arriving at the Spiral Rise", exit = true }
