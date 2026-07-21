@@ -463,6 +463,9 @@ exclude = true  # Cathedral of Manus Metyr interior, accessed via unique warp, n
 #   vs. its lower-only variant, see [clusters.enirilim_9820] above).
 # Use "zone:fog_id" when the same fog_id appears in multiple zones
 
+[clusters.academy_library_58f2]
+display_name = "Rennala, Queen of the Full Moon"
+
 [clusters.caelid_gaeltunnel_befe]
 exclude = true
 
@@ -701,6 +704,7 @@ allowed_exits = [
 weight = 2
 
 [clusters.rauhruins_east_aa23]
+display_name = "Ruins of Rauh"
 weight = 4
 
 [clusters.fissure_e510]
