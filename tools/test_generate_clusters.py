@@ -17,6 +17,7 @@ from generate_clusters import (
     _is_side_core,
     _pick_display_name,
     _resolve_zone_type,
+    _validate_map_splits,
     apply_cluster_merges,
     apply_map_splits_side_roles,
     build_world_graph,
@@ -4879,3 +4880,20 @@ class TestMapSplits:
 
         assert zone_fogs["lower"].entry_fogs == before_lower_entries
         assert zone_fogs["upper"].exit_fogs == before_upper_exits
+
+    def test_validate_accepts_enemies_list(self):
+        splits = self._splits()
+        splits["zones"][0]["enemies"] = ["c5651_9000", "c5980_9001"]
+        _validate_map_splits(splits)  # must not raise
+
+    def test_validate_rejects_enemies_wrong_shape(self):
+        splits = self._splits()
+        splits["zones"][0]["enemies"] = ["c5651_9000", 12]
+        with pytest.raises(ValueError, match="enemies"):
+            _validate_map_splits(splits)
+
+    def test_validate_rejects_enemies_bad_format(self):
+        splits = self._splits()
+        splits["zones"][0]["enemies"] = ["AEG099_002_9000"]
+        with pytest.raises(ValueError, match="entity name"):
+            _validate_map_splits(splits)
