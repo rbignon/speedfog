@@ -50,6 +50,16 @@ if (args.Length >= 1 && args[0] == "list-enemies")
     }
     return 0;
 }
+if (args.Length >= 1 && args[0] == "near")
+{
+    if (args.Length < 5) { Console.Error.WriteLine("Usage: game_inspect near <msb> <x> <y> <z> [--radius R]"); return 1; }
+    float nx = float.Parse(args[2]), ny = float.Parse(args[3]), nz = float.Parse(args[4]);
+    float radius = 15f;
+    for (int i = 5; i + 1 < args.Length; i++)
+        if (args[i] == "--radius") radius = float.Parse(args[i + 1]);
+    ListNear(args[1], new System.Numerics.Vector3(nx, ny, nz), radius);
+    return 0;
+}
 if (args.Length >= 1 && args[0] == "list-collisions")
 {
     if (args.Length < 2) { Console.Error.WriteLine("Usage: game_inspect list-collisions <msb> [--torrent-only]"); return 1; }
@@ -66,6 +76,31 @@ if (args.Length >= 1 && args[0] == "list-collisions")
 
 // Default: list SFX
 return ListSfx(args);
+
+// ── near ────────────────────────────────────────────────────────────
+
+static void ListNear(string msbPath, System.Numerics.Vector3 center, float radius)
+{
+    var msb = MSBE.Read(msbPath);
+    Console.WriteLine($"=== Parts/regions within {radius:F0}m of ({center.X:F1}, {center.Y:F1}, {center.Z:F1}) in {Path.GetFileName(msbPath)} ===");
+
+    var lines = new List<(float dist, string text)>();
+    foreach (var part in msb.Parts.GetEntries())
+    {
+        float dist = System.Numerics.Vector3.Distance(part.Position, center);
+        if (dist > radius) continue;
+        var groups = string.Join(",", (part.EntityGroupIDs ?? Array.Empty<uint>()).Where(g => g > 0));
+        lines.Add((dist, $"  {dist,5:F1}m  part   {part.GetType().Name,-10} {part.Name,-24} model={part.ModelName,-10} entity={part.EntityID,-12} pos=({part.Position.X:F1},{part.Position.Y:F1},{part.Position.Z:F1}) groups=[{groups}]"));
+    }
+    foreach (var region in msb.Regions.GetEntries())
+    {
+        float dist = System.Numerics.Vector3.Distance(region.Position, center);
+        if (dist > radius) continue;
+        lines.Add((dist, $"  {dist,5:F1}m  region {region.GetType().Name,-10} {region.Name,-24} entity={region.EntityID,-12} pos=({region.Position.X:F1},{region.Position.Y:F1},{region.Position.Z:F1})"));
+    }
+    foreach (var (_, text) in lines.OrderBy(l => l.dist))
+        Console.WriteLine(text);
+}
 
 // ── dump-entity ─────────────────────────────────────────────────────
 

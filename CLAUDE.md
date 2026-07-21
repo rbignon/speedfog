@@ -520,6 +520,9 @@ wine publish/win-x64/game_inspect.exe dump-entity <msb-dir> <entity-id>
 # List all assets matching a model name in an MSB
 wine publish/win-x64/game_inspect.exe find-model <msb-file> AEG099_090
 
+# List all parts and regions near a position, sorted by distance (default radius 15m)
+wine publish/win-x64/game_inspect.exe near <msb-file> 76.7 303.2 127.2 --radius 20
+
 # Compare two assets by entity ID (shows all property differences)
 wine publish/win-x64/game_inspect.exe compare <msb-file> <eid1> <eid2>
 
