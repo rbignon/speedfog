@@ -843,6 +843,10 @@ Example:
         // Re-enable Torrent inside boss arenas where vanilla blocks it via
         // collision DisableTorrent flags. See docs/torrent-arena-patcher.md.
         TorrentArenaPatcher.Patch(ctx.ModDir, ctx.Config.GameDir);
+
+        // Remove spiritspring jumps that bypass map-splits chokepoints
+        // (Fort of Reprimand back ravine). See docs/map-splits.md.
+        SpiritspringRemover.Patch(ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.AreaTiers);
     }
 
     /// <summary>
