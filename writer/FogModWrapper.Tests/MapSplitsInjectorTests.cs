@@ -49,6 +49,33 @@ public class MapSplitsInjectorTests
     }
 
     [Fact]
+    public void Apply_BossAreaSide_GetsBossDefeatName()
+    {
+        // Sides whose area is a boss area (DefeatFlag set) must carry
+        // BossDefeatName = "area", the universal fog.txt convention: without
+        // it FogMod compiles the side's fogwarp without the
+        // IfEventFlag(defeat flag) wait and the gate is traversable before
+        // the boss dies (GameDataWriterE getNameFlag/fogwarp compilation).
+        var ann = MakeAnn();
+        ann.Areas.Add(new AnnotationData.Area
+        {
+            Name = "boss_room", Text = "Boss", Maps = "m99_00_00_00", DefeatFlag = 990800,
+        });
+        var splits = new MapSplits(
+            new List<SplitZone>(),
+            new List<SplitFog>
+            {
+                new("AEG099_001_9900", "m99_00_00_00", 990002, "Boss door",
+                    "AEG099_001 AEG099_002_9000 1.0 2.0 3.0 90.0",
+                    "boss_room", "in the boss room", "lower", "before the boss room"),
+            });
+        MapSplitsInjector.Apply(ann, splits);
+        var e = ann.Entrances.Single(x => x.Name == "AEG099_001_9900");
+        Assert.Equal("area", e.ASide.BossDefeatName);
+        Assert.Null(e.BSide.BossDefeatName);
+    }
+
+    [Fact]
     public void Apply_ExistingZone_Throws()
     {
         var ann = MakeAnn();

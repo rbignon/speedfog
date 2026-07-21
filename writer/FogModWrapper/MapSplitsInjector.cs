@@ -33,6 +33,23 @@ public static class MapSplitsInjector
             Console.WriteLine($"MapSplits: added area '{zone.Name}' ({zone.Map})");
         }
 
+        // Sides whose area is a boss area (DefeatFlag set) carry
+        // BossDefeatName = "area", the universal fog.txt convention for every
+        // fog side inside a boss room: GameDataWriterE resolves it to the
+        // area's DefeatFlag and gates the side's fogwarp on it
+        // (IfEventFlag wait), so the gate only opens outward once the boss is
+        // dead. Without it the flag resolves to 0 and the warp is always
+        // usable. BossTrapName/BossTriggerName are NOT mirrored: they drive
+        // trap-flag locks and MSB trigger regions that only apply to areas
+        // declaring those flags in fog.txt.
+        AnnotationData.Side MakeSide(string area, string text) => new()
+        {
+            Area = area,
+            Text = text,
+            BossDefeatName =
+                ann.Areas.FirstOrDefault(a => a.Name == area)?.DefeatFlag > 0 ? "area" : null,
+        };
+
         foreach (var fog in splits.Fogs)
         {
             // FogMod keys entrances by FullName = Area + "_" + Name (see
@@ -51,8 +68,8 @@ public static class MapSplitsInjector
                 Area = fog.Map,
                 Text = fog.Text,
                 MakeFrom = fog.MakeFrom,
-                ASide = new AnnotationData.Side { Area = fog.ASideArea, Text = fog.ASideText },
-                BSide = new AnnotationData.Side { Area = fog.BSideArea, Text = fog.BSideText },
+                ASide = MakeSide(fog.ASideArea, fog.ASideText),
+                BSide = MakeSide(fog.BSideArea, fog.BSideText),
             });
             Console.WriteLine(
                 $"MapSplits: added synthetic gate '{fog.Name}' ({fog.ASideArea} -> {fog.BSideArea})");
