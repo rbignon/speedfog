@@ -135,6 +135,19 @@ clusters are valid candidates but never both appear in the same run. The C#
 side reads nothing for `drops_to`: world links only affect Python-side
 clustering, never the fog gates FogMod's writer compiles.
 
+### `enemies` (optional, list of entity names)
+
+Overworld-tile variant of the EnemyArea split: tiles have no per-enemy `Col`
+in foglocations2.txt, so `cols` cannot partition them. Instead, `enemies`
+lists MSB entity names (`cNNNN_NNNN`) whose `EnemyLoc.Area` the injector
+forces to the synthetic zone (FogRando's native per-enemy override, as used
+by vanilla `Area: abyssal` entries). The zone gets its own EnemyArea
+(inheriting the source's ScalingTier) and then scales with its graph.json
+tier. Unknown names or names belonging to another area fail the build.
+Derive candidates with `game_inspect list-enemies` / `near` and validate
+in-game. Python validates shape and the cNNNN_NNNN format at cluster-gen
+time (strict parity with the C# loader).
+
 ## Two Injection Points
 
 The supplement is consumed by two independent pipelines that must agree on
@@ -431,6 +444,130 @@ longer needed either: now that the split is modeled via `drops_to` (see
 separate DAG nodes in the same run, so `enirilim_upper.cols` stays `[]` by
 design rather than pending capture.
 
+## The Fort of Reprimand Instance
+
+The Fort of Reprimand (Scadu Altus DLC tile `m61_49_43_00`) is the second
+map-splits instance and the first on an open overworld tile rather than a
+closed dungeon map: the fort's geometry belongs to `scadualtus`, the huge
+excluded (type `other`) overworld area, with no fog gate of its own. It is
+also the first instance that gives a fog boundary to an *orphan* fog.txt
+area: `scadualtus_edredd_boss` (Black Knight Edredd, `DefeatFlag
+2049430850`) already existed in `fog.txt` with `OpenArea: scadualtus`, but
+had no `Entrances` of its own, so it could never become a cluster until one
+of its sides got a fog gate.
+
+Two synthetic fogs carve a strictly one-way ascent through the fort, with no
+merge or drop back down (unlike Enir-Ilim's `drops_to`, a reversed descent
+route was explicitly rejected for this instance; see the design spec's
+"Hors périmètre"):
+
+```
+scadualtus (overworld, excluded: type "other")
+   |  FOG 1 (synthetic, AEG099_003_9100, id 2049431960)
+   |  ASide=scadualtus: exit only
+   |  BSide=reprimand: entry only
+   v
+reprimand (mini_dungeon, synthetic): Fort of Reprimand interior
+   |  FOG 2 (synthetic, AEG099_001_9101, id 2049431961)
+   |  ASide=reprimand: exit only
+   |  BSide=scadualtus_edredd_boss: entry (default) + exit (bside.exit grant)
+   v
+scadualtus_edredd_boss (boss_arena, existing fog.txt area): Black Knight
+Edredd's chapel, dead end
+```
+
+- **Cluster `{reprimand}`** (mini_dungeon): entry = FOG 1's BSide ("inside
+  the Fort of Reprimand gate"), exit = FOG 2's ASide ("before Black Knight
+  Edredd's chapel"). Both fogs stay at their plain one-way default role (no
+  side-role grant on this pair), so there is exactly one entry fog and one
+  exit fog: no `proximity_groups` disambiguation needed, unlike the merged
+  Enir-Ilim cluster.
+- **Cluster `{scadualtus_edredd_boss}`** (boss_arena, single gate): entry =
+  FOG 2's BSide ("in Black Knight Edredd's chapel"); the same BSide is also
+  granted the exit role (`bside.exit = true`), so the cluster's only way out
+  is back through the same doorway after the fight (the general single-gate
+  `allow_entry_as_exit` mechanism, `[zones.scadualtus_edredd_boss]` in
+  `zone_metadata.toml`; see `docs/dag-generation.md`), not something new to
+  this instance. `defeat_flag` (2049430850) and `boss_name` ("Black Knight
+  Edredd") are picked up automatically from `fog.txt`'s existing
+  `DefeatFlag` and `enemy.txt`, the same generic mechanism every other boss
+  cluster uses.
+
+**Entity IDs**: FOG 1 is `AEG099_003_9100` / `2049431960` (wide gate, ~5.2m
+opening); FOG 2 is `AEG099_001_9101` / `2049431961` (narrow gate, ~1.0m
+opening). Both copy the `AEG099_090_9000` "Shiny Item" asset already present
+on `m61_49_43_00`, not an existing fog gate: `m61_49_43_00` has none to copy
+the way Enir-Ilim's fogs copy `AEG099_002_9000`. This is FogRando's own
+established idiom for `MakeFrom` gates on overworld tiles with no existing
+fog to clone from, e.g. `fog.txt`'s own `AEG099_231_9500` on the Gravesite
+Plain tile `m61_47_43_00` (`MakeFrom: AEG099_231 AEG099_090_9000 ...`).
+
+**Enemy reassignment (`enemies`)**: the fort's interior enemies belong to
+the `scadualtus` EnemyArea, which is never a DAG node (type `other`), so
+without intervention they would stay at their vanilla DLC difficulty
+regardless of the `reprimand` cluster's tier. `[[zones]] name = "reprimand"`
+in `data/map_splits.toml` lists 10 entity names (`c5651_9000` through
+`c5980_9002`, derived from the MSB bounding box `x 0..120, y 370..430, z
+-92..-10` via `game_inspect near`/`list-enemies`) that the `enemies` key
+(see "File Format" above) reassigns to the new zone. Excluded by design: the
+`c1000` NPC, the `c5401` gatehouse trio on the approach side (outside the
+fort proper, pending in-game confirmation they cannot reach over or through
+the gate), and the crypt behind FOG 2 (Edredd's chapel mobs stay in
+`scadualtus`, a deliberate boss-arena scaling decision, not an oversight).
+
+**Spiritspring removal**: a spiritspring on the neighbouring tile
+`m61_49_42_00` (the ravine behind the chapel, roughly 80m below the fort)
+lets the player jump straight up past both synthetic gates, bypassing the
+fort's containment entirely. The jump behaviour lives in two MSB regions,
+`MountJump` and `MountJumpFall`, at `(76.7, 303.2, 127.2)`, with `EntityID
+0`: no flag or EMEVD can gate them (only springs built as `LockedMountJump`
+support that), so `SpiritspringRemover`
+(`writer/FogModWrapper/SpiritspringRemover.cs`) deletes both regions from
+the MSB by proximity match (5m radius) post-`Write`, a hardcoded target list
+following the same policy as `EnirilimAssetRemover`. It only runs when
+`reprimand` is present in the seed's `graph.json` `area_tiers` (the Fort of
+Reprimand cluster is actually in this run's DAG), leaving other seeds'
+`m61_49_42_00` untouched.
+
+**Capture-frame Z inversion**: this is the first map-splits instance on an
+overworld tile, and it surfaced a capture-tool quirk that Enir-Ilim's closed
+map never hit: on `m60`/`m61` tiles, Roger's in-game position capture
+reports Z with the opposite sign of the tile's MSB frame (X and height
+match). Raw captures pointed 120-180m away from Edredd; negating Z landed
+FOG 2's segment 16m from his MSB spawn `(69, 396, -96)`, inside his chapel,
+and made the spiritspring capture match `m61_49_42_00`'s MSB. All
+coordinates in `data/map_splits.toml`'s Fort of Reprimand entries are
+already Z-corrected. Negating Z also flips the `make_from` yaw convention
+from "File Format" above: yaw `θ` becomes `180-θ`. See the
+`overworld-capture-z-inversion` memory entry for the general rule and
+calibration method.
+
+**`zone_metadata.toml` pieces** (see `data/zone_metadata.toml` around
+`[zones.reprimand]`, `[zones.scadualtus_edredd_boss]`,
+`[clusters.scadualtus_edredd_boss_8c7d]`):
+
+- `[zones.reprimand] type = "mini_dungeon", weight = 2` and
+  `[zones.scadualtus_edredd_boss] type = "boss_arena", weight = 1,
+  allow_entry_as_exit = true`: both overrides exist because `m61` maps are
+  unknown to the type classifier and default to `other`, which the
+  generator never picks (see "EnemyArea Split Mechanics" above for the same
+  point about `scadualtus`'s own `other` type).
+- `[clusters.scadualtus_edredd_boss_8c7d] display_name = "Fort of Reprimand
+  - Black Knight Edredd"`: fog.txt's own `Text` reads "Scadu Altus - Black
+  Knight Edredd", which the racing UI should not use verbatim once the boss
+  is reachable through the fort rather than the open DLC map.
+- Weights (`reprimand` 2, boss 1) are placeholders pending playtesting, the
+  same caveat as Enir-Ilim's.
+
+**Remaining in-game inputs**: per the design spec's validation checklist,
+fort containment (no other way over the walls once the spiritspring is
+gone), gate coverage and orientation for both models, boss-room retraversal
+after the `DefeatFlag`, effective scaling of the reassigned mobs, and the
+two fort graces (76909/76910) are not yet run against a live build as of
+this writing; see
+`docs/superpowers/specs/2026-07-21-fort-reprimand-map-splits-design.md`'s
+"Reste à valider in-game" for the full list.
+
 ## Reference points
 
 - `data/map_splits.toml`: source of truth for the supplement, both zones and
@@ -451,9 +588,13 @@ design rather than pending capture.
 - `writer/FogModWrapper/MapSplitsInjector.cs`: `Apply` (Areas/Entrances),
   `SplitEnemyAreas` (EnemyArea split), `InjectShowSfx` (fog-wall mist).
 - `writer/FogModWrapper/EnirilimAssetRemover.cs`: hardcoded thorns removal.
+- `writer/FogModWrapper/SpiritspringRemover.cs`: hardcoded spiritspring
+  region removal (Fort of Reprimand), gated on `reprimand`'s presence in
+  `area_tiers`.
 - `writer/FogModWrapper/VanillaWarpRemover.cs`: `MatchGroup` removal path.
 - `data/zone_metadata.toml`: `[zones.enirilim]`, `[zones.enirilim_upper]`,
-  `[zones.enirilim_stairs]`, `[clusters.enirilim_9820]`.
+  `[zones.enirilim_stairs]`, `[clusters.enirilim_9820]`; `[zones.reprimand]`,
+  `[zones.scadualtus_edredd_boss]`, `[clusters.scadualtus_edredd_boss_8c7d]`.
 - `reference/fogrando-src/GameDataWriterE.cs`: `MakeFrom` gate creation
   (~L256-262), enemy scaling / `AreaTiers.TryGetValue` (~L2126-2140).
 - `reference/fogrando-src/AnnotationData.cs`: `EnemyLocArea`, `EnemyLoc`
@@ -462,6 +603,9 @@ design rather than pending capture.
   from `crawl`/`bossrush`/`endless`.
 - `docs/superpowers/specs/2026-07-20-enirilim-split-synthetic-fogs-design.md`:
   design rationale, topology, in-game capture notes (French).
+- `docs/superpowers/specs/2026-07-21-fort-reprimand-map-splits-design.md`:
+  design rationale, topology, the overworld capture Z-inversion discovery
+  (French).
 - `docs/startup-flag-injection.md`: methodology used to find the fog-2 door
   flag (`20018540`).
 - `docs/vanilla-warp-removal.md`: `match_group` removal mechanism.
