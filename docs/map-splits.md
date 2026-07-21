@@ -352,7 +352,8 @@ AEG099_002_9000 BSide -> enirilim_radahn (final_boss)   <- unchanged, DAG-wired
   1's BSide targets `enirilim_stairs`, which is never a graph entry (see
   below), so it's not reachable as an *entrance* from anywhere in the
   randomized run. The side-role grants add roles on specific sides; they
-  never touch `enirilim_stairs`.
+  never touch `enirilim_stairs`. Side-role grants affect `enirilim_upper`
+  only: FOG 2 gets `bside.exit` and FOG 1 gets `aside.entry`.
 - `[clusters.enirilim_9820]` in `zone_metadata.toml` declares
   `proximity_groups = [["AEG099_002_9100"], ["AEG099_002_9101"]]`: each gate
   is now both an entry and an exit candidate for the merged cluster, and
@@ -478,10 +479,10 @@ Edredd's chapel, dead end
 
 - **Cluster `{reprimand}`** (mini_dungeon): entry = FOG 1's BSide ("inside
   the Fort of Reprimand gate"), exit = FOG 2's ASide ("before Black Knight
-  Edredd's chapel"). Both fogs stay at their plain one-way default role (no
-  side-role grant on this pair), so there is exactly one entry fog and one
-  exit fog: no `proximity_groups` disambiguation needed, unlike the merged
-  Enir-Ilim cluster.
+  Edredd's chapel"). No side-role grant on either reprimand-side role; the
+  only grant on these two fogs is `bside.exit` on FOG 2's boss side, so there
+  is exactly one entry fog and one exit fog: no `proximity_groups`
+  disambiguation needed, unlike the merged Enir-Ilim cluster.
 - **Cluster `{scadualtus_edredd_boss}`** (boss_arena, single gate): entry =
   FOG 2's BSide ("in Black Knight Edredd's chapel"); the same BSide is also
   granted the exit role (`bside.exit = true`), so the cluster's only way out

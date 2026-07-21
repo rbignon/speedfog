@@ -30,11 +30,12 @@ public class SpiritspringRemoverTests
         // Another spring on the same map, 100m away: must survive
         msb.Regions.MountJumps.Add(new MSBE.Region.MountJump { Position = new Vector3(20.1f, 206.2f, 116.2f) });
         msb.Regions.LockedMountJumps.Add(new MSBE.Region.LockedMountJump { Position = new Vector3(20.1f, 206.2f, 116.2f) });
+        msb.Regions.LockedMountJumps.Add(new MSBE.Region.LockedMountJump { Position = new Vector3(76.7f, 303.2f, 127.2f) });
 
         var removed = SpiritspringRemover.ApplyToMsb(msb, Target);
 
         Assert.Equal(0, removed);
         Assert.Single(msb.Regions.MountJumps);
-        Assert.Single(msb.Regions.LockedMountJumps);
+        Assert.Equal(2, msb.Regions.LockedMountJumps.Count);
     }
 }

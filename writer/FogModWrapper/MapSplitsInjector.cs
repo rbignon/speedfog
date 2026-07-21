@@ -146,7 +146,7 @@ public static class MapSplitsInjector
             ann.Locations.EnemyAreas.Add(new AnnotationData.EnemyLocArea
             {
                 Name = zone.Name,
-                Cols = string.Join(' ', moved),
+                Cols = moved.Count > 0 ? string.Join(' ', moved) : null,
                 ScalingTier = src.ScalingTier,
             });
 

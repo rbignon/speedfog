@@ -53,10 +53,10 @@ if (args.Length >= 1 && args[0] == "list-enemies")
 if (args.Length >= 1 && args[0] == "near")
 {
     if (args.Length < 5) { Console.Error.WriteLine("Usage: game_inspect near <msb> <x> <y> <z> [--radius R]"); return 1; }
-    float nx = float.Parse(args[2]), ny = float.Parse(args[3]), nz = float.Parse(args[4]);
+    float nx = float.Parse(args[2], System.Globalization.CultureInfo.InvariantCulture), ny = float.Parse(args[3], System.Globalization.CultureInfo.InvariantCulture), nz = float.Parse(args[4], System.Globalization.CultureInfo.InvariantCulture);
     float radius = 15f;
     for (int i = 5; i + 1 < args.Length; i++)
-        if (args[i] == "--radius") radius = float.Parse(args[i + 1]);
+        if (args[i] == "--radius") radius = float.Parse(args[i + 1], System.Globalization.CultureInfo.InvariantCulture);
     ListNear(args[1], new System.Numerics.Vector3(nx, ny, nz), radius);
     return 0;
 }
