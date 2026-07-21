@@ -104,33 +104,45 @@ public static class MapSplitsInjector
     }
 
     /// <summary>
-    /// Moves the supplement-listed collision names from the source EnemyArea
-    /// to a new one named after the synthetic zone, and reassigns per-enemy
-    /// entries accordingly. EnemyLocArea.Cols are map-prefixed
-    /// ("m20_01_00_00_h001800"); EnemyLoc.Col is unprefixed ("h001800").
-    /// No-op while the supplement's cols list is empty.
+    /// Gives each supplement zone that declares cols and/or enemies its own
+    /// EnemyArea (inheriting the source's ScalingTier) and reassigns per-enemy
+    /// entries into it, so the zone scales with its own graph.json tier:
+    /// - cols: moves the map-prefixed collision names out of the source
+    ///   EnemyArea and reassigns EnemyLocs by collision (EnemyLocArea.Cols are
+    ///   map-prefixed "m20_01_00_00_h001800"; EnemyLoc.Col is unprefixed).
+    /// - enemies: reassigns EnemyLocs by entity name (e.g. "c5651_9000") on the
+    ///   zone's map. This is the overworld-tile variant where EnemyLocs carry no
+    ///   Col; the per-enemy Area field is FogRando's native override (same
+    ///   mechanism as the vanilla "Area: abyssal" entries in foglocations2.txt).
+    /// Unknown enemy names and names whose EnemyLoc belongs to another area are
+    /// configuration errors and throw.
     /// </summary>
     private static void SplitEnemyAreas(AnnotationData ann, MapSplits splits)
     {
         if (ann.Locations?.EnemyAreas == null)
         {
-            if (splits.Zones.Any(z => z.Cols.Count > 0))
-                Console.WriteLine("MapSplits: warning, cols configured but no foglocations loaded; EnemyArea split skipped");
+            if (splits.Zones.Any(z => z.Cols.Count > 0 || z.Enemies.Count > 0))
+                Console.WriteLine("MapSplits: warning, cols/enemies configured but no foglocations loaded; EnemyArea split skipped");
             return;
         }
-        foreach (var zone in splits.Zones.Where(z => z.Cols.Count > 0))
+        foreach (var zone in splits.Zones.Where(z => z.Cols.Count > 0 || z.Enemies.Count > 0))
         {
             var src = ann.Locations.EnemyAreas.FirstOrDefault(a => a.Name == zone.SplitFrom)
                 ?? throw new InvalidDataException(
                     $"map_splits: EnemyArea '{zone.SplitFrom}' not found for split '{zone.Name}'");
-            var prefixed = zone.Cols.Select(c => $"{zone.Map}_{c}").ToHashSet();
-            var srcCols = (src.Cols ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var moved = srcCols.Where(prefixed.Contains).ToList();
-            if (moved.Count != prefixed.Count)
-                throw new InvalidDataException(
-                    $"map_splits: cols missing from EnemyArea '{zone.SplitFrom}': "
-                    + string.Join(", ", prefixed.Except(moved)));
-            src.Cols = string.Join(' ', srcCols.Where(c => !prefixed.Contains(c)));
+
+            var moved = new List<string>();
+            if (zone.Cols.Count > 0)
+            {
+                var prefixed = zone.Cols.Select(c => $"{zone.Map}_{c}").ToHashSet();
+                var srcCols = (src.Cols ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                moved = srcCols.Where(prefixed.Contains).ToList();
+                if (moved.Count != prefixed.Count)
+                    throw new InvalidDataException(
+                        $"map_splits: cols missing from EnemyArea '{zone.SplitFrom}': "
+                        + string.Join(", ", prefixed.Except(moved)));
+                src.Cols = string.Join(' ', srcCols.Where(c => !prefixed.Contains(c)));
+            }
             ann.Locations.EnemyAreas.Add(new AnnotationData.EnemyLocArea
             {
                 Name = zone.Name,
@@ -139,16 +151,36 @@ public static class MapSplitsInjector
             });
 
             var colSet = zone.Cols.ToHashSet();
+            var wanted = zone.Enemies.ToHashSet();
+            var found = new HashSet<string>();
             int reassigned = 0;
             foreach (var loc in ann.Locations.Enemies)
             {
-                if (loc.Map == zone.Map && loc.Col != null && colSet.Contains(loc.Col)
-                    && loc.ActualArea == zone.SplitFrom)
+                if (loc.Map != zone.Map)
+                    continue;
+                bool byCol = loc.Col != null && colSet.Contains(loc.Col);
+                bool byId = loc.ID != null && wanted.Contains(loc.ID);
+                if (!byCol && !byId)
+                    continue;
+                if (loc.ActualArea != zone.SplitFrom)
                 {
-                    loc.Area = zone.Name;
-                    reassigned++;
+                    if (byId)
+                        throw new InvalidDataException(
+                            $"map_splits: enemy '{loc.ID}' belongs to area '{loc.ActualArea}', "
+                            + $"expected '{zone.SplitFrom}' for split '{zone.Name}'");
+                    continue;
                 }
+                loc.Area = zone.Name;
+                reassigned++;
+                if (byId)
+                    found.Add(loc.ID!);
             }
+            var missing = wanted.Except(found).OrderBy(x => x).ToList();
+            if (missing.Count > 0)
+                throw new InvalidDataException(
+                    $"map_splits: enemies not found in foglocations for map '{zone.Map}': "
+                    + string.Join(", ", missing));
+
             Console.WriteLine(
                 $"MapSplits: EnemyArea '{zone.SplitFrom}' -> '{zone.Name}': "
                 + $"{moved.Count} cols, {reassigned} enemies reassigned");

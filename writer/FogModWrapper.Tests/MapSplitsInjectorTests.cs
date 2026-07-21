@@ -156,6 +156,70 @@ public class MapSplitsInjectorTests
         Assert.Equal("m99_00_00_00_h001000", ann.Locations.EnemyAreas[0].Cols);
     }
 
+    [Fact]
+    public void Apply_ReassignsEnemiesById()
+    {
+        var ann = MakeAnn();
+        ann.Locations = new AnnotationData.FogLocations
+        {
+            EnemyAreas = new List<AnnotationData.EnemyLocArea>
+            {
+                new() { Name = "lower", MainMap = "m99_00_00_00", ScalingTier = 20 },
+            },
+            Enemies = new List<AnnotationData.EnemyLoc>
+            {
+                new() { Map = "m99_00_00_00", ID = "c5651_9000", AArea = "lower" },
+                new() { Map = "m99_00_00_00", ID = "c5651_9001", AArea = "lower" },
+                new() { Map = "m88_00_00_00", ID = "c5651_9000", AArea = "elsewhere" },
+            },
+        };
+        MapSplitsInjector.Apply(ann, MakeSplits(enemies: new List<string> { "c5651_9000" }));
+
+        // A dedicated EnemyArea is created even with cols empty
+        var dst = ann.Locations.EnemyAreas.Single(a => a.Name == "upper");
+        Assert.Equal(20, dst.ScalingTier);
+        // Only the listed ID on the zone's map is reassigned
+        Assert.Equal("upper", ann.Locations.Enemies[0].Area);
+        Assert.Null(ann.Locations.Enemies[1].Area);
+        Assert.Null(ann.Locations.Enemies[2].Area);
+    }
+
+    [Fact]
+    public void Apply_EnemyIdMissing_Throws()
+    {
+        var ann = MakeAnn();
+        ann.Locations = new AnnotationData.FogLocations
+        {
+            EnemyAreas = new List<AnnotationData.EnemyLocArea>
+            {
+                new() { Name = "lower", ScalingTier = 20 },
+            },
+            Enemies = new List<AnnotationData.EnemyLoc>(),
+        };
+        var ex = Assert.Throws<InvalidDataException>(() =>
+            MapSplitsInjector.Apply(ann, MakeSplits(enemies: new List<string> { "c9999_0000" })));
+        Assert.Contains("c9999_0000", ex.Message);
+    }
+
+    [Fact]
+    public void Apply_EnemyWrongArea_Throws()
+    {
+        var ann = MakeAnn();
+        ann.Locations = new AnnotationData.FogLocations
+        {
+            EnemyAreas = new List<AnnotationData.EnemyLocArea>
+            {
+                new() { Name = "lower", ScalingTier = 20 },
+            },
+            Enemies = new List<AnnotationData.EnemyLoc>
+            {
+                new() { Map = "m99_00_00_00", ID = "c5651_9000", AArea = "someboss" },
+            },
+        };
+        Assert.Throws<InvalidDataException>(() =>
+            MapSplitsInjector.Apply(ann, MakeSplits(enemies: new List<string> { "c5651_9000" })));
+    }
+
     private static EMEVD MakeEmevdWithEvent0()
     {
         var emevd = new EMEVD();
