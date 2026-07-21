@@ -337,8 +337,8 @@ type = "final_boss"
 weight = 4
 
 [zones.enirilim]
-type = "legacy_dungeon"
-weight = 2  # lower half of the climb (Outer Wall + First Rise); calibrate after playtesting
+type = "mini_dungeon"
+weight = 1.5
 # Cut world links so the climb stays warp-entered and detached from Belurat
 # and the Leda tail (it still merges with enirilim_upper via that zone's
 # declared drops_to, forming the overlapping cluster variant):
@@ -348,8 +348,8 @@ weight = 2  # lower half of the climb (Outer Wall + First Rise); calibrate after
 no_drop_to = ["belurat_enirilim", "belurat_stairs", "enirilim_stairs"]
 
 [zones.enirilim_upper]
-type = "legacy_dungeon"
-weight = 2  # upper half (Spiral Rise + Cleansing Chamber Anteroom); calibrate after playtesting
+type = "mini_dungeon"
+weight = 2
 
 [zones.enirilim_stairs]
 # Leda tail: sealed behind a synthetic fog gate (defined in data/map_splits.toml)
@@ -366,7 +366,11 @@ no_drop_to = ["enirilim"]
 display_name = "Enir-Ilim Spiral Rise"
 # Each synthetic gate's two sides share one doorway: entering through a gate
 # must not allow exiting through the same gate (zero-length placement).
-proximity_groups = [["AEG099_002_9100"], ["AEG099_002_9101"]]
+proximity_groups = [
+    ["enirilim:AEG099_002_9100",
+     "enirilim_upper:AEG099_002_9100",
+    ]
+]
 
 [zones.scadualtus_catacombs_boss]
 type = "boss_arena"  # fog.txt Entrance has "major" tag, but Jori is a catacomb boss, not a remembrance boss
