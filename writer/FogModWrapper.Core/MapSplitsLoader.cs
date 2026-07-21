@@ -5,7 +5,7 @@ namespace FogModWrapper;
 
 public sealed record SplitZone(
     string Name, string Map, string DisplayName, List<string> Tags,
-    string SplitFrom, List<string> Cols);
+    string SplitFrom, List<string> Cols, List<string> Enemies);
 
 public sealed record SplitFog(
     string Name, string Map, int Id, string Text, string MakeFrom,
@@ -50,7 +50,8 @@ public static class MapSplitsLoader
                     RequireString(entry, "display_name"),
                     ReadStringList(entry, "tags"),
                     RequireString(entry, "split_from"),
-                    ReadStringList(entry, "cols")));
+                    ReadStringList(entry, "cols"),
+                    ReadStringList(entry, "enemies")));
             }
         }
         var fogs = new List<SplitFog>();

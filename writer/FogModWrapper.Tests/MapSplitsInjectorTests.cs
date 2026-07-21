@@ -7,11 +7,11 @@ namespace FogModWrapper.Tests;
 
 public class MapSplitsInjectorTests
 {
-    private static MapSplits MakeSplits(List<string>? cols = null) => new(
+    private static MapSplits MakeSplits(List<string>? cols = null, List<string>? enemies = null) => new(
         new List<SplitZone>
         {
             new("upper", "m99_00_00_00", "Upper Half", new List<string> { "dlc" },
-                "lower", cols ?? new List<string>()),
+                "lower", cols ?? new List<string>(), enemies ?? new List<string>()),
         },
         new List<SplitFog>
         {
@@ -97,7 +97,7 @@ public class MapSplitsInjectorTests
             new List<SplitZone>
             {
                 new("upper", "m99_00_00_00", "Upper Half", new List<string>(),
-                    "lower", new List<string>()),
+                    "lower", new List<string>(), new List<string>()),
             },
             new List<SplitFog>());
         MapSplitsInjector.Apply(ann, splits);

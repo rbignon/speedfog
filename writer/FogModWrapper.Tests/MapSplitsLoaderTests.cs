@@ -55,4 +55,44 @@ public class MapSplitsLoaderTests
             name = "X"
             """));
     }
+
+    [Fact]
+    public void Parse_ReadsEnemies()
+    {
+        var splits = MapSplitsLoader.Parse("""
+            [[zones]]
+            name = "upper"
+            map = "m99_00_00_00"
+            display_name = "Upper Half"
+            split_from = "lower"
+            enemies = ["c5651_9000", "c5980_9001"]
+            """);
+        Assert.Equal(new List<string> { "c5651_9000", "c5980_9001" }, splits.Zones[0].Enemies);
+    }
+
+    [Fact]
+    public void Parse_MissingEnemies_DefaultsEmpty()
+    {
+        var splits = MapSplitsLoader.Parse("""
+            [[zones]]
+            name = "upper"
+            map = "m99_00_00_00"
+            display_name = "Upper Half"
+            split_from = "lower"
+            """);
+        Assert.Empty(splits.Zones[0].Enemies);
+    }
+
+    [Fact]
+    public void Parse_EnemiesWrongShape_Throws()
+    {
+        Assert.Throws<InvalidDataException>(() => MapSplitsLoader.Parse("""
+            [[zones]]
+            name = "upper"
+            map = "m99_00_00_00"
+            display_name = "Upper Half"
+            split_from = "lower"
+            enemies = [12]
+            """));
+    }
 }
