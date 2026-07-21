@@ -45,7 +45,7 @@ boss_arena = "arène de boss"
 major_boss = "boss majeur"
 
 # =============================================================================
-# Noms propres — DRAFT
+# Noms propres (DRAFT)
 # Lancer tools/update_i18n_names.py pour mettre à jour depuis les FMG du jeu.
 # =============================================================================
 
@@ -433,7 +433,7 @@ major_boss = "boss majeur"
 "Yelough Anix Tunnel" = "Galerie d'anis jaune"
 
 # =============================================================================
-# Patterns — labels de fog gates (champ text)
+# Patterns : labels de fog gates (champ text)
 # =============================================================================
 # Le code match le suffixe anglais, extrait le nom d'entité, le traduit,
 # puis applique le pattern français.
@@ -468,7 +468,7 @@ major_boss = "boss majeur"
 "{location} entrance new gate" = "Nouvelle porte d'entrée de {location}"
 
 # =============================================================================
-# Patterns — descriptions de fog gates (champ side_text)
+# Patterns : descriptions de fog gates (champ side_text)
 # =============================================================================
 
 [patterns.side_text]
@@ -490,10 +490,10 @@ major_boss = "boss majeur"
 "before {boss}'s arena" = "avant l'arène de {boss}"
 "after {boss}'s arena" = "après l'arène de {boss}"
 "after {boss}'s arena in {location}" = "après l'arène de {boss} dans {location}"
-# Retours post-boss ("completing" must come before bare "{boss}" — first match wins)
+# Retours post-boss ("completing" must come before bare "{boss}", first match wins)
 "return to entrance after completing {zone}" = "retour à l'entrée après {zone}"
 "return to entrance after {boss}" = "retour à l'entrée après {boss}"
-# Entrées/sorties de zones (possessive before bare zone — first match wins)
+# Entrées/sorties de zones (possessive before bare zone, first match wins)
 "at the entrance from {boss}'s arena" = "à l'entrée depuis l'arène de {boss}"
 "at the entrance from {zone}" = "à l'entrée depuis {zone}"
 "at the entrance to {zone}" = "à l'entrée de {zone}"
@@ -512,7 +512,7 @@ major_boss = "boss majeur"
 "{zone1}-{zone2} boundary" = "frontière {zone1}-{zone2}"
 
 # =============================================================================
-# Patterns — segments de display_name (noms composites "Region - Location - Boss")
+# Patterns : segments de display_name (noms composites "Region - Location - Boss")
 # =============================================================================
 # Le code serveur split sur " - " et traduit chaque segment via [names.*].
 # Les patterns ci-dessous couvrent les segments descriptifs/positionnels
@@ -538,7 +538,7 @@ major_boss = "boss majeur"
 "Enir-Ilim Spiral Rise" = "Tour hélicoïdale d'Enir-Ilim"
 
 # =============================================================================
-# Post-traitement — règles regex appliquées après substitution de patterns
+# Post-traitement : règles regex appliquées après substitution de patterns
 # Contractions grammaticales obligatoires + élision devant voyelle.
 # Les contractions d'articles sont appliquées AVANT l'élision.
 # =============================================================================
@@ -586,7 +586,7 @@ pattern = "\\bDe ([AEIOUÀÂÉÈÊËÎÏÔÛÜŒaeiouàâéèêëîïôûüœ])"
 replacement = "D'\\1"
 
 # =============================================================================
-# Overrides — labels spéciaux (champ text)
+# Overrides : labels spéciaux (champ text)
 # Traductions complètes pour les labels qui ne matchent aucun pattern.
 # =============================================================================
 
@@ -655,7 +655,7 @@ replacement = "D'\\1"
 "Caelid Divine Tower right entrance" = "Tour Divine de Caelid (entrée droite)"
 
 # =============================================================================
-# Overrides — descriptions non-formulaïques (champ side_text)
+# Overrides : descriptions non-formulaïques (champ side_text)
 # Traductions complètes pour les descriptions qui ne matchent aucun pattern.
 # =============================================================================
 
@@ -724,7 +724,7 @@ replacement = "D'\\1"
 "before back left of Godskin Duo arena, by the crumbled stairs" = "avant l'arrière gauche de l'arène du Duo sanctechair, près des escaliers effondrés"
 "outside the balcony above Godskin Duo's arena" = "à l'extérieur du balcon au-dessus de l'arène du Duo sanctechair"
 "up the stairs from Dragon Temple Transept" = "en haut des escaliers depuis le Transept du Temple des dragons"
-# NB: "defeathing" is an upstream typo in FogRando fog.txt — key must match exactly
+# NB: "defeathing" is an upstream typo in FogRando fog.txt, key must match exactly
 "warp after defeathing Maliketh, or repeating the warp using the grace" = "téléportation après avoir vaincu Maliketh, ou en répétant via la grâce"
 
 # --- Fissure / Jagged Peak ---
@@ -836,7 +836,7 @@ replacement = "D'\\1"
 "at the elevator to West Rampart" = "à l'ascenseur vers le Rempart Ouest"
 
 # --- Abduction ---
-"getting abducted at the bottom of the elevator. this requires dying in the bottom 30 meters, not above that" = "en se faisant enlever au bas de l'ascenseur: il faut mourir dans les 30 derniers mètres, pas au-dessus"
+"getting abducted at the bottom of the elevator. this requires dying in the bottom 30 meters, not above that" = "en se faisant enlever au bas de l'ascenseur (il faut mourir dans les 30 derniers mètres, pas au-dessus)"
 
 # --- Enir-Ilim split (portes synthétiques map_splits.toml) ---
 # Note: "tour hélicoïdale" est un équivalent approximatif — à confirmer via le nom officiel
