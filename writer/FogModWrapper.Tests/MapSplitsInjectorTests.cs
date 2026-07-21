@@ -270,7 +270,7 @@ public class MapSplitsInjectorTests
         Assert.True(File.Exists(path), $"tracked data file missing: {path}");
 
         var splits = MapSplitsLoader.Load(path);
-        Assert.Equal(2, splits.Fogs.Count);
+        Assert.Equal(4, splits.Fogs.Count);
         Assert.All(splits.Fogs, f => Assert.Equal(6, f.MakeFrom.Split(' ').Length));
 
         var ann = new AnnotationData
@@ -285,11 +285,14 @@ public class MapSplitsInjectorTests
         };
         MapSplitsInjector.Apply(ann, splits);
         Assert.Contains(ann.Areas, a => a.Name == "enirilim_upper");
-        Assert.Equal(2, ann.Entrances.Count);
+        Assert.Contains(ann.Areas, a => a.Name == "reprimand");
+        Assert.Equal(4, ann.Areas.Count); // enirilim, enirilim_stairs, enirilim_upper, reprimand
+        Assert.Equal(4, ann.Entrances.Count);
 
-        // Both real fogs live in m20_01_00_00: InjectShowSfx must aggregate
-        // them into the same map EMEVD (drift guard for the fog 'map' field
-        // vs. the EMEVD filename convention).
+        // Synthetic fogs are grouped per map: InjectShowSfx aggregates fogs
+        // by target map (m20_01_00_00 has Enir-Ilim pair, m61_49_43_00 has Fort
+        // of Reprimand pair). This guards the per-map aggregation and the fog
+        // 'map' field vs. the EMEVD filename convention.
         var emevd = MakeEmevdWithEvent0();
         int n = MapSplitsInjector.InjectShowSfx(emevd, "m20_01_00_00", splits, 9005775);
         Assert.Equal(2, n);
@@ -298,5 +301,15 @@ public class MapSplitsInjectorTests
             .Select(i => BitConverter.ToInt32(i.ArgData, 8))
             .ToList();
         Assert.Equal(new List<int> { 20011960, 20011961 }, entities);
+
+        // Parallel check for Fort of Reprimand fogs in m61_49_43_00
+        var emevd2 = MakeEmevdWithEvent0();
+        int n2 = MapSplitsInjector.InjectShowSfx(emevd2, "m61_49_43_00", splits, 9005775);
+        Assert.Equal(2, n2);
+        Assert.Equal(2, emevd2.Events[0].Instructions.Count);
+        var entities2 = emevd2.Events[0].Instructions
+            .Select(i => BitConverter.ToInt32(i.ArgData, 8))
+            .ToList();
+        Assert.Equal(new List<int> { 2049431960, 2049431961 }, entities2);
     }
 }

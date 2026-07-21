@@ -58,3 +58,54 @@ make_from = "AEG099_002 AEG099_002_9000 -307.093 169.778 -307.931 104.0"
 # doorway, descend), on top of the default aside=exit-only role.
 aside = { area = "enirilim_upper", text = "before Leda's arena", entry = true }
 bside = { area = "enirilim_stairs", text = "arriving on the stairs before Leda" }
+
+# --- Fort of Reprimand (m61_49_43_00, DLC Scadu Altus) ---
+# First overworld-tile instance: the fort is carved out of the excluded
+# `scadualtus` overworld zone; Fog 2's BSide gives the orphan fog.txt area
+# scadualtus_edredd_boss (Black Knight Edredd, DefeatFlag 2049430850) its
+# first fog boundary, which turns it into a boss_arena cluster.
+# Roger's captures have Z sign-inverted vs the MSB frame on overworld tiles
+# (calibrated at Edredd's spawn (69, 396, -96)); coordinates below are
+# already converted. See the spec 2026-07-21-fort-reprimand-map-splits-design.md.
+[[zones]]
+name = "reprimand"
+map = "m61_49_43_00"
+display_name = "Fort of Reprimand"
+tags = ["dlc"]
+split_from = "scadualtus"
+cols = []
+# Fort interior enemies (between the two gates), reassigned so they scale
+# with the cluster tier instead of staying at the vanilla DLC level: the
+# scadualtus EnemyArea is never in the DAG. Derived from the MSB (bbox
+# x 0..120, y 370..430, z -92..-10); excludes the c1000 NPC, the gatehouse
+# c5401 trio on the approach side, and the crypt behind Fog 2 (boss zone).
+enemies = [
+  "c5651_9000", "c5651_9001", "c5651_9002", "c5651_9003", "c5651_9009",
+  "c5970_9001", "c5970_9002",
+  "c5980_9000", "c5980_9001", "c5980_9002",
+]
+
+# Fog 1: the fort's front gate, ~5.2 m opening.
+# Captured segment (Z negated): (15.456, 385.934, -19.050) -> (20.596, 385.934, -18.119)
+# Yaw = atan2(dx, dz) + 90 (see the Enir-Ilim entries above).
+[[fogs]]
+name = "AEG099_003_9100"
+map = "m61_49_43_00"
+id = 2049431960
+text = "Fort of Reprimand gate"
+make_from = "AEG099_003 AEG099_090_9000 18.026 385.934 -18.585 169.7"
+aside = { area = "scadualtus", text = "outside the Fort of Reprimand gate" }
+bside = { area = "reprimand", text = "inside the Fort of Reprimand gate" }
+
+# Fog 2: the doorway into Edredd's chapel (the dead-end boss room), ~1.0 m.
+# Captured segment (Z negated): (55.411, 396.481, -86.473) -> (54.884, 396.481, -87.314)
+# bside.exit: the boss cluster's only exit, back through this gate after the
+# DefeatFlag (allow_entry_as_exit on the cluster).
+[[fogs]]
+name = "AEG099_001_9101"
+map = "m61_49_43_00"
+id = 2049431961
+text = "Before Edredd"
+make_from = "AEG099_001 AEG099_090_9000 55.148 396.481 -86.894 -57.9"
+aside = { area = "reprimand", text = "before Black Knight Edredd's chapel" }
+bside = { area = "scadualtus_edredd_boss", text = "in Black Knight Edredd's chapel", exit = true }

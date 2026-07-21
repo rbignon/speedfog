@@ -372,8 +372,26 @@ proximity_groups = [
     ]
 ]
 
+[clusters.scadualtus_edredd_boss_8c7d]
+# fog.txt Text is "Scadu Altus - Black Knight Edredd"; racing UI should name
+# the fort instead.
+display_name = "Fort of Reprimand - Black Knight Edredd"
+
 [zones.scadualtus_catacombs_boss]
 type = "boss_arena"  # fog.txt Entrance has "major" tag, but Jori is a catacomb boss, not a remembrance boss
+
+[zones.reprimand]
+# Synthetic map_splits zone (Fort of Reprimand interior); m61 maps classify
+# as "other" without this override.
+type = "mini_dungeon"
+weight = 2
+
+[zones.scadualtus_edredd_boss]
+# Orphan fog.txt area (no vanilla fogs); gains its first boundary from the
+# map_splits gate AEG099_001_9101 and becomes a single-gate boss arena.
+type = "boss_arena"
+weight = 1
+allow_entry_as_exit = true
 
 [zones.scaduview_gaius]
 weight = 2
