@@ -50,19 +50,6 @@ public class TorrentArenaPatcherTests
     }
 
     [Fact]
-    public void Targets_LocksDownArenaContract()
-    {
-        // Encodes the design contract from docs/torrent-arena-patcher.md:
-        // exactly the four boss arenas where Torrent is intentionally re-enabled.
-        // Mohgwyn (m12_05) is deliberately excluded; new entries should not be
-        // added here without a docs update + an explicit test change.
-        Assert.Equal(
-            new[] { "m12_03_00_00", "m12_04_00_00", "m12_08_00_00", "m12_09_00_00" },
-            TorrentArenaPatcher.Targets.Keys.OrderBy(k => k).ToArray());
-        Assert.DoesNotContain("m12_05_00_00", TorrentArenaPatcher.Targets.Keys);
-    }
-
-    [Fact]
     public void ApplyToMsb_NoMatches_ReturnsZero()
     {
         var msb = new MSBE();

@@ -94,3 +94,24 @@ on = true  # Stormveil barred gate (AEG219_050_0500, lever AEG219_030_0500)
 map = "m20_01_00_00"
 flag = 20018540
 on = true  # Enir-Ilim Spiral Rise split door (AEG417_012_0501, ObjAct 417012)
+
+# Boss arenas where vanilla blocks Torrent via Collision.DisableTorrent;
+# SpeedFog flips the flag back on the listed collision cells only. Names
+# found with `game_inspect list-collisions --torrent-only`. Mohgwyn (m12_05)
+# is deliberately excluded. See docs/torrent-arena-patcher.md.
+
+[[torrent_arenas]]
+map = "m12_03_00_00"
+collisions = ["h006000"]  # deeproot_boss (Fia's Champions)
+
+[[torrent_arenas]]
+map = "m12_04_00_00"
+collisions = ["h020300", "h020400", "h020500"]  # ainsel_boss (Astel, Naturalborn of the Void)
+
+[[torrent_arenas]]
+map = "m12_08_00_00"
+collisions = ["h020300", "h020500", "h901000", "h905000"]  # siofra_boss (Ancestor Spirit)
+
+[[torrent_arenas]]
+map = "m12_09_00_00"
+collisions = ["h020300", "h020500", "h901000", "h905000"]  # siofra_nokron_boss (Regal Ancestor Spirit)

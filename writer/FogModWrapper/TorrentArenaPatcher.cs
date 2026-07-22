@@ -16,40 +16,20 @@ namespace FogModWrapper;
 /// </summary>
 public static class TorrentArenaPatcher
 {
-    private static readonly Dictionary<string, HashSet<string>> TargetCollisions = new()
-    {
-        // deeproot_boss (Fia's Champions)
-        ["m12_03_00_00"] = new() { "h006000" },
-
-        // ainsel_boss (Astel, Naturalborn of the Void)
-        ["m12_04_00_00"] = new() { "h020300", "h020400", "h020500" },
-
-        // siofra_boss (Ancestor Spirit)
-        ["m12_08_00_00"] = new() { "h020300", "h020500", "h901000", "h905000" },
-
-        // siofra_nokron_boss (Regal Ancestor Spirit)
-        ["m12_09_00_00"] = new() { "h020300", "h020500", "h901000", "h905000" },
-    };
-
     /// <summary>
-    /// Map IDs whose arena collisions we re-enable Torrent on. Exposed for
-    /// tests so the data contract stays locked.
-    /// </summary>
-    public static IReadOnlyDictionary<string, HashSet<string>> Targets => TargetCollisions;
-
-    /// <summary>
-    /// Patch every targeted arena MSB. If FogMod already wrote the MSB into
+    /// Patch every targeted arena MSB from the [[torrent_arenas]] entries of
+    /// data/game_tweaks.toml. If FogMod already wrote the MSB into
     /// <paramref name="modDir"/> we edit it in place; otherwise we read the
     /// vanilla MSB from <paramref name="gameDir"/> and write the patched
     /// version into the mod output.
     /// </summary>
-    public static void Patch(string modDir, string gameDir)
+    public static void Patch(string modDir, string gameDir, IReadOnlyList<TorrentArena> arenas)
     {
         int totalFlipped = 0;
         int patchedMaps = 0;
-        foreach (var (mapId, names) in TargetCollisions)
+        foreach (var arena in arenas)
         {
-            int flipped = PatchMap(modDir, gameDir, mapId, names);
+            int flipped = PatchMap(modDir, gameDir, arena.Map, new HashSet<string>(arena.Collisions));
             if (flipped > 0)
             {
                 totalFlipped += flipped;
@@ -59,7 +39,7 @@ public static class TorrentArenaPatcher
         Console.WriteLine(
             $"TorrentArenaPatcher: enabled Torrent on {totalFlipped} collision(s) " +
             $"across {patchedMaps} arena MSB(s)");
-        if (patchedMaps == 0)
+        if (arenas.Count > 0 && patchedMaps == 0)
         {
             Console.Error.WriteLine(
                 "  Warning: no arena MSB was patched. Check that gameDir is " +
