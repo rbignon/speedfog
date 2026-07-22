@@ -831,9 +831,9 @@ Example:
         StartupFlagInjector.Inject(ctx.ModDir, ctx.Tweaks.StartupFlags);
 
         // Remove vanilla assets that conflict with fog gates: graph.json entities
-        // plus the hardcoded Enir-Ilim list (thorns barrier).
+        // plus the [[remove_entities]] entries of data/game_tweaks.toml.
         var removeEntities = ctx.GraphData.RemoveEntities
-            .Concat(EnirilimAssetRemover.GetEntities())
+            .Concat(ctx.Tweaks.RemoveEntities)
             .ToList();
         if (removeEntities.Count > 0)
         {

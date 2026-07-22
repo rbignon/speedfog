@@ -126,3 +126,13 @@ collisions = ["h020300", "h020500", "h901000", "h905000"]  # siofra_nokron_boss 
 map = "m61_49_42_00"
 position = [76.7, 303.2, 127.2]
 required_zone = "reprimand"  # Fort of Reprimand back-ravine spring (jumps up behind Edredd's chapel)
+
+# MSB assets removed post-Write by VanillaWarpRemover, merged with
+# graph.json's per-seed remove_entities. match_group = true matches
+# EntityGroupIDs instead of EntityID. Maps absent from the seed output are
+# skipped, so entries are no-ops when their map is not in the run.
+
+[[remove_entities]]
+map = "m20_01_00_00"
+entity_id = 20006662
+match_group = true  # Enir-Ilim Outer Wall thorns barrier: FogMod creates it as two assets (AEG410_901/905) sharing this EntityGroup and only disables it when flag 330 is ON, which SpeedFog keeps OFF
