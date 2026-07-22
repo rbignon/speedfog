@@ -128,6 +128,9 @@ bside = { area = "reprimand", text = "before Black Knight Edredd's chapel", exit
 # by BossStakePatcher to the RetryPoint's region). A box hugging the chapel:
 # FogMod's default cylinder is centered on the stake AT the gate, so any
 # radius bleeds symmetrically into the fort; the box's z edge sits flush
-# with the fog wall (z = -86.5) instead. Bounds from the MSB survey of the
-# chapel and crypt; tune in-game like make_from.
-stake_region = [30.0, 370.0, -120.0, 100.0, 412.0, -86.5]
+# with the fog wall (z = -86.5) instead. Only that wall face is
+# load-bearing: the other five faces are deliberately oversized into
+# walls/void (vanilla retry boxes are similarly generous, e.g. Ainsel's
+# 125x231x34), after a first survey-based fit clipped part of the arena.
+# Tune in-game like make_from.
+stake_region = [0.0, 340.0, -150.0, 130.0, 440.0, -86.5]
