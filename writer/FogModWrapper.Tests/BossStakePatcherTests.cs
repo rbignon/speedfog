@@ -45,6 +45,38 @@ public class BossStakePatcherTests
     }
 
     [Fact]
+    public void ApplyToMsb_StakeRegion_ReplacesCylinderWithBox()
+    {
+        // A cylinder centered on the stake AT the gate bleeds symmetrically
+        // through the fog wall into the neighbouring zone (2026-07-22 second
+        // playtest: deaths in the fort near the gate still offered the
+        // chapel respawn). The AABB from map_splits.toml becomes a box whose
+        // edge can sit flush with the wall.
+        var msb = MsbWithStake("boss_room");
+        msb.Regions.Others.Add(new MSBE.Region.Other
+        {
+            Name = "c0000_21335 stake",
+            Shape = new MSB.Shape.Cylinder { Radius = 40f, Height = 100f },
+            Position = new System.Numerics.Vector3(55.1f, 343.5f, -86.9f),
+        });
+
+        var patched = BossStakePatcher.ApplyToMsb(
+            msb, "boss_room", 1050294004,
+            new List<float> { 30f, 370f, -120f, 100f, 412f, -86.5f });
+
+        Assert.True(patched);
+        var region = msb.Regions.Others.Single(r => r.Name == "c0000_21335 stake");
+        var box = Assert.IsType<MSB.Shape.Box>(region.Shape);
+        Assert.Equal(70f, box.Width);
+        Assert.Equal(33.5f, box.Depth);
+        Assert.Equal(42f, box.Height);
+        // Bottom-center anchor of the AABB
+        Assert.Equal(65f, region.Position.X);
+        Assert.Equal(370f, region.Position.Y);
+        Assert.Equal(-103.25f, region.Position.Z);
+    }
+
+    [Fact]
     public void ApplyToMsb_NoMatchingStake_ReturnsFalse()
     {
         var msb = MsbWithStake("some_other_area");

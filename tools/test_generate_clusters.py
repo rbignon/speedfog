@@ -4903,6 +4903,17 @@ class TestMapSplits:
         splits["zones"][0]["enemies"] = ["scadualtus_high:c5401_9020"]
         _validate_map_splits(splits)  # must not raise
 
+    def test_validate_accepts_stake_region(self):
+        splits = self._splits()
+        splits["fogs"][0]["stake_region"] = [30.0, 370, -120.0, 100.0, 412.0, -86.5]
+        _validate_map_splits(splits)  # must not raise
+
+    def test_validate_rejects_bad_stake_region(self):
+        splits = self._splits()
+        splits["fogs"][0]["stake_region"] = [30.0, 370.0]
+        with pytest.raises(ValueError, match="stake_region"):
+            _validate_map_splits(splits)
+
     def test_validate_rejects_bad_area_qualifier(self):
         splits = self._splits()
         splits["zones"][0]["enemies"] = ["Bad-Area:c5401_9020"]

@@ -286,7 +286,7 @@ speedfog/
 | `DeathMarkerInjector` | Bloodstain markers at fog gates (MSB assets + EMEVD SFX) |
 | `BossTriggerInjector` | Locks boss arena exit fog gates by setting TrapFlag before entrance warp |
 | `TorrentArenaPatcher` | Re-enables Torrent in selected boss arenas by flipping `Collision.DisableTorrent`, targets come from `data/game_tweaks.toml` |
-| `BossStakePatcher` | Rescopes BossTrigger-less synthetic boss arena stakes to the cluster's zone-tracking entry flag (radius bounded at annotation time via MapSplitsInjector's StakeRadius) |
+| `BossStakePatcher` | Rescopes BossTrigger-less synthetic boss arena stakes to the cluster's zone-tracking entry flag, and reshapes the activation region into the fog's optional stake_region AABB box |
 | `WeatherInjector` | Forces a fixed weather and optionally pins the clock hour via a looping common.emevd event (opt-in via `[plugin.weather]`) |
 | `WeaponUpgradeInjector` | Weapon upgrade initialization for starting weapons with ashes of war |
 | `PhantomCatalogInjector` | Bakes phantom skin catalog (cosmetic auras) into PhantomParam/SpEffectVfxParam/SpEffectParam |

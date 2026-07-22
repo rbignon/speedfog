@@ -853,13 +853,18 @@ Example:
         // Rescope the activation flag of stakes created for BossTrigger-less
         // synthetic boss arenas (FogMod's 6001 fallback is always on, so the
         // stake activated before the player ever entered the arena). The
-        // spatial bound comes from Area.StakeRadius, set at annotation time.
+        // spatial bound is the StakeRadius cylinder set at annotation time,
+        // or the stake_region AABB box when the fog declares one.
         // See docs/map-splits.md.
         var stakeCandidates = ctx.MapSplits.Fogs
-            .SelectMany(f => new[] { (AreaName: f.ASideArea, f.Map), (AreaName: f.BSideArea, f.Map) })
+            .SelectMany(f => new[]
+            {
+                (AreaName: f.ASideArea, f.Map, f.StakeRegion),
+                (AreaName: f.BSideArea, f.Map, f.StakeRegion),
+            })
             .Where(x => ctx.Ann.Areas.Any(
                 a => a.Name == x.AreaName && a.DefeatFlag > 0 && a.BossTrigger <= 0))
-            .Distinct()
+            .DistinctBy(x => (x.AreaName, x.Map))
             .ToList();
         if (stakeCandidates.Count > 0)
         {

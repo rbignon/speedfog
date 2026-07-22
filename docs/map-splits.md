@@ -75,7 +75,9 @@ bside = { area = "enirilim_upper", text = "arriving at the Spiral Rise", exit = 
   below; the C# `MapSplitsLoader` does not read it). `[[fogs]]` requires
   non-empty strings `name`, `map`, `text`, `make_from`, plus an integer `id`;
   `aside`/`bside` are required tables each requiring non-empty strings
-  `area`/`text`. Both
+  `area`/`text`; an optional `stake_region` (list of exactly 6 numbers, an
+  AABB) bounds the boss-side stake's activation volume (see the Fort of
+  Reprimand instance). Both
   pipelines validate this before use, independently: C#'s `MapSplitsLoader`
   (`RequireString`/`ReadStringList`) throws `InvalidDataException`, Python's
   `_validate_map_splits` (called at the top of `inject_map_splits`) throws
@@ -554,8 +556,16 @@ playtest gap: Edredd's chapel had no stake, unlike every other boss arena):
   the RetryPoint's region takes precedence over its `UnkT08` distance
   field), and `BossStakePatcher` (post-Write) rescopes the RetryPoint's
   `EventFlagID` to the boss cluster's zone-tracking entry flag (graph.json
-  `connections`, set by the fogwarp right before warping into the arena),
-  so the stake only activates once the player has actually entered.
+  `connections`, set by the fogwarp right before warping into the arena).
+- A radius alone proved insufficient (2026-07-22 second playtest): the
+  cylinder is centered on the stake AT the gate, so any radius bleeds
+  symmetrically through the fog wall into the fort. The optional
+  `stake_region = [x1, y1, z1, x2, y2, z2]` key on the `[[fogs]]` entry
+  (AABB, tunable in-game like `make_from`) makes `BossStakePatcher`
+  reshape the activation region into a box whose edge sits flush with the
+  wall (`Box(70x34x42)` hugging the chapel and crypt for the Fort
+  instance). Python validates the key's shape in parity
+  (`_validate_map_splits`).
 
 **Entity IDs**: FOG 1 is `AEG099_003_9100` / `2049431960` (wide gate, ~5.2m
 opening); FOG 2 is `AEG099_001_9101` / `2049431961` (narrow gate, ~1.0m

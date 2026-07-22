@@ -124,3 +124,10 @@ text = "Before Edredd"
 make_from = "AEG099_001 AEG099_090_9000 55.148 396.481 -86.894 -57.9"
 aside = { area = "scadualtus_edredd_boss", text = "in Black Knight Edredd's chapel", entry = true }
 bside = { area = "reprimand", text = "before Black Knight Edredd's chapel", exit = true }
+# Stake of Marika activation volume (AABB [x1, y1, z1, x2, y2, z2], applied
+# by BossStakePatcher to the RetryPoint's region). A box hugging the chapel:
+# FogMod's default cylinder is centered on the stake AT the gate, so any
+# radius bleeds symmetrically into the fort; the box's z edge sits flush
+# with the fog wall (z = -86.5) instead. Bounds from the MSB survey of the
+# chapel and crypt; tune in-game like make_from.
+stake_region = [30.0, 370.0, -120.0, 100.0, 412.0, -86.5]
