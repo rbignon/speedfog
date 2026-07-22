@@ -125,6 +125,7 @@ speedfog/
 │   │   ├── SpiritspringRemover.cs  # Remove spiritspring jump regions bypassing map-splits chokepoints
 │   │   ├── HeavyDoorMessagePatcher.cs  # Suppress "heavy door" popup in common_func
 │   │   ├── TorrentArenaPatcher.cs  # Re-enable Torrent inside selected boss arenas
+│   │   ├── BossStakePatcher.cs  # Rescope synthetic boss arena stake activation flag
 │   │   ├── WeatherInjector.cs  # Force weather / pin clock hour ([plugin.weather])
 │   │   ├── WeaponUpgradeInjector.cs  # Weapon upgrade initialization for starting weapons
 │   │   └── eldendata/       # FogRando game data (gitignored)
@@ -285,6 +286,7 @@ speedfog/
 | `DeathMarkerInjector` | Bloodstain markers at fog gates (MSB assets + EMEVD SFX) |
 | `BossTriggerInjector` | Locks boss arena exit fog gates by setting TrapFlag before entrance warp |
 | `TorrentArenaPatcher` | Re-enables Torrent in selected boss arenas by flipping `Collision.DisableTorrent`, targets come from `data/game_tweaks.toml` |
+| `BossStakePatcher` | Rescopes BossTrigger-less synthetic boss arena stakes to the cluster's zone-tracking entry flag (radius bounded at annotation time via MapSplitsInjector's StakeRadius) |
 | `WeatherInjector` | Forces a fixed weather and optionally pins the clock hour via a looping common.emevd event (opt-in via `[plugin.weather]`) |
 | `WeaponUpgradeInjector` | Weapon upgrade initialization for starting weapons with ashes of war |
 | `PhantomCatalogInjector` | Bakes phantom skin catalog (cosmetic auras) into PhantomParam/SpEffectVfxParam/SpEffectParam |
@@ -499,6 +501,9 @@ dotnet run -- search output/mods/fogmod/event/ --flag 330
 
 # Trace event initialization (find InitializeEvent calls + parameter data)
 dotnet run -- init output/mods/fogmod/event/ --event 1040290310
+
+# Dump RetryPoints (Stakes of Marika) with activation flag/radius/region
+dotnet run -- retrypoints output/mods/fogmod/map/mapstudio/ --map-filter m61_49_43
 ```
 
 ### game_inspect Tool

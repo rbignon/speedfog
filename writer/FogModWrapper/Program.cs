@@ -850,6 +850,22 @@ Example:
         // collision DisableTorrent flags. See docs/torrent-arena-patcher.md.
         TorrentArenaPatcher.Patch(ctx.ModDir, ctx.Config.GameDir, ctx.Tweaks.TorrentArenas);
 
+        // Rescope the activation flag of stakes created for BossTrigger-less
+        // synthetic boss arenas (FogMod's 6001 fallback is always on, so the
+        // stake activated before the player ever entered the arena). The
+        // spatial bound comes from Area.StakeRadius, set at annotation time.
+        // See docs/map-splits.md.
+        var stakeCandidates = ctx.MapSplits.Fogs
+            .SelectMany(f => new[] { (AreaName: f.ASideArea, f.Map), (AreaName: f.BSideArea, f.Map) })
+            .Where(x => ctx.Ann.Areas.Any(
+                a => a.Name == x.AreaName && a.DefeatFlag > 0 && a.BossTrigger <= 0))
+            .Distinct()
+            .ToList();
+        if (stakeCandidates.Count > 0)
+        {
+            BossStakePatcher.Patch(ctx.ModDir, stakeCandidates, ctx.GraphData.Connections);
+        }
+
         // Remove spiritspring jumps that bypass map-splits chokepoints
         // (Fort of Reprimand back ravine). See docs/map-splits.md.
         SpiritspringRemover.Patch(

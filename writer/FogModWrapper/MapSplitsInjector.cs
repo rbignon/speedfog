@@ -116,8 +116,13 @@ public static class MapSplitsInjector
                 continue;
             var makeFrom = fog.MakeFrom.Split(' ', StringSplitOptions.RemoveEmptyEntries);
             area.StakePos = $"{fog.Map} {string.Join(' ', makeFrom.Skip(2))}";
+            // Bound the stake's activation cylinder (FogMod: StakeRadius > 0
+            // ? StakeRadius : 150) to arena size; the 150 default reaches
+            // deep into the neighbouring zone on the same map. 40 covers
+            // Edredd's chapel (~37m from the stake to the far crypt corner).
+            area.StakeRadius = SyntheticBossStakeRadius;
             Console.WriteLine(
-                $"MapSplits: StakePos set on boss area '{areaName}' (stake at gate '{fog.Name}')");
+                $"MapSplits: StakePos set on boss area '{areaName}' (stake at gate '{fog.Name}', radius {SyntheticBossStakeRadius})");
         }
     }
 
@@ -127,6 +132,12 @@ public static class MapSplitsInjector
     /// (GameDataWriterE.cs ~L3211-3234) when no vanilla sfx id was captured.
     /// </summary>
     public const int WhiteFogSfx = 5;
+
+    /// <summary>
+    /// Activation radius (Area.StakeRadius) for stakes created on synthetic
+    /// boss arenas; see EnsureBossStakePos.
+    /// </summary>
+    public const int SyntheticBossStakeRadius = 40;
 
     /// <summary>
     /// Appends one showsfx init (ChangeAssetEnableState + CreateAssetfollowingSFX,

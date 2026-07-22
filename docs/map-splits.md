@@ -544,8 +544,18 @@ playtest gap: Edredd's chapel had no stake, unlike every other boss arena):
   null-checks it and places the stake at the main spawn point). Areas that
   already have a `BossTrigger` or `StakePos` are left untouched. Result for
   the Fort instance: `AEG099_500` stake + RetryPoint created at FOG 2's
-  chapel side, always-active (`EventFlagID` falls back to flag 6001 when
-  there is no `BossTrigger`).
+  chapel side.
+- FogMod's fallback activation for a BossTrigger-less stake is flag 6001
+  (always on) with a cylinder activation region of radius
+  `Area.StakeRadius > 0 ? StakeRadius : 150`: the 150 default reached the
+  whole fort, so dying anywhere in `reprimand` offered a respawn inside the
+  chapel (2026-07-22 playtest). Two-part fix: `EnsureBossStakePos` also
+  sets `Area.StakeRadius = 40` (arena-sized cylinder, native FogMod knob;
+  the RetryPoint's region takes precedence over its `UnkT08` distance
+  field), and `BossStakePatcher` (post-Write) rescopes the RetryPoint's
+  `EventFlagID` to the boss cluster's zone-tracking entry flag (graph.json
+  `connections`, set by the fogwarp right before warping into the arena),
+  so the stake only activates once the player has actually entered.
 
 **Entity IDs**: FOG 1 is `AEG099_003_9100` / `2049431960` (wide gate, ~5.2m
 opening); FOG 2 is `AEG099_001_9101` / `2049431961` (narrow gate, ~1.0m

@@ -47,6 +47,17 @@ for (int i = 2; i < args.Length; i++)
         searchFlag = int.Parse(args[++i]);
 }
 
+if (mode == "retrypoints")
+{
+    var msbFiles = GetMsbFiles(target, mapFilter);
+    if (msbFiles.Count == 0)
+    {
+        Console.Error.WriteLine($"No MSB files found: {target}");
+        return 1;
+    }
+    return DoRetryPoints(msbFiles);
+}
+
 if (mode == "objacts")
 {
     var msbFiles = GetMsbFiles(target, mapFilter);
@@ -487,6 +498,44 @@ static int DoInit(List<string> files, long eventId)
                     }
                 }
             }
+        }
+    }
+    return 0;
+}
+
+static int DoRetryPoints(List<string> msbFiles)
+{
+    foreach (var file in msbFiles)
+    {
+        var msb = MSBE.Read(file);
+        if (msb.Events.RetryPoints.Count == 0)
+            continue;
+        var fn = Path.GetFileName(file);
+        var assetPositions = msb.Parts.Assets.ToDictionary(a => a.Name, a => a.Position);
+        var regions = msb.Regions.GetEntries().ToDictionary(r => r.Name, r => r);
+
+        Console.WriteLine($"\n=== RetryPoints in {fn} ({msb.Events.RetryPoints.Count} entries) ===");
+        foreach (var rp in msb.Events.RetryPoints)
+        {
+            string pos = "";
+            if (rp.RetryPartName != null && assetPositions.TryGetValue(rp.RetryPartName, out var p))
+                pos = $"({p.X:F1}, {p.Y:F1}, {p.Z:F1})";
+            string region = "region=none";
+            if (rp.RetryRegionName != null && regions.TryGetValue(rp.RetryRegionName, out var r))
+            {
+                string shape = r.Shape switch
+                {
+                    MSB.Shape.Cylinder cyl => $"Cylinder(r={cyl.Radius:F0},h={cyl.Height:F0})",
+                    MSB.Shape.Sphere sph => $"Sphere(r={sph.Radius:F0})",
+                    MSB.Shape.Box box => $"Box({box.Width:F0}x{box.Depth:F0}x{box.Height:F0})",
+                    null => "null",
+                    var s => s.GetType().Name,
+                };
+                region = $"region={rp.RetryRegionName} type={r.GetType().Name} pos=({r.Position.X:F1},{r.Position.Y:F1},{r.Position.Z:F1}) shape={shape}";
+            }
+            else if (rp.RetryRegionName != null)
+                region = $"region={rp.RetryRegionName} (unresolved)";
+            Console.WriteLine($"  part={rp.RetryPartName,-30} {pos,-24} flag={rp.EventFlagID,-12} UnkT08={rp.UnkT08,-8} {region}  name={rp.Name}");
         }
     }
     return 0;

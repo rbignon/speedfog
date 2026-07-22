@@ -107,6 +107,7 @@ public class MapSplitsInjectorTests
         // neither, so the injector fills StakePos from the gate's placement.
         var bossArea = ann.Areas.Single(a => a.Name == "boss_room");
         Assert.Equal("m99_00_00_00 1.0 2.0 3.0 90.0", bossArea.StakePos);
+        Assert.Equal(MapSplitsInjector.SyntheticBossStakeRadius, bossArea.StakeRadius);
     }
 
     [Fact]
