@@ -102,8 +102,8 @@ map = "m61_49_43_00"
 id = 2049431960
 text = "Fort of Reprimand gate"
 make_from = "AEG099_003 AEG099_090_9000 18.026 388.534 37.585 165.0"
-aside = { area = "scadualtus", text = "outside the Fort of Reprimand gate" }
-bside = { area = "reprimand", text = "inside the Fort of Reprimand gate" }
+aside = { area = "scadualtus", text = "before the Fort of Reprimand" }
+bside = { area = "reprimand", text = "before the Fort of Reprimand" }
 
 # Fog 2: the doorway into Edredd's chapel, ~1.0 m. The reprimand cluster's
 # exit; the chapel behind it is a sealed, never-played tail (same pattern
@@ -121,10 +121,10 @@ bside = { area = "reprimand", text = "inside the Fort of Reprimand gate" }
 #   a valid cluster (the orphan boss area has no entry), so the tail stays
 #   out of the pool automatically.
 [[fogs]]
-name = "AEG099_001_9101"
+name = "AEG099_090_9101"
 map = "m61_49_43_00"
 id = 2049431961
 text = "Before Edredd"
 make_from = "AEG099_001 AEG099_090_9000 55.148 396.481 -86.894 -57.9"
-aside = { area = "scadualtus_edredd_boss", text = "in Black Knight Edredd's chapel" }
-bside = { area = "reprimand", text = "before Black Knight Edredd's chapel", exit = true }
+aside = { area = "scadualtus_edredd_boss", text = "at the front of Black Knight Edredd's arena" }
+bside = { area = "reprimand", text = "before Knight Edredd's arena", exit = true }

@@ -536,7 +536,7 @@ major_boss = "boss majeur"
 # Rise" n'apparaît que comme display_name de cluster, jamais comme segment
 # {location} substitué dans un pattern text/side_text.
 "Enir-Ilim Spiral Rise" = "Tour hélicoïdale d'Enir-Ilim"
-"Fort of Reprimand" = "Fort de la Semonce"
+"Fort of Reprimand" = "Fort de la Réprimande"
 
 # =============================================================================
 # Post-traitement : règles regex appliquées après substitution de patterns
@@ -840,17 +840,9 @@ replacement = "D'\\1"
 "getting abducted at the bottom of the elevator. this requires dying in the bottom 30 meters, not above that" = "en se faisant enlever au bas de l'ascenseur (il faut mourir dans les 30 derniers mètres, pas au-dessus)"
 
 # --- Enir-Ilim split (portes synthétiques map_splits.toml) ---
-# Note: "tour hélicoïdale" est un équivalent approximatif — à confirmer via le nom officiel
-# de la grâce "Spiral Rise" dans la version française du jeu (fmg_names.json ne couvre pas la DLC).
 "in front of the door at the top of the stairs before the Spiral Rise" = "devant la porte en haut des escaliers avant la tour hélicoïdale"
 "arriving at the Spiral Rise" = "en arrivant à la tour hélicoïdale"
-"before Leda's arena" = "devant l'arène de Leda"
 "arriving on the stairs before Leda" = "en arrivant sur les marches avant Leda"
 
 # --- Fort of Reprimand split (portes synthétiques map_splits.toml) ---
-# "Fort de la Semonce" = nom français officiel supposé du Fort of Reprimand
-# (à confirmer, fmg_names.json ne couvre pas la DLC).
-"outside the Fort of Reprimand gate" = "devant la porte du fort de la Semonce"
-"inside the Fort of Reprimand gate" = "derrière la porte du fort de la Semonce"
-"before Black Knight Edredd's chapel" = "devant la chapelle du chevalier noir Edredd"
-"in Black Knight Edredd's chapel" = "dans la chapelle du chevalier noir Edredd"
+"before the Fort of Reprimand gate" = "devant le Fort de la Réprimande"
