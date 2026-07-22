@@ -289,13 +289,13 @@ public static class DeathMarkerInjector
             var offsetsASide = GenerateOffsets(gateAsset.EntityID, gateAsset.Rotation.Y, isASide: true);
             var offsetsBSide = GenerateOffsets(gateAsset.EntityID, gateAsset.Rotation.Y, isASide: false);
 
-            // WORKAROUND: SoulsFormats' MSBE.Part.DeepCopy() shares the
-            // UnkPartNames array between base and clone (MemberwiseClone).
-            // Save and restore around the clone batch; the Unk1 group arrays
-            // are handled by DetachVisibilityGroups instead.
-            var savedUnkPartNames = baseAsset.UnkPartNames.ToArray();
-            var savedUnkT54 = baseAsset.UnkT54PartName;
-
+            // No save/restore needed around the clone batch: Part.DeepCopy
+            // clones EntityGroupIDs, Asset.DeepCopyTo reassigns the SOURCE's
+            // UnkPartNames to a fresh clone (an unqualified `UnkPartNames =
+            // Clone()`, so each clone ends up holding an array no longer
+            // referenced by the base), UnkT54PartName is an immutable string
+            // reference, and the Unk1 group arrays are detached per clone by
+            // DetachVisibilityGroups.
             foreach (var spec in partSpecs)
             {
                 var offsets = spec.IsASide ? offsetsASide : offsetsBSide;
@@ -329,12 +329,6 @@ public static class DeathMarkerInjector
                 nextEntityId++;
                 placedCount++;
             }
-
-            // Restore the base asset's UnkPartNames corrupted by the clones'
-            // in-place nulling of the shared array (EntityGroupIDs is cloned
-            // by Part.DeepCopy itself; the Unk1 arrays are detached per clone).
-            Array.Copy(savedUnkPartNames, baseAsset.UnkPartNames, savedUnkPartNames.Length);
-            baseAsset.UnkT54PartName = savedUnkT54;
         }
 
         if (placedCount == 0)

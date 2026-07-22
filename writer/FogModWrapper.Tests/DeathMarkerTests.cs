@@ -21,8 +21,13 @@ public class DeathMarkerTests
         baseAsset.Unk1.DisplayGroups[0] = 0x10;
         baseAsset.Unk1.DrawGroups[0] = 0x8;
         baseAsset.Unk1.CollisionMask[0] = 0x4;
-        baseAsset.Unk1.UnkC4 = -1;
+        baseAsset.Unk1.CollisionMask[31] = 0x2;
+        baseAsset.Unk1.Condition1 = 3;
         baseAsset.Unk1.Condition2 = 1;
+        baseAsset.Unk1.UnkC2 = 5;
+        baseAsset.Unk1.UnkC3 = 7;
+        baseAsset.Unk1.UnkC4 = -1;
+        baseAsset.Unk1.UnkC6 = 9;
 
         var clone = (MSBE.Part.Asset)baseAsset.DeepCopy();
         DeathMarkerInjector.DetachVisibilityGroups(clone);
@@ -30,8 +35,13 @@ public class DeathMarkerTests
         Assert.All(clone.Unk1.DisplayGroups, g => Assert.Equal(0u, g));
         Assert.All(clone.Unk1.DrawGroups, g => Assert.Equal(0u, g));
         Assert.Equal(0x4u, clone.Unk1.CollisionMask[0]);
-        Assert.Equal(-1, clone.Unk1.UnkC4);
+        Assert.Equal(0x2u, clone.Unk1.CollisionMask[31]);
+        Assert.Equal(3, clone.Unk1.Condition1);
         Assert.Equal(1, clone.Unk1.Condition2);
+        Assert.Equal(5, clone.Unk1.UnkC2);
+        Assert.Equal(7, clone.Unk1.UnkC3);
+        Assert.Equal(-1, clone.Unk1.UnkC4);
+        Assert.Equal(9, clone.Unk1.UnkC6);
 
         // The base asset keeps its own values: the clone no longer aliases
         // its arrays.

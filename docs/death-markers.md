@@ -79,20 +79,25 @@ and CollisionMask values preserved).
 
 ### DeepCopy Shallow Array Bug
 
-SoulsFormats' `MSBE.Part.DeepCopy()` clones `EntityGroupIDs` but shares the
-rest: `UnkStruct1.DeepCopy` only clones `CollisionMask`, leaving
-`DrawGroups`/`DisplayGroups` aliased between base and clone, and
-`UnkPartNames` is aliased at the Part level. Consequences:
+SoulsFormats' `MSBE.Part.Asset.DeepCopy()` aliasing, verified empirically
+against the shipped `writer/lib/SoulsFormats.dll` (2026-07-22 review probe):
 
-- Editing a clone's aliased arrays silently corrupts the base asset. For fog
-  gates this caused "visible from far, disappears when approaching".
-- The aliasing also runs the other way: restoring the base's arrays after a
-  clone batch resets every clone that still aliases them (this is what made
-  the old `ApplyDrawGroups` a no-op).
-
-Fix: `DetachVisibilityGroups()` replaces each clone's `Unk1` outright, and
-the only remaining save/restore protects `UnkPartNames`/`UnkT54PartName`
-(still aliased, nulled in place on clones).
+- `EntityGroupIDs`: cloned by `Part.DeepCopy` itself. Safe to edit on clones.
+- `Unk1.DrawGroups`/`Unk1.DisplayGroups`: ALIASED (`UnkStruct1.DeepCopy`
+  only clones `CollisionMask`). Editing them on a clone corrupts the base
+  (for fog gates this caused "visible from far, disappears when
+  approaching"), and restoring the base's arrays after a clone batch resets
+  every clone that still aliases them (this is what silently made the old
+  `ApplyDrawGroups` a no-op). `DetachVisibilityGroups()` replaces each
+  clone's `Unk1` outright to break the aliasing.
+- `UnkPartNames`: NOT aliased in practice, through a quirk: `Asset.DeepCopyTo`
+  contains an unqualified `UnkPartNames = (string[])UnkPartNames.Clone();`
+  that reassigns the SOURCE's array, so after every `DeepCopy` the clone
+  holds an array the base no longer references. Nulling it on clones is
+  safe; no save/restore is needed (an earlier version restored it
+  defensively based on the wrong aliasing assumption).
+- `UnkT54PartName`: a plain string reference; strings are immutable, so
+  reassigning it on a clone can never affect the base.
 
 ### Entity ID Allocation
 

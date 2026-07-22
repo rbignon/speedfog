@@ -529,8 +529,16 @@ playtest gap: Edredd's chapel had no stake, unlike every other boss arena):
 - FogMod's `shouldEditStake` only creates a Stake of Marika for areas with
   `BossTrigger > 0` or a `StakePos` (the latter gated on the
   `AddOverworldStakes` feature, which FogMod itself only enables for
-  bossrush/endless; `Program.cs` now turns it on for SpeedFog). Boss areas
-  gaining their first gate synthetically have neither, so
+  bossrush/endless; `Program.cs` now turns it on for SpeedFog). Note the
+  feature's scope is GLOBAL, not map-splits-scoped: `data/fog.txt` carries
+  41 vanilla `StakePos` declarations on open-world field bosses
+  (limgrave_treesentinel_boss etc.), which would also gain a stake if one of
+  those zones ever entered a seed's DAG with a connected main entrance.
+  Currently inert (none of them appear in clusters.json), but a future
+  change to zone selection would activate it silently; this is judged
+  desirable (a boss zone in the DAG wants a stake) rather than guarded
+  against. Boss areas gaining their first gate synthetically have neither
+  `BossTrigger` nor `StakePos`, so
   `EnsureBossStakePos` fills `Area.StakePos` from the gate's `make_from`
   placement (`"map x y z yaw"`, fog.txt's own format; FogMod only
   null-checks it and places the stake at the main spawn point). Areas that
