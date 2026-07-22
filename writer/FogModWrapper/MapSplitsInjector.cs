@@ -42,13 +42,27 @@ public static class MapSplitsInjector
         // usable. BossTrapName/BossTriggerName are NOT mirrored: they drive
         // trap-flag locks and MSB trigger regions that only apply to areas
         // declaring those flags in fog.txt.
-        AnnotationData.Side MakeSide(string area, string text) => new()
+        // Boss sides also get the "main" tag (unless the area already has a
+        // main-tagged side): FogMod's stake creation (makeNewStake) and
+        // Marika-effigy placement resolve the area's spawn point through its
+        // main entrance side (getMainSpawnPoint); without it, boss areas
+        // reached only through a synthetic gate get no Stake of Marika.
+        bool AreaHasMainSide(string area) =>
+            ann.Entrances.Concat(ann.Warps)
+                .SelectMany(x => new[] { x.ASide, x.BSide })
+                .Any(s => s != null && s.Area == area && s.HasTag("main"));
+
+        AnnotationData.Side MakeSide(string area, string text)
         {
-            Area = area,
-            Text = text,
-            BossDefeatName =
-                ann.Areas.FirstOrDefault(a => a.Name == area)?.DefeatFlag > 0 ? "area" : null,
-        };
+            bool isBoss = ann.Areas.FirstOrDefault(a => a.Name == area)?.DefeatFlag > 0;
+            return new()
+            {
+                Area = area,
+                Text = text,
+                BossDefeatName = isBoss ? "area" : null,
+                Tags = isBoss && !AreaHasMainSide(area) ? "main" : null,
+            };
+        }
 
         foreach (var fog in splits.Fogs)
         {
@@ -71,11 +85,40 @@ public static class MapSplitsInjector
                 ASide = MakeSide(fog.ASideArea, fog.ASideText),
                 BSide = MakeSide(fog.BSideArea, fog.BSideText),
             });
+            EnsureBossStakePos(ann, fog);
             Console.WriteLine(
                 $"MapSplits: added synthetic gate '{fog.Name}' ({fog.ASideArea} -> {fog.BSideArea})");
         }
 
         SplitEnemyAreas(ann, splits);
+    }
+
+    /// <summary>
+    /// Fills Area.StakePos for boss areas that gain a synthetic gate, so
+    /// FogMod creates a Stake of Marika for them like every other boss
+    /// arena. shouldEditStake (GameDataWriterE) only stakes areas with
+    /// BossTrigger > 0 or a StakePos (the latter gated on the
+    /// AddOverworldStakes feature, which Program.cs enables); orphan areas
+    /// like scadualtus_edredd_boss have neither. The value mirrors fog.txt's
+    /// StakePos format ("map x y z yaw", taken from the gate's make_from
+    /// placement) but is only null-checked by FogMod: the stake itself is
+    /// placed at the area's main spawn point (the gate, via the "main" tag
+    /// set in MakeSide). Areas with a BossTrigger or an existing StakePos
+    /// are left untouched.
+    /// </summary>
+    private static void EnsureBossStakePos(AnnotationData ann, SplitFog fog)
+    {
+        foreach (var areaName in new[] { fog.ASideArea, fog.BSideArea })
+        {
+            var area = ann.Areas.FirstOrDefault(a => a.Name == areaName);
+            if (area == null || area.DefeatFlag <= 0
+                || area.BossTrigger > 0 || area.StakePos != null)
+                continue;
+            var makeFrom = fog.MakeFrom.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            area.StakePos = $"{fog.Map} {string.Join(' ', makeFrom.Skip(2))}";
+            Console.WriteLine(
+                $"MapSplits: StakePos set on boss area '{areaName}' (stake at gate '{fog.Name}')");
+        }
     }
 
     /// <summary>

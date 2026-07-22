@@ -76,6 +76,69 @@ public class MapSplitsInjectorTests
     }
 
     [Fact]
+    public void Apply_BossAreaSide_GetsMainTag()
+    {
+        // FogMod's stake creation and Marika-effigy placement resolve a boss
+        // area's spawn point through its "main"-tagged entrance side
+        // (getMainSpawnPoint); every vanilla boss side carries the tag.
+        // Without it, boss areas reached only through a synthetic gate get no
+        // Stake of Marika.
+        var ann = MakeAnn();
+        ann.Areas.Add(new AnnotationData.Area
+        {
+            Name = "boss_room", Text = "Boss", Maps = "m99_00_00_00", DefeatFlag = 990800,
+        });
+        var splits = new MapSplits(
+            new List<SplitZone>(),
+            new List<SplitFog>
+            {
+                new("AEG099_001_9900", "m99_00_00_00", 990002, "Boss door",
+                    "AEG099_001 AEG099_002_9000 1.0 2.0 3.0 90.0",
+                    "boss_room", "in the boss room", "lower", "before the boss room"),
+            });
+        MapSplitsInjector.Apply(ann, splits);
+        var e = ann.Entrances.Single(x => x.Name == "AEG099_001_9900");
+        Assert.True(e.ASide.HasTag("main"));
+        Assert.False(e.BSide.HasTag("main"));
+
+        // Stake of Marika: FogMod's shouldEditStake only creates a stake for
+        // areas with BossTrigger > 0 or a StakePos (with AddOverworldStakes
+        // on). Boss areas that gain their first gate synthetically have
+        // neither, so the injector fills StakePos from the gate's placement.
+        var bossArea = ann.Areas.Single(a => a.Name == "boss_room");
+        Assert.Equal("m99_00_00_00 1.0 2.0 3.0 90.0", bossArea.StakePos);
+    }
+
+    [Fact]
+    public void Apply_BossAreaWithExistingMainSide_DoesNotAddSecondMain()
+    {
+        var ann = MakeAnn();
+        ann.Areas.Add(new AnnotationData.Area
+        {
+            Name = "boss_room", Text = "Boss", Maps = "m99_00_00_00", DefeatFlag = 990800,
+        });
+        ann.Entrances.Add(new AnnotationData.Entrance
+        {
+            Name = "AEG099_001_0500",
+            Area = "m99_00_00_00",
+            ASide = new AnnotationData.Side { Area = "boss_room", Text = "vanilla front", Tags = "main" },
+            BSide = new AnnotationData.Side { Area = "lower", Text = "outside" },
+        });
+        var splits = new MapSplits(
+            new List<SplitZone>(),
+            new List<SplitFog>
+            {
+                new("AEG099_001_9900", "m99_00_00_00", 990002, "Boss back door",
+                    "AEG099_001 AEG099_002_9000 1.0 2.0 3.0 90.0",
+                    "boss_room", "in the boss room", "lower", "before the boss room"),
+            });
+        MapSplitsInjector.Apply(ann, splits);
+        var e = ann.Entrances.Single(x => x.Name == "AEG099_001_9900");
+        Assert.False(e.ASide.HasTag("main"));
+        Assert.Equal("area", e.ASide.BossDefeatName);
+    }
+
+    [Fact]
     public void Apply_ExistingZone_Throws()
     {
         var ann = MakeAnn();

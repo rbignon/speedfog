@@ -313,6 +313,12 @@ Example:
         opt[Feature.AllowUnlinked] = true;  // Allow edges without connections
         opt[Feature.ForceUnlinked] = true;  // Force unlinked mode
         opt[Feature.SegmentFortresses] = true;  // Treat fortresses as segments
+        // Stakes of Marika for boss areas that only have a StakePos (no
+        // BossTrigger): shouldEditStake gates those on this feature, which
+        // FogMod itself only turns on for bossrush/endless. SpeedFog wants
+        // them too, notably for boss areas gaining their first gate via
+        // map_splits (MapSplitsInjector.EnsureBossStakePos).
+        opt[Feature.AddOverworldStakes] = true;
 
         return opt;
     }

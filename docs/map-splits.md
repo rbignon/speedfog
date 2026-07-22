@@ -518,6 +518,27 @@ side compiled ungated and the player could leave before fighting Edredd (the
 NOT mirrored: they drive trap-flag locks and MSB trigger regions that only
 apply to areas declaring those flags.
 
+**Boss-side `main` tag and Stake of Marika**: two more pieces of the same
+automatic boss-side treatment in `MapSplitsInjector` (second 2026-07-22
+playtest gap: Edredd's chapel had no stake, unlike every other boss arena):
+
+- The synthetic side into a boss area gets the `main` tag (unless the area
+  already has a main-tagged side): FogMod's `getMainSpawnPoint` resolves a
+  boss area's spawn point (stake placement, Marika-effigy logic) through its
+  main entrance side, which every vanilla boss side carries.
+- FogMod's `shouldEditStake` only creates a Stake of Marika for areas with
+  `BossTrigger > 0` or a `StakePos` (the latter gated on the
+  `AddOverworldStakes` feature, which FogMod itself only enables for
+  bossrush/endless; `Program.cs` now turns it on for SpeedFog). Boss areas
+  gaining their first gate synthetically have neither, so
+  `EnsureBossStakePos` fills `Area.StakePos` from the gate's `make_from`
+  placement (`"map x y z yaw"`, fog.txt's own format; FogMod only
+  null-checks it and places the stake at the main spawn point). Areas that
+  already have a `BossTrigger` or `StakePos` are left untouched. Result for
+  the Fort instance: `AEG099_500` stake + RetryPoint created at FOG 2's
+  chapel side, always-active (`EventFlagID` falls back to flag 6001 when
+  there is no `BossTrigger`).
+
 **Entity IDs**: FOG 1 is `AEG099_003_9100` / `2049431960` (wide gate, ~5.2m
 opening); FOG 2 is `AEG099_001_9101` / `2049431961` (narrow gate, ~1.0m
 opening). Both copy the `AEG099_090_9000` "Shiny Item" asset already present
