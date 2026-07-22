@@ -387,7 +387,7 @@ type = "boss_arena"  # fog.txt Entrance has "major" tag, but Jori is a catacomb 
 # Synthetic map_splits zone (Fort of Reprimand interior); m61 maps classify
 # as "other" without this override.
 type = "mini_dungeon"
-weight = 2
+weight = 1
 
 [zones.scaduview_gaius]
 weight = 2
