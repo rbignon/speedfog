@@ -1,11 +1,44 @@
 using System.Numerics;
 using FogModWrapper;
+using SoulsFormats;
 using Xunit;
 
 namespace FogModWrapper.Tests;
 
 public class DeathMarkerTests
 {
+    [Fact]
+    public void DetachVisibilityGroups_ZeroesGroupsAndPreservesScalars()
+    {
+        // MSBE's UnkStruct1.DeepCopy only clones CollisionMask: a cloned
+        // bloodstain SHARES the base asset's DisplayGroups/DrawGroups arrays,
+        // so a restrictive inherited DisplayGroups (e.g. an interior prop's
+        // display cell, found on Fort of Reprimand's chapel props) culls the
+        // marker and its SFX. Detaching must zero both group arrays (the
+        // profile every working map's bloodstains ship with) while keeping
+        // the scalar display-condition fields.
+        var baseAsset = new MSBE.Part.Asset();
+        baseAsset.Unk1.DisplayGroups[0] = 0x10;
+        baseAsset.Unk1.DrawGroups[0] = 0x8;
+        baseAsset.Unk1.CollisionMask[0] = 0x4;
+        baseAsset.Unk1.UnkC4 = -1;
+        baseAsset.Unk1.Condition2 = 1;
+
+        var clone = (MSBE.Part.Asset)baseAsset.DeepCopy();
+        DeathMarkerInjector.DetachVisibilityGroups(clone);
+
+        Assert.All(clone.Unk1.DisplayGroups, g => Assert.Equal(0u, g));
+        Assert.All(clone.Unk1.DrawGroups, g => Assert.Equal(0u, g));
+        Assert.Equal(0x4u, clone.Unk1.CollisionMask[0]);
+        Assert.Equal(-1, clone.Unk1.UnkC4);
+        Assert.Equal(1, clone.Unk1.Condition2);
+
+        // The base asset keeps its own values: the clone no longer aliases
+        // its arrays.
+        Assert.Equal(0x10u, baseAsset.Unk1.DisplayGroups[0]);
+        Assert.Equal(0x8u, baseAsset.Unk1.DrawGroups[0]);
+    }
+
     [Fact]
     public void GenerateOffsets_BSide_PlacesInFrontOfGate()
     {

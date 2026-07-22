@@ -48,52 +48,51 @@ entity ID.
 
 Two-phase injection per map, running after FogMod's `Write()`:
 
-1. **MSB phase**: clone `AEG099_090` assets near each exit fog gate, with
-   DrawGroups sourced from the nearest MapPiece
+1. **MSB phase**: clone a nearby vanilla asset per exit fog gate, retarget it
+   to `AEG099_090`, and detach its visibility groups (all-zero, see below)
 2. **EMEVD phase**: dedicated events per (death_flag, map) pair, registered
    via `InitializeEvent` in event 0
 
 ## Key Concepts
 
-### DrawGroups
+### Visibility: SFX, not the asset model
 
-Elden Ring uses DrawGroups (8 x uint32 bitmasks) to control asset visibility based
-on camera position. The engine activates specific bits depending on where the camera
-is; an asset renders only if its DrawGroups overlap the active bits.
+The visible part of a marker is the `CreateAssetfollowingSFX` red glow, not
+the `AEG099_090` anchor model. Production evidence (2026-07-22 survey of
+built seeds): every placed bloodstain ships with all-zero DrawGroups AND
+all-zero DisplayGroups, and the markers render fine on every map, the same
+way FogMod's own fog gates (all-zero DrawGroups) are made visible by their
+`showsfx` mist. An earlier design tried to copy DrawGroups from the nearest
+MapPiece (`GetDrawGroupsAtPosition`/`ApplyDrawGroups`); the save/restore
+choreography below silently clobbered those writes from day one (clones
+aliased the base asset's arrays, and the post-batch restore reset them), so
+zero groups is both the historical and the intended profile. The machinery
+was removed once the aliasing was understood.
 
-Critical behaviors discovered during implementation:
-- **All-zero DrawGroups** = invisible for newly added assets (even though vanilla
-  assets with zero DrawGroups may render via other mechanisms)
-- **All-ones DrawGroups (0xFFFFFFFF)** = also invisible (not "render everywhere")
-- **DrawGroups must match the camera zone** at the asset's position
-
-FogMod-created fog gate assets have all-zero DrawGroups. They are made visible via
-the `showsfx` EMEVD event, not through DrawGroups. New bloodstain assets cannot rely
-on this mechanism and need correct DrawGroups.
-
-### MapPieces as DrawGroup Source
-
-MapPieces are static level geometry (floors, walls, ceilings). Their DrawGroups
-accurately represent the rendering zone at their position, unlike interactive assets
-which often have zero or partial DrawGroups.
-
-`GetDrawGroupsAtPosition()` finds the nearest MapPiece with non-zero DrawGroups and
-copies its DrawGroups to the bloodstain. This gives correct visibility in the vast
-majority of maps.
+What DOES matter is a **restrictive inherited `DisplayGroups`**: the clone
+starts as a copy of the nearest vanilla asset, and when that asset is an
+interior prop with a display-cell mask (hit at Fort of Reprimand's chapel,
+`m61_49_43_00`, mask `0x10`), the marker and its SFX are display-culled
+outside that cell. `DetachVisibilityGroups()` therefore gives every clone
+its own `Unk1` with all-zero group arrays (scalar display-condition fields
+and CollisionMask values preserved).
 
 ### DeepCopy Shallow Array Bug
 
-SoulsFormats' `MSBE.Part.DeepCopy()` produces shallow copies of internal arrays:
-`DrawGroups`, `DisplayGroups`, `CollisionMask`, `EntityGroupIDs`, `UnkPartNames`.
-The clone and the original share the same array references.
+SoulsFormats' `MSBE.Part.DeepCopy()` clones `EntityGroupIDs` but shares the
+rest: `UnkStruct1.DeepCopy` only clones `CollisionMask`, leaving
+`DrawGroups`/`DisplayGroups` aliased between base and clone, and
+`UnkPartNames` is aliased at the Part level. Consequences:
 
-Modifying the clone's arrays (e.g., `ApplyDrawGroups`, `Array.Clear(EntityGroupIDs)`)
-silently corrupts the original asset. For fog gates, this causes the gate to lose
-its DrawGroups and become invisible at close range ("visible from far, disappears
-when approaching").
+- Editing a clone's aliased arrays silently corrupts the base asset. For fog
+  gates this caused "visible from far, disappears when approaching".
+- The aliasing also runs the other way: restoring the base's arrays after a
+  clone batch resets every clone that still aliases them (this is what made
+  the old `ApplyDrawGroups` a no-op).
 
-Fix: save all array contents from the source asset before cloning, restore after
-all clones are created.
+Fix: `DetachVisibilityGroups()` replaces each clone's `Unk1` outright, and
+the only remaining save/restore protects `UnkPartNames`/`UnkT54PartName`
+(still aliased, nulled in place on clones).
 
 ### Entity ID Allocation
 

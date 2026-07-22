@@ -252,9 +252,6 @@ public static class DeathMarkerInjector
 
         var msb = MSBE.Read(msbPath);
 
-        if (msb.Parts.MapPieces.Count == 0)
-            return 0;
-
         // Group specs by death flag for EMEVD event creation.
         // Each entry maps deathFlag -> list of entity IDs to activate.
         var entityIdsByFlag = new Dictionary<int, List<uint>>();
@@ -286,20 +283,16 @@ public static class DeathMarkerInjector
                 continue;
             }
 
-            var drawGroups = GetDrawGroupsAtPosition(msb, gateAsset.Position);
-
             // Precompute offsets for both sides. A gate used as both entrance and exit
             // in different connections may need bloodstains on different sides: the exit
             // connection approaches from one zone, the entrance connection from another.
             var offsetsASide = GenerateOffsets(gateAsset.EntityID, gateAsset.Rotation.Y, isASide: true);
             var offsetsBSide = GenerateOffsets(gateAsset.EntityID, gateAsset.Rotation.Y, isASide: false);
 
-            // WORKAROUND: SoulsFormats' MSBE.Part.DeepCopy() produces shallow copies
-            // of internal arrays. Save and restore around the clone batch.
-            var savedDrawGroups = baseAsset.Unk1.DrawGroups.ToArray();
-            var savedDisplayGroups = baseAsset.Unk1.DisplayGroups.ToArray();
-            var savedCollisionMask = baseAsset.Unk1.CollisionMask.ToArray();
-            var savedEntityGroupIDs = baseAsset.EntityGroupIDs.ToArray();
+            // WORKAROUND: SoulsFormats' MSBE.Part.DeepCopy() shares the
+            // UnkPartNames array between base and clone (MemberwiseClone).
+            // Save and restore around the clone batch; the Unk1 group arrays
+            // are handled by DetachVisibilityGroups instead.
             var savedUnkPartNames = baseAsset.UnkPartNames.ToArray();
             var savedUnkT54 = baseAsset.UnkT54PartName;
 
@@ -309,6 +302,7 @@ public static class DeathMarkerInjector
                 var offset = offsets[spec.TierIndex % 3];
 
                 var bloodstain = (MSBE.Part.Asset)baseAsset.DeepCopy();
+                DetachVisibilityGroups(bloodstain);
                 bloodstain.ModelName = BLOODSTAIN_MODEL;
                 bloodstain.Name = MsbHelper.GeneratePartName(
                     msb.Parts.Assets.Select(a => a.Name), BLOODSTAIN_MODEL);
@@ -323,9 +317,6 @@ public static class DeathMarkerInjector
                 bloodstain.UnkT54PartName = null;
                 Array.Clear(bloodstain.EntityGroupIDs);
 
-                if (drawGroups != null)
-                    ApplyDrawGroups(bloodstain, drawGroups);
-
                 msb.Parts.Assets.Add(bloodstain);
 
                 if (!entityIdsByFlag.TryGetValue(spec.DeathFlag, out var flagEntities))
@@ -339,11 +330,9 @@ public static class DeathMarkerInjector
                 placedCount++;
             }
 
-            // Restore source asset arrays corrupted by DeepCopy shallow references
-            Array.Copy(savedDrawGroups, baseAsset.Unk1.DrawGroups, savedDrawGroups.Length);
-            Array.Copy(savedDisplayGroups, baseAsset.Unk1.DisplayGroups, savedDisplayGroups.Length);
-            Array.Copy(savedCollisionMask, baseAsset.Unk1.CollisionMask, savedCollisionMask.Length);
-            Array.Copy(savedEntityGroupIDs, baseAsset.EntityGroupIDs, savedEntityGroupIDs.Length);
+            // Restore the base asset's UnkPartNames corrupted by the clones'
+            // in-place nulling of the shared array (EntityGroupIDs is cloned
+            // by Part.DeepCopy itself; the Unk1 arrays are detached per clone).
             Array.Copy(savedUnkPartNames, baseAsset.UnkPartNames, savedUnkPartNames.Length);
             baseAsset.UnkT54PartName = savedUnkT54;
         }
@@ -464,38 +453,30 @@ public static class DeathMarkerInjector
     }
 
     /// <summary>
-    /// Get DrawGroups for a position from the nearest MapPiece with non-zero DrawGroups.
-    /// MapPieces are static level geometry whose DrawGroups reliably represent the
-    /// rendering zone at their position.
+    /// Gives a cloned bloodstain its own Unk1 so it stops aliasing the base
+    /// asset's group arrays: MSBE's UnkStruct1.DeepCopy only clones
+    /// CollisionMask, sharing DisplayGroups/DrawGroups between base and
+    /// clone. The fresh arrays stay all-zero, the profile every working
+    /// map's bloodstains ship with (the visible part is the following SFX,
+    /// not the asset model); a restrictive inherited DisplayGroups (e.g. an
+    /// interior prop's display cell, hit at Fort of Reprimand's chapel)
+    /// display-culls the marker and its SFX. Scalar display-condition
+    /// fields and CollisionMask values are preserved from the clone.
     /// </summary>
-    private static uint[]? GetDrawGroupsAtPosition(MSBE msb, Vector3 targetPos)
+    internal static void DetachVisibilityGroups(MSBE.Part.Asset bloodstain)
     {
-        MSBE.Part.MapPiece? best = null;
-        float bestDist = float.MaxValue;
-
-        foreach (var piece in msb.Parts.MapPieces)
+        var src = bloodstain.Unk1;
+        var own = new MSBE.Part.UnkStruct1
         {
-            if (piece.Unk1.DrawGroups.All(g => g == 0))
-                continue;
-
-            var diff = piece.Position - targetPos;
-            float dist = diff.X * diff.X + diff.Y * diff.Y + diff.Z * diff.Z;
-            if (dist < bestDist)
-            {
-                bestDist = dist;
-                best = piece;
-            }
-        }
-
-        return best?.Unk1.DrawGroups.ToArray();
-    }
-
-    private static void ApplyDrawGroups(MSBE.Part.Asset asset, uint[] drawGroups)
-    {
-        for (int i = 0; i < asset.Unk1.DrawGroups.Length && i < drawGroups.Length; i++)
-            asset.Unk1.DrawGroups[i] = drawGroups[i];
-        for (int i = 0; i < asset.Unk1.DisplayGroups.Length && i < drawGroups.Length; i++)
-            asset.Unk1.DisplayGroups[i] = drawGroups[i];
+            Condition1 = src.Condition1,
+            Condition2 = src.Condition2,
+            UnkC2 = src.UnkC2,
+            UnkC3 = src.UnkC3,
+            UnkC4 = src.UnkC4,
+            UnkC6 = src.UnkC6,
+        };
+        Array.Copy(src.CollisionMask, own.CollisionMask, own.CollisionMask.Length);
+        bloodstain.Unk1 = own;
     }
 
 }
