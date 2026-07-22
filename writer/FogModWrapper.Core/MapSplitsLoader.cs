@@ -9,8 +9,7 @@ public sealed record SplitZone(
 
 public sealed record SplitFog(
     string Name, string Map, int Id, string Text, string MakeFrom,
-    string ASideArea, string ASideText, string BSideArea, string BSideText,
-    List<float>? StakeRegion = null);
+    string ASideArea, string ASideText, string BSideArea, string BSideText);
 
 public sealed record MapSplits(List<SplitZone> Zones, List<SplitFog> Fogs)
 {
@@ -72,37 +71,10 @@ public static class MapSplitsLoader
                     checked((int)id),
                     RequireString(entry, "text"),
                     RequireString(entry, "make_from"),
-                    asideArea, asideText, bsideArea, bsideText,
-                    ReadStakeRegion(entry)));
+                    asideArea, asideText, bsideArea, bsideText));
             }
         }
         return new MapSplits(zones, fogs);
-    }
-
-    /// <summary>
-    /// Optional stake activation AABB ([x1, y1, z1, x2, y2, z2]) applied by
-    /// BossStakePatcher to the boss-side stake's RetryPoint region. Absent
-    /// is fine; present must be exactly 6 numbers.
-    /// </summary>
-    private static List<float>? ReadStakeRegion(TomlTable entry)
-    {
-        if (!entry.TryGetValue("stake_region", out var obj))
-            return null;
-        if (obj is not TomlArray arr || arr.Count != 6)
-            throw new InvalidDataException(
-                "map_splits.toml: 'stake_region' must be an array of 6 numbers");
-        var values = new List<float>(6);
-        foreach (var item in arr)
-        {
-            values.Add(item switch
-            {
-                double d => (float)d,
-                long l => l,
-                _ => throw new InvalidDataException(
-                    "map_splits.toml: 'stake_region' must contain numbers"),
-            });
-        }
-        return values;
     }
 
     private static string RequireString(TomlTable entry, string key)

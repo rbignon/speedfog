@@ -61,9 +61,10 @@ bside = { area = "enirilim_stairs", text = "arriving on the stairs before Leda" 
 
 # --- Fort of Reprimand (m61_49_43_00, DLC Scadu Altus) ---
 # First overworld-tile instance: the fort is carved out of the excluded
-# `scadualtus` overworld zone; Fog 2's BSide gives the orphan fog.txt area
-# scadualtus_edredd_boss (Black Knight Edredd, DefeatFlag 2049430850) its
-# first fog boundary, which turns it into a boss_arena cluster.
+# `scadualtus` overworld zone. Behind Fog 2, the orphan fog.txt area
+# scadualtus_edredd_boss (Black Knight Edredd, DefeatFlag 2049430850) is a
+# SEALED TAIL, never played: its attempted boss_arena cluster was rolled
+# back (see docs/map-splits.md's post-mortem).
 # Coordinate caution: on overworld tiles the capture tool's Z sign proved
 # unreliable per point (Fog 2 and the removed spiritspring needed Z negated
 # to match the MSB; Fog 1 did not). All positions below were tuned and
@@ -104,33 +105,26 @@ make_from = "AEG099_003 AEG099_090_9000 18.026 388.534 37.585 165.0"
 aside = { area = "scadualtus", text = "outside the Fort of Reprimand gate" }
 bside = { area = "reprimand", text = "inside the Fort of Reprimand gate" }
 
-# Fog 2: the doorway into Edredd's chapel (the dead-end boss room), ~1.0 m.
+# Fog 2: the doorway into Edredd's chapel, ~1.0 m. The reprimand cluster's
+# exit; the chapel behind it is a sealed, never-played tail (same pattern
+# as Enir-Ilim's Leda stairs). A playable scadualtus_edredd_boss arena was
+# attempted and rolled back (2026-07-22): the Stake of Marika activation
+# could not be calibrated in-game, see docs/map-splits.md's post-mortem.
 # Captured segment (Z negated): (55.411, 396.481, -86.473) -> (54.884, 396.481, -87.314)
 # Sides ordered so ASide = chapel: the gate's front physically faces the
-# chapel (validated in-game 2026-07-22). Roles with this orientation:
-# - aside default (exit of the boss area) = the boss cluster's only exit,
-#   back through this gate; MapSplitsInjector gates it on DefeatFlag
-#   2049430850 via BossDefeatName since the area is a boss area.
-# - aside.entry grant = the boss cluster's entry (warp into the chapel).
+# chapel (validated in-game 2026-07-22). Roles:
 # - bside.exit grant = the reprimand cluster's exit (before the chapel).
 # - bside default (entry into reprimand at the chapel door) is unwanted for
 #   the one-way ascent; filtered by [clusters.reprimand_77e7]
 #   allowed_entries in zone_metadata.toml.
+# - aside (the chapel) keeps only its default exit role, which never forms
+#   a valid cluster (the orphan boss area has no entry), so the tail stays
+#   out of the pool automatically.
 [[fogs]]
 name = "AEG099_001_9101"
 map = "m61_49_43_00"
 id = 2049431961
 text = "Before Edredd"
 make_from = "AEG099_001 AEG099_090_9000 55.148 396.481 -86.894 -57.9"
-aside = { area = "scadualtus_edredd_boss", text = "in Black Knight Edredd's chapel", entry = true }
+aside = { area = "scadualtus_edredd_boss", text = "in Black Knight Edredd's chapel" }
 bside = { area = "reprimand", text = "before Black Knight Edredd's chapel", exit = true }
-# Stake of Marika activation volume (AABB [x1, y1, z1, x2, y2, z2], applied
-# by BossStakePatcher to the RetryPoint's region). A box hugging the chapel:
-# FogMod's default cylinder is centered on the stake AT the gate, so any
-# radius bleeds symmetrically into the fort; the box's z edge sits flush
-# with the fog wall (z = -86.5) instead. Only that wall face is
-# load-bearing: the other five faces are deliberately oversized into
-# walls/void (vanilla retry boxes are similarly generous, e.g. Ainsel's
-# 125x231x34), after a first survey-based fit clipped part of the arena.
-# Tune in-game like make_from.
-stake_region = [0.0, 340.0, -150.0, 130.0, 440.0, -86.5]

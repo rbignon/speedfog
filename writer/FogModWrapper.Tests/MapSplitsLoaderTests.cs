@@ -40,58 +40,6 @@ public class MapSplitsLoaderTests
     }
 
     [Fact]
-    public void Parse_StakeRegion_ReadsSixNumbers()
-    {
-        var splits = MapSplitsLoader.Parse("""
-            [[fogs]]
-            name = "AEG099_001_9101"
-            map = "m61_49_43_00"
-            id = 2049431961
-            text = "Boss door"
-            make_from = "AEG099_001 AEG099_090_9000 1.0 2.0 3.0 90.0"
-            aside = { area = "boss", text = "in" }
-            bside = { area = "zone", text = "out" }
-            stake_region = [30.0, 370, -120.0, 100.0, 412.0, -86.5]
-            """);
-        Assert.Equal(
-            new List<float> { 30f, 370f, -120f, 100f, 412f, -86.5f },
-            splits.Fogs[0].StakeRegion);
-    }
-
-    [Fact]
-    public void Parse_StakeRegion_WrongArity_Throws()
-    {
-        var ex = Assert.Throws<InvalidDataException>(() => MapSplitsLoader.Parse("""
-            [[fogs]]
-            name = "AEG099_001_9101"
-            map = "m61_49_43_00"
-            id = 2049431961
-            text = "Boss door"
-            make_from = "AEG099_001 AEG099_090_9000 1.0 2.0 3.0 90.0"
-            aside = { area = "boss", text = "in" }
-            bside = { area = "zone", text = "out" }
-            stake_region = [30.0, 370.0]
-            """));
-        Assert.Contains("stake_region", ex.Message);
-    }
-
-    [Fact]
-    public void Parse_MissingStakeRegion_DefaultsNull()
-    {
-        var splits = MapSplitsLoader.Parse("""
-            [[fogs]]
-            name = "AEG099_001_9101"
-            map = "m61_49_43_00"
-            id = 2049431961
-            text = "Boss door"
-            make_from = "AEG099_001 AEG099_090_9000 1.0 2.0 3.0 90.0"
-            aside = { area = "boss", text = "in" }
-            bside = { area = "zone", text = "out" }
-            """);
-        Assert.Null(splits.Fogs[0].StakeRegion);
-    }
-
-    [Fact]
     public void Load_MissingFile_ReturnsEmpty()
     {
         var splits = MapSplitsLoader.Load("/nonexistent/map_splits.toml");

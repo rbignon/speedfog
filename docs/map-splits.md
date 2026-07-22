@@ -75,9 +75,7 @@ bside = { area = "enirilim_upper", text = "arriving at the Spiral Rise", exit = 
   below; the C# `MapSplitsLoader` does not read it). `[[fogs]]` requires
   non-empty strings `name`, `map`, `text`, `make_from`, plus an integer `id`;
   `aside`/`bside` are required tables each requiring non-empty strings
-  `area`/`text`; an optional `stake_region` (list of exactly 6 numbers, an
-  AABB) bounds the boss-side stake's activation volume (see the Fort of
-  Reprimand instance). Both
+  `area`/`text`. Both
   pipelines validate this before use, independently: C#'s `MapSplitsLoader`
   (`RequireString`/`ReadStringList`) throws `InvalidDataException`, Python's
   `_validate_map_splits` (called at the top of `inject_map_splits`) throws
@@ -458,11 +456,11 @@ The Fort of Reprimand (Scadu Altus DLC tile `m61_49_43_00`) is the second
 map-splits instance and the first on an open overworld tile rather than a
 closed dungeon map: the fort's geometry belongs to `scadualtus`, the huge
 excluded (type `other`) overworld area, with no fog gate of its own. It is
-also the first instance that gives a fog boundary to an *orphan* fog.txt
-area: `scadualtus_edredd_boss` (Black Knight Edredd, `DefeatFlag
-2049430850`) already existed in `fog.txt` with `OpenArea: scadualtus`, but
-had no `Entrances` of its own, so it could never become a cluster until one
-of its sides got a fog gate.
+also the instance that experimented with giving a fog boundary to an
+*orphan* fog.txt area: `scadualtus_edredd_boss` (Black Knight Edredd,
+`DefeatFlag 2049430850`, `OpenArea: scadualtus`, no `Entrances` of its own).
+That boss arena was later rolled back (see the post-mortem below); the
+chapel is now a sealed tail behind FOG 2.
 
 Two synthetic fogs carve a strictly one-way ascent through the fort, with no
 merge or drop back down (unlike Enir-Ilim's `drops_to`, a reversed descent
@@ -478,10 +476,10 @@ scadualtus (overworld, excluded: type "other")
 reprimand (mini_dungeon, synthetic): Fort of Reprimand interior
    |  FOG 2 (synthetic, AEG099_001_9101, id 2049431961)
    |  BSide=reprimand: entry (default, filtered out) + exit (bside.exit grant)
-   |  ASide=scadualtus_edredd_boss: exit (default) + entry (aside.entry grant)
+   |  ASide=scadualtus_edredd_boss: exit (default), never used
    v
-scadualtus_edredd_boss (boss_arena, existing fog.txt area): Black Knight
-Edredd's chapel, dead end
+scadualtus_edredd_boss (existing fog.txt area): Black Knight Edredd's
+chapel, SEALED TAIL (never played, like Enir-Ilim's Leda stairs)
 ```
 
 FOG 2's sides are ordered boss-first (ASide = chapel) because the created
@@ -496,16 +494,11 @@ swapped during the 2026-07-22 playtest).
   which `[clusters.reprimand_77e7] allowed_entries` in `zone_metadata.toml`
   filters back out to keep the strict one-way ascent: one entry fog, one
   exit fog, no `proximity_groups` needed.
-- **Cluster `{scadualtus_edredd_boss}`** (boss_arena, single gate): entry =
-  FOG 2's ASide via the `aside.entry` grant ("in Black Knight Edredd's
-  chapel"); the same ASide keeps its default exit role, so the cluster's
-  only way out is back through the same doorway after the fight (the general
-  single-gate `allow_entry_as_exit` mechanism,
-  `[zones.scadualtus_edredd_boss]` in `zone_metadata.toml`; see
-  `docs/dag-generation.md`), not something new to this instance.
-  `defeat_flag` (2049430850) and `boss_name` ("Black Knight Edredd") are
-  picked up automatically from `fog.txt`'s existing `DefeatFlag` and
-  `enemy.txt`, the same generic mechanism every other boss cluster uses.
+- **`scadualtus_edredd_boss` is a sealed tail**, not a cluster: with only
+  FOG 2's default ASide exit role and no entry, the orphan area never forms
+  a valid cluster and drops out of the pool automatically. A playable
+  boss_arena there was attempted and rolled back (see the post-mortem
+  below).
 
 **Boss-side defeat gating (`BossDefeatName`)**: every vanilla fog side that
 sits inside a boss area carries `BossDefeatName: area` in `fog.txt` (Grafted
@@ -520,52 +513,49 @@ side compiled ungated and the player could leave before fighting Edredd (the
 NOT mirrored: they drive trap-flag locks and MSB trigger regions that only
 apply to areas declaring those flags.
 
-**Boss-side `main` tag and Stake of Marika**: two more pieces of the same
-automatic boss-side treatment in `MapSplitsInjector` (second 2026-07-22
-playtest gap: Edredd's chapel had no stake, unlike every other boss arena):
+**Boss-side `main` tag**: the synthetic side into a boss area also gets the
+`main` tag (unless the area already has a main-tagged side): FogMod resolves
+a boss area's spawn point through its main entrance side
+(`getMainSpawnPoint`), the universal convention on vanilla boss sides.
 
-- The synthetic side into a boss area gets the `main` tag (unless the area
-  already has a main-tagged side): FogMod's `getMainSpawnPoint` resolves a
-  boss area's spawn point (stake placement, Marika-effigy logic) through its
-  main entrance side, which every vanilla boss side carries.
-- FogMod's `shouldEditStake` only creates a Stake of Marika for areas with
-  `BossTrigger > 0` or a `StakePos` (the latter gated on the
-  `AddOverworldStakes` feature, which FogMod itself only enables for
-  bossrush/endless; `Program.cs` now turns it on for SpeedFog). Note the
-  feature's scope is GLOBAL, not map-splits-scoped: `data/fog.txt` carries
-  41 vanilla `StakePos` declarations on open-world field bosses
-  (limgrave_treesentinel_boss etc.), which would also gain a stake if one of
-  those zones ever entered a seed's DAG with a connected main entrance.
-  Currently inert (none of them appear in clusters.json), but a future
-  change to zone selection would activate it silently; this is judged
-  desirable (a boss zone in the DAG wants a stake) rather than guarded
-  against. Boss areas gaining their first gate synthetically have neither
-  `BossTrigger` nor `StakePos`, so
-  `EnsureBossStakePos` fills `Area.StakePos` from the gate's `make_from`
-  placement (`"map x y z yaw"`, fog.txt's own format; FogMod only
-  null-checks it and places the stake at the main spawn point). Areas that
-  already have a `BossTrigger` or `StakePos` are left untouched. Result for
-  the Fort instance: `AEG099_500` stake + RetryPoint created at FOG 2's
-  chapel side.
-- FogMod's fallback activation for a BossTrigger-less stake is flag 6001
-  (always on) with a cylinder activation region of radius
-  `Area.StakeRadius > 0 ? StakeRadius : 150`: the 150 default reached the
-  whole fort, so dying anywhere in `reprimand` offered a respawn inside the
-  chapel (2026-07-22 playtest). Two-part fix: `EnsureBossStakePos` also
-  sets `Area.StakeRadius = 40` (arena-sized cylinder, native FogMod knob;
-  the RetryPoint's region takes precedence over its `UnkT08` distance
-  field), and `BossStakePatcher` (post-Write) rescopes the RetryPoint's
-  `EventFlagID` to the boss cluster's zone-tracking entry flag (graph.json
-  `connections`, set by the fogwarp right before warping into the arena).
-- A radius alone proved insufficient (2026-07-22 second playtest): the
-  cylinder is centered on the stake AT the gate, so any radius bleeds
-  symmetrically through the fog wall into the fort. The optional
-  `stake_region = [x1, y1, z1, x2, y2, z2]` key on the `[[fogs]]` entry
-  (AABB, tunable in-game like `make_from`) makes `BossStakePatcher`
-  reshape the activation region into a box whose edge sits flush with the
-  wall (`Box(70x34x42)` hugging the chapel and crypt for the Fort
-  instance). Python validates the key's shape in parity
-  (`_validate_map_splits`).
+**Post-mortem: the Stake of Marika attempt (2026-07-22, rolled back)**. A
+playable `scadualtus_edredd_boss` boss_arena cluster was implemented and
+worked (entry/exit through FOG 2, defeat gating, enemy scaling), but its
+Stake of Marika could never be calibrated in-game after four iterations,
+and the marginal value of one more boss arena did not justify further
+cycles. The mechanism-specific code (BossStakePatcher, the `stake_region`
+key, `EnsureBossStakePos`/`Area.StakePos`/`StakeRadius`, the
+`AddOverworldStakes` feature enable) was removed rather than left dormant:
+unit-tested but never field-validated code reads as finished and invites
+false confidence. What WAS established, for the next attempt:
+
+- FogMod creates a stake per boss area when `shouldEditStake` passes:
+  `BossTrigger > 0`, or `StakePos != null` with the `AddOverworldStakes`
+  feature (which FogMod only enables for bossrush/endless). Placement is
+  the area's main spawn point (hence the `main` tag above); the RetryPoint
+  is named `"<area> stake"`.
+- RetryPoint anatomy (see the `retrypoints` mode of
+  `tools/dump_emevd_warps`): `EventFlagID` (activation flag),
+  `RetryRegionName` (activation volume) and `UnkT08` (activation radius,
+  ONLY used when no region is set: the region takes precedence). FogMod's
+  BossTrigger-less fallback is flag 6001 (always on) + a cylinder region of
+  radius `Area.StakeRadius > 0 ? StakeRadius : 150`, centered 50 below the
+  stake, height 100.
+- A cylinder centered on a stake AT a gate necessarily bleeds through the
+  fog wall by its full radius; only a box can sit flush with a wall.
+  Region box anchor convention (verified against Ainsel's vanilla retry
+  box): X/Z centered on Position, Y bottom-anchored.
+- UNRESOLVED when rolled back: even a wall-flush oversized box
+  (130x100x64) was still reported misplaced in-game (part of the arena
+  uncovered), suggesting another convention gap (Width/Depth axis mapping
+  was the next suspect); and rescoping `EventFlagID` to the cluster's
+  zone-tracking entry flag did not observably gate the respawn offer
+  (either EventFlagID does not gate offer eligibility, or the test save
+  carried a stale persistent 1050294xxx flag from a previous seed: these
+  flags are reallocated per seed and persist in the save).
+- The relevant git history: commits d4165b0 through 6253244 (creation, flag
+  rescoping, StakeRadius, stake_region box, oversizing) and their review
+  threads.
 
 **Entity IDs**: FOG 1 is `AEG099_003_9100` / `2049431960` (wide gate, ~5.2m
 opening); FOG 2 is `AEG099_001_9101` / `2049431961` (narrow gate, ~1.0m
@@ -618,31 +608,26 @@ in-game. When Z is negated, the `make_from` yaw convention from "File
 Format" above flips: yaw `θ` becomes `180-θ`.
 
 **`zone_metadata.toml` pieces** (see `data/zone_metadata.toml` around
-`[zones.reprimand]`, `[zones.scadualtus_edredd_boss]`,
-`[clusters.reprimand_77e7]`, `[clusters.scadualtus_edredd_boss_8c7d]`):
+`[zones.reprimand]` and `[clusters.reprimand_77e7]`):
 
-- `[zones.reprimand] type = "mini_dungeon", weight = 2` and
-  `[zones.scadualtus_edredd_boss] type = "boss_arena", weight = 1,
-  allow_entry_as_exit = true`: both overrides exist because `m61` maps are
-  unknown to the type classifier and default to `other`, which the
-  generator never picks (see "EnemyArea Split Mechanics" above for the same
-  point about `scadualtus`'s own `other` type).
-- `[clusters.scadualtus_edredd_boss_8c7d] display_name = "Fort of Reprimand
-  - Black Knight Edredd"`: fog.txt's own `Text` reads "Scadu Altus - Black
-  Knight Edredd", which the racing UI should not use verbatim once the boss
-  is reachable through the fort rather than the open DLC map.
-- Weights (`reprimand` 2, boss 1) are placeholders pending playtesting, the
-  same caveat as Enir-Ilim's.
+- `[zones.reprimand] type = "mini_dungeon", weight = 2`: the override
+  exists because `m61` maps are unknown to the type classifier and default
+  to `other`, which the generator never picks (see "EnemyArea Split
+  Mechanics" above for the same point about `scadualtus`'s own `other`
+  type).
+- The `reprimand` weight (2) is a placeholder pending playtesting, the same
+  caveat as Enir-Ilim's.
 
 **In-game validation status** (first playtest 2026-07-22): spiritspring
 removal confirmed working, FOG 2 position confirmed, FOG 1 repositioned and
 FOG 2's sides swapped in-game (both folded back into `map_splits.toml`), and
 the ungated chapel side fixed via the `BossDefeatName` mechanism above.
-Still pending: gate coverage with the final positions (FOG 1 still being
-tuned in-game), boss-room retraversal after the `DefeatFlag`, effective
-scaling of the reassigned mobs (including the gatehouse trio added as
-`scadualtus_high:` qualified entries after the first playtest), and the two
-fort graces (76909/76910); see the design spec's "Reste à valider in-game"
+The boss arena was rolled back after the third playtest (see the
+post-mortem above). Still pending: gate coverage with the final positions
+(FOG 1 still being tuned in-game), effective scaling of the reassigned mobs
+(including the gatehouse trio added as `scadualtus_high:` qualified entries
+after the first playtest), and the two fort graces (76909/76910); see the
+design spec's "Reste à valider in-game"
 for the full list.
 
 ## Reference points
@@ -674,8 +659,7 @@ for the full list.
   map-splits instances above.
 - `data/zone_metadata.toml`: `[zones.enirilim]`, `[zones.enirilim_upper]`,
   `[zones.enirilim_stairs]`, `[clusters.enirilim_9820]`; `[zones.reprimand]`,
-  `[zones.scadualtus_edredd_boss]`, `[clusters.reprimand_77e7]`,
-  `[clusters.scadualtus_edredd_boss_8c7d]`.
+  `[clusters.reprimand_77e7]`.
 - `reference/fogrando-src/GameDataWriterE.cs`: `MakeFrom` gate creation
   (~L256-262), enemy scaling / `AreaTiers.TryGetValue` (~L2126-2140).
 - `reference/fogrando-src/AnnotationData.cs`: `EnemyLocArea`, `EnemyLoc`

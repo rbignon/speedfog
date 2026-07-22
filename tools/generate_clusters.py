@@ -1583,8 +1583,7 @@ def _validate_map_splits(splits: dict[str, Any]) -> None:
       optional role-grant boolean each (see apply_map_splits_side_roles and
       _SIDE_ROLE_KEY): 'aside.entry' / 'bside.exit'. If present, it must be
       bool; the *other* side's key (e.g. 'aside.exit') is rejected outright
-      rather than silently ignored. An optional 'stake_region' must be a list
-      of 6 numbers (AABB, C#-consumed by BossStakePatcher).
+      rather than silently ignored.
     """
     for zone in splits.get("zones", []):
         raw_name = zone.get("name")
@@ -1613,20 +1612,6 @@ def _validate_map_splits(splits: dict[str, Any]) -> None:
             raise ValueError(f"map_splits: [[fogs]] '{name}' missing integer 'id'")
         _require_side(fog, "aside", name)
         _require_side(fog, "bside", name)
-        if "stake_region" in fog:
-            region = fog["stake_region"]
-            if (
-                not isinstance(region, list)
-                or len(region) != 6
-                or not all(
-                    isinstance(v, int | float) and not isinstance(v, bool)
-                    for v in region
-                )
-            ):
-                raise ValueError(
-                    f"map_splits: [[fogs]] '{name}' 'stake_region' must be a "
-                    f"list of 6 numbers"
-                )
 
 
 def inject_map_splits(parsed: dict[str, Any], splits: dict[str, Any]) -> None:

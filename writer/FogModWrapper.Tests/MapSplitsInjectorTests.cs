@@ -78,11 +78,9 @@ public class MapSplitsInjectorTests
     [Fact]
     public void Apply_BossAreaSide_GetsMainTag()
     {
-        // FogMod's stake creation and Marika-effigy placement resolve a boss
-        // area's spawn point through its "main"-tagged entrance side
-        // (getMainSpawnPoint); every vanilla boss side carries the tag.
-        // Without it, boss areas reached only through a synthetic gate get no
-        // Stake of Marika.
+        // FogMod resolves a boss area's spawn point through its "main"-tagged
+        // entrance side (getMainSpawnPoint); every vanilla boss side carries
+        // the tag.
         var ann = MakeAnn();
         ann.Areas.Add(new AnnotationData.Area
         {
@@ -100,14 +98,6 @@ public class MapSplitsInjectorTests
         var e = ann.Entrances.Single(x => x.Name == "AEG099_001_9900");
         Assert.True(e.ASide.HasTag("main"));
         Assert.False(e.BSide.HasTag("main"));
-
-        // Stake of Marika: FogMod's shouldEditStake only creates a stake for
-        // areas with BossTrigger > 0 or a StakePos (with AddOverworldStakes
-        // on). Boss areas that gain their first gate synthetically have
-        // neither, so the injector fills StakePos from the gate's placement.
-        var bossArea = ann.Areas.Single(a => a.Name == "boss_room");
-        Assert.Equal("m99_00_00_00 1.0 2.0 3.0 90.0", bossArea.StakePos);
-        Assert.Equal(MapSplitsInjector.SyntheticBossStakeRadius, bossArea.StakeRadius);
     }
 
     [Fact]

@@ -313,12 +313,6 @@ Example:
         opt[Feature.AllowUnlinked] = true;  // Allow edges without connections
         opt[Feature.ForceUnlinked] = true;  // Force unlinked mode
         opt[Feature.SegmentFortresses] = true;  // Treat fortresses as segments
-        // Stakes of Marika for boss areas that only have a StakePos (no
-        // BossTrigger): shouldEditStake gates those on this feature, which
-        // FogMod itself only turns on for bossrush/endless. SpeedFog wants
-        // them too, notably for boss areas gaining their first gate via
-        // map_splits (MapSplitsInjector.EnsureBossStakePos).
-        opt[Feature.AddOverworldStakes] = true;
 
         return opt;
     }
@@ -849,27 +843,6 @@ Example:
         // Re-enable Torrent inside boss arenas where vanilla blocks it via
         // collision DisableTorrent flags. See docs/torrent-arena-patcher.md.
         TorrentArenaPatcher.Patch(ctx.ModDir, ctx.Config.GameDir, ctx.Tweaks.TorrentArenas);
-
-        // Rescope the activation flag of stakes created for BossTrigger-less
-        // synthetic boss arenas (FogMod's 6001 fallback is always on, so the
-        // stake activated before the player ever entered the arena). The
-        // spatial bound is the StakeRadius cylinder set at annotation time,
-        // or the stake_region AABB box when the fog declares one.
-        // See docs/map-splits.md.
-        var stakeCandidates = ctx.MapSplits.Fogs
-            .SelectMany(f => new[]
-            {
-                (AreaName: f.ASideArea, f.Map, f.StakeRegion),
-                (AreaName: f.BSideArea, f.Map, f.StakeRegion),
-            })
-            .Where(x => ctx.Ann.Areas.Any(
-                a => a.Name == x.AreaName && a.DefeatFlag > 0 && a.BossTrigger <= 0))
-            .DistinctBy(x => (x.AreaName, x.Map))
-            .ToList();
-        if (stakeCandidates.Count > 0)
-        {
-            BossStakePatcher.Patch(ctx.ModDir, stakeCandidates, ctx.GraphData.Connections);
-        }
 
         // Remove spiritspring jumps that bypass map-splits chokepoints
         // (Fort of Reprimand back ravine). See docs/map-splits.md.

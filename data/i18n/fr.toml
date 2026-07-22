@@ -537,7 +537,6 @@ major_boss = "boss majeur"
 # {location} substitué dans un pattern text/side_text.
 "Enir-Ilim Spiral Rise" = "Tour hélicoïdale d'Enir-Ilim"
 "Fort of Reprimand" = "Fort de la Semonce"
-"Fort of Reprimand - Black Knight Edredd" = "Fort de la Semonce - Chevalier noir Edredd"
 
 # =============================================================================
 # Post-traitement : règles regex appliquées après substitution de patterns

@@ -43,10 +43,9 @@ public static class MapSplitsInjector
         // trap-flag locks and MSB trigger regions that only apply to areas
         // declaring those flags in fog.txt.
         // Boss sides also get the "main" tag (unless the area already has a
-        // main-tagged side): FogMod's stake creation (makeNewStake) and
-        // Marika-effigy placement resolve the area's spawn point through its
-        // main entrance side (getMainSpawnPoint); without it, boss areas
-        // reached only through a synthetic gate get no Stake of Marika.
+        // main-tagged side): FogMod resolves a boss area's spawn point
+        // through its main entrance side (getMainSpawnPoint), the universal
+        // convention on vanilla boss sides.
         bool AreaHasMainSide(string area) =>
             ann.Entrances.Concat(ann.Warps)
                 .SelectMany(x => new[] { x.ASide, x.BSide })
@@ -85,7 +84,6 @@ public static class MapSplitsInjector
                 ASide = MakeSide(fog.ASideArea, fog.ASideText),
                 BSide = MakeSide(fog.BSideArea, fog.BSideText),
             });
-            EnsureBossStakePos(ann, fog);
             Console.WriteLine(
                 $"MapSplits: added synthetic gate '{fog.Name}' ({fog.ASideArea} -> {fog.BSideArea})");
         }
@@ -94,50 +92,11 @@ public static class MapSplitsInjector
     }
 
     /// <summary>
-    /// Fills Area.StakePos for boss areas that gain a synthetic gate, so
-    /// FogMod creates a Stake of Marika for them like every other boss
-    /// arena. shouldEditStake (GameDataWriterE) only stakes areas with
-    /// BossTrigger > 0 or a StakePos (the latter gated on the
-    /// AddOverworldStakes feature, which Program.cs enables); orphan areas
-    /// like scadualtus_edredd_boss have neither. The value mirrors fog.txt's
-    /// StakePos format ("map x y z yaw", taken from the gate's make_from
-    /// placement) but is only null-checked by FogMod: the stake itself is
-    /// placed at the area's main spawn point (the gate, via the "main" tag
-    /// set in MakeSide). Areas with a BossTrigger or an existing StakePos
-    /// are left untouched.
-    /// </summary>
-    private static void EnsureBossStakePos(AnnotationData ann, SplitFog fog)
-    {
-        foreach (var areaName in new[] { fog.ASideArea, fog.BSideArea })
-        {
-            var area = ann.Areas.FirstOrDefault(a => a.Name == areaName);
-            if (area == null || area.DefeatFlag <= 0
-                || area.BossTrigger > 0 || area.StakePos != null)
-                continue;
-            var makeFrom = fog.MakeFrom.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            area.StakePos = $"{fog.Map} {string.Join(' ', makeFrom.Skip(2))}";
-            // Bound the stake's activation cylinder (FogMod: StakeRadius > 0
-            // ? StakeRadius : 150) to arena size; the 150 default reaches
-            // deep into the neighbouring zone on the same map. 40 covers
-            // Edredd's chapel (~37m from the stake to the far crypt corner).
-            area.StakeRadius = SyntheticBossStakeRadius;
-            Console.WriteLine(
-                $"MapSplits: StakePos set on boss area '{areaName}' (stake at gate '{fog.Name}', radius {SyntheticBossStakeRadius})");
-        }
-    }
-
-    /// <summary>
     /// SFX id of the standard white fog-wall mist. FogRando uses this value
     /// for the AEG099_001/AEG099_002 gates in its own hardcoded showsfx list
     /// (GameDataWriterE.cs ~L3211-3234) when no vanilla sfx id was captured.
     /// </summary>
     public const int WhiteFogSfx = 5;
-
-    /// <summary>
-    /// Activation radius (Area.StakeRadius) for stakes created on synthetic
-    /// boss arenas; see EnsureBossStakePos.
-    /// </summary>
-    public const int SyntheticBossStakeRadius = 40;
 
     /// <summary>
     /// Appends one showsfx init (ChangeAssetEnableState + CreateAssetfollowingSFX,
