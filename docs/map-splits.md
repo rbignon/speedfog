@@ -24,8 +24,9 @@ finalized, so the split behaves exactly like an ordinary fog.txt zone/gate to
 everything downstream (cluster generation, DAG placement, connection
 injection, zone tracking, spoiler).
 
-The Enir-Ilim climb is the first (and so far only) instance of the mechanism;
-see "The Enir-Ilim Instance" below.
+The Enir-Ilim climb was the first instance of the mechanism; the Fort of
+Reprimand followed. See "The Enir-Ilim Instance" and "The Fort of Reprimand
+Instance" below.
 
 ## File Format
 

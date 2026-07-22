@@ -132,6 +132,20 @@ public class GameTweaksLoaderTests
     }
 
     [Fact]
+    public void Parse_TorrentArenas_NonStringCollision_Throws()
+    {
+        var ex = Assert.Throws<InvalidDataException>(() => GameTweaksLoader.Parse("""
+            [config_vars]
+            logicpass = true
+
+            [[torrent_arenas]]
+            map = "m12_03_00_00"
+            collisions = [3]
+            """));
+        Assert.Contains("collisions", ex.Message);
+    }
+
+    [Fact]
     public void Parse_SpiritspringRemovals_ParsesEntry()
     {
         var tweaks = GameTweaksLoader.Parse("""
