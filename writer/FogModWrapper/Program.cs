@@ -591,10 +591,11 @@ Example:
                 emevd.Write(file);
         }
 
-        if (showSfxEventId > 0 && totalShowSfxInjected != ctx.MapSplits.Fogs.Count)
+        int expectedShowSfx = MapSplitsInjector.CountShowSfxGates(ctx.MapSplits);
+        if (showSfxEventId > 0 && totalShowSfxInjected != expectedShowSfx)
         {
             Console.WriteLine(
-                $"Warning: injected showsfx for {totalShowSfxInjected}/{ctx.MapSplits.Fogs.Count} " +
+                $"Warning: injected showsfx for {totalShowSfxInjected}/{expectedShowSfx} " +
                 "map-splits gates (missing map EMEVD or Event 0?)");
         }
 

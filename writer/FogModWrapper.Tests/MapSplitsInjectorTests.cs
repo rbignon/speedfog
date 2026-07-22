@@ -373,6 +373,34 @@ public class MapSplitsInjectorTests
     }
 
     [Fact]
+    public void InjectShowSfx_SkipsGreyFogModels()
+    {
+        // Grey boundary-wall models (FogMod's mfogModels) render their own
+        // mist: the MakeFrom path sets AssetSfxParamRelativeID = 0 on them,
+        // so a showsfx init would overlay the white fog-wall SFX on the grey
+        // wall. Only the golden-model gate must get an init.
+        var splits = new MapSplits(
+            new List<SplitZone>(),
+            new List<SplitFog>
+            {
+                new("AEG099_002_9900", "m99_00_00_00", 990001, "Grey gate",
+                    "AEG099_231 AEG099_002_9000 1.0 2.0 3.0 90.0",
+                    "lower", "going up", "upper", "arriving up"),
+                new("AEG099_001_9901", "m99_00_00_00", 990002, "Golden gate",
+                    "AEG099_001 AEG099_002_9000 1.0 2.0 3.0 90.0",
+                    "lower", "going up", "upper", "arriving up"),
+            });
+        var emevd = MakeEmevdWithEvent0();
+        int n = MapSplitsInjector.InjectShowSfx(emevd, "m99_00_00_00", splits, 9005775);
+
+        Assert.Equal(1, n);
+        var ins = Assert.Single(emevd.Events[0].Instructions);
+        Assert.Equal(990002, BitConverter.ToInt32(ins.ArgData, 8));
+        // The Program.cs sanity counter must agree with the skip predicate.
+        Assert.Equal(1, MapSplitsInjector.CountShowSfxGates(splits));
+    }
+
+    [Fact]
     public void InjectShowSfx_OtherMap_NoOp()
     {
         var emevd = MakeEmevdWithEvent0();
@@ -421,24 +449,20 @@ public class MapSplitsInjectorTests
         // Synthetic fogs are grouped per map: InjectShowSfx aggregates fogs
         // by target map (m20_01_00_00 has Enir-Ilim pair, m61_49_43_00 has Fort
         // of Reprimand pair). This guards the per-map aggregation and the fog
-        // 'map' field vs. the EMEVD filename convention.
+        // 'map' field vs. the EMEVD filename convention. The 9100 gates use a
+        // grey model (own mist, no showsfx); only the golden 9101 gates get
+        // an init.
         var emevd = MakeEmevdWithEvent0();
         int n = MapSplitsInjector.InjectShowSfx(emevd, "m20_01_00_00", splits, 9005775);
-        Assert.Equal(2, n);
-        Assert.Equal(2, emevd.Events[0].Instructions.Count);
-        var entities = emevd.Events[0].Instructions
-            .Select(i => BitConverter.ToInt32(i.ArgData, 8))
-            .ToList();
-        Assert.Equal(new List<int> { 20011960, 20011961 }, entities);
+        Assert.Equal(1, n);
+        var ins = Assert.Single(emevd.Events[0].Instructions);
+        Assert.Equal(20011961, BitConverter.ToInt32(ins.ArgData, 8));
 
         // Parallel check for Fort of Reprimand fogs in m61_49_43_00
         var emevd2 = MakeEmevdWithEvent0();
         int n2 = MapSplitsInjector.InjectShowSfx(emevd2, "m61_49_43_00", splits, 9005775);
-        Assert.Equal(2, n2);
-        Assert.Equal(2, emevd2.Events[0].Instructions.Count);
-        var entities2 = emevd2.Events[0].Instructions
-            .Select(i => BitConverter.ToInt32(i.ArgData, 8))
-            .ToList();
-        Assert.Equal(new List<int> { 2049431960, 2049431961 }, entities2);
+        Assert.Equal(1, n2);
+        var ins2 = Assert.Single(emevd2.Events[0].Instructions);
+        Assert.Equal(2049431961, BitConverter.ToInt32(ins2.ArgData, 8));
     }
 }

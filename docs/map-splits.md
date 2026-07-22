@@ -47,7 +47,7 @@ name = "AEG099_002_9100"
 map = "m20_01_00_00"
 id = 20011960
 text = "Spiral Rise ascent"
-make_from = "AEG099_002 AEG099_002_9000 -281.566 66.082 -85.637 -69.1"
+make_from = "AEG099_231 AEG099_002_9000 -281.566 66.082 -85.637 -69.1"
 aside = { area = "enirilim", text = "climbing toward the Spiral Rise" }
 bside = { area = "enirilim_upper", text = "arriving at the Spiral Rise", exit = true }
 ```
@@ -62,13 +62,28 @@ bside = { area = "enirilim_upper", text = "arriving at the Spiral Rise", exit = 
   outside FogMod's own range (>= 755890000, see `FOGMOD_ENTITY_BASE` in
   CLAUDE.md). `make_from` is FogMod's own space-delimited format (`GameDataWriterE.cs`
   `Write` methods, ~L256-262): `"<model> <source-asset-to-copy> <x> <y> <z> <yaw>"`.
-  The source asset must already exist in the target map (Enir-Ilim's fogs copy
-  `AEG099_002_9000`, the existing Radahn-arena gate in `m20_01_00_00`).
+  FogMod's `addFakeGate` finds the source asset in the target map's MSB (it
+  must already exist there, else "Missing asset ... need it to create ..."),
+  DeepCopies it, then overrides the copy's `ModelName` with the model token
+  and registers that model in the MSB. The source's own model is therefore
+  irrelevant (fog.txt's MakeFrom entries copy doors, statues, anything local);
+  Enir-Ilim's fogs copy `AEG099_002_9000`, the existing Radahn-arena gate in
+  `m20_01_00_00`. On overworld tiles (`m6*_*0` maps) the pseudo-source
+  `overworld` uses FogMod's built-in stock donor instead of a local asset.
   Yaw convention (in-game validated): `yaw = atan2(dx, dz)` of the captured
-  edge-to-edge doorway segment `+ 90°`. The `AEG099_002` model's width axis
-  runs perpendicular to the direction its yaw points, so plain
+  edge-to-edge doorway segment `+ 90°`. The `AEG099` gate models' width axis
+  runs perpendicular to the direction their yaw points, so plain
   `atan2(dx, dz)` leaves the gate lying along the corridor instead of
   spanning the doorway.
+- **Model choice (golden vs grey)**: FogRando's convention is golden fog
+  (`AEG099_001`/`002`/`003`) in front of boss arenas and grey boundary mist
+  (`AEG099_230`/`231`/`232`, FogMod's `mfogModels`) for plain transitions.
+  Grey models are self-visible (see "Gate Visibility"). The gate `name` must
+  NOT contain a grey model string: FogMod's `fixMultiplayerGate` disables
+  fixed gates by name substring match against `mfogModels`. MakeFrom gate
+  names are otherwise arbitrary (fog.txt names its own MakeFrom gates after
+  their raw entity IDs), which is why the two grey-model map-splits gates
+  keep their historical `AEG099_002_9100`/`AEG099_003_9100` names.
 - **Required keys**: `[[zones]]` requires non-empty strings `name`, `map`,
   `display_name`, `split_from`; `cols`/`tags`/`drops_to` are optional and, if
   present, must be lists of strings (`drops_to` is Python-only, see "Drops"
@@ -209,6 +224,15 @@ Event 0, mirroring FogRando's own hardcoded pattern. Sfx 5 is the standard
 white-fog mist FogRando uses for `AEG099_001`/`AEG099_002` gates without a
 vanilla-captured sfx id. The showsfx event ID is resolved by name from
 `fogevents.txt` (`EventConfig.NewEvents`), not hardcoded.
+
+Grey-model gates (`AEG099_230`/`231`/`232`) are the exception: FogMod's
+MakeFrom path sets `AssetSfxParamRelativeID = 0` on them (the `mfogModels`
+branch), so the grey mist is rendered by the asset's own
+`AssetEnvironmentGeometryParam` row (992xx; FogMod also clears
+`isCreateMultiPlayOnly` on those rows so the mist shows in single-player).
+FogRando never emits showsfx for its own grey barriers, and
+`InjectShowSfx` skips them for the same reason: an init would overlay the
+white mist on the grey wall.
 
 ## Collision Guards
 
@@ -380,9 +404,11 @@ AEG099_002_9000 BSide -> enirilim_radahn (final_boss)   <- unchanged, DAG-wired
   section), not an Enir-Ilim-specific mechanism.
 - Each half keeps at least one Site of Grace.
 
-**Entity IDs**: fog 2 is `AEG099_002_9100` / `20011960`; fog 1 is
-`AEG099_002_9101` / `20011961`. Both copy the `AEG099_002` model from the
-existing `AEG099_002_9000` asset in `m20_01_00_00`.
+**Entity IDs**: fog 2 is `AEG099_002_9100` / `20011960` (grey `AEG099_231`
+model: not a boss-arena front; its name keeps the historical `AEG099_002`
+prefix, see "Model choice" under File Format); fog 1 is `AEG099_002_9101` /
+`20011961` (golden `AEG099_002`). Both copy the existing `AEG099_002_9000`
+asset in `m20_01_00_00`.
 
 **Sealed Leda tail**: `enirilim_stairs` (Leda's plateau onward) is excluded
 from the cluster pool via `zone_metadata.toml`'s existing `exclude = true`
@@ -474,7 +500,7 @@ scadualtus (overworld, excluded: type "other")
    |  BSide=reprimand: entry only
    v
 reprimand (mini_dungeon, synthetic): Fort of Reprimand interior
-   |  FOG 2 (synthetic, AEG099_001_9101, id 2049431961)
+   |  FOG 2 (synthetic, AEG099_090_9101, id 2049431961)
    |  BSide=reprimand: entry (default, filtered out) + exit (bside.exit grant)
    |  ASide=scadualtus_edredd_boss: exit (default), never used
    v
@@ -487,9 +513,9 @@ gate's front physically faces the chapel; the initial reprimand-first
 ordering left the gate's interaction sides inverted in-game (found and
 swapped during the 2026-07-22 playtest).
 
-- **Cluster `{reprimand}`** (mini_dungeon): entry = FOG 1's BSide ("inside
-  the Fort of Reprimand gate"), exit = FOG 2's BSide ("before Black Knight
-  Edredd's chapel", the `bside.exit` grant). The swap gives FOG 2's BSide an
+- **Cluster `{reprimand}`** (mini_dungeon): entry = FOG 1's BSide ("before
+  the Fort of Reprimand"), exit = FOG 2's BSide ("before Knight Edredd's
+  arena", the `bside.exit` grant). The swap gives FOG 2's BSide an
   unwanted default entry role (arriving at the chapel door inside the fort),
   which `[clusters.reprimand_77e7] allowed_entries` in `zone_metadata.toml`
   filters back out to keep the strict one-way ascent: one entry fog, one
@@ -557,9 +583,11 @@ false confidence. What WAS established, for the next attempt:
   rescoping, StakeRadius, stake_region box, oversizing) and their review
   threads.
 
-**Entity IDs**: FOG 1 is `AEG099_003_9100` / `2049431960` (wide gate, ~5.2m
-opening); FOG 2 is `AEG099_001_9101` / `2049431961` (narrow gate, ~1.0m
-opening). Both copy the `AEG099_090_9000` "Shiny Item" asset already present
+**Entity IDs**: FOG 1 is `AEG099_003_9100` / `2049431960` (~5.2m opening,
+grey `AEG099_231` model: not a boss-arena front; its name keeps the
+historical `AEG099_003` prefix, see "Model choice" under File Format); FOG 2
+is `AEG099_090_9101` / `2049431961` (~1.0m opening, golden `AEG099_001`
+model). Both copy the `AEG099_090_9000` "Shiny Item" asset already present
 on `m61_49_43_00`, not an existing fog gate: `m61_49_43_00` has none to copy
 the way Enir-Ilim's fogs copy `AEG099_002_9000`. This is FogRando's own
 established idiom for `MakeFrom` gates on overworld tiles with no existing

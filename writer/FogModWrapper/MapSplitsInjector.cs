@@ -99,6 +99,31 @@ public static class MapSplitsInjector
     public const int WhiteFogSfx = 5;
 
     /// <summary>
+    /// FogRando's grey boundary-wall models (GameDataWriterE mfogModels).
+    /// A MakeFrom gate using one of these gets AssetSfxParamRelativeID = 0
+    /// from FogMod, so the grey mist is rendered by the asset's own
+    /// AssetEnvironmentGeometryParam row (992xx); it needs no showsfx event,
+    /// and adding one would overlay the white mist on the grey wall.
+    /// </summary>
+    private static readonly HashSet<string> GreyFogModels =
+        new() { "AEG099_230", "AEG099_231", "AEG099_232" };
+
+    /// <summary>
+    /// A gate needs a showsfx init unless it uses a grey model (self-visible,
+    /// see <see cref="GreyFogModels"/>). The model is the first MakeFrom token,
+    /// exactly what FogMod's addFakeGate assigns to the created asset.
+    /// </summary>
+    private static bool NeedsShowSfx(SplitFog fog) =>
+        !GreyFogModels.Contains(fog.MakeFrom.Split(' ')[0]);
+
+    /// <summary>
+    /// Number of map-splits gates that need a showsfx init. Program.cs checks
+    /// the injected total against this.
+    /// </summary>
+    public static int CountShowSfxGates(MapSplits splits) =>
+        splits.Fogs.Count(NeedsShowSfx);
+
+    /// <summary>
     /// Appends one showsfx init (ChangeAssetEnableState + CreateAssetfollowingSFX,
     /// i.e. the fog-wall mist) per map-splits gate to the owning map's
     /// constructor event. FogMod only emits showsfx for gates captured in
@@ -108,11 +133,19 @@ public static class MapSplitsInjector
     /// Synthetic gates have no vanilla event, so without this step they are
     /// interactable but invisible. Mirrors FogRando's hardcoded pattern:
     /// InitializeCommonEvent(0, showsfx, gate entity, sfx).
-    /// Returns the number of inits added.
+    /// Gates using a grey model (<see cref="GreyFogModels"/>) are skipped:
+    /// they display their own mist. Returns the number of inits added.
     /// </summary>
     public static int InjectShowSfx(EMEVD emevd, string mapName, MapSplits splits, int showSfxEventId)
     {
-        var fogs = splits.Fogs.Where(f => f.Map == mapName).ToList();
+        var mapFogs = splits.Fogs.Where(f => f.Map == mapName).ToList();
+        foreach (var fog in mapFogs.Where(f => !NeedsShowSfx(f)))
+        {
+            Console.WriteLine(
+                $"MapSplits: showsfx skipped for '{fog.Name}' "
+                + $"({fog.MakeFrom.Split(' ')[0]} renders its own grey mist)");
+        }
+        var fogs = mapFogs.Where(NeedsShowSfx).ToList();
         if (fogs.Count == 0)
             return 0;
         var evt0 = emevd.Events.FirstOrDefault(e => e.ID == 0);

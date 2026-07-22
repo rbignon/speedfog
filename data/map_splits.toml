@@ -28,18 +28,28 @@ drops_to = ["enirilim"]
 
 # Fog 2 of the spec: doorway before the Spiral Rise stairs.
 # Captured edge-to-edge segment: (-280.792, 66.078, -83.610) -> (-282.340, 66.086, -87.664)
-# MakeFrom = "<model> <source-asset-to-copy> <x> <y> <z> <yaw>"; position is the
-# segment midpoint. Yaw formula (in-game validated): yaw = atan2(dx, dz) of the
-# segment + 90. The AEG099_002 model's width axis runs perpendicular to the
-# direction its yaw points, so the gate spans the doorway only when yawed 90
-# degrees off the segment direction (with plain atan2(dx, dz) it lies along
-# the corridor instead).
+# MakeFrom = "<model> <source-asset-to-copy> <x> <y> <z> <yaw>". The source is
+# a template DeepCopied by FogMod's addFakeGate and must already exist in the
+# map's MSB; the model freely overrides the copy's ModelName (FogMod registers
+# it). Position is the segment midpoint. Yaw formula (in-game validated):
+# yaw = atan2(dx, dz) of the segment + 90. The AEG099 gate models' width axis
+# runs perpendicular to the direction their yaw points, so the gate spans the
+# doorway only when yawed 90 degrees off the segment direction (with plain
+# atan2(dx, dz) it lies along the corridor instead).
+# Model AEG099_231 = grey boundary-wall mist (FogRando convention for gates
+# that are not boss-arena entrances; golden AEG099_001/002/003 are for boss
+# fronts). FogMod sets AssetSfxParamRelativeID = 0 on grey models, so the
+# gate shows its own mist and InjectShowSfx skips it. The gate NAME keeps its
+# historical AEG099_002 prefix on purpose: names must never contain a grey
+# model string (FogMod's fixMultiplayerGate disables fixed gates by name
+# match), and MakeFrom gate names are arbitrary anyway (fog.txt uses raw
+# entity IDs as names).
 [[fogs]]
 name = "AEG099_002_9100"
 map = "m20_01_00_00"
 id = 20011960
 text = "Spiral Rise ascent"
-make_from = "AEG099_002 AEG099_002_9000 -281.566 66.082 -85.637 -69.1"
+make_from = "AEG099_231 AEG099_002_9000 -281.566 66.082 -85.637 -69.1"
 aside = { area = "enirilim", text = "in front of the door at the top of the stairs before the Spiral Rise" }
 # bside.exit: upper-side exit enables the reverse (descending) route through
 # the merged cluster, on top of the default bside=entry-only role.
@@ -99,12 +109,16 @@ enemies = [
 # Fog 1: the fort's front gate, ~5.2 m opening.
 # Position and yaw tuned in-game (the raw capture frame matched the MSB here,
 # unlike Fog 2; see the header note above).
+# Grey boundary-wall model (non-boss gate, see the Enir-Ilim fog 2 comment);
+# name keeps its historical AEG099_003 prefix on purpose. If AEG099_231 turns
+# out too narrow for the ~5.2 m opening, swapping the model token to
+# AEG099_230/232 is a one-token change.
 [[fogs]]
 name = "AEG099_003_9100"
 map = "m61_49_43_00"
 id = 2049431960
 text = "Fort of Reprimand gate"
-make_from = "AEG099_003 AEG099_090_9000 18.026 388.534 37.585 165.0"
+make_from = "AEG099_231 AEG099_090_9000 18.026 388.534 37.585 165.0"
 aside = { area = "scadualtus", text = "before the Fort of Reprimand" }
 bside = { area = "reprimand", text = "before the Fort of Reprimand" }
 
