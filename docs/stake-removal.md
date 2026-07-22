@@ -86,4 +86,6 @@ To identify additional vanilla stakes that need removal:
 3. **Geometric verification (shared-MSB case):** use `tools/game_inspect` to dump the asset and its associated `c0000` Part.Player. The player entity ID is given by the RetryPoint's DebugInfo `player` line in fog.txt (it also equals the asset entity ID minus 970, per FogMod source). Compare its `Position` to the `BossPos` of each area sharing the map. If the position is closer to a non-boss area, the stake is a candidate.
 4. **In-game confirmation:** with a minimal seed including only the target boss arena, die at the boss from multiple positions inside the arena to reproduce the intermittent activation, and observe the respawn point.
 
-Once confirmed, add the `(Map, Name)` tuple to `StakesToRemove` in `StakeRemover.cs`.
+Once confirmed, add a `[[stake_removals]]` entry (map + name) to
+`data/game_tweaks.toml` and bump the drift-guard count in
+`GameTweaksLoaderTests`.

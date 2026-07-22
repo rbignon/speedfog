@@ -259,4 +259,22 @@ public class GameTweaksLoaderTests
         Assert.Empty(tweaks.RemoveEntities);
         Assert.Empty(tweaks.StakeRemovals);
     }
+
+    [Fact]
+    public void RealDataFile_ParsesAllTargetSections()
+    {
+        // Drift guard for the tracked data file: the counts change only when
+        // entries are deliberately added or removed, keeping data and docs
+        // honest (same role as MapSplits' RealDataFile test).
+        var baseDir = AppDomain.CurrentDomain.BaseDirectory;
+        var path = Path.GetFullPath(
+            Path.Combine(baseDir, "../../../../..", "data", "game_tweaks.toml"));
+        Assert.True(File.Exists(path), $"tracked data file missing: {path}");
+
+        var tweaks = GameTweaksLoader.Load(path);
+        Assert.Equal(4, tweaks.TorrentArenas.Count);
+        Assert.Single(tweaks.SpiritspringRemovals);
+        Assert.Single(tweaks.RemoveEntities);
+        Assert.Equal(3, tweaks.StakeRemovals.Count);
+    }
 }

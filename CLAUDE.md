@@ -75,7 +75,7 @@ speedfog/
 │   ├── fog_data.json        # Generated fog gate metadata (gitignored)
 │   ├── zone_metadata.toml   # Zone weight config (tracked)
 │   ├── map_splits.toml      # Synthetic zones/fogs splitting oversized maps (tracked)
-│   ├── game_tweaks.toml     # FogMod ConfigVars + startup gate flags (tracked)
+│   ├── game_tweaks.toml     # FogMod ConfigVars + startup gate flags + target lists (torrent arenas, spiritspring/stake/entity removals) (tracked)
 │   ├── care_package_items.toml  # Curated item pools for care package (tracked)
 │   ├── phantom_skins.toml   # Phantom skins catalog (cosmetic auras, tracked)
 │   ├── boss_arena_tags.json # Boss/arena tags for compatibility matching (tracked)
@@ -256,7 +256,7 @@ speedfog/
 | `GraphLoader` | Parses graph.json v4 format from Python |
 | `PhantomCatalogLoader` | Loads and validates `data/phantom_skins.toml` |
 | `OpenSplitOverrideLoader` | Reads `[warps."<id>"] opensplit = true` from `data/zone_metadata.toml` |
-| `GameTweaksLoader` | Loads FogMod ConfigVars + startup gate flags from `data/game_tweaks.toml` |
+| `GameTweaksLoader` | Loads FogMod ConfigVars, startup gate flags and the four target lists (torrent arenas, spiritspring removals, remove-entities, stake removals) from `data/game_tweaks.toml` |
 | `ResourceCalculations` | Pure calculation functions for starting resources |
 | `ShopIdAllocator` | Shop ID allocation utilities |
 | `PhaseTimer` | Per-phase timing of Program.cs pipeline steps (use this, not ad-hoc Stopwatches) |
@@ -278,14 +278,13 @@ speedfog/
 | `MakestablePulsePatcher` | Gates the makestable stable-position pulse on load end (flag 2200) so arena quit-outs respawn at the entrance |
 | `PlayRegionPatcher` | Restores vanilla 6000/6001 play region save-limit flags that FogMod needlessly remapped |
 | `VanillaWarpRemover` | Removes vanilla warp MSB assets that conflict with fog gates |
-| `EnirilimAssetRemover` | Hardcoded removal of FogMod-created Enir-Ilim thorns (EntityGroup match, via VanillaWarpRemover) |
 | `StartupFlagInjector` | Sets event flags at startup in any EMEVD (open gates, etc.) |
-| `StakeRemover` | Removes vanilla stakes that respawn outside the DAG |
-| `SpiritspringRemover` | Removes spiritspring jump regions (MountJump/MountJumpFall) that bypass map-splits chokepoints |
+| `StakeRemover` | Removes vanilla stakes that respawn outside the DAG, targets come from `data/game_tweaks.toml` |
+| `SpiritspringRemover` | Removes spiritspring jump regions (MountJump/MountJumpFall) that bypass map-splits chokepoints, targets come from `data/game_tweaks.toml` |
 | `HeavyDoorMessagePatcher` | Suppresses "heavy door" popup (text 4200) in common_func |
 | `DeathMarkerInjector` | Bloodstain markers at fog gates (MSB assets + EMEVD SFX) |
 | `BossTriggerInjector` | Locks boss arena exit fog gates by setting TrapFlag before entrance warp |
-| `TorrentArenaPatcher` | Re-enables Torrent in selected boss arenas by flipping `Collision.DisableTorrent` |
+| `TorrentArenaPatcher` | Re-enables Torrent in selected boss arenas by flipping `Collision.DisableTorrent`, targets come from `data/game_tweaks.toml` |
 | `WeatherInjector` | Forces a fixed weather and optionally pins the clock hour via a looping common.emevd event (opt-in via `[plugin.weather]`) |
 | `WeaponUpgradeInjector` | Weapon upgrade initialization for starting weapons with ashes of war |
 | `PhantomCatalogInjector` | Bakes phantom skin catalog (cosmetic auras) into PhantomParam/SpEffectVfxParam/SpEffectParam |

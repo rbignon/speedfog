@@ -398,11 +398,11 @@ superseded, see the design spec).
 **Thorns removal**: FogMod itself *creates* an Outer Wall thorns barrier
 (two assets, `AEG410_901`/`AEG410_905`, sharing `EntityGroup 20006662`) and
 only disables it when flag 330 (Sealing Tree burned) is ON, which SpeedFog
-keeps OFF. `EnirilimAssetRemover` (`writer/FogModWrapper/EnirilimAssetRemover.cs`)
-removes it post-`Write` by `EntityGroup` match (`MatchGroup = true`) via
-`VanillaWarpRemover`, since a FogMod-created asset has no per-asset EntityID
-to key on before the write pass. See `docs/vanilla-warp-removal.md` for the
-`match_group` mechanism.
+keeps OFF. A `[[remove_entities]]` entry in `data/game_tweaks.toml`
+(`m20_01_00_00 / 20006662`, `match_group = true`) removes it post-`Write` by
+`EntityGroup` match via `VanillaWarpRemover`, since a FogMod-created asset has
+no per-asset EntityID to key on before the write pass. See
+`docs/vanilla-warp-removal.md` for the `match_group` mechanism.
 
 **Fog-2 door**: a vanilla closed door blocks the passage at fog 2, before the
 Spiral Rise stairs. The controlling flag is `20018540`, on door asset
@@ -548,8 +548,8 @@ fort's containment entirely. The jump behaviour lives in two MSB regions,
 0`: no flag or EMEVD can gate them (only springs built as `LockedMountJump`
 support that), so `SpiritspringRemover`
 (`writer/FogModWrapper/SpiritspringRemover.cs`) deletes both regions from
-the MSB by proximity match (5m radius) post-`Write`, a hardcoded target list
-following the same policy as `EnirilimAssetRemover`. It only runs when
+the MSB by proximity match (5m radius) post-`Write`, declared as a
+`[[spiritspring_removals]]` entry in `data/game_tweaks.toml`. It only runs when
 `reprimand` is present in the seed's `graph.json` `area_tiers` (the Fort of
 Reprimand cluster is actually in this run's DAG), leaving other seeds'
 `m61_49_42_00` untouched.
@@ -615,11 +615,13 @@ for the full list.
 - `writer/FogModWrapper/MapSplitsInjector.cs`: `Apply` (Areas/Entrances,
   `BossDefeatName` mirroring for boss-area sides), `SplitEnemyAreas`
   (EnemyArea split), `InjectShowSfx` (fog-wall mist).
-- `writer/FogModWrapper/EnirilimAssetRemover.cs`: hardcoded thorns removal.
-- `writer/FogModWrapper/SpiritspringRemover.cs`: hardcoded spiritspring
-  region removal (Fort of Reprimand), gated on `reprimand`'s presence in
-  `area_tiers`.
+- `writer/FogModWrapper/SpiritspringRemover.cs`: spiritspring region removal
+  driven by game_tweaks `[[spiritspring_removals]]`, gated on the required
+  zone's presence in `area_tiers`.
 - `writer/FogModWrapper/VanillaWarpRemover.cs`: `MatchGroup` removal path.
+- `data/game_tweaks.toml`: `[[remove_entities]]` (Enir-Ilim thorns) and
+  `[[spiritspring_removals]]` (Fort of Reprimand) sections used by the
+  map-splits instances above.
 - `data/zone_metadata.toml`: `[zones.enirilim]`, `[zones.enirilim_upper]`,
   `[zones.enirilim_stairs]`, `[clusters.enirilim_9820]`; `[zones.reprimand]`,
   `[zones.scadualtus_edredd_boss]`, `[clusters.reprimand_77e7]`,

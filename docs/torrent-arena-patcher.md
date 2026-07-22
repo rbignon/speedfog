@@ -41,6 +41,13 @@ The collisions don't carry geometry in the MSB (positions are `(0,0,0)`); only
 the name identifies them. The geometry comes from the `h<NNNNNN>` mesh file in
 the map's `.mapbnd.dcx`.
 
+The per-map lists live as `[[torrent_arenas]]` entries in
+`data/game_tweaks.toml` (previously a hardcoded dictionary in
+`TorrentArenaPatcher.cs`). Adding an arena is a data edit: append an entry
+with `map` and `collisions`, then bump the expected count in the
+`RealDataFile_ParsesAllTargetSections` drift guard
+(`writer/FogModWrapper.Tests/GameTweaksLoaderTests.cs`); no recompile needed.
+
 ## Pipeline
 
 The patcher runs in Phase 8 (`ApplyModDirInjectors` in `Program.cs`), after

@@ -28,12 +28,12 @@ FogMod tags unique warps with `"remove"` in its graph data, but its removal logi
 
 ## Matching by EntityGroup (`match_group`)
 
-Besides the data-driven `remove_entities` from `graph.json`, `EnirilimAssetRemover`
-(`writer/FogModWrapper/EnirilimAssetRemover.cs`) contributes a small hardcoded
-`(map, entityId, matchGroup)` list (pattern mirrored from `StakeRemover`) merged
-into the `VanillaWarpRemover.Remove` call in `Program.cs`:
+Besides the data-driven `remove_entities` from `graph.json`, `data/game_tweaks.toml`
+carries a small `[[remove_entities]]` list (map + entity_id + optional
+`match_group`) that is concatenated onto `graph.json`'s list before the
+`VanillaWarpRemover.Remove` call in `Program.cs`:
 
-- `m20_01_00_00 / 20006662` (by EntityGroup, `matchGroup = true`): the Outer Wall
+- `m20_01_00_00 / 20006662` (by EntityGroup, `match_group = true`): the Outer Wall
   thorns barrier in Enir-Ilim (part of the map-splits climb, see
   `docs/map-splits.md`). FogMod CREATES this barrier as two assets
   (`AEG410_901`, `AEG410_905`) sharing EntityGroup `20006662`, and only disables
@@ -47,8 +47,8 @@ selects between the two matching strategies in `VanillaWarpRemover.RemoveFromMap
 entries with `MatchGroup = false` (the `graph.json`-sourced default) are matched
 by `EntityID`; entries with `MatchGroup = true` are matched against the asset's
 `EntityGroupIDs` array instead. Both matching strategies run in the same
-`Remove()` pass, since `EnirilimAssetRemover.GetEntities()` is concatenated onto
-`graph.json`'s `RemoveEntities` before the call (`Program.cs`).
+`Remove()` pass, since `ctx.Tweaks.RemoveEntities` (from `GameTweaksLoader`) is
+concatenated onto `graph.json`'s `RemoveEntities` before the call (`Program.cs`).
 
 This runs post-`Write`, i.e. after FogMod's `GameDataWriterE.Write()` has
 already created the thorns assets: `VanillaWarpRemover` operates on the MSBs
