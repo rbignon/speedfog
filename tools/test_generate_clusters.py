@@ -4897,3 +4897,14 @@ class TestMapSplits:
         splits["zones"][0]["enemies"] = ["AEG099_002_9000"]
         with pytest.raises(ValueError, match="entity name"):
             _validate_map_splits(splits)
+
+    def test_validate_accepts_area_qualified_enemies(self):
+        splits = self._splits()
+        splits["zones"][0]["enemies"] = ["scadualtus_high:c5401_9020"]
+        _validate_map_splits(splits)  # must not raise
+
+    def test_validate_rejects_bad_area_qualifier(self):
+        splits = self._splits()
+        splits["zones"][0]["enemies"] = ["Bad-Area:c5401_9020"]
+        with pytest.raises(ValueError, match="entity name"):
+            _validate_map_splits(splits)

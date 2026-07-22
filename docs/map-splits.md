@@ -143,10 +143,14 @@ lists MSB entity names (`cNNNN_NNNN`) whose `EnemyLoc.Area` the injector
 forces to the synthetic zone (FogRando's native per-enemy override, as used
 by vanilla `Area: abyssal` entries). The zone gets its own EnemyArea
 (inheriting the source's ScalingTier) and then scales with its graph.json
-tier. Unknown names or names belonging to another area fail the build.
-Derive candidates with `game_inspect list-enemies` / `near` and validate
-in-game. Python validates shape and the cNNNN_NNNN format at cluster-gen
-time (strict parity with the C# loader).
+tier. Entries default to `split_from` as their expected source area; the
+qualified form `area:cNNNN_NNNN` declares another source, for enemies
+FogRando attributed to an overlapping area (e.g. the Fort of Reprimand
+gatehouse trio under `scadualtus_high`). Unknown names or names whose
+EnemyLoc belongs to an unexpected area fail the build. Derive candidates
+with `game_inspect list-enemies` / `near` (cross-check each candidate's
+`AArea` in foglocations2.txt) and validate in-game. Python validates shape
+and both entry forms at cluster-gen time (strict parity with the C# loader).
 
 ## Two Injection Points
 
@@ -526,14 +530,15 @@ Plain tile `m61_47_43_00` (`MakeFrom: AEG099_231 AEG099_090_9000 ...`).
 the `scadualtus` EnemyArea, which is never a DAG node (type `other`), so
 without intervention they would stay at their vanilla DLC difficulty
 regardless of the `reprimand` cluster's tier. `[[zones]] name = "reprimand"`
-in `data/map_splits.toml` lists 10 entity names (`c5651_9000` through
-`c5980_9002`, derived from the MSB bounding box `x 0..120, y 370..430, z
--92..-10` via `game_inspect near`/`list-enemies`) that the `enemies` key
-(see "File Format" above) reassigns to the new zone. Excluded by design: the
-`c1000` NPC, the `c5401` gatehouse trio on the approach side (outside the
-fort proper, pending in-game confirmation they cannot reach over or through
-the gate), and the crypt behind FOG 2 (Edredd's chapel mobs stay in
-`scadualtus`, a deliberate boss-arena scaling decision, not an oversight).
+in `data/map_splits.toml` lists 13 entity names (derived from the MSB via
+`game_inspect near`/`list-enemies`) that the `enemies` key (see "File
+Format" above) reassigns to the new zone: 10 plain entries from
+`scadualtus`, plus the gatehouse `c5401` trio as area-qualified
+`scadualtus_high:` entries, since FogRando attributed those high-perched
+soldiers to the overlapping Scaduview Cross area (their foglocations2
+`AArea`), not to `scadualtus`. Excluded by design: the `c1000` NPC and the
+crypt behind FOG 2 (Edredd's chapel mobs stay in `scadualtus`, a deliberate
+boss-arena scaling decision, not an oversight).
 
 **Spiritspring removal**: a spiritspring on the neighbouring tile
 `m61_49_42_00` (the ravine behind the chapel, roughly 80m below the fort)
@@ -583,12 +588,12 @@ Format" above flips: yaw `θ` becomes `180-θ`.
 removal confirmed working, FOG 2 position confirmed, FOG 1 repositioned and
 FOG 2's sides swapped in-game (both folded back into `map_splits.toml`), and
 the ungated chapel side fixed via the `BossDefeatName` mechanism above.
-Still pending: gate coverage with the final positions, boss-room retraversal
-after the `DefeatFlag`, effective scaling of the reassigned mobs, the
-gatehouse `c5401` trio (now inside the zone span after FOG 1 moved to
-z=+29.6; currently NOT in the `enemies` list), and the two fort graces
-(76909/76910); see the design spec's "Reste à valider in-game" for the full
-list.
+Still pending: gate coverage with the final positions (FOG 1 still being
+tuned in-game), boss-room retraversal after the `DefeatFlag`, effective
+scaling of the reassigned mobs (including the gatehouse trio added as
+`scadualtus_high:` qualified entries after the first playtest), and the two
+fort graces (76909/76910); see the design spec's "Reste à valider in-game"
+for the full list.
 
 ## Reference points
 

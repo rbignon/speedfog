@@ -79,13 +79,17 @@ split_from = "scadualtus"
 cols = []
 # Fort interior enemies (between the two gates), reassigned so they scale
 # with the cluster tier instead of staying at the vanilla DLC level: the
-# scadualtus EnemyArea is never in the DAG. Derived from the MSB (bbox
-# x 0..120, y 370..430, z -92..-10); excludes the c1000 NPC, the gatehouse
-# c5401 trio on the approach side, and the crypt behind Fog 2 (boss zone).
+# scadualtus EnemyArea is never in the DAG. Derived from the MSB via
+# game_inspect near/list-enemies; excludes the c1000 NPC and the crypt
+# behind Fog 2 (boss zone). The gatehouse c5401 trio sits inside the zone
+# span (in-game confirmation 2026-07-22) but FogRando attributed it to the
+# overlapping scadualtus_high area, hence the area-qualified entries.
 enemies = [
   "c5651_9000", "c5651_9001", "c5651_9002", "c5651_9003", "c5651_9009",
   "c5970_9001", "c5970_9002",
   "c5980_9000", "c5980_9001", "c5980_9002",
+  "scadualtus_high:c5401_9020", "scadualtus_high:c5401_9021",
+  "scadualtus_high:c5401_9022",
 ]
 
 # Fog 1: the fort's front gate, ~5.2 m opening.
@@ -96,7 +100,7 @@ name = "AEG099_003_9100"
 map = "m61_49_43_00"
 id = 2049431960
 text = "Fort of Reprimand gate"
-make_from = "AEG099_003 AEG099_090_9000 18.026 386.934 29.585 165.0"
+make_from = "AEG099_003 AEG099_090_9000 18.026 388.534 37.585 165.0"
 aside = { area = "scadualtus", text = "outside the Fort of Reprimand gate" }
 bside = { area = "reprimand", text = "inside the Fort of Reprimand gate" }
 

@@ -1574,8 +1574,10 @@ def _validate_map_splits(splits: dict[str, Any]) -> None:
     - zones: 'name', 'map', 'display_name', 'split_from' are required
       non-empty strings; 'cols'/'tags'/'drops_to'/'enemies' are optional
       lists of strings. 'drops_to' is Python-only (world-graph drop edges
-      for cluster-gen); 'enemies' entries must be entity names (cNNNN_NNNN),
-      consumed by C#'s MapSplitsInjector for EnemyLoc reassignment.
+      for cluster-gen); 'enemies' entries must be entity names, plain
+      (cNNNN_NNNN, source area = split_from) or area-qualified
+      (area:cNNNN_NNNN, for enemies FogRando attributed to an overlapping
+      area), consumed by C#'s MapSplitsInjector for EnemyLoc reassignment.
     - fogs: 'name', 'map', 'id' (int), 'text', 'make_from' are required;
       'aside'/'bside' are tables with required 'area' and 'text', plus one
       optional role-grant boolean each (see apply_map_splits_side_roles and
@@ -1593,10 +1595,11 @@ def _validate_map_splits(splits: dict[str, Any]) -> None:
         _require_str_list(zone, "drops_to", "zones", name)
         _require_str_list(zone, "enemies", "zones", name)
         for enemy in zone.get("enemies", []):
-            if not re.fullmatch(r"c\d{4}_\d{4}", enemy):
+            if not re.fullmatch(r"(?:[a-z0-9_]+:)?c\d{4}_\d{4}", enemy):
                 raise ValueError(
                     f"map_splits: [[zones]] '{name}' 'enemies' entry '{enemy}' "
-                    f"is not an entity name (expected cNNNN_NNNN)"
+                    f"is not an entity name (expected cNNNN_NNNN or "
+                    f"area:cNNNN_NNNN)"
                 )
 
     for fog in splits.get("fogs", []):

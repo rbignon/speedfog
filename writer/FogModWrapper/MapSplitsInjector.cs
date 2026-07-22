@@ -131,8 +131,12 @@ public static class MapSplitsInjector
     ///   zone's map. This is the overworld-tile variant where EnemyLocs carry no
     ///   Col; the per-enemy Area field is FogRando's native override (same
     ///   mechanism as the vanilla "Area: abyssal" entries in foglocations2.txt).
-    /// Unknown enemy names and names whose EnemyLoc belongs to another area are
-    /// configuration errors and throw.
+    ///   Entries default to split_from as the expected source area; the
+    ///   qualified form "area:cNNNN_NNNN" declares another source for enemies
+    ///   FogRando attributed to an overlapping area (e.g. the Fort of
+    ///   Reprimand gatehouse trio under scadualtus_high).
+    /// Unknown enemy names and names whose EnemyLoc belongs to an unexpected
+    /// area are configuration errors and throw.
     /// </summary>
     private static void SplitEnemyAreas(AnnotationData ann, MapSplits splits)
     {
@@ -168,7 +172,17 @@ public static class MapSplitsInjector
             });
 
             var colSet = zone.Cols.ToHashSet();
-            var wanted = zone.Enemies.ToHashSet();
+            // entity name -> expected source area ("area:cNNNN_NNNN" qualified
+            // form, defaulting to split_from)
+            var wanted = new Dictionary<string, string>();
+            foreach (var entry in zone.Enemies)
+            {
+                var sep = entry.IndexOf(':');
+                if (sep >= 0)
+                    wanted[entry[(sep + 1)..]] = entry[..sep];
+                else
+                    wanted[entry] = zone.SplitFrom;
+            }
             var found = new HashSet<string>();
             int reassigned = 0;
             foreach (var loc in ann.Locations.Enemies)
@@ -176,23 +190,25 @@ public static class MapSplitsInjector
                 if (loc.Map != zone.Map)
                     continue;
                 bool byCol = loc.Col != null && colSet.Contains(loc.Col);
-                bool byId = loc.ID != null && wanted.Contains(loc.ID);
-                if (!byCol && !byId)
+                string? expectedById =
+                    loc.ID != null && wanted.TryGetValue(loc.ID, out var declared)
+                        ? declared : null;
+                if (!byCol && expectedById == null)
                     continue;
-                if (loc.ActualArea != zone.SplitFrom)
+                if (loc.ActualArea != (expectedById ?? zone.SplitFrom))
                 {
-                    if (byId)
+                    if (expectedById != null)
                         throw new InvalidDataException(
                             $"map_splits: enemy '{loc.ID}' belongs to area '{loc.ActualArea}', "
-                            + $"expected '{zone.SplitFrom}' for split '{zone.Name}'");
+                            + $"expected '{expectedById}' for split '{zone.Name}'");
                     continue;
                 }
                 loc.Area = zone.Name;
                 reassigned++;
-                if (byId)
+                if (expectedById != null)
                     found.Add(loc.ID!);
             }
-            var missing = wanted.Except(found).OrderBy(x => x).ToList();
+            var missing = wanted.Keys.Except(found).OrderBy(x => x).ToList();
             if (missing.Count > 0)
                 throw new InvalidDataException(
                     $"map_splits: enemies not found in foglocations for map '{zone.Map}': "

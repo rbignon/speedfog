@@ -247,6 +247,54 @@ public class MapSplitsInjectorTests
             MapSplitsInjector.Apply(ann, MakeSplits(enemies: new List<string> { "c5651_9000" })));
     }
 
+    [Fact]
+    public void Apply_QualifiedEnemy_ReassignsFromDeclaredArea()
+    {
+        // "area:cNNNN_NNNN" entries declare their source area explicitly, for
+        // enemies FogRando attributed to an overlapping area instead of the
+        // zone's split_from (e.g. the Fort of Reprimand gatehouse trio under
+        // scadualtus_high). Unqualified entries keep the split_from guard.
+        var ann = MakeAnn();
+        ann.Locations = new AnnotationData.FogLocations
+        {
+            EnemyAreas = new List<AnnotationData.EnemyLocArea>
+            {
+                new() { Name = "lower", ScalingTier = 20 },
+            },
+            Enemies = new List<AnnotationData.EnemyLoc>
+            {
+                new() { Map = "m99_00_00_00", ID = "c5401_9020", AArea = "overlay" },
+                new() { Map = "m99_00_00_00", ID = "c5651_9000", AArea = "lower" },
+            },
+        };
+        MapSplitsInjector.Apply(ann, MakeSplits(
+            enemies: new List<string> { "overlay:c5401_9020", "c5651_9000" }));
+
+        Assert.Equal("upper", ann.Locations.Enemies[0].Area);
+        Assert.Equal("upper", ann.Locations.Enemies[1].Area);
+    }
+
+    [Fact]
+    public void Apply_QualifiedEnemyWrongArea_Throws()
+    {
+        var ann = MakeAnn();
+        ann.Locations = new AnnotationData.FogLocations
+        {
+            EnemyAreas = new List<AnnotationData.EnemyLocArea>
+            {
+                new() { Name = "lower", ScalingTier = 20 },
+            },
+            Enemies = new List<AnnotationData.EnemyLoc>
+            {
+                new() { Map = "m99_00_00_00", ID = "c5401_9020", AArea = "overlay" },
+            },
+        };
+        var ex = Assert.Throws<InvalidDataException>(() =>
+            MapSplitsInjector.Apply(ann, MakeSplits(
+                enemies: new List<string> { "elsewhere:c5401_9020" })));
+        Assert.Contains("elsewhere", ex.Message);
+    }
+
     private static EMEVD MakeEmevdWithEvent0()
     {
         var emevd = new EMEVD();
