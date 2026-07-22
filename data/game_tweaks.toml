@@ -115,3 +115,14 @@ collisions = ["h020300", "h020500", "h901000", "h905000"]  # siofra_boss (Ancest
 [[torrent_arenas]]
 map = "m12_09_00_00"
 collisions = ["h020300", "h020500", "h901000", "h905000"]  # siofra_nokron_boss (Regal Ancestor Spirit)
+
+# Spiritspring jump regions (MountJump + MountJumpFall MSB regions, EntityID
+# 0, not flag-controllable) removed because they bypass a map-splits
+# chokepoint. Point regions matched within 5m of `position`. Only applied
+# when `required_zone` is in the seed's DAG (graph.json area_tiers). See
+# docs/map-splits.md, Fort of Reprimand instance.
+
+[[spiritspring_removals]]
+map = "m61_49_42_00"
+position = [76.7, 303.2, 127.2]
+required_zone = "reprimand"  # Fort of Reprimand back-ravine spring (jumps up behind Edredd's chapel)

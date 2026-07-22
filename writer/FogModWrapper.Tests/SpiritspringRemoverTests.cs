@@ -6,7 +6,7 @@ namespace FogModWrapper.Tests;
 
 public class SpiritspringRemoverTests
 {
-    private static readonly SpiritspringRemover.SpringTarget Target =
+    private static readonly SpiritspringRemoval Target =
         new("m61_49_42_00", 76.7f, 303.2f, 127.2f, "reprimand");
 
     [Fact]

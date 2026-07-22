@@ -846,7 +846,9 @@ Example:
 
         // Remove spiritspring jumps that bypass map-splits chokepoints
         // (Fort of Reprimand back ravine). See docs/map-splits.md.
-        SpiritspringRemover.Patch(ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.AreaTiers);
+        SpiritspringRemover.Patch(
+            ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.AreaTiers,
+            ctx.Tweaks.SpiritspringRemovals);
     }
 
     /// <summary>
