@@ -395,7 +395,7 @@ Example:
         // post-process them. Instead, inject RetryPoints with "remove" tag so
         // FogMod removes them during Write() and writes the modified MSB.
         // LoadLiteConfig doesn't load RetryPoints, so ann.RetryPoints is null.
-        ctx.Ann.RetryPoints = StakeRemover.GetRetryPointsToRemove();
+        ctx.Ann.RetryPoints = StakeRemover.GetRetryPointsToRemove(ctx.Tweaks.StakeRemovals);
 
         // Resolve scaling areas for enemy-randomizer helper parts (e.g. the
         // Godskin Duo respawning backups). Without this they fall through to

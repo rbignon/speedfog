@@ -136,3 +136,20 @@ required_zone = "reprimand"  # Fort of Reprimand back-ravine spring (jumps up be
 map = "m20_01_00_00"
 entity_id = 20006662
 match_group = true  # Enir-Ilim Outer Wall thorns barrier: FogMod creates it as two assets (AEG410_901/905) sharing this EntityGroup and only disables it when flag 330 is ON, which SpeedFog keeps OFF
+
+# Vanilla Stakes of Marika whose respawn position lands outside the SpeedFog
+# DAG (or bypasses a fog gate): injected as RetryPoints tagged "remove"
+# before FogMod's Write, which handles the archive extraction and removal.
+# See docs/stake-removal.md for the discovery methodology.
+
+[[stake_removals]]
+map = "m60_12_09_02"
+name = "m60_51_36_00-AEG099_502_2000"  # caelid_radahn: vanilla stake respawns in caelid_preradahn (outside DAG)
+
+[[stake_removals]]
+map = "m12_05_00_00"
+name = "AEG099_503_9001"  # mohgwyn_boss: activation region inside the arena but respawn just outside, bypasses the fog gate
+
+[[stake_removals]]
+map = "m12_04_00_00"
+name = "AEG099_504_9001"  # ainsel_boss: respawn c0000_9015 sits ~140 units south of Astel's arena in ainsel_preboss, bypasses the fog gate
