@@ -14,6 +14,15 @@ using SoulsFormats;
 //
 //   init <file-or-dir> --event ID
 //       Find InitializeEvent/InitializeCommonEvent calls targeting a specific event.
+//
+//   objacts <msb-file-or-dir> [--map-filter mAA_BB]
+//       List MSB assets and ObjAct events.
+//
+//   asset <msb-file-or-dir> (--entity ID... | --name NAME | --first) [--typeinfo] [--map-filter mAA_BB]
+//       Dump MSB asset properties by entity ID or name.
+//
+//   retrypoints <msb-file-or-dir> [--map-filter mAA_BB]
+//       Dump RetryPoints (Stakes of Marika) with activation flag/radius/region.
 
 if (args.Length < 2)
 {
@@ -22,6 +31,8 @@ if (args.Length < 2)
     Console.Error.WriteLine("  dump_emevd_warps search <dir-or-file> --flag ID");
     Console.Error.WriteLine("  dump_emevd_warps init <dir-or-file> --event ID");
     Console.Error.WriteLine("  dump_emevd_warps objacts <msb-file-or-dir> [--map-filter mAA_BB]");
+    Console.Error.WriteLine("  dump_emevd_warps asset <msb-file-or-dir> (--entity ID... | --name NAME | --first) [--typeinfo] [--map-filter mAA_BB]");
+    Console.Error.WriteLine("  dump_emevd_warps retrypoints <msb-file-or-dir> [--map-filter mAA_BB]");
     return 1;
 }
 
@@ -96,7 +107,7 @@ if (mode == "asset")
 
     if (entityIds.Count == 0 && nameFilter.Count == 0 && !dumpFirst)
     {
-        Console.Error.WriteLine("Usage: asset <msb-dir> --entity ID1 ID2 ... [--name NAME] [--first] [--map-filter mAA_BB]");
+        Console.Error.WriteLine("Usage: asset <msb-dir> (--entity ID1 ID2 ... | --name NAME | --first) [--typeinfo] [--map-filter mAA_BB]");
         return 1;
     }
     var msbFiles = GetMsbFiles(target, mapFilter);

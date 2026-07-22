@@ -5,7 +5,9 @@
 
 How SpeedFog injects event flags into fog gate warp events so the racing mod can track which zone the player enters.
 
-**Design spec:** `docs/specs/2026-03-12-region-based-zone-tracking.md`
+**Design spec:** `2026-03-12-region-based-zone-tracking.md` (historical
+working document, not tracked in git and no longer available; this doc is
+the surviving reference)
 
 ## Purpose
 
@@ -130,8 +132,6 @@ Systems consuming SpeedFog event flags should:
 2. **Handle duplicate node arrivals** — multiple flags may fire for the same node in the same frame. Be idempotent on `(node_id, timestamp)`.
 3. **Do not assume flag uniqueness per traversal** — a single fog gate traversal may set 1 or N flags (N > 1 for shared entrances). All resolve to the same node.
 
-See the [design spec](specs/2026-03-12-region-based-zone-tracking.md#consumer-impact) for detailed consumer impact analysis and recommended deduplication guard.
-
 ## Boss Death Monitor
 
 `ZoneTrackingInjector.InjectBossDeathEvent()` creates event 755862000 in common.emevd:
@@ -152,8 +152,7 @@ This translates the boss's vanilla defeat flag into SpeedFog's `finish_event` fl
 | `writer/FogModWrapper.Tests/ZoneTrackingTests.cs` | Unit tests |
 | `speedfog/graph_export.py` | Flag allocation (EVENT_FLAG_BASE from `constants.py`), event_map construction |
 | `docs/event-flags.md` | Flag ranges and EMEVD event ID allocation |
-| `docs/specs/2026-03-12-region-based-zone-tracking.md` | Full design spec (rationale, consumer impact, edge cases) |
 
 ## Design History
 
-The original ZoneTrackingInjector (pre-March 2026) reverse-engineered compiled EMEVD events to match warp instructions back to graph.json connections using five heuristic strategies (entity matching, region suffix, compound key, dest-only, common event) plus a residual fallback. This was inherently fragile because FogMod's compilation discards connection identity. Collision-prone configurations required conservative Python-side validators that limited seed diversity. The region-based approach captures the mapping before compilation, eliminating the information loss. See the [design spec](specs/2026-03-12-region-based-zone-tracking.md) for the full rationale.
+The original ZoneTrackingInjector (pre-March 2026) reverse-engineered compiled EMEVD events to match warp instructions back to graph.json connections using five heuristic strategies (entity matching, region suffix, compound key, dest-only, common event) plus a residual fallback. This was inherently fragile because FogMod's compilation discards connection identity. Collision-prone configurations required conservative Python-side validators that limited seed diversity. The region-based approach captures the mapping before compilation, eliminating the information loss.

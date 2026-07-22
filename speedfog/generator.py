@@ -6,7 +6,8 @@ Generates a randomized DAG using saturating routing:
 - Convergence phase: width shrinks to 1 before final boss
 - End: final_boss cluster
 
-Spec: docs/specs/2026-04-25-exit-driven-dag-generation.md
+Doc: docs/dag-generation.md (the original design spec is a local working
+file under docs/superpowers/specs/, not tracked in git).
 """
 
 from __future__ import annotations

@@ -4,7 +4,9 @@
 #     (one-way semantics: aside = exit only, bside = entry only)
 #   - writer/FogModWrapper (MapSplitsInjector): injected into FogMod's
 #     AnnotationData before Graph.Construct, plus EnemyArea split for scaling
-# See docs/map-splits.md and docs/superpowers/specs/2026-07-20-enirilim-split-synthetic-fogs-design.md.
+# See docs/map-splits.md; the original design spec
+# (docs/superpowers/specs/2026-07-20-enirilim-split-synthetic-fogs-design.md)
+# is a local working file, not tracked in git.
 
 [[zones]]
 name = "enirilim_upper"
@@ -70,7 +72,8 @@ bside = { area = "enirilim_stairs", text = "arriving on the stairs before Leda" 
 # to match the MSB; Fog 1 did not). All positions below were tuned and
 # validated in-game (2026-07-22); verify any new capture against MSB
 # architecture with `game_inspect near` before trusting it.
-# See the spec 2026-07-21-fort-reprimand-map-splits-design.md.
+# Design spec: 2026-07-21-fort-reprimand-map-splits-design.md (local working
+# file under docs/superpowers/specs/, not tracked in git).
 [[zones]]
 name = "reprimand"
 map = "m61_49_43_00"

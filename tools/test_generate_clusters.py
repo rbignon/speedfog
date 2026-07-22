@@ -4720,11 +4720,18 @@ class TestMapSplits:
         assert load_map_splits(tmp_path / "absent.toml") == {"zones": [], "fogs": []}
 
     def test_load_map_splits_real_file(self):
+        # Drift guard on the tracked data file: exact fog set, parity with
+        # the C# twin (MapSplitsInjectorTests.RealDataFile_ParsesAndInjects).
         splits = load_map_splits(
             Path(__file__).parent.parent / "data" / "map_splits.toml"
         )
         names = {f["name"] for f in splits["fogs"]}
-        assert {"AEG099_002_9100", "AEG099_002_9101"} <= names
+        assert names == {
+            "AEG099_002_9100",  # Enir-Ilim Spiral Rise ascent
+            "AEG099_002_9101",  # Enir-Ilim before Leda
+            "AEG099_003_9100",  # Fort of Reprimand gate
+            "AEG099_090_9101",  # Fort of Reprimand, before Edredd
+        }
 
     def test_drops_to_creates_overlapping_clusters(self):
         """A drops_to link floods the lower zone into the upper cluster (academy pattern)."""

@@ -57,4 +57,5 @@ Clergyman`, `Messmer the Impaler`) are SEPARATE `NpcName` FMG entries with no
 `game_inspect dump-fmg <item.msgbnd.dcx> "<name>"` (the phase ids are usually
 adjacent, e.g. `904710000`/`904710001`).
 
-See the design spec: `docs/superpowers/specs/2026-06-19-summer-theme-plugin-design.md`.
+See the design spec: `docs/superpowers/specs/2026-06-19-summer-theme-plugin-design.md`
+(local working file, not tracked in git).

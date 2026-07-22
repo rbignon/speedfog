@@ -11,7 +11,7 @@ namespace FogModWrapper;
 /// The region-to-flags mapping is built by ConnectionInjector from
 /// entranceEdge.Side.Warp.Region after Graph.Connect(), before compilation.
 /// This avoids reverse-engineering compiled events and eliminates all
-/// heuristic matching strategies. See docs/specs/2026-03-12-region-based-zone-tracking.md.
+/// heuristic matching strategies. See docs/zone-tracking.md.
 /// </summary>
 public static class ZoneTrackingInjector
 {

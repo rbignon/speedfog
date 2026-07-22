@@ -667,10 +667,12 @@ for the full list.
 - `reference/fogrando-src/Randomizer.cs:19`: `Feature.AllowUnlinked` derived
   from `crawl`/`bossrush`/`endless`.
 - `docs/superpowers/specs/2026-07-20-enirilim-split-synthetic-fogs-design.md`:
-  design rationale, topology, in-game capture notes (French).
+  design rationale, topology, in-game capture notes (French). Local working
+  file, not tracked in git (absent from a fresh clone).
 - `docs/superpowers/specs/2026-07-21-fort-reprimand-map-splits-design.md`:
   design rationale, topology, the overworld capture-frame investigation
-  (French).
+  (French). Local working file, not tracked in git (absent from a fresh
+  clone).
 - `docs/startup-flag-injection.md`: methodology used to find the fog-2 door
   flag (`20018540`).
 - `docs/vanilla-warp-removal.md`: `match_group` removal mechanism.

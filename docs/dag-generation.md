@@ -13,7 +13,9 @@ start and final boss). At each layer the algorithm picks a set of clusters and r
 to them; splits, merges, and cross-links emerge from this routing rather than being scheduled
 explicitly. All paths through the DAG have similar total weight (duration), ensuring fair races.
 
-For full design rationale see `docs/specs/2026-04-25-exit-driven-dag-generation.md`.
+For full design rationale see
+`docs/superpowers/specs/2026-04-25-exit-driven-dag-generation.md` (local
+working file, not tracked in git).
 
 ## Data Structures
 
@@ -452,4 +454,5 @@ Semantics:
 - Validator: `speedfog/validator.py`
 - Output: `speedfog/graph_export.py` (graph.json), `speedfog/spoiler.py` (spoiler log)
 - Config: `speedfog/config.py`
-- Spec: `docs/specs/2026-04-25-exit-driven-dag-generation.md`
+- Spec: `docs/superpowers/specs/2026-04-25-exit-driven-dag-generation.md`
+  (local working file, not tracked in git)

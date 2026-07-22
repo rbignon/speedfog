@@ -286,7 +286,12 @@ public class GameTweaksLoaderTests
         Assert.True(File.Exists(path), $"tracked data file missing: {path}");
 
         var tweaks = GameTweaksLoader.Load(path);
-        Assert.Equal(4, tweaks.TorrentArenas.Count);
+        // Exact arena set: the four underground boss maps. Mohgwyn (m12_05)
+        // is deliberately excluded (see docs/torrent-arena-patcher.md); this
+        // assertion is what keeps that design decision executable.
+        Assert.Equal(
+            new[] { "m12_03_00_00", "m12_04_00_00", "m12_08_00_00", "m12_09_00_00" },
+            tweaks.TorrentArenas.Select(a => a.Map).OrderBy(m => m, StringComparer.Ordinal));
         Assert.Single(tweaks.SpiritspringRemovals);
         Assert.Single(tweaks.RemoveEntities);
         Assert.Equal(3, tweaks.StakeRemovals.Count);
