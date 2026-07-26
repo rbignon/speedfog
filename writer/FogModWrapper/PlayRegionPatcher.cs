@@ -9,8 +9,10 @@ namespace FogModWrapper;
 /// PlayRegionParam.pcPositionSaveLimitEventFlagId gates the engine's player
 /// position save (flag ON = save enabled, OFF = disabled, 0 = always on).
 /// FogMod remaps every nonzero value to a temp flag driven by its
-/// common_makestable event. That is required for boss-defeat-gated rows
-/// (arena entrance anchoring after a fog gate warp) but pointless for the
+/// common_makestable event. The boss-defeat-gated rows keep that stock
+/// behavior (FogRando parity; the pulse is meant to anchor the arena
+/// entrance after a fog gate warp but rarely captures, see
+/// docs/quitout-respawn.md), while the remap is pointless for the
 /// rows whose vanilla flag is the constant 6001 (always ON, set by vanilla
 /// common.emevd Event 50 at every load): row 0, the default region for all
 /// ground in the game, plus the DLC overworld rows. Remapping those onto a

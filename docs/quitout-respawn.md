@@ -1,11 +1,12 @@
 # Quit-Out Respawn (Stable Position)
 
-**Date:** 2026-07-10
-**Status:** Active
+**Date:** 2026-07-10, updated 2026-07-26
+**Status:** Active (PlayRegionPatcher); the makestable pulse patch was removed
+after an A/B test, see the post-mortem below.
 
 Why quit-outs sometimes respawned players at the last grace instead of their
-last position, and the two patches that fix it: `PlayRegionPatcher` and
-`MakestablePulsePatcher`.
+last position, the patch that fixes it (`PlayRegionPatcher`), and why a second
+patch (`MakestablePulsePatcher`, 2026-07-10 to 2026-07-26) was removed.
 
 ## Engine mechanism
 
@@ -30,7 +31,7 @@ Vanilla mid-boss quit-out behavior follows: you walked into the arena on
 foot, so your last saved position is just outside the fog gate, and that is
 where you reload.
 
-## What FogMod does, and why it breaks
+## What FogMod does
 
 FogMod (GameDataWriterE.cs L1853-1879 in the decompiled sources) remaps
 **every** nonzero `pcPositionSaveLimitEventFlagId` to a temp flag (base
@@ -48,24 +49,13 @@ EndUnconditionally(Restart)             // then permanent ON
 ```
 
 Every fog gate traversal is a `WarpPlayer` with a loading screen, which
-re-runs common.emevd Event 0. The 10-frame pulse therefore anchors the
-player's arrival position when warping into a boss arena: a quit-out
-mid-fight respawns at the arena entrance (inside), instead of a stale
-pre-warp position in another map.
+re-runs common.emevd Event 0. The intent of the 10-frame pulse is to anchor
+the player's arrival position when warping into a boss arena, so a quit-out
+mid-fight respawns at the arena entrance instead of a stale pre-warp
+position in another map. In practice the pulse runs while the loading screen
+is still up and appears to capture rarely, if ever (see the post-mortem).
 
-The defect: 10 frames (~0.3 s at the 30 fps event tick) races against the
-engine grounding the player after the warp fade-in. When the pulse misses,
-no position is ever saved inside the gated region, and the next quit-out
-falls back to the **last grace**. This is intermittent (load timing,
-framerate) and hard to reproduce on demand, which matches the field reports.
-
-In-game checks performed (2026-07): resting at a grace then quitting without
-a loading screen respawns correctly (no rest-wipe issue), and quit-outs on
-open ground after a fresh load respawn in place (the 6001 group is
-re-asserted at every load). The exposure is the pulse race inside
-boss-gated regions.
-
-## Fix 1: PlayRegionPatcher (regulation phase)
+## Fix: PlayRegionPatcher (regulation phase)
 
 Remapping the constant-flag rows buys nothing: 6001 is already ON at every
 load, and FogMod's remap replaces a permanently ON gate with a temp flag
@@ -76,86 +66,75 @@ makes it saveable for 10 frames per load.
 `PlayRegionPatcher.ApplyTo` (Phase 7, `ApplyRegulation`) opens the vanilla
 regulation from `--game-dir`, collects the rows whose vanilla value is 6000
 or 6001, and writes those values back into the modded regulation. Rows gated
-by boss defeat flags keep FogMod's makestable behavior (arena entrance
-anchoring). The makestable event instance for the 6001 group keeps running
-in common.emevd; it just pulses a flag no row references anymore.
+by boss defeat flags keep FogMod's stock makestable behavior. The makestable
+event instance for the 6001 group keeps running in common.emevd; it just
+pulses a flag no row references anymore.
 
-## Fix 2: MakestablePulsePatcher (common.emevd phase)
+This is the fix for the reported last-grace respawns: the 2026-07-26 A/B
+test showed post-kill arena quit-outs were fine with the stock event
+(below), so the field reports are attributed to the constant-flag rows this
+patcher restores. The 2026-07 open-ground spot checks that had originally
+exonerated those rows were few and manual; they could not rule out an
+intermittent exposure of the EMEVD-timed temp-flag re-assert, which is
+exactly the dependency this patcher removes.
 
-A first iteration extended `WaitFixedTimeFrames(10)` to 150 frames (5 s at
-30 fps). That made the capture reliable but broke the anchor semantics: the
-engine keeps re-saving the position while the flag is ON, so the quit-out
-anchor became "wherever the player stood 5 s after entry", not the arena
-entrance. A racer could sprint toward the boss during the window and then
-use quit-outs to skip the run-back.
+## Post-mortem: MakestablePulsePatcher (removed 2026-07-26)
 
-`MakestablePulsePatcher.Patch` instead gates the pulse start on the end of
-the loading screen, keeping FogRando's original 10-frame pulse. It inserts
-three instructions before the wait in the compiled event 755850000:
+The 2026-07-10 investigation attributed the last-grace field reports to the
+10-frame pulse racing the post-warp fade-in inside boss-gated regions (an
+attribution by elimination: rest-wipe and open-ground checks came back
+clean, and the pulse miss itself was never directly reproduced). Two
+iterations of a pulse patch followed:
 
-```
-SetEventFlag(temp, ON)
-EndIfEventFlag(End, ON, vanilla_flag)
-IfEventFlag(OR_01, OFF, EventFlag, 2200)   <- inserted: fade-in finished
-IfElapsedSeconds(OR_01, 5)                 <- inserted: or safety timeout
-IfConditionGroup(MAIN, ON, OR_01)          <- inserted
-WaitFixedTimeFrames(10)
-SetEventFlag(temp, OFF)
-...
-```
+1. **150-frame window** (b2b9e1c): extending `WaitFixedTimeFrames(10)` to
+   150 frames made the capture reliable but broke the anchor semantics: the
+   engine keeps re-saving the position while the flag is ON, so the anchor
+   drifted to wherever the player stood 5 s after entry. A racer could
+   sprint toward the boss and quit out to skip the run-back.
+2. **Load-end gate** (4c8206b): restored the 10-frame pulse and gated its
+   start on engine flag 2200 ("world clock stopped", drops ~0.9 s after the
+   player position becomes readable at fade-in end), so the anchor landed
+   reliably at the arena entrance.
 
-Engine flag 2200 means "world clock stopped": ON during loading screens and
-cutscenes, it drops about 0.9 s after the player position becomes readable,
-at fade-in end (characterized 2026-07 by instrumenting the racing overlay's
-read of the flag byte; the Hexinton CE table mislabels it "In cut-scene/
-loading screen", see the `freeze_time` note in `docs/plugins/weather.md`).
-The pulse therefore starts once the player is placed and grounded, and the
-anchor lands at the arena entrance with at most 10 frames of drift. When an
-entry cutscene plays, 2200 stays ON through it and the anchor becomes the
-post-cutscene position, which is the desirable behavior.
+The gate worked as designed, and that was the problem: it guaranteed a
+stale entrance anchor exists, and a quit-out shortly after a boss kill
+could reload at that anchor instead of the kill position.
 
-The `IfElapsedSeconds` timeout is a safety net for anything that keeps the
-world clock stopped indefinitely (an EMEVD `FreezeTime(true)`, which the
-weather plugin deliberately avoids): after 5 s the pulse runs anyway,
-degrading to the fixed-window behavior of the first iteration.
+A/B test (2026-07-26, seed 514184634 built with and without the patch,
+about ten post-kill quit-outs each): the entrance respawn reproduced
+intermittently with the gate and never without it; the stock build always
+resumed at the kill position. The engine's exact post-defeat save timing
+remains uncharacterized: under the model above, a stock quit-out completed
+before the defeat flag rises and saving resumes should fall back to the
+last grace, which was never observed either, so either every stock quit-out
+landed after the re-capture or the engine's behavior with no saved position
+in the region is gentler than the last-grace fallback here. What the A/B
+does establish is the causal direction: the stale anchor introduced by the
+gate is what sends post-kill quit-outs to the entrance. Since boss arenas
+never exhibited the last-grace problem in the field, the patch fixed a
+defect that was never observed and introduced one that was. It was removed
+entirely; the makestable event ships stock (FogRando parity).
 
-The event is parameterized (X0_4/X4_4 substituted via the event's
-`Parameters` table, keyed by instruction index), so the patcher shifts the
-entries pointing past the insertion point by the number of inserted
-instructions. The patch only applies when the event contains exactly one
-`WaitFixedTimeFrames(10)`: if a future FogRando version changes the
-template, the patcher logs and leaves it alone.
-
-Patching the compiled event (rather than `data/fogevents.txt`) is deliberate:
-the template file is overwritten at bootstrap.
+If arena mid-fight quit-outs ever do fall back to the last grace, revisit
+this with the git history (`MakestablePulsePatcher.cs` and its tests were
+deleted on 2026-07-26); any future anchor mechanism must keep the post-kill
+window in mind, e.g. by re-enabling the temp flag on boss death
+(`IfCharacterDeadAlive`) rather than waiting for the defeat flag.
 
 ## Verifying a build
 
 ```bash
 # Restored rows in the output regulation (expect 6001, not 10402921xx)
 wine tools/game_inspect/publish/win-x64/game_inspect.exe dump-param \
-  output/mods/fogmod/regulation.bin PlayRegionParam --row 0 \
+  <seed_dir>/mods/fogmod/regulation.bin PlayRegionParam --row 0 \
   --defs writer/FogModWrapper/eldendata/Defs --field pcPositionSaveLimitEventFlagId
 
-# Gated pulse in the compiled makestable event (expect IfEventFlag(OR_01, OFF, 2200),
-# IfElapsedSeconds(OR_01, 5), IfConditionGroup before WaitFixedTimeFrames(10))
-cd tools/dump_emevd_warps && dotnet run -- dump ../../output/mods/fogmod/event/ --event 755850000
+# Stock makestable event (expect the 6-instruction template, no flag 2200 gate)
+cd tools/dump_emevd_warps && dotnet run -- dump <seed_dir>/mods/fogmod/event/ --event 755850000
 ```
 
-In-game: warp into a boss arena through a fog gate, quit out immediately
-(before the fight) and again mid-fight; both should reload at the arena
-entrance, never at the last grace.
-
-The 2200 gate itself needs two in-game discriminants, because an unreadable
-flag can degrade two ways (no vanilla script reads the 2200-2207 range, so
-EMEVD readability rests on these tests):
-
-- **Sprint test** (catches "condition never true" → timeout path): warp into
-  an arena, sprint toward the boss, quit out after ~20 s. Respawning at the
-  entrance means EMEVD read the flag; respawning where you stood ~5 s after
-  entry means only the timeout fired and the anchor drift is back.
-- **Repeated immediate quit-outs** (catches "flag reads constant OFF" → gate
-  passes instantly, reintroducing the original 10-frame race): warp into an
-  arena and quit out right away, several times across different loads. Any
-  respawn at the last grace instead of the entrance means the pulse raced
-  the fade-in again.
+In-game: quit-outs on open ground and at graces respawn in place; a
+quit-out right after killing a boss resumes at the kill position. A
+quit-out mid-fight inside a warp-entered arena is expected to have no saved
+position in the region and to fall back to the last grace: that is stock
+FogRando behavior, and it has not been a problem in the field.
