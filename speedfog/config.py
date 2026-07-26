@@ -192,7 +192,8 @@ def prune_final_boss_candidates(
     """Drop excluded zones from a final_boss candidate mapping (fresh dict).
 
     The 'all' keyword has no zone name to match, so it is preserved and later
-    resolves against the already-filtered pool.
+    resolves against the boss_candidates snapshot (post-exclusion, taken
+    before the passant filter).
     """
     return {zone: weight for zone, weight in candidates.items() if zone not in excluded}
 

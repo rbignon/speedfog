@@ -198,6 +198,12 @@ Before executing any layers, a final boss cluster is selected by weighted random
 `final_boss_candidates`. Its zones are added to `used_zones` so they cannot be consumed by
 intermediate layers.
 
+Candidate clusters come from the `boss_candidates` parameter of `generate_dag`, a snapshot of
+all `major_boss`/`final_boss` clusters taken in `main.py` **before**
+`filter_passant_incompatible()` runs. Dead-end bosses (0 exits, e.g. Placidusax, Finger
+Grounds) are removed from the pool by that filter but remain valid run endpoints, so the
+selection must never be re-derived from the filtered pool.
+
 **Zone conflicts**: Some zones are mutually exclusive and cannot both appear in the same run
 (declared via `conflicts_with` in `zone_metadata.toml`). When a cluster is selected, conflicting
 zones are added to `used_zones` via `_mark_cluster_used()`. Example: `stormveil_margit` (Margit)

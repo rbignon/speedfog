@@ -308,7 +308,7 @@ def test_generation_log_with_real_clusters(
         }
     )
     config.seed = 42
-    dag, log = generate_dag(config, real_clusters)
+    dag, log = generate_dag(config, real_clusters, boss_candidates=real_boss_candidates)
 
     # Verify log structure
     assert log.plan_event is not None

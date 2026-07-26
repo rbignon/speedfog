@@ -76,8 +76,8 @@ def make_cluster_pool() -> ClusterPool:
     """Create a minimal cluster pool for testing.
 
     The pool uses a major_boss cluster (``test_final_boss``) as the canonical
-    end node so the exit-driven generator can select it via
-    ``clusters.get_by_type("major_boss")``. Tests configure
+    end node; tests pass it to generate_dag via ``boss_candidates`` (see
+    ``_boss_candidates``) and configure
     ``final_boss_candidates={"test_final_boss_zone": 1}`` to point at it.
 
     Includes:
@@ -225,8 +225,8 @@ class TestGenerateDag:
         pool = make_cluster_pool()
         config = _make_test_config(seed=12345)
 
-        dag1, _log1 = generate_dag(config, pool)
-        dag2, _log2 = generate_dag(config, pool)
+        dag1, _log1 = generate_dag(config, pool, boss_candidates=_boss_candidates(pool))
+        dag2, _log2 = generate_dag(config, pool, boss_candidates=_boss_candidates(pool))
 
         assert dag1.seed == dag2.seed == 12345
         assert len(dag1.nodes) == len(dag2.nodes)
@@ -237,7 +237,7 @@ class TestGenerateDag:
         pool = make_cluster_pool()
         config = _make_test_config()
 
-        dag, _log = generate_dag(config, pool)
+        dag, _log = generate_dag(config, pool, boss_candidates=_boss_candidates(pool))
 
         assert dag.start_id is not None
         assert dag.end_id is not None
@@ -249,7 +249,7 @@ class TestGenerateDag:
         pool = make_cluster_pool()
         config = _make_test_config()
 
-        dag, _log = generate_dag(config, pool)
+        dag, _log = generate_dag(config, pool, boss_candidates=_boss_candidates(pool))
 
         end_node = dag.nodes[dag.end_id]
         assert "test_final_boss_zone" in end_node.cluster.zones
@@ -259,7 +259,7 @@ class TestGenerateDag:
         pool = make_cluster_pool()
         config = _make_test_config()
 
-        dag, _log = generate_dag(config, pool)
+        dag, _log = generate_dag(config, pool, boss_candidates=_boss_candidates(pool))
 
         errors = dag.validate_structure()
         assert not errors, f"DAG structure errors: {errors}"
@@ -270,7 +270,7 @@ class TestGenerateDag:
         config = _make_test_config(layers_count=8)
         config.structure.max_parallel_paths = 2
 
-        dag, _log = generate_dag(config, pool)
+        dag, _log = generate_dag(config, pool, boss_candidates=_boss_candidates(pool))
 
         nodes_by_layer: dict[int, int] = {}
         for node in dag.nodes.values():
@@ -287,7 +287,7 @@ class TestGenerateDag:
         pool = make_cluster_pool()
         config = _make_test_config()
 
-        dag, _log = generate_dag(config, pool)
+        dag, _log = generate_dag(config, pool, boss_candidates=_boss_candidates(pool))
 
         all_zones: set[str] = set()
         for node in dag.nodes.values():
@@ -312,7 +312,7 @@ class TestGenerateDag:
         config.structure.layers_count = 4
 
         with pytest.raises(GenerationError, match="[Ss]tart"):
-            generate_dag(config, pool)
+            generate_dag(config, pool, boss_candidates=_boss_candidates(pool))
 
     def test_raises_if_no_final_boss_candidate(self):
         """Raises GenerationError when no major_boss cluster matches candidates."""
@@ -351,7 +351,7 @@ class TestGenerateDag:
         config.requirements.mini_dungeons = 0
 
         with pytest.raises(GenerationError, match="[Ff]inal"):
-            generate_dag(config, pool)
+            generate_dag(config, pool, boss_candidates=_boss_candidates(pool))
 
     def test_final_boss_candidate_can_be_final_boss_typed_cluster(self):
         """Regression: a zone belonging to a ``final_boss``-typed cluster must
@@ -412,7 +412,7 @@ class TestGenerateDag:
         config.requirements.mini_dungeons = 0
         config.requirements.major_bosses = 0
 
-        dag, _log = generate_dag(config, pool)
+        dag, _log = generate_dag(config, pool, boss_candidates=_boss_candidates(pool))
 
         end_node = dag.nodes[dag.end_id]
         assert end_node.cluster.type == "final_boss"
@@ -423,7 +423,7 @@ class TestGenerateDag:
         pool = make_cluster_pool()
         config = _make_test_config(layers_count=8)
 
-        dag, _log = generate_dag(config, pool)
+        dag, _log = generate_dag(config, pool, boss_candidates=_boss_candidates(pool))
 
         tiers_by_layer: dict[int, list[int]] = {}
         for node in dag.nodes.values():
@@ -478,6 +478,25 @@ class TestGenerateWithRetry:
         assert result.dag.seed == result.seed
         assert len(result.dag.nodes) > 0
         assert result.validation.is_valid
+
+    def test_dead_end_boss_removed_by_passant_filter_still_selectable(self):
+        """Regression: a dead-end major_boss (0 exits, e.g. Placidusax) pruned
+        by filter_passant_incompatible must remain selectable as final boss.
+
+        main.py snapshots boss_candidates before the passant filter precisely
+        for this case; the selection inside generate_dag must use that snapshot
+        instead of re-deriving candidates from the filtered pool.
+        """
+        pool = make_cluster_pool()
+        boss_candidates = _boss_candidates(pool)
+        removed = pool.filter_passant_incompatible()
+        assert "test_final_boss" in [c.id for c in removed]
+
+        config = _make_test_config(seed=42)
+        result = generate_with_retry(config, pool, boss_candidates=boss_candidates)
+
+        end_node = result.dag.nodes[result.dag.end_id]
+        assert "test_final_boss_zone" in end_node.cluster.zones
 
     def test_raises_after_max_attempts(self):
         """Raises GenerationError after max_attempts failures (no start cluster)."""
@@ -2592,7 +2611,7 @@ def test_generator_v2_corpus_validity_50_seeds():
             ),
         )
         try:
-            dag, _ = generate_dag(cfg, pool)
+            dag, _ = generate_dag(cfg, pool, boss_candidates=_boss_candidates(pool))
         except Exception as e:
             hard_failures.append((seed, f"GENERATION: {e}"))
             continue
@@ -2647,7 +2666,7 @@ def test_generate_dag_v2_produces_exact_layers_count():
             final_boss_candidates={"leyndell_throne": 1},
         ),
     )
-    dag, log = generate_dag(cfg, pool)
+    dag, log = generate_dag(cfg, pool, boss_candidates=_boss_candidates(pool))
 
     layers = {n.layer for n in dag.nodes.values()}
     assert layers == set(range(15)), f"Expected 15 layers, got {sorted(layers)}"
@@ -3252,7 +3271,7 @@ def test_generate_dag_places_required_zone_in_dag():
         ),
     )
 
-    dag, log = generate_dag(cfg, pool)
+    dag, log = generate_dag(cfg, pool, boss_candidates=_boss_candidates(pool))
     all_zones = {z for node in dag.nodes.values() for z in node.cluster.zones}
     assert (
         required_zone in all_zones
@@ -3290,7 +3309,7 @@ def test_generate_dag_without_required_zones_emits_no_events():
         ),
     )
 
-    _, log = generate_dag(cfg, pool)
+    _, log = generate_dag(cfg, pool, boss_candidates=_boss_candidates(pool))
     assert log.required_zone_placements == []
 
 
@@ -3352,7 +3371,9 @@ class TestExcludeZonesGeneration:
     _SEEDS = list(range(1, 31))
 
     def _zones_for(self, pool, seed):
-        dag, _log = generate_dag(_make_test_config(seed=seed), pool)
+        dag, _log = generate_dag(
+            _make_test_config(seed=seed), pool, boss_candidates=_boss_candidates(pool)
+        )
         return {z for n in dag.nodes.values() for z in n.cluster.zones}
 
     def test_excluded_reachable_zone_never_appears(self):

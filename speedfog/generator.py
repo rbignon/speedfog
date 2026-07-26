@@ -923,7 +923,12 @@ def pick_layer_clusters(
 # =============================================================================
 
 
-def generate_dag(config: Config, clusters: ClusterPool) -> tuple[Dag, GenerationLog]:
+def generate_dag(
+    config: Config,
+    clusters: ClusterPool,
+    *,
+    boss_candidates: list[ClusterData],
+) -> tuple[Dag, GenerationLog]:
     """Generate a DAG using the exit-driven algorithm.
 
     Algorithm:
@@ -937,6 +942,10 @@ def generate_dag(config: Config, clusters: ClusterPool) -> tuple[Dag, Generation
     Args:
         config: Configuration with requirements and structure (config.seed used).
         clusters: Pool of available clusters.
+        boss_candidates: Clusters eligible as final boss, snapshotted before
+            filter_passant_incompatible so dead-end bosses (0 exits, e.g.
+            Placidusax) stay selectable. Do NOT derive this from ``clusters``:
+            the pool has already been passant-filtered by the time this runs.
 
     Returns:
         Tuple of (Generated DAG, GenerationLog with diagnostic events)
@@ -953,9 +962,7 @@ def generate_dag(config: Config, clusters: ClusterPool) -> tuple[Dag, Generation
     total_target = config.structure.layers_count
 
     # 1. Pick final boss
-    boss_cluster_list = clusters.get_by_type("major_boss") + clusters.get_by_type(
-        "final_boss"
-    )
+    boss_cluster_list = boss_candidates
     all_boss_zones = {zone for c in boss_cluster_list for zone in c.zones}
     weighted_candidates = resolve_final_boss_candidates(
         config.structure.effective_final_boss_candidates, all_boss_zones
@@ -1168,8 +1175,9 @@ def generate_with_retry(
         config: Configuration
         clusters: Cluster pool
         max_attempts: Maximum retry attempts (only for seed=0)
-        boss_candidates: Pre-filtered list of clusters eligible as final boss.
-            Used only for validate_config; generate_dag selects from the pool directly.
+        boss_candidates: Clusters eligible as final boss, snapshotted before
+            filter_passant_incompatible (see generate_dag). Used both for
+            validate_config and for the final boss selection in generate_dag.
         post_validate: Optional hook run after structural validation. Receives
             ``(dag, seed)``. Raising ``GenerationError`` triggers a reroll in
             auto mode, or propagates under a fixed seed. Used by callers to
@@ -1192,7 +1200,7 @@ def generate_with_retry(
 
     if config.seed != 0:
         # Fixed seed - single attempt
-        dag, log = generate_dag(config, clusters)
+        dag, log = generate_dag(config, clusters, boss_candidates=boss_candidates)
         validation = validate_dag(dag, config, clusters)
         if not validation.is_valid:
             errors = "; ".join(validation.errors)
@@ -1215,7 +1223,9 @@ def generate_with_retry(
         seed = base_rng.randint(1, 999999999)
         attempt_config = replace(config, seed=seed)
         try:
-            dag, log = generate_dag(attempt_config, clusters)
+            dag, log = generate_dag(
+                attempt_config, clusters, boss_candidates=boss_candidates
+            )
             validation = validate_dag(dag, attempt_config, clusters)
             if not validation.is_valid:
                 errors = "; ".join(validation.errors)

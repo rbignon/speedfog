@@ -295,11 +295,20 @@ def _make_cluster(
     )
 
 
+def _boss_candidates(pool: ClusterPool) -> list[ClusterData]:
+    """Return boss candidate clusters (major_boss + final_boss) from pool.
+
+    Mirrors the snapshot logic in main.py (taken before
+    filter_passant_incompatible); these test pools are never filtered.
+    """
+    return pool.get_by_type("major_boss") + pool.get_by_type("final_boss")
+
+
 def _make_small_pool() -> ClusterPool:
     """Create a minimal ClusterPool for log tests.
 
-    Uses a major_boss cluster as the final boss so the exit-driven generator
-    can select it via ``clusters.get_by_type("major_boss")``.
+    Uses a major_boss cluster as the final boss; tests pass it to
+    generate_dag via ``boss_candidates`` (see ``_boss_candidates``).
     """
     pool = ClusterPool()
 
@@ -363,7 +372,7 @@ def test_saturation_layers_have_events():
         }
     )
     config.seed = 42
-    dag, log = generate_dag(config, pool)
+    dag, log = generate_dag(config, pool, boss_candidates=_boss_candidates(pool))
     saturation = [le for le in log.layer_events if le.phase == "saturation"]
     assert len(saturation) >= 1
     for le in saturation:
@@ -435,7 +444,7 @@ def test_convergence_layers_have_events():
         }
     )
     config.seed = 42
-    dag, log = generate_dag(config, pool)
+    dag, log = generate_dag(config, pool, boss_candidates=_boss_candidates(pool))
     convergence = [le for le in log.layer_events if le.phase == "convergence"]
     # With max_parallel_paths=2 and layers_count=6, convergence must occur
     assert len(convergence) >= 1
@@ -501,7 +510,7 @@ def test_fallback_recorded_when_pool_exhausted():
         }
     )
     config.seed = 42
-    dag, log = generate_dag(config, pool)
+    dag, log = generate_dag(config, pool, boss_candidates=_boss_candidates(pool))
     all_fallbacks = [fb for le in log.layer_events for fb in le.fallbacks]
     assert log.summary is not None
     assert log.summary.fallback_count == len(all_fallbacks)
@@ -526,7 +535,7 @@ def test_fallback_count_matches_summary():
         }
     )
     config.seed = 42
-    dag, log = generate_dag(config, pool)
+    dag, log = generate_dag(config, pool, boss_candidates=_boss_candidates(pool))
     all_fallbacks = [fb for le in log.layer_events for fb in le.fallbacks]
     assert log.summary is not None
     assert log.summary.fallback_count == len(all_fallbacks)
