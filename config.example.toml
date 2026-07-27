@@ -91,8 +91,10 @@ layers_count = 30
 # Enemy scaling tier for the final boss and end of run (1-28).
 # Tiers control how much enemies are scaled up/down from vanilla.
 # - Tier 1: starting area difficulty
-# - Tier 28: maximum difficulty (default, vanilla endgame)
+# - Tier 28: maximum difficulty (DLC endgame, without Scadutree Blessings)
 # - Tier 15-20: mid-game difficulty (good for shorter/easier runs)
+# Tiers 22+ use the DLC scaling range and are much harder than 21: damage
+# jumps +59% at tier 22 for upscaled bosses (see docs/enemy-scaling.md).
 # Intermediate zones scale from start_tier to this value using the tier curve.
 final_tier = 28
 

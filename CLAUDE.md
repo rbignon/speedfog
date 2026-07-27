@@ -115,6 +115,7 @@ speedfog/
 │   │   ├── BossTriggerInjector.cs  # Lock boss arena exits by setting TrapFlag before warp
 │   │   ├── RebirthInjector.cs  # Rebirth (stat reallocation) at Sites of Grace
 │   │   ├── ShadowRealmBlessingRemover.cs  # Remove DLC "Shadow Realm Blessing" grace menu entry
+│   │   ├── ScaduBlessingNeutralizer.cs  # Neutralize Scadutree/Revered Spirit Ash blessing SpEffects
 │   │   ├── AlternateFlagPatcher.cs  # Neutralize Event 915, clear flags 300/330 at startup
 │   │   ├── PlayRegionPatcher.cs  # Restore vanilla 6000/6001 play region save-limit flags
 │   │   ├── SealingTreeWarpPatcher.cs  # Patch Sealing Tree fogwarps (flag 330)
@@ -159,6 +160,7 @@ speedfog/
 │   ├── clusters.md          # Cluster generation from fog.txt
 │   ├── fogmod-emevd-model.md # FogMod EMEVD compilation model
 │   ├── connection-injection.md # FogMod Graph connection injection
+│   ├── enemy-scaling.md     # FogMod scaling model, tier 21 clamp bypass, blessing neutralization
 │   ├── zone-tracking.md     # Zone tracking for racing (region-based lookup)
 │   ├── chapel-grace.md      # Chapel of Anticipation Site of Grace
 │   ├── starting-items.md    # Starting items and auxiliary flags
@@ -192,6 +194,7 @@ speedfog/
 | `docs/dag-generation.md` | DAG generation algorithm (exit-driven routing) |
 | `docs/fogmod-emevd-model.md` | FogMod EMEVD compilation model (critical mental model) |
 | `docs/connection-injection.md` | Connection injection (shared entrance, ignore_pair) |
+| `docs/enemy-scaling.md` | FogMod scaling model, tier 21 clamp bypass, blessing neutralization |
 | `docs/zone-tracking.md` | Zone tracking for racing (region-based lookup) |
 | `docs/starting-items.md` | Starting items + auxiliary flags (whetblades, Great Runes) |
 | `docs/chapel-grace.md` | Chapel of Anticipation Site of Grace (4 subsystems) |
@@ -272,6 +275,7 @@ speedfog/
 | `ChapelGraceInjector` | Site of Grace + player spawn relocation at Chapel of Anticipation |
 | `RebirthInjector` | Rebirth (stat reallocation) option at Sites of Grace via ESD |
 | `ShadowRealmBlessingRemover` | Removes the DLC "Shadow Realm Blessing" entry from the grace menu ESD |
+| `ScaduBlessingNeutralizer` | Neutralizes Scadutree/Revered Spirit Ash blessing SpEffects (see `docs/enemy-scaling.md`) |
 | `SealingTreeWarpPatcher` | Patches Sealing Tree fogwarps to eliminate flag 330 dependency |
 | `AlternateFlagPatcher` | Neutralizes Event 915, clears AlternateFlags 300/330 on game start |
 | `PlayRegionPatcher` | Restores vanilla 6000/6001 play region save-limit flags that FogMod needlessly remapped |

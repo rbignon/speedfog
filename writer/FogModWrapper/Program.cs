@@ -407,6 +407,18 @@ Example:
             HelperAreaResolver.Resolve(ctx.Ann, ctx.Graph, ctx.Config.MergeDir, Console.WriteLine);
         }
 
+        // FogMod's writer clamps every scaling target tier 21-28 down to 21
+        // (29+ down to 22) when ExcludeMode == None, i.e. when base game and
+        // DLC are both in the pool. SpeedFog wants tiers 22+ to mean what the
+        // graph says, so pretend to be a DLC-only run (the value dlconly sets).
+        // ExcludeMode is only read in four places during Write() and the other
+        // three are unaffected: the != DLC data-load check stays true, and the
+        // tierreq/scadushop branches are dead (options never set by SpeedFog).
+        // The Scadutree blessing neutralization that the same condition guarded
+        // is re-applied in ApplyRegulation (ScaduBlessingNeutralizer). See
+        // docs/enemy-scaling.md.
+        ctx.Graph.ExcludeMode = AnnotationData.AreaMode.Base;
+
         var writer = new GameDataWriterE();
         writer.Write(ctx.Opt, ctx.Ann, ctx.Graph, mergedMods, ctx.ModDir, ctx.Events, ctx.EventConfig, Console.WriteLine);
 
@@ -783,6 +795,11 @@ Example:
         // Undo FogMod's makestable remap on the constant-flag play regions
         // (row 0 = all default ground); see docs/quitout-respawn.md.
         PlayRegionPatcher.ApplyTo(reg, ctx.Config.GameDir);
+
+        // Re-apply the blessing neutralization that FogMod skips because of
+        // the ExcludeMode override in WriteFogMod. Touches SpEffectParam rows
+        // 200001xx/200002xx, disjoint from PhantomCatalogInjector's additions.
+        ScaduBlessingNeutralizer.ApplyTo(reg);
 
         reg.Save();
     }
