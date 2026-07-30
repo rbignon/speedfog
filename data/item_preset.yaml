@@ -173,6 +173,76 @@ Placements:
     ID: gem:415000
   - Name: Divine Beast Frost Stomp
     ID: gem:416000
+  # Spells / Incantations
+  - Name: Glintstone Nail
+    ID: goods:2004500
+  - Name: Glintstone Nails
+    ID: goods:2004510
+  - Name: Impenetrable Thorns
+    ID: goods:2004910
+  - Name: Rings of Spectral Light
+    ID: goods:2005000
+  - Name: Blades of Stone
+    ID: goods:2004700
+  - Name: Carian Slicer
+    ID: goods:4440
+  - Name: Comet
+    ID: goods:4021
+  - Name: Glintstone Cometshard
+    ID: goods:4020
+  - Name: Glintstone Icecrag
+    ID: goods:4400
+  - Name: Glintstone Pebble
+    ID: goods:4000
+  - Name: Gravitational Missile
+    ID: goods:2004710
+  - Name: Great Glintstone Shard
+    ID: goods:4001
+  - Name: Magic Glintblade
+    ID: goods:4390
+  - Name: Night Comet
+    ID: goods:4620
+  - Name: Shard Spiral
+    ID: goods:4030
+  - Name: Zamor Ice Storm
+    ID: goods:4410
+  - Name: Beast Claw (Incantation)
+    ID: goods:6820
+  - Name: Bestial Sling
+    ID: goods:6800
+  - Name: Black Flame
+    ID: goods:6210
+  - Name: Catch Flame
+    ID: goods:6000
+  - Name: Discus of Light
+    ID: goods:6700
+  - Name: Fire Serpent
+    ID: goods:2007800
+  - Name: Flame Sling
+    ID: goods:6010
+  - Name: Flame, Grant Me Strength
+    ID: goods:6050
+  - Name: Frenzied Burst
+    ID: goods:7320
+  - Name: Golden Vow (Incantation)
+    ID: goods:6600
+  - Name: Great Heal
+    ID: goods:6422
+  - Name: Heal
+    ID: goods:6421
+  - Name: Heal from Afar
+    ID: goods:2006400
+  - Name: Honed Bolt
+    ID: goods:6930
+  - Name: Knight's Lightning Spear
+    ID: goods:2006900
+  - Name: Lightning Spear
+    ID: goods:6900
+  - Name: Order's Blade
+    ID: goods:6770
+  - Name: Pest-Thread Spears
+    ID: goods:2007210
+
   # Curated weapons (notable uniques, catalysts, and unique shields)
   # Daggers
   - Name: Black Knife
@@ -592,10 +662,6 @@ Placements:
   - Tag: graveboss
   - Tag: gaolboss
   - Tag: minidungeonboss
-  - Tag: evergaol
-  - Tag: night
-  - Tag: dragonboss
-  - Tag: overworldboss
   - Tag: namelessmausoleum
   - Tag: seedtree
   - Tag: church
@@ -604,6 +670,10 @@ Placements:
   - Tag: revered
   Excludes:
   - Tag: missable
+  - Tag: night
+  - Tag: dragonboss
+  - Tag: overworldboss
+  - Tag: evergaol
 
 # Golden Seeds and Sacred Tears at flask upgrade locations.
 # Items: fixed by randomizer (EditItems=false). Locations: editable.
@@ -687,5 +757,10 @@ LocationGroups:
   - Tag: cross
   Excludes:
   - Tag: missable
+  - Tag: night
+  - Tag: dragonboss
+  - Tag: overworldboss
+  - Tag: evergaol
+
 
 Version: 1
