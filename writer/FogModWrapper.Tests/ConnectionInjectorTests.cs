@@ -373,6 +373,44 @@ public class ConnectionInjectorTests
         Assert.Equal(7, graph.AreaTiers["other"]);
     }
 
+    [Fact]
+    public void ApplyAreaTiers_LeyndellErdtree_PropagatesTierToErdtreeArena()
+    {
+        var graph = MakeGraph("chapel");
+
+        ConnectionInjector.ApplyAreaTiers(graph, new Dictionary<string, int>
+        {
+            ["chapel"] = 1,
+            ["leyndell_erdtree"] = 28,
+        });
+
+        Assert.Equal(28, graph.AreaTiers["erdtree"]);
+    }
+
+    [Fact]
+    public void ApplyAreaTiers_ExplicitErdtreeTier_IsNotOverwritten()
+    {
+        var graph = MakeGraph("chapel");
+
+        ConnectionInjector.ApplyAreaTiers(graph, new Dictionary<string, int>
+        {
+            ["leyndell_erdtree"] = 28,
+            ["erdtree"] = 10,
+        });
+
+        Assert.Equal(10, graph.AreaTiers["erdtree"]);
+    }
+
+    [Fact]
+    public void ApplyAreaTiers_WithoutLeyndellErdtree_DoesNotAddErdtree()
+    {
+        var graph = MakeGraph("chapel");
+
+        ConnectionInjector.ApplyAreaTiers(graph, new Dictionary<string, int> { ["chapel"] = 1 });
+
+        Assert.False(graph.AreaTiers.ContainsKey("erdtree"));
+    }
+
     // --- InjectionResult.BuildRegionToFlags ---
 
     private static Graph.Edge EdgeWithWarp(string area, int region)

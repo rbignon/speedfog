@@ -82,6 +82,34 @@ The skipped blessing neutralization is re-applied by
 replicating FogMod's row copies. Without it, Scadutree fragments placed by
 the item randomizer would buff the player inside DLC-map zones only.
 
+## The final arena anchor (erdtree)
+
+The Elden Beast arena is its own fog.txt area, `erdtree` (m19_00_00_00,
+"Stone Platform", tagged `final`): all its fog gates are tagged `unused`, so
+no randomizable edge ever leads into it and the player enters through the
+fixed vanilla warp from `leyndell2_erdtree`. It therefore never appears in
+`clusters.json` or in `graph.json`'s `area_tiers`; the DAG's final zone is
+the entrance stairway `leyndell_erdtree` (m11_00).
+
+At write time each enemy's area is looked up in `Graph.AreaTiers`
+(`GameDataWriterE.cs:2126`). A missing area normally throws
+`No tier for <area>`, but `AllowUnlinked` (forced on by crawl mode,
+`FogModWrapper/Program.cs`) downgrades that to a silent skip: Radagon
+(`c2190_9000`, source SpEffect 7170 = tier 17) and Elden Beast
+(`c2200_9000`) kept vanilla stats, and the `GameAreaParam.bonusSoul` rune
+reward stayed vanilla too. FogRando papers over the same hole by hardcoding
+`AreaTiers["erdtree"] = 17` (`GraphConnector.cs:1619`), the vanilla tier,
+which makes the rescale a deliberate no-op; same idea for
+`enirilim_radahn = 33` in DLC-only mode. Note `enirilim_radahn` is not
+affected in SpeedFog: it has real fog gates, so it is a normal DAG zone
+with its own tier.
+
+SpeedFog instead anchors `erdtree` to the tier of `leyndell_erdtree` in
+`ConnectionInjector.ApplyAreaTiers` (skipped if `graph.json` ever supplies
+`erdtree` explicitly), so the final fight scales with the rest of the final
+cluster, e.g. pair `(17, 28)` UniqueFixed = SpEffect 7802218 for a tier-28
+final zone.
+
 ## Difficulty consequences of tiers 22+
 
 - Tiers 21-28 now produce distinct scaling. Reference points for a

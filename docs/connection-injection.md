@@ -128,6 +128,12 @@ The injector extracts the final boss's `DefeatFlag` from FogMod's Graph for down
 graph.AreaTiers[area] = tier;  // e.g., "stormveil" -> 5
 ```
 
+One anchor is added on top of the dictionary: when `leyndell_erdtree` has a
+tier, the Elden Beast arena area `erdtree` (m19, no randomizable fog gates,
+never a DAG zone) inherits it, unless `graph.json` supplied one explicitly. Without a tier
+the writer silently skips scaling for Radagon and Elden Beast (see "The final
+arena anchor" in `enemy-scaling.md`).
+
 ## Return Value
 
 `InjectAndExtract()` returns an `InjectionResult`:

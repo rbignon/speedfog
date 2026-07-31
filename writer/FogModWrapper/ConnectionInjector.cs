@@ -303,6 +303,20 @@ public static class ConnectionInjector
             graph.AreaTiers[area] = tier;
         }
 
+        // The Elden Beast arena ("erdtree", m19) has no randomizable fog
+        // gates, so it is never a DAG zone and graph.json cannot tier it;
+        // without a tier the writer silently leaves Radagon/Elden Beast at
+        // vanilla stats (AllowUnlinked suppresses the "No tier for erdtree"
+        // exception). FogRando anchors it at its vanilla tier
+        // (GraphConnector.cs:1619); we anchor it at the tier of its entrance
+        // zone so the arena scales with the rest of the final cluster.
+        if (!graph.AreaTiers.ContainsKey("erdtree")
+            && graph.AreaTiers.TryGetValue("leyndell_erdtree", out int erdtreeTier))
+        {
+            graph.AreaTiers["erdtree"] = erdtreeTier;
+            Console.WriteLine($"Anchored erdtree to tier {erdtreeTier} (from leyndell_erdtree).");
+        }
+
         Console.WriteLine($"Applied {areaTiers.Count} area tiers for scaling.");
     }
 }
