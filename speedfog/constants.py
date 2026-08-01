@@ -33,8 +33,8 @@ INTERMEDIATE_CLUSTER_TYPES = (
     "major_boss",
 )
 
-# Enemy scaling tier ceiling (SpeedFog uses tiers 1-28, a subset of vanilla).
-MAX_TIER = 28
+# Enemy scaling tier ceiling (SpeedFog uses tiers 1-34, a subset of vanilla).
+MAX_TIER = 34
 
 # Default hard cap on weight spread (max - min) within a single layer.
 DEFAULT_MAX_LAYER_SPREAD = 2.0
