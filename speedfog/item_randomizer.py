@@ -121,7 +121,8 @@ def generate_item_config(
             "autoUpgradeWeapons": config.item_randomizer.auto_upgrade_weapons,
             "regionLockWeapons": False,
             "autoUpgradeSpiritAshes": True,
-            "autoUpgradeDropped": config.item_randomizer.auto_upgrade_dropped,
+            "autoUpgradeDropped": config.item_randomizer.auto_upgrade_weapons,
+            "autoUpgradeEquipped": config.item_randomizer.auto_upgrade_weapons,
         },
     }
 

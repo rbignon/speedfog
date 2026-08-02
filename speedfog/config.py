@@ -388,7 +388,6 @@ class ItemRandomizerConfig:
     difficulty: int = 50
     remove_requirements: bool = True
     auto_upgrade_weapons: bool = True
-    auto_upgrade_dropped: bool = True
     reduce_upgrade_cost: bool = True
     # Auto-equip best gear at start (item randomizer helper). Disabled by
     # default: SpeedFog gives a care package instead.
@@ -588,7 +587,6 @@ _KNOWN_SECTION_KEYS: dict[str, frozenset[str] | None] = {
             "difficulty",
             "remove_requirements",
             "auto_upgrade_weapons",
-            "auto_upgrade_dropped",
             "reduce_upgrade_cost",
             "auto_equip",
             "dlc",
@@ -845,9 +843,6 @@ class Config:
                 ),
                 auto_upgrade_weapons=item_randomizer_section.get(
                     "auto_upgrade_weapons", True
-                ),
-                auto_upgrade_dropped=item_randomizer_section.get(
-                    "auto_upgrade_dropped", True
                 ),
                 reduce_upgrade_cost=item_randomizer_section.get(
                     "reduce_upgrade_cost", True
