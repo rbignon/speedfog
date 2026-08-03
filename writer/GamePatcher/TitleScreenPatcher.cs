@@ -1,3 +1,4 @@
+using System.Text;
 using BCnEncoder.Decoder;
 using BCnEncoder.Encoder;
 using BCnEncoder.ImageSharp;
@@ -11,37 +12,33 @@ namespace GamePatcher;
 
 /// <summary>
 /// Overlays the SpeedFog badge (data/title_screen_overlay.png, transparent
-/// RGBA) onto the vanilla title screen artwork.
+/// RGBA) onto the title screen artwork, without shipping the 65 MB shared UI
+/// atlas that contains it.
 ///
-/// The title screen image is the MENU_Title_EldenRing_01 sprite inside the
-/// SB_Title_01 atlas of menu/{hi,low}/01_common.tpf.dcx. Its rect, from
-/// SB_Title_01.layout in 01_common.sblytbnd.dcx, is 4px-block-aligned, so the
-/// sprite's BC7 blocks are extracted, decoded, alpha-composited with the
-/// overlay, re-encoded, and spliced back without touching the other sprites
-/// sharing the atlas (HUD bars, inventory icons). The vanilla art stays the
-/// base, so the sprite keeps blending into the black title screen.
+/// The title GFX references the artwork by name (GFxDefineExternalImage2
+/// "MENU_Title_EldenRing_01"), resolved at runtime first through the atlas
+/// layouts of 01_common.sblytbnd.dcx, then as a standalone TPF texture (how
+/// boot logos and MENU_Dummy* fallbacks resolve in vanilla). So the patch
+/// redirects the lookup: it removes the sprite's SubTexture entry from
+/// SB_Title_01.layout and adds a standalone texture with that name (vanilla
+/// sprite pixels + badge) to 02_title.tpf.dcx, the title screen's own
+/// resource block. Shipped output is ~1.5 MB instead of ~112 MB. Validated
+/// in-game on 2026-08-03.
 /// </summary>
 public static class TitleScreenPatcher
 {
     private const string OVERLAY_NAME = "title_screen_overlay.png";
-    private const string TEXTURE_NAME = "SB_Title_01";
+    private const string SPRITE_NAME = "MENU_Title_EldenRing_01";
+    private const string ATLAS_NAME = "SB_Title_01";
+    private const int DXGI_BC7_UNORM = 98;
+    private const byte TPF_FORMAT_BC7 = 102; // format byte used by the SB_* menu textures
     private static readonly string[] Variants = { "hi", "low" };
 
-    // MENU_Title_EldenRing_01 sprite rect within the SB_Title_01 atlas.
-    private const int SPRITE_X = 0;
-    private const int SPRITE_Y = 60;
-    private const int SPRITE_W = 2532;
-    private const int SPRITE_H = 1532;
-
-    private const int ATLAS_WIDTH = 4096;
-    private const int ATLAS_HEIGHT = 2048;
-    private const int DXGI_BC7_UNORM = 98;
-
     /// <summary>
-    /// Read menu/{hi,low}/01_common.tpf.dcx from gameDir, composite the overlay
-    /// onto SB_Title_01's title sprite, write the patched TPFs to outputDir.
-    /// Returns the number of TPFs patched, or 0 if the overlay or textures were
-    /// not found.
+    /// For menu/{hi,low}: rewrite 01_common.sblytbnd.dcx (sprite entry
+    /// removed) and 02_title.tpf.dcx (standalone composited texture added)
+    /// into outputDir. The 01_common.tpf.dcx atlas is only read. Returns the
+    /// number of variants patched.
     /// </summary>
     public static int Patch(string gameDir, string outputDir, string dataDir)
     {
@@ -51,95 +48,151 @@ public static class TitleScreenPatcher
             Console.WriteLine($"Warning: {OVERLAY_NAME} not found in data dir, skipping title screen patch");
             return 0;
         }
-
         using var overlay = Image.Load<Rgba32>(overlayPath);
-        if (overlay.Width != SPRITE_W || overlay.Height != SPRITE_H)
-        {
-            Console.WriteLine(
-                $"Warning: {OVERLAY_NAME} is {overlay.Width}x{overlay.Height}, expected {SPRITE_W}x{SPRITE_H}; skipping title screen patch");
-            return 0;
-        }
 
-        // hi and low ship identical SB_Title_01 textures, so cache the encoded
-        // result keyed on the extracted vanilla blocks
-        byte[]? cachedVanilla = null;
-        byte[]? cachedEncoded = null;
+        // hi and low pack their atlases differently but hold the same sprite
+        // pixels, so the encoded standalone texture is cached on pixel content
+        byte[]? cachedPixels = null;
+        byte[]? cachedDds = null;
 
         int patched = 0;
         foreach (var variant in Variants)
         {
-            var subPath = Path.Combine("menu", variant, "01_common.tpf.dcx");
-            var srcPath = Path.Combine(gameDir, subPath);
-            if (!File.Exists(srcPath))
+            var layoutSubPath = Path.Combine("menu", variant, "01_common.sblytbnd.dcx");
+            var atlasSubPath = Path.Combine("menu", variant, "01_common.tpf.dcx");
+            var titleSubPath = Path.Combine("menu", variant, "02_title.tpf.dcx");
+            var missing = new[] { layoutSubPath, atlasSubPath, titleSubPath }
+                .FirstOrDefault(p => !File.Exists(Path.Combine(gameDir, p)));
+            if (missing != null)
             {
-                Console.WriteLine($"Warning: {subPath} not found in game dir, skipping");
+                Console.WriteLine($"Warning: {missing} not found in game dir, skipping");
                 continue;
             }
 
-            var tpf = TPF.Read(srcPath);
-            var tex = tpf.Textures.Find(
-                t => Path.GetFileNameWithoutExtension(t.Name).Equals(TEXTURE_NAME, StringComparison.OrdinalIgnoreCase));
-            if (tex == null)
+            // locate the sprite in the variant's layout
+            var layoutBnd = BND4.Read(Path.Combine(gameDir, layoutSubPath));
+            var layoutFile = layoutBnd.Files.Find(
+                f => Path.GetFileNameWithoutExtension(f.Name).Equals(ATLAS_NAME, StringComparison.OrdinalIgnoreCase));
+            if (layoutFile == null)
             {
-                Console.WriteLine($"Warning: {TEXTURE_NAME} not found in {subPath}, skipping");
+                Console.WriteLine($"Warning: {ATLAS_NAME}.layout not found in {layoutSubPath}, skipping");
                 continue;
             }
+            var layoutXml = Encoding.UTF8.GetString(layoutFile.Bytes);
 
-            DdsInfo info;
+            (int X, int Y, int Width, int Height) rect;
             try
             {
-                info = DdsAtlas.ParseHeader(tex.Bytes);
+                rect = LayoutFile.FindSubTexture(layoutXml, SPRITE_NAME);
             }
             catch (InvalidDataException e)
             {
-                Console.WriteLine($"Warning: {TEXTURE_NAME} in {subPath}: {e.Message}, skipping");
+                Console.WriteLine($"Warning: {layoutSubPath}: {e.Message}, skipping");
                 continue;
             }
-
-            if (info.Width != ATLAS_WIDTH || info.Height != ATLAS_HEIGHT
-                || info.DxgiFormat != DXGI_BC7_UNORM || info.MipCount > 1)
+            if (overlay.Width != rect.Width || overlay.Height != rect.Height)
             {
                 Console.WriteLine(
-                    $"Warning: {TEXTURE_NAME} in {subPath} is {info.Width}x{info.Height}"
-                    + $" dxgi={info.DxgiFormat} mips={info.MipCount},"
-                    + $" expected {ATLAS_WIDTH}x{ATLAS_HEIGHT} dxgi={DXGI_BC7_UNORM} mips<=1; skipping");
+                    $"Warning: {OVERLAY_NAME} is {overlay.Width}x{overlay.Height},"
+                    + $" expected {rect.Width}x{rect.Height} per {layoutSubPath}; skipping");
                 continue;
             }
 
-            var vanillaBlocks = DdsAtlas.ExtractBlocks(tex.Bytes, info, SPRITE_X, SPRITE_Y, SPRITE_W, SPRITE_H);
-            byte[] encoded;
-            if (cachedVanilla != null && vanillaBlocks.AsSpan().SequenceEqual(cachedVanilla))
+            // pull the vanilla sprite blocks out of the atlas (read-only)
+            var atlasTpf = TPF.Read(Path.Combine(gameDir, atlasSubPath));
+            var atlasTex = atlasTpf.Textures.Find(
+                t => Path.GetFileNameWithoutExtension(t.Name).Equals(ATLAS_NAME, StringComparison.OrdinalIgnoreCase));
+            if (atlasTex == null)
             {
-                encoded = cachedEncoded!;
+                Console.WriteLine($"Warning: {ATLAS_NAME} not found in {atlasSubPath}, skipping");
+                continue;
+            }
+
+            byte[] spriteBlocks;
+            byte[] spriteDds;
+            try
+            {
+                var info = DdsAtlas.ParseHeader(atlasTex.Bytes);
+                if (info.DxgiFormat != DXGI_BC7_UNORM || info.MipCount > 1)
+                {
+                    Console.WriteLine(
+                        $"Warning: {ATLAS_NAME} in {atlasSubPath} is dxgi={info.DxgiFormat} mips={info.MipCount},"
+                        + $" expected dxgi={DXGI_BC7_UNORM} mips<=1; skipping");
+                    continue;
+                }
+                spriteBlocks = DdsAtlas.ExtractBlocks(atlasTex.Bytes, info, rect.X, rect.Y, rect.Width, rect.Height);
+                spriteDds = DdsAtlas.BuildStandaloneDds(atlasTex.Bytes, spriteBlocks, rect.Width, rect.Height);
+            }
+            catch (InvalidDataException e)
+            {
+                Console.WriteLine($"Warning: {ATLAS_NAME} in {atlasSubPath}: {e.Message}, skipping");
+                continue;
+            }
+            catch (ArgumentException e)
+            {
+                Console.WriteLine($"Warning: {ATLAS_NAME} in {atlasSubPath}: {e.Message}, skipping");
+                continue;
+            }
+
+            var composited = CompositeAndEncode(spriteDds, spriteBlocks, overlay, ref cachedPixels, ref cachedDds);
+
+            // build both artifacts before writing either, so a failure never
+            // leaves a layout-without-texture partial output
+            layoutFile.Bytes = Encoding.UTF8.GetBytes(LayoutFile.RemoveSubTexture(layoutXml, SPRITE_NAME));
+            var titleTpf = TPF.Read(Path.Combine(gameDir, titleSubPath));
+            var existing = titleTpf.Textures.Find(
+                t => Path.GetFileNameWithoutExtension(t.Name).Equals(SPRITE_NAME, StringComparison.OrdinalIgnoreCase));
+            if (existing != null)
+            {
+                existing.Bytes = composited;
             }
             else
             {
-                encoded = CompositeAndEncode(vanillaBlocks, overlay);
-                cachedVanilla = vanillaBlocks;
-                cachedEncoded = encoded;
+                titleTpf.Textures.Add(
+                    new TPF.Texture(SPRITE_NAME, TPF_FORMAT_BC7, 0, composited, TPF.TPFPlatform.PC));
             }
 
-            DdsAtlas.SpliceBlocks(tex.Bytes, info, encoded, SPRITE_X, SPRITE_Y, SPRITE_W, SPRITE_H);
+            var layoutDest = Path.Combine(outputDir, layoutSubPath);
+            Directory.CreateDirectory(Path.GetDirectoryName(layoutDest)!);
+            layoutBnd.Write(layoutDest);
+            titleTpf.Write(Path.Combine(outputDir, titleSubPath));
 
-            var destPath = Path.Combine(outputDir, subPath);
-            Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
-            tpf.Write(destPath);
+            // drop the full-atlas override left behind by pre-redirect
+            // SpeedFog versions: it would silently re-bloat every seed by
+            // ~110 MB and re-ship that era's broken low-variant splice
+            var staleAtlas = Path.Combine(outputDir, atlasSubPath);
+            if (File.Exists(staleAtlas))
+            {
+                File.Delete(staleAtlas);
+                Console.WriteLine($"Removed stale {atlasSubPath} override from a previous SpeedFog version");
+            }
             patched++;
         }
 
         if (patched > 0)
         {
-            Console.WriteLine($"Title screen patch: composited {OVERLAY_NAME} into {patched} menu TPF(s)");
+            Console.WriteLine($"Title screen patch: redirected {SPRITE_NAME} to 02_title with {OVERLAY_NAME} composited ({patched} variant(s))");
         }
         return patched;
     }
 
-    private static byte[] CompositeAndEncode(byte[] vanillaBlocks, Image<Rgba32> overlay)
+    private static byte[] CompositeAndEncode(
+        byte[] spriteDds, byte[] spriteBlocks, Image<Rgba32> overlay,
+        ref byte[]? cachedPixels, ref byte[]? cachedDds)
     {
         var decoder = new BcDecoder();
-        // same Wine constraint as the encoder below; decode is sub-second anyway
+        // same Wine constraint as the encoder below; decode is a few seconds
         decoder.Options.IsParallel = false;
-        using var sprite = decoder.DecodeRawToImageRgba32(vanillaBlocks, SPRITE_W, SPRITE_H, CompressionFormat.Bc7);
+        using var sprite = decoder.DecodeRawToImageRgba32(
+            spriteBlocks, overlay.Width, overlay.Height, CompressionFormat.Bc7);
+
+        var pixels = new byte[overlay.Width * overlay.Height * 4];
+        sprite.CopyPixelDataTo(pixels);
+        if (cachedPixels != null && pixels.AsSpan().SequenceEqual(cachedPixels))
+        {
+            return cachedDds!;
+        }
+
         sprite.Mutate(ctx => ctx.DrawImage(overlay, 1f));
 
         var encoder = new BcEncoder(CompressionFormat.Bc7);
@@ -153,7 +206,11 @@ public static class TitleScreenPatcher
         // setup step, and re-encoding BC7-decoded content gains nothing
         // visible from BestQuality (which takes ~4min serial).
         encoder.Options.IsParallel = false;
-        // mip 0 is the only level generated
-        return encoder.EncodeToRawBytes(sprite)[0];
+        var encoded = encoder.EncodeToRawBytes(sprite)[0];
+
+        var dds = DdsAtlas.BuildStandaloneDds(spriteDds, encoded, overlay.Width, overlay.Height);
+        cachedPixels = pixels;
+        cachedDds = dds;
+        return dds;
     }
 }

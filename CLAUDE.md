@@ -145,8 +145,9 @@ speedfog/
 │   ├── GamePatcher/          # Overlay generator, runs at setup (uses SoulsFormatsNEXT submodule)
 │   │   ├── Program.cs       # CLI entry point
 │   │   ├── GraceAnimationPatcher.cs  # Speed up grace sit/discover animations
-│   │   ├── TitleScreenPatcher.cs  # Composite data/title_screen_overlay.png onto the title screen sprite
-│   │   └── DdsAtlas.cs      # DX10 DDS header parsing + BC7 block extract/splice
+│   │   ├── TitleScreenPatcher.cs  # Redirect title sprite to a standalone badge texture in 02_title.tpf.dcx
+│   │   ├── DdsAtlas.cs      # DX10 DDS header parsing + BC7 block extract + standalone DDS build
+│   │   └── LayoutFile.cs    # Menu .layout XML helpers (find/remove SubTexture entries)
 │   └── GamePatcher.Tests/   # xUnit tests for GamePatcher
 ├── tools/                   # Standalone scripts
 │   ├── bootstrap.py             # Project bootstrap (extract deps, build, generate data)
@@ -331,8 +332,9 @@ speedfog/
 |-------|---------|
 | `Program.cs` | CLI entry, runs all post-processing patches |
 | `GraceAnimationPatcher` | Speeds up grace sit/discover animations via TAE event 608 |
-| `TitleScreenPatcher` | Composites data/title_screen_overlay.png onto the title sprite in the SB_Title_01 atlas (see `docs/title-screen.md`) |
-| `DdsAtlas` | DX10 DDS header parsing + block-aligned BC7 extract/splice |
+| `TitleScreenPatcher` | Redirects the title sprite to a standalone composited badge texture in 02_title.tpf.dcx (~1.5 MB shipped, see `docs/title-screen.md`) |
+| `DdsAtlas` | DX10 DDS header parsing + block-aligned BC7 extract + standalone DDS build |
+| `LayoutFile` | Menu .layout XML helpers (find/remove SubTexture entries) |
 
 **Key RandomizerCommon classes** (from RandomizerCommon.dll):
 | Class | Purpose |

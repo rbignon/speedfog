@@ -8,12 +8,12 @@ from speedfog-racing's og-image.svg: Inter Bold wordmark in off-white #e8e6e1,
 gold accent line #c8a44e, and a small waving checkered flag. The badge also
 paints an opaque black patch over the vanilla TM glyph, whose spot it takes.
 
-The output is committed; re-run this script only to change the design, then
-regenerate the overlay (see docs/title-screen.md). Standalone from the project
-venv: requires Pillow and the Inter fonts (Debian: fonts-inter). The script
-is fully deterministic; the output is reproducible on a fixed environment
-(generated with Pillow 11.1.0 + fonts-inter on Debian 13); other
-Pillow/FreeType/font versions may produce byte-different files.
+CAUTION: the committed data/title_screen_overlay.png has been hand-polished
+after generation (commit 920905a) and is the authoritative artwork; running
+this script OVERWRITES it with the script's own (older) design. Use it as a
+starting point for a redesign, not to reproduce the current file. After any
+change, regenerate the overlay (see docs/title-screen.md). Standalone from
+the project venv: requires Pillow and the Inter fonts (Debian: fonts-inter).
 """
 
 import math

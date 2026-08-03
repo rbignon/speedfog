@@ -85,7 +85,7 @@ Arguments:
 
 Patches applied:
   - Grace animation speedup (chr/c0000.anibnd.dcx)
-  - Title screen artwork (menu/{hi,low}/01_common.tpf.dcx, needs --data-dir)
+  - Title screen badge (menu/{hi,low}/01_common.sblytbnd.dcx + 02_title.tpf.dcx, needs --data-dir)
 ");
     }
 }

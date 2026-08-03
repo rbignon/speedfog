@@ -89,44 +89,6 @@ public class DdsAtlasTests
     }
 
     [Fact]
-    public void SpliceBlocks_ReplacesTargetRegionAndPreservesRest()
-    {
-        // 16x16 atlas = 4x4 blocks; splice an 8x8 region at (4, 4) = blocks (1,1)-(2,2)
-        var dds = MakeDds(16, 16);
-        var info = DdsAtlas.ParseHeader(dds);
-        var region = MakeRegionBlocks(8, 8, 0xAA);
-
-        DdsAtlas.SpliceBlocks(dds, info, region, 4, 4, 8, 8);
-
-        var replaced = new[] { 5, 6, 9, 10 }; // block index = row * 4 + col
-        for (int i = 0; i < 16; i++)
-        {
-            byte expected = replaced.Contains(i) ? (byte)0xAA : (byte)i;
-            for (int j = 0; j < BLOCK_SIZE; j++)
-            {
-                Assert.Equal(expected, dds[HEADER_SIZE + i * BLOCK_SIZE + j]);
-            }
-        }
-    }
-
-    [Fact]
-    public void SpliceBlocks_AcceptsRegionTouchingAtlasEdges()
-    {
-        // full-width region at the top edge: blocks (0,0)-(3,0)
-        var dds = MakeDds(16, 16);
-        var info = DdsAtlas.ParseHeader(dds);
-        var region = MakeRegionBlocks(16, 4, 0xBB);
-
-        DdsAtlas.SpliceBlocks(dds, info, region, 0, 0, 16, 4);
-
-        for (int i = 0; i < 16; i++)
-        {
-            byte expected = i < 4 ? (byte)0xBB : (byte)i;
-            Assert.Equal(expected, dds[HEADER_SIZE + i * BLOCK_SIZE]);
-        }
-    }
-
-    [Fact]
     public void ExtractBlocks_ReadsTargetRegionInRasterOrder()
     {
         // 16x16 atlas = 4x4 blocks; extract the 8x8 region at (4, 4) = blocks 5, 6, 9, 10
@@ -147,16 +109,32 @@ public class DdsAtlasTests
     }
 
     [Fact]
-    public void ExtractBlocks_RoundtripsWithSpliceBlocks()
+    public void BuildStandaloneDds_WrapsRegionWithPatchedHeader()
     {
-        var dds = MakeDds(16, 16);
-        var original = (byte[])dds.Clone();
-        var info = DdsAtlas.ParseHeader(dds);
+        var atlas = MakeDds(16, 16);
+        var info = DdsAtlas.ParseHeader(atlas);
+        var region = DdsAtlas.ExtractBlocks(atlas, info, 4, 4, 8, 8);
 
-        var region = DdsAtlas.ExtractBlocks(dds, info, 4, 4, 8, 8);
-        DdsAtlas.SpliceBlocks(dds, info, region, 4, 4, 8, 8);
+        var dds = DdsAtlas.BuildStandaloneDds(atlas, region, 8, 8);
 
-        Assert.Equal(original, dds);
+        var built = DdsAtlas.ParseHeader(dds);
+        Assert.Equal(8, built.Width);
+        Assert.Equal(8, built.Height);
+        Assert.Equal(98, built.DxgiFormat);
+        Assert.Equal(HEADER_SIZE, built.DataOffset);
+        Assert.Equal(region.Length, BitConverter.ToInt32(dds, 20)); // linear size
+        Assert.Equal(region, dds.Skip(HEADER_SIZE).ToArray());
+        // the standalone file roundtrips through the same block accessors
+        Assert.Equal(region, DdsAtlas.ExtractBlocks(dds, built, 0, 0, 8, 8));
+    }
+
+    [Fact]
+    public void BuildStandaloneDds_RejectsRegionSizeMismatch()
+    {
+        var atlas = MakeDds(16, 16);
+        var region = MakeRegionBlocks(8, 4, 0xAA); // too small for 8x8
+
+        Assert.Throws<ArgumentException>(() => DdsAtlas.BuildStandaloneDds(atlas, region, 8, 8));
     }
 
     [Fact]
@@ -169,34 +147,4 @@ public class DdsAtlasTests
         Assert.Throws<ArgumentException>(() => DdsAtlas.ExtractBlocks(dds, info, 12, 12, 8, 8));
     }
 
-    [Fact]
-    public void SpliceBlocks_RejectsUnalignedRect()
-    {
-        var dds = MakeDds(16, 16);
-        var info = DdsAtlas.ParseHeader(dds);
-        var region = MakeRegionBlocks(8, 8, 0xAA);
-
-        Assert.Throws<ArgumentException>(() => DdsAtlas.SpliceBlocks(dds, info, region, 2, 4, 8, 8));
-        Assert.Throws<ArgumentException>(() => DdsAtlas.SpliceBlocks(dds, info, region, 4, 4, 6, 8));
-    }
-
-    [Fact]
-    public void SpliceBlocks_RejectsRegionSizeMismatch()
-    {
-        var dds = MakeDds(16, 16);
-        var info = DdsAtlas.ParseHeader(dds);
-        var region = MakeRegionBlocks(8, 4, 0xAA); // too small for an 8x8 rect
-
-        Assert.Throws<ArgumentException>(() => DdsAtlas.SpliceBlocks(dds, info, region, 4, 4, 8, 8));
-    }
-
-    [Fact]
-    public void SpliceBlocks_RejectsRectOutsideAtlas()
-    {
-        var dds = MakeDds(16, 16);
-        var info = DdsAtlas.ParseHeader(dds);
-        var region = MakeRegionBlocks(8, 8, 0xAA);
-
-        Assert.Throws<ArgumentException>(() => DdsAtlas.SpliceBlocks(dds, info, region, 12, 12, 8, 8));
-    }
 }

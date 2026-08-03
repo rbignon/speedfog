@@ -6,11 +6,11 @@ namespace GamePatcher;
 internal readonly record struct DdsInfo(int Width, int Height, int DxgiFormat, int MipCount, int DataOffset);
 
 /// <summary>
-/// Minimal DDS/BC7 helpers for editing texture atlases in place.
+/// Minimal DDS/BC7 helpers for reading texture atlases.
 ///
 /// BC7 stores 4x4 pixel blocks of 16 bytes in raster order, so a block-aligned
-/// sub-rectangle can be replaced without decoding the rest of the atlas: the
-/// untouched blocks stay byte-identical to vanilla.
+/// sub-rectangle can be pulled out (or wrapped into a standalone DDS) without
+/// decoding the rest of the atlas.
 /// </summary>
 internal static class DdsAtlas
 {
@@ -58,36 +58,8 @@ internal static class DdsAtlas
     }
 
     /// <summary>
-    /// Overwrite the block-aligned rectangle (x, y, width, height) of a BC7
-    /// atlas with pre-encoded BC7 blocks (raster order, region-sized).
-    /// </summary>
-    internal static void SpliceBlocks(byte[] atlasDds, DdsInfo info, byte[] regionBlocks, int x, int y, int width, int height)
-    {
-        ValidateRect(info, x, y, width, height);
-
-        int regionBlockCols = width / BLOCK_DIM;
-        int regionBlockRows = height / BLOCK_DIM;
-        if (regionBlocks.Length != regionBlockCols * regionBlockRows * BLOCK_SIZE)
-        {
-            throw new ArgumentException(
-                $"region data is {regionBlocks.Length} bytes, expected {regionBlockCols * regionBlockRows * BLOCK_SIZE} for {width}x{height}");
-        }
-
-        int atlasBlockCols = info.Width / BLOCK_DIM;
-        int firstBlockCol = x / BLOCK_DIM;
-        int firstBlockRow = y / BLOCK_DIM;
-
-        for (int row = 0; row < regionBlockRows; row++)
-        {
-            int srcOffset = row * regionBlockCols * BLOCK_SIZE;
-            int dstOffset = info.DataOffset + ((firstBlockRow + row) * atlasBlockCols + firstBlockCol) * BLOCK_SIZE;
-            Array.Copy(regionBlocks, srcOffset, atlasDds, dstOffset, regionBlockCols * BLOCK_SIZE);
-        }
-    }
-
-    /// <summary>
     /// Read the BC7 blocks of a block-aligned rectangle out of an atlas, in
-    /// raster order (the exact inverse of SpliceBlocks).
+    /// raster order.
     /// </summary>
     internal static byte[] ExtractBlocks(byte[] atlasDds, DdsInfo info, int x, int y, int width, int height)
     {
@@ -108,6 +80,37 @@ internal static class DdsAtlas
             Array.Copy(atlasDds, srcOffset, regionBlocks, dstOffset, regionBlockCols * BLOCK_SIZE);
         }
         return regionBlocks;
+    }
+
+    /// <summary>
+    /// Wrap raw BC7 blocks into a standalone single-mip DDS, reusing the
+    /// 148-byte DX10 header of an existing DDS as template (dimensions and
+    /// linear size patched).
+    /// </summary>
+    internal static byte[] BuildStandaloneDds(byte[] templateDds, byte[] regionBlocks, int width, int height)
+    {
+        if (templateDds.Length < DX10_DATA_OFFSET)
+        {
+            throw new ArgumentException($"template DDS too short: {templateDds.Length} bytes");
+        }
+        if (width % BLOCK_DIM != 0 || height % BLOCK_DIM != 0)
+        {
+            throw new ArgumentException($"{width}x{height} is not aligned to {BLOCK_DIM}px BC7 blocks");
+        }
+        int expected = (width / BLOCK_DIM) * (height / BLOCK_DIM) * BLOCK_SIZE;
+        if (regionBlocks.Length != expected)
+        {
+            throw new ArgumentException(
+                $"region data is {regionBlocks.Length} bytes, expected {expected} for {width}x{height}");
+        }
+
+        var dds = new byte[DX10_DATA_OFFSET + regionBlocks.Length];
+        Array.Copy(templateDds, dds, DX10_DATA_OFFSET);
+        BitConverter.GetBytes(height).CopyTo(dds, 12);
+        BitConverter.GetBytes(width).CopyTo(dds, 16);
+        BitConverter.GetBytes(regionBlocks.Length).CopyTo(dds, 20); // linear size
+        regionBlocks.CopyTo(dds, DX10_DATA_OFFSET);
+        return dds;
     }
 
     private static void ValidateRect(DdsInfo info, int x, int y, int width, int height)
