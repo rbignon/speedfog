@@ -127,6 +127,49 @@ public class DdsAtlasTests
     }
 
     [Fact]
+    public void ExtractBlocks_ReadsTargetRegionInRasterOrder()
+    {
+        // 16x16 atlas = 4x4 blocks; extract the 8x8 region at (4, 4) = blocks 5, 6, 9, 10
+        var dds = MakeDds(16, 16);
+        var info = DdsAtlas.ParseHeader(dds);
+
+        var region = DdsAtlas.ExtractBlocks(dds, info, 4, 4, 8, 8);
+
+        Assert.Equal(4 * BLOCK_SIZE, region.Length);
+        var expected = new[] { 5, 6, 9, 10 };
+        for (int i = 0; i < 4; i++)
+        {
+            for (int j = 0; j < BLOCK_SIZE; j++)
+            {
+                Assert.Equal((byte)expected[i], region[i * BLOCK_SIZE + j]);
+            }
+        }
+    }
+
+    [Fact]
+    public void ExtractBlocks_RoundtripsWithSpliceBlocks()
+    {
+        var dds = MakeDds(16, 16);
+        var original = (byte[])dds.Clone();
+        var info = DdsAtlas.ParseHeader(dds);
+
+        var region = DdsAtlas.ExtractBlocks(dds, info, 4, 4, 8, 8);
+        DdsAtlas.SpliceBlocks(dds, info, region, 4, 4, 8, 8);
+
+        Assert.Equal(original, dds);
+    }
+
+    [Fact]
+    public void ExtractBlocks_RejectsUnalignedOrOutOfBoundsRect()
+    {
+        var dds = MakeDds(16, 16);
+        var info = DdsAtlas.ParseHeader(dds);
+
+        Assert.Throws<ArgumentException>(() => DdsAtlas.ExtractBlocks(dds, info, 2, 4, 8, 8));
+        Assert.Throws<ArgumentException>(() => DdsAtlas.ExtractBlocks(dds, info, 12, 12, 8, 8));
+    }
+
+    [Fact]
     public void SpliceBlocks_RejectsUnalignedRect()
     {
         var dds = MakeDds(16, 16);

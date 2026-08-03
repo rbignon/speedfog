@@ -81,7 +81,7 @@ Usage: GamePatcher <game-dir> <output-dir> [--data-dir <dir>]
 Arguments:
   <game-dir>    Path to Elden Ring Game directory
   <output-dir>  Output directory for patched files (e.g. data/overlay/)
-  --data-dir    SpeedFog data directory (for title_screen.png)
+  --data-dir    SpeedFog data directory (for title_screen_overlay.png)
 
 Patches applied:
   - Grace animation speedup (chr/c0000.anibnd.dcx)

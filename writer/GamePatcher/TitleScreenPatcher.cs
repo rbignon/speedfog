@@ -1,25 +1,29 @@
+using BCnEncoder.Decoder;
 using BCnEncoder.Encoder;
 using BCnEncoder.ImageSharp;
 using BCnEncoder.Shared;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using SoulsFormats;
 
 namespace GamePatcher;
 
 /// <summary>
-/// Replaces the title screen artwork (ELDEN RING logo + ring art) with the
-/// SpeedFog artwork from data/title_screen.png.
+/// Overlays the SpeedFog badge (data/title_screen_overlay.png, transparent
+/// RGBA) onto the vanilla title screen artwork.
 ///
 /// The title screen image is the MENU_Title_EldenRing_01 sprite inside the
 /// SB_Title_01 atlas of menu/{hi,low}/01_common.tpf.dcx. Its rect, from
 /// SB_Title_01.layout in 01_common.sblytbnd.dcx, is 4px-block-aligned, so the
-/// artwork is BC7-encoded and spliced into the vanilla atlas without decoding
-/// or re-encoding the other sprites sharing it (HUD bars, inventory icons).
+/// sprite's BC7 blocks are extracted, decoded, alpha-composited with the
+/// overlay, re-encoded, and spliced back without touching the other sprites
+/// sharing the atlas (HUD bars, inventory icons). The vanilla art stays the
+/// base, so the sprite keeps blending into the black title screen.
 /// </summary>
 public static class TitleScreenPatcher
 {
-    private const string ARTWORK_NAME = "title_screen.png";
+    private const string OVERLAY_NAME = "title_screen_overlay.png";
     private const string TEXTURE_NAME = "SB_Title_01";
     private static readonly string[] Variants = { "hi", "low" };
 
@@ -34,30 +38,32 @@ public static class TitleScreenPatcher
     private const int DXGI_BC7_UNORM = 98;
 
     /// <summary>
-    /// Read menu/{hi,low}/01_common.tpf.dcx from gameDir, splice the artwork
-    /// into SB_Title_01, write the patched TPFs to outputDir. Returns the
-    /// number of TPFs patched, or 0 if the artwork or textures were not found.
+    /// Read menu/{hi,low}/01_common.tpf.dcx from gameDir, composite the overlay
+    /// onto SB_Title_01's title sprite, write the patched TPFs to outputDir.
+    /// Returns the number of TPFs patched, or 0 if the overlay or textures were
+    /// not found.
     /// </summary>
     public static int Patch(string gameDir, string outputDir, string dataDir)
     {
-        var artworkPath = Path.Combine(dataDir, ARTWORK_NAME);
-        if (!File.Exists(artworkPath))
+        var overlayPath = Path.Combine(dataDir, OVERLAY_NAME);
+        if (!File.Exists(overlayPath))
         {
-            Console.WriteLine($"Warning: {ARTWORK_NAME} not found in data dir, skipping title screen patch");
+            Console.WriteLine($"Warning: {OVERLAY_NAME} not found in data dir, skipping title screen patch");
             return 0;
         }
 
-        byte[] regionBlocks;
-        using (var image = Image.Load<Rgba32>(artworkPath))
+        using var overlay = Image.Load<Rgba32>(overlayPath);
+        if (overlay.Width != SPRITE_W || overlay.Height != SPRITE_H)
         {
-            if (image.Width != SPRITE_W || image.Height != SPRITE_H)
-            {
-                Console.WriteLine(
-                    $"Warning: {ARTWORK_NAME} is {image.Width}x{image.Height}, expected {SPRITE_W}x{SPRITE_H}; skipping title screen patch");
-                return 0;
-            }
-            regionBlocks = EncodeBc7(image);
+            Console.WriteLine(
+                $"Warning: {OVERLAY_NAME} is {overlay.Width}x{overlay.Height}, expected {SPRITE_W}x{SPRITE_H}; skipping title screen patch");
+            return 0;
         }
+
+        // hi and low ship identical SB_Title_01 textures, so cache the encoded
+        // result keyed on the extracted vanilla blocks
+        byte[]? cachedVanilla = null;
+        byte[]? cachedEncoded = null;
 
         int patched = 0;
         foreach (var variant in Variants)
@@ -100,7 +106,20 @@ public static class TitleScreenPatcher
                 continue;
             }
 
-            DdsAtlas.SpliceBlocks(tex.Bytes, info, regionBlocks, SPRITE_X, SPRITE_Y, SPRITE_W, SPRITE_H);
+            var vanillaBlocks = DdsAtlas.ExtractBlocks(tex.Bytes, info, SPRITE_X, SPRITE_Y, SPRITE_W, SPRITE_H);
+            byte[] encoded;
+            if (cachedVanilla != null && vanillaBlocks.AsSpan().SequenceEqual(cachedVanilla))
+            {
+                encoded = cachedEncoded!;
+            }
+            else
+            {
+                encoded = CompositeAndEncode(vanillaBlocks, overlay);
+                cachedVanilla = vanillaBlocks;
+                cachedEncoded = encoded;
+            }
+
+            DdsAtlas.SpliceBlocks(tex.Bytes, info, encoded, SPRITE_X, SPRITE_Y, SPRITE_W, SPRITE_H);
 
             var destPath = Path.Combine(outputDir, subPath);
             Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
@@ -110,19 +129,31 @@ public static class TitleScreenPatcher
 
         if (patched > 0)
         {
-            Console.WriteLine($"Title screen patch: spliced {ARTWORK_NAME} into {patched} menu TPF(s)");
+            Console.WriteLine($"Title screen patch: composited {OVERLAY_NAME} into {patched} menu TPF(s)");
         }
         return patched;
     }
 
-    private static byte[] EncodeBc7(Image<Rgba32> image)
+    private static byte[] CompositeAndEncode(byte[] vanillaBlocks, Image<Rgba32> overlay)
     {
+        var decoder = new BcDecoder();
+        // same Wine constraint as the encoder below; decode is sub-second anyway
+        decoder.Options.IsParallel = false;
+        using var sprite = decoder.DecodeRawToImageRgba32(vanillaBlocks, SPRITE_W, SPRITE_H, CompressionFormat.Bc7);
+        sprite.Mutate(ctx => ctx.DrawImage(overlay, 1f));
+
         var encoder = new BcEncoder(CompressionFormat.Bc7);
         encoder.OutputOptions.GenerateMipMaps = false;
-        // one-shot at setup, so favor quality over encode time (gradients band
-        // more visibly at lower BC7 quality)
-        encoder.OutputOptions.Quality = CompressionQuality.BestQuality;
+        encoder.OutputOptions.Quality = CompressionQuality.Balanced;
+        // BCnEncoder's Parallel.For encode loop crashes non-deterministically
+        // (access violations at varying sites, ~50% of runs, both quality
+        // modes) under Wine's .NET runtime; the same workload is stable on
+        // native Linux and stable under Wine when single-threaded. Serial
+        // Balanced encodes this sprite in ~90s, acceptable for a one-shot
+        // setup step, and re-encoding BC7-decoded content gains nothing
+        // visible from BestQuality (which takes ~4min serial).
+        encoder.Options.IsParallel = false;
         // mip 0 is the only level generated
-        return encoder.EncodeToRawBytes(image)[0];
+        return encoder.EncodeToRawBytes(sprite)[0];
     }
 }

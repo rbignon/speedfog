@@ -63,14 +63,7 @@ internal static class DdsAtlas
     /// </summary>
     internal static void SpliceBlocks(byte[] atlasDds, DdsInfo info, byte[] regionBlocks, int x, int y, int width, int height)
     {
-        if (x % BLOCK_DIM != 0 || y % BLOCK_DIM != 0 || width % BLOCK_DIM != 0 || height % BLOCK_DIM != 0)
-        {
-            throw new ArgumentException($"rect ({x},{y},{width},{height}) is not aligned to {BLOCK_DIM}px BC7 blocks");
-        }
-        if (x < 0 || y < 0 || x + width > info.Width || y + height > info.Height)
-        {
-            throw new ArgumentException($"rect ({x},{y},{width},{height}) exceeds atlas {info.Width}x{info.Height}");
-        }
+        ValidateRect(info, x, y, width, height);
 
         int regionBlockCols = width / BLOCK_DIM;
         int regionBlockRows = height / BLOCK_DIM;
@@ -89,6 +82,43 @@ internal static class DdsAtlas
             int srcOffset = row * regionBlockCols * BLOCK_SIZE;
             int dstOffset = info.DataOffset + ((firstBlockRow + row) * atlasBlockCols + firstBlockCol) * BLOCK_SIZE;
             Array.Copy(regionBlocks, srcOffset, atlasDds, dstOffset, regionBlockCols * BLOCK_SIZE);
+        }
+    }
+
+    /// <summary>
+    /// Read the BC7 blocks of a block-aligned rectangle out of an atlas, in
+    /// raster order (the exact inverse of SpliceBlocks).
+    /// </summary>
+    internal static byte[] ExtractBlocks(byte[] atlasDds, DdsInfo info, int x, int y, int width, int height)
+    {
+        ValidateRect(info, x, y, width, height);
+
+        int regionBlockCols = width / BLOCK_DIM;
+        int regionBlockRows = height / BLOCK_DIM;
+        var regionBlocks = new byte[regionBlockCols * regionBlockRows * BLOCK_SIZE];
+
+        int atlasBlockCols = info.Width / BLOCK_DIM;
+        int firstBlockCol = x / BLOCK_DIM;
+        int firstBlockRow = y / BLOCK_DIM;
+
+        for (int row = 0; row < regionBlockRows; row++)
+        {
+            int srcOffset = info.DataOffset + ((firstBlockRow + row) * atlasBlockCols + firstBlockCol) * BLOCK_SIZE;
+            int dstOffset = row * regionBlockCols * BLOCK_SIZE;
+            Array.Copy(atlasDds, srcOffset, regionBlocks, dstOffset, regionBlockCols * BLOCK_SIZE);
+        }
+        return regionBlocks;
+    }
+
+    private static void ValidateRect(DdsInfo info, int x, int y, int width, int height)
+    {
+        if (x % BLOCK_DIM != 0 || y % BLOCK_DIM != 0 || width % BLOCK_DIM != 0 || height % BLOCK_DIM != 0)
+        {
+            throw new ArgumentException($"rect ({x},{y},{width},{height}) is not aligned to {BLOCK_DIM}px BC7 blocks");
+        }
+        if (x < 0 || y < 0 || x + width > info.Width || y + height > info.Height)
+        {
+            throw new ArgumentException($"rect ({x},{y},{width},{height}) exceeds atlas {info.Width}x{info.Height}");
         }
     }
 }

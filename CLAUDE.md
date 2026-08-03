@@ -78,7 +78,7 @@ speedfog/
 │   ├── game_tweaks.toml     # FogMod ConfigVars + startup gate flags + target lists (torrent arenas, spiritspring/stake/entity removals) (tracked)
 │   ├── care_package_items.toml  # Curated item pools for care package (tracked)
 │   ├── phantom_skins.toml   # Phantom skins catalog (cosmetic auras, tracked)
-│   ├── title_screen.png     # Title screen artwork, spliced by GamePatcher (tracked)
+│   ├── title_screen_overlay.png  # SpeedFog badge composited on the title screen by GamePatcher (tracked)
 │   ├── boss_arena_tags.json # Boss/arena tags for compatibility matching (tracked)
 │   ├── item_preset.yaml     # Item preset configuration (tracked)
 │   ├── plugins/             # Plugin data files
@@ -145,14 +145,14 @@ speedfog/
 │   ├── GamePatcher/          # Overlay generator, runs at setup (uses SoulsFormatsNEXT submodule)
 │   │   ├── Program.cs       # CLI entry point
 │   │   ├── GraceAnimationPatcher.cs  # Speed up grace sit/discover animations
-│   │   ├── TitleScreenPatcher.cs  # Splice data/title_screen.png into the title screen atlas
-│   │   └── DdsAtlas.cs      # DX10 DDS header parsing + BC7 block splicing
+│   │   ├── TitleScreenPatcher.cs  # Composite data/title_screen_overlay.png onto the title screen sprite
+│   │   └── DdsAtlas.cs      # DX10 DDS header parsing + BC7 block extract/splice
 │   └── GamePatcher.Tests/   # xUnit tests for GamePatcher
 ├── tools/                   # Standalone scripts
 │   ├── bootstrap.py             # Project bootstrap (extract deps, build, generate data)
 │   ├── generate_clusters.py # Generate clusters.json from fog.txt
 │   ├── port_boss_arena_tags.py  # Port BAR data → data/boss_arena_tags.json
-│   ├── generate_title_screen.py  # Generate data/title_screen.png (title artwork)
+│   ├── generate_title_screen.py  # Generate data/title_screen_overlay.png (title badge)
 │   ├── extract_fog_data.py  # Extract fog gate metadata
 │   ├── dump_emevd_warps/    # EMEVD analysis tool (dump warps, search flags, trace inits)
 │   └── game_inspect/        # Game data inspection tool (SFX, MSB entities, EMEVD, asset comparison)
@@ -331,8 +331,8 @@ speedfog/
 |-------|---------|
 | `Program.cs` | CLI entry, runs all post-processing patches |
 | `GraceAnimationPatcher` | Speeds up grace sit/discover animations via TAE event 608 |
-| `TitleScreenPatcher` | Splices data/title_screen.png into the SB_Title_01 menu atlas (see `docs/title-screen.md`) |
-| `DdsAtlas` | DX10 DDS header parsing + block-aligned BC7 splicing |
+| `TitleScreenPatcher` | Composites data/title_screen_overlay.png onto the title sprite in the SB_Title_01 atlas (see `docs/title-screen.md`) |
+| `DdsAtlas` | DX10 DDS header parsing + block-aligned BC7 extract/splice |
 
 **Key RandomizerCommon classes** (from RandomizerCommon.dll):
 | Class | Purpose |
