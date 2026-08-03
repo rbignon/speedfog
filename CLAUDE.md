@@ -152,6 +152,7 @@ speedfog/
 │   ├── bootstrap.py             # Project bootstrap (extract deps, build, generate data)
 │   ├── generate_clusters.py # Generate clusters.json from fog.txt
 │   ├── port_boss_arena_tags.py  # Port BAR data → data/boss_arena_tags.json
+│   ├── generate_title_screen.py  # Generate data/title_screen.png (title artwork)
 │   ├── extract_fog_data.py  # Extract fog gate metadata
 │   ├── dump_emevd_warps/    # EMEVD analysis tool (dump warps, search flags, trace inits)
 │   └── game_inspect/        # Game data inspection tool (SFX, MSB entities, EMEVD, asset comparison)

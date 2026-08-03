@@ -119,7 +119,9 @@ public static class TitleScreenPatcher
     {
         var encoder = new BcEncoder(CompressionFormat.Bc7);
         encoder.OutputOptions.GenerateMipMaps = false;
-        encoder.OutputOptions.Quality = CompressionQuality.Balanced;
+        // one-shot at setup, so favor quality over encode time (gradients band
+        // more visibly at lower BC7 quality)
+        encoder.OutputOptions.Quality = CompressionQuality.BestQuality;
         // mip 0 is the only level generated
         return encoder.EncodeToRawBytes(image)[0];
     }
