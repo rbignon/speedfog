@@ -1,0 +1,65 @@
+# Title Screen Artwork
+
+**Date:** 2026-08-03
+**Status:** Active
+
+Replaces the ELDEN RING title screen artwork (logo + ring art) with SpeedFog artwork. Applied at setup by GamePatcher (`TitleScreenPatcher`), not per-seed.
+
+## Where the image lives in game data
+
+The title screen is not a standalone fullscreen image. It is a sprite inside a shared menu texture atlas:
+
+- **File:** `menu/hi/01_common.tpf.dcx` (DCX-compressed TPF, 57 DDS textures). A same-sized variant exists at `menu/low/01_common.tpf.dcx` (used with the Low texture quality setting); both contain an identical `SB_Title_01`.
+- **Texture:** `SB_Title_01.dds`, 4096x2048, BC7_UNORM (DXGI format 98, DX10 header), no mipmaps.
+- **Sprite:** `MENU_Title_EldenRing_01.png`, rect **(0, 60) to (2532, 1592)** (2532x1532), fully opaque. Sprite rects come from the layout bundle `menu/hi/01_common.sblytbnd.dcx` (`SB_Title_01.layout`).
+
+The same sprite is drawn on the "Press any button" screen and above the main menu entries, so the replacement shows in both places.
+
+Pitfall: the atlas is shared. Outside the sprite rect, `SB_Title_01` holds in-game HUD elements (HP/FP bar gradients `MENU_Bar_Loss`/`MENU_Bar_Regain`, flask shortcut decorations, inventory tab icons). Only the sprite rect may be repainted.
+
+Related but distinct files:
+
+- `menu/hi/02_title.tpf.dcx`: boot logos only (Bandai Namco, FromSoftware, anti-piracy warning).
+- `menu/hi/00_solo.tpfbdt`: loading screen artworks (`MENU_Knowledge_*`) and tutorial images.
+- `menu/hi/jpnjp/80_language.tpf.dcx`: Japanese banner textures (YOU DIED etc.), no title art.
+
+## How the patch works
+
+Committed artwork: `data/title_screen.png`, which must be exactly **2532x1532**.
+
+`TitleScreenPatcher` (in GamePatcher, using SoulsFormatsNEXT for TPF/DCX) runs at setup:
+
+1. Load `data/title_screen.png` and BC7-encode it with BCnEncoder.NET (Balanced quality, no mipmaps).
+2. For each of `menu/hi/` and `menu/low/`: read `01_common.tpf.dcx` from the game dir, locate `SB_Title_01`, validate the DDS (DX10 BC7, 4096x2048, <=1 mip; skip with a warning on mismatch, e.g. after a game update changes the atlas).
+3. Splice the encoded blocks into the atlas (`DdsAtlas.SpliceBlocks`) and write the TPF to `data/overlay/menu/{hi,low}/01_common.tpf.dcx`, preserving the original DCX compression.
+
+The splice works because BC7 stores 4x4-pixel blocks of 16 bytes in raster order and the sprite rect is 4px-aligned on every edge: the artwork region maps to whole blocks, so the replacement never decodes or re-encodes the rest of the atlas. Every block outside the rect stays byte-identical to vanilla (HUD sprites are untouched by construction), and the DDS header is not rewritten.
+
+`speedfog/main.py` already copies `data/overlay/` recursively into each seed's `mods/fogmod/`, and ModEngine 2 picks the file up as a loose-file override. No per-seed work.
+
+## Replacing the artwork
+
+1. Edit or replace `data/title_screen.png` (must stay 2532x1532; any other size is refused with a warning and the patch is skipped).
+2. Re-run the overlay generation:
+
+```bash
+cd writer/GamePatcher
+wine publish/win-x64/GamePatcher.exe <game-dir> ../../data/overlay --data-dir ../../data
+```
+
+(or re-run `tools/bootstrap.py`, which passes `--data-dir` automatically). BC7 encoding plus recompressing both TPFs takes 2-3 minutes.
+
+3. Rebuild or re-copy a seed output to get the new overlay file.
+
+## Verification
+
+After regenerating, the patched atlas can be checked without launching the game:
+
+```bash
+# Unpack (WitchyBND via Wine), then decode SB_Title_01.dds with Pillow (reads BC7)
+wine tools/witchybnd/WitchyBND.exe -p data/overlay/menu/hi/01_common.tpf.dcx
+python3 -c "from PIL import Image; Image.open(
+    'data/overlay/menu/hi/01_common-tpf-dcx/SB_Title_01.dds').convert('RGBA').save('/tmp/title.png')"
+```
+
+Expected: the artwork occupies (0, 60)-(2532, 1592); all other textures and all blocks outside the rect are byte-identical to vanilla.

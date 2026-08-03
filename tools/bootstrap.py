@@ -832,7 +832,14 @@ def run_modpatcher(game_dir: Path) -> bool:
             return True
         cmd = ["wine", str(patcher_exe)]
 
-    cmd.extend([str(game_dir.resolve()), str(OVERLAY_DEST.resolve())])
+    cmd.extend(
+        [
+            str(game_dir.resolve()),
+            str(OVERLAY_DEST.resolve()),
+            "--data-dir",
+            str(DATA_DEST.resolve()),
+        ]
+    )
 
     try:
         result = subprocess.run(

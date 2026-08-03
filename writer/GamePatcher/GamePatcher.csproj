@@ -10,7 +10,15 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="GamePatcher.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../../SoulsFormats/SoulsFormats/SoulsFormats.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BCnEncoder.Net.ImageSharp" Version="1.1.3" />
   </ItemGroup>
 
   <!-- Native compression libraries required for DCX decompression -->

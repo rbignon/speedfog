@@ -78,6 +78,7 @@ speedfog/
 │   ├── game_tweaks.toml     # FogMod ConfigVars + startup gate flags + target lists (torrent arenas, spiritspring/stake/entity removals) (tracked)
 │   ├── care_package_items.toml  # Curated item pools for care package (tracked)
 │   ├── phantom_skins.toml   # Phantom skins catalog (cosmetic auras, tracked)
+│   ├── title_screen.png     # Title screen artwork, spliced by GamePatcher (tracked)
 │   ├── boss_arena_tags.json # Boss/arena tags for compatibility matching (tracked)
 │   ├── item_preset.yaml     # Item preset configuration (tracked)
 │   ├── plugins/             # Plugin data files
@@ -141,9 +142,12 @@ speedfog/
 │   │   ├── launch_speedfog.bat  # Windows launcher
 │   │   ├── recovery.bat     # Windows save recovery
 │   │   └── backups/         # Save backup daemon (PowerShell)
-│   └── GamePatcher/          # Overlay generator, runs at setup (uses SoulsFormatsNEXT submodule)
-│       ├── Program.cs       # CLI entry point
-│       └── GraceAnimationPatcher.cs  # Speed up grace sit/discover animations
+│   ├── GamePatcher/          # Overlay generator, runs at setup (uses SoulsFormatsNEXT submodule)
+│   │   ├── Program.cs       # CLI entry point
+│   │   ├── GraceAnimationPatcher.cs  # Speed up grace sit/discover animations
+│   │   ├── TitleScreenPatcher.cs  # Splice data/title_screen.png into the title screen atlas
+│   │   └── DdsAtlas.cs      # DX10 DDS header parsing + BC7 block splicing
+│   └── GamePatcher.Tests/   # xUnit tests for GamePatcher
 ├── tools/                   # Standalone scripts
 │   ├── bootstrap.py             # Project bootstrap (extract deps, build, generate data)
 │   ├── generate_clusters.py # Generate clusters.json from fog.txt
@@ -178,6 +182,7 @@ speedfog/
 │   ├── torrent-arena-patcher.md # Re-enable Torrent in selected boss arenas (DisableTorrent flag)
 │   ├── quitout-respawn.md   # Quit-out stable position (PlayRegionParam restore)
 │   ├── save-backup.md      # Save backup system (daemon, recovery, config)
+│   ├── title-screen.md     # Title screen artwork replacement (BC7 splice at setup)
 │   └── plugins/             # Plugin documentation
 │       ├── README.md        # Plugin config convention
 │       ├── summer-theme.md  # Summer theme specifics
@@ -217,6 +222,7 @@ speedfog/
 | `docs/opensplit-overrides.md` | Per-warp opensplit overrides (zone_metadata.toml -> Python cluster gen + C# tag injection) |
 | `docs/map-splits.md` | Splitting oversized maps with synthetic zones/fogs (map_splits.toml, Enir-Ilim instance) |
 | `docs/phantom-skins.md` | Phantom skins catalog (cosmetic player auras for racing rewards) |
+| `docs/title-screen.md` | Title screen artwork replacement (BC7 splice at setup) |
 | `docs/plugins/README.md` | Plugin config convention (Python passthrough + C# IsPluginEnabled) |
 | `docs/plugins/summer-theme.md` | Summer theme: boss epithets + UI banners, catalogue format, discovery |
 | `docs/plugins/weather.md` | Weather plugin: force weather + pin clock hour, accepted names, event mechanism |
@@ -324,6 +330,8 @@ speedfog/
 |-------|---------|
 | `Program.cs` | CLI entry, runs all post-processing patches |
 | `GraceAnimationPatcher` | Speeds up grace sit/discover animations via TAE event 608 |
+| `TitleScreenPatcher` | Splices data/title_screen.png into the SB_Title_01 menu atlas (see `docs/title-screen.md`) |
+| `DdsAtlas` | DX10 DDS header parsing + block-aligned BC7 splicing |
 
 **Key RandomizerCommon classes** (from RandomizerCommon.dll):
 | Class | Purpose |
