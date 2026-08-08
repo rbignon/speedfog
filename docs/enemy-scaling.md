@@ -110,6 +110,11 @@ SpeedFog instead anchors `erdtree` to the tier of `leyndell_erdtree` in
 cluster, e.g. pair `(17, 28)` UniqueFixed = SpEffect 7802218 for a tier-28
 final zone.
 
+The same `AllowUnlinked` skip bites "Mini Midra" (the phase-1 Midra inside
+Midra's arena), which foglocations2 misfiles under the surrounding
+`midramanse` area; `HelperAreaResolver.ApplyVanillaOverrides` re-points it at
+`midramanse_boss` (see `docs/item-randomizer.md`, "Helper enemy scaling").
+
 ## Difficulty consequences of tiers 22+
 
 - Tiers 21-28 now produce distinct scaling. Reference points for a

@@ -215,6 +215,21 @@ outranks them and name entries win anyway.
 Measured on a real seed: 11 entries added, 47 of 510 merge-dir maps scanned,
 ~4 s under Wine (dominated by MSB parsing).
 
+`HelperAreaResolver.ApplyVanillaOverrides` handles the converse,
+randomizer-independent case: a vanilla part misfiled by foglocations2
+*outside* its boss arena. Sole known instance in the game: "Mini Midra"
+(`m28_00_00_00` `c5050_9000`, entity 28000801), the phase-1 Midra inside the
+arena, filed under the surrounding `midramanse` area despite sharing the boss
+slot's entity groups (28005100/28005800) and collision (h008000). When only
+`midramanse_boss` is in the DAG, the part resolves by name to an area absent
+from the DAG's `AreaTiers` and FogMod silently skips its rescale
+(`AllowUnlinked`), leaving it at
+vanilla tier-32 stats; with the enemy randomizer, the randomizer's own
+`scale2` init (native tier -> vanilla location tier) additionally survives
+unrewritten. The override re-points the `EnemyLoc` at `midramanse_boss` on
+every seed (with or without a merge dir), before `Resolve`, so the part gets
+arena-tier unique boss scaling like the boss slot.
+
 ## RandomizerHelper
 
 `RandomizerHelper.dll` (in `data/packaging/lib/`) is an optional runtime DLL loaded by ModEngine 2 via `external_dlls`. It provides in-game quality-of-life features like auto-upgrading weapons.

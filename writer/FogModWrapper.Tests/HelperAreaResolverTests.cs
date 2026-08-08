@@ -233,6 +233,92 @@ public class HelperAreaResolverTests
     }
 
     [Fact]
+    public void ApplyVanillaOverrides_RepointsMiniMidraToBossArea()
+    {
+        // Vanilla foglocations2 files "Mini Midra" (the phase-1 Midra inside
+        // the boss arena) under the surrounding manse area; when only
+        // midramanse_boss is in the DAG the part has no tier and FogMod
+        // silently skips its rescale (AllowUnlinked).
+        var locations = new FogLocations
+        {
+            EnemyAreas = new List<EnemyLocArea>
+            {
+                new EnemyLocArea { Name = "midramanse", ScalingTier = 31 },
+                new EnemyLocArea { Name = "midramanse_boss", ScalingTier = 32 },
+            },
+            Enemies = new List<EnemyLoc>
+            {
+                new EnemyLoc { Map = "m28_00_00_00", ID = "c5050_9000", AArea = "midramanse" },
+                new EnemyLoc { Map = "m28_00_00_00", ID = "c5051_9000", AArea = "midramanse_boss" },
+            },
+        };
+
+        var changed = HelperAreaResolver.ApplyVanillaOverrides(locations, _ => { });
+
+        Assert.Equal(1, changed);
+        Assert.Equal("midramanse_boss",
+            locations.Enemies.Single(l => l.ID == "c5050_9000").ActualArea);
+        Assert.Null(locations.Enemies.Single(l => l.ID == "c5051_9000").Area);
+    }
+
+    [Fact]
+    public void ApplyVanillaOverrides_TargetAreaMissingFromEnemyAreas_LeavesEntryAlone()
+    {
+        // FogMod indexes EnemyAreas by name and would throw on an EnemyLoc
+        // pointing at an area with no EnemyLocArea entry; never re-point to one.
+        var locations = new FogLocations
+        {
+            EnemyAreas = new List<EnemyLocArea>
+            {
+                new EnemyLocArea { Name = "midramanse", ScalingTier = 31 },
+            },
+            Enemies = new List<EnemyLoc>
+            {
+                new EnemyLoc { Map = "m28_00_00_00", ID = "c5050_9000", AArea = "midramanse" },
+            },
+        };
+
+        var changed = HelperAreaResolver.ApplyVanillaOverrides(locations, _ => { });
+
+        Assert.Equal(0, changed);
+        Assert.Equal("midramanse", locations.Enemies.Single().ActualArea);
+    }
+
+    [Fact]
+    public void ApplyVanillaOverrides_NoMatchingEntries_IsNoOp()
+    {
+        var locations = MakeLocations();
+
+        var changed = HelperAreaResolver.ApplyVanillaOverrides(locations, _ => { });
+
+        Assert.Equal(0, changed);
+        Assert.All(locations.Enemies, l => Assert.Null(l.Area));
+    }
+
+    [Fact]
+    public void ApplyVanillaOverrides_AlreadyPointingAtTarget_CountsNothing()
+    {
+        // Idempotence, and resilience to a future FogRando version fixing the
+        // assignment upstream.
+        var locations = new FogLocations
+        {
+            EnemyAreas = new List<EnemyLocArea>
+            {
+                new EnemyLocArea { Name = "midramanse_boss", ScalingTier = 32 },
+            },
+            Enemies = new List<EnemyLoc>
+            {
+                new EnemyLoc { Map = "m28_00_00_00", ID = "c5050_9000", AArea = "midramanse_boss" },
+            },
+        };
+
+        var changed = HelperAreaResolver.ApplyVanillaOverrides(locations, _ => { });
+
+        Assert.Equal(0, changed);
+        Assert.Null(locations.Enemies.Single().Area);
+    }
+
+    [Fact]
     public void ZeroGroupIds_AreIgnored()
     {
         // MSB EntityGroupIDs arrays are zero-padded; 0 must never act as a

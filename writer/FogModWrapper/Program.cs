@@ -397,6 +397,13 @@ Example:
         // LoadLiteConfig doesn't load RetryPoints, so ann.RetryPoints is null.
         ctx.Ann.RetryPoints = StakeRemover.GetRetryPointsToRemove(ctx.Tweaks.StakeRemovals);
 
+        // Re-point vanilla parts misfiled outside their boss arena (Mini
+        // Midra); when the surrounding area is not in the DAG they otherwise
+        // keep vanilla stats (AllowUnlinked skips the rescale). Independent of
+        // the enemy randomizer; must run before Resolve below so it sees
+        // consistent name resolutions.
+        HelperAreaResolver.ApplyVanillaOverrides(ctx.Ann.Locations, Console.WriteLine);
+
         // Resolve scaling areas for enemy-randomizer helper parts (e.g. the
         // Godskin Duo respawning backups). Without this they fall through to
         // the map's default area and get scaled to an unrelated DAG tier.

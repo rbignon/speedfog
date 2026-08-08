@@ -102,7 +102,7 @@ speedfog/
 │   ├── FogModWrapper/       # Fog gate writer - thin wrapper calling FogMod.dll
 │   │   ├── Program.cs       # CLI entry point
 │   │   ├── ConnectionInjector.cs  # Inject connections into FogMod Graph
-│   │   ├── HelperAreaResolver.cs  # Scaling areas for enemy-randomizer helper parts (boss adds)
+│   │   ├── HelperAreaResolver.cs  # Scaling areas for enemy-randomizer helper parts (boss adds) + vanilla misfiled arena parts
 │   │   ├── StartingItemInjector.cs  # Inject starting item events into EMEVD
 │   │   ├── StartingResourcesInjector.cs  # Inject seeds, tears, keys
 │   │   ├── StartingRuneInjector.cs  # Set starting runes via CharaInitParam
@@ -271,7 +271,7 @@ speedfog/
 | `ShopIdAllocator` | Shop ID allocation utilities |
 | `PhaseTimer` | Per-phase timing of Program.cs pipeline steps (use this, not ad-hoc Stopwatches) |
 | `ConnectionInjector` | Injects connections into FogMod's Graph, extracts warp data |
-| `HelperAreaResolver` | Resolves scaling areas for enemy-randomizer helper parts (boss adds) before FogMod's writer |
+| `HelperAreaResolver` | Resolves scaling areas for enemy-randomizer helper parts (boss adds) and re-points misfiled vanilla arena parts (Mini Midra) before FogMod's writer |
 | `StartingItemInjector` | Injects starting item events into common.emevd |
 | `StartingResourcesInjector` | Injects consumables (seeds, tears, keys) via EMEVD |
 | `StartingRuneInjector` | Sets starting runes on all classes via CharaInitParam.soul |

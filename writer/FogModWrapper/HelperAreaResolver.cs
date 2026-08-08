@@ -25,6 +25,9 @@ namespace FogModWrapper;
 /// pointing at the boss arena. FogMod's name lookup (highest priority) then
 /// treats it like any vanilla boss part: arena tier, unique boss scaling.
 /// See docs/item-randomizer.md, section "Helper enemy scaling".
+///
+/// ApplyVanillaOverrides covers the converse, randomizer-independent case:
+/// vanilla parts misfiled by foglocations2 outside their boss arena.
 /// </summary>
 public static class HelperAreaResolver
 {
@@ -175,6 +178,50 @@ public static class HelperAreaResolver
             added.Add(new EnemyLoc { Map = map, ID = part.Name, Area = area });
         }
         return added;
+    }
+
+    // Vanilla foglocations2 assignments that are wrong for SpeedFog's DAG
+    // model: parts living inside a boss arena but filed under the surrounding
+    // area. FogRando always tiers both areas so the misfiling is harmless
+    // there; in SpeedFog the surrounding area can be absent from the DAG, and
+    // FogMod then silently skips the rescale (AllowUnlinked), leaving the part
+    // at vanilla stats. Sole known case: "Mini Midra" (28000801), the phase-1
+    // Midra inside the arena, sharing the boss slot's entity groups and
+    // collision.
+    private static readonly (string Map, string Id, string Area)[] VanillaAreaOverrides =
+    {
+        ("m28_00_00_00", "c5050_9000", "midramanse_boss"),
+    };
+
+    /// <summary>
+    /// Re-points misfiled vanilla EnemyLoc entries at their boss area. Unlike
+    /// <see cref="Resolve"/> this is independent of the enemy randomizer and
+    /// must run on every seed, before Resolve and before GameDataWriterE.Write.
+    /// </summary>
+    /// <returns>The number of entries re-pointed.</returns>
+    public static int ApplyVanillaOverrides(FogLocations locations, Action<string> log)
+    {
+        var enemyAreaNames = locations.EnemyAreas.Select(a => a.Name).ToHashSet();
+        int changed = 0;
+        foreach (var (map, id, area) in VanillaAreaOverrides)
+        {
+            // FogMod indexes EnemyAreas by name and would throw on an EnemyLoc
+            // pointing at an area with no EnemyLocArea entry.
+            if (!enemyAreaNames.Contains(area))
+            {
+                log($"  Vanilla area override skipped: {area} not in EnemyAreas");
+                continue;
+            }
+            foreach (var loc in locations.Enemies)
+            {
+                if (loc.Map != map || loc.ID != id || loc.ActualArea == area)
+                    continue;
+                log($"  Vanilla area override: {map} {id} {loc.ActualArea} -> {area}");
+                loc.Area = area;
+                changed++;
+            }
+        }
+        return changed;
     }
 
     /// <summary>
