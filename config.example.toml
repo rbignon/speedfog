@@ -83,15 +83,16 @@ max_parallel_paths = 4
 # Total number of layers in the DAG (start + intermediates + final boss).
 layers_count = 30
 
-# Enemy scaling tier for the first layer (1-28, default: 1).
+# Enemy scaling tier for the first layer (1-34, default: 1).
 # Raises the minimum difficulty floor so early zones aren't trivially easy.
 # Must be <= final_tier.
 # start_tier = 1
 
-# Enemy scaling tier for the final boss and end of run (1-28).
+# Enemy scaling tier for the final boss and end of run (1-34).
 # Tiers control how much enemies are scaled up/down from vanilla.
 # - Tier 1: starting area difficulty
-# - Tier 28: maximum difficulty (DLC endgame, without Scadutree Blessings)
+# - Tier 28: DLC endgame difficulty (without Scadutree Blessings)
+# - Tier 34: maximum difficulty
 # - Tier 15-20: mid-game difficulty (good for shorter/easier runs)
 # Tiers 22+ use the DLC scaling range and are much harder than 21: damage
 # jumps +59% at tier 22 for upscaled bosses (see docs/enemy-scaling.md).

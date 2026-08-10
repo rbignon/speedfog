@@ -31,7 +31,7 @@ class DagNode:
     id: str
     cluster: ClusterData
     layer: int
-    tier: int  # Difficulty scaling (1-28)
+    tier: int  # Difficulty scaling (1-34)
     entry_fogs: list[FogRef] = field(
         default_factory=list
     )  # FogRef pairs used to enter (empty for start)

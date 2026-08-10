@@ -28,7 +28,7 @@ A cluster instance placed at a specific layer and tier in the DAG.
 | `id` | str | Unique node ID (usually `cluster.id`) |
 | `cluster` | ClusterData | Zone cluster with entry/exit fogs |
 | `layer` | int | Vertical position (0 = start) |
-| `tier` | int | Enemy difficulty scaling (1-28) |
+| `tier` | int | Enemy difficulty scaling (1-34) |
 | `entry_fogs` | list[FogRef] | Fog gates consumed to enter (empty for start) |
 | `exit_fogs` | list[FogRef] | Available exits after consuming entries |
 
@@ -298,7 +298,7 @@ The exponent controls the shape:
 
 Special cases:
 - Single layer: always tier 1
-- `final_tier` is clamped to range [1, 28]
+- `final_tier` is clamped to range [1, 34]
 
 This maps to FogMod's enemy scaling SpEffects.
 
@@ -338,10 +338,10 @@ Config validation runs once before any attempts; invalid config raises `Generati
 | `structure.first_layer_type` | None | Force type for first layer |
 | `requirements.major_bosses` | 8 | Number of major boss layers |
 | `structure.final_boss_candidates` | `{"leyndell_erdtree": 1, "enirilim_radahn": 1}` | Possible end bosses (zone -> weight). Also accepts a flat list (all weight 1). |
-| `structure.final_tier` | 28 | Enemy tier for final boss |
+| `structure.final_tier` | 34 | Enemy tier for final boss |
 | `structure.tier_curve` | `"linear"` | Tier progression curve (`"linear"` or `"power"`) |
 | `structure.tier_curve_exponent` | 0.6 | Power curve exponent (only for `"power"`) |
-| `structure.start_tier` | 1 | Starting enemy tier (range 1-28) |
+| `structure.start_tier` | 1 | Starting enemy tier (range 1-34) |
 | `requirements.legacy_dungeons` | 1 | Minimum legacy dungeons |
 | `requirements.bosses` | 5 | Minimum boss arenas |
 | `requirements.mini_dungeons` | 5 | Minimum mini dungeons |

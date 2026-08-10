@@ -147,7 +147,7 @@ def test_structure_defaults():
     assert config.structure.layers_count == 30
     assert config.structure.first_layer_type is None
     assert config.structure.final_boss_candidates == {}
-    assert config.structure.final_tier == 28
+    assert config.structure.final_tier == 34
     assert config.structure.tier_curve == "linear"
     assert config.structure.tier_curve_exponent == 0.6
 
@@ -583,13 +583,13 @@ def test_structure_start_tier_default():
 
 
 def test_structure_start_tier_validation():
-    """start_tier must be 1-28 and <= final_tier."""
+    """start_tier must be 1-34 and <= final_tier."""
     import pytest
 
-    with pytest.raises(ValueError, match="start_tier must be 1-28"):
+    with pytest.raises(ValueError, match="start_tier must be 1-34"):
         Config.from_dict({"structure": {"start_tier": 0}})
-    with pytest.raises(ValueError, match="start_tier must be 1-28"):
-        Config.from_dict({"structure": {"start_tier": 29}})
+    with pytest.raises(ValueError, match="start_tier must be 1-34"):
+        Config.from_dict({"structure": {"start_tier": 35}})
     with pytest.raises(ValueError, match="start_tier.*must be <= final_tier"):
         Config.from_dict({"structure": {"start_tier": 20, "final_tier": 10}})
 
@@ -606,14 +606,14 @@ final_tier = 20
 
 
 def test_structure_final_tier_validation():
-    """final_tier must be 1-28."""
+    """final_tier must be 1-34."""
     import pytest
 
-    with pytest.raises(ValueError, match="final_tier must be 1-28"):
+    with pytest.raises(ValueError, match="final_tier must be 1-34"):
         Config.from_dict({"structure": {"final_tier": 0}})
-    with pytest.raises(ValueError, match="final_tier must be 1-28"):
-        Config.from_dict({"structure": {"final_tier": 29}})
-    with pytest.raises(ValueError, match="final_tier must be 1-28"):
+    with pytest.raises(ValueError, match="final_tier must be 1-34"):
+        Config.from_dict({"structure": {"final_tier": 35}})
+    with pytest.raises(ValueError, match="final_tier must be 1-34"):
         Config.from_dict({"structure": {"final_tier": -5}})
 
 
@@ -695,13 +695,13 @@ def test_resolve_run_complete_message_deterministic():
 
 
 def test_structure_final_tier_valid_range():
-    """final_tier accepts valid values 1-28."""
+    """final_tier accepts valid values 1-34."""
     # Test boundary values
     config_low = Config.from_dict({"structure": {"final_tier": 1}})
     assert config_low.structure.final_tier == 1
 
-    config_high = Config.from_dict({"structure": {"final_tier": 28}})
-    assert config_high.structure.final_tier == 28
+    config_high = Config.from_dict({"structure": {"final_tier": 34}})
+    assert config_high.structure.final_tier == 34
 
     config_mid = Config.from_dict({"structure": {"final_tier": 15}})
     assert config_mid.structure.final_tier == 15

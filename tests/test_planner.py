@@ -88,15 +88,15 @@ class TestComputeTier:
         """First layer (index 0) should have tier 1."""
         assert compute_tier(0, 10) == 1
 
-    def test_last_layer_tier_28_default(self):
-        """Last layer should have tier 28 with default final_tier."""
-        assert compute_tier(9, 10) == 28
+    def test_last_layer_tier_34_default(self):
+        """Last layer should have tier 34 with default final_tier."""
+        assert compute_tier(9, 10) == 34
 
     def test_middle_layers_intermediate(self):
         """Middle layers should have intermediate tiers."""
         # With 10 layers, layer 5 should be roughly in the middle
         tier = compute_tier(5, 10)
-        assert 1 < tier < 28
+        assert 1 < tier < 34
 
     def test_single_layer_edge_case(self):
         """Single layer should have tier 1 (starting tier)."""
@@ -108,13 +108,13 @@ class TestComputeTier:
             for layer_idx in range(total_layers):
                 tier = compute_tier(layer_idx, total_layers)
                 assert (
-                    1 <= tier <= 28
+                    1 <= tier <= 34
                 ), f"Tier {tier} out of bounds for layer {layer_idx}/{total_layers}"
 
     def test_two_layers_first_and_last(self):
         """Two layers should have tier 1 and final_tier."""
         assert compute_tier(0, 2) == 1
-        assert compute_tier(1, 2) == 28  # default final_tier
+        assert compute_tier(1, 2) == 34  # default final_tier
 
     def test_tiers_monotonically_increase(self):
         """Tiers should increase or stay the same as layer index increases."""
@@ -178,9 +178,9 @@ class TestComputeTier:
                     )
 
     def test_final_tier_clamped_to_valid_range(self):
-        """Final tier should be clamped to [1, 28]."""
-        # final_tier > 28 should be clamped to 28
-        assert compute_tier(9, 10, final_tier=50) == 28
+        """Final tier should be clamped to [1, 34]."""
+        # final_tier > 34 should be clamped to 34
+        assert compute_tier(9, 10, final_tier=50) == 34
         # final_tier < 1 should be clamped to 1
         assert compute_tier(9, 10, final_tier=0) == 1
         assert compute_tier(9, 10, final_tier=-5) == 1

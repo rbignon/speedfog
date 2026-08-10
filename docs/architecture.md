@@ -472,7 +472,7 @@ Each fog gate has paired edges (Exit in `node.To`, Entrance in `node.From`). We 
 
 ## Enemy Scaling
 
-Zones have tiers (1-28) based on their layer in the DAG. FogMod applies SpEffect modifiers:
+Zones have tiers (1-34) based on their layer in the DAG. FogMod applies SpEffect modifiers:
 
 | Tier Range | Approximate Difficulty |
 |------------|------------------------|
@@ -480,6 +480,7 @@ Zones have tiers (1-28) based on their layer in the DAG. FogMod applies SpEffect
 | 6-12 | Mid game (Liurnia, Caelid) |
 | 13-20 | Late game (Mountaintops) |
 | 21-28 | Endgame (Farum Azula, Haligtree) |
+| 29-34 | DLC scaling range (see `docs/enemy-scaling.md`) |
 
 ## Output Structure
 

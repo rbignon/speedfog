@@ -30,8 +30,8 @@ def compute_tier(
     Args:
         layer_idx: Zero-based index of the current layer.
         total_layers: Total number of layers in the DAG.
-        final_tier: Maximum tier for the final layer (default 28, range 1-28).
-        start_tier: Minimum tier for the first layer (default 1, range 1-28).
+        final_tier: Maximum tier for the final layer (default 34, range 1-34).
+        start_tier: Minimum tier for the first layer (default 1, range 1-34).
             Must be <= final_tier.
         curve: Progression curve type ("linear" or "power").
         exponent: Power curve exponent (only used when curve="power").
