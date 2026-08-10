@@ -105,7 +105,7 @@ def package_seed(
     item_randomizer_enabled: bool = False,
     item_randomizer_dir: Path | None = None,
 ) -> None:
-    """Assemble ModEngine 2, launcher, native DLLs, and config for a seed."""
+    """Assemble the static mod, ModEngine 2, launcher, DLLs, and config."""
     print()
     print("=== Packaging SpeedFog Mod ===")
 
@@ -115,6 +115,19 @@ def package_seed(
         item_randomizer_enabled=item_randomizer_enabled,
     )
     print("Copied packaging assets from data/packaging/")
+
+    static_mod_dir = project_root / "data" / "mods" / "speedfog"
+    static_mod_enabled = static_mod_dir.is_dir()
+    if static_mod_enabled:
+        shutil.copytree(
+            static_mod_dir, seed_dir / "mods" / "speedfog", dirs_exist_ok=True
+        )
+        print("Copied static mod from data/mods/speedfog/")
+    else:
+        print(
+            "Note: data/mods/speedfog/ not found (bootstrap not run or skipped),"
+            " building seed without static patches"
+        )
 
     if item_randomizer_enabled and item_randomizer_dir is not None:
         helper_config = item_randomizer_dir / "RandomizerHelper_config.ini"
@@ -131,6 +144,7 @@ def package_seed(
             item_randomizer_enabled
             and (seed_dir / "lib" / "RandomizerCrashFix.dll").exists()
         ),
+        static_mod_enabled=static_mod_enabled,
     )
     print("Generated modengine2/config_speedfog.toml")
 

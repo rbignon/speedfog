@@ -134,3 +134,38 @@ def test_package_seed_copies_randomizer_helper_config(tmp_path: Path) -> None:
         encoding="utf-8"
     ) == "autoUpgrade=true\n"
     assert (seed_dir / "modengine2" / "config_speedfog.toml").exists()
+
+
+def test_package_seed_copies_static_mod_and_registers_it(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    seed_dir = tmp_path / "seed"
+    _make_packaging_tree(project_root)
+    static_file = (
+        project_root / "data" / "mods" / "speedfog" / "chr" / "c0000.anibnd.dcx"
+    )
+    static_file.parent.mkdir(parents=True)
+    static_file.write_text("patched", encoding="utf-8")
+
+    package_seed(project_root, seed_dir)
+
+    assert (seed_dir / "mods" / "speedfog" / "chr" / "c0000.anibnd.dcx").read_text(
+        encoding="utf-8"
+    ) == "patched"
+    content = (seed_dir / "modengine2" / "config_speedfog.toml").read_text(
+        encoding="utf-8"
+    )
+    assert content.index('name = "speedfog"') < content.index('name = "fogmod"')
+
+
+def test_package_seed_without_static_mod_omits_the_entry(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    seed_dir = tmp_path / "seed"
+    _make_packaging_tree(project_root)
+
+    package_seed(project_root, seed_dir)
+
+    assert not (seed_dir / "mods" / "speedfog").exists()
+    content = (seed_dir / "modengine2" / "config_speedfog.toml").read_text(
+        encoding="utf-8"
+    )
+    assert 'name = "speedfog"' not in content
