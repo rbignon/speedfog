@@ -3,6 +3,6 @@
   <Project Path="FogModWrapper.Tests/FogModWrapper.Tests.csproj" />
   <Project Path="ItemRandomizerWrapper/ItemRandomizerWrapper.csproj" />
   <Project Path="ItemRandomizerWrapper.Tests/ItemRandomizerWrapper.Tests.csproj" />
-  <Project Path="GamePatcher/GamePatcher.csproj" />
-  <Project Path="GamePatcher.Tests/GamePatcher.Tests.csproj" />
+  <Project Path="StaticModBuilder/StaticModBuilder.csproj" />
+  <Project Path="StaticModBuilder.Tests/StaticModBuilder.Tests.csproj" />
 </Solution>

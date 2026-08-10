@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace GamePatcher;
+namespace StaticModBuilder;
 
 /// <summary>
 /// Helpers for FromSoft menu .layout files (TextureAtlas XML bundled in

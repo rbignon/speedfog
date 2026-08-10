@@ -1,6 +1,6 @@
 using Xunit;
 
-namespace GamePatcher.Tests;
+namespace StaticModBuilder.Tests;
 
 public class DdsAtlasTests
 {

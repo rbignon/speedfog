@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../GamePatcher/GamePatcher.csproj" />
+    <ProjectReference Include="../StaticModBuilder/StaticModBuilder.csproj" />
   </ItemGroup>
 
 </Project>

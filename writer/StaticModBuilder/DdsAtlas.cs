@@ -1,4 +1,4 @@
-namespace GamePatcher;
+namespace StaticModBuilder;
 
 /// <summary>
 /// Parsed DX10 DDS header fields needed to splice block-compressed data.

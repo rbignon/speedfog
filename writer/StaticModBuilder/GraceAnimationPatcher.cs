@@ -1,6 +1,6 @@
 using SoulsFormats;
 
-namespace GamePatcher;
+namespace StaticModBuilder;
 
 /// <summary>
 /// Speeds up grace animations by injecting TAE event type 608 (AnimSpeedGradient)

@@ -1,4 +1,4 @@
-namespace GamePatcher;
+namespace StaticModBuilder;
 
 class Program
 {
@@ -49,7 +49,7 @@ class Program
             return 1;
         }
 
-        Console.WriteLine("=== GamePatcher ===");
+        Console.WriteLine("=== StaticModBuilder ===");
         Console.WriteLine($"Game dir: {gameDir}");
         Console.WriteLine($"Mod dir:  {outputDir}");
 
@@ -68,19 +68,19 @@ class Program
             Console.WriteLine("Note: --data-dir not provided, skipping title screen patch");
         }
 
-        Console.WriteLine($"GamePatcher: {total} patch(es) applied");
+        Console.WriteLine($"StaticModBuilder: {total} patch(es) applied");
         return 0;
     }
 
     static void PrintUsage()
     {
-        Console.WriteLine(@"GamePatcher - Pre-process game files for SpeedFog
+        Console.WriteLine(@"StaticModBuilder - Build SpeedFog's static mod files from vanilla game data
 
-Usage: GamePatcher <game-dir> <output-dir> [--data-dir <dir>]
+Usage: StaticModBuilder <game-dir> <output-dir> [--data-dir <dir>]
 
 Arguments:
   <game-dir>    Path to Elden Ring Game directory
-  <output-dir>  Output directory for patched files (e.g. data/overlay/)
+  <output-dir>  Output directory for patched files (e.g. data/mods/speedfog/)
   --data-dir    SpeedFog data directory (for title_screen_overlay.png)
 
 Patches applied:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate data/title_screen_overlay.png (2532x1532 RGBA, mostly transparent).
 
-The overlay is alpha-composited by GamePatcher's TitleScreenPatcher onto the
+The overlay is alpha-composited by StaticModBuilder's TitleScreenPatcher onto the
 vanilla title screen artwork (MENU_Title_EldenRing_01): the SpeedFog Racing
 wordmark centered above the ELDEN RING logo, per speedfog-racing's graphic
 charter (docs/GRAPHIC_CHARTER.md there): SPEEDFOG in Barlow Condensed 700

@@ -3,7 +3,7 @@
 Bootstrap the SpeedFog project from Nexusmods mod archives.
 
 Extracts dependencies, generates derived data, builds C# wrappers,
-and runs GamePatcher and WitchyBND for overlay generation.
+and runs StaticModBuilder and WitchyBND for overlay generation.
 
 This script extracts:
 - FogRando:
@@ -86,7 +86,7 @@ FOGRANDO_REQUIRED_DLLS = [
     "YamlDotNet.dll",
     "ZstdNet.dll",
     "DrSwizzler.dll",
-    # GamePatcher uses SoulsFormatsNEXT (git submodule) instead of these DLLs.
+    # StaticModBuilder uses SoulsFormatsNEXT (git submodule) instead of these DLLs.
 ]
 
 # Data files to extract from Item Randomizer's diste/Base/ to data/
@@ -559,12 +559,12 @@ def setup_fogrando(sfextract: Path, zip_path: Path, force: bool) -> bool:
         if not compile_wrapper("FogModWrapper"):
             return False
 
-        # Initialize SoulsFormatsNEXT submodule (needed by GamePatcher)
+        # Initialize SoulsFormatsNEXT submodule (needed by StaticModBuilder)
         if not ensure_submodule():
             return False
 
-        # Compile GamePatcher (overlay generator, uses SoulsFormatsNEXT submodule)
-        if not compile_wrapper("GamePatcher"):
+        # Compile StaticModBuilder (static mod generator, uses SoulsFormatsNEXT submodule)
+        if not compile_wrapper("StaticModBuilder"):
             return False
 
     finally:
@@ -805,8 +805,8 @@ def copy_oodle_dll(game_dir: Path, force: bool = False) -> bool:
     return True
 
 
-def run_modpatcher(game_dir: Path) -> bool:
-    """Run GamePatcher to generate overlay files (e.g., patched animations).
+def run_static_mod_builder(game_dir: Path) -> bool:
+    """Run StaticModBuilder to generate overlay files (e.g., patched animations).
 
     Outputs to data/overlay/ so the main pipeline copies them into each mod build.
     """
@@ -814,11 +814,11 @@ def run_modpatcher(game_dir: Path) -> bool:
     print("Overlay generation")
     print("=" * 50)
 
-    patcher_dir = PROJECT_ROOT / "writer" / "GamePatcher"
-    patcher_exe = patcher_dir / "publish" / "win-x64" / "GamePatcher.exe"
+    patcher_dir = PROJECT_ROOT / "writer" / "StaticModBuilder"
+    patcher_exe = patcher_dir / "publish" / "win-x64" / "StaticModBuilder.exe"
 
     if not patcher_exe.exists():
-        print_error("GamePatcher not published, skipping overlay generation")
+        print_error("StaticModBuilder not published, skipping overlay generation")
         return True
 
     OVERLAY_DEST.mkdir(parents=True, exist_ok=True)
@@ -828,7 +828,7 @@ def run_modpatcher(game_dir: Path) -> bool:
         cmd = [str(patcher_exe)]
     else:
         if not shutil.which("wine"):
-            print_error("Wine not found, skipping GamePatcher")
+            print_error("Wine not found, skipping StaticModBuilder")
             return True
         cmd = ["wine", str(patcher_exe)]
 
@@ -851,10 +851,10 @@ def run_modpatcher(game_dir: Path) -> bool:
         for line in result.stdout.strip().splitlines():
             print(f"      {line}")
         if result.returncode != 0:
-            print_error(f"GamePatcher failed: {result.stderr}")
+            print_error(f"StaticModBuilder failed: {result.stderr}")
             return False
     except FileNotFoundError:
-        print_error("Failed to run GamePatcher")
+        print_error("Failed to run StaticModBuilder")
         return False
 
     print_ok("Overlay files generated in data/overlay/")
@@ -1060,7 +1060,7 @@ def main() -> int:
         "--game-dir",
         type=Path,
         required=True,
-        help="Path to Elden Ring Game directory (for Oodle DLL and GamePatcher overlay)",
+        help="Path to Elden Ring Game directory (for Oodle DLL and StaticModBuilder)",
     )
     parser.add_argument(
         "--force",
@@ -1070,7 +1070,7 @@ def main() -> int:
     parser.add_argument(
         "--skip-overlay",
         action="store_true",
-        help="Skip overlay generation (GamePatcher and WitchyBND script repack)",
+        help="Skip overlay generation (StaticModBuilder and WitchyBND script repack)",
     )
     args = parser.parse_args()
 
@@ -1119,9 +1119,9 @@ def main() -> int:
     if success and not ensure_modengine(args.force):
         success = False
 
-    # Run GamePatcher and WitchyBND to generate overlay files
+    # Run StaticModBuilder and WitchyBND to generate overlay files
     if success and not args.skip_overlay:
-        if not run_modpatcher(args.game_dir):
+        if not run_static_mod_builder(args.game_dir):
             success = False
         if success and not build_overlay_scripts(args.force):
             success = False

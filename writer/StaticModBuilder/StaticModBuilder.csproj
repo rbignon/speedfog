@@ -10,7 +10,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="GamePatcher.Tests" />
+    <InternalsVisibleTo Include="StaticModBuilder.Tests" />
   </ItemGroup>
 
   <ItemGroup>

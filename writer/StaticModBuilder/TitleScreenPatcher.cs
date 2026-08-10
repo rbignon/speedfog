@@ -8,7 +8,7 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SoulsFormats;
 
-namespace GamePatcher;
+namespace StaticModBuilder;
 
 /// <summary>
 /// Overlays the SpeedFog badge (data/title_screen_overlay.png, transparent
