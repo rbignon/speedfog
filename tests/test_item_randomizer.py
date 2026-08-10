@@ -108,9 +108,9 @@ def test_generate_item_config_basic():
     assert "preset" not in result
     assert result["enemy_options"]["randomize_bosses"] == "none"
     assert result["helper_options"]["autoUpgradeWeapons"] is True
-    # All 14 bool options must be explicitly set (DLL defaults most to true)
+    # All 15 bool options must be explicitly set (DLL defaults most to true)
     helper = result["helper_options"]
-    assert len(helper) == 14
+    assert len(helper) == 15
     # Auto-equip: all disabled
     assert helper["autoEquip"] is False
     assert helper["equipShop"] is False
@@ -125,6 +125,7 @@ def test_generate_item_config_basic():
     assert helper["autoUpgrade"] is True
     assert helper["autoUpgradeSpiritAshes"] is True
     assert helper["autoUpgradeDropped"] is True
+    assert helper["autoUpgradeEquipped"] is True
     assert helper["regionLockWeapons"] is False
 
 
