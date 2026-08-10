@@ -75,10 +75,13 @@ def tracked_width(text: str, font: ImageFont.FreeTypeFont, tracking: float) -> f
 def route_underline(
     width: int, color: tuple[int, int, int, int], ss: int = 4
 ) -> Image.Image:
-    """The hero route underline: triangle, line, ring, line, terminal square.
+    """The hero route underline: triangle, gap, line, ring, line, gap, square.
 
-    Drawn supersampled at ss then downscaled (Pillow shapes are aliased at
-    1x). Logical height 24px, the line rides the vertical center.
+    Same device as the racing site's route underlines: 8px gaps separate the
+    line from the start triangle and the terminal square (2x the line width,
+    matching the dynamic OG cards). Drawn supersampled at ss then downscaled
+    (Pillow shapes are aliased at 1x). Logical height 24px, the line rides
+    the vertical center.
     """
     LH = 24
     img = Image.new("RGBA", (width * ss, LH * ss), (0, 0, 0, 0))
@@ -90,10 +93,15 @@ def route_underline(
     sq = 18 * ss
     end = width * ss
     mid = end // 2
+    gap = 8 * ss
     d.polygon([(0, cy - tri_h // 2), (0, cy + tri_h // 2), (tri_w, cy)], fill=color)
-    d.rectangle([tri_w, cy - lw // 2, mid - ring_r - 3 * ss, cy + lw // 2], fill=color)
+    # The lines run 2px under the ring's stroke (drawn after, same opaque
+    # color) so no seam opens at the junction; the ring's hole stays clear.
     d.rectangle(
-        [mid + ring_r + 3 * ss, cy - lw // 2, end - sq, cy + lw // 2], fill=color
+        [tri_w + gap, cy - lw // 2, mid - ring_r + 2 * ss, cy + lw // 2], fill=color
+    )
+    d.rectangle(
+        [mid + ring_r - 2 * ss, cy - lw // 2, end - sq - gap, cy + lw // 2], fill=color
     )
     d.ellipse(
         [mid - ring_r, cy - ring_r, mid + ring_r, cy + ring_r],
