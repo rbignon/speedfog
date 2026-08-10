@@ -26,7 +26,7 @@ existing injectors. A "plugin" here is a config convention plus a
 self-contained feature class. The `plugins` map + `IsPluginEnabled` are the
 seed of a future framework; extract a shared interface only once two or more
 opt-in plugins exist (rule of three). Note that a single theme can span
-processes (e.g. text in FogModWrapper, lighting in GamePatcher), so the
+processes (e.g. text in FogModWrapper, lighting in StaticModBuilder), so the
 cohesive unit is the config namespace, read independently where each piece
 runs.
 

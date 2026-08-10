@@ -86,7 +86,7 @@ speedfog/
 │   │   ├── Program.cs           # CLI entry point
 │   │   └── diste/               # Item Randomizer data (gitignored)
 │   ├── ItemRandomizerWrapper.Tests/  # xUnit tests
-│   ├── GamePatcher/             # One-time overlay generator run by bootstrap
+│   ├── StaticModBuilder/        # One-time static mod generator run by bootstrap
 │   └── FmgNameExtractor/        # Utility for generated i18n name data
 │
 ├── data/                        # Shared data files
@@ -102,7 +102,8 @@ speedfog/
 │   │   ├── backups/              # Windows backup scripts/config
 │   │   ├── lib/                  # Runtime DLLs from bootstrap (gitignored)
 │   │   └── modengine2/           # ModEngine 2 binaries from bootstrap (gitignored)
-│   ├── overlay/                 # GamePatcher/user file overrides (gitignored)
+│   ├── mods-src/speedfog/       # Static mod sources (tracked, e.g. lua scripts to repack)
+│   ├── mods/speedfog/           # StaticModBuilder output + user overrides (gitignored)
 │   ├── i18n/                    # Localization data
 │   └── zone_metadata.toml       # Zone weights (tracked)
 │
@@ -118,7 +119,7 @@ speedfog/
 │   ├── care-package.md          # Randomized starting build system
 │   └── ...                      # See docs/ for full list
 │
-├── SoulsFormats/                # SoulsFormatsNEXT submodule for GamePatcher
+├── SoulsFormats/                # SoulsFormatsNEXT submodule for StaticModBuilder
 └── seeds/                       # Generated runs (gitignored)
 ```
 
@@ -129,7 +130,7 @@ SpeedFog uses a hybrid Python + C# architecture:
 - **Python**: Configuration, DAG generation, Item Randomizer orchestration, final seed packaging
 - **C#**: Thin wrappers around FogMod.dll and RandomizerCommon.dll
 - **Interface**: `graph.json` passes DAG from Python to C#
-- **Bootstrap assets**: `tools/bootstrap.py` prepares `data/`, `writer/lib/`, C# publishes, `data/overlay/`, and `data/packaging/`
+- **Bootstrap assets**: `tools/bootstrap.py` prepares `data/`, `writer/lib/`, C# publishes, `data/mods/speedfog/`, and `data/packaging/`
 
 See [docs/architecture.md](docs/architecture.md) for the authoritative pipeline and output structure. Avoid duplicating architecture diagrams here; they drift quickly.
 
@@ -140,7 +141,7 @@ See [docs/architecture.md](docs/architecture.md) for the authoritative pipeline 
 3. `config.toml` + `clusters.json` → `speedfog` CLI → `graph.json`
 4. `item_config.json` + game files → `ItemRandomizerWrapper` → randomized items (optional)
 5. `graph.json` + game files → `FogModWrapper` (merges item randomizer output) → mod files
-6. `data/overlay/` + `data/packaging/` → `speedfog` → self-contained seed directory
+6. `data/mods/speedfog/` + `data/packaging/` → `speedfog` → self-contained seed directory
 
 ## Running Tests
 

@@ -13,7 +13,7 @@ Bootstrap (one-time)              Per-seed generation                         Ou
 FogRando ZIP ─┐
 ItemRando ZIP ├──► tools/bootstrap.py ───────┐
 ModEngine 2 ──┘                              ├──► data/packaging/
-                                             ├──► data/overlay/
+                                             ├──► data/mods/speedfog/
                                              ├──► data/clusters.json
                                              └──► writer/*/publish/
 
@@ -26,13 +26,14 @@ config.toml + data/clusters.json ───► speedfog ───► graph.json
                                            │          FogMod.dll
                                            │          merges itemrando when present
                                            │
-                                           └──► copy data/overlay/ + data/packaging/
+                                           └──► copy data/mods/speedfog/ + data/packaging/
                                                 generate modengine2/config_speedfog.toml
 
 Final built seed: seeds/<seed>/ with mods/, modengine2/, launchers, backups/, logs/.
 
-GamePatcher runs during bootstrap as a separate process using the
-SoulsFormatsNEXT submodule. Its output is copied from data/overlay/ per seed.
+StaticModBuilder runs during bootstrap as a separate process using the SoulsFormatsNEXT
+submodule. Its output lands in data/mods/speedfog/ and is copied verbatim into each seed
+as its own ModEngine 2 mod.
 ```
 
 **Key insight**: SpeedFog reuses 100% of FogRando's game writer (`FogMod.dll`) and optionally 100% of Item Randomizer's writer (`RandomizerCommon.dll`). We only generate the graph connections and item config differently.
@@ -206,23 +207,26 @@ Post-processing (after FogMod writes, step numbers match Program.cs):
 - **7k** VanillaWarpRemover: delete vanilla warp MSB assets that conflict with fog gates
 - **7l** StakeRemover: remove vanilla stakes outside the DAG
 
-### 5. Overlay Generation (GamePatcher, at setup time)
+### 5. Static Mod Generation (StaticModBuilder, at setup time)
 
-GamePatcher runs during `bootstrap.py` (not per-seed) as a **separate process**.
+StaticModBuilder runs during `bootstrap.py` (not per-seed) as a **separate process**.
 It uses SoulsFormatsNEXT (git submodule) which provides TAE support not available in the
 old SoulsFormats.dll. FogMod.dll and SoulsIds.dll are compiled against the old SoulsFormats
 API, so they cannot coexist with SoulsFormatsNEXT in the same process.
 
-Output goes to `data/overlay/`, which the per-seed pipeline copies into each mod build.
+Output goes to `data/mods/speedfog/`, which `package_seed()` copies verbatim to
+`<seed>/mods/speedfog/`; ModEngine 2 merges it with fogmod and itemrando at runtime
+(first declared wins, speedfog is listed first).
 
 - **GraceAnimationPatcher**: Injects TAE event type 608 (AnimSpeedGradient) into
   c0000.anibnd.dcx to speed up grace sit (anim 63000, 150x) and grace discovery
   (anim 68000, ~4.67x).
 
-### 6. Overlay and Packaging
+### 6. Static Mod and Packaging
 
-- **Overlay**: Files from `data/overlay/` are copied over the mod output. Contains both
-  GamePatcher-generated files and user-provided overrides.
+- **Static mod**: `data/mods/speedfog/` (StaticModBuilder output, WitchyBND repacks, and
+  manual overrides) ships as its own mod directory, `mods/speedfog/`, listed first in the
+  ModEngine 2 mod list.
 
 Packaging: `speedfog` copies `data/packaging/*` into the seed directory and
 generates `modengine2/config_speedfog.toml`. `tools/bootstrap.py` is
