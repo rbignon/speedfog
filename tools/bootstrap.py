@@ -822,8 +822,6 @@ def run_static_mod_builder(game_dir: Path) -> bool:
         print_error("StaticModBuilder not published, skipping static mod generation")
         return True
 
-    STATIC_MOD_DEST.mkdir(parents=True, exist_ok=True)
-
     # Detect platform
     if sys.platform == "win32":
         cmd = [str(patcher_exe)]
@@ -832,6 +830,8 @@ def run_static_mod_builder(game_dir: Path) -> bool:
             print_error("Wine not found, skipping StaticModBuilder")
             return True
         cmd = ["wine", str(patcher_exe)]
+
+    STATIC_MOD_DEST.mkdir(parents=True, exist_ok=True)
 
     cmd.extend(
         [

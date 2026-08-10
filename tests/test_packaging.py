@@ -169,3 +169,18 @@ def test_package_seed_without_static_mod_omits_the_entry(tmp_path: Path) -> None
         encoding="utf-8"
     )
     assert 'name = "speedfog"' not in content
+
+
+def test_package_seed_with_empty_static_mod_omits_the_entry(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    seed_dir = tmp_path / "seed"
+    _make_packaging_tree(project_root)
+    (project_root / "data" / "mods" / "speedfog").mkdir(parents=True)
+
+    package_seed(project_root, seed_dir)
+
+    assert not (seed_dir / "mods" / "speedfog").exists()
+    content = (seed_dir / "modengine2" / "config_speedfog.toml").read_text(
+        encoding="utf-8"
+    )
+    assert 'name = "speedfog"' not in content

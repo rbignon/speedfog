@@ -117,7 +117,9 @@ def package_seed(
     print("Copied packaging assets from data/packaging/")
 
     static_mod_dir = project_root / "data" / "mods" / "speedfog"
-    static_mod_enabled = static_mod_dir.is_dir()
+    static_mod_enabled = static_mod_dir.is_dir() and any(
+        f.is_file() for f in static_mod_dir.rglob("*")
+    )
     if static_mod_enabled:
         shutil.copytree(
             static_mod_dir, seed_dir / "mods" / "speedfog", dirs_exist_ok=True
