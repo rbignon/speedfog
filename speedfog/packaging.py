@@ -15,6 +15,7 @@ def write_modengine_config(
     *,
     item_randomizer_enabled: bool = False,
     include_crash_fix: bool = False,
+    static_mod_enabled: bool = False,
 ) -> Path:
     """Write the ModEngine 2 TOML config consumed by the launcher.
 
@@ -41,11 +42,17 @@ def write_modengine_config(
     else:
         dlls_block = "external_dlls = []"
 
-    # ModEngine 2 loads mods in declaration order; first wins. Keep fogmod
-    # ahead of itemrando so fog gate edits override the randomizer.
-    mods_lines: list[str] = [
+    # ModEngine 2 loads mods in declaration order; first wins. The static
+    # speedfog mod goes first so its files beat per-seed output, and fogmod
+    # stays ahead of itemrando so fog gate edits override the randomizer.
+    mods_lines: list[str] = []
+    if static_mod_enabled:
+        mods_lines.append(
+            '    { enabled = true, name = "speedfog", path = "../mods/speedfog" }'
+        )
+    mods_lines.append(
         '    { enabled = true, name = "fogmod", path = "../mods/fogmod" }'
-    ]
+    )
     if item_randomizer_enabled:
         mods_lines.append(
             '    { enabled = true, name = "itemrando", path = "../mods/itemrando" }'

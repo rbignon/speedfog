@@ -47,6 +47,7 @@ def test_write_modengine_config_without_item_randomizer(tmp_path: Path) -> None:
     assert "RandomizerHelper.dll" not in content
     assert "itemrando" not in content
     assert "external_dlls = []" in content
+    assert 'name = "speedfog"' not in content
 
 
 def test_write_modengine_config_with_item_randomizer_loads_fogmod_first(
@@ -66,6 +67,25 @@ def test_write_modengine_config_with_item_randomizer_loads_fogmod_first(
     assert r"..\\lib\\RandomizerCrashFix.dll" in content
     assert r"..\\lib\\RandomizerHelper.dll" in content
     # ModEngine 2: first mod wins, fogmod must be listed before itemrando.
+    assert content.index('name = "fogmod"') < content.index('name = "itemrando"')
+
+
+def test_write_modengine_config_with_static_mod_lists_speedfog_first(
+    tmp_path: Path,
+) -> None:
+    write_modengine_config(
+        tmp_path,
+        item_randomizer_enabled=True,
+        static_mod_enabled=True,
+    )
+
+    content = (tmp_path / "modengine2" / "config_speedfog.toml").read_text(
+        encoding="utf-8"
+    )
+    assert 'path = "../mods/speedfog"' in content
+    # ModEngine 2: first mod wins. Static files beat fogmod, fogmod beats
+    # itemrando.
+    assert content.index('name = "speedfog"') < content.index('name = "fogmod"')
     assert content.index('name = "fogmod"') < content.index('name = "itemrando"')
 
 
