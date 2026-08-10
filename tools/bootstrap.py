@@ -3,7 +3,7 @@
 Bootstrap the SpeedFog project from Nexusmods mod archives.
 
 Extracts dependencies, generates derived data, builds C# wrappers,
-and runs StaticModBuilder and WitchyBND for overlay generation.
+and runs StaticModBuilder and WitchyBND for static mod generation.
 
 This script extracts:
 - FogRando:
@@ -18,7 +18,7 @@ This script extracts:
   - launcher + runtime → data/packaging/modengine2/
 - WitchyBND (Windows build, run via Wine on Linux):
   - extracted to tools/witchybnd/ (downloaded lazily when scripts need repacking)
-  - repacks data/overlay-src/script/*-luabnd-dcx/ into data/overlay/script/
+  - repacks data/mods-src/speedfog/script/*-luabnd-dcx/ into data/mods/speedfog/script/
 
 Prerequisites:
 - sfextract (dotnet tool): dotnet tool install -g sfextract
@@ -65,8 +65,8 @@ PACKAGING_DEST = DATA_DEST / "packaging"
 PACKAGING_LIB_DEST = PACKAGING_DEST / "lib"
 MODENGINE_DEST = PACKAGING_DEST / "modengine2"
 WITCHYBND_DEST = PROJECT_ROOT / "tools" / "witchybnd"
-OVERLAY_SRC_DEST = DATA_DEST / "overlay-src"
-OVERLAY_DEST = DATA_DEST / "overlay"
+STATIC_MOD_SRC_DEST = DATA_DEST / "mods-src" / "speedfog"
+STATIC_MOD_DEST = DATA_DEST / "mods" / "speedfog"
 
 # Files to extract from eldendata/Base/ to data/
 FOGRANDO_DATA_FILES = [
@@ -806,22 +806,23 @@ def copy_oodle_dll(game_dir: Path, force: bool = False) -> bool:
 
 
 def run_static_mod_builder(game_dir: Path) -> bool:
-    """Run StaticModBuilder to generate overlay files (e.g., patched animations).
+    """Run StaticModBuilder to generate the static mod (e.g., patched animations).
 
-    Outputs to data/overlay/ so the main pipeline copies them into each mod build.
+    Outputs to data/mods/speedfog/, copied verbatim into each seed as its own
+    ModEngine 2 mod.
     """
     print("\n" + "=" * 50)
-    print("Overlay generation")
+    print("Static mod generation")
     print("=" * 50)
 
     patcher_dir = PROJECT_ROOT / "writer" / "StaticModBuilder"
     patcher_exe = patcher_dir / "publish" / "win-x64" / "StaticModBuilder.exe"
 
     if not patcher_exe.exists():
-        print_error("StaticModBuilder not published, skipping overlay generation")
+        print_error("StaticModBuilder not published, skipping static mod generation")
         return True
 
-    OVERLAY_DEST.mkdir(parents=True, exist_ok=True)
+    STATIC_MOD_DEST.mkdir(parents=True, exist_ok=True)
 
     # Detect platform
     if sys.platform == "win32":
@@ -835,7 +836,7 @@ def run_static_mod_builder(game_dir: Path) -> bool:
     cmd.extend(
         [
             str(game_dir.resolve()),
-            str(OVERLAY_DEST.resolve()),
+            str(STATIC_MOD_DEST.resolve()),
             "--data-dir",
             str(DATA_DEST.resolve()),
         ]
@@ -857,7 +858,7 @@ def run_static_mod_builder(game_dir: Path) -> bool:
         print_error("Failed to run StaticModBuilder")
         return False
 
-    print_ok("Overlay files generated in data/overlay/")
+    print_ok("Static mod files generated in data/mods/speedfog/")
     return True
 
 
@@ -962,13 +963,13 @@ def ensure_witchybnd(force: bool = False) -> bool:
     return True
 
 
-def _overlay_script_sources() -> list[Path]:
-    """Return repackable source directories under data/overlay-src/script/.
+def _static_mod_script_sources() -> list[Path]:
+    """Return repackable source directories under data/mods-src/speedfog/script/.
 
     A repackable source is a directory ending in `-luabnd-dcx` that contains
     a WitchyBND manifest (`_witchy-bnd4.xml`).
     """
-    script_src = OVERLAY_SRC_DEST / "script"
+    script_src = STATIC_MOD_SRC_DEST / "script"
     if not script_src.is_dir():
         return []
     sources = []
@@ -981,19 +982,19 @@ def _overlay_script_sources() -> list[Path]:
     return sources
 
 
-def build_overlay_scripts(force: bool = False) -> bool:
-    """Repack `data/overlay-src/script/*-luabnd-dcx/` into `data/overlay/script/`.
+def build_static_mod_scripts(force: bool = False) -> bool:
+    """Repack `data/mods-src/speedfog/script/*-luabnd-dcx/` into `data/mods/speedfog/script/`.
 
     Each source directory is packed via WitchyBND (run through Wine on Linux).
-    The resulting `*.luabnd.dcx` file is moved into `data/overlay/script/`.
+    The resulting `*.luabnd.dcx` file is moved into `data/mods/speedfog/script/`.
     Silent no-op if there are no sources.
     """
-    sources = _overlay_script_sources()
+    sources = _static_mod_script_sources()
     if not sources:
         return True
 
     print("\n" + "=" * 50)
-    print("Building overlay scripts (WitchyBND)")
+    print("Building static mod scripts (WitchyBND)")
     print("=" * 50)
 
     if not ensure_witchybnd(force):
@@ -1005,13 +1006,13 @@ def build_overlay_scripts(force: bool = False) -> bool:
     else:
         if not shutil.which("wine"):
             print_error(
-                "Wine not found but overlay scripts need repacking;"
-                " install wine or remove sources under data/overlay-src/script/"
+                "Wine not found but static mod scripts need repacking;"
+                " install wine or remove sources under data/mods-src/speedfog/script/"
             )
             return False
         cmd_prefix = ["wine", str(witchy_exe)]
 
-    script_dst = OVERLAY_DEST / "script"
+    script_dst = STATIC_MOD_DEST / "script"
     script_dst.mkdir(parents=True, exist_ok=True)
 
     for src in sources:
@@ -1068,9 +1069,9 @@ def main() -> int:
         help="Overwrite existing files",
     )
     parser.add_argument(
-        "--skip-overlay",
+        "--skip-static-mod",
         action="store_true",
-        help="Skip overlay generation (StaticModBuilder and WitchyBND script repack)",
+        help="Skip static mod generation (StaticModBuilder and WitchyBND script repack)",
     )
     args = parser.parse_args()
 
@@ -1119,11 +1120,11 @@ def main() -> int:
     if success and not ensure_modengine(args.force):
         success = False
 
-    # Run StaticModBuilder and WitchyBND to generate overlay files
-    if success and not args.skip_overlay:
+    # Run StaticModBuilder and WitchyBND to generate the static mod
+    if success and not args.skip_static_mod:
         if not run_static_mod_builder(args.game_dir):
             success = False
-        if success and not build_overlay_scripts(args.force):
+        if success and not build_static_mod_scripts(args.force):
             success = False
 
     if success:

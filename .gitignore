@@ -83,10 +83,10 @@ data/enemy.txt
 data/clusters.json
 data/fog_data.json
 
-# Overlay files (built by tools/bootstrap.py: GamePatcher + WitchyBND repack)
-data/overlay/
+# Static mod (built by tools/bootstrap.py: StaticModBuilder + WitchyBND repack)
+data/mods/
 
-# WitchyBND (downloaded by tools/bootstrap.py for overlay script repack)
+# WitchyBND (downloaded by tools/bootstrap.py for static mod script repack)
 tools/witchybnd/
 
 # Packaging files populated by tools/bootstrap.py

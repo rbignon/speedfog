@@ -6,8 +6,8 @@ from unittest.mock import patch
 import bootstrap
 import pytest
 from bootstrap import (
-    _overlay_script_sources,
-    build_overlay_scripts,
+    _static_mod_script_sources,
+    build_static_mod_scripts,
     install_modengine_runtime,
     is_itemrando_installed,
     select_witchybnd_asset,
@@ -146,18 +146,20 @@ def test_select_witchybnd_asset_picks_first_when_multiple(
     assert "Multiple" in captured.out
 
 
-def test_overlay_script_sources_skips_when_no_dir(
+def test_static_mod_script_sources_skips_when_no_dir(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(bootstrap, "OVERLAY_SRC_DEST", tmp_path / "overlay-src")
-    assert _overlay_script_sources() == []
+    monkeypatch.setattr(
+        bootstrap, "STATIC_MOD_SRC_DEST", tmp_path / "mods-src" / "speedfog"
+    )
+    assert _static_mod_script_sources() == []
 
 
-def test_overlay_script_sources_filters_by_suffix_and_manifest(
+def test_static_mod_script_sources_filters_by_suffix_and_manifest(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    overlay_src = tmp_path / "overlay-src"
-    script_dir = overlay_src / "script"
+    static_mod_src = tmp_path / "mods-src" / "speedfog"
+    script_dir = static_mod_src / "script"
     script_dir.mkdir(parents=True)
 
     # Valid: correct suffix + manifest
@@ -179,25 +181,27 @@ def test_overlay_script_sources_filters_by_suffix_and_manifest(
     # Invalid: file (not directory) with matching name
     (script_dir / "473000_battle-luabnd-dcx").write_text("not a dir")
 
-    monkeypatch.setattr(bootstrap, "OVERLAY_SRC_DEST", overlay_src)
-    sources = _overlay_script_sources()
+    monkeypatch.setattr(bootstrap, "STATIC_MOD_SRC_DEST", static_mod_src)
+    sources = _static_mod_script_sources()
     assert sources == [valid]
 
 
-def test_build_overlay_scripts_silent_skip_when_no_sources(
+def test_build_static_mod_scripts_silent_skip_when_no_sources(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    monkeypatch.setattr(bootstrap, "OVERLAY_SRC_DEST", tmp_path / "overlay-src")
-    monkeypatch.setattr(bootstrap, "OVERLAY_DEST", tmp_path / "overlay")
+    monkeypatch.setattr(
+        bootstrap, "STATIC_MOD_SRC_DEST", tmp_path / "mods-src" / "speedfog"
+    )
+    monkeypatch.setattr(bootstrap, "STATIC_MOD_DEST", tmp_path / "mods" / "speedfog")
 
     # ensure_witchybnd must not be called when there are no sources
     with patch.object(bootstrap, "ensure_witchybnd") as mock_ensure:
-        assert build_overlay_scripts() is True
+        assert build_static_mod_scripts() is True
         mock_ensure.assert_not_called()
 
     captured = capsys.readouterr()
     assert "WitchyBND" not in captured.out
-    assert not (tmp_path / "overlay").exists()
+    assert not (tmp_path / "mods").exists()
 
 
 def _make_itemrando_install(
