@@ -2,6 +2,18 @@
 # Detects the Elden Ring save file and starts the backup daemon.
 # Called by launch_speedfog.bat.
 
+# --- Refuse to launch if the game is already running ---
+# Exit code 2 tells launch_speedfog.bat to abort without starting ModEngine.
+if (Get-Process -Name eldenring -ErrorAction SilentlyContinue) {
+    Add-Type -AssemblyName System.Windows.Forms
+    [void][System.Windows.Forms.MessageBox]::Show(
+        "Elden Ring is already running. Close it before launching a new seed.",
+        "SpeedFog",
+        [System.Windows.Forms.MessageBoxButtons]::OK,
+        [System.Windows.Forms.MessageBoxIcon]::Error)
+    exit 2
+}
+
 $configPath = "$PSScriptRoot\config.ini"
 
 # --- Parse config.ini ---

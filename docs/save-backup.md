@@ -52,6 +52,12 @@ The `<steam_id>` varies per player. ModEngine 2 does not isolate saves, so the b
 
 Detection runs in the **launcher** (visible console window):
 
+Before detection, the launcher checks whether `eldenring.exe` is already
+running. If so, it shows an error popup and aborts entirely (exit code 2
+from `launch_helper.ps1`, checked by `launch_speedfog.bat`): no backup
+daemon, no ModEngine launch. Any other helper failure is non-fatal and the
+game still launches.
+
 1. If `save_path` is set in `config.ini`, use it directly.
 2. Otherwise, scan for `ER0000.sl2` in the platform-specific directory.
 3. One match: use it. Multiple: numbered menu. None: warning, game launches
