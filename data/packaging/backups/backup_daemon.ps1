@@ -34,16 +34,14 @@ Log "Save file: $SavePath"
 # --- Wait for Elden Ring to start ---
 Log "Waiting for Elden Ring to start..."
 $waited = 0
-$found = $false
+$game = $null
 while ($waited -lt 60) {
-    if (Get-Process -Name eldenring -ErrorAction SilentlyContinue) {
-        $found = $true
-        break
-    }
+    $game = Get-Process -Name eldenring -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($game) { break }
     Start-Sleep -Seconds 5
     $waited++
 }
-if (-not $found) {
+if (-not $game) {
     Log "ERROR: Timed out waiting for Elden Ring to start. Exiting."
     exit 1
 }
@@ -70,9 +68,10 @@ Log "Backup daemon started (interval: $interval min, keep: $maxBackups)"
 # --- Backup loop ---
 $backupCount = 0
 while ($true) {
-    Start-Sleep -Seconds ($interval * 60)
+    # Wait one interval; returns early (with a suppressed error) if the game exits.
+    Wait-Process -Id $game.Id -Timeout ($interval * 60) -ErrorAction SilentlyContinue
 
-    if (-not (Get-Process -Name eldenring -ErrorAction SilentlyContinue)) {
+    if ($game.HasExited) {
         Log "Game exited. Daemon stopping. ($backupCount backups created)"
         exit 0
     }

@@ -63,14 +63,18 @@ The resolved path is passed to the daemon as an argument.
 
 Launched by the launcher in a minimized window. Lifecycle:
 
-1. **Wait phase**: poll for `eldenring.exe` every 5 seconds, up to 5 minutes.
+1. **Wait phase**: poll for `eldenring.exe` every 5 seconds, up to 5 minutes,
+   and capture the matching process (PID).
 2. **Pre-run backup**: if save file exists, zip it as `pre-run_<timestamp>.zip`.
-3. **Backup loop**: every `interval` minutes:
-   - If game exited: log summary, exit.
-   - If save file missing: skip.
-   - Compress to `ER0000_<timestamp>.zip`.
-   - If zip < 100 KB: log warning (possible partial copy from locked file).
-   - Purge oldest periodic backups beyond `max_backups`.
+3. **Backup loop**: wait on the game PID with a timeout of `interval` minutes:
+   - If the game exited: log summary, exit immediately (no lag until the
+     next interval; a quickly relaunched game is a new PID, so a stale
+     daemon never latches onto the next seed's session).
+   - On timeout (game still running):
+     - If save file missing: skip.
+     - Compress to `ER0000_<timestamp>.zip`.
+     - If zip < 100 KB: log warning (possible partial copy from locked file).
+     - Purge oldest periodic backups beyond `max_backups`.
 4. Compression errors (e.g. file locked during autosave) are caught and
    retried next interval.
 
