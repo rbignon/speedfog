@@ -5,12 +5,17 @@
 # --- Refuse to launch if the game is already running ---
 # Exit code 2 tells launch_speedfog.bat to abort without starting ModEngine.
 if (Get-Process -Name eldenring -ErrorAction SilentlyContinue) {
-    Add-Type -AssemblyName System.Windows.Forms
-    [void][System.Windows.Forms.MessageBox]::Show(
-        "Elden Ring is already running. Close it before launching a new seed.",
-        "SpeedFog",
-        [System.Windows.Forms.MessageBoxButtons]::OK,
-        [System.Windows.Forms.MessageBoxIcon]::Error)
+    # The popup is best-effort: the abort must not fail open if UI is unavailable.
+    try {
+        Add-Type -AssemblyName System.Windows.Forms -ErrorAction Stop
+        [void][System.Windows.Forms.MessageBox]::Show(
+            "Elden Ring is already running. Close it before launching a new seed.",
+            "SpeedFog",
+            [System.Windows.Forms.MessageBoxButtons]::OK,
+            [System.Windows.Forms.MessageBoxIcon]::Error)
+    } catch {
+        Write-Host "ERROR: Elden Ring is already running. Close it before launching a new seed."
+    }
     exit 2
 }
 

@@ -42,7 +42,7 @@ The output root contains only files the player interacts with directly
 |-----|---------|-------------|
 | `enabled` | `true` | Set to `false` to disable backups entirely |
 | `save_path` | (auto-detect) | Override save file path |
-| `interval` | `1` | Minutes between backups |
+| `interval` | `1` | Minutes between backups (clamped to 1-540) |
 | `max_backups` | `10` | Number of periodic backups to keep |
 
 ## Save File Detection

@@ -28,6 +28,8 @@ if (Test-Path $configPath) {
         if ($line -match '^\s*max_backups\s*=\s*(\d+)\s*$') { $maxBackups = [int]$Matches[1] }
     }
 }
+# Wait-Process -Timeout rejects values above 32767 seconds; clamp to sane bounds.
+if ($interval -lt 1) { $interval = 1 } elseif ($interval -gt 540) { $interval = 540 }
 
 Log "Save file: $SavePath"
 
@@ -68,7 +70,8 @@ Log "Backup daemon started (interval: $interval min, keep: $maxBackups)"
 # --- Backup loop ---
 $backupCount = 0
 while ($true) {
-    # Wait one interval; returns early (with a suppressed error) if the game exits.
+    # Wait one interval; returns as soon as the game exits. Suppressed errors:
+    # timeout elapsed, or the PID was already gone when the wait started.
     Wait-Process -Id $game.Id -Timeout ($interval * 60) -ErrorAction SilentlyContinue
 
     if ($game.HasExited) {
