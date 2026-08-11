@@ -9,12 +9,12 @@ if (Get-Process -Name eldenring -ErrorAction SilentlyContinue) {
     try {
         Add-Type -AssemblyName System.Windows.Forms -ErrorAction Stop
         [void][System.Windows.Forms.MessageBox]::Show(
-            "Elden Ring is already running. Close it before launching a new seed.",
+            "Elden Ring is already running.",
             "SpeedFog",
             [System.Windows.Forms.MessageBoxButtons]::OK,
             [System.Windows.Forms.MessageBoxIcon]::Error)
     } catch {
-        Write-Host "ERROR: Elden Ring is already running. Close it before launching a new seed."
+        Write-Host "ERROR: Elden Ring is already running."
     }
     exit 2
 }
