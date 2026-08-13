@@ -55,7 +55,7 @@ weight = 4
 weight = 2.5
 
 [zones.sewer]
-weight = 6
+weight = 3
 
 [zones.peninsula_morne]
 weight = 3  # Castle Morne, detected as legacy_dungeon via fortressonly+legacy fog
@@ -84,6 +84,9 @@ type = "legacy_dungeon"
 
 [zones.midramanse]
 type = "legacy_dungeon"
+
+[clusters.belurat_d88b]
+weight = 2
 
 # =============================================================================
 # Mini Dungeons
@@ -117,6 +120,9 @@ weight = 2.5
 
 [zones.gelmir_wyndhamcatacombs]
 weight = 2
+
+[zones.peninsula_earthborecave]
+weight = 0.5
 
 [zones.limgrave_tunnels]
 weight = 2
@@ -158,13 +164,49 @@ type = "mini_dungeon"
 weight = 2
 
 [zones.deeproot]
-weight = 2
+weight = 1
 type = "mini_dungeon"
 
 [zones.siofra_nokron]
 type = "mini_dungeon"
 
+[clusters.caelid_gaeltunnel_1599]
+weight = 1
+
+[zones.caelid_redmane]
+weight = 1.5
+
+[zones.gelmir_volcanocave]
+weight = 0.5
+
+[zones.limgrave_coastalcave]
+weight = 0.5
+
+[zones.limgrave_grovesidecave]
+weight = 0.5
+
+[zones.limgrave_murkwatercatacombs]
+weight = 0.5
+
+[zones.limgrave_murkwatercave]
+weight = 0.5
+
+[clusters.snowfield_hiddenpath_8ef0]
+weight = 1
+
+[clusters.volcano_temple_2a47]
+weight = 2
+
+[clusters.sewer_46d2]
+weight = 1
+
 # --- DLC ---
+
+[clusters.gravesite_dragonpit_1f37]
+weight = 1
+
+[clusters.charo_gaol_5c86]
+weight = 1
 
 [zones.fissure]
 type = "mini_dungeon"
@@ -244,9 +286,6 @@ type = "boss_arena"
 weight = 2.5
 allow_entry_as_exit = false
 
-[zones.siofra_boss]
-weight = 2
-
 [zones.siofra_nokron_boss]
 type = "major_boss"
 weight = 2
@@ -264,7 +303,7 @@ weight = 5
 # Multi-phase major boss (2+ phase transitions)
 [zones.academy_library]
 type = "major_boss"
-weight = 4
+weight = 3
 
 [zones.stormveil_godrick]
 weight = 2
@@ -297,7 +336,7 @@ allowed_exits = [
 ]
 
 [zones.farumazula_maliketh]
-weight = 3
+weight = 2.5
 allow_entry_as_exit = false
 
 [zones.farumazula_placidusax]
@@ -483,50 +522,11 @@ display_name = "Rennala, Queen of the Full Moon"
 [clusters.caelid_gaeltunnel_befe]
 exclude = true
 
-[clusters.caelid_gaeltunnel_1599]
-weight = 1
-
-[zones.caelid_redmane]
-weight = 1.5
-
-[clusters.charo_gaol_5c86]
-weight = 1
-
-[zones.gelmir_volcanocave]
-weight = 0.5
-
-[clusters.gravesite_dragonpit_1f37]
-weight = 1
-
-[zones.limgrave_coastalcave]
-weight = 0.5
-
-[zones.limgrave_grovesidecave]
-weight = 0.5
-
-[zones.limgrave_murkwatercatacombs]
-weight = 0.5
-
-[zones.limgrave_murkwatercave]
-weight = 0.5
-
-[clusters.snowfield_hiddenpath_8ef0]
-weight = 1
-
-[zones.peninsula_earthborecave]
-weight = 0.5
-
 [clusters.volcano_ac44]
 exclude = true  # Too small for legacy_dungeon (~30s to traverse)
 
 [clusters.farumazula_temple_0ef3]
 exclude = true # only fogs around Godskin's Duo, use farumazula_start_f5a0 to include start
-
-[clusters.belurat_d88b]
-weight = 2
-
-[clusters.sewer_46d2]
-weight = 2
 
 [clusters.graveyard_grave_65d8]
 proximity_groups = [
@@ -671,7 +671,7 @@ proximity_groups = [
 
 # Academy Post Redwolf (large), same spatial groups
 [clusters.academy_redwolf_b9d9]
-weight = 2
+weight = 1
 proximity_groups = [
     ["AEG099_001_9000",             # Rennala front
      "1037462650",                  # Sending gate to Church of Vows
@@ -684,6 +684,7 @@ proximity_groups = [
 
 # Farum Azula before Godskin Duo
 [clusters.farumazula_lift_979a]
+weight = 2
 proximity_groups = [
     ["AEG099_001_9004", # Godskin Duo balcony (top)
      "AEG099_001_9000", # Godskin Duo back right (down stairs)
