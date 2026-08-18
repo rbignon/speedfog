@@ -95,6 +95,16 @@ map = "m20_01_00_00"
 flag = 20018540
 on = true  # Enir-Ilim Spiral Rise split door (AEG417_012_0501, ObjAct 417012)
 
+[[startup_flags]]
+map = "m61_47_44_00"
+flag = 2047448500
+on = true  # Castle Ensis barred gate (AEG464_015_2000, mechanism AEG464_016_2000, ObjAct 464016)
+
+[[startup_flags]]
+map = "m61_47_44_10"
+flag = 2047448500
+on = true  # Same Castle Ensis gate: _10 is a duplicate tile EMEVD (FogRando dupeMsbs, byte-identical to _00 in vanilla), dupe-written by FogMod before the injector runs, so it needs its own injection
+
 # Boss arenas where vanilla blocks Torrent via Collision.DisableTorrent;
 # SpeedFog flips the flag back on the listed collision cells only. Names
 # found with `game_inspect list-collisions --torrent-only`. Mohgwyn (m12_05)
