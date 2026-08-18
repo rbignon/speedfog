@@ -23,6 +23,7 @@ This works only for gates where the flag check happens at the **start** of the c
 |-----|------|-------|-------|
 | m35_00_00_00 | 35000565 | `AEG023_330_1000` | Sewer barred gate 1 (lever `AEG027_002_0503`). Common event 90005540 reads this flag. |
 | m35_00_00_00 | 35000566 | `AEG023_330_1001` | Sewer barred gate 2 (lever `AEG027_002_0507`). Common event 90005540 reads this flag. |
+| m35_00_00_00 | 35000530 | `AEG027_015_0500` | Sewer side door next to barred gate 1, near (-184, -99, -225) (lever `AEG027_002_0502`). Common event 90005540 reads this flag. Map event 35002530's second branch (sets 35000350) is armed by this flag, but 90005540's ON branch disables the lever ObjAct at load, same as vanilla after opening; its animation target 35001350 does not exist in the MSB. |
 | m10_00_00_00 | 10000500 | `AEG219_050_0500` | Stormveil barred gate near (-111, 21, 23). Map event 10002500 reads this flag and animates the gate plus its winch (`AEG219_030_0500`, EntityID 10001501). |
 | m20_01_00_00 | 20018540 | `AEG417_012_0501` | Enir-Ilim door before Spiral Rise stairs (map-split fog 2). |
 | m61_47_44_00 | 2047448500 | `AEG464_015_2000` | Castle Ensis barred gate near (81, 360, 52). Parameterized map event 2047442500 reads this flag (also the mechanism's ObjAct EventFlagID) and animates the gate plus its mechanism (`AEG464_016_2000`, ObjAct 464016). |

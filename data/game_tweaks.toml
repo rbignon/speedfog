@@ -86,6 +86,11 @@ flag = 35000566
 on = true  # Sewer barred gate 2 (AEG023_330_1001, lever AEG027_002_0507)
 
 [[startup_flags]]
+map = "m35_00_00_00"
+flag = 35000530
+on = true  # Sewer side door next to barred gate 1 (AEG027_015_0500, lever AEG027_002_0502)
+
+[[startup_flags]]
 map = "m10_00_00_00"
 flag = 10000500
 on = true  # Stormveil barred gate (AEG219_050_0500, lever AEG219_030_0500)
