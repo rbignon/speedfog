@@ -44,6 +44,7 @@ from generate_clusters import (
     parse_fog_txt,
     parse_tags,
     should_exclude_area,
+    snap_weight,
 )
 
 # =============================================================================
@@ -1880,6 +1881,95 @@ def _make_cluster_with_fogs(zones: frozenset[str]) -> Cluster:
         entry_fogs=[{"fog_id": f"entry_{primary}", "zone": primary}],
         exit_fogs=[{"fog_id": f"exit_{primary}", "zone": primary}],
     )
+
+
+class TestSnapWeight:
+    """Tests for the 0.5-grid cluster weight snapping."""
+
+    def test_off_grid_values_snap_to_nearest_half(self):
+        """The off-grid weights observed in the catalog snap to their
+        nearest grid point (the bias study's starvation cases)."""
+        assert snap_weight(1.3) == 1.5
+        assert snap_weight(2.4) == 2.5
+        assert snap_weight(2.7) == 2.5
+        assert snap_weight(3.4) == 3.5
+        assert snap_weight(3.6) == 3.5
+        assert snap_weight(4.2) == 4.0
+
+    def test_on_grid_values_unchanged(self):
+        for w in (0.5, 1.0, 2.5, 5.5, 10.0):
+            assert snap_weight(w) == w
+
+    def test_tie_rounds_up(self):
+        assert snap_weight(2.25) == 2.5
+
+    def test_minimum_clamp(self):
+        """Weights never snap below 0.5 (a zero weight would make the
+        cluster free for the path budget)."""
+        assert snap_weight(0.2) == 0.5
+        assert snap_weight(0.0) == 0.5
+
+    def test_enriched_cluster_weight_is_on_grid(self):
+        """An off-grid zone weight yields a snapped cluster weight."""
+        areas = {
+            "stormveil": AreaData(
+                name="stormveil", text="Stormveil", maps=["m10_00_00_00"], tags=[]
+            ),
+        }
+        metadata = {
+            "defaults": {"legacy_dungeon": 10},
+            "zones": {"stormveil": {"weight": 1.3}},
+        }
+        cluster = _make_cluster_with_fogs(frozenset({"stormveil"}))
+
+        result = filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+        assert len(result) == 1
+        assert result[0].weight == 1.5
+
+    def test_off_grid_cluster_override_snaps_and_warns(self, capsys):
+        """An explicit [clusters.<id>] weight off the grid is snapped
+        with a warning instead of silently starving the cluster."""
+        areas = {
+            "stormveil": AreaData(
+                name="stormveil", text="Stormveil", maps=["m10_00_00_00"], tags=[]
+            ),
+        }
+        cluster = _make_cluster_with_fogs(frozenset({"stormveil"}))
+        metadata = {"defaults": {"legacy_dungeon": 10}, "zones": {}}
+        # First pass to learn the generated cluster_id
+        filter_and_enrich_clusters(
+            [cluster],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+        metadata["clusters"] = {cluster.cluster_id: {"weight": 2.7}}
+        cluster2 = _make_cluster_with_fogs(frozenset({"stormveil"}))
+
+        result = filter_and_enrich_clusters(
+            [cluster2],
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+        assert result[0].weight == 2.5
+        captured = capsys.readouterr()
+        assert "off the 0.5 grid" in captured.out
 
 
 class TestFilterAndEnrichMetadataTypeOverride:

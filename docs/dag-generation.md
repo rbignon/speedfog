@@ -234,9 +234,11 @@ For each intermediate layer:
    when the requested pool is exhausted. Each fallback is recorded as a `FallbackEntry` in the
    generation log.
 
-   **Intra-layer weight balance.** Cluster weights are floats (1 decimal of precision, computed in
-   `tools/generate_clusters.py`). The first slot is picked uniformly from the primary pool.
-   Subsequent slots use `pick_cluster_weight_matched` with two complementary mechanisms:
+   **Intra-layer weight balance.** Cluster weights are multiples of 0.5 (snapped in
+   `tools/generate_clusters.py`; an off-grid weight would almost never fall inside
+   the 0.5-step anchor bands below and its cluster would be starved). The first
+   slot is picked uniformly from the primary pool. Subsequent slots use
+   `pick_cluster_weight_matched` with two complementary mechanisms:
 
    - **Hard window** (`max_layer_spread`, default 2.0): candidates whose weight would push the
      layer's `max - min` spread above this threshold are filtered out before any preference is

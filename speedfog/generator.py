@@ -352,6 +352,9 @@ def validate_config(
 # =============================================================================
 
 
+# Cluster weights are snapped to this grid at generation time
+# (tools/generate_clusters.py); changing the step requires regenerating
+# clusters.json on the new grid.
 _TOLERANCE_STEP = 0.5
 
 

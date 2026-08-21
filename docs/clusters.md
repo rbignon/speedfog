@@ -177,8 +177,18 @@ Weight = approximate traversal time in minutes.
 - `final_boss`: 4 min
 
 Per-zone overrides for notably larger/smaller areas (e.g., `stormveil`: 15, `leyndell`: 20).
+Zone weights stay raw measurements (observed traversal times from production race
+data, plus manual adjustments) and may sit anywhere on the scale.
 
-Cluster weight = sum of all zone weights in the cluster.
+Cluster weight = logarithmic aggregation of the zone weights
+(`avg_zone_weight * (1 + 0.5 * ln(n_zones))`: players traverse a path through the
+cluster, not every zone), **snapped to the 0.5 grid** (minimum 0.5). The DAG
+generator's weight matcher widens its anchor bands in 0.5 steps, so an off-grid
+cluster weight (2.7, 3.4, ...) almost never falls exactly inside a band and the
+cluster is systematically under-picked as a layer companion. Snapping distorts a
+weight by at most 0.25 min (more only near zero, via the 0.5 minimum), within
+measurement noise. Explicit `[clusters.<id>]` weight overrides are snapped too,
+with a warning when the declared value is off the grid.
 
 ## Defeat Flag Discovery
 

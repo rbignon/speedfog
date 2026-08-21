@@ -6,9 +6,12 @@
 # weight = relative traversal difficulty (data-driven for dungeons, phase-based for bosses)
 #
 # Multi-zone cluster weights use logarithmic aggregation by default:
-#   cluster_weight = round(avg_zone_weight * (1 + 0.5 * ln(n_zones)))
+#   cluster_weight = avg_zone_weight * (1 + 0.5 * ln(n_zones))
 # This reflects that players traverse a path through zones, not all of them.
-# Override with [clusters.<id>] weight = X to use observed race data directly.
+# The final cluster weight is snapped to the 0.5 grid (minimum 0.5): the DAG
+# generator matches weights in 0.5 steps, and off-grid clusters get starved.
+# Override with [clusters.<id>] weight = X to use observed race data directly;
+# overrides are snapped too (keep them on the 0.5 grid).
 #
 # [warps."<name>"] entries opt specific FogMod warps into 'opensplit' handling
 # at runtime (see Graph.cs:1257-1266). Used for unique warps where one side
