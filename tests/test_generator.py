@@ -1943,8 +1943,8 @@ class TestPickClusterWeightMatched:
             for i, w in enumerate(weights)
         ]
 
-    def test_exact_match_preferred(self):
-        """When an exact weight match exists, it is chosen."""
+    def test_closest_band_preferred(self):
+        """Only the first non-empty band (+/-0.5 around the anchor) is drawn from."""
         candidates = self._make_pool([1, 2, 3, 4, 5])
         # Run many times: anchor=3 should always pick weight-3 first
         results = set()
@@ -1957,7 +1957,33 @@ class TestPickClusterWeightMatched:
             )
             assert r is not None
             results.add(r.weight)
-        assert results == {3}  # Only exact match since only 1 candidate at w=3
+        assert results == {3}  # Only w=3 sits within +/-0.5 of the anchor
+
+    def test_first_band_has_width(self):
+        """A candidate within 0.5 of the anchor is reachable even when
+        another candidate matches the anchor exactly.
+
+        An exact-equality first band would hand the slot to the exact
+        sibling every time and starve any cluster whose weight has no
+        exact twin in the pool (e.g. the only major boss at w=3.0 when
+        the first pick is one of several at w=2.5).
+        """
+        candidates = [
+            make_cluster("c0", zones=["z0"], weight=3.0),
+            make_cluster("c1", zones=["z1"], weight=3.0),
+            make_cluster("c2", zones=["z2"], weight=3.5),
+        ]
+        results = set()
+        for seed in range(100):
+            r = pick_cluster_weight_matched(
+                candidates,
+                set(),
+                random.Random(seed),
+                anchor_weight=3.0,
+            )
+            assert r is not None
+            results.add(r.weight)
+        assert results == {3.0, 3.5}
 
     def test_tolerance_widening_prefers_closer(self):
         """Closer weight matches are preferred over further ones."""
@@ -1981,8 +2007,8 @@ class TestPickClusterWeightMatched:
     def test_tolerance_widening_same_distance(self):
         """Candidates at the same distance from anchor are both reachable."""
         # Weights [1, 5]: anchor=3, both at distance 2
-        # tol=0: no match, tol=1: no match
-        # tol=2: both match -> either can be picked
+        # tol=0.5, 1.0, 1.5: no match
+        # tol=2.0: both match -> either can be picked
         candidates = self._make_pool([1, 5])
         results = set()
         for seed in range(50):
@@ -2022,7 +2048,7 @@ class TestPickClusterWeightMatched:
     def test_half_step_tolerance(self):
         """Half-integer anchors match candidates within 0.5 before widening."""
         # Anchor=3.5, candidates [3.0, 5.0]:
-        #   tol=0.0 -> no match, tol=0.5 -> weight 3.0 matches (delta 0.5)
+        #   tol=0.5 -> weight 3.0 matches (delta 0.5)
         # weight 5.0 only matches at tol=1.5, so weight 3.0 always wins.
         candidates = [
             make_cluster("c0", zones=["z0"], weight=3.0),

@@ -44,7 +44,6 @@ from generate_clusters import (
     parse_fog_txt,
     parse_tags,
     should_exclude_area,
-    snap_weight,
 )
 
 # =============================================================================
@@ -1883,93 +1882,59 @@ def _make_cluster_with_fogs(zones: frozenset[str]) -> Cluster:
     )
 
 
-class TestSnapWeight:
-    """Tests for the 0.5-grid cluster weight snapping."""
+class TestClusterWeightAggregation:
+    """Tests for the cluster weight computed by filter_and_enrich_clusters."""
 
-    def test_off_grid_values_snap_to_nearest_half(self):
-        """The off-grid weights observed in the catalog snap to their
-        nearest grid point (the bias study's starvation cases)."""
-        assert snap_weight(1.3) == 1.5
-        assert snap_weight(2.4) == 2.5
-        assert snap_weight(2.7) == 2.5
-        assert snap_weight(3.4) == 3.5
-        assert snap_weight(3.6) == 3.5
-        assert snap_weight(4.2) == 4.0
-
-    def test_on_grid_values_unchanged(self):
-        for w in (0.5, 1.0, 2.5, 5.5, 10.0):
-            assert snap_weight(w) == w
-
-    def test_tie_rounds_up(self):
-        assert snap_weight(2.25) == 2.5
-
-    def test_minimum_clamp(self):
-        """Weights never snap below 0.5 (a zero weight would make the
-        cluster free for the path budget)."""
-        assert snap_weight(0.2) == 0.5
-        assert snap_weight(0.0) == 0.5
-
-    def test_enriched_cluster_weight_is_on_grid(self):
-        """An off-grid zone weight yields a snapped cluster weight."""
-        areas = {
-            "stormveil": AreaData(
-                name="stormveil", text="Stormveil", maps=["m10_00_00_00"], tags=[]
-            ),
+    @staticmethod
+    def _areas(*names: str) -> dict[str, AreaData]:
+        return {
+            n: AreaData(name=n, text=n.title(), maps=["m10_00_00_00"], tags=[])
+            for n in names
         }
+
+    @staticmethod
+    def _enrich(clusters, areas, metadata):
+        return filter_and_enrich_clusters(
+            clusters,
+            areas,
+            metadata,
+            set(),
+            set(),
+            exclude_dlc=False,
+            exclude_overworld=False,
+        )
+
+    def test_multi_zone_weight_uses_log_aggregation(self):
+        """Two zones at weight 2 aggregate to 2 * (1 + 0.5 ln 2) = 2.69,
+        kept at one decimal (the raw value, not a coarser grid)."""
         metadata = {
             "defaults": {"legacy_dungeon": 10},
-            "zones": {"stormveil": {"weight": 1.3}},
+            "zones": {"stormveil": {"weight": 2}, "liurnia": {"weight": 2}},
         }
-        cluster = _make_cluster_with_fogs(frozenset({"stormveil"}))
+        cluster = _make_cluster_with_fogs(frozenset({"stormveil", "liurnia"}))
 
-        result = filter_and_enrich_clusters(
-            [cluster],
-            areas,
-            metadata,
-            set(),
-            set(),
-            exclude_dlc=False,
-            exclude_overworld=False,
-        )
+        result = self._enrich([cluster], self._areas("stormveil", "liurnia"), metadata)
 
         assert len(result) == 1
-        assert result[0].weight == 1.5
+        assert result[0].weight == 2.7
 
-    def test_off_grid_cluster_override_snaps_and_warns(self, capsys):
-        """An explicit [clusters.<id>] weight off the grid is snapped
-        with a warning instead of silently starving the cluster."""
-        areas = {
-            "stormveil": AreaData(
-                name="stormveil", text="Stormveil", maps=["m10_00_00_00"], tags=[]
-            ),
-        }
-        cluster = _make_cluster_with_fogs(frozenset({"stormveil"}))
+    def test_cluster_override_applied_verbatim(self, capsys):
+        """An explicit [clusters.<id>] weight replaces the computed one
+        as declared, without rounding or warning."""
+        areas = self._areas("stormveil")
         metadata = {"defaults": {"legacy_dungeon": 10}, "zones": {}}
-        # First pass to learn the generated cluster_id
-        filter_and_enrich_clusters(
-            [cluster],
-            areas,
-            metadata,
-            set(),
-            set(),
-            exclude_dlc=False,
-            exclude_overworld=False,
-        )
-        metadata["clusters"] = {cluster.cluster_id: {"weight": 2.7}}
-        cluster2 = _make_cluster_with_fogs(frozenset({"stormveil"}))
+        # First pass to learn the generated cluster_id (set by enrichment)
+        probe = _make_cluster_with_fogs(frozenset({"stormveil"}))
+        self._enrich([probe], areas, metadata)
+        metadata["clusters"] = {probe.cluster_id: {"weight": 2.7}}
 
-        result = filter_and_enrich_clusters(
-            [cluster2],
-            areas,
-            metadata,
-            set(),
-            set(),
-            exclude_dlc=False,
-            exclude_overworld=False,
+        result = self._enrich(
+            [_make_cluster_with_fogs(frozenset({"stormveil"}))], areas, metadata
         )
-        assert result[0].weight == 2.5
+
+        assert result[0].weight == 2.7
         captured = capsys.readouterr()
-        assert "off the 0.5 grid" in captured.out
+        assert "Warning" not in captured.out + captured.err
 
 
 class TestFilterAndEnrichMetadataTypeOverride:
@@ -2053,9 +2018,11 @@ class TestFilterAndEnrichMetadataTypeOverride:
             exclude_dlc=False,
             exclude_overworld=False,
         )
+        # Warnings go to stderr so bootstrap.py can surface them while
+        # keeping the tool's stdout progress quiet.
         captured = capsys.readouterr()
-        assert "does_not_exist_zzzz" in captured.out
-        assert "Warning" in captured.out
+        assert "does_not_exist_zzzz" in captured.err
+        assert "Warning" in captured.err
 
     def test_matched_cluster_declaration_does_not_warn(self, capsys):
         """A declaration matching a real cluster ID does not trigger a warning."""
@@ -2092,7 +2059,7 @@ class TestFilterAndEnrichMetadataTypeOverride:
             exclude_overworld=False,
         )
         captured = capsys.readouterr()
-        assert "Warning" not in captured.out
+        assert "Warning" not in captured.out + captured.err
 
 
 class TestFilterAndEnrichDisplayNameOverride:

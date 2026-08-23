@@ -13,6 +13,7 @@ from speedfog.constants import (
     DEFAULT_MAX_LAYER_SPREAD,
     INTERMEDIATE_CLUSTER_TYPES,
     MAX_TIER,
+    WEIGHT_TOLERANCE_STEP,
 )
 
 _VALID_CLUSTER_TYPES = INTERMEDIATE_CLUSTER_TYPES
@@ -87,7 +88,8 @@ class StructureConfig:
     tier_curve_exponent: float = 0.6  # Power curve exponent (only for "power")
     max_weight_tolerance: float = (
         3.0  # Soft preference radius around the anchor weight (0=disabled).
-        # Must be a non-negative multiple of 0.5 (matcher widens by 0.5 steps).
+        # Must be a non-negative multiple of WEIGHT_TOLERANCE_STEP (the
+        # matcher's band step, 0.5).
         # Independent of max_layer_spread: even at 3.0, the layer's hard
         # window still clamps the actual spread to max_layer_spread.
     )
@@ -140,12 +142,12 @@ class StructureConfig:
             raise ValueError(
                 f"max_weight_tolerance must be >= 0, got {self.max_weight_tolerance}"
             )
-        # Matcher widens tolerance in 0.5 steps; non-multiples would silently
-        # truncate (e.g. 2.7 would behave like 2.5).
-        if (self.max_weight_tolerance * 2) % 1 != 0:
+        # Matcher widens tolerance in WEIGHT_TOLERANCE_STEP steps;
+        # non-multiples would silently truncate (e.g. 2.7 would behave like 2.5).
+        if (self.max_weight_tolerance / WEIGHT_TOLERANCE_STEP) % 1 != 0:
             raise ValueError(
-                f"max_weight_tolerance must be a multiple of 0.5, "
-                f"got {self.max_weight_tolerance}"
+                f"max_weight_tolerance must be a multiple of "
+                f"{WEIGHT_TOLERANCE_STEP}, got {self.max_weight_tolerance}"
             )
         if self.max_layer_spread < 0:
             raise ValueError(

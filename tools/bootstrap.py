@@ -148,6 +148,11 @@ def print_error(message: str) -> None:
     print(f"      \u2717 {message}")
 
 
+def print_warning(message: str) -> None:
+    """Print a non-fatal warning message."""
+    print(f"      \u26a0 {message}")
+
+
 def find_sfextract() -> Path | None:
     """Find the sfextract tool."""
     # Try common locations
@@ -383,7 +388,7 @@ def regenerate_derived_data() -> bool:
 
     # Generate clusters.json
     try:
-        subprocess.run(
+        result = subprocess.run(
             [
                 sys.executable,
                 str(tools_dir / "generate_clusters.py"),
@@ -396,6 +401,11 @@ def regenerate_derived_data() -> bool:
             text=True,
             check=True,
         )
+        # generate_clusters.py reports zone_metadata.toml problems (orphan
+        # [clusters.<id>] overrides, bad merge targets) on stderr; surface
+        # them; the captured stdout is discarded.
+        for line in result.stderr.strip().splitlines():
+            print_warning(line.strip())
         with open(DATA_DEST / "clusters.json") as f:
             data = json.load(f)
         cluster_count = data.get("cluster_count", "?")

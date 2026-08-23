@@ -23,6 +23,7 @@ from speedfog.constants import (
     DEFAULT_MAX_LAYER_SPREAD,
     INTERMEDIATE_CLUSTER_TYPES,
     MAX_TIER,
+    WEIGHT_TOLERANCE_STEP,
 )
 from speedfog.dag import Dag, DagNode, FogRef
 from speedfog.generation_log import (
@@ -352,12 +353,6 @@ def validate_config(
 # =============================================================================
 
 
-# Cluster weights are snapped to this grid at generation time
-# (tools/generate_clusters.py); changing the step requires regenerating
-# clusters.json on the new grid.
-_TOLERANCE_STEP = 0.5
-
-
 def pick_cluster_weight_matched(
     candidates: list[ClusterData],
     used_zones: set[str],
@@ -379,10 +374,12 @@ def pick_cluster_weight_matched(
       spread (``max - min``) above ``max_layer_spread`` are filtered out.
       This is the invariant guaranteeing balanced parallel branches.
     - **Soft preference** (``anchor_tolerance``): within the window, the
-      function prefers candidates close to ``anchor_weight`` by widening
-      a 0.5-step band up to ``anchor_tolerance``. If no candidate matches
-      at any step, falls through to a uniform pick within the window
-      (no "nearest fallback" outside the window).
+      function prefers candidates close to ``anchor_weight``: a band of
+      +/-0.5 around the anchor, widened in 0.5 steps up to
+      ``anchor_tolerance``; the first non-empty band is drawn from
+      uniformly. If no candidate matches at any step, falls through to a
+      uniform pick within the window (no "nearest fallback" outside the
+      window).
 
     If ``required_zones`` is non-empty and at least one filtered candidate
     covers a required zone, the draw is restricted to that subset before
@@ -398,8 +395,9 @@ def pick_cluster_weight_matched(
         reserved_zones: Zones reserved for prerequisite placement.
         required_zones: Zones that must appear in the DAG.
         anchor_tolerance: Soft preference radius around ``anchor_weight``
-            (<= 0 disables the preference, falling straight through to
-            uniform pick within the window).
+            (below ``WEIGHT_TOLERANCE_STEP``, e.g. 0, disables the
+            preference, falling straight through to uniform pick within
+            the window).
         layer_bounds: Running ``(layer_min, layer_max)`` of weights already
             picked in this layer. ``None`` disables the window check.
         max_layer_spread: Maximum ``max - min`` allowed in the layer when
@@ -435,12 +433,15 @@ def pick_cluster_weight_matched(
     if anchor_tolerance <= 0:
         return rng.choice(available)
 
-    tol = 0.0
+    # The first band already has width: an exact-equality band (tol=0)
+    # would hand the slot to any candidate sharing the anchor's weight
+    # and starve clusters whose weight has no exact twin in the pool.
+    tol = WEIGHT_TOLERANCE_STEP
     while tol <= anchor_tolerance + 1e-9:
         matched = [c for c in available if abs(c.weight - anchor_weight) <= tol + 1e-9]
         if matched:
             return rng.choice(matched)
-        tol += _TOLERANCE_STEP
+        tol += WEIGHT_TOLERANCE_STEP
 
     # No candidate within anchor_tolerance: fall back to uniform pick
     # within the window-filtered set. With layer_bounds set, this is still

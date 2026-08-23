@@ -169,26 +169,22 @@ Overrides from `data/zone_metadata.toml` take priority (e.g., DLC `m20_` maps â†
 
 Weight = approximate traversal time in minutes.
 
-**Defaults** from `zone_metadata.toml`:
-- `legacy_dungeon`: 10 min
-- `mini_dungeon`: 4 min
-- `boss_arena`: 2 min
-- `start`: 1 min
-- `final_boss`: 4 min
+**Defaults** per zone type from the `[defaults]` table of `zone_metadata.toml`:
+`legacy_dungeon` 3, `mini_dungeon` 1, `boss_arena` 1, `major_boss` 1, `final_boss` 2.5,
+`other` 2, `start` 1, `underground` 6.
 
-Per-zone overrides for notably larger/smaller areas (e.g., `stormveil`: 15, `leyndell`: 20).
-Zone weights stay raw measurements (observed traversal times from production race
-data, plus manual adjustments) and may sit anywhere on the scale.
+Per-zone overrides `[zones.<name>] weight` for notably smaller/larger areas (e.g.
+`dragonbarrow_cave`: 0.5, `gelmir_hero_grave`: 6). Zone weights are raw measurements
+(observed traversal times from production race data, plus manual adjustments).
 
-Cluster weight = logarithmic aggregation of the zone weights
-(`avg_zone_weight * (1 + 0.5 * ln(n_zones))`: players traverse a path through the
-cluster, not every zone), **snapped to the 0.5 grid** (minimum 0.5). The DAG
-generator's weight matcher widens its anchor bands in 0.5 steps, so an off-grid
-cluster weight (2.7, 3.4, ...) almost never falls exactly inside a band and the
-cluster is systematically under-picked as a layer companion. Snapping distorts a
-weight by at most 0.25 min (more only near zero, via the 0.5 minimum), within
-measurement noise. Explicit `[clusters.<id>]` weight overrides are snapped too,
-with a warning when the declared value is off the grid.
+Cluster weight = logarithmic aggregation of the zone weights, rounded to one decimal:
+`round(avg_zone_weight * (1 + 0.5 * ln(n_zones)), 1)` (players traverse a path through
+the cluster, not every zone). Explicit `[clusters.<id>] weight` overrides replace the
+computed value as declared (observed race data for the whole cluster); an override
+whose id matches no generated cluster is reported on stderr and surfaced by
+`tools/bootstrap.py`. Weights are consumed by the DAG generator's intra-layer matcher:
+see `docs/dag-generation.md` (Intra-layer weight balance) for how they are compared
+and why they must not be snapped to a coarser grid.
 
 ## Defeat Flag Discovery
 

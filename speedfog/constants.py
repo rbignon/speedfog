@@ -38,3 +38,8 @@ MAX_TIER = 34
 
 # Default hard cap on weight spread (max - min) within a single layer.
 DEFAULT_MAX_LAYER_SPREAD = 2.0
+
+# Width of the weight matcher's anchor bands (generator.py): the first band
+# is +/- this value around the anchor and widens by the same step up to
+# max_weight_tolerance, which config.py requires to be a multiple of it.
+WEIGHT_TOLERANCE_STEP = 0.5

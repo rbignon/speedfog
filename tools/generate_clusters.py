@@ -1078,7 +1078,10 @@ def apply_cluster_merges(
     consumed: set[int] = set()  # id() of clusters absorbed into others
     for source_zone, target_zone in merges.items():
         if target_zone not in zone_to_cluster:
-            print(f"  Warning: merge_into target '{target_zone}' not found, skipping")
+            print(
+                f"  Warning: merge_into target '{target_zone}' not found, skipping",
+                file=sys.stderr,
+            )
             continue
 
         target_cluster = zone_to_cluster[target_zone]
@@ -1086,7 +1089,8 @@ def apply_cluster_merges(
         if id(target_cluster) in consumed:
             print(
                 f"  Warning: merge target '{target_zone}' is in a cluster already consumed "
-                f"by another merge — check for conflicting merge_into declarations"
+                f"by another merge — check for conflicting merge_into declarations",
+                file=sys.stderr,
             )
             continue
 
@@ -1808,18 +1812,6 @@ def get_zone_weight(
     return float(defaults.get(zone_type, 4))
 
 
-def snap_weight(value: float) -> float:
-    """Snap a cluster weight to the 0.5 grid (minimum 0.5).
-
-    The DAG generator's weight matcher widens its anchor bands in 0.5
-    steps, so an off-grid weight (2.7, 3.4, ...) almost never falls
-    exactly inside a band and its cluster is systematically under-picked
-    as a layer companion. Zone weights stay raw measurements; only the
-    final cluster weight lands on the grid.
-    """
-    return max(0.5, math.floor(value * 2 + 0.5) / 2)
-
-
 def compute_allow_entry_as_exit(
     cluster_type: str,
     exit_fogs: list[dict],
@@ -2099,7 +2091,13 @@ def filter_and_enrich_clusters(
 
         n_zones = len(zone_weights)
         avg_weight = sum(zone_weights) / n_zones
-        cluster.weight = snap_weight(avg_weight * (1 + 0.5 * math.log(n_zones)))
+        # Keep one decimal of precision: the matcher's anchor bands are
+        # +/-0.5 wide, finer floats add noise without helping intra-layer
+        # balance. Do not snap to a coarser grid: tried and reverted, it
+        # gave off-grid clusters exact twins but left on-grid singletons
+        # starved, and buys nothing now that the matcher's first band has
+        # width (see docs/dag-generation.md, intra-layer weight balance).
+        cluster.weight = round(avg_weight * (1 + 0.5 * math.log(n_zones)), 1)
 
         # For boss_arena clusters with one-way internal links, remove
         # exit fogs from zones that become unreachable after traversal.
@@ -2151,14 +2149,7 @@ def filter_and_enrich_clusters(
             if cm.get("exclude"):
                 continue
             if "weight" in cm:
-                override = float(cm["weight"])
-                snapped = snap_weight(override)
-                if snapped != override:
-                    print(
-                        f"  Warning: [clusters.{cluster.cluster_id}] weight "
-                        f"{override} is off the 0.5 grid, snapped to {snapped}"
-                    )
-                cluster.weight = snapped
+                cluster.weight = float(cm["weight"])
             cluster.proximity_groups = cm.get("proximity_groups", [])
             cluster.allowed_entries = cm.get("allowed_entries", [])
             cluster.allowed_exits = cm.get("allowed_exits", [])
@@ -2175,7 +2166,8 @@ def filter_and_enrich_clusters(
     for orphan_id in sorted(orphans):
         print(
             f"  Warning: [clusters.{orphan_id}] in metadata does not match "
-            f"any generated cluster (override ignored)"
+            f"any generated cluster (override ignored)",
+            file=sys.stderr,
         )
 
     return filtered

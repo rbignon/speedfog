@@ -234,21 +234,32 @@ For each intermediate layer:
    when the requested pool is exhausted. Each fallback is recorded as a `FallbackEntry` in the
    generation log.
 
-   **Intra-layer weight balance.** Cluster weights are multiples of 0.5 (snapped in
-   `tools/generate_clusters.py`; an off-grid weight would almost never fall inside
-   the 0.5-step anchor bands below and its cluster would be starved). The first
-   slot is picked uniformly from the primary pool. Subsequent slots use
-   `pick_cluster_weight_matched` with two complementary mechanisms:
+   **Intra-layer weight balance.** Cluster weights are floats: computed weights are rounded to one
+   decimal in `tools/generate_clusters.py`, `[clusters.<id>]` overrides are applied as declared. The
+   first slot is picked uniformly from the primary pool.
+   Subsequent slots use `pick_cluster_weight_matched` with two complementary mechanisms:
 
    - **Hard window** (`max_layer_spread`, default 2.0): candidates whose weight would push the
      layer's `max - min` spread above this threshold are filtered out before any preference is
      applied. This guarantees that parallel branches stay comparable; with `max_layer_spread=2`,
      a layer cannot mix a w=1 cluster with a w=4 cluster.
    - **Soft preference** (`anchor_tolerance`, default 3.0, exposed as `max_weight_tolerance` in
-     the TOML config): inside the window, the matcher widens an anchor band in 0.5 steps around
-     the running mean of prior picks. As soon as one candidate fits the current band, a uniform
+     the TOML config): inside the window, the matcher draws from the first non-empty band around
+     the running mean of prior picks: `+/-0.5` first (`WEIGHT_TOLERANCE_STEP`), then widened in
+     0.5 steps up to `anchor_tolerance`. As soon as one candidate fits the current band, a uniform
      pick is made within it. If no band matches up to `anchor_tolerance`, the function falls
      back to a uniform pick across the window-filtered set, never beyond it.
+
+     The first band deliberately has width. Since only the first non-empty band is drawn from, an
+     exact-equality first band (`tol = 0`) hands slot 1 to any candidate sharing the first pick's
+     weight, so a cluster whose weight has no exact twin in its type pool is only reachable when
+     the anchor happens to have no exact match either. On the production pool this starved both
+     the off-grid weights produced by the log aggregation (Caelid Abandoned Cave at 1.3: ~10% of
+     seeds) and on-grid singletons (the only major boss at 3.0). Snapping cluster weights to the
+     0.5 grid was tried and reverted (August 2026): it only moved the starvation onto the on-grid
+     singletons (Messmer 73% -> 56% of seeds). Starting the band at `+/-0.5` fixes both, at the
+     cost of a looser soft preference (mean raw layer spread 0.10 -> 0.26 min over 2000 seeds,
+     still far inside the hard window).
 
    When the window leaves no in-type candidate, `pick_layer_clusters` falls through to other
    `allowed_types` (recorded as a `FallbackEntry`); the resulting mixed-type layer is then
@@ -304,16 +315,15 @@ Special cases:
 
 This maps to FogMod's enemy scaling SpEffects.
 
-## Budget and Weight
+## Weight Balance
 
-Each cluster has a **weight** (approximate traversal time in minutes). Each path through the DAG
-has a total weight = sum of node weights along the path.
+Each cluster has a **weight** (approximate traversal time in minutes, see `docs/clusters.md`).
+Balance is enforced per layer, not per path: the `[structure]` keys `max_layer_spread` (hard
+window, re-asserted by the validator's `_check_layer_weight_spread` as an error) and
+`max_weight_tolerance` (soft preference), both described in the main loop above, are the only
+weight knobs. The former `[budget]` section (`tolerance`, per-path total weight) is deprecated
+and ignored with a warning.
 
-**Balance constraint** (from config):
-- `tolerance`: maximum allowed weight spread between heaviest and lightest paths (default 5)
-
-The validator checks that all paths have similar weights. If the spread exceeds tolerance, a
-warning is produced (not a hard error).
 
 ## Retry System (`generate_with_retry`)
 
