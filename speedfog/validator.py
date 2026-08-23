@@ -38,6 +38,7 @@ def validate_dag(
     - Structural validity (uses dag.validate_structure())
     - Entry fog consistency (incoming edges match entry_fogs count)
     - Entry zone membership (entry_fog.zone ∈ target cluster zones)
+    - Path weight spread (budget.tolerance, disabled when 0)
     - Minimum requirements (bosses, legacy_dungeons, mini_dungeons)
     - Layer count (few layers = warning)
 
@@ -84,6 +85,11 @@ def validate_dag(
     )
     if spread_errors:
         errors.extend(spread_errors)
+
+    # Check end-to-end path balance (budget tolerance)
+    path_errors = _check_path_weight_spread(dag, tolerance=config.budget.tolerance)
+    if path_errors:
+        errors.extend(path_errors)
 
     # Check minimum requirements
     _check_requirements(dag, config, errors)
@@ -302,11 +308,37 @@ def _check_layer_weight_spread(
                 for nid in node_ids
             )
             errors.append(
-                f"Layer {layer_idx}: weight spread {spread} > {max_spread} "
-                f"[{details}]"
+                f"Layer {layer_idx}: weight spread {spread} > {max_spread} [{details}]"
             )
 
     return errors
+
+
+def _check_path_weight_spread(dag: Dag, tolerance: float) -> list[str]:
+    """Check the weight spread between the lightest and heaviest full path.
+
+    The per-layer window bounds the disparity between parallel branches,
+    but per-layer slack compounds across layers: end-to-end routes can
+    drift apart even when every layer passes. This check bounds the total
+    drift via ``Dag.path_weight_spread`` (dynamic programming, no path
+    enumeration).
+
+    Args:
+        dag: The DAG to check.
+        tolerance: Maximum permitted spread; ``<= 0`` disables the check.
+
+    Returns:
+        List with one error message when the spread exceeds the tolerance.
+    """
+    if tolerance <= 0:
+        return []
+    spread = dag.path_weight_spread()
+    if spread > tolerance + 1e-9:
+        return [
+            f"Path weight spread {spread:.1f} > tolerance {tolerance} "
+            f"(lightest vs heaviest start-to-end path)"
+        ]
+    return []
 
 
 def _check_layer_type_homogeneity(dag: Dag) -> list[str]:

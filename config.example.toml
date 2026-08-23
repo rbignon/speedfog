@@ -147,6 +147,13 @@ max_entrances = 3
 #   leyndell_erdtree (Radagon), leyndell_throne (Gideon),
 #   enirilim_radahn (Promised Consort Radahn, DLC), etc.
 
+[budget]
+# Maximum weight spread (in minutes) between the lightest and heaviest
+# start-to-end path. 0 disables the check. Violations reroll the seed in
+# auto mode. Scales with layers_count: ~30-layer runs sit around a
+# 5-minute spread, ~90-layer runs around 11.
+tolerance = 0
+
 [paths]
 # Path to Elden Ring installation.
 game_dir = "C:/Program Files/Steam/steamapps/common/ELDEN RING/Game"

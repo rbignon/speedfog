@@ -476,6 +476,115 @@ class TestDagStatistics:
         assert dag.count_by_type("nonexistent") == 0
 
 
+class TestPathWeightSpread:
+    """Tests for Dag.path_weight_spread (DP over lightest/heaviest paths)."""
+
+    @staticmethod
+    def _node(node_id: str, layer: int, weight: float) -> DagNode:
+        return DagNode(
+            id=node_id,
+            cluster=make_cluster(f"c_{node_id}", weight=weight),
+            layer=layer,
+            tier=1,
+            entry_fogs=[],
+            exit_fogs=[],
+        )
+
+    def _make_dag(
+        self,
+        nodes: tuple[tuple[str, int, float], ...],
+        edges: tuple[tuple[str, str], ...],
+    ) -> Dag:
+        dag = Dag(seed=42)
+        for node_id, layer, weight in nodes:
+            dag.add_node(self._node(node_id, layer, weight))
+        for src, dst in edges:
+            dag.add_edge(src, dst, _f(f"{src}_out"), _f(f"{dst}_in"))
+        return dag
+
+    def test_crosslinked_diamond(self):
+        """Min/max path totals through a fully cross-linked middle section.
+
+        start(1) -> {a(1), b(3)} -> {c(2), d(4)} -> end(5), all four
+        cross edges present: lightest = 1+1+2+5 = 9, heaviest =
+        1+3+4+5 = 13, spread 4. Enumerating paths is not needed to
+        know the extremes compose per node.
+        """
+        dag = self._make_dag(
+            (
+                ("start", 0, 1),
+                ("a", 1, 1),
+                ("b", 1, 3),
+                ("c", 2, 2),
+                ("d", 2, 4),
+                ("end", 3, 5),
+            ),
+            (
+                ("start", "a"),
+                ("start", "b"),
+                ("a", "c"),
+                ("a", "d"),
+                ("b", "c"),
+                ("b", "d"),
+                ("c", "end"),
+                ("d", "end"),
+            ),
+        )
+        assert dag.path_weight_spread() == 4.0
+
+    def test_restricted_connectivity_follows_edges(self):
+        """Edges decide the extremes, not per-layer min/max.
+
+        Same layer weights as a diamond, but a(1) only reaches d(4) and
+        b(3) only reaches c(2): both paths total 1+5+5 = 11, spread 0.
+        Aggregating min/max per layer would wrongly report 4.
+        """
+        dag = self._make_dag(
+            (
+                ("start", 0, 1),
+                ("a", 1, 1),
+                ("b", 1, 3),
+                ("c", 2, 2),
+                ("d", 2, 4),
+                ("end", 3, 5),
+            ),
+            (
+                ("start", "a"),
+                ("start", "b"),
+                ("a", "d"),
+                ("b", "c"),
+                ("c", "end"),
+                ("d", "end"),
+            ),
+        )
+        assert dag.path_weight_spread() == 0.0
+
+    def test_single_path_has_zero_spread(self):
+        dag = self._make_dag(
+            (("start", 0, 1), ("end", 1, 5)),
+            (("start", "end"),),
+        )
+        assert dag.path_weight_spread() == 0.0
+
+    def test_empty_dag(self):
+        assert Dag(seed=42).path_weight_spread() == 0.0
+
+    def test_malformed_dag_does_not_crash(self):
+        """Dangling edge endpoints and backward edges stay total.
+
+        Structural validity is checked elsewhere; the spread must stay
+        computable so validation reports errors instead of crashing.
+        """
+        dag = self._make_dag(
+            (("start", 0, 1), ("mid", 1, 2), ("end", 2, 5)),
+            (("start", "mid"), ("mid", "end")),
+        )
+        # Backward edge and an edge from a node that does not exist.
+        dag.add_edge("end", "mid", _f("back_out"), _f("back_in"))
+        dag.add_edge("ghost", "mid", _f("ghost_out"), _f("ghost_in"))
+        assert dag.path_weight_spread() >= 0.0
+
+
 # =============================================================================
 # Validation tests
 # =============================================================================

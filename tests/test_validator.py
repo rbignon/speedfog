@@ -1134,6 +1134,79 @@ class TestLayerWeightSpread:
         )
 
 
+class TestPathWeightSpreadCheck:
+    """Tests for the end-to-end path balance check (budget.tolerance)."""
+
+    def _make_diamond(self) -> Dag:
+        """start(0) -> {w=1, w=3} -> end(5): path spread = 2."""
+        dag = Dag(seed=42)
+        dag.add_node(
+            DagNode(
+                id="start",
+                cluster=make_cluster("start_c", cluster_type="start", weight=0),
+                layer=0,
+                tier=1,
+                entry_fogs=[],
+                exit_fogs=["exit_0", "exit_1"],
+            )
+        )
+        for i, w in enumerate([1, 3]):
+            dag.add_node(
+                DagNode(
+                    id=f"n{i}",
+                    cluster=make_cluster(
+                        f"mini_{i}", cluster_type="mini_dungeon", weight=w
+                    ),
+                    layer=1,
+                    tier=1,
+                    entry_fogs=[f"in_{i}"],
+                    exit_fogs=[f"out_{i}"],
+                )
+            )
+            dag.add_edge("start", f"n{i}", f"exit_{i}", f"in_{i}")
+        dag.add_node(
+            DagNode(
+                id="end",
+                cluster=make_cluster("end_c", cluster_type="final_boss", weight=5),
+                layer=2,
+                tier=1,
+                entry_fogs=["end_in_0", "end_in_1"],
+                exit_fogs=[],
+            )
+        )
+        for i in range(2):
+            dag.add_edge(f"n{i}", "end", f"out_{i}", f"end_in_{i}")
+        dag.start_id = "start"
+        dag.end_id = "end"
+        return dag
+
+    def _make_config(self, tolerance: float) -> Config:
+        return Config.from_dict(
+            {
+                "requirements": {
+                    "legacy_dungeons": 0,
+                    "bosses": 0,
+                    "mini_dungeons": 0,
+                },
+                "structure": {"layers_count": 1},
+                "budget": {"tolerance": tolerance},
+            }
+        )
+
+    def test_disabled_by_default(self):
+        """tolerance 0 disables the check regardless of the actual spread."""
+        result = validate_dag(self._make_diamond(), self._make_config(0))
+        assert not any("Path weight spread" in e for e in result.errors)
+
+    def test_spread_above_tolerance_fails(self):
+        result = validate_dag(self._make_diamond(), self._make_config(1.5))
+        assert any("Path weight spread" in e for e in result.errors)
+
+    def test_spread_within_tolerance_passes(self):
+        result = validate_dag(self._make_diamond(), self._make_config(2.5))
+        assert not any("Path weight spread" in e for e in result.errors)
+
+
 class TestValidateExclusions:
     """Tests for validate_exclusions()."""
 

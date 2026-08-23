@@ -212,6 +212,23 @@ def _parse_final_boss_candidates(raw: list[str] | dict[str, int]) -> dict[str, i
 
 
 @dataclass
+class BudgetConfig:
+    """End-to-end path balance constraints."""
+
+    tolerance: float = (
+        0.0  # Max weight spread between the lightest and heaviest
+        # start-to-end path (0 = check disabled). Violations are validation
+        # errors, so the seed is rerolled in auto mode. Scales with
+        # layers_count: ~30-layer pools sit around a 5-minute spread,
+        # ~90-layer pools around 11, so the tolerance is a per-pool call.
+    )
+
+    def __post_init__(self) -> None:
+        if self.tolerance < 0:
+            raise ValueError(f"tolerance must be >= 0, got {self.tolerance}")
+
+
+@dataclass
 class PathsConfig:
     """File paths configuration."""
 
@@ -626,6 +643,7 @@ _KNOWN_SECTION_KEYS: dict[str, frozenset[str] | None] = {
             "bosses",
         }
     ),
+    "budget": frozenset({"tolerance"}),
     # Free-form plugin tables, envelope-validated in Config.__post_init__
     "plugin": None,
     # Preset metadata consumed by the speedfog-racing platform, not by
@@ -635,21 +653,9 @@ _KNOWN_SECTION_KEYS: dict[str, frozenset[str] | None] = {
 
 
 def _reject_unknown_keys(data: dict[str, Any]) -> None:
-    """Reject unknown sections and unknown keys within known sections.
-
-    The removed [budget] section only warns (deprecated, ignored) so old
-    configs keep loading.
-    """
+    """Reject unknown sections and unknown keys within known sections."""
     errors: list[str] = []
     for section, content in data.items():
-        if section == "budget":
-            warnings.warn(
-                "[budget] is no longer used and will be ignored; "
-                "remove it from your config",
-                DeprecationWarning,
-                stacklevel=3,
-            )
-            continue
         if section not in _KNOWN_SECTION_KEYS:
             errors.append(f"unknown section [{section}]")
             continue
@@ -676,6 +682,7 @@ class Config:
     death_markers: bool = True
     requirements: RequirementsConfig = field(default_factory=RequirementsConfig)
     structure: StructureConfig = field(default_factory=StructureConfig)
+    budget: BudgetConfig = field(default_factory=BudgetConfig)
     paths: PathsConfig = field(default_factory=PathsConfig)
     starting_items: StartingItemsConfig = field(default_factory=StartingItemsConfig)
     item_randomizer: ItemRandomizerConfig = field(default_factory=ItemRandomizerConfig)
@@ -745,6 +752,7 @@ class Config:
                     DeprecationWarning,
                     stacklevel=2,
                 )
+        budget_section = data.get("budget", {})
         paths_section = data.get("paths", {})
         starting_items_section = data.get("starting_items", {})
         item_randomizer_section = data.get("item_randomizer", {})
@@ -799,6 +807,9 @@ class Config:
                     structure_section.get("max_layer_spread", DEFAULT_MAX_LAYER_SPREAD)
                 ),
                 layers_count=structure_section.get("layers_count", 30),
+            ),
+            budget=BudgetConfig(
+                tolerance=float(budget_section.get("tolerance", 0.0)),
             ),
             paths=PathsConfig(
                 game_dir=paths_section.get("game_dir", ""),

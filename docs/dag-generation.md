@@ -318,11 +318,27 @@ This maps to FogMod's enemy scaling SpEffects.
 ## Weight Balance
 
 Each cluster has a **weight** (approximate traversal time in minutes, see `docs/clusters.md`).
-Balance is enforced per layer, not per path: the `[structure]` keys `max_layer_spread` (hard
-window, re-asserted by the validator's `_check_layer_weight_spread` as an error) and
-`max_weight_tolerance` (soft preference), both described in the main loop above, are the only
-weight knobs. The former `[budget]` section (`tolerance`, per-path total weight) is deprecated
-and ignored with a warning.
+Balance is enforced at two levels:
+
+**Per layer**: the `[structure]` keys `max_layer_spread` (hard window, re-asserted by the
+validator's `_check_layer_weight_spread` as an error) and `max_weight_tolerance` (soft
+preference), both described in the main loop above.
+
+**Per path** (`[budget] tolerance`, 0 = disabled): the weight spread between the lightest and
+heaviest start-to-end path may not exceed the tolerance. Per-layer slack compounds across
+layers (a per-layer spread averaging 0.26 yields end-to-end spreads around 5 on a 30-layer
+run), so the per-layer window alone does not bound how far full routes drift apart.
+`Dag.path_weight_spread` computes the bound by dynamic programming in O(nodes + edges): the
+lightest/heaviest incoming totals compose per node, so cross-links never force path
+enumeration (an earlier per-path implementation was removed for exponential cost; this one is
+a few microseconds per DAG). Violations are validation errors, so the seed is rerolled in
+auto mode.
+
+Choosing the tolerance is a per-pool call because the spread scales with `layers_count` and
+width: measured on the racing pools, ~30-35-layer width-3 pools sit at a median spread around
+5 (tolerance 5 rerolls ~half the candidates, ~2 attempts per seed; 6 rerolls ~15-25%), the
+90-layer expedition pool sits around 11 (tolerance below ~15 makes generation fail), and
+width-1 pools always have spread 0.
 
 
 ## Retry System (`generate_with_retry`)
@@ -357,6 +373,7 @@ Config validation runs once before any attempts; invalid config raises `Generati
 | `requirements.legacy_dungeons` | 1 | Minimum legacy dungeons |
 | `requirements.bosses` | 5 | Minimum boss arenas |
 | `requirements.mini_dungeons` | 5 | Minimum mini dungeons |
+| `budget.tolerance` | 0 (disabled) | Max weight spread between lightest and heaviest full path; violations reroll the seed |
 
 ## Validation
 
@@ -380,9 +397,10 @@ Post-generation checks on the built DAG:
 4. **No duplicate edges**: prevents trivial Y-patterns
 5. **Entry zone membership**: entry fog zone belongs to target cluster zones
 6. **Layer type homogeneity**: all nodes in a layer share the same cluster type (prevents unfair asymmetry between parallel branches)
-7. **Requirements**: minimum zone type counts met
-8. **Layer count**: few layers = warning
-9. **Event flag budget**: total flag allocation within budget
+7. **Path weight spread**: lightest vs heaviest full path within `budget.tolerance` (skipped when 0)
+8. **Requirements**: minimum zone type counts met
+9. **Layer count**: few layers = warning
+10. **Event flag budget**: total flag allocation within budget
 
 ## Required Zones
 

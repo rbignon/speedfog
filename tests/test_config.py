@@ -11,10 +11,28 @@ from speedfog.config import (
 )
 
 
-def test_budget_section_is_deprecated():
-    """A [budget] section warns (deprecated) instead of failing strict mode."""
-    with pytest.warns(DeprecationWarning, match="budget"):
-        Config.from_dict({"budget": {"tolerance": 5}})
+def test_budget_tolerance_parsed():
+    """[budget] tolerance is parsed as the path-spread bound."""
+    config = Config.from_dict({"budget": {"tolerance": 5}})
+    assert config.budget.tolerance == 5.0
+
+
+def test_budget_tolerance_defaults_to_disabled():
+    """Without a [budget] section, the path-spread check is disabled (0)."""
+    config = Config.from_dict({})
+    assert config.budget.tolerance == 0.0
+
+
+def test_budget_negative_tolerance_rejected():
+    """A negative tolerance fails loudly."""
+    with pytest.raises(ValueError, match="tolerance must be >= 0"):
+        Config.from_dict({"budget": {"tolerance": -1}})
+
+
+def test_budget_unknown_key_rejected():
+    """Typo'd keys inside [budget] fail loudly."""
+    with pytest.raises(ValueError, match="unknown key budget.tolerence"):
+        Config.from_dict({"budget": {"tolerence": 5}})
 
 
 def test_unknown_section_rejected():

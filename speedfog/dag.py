@@ -150,6 +150,46 @@ class Dag:
             1 for node in self.nodes.values() if node.cluster.type == cluster_type
         )
 
+    def path_weight_spread(self) -> float:
+        """Weight difference between the heaviest and lightest full path.
+
+        Total cluster weight summed along a start-to-end path, min and max
+        taken over every path, computed by dynamic programming in layer
+        order (one pass over nodes and edges after a sort by layer).
+        Cross-links make path *enumeration* exponential, but the
+        lightest/heaviest totals compose per node, so no path is ever
+        materialized.
+
+        Nodes without incoming edges are treated as path starts and nodes
+        without outgoing edges as path ends. On structurally invalid DAGs
+        (backward edges, dangling edge endpoints) the value is still
+        defined, though meaningless: sources not processed yet are
+        ignored, and 0.0 is returned when no end exists. Structural
+        validity is validated separately.
+        """
+        if not self.nodes:
+            return 0.0
+        incoming: dict[str, list[str]] = {}
+        has_outgoing: set[str] = set()
+        for edge in self.edges:
+            incoming.setdefault(edge.target_id, []).append(edge.source_id)
+            has_outgoing.add(edge.source_id)
+        lightest: dict[str, float] = {}
+        heaviest: dict[str, float] = {}
+        order = sorted(self.nodes.values(), key=lambda n: n.layer)
+        for node in order:
+            weight = node.cluster.weight
+            sources = [s for s in incoming.get(node.id, []) if s in lightest]
+            if sources:
+                lightest[node.id] = min(lightest[s] for s in sources) + weight
+                heaviest[node.id] = max(heaviest[s] for s in sources) + weight
+            else:
+                lightest[node.id] = heaviest[node.id] = weight
+        ends = [n.id for n in order if n.id not in has_outgoing]
+        if not ends:
+            return 0.0
+        return max(heaviest[e] for e in ends) - min(lightest[e] for e in ends)
+
     def validate_structure(self) -> list[str]:
         """Validate the DAG structure for correctness.
 
