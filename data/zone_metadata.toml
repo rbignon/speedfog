@@ -747,7 +747,7 @@ allowed_exits = [
 [clusters.volcano_town_d40f]
 weight = 2
 
-[clusters.gravesite_catacombs_7a82]
+[clusters.gravesite_catacombs_1e77]
 allowed_entries = [
     "AEG099_232_9000", # Main entrance
 ]
