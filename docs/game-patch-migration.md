@@ -287,7 +287,10 @@ A frozen copy and the Steam install share
   after every `tools/bootstrap.py`.
 - `game_inspect diff-param <old.bin> <new.bin> --defs <Defs> [--param X]
   [--rows-only]`: rows added/removed and cells changed per param; this is
-  what located the Torrent rows.
+  what located the Torrent rows. `dump-event <emevd> <id>` and
+  `find-int <emevd> <value>` read EMEVDs under Wine (flag and entity
+  lookups); `dump_emevd_warps` reads FogMod output natively but needs Oodle
+  for the game's KRAK-compressed files, which has no Linux build.
 - Still to write when needed: a Paramdex refresh (not needed for 1.17).
 
 ## 1.17 triage results
@@ -352,6 +355,22 @@ frozen 1.16.2 copy and the FogRando snapshot.
   "Tarnished Pack" system message); `item_dlc02` +262 entries (new
   equipment names and descriptions) and 39 reworded DLC weapon captions
   (backhand blades, great katanas, light greatswords). No entry removed.
+- **Entitlement**: the patch notes list every addition (two classes, the
+  weapons, the armor sets, the three Spectral Steed Regalia, the Torrent
+  appearance menu, both invasions) under "added upon purchase of the
+  Tarnished Pack DLC", on sale 2026-08-28. The 1.17 data received on
+  2026-08-27 already contains all of it (80 weapon names, 18 armor pieces,
+  3 regalia goods 2009600-2009620, 3 NPC names, 2 arts), gated by event
+  flag 6953: `ShopLineupParam` 101896 (Reverse-Bladed Sword) has
+  `eventFlag_forRelease = 6953`, the Stormveil pickup init
+  (`common_func` 900005590) takes it as argument, so do the other five
+  pickup tiles and the Redmane summon (`m60_51_36_00` event 1051360740),
+  every Caelid invasion event (`m60_52_39_00` event 200 initializers,
+  1052392910) and Leyndell's 11002930 test it. In every EMEVD changed by
+  1.17 the flag only appears as an initializer argument or a check
+  (`GotoIfEventFlag`, `IfEventFlag`), never as a `SetEventFlag` target, so
+  the engine sets it from DLC ownership. Without the pack the content stays
+  dormant, in vanilla and in seeds alike.
 - **Treasure pickups** (one asset plus a Treasure MSB event named
   "Patch1.17", one or two init instructions in EMEVD event 0): `m60_34_50`
   (`AEG099_630_9001`, 1034501601), `m60_38_41` (`AEG099_600_9002`,

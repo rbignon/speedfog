@@ -100,6 +100,23 @@ wine publish/win-x64/game_inspect.exe check-emevd <emevd-file> [entity_id]
 
 Opens an EMEVD file, finds event ID 0 (the startup event, the only event inspected by this mode), and walks every instruction in it. For each instruction with at least 4 bytes of argument data, it reads the first 4 bytes as a `uint32`. If `entity_id` is provided, only instructions whose first 4 bytes equal that ID are reported. If omitted, any first-4-byte value in the `755895000-755895999` range (FogMod's startup-event entity allocation) is reported. Used as a quick sanity check when adding new entities: "did FogMod actually wire them up in the startup event?" Note the scan is deliberately dumb about opcode semantics, so it can produce false positives if an opcode's first argument is not an entity ID.
 
+### EMEVD under Wine: `dump-event`, `find-int`
+
+```bash
+wine publish/win-x64/game_inspect.exe dump-event <emevd> <event-id>
+wine publish/win-x64/game_inspect.exe find-int <emevd> <int32>
+```
+
+`dump-event` prints every instruction of one event as `bank[id]` with the
+argument bytes decoded as int32s and as hex. `find-int` lists every 4-byte
+aligned argument slot, in every instruction of every event, that holds the
+value (accepted as int32 or uint32, compared as a bit pattern): flag checks,
+entity references, initializer arguments. `dump_emevd_warps` does the same
+with opcode names and runs natively on FogMod output (DFLT-compressed DCX),
+but the game's own EMEVDs are KRAK-compressed and need Oodle, which only
+exists as a Windows DLL; these two work through Wine like the rest of this
+tool, so they are the way to read vanilla files on Linux.
+
 ### Game patch triage: `check-params`, `diff-param`, `diff-msb`, `diff-emevd`, `bnd-list`
 
 Written for the Elden Ring 1.17 update (see `docs/game-patch-migration.md`).
@@ -158,6 +175,8 @@ game_inspect compare ...       → CompareAssets.Run (CompareAssets.cs)
 game_inspect check-emevd ...   → CheckEmevd.Run    (CheckEmevd.cs)
 game_inspect check-params ...  → CheckParams.Run   (CheckParams.cs)
 game_inspect diff-param ...    → DiffParam.Run     (DiffParam.cs)
+game_inspect dump-event ...    → DumpEvent.RunDump (DumpEvent.cs)
+game_inspect find-int ...      → DumpEvent.RunFind (DumpEvent.cs)
 game_inspect diff-msb ...      → DiffMsb.Run       (DiffMsb.cs)
 game_inspect diff-emevd ...    → DiffEmevd.Run     (DiffEmevd.cs)
 game_inspect bnd-list ...      → BndList.Run       (BndList.cs)

@@ -33,7 +33,7 @@ cd tools/dump_emevd_warps
 dotnet build
 ```
 
-Targets .NET 8.0. References `writer/lib/SoulsFormats.dll` and bundles `oo2core_6_win64.dll` + `libzstd.dll` for DCX decompression. No Wine needed on Linux (runs natively on .NET).
+Targets .NET 8.0. References `writer/lib/SoulsFormats.dll` and bundles `oo2core_6_win64.dll` + `libzstd.dll` for DCX decompression. No Wine needed on Linux (runs natively on .NET) for FogMod output, which is DFLT-compressed; the game's own EMEVDs are KRAK-compressed and need Oodle, which has no Linux build, so for vanilla files use `game_inspect dump-event` / `find-int` under Wine instead.
 
 ## Usage
 

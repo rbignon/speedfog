@@ -578,6 +578,13 @@ wine publish/win-x64/game_inspect.exe diff-param <old-regulation.bin> <new-regul
 wine publish/win-x64/game_inspect.exe diff-msb <old.msb.dcx> <new.msb.dcx>
 wine publish/win-x64/game_inspect.exe diff-emevd <old.emevd.dcx> <new.emevd.dcx>
 wine publish/win-x64/game_inspect.exe bnd-list <game>/_unknown/*
+
+# Vanilla EMEVD under Wine. dump_emevd_warps runs natively on FogMod output
+# (DFLT-compressed) but needs Oodle for the game's own KRAK-compressed EMEVDs,
+# which has no Linux build. dump-event prints every instruction of one event;
+# find-int lists every 4-byte aligned argument slot holding a value (flag, entity ID).
+wine publish/win-x64/game_inspect.exe dump-event <game>/event/m11_00_00_00.emevd.dcx 11002930
+wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.dcx 6953
 ```
 
 ### Investigation Tips

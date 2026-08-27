@@ -46,6 +46,14 @@ if (args.Length >= 1 && args[0] == "diff-param")
 {
     return DiffParam.Run(args);
 }
+if (args.Length >= 1 && args[0] == "dump-event")
+{
+    return DumpEvent.RunDump(args);
+}
+if (args.Length >= 1 && args[0] == "find-int")
+{
+    return DumpEvent.RunFind(args);
+}
 if (args.Length >= 1 && args[0] == "diff-msb")
 {
     return DiffMsb.Run(args);
