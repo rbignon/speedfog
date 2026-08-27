@@ -201,9 +201,39 @@ has not been tested: players on a frozen copy should update.
     only clears 330 at startup, see `docs/alternate-warp-patching.md`), so
     refreshing `m11_00` EMEVD would make the invader appear in runs.
     Default: do not refresh, this is a gameplay change to decide explicitly.
-  - Caelid invasion: same default.
+  - Caelid invasion: same default in principle, but it has no effect: the
+    mod never writes `m60_52_39_00`, so the player's own 1.17 files run and
+    pack owners get the invasion in every seed.
   - If a map is refreshed, re-check the fog gates of that map in-game
     (`fog.txt` entity IDs, `fogevents.txt` templates).
+  - Previewing the Tarnished Pack content locally (compatibility testing
+    only, never in a distributed seed): the content is gated by engine flag
+    6953. Its consumers are the 1.17 EMEVD/MSB of ten maps, nine of which
+    the seed overrides with snapshot files, plus `common_func` 900005590
+    (the pickup event, called from the tile inits), which the seed also
+    overrides. A `[[startup_flags]]` `map = "common"`, `flag = 6953` entry
+    alone therefore does nothing (verified 2026-08-27: the flag lands in
+    `common.emevd` Event 0 but the 1.16 files carry no event reading it).
+    Refresh the eight snapshot maps and `common_func` first, then
+    regenerate:
+    `python tools/refresh_vanilla_snapshot.py <patched game> --file
+    common_func.emevd.dcx --file m10_00_00_00.emevd.dcx --file
+    m10_00_00_00.msb.dcx ...` for `m10_00_00_00`, `m11_00_00_00`,
+    `m60_34_50_00`, `m60_38_41_00`, `m60_44_52_00`, `m60_47_42_00`,
+    `m60_50_40_00`, `m60_51_36_00` (`m60_44_52_10` is not in the
+    snapshots, FogMod dupe-writes it from `_00`; `m60_52_39_00` is not
+    overridden by the mod). The run re-copies `regulation.bin` and msg too,
+    reported "up to date". The shop row (`ShopLineupParam` 101896) needs
+    only the regulation refresh. Not covered: the Torrent appearance menu
+    (grace ESD and `common.emevd` event 780 stay 1.16).
+    Two things a preview host must undo before generating a seed for
+    others: the flag entry lives in a tracked file, so check `git status`
+    before every commit and never commit it; and the refreshed files ship
+    the Leyndell invasion event 11002930 to pack owners regardless of the
+    flag, so put the nine files back on 1.16. `refresh_vanilla_snapshot.py`
+    cannot do that (it always includes `regulation.bin`): either copy them
+    from a frozen 1.16 install into both snapshots by hand, or re-bootstrap
+    and re-run the regulation refresh without `--file`.
 - [ ] Grace menu ESD (`m00_00_00_00.talkesdbnd`): 1.17 adds a Torrent
       attire entry. Keeping the 1.16 ESD hides it (acceptable). If refreshed,
       re-validate `RebirthInjector` and `ShadowRealmBlessingRemover`
@@ -396,7 +426,7 @@ frozen 1.16.2 copy and the FogRando snapshot.
   vanilla `RideParam 80000` row is untouched but no longer used by the 1.17
   executable, and none of the new rows exist in a 1.16 `regulation.bin`.
   Fix: ship the 1.17 params (Phase 2 refresh of both snapshots); a seed
-  built afterwards carries the rows, in-game confirmation pending. A
+  built afterwards carries the rows, confirmed in-game 2026-08-27. A
   1.16-built seed otherwise runs on the 1.17 executable (verified in-game).
 
 Consequence for Phase 2: the S2 exposure is six pickups, two invasions and
@@ -443,3 +473,12 @@ dotnet tool install ilspycmd --tool-path "$SCRATCH/tools" --version 11.0.0.9375
   patched install so the game-directory readers match the snapshot. In-game
   confirmation of Torrent on a seed built from the refreshed snapshots
   pending.
+- 2026-08-27 (evening): Torrent confirmed in-game on a refreshed-snapshot
+  seed. For a local compatibility preview of the Tarnished Pack content,
+  both snapshots on the generation host also moved to the 1.17 EMEVD and
+  MSB of the eight maps listed under "Decide per map" plus `common_func`,
+  with an uncommitted `[[startup_flags]]` entry for flag 6953. This
+  overrides the Leyndell invasion default on that host: restore the 1.16
+  files and drop the entry before generating seeds for others (procedure
+  in the same bullet). A bootstrap also reverts the files, like the
+  regulation refresh.
