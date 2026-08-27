@@ -24,7 +24,7 @@ output/
 ├── launch_speedfog.bat        # Detects save, starts daemon, launches game
 ├── recovery.bat               # Wrapper → backups/recovery.ps1
 └── backups/
-    ├── config.ini             # Optional backup settings (the game path override lives in %APPDATA%\SpeedFog\config.ini)
+    ├── config.ini             # Optional backup settings (the game path override lives in %APPDATA%\SpeedFog\config.ini or <seed>\config.ini)
     ├── launch_helper.ps1      # Save detection + daemon launch (Windows)
     ├── resolve_game_path.ps1  # Optional eldenring.exe override for ModEngine 2
     ├── backup_daemon.ps1      # Windows daemon
@@ -54,12 +54,16 @@ The `<steam_id>` varies per player. ModEngine 2 does not isolate saves, so the b
 Detection runs in the **launcher** (visible console window):
 
 Before anything else, the launcher resolves an optional game override
-(`resolve_game_path.ps1`: `SPEEDFOG_GAME_PATH` or `game_path=` in
-`%APPDATA%\SpeedFog\config.ini`) and passes it to ModEngine 2 as
-`-p <eldenring.exe>`. This lets a player keep a frozen copy of an older game
-version. An override that points nowhere aborts the launch (`INVALID` on
-stdout) so the player never silently plays the Steam install instead. The
-save file is not affected by the override: both game copies share it.
+(`resolve_game_path.ps1`: `SPEEDFOG_GAME_PATH`, then `game_path=` in
+`%APPDATA%\SpeedFog\config.ini`, then `game_path=` in `<seed>\config.ini`
+at the seed root; the first configured value wins) and passes it to
+ModEngine 2 as `-p <eldenring.exe>`. This lets a player keep a frozen copy
+of an older game version. The seed-root file is not part of the packaging
+output: a distributor such as SpeedFog Racing adds it to the seed from the
+player's account settings, and the per-machine sources take precedence over
+it. An override that points nowhere aborts the launch (`INVALID` on stdout)
+so the player never silently plays the Steam install instead. The save file
+is not affected by the override: both game copies share it.
 
 Then the launcher checks whether `eldenring.exe` is already
 running. If so, it shows an error popup and aborts entirely (exit code 2

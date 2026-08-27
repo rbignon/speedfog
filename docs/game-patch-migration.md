@@ -85,7 +85,7 @@ Verified 2026-08-26 in `reference/fogrando-src/` and in decompiled
 6. **Runtime.** `modengine2_launcher.exe` accepts `-p/--game-path`
    (exe path, bypasses Steam autodetect); the seed launcher exposes it as
    `SPEEDFOG_GAME_PATH` or `game_path=` in `%APPDATA%\SpeedFog\config.ini`
-   (see `docs/save-backup.md`). The speedfog-racing DLL locates memory with
+   or in `<seed>\config.ini` (see `docs/save-backup.md`). The speedfog-racing DLL locates memory with
    AOB pattern scans (`mod/src/core/aob.rs`), robust to most patches but to
    be re-validated on every executable change.
 

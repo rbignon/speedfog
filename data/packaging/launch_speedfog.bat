@@ -6,8 +6,9 @@ setlocal
 REM Get the directory where this script is located
 set SCRIPT_DIR=%~dp0
 
-REM Optional game override: SPEEDFOG_GAME_PATH or game_path= in
-REM %APPDATA%\SpeedFog\config.ini (see backups\resolve_game_path.ps1).
+REM Optional game override: SPEEDFOG_GAME_PATH, or game_path= in
+REM %APPDATA%\SpeedFog\config.ini, or game_path= in config.ini next to this
+REM script (see backups\resolve_game_path.ps1 for the precedence).
 REM Lets a player run SpeedFog on a frozen copy of the game. An override that
 REM points nowhere aborts here rather than silently launching the Steam install.
 set "GAME_EXE="

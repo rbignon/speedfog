@@ -140,11 +140,16 @@ game_path=D:\Games\ELDEN RING 1.16\Game
 ```
 
 The value may be the `Game` folder or the `eldenring.exe` inside it; keep
-the copy on a path without accented or non-Latin characters. The setting
-lives outside the seed folder, so it applies to every seed (it is not the
-per-seed `backups\config.ini`, which only holds backup settings). The
-launcher prints which game it uses and refuses to start if the configured
-path does not exist. Steam must still be running. The save file
+the copy on a path without accented or non-Latin characters. Both settings
+live outside the seed folder, so they apply to every seed. A seed
+distributor may also ship the same `game_path=` line in a `config.ini` at
+the seed root, next to `launch_speedfog.bat` (SpeedFog Racing writes it
+from the player's account settings); it is only used when neither the
+environment variable nor the per-machine file is set, so a local setting
+always wins. None of these is the per-seed `backups\config.ini`, which only
+holds backup settings. The launcher prints which game it uses and refuses
+to start if the configured path does not exist. Steam must still be
+running. The save file
 (`%APPDATA%\EldenRing\<id>\ER0000.sl2`) is shared by both copies: do not
 open the updated game with a save you still need on the older version, and
 keep the backup daemon enabled (see `docs/save-backup.md`).
