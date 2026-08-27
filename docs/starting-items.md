@@ -86,7 +86,7 @@ Starting runes are set directly on all character classes via the `CharaInitParam
 
 | Field | Max | Notes |
 |-------|-----|-------|
-| `soul` (s32) | 10,000,000 | Set on all 10 classes (rows 3000-3009) |
+| `soul` (s32) | 10,000,000 | Set on every starting class row resolved by `StartingClassRows` from `BaseChrSelectMenuParam`: `originChrInitParam` 3000-3011 and `chrInitParam` 3100-3122 plus their odd twins 3101-3123 (36 rows for the 12 classes since Elden Ring 1.17). A missing param stops generation instead of falling back to 3000-3009. |
 
 Config: `starting_runes = 500000` sets 500k runes on every class. Clamped to 0-10M.
 

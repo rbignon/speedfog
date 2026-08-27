@@ -1,3 +1,5 @@
+using SoulsFormats;
+
 namespace FogModWrapper;
 
 /// <summary>
@@ -7,10 +9,6 @@ namespace FogModWrapper;
 /// </summary>
 public static class StartingRuneInjector
 {
-    // CharaInitParam row IDs for the 10 base classes (Vagabond through Wretch)
-    private const int CLASS_ROW_MIN = 3000;
-    private const int CLASS_ROW_MAX = 3009;
-
     // CharaInitParam.soul max value from paramdef
     private const int MAX_SOUL = 10_000_000;
 
@@ -34,15 +32,7 @@ public static class StartingRuneInjector
 
         Console.WriteLine($"Setting starting runes to {clampedRunes:N0} on all classes...");
 
-        int updated = 0;
-        foreach (var row in charaParam.Rows)
-        {
-            if (row.ID < CLASS_ROW_MIN || row.ID > CLASS_ROW_MAX)
-                continue;
-
-            row["soul"].Value = clampedRunes;
-            updated++;
-        }
+        int updated = Apply(charaParam, StartingClassRows.Resolve(reg), clampedRunes);
 
         if (updated == 0)
         {
@@ -50,6 +40,20 @@ public static class StartingRuneInjector
             return;
         }
 
-        Console.WriteLine($"  Set {clampedRunes:N0} starting runes on {updated} classes");
+        Console.WriteLine($"  Set {clampedRunes:N0} starting runes on {updated} class rows");
+    }
+
+    /// <summary>Set soul on every CharaInitParam row listed in classRows; returns the count.</summary>
+    internal static int Apply(PARAM charaParam, ISet<int> classRows, int runes)
+    {
+        int updated = 0;
+        foreach (var row in charaParam.Rows)
+        {
+            if (!classRows.Contains(row.ID))
+                continue;
+            row["soul"].Value = runes;
+            updated++;
+        }
+        return updated;
     }
 }

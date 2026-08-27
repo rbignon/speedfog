@@ -71,6 +71,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>eldendata/Defs/CharaInitParam.xml</Link>
     </None>
+    <None Include="eldendata/Defs/BaseChrSelectMenuParam.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>eldendata/Defs/BaseChrSelectMenuParam.xml</Link>
+    </None>
     <None Include="eldendata/Defs/EquipParamWeapon.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>eldendata/Defs/EquipParamWeapon.xml</Link>

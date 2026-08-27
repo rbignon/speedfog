@@ -6,13 +6,9 @@ namespace FogModWrapper;
 /// </summary>
 public static class WeaponUpgradeInjector
 {
-    // CharaInitParam row IDs for the 10 base classes (Vagabond through Wretch)
-    private const int CLASS_ROW_MIN = 3000;
-    private const int CLASS_ROW_MAX = 3009;
-
     // Weapon equipment fields in CharaInitParam, mapped to their
     // wepParamType companion fields (0 = EquipParamWeapon, 1 = EquipParamCustomWeapon).
-    // The randomizer also maps Subwep_Right3/Left3, but vanilla base classes (3000-3009)
+    // The randomizer also maps Subwep_Right3/Left3, but the vanilla starting classes
     // never use the third slots, so we omit them.
     private static readonly Dictionary<string, string> WeaponTypeFields = new()
     {
@@ -101,10 +97,11 @@ public static class WeaponUpgradeInjector
         Console.WriteLine($"Upgrading starting class weapons to +{weaponUpgrade} (somber +{SomberUpgrade(weaponUpgrade)})...");
 
         int upgraded = 0;
+        var classRows = StartingClassRows.Resolve(reg);
 
         foreach (var row in charaParam.Rows)
         {
-            if (row.ID < CLASS_ROW_MIN || row.ID > CLASS_ROW_MAX)
+            if (!classRows.Contains(row.ID))
                 continue;
 
             foreach (var (fieldName, typeFieldName) in WeaponTypeFields)

@@ -404,6 +404,15 @@ frozen 1.16.2 copy and the FogRando snapshot.
   1252392280/520/600) the parameter table binds it only to checks, never to
   a `SetEventFlag`. The engine therefore sets it from DLC ownership.
   Without the pack the content stays dormant, in vanilla and in seeds alike.
+- **Starting classes in our injectors**: the two classes use `CharaInitParam`
+  rows 3010/3011 (origin) and 3120-3123, outside the 3000-3009 range
+  `StartingRuneInjector` and `WeaponUpgradeInjector` used to hard-code, so a
+  pack owner picking Idus Knight or Heavy Knight got no starting runes and no
+  weapon upgrade. Fixed 2026-08-27: `StartingClassRows` resolves the rows
+  from `BaseChrSelectMenuParam` (both families plus the odd twins, as
+  RandomizerCommon does) and fails generation instead of falling back; the
+  def now ships with the exe (`FogModWrapper.csproj`). Verified on generated
+  seeds: 36 rows at 100,000 runes, class weapons at the configured level.
 - **Treasure pickups** (one asset plus a Treasure MSB event named
   "Patch1.17", one or two init instructions in EMEVD event 0): `m60_34_50`
   (`AEG099_630_9001`, 1034501601), `m60_38_41` (`AEG099_600_9002`,

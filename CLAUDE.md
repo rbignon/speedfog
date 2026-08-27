@@ -109,6 +109,7 @@ speedfog/
 │   │   ├── StartingItemInjector.cs  # Inject starting item events into EMEVD
 │   │   ├── StartingResourcesInjector.cs  # Inject seeds, tears, keys
 │   │   ├── StartingRuneInjector.cs  # Set starting runes via CharaInitParam
+│   │   ├── StartingClassRows.cs  # CharaInitParam rows of the selectable classes (from BaseChrSelectMenuParam)
 │   │   ├── RoundtableUnlockInjector.cs  # Unlock Roundtable Hold at start
 │   │   ├── ShopInjector.cs           # Add smithing stones + Sentry's Torch to shop
 │   │   ├── ZoneTrackingInjector.cs  # Zone tracking flags for racing
@@ -278,6 +279,7 @@ speedfog/
 | `StartingItemInjector` | Injects starting item events into common.emevd |
 | `StartingResourcesInjector` | Injects consumables (seeds, tears, keys) via EMEVD |
 | `StartingRuneInjector` | Sets starting runes on all classes via CharaInitParam.soul |
+| `StartingClassRows` | Resolves the CharaInitParam rows of the selectable classes from BaseChrSelectMenuParam (covers the 1.17 Tarnished Pack classes) |
 | `RoundtableUnlockInjector` | Unlocks Roundtable Hold at game start |
 | `ShopInjector` | Adds smithing stones + Sentry's Torch to Twin Maiden Husks shop |
 | `ZoneTrackingInjector` | Injects SetEventFlag before fog gate warps for racing |
