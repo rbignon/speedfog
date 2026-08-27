@@ -154,6 +154,7 @@ speedfog/
 │   ├── port_boss_arena_tags.py  # Port BAR data → data/boss_arena_tags.json
 │   ├── generate_title_screen.py  # Generate data/title_screen_overlay.png (title badge)
 │   ├── extract_fog_data.py  # Extract fog gate metadata
+│   ├── diff_vanilla_snapshot.py  # Hash-diff an unpacked game dir against eldendata/Vanilla (game patch triage)
 │   ├── dump_emevd_warps/    # EMEVD analysis tool (dump warps, search flags, trace inits)
 │   └── game_inspect/        # Game data inspection tool (SFX, MSB entities, EMEVD, asset comparison)
 ├── reference/               # FogRando decompiled code (READ-ONLY)
@@ -560,6 +561,19 @@ wine publish/win-x64/game_inspect.exe dump-param <regulation.bin> SpEffectParam 
   --defs ../../writer/FogModWrapper/eldendata/Defs --def-name SpEffect --field maxHpRate
 wine publish/win-x64/game_inspect.exe dump-param <regulation.bin> NpcParam --prefix 4420 \
   --defs ../../writer/FogModWrapper/eldendata/Defs
+
+# Game patch triage (see docs/game-patch-migration.md). check-params applies the
+# bundled Defs to every param exactly like SoulsIds does for FogMod and lists the
+# ones that fail (exit code 2), plus row-count differences against a reference
+# regulation.bin (--all lists every param). diff-msb / diff-emevd compare the
+# same map across two game versions (added/removed/moved parts, regions, events;
+# added/removed/changed EMEVD events). bnd-list identifies DCX files an unpacker
+# could not name.
+wine publish/win-x64/game_inspect.exe check-params <new-regulation.bin> \
+  --defs ../../writer/FogModWrapper/eldendata/Defs --reference <old-regulation.bin> [--all]
+wine publish/win-x64/game_inspect.exe diff-msb <old.msb.dcx> <new.msb.dcx>
+wine publish/win-x64/game_inspect.exe diff-emevd <old.emevd.dcx> <new.emevd.dcx>
+wine publish/win-x64/game_inspect.exe bnd-list <game>/_unknown/*
 ```
 
 ### Investigation Tips

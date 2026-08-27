@@ -38,6 +38,22 @@ if (args.Length >= 1 && args[0] == "dump-esd")
 {
     return DumpEsd.Run(args);
 }
+if (args.Length >= 1 && args[0] == "check-params")
+{
+    return CheckParams.Run(args);
+}
+if (args.Length >= 1 && args[0] == "diff-msb")
+{
+    return DiffMsb.Run(args);
+}
+if (args.Length >= 1 && args[0] == "diff-emevd")
+{
+    return DiffEmevd.Run(args);
+}
+if (args.Length >= 1 && args[0] == "bnd-list")
+{
+    return BndList.Run(args);
+}
 if (args.Length >= 1 && args[0] == "list-enemies")
 {
     if (args.Length < 2) { Console.Error.WriteLine("Usage: game_inspect list-enemies <msb>"); return 1; }

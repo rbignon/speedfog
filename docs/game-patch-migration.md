@@ -23,10 +23,18 @@ work progresses and keep the decision log at the bottom.
 - thefifthmatt's stated timeline: Item and Enemy Randomizer updated within
   a day or two; FogRando "may take much longer", possibly not before it
   merges into the unified randomizer (no WinForms, sources published).
-- Baseline before the patch: `eldenring.exe` dated 2025-09-15,
-  `regulation.bin` md5 `56ec3b35bc9412aac9838f399f2f8afd`, FogRando v0.2.3,
-  Item Randomizer v0.12alpha1, ModEngine 2.1.0, SoulsFormatsNEXT submodule
-  at `d0caa7a`.
+- Baseline before the patch: `eldenring.exe` dated 2025-09-15
+  (FileVersion 2.6.1.0), `regulation.bin` md5
+  `56ec3b35bc9412aac9838f399f2f8afd` (2036272 bytes, identical to the
+  snapshot's), FogRando v0.2.3, Item Randomizer v0.12alpha1, ModEngine 2.1.0,
+  SoulsFormatsNEXT submodule at `d0caa7a`.
+- Patched game (received 2026-08-27, one day early): `eldenring.exe` dated
+  2026-08-27 (FileVersion 2.7.0.0), `regulation.bin` md5
+  `f27fb24bb28c9c6f7f0e784aba2baa9e` (2045728 bytes). On the generation host
+  the patched install is `/data/thewall/Game` and the frozen 1.16.2 copy is
+  `/data/thewall/Game.1.16.2`, both unpacked to loose files; `config.toml`
+  points at the frozen copy. Triage results are in "1.17 triage results"
+  below.
 
 ## What the pipeline depends on
 
@@ -111,9 +119,11 @@ Liurnia, Altus, Caelid and Leyndell. S3 has no signal in the notes.
 - [ ] Run `backups/resolve_game_path.ps1` once on a Windows machine and
       test the three edge cases: an empty value (`game_path=""`), a
       commented key (`# game_path=`), a path containing `=`.
-- [ ] Freeze a full copy of `Game/` on every machine that generates seeds
+- [x] Freeze a full copy of `Game/` on every machine that generates seeds
       (speedfog-racing's `tools/generate_pool.py` host included). Point
-      `config.toml` `game_dir` at the frozen copy.
+      `config.toml` `game_dir` at the frozen copy. Done on the generation
+      host (`/data/thewall/Game.1.16.2`, `config.toml` repointed
+      2026-08-27); the racing pool host still has to be checked.
 - [ ] Announce to players (the README section exists, the announcement
       does not): block automatic updates, or copy `Game/` and configure the
       launcher; the save file is shared between copies until the
@@ -123,18 +133,21 @@ Liurnia, Altus, Caelid and Leyndell. S3 has no signal in the notes.
 
 Run in order; each step decides the next.
 
-- [ ] Copy the patched game to a second directory, keep the frozen copy
-      untouched. Note the executable date and version.
-- [ ] Extract the `eldendata/Vanilla` file list plus `msg/*` from the
-      patched game (WitchyBND under Wine, or SoulsIds `BhdExtractor`) and
-      hash-diff against the snapshot. Expected for 1.17: `regulation.bin`,
+- [x] Copy the patched game to a second directory, keep the frozen copy
+      untouched. Note the executable date and version. (2.7.0.0, 2026-08-27.)
+- [x] Extract the `eldendata/Vanilla` file list plus `msg/*` from the
+      patched game and hash-diff against the snapshot:
+      `python tools/diff_vanilla_snapshot.py <patched> --reference <frozen>`
+      on unpacked game directories. Expected for 1.17: `regulation.bin`,
       msg, the MSB and EMEVD of Stormveil (m10_00), Liurnia, Altus, Caelid
       and Leyndell (m11_00) tiles, `common.emevd`, and
       `m00_00_00_00.talkesdbnd` (grace menu). Anything else is a surprise.
-- [ ] Read one changed file of each type with the old SoulsFormats.
-      `tools/game_inspect` links `writer/lib/SoulsFormats.dll` and already
-      has `dump-param`, `find-model` and `check-emevd` for that. Failure
-      means S3.
+      (Result: 204 changed, 0 missing, see below.)
+- [x] Read one changed file of each type with the old SoulsFormats.
+      `tools/game_inspect` links `writer/lib/SoulsFormats.dll`:
+      `check-params` (every param against the bundled Defs, SoulsIds
+      semantics), `diff-msb`, `diff-emevd`, `dump-fmg`, `dump-esd`. Failure
+      means S3. (Result: everything reads, all 194 Defs apply to 1.17.)
 - [ ] Launch an existing pre-patch seed on the patched executable through
       ModEngine. Outcomes: plays (buy time), boots without the new content
       (fine for racing), crashes at boot (S1 hard path), fails before the
@@ -148,7 +161,17 @@ Run in order; each step decides the next.
 
 ### Phase 2: move the snapshot to the new version
 
-- [ ] Wait for Paramdex defs for 1.17, refresh `eldendata/Defs`.
+Precondition, not a technical one: a seed ships one `regulation.bin`, and it
+must match the executable of every player who runs it. Once the snapshot
+moves to 1.17, players on a frozen 1.16 copy get a 1.17 regulation on a 1.16
+executable (untested, at best missing rows referenced by the new params).
+Moving the snapshot is therefore a community switch (everyone updates, the
+frozen-copy instruction is withdrawn), not a rolling one. Until that call,
+seeds stay on 1.16 and the frozen copy stays the supported setup.
+
+- [ ] Refresh `eldendata/Defs` only if `check-params` reports a mismatch
+      (for 1.17 it reports none: no param layout changed, the 1.16 Defs apply
+      to every param, so Paramdex is not on the critical path).
 - [ ] Replace `Vanilla/regulation.bin` and `Vanilla/msg` with the 1.17
       files. Keep MSB, EMEVD and ESD on 1.16 unless a reason below applies.
       Trap: `eldendata/` is gitignored and `tools/bootstrap.py:286-294`
@@ -229,17 +252,113 @@ A frozen copy and the Steam install share
   me3 (only if ModEngine 2 itself breaks, S4; it was tried and reverted in
   commit `3b6958d`).
 
-## Tooling to write
+## Tooling
 
-- `tools/diff_vanilla_snapshot.py`: given a game directory, extract the
-  files listed in `eldendata/Vanilla` plus `msg/*`, hash them against the
-  snapshot, print the changed list. This is Phase 1 step 2 and the input of
-  every Phase 2 decision.
-- `tools/refresh_paramdefs.py`: fetch or copy a Paramdex checkout into
-  `eldendata/Defs`, reporting defs whose row size changed.
-- Both act on gitignored, bootstrap-managed directories: make them idempotent,
-  print what they replaced, and either hook them into `tools/bootstrap.py`
-  or document that they must be re-run after every bootstrap.
+- `tools/diff_vanilla_snapshot.py <game> [--reference <frozen>]` (written
+  2026-08-27): hashes every `eldendata/Vanilla` file against its counterpart
+  in an unpacked game directory and lists changed and missing files. With
+  `--reference` the diff becomes three-way: a file is a patch change when
+  the game copy differs from the frozen copy, and a stale snapshot file when
+  both game copies agree but the snapshot differs (the frozen copy is the
+  ground truth, the snapshot is not). This also covers the injectors that
+  read from the installed game instead of the snapshot (`RunCompleteInjector`
+  reads `menu_dlc02` of every language, `SummerTheme` reads `item` and
+  `item_dlc02`). Bundles the snapshot does not carry (`item_dlc01`,
+  `menu_dlc01`, `ngword`, `araae`) are listed separately, compared to the
+  frozen copy only. Needs loose files (UXM, Nuxe or similar): the FogRando
+  snapshot itself is the baseline, no archive extraction here.
+- `tools/game_inspect` (Wine): `check-params <regulation.bin> --defs <Defs>
+  [--reference <regulation.bin>] [--all]` replays SoulsIds' def application
+  over every param (exit code 2 on any failure) and lists row-count changes
+  (`--all` lists every param, not only problems and differences);
+  `diff-msb` / `diff-emevd` compare one map across two versions; `bnd-list`
+  names the files an unpacker left in `_unknown/`.
+- Still to write when needed: a snapshot refresh step (copy chosen files
+  from a game directory into `eldendata/Vanilla`, idempotent, printing what
+  it replaced) and a Paramdex refresh. Both act on gitignored,
+  bootstrap-managed directories: hook them into `tools/bootstrap.py` or
+  document that they must be re-run after every bootstrap.
+
+## 1.17 triage results
+
+Measured 2026-08-27 with the tooling above, patched install against the
+frozen 1.16.2 copy and the FogRando snapshot.
+
+- **Snapshot diff**: 204 of 1711 snapshot files changed, none missing.
+  `regulation.bin`; `common.emevd` and `common_func.emevd`;
+  `m00_00_00_00.talkesdbnd` (grace menu); Stormveil `m10_00` and Leyndell
+  `m11_00` MSB+EMEVD; 133 overworld tiles (MSB, plus the EMEVD of
+  `m60_34_50`, `m60_38_41`, `m60_44_52`, `m60_47_42`, `m60_50_40`,
+  `m60_51_36`, `m60_52_39`); all four msg bundles (`item`, `menu`,
+  `item_dlc02`, `menu_dlc02`) in all 14 languages. Every one of the 204 is a
+  real patch change (game differs from the frozen 1.16.2 copy). The base
+  `item`/`menu` bundles were in addition already stale in the snapshot
+  (FogMod only reads and writes the `_dlc02` ones), which is harmless for
+  FogMod but matters for `SummerTheme`: it reads `item.msgbnd` from the
+  installed game, so a host generating against a patched install feeds it
+  1.17 text. Outside the snapshot, `item_dlc01`/`menu_dlc01` changed in
+  every language, and `araae` (absent from the snapshot) changed too.
+- **Params**: no layout change. `check-params` applies all 194 bundled Defs
+  to the 1.17 regulation exactly as on 1.16.2 (0 problems on both). 26 params
+  gained rows: `EquipParamWeapon` +82, `CharaInitParam` +33, `SpEffectParam`
+  +29, `ItemLotParam_map` +28, `ShopLineupParam` +19, `EquipParamProtector`
+  +18, `EquipParamGoods` +3, `NpcParam` +6, `ActionButtonParam` +1,
+  `EquipMtrlSetParam` +4, `BaseChrSelectMenuParam` +2 (the two classes),
+  and others. `ShopLineupParam` gained row 101896 inside the Twin Maiden Husks
+  range; `ShopInjector` only clears 101800-101817 (8 + 9 + 1 rows), so no
+  collision and no need to move `BASE_SHOP_ID`.
+- **Formats**: the old SoulsFormats reads the 1.17 regulation, MSB, EMEVD,
+  msgbnd and talkesdbnd without error. S3 is off the table for 1.17.
+- **New files**: the 1.17 archives contain 73 files the unpacker's
+  dictionary did not know; `bnd-list` identifies all of them as part
+  bundles (weapon `WP_A_*`, armor `BD/HD/LG/AM_M_*` models, textures,
+  animations). No new map, event, param or text file.
+- **common.emevd**: new event 780 (2 instructions) initialised from event 0
+  (434 -> 435 instructions). **common_func.emevd**: new event 900005590
+  (12 instructions). Neither touches the FogMod templates.
+- **Stormveil `m10_00`**: one new asset `AEG099_630_9006` (entity 10001256,
+  the Spectral Steed Attire pickup) with its Treasure and ObjAct MSB events
+  (named "Patch1.17" in the MSB); EMEVD event 0 gained one instruction. No
+  entity moved.
+- **Leyndell `m11_00`**: one new enemy part `c0000_9060` (entity 11000180)
+  and three "Patch1.17" regions (11002180-11002182), the NPC invasion; EMEVD
+  gained event 11002930 and five instructions in event 0. No entity moved.
+- **Caelid invasion** (`m60_52_39_00`, Dragonbarrow): EMEVD 832 -> 24112
+  bytes with ten new events (0, 200, 1052392910, 1252392200-1252392695);
+  MSB gains enemy `c0000_9020` (entity 1052390180) and five NPC regions
+  (1052392180-1052392182). The level-2 tile `m60_13_09_02` gains enemy
+  `c0000_9010` (entity 1052390200) and ten `AEG099_090` assets
+  (1052391500-1052391572).
+- **Redmane Castle `m60_51_36_00`**: one new enemy `c0000_9013` (entity
+  1051360740) with EMEVD event 1051360740 (32 instructions), most likely the
+  Knight Leontiel summon (`menu_dlc02` 9560, 80900-80902).
+- **Grace menu ESD** (`t000001000`, machine 2147483616): 46 -> 49 states,
+  one new branch on menu result 75 (Torrent appearance, texts
+  20010070-20010079 and 20011070-20011078 in `menu_dlc02`). Every other
+  branch keeps its target, only the state numbers were renumbered.
+- **Text** (`engus`): `menu_dlc02` +30 entries (Torrent appearance menu,
+  Knight Leontiel summon texts, class names Idus Knight / Heavy Knight,
+  "Tarnished Pack" system message); `item_dlc02` +262 entries (new
+  equipment names and descriptions) and 39 reworded DLC weapon captions
+  (backhand blades, great katanas, light greatswords). No entry removed.
+- **Treasure pickups** (one asset plus a Treasure MSB event named
+  "Patch1.17", one or two init instructions in EMEVD event 0): `m60_34_50`
+  (`AEG099_630_9001`, 1034501601), `m60_38_41` (`AEG099_600_9002`,
+  1038411682), `m60_44_52` (`AEG099_395_1000` + `AEG099_990_9010`,
+  1044521620/1044521610), `m60_47_42` (`AEG099_620_9000`, 1047421680),
+  `m60_50_40` (`AEG099_600_9000`, 1050401680), plus the Stormveil one above.
+- **The other 125 changed MSBs**: identical decompressed size, and
+  `diff-msb` finds no part, region or event added, removed, renamed,
+  re-modelled or moved. Byte-level field changes only (not identified, no
+  fog gate or warp region affected). Refreshing them buys nothing; keeping
+  the 1.16 versions costs nothing.
+
+Consequence for Phase 2: the S2 exposure is six pickups, two invasions and
+one summon NPC, all additive. No `fog.txt` entity moved, so refreshing any
+map is a content decision, not a compatibility one. The one input that
+changes silently on a host generating against a patched install is the
+text `SummerTheme` and `RunCompleteInjector` read from the game directory,
+which is why `config.toml` `game_dir` must stay on the frozen copy.
 
 ## Clean decompile recipe
 
@@ -264,3 +383,10 @@ dotnet tool install ilspycmd --tool-path "$SCRATCH/tools" --version 11.0.0.9375
   Stormveil, Liurnia, Altus, Caelid, Leyndell; grace menu ESD changes;
   `ShopInjector` range to check after the regulation refresh. Default for
   the two NPC invasions: keep the 1.16 EMEVD.
+- 2026-08-27: patch received and triaged (see "1.17 triage results"). S1
+  is the soft path: no param layout change, the bundled Defs apply, formats
+  read. `ShopInjector` range clear. Snapshot stays on 1.16 until the
+  community switches versions; the frozen copy is the supported setup
+  meanwhile. Remaining Phase 1 steps need a Windows machine (pre-patch seed
+  on the 1.17 executable, save round-trip) and the speedfog-racing repo
+  (AOB re-validation).

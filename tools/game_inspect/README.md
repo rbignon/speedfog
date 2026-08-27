@@ -100,6 +100,42 @@ wine publish/win-x64/game_inspect.exe check-emevd <emevd-file> [entity_id]
 
 Opens an EMEVD file, finds event ID 0 (the startup event, the only event inspected by this mode), and walks every instruction in it. For each instruction with at least 4 bytes of argument data, it reads the first 4 bytes as a `uint32`. If `entity_id` is provided, only instructions whose first 4 bytes equal that ID are reported. If omitted, any first-4-byte value in the `755895000-755895999` range (FogMod's startup-event entity allocation) is reported. Used as a quick sanity check when adding new entities: "did FogMod actually wire them up in the startup event?" Note the scan is deliberately dumb about opcode semantics, so it can produce false positives if an opcode's first argument is not an entity ID.
 
+### Game patch triage: `check-params`, `diff-msb`, `diff-emevd`, `bnd-list`
+
+Written for the Elden Ring 1.17 update (see `docs/game-patch-migration.md`).
+
+```bash
+# Apply the bundled Defs to every param, SoulsIds-style; exit code 2 on any failure.
+wine publish/win-x64/game_inspect.exe check-params <regulation.bin> \
+  --defs ../../writer/FogModWrapper/eldendata/Defs [--reference <old-regulation.bin>] [--all]
+
+# Compare one map across two game versions
+wine publish/win-x64/game_inspect.exe diff-msb <old.msb.dcx> <new.msb.dcx>
+wine publish/win-x64/game_inspect.exe diff-emevd <old.emevd.dcx> <new.emevd.dcx>
+
+# Identify DCX files an archive unpacker could not name
+wine publish/win-x64/game_inspect.exe bnd-list <game>/_unknown/*
+```
+
+`check-params` replays the predicate SoulsIds uses when it loads params for
+FogMod (`ParamType` equality and `DetectedSize == GetRowSize(ulong.MaxValue)`,
+`ParamDictionary.ApplyParamdefCarefully`) over every `.param` in the
+regulation, and prints the ones no def applies to. With `--reference` it also
+lists params whose row count or paramdef data version differs between the two
+files. `--all` prints every param. Do not replace it with SoulsFormats' own
+`PARAM.ApplyParamdefCarefully`, which uses a different row size and reports
+false mismatches.
+
+`diff-msb` first compares the decompressed bytes (a re-compressed but identical
+file is reported as such), then lists parts, regions and events added or
+removed by name, and common parts/regions whose model, entity ID, position or
+rotation changed. `diff-emevd` does the same for events by ID, comparing the
+instruction stream (bank, ID, argument bytes) of common events. Both print a
+"no differences" line when the bytes differ but nothing they look at does.
+
+`bnd-list` decompresses each file and prints the inner magic and size, plus
+the entry names of BND3, BND4 and TPF containers.
+
 ## How it works
 
 Dispatch lives in `Program.cs`:
@@ -109,6 +145,10 @@ game_inspect dump-entity ...   → DumpEntity        (Program.cs)
 game_inspect find-model ...    → FindModel.Run     (FindModel.cs)
 game_inspect compare ...       → CompareAssets.Run (CompareAssets.cs)
 game_inspect check-emevd ...   → CheckEmevd.Run    (CheckEmevd.cs)
+game_inspect check-params ...  → CheckParams.Run   (CheckParams.cs)
+game_inspect diff-msb ...      → DiffMsb.Run       (DiffMsb.cs)
+game_inspect diff-emevd ...    → DiffEmevd.Run     (DiffEmevd.cs)
+game_inspect bnd-list ...      → BndList.Run       (BndList.cs)
 game_inspect <sfx-path> ...    → ListSfx           (Program.cs, fallback)
 ```
 
