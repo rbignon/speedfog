@@ -19,6 +19,7 @@ def _make_packaging_tree(root: Path) -> None:
         "recovery.bat",
         "backups/config.ini",
         "backups/launch_helper.ps1",
+        "backups/resolve_game_path.ps1",
         "backups/backup_daemon.ps1",
         "backups/recovery.ps1",
         "lib/RandomizerCrashFix.dll",
@@ -99,6 +100,7 @@ def test_copy_packaging_assets_copies_tree_shape(tmp_path: Path) -> None:
     assert (seed_dir / "launch_speedfog.bat").exists()
     assert (seed_dir / "recovery.bat").exists()
     assert (seed_dir / "backups" / "config.ini").exists()
+    assert (seed_dir / "backups" / "resolve_game_path.ps1").exists()
     assert (seed_dir / "lib" / "RandomizerCrashFix.dll").exists()
     assert (seed_dir / "lib" / "RandomizerHelper.dll").exists()
     assert (seed_dir / "modengine2" / "modengine2_launcher.exe").exists()
@@ -110,6 +112,19 @@ def test_copy_packaging_assets_reports_missing_bootstrap_assets(
 ) -> None:
     with pytest.raises(PackagingError, match="Run tools/bootstrap.py"):
         copy_packaging_assets(tmp_path / "project", tmp_path / "seed")
+
+
+def test_copy_packaging_assets_requires_game_path_resolver(
+    tmp_path: Path,
+) -> None:
+    # Without the resolver the launcher silently falls back to the Steam
+    # install, so a missing script must fail packaging, not the player.
+    project_root = tmp_path / "project"
+    _make_packaging_tree(project_root)
+    (project_root / "data" / "packaging" / "backups" / "resolve_game_path.ps1").unlink()
+
+    with pytest.raises(PackagingError, match="resolve_game_path.ps1"):
+        copy_packaging_assets(project_root, tmp_path / "seed")
 
 
 def test_package_seed_copies_randomizer_helper_config(tmp_path: Path) -> None:

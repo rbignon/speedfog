@@ -122,6 +122,33 @@ The output folder is self-contained with ModEngine 2 copied from `data/packaging
 ./seeds/<seed>/launch_speedfog.bat
 ```
 
+#### Playing on a frozen copy of the game
+
+By default ModEngine 2 launches the Steam install. To keep playing SpeedFog
+on an older game version while Steam updates the main install, copy the whole
+`ELDEN RING/Game` folder somewhere else before the update, then point the
+launcher at it, either with an environment variable:
+
+```
+SPEEDFOG_GAME_PATH=D:\Games\ELDEN RING 1.16\Game
+```
+
+or with a per-machine config file at `%APPDATA%\SpeedFog\config.ini`:
+
+```ini
+game_path=D:\Games\ELDEN RING 1.16\Game
+```
+
+The value may be the `Game` folder or the `eldenring.exe` inside it; keep
+the copy on a path without accented or non-Latin characters. The setting
+lives outside the seed folder, so it applies to every seed (it is not the
+per-seed `backups\config.ini`, which only holds backup settings). The
+launcher prints which game it uses and refuses to start if the configured
+path does not exist. Steam must still be running. The save file
+(`%APPDATA%\EldenRing\<id>\ER0000.sl2`) is shared by both copies: do not
+open the updated game with a save you still need on the older version, and
+keep the backup daemon enabled (see `docs/save-backup.md`).
+
 ## Configuration
 
 Edit `config.toml` (see `config.example.toml` for all options).
