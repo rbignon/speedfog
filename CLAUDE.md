@@ -183,6 +183,7 @@ speedfog/
 │   ├── torrent-arena-patcher.md # Re-enable Torrent in selected boss arenas (DisableTorrent flag)
 │   ├── quitout-respawn.md   # Quit-out stable position (PlayRegionParam restore)
 │   ├── save-backup.md      # Save backup system (daemon, recovery, config)
+│   ├── game-patch-migration.md  # Keeping seeds playable across an Elden Ring update without a FogRando release
 │   ├── title-screen.md     # Title screen artwork replacement (BC7 splice at setup)
 │   └── plugins/             # Plugin documentation
 │       ├── README.md        # Plugin config convention
@@ -218,6 +219,7 @@ speedfog/
 | `docs/torrent-arena-patcher.md` | Re-enable Torrent in selected boss arenas (DisableTorrent collision flag) |
 | `docs/quitout-respawn.md` | Quit-out stable position fix (PlayRegionParam restore) |
 | `docs/save-backup.md` | Save backup system (daemon, recovery, config) |
+| `docs/game-patch-migration.md` | Elden Ring update playbook: pipeline dependencies, scenarios, ordered tasks, save handling (1.17 instance) |
 | `docs/item-giving-limitations.md` | EMEVD item type constraints and workarounds |
 | `docs/clusters.md` | Cluster generation from fog.txt |
 | `docs/opensplit-overrides.md` | Per-warp opensplit overrides (zone_metadata.toml -> Python cluster gen + C# tag injection) |
