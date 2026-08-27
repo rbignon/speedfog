@@ -491,3 +491,11 @@ dotnet tool install ilspycmd --tool-path "$SCRATCH/tools" --version 11.0.0.9375
   files and drop the entry before generating seeds for others (procedure
   in the same bullet). A bootstrap also reverts the files, like the
   regulation refresh.
+- 2026-08-27 (later): preview over, the generation host is back on the
+  distribution state: the 17 files copied back from the frozen 1.16.2
+  install into both snapshots (md5-checked), flag entry removed,
+  `regulation.bin` still 1.17. The plain `refresh_vanilla_snapshot.py
+  <patched game>` after a bootstrap remains the whole procedure. The
+  Tarnished Pack scenarios (owner, and owner with the DLC unchecked in
+  Steam to emulate a non-owner) are to be tested on the pack's release,
+  2026-08-28.
