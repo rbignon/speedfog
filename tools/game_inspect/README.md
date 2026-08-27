@@ -100,7 +100,7 @@ wine publish/win-x64/game_inspect.exe check-emevd <emevd-file> [entity_id]
 
 Opens an EMEVD file, finds event ID 0 (the startup event, the only event inspected by this mode), and walks every instruction in it. For each instruction with at least 4 bytes of argument data, it reads the first 4 bytes as a `uint32`. If `entity_id` is provided, only instructions whose first 4 bytes equal that ID are reported. If omitted, any first-4-byte value in the `755895000-755895999` range (FogMod's startup-event entity allocation) is reported. Used as a quick sanity check when adding new entities: "did FogMod actually wire them up in the startup event?" Note the scan is deliberately dumb about opcode semantics, so it can produce false positives if an opcode's first argument is not an entity ID.
 
-### Game patch triage: `check-params`, `diff-msb`, `diff-emevd`, `bnd-list`
+### Game patch triage: `check-params`, `diff-param`, `diff-msb`, `diff-emevd`, `bnd-list`
 
 Written for the Elden Ring 1.17 update (see `docs/game-patch-migration.md`).
 
@@ -108,6 +108,10 @@ Written for the Elden Ring 1.17 update (see `docs/game-patch-migration.md`).
 # Apply the bundled Defs to every param, SoulsIds-style; exit code 2 on any failure.
 wine publish/win-x64/game_inspect.exe check-params <regulation.bin> \
   --defs ../../writer/FogModWrapper/eldendata/Defs [--reference <old-regulation.bin>] [--all]
+
+# Rows added/removed and cells changed per param between two regulation.bin
+wine publish/win-x64/game_inspect.exe diff-param <old-regulation.bin> <new-regulation.bin> \
+  --defs ../../writer/FogModWrapper/eldendata/Defs [--param RideParam]... [--rows-only]
 
 # Compare one map across two game versions
 wine publish/win-x64/game_inspect.exe diff-msb <old.msb.dcx> <new.msb.dcx>
@@ -125,6 +129,13 @@ lists params whose row count or paramdef data version differs between the two
 files. `--all` prints every param. Do not replace it with SoulsFormats' own
 `PARAM.ApplyParamdefCarefully`, which uses a different row size and reports
 false mismatches.
+
+`diff-param` applies the Defs the same way and, per param, lists rows added
+or removed by ID and, for common rows, every cell whose value changed
+(`field: old -> new`). `--param` restricts it, `--rows-only` skips the cell
+comparison. A param that no def applies to is compared by row ID and row
+name only. This is how the Elden Ring 1.17 Torrent rows (`RideParam`
+80020-80050) were found.
 
 `diff-msb` first compares the decompressed bytes (a re-compressed but identical
 file is reported as such), then lists parts, regions and events added or
@@ -146,6 +157,7 @@ game_inspect find-model ...    → FindModel.Run     (FindModel.cs)
 game_inspect compare ...       → CompareAssets.Run (CompareAssets.cs)
 game_inspect check-emevd ...   → CheckEmevd.Run    (CheckEmevd.cs)
 game_inspect check-params ...  → CheckParams.Run   (CheckParams.cs)
+game_inspect diff-param ...    → DiffParam.Run     (DiffParam.cs)
 game_inspect diff-msb ...      → DiffMsb.Run       (DiffMsb.cs)
 game_inspect diff-emevd ...    → DiffEmevd.Run     (DiffEmevd.cs)
 game_inspect bnd-list ...      → BndList.Run       (BndList.cs)

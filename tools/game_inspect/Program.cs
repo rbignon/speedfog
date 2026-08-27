@@ -42,6 +42,10 @@ if (args.Length >= 1 && args[0] == "check-params")
 {
     return CheckParams.Run(args);
 }
+if (args.Length >= 1 && args[0] == "diff-param")
+{
+    return DiffParam.Run(args);
+}
 if (args.Length >= 1 && args[0] == "diff-msb")
 {
     return DiffMsb.Run(args);

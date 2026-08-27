@@ -122,8 +122,10 @@ Liurnia, Altus, Caelid and Leyndell. S3 has no signal in the notes.
 - [x] Freeze a full copy of `Game/` on every machine that generates seeds
       (speedfog-racing's `tools/generate_pool.py` host included). Point
       `config.toml` `game_dir` at the frozen copy. Done on the generation
-      host (`/data/thewall/Game.1.16.2`, `config.toml` repointed
-      2026-08-27); the racing pool host still has to be checked.
+      host (`/data/thewall/Game.1.16.2`) on 2026-08-27, then reverted the
+      same day once the snapshots moved to 1.17: `game_dir` must follow the
+      snapshot version (point 5 above), so it is back on the patched
+      install. The frozen copy stays as the reference for diffs.
 - [ ] Announce to players (the README section exists, the announcement
       does not): block automatic updates, or copy `Game/` and configure the
       launcher; the save file is shared between copies until the
@@ -148,10 +150,11 @@ Run in order; each step decides the next.
       `check-params` (every param against the bundled Defs, SoulsIds
       semantics), `diff-msb`, `diff-emevd`, `dump-fmg`, `dump-esd`. Failure
       means S3. (Result: everything reads, all 194 Defs apply to 1.17.)
-- [ ] Launch an existing pre-patch seed on the patched executable through
+- [x] Launch an existing pre-patch seed on the patched executable through
       ModEngine. Outcomes: plays (buy time), boots without the new content
       (fine for racing), crashes at boot (S1 hard path), fails before the
-      title screen (S4).
+      title screen (S4). (Result 2026-08-27: plays, except Torrent, see
+      "Torrent bug" below.)
 - [ ] Save compatibility: copy the current save aside, start the patched
       game once with it (vanilla, no mods), then load that save on the
       frozen copy. Loads: the shared-save concern is closed for this patch.
@@ -161,25 +164,27 @@ Run in order; each step decides the next.
 
 ### Phase 2: move the snapshot to the new version
 
-Precondition, not a technical one: a seed ships one `regulation.bin`, and it
-must match the executable of every player who runs it. Once the snapshot
-moves to 1.17, players on a frozen 1.16 copy get a 1.17 regulation on a 1.16
-executable (untested, at best missing rows referenced by the new params).
-Moving the snapshot is therefore a community switch (everyone updates, the
-frozen-copy instruction is withdrawn), not a rolling one. Until that call,
-seeds stay on 1.16 and the frozen copy stays the supported setup.
+A seed ships one `regulation.bin`, and it must suit the executable of every
+player who runs it. For 1.17 the switch was forced by the Torrent bug below:
+a 1.16 regulation on the 1.17 executable breaks Torrent for everyone. Seeds
+are therefore on 1.17 params since 2026-08-27. The reverse combination (a
+1.17 regulation on a frozen 1.16 copy) is expected to work, since no row was
+removed or re-laid-out and the 1.16 code never selects the new rows, but it
+has not been tested: players on a frozen copy should update.
 
-- [ ] Refresh `eldendata/Defs` only if `check-params` reports a mismatch
+- [x] Refresh `eldendata/Defs` only if `check-params` reports a mismatch
       (for 1.17 it reports none: no param layout changed, the 1.16 Defs apply
       to every param, so Paramdex is not on the critical path).
-- [ ] Replace `Vanilla/regulation.bin` and `Vanilla/msg` with the 1.17
-      files. Keep MSB, EMEVD and ESD on 1.16 unless a reason below applies.
-      Trap: `eldendata/` is gitignored and `tools/bootstrap.py:286-294`
-      re-copies it wholesale from the FogRando zip, so any re-bootstrap (on
-      the racing pool host too) silently reverts Defs and Vanilla to 1.16.
-      Until bootstrap learns to re-apply the refresh, re-run the refresh
-      tooling after every bootstrap and check the `regulation.bin` md5
-      before generating.
+- [x] Replace `Vanilla/regulation.bin` and `Vanilla/msg` with the 1.17
+      files, in both snapshots: `python tools/refresh_vanilla_snapshot.py
+      <patched game>` (2026-08-27, md5 `f27fb24bb28c9c6f7f0e784aba2baa9e`).
+      The Item Randomizer's `diste/Vanilla` must move too: with
+      `--merge-dir`, its `regulation.bin` takes precedence over FogMod's.
+      Keep MSB, EMEVD and ESD on 1.16 unless a reason below applies.
+      Trap: both snapshots are gitignored and `tools/bootstrap.py` re-copies
+      them wholesale from the zips, so any re-bootstrap (on the racing pool
+      host too) silently reverts them to 1.16. Re-run the refresh after every
+      bootstrap and check the `regulation.bin` md5 it prints.
 - [ ] Regenerate a known seed and diff it against the pre-patch output
       (exclude `regulation.bin` from byte diffs, it is never reproducible).
       Then play it on the patched executable.
@@ -273,11 +278,17 @@ A frozen copy and the Steam install share
   (`--all` lists every param, not only problems and differences);
   `diff-msb` / `diff-emevd` compare one map across two versions; `bnd-list`
   names the files an unpacker left in `_unknown/`.
-- Still to write when needed: a snapshot refresh step (copy chosen files
-  from a game directory into `eldendata/Vanilla`, idempotent, printing what
-  it replaced) and a Paramdex refresh. Both act on gitignored,
-  bootstrap-managed directories: hook them into `tools/bootstrap.py` or
-  document that they must be re-run after every bootstrap.
+- `tools/refresh_vanilla_snapshot.py <game> [--dry-run] [--snapshot
+  fogmod|itemrando] [--file <snapshot-rel>]` (written 2026-08-27): copies
+  `regulation.bin` and every msg bundle each snapshot already carries from
+  an unpacked game directory into `eldendata/Vanilla` and `diste/Vanilla`,
+  idempotent, prints what it replaced and the resulting `regulation.bin`
+  md5. Maps are never refreshed unless named with `--file`. Must be re-run
+  after every `tools/bootstrap.py`.
+- `game_inspect diff-param <old.bin> <new.bin> --defs <Defs> [--param X]
+  [--rows-only]`: rows added/removed and cells changed per param; this is
+  what located the Torrent rows.
+- Still to write when needed: a Paramdex refresh (not needed for 1.17).
 
 ## 1.17 triage results
 
@@ -353,12 +364,27 @@ frozen 1.16.2 copy and the FogRando snapshot.
   fog gate or warp region affected). Refreshing them buys nothing; keeping
   the 1.16 versions costs nothing.
 
+- **Torrent bug** (reported by Roger and the community 2026-08-27 on a
+  1.16-built seed running on 1.17: the whistle does nothing). Root cause:
+  1.17 spawns the mount through four new `RideParam` rows 80020-80050
+  (`defChrId` 8002-8005, one per appearance including "Original") backed by
+  new `NpcParam` rows 80020000-80050000 (copies of 80000000 with
+  `normalChangeAnimChrId = 8000`, so they reuse c8000's model and
+  animations) and `SpEffectVfxParam` 30000-30002 for the attires. The
+  vanilla `RideParam 80000` row is untouched but no longer used by the 1.17
+  executable, and none of the new rows exist in a 1.16 `regulation.bin`.
+  Fix: ship the 1.17 params (Phase 2 refresh of both snapshots); a seed
+  built afterwards carries the rows, in-game confirmation pending. A
+  1.16-built seed otherwise runs on the 1.17 executable (verified in-game).
+
 Consequence for Phase 2: the S2 exposure is six pickups, two invasions and
 one summon NPC, all additive. No `fog.txt` entity moved, so refreshing any
-map is a content decision, not a compatibility one. The one input that
-changes silently on a host generating against a patched install is the
-text `SummerTheme` and `RunCompleteInjector` read from the game directory,
-which is why `config.toml` `game_dir` must stay on the frozen copy.
+map is a content decision, not a compatibility one. `config.toml`
+`game_dir` must match the snapshot version: `RunCompleteInjector` ships the
+game directory's `menu_dlc02` for the 13 non-English languages next to the
+snapshot's `engus` one, `SummerTheme` reads the game directory's item text,
+and `PlayRegionPatcher` copies `PlayRegionParam` rows from the game
+directory's regulation (identical in 1.16 and 1.17, so harmless this time).
 
 ## Clean decompile recipe
 
@@ -385,8 +411,13 @@ dotnet tool install ilspycmd --tool-path "$SCRATCH/tools" --version 11.0.0.9375
   the two NPC invasions: keep the 1.16 EMEVD.
 - 2026-08-27: patch received and triaged (see "1.17 triage results"). S1
   is the soft path: no param layout change, the bundled Defs apply, formats
-  read. `ShopInjector` range clear. Snapshot stays on 1.16 until the
-  community switches versions; the frozen copy is the supported setup
-  meanwhile. Remaining Phase 1 steps need a Windows machine (pre-patch seed
-  on the 1.17 executable, save round-trip) and the speedfog-racing repo
-  (AOB re-validation).
+  read. `ShopInjector` range clear. Remaining Phase 1 steps need a Windows
+  machine (save round-trip) and the speedfog-racing repo (AOB
+  re-validation).
+- 2026-08-27 (later): a 1.16-built seed boots and plays on the 1.17
+  executable, except Torrent (see "Torrent bug"). Both snapshots moved to
+  the 1.17 `regulation.bin` and msg with `tools/refresh_vanilla_snapshot.py`;
+  maps, EMEVD and ESD stay on 1.16. `config.toml` `game_dir` back on the
+  patched install so the game-directory readers match the snapshot. In-game
+  confirmation of Torrent on a seed built from the refreshed snapshots
+  pending.
