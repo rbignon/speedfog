@@ -11,7 +11,8 @@ snapshots must move to the patched files. See docs/game-patch-migration.md.
 By default this copies regulation.bin and every message bundle the snapshot
 already carries (msg/<lang>/*.msgbnd.dcx). Map files (MSB, EMEVD, talk ESD)
 are left alone unless named with --file, because refreshing a map exposes
-fog.txt and fogevents.txt to moved entities and is a per-map decision.
+fog.txt and fogevents.txt to moved entities and is a per-map decision; --all
+refreshes every file the snapshot carries, for the day the maps move too.
 
 Both snapshots must carry the same regulation.bin: with --merge-dir, the
 Item Randomizer's output takes precedence over FogMod's snapshot, so a
@@ -27,6 +28,7 @@ Usage:
     python tools/refresh_vanilla_snapshot.py /path/to/Game --dry-run
     python tools/refresh_vanilla_snapshot.py /path/to/Game
     python tools/refresh_vanilla_snapshot.py /path/to/Game --file m60_52_39_00.emevd.dcx
+    python tools/refresh_vanilla_snapshot.py /path/to/Game --all
 """
 
 from __future__ import annotations
@@ -44,6 +46,7 @@ from diff_vanilla_snapshot import (
     file_digest,
     game_path_for,
     is_unpacked_game_dir,
+    iter_snapshot_files,
 )
 
 SNAPSHOTS = {
@@ -89,9 +92,27 @@ def validate_extra_file(snapshot_rel: str) -> str:
     return game_path_for(snapshot_rel)
 
 
-def plan_targets(snapshot_dir: Path, extra_files: list[str]) -> list[str]:
-    """Default targets followed by the extra files not already among them."""
-    targets = default_targets(snapshot_dir)
+def all_targets(snapshot_dir: Path) -> tuple[list[str], list[str]]:
+    """Every snapshot file with a known game location, plus the ones without one."""
+    targets: list[str] = []
+    skipped: list[str] = []
+    for rel in iter_snapshot_files(snapshot_dir):
+        try:
+            game_path_for(rel)
+        except ValueError:
+            skipped.append(rel)
+            continue
+        targets.append(rel)
+    return targets, skipped
+
+
+def plan_targets(
+    snapshot_dir: Path, extra_files: list[str], all_files: bool = False
+) -> list[str]:
+    """Default (or all) targets followed by the extra files not already among them."""
+    targets = (
+        all_targets(snapshot_dir)[0] if all_files else default_targets(snapshot_dir)
+    )
     for extra in extra_files:
         if extra not in targets:
             targets.append(extra)
@@ -160,6 +181,13 @@ def main(argv: list[str] | None = None) -> int:
         help="Extra snapshot-relative file to refresh, e.g. m60_52_39_00.emevd.dcx (repeatable)",
     )
     parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Refresh every file the snapshot carries (maps, events, talk ESDs included), not only "
+        "regulation.bin and msg. Combine with --snapshot only for experiments: the cross-snapshot "
+        "check below covers regulation.bin alone",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Report what would be replaced without writing",
@@ -197,12 +225,19 @@ def main(argv: list[str] | None = None) -> int:
     for name in names:
         snapshot_dir = SNAPSHOTS[name]
         print(f"== {name}: {snapshot_dir}{' (dry run)' if args.dry_run else ''}")
-        targets = plan_targets(snapshot_dir, args.file)
+        targets = plan_targets(snapshot_dir, args.file, args.all)
+        if args.all:
+            for rel in all_targets(snapshot_dir)[1]:
+                print(f"  skipped (unknown file type, extend SUFFIX_DIRS): {rel}")
+                problems += 1
         results = refresh_snapshot(snapshot_dir, args.game_dir, targets, args.dry_run)
         for r in results:
             if r.status == UP_TO_DATE:
                 continue
-            print(f"  {r.status}: {r.snapshot_rel}  <-  {r.game_rel}")
+            label = (
+                "would replace" if args.dry_run and r.status == REPLACED else r.status
+            )
+            print(f"  {label}: {r.snapshot_rel}  <-  {r.game_rel}")
             if r.status in (MISSING_IN_GAME, MISSING_IN_SNAPSHOT):
                 problems += 1
         counts = {

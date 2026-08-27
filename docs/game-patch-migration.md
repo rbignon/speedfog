@@ -170,7 +170,9 @@ a 1.16 regulation on the 1.17 executable breaks Torrent for everyone. Seeds
 are therefore on 1.17 params since 2026-08-27. The reverse combination (a
 1.17 regulation on a frozen 1.16 copy) is expected to work, since no row was
 removed or re-laid-out and the 1.16 code never selects the new rows, but it
-has not been tested: players on a frozen copy should update.
+has not been tested (Torrent included: the 1.16 code reads `RideParam`
+80000, which the 1.17 file still carries): players on a frozen copy should
+update.
 
 - [x] Refresh `eldendata/Defs` only if `check-params` reports a mismatch
       (for 1.17 it reports none: no param layout changed, the 1.16 Defs apply
@@ -238,10 +240,36 @@ has not been tested: players on a frozen copy should update.
       attire entry. Keeping the 1.16 ESD hides it (acceptable). If refreshed,
       re-validate `RebirthInjector` and `ShadowRealmBlessingRemover`
       (ConsistentID allocation, matched menu entries, `docs/esd-editing.md`).
-- [ ] Only then bump the Item Randomizer to the 1.17 release and re-run
-      with `--merge-dir`. Never bump it alone: with `--merge-dir`, FogMod
-      reads the randomizer's `regulation.bin` with its own Defs, and a
-      pre-patch Defs set crashes on the first changed param layout.
+- [x] Rebuild the static mod from the patched game. `StaticModBuilder`
+      reads `chr/c0000.anibnd.dcx`, `menu/hi/01_common.tpf.dcx`,
+      `01_common.sblytbnd.dcx` and `02_title.tpf.dcx` from `--game-dir`, and
+      its output ships in every seed. 1.17 changed the first three
+      (`c0000.anibnd`: 654 -> 657 TAE, `a269`/`a972`/`a973` added for the
+      new weapons, `a00`/`a692`/`a953` modified), so a static mod built from
+      1.16 files reverts those animations for everyone and leaves pack
+      owners without the new weapon movesets. Rebuilt 2026-08-27 without a
+      full bootstrap: `cd tools && uv run python -c "from pathlib import
+      Path; from bootstrap import run_static_mod_builder;
+      run_static_mod_builder(Path('<patched game>'))"` (a full
+      `bootstrap.py --game-dir <patched game>` does the same, then needs the
+      snapshot refresh). Every bootstrap must use the patched game from now
+      on.
+- [ ] Bump the Item Randomizer to its 1.17 release when it ships. The Defs
+      concern is moot for 1.17 (no layout change), but its output is not
+      only params: with `--merge-dir` it also overrides about 510 MSB, 485
+      EMEVD and 18 talk ESDs (Stormveil, Leyndell, Redmane, the five
+      overworld pickup tiles, `common`, `common_func`, the grace menu, 58 of
+      the 133 changed
+      overworld tiles), so a 1.17 randomizer moves most maps to 1.17 by
+      itself. Do it on a scratch bootstrap first, and at the same time
+      refresh FogMod's snapshot maps (`refresh_vanilla_snapshot.py <patched
+      game> --all`, 147 files) so the seed is not a 1.17/1.16 mix, decide
+      the invasion question above, re-validate the grace ESD injectors, and
+      check the randomizer's own DLL dependencies (`writer/lib/itemrando/`).
+- [ ] When FogRando ships its 1.17: the data side is already handled by the
+      refresh, the risk is the API of `FogMod.dll` (S5: `ConnectionInjector`,
+      `MapSplitsInjector`, `OpenSplitInjector`, `HelperAreaResolver`). Check
+      it before anything else; a lagging FogRando is the comfortable case.
 - [ ] In-game validation list: Chapel grace and spawn, a fog gate warp in
       each refreshed map, boss trigger lock, run-complete banner, rebirth
       menu, care package delivery, racing overlay zone tracking.
@@ -313,8 +341,10 @@ A frozen copy and the Steam install share
   `regulation.bin` and every msg bundle each snapshot already carries from
   an unpacked game directory into `eldendata/Vanilla` and `diste/Vanilla`,
   idempotent, prints what it replaced and the resulting `regulation.bin`
-  md5. Maps are never refreshed unless named with `--file`. Must be re-run
-  after every `tools/bootstrap.py`.
+  md5. Maps are never refreshed unless named with `--file`, or all at once
+  with `--all` (every snapshot file with a known game location; for 1.17
+  that is the 147 changed MSB/EMEVD/ESD on top of regulation and msg). Must
+  be re-run after every `tools/bootstrap.py`.
 - `game_inspect diff-param <old.bin> <new.bin> --defs <Defs> [--param X]
   [--rows-only]`: rows added/removed and cells changed per param; this is
   what located the Torrent rows. `dump-event <emevd> <id>` and
@@ -413,6 +443,11 @@ frozen 1.16.2 copy and the FogRando snapshot.
   RandomizerCommon does) and fails generation instead of falling back; the
   def now ships with the exe (`FogModWrapper.csproj`). Verified on generated
   seeds: 36 rows at 100,000 runes, class weapons at the configured level.
+- **Static mod inputs**: `chr/c0000.anibnd.dcx` (654 -> 657 TAE),
+  `menu/hi/01_common.tpf.dcx` and `01_common.sblytbnd.dcx` changed;
+  `02_title.tpf.dcx` did not. The shipped `c0000.anibnd` was still the
+  1.16-based one until the static mod was rebuilt from the patched game (see
+  Phase 2).
 - **Treasure pickups** (one asset plus a Treasure MSB event named
   "Patch1.17", one or two init instructions in EMEVD event 0): `m60_34_50`
   (`AEG099_630_9001`, 1034501601), `m60_38_41` (`AEG099_600_9002`,
@@ -499,3 +534,12 @@ dotnet tool install ilspycmd --tool-path "$SCRATCH/tools" --version 11.0.0.9375
   Tarnished Pack scenarios (owner, and owner with the DLC unchecked in
   Steam to emulate a non-owner) are to be tested on the pack's release,
   2026-08-28.
+- 2026-08-27 (evening): the two Tarnished Pack classes fixed in the
+  injectors (`StartingClassRows`); static mod rebuilt from the 1.17 game
+  (`c0000.anibnd` was still 1.16-based in shipped seeds); `--all` added to
+  the refresh tool but not applied: maps stay on 1.16 until the Item
+  Randomizer 1.17 bump, which moves most of them anyway. From now on the
+  generation host treats 1.17 as the only game version: bootstrap with
+  `--game-dir <patched game>`, then the refresh; `Game.1.16.2` is kept as
+  the diff reference only. Torrent on a 1.16.2 executable with a 1.17
+  regulation is expected to work (row 80000 still present), untested.

@@ -71,6 +71,45 @@ def test_plan_targets_appends_extra_files_without_duplicates(snapshot: Path):
     ]
 
 
+def test_plan_targets_all_files_covers_every_mappable_snapshot_file(snapshot: Path):
+    _write(snapshot / "m10_00_00_00.nva.dcx", b"navmesh")  # unknown suffix
+    _write(snapshot / "chr/c0000.chrbnd.dcx", b"player")  # unknown subdirectory
+
+    targets = plan_targets(snapshot, [], all_files=True)
+
+    assert targets == [
+        "m10_00_00_00.msb.dcx",
+        "m60_52_39_00.emevd.dcx",
+        "msg/engus/item_dlc02.msgbnd.dcx",
+        "msg/frafr/menu_dlc02.msgbnd.dcx",
+        "regulation.bin",
+    ]
+
+
+def test_main_all_reports_unmappable_snapshot_files(
+    two_snapshots: dict[str, Path], game: Path, capsys: pytest.CaptureFixture[str]
+):
+    _write(two_snapshots["fogmod"] / "m10_00_00_00.nva.dcx", b"navmesh")
+
+    assert rvs.main([str(game), "--all"]) == 2
+
+    out = capsys.readouterr().out
+    assert (
+        "skipped (unknown file type, extend SUFFIX_DIRS): m10_00_00_00.nva.dcx" in out
+    )
+    # The mappable files were still refreshed.
+    assert (
+        two_snapshots["fogmod"] / "m10_00_00_00.msb.dcx"
+    ).read_bytes() == b"stormveil-1.17"
+
+
+def test_main_all_refreshes_maps_too(two_snapshots: dict[str, Path], game: Path):
+    assert rvs.main([str(game), "--all"]) == 0
+    for path in two_snapshots.values():
+        assert (path / "m10_00_00_00.msb.dcx").read_bytes() == b"stormveil-1.17"
+        assert (path / "m60_52_39_00.emevd.dcx").read_bytes() == b"caelid-1.17"
+
+
 @pytest.mark.parametrize(
     "bad", ["msg/../../x.msgbnd.dcx", "chr/c0000.chrbnd.dcx", "m10_00_00_00.nva.dcx"]
 )
