@@ -108,7 +108,8 @@ wine publish/win-x64/game_inspect.exe find-int <emevd> <int32>
 ```
 
 `dump-event` prints every instruction of one event as `bank[id]` with the
-argument bytes decoded as int32s and as hex. `find-int` lists every 4-byte
+argument bytes decoded as int32s and as hex, then the parameter table in
+the `X{offset}_{size} -> [instruction] byte N` notation of `fogevents.txt`. `find-int` lists every 4-byte
 aligned argument slot, in every instruction of every event, that holds the
 value (accepted as int32 or uint32, compared as a bit pattern): flag checks,
 entity references, initializer arguments. `dump_emevd_warps` does the same

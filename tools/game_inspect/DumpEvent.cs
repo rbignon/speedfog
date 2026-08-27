@@ -31,6 +31,14 @@ static class DumpEvent
             var ins = ev.Instructions[i];
             Console.WriteLine($"  [{i}] {ins.Bank}[{ins.ID}] {FormatArgs(ins.ArgData)}");
         }
+        if (ev.Parameters.Count > 0)
+        {
+            // Same X{offset}_{size} notation as fogevents.txt: the source offset
+            // counts from the first argument after the event ID in the initializer.
+            Console.WriteLine($"  parameters ({ev.Parameters.Count}):");
+            foreach (var prm in ev.Parameters.OrderBy(x => x.InstructionIndex).ThenBy(x => x.TargetStartByte))
+                Console.WriteLine($"    X{prm.SourceStartByte}_{prm.ByteCount} -> [{prm.InstructionIndex}] byte {prm.TargetStartByte}");
+        }
         return 0;
     }
 

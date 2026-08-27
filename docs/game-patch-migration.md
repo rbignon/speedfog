@@ -366,11 +366,14 @@ frozen 1.16.2 copy and the FogRando snapshot.
   (`common_func` 900005590) takes it as argument, so do the other five
   pickup tiles and the Redmane summon (`m60_51_36_00` event 1051360740),
   every Caelid invasion event (`m60_52_39_00` event 200 initializers,
-  1052392910) and Leyndell's 11002930 test it. In every EMEVD changed by
-  1.17 the flag only appears as an initializer argument or a check
-  (`GotoIfEventFlag`, `IfEventFlag`), never as a `SetEventFlag` target, so
-  the engine sets it from DLC ownership. Without the pack the content stays
-  dormant, in vanilla and in seeds alike.
+  1052392910) and Leyndell's 11002930 test it. A `find-int` sweep of all
+  589 1.17 EMEVDs finds the flag in exactly ten files (the ones above plus
+  `m60_44_52_10`), always as an initializer argument or a check
+  (`GotoIfEventFlag`, `IfEventFlag`); in the events that receive it as a
+  parameter (`common_func` 900005590, Redmane 1051360740, Caelid
+  1252392280/520/600) the parameter table binds it only to checks, never to
+  a `SetEventFlag`. The engine therefore sets it from DLC ownership.
+  Without the pack the content stays dormant, in vanilla and in seeds alike.
 - **Treasure pickups** (one asset plus a Treasure MSB event named
   "Patch1.17", one or two init instructions in EMEVD event 0): `m60_34_50`
   (`AEG099_630_9001`, 1034501601), `m60_38_41` (`AEG099_600_9002`,
