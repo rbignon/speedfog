@@ -564,6 +564,15 @@ wine publish/win-x64/game_inspect.exe dump-param <regulation.bin> SpEffectParam 
   --defs ../../writer/FogModWrapper/eldendata/Defs --def-name SpEffect --field maxHpRate
 wine publish/win-x64/game_inspect.exe dump-param <regulation.bin> NpcParam --prefix 4420 \
   --defs ../../writer/FogModWrapper/eldendata/Defs
+# --all lists every row; with --prefix/--all, --field appends the matching
+# cells inline (one row per line, pipeable: this feeds speedfog-racing's
+# tools/generate_weapons.py together with dump-fmg).
+wine publish/win-x64/game_inspect.exe dump-param <regulation.bin> EquipParamWeapon --all \
+  --field wepType --defs ../../writer/FogModWrapper/eldendata/Defs
+
+# Dump every FMG entry of a msgbnd (fmg name, ID, text), optionally filtered by
+# a case-insensitive substring. Output is UTF-8.
+wine publish/win-x64/game_inspect.exe dump-fmg <game>/msg/engus/item_dlc02.msgbnd.dcx [substring]
 
 # Game patch triage (see docs/game-patch-migration.md). check-params applies the
 # bundled Defs to every param exactly like SoulsIds does for FogMod and lists the

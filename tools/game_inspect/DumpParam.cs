@@ -6,10 +6,12 @@ public static class DumpParam
     {
         if (args.Length < 3)
         {
-            Console.Error.WriteLine("Usage: game_inspect dump-param <regulation.bin> <ParamName> [--row <id>] [--prefix <prefix>] [--defs <dir>] [--def-name <name>] [--field <name>]");
+            Console.Error.WriteLine("Usage: game_inspect dump-param <regulation.bin> <ParamName> [--row <id>] [--prefix <prefix>] [--all] [--defs <dir>] [--def-name <name>] [--field <name>]");
             Console.Error.WriteLine("  --row       dump every field of the named row");
             Console.Error.WriteLine("  --prefix    list IDs starting with the given digits");
-            Console.Error.WriteLine("  --field     restrict --row output to fields whose name contains this substring (repeatable)");
+            Console.Error.WriteLine("  --all       list every row");
+            Console.Error.WriteLine("  --field     restrict --row output to fields whose name contains this substring (repeatable);");
+            Console.Error.WriteLine("              with --prefix/--all, append the matching fields to each listed row");
             Console.Error.WriteLine("  --defs      directory holding paramdef XMLs (default: ./eldendata/Defs)");
             Console.Error.WriteLine("  --def-name  paramdef XML basename when it differs from ParamName (e.g. SpEffect for SpEffectParam)");
             return 1;
@@ -19,6 +21,7 @@ public static class DumpParam
         string paramName = args[2];
         int? rowId = null;
         string? prefix = null;
+        bool all = false;
         string? defsDir = null;
         string? defName = null;
         var fieldFilters = new List<string>();
@@ -38,6 +41,9 @@ public static class DumpParam
                 case "--prefix" when i + 1 < args.Length:
                     prefix = args[++i];
                     break;
+                case "--all":
+                    all = true;
+                    break;
                 case "--defs" when i + 1 < args.Length:
                     defsDir = args[++i];
                     break;
@@ -51,6 +57,12 @@ public static class DumpParam
                     Console.Error.WriteLine($"Unknown or malformed argument: {args[i]}");
                     return 1;
             }
+        }
+
+        if (rowId.HasValue && (prefix != null || all))
+        {
+            Console.Error.WriteLine("--row cannot be combined with --prefix or --all");
+            return 1;
         }
 
         defsDir ??= Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "eldendata", "Defs");
@@ -97,6 +109,13 @@ public static class DumpParam
             return 1;
         }
 
+        if (fieldFilters.Count > 0 &&
+            !def.Fields.Any(f => fieldFilters.Any(filter => f.InternalName.Contains(filter, StringComparison.OrdinalIgnoreCase))))
+        {
+            Console.Error.WriteLine($"No field of {paramName} matches --field {string.Join(" / ", fieldFilters)}");
+            return 1;
+        }
+
         if (rowId.HasValue)
         {
             var row = param.Rows.Find(r => r.ID == rowId.Value);
@@ -107,18 +126,37 @@ public static class DumpParam
             }
             DumpRow(paramName, row, fieldFilters);
         }
-        else if (prefix != null)
+        else if (prefix != null || all)
         {
-            var matches = param.Rows.Where(r => r.ID.ToString().StartsWith(prefix)).OrderBy(r => r.ID).ToList();
-            Console.WriteLine($"{paramName}: {matches.Count} rows matching prefix '{prefix}'");
+            var matches = param.Rows
+                .Where(r => prefix == null || r.ID.ToString().StartsWith(prefix))
+                .OrderBy(r => r.ID)
+                .ToList();
+            Console.WriteLine(prefix == null
+                ? $"{paramName}: {matches.Count} rows"
+                : $"{paramName}: {matches.Count} rows matching prefix '{prefix}'");
             foreach (var row in matches)
-                Console.WriteLine($"  {row.ID}  {row.Name}");
+                Console.WriteLine($"  {row.ID}  {row.Name}{FormatFields(row, fieldFilters)}");
         }
         else
         {
             Console.WriteLine($"{paramName}: {param.Rows.Count} rows");
         }
         return 0;
+    }
+
+    /// <summary>
+    /// Inline " name=value" pairs of the cells whose name matches a filter,
+    /// empty when no filter is given.
+    /// </summary>
+    static string FormatFields(PARAM.Row row, List<string> fieldFilters)
+    {
+        if (fieldFilters.Count == 0)
+            return "";
+        var parts = row.Cells
+            .Where(c => fieldFilters.Any(f => c.Def.InternalName.Contains(f, StringComparison.OrdinalIgnoreCase)))
+            .Select(c => $"{c.Def.InternalName}={DiffParam.Fmt(c.Value)}");
+        return "  " + string.Join(" ", parts);
     }
 
     static void DumpRow(string paramName, PARAM.Row row, List<string> fieldFilters)
@@ -129,7 +167,7 @@ public static class DumpParam
             var name = cell.Def.InternalName;
             if (fieldFilters.Count > 0 && !fieldFilters.Any(f => name.Contains(f, StringComparison.OrdinalIgnoreCase)))
                 continue;
-            Console.WriteLine($"  {name,-40} = {cell.Value}");
+            Console.WriteLine($"  {name,-40} = {DiffParam.Fmt(cell.Value)}");
         }
     }
 }

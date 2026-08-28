@@ -1,5 +1,12 @@
 using SoulsFormats;
 
+// Redirected output uses the console code page, which mangles accented FMG
+// text (Miséricorde) in dumps piped to files; write UTF-8 instead. Replace the
+// writer rather than set Console.OutputEncoding: the latter throws IOException
+// under Wine. An interactive console keeps its own code page.
+if (Console.IsOutputRedirected)
+    Console.SetOut(new StreamWriter(Console.OpenStandardOutput(), new System.Text.UTF8Encoding(false)) { AutoFlush = true });
+
 // Dispatch subcommand
 if (args.Length >= 1 && args[0] == "dump-entity")
 {

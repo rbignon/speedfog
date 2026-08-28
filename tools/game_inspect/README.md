@@ -118,6 +118,26 @@ but the game's own EMEVDs are KRAK-compressed and need Oodle, which only
 exists as a Windows DLL; these two work through Wine like the rest of this
 tool, so they are the way to read vanilla files on Linux.
 
+### Params and text: `dump-param`, `dump-fmg`
+
+```bash
+# One row, every field (or the fields whose name contains a --field substring)
+wine publish/win-x64/game_inspect.exe dump-param <regulation.bin> NpcParam --row 44200120 \
+  --defs ../../writer/FogModWrapper/eldendata/Defs --field hp
+# Rows by ID prefix, or every row with --all; --field appends the matching cells
+# inline on each line (pipeable, this feeds speedfog-racing's generate_weapons.py)
+wine publish/win-x64/game_inspect.exe dump-param <regulation.bin> EquipParamWeapon --all \
+  --field wepType --defs ../../writer/FogModWrapper/eldendata/Defs
+# Every FMG entry of a msgbnd (fmg name, ID, text), optionally filtered by substring
+wine publish/win-x64/game_inspect.exe dump-fmg <game>/msg/engus/item_dlc02.msgbnd.dcx "Blessing"
+```
+
+`dump-param` decrypts `regulation.bin` and applies the paramdef XML named
+after the param (`--def-name` when the basename differs, e.g. `SpEffect` for
+`SpEffectParam`). A `--field` that matches no field of the paramdef is an
+error, so a typo cannot produce a well-formed but empty dump. `--row` cannot
+be combined with `--prefix` or `--all`. Output is UTF-8 when redirected.
+
 ### Game patch triage: `check-params`, `diff-param`, `diff-msb`, `diff-emevd`, `bnd-list`
 
 Written for the Elden Ring 1.17 update (see `docs/game-patch-migration.md`).
@@ -174,6 +194,8 @@ game_inspect dump-entity ...   → DumpEntity        (Program.cs)
 game_inspect find-model ...    → FindModel.Run     (FindModel.cs)
 game_inspect compare ...       → CompareAssets.Run (CompareAssets.cs)
 game_inspect check-emevd ...   → CheckEmevd.Run    (CheckEmevd.cs)
+game_inspect dump-param ...    → DumpParam.Run     (DumpParam.cs)
+game_inspect dump-fmg ...      → DumpFmg.Run       (DumpFmg.cs)
 game_inspect check-params ...  → CheckParams.Run   (CheckParams.cs)
 game_inspect diff-param ...    → DiffParam.Run     (DiffParam.cs)
 game_inspect dump-event ...    → DumpEvent.RunDump (DumpEvent.cs)

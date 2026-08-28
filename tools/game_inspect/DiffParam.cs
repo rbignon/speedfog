@@ -134,5 +134,11 @@ static class DiffParam
         return result;
     }
 
-    static string Fmt(object? v) => v is byte[] bytes ? Convert.ToHexString(bytes) : v?.ToString() ?? "null";
+    /// <summary>
+    /// Cell value as text: hex for byte arrays (pad fields), invariant culture
+    /// for numbers so dumps are locale-proof. Shared with dump-param.
+    /// </summary>
+    internal static string Fmt(object? v) => v is byte[] bytes
+        ? Convert.ToHexString(bytes)
+        : Convert.ToString(v, System.Globalization.CultureInfo.InvariantCulture) ?? "null";
 }
