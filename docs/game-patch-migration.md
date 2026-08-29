@@ -269,6 +269,16 @@ update.
       game> --all`, 147 files) so the seed is not a 1.17/1.16 mix, decide
       the invasion question above, re-validate the grace ESD injectors, and
       check the randomizer's own DLL dependencies (`writer/lib/itemrando/`).
+      Both item presets already list the Tarnished Pack weapons (all eight
+      in `data/uwyg_item_preset.yaml`, seven in the curated
+      `data/item_preset.yaml`, which leaves out the plain Silver Grooved
+      Shield; added 2026-08-29); with the 1.16 `diste/Base` annotations they parse but
+      never enter the pool (the 28 new `ItemLotParam_map` and 19
+      `ShopLineupParam` rows are unannotated, so not randomized). Once the
+      1.17 annotations activate them, decide whether they may be placed at
+      all: the randomizer rewrites lots without the 6953 gate, so a player
+      without the pack could receive one, and whether the executable lets
+      a non-owner hold it is untested.
 - [ ] When FogRando ships its 1.17: the data side is already handled by the
       refresh, the risk is the API of `FogMod.dll` (S5: `ConnectionInjector`,
       `MapSplitsInjector`, `OpenSplitInjector`, `HelperAreaResolver`). Check

@@ -781,6 +781,23 @@ Placements:
     ID: weapon:30510000
   - Name: Shield of Night
     ID: weapon:21550000
+  # Tarnished Pack (1.17), inert until the randomizer annotations cover 1.17, see docs/game-patch-migration.md
+  - Name: Leontiel's Greatsword
+    ID: weapon:3560000
+  - Name: Hefty Scimitar
+    ID: weapon:8530000
+  - Name: Golden Order Flail
+    ID: weapon:13510000
+  - Name: Reverse-Bladed Sword
+    ID: weapon:64530000
+  - Name: Reed Great Katana
+    ID: weapon:66530000
+  - Name: Idus Sword
+    ID: weapon:67530000
+  - Name: Ritual Thrusting Shield
+    ID: weapon:62520000
+  - Name: Silver Grooved Shield
+    ID: weapon:31540000
   - Name: Glintstone Nail
     ID: goods:2004500
   - Name: Glintstone Nails

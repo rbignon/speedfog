@@ -651,6 +651,26 @@ Placements:
     ID: weapon:30200000
   - Name: Verdigris Greatshield
     ID: weapon:32520000
+  # Tarnished Pack (1.17). Inert until the Item Randomizer's diste/Base
+  # annotations cover the 1.17 lots and shop rows (verified 2026-08-29: parsed
+  # without error, absent from the spoiler with the pre-1.17 annotations).
+  # Once randomized they can land on players without the pack: see
+  # docs/game-patch-migration.md. Silver Grooved Shield is a plain medium
+  # shield, left out of this curated list (it is in uwyg_item_preset.yaml).
+  - Name: Leontiel's Greatsword
+    ID: weapon:3560000
+  - Name: Hefty Scimitar
+    ID: weapon:8530000
+  - Name: Golden Order Flail
+    ID: weapon:13510000
+  - Name: Reverse-Bladed Sword
+    ID: weapon:64530000
+  - Name: Reed Great Katana
+    ID: weapon:66530000
+  - Name: Idus Sword
+    ID: weapon:67530000
+  - Name: Ritual Thrusting Shield
+    ID: weapon:62520000
   Requires:
   - Tag: boss
   - Tag: altboss
