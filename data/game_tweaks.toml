@@ -157,6 +157,25 @@ map = "m20_01_00_00"
 entity_id = 20006662
 match_group = true  # Enir-Ilim Outer Wall thorns barrier: FogMod creates it as two assets (AEG410_901/905) sharing this EntityGroup and only disables it when flag 330 is ON, which SpeedFog keeps OFF
 
+[[remove_entities]]
+map = "m60_51_36_00"
+entity_id = 1051360740  # Elden Ring 1.17 Tarnished Pack invader at Redmane (Enemy part c0000_9013): its event 1051360740 is disabled below, and that event's prologue is what hides the NPC for non-owners, so the part is removed as well (absent from 1.16 map data, no-op until the map moves to 1.17)
+
+# Vanilla EMEVD events neutralized in the mod output (body replaced by an
+# END Unconditionally, Event 0 initializer left in place). Maps absent from
+# the seed output, and events absent from the map file (a map still on
+# pre-patch data), are skipped with a log line. An NPC that the event's own
+# prologue disables (SetCharEnable OFF before waiting on a flag) must also
+# be listed in [[remove_entities]], or it stays enabled for everyone.
+
+[[disable_events]]
+map = "m60_51_36_00"
+event = 1051360740  # Elden Ring 1.17 Tarnished Pack NPC invasion at Redmane ("The Noble Broken Mask", c0000_9013, DLC flag 6953): conditioned on the Radahn festival flags 9410/9413, which a run needs as they are, so the event itself is disabled
+
+[[disable_events]]
+map = "m11_00_00_00"
+event = 11002930  # Elden Ring 1.17 Tarnished Pack NPC invasion at Leyndell (c0000_9060, DLC flag 6953): absent from the 1.16 map data the seeds ship today, listed so the bump to 1.17 map data does not bring it back
+
 # Vanilla Stakes of Marika whose respawn position lands outside the SpeedFog
 # DAG (or bypasses a fog gate): injected as RetryPoints tagged "remove"
 # before FogMod's Write, which handles the archive extraction and removal.

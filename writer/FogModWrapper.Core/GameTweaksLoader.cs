@@ -8,6 +8,8 @@ public sealed record TorrentArena(string Map, List<string> Collisions);
 public sealed record SpiritspringRemoval(
     string Map, float X, float Y, float Z, string RequiredZone);
 public sealed record StakeRemoval(string Map, string Name);
+/// <summary>An EMEVD event to neutralize in the mod output (body replaced by End).</summary>
+public sealed record DisableEvent(string Map, long EventId);
 
 /// <summary>
 /// Game-knowledge tables loaded from <c>data/game_tweaks.toml</c>:
@@ -20,7 +22,8 @@ public sealed record GameTweaks(
     List<TorrentArena> TorrentArenas,
     List<SpiritspringRemoval> SpiritspringRemovals,
     List<RemoveEntity> RemoveEntities,
-    List<StakeRemoval> StakeRemovals);
+    List<StakeRemoval> StakeRemovals,
+    List<DisableEvent> DisableEvents);
 
 /// <summary>
 /// Loads and validates <c>data/game_tweaks.toml</c>. Unlike optional
@@ -86,7 +89,8 @@ public static class GameTweaksLoader
             ParseTorrentArenas(root),
             ParseSpiritspringRemovals(root),
             ParseRemoveEntities(root),
-            ParseStakeRemovals(root));
+            ParseStakeRemovals(root),
+            ParseDisableEvents(root));
     }
 
     public static GameTweaks Load(string path)
@@ -102,8 +106,26 @@ public static class GameTweaksLoader
             $"{tweaks.TorrentArenas.Count} torrent arenas, " +
             $"{tweaks.SpiritspringRemovals.Count} spiritspring removals, " +
             $"{tweaks.RemoveEntities.Count} remove entities, " +
-            $"{tweaks.StakeRemovals.Count} stake removals from {path}");
+            $"{tweaks.StakeRemovals.Count} stake removals, " +
+            $"{tweaks.DisableEvents.Count} disabled events from {path}");
         return tweaks;
+    }
+
+    private static List<DisableEvent> ParseDisableEvents(TomlTable root)
+    {
+        var result = new List<DisableEvent>();
+        var entries = Section(root, "disable_events");
+        if (entries == null)
+            return result;
+        foreach (var entry in entries)
+        {
+            var map = RequireString(entry, "disable_events", "map");
+            if (!entry.TryGetValue("event", out var eventObj) || eventObj is not long eventId)
+                throw new InvalidDataException(
+                    $"game_tweaks.toml: [[disable_events]] entry for {map} missing integer 'event'");
+            result.Add(new DisableEvent(map, eventId));
+        }
+        return result;
     }
 
     private static string RequireString(TomlTable entry, string section, string key)

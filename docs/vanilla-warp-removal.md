@@ -11,7 +11,7 @@ FogMod tags unique warps with `"remove"` in its graph data, but its removal logi
 
 ## Solution
 
-`VanillaWarpRemover` runs as a post-processing step after FogMod writes its output. It removes Part.Asset entries from MSB files by matching on `EntityID` (an integer field), not the string name.
+`VanillaWarpRemover` runs as a post-processing step after FogMod writes its output. It removes Part.Asset entries from MSB files by matching on `EntityID` (an integer field), not the string name. Since Elden Ring 1.17 it removes matching Part.Enemy entries as well: the `[[remove_entities]]` list of `data/game_tweaks.toml` names the Tarnished Pack invader at Redmane, whose EMEVD event (neutralized by `EventDisabler`) was the only thing hiding it from non-owners (FogRando does the same for its grave parts, `GameDataWriterE.cs:4268-4275`).
 
 ## Data Flow
 
@@ -24,6 +24,7 @@ FogMod tags unique warps with `"remove"` in its graph data, but its removal logi
 - **Group by map**: Avoids reading/writing the same MSB multiple times when several entities share a map.
 - **ObjAct cleanup**: ObjAct events reference part names. If a removed asset is referenced by an ObjAct, `MSB.Write()` would fail. The remover also removes these ObjAct events (same pattern as FogRando `GameDataWriterE.cs:574`).
 - **MSB directory casing**: Handles both `MapStudio` (vanilla) and `mapstudio` (Wine/FogMod) directory names.
+- **Enemy parts**: no MSB event referencing a removed enemy is stripped (Talk, Platoon, Mount, Patrol, RetryPoint); such an entry would make `MSB.Write()` throw, loudly, rather than ship a broken map.
 - **Missing maps**: Maps not in the mod output (not part of this seed's graph) are silently skipped.
 
 ## Matching by EntityGroup (`match_group`)

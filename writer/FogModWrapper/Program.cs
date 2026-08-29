@@ -851,6 +851,10 @@ Example:
         // See docs/startup-flag-injection.md for the methodology used to find these flags.
         StartupFlagInjector.Inject(ctx.ModDir, ctx.Tweaks.StartupFlags);
 
+        // Neutralize vanilla events listed in data/game_tweaks.toml [[disable_events]]
+        // (Tarnished Pack NPC invasion at Redmane, see docs/game-patch-migration.md).
+        EventDisabler.Inject(ctx.ModDir, ctx.Tweaks.DisableEvents);
+
         // Remove vanilla assets that conflict with fog gates: graph.json entities
         // plus the [[remove_entities]] entries of data/game_tweaks.toml.
         var removeEntities = ctx.GraphData.RemoveEntities
