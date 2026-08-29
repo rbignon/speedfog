@@ -39,27 +39,27 @@ public class VanillaWarpRemoverTests
     [Fact]
     public void Remove_ByEntityId_RemovesEnemyPart()
     {
-        // The 1.17 Redmane invader is an Enemy part whose own event hides it;
-        // with that event disabled, the part itself has to go.
+        // A 1.17 NPC whose own event hides it (SetCharEnable OFF in the prologue):
+        // with that event disabled, the Enemy part itself has to go.
         using var tmp = new TempDir();
         var mapDir = Path.Combine(tmp.Path, "map", "mapstudio");
         Directory.CreateDirectory(mapDir);
 
         var msb = new MSBE();
         msb.Models.Enemies.Add(new MSBE.Model.Enemy { Name = "c0000" });
-        var invader = new MSBE.Part.Enemy { Name = "c0000_9013", ModelName = "c0000", EntityID = 1051360740 };
-        var keep = new MSBE.Part.Enemy { Name = "c0000_9000", ModelName = "c0000", EntityID = 1051360700 };
+        var invader = new MSBE.Part.Enemy { Name = "c0000_9060", ModelName = "c0000", EntityID = 11000180 };
+        var keep = new MSBE.Part.Enemy { Name = "c0000_9000", ModelName = "c0000", EntityID = 11000100 };
         msb.Parts.Enemies.Add(invader);
         msb.Parts.Enemies.Add(keep);
-        msb.Write(Path.Combine(mapDir, "m60_51_36_00.msb.dcx"), DCX.Type.DCX_DFLT_10000_44_9);
+        msb.Write(Path.Combine(mapDir, "m11_00_00_00.msb.dcx"), DCX.Type.DCX_DFLT_10000_44_9);
 
         VanillaWarpRemover.Remove(tmp.Path, new List<RemoveEntity>
         {
-            new() { Map = "m60_51_36_00", EntityId = 1051360740 },
+            new() { Map = "m11_00_00_00", EntityId = 11000180 },
         });
 
-        var reread = MSBE.Read(Path.Combine(mapDir, "m60_51_36_00.msb.dcx"));
-        Assert.DoesNotContain(reread.Parts.Enemies, e => e.Name == "c0000_9013");
+        var reread = MSBE.Read(Path.Combine(mapDir, "m11_00_00_00.msb.dcx"));
+        Assert.DoesNotContain(reread.Parts.Enemies, e => e.Name == "c0000_9060");
         Assert.Contains(reread.Parts.Enemies, e => e.Name == "c0000_9000");
     }
 

@@ -5,8 +5,9 @@ namespace FogModWrapper.Tests;
 
 public class EventDisablerTests
 {
-    private const long INVASION_EVENT = 1051360740;
-    private const long OTHER_EVENT = 1051360741;
+    // Leyndell's 1.17 invasion event and a neighbour that must survive.
+    private const long INVASION_EVENT = 11002930;
+    private const long OTHER_EVENT = 11002931;
 
     private static EMEVD.Instruction MakeFiller() =>
         new(1003, 14, new byte[] { 0, 1, 0, 0 });
@@ -54,9 +55,9 @@ public class EventDisablerTests
     public void Inject_ReplacesEventBodyWithEndAndClearsParameters()
     {
         using var tmp = new TempDir();
-        var path = WriteTestEmevd(tmp.Path, "m60_51_36_00");
+        var path = WriteTestEmevd(tmp.Path, "m11_00_00_00");
 
-        EventDisabler.Inject(tmp.Path, new[] { new DisableEvent("m60_51_36_00", INVASION_EVENT) });
+        EventDisabler.Inject(tmp.Path, new[] { new DisableEvent("m11_00_00_00", INVASION_EVENT) });
 
         var emevd = EMEVD.Read(path);
         var target = emevd.Events.First(e => e.ID == INVASION_EVENT);
@@ -71,9 +72,9 @@ public class EventDisablerTests
     public void Inject_LeavesEvent0AndOtherEventsUntouched()
     {
         using var tmp = new TempDir();
-        var path = WriteTestEmevd(tmp.Path, "m60_51_36_00");
+        var path = WriteTestEmevd(tmp.Path, "m11_00_00_00");
 
-        EventDisabler.Inject(tmp.Path, new[] { new DisableEvent("m60_51_36_00", INVASION_EVENT) });
+        EventDisabler.Inject(tmp.Path, new[] { new DisableEvent("m11_00_00_00", INVASION_EVENT) });
 
         var emevd = EMEVD.Read(path);
         var evt0 = emevd.Events.First(e => e.ID == 0);
@@ -90,12 +91,12 @@ public class EventDisablerTests
     public void Inject_OneOfTwoEntriesAbsent_DisablesThePresentOne()
     {
         using var tmp = new TempDir();
-        var path = WriteTestEmevd(tmp.Path, "m60_51_36_00");
+        var path = WriteTestEmevd(tmp.Path, "m11_00_00_00");
 
         EventDisabler.Inject(tmp.Path, new[]
         {
-            new DisableEvent("m60_51_36_00", 999),
-            new DisableEvent("m60_51_36_00", INVASION_EVENT),
+            new DisableEvent("m11_00_00_00", 999),
+            new DisableEvent("m11_00_00_00", INVASION_EVENT),
         });
 
         var emevd = EMEVD.Read(path);
@@ -108,10 +109,10 @@ public class EventDisablerTests
     {
         // A 1.16 map file does not carry the 1.17 event: nothing to disable.
         using var tmp = new TempDir();
-        var path = WriteTestEmevd(tmp.Path, "m60_51_36_00");
+        var path = WriteTestEmevd(tmp.Path, "m11_00_00_00");
         var before = File.ReadAllBytes(path);
 
-        EventDisabler.Inject(tmp.Path, new[] { new DisableEvent("m60_51_36_00", 999) });
+        EventDisabler.Inject(tmp.Path, new[] { new DisableEvent("m11_00_00_00", 999) });
 
         Assert.Equal(before, File.ReadAllBytes(path));
     }

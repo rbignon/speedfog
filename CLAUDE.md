@@ -75,7 +75,7 @@ speedfog/
 │   ├── fog_data.json        # Generated fog gate metadata (gitignored)
 │   ├── zone_metadata.toml   # Zone weight config (tracked)
 │   ├── map_splits.toml      # Synthetic zones/fogs splitting oversized maps (tracked)
-│   ├── game_tweaks.toml     # FogMod ConfigVars + startup gate flags + target lists (torrent arenas, spiritspring/stake/entity removals, disabled events) (tracked)
+│   ├── game_tweaks.toml     # FogMod ConfigVars + startup gate flags + target lists (torrent arenas, spiritspring/stake/entity removals, disabled events, pinned vanilla maps) (tracked)
 │   ├── care_package_items.toml  # Curated item pools for care package (tracked)
 │   ├── phantom_skins.toml   # Phantom skins catalog (cosmetic auras, tracked)
 │   ├── title_screen_overlay.png  # SpeedFog badge composited on the title screen by StaticModBuilder (tracked)
@@ -127,6 +127,7 @@ speedfog/
 │   │   ├── VanillaWarpRemover.cs  # Remove vanilla assets (warps, blocking gates) and enemy parts listed in game_tweaks.toml
 │   │   ├── StartupFlagInjector.cs  # Set event flags at startup (open gates, etc.)
 │   │   ├── EventDisabler.cs  # Neutralize vanilla EMEVD events listed in game_tweaks.toml (1.17 NPC invasions)
+│   │   ├── VanillaMapPinner.cs  # Ship snapshot MSB/EMEVD for maps FogMod does not write (game_tweaks.toml pin_vanilla_maps)
 │   │   ├── StakeRemover.cs  # Remove vanilla stakes outside DAG
 │   │   ├── SpiritspringRemover.cs  # Remove spiritspring jump regions bypassing map-splits chokepoints
 │   │   ├── HeavyDoorMessagePatcher.cs  # Suppress "heavy door" popup in common_func
@@ -271,7 +272,7 @@ speedfog/
 | `GraphLoader` | Parses graph.json v4 format from Python |
 | `PhantomCatalogLoader` | Loads and validates `data/phantom_skins.toml` |
 | `OpenSplitOverrideLoader` | Reads `[warps."<id>"] opensplit = true` from `data/zone_metadata.toml` |
-| `GameTweaksLoader` | Loads FogMod ConfigVars, startup gate flags and the five target lists (torrent arenas, spiritspring removals, remove-entities, stake removals, disable-events) from `data/game_tweaks.toml` |
+| `GameTweaksLoader` | Loads FogMod ConfigVars, startup gate flags and the six target lists (torrent arenas, spiritspring removals, remove-entities, stake removals, disable-events, pin-vanilla-maps) from `data/game_tweaks.toml` |
 | `ResourceCalculations` | Pure calculation functions for starting resources |
 | `ShopIdAllocator` | Shop ID allocation utilities |
 | `PhaseTimer` | Per-phase timing of Program.cs pipeline steps (use this, not ad-hoc Stopwatches) |
@@ -296,6 +297,7 @@ speedfog/
 | `VanillaWarpRemover` | Removes vanilla warp MSB assets that conflict with fog gates, and enemy parts listed in `[[remove_entities]]` (1.17 invader) |
 | `StartupFlagInjector` | Sets event flags at startup in any EMEVD (open gates, etc.) |
 | `EventDisabler` | Replaces the body of vanilla EMEVD events listed in `[[disable_events]]` of `data/game_tweaks.toml` by an End (Tarnished Pack NPC invasions), skipping events absent from the shipped map data |
+| `VanillaMapPinner` | Copies the snapshot MSB/EMEVD of `[[pin_vanilla_maps]]` maps into the seed when FogMod did not write them, so the player's install does not fill the gap (Radahn arena tile, 1.17 invasion) |
 | `StakeRemover` | Removes vanilla stakes that respawn outside the DAG, targets come from `data/game_tweaks.toml` |
 | `SpiritspringRemover` | Removes spiritspring jump regions (MountJump/MountJumpFall) that bypass map-splits chokepoints, targets come from `data/game_tweaks.toml` |
 | `HeavyDoorMessagePatcher` | Suppresses "heavy door" popup (text 4200) in common_func |

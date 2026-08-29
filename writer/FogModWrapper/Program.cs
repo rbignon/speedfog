@@ -819,6 +819,16 @@ Example:
     // ====================================================================
     static void ApplyModDirInjectors(Context ctx)
     {
+        // Ship the snapshot MSB/EMEVD of maps the mod would otherwise leave to
+        // the player's install (data/game_tweaks.toml [[pin_vanilla_maps]]);
+        // first, so every injector of this phase sees those files. The
+        // snapshot is where FogMod reads it: eldendata/Vanilla under the cwd.
+        var vanillaDir = Path.GetFullPath(Path.Combine(Directory.GetCurrentDirectory(), "eldendata", "Vanilla"));
+        if (Directory.Exists(vanillaDir))
+            VanillaMapPinner.Pin(ctx.ModDir, vanillaDir, ctx.Tweaks.PinVanillaMaps, ctx.Config.MergeDir);
+        else if (ctx.Tweaks.PinVanillaMaps.Count > 0)
+            Console.WriteLine($"Warning: {vanillaDir} not found, {ctx.Tweaks.PinVanillaMaps.Count} pinned vanilla map(s) not shipped");
+
         // "RUN COMPLETE" banner FMG entries (all languages)
         if (ctx.GraphData.FinishEvent > 0)
         {
@@ -852,7 +862,7 @@ Example:
         StartupFlagInjector.Inject(ctx.ModDir, ctx.Tweaks.StartupFlags);
 
         // Neutralize vanilla events listed in data/game_tweaks.toml [[disable_events]]
-        // (Tarnished Pack NPC invasion at Redmane, see docs/game-patch-migration.md).
+        // (Tarnished Pack NPC invasion at Leyndell, see docs/game-patch-migration.md).
         EventDisabler.Inject(ctx.ModDir, ctx.Tweaks.DisableEvents);
 
         // Remove vanilla assets that conflict with fog gates: graph.json entities

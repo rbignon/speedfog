@@ -9,14 +9,15 @@ namespace FogModWrapper;
 /// initializer (left untouched, which keeps Event 0's own parameter table
 /// valid) starts an event that ends immediately.
 ///
-/// Introduced for the Elden Ring 1.17 Tarnished Pack NPC invasion at Redmane
-/// (m60_51_36_00 event 1051360740, gated by DLC flag 6953): unwanted in a
-/// SpeedFog run, and not disableable through a flag (its conditions are the
-/// Radahn festival flags 9410/9413, which the run needs as they are). Its
-/// prologue is also what disables the invader NPC, so the MSB part is removed
-/// alongside through [[remove_entities]] (VanillaWarpRemover). An event
-/// absent from the file (a map still on 1.16 data) is reported and skipped,
-/// so the list stays correct whichever version the snapshot holds.
+/// Introduced for the Elden Ring 1.17 Tarnished Pack NPC invasions (DLC flag
+/// 6953), unwanted in a SpeedFog run: Leyndell's event 11002930 only gates
+/// the common invasion template through flag 11000930. When an event's own
+/// prologue is what disables an NPC (SetCharEnable OFF before waiting on a
+/// flag), the MSB part must be removed alongside through [[remove_entities]]
+/// (VanillaWarpRemover handles Enemy parts), or it stays enabled for
+/// everyone. An event absent from the file (a map still on 1.16 data) is
+/// reported and skipped, so the list stays correct whichever version the
+/// snapshot holds.
 /// </summary>
 public static class EventDisabler
 {

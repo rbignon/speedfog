@@ -204,10 +204,10 @@ update.
     refreshing `m11_00` EMEVD would make the invader appear in runs, which
     `[[disable_events]]` (event 11002930) now prevents whatever the map
     version; refreshing the map is still a content decision.
-  - Caelid invasion: it lives in `m60_51_36_00` (Redmane), which the mod
-    writes, and is neutralized by `[[disable_events]]` whatever the map
-    version; `m60_52_39_00`, which the mod never writes, only carries the
-    Leontiel summon signs.
+  - Caelid invasion: it lives in `m60_52_39_00` (Radahn arena tile), which
+    the mod never writes; `[[pin_vanilla_maps]]` ships the snapshot copy so
+    the player's 1.17 file does not run. Refreshing that map to 1.17 needs
+    `[[disable_events]]` / `[[remove_entities]]` entries first.
   - If a map is refreshed, re-check the fog gates of that map in-game
     (`fog.txt` entity IDs, `fogevents.txt` templates).
   - Previewing the Tarnished Pack content locally (compatibility testing
@@ -410,29 +410,31 @@ frozen 1.16.2 copy and the FogRando snapshot.
 - **Leyndell `m11_00`**: one new enemy part `c0000_9060` (entity 11000180)
   and three "Patch1.17" regions (11002180-11002182), the NPC invasion; EMEVD
   gained event 11002930 and five instructions in event 0. No entity moved.
-- **Knight Leontiel summon** (`m60_52_39_00` and the level-2 tile
-  `m60_13_09_02`): EMEVD 832 -> 24112 bytes with ten new events (0, 200,
-  1052392910, 1252392200-1252392695, all carrying the summon action button
-  9560 and texts 80900-80902); MSB gains enemy `c0000_9020` (entity
-  1052390180) and five NPC regions; `m60_13_09_02` gains enemy `c0000_9010`
-  (entity 1052390200) and ten `AEG099_090` summon signs
-  (1052391500-1052391572). Neither map is written by the mod, so pack
-  owners get the signs from their own install; a cooperator, not an
-  invasion, left as is.
+- **Caelid NPC invasion, Radahn arena** (`m60_52_39_00` and the level-2
+  tile `m60_13_09_02`): EMEVD 832 -> 24112 bytes with ten new events (0,
+  200, 1052392910, 1252392200-1252392695, carrying the summon action button
+  9560, texts 80900-80902 and flag 6953); MSB gains enemy `c0000_9020`
+  (entity 1052390180, `NpcParam` 544700000: name 147001 "Knight Leontiel",
+  team 27, the invader team) and five NPC regions. `NpcParam` 544710000 is
+  "The Noble Broken Mask" (team 27). `m60_52_39_00` has no fog gate and no
+  randomized item, so neither tool ever wrote it and pack owners got the
+  invasion from their own 1.17 files (reported 2026-08-29 on seed
+  546905155). Fix: `[[pin_vanilla_maps]]` ships the snapshot copy (1.16: no
+  enemy, an empty EMEVD) through `VanillaMapPinner`. When the snapshot map
+  moves to 1.17, these events and parts need `[[disable_events]]` /
+  `[[remove_entities]]` entries instead. The level-2 tile `m60_13_09_02`
+  gains enemy `c0000_9010` (entity 1052390200, `NpcParam` 534700000: name
+  147000 "Knight Leontiel", team 2, a cooperator) and ten `AEG099_090`
+  summon signs (1052391500-1052391572): not an invasion, left as is; the
+  Item Randomizer writes that tile (from 1.16 data) only when it places
+  something there, otherwise it runs from the player's install and pack
+  owners keep the signs and the summon.
 - **Redmane Castle `m60_51_36_00`**: one new enemy `c0000_9013` (entity
-  1051360740, NPC name 147100 "The Noble Broken Mask") with EMEVD event
-  1051360740 (32 instructions): the Caelid NPC invasion, in the Radahn
-  arena approach. Its conditions are DLC flag 6953 ON, 9410 ON and 9413 OFF
-  (Radahn festival flags a run needs as they are), so it cannot be turned
-  off by a startup flag; it is neutralized by `EventDisabler`
-  (`[[disable_events]]` in `data/game_tweaks.toml`, together with
-  Leyndell's 11002930), and the invader part `c0000_9013` is removed
-  through `[[remove_entities]]`, because the event's own prologue is what
-  disables the NPC for non-owners. Seeds generated on 2026-08-27 between
-  18:52 and 19:01, during the 1.17 preview window, carry the 1.17 file and
-  the invasion; seeds built since ship the 1.16 file. The Knight Leontiel
-  summon signs are the `m60_52_39_00` events and the ten `AEG099_090` in
-  `m60_13_09_02` (below), a cooperator, left as is.
+  1051360740, `NpcParam` 524700000, name 147000 "Knight Leontiel", team 0:
+  the friendly festival NPC) with EMEVD event 1051360740 (32 instructions,
+  conditions DLC flag 6953 ON, 9410 ON, 9413 OFF: the Radahn festival
+  flags). Not an invasion; left as is (a 2026-08-29 attempt to disable it
+  was reverted the same day).
 - **Grace menu ESD** (`t000001000`, machine 2147483616): 46 -> 49 states,
   one new branch on menu result 75 (Torrent appearance, texts
   20010070-20010079 and 20011070-20011078 in `menu_dlc02`). Every other
@@ -570,11 +572,12 @@ dotnet tool install ilspycmd --tool-path "$SCRATCH/tools" --version 11.0.0.9375
   `--game-dir <patched game>`, then the refresh; `Game.1.16.2` is kept as
   the diff reference only. Torrent on a 1.16.2 executable with a 1.17
   regulation is expected to work (row 80000 still present), untested.
-- 2026-08-29: the Redmane NPC invasion (`m60_51_36_00` event 1051360740)
-  showed up in a seed generated during the 2026-08-27 preview window (1.17
-  map file). Neutralized durably with `EventDisabler` and
-  `[[disable_events]]` in `data/game_tweaks.toml` (Redmane and Leyndell
-  entries) plus a `[[remove_entities]]` entry for the Redmane invader part
-  (`VanillaWarpRemover` now removes Enemy parts too); both work on 1.17 map
-  data and are logged no-ops on 1.16. In-game check on 1.17 map data still
-  due (regenerate with refreshed maps, as in the preview window).
+- 2026-08-29: the Caelid NPC invasion reported in the Radahn arena. First
+  attributed to Redmane's new event 1051360740 (that is Knight Leontiel,
+  friendly; the `[[disable_events]]` / `[[remove_entities]]` entries added
+  for it were reverted), then located in `m60_52_39_00`, a map the mod never
+  writes: seed 546905155 (built after the snapshots were back on 1.16) had
+  it because the player's own 1.17 files ran. Fixed with
+  `[[pin_vanilla_maps]]` (`VanillaMapPinner`). Kept from the first attempt:
+  `EventDisabler` with the Leyndell entry 11002930, and Enemy-part support
+  in `VanillaWarpRemover`, both for the day the map data moves to 1.17.

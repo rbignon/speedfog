@@ -203,15 +203,15 @@ public class GameTweaksLoaderTests
             [config_vars]
             logicpass = true
             [[disable_events]]
-            map = "m60_51_36_00"
-            event = 1051360740
+            map = "m11_00_00_00"
+            event = 11002930
             [[disable_events]]
             map = "common"
             event = 780
             """);
 
         Assert.Equal(2, tweaks.DisableEvents.Count);
-        Assert.Equal(new DisableEvent("m60_51_36_00", 1051360740), tweaks.DisableEvents[0]);
+        Assert.Equal(new DisableEvent("m11_00_00_00", 11002930), tweaks.DisableEvents[0]);
         Assert.Equal(new DisableEvent("common", 780), tweaks.DisableEvents[1]);
     }
 
@@ -233,10 +233,37 @@ public class GameTweaksLoaderTests
             [config_vars]
             logicpass = true
             [[disable_events]]
-            map = "m60_51_36_00"
+            map = "m11_00_00_00"
             """));
         Assert.Contains("disable_events", ex.Message);
         Assert.Contains("event", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_PinVanillaMaps_ParsesMapIds()
+    {
+        var tweaks = GameTweaksLoader.Parse("""
+            [config_vars]
+            logicpass = true
+            [[pin_vanilla_maps]]
+            map = "m60_52_39_00"
+            [[pin_vanilla_maps]]
+            map = "m60_13_09_02"
+            """);
+
+        Assert.Equal(new[] { "m60_52_39_00", "m60_13_09_02" }, tweaks.PinVanillaMaps);
+    }
+
+    [Fact]
+    public void Parse_PinVanillaMaps_MissingMap_Throws()
+    {
+        var ex = Assert.Throws<InvalidDataException>(() => GameTweaksLoader.Parse("""
+            [config_vars]
+            logicpass = true
+            [[pin_vanilla_maps]]
+            name = "m60_52_39_00"
+            """));
+        Assert.Contains("pin_vanilla_maps", ex.Message);
     }
 
     [Fact]
@@ -336,13 +363,9 @@ public class GameTweaksLoaderTests
             new[] { "m12_03_00_00", "m12_04_00_00", "m12_08_00_00", "m12_09_00_00" },
             tweaks.TorrentArenas.Select(a => a.Map).OrderBy(m => m, StringComparer.Ordinal));
         Assert.Single(tweaks.SpiritspringRemovals);
-        // Enir-Ilim thorns barrier plus the 1.17 Redmane invader part, whose
-        // event is in disable_events with Leyndell's (docs/game-patch-migration.md).
-        Assert.Equal(2, tweaks.RemoveEntities.Count);
-        Assert.Contains(tweaks.RemoveEntities, e => e.Map == "m60_51_36_00" && e.EntityId == 1051360740);
-        Assert.Equal(
-            new[] { new DisableEvent("m11_00_00_00", 11002930), new DisableEvent("m60_51_36_00", 1051360740) },
-            tweaks.DisableEvents.OrderBy(e => e.Map, StringComparer.Ordinal));
+        Assert.Single(tweaks.RemoveEntities);
+        Assert.Equal(new[] { new DisableEvent("m11_00_00_00", 11002930) }, tweaks.DisableEvents);
+        Assert.Equal(new[] { "m60_52_39_00" }, tweaks.PinVanillaMaps);
         Assert.Equal(3, tweaks.StakeRemovals.Count);
     }
 }

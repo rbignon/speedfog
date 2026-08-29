@@ -11,7 +11,7 @@ FogMod tags unique warps with `"remove"` in its graph data, but its removal logi
 
 ## Solution
 
-`VanillaWarpRemover` runs as a post-processing step after FogMod writes its output. It removes Part.Asset entries from MSB files by matching on `EntityID` (an integer field), not the string name. Since Elden Ring 1.17 it removes matching Part.Enemy entries as well: the `[[remove_entities]]` list of `data/game_tweaks.toml` names the Tarnished Pack invader at Redmane, whose EMEVD event (neutralized by `EventDisabler`) was the only thing hiding it from non-owners (FogRando does the same for its grave parts, `GameDataWriterE.cs:4268-4275`).
+`VanillaWarpRemover` runs as a post-processing step after FogMod writes its output. It removes Part.Asset entries from MSB files by matching on `EntityID` (an integer field), not the string name. Since Elden Ring 1.17 it removes matching Part.Enemy entries as well, for NPCs whose EMEVD event (neutralized by `EventDisabler`) is the only thing hiding them from non-owners of the Tarnished Pack; no such entry is listed today (FogRando does the same for its grave parts, `GameDataWriterE.cs:4268-4275`).
 
 ## Data Flow
 

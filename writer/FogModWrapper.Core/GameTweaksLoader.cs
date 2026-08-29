@@ -23,7 +23,8 @@ public sealed record GameTweaks(
     List<SpiritspringRemoval> SpiritspringRemovals,
     List<RemoveEntity> RemoveEntities,
     List<StakeRemoval> StakeRemovals,
-    List<DisableEvent> DisableEvents);
+    List<DisableEvent> DisableEvents,
+    List<string> PinVanillaMaps);
 
 /// <summary>
 /// Loads and validates <c>data/game_tweaks.toml</c>. Unlike optional
@@ -90,7 +91,8 @@ public static class GameTweaksLoader
             ParseSpiritspringRemovals(root),
             ParseRemoveEntities(root),
             ParseStakeRemovals(root),
-            ParseDisableEvents(root));
+            ParseDisableEvents(root),
+            ParsePinVanillaMaps(root));
     }
 
     public static GameTweaks Load(string path)
@@ -107,7 +109,8 @@ public static class GameTweaksLoader
             $"{tweaks.SpiritspringRemovals.Count} spiritspring removals, " +
             $"{tweaks.RemoveEntities.Count} remove entities, " +
             $"{tweaks.StakeRemovals.Count} stake removals, " +
-            $"{tweaks.DisableEvents.Count} disabled events from {path}");
+            $"{tweaks.DisableEvents.Count} disabled events, " +
+            $"{tweaks.PinVanillaMaps.Count} pinned vanilla maps from {path}");
         return tweaks;
     }
 
@@ -125,6 +128,17 @@ public static class GameTweaksLoader
                     $"game_tweaks.toml: [[disable_events]] entry for {map} missing integer 'event'");
             result.Add(new DisableEvent(map, eventId));
         }
+        return result;
+    }
+
+    private static List<string> ParsePinVanillaMaps(TomlTable root)
+    {
+        var result = new List<string>();
+        var entries = Section(root, "pin_vanilla_maps");
+        if (entries == null)
+            return result;
+        foreach (var entry in entries)
+            result.Add(RequireString(entry, "pin_vanilla_maps", "map"));
         return result;
     }
 
