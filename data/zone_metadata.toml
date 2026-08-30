@@ -580,6 +580,11 @@ allowed_entries = [
     "AEG099_230_9500", # Midra's Manse entrance
 ]
 
+[clusters.altus_shaded_ec7b]
+allowed_entries = [
+    "755894502", # Shaded Castle entrance
+]
+
 [clusters.mountaintops_sol_30e9]
 allowed_entries = [
     "755894503", # Castle Sol entrance
