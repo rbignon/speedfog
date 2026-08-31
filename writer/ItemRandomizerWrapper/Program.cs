@@ -132,7 +132,7 @@ Example:
         Console.WriteLine();
 
         // Build or load enemy preset
-        Preset? preset = null;
+        EnemyPreset? preset = null;
         if (randoConfig.EnemyOptions != null)
         {
             preset = BuildEnemyPreset(randoConfig.EnemyOptions, randoConfig.EnemyAssignments);
@@ -159,7 +159,7 @@ Example:
             if (File.Exists(presetFile))
             {
                 Console.WriteLine($"Loading preset: {randoConfig.Preset}");
-                preset = Preset.LoadPreset(randoConfig.Preset);
+                preset = EnemyPreset.LoadPreset(randoConfig.Preset);
             }
             else
             {
@@ -197,7 +197,7 @@ Example:
             GameSpec.FromGame.ER,
             notify: status => Console.Error.WriteLine($"  {status}"),
             outPath: config.OutputDir,
-            preset: preset,
+            enemyPreset: preset,
             itemPreset: itemPreset,
             messages: null,
             gameExe: Path.Combine(config.GameDir, "eldenring.exe")
@@ -226,7 +226,7 @@ Example:
     /// Pool / RemoveSource values are semicolon-separated strings, parsed by
     /// Preset.PhraseRe (see Preset.cs:107, getPoolMultiIds / getMultiIds).
     /// </summary>
-    internal static Preset BuildEnemyPreset(
+    internal static EnemyPreset BuildEnemyPreset(
         EnemyOptionsConfig options,
         Dictionary<string, string>? enemyAssignments)
     {
@@ -235,13 +235,13 @@ Example:
             throw new ArgumentException(
                 $"Invalid randomize_bosses value: '{options.RandomizeBosses}' (expected: {string.Join(", ", valid)})");
 
-        var preset = new Preset();
+        var preset = new EnemyPreset();
 
         // HostileNPC: NOT listed in preset → default behavior = randomize
         // among themselves only (each class without a preset entry swaps within itself).
         // CaravanTroll: never randomize (special scripted entity)
         preset.Classes[EnemyAnnotations.EnemyClass.CaravanTroll] =
-            new Preset.ClassAssignment { NoRandom = true };
+            new EnemyPreset.ClassAssignment { NoRandom = true };
 
         if (options.RandomizeBosses == "none")
         {
@@ -255,7 +255,7 @@ Example:
                 EnemyAnnotations.EnemyClass.Evergaol,
             })
             {
-                preset.Classes[cls] = new Preset.ClassAssignment { NoRandom = true };
+                preset.Classes[cls] = new EnemyPreset.ClassAssignment { NoRandom = true };
             }
         }
         else
@@ -268,11 +268,11 @@ Example:
             // from Boss via DefaultInherit (enemy.txt: MinorBoss.Parent = Boss).
             // Without this, ProcessEnemyPreset copies Boss.NoRandom → MinorBoss,
             // which disables the entire MinorBoss silo.
-            preset.Classes[EnemyAnnotations.EnemyClass.MinorBoss] = new Preset.ClassAssignment
+            preset.Classes[EnemyAnnotations.EnemyClass.MinorBoss] = new EnemyPreset.ClassAssignment
             {
-                Pools = new List<Preset.PoolAssignment>
+                Pools = new List<EnemyPreset.PoolAssignment>
                 {
-                    new Preset.PoolAssignment { Weight = 1000, Pool = "default" }
+                    new EnemyPreset.PoolAssignment { Weight = 1000, Pool = "default" }
                 }
             };
             foreach (var cls in new[] {
@@ -281,24 +281,24 @@ Example:
                 EnemyAnnotations.EnemyClass.Evergaol,
             })
             {
-                preset.Classes[cls] = new Preset.ClassAssignment
+                preset.Classes[cls] = new EnemyPreset.ClassAssignment
                 {
                     MergeParent = true,
-                    Pools = new List<Preset.PoolAssignment>
+                    Pools = new List<EnemyPreset.PoolAssignment>
                     {
-                        new Preset.PoolAssignment { Weight = 1000, Pool = "default" }
+                        new EnemyPreset.PoolAssignment { Weight = 1000, Pool = "default" }
                     }
                 };
             }
             // Miniboss.Parent is Boss, but AltParent includes MinorBoss.
             // Use ManualParent to redirect the merge into MinorBoss instead of Boss.
-            preset.Classes[EnemyAnnotations.EnemyClass.Miniboss] = new Preset.ClassAssignment
+            preset.Classes[EnemyAnnotations.EnemyClass.Miniboss] = new EnemyPreset.ClassAssignment
             {
                 MergeParent = true,
                 ManualParent = EnemyAnnotations.EnemyClass.MinorBoss,
-                Pools = new List<Preset.PoolAssignment>
+                Pools = new List<EnemyPreset.PoolAssignment>
                 {
-                    new Preset.PoolAssignment { Weight = 1000, Pool = "default" }
+                    new EnemyPreset.PoolAssignment { Weight = 1000, Pool = "default" }
                 }
             };
 
@@ -315,7 +315,7 @@ Example:
             {
                 // Lock major bosses (Boss class) in place
                 preset.Classes[EnemyAnnotations.EnemyClass.Boss] =
-                    new Preset.ClassAssignment { NoRandom = true };
+                    new EnemyPreset.ClassAssignment { NoRandom = true };
             }
 
         }

@@ -71,6 +71,14 @@
     <None Include="../lib/LightInject.Annotation.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <!-- Runtime deps of the v0.12 RandomizerCommon/SoulsIds pair: XxHash
+         (RandomizerCommon Util) and TOML parsing (SoulsIds MergedMods) -->
+    <None Include="../lib/System.IO.Hashing.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="../lib/Tommy.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>
