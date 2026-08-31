@@ -340,8 +340,9 @@ A frozen copy and the Steam install share
   ModEngine config with the DLL from `packaging.py`, pick it in the launcher
   when a game path is configured, make `launch_helper.ps1` look for the
   alternate extension, seed the alternate file with a one-shot copy of
-  `ER0000.sl2`. Check the DLL's redistribution licence first. Trigger: the
-  save test fails and FogRando is still not updated after a few weeks.
+  `ER0000.sl2`. Check the DLL's redistribution licence first. Trigger:
+  cross-version save corruption is observed on a future patch and FogRando
+  is still not updated after a few weeks.
 - Not planned: swapping save files around the launch (fragile on crash);
   me3 (only if ModEngine 2 itself breaks, S4; it was tried and reverted in
   commit `3b6958d`).
