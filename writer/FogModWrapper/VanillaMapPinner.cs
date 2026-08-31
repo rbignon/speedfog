@@ -8,10 +8,13 @@ namespace FogModWrapper;
 /// invasion in the Radahn arena lives in m60_52_39_00, a map without fog
 /// gates or randomized items, so the seed shipped nothing for it and pack
 /// owners got the invasion from their 1.17 files. Pinning the snapshot copy
-/// (1.16 today: no enemy, an empty EMEVD) overrides that. Files FogMod wrote
-/// are never replaced, and files present in the merge dir are skipped: the
-/// seed loads mods/itemrando after mods/fogmod, so a pinned copy would
-/// shadow the Item Randomizer's edits for that map.
+/// overrides that. A listed map is guaranteed present in the FogMod output:
+/// FogMod's own copy if it wrote one, else the Item Randomizer's merge-dir
+/// copy, else the snapshot copy. The merge-dir case copies the file into the
+/// FogMod output (rather than leaving it merge-dir-only) so EventDisabler and
+/// VanillaWarpRemover, which run after Pin in Program.cs and only read the
+/// FogMod output dir, can still patch it. mods/fogmod wins the ModEngine
+/// order, so the copy shadows nothing observable.
 /// </summary>
 public static class VanillaMapPinner
 {
@@ -49,7 +52,10 @@ public static class VanillaMapPinner
                 }
                 if (c.merged != null)
                 {
-                    Console.WriteLine($"Pin vanilla maps: {c.fileName} written by the Item Randomizer (merge dir), not pinned");
+                    Directory.CreateDirectory(Path.GetDirectoryName(c.target)!);
+                    File.Copy(c.merged, c.target);
+                    copied++;
+                    Console.WriteLine($"Pin vanilla maps: shipped the Item Randomizer's {c.fileName} (merge dir) for later patching");
                     continue;
                 }
                 Directory.CreateDirectory(Path.GetDirectoryName(c.target)!);

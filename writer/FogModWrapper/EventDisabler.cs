@@ -15,9 +15,9 @@ namespace FogModWrapper;
 /// prologue is what disables an NPC (SetCharEnable OFF before waiting on a
 /// flag), the MSB part must be removed alongside through [[remove_entities]]
 /// (VanillaWarpRemover handles Enemy parts), or it stays enabled for
-/// everyone. An event absent from the file (a map still on 1.16 data) is
-/// reported and skipped, so the list stays correct whichever version the
-/// snapshot holds.
+/// everyone. An event absent from the file (a map on pre-1.17 data, or a
+/// mod-list edit ahead of the shipped maps) is reported and skipped, so the
+/// list stays correct whichever version the snapshot holds.
 /// </summary>
 public static class EventDisabler
 {
