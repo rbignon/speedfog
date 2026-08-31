@@ -167,6 +167,14 @@ public static class AmbientSpawnInjector
         int greeters = 0;
         int ambushers = 0;
         var modelsEnsured = new HashSet<string>();
+        // Snapshot before placing anything: a spawn added for an earlier gate
+        // carries EntityID 0 (see below), which passes the "vanilla" filter
+        // in FindNearestVanillaEnemy just like a real vanilla enemy would. A
+        // later gate in the same map must never pick an already-placed spawn
+        // as its clone source, or the "nearest enemy stands on a valid
+        // collision in the same play space" rationale for the inherited
+        // CollisionPartName no longer holds.
+        var vanillaEnemies = msb.Parts.Enemies.ToList();
 
         foreach (var group in specs.GroupBy(s => s.GatePartName))
         {
@@ -182,7 +190,7 @@ public static class AmbientSpawnInjector
                 continue;
             }
 
-            var baseEnemy = FindNearestVanillaEnemy(msb, gateAsset.Position);
+            var baseEnemy = FindNearestVanillaEnemy(vanillaEnemies, gateAsset.Position);
             if (baseEnemy == null)
             {
                 log($"  Warning: No vanilla enemy to clone from, skipping ambient spawns for gate '{partName}'");
@@ -252,6 +260,19 @@ public static class AmbientSpawnInjector
             Console.WriteLine("Halloween spawns: NpcThinkParam unavailable, greeters stay vanilla-aggro");
             return;
         }
+        Apply(think);
+    }
+
+    /// <summary>
+    /// Lower-level entry point used by tests. Operates on an already-loaded
+    /// PARAM (same split as PhantomCatalogInjector.ApplyTo/Apply), so the
+    /// row-writing logic can be exercised against a real NpcThinkParam.xml
+    /// paramdef without needing a RegulationEditor/regulation.bin. This is
+    /// the codepath that shipped without its paramdef in a real publish
+    /// (see e5a3212); PARAM-level coverage regression-guards that.
+    /// </summary>
+    public static void Apply(PARAM think)
+    {
         var row = GameEditor.AddRow(think, SpeedFogIds.PassiveGreeterThinkRow, 52800000);
         // Storage types from Defs/NpcThinkParam.xml: ear_dist is f32, the rest u16.
         row["ear_dist"].Value = 0f;
@@ -287,12 +308,12 @@ public static class AmbientSpawnInjector
         return (greeters, ambushers);
     }
 
-    private static MSBE.Part.Enemy? FindNearestVanillaEnemy(MSBE msb, Vector3 targetPos)
+    private static MSBE.Part.Enemy? FindNearestVanillaEnemy(IReadOnlyList<MSBE.Part.Enemy> enemies, Vector3 targetPos)
     {
         MSBE.Part.Enemy? best = null;
         float bestDist = float.MaxValue;
 
-        foreach (var enemy in msb.Parts.Enemies)
+        foreach (var enemy in enemies)
         {
             if (enemy.EntityID >= FOGMOD_ENTITY_MIN)
                 continue;

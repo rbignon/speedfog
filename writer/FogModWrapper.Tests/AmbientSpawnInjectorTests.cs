@@ -66,6 +66,26 @@ public class AmbientSpawnInjectorTests
     }
 
     [Fact]
+    public void CollectSpecs_DedupesSameGateAcrossConnections()
+    {
+        // Mirrors GateDecorInjectorTests.CollectGates_DedupesSameGateAcrossConnections:
+        // two connections landing on the same entrance gate must not double
+        // up the greeter (or, with ambushes on, double the pack).
+        var connections = new List<Connection>
+        {
+            Conn("m10_00_00_00_AEG099_001_9000", "m31_00_00_00_AEG099_002_9000", "cave_zone", 1),
+            Conn("m10_00_00_00_AEG099_005_9000", "m31_00_00_00_AEG099_002_9000", "cave_zone", 3),
+        };
+        var eventMap = new Dictionary<string, string> { ["1"] = "mini1", ["3"] = "mini1" };
+        var specs = AmbientSpawnInjector.CollectSpawnSpecsByMap(
+            connections, eventMap, Nodes,
+            new Dictionary<string, (string, string)>(),
+            new HalloweenPluginSettings.Settings(Ambushes: false));
+
+        Assert.Single(specs["m31_00_00_00"]);
+    }
+
+    [Fact]
     public void ApplyToMsb_PlacesGreeterWithPassiveThink()
     {
         var msb = MakeMsbWithGateAndEnemy();
@@ -102,6 +122,77 @@ public class AmbientSpawnInjectorTests
         Assert.NotSame(sourceEnemy.Unk1.DisplayGroups, greeter.Unk1.DisplayGroups);
     }
 
+    [Fact]
+    public void ApplyToMsb_LaterGateDoesNotCloneAnEarlierGatesPlacedSpawn()
+    {
+        // Two gates in the same map, each with its own genuine vanilla enemy
+        // nearby, distinguished by CollisionPartName. Gate B's own vanilla
+        // enemy sits 1m away from gate B; gate A's greeter lands EXACTLY at
+        // gate B's position by construction. A clone-source search that
+        // rescans the live (mutated) enemy list would find gate A's
+        // already-placed greeter (distance 0, EntityID 0 passes the
+        // "vanilla" filter) before ever preferring gate B's own neighbor.
+        var msb = new MSBE();
+
+        var gateA = new MSBE.Part.Asset
+        {
+            Name = "AEG099_002_9000", ModelName = "AEG099_002",
+            Position = new Vector3(0f, 0f, 0f), EntityID = 755890001,
+        };
+        msb.Parts.Assets.Add(gateA);
+
+        var vanillaA = new MSBE.Part.Enemy
+        {
+            Name = "c9990_9000", ModelName = "c9990",
+            Position = new Vector3(0f, 0f, 0f), EntityID = 0,
+            NPCParamID = 99900000, ThinkParamID = 99900000,
+            CollisionPartName = "h_zone_a",
+        };
+        msb.Parts.Enemies.Add(vanillaA);
+
+        // Exactly where gate A's greeter will land: same seed math ApplyToMsb
+        // uses for a Greeter spec with GateSideIsASide=false (arc center 0
+        // degrees, radius 4-6m, pack size 1).
+        var greeterAOffset = GateGeometry.GenerateArcOffsets(
+            gateA.EntityID, gateA.Rotation.Y, 0f, 1, 4.0f, 6.0f, 0f, 120f)[0];
+        var greeterAPosition = gateA.Position + greeterAOffset;
+
+        var gateB = new MSBE.Part.Asset
+        {
+            Name = "AEG099_003_9000", ModelName = "AEG099_003",
+            Position = greeterAPosition, EntityID = 755890002,
+        };
+        msb.Parts.Assets.Add(gateB);
+
+        // Gate B's own genuine neighbor: closer to gate B than vanillaA, but
+        // deliberately 1m off (not distance 0) so the buggy live-list scan
+        // still prefers gate A's already-placed greeter (distance 0) over it.
+        var vanillaB = new MSBE.Part.Enemy
+        {
+            Name = "c9991_9000", ModelName = "c9991",
+            Position = greeterAPosition + new Vector3(1f, 0f, 0f), EntityID = 0,
+            NPCParamID = 99910000, ThinkParamID = 99910000,
+            CollisionPartName = "h_zone_b",
+        };
+        msb.Parts.Enemies.Add(vanillaB);
+
+        var specs = new List<SpawnSpec>
+        {
+            new("AEG099_002_9000", SpawnKind.Greeter, 0, 1, GateSideIsASide: false),
+            new("AEG099_003_9000", SpawnKind.Greeter, 0, 1, GateSideIsASide: false),
+        };
+
+        var (greeters, _) = AmbientSpawnInjector.ApplyToMsb(msb, specs, _ => { });
+
+        Assert.Equal(2, greeters);
+        var placedGreeters = msb.Parts.Enemies.Where(e => e.ModelName == "c5280").ToList();
+        Assert.Equal(2, placedGreeters.Count);
+        // GroupBy preserves first-occurrence key order, matching the specs
+        // list order (gate A's group processed before gate B's).
+        var greeterForGateB = placedGreeters[1];
+        Assert.Equal("h_zone_b", greeterForGateB.CollisionPartName);
+    }
+
     private static MSBE MakeMsbWithGateAndEnemy()
     {
         var msb = new MSBE();
@@ -121,4 +212,47 @@ public class AmbientSpawnInjectorTests
         msb.Parts.Enemies.Add(enemy);
         return msb;
     }
+
+    // --- ApplyPassiveThinkRow: PARAM-level coverage ---
+    //
+    // This is the codepath that shipped without its paramdef in a real
+    // publish (see e5a3212): ApplyPassiveThinkRow.GetParam("NpcThinkParam")
+    // fails silently by design (Console.WriteLine + return) when the
+    // .csproj does not ship eldendata/Defs/NpcThinkParam.xml. Loading the
+    // real paramdef here regression-guards the .csproj entry: if it goes
+    // missing again, PARAMDEF.XmlDeserialize below throws (file not found)
+    // rather than the row-writing assertions silently not running.
+
+    [Fact]
+    public void ApplyPassiveThinkRow_ClonesAgingUntouchableRowWithPerceptionZeroed()
+    {
+        var think = BuildParamFromDef(Path.Combine(DefsDir(), "NpcThinkParam.xml"), 52800000);
+
+        AmbientSpawnInjector.Apply(think);
+
+        var row = think[SpeedFogIds.PassiveGreeterThinkRow]!;
+        Assert.Equal(0f, row["ear_dist"].Value);
+        Assert.Equal((ushort)0, row["eye_dist"].Value);
+        Assert.Equal((ushort)0, row["nose_dist"].Value);
+        Assert.Equal((ushort)0, row["searchEye_dist"].Value);
+        Assert.Equal((ushort)0, row["BattleStartDist"].Value);
+    }
+
+    // Same idiom as PhantomCatalogInjectorTests.BuildParamFromDef: build an
+    // in-memory PARAM from the real paramdef XML, with a template row to
+    // clone from.
+    private static PARAM BuildParamFromDef(string defXmlPath, params int[] templateRowIds)
+    {
+        var def = PARAMDEF.XmlDeserialize(defXmlPath);
+        var param = new PARAM { ParamType = def.ParamType, Rows = new List<PARAM.Row>() };
+        param.ApplyParamdef(def);
+        foreach (var id in templateRowIds)
+        {
+            param.Rows.Add(new PARAM.Row(id, "", def));
+        }
+        return param;
+    }
+
+    private static string DefsDir() =>
+        Path.Combine(AppContext.BaseDirectory, "eldendata", "Defs");
 }

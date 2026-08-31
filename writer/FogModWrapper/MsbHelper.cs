@@ -93,8 +93,9 @@ internal static class MsbHelper
     /// Ensure an enemy model definition exists in the MSB models list.
     /// SibPath follows the enemy randomizer's registration convention
     /// (N:\GR\data\Model\chr\{model}\sib\{model}.sib). The existing
-    /// ChapelGrace caller only registers the invisible c1000 and is
-    /// unaffected by the addition.
+    /// ChapelGrace caller (registering the invisible c1000) now also gets a
+    /// SibPath on its model entry; harmless there since c1000 already loads
+    /// correctly regardless (it has no chr geometry to resolve).
     /// </summary>
     public static void EnsureEnemyModel(MSBE msb, string modelName)
     {

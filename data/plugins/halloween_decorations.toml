@@ -16,6 +16,12 @@
 #   4. Add an [[entries]] block, rebuild a seed, and check the first
 #      entrance gates of any mini dungeon in game.
 #
+# Note: MsbHelper.EnsureAssetModel registers a new model name without an
+# asset SibPath (unlike EnsureEnemyModel for chr models). A real geometry
+# model (not the AEG099_090 invisible anchor above) may need its own SibPath
+# to load; if it does not render in-game, step 4's check is where that
+# surfaces.
+#
 # [[entries]]
 # model = "AEG099_090"   # asset model to place (AEGxxx_xxx)
 # count = 2              # decorations per gate (1-5)
