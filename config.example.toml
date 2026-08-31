@@ -332,6 +332,11 @@ item_preset = true
 [plugin.summer]
 enabled = false  # set true to reskin boss names + victory/death banners
 
+# Halloween text reskin (boss names, banners, item renames, loading tips).
+# If both text themes are enabled, halloween overwrites colliding entries.
+[plugin.halloween]
+enabled = false
+
 # Force a fixed weather and pin the in-game clock hour (racing consistency).
 [plugin.weather]
 enabled = false
