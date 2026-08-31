@@ -199,3 +199,87 @@ def test_package_seed_with_empty_static_mod_omits_the_entry(tmp_path: Path) -> N
         encoding="utf-8"
     )
     assert 'name = "speedfog"' not in content
+
+
+def test_package_seed_copies_halloween_overlay_when_plugin_enabled(
+    tmp_path: Path,
+) -> None:
+    project_root = tmp_path / "project"
+    seed_dir = tmp_path / "seed"
+    _make_packaging_tree(project_root)
+    overlay = project_root / "data" / "mods" / "speedfog-halloween"
+    (overlay / "menu" / "hi").mkdir(parents=True)
+    (overlay / "menu" / "hi" / "05_dummy.tpf.dcx").write_bytes(b"x")
+
+    package_seed(project_root, seed_dir, halloween_enabled=True)
+
+    assert (
+        seed_dir / "mods" / "speedfog-halloween" / "menu" / "hi" / "05_dummy.tpf.dcx"
+    ).exists()
+    content = (seed_dir / "modengine2" / "config_speedfog.toml").read_text(
+        encoding="utf-8"
+    )
+    assert 'name = "speedfog-halloween"' in content
+    # ModEngine 2: first mod wins. The static mod and the halloween overlay
+    # must both beat fogmod, in that order (static mod fixture absent here,
+    # so assert against fogmod directly).
+    assert content.index('name = "speedfog-halloween"') < content.index(
+        'name = "fogmod"'
+    )
+
+
+def test_package_seed_omits_halloween_overlay_when_plugin_disabled(
+    tmp_path: Path,
+) -> None:
+    project_root = tmp_path / "project"
+    seed_dir = tmp_path / "seed"
+    _make_packaging_tree(project_root)
+    overlay = project_root / "data" / "mods" / "speedfog-halloween"
+    (overlay / "menu").mkdir(parents=True)
+    (overlay / "menu" / "x.bin").write_bytes(b"x")
+
+    package_seed(project_root, seed_dir, halloween_enabled=False)
+
+    assert not (seed_dir / "mods" / "speedfog-halloween").exists()
+    content = (seed_dir / "modengine2" / "config_speedfog.toml").read_text(
+        encoding="utf-8"
+    )
+    assert "speedfog-halloween" not in content
+
+
+def test_package_seed_omits_halloween_overlay_when_dir_empty(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    seed_dir = tmp_path / "seed"
+    _make_packaging_tree(project_root)
+    (project_root / "data" / "mods" / "speedfog-halloween").mkdir(parents=True)
+
+    package_seed(project_root, seed_dir, halloween_enabled=True)
+
+    assert not (seed_dir / "mods" / "speedfog-halloween").exists()
+    content = (seed_dir / "modengine2" / "config_speedfog.toml").read_text(
+        encoding="utf-8"
+    )
+    assert "speedfog-halloween" not in content
+
+
+def test_write_modengine_config_lists_halloween_overlay_after_speedfog(
+    tmp_path: Path,
+) -> None:
+    write_modengine_config(
+        tmp_path,
+        static_mod_enabled=True,
+        halloween_mod_enabled=True,
+    )
+
+    content = (tmp_path / "modengine2" / "config_speedfog.toml").read_text(
+        encoding="utf-8"
+    )
+    assert 'name = "speedfog-halloween"' in content
+    assert 'path = "../mods/speedfog-halloween"' in content
+    # ModEngine 2: first mod wins. Order must be speedfog, then the
+    # halloween overlay, then fogmod.
+    assert (
+        content.index('name = "speedfog"')
+        < content.index('name = "speedfog-halloween"')
+        < content.index('name = "fogmod"')
+    )

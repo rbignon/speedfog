@@ -16,6 +16,7 @@ def write_modengine_config(
     item_randomizer_enabled: bool = False,
     include_crash_fix: bool = False,
     static_mod_enabled: bool = False,
+    halloween_mod_enabled: bool = False,
 ) -> Path:
     """Write the ModEngine 2 TOML config consumed by the launcher.
 
@@ -49,6 +50,11 @@ def write_modengine_config(
     if static_mod_enabled:
         mods_lines.append(
             '    { enabled = true, name = "speedfog", path = "../mods/speedfog" }'
+        )
+    if halloween_mod_enabled:
+        mods_lines.append(
+            '    { enabled = true, name = "speedfog-halloween",'
+            ' path = "../mods/speedfog-halloween" }'
         )
     mods_lines.append(
         '    { enabled = true, name = "fogmod", path = "../mods/fogmod" }'
@@ -104,6 +110,7 @@ def package_seed(
     *,
     item_randomizer_enabled: bool = False,
     item_randomizer_dir: Path | None = None,
+    halloween_enabled: bool = False,
 ) -> None:
     """Assemble the static mod, ModEngine 2, launcher, DLLs, and config."""
     print()
@@ -131,6 +138,24 @@ def package_seed(
             " building seed without static patches"
         )
 
+    # The halloween overlay is only shipped when the plugin is enabled AND
+    # the overlay was actually built at bootstrap (mirrors static_mod_enabled
+    # above: a disabled plugin, or a bootstrap run without it, must not
+    # register an empty/missing mod directory with ModEngine 2).
+    halloween_dir = project_root / "data" / "mods" / "speedfog-halloween"
+    halloween_mod_enabled = (
+        halloween_enabled
+        and halloween_dir.is_dir()
+        and any(f.is_file() for f in halloween_dir.rglob("*"))
+    )
+    if halloween_mod_enabled:
+        shutil.copytree(
+            halloween_dir,
+            seed_dir / "mods" / "speedfog-halloween",
+            dirs_exist_ok=True,
+        )
+        print("Copied halloween overlay from data/mods/speedfog-halloween/")
+
     if item_randomizer_enabled and item_randomizer_dir is not None:
         helper_config = item_randomizer_dir / "RandomizerHelper_config.ini"
         if helper_config.exists():
@@ -147,6 +172,7 @@ def package_seed(
             and (seed_dir / "lib" / "RandomizerCrashFix.dll").exists()
         ),
         static_mod_enabled=static_mod_enabled,
+        halloween_mod_enabled=halloween_mod_enabled,
     )
     print("Generated modengine2/config_speedfog.toml")
 

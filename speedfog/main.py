@@ -593,6 +593,9 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
                 seed_dir,
                 item_randomizer_enabled=merge_dir is not None,
                 item_randomizer_dir=merge_dir,
+                halloween_enabled=bool(
+                    config.plugins.get("halloween", {}).get("enabled", False)
+                ),
             )
         except PackagingError as e:
             print(f"Error: {e}", file=sys.stderr)
