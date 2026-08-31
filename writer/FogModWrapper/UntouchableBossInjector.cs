@@ -91,20 +91,22 @@ public static class UntouchableBossInjector
         {
             var msb = MSBE.Read(msbPath);
             var lines = new List<string>();
-            int repointed = ApplyToMsb(msb, arenaIds, lines.Add);
-            if (repointed == 0)
-                return;
-            msb.Write(msbPath);
+            var (repointed, ids) = ApplyToMsb(msb, arenaIds, lines.Add);
+            if (repointed > 0)
+                msb.Write(msbPath);
             lock (consoleLock)
             {
-                total += repointed;
-                foreach (var e in msb.Parts.Enemies.Where(
-                    e => e.NPCParamID == SpeedFogIds.UntouchableBossNpcRow))
-                {
-                    found.Add(e.EntityID);
-                }
+                // Always surface collected log lines (e.g. "not c5280" warnings),
+                // even when nothing was repointed in this map; only the numeric
+                // bookkeeping below is gated on the count.
                 foreach (var line in lines)
                     Console.WriteLine(line);
+                if (repointed > 0)
+                {
+                    total += repointed;
+                    foreach (var id in ids)
+                        found.Add(id);
+                }
             }
         });
         Console.WriteLine($"  Repointed {total} untouchable boss part(s)");
@@ -116,9 +118,15 @@ public static class UntouchableBossInjector
         }
     }
 
-    internal static int ApplyToMsb(MSBE msb, HashSet<uint> arenaIds, Action<string> log)
+    /// <summary>Repoints every enemy part whose EntityID is an arena id and
+    /// whose model is c5280 (the wrong-model case is logged and skipped, not
+    /// repointed). Returns the repointed count and the repointed entity ids,
+    /// so callers can do exact found/missing bookkeeping without re-scanning
+    /// the MSB by NPCParamID.</summary>
+    internal static (int Repointed, List<uint> Ids) ApplyToMsb(
+        MSBE msb, HashSet<uint> arenaIds, Action<string> log)
     {
-        int repointed = 0;
+        var ids = new List<uint>();
         foreach (var enemy in msb.Parts.Enemies)
         {
             if (!arenaIds.Contains(enemy.EntityID))
@@ -130,8 +138,8 @@ public static class UntouchableBossInjector
             }
             enemy.NPCParamID = SpeedFogIds.UntouchableBossNpcRow;
             log($"  {enemy.Name} (entity {enemy.EntityID}): NPCParamID -> {SpeedFogIds.UntouchableBossNpcRow}");
-            repointed++;
+            ids.Add(enemy.EntityID);
         }
-        return repointed;
+        return (ids.Count, ids);
     }
 }

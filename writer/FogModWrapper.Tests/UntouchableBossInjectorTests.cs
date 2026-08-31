@@ -74,10 +74,11 @@ public class UntouchableBossInjectorTests
             EntityID = 30001850, NPCParamID = 35000030, ThinkParamID = 35000000,
         });
 
-        int repointed = UntouchableBossInjector.ApplyToMsb(
+        var (repointed, ids) = UntouchableBossInjector.ApplyToMsb(
             msb, new HashSet<uint> { 30001800 }, _ => { });
 
         Assert.Equal(1, repointed);
+        Assert.Equal(new List<uint> { 30001800 }, ids);
         var boss = msb.Parts.Enemies.Single(e => e.EntityID == 30001800);
         Assert.Equal(SpeedFogIds.UntouchableBossNpcRow, boss.NPCParamID);
         Assert.Equal(52800000, boss.ThinkParamID); // AI stays vanilla in this plan
@@ -96,10 +97,11 @@ public class UntouchableBossInjectorTests
         });
         var warnings = new List<string>();
 
-        int repointed = UntouchableBossInjector.ApplyToMsb(
+        var (repointed, ids) = UntouchableBossInjector.ApplyToMsb(
             msb, new HashSet<uint> { 30001800 }, warnings.Add);
 
         Assert.Equal(0, repointed);
+        Assert.Empty(ids);
         Assert.Equal(35000030, msb.Parts.Enemies[0].NPCParamID);
         Assert.Contains(warnings, w => w.Contains("30001800"));
     }
