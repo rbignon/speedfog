@@ -17,9 +17,9 @@ Items are defined in `data/care_package_items.toml`. Each entry has a `name` (di
 
 The pool file is configurable via `care_package.pool_file` (default:
 `care_package_items.toml`). The value is a file name, resolved under `data/`
-(`project_root / "data" / pool_file`); an absolute path or a value containing
-`..` is rejected at config load with a `ValueError`. This lets a run swap in
-an alternate pool without touching the item counts or upgrade level.
+(`project_root / "data" / pool_file`); an absolute path or a path with a `..`
+segment is rejected at config load with a `ValueError`. This lets a run swap
+in an alternate pool without touching the item counts or upgrade level.
 
 `data/care_package_items_halloween.toml` is the Halloween mode pool: a
 death/pumpkin/spooky-themed set of weapons, shields, catalysts, armor,
@@ -34,8 +34,8 @@ pool_file = "care_package_items_halloween.toml"
 
 ### Per-item somber flag
 
-Weapons, shields, and catalyst entries may set `somber = true` to use the
-somber upgrade encoding instead of the standard one:
+Weapons and shields entries may set `somber = true` to use the somber
+upgrade encoding instead of the standard one:
 
 ```toml
 [[weapons]]
