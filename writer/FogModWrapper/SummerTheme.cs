@@ -28,7 +28,7 @@ public static class SummerTheme
 
     public static void Apply(string modDir, string gameDir, string dataDir)
     {
-        var catalog = SummerCatalogLoader.Load(Path.Combine(dataDir, "plugins", "summer.toml"));
+        var catalog = TextThemeCatalogLoader.Load(Path.Combine(dataDir, "plugins", "summer.toml"), "summer");
         if (catalog.IsEmpty)
             return;
 
@@ -58,7 +58,7 @@ public static class SummerTheme
     }
 
     private static int ApplyBossEpithets(string modDir, string langDir, string lang,
-        IReadOnlyDictionary<int, SummerBossEntry> bossById)
+        IReadOnlyDictionary<int, ThemeBossEntry> bossById)
     {
         int total = 0;
         foreach (var bndName in BossBnds)
@@ -93,7 +93,7 @@ public static class SummerTheme
     }
 
     private static int ApplyUiStrings(string modDir, string langDir, string lang,
-        IReadOnlyList<SummerUiEntry> ui)
+        IReadOnlyList<ThemeUiEntry> ui)
     {
         int total = 0;
         foreach (var group in ui.GroupBy(u => u.Bnd))

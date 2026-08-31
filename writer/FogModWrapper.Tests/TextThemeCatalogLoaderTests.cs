@@ -1,7 +1,7 @@
 using FogModWrapper;
 using Xunit;
 
-public class SummerCatalogLoaderTests
+public class TextThemeCatalogLoaderTests
 {
     [Fact]
     public void Parse_ValidMixedCatalogue()
@@ -20,7 +20,7 @@ public class SummerCatalogLoaderTests
         en = "SUNSTROKE"
         """;
 
-        var c = SummerCatalogLoader.Parse(toml);
+        var c = TextThemeCatalogLoader.Parse(toml, "summer");
 
         Assert.Single(c.Bosses);
         Assert.Equal(902130000, c.Bosses[0].NpcNameId);
@@ -40,7 +40,7 @@ public class SummerCatalogLoaderTests
         name = "Margit"
         en = ""
         """;
-        Assert.Throws<InvalidDataException>(() => SummerCatalogLoader.Parse(toml));
+        Assert.Throws<InvalidDataException>(() => TextThemeCatalogLoader.Parse(toml, "summer"));
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public class SummerCatalogLoaderTests
         npc_name_id = 902130000
         en = "B"
         """;
-        Assert.Throws<InvalidDataException>(() => SummerCatalogLoader.Parse(toml));
+        Assert.Throws<InvalidDataException>(() => TextThemeCatalogLoader.Parse(toml, "summer"));
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class SummerCatalogLoaderTests
         id = 331314
         en = "X"
         """;
-        Assert.Throws<InvalidDataException>(() => SummerCatalogLoader.Parse(toml));
+        Assert.Throws<InvalidDataException>(() => TextThemeCatalogLoader.Parse(toml, "summer"));
     }
 
     [Fact]
@@ -80,13 +80,26 @@ public class SummerCatalogLoaderTests
         id = 331305
         en = ""
         """;
-        Assert.Throws<InvalidDataException>(() => SummerCatalogLoader.Parse(toml));
+        Assert.Throws<InvalidDataException>(() => TextThemeCatalogLoader.Parse(toml, "summer"));
     }
 
     [Fact]
     public void Load_MissingFileReturnsEmpty()
     {
-        var c = SummerCatalogLoader.Load("/no/such/summer.toml");
+        var c = TextThemeCatalogLoader.Load("/no/such/summer.toml", "summer");
         Assert.True(c.IsEmpty);
+    }
+
+    [Fact]
+    public void Parse_ErrorsCarryThemeName()
+    {
+        var toml = """
+        [[bosses]]
+        npc_name_id = 902130000
+        en = ""
+        """;
+        var ex = Assert.Throws<InvalidDataException>(
+            () => TextThemeCatalogLoader.Parse(toml, "halloween"));
+        Assert.StartsWith("halloween:", ex.Message);
     }
 }
