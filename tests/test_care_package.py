@@ -318,6 +318,82 @@ class TestSampleCarePackage:
             assert "+" not in item.name
 
 
+class TestSomberFlag:
+    """Per-item somber = true switches the upgrade encoding."""
+
+    def _write_pool(self, tmp_path, body):
+        pool = tmp_path / "pool.toml"
+        pool.write_text(body, encoding="utf-8")
+        return pool
+
+    def test_somber_weapon_gets_somber_upgrade(self, tmp_path):
+        pool = self._write_pool(
+            tmp_path,
+            """
+            [[weapons]]
+            name = "Standard Sword"
+            id = 2000000
+
+            [[weapons]]
+            name = "Somber Scythe"
+            id = 19020000
+            somber = true
+            """,
+        )
+        config = CarePackageConfig(
+            enabled=True,
+            weapon_upgrade=10,
+            weapons=2,
+            shields=0,
+            catalysts=0,
+            talismans=0,
+            sorceries=0,
+            incantations=0,
+            head_armor=0,
+            body_armor=0,
+            arm_armor=0,
+            leg_armor=0,
+            crystal_tears=0,
+            ashes_of_war=0,
+        )
+        items = sample_care_package(config, seed=1, pool_path=pool)
+        by_name = {i.name: i for i in items}
+        assert by_name["Standard Sword +10"].id == 2000010
+        # floor(10 / 2.5) = 4
+        assert by_name["Somber Scythe +4"].id == 19020004
+
+    def test_somber_shield_gets_somber_upgrade(self, tmp_path):
+        pool = self._write_pool(
+            tmp_path,
+            """
+            [[shields]]
+            name = "Somber Shield"
+            id = 30200000
+            somber = true
+            """,
+        )
+        config = CarePackageConfig(
+            enabled=True,
+            weapon_upgrade=8,
+            weapons=0,
+            shields=1,
+            catalysts=0,
+            talismans=0,
+            sorceries=0,
+            incantations=0,
+            head_armor=0,
+            body_armor=0,
+            arm_armor=0,
+            leg_armor=0,
+            crystal_tears=0,
+            ashes_of_war=0,
+        )
+        items = sample_care_package(config, seed=1, pool_path=pool)
+        # floor(8 / 2.5) = 3
+        assert items[0].name == "Somber Shield +3"
+        assert items[0].id == 30200003
+
+
 # =============================================================================
 # Config parsing tests
 # =============================================================================

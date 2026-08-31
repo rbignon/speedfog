@@ -2,6 +2,8 @@
 
 Loads curated item pools from data/care_package_items.toml and samples
 a random starting build based on the run seed and per-category counts.
+Weapons and shields entries may set somber = true to get the somber
+upgrade level instead of the standard one.
 """
 
 from __future__ import annotations
@@ -127,6 +129,7 @@ def sample_care_package(
         count: int,
         item_type: int,
         upgrade: int = 0,
+        somber_alternative: int | None = None,
     ) -> None:
         if count <= 0 or not pool_items:
             return
@@ -134,9 +137,12 @@ def sample_care_package(
         for item in chosen:
             base_id = item["id"]
             name = item["name"]
-            if upgrade > 0:
-                final_id = _apply_weapon_upgrade(base_id, upgrade)
-                display_name = _format_upgrade(name, upgrade)
+            effective = upgrade
+            if somber_alternative is not None and item.get("somber"):
+                effective = somber_alternative
+            if effective > 0:
+                final_id = _apply_weapon_upgrade(base_id, effective)
+                display_name = _format_upgrade(name, effective)
             else:
                 final_id = base_id
                 display_name = name
@@ -173,14 +179,22 @@ def sample_care_package(
                 CarePackageItem(type=ITEM_TYPE_WEAPON, id=final_id, name=display_name)
             )
 
-    # Weapons (flat standard pool)
+    # Weapons (flat pool, items may carry somber = true for somber upgrade)
     sample_items(
-        pool.get("weapons", []), config.weapons, ITEM_TYPE_WEAPON, standard_upgrade
+        pool.get("weapons", []),
+        config.weapons,
+        ITEM_TYPE_WEAPON,
+        standard_upgrade,
+        somber_alternative=somber_upgrade,
     )
 
-    # Shields (standard upgrade, Weapon type)
+    # Shields (Weapon type, items may carry somber = true for somber upgrade)
     sample_items(
-        pool.get("shields", []), config.shields, ITEM_TYPE_WEAPON, standard_upgrade
+        pool.get("shields", []),
+        config.shields,
+        ITEM_TYPE_WEAPON,
+        standard_upgrade,
+        somber_alternative=somber_upgrade,
     )
 
     # Catalysts (merged standard + somber pool, Weapon type)
