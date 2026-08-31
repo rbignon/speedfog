@@ -27,6 +27,7 @@ public static class HalloweenIconPatcher
 {
     private const int ICON_SIZE = 160;
     private const byte TPF_FORMAT_BC7 = 102; // format byte used by the SB_* menu textures
+    private const int DXGI_BC7_UNORM = 98; // matches TitleScreenPatcher.DXGI_BC7_UNORM
     private const string TEMPLATE_TEXTURE_NAME = "MENU_DummyTransparent";
     private static readonly string[] Variants = { "hi", "low" };
 
@@ -89,12 +90,29 @@ public static class HalloweenIconPatcher
                 continue;
             }
 
+            var templateContext = $"{TEMPLATE_TEXTURE_NAME} in {dummySubPath}";
+            if (!TryValidateBc7Template(template.Bytes, templateContext))
+            {
+                continue;
+            }
+
+            byte[][] iconDds;
+            try
+            {
+                iconDds = blocksByIcon
+                    .Select(blocks => DdsAtlas.BuildStandaloneDds(template.Bytes, blocks, ICON_SIZE, ICON_SIZE))
+                    .ToArray();
+            }
+            catch (ArgumentException e)
+            {
+                Console.WriteLine($"Warning: {templateContext}: {e.Message}, skipping");
+                continue;
+            }
+
             var textures = new (string Name, byte[] Dds)[Icons.Length];
             for (int i = 0; i < Icons.Length; i++)
             {
-                textures[i] = (
-                    Icons[i].Name,
-                    DdsAtlas.BuildStandaloneDds(template.Bytes, blocksByIcon[i], ICON_SIZE, ICON_SIZE));
+                textures[i] = (Icons[i].Name, iconDds[i]);
             }
             int added = AddTexturesToTpf(tpf, textures);
 
@@ -147,6 +165,39 @@ public static class HalloweenIconPatcher
             count++;
         }
         return count;
+    }
+
+    /// <summary>
+    /// Validate that a borrowed vanilla texture is a well-formed single-mip
+    /// BC7 DX10 DDS before it is used as a header template for
+    /// DdsAtlas.BuildStandaloneDds, which otherwise blindly copies whatever
+    /// dxgiFormat/mip count/caps the template's header carries. Mirrors
+    /// TitleScreenPatcher's ParseHeader + dxgi/mip gate
+    /// (TitleScreenPatcher.cs), so a malformed or too-short template (under
+    /// the 148-byte DX10 header size) becomes a warn-and-skip here instead of
+    /// an uncaught ArgumentException/InvalidDataException out of
+    /// DdsAtlas.ParseHeader or DdsAtlas.BuildStandaloneDds.
+    /// </summary>
+    internal static bool TryValidateBc7Template(byte[] templateDds, string context)
+    {
+        DdsInfo info;
+        try
+        {
+            info = DdsAtlas.ParseHeader(templateDds);
+        }
+        catch (InvalidDataException e)
+        {
+            Console.WriteLine($"Warning: {context}: {e.Message}, skipping");
+            return false;
+        }
+        if (info.DxgiFormat != DXGI_BC7_UNORM || info.MipCount > 1)
+        {
+            Console.WriteLine(
+                $"Warning: {context} is dxgi={info.DxgiFormat} mips={info.MipCount},"
+                + $" expected dxgi={DXGI_BC7_UNORM} mips<=1; skipping");
+            return false;
+        }
+        return true;
     }
 
     private static byte[] EncodeToBc7Blocks(Image<Rgba32> icon)

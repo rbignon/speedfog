@@ -13,17 +13,17 @@ public class HalloweenIconPatcherTests
     /// unlike the brief's original fixture of a bare byte[16], so the fixture
     /// needs a real (if minimal) DDS instead.
     /// </summary>
-    private static byte[] MakeMinimalDds()
+    private static byte[] MakeMinimalDds(int dxgiFormat = 98, int mipCount = 1)
     {
         var dds = new byte[148 + 16];
         "DDS "u8.ToArray().CopyTo(dds, 0);
         BitConverter.GetBytes(124).CopyTo(dds, 4);   // dwSize
         BitConverter.GetBytes(4).CopyTo(dds, 12);    // dwHeight
         BitConverter.GetBytes(4).CopyTo(dds, 16);    // dwWidth
-        BitConverter.GetBytes(1).CopyTo(dds, 28);    // dwMipMapCount
+        BitConverter.GetBytes(mipCount).CopyTo(dds, 28); // dwMipMapCount
         BitConverter.GetBytes(32).CopyTo(dds, 76);   // ddspf dwSize
         System.Text.Encoding.ASCII.GetBytes("DX10").CopyTo(dds, 84); // ddspf dwFourCC
-        BitConverter.GetBytes(98).CopyTo(dds, 128);  // header10 dxgiFormat = BC7_UNORM
+        BitConverter.GetBytes(dxgiFormat).CopyTo(dds, 128); // header10 dxgiFormat
         BitConverter.GetBytes(3).CopyTo(dds, 132);   // header10 resourceDimension = TEXTURE2D
         BitConverter.GetBytes(1).CopyTo(dds, 140);   // header10 arraySize
         return dds;
@@ -67,5 +67,37 @@ public class HalloweenIconPatcherTests
         var tex = tpf.Textures.Single(t => t.Name == "MENU_ItemIcon_60383");
         Assert.Equal(new byte[] { 9, 9 }, tex.Bytes);
         Assert.Equal(2, tpf.Textures.Count);
+    }
+
+    [Fact]
+    public void TryValidateBc7Template_AcceptsValidTemplate()
+    {
+        Assert.True(HalloweenIconPatcher.TryValidateBc7Template(MakeMinimalDds(), "test template"));
+    }
+
+    [Fact]
+    public void TryValidateBc7Template_RejectsNonBc7Format()
+    {
+        // 71 = BC1_UNORM, not BC7_UNORM (98)
+        var nonBc7 = MakeMinimalDds(dxgiFormat: 71);
+        Assert.False(HalloweenIconPatcher.TryValidateBc7Template(nonBc7, "test template"));
+    }
+
+    [Fact]
+    public void TryValidateBc7Template_RejectsMultiMip()
+    {
+        var multiMip = MakeMinimalDds(mipCount: 2);
+        Assert.False(HalloweenIconPatcher.TryValidateBc7Template(multiMip, "test template"));
+    }
+
+    [Fact]
+    public void TryValidateBc7Template_RejectsTooShortTemplate()
+    {
+        // Below the 148-byte DX10 header size; DdsAtlas.ParseHeader throws
+        // InvalidDataException on this, which must be caught here rather than
+        // escaping and hard-failing the whole builder (the bug this guards
+        // against: BuildStandaloneDds itself also throws on a too-short
+        // template, but only after the header has already been trusted).
+        Assert.False(HalloweenIconPatcher.TryValidateBc7Template(new byte[10], "test template"));
     }
 }
