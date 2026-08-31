@@ -151,6 +151,11 @@ public class GraphData
     [JsonPropertyName("plugins")]
     public Dictionary<string, PluginConfig> Plugins { get; set; } = new();
 
+    /// <summary>DAG nodes keyed by cluster id (graph.json v4.4). Only the
+    /// cluster type is modeled; visualization-only fields are ignored.</summary>
+    [JsonPropertyName("nodes")]
+    public Dictionary<string, GraphNode> Nodes { get; set; } = new();
+
     /// <summary>True when the named plugin is present and enabled.</summary>
     public bool IsPluginEnabled(string name)
         => Plugins != null && Plugins.TryGetValue(name, out var p) && p.Enabled;
@@ -270,4 +275,13 @@ public class RemoveEntity
     /// </summary>
     [JsonPropertyName("match_group")]
     public bool MatchGroup { get; set; } = false;
+}
+
+/// <summary>
+/// One DAG node (cluster); only the fields injectors need.
+/// </summary>
+public class GraphNode
+{
+    [JsonPropertyName("type")]
+    public string Type { get; set; } = "";
 }

@@ -208,4 +208,24 @@ public class GraphLoaderTests
         Assert.Single(data.Connections);
         Assert.Equal(9000000, data.Connections[0].FlagId);
     }
+
+    [Fact]
+    public void GraphData_DeserializesNodeTypes()
+    {
+        var json = """
+        {
+          "version": "4.4",
+          "seed": 1,
+          "nodes": {
+            "stormveil": {"type": "legacy_dungeon", "display_name": "Stormveil", "layer": 1},
+            "arena_x": {"type": "boss_arena"}
+          },
+          "connections": [],
+          "area_tiers": {}
+        }
+        """;
+        var data = GraphLoader.Parse(json)!;
+        Assert.Equal("legacy_dungeon", data.Nodes["stormveil"].Type);
+        Assert.Equal("boss_arena", data.Nodes["arena_x"].Type);
+    }
 }
