@@ -87,9 +87,9 @@ def test_plan_targets_all_files_covers_every_mappable_snapshot_file(snapshot: Pa
 
 
 def test_main_all_reports_unmappable_snapshot_files(
-    two_snapshots: dict[str, Path], game: Path, capsys: pytest.CaptureFixture[str]
+    snapshots: dict[str, Path], game: Path, capsys: pytest.CaptureFixture[str]
 ):
-    _write(two_snapshots["fogmod"] / "m10_00_00_00.nva.dcx", b"navmesh")
+    _write(snapshots["fogmod"] / "m10_00_00_00.nva.dcx", b"navmesh")
 
     assert rvs.main([str(game), "--all"]) == 2
 
@@ -99,13 +99,13 @@ def test_main_all_reports_unmappable_snapshot_files(
     )
     # The mappable files were still refreshed.
     assert (
-        two_snapshots["fogmod"] / "m10_00_00_00.msb.dcx"
+        snapshots["fogmod"] / "m10_00_00_00.msb.dcx"
     ).read_bytes() == b"stormveil-1.17"
 
 
-def test_main_all_refreshes_maps_too(two_snapshots: dict[str, Path], game: Path):
+def test_main_all_refreshes_maps_too(snapshots: dict[str, Path], game: Path):
     assert rvs.main([str(game), "--all"]) == 0
-    for path in two_snapshots.values():
+    for path in snapshots.values():
         assert (path / "m10_00_00_00.msb.dcx").read_bytes() == b"stormveil-1.17"
         assert (path / "m60_52_39_00.emevd.dcx").read_bytes() == b"caelid-1.17"
 
@@ -192,53 +192,40 @@ def test_missing_files_are_reported_not_copied(snapshot: Path, game: Path):
 
 
 @pytest.fixture
-def two_snapshots(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
+def snapshots(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Path]:
     paths = {
         "fogmod": _make_snapshot(tmp_path / "eldendata" / "Vanilla"),
-        "itemrando": _make_snapshot(tmp_path / "diste" / "Vanilla"),
     }
     monkeypatch.setattr(rvs, "SNAPSHOTS", paths)
     return paths
 
 
-def test_main_refreshes_every_snapshot(
-    two_snapshots: dict[str, Path], game: Path, capsys: pytest.CaptureFixture[str]
-):
+def test_main_refreshes_every_snapshot(snapshots: dict[str, Path], game: Path, capsys):
     assert rvs.main([str(game)]) == 0
-    for path in two_snapshots.values():
-        assert (path / "regulation.bin").read_bytes() == b"reg-1.17"
-    assert capsys.readouterr().out.count("regulation.bin md5: ") == 2
+    assert (snapshots["fogmod"] / "regulation.bin").read_bytes() == (
+        game / "regulation.bin"
+    ).read_bytes()
 
 
 def test_main_dry_run_writes_nothing(
-    two_snapshots: dict[str, Path], game: Path, capsys: pytest.CaptureFixture[str]
+    snapshots: dict[str, Path], game: Path, capsys: pytest.CaptureFixture[str]
 ):
     assert rvs.main([str(game), "--dry-run"]) == 0
-    for path in two_snapshots.values():
-        assert (path / "regulation.bin").read_bytes() == b"reg-1.16"
+    assert (snapshots["fogmod"] / "regulation.bin").read_bytes() == b"reg-1.16"
     assert "current regulation.bin md5" in capsys.readouterr().out
 
 
-def test_main_reports_out_of_sync_snapshots(
-    two_snapshots: dict[str, Path], game: Path, capsys: pytest.CaptureFixture[str]
-):
-    assert rvs.main([str(game), "--snapshot", "fogmod"]) == 2
-    assert (two_snapshots["fogmod"] / "regulation.bin").read_bytes() == b"reg-1.17"
-    assert (two_snapshots["itemrando"] / "regulation.bin").read_bytes() == b"reg-1.16"
-    assert "different regulation.bin" in capsys.readouterr().err
-
-
-def test_main_missing_game_file_is_exit_2(two_snapshots: dict[str, Path], game: Path):
+def test_main_missing_game_file_is_exit_2(snapshots: dict[str, Path], game: Path):
     (game / "msg/engus/item_dlc02.msgbnd.dcx").unlink()
     assert rvs.main([str(game)]) == 2
     # The other files were still refreshed.
-    assert (two_snapshots["fogmod"] / "regulation.bin").read_bytes() == b"reg-1.17"
+    assert (snapshots["fogmod"] / "regulation.bin").read_bytes() == b"reg-1.17"
 
 
 def test_main_rejects_bad_inputs_before_writing(
-    two_snapshots: dict[str, Path], game: Path, tmp_path: Path
+    snapshots: dict[str, Path], game: Path, tmp_path: Path
 ):
     assert rvs.main([str(game), "--file", "chr/c0000.chrbnd.dcx"]) == 1
     assert rvs.main([str(tmp_path / "not-a-game")]) == 1
-    for path in two_snapshots.values():
+    for path in snapshots.values():
         assert (path / "regulation.bin").read_bytes() == b"reg-1.16"

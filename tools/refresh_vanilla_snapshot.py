@@ -1,26 +1,24 @@
 #!/usr/bin/env python3
-"""Refresh the bundled game snapshots from an unpacked game directory.
+"""Refresh the bundled FogMod snapshot from an unpacked game directory.
 
-FogMod (writer/FogModWrapper/eldendata/Vanilla) and the Item Randomizer
-(writer/ItemRandomizerWrapper/diste/Vanilla) never read the installed game:
-every seed is built from these bundled snapshots. After a game patch, the
-executable may require param rows that only exist in the patched
+FogMod (writer/FogModWrapper/eldendata/Vanilla) never reads the installed
+game: every seed is built from this bundled snapshot. After a game patch,
+the executable may require param rows that only exist in the patched
 regulation.bin (Elden Ring 1.17: RideParam 80020-80050 for Torrent), so the
-snapshots must move to the patched files. See docs/game-patch-migration.md.
+snapshot must move to the patched files. See docs/game-patch-migration.md.
+
+The Item Randomizer (v0.12+) extracts its own diste/Vanilla snapshot from
+the installed game directory on the fly, driven by its files.txt manifest,
+so it needs no refreshing here.
 
 By default this copies regulation.bin and every message bundle the snapshot
 already carries (msg/<lang>/*.msgbnd.dcx). Map files (MSB, EMEVD, talk ESD)
 are left alone unless named with --file, because refreshing a map exposes
 fog.txt and fogevents.txt to moved entities and is a per-map decision; --all
 refreshes every file the snapshot carries, for the day the maps move too.
+Seeds are 1.17-only now, so --all is the standard post-bootstrap invocation.
 
-Both snapshots must carry the same regulation.bin: with --merge-dir, the
-Item Randomizer's output takes precedence over FogMod's snapshot, so a
-FogMod-only refresh is silently undone on every seed that randomizes items.
-The tool refreshes every snapshot it finds and fails when their
-regulation.bin still differ afterwards.
-
-Both snapshots are gitignored and re-copied wholesale by tools/bootstrap.py,
+The snapshot is gitignored and re-copied wholesale by tools/bootstrap.py,
 so this must be re-run after every bootstrap (check the regulation.bin md5
 printed at the end against the one recorded in the playbook).
 
@@ -51,11 +49,6 @@ from diff_vanilla_snapshot import (
 
 SNAPSHOTS = {
     "fogmod": PROJECT_ROOT / "writer" / "FogModWrapper" / "eldendata" / "Vanilla",
-    "itemrando": PROJECT_ROOT
-    / "writer"
-    / "ItemRandomizerWrapper"
-    / "diste"
-    / "Vanilla",
 }
 
 REPLACED = "replaced"
@@ -170,8 +163,7 @@ def main(argv: list[str] | None = None) -> int:
         choices=sorted(SNAPSHOTS),
         action="append",
         default=None,
-        help="Snapshot to refresh (repeatable; default: every snapshot that exists). "
-        "Refreshing one alone leaves the snapshots out of sync, which the tool reports as an error",
+        help="Snapshot to refresh (repeatable; default: every snapshot that exists)",
     )
     parser.add_argument(
         "--file",
@@ -184,8 +176,7 @@ def main(argv: list[str] | None = None) -> int:
         "--all",
         action="store_true",
         help="Refresh every file the snapshot carries (maps, events, talk ESDs included), not only "
-        "regulation.bin and msg. Combine with --snapshot only for experiments: the cross-snapshot "
-        "check below covers regulation.bin alone",
+        "regulation.bin and msg",
     )
     parser.add_argument(
         "--dry-run",
@@ -251,21 +242,6 @@ def main(argv: list[str] | None = None) -> int:
                 "current regulation.bin md5" if args.dry_run else "regulation.bin md5"
             )
             print(f"  {label}: {md5(regulation)}")
-
-    if not args.dry_run:
-        digests = {
-            name: md5(SNAPSHOTS[name] / "regulation.bin")
-            for name in existing
-            if (SNAPSHOTS[name] / "regulation.bin").is_file()
-        }
-        if len(set(digests.values())) > 1:
-            print(
-                "Error: the snapshots carry different regulation.bin files; "
-                "with --merge-dir the Item Randomizer's wins, refresh all of them: "
-                + ", ".join(f"{n}={d}" for n, d in digests.items()),
-                file=sys.stderr,
-            )
-            problems += 1
 
     return 2 if problems else 0
 
