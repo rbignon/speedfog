@@ -214,6 +214,27 @@ def patch_graph_boss_placements(
         json.dump(graph, f, indent=2)
 
 
+def patch_graph_enemy_assignments(
+    graph_path: Path, assignments: dict[str, str]
+) -> None:
+    """Patch graph.json with the enemy_assignments mapping (v4.5).
+
+    FogModWrapper uses it to locate enemy-randomizer boss placements
+    (arena entity id -> source entity id, both decimal strings). Empty
+    or missing assignments leave the file untouched.
+    """
+    if not assignments:
+        return
+
+    with open(graph_path, encoding="utf-8") as f:
+        graph: dict[str, Any] = json.load(f)
+
+    graph["enemy_assignments"] = dict(assignments)
+
+    with open(graph_path, "w", encoding="utf-8") as f:
+        json.dump(graph, f, indent=2)
+
+
 def _match_boss_placement(
     defeat_flag: int, placements: dict[str, dict[str, Any]]
 ) -> str | None:

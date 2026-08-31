@@ -24,6 +24,7 @@ from speedfog.enemy_data import (
     parse_boss_key_names,
     parse_boss_phases,
     patch_graph_boss_placements,
+    patch_graph_enemy_assignments,
     resolve_boss_name,
     resolve_entity_id,
 )
@@ -460,6 +461,7 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
             patch_graph_boss_placements(
                 json_path, dag, placements, assignment_phase_mapping
             )
+            patch_graph_enemy_assignments(json_path, enemy_assignments)
             print(f"Boss placements: {len(placements)} bosses randomized")
             if args.logs and spoiler_path is not None:
                 append_boss_placements_to_spoiler(spoiler_path, placements)

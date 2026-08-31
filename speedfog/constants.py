@@ -9,7 +9,7 @@ from __future__ import annotations
 # Version of the graph.json format emitted by graph_export.dag_to_dict and
 # consumed by writer/FogModWrapper.Core/GraphLoader.cs. Bump on any
 # structural change and document it in docs/architecture.md.
-GRAPH_JSON_VERSION = "4.4"
+GRAPH_JSON_VERSION = "4.5"
 
 # SpeedFog's dedicated flag base: 1050290000 (m60_50_29_00, unclaimed).
 # Saved flags (4xxx): zone tracking, finish event, death markers.

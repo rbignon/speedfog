@@ -13,6 +13,7 @@ from speedfog.enemy_data import (
     parse_boss_key_names,
     parse_boss_phases,
     patch_graph_boss_placements,
+    patch_graph_enemy_assignments,
     resolve_boss_name,
 )
 from speedfog.graph_export import (
@@ -373,10 +374,10 @@ def _make_result(death_markers: bool = True) -> dict:
 class TestEventMap:
     """Tests for v4 event_map, finish_event, and flag_id fields."""
 
-    def test_version_is_4_4(self):
-        """Version string is '4.4'."""
+    def test_version_is_4_5(self):
+        """Version string is '4.5'."""
         result = _make_result()
-        assert result["version"] == "4.4"
+        assert result["version"] == "4.5"
 
     def test_event_map_keys_are_string_flag_ids(self):
         """event_map keys are stringified integers."""
@@ -2121,6 +2122,22 @@ class TestPatchGraphBossPlacements:
         assert node["boss_name"] == "Godskin Noble"
 
 
+class TestPatchGraphEnemyAssignments:
+    def test_patch_graph_enemy_assignments_writes_key(self, tmp_path):
+        graph = tmp_path / "graph.json"
+        graph.write_text(json.dumps({"version": "4.5", "nodes": {}}), encoding="utf-8")
+        patch_graph_enemy_assignments(graph, {"30001800": "2049420200"})
+        data = json.loads(graph.read_text(encoding="utf-8"))
+        assert data["enemy_assignments"] == {"30001800": "2049420200"}
+
+    def test_patch_graph_enemy_assignments_empty_is_noop(self, tmp_path):
+        graph = tmp_path / "graph.json"
+        original = json.dumps({"version": "4.5", "nodes": {}})
+        graph.write_text(original, encoding="utf-8")
+        patch_graph_enemy_assignments(graph, {})
+        assert "enemy_assignments" not in json.loads(graph.read_text(encoding="utf-8"))
+
+
 class TestParseBossPhases:
     def test_builds_reverse_next_phase_mapping(self, tmp_path):
         enemy_txt = tmp_path / "enemy.txt"
@@ -2462,7 +2479,7 @@ class TestPhantomSkins:
         result = dag_to_dict(dag, clusters)
         assert result["phantom_skins"] == {}
 
-    def test_version_bumped_to_4_4(self):
+    def test_version_bumped_to_4_5(self):
         dag = make_test_dag()
         clusters = ClusterPool(
             clusters=[node.cluster for node in dag.nodes.values()],
@@ -2470,7 +2487,7 @@ class TestPhantomSkins:
             zone_names={},
         )
         result = dag_to_dict(dag, clusters)
-        assert result["version"] == "4.4"
+        assert result["version"] == "4.5"
 
 
 class TestDagToDictPlugins:
@@ -2486,7 +2503,7 @@ class TestDagToDictPlugins:
             clusters,
             GraphExportOptions(plugins={"summer": {"enabled": True, "intensity": 3}}),
         )
-        assert result["version"] == "4.4"
+        assert result["version"] == "4.5"
         assert result["plugins"] == {"summer": {"enabled": True, "intensity": 3}}
 
     def test_plugins_default_empty(self):
