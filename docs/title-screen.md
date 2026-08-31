@@ -10,7 +10,7 @@ Overlays the SpeedFog Racing badge (the charter wordmark + brass route underline
 The title screen is drawn by Scaleform GFX files that reference images **by name**, resolved by the engine at runtime:
 
 - `menu/05_001_title_logo.gfx` contains a `GFxDefineExternalImage2` entry for `MENU_Title_EldenRing_01.tga` (2532x1532). No pixels and no atlas UVs live in the GFX.
-- The engine builds a sprite registry from the `.layout` XML files bundled in `menu/{hi,low}/01_common.sblytbnd.dcx`. Vanilla maps `MENU_Title_EldenRing_01` into the `SB_Title_01` atlas of `01_common.tpf.dcx` (65 MB hi / 52 MB low; the atlas also holds HUD bars and inventory icons). **hi and low pack their atlases differently** (sprite at y=60 in hi, y=0 in low) but hold identical sprite pixels.
+- The engine builds a sprite registry from the `.layout` XML files bundled in `menu/{hi,low}/01_common.sblytbnd.dcx`. Vanilla maps `MENU_Title_EldenRing_01` into the `SB_Title_01` atlas of `01_common.tpf.dcx` (67 MB hi / 53 MB low; the atlas also holds HUD bars and inventory icons). **hi and low pack their atlases differently** (sprite at y=60 in hi, y=0 in low) but hold identical sprite pixels.
 - Names not found in any layout are looked up **directly among loaded TPF texture names**: that is how the boot logos (`MENU_FROMSOFTWARE_Logo` in `02_title.tpf.dcx`) and the `MENU_Dummy*` fallbacks resolve; those TPFs contain no layouts at all.
 - The menu texture groups (`01_Common`, `02_Title`, `05_Dummy`, ...) are a hardcoded table in the exe; `02_title.tpf.dcx` is the title screen's own resource block (70 KB vanilla). Dangling references are harmless: the same GFX still references `MENU_DS3_LOGO`, which resolves nowhere.
 

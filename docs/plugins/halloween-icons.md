@@ -7,9 +7,9 @@ Gives Golden Seed and Larval Tear custom pumpkin / gummy-worm inventory
 icons on Halloween seeds, matching the item renames already done by the
 text theme (`Pumpkin Seed`, `Gummy Worm`; see
 [halloween-theme.md](halloween-theme.md)). Placeholder art for now; the
-user replaces it later. Third feature under the `[plugin.halloween]`
-namespace, alongside the text reskin and the ambient
-spawns/decorations (see [halloween-ambient.md](halloween-ambient.md)).
+user replaces it later. Fourth feature under the `[plugin.halloween]`
+namespace, alongside the text reskin, the ambient spawns, and the gate
+decorations (see [halloween-ambient.md](halloween-ambient.md)).
 
 ## The two icons
 
