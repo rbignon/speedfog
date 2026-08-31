@@ -102,4 +102,24 @@ public class TextThemeCatalogLoaderTests
             () => TextThemeCatalogLoader.Parse(toml, "halloween"));
         Assert.StartsWith("halloween:", ex.Message);
     }
+
+    [Theory]
+    [InlineData("summer")]
+    [InlineData("halloween")]
+    public void Load_RealCatalogueValidates(string theme)
+    {
+        var path = Path.Combine(RepoPluginsDir(), $"{theme}.toml");
+        var c = TextThemeCatalogLoader.Load(path, theme);
+        Assert.False(c.IsEmpty);
+    }
+
+    // Walks up from the test bin dir to the repo root (the dir holding data/plugins).
+    private static string RepoPluginsDir()
+    {
+        var dir = AppContext.BaseDirectory;
+        while (dir != null && !Directory.Exists(Path.Combine(dir, "data", "plugins")))
+            dir = Path.GetDirectoryName(dir);
+        Assert.NotNull(dir);
+        return Path.Combine(dir!, "data", "plugins");
+    }
 }

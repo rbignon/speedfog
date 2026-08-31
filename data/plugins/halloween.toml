@@ -1,0 +1,462 @@
+# Halloween theme text catalogue. Consumed by TextTheme (C#) when
+# [plugin.halloween] enabled = true in the seed config. `en` is required;
+# `fr` is optional (written to the frafr FMG, falls back to en when absent).
+# `name` is a human-readable label only, not written to game data.
+# Bosses absent here keep their vanilla names. Generate more boss skeletons
+# with tools/seed_theme_catalog.py.
+#
+# Register: commercial kitsch Halloween (candy, costumes, jack-o'-lanterns),
+# never genuine-spooky (see the design spec). Same npc_name_id roster as
+# summer.toml; "Rennala, Witch of the Full Moon" deliberately mirrors
+# summer's "Queen of the Full Sun".
+
+# ---- Boss epithets (NpcName) ----
+
+[[bosses]]
+npc_name_id = 902030001
+name = "Rennala"
+en = "Rennala, Witch of the Full Moon"
+fr = "Rennala, Sorcière de la Pleine Lune"
+
+[[bosses]]
+npc_name_id = 903181000
+name = "Red Wolf of Radagon"
+en = "Werewolf of Radagon"
+fr = "Loup-Garou de Radagon"
+
+[[bosses]]
+npc_name_id = 904620001
+name = "Astel, Naturalborn of the Void"
+en = "Astel, Naturalborn of the Cobweb"
+fr = "Astel, Rejeton de la Toile d'Araignée"
+
+[[bosses]]
+npc_name_id = 904650000
+name = "Dragonkin Soldier of Nokstella"
+en = "Dragonkin Gravedigger of Nokstella"
+fr = "Fossoyeur Draconique de Nokstella"
+
+[[bosses]]
+npc_name_id = 905210000
+name = "Divine Beast Dancing Lion"
+en = "Possessed Dancing Lion"
+fr = "Lion Dansant Possédé"
+
+[[bosses]]
+npc_name_id = 904730000
+name = "Starscourge Radahn"
+en = "Tombscourge Radahn"
+fr = "Radahn, Fléau des Tombes"
+
+[[bosses]]
+npc_name_id = 905300000
+name = "Rellana, Twin Moon Knight"
+en = "Rellana, Twin Bat Knight"
+fr = "Rellana, chevalière des Deux Chauves-Souris"
+
+[[bosses]]
+npc_name_id = 903575000
+name = "Godskin Duo"
+en = "Trick-or-Treat Duo"
+fr = "Duo des Farces ou Friandises"
+
+[[bosses]]
+npc_name_id = 902110001
+name = "Maliketh, the Black Blade"
+en = "Maliketh, the Candy Blade"
+fr = "Maliketh, la Lame en Sucre d'Orge"
+
+[[bosses]]
+npc_name_id = 904520000
+name = "Dragonlord Placidusax"
+en = "Pumpkin Lord Placidusax"
+fr = "Seigneur Citrouille Placidusax"
+
+[[bosses]]
+npc_name_id = 905200000
+name = "Metyr, Mother of Fingers"
+en = "Metyr, Mother of Witch Fingers"
+fr = "Metyr, Mère des Doigts de Sorcière"
+
+[[bosses]]
+npc_name_id = 905020000
+name = "Putrescent Knight"
+en = "Spooky Scary Skeleton"
+fr = "Squelette Épouvantable"
+
+[[bosses]]
+npc_name_id = 904760000
+name = "Fire Giant"
+en = "Jack-o'-Lantern Giant"
+fr = "Géant Citrouille-Lanterne"
+
+[[bosses]]
+npc_name_id = 903252000
+name = "Loretta, Knight of the Haligtree"
+en = "Loretta, Knight of the Haunted Tree"
+fr = "Loretta, chevalière de l'Arbre Hanté"
+
+[[bosses]]
+npc_name_id = 902120000
+name = "Malenia, Blade of Miquella"
+en = "Malenia, Broomstick of Miquella"
+fr = "Malenia, Balai de Miquella"
+
+[[bosses]]
+npc_name_id = 905120000
+name = "Bayle the Dread"
+en = "Bayle the Candy Hoarder"
+fr = "Bayle l'Accapareur de Bonbons"
+
+[[bosses]]
+npc_name_id = 132400
+name = "Sir Gideon Ofnir, the All-Knowing"
+en = "Sir Gideon Ofnir, the All-Seeing Eyeball"
+fr = "Sire Gideon Ofnir, le Globe Oculaire Omniscient"
+
+[[bosses]]
+npc_name_id = 904720001
+name = "Hoarah Loux, Warrior"
+en = "Hoarah Loux, Grave Robber"
+fr = "Hoarah Loux, Pilleur de Tombes"
+
+[[bosses]]
+npc_name_id = 904720002
+name = "Godfrey, First Elden Lord"
+en = "Godfrey, the First Executioner"
+fr = "Godfrey, le Premier Bourreau"
+
+[[bosses]]
+npc_name_id = 902130003
+name = "Morgott, the Omen King"
+en = "Morgott, the Bogeyman King"
+fr = "Morgott, le Roi Croque-Mitaine"
+
+[[bosses]]
+npc_name_id = 903253500
+name = "Royal Knight Loretta"
+en = "Royal Ghost Knight Loretta"
+fr = "Loretta, chevalière royale fantôme"
+
+[[bosses]]
+npc_name_id = 905051000
+name = "Midra, Lord of Frenzied Flame"
+en = "Midra, the Frenzied Scarecrow"
+fr = "Midra, l'Épouvantail Frénétique"
+
+[[bosses]]
+npc_name_id = 904800000
+name = "Mohg, Lord of Blood"
+en = "Mohg, Lord of Vampires"
+fr = "Mohg, Seigneur des Vampires"
+
+[[bosses]]
+npc_name_id = 903050500
+name = "Commander Niall"
+en = "Headless Horseman Niall"
+fr = "Niall, le Cavalier sans Tête"
+
+[[bosses]]
+npc_name_id = 903460500
+name = "Leonine Misbegotten Boss"
+en = "Black Cat Misbegotten"
+fr = "Chimère Chat Noir"
+
+[[bosses]]
+npc_name_id = 904910000
+name = "Magma Wyrm Makar"
+en = "Cauldron Wyrm Makar"
+fr = "Makar, le Dragon du Chaudron"
+
+[[bosses]]
+npc_name_id = 905030000
+name = "Romina, Saint of the Bud"
+en = "Romina, Saint of the Spiders"
+fr = "Romina, Sainte des Araignées"
+
+[[bosses]]
+npc_name_id = 905230000
+name = "Scadutree Avatar"
+en = "Haunted Tree Avatar"
+fr = "Avatar de l'Arbre Hanté"
+
+[[bosses]]
+npc_name_id = 905230001
+name = "Scadutree Avatar (P2)"
+en = "Haunted Tree Avatar"
+fr = "Avatar de l'Arbre Hanté"
+
+[[bosses]]
+npc_name_id = 905230002
+name = "Scadutree Avatar (P3)"
+en = "Haunted Tree Avatar"
+fr = "Avatar de l'Arbre Hanté"
+
+[[bosses]]
+npc_name_id = 905000000
+name = "Commander Gaius"
+en = "Nightmare Rider Gaius"
+fr = "Gaius, Cavalier du Cauchemar"
+
+[[bosses]]
+npc_name_id = 904800002
+name = "Mohg, the Omen"
+en = "Mohg, the Sewer Ghoul"
+fr = "Mohg, la Goule des Égouts"
+
+[[bosses]]
+npc_name_id = 905010000
+name = "Golden Hippopotamus"
+en = "Swamp Monster"
+fr = "Monstre du Marais"
+
+[[bosses]]
+npc_name_id = 904670001
+name = "Regal Ancestor Spirit"
+en = "Regal Ancestor Ghost"
+fr = "Fantôme Ancestral Royal"
+
+[[bosses]]
+npc_name_id = 904770000
+name = "Valiant Gargoyles"
+en = "Weeping Angels"
+fr = "Anges Pleureurs"
+
+[[bosses]]
+npc_name_id = 904770001
+name = "Valiant Gargoyle (Twinblade)"
+en = "Weeping Angels"
+fr = "Anges Pleureurs"
+
+[[bosses]]
+npc_name_id = 903320000
+name = "Mimic Tear"
+en = "Mimic Tear, the Skinwalker"
+fr = "Larme Mimétique, le Doppelgänger"
+
+[[bosses]]
+npc_name_id = 905130001
+name = "Base Serpent Messmer"
+en = "Basilisk Messmer"
+fr = "Messmer le Basilic"
+
+[[bosses]]
+npc_name_id = 904750000
+name = "Godrick the Grafted"
+en = "Godrick the Limb Collector"
+fr = "Godrick le Collectionneur de Membres"
+
+[[bosses]]
+npc_name_id = 902130000
+name = "Margit, the Fell Omen"
+en = "Margit, the Grumpy Ghost"
+fr = "Margit, le Fantôme Grognon"
+
+[[bosses]]
+npc_name_id = 904710001
+name = "Rykard, Lord of Blasphemy"
+en = "Rykard, Lord of the Candy Binge"
+fr = "Rykard, Seigneur de la Crise de Foie"
+
+[[bosses]]
+npc_name_id = 903570000
+name = "Godskin Noble Boss"
+en = "Bedsheet Ghost Noble"
+fr = "Noble au Drap Fantôme"
+
+# Final boss (not a major_boss cluster, so not emitted by the seeding tool;
+# kept here so the final fight is themed too).
+[[bosses]]
+npc_name_id = 902190000
+name = "Radagon"
+en = "Radagon of the Haunted Order"
+fr = "Radagon de l'Ordre Hanté"
+
+# ---- Final bosses + distinct phase / alternate-instance forms ----
+# Same hand-maintained ids as summer.toml (no DefeatFlag, so the seeding
+# tool cannot emit them).
+
+[[bosses]]
+npc_name_id = 902200000
+name = "Elden Beast"
+en = "Elden Ectoplasm"
+fr = "Ectoplasme d'Elden"
+
+[[bosses]]
+npc_name_id = 905220000
+name = "Promised Consort Radahn"
+en = "Promised Costume Radahn"
+fr = "Radahn, Déguisement Promis"
+
+[[bosses]]
+npc_name_id = 905220001
+name = "Radahn, Consort of Miquella"
+en = "Radahn, Zombie of Miquella"
+fr = "Radahn, Zombie de Miquella"
+
+[[bosses]]
+npc_name_id = 904710000
+name = "God-Devouring Serpent"
+en = "Candy-Devouring Serpent"
+fr = "Serpent Dévoreur de Bonbons"
+
+[[bosses]]
+npc_name_id = 902110000
+name = "Beast Clergyman"
+en = "Graveyard Clergyman"
+fr = "Clerc du Cimetière"
+
+[[bosses]]
+npc_name_id = 902120001
+name = "Malenia, Goddess of Rot"
+en = "Malenia, Goddess of Cobwebs"
+fr = "Malenia, Déesse des Toiles d'Araignée"
+
+[[bosses]]
+npc_name_id = 905130000
+name = "Messmer the Impaler"
+en = "Count Messmer"
+fr = "Comte Messmer"
+
+[[bosses]]
+npc_name_id = 902030000
+name = "Rennala (alternate)"
+en = "Rennala, Witch of the Full Moon"
+fr = "Rennala, Sorcière de la Pleine Lune"
+
+[[bosses]]
+npc_name_id = 902130002
+name = "Morgott (alternate)"
+en = "Morgott, the Bogeyman King"
+fr = "Morgott, le Roi Croque-Mitaine"
+
+[[bosses]]
+npc_name_id = 904720000
+name = "Godfrey (golden shade)"
+en = "Godfrey, First Elden Ghost"
+fr = "Godfrey, Premier Fantôme d'Elden"
+
+# ---- Universal UI banners (GR_MenuText in menu_dlc02.msgbnd.dcx) ----
+# IDs sorted ascending; 331314 is reserved (vanilla) and must not appear here.
+
+[[ui]]
+bnd = "menu_dlc02.msgbnd.dcx"
+fmg = "GR_MenuText"
+id = 331301
+en = "DEMIGOD SPOOKED"
+fr = "DEMI-DIEU TERRORISÉ"
+
+[[ui]]
+bnd = "menu_dlc02.msgbnd.dcx"
+fmg = "GR_MenuText"
+id = 331302
+en = "LEGEND SPOOKED"
+fr = "LÉGENDE TERRORISÉE"
+
+[[ui]]
+bnd = "menu_dlc02.msgbnd.dcx"
+fmg = "GR_MenuText"
+id = 331303
+en = "GREAT ENEMY SPOOKED"
+fr = "ENNEMI MAJEUR TERRORISÉ"
+
+[[ui]]
+bnd = "menu_dlc02.msgbnd.dcx"
+fmg = "GR_MenuText"
+id = 331304
+en = "ENEMY SPOOKED"
+fr = "ENNEMI TERRORISÉ"
+
+[[ui]]
+bnd = "menu_dlc02.msgbnd.dcx"
+fmg = "GR_MenuText"
+id = 331305
+en = "YOU GOT TRICKED"
+fr = "VOUS AVEZ ÉTÉ PIÉGÉ"
+
+[[ui]]
+bnd = "menu_dlc02.msgbnd.dcx"
+fmg = "GR_MenuText"
+id = 331311
+en = "CANDY STASH DISCOVERED"
+fr = "RÉSERVE DE BONBONS DÉCOUVERTE"
+
+[[ui]]
+bnd = "menu_dlc02.msgbnd.dcx"
+fmg = "GR_MenuText"
+id = 331322
+en = "GOD SPOOKED"
+fr = "DIEU TERRORISÉ"
+
+# ---- Item renames (GoodsName/GoodsCaption in item_dlc02.msgbnd.dcx) ----
+# Matches the pumpkin/candy icon replacement (spec 1.2, implemented in
+# Halloween plan 5). 10010 = Golden Seed, 8185 = Larval Tear.
+
+[[ui]]
+bnd = "item_dlc02.msgbnd.dcx"
+fmg = "GoodsName"
+id = 10010
+en = "Pumpkin Seed"
+fr = "Graine de Citrouille"
+
+[[ui]]
+bnd = "item_dlc02.msgbnd.dcx"
+fmg = "GoodsCaption"
+id = 10010
+en = "A plump pumpkin seed, found beneath a jack-o'-lantern's grin.\n\nIncreases a Sacred Flask's number of uses.\n(Can be used after resting at a site of grace.)\n\nEvery autumn they sprout overnight wherever trick-or-treaters have passed, as if the season itself insisted on one more treat."
+fr = "Une graine de citrouille bien dodue, trouvée sous le sourire d'une citrouille-lanterne.\n\nAugmente le nombre d'utilisations d'une fiole sacrée.\n(Utilisable après un repos sur un site de grâce.)\n\nChaque automne, elles germent en une nuit sur le passage des chasseurs de bonbons, comme si la saison exigeait une friandise de plus."
+
+[[ui]]
+bnd = "item_dlc02.msgbnd.dcx"
+fmg = "GoodsName"
+id = 8185
+en = "Gummy Worm"
+fr = "Ver en Gélatine"
+
+[[ui]]
+bnd = "item_dlc02.msgbnd.dcx"
+fmg = "GoodsCaption"
+id = 8185
+en = "A wriggly gummy worm, chewy and faintly luminous.\n\nGrants rebirth when offered at a site of grace.\n\nSwallowing one whole is said to change a person entirely. Most of the time, it merely changes their appetite."
+fr = "Un ver en gélatine bien frétillant, fondant et vaguement luminescent.\n\nOffre une renaissance sur un site de grâce.\n\nOn dit qu'en avaler un tout rond change un être du tout au tout. La plupart du temps, cela ne change que son appétit."
+
+# ---- Loading screen tips (LoadingText in menu_dlc02.msgbnd.dcx) ----
+# fmg carries the .fmg extension on purpose: the bnd also contains
+# LoadingText_dlc01.fmg and the applier matches by substring; the extension
+# pins the base file. Vanilla ids 1-69; overriding a handful means the
+# Halloween tips show up occasionally between vanilla ones.
+
+[[ui]]
+bnd = "menu_dlc02.msgbnd.dcx"
+fmg = "LoadingText.fmg"
+id = 1
+en = "Crouch to make it harder for the things in the dark to discover you.\nIf a pumpkin-headed stranger stands watch beside a fog gate, walk on by.\nIt is probably a decoration. Probably."
+fr = "Accroupissez-vous pour échapper aux choses qui rôdent dans le noir.\nSi un inconnu à tête de citrouille monte la garde près d'une porte de brume, passez votre chemin.\nC'est sans doute une décoration. Sans doute."
+
+[[ui]]
+bnd = "menu_dlc02.msgbnd.dcx"
+fmg = "LoadingText.fmg"
+id = 5
+en = "Charge attacks and jump attacks are powerful.\nSo is a sugar rush. Pace yourself on the candy."
+fr = "Les attaques chargées et les attaques sautées sont puissantes.\nLa crise d'hyperglycémie aussi. Allez-y doucement sur les bonbons."
+
+[[ui]]
+bnd = "menu_dlc02.msgbnd.dcx"
+fmg = "LoadingText.fmg"
+id = 7
+en = "Shields allow you to use the \"Parry\" skill.\nSome guests refuse to take damage until they have been parried.\nTrick, meet treat."
+fr = "Les boucliers permettent d'utiliser la compétence « Parade ».\nCertains invités refusent de subir des dégâts tant qu'ils n'ont pas été parés.\nFarce, voici friandise."
+
+[[ui]]
+bnd = "menu_dlc02.msgbnd.dcx"
+fmg = "LoadingText.fmg"
+id = 12
+en = "Raise your torch to see further into dark spaces.\nWhatever you see there has been looking at you for a while already."
+fr = "Levez votre torche pour éclairer les recoins sombres.\nCe que vous y verrez vous observait déjà depuis un moment."
+
+[[ui]]
+bnd = "menu_dlc02.msgbnd.dcx"
+fmg = "LoadingText.fmg"
+id = 14
+en = "Use \"Gestures\" to perform a variety of basic poses.\nWaving at skeletons is allowed. They rarely wave back. Rarely."
+fr = "Utilisez les « Gestes » pour adopter diverses poses.\nSaluer les squelettes est permis. Ils répondent rarement. Rarement."
