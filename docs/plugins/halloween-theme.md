@@ -13,7 +13,7 @@ Beyond the summer-style boss epithets and banners, the catalogue also
 renames Golden Seed (`Pumpkin Seed`), Larval Tear (`Gummy Worm`) and Sacred
 Tear (`Sacred Gumdrop`, text-only) via `GoodsName`/`GoodsCaption` in
 `item_dlc02.msgbnd.dcx` (ids 10010 / 8185 / 10020), the first two matching
-the icon replacement (spec 1.2), and overrides five loading tips
+the icon replacement (spec 1.2), and overrides twenty loading tips
 (`LoadingText.fmg` in `menu_dlc02.msgbnd.dcx`; the `.fmg` extension in the
 `fmg` field pins the base file against the `_dlc01` variant, which the
 applier's substring match would otherwise hit).
