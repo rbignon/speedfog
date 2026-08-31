@@ -69,6 +69,7 @@ MODENGINE_DEST = PACKAGING_DEST / "modengine2"
 WITCHYBND_DEST = PROJECT_ROOT / "tools" / "witchybnd"
 STATIC_MOD_SRC_DEST = DATA_DEST / "mods-src" / "speedfog"
 STATIC_MOD_DEST = DATA_DEST / "mods" / "speedfog"
+HALLOWEEN_MOD_DEST = DATA_DEST / "mods" / "speedfog-halloween"
 
 # Files to extract from eldendata/Base/ to data/
 FOGRANDO_DATA_FILES = [
@@ -847,6 +848,7 @@ def run_static_mod_builder(game_dir: Path) -> bool:
         cmd = ["wine", str(patcher_exe)]
 
     STATIC_MOD_DEST.mkdir(parents=True, exist_ok=True)
+    HALLOWEEN_MOD_DEST.mkdir(parents=True, exist_ok=True)
 
     cmd.extend(
         [
@@ -854,6 +856,8 @@ def run_static_mod_builder(game_dir: Path) -> bool:
             str(STATIC_MOD_DEST.resolve()),
             "--data-dir",
             str(DATA_DEST.resolve()),
+            "--halloween-dir",
+            str(HALLOWEEN_MOD_DEST.resolve()),
         ]
     )
 

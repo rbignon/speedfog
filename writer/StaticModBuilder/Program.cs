@@ -13,6 +13,7 @@ class Program
         var gameDir = args[0];
         var outputDir = args[1];
         string? dataDir = null;
+        string? halloweenDir = null;
         for (int i = 2; i < args.Length; i++)
         {
             if (args[i] == "--data-dir")
@@ -23,6 +24,15 @@ class Program
                     return 1;
                 }
                 dataDir = args[++i];
+            }
+            else if (args[i] == "--halloween-dir")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    Console.Error.WriteLine("Error: --halloween-dir requires a value");
+                    return 1;
+                }
+                halloweenDir = args[++i];
             }
             else
             {
@@ -49,6 +59,12 @@ class Program
             return 1;
         }
 
+        if (halloweenDir != null && !Directory.Exists(halloweenDir))
+        {
+            Console.Error.WriteLine($"Error: Halloween directory not found: {halloweenDir}");
+            return 1;
+        }
+
         Console.WriteLine("=== StaticModBuilder ===");
         Console.WriteLine($"Game dir: {gameDir}");
         Console.WriteLine($"Mod dir:  {outputDir}");
@@ -68,6 +84,16 @@ class Program
             Console.WriteLine("Note: --data-dir not provided, skipping title screen patch");
         }
 
+        // Halloween care package icon overlay
+        if (halloweenDir != null && dataDir != null)
+        {
+            total += HalloweenIconPatcher.Patch(gameDir, halloweenDir, dataDir);
+        }
+        else
+        {
+            Console.WriteLine("Note: --halloween-dir or --data-dir not provided, skipping Halloween icon overlay");
+        }
+
         Console.WriteLine($"StaticModBuilder: {total} patch(es) applied");
         return 0;
     }
@@ -76,16 +102,18 @@ class Program
     {
         Console.WriteLine(@"StaticModBuilder - Build SpeedFog's static mod files from vanilla game data
 
-Usage: StaticModBuilder <game-dir> <output-dir> [--data-dir <dir>]
+Usage: StaticModBuilder <game-dir> <output-dir> [--data-dir <dir>] [--halloween-dir <dir>]
 
 Arguments:
-  <game-dir>    Path to Elden Ring Game directory
-  <output-dir>  Output directory for patched files (e.g. data/mods/speedfog/)
-  --data-dir    SpeedFog data directory (for title_screen_overlay.png)
+  <game-dir>       Path to Elden Ring Game directory
+  <output-dir>     Output directory for patched files (e.g. data/mods/speedfog/)
+  --data-dir       SpeedFog data directory (for title_screen_overlay.png and Halloween icon PNGs)
+  --halloween-dir  Output directory for the Halloween icon overlay (e.g. data/mods/speedfog-halloween/), needs --data-dir
 
 Patches applied:
   - Grace animation speedup (chr/c0000.anibnd.dcx)
   - Title screen badge (menu/{hi,low}/01_common.sblytbnd.dcx + 02_title.tpf.dcx, needs --data-dir)
+  - Halloween icon overlay (menu/{hi,low}/05_dummy.tpf.dcx superset, needs --data-dir and --halloween-dir)
 ");
     }
 }
