@@ -222,9 +222,9 @@ Example:
     }
 
     /// <summary>
-    /// Build an enemy Preset programmatically from EnemyOptionsConfig.
+    /// Build an EnemyPreset programmatically from EnemyOptionsConfig.
     /// Pool / RemoveSource values are semicolon-separated strings, parsed by
-    /// Preset.PhraseRe (see Preset.cs:107, getPoolMultiIds / getMultiIds).
+    /// EnemyPreset.PhraseRe (see EnemyPreset.cs, getPoolMultiIds / getMultiIds).
     /// </summary>
     internal static EnemyPreset BuildEnemyPreset(
         EnemyOptionsConfig options,

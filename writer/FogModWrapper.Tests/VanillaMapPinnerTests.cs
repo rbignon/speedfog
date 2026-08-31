@@ -23,15 +23,15 @@ public class VanillaMapPinnerTests
         using var tmp = new TempDir();
         var vanilla = Path.Combine(tmp.Path, "Vanilla");
         var mod = Path.Combine(tmp.Path, "mod");
-        Write(Path.Combine(vanilla, "m60_52_39_00.msb.dcx"), "msb-1.16");
-        Write(Path.Combine(vanilla, "m60_52_39_00.emevd.dcx"), "emevd-1.16");
+        Write(Path.Combine(vanilla, "m60_52_39_00.msb.dcx"), "msb-snapshot");
+        Write(Path.Combine(vanilla, "m60_52_39_00.emevd.dcx"), "emevd-snapshot");
         Directory.CreateDirectory(mod);
 
         int pinned = VanillaMapPinner.Pin(mod, vanilla, new[] { "m60_52_39_00" });
 
         Assert.Equal(2, pinned);
-        Assert.Equal("msb-1.16", File.ReadAllText(Path.Combine(mod, "map", "mapstudio", "m60_52_39_00.msb.dcx")));
-        Assert.Equal("emevd-1.16", File.ReadAllText(Path.Combine(mod, "event", "m60_52_39_00.emevd.dcx")));
+        Assert.Equal("msb-snapshot", File.ReadAllText(Path.Combine(mod, "map", "mapstudio", "m60_52_39_00.msb.dcx")));
+        Assert.Equal("emevd-snapshot", File.ReadAllText(Path.Combine(mod, "event", "m60_52_39_00.emevd.dcx")));
     }
 
     [Fact]
@@ -40,15 +40,15 @@ public class VanillaMapPinnerTests
         using var tmp = new TempDir();
         var vanilla = Path.Combine(tmp.Path, "Vanilla");
         var mod = Path.Combine(tmp.Path, "mod");
-        Write(Path.Combine(vanilla, "m60_52_39_00.msb.dcx"), "msb-1.16");
-        Write(Path.Combine(vanilla, "m60_52_39_00.emevd.dcx"), "emevd-1.16");
+        Write(Path.Combine(vanilla, "m60_52_39_00.msb.dcx"), "msb-snapshot");
+        Write(Path.Combine(vanilla, "m60_52_39_00.emevd.dcx"), "emevd-snapshot");
         Write(Path.Combine(mod, "event", "m60_52_39_00.emevd.dcx"), "emevd-with-fog-edits");
 
         int pinned = VanillaMapPinner.Pin(mod, vanilla, new[] { "m60_52_39_00" });
 
         Assert.Equal(1, pinned);
         Assert.Equal("emevd-with-fog-edits", File.ReadAllText(Path.Combine(mod, "event", "m60_52_39_00.emevd.dcx")));
-        Assert.Equal("msb-1.16", File.ReadAllText(Path.Combine(mod, "map", "mapstudio", "m60_52_39_00.msb.dcx")));
+        Assert.Equal("msb-snapshot", File.ReadAllText(Path.Combine(mod, "map", "mapstudio", "m60_52_39_00.msb.dcx")));
     }
 
     [Fact]

@@ -151,7 +151,7 @@ def md5(path: Path) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Refresh regulation.bin and msg bundles of the bundled snapshots from an unpacked game directory",
+        description="Refresh regulation.bin and msg bundles of the bundled FogMod snapshot from an unpacked game directory",
     )
     parser.add_argument(
         "game_dir",
@@ -163,7 +163,7 @@ def main(argv: list[str] | None = None) -> int:
         choices=sorted(SNAPSHOTS),
         action="append",
         default=None,
-        help="Snapshot to refresh (repeatable; default: every snapshot that exists)",
+        help="Snapshot to refresh (repeatable; default: the fogmod snapshot, currently the only one)",
     )
     parser.add_argument(
         "--file",

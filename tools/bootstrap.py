@@ -86,6 +86,7 @@ FOGRANDO_REQUIRED_DLLS = [
     "YamlDotNet.dll",
     "ZstdNet.dll",
     "DrSwizzler.dll",
+    "Tommy.dll",  # FogRando's shared copy; ItemRandomizerWrapper's csproj copies it next to its exe
     # StaticModBuilder uses SoulsFormatsNEXT (git submodule) instead of these DLLs.
 ]
 

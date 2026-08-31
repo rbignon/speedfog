@@ -158,7 +158,7 @@ speedfog/
 │   ├── generate_title_screen.py  # Generate data/title_screen_overlay.png (title badge)
 │   ├── extract_fog_data.py  # Extract fog gate metadata
 │   ├── diff_vanilla_snapshot.py  # Hash-diff an unpacked game dir against eldendata/Vanilla (game patch triage)
-│   ├── refresh_vanilla_snapshot.py  # Copy a patched regulation.bin + msg into both snapshots (re-run after bootstrap)
+│   ├── refresh_vanilla_snapshot.py  # Refresh the FogMod snapshot (eldendata/Vanilla) from the game dir (--all standard after every bootstrap)
 │   ├── dump_emevd_warps/    # EMEVD analysis tool (dump warps, search flags, trace inits)
 │   └── game_inspect/        # Game data inspection tool (SFX, MSB entities, EMEVD, asset comparison)
 ├── reference/               # FogRando decompiled code (READ-ONLY)
