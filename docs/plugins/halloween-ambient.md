@@ -2,9 +2,10 @@
 
 Two non-text layers of the Halloween plugin, both running after FogMod's
 `Write()`: passive "greeter" enemies (plus optional hostile ambush packs)
-and data-driven prop decorations, placed at dungeon entrance gates.
+and data-driven prop decorations, placed at cluster exit gates.
 Implemented in `writer/FogModWrapper/AmbientSpawnInjector.cs` and
-`writer/FogModWrapper/GateDecorInjector.cs`. See
+`writer/FogModWrapper/GateDecorInjector.cs`, with the shared anchor
+collection in `writer/FogModWrapper/HalloweenGateAnchors.cs`. See
 [halloween-theme.md](halloween-theme.md) for the text reskin layer that
 shares the same `[plugin.halloween]` namespace.
 
@@ -13,7 +14,7 @@ shares the same `[plugin.halloween]` namespace.
 ```toml
 [plugin.halloween]
 enabled = true    # gates greeters + decorations (and the text theme)
-ambushes = false  # also spawn hostile skeleton packs at dungeon entrances
+ambushes = false  # also spawn hostile skeleton packs at the anchored gates
 ```
 
 Parsed strictly by `HalloweenPluginSettings.Parse`: unknown keys or a
@@ -22,11 +23,11 @@ non-boolean `ambushes` abort the build (same idiom as `WeatherInjector.Parse`).
 ## The two flavors
 
 - **Greeters**: one passive Aging Untouchable (`c5280`, `NPCParamID
-  52800086`) at every qualifying entrance gate, always placed when
-  `enabled = true`.
+  52800086`) standing watch beside every anchored exit gate, always placed
+  when `enabled = true`.
 - **Ambushers**: when `ambushes = true`, a pack of 2-3 hostile skeletons
   (`c3500`, `NPCParamID 35000030`, Sage's Cave low-tier variant) sharing
-  the same entrance.
+  the same gate.
 
 Both are placed by `AmbientSpawnInjector`; the gate decoration catalogue
 (candelabras, cobwebs, glow anchors) is a separate, independently-gated
@@ -38,19 +39,27 @@ Both injectors reuse `GateGeometry` (extracted from `DeathMarkerInjector`,
 see [death-markers.md](../death-markers.md)) for gate parsing, side
 resolution, and arc math:
 
-- Only entrance gates of connections whose destination cluster type is
-  `mini_dungeon` or `legacy_dungeon` qualify (resolved via `eventMap` +
-  `GraphData.Nodes`). Boss arenas never receive spawns or decorations.
-- Spawns/decorations are anchored on the ENTRANCE gate (inside the
-  destination zone), not the exit gate that death markers use: they greet
-  the player as they arrive, not before they leave.
-- Placement is on the interior side, i.e. the side of the entrance area
-  itself (`GateGeometry.ResolveIsASide(conn.EntranceGate, conn.EntranceArea,
-  gateSides)`, mapped `isASide ? 180f : 0f`, the same ASide/BSide semantics
-  as death markers; see "Position Offsets" in death-markers.md).
+- Anchors come from `HalloweenGateAnchors.Collect`, shared by both
+  injectors: the EXIT gates of connections whose source cluster type is
+  `mini_dungeon`, `legacy_dungeon` or `start` (the source cluster is
+  resolved from `conn.ExitArea` through `GraphNode.Zones`). The `start`
+  cluster is included so the run's very first fog gate (Chapel of
+  Anticipation) sets the tone, but its `roundtable` zone is excluded: no
+  greeter or ambush pack inside the safe hub. Boss arena interiors never
+  receive spawns or decorations, though the fog INTO a boss arena can be
+  dressed, since it is an exit of the preceding cluster.
+- Anchoring was originally on entrance gates ("greet the player as they
+  arrive") and flipped after in-game review: on arrival the entrance gate
+  is behind the player and its dressing is never seen, while exit gates
+  are hunted for and approached frontally. Death markers already anchor
+  exit gates the same way.
+- Placement is on the approach side, i.e. the side of the exit area itself
+  (`GateGeometry.ResolveIsASide(conn.ExitGate, conn.ExitArea, gateSides)`,
+  mapped `isASide ? 180f : 0f`, the same ASide/BSide semantics as death
+  markers; see "Position Offsets" in death-markers.md).
 - Radii: greeters 4-6m from the gate in a 120-degree arc; ambushers 3-7m in
-  a 140-degree arc. Greeters face the gate (the arriving player); ambushers
-  keep pack scatter rotation.
+  a 140-degree arc. Greeters face AWAY from the gate, toward the player
+  walking up to it; ambushers keep pack scatter rotation.
 - One spec group per (map, gate part name) pair: at most one greeter and
   one ambush pack per gate, even if several connections share it.
 - Ambush pack size (2 or 3) is drawn from a process-stable string hash of
@@ -150,20 +159,42 @@ registered by name only may fail to resolve in-game.
 
 ### Ground estimation
 
-Gate origins are not reliably at floor level (the bloodstain death markers
-inherit this: they often float or sink). Decorations are therefore
-anchored on a per-gate ground estimate instead of the gate Y:
-`GateGeometry.EstimateGroundY` takes the median Y of vanilla assets within
-6m horizontal and 2.5m vertical of the gate, clamps the correction to
-±2m, and falls back to the gate Y with fewer than two candidates. A
-survey over every fog gate and dungeon door in m30/m31/m32 found ~85% of
-gates within 0.3m of that median (doors max 0.5m, fog gates up to 1.7m,
-typically stairs). Enemy parts are excluded from the estimate
-(AmbientSpawnInjector's greeters, `EntityID = 0`, are already placed when
-this injector runs and inherit the same unreliable gate Y), as are
-`AEG099_*` assets (fog gates, warp doors, glow anchors). The catalogue's
-`y_offset` applies on top; the shipped entries sink props a few
-centimeters so residual error reads as settled rather than floating.
+Chr parts (greeters, ambushers) need no vertical care: the engine
+gravity-snaps characters onto the collision below at spawn. Static assets
+render exactly at their MSB Y, so decorations are anchored on a per-gate
+ground estimate instead of the gate origin (which is not reliably at floor
+level; the bloodstain death markers inherit this and often float or sink).
+
+`GateGeometry.EstimateGroundY` takes the median Y of vanilla parts within
+6m horizontal of the gate, clamps the correction to ±2m, and falls back
+to the gate Y with fewer than two candidates. Two guards shape which
+candidates count and whether the correction applies:
+
+- **Asymmetric vertical window** ([-2.5m, +0.5m] around the gate Y):
+  floor evidence well above the gate origin is almost always wall-mounted
+  decor. The instructive failure was Shadow Keep gate `AEG099_230_9500`:
+  the gate origin sat exactly at floor level, but under an earlier
+  symmetric ±2.5m window two wall props at +2.3m outvoted the single
+  floor asset and pulled every decoration to mid-gate height. The costs
+  are asymmetric too: a floating prop is glaring, a slightly sunken one
+  reads as settled. Downward corrections (the floating-bloodstain case)
+  stay fully allowed.
+- **Consensus**: the correction applies only when the selected candidates
+  agree within 0.75m (max - min); mixed-level neighborhoods (stairs,
+  ledges) fall back to the gate Y instead of trusting a median between
+  levels.
+
+Candidates are vanilla assets (excluding `AEG099_*`: fog gates, warp
+doors, glow anchors are gameplay helpers, not floor evidence) plus
+vanilla enemies, which are hand-placed on walkable floor and never
+wall-mounted. Using enemies is why `GateDecorInjector` MUST run before
+`AmbientSpawnInjector` in `Program.cs`: the greeters/ambushers carry
+`EntityID = 0` and would otherwise pass the vanilla filter with the same
+unreliable gate Y. A survey over every fog gate and dungeon door in
+m30/m31/m32 found ~85% of gates within 0.3m of the neighborhood median
+(doors max 0.5m, fog gates up to 1.7m, typically stairs). The
+catalogue's `y_offset` applies on top; the shipped entries sink props a
+few centimeters so residual error reads as settled rather than floating.
 Corrections beyond 0.3m are logged per gate. Each decoration also gets a
 deterministic random yaw (`GateGeometry.GenerateYaws`, a separate PRNG
 stream from the arc offsets) instead of identity rotation.
@@ -196,8 +227,8 @@ Scouting workflow (copied from the TOML file's own header comment):
    ```
    and use `model = "AEG099_090"` (the invisible anchor the death markers
    use) with `sfx_dummy = 100`.
-4. Add an `[[entries]]` block, rebuild a seed, and check the first entrance
-   gates of any mini dungeon in game.
+4. Add an `[[entries]]` block, rebuild a seed, and check the exit gates of
+   the Chapel of Anticipation or any mini dungeon in game.
 
 Each catalogue entry's arc offsets are seeded independently: the gate's
 own `EntityID` is XORed with a fixed decor tag constant
@@ -221,9 +252,9 @@ disjoint from FogMod's own range and from death markers (755900000+).
 
 - **Backportal gates** (numeric entity IDs, e.g. `12012504`): same limitation
   as death markers (see death-markers.md), not found by name or entity ID in
-  the MSB. Both injectors log a warning and skip these entrances; a smoke
-  run of a full 46-entrance DAG left 3-4 entrances without a greeter for
-  this reason.
+  the MSB. Both injectors log a warning and skip these gates; a smoke run
+  of a full 46-connection DAG left 3-4 anchored gates undressed for this
+  reason.
 
 ## In-game checks still owed
 
@@ -231,9 +262,11 @@ Deferred to manual verification (see the task brief); tuning knobs are the
 constants at the top of `AmbientSpawnInjector.cs` (radii, arc spreads,
 pack size range):
 
-- Greeter presence and passivity at dungeon entrances: no aggro, and no
-  madness (or other status) buildup when walking past.
-- Per-map performance with 1-4 extra chr loads per entrance: no visible
+- Greeter presence and passivity at anchored exit gates: no aggro, and no
+  madness (or other status) buildup when walking past; greeters face the
+  approaching player, not the gate; the Chapel of Anticipation exit is
+  dressed (start cluster).
+- Per-map performance with 1-4 extra chr loads per gate: no visible
   hitch on map load.
 - Ambush pack difficulty feel when `ambushes = true`: packs should aggro
   normally and read as a deliberate, low-stakes hazard rather than a

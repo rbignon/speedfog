@@ -88,16 +88,29 @@ internal static class GateGeometry
     /// Estimate the ground Y at a gate from hand-placed vanilla parts nearby.
     /// The gate origin's own Y is often not exactly at floor level (survey
     /// over every m30/m31/m32 fog gate and dungeon door: ~85% within 0.3m of
-    /// the neighborhood median, outliers up to 1.7m), while surrounding
-    /// vanilla assets in dungeon interiors are overwhelmingly floor-standing.
-    /// Takes the median Y of candidates within horizontalRadius meters and
-    /// maxDeltaY vertical of the gate; falls back to the gate's own Y with
-    /// fewer than two candidates, and clamps the correction to maxCorrection
-    /// so a sparse neighborhood up a staircase cannot fling placements.
+    /// the neighborhood median, outliers up to 1.7m). Takes the median Y of
+    /// candidates within horizontalRadius meters of the gate; falls back to
+    /// the gate's own Y with fewer than two candidates, and clamps the
+    /// correction to maxCorrection.
+    ///
+    /// The vertical acceptance window is ASYMMETRIC ([-maxBelow, +maxAbove]):
+    /// floor evidence sitting well above the gate origin is almost always
+    /// wall-mounted decor, not floor (Shadow Keep gate AEG099_230_9500: two
+    /// wall props at +2.3m outvoted the single floor asset and pulled
+    /// decorations to mid-gate height under the old symmetric window), and
+    /// the failure costs are asymmetric too: a floating prop is glaring, a
+    /// slightly sunken one reads as settled. Downward corrections (the
+    /// "floating bloodstain" case) stay fully allowed.
+    ///
+    /// The correction is applied only when the selected candidates agree
+    /// within consensusSpread meters (max - min); a mixed-level neighborhood
+    /// (stairs, ledges) falls back to the gate Y instead of trusting an
+    /// arbitrary median between levels.
     /// </summary>
     internal static float EstimateGroundY(
         Vector3 gatePos, IEnumerable<Vector3> candidates,
-        float horizontalRadius = 6f, float maxDeltaY = 2.5f, float maxCorrection = 2f)
+        float horizontalRadius = 6f, float maxBelow = 2.5f, float maxAbove = 0.5f,
+        float consensusSpread = 0.75f, float maxCorrection = 2f)
     {
         var ys = new List<float>();
         foreach (var pos in candidates)
@@ -106,7 +119,8 @@ internal static class GateGeometry
             float dz = pos.Z - gatePos.Z;
             if (dx * dx + dz * dz > horizontalRadius * horizontalRadius)
                 continue;
-            if (MathF.Abs(pos.Y - gatePos.Y) > maxDeltaY)
+            float dy = pos.Y - gatePos.Y;
+            if (dy < -maxBelow || dy > maxAbove)
                 continue;
             ys.Add(pos.Y);
         }
@@ -114,6 +128,9 @@ internal static class GateGeometry
             return gatePos.Y;
 
         ys.Sort();
+        if (ys[^1] - ys[0] > consensusSpread)
+            return gatePos.Y;
+
         float median = ys.Count % 2 == 1
             ? ys[ys.Count / 2]
             : (ys[ys.Count / 2 - 1] + ys[ys.Count / 2]) / 2f;

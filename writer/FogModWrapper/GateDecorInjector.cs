@@ -7,18 +7,21 @@ namespace FogModWrapper;
 
 /// <summary>
 /// Places data-driven ambient decorations (candelabras, bone piles, glow
-/// anchors, ...) near dungeon entrance gates for the Halloween plugin, from
+/// anchors, ...) at cluster exit gates for the Halloween plugin, from
 /// data/plugins/halloween_decorations.toml (with no active entries, Inject
 /// is a silent no-op).
 ///
-/// Same entrance-gate filter as AmbientSpawnInjector (destination cluster
-/// type in mini_dungeon/legacy_dungeon via eventMap, never boss arenas, one
-/// spec group per (map, gate) pair) and the same death-marker clone recipe
-/// as DeathMarkerInjector (DeepCopy a nearby vanilla asset, detach
-/// visibility groups, retarget the model, clear identity fields).
-/// Decorations are anchored vertically on a per-gate ground estimate
-/// (GateGeometry.EstimateGroundY over nearby vanilla assets) rather than
-/// the gate origin, whose Y is not reliably at floor level.
+/// Anchors come from HalloweenGateAnchors (shared with
+/// AmbientSpawnInjector): exit gates of mini_dungeon/legacy_dungeon/start
+/// clusters, on the approach side, one spec group per (map, gate) pair.
+/// The clone recipe is DeathMarkerInjector's (DeepCopy a nearby vanilla
+/// asset, detach visibility groups, retarget the model, clear identity
+/// fields). Decorations are anchored vertically on a per-gate ground
+/// estimate (GateGeometry.EstimateGroundY over nearby vanilla assets and
+/// enemies) rather than the gate origin, whose Y is not reliably at floor
+/// level. Because vanilla enemies serve as ground evidence, this injector
+/// MUST run before AmbientSpawnInjector adds its own EntityID-0 spawns
+/// (enforced by the call order in Program.cs).
 ///
 /// Two-phase per map, mirroring DeathMarkerInjector:
 /// 1. MSB phase: clone a nearby vanilla asset per catalogue entry per gate.
@@ -35,13 +38,13 @@ namespace FogModWrapper;
 /// </summary>
 public static class GateDecorInjector
 {
-    private static readonly HashSet<string> DecorClusterTypes =
-        new() { "mini_dungeon", "legacy_dungeon" };
-
     // FogMod's own entity/region allocation floor (DeathMarkerInjector.FOGMOD_ENTITY_MIN);
-    // vanilla assets used as clone sources, plus every SpeedFog-managed
-    // entity range (death markers, this injector's own decorations), sit at
-    // or above it, so a single-sided floor excludes all of them.
+    // vanilla parts used as clone sources or ground evidence, plus almost
+    // every SpeedFog-managed entity range (death markers, this injector's
+    // own decorations), sit on opposite sides of it. Known exception below
+    // the floor: ChapelGraceInjector's c1000 grace NPC (bonfire entity
+    // range, ~10011952), placed at floor level at the Chapel grace, so it
+    // is harmless as ground evidence for the Chapel's anchored exit gate.
     private const uint FOGMOD_ENTITY_MIN = 755890000;
 
     // Arbitrary fixed tag XORed into the gate EntityID to seed each catalogue
@@ -49,21 +52,18 @@ public static class GateDecorInjector
     // just avoids the all-zero/identity case. Must never be 0.
     private const uint DecorSeedTag = 0x44454355u;
 
-    internal readonly record struct GateSpec(string PartName, bool IsASide);
-
     internal sealed record MapAllocation(string MapId, uint EntityIdBase, int EventOffsetBase);
 
     /// <summary>
-    /// Inject catalogue decorations at every DAG entrance leading into a
-    /// mini_dungeon/legacy_dungeon cluster. A no-op (one console line) when
-    /// the catalogue is missing or has no active entries. Maps are
-    /// processed in parallel; entity and event IDs are pre-partitioned per
-    /// map so the output stays deterministic.
+    /// Inject catalogue decorations at every exit gate of a
+    /// mini_dungeon/legacy_dungeon/start cluster (HalloweenGateAnchors). A
+    /// no-op (one console line) when the catalogue is missing or has no
+    /// active entries. Maps are processed in parallel; entity and event IDs
+    /// are pre-partitioned per map so the output stays deterministic.
     /// </summary>
     public static void Inject(
         string modDir, string gameDir,
         List<Connection> connections,
-        Dictionary<string, string> eventMap,
         Dictionary<string, GraphNode> nodes,
         Dictionary<string, (string ASideArea, string BSideArea)> gateSides,
         Events events,
@@ -76,7 +76,7 @@ public static class GateDecorInjector
 
         Console.WriteLine("Injecting Halloween gate decorations...");
 
-        var gatesByMap = CollectGatesByMap(connections, eventMap, nodes, gateSides);
+        var gatesByMap = HalloweenGateAnchors.Collect(connections, nodes, gateSides);
         var work = gatesByMap.ToList();
         int perGateCount = catalog.Entries.Sum(e => e.Count);
         bool hasSfxEntries = catalog.Entries.Any(e => e.SfxId > 0);
@@ -108,48 +108,6 @@ public static class GateDecorInjector
         });
 
         Console.WriteLine($"  Placed {totalPlaced} gate decorations across {totalMaps} maps");
-    }
-
-    /// <summary>
-    /// Collect entrance gates per map, keyed by the entrance gate's map id.
-    /// For each connection, resolves the destination cluster via eventMap
-    /// and skips it unless the cluster exists and its type is in
-    /// DecorClusterTypes (mini_dungeon/legacy_dungeon; never boss arenas).
-    /// Decorations are anchored on the ENTRANCE gate (inside the destination
-    /// zone), same as AmbientSpawnInjector. Emits at most one gate per
-    /// (map, gate part name) pair.
-    /// </summary>
-    internal static Dictionary<string, List<GateSpec>> CollectGatesByMap(
-        List<Connection> connections,
-        Dictionary<string, string> eventMap,
-        Dictionary<string, GraphNode> nodes,
-        Dictionary<string, (string ASideArea, string BSideArea)> gateSides)
-    {
-        var result = new Dictionary<string, List<GateSpec>>();
-        var seenGates = new HashSet<(string MapId, string PartName)>();
-
-        foreach (var conn in connections)
-        {
-            if (!eventMap.TryGetValue(conn.FlagId.ToString(), out var clusterId))
-                continue;
-            if (!nodes.TryGetValue(clusterId, out var node) || !DecorClusterTypes.Contains(node.Type))
-                continue;
-
-            var (mapId, partName) = GateGeometry.ParseGateFullName(conn.EntranceGate);
-            if (!seenGates.Add((mapId, partName)))
-                continue;
-
-            bool isASide = GateGeometry.ResolveIsASide(conn.EntranceGate, conn.EntranceArea, gateSides);
-
-            if (!result.TryGetValue(mapId, out var gates))
-            {
-                gates = new List<GateSpec>();
-                result[mapId] = gates;
-            }
-            gates.Add(new GateSpec(partName, isASide));
-        }
-
-        return result;
     }
 
     /// <summary>
@@ -196,7 +154,8 @@ public static class GateDecorInjector
     /// item: geometry only, no EMEVD event).
     /// </summary>
     internal static (int Placed, List<(uint EntityId, int SfxDummy, int SfxId)> SfxWork) ApplyToMsb(
-        MSBE msb, List<GateSpec> gates, DecorCatalog catalog, uint entityIdBase, Action<string> log)
+        MSBE msb, List<HalloweenGateAnchors.GateAnchor> gates, DecorCatalog catalog,
+        uint entityIdBase, Action<string> log)
     {
         int placed = 0;
         uint nextEntityId = entityIdBase;
@@ -221,26 +180,31 @@ public static class GateDecorInjector
                 continue;
             }
 
-            // Decorations sit on the interior (entrance-area) side, like
-            // AmbientSpawnInjector's greeters: isASide?180:0 places them on
-            // the queried (entrance) zone's own player side. See
-            // docs/death-markers.md "Position Offsets (ASide/BSide)".
+            // Decorations sit on the approach side of the exit gate, like
+            // AmbientSpawnInjector's spawns: IsASide was resolved against
+            // the exit area, and isASide?180:0 places them on the queried
+            // zone's own player side. See docs/death-markers.md "Position
+            // Offsets (ASide/BSide)".
             float arcCenterDeg = gate.IsASide ? 180f : 0f;
 
             // Gate origins are not reliably at floor level; anchor decor on
-            // the ground estimated from surrounding vanilla assets instead.
-            // Enemy parts are excluded (AmbientSpawnInjector's greeters,
-            // EntityID = 0, are already in the MSB and inherit the same
-            // unreliable gate Y), and so are AEG099_* assets (fog gates,
-            // warp doors, glow anchors: gameplay helpers, not floor
-            // evidence). Earlier decorations sit at or above
-            // FOGMOD_ENTITY_MIN and drop out with the entity filter.
+            // the ground estimated from surrounding vanilla parts instead.
+            // Vanilla enemies count as evidence (hand-placed on walkable
+            // floor, never wall-mounted), which is why this injector must
+            // run before AmbientSpawnInjector adds its EntityID-0 spawns.
+            // AEG099_* assets are excluded (fog gates, warp doors, glow
+            // anchors: gameplay helpers, not floor evidence); earlier
+            // decorations sit at or above FOGMOD_ENTITY_MIN and drop out
+            // with the entity filter.
             float groundY = GateGeometry.EstimateGroundY(
                 gateAsset.Position,
                 msb.Parts.Assets
                     .Where(a => a.EntityID < FOGMOD_ENTITY_MIN
                         && a.ModelName?.StartsWith("AEG099", StringComparison.Ordinal) != true)
-                    .Select(a => a.Position));
+                    .Select(a => a.Position)
+                    .Concat(msb.Parts.Enemies
+                        .Where(e => e.EntityID < FOGMOD_ENTITY_MIN)
+                        .Select(e => e.Position)));
             if (MathF.Abs(groundY - gateAsset.Position.Y) > 0.3f)
             {
                 log($"  Gate '{gate.PartName}': ground Y {groundY:F1} " +
@@ -305,7 +269,7 @@ public static class GateDecorInjector
 
     private static int InjectMap(
         string modDir, string gameDir, Events events,
-        string mapId, List<GateSpec> gates, DecorCatalog catalog,
+        string mapId, List<HalloweenGateAnchors.GateAnchor> gates, DecorCatalog catalog,
         uint entityIdBase, int eventOffset, Action<string> log)
     {
         var msbFileName = $"{mapId}.msb.dcx";

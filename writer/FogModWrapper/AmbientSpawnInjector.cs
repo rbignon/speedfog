@@ -6,17 +6,22 @@ using SoulsIds;
 namespace FogModWrapper;
 
 /// <summary>
-/// Places ambient enemy spawns just inside dungeon entrance gates for the
-/// Halloween plugin: a passive "greeter" (Aging Untouchable model, perception
-/// zeroed so it never aggros) at every mini_dungeon/legacy_dungeon entrance,
-/// plus, when ambushes are enabled, a small skeleton pack sharing the
-/// entrance's arc. Boss arenas never receive spawns (see SpawnClusterTypes).
+/// Places ambient enemy spawns at cluster exit gates for the Halloween
+/// plugin: a passive "greeter" (Aging Untouchable model, perception zeroed
+/// so it never aggros) standing watch beside every exit gate of a
+/// mini_dungeon/legacy_dungeon/start cluster (HalloweenGateAnchors), plus,
+/// when ambushes are enabled, a small skeleton pack sharing the gate's arc.
+/// Boss arenas never receive spawns.
 ///
 /// Two-phase injection, mirroring DeathMarkerInjector:
 /// 1. MSB phase (this class, Inject/ApplyToMsb): clone a nearby vanilla enemy
-///    per entrance gate, retarget it to the greeter/ambusher model.
+///    per anchored gate, retarget it to the greeter/ambusher model.
 /// 2. Regulation phase (ApplyPassiveThinkRow): clone the greeter's
 ///    NpcThinkParam row with all perception fields zeroed.
+///
+/// Must run AFTER GateDecorInjector: the spawns carry EntityID 0 and would
+/// otherwise pollute the decor injector's vanilla-enemy ground evidence
+/// (enforced by the call order in Program.cs).
 /// </summary>
 public static class AmbientSpawnInjector
 {
@@ -30,30 +35,27 @@ public static class AmbientSpawnInjector
     private const float AMBUSH_MIN_RADIUS = 3.0f;
     private const float AMBUSH_MAX_RADIUS = 7.0f;
     private const float AMBUSH_ARC_SPREAD = 140f;
-    private static readonly HashSet<string> SpawnClusterTypes =
-        new() { "mini_dungeon", "legacy_dungeon" };
 
     // FogMod's own entity/region allocation floor (DeathMarkerInjector.FOGMOD_ENTITY_MIN);
     // vanilla enemies used as clone sources must sit below it.
     private const uint FOGMOD_ENTITY_MIN = 755890000;
 
     /// <summary>
-    /// Inject passive greeters (and optional ambush packs) at every DAG entrance
-    /// leading into a mini_dungeon/legacy_dungeon cluster. Maps are processed in
-    /// parallel (independent MSB files); no entity or event IDs are allocated,
-    /// so no pre-partitioning is needed.
+    /// Inject passive greeters (and optional ambush packs) at every exit
+    /// gate of a mini_dungeon/legacy_dungeon/start cluster. Maps are
+    /// processed in parallel (independent MSB files); no entity or event IDs
+    /// are allocated, so no pre-partitioning is needed.
     /// </summary>
     public static void Inject(
         string modDir, string gameDir,
         List<Connection> connections,
-        Dictionary<string, string> eventMap,
         Dictionary<string, GraphNode> nodes,
         Dictionary<string, (string ASideArea, string BSideArea)> gateSides,
         HalloweenPluginSettings.Settings settings)
     {
-        Console.WriteLine("Injecting Halloween ambient spawns at dungeon entrances...");
+        Console.WriteLine("Injecting Halloween ambient spawns at cluster exit gates...");
 
-        var specsByMap = CollectSpawnSpecsByMap(connections, eventMap, nodes, gateSides, settings);
+        var specsByMap = CollectSpawnSpecsByMap(connections, nodes, gateSides, settings);
         var work = specsByMap.ToList();
 
         int totalGreeters = 0;
@@ -83,51 +85,35 @@ public static class AmbientSpawnInjector
     }
 
     /// <summary>
-    /// Collect spawn specs per map, keyed by the entrance gate's map id. For
-    /// each connection, resolves the destination cluster via eventMap and
-    /// skips it unless the cluster exists and its type is in
-    /// SpawnClusterTypes (mini_dungeon/legacy_dungeon; never boss arenas).
-    /// Spawns are anchored on the ENTRANCE gate (inside the destination zone)
-    /// since they greet the player as they arrive. Emits at most one spec
-    /// group per (map, gate part name) pair: one Greeter, plus, when
+    /// Collect spawn specs per map, keyed by the anchored gate's map id.
+    /// Anchors (exit gates of mini_dungeon/legacy_dungeon/start clusters,
+    /// deduped per (map, gate part name) pair) come from
+    /// HalloweenGateAnchors.Collect; each expands to one Greeter, plus, when
     /// settings.Ambushes, a pack of 2-3 Ambushers.
     /// </summary>
     internal static Dictionary<string, List<SpawnSpec>> CollectSpawnSpecsByMap(
         List<Connection> connections,
-        Dictionary<string, string> eventMap,
         Dictionary<string, GraphNode> nodes,
         Dictionary<string, (string ASideArea, string BSideArea)> gateSides,
         HalloweenPluginSettings.Settings settings)
     {
         var result = new Dictionary<string, List<SpawnSpec>>();
-        var seenGates = new HashSet<(string MapId, string PartName)>();
 
-        foreach (var conn in connections)
+        foreach (var (mapId, anchors) in HalloweenGateAnchors.Collect(connections, nodes, gateSides))
         {
-            if (!eventMap.TryGetValue(conn.FlagId.ToString(), out var clusterId))
-                continue;
-            if (!nodes.TryGetValue(clusterId, out var node) || !SpawnClusterTypes.Contains(node.Type))
-                continue;
+            var specs = new List<SpawnSpec>();
+            result[mapId] = specs;
 
-            var (mapId, partName) = GateGeometry.ParseGateFullName(conn.EntranceGate);
-            if (!seenGates.Add((mapId, partName)))
-                continue;
-
-            bool isASide = GateGeometry.ResolveIsASide(conn.EntranceGate, conn.EntranceArea, gateSides);
-
-            if (!result.TryGetValue(mapId, out var specs))
+            foreach (var anchor in anchors)
             {
-                specs = new List<SpawnSpec>();
-                result[mapId] = specs;
-            }
+                specs.Add(new SpawnSpec(anchor.PartName, SpawnKind.Greeter, 0, 1, anchor.IsASide));
 
-            specs.Add(new SpawnSpec(partName, SpawnKind.Greeter, 0, 1, isASide));
-
-            if (settings.Ambushes)
-            {
-                int packSize = 2 + new Random(StablePartNameHash(partName)).Next(2);
-                for (int i = 0; i < packSize; i++)
-                    specs.Add(new SpawnSpec(partName, SpawnKind.Ambusher, i, packSize, isASide));
+                if (settings.Ambushes)
+                {
+                    int packSize = 2 + new Random(StablePartNameHash(anchor.PartName)).Next(2);
+                    for (int i = 0; i < packSize; i++)
+                        specs.Add(new SpawnSpec(anchor.PartName, SpawnKind.Ambusher, i, packSize, anchor.IsASide));
+                }
             }
         }
 
@@ -207,10 +193,10 @@ public static class AmbientSpawnInjector
                     gateAsset.EntityID, gateAsset.Rotation.Y,
                     // Same mapping as DeathMarkerInjector: isASide?180:0 places an
                     // object on the QUERIED zone's player side. GateSideIsASide was
-                    // resolved against the entrance area, so this lands spawns on
-                    // the entrance area's own side, i.e. where the arriving player
-                    // stands inside the destination zone (see docs/death-markers.md
-                    // "Position Offsets (ASide/BSide)").
+                    // resolved against the exit area, so this lands spawns on the
+                    // approach side of the exit gate, where the player walks up to
+                    // it (see docs/death-markers.md "Position Offsets
+                    // (ASide/BSide)").
                     spec.GateSideIsASide ? 180f : 0f,
                     spec.PackSize,
                     spec.Kind == SpawnKind.Greeter ? GREETER_MIN_RADIUS : AMBUSH_MIN_RADIUS,
@@ -225,9 +211,11 @@ public static class AmbientSpawnInjector
                 spawn.Name = MsbHelper.GeneratePartName(msb.Parts.Enemies.Select(e => e.Name), spawn.ModelName);
                 MsbHelper.SetNameIdent(spawn);
                 spawn.Position = gateAsset.Position + offset;
-                // Greeters face the gate (the arriving player); ambushers keep pack scatter.
-                float yawToGate = MathF.Atan2(-offset.X, -offset.Z) * 180f / MathF.PI;
-                spawn.Rotation = new Vector3(0f, spec.Kind == SpawnKind.Greeter ? yawToGate : (spec.IndexInPack * 137f) % 360f, 0f);
+                // Greeters stand watch facing AWAY from the gate, toward the
+                // approaching player (at an exit gate the player walks up
+                // from the zone interior); ambushers keep pack scatter.
+                float yawAwayFromGate = MathF.Atan2(offset.X, offset.Z) * 180f / MathF.PI;
+                spawn.Rotation = new Vector3(0f, spec.Kind == SpawnKind.Greeter ? yawAwayFromGate : (spec.IndexInPack * 137f) % 360f, 0f);
                 spawn.EntityID = 0;
                 Array.Clear(spawn.EntityGroupIDs);
                 spawn.NPCParamID = spec.Kind == SpawnKind.Greeter ? GREETER_NPC_PARAM : AMBUSH_NPC_PARAM;

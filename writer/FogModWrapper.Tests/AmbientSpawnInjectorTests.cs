@@ -6,43 +6,44 @@ using Xunit;
 namespace FogModWrapper.Tests;
 
 /// <summary>
-/// Tests for AmbientSpawnInjector: spec collection (destination cluster type
-/// filter, ambush pack sizing) and the in-memory MSB placement (passive
-/// greeter clone, radius band around the entrance gate).
+/// Tests for AmbientSpawnInjector: spec expansion from the shared exit-gate
+/// anchors (ambush pack sizing) and the in-memory MSB placement (passive
+/// greeter clone, radius band and facing around the anchored gate). Anchor
+/// collection itself is covered by HalloweenGateAnchorsTests.
 /// </summary>
 public class AmbientSpawnInjectorTests
 {
-    private static Connection Conn(string exitGate, string entranceGate, string entranceArea, int flag)
+    private static Connection Conn(string exitArea, string exitGate, int flag)
         => new()
         {
-            ExitGate = exitGate, EntranceGate = entranceGate,
-            ExitArea = "src_zone", EntranceArea = entranceArea, FlagId = flag,
+            ExitArea = exitArea, ExitGate = exitGate,
+            EntranceArea = "dst_zone", EntranceGate = "m99_00_00_00_AEG099_099_9000",
+            FlagId = flag,
         };
 
     private static readonly Dictionary<string, GraphNode> Nodes = new()
     {
-        ["mini1"] = new GraphNode { Type = "mini_dungeon" },
-        ["legacy1"] = new GraphNode { Type = "legacy_dungeon" },
-        ["arena1"] = new GraphNode { Type = "boss_arena" },
+        ["mini1"] = new GraphNode { Type = "mini_dungeon", Zones = new() { "cave_zone" } },
+        ["legacy1"] = new GraphNode { Type = "legacy_dungeon", Zones = new() { "castle_zone" } },
+        ["arena1"] = new GraphNode { Type = "boss_arena", Zones = new() { "arena_zone" } },
     };
 
     [Fact]
-    public void CollectSpecs_FiltersOnDestinationClusterType()
+    public void CollectSpecs_AnchorsOnSourceClusterExitGates()
     {
         var connections = new List<Connection>
         {
-            Conn("m10_00_00_00_AEG099_001_9000", "m31_00_00_00_AEG099_002_9000", "cave_zone", 1),
-            Conn("m10_00_00_00_AEG099_003_9000", "m12_00_00_00_AEG099_004_9000", "arena_zone", 2),
+            Conn("cave_zone", "m31_00_00_00_AEG099_002_9000", 1),
+            Conn("arena_zone", "m12_00_00_00_AEG099_004_9000", 2),
         };
-        var eventMap = new Dictionary<string, string> { ["1"] = "mini1", ["2"] = "arena1" };
         var specs = AmbientSpawnInjector.CollectSpawnSpecsByMap(
-            connections, eventMap, Nodes,
+            connections, Nodes,
             new Dictionary<string, (string, string)>(),
             new HalloweenPluginSettings.Settings(Ambushes: false));
 
-        Assert.True(specs.ContainsKey("m31_00_00_00"));   // mini_dungeon entrance
-        Assert.False(specs.ContainsKey("m12_00_00_00"));  // boss arena filtered out
-        Assert.All(specs["m31_00_00_00"], s => Assert.Equal(SpawnKind.Greeter, s.Kind));
+        Assert.True(specs.ContainsKey("m31_00_00_00"));   // mini_dungeon exit
+        Assert.False(specs.ContainsKey("m12_00_00_00"));  // boss arena stays bare
+        Assert.Equal(SpawnKind.Greeter, Assert.Single(specs["m31_00_00_00"]).Kind);
     }
 
     [Fact]
@@ -50,11 +51,10 @@ public class AmbientSpawnInjectorTests
     {
         var connections = new List<Connection>
         {
-            Conn("m10_00_00_00_AEG099_001_9000", "m31_00_00_00_AEG099_002_9000", "cave_zone", 1),
+            Conn("castle_zone", "m31_00_00_00_AEG099_002_9000", 1),
         };
-        var eventMap = new Dictionary<string, string> { ["1"] = "legacy1" };
         var specs = AmbientSpawnInjector.CollectSpawnSpecsByMap(
-            connections, eventMap, Nodes,
+            connections, Nodes,
             new Dictionary<string, (string, string)>(),
             new HalloweenPluginSettings.Settings(Ambushes: true));
 
@@ -68,17 +68,15 @@ public class AmbientSpawnInjectorTests
     [Fact]
     public void CollectSpecs_DedupesSameGateAcrossConnections()
     {
-        // Mirrors GateDecorInjectorTests.CollectGates_DedupesSameGateAcrossConnections:
-        // two connections landing on the same entrance gate must not double
+        // Two connections leaving through the same exit gate must not double
         // up the greeter (or, with ambushes on, double the pack).
         var connections = new List<Connection>
         {
-            Conn("m10_00_00_00_AEG099_001_9000", "m31_00_00_00_AEG099_002_9000", "cave_zone", 1),
-            Conn("m10_00_00_00_AEG099_005_9000", "m31_00_00_00_AEG099_002_9000", "cave_zone", 3),
+            Conn("cave_zone", "m31_00_00_00_AEG099_002_9000", 1),
+            Conn("cave_zone", "m31_00_00_00_AEG099_002_9000", 3),
         };
-        var eventMap = new Dictionary<string, string> { ["1"] = "mini1", ["3"] = "mini1" };
         var specs = AmbientSpawnInjector.CollectSpawnSpecsByMap(
-            connections, eventMap, Nodes,
+            connections, Nodes,
             new Dictionary<string, (string, string)>(),
             new HalloweenPluginSettings.Settings(Ambushes: false));
 
@@ -93,9 +91,8 @@ public class AmbientSpawnInjectorTests
         var specs = AmbientSpawnInjector.CollectSpawnSpecsByMap(
             new List<Connection>
             {
-                Conn("m99_00_00_00_AEG099_001_9000", "m31_00_00_00_AEG099_002_9000", "cave_zone", 1),
+                Conn("cave_zone", "m31_00_00_00_AEG099_002_9000", 1),
             },
-            new Dictionary<string, string> { ["1"] = "mini1" },
             Nodes, new Dictionary<string, (string, string)>(),
             new HalloweenPluginSettings.Settings(Ambushes: false))["m31_00_00_00"];
 
@@ -113,6 +110,11 @@ public class AmbientSpawnInjectorTests
         var d = greeter.Position - gate.Position;
         var horizontal = MathF.Sqrt(d.X * d.X + d.Z * d.Z);
         Assert.InRange(horizontal, 4.0f, 6.0f);
+        // The greeter stands watch facing AWAY from the gate, toward the
+        // player approaching the exit fog (not toward the gate, which would
+        // show its back to everyone walking up).
+        float expectedYaw = MathF.Atan2(d.X, d.Z) * 180f / MathF.PI;
+        Assert.Equal(expectedYaw, greeter.Rotation.Y, 3);
         // Visibility groups inherit the clone source's values (a chr-rendered
         // spawn must not go all-zero like an SFX-visible bloodstain marker
         // would), but through fresh, un-aliased arrays.

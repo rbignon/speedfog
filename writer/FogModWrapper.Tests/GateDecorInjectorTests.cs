@@ -6,63 +6,17 @@ using Xunit;
 namespace FogModWrapper.Tests;
 
 /// <summary>
-/// Tests for GateDecorInjector: entrance-gate spec collection (destination
-/// cluster type filter, same as Task 4), MSB asset placement, and the
-/// entity-id/event pre-partition math (mirrors DeathMarkerTests).
+/// Tests for GateDecorInjector: MSB asset placement (ground estimation,
+/// yaw, SibPath) and the entity-id/event pre-partition math (mirrors
+/// DeathMarkerTests). Anchor collection lives in HalloweenGateAnchorsTests.
 /// </summary>
 public class GateDecorInjectorTests
 {
-    private static Connection Conn(string exitGate, string entranceGate, string entranceArea, int flag)
-        => new()
-        {
-            ExitGate = exitGate, EntranceGate = entranceGate,
-            ExitArea = "src_zone", EntranceArea = entranceArea, FlagId = flag,
-        };
-
-    private static readonly Dictionary<string, GraphNode> Nodes = new()
-    {
-        ["mini1"] = new GraphNode { Type = "mini_dungeon" },
-        ["legacy1"] = new GraphNode { Type = "legacy_dungeon" },
-        ["arena1"] = new GraphNode { Type = "boss_arena" },
-    };
-
-    [Fact]
-    public void CollectGates_FiltersOnDestinationClusterType()
-    {
-        var connections = new List<Connection>
-        {
-            Conn("m10_00_00_00_AEG099_001_9000", "m31_00_00_00_AEG099_002_9000", "cave_zone", 1),
-            Conn("m10_00_00_00_AEG099_003_9000", "m12_00_00_00_AEG099_004_9000", "arena_zone", 2),
-        };
-        var eventMap = new Dictionary<string, string> { ["1"] = "mini1", ["2"] = "arena1" };
-        var gates = GateDecorInjector.CollectGatesByMap(
-            connections, eventMap, Nodes, new Dictionary<string, (string, string)>());
-
-        Assert.True(gates.ContainsKey("m31_00_00_00"));   // mini_dungeon entrance
-        Assert.False(gates.ContainsKey("m12_00_00_00"));  // boss arena filtered out
-        Assert.Equal("AEG099_002_9000", Assert.Single(gates["m31_00_00_00"]).PartName);
-    }
-
-    [Fact]
-    public void CollectGates_DedupesSameGateAcrossConnections()
-    {
-        var connections = new List<Connection>
-        {
-            Conn("m10_00_00_00_AEG099_001_9000", "m31_00_00_00_AEG099_002_9000", "cave_zone", 1),
-            Conn("m10_00_00_00_AEG099_005_9000", "m31_00_00_00_AEG099_002_9000", "cave_zone", 3),
-        };
-        var eventMap = new Dictionary<string, string> { ["1"] = "mini1", ["3"] = "mini1" };
-        var gates = GateDecorInjector.CollectGatesByMap(
-            connections, eventMap, Nodes, new Dictionary<string, (string, string)>());
-
-        Assert.Single(gates["m31_00_00_00"]);
-    }
-
     [Fact]
     public void ApplyToMsb_PlacesEntryCountAssetsAtCorrectRadiusAndEntityIds()
     {
         var msb = MakeMsbWithGateAndVanillaAsset();
-        var gates = new List<GateDecorInjector.GateSpec> { new("AEG099_002_9000", IsASide: false) };
+        var gates = new List<HalloweenGateAnchors.GateAnchor> { new("AEG099_002_9000", IsASide: false) };
         var catalog = new DecorCatalog(new List<DecorEntry>
         {
             new("AEG099_090", 2, 2.0f, 4.0f, 0f, 100, 0),
@@ -92,7 +46,7 @@ public class GateDecorInjectorTests
     public void ApplyToMsb_SfxEntryProducesSfxWorkItems()
     {
         var msb = MakeMsbWithGateAndVanillaAsset();
-        var gates = new List<GateDecorInjector.GateSpec> { new("AEG099_002_9000", IsASide: false) };
+        var gates = new List<HalloweenGateAnchors.GateAnchor> { new("AEG099_002_9000", IsASide: false) };
         var catalog = new DecorCatalog(new List<DecorEntry>
         {
             new("AEG099_090", 1, 1.0f, 2.0f, 0f, 100, 42),
@@ -116,7 +70,7 @@ public class GateDecorInjectorTests
         // needs its own PRNG sequence, not a shared one seeded off the raw
         // gate EntityID.
         var msb = MakeMsbWithGateAndVanillaAsset();
-        var gates = new List<GateDecorInjector.GateSpec> { new("AEG099_002_9000", IsASide: false) };
+        var gates = new List<HalloweenGateAnchors.GateAnchor> { new("AEG099_002_9000", IsASide: false) };
         var catalog = new DecorCatalog(new List<DecorEntry>
         {
             new("AEG099_090", 2, 2.0f, 4.0f, 0f, 100, 0),
@@ -145,7 +99,7 @@ public class GateDecorInjectorTests
         // would draw for a greeter at the same gate/arc center, which seeds
         // GenerateArcOffsets directly off the raw gate EntityID.
         var msb = MakeMsbWithGateAndVanillaAsset();
-        var gates = new List<GateDecorInjector.GateSpec> { new("AEG099_002_9000", IsASide: false) };
+        var gates = new List<HalloweenGateAnchors.GateAnchor> { new("AEG099_002_9000", IsASide: false) };
         var entry = new DecorEntry("AEG099_090", 2, 2.0f, 4.0f, 0f, 100, 0);
         var catalog = new DecorCatalog(new List<DecorEntry> { entry });
 
@@ -169,7 +123,7 @@ public class GateDecorInjectorTests
     public void ApplyToMsb_MissingGateAssetIsSkippedNotThrown()
     {
         var msb = new MSBE();
-        var gates = new List<GateDecorInjector.GateSpec> { new("no_such_gate", IsASide: false) };
+        var gates = new List<HalloweenGateAnchors.GateAnchor> { new("no_such_gate", IsASide: false) };
         var catalog = new DecorCatalog(new List<DecorEntry>
         {
             new("AEG099_090", 1, 1.0f, 2.0f, 0f, 100, 0),
@@ -188,7 +142,7 @@ public class GateDecorInjectorTests
         // FogRando parity (GameDataWriterE addAssetModel): without a SibPath
         // the game may not resolve real geometry models registered by name.
         var msb = MakeMsbWithGateAndVanillaAsset();
-        var gates = new List<GateDecorInjector.GateSpec> { new("AEG099_002_9000", IsASide: false) };
+        var gates = new List<HalloweenGateAnchors.GateAnchor> { new("AEG099_002_9000", IsASide: false) };
         var catalog = new DecorCatalog(new List<DecorEntry>
         {
             new("AEG023_920", 1, 1.0f, 2.0f, 0f, 100, 0),
@@ -219,7 +173,7 @@ public class GateDecorInjectorTests
             Name = "AEG020_100_1001", ModelName = "AEG020_100",
             Position = new Vector3(12f, -1.2f, 11f), EntityID = 0,
         });
-        var gates = new List<GateDecorInjector.GateSpec> { new("AEG099_002_9000", IsASide: false) };
+        var gates = new List<HalloweenGateAnchors.GateAnchor> { new("AEG099_002_9000", IsASide: false) };
         var catalog = new DecorCatalog(new List<DecorEntry>
         {
             new("AEG023_920", 2, 2.0f, 4.0f, 0f, 100, 0),
@@ -233,22 +187,44 @@ public class GateDecorInjectorTests
     }
 
     [Fact]
-    public void ApplyToMsb_GroundEstimateIgnoresEnemiesAndFogGateAssets()
+    public void ApplyToMsb_VanillaEnemiesCountAsGroundEvidence()
     {
-        // Enemy parts are excluded on purpose: AmbientSpawnInjector's
-        // greeters (EntityID = 0) are already in the MSB when this injector
-        // runs, and their Y comes from the same unreliable gate origin.
-        // AEG099_* assets (other fog gates, warp doors) are no floor
-        // evidence either. With only those nearby, decor keeps the gate Y.
+        // Vanilla enemies are hand-placed on walkable floor and never
+        // wall-mounted, so they are prime ground evidence. This relies on
+        // GateDecorInjector running BEFORE AmbientSpawnInjector adds its own
+        // EntityID-0 spawns (call order in Program.cs).
         var msb = MakeMsbWithGateAndVanillaAsset();
         msb.Parts.Enemies.Add(new MSBE.Part.Enemy
         {
-            Name = "c5280_9000", ModelName = "c5280",
-            Position = new Vector3(9f, -1.5f, 10f), EntityID = 0,
+            Name = "c3000_1000", ModelName = "c3000",
+            Position = new Vector3(9f, -1.4f, 10f), EntityID = 0,
         });
-        // Two AEG099 assets with vanilla entity IDs: were the model-prefix
-        // filter dropped, they would form a 2-sample median at -1.5 and
-        // shift the decor off the gate Y.
+        msb.Parts.Assets.Add(new MSBE.Part.Asset
+        {
+            Name = "AEG020_100_1000", ModelName = "AEG020_100",
+            Position = new Vector3(12f, -1.2f, 11f), EntityID = 0,
+        });
+        var gates = new List<HalloweenGateAnchors.GateAnchor> { new("AEG099_002_9000", IsASide: false) };
+        var catalog = new DecorCatalog(new List<DecorEntry>
+        {
+            new("AEG023_920", 1, 2.0f, 4.0f, 0f, 100, 0),
+        });
+
+        GateDecorInjector.ApplyToMsb(msb, gates, catalog, entityIdBase: 755910000, log: _ => { });
+
+        var decor = msb.Parts.Assets.Single(a => a.ModelName == "AEG023_920");
+        Assert.Equal(-1.3f, decor.Position.Y, 3);
+    }
+
+    [Fact]
+    public void ApplyToMsb_GroundEstimateIgnoresFogGateAssets()
+    {
+        // AEG099_* assets (fog gates, warp doors, glow anchors) are gameplay
+        // helpers, not floor evidence. Two of them with vanilla entity IDs
+        // would form a 2-sample median at -1.5 if the model-prefix filter
+        // were dropped; with it, no evidence remains and decor keeps the
+        // gate Y.
+        var msb = MakeMsbWithGateAndVanillaAsset();
         msb.Parts.Assets.Add(new MSBE.Part.Asset
         {
             Name = "AEG099_001_9500", ModelName = "AEG099_001",
@@ -259,7 +235,7 @@ public class GateDecorInjectorTests
             Name = "AEG099_065_9501", ModelName = "AEG099_065",
             Position = new Vector3(10f, -1.5f, 12f), EntityID = 30051950,
         });
-        var gates = new List<GateDecorInjector.GateSpec> { new("AEG099_002_9000", IsASide: false) };
+        var gates = new List<HalloweenGateAnchors.GateAnchor> { new("AEG099_002_9000", IsASide: false) };
         var catalog = new DecorCatalog(new List<DecorEntry>
         {
             new("AEG023_920", 1, 2.0f, 4.0f, 0f, 100, 0),
@@ -276,7 +252,7 @@ public class GateDecorInjectorTests
     {
         var msb1 = MakeMsbWithGateAndVanillaAsset();
         var msb2 = MakeMsbWithGateAndVanillaAsset();
-        var gates = new List<GateDecorInjector.GateSpec> { new("AEG099_002_9000", IsASide: false) };
+        var gates = new List<HalloweenGateAnchors.GateAnchor> { new("AEG099_002_9000", IsASide: false) };
         var catalog = new DecorCatalog(new List<DecorEntry>
         {
             new("AEG023_920", 3, 2.0f, 4.0f, 0f, 100, 0),

@@ -290,4 +290,7 @@ public class GraphNode
 {
     [JsonPropertyName("type")]
     public string Type { get; set; } = "";
+
+    [JsonPropertyName("zones")]
+    public List<string> Zones { get; set; } = new();
 }

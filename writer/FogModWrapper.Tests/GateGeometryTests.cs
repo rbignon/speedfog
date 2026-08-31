@@ -69,9 +69,72 @@ public class GateGeometryTests
             new Vector3(2f, 9.4f, 0f),
             new Vector3(-1f, 9.6f, 2f),
             new Vector3(20f, 9.4f, 0f),   // beyond 6m horizontal (dY in range)
-            new Vector3(1f, 14.0f, 0f),   // wall torch: beyond 2.5m vertical
+            new Vector3(1f, 14.0f, 0f),   // wall torch: above the +0.5m cap
         };
         Assert.Equal(9.5f, GateGeometry.EstimateGroundY(gate, candidates), 3);
+    }
+
+    [Fact]
+    public void EstimateGroundY_WallPropsAboveGateAreNotFloorEvidence()
+    {
+        // The Shadow Keep regression (gate AEG099_230_9500): the gate origin
+        // was AT floor level, but two wall props at +2.3m outvoted the
+        // single floor asset under a symmetric vertical window and pulled
+        // decor to mid-gate height. This exact mix is guarded twice (the
+        // asymmetric cap rejects the wall props; even symmetric, the 2.3m
+        // spread trips the consensus guard); the window alone is pinned by
+        // EstimateGroundY_AgreeingWallPropsAloneCannotRaiseTheEstimate.
+        var gate = new Vector3(0f, 263.0f, 0f);
+        var candidates = new[]
+        {
+            new Vector3(2f, 263.0f, 2f),   // floor asset
+            new Vector3(-3f, 265.3f, 1f),  // wall prop
+            new Vector3(2f, 265.3f, -2f),  // wall prop
+        };
+        Assert.Equal(263.0f, GateGeometry.EstimateGroundY(gate, candidates), 3);
+    }
+
+    [Fact]
+    public void EstimateGroundY_AgreeingWallPropsAloneCannotRaiseTheEstimate()
+    {
+        // Two matching wall props flanking a gate with no other evidence in
+        // range: they agree within the consensus tolerance, so only the
+        // asymmetric +0.5m cap stands between them and a +2m (clamped)
+        // upward correction. A symmetric window would return 265.0 here.
+        var gate = new Vector3(0f, 263.0f, 0f);
+        var candidates = new[]
+        {
+            new Vector3(-3f, 265.3f, 1f),  // wall prop
+            new Vector3(2f, 265.3f, -2f),  // wall prop
+        };
+        Assert.Equal(263.0f, GateGeometry.EstimateGroundY(gate, candidates), 3);
+    }
+
+    [Fact]
+    public void EstimateGroundY_AcceptsFloorSlightlyAboveGateOrigin()
+    {
+        var gate = new Vector3(0f, 10f, 0f);
+        var candidates = new[]
+        {
+            new Vector3(2f, 10.4f, 0f),
+            new Vector3(-3f, 10.4f, 1f),
+        };
+        Assert.Equal(10.4f, GateGeometry.EstimateGroundY(gate, candidates), 3);
+    }
+
+    [Fact]
+    public void EstimateGroundY_MixedLevelNeighborhoodFallsBackToGateY()
+    {
+        // Stairs / ledges: candidates on different levels (spread beyond the
+        // consensus tolerance) must not be blended into an arbitrary median
+        // between them.
+        var gate = new Vector3(0f, 10f, 0f);
+        var candidates = new[]
+        {
+            new Vector3(2f, 9.8f, 0f),
+            new Vector3(-2f, 8.6f, 1f),
+        };
+        Assert.Equal(10f, GateGeometry.EstimateGroundY(gate, candidates), 3);
     }
 
     [Fact]

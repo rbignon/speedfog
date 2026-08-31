@@ -1,8 +1,9 @@
 # Halloween gate decorations catalogue. Consumed by GateDecorInjector when
 # [plugin.halloween] enabled = true. Ships with a starter set scouted in
 # Smithbox (catacombs bones + candelabras, Volcano Manor candles); every
-# entry applies at every eligible entrance gate (mini_dungeon /
-# legacy_dungeon destinations), so keep the summed count per gate modest.
+# entry applies at every anchored gate (exit gates of mini_dungeon /
+# legacy_dungeon / start clusters), so keep the summed count per gate
+# modest.
 #
 # Scouting workflow:
 #   1. In Smithbox, open a candle-lit vanilla map (catacombs work well) and
@@ -17,14 +18,14 @@
 #          <game>/sfx/ --search <id>
 #      and use model = "AEG099_090" (the invisible anchor the death markers
 #      use) with sfx_dummy = 100.
-#   4. Add an [[entries]] block, rebuild a seed, and check the first
-#      entrance gates of any mini dungeon in game.
+#   4. Add an [[entries]] block, rebuild a seed, and check the exit gates
+#      of the Chapel of Anticipation or any mini dungeon in game.
 #
 # Placement Y: decorations are anchored on the per-gate ground estimate
-# (median Y of nearby vanilla assets, GateGeometry.EstimateGroundY), not on
-# the gate origin; y_offset applies on top of that. Slightly negative
-# offsets sink props a few centimeters so residual error reads as settled,
-# not floating.
+# (median Y of nearby vanilla assets and enemies,
+# GateGeometry.EstimateGroundY), not on the gate origin; y_offset applies
+# on top of that. Slightly negative offsets sink props a few centimeters
+# so residual error reads as settled, not floating.
 #
 # Schema per [[entries]] block:
 #   model = "AEG099_090"   # asset model to place (AEGxxx_xxx)

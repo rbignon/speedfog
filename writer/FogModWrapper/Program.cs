@@ -864,21 +864,24 @@ Example:
             ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.Connections, ctx.Events,
             ctx.GraphData.EventMap, ctx.GraphData.DeathFlags, gateSides);
 
-        // Halloween ambient spawns: passive greeters + optional ambush packs
-        // at dungeon entrance gates (opt-in via [plugin.halloween]).
+        // Halloween ambient layer at cluster exit gates (opt-in via
+        // [plugin.halloween]). Decorations MUST run before the spawns: the
+        // decor ground estimate uses vanilla enemies as floor evidence, and
+        // AmbientSpawnInjector's greeters/ambushers carry EntityID 0, which
+        // would pass its vanilla filter.
         if (ctx.GraphData.IsPluginEnabled("halloween"))
         {
-            var halloweenSettings = HalloweenPluginSettings.Parse(ctx.GraphData.Plugins["halloween"]);
-            AmbientSpawnInjector.Inject(
-                ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.Connections,
-                ctx.GraphData.EventMap, ctx.GraphData.Nodes, gateSides, halloweenSettings);
-
             // Data-driven gate decorations (data/plugins/halloween_decorations.toml);
             // a no-op only if the catalogue is emptied.
             GateDecorInjector.Inject(
                 ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.Connections,
-                ctx.GraphData.EventMap, ctx.GraphData.Nodes, gateSides,
-                ctx.Events, ctx.Config.DataDir);
+                ctx.GraphData.Nodes, gateSides, ctx.Events, ctx.Config.DataDir);
+
+            // Passive greeters + optional ambush packs at the same gates.
+            var halloweenSettings = HalloweenPluginSettings.Parse(ctx.GraphData.Plugins["halloween"]);
+            AmbientSpawnInjector.Inject(
+                ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.Connections,
+                ctx.GraphData.Nodes, gateSides, halloweenSettings);
         }
 
         // Aging Untouchable minor boss: repoint enemy-randomizer-placed
