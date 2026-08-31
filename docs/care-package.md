@@ -13,6 +13,50 @@ The care package uses `random.Random(seed)` with the run seed. Same seed always 
 
 Items are defined in `data/care_package_items.toml`. Each entry has a `name` (display) and `id` (EquipParam row ID, base before upgrade encoding).
 
+### Pool file selection
+
+The pool file is configurable via `care_package.pool_file` (default:
+`care_package_items.toml`). The value is a file name, resolved under `data/`
+(`project_root / "data" / pool_file`); an absolute path or a value containing
+`..` is rejected at config load with a `ValueError`. This lets a run swap in
+an alternate pool without touching the item counts or upgrade level.
+
+`data/care_package_items_halloween.toml` is the Halloween mode pool: a
+death/pumpkin/spooky-themed set of weapons, shields, catalysts, armor,
+talismans, spells, and crystal tears, following the same schema as the
+default pool. Select it with:
+
+```toml
+[care_package]
+enabled = true
+pool_file = "care_package_items_halloween.toml"
+```
+
+### Per-item somber flag
+
+Weapons, shields, and catalyst entries may set `somber = true` to use the
+somber upgrade encoding instead of the standard one:
+
+```toml
+[[weapons]]
+name = "Winged Scythe"
+id = 19060000
+somber = true
+```
+
+Catalysts already have separate `catalysts.standard` and `catalysts.somber`
+sub-pools (every entry in `catalysts.somber` is implicitly somber-upgraded);
+the per-item flag is what lets a single flat pool (`weapons`, `shields`) mix
+standard- and somber-upgrade items. Armor, talismans, sorceries,
+incantations, and crystal tears never carry an upgrade level and ignore the
+flag if present.
+
+An item without `somber = true` (or with it set to `false`) uses the
+standard upgrade level (`weapon_upgrade`, see below); a somber-flagged item
+uses `floor(weapon_upgrade / 2.5)` instead, so its displayed and encoded
+`+N` is always lower than (or equal to, at low levels) a standard item's for
+the same `weapon_upgrade` setting.
+
 ### Categories
 
 | Category | Item Type | Upgrade | TOML Key |
@@ -40,6 +84,7 @@ Catalysts have sub-pools (`standard`/`somber`) that are merged before sampling. 
 | Field | Default | Description |
 |-------|---------|-------------|
 | `enabled` | `false` | Enable care package system |
+| `pool_file` | `care_package_items.toml` | Item pool file name, resolved under `data/` (see below) |
 | `weapon_upgrade` | `8` | Standard upgrade level (0-25) |
 | `weapons` | `5` | Number of weapons to sample |
 | `shields` | `2` | Number of shields |
@@ -130,7 +175,8 @@ CARE PACKAGE (starting build)
 |------|------|
 | `speedfog/care_package.py` | Pool loading, validation, sampling logic |
 | `speedfog/config.py` | `CarePackageConfig` dataclass |
-| `data/care_package_items.toml` | Item pool definitions |
+| `data/care_package_items.toml` | Default item pool definitions |
+| `data/care_package_items_halloween.toml` | Halloween mode item pool (select via `pool_file`) |
 | `speedfog/graph_export.py` | Serialization to `graph.json` |
 | `speedfog/spoiler.py` | Spoiler log |
 | `writer/FogModWrapper.Core/Models/GraphData.cs` | C# `CarePackageItem` model |

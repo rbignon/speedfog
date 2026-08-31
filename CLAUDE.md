@@ -77,6 +77,7 @@ speedfog/
 │   ├── map_splits.toml      # Synthetic zones/fogs splitting oversized maps (tracked)
 │   ├── game_tweaks.toml     # FogMod ConfigVars + startup gate flags + target lists (torrent arenas, spiritspring/stake/entity removals, disabled events, pinned vanilla maps) (tracked)
 │   ├── care_package_items.toml  # Curated item pools for care package (tracked)
+│   ├── care_package_items_halloween.toml  # Halloween care package pool (tracked)
 │   ├── phantom_skins.toml   # Phantom skins catalog (cosmetic auras, tracked)
 │   ├── title_screen_overlay.png  # SpeedFog badge composited on the title screen by StaticModBuilder (tracked)
 │   ├── boss_arena_tags.json # Boss/arena tags for compatibility matching (tracked)

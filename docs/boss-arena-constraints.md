@@ -189,7 +189,7 @@ Some major bosses are implemented as two distinct entities with a
 despawn/respawn transition (Fire Giant, Rennala, Godfrey/Hoarah Loux,
 Radagon/Elden Beast). The DAG carries only the leader (phase 2) entity in
 `defeat_flag`. Each phase entity is an independent slot in the MSB, so both
-must appear in ``Preset.Enemies`` to avoid the non-listed phase being
+must appear in ``EnemyPreset.Enemies`` to avoid the non-listed phase being
 randomized incoherently (or remaining vanilla) by RandomizerCommon's
 class-based logic.
 
@@ -267,7 +267,7 @@ gets a non-DLC replacement boss.
 ```
 
 - ``enemy_assignments``: arena entity ID (vanilla boss slot in the MSB) ->
-  boss source entity ID. Threaded into ``Preset.Enemies`` by
+  boss source entity ID. Threaded into ``EnemyPreset.Enemies`` by
   ``ItemRandomizerWrapper``, which short-circuits class-based randomization
   for those specific slots via ``forceMap`` in
   ``EnemyRandomizer.cs:1846-1849``.
@@ -325,3 +325,31 @@ Example "Malenia only":
     randomize_bosses = "all"
     ignore_arena_size = true
     bosses = ["Malenia"]
+
+## Promoted allowlist-only sources
+
+Three skeleton entities are hand-promoted into the minor pool as
+allowlist-only sources (Halloween mode):
+
+| Entity ID | Name | `dlc` |
+|-----------|------|-------|
+| `11000295` | Skeletal Militiaman | `false` |
+| `31190300` | Giant Skeleton | `false` |
+| `43010200` | Shadow Skeleton | `true` |
+
+Each entry carries `pool: "minor"` and `boss.exclude_from_pool: true`. The
+`exclude_from_pool` flag makes them inert on the standard (no-allowlist)
+path: `_compose_pool` drops `exclude_from_pool` entries at every branch, so
+these three never enter the minor candidate pool for ordinary
+`randomize_bosses = "minor"`/`"all"` runs. They become reachable only
+through the `enemy.bosses` allowlist, which is authoritative and includes a
+listed boss even when tagged `exclude_from_pool`:
+
+    [enemy]
+    randomize_bosses = "all"
+    bosses = ["Skeletal Militiaman", "Giant Skeleton", "Shadow Skeleton"]
+
+These entries are hand-added, not sourced from BossArenaRandomizer's data.
+Re-running `tools/port_boss_arena_tags.py` overwrites
+`data/boss_arena_tags.json` without them; re-add them after a re-port, or
+the `TestPromotedSkeletons` tests will fail.

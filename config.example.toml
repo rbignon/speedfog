@@ -221,6 +221,10 @@ talisman_pouches = 3
 # Same seed = same starting build for consistent racing.
 enabled = false
 
+# Item pool file, relative to data/ (default: care_package_items.toml).
+# The Halloween mode uses care_package_items_halloween.toml.
+# pool_file = "care_package_items.toml"
+
 # Weapon upgrade level for care package AND starting class weapons (0-25).
 # Somber weapons get floor(weapon_upgrade / 2.5), e.g. +8 -> +3 somber.
 # weapon_upgrade = 8
