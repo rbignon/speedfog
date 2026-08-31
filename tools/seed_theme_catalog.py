@@ -1,4 +1,4 @@
-"""Seed data/plugins/summer.toml boss skeleton from generated game data.
+"""Seed a theme catalogue (data/plugins/<theme>.toml) boss skeleton from generated game data.
 
 Joins clusters.json (major_boss and final_boss clusters, each carrying
 `defeat_flag` and `boss_name`) with the randomizer enemy.txt (which carries
@@ -82,7 +82,7 @@ def roster_boss_entries(clusters_path: str | Path) -> list[dict]:
     return out
 
 
-def build_summer_skeleton(
+def build_theme_skeleton(
     major_bosses: list[dict],
     defeat_flag_to_npc: dict[int, int],
 ) -> list[dict]:
@@ -104,12 +104,12 @@ def build_summer_skeleton(
 
 def main(argv: list[str]) -> int:
     if len(argv) < 2:
-        print("usage: seed_summer_catalog.py <path/to/enemy.txt>", file=sys.stderr)
+        print("usage: seed_theme_catalog.py <path/to/enemy.txt>", file=sys.stderr)
         return 1
     root = Path(__file__).resolve().parent.parent
     defeat_to_npc = parse_defeat_flag_npc_names(Path(argv[1]))
     roster = roster_boss_entries(root / "data" / "clusters.json")
-    skeleton = build_summer_skeleton(roster, defeat_to_npc)
+    skeleton = build_theme_skeleton(roster, defeat_to_npc)
     for row in skeleton:
         print(
             f'[[bosses]]\nnpc_name_id = {row["npc_name_id"]}'

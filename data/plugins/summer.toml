@@ -1,9 +1,9 @@
-# Summer theme text catalogue. Consumed by SummerTheme (C#) when
+# Summer theme text catalogue. Consumed by TextTheme (C#) when
 # [plugin.summer] enabled = true in the seed config. `en` is required;
 # `fr` is optional (written to the frafr FMG, falls back to en when absent).
 # `name` is a human-readable label only, not written to game data.
 # Bosses absent here keep their vanilla names. Generate more boss skeletons
-# with tools/seed_summer_catalog.py.
+# with tools/seed_theme_catalog.py.
 
 # ---- Boss epithets (NpcName) ----
 
