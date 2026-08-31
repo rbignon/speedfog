@@ -131,4 +131,16 @@ public static class SpeedFogIds
     /// (c5280_9000 in m61_49_42); enemy_assignments values equal to it
     /// mark enemy-randomizer-placed untouchable bosses.</summary>
     public const uint UntouchableSourceEntity = 2049420200;
+
+    // --- Icon ids (not entity ids, not param row ids; a third id namespace) ---
+
+    /// <summary>Icon id for the Halloween Golden Seed pumpkin icon. The
+    /// texture MENU_ItemIcon_60383 ships in the speedfog-halloween
+    /// overlay's 05_dummy.tpf.dcx superset; the id is u16-safe and far
+    /// above every vanilla icon id (max ~8490). Vanilla iconId: 383.</summary>
+    public const int HalloweenGoldenSeedIcon = 60383;
+
+    /// <summary>Icon id for the Halloween Larval Tear gummy-worm icon
+    /// (MENU_ItemIcon_63075, same overlay). Vanilla iconId: 3075.</summary>
+    public const int HalloweenLarvalTearIcon = 63075;
 }

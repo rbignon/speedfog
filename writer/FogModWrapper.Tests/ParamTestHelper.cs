@@ -42,4 +42,19 @@ internal static class ParamTestHelper
         param.Rows.Add(new PARAM.Row(templateId, "", def));
         return param;
     }
+
+    /// <summary>
+    /// Adds a second empty row (id <paramref name="rowId"/>) to a PARAM
+    /// already built by <see cref="BuildParamFromDef"/>, reusing its applied
+    /// paramdef. For tests needing more than one row of the same PARAM (e.g.
+    /// two independent EquipParamGoods items), where GameEditor.AddRow's
+    /// clone-from-template idiom does not apply because both rows already
+    /// exist in the real regulation and are edited in place, not cloned.
+    /// </summary>
+    public static PARAM.Row AddRowFromTemplate(PARAM param, int rowId)
+    {
+        var row = new PARAM.Row(rowId, "", param.AppliedParamdef);
+        param.Rows.Add(row);
+        return row;
+    }
 }

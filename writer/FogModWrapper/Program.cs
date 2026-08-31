@@ -800,7 +800,10 @@ Example:
         PhantomCatalogInjector.ApplyTo(reg, ctx.PhantomSkins);
 
         if (ctx.GraphData.IsPluginEnabled("halloween"))
+        {
             AmbientSpawnInjector.ApplyPassiveThinkRow(reg);
+            HalloweenIconInjector.ApplyTo(reg);
+        }
 
         // Aging Untouchable minor boss (allowlist-only): boss NpcParam
         // clone + partial damage-cut SpEffect. Independent of the

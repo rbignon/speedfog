@@ -107,6 +107,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>eldendata/Defs/NpcParam.xml</Link>
     </None>
+    <None Include="eldendata/Defs/EquipParamGoods.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>eldendata/Defs/EquipParamGoods.xml</Link>
+    </None>
   </ItemGroup>
 
 </Project>
