@@ -157,12 +157,15 @@ public static class AmbientSpawnInjector
     /// finds the gate asset by name (falling back to an EntityID parse, same
     /// as DeathMarkerInjector.InjectMap), then the nearest vanilla enemy to
     /// clone (skipping FogMod-allocated entities). Maps with no vanilla enemy
-    /// to clone from are logged and skipped. Returns the number of spawns
-    /// placed.
+    /// to clone from are logged and skipped. Returns the number of greeters
+    /// and ambushers actually placed by this call (not a count of matching
+    /// models in the MSB: vanilla catacomb maps often already contain
+    /// skeleton enemies sharing the ambusher's chr model).
     /// </summary>
-    internal static int ApplyToMsb(MSBE msb, List<SpawnSpec> specs, Action<string> log)
+    internal static (int Greeters, int Ambushers) ApplyToMsb(MSBE msb, List<SpawnSpec> specs, Action<string> log)
     {
-        int placed = 0;
+        int greeters = 0;
+        int ambushers = 0;
         var modelsEnsured = new HashSet<string>();
 
         foreach (var group in specs.GroupBy(s => s.GatePartName))
@@ -209,7 +212,7 @@ public static class AmbientSpawnInjector
                 var offset = offsets[spec.IndexInPack];
 
                 var spawn = (MSBE.Part.Enemy)baseEnemy.DeepCopy();
-                MsbHelper.DetachVisibilityGroups(spawn);
+                MsbHelper.CopyVisibilityGroups(spawn);
                 spawn.ModelName = model;
                 spawn.Name = MsbHelper.GeneratePartName(msb.Parts.Enemies.Select(e => e.Name), spawn.ModelName);
                 MsbHelper.SetNameIdent(spawn);
@@ -227,11 +230,14 @@ public static class AmbientSpawnInjector
                 // nearest enemy stands on a valid collision in the same play space.
                 msb.Parts.Enemies.Add(spawn);
 
-                placed++;
+                if (spec.Kind == SpawnKind.Greeter)
+                    greeters++;
+                else
+                    ambushers++;
             }
         }
 
-        return placed;
+        return (greeters, ambushers);
     }
 
     /// <summary>
@@ -270,12 +276,9 @@ public static class AmbientSpawnInjector
         }
 
         var msb = MSBE.Read(msbPath);
-        int placed = ApplyToMsb(msb, specs, log);
-        if (placed == 0)
+        var (greeters, ambushers) = ApplyToMsb(msb, specs, log);
+        if (greeters + ambushers == 0)
             return (0, 0);
-
-        int greeters = msb.Parts.Enemies.Count(e => e.ModelName == GREETER_MODEL);
-        int ambushers = msb.Parts.Enemies.Count(e => e.ModelName == AMBUSH_MODEL);
 
         var writePath = MsbHelper.FindMsbPath(modDir, msbFileName) ?? MsbHelper.FindOrCreateMsbDir(modDir, msbFileName);
         Directory.CreateDirectory(Path.GetDirectoryName(writePath)!);

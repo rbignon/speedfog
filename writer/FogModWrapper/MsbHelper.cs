@@ -118,6 +118,10 @@ internal static class MsbHelper
     /// display-culls the marker and its SFX. Scalar display-condition
     /// fields and CollisionMask values are preserved from the clone.
     /// See docs/death-markers.md for the aliasing details.
+    ///
+    /// Only safe for SFX-visible parts. A part that renders through its own
+    /// model (e.g. an enemy chr) must keep its DrawGroups/DisplayGroups
+    /// values instead of zeroing them; see <see cref="CopyVisibilityGroups"/>.
     /// </summary>
     public static void DetachVisibilityGroups(MSBE.Part.Asset part)
     {
@@ -136,10 +140,22 @@ internal static class MsbHelper
     }
 
     /// <summary>
-    /// Same detachment as the Asset overload, for cloned Enemy parts.
-    /// See docs/death-markers.md for the aliasing details.
+    /// Gives a cloned enemy its own Unk1 with the SAME DrawGroups/DisplayGroups
+    /// values as the clone source, unlike <see cref="DetachVisibilityGroups(MSBE.Part.Asset)"/>
+    /// which zeroes them. An enemy chr is visible through its own model, not a
+    /// following SFX, so the all-zero profile that works for bloodstain anchors
+    /// would risk making the spawn invisible in dungeon interiors (restrictive
+    /// DisplayGroups culling). Copying the source's values keeps the spawn
+    /// visible under the same conditions as the vanilla enemy it stood next to.
+    ///
+    /// Still un-aliases the clone from the base: MSBE's UnkStruct1.DeepCopy only
+    /// clones CollisionMask, so right after DeepCopy the clone's DrawGroups and
+    /// DisplayGroups are the SAME array instances as the base part's (see
+    /// docs/death-markers.md for the aliasing bug this avoids). This copies their
+    /// contents into fresh arrays before reassigning Unk1, so later edits to
+    /// either part's groups cannot cross-contaminate the other.
     /// </summary>
-    public static void DetachVisibilityGroups(MSBE.Part.Enemy part)
+    public static void CopyVisibilityGroups(MSBE.Part.Enemy part)
     {
         var src = part.Unk1;
         var own = new MSBE.Part.UnkStruct1
@@ -152,6 +168,8 @@ internal static class MsbHelper
             UnkC6 = src.UnkC6,
         };
         Array.Copy(src.CollisionMask, own.CollisionMask, own.CollisionMask.Length);
+        Array.Copy(src.DrawGroups, own.DrawGroups, own.DrawGroups.Length);
+        Array.Copy(src.DisplayGroups, own.DisplayGroups, own.DisplayGroups.Length);
         part.Unk1 = own;
     }
 }

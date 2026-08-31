@@ -69,6 +69,7 @@ public class AmbientSpawnInjectorTests
     public void ApplyToMsb_PlacesGreeterWithPassiveThink()
     {
         var msb = MakeMsbWithGateAndEnemy();
+        var sourceEnemy = msb.Parts.Enemies.Single(e => e.ModelName == "c9990");
         var specs = AmbientSpawnInjector.CollectSpawnSpecsByMap(
             new List<Connection>
             {
@@ -78,9 +79,10 @@ public class AmbientSpawnInjectorTests
             Nodes, new Dictionary<string, (string, string)>(),
             new HalloweenPluginSettings.Settings(Ambushes: false))["m31_00_00_00"];
 
-        int placed = AmbientSpawnInjector.ApplyToMsb(msb, specs, _ => { });
+        var (greeters, ambushers) = AmbientSpawnInjector.ApplyToMsb(msb, specs, _ => { });
 
-        Assert.Equal(1, placed);
+        Assert.Equal(1, greeters);
+        Assert.Equal(0, ambushers);
         var greeter = msb.Parts.Enemies.Single(e => e.ModelName == "c5280");
         Assert.Equal(52800086, greeter.NPCParamID);
         Assert.Equal(SpeedFogIds.PassiveGreeterThinkRow, greeter.ThinkParamID);
@@ -91,6 +93,13 @@ public class AmbientSpawnInjectorTests
         var d = greeter.Position - gate.Position;
         var horizontal = MathF.Sqrt(d.X * d.X + d.Z * d.Z);
         Assert.InRange(horizontal, 4.0f, 6.0f);
+        // Visibility groups inherit the clone source's values (a chr-rendered
+        // spawn must not go all-zero like an SFX-visible bloodstain marker
+        // would), but through fresh, un-aliased arrays.
+        Assert.Equal(0x8u, greeter.Unk1.DrawGroups[0]);
+        Assert.Equal(0x10u, greeter.Unk1.DisplayGroups[0]);
+        Assert.NotSame(sourceEnemy.Unk1.DrawGroups, greeter.Unk1.DrawGroups);
+        Assert.NotSame(sourceEnemy.Unk1.DisplayGroups, greeter.Unk1.DisplayGroups);
     }
 
     private static MSBE MakeMsbWithGateAndEnemy()
@@ -101,12 +110,15 @@ public class AmbientSpawnInjectorTests
             Name = "AEG099_002_9000", ModelName = "AEG099_002",
             Position = new Vector3(10f, 0f, 10f), EntityID = 755890001,
         });
-        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        var enemy = new MSBE.Part.Enemy
         {
             Name = "c9990_9000", ModelName = "c9990",
             Position = new Vector3(0f, 0f, 0f), EntityID = 0,
             NPCParamID = 99900000, ThinkParamID = 99900000,
-        });
+        };
+        enemy.Unk1.DrawGroups[0] = 0x8;
+        enemy.Unk1.DisplayGroups[0] = 0x10;
+        msb.Parts.Enemies.Add(enemy);
         return msb;
     }
 }
