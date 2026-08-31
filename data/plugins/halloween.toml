@@ -219,14 +219,14 @@ fr = "Fantôme Ancestral Royal"
 [[bosses]]
 npc_name_id = 904770000
 name = "Valiant Gargoyles"
-en = "Weeping Angels"
-fr = "Anges Pleureurs"
+en = "Weeping Angel"
+fr = "Ange Pleureur"
 
 [[bosses]]
 npc_name_id = 904770001
 name = "Valiant Gargoyle (Twinblade)"
-en = "Weeping Angels"
-fr = "Anges Pleureurs"
+en = "Weeping Angel"
+fr = "Ange Pleureur"
 
 [[bosses]]
 npc_name_id = 903320000
@@ -390,7 +390,8 @@ fr = "DIEU TERRORISÉ"
 
 # ---- Item renames (GoodsName/GoodsCaption in item_dlc02.msgbnd.dcx) ----
 # Matches the pumpkin/candy icon replacement (spec 1.2, implemented in
-# Halloween plan 5). 10010 = Golden Seed, 8185 = Larval Tear.
+# Halloween plan 5). 10010 = Golden Seed, 8185 = Larval Tear,
+# 10020 = Sacred Tear (text-only, no icon planned).
 
 [[ui]]
 bnd = "item_dlc02.msgbnd.dcx"
@@ -419,6 +420,20 @@ fmg = "GoodsCaption"
 id = 8185
 en = "A wriggly gummy worm, chewy and faintly luminous.\n\nGrants rebirth when offered at a site of grace.\n\nSwallowing one whole is said to change a person entirely. Most of the time, it merely changes their appetite."
 fr = "Un ver en gélatine bien frétillant, fondant et vaguement luminescent.\n\nOffre une renaissance sur un site de grâce.\n\nOn dit qu'en avaler un tout rond change un être du tout au tout. La plupart du temps, cela ne change que son appétit."
+
+[[ui]]
+bnd = "item_dlc02.msgbnd.dcx"
+fmg = "GoodsName"
+id = 10020
+en = "Sacred Gumdrop"
+fr = "Bonbon Sacré"
+
+[[ui]]
+bnd = "item_dlc02.msgbnd.dcx"
+fmg = "GoodsCaption"
+id = 10020
+en = "A sacred gumdrop, still sticky from the church altar it was left on.\n\nUpgrades the Sacred Flask when offered at a Church of Marika.\n(Can be used after resting at a site of grace.)\n\nThe faithful swear a saint's tear hides at the center of each one. No one has ever chewed slowly enough to confirm it."
+fr = "Un bonbon sacré, encore poisseux de l'autel d'église où il fut déposé.\n\nAméliore la fiole sacrée lorsqu'il est offert dans une église de Marika.\n(Utilisable après un repos sur un site de grâce.)\n\nLes fidèles jurent qu'une larme de sainte se cache au cœur de chacun. Personne n'a jamais mâché assez lentement pour le vérifier."
 
 # ---- Loading screen tips (LoadingText in menu_dlc02.msgbnd.dcx) ----
 # fmg carries the .fmg extension on purpose: the bnd also contains
