@@ -125,13 +125,31 @@ public static class AmbientSpawnInjector
 
             if (settings.Ambushes)
             {
-                int packSize = 2 + new Random(partName.GetHashCode()).Next(2);
+                int packSize = 2 + new Random(StablePartNameHash(partName)).Next(2);
                 for (int i = 0; i < packSize; i++)
                     specs.Add(new SpawnSpec(partName, SpawnKind.Ambusher, i, packSize, isASide));
             }
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Process-stable string hash for seeding pack-size randomness.
+    /// string.GetHashCode() is randomized per process on .NET (hash-flooding
+    /// mitigation), which would make ambush pack sizes differ between
+    /// separate builds of the same seed. This is a plain 31-accumulator
+    /// rolling hash, deterministic across processes and .NET versions.
+    /// </summary>
+    private static int StablePartNameHash(string s)
+    {
+        unchecked
+        {
+            int hash = 17;
+            foreach (char c in s)
+                hash = hash * 31 + c;
+            return hash;
+        }
     }
 
     /// <summary>
@@ -176,7 +194,13 @@ public static class AmbientSpawnInjector
 
                 var offsets = GateGeometry.GenerateArcOffsets(
                     gateAsset.EntityID, gateAsset.Rotation.Y,
-                    spec.GateSideIsASide ? 0f : 180f,   // interior side: where the entrance area lies
+                    // Same mapping as DeathMarkerInjector: isASide?180:0 places an
+                    // object on the QUERIED zone's player side. GateSideIsASide was
+                    // resolved against the entrance area, so this lands spawns on
+                    // the entrance area's own side, i.e. where the arriving player
+                    // stands inside the destination zone (see docs/death-markers.md
+                    // "Position Offsets (ASide/BSide)").
+                    spec.GateSideIsASide ? 180f : 0f,
                     spec.PackSize,
                     spec.Kind == SpawnKind.Greeter ? GREETER_MIN_RADIUS : AMBUSH_MIN_RADIUS,
                     spec.Kind == SpawnKind.Greeter ? GREETER_MAX_RADIUS : AMBUSH_MAX_RADIUS,
