@@ -35,7 +35,7 @@ config.toml                    item_config.json                C# Models
 
 | Class | TOML Section | Key Fields |
 |-------|-------------|------------|
-| `ItemRandomizerConfig` | `[item_randomizer]` | `enabled`, `difficulty` (0-100), `dlc`, `remove_requirements`, `reduce_upgrade_cost`, `auto_upgrade_weapons`, `auto_upgrade_dropped`, `auto_equip`, `nerf_gargoyles`, `nerf_malenia`, `allcraft`, `item_preset` |
+| `ItemRandomizerConfig` | `[item_randomizer]` | `enabled`, `difficulty` (0-100), `dlc`, `tarnished`, `remove_requirements`, `reduce_upgrade_cost`, `auto_upgrade_weapons`, `auto_upgrade_dropped`, `auto_equip`, `nerf_gargoyles`, `nerf_malenia`, `allcraft`, `item_preset` |
 | `EnemyConfig` | `[enemy]` | `randomize_bosses` |
 
 ### item_config.json Fields
@@ -62,6 +62,7 @@ Set in `options` dictionary, applied via `opt[key] = value`:
 | `fog` | `true` | Fog gate mode (crawl-compatible) |
 | `crawl` | `true` | Dungeon crawler mode |
 | `dlc` | from config | Include Shadow of the Erdtree |
+| `tarnished` | from config | Include Tarnished Pack (ER 1.17 paid DLC) items and invaders; not seed-neutral, pack-owner-only seeds |
 | `weaponreqs` | from config | Remove weapon stat requirements |
 | `sombermode` | from config | Reduce upgrade material costs |
 | `mats` | `true` | Randomize materials (smithing stones, gloveworts, crafting) |

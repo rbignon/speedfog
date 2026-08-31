@@ -129,6 +129,26 @@ def test_generate_item_config_basic():
     assert helper["regionLockWeapons"] is False
 
 
+def test_generate_item_config_tarnished_default_off():
+    """The Tarnished Pack option defaults to off: pack items and invaders stay
+    out of the pool and non-owners get no startup error dialog."""
+    config = Config.from_dict({})
+
+    result = generate_item_config(config, 12345)
+
+    assert result["options"]["tarnished"] is False
+
+
+def test_generate_item_config_tarnished_enabled():
+    """[item_randomizer] tarnished = true flows through to the randomizer
+    option (pack-owner-only seeds)."""
+    config = Config.from_dict({"item_randomizer": {"tarnished": True}})
+
+    result = generate_item_config(config, 12345)
+
+    assert result["options"]["tarnished"] is True
+
+
 def test_generate_item_config_custom_settings():
     """generate_item_config respects custom config."""
     config = Config.from_dict(

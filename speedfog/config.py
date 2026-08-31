@@ -412,6 +412,12 @@ class ItemRandomizerConfig:
     # default: SpeedFog gives a care package instead.
     auto_equip: bool = False
     dlc: bool = True
+    # Tarnished Pack (ER 1.17 paid DLC): let the randomizer place pack items
+    # and randomize the two pack invaders. NOT seed-neutral (the whole item
+    # layout diverges between on and off for one seed number); when on, the
+    # randomizer adds a startup error dialog for players without the pack
+    # (flag 6953). Off for general distribution; on for pack-owner-only seeds.
+    tarnished: bool = False
     nerf_gargoyles: bool = (
         True  # Disable damage tick in Valiant Gargoyles's poison cloud
     )
@@ -609,6 +615,7 @@ _KNOWN_SECTION_KEYS: dict[str, frozenset[str] | None] = {
             "reduce_upgrade_cost",
             "auto_equip",
             "dlc",
+            "tarnished",
             "nerf_gargoyles",
             "nerf_malenia",
             "allcraft",
@@ -862,6 +869,7 @@ class Config:
                 ),
                 auto_equip=item_randomizer_section.get("auto_equip", False),
                 dlc=item_randomizer_section.get("dlc", True),
+                tarnished=item_randomizer_section.get("tarnished", False),
                 nerf_gargoyles=item_randomizer_section.get("nerf_gargoyles", True),
                 nerf_malenia=item_randomizer_section.get("nerf_malenia", False),
                 allcraft=item_randomizer_section.get("allcraft", True),

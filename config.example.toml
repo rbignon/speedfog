@@ -301,6 +301,14 @@ auto_equip = false
 # DLC enemies are mixed with base game (no separate silo)
 dlc = true
 
+# Tarnished Pack (ER 1.17 paid DLC) items and invaders enter the randomization.
+# NOT seed-neutral: the whole item layout diverges between on and off for the
+# same seed, so never mix packages of one seed generated with different values.
+# When on, players without the pack get an in-game error dialog at startup:
+# reserve it for pack-owner-only seeds.
+# Default: false
+# tarnished = false
+
 # Disable damage tick in Valiant Gargoyles's poison cloud (default: true)
 # Sets the magic damage of their poison attacks to 0
 nerf_gargoyles = true
