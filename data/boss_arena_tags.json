@@ -5421,6 +5421,23 @@
     "scaling": 29,
     "dlc": true
   },
+  "2049420200": {
+    "name": "Aging Untouchable",
+    "boss": {
+      "size": 2,
+      "type": 1,
+      "is_two_phase": false,
+      "is_dragon": false,
+      "is_npc": false,
+      "can_escape": false,
+      "night_boss": false,
+      "exclude_from_pool": true
+    },
+    "pool": "minor",
+    "region": 0,
+    "scaling": 0,
+    "dlc": true
+  },
   "2049430800": {
     "name": "Ghostflame Dragon Reprimand",
     "boss": {
@@ -5619,23 +5636,6 @@
     },
     "region": 23,
     "scaling": 32,
-    "dlc": true
-  },
-  "2049420200": {
-    "name": "Aging Untouchable",
-    "boss": {
-      "size": 2,
-      "type": 1,
-      "is_two_phase": false,
-      "is_dragon": false,
-      "is_npc": false,
-      "can_escape": false,
-      "night_boss": false,
-      "exclude_from_pool": true
-    },
-    "pool": "minor",
-    "region": 0,
-    "scaling": 0,
     "dlc": true
   },
   "2052400800": {
