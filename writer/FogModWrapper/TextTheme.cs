@@ -5,17 +5,18 @@ using SoulsFormats;
 namespace FogModWrapper;
 
 /// <summary>
-/// "summer" plugin: reskins boss healthbar names (NpcName) and recurring UI
-/// banners to a summer theme by editing FMG entries, mirroring
-/// RunCompleteInjector. Runs only when [plugin.summer] enabled = true. Bosses
-/// or UI ids absent from the game's FMGs are skipped (tolerant).
+/// A theme text plugin (summer, halloween, ...): reskins boss healthbar names
+/// (NpcName) and recurring UI banners to a theme by editing FMG entries,
+/// mirroring RunCompleteInjector. Runs only when [plugin.&lt;theme&gt;]
+/// enabled = true. Bosses or UI ids absent from the game's FMGs are skipped
+/// (tolerant).
 ///
 /// Only the English (engus) and French (frafr) message archives are edited;
 /// the catalogue carries content for those two languages only, and touching
 /// all ~15 game languages tripled the per-seed cost for no benefit. Other
 /// languages keep their vanilla names.
 /// </summary>
-public static class SummerTheme
+public static class TextTheme
 {
     private static readonly string[] BossBnds = { "item.msgbnd.dcx", "item_dlc02.msgbnd.dcx" };
 
@@ -26,16 +27,17 @@ public static class SummerTheme
     public static string LocalizedText(string langName, string en, string? fr)
         => langName == "frafr" && !string.IsNullOrEmpty(fr) ? fr! : en;
 
-    public static void Apply(string modDir, string gameDir, string dataDir)
+    public static void Apply(string theme, string modDir, string gameDir, string dataDir)
     {
-        var catalog = TextThemeCatalogLoader.Load(Path.Combine(dataDir, "plugins", "summer.toml"), "summer");
+        var catalog = TextThemeCatalogLoader.Load(
+            Path.Combine(dataDir, "plugins", $"{theme}.toml"), theme);
         if (catalog.IsEmpty)
             return;
 
         var gameMsgDir = Path.Combine(gameDir, "msg");
         if (!Directory.Exists(gameMsgDir))
         {
-            Console.WriteLine("Summer theme: game msg directory not found, skipping");
+            Console.WriteLine($"{theme} theme: game msg directory not found, skipping");
             return;
         }
 
@@ -54,7 +56,7 @@ public static class SummerTheme
         });
 
         Console.WriteLine(
-            $"Summer theme: applied {catalog.Bosses.Count} boss + {catalog.Ui.Count} UI overrides across {touchedLangs} languages");
+            $"{theme} theme: applied {catalog.Bosses.Count} boss + {catalog.Ui.Count} UI overrides across {touchedLangs} languages");
     }
 
     private static int ApplyBossEpithets(string modDir, string langDir, string lang,

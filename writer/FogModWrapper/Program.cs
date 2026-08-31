@@ -835,10 +835,17 @@ Example:
             RunCompleteInjector.InjectFmgEntries(ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.RunCompleteMessage);
         }
 
-        // "summer" plugin: cosmetic boss/UI text reskin (opt-in via [plugin.summer]).
-        if (ctx.GraphData.IsPluginEnabled("summer"))
+        // Text theme plugins: cosmetic boss/UI text reskins, one catalogue per
+        // theme (opt-in via [plugin.summer] / [plugin.halloween]). Applied in
+        // order; a later theme overwrites colliding entries of an earlier one.
+        var textThemes = new[] { "summer", "halloween" }
+            .Where(t => ctx.GraphData.IsPluginEnabled(t)).ToList();
+        if (textThemes.Count > 1)
+            Console.WriteLine(
+                $"Warning: multiple text themes enabled ({string.Join(", ", textThemes)}); later themes overwrite colliding entries");
+        foreach (var theme in textThemes)
         {
-            SummerTheme.Apply(ctx.ModDir, ctx.Config.GameDir, ctx.Config.DataDir);
+            TextTheme.Apply(theme, ctx.ModDir, ctx.Config.GameDir, ctx.Config.DataDir);
         }
 
         // Death markers at fog gates
