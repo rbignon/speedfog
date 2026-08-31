@@ -132,6 +132,21 @@ slot per phase entity for multi-phase bosses (see
 `docs/boss-arena-constraints.md`), and a phase-expanded slot may have no
 MSB part of its own if the arena's boss is single-phase.
 
+A second, verified cause also produces this warning: an assignment
+target whose arena map FogMod never ships at all. Observed on smoke seed
+391735550: Starscourge Radahn's arena is a private instance map
+(`m60_13_09_02`, per `enemy.txt`'s `Map:` field), not the overworld tiles
+FogMod's own fog-gate connections touch for that cluster; the Item
+Randomizer writes the boss swap there correctly, but that map is absent
+from `data/game_tweaks.toml`'s `[[pin_vanilla_maps]]`, so it never
+reaches FogMod's output and the swap is dropped before the repoint scan
+ever runs. This is a pre-existing gap in the FogMod/item-randomizer
+merge, not something `UntouchableBossInjector` introduces or can work
+around; a candidate fix is adding the tile to `[[pin_vanilla_maps]]`
+(sourced from the Item Randomizer's merge-dir copy, not the vanilla
+snapshot), after checking its interactions with the existing 1.17
+Tarnished Pack invasion pin on the neighboring tile.
+
 ## Expected log lines
 
 ```

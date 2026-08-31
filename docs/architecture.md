@@ -301,7 +301,7 @@ Pre-computed zone clusters with entry/exit fogs.
 }
 ```
 
-### graph.json v4.4
+### graph.json v4.5
 
 DAG serialized for C# consumption, visualization tools, and racing. Shows every
 top-level field; see `writer/FogModWrapper.Core/Models/GraphData.cs` for exact
@@ -309,7 +309,7 @@ types and the optional node-level fields documented below.
 
 ```json
 {
-  "version": "4.4",
+  "version": "4.5",
   "seed": 212559448,
   "total_layers": 8, "total_nodes": 12, "total_zones": 24,
   "options": {"scale": true, "shuffle": true},
@@ -361,7 +361,8 @@ types and the optional node-level fields documented below.
   "weapon_upgrade": 8,
   "remove_entities": [{"map": "m12_05_00_00", "entity_id": 12051500}],
   "phantom_skins": {"gold-aura": {"speffects": [1450700]}},
-  "plugins": {"summer": {"enabled": false}}
+  "plugins": {"summer": {"enabled": false}},
+  "enemy_assignments": {"30001800": "2049420200"}
 }
 ```
 
@@ -378,6 +379,7 @@ Gate names use FogMod's FullName format: `{map}_{gate_name}`.
 - `remove_entities`: vanilla warp MSB assets to delete
 - `phantom_skins`: cosmetic aura catalog (skin name -> SpEffect), baked for the racing platform
 - `plugins`: verbatim `[plugin]` config passthrough (C# reads via `GraphData.IsPluginEnabled`)
+- `enemy_assignments`: optional `{arena_entity_id: source_entity_id}` map (both decimal strings), the enemy-randomizer placement mapping; absent when the item randomizer or boss randomization is off (added v4.5, consumed by `UntouchableBossInjector`, see `docs/untouchable-boss.md`)
 
 Flag allocation: connection flags (`connections[].flag_id`, mirrored as `event_map` keys),
 `finish_event`, and `death_flags` are drawn sequentially from `EVENT_FLAG_BASE` (1050294000, budget

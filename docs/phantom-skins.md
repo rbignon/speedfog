@@ -56,7 +56,7 @@ The Rust mod resolves the skin via the per-seed mapping shipped in `graph.json` 
 
 ```json
 {
-  "version": "4.4",
+  "version": "4.5",
   "phantom_skins": {
     "gold-aura": { "speffects": [1450700] },
     "cyan-aura": { "speffects": [1450701] },
