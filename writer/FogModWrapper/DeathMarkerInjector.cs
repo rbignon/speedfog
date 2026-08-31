@@ -53,17 +53,10 @@ public static class DeathMarkerInjector
 
     /// <summary>
     /// Parse a gate FullName like "m10_01_00_00_AEG099_001_9000" into (mapId, partName).
+    /// Thin wrapper over <see cref="GateGeometry.ParseGateFullName"/>.
     /// </summary>
-    internal static (string MapId, string PartName) ParseGateFullName(string fullName)
-    {
-        var parts = fullName.Split('_');
-        if (parts.Length < 5)
-            throw new ArgumentException($"Invalid gate FullName (too few segments): {fullName}");
-
-        var mapId = string.Join("_", parts[0], parts[1], parts[2], parts[3]);
-        var partName = string.Join("_", parts.Skip(4));
-        return (mapId, partName);
-    }
+    internal static (string MapId, string PartName) ParseGateFullName(string fullName) =>
+        GateGeometry.ParseGateFullName(fullName);
 
     /// <summary>
     /// Generate 3 offsets on the approach side of a gate, spread across a 120-degree arc.
@@ -72,36 +65,12 @@ public static class DeathMarkerInjector
     /// - isASide=true: arc at 180 degrees (opposite the facing direction)
     /// - isASide=false: arc at 0 degrees (the facing direction)
     /// PRNG seeded on gateEntityId for deterministic placement.
+    /// Thin wrapper over <see cref="GateGeometry.GenerateArcOffsets"/>.
     /// </summary>
-    internal static Vector3[] GenerateOffsets(uint gateEntityId, float gateRotY, bool isASide)
-    {
-        var rng = new Random(gateEntityId.GetHashCode());
-        var offsets = new Vector3[BLOODSTAINS_PER_GATE];
-        float gateRad = gateRotY * MathF.PI / 180f;
-
-        const float arcSpread = 120f;
-        const float sectorSize = arcSpread / BLOODSTAINS_PER_GATE;
-        float arcCenter = isASide ? 180f : 0f;
-        float arcStart = arcCenter - arcSpread / 2f;
-
-        for (int i = 0; i < BLOODSTAINS_PER_GATE; i++)
-        {
-            float sectorStart = arcStart + i * sectorSize;
-            float angleDeg = sectorStart + (float)(rng.NextDouble() * sectorSize);
-            float angleRad = angleDeg * MathF.PI / 180f;
-            float radius = MIN_RADIUS + (float)(rng.NextDouble() * (MAX_RADIUS - MIN_RADIUS));
-
-            float localX = MathF.Sin(angleRad) * radius;
-            float localZ = MathF.Cos(angleRad) * radius;
-
-            float worldX = localX * MathF.Cos(gateRad) + localZ * MathF.Sin(gateRad);
-            float worldZ = -localX * MathF.Sin(gateRad) + localZ * MathF.Cos(gateRad);
-
-            offsets[i] = new Vector3(worldX, Y_OFFSET, worldZ);
-        }
-
-        return offsets;
-    }
+    internal static Vector3[] GenerateOffsets(uint gateEntityId, float gateRotY, bool isASide) =>
+        GateGeometry.GenerateArcOffsets(
+            gateEntityId, gateRotY, isASide ? 180f : 0f,
+            BLOODSTAINS_PER_GATE, MIN_RADIUS, MAX_RADIUS, Y_OFFSET);
 
     /// <summary>
     /// Inject bloodstain visual markers at exit fog gates in the DAG.
@@ -212,7 +181,7 @@ public static class DeathMarkerInjector
             // before entering the dangerous zone), not at the entrance gate inside
             // the destination zone.
             var (mapId, partName) = ParseGateFullName(conn.ExitGate);
-            bool isASide = ResolveIsASide(conn.ExitGate, conn.ExitArea, gateSides);
+            bool isASide = GateGeometry.ResolveIsASide(conn.ExitGate, conn.ExitArea, gateSides);
 
             if (!result.TryGetValue(mapId, out var specs))
             {
@@ -302,7 +271,7 @@ public static class DeathMarkerInjector
                 var offset = offsets[spec.TierIndex % 3];
 
                 var bloodstain = (MSBE.Part.Asset)baseAsset.DeepCopy();
-                DetachVisibilityGroups(bloodstain);
+                MsbHelper.DetachVisibilityGroups(bloodstain);
                 bloodstain.ModelName = BLOODSTAIN_MODEL;
                 bloodstain.Name = MsbHelper.GeneratePartName(
                     msb.Parts.Assets.Select(a => a.Name), BLOODSTAIN_MODEL);
@@ -400,30 +369,6 @@ public static class DeathMarkerInjector
 
     // --- Helper methods ---
 
-    /// <summary>
-    /// Determine if the approach area is on the ASide (gate facing direction) of the gate.
-    /// ASide = forward direction of the fog gate model (based on Y rotation).
-    /// BSide = opposite direction (180 degrees from facing).
-    /// Falls back to BSide (current behavior) if the gate or area is not found.
-    /// </summary>
-    private static bool ResolveIsASide(
-        string gateFullName, string approachArea,
-        Dictionary<string, (string ASideArea, string BSideArea)> gateSides)
-    {
-        if (!gateSides.TryGetValue(gateFullName, out var sides))
-            return false; // default: BSide (legacy behavior)
-
-        if (sides.ASideArea == approachArea)
-            return true;
-        if (sides.BSideArea == approachArea)
-            return false;
-
-        // Area not found on either side (zone name mismatch). Fall back to BSide.
-        Console.WriteLine($"  Warning: Area '{approachArea}' not on either side of gate {gateFullName}" +
-            $" (A={sides.ASideArea}, B={sides.BSideArea}), defaulting to BSide");
-        return false;
-    }
-
     private static MSBE.Part.Asset? FindNearestVanillaAsset(MSBE msb, Vector3 targetPos)
     {
         MSBE.Part.Asset? best = null;
@@ -447,30 +392,10 @@ public static class DeathMarkerInjector
     }
 
     /// <summary>
-    /// Gives a cloned bloodstain its own Unk1 so it stops aliasing the base
-    /// asset's group arrays: MSBE's UnkStruct1.DeepCopy only clones
-    /// CollisionMask, sharing DisplayGroups/DrawGroups between base and
-    /// clone. The fresh arrays stay all-zero, the profile every working
-    /// map's bloodstains ship with (the visible part is the following SFX,
-    /// not the asset model); a restrictive inherited DisplayGroups (e.g. an
-    /// interior prop's display cell, hit at Fort of Reprimand's chapel)
-    /// display-culls the marker and its SFX. Scalar display-condition
-    /// fields and CollisionMask values are preserved from the clone.
+    /// Thin wrapper over <see cref="MsbHelper.DetachVisibilityGroups(MSBE.Part.Asset)"/>,
+    /// kept for existing callers. See docs/death-markers.md for the aliasing rationale.
     /// </summary>
-    internal static void DetachVisibilityGroups(MSBE.Part.Asset bloodstain)
-    {
-        var src = bloodstain.Unk1;
-        var own = new MSBE.Part.UnkStruct1
-        {
-            Condition1 = src.Condition1,
-            Condition2 = src.Condition2,
-            UnkC2 = src.UnkC2,
-            UnkC3 = src.UnkC3,
-            UnkC4 = src.UnkC4,
-            UnkC6 = src.UnkC6,
-        };
-        Array.Copy(src.CollisionMask, own.CollisionMask, own.CollisionMask.Length);
-        bloodstain.Unk1 = own;
-    }
+    internal static void DetachVisibilityGroups(MSBE.Part.Asset bloodstain) =>
+        MsbHelper.DetachVisibilityGroups(bloodstain);
 
 }

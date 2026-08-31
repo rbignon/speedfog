@@ -98,4 +98,52 @@ internal static class MsbHelper
             return;
         msb.Models.Enemies.Add(new MSBE.Model.Enemy { Name = modelName });
     }
+
+    /// <summary>
+    /// Gives a cloned asset its own Unk1 so it stops aliasing the base
+    /// part's group arrays: MSBE's UnkStruct1.DeepCopy only clones
+    /// CollisionMask, sharing DisplayGroups/DrawGroups between base and
+    /// clone. The fresh arrays stay all-zero, the profile every working
+    /// map's bloodstains ship with (the visible part is a following SFX,
+    /// not the asset model); a restrictive inherited DisplayGroups (e.g. an
+    /// interior prop's display cell, hit at Fort of Reprimand's chapel)
+    /// display-culls the marker and its SFX. Scalar display-condition
+    /// fields and CollisionMask values are preserved from the clone.
+    /// See docs/death-markers.md for the aliasing details.
+    /// </summary>
+    public static void DetachVisibilityGroups(MSBE.Part.Asset part)
+    {
+        var src = part.Unk1;
+        var own = new MSBE.Part.UnkStruct1
+        {
+            Condition1 = src.Condition1,
+            Condition2 = src.Condition2,
+            UnkC2 = src.UnkC2,
+            UnkC3 = src.UnkC3,
+            UnkC4 = src.UnkC4,
+            UnkC6 = src.UnkC6,
+        };
+        Array.Copy(src.CollisionMask, own.CollisionMask, own.CollisionMask.Length);
+        part.Unk1 = own;
+    }
+
+    /// <summary>
+    /// Same detachment as the Asset overload, for cloned Enemy parts.
+    /// See docs/death-markers.md for the aliasing details.
+    /// </summary>
+    public static void DetachVisibilityGroups(MSBE.Part.Enemy part)
+    {
+        var src = part.Unk1;
+        var own = new MSBE.Part.UnkStruct1
+        {
+            Condition1 = src.Condition1,
+            Condition2 = src.Condition2,
+            UnkC2 = src.UnkC2,
+            UnkC3 = src.UnkC3,
+            UnkC4 = src.UnkC4,
+            UnkC6 = src.UnkC6,
+        };
+        Array.Copy(src.CollisionMask, own.CollisionMask, own.CollisionMask.Length);
+        part.Unk1 = own;
+    }
 }
