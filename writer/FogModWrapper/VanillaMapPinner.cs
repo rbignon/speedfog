@@ -40,11 +40,6 @@ public static class VanillaMapPinner
             foreach (var c in candidates)
             {
                 var source = Path.Combine(vanillaDir, c.fileName);
-                if (!File.Exists(source))
-                {
-                    Console.WriteLine($"Pin vanilla maps: {c.fileName} not in the snapshot, skipping");
-                    continue;
-                }
                 if (c.existing != null)
                 {
                     Console.WriteLine($"Pin vanilla maps: {c.fileName} already written by the mod, kept");
@@ -56,6 +51,11 @@ public static class VanillaMapPinner
                     File.Copy(c.merged, c.target);
                     copied++;
                     Console.WriteLine($"Pin vanilla maps: shipped the Item Randomizer's {c.fileName} (merge dir) for later patching");
+                    continue;
+                }
+                if (!File.Exists(source))
+                {
+                    Console.WriteLine($"Pin vanilla maps: {c.fileName} not in the snapshot, skipping");
                     continue;
                 }
                 Directory.CreateDirectory(Path.GetDirectoryName(c.target)!);

@@ -75,6 +75,27 @@ public class VanillaMapPinnerTests
     }
 
     [Fact]
+    public void Pin_ShipsMergeDirFileEvenWhenSnapshotLacksIt()
+    {
+        // The presence guarantee must not depend on the snapshot: a map the
+        // Item Randomizer wrote is shipped from the merge dir even when the
+        // snapshot has no copy of that file at all.
+        using var tmp = new TempDir();
+        var vanilla = Path.Combine(tmp.Path, "Vanilla");
+        var mod = Path.Combine(tmp.Path, "mod");
+        var merge = Path.Combine(tmp.Path, "merge");
+        Directory.CreateDirectory(vanilla);
+        Write(Path.Combine(merge, "map", "MapStudio", "m60_52_39_00.msb.dcx"), "msb-with-item-edits");
+        Directory.CreateDirectory(mod);
+
+        int pinned = VanillaMapPinner.Pin(mod, vanilla, new[] { "m60_52_39_00" }, merge);
+
+        Assert.Equal(1, pinned);
+        Assert.Equal("msb-with-item-edits", File.ReadAllText(Path.Combine(mod, "map", "mapstudio", "m60_52_39_00.msb.dcx")));
+        Assert.False(File.Exists(Path.Combine(mod, "event", "m60_52_39_00.emevd.dcx")));
+    }
+
+    [Fact]
     public void Pin_MissingVanillaFile_IsReportedNotCreated()
     {
         using var tmp = new TempDir();
