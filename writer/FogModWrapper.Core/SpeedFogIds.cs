@@ -51,6 +51,12 @@ public static class SpeedFogIds
     public static readonly IdRange WeatherEvents =
         new("WeatherInjector", 755865000, 100);
 
+    /// <summary>One unconditional CreateAssetfollowingSFX event per map (no
+    /// flag wait, unlike DeathMarkerEvents); slots are pre-partitioned per
+    /// map by GateDecorInjector.PlanAllocations.</summary>
+    public static readonly IdRange HalloweenDecorEvents =
+        new("GateDecorInjector", 755865100, 400);
+
     /// <summary>All event ranges, for the disjointness test.</summary>
     public static readonly IReadOnlyList<IdRange> EventRanges = new[]
     {
@@ -62,6 +68,7 @@ public static class SpeedFogIds
         RunCompleteEvents,
         ChapelGraceEvents,
         WeatherEvents,
+        HalloweenDecorEvents,
     };
 
     // --- Auxiliary one-shot flags (FogMod band 104029xxxx, top slice) ---
@@ -88,6 +95,12 @@ public static class SpeedFogIds
     /// RUN COMPLETE banner one-shot. Offset 0 (items_spawned_flag) is
     /// allocated Python-side and arrives via graph.json.</summary>
     public const int BannerShownFlag = 1050290001;
+
+    // --- MSB entity ID bases (not EMEVD event ids; a separate id space) ---
+
+    /// <summary>MSB entity IDs for Halloween gate decorations. Disjoint from
+    /// FogMod (755890000+) and the death markers (755900000+).</summary>
+    public const uint HalloweenDecorEntityBase = 755910000;
 
     // --- Param row IDs (not entity IDs; separate namespace per PARAM) ---
 

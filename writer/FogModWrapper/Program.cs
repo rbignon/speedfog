@@ -865,6 +865,13 @@ Example:
             AmbientSpawnInjector.Inject(
                 ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.Connections,
                 ctx.GraphData.EventMap, ctx.GraphData.Nodes, gateSides, halloweenSettings);
+
+            // Data-driven gate decorations (data/plugins/halloween_decorations.toml);
+            // ships empty, so this is a no-op until the catalogue gets entries.
+            GateDecorInjector.Inject(
+                ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.Connections,
+                ctx.GraphData.EventMap, ctx.GraphData.Nodes, gateSides,
+                ctx.Events, ctx.Config.DataDir);
         }
 
         // Rebirth option at Sites of Grace

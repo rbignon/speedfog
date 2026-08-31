@@ -1,0 +1,26 @@
+# Halloween gate decorations catalogue. Consumed by GateDecorInjector when
+# [plugin.halloween] enabled = true. SHIPS EMPTY: entries require visual
+# scouting (asset models and SFX ids cannot be picked from data alone).
+#
+# Scouting workflow:
+#   1. In Smithbox, open a candle-lit vanilla map (catacombs work well) and
+#      note the AEG model of the prop you want (e.g. a candelabra).
+#   2. Cross-check placement context with:
+#        wine tools/game_inspect/publish/win-x64/game_inspect.exe \
+#          near <msb-file> <x> <y> <z> --radius 10
+#   3. For glow-only decorations, pick an SFX id with:
+#        wine tools/game_inspect/publish/win-x64/game_inspect.exe \
+#          <game>/sfx/ --search <id>
+#      and use model = "AEG099_090" (the invisible anchor the death markers
+#      use) with sfx_dummy = 100.
+#   4. Add an [[entries]] block, rebuild a seed, and check the first
+#      entrance gates of any mini dungeon in game.
+#
+# [[entries]]
+# model = "AEG099_090"   # asset model to place (AEGxxx_xxx)
+# count = 2              # decorations per gate (1-5)
+# min_radius = 2.0       # placement ring around the gate, meters
+# max_radius = 4.0
+# y_offset = 0.0
+# sfx_dummy = 100        # only used when sfx_id > 0
+# sfx_id = 0             # 0 = geometry only, no SFX event
