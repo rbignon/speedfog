@@ -77,6 +77,16 @@ outside that cell. `DetachVisibilityGroups()` therefore gives every clone
 its own `Unk1` with all-zero group arrays (scalar display-condition fields
 and CollisionMask values preserved).
 
+This all-zero profile is only safe for SFX-visible clones (an `Asset` part
+whose visible glow comes from a following SFX, not its own model), so
+`MsbHelper.DetachVisibilityGroups` stays Asset-only. A part rendered
+through its own model, such as the Halloween ambient spawns' cloned enemy
+chr, uses `MsbHelper.CopyVisibilityGroups` instead: it un-aliases the
+clone's `Unk1` the same way, but copies the clone source's
+`DrawGroups`/`DisplayGroups` values rather than zeroing them, since an
+all-zero profile would risk making the chr invisible under a restrictive
+mask. See [plugins/halloween-ambient.md](plugins/halloween-ambient.md).
+
 ### DeepCopy Shallow Array Bug
 
 SoulsFormats' `MSBE.Part.Asset.DeepCopy()` aliasing, verified empirically
@@ -128,7 +138,11 @@ the connection direction:
 
 `BuildGateSideLookup()` in Program.cs builds a mapping from gate FullName to
 (ASideArea, BSideArea) using `ann.Entrances` and `ann.Warps` from fog.txt. This
-is passed to DeathMarkerInjector which calls `ResolveIsASide()` per gate.
+is passed to DeathMarkerInjector, which calls `GateGeometry.ResolveIsASide()`
+per gate (the gate-parsing/side/arc helpers were extracted from
+DeathMarkerInjector into `GateGeometry` so other injectors, e.g. the
+Halloween ambient spawns, can reuse them; see
+[plugins/halloween-ambient.md](plugins/halloween-ambient.md)).
 
 Bloodstains are spread across a 120-degree arc on the approach side, split into
 3 x 40-degree sectors. Each bloodstain gets a random angle within its sector and
