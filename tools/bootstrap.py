@@ -100,11 +100,13 @@ ITEMRANDO_REQUIRED_DLLS = [
     "Pidgin.dll",  # Parser library used by RandomizerCommon
     "LightInject.dll",  # DI container RandomizerCommon uses at runtime (added in v0.12; headless-required, see ItemRandomizerWrapper.csproj <None> copy)
     "LightInject.Annotation.dll",  # LightInject companion it loads at runtime
+    "System.IO.Hashing.dll",  # XxHash used by RandomizerCommon (Util.cs) and the new SoulsIds BhdExtractor path (added in v0.12 final)
     # SoulsIds.dll / SoulsFormats.dll are NOT listed here: their Item Randomizer
     # builds are incompatible with FogRando's, so they go in WRITER_LIB_ITEMRANDO
     # (see ITEMRANDO_PRIVATE_DLLS) instead of overwriting the shared copies.
-    # YamlDotNet/Newtonsoft.Json/BouncyCastle/ZstdNet are byte-identical between
-    # the two mods, so they stay shared from FogRando.
+    # YamlDotNet/Newtonsoft.Json/BouncyCastle/ZstdNet/Tommy are byte-identical
+    # between the two mods (verified against v0.12 final), so they stay shared
+    # from FogRando.
 ]
 
 # Item Randomizer DLLs that conflict with FogRando's shared copies and must be
