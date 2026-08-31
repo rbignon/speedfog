@@ -32,8 +32,8 @@ have no such companion: both `MENU_ItemIcon_00383` and
 (67 MB hi / 53 MB low) with their layout entries in
 `01_common.sblytbnd.dcx`, and there is no small TPF in that group to host
 a couple of standalone replacements. Shipping a modified copy of the full
-atlas (the "in-place splice" approach) would cost close to that 67 MB
-figure per seed, for two icons. That cost, not a technical blocker, is
+atlas (the "in-place splice" approach) would cost close to ~120 MB
+per seed, for two icons. That cost, not a technical blocker, is
 why this plugin does not touch `01_common` at all.
 
 ## The chosen mechanism: iconId redirect + 05_dummy superset

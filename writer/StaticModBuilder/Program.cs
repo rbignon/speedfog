@@ -84,7 +84,7 @@ class Program
             Console.WriteLine("Note: --data-dir not provided, skipping title screen patch");
         }
 
-        // Halloween care package icon overlay
+        // Halloween item icons overlay
         if (halloweenDir != null && dataDir != null)
         {
             total += HalloweenIconPatcher.Patch(gameDir, halloweenDir, dataDir);

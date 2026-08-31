@@ -16,7 +16,7 @@ The title screen is drawn by Scaleform GFX files that reference images **by name
 
 ## How the patch works
 
-Instead of shipping a modified 65 MB atlas, the patch **redirects the lookup** (validated in-game 2026-08-03):
+Instead of shipping a modified 67 MB atlas, the patch **redirects the lookup** (validated in-game 2026-08-03):
 
 1. `01_common.sblytbnd.dcx` (21 KB): the `MENU_Title_EldenRing_01` SubTexture entry is removed from `SB_Title_01.layout`, so the atlas no longer resolves the name.
 2. `02_title.tpf.dcx` (70 KB -> ~730 KB): a standalone texture named `MENU_Title_EldenRing_01` is added: the vanilla sprite pixels with the badge alpha-composited on top, BC7-encoded, single-mip DX10 DDS (TPF format byte 102 like the other menu BC7 textures).

@@ -8,9 +8,9 @@ using SoulsFormats;
 namespace StaticModBuilder;
 
 /// <summary>
-/// Ships two new item icon textures (Halloween care package art) as a
+/// Ships two new item icon textures (Halloween item icons) as a
 /// superset of the vanilla menu/{hi,low}/05_dummy.tpf.dcx, so the per-seed
-/// injector (HalloweenIconInjector, see Task 3) can repoint
+/// injector (HalloweenIconInjector, see docs/plugins/halloween-icons.md) can repoint
 /// EquipParamGoods.iconId at them without shipping a bloated shared UI atlas.
 ///
 /// Unlike TitleScreenPatcher, these are standalone icons with no vanilla
