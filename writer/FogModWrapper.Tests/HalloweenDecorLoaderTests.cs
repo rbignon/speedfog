@@ -97,9 +97,12 @@ public class HalloweenDecorLoaderTests
         while (dir != null && !Directory.Exists(Path.Combine(dir, "data", "plugins")))
             dir = Path.GetDirectoryName(dir);
         Assert.NotNull(dir);
-        // Ships empty; loading must succeed and report empty, not throw.
+        // Ships with the scouted starter set; loading must succeed, and the
+        // summed per-gate count must stay modest (the file header asks for
+        // it: every entry applies at every eligible entrance gate).
         var catalog = HalloweenDecorLoader.Load(
             Path.Combine(dir!, "data", "plugins", "halloween_decorations.toml"));
-        Assert.True(catalog.IsEmpty);
+        Assert.False(catalog.IsEmpty);
+        Assert.InRange(catalog.Entries.Sum(e => e.Count), 1, 10);
     }
 }

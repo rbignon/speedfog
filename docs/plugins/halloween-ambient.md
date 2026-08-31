@@ -131,11 +131,42 @@ in the same play space.
 
 ## Gate decoration catalogue
 
-`data/plugins/halloween_decorations.toml` ships empty (tracked, with a
-documented header) because entries require visual scouting: asset models
-and SFX ids cannot be picked from data alone. `HalloweenDecorLoader.Load`
-returns an empty catalogue when the file is absent or has no active
-entries, making `GateDecorInjector.Inject` a silent one-line no-op.
+`data/plugins/halloween_decorations.toml` ships with a starter set scouted
+in Smithbox (2026-09): catacombs bone piles (`AEG023_920`/`924`), the
+catacombs standing candelabra (`AEG023_862`), and the Volcano Manor
+candelabra and floor candles (`AEG270_684`/`686`/`687`), 7 decorations per
+gate in total. Entries require visual scouting (asset models and SFX ids
+cannot be picked from data alone); only free-standing floor props work,
+since placement is a ground ring around the gate.
+`HalloweenDecorLoader.Load` returns an empty catalogue when the file is
+absent or has no active entries, making `GateDecorInjector.Inject` a
+silent one-line no-op.
+
+Registered decor models get a SibPath following FogRando's own
+`addAssetModel` convention, e.g.
+`N:\GR\data\Asset\Environment\geometry\AEG270\AEG270_684\sib\AEG270_684.sib`
+(`MsbHelper.EnsureAssetModel`); without it, real geometry models
+registered by name only may fail to resolve in-game.
+
+### Ground estimation
+
+Gate origins are not reliably at floor level (the bloodstain death markers
+inherit this: they often float or sink). Decorations are therefore
+anchored on a per-gate ground estimate instead of the gate Y:
+`GateGeometry.EstimateGroundY` takes the median Y of vanilla assets within
+6m horizontal and 2.5m vertical of the gate, clamps the correction to
+±2m, and falls back to the gate Y with fewer than two candidates. A
+survey over every fog gate and dungeon door in m30/m31/m32 found ~85% of
+gates within 0.3m of that median (doors max 0.5m, fog gates up to 1.7m,
+typically stairs). Enemy parts are excluded from the estimate
+(AmbientSpawnInjector's greeters, `EntityID = 0`, are already placed when
+this injector runs and inherit the same unreliable gate Y), as are
+`AEG099_*` assets (fog gates, warp doors, glow anchors). The catalogue's
+`y_offset` applies on top; the shipped entries sink props a few
+centimeters so residual error reads as settled rather than floating.
+Corrections beyond 0.3m are logged per gate. Each decoration also gets a
+deterministic random yaw (`GateGeometry.GenerateYaws`, a separate PRNG
+stream from the arc offsets) instead of identity rotation.
 
 Schema (`[[entries]]`, one array element per decoration type):
 
@@ -207,4 +238,11 @@ pack size range):
 - Ambush pack difficulty feel when `ambushes = true`: packs should aggro
   normally and read as a deliberate, low-stakes hazard rather than a
   spike.
-- Gate decorations: no content to verify yet (catalogue ships empty).
+- Gate decorations (starter catalogue, first seed): the Volcano Manor
+  candles (`AEG270_684`/`686`/`687`) burn outside m16, or ship unlit
+  geometry (their vanilla flame may come from map lighting rather than the
+  model; if unlit, pair them with a candle-flame `sfx_id`); the `AEG270`
+  models load at all outside m16, where vanilla never places them (the
+  `AEG023` set is pan-catacombs, no doubt there); decorations sit on the
+  ground (per-gate median estimate) without cluttering the doorway at 7
+  props per gate.

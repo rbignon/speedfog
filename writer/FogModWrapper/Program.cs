@@ -874,7 +874,7 @@ Example:
                 ctx.GraphData.EventMap, ctx.GraphData.Nodes, gateSides, halloweenSettings);
 
             // Data-driven gate decorations (data/plugins/halloween_decorations.toml);
-            // ships empty, so this is a no-op until the catalogue gets entries.
+            // a no-op only if the catalogue is emptied.
             GateDecorInjector.Inject(
                 ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.Connections,
                 ctx.GraphData.EventMap, ctx.GraphData.Nodes, gateSides,

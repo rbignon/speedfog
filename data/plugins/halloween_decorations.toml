@@ -1,10 +1,14 @@
 # Halloween gate decorations catalogue. Consumed by GateDecorInjector when
-# [plugin.halloween] enabled = true. SHIPS EMPTY: entries require visual
-# scouting (asset models and SFX ids cannot be picked from data alone).
+# [plugin.halloween] enabled = true. Ships with a starter set scouted in
+# Smithbox (catacombs bones + candelabras, Volcano Manor candles); every
+# entry applies at every eligible entrance gate (mini_dungeon /
+# legacy_dungeon destinations), so keep the summed count per gate modest.
 #
 # Scouting workflow:
 #   1. In Smithbox, open a candle-lit vanilla map (catacombs work well) and
-#      note the AEG model of the prop you want (e.g. a candelabra).
+#      note the AEG model of the prop you want (e.g. a candelabra). Only
+#      free-standing floor props work: placement is a ground ring around the
+#      gate, wall/ceiling-mounted assets would float.
 #   2. Cross-check placement context with:
 #        wine tools/game_inspect/publish/win-x64/game_inspect.exe \
 #          near <msb-file> <x> <y> <z> --radius 10
@@ -16,17 +20,65 @@
 #   4. Add an [[entries]] block, rebuild a seed, and check the first
 #      entrance gates of any mini dungeon in game.
 #
-# Note: MsbHelper.EnsureAssetModel registers a new model name without an
-# asset SibPath (unlike EnsureEnemyModel for chr models). A real geometry
-# model (not the AEG099_090 invisible anchor above) may need its own SibPath
-# to load; if it does not render in-game, step 4's check is where that
-# surfaces.
+# Placement Y: decorations are anchored on the per-gate ground estimate
+# (median Y of nearby vanilla assets, GateGeometry.EstimateGroundY), not on
+# the gate origin; y_offset applies on top of that. Slightly negative
+# offsets sink props a few centimeters so residual error reads as settled,
+# not floating.
 #
-# [[entries]]
-# model = "AEG099_090"   # asset model to place (AEGxxx_xxx)
-# count = 2              # decorations per gate (1-5)
-# min_radius = 2.0       # placement ring around the gate, meters
-# max_radius = 4.0
-# y_offset = 0.0
-# sfx_dummy = 100        # only used when sfx_id > 0
-# sfx_id = 0             # 0 = geometry only, no SFX event
+# Schema per [[entries]] block:
+#   model = "AEG099_090"   # asset model to place (AEGxxx_xxx)
+#   count = 2              # decorations per gate (1-5)
+#   min_radius = 2.0       # placement ring around the gate, meters
+#   max_radius = 4.0
+#   y_offset = 0.0
+#   sfx_dummy = 100        # only used when sfx_id > 0
+#   sfx_id = 0             # 0 = geometry only, no SFX event
+
+# Bone pile (catacombs set, used across most m30 maps).
+[[entries]]
+model = "AEG023_920"
+count = 2
+min_radius = 1.5
+max_radius = 3.5
+y_offset = -0.05
+
+# Bone scatter (catacombs set).
+[[entries]]
+model = "AEG023_924"
+count = 1
+min_radius = 2.0
+max_radius = 4.0
+y_offset = -0.05
+
+# Standing candelabra, catacombs variant (unlit in vanilla m30 maps).
+[[entries]]
+model = "AEG023_862"
+count = 1
+min_radius = 1.5
+max_radius = 3.0
+y_offset = -0.02
+
+# Standing candelabra, Volcano Manor variant (lit in vanilla m16; whether
+# the flame is intrinsic to the model outside m16 is pending in-game check).
+[[entries]]
+model = "AEG270_684"
+count = 1
+min_radius = 2.0
+max_radius = 3.5
+y_offset = -0.02
+
+# Floor candle clusters, Volcano Manor variants (same flame caveat).
+[[entries]]
+model = "AEG270_686"
+count = 1
+min_radius = 1.5
+max_radius = 3.0
+y_offset = -0.02
+
+[[entries]]
+model = "AEG270_687"
+count = 1
+min_radius = 1.5
+max_radius = 3.0
+y_offset = -0.02

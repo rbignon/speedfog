@@ -81,12 +81,21 @@ internal static class MsbHelper
 
     /// <summary>
     /// Ensure an asset model definition exists in the MSB models list.
+    /// SibPath follows FogRando's own asset-model registration convention
+    /// (GameDataWriterE addAssetModel, L5228: N:\GR\data\Asset\Environment\
+    /// geometry\{AEG270}\{AEG270_684}\sib\{AEG270_684}.sib); without it, real
+    /// geometry models registered by name only may fail to resolve in-game.
     /// </summary>
     public static void EnsureAssetModel(MSBE msb, string modelName)
     {
         if (msb.Models.Assets.Any(m => m.Name == modelName))
             return;
-        msb.Models.Assets.Add(new MSBE.Model.Asset { Name = modelName });
+        var category = modelName[..6];
+        msb.Models.Assets.Add(new MSBE.Model.Asset
+        {
+            Name = modelName,
+            SibPath = $"N:\\GR\\data\\Asset\\Environment\\geometry\\{category}\\{modelName}\\sib\\{modelName}.sib",
+        });
     }
 
     /// <summary>

@@ -83,4 +83,55 @@ internal static class GateGeometry
 
         return offsets;
     }
+
+    /// <summary>
+    /// Estimate the ground Y at a gate from hand-placed vanilla parts nearby.
+    /// The gate origin's own Y is often not exactly at floor level (survey
+    /// over every m30/m31/m32 fog gate and dungeon door: ~85% within 0.3m of
+    /// the neighborhood median, outliers up to 1.7m), while surrounding
+    /// vanilla assets in dungeon interiors are overwhelmingly floor-standing.
+    /// Takes the median Y of candidates within horizontalRadius meters and
+    /// maxDeltaY vertical of the gate; falls back to the gate's own Y with
+    /// fewer than two candidates, and clamps the correction to maxCorrection
+    /// so a sparse neighborhood up a staircase cannot fling placements.
+    /// </summary>
+    internal static float EstimateGroundY(
+        Vector3 gatePos, IEnumerable<Vector3> candidates,
+        float horizontalRadius = 6f, float maxDeltaY = 2.5f, float maxCorrection = 2f)
+    {
+        var ys = new List<float>();
+        foreach (var pos in candidates)
+        {
+            float dx = pos.X - gatePos.X;
+            float dz = pos.Z - gatePos.Z;
+            if (dx * dx + dz * dz > horizontalRadius * horizontalRadius)
+                continue;
+            if (MathF.Abs(pos.Y - gatePos.Y) > maxDeltaY)
+                continue;
+            ys.Add(pos.Y);
+        }
+        if (ys.Count < 2)
+            return gatePos.Y;
+
+        ys.Sort();
+        float median = ys.Count % 2 == 1
+            ? ys[ys.Count / 2]
+            : (ys[ys.Count / 2 - 1] + ys[ys.Count / 2]) / 2f;
+        return gatePos.Y + Math.Clamp(median - gatePos.Y, -maxCorrection, maxCorrection);
+    }
+
+    /// <summary>
+    /// Deterministic yaw angles (degrees, [0, 360)) for parts placed around
+    /// a gate. Seeded like GenerateArcOffsets but XORed with a fixed
+    /// constant so the yaw stream never replays the arc angle/radius stream
+    /// (which would correlate a part's facing with its position).
+    /// </summary>
+    internal static float[] GenerateYaws(uint seedEntityId, int count)
+    {
+        var rng = new Random(seedEntityId.GetHashCode() ^ 0x5F375A86);
+        var yaws = new float[count];
+        for (int i = 0; i < count; i++)
+            yaws[i] = (float)(rng.NextDouble() * 360.0);
+        return yaws;
+    }
 }

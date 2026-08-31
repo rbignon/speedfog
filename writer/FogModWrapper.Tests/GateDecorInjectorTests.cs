@@ -182,6 +182,118 @@ public class GateDecorInjectorTests
         Assert.Empty(sfxWork);
     }
 
+    [Fact]
+    public void ApplyToMsb_RegistersDecorModelWithSibPath()
+    {
+        // FogRando parity (GameDataWriterE addAssetModel): without a SibPath
+        // the game may not resolve real geometry models registered by name.
+        var msb = MakeMsbWithGateAndVanillaAsset();
+        var gates = new List<GateDecorInjector.GateSpec> { new("AEG099_002_9000", IsASide: false) };
+        var catalog = new DecorCatalog(new List<DecorEntry>
+        {
+            new("AEG023_920", 1, 1.0f, 2.0f, 0f, 100, 0),
+        });
+
+        GateDecorInjector.ApplyToMsb(msb, gates, catalog, entityIdBase: 755910000, log: _ => { });
+
+        var model = msb.Models.Assets.Single(m => m.Name == "AEG023_920");
+        Assert.Equal(
+            @"N:\GR\data\Asset\Environment\geometry\AEG023\AEG023_920\sib\AEG023_920.sib",
+            model.SibPath);
+    }
+
+    [Fact]
+    public void ApplyToMsb_SnapsDecorToNearbyVanillaAssetGroundY()
+    {
+        // Gate origin sits 1.3m above the floor; two hand-placed vanilla
+        // assets nearby define the ground. Decor must sit at their median Y,
+        // not at the gate's own Y.
+        var msb = MakeMsbWithGateAndVanillaAsset();
+        msb.Parts.Assets.Add(new MSBE.Part.Asset
+        {
+            Name = "AEG020_100_1000", ModelName = "AEG020_100",
+            Position = new Vector3(8f, -1.4f, 10f), EntityID = 0,
+        });
+        msb.Parts.Assets.Add(new MSBE.Part.Asset
+        {
+            Name = "AEG020_100_1001", ModelName = "AEG020_100",
+            Position = new Vector3(12f, -1.2f, 11f), EntityID = 0,
+        });
+        var gates = new List<GateDecorInjector.GateSpec> { new("AEG099_002_9000", IsASide: false) };
+        var catalog = new DecorCatalog(new List<DecorEntry>
+        {
+            new("AEG023_920", 2, 2.0f, 4.0f, 0f, 100, 0),
+        });
+
+        GateDecorInjector.ApplyToMsb(msb, gates, catalog, entityIdBase: 755910000, log: _ => { });
+
+        var decorAssets = msb.Parts.Assets.Where(a => a.ModelName == "AEG023_920").ToList();
+        Assert.Equal(2, decorAssets.Count);
+        Assert.All(decorAssets, a => Assert.Equal(-1.3f, a.Position.Y, 3));
+    }
+
+    [Fact]
+    public void ApplyToMsb_GroundEstimateIgnoresEnemiesAndFogGateAssets()
+    {
+        // Enemy parts are excluded on purpose: AmbientSpawnInjector's
+        // greeters (EntityID = 0) are already in the MSB when this injector
+        // runs, and their Y comes from the same unreliable gate origin.
+        // AEG099_* assets (other fog gates, warp doors) are no floor
+        // evidence either. With only those nearby, decor keeps the gate Y.
+        var msb = MakeMsbWithGateAndVanillaAsset();
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c5280_9000", ModelName = "c5280",
+            Position = new Vector3(9f, -1.5f, 10f), EntityID = 0,
+        });
+        // Two AEG099 assets with vanilla entity IDs: were the model-prefix
+        // filter dropped, they would form a 2-sample median at -1.5 and
+        // shift the decor off the gate Y.
+        msb.Parts.Assets.Add(new MSBE.Part.Asset
+        {
+            Name = "AEG099_001_9500", ModelName = "AEG099_001",
+            Position = new Vector3(11f, -1.5f, 10f), EntityID = 30051801,
+        });
+        msb.Parts.Assets.Add(new MSBE.Part.Asset
+        {
+            Name = "AEG099_065_9501", ModelName = "AEG099_065",
+            Position = new Vector3(10f, -1.5f, 12f), EntityID = 30051950,
+        });
+        var gates = new List<GateDecorInjector.GateSpec> { new("AEG099_002_9000", IsASide: false) };
+        var catalog = new DecorCatalog(new List<DecorEntry>
+        {
+            new("AEG023_920", 1, 2.0f, 4.0f, 0f, 100, 0),
+        });
+
+        GateDecorInjector.ApplyToMsb(msb, gates, catalog, entityIdBase: 755910000, log: _ => { });
+
+        var decor = msb.Parts.Assets.Single(a => a.ModelName == "AEG023_920");
+        Assert.Equal(0f, decor.Position.Y, 3);
+    }
+
+    [Fact]
+    public void ApplyToMsb_DecorGetsDeterministicNonZeroYaw()
+    {
+        var msb1 = MakeMsbWithGateAndVanillaAsset();
+        var msb2 = MakeMsbWithGateAndVanillaAsset();
+        var gates = new List<GateDecorInjector.GateSpec> { new("AEG099_002_9000", IsASide: false) };
+        var catalog = new DecorCatalog(new List<DecorEntry>
+        {
+            new("AEG023_920", 3, 2.0f, 4.0f, 0f, 100, 0),
+        });
+
+        GateDecorInjector.ApplyToMsb(msb1, gates, catalog, entityIdBase: 755910000, log: _ => { });
+        GateDecorInjector.ApplyToMsb(msb2, gates, catalog, entityIdBase: 755910000, log: _ => { });
+
+        var yaws1 = msb1.Parts.Assets.Where(a => a.ModelName == "AEG023_920")
+            .Select(a => a.Rotation.Y).ToList();
+        var yaws2 = msb2.Parts.Assets.Where(a => a.ModelName == "AEG023_920")
+            .Select(a => a.Rotation.Y).ToList();
+        Assert.Equal(yaws1, yaws2);
+        Assert.All(yaws1, y => Assert.InRange(y, 0f, 360f));
+        Assert.Contains(yaws1, y => y != 0f);
+    }
+
     private static MSBE MakeMsbWithGateAndVanillaAsset()
     {
         var msb = new MSBE();

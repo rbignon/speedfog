@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Numerics;
 using FogModWrapper;
 using Xunit;
 
@@ -32,6 +33,87 @@ public class GateGeometryTests
         var direct = GateGeometry.GenerateArcOffsets(42u, 30f, 180f, 3, 1.5f, 3.0f, 0.13f);
         var viaWrapper = DeathMarkerInjector.GenerateOffsets(42u, 30f, isASide: true);
         Assert.Equal(direct, viaWrapper);
+    }
+
+    [Fact]
+    public void EstimateGroundY_ReturnsMedianOfNearbyCandidates()
+    {
+        var gate = new Vector3(0f, 10f, 0f);
+        var candidates = new[]
+        {
+            new Vector3(2f, 8.6f, 0f),
+            new Vector3(-3f, 8.8f, 1f),
+            new Vector3(0f, 9.0f, -4f),
+        };
+        Assert.Equal(8.8f, GateGeometry.EstimateGroundY(gate, candidates), 3);
+    }
+
+    [Fact]
+    public void EstimateGroundY_AveragesMiddlePairOnEvenCount()
+    {
+        var gate = new Vector3(0f, 10f, 0f);
+        var candidates = new[]
+        {
+            new Vector3(2f, 8.6f, 0f),
+            new Vector3(-3f, 8.8f, 1f),
+        };
+        Assert.Equal(8.7f, GateGeometry.EstimateGroundY(gate, candidates), 3);
+    }
+
+    [Fact]
+    public void EstimateGroundY_IgnoresCandidatesBeyondHorizontalRadiusOrDeltaY()
+    {
+        var gate = new Vector3(0f, 10f, 0f);
+        var candidates = new[]
+        {
+            new Vector3(2f, 9.4f, 0f),
+            new Vector3(-1f, 9.6f, 2f),
+            new Vector3(20f, 9.4f, 0f),   // beyond 6m horizontal (dY in range)
+            new Vector3(1f, 14.0f, 0f),   // wall torch: beyond 2.5m vertical
+        };
+        Assert.Equal(9.5f, GateGeometry.EstimateGroundY(gate, candidates), 3);
+    }
+
+    [Fact]
+    public void EstimateGroundY_FallsBackToGateYWithFewerThanTwoSamples()
+    {
+        var gate = new Vector3(0f, 10f, 0f);
+        var candidates = new[] { new Vector3(2f, 8.0f, 0f) };
+        Assert.Equal(10f, GateGeometry.EstimateGroundY(gate, candidates), 3);
+        Assert.Equal(10f, GateGeometry.EstimateGroundY(gate, new List<Vector3>()), 3);
+    }
+
+    [Fact]
+    public void EstimateGroundY_ClampsCorrectionToMaxCorrection()
+    {
+        var gate = new Vector3(0f, 10f, 0f);
+        var candidates = new[]
+        {
+            new Vector3(2f, 7.6f, 0f),
+            new Vector3(-3f, 7.6f, 1f),
+        };
+        Assert.Equal(8.0f, GateGeometry.EstimateGroundY(gate, candidates), 3);
+    }
+
+    [Fact]
+    public void GenerateYaws_IsDeterministicAndInRange()
+    {
+        var a = GateGeometry.GenerateYaws(755910001u, 4);
+        var b = GateGeometry.GenerateYaws(755910001u, 4);
+        Assert.Equal(a, b);
+        Assert.Equal(4, a.Length);
+        Assert.All(a, y => Assert.InRange(y, 0f, 360f));
+        Assert.Contains(a, y => y != 0f);
+    }
+
+    [Fact]
+    public void GenerateYaws_DrawsADistinctStreamFromArcOffsets()
+    {
+        // Same seed as a GenerateArcOffsets call: the yaw stream must not
+        // replay the arc PRNG (which would correlate yaw with angle).
+        var yaws = GateGeometry.GenerateYaws(42u, 2);
+        var replayed = new Random(42u.GetHashCode());
+        Assert.NotEqual(yaws[0], (float)(replayed.NextDouble() * 360.0));
     }
 
     [Fact]

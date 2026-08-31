@@ -6,17 +6,19 @@ using SoulsIds;
 namespace FogModWrapper;
 
 /// <summary>
-/// Places data-driven ambient decorations (candelabras, cobwebs, glow
+/// Places data-driven ambient decorations (candelabras, bone piles, glow
 /// anchors, ...) near dungeon entrance gates for the Halloween plugin, from
-/// data/plugins/halloween_decorations.toml. The catalogue ships empty
-/// (see HalloweenDecorLoader): with no active entries, Inject is a silent
-/// no-op.
+/// data/plugins/halloween_decorations.toml (with no active entries, Inject
+/// is a silent no-op).
 ///
 /// Same entrance-gate filter as AmbientSpawnInjector (destination cluster
 /// type in mini_dungeon/legacy_dungeon via eventMap, never boss arenas, one
 /// spec group per (map, gate) pair) and the same death-marker clone recipe
 /// as DeathMarkerInjector (DeepCopy a nearby vanilla asset, detach
 /// visibility groups, retarget the model, clear identity fields).
+/// Decorations are anchored vertically on a per-gate ground estimate
+/// (GateGeometry.EstimateGroundY over nearby vanilla assets) rather than
+/// the gate origin, whose Y is not reliably at floor level.
 ///
 /// Two-phase per map, mirroring DeathMarkerInjector:
 /// 1. MSB phase: clone a nearby vanilla asset per catalogue entry per gate.
@@ -225,6 +227,27 @@ public static class GateDecorInjector
             // docs/death-markers.md "Position Offsets (ASide/BSide)".
             float arcCenterDeg = gate.IsASide ? 180f : 0f;
 
+            // Gate origins are not reliably at floor level; anchor decor on
+            // the ground estimated from surrounding vanilla assets instead.
+            // Enemy parts are excluded (AmbientSpawnInjector's greeters,
+            // EntityID = 0, are already in the MSB and inherit the same
+            // unreliable gate Y), and so are AEG099_* assets (fog gates,
+            // warp doors, glow anchors: gameplay helpers, not floor
+            // evidence). Earlier decorations sit at or above
+            // FOGMOD_ENTITY_MIN and drop out with the entity filter.
+            float groundY = GateGeometry.EstimateGroundY(
+                gateAsset.Position,
+                msb.Parts.Assets
+                    .Where(a => a.EntityID < FOGMOD_ENTITY_MIN
+                        && a.ModelName?.StartsWith("AEG099", StringComparison.Ordinal) != true)
+                    .Select(a => a.Position));
+            if (MathF.Abs(groundY - gateAsset.Position.Y) > 0.3f)
+            {
+                log($"  Gate '{gate.PartName}': ground Y {groundY:F1} " +
+                    $"({groundY - gateAsset.Position.Y:+0.0;-0.0} vs gate origin)");
+            }
+            var anchor = new Vector3(gateAsset.Position.X, groundY, gateAsset.Position.Z);
+
             for (int entryIndex = 0; entryIndex < catalog.Entries.Count; entryIndex++)
             {
                 var entry = catalog.Entries[entryIndex];
@@ -244,6 +267,7 @@ public static class GateDecorInjector
                 var offsets = GateGeometry.GenerateArcOffsets(
                     seed, gateAsset.Rotation.Y, arcCenterDeg,
                     entry.Count, entry.MinRadius, entry.MaxRadius, entry.YOffset);
+                var yaws = GateGeometry.GenerateYaws(seed, entry.Count);
 
                 for (int i = 0; i < entry.Count; i++)
                 {
@@ -253,8 +277,8 @@ public static class GateDecorInjector
                     decor.Name = MsbHelper.GeneratePartName(
                         msb.Parts.Assets.Select(a => a.Name), entry.Model);
                     MsbHelper.SetNameIdent(decor);
-                    decor.Position = gateAsset.Position + offsets[i];
-                    decor.Rotation = Vector3.Zero;
+                    decor.Position = anchor + offsets[i];
+                    decor.Rotation = new Vector3(0f, yaws[i], 0f);
                     decor.EntityID = nextEntityId;
                     decor.AssetSfxParamRelativeID = -1;
 
