@@ -499,6 +499,7 @@ class CarePackageConfig:
     leg_armor: int = 2
     crystal_tears: int = 5
     ashes_of_war: int = 0
+    pool_file: str = "care_package_items.toml"
 
     def __post_init__(self) -> None:
         """Validate care package configuration."""
@@ -522,6 +523,13 @@ class CarePackageConfig:
             value = getattr(self, field_name)
             if value < 0:
                 raise ValueError(f"{field_name} must be >= 0, got {value}")
+        if not self.pool_file or not isinstance(self.pool_file, str):
+            raise ValueError("care_package.pool_file must be a non-empty string")
+        if Path(self.pool_file).is_absolute() or ".." in Path(self.pool_file).parts:
+            raise ValueError(
+                f"care_package.pool_file must be a file name relative to data/, "
+                f"got {self.pool_file!r}"
+            )
 
 
 # Known config sections and their accepted keys. None means the section's
@@ -639,6 +647,7 @@ _KNOWN_SECTION_KEYS: dict[str, frozenset[str] | None] = {
             "leg_armor",
             "crystal_tears",
             "ashes_of_war",
+            "pool_file",
         }
     ),
     "enemy": frozenset(
@@ -891,6 +900,9 @@ class Config:
                 leg_armor=care_package_section.get("leg_armor", 2),
                 crystal_tears=care_package_section.get("crystal_tears", 5),
                 ashes_of_war=care_package_section.get("ashes_of_war", 0),
+                pool_file=care_package_section.get(
+                    "pool_file", "care_package_items.toml"
+                ),
             ),
             enemy=EnemyConfig(
                 randomize_bosses=enemy_section.get("randomize_bosses", "none"),

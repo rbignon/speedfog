@@ -359,7 +359,7 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
     # Sample care package if enabled
     care_package_items = None
     if config.care_package.enabled:
-        pool_path = project_root / "data" / "care_package_items.toml"
+        pool_path = project_root / "data" / config.care_package.pool_file
         if pool_path.exists():
             care_package_items = sample_care_package(
                 config.care_package, actual_seed, pool_path

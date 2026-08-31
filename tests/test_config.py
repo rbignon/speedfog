@@ -1204,3 +1204,23 @@ def test_enemy_bosses_rejects_bare_string():
     """A bare string (not a list) is rejected with a clear error."""
     with pytest.raises(ValueError, match="bosses"):
         Config.from_dict({"enemy": {"randomize_bosses": "all", "bosses": "Malenia"}})
+
+
+def test_care_package_pool_file_default():
+    """care_package.pool_file defaults to the standard item pool file name."""
+    config = Config.from_dict({})
+    assert config.care_package.pool_file == "care_package_items.toml"
+
+
+def test_care_package_pool_file_custom():
+    """care_package.pool_file selects an alternate pool file (e.g. Halloween)."""
+    config = Config.from_dict(
+        {"care_package": {"pool_file": "care_package_items_halloween.toml"}}
+    )
+    assert config.care_package.pool_file == "care_package_items_halloween.toml"
+
+
+def test_care_package_pool_file_rejects_absolute_path():
+    """care_package.pool_file must be a file name relative to data/, not a path."""
+    with pytest.raises(ValueError, match="pool_file"):
+        Config.from_dict({"care_package": {"pool_file": "/etc/passwd"}})
