@@ -87,21 +87,31 @@ class TestFormatUpgrade:
 class TestLoadItemPool:
     """Tests for loading care_package_items.toml."""
 
-    def test_loads_real_pool(self):
+    @pytest.mark.parametrize(
+        "pool_name, min_weapons",
+        [
+            ("care_package_items.toml", 30),
+            ("care_package_items_halloween.toml", 10),
+        ],
+    )
+    def test_loads_real_pool(self, pool_name, min_weapons):
         """Load the actual care_package_items.toml from data/."""
-        pool_path = Path(__file__).parent.parent / "data" / "care_package_items.toml"
-        if not pool_path.exists():
-            pytest.skip("data/care_package_items.toml not found")
+        pool_path = Path(__file__).parent.parent / "data" / pool_name
         pool = load_item_pool(pool_path)
         assert "weapons" in pool
         assert isinstance(pool["weapons"], list)
-        assert len(pool["weapons"]) >= 30
+        assert len(pool["weapons"]) >= min_weapons
 
-    def test_pool_has_all_categories(self):
+    @pytest.mark.parametrize(
+        "pool_name",
+        [
+            "care_package_items.toml",
+            "care_package_items_halloween.toml",
+        ],
+    )
+    def test_pool_has_all_categories(self, pool_name):
         """Verify all expected categories exist in the pool."""
-        pool_path = Path(__file__).parent.parent / "data" / "care_package_items.toml"
-        if not pool_path.exists():
-            pytest.skip("data/care_package_items.toml not found")
+        pool_path = Path(__file__).parent.parent / "data" / pool_name
         pool = load_item_pool(pool_path)
         assert "shields" in pool
         assert "catalysts" in pool

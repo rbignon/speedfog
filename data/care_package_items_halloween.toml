@@ -1,0 +1,366 @@
+# Halloween Care Package Item Pool
+#
+# Death/pumpkin/spooky-flavored starting builds for the Halloween race mode.
+# Selected via care_package.pool_file = "care_package_items_halloween.toml".
+# Same schema as care_package_items.toml (see its header for the format);
+# weapons/shields entries may set somber = true to use the somber upgrade
+# encoding (floor(weapon_upgrade / 2.5)).
+
+# =============================================================================
+# Weapons
+# =============================================================================
+
+[[weapons]]
+name = "Scythe"
+id = 19000000
+
+[[weapons]]
+name = "Grave Scythe"
+id = 19010000
+
+[[weapons]]
+name = "Winged Scythe"
+id = 19060000
+somber = true
+
+[[weapons]]
+name = "Halo Scythe"
+id = 19020000
+somber = true
+
+[[weapons]]
+name = "Death's Poker"
+id = 3200000
+somber = true
+
+[[weapons]]
+name = "Celebrant's Sickle"
+id = 1060000
+
+[[weapons]]
+name = "Celebrant's Skull"
+id = 12130000
+
+[[weapons]]
+name = "Celebrant's Cleaver"
+id = 14060000
+
+[[weapons]]
+name = "Chainlink Flail"
+id = 13040000
+
+[[weapons]]
+name = "Morning Star"
+id = 11050000
+
+[[weapons]]
+name = "Torch"
+id = 24000000
+
+[[weapons]]
+name = "Ghostflame Torch"
+id = 24050000
+
+[[weapons]]
+name = "St. Trina's Torch"
+id = 24040000
+somber = true
+
+[[weapons]]
+name = "Beast-Repellent Torch"
+id = 24060000
+
+# =============================================================================
+# Shields
+# =============================================================================
+
+[[shields]]
+name = "Candletree Wooden Shield"
+id = 31250000
+
+[[shields]]
+name = "Spiked Palisade Shield"
+id = 32170000
+
+[[shields]]
+name = "Coil Shield"
+id = 30200000
+somber = true
+
+[[shields]]
+name = "Jellyfish Shield"
+id = 32120000
+somber = true
+
+# =============================================================================
+# Catalysts
+# =============================================================================
+
+[[catalysts.standard]]
+name = "Prince of Death's Staff"
+id = 33180000
+
+[[catalysts.standard]]
+name = "Albinauric Staff"
+id = 33190000
+
+[[catalysts.standard]]
+name = "Staff of the Guilty"
+id = 33260000
+
+[[catalysts.standard]]
+name = "Clawmark Seal"
+id = 34040000
+
+[[catalysts.somber]]
+name = "Dragon Communion Seal"
+id = 34080000
+
+[[catalysts.somber]]
+name = "Frenzied Flame Seal"
+id = 34090000
+
+# =============================================================================
+# Armor
+# =============================================================================
+
+[[armor.head]]
+name = "Pumpkin Helm"
+id = 440000
+
+[[armor.head]]
+name = "Skeletal Mask"
+id = 930000
+
+[[armor.head]]
+name = "Fia's Hood"
+id = 1940000
+
+[[armor.head]]
+name = "Sanguine Noble Hood"
+id = 320000
+
+[[armor.head]]
+name = "Death Knight Helm"
+id = 5200000
+
+[[armor.head]]
+name = "Imp Head (Cat)"
+id = 1080000
+
+[[armor.head]]
+name = "Imp Head (Fanged)"
+id = 1081000
+
+[[armor.head]]
+name = "Imp Head (Long-Tongued)"
+id = 1082000
+
+[[armor.head]]
+name = "Imp Head (Corpse)"
+id = 1083000
+
+[[armor.head]]
+name = "Imp Head (Wolf)"
+id = 1084000
+
+[[armor.head]]
+name = "Imp Head (Elder)"
+id = 1085000
+
+[[armor.body]]
+name = "Deathbed Dress"
+id = 1930100
+
+[[armor.body]]
+name = "Fia's Robe"
+id = 1940100
+
+[[armor.body]]
+name = "Sanguine Noble Robe"
+id = 320100
+
+[[armor.body]]
+name = "Raptor's Black Feathers"
+id = 930100
+
+[[armor.body]]
+name = "Death Knight Armor"
+id = 5200100
+
+[[armor.arm]]
+name = "Spellblade's Gloves"
+id = 130200
+
+[[armor.arm]]
+name = "Death Knight Gauntlets"
+id = 5200200
+
+[[armor.leg]]
+name = "Spellblade's Trousers"
+id = 130300
+
+[[armor.leg]]
+name = "Sanguine Noble Waistcloth"
+id = 320300
+
+[[armor.leg]]
+name = "Death Knight Greaves"
+id = 5200300
+
+# =============================================================================
+# Talismans
+# =============================================================================
+
+[[talismans]]
+name = "Prince of Death's Pustule"
+id = 1190
+
+[[talismans]]
+name = "Prince of Death's Cyst"
+id = 1191
+
+[[talismans]]
+name = "Lord of Blood's Exultation"
+id = 2160
+
+[[talismans]]
+name = "Godskin Swaddling Cloth"
+id = 5040
+
+[[talismans]]
+name = "Assassin's Crimson Dagger"
+id = 5050
+
+# =============================================================================
+# Sorceries
+# =============================================================================
+
+[[sorceries]]
+name = "Rancorcall"
+id = 5000
+
+[[sorceries]]
+name = "Ancient Death Rancor"
+id = 5001
+
+[[sorceries]]
+name = "Explosive Ghostflame"
+id = 5010
+
+[[sorceries]]
+name = "Fia's Mist"
+id = 5020
+
+[[sorceries]]
+name = "Tibia's Summons"
+id = 5030
+
+[[sorceries]]
+name = "Unseen Form"
+id = 4670
+
+[[sorceries]]
+name = "Briars of Sin"
+id = 4900
+
+# =============================================================================
+# Incantations
+# =============================================================================
+
+[[incantations]]
+name = "Death Lightning"
+id = 5040
+
+[[incantations]]
+name = "Bloodflame Blade"
+id = 6320
+
+[[incantations]]
+name = "Pest Threads"
+id = 7200
+
+[[incantations]]
+name = "Swarm of Flies"
+id = 7210
+
+[[incantations]]
+name = "Frenzied Burst"
+id = 7320
+
+[[incantations]]
+name = "Howl of Shabriri"
+id = 7330
+
+# =============================================================================
+# Crystal Tears (same list as the standard pool)
+# =============================================================================
+
+[[crystal_tears]]
+name = "Crimsonspill Crystal Tear"
+id = 11000
+
+[[crystal_tears]]
+name = "Greenspill Crystal Tear"
+id = 11001
+
+[[crystal_tears]]
+name = "Crimsonburst Crystal Tear"
+id = 11009
+
+[[crystal_tears]]
+name = "Greenburst Crystal Tear"
+id = 11010
+
+[[crystal_tears]]
+name = "Winged Crystal Tear"
+id = 11012
+
+[[crystal_tears]]
+name = "Strength-knot Crystal Tear"
+id = 11021
+
+[[crystal_tears]]
+name = "Dexterity-knot Crystal Tear"
+id = 11022
+
+[[crystal_tears]]
+name = "Intelligence-knot Crystal Tear"
+id = 11023
+
+[[crystal_tears]]
+name = "Faith-knot Crystal Tear"
+id = 11024
+
+[[crystal_tears]]
+name = "Purifying Crystal Tear"
+id = 11027
+
+# =============================================================================
+# Ashes of War (type=Gem, EquipParamGem)
+# Runtime-spawned by the racing mod (EMEVD doesn't support Gem type)
+# =============================================================================
+
+[[ashes_of_war]]
+name = "Phantom Slash"
+id = 22500
+
+[[ashes_of_war]]
+name = "Bloody Slash"
+id = 20400
+
+[[ashes_of_war]]
+name = "Lifesteal Fist"
+id = 20500
+
+[[ashes_of_war]]
+name = "Poison Moth Flight"
+id = 11900
+
+[[ashes_of_war]]
+name = "Barbaric Roar"
+id = 65000
+
+[[ashes_of_war]]
+name = "White Shadow's Lure"
+id = 85000
