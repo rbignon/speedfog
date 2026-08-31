@@ -27,4 +27,6 @@ logged by `Program.cs`.
 
 The Halloween namespace also covers two non-text layers, ambient dungeon
 spawns and gate decorations: see
-[halloween-ambient.md](halloween-ambient.md).
+[halloween-ambient.md](halloween-ambient.md); and a fourth, custom
+inventory icons for Golden Seed and Larval Tear matching the renames
+above: see [halloween-icons.md](halloween-icons.md).

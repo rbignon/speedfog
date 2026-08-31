@@ -80,6 +80,8 @@ speedfog/
 │   ├── care_package_items_halloween.toml  # Halloween care package pool (tracked)
 │   ├── phantom_skins.toml   # Phantom skins catalog (cosmetic auras, tracked)
 │   ├── title_screen_overlay.png  # SpeedFog badge composited on the title screen by StaticModBuilder (tracked)
+│   ├── halloween_icon_pumpkin_seed.png  # Golden Seed placeholder icon art, 160x160 (tracked)
+│   ├── halloween_icon_gummy_worm.png  # Larval Tear placeholder icon art, 160x160 (tracked)
 │   ├── boss_arena_tags.json # Boss/arena tags for compatibility matching (tracked)
 │   ├── item_preset.yaml     # Item preset configuration (tracked)
 │   ├── plugins/             # Plugin data files
@@ -95,7 +97,8 @@ speedfog/
 │   │   └── backups/         # Save backup daemon + launch helpers (PowerShell)
 │   ├── mods-src/speedfog/   # Static mod sources, tracked
 │   │   └── script/<name>-luabnd-dcx/  # WitchyBND-unpacked layout, repacked at bootstrap
-│   └── mods/speedfog/       # StaticModBuilder output + WitchyBND repacks + user overrides (gitignored)
+│   ├── mods/speedfog/       # StaticModBuilder output + WitchyBND repacks + user overrides (gitignored)
+│   └── mods/speedfog-halloween/  # Halloween icon overlay (05_dummy.tpf.dcx superset), built at bootstrap, shipped only when [plugin.halloween] is enabled (gitignored)
 ├── writer/                  # C# - Mod file generation
 │   ├── lib/                 # DLLs (FogMod, RandomizerCommon, SoulsFormats, etc.)
 │   ├── FogModWrapper.Core/  # Shared library (models, graph loading)
@@ -159,6 +162,7 @@ speedfog/
 │   ├── generate_clusters.py # Generate clusters.json from fog.txt
 │   ├── port_boss_arena_tags.py  # Port BAR data → data/boss_arena_tags.json
 │   ├── generate_title_screen.py  # Generate data/title_screen_overlay.png (title badge)
+│   ├── generate_halloween_icons.py  # Generate the two placeholder Halloween item icon PNGs
 │   ├── extract_fog_data.py  # Extract fog gate metadata
 │   ├── diff_vanilla_snapshot.py  # Hash-diff an unpacked game dir against eldendata/Vanilla (game patch triage)
 │   ├── refresh_vanilla_snapshot.py  # Refresh the FogMod snapshot (eldendata/Vanilla) from the game dir (run automatically by bootstrap.py; manual runs for game-patch triage)
@@ -199,6 +203,7 @@ speedfog/
 │       ├── summer-theme.md  # Summer theme specifics
 │       ├── halloween-theme.md  # Halloween theme specifics
 │       ├── halloween-ambient.md  # Halloween ambient dungeon spawns + gate decorations
+│       ├── halloween-icons.md  # Halloween item icon redirect (Golden Seed, Larval Tear)
 │       └── weather.md       # Weather plugin: force weather + pin clock hour
 ├── SoulsFormats/            # SoulsFormatsNEXT git submodule (used by StaticModBuilder)
 └── output/                  # Generated mod (gitignored, self-contained)
@@ -242,6 +247,7 @@ speedfog/
 | `docs/plugins/summer-theme.md` | Summer theme: boss epithets + UI banners, catalogue format, discovery |
 | `docs/plugins/halloween-theme.md` | Halloween theme: kitsch text reskin, item renames |
 | `docs/plugins/halloween-ambient.md` | Halloween ambient dungeon spawns (greeters, ambush packs) + gate decoration catalogue |
+| `docs/plugins/halloween-icons.md` | Halloween item icon redirect (Golden Seed, Larval Tear): 05_dummy overlay + iconId redirect, EXPERIMENT status, revert path, fallbacks |
 | `docs/plugins/weather.md` | Weather plugin: force weather + pin clock hour, accepted names, event mechanism |
 | `reference/fogrando-src/GameDataWriterE.cs` | Main FogRando writer (5639 lines) |
 | `reference/fogrando-src/EldenScaling.cs` | Enemy scaling logic |
@@ -327,6 +333,7 @@ speedfog/
 | `GateDecorInjector` | Places catalogue-driven ambient decorations at the same exit gates from `data/plugins/halloween_decorations.toml`, on a per-gate ground estimate (vanilla assets + enemies) |
 | `HalloweenDecorLoader` | Loads and validates `data/plugins/halloween_decorations.toml` (Core) |
 | `UntouchableBossInjector` | Aging Untouchable minor boss: NpcParam clone + partial damage-cut SpEffect, repoints enemy-randomizer placements, see `docs/untouchable-boss.md` |
+| `HalloweenIconInjector` | Repoints Golden Seed/Larval Tear `EquipParamGoods.iconId` to the Halloween 05_dummy overlay textures (opt-in via `[plugin.halloween]`, see `docs/plugins/halloween-icons.md`) |
 
 **ItemRandomizerWrapper** (uses RandomizerCommon.dll directly):
 | Class | Purpose |
@@ -358,6 +365,7 @@ speedfog/
 | `Program.cs` | CLI entry, runs all post-processing patches |
 | `GraceAnimationPatcher` | Speeds up grace sit/discover animations via TAE event 608 |
 | `TitleScreenPatcher` | Redirects the title sprite to a standalone composited badge texture in 02_title.tpf.dcx (~1.5 MB shipped, see `docs/title-screen.md`) |
+| `HalloweenIconPatcher` | Ships Golden Seed/Larval Tear pumpkin/gummy-worm icons as a 05_dummy.tpf.dcx superset (`--halloween-dir`, opt-in overlay output, see `docs/plugins/halloween-icons.md`) |
 | `DdsAtlas` | DX10 DDS header parsing + block-aligned BC7 extract + standalone DDS build |
 | `LayoutFile` | Menu .layout XML helpers (find/remove SubTexture entries) |
 

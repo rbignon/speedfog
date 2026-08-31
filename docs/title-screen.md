@@ -29,6 +29,8 @@ The committed artwork is `data/title_screen_overlay.png`, a **2532x1532 RGBA ove
 
 `package_seed()` copies `data/mods/speedfog/` verbatim into each seed's `mods/speedfog/`, which ModEngine 2 loads as its own mod. No per-seed work, and no vanilla art is committed to the repo.
 
+The opt-in Halloween icon overlay reuses this same standalone-name fallback lookup, against a different host TPF (`05_dummy.tpf.dcx` instead of `02_title.tpf.dcx`); see [plugins/halloween-icons.md](plugins/halloween-icons.md).
+
 ## Replacing the artwork
 
 1. Edit `tools/generate_title_screen.py` and re-run it (or replace `data/title_screen_overlay.png` directly; the size must match the sprite rect, 2532x1532, or the patch skips with a warning).
