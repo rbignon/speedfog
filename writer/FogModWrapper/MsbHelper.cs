@@ -91,12 +91,20 @@ internal static class MsbHelper
 
     /// <summary>
     /// Ensure an enemy model definition exists in the MSB models list.
+    /// SibPath follows the enemy randomizer's registration convention
+    /// (N:\GR\data\Model\chr\{model}\sib\{model}.sib). The existing
+    /// ChapelGrace caller only registers the invisible c1000 and is
+    /// unaffected by the addition.
     /// </summary>
     public static void EnsureEnemyModel(MSBE msb, string modelName)
     {
         if (msb.Models.Enemies.Any(m => m.Name == modelName))
             return;
-        msb.Models.Enemies.Add(new MSBE.Model.Enemy { Name = modelName });
+        msb.Models.Enemies.Add(new MSBE.Model.Enemy
+        {
+            Name = modelName,
+            SibPath = $"N:\\GR\\data\\Model\\chr\\{modelName}\\sib\\{modelName}.sib",
+        });
     }
 
     /// <summary>

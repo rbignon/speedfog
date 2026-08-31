@@ -799,6 +799,9 @@ Example:
 
         PhantomCatalogInjector.ApplyTo(reg, ctx.PhantomSkins);
 
+        if (ctx.GraphData.IsPluginEnabled("halloween"))
+            AmbientSpawnInjector.ApplyPassiveThinkRow(reg);
+
         // Undo FogMod's makestable remap on the constant-flag play regions
         // (row 0 = all default ground); see docs/quitout-respawn.md.
         PlayRegionPatcher.ApplyTo(reg, ctx.Config.GameDir);
@@ -853,6 +856,16 @@ Example:
         DeathMarkerInjector.Inject(
             ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.Connections, ctx.Events,
             ctx.GraphData.EventMap, ctx.GraphData.DeathFlags, gateSides);
+
+        // Halloween ambient spawns: passive greeters + optional ambush packs
+        // at dungeon entrance gates (opt-in via [plugin.halloween]).
+        if (ctx.GraphData.IsPluginEnabled("halloween"))
+        {
+            var halloweenSettings = HalloweenPluginSettings.Parse(ctx.GraphData.Plugins["halloween"]);
+            AmbientSpawnInjector.Inject(
+                ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.Connections,
+                ctx.GraphData.EventMap, ctx.GraphData.Nodes, gateSides, halloweenSettings);
+        }
 
         // Rebirth option at Sites of Grace
         if (ctx.GraphData.StartingLarvalTears > 0)

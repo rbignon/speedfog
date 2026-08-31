@@ -88,4 +88,13 @@ public static class SpeedFogIds
     /// RUN COMPLETE banner one-shot. Offset 0 (items_spawned_flag) is
     /// allocated Python-side and arrives via graph.json.</summary>
     public const int BannerShownFlag = 1050290001;
+
+    // --- Param row IDs (not entity IDs; separate namespace per PARAM) ---
+
+    /// <summary>NpcThinkParam row for the passive Halloween greeters:
+    /// a clone of the Aging Untouchable's think row (52800000) with all
+    /// perception zeroed. The numeric value sits in FogMod's entity band
+    /// only by convention (params and entities are unrelated id spaces);
+    /// no vanilla NpcThinkParam row comes anywhere near it.</summary>
+    public const int PassiveGreeterThinkRow = 755890000;
 }
