@@ -9,12 +9,13 @@
 # by defaults during Resolve(). See ItemPreset.cs:614-617.
 #
 # Placement modes:
-#   - Important (KeyItems, ShadowRealmBlessings): inherits LocationGroups for
+#   - Important (KeyItems): inherits LocationGroups for
 #     location tags, and items are added to RaceModeItems (race-mode tagging).
 #   - Custom (CoreMechanics, SacredFlaskUpgrades): per-item Requires/Excludes
 #     tags. Constrained items are queued and matched to compatible slots; no
 #     separate pass between Custom placements.
-#   - Anywhere (QuestItems, UpgradeBellBearings): unrestricted (Excludes only).
+#   - Anywhere (QuestItems, UpgradeBellBearings, ShadowRealmBlessings):
+#     unrestricted (Excludes only).
 #
 # Uses Item Randomizer's ItemPreset.ParsePreset().
 

@@ -101,6 +101,10 @@ def test_generate_item_config_basic():
     assert result["options"]["dlc"] is True
     assert result["options"]["sombermode"] is True
     assert result["options"]["mats"] is True
+    # Pinned GUI defaults: v0.12 keys these on Switch: options in the
+    # annotations, and unset booleans are false headless (silent flip).
+    assert result["options"]["dlcblessing"] is True
+    assert result["options"]["spellshops"] is True
     # editnames was intentionally removed (596cad7): boss names are no longer edited.
     assert "editnames" not in result["options"]
     assert result["options"]["scale"] is True

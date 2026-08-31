@@ -9,12 +9,13 @@
 # by defaults during Resolve(). See ItemPreset.cs:614-617.
 #
 # Placement modes:
-#   - Important (KeyItems, ShadowRealmBlessings): inherits LocationGroups for
+#   - Important (KeyItems): inherits LocationGroups for
 #     location tags, and items are added to RaceModeItems (race-mode tagging).
 #   - Custom (CoreMechanics, SacredFlaskUpgrades): per-item Requires/Excludes
 #     tags. Constrained items are queued and matched to compatible slots; no
 #     separate pass between Custom placements.
-#   - Anywhere (QuestItems, UpgradeBellBearings): unrestricted (Excludes only).
+#   - Anywhere (QuestItems, UpgradeBellBearings, ShadowRealmBlessings):
+#     unrestricted (Excludes only).
 #
 # Uses Item Randomizer's ItemPreset.ParsePreset().
 
@@ -730,15 +731,39 @@ Placements:
 
 # Shadow Realm Blessings (Scadutree Fragments, Revered Spirit Ashes).
 # Items: fixed by randomizer (EditItems=false). Locations: editable.
+# Anywhere (was Important with cross/boss/altboss tags): SpeedFog neutralizes
+# the blessing SpEffects (ScaduBlessingNeutralizer), so these are dead pickups
+# in a run; the Excludes list (same as the uwyg preset) structurally keeps
+# them off boss drops and out of minidungeon reward slots, so they only land
+# in generic overworld/legacy pickups. Note the dlcblessing option does NOT
+# constrain them here: the explicit empty DlcOnlyItems section below
+# (EditItems=true) overrides the randomizer's default DLC-only entries.
 - Type: ShadowRealmBlessings
-  Mode: Important
+  Mode: Anywhere
   Items: []
-  Requires:
-  - Tag: cross
-  - Tag: boss
-  - Tag: altboss
+  Requires: []
   Excludes:
   - Tag: missable
+  - Tag: catacomb
+  - Tag: caveboss
+  - Tag: cave
+  - Tag: catacombboss
+  - Tag: evergaol
+  - Tag: forge
+  - Tag: forgereward
+  - Tag: gaolboss
+  - Tag: gaol
+  - Tag: seedtree
+  - Tag: graveboss
+  - Tag: grave
+  - Tag: boss
+  - Tag: racemode
+  - Tag: namelessmausoleum
+  - Tag: altboss
+  - Tag: tunnelboss
+  - Tag: tunnel
+  - Tag: minidungeon
+  - Tag: minidungeonboss
 
 # Unused placement types (required by Resolve(), kept empty).
 

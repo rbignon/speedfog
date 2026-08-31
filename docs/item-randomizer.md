@@ -70,6 +70,8 @@ Set in `options` dictionary, applied via `opt[key] = value`:
 | `editnames` | `true` | Rewrite boss healthbar names to match randomized enemy |
 | `nerfgargoyles` | from config | Disable Valiant Gargoyles poison tick |
 | `allcraft` | from config | Unlock all crafting recipes at start |
+| `dlcblessing` | `true` | GUI default ("Place Shadow Realm Blessings in DLC only"), pinned because v0.12 keys it on a `Switch:` in `annotations.txt` and unset booleans are false headless. Inert with the shipped presets: their explicit empty `DlcOnlyItems` section overrides the default DLC-only entries, and blessing placement is governed by the presets' `ShadowRealmBlessings` section, `Mode: Anywhere` since 2026-08-31 so the (SpEffect-neutralized, see `ScaduBlessingNeutralizer`) blessings scatter into generic slots instead of boss drops |
+| `spellshops` | `true` | Sorcery/incantation shops keep selling random spells (GUI default; same v0.12 `Switch:` headless flip, and live for us since neither preset overrides the shop sections) |
 
 ## Enemy Preset Building
 

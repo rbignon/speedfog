@@ -94,6 +94,19 @@ def generate_item_config(
             "nerfgargoyles": config.item_randomizer.nerf_gargoyles,
             "nerfmalenia": config.item_randomizer.nerf_malenia,
             "allcraft": config.item_randomizer.allcraft,
+            # v0.12 keys two annotation-default behaviors on named options
+            # (Switch: in diste/Base/annotations.txt); both are checked by
+            # default in the GUI but unset booleans are false headless. Pin
+            # the GUI defaults. spellshops is live (neither preset overrides
+            # the SorceryShop/MiracleShop sections): spell shops keep selling
+            # random spells. dlcblessing is inert with the shipped presets
+            # (their explicit empty DlcOnlyItems section overrides the
+            # default DLC-only blessing entries; blessing placement is
+            # governed by the presets' ShadowRealmBlessings section instead)
+            # but pinned anyway so a future preset without that override
+            # gets the GUI default, not the headless-false flip.
+            "dlcblessing": True,
+            "spellshops": True,
         },
         "enemy_options": {
             "randomize_bosses": config.enemy.randomize_bosses,
