@@ -65,4 +65,73 @@ public static class UntouchableBossInjector
         Console.WriteLine(
             $"Untouchable boss: NpcParam {SpeedFogIds.UntouchableBossNpcRow} (clone of {UNTOUCHABLE_VANILLA_NPC}, hp {BOSS_HP}, runes {BOSS_RUNES}) + SpEffect {SpeedFogIds.UntouchableBossSpEffectRow} (cut {DAMAGE_CUT})");
     }
+
+    /// <summary>MSB phase (post-Write): repoint every placed untouchable
+    /// (arena entity ids whose assignment value is the source entity) to
+    /// the boss NpcParam clone. ThinkParamID stays vanilla 52800000; AI
+    /// tuning is a documented follow-up, not done here.</summary>
+    public static void Inject(
+        string modDir, Dictionary<string, string> enemyAssignments)
+    {
+        var source = SpeedFogIds.UntouchableSourceEntity.ToString();
+        var arenaIds = enemyAssignments
+            .Where(kv => kv.Value == source)
+            .Select(kv => uint.Parse(kv.Key))
+            .ToHashSet();
+        if (arenaIds.Count == 0)
+            return;
+
+        Console.WriteLine(
+            $"Untouchable boss: repointing {arenaIds.Count} placed boss slot(s)");
+        var msbDir = Path.Combine(modDir, "map", "mapstudio");
+        int total = 0;
+        var found = new HashSet<uint>();
+        var consoleLock = new object();
+        Parallel.ForEach(Directory.GetFiles(msbDir, "*.msb.dcx"), msbPath =>
+        {
+            var msb = MSBE.Read(msbPath);
+            var lines = new List<string>();
+            int repointed = ApplyToMsb(msb, arenaIds, lines.Add);
+            if (repointed == 0)
+                return;
+            msb.Write(msbPath);
+            lock (consoleLock)
+            {
+                total += repointed;
+                foreach (var e in msb.Parts.Enemies.Where(
+                    e => e.NPCParamID == SpeedFogIds.UntouchableBossNpcRow))
+                {
+                    found.Add(e.EntityID);
+                }
+                foreach (var line in lines)
+                    Console.WriteLine(line);
+            }
+        });
+        Console.WriteLine($"  Repointed {total} untouchable boss part(s)");
+        foreach (var missing in arenaIds.Except(found).OrderBy(id => id))
+        {
+            // Phase-expanded slots may have no MSB part of their own.
+            Console.WriteLine(
+                $"  Warning: assignment target {missing} not found in any map (phase slot?)");
+        }
+    }
+
+    internal static int ApplyToMsb(MSBE msb, HashSet<uint> arenaIds, Action<string> log)
+    {
+        int repointed = 0;
+        foreach (var enemy in msb.Parts.Enemies)
+        {
+            if (!arenaIds.Contains(enemy.EntityID))
+                continue;
+            if (enemy.ModelName != "c5280")
+            {
+                log($"  Warning: arena entity {enemy.EntityID} is {enemy.ModelName}, not c5280; leaving it alone");
+                continue;
+            }
+            enemy.NPCParamID = SpeedFogIds.UntouchableBossNpcRow;
+            log($"  {enemy.Name} (entity {enemy.EntityID}): NPCParamID -> {SpeedFogIds.UntouchableBossNpcRow}");
+            repointed++;
+        }
+        return repointed;
+    }
 }

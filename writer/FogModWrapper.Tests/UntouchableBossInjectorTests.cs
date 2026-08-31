@@ -50,4 +50,57 @@ public class UntouchableBossInjectorTests
             new Dictionary<string, string> { ["30001800"] = "11000295" }));
         Assert.False(UntouchableBossInjector.IsBossPlaced(new Dictionary<string, string>()));
     }
+
+    [Fact]
+    public void ApplyToMsb_RepointsPlacedBossAndLeavesOthersAlone()
+    {
+        var msb = new MSBE();
+        // The randomizer-placed boss: arena entity id, source model + npc.
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c5280_9000", ModelName = "c5280",
+            EntityID = 30001800, NPCParamID = 52800086, ThinkParamID = 52800000,
+        });
+        // A halloween greeter (same model/npc, EntityID 0): must stay vanilla.
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c5280_9001", ModelName = "c5280",
+            EntityID = 0, NPCParamID = 52800086, ThinkParamID = 755890000,
+        });
+        // An unrelated boss in the same map: must stay untouched.
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c3500_9000", ModelName = "c3500",
+            EntityID = 30001850, NPCParamID = 35000030, ThinkParamID = 35000000,
+        });
+
+        int repointed = UntouchableBossInjector.ApplyToMsb(
+            msb, new HashSet<uint> { 30001800 }, _ => { });
+
+        Assert.Equal(1, repointed);
+        var boss = msb.Parts.Enemies.Single(e => e.EntityID == 30001800);
+        Assert.Equal(SpeedFogIds.UntouchableBossNpcRow, boss.NPCParamID);
+        Assert.Equal(52800000, boss.ThinkParamID); // AI stays vanilla in this plan
+        Assert.Equal(52800086, msb.Parts.Enemies.Single(e => e.Name == "c5280_9001").NPCParamID);
+        Assert.Equal(35000030, msb.Parts.Enemies.Single(e => e.ModelName == "c3500").NPCParamID);
+    }
+
+    [Fact]
+    public void ApplyToMsb_WarnsAndSkipsWrongModelAtArenaId()
+    {
+        var msb = new MSBE();
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c3500_9000", ModelName = "c3500",
+            EntityID = 30001800, NPCParamID = 35000030, ThinkParamID = 35000000,
+        });
+        var warnings = new List<string>();
+
+        int repointed = UntouchableBossInjector.ApplyToMsb(
+            msb, new HashSet<uint> { 30001800 }, warnings.Add);
+
+        Assert.Equal(0, repointed);
+        Assert.Equal(35000030, msb.Parts.Enemies[0].NPCParamID);
+        Assert.Contains(warnings, w => w.Contains("30001800"));
+    }
 }
