@@ -109,6 +109,63 @@ public class GateDecorInjectorTests
     }
 
     [Fact]
+    public void ApplyToMsb_DistinctEntriesWithEqualParamsGetDifferentOffsets()
+    {
+        // Two catalogue entries at the same gate with identical count and
+        // radius bands must not land on coincident positions: each entry
+        // needs its own PRNG sequence, not a shared one seeded off the raw
+        // gate EntityID.
+        var msb = MakeMsbWithGateAndVanillaAsset();
+        var gates = new List<GateDecorInjector.GateSpec> { new("AEG099_002_9000", IsASide: false) };
+        var catalog = new DecorCatalog(new List<DecorEntry>
+        {
+            new("AEG099_090", 2, 2.0f, 4.0f, 0f, 100, 0),
+            new("AEG099_091", 2, 2.0f, 4.0f, 0f, 100, 0),
+        });
+
+        GateDecorInjector.ApplyToMsb(msb, gates, catalog, entityIdBase: 755910000, log: _ => { });
+
+        var gate = msb.Parts.Assets.Single(a => a.Name == "AEG099_002_9000");
+        var entry1Offsets = msb.Parts.Assets
+            .Where(a => a.ModelName == "AEG099_090")
+            .Select(a => a.Position - gate.Position)
+            .OrderBy(v => v.X).ToList();
+        var entry2Offsets = msb.Parts.Assets
+            .Where(a => a.ModelName == "AEG099_091")
+            .Select(a => a.Position - gate.Position)
+            .OrderBy(v => v.X).ToList();
+
+        Assert.NotEqual(entry1Offsets, entry2Offsets);
+    }
+
+    [Fact]
+    public void ApplyToMsb_FirstEntryOffsetsDifferFromRawEntityIdSeed()
+    {
+        // The decor sequence must not coincide with what AmbientSpawnInjector
+        // would draw for a greeter at the same gate/arc center, which seeds
+        // GenerateArcOffsets directly off the raw gate EntityID.
+        var msb = MakeMsbWithGateAndVanillaAsset();
+        var gates = new List<GateDecorInjector.GateSpec> { new("AEG099_002_9000", IsASide: false) };
+        var entry = new DecorEntry("AEG099_090", 2, 2.0f, 4.0f, 0f, 100, 0);
+        var catalog = new DecorCatalog(new List<DecorEntry> { entry });
+
+        var gateAsset = msb.Parts.Assets.Single(a => a.Name == "AEG099_002_9000");
+        var rawSeedOffsets = GateGeometry.GenerateArcOffsets(
+            gateAsset.EntityID, gateAsset.Rotation.Y, 0f,
+            entry.Count, entry.MinRadius, entry.MaxRadius, entry.YOffset)
+            .OrderBy(v => v.X).ToList();
+
+        GateDecorInjector.ApplyToMsb(msb, gates, catalog, entityIdBase: 755910000, log: _ => { });
+
+        var decorOffsets = msb.Parts.Assets
+            .Where(a => a.ModelName == "AEG099_090")
+            .Select(a => a.Position - gateAsset.Position)
+            .OrderBy(v => v.X).ToList();
+
+        Assert.NotEqual(rawSeedOffsets, decorOffsets);
+    }
+
+    [Fact]
     public void ApplyToMsb_MissingGateAssetIsSkippedNotThrown()
     {
         var msb = new MSBE();

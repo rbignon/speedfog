@@ -23,6 +23,13 @@ namespace FogModWrapper;
 /// 2. EMEVD phase: catalogue entries with SfxId > 0 get one unconditional
 ///    CreateAssetfollowingSFX event per map (no flag wait, since
 ///    decorations are always present, unlike death markers).
+///
+/// Each catalogue entry at a gate seeds GateGeometry.GenerateArcOffsets off
+/// the gate EntityID mixed with a decor-specific tag and the entry's index
+/// (see ApplyToMsb), not off the raw EntityID: seeding off the raw EntityID
+/// would make two entries with equal count/radius bands draw identical
+/// positions, and would coincide with AmbientSpawnInjector's greeter
+/// sequence at the same gate/arc center.
 /// </summary>
 public static class GateDecorInjector
 {
@@ -34,6 +41,11 @@ public static class GateDecorInjector
     // entity range (death markers, this injector's own decorations), sit at
     // or above it, so a single-sided floor excludes all of them.
     private const uint FOGMOD_ENTITY_MIN = 755890000;
+
+    // Arbitrary fixed tag XORed into the gate EntityID to seed each catalogue
+    // entry's arc PRNG (see ApplyToMsb). Any stable constant works; this one
+    // just avoids the all-zero/identity case. Must never be 0.
+    private const uint DecorSeedTag = 0x44454355u;
 
     internal readonly record struct GateSpec(string PartName, bool IsASide);
 
@@ -213,13 +225,24 @@ public static class GateDecorInjector
             // docs/death-markers.md "Position Offsets (ASide/BSide)".
             float arcCenterDeg = gate.IsASide ? 180f : 0f;
 
-            foreach (var entry in catalog.Entries)
+            for (int entryIndex = 0; entryIndex < catalog.Entries.Count; entryIndex++)
             {
+                var entry = catalog.Entries[entryIndex];
                 if (modelsEnsured.Add(entry.Model))
                     MsbHelper.EnsureAssetModel(msb, entry.Model);
 
+                // Mix the gate's own EntityID with a decor-specific tag and
+                // the entry index so every catalogue entry at this gate
+                // draws its own angle/radius sequence: seeding straight off
+                // gateAsset.EntityID (as AmbientSpawnInjector's greeters do
+                // for the same arc center) would make two entries with equal
+                // count/radius bands land on byte-identical positions, and
+                // would make this sequence coincide with the greeter's.
+                uint seed = gateAsset.EntityID ^ DecorSeedTag;
+                seed += (uint)entryIndex * 7919u;
+
                 var offsets = GateGeometry.GenerateArcOffsets(
-                    gateAsset.EntityID, gateAsset.Rotation.Y, arcCenterDeg,
+                    seed, gateAsset.Rotation.Y, arcCenterDeg,
                     entry.Count, entry.MinRadius, entry.MaxRadius, entry.YOffset);
 
                 for (int i = 0; i < entry.Count; i++)
