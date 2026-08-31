@@ -353,3 +353,22 @@ These entries are hand-added, not sourced from BossArenaRandomizer's data.
 Re-running `tools/port_boss_arena_tags.py` overwrites
 `data/boss_arena_tags.json` without them; re-add them after a re-port, or
 the `TestPromotedSkeletons` tests will fail.
+
+A fourth entity follows the same pattern with a `boss.size` lever in
+addition to `exclude_from_pool`:
+
+| Entity ID | Name | `size` | `dlc` |
+|-----------|------|--------|-------|
+| `2049420200` | Aging Untouchable | `2` | `true` |
+
+`boss.size: 2` excludes only size-1 arenas from the compatibility match (the
+tag model has no dedicated "open arena" flag). Reachable the same way:
+
+    [enemy]
+    randomize_bosses = "all"
+    bosses = ["Aging Untouchable"]
+
+Placing it also activates `UntouchableBossInjector` in FogModWrapper (a
+regulation-side `NpcParam`/`SpEffectParam` clone plus a post-Write MSB
+repoint of the placed part); see `docs/untouchable-boss.md` for the
+vulnerability mechanism and the injector's two phases.

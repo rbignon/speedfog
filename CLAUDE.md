@@ -179,6 +179,7 @@ speedfog/
 │   ├── starting-items.md    # Starting items and auxiliary flags
 │   ├── esd-editing.md       # ESD talk script editing conventions
 │   ├── care-package.md      # Randomized starting build system
+│   ├── untouchable-boss.md  # Aging Untouchable minor boss (vulnerability mechanism, two-phase injector)
 │   ├── item-randomizer.md   # ItemRandomizerWrapper integration
 │   ├── event-flags.md       # Event flag allocation and EMEVD reference
 │   ├── alternate-warp-patching.md # AlternateFlag warp patching (300/330)
@@ -221,6 +222,7 @@ speedfog/
 | `docs/item-randomizer.md` | ItemRandomizerWrapper (preset building, boss placement capture) |
 | `docs/boss-arena-constraints.md` | Arena-boss compatibility constraints and matching |
 | `docs/care-package.md` | Randomized starting build system |
+| `docs/untouchable-boss.md` | Aging Untouchable minor boss: vulnerability mechanism (nerflantern-style wall lift + partial damage cut), two-phase injector, in-game tuning session owed |
 | `docs/vanilla-warp-removal.md` | FogMod vanilla warp removal workaround |
 | `docs/stake-removal.md` | Vanilla stake removal (RetryPoint softlock prevention) |
 | `docs/startup-flag-injection.md` | StartupFlagInjector mechanism + methodology to find new gate flags |
@@ -323,6 +325,7 @@ speedfog/
 | `AmbientSpawnInjector` | Places passive greeter enemies + optional ambush packs at mini_dungeon/legacy_dungeon entrance gates (opt-in via `[plugin.halloween]`, see `docs/plugins/halloween-ambient.md`) |
 | `GateDecorInjector` | Places catalogue-driven ambient decorations at the same entrance gates from `data/plugins/halloween_decorations.toml` (ships empty) |
 | `HalloweenDecorLoader` | Loads and validates `data/plugins/halloween_decorations.toml` (Core) |
+| `UntouchableBossInjector` | Aging Untouchable minor boss: NpcParam clone + partial damage-cut SpEffect, repoints enemy-randomizer placements, see `docs/untouchable-boss.md` |
 
 **ItemRandomizerWrapper** (uses RandomizerCommon.dll directly):
 | Class | Purpose |
@@ -669,11 +672,11 @@ wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.d
 
 ## Data Formats
 
-### graph.json v4.4 (Python → C# + visualization + racing)
+### graph.json v4.5 (Python → C# + visualization + racing)
 
 ```json
 {
-  "version": "4.4",
+  "version": "4.5",
   "seed": 212559448,
   "options": {"scale": true, "shuffle": true},
   "plugins": {"summer": {"enabled": true}},
@@ -685,7 +688,8 @@ wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.d
   "area_tiers": {"zone1": 1, "zone2": 5},
   "event_map": {"1050294000": "cluster_id"},
   "finish_event": 1050294002,
-  "items_spawned_flag": 1050290000
+  "items_spawned_flag": 1050290000,
+  "enemy_assignments": {"30001800": "2049420200"}
 }
 ```
 
@@ -695,6 +699,7 @@ wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.d
 - `finish_event`: flag_id set on final boss defeat
 - `items_spawned_flag`: saved flag (1050290000) used as one-shot guard for item delivery
 - `plugins`: verbatim copy of `[plugin]` config table; C# reads via `GraphData.IsPluginEnabled(name)` (added v4.4)
+- `enemy_assignments`: optional `{arena_entity_id: source_entity_id}` map (both decimal strings), the same enemy-randomizer placement mapping already computed in `speedfog/item_randomizer.py` and shipped to ItemRandomizerWrapper as `item_config.json`, now also patched into graph.json (`patch_graph_enemy_assignments`) so FogModWrapper can locate placed bosses; absent or empty when no assignments were made (added v4.5, `GraphData.EnemyAssignments`, consumed by `UntouchableBossInjector`, see `docs/untouchable-boss.md`)
 - `flag_id` per connection: event flag set when fog gate is traversed
 - Event flags allocated sequentially from base 1050294000 (range 1050294000-1050294999); persistent flags (e.g. `items_spawned_flag`) come from a separate base 1050290000
 - Connections use FogMod's edge FullName format: `{map}_{gate_name}` (e.g., `m10_01_00_00_AEG099_001_9000`)
