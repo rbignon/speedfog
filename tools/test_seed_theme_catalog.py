@@ -1,4 +1,4 @@
-"""Tests for the summer catalogue seeding tool.
+"""Tests for the theme catalogue seeding tool.
 
 The join key between a major-boss cluster and its NpcName FMG id is the
 cluster's `defeat_flag` (clusters.json) matched against `DefeatFlag` in the
@@ -7,8 +7,8 @@ plain zone-name strings, not objects, and major-boss clusters carry
 `boss_name` directly.
 """
 
-from seed_summer_catalog import (
-    build_summer_skeleton,
+from seed_theme_catalog import (
+    build_theme_skeleton,
     parse_defeat_flag_npc_names,
     roster_boss_entries,
 )
@@ -95,7 +95,7 @@ def test_build_skeleton_joins_on_defeat_flag():
     ]
     df_to_npc = {14000800: 902030001, 10000850: 902130000}
 
-    out = build_summer_skeleton(majors, df_to_npc)
+    out = build_theme_skeleton(majors, df_to_npc)
 
     assert {"npc_name_id": 902030001, "name": "Rennala"} in out
     assert {"npc_name_id": 902130000, "name": "Margit"} in out
@@ -108,5 +108,5 @@ def test_build_skeleton_dedupes_by_npc_name_id():
         {"defeat_flag": 2, "name": "B"},
     ]
     df_to_npc = {1: 500, 2: 500}  # same NpcName id
-    out = build_summer_skeleton(majors, df_to_npc)
+    out = build_theme_skeleton(majors, df_to_npc)
     assert out == [{"npc_name_id": 500, "name": "A"}]

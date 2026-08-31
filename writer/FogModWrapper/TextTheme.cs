@@ -8,8 +8,9 @@ namespace FogModWrapper;
 /// A theme text plugin (summer, halloween, ...): reskins boss healthbar names
 /// (NpcName) and recurring UI banners to a theme by editing FMG entries,
 /// mirroring RunCompleteInjector. Runs only when [plugin.&lt;theme&gt;]
-/// enabled = true. Bosses or UI ids absent from the game's FMGs are skipped
-/// (tolerant).
+/// enabled = true. Boss ids absent from the game's FMGs are skipped
+/// (tolerant); UI ids absent are added as new FMG entries instead. A
+/// missing FMG file or bnd is skipped either way.
 ///
 /// Only the English (engus) and French (frafr) message archives are edited;
 /// the catalogue carries content for those two languages only, and touching

@@ -194,6 +194,7 @@ speedfog/
 │   └── plugins/             # Plugin documentation
 │       ├── README.md        # Plugin config convention
 │       ├── summer-theme.md  # Summer theme specifics
+│       ├── halloween-theme.md  # Halloween theme specifics
 │       └── weather.md       # Weather plugin: force weather + pin clock hour
 ├── SoulsFormats/            # SoulsFormatsNEXT git submodule (used by StaticModBuilder)
 └── output/                  # Generated mod (gitignored, self-contained)
@@ -234,6 +235,7 @@ speedfog/
 | `docs/title-screen.md` | Title screen artwork replacement (BC7 splice at setup) |
 | `docs/plugins/README.md` | Plugin config convention (Python passthrough + C# IsPluginEnabled) |
 | `docs/plugins/summer-theme.md` | Summer theme: boss epithets + UI banners, catalogue format, discovery |
+| `docs/plugins/halloween-theme.md` | Halloween theme: kitsch text reskin, item renames, loading tips |
 | `docs/plugins/weather.md` | Weather plugin: force weather + pin clock hour, accepted names, event mechanism |
 | `reference/fogrando-src/GameDataWriterE.cs` | Main FogRando writer (5639 lines) |
 | `reference/fogrando-src/EldenScaling.cs` | Enemy scaling logic |

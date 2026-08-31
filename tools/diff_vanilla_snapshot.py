@@ -24,7 +24,7 @@ well, which turns the two-way diff into a three-way one:
   patch change.
 
 A few injectors read from the installed game rather than from the snapshot
-(RunCompleteInjector: menu_dlc02 of every language; SummerTheme: item and
+(RunCompleteInjector: menu_dlc02 of every language; TextTheme: item and
 item_dlc02). For those the game-versus-reference column is the one that
 matters. Message bundles the snapshot does not carry at all (item_dlc01,
 menu_dlc01, ngword, the araae language) are listed separately, compared to

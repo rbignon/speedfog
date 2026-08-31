@@ -79,7 +79,7 @@ Verified 2026-08-26 in `reference/fogrando-src/` and in decompiled
    (`writer/lib/itemrando/`).
 5. **Our injectors read a few files from the installed game** with the old
    SoulsFormats: `ChapelGraceInjector` and `DeathMarkerInjector` (vanilla
-   EMEVD), `RunCompleteInjector` (msg, all languages) and `SummerTheme` (msg,
+   EMEVD), `RunCompleteInjector` (msg, all languages) and `TextTheme` (msg,
    `engus` and `frafr`), `GraceTalkEsd` (talkesdbnd fallback),
    `TorrentArenaPatcher` and `SpiritspringRemover` (game MSB via
    `MsbHelper.FindMsbPath` when the mod dir has none for that map), and
@@ -361,7 +361,7 @@ A frozen copy and the Steam install share
   both game copies agree but the snapshot differs (the frozen copy is the
   ground truth, the snapshot is not). This also covers the injectors that
   read from the installed game instead of the snapshot (`RunCompleteInjector`
-  reads `menu_dlc02` of every language, `SummerTheme` reads `item` and
+  reads `menu_dlc02` of every language, `TextTheme` reads `item` and
   `item_dlc02`). Bundles the snapshot does not carry (`item_dlc01`,
   `menu_dlc01`, `ngword`, `araae`) are listed separately, compared to the
   frozen copy only. Needs loose files (UXM, Nuxe or similar): the FogRando
@@ -407,7 +407,7 @@ frozen 1.16.2 copy and the FogRando snapshot.
   real patch change (game differs from the frozen 1.16.2 copy). The base
   `item`/`menu` bundles were in addition already stale in the snapshot
   (FogMod only reads and writes the `_dlc02` ones), which is harmless for
-  FogMod but matters for `SummerTheme`: it reads `item.msgbnd` from the
+  FogMod but matters for `TextTheme`: it reads `item.msgbnd` from the
   installed game, so a host generating against a patched install feeds it
   1.17 text. Outside the snapshot, `item_dlc01`/`menu_dlc01` changed in
   every language, and `araae` (absent from the snapshot) changed too.
@@ -533,7 +533,7 @@ one summon NPC, all additive. No `fog.txt` entity moved, so refreshing any
 map is a content decision, not a compatibility one. `config.toml`
 `game_dir` must match the snapshot version: `RunCompleteInjector` ships the
 game directory's `menu_dlc02` for the 13 non-English languages next to the
-snapshot's `engus` one, `SummerTheme` reads the game directory's item text,
+snapshot's `engus` one, `TextTheme` reads the game directory's item text,
 and `PlayRegionPatcher` copies `PlayRegionParam` rows from the game
 directory's regulation (identical in 1.16 and 1.17, so harmless this time).
 
