@@ -127,7 +127,7 @@ speedfog/
 │   │   ├── VanillaWarpRemover.cs  # Remove vanilla assets (warps, blocking gates) and enemy parts listed in game_tweaks.toml
 │   │   ├── StartupFlagInjector.cs  # Set event flags at startup (open gates, etc.)
 │   │   ├── EventDisabler.cs  # Neutralize vanilla EMEVD events listed in game_tweaks.toml (1.17 NPC invasions)
-│   │   ├── VanillaMapPinner.cs  # Ship snapshot MSB/EMEVD for maps FogMod does not write (game_tweaks.toml pin_vanilla_maps)
+│   │   ├── VanillaMapPinner.cs  # Ship pinned maps in the seed from FogMod's copy, the Item Randomizer's merge-dir copy, or the snapshot, so later injectors can patch them (game_tweaks.toml pin_vanilla_maps)
 │   │   ├── StakeRemover.cs  # Remove vanilla stakes outside DAG
 │   │   ├── SpiritspringRemover.cs  # Remove spiritspring jump regions bypassing map-splits chokepoints
 │   │   ├── HeavyDoorMessagePatcher.cs  # Suppress "heavy door" popup in common_func
@@ -297,7 +297,7 @@ speedfog/
 | `VanillaWarpRemover` | Removes vanilla warp MSB assets that conflict with fog gates, and enemy parts listed in `[[remove_entities]]` (1.17 invader) |
 | `StartupFlagInjector` | Sets event flags at startup in any EMEVD (open gates, etc.) |
 | `EventDisabler` | Replaces the body of vanilla EMEVD events listed in `[[disable_events]]` of `data/game_tweaks.toml` by an End (Tarnished Pack NPC invasions), skipping events absent from the shipped map data |
-| `VanillaMapPinner` | Copies the snapshot MSB/EMEVD of `[[pin_vanilla_maps]]` maps into the seed when FogMod did not write them, so the player's install does not fill the gap (Radahn arena tile, 1.17 invasion) |
+| `VanillaMapPinner` | Ships pinned maps in the seed from FogMod's copy, the Item Randomizer's merge-dir copy, or the snapshot, so later injectors can patch them and the player's install does not fill the gap (Radahn arena tile, 1.17 invasion) |
 | `StakeRemover` | Removes vanilla stakes that respawn outside the DAG, targets come from `data/game_tweaks.toml` |
 | `SpiritspringRemover` | Removes spiritspring jump regions (MountJump/MountJumpFall) that bypass map-splits chokepoints, targets come from `data/game_tweaks.toml` |
 | `HeavyDoorMessagePatcher` | Suppresses "heavy door" popup (text 4200) in common_func |
@@ -408,6 +408,11 @@ python tools/bootstrap.py \
   --game-dir /path/to/ELDEN_RING/Game \
   --fogrando /path/to/FogRando.zip \
   --itemrando /path/to/ItemRandomizer.zip
+
+# Item Randomizer v0.12+ ships only a two-file diste/Vanilla/ stub (manifest
+# + regulation.bin); ItemRandomizerWrapper self-extracts the rest from
+# --game-dir's BHD/BDT archives on its first run (needs the archives
+# present), then reuses the cache on later runs. See docs/item-randomizer.md.
 
 # Or extract only FogRando (legacy mode)
 python tools/bootstrap.py \

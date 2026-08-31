@@ -128,8 +128,8 @@ Liurnia, Altus, Caelid and Leyndell. S3 has no signal in the notes.
       install. The frozen copy stays as the reference for diffs.
 - [ ] Announce to players (the README section exists, the announcement
       does not): block automatic updates, or copy `Game/` and configure the
-      launcher; the save file is shared between copies until the
-      compatibility test below says otherwise.
+      launcher; the save file is shared between copies (see "Save handling"
+      below).
 
 ### Phase 1: patch-day triage
 
@@ -155,10 +155,6 @@ Run in order; each step decides the next.
       (fine for racing), crashes at boot (S1 hard path), fails before the
       title screen (S4). (Result 2026-08-27: plays, except Torrent, see
       "Torrent bug" below.)
-- [ ] Save compatibility: copy the current save aside, start the patched
-      game once with it (vanilla, no mods), then load that save on the
-      frozen copy. Loads: the shared-save concern is closed for this patch.
-      Does not load: see "Save handling" below.
 - [ ] speedfog-racing: re-validate the AOB patterns, IGT fix and overlay on
       the patched executable (independent of the steps above).
 
@@ -178,15 +174,20 @@ update.
       (for 1.17 it reports none: no param layout changed, the 1.16 Defs apply
       to every param, so Paramdex is not on the critical path).
 - [x] Replace `Vanilla/regulation.bin` and `Vanilla/msg` with the 1.17
-      files, in both snapshots: `python tools/refresh_vanilla_snapshot.py
-      <patched game>` (2026-08-27, md5 `f27fb24bb28c9c6f7f0e784aba2baa9e`).
-      The Item Randomizer's `diste/Vanilla` must move too: with
-      `--merge-dir`, its `regulation.bin` takes precedence over FogMod's.
-      Keep MSB, EMEVD and ESD on 1.16 unless a reason below applies.
-      Trap: both snapshots are gitignored and `tools/bootstrap.py` re-copies
-      them wholesale from the zips, so any re-bootstrap (on the racing pool
-      host too) silently reverts them to 1.16. Re-run the refresh after every
-      bootstrap and check the `regulation.bin` md5 it prints.
+      files: `python tools/refresh_vanilla_snapshot.py <patched game>`
+      (2026-08-27, md5 `f27fb24bb28c9c6f7f0e784aba2baa9e`). The Item
+      Randomizer's `diste/Vanilla` moved by a different route since v0.12:
+      it self-extracts its own vanilla cache from `--game-dir` on the
+      wrapper's first run, so `refresh_vanilla_snapshot.py` only ever
+      touches FogMod's snapshot from here on (Task 2, 2026-08-31). MSB,
+      EMEVD and ESD moved to 1.17 too on 2026-08-31 with `--all` (147 files
+      replaced, 0 missing, `regulation.bin` md5 unchanged; Task 8): seeds
+      are 1.17-only from that point, superseding the per-map decisions
+      below. Trap: the snapshot is gitignored and `tools/bootstrap.py`
+      re-copies it wholesale from the FogRando zip, so any re-bootstrap (on
+      the racing pool host too) silently reverts it to the zip's pre-1.17
+      baseline. Re-run `refresh_vanilla_snapshot.py <game> --all` after
+      every bootstrap and check the `regulation.bin` md5 it prints.
 - [ ] Regenerate a known seed and diff it against the pre-patch output
       (exclude `regulation.bin` from byte diffs, it is never reproducible).
       Then play it on the patched executable.
@@ -194,7 +195,12 @@ update.
       adding its rows. The log prints the vanilla IDs in 101800-101999: if
       1.17 placed new purchasable weapons there, move `BASE_SHOP_ID` or
       skip occupied IDs before shipping.
-- [ ] Decide per map whether to refresh MSB/EMEVD from 1.17:
+- [x] Decide per map whether to refresh MSB/EMEVD from 1.17: superseded
+      2026-08-31 by refreshing everything instead of picking per map
+      (`--all`, Task 8); the sub-bullets below record the per-map analysis
+      that led there, and the invasions it raised are neutralized
+      regardless of map version (`[[disable_events]]`,
+      `[[pin_vanilla_maps]]`, see the decision log).
   - Torrent attire pickups (Stormveil, Liurnia, Altus) and new weapons in
     the world: harmless either way, absent from seeds if not refreshed.
   - Leyndell invasion: conditioned on the Ashen Capital state (flag 300).
@@ -228,21 +234,25 @@ update.
     snapshots, FogMod dupe-writes it from `_00`; `m60_52_39_00` is not
     overridden by the mod). The run re-copies `regulation.bin` and msg too,
     reported "up to date". The shop row (`ShopLineupParam` 101896) needs
-    only the regulation refresh. Not covered: the Torrent appearance menu
-    (grace ESD and `common.emevd` event 780 stay 1.16).
-    Two things a preview host must undo before generating a seed for
-    others: the flag entry lives in a tracked file, so check `git status`
-    before every commit and never commit it; and the refreshed files ship
-    the Leyndell invasion event 11002930 to pack owners regardless of the
-    flag (neutralized by `[[disable_events]]` since 2026-08-29), so put the
-    nine files back on 1.16. `refresh_vanilla_snapshot.py`
-    cannot do that (it always includes `regulation.bin`): either copy them
-    from a frozen 1.16 install into both snapshots by hand, or re-bootstrap
-    and re-run the regulation refresh without `--file`.
-- [ ] Grace menu ESD (`m00_00_00_00.talkesdbnd`): 1.17 adds a Torrent
-      attire entry. Keeping the 1.16 ESD hides it (acceptable). If refreshed,
-      re-validate `RebirthInjector` and `ShadowRealmBlessingRemover`
-      (ConsistentID allocation, matched menu entries, `docs/esd-editing.md`).
+    only the regulation refresh (this whole preview procedure predates the
+    2026-08-31 full refresh, when grace ESD and `common.emevd` moved to
+    1.17 too).
+    A preview host must still avoid committing the flag entry (check
+    `git status` before every commit). The "put the nine files back on
+    1.16" revert this used to require is moot: 1.16 support was dropped on
+    2026-08-31, seeds are 1.17-only, and the Leyndell invasion ships
+    neutralized by `[[disable_events]]` regardless of map version. The
+    frozen `Game.1.16.2` copy is no longer a pipeline input (deletion is
+    the operator's call).
+- [x] Grace menu ESD (`m00_00_00_00.talkesdbnd`): 1.17 adds a Torrent
+      attire entry. Refreshed to 1.17 on 2026-08-31 as part of the `--all`
+      snapshot refresh (Task 8).
+
+      2026-08-31: `RebirthInjector` and `ShadowRealmBlessingRemover`
+      re-validated against the renumbered ESD (46 -> 49 states, see "1.17
+      triage results"; ConsistentID allocation, matched menu entries,
+      `docs/esd-editing.md`) and ran clean on generated seed 570656617
+      (Task 9 evidence).
 - [x] Rebuild the static mod from the patched game. `StaticModBuilder`
       reads `chr/c0000.anibnd.dcx`, `menu/hi/01_common.tpf.dcx`,
       `01_common.sblytbnd.dcx` and `02_title.tpf.dcx` from `--game-dir`, and
@@ -257,7 +267,7 @@ update.
       `bootstrap.py --game-dir <patched game>` does the same, then needs the
       snapshot refresh). Every bootstrap must use the patched game from now
       on.
-- [ ] Bump the Item Randomizer to its 1.17 release when it ships. The Defs
+- [x] Bump the Item Randomizer to its 1.17 release when it ships. The Defs
       concern is moot for 1.17 (no layout change), but its output is not
       only params: with `--merge-dir` it also overrides about 510 MSB, 485
       EMEVD and 18 talk ESDs (Stormveil, Leyndell, Redmane, the five
@@ -279,6 +289,14 @@ update.
       all: the randomizer rewrites lots without the 6953 gate, so a player
       without the pack could receive one, and whether the executable lets
       a non-owner hold it is untested.
+
+      2026-08-31: done. Item Randomizer v0.12 final integrated (`EnemyPreset`
+      rename, `System.IO.Hashing`/`Tommy` runtime deps, `diste/Vanilla`
+      self-extraction replacing the old snapshot copy for that side),
+      eldendata refreshed with `--all` (147 files replaced, 0 missing,
+      `regulation.bin` md5 `f27fb24bb28c9c6f7f0e784aba2baa9e` unchanged;
+      Task 8). The racing pool host needs the same sequence: re-bootstrap
+      with the v0.12 zip, then `refresh_vanilla_snapshot.py <game> --all`.
 - [ ] When FogRando ships its 1.17: the data side is already handled by the
       refresh, the risk is the API of `FogMod.dll` (S5: `ConnectionInjector`,
       `MapSplitsInjector`, `OpenSplitInjector`, `HelperAreaResolver`). Check
@@ -349,15 +367,18 @@ A frozen copy and the Steam install share
   (`--all` lists every param, not only problems and differences);
   `diff-msb` / `diff-emevd` compare one map across two versions; `bnd-list`
   names the files an unpacker left in `_unknown/`.
-- `tools/refresh_vanilla_snapshot.py <game> [--dry-run] [--snapshot
-  fogmod|itemrando] [--file <snapshot-rel>]` (written 2026-08-27): copies
-  `regulation.bin` and every msg bundle each snapshot already carries from
-  an unpacked game directory into `eldendata/Vanilla` and `diste/Vanilla`,
-  idempotent, prints what it replaced and the resulting `regulation.bin`
-  md5. Maps are never refreshed unless named with `--file`, or all at once
-  with `--all` (every snapshot file with a known game location; for 1.17
-  that is the 147 changed MSB/EMEVD/ESD on top of regulation and msg). Must
-  be re-run after every `tools/bootstrap.py`.
+- `tools/refresh_vanilla_snapshot.py <game> [--dry-run] [--snapshot fogmod]
+  [--file <snapshot-rel>]` (written 2026-08-27): copies `regulation.bin` and
+  every msg bundle the snapshot already carries from an unpacked game
+  directory into `eldendata/Vanilla`, idempotent, prints what it replaced
+  and the resulting `regulation.bin` md5. Only touches FogMod's snapshot
+  since 2026-08-31 (Task 2): the Item Randomizer (v0.12+) self-extracts its
+  own `diste/Vanilla` from `--game-dir` instead. Maps are never refreshed
+  unless named with `--file`, or all at once with `--all` (every snapshot
+  file with a known game location; for 1.17 that is the 147 changed
+  MSB/EMEVD/ESD on top of regulation and msg, and is the standard
+  post-bootstrap invocation now that seeds are 1.17-only). Must be re-run
+  after every `tools/bootstrap.py`.
 - `game_inspect diff-param <old.bin> <new.bin> --defs <Defs> [--param X]
   [--rows-only]`: rows added/removed and cells changed per param; this is
   what located the Torrent rows. `dump-event <emevd> <id>` and
@@ -580,4 +601,15 @@ dotnet tool install ilspycmd --tool-path "$SCRATCH/tools" --version 11.0.0.9375
   it because the player's own 1.17 files ran. Fixed with
   `[[pin_vanilla_maps]]` (`VanillaMapPinner`). Kept from the first attempt:
   `EventDisabler` with the Leyndell entry 11002930, and Enemy-part support
-  in `VanillaWarpRemover`, both for the day the map data moves to 1.17.
+  in `VanillaWarpRemover`. 2026-08-31: the map data moved to 1.17
+  (`refresh_vanilla_snapshot.py --all`, Task 8); the pin now guarantees
+  `m60_52_39_00` ships in every seed (FogMod's own copy if it wrote one,
+  else the Item Randomizer's merge-dir copy, else the snapshot copy), and
+  `[[disable_events]]` neutralizes the invasion (entry 1052392910) on
+  whichever copy ships. The level-2 tile's summon signs (`m60_13_09_02`)
+  are a separate, cooperative NPC encounter and stay as before.
+- 2026-08-31: `opt["tarnished"]` exposed as `[item_randomizer] tarnished`,
+  default false (Task 5, documented in `docs/item-randomizer.md` and
+  `config.example.toml`). Racing ships it off: not seed-neutral (a
+  non-owner gets a startup error dialog when it is on), and the preset
+  weapon entries added 2026-08-29 stay dormant while it is off.
