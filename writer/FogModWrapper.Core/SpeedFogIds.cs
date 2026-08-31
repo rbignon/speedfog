@@ -110,4 +110,25 @@ public static class SpeedFogIds
     /// only by convention (params and entities are unrelated id spaces);
     /// no vanilla NpcThinkParam row comes anywhere near it.</summary>
     public const int PassiveGreeterThinkRow = 755890000;
+
+    /// <summary>NpcParam row for the Aging Untouchable minor boss: a clone
+    /// of vanilla 52800086 with boss-level HP/runes and the partial
+    /// damage-cut SpEffect in slot 19. Deliberately outside the 5280xxxx
+    /// band: the item randomizer's always-on nerflantern option patches
+    /// every 5280-band NpcParam row, and the boss's vulnerability must
+    /// stay under SpeedFog's control.</summary>
+    public const int UntouchableBossNpcRow = 755890000;
+
+    /// <summary>SpEffectParam row for the boss's permanent state: a clone
+    /// of vanilla 20011471 (stateInfo 121 lifts the parry wall, the same
+    /// mechanism nerflantern uses) with the eight damage-type cut rates
+    /// lowered to a partial cut. Param row namespaces are per-PARAM;
+    /// 755890000 collides with nothing here (phantom skins use
+    /// 1450700-1450799, FogMod scaling 7800000-7804487).</summary>
+    public const int UntouchableBossSpEffectRow = 755890000;
+
+    /// <summary>Vanilla MSB entity id of the allowlist source part
+    /// (c5280_9000 in m61_49_42); enemy_assignments values equal to it
+    /// mark enemy-randomizer-placed untouchable bosses.</summary>
+    public const uint UntouchableSourceEntity = 2049420200;
 }

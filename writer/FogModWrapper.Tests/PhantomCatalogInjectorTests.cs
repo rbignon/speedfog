@@ -1,37 +1,18 @@
 using FogModWrapper;
 using FogModWrapper.Models;
-using SoulsFormats;
 using Xunit;
+using static FogModWrapper.Tests.ParamTestHelper;
 
 namespace FogModWrapper.Tests;
 
 public class PhantomCatalogInjectorTests
 {
-    private static PARAM BuildParamFromDef(string defXmlPath, params int[] templateRowIds)
-    {
-        var def = PARAMDEF.XmlDeserialize(defXmlPath);
-        // Initialize Rows before calling ApplyParamdef so the foreach in
-        // ApplyParamdef does not throw on a null collection. RowReader is
-        // null for in-memory PARAMs, but that is fine because no rows exist
-        // yet at ApplyParamdef time.
-        var param = new PARAM { ParamType = def.ParamType, Rows = new List<PARAM.Row>() };
-        param.ApplyParamdef(def);
-        foreach (var id in templateRowIds)
-        {
-            param.Rows.Add(new PARAM.Row(id, "", def));
-        }
-        return param;
-    }
-
-    private static string DefsDir() =>
-        Path.Combine(AppContext.BaseDirectory, "eldendata", "Defs");
-
     [Fact]
     public void Apply_CreatesThreeRowsPerSkin_WithSharedId()
     {
-        var phantomParam = BuildParamFromDef(Path.Combine(DefsDir(), "PhantomParam.xml"), 260);
-        var vfxParam = BuildParamFromDef(Path.Combine(DefsDir(), "SpEffectVfx.xml"), 51508);
-        var spParam = BuildParamFromDef(Path.Combine(DefsDir(), "SpEffect.xml"), 13177);
+        var phantomParam = BuildParamFromDef("PhantomParam", 260);
+        var vfxParam = BuildParamFromDef("SpEffectVfx", 51508);
+        var spParam = BuildParamFromDef("SpEffect", 13177);
 
         var skins = new List<PhantomSkin>
         {
@@ -57,9 +38,9 @@ public class PhantomCatalogInjectorTests
     [Fact]
     public void Apply_PhantomParamCarriesEdgeColorAndAura()
     {
-        var phantomParam = BuildParamFromDef(Path.Combine(DefsDir(), "PhantomParam.xml"), 260);
-        var vfxParam = BuildParamFromDef(Path.Combine(DefsDir(), "SpEffectVfx.xml"), 51508);
-        var spParam = BuildParamFromDef(Path.Combine(DefsDir(), "SpEffect.xml"), 13177);
+        var phantomParam = BuildParamFromDef("PhantomParam", 260);
+        var vfxParam = BuildParamFromDef("SpEffectVfx", 51508);
+        var spParam = BuildParamFromDef("SpEffect", 13177);
 
         var skin = new PhantomSkin(1450700, "gold", "Gold", 255, 215, 0, 0.5f, 0.0f, 1.0f);
         PhantomCatalogInjector.Apply(phantomParam, vfxParam, spParam, new[] { skin });
@@ -77,9 +58,9 @@ public class PhantomCatalogInjectorTests
     [Fact]
     public void Apply_VfxRowPointsAtPhantomParam()
     {
-        var phantomParam = BuildParamFromDef(Path.Combine(DefsDir(), "PhantomParam.xml"), 260);
-        var vfxParam = BuildParamFromDef(Path.Combine(DefsDir(), "SpEffectVfx.xml"), 51508);
-        var spParam = BuildParamFromDef(Path.Combine(DefsDir(), "SpEffect.xml"), 13177);
+        var phantomParam = BuildParamFromDef("PhantomParam", 260);
+        var vfxParam = BuildParamFromDef("SpEffectVfx", 51508);
+        var spParam = BuildParamFromDef("SpEffect", 13177);
 
         var skin = new PhantomSkin(1450700, "gold", "Gold", 255, 215, 0, 0.5f, 0.0f, 1.0f);
         PhantomCatalogInjector.Apply(phantomParam, vfxParam, spParam, new[] { skin });
@@ -91,9 +72,9 @@ public class PhantomCatalogInjectorTests
     [Fact]
     public void Apply_SpEffectRowPointsAtVfx()
     {
-        var phantomParam = BuildParamFromDef(Path.Combine(DefsDir(), "PhantomParam.xml"), 260);
-        var vfxParam = BuildParamFromDef(Path.Combine(DefsDir(), "SpEffectVfx.xml"), 51508);
-        var spParam = BuildParamFromDef(Path.Combine(DefsDir(), "SpEffect.xml"), 13177);
+        var phantomParam = BuildParamFromDef("PhantomParam", 260);
+        var vfxParam = BuildParamFromDef("SpEffectVfx", 51508);
+        var spParam = BuildParamFromDef("SpEffect", 13177);
 
         var skin = new PhantomSkin(1450700, "gold", "Gold", 255, 215, 0, 0.5f, 0.0f, 1.0f);
         PhantomCatalogInjector.Apply(phantomParam, vfxParam, spParam, new[] { skin });
@@ -105,9 +86,9 @@ public class PhantomCatalogInjectorTests
     [Fact]
     public void Apply_EmptyCatalog_NoOp()
     {
-        var phantomParam = BuildParamFromDef(Path.Combine(DefsDir(), "PhantomParam.xml"), 260);
-        var vfxParam = BuildParamFromDef(Path.Combine(DefsDir(), "SpEffectVfx.xml"), 51508);
-        var spParam = BuildParamFromDef(Path.Combine(DefsDir(), "SpEffect.xml"), 13177);
+        var phantomParam = BuildParamFromDef("PhantomParam", 260);
+        var vfxParam = BuildParamFromDef("SpEffectVfx", 51508);
+        var spParam = BuildParamFromDef("SpEffect", 13177);
 
         PhantomCatalogInjector.Apply(phantomParam, vfxParam, spParam, Array.Empty<PhantomSkin>());
 
@@ -121,9 +102,9 @@ public class PhantomCatalogInjectorTests
     {
         // Aura-only intent: frontColor*, diffMulColor*, specMulColor*, lightColor*
         // must not carry over template defaults that could tint the model.
-        var phantomParam = BuildParamFromDef(Path.Combine(DefsDir(), "PhantomParam.xml"), 260);
-        var vfxParam = BuildParamFromDef(Path.Combine(DefsDir(), "SpEffectVfx.xml"), 51508);
-        var spParam = BuildParamFromDef(Path.Combine(DefsDir(), "SpEffect.xml"), 13177);
+        var phantomParam = BuildParamFromDef("PhantomParam", 260);
+        var vfxParam = BuildParamFromDef("SpEffectVfx", 51508);
+        var spParam = BuildParamFromDef("SpEffect", 13177);
 
         // Pre-fill template row 260 with non-zero values to simulate a "dirty" template.
         // diffMulColor* defaults to 255 in vanilla, so this simulates real game data.

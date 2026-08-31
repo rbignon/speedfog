@@ -802,6 +802,13 @@ Example:
         if (ctx.GraphData.IsPluginEnabled("halloween"))
             AmbientSpawnInjector.ApplyPassiveThinkRow(reg);
 
+        // Aging Untouchable minor boss (allowlist-only): boss NpcParam
+        // clone + partial damage-cut SpEffect. Independent of the
+        // halloween plugin; gated on the enemy allowlist actually
+        // placing the boss.
+        if (UntouchableBossInjector.IsBossPlaced(ctx.GraphData.EnemyAssignments))
+            UntouchableBossInjector.ApplyParams(reg);
+
         // Undo FogMod's makestable remap on the constant-flag play regions
         // (row 0 = all default ground); see docs/quitout-respawn.md.
         PlayRegionPatcher.ApplyTo(reg, ctx.Config.GameDir);
