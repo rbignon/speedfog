@@ -166,16 +166,20 @@ match_group = true  # Enir-Ilim Outer Wall thorns barrier: FogMod creates it as 
 
 [[disable_events]]
 map = "m11_00_00_00"
-event = 11002930  # Elden Ring 1.17 Tarnished Pack NPC invasion at Leyndell (c0000_9060, DLC flag 6953): absent from the 1.16 map data the seeds ship today, listed so the bump to 1.17 map data does not bring it back
+event = 11002930  # Elden Ring 1.17 Tarnished Pack NPC invasion at Leyndell (c0000_9060, DLC flag 6953)
 
-# Maps whose snapshot (eldendata/Vanilla) MSB and EMEVD are shipped in the
-# seed when FogMod did not write them, so the player's own install does not
-# fill the gap with whatever version it has. Files FogMod wrote are kept, and
-# files the Item Randomizer wrote (merge dir, loaded after mods/fogmod) are
-# not shadowed: pinning a tile it can write is a no-op for that file.
+[[disable_events]]
+map = "m60_52_39_00"
+event = 1052392910  # Elden Ring 1.17 Tarnished Pack NPC invasion gate at the Radahn arena tile (Leontiel as invader c0000_9020, DLC flag 6953): conditions 6953 + 9415, sets flags 1052390910/1252390910 that arm the common invasion templates 90005790-90005793 (initialized by Event 0 with entity 1052390180). Disabling the gate keeps the invader hidden, same treatment as Leyndell's 11002930. The Leontiel summon signs (event 200) stay, consistent with the m60_13_09_02 decision
+
+# Maps guaranteed present in the FogMod output, so EventDisabler and
+# VanillaWarpRemover can patch them regardless of which tool would otherwise
+# have written the file. Source picked in priority order: FogMod's own copy
+# first, else the Item Randomizer's merge-dir copy (loaded after mods/fogmod),
+# else the eldendata/Vanilla snapshot copy.
 
 [[pin_vanilla_maps]]
-map = "m60_52_39_00"  # Radahn arena tile (Caelid): no fog gate and no randomized item, so never written; its 1.17 files carry the Tarnished Pack NPC invasion (Leontiel as invader c0000_9020, "The Noble Broken Mask", DLC flag 6953) and the pack's summon signs. The 1.16 snapshot copy has no enemy and an empty EMEVD
+map = "m60_52_39_00"  # Radahn arena tile (Caelid): no fog gate and no randomized item, so neither tool ever writes it; pinning the 1.17 snapshot copy keeps the Tarnished Pack NPC invasion (Leontiel as invader c0000_9020, "The Noble Broken Mask", DLC flag 6953) and its summon signs present in the seed. The 1.17 file carries the invasion, which [[disable_events]] neutralizes
 
 # Vanilla Stakes of Marika whose respawn position lands outside the SpeedFog
 # DAG (or bypasses a fog gate): injected as RetryPoints tagged "remove"
