@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import bootstrap
 import pytest
+import refresh_vanilla_snapshot
 from bootstrap import (
     _static_mod_script_sources,
     build_static_mod_scripts,
@@ -269,3 +270,47 @@ def test_is_itemrando_installed_false_when_artifact_missing(
     artifacts = _make_itemrando_install(tmp_path, monkeypatch)
     artifacts[missing].unlink()
     assert is_itemrando_installed() is False
+
+
+def test_refresh_fogmod_snapshot_skips_when_snapshot_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A bootstrap without --fogrando (or before any FogRando install) has no
+    # snapshot to refresh; that is a quiet no-op, not an error.
+    monkeypatch.setitem(
+        refresh_vanilla_snapshot.SNAPSHOTS, "fogmod", tmp_path / "missing"
+    )
+    calls: list[list[str]] = []
+    monkeypatch.setattr(
+        refresh_vanilla_snapshot, "main", lambda argv: calls.append(argv) or 0
+    )
+    assert bootstrap.refresh_fogmod_snapshot(tmp_path / "Game") is True
+    assert calls == []
+
+
+def test_refresh_fogmod_snapshot_runs_all_refresh(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    snapshot = tmp_path / "eldendata" / "Vanilla"
+    snapshot.mkdir(parents=True)
+    monkeypatch.setitem(refresh_vanilla_snapshot.SNAPSHOTS, "fogmod", snapshot)
+    calls: list[list[str]] = []
+    monkeypatch.setattr(
+        refresh_vanilla_snapshot, "main", lambda argv: calls.append(argv) or 0
+    )
+    game = tmp_path / "Game"
+    assert bootstrap.refresh_fogmod_snapshot(game) is True
+    assert calls == [[str(game), "--all"]]
+
+
+def test_refresh_fogmod_snapshot_propagates_refresh_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # A refresh that cannot run (packed install, missing game files) must fail
+    # the bootstrap: continuing would silently generate seeds from the zip's
+    # pre-1.17 snapshot.
+    snapshot = tmp_path / "eldendata" / "Vanilla"
+    snapshot.mkdir(parents=True)
+    monkeypatch.setitem(refresh_vanilla_snapshot.SNAPSHOTS, "fogmod", snapshot)
+    monkeypatch.setattr(refresh_vanilla_snapshot, "main", lambda argv: 1)
+    assert bootstrap.refresh_fogmod_snapshot(tmp_path / "Game") is False

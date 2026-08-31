@@ -183,11 +183,14 @@ update.
       EMEVD and ESD moved to 1.17 too on 2026-08-31 with `--all` (147 files
       replaced, 0 missing, `regulation.bin` md5 unchanged; Task 8): seeds
       are 1.17-only from that point, superseding the per-map decisions
-      below. Trap: the snapshot is gitignored and `tools/bootstrap.py`
-      re-copies it wholesale from the FogRando zip, so any re-bootstrap (on
-      the racing pool host too) silently reverts it to the zip's pre-1.17
-      baseline. Re-run `refresh_vanilla_snapshot.py <game> --all` after
-      every bootstrap and check the `regulation.bin` md5 it prints.
+      below. The snapshot is gitignored and `tools/bootstrap.py` re-copies
+      it wholesale from the FogRando zip, so any re-bootstrap reverts it to
+      the zip's pre-1.17 baseline; since 2026-08-31 the bootstrap runs
+      `refresh_vanilla_snapshot.py <game> --all` itself as its final step,
+      so one bootstrap command leaves a consistent snapshot (check the
+      `regulation.bin` md5 it prints). On a patch day, bootstrap with
+      `--no-refresh` and triage first: a blind refresh would copy untriaged
+      new-patch files into the snapshot.
 - [ ] Regenerate a known seed and diff it against the pre-patch output
       (exclude `regulation.bin` from byte diffs, it is never reproducible).
       Then play it on the patched executable.
@@ -295,8 +298,9 @@ update.
       self-extraction replacing the old snapshot copy for that side),
       eldendata refreshed with `--all` (147 files replaced, 0 missing,
       `regulation.bin` md5 `f27fb24bb28c9c6f7f0e784aba2baa9e` unchanged;
-      Task 8). The racing pool host needs the same sequence: re-bootstrap
-      with the v0.12 zip, then `refresh_vanilla_snapshot.py <game> --all`.
+      Task 8). The racing pool host only needs a re-bootstrap with the
+      v0.12 zip: the bootstrap runs the snapshot refresh itself since
+      2026-08-31.
 - [ ] When FogRando ships its 1.17: the data side is already handled by the
       refresh, the risk is the API of `FogMod.dll` (S5: `ConnectionInjector`,
       `MapSplitsInjector`, `OpenSplitInjector`, `HelperAreaResolver`). Check

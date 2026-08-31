@@ -158,7 +158,7 @@ speedfog/
 │   ├── generate_title_screen.py  # Generate data/title_screen_overlay.png (title badge)
 │   ├── extract_fog_data.py  # Extract fog gate metadata
 │   ├── diff_vanilla_snapshot.py  # Hash-diff an unpacked game dir against eldendata/Vanilla (game patch triage)
-│   ├── refresh_vanilla_snapshot.py  # Refresh the FogMod snapshot (eldendata/Vanilla) from the game dir (--all standard after every bootstrap)
+│   ├── refresh_vanilla_snapshot.py  # Refresh the FogMod snapshot (eldendata/Vanilla) from the game dir (run automatically by bootstrap.py; manual runs for game-patch triage)
 │   ├── dump_emevd_warps/    # EMEVD analysis tool (dump warps, search flags, trace inits)
 │   └── game_inspect/        # Game data inspection tool (SFX, MSB entities, EMEVD, asset comparison)
 ├── reference/               # FogRando decompiled code (READ-ONLY)
@@ -413,6 +413,9 @@ python tools/bootstrap.py \
 # + regulation.bin); ItemRandomizerWrapper self-extracts the rest from
 # --game-dir's BHD/BDT archives on its first run (needs the archives
 # present), then reuses the cache on later runs. See docs/item-randomizer.md.
+# The bootstrap ends by refreshing FogMod's eldendata snapshot from
+# --game-dir (the FogRando zip data is pre-1.17); pass --no-refresh to keep
+# the zip contents on a game-patch day (see docs/game-patch-migration.md).
 
 # Or extract only FogRando (legacy mode)
 python tools/bootstrap.py \

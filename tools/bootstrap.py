@@ -45,6 +45,8 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
+import refresh_vanilla_snapshot
+
 # Project root (parent of tools/)
 PROJECT_ROOT = Path(__file__).parent.parent
 
@@ -1055,6 +1057,23 @@ def build_static_mod_scripts(force: bool = False) -> bool:
     return True
 
 
+def refresh_fogmod_snapshot(game_dir: Path) -> bool:
+    """Refresh FogMod's eldendata/Vanilla snapshot from the game directory.
+
+    The FogRando zip carries pre-1.17 game data and setup_fogrando re-copies
+    it wholesale, so every bootstrap silently reverts the snapshot to the
+    zip's baseline while seeds are 1.17-only. Running the refresh here keeps
+    a single bootstrap command sufficient. A missing snapshot (FogRando not
+    installed) is a quiet no-op; a refresh that cannot run fails the
+    bootstrap, because generating seeds from the stale snapshot is a silent
+    version-mix bug (pass --no-refresh for game-patch triage instead).
+    """
+    if not refresh_vanilla_snapshot.SNAPSHOTS["fogmod"].is_dir():
+        print_info("FogMod snapshot not present; skipping refresh")
+        return True
+    return refresh_vanilla_snapshot.main([str(game_dir), "--all"]) == 0
+
+
 def main() -> int:
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -1086,10 +1105,16 @@ def main() -> int:
         action="store_true",
         help="Skip static mod generation (StaticModBuilder and WitchyBND script repack)",
     )
+    parser.add_argument(
+        "--no-refresh",
+        action="store_true",
+        help="Skip the final FogMod snapshot refresh (game-patch triage: "
+        "keep eldendata on the FogRando zip contents)",
+    )
     args = parser.parse_args()
 
     # Check prerequisites
-    print_step(1, 4, "Checking prerequisites...")
+    print_step(1, 5, "Checking prerequisites...")
     sfextract = None
     if args.fogrando or args.itemrando:
         sfextract = find_sfextract()
@@ -1103,11 +1128,11 @@ def main() -> int:
         print_info("No mod archive provided; skipping sfextract check")
 
     # Copy oo2core_6_win64.dll from game directory (needed by dotnet publish)
-    print_step(2, 4, "Copying Oodle DLL from game directory...")
+    print_step(2, 5, "Copying Oodle DLL from game directory...")
     if not copy_oodle_dll(args.game_dir, args.force):
         return 1
 
-    print_step(3, 4, "Setting up mod dependencies...")
+    print_step(3, 5, "Setting up mod dependencies...")
 
     success = True
 
@@ -1123,7 +1148,7 @@ def main() -> int:
         if not setup_itemrando(sfextract, args.itemrando, args.force):
             success = False
 
-    print_step(4, 4, "Setting up packaging assets...")
+    print_step(4, 5, "Setting up packaging assets...")
 
     # Migration: drop the stale MenuInputDelayFix.dll left by older bootstraps;
     # the fix now ships inside the item randomizer's RandomizerCrashFix.dll and
@@ -1139,6 +1164,15 @@ def main() -> int:
             success = False
         if success and not build_static_mod_scripts(args.force):
             success = False
+
+    print_step(5, 5, "Refreshing the FogMod snapshot from the game directory...")
+    if args.no_refresh:
+        print_info(
+            "Skipped (--no-refresh): run tools/refresh_vanilla_snapshot.py "
+            "<game> --all before generating seeds"
+        )
+    elif success and not refresh_fogmod_snapshot(args.game_dir):
+        success = False
 
     if success:
         print()

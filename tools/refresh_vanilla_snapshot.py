@@ -19,8 +19,10 @@ refreshes every file the snapshot carries, for the day the maps move too.
 Seeds are 1.17-only now, so --all is the standard post-bootstrap invocation.
 
 The snapshot is gitignored and re-copied wholesale by tools/bootstrap.py,
-so this must be re-run after every bootstrap (check the regulation.bin md5
-printed at the end against the one recorded in the playbook).
+which therefore runs this refresh itself as its final step (--all; skip
+with the bootstrap's --no-refresh flag). Manual runs are for game-patch
+triage and one-off --file refreshes; check the regulation.bin md5 printed
+at the end against the one recorded in the playbook.
 
 Usage:
     python tools/refresh_vanilla_snapshot.py /path/to/Game --dry-run
