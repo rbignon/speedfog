@@ -364,7 +364,9 @@ public class GameTweaksLoaderTests
             tweaks.TorrentArenas.Select(a => a.Map).OrderBy(m => m, StringComparer.Ordinal));
         Assert.Single(tweaks.SpiritspringRemovals);
         Assert.Single(tweaks.RemoveEntities);
-        Assert.Equal(new[] { new DisableEvent("m11_00_00_00", 11002930) }, tweaks.DisableEvents);
+        Assert.Equal(
+            new[] { new DisableEvent("m11_00_00_00", 11002930), new DisableEvent("m60_52_39_00", 1052392910) },
+            tweaks.DisableEvents);
         Assert.Equal(new[] { "m60_52_39_00" }, tweaks.PinVanillaMaps);
         Assert.Equal(3, tweaks.StakeRemovals.Count);
     }
