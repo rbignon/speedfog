@@ -156,6 +156,12 @@ public class GraphData
     [JsonPropertyName("nodes")]
     public Dictionary<string, GraphNode> Nodes { get; set; } = new();
 
+    /// <summary>Enemy-randomizer boss placements: arena entity id to
+    /// source entity id, both decimal strings (graph.json v4.5, optional;
+    /// empty when the item randomizer or boss randomization is off).</summary>
+    [JsonPropertyName("enemy_assignments")]
+    public Dictionary<string, string> EnemyAssignments { get; set; } = new();
+
     /// <summary>True when the named plugin is present and enabled.</summary>
     public bool IsPluginEnabled(string name)
         => Plugins != null && Plugins.TryGetValue(name, out var p) && p.Enabled;

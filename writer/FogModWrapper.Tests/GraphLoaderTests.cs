@@ -228,4 +228,29 @@ public class GraphLoaderTests
         Assert.Equal("legacy_dungeon", data.Nodes["stormveil"].Type);
         Assert.Equal("boss_arena", data.Nodes["arena_x"].Type);
     }
+
+    [Fact]
+    public void GraphData_DeserializesEnemyAssignments()
+    {
+        var json = """
+        {
+          "version": "4.5",
+          "seed": 1,
+          "enemy_assignments": {"30001800": "2049420200"},
+          "connections": [],
+          "area_tiers": {}
+        }
+        """;
+        var data = GraphLoader.Parse(json);
+        Assert.Equal("2049420200", data.EnemyAssignments["30001800"]);
+    }
+
+    [Fact]
+    public void GraphData_EnemyAssignmentsDefaultEmpty()
+    {
+        var json = """
+        {"version": "4.5", "seed": 1, "connections": [], "area_tiers": {}}
+        """;
+        Assert.Empty(GraphLoader.Parse(json).EnemyAssignments);
+    }
 }
