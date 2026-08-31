@@ -13,10 +13,13 @@ Beyond the summer-style boss epithets and banners, the catalogue also
 renames Golden Seed (`Pumpkin Seed`), Larval Tear (`Gummy Worm`) and Sacred
 Tear (`Sacred Gumdrop`, text-only) via `GoodsName`/`GoodsCaption` in
 `item_dlc02.msgbnd.dcx` (ids 10010 / 8185 / 10020), the first two matching
-the icon replacement (spec 1.2), and overrides twenty loading tips
-(`LoadingText.fmg` in `menu_dlc02.msgbnd.dcx`; the `.fmg` extension in the
-`fmg` field pins the base file against the `_dlc01` variant, which the
-applier's substring match would otherwise hit).
+the icon replacement (spec 1.2).
+
+Loading-screen tips were shipped in v1 and dropped after in-game testing:
+the engine reads `GR_MenuText` from `menu_dlc02.msgbnd.dcx` (themed banners
+display) but `LoadingText` from the base `menu.msgbnd.dcx`, which SpeedFog
+does not ship, so tips written to the dlc02 copy never display. See the
+design spec's Rejected section before retrying.
 
 Both text themes can be enabled at once; they apply in order (summer then
 halloween) and the later one overwrites colliding entries, with a warning
