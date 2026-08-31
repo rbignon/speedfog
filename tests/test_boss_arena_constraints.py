@@ -571,3 +571,30 @@ def test_uniform_falls_back_when_alternatives_are_incompatible() -> None:
         forbidden={1: frozenset({1})},
     )
     assert result == {1: 1}
+
+
+class TestPromotedSkeletons:
+    """Halloween allowlist-only skeleton sources (spec 2.1)."""
+
+    PROMOTED = {
+        "Skeletal Militiaman": 11000295,
+        "Giant Skeleton": 31190300,
+        "Shadow Skeleton": 43010200,
+    }
+
+    def _real_tags(self):
+        path = Path(__file__).parent.parent / "data" / "boss_arena_tags.json"
+        return load_tags(path)
+
+    def test_allowlist_resolves_each_promoted_name_uniquely(self):
+        tags = self._real_tags()
+        pool = resolve_boss_allowlist(tags, self.PROMOTED.keys())
+        assert set(pool) == set(self.PROMOTED.values())
+
+    def test_promoted_entries_are_standard_path_inert_minor_sources(self):
+        tags = self._real_tags()
+        for eid in self.PROMOTED.values():
+            entry = tags[eid]
+            assert entry.pool == "minor"
+            assert entry.arena is None
+            assert entry.boss.exclude_from_pool is True

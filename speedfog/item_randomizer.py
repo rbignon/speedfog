@@ -38,7 +38,7 @@ def generate_item_config(
     When ``config.enemy.randomize_bosses`` is ``"minor"`` or ``"all"``, computes
     an arena-compatible boss assignment and emits it as ``enemy_assignments``
     (a ``{arena_entity_id: boss_entity_id}`` dict, both as strings). The
-    assignment is threaded into ``Preset.Enemies`` by ItemRandomizerWrapper.
+    assignment is threaded into ``EnemyPreset.Enemies`` by ItemRandomizerWrapper.
 
     ``tags`` must be provided when boss randomization is active.
 

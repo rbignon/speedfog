@@ -19,6 +19,10 @@ Writes:
 - BASIC_REMOVE_SOURCE_IDS (C# constant) is intentionally dropped: it
   configured the Basic pool in class-based randomization, which only applies
   to arenas outside the DAG. SpeedFog runs never visit those arenas.
+- Hand-promoted allowlist-only sources (Skeletal Militiaman 11000295, Giant
+  Skeleton 31190300, Shadow Skeleton 43010200; see the Halloween spec 2.1)
+  are NOT in BAR data: re-add them after a re-port, or the
+  TestPromotedSkeletons tests will fail.
 """
 
 from __future__ import annotations
