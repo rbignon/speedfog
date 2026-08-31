@@ -1224,3 +1224,9 @@ def test_care_package_pool_file_rejects_absolute_path():
     """care_package.pool_file must be a file name relative to data/, not a path."""
     with pytest.raises(ValueError, match="pool_file"):
         Config.from_dict({"care_package": {"pool_file": "/etc/passwd"}})
+
+
+def test_care_package_pool_file_rejects_parent_segment():
+    """care_package.pool_file must not contain parent directory traversal."""
+    with pytest.raises(ValueError, match="pool_file"):
+        Config.from_dict({"care_package": {"pool_file": "../secrets.toml"}})

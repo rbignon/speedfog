@@ -403,6 +403,36 @@ class TestSomberFlag:
         assert items[0].name == "Somber Shield +3"
         assert items[0].id == 30200003
 
+    def test_somber_item_at_low_upgrade_keeps_base_id(self, tmp_path):
+        pool = self._write_pool(
+            tmp_path,
+            """
+            [[weapons]]
+            name = "Somber Scythe"
+            id = 19020000
+            somber = true
+            """,
+        )
+        config = CarePackageConfig(
+            enabled=True,
+            weapon_upgrade=2,
+            weapons=1,
+            shields=0,
+            catalysts=0,
+            talismans=0,
+            sorceries=0,
+            incantations=0,
+            head_armor=0,
+            body_armor=0,
+            arm_armor=0,
+            leg_armor=0,
+            crystal_tears=0,
+            ashes_of_war=0,
+        )
+        items = sample_care_package(config, seed=1, pool_path=pool)
+        assert items[0].name == "Somber Scythe"
+        assert items[0].id == 19020000
+
 
 # =============================================================================
 # Config parsing tests
