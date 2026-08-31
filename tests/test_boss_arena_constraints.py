@@ -598,3 +598,15 @@ class TestPromotedSkeletons:
             assert entry.pool == "minor"
             assert entry.arena is None
             assert entry.boss.exclude_from_pool is True
+
+    def test_aging_untouchable_promoted(self):
+        tags = self._real_tags()
+        resolved = resolve_boss_allowlist(tags, ["Aging Untouchable"])
+        assert list(resolved) == [2049420200]
+        entry = tags[2049420200]
+        assert entry.pool == "minor"
+        assert entry.arena is None
+        assert entry.boss is not None
+        assert entry.boss.exclude_from_pool is True
+        assert entry.boss.size == 2
+        assert entry.dlc is True
