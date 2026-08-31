@@ -2,7 +2,7 @@
 
 Cosmetic, opt-in text reskin (`[plugin.summer] enabled = true`). Two layers,
 both FMG edits (mirror `RunCompleteInjector`), applied by
-`writer/FogModWrapper/SummerTheme.cs` during `ApplyModDirInjectors`:
+`writer/FogModWrapper/TextTheme.cs` during `ApplyModDirInjectors`:
 
 1. **Boss epithets** - rewrite boss `NpcName` entries (in `item.msgbnd.dcx` /
    `item_dlc02.msgbnd.dcx`). Tolerant: bosses absent from the catalogue keep
@@ -12,6 +12,10 @@ both FMG edits (mirror `RunCompleteInjector`), applied by
    `LOST GRACE DISCOVERED`).
 
 Independent of the item/enemy randomizer; applies to every run.
+
+The applier and loader are theme-parameterized (TextTheme /
+TextThemeCatalogLoader); the halloween theme reuses them with its own
+catalogue.
 
 ## Catalogue: data/plugins/summer.toml
 
@@ -44,7 +48,7 @@ Resolved v1 ids (GR_MenuText): 331301 DEMIGOD FELLED, 331302 LEGEND FELLED,
 
 ## Adding boss epithets
 
-`tools/seed_summer_catalog.py <path-to-enemy.txt>` prints `[[bosses]]`
+`tools/seed_theme_catalog.py <path-to-enemy.txt>` prints `[[bosses]]`
 skeletons for major-boss and final-boss clusters. It joins `clusters.json`
 (each such cluster carries `defeat_flag` and `boss_name`) with `enemy.txt`
 (each entity carries both `DefeatFlag` and `NpcName`), using the defeat flag

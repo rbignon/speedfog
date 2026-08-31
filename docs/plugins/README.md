@@ -33,4 +33,5 @@ runs.
 ## Plugins
 
 - [summer-theme.md](summer-theme.md) - cosmetic summer text reskin.
+- [halloween-theme.md](halloween-theme.md) - cosmetic halloween text reskin.
 - [weather.md](weather.md) - force a fixed weather, pin the clock hour.
