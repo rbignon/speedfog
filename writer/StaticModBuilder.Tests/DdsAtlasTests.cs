@@ -89,6 +89,48 @@ public class DdsAtlasTests
     }
 
     [Fact]
+    public void TryValidateBc7Header_AcceptsValidHeader()
+    {
+        var dds = MakeDds(4, 4);
+
+        Assert.True(DdsAtlas.TryValidateBc7Header(dds, out var info, out var reason));
+        Assert.Null(reason);
+        Assert.Equal(98, info.DxgiFormat);
+    }
+
+    [Fact]
+    public void TryValidateBc7Header_RejectsNonBc7Format()
+    {
+        // 71 = BC1_UNORM, not BC7_UNORM (98)
+        var nonBc7 = MakeDds(4, 4, dxgiFormat: 71);
+
+        Assert.False(DdsAtlas.TryValidateBc7Header(nonBc7, out _, out var reason));
+        Assert.Contains("dxgi=71", reason);
+    }
+
+    [Fact]
+    public void TryValidateBc7Header_RejectsMultiMip()
+    {
+        var multiMip = MakeDds(4, 4, mipCount: 2);
+
+        Assert.False(DdsAtlas.TryValidateBc7Header(multiMip, out _, out var reason));
+        Assert.Contains("mips=2", reason);
+    }
+
+    [Fact]
+    public void TryValidateBc7Header_RejectsTooShortHeader()
+    {
+        // Below the 148-byte DX10 header size; ParseHeader throws
+        // InvalidDataException internally, which TryValidateBc7Header must
+        // catch rather than let escape and hard-fail the caller (the bug
+        // this guards against: BuildStandaloneDds itself also throws on a
+        // too-short template, but only after the header has already been
+        // trusted).
+        Assert.False(DdsAtlas.TryValidateBc7Header(new byte[10], out _, out var reason));
+        Assert.NotNull(reason);
+    }
+
+    [Fact]
     public void ExtractBlocks_ReadsTargetRegionInRasterOrder()
     {
         // 16x16 atlas = 4x4 blocks; extract the 8x8 region at (4, 4) = blocks 5, 6, 9, 10

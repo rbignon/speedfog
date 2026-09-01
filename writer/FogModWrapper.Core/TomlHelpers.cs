@@ -19,7 +19,7 @@ internal static class TomlHelpers
         {
             long l => checked((int)l),
             int i => i,
-            _ => throw new InvalidDataException($"{errorPrefix} field '{key}' must be integer")
+            _ => throw new InvalidDataException($"{errorPrefix} field '{key}' must be integer, got {v?.GetType().Name}")
         };
     }
 
@@ -31,7 +31,7 @@ internal static class TomlHelpers
         {
             long l => checked((int)l),
             int i => i,
-            _ => throw new InvalidDataException($"{errorPrefix} field '{key}' must be integer")
+            _ => throw new InvalidDataException($"{errorPrefix} field '{key}' must be integer, got {v?.GetType().Name}")
         };
     }
 
@@ -44,7 +44,7 @@ internal static class TomlHelpers
             double d => (float)d,
             long l => l,
             int i => i,
-            _ => throw new InvalidDataException($"{errorPrefix} field '{key}' must be numeric")
+            _ => throw new InvalidDataException($"{errorPrefix} field '{key}' must be numeric, got {v?.GetType().Name}")
         };
     }
 
@@ -57,7 +57,7 @@ internal static class TomlHelpers
             double d => (float)d,
             long l => l,
             int i => i,
-            _ => throw new InvalidDataException($"{errorPrefix} field '{key}' must be numeric")
+            _ => throw new InvalidDataException($"{errorPrefix} field '{key}' must be numeric, got {v?.GetType().Name}")
         };
     }
 

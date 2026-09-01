@@ -17,6 +17,7 @@ internal static class DdsAtlas
     private const int BLOCK_DIM = 4;    // BC7 block edge in pixels
     private const int BLOCK_SIZE = 16;  // BC7 block size in bytes
     private const int DX10_DATA_OFFSET = 148; // 4 magic + 124 header + 20 DX10 extension
+    private const int DXGI_BC7_UNORM = 98;
 
     /// <summary>
     /// Parse a DX10-extended DDS header. Throws InvalidDataException on legacy
@@ -55,6 +56,42 @@ internal static class DdsAtlas
         }
 
         return new DdsInfo(width, height, dxgiFormat, mipCount, DX10_DATA_OFFSET);
+    }
+
+    /// <summary>
+    /// Validate that a byte blob is a well-formed single-mip BC7 DX10 DDS,
+    /// before it is trusted as a header-splice template or block source:
+    /// combines ParseHeader with the dxgi-format/mip-count gate every BC7
+    /// caller in this project applies. Never throws; a malformed or
+    /// too-short blob (ParseHeader's InvalidDataException) or a
+    /// format/mip mismatch both come back as a false result instead, so
+    /// callers can warn-and-skip rather than hard-fail.
+    ///
+    /// On failure, <paramref name="reason"/> is a punctuated fragment
+    /// (leading ": " or " is ...") meant to be appended directly after the
+    /// caller's own context, e.g. <c>$"Warning: {context}{reason}"</c>,
+    /// so each caller reproduces its own exact message text.
+    /// </summary>
+    internal static bool TryValidateBc7Header(byte[] dds, out DdsInfo info, out string? reason)
+    {
+        try
+        {
+            info = ParseHeader(dds);
+        }
+        catch (InvalidDataException e)
+        {
+            info = default;
+            reason = $": {e.Message}, skipping";
+            return false;
+        }
+        if (info.DxgiFormat != DXGI_BC7_UNORM || info.MipCount > 1)
+        {
+            reason = $" is dxgi={info.DxgiFormat} mips={info.MipCount}," +
+                $" expected dxgi={DXGI_BC7_UNORM} mips<=1; skipping";
+            return false;
+        }
+        reason = null;
+        return true;
     }
 
     /// <summary>

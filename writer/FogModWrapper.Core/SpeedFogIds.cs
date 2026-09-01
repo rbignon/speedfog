@@ -8,7 +8,7 @@ namespace FogModWrapper;
 ///
 /// Bands:
 /// - Event IDs live in the 7558600xx-7558650xx band, safely below FogMod's
-///   entity/region base (755890000, see DeathMarkerInjector.FOGMOD_ENTITY_MIN).
+///   entity/region base (see FogModEntityMin).
 /// - Auxiliary flags live at the top of FogMod's 104029xxxx flag band
 ///   (9000+), which FogMod's own allocator does not reach.
 /// - Persistent flags come from Python's PERSISTENT_FLAG_BASE (1050290000,
@@ -22,6 +22,12 @@ public static class SpeedFogIds
         /// <summary>Exclusive upper bound.</summary>
         public int End => Base + Capacity;
     }
+
+    /// <summary>FogMod's entity/region allocation floor: FogMod-managed MSB
+    /// parts and regions sit at or above this value. Injectors use it to
+    /// tell vanilla parts (below) from FogMod-managed ones (at or above)
+    /// when picking clone sources or ground evidence.</summary>
+    public const uint FogModEntityMin = 755890000;
 
     // --- EMEVD event ID ranges ---
 
@@ -104,12 +110,21 @@ public static class SpeedFogIds
 
     // --- Param row IDs (not entity IDs; separate namespace per PARAM) ---
 
+    // Param row namespaces are per-PARAM (NpcThinkParam, NpcParam,
+    // SpEffectParam never share ids), so the same two numeric values below
+    // are reused across the five rows with no collision. They sit in
+    // FogMod's entity band only by convention (params and entities are
+    // unrelated id spaces); no vanilla row in any of the three params
+    // comes anywhere near them, and phantom skins (1450700-1450799) /
+    // FogMod scaling (7800000-7804487) live in disjoint SpEffectParam
+    // territory.
+    private const int ParamRowBase0 = 755890000;
+    private const int ParamRowBase1 = 755890001;
+
     /// <summary>NpcThinkParam row for the passive Halloween greeters:
     /// a clone of the Aging Untouchable's think row (52800000) with all
-    /// perception zeroed. The numeric value sits in FogMod's entity band
-    /// only by convention (params and entities are unrelated id spaces);
-    /// no vanilla NpcThinkParam row comes anywhere near it.</summary>
-    public const int PassiveGreeterThinkRow = 755890000;
+    /// perception zeroed.</summary>
+    public const int PassiveGreeterThinkRow = ParamRowBase0;
 
     /// <summary>NpcParam row for the Aging Untouchable minor boss: a clone
     /// of vanilla 52800086 with boss-level HP/runes and the partial
@@ -117,15 +132,13 @@ public static class SpeedFogIds
     /// band: the item randomizer's always-on nerflantern option patches
     /// every 5280-band NpcParam row, and the boss's vulnerability must
     /// stay under SpeedFog's control.</summary>
-    public const int UntouchableBossNpcRow = 755890000;
+    public const int UntouchableBossNpcRow = ParamRowBase0;
 
     /// <summary>SpEffectParam row for the boss's permanent state: a clone
     /// of vanilla 20011471 (stateInfo 121 lifts the parry wall, the same
     /// mechanism nerflantern uses) with the eight damage-type cut rates
-    /// lowered to a partial cut. Param row namespaces are per-PARAM;
-    /// 755890000 collides with nothing here (phantom skins use
-    /// 1450700-1450799, FogMod scaling 7800000-7804487).</summary>
-    public const int UntouchableBossSpEffectRow = 755890000;
+    /// lowered to a partial cut.</summary>
+    public const int UntouchableBossSpEffectRow = ParamRowBase0;
 
     /// <summary>Vanilla MSB entity id of the allowlist source part
     /// (c5280_9000 in m61_49_42); enemy_assignments values equal to it
@@ -134,15 +147,13 @@ public static class SpeedFogIds
 
     /// <summary>NpcParam row for the decorative Halloween ambushers: a
     /// clone of the Sage's Cave skeleton (35000030) with token HP, no runes,
-    /// and the near-zero attack SpEffect attached. 755890000 is taken in
-    /// NpcParam by the untouchable boss clone.</summary>
-    public const int DecorativeAmbusherNpcRow = 755890001;
+    /// and the near-zero attack SpEffect attached.</summary>
+    public const int DecorativeAmbusherNpcRow = ParamRowBase1;
 
     /// <summary>SpEffectParam row multiplying the ambushers' attack power
     /// rates down to near zero: a clone of the tier-1 scaling row (7010,
-    /// see docs/enemy-scaling.md). 755890000 is taken in SpEffectParam by
-    /// the untouchable boss state.</summary>
-    public const int DecorativeAmbusherSpEffectRow = 755890001;
+    /// see docs/enemy-scaling.md).</summary>
+    public const int DecorativeAmbusherSpEffectRow = ParamRowBase1;
 
     // --- Icon ids (not entity ids, not param row ids; a third id namespace) ---
 

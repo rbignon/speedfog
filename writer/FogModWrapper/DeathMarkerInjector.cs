@@ -25,7 +25,6 @@ public static class DeathMarkerInjector
     private const string BLOODSTAIN_MODEL = "AEG099_090";
     private const int SFX_DUMMY_POLY = 100;
     private const int SFX_ID = 42;
-    private const uint FOGMOD_ENTITY_MIN = 755890000;
     private const uint FOGMOD_ENTITY_MAX = 755900000;
 
     private const int BLOODSTAINS_PER_GATE = 3;
@@ -113,8 +112,9 @@ public static class DeathMarkerInjector
         IEnumerable<(string MapId, int SpecCount, int DistinctFlagCount)> maps)
     {
         // Entity IDs start above FogMod's range to avoid collisions without
-        // scanning MSBs. FogMod allocates from FOGMOD_ENTITY_MIN (755890000)
-        // and uses far fewer than the 10000 available IDs in a typical DAG.
+        // scanning MSBs. FogMod allocates from SpeedFogIds.FogModEntityMin
+        // (755890000) and uses far fewer than the 10000 available IDs in a
+        // typical DAG.
         uint entityBase = FOGMOD_ENTITY_MAX;
         int eventBase = 0;
         var plans = new List<MapAllocation>();
@@ -348,6 +348,6 @@ public static class DeathMarkerInjector
     private static MSBE.Part.Asset? FindNearestVanillaAsset(MSBE msb, Vector3 targetPos) =>
         MsbHelper.FindNearestVanilla(
             msb.Parts.Assets, a => a.EntityID, a => a.Position, targetPos,
-            FOGMOD_ENTITY_MIN, FOGMOD_ENTITY_MAX);
+            SpeedFogIds.FogModEntityMin, FOGMOD_ENTITY_MAX);
 
 }

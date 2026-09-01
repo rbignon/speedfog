@@ -2,12 +2,15 @@
 
 Two non-text layers of the Halloween plugin, both running after FogMod's
 `Write()`: passive "greeter" enemies (plus optional hostile ambush packs)
-and data-driven prop decorations, placed at cluster exit gates.
-Implemented in `writer/FogModWrapper/AmbientSpawnInjector.cs` and
-`writer/FogModWrapper/GateDecorInjector.cs`, with the shared anchor
-collection in `writer/FogModWrapper/HalloweenGateAnchors.cs`. See
-[halloween-theme.md](halloween-theme.md) for the text reskin layer that
-shares the same `[plugin.halloween]` namespace.
+and data-driven prop decorations, placed at cluster exit gates. A single
+driver, `writer/FogModWrapper/HalloweenAmbientPass.cs`, reads each map's
+MSB once and calls into both features (decorations from
+`writer/FogModWrapper/GateDecorInjector.cs` before spawns from
+`writer/FogModWrapper/AmbientSpawnInjector.cs`) rather than each running
+its own independent per-map pass, with the shared anchor collection in
+`writer/FogModWrapper/HalloweenGateAnchors.cs`. See "Driver architecture"
+below for the call graph. See [halloween-theme.md](halloween-theme.md) for
+the text reskin layer that shares the same `[plugin.halloween]` namespace.
 
 ## Configuration
 
@@ -44,6 +47,36 @@ non-boolean `ambushes` abort the build (same idiom as `WeatherInjector.Parse`).
 Both are placed by `AmbientSpawnInjector`; the gate decoration catalogue
 (candelabras, cobwebs, glow anchors) is a separate, independently-gated
 feature handled by `GateDecorInjector`.
+
+## Driver architecture
+
+`HalloweenAmbientPass.Inject` is the single call site (from
+`ApplyModDirInjectors` in `Program.cs`) for both features; neither
+`GateDecorInjector` nor `AmbientSpawnInjector` has its own top-level
+`Inject` entry point or reads/writes an MSB on its own. Per map, the
+driver:
+
+1. Reads the map's MSB once.
+2. Calls `GateDecorInjector.ApplyToMsb` (decorations) before
+   `AmbientSpawnInjector.ApplyToMsb` (greeters/ambushers): the ground-
+   evidence invariant in "Ground estimation" below requires vanilla
+   enemies still be in the MSB when decor placement runs, and the spawns
+   carry `EntityID = 0` until placed, which would otherwise pass decor's
+   own vanilla-enemy filter.
+3. Writes the MSB once, only if either phase placed something.
+4. Separately calls `GateDecorInjector.WriteSfxEvents` for the decor
+   layer's own EMEVD tail (`sfx_id > 0` entries only); spawns need no
+   EMEVD at all (see "Why no EMEVD and no scaling").
+
+Because the two features anchor on different cluster-type sets
+(`DecorClusterTypes` includes `start`, `SpawnClusterTypes` does not), the
+driver unions the two features' per-map anchor/spec dictionaries to decide
+which maps to visit, but plans decor's entity/event id allocation
+(`GateDecorInjector.PlanAllocations`) only over the maps that actually
+have decor anchors, in that dictionary's own enumeration order, so decor
+ids stay identical to before this driver existed (a wider plan over the
+map union would hand spawn-only maps an unused decor event slot and shift
+every later map's allocation).
 
 ## Placement rules
 
@@ -88,8 +121,8 @@ resolution, and arc math:
 
 ## Why no EMEVD and no scaling
 
-Both injectors run in `ApplyModDirInjectors`, strictly after FogMod's own
-`Write()` phase. This means:
+`HalloweenAmbientPass.Inject` runs in `ApplyModDirInjectors`, strictly
+after FogMod's own `Write()` phase. This means:
 
 - **No scaling**: FogMod's `EldenScaling` tier pass has already completed
   when these spawns are added, so they are never touched by it. The
@@ -170,8 +203,10 @@ gate in total. Entries require visual scouting (asset models and SFX ids
 cannot be picked from data alone); only free-standing floor props work,
 since placement is a ground ring around the gate.
 `HalloweenDecorLoader.Load` returns an empty catalogue when the file is
-absent or has no active entries, making `GateDecorInjector.Inject` a
-silent one-line no-op.
+absent or has no active entries; `HalloweenAmbientPass.Inject` checks
+`catalog.IsEmpty` and skips collecting decor anchors and planning decor
+allocations entirely, making the whole decor layer a silent no-op while
+the spawn layer still runs.
 
 Registered decor models get a SibPath following FogRando's own
 `addAssetModel` convention, e.g.
@@ -209,8 +244,9 @@ candidates count and whether the correction applies:
 Candidates are vanilla assets (excluding `AEG099_*`: fog gates, warp
 doors, glow anchors are gameplay helpers, not floor evidence) plus
 vanilla enemies, which are hand-placed on walkable floor and never
-wall-mounted. Using enemies is why `GateDecorInjector` MUST run before
-`AmbientSpawnInjector` in `Program.cs`: the greeters/ambushers carry
+wall-mounted. Using enemies is why `GateDecorInjector.ApplyToMsb` MUST run
+before `AmbientSpawnInjector.ApplyToMsb` within `HalloweenAmbientPass`'s
+per-map ordering (see "Driver architecture"): the greeters/ambushers carry
 `EntityID = 0` and would otherwise pass the vanilla filter with the same
 unreliable gate Y. A survey over every fog gate and dungeon door in
 m30/m31/m32 found ~85% of gates within 0.3m of the neighborhood median

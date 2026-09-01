@@ -61,10 +61,6 @@ public static class AmbientSpawnInjector
     private const float AMBUSH_MAX_RADIUS = 7.0f;
     internal const float AMBUSH_ARC_SPREAD = 80f;
 
-    // FogMod's own entity/region allocation floor (DeathMarkerInjector.FOGMOD_ENTITY_MIN);
-    // vanilla enemies used as clone sources must sit below it.
-    private const uint FOGMOD_ENTITY_MIN = 755890000;
-
     /// <summary>
     /// Collect spawn specs per map, keyed by the anchored gate's map id.
     /// Anchors (exit gates of mini_dungeon/legacy_dungeon clusters, deduped
@@ -345,7 +341,7 @@ public static class AmbientSpawnInjector
     // --- Helper methods ---
 
     private static MSBE.Part.Enemy? FindNearestVanillaEnemy(IReadOnlyList<MSBE.Part.Enemy> enemies, Vector3 targetPos) =>
-        MsbHelper.FindNearestVanilla(enemies, e => e.EntityID, e => e.Position, targetPos, FOGMOD_ENTITY_MIN);
+        MsbHelper.FindNearestVanilla(enemies, e => e.EntityID, e => e.Position, targetPos, SpeedFogIds.FogModEntityMin);
 }
 
 public enum SpawnKind { Greeter, Ambusher }

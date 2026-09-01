@@ -5,7 +5,7 @@ namespace FogModWrapper.Tests;
 public class SpeedFogIdsTests
 {
     // FogMod allocates its own entities/regions from this base upward
-    // (DeathMarkerInjector.FOGMOD_ENTITY_MIN); SpeedFog event IDs must stay below.
+    // (SpeedFogIds.FogModEntityMin); SpeedFog event IDs must stay below.
     private const int FogModEntityMin = 755890000;
 
     [Fact]

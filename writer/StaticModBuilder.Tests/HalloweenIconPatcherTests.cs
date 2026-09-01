@@ -68,36 +68,4 @@ public class HalloweenIconPatcherTests
         Assert.Equal(new byte[] { 9, 9 }, tex.Bytes);
         Assert.Equal(2, tpf.Textures.Count);
     }
-
-    [Fact]
-    public void TryValidateBc7Template_AcceptsValidTemplate()
-    {
-        Assert.True(HalloweenIconPatcher.TryValidateBc7Template(MakeMinimalDds(), "test template"));
-    }
-
-    [Fact]
-    public void TryValidateBc7Template_RejectsNonBc7Format()
-    {
-        // 71 = BC1_UNORM, not BC7_UNORM (98)
-        var nonBc7 = MakeMinimalDds(dxgiFormat: 71);
-        Assert.False(HalloweenIconPatcher.TryValidateBc7Template(nonBc7, "test template"));
-    }
-
-    [Fact]
-    public void TryValidateBc7Template_RejectsMultiMip()
-    {
-        var multiMip = MakeMinimalDds(mipCount: 2);
-        Assert.False(HalloweenIconPatcher.TryValidateBc7Template(multiMip, "test template"));
-    }
-
-    [Fact]
-    public void TryValidateBc7Template_RejectsTooShortTemplate()
-    {
-        // Below the 148-byte DX10 header size; DdsAtlas.ParseHeader throws
-        // InvalidDataException on this, which must be caught here rather than
-        // escaping and hard-failing the whole builder (the bug this guards
-        // against: BuildStandaloneDds itself also throws on a too-short
-        // template, but only after the header has already been trusted).
-        Assert.False(HalloweenIconPatcher.TryValidateBc7Template(new byte[10], "test template"));
-    }
 }

@@ -30,7 +30,6 @@ public static class TitleScreenPatcher
     private const string OVERLAY_NAME = "title_screen_overlay.png";
     private const string SPRITE_NAME = "MENU_Title_EldenRing_01";
     private const string ATLAS_NAME = "SB_Title_01";
-    private const int DXGI_BC7_UNORM = 98;
     private const byte TPF_FORMAT_BC7 = 102; // format byte used by the SB_* menu textures
     private static readonly string[] Variants = { "hi", "low" };
 
@@ -108,29 +107,23 @@ public static class TitleScreenPatcher
                 continue;
             }
 
+            var atlasContext = $"{ATLAS_NAME} in {atlasSubPath}";
+            if (!DdsAtlas.TryValidateBc7Header(atlasTex.Bytes, out var info, out var reason))
+            {
+                Console.WriteLine($"Warning: {atlasContext}{reason}");
+                continue;
+            }
+
             byte[] spriteBlocks;
             byte[] spriteDds;
             try
             {
-                var info = DdsAtlas.ParseHeader(atlasTex.Bytes);
-                if (info.DxgiFormat != DXGI_BC7_UNORM || info.MipCount > 1)
-                {
-                    Console.WriteLine(
-                        $"Warning: {ATLAS_NAME} in {atlasSubPath} is dxgi={info.DxgiFormat} mips={info.MipCount},"
-                        + $" expected dxgi={DXGI_BC7_UNORM} mips<=1; skipping");
-                    continue;
-                }
                 spriteBlocks = DdsAtlas.ExtractBlocks(atlasTex.Bytes, info, rect.X, rect.Y, rect.Width, rect.Height);
                 spriteDds = DdsAtlas.BuildStandaloneDds(atlasTex.Bytes, spriteBlocks, rect.Width, rect.Height);
             }
-            catch (InvalidDataException e)
-            {
-                Console.WriteLine($"Warning: {ATLAS_NAME} in {atlasSubPath}: {e.Message}, skipping");
-                continue;
-            }
             catch (ArgumentException e)
             {
-                Console.WriteLine($"Warning: {ATLAS_NAME} in {atlasSubPath}: {e.Message}, skipping");
+                Console.WriteLine($"Warning: {atlasContext}: {e.Message}, skipping");
                 continue;
             }
 

@@ -40,14 +40,14 @@ namespace FogModWrapper;
 /// </summary>
 public static class GateDecorInjector
 {
-    // FogMod's own entity/region allocation floor (DeathMarkerInjector.FOGMOD_ENTITY_MIN);
-    // vanilla parts used as clone sources or ground evidence, plus almost
-    // every SpeedFog-managed entity range (death markers, this injector's
-    // own decorations), sit on opposite sides of it. Known exception below
-    // the floor: ChapelGraceInjector's c1000 grace NPC (bonfire entity
-    // range, ~10011952), placed at floor level at the Chapel grace, so it
-    // is harmless as ground evidence for the Chapel's anchored exit gate.
-    private const uint FOGMOD_ENTITY_MIN = 755890000;
+    // SpeedFogIds.FogModEntityMin is FogMod's own entity/region allocation
+    // floor: vanilla parts used as clone sources or ground evidence, plus
+    // almost every SpeedFog-managed entity range (death markers, this
+    // injector's own decorations), sit on opposite sides of it. Known
+    // exception below the floor: ChapelGraceInjector's c1000 grace NPC
+    // (bonfire entity range, ~10011952), placed at floor level at the
+    // Chapel grace, so it is harmless as ground evidence for the Chapel's
+    // anchored exit gate.
 
     // Arbitrary fixed tag XORed into the gate EntityID to seed each catalogue
     // entry's arc PRNG (see ApplyToMsb). Any stable constant works; this one
@@ -140,16 +140,16 @@ public static class GateDecorInjector
             // run before AmbientSpawnInjector adds its EntityID-0 spawns.
             // AEG099_* assets are excluded (fog gates, warp doors, glow
             // anchors: gameplay helpers, not floor evidence); earlier
-            // decorations sit at or above FOGMOD_ENTITY_MIN and drop out
-            // with the entity filter.
+            // decorations sit at or above SpeedFogIds.FogModEntityMin and
+            // drop out with the entity filter.
             float groundY = GateGeometry.EstimateGroundY(
                 gateAsset.Position,
                 msb.Parts.Assets
-                    .Where(a => a.EntityID < FOGMOD_ENTITY_MIN
+                    .Where(a => a.EntityID < SpeedFogIds.FogModEntityMin
                         && a.ModelName?.StartsWith("AEG099", StringComparison.Ordinal) != true)
                     .Select(a => a.Position)
                     .Concat(msb.Parts.Enemies
-                        .Where(e => e.EntityID < FOGMOD_ENTITY_MIN)
+                        .Where(e => e.EntityID < SpeedFogIds.FogModEntityMin)
                         .Select(e => e.Position)));
             if (MathF.Abs(groundY - gateAsset.Position.Y) > 0.3f)
             {
@@ -277,5 +277,5 @@ public static class GateDecorInjector
 
     private static MSBE.Part.Asset? FindNearestVanillaAsset(MSBE msb, Vector3 targetPos) =>
         MsbHelper.FindNearestVanilla(
-            msb.Parts.Assets, a => a.EntityID, a => a.Position, targetPos, FOGMOD_ENTITY_MIN);
+            msb.Parts.Assets, a => a.EntityID, a => a.Position, targetPos, SpeedFogIds.FogModEntityMin);
 }
