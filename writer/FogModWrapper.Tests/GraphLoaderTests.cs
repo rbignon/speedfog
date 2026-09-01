@@ -253,4 +253,37 @@ public class GraphLoaderTests
         """;
         Assert.Empty(GraphLoader.Parse(json).EnemyAssignments);
     }
+
+    [Fact]
+    public void GraphData_DeserializesClassLoadoutAndTorrentSkins()
+    {
+        var json = """
+        {
+          "version": "4.6",
+          "seed": 1,
+          "class_loadout": {
+            "hand_items": [{"id": 1020000, "slot": "left", "name": "Buckler"}],
+            "armor_sets": [[100, 200, 300, 400]]
+          },
+          "torrent_skins": {"unlock": true, "default_flag": 6702},
+          "connections": [],
+          "area_tiers": {}
+        }
+        """;
+        var data = GraphLoader.Parse(json);
+        Assert.Equal("left", data.ClassLoadout!.HandItems[0].Slot);
+        Assert.Equal(4, data.ClassLoadout.ArmorSets[0].Count);
+        Assert.Equal(6702, data.TorrentSkins!.DefaultFlag);
+    }
+
+    [Fact]
+    public void GraphData_ClassLoadoutAndTorrentSkinsDefaultNull()
+    {
+        var json = """
+        {"version": "4.6", "seed": 1, "connections": [], "area_tiers": {}}
+        """;
+        var data = GraphLoader.Parse(json);
+        Assert.Null(data.ClassLoadout);
+        Assert.Null(data.TorrentSkins);
+    }
 }

@@ -121,6 +121,20 @@ public class GraphData
     public List<CarePackageItem> CarePackage { get; set; } = new();
 
     /// <summary>
+    /// Starting class hand items (weapons/shields) and armor sets for the
+    /// Tarnished Pack showcase (graph.json v4.6, optional; null when absent).
+    /// </summary>
+    [JsonPropertyName("class_loadout")]
+    public ClassLoadoutData? ClassLoadout { get; set; }
+
+    /// <summary>
+    /// Torrent cosmetic skin unlock configuration for the Tarnished Pack
+    /// showcase (graph.json v4.6, optional; null when absent).
+    /// </summary>
+    [JsonPropertyName("torrent_skins")]
+    public TorrentSkinsData? TorrentSkins { get; set; }
+
+    /// <summary>
     /// Vanilla warp entities to remove from MSBs.
     /// These are one-way teleporters (coffins, DLC warps) that FogMod marks for removal
     /// but can't actually delete due to a name mismatch in its removal logic.
@@ -204,6 +218,66 @@ public class CarePackageItem
     /// </summary>
     [JsonPropertyName("name")]
     public string Name { get; set; } = "";
+}
+
+/// <summary>
+/// Starting class hand items and armor sets for the Tarnished Pack showcase.
+/// </summary>
+public class ClassLoadoutData
+{
+    /// <summary>
+    /// Weapons/shields held by the starting class, per hand slot.
+    /// </summary>
+    [JsonPropertyName("hand_items")]
+    public List<HandItemData> HandItems { get; set; } = new();
+
+    /// <summary>
+    /// Armor set param row IDs, each a 4-element list (head, body, arms, legs).
+    /// </summary>
+    [JsonPropertyName("armor_sets")]
+    public List<List<int>> ArmorSets { get; set; } = new();
+}
+
+/// <summary>
+/// A single starting class hand item (weapon or shield).
+/// </summary>
+public class HandItemData
+{
+    /// <summary>
+    /// Param row ID.
+    /// </summary>
+    [JsonPropertyName("id")]
+    public int Id { get; set; }
+
+    /// <summary>
+    /// Hand slot: "right" or "left".
+    /// </summary>
+    [JsonPropertyName("slot")]
+    public string Slot { get; set; } = "right";
+
+    /// <summary>
+    /// Display name for logging/spoiler.
+    /// </summary>
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = "";
+}
+
+/// <summary>
+/// Torrent cosmetic skin unlock configuration for the Tarnished Pack showcase.
+/// </summary>
+public class TorrentSkinsData
+{
+    /// <summary>
+    /// Whether Torrent cosmetic skins should be unlocked.
+    /// </summary>
+    [JsonPropertyName("unlock")]
+    public bool Unlock { get; set; }
+
+    /// <summary>
+    /// Event flag ID for the default Torrent skin. 0 means none.
+    /// </summary>
+    [JsonPropertyName("default_flag")]
+    public int DefaultFlag { get; set; }
 }
 
 /// <summary>
