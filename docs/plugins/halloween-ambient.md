@@ -28,7 +28,9 @@ non-boolean `ambushes` abort the build (same idiom as `WeatherInjector.Parse`).
 - **Ambushers**: when `ambushes = true`, a pack of 2-3 hostile skeletons
   (`c3500`) sharing the same gate. They aggro normally but are DECORATIVE:
   a clone of the Sage's Cave skeleton row (35000030) into
-  `SpeedFogIds.DecorativeAmbusherNpcRow` with 1 HP, no runes, and a custom
+  `SpeedFogIds.DecorativeAmbusherNpcRow` with token HP (`AMBUSH_HP`, 100:
+  1 HP self-destructed in-game, the skeletons' own collapse/assembly
+  mechanics finished them off), no runes, and a custom
   SpEffect (`DecorativeAmbusherSpEffectRow`, cloned from scaling tier-1 row
   7010, attached to the first free `spEffectID` slot) multiplying the five
   attack power rates plus `staminaAttackRate` by `AMBUSH_ATTACK_RATE`
@@ -92,7 +94,7 @@ Both injectors run in `ApplyModDirInjectors`, strictly after FogMod's own
 - **No scaling**: FogMod's `EldenScaling` tier pass has already completed
   when these spawns are added, so they are never touched by it. The
   greeter uses the Aging Untouchable's vanilla `NpcParam` row as-is;
-  ambushers use SpeedFog's decorative clone (1 HP, near-zero attack, see
+  ambushers use SpeedFog's decorative clone (token HP, near-zero attack, see
   "The two flavors"). Either way, difficulty is deliberately flat and
   negligible regardless of DAG tier or dungeon depth.
 - **No EMEVD needed**: spawns are ordinary always-on MSB `Enemy` parts,
@@ -289,9 +291,9 @@ pack size range):
 - Per-map performance with 1-4 extra chr loads per gate: no visible
   hitch on map load.
 - Ambush pack feel when `ambushes = true`: packs aggro and swing but die
-  to any single hit and deal negligible damage (decorative clone); confirm
-  a hit from them barely registers and that the skeletons' collapse/revive
-  behavior with 1 HP does not look broken.
+  to any real hit and deal negligible damage (decorative clone); confirm
+  a hit from them barely registers, and that at 100 HP they no longer
+  self-destruct (they did at 1 HP) while still folding to one player hit.
 - Gate decorations (starter catalogue, first seed): the Volcano Manor
   candles (`AEG270_684`/`686`/`687`) burn outside m16, or ship unlit
   geometry (their vanilla flame may come from map lighting rather than the

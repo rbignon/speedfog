@@ -12,7 +12,7 @@ namespace FogModWrapper;
 /// mini_dungeon/legacy_dungeon cluster (HalloweenGateAnchors.
 /// SpawnClusterTypes: unlike decorations, no spawns at the start cluster),
 /// plus, when ambushes are enabled, a small skeleton pack sharing the
-/// gate's arc. Ambushers aggro normally but are decorative: 1 HP, no
+/// gate's arc. Ambushers aggro normally but are decorative: token HP, no
 /// runes, near-zero attack via a cloned NpcParam row (ApplyAmbusher).
 /// Boss arenas never receive spawns.
 ///
@@ -42,6 +42,12 @@ public static class AmbientSpawnInjector
     /// <summary>Attack power multiplier for decorative ambushers: they are
     /// scenery that swings, not a threat, so damage floors out at ~nothing.</summary>
     public const float AMBUSH_ATTACK_RATE = 0.01f;
+    /// <summary>Token HP for decorative ambushers: should fold to any
+    /// serious player hit (in-game checklist verifies) while surviving
+    /// ambient chip damage. 1 HP self-destructed in-game (the skeletons'
+    /// own collapse/assembly mechanics finished them off before the player
+    /// ever saw them).</summary>
+    public const uint AMBUSH_HP = 100u;
     internal const float GREETER_MIN_RADIUS = 4.0f;
     internal const float GREETER_MAX_RADIUS = 6.0f;
     // Spawn arcs are much narrower than the decor's 120-degree default:
@@ -293,7 +299,7 @@ public static class AmbientSpawnInjector
 
     /// <summary>
     /// Clone the Sage's Cave skeleton NpcParam row into the decorative
-    /// ambusher row (1 HP, no runes, near-zero attack via a custom
+    /// ambusher row (token HP, no runes, near-zero attack via a custom
     /// SpEffect): ambushers are scenery that swings, not a threat. Same
     /// clone-plus-SpEffect mechanism as UntouchableBossInjector.Apply.
     /// </summary>
@@ -315,8 +321,8 @@ public static class AmbientSpawnInjector
         var spRow = GameEditor.AddRow(
             spEffect, SpeedFogIds.DecorativeAmbusherSpEffectRow, SCALING_TIER1_TEMPLATE_SPEFFECT);
         // Neutralize the template's own tier-1 multipliers (vanilla 7010:
-        // maxHpRate 1.141); only the attack rates matter, since hp is
-        // forced to 1 on the NpcParam row anyway. staminaAttackRate is in
+        // maxHpRate 1.141); hp is forced to AMBUSH_HP on the NpcParam row
+        // and maxHpRate 1 keeps that value exact. staminaAttackRate is in
         // the nerf list so blocked hits do not drain stamina either.
         spRow["maxHpRate"].Value = 1f;
         spRow["haveSoulRate"].Value = 1f;
@@ -331,7 +337,7 @@ public static class AmbientSpawnInjector
 
         var npcRow = GameEditor.AddRow(
             npc, SpeedFogIds.DecorativeAmbusherNpcRow, AMBUSH_NPC_PARAM);
-        npcRow["hp"].Value = 1u;       // u32: dies to any hit
+        npcRow["hp"].Value = AMBUSH_HP;  // u32: token HP, dies to any real hit
         npcRow["getSoul"].Value = 0u;  // u32: no rune pinata
         ClearInheritedScalingSlots(npcRow);
         int slot = FirstFreeSpEffectSlot(npcRow);
@@ -339,14 +345,14 @@ public static class AmbientSpawnInjector
 
         Console.WriteLine(
             $"Halloween spawns: decorative ambusher NpcParam {SpeedFogIds.DecorativeAmbusherNpcRow} " +
-            $"(clone of {AMBUSH_NPC_PARAM}, hp 1, runes 0) + SpEffect " +
+            $"(clone of {AMBUSH_NPC_PARAM}, hp {AMBUSH_HP}, runes 0) + SpEffect " +
             $"{SpeedFogIds.DecorativeAmbusherSpEffectRow} (attack x{AMBUSH_ATTACK_RATE}, slot {slot})");
     }
 
     // Vanilla 35000030 carries the game's own area-scaling SpEffect in one
     // of its slots (7080, tier 8: ~2.7x hp, 2x attack), which the clone
-    // would inherit and stack onto the nerf, roughly doubling the "1 HP /
-    // 0.01x" numbers. Clear every slot pointing into the scaling bands
+    // would inherit and stack onto the nerf, roughly doubling the
+    // AMBUSH_HP / 0.01x numbers. Clear every slot pointing into the scaling bands
     // (docs/enemy-scaling.md: 7000+10*tier and the DLC 20007xxx band) so
     // the decorative stats are exact.
     private static void ClearInheritedScalingSlots(PARAM.Row row)

@@ -130,7 +130,7 @@ Allocations in regulation.bin params (not event flags). Listed here so future co
 | 755890000 | NpcThinkParam | AmbientSpawnInjector | `SpeedFogIds.PassiveGreeterThinkRow` | Passive greeter think clone (Aging Untouchable basis) |
 | 755890000 | NpcParam | UntouchableBossInjector | `SpeedFogIds.UntouchableBossNpcRow` | Boss clone; outside 5280-band to avoid nerflantern patching |
 | 755890000 | SpEffectParam | UntouchableBossInjector | `SpeedFogIds.UntouchableBossSpEffectRow` | Partial damage-cut state for boss |
-| 755890001 | NpcParam | AmbientSpawnInjector | `SpeedFogIds.DecorativeAmbusherNpcRow` | Decorative ambusher clone (Sage's Cave skeleton basis, 1 HP, no runes) |
+| 755890001 | NpcParam | AmbientSpawnInjector | `SpeedFogIds.DecorativeAmbusherNpcRow` | Decorative ambusher clone (Sage's Cave skeleton basis, token HP, no runes) |
 | 755890001 | SpEffectParam | AmbientSpawnInjector | `SpeedFogIds.DecorativeAmbusherSpEffectRow` | Near-zero attack rates for ambushers (tier-1 scaling row basis) |
 
 ## Risks & Constraints

@@ -133,7 +133,7 @@ public static class SpeedFogIds
     public const uint UntouchableSourceEntity = 2049420200;
 
     /// <summary>NpcParam row for the decorative Halloween ambushers: a
-    /// clone of the Sage's Cave skeleton (35000030) with 1 HP, no runes,
+    /// clone of the Sage's Cave skeleton (35000030) with token HP, no runes,
     /// and the near-zero attack SpEffect attached. 755890000 is taken in
     /// NpcParam by the untouchable boss clone.</summary>
     public const int DecorativeAmbusherNpcRow = 755890001;

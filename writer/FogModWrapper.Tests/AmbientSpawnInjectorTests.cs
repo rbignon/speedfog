@@ -265,7 +265,7 @@ public class AmbientSpawnInjectorTests
         Assert.Equal(2, ambushers);
         var placed = msb.Parts.Enemies.Where(e => e.ModelName == "c3500").ToList();
         Assert.Equal(2, placed.Count);
-        // Decorative clone (1 HP, near-zero attack), vanilla aggro AI.
+        // Decorative clone (token HP, near-zero attack), vanilla aggro AI.
         Assert.All(placed, e => Assert.Equal(SpeedFogIds.DecorativeAmbusherNpcRow, e.NPCParamID));
         Assert.All(placed, e => Assert.Equal(35000000, e.ThinkParamID));
         // Pack stays inside the tight spawn arc around the gate axis (arc
@@ -282,7 +282,7 @@ public class AmbientSpawnInjectorTests
     }
 
     [Fact]
-    public void ApplyAmbusher_ClonesSkeletonRowWithOneHpAndNoRunes()
+    public void ApplyAmbusher_ClonesSkeletonRowWithTokenHpAndNoRunes()
     {
         var npc = BuildParamFromDef(Path.Combine(DefsDir(), "NpcParam.xml"), 35000030);
         var sp = BuildSpEffectParam();
@@ -290,7 +290,7 @@ public class AmbientSpawnInjectorTests
         AmbientSpawnInjector.ApplyAmbusher(npc, sp);
 
         var row = npc[SpeedFogIds.DecorativeAmbusherNpcRow]!;
-        Assert.Equal(1u, (uint)row["hp"].Value);
+        Assert.Equal(AmbientSpawnInjector.AMBUSH_HP, (uint)row["hp"].Value);
         Assert.Equal(0u, (uint)row["getSoul"].Value);
         // Def defaults leave every slot at -1, so the scan picks slot 0.
         Assert.Equal(SpeedFogIds.DecorativeAmbusherSpEffectRow, (int)row["spEffectID0"].Value);
