@@ -34,6 +34,11 @@ public class StartingItemInjectorTests
 
     private const int ITEMS_GIVEN_FLAG = 1040299001; // SpeedFogIds.ItemsGivenFlag
 
+    // Vanilla flag common.emevd event 780 sets ON (vanilla Torrent appearance)
+    // when none of 6700-6703 is on. Must be cleared alongside setting a
+    // default skin flag so exactly one of 6700-6703 stays ON.
+    private const int TORRENT_VANILLA_SKIN_FLAG = 6700;
+
     private static string? FindDataDir()
     {
         var envDir = Environment.GetEnvironmentVariable("DATA_DIR");
@@ -73,11 +78,17 @@ public class StartingItemInjectorTests
 
     private static int DecodeArgInt(EMEVD.Instruction instr) => BitConverter.ToInt32(instr.ArgData, 4);
 
+    // State(byte)@8 of SetEventFlag: 1 = ON, 0 = OFF.
+    private static byte DecodeState(EMEVD.Instruction instr) => instr.ArgData[8];
+
     private static List<int> GivenGoodIds(EMEVD.Event evt) =>
         evt.Instructions.Where(i => i.Bank == BANK && i.ID == ID_GIVE_ITEM).Select(DecodeArgInt).ToList();
 
     private static List<EMEVD.Instruction> FlagSets(EMEVD.Event evt) =>
         evt.Instructions.Where(i => i.Bank == BANK && i.ID == ID_SET_FLAG).ToList();
+
+    private static List<EMEVD.Instruction> FlagSetsFor(EMEVD.Event evt, int flagId) =>
+        FlagSets(evt).Where(i => DecodeArgInt(i) == flagId).ToList();
 
     [Fact]
     public void Inject_UnlockWithDefaultFlag_GivesRegaliaAndSetsFlagBeforeGuard()
@@ -91,13 +102,17 @@ public class StartingItemInjectorTests
         foreach (var regaliaId in RegaliaGoods)
             Assert.Contains(regaliaId, givenIds);
 
+        int clearIndex = evt.Instructions.FindIndex(i =>
+            i.Bank == BANK && i.ID == ID_SET_FLAG && DecodeArgInt(i) == TORRENT_VANILLA_SKIN_FLAG && DecodeState(i) == 0);
         int flagIndex = evt.Instructions.FindIndex(i =>
-            i.Bank == BANK && i.ID == ID_SET_FLAG && DecodeArgInt(i) == 6702);
+            i.Bank == BANK && i.ID == ID_SET_FLAG && DecodeArgInt(i) == 6702 && DecodeState(i) == 1);
         int guardIndex = evt.Instructions.FindIndex(i =>
             i.Bank == BANK && i.ID == ID_SET_FLAG && DecodeArgInt(i) == ITEMS_GIVEN_FLAG);
 
+        Assert.True(clearIndex >= 0, "expected a SetEventFlag(6700, OFF) instruction");
         Assert.True(flagIndex >= 0, "expected a SetEventFlag(6702, ON) instruction");
         Assert.True(guardIndex >= 0, "expected the ITEMS_GIVEN_FLAG guard-set");
+        Assert.True(clearIndex < flagIndex, "the vanilla-skin flag must be cleared before the default-skin flag is set");
         Assert.True(flagIndex < guardIndex, "the default-skin flag must be set before the one-shot guard flag");
     }
 
@@ -113,9 +128,11 @@ public class StartingItemInjectorTests
         foreach (var regaliaId in RegaliaGoods)
             Assert.Contains(regaliaId, givenIds);
 
-        // The only SetEventFlag left is the mandatory one-shot guard.
+        // The only SetEventFlag left is the mandatory one-shot guard: no
+        // default flag means no 6700 clear either (nothing to reconcile).
         var flagSet = Assert.Single(FlagSets(evt));
         Assert.Equal(ITEMS_GIVEN_FLAG, DecodeArgInt(flagSet));
+        Assert.Empty(FlagSetsFor(evt, TORRENT_VANILLA_SKIN_FLAG));
     }
 
     [Fact]
@@ -136,6 +153,7 @@ public class StartingItemInjectorTests
         var evt = Assert.Single(commonEmevd.Events, e => e.ID == SpeedFogIds.StartingItemEvents.Base);
         var givenIds = GivenGoodIds(evt);
         Assert.Equal(RegaliaGoods.OrderBy(x => x), givenIds.OrderBy(x => x));
+        Assert.Empty(FlagSetsFor(evt, TORRENT_VANILLA_SKIN_FLAG));
     }
 
     [Fact]
@@ -154,5 +172,6 @@ public class StartingItemInjectorTests
         Assert.Equal(4, evt.Instructions.Count);
         var flagSet = Assert.Single(FlagSets(evt));
         Assert.Equal(ITEMS_GIVEN_FLAG, DecodeArgInt(flagSet));
+        Assert.Empty(FlagSetsFor(evt, TORRENT_VANILLA_SKIN_FLAG));
     }
 }

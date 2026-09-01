@@ -21,6 +21,15 @@ public static class StartingItemInjector
     // Flag to track if we already gave the starting items (prevents re-giving on reload)
     private const int ITEMS_GIVEN_FLAG = SpeedFogIds.ItemsGivenFlag;
 
+    // Vanilla flag: common.emevd event 780 (1.17) sets this ON (vanilla
+    // Torrent appearance) when none of 6700-6703 is already on. That event
+    // has already run by the time this delivery event fires on a fresh
+    // save, so setting a default skin flag (6701-6703) without also
+    // clearing 6700 would leave two of 6700-6703 on at once. The engine
+    // invariant is exactly one of them ON; clearing 6700 restores it instead
+    // of shipping the untested both-flags-on state.
+    private const int TORRENT_VANILLA_SKIN_FLAG = 6700;
+
     // ItemType enum names for DirectlyGivePlayerItem instruction
     // Must match EMEDF enum: Weapon=0, Armor=1, Ring=2, Goods=3
     private static readonly string[] ItemTypeNames = { "ItemType.Weapon", "ItemType.Armor", "ItemType.Ring", "ItemType.Goods" };
@@ -182,8 +191,13 @@ public static class StartingItemInjector
         // before that guard flag is set below.
         if (torrentSkins?.DefaultFlag > 0)
         {
+            // Vanilla common event 780 already set 6700 (vanilla appearance)
+            // by the time this event runs on a fresh save: clear it first so
+            // exactly one of 6700-6703 stays ON, matching the engine's own
+            // invariant instead of leaving both 6700 and the default flag on.
+            evt.Instructions.Add(events.ParseAdd($"SetEventFlag(TargetEventFlagType.EventFlag, {TORRENT_VANILLA_SKIN_FLAG}, OFF)"));
             evt.Instructions.Add(events.ParseAdd($"SetEventFlag(TargetEventFlagType.EventFlag, {torrentSkins.DefaultFlag}, ON)"));
-            Console.WriteLine($"  Set default Torrent skin flag ({torrentSkins.DefaultFlag})");
+            Console.WriteLine($"  Cleared vanilla Torrent skin flag ({TORRENT_VANILLA_SKIN_FLAG}), set default Torrent skin flag ({torrentSkins.DefaultFlag})");
         }
 
         // Set flag so we don't give items again on reload

@@ -14,12 +14,20 @@ namespace FogModWrapper;
 /// the mechanism itself is pack-agnostic.
 ///
 /// Every other CharaInitParam field is left to CharacterWriter's existing
-/// randomization. This injector writes only <c>equip_Wep_Right</c>,
+/// randomization. This injector writes <c>equip_Wep_Right</c>,
 /// <c>equip_Wep_Left</c>, <c>equip_Helm</c>, <c>equip_Armer</c>,
-/// <c>equip_Gaunt</c>, <c>equip_Leg</c>, disjoint from
-/// <see cref="StartingRuneInjector"/>'s <c>soul</c> field, per
+/// <c>equip_Gaunt</c>, <c>equip_Leg</c>, and (for the hand slot it writes)
+/// the companion <c>wepParamType_Right1</c>/<c>wepParamType_Left1</c> field,
+/// forced to 0 (EquipParamWeapon). CharacterWriter (merged item-randomizer
+/// output) sets that companion field to 1 when it drew an ash-of-war weapon
+/// into the slot; left stale, it makes <see cref="WeaponUpgradeInjector"/>
+/// take the EquipParamCustomWeapon path for a raw EquipParamWeapon ID,
+/// skipping the upgrade and misreading the weapon. These writes are
+/// disjoint from <see cref="StartingRuneInjector"/>'s <c>soul</c> field, per
 /// <see cref="RegulationEditor"/>'s co-residency rule that injectors sharing
-/// a PARAM in the same Open/Save block must write disjoint fields.
+/// a PARAM in the same Open/Save block must write disjoint fields (see that
+/// file's remarks for the one deliberate, ordered exception with
+/// <see cref="WeaponUpgradeInjector"/>).
 ///
 /// MUST run before <see cref="WeaponUpgradeInjector"/> in Phase 7 of
 /// Program.cs: forced weapons need to go through the same weapon-upgrade
@@ -37,9 +45,8 @@ public static class ClassLoadoutInjector
         if (loadout == null || (loadout.HandItems.Count == 0 && loadout.ArmorSets.Count == 0))
             return;
 
-        var charaParam = reg.GetParam("CharaInitParam");
-        if (charaParam == null)
-            return;
+        var charaParam = reg.GetParam("CharaInitParam")
+            ?? throw new InvalidOperationException("CharaInitParam unavailable: cannot apply the starting class loadout");
 
         Console.WriteLine("Applying starting class loadout (Tarnished Pack showcase)...");
 
@@ -74,11 +81,14 @@ public static class ClassLoadoutInjector
                 : null;
 
             string? handField = null;
+            string? handTypeField = null;
             if (hand != null)
             {
                 if (hand.Slot != "left" && hand.Slot != "right")
                     Console.WriteLine($"  Warning: unrecognized hand slot \"{hand.Slot}\" for item {hand.Id} ({hand.Name}), defaulting to right");
-                handField = hand.Slot == "left" ? "equip_Wep_Left" : "equip_Wep_Right";
+                bool left = hand.Slot == "left";
+                handField = left ? "equip_Wep_Left" : "equip_Wep_Right";
+                handTypeField = left ? "wepParamType_Left1" : "wepParamType_Right1";
             }
 
             if (armor != null && armor.Count != 4)
@@ -93,7 +103,16 @@ public static class ClassLoadoutInjector
                     continue;
 
                 if (handField != null)
+                {
                     row[handField].Value = hand!.Id;
+                    // CharacterWriter (merged item-randomizer output) may
+                    // have left this at 1 (EquipParamCustomWeapon) when it
+                    // drew an ash-of-war weapon into the slot. Our loadout
+                    // always writes a plain EquipParamWeapon row ID, so
+                    // reset the companion type field on every row of the
+                    // group, not just where a nonzero value happens to sit.
+                    row[handTypeField!].Value = (byte)0;
+                }
 
                 if (armor != null)
                 {
