@@ -142,17 +142,33 @@ Item Randomizer writes the boss swap there and the seed registers
 `mods/itemrando` (lowest priority, 510 maps) in ModEngine, so the swap
 itself is live. What is lost is SpeedFog's post-processing: every
 FogModWrapper injector, including this one's repoint scan, only patches
-`mods/fogmod`. An Untouchable assigned to that arena therefore fights
-with its vanilla `NpcParam` row (base HP 323, possibly rescaled by the
-Item Randomizer's own scaling, damageable via the global nerflantern
-lift, vanilla runes) instead of the 3000 HP / damage-cut boss clone: a
-functional but far-too-weak finale. This is a pre-existing gap (any
-future injector edit to that map is equally unreachable), not something
-`UntouchableBossInjector` introduces or can work around; the candidate
-fix is adding the tile to `[[pin_vanilla_maps]]` (sourced from the Item
-Randomizer's merge-dir copy, so the swap enters the `mods/fogmod` layer
-where injectors patch), after checking its interactions with the
-existing 1.17 Tarnished Pack invasion pin on the neighboring tile.
+`mods/fogmod`. An Untouchable assigned to that arena therefore keeps the
+Item Randomizer's own scaled placement clone (observed on seed
+391735550: `npc=52800140`, a 5280-band row, so nerflantern makes it
+damageable, with the randomizer's generic tier scaling and runes)
+instead of SpeedFog's tuned boss profile (3000 HP, 65% damage cut,
+20000 runes): a functional fight, just off-design. Note this is why the
+gap was never observed before the boss feature: gameplay never depended
+on FogMod writing this supertile (swaps ship via the `mods/itemrando`
+layer, and scaling of randomized bosses travels in the randomizer's
+NpcParam clones, not in FogMod EMEVD events); the repoint is the first
+SpeedFog injector that needs to edit an arena-map MSB. Other fogless
+arenas (Stone Platform m19_00, Farum m13_00 for Placidusax) are
+unaffected because their boss parts live in maps FogMod writes anyway
+for the area's gates and portals; caelid_radahn is unique in having its
+boss on an 02-supertile that carries nothing FogMod touches (the zone's
+gates are on the 00-tiles, and the stake fix lives on the OTHER
+supertile m60_12_09_02, which FogMod does write for that reason).
+
+Candidate fixes: (a) targeted, preferred: teach the repoint scan a
+fallback source: when an assignment target is absent from every
+`mods/fogmod` map, read the map from the merge-dir copy, repoint there,
+and write the result into `mods/fogmod` (the higher-priority layer), so
+the extra map ships only when the boss is actually placed in it;
+(b) generic: add the tile to `[[pin_vanilla_maps]]` sourced from the
+merge-dir copy, which also serves hypothetical future injectors but
+ships the map on every seed (and keeps the 1.17 invasion-content check
+on that file's contents relevant either way).
 
 ## Expected log lines
 
