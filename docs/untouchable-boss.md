@@ -80,7 +80,7 @@ nerflantern's own pass would collide with (or follow) this injector's edit
 and the boss's vulnerability would no longer be fully under SpeedFog's
 control. Row `755890000` sits far outside that band, so nerflantern never
 touches it. `NpcParam`, `SpEffectParam` and `NpcThinkParam` are separate row
-namespaces, so this value colliding with `UntouchableBossInjector.PassiveGreeterThinkRow`
+namespaces, so this value colliding with `SpeedFogIds.PassiveGreeterThinkRow`
 (also `755890000`, a `NpcThinkParam` row from the Halloween ambient-spawn
 feature) is not a conflict.
 
@@ -94,13 +94,20 @@ placing the boss):
 1. **Regulation phase** (`ApplyRegulation`, gated by
    `UntouchableBossInjector.IsBossPlaced(ctx.GraphData.EnemyAssignments)`):
    `ApplyParams` clones the `NpcParam` and `SpEffectParam` rows described
-   above into `regulation.bin`. `IsBossPlaced` checks whether any
-   `enemy_assignments` value equals `SpeedFogIds.UntouchableSourceEntity`
-   (`2049420200`) as a decimal string; if the boss was not placed anywhere
-   this run, the phase (and the whole feature) is skipped and neither param
-   row is added.
-2. **MSB phase** (`ApplyModDirInjectors`, runs post-Write, unconditional):
-   `Inject` collects every `enemy_assignments` key (an arena entity id)
+   above into `regulation.bin`, returning `true` when both rows were
+   written. `IsBossPlaced` checks whether any `enemy_assignments` value
+   equals `SpeedFogIds.UntouchableSourceEntity` (`2049420200`) as a decimal
+   string; if the boss was not placed anywhere this run, the phase (and the
+   whole feature) is skipped and neither param row is added. `Program.cs`
+   stores the boolean result on `Context.UntouchableBossParamsApplied` for
+   the MSB phase to read.
+2. **MSB phase** (`ApplyModDirInjectors`, runs post-Write): `Inject` runs
+   unconditionally except for one guard: when the boss was placed
+   (`IsBossPlaced`) but the regulation phase warn-returned (`NpcParam` or
+   `SpEffectParam` unavailable, so `Context.UntouchableBossParamsApplied` is
+   `false`), the call is skipped with a one-line warning instead, because the
+   boss `NpcParam` row the repoint would point at was never written. When it
+   does run, `Inject` collects every `enemy_assignments` key (an arena entity id)
    whose value is the source entity, then scans every `.msb.dcx` in the mod
    directory in parallel. For each map, `ApplyToMsb` repoints the
    `NPCParamID` of every placed enemy part whose `EntityID` is one of those
@@ -227,6 +234,15 @@ section 2.3. Not automatable; requires playing the fight. Owed checks:
 - Successful-parry reward and teleport behavior specifically in the arenas
   that actually received the boss (navmesh clearance for the AI's warp
   scan around the player).
+
+`BOSS_HP` scaling note: the MSB repoint (`ApplyToMsb`) replaces the Item
+Randomizer's own scaled placement clone outright; it does not layer on top
+of it (see the caelid_radahn note above for what happens when the repoint
+does not reach an arena: the randomizer's generic tier scaling is what
+survives instead). So `BOSS_HP` (3000) is an ABSOLUTE HP value in every
+repointed arena, with no tier/area scaling multiplier applied afterward.
+Tune it as a flat number for the fight you want, not as a base that some
+external multiplier will adjust later.
 
 If in-game testing shows the fight too passive, the fix is an AI overlay,
 not a change to this injector:

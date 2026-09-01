@@ -202,6 +202,9 @@ public static class AmbientSpawnInjector
                 spawn.ThinkParamID = spec.Kind == SpawnKind.Greeter ? SpeedFogIds.PassiveGreeterThinkRow : AMBUSH_THINK_PARAM;
                 spawn.TalkID = 0;
                 spawn.CharaInitID = -1;
+                // The nearest-neighbor clone source may patrol a walk route; greeters
+                // and ambushers must stand their ground, not inherit it.
+                spawn.WalkRouteName = null;
                 // CollisionPartName inherited from the cloned neighbor on purpose: the
                 // nearest enemy stands on a valid collision in the same play space.
                 msb.Parts.Enemies.Add(spawn);

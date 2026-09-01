@@ -42,6 +42,43 @@ public class UntouchableBossInjectorTests
     }
 
     [Fact]
+    public void ApplyParams_ReturnsFalse_WhenParamsUnavailable()
+    {
+        // Empty BND4: GetParam("NpcParam") warn-returns null before ever
+        // touching the defs dir (RegulationEditorTests' fixture pattern).
+        // Program.cs must see this false to skip the MSB repoint phase
+        // instead of pointing placed parts at a row that was never written
+        // (see docs/untouchable-boss.md "Two-phase injector").
+        var editor = new RegulationEditor(new BND4(), Path.GetTempPath());
+
+        var result = UntouchableBossInjector.ApplyParams(editor);
+
+        Assert.False(result);
+    }
+
+    [Fact]
+    public void ApplyParams_ReturnsTrue_WhenBothParamsAvailable()
+    {
+        // Mirrors ApplyParams_ReturnsFalse_WhenParamsUnavailable's fixture
+        // shape with both binder files present, real paramdefs applied
+        // (RegulationEditorTests.Save_SortsRowsByIdAfterOutOfOrderAppends'
+        // pattern), so the true branch of the two-phase guard is covered
+        // directly, not just implied by Apply's own tests.
+        var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
+        var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
+        var bnd = new BND4();
+        bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/NpcParam.param", npc.Write()));
+        bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/SpEffectParam.param", sp.Write()));
+        var editor = new RegulationEditor(bnd, DefsDir());
+
+        var result = UntouchableBossInjector.ApplyParams(editor);
+
+        Assert.True(result);
+        var row = editor.GetParam("NpcParam")!.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossNpcRow);
+        Assert.Equal(UntouchableBossInjector.BOSS_HP, (uint)row["hp"].Value);
+    }
+
+    [Fact]
     public void IsBossPlaced_MatchesSourceEntityValue()
     {
         Assert.True(UntouchableBossInjector.IsBossPlaced(

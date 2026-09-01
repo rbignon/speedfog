@@ -32,7 +32,11 @@ public static class UntouchableBossInjector
         => enemyAssignments.ContainsValue(
             SpeedFogIds.UntouchableSourceEntity.ToString());
 
-    public static void ApplyParams(RegulationEditor reg)
+    /// <summary>Returns true when the boss rows were written (both params
+    /// were available), false on the warn-and-skip path. Callers must not
+    /// run the MSB repoint phase (<see cref="Inject"/>) when this returns
+    /// false: it would point placed parts at a row that was never added.</summary>
+    public static bool ApplyParams(RegulationEditor reg)
     {
         var npc = reg.GetParam("NpcParam");
         var sp = reg.GetParam("SpEffectParam", "SpEffect");
@@ -40,9 +44,10 @@ public static class UntouchableBossInjector
         {
             Console.WriteLine(
                 "Untouchable boss: NpcParam/SpEffectParam unavailable, boss keeps vanilla stats");
-            return;
+            return false;
         }
         Apply(npc, sp);
+        return true;
     }
 
     public static void Apply(PARAM npc, PARAM spEffect)

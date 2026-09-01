@@ -52,4 +52,22 @@ public class SpeedFogIdsTests
         // The shared finger-pickup flag is FogMod's, not one of ours
         Assert.DoesNotContain(SpeedFogIds.FingerPickupFlag, SpeedFogIds.AuxiliaryFlags);
     }
+
+    [Fact]
+    public void MsbEntityBands_AreDisjointAndOrdered()
+    {
+        // Three consecutive MSB entity id bands, each owned by a different
+        // injector: FogMod itself, DeathMarkerInjector's bloodstains, and
+        // GateDecorInjector's Halloween decorations. Each base must be
+        // strictly below the next so none of the three ever hands out an id
+        // another one already claims.
+        Assert.True(
+            SpeedFogIds.FogModEntityMin < SpeedFogIds.DeathMarkerEntityBase,
+            $"FogModEntityMin ({SpeedFogIds.FogModEntityMin}) must be below " +
+            $"DeathMarkerEntityBase ({SpeedFogIds.DeathMarkerEntityBase})");
+        Assert.True(
+            SpeedFogIds.DeathMarkerEntityBase < SpeedFogIds.HalloweenDecorEntityBase,
+            $"DeathMarkerEntityBase ({SpeedFogIds.DeathMarkerEntityBase}) must be below " +
+            $"HalloweenDecorEntityBase ({SpeedFogIds.HalloweenDecorEntityBase})");
+    }
 }

@@ -113,8 +113,8 @@ against the shipped `writer/lib/SoulsFormats.dll` (2026-07-22 review probe):
 
 FogMod allocates entity IDs from a single counter starting at 755890000
 (`FOGMOD_ENTITY_MIN`), shared across Assets, Enemies, Players, and Regions.
-Bloodstain entity IDs start at 755900000 (`FOGMOD_ENTITY_MAX`), above FogMod's
-range, avoiding collisions without needing to scan MSBs.
+Bloodstain entity IDs start at 755900000 (`SpeedFogIds.DeathMarkerEntityBase`),
+above FogMod's range, avoiding collisions without needing to scan MSBs.
 
 Maps are processed in parallel (independent MSB/EMEVD files), so entity IDs and
 event IDs are pre-partitioned per map by `PlanAllocations()` in map order: one

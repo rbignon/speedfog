@@ -123,6 +123,9 @@ public class AmbientSpawnInjectorTests
         Assert.Equal(52800086, greeter.NPCParamID);
         Assert.Equal(SpeedFogIds.PassiveGreeterThinkRow, greeter.ThinkParamID);
         Assert.Equal(0u, greeter.EntityID);
+        // The clone source patrols (WalkRouteName set above); the greeter
+        // must not inherit that route.
+        Assert.Null(greeter.WalkRouteName);
         Assert.Contains(msb.Models.Enemies, m => m.Name == "c5280");
         // Placement lands within the greeter radius band around the gate.
         var gate = msb.Parts.Assets.Single(a => a.Name == "AEG099_002_9000");
@@ -234,6 +237,7 @@ public class AmbientSpawnInjectorTests
             Name = "c9990_9000", ModelName = "c9990",
             Position = new Vector3(0f, 0f, 0f), EntityID = 0,
             NPCParamID = 99900000, ThinkParamID = 99900000,
+            WalkRouteName = "h_patrol_route",
         };
         enemy.Unk1.DrawGroups[0] = 0x8;
         enemy.Unk1.DisplayGroups[0] = 0x10;

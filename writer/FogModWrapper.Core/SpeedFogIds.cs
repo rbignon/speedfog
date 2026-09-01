@@ -104,8 +104,15 @@ public static class SpeedFogIds
 
     // --- MSB entity ID bases (not EMEVD event ids; a separate id space) ---
 
+    /// <summary>DeathMarkerInjector's per-map entity ID allocation floor:
+    /// bloodstain markers are placed at or above this value. Also doubles as
+    /// the exclusive upper bound of FogMod's own entity range (see
+    /// FogModEntityMin), the boundary between the two bands.</summary>
+    public const uint DeathMarkerEntityBase = 755900000;
+
     /// <summary>MSB entity IDs for Halloween gate decorations. Disjoint from
-    /// FogMod (755890000+) and the death markers (755900000+).</summary>
+    /// FogMod (<see cref="FogModEntityMin"/>, 755890000+) and the death
+    /// markers (<see cref="DeathMarkerEntityBase"/>, 755900000+).</summary>
     public const uint HalloweenDecorEntityBase = 755910000;
 
     // --- Param row IDs (not entity IDs; separate namespace per PARAM) ---

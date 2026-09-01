@@ -804,7 +804,7 @@ Example:
         // halloween plugin; gated on the enemy allowlist actually
         // placing the boss.
         if (UntouchableBossInjector.IsBossPlaced(ctx.GraphData.EnemyAssignments))
-            UntouchableBossInjector.ApplyParams(reg);
+            ctx.UntouchableBossParamsApplied = UntouchableBossInjector.ApplyParams(reg);
 
         if (ctx.GraphData.IsPluginEnabled("halloween"))
         {
@@ -893,8 +893,18 @@ Example:
 
         // Aging Untouchable minor boss: repoint enemy-randomizer-placed
         // untouchables to the boss NpcParam clone (see ApplyRegulation).
-        UntouchableBossInjector.Inject(
-            ctx.ModDir, ctx.GraphData.EnemyAssignments, ctx.Config.MergeDir, ctx.Tweaks.FallbackArenaMaps);
+        // Skipped when the boss was placed but the regulation phase
+        // warn-returned: the boss NpcParam row was never written, so
+        // repointing parts to it would point at a nonexistent row.
+        if (UntouchableBossInjector.IsBossPlaced(ctx.GraphData.EnemyAssignments) && !ctx.UntouchableBossParamsApplied)
+        {
+            Console.WriteLine("Untouchable boss: regulation phase did not write boss rows, skipping MSB repoint");
+        }
+        else
+        {
+            UntouchableBossInjector.Inject(
+                ctx.ModDir, ctx.GraphData.EnemyAssignments, ctx.Config.MergeDir, ctx.Tweaks.FallbackArenaMaps);
+        }
 
         // Rebirth option at Sites of Grace
         if (ctx.GraphData.StartingLarvalTears > 0)
@@ -1006,6 +1016,13 @@ Example:
         // Resolved by PatchEmevd, consumed by ApplyCommonInjectors.
         // 0 when zone tracking is disabled or no defeat flag is known.
         public int BossDefeatFlag;
+
+        // Set by ApplyRegulation (UntouchableBossInjector.ApplyParams'
+        // result), consumed by ApplyModDirInjectors to decide whether the
+        // MSB repoint phase may run. Stays false when the boss was never
+        // placed (ApplyParams not called) or the regulation phase warn-
+        // returned (NpcParam/SpEffectParam unavailable).
+        public bool UntouchableBossParamsApplied;
 
         // Parsed lazily on first access: both ApplyRegulation (ambusher row
         // gating) and ApplyModDirInjectors (HalloweenAmbientPass) need the
