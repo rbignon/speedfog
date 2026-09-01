@@ -391,7 +391,7 @@ fr = "DIEU TERRORISÉ"
 # ---- Item renames (GoodsName/GoodsCaption in item_dlc02.msgbnd.dcx) ----
 # Matches the pumpkin/candy icon replacement (spec 1.2, implemented in
 # Halloween plan 5). 10010 = Golden Seed, 8185 = Larval Tear,
-# 10020 = Sacred Tear (text-only, no icon planned).
+# 10020 = Sacred Tear; all three carry a dedicated Halloween icon.
 
 [[ui]]
 bnd = "item_dlc02.msgbnd.dcx"

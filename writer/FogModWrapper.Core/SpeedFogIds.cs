@@ -155,4 +155,10 @@ public static class SpeedFogIds
     /// <summary>Icon id for the Halloween Larval Tear gummy-worm icon
     /// (MENU_ItemIcon_63075, same overlay). Vanilla iconId: 3075.</summary>
     public const int HalloweenLarvalTearIcon = 63075;
+
+    /// <summary>Icon id for the Halloween Sacred Tear gumdrop icon
+    /// (MENU_ItemIcon_60384, same overlay). Vanilla iconId: 384
+    /// (EquipParamGoods row 10020, renamed "Sacred Gumdrop" by the text
+    /// catalogue).</summary>
+    public const int HalloweenSacredTearIcon = 60384;
 }

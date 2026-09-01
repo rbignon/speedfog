@@ -8,7 +8,7 @@ using SoulsFormats;
 namespace StaticModBuilder;
 
 /// <summary>
-/// Ships two new item icon textures (Halloween item icons) as a
+/// Ships new item icon textures (Halloween item icons) as a
 /// superset of the vanilla menu/{hi,low}/05_dummy.tpf.dcx, so the per-seed
 /// injector (HalloweenIconInjector, see docs/plugins/halloween-icons.md) can repoint
 /// EquipParamGoods.iconId at them without shipping a bloated shared UI atlas.
@@ -31,12 +31,13 @@ public static class HalloweenIconPatcher
     private const string TEMPLATE_TEXTURE_NAME = "MENU_DummyTransparent";
     private static readonly string[] Variants = { "hi", "low" };
 
-    // (icon name, source PNG under dataDir). The per-seed injector repoints
+    // (icon name, source PNG under dataDir/plugins). The per-seed injector repoints
     // EquipParamGoods.iconId to these numbers (see HalloweenIconInjector).
     private static readonly (string Name, string Png)[] Icons =
     {
         ("MENU_ItemIcon_60383", "halloween_icon_pumpkin_seed.png"),
         ("MENU_ItemIcon_63075", "halloween_icon_gummy_worm.png"),
+        ("MENU_ItemIcon_60384", "halloween_icon_sacred_gumdrop.png"),
     };
 
     /// <summary>
@@ -46,7 +47,7 @@ public static class HalloweenIconPatcher
     /// </summary>
     public static int Patch(string gameDir, string halloweenDir, string dataDir)
     {
-        var pngPaths = Icons.Select(icon => Path.Combine(dataDir, icon.Png)).ToArray();
+        var pngPaths = Icons.Select(icon => Path.Combine(dataDir, "plugins", icon.Png)).ToArray();
         var missing = pngPaths.FirstOrDefault(p => !File.Exists(p));
         if (missing != null)
         {

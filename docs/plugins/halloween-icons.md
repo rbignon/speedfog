@@ -3,20 +3,22 @@
 **Date:** 2026-09-01
 **Status:** EXPERIMENT, in-game check not yet performed (see below)
 
-Gives Golden Seed and Larval Tear custom pumpkin / gummy-worm inventory
-icons on Halloween seeds, matching the item renames already done by the
-text theme (`Pumpkin Seed`, `Gummy Worm`; see
+Gives Golden Seed, Larval Tear and Sacred Tear custom pumpkin /
+gummy-worm / gumdrop inventory icons on Halloween seeds, matching the
+item renames already done by the
+text theme (`Pumpkin Seed`, `Gummy Worm`, `Sacred Gumdrop`; see
 [halloween-theme.md](halloween-theme.md)). Placeholder art for now; the
 user replaces it later. Fourth feature under the `[plugin.halloween]`
 namespace, alongside the text reskin, the ambient spawns, and the gate
 decorations (see [halloween-ambient.md](halloween-ambient.md)).
 
-## The two icons
+## The three icons
 
 | Item | EquipParamGoods row | Vanilla `iconId` | Halloween `iconId` | Texture name |
 |------|---------------------|-------------------|---------------------|--------------|
 | Golden Seed | 10010 | 383 | 60383 | `MENU_ItemIcon_60383` |
 | Larval Tear | 8185 | 3075 | 63075 | `MENU_ItemIcon_63075` |
+| Sacred Tear | 10020 | 384 | 60384 | `MENU_ItemIcon_60384` |
 
 The new ids are u16-safe (`iconId` is a u16 field) and far above every
 vanilla icon id (max ~8490 across the 13 `SB_Icon` atlas pages), so they
@@ -27,13 +29,13 @@ cannot collide with an existing icon.
 [title-screen.md](title-screen.md) redirects a single sprite name out of
 `01_common.tpf.dcx` into a tiny companion TPF (`02_title.tpf.dcx`, 70 KB)
 that already existed as the title screen's own resource block. Item icons
-have no such companion: both `MENU_ItemIcon_00383` and
-`MENU_ItemIcon_03075` live only inside `menu/{hi,low}/01_common.tpf.dcx`
+have no such companion: `MENU_ItemIcon_00383`, `MENU_ItemIcon_03075`
+and `MENU_ItemIcon_00384` live only inside `menu/{hi,low}/01_common.tpf.dcx`
 (67 MB hi / 53 MB low) with their layout entries in
 `01_common.sblytbnd.dcx`, and there is no small TPF in that group to host
 a couple of standalone replacements. Shipping a modified copy of the full
 atlas (the "in-place splice" approach) would cost close to ~120 MB
-per seed, for two icons. That cost, not a technical blocker, is
+per seed, for a handful of item icons. That cost, not a technical blocker, is
 why this plugin does not touch `01_common` at all.
 
 ## The chosen mechanism: iconId redirect + 05_dummy superset
@@ -47,12 +49,13 @@ resolves to nothing). The name-fallback lookup documented in
 image") is the load-bearing mechanism here too: names not found in any
 `.layout` atlas index are looked up directly among loaded TPF texture
 names. `05_dummy.tpf.dcx` carries no layouts of its own, so every texture
-in it (including the two new ones) is only reachable through that
+in it (including the three new ones) is only reachable through that
 fallback path, never through an atlas UV rect.
 
 `EquipParamGoods.iconId` is then simply repointed from the vanilla id
-to the new one (383 -> 60383, 3075 -> 63075), so the engine looks up
-`MENU_ItemIcon_60383` / `MENU_ItemIcon_63075` by name wherever it draws
+to the new one (383 -> 60383, 3075 -> 63075, 384 -> 60384), so the
+engine looks up `MENU_ItemIcon_60383` / `MENU_ItemIcon_63075` /
+`MENU_ItemIcon_60384` by name wherever it draws
 that item's icon, and the fallback lookup resolves them from the shipped
 `05_dummy.tpf.dcx` superset. `01_common` and its layouts are never
 touched; a seed with the plugin disabled ships nothing extra at all.
@@ -60,8 +63,8 @@ touched; a seed with the plugin disabled ships nothing extra at all.
 ## The three moving parts
 
 1. **`HalloweenIconPatcher`** (`writer/StaticModBuilder/HalloweenIconPatcher.cs`,
-   runs at bootstrap, not per-seed): reads the two placeholder PNGs from
-   `data/`, encodes each once to raw BC7 blocks (BcEncoder, `Balanced`
+   runs at bootstrap, not per-seed): reads the placeholder PNGs from
+   `data/plugins/`, encodes each once to raw BC7 blocks (BcEncoder, `Balanced`
    quality, `IsParallel = false`, same Wine-crash workaround as
    `TitleScreenPatcher`), then for each of `menu/{hi,low}`: reads the
    vanilla `05_dummy.tpf.dcx`, validates its `MENU_DummyTransparent`
@@ -71,7 +74,7 @@ touched; a seed with the plugin disabled ships nothing extra at all.
    148-byte DX10 header as a template for `DdsAtlas.BuildStandaloneDds`
    (width, height and pixel data are fully replaced; there is no
    icon-sized vanilla DDS to splice a header from, unlike the title
-   patch's own sprite), adds or replaces the two `MENU_ItemIcon_*`
+   patch's own sprite), adds or replaces the `MENU_ItemIcon_*`
    textures by name (idempotent reruns), and writes the superset TPF to
    `data/mods/speedfog-halloween/menu/{hi,low}/05_dummy.tpf.dcx`. Invoked
    by `tools/bootstrap.py` via `--halloween-dir`, unconditionally
@@ -79,9 +82,10 @@ touched; a seed with the plugin disabled ships nothing extra at all.
    plugin.
 2. **`HalloweenIconInjector`** (`writer/FogModWrapper/HalloweenIconInjector.cs`,
    runs per seed): `ApplyTo(RegulationEditor reg)` reads
-   `EquipParamGoods`, and for rows 10010 and 8185 sets `iconId` to
+   `EquipParamGoods`, and for rows 10010, 8185 and 10020 sets `iconId` to
    `SpeedFogIds.HalloweenGoldenSeedIcon` (60383) /
-   `HalloweenLarvalTearIcon` (63075). Called from `Program.cs`'s
+   `HalloweenLarvalTearIcon` (63075) / `HalloweenSacredTearIcon`
+   (60384). Called from `Program.cs`'s
    `ApplyRegulation`, inside the same `IsPluginEnabled("halloween")`
    block as `AmbientSpawnInjector.ApplyPassiveThinkRow`. Prints
    `Halloween icons: repointed N item icon id(s)`; a missing row logs a
@@ -122,8 +126,9 @@ ships the overlay either, since `halloween_enabled` is the first term.
 
 ## Placeholder art and how to replace it
 
-`data/halloween_icon_pumpkin_seed.png` and
-`data/halloween_icon_gummy_worm.png` are 160x160 RGBA placeholders
+`data/plugins/halloween_icon_pumpkin_seed.png`,
+`data/plugins/halloween_icon_gummy_worm.png` and
+`data/plugins/halloween_icon_sacred_gumdrop.png` are 160x160 RGBA placeholders
 generated by `tools/generate_halloween_icons.py` (Pillow only, flat
 shapes, no fonts, mirroring `tools/generate_title_screen.py`'s
 "standalone, output committed, rerun to change the design" convention).
@@ -133,7 +138,7 @@ size.
 
 To replace the art:
 
-1. Overwrite the two PNGs under `data/` with authored art (same
+1. Overwrite the PNGs under `data/plugins/` with authored art (same
    filenames, 160x160 RGBA), or edit `tools/generate_halloween_icons.py`
    and re-run it.
 2. Re-run `tools/bootstrap.py`, or invoke `StaticModBuilder` directly
@@ -162,8 +167,9 @@ until it is:
 
 **In-game check owed** (see the task's smoke report for the seed used):
 open the inventory on a Halloween seed, check the Golden Seed
-("Pumpkin Seed") and Larval Tear ("Gummy Worm") icons. Custom pumpkin /
-gummy-worm art means the experiment is confirmed and the mechanism is
+("Pumpkin Seed"), Larval Tear ("Gummy Worm") and Sacred Tear
+("Sacred Gumdrop") icons. Custom pumpkin / gummy-worm / gumdrop art
+means the experiment is confirmed and the mechanism is
 solid; a dummy or blank icon means the name-fallback path does not
 resolve for inventory icons (or does not stay resident), and one of the
 fallbacks below applies.
@@ -189,7 +195,7 @@ other part of the Halloween theme depends on this feature.
 2. **Full-atlas in-place splice via `DdsAtlas`** (last resort, ~120 MB
    per seed): follow the `TitleScreenPatcher` recipe against
    `01_common.tpf.dcx` and `01_common.sblytbnd.dcx` directly instead of
-   `05_dummy.tpf.dcx`, extracting and replacing the two `SB_Icon_*`
+   `05_dummy.tpf.dcx`, extracting and replacing the three `SB_Icon_*`
    atlas regions in place. This is the atlas approach the icon redirect
    was built specifically to avoid; only fall back to it if the
    name-fallback path is confirmed not to work for inventory icons at

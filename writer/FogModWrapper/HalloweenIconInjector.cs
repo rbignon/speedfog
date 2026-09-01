@@ -3,10 +3,11 @@ using SoulsFormats;
 namespace FogModWrapper;
 
 /// <summary>
-/// Repoints Golden Seed / Larval Tear inventory icons to the Halloween
-/// icons shipped by the speedfog-halloween overlay (05_dummy.tpf.dcx
-/// superset built by StaticModBuilder). The engine resolves the new
-/// MENU_ItemIcon_{60383,63075} names via its loaded-TPF fallback lookup;
+/// Repoints Golden Seed / Larval Tear / Sacred Tear inventory icons to
+/// the Halloween icons shipped by the speedfog-halloween overlay
+/// (05_dummy.tpf.dcx superset built by StaticModBuilder). The engine
+/// resolves the new MENU_ItemIcon_{60383,63075,60384} names via its
+/// loaded-TPF fallback lookup;
 /// see docs/plugins/halloween-icons.md, including the in-game check this
 /// experiment still owes and its revert path. Opt-in via
 /// [plugin.halloween]; without the plugin, iconId stays vanilla and the
@@ -19,6 +20,7 @@ public static class HalloweenIconInjector
     {
         (10010, SpeedFogIds.HalloweenGoldenSeedIcon),
         (8185, SpeedFogIds.HalloweenLarvalTearIcon),
+        (10020, SpeedFogIds.HalloweenSacredTearIcon),
     };
 
     public static void ApplyTo(RegulationEditor reg)
