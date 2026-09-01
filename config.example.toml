@@ -305,14 +305,6 @@ auto_equip = false
 # DLC enemies are mixed with base game (no separate silo)
 dlc = true
 
-# Tarnished Pack (ER 1.17 paid DLC) items and invaders enter the randomization.
-# NOT seed-neutral: the whole item layout diverges between on and off for the
-# same seed, so never mix packages of one seed generated with different values.
-# When on, players without the pack get an in-game error dialog at startup:
-# reserve it for pack-owner-only seeds.
-# Default: false
-# tarnished = false
-
 # Disable damage tick in Valiant Gargoyles's poison cloud (default: true)
 # Sets the magic damage of their poison attacks to 0
 nerf_gargoyles = true
@@ -330,6 +322,33 @@ allcraft = true
 item_preset = true
 # Custom item preset YAML (default: built-in data/item_preset.yaml)
 # item_preset_path = "/path/to/custom_preset.yaml"
+
+# Tarnished Pack (ER 1.17 paid DLC) showcase: pack-owner-only seeds where
+# every starting class carries pack equipment and the Torrent regalia are
+# unlocked. See docs/tarnished-showcase.md.
+[tarnished]
+# Feed opt["tarnished"]: pack items/invaders enter the randomizer pools, and
+# players without the pack get an in-game error dialog at startup. NOT
+# seed-neutral: the whole item layout diverges between on and off for the
+# same seed, so never mix packages of one seed generated with different
+# values. All sub-options below require this to be true. (default: false)
+enabled = false
+
+# Give every starting class a pack hand item (weapon or shield) and a full
+# pack armor set, drawn as covering shuffles so all 8 items and all 4 sets
+# are used across the class roster. Requires enabled. (default: false)
+starting_loadout = false
+
+# Give the 3 Spectral Steed Regalia (Torrent cosmetic skins) at game start.
+# Requires enabled. (default: false)
+unlock_torrent_skins = false
+
+# Pre-select a default Torrent skin, applied once per save (a later manual
+# choice at the grace "Torrent attire" menu survives reloads). Requires
+# unlock_torrent_skins. One of "", "tree-sentinel", "carian-silver",
+# "funereal-night", "random" (resolved to a concrete skin per seed).
+# (default: "")
+default_torrent_skin = ""
 
 # Thematic plugins (opt-in cosmetic/feature layers). Each [plugin.<name>] block is
 # forwarded verbatim into graph.json and read by its feature in the writer.

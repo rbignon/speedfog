@@ -61,6 +61,7 @@ speedfog/
 │   ├── spoiler.py           # Spoiler log with ASCII graph
 │   ├── enemy_data.py        # enemy.txt parsing, boss placement patching
 │   ├── care_package.py      # Randomized starting build system
+│   ├── tarnished.py         # Tarnished Pack showcase: class loadout + Torrent skin draws
 │   ├── boss_arena_constraints.py  # Boss/arena tag model, compat check, matcher
 │   ├── fog_mod.py           # FogMod wrapper (runs FogModWrapper.exe)
 │   ├── item_randomizer.py   # Item Randomizer integration
@@ -116,6 +117,7 @@ speedfog/
 │   │   ├── StartingResourcesInjector.cs  # Inject seeds, tears, keys
 │   │   ├── StartingRuneInjector.cs  # Set starting runes via CharaInitParam
 │   │   ├── StartingClassRows.cs  # CharaInitParam rows of the selectable classes (from BaseChrSelectMenuParam)
+│   │   ├── ClassLoadoutInjector.cs  # Apply Tarnished Pack showcase hand items/armor per starting class
 │   │   ├── RoundtableUnlockInjector.cs  # Unlock Roundtable Hold at start
 │   │   ├── ShopInjector.cs           # Add smithing stones + Sentry's Torch to shop
 │   │   ├── ZoneTrackingInjector.cs  # Zone tracking flags for racing
@@ -183,6 +185,7 @@ speedfog/
 │   ├── starting-items.md    # Starting items and auxiliary flags
 │   ├── esd-editing.md       # ESD talk script editing conventions
 │   ├── care-package.md      # Randomized starting build system
+│   ├── tarnished-showcase.md  # Tarnished Pack showcase mode (class loadout, Torrent skins)
 │   ├── untouchable-boss.md  # Aging Untouchable minor boss (vulnerability mechanism, two-phase injector)
 │   ├── item-randomizer.md   # ItemRandomizerWrapper integration
 │   ├── event-flags.md       # Event flag allocation and EMEVD reference
@@ -227,6 +230,7 @@ speedfog/
 | `docs/item-randomizer.md` | ItemRandomizerWrapper (preset building, boss placement capture) |
 | `docs/boss-arena-constraints.md` | Arena-boss compatibility constraints and matching |
 | `docs/care-package.md` | Randomized starting build system |
+| `docs/tarnished-showcase.md` | Tarnished Pack showcase mode: `[tarnished]` config, class loadout + Torrent skin draws, graph.json v4.6 fields, in-game validation owed for the flag-to-skin mapping |
 | `docs/untouchable-boss.md` | Aging Untouchable minor boss: vulnerability mechanism (nerflantern-style wall lift + partial damage cut), two-phase injector, in-game tuning session owed |
 | `docs/vanilla-warp-removal.md` | FogMod vanilla warp removal workaround |
 | `docs/stake-removal.md` | Vanilla stake removal (RetryPoint softlock prevention) |
@@ -297,6 +301,7 @@ speedfog/
 | `StartingResourcesInjector` | Injects consumables (seeds, tears, keys) via EMEVD |
 | `StartingRuneInjector` | Sets starting runes on all classes via CharaInitParam.soul |
 | `StartingClassRows` | Resolves the CharaInitParam rows of the selectable classes from BaseChrSelectMenuParam (covers the 1.17 Tarnished Pack classes) |
+| `ClassLoadoutInjector` | Writes the Tarnished Pack showcase hand item + armor set onto CharaInitParam per starting class group (see `docs/tarnished-showcase.md`); runs before `WeaponUpgradeInjector` |
 | `RoundtableUnlockInjector` | Unlocks Roundtable Hold at game start |
 | `ShopInjector` | Adds smithing stones + Sentry's Torch to Twin Maiden Husks shop |
 | `ZoneTrackingInjector` | Injects SetEventFlag before fog gate warps for racing |
@@ -684,11 +689,11 @@ wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.d
 
 ## Data Formats
 
-### graph.json v4.5 (Python → C# + visualization + racing)
+### graph.json v4.6 (Python → C# + visualization + racing)
 
 ```json
 {
-  "version": "4.5",
+  "version": "4.6",
   "seed": 212559448,
   "options": {"scale": true, "shuffle": true},
   "plugins": {"summer": {"enabled": true}},
@@ -701,7 +706,9 @@ wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.d
   "event_map": {"1050294000": "cluster_id"},
   "finish_event": 1050294002,
   "items_spawned_flag": 1050290000,
-  "enemy_assignments": {"30001800": "2049420200"}
+  "enemy_assignments": {"30001800": "2049420200"},
+  "class_loadout": {"hand_items": [{"id": 3560000, "slot": "right", "name": "Leontiel's Greatsword"}, ...], "armor_sets": [[5350000, 5350100, 5350200, 5350300], ...]},
+  "torrent_skins": {"unlock": true, "default_flag": 6702}
 }
 ```
 
@@ -712,6 +719,8 @@ wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.d
 - `items_spawned_flag`: saved flag (1050290000) used as one-shot guard for item delivery
 - `plugins`: verbatim copy of `[plugin]` config table; C# reads via `GraphData.IsPluginEnabled(name)` (added v4.4)
 - `enemy_assignments`: optional `{arena_entity_id: source_entity_id}` map (both decimal strings), the same enemy-randomizer placement mapping already computed in `speedfog/item_randomizer.py` and shipped to ItemRandomizerWrapper as `item_config.json`, now also patched into graph.json (`patch_graph_enemy_assignments`) so FogModWrapper can locate placed bosses; absent or empty when no assignments were made (added v4.5, `GraphData.EnemyAssignments`, consumed by `UntouchableBossInjector`, see `docs/untouchable-boss.md`)
+- `class_loadout`: optional, `[tarnished] starting_loadout`'s shuffled hand-item and armor-set permutations for the starting classes (mechanism-named, not pack-named: `[tarnished]` is only its first producer); absent when the option is off (added v4.6, `GraphData.ClassLoadout`, consumed by `ClassLoadoutInjector`, see `docs/tarnished-showcase.md`)
+- `torrent_skins`: optional, `[tarnished] unlock_torrent_skins`'s unlock flag plus a resolved `default_flag` (6701-6703) for the pre-selected Torrent skin; absent when the option is off (added v4.6, `GraphData.TorrentSkins`, consumed by `StartingItemInjector`, see `docs/tarnished-showcase.md`)
 - `flag_id` per connection: event flag set when fog gate is traversed
 - Event flags allocated sequentially from base 1050294000 (range 1050294000-1050294999); persistent flags (e.g. `items_spawned_flag`) come from a separate base 1050290000
 - Connections use FogMod's edge FullName format: `{map}_{gate_name}` (e.g., `m10_01_00_00_AEG099_001_9000`)

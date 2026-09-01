@@ -12,7 +12,9 @@ namespace FogModWrapper;
 /// their changes coexist in the same in-memory object. This is safe as long
 /// as they write disjoint fields, which is a documented invariant of the
 /// current consumer set (WeaponUpgradeInjector writes weapon fields;
-/// StartingRuneInjector writes the soul field).
+/// StartingRuneInjector writes the soul field; ClassLoadoutInjector writes
+/// equip_Wep_Right/equip_Wep_Left and equip_Helm/equip_Armer/equip_Gaunt/
+/// equip_Leg).
 /// </summary>
 /// <remarks>
 /// Any future consumer that mutates a PARAM already accessed by another
