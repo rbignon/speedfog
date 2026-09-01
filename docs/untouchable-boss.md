@@ -109,7 +109,10 @@ placing the boss):
    alone (defensive: nothing else should ever share an untouchable's arena
    entity id, but the injector never repoints the wrong model). `ThinkParamID`
    is left at its vanilla value (`52800000`); AI tuning is a separate,
-   documented follow-up (see below), not part of this injector.
+   documented follow-up (see below), not part of this injector. If
+   assignment targets are still unfound after this mod-dir scan, `Inject`
+   runs a merge-dir fallback over a named list of arena maps FogMod never
+   writes; see "Implemented fix" below for the full mechanics.
 
 `ApplyToMsb` returns `(Repointed, Ids)`: the repointed count and the exact
 set of entity ids it touched. `Inject` uses that tuple directly for its
@@ -160,27 +163,43 @@ boss on an 02-supertile that carries nothing FogMod touches (the zone's
 gates are on the 00-tiles, and the stake fix lives on the OTHER
 supertile m60_12_09_02, which FogMod does write for that reason).
 
-Candidate fixes: (a) targeted, preferred: teach the repoint scan a
-fallback source: when an assignment target is absent from every
-`mods/fogmod` map, read the map from the merge-dir copy, repoint there,
-and write the result into `mods/fogmod` (the higher-priority layer), so
-the extra map ships only when the boss is actually placed in it;
-(b) generic: add the tile to `[[pin_vanilla_maps]]` sourced from the
-merge-dir copy, which also serves hypothetical future injectors but
-ships the map on every seed (and keeps the 1.17 invasion-content check
-on that file's contents relevant either way).
+Implemented fix (user-approved option a, 2026-09-01): the repoint scan
+in `Inject` gained a named fallback source. After the primary
+`mods/fogmod` scan, if any assignment target is still unfound and a
+merge dir is available (`Program.cs` passes `ctx.Config.MergeDir`),
+`Inject` walks a hardcoded `FallbackArenaMaps` list (currently just
+`m60_13_09_02`), skipping any name already present in `mods/fogmod`
+(already scanned by the primary loop). For each remaining name it reads
+the merge-dir copy (`<mergeDir>/map/mapstudio/<name>.msb.dcx`, missing
+being logged and skipped), runs the same `ApplyToMsb` repoint, and, only
+when something was actually repointed there, writes the result into
+`mods/fogmod` (the higher-priority ModEngine layer) and folds the
+repointed ids into the found set. The extra map therefore ships only on
+seeds that actually place the boss in it; any id still unfound after the
+fallback keeps the existing phase-slot warning. Extend
+`FallbackArenaMaps` if the "assignment target not found" warning ever
+fires for another arena whose map exists in the merge-dir.
+
+The discarded generic alternative (option b) was to add the tile to
+`[[pin_vanilla_maps]]` sourced from the merge-dir copy: it would also
+serve hypothetical future injectors, but ships the map on every seed
+regardless of whether the boss landed there, which was not worth the
+unconditional cost for a single-arena case.
 
 ## Expected log lines
 
 ```
 Untouchable boss: NpcParam 755890000 (clone of 52800086, hp 3000, runes 20000) + SpEffect 755890000 (cut 0.35)
 Untouchable boss: repointing N placed boss slot(s)
+  Fallback: repointed N part(s) in <name> (merge-dir copy shipped into the mod dir)
   Repointed M untouchable boss part(s)
 ```
 
 with `M >= 1` whenever the boss was actually placed in at least one
-compatible (`c5280`-model) arena. Phase-slot warnings (see above) are
-expected and not failures.
+compatible (`c5280`-model) arena. The `Fallback:` line only appears when
+the merge-dir fallback described above actually repointed something in
+one of `FallbackArenaMaps`. Phase-slot warnings (see above) are expected
+and not failures.
 
 ## In-game tuning session (owed)
 

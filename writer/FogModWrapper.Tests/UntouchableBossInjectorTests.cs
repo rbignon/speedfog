@@ -105,4 +105,130 @@ public class UntouchableBossInjectorTests
         Assert.Equal(35000030, msb.Parts.Enemies[0].NPCParamID);
         Assert.Contains(warnings, w => w.Contains("30001800"));
     }
+
+    // Merge-dir fallback (docs/untouchable-boss.md, m60_13_09_02 paragraph):
+    // caelid_radahn's boss part lives on an 02-supertile FogMod never
+    // writes, so the primary mod-dir scan in Inject never sees it. When the
+    // assignment target is still unfound after that scan and a mergeDir is
+    // given, Inject reads the merge-dir (Item Randomizer) copy of every map
+    // in the fallback list, repoints it, and ships it into modDir.
+
+    [Fact]
+    public void Inject_FallbackRepointsMergeDirCopyIntoModDir()
+    {
+        using var tmp = new TempDir();
+        var modDir = Path.Combine(tmp.Path, "mod");
+        var mergeDir = Path.Combine(tmp.Path, "merge");
+        Directory.CreateDirectory(Path.Combine(modDir, "map", "mapstudio")); // empty: primary scan finds nothing
+        var mergeMapDir = Path.Combine(mergeDir, "map", "mapstudio");
+        Directory.CreateDirectory(mergeMapDir);
+
+        var msb = new MSBE();
+        msb.Models.Enemies.Add(new MSBE.Model.Enemy { Name = "c5280" });
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c5280_9000", ModelName = "c5280",
+            EntityID = 30001800, NPCParamID = 52800140, ThinkParamID = 52800000,
+        });
+        msb.Write(Path.Combine(mergeMapDir, "m60_13_09_02.msb.dcx"), DCX.Type.DCX_DFLT_10000_44_9);
+
+        var assignments = new Dictionary<string, string>
+        {
+            ["30001800"] = SpeedFogIds.UntouchableSourceEntity.ToString(),
+        };
+
+        UntouchableBossInjector.Inject(modDir, assignments, mergeDir);
+
+        var writtenPath = Path.Combine(modDir, "map", "mapstudio", "m60_13_09_02.msb.dcx");
+        Assert.True(File.Exists(writtenPath));
+        var reread = MSBE.Read(writtenPath);
+        var boss = reread.Parts.Enemies.Single(e => e.EntityID == 30001800);
+        Assert.Equal(SpeedFogIds.UntouchableBossNpcRow, boss.NPCParamID);
+    }
+
+    [Fact]
+    public void Inject_NoMergeDir_DoesNotThrowAndModDirStaysEmpty()
+    {
+        using var tmp = new TempDir();
+        var modDir = Path.Combine(tmp.Path, "mod");
+        var mapDir = Path.Combine(modDir, "map", "mapstudio");
+        Directory.CreateDirectory(mapDir);
+
+        var assignments = new Dictionary<string, string>
+        {
+            ["30001800"] = SpeedFogIds.UntouchableSourceEntity.ToString(),
+        };
+
+        var captured = new StringWriter();
+        var prev = Console.Out;
+        Console.SetOut(captured);
+        Exception? ex;
+        try
+        {
+            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, null));
+        }
+        finally
+        {
+            Console.SetOut(prev);
+        }
+
+        Assert.Null(ex);
+        Assert.Empty(Directory.GetFiles(mapDir));
+        Assert.Contains("not found in any map (phase slot?)", captured.ToString());
+    }
+
+    [Fact]
+    public void Inject_FallbackMapAbsentFromMergeDir_LogsWarningAndModDirStaysEmpty()
+    {
+        using var tmp = new TempDir();
+        var modDir = Path.Combine(tmp.Path, "mod");
+        var mergeDir = Path.Combine(tmp.Path, "merge");
+        var mapDir = Path.Combine(modDir, "map", "mapstudio");
+        Directory.CreateDirectory(mapDir);
+        Directory.CreateDirectory(mergeDir); // no map/mapstudio/m60_13_09_02.msb.dcx inside
+
+        var assignments = new Dictionary<string, string>
+        {
+            ["30001800"] = SpeedFogIds.UntouchableSourceEntity.ToString(),
+        };
+
+        var captured = new StringWriter();
+        var prev = Console.Out;
+        Console.SetOut(captured);
+        Exception? ex;
+        try
+        {
+            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, mergeDir));
+        }
+        finally
+        {
+            Console.SetOut(prev);
+        }
+
+        Assert.Null(ex);
+        Assert.Empty(Directory.GetFiles(mapDir));
+        var output = captured.ToString();
+        Assert.Contains("fallback map m60_13_09_02.msb.dcx not found in merge dir", output);
+        Assert.Contains("not found in any map (phase slot?)", output);
+    }
+
+    /// <summary>
+    /// Disposable temp directory helper (mirrors VanillaWarpRemoverTests).
+    /// </summary>
+    private sealed class TempDir : IDisposable
+    {
+        public string Path { get; }
+
+        public TempDir()
+        {
+            Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"sftest_{Guid.NewGuid():N}");
+            Directory.CreateDirectory(Path);
+        }
+
+        public void Dispose()
+        {
+            if (Directory.Exists(Path))
+                Directory.Delete(Path, true);
+        }
+    }
 }

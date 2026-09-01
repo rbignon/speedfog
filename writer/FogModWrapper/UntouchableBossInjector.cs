@@ -28,6 +28,20 @@ public static class UntouchableBossInjector
     // and no other offline size mechanism exists (docs/untouchable-boss.md,
     // "Size: settled").
 
+    /// <summary>
+    /// Arena maps whose boss part FogMod never writes, so the primary
+    /// mod-dir scan in <see cref="Inject"/> never sees them: the assignment
+    /// target is only present in the merge-dir (Item Randomizer) copy.
+    /// caelid_radahn's boss part lives on the private-instance supertile
+    /// m60_13_09_02, which carries none of the zone's fog gates (those live
+    /// on the surrounding 00-tiles), so FogMod's writer skips it entirely
+    /// while the Item Randomizer's swap still ships it via mods/itemrando
+    /// (see docs/untouchable-boss.md, the m60_13_09_02 paragraph). Extend
+    /// this list if the "assignment target not found" warning ever fires
+    /// for another arena whose map exists in the merge-dir.
+    /// </summary>
+    private static readonly string[] FallbackArenaMaps = { "m60_13_09_02" };
+
     public static bool IsBossPlaced(Dictionary<string, string> enemyAssignments)
         => enemyAssignments.ContainsValue(
             SpeedFogIds.UntouchableSourceEntity.ToString());
@@ -74,9 +88,17 @@ public static class UntouchableBossInjector
     /// <summary>MSB phase (post-Write): repoint every placed untouchable
     /// (arena entity ids whose assignment value is the source entity) to
     /// the boss NpcParam clone. ThinkParamID stays vanilla 52800000; AI
-    /// tuning is a documented follow-up, not done here.</summary>
+    /// tuning is a documented follow-up, not done here.
+    ///
+    /// <paramref name="mergeDir"/> is the Item Randomizer merge dir (null
+    /// or empty disables the fallback, leaving behavior unchanged). When
+    /// assignment targets remain unfound after the primary mod-dir scan,
+    /// each map in <see cref="FallbackArenaMaps"/> is read from the
+    /// merge-dir copy, repointed the same way, and, only when something was
+    /// actually repointed, written into modDir (the higher-priority
+    /// layer).</summary>
     public static void Inject(
-        string modDir, Dictionary<string, string> enemyAssignments)
+        string modDir, Dictionary<string, string> enemyAssignments, string? mergeDir)
     {
         var source = SpeedFogIds.UntouchableSourceEntity.ToString();
         var arenaIds = enemyAssignments
@@ -114,6 +136,46 @@ public static class UntouchableBossInjector
                 }
             }
         });
+        // Merge-dir fallback: arenas whose map FogMod never writes (see
+        // FallbackArenaMaps) still have unfound assignment targets at this
+        // point. Read the merge-dir copy, repoint it, and ship it into
+        // modDir only when something was actually repointed there.
+        var unfound = arenaIds.Except(found).ToHashSet();
+        if (unfound.Count > 0 && !string.IsNullOrEmpty(mergeDir))
+        {
+            foreach (var name in FallbackArenaMaps)
+            {
+                var msbFileName = $"{name}.msb.dcx";
+                if (MsbHelper.FindMsbPath(modDir, msbFileName) != null)
+                    continue; // already scanned in the primary loop above
+
+                var mergePath = MsbHelper.FindMsbPath(mergeDir, msbFileName);
+                if (mergePath == null)
+                {
+                    Console.WriteLine(
+                        $"  Warning: fallback map {msbFileName} not found in merge dir");
+                    continue;
+                }
+
+                var msb = MSBE.Read(mergePath);
+                var lines = new List<string>();
+                var (repointed, ids) = ApplyToMsb(msb, arenaIds, lines.Add);
+                foreach (var line in lines)
+                    Console.WriteLine(line);
+                if (repointed > 0)
+                {
+                    var writePath = MsbHelper.FindOrCreateMsbDir(modDir, msbFileName);
+                    Directory.CreateDirectory(Path.GetDirectoryName(writePath)!);
+                    msb.Write(writePath);
+                    total += repointed;
+                    foreach (var id in ids)
+                        found.Add(id);
+                    Console.WriteLine(
+                        $"  Fallback: repointed {repointed} part(s) in {name} (merge-dir copy shipped into the mod dir)");
+                }
+            }
+        }
+
         Console.WriteLine($"  Repointed {total} untouchable boss part(s)");
         foreach (var missing in arenaIds.Except(found).OrderBy(id => id))
         {

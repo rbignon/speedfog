@@ -894,7 +894,7 @@ Example:
 
         // Aging Untouchable minor boss: repoint enemy-randomizer-placed
         // untouchables to the boss NpcParam clone (see ApplyRegulation).
-        UntouchableBossInjector.Inject(ctx.ModDir, ctx.GraphData.EnemyAssignments);
+        UntouchableBossInjector.Inject(ctx.ModDir, ctx.GraphData.EnemyAssignments, ctx.Config.MergeDir);
 
         // Rebirth option at Sites of Grace
         if (ctx.GraphData.StartingLarvalTears > 0)
