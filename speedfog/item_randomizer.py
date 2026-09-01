@@ -88,7 +88,7 @@ def generate_item_config(
             "nerflantern": True,
             "nohand": config.item_randomizer.remove_requirements,
             "dlc": config.item_randomizer.dlc,
-            "tarnished": config.item_randomizer.tarnished,
+            "tarnished": config.tarnished.enabled,
             "weaponreqs": config.item_randomizer.remove_requirements,
             "sombermode": config.item_randomizer.reduce_upgrade_cost,
             "nerfgargoyles": config.item_randomizer.nerf_gargoyles,

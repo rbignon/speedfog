@@ -144,9 +144,9 @@ def test_generate_item_config_tarnished_default_off():
 
 
 def test_generate_item_config_tarnished_enabled():
-    """[item_randomizer] tarnished = true flows through to the randomizer
+    """[tarnished] enabled = true flows through to the randomizer
     option (pack-owner-only seeds)."""
-    config = Config.from_dict({"item_randomizer": {"tarnished": True}})
+    config = Config.from_dict({"tarnished": {"enabled": True}})
 
     result = generate_item_config(config, 12345)
 

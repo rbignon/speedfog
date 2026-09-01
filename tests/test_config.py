@@ -1230,3 +1230,64 @@ def test_care_package_pool_file_rejects_parent_segment():
     """care_package.pool_file must not contain parent directory traversal."""
     with pytest.raises(ValueError, match="pool_file"):
         Config.from_dict({"care_package": {"pool_file": "../secrets.toml"}})
+
+
+def test_tarnished_section_defaults():
+    config = Config.from_dict({})
+    assert config.tarnished.enabled is False
+    assert config.tarnished.starting_loadout is False
+    assert config.tarnished.unlock_torrent_skins is False
+    assert config.tarnished.default_torrent_skin == ""
+
+
+def test_tarnished_section_full():
+    config = Config.from_dict(
+        {
+            "tarnished": {
+                "enabled": True,
+                "starting_loadout": True,
+                "unlock_torrent_skins": True,
+                "default_torrent_skin": "carian-silver",
+            }
+        }
+    )
+    assert config.tarnished.starting_loadout is True
+    assert config.tarnished.default_torrent_skin == "carian-silver"
+
+
+@pytest.mark.parametrize(
+    "section",
+    [
+        {"starting_loadout": True},
+        {"unlock_torrent_skins": True},
+        {"unlock_torrent_skins": True, "default_torrent_skin": "random"},
+    ],
+)
+def test_tarnished_suboptions_require_enabled(section):
+    with pytest.raises(ValueError, match="tarnished"):
+        Config.from_dict({"tarnished": section})
+
+
+def test_tarnished_default_skin_requires_unlock():
+    with pytest.raises(ValueError, match="unlock_torrent_skins"):
+        Config.from_dict(
+            {"tarnished": {"enabled": True, "default_torrent_skin": "random"}}
+        )
+
+
+def test_tarnished_default_skin_enum():
+    with pytest.raises(ValueError, match="default_torrent_skin"):
+        Config.from_dict(
+            {
+                "tarnished": {
+                    "enabled": True,
+                    "unlock_torrent_skins": True,
+                    "default_torrent_skin": "gold-tattoo",
+                }
+            }
+        )
+
+
+def test_item_randomizer_tarnished_migration_error():
+    with pytest.raises(ValueError, match=r"\[tarnished\] enabled"):
+        Config.from_dict({"item_randomizer": {"tarnished": True}})

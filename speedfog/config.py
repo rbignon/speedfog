@@ -412,12 +412,6 @@ class ItemRandomizerConfig:
     # default: SpeedFog gives a care package instead.
     auto_equip: bool = False
     dlc: bool = True
-    # Tarnished Pack (ER 1.17 paid DLC): let the randomizer place pack items
-    # and randomize the two pack invaders. NOT seed-neutral (the whole item
-    # layout diverges between on and off for one seed number); when on, the
-    # randomizer adds a startup error dialog for players without the pack
-    # (flag 6953). Off for general distribution; on for pack-owner-only seeds.
-    tarnished: bool = False
     nerf_gargoyles: bool = (
         True  # Disable damage tick in Valiant Gargoyles's poison cloud
     )
@@ -532,6 +526,47 @@ class CarePackageConfig:
             )
 
 
+@dataclass
+class TarnishedConfig:
+    """Tarnished Pack showcase configuration (pack-owner-only seeds).
+
+    ``enabled`` feeds the randomizer's ``tarnished`` option: pack items and
+    invaders enter the pools and non-owners get the v0.12 startup error
+    dialog. The sub-options shape the showcase itself; they all require
+    ``enabled``.
+    """
+
+    enabled: bool = False
+    starting_loadout: bool = False
+    unlock_torrent_skins: bool = False
+    default_torrent_skin: str = (
+        ""  # "", "tree-sentinel", "carian-silver", "funereal-night", "random"
+    )
+
+    def __post_init__(self) -> None:
+        if not self.enabled and (
+            self.starting_loadout
+            or self.unlock_torrent_skins
+            or self.default_torrent_skin
+        ):
+            raise ValueError(
+                "invalid config: [tarnished] sub-options require enabled = true"
+            )
+        if self.default_torrent_skin and not self.unlock_torrent_skins:
+            raise ValueError(
+                "invalid config: [tarnished] default_torrent_skin requires "
+                "unlock_torrent_skins = true (forcing a skin without its "
+                "regalia is untested engine behavior)"
+            )
+        valid_skins = {"", "tree-sentinel", "carian-silver", "funereal-night", "random"}
+        if self.default_torrent_skin not in valid_skins:
+            raise ValueError(
+                f"invalid config: [tarnished] default_torrent_skin "
+                f"'{self.default_torrent_skin}' (expected one of: "
+                f"tree-sentinel, carian-silver, funereal-night, random)"
+            )
+
+
 # Known config sections and their accepted keys. None means the section's
 # content is free-form (validated elsewhere). Keep in sync with from_dict;
 # _reject_unknown_keys uses this to fail loudly on typos instead of letting
@@ -623,7 +658,6 @@ _KNOWN_SECTION_KEYS: dict[str, frozenset[str] | None] = {
             "reduce_upgrade_cost",
             "auto_equip",
             "dlc",
-            "tarnished",
             "nerf_gargoyles",
             "nerf_malenia",
             "allcraft",
@@ -660,6 +694,14 @@ _KNOWN_SECTION_KEYS: dict[str, frozenset[str] | None] = {
         }
     ),
     "budget": frozenset({"tolerance"}),
+    "tarnished": frozenset(
+        {
+            "enabled",
+            "starting_loadout",
+            "unlock_torrent_skins",
+            "default_torrent_skin",
+        }
+    ),
     # Free-form plugin tables, envelope-validated in Config.__post_init__
     "plugin": None,
     # Preset metadata consumed by the speedfog-racing platform, not by
@@ -682,7 +724,12 @@ def _reject_unknown_keys(data: dict[str, Any]) -> None:
         if known is not None:
             for key in content:
                 if key not in known:
-                    errors.append(f"unknown key {section}.{key}")
+                    if (section, key) == ("item_randomizer", "tarnished"):
+                        errors.append(
+                            "item_randomizer.tarnished moved: use [tarnished] enabled"
+                        )
+                    else:
+                        errors.append(f"unknown key {section}.{key}")
     if errors:
         raise ValueError("invalid config: " + "; ".join(errors))
 
@@ -704,6 +751,7 @@ class Config:
     item_randomizer: ItemRandomizerConfig = field(default_factory=ItemRandomizerConfig)
     care_package: CarePackageConfig = field(default_factory=CarePackageConfig)
     enemy: EnemyConfig = field(default_factory=EnemyConfig)
+    tarnished: TarnishedConfig = field(default_factory=TarnishedConfig)
     plugins: dict[str, dict[str, Any]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
@@ -774,6 +822,7 @@ class Config:
         item_randomizer_section = data.get("item_randomizer", {})
         care_package_section = data.get("care_package", {})
         enemy_section = data.get("enemy", {})
+        tarnished_section = data.get("tarnished", {})
 
         run_complete_message = run_section.get("run_complete_message", "RUN COMPLETE")
         if isinstance(run_complete_message, list):
@@ -878,7 +927,6 @@ class Config:
                 ),
                 auto_equip=item_randomizer_section.get("auto_equip", False),
                 dlc=item_randomizer_section.get("dlc", True),
-                tarnished=item_randomizer_section.get("tarnished", False),
                 nerf_gargoyles=item_randomizer_section.get("nerf_gargoyles", True),
                 nerf_malenia=item_randomizer_section.get("nerf_malenia", False),
                 allcraft=item_randomizer_section.get("allcraft", True),
@@ -910,6 +958,14 @@ class Config:
                 swap_boss=enemy_section.get("swap_boss", False),
                 dlc_bosses=enemy_section.get("dlc_bosses", True),
                 bosses=enemy_section.get("bosses", []),
+            ),
+            tarnished=TarnishedConfig(
+                enabled=tarnished_section.get("enabled", False),
+                starting_loadout=tarnished_section.get("starting_loadout", False),
+                unlock_torrent_skins=tarnished_section.get(
+                    "unlock_torrent_skins", False
+                ),
+                default_torrent_skin=tarnished_section.get("default_torrent_skin", ""),
             ),
             plugins=data.get("plugin", {}),
         )
