@@ -732,9 +732,9 @@ Example:
     static void ApplyCommonInjectors(Context ctx)
     {
         // Starting items
-        if (ctx.GraphData.StartingGoods.Count > 0 || ctx.GraphData.CarePackage.Count > 0)
+        if (ctx.GraphData.StartingGoods.Count > 0 || ctx.GraphData.CarePackage.Count > 0 || ctx.GraphData.TorrentSkins?.Unlock == true)
         {
-            StartingItemInjector.Inject(ctx.CommonEmevd, ctx.GraphData.StartingGoods, ctx.GraphData.CarePackage, ctx.Events);
+            StartingItemInjector.Inject(ctx.CommonEmevd, ctx.GraphData.StartingGoods, ctx.GraphData.CarePackage, ctx.Events, ctx.GraphData.TorrentSkins);
         }
 
         // Starting resources (consumables via EMEVD)

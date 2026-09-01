@@ -63,6 +63,15 @@ public static class StartingItemInjector
         196,  // Malenia's Great Rune
     };
 
+    // Torrent cosmetic skin regalia Good IDs (Tarnished Pack showcase), given
+    // at start when TorrentSkinsData.Unlock is true.
+    private static readonly int[] RegaliaGoods =
+    {
+        2009600,  // Tree Sentinel Torrent skin
+        2009610,  // Carian Silver Torrent skin
+        2009620,  // Funereal Night Torrent skin
+    };
+
     /// <summary>
     /// Inject starting item events into the provided common EMEVD.
     /// Gives Good IDs (key items) and care package items (typed) at game start.
@@ -71,9 +80,16 @@ public static class StartingItemInjector
     /// <param name="goodIds">List of Good IDs to award (key items, great runes)</param>
     /// <param name="carePackage">List of typed care package items (weapons, armor, etc.)</param>
     /// <param name="events">Events parser for instruction generation</param>
-    public static void Inject(EMEVD commonEmevd, List<int> goodIds, List<CarePackageItem> carePackage, Events events)
+    /// <param name="torrentSkins">
+    /// Torrent cosmetic skin unlock configuration (Tarnished Pack showcase). When
+    /// Unlock is true, the regalia goods are given inside this same event; when
+    /// DefaultFlag is set, it is set ON once, guarded by this event's own
+    /// one-shot ITEMS_GIVEN_FLAG check.
+    /// </param>
+    public static void Inject(EMEVD commonEmevd, List<int> goodIds, List<CarePackageItem> carePackage, Events events, TorrentSkinsData? torrentSkins = null)
     {
-        var totalItems = goodIds.Count + carePackage.Count;
+        var unlockRegalia = torrentSkins?.Unlock == true;
+        var totalItems = goodIds.Count + carePackage.Count + (unlockRegalia ? RegaliaGoods.Length : 0);
         if (totalItems == 0)
         {
             Console.WriteLine("No starting items to inject");
@@ -122,6 +138,17 @@ public static class StartingItemInjector
             }
         }
 
+        // Give Torrent regalia goods (Tarnished Pack showcase) when unlocked,
+        // delivered exactly like other goods above.
+        if (unlockRegalia)
+        {
+            foreach (var goodId in RegaliaGoods)
+            {
+                evt.Instructions.Add(events.ParseAdd($"DirectlyGivePlayerItem(ItemType.Goods, {goodId}, 6001, 1)"));
+                Console.WriteLine($"  Added Torrent regalia Good ID {goodId}");
+            }
+        }
+
         // Set the "2+ Great Runes activated" vanilla flag if we gave enough Great Runes.
         // Without this, sending gates (Deeproot→Leyndell) and the capital barrier
         // show "not enough Great Runes" even though the items are in inventory.
@@ -148,6 +175,15 @@ public static class StartingItemInjector
         foreach (var item in carePackage.Where(i => i.Type >= 4))
         {
             Console.WriteLine($"  Skipping gem item {item.Name} (id={item.Id}, runtime-spawned by mod)");
+        }
+
+        // One-shot default Torrent skin flag: fires exactly once per save because
+        // it shares this event's own ITEMS_GIVEN_FLAG guard, so it must be set
+        // before that guard flag is set below.
+        if (torrentSkins?.DefaultFlag > 0)
+        {
+            evt.Instructions.Add(events.ParseAdd($"SetEventFlag(TargetEventFlagType.EventFlag, {torrentSkins.DefaultFlag}, ON)"));
+            Console.WriteLine($"  Set default Torrent skin flag ({torrentSkins.DefaultFlag})");
         }
 
         // Set flag so we don't give items again on reload
