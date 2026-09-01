@@ -114,6 +114,8 @@ Event ID ranges and auxiliary flags are declared centrally in
 | 755862100 | DeathMarkerInjector | map emevds | Bloodstain SFX events (sequential, capacity 900) |
 | 755863000 | RunCompleteInjector | common.emevd | Display victory banner + jingle |
 | 755864000 | ChapelGraceInjector | m10_01_00_00.emevd | One-shot warp to chapel grace (initial spawn) |
+| 755865000 | WeatherInjector | common.emevd | Force fixed weather + pin clock hour (opt-in) |
+| 755865100 | GateDecorInjector | map emevds | Halloween decoration SFX (sequential, capacity 400) |
 
 All events are registered in Event 0 via `InitializeEvent` (bank 2000, id 0),
 built by `EmevdHelper.InitializeEvent`.
@@ -122,9 +124,12 @@ built by `EmevdHelper.InitializeEvent`.
 
 Allocations in regulation.bin params (not event flags). Listed here so future contributors do not collide.
 
-| Range | Param(s) | Owner | Reference |
-|-------|----------|-------|-----------|
-| 1450700-1450799 | PhantomParam, SpEffectVfxParam, SpEffectParam | Phantom skins catalog | `docs/phantom-skins.md` |
+| Range | Param(s) | Owner | Reference | Notes |
+|-------|----------|-------|-----------|-------|
+| 1450700-1450799 | PhantomParam, SpEffectVfxParam, SpEffectParam | Phantom skins catalog | `docs/phantom-skins.md` | |
+| 755890000 | NpcThinkParam | AmbientSpawnInjector | `SpeedFogIds.PassiveGreeterThinkRow` | Passive greeter think clone (Aging Untouchable basis) |
+| 755890000 | NpcParam | UntouchableBossInjector | `SpeedFogIds.UntouchableBossNpcRow` | Boss clone; outside 5280-band to avoid nerflantern patching |
+| 755890000 | SpEffectParam | UntouchableBossInjector | `SpeedFogIds.UntouchableBossSpEffectRow` | Partial damage-cut state for boss |
 
 ## Risks & Constraints
 
