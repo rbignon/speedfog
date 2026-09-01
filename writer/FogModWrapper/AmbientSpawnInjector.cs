@@ -42,11 +42,16 @@ public static class AmbientSpawnInjector
     /// <summary>Attack power multiplier for decorative ambushers: they are
     /// scenery that swings, not a threat, so damage floors out at ~nothing.</summary>
     public const float AMBUSH_ATTACK_RATE = 0.01f;
-    private const float GREETER_MIN_RADIUS = 4.0f;
-    private const float GREETER_MAX_RADIUS = 6.0f;
+    internal const float GREETER_MIN_RADIUS = 4.0f;
+    internal const float GREETER_MAX_RADIUS = 6.0f;
+    // Spawn arcs are much narrower than the decor's 120-degree default:
+    // spawns sit 3-7m out, where a wide arc regularly clipped them into
+    // corridor walls in-game (fog gates sit in doorways). Decorations stay
+    // wide: their 1.5-4m radii keep them off the walls.
+    internal const float GREETER_ARC_SPREAD = 60f;
     private const float AMBUSH_MIN_RADIUS = 3.0f;
     private const float AMBUSH_MAX_RADIUS = 7.0f;
-    private const float AMBUSH_ARC_SPREAD = 140f;
+    internal const float AMBUSH_ARC_SPREAD = 80f;
 
     // FogMod's own entity/region allocation floor (DeathMarkerInjector.FOGMOD_ENTITY_MIN);
     // vanilla enemies used as clone sources must sit below it.
@@ -215,7 +220,7 @@ public static class AmbientSpawnInjector
                     spec.Kind == SpawnKind.Greeter ? GREETER_MIN_RADIUS : AMBUSH_MIN_RADIUS,
                     spec.Kind == SpawnKind.Greeter ? GREETER_MAX_RADIUS : AMBUSH_MAX_RADIUS,
                     0f,
-                    spec.Kind == SpawnKind.Greeter ? 120f : AMBUSH_ARC_SPREAD);
+                    spec.Kind == SpawnKind.Greeter ? GREETER_ARC_SPREAD : AMBUSH_ARC_SPREAD);
                 var offset = offsets[spec.IndexInPack];
 
                 var spawn = (MSBE.Part.Enemy)baseEnemy.DeepCopy();

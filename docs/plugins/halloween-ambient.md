@@ -69,9 +69,14 @@ resolution, and arc math:
   (`GateGeometry.ResolveIsASide(conn.ExitGate, conn.ExitArea, gateSides)`,
   mapped `isASide ? 180f : 0f`, the same ASide/BSide semantics as death
   markers; see "Position Offsets" in death-markers.md).
-- Radii: greeters 4-6m from the gate in a 120-degree arc; ambushers 3-7m in
-  a 140-degree arc. Greeters face AWAY from the gate, toward the player
-  walking up to it; ambushers keep pack scatter rotation.
+- Radii: greeters 4-6m from the gate in a 60-degree arc; ambushers 3-7m in
+  an 80-degree arc (both arcs were originally 120/140 degrees and were
+  tightened after in-game review: at those radii the wide arcs regularly
+  clipped spawns into corridor walls; decorations keep the 120-degree
+  default, the shipped catalogue's 1.5-4m radii stay clear of walls).
+  Greeters face AWAY
+  from the gate, toward the player walking up to it; ambushers keep pack
+  scatter rotation.
 - One spec group per (map, gate part name) pair: at most one greeter and
   one ambush pack per gate, even if several connections share it.
 - Ambush pack size (2 or 3) is drawn from a process-stable string hash of

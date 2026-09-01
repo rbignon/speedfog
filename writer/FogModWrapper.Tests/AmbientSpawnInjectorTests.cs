@@ -133,6 +133,11 @@ public class AmbientSpawnInjectorTests
         // show its back to everyone walking up).
         float expectedYaw = MathF.Atan2(d.X, d.Z) * 180f / MathF.PI;
         Assert.Equal(expectedYaw, greeter.Rotation.Y, 3);
+        // The spawn arc is tight around the gate axis (arc center 0 degrees
+        // here): wide arcs clipped spawns into corridor walls in-game.
+        Assert.InRange(expectedYaw,
+            -AmbientSpawnInjector.GREETER_ARC_SPREAD / 2f,
+            AmbientSpawnInjector.GREETER_ARC_SPREAD / 2f);
         // Visibility groups inherit the clone source's values (a chr-rendered
         // spawn must not go all-zero like an SFX-visible bloodstain marker
         // would), but through fresh, un-aliased arrays.
@@ -174,7 +179,9 @@ public class AmbientSpawnInjectorTests
         // uses for a Greeter spec with GateSideIsASide=false (arc center 0
         // degrees, radius 4-6m, pack size 1).
         var greeterAOffset = GateGeometry.GenerateArcOffsets(
-            gateA.EntityID, gateA.Rotation.Y, 0f, 1, 4.0f, 6.0f, 0f, 120f)[0];
+            gateA.EntityID, gateA.Rotation.Y, 0f, 1,
+            AmbientSpawnInjector.GREETER_MIN_RADIUS, AmbientSpawnInjector.GREETER_MAX_RADIUS,
+            0f, AmbientSpawnInjector.GREETER_ARC_SPREAD)[0];
         var greeterAPosition = gateA.Position + greeterAOffset;
 
         var gateB = new MSBE.Part.Asset
@@ -261,6 +268,17 @@ public class AmbientSpawnInjectorTests
         // Decorative clone (1 HP, near-zero attack), vanilla aggro AI.
         Assert.All(placed, e => Assert.Equal(SpeedFogIds.DecorativeAmbusherNpcRow, e.NPCParamID));
         Assert.All(placed, e => Assert.Equal(35000000, e.ThinkParamID));
+        // Pack stays inside the tight spawn arc around the gate axis (arc
+        // center 0 degrees here; wide arcs clipped spawns into walls).
+        var gate = msb.Parts.Assets.Single(a => a.Name == "AEG099_002_9000");
+        Assert.All(placed, e =>
+        {
+            var d = e.Position - gate.Position;
+            float angle = MathF.Atan2(d.X, d.Z) * 180f / MathF.PI;
+            Assert.InRange(angle,
+                -AmbientSpawnInjector.AMBUSH_ARC_SPREAD / 2f,
+                AmbientSpawnInjector.AMBUSH_ARC_SPREAD / 2f);
+        });
     }
 
     [Fact]
