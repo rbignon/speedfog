@@ -1,3 +1,4 @@
+using System.Numerics;
 using SoulsFormats;
 
 namespace FogModWrapper;
@@ -135,18 +136,7 @@ internal static class MsbHelper
     /// </summary>
     public static void DetachVisibilityGroups(MSBE.Part.Asset part)
     {
-        var src = part.Unk1;
-        var own = new MSBE.Part.UnkStruct1
-        {
-            Condition1 = src.Condition1,
-            Condition2 = src.Condition2,
-            UnkC2 = src.UnkC2,
-            UnkC3 = src.UnkC3,
-            UnkC4 = src.UnkC4,
-            UnkC6 = src.UnkC6,
-        };
-        Array.Copy(src.CollisionMask, own.CollisionMask, own.CollisionMask.Length);
-        part.Unk1 = own;
+        part.Unk1 = CopyUnkStruct1Base(part.Unk1);
     }
 
     /// <summary>
@@ -168,6 +158,23 @@ internal static class MsbHelper
     public static void CopyVisibilityGroups(MSBE.Part.Enemy part)
     {
         var src = part.Unk1;
+        var own = CopyUnkStruct1Base(src);
+        Array.Copy(src.DrawGroups, own.DrawGroups, own.DrawGroups.Length);
+        Array.Copy(src.DisplayGroups, own.DisplayGroups, own.DisplayGroups.Length);
+        part.Unk1 = own;
+    }
+
+    /// <summary>
+    /// Copies the scalar display-condition fields and CollisionMask from
+    /// <paramref name="src"/> into a fresh UnkStruct1 (the base every clone
+    /// needs to un-alias from its source; see DetachVisibilityGroups and
+    /// CopyVisibilityGroups). DrawGroups/DisplayGroups are left at their
+    /// zero-initialized default; callers that must preserve them (an enemy
+    /// visible through its own model, unlike an SFX-following asset) copy
+    /// those two arrays themselves afterward.
+    /// </summary>
+    private static MSBE.Part.UnkStruct1 CopyUnkStruct1Base(MSBE.Part.UnkStruct1 src)
+    {
         var own = new MSBE.Part.UnkStruct1
         {
             Condition1 = src.Condition1,
@@ -178,8 +185,66 @@ internal static class MsbHelper
             UnkC6 = src.UnkC6,
         };
         Array.Copy(src.CollisionMask, own.CollisionMask, own.CollisionMask.Length);
-        Array.Copy(src.DrawGroups, own.DrawGroups, own.DrawGroups.Length);
-        Array.Copy(src.DisplayGroups, own.DisplayGroups, own.DisplayGroups.Length);
-        part.Unk1 = own;
+        return own;
+    }
+
+    /// <summary>
+    /// Finds the nearest item to <paramref name="target"/> among
+    /// <paramref name="parts"/>, skipping any whose entity id falls in the
+    /// excluded band: <c>[min, maxExclusive)</c> when <paramref name="maxExclusive"/>
+    /// is given (DeathMarkerInjector: FogMod's own id range only), or
+    /// <c>[min, +inf)</c> otherwise (every other caller: "at or above
+    /// FogMod's floor", no upper bound). Ties keep the first candidate seen
+    /// (squared distance, no sqrt needed for comparison).
+    /// </summary>
+    public static T? FindNearestVanilla<T>(
+        IEnumerable<T> parts, Func<T, uint> entityId, Func<T, Vector3> position,
+        Vector3 target, uint min, uint? maxExclusive = null)
+    {
+        T? best = default;
+        float bestDist = float.MaxValue;
+
+        foreach (var part in parts)
+        {
+            var id = entityId(part);
+            bool excluded = maxExclusive.HasValue ? (id >= min && id < maxExclusive.Value) : id >= min;
+            if (excluded)
+                continue;
+
+            var diff = position(part) - target;
+            float dist = diff.X * diff.X + diff.Y * diff.Y + diff.Z * diff.Z;
+            if (dist < bestDist)
+            {
+                bestDist = dist;
+                best = part;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// Runs <paramref name="body"/> over <paramref name="items"/> in parallel,
+    /// buffering each item's log lines and flushing them to Console grouped
+    /// per item (never interleaved with another item's lines) under a shared
+    /// lock. Mirrors the Parallel.ForEach + per-item log buffer idiom shared
+    /// by DeathMarkerInjector, AmbientSpawnInjector, GateDecorInjector and
+    /// UntouchableBossInjector. Any counters or shared mutable state the body
+    /// updates remain the caller's responsibility (Interlocked / its own lock),
+    /// same as before this helper existed.
+    /// </summary>
+    public static void ForEachWithBufferedLogs<T>(IEnumerable<T> items, Action<T, Action<string>> body)
+    {
+        var consoleLock = new object();
+        Parallel.ForEach(items, item =>
+        {
+            var log = new List<string>();
+            body(item, log.Add);
+            lock (consoleLock)
+            {
+                foreach (var line in log)
+                    Console.WriteLine(line);
+            }
+        });
     }
 }

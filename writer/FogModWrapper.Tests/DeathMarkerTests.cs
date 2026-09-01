@@ -30,7 +30,7 @@ public class DeathMarkerTests
         baseAsset.Unk1.UnkC6 = 9;
 
         var clone = (MSBE.Part.Asset)baseAsset.DeepCopy();
-        DeathMarkerInjector.DetachVisibilityGroups(clone);
+        MsbHelper.DetachVisibilityGroups(clone);
 
         Assert.All(clone.Unk1.DisplayGroups, g => Assert.Equal(0u, g));
         Assert.All(clone.Unk1.DrawGroups, g => Assert.Equal(0u, g));
@@ -56,7 +56,9 @@ public class DeathMarkerTests
         // The ASide warp region is in the facing direction, but the player stands
         // on the opposite side to trigger it. So BSide placement = facing direction.
         // Gate facing +Z (rotY=0), so BSide offsets should have positive Z.
-        var offsets = DeathMarkerInjector.GenerateOffsets(100, 0f, isASide: false);
+        // Death marker constants (BLOODSTAINS_PER_GATE=3, MIN/MAX_RADIUS, Y_OFFSET)
+        // are private to DeathMarkerInjector; hardcoded here like GateGeometryTests.
+        var offsets = GateGeometry.GenerateArcOffsets(100, 0f, 0f, 3, 1.5f, 3.0f, 0.13f);
 
         Assert.Equal(3, offsets.Length);
         foreach (var offset in offsets)
@@ -70,7 +72,7 @@ public class DeathMarkerTests
     {
         // ASide (isASide=true): arc centered at 180 degrees (opposite gate facing).
         // Gate facing +Z (rotY=0), so ASide offsets should have negative Z.
-        var offsets = DeathMarkerInjector.GenerateOffsets(100, 0f, isASide: true);
+        var offsets = GateGeometry.GenerateArcOffsets(100, 0f, 180f, 3, 1.5f, 3.0f, 0.13f);
 
         Assert.Equal(3, offsets.Length);
         foreach (var offset in offsets)
@@ -85,8 +87,8 @@ public class DeathMarkerTests
         uint entityId = 42;
         float rotY = 45f; // arbitrary rotation
 
-        var aSideOffsets = DeathMarkerInjector.GenerateOffsets(entityId, rotY, isASide: true);
-        var bSideOffsets = DeathMarkerInjector.GenerateOffsets(entityId, rotY, isASide: false);
+        var aSideOffsets = GateGeometry.GenerateArcOffsets(entityId, rotY, 180f, 3, 1.5f, 3.0f, 0.13f);
+        var bSideOffsets = GateGeometry.GenerateArcOffsets(entityId, rotY, 0f, 3, 1.5f, 3.0f, 0.13f);
 
         // Compute centroid of each set
         var aCentroid = Average(aSideOffsets);
@@ -101,7 +103,7 @@ public class DeathMarkerTests
     [Fact]
     public void ParseGateFullName_SplitsCorrectly()
     {
-        var (mapId, partName) = DeathMarkerInjector.ParseGateFullName("m10_00_00_00_AEG099_002_9000");
+        var (mapId, partName) = GateGeometry.ParseGateFullName("m10_00_00_00_AEG099_002_9000");
         Assert.Equal("m10_00_00_00", mapId);
         Assert.Equal("AEG099_002_9000", partName);
     }

@@ -26,16 +26,6 @@ public class GateGeometryTests
     }
 
     [Fact]
-    public void GenerateArcOffsets_MatchesDeathMarkerWrapper()
-    {
-        // The death-marker wrapper must keep producing the exact same
-        // offsets as before the refactor (same PRNG seed and draw order).
-        var direct = GateGeometry.GenerateArcOffsets(42u, 30f, 180f, 3, 1.5f, 3.0f, 0.13f);
-        var viaWrapper = DeathMarkerInjector.GenerateOffsets(42u, 30f, isASide: true);
-        Assert.Equal(direct, viaWrapper);
-    }
-
-    [Fact]
     public void EstimateGroundY_ReturnsMedianOfNearbyCandidates()
     {
         var gate = new Vector3(0f, 10f, 0f);

@@ -99,37 +99,11 @@ public static class PhantomCatalogLoader
         }
     }
 
-    private static int ToInt(TomlTable entry, string key)
-    {
-        if (!entry.TryGetValue(key, out var v))
-            throw new InvalidDataException($"phantom_skins: missing field '{key}'");
-        return v switch
-        {
-            long l => checked((int)l),
-            int i => i,
-            _ => throw new InvalidDataException($"phantom_skins: field '{key}' must be integer, got {v?.GetType().Name}")
-        };
-    }
+    private static int ToInt(TomlTable entry, string key) => TomlHelpers.ToInt(entry, key, "phantom_skins:");
 
-    private static string ToString(TomlTable entry, string key)
-    {
-        if (!entry.TryGetValue(key, out var v) || v is not string s)
-            throw new InvalidDataException($"phantom_skins: missing or non-string field '{key}'");
-        return s;
-    }
+    private static string ToString(TomlTable entry, string key) => TomlHelpers.ToString(entry, key, "phantom_skins:");
 
-    private static float ToFloat(TomlTable entry, string key)
-    {
-        if (!entry.TryGetValue(key, out var v))
-            throw new InvalidDataException($"phantom_skins: missing field '{key}'");
-        return v switch
-        {
-            double d => (float)d,
-            long l => l,
-            int i => i,
-            _ => throw new InvalidDataException($"phantom_skins: field '{key}' must be number, got {v?.GetType().Name}")
-        };
-    }
+    private static float ToFloat(TomlTable entry, string key) => TomlHelpers.ToFloat(entry, key, "phantom_skins:");
 
     private static byte ToByte(object? v, string label)
     {

@@ -9,18 +9,19 @@ namespace FogModWrapper;
 /// hunting the next gate. Anchoring flipped from entrance gates to exit
 /// gates after in-game review: on arrival the entrance gate is behind the
 /// player and its dressing is never seen. Each consumer passes its own
-/// cluster-type set: decorations include the start cluster (Chapel of
-/// Anticipation, so the very first fog gate of a run sets the tone with
-/// candles and bones), spawns do not (no mobs at the Chapel); boss arenas
-/// and the final boss stay bare for both.
+/// cluster-type set (see SpawnClusterTypes / DecorClusterTypes below); boss
+/// arenas and the final boss stay bare for both.
 /// </summary>
 internal static class HalloweenGateAnchors
 {
-    internal static readonly HashSet<string> DecorClusterTypes =
-        new() { "mini_dungeon", "legacy_dungeon", "start" };
-
     internal static readonly HashSet<string> SpawnClusterTypes =
         new() { "mini_dungeon", "legacy_dungeon" };
+
+    // Decorations additionally cover the start cluster (Chapel of
+    // Anticipation): the very first fog gate of a run sets the tone with
+    // candles and bones, unlike spawns, which have no mobs there.
+    internal static readonly HashSet<string> DecorClusterTypes =
+        new(SpawnClusterTypes) { "start" };
 
     // The start cluster's zone list also contains the Roundtable Hold,
     // whose own exit fog would otherwise get decorations too (spawns

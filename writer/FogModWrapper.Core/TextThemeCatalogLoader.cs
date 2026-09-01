@@ -81,24 +81,9 @@ public static class TextThemeCatalogLoader
         }
     }
 
-    private static int ToInt(TomlTable e, string key, string theme)
-    {
-        if (!e.TryGetValue(key, out var v))
-            throw new InvalidDataException($"{theme}: missing field '{key}'");
-        return v switch
-        {
-            long l => checked((int)l),
-            int i => i,
-            _ => throw new InvalidDataException($"{theme}: field '{key}' must be integer")
-        };
-    }
+    private static int ToInt(TomlTable e, string key, string theme) => TomlHelpers.ToInt(e, key, $"{theme}:");
 
-    private static string ToString(TomlTable e, string key, string theme)
-    {
-        if (!e.TryGetValue(key, out var v) || v is not string s)
-            throw new InvalidDataException($"{theme}: missing or non-string field '{key}'");
-        return s;
-    }
+    private static string ToString(TomlTable e, string key, string theme) => TomlHelpers.ToString(e, key, $"{theme}:");
 
     private static string? ToStringOpt(TomlTable e, string key)
         => e.TryGetValue(key, out var v) && v is string s ? s : null;

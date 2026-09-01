@@ -52,27 +52,6 @@ public static class DeathMarkerInjector
     }
 
     /// <summary>
-    /// Parse a gate FullName like "m10_01_00_00_AEG099_001_9000" into (mapId, partName).
-    /// Thin wrapper over <see cref="GateGeometry.ParseGateFullName"/>.
-    /// </summary>
-    internal static (string MapId, string PartName) ParseGateFullName(string fullName) =>
-        GateGeometry.ParseGateFullName(fullName);
-
-    /// <summary>
-    /// Generate 3 offsets on the approach side of a gate, spread across a 120-degree arc.
-    /// FogMod places the ASide warp region in the gate's facing direction (0 degrees).
-    /// The player stands on the opposite side of the warp region to trigger it, so:
-    /// - isASide=true: arc at 180 degrees (opposite the facing direction)
-    /// - isASide=false: arc at 0 degrees (the facing direction)
-    /// PRNG seeded on gateEntityId for deterministic placement.
-    /// Thin wrapper over <see cref="GateGeometry.GenerateArcOffsets"/>.
-    /// </summary>
-    internal static Vector3[] GenerateOffsets(uint gateEntityId, float gateRotY, bool isASide) =>
-        GateGeometry.GenerateArcOffsets(
-            gateEntityId, gateRotY, isASide ? 180f : 0f,
-            BLOODSTAINS_PER_GATE, MIN_RADIUS, MAX_RADIUS, Y_OFFSET);
-
-    /// <summary>
     /// Inject bloodstain visual markers at exit fog gates in the DAG.
     /// Requires deathFlags to be non-empty; returns immediately otherwise.
     /// Each bloodstain is controlled by a per-cluster death flag via a dedicated
@@ -103,21 +82,14 @@ public static class DeathMarkerInjector
 
         int totalAssets = 0;
         int totalMaps = 0;
-        var consoleLock = new object();
 
-        Parallel.ForEach(work.Zip(plans), pair =>
+        MsbHelper.ForEachWithBufferedLogs(work.Zip(plans), (pair, log) =>
         {
             var (mapId, specs) = pair.First;
             var plan = pair.Second;
-            var log = new List<string>();
             int count = InjectMap(
                 modDir, gameDir, events, mapId, specs,
-                plan.EntityIdBase, plan.EventOffsetBase, log.Add);
-            lock (consoleLock)
-            {
-                foreach (var line in log)
-                    Console.WriteLine(line);
-            }
+                plan.EntityIdBase, plan.EventOffsetBase, log);
             if (count > 0)
             {
                 Interlocked.Add(ref totalAssets, count);
@@ -180,7 +152,7 @@ public static class DeathMarkerInjector
             // Only place bloodstains at the exit gate (the fog the player sees
             // before entering the dangerous zone), not at the entrance gate inside
             // the destination zone.
-            var (mapId, partName) = ParseGateFullName(conn.ExitGate);
+            var (mapId, partName) = GateGeometry.ParseGateFullName(conn.ExitGate);
             bool isASide = GateGeometry.ResolveIsASide(conn.ExitGate, conn.ExitArea, gateSides);
 
             if (!result.TryGetValue(mapId, out var specs))
@@ -255,8 +227,12 @@ public static class DeathMarkerInjector
             // Precompute offsets for both sides. A gate used as both entrance and exit
             // in different connections may need bloodstains on different sides: the exit
             // connection approaches from one zone, the entrance connection from another.
-            var offsetsASide = GenerateOffsets(gateAsset.EntityID, gateAsset.Rotation.Y, isASide: true);
-            var offsetsBSide = GenerateOffsets(gateAsset.EntityID, gateAsset.Rotation.Y, isASide: false);
+            var offsetsASide = GateGeometry.GenerateArcOffsets(
+                gateAsset.EntityID, gateAsset.Rotation.Y, 180f,
+                BLOODSTAINS_PER_GATE, MIN_RADIUS, MAX_RADIUS, Y_OFFSET);
+            var offsetsBSide = GateGeometry.GenerateArcOffsets(
+                gateAsset.EntityID, gateAsset.Rotation.Y, 0f,
+                BLOODSTAINS_PER_GATE, MIN_RADIUS, MAX_RADIUS, Y_OFFSET);
 
             // No save/restore needed around the clone batch: Part.DeepCopy
             // clones EntityGroupIDs, Asset.DeepCopyTo reassigns the SOURCE's
@@ -369,33 +345,9 @@ public static class DeathMarkerInjector
 
     // --- Helper methods ---
 
-    private static MSBE.Part.Asset? FindNearestVanillaAsset(MSBE msb, Vector3 targetPos)
-    {
-        MSBE.Part.Asset? best = null;
-        float bestDist = float.MaxValue;
-
-        foreach (var asset in msb.Parts.Assets)
-        {
-            if (asset.EntityID >= FOGMOD_ENTITY_MIN && asset.EntityID < FOGMOD_ENTITY_MAX)
-                continue;
-
-            var diff = asset.Position - targetPos;
-            float dist = diff.X * diff.X + diff.Y * diff.Y + diff.Z * diff.Z;
-            if (dist < bestDist)
-            {
-                bestDist = dist;
-                best = asset;
-            }
-        }
-
-        return best;
-    }
-
-    /// <summary>
-    /// Thin wrapper over <see cref="MsbHelper.DetachVisibilityGroups(MSBE.Part.Asset)"/>,
-    /// kept for existing callers. See docs/death-markers.md for the aliasing rationale.
-    /// </summary>
-    internal static void DetachVisibilityGroups(MSBE.Part.Asset bloodstain) =>
-        MsbHelper.DetachVisibilityGroups(bloodstain);
+    private static MSBE.Part.Asset? FindNearestVanillaAsset(MSBE msb, Vector3 targetPos) =>
+        MsbHelper.FindNearestVanilla(
+            msb.Parts.Assets, a => a.EntityID, a => a.Position, targetPos,
+            FOGMOD_ENTITY_MIN, FOGMOD_ENTITY_MAX);
 
 }

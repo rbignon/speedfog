@@ -70,62 +70,15 @@ public static class HalloweenDecorLoader
         return new DecorEntry(model, count, minRadius, maxRadius, yOffset, sfxDummy, sfxId);
     }
 
-    private static int ToInt(TomlTable e, string key)
-    {
-        if (!e.TryGetValue(key, out var v))
-            throw new InvalidDataException($"{Prefix} missing field '{key}'");
-        return v switch
-        {
-            long l => checked((int)l),
-            int i => i,
-            _ => throw new InvalidDataException($"{Prefix} field '{key}' must be integer")
-        };
-    }
+    private static int ToInt(TomlTable e, string key) => TomlHelpers.ToInt(e, key, Prefix);
 
-    private static int? ToIntOpt(TomlTable e, string key)
-    {
-        if (!e.TryGetValue(key, out var v))
-            return null;
-        return v switch
-        {
-            long l => checked((int)l),
-            int i => i,
-            _ => throw new InvalidDataException($"{Prefix} field '{key}' must be integer")
-        };
-    }
+    private static int? ToIntOpt(TomlTable e, string key) => TomlHelpers.ToIntOpt(e, key, Prefix);
 
-    private static float ToFloat(TomlTable e, string key)
-    {
-        if (!e.TryGetValue(key, out var v))
-            throw new InvalidDataException($"{Prefix} missing field '{key}'");
-        return v switch
-        {
-            double d => (float)d,
-            long l => l,
-            int i => i,
-            _ => throw new InvalidDataException($"{Prefix} field '{key}' must be numeric")
-        };
-    }
+    private static float ToFloat(TomlTable e, string key) => TomlHelpers.ToFloat(e, key, Prefix);
 
-    private static float? ToFloatOpt(TomlTable e, string key)
-    {
-        if (!e.TryGetValue(key, out var v))
-            return null;
-        return v switch
-        {
-            double d => (float)d,
-            long l => l,
-            int i => i,
-            _ => throw new InvalidDataException($"{Prefix} field '{key}' must be numeric")
-        };
-    }
+    private static float? ToFloatOpt(TomlTable e, string key) => TomlHelpers.ToFloatOpt(e, key, Prefix);
 
-    private static string ToString(TomlTable e, string key)
-    {
-        if (!e.TryGetValue(key, out var v) || v is not string s)
-            throw new InvalidDataException($"{Prefix} missing or non-string field '{key}'");
-        return s;
-    }
+    private static string ToString(TomlTable e, string key) => TomlHelpers.ToString(e, key, Prefix);
 }
 
 /// <summary>
