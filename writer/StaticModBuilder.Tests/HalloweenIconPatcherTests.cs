@@ -43,7 +43,7 @@ public class HalloweenIconPatcherTests
         int added = HalloweenIconPatcher.AddTexturesToTpf(tpf, new[]
         {
             ("MENU_ItemIcon_60383", new byte[] { 1, 2, 3 }),
-            ("MENU_ItemIcon_63075", new byte[] { 4, 5, 6 }),
+            ("MENU_ItemIcon_99999", new byte[] { 4, 5, 6 }),
         });
         Assert.Equal(2, added);
         Assert.Equal(3, tpf.Textures.Count);

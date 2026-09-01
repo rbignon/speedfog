@@ -40,5 +40,5 @@ reading `[plugin.halloween]` independently.
 - [summer-theme.md](summer-theme.md) - cosmetic summer text reskin.
 - [halloween-theme.md](halloween-theme.md) - cosmetic halloween text reskin.
 - [halloween-ambient.md](halloween-ambient.md) - Halloween ambient dungeon spawns and gate decorations.
-- [halloween-icons.md](halloween-icons.md) - Halloween item icon redirect (Golden Seed, Larval Tear, Sacred Tear).
+- [halloween-icons.md](halloween-icons.md) - Halloween item icon redirect (Golden Seed, Sacred Tear).
 - [weather.md](weather.md) - force a fixed weather, pin the clock hour.

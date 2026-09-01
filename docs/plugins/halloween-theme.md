@@ -10,10 +10,12 @@ never genuine-spooky. See the design spec:
 `docs/superpowers/specs/2026-08-03-halloween-theme-design.md`.
 
 Beyond the summer-style boss epithets and banners, the catalogue also
-renames Golden Seed (`Pumpkin Seed`), Larval Tear (`Gummy Worm`) and Sacred
-Tear (`Sacred Gumdrop`, text-only) via `GoodsName`/`GoodsCaption` in
-`item_dlc02.msgbnd.dcx` (ids 10010 / 8185 / 10020), the first two matching
-the icon replacement (spec 1.2).
+renames Golden Seed (`Pumpkin Seed`) and Sacred Tear (`Sacred Gumdrop`)
+via `GoodsName`/`GoodsCaption` in `item_dlc02.msgbnd.dcx`
+(ids 10010 / 10020), both matching the icon replacement (spec 1.2).
+Larval Tear (`Gummy Worm`) was renamed too until 2026-09-01, then dropped
+along with its icon: the item is never dropped during a run, so the
+reskin was invisible.
 
 Loading-screen tips were shipped in v1 and dropped after in-game testing:
 the engine reads `GR_MenuText` from `menu_dlc02.msgbnd.dcx` (themed banners
@@ -28,5 +30,5 @@ logged by `Program.cs`.
 The Halloween namespace also covers two non-text layers, ambient dungeon
 spawns and gate decorations: see
 [halloween-ambient.md](halloween-ambient.md); and a fourth, custom
-inventory icons for Golden Seed and Larval Tear matching the renames
+inventory icons for Golden Seed and Sacred Tear matching the renames
 above: see [halloween-icons.md](halloween-icons.md).

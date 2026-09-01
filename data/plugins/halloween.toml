@@ -390,8 +390,10 @@ fr = "DIEU TERRORISÉ"
 
 # ---- Item renames (GoodsName/GoodsCaption in item_dlc02.msgbnd.dcx) ----
 # Matches the pumpkin/candy icon replacement (spec 1.2, implemented in
-# Halloween plan 5). 10010 = Golden Seed, 8185 = Larval Tear,
-# 10020 = Sacred Tear; all three carry a dedicated Halloween icon.
+# Halloween plan 5). 10010 = Golden Seed, 10020 = Sacred Tear; both carry
+# a dedicated Halloween icon. Larval Tear ("Gummy Worm") was dropped on
+# 2026-09-01: the item is never dropped during a run, so the reskin was
+# invisible.
 
 [[ui]]
 bnd = "item_dlc02.msgbnd.dcx"
@@ -406,20 +408,6 @@ fmg = "GoodsCaption"
 id = 10010
 en = "A plump pumpkin seed, found beneath a jack-o'-lantern's grin.\n\nIncreases a Sacred Flask's number of uses.\n(Can be used after resting at a site of grace.)\n\nEvery autumn they sprout overnight wherever trick-or-treaters have passed, as if the season itself insisted on one more treat."
 fr = "Une graine de citrouille bien dodue, trouvée sous le sourire d'une citrouille-lanterne.\n\nAugmente le nombre d'utilisations d'une fiole sacrée.\n(Utilisable après un repos sur un site de grâce.)\n\nChaque automne, elles germent en une nuit sur le passage des chasseurs de bonbons, comme si la saison exigeait une friandise de plus."
-
-[[ui]]
-bnd = "item_dlc02.msgbnd.dcx"
-fmg = "GoodsName"
-id = 8185
-en = "Gummy Worm"
-fr = "Ver en Gélatine"
-
-[[ui]]
-bnd = "item_dlc02.msgbnd.dcx"
-fmg = "GoodsCaption"
-id = 8185
-en = "A wriggly gummy worm, chewy and faintly luminous.\n\nGrants rebirth when offered at a site of grace.\n\nSwallowing one whole is said to change a person entirely. Most of the time, it merely changes their appetite."
-fr = "Un ver en gélatine bien frétillant, fondant et vaguement luminescent.\n\nOffre une renaissance sur un site de grâce.\n\nOn dit qu'en avaler un tout rond change un être du tout au tout. La plupart du temps, cela ne change que son appétit."
 
 [[ui]]
 bnd = "item_dlc02.msgbnd.dcx"

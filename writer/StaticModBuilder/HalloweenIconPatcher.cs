@@ -36,7 +36,6 @@ public static class HalloweenIconPatcher
     private static readonly (string Name, string Png)[] Icons =
     {
         ("MENU_ItemIcon_60383", "halloween_icon_pumpkin_seed.png"),
-        ("MENU_ItemIcon_63075", "halloween_icon_gummy_worm.png"),
         ("MENU_ItemIcon_60384", "halloween_icon_sacred_gumdrop.png"),
     };
 
