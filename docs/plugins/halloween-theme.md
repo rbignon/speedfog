@@ -10,7 +10,7 @@ never genuine-spooky. See the design spec:
 `docs/superpowers/specs/2026-08-03-halloween-theme-design.md`.
 
 Beyond the summer-style boss epithets and banners, the catalogue also
-renames Golden Seed (`Pumpkin Seed`) and Sacred Tear (`Sacred Gumdrop`)
+renames Golden Seed (`Pumpkin Seed`) and Sacred Tear (`Profane Tear`)
 via `GoodsName`/`GoodsCaption` in `item_dlc02.msgbnd.dcx`
 (ids 10010 / 10020), both matching the icon replacement (spec 1.2).
 Larval Tear (`Gummy Worm`) was renamed too until 2026-09-01, then dropped

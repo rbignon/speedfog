@@ -35,7 +35,7 @@ def draw_pumpkin_seed(draw: ImageDraw.ImageDraw) -> None:
     draw.rectangle((72, 26, 88, 54), fill=STEM_GREEN, outline=OUTLINE, width=3)
 
 
-def draw_sacred_gumdrop(draw: ImageDraw.ImageDraw) -> None:
+def draw_profane_tear(draw: ImageDraw.ImageDraw) -> None:
     """A dome-shaped sugar gumdrop with a shine, sitting on a flat base."""
     draw.pieslice(
         (28, 32, 132, 200),
@@ -54,7 +54,7 @@ def draw_sacred_gumdrop(draw: ImageDraw.ImageDraw) -> None:
 def main() -> None:
     for name, painter in (
         ("halloween_icon_pumpkin_seed.png", draw_pumpkin_seed),
-        ("halloween_icon_sacred_gumdrop.png", draw_sacred_gumdrop),
+        ("halloween_icon_profane_tear.png", draw_profane_tear),
     ):
         img = Image.new("RGBA", (SIZE, SIZE), (0, 0, 0, 0))
         painter(ImageDraw.Draw(img))

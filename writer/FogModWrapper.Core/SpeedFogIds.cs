@@ -152,9 +152,9 @@ public static class SpeedFogIds
     /// above every vanilla icon id (max ~8490). Vanilla iconId: 383.</summary>
     public const int HalloweenGoldenSeedIcon = 60383;
 
-    /// <summary>Icon id for the Halloween Sacred Tear gumdrop icon
-    /// (MENU_ItemIcon_60384, same overlay). Vanilla iconId: 384
-    /// (EquipParamGoods row 10020, renamed "Sacred Gumdrop" by the text
-    /// catalogue).</summary>
+    /// <summary>Icon id for the Halloween Sacred Tear icon, a corrupted
+    /// burning-chalice artwork (MENU_ItemIcon_60384, same overlay).
+    /// Vanilla iconId: 384 (EquipParamGoods row 10020, renamed
+    /// "Profane Tear" by the text catalogue).</summary>
     public const int HalloweenSacredTearIcon = 60384;
 }

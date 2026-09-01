@@ -413,12 +413,12 @@ fr = "Une graine de citrouille bien dodue, trouvée sous le sourire d'une citrou
 bnd = "item_dlc02.msgbnd.dcx"
 fmg = "GoodsName"
 id = 10020
-en = "Sacred Gumdrop"
-fr = "Bonbon Sacré"
+en = "Profane Tear"
+fr = "Larme profane"
 
 [[ui]]
 bnd = "item_dlc02.msgbnd.dcx"
 fmg = "GoodsCaption"
 id = 10020
-en = "A sacred gumdrop, still sticky from the church altar it was left on.\n\nUpgrades the Sacred Flask when offered at a Church of Marika.\n(Can be used after resting at a site of grace.)\n\nThe faithful swear a saint's tear hides at the center of each one. No one has ever chewed slowly enough to confirm it."
-fr = "Un bonbon sacré, encore poisseux de l'autel d'église où il fut déposé.\n\nAméliore la fiole sacrée lorsqu'il est offert dans une église de Marika.\n(Utilisable après un repos sur un site de grâce.)\n\nLes fidèles jurent qu'une larme de sainte se cache au cœur de chacun. Personne n'a jamais mâché assez lentement pour le vérifier."
+en = "A Sacred Tear gone wrong: a chalice of liquid fire that refuses to burn out.\n\nUpgrades the Sacred Flask when offered at a Church of Marika.\n(Can be used after resting at a site of grace.)\n\nWhatever blessed it once stopped answering long ago. The flame keeps drinking anyway."
+fr = "Une larme sacrée qui a mal tourné : un calice de feu liquide qui refuse de s'éteindre.\n\nAméliore la fiole sacrée lorsqu'elle est offerte dans une église de Marika.\n(Utilisable après un repos sur un site de grâce.)\n\nCe qui l'avait bénie a cessé de répondre depuis longtemps. La flamme, elle, continue de boire."
