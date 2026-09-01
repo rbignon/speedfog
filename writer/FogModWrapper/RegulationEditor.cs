@@ -9,18 +9,27 @@ namespace FogModWrapper;
 ///
 /// Cached PARAMs are shared by reference across GetParam calls with the same
 /// name. If two injectors both modify the same PARAM (e.g. CharaInitParam),
-/// their changes coexist in the same in-memory object. This is safe as long
-/// as they write disjoint fields, which is a documented invariant of the
-/// current consumer set (WeaponUpgradeInjector writes weapon fields;
-/// StartingRuneInjector writes the soul field; ClassLoadoutInjector writes
-/// equip_Wep_Right/equip_Wep_Left and equip_Helm/equip_Armer/equip_Gaunt/
-/// equip_Leg).
+/// their changes coexist in the same in-memory object. Two disjoint-fields
+/// consumers can run in either order: StartingRuneInjector writes only the
+/// <c>soul</c> field, disjoint from everything else that touches
+/// CharaInitParam. ClassLoadoutInjector and WeaponUpgradeInjector, by
+/// contrast, deliberately OVERLAP on the weapon fields
+/// (<c>equip_Wep_Right</c>/<c>equip_Wep_Left</c> plus their
+/// <c>wepParamType_*1</c> companions) with a load-bearing order:
+/// ClassLoadoutInjector must run first, writing the raw EquipParamWeapon
+/// row IDs and zeroing the companion type fields, so that
+/// WeaponUpgradeInjector then reads those same fields and rewrites them
+/// with upgrade encoding (ID-shifted, or EquipParamCustomWeapon
+/// reinforceLv). Reversing the order silently ships the forced weapons
+/// unupgraded.
 /// </summary>
 /// <remarks>
 /// Any future consumer that mutates a PARAM already accessed by another
-/// injector in the same Open/Save block must verify its field writes are
-/// disjoint from the existing consumers, otherwise the last writer wins
-/// silently.
+/// injector in the same Open/Save block must either keep its field writes
+/// disjoint from the existing consumers, or, if it deliberately overlaps
+/// like ClassLoadoutInjector and WeaponUpgradeInjector do, document and
+/// enforce the required ordering the same way (see Program.cs Phase 7).
+/// Silent disjointness is not a rule to lean on when overlap is the point.
 /// </remarks>
 public sealed class RegulationEditor
 {

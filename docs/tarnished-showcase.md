@@ -26,7 +26,7 @@ default_torrent_skin = "" # "", "tree-sentinel", "carian-silver", "funereal-nigh
 ```
 
 - `enabled` replaces the old `[item_randomizer] tarnished` key (added
-  2026-08-27, removed the same week with no external users): a config that
+  2026-08-31, removed the same week with no external users): a config that
   still carries `[item_randomizer] tarnished` fails strict validation with a
   dedicated message pointing at `[tarnished] enabled`.
   `generate_item_config()` reads `config.tarnished.enabled` for
@@ -114,29 +114,43 @@ shuffled sequences and the resolved skin are also logged to the spoiler
 - `ClassLoadoutInjector` (`writer/FogModWrapper/ClassLoadoutInjector.cs`),
   pack-agnostic: for each class group from `StartingClassRows.ResolveGroups`
   (menu order), overwrites `equip_Wep_Right` or `equip_Wep_Left` (whichever
-  slot the drawn hand item names) and the four armor fields
-  (`equip_Helm`/`equip_Armer`/`equip_Gaunt`/`equip_Leg`) on every
-  CharaInitParam row of that group. Every other field is left untouched, so
+  slot the drawn hand item names), that field's `wepParamType_Right1` or
+  `wepParamType_Left1` companion (forced to 0, EquipParamWeapon), and the
+  four armor fields (`equip_Helm`/`equip_Armer`/`equip_Gaunt`/`equip_Leg`) on
+  every CharaInitParam row of that group. The type-field reset matters
+  because CharacterWriter (merged item-randomizer output) may have left it
+  at 1 (EquipParamCustomWeapon) from drawing an ash-of-war weapon into that
+  same slot; left stale, it sends WeaponUpgradeInjector down the wrong path
+  for a plain EquipParamWeapon ID. Every other field is left untouched, so
   CharacterWriter's own randomization still applies everywhere else. This is
   disjoint-fields co-residency on CharaInitParam alongside
   `StartingRuneInjector` (writes only `soul`); see
   `writer/FogModWrapper/RegulationEditor.cs`'s documented invariant.
 - Ordering constraint in `Program.cs` (Phase 7, batched regulation.bin
   edits): `ClassLoadoutInjector.ApplyTo` runs BEFORE
-  `WeaponUpgradeInjector.ApplyTo`, so the forced weapons go through the same
-  weapon-upgrade initialization pass as any other starting weapon. Reversing
-  the order would leave the drawn weapon IDs at their raw (unupgraded) form.
+  `WeaponUpgradeInjector.ApplyTo`. This is a deliberate OVERLAP, not
+  disjoint-fields co-residency: ClassLoadoutInjector writes the raw weapon
+  IDs and zeroed type fields first, then WeaponUpgradeInjector reads those
+  same fields and rewrites them with upgrade encoding, so the forced weapons
+  go through the same weapon-upgrade initialization pass as any other
+  starting weapon. Reversing the order would leave the drawn weapon IDs at
+  their raw (unupgraded) form.
 - Regalia: when `torrentSkins.Unlock` is true, `StartingItemInjector` gives
   the three regalia Good IDs (`RegaliaGoods = {2009600, 2009610, 2009620}`)
   inside its existing start-of-run delivery event, alongside the other
   starting goods and the care package.
 - Default skin one-shot guard: when `torrentSkins.DefaultFlag > 0`,
-  `StartingItemInjector` appends a `SetEventFlag(DefaultFlag, ON)`
-  instruction to the same event, right before the event sets its own
-  `ITEMS_GIVEN_FLAG` guard (`SpeedFogIds.ItemsGivenFlag`). Because that guard
-  already makes the whole event a one-shot (it bails out on re-entry once
-  the flag is set), the default-skin flag rides that same one-shot for free:
-  it fires exactly once per save, so the player's later choice in the grace
+  `StartingItemInjector` first appends a `SetEventFlag(6700, OFF)`
+  instruction, then `SetEventFlag(DefaultFlag, ON)`, right before the event
+  sets its own `ITEMS_GIVEN_FLAG` guard (`SpeedFogIds.ItemsGivenFlag`).
+  Vanilla `common.emevd` event 780 sets flag 6700 (vanilla appearance) when
+  none of 6700-6703 is on, and it has already run by the time this delivery
+  event fires on a fresh save; clearing 6700 restores the engine's
+  exactly-one-of-6700-6703 invariant instead of leaving both 6700 and the
+  configured default flag on. Because the `ITEMS_GIVEN_FLAG` guard already
+  makes the whole event a one-shot (it bails out on re-entry once the flag
+  is set), the clear-and-set pair rides that same one-shot for free: it
+  fires exactly once per save, so the player's later choice in the grace
   "Torrent attire" menu is never overwritten by a reload.
 
 ## Verified 1.17 facts
@@ -182,10 +196,16 @@ shuffled sequences and the resolved skin are also logged to the spoiler
   `speedfog/tarnished.py` if the observed skin does not match.
 - Class-selection screen shows the pack loadout (weapon in hand, armor worn)
   on every class.
-- Forced weapons are upgraded (matches `care_package.weapon_upgrade`).
-- The default skin applies on a new save, AND a manual skin change at the
-  grace "Torrent attire" menu survives a reload (proves the one-shot guard
-  does not fight the player's later choice).
+- Forced weapons are upgraded (matches `care_package.weapon_upgrade`); for a
+  class whose randomized slot held an ash-of-war weapon before the loadout
+  overwrote it, confirm the forced pack weapon still carries the upgrade
+  (the `wepParamType` reset case: a stale companion field would have sent
+  `WeaponUpgradeInjector` down the EquipParamCustomWeapon path instead).
+- The default skin applies on a new save (the injector clears vanilla flag
+  6700 and sets the default flag in the same one-shot; flags 6700-6703
+  should show exactly one ON), AND a manual skin change at the grace
+  "Torrent attire" menu survives a reload (proves the one-shot guard does
+  not fight the player's later choice).
 - One pack-owner pass (full showcase) and one non-owner pass (only needs to
   hit the Item Randomizer's startup error dialog).
 

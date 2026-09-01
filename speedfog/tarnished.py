@@ -47,7 +47,7 @@ HAND_ITEMS: list[HandItem] = [
     HandItem(62520000, "left", "Ritual Thrusting Shield"),
 ]
 
-# Armor sets, each a (head, body, arms, legs) quadruple (ProtectorParam rows)
+# Armor sets, each a (head, body, arms, legs) quadruple (EquipParamProtector rows)
 ARMOR_SETS: list[list[int]] = [
     [5340000, 5340100, 5340200, 5340300],  # Gold Tattoo (Broken Gold Mask)
     [5350000, 5350100, 5350200, 5350300],  # Silver Grooved
