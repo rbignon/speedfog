@@ -372,7 +372,7 @@ def export_spoiler_log(
         output_path: Path to write the spoiler log
         care_package: Optional care package items to include in spoiler
         class_loadout: Optional Tarnished Pack class loadout draw
-            ({"hand_items": [...], "armor_sets": [...]})
+            ({"weapons": [...], "shields": [...], "armor_sets": [...]})
         torrent_skins: Optional Tarnished Pack Torrent skins unlock draw
             ({"unlock": bool, "default_flag": int?})
     """
@@ -548,14 +548,19 @@ def export_spoiler_log(
         lines.append("TARNISHED SHOWCASE")
         lines.append("=" * 60)
         if class_loadout:
-            hand_items = class_loadout.get("hand_items", [])
-            if hand_items:
-                lines.append("  Hand items (draw order):")
-                for hand_item in hand_items:
-                    lines.append(
-                        f"    [{hand_item['slot']}] {hand_item['name']} "
-                        f"(id={hand_item['id']})"
-                    )
+            weapons = class_loadout.get("weapons", [])
+            if weapons:
+                lines.append("  Weapons (draw order, right hand, wraps over classes):")
+                for weapon in weapons:
+                    lines.append(f"    {weapon['name']} (id={weapon['id']})")
+            shields = class_loadout.get("shields", [])
+            if shields:
+                lines.append(
+                    "  Shields (draw order, one each, first classes with an "
+                    "occupied left hand):"
+                )
+                for shield in shields:
+                    lines.append(f"    {shield['name']} (id={shield['id']})")
             armor_sets = class_loadout.get("armor_sets", [])
             if armor_sets:
                 lines.append("  Armor sets (draw order):")

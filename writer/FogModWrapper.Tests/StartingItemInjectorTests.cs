@@ -39,6 +39,10 @@ public class StartingItemInjectorTests
     // default skin flag so exactly one of 6700-6703 stays ON.
     private const int TORRENT_VANILLA_SKIN_FLAG = 6700;
 
+    // Grace-ESD "attire menu announced" flag: set whenever the regalia are
+    // unlocked, so the one-time announce dialog never shows mid-run.
+    private const int TORRENT_ATTIRE_ANNOUNCED_FLAG = 69560;
+
     private static string? FindDataDir()
     {
         var envDir = Environment.GetEnvironmentVariable("DATA_DIR");
@@ -114,6 +118,11 @@ public class StartingItemInjectorTests
         Assert.True(guardIndex >= 0, "expected the ITEMS_GIVEN_FLAG guard-set");
         Assert.True(clearIndex < flagIndex, "the vanilla-skin flag must be cleared before the default-skin flag is set");
         Assert.True(flagIndex < guardIndex, "the default-skin flag must be set before the one-shot guard flag");
+
+        int announcedIndex = evt.Instructions.FindIndex(i =>
+            i.Bank == BANK && i.ID == ID_SET_FLAG && DecodeArgInt(i) == TORRENT_ATTIRE_ANNOUNCED_FLAG && DecodeState(i) == 1);
+        Assert.True(announcedIndex >= 0 && announcedIndex < guardIndex,
+            "the attire-announced flag must be set (before the one-shot guard) whenever regalia are unlocked");
     }
 
     [Fact]
@@ -128,10 +137,13 @@ public class StartingItemInjectorTests
         foreach (var regaliaId in RegaliaGoods)
             Assert.Contains(regaliaId, givenIds);
 
-        // The only SetEventFlag left is the mandatory one-shot guard: no
-        // default flag means no 6700 clear either (nothing to reconcile).
-        var flagSet = Assert.Single(FlagSets(evt));
-        Assert.Equal(ITEMS_GIVEN_FLAG, DecodeArgInt(flagSet));
+        // Exactly two SetEventFlags: the attire-announced flag (regalia are
+        // unlocked, so the grace popup is suppressed) and the mandatory
+        // one-shot guard. No default flag means no 6700 clear either.
+        var flagIds = FlagSets(evt).Select(DecodeArgInt).ToList();
+        Assert.Equal(2, flagIds.Count);
+        Assert.Contains(TORRENT_ATTIRE_ANNOUNCED_FLAG, flagIds);
+        Assert.Contains(ITEMS_GIVEN_FLAG, flagIds);
         Assert.Empty(FlagSetsFor(evt, TORRENT_VANILLA_SKIN_FLAG));
     }
 
@@ -154,6 +166,7 @@ public class StartingItemInjectorTests
         var givenIds = GivenGoodIds(evt);
         Assert.Equal(RegaliaGoods.OrderBy(x => x), givenIds.OrderBy(x => x));
         Assert.Empty(FlagSetsFor(evt, TORRENT_VANILLA_SKIN_FLAG));
+        Assert.Single(FlagSetsFor(evt, TORRENT_ATTIRE_ANNOUNCED_FLAG));
     }
 
     [Fact]

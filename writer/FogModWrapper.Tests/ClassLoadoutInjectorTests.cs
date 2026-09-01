@@ -15,6 +15,7 @@ public class ClassLoadoutInjectorTests
     private const int SentinelArmer = 444;
     private const int SentinelGaunt = 555;
     private const int SentinelLeg = 666;
+    private const int Empty = -1;  // CharaInitParam empty-slot sentinel
 
     // wepParamType_Right1/Left1 (u8, CHARA_INIT_WEP_TYPE enum: 0 =
     // EquipParamWeapon, 1 = EquipParamCustomWeapon) are set to 1 by
@@ -25,10 +26,11 @@ public class ClassLoadoutInjectorTests
 
     /// <summary>
     /// CharaInitParam-shaped PARAM with the six equip fields plus the two
-    /// wepParamType companion fields the injector writes, all int fields as
-    /// sentinel-carrying stand-ins for the vanilla def's real types (mirrors
-    /// StartingClassRowsTests/StartingRuneInjectorTests), except the type
-    /// fields which are u8 to mirror the real CharaInitParam def.
+    /// wepParamType companion fields the injector writes (mirrors
+    /// StartingClassRowsTests/StartingRuneInjectorTests; the type fields are
+    /// u8 like the real CharaInitParam def). Every slot starts occupied at a
+    /// sentinel; tests set individual fields to Empty (-1) to model bare
+    /// classes.
     /// </summary>
     private static PARAM MakeCharaInit(params int[] rowIds)
     {
@@ -61,51 +63,108 @@ public class ClassLoadoutInjectorTests
 
     private static PARAM.Row Row(PARAM param, int id) => param.Rows.Find(r => r.ID == id)!;
 
+    private static PackItemData Item(int id, string name) => new() { Id = id, Name = name };
+
     [Fact]
-    public void Apply_RightSlotItem_WritesRightAndLeavesLeftAtSentinel()
+    public void Apply_WeaponAlwaysWritesRightHandAndZeroesItsType()
     {
         var chara = MakeCharaInit(3000);
         var groups = new List<List<int>> { new() { 3000 } };
         var loadout = new ClassLoadoutData
         {
-            HandItems = new List<HandItemData> { new() { Id = 9001, Slot = "right", Name = "Longsword" } },
+            Weapons = new List<PackItemData> { Item(9001, "Longsword") },
         };
 
         ClassLoadoutInjector.Apply(chara, groups, loadout);
 
         Assert.Equal(9001, (int)Row(chara, 3000)["equip_Wep_Right"].Value);
-        Assert.Equal(SentinelLeft, (int)Row(chara, 3000)["equip_Wep_Left"].Value);
         Assert.Equal((byte)0, (byte)Row(chara, 3000)["wepParamType_Right1"].Value);
+        // Left hand untouched without a shield assignment.
+        Assert.Equal(SentinelLeft, (int)Row(chara, 3000)["equip_Wep_Left"].Value);
         Assert.Equal(SentinelWepTypeSet, (byte)Row(chara, 3000)["wepParamType_Left1"].Value);
     }
 
     [Fact]
-    public void Apply_LeftSlotItem_WritesLeftAndLeavesRightAtSentinel()
+    public void Apply_ShieldSkipsEmptyLeftHandAndLandsOnNextOccupiedClass()
     {
-        var chara = MakeCharaInit(3000);
-        var groups = new List<List<int>> { new() { 3000 } };
+        // Class 3000 has an empty left hand (Wretch-style): the shield must
+        // skip it entirely (no write, no type reset) and land on class 3001.
+        var chara = MakeCharaInit(3000, 3001);
+        Row(chara, 3000)["equip_Wep_Left"].Value = Empty;
+        var groups = new List<List<int>> { new() { 3000 }, new() { 3001 } };
         var loadout = new ClassLoadoutData
         {
-            HandItems = new List<HandItemData> { new() { Id = 9002, Slot = "left", Name = "Buckler" } },
+            Shields = new List<PackItemData> { Item(9002, "Buckler") },
         };
 
         ClassLoadoutInjector.Apply(chara, groups, loadout);
 
-        Assert.Equal(9002, (int)Row(chara, 3000)["equip_Wep_Left"].Value);
-        Assert.Equal(SentinelRight, (int)Row(chara, 3000)["equip_Wep_Right"].Value);
-        Assert.Equal((byte)0, (byte)Row(chara, 3000)["wepParamType_Left1"].Value);
-        Assert.Equal(SentinelWepTypeSet, (byte)Row(chara, 3000)["wepParamType_Right1"].Value);
+        Assert.Equal(Empty, (int)Row(chara, 3000)["equip_Wep_Left"].Value);
+        Assert.Equal(SentinelWepTypeSet, (byte)Row(chara, 3000)["wepParamType_Left1"].Value);
+        Assert.Equal(9002, (int)Row(chara, 3001)["equip_Wep_Left"].Value);
+        Assert.Equal((byte)0, (byte)Row(chara, 3001)["wepParamType_Left1"].Value);
+    }
+
+    [Fact]
+    public void Apply_EachShieldPlacedExactlyOnce()
+    {
+        // Three eligible classes, two shields: first two classes get one
+        // shield each in draw order, the third keeps its left hand.
+        var chara = MakeCharaInit(3000, 3001, 3002);
+        var groups = new List<List<int>> { new() { 3000 }, new() { 3001 }, new() { 3002 } };
+        var loadout = new ClassLoadoutData
+        {
+            Shields = new List<PackItemData> { Item(901, "Shield A"), Item(902, "Shield B") },
+        };
+
+        ClassLoadoutInjector.Apply(chara, groups, loadout);
+
+        Assert.Equal(901, (int)Row(chara, 3000)["equip_Wep_Left"].Value);
+        Assert.Equal(902, (int)Row(chara, 3001)["equip_Wep_Left"].Value);
+        Assert.Equal(SentinelLeft, (int)Row(chara, 3002)["equip_Wep_Left"].Value);
+        Assert.Equal(SentinelWepTypeSet, (byte)Row(chara, 3002)["wepParamType_Left1"].Value);
+    }
+
+    [Fact]
+    public void Apply_ArmorPieceOnlyReplacesOccupiedSlots()
+    {
+        // The vanilla 3008 case: helm/body/legs worn, no gauntlets. Three
+        // pieces replaced, gauntlets stay empty. A fully bare class (Wretch)
+        // keeps every armor slot empty while still getting its weapon.
+        var chara = MakeCharaInit(3000, 3001);
+        Row(chara, 3000)["equip_Gaunt"].Value = Empty;
+        foreach (var field in new[] { "equip_Helm", "equip_Armer", "equip_Gaunt", "equip_Leg" })
+            Row(chara, 3001)[field].Value = Empty;
+        var groups = new List<List<int>> { new() { 3000 }, new() { 3001 } };
+        var loadout = new ClassLoadoutData
+        {
+            Weapons = new List<PackItemData> { Item(9001, "Longsword") },
+            ArmorSets = new List<List<int>> { new() { 501, 502, 503, 504 } },
+        };
+
+        ClassLoadoutInjector.Apply(chara, groups, loadout);
+
+        Assert.Equal(501, (int)Row(chara, 3000)["equip_Helm"].Value);
+        Assert.Equal(502, (int)Row(chara, 3000)["equip_Armer"].Value);
+        Assert.Equal(Empty, (int)Row(chara, 3000)["equip_Gaunt"].Value);
+        Assert.Equal(504, (int)Row(chara, 3000)["equip_Leg"].Value);
+        foreach (var field in new[] { "equip_Helm", "equip_Armer", "equip_Gaunt", "equip_Leg" })
+            Assert.Equal(Empty, (int)Row(chara, 3001)[field].Value);
+        Assert.Equal(9001, (int)Row(chara, 3001)["equip_Wep_Right"].Value);
     }
 
     [Fact]
     public void Apply_EveryRowOfGroupGetsSameValues()
     {
-        // origin (3000) and chrInit twins (3100, 3101) for one class.
+        // origin (3000) and chrInit twins (3100, 3101) for one class; the
+        // presence decision comes from the first row and the writes land
+        // uniformly on all three.
         var chara = MakeCharaInit(3000, 3100, 3101);
         var groups = new List<List<int>> { new() { 3000, 3100, 3101 } };
         var loadout = new ClassLoadoutData
         {
-            HandItems = new List<HandItemData> { new() { Id = 9001, Slot = "right", Name = "Longsword" } },
+            Weapons = new List<PackItemData> { Item(9001, "Longsword") },
+            Shields = new List<PackItemData> { Item(9002, "Buckler") },
             ArmorSets = new List<List<int>> { new() { 1, 2, 3, 4 } },
         };
 
@@ -114,44 +173,21 @@ public class ClassLoadoutInjectorTests
         foreach (var id in new[] { 3000, 3100, 3101 })
         {
             Assert.Equal(9001, (int)Row(chara, id)["equip_Wep_Right"].Value);
+            Assert.Equal(9002, (int)Row(chara, id)["equip_Wep_Left"].Value);
             Assert.Equal(1, (int)Row(chara, id)["equip_Helm"].Value);
             Assert.Equal(2, (int)Row(chara, id)["equip_Armer"].Value);
             Assert.Equal(3, (int)Row(chara, id)["equip_Gaunt"].Value);
             Assert.Equal(4, (int)Row(chara, id)["equip_Leg"].Value);
             Assert.Equal((byte)0, (byte)Row(chara, id)["wepParamType_Right1"].Value);
-            Assert.Equal(SentinelWepTypeSet, (byte)Row(chara, id)["wepParamType_Left1"].Value);
+            Assert.Equal((byte)0, (byte)Row(chara, id)["wepParamType_Left1"].Value);
         }
     }
 
     [Fact]
-    public void Apply_RightSlotItem_ZeroesWepParamTypeOnEveryRowOfWrittenSlotGroup()
+    public void Apply_WrapsWeaponsAndArmorSetsIndependentlyByGroupIndexModulo()
     {
-        // Dedicated test for the finding: a stale wepParamType left over from
-        // CharacterWriter (set to 1 when it drew an ash-of-war weapon into
-        // the slot) must be zeroed on EVERY row of the group for the written
-        // slot, not just the first row, and the other slot's type field must
-        // stay untouched.
-        var chara = MakeCharaInit(3000, 3100, 3101);
-        var groups = new List<List<int>> { new() { 3000, 3100, 3101 } };
-        var loadout = new ClassLoadoutData
-        {
-            HandItems = new List<HandItemData> { new() { Id = 9001, Slot = "right", Name = "Longsword" } },
-        };
-
-        ClassLoadoutInjector.Apply(chara, groups, loadout);
-
-        foreach (var id in new[] { 3000, 3100, 3101 })
-        {
-            Assert.Equal((byte)0, (byte)Row(chara, id)["wepParamType_Right1"].Value);
-            Assert.Equal(SentinelWepTypeSet, (byte)Row(chara, id)["wepParamType_Left1"].Value);
-        }
-    }
-
-    [Fact]
-    public void Apply_WrapsHandItemsAndArmorSetsIndependentlyByGroupIndexModulo()
-    {
-        // 3 class groups, 2 hand items, 3 armor sets: group index 2 (third
-        // group) wraps hand items back to index 0 (2 % 2 == 0) while armor
+        // 3 class groups, 2 weapons, 3 armor sets: group index 2 (third
+        // group) wraps weapons back to index 0 (2 % 2 == 0) while armor
         // sets have enough entries to use index 2 directly (2 % 3 == 2).
         var chara = MakeCharaInit(3000, 3001, 3002);
         var groups = new List<List<int>>
@@ -162,11 +198,7 @@ public class ClassLoadoutInjectorTests
         };
         var loadout = new ClassLoadoutData
         {
-            HandItems = new List<HandItemData>
-            {
-                new() { Id = 100, Slot = "right", Name = "Sword A" },
-                new() { Id = 200, Slot = "right", Name = "Sword B" },
-            },
+            Weapons = new List<PackItemData> { Item(100, "Sword A"), Item(200, "Sword B") },
             ArmorSets = new List<List<int>>
             {
                 new() { 11, 12, 13, 14 },
@@ -177,29 +209,31 @@ public class ClassLoadoutInjectorTests
 
         ClassLoadoutInjector.Apply(chara, groups, loadout);
 
-        // Group 3 (index 2) wraps hand items to index 0 (Sword A) but uses
-        // its own armor set at index 2 (no wrap needed, 3 sets for 3 groups).
         Assert.Equal(100, (int)Row(chara, 3002)["equip_Wep_Right"].Value);
         Assert.Equal(31, (int)Row(chara, 3002)["equip_Helm"].Value);
     }
 
     [Fact]
-    public void Apply_ArmorQuadrupleMapsInOrderToHelmArmerGauntLeg()
+    public void Apply_ReturnsSwapsWithPreWriteIdsForTextPatching()
     {
-        var chara = MakeCharaInit(3000);
-        var groups = new List<List<int>> { new() { 3000 } };
+        // The swaps must carry the PRE-write ids (CharacterWriter's picks,
+        // whose names sit in the GR_LineHelp text) so the text patcher can
+        // find and replace them. Class 3000 gets weapon+shield; class 3001
+        // has an empty left hand, so its swap carries no shield.
+        var chara = MakeCharaInit(3000, 3001);
+        Row(chara, 3001)["equip_Wep_Left"].Value = Empty;
+        var groups = new List<List<int>> { new() { 3000 }, new() { 3001 } };
         var loadout = new ClassLoadoutData
         {
-            ArmorSets = new List<List<int>> { new() { 501, 502, 503, 504 } },
+            Weapons = new List<PackItemData> { Item(9001, "Longsword") },
+            Shields = new List<PackItemData> { Item(9002, "Buckler") },
         };
 
-        ClassLoadoutInjector.Apply(chara, groups, loadout);
+        var swaps = ClassLoadoutInjector.Apply(chara, groups, loadout);
 
-        var row = Row(chara, 3000);
-        Assert.Equal(501, (int)row["equip_Helm"].Value);
-        Assert.Equal(502, (int)row["equip_Armer"].Value);
-        Assert.Equal(503, (int)row["equip_Gaunt"].Value);
-        Assert.Equal(504, (int)row["equip_Leg"].Value);
+        Assert.Equal(2, swaps.Count);
+        Assert.Equal(new ClassLoadoutInjector.LoadoutSwap(0, SentinelRight, 9001, SentinelLeft, 9002), swaps[0]);
+        Assert.Equal(new ClassLoadoutInjector.LoadoutSwap(1, SentinelRight, 9001, 0, 0), swaps[1]);
     }
 
     [Fact]
@@ -212,8 +246,8 @@ public class ClassLoadoutInjectorTests
         // resolve the class group below (row 3000, via its origin
         // reference) and mutate these fields, instead of returning before
         // ever calling GetParam. A fixture with no params registered at all
-        // (as in ApplyTo_NullLoadout's earlier version) cannot distinguish
-        // "the null check fired" from "GetParam warn-returned null anyway".
+        // cannot distinguish "the null check fired" from "GetParam
+        // warn-returned null anyway".
         var chara = BuildParamFromDef("CharaInitParam", templateId: 3000);
         var row = chara.Rows.Single(r => r.ID == 3000);
         row["equip_Wep_Right"].Value = SentinelRight;
@@ -251,7 +285,7 @@ public class ClassLoadoutInjectorTests
         // silently no-op, matching StartingClassRows.Resolve's style.
         var loadout = new ClassLoadoutData
         {
-            HandItems = new List<HandItemData> { new() { Id = 9001, Slot = "right", Name = "Longsword" } },
+            Weapons = new List<PackItemData> { Item(9001, "Longsword") },
         };
         var bnd = new BND4();
         var reg = new RegulationEditor(bnd, DefsDir());

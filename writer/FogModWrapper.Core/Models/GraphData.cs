@@ -226,10 +226,18 @@ public class CarePackageItem
 public class ClassLoadoutData
 {
     /// <summary>
-    /// Weapons/shields held by the starting class, per hand slot.
+    /// Right-hand weapons: a covering shuffle applied to every class,
+    /// wrapping by class index.
     /// </summary>
-    [JsonPropertyName("hand_items")]
-    public List<HandItemData> HandItems { get; set; } = new();
+    [JsonPropertyName("weapons")]
+    public List<PackItemData> Weapons { get; set; } = new();
+
+    /// <summary>
+    /// Left-hand shields: each placed exactly once, on the first classes in
+    /// draw order whose left-hand slot is occupied.
+    /// </summary>
+    [JsonPropertyName("shields")]
+    public List<PackItemData> Shields { get; set; } = new();
 
     /// <summary>
     /// Armor set param row IDs, each a 4-element list (head, body, arms, legs).
@@ -239,21 +247,15 @@ public class ClassLoadoutData
 }
 
 /// <summary>
-/// A single starting class hand item (weapon or shield).
+/// A single starting class loadout item (weapon or shield).
 /// </summary>
-public class HandItemData
+public class PackItemData
 {
     /// <summary>
-    /// Param row ID.
+    /// Param row ID (EquipParamWeapon).
     /// </summary>
     [JsonPropertyName("id")]
     public int Id { get; set; }
-
-    /// <summary>
-    /// Hand slot: "right" or "left".
-    /// </summary>
-    [JsonPropertyName("slot")]
-    public string Slot { get; set; } = "right";
 
     /// <summary>
     /// Display name for logging/spoiler.

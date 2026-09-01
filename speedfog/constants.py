@@ -10,7 +10,9 @@ from __future__ import annotations
 # consumed by writer/FogModWrapper.Core/GraphLoader.cs. Bump on any
 # structural change and document it in docs/architecture.md.
 # 4.6: optional class_loadout + torrent_skins (Tarnished showcase)
-GRAPH_JSON_VERSION = "4.6"
+# 4.7: class_loadout reshaped to weapons/shields/armor_sets (weapon always,
+#      shields once each on occupied left hands, armor per occupied slot)
+GRAPH_JSON_VERSION = "4.7"
 
 # SpeedFog's dedicated flag base: 1050290000 (m60_50_29_00, unclaimed).
 # Saved flags (4xxx): zone tracking, finish event, death markers.

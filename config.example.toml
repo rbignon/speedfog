@@ -334,9 +334,11 @@ item_preset = true
 # values. All sub-options below require this to be true. (default: false)
 enabled = false
 
-# Give every starting class a pack hand item (weapon or shield) and a full
-# pack armor set, drawn as covering shuffles so all 8 items and all 4 sets
-# are used across the class roster. Requires enabled. (default: false)
+# Force the Tarnished Pack starting loadout: every class gets one of the 6
+# pack weapons in the right hand (covering shuffle), each of the 2 pack
+# shields lands once on a class with an occupied left hand, and armor
+# pieces replace only slots the class already fills (Wretch stays bare).
+# Requires enabled. (default: false)
 starting_loadout = false
 
 # Give the 3 Spectral Steed Regalia (Torrent cosmetic skins) at game start.

@@ -259,10 +259,11 @@ public class GraphLoaderTests
     {
         var json = """
         {
-          "version": "4.6",
+          "version": "4.7",
           "seed": 1,
           "class_loadout": {
-            "hand_items": [{"id": 1020000, "slot": "left", "name": "Buckler"}],
+            "weapons": [{"id": 3560000, "name": "Leontiel's Greatsword"}],
+            "shields": [{"id": 31540000, "name": "Silver Grooved Shield"}],
             "armor_sets": [[100, 200, 300, 400]]
           },
           "torrent_skins": {"unlock": true, "default_flag": 6702},
@@ -271,7 +272,8 @@ public class GraphLoaderTests
         }
         """;
         var data = GraphLoader.Parse(json);
-        Assert.Equal("left", data.ClassLoadout!.HandItems[0].Slot);
+        Assert.Equal(3560000, data.ClassLoadout!.Weapons[0].Id);
+        Assert.Equal(31540000, data.ClassLoadout.Shields[0].Id);
         Assert.Equal(4, data.ClassLoadout.ArmorSets[0].Count);
         Assert.Equal(6702, data.TorrentSkins!.DefaultFlag);
     }
@@ -280,7 +282,7 @@ public class GraphLoaderTests
     public void GraphData_ClassLoadoutAndTorrentSkinsDefaultNull()
     {
         var json = """
-        {"version": "4.6", "seed": 1, "connections": [], "area_tiers": {}}
+        {"version": "4.7", "seed": 1, "connections": [], "area_tiers": {}}
         """;
         var data = GraphLoader.Parse(json);
         Assert.Null(data.ClassLoadout);

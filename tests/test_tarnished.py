@@ -1,26 +1,25 @@
 from speedfog.config import TarnishedConfig
 from speedfog.tarnished import (
     ARMOR_SETS,
-    HAND_ITEMS,
+    SHIELDS,
     SKIN_FLAGS,
+    WEAPONS,
     build_class_loadout,
     build_torrent_skins,
     tarnished_rng,
 )
 
 
-def test_hand_items_slots():
-    """Six weapons go to the right hand, the two shields to the left."""
-    by_slot = {"right": set(), "left": set()}
-    for item in HAND_ITEMS:
-        by_slot[item.slot].add(item.id)
-    assert by_slot["left"] == {31540000, 62520000}
-    assert len(by_slot["right"]) == 6
+def test_pack_item_pools():
+    """Six right-hand weapons, two left-hand shields."""
+    assert len(WEAPONS) == 6
+    assert {s.id for s in SHIELDS} == {31540000, 62520000}
 
 
 def test_build_class_loadout_is_covering_permutation():
-    hand, armor = build_class_loadout(tarnished_rng(123))
-    assert sorted(i.id for i in hand) == sorted(i.id for i in HAND_ITEMS)
+    weapons, shields, armor = build_class_loadout(tarnished_rng(123))
+    assert sorted(i.id for i in weapons) == sorted(i.id for i in WEAPONS)
+    assert sorted(i.id for i in shields) == sorted(i.id for i in SHIELDS)
     assert sorted(map(tuple, armor)) == sorted(map(tuple, ARMOR_SETS))
 
 

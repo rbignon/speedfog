@@ -369,10 +369,8 @@ class TestExportSpoilerLog:
         dag = make_test_dag()
         output_file = tmp_path / "spoiler.txt"
         class_loadout = {
-            "hand_items": [
-                {"id": 3560000, "slot": "right", "name": "Leontiel's Greatsword"},
-                {"id": 31540000, "slot": "left", "name": "Silver Grooved Shield"},
-            ],
+            "weapons": [{"id": 3560000, "name": "Leontiel's Greatsword"}],
+            "shields": [{"id": 31540000, "name": "Silver Grooved Shield"}],
             "armor_sets": [[5350000, 5350100, 5350200, 5350300]],
         }
         torrent_skins = {"unlock": True, "default_flag": 6702}
@@ -386,8 +384,8 @@ class TestExportSpoilerLog:
 
         content = output_file.read_text(encoding="utf-8")
         assert "TARNISHED SHOWCASE" in content
-        assert "[right] Leontiel's Greatsword (id=3560000)" in content
-        assert "[left] Silver Grooved Shield (id=31540000)" in content
+        assert "Leontiel's Greatsword (id=3560000)" in content
+        assert "Silver Grooved Shield (id=31540000)" in content
         assert "[5350000, 5350100, 5350200, 5350300]" in content
         assert "Torrent skins unlocked: True" in content
         assert (
@@ -414,10 +412,10 @@ def _make_result(death_markers: bool = True) -> dict:
 class TestEventMap:
     """Tests for v4 event_map, finish_event, and flag_id fields."""
 
-    def test_version_is_4_6(self):
-        """Version string is '4.6'."""
+    def test_version_is_4_7(self):
+        """Version string is '4.7'."""
         result = _make_result()
-        assert result["version"] == "4.6"
+        assert result["version"] == "4.7"
 
     def test_event_map_keys_are_string_flag_ids(self):
         """event_map keys are stringified integers."""
@@ -2527,7 +2525,7 @@ class TestPhantomSkins:
             zone_names={},
         )
         result = dag_to_dict(dag, clusters)
-        assert result["version"] == "4.6"
+        assert result["version"] == "4.7"
 
 
 class TestDagToDictPlugins:
@@ -2543,7 +2541,7 @@ class TestDagToDictPlugins:
             clusters,
             GraphExportOptions(plugins={"summer": {"enabled": True, "intensity": 3}}),
         )
-        assert result["version"] == "4.6"
+        assert result["version"] == "4.7"
         assert result["plugins"] == {"summer": {"enabled": True, "intensity": 3}}
 
     def test_plugins_default_empty(self):
@@ -2569,17 +2567,17 @@ class TestDagToDictTarnishedFields:
         )
         export = GraphExportOptions(
             class_loadout={
-                "hand_items": [
-                    {"id": 3560000, "slot": "right", "name": "Leontiel's Greatsword"}
-                ],
+                "weapons": [{"id": 3560000, "name": "Leontiel's Greatsword"}],
+                "shields": [{"id": 31540000, "name": "Silver Grooved Shield"}],
                 "armor_sets": [[5350000, 5350100, 5350200, 5350300]],
             },
             torrent_skins={"unlock": True, "default_flag": 6702},
         )
         result = dag_to_dict(dag, clusters, export)
-        assert result["class_loadout"]["hand_items"][0]["slot"] == "right"
+        assert result["class_loadout"]["weapons"][0]["id"] == 3560000
+        assert result["class_loadout"]["shields"][0]["id"] == 31540000
         assert result["torrent_skins"] == {"unlock": True, "default_flag": 6702}
-        assert result["version"] == "4.6"
+        assert result["version"] == "4.7"
 
     def test_dag_to_dict_omits_absent_tarnished_fields(self):
         dag = make_test_dag()
@@ -2722,7 +2720,7 @@ class TestValidateGraphDict:
 
     def test_optional_tarnished_keys_present_with_correct_type_is_valid(self):
         graph = self._valid_graph()
-        graph["class_loadout"] = {"hand_items": [], "armor_sets": []}
+        graph["class_loadout"] = {"weapons": [], "shields": [], "armor_sets": []}
         graph["torrent_skins"] = {"unlock": True}
         validate_graph_dict(graph)  # must not raise
 

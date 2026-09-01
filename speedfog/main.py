@@ -381,11 +381,10 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
     if config.tarnished.starting_loadout or config.tarnished.unlock_torrent_skins:
         rng = tarnished_rng(actual_seed)
         if config.tarnished.starting_loadout:
-            hand, armor = build_class_loadout(rng)
+            weapons, shields, armor = build_class_loadout(rng)
             class_loadout = {
-                "hand_items": [
-                    {"id": i.id, "slot": i.slot, "name": i.name} for i in hand
-                ],
+                "weapons": [{"id": i.id, "name": i.name} for i in weapons],
+                "shields": [{"id": i.id, "name": i.name} for i in shields],
                 "armor_sets": armor,
             }
         torrent_skins = build_torrent_skins(config.tarnished, rng)

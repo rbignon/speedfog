@@ -30,6 +30,11 @@ public static class StartingItemInjector
     // of shipping the untested both-flags-on state.
     private const int TORRENT_VANILLA_SKIN_FLAG = 6700;
 
+    // "Attire menu announced" flag read and set by the grace talk ESD: with
+    // it ON the ESD adds the Torrent attire menu entry without showing the
+    // one-time "The spectral steed's appearance can now be changed" dialog.
+    private const int TORRENT_ATTIRE_ANNOUNCED_FLAG = 69560;
+
     // ItemType enum names for DirectlyGivePlayerItem instruction
     // Must match EMEDF enum: Weapon=0, Armor=1, Ring=2, Goods=3
     private static readonly string[] ItemTypeNames = { "ItemType.Weapon", "ItemType.Armor", "ItemType.Ring", "ItemType.Goods" };
@@ -156,6 +161,16 @@ public static class StartingItemInjector
                 evt.Instructions.Add(events.ParseAdd($"DirectlyGivePlayerItem(ItemType.Goods, {goodId}, 6001, 1)"));
                 Console.WriteLine($"  Added Torrent regalia Good ID {goodId}");
             }
+            // The grace talk ESD (machine 2147483562 of t000001000) shows the
+            // "The spectral steed's appearance can now be changed" dialog at
+            // the first grace sit when the player owns a regalia and flag
+            // 69560 is OFF, then sets 69560 and adds the attire menu entry.
+            // With 69560 already ON it adds the menu entry directly, no
+            // dialog. We hand the regalia at run start, so pre-announce here
+            // to spare the player the popup mid-run; non-showcase seeds keep
+            // the vanilla announce on organic regalia pickup.
+            evt.Instructions.Add(events.ParseAdd($"SetEventFlag(TargetEventFlagType.EventFlag, {TORRENT_ATTIRE_ANNOUNCED_FLAG}, ON)"));
+            Console.WriteLine($"  Set Torrent attire announced flag ({TORRENT_ATTIRE_ANNOUNCED_FLAG}), grace popup suppressed");
         }
 
         // Set the "2+ Great Runes activated" vanilla flag if we gave enough Great Runes.

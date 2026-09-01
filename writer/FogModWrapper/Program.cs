@@ -791,7 +791,7 @@ Example:
         }
 
         ShopInjector.ApplyTo(reg, ctx.GraphData.SentryTorchShop);
-        ClassLoadoutInjector.ApplyTo(reg, ctx.GraphData.ClassLoadout);
+        ctx.LoadoutSwaps = ClassLoadoutInjector.ApplyTo(reg, ctx.GraphData.ClassLoadout);
         WeaponUpgradeInjector.ApplyTo(reg, ctx.GraphData.WeaponUpgrade);
         StartingRuneInjector.ApplyTo(reg, ctx.GraphData.StartingRunes);
 
@@ -854,6 +854,14 @@ Example:
         if (ctx.GraphData.FinishEvent > 0)
         {
             RunCompleteInjector.InjectFmgEntries(ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.RunCompleteMessage);
+        }
+
+        // Class-selection equipment text: CharacterWriter wrote the
+        // pre-loadout weapon names into GR_LineHelp; swap in the forced ones
+        // (runs after CopyLocalizedFmgs so every language is present).
+        if (ctx.LoadoutSwaps.Count > 0)
+        {
+            ClassLoadoutTextPatcher.Patch(ctx.ModDir, ctx.Config.MergeDir, ctx.Config.GameDir, ctx.LoadoutSwaps);
         }
 
         // Text theme plugins: cosmetic boss/UI text reskins, one catalogue per
@@ -1013,6 +1021,11 @@ Example:
 
         // Populated by PatchEmevd, written by ApplyCommonInjectors
         public EMEVD CommonEmevd = null!;
+
+        // Per-class hand-slot swaps recorded by ClassLoadoutInjector (Phase
+        // 7), consumed by ClassLoadoutTextPatcher (Phase 8) to fix the
+        // class-selection equipment text.
+        public List<ClassLoadoutInjector.LoadoutSwap> LoadoutSwaps = new();
 
         // Resolved by PatchEmevd, consumed by ApplyCommonInjectors.
         // 0 when zone tracking is disabled or no defeat flag is known.
