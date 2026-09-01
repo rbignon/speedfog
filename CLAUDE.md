@@ -328,8 +328,8 @@ speedfog/
 | `TextTheme` | Cosmetic text reskins per theme, summer + halloween, opt-in via `[plugin.summer]` / `[plugin.halloween]` |
 | `TextThemeCatalogLoader` | Loads and validates `data/plugins/<theme>.toml` |
 | `HalloweenPluginSettings` | Parses `[plugin.halloween]` parameters (`ambushes`) from graph.json's plugin table |
-| `HalloweenGateAnchors` | Shared exit-gate anchor collection for the two ambient injectors (source cluster in mini_dungeon/legacy_dungeon/start, resolved through GraphNode.Zones) |
-| `AmbientSpawnInjector` | Places passive greeter enemies + optional ambush packs at the anchored exit gates (opt-in via `[plugin.halloween]`, see `docs/plugins/halloween-ambient.md`); runs after GateDecorInjector |
+| `HalloweenGateAnchors` | Shared exit-gate anchor collection for the two ambient injectors (source cluster resolved through GraphNode.Zones; decor set includes the start cluster, spawn set does not) |
+| `AmbientSpawnInjector` | Places passive greeters + optional decorative ambush packs (1 HP, near-zero attack via NpcParam clone) at the anchored exit gates (opt-in via `[plugin.halloween]`, see `docs/plugins/halloween-ambient.md`); runs after GateDecorInjector |
 | `GateDecorInjector` | Places catalogue-driven ambient decorations at the same exit gates from `data/plugins/halloween_decorations.toml`, on a per-gate ground estimate (vanilla assets + enemies) |
 | `HalloweenDecorLoader` | Loads and validates `data/plugins/halloween_decorations.toml` (Core) |
 | `UntouchableBossInjector` | Aging Untouchable minor boss: NpcParam clone + partial damage-cut SpEffect, repoints enemy-randomizer placements, see `docs/untouchable-boss.md` |

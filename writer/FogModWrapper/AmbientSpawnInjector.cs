@@ -9,8 +9,11 @@ namespace FogModWrapper;
 /// Places ambient enemy spawns at cluster exit gates for the Halloween
 /// plugin: a passive "greeter" (Aging Untouchable model, perception zeroed
 /// so it never aggros) standing watch beside every exit gate of a
-/// mini_dungeon/legacy_dungeon/start cluster (HalloweenGateAnchors), plus,
-/// when ambushes are enabled, a small skeleton pack sharing the gate's arc.
+/// mini_dungeon/legacy_dungeon cluster (HalloweenGateAnchors.
+/// SpawnClusterTypes: unlike decorations, no spawns at the start cluster),
+/// plus, when ambushes are enabled, a small skeleton pack sharing the
+/// gate's arc. Ambushers aggro normally but are decorative: 1 HP, no
+/// runes, near-zero attack via a cloned NpcParam row (ApplyAmbusher).
 /// Boss arenas never receive spawns.
 ///
 /// Two-phase injection, mirroring DeathMarkerInjector:
@@ -28,8 +31,17 @@ public static class AmbientSpawnInjector
     private const string GREETER_MODEL = "c5280";
     private const int GREETER_NPC_PARAM = 52800086;
     private const string AMBUSH_MODEL = "c3500";
+    // Vanilla Sage's Cave skeleton: the clone TEMPLATE for the decorative
+    // ambusher row; placed ambushers use SpeedFogIds.DecorativeAmbusherNpcRow.
     private const int AMBUSH_NPC_PARAM = 35000030;
     private const int AMBUSH_THINK_PARAM = 35000000;
+    // Tier-1 enemy-scaling row (7000 + 10 * tier, docs/enemy-scaling.md):
+    // the SpEffect clone template for the ambushers' attack nerf. A pure
+    // rate-multiplier row with no stateInfo side effects.
+    private const int SCALING_TIER1_TEMPLATE_SPEFFECT = 7010;
+    /// <summary>Attack power multiplier for decorative ambushers: they are
+    /// scenery that swings, not a threat, so damage floors out at ~nothing.</summary>
+    public const float AMBUSH_ATTACK_RATE = 0.01f;
     private const float GREETER_MIN_RADIUS = 4.0f;
     private const float GREETER_MAX_RADIUS = 6.0f;
     private const float AMBUSH_MIN_RADIUS = 3.0f;
@@ -42,9 +54,9 @@ public static class AmbientSpawnInjector
 
     /// <summary>
     /// Inject passive greeters (and optional ambush packs) at every exit
-    /// gate of a mini_dungeon/legacy_dungeon/start cluster. Maps are
-    /// processed in parallel (independent MSB files); no entity or event IDs
-    /// are allocated, so no pre-partitioning is needed.
+    /// gate of a mini_dungeon/legacy_dungeon cluster. Maps are processed
+    /// in parallel (independent MSB files); no entity or event IDs are
+    /// allocated, so no pre-partitioning is needed.
     /// </summary>
     public static void Inject(
         string modDir, string gameDir,
@@ -86,10 +98,10 @@ public static class AmbientSpawnInjector
 
     /// <summary>
     /// Collect spawn specs per map, keyed by the anchored gate's map id.
-    /// Anchors (exit gates of mini_dungeon/legacy_dungeon/start clusters,
-    /// deduped per (map, gate part name) pair) come from
-    /// HalloweenGateAnchors.Collect; each expands to one Greeter, plus, when
-    /// settings.Ambushes, a pack of 2-3 Ambushers.
+    /// Anchors (exit gates of mini_dungeon/legacy_dungeon clusters, deduped
+    /// per (map, gate part name) pair) come from HalloweenGateAnchors.
+    /// Collect with SpawnClusterTypes; each expands to one Greeter, plus,
+    /// when settings.Ambushes, a pack of 2-3 Ambushers.
     /// </summary>
     internal static Dictionary<string, List<SpawnSpec>> CollectSpawnSpecsByMap(
         List<Connection> connections,
@@ -99,7 +111,8 @@ public static class AmbientSpawnInjector
     {
         var result = new Dictionary<string, List<SpawnSpec>>();
 
-        foreach (var (mapId, anchors) in HalloweenGateAnchors.Collect(connections, nodes, gateSides))
+        foreach (var (mapId, anchors) in HalloweenGateAnchors.Collect(
+            connections, nodes, gateSides, HalloweenGateAnchors.SpawnClusterTypes))
         {
             var specs = new List<SpawnSpec>();
             result[mapId] = specs;
@@ -218,7 +231,9 @@ public static class AmbientSpawnInjector
                 spawn.Rotation = new Vector3(0f, spec.Kind == SpawnKind.Greeter ? yawAwayFromGate : (spec.IndexInPack * 137f) % 360f, 0f);
                 spawn.EntityID = 0;
                 Array.Clear(spawn.EntityGroupIDs);
-                spawn.NPCParamID = spec.Kind == SpawnKind.Greeter ? GREETER_NPC_PARAM : AMBUSH_NPC_PARAM;
+                spawn.NPCParamID = spec.Kind == SpawnKind.Greeter
+                    ? GREETER_NPC_PARAM
+                    : SpeedFogIds.DecorativeAmbusherNpcRow;
                 spawn.ThinkParamID = spec.Kind == SpawnKind.Greeter ? SpeedFogIds.PassiveGreeterThinkRow : AMBUSH_THINK_PARAM;
                 spawn.TalkID = 0;
                 spawn.CharaInitID = -1;
@@ -269,6 +284,90 @@ public static class AmbientSpawnInjector
         row["searchEye_dist"].Value = (ushort)0;
         row["BattleStartDist"].Value = (ushort)0;
         Console.WriteLine($"Halloween spawns: passive think row {SpeedFogIds.PassiveGreeterThinkRow} (clone of 52800000, perception zeroed)");
+    }
+
+    /// <summary>
+    /// Clone the Sage's Cave skeleton NpcParam row into the decorative
+    /// ambusher row (1 HP, no runes, near-zero attack via a custom
+    /// SpEffect): ambushers are scenery that swings, not a threat. Same
+    /// clone-plus-SpEffect mechanism as UntouchableBossInjector.Apply.
+    /// </summary>
+    public static void ApplyDecorativeAmbusherRows(RegulationEditor reg)
+    {
+        var npc = reg.GetParam("NpcParam");
+        var sp = reg.GetParam("SpEffectParam", "SpEffect");
+        if (npc == null || sp == null)
+        {
+            Console.WriteLine("Halloween spawns: NpcParam/SpEffectParam unavailable, ambushers keep vanilla stats");
+            return;
+        }
+        ApplyAmbusher(npc, sp);
+    }
+
+    /// <summary>PARAM-level entry point used by tests (same split as Apply).</summary>
+    public static void ApplyAmbusher(PARAM npc, PARAM spEffect)
+    {
+        var spRow = GameEditor.AddRow(
+            spEffect, SpeedFogIds.DecorativeAmbusherSpEffectRow, SCALING_TIER1_TEMPLATE_SPEFFECT);
+        // Neutralize the template's own tier-1 multipliers (vanilla 7010:
+        // maxHpRate 1.141); only the attack rates matter, since hp is
+        // forced to 1 on the NpcParam row anyway. staminaAttackRate is in
+        // the nerf list so blocked hits do not drain stamina either.
+        spRow["maxHpRate"].Value = 1f;
+        spRow["haveSoulRate"].Value = 1f;
+        foreach (var field in new[]
+        {
+            "physicsAttackPowerRate", "magicAttackPowerRate", "fireAttackPowerRate",
+            "thunderAttackPowerRate", "darkAttackPowerRate", "staminaAttackRate",
+        })
+        {
+            spRow[field].Value = AMBUSH_ATTACK_RATE;
+        }
+
+        var npcRow = GameEditor.AddRow(
+            npc, SpeedFogIds.DecorativeAmbusherNpcRow, AMBUSH_NPC_PARAM);
+        npcRow["hp"].Value = 1u;       // u32: dies to any hit
+        npcRow["getSoul"].Value = 0u;  // u32: no rune pinata
+        ClearInheritedScalingSlots(npcRow);
+        int slot = FirstFreeSpEffectSlot(npcRow);
+        npcRow[$"spEffectID{slot}"].Value = SpeedFogIds.DecorativeAmbusherSpEffectRow; // s32
+
+        Console.WriteLine(
+            $"Halloween spawns: decorative ambusher NpcParam {SpeedFogIds.DecorativeAmbusherNpcRow} " +
+            $"(clone of {AMBUSH_NPC_PARAM}, hp 1, runes 0) + SpEffect " +
+            $"{SpeedFogIds.DecorativeAmbusherSpEffectRow} (attack x{AMBUSH_ATTACK_RATE}, slot {slot})");
+    }
+
+    // Vanilla 35000030 carries the game's own area-scaling SpEffect in one
+    // of its slots (7080, tier 8: ~2.7x hp, 2x attack), which the clone
+    // would inherit and stack onto the nerf, roughly doubling the "1 HP /
+    // 0.01x" numbers. Clear every slot pointing into the scaling bands
+    // (docs/enemy-scaling.md: 7000+10*tier and the DLC 20007xxx band) so
+    // the decorative stats are exact.
+    private static void ClearInheritedScalingSlots(PARAM.Row row)
+    {
+        for (int i = 0; i < 32; i++)
+        {
+            int value = (int)row[$"spEffectID{i}"].Value;
+            if ((value >= 7000 && value <= 7200) || (value >= 20007000 && value <= 20007130))
+                row[$"spEffectID{i}"].Value = -1;
+        }
+    }
+
+    // NpcParam carries 32 SpEffect slots (spEffectID0-31); unused ones hold
+    // -1 (0 also appears as a placeholder and counts as occupied). Scanned
+    // instead of hardcoded (unlike UntouchableBossInjector's slot 19)
+    // because the skeleton template's occupancy is not pinned by any
+    // SpeedFog code and may shift with game patches.
+    private static int FirstFreeSpEffectSlot(PARAM.Row row)
+    {
+        for (int i = 0; i < 32; i++)
+        {
+            if ((int)row[$"spEffectID{i}"].Value == -1)
+                return i;
+        }
+        throw new InvalidOperationException(
+            "No free spEffectID slot on the decorative ambusher NpcParam clone");
     }
 
     // --- Helper methods ---

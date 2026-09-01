@@ -76,7 +76,8 @@ public static class GateDecorInjector
 
         Console.WriteLine("Injecting Halloween gate decorations...");
 
-        var gatesByMap = HalloweenGateAnchors.Collect(connections, nodes, gateSides);
+        var gatesByMap = HalloweenGateAnchors.Collect(
+            connections, nodes, gateSides, HalloweenGateAnchors.DecorClusterTypes);
         var work = gatesByMap.ToList();
         int perGateCount = catalog.Entries.Sum(e => e.Count);
         bool hasSfxEntries = catalog.Entries.Any(e => e.SfxId > 0);

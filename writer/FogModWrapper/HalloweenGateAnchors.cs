@@ -8,20 +8,25 @@ namespace FogModWrapper;
 /// the player walks through, i.e. the fogs they approach frontally while
 /// hunting the next gate. Anchoring flipped from entrance gates to exit
 /// gates after in-game review: on arrival the entrance gate is behind the
-/// player and its dressing is never seen. The start cluster (Chapel of
-/// Anticipation) is included so the very first fog gate of a run sets the
-/// tone; boss arenas and the final boss stay bare.
+/// player and its dressing is never seen. Each consumer passes its own
+/// cluster-type set: decorations include the start cluster (Chapel of
+/// Anticipation, so the very first fog gate of a run sets the tone with
+/// candles and bones), spawns do not (no mobs at the Chapel); boss arenas
+/// and the final boss stay bare for both.
 /// </summary>
 internal static class HalloweenGateAnchors
 {
-    internal static readonly HashSet<string> AnchorClusterTypes =
+    internal static readonly HashSet<string> DecorClusterTypes =
         new() { "mini_dungeon", "legacy_dungeon", "start" };
 
-    // The start cluster's zone list also contains the Roundtable Hold, whose
-    // own exit fog would otherwise be dressed too: a greeter and, with
-    // ambushes on, a hostile skeleton pack inside the safe hub. The start
-    // inclusion is about the run's first gate (the Chapel exit), so the hub
-    // zone is excluded outright.
+    internal static readonly HashSet<string> SpawnClusterTypes =
+        new() { "mini_dungeon", "legacy_dungeon" };
+
+    // The start cluster's zone list also contains the Roundtable Hold,
+    // whose own exit fog would otherwise get decorations too (spawns
+    // already cannot reach it: SpawnClusterTypes has no start). The start
+    // inclusion is about the run's first gate (the Chapel exit), so the
+    // hub zone is excluded outright.
     internal static readonly HashSet<string> ExcludedZones = new() { "roundtable" };
 
     internal readonly record struct GateAnchor(string PartName, bool IsASide);
@@ -30,16 +35,18 @@ internal static class HalloweenGateAnchors
     /// Collect exit-gate anchors per map id. The source cluster of a
     /// connection is resolved from its exit_area through the nodes' zone
     /// lists (GraphNode.Zones); connections whose source cluster is unknown
-    /// or not in AnchorClusterTypes are skipped. Emits at most one anchor
-    /// per (map, gate part name) pair. IsASide is resolved against the exit
-    /// area, so the isASide?180:0 arc-center mapping used by both consumers
-    /// lands placements on the approach side of the gate (see
-    /// docs/death-markers.md "Position Offsets (ASide/BSide)").
+    /// or not in clusterTypes (DecorClusterTypes or SpawnClusterTypes) are
+    /// skipped. Emits at most one anchor per (map, gate part name) pair.
+    /// IsASide is resolved against the exit area, so the isASide?180:0
+    /// arc-center mapping used by both consumers lands placements on the
+    /// approach side of the gate (see docs/death-markers.md "Position
+    /// Offsets (ASide/BSide)").
     /// </summary>
     internal static Dictionary<string, List<GateAnchor>> Collect(
         List<Connection> connections,
         Dictionary<string, GraphNode> nodes,
-        Dictionary<string, (string ASideArea, string BSideArea)> gateSides)
+        Dictionary<string, (string ASideArea, string BSideArea)> gateSides,
+        HashSet<string> clusterTypes)
     {
         var zoneTypes = new Dictionary<string, string>();
         foreach (var node in nodes.Values)
@@ -55,7 +62,7 @@ internal static class HalloweenGateAnchors
         {
             if (ExcludedZones.Contains(conn.ExitArea))
                 continue;
-            if (!zoneTypes.TryGetValue(conn.ExitArea, out var type) || !AnchorClusterTypes.Contains(type))
+            if (!zoneTypes.TryGetValue(conn.ExitArea, out var type) || !clusterTypes.Contains(type))
                 continue;
 
             var (mapId, partName) = GateGeometry.ParseGateFullName(conn.ExitGate);

@@ -26,7 +26,25 @@ public class AmbientSpawnInjectorTests
         ["mini1"] = new GraphNode { Type = "mini_dungeon", Zones = new() { "cave_zone" } },
         ["legacy1"] = new GraphNode { Type = "legacy_dungeon", Zones = new() { "castle_zone" } },
         ["arena1"] = new GraphNode { Type = "boss_arena", Zones = new() { "arena_zone" } },
+        ["start1"] = new GraphNode { Type = "start", Zones = new() { "chapel_start" } },
     };
+
+    [Fact]
+    public void CollectSpecs_NoSpawnsAtTheStartCluster()
+    {
+        // The Chapel exit is dressed by GateDecorInjector only: props set
+        // the tone, no greeter or ambush pack at the run's first gate.
+        var connections = new List<Connection>
+        {
+            Conn("chapel_start", "m10_01_00_00_AEG099_001_9000", 1),
+        };
+        var specs = AmbientSpawnInjector.CollectSpawnSpecsByMap(
+            connections, Nodes,
+            new Dictionary<string, (string, string)>(),
+            new HalloweenPluginSettings.Settings(Ambushes: true));
+
+        Assert.Empty(specs);
+    }
 
     [Fact]
     public void CollectSpecs_AnchorsOnSourceClusterExitGates()
@@ -224,6 +242,114 @@ public class AmbientSpawnInjectorTests
     // real paramdef here regression-guards the .csproj entry: if it goes
     // missing again, PARAMDEF.XmlDeserialize below throws (file not found)
     // rather than the row-writing assertions silently not running.
+
+    [Fact]
+    public void ApplyToMsb_AmbushersUseTheDecorativeNpcClone()
+    {
+        var msb = MakeMsbWithGateAndEnemy();
+        var specs = new List<SpawnSpec>
+        {
+            new("AEG099_002_9000", SpawnKind.Ambusher, 0, 2, GateSideIsASide: false),
+            new("AEG099_002_9000", SpawnKind.Ambusher, 1, 2, GateSideIsASide: false),
+        };
+
+        var (_, ambushers) = AmbientSpawnInjector.ApplyToMsb(msb, specs, _ => { });
+
+        Assert.Equal(2, ambushers);
+        var placed = msb.Parts.Enemies.Where(e => e.ModelName == "c3500").ToList();
+        Assert.Equal(2, placed.Count);
+        // Decorative clone (1 HP, near-zero attack), vanilla aggro AI.
+        Assert.All(placed, e => Assert.Equal(SpeedFogIds.DecorativeAmbusherNpcRow, e.NPCParamID));
+        Assert.All(placed, e => Assert.Equal(35000000, e.ThinkParamID));
+    }
+
+    [Fact]
+    public void ApplyAmbusher_ClonesSkeletonRowWithOneHpAndNoRunes()
+    {
+        var npc = BuildParamFromDef(Path.Combine(DefsDir(), "NpcParam.xml"), 35000030);
+        var sp = BuildSpEffectParam();
+
+        AmbientSpawnInjector.ApplyAmbusher(npc, sp);
+
+        var row = npc[SpeedFogIds.DecorativeAmbusherNpcRow]!;
+        Assert.Equal(1u, (uint)row["hp"].Value);
+        Assert.Equal(0u, (uint)row["getSoul"].Value);
+        // Def defaults leave every slot at -1, so the scan picks slot 0.
+        Assert.Equal(SpeedFogIds.DecorativeAmbusherSpEffectRow, (int)row["spEffectID0"].Value);
+    }
+
+    [Fact]
+    public void ApplyAmbusher_AttachesToTheFirstFreeSpEffectSlot()
+    {
+        var npc = BuildParamFromDef(Path.Combine(DefsDir(), "NpcParam.xml"), 35000030);
+        // Occupy the template's first slots: the clone inherits them, and
+        // the nerf SpEffect must land in the next free slot, not overwrite.
+        var template = npc[35000030]!;
+        template["spEffectID0"].Value = 350001;
+        template["spEffectID1"].Value = 350002;
+        var sp = BuildSpEffectParam();
+
+        AmbientSpawnInjector.ApplyAmbusher(npc, sp);
+
+        var row = npc[SpeedFogIds.DecorativeAmbusherNpcRow]!;
+        Assert.Equal(350001, (int)row["spEffectID0"].Value);
+        Assert.Equal(350002, (int)row["spEffectID1"].Value);
+        Assert.Equal(SpeedFogIds.DecorativeAmbusherSpEffectRow, (int)row["spEffectID2"].Value);
+    }
+
+    [Fact]
+    public void ApplyAmbusher_SpEffectNeutersAttackAndNeutralizesTemplateRates()
+    {
+        var npc = BuildParamFromDef(Path.Combine(DefsDir(), "NpcParam.xml"), 35000030);
+        var sp = BuildSpEffectParam();
+        // Real vanilla 7010 values (def defaults are already 1, which would
+        // make the neutralization assertions tautological).
+        sp[7010]!["maxHpRate"].Value = 1.141f;
+        sp[7010]!["staminaAttackRate"].Value = 1.021f;
+
+        AmbientSpawnInjector.ApplyAmbusher(npc, sp);
+
+        var row = sp[SpeedFogIds.DecorativeAmbusherSpEffectRow]!;
+        foreach (var field in new[]
+        {
+            "physicsAttackPowerRate", "magicAttackPowerRate", "fireAttackPowerRate",
+            "thunderAttackPowerRate", "darkAttackPowerRate", "staminaAttackRate",
+        })
+        {
+            Assert.Equal(AmbientSpawnInjector.AMBUSH_ATTACK_RATE, (float)row[field].Value);
+        }
+        Assert.Equal(1f, (float)row["maxHpRate"].Value);
+        Assert.Equal(1f, (float)row["haveSoulRate"].Value);
+    }
+
+    [Fact]
+    public void ApplyAmbusher_ClearsInheritedScalingSlotsOnly()
+    {
+        // Vanilla 35000030 carries the game's own area-scaling SpEffect
+        // (7080) in a slot; the clone must drop scaling-band references
+        // (they would stack ~2x hp/attack onto the nerf) while keeping
+        // unrelated inherited SpEffects.
+        var npc = BuildParamFromDef(Path.Combine(DefsDir(), "NpcParam.xml"), 35000030);
+        var template = npc[35000030]!;
+        template["spEffectID0"].Value = 350001;    // unrelated: must survive
+        template["spEffectID3"].Value = 7080;      // base-game scaling band
+        template["spEffectID4"].Value = 20007000;  // DLC scaling band
+        var sp = BuildSpEffectParam();
+
+        AmbientSpawnInjector.ApplyAmbusher(npc, sp);
+
+        var row = npc[SpeedFogIds.DecorativeAmbusherNpcRow]!;
+        Assert.Equal(350001, (int)row["spEffectID0"].Value);
+        Assert.Equal(-1, (int)row["spEffectID3"].Value);
+        Assert.Equal(-1, (int)row["spEffectID4"].Value);
+        // The nerf lands in the first slot freed after clearing.
+        Assert.Equal(SpeedFogIds.DecorativeAmbusherSpEffectRow, (int)row["spEffectID1"].Value);
+    }
+
+    // The scaling tier-1 row (7010) is the clone template in production;
+    // its def-built stand-in just needs to exist with that id.
+    private static PARAM BuildSpEffectParam()
+        => BuildParamFromDef(Path.Combine(DefsDir(), "SpEffect.xml"), 7010);
 
     [Fact]
     public void ApplyPassiveThinkRow_ClonesAgingUntouchableRowWithPerceptionZeroed()

@@ -26,8 +26,18 @@ non-boolean `ambushes` abort the build (same idiom as `WeatherInjector.Parse`).
   52800086`) standing watch beside every anchored exit gate, always placed
   when `enabled = true`.
 - **Ambushers**: when `ambushes = true`, a pack of 2-3 hostile skeletons
-  (`c3500`, `NPCParamID 35000030`, Sage's Cave low-tier variant) sharing
-  the same gate.
+  (`c3500`) sharing the same gate. They aggro normally but are DECORATIVE:
+  a clone of the Sage's Cave skeleton row (35000030) into
+  `SpeedFogIds.DecorativeAmbusherNpcRow` with 1 HP, no runes, and a custom
+  SpEffect (`DecorativeAmbusherSpEffectRow`, cloned from scaling tier-1 row
+  7010, attached to the first free `spEffectID` slot) multiplying the five
+  attack power rates plus `staminaAttackRate` by `AMBUSH_ATTACK_RATE`
+  (0.01). Inherited slots pointing into the game's own scaling bands
+  (vanilla 35000030 carries area-scaling row 7080, ~2x) are cleared on the
+  clone so the numbers are exact. Scenery that swings, not a threat
+  (`AmbientSpawnInjector.ApplyAmbusher`, applied in `ApplyRegulation`
+  alongside the passive think row; the untouchable-boss rows are appended
+  first to keep NpcParam/SpEffectParam row ids ascending).
 
 Both are placed by `AmbientSpawnInjector`; the gate decoration catalogue
 (candelabras, cobwebs, glow anchors) is a separate, independently-gated
@@ -42,12 +52,14 @@ resolution, and arc math:
 - Anchors come from `HalloweenGateAnchors.Collect`, shared by both
   injectors: the EXIT gates of connections whose source cluster type is
   `mini_dungeon`, `legacy_dungeon` or `start` (the source cluster is
-  resolved from `conn.ExitArea` through `GraphNode.Zones`). The `start`
-  cluster is included so the run's very first fog gate (Chapel of
-  Anticipation) sets the tone, but its `roundtable` zone is excluded: no
-  greeter or ambush pack inside the safe hub. Boss arena interiors never
-  receive spawns or decorations, though the fog INTO a boss arena can be
-  dressed, since it is an exit of the preceding cluster.
+  resolved from `conn.ExitArea` through `GraphNode.Zones`). Each consumer
+  passes its own type set: decorations use `DecorClusterTypes` (which adds
+  `start`, so the run's very first fog gate at the Chapel of Anticipation
+  is dressed with props), spawns use `SpawnClusterTypes` (no `start`: no
+  mobs at the Chapel). The start cluster's `roundtable` zone is excluded
+  for both (nothing in the safe hub). Boss arena interiors never receive
+  spawns or decorations, though the fog INTO a boss arena can be dressed,
+  since it is an exit of the preceding cluster.
 - Anchoring was originally on entrance gates ("greet the player as they
   arrive") and flipped after in-game review: on arrival the entrance gate
   is behind the player and its dressing is never seen, while exit gates
@@ -74,9 +86,10 @@ Both injectors run in `ApplyModDirInjectors`, strictly after FogMod's own
 
 - **No scaling**: FogMod's `EldenScaling` tier pass has already completed
   when these spawns are added, so they are never touched by it. The
-  vanilla `NpcParam` rows for the Aging Untouchable and the Sage's Cave
-  skeleton are used as-is, giving a deliberately flat, low difficulty
-  regardless of DAG tier or dungeon depth.
+  greeter uses the Aging Untouchable's vanilla `NpcParam` row as-is;
+  ambushers use SpeedFog's decorative clone (1 HP, near-zero attack, see
+  "The two flavors"). Either way, difficulty is deliberately flat and
+  negligible regardless of DAG tier or dungeon depth.
 - **No EMEVD needed**: spawns are ordinary always-on MSB `Enemy` parts,
   `EntityID = 0` (no flag, no scripted behavior), so nothing needs to
   initialize or gate them at runtime. Gate decorations with `sfx_id > 0`
@@ -103,7 +116,9 @@ every perception field zeroed:
 With every detection radius at zero, the greeter can never perceive the
 player and never enters battle state; every other AI/combat parameter
 (including the madness aura, if the vanilla NPC carries one) is untouched.
-Ambushers keep the vanilla `ThinkParamID 35000000` and aggro normally.
+Ambushers keep the vanilla `ThinkParamID 35000000` and aggro normally;
+their harmlessness comes from the decorative `NpcParam` clone instead
+(see "The two flavors").
 
 ## MSB clone recipe and visibility groups
 
@@ -264,13 +279,14 @@ pack size range):
 
 - Greeter presence and passivity at anchored exit gates: no aggro, and no
   madness (or other status) buildup when walking past; greeters face the
-  approaching player, not the gate; the Chapel of Anticipation exit is
-  dressed (start cluster).
+  approaching player, not the gate; the Chapel of Anticipation exit shows
+  decorations but NO greeter or ambushers (decor-only start cluster).
 - Per-map performance with 1-4 extra chr loads per gate: no visible
   hitch on map load.
-- Ambush pack difficulty feel when `ambushes = true`: packs should aggro
-  normally and read as a deliberate, low-stakes hazard rather than a
-  spike.
+- Ambush pack feel when `ambushes = true`: packs aggro and swing but die
+  to any single hit and deal negligible damage (decorative clone); confirm
+  a hit from them barely registers and that the skeletons' collapse/revive
+  behavior with 1 HP does not look broken.
 - Gate decorations (starter catalogue, first seed): the Volcano Manor
   candles (`AEG270_684`/`686`/`687`) burn outside m16, or ship unlit
   geometry (their vanilla flame may come from map lighting rather than the

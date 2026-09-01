@@ -799,18 +799,23 @@ Example:
 
         PhantomCatalogInjector.ApplyTo(reg, ctx.PhantomSkins);
 
-        if (ctx.GraphData.IsPluginEnabled("halloween"))
-        {
-            AmbientSpawnInjector.ApplyPassiveThinkRow(reg);
-            HalloweenIconInjector.ApplyTo(reg);
-        }
-
         // Aging Untouchable minor boss (allowlist-only): boss NpcParam
         // clone + partial damage-cut SpEffect. Independent of the
         // halloween plugin; gated on the enemy allowlist actually
-        // placing the boss.
+        // placing the boss. MUST stay above the halloween block: both add
+        // NpcParam/SpEffectParam rows via plain appends and nothing sorts
+        // them afterwards, so the boss rows (755890000) have to land
+        // before the ambusher rows (755890001) to keep the row-id order
+        // ascending (ShopInjector sorts for the same reason).
         if (UntouchableBossInjector.IsBossPlaced(ctx.GraphData.EnemyAssignments))
             UntouchableBossInjector.ApplyParams(reg);
+
+        if (ctx.GraphData.IsPluginEnabled("halloween"))
+        {
+            AmbientSpawnInjector.ApplyPassiveThinkRow(reg);
+            AmbientSpawnInjector.ApplyDecorativeAmbusherRows(reg);
+            HalloweenIconInjector.ApplyTo(reg);
+        }
 
         // Undo FogMod's makestable remap on the constant-flag play regions
         // (row 0 = all default ground); see docs/quitout-respawn.md.

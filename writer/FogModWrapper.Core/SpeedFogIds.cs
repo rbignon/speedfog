@@ -132,6 +132,18 @@ public static class SpeedFogIds
     /// mark enemy-randomizer-placed untouchable bosses.</summary>
     public const uint UntouchableSourceEntity = 2049420200;
 
+    /// <summary>NpcParam row for the decorative Halloween ambushers: a
+    /// clone of the Sage's Cave skeleton (35000030) with 1 HP, no runes,
+    /// and the near-zero attack SpEffect attached. 755890000 is taken in
+    /// NpcParam by the untouchable boss clone.</summary>
+    public const int DecorativeAmbusherNpcRow = 755890001;
+
+    /// <summary>SpEffectParam row multiplying the ambushers' attack power
+    /// rates down to near zero: a clone of the tier-1 scaling row (7010,
+    /// see docs/enemy-scaling.md). 755890000 is taken in SpEffectParam by
+    /// the untouchable boss state.</summary>
+    public const int DecorativeAmbusherSpEffectRow = 755890001;
+
     // --- Icon ids (not entity ids, not param row ids; a third id namespace) ---
 
     /// <summary>Icon id for the Halloween Golden Seed pumpkin icon. The

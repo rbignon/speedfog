@@ -41,7 +41,8 @@ public class HalloweenGateAnchorsTests
         };
 
         var anchors = HalloweenGateAnchors.Collect(
-            connections, Nodes, new Dictionary<string, (string, string)>());
+            connections, Nodes, new Dictionary<string, (string, string)>(),
+            HalloweenGateAnchors.DecorClusterTypes);
 
         Assert.Equal("AEG099_002_9000", Assert.Single(anchors["m31_00_00_00"]).PartName);
         Assert.Equal("AEG099_003_9000", Assert.Single(anchors["m10_00_00_00"]).PartName);
@@ -49,8 +50,27 @@ public class HalloweenGateAnchorsTests
         Assert.False(anchors.ContainsKey("m12_00_00_00"));
         Assert.False(anchors.ContainsKey("m13_00_00_00"));
         // The roundtable zone belongs to the start cluster but is the safe
-        // hub; its fog gate must stay bare (no greeter, no ambush pack).
+        // hub; its fog gate must stay bare even for decorations.
         Assert.False(anchors.ContainsKey("m11_10_00_00"));
+    }
+
+    [Fact]
+    public void Collect_SpawnTypesExcludeTheStartCluster()
+    {
+        // The Chapel exit gets decorations only: no greeter or ambush pack
+        // at the run's first gate.
+        var connections = new List<Connection>
+        {
+            Conn("chapel_start", "m10_01_00_00_AEG099_001_9000", 1),
+            Conn("cave_zone", "m31_00_00_00_AEG099_002_9000", 2),
+        };
+
+        var spawnAnchors = HalloweenGateAnchors.Collect(
+            connections, Nodes, new Dictionary<string, (string, string)>(),
+            HalloweenGateAnchors.SpawnClusterTypes);
+
+        Assert.False(spawnAnchors.ContainsKey("m10_01_00_00"));
+        Assert.True(spawnAnchors.ContainsKey("m31_00_00_00"));
     }
 
     [Fact]
@@ -63,7 +83,8 @@ public class HalloweenGateAnchorsTests
         };
 
         var anchors = HalloweenGateAnchors.Collect(
-            connections, Nodes, new Dictionary<string, (string, string)>());
+            connections, Nodes, new Dictionary<string, (string, string)>(),
+            HalloweenGateAnchors.DecorClusterTypes);
 
         Assert.Single(anchors["m31_00_00_00"]);
     }
@@ -82,7 +103,8 @@ public class HalloweenGateAnchorsTests
             ["m10_00_00_00_AEG099_003_9000"] = ("other_zone", "castle_zone"),
         };
 
-        var anchors = HalloweenGateAnchors.Collect(connections, Nodes, gateSides);
+        var anchors = HalloweenGateAnchors.Collect(
+            connections, Nodes, gateSides, HalloweenGateAnchors.DecorClusterTypes);
 
         Assert.True(Assert.Single(anchors["m31_00_00_00"]).IsASide);
         Assert.False(Assert.Single(anchors["m10_00_00_00"]).IsASide);
