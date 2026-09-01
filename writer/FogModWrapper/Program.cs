@@ -791,6 +791,7 @@ Example:
         }
 
         ShopInjector.ApplyTo(reg, ctx.GraphData.SentryTorchShop);
+        ClassLoadoutInjector.ApplyTo(reg, ctx.GraphData.ClassLoadout);
         WeaponUpgradeInjector.ApplyTo(reg, ctx.GraphData.WeaponUpgrade);
         StartingRuneInjector.ApplyTo(reg, ctx.GraphData.StartingRunes);
 
