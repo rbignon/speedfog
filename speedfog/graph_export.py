@@ -53,6 +53,8 @@ class GraphExportOptions:
     weapon_upgrade: int = 0
     phantom_skins: dict[str, int] = field(default_factory=dict)
     plugins: dict[str, Any] = field(default_factory=dict)
+    class_loadout: dict[str, Any] | None = None
+    torrent_skins: dict[str, Any] | None = None
 
 
 def load_phantom_skins_catalog(path: Path) -> dict[str, int]:
@@ -588,7 +590,7 @@ def dag_to_dict(
                 seen_entities.add(key)
                 remove_entities.append({"map": map_id, "entity_id": location})
 
-    return {
+    result: dict[str, Any] = {
         "version": GRAPH_JSON_VERSION,
         "seed": dag.seed,
         "total_layers": total_layers,
@@ -628,6 +630,16 @@ def dag_to_dict(
         "plugins": export.plugins,
     }
 
+    # Tarnished Pack showcase fields: only present when the corresponding
+    # draw ran (starting_loadout / unlock_torrent_skins), unlike care_package
+    # which is always present (possibly empty).
+    if export.class_loadout is not None:
+        result["class_loadout"] = export.class_loadout
+    if export.torrent_skins is not None:
+        result["torrent_skins"] = export.torrent_skins
+
+    return result
+
 
 # Required top-level graph.json keys and their expected Python types.
 # Mirrors what writer/FogModWrapper.Core/GraphLoader.cs consumes; extend it
@@ -664,6 +676,14 @@ _GRAPH_SCHEMA: dict[str, type] = {
     "remove_entities": list,
     "phantom_skins": dict,
     "plugins": dict,
+}
+
+# Optional top-level graph.json keys: present only when the corresponding
+# Tarnished Pack showcase draw ran (see dag_to_dict). Type-checked when
+# present, but unlike _GRAPH_SCHEMA their absence is not a validation error.
+_GRAPH_OPTIONAL_SCHEMA: dict[str, type] = {
+    "class_loadout": dict,
+    "torrent_skins": dict,
 }
 
 _CONNECTION_REQUIRED_KEYS = (
@@ -704,6 +724,13 @@ def validate_graph_dict(data: dict[str, Any]) -> None:
             # bool is an int subclass, so isinstance passes above: reject
             # bools where int is expected
             errors.append(f"key {key}: expected int, got bool")
+
+    for key, expected in _GRAPH_OPTIONAL_SCHEMA.items():
+        if key in data and not isinstance(data[key], expected):
+            errors.append(
+                f"key {key}: expected {expected.__name__}, "
+                f"got {type(data[key]).__name__}"
+            )
 
     for i, conn in enumerate(data.get("connections", [])):
         for key in _CONNECTION_REQUIRED_KEYS:

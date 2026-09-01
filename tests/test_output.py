@@ -354,6 +354,46 @@ class TestExportSpoilerLog:
         assert "[final_boss]" in content
         assert "[major_boss]" not in content
 
+    def test_tarnished_showcase_section_absent_by_default(self, tmp_path: Path):
+        """No TARNISHED SHOWCASE section when neither field is provided."""
+        dag = make_test_dag()
+        output_file = tmp_path / "spoiler.txt"
+
+        export_spoiler_log(dag, output_file)
+
+        content = output_file.read_text(encoding="utf-8")
+        assert "TARNISHED SHOWCASE" not in content
+
+    def test_tarnished_showcase_section_lists_loadout_and_skins(self, tmp_path: Path):
+        """TARNISHED SHOWCASE section shows hand items, armor sets, and skins."""
+        dag = make_test_dag()
+        output_file = tmp_path / "spoiler.txt"
+        class_loadout = {
+            "hand_items": [
+                {"id": 3560000, "slot": "right", "name": "Leontiel's Greatsword"},
+                {"id": 31540000, "slot": "left", "name": "Silver Grooved Shield"},
+            ],
+            "armor_sets": [[5350000, 5350100, 5350200, 5350300]],
+        }
+        torrent_skins = {"unlock": True, "default_flag": 6702}
+
+        export_spoiler_log(
+            dag,
+            output_file,
+            class_loadout=class_loadout,
+            torrent_skins=torrent_skins,
+        )
+
+        content = output_file.read_text(encoding="utf-8")
+        assert "TARNISHED SHOWCASE" in content
+        assert "[right] Leontiel's Greatsword (id=3560000)" in content
+        assert "[left] Silver Grooved Shield (id=31540000)" in content
+        assert "[5350000, 5350100, 5350200, 5350300]" in content
+        assert "Torrent skins unlocked: True" in content
+        assert (
+            "Default skin: carian-silver" in content
+        )  # resolved from SKIN_FLAGS[6702]
+
 
 # =============================================================================
 # Event map / v4 format tests
@@ -374,10 +414,10 @@ def _make_result(death_markers: bool = True) -> dict:
 class TestEventMap:
     """Tests for v4 event_map, finish_event, and flag_id fields."""
 
-    def test_version_is_4_5(self):
-        """Version string is '4.5'."""
+    def test_version_is_4_6(self):
+        """Version string is '4.6'."""
         result = _make_result()
-        assert result["version"] == "4.5"
+        assert result["version"] == "4.6"
 
     def test_event_map_keys_are_string_flag_ids(self):
         """event_map keys are stringified integers."""
@@ -2479,7 +2519,7 @@ class TestPhantomSkins:
         result = dag_to_dict(dag, clusters)
         assert result["phantom_skins"] == {}
 
-    def test_version_bumped_to_4_5(self):
+    def test_version_bumped_to_4_6(self):
         dag = make_test_dag()
         clusters = ClusterPool(
             clusters=[node.cluster for node in dag.nodes.values()],
@@ -2487,7 +2527,7 @@ class TestPhantomSkins:
             zone_names={},
         )
         result = dag_to_dict(dag, clusters)
-        assert result["version"] == "4.5"
+        assert result["version"] == "4.6"
 
 
 class TestDagToDictPlugins:
@@ -2503,7 +2543,7 @@ class TestDagToDictPlugins:
             clusters,
             GraphExportOptions(plugins={"summer": {"enabled": True, "intensity": 3}}),
         )
-        assert result["version"] == "4.5"
+        assert result["version"] == "4.6"
         assert result["plugins"] == {"summer": {"enabled": True, "intensity": 3}}
 
     def test_plugins_default_empty(self):
@@ -2515,6 +2555,42 @@ class TestDagToDictPlugins:
         )
         result = dag_to_dict(dag, clusters)
         assert result["plugins"] == {}
+
+
+class TestDagToDictTarnishedFields:
+    """Tests for the optional class_loadout / torrent_skins graph.json keys."""
+
+    def test_dag_to_dict_class_loadout_and_torrent_skins(self):
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        export = GraphExportOptions(
+            class_loadout={
+                "hand_items": [
+                    {"id": 3560000, "slot": "right", "name": "Leontiel's Greatsword"}
+                ],
+                "armor_sets": [[5350000, 5350100, 5350200, 5350300]],
+            },
+            torrent_skins={"unlock": True, "default_flag": 6702},
+        )
+        result = dag_to_dict(dag, clusters, export)
+        assert result["class_loadout"]["hand_items"][0]["slot"] == "right"
+        assert result["torrent_skins"] == {"unlock": True, "default_flag": 6702}
+        assert result["version"] == "4.6"
+
+    def test_dag_to_dict_omits_absent_tarnished_fields(self):
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters, GraphExportOptions())
+        assert "class_loadout" not in result
+        assert "torrent_skins" not in result
 
 
 def test_resolve_boss_name_prefers_key_name():
@@ -2636,4 +2712,28 @@ class TestValidateGraphDict:
         assert graph["connections"], "fixture must produce connections"
         del graph["connections"][0]["flag_id"]
         with pytest.raises(ValueError, match=r"connections\[0\]: missing key flag_id"):
+            validate_graph_dict(graph)
+
+    def test_optional_tarnished_keys_absent_is_valid(self):
+        graph = self._valid_graph()
+        assert "class_loadout" not in graph
+        assert "torrent_skins" not in graph
+        validate_graph_dict(graph)  # must not raise
+
+    def test_optional_tarnished_keys_present_with_correct_type_is_valid(self):
+        graph = self._valid_graph()
+        graph["class_loadout"] = {"hand_items": [], "armor_sets": []}
+        graph["torrent_skins"] = {"unlock": True}
+        validate_graph_dict(graph)  # must not raise
+
+    def test_class_loadout_wrong_type_raises(self):
+        graph = self._valid_graph()
+        graph["class_loadout"] = "not-a-dict"
+        with pytest.raises(ValueError, match="class_loadout"):
+            validate_graph_dict(graph)
+
+    def test_torrent_skins_wrong_type_raises(self):
+        graph = self._valid_graph()
+        graph["torrent_skins"] = ["not", "a", "dict"]
+        with pytest.raises(ValueError, match="torrent_skins"):
             validate_graph_dict(graph)

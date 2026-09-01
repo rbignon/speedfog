@@ -44,6 +44,7 @@ from speedfog.item_randomizer import (
 )
 from speedfog.packaging import PackagingError, package_seed
 from speedfog.spoiler import append_boss_placements_to_spoiler, export_spoiler_log
+from speedfog.tarnished import build_class_loadout, build_torrent_skins, tarnished_rng
 from speedfog.validator import validate_exclusions
 
 
@@ -373,6 +374,22 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
 
+    # Draw the Tarnished Pack showcase (class loadout / Torrent skins), when
+    # enabled. Seeded independently from the care package's RNG.
+    class_loadout = None
+    torrent_skins = None
+    if config.tarnished.starting_loadout or config.tarnished.unlock_torrent_skins:
+        rng = tarnished_rng(actual_seed)
+        if config.tarnished.starting_loadout:
+            hand, armor = build_class_loadout(rng)
+            class_loadout = {
+                "hand_items": [
+                    {"id": i.id, "slot": i.slot, "name": i.name} for i in hand
+                ],
+                "armor_sets": armor,
+            }
+        torrent_skins = build_torrent_skins(config.tarnished, rng)
+
     # Resolve run_complete_message (seeded pick when a list is configured).
     run_complete_message = config.resolve_run_complete_message(actual_seed)
 
@@ -405,6 +422,8 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
         else 0,
         phantom_skins=phantom_skins,
         plugins=config.plugins,
+        class_loadout=class_loadout,
+        torrent_skins=torrent_skins,
     )
     export_json(dag, clusters, json_path, export_options)
     print(f"Written: {json_path}")
@@ -434,7 +453,13 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
         logs_dir.mkdir(parents=True, exist_ok=True)
         _spoiler: Path = logs_dir / "spoiler.txt"
         spoiler_path = _spoiler
-        export_spoiler_log(dag, _spoiler, care_package=care_package_items)
+        export_spoiler_log(
+            dag,
+            _spoiler,
+            care_package=care_package_items,
+            class_loadout=class_loadout,
+            torrent_skins=torrent_skins,
+        )
         print(f"Written: {_spoiler}")
 
         from speedfog.generation_log import export_generation_log

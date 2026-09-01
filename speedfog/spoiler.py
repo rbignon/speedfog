@@ -10,6 +10,7 @@ from typing import Any
 from speedfog.care_package import CarePackageItem
 from speedfog.dag import Dag, FogRef
 from speedfog.graph_export import effective_type, get_fog_text
+from speedfog.tarnished import SKIN_FLAGS
 
 
 def _build_connection_lines(
@@ -361,6 +362,8 @@ def export_spoiler_log(
     dag: Dag,
     output_path: Path,
     care_package: list[CarePackageItem] | None = None,
+    class_loadout: dict[str, Any] | None = None,
+    torrent_skins: dict[str, Any] | None = None,
 ) -> None:
     """Export human-readable spoiler log with ASCII graph visualization.
 
@@ -368,6 +371,10 @@ def export_spoiler_log(
         dag: The DAG to export
         output_path: Path to write the spoiler log
         care_package: Optional care package items to include in spoiler
+        class_loadout: Optional Tarnished Pack class loadout draw
+            ({"hand_items": [...], "armor_sets": [...]})
+        torrent_skins: Optional Tarnished Pack Torrent skins unlock draw
+            ({"unlock": bool, "default_flag": int?})
     """
     lines: list[str] = []
 
@@ -533,6 +540,37 @@ def export_spoiler_log(
         for item in care_package:
             type_label = type_names.get(item.type, "Unknown")
             lines.append(f"  [{type_label}] {item.name} (id={item.id})")
+
+    # Tarnished Pack showcase section
+    if class_loadout or torrent_skins:
+        lines.append("")
+        lines.append("=" * 60)
+        lines.append("TARNISHED SHOWCASE")
+        lines.append("=" * 60)
+        if class_loadout:
+            hand_items = class_loadout.get("hand_items", [])
+            if hand_items:
+                lines.append("  Hand items (draw order):")
+                for hand_item in hand_items:
+                    lines.append(
+                        f"    [{hand_item['slot']}] {hand_item['name']} "
+                        f"(id={hand_item['id']})"
+                    )
+            armor_sets = class_loadout.get("armor_sets", [])
+            if armor_sets:
+                lines.append("  Armor sets (draw order):")
+                for armor_set in armor_sets:
+                    lines.append(f"    {armor_set}")
+        if torrent_skins:
+            unlock = torrent_skins.get("unlock", False)
+            lines.append(f"  Torrent skins unlocked: {unlock}")
+            default_flag = torrent_skins.get("default_flag")
+            if default_flag is not None:
+                skin_name = next(
+                    (name for name, flag in SKIN_FLAGS.items() if flag == default_flag),
+                    str(default_flag),
+                )
+                lines.append(f"  Default skin: {skin_name}")
 
     # Write to file
     with open(output_path, "w", encoding="utf-8") as f:
