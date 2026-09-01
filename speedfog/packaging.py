@@ -104,6 +104,24 @@ def copy_packaging_assets(
             shutil.copy2(src, dest)
 
 
+def _copy_optional_mod(
+    project_root: Path, seed_dir: Path, name: str, label: str
+) -> bool:
+    """Copy data/mods/<name>/ into the seed if it exists and is non-empty.
+
+    Shared by the speedfog static mod and speedfog-halloween overlay blocks
+    in package_seed: both must skip registering an empty/missing mod
+    directory with ModEngine 2. Returns whether the mod was found and
+    copied.
+    """
+    mod_dir = project_root / "data" / "mods" / name
+    enabled = mod_dir.is_dir() and any(f.is_file() for f in mod_dir.rglob("*"))
+    if enabled:
+        shutil.copytree(mod_dir, seed_dir / "mods" / name, dirs_exist_ok=True)
+        print(f"Copied {label} from data/mods/{name}/")
+    return enabled
+
+
 def package_seed(
     project_root: Path,
     seed_dir: Path,
@@ -123,16 +141,10 @@ def package_seed(
     )
     print("Copied packaging assets from data/packaging/")
 
-    static_mod_dir = project_root / "data" / "mods" / "speedfog"
-    static_mod_enabled = static_mod_dir.is_dir() and any(
-        f.is_file() for f in static_mod_dir.rglob("*")
+    static_mod_enabled = _copy_optional_mod(
+        project_root, seed_dir, "speedfog", "static mod"
     )
-    if static_mod_enabled:
-        shutil.copytree(
-            static_mod_dir, seed_dir / "mods" / "speedfog", dirs_exist_ok=True
-        )
-        print("Copied static mod from data/mods/speedfog/")
-    else:
+    if not static_mod_enabled:
         print(
             "Note: data/mods/speedfog/ not found (bootstrap not run or skipped),"
             " building seed without static patches"
@@ -142,19 +154,9 @@ def package_seed(
     # the overlay was actually built at bootstrap (mirrors static_mod_enabled
     # above: a disabled plugin, or a bootstrap run without it, must not
     # register an empty/missing mod directory with ModEngine 2).
-    halloween_dir = project_root / "data" / "mods" / "speedfog-halloween"
-    halloween_mod_enabled = (
-        halloween_enabled
-        and halloween_dir.is_dir()
-        and any(f.is_file() for f in halloween_dir.rglob("*"))
+    halloween_mod_enabled = halloween_enabled and _copy_optional_mod(
+        project_root, seed_dir, "speedfog-halloween", "halloween overlay"
     )
-    if halloween_mod_enabled:
-        shutil.copytree(
-            halloween_dir,
-            seed_dir / "mods" / "speedfog-halloween",
-            dirs_exist_ok=True,
-        )
-        print("Copied halloween overlay from data/mods/speedfog-halloween/")
 
     if item_randomizer_enabled and item_randomizer_dir is not None:
         helper_config = item_randomizer_dir / "RandomizerHelper_config.ini"

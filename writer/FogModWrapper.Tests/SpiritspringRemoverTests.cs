@@ -76,23 +76,4 @@ public class SpiritspringRemoverTests
         return path;
     }
 
-    /// <summary>
-    /// Disposable temp directory helper (mirrors StartupFlagInjectorTests).
-    /// </summary>
-    private sealed class TempDir : IDisposable
-    {
-        public string Path { get; }
-
-        public TempDir()
-        {
-            Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"sftest_{Guid.NewGuid():N}");
-            Directory.CreateDirectory(Path);
-        }
-
-        public void Dispose()
-        {
-            if (Directory.Exists(Path))
-                Directory.Delete(Path, true);
-        }
-    }
 }

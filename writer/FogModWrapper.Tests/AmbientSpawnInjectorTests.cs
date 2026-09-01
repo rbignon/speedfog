@@ -2,6 +2,7 @@ using System.Numerics;
 using FogModWrapper.Models;
 using SoulsFormats;
 using Xunit;
+using static FogModWrapper.Tests.ParamTestHelper;
 
 namespace FogModWrapper.Tests;
 
@@ -284,7 +285,7 @@ public class AmbientSpawnInjectorTests
     [Fact]
     public void ApplyAmbusher_ClonesSkeletonRowWithTokenHpAndNoRunes()
     {
-        var npc = BuildParamFromDef(Path.Combine(DefsDir(), "NpcParam.xml"), 35000030);
+        var npc = BuildParamFromDef("NpcParam", 35000030);
         var sp = BuildSpEffectParam();
 
         AmbientSpawnInjector.ApplyAmbusher(npc, sp);
@@ -299,7 +300,7 @@ public class AmbientSpawnInjectorTests
     [Fact]
     public void ApplyAmbusher_AttachesToTheFirstFreeSpEffectSlot()
     {
-        var npc = BuildParamFromDef(Path.Combine(DefsDir(), "NpcParam.xml"), 35000030);
+        var npc = BuildParamFromDef("NpcParam", 35000030);
         // Occupy the template's first slots: the clone inherits them, and
         // the nerf SpEffect must land in the next free slot, not overwrite.
         var template = npc[35000030]!;
@@ -318,7 +319,7 @@ public class AmbientSpawnInjectorTests
     [Fact]
     public void ApplyAmbusher_SpEffectNeutersAttackAndNeutralizesTemplateRates()
     {
-        var npc = BuildParamFromDef(Path.Combine(DefsDir(), "NpcParam.xml"), 35000030);
+        var npc = BuildParamFromDef("NpcParam", 35000030);
         var sp = BuildSpEffectParam();
         // Real vanilla 7010 values (def defaults are already 1, which would
         // make the neutralization assertions tautological).
@@ -347,7 +348,7 @@ public class AmbientSpawnInjectorTests
         // (7080) in a slot; the clone must drop scaling-band references
         // (they would stack ~2x hp/attack onto the nerf) while keeping
         // unrelated inherited SpEffects.
-        var npc = BuildParamFromDef(Path.Combine(DefsDir(), "NpcParam.xml"), 35000030);
+        var npc = BuildParamFromDef("NpcParam", 35000030);
         var template = npc[35000030]!;
         template["spEffectID0"].Value = 350001;    // unrelated: must survive
         template["spEffectID3"].Value = 7080;      // base-game scaling band
@@ -367,12 +368,12 @@ public class AmbientSpawnInjectorTests
     // The scaling tier-1 row (7010) is the clone template in production;
     // its def-built stand-in just needs to exist with that id.
     private static PARAM BuildSpEffectParam()
-        => BuildParamFromDef(Path.Combine(DefsDir(), "SpEffect.xml"), 7010);
+        => BuildParamFromDef("SpEffect", 7010, "SpEffectParam");
 
     [Fact]
     public void ApplyPassiveThinkRow_ClonesAgingUntouchableRowWithPerceptionZeroed()
     {
-        var think = BuildParamFromDef(Path.Combine(DefsDir(), "NpcThinkParam.xml"), 52800000);
+        var think = BuildParamFromDef("NpcThinkParam", 52800000);
 
         AmbientSpawnInjector.Apply(think);
 
@@ -384,21 +385,4 @@ public class AmbientSpawnInjectorTests
         Assert.Equal((ushort)0, row["BattleStartDist"].Value);
     }
 
-    // Same idiom as PhantomCatalogInjectorTests.BuildParamFromDef: build an
-    // in-memory PARAM from the real paramdef XML, with a template row to
-    // clone from.
-    private static PARAM BuildParamFromDef(string defXmlPath, params int[] templateRowIds)
-    {
-        var def = PARAMDEF.XmlDeserialize(defXmlPath);
-        var param = new PARAM { ParamType = def.ParamType, Rows = new List<PARAM.Row>() };
-        param.ApplyParamdef(def);
-        foreach (var id in templateRowIds)
-        {
-            param.Rows.Add(new PARAM.Row(id, "", def));
-        }
-        return param;
-    }
-
-    private static string DefsDir() =>
-        Path.Combine(AppContext.BaseDirectory, "eldendata", "Defs");
 }

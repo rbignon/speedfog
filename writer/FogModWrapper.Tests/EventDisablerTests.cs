@@ -117,13 +117,6 @@ public class EventDisablerTests
         Assert.Equal(before, File.ReadAllBytes(path));
     }
 
-    private sealed class TempDir : IDisposable
-    {
-        public string Path { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "speedfog-test-" + Guid.NewGuid().ToString("N"));
-        public TempDir() => Directory.CreateDirectory(Path);
-        public void Dispose() => Directory.Delete(Path, recursive: true);
-    }
-
     [Fact]
     public void Inject_MissingFile_SkipsGracefully()
     {

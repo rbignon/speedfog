@@ -10,13 +10,6 @@ public class VanillaMapPinnerTests
         File.WriteAllText(path, content);
     }
 
-    private sealed class TempDir : IDisposable
-    {
-        public string Path { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "sf-pin-" + Guid.NewGuid().ToString("N"));
-        public TempDir() => Directory.CreateDirectory(Path);
-        public void Dispose() => Directory.Delete(Path, recursive: true);
-    }
-
     [Fact]
     public void Pin_CopiesMsbAndEmevdFromVanillaWhenModHasNeither()
     {
