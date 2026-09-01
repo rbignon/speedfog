@@ -133,19 +133,26 @@ slot per phase entity for multi-phase bosses (see
 MSB part of its own if the arena's boss is single-phase.
 
 A second, verified cause also produces this warning: an assignment
-target whose arena map FogMod never ships at all. Observed on smoke seed
+target whose arena map FogMod never writes. Observed on smoke seed
 391735550: Starscourge Radahn's arena is a private instance map
-(`m60_13_09_02`, per `enemy.txt`'s `Map:` field), not the overworld tiles
-FogMod's own fog-gate connections touch for that cluster; the Item
-Randomizer writes the boss swap there correctly, but that map is absent
-from `data/game_tweaks.toml`'s `[[pin_vanilla_maps]]`, so it never
-reaches FogMod's output and the swap is dropped before the repoint scan
-ever runs. This is a pre-existing gap in the FogMod/item-randomizer
-merge, not something `UntouchableBossInjector` introduces or can work
-around; a candidate fix is adding the tile to `[[pin_vanilla_maps]]`
-(sourced from the Item Randomizer's merge-dir copy, not the vanilla
-snapshot), after checking its interactions with the existing 1.17
-Tarnished Pack invasion pin on the neighboring tile.
+(`m60_13_09_02`, per `enemy.txt`'s `Map:` field) with no fog gate of its
+own (the `caelid_radahn` gates live on the surrounding tiles), so it is
+absent from `mods/fogmod`. The map still ships and loads in game: the
+Item Randomizer writes the boss swap there and the seed registers
+`mods/itemrando` (lowest priority, 510 maps) in ModEngine, so the swap
+itself is live. What is lost is SpeedFog's post-processing: every
+FogModWrapper injector, including this one's repoint scan, only patches
+`mods/fogmod`. An Untouchable assigned to that arena therefore fights
+with its vanilla `NpcParam` row (base HP 323, possibly rescaled by the
+Item Randomizer's own scaling, damageable via the global nerflantern
+lift, vanilla runes) instead of the 3000 HP / damage-cut boss clone: a
+functional but far-too-weak finale. This is a pre-existing gap (any
+future injector edit to that map is equally unreachable), not something
+`UntouchableBossInjector` introduces or can work around; the candidate
+fix is adding the tile to `[[pin_vanilla_maps]]` (sourced from the Item
+Randomizer's merge-dir copy, so the swap enters the `mods/fogmod` layer
+where injectors patch), after checking its interactions with the
+existing 1.17 Tarnished Pack invasion pin on the neighboring tile.
 
 ## Expected log lines
 
