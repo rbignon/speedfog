@@ -85,6 +85,51 @@ if (args.Length >= 1 && args[0] == "list-enemies")
     }
     return 0;
 }
+if (args.Length >= 1 && args[0] == "scan-scale")
+{
+    if (args.Length < 2) { Console.Error.WriteLine("Usage: game_inspect scan-scale <msb-or-mapstudio-dir> [--map-filter substr] [--enemies-only]"); return 1; }
+    string scaleTarget = args[1];
+    string? scaleFilter = null;
+    bool enemiesOnly = args.Contains("--enemies-only");
+    for (int i = 2; i < args.Length; i++)
+    {
+        if (args[i] != "--map-filter") continue;
+        if (i + 1 >= args.Length || args[i + 1].StartsWith("--"))
+        {
+            Console.Error.WriteLine("scan-scale: --map-filter requires a value");
+            return 1;
+        }
+        scaleFilter = args[i + 1];
+    }
+    var scaleFiles = Directory.Exists(scaleTarget)
+        ? Directory.GetFiles(scaleTarget, "*.msb.dcx").OrderBy(f => f).ToArray()
+        : new[] { scaleTarget };
+    int scaledParts = 0;
+    int scannedMaps = 0;
+    foreach (var file in scaleFiles)
+    {
+        var name = Path.GetFileName(file);
+        if (scaleFilter != null && !name.Contains(scaleFilter)) continue;
+        scannedMaps++;
+        var m = MSBE.Read(file);
+        // DummyEnemies are chr parts too (cutscene actors the engine does
+        // render): a non-unit scale there would be chr-scaling evidence.
+        var parts = m.Parts.Enemies.Cast<MSBE.Part>().Concat(m.Parts.DummyEnemies);
+        if (!enemiesOnly)
+            parts = parts.Concat(m.Parts.Assets);
+        foreach (var p in parts)
+        {
+            if (p.Scale == System.Numerics.Vector3.One) continue;
+            scaledParts++;
+            string kind = p is MSBE.Part.Enemy ? "Enemy" : p is MSBE.Part.DummyEnemy ? "Dummy" : "Asset";
+            string npc = p is MSBE.Part.EnemyBase eb ? $" npc={eb.NPCParamID}" : "";
+            Console.WriteLine($"{name.Split('.')[0]} {kind,-5} {p.Name,-22} model={p.ModelName,-10}{npc} " +
+                $"scale=({p.Scale.X:F2},{p.Scale.Y:F2},{p.Scale.Z:F2}) pos=({p.Position.X:F0},{p.Position.Y:F0},{p.Position.Z:F0})");
+        }
+    }
+    Console.WriteLine($"=== {scaledParts} non-unit-scale parts across {scannedMaps} maps ===");
+    return 0;
+}
 if (args.Length >= 1 && args[0] == "near")
 {
     if (args.Length < 5) { Console.Error.WriteLine("Usage: game_inspect near <msb> <x> <y> <z> [--radius R]"); return 1; }

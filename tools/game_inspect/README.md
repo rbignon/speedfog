@@ -92,6 +92,19 @@ which collisions are gated by `pcPositionSaveLimitEventFlagId`), position, and
 entity ID. `--torrent-only` restricts output to collisions where Torrent is
 disabled.
 
+### `scan-scale`: find parts with a non-unit MSB scale
+
+```bash
+wine publish/win-x64/game_inspect.exe scan-scale <msb-or-mapstudio-dir> [--map-filter m21] [--enemies-only]
+```
+
+Lists every Enemy and DummyEnemy (and, without `--enemies-only`, Asset)
+part whose `Part.Scale` differs from `(1,1,1)`, across one MSB or a whole
+mapstudio directory. Built to establish whether vanilla ever scales chr
+parts via the MSB (answer: no, zero Enemy/DummyEnemy hits over all 1347
+maps, which is why `UntouchableBossInjector.BOSS_SCALE` is labeled an
+experiment).
+
 ### `check-emevd`: scan event 0 for FogMod entity references
 
 ```bash

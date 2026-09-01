@@ -591,6 +591,9 @@ wine publish/win-x64/game_inspect.exe check-emevd <emevd-file> 0
 # List all enemy parts in an MSB with model, NpcParam, entity ID, position, groups
 wine publish/win-x64/game_inspect.exe list-enemies <msb-file>
 
+# List parts with a non-unit MSB scale (Enemy + Asset; one MSB or a whole mapstudio dir)
+wine publish/win-x64/game_inspect.exe scan-scale <msb-or-mapstudio-dir> [--map-filter m21] [--enemies-only]
+
 # Dump a row from regulation.bin (decrypts ER regulation, applies paramdef XML).
 # Use --def-name when the paramdef basename differs from the param (e.g. SpEffect
 # for SpEffectParam). Use --field to restrict output to fields containing a

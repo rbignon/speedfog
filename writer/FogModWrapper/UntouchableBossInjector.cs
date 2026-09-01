@@ -1,3 +1,4 @@
+using System.Numerics;
 using FogMod;
 using SoulsFormats;
 using SoulsIds;
@@ -22,6 +23,16 @@ public static class UntouchableBossInjector
     public const uint BOSS_HP = 3000;
     public const uint BOSS_RUNES = 20000;
     public const float DAMAGE_CUT = 0.35f; // fraction of damage taken (65% cut)
+
+    // EXPERIMENT: MSB part scale on the promoted boss. The MSBE format
+    // carries Part.Scale, but no vanilla map scales an Enemy part
+    // (scan-scale over all 1347 maps: zero hits) and SoulsFormats documents
+    // the field as map-piece/object-only, so whether the engine honors it
+    // for chr in ER is unknown; there is no other offline size mechanism
+    // (no NpcParam/SpEffect size field, no EMEVD instruction). The in-game
+    // check decides: revert to 1.0f if the boss renders at normal size or
+    // scales visually with broken hitboxes/animations.
+    public const float BOSS_SCALE = 1.3f;
 
     public static bool IsBossPlaced(Dictionary<string, string> enemyAssignments)
         => enemyAssignments.ContainsValue(
@@ -137,7 +148,8 @@ public static class UntouchableBossInjector
                 continue;
             }
             enemy.NPCParamID = SpeedFogIds.UntouchableBossNpcRow;
-            log($"  {enemy.Name} (entity {enemy.EntityID}): NPCParamID -> {SpeedFogIds.UntouchableBossNpcRow}");
+            enemy.Scale = new Vector3(BOSS_SCALE);
+            log($"  {enemy.Name} (entity {enemy.EntityID}): NPCParamID -> {SpeedFogIds.UntouchableBossNpcRow}, scale {BOSS_SCALE}");
             ids.Add(enemy.EntityID);
         }
         return (ids.Count, ids);

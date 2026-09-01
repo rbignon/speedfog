@@ -204,6 +204,16 @@ section 2.3. Not automatable; requires playing the fight. Owed checks:
 - Successful-parry reward and teleport behavior specifically in the arenas
   that actually received the boss (navmesh clearance for the AI's warp
   scan around the player).
+- `BOSS_SCALE` (currently 1.3): an EXPERIMENT setting MSB `Part.Scale` on
+  the promoted part so the boss reads bigger than the ambiance
+  untouchables. Whether the ER engine honors the field for chr is unknown:
+  no vanilla map scales any chr part (`game_inspect scan-scale` over all
+  1347 maps: zero Enemy or DummyEnemy hits), SoulsFormats documents the field as
+  map-piece/object-only, and no other offline mechanism exists (no
+  NpcParam/SpEffect size field, no EMEVD instruction; runtime tools scale
+  chr through live memory only). Outcomes: normal size in-game means the
+  engine ignores it (revert to 1.0), visually scaled means judging whether
+  hitboxes/animations track at this modest factor.
 
 If in-game testing shows the fight too passive, the fix is an AI overlay,
 not a change to this injector:
