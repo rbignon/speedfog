@@ -204,16 +204,6 @@ section 2.3. Not automatable; requires playing the fight. Owed checks:
 - Successful-parry reward and teleport behavior specifically in the arenas
   that actually received the boss (navmesh clearance for the AI's warp
   scan around the player).
-- `BOSS_SCALE` (currently 1.3): an EXPERIMENT setting MSB `Part.Scale` on
-  the promoted part so the boss reads bigger than the ambiance
-  untouchables. Whether the ER engine honors the field for chr is unknown:
-  no vanilla map scales any chr part (`game_inspect scan-scale` over all
-  1347 maps: zero Enemy or DummyEnemy hits), SoulsFormats documents the field as
-  map-piece/object-only, and no other offline mechanism exists (no
-  NpcParam/SpEffect size field, no EMEVD instruction; runtime tools scale
-  chr through live memory only). Outcomes: normal size in-game means the
-  engine ignores it (revert to 1.0), visually scaled means judging whether
-  hitboxes/animations track at this modest factor.
 
 If in-game testing shows the fight too passive, the fix is an AI overlay,
 not a change to this injector:
@@ -233,6 +223,21 @@ not a change to this injector:
 4. Knobs to try: the 3002 cooldown, the per-distance attack probability
    tables, and (only if step 1 shows it exists) re-enabling 3004, trialed
    during the same in-game session before deciding to keep it.
+
+## Size: settled (no resize possible)
+
+The boss keeps its vanilla size, by engine constraint, not by choice. An
+MSB `Part.Scale` experiment (1.3x and higher on the promoted part,
+in-game test 2026-09-01) confirmed the engine ignores the field for chr
+parts, matching vanilla usage (`game_inspect scan-scale` over all 1347
+maps: zero Enemy or DummyEnemy hits; SoulsFormats documents the field as
+map-piece/object-only). No other offline mechanism exists: NpcParam and
+SpEffectParam carry no size field, EMEVD has no resize instruction, and
+the decompiled enemy randomizer never rescales. Runtime tools scale chr
+through live process memory only, which is outside SpeedFog's
+offline-patching paradigm. Any future resize would likely need a full
+chr clone with a rescaled skeleton (chrbnd + anibnd + behbnd),
+disproportionate for a cosmetic. Do not revisit without new evidence.
 
 ## Fallback
 

@@ -1,4 +1,3 @@
-using System.Numerics;
 using FogModWrapper.Models;
 using SoulsFormats;
 using Xunit;
@@ -83,11 +82,7 @@ public class UntouchableBossInjectorTests
         var boss = msb.Parts.Enemies.Single(e => e.EntityID == 30001800);
         Assert.Equal(SpeedFogIds.UntouchableBossNpcRow, boss.NPCParamID);
         Assert.Equal(52800000, boss.ThinkParamID); // AI stays vanilla in this plan
-        // MSB-scale experiment: only the promoted part grows.
-        Assert.Equal(new Vector3(UntouchableBossInjector.BOSS_SCALE), boss.Scale);
-        var greeter = msb.Parts.Enemies.Single(e => e.Name == "c5280_9001");
-        Assert.Equal(52800086, greeter.NPCParamID);
-        Assert.Equal(Vector3.One, greeter.Scale);
+        Assert.Equal(52800086, msb.Parts.Enemies.Single(e => e.Name == "c5280_9001").NPCParamID);
         Assert.Equal(35000030, msb.Parts.Enemies.Single(e => e.ModelName == "c3500").NPCParamID);
     }
 
@@ -108,8 +103,6 @@ public class UntouchableBossInjectorTests
         Assert.Equal(0, repointed);
         Assert.Empty(ids);
         Assert.Equal(35000030, msb.Parts.Enemies[0].NPCParamID);
-        // The scale experiment must never leak onto a wrong-model part.
-        Assert.Equal(Vector3.One, msb.Parts.Enemies[0].Scale);
         Assert.Contains(warnings, w => w.Contains("30001800"));
     }
 }
