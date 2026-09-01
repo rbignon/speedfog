@@ -1,3 +1,4 @@
+using System.Linq;
 using SoulsFormats;
 using Xunit;
 
@@ -75,5 +76,27 @@ public class RegulationEditorTests
 
         Assert.Contains("SpEffect.xml", captured.ToString());
         Assert.DoesNotContain("SpEffectParam.xml", captured.ToString());
+    }
+
+    [Fact]
+    public void Save_SortsRowsByIdAfterOutOfOrderAppends()
+    {
+        // Injectors append new rows with plain Rows.Add calls (ShopInjector,
+        // ChapelGraceInjector, ...) and rely on Save() to leave the game-
+        // required ascending row-id order intact, instead of sorting
+        // themselves. Real NpcParam.xml paramdef, real PARAM.Write()/Read()
+        // roundtrip, so this exercises the actual serialization path.
+        var template = ParamTestHelper.BuildParamFromDef("NpcParam", templateId: 100);
+        var bnd = CreateBndWithFile("N:/GR/data/Param/GameParam/NpcParam.param", template.Write());
+        var editor = new RegulationEditor(bnd, ParamTestHelper.DefsDir());
+
+        var npc = editor.GetParam("NpcParam")!;
+        npc.Rows.Add(new PARAM.Row(300, "", npc.AppliedParamdef));
+        npc.Rows.Add(new PARAM.Row(200, "", npc.AppliedParamdef));
+
+        editor.Save();
+
+        var reread = editor.GetParam("NpcParam")!;
+        Assert.Equal(new[] { 100, 200, 300 }, reread.Rows.Select(r => r.ID));
     }
 }

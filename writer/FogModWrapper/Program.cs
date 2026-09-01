@@ -802,18 +802,20 @@ Example:
         // Aging Untouchable minor boss (allowlist-only): boss NpcParam
         // clone + partial damage-cut SpEffect. Independent of the
         // halloween plugin; gated on the enemy allowlist actually
-        // placing the boss. MUST stay above the halloween block: both add
-        // NpcParam/SpEffectParam rows via plain appends and nothing sorts
-        // them afterwards, so the boss rows (755890000) have to land
-        // before the ambusher rows (755890001) to keep the row-id order
-        // ascending (ShopInjector sorts for the same reason).
+        // placing the boss.
         if (UntouchableBossInjector.IsBossPlaced(ctx.GraphData.EnemyAssignments))
             UntouchableBossInjector.ApplyParams(reg);
 
         if (ctx.GraphData.IsPluginEnabled("halloween"))
         {
             AmbientSpawnInjector.ApplyPassiveThinkRow(reg);
-            AmbientSpawnInjector.ApplyDecorativeAmbusherRows(reg);
+            // Ambusher rows are only consumed when ambushes are actually
+            // placed (HalloweenAmbientPass gates AmbientSpawnInjector's
+            // ambush packs on the same settings.Ambushes flag); parsed once
+            // via ctx.HalloweenSettings and reused by the Phase-8 spawn
+            // injection below.
+            if (ctx.HalloweenSettings.Ambushes)
+                AmbientSpawnInjector.ApplyDecorativeAmbusherRows(reg);
             HalloweenIconInjector.ApplyTo(reg);
         }
 
@@ -873,28 +875,26 @@ Example:
             ctx.GraphData.EventMap, ctx.GraphData.DeathFlags, gateSides);
 
         // Halloween ambient layer at cluster exit gates (opt-in via
-        // [plugin.halloween]). Decorations MUST run before the spawns: the
-        // decor ground estimate uses vanilla enemies as floor evidence, and
-        // AmbientSpawnInjector's greeters/ambushers carry EntityID 0, which
-        // would pass its vanilla filter.
+        // [plugin.halloween]): data-driven gate decorations
+        // (data/plugins/halloween_decorations.toml, a no-op only if the
+        // catalogue is emptied) plus passive greeters and optional ambush
+        // packs at the same gates. HalloweenAmbientPass reads/writes each
+        // map's MSB once (decor placement first: the decor ground estimate
+        // uses vanilla enemies as floor evidence, and AmbientSpawnInjector's
+        // greeters/ambushers carry EntityID 0, which would pass its vanilla
+        // filter). ctx.HalloweenSettings is parsed once in ApplyRegulation.
         if (ctx.GraphData.IsPluginEnabled("halloween"))
         {
-            // Data-driven gate decorations (data/plugins/halloween_decorations.toml);
-            // a no-op only if the catalogue is emptied.
-            GateDecorInjector.Inject(
+            HalloweenAmbientPass.Inject(
                 ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.Connections,
-                ctx.GraphData.Nodes, gateSides, ctx.Events, ctx.Config.DataDir);
-
-            // Passive greeters + optional ambush packs at the same gates.
-            var halloweenSettings = HalloweenPluginSettings.Parse(ctx.GraphData.Plugins["halloween"]);
-            AmbientSpawnInjector.Inject(
-                ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.Connections,
-                ctx.GraphData.Nodes, gateSides, halloweenSettings);
+                ctx.GraphData.Nodes, gateSides, ctx.Events, ctx.Config.DataDir,
+                ctx.HalloweenSettings);
         }
 
         // Aging Untouchable minor boss: repoint enemy-randomizer-placed
         // untouchables to the boss NpcParam clone (see ApplyRegulation).
-        UntouchableBossInjector.Inject(ctx.ModDir, ctx.GraphData.EnemyAssignments, ctx.Config.MergeDir);
+        UntouchableBossInjector.Inject(
+            ctx.ModDir, ctx.GraphData.EnemyAssignments, ctx.Config.MergeDir, ctx.Tweaks.FallbackArenaMaps);
 
         // Rebirth option at Sites of Grace
         if (ctx.GraphData.StartingLarvalTears > 0)
@@ -1006,6 +1006,15 @@ Example:
         // Resolved by PatchEmevd, consumed by ApplyCommonInjectors.
         // 0 when zone tracking is disabled or no defeat flag is known.
         public int BossDefeatFlag;
+
+        // Parsed lazily on first access: both ApplyRegulation (ambusher row
+        // gating) and ApplyModDirInjectors (HalloweenAmbientPass) need the
+        // [plugin.halloween] settings, but HalloweenPluginSettings.Parse
+        // should only run once per build. Only valid when the halloween
+        // plugin is enabled (both call sites already guard on that).
+        private HalloweenPluginSettings.Settings? _halloweenSettings;
+        public HalloweenPluginSettings.Settings HalloweenSettings =>
+            _halloweenSettings ??= HalloweenPluginSettings.Parse(GraphData.Plugins["halloween"]);
 
         public Context(Config config)
         {

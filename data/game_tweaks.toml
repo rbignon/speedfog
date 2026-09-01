@@ -197,3 +197,16 @@ name = "AEG099_503_9001"  # mohgwyn_boss: activation region inside the arena but
 [[stake_removals]]
 map = "m12_04_00_00"
 name = "AEG099_504_9001"  # ainsel_boss: respawn c0000_9015 sits ~140 units south of Astel's arena in ainsel_preboss, bypasses the fog gate
+
+# Arena maps whose boss part FogMod never writes, so UntouchableBossInjector's
+# primary mod-dir scan never sees them: the assignment target is only present
+# in the merge-dir (Item Randomizer) copy. caelid_radahn's boss part lives on
+# the private-instance supertile m60_13_09_02, which carries none of the
+# zone's fog gates (those live on the surrounding 00-tiles), so FogMod's
+# writer skips it entirely while the Item Randomizer's swap still ships it
+# via mods/itemrando (see docs/untouchable-boss.md, the m60_13_09_02
+# paragraph). Extend this list if the "assignment target not found" warning
+# ever fires for another arena whose map exists in the merge-dir.
+
+[[fallback_arena_maps]]
+map = "m60_13_09_02"

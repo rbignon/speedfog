@@ -267,6 +267,31 @@ public class GameTweaksLoaderTests
     }
 
     [Fact]
+    public void Parse_FallbackArenaMaps_ParsesMapIds()
+    {
+        var tweaks = GameTweaksLoader.Parse("""
+            [config_vars]
+            logicpass = true
+            [[fallback_arena_maps]]
+            map = "m60_13_09_02"
+            """);
+
+        Assert.Equal(new[] { "m60_13_09_02" }, tweaks.FallbackArenaMaps);
+    }
+
+    [Fact]
+    public void Parse_FallbackArenaMaps_MissingMap_Throws()
+    {
+        var ex = Assert.Throws<InvalidDataException>(() => GameTweaksLoader.Parse("""
+            [config_vars]
+            logicpass = true
+            [[fallback_arena_maps]]
+            name = "m60_13_09_02"
+            """));
+        Assert.Contains("fallback_arena_maps", ex.Message);
+    }
+
+    [Fact]
     public void Parse_RemoveEntities_ParsesEntryWithMatchGroupDefault()
     {
         var tweaks = GameTweaksLoader.Parse("""
@@ -369,5 +394,6 @@ public class GameTweaksLoaderTests
             tweaks.DisableEvents);
         Assert.Equal(new[] { "m60_52_39_00" }, tweaks.PinVanillaMaps);
         Assert.Equal(3, tweaks.StakeRemovals.Count);
+        Assert.Equal(new[] { "m60_13_09_02" }, tweaks.FallbackArenaMaps);
     }
 }

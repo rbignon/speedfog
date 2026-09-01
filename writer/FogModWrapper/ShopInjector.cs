@@ -104,8 +104,8 @@ public static class ShopInjector
             }
         }
 
-        // Sort rows by ID (required for game to read correctly)
-        shopParam.Rows = shopParam.Rows.OrderBy(r => r.ID).ToList();
+        // Row order (required for the game to read correctly) is enforced
+        // centrally by RegulationEditor.Save().
 
         Console.WriteLine($"Shop items injected successfully ({itemCount} items)");
     }

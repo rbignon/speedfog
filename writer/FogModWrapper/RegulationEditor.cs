@@ -1,3 +1,4 @@
+using System.Linq;
 using SoulsFormats;
 
 namespace FogModWrapper;
@@ -107,6 +108,11 @@ public sealed class RegulationEditor
     /// regulation.bin at the path supplied to Open(). No-op when no PARAM has
     /// been accessed. Skips the encryption step entirely when the editor was
     /// constructed without a path (test fixtures only).
+    ///
+    /// Sorts each accessed PARAM's Rows by ID before serializing: the game
+    /// requires ascending row-id order, and injectors append new rows with
+    /// plain Rows.Add calls, so ordering is enforced centrally here instead
+    /// of by each injector that appends rows.
     /// </summary>
     public void Save()
     {
@@ -118,6 +124,7 @@ public sealed class RegulationEditor
 
         foreach (var kvp in _params)
         {
+            kvp.Value.Rows = kvp.Value.Rows.OrderBy(r => r.ID).ToList();
             var file = _bnd.Files.Find(f => f.Name.EndsWith($"{kvp.Key}.param"));
             if (file == null)
                 continue;

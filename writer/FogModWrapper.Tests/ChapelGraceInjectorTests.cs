@@ -437,20 +437,11 @@ public class ChapelGraceInjectorTests
         Assert.Equal(BONFIRE_ROW_BASE + 1, row.ID);
     }
 
-    [Fact]
-    public void AddBonfireWarpRow_KeepsRowsSortedById()
-    {
-        var param = MakeBonfireParam();
-        var late = new PARAM.Row(999999, "late", param.AppliedParamdef);
-        late["eventflagId"].Value = 90000u;
-        late["bonfireEntityId"].Value = 10008888u;
-        param.Rows.Add(late);
-
-        ChapelGraceInjector.AddBonfireWarpRow(param, NEW_BONFIRE_ENTITY);
-
-        var ids = param.Rows.Select(r => r.ID).ToList();
-        Assert.Equal(ids.OrderBy(id => id).ToList(), ids);
-    }
+    // Row-id ordering after an append is no longer AddBonfireWarpRow's job:
+    // RegulationEditor.Save() sorts every accessed PARAM's Rows before
+    // serializing (see RegulationEditorTests.Save_SortsRowsByIdAfterOutOfOrderAppends),
+    // so the per-injector sort this test used to pin was removed as
+    // redundant.
 
     // --- PatchGameStartEvent ---
 

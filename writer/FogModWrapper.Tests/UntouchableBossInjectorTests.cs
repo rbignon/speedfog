@@ -137,7 +137,7 @@ public class UntouchableBossInjectorTests
             ["30001800"] = SpeedFogIds.UntouchableSourceEntity.ToString(),
         };
 
-        UntouchableBossInjector.Inject(modDir, assignments, mergeDir);
+        UntouchableBossInjector.Inject(modDir, assignments, mergeDir, new[] { "m60_13_09_02" });
 
         var writtenPath = Path.Combine(modDir, "map", "mapstudio", "m60_13_09_02.msb.dcx");
         Assert.True(File.Exists(writtenPath));
@@ -165,7 +165,7 @@ public class UntouchableBossInjectorTests
         Exception? ex;
         try
         {
-            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, null));
+            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, null, new[] { "m60_13_09_02" }));
         }
         finally
         {
@@ -198,7 +198,7 @@ public class UntouchableBossInjectorTests
         Exception? ex;
         try
         {
-            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, mergeDir));
+            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, mergeDir, new[] { "m60_13_09_02" }));
         }
         finally
         {
@@ -212,23 +212,4 @@ public class UntouchableBossInjectorTests
         Assert.Contains("not found in any map (phase slot?)", output);
     }
 
-    /// <summary>
-    /// Disposable temp directory helper (mirrors VanillaWarpRemoverTests).
-    /// </summary>
-    private sealed class TempDir : IDisposable
-    {
-        public string Path { get; }
-
-        public TempDir()
-        {
-            Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"sftest_{Guid.NewGuid():N}");
-            Directory.CreateDirectory(Path);
-        }
-
-        public void Dispose()
-        {
-            if (Directory.Exists(Path))
-                Directory.Delete(Path, true);
-        }
-    }
 }

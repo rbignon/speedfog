@@ -1,5 +1,4 @@
 using System.Numerics;
-using FogModWrapper.Models;
 using SoulsFormats;
 using SoulsIds;
 
@@ -8,8 +7,8 @@ namespace FogModWrapper;
 /// <summary>
 /// Places data-driven ambient decorations (candelabras, bone piles, glow
 /// anchors, ...) at cluster exit gates for the Halloween plugin, from
-/// data/plugins/halloween_decorations.toml (with no active entries, Inject
-/// is a silent no-op).
+/// data/plugins/halloween_decorations.toml (with no active entries, a
+/// silent no-op driven by HalloweenAmbientPass never finding any gates).
 ///
 /// Anchors come from HalloweenGateAnchors (shared with
 /// AmbientSpawnInjector): exit gates of mini_dungeon/legacy_dungeon/start
@@ -19,15 +18,18 @@ namespace FogModWrapper;
 /// fields). Decorations are anchored vertically on a per-gate ground
 /// estimate (GateGeometry.EstimateGroundY over nearby vanilla assets and
 /// enemies) rather than the gate origin, whose Y is not reliably at floor
-/// level. Because vanilla enemies serve as ground evidence, this injector
-/// MUST run before AmbientSpawnInjector adds its own EntityID-0 spawns
-/// (enforced by the call order in Program.cs).
+/// level. Because vanilla enemies serve as ground evidence, this injector's
+/// placement (ApplyToMsb) MUST run before AmbientSpawnInjector's own
+/// ApplyToMsb adds its EntityID-0 spawns (enforced by HalloweenAmbientPass's
+/// per-map ordering).
 ///
-/// Two-phase per map, mirroring DeathMarkerInjector:
-/// 1. MSB phase: clone a nearby vanilla asset per catalogue entry per gate.
-/// 2. EMEVD phase: catalogue entries with SfxId > 0 get one unconditional
-///    CreateAssetfollowingSFX event per map (no flag wait, since
-///    decorations are always present, unlike death markers).
+/// Two-phase per map, mirroring DeathMarkerInjector, driven by
+/// HalloweenAmbientPass:
+/// 1. MSB phase (ApplyToMsb): clone a nearby vanilla asset per catalogue
+///    entry per gate.
+/// 2. EMEVD phase (WriteSfxEvents): catalogue entries with SfxId > 0 get one
+///    unconditional CreateAssetfollowingSFX event per map (no flag wait,
+///    since decorations are always present, unlike death markers).
 ///
 /// Each catalogue entry at a gate seeds GateGeometry.GenerateArcOffsets off
 /// the gate EntityID mixed with a decor-specific tag and the entry's index
@@ -53,63 +55,6 @@ public static class GateDecorInjector
     private const uint DecorSeedTag = 0x44454355u;
 
     internal sealed record MapAllocation(string MapId, uint EntityIdBase, int EventOffsetBase);
-
-    /// <summary>
-    /// Inject catalogue decorations at every exit gate of a
-    /// mini_dungeon/legacy_dungeon/start cluster (HalloweenGateAnchors). A
-    /// no-op (one console line) when the catalogue is missing or has no
-    /// active entries. Maps are processed in parallel; entity and event IDs
-    /// are pre-partitioned per map so the output stays deterministic.
-    /// </summary>
-    public static void Inject(
-        string modDir, string gameDir,
-        List<Connection> connections,
-        Dictionary<string, GraphNode> nodes,
-        Dictionary<string, (string ASideArea, string BSideArea)> gateSides,
-        Events events,
-        string dataDir)
-    {
-        var catalog = HalloweenDecorLoader.Load(
-            Path.Combine(dataDir, "plugins", "halloween_decorations.toml"));
-        if (catalog.IsEmpty)
-            return;
-
-        Console.WriteLine("Injecting Halloween gate decorations...");
-
-        var gatesByMap = HalloweenGateAnchors.Collect(
-            connections, nodes, gateSides, HalloweenGateAnchors.DecorClusterTypes);
-        var work = gatesByMap.ToList();
-        int perGateCount = catalog.Entries.Sum(e => e.Count);
-        bool hasSfxEntries = catalog.Entries.Any(e => e.SfxId > 0);
-        var plans = PlanAllocations(
-            work.Select(kv => (kv.Key, kv.Value.Count * perGateCount)), hasSfxEntries);
-
-        int totalPlaced = 0;
-        int totalMaps = 0;
-        var consoleLock = new object();
-
-        Parallel.ForEach(work.Zip(plans), pair =>
-        {
-            var (mapId, gates) = pair.First;
-            var plan = pair.Second;
-            var log = new List<string>();
-            int count = InjectMap(
-                modDir, gameDir, events, mapId, gates, catalog,
-                plan.EntityIdBase, plan.EventOffsetBase, log.Add);
-            lock (consoleLock)
-            {
-                foreach (var line in log)
-                    Console.WriteLine(line);
-            }
-            if (count > 0)
-            {
-                Interlocked.Add(ref totalPlaced, count);
-                Interlocked.Increment(ref totalMaps);
-            }
-        });
-
-        Console.WriteLine($"  Placed {totalPlaced} gate decorations across {totalMaps} maps");
-    }
 
     /// <summary>
     /// Partition the entity ID and event ID spaces per map, in map order, so
@@ -268,30 +213,22 @@ public static class GateDecorInjector
 
     // --- Helper methods ---
 
-    private static int InjectMap(
-        string modDir, string gameDir, Events events,
-        string mapId, List<HalloweenGateAnchors.GateAnchor> gates, DecorCatalog catalog,
-        uint entityIdBase, int eventOffset, Action<string> log)
+    /// <summary>
+    /// EMEVD phase for gate decorations: for each (entityId, sfxDummy, sfxId)
+    /// work item returned by <see cref="ApplyToMsb"/> (only entries with
+    /// SfxId &gt; 0 produce one), emits one unconditional
+    /// ChangeAssetEnableState + CreateAssetfollowingSFX pair into a single
+    /// per-map event, registered via InitializeEvent in event 0. No-op when
+    /// there is no SFX work or the map has no event slot allocated
+    /// (eventOffset &lt; 0: the catalogue has no SfxId &gt; 0 entries at all).
+    /// Called by HalloweenAmbientPass after the shared MSB write.
+    /// </summary>
+    internal static void WriteSfxEvents(
+        string modDir, string gameDir, Events events, string mapId,
+        List<(uint EntityId, int SfxDummy, int SfxId)> sfxWork, int eventOffset, Action<string> log)
     {
-        var msbFileName = $"{mapId}.msb.dcx";
-        var msbPath = MsbHelper.FindMsbPath(modDir, msbFileName) ?? MsbHelper.FindMsbPath(gameDir, msbFileName);
-        if (msbPath == null)
-        {
-            log($"  Warning: {msbFileName} not found, skipping gate decorations for {mapId}");
-            return 0;
-        }
-
-        var msb = MSBE.Read(msbPath);
-        var (placed, sfxWork) = ApplyToMsb(msb, gates, catalog, entityIdBase, log);
-        if (placed == 0)
-            return 0;
-
-        var writePath = MsbHelper.FindMsbPath(modDir, msbFileName) ?? MsbHelper.FindOrCreateMsbDir(modDir, msbFileName);
-        Directory.CreateDirectory(Path.GetDirectoryName(writePath)!);
-        msb.Write(writePath);
-
         if (sfxWork.Count == 0 || eventOffset < 0)
-            return placed;
+            return;
 
         var emevdFileName = $"{mapId}.emevd.dcx";
         var emevdPath = Path.Combine(modDir, "event", emevdFileName);
@@ -301,7 +238,7 @@ public static class GateDecorInjector
             if (!File.Exists(gameEmevdPath))
             {
                 log($"  Warning: {emevdFileName} not found, skipping SFX activation for {mapId}");
-                return placed;
+                return;
             }
             Directory.CreateDirectory(Path.GetDirectoryName(emevdPath)!);
             File.Copy(gameEmevdPath, emevdPath);
@@ -312,7 +249,7 @@ public static class GateDecorInjector
         if (initEvent == null)
         {
             log($"  Warning: Event 0 not found in {emevdFileName}, skipping SFX activation");
-            return placed;
+            return;
         }
 
         long eventId = SpeedFogIds.HalloweenDecorEvents.Base + eventOffset;
@@ -336,29 +273,9 @@ public static class GateDecorInjector
         emevd.Events.Add(evt);
         initEvent.Instructions.Add(EmevdHelper.InitializeEvent((int)eventId));
         emevd.Write(emevdPath);
-
-        return placed;
     }
 
-    private static MSBE.Part.Asset? FindNearestVanillaAsset(MSBE msb, Vector3 targetPos)
-    {
-        MSBE.Part.Asset? best = null;
-        float bestDist = float.MaxValue;
-
-        foreach (var asset in msb.Parts.Assets)
-        {
-            if (asset.EntityID >= FOGMOD_ENTITY_MIN)
-                continue;
-
-            var diff = asset.Position - targetPos;
-            float dist = diff.X * diff.X + diff.Y * diff.Y + diff.Z * diff.Z;
-            if (dist < bestDist)
-            {
-                bestDist = dist;
-                best = asset;
-            }
-        }
-
-        return best;
-    }
+    private static MSBE.Part.Asset? FindNearestVanillaAsset(MSBE msb, Vector3 targetPos) =>
+        MsbHelper.FindNearestVanilla(
+            msb.Parts.Assets, a => a.EntityID, a => a.Position, targetPos, FOGMOD_ENTITY_MIN);
 }

@@ -17,14 +17,16 @@ namespace FogModWrapper;
 /// Boss arenas never receive spawns.
 ///
 /// Two-phase injection, mirroring DeathMarkerInjector:
-/// 1. MSB phase (this class, Inject/ApplyToMsb): clone a nearby vanilla enemy
-///    per anchored gate, retarget it to the greeter/ambusher model.
+/// 1. MSB phase (ApplyToMsb): clone a nearby vanilla enemy per anchored
+///    gate, retarget it to the greeter/ambusher model. Driven per map by
+///    HalloweenAmbientPass, which reads/writes the MSB once alongside
+///    GateDecorInjector's own MSB phase.
 /// 2. Regulation phase (ApplyPassiveThinkRow): clone the greeter's
 ///    NpcThinkParam row with all perception fields zeroed.
 ///
-/// Must run AFTER GateDecorInjector: the spawns carry EntityID 0 and would
-/// otherwise pollute the decor injector's vanilla-enemy ground evidence
-/// (enforced by the call order in Program.cs).
+/// Must run AFTER GateDecorInjector's placement: the spawns carry EntityID 0
+/// and would otherwise pollute the decor injector's vanilla-enemy ground
+/// evidence (enforced by HalloweenAmbientPass's per-map ordering).
 /// </summary>
 public static class AmbientSpawnInjector
 {
@@ -62,50 +64,6 @@ public static class AmbientSpawnInjector
     // FogMod's own entity/region allocation floor (DeathMarkerInjector.FOGMOD_ENTITY_MIN);
     // vanilla enemies used as clone sources must sit below it.
     private const uint FOGMOD_ENTITY_MIN = 755890000;
-
-    /// <summary>
-    /// Inject passive greeters (and optional ambush packs) at every exit
-    /// gate of a mini_dungeon/legacy_dungeon cluster. Maps are processed
-    /// in parallel (independent MSB files); no entity or event IDs are
-    /// allocated, so no pre-partitioning is needed.
-    /// </summary>
-    public static void Inject(
-        string modDir, string gameDir,
-        List<Connection> connections,
-        Dictionary<string, GraphNode> nodes,
-        Dictionary<string, (string ASideArea, string BSideArea)> gateSides,
-        HalloweenPluginSettings.Settings settings)
-    {
-        Console.WriteLine("Injecting Halloween ambient spawns at cluster exit gates...");
-
-        var specsByMap = CollectSpawnSpecsByMap(connections, nodes, gateSides, settings);
-        var work = specsByMap.ToList();
-
-        int totalGreeters = 0;
-        int totalAmbushers = 0;
-        int totalMaps = 0;
-        var consoleLock = new object();
-
-        Parallel.ForEach(work, kv =>
-        {
-            var (mapId, specs) = kv;
-            var log = new List<string>();
-            var (greeters, ambushers) = InjectMap(modDir, gameDir, mapId, specs, log.Add);
-            lock (consoleLock)
-            {
-                foreach (var line in log)
-                    Console.WriteLine(line);
-            }
-            if (greeters + ambushers > 0)
-            {
-                Interlocked.Add(ref totalGreeters, greeters);
-                Interlocked.Add(ref totalAmbushers, ambushers);
-                Interlocked.Increment(ref totalMaps);
-            }
-        });
-
-        Console.WriteLine($"  Placed {totalGreeters} greeters + {totalAmbushers} ambushers across {totalMaps} maps");
-    }
 
     /// <summary>
     /// Collect spawn specs per map, keyed by the anchored gate's map id.
@@ -339,8 +297,7 @@ public static class AmbientSpawnInjector
             npc, SpeedFogIds.DecorativeAmbusherNpcRow, AMBUSH_NPC_PARAM);
         npcRow["hp"].Value = AMBUSH_HP;  // u32: token HP, dies to any real hit
         npcRow["getSoul"].Value = 0u;  // u32: no rune pinata
-        ClearInheritedScalingSlots(npcRow);
-        int slot = FirstFreeSpEffectSlot(npcRow);
+        int slot = ClearScalingSlotsAndFindFree(npcRow);
         npcRow[$"spEffectID{slot}"].Value = SpeedFogIds.DecorativeAmbusherSpEffectRow; // s32
 
         Console.WriteLine(
@@ -352,81 +309,43 @@ public static class AmbientSpawnInjector
     // Vanilla 35000030 carries the game's own area-scaling SpEffect in one
     // of its slots (7080, tier 8: ~2.7x hp, 2x attack), which the clone
     // would inherit and stack onto the nerf, roughly doubling the
-    // AMBUSH_HP / 0.01x numbers. Clear every slot pointing into the scaling bands
-    // (docs/enemy-scaling.md: 7000+10*tier and the DLC 20007xxx band) so
-    // the decorative stats are exact.
-    private static void ClearInheritedScalingSlots(PARAM.Row row)
+    // AMBUSH_HP / 0.01x numbers. One 0..31 pass clears every slot pointing
+    // into the scaling bands (docs/enemy-scaling.md: 7000+10*tier and the
+    // DLC 20007xxx band) so the decorative stats are exact, while tracking
+    // the first free (-1) slot seen so far. Clearing always runs to slot 31
+    // (no early exit once a free slot is found): a scaling slot past the
+    // free one still needs neutralizing. NpcParam carries 32 SpEffect slots
+    // (spEffectID0-31); unused ones hold -1 (0 also appears as a placeholder
+    // and counts as occupied). Scanned instead of hardcoded (unlike
+    // UntouchableBossInjector's slot 19) because the skeleton template's
+    // occupancy is not pinned by any SpeedFog code and may shift with game
+    // patches.
+    private static int ClearScalingSlotsAndFindFree(PARAM.Row row)
     {
+        int freeSlot = -1;
         for (int i = 0; i < 32; i++)
         {
             int value = (int)row[$"spEffectID{i}"].Value;
             if ((value >= 7000 && value <= 7200) || (value >= 20007000 && value <= 20007130))
+            {
                 row[$"spEffectID{i}"].Value = -1;
+                value = -1;
+            }
+            if (freeSlot == -1 && value == -1)
+                freeSlot = i;
         }
-    }
-
-    // NpcParam carries 32 SpEffect slots (spEffectID0-31); unused ones hold
-    // -1 (0 also appears as a placeholder and counts as occupied). Scanned
-    // instead of hardcoded (unlike UntouchableBossInjector's slot 19)
-    // because the skeleton template's occupancy is not pinned by any
-    // SpeedFog code and may shift with game patches.
-    private static int FirstFreeSpEffectSlot(PARAM.Row row)
-    {
-        for (int i = 0; i < 32; i++)
+        if (freeSlot == -1)
         {
-            if ((int)row[$"spEffectID{i}"].Value == -1)
-                return i;
+            throw new InvalidOperationException(
+                "No free spEffectID slot on the decorative ambusher NpcParam clone");
         }
-        throw new InvalidOperationException(
-            "No free spEffectID slot on the decorative ambusher NpcParam clone");
+        return freeSlot;
     }
 
     // --- Helper methods ---
 
-    private static (int Greeters, int Ambushers) InjectMap(
-        string modDir, string gameDir, string mapId, List<SpawnSpec> specs, Action<string> log)
-    {
-        var msbFileName = $"{mapId}.msb.dcx";
-        var msbPath = MsbHelper.FindMsbPath(modDir, msbFileName) ?? MsbHelper.FindMsbPath(gameDir, msbFileName);
-        if (msbPath == null)
-        {
-            log($"  Warning: {msbFileName} not found, skipping ambient spawns for {mapId}");
-            return (0, 0);
-        }
-
-        var msb = MSBE.Read(msbPath);
-        var (greeters, ambushers) = ApplyToMsb(msb, specs, log);
-        if (greeters + ambushers == 0)
-            return (0, 0);
-
-        var writePath = MsbHelper.FindMsbPath(modDir, msbFileName) ?? MsbHelper.FindOrCreateMsbDir(modDir, msbFileName);
-        Directory.CreateDirectory(Path.GetDirectoryName(writePath)!);
-        msb.Write(writePath);
-
-        return (greeters, ambushers);
-    }
-
-    private static MSBE.Part.Enemy? FindNearestVanillaEnemy(IReadOnlyList<MSBE.Part.Enemy> enemies, Vector3 targetPos)
-    {
-        MSBE.Part.Enemy? best = null;
-        float bestDist = float.MaxValue;
-
-        foreach (var enemy in enemies)
-        {
-            if (enemy.EntityID >= FOGMOD_ENTITY_MIN)
-                continue;
-
-            var diff = enemy.Position - targetPos;
-            float dist = diff.X * diff.X + diff.Y * diff.Y + diff.Z * diff.Z;
-            if (dist < bestDist)
-            {
-                bestDist = dist;
-                best = enemy;
-            }
-        }
-
-        return best;
-    }
+    private static MSBE.Part.Enemy? FindNearestVanillaEnemy(IReadOnlyList<MSBE.Part.Enemy> enemies, Vector3 targetPos) =>
+        MsbHelper.FindNearestVanilla(enemies, e => e.EntityID, e => e.Position, targetPos, FOGMOD_ENTITY_MIN);
 }
 
 public enum SpawnKind { Greeter, Ambusher }

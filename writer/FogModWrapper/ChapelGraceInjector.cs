@@ -359,7 +359,8 @@ public static class ChapelGraceInjector
         }
 
         bonfireParam.Rows.Add(newRow);
-        bonfireParam.Rows = bonfireParam.Rows.OrderBy(r => r.ID).ToList();
+        // Row order (required for the game to read correctly) is enforced
+        // centrally by RegulationEditor.Save().
 
         Console.WriteLine($"  BonfireWarpParam: row {rowId}, flag {flagId}, entity {bonfireEntityId}");
         return flagId;

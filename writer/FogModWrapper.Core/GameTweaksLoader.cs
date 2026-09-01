@@ -24,7 +24,8 @@ public sealed record GameTweaks(
     List<RemoveEntity> RemoveEntities,
     List<StakeRemoval> StakeRemovals,
     List<DisableEvent> DisableEvents,
-    List<string> PinVanillaMaps);
+    List<string> PinVanillaMaps,
+    List<string> FallbackArenaMaps);
 
 /// <summary>
 /// Loads and validates <c>data/game_tweaks.toml</c>. Unlike optional
@@ -92,7 +93,8 @@ public static class GameTweaksLoader
             ParseRemoveEntities(root),
             ParseStakeRemovals(root),
             ParseDisableEvents(root),
-            ParsePinVanillaMaps(root));
+            ParsePinVanillaMaps(root),
+            ParseFallbackArenaMaps(root));
     }
 
     public static GameTweaks Load(string path)
@@ -110,7 +112,8 @@ public static class GameTweaksLoader
             $"{tweaks.RemoveEntities.Count} remove entities, " +
             $"{tweaks.StakeRemovals.Count} stake removals, " +
             $"{tweaks.DisableEvents.Count} disabled events, " +
-            $"{tweaks.PinVanillaMaps.Count} pinned vanilla maps from {path}");
+            $"{tweaks.PinVanillaMaps.Count} pinned vanilla maps, " +
+            $"{tweaks.FallbackArenaMaps.Count} fallback arena maps from {path}");
         return tweaks;
     }
 
@@ -139,6 +142,17 @@ public static class GameTweaksLoader
             return result;
         foreach (var entry in entries)
             result.Add(RequireString(entry, "pin_vanilla_maps", "map"));
+        return result;
+    }
+
+    private static List<string> ParseFallbackArenaMaps(TomlTable root)
+    {
+        var result = new List<string>();
+        var entries = Section(root, "fallback_arena_maps");
+        if (entries == null)
+            return result;
+        foreach (var entry in entries)
+            result.Add(RequireString(entry, "fallback_arena_maps", "map"));
         return result;
     }
 

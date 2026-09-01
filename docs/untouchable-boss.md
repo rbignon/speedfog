@@ -164,21 +164,25 @@ gates are on the 00-tiles, and the stake fix lives on the OTHER
 supertile m60_12_09_02, which FogMod does write for that reason).
 
 Implemented fix (user-approved option a, 2026-09-01): the repoint scan
-in `Inject` gained a named fallback source. After the primary
-`mods/fogmod` scan, if any assignment target is still unfound and a
-merge dir is available (`Program.cs` passes `ctx.Config.MergeDir`),
-`Inject` walks a hardcoded `FallbackArenaMaps` list (currently just
-`m60_13_09_02`), skipping any name already present in `mods/fogmod`
-(already scanned by the primary loop). For each remaining name it reads
-the merge-dir copy (`<mergeDir>/map/mapstudio/<name>.msb.dcx`, missing
-being logged and skipped), runs the same `ApplyToMsb` repoint, and, only
-when something was actually repointed there, writes the result into
-`mods/fogmod` (the higher-priority ModEngine layer) and folds the
+in `Inject` gained a named fallback source, data-driven from
+`data/game_tweaks.toml`'s `[[fallback_arena_maps]]` (parsed by
+`GameTweaksLoader`, mirroring `[[pin_vanilla_maps]]`, exposed as
+`GameTweaks.FallbackArenaMaps`). After the primary `mods/fogmod` scan, if
+any assignment target is still unfound and a merge dir is available
+(`Program.cs` passes `ctx.Config.MergeDir` and
+`ctx.Tweaks.FallbackArenaMaps` into `Inject`), it walks that list
+(currently just `m60_13_09_02`), skipping any name already present in
+`mods/fogmod` (already scanned by the primary loop). For each remaining
+name it reads the merge-dir copy (`<mergeDir>/map/mapstudio/<name>.msb.dcx`,
+missing being logged and skipped), runs the same `ApplyToMsb` repoint,
+and, only when something was actually repointed there, writes the result
+into `mods/fogmod` (the higher-priority ModEngine layer) and folds the
 repointed ids into the found set. The extra map therefore ships only on
 seeds that actually place the boss in it; any id still unfound after the
 fallback keeps the existing phase-slot warning. Extend
-`FallbackArenaMaps` if the "assignment target not found" warning ever
-fires for another arena whose map exists in the merge-dir.
+`[[fallback_arena_maps]]` in `data/game_tweaks.toml` if the "assignment
+target not found" warning ever fires for another arena whose map exists
+in the merge-dir.
 
 The discarded generic alternative (option b) was to add the tile to
 `[[pin_vanilla_maps]]` sourced from the merge-dir copy: it would also
@@ -198,8 +202,8 @@ Untouchable boss: repointing N placed boss slot(s)
 with `M >= 1` whenever the boss was actually placed in at least one
 compatible (`c5280`-model) arena. The `Fallback:` line only appears when
 the merge-dir fallback described above actually repointed something in
-one of `FallbackArenaMaps`. Phase-slot warnings (see above) are expected
-and not failures.
+one of `data/game_tweaks.toml`'s `[[fallback_arena_maps]]`. Phase-slot
+warnings (see above) are expected and not failures.
 
 ## In-game tuning session (owed)
 
