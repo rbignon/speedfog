@@ -101,6 +101,11 @@ flag = 10000500
 on = true  # Stormveil barred gate (AEG219_050_0500, lever AEG219_030_0500)
 
 [[startup_flags]]
+map = "m20_00_00_00"
+flag = 20000548
+on = true  # Belurat swamp sub-route one-way door (AEG417_012_0505, ObjAct 417012, no lever); same model as the Dancing Lion door FogMod opens itself from fog.txt DoorName (20000544)
+
+[[startup_flags]]
 map = "m20_01_00_00"
 flag = 20018540
 on = true  # Enir-Ilim Spiral Rise split door (AEG417_012_0501, ObjAct 417012)

@@ -26,6 +26,7 @@ This works only for gates where the flag check happens at the **start** of the c
 | m35_00_00_00 | 35008542 | `AEG027_031_0500` | Sewer one-way door near barred gate 1, at (-129, -99, -185). No lever: the flag is the door's own ObjAct EventFlagID (ObjAct 27031), the engine renders the door open when it is ON (same mechanism as the Enir-Ilim entry). Also ends common event 90005515, the "won't open from this side" prompt. |
 | m35_00_00_00 | 35008544 | `AEG027_031_0501` | Sewer one-way door near barred gate 2, at (-56, -99, -127). Same ObjAct-flag mechanism; this one has no EMEVD reference at all (not even the wrong-side prompt). |
 | m10_00_00_00 | 10000500 | `AEG219_050_0500` | Stormveil barred gate near (-111, 21, 23). Map event 10002500 reads this flag and animates the gate plus its winch (`AEG219_030_0500`, EntityID 10001501). |
+| m20_00_00_00 | 20000548 | `AEG417_012_0505` | Belurat big door in the swamp sub-route (play region 2000011), at (-190, 33, 169). No lever, no EMEVD reference: the flag is the door's own ObjAct EventFlagID (ObjAct 417012). Same model as the Divine Beast Dancing Lion door, which FogMod opens on its own (see step 0 below). Opening it also makes `belurat -> belurat_swamp` free, a direction `fog.txt` gates behind `Cond: welldepthskey`; harmless while every key item is granted at start. |
 | m20_01_00_00 | 20018540 | `AEG417_012_0501` | Enir-Ilim door before Spiral Rise stairs (map-split fog 2). No lever, no EMEVD reference: the flag is the door's own ObjAct EventFlagID (ObjAct 417012), the engine renders the door open when it is ON. |
 | m61_47_44_00 | 2047448500 | `AEG464_015_2000` | Castle Ensis barred gate near (81, 360, 52). Parameterized map event 2047442500 reads this flag (also the mechanism's ObjAct EventFlagID) and animates the gate plus its mechanism (`AEG464_016_2000`, ObjAct 464016). |
 | m61_47_44_10 | 2047448500 | `AEG464_015_2000` | Same gate: `_10` is a duplicate tile EMEVD (byte-identical to `_00` in vanilla, FogRando `dupeMsbs`), dupe-written by FogMod at Write time before the injector runs, so it needs its own entry. |
@@ -33,6 +34,25 @@ This works only for gates where the flag check happens at the **start** of the c
 ## Finding a Flag for a New Gate
 
 When you spot a gate that blocks a SpeedFog path, the goal is to find the flag whose `ON` state makes the gate render in the open position at map load.
+
+### Step 0. Check whether FogMod already opens it
+
+`fog.txt` entrances can carry a `DoorName` field (the MSB name of a door next to
+the fog gate, optionally followed by its map). For those, FogMod reads the door's
+`ObjAct.EventFlagID` and emits the `setflag` common event (`fogevents.txt` ID
+9005772, "Just set saved flag X0_4. Used for opening a door via event flag in
+objact") into the map's Event 0, which is the same mechanism as this injector
+(`reference/fogrando-src/GameDataWriterE.cs:554-575`, flushed at L3201-3212).
+So before hunting a flag, grep `DoorName` in `data/fog.txt`: those doors are
+already handled in our output, and they double as worked examples of the flag
+pattern used by their neighbours. The other branch of the same code deletes
+the door asset (and its ObjAct) instead, when the door has no ObjAct, no
+`EventFlagID`, or the `cellar` tag, so a `DoorName` door missing from a map is
+expected rather than a bug.
+
+```bash
+grep -n "DoorName" data/fog.txt
+```
 
 ### Step 1. Locate the asset by position
 
@@ -46,7 +66,7 @@ wine publish/win-x64/dump_emevd_warps.exe objacts \
   | grep -E "<X rounded>\s+<Y rounded>\s+<Z rounded>"
 ```
 
-Practice-tool coordinates are world-space; MSB positions are local to the map's tile. For legacy dungeons (m10 ... m19, m35) the offset is zero, so the values match. For open-world tiles (m60_AA_BB_CC) you need to subtract the tile origin.
+Practice-tool coordinates are world-space; MSB positions are local to the map's tile. For legacy dungeons (m10 ... m19, m35, and the DLC ones m20/m21) the offset is zero, so the values match. For open-world tiles (m60_AA_BB_CC) you need to subtract the tile origin.
 
 ### Step 2. Inspect the ObjAct entry, if any
 
@@ -59,6 +79,20 @@ PartName  EventFlagID  EntityID  ObjActID  Position  Name
 If the asset name appears here with `EventFlagID > 0`, that flag controls the ObjAct interaction directly. Add it to `[[startup_flags]]` in `data/game_tweaks.toml` and you're done.
 
 If the asset has no ObjAct entry (or `EventFlagID = 0`), continue to step 3.
+
+`ObjActParam` (row = the `ObjActID` column) tells what kind of door it is
+without launching the game: `actionFailedMsgId` 4010 is "Does not open from this
+side" (one-way door), 4020 is "Locked" (key or flag required, see
+`spQualifiedType`/`spQualifiedId`), and `playerAnimId` distinguishes the
+two-handed push of a big double door (60180/60190) from a small door (60000)
+or a lever (60200 pull, 60231 push, the animation of the Stormveil and Castle
+Ensis winches above).
+
+```bash
+cd tools/game_inspect
+wine publish/win-x64/game_inspect.exe dump-param <regulation.bin> ObjActParam \
+  --row 417012 --defs ../../writer/FogModWrapper/eldendata/Defs
+```
 
 ### Step 3. Trace the asset's EntityID through EMEVD
 
