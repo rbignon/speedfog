@@ -9,8 +9,17 @@ Layout: one WitchyBND-unpacked directory per archive under `speedfog/`, e.g.
 `_witchy-bnd4.xml` manifest. Bootstrap repacks each such directory into the
 corresponding `.dcx` under `data/mods/speedfog/`.
 
-The directory is currently empty on purpose: the only content it ever had
-(the Rykard AI script) was reverted in commit c3f921d ("Revert 'overlay:
-import Rykard AI script'"). The mechanism is kept so future sources can be
-dropped here and become reproducible from the repository. When there are no
-unpacked archives, the repack step is a no-op.
+Current content:
+
+- `speedfog/script/755890_battle-luabnd-dcx/`: the Aging Untouchable boss
+  battle AI (plain-text Lua, loaded by the game because the boss's
+  NpcThinkParam clone sets `battleGoalID = 755890`; ambient untouchables keep
+  the vanilla bytecode `528000_battle`). Regenerate the baseline with
+  WitchyBND (`--passive Game/script/528000_battle.luabnd.dcx`) and
+  DSLuaDecompiler, then re-apply the SpeedFog edits (header comment, the
+  tuning knobs and rewritten brackets in `Goal.Activate`, Act01's
+  `successDist`, Act04, Act11); see `docs/untouchable-boss.md` "Moveset".
+
+The Rykard AI script that once lived here was reverted in commit c3f921d
+("Revert 'overlay: import Rykard AI script'"); the plain-text Lua + manifest
+layout is the same.

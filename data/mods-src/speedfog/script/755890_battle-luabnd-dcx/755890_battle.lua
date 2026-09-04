@@ -1,0 +1,588 @@
+-- SpeedFog: Aging Untouchable boss battle script (docs/untouchable-boss.md,
+-- "Moveset"). Decompiled from the vanilla 528000_battle.lua with
+-- DSLuaDecompiler and renamed to battle goal 755890 (the boss NpcThinkParam
+-- clone's battleGoalID). Two additions: the lantern swing (3001) as a regular
+-- melee act (Act11) and the dormant lantern ray (3004) re-enabled as a beam
+-- at range (Act04). Ambient untouchables keep the vanilla bytecode script.
+RegisterTableGoal(GOAL_Houzuki755890_Battle, "Houzuki755890_Battle")
+REGISTER_GOAL_NO_SUB_GOAL(GOAL_Houzuki755890_Battle, true)
+
+Goal.Initialize = function (self, ai, goal, battleActivatedCount)
+    ai:EnableUnfavorableAttackCheck(0, 3002)
+end
+
+Goal.Activate = function (self, ai, goal)
+    Init_Pseudo_Global(ai, goal)
+    local probabilities = {}
+    local acts = {}
+    local paramTbls = {}
+    Common_Clear_Param(probabilities, acts, paramTbls)
+    local distanceEnemy = ai:GetDist(TARGET_ENE_0)
+    local random = ai:GetRandam_Int(1, 100)
+    local paramDoAdmire = ai:GetExcelParam(AI_EXCEL_THINK_PARAM_TYPE__thinkAttr_doAdmirer)
+    -- SpeedFog tuning knobs: percentages within a distance bracket, the
+    -- vanilla act of that bracket keeps the remainder.
+    local BEAM_FAR_TELEPORT_READY = 40      -- >= 10 m, teleport ready: Act04 (beam) vs Act02
+    local BEAM_FAR_TELEPORT_NOT_READY = 50  -- >= 10 m, teleport not ready: Act04 (beam) vs Act01
+    local SWING_MID = 40                    -- 3 to 10 m: Act11 (swing) vs Act03 (grab)
+    local SWING_CLOSE = 50                  -- < 3 m: Act11 (swing) vs Act03 (grab)
+    local BEAM_COOLDOWN = 8                 -- seconds between two beams (3004)
+    local f2_local6 = 0
+    local f2_local7 = TARGET_SELF
+    local f2_local8 = TARGET_ENE_0
+    local f2_local9 = AI_DIR_TYPE_F
+    local f2_local10 = 30
+    local f2_local11 = 180
+    local f2_local12 = 1
+    ai:AddObserveAreaCustom(f2_local6, f2_local7, f2_local8, f2_local9, f2_local10, f2_local11, f2_local12)
+    if ai:IsInsideTarget(TARGET_ENE_0, AI_DIR_TYPE_B, 90) then
+        if distanceEnemy >= 8 then
+            probabilities[2] = 100
+            probabilities[43] = 0
+        else
+            probabilities[1] = 20
+            probabilities[2] = 0
+            probabilities[43] = 80
+        end
+    elseif ai:HasSpecialEffectId(TARGET_SELF, 5031) then
+        probabilities[1] = 0
+        probabilities[2] = 0
+        probabilities[3] = 0
+        probabilities[5] = 100
+        probabilities[6] = 0
+        probabilities[40] = 0
+        probabilities[41] = 0
+        probabilities[42] = 0
+        probabilities[43] = 0
+        probabilities[44] = 0
+        probabilities[45] = 0
+    elseif ai:HasSpecialEffectId(TARGET_SELF, 5032) then
+        probabilities[1] = 0
+        probabilities[2] = 0
+        probabilities[3] = 0
+        probabilities[5] = 0
+        probabilities[6] = 100
+        probabilities[40] = 0
+        probabilities[41] = 0
+        probabilities[42] = 0
+        probabilities[43] = 0
+        probabilities[44] = 0
+        probabilities[45] = 0
+    elseif distanceEnemy >= 10 then
+        if ai:HasSpecialEffectId(TARGET_SELF, 20011450) then
+            probabilities[1] = 0
+            probabilities[2] = 100 - BEAM_FAR_TELEPORT_READY
+            probabilities[3] = 0
+            probabilities[4] = BEAM_FAR_TELEPORT_READY
+            probabilities[40] = 0
+            probabilities[41] = 0
+            probabilities[42] = 0
+            probabilities[43] = 0
+            probabilities[44] = 0
+            probabilities[45] = 0
+        else
+            probabilities[1] = 100 - BEAM_FAR_TELEPORT_NOT_READY
+            probabilities[2] = 0
+            probabilities[3] = 0
+            probabilities[4] = BEAM_FAR_TELEPORT_NOT_READY
+            probabilities[40] = 0
+            probabilities[41] = 0
+            probabilities[42] = 0
+            probabilities[43] = 0
+            probabilities[44] = 0
+            probabilities[45] = 0
+        end
+    elseif distanceEnemy >= 3 then
+        probabilities[1] = 0
+        probabilities[2] = 0
+        probabilities[3] = 100 - SWING_MID
+        probabilities[4] = 0
+        probabilities[5] = 0
+        probabilities[11] = SWING_MID
+        probabilities[40] = 0
+        probabilities[41] = 0
+        probabilities[42] = 0
+        probabilities[43] = 0
+        probabilities[44] = 0
+        probabilities[45] = 0
+    else
+        probabilities[1] = 0
+        probabilities[2] = 0
+        probabilities[3] = 100 - SWING_CLOSE
+        probabilities[4] = 0
+        probabilities[5] = 0
+        probabilities[11] = SWING_CLOSE
+        probabilities[40] = 0
+        probabilities[41] = 0
+        probabilities[42] = 0
+        probabilities[43] = 0
+        probabilities[44] = 0
+        probabilities[45] = 0
+    end
+    probabilities[3] = SetCoolTime(ai, goal, 3002, 12, probabilities[3], 1)
+    probabilities[4] = SetCoolTime(ai, goal, 3004, BEAM_COOLDOWN, probabilities[4], 1)
+    acts[1] = REGIST_FUNC(ai, goal, Houzuki755890_Act01)
+    acts[2] = REGIST_FUNC(ai, goal, Houzuki755890_Act02)
+    acts[3] = REGIST_FUNC(ai, goal, Houzuki755890_Act03)
+    acts[4] = REGIST_FUNC(ai, goal, Houzuki755890_Act04)
+    acts[5] = REGIST_FUNC(ai, goal, Houzuki755890_Act05)
+    acts[6] = REGIST_FUNC(ai, goal, Houzuki755890_Act06)
+    acts[7] = REGIST_FUNC(ai, goal, Houzuki755890_Act07)
+    acts[8] = REGIST_FUNC(ai, goal, Houzuki755890_Act08)
+    acts[9] = REGIST_FUNC(ai, goal, Houzuki755890_Act09)
+    acts[10] = REGIST_FUNC(ai, goal, Houzuki755890_Act10)
+    acts[11] = REGIST_FUNC(ai, goal, Houzuki755890_Act11)
+    acts[40] = REGIST_FUNC(ai, goal, Houzuki755890_Act40)
+    acts[41] = REGIST_FUNC(ai, goal, Houzuki755890_Act41)
+    acts[42] = REGIST_FUNC(ai, goal, Houzuki755890_Act42)
+    acts[43] = REGIST_FUNC(ai, goal, Houzuki755890_Act43)
+    acts[44] = REGIST_FUNC(ai, goal, Houzuki755890_Act44)
+    acts[45] = REGIST_FUNC(ai, goal, Houzuki755890_Act45)
+    acts[46] = REGIST_FUNC(ai, goal, Houzuki755890_Act46)
+    acts[47] = REGIST_FUNC(ai, goal, Houzuki755890_Act47)
+    local actAfter = REGIST_FUNC(ai, goal, Houzuki755890_ActAfter_AdjustSpace)
+    Common_Battle_Activate(ai, goal, probabilities, acts, actAfter, paramTbls)
+    ai:AddObserveSpecialEffectAttribute(TARGET_SELF, 5031)
+    ai:AddObserveSpecialEffectAttribute(TARGET_SELF, 5032)
+end
+
+function Houzuki755890_Act01(ai, goal, paramTbl)
+    local distanceEnemy = ai:GetDist(TARGET_ENE_0)
+    local stopDist = 0.5
+    local canRunDist = 0
+    local forceRunMinDist = 0.1
+    local runProbability = 100
+    local guardProbability = 0
+    local walkLife = 1
+    local runLife = 5
+    Approach_Act_Flex(ai, goal, stopDist, canRunDist, forceRunMinDist, runProbability, guardProbability, walkLife, runLife)
+    local goalLife = 0.1
+    local animationId = 2100
+    local target = TARGET_ENE_0
+    local successDist = 5
+    local turnTime = 1.5
+    local turnFaceAngle = 20
+    local upAngleThreshold = 0
+    local downAngleThreshold = 0
+    goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, goalLife, animationId, target, successDist, turnTime, turnFaceAngle, upAngleThreshold, downAngleThreshold)
+    GetWellSpace_Odds = 0
+    return GetWellSpace_Odds
+end
+
+function Houzuki755890_Act02(ai, goal, paramTbl)
+    local distanceEnemy = ai:GetDist(TARGET_ENE_0)
+    local animationId = 3000
+    local successDist = 5 - ai:GetMapHitRadius(TARGET_SELF) + 999
+    local turnTime = 0
+    local turnFaceAngle = 0
+    local f4_local5 = 5
+    local f4_local6 = AI_DIR_TYPE_F
+    local f4_local7 = TARGET_ENE_0
+    local f4_local8 = TARGET_ENE_0
+    local hitRadius = ai:GetMapHitRadius(TARGET_SELF)
+    ai:AddObserveSpecialEffectAttribute(TARGET_SELF, 20011452)
+    goal:AddSubGoal(GOAL_COMMON_ComboTunable_SuccessAngle180, 10, animationId, TARGET_ENE_0, successDist, turnTime, turnFaceAngle, 0, 0)
+    GetWellSpace_Odds = 0
+    return GetWellSpace_Odds
+end
+
+function Houzuki755890_Act03(ai, goal, paramTbl)
+    local distanceEnemy = ai:GetDist(TARGET_ENE_0)
+    local stopDist = 12
+    local canRunDist = 0
+    local forceRunMinDist = 0.1
+    local runProbability = 100
+    local guardProbability = 0
+    local walkLife = 1
+    local runLife = 8
+    Approach_Act_Flex(ai, goal, stopDist, canRunDist, forceRunMinDist, runProbability, guardProbability, walkLife, runLife)
+    local goalLife = 8
+    local animationId = 3002
+    local target = TARGET_ENE_0
+    local successDist = 12
+    local turnTime = 2
+    local turnFaceAngle = 50
+    local upAngleThreshold = 0
+    local downAngleThreshold = 0
+    ai:AddObserveSpecialEffectAttribute(TARGET_SELF, 5030)
+    goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, goalLife, animationId, target, successDist, turnTime, turnFaceAngle, upAngleThreshold, downAngleThreshold)
+    GetWellSpace_Odds = 0
+    return GetWellSpace_Odds
+end
+
+function Houzuki755890_Act04(ai, goal, paramTbl)
+    -- SpeedFog: beam. Vanilla registers this act but never gives it any
+    -- probability. Animation 3004's bullet events are retargeted to judge
+    -- 150 by StaticModBuilder (UntouchableTaePatcher) and resolved to the
+    -- beam bullet under the boss's behavior variation (UntouchableBossInjector).
+    local goalLife = 3
+    local animationId = 3004
+    local target = TARGET_ENE_0
+    local successDist = 999
+    local turnTime = 1.5
+    local turnFaceAngle = 60
+    local upAngleThreshold = 0
+    local downAngleThreshold = 0
+    goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, goalLife, animationId, target, successDist, turnTime, turnFaceAngle, upAngleThreshold, downAngleThreshold)
+    GetWellSpace_Odds = 0
+    return GetWellSpace_Odds
+end
+
+function Houzuki755890_Act05(ai, goal, paramTbl)
+    local goalLife = 5
+    local moveTarget = TARGET_ENE_0
+    local f7_local2 = 999
+    local f7_local3 = 1.5
+    local f7_local4 = 60
+    local f7_local5 = 0
+    local f7_local6 = 0
+    local turnTarget = TARGET_ENE_0
+    goal:ClearSubGoal()
+    goal:AddSubGoal(GOAL_COMMON_LeaveTarget, goalLife, moveTarget, 10, turnTarget, true, 0)
+    GetWellSpace_Odds = 0
+    return GetWellSpace_Odds
+end
+
+function Houzuki755890_Act06(ai, goal, paramTbl)
+    local goalLife = 4
+    local moveTarget = TARGET_ENE_0
+    local f8_local2 = 999
+    local f8_local3 = 1.5
+    local f8_local4 = 60
+    local f8_local5 = 0
+    local f8_local6 = 0
+    local turnTarget = TARGET_ENE_0
+    goal:ClearSubGoal()
+    goal:AddSubGoal(GOAL_COMMON_LeaveTarget, goalLife, moveTarget, 8, turnTarget, true, 0)
+    GetWellSpace_Odds = 0
+    return GetWellSpace_Odds
+end
+
+function Houzuki755890_Act07(ai, goal, paramTbl)
+    GetWellSpace_Odds = 0
+    return GetWellSpace_Odds
+end
+
+function Houzuki755890_Act08(ai, goal, paramTbl)
+    GetWellSpace_Odds = 0
+    return GetWellSpace_Odds
+end
+
+function Houzuki755890_Act09(ai, goal, paramTbl)
+    GetWellSpace_Odds = 0
+    return GetWellSpace_Odds
+end
+
+function Houzuki755890_Act10(ai, goal, paramTbl)
+    GetWellSpace_Odds = 0
+    return GetWellSpace_Odds
+end
+
+function Houzuki755890_Act11(ai, goal, paramTbl)
+    -- SpeedFog: lantern swing. 3001 is vanilla's post-teleport surprise
+    -- attack (magic, no grab); as a regular melee act the boss keeps
+    -- attacking while the grab (3002) sits on its 12 s cooldown.
+    local stopDist = 3
+    local canRunDist = 0
+    local forceRunMinDist = 0.1
+    local runProbability = 100
+    local guardProbability = 0
+    local walkLife = 1
+    local runLife = 5
+    Approach_Act_Flex(ai, goal, stopDist, canRunDist, forceRunMinDist, runProbability, guardProbability, walkLife, runLife)
+    local goalLife = 8
+    local animationId = 3001
+    local target = TARGET_ENE_0
+    local successDist = 4
+    local turnTime = 1.5
+    local turnFaceAngle = 60
+    local upAngleThreshold = 0
+    local downAngleThreshold = 0
+    goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, goalLife, animationId, target, successDist, turnTime, turnFaceAngle, upAngleThreshold, downAngleThreshold)
+    GetWellSpace_Odds = 0
+    return GetWellSpace_Odds
+end
+
+function Houzuki755890_Act40(ai, goal, paramTbl)
+    local goalLife = ai:GetRandam_Int(1, 3)
+    local moveTarget = TARGET_ENE_0
+    local stopDist = 0.1
+    local turnTarget = TARGET_SELF
+    local walk = true
+    local distanceEnemy = ai:GetDist(TARGET_ENE_0)
+    local onGuardResult = GUARD_GOAL_DESIRE_RET_Continue
+    local guardSuccessOnEnd = true
+    local xzDistanceOnly = AI_CALC_DIST_TYPE__XYZ
+    local f13_local9 = 0
+    local random = ai:GetRandam_Int(1, 100)
+    local guardStateId = -1
+    if random <= f13_local9 then
+        guardStateId = 9910
+    end
+    goal:AddSubGoal(GOAL_COMMON_ApproachTarget, goalLife, moveTarget, stopDist, turnTarget, walk, guardStateId, onGuardResult, guardSuccessOnEnd, xzDistanceOnly)
+    GetWellSpace_Odds = 0
+    return GetWellSpace_Odds
+end
+
+function Houzuki755890_Act41(ai, goal, paramTbl)
+    local goalLife = ai:GetRandam_Int(1, 3)
+    local moveTarget = TARGET_ENE_0
+    local stopDist = 10
+    local turnTarget = TARGET_ENE_0
+    local walk = true
+    local distanceEnemy = ai:GetDist(TARGET_ENE_0)
+    local f14_local6 = 0
+    local random = ai:GetRandam_Int(1, 100)
+    local guardStateId = -1
+    if random <= f14_local6 then
+        guardStateId = 9910
+    end
+    goal:AddSubGoal(GOAL_COMMON_LeaveTarget, goalLife, moveTarget, stopDist, turnTarget, walk, guardStateId)
+    GetWellSpace_Odds = 0
+    return GetWellSpace_Odds
+end
+
+function Houzuki755890_Act42(ai, goal, paramTbl)
+    local goalLife = ai:GetRandam_Float(0.8, 1.5)
+    local moveTarget = TARGET_ENE_0
+    local right = 1
+    local angleThreshold = 90
+    local f15_local4 = 0
+    local f15_local5 = TARGET_SELF
+    local isWalk = true
+    local successOnEnd = true
+    local distanceEnemy = ai:GetDist(TARGET_ENE_0)
+    local f15_local9 = 0
+    local random = ai:GetRandam_Int(1, 100)
+    local guardStateId = -1
+    if random <= f15_local9 then
+        guardStateId = 9910
+    end
+    goal:AddSubGoal(GOAL_COMMON_SidewayMove, goalLife, moveTarget, right, angleThreshold, isWalk, successOnEnd, guardStateId)
+    GetWellSpace_Odds = 0
+    return GetWellSpace_Odds
+end
+
+function Houzuki755890_Act43(ai, goal, paramTbl)
+    local goalLife = 2
+    local turnTarget = TARGET_ENE_0
+    local stopAngleWidth = 90
+    local onGuardResult = GUARD_GOAL_DESIRE_RET_Continue
+    local guardSuccessOnEnd = true
+    local f16_local5 = 0
+    local random = ai:GetRandam_Int(1, 100)
+    local guardStateId = -1
+    if random <= f16_local5 then
+        guardStateId = 9910
+    end
+    goal:AddSubGoal(GOAL_COMMON_Turn, goalLife, turnTarget, stopAngleWidth, guardStateId, onGuardResult, guardSuccessOnEnd)
+    GetWellSpace_Odds = 0
+    return GetWellSpace_Odds
+end
+
+function Houzuki755890_Act44(ai, goal, paramTbl)
+    local goalLife = 5
+    local frontPriority = -1
+    local backPriority = -1
+    local leftPriority = 1
+    local rightPriority = 1
+    local target = TARGET_ENE_0
+    local distSpaceCheck = 3
+    local turnTime = 0
+    local alwaysSuccess = true
+    if ai:IsInsideTargetCustom(TARGET_SELF, TARGET_ENE_0, AI_DIR_TYPE_F, 120, 180, 15) then
+        goal:AddSubGoal(GOAL_COMMON_StepSafety, goalLife, frontPriority, 2, leftPriority, rightPriority, target, distSpaceCheck, turnTime, alwaysSuccess)
+    elseif ai:IsInsideTargetCustom(TARGET_SELF, TARGET_ENE_0, AI_DIR_TYPE_R, 180, 180, 15) then
+        goal:AddSubGoal(GOAL_COMMON_StepSafety, goalLife, frontPriority, backPriority, 1, -1, target, distSpaceCheck, turnTime, alwaysSuccess)
+    elseif ai:IsInsideTargetCustom(TARGET_SELF, TARGET_ENE_0, AI_DIR_TYPE_L, 180, 180, 15) then
+        goal:AddSubGoal(GOAL_COMMON_StepSafety, goalLife, frontPriority, backPriority, -1, 1, target, distSpaceCheck, turnTime, alwaysSuccess)
+    end
+    GetWellSpace_Odds = 0
+    return GetWellSpace_Odds
+end
+
+function Houzuki755890_Act45(ai, goal, paramTbl)
+    local goalLife = 5
+    local frontPriority = -1
+    local backPriority = -1
+    local leftPriority = 1
+    local rightPriority = 1
+    local target = TARGET_ENE_0
+    local distSpaceCheck = 3
+    local turnTime = 0
+    local alwaysSuccess = true
+    local random = ai:GetRandam_Int(1, 2)
+    if random == 1 then
+        rightPriority = 1
+        leftPriority = -1
+    end
+    goal:AddSubGoal(GOAL_COMMON_StepSafety, goalLife, frontPriority, backPriority, leftPriority, rightPriority, target, distSpaceCheck, turnTime, alwaysSuccess)
+    GetWellSpace_Odds = 0
+    return GetWellSpace_Odds
+end
+
+function Houzuki755890_Act46(ai, goal, paramTbl)
+    local goalLife = 10
+    local moveTarget = TARGET_ENE_0
+    local stopDist = 4
+    local walk = true
+    local distanceEnemy = ai:GetDist(TARGET_ENE_0)
+    local f19_local5 = 0
+    local random = ai:GetRandam_Int(1, 100)
+    local guardStateId = -1
+    if random <= f19_local5 then
+        guardStateId = 9910
+    end
+    if stopDist <= distanceEnemy then
+        local turnTarget = TARGET_SELF
+        goal:AddSubGoal(GOAL_COMMON_ApproachTarget, goalLife, moveTarget, stopDist, turnTarget, walk, guardStateId)
+    else
+        local turnTarget = TARGET_ENE_0
+        goal:AddSubGoal(GOAL_COMMON_LeaveTarget, goalLife, moveTarget, stopDist, turnTarget, walk, guardStateId)
+    end
+    local goalLife_2 = ai:GetRandam_Float(0.1, 2)
+    local moveTarget_2 = TARGET_ENE_0
+    local right = ai:GetRandam_Int(0, 1)
+    local angleThreshold = ai:GetRandam_Int(30, 45)
+    local f19_local12 = 1
+    local f19_local13 = TARGET_SELF
+    local isWalk = true
+    local successOnEnd = true
+    local distanceEnemy_2 = ai:GetDist(TARGET_ENE_0)
+    local f19_local17 = 0
+    local random_2 = ai:GetRandam_Int(1, 100)
+    local guardStateId_2 = -1
+    if random_2 <= f19_local17 then
+        guardStateId_2 = 9910
+    end
+    goal:AddSubGoal(GOAL_COMMON_SidewayMove, goalLife_2, moveTarget_2, right, angleThreshold, isWalk, successOnEnd, guardStateId_2)
+    GetWellSpace_Odds = 0
+    return GetWellSpace_Odds
+end
+
+function Houzuki755890_Act47(ai, goal, paramTbl)
+    local min = TORIMAKI_MIN_DIST
+    local max = TORIMAKI_MAX_DIST
+    local guardStateId = -1
+    local walk = true
+    local maxDistance = 1
+    local goalLife = 10
+    local goalLife_2 = 1.5
+    local goalLife_3 = 0.5
+    local existMesh = ai:IsExistMeshOnLine(TARGET_SELF, AI_DIR_TYPE_R, maxDistance)
+    local existMesh_2 = ai:IsExistMeshOnLine(TARGET_SELF, AI_DIR_TYPE_L, maxDistance)
+    local existMesh_3 = ai:IsExistMeshOnLine(TARGET_SELF, AI_DIR_TYPE_F, maxDistance)
+    local existMesh_4 = ai:IsExistMeshOnLine(TARGET_SELF, AI_DIR_TYPE_B, maxDistance)
+    local distanceTARGET_ENE0 = ai:GetDist(TARGET_ENE0)
+    local right = ai:GetRandam_Int(0, 1)
+    if existMesh_2 == true and existMesh == true then
+    elseif existMesh_2 == true and existMesh == false then
+        right = 0
+    elseif existMesh_2 == false and existMesh == true then
+        right = 1
+    elseif existMesh_2 == false and existMesh == false then
+        right = 2
+    end
+    if max < distanceTARGET_ENE0 then
+        goal:AddSubGoal(GOAL_COMMON_ApproachTarget, goalLife, TARGET_ENE_0, ai:GetRandam_Float(min, max), TARGET_SELF, walk, guardStateId)
+        GetWellSpace_Odds = 0
+        return GetWellSpace_Odds
+    elseif distanceTARGET_ENE0 <= max and min <= distanceTARGET_ENE0 then
+        if right <= 1 then
+            goal:AddSubGoal(GOAL_COMMON_SidewayMove, goalLife_2, TARGET_ENE_0, right, 100, walk, false, guardStateId, resultTypeIfGuardSuccess)
+        else
+            goal:AddSubGoal(GOAL_COMMON_Wait, 0.5, TARGET_ENE_0)
+        end
+    elseif distanceTARGET_ENE0 < min then
+        if existMesh_4 == true then
+            goal:AddSubGoal(GOAL_COMMON_LeaveTarget, goalLife_3, TARGET_ENE_0, ai:GetRandam_Float(min, max), TARGET_ENE_0, walk, guardStateId, GUARD_GOAL_DESIRE_RET_Success)
+        elseif right <= 1 then
+            goal:AddSubGoal(GOAL_COMMON_SidewayMove, goalLife_2, TARGET_ENE_0, right, 100, walk, false, guardStateId, resultTypeIfGuardSuccess)
+        else
+            goal:AddSubGoal(GOAL_COMMON_Wait, 0.5, TARGET_ENE_0)
+        end
+    end
+    GetWellSpace_Odds = 0
+    return GetWellSpace_Odds
+end
+
+function Houzuki755890_ActAfter_AdjustSpace(ai, goal, paramTbl)
+    goal:AddSubGoal(GOAL_Houzuki755890_AfterAttackAct, 10)
+end
+
+Goal.Update = function (self, ai, goal)
+    return Update_Default_NoSubGoal(self, ai, goal)
+end
+
+Goal.Terminate = function (self, ai, goal)
+end
+
+Goal.Interrupt = function (self, ai, goal)
+    if ai:IsLadderAct(TARGET_SELF) then
+        return false
+    end
+    if ai:HasSpecialEffectId(TARGET_SELF, 5110) == true or ai:HasSpecialEffectAttribute(TARGET_SELF, SP_EFFECT_TYPE_ILLNESS) == true then
+        return false
+    end
+    if ai:IsInterupt(INTERUPT_ActivateSpecialEffect) then
+        if ai:HasSpecialEffectId(TARGET_SELF, 20011452) then
+            local distanceFromTarget = 5
+            local directionFromTarget = AI_DIR_TYPE_F
+            local f24_local2 = TARGET_EVENT
+            local turnTarget = TARGET_ENE_0
+            local lineWidth = ai:GetMapHitRadius(TARGET_SELF)
+            local f24_local5 = true
+            if ai:GetExistMeshOnLineDistEx(TARGET_EVENT, AI_DIR_TYPE_F, 3 + lineWidth, lineWidth, 0) >= 2.5 then
+                directionFromTarget = AI_DIR_TYPE_BR
+                distanceFromTarget = 0
+                f24_local5 = true
+            elseif ai:GetExistMeshOnLineDistEx(TARGET_EVENT, AI_DIR_TYPE_BR, 3 + lineWidth, lineWidth, 0) >= 2.5 then
+                directionFromTarget = AI_DIR_TYPE_BR
+                distanceFromTarget = 0
+                f24_local5 = true
+            elseif ai:GetExistMeshOnLineDistEx(TARGET_EVENT, AI_DIR_TYPE_BL, 3 + lineWidth, lineWidth, 0) >= 2.5 then
+                directionFromTarget = AI_DIR_TYPE_BL
+                distanceFromTarget = 0
+                f24_local5 = true
+            elseif ai:GetExistMeshOnLineDistEx(TARGET_EVENT, AI_DIR_TYPE_BL, 3 + lineWidth, lineWidth, 2) >= 2.5 then
+                directionFromTarget = AI_DIR_TYPE_BL
+                distanceFromTarget = 2
+                f24_local5 = true
+            elseif ai:GetExistMeshOnLineDistEx(TARGET_EVENT, AI_DIR_TYPE_BR, 3 + lineWidth, lineWidth, 2) >= 2.5 then
+                directionFromTarget = AI_DIR_TYPE_BR
+                distanceFromTarget = 2
+                f24_local5 = true
+            elseif ai:GetExistMeshOnLineDistEx(TARGET_EVENT, AI_DIR_TYPE_B, 3 + lineWidth, lineWidth, 2) >= 2.5 then
+                directionFromTarget = AI_DIR_TYPE_B
+                distanceFromTarget = 2
+                f24_local5 = true
+            else
+                f24_local5 = false
+            end
+            if f24_local5 == true then
+                goal:ClearSubGoal()
+                goal:AddSubGoal(GOAL_COMMON_ToTargetWarp, 15, TARGET_EVENT, directionFromTarget, distanceFromTarget, turnTarget)
+                goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, 8, 3001, TARGET_ENE_0, 999, 0, 0)
+            else
+            end
+            return true
+        end
+        if ai:GetSpecialEffectActivateInterruptId(5030) and ai:IsInsideTargetCustom(TARGET_SELF, TARGET_ENE_0, AI_DIR_TYPE_F, 180, 180, 4) then
+            goal:ClearSubGoal()
+            goal:AddSubGoal(GOAL_COMMON_ComboRepeat_SuccessAngle180, 5, 3003, TARGET_ENE_0, 999, 0, 0)
+            return true
+        end
+        return false
+    end
+    return false
+end
+
+RegisterTableGoal(GOAL_Houzuki755890_AfterAttackAct, "Houzuki755890_AfterAttackAct")
+REGISTER_GOAL_NO_SUB_GOAL(GOAL_Houzuki755890_AfterAttackAct, true)
+
+Goal.Activate = function (self, ai, goal)
+end
+
+Goal.Update = function (self, ai, goal)
+    return Update_Default_NoSubGoal(self, ai, goal)
+end
