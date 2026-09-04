@@ -118,10 +118,10 @@ public static class SpeedFogIds
     // --- Param row IDs (not entity IDs; separate namespace per PARAM) ---
 
     // Param row namespaces are per-PARAM (NpcThinkParam, NpcParam,
-    // SpEffectParam never share ids), so the same two numeric values below
-    // are reused across the five rows with no collision. They sit in
-    // FogMod's entity band only by convention (params and entities are
-    // unrelated id spaces); no vanilla row in any of the three params
+    // SpEffectParam, Bullet, AtkParam_Npc never share ids), so the same two
+    // numeric values below are reused across the eight rows with no collision.
+    // They sit in FogMod's entity band only by convention (params and entities
+    // are unrelated id spaces); no vanilla row in any of the five params
     // comes anywhere near them, and phantom skins (1450700-1450799) /
     // FogMod scaling (7800000-7804487) live in disjoint SpEffectParam
     // territory.
@@ -179,6 +179,20 @@ public static class SpeedFogIds
     /// AtkParam_Pc rows, so an NPC-fired Frenzied Burst needs this one.</summary>
     public const int UntouchableBeamAtkRow = ParamRowBase0;
 
+    // --- Icon ids (not entity ids, not param row ids; a third id namespace) ---
+
+    /// <summary>Icon id for the Halloween Golden Seed pumpkin icon. The
+    /// texture MENU_ItemIcon_60383 ships in the speedfog-halloween
+    /// overlay's 05_dummy.tpf.dcx superset; the id is u16-safe and far
+    /// above every vanilla icon id (max ~8490). Vanilla iconId: 383.</summary>
+    public const int HalloweenGoldenSeedIcon = 60383;
+
+    /// <summary>Icon id for the Halloween Sacred Tear icon, a corrupted
+    /// burning-chalice artwork (MENU_ItemIcon_60384, same overlay).
+    /// Vanilla iconId: 384 (EquipParamGoods row 10020, renamed
+    /// "Profane Tear" by the text catalogue).</summary>
+    public const int HalloweenSacredTearIcon = 60384;
+
     // --- Behavior ids (a fourth id kind: the battle-script id selected by
     //     NpcThinkParam.battleGoalID, NpcParam.behaviorVariationId, and a
     //     TAE bullet judge id; none of them is a param row id) ---
@@ -205,18 +219,4 @@ public static class SpeedFogIds
     /// game's own composite key (vanilla c5280 judge 100 is 252800100).</summary>
     public static int BehaviorRowId(int variationId, int judgeId)
         => 200000000 + variationId * 1000 + judgeId;
-
-    // --- Icon ids (not entity ids, not param row ids; a third id namespace) ---
-
-    /// <summary>Icon id for the Halloween Golden Seed pumpkin icon. The
-    /// texture MENU_ItemIcon_60383 ships in the speedfog-halloween
-    /// overlay's 05_dummy.tpf.dcx superset; the id is u16-safe and far
-    /// above every vanilla icon id (max ~8490). Vanilla iconId: 383.</summary>
-    public const int HalloweenGoldenSeedIcon = 60383;
-
-    /// <summary>Icon id for the Halloween Sacred Tear icon, a corrupted
-    /// burning-chalice artwork (MENU_ItemIcon_60384, same overlay).
-    /// Vanilla iconId: 384 (EquipParamGoods row 10020, renamed
-    /// "Profane Tear" by the text catalogue).</summary>
-    public const int HalloweenSacredTearIcon = 60384;
 }
