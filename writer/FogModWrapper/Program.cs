@@ -818,7 +818,11 @@ Example:
         // halloween plugin; gated on the enemy allowlist actually
         // placing the boss.
         if (UntouchableBossInjector.IsBossPlaced(ctx.GraphData.EnemyAssignments))
-            ctx.UntouchableBossParamsApplied = UntouchableBossInjector.ApplyParams(reg);
+        {
+            var bossParams = UntouchableBossInjector.ApplyParams(reg, ctx.Config.DataDir);
+            ctx.UntouchableBossParamsApplied = bossParams.Core;
+            ctx.UntouchableBossMovesetApplied = bossParams.Moveset;
+        }
 
         if (ctx.GraphData.IsPluginEnabled("halloween"))
         {
@@ -1050,6 +1054,11 @@ Example:
         // placed (ApplyParams not called) or the regulation phase warn-
         // returned (NpcParam/SpEffectParam unavailable).
         public bool UntouchableBossParamsApplied;
+
+        // Set by ApplyRegulation (UntouchableBossInjector.ApplyParams'
+        // Moveset flag): the boss think row exists, so the MSB phase may
+        // repoint ThinkParamID at it. False keeps the vanilla AI.
+        public bool UntouchableBossMovesetApplied;
 
         // Parsed lazily on first access: both ApplyRegulation (ambusher row
         // gating) and ApplyModDirInjectors (HalloweenAmbientPass) need the

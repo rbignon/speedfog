@@ -46,36 +46,103 @@ public class UntouchableBossInjectorTests
     {
         // Empty BND4: GetParam("NpcParam") warn-returns null before ever
         // touching the defs dir (RegulationEditorTests' fixture pattern).
-        // Program.cs must see this false to skip the MSB repoint phase
+        // Program.cs must see Core == false to skip the MSB repoint phase
         // instead of pointing placed parts at a row that was never written
         // (see docs/untouchable-boss.md "Two-phase injector").
+        using var data = new TempDir();
         var editor = new RegulationEditor(new BND4(), Path.GetTempPath());
 
-        var result = UntouchableBossInjector.ApplyParams(editor);
+        var result = UntouchableBossInjector.ApplyParams(editor, data.Path);
 
-        Assert.False(result);
+        Assert.False(result.Core);
+        Assert.False(result.Moveset);
     }
 
     [Fact]
     public void ApplyParams_ReturnsTrue_WhenBothParamsAvailable()
     {
-        // Mirrors ApplyParams_ReturnsFalse_WhenParamsUnavailable's fixture
-        // shape with both binder files present, real paramdefs applied
-        // (RegulationEditorTests.Save_SortsRowsByIdAfterOutOfOrderAppends'
-        // pattern), so the true branch of the two-phase guard is covered
-        // directly, not just implied by Apply's own tests.
         var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
         var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
         var bnd = new BND4();
         bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/NpcParam.param", npc.Write()));
         bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/SpEffectParam.param", sp.Write()));
         var editor = new RegulationEditor(bnd, DefsDir());
+        using var data = new TempDir(); // no static assets: moveset off, core on
 
-        var result = UntouchableBossInjector.ApplyParams(editor);
+        var result = UntouchableBossInjector.ApplyParams(editor, data.Path);
 
-        Assert.True(result);
+        Assert.True(result.Core);
+        Assert.False(result.Moveset);
         var row = editor.GetParam("NpcParam")!.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossNpcRow);
         Assert.Equal(UntouchableBossInjector.BOSS_HP, (uint)row["hp"].Value);
+    }
+
+    private static void TouchStaticAssets(string dataDir)
+    {
+        foreach (var rel in UntouchableBossInjector.MovesetStaticAssets)
+        {
+            var path = Path.Combine(dataDir, rel);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllBytes(path, new byte[] { 0 });
+        }
+    }
+
+    [Fact]
+    public void MovesetStaticAssets_AreTheAnibndAndTheBattleScript()
+    {
+        Assert.Contains(Path.Combine("mods", "speedfog", "chr", "c5280.anibnd.dcx"),
+            UntouchableBossInjector.MovesetStaticAssets);
+        Assert.Contains(Path.Combine("mods", "speedfog", "script", "755890_battle.luabnd.dcx"),
+            UntouchableBossInjector.MovesetStaticAssets);
+    }
+
+    [Fact]
+    public void ApplyParams_SkipsMoveset_WhenMovesetParamsUnavailable()
+    {
+        // Static assets present, but the regulation carries only the two
+        // core params: core rows written, no moveset row, no think row.
+        var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
+        var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
+        var bnd = new BND4();
+        bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/NpcParam.param", npc.Write()));
+        bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/SpEffectParam.param", sp.Write()));
+        var editor = new RegulationEditor(bnd, DefsDir());
+        using var data = new TempDir();
+        TouchStaticAssets(data.Path);
+
+        var result = UntouchableBossInjector.ApplyParams(editor, data.Path);
+
+        Assert.True(result.Core);
+        Assert.False(result.Moveset);
+        Assert.Equal(0, (int)editor.GetParam("NpcParam")!.Rows
+            .Single(r => r.ID == SpeedFogIds.UntouchableBossNpcRow)["behaviorVariationId"].Value);
+    }
+
+    [Fact]
+    public void ApplyParams_AppliesMoveset_WhenAssetsAndParamsArePresent()
+    {
+        var (_, think, behavior, bullet, atk) = BuildMovesetParams();
+        // BuildMovesetParams already ran Apply on npc; feed ApplyParams a
+        // fresh NpcParam so the core clone is written by ApplyParams itself.
+        var freshNpc = BuildParamFromDef("NpcParam", templateId: 52800086);
+        var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
+        var bnd = new BND4();
+        bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/NpcParam.param", freshNpc.Write()));
+        bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/SpEffectParam.param", sp.Write()));
+        bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/NpcThinkParam.param", think.Write()));
+        bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/BehaviorParam.param", behavior.Write()));
+        bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/Bullet.param", bullet.Write()));
+        bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/AtkParam_Npc.param", atk.Write()));
+        var editor = new RegulationEditor(bnd, DefsDir());
+        using var data = new TempDir();
+        TouchStaticAssets(data.Path);
+
+        var result = UntouchableBossInjector.ApplyParams(editor, data.Path);
+
+        Assert.True(result.Core);
+        Assert.True(result.Moveset);
+        Assert.Contains(editor.GetParam("NpcThinkParam")!.Rows, r => r.ID == SpeedFogIds.UntouchableBossThinkRow);
+        Assert.Contains(editor.GetParam("Bullet", "BulletParam")!.Rows, r => r.ID == SpeedFogIds.UntouchableBeamBulletRow);
     }
 
     [Fact]

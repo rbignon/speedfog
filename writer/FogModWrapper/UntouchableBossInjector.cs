@@ -54,11 +54,30 @@ public static class UntouchableBossInjector
         => enemyAssignments.ContainsValue(
             SpeedFogIds.UntouchableSourceEntity.ToString());
 
-    /// <summary>Returns true when the boss rows were written (both params
-    /// were available), false on the warn-and-skip path. Callers must not
-    /// run the MSB repoint phase (<see cref="Inject"/>) when this returns
-    /// false: it would point placed parts at a row that was never added.</summary>
-    public static bool ApplyParams(RegulationEditor reg)
+    /// <summary>Outcome of the regulation phase. <c>Core</c>: the boss
+    /// NpcParam/SpEffect rows were written (today's boss). <c>Moveset</c>:
+    /// the think row, behavior variation, beam bullet and damage row were
+    /// written too. Callers must not run the MSB repoint when Core is
+    /// false, and must not repoint ThinkParamID when Moveset is false.</summary>
+    public readonly record struct ParamResult(bool Core, bool Moveset);
+
+    /// <summary>Static mod files the moveset depends on, relative to the
+    /// SpeedFog data dir (built by tools/bootstrap.py: StaticModBuilder's
+    /// UntouchableTaePatcher and the WitchyBND repack of
+    /// data/mods-src/speedfog/script/). A think row pointing at a missing
+    /// luabnd would leave the boss without battle AI, so their absence
+    /// disables the whole moveset.</summary>
+    public static readonly string[] MovesetStaticAssets =
+    {
+        Path.Combine("mods", "speedfog", "chr", "c5280.anibnd.dcx"),
+        Path.Combine("mods", "speedfog", "script", $"{SpeedFogIds.UntouchableBossBattleGoal}_battle.luabnd.dcx"),
+    };
+
+    /// <summary>Regulation phase. Core rows first (as before); then, only if
+    /// both static assets exist under <paramref name="dataDir"/> and the
+    /// four moveset params are available, the moveset rows
+    /// (<see cref="ApplyMoveset"/>). Every skip prints one warning line.</summary>
+    public static ParamResult ApplyParams(RegulationEditor reg, string dataDir)
     {
         var npc = reg.GetParam("NpcParam");
         var sp = reg.GetParam("SpEffectParam", "SpEffect");
@@ -66,10 +85,32 @@ public static class UntouchableBossInjector
         {
             Console.WriteLine(
                 "Untouchable boss: NpcParam/SpEffectParam unavailable, boss keeps vanilla stats");
-            return false;
+            return new ParamResult(false, false);
         }
         Apply(npc, sp);
-        return true;
+
+        var missingAssets = MovesetStaticAssets
+            .Where(rel => !File.Exists(Path.Combine(dataDir, rel)))
+            .ToList();
+        if (missingAssets.Count > 0)
+        {
+            Console.WriteLine(
+                $"Untouchable boss: moveset skipped (static asset(s) missing: {string.Join(", ", missingAssets)}; run tools/bootstrap.py)");
+            return new ParamResult(true, false);
+        }
+
+        var think = reg.GetParam("NpcThinkParam");
+        var behavior = reg.GetParam("BehaviorParam");
+        var bullet = reg.GetParam("Bullet", "BulletParam");
+        var atk = reg.GetParam("AtkParam_Npc", "AtkParam");
+        if (think == null || behavior == null || bullet == null || atk == null)
+        {
+            Console.WriteLine(
+                "Untouchable boss: moveset skipped (NpcThinkParam/BehaviorParam/Bullet/AtkParam_Npc unavailable)");
+            return new ParamResult(true, false);
+        }
+
+        return new ParamResult(true, ApplyMoveset(npc, think, behavior, bullet, atk));
     }
 
     public static void Apply(PARAM npc, PARAM spEffect)
