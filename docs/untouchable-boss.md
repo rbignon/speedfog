@@ -58,10 +58,12 @@ thunderDamageCutRate, darkDamageCutRate
 
 all set to `UntouchableBossInjector.DAMAGE_CUT` (`0.5f`, i.e. the boss
 takes 50% of incoming damage: a 50% cut; 0.35 until the 2026-09-04
-in-game session found the boss too tanky). The vanilla parry window is
-untouched: the wall-lift SpEffect only ever governs the permanent state
-outside of a successful parry, so a parry still opens the normal
-full-damage window exactly as with `nerflantern`.
+in-game session found the boss too tanky). The vanilla parry mechanic is
+untouched (the parried animation 8500 still opens the riposte window),
+but the cut rates of the permanent row keep applying to every hit,
+riposte included, until the parry break counter lands (see "Moveset",
+"Parry break"); that counter is applied on the parry itself, before the
+riposte, so the first riposte already deals full damage.
 
 The clone (`NpcParam` row `755890000`, `UntouchableBossInjector.UNTOUCHABLE_VANILLA_NPC`
 = clone of `52800086`) sets:
@@ -241,7 +243,9 @@ or not the boss is placed; it is inert without the boss rows.
 |-------|-----|--------|---------|
 | NpcParam | 755890000 (existing clone) | 52800086 | `behaviorVariationId` 75589 |
 | NpcThinkParam | 755890001 | 52800000 | `battleGoalID` 755890 (`logicId` stays 528000) |
-| BehaviorParam | 275589100/101/102/110/111/112/113/115/500 | the nine vanilla rows of variation 52800 (judge 500 is the non-formula row 1170) | `variationId` 75589 |
+| BehaviorParam | 275589100/101/102/110/111/112/113/115/500 | the nine vanilla rows of variation 52800 (judge 500 is the non-formula row 1170) | `variationId` 75589; judges 100-102 re-pointed at the pulse clones below |
+| Bullet | 755890003-005 | 205280000-002 (the lantern's ambient pulses, judges 100-102) | madness rider (SpEffect 26000, stateInfo 437) cleared, VFX rider kept; the reason madness built up while the boss stood still |
+| SpEffectParam | 755890002 | 755890000 (the cut row) | eight cut rates = 1 / `DAMAGE_CUT`: the parry break counter, applied by EMEVD (see "Parry break") |
 | BehaviorParam | 275589150 | 252800101 | judge 150, refType 1, refId 755890000 |
 | Bullet | 755890000 | 10732000 (Frenzied Burst) | `atkId_Bullet` 755890000, `spEffectId0-4` -1 |
 | AtkParam_Npc | 755890000 | 5280115 | `atkMag` 110 (`BEAM_MAGIC`) |
@@ -261,7 +265,9 @@ two knobs together.
 `data/mods/speedfog/script/755890_battle.luabnd.dcx`) is the decompiled
 vanilla `528000_battle` renamed to goal 755890, plus Act11 (swing) and a
 working Act04 (beam, `successDist` 999, 8 s cooldown via `SetCoolTime`),
-and the grab cooldown lowered from vanilla's 12 s to `GRAB_COOLDOWN` (8 s). The
+the grab cooldown lowered from vanilla's 12 s to `GRAB_COOLDOWN` (8 s), and
+a `SWING_COOLDOWN` (12 s) on 3001 through the same `SetCoolTime`, which
+counts the interrupt's post-teleport 3001 too. The
 `GOAL_Houzuki755890_Battle` and `GOAL_Houzuki755890_AfterAttackAct` globals
 are not provided by the shared aiCommon global-name list (which only knows
 the vanilla `GOAL_Houzuki528000_*` names), so the script assigns them itself
@@ -287,6 +293,44 @@ the grab back sooner.
 `battleGoalID` selects the battle luabnd independently of `logicId` (255
 vanilla think rows share the generic 29999), and the logic script does not
 reference the battle goal by name, so only the battle script is cloned.
+
+### Parry break
+
+The first successful parry cancels the damage cut for the rest of the
+fight (2026-09-05 session request): the parry becomes a break, the
+riposte and everything after it deal full damage, and a player who never
+parries still faces a beatable boss.
+
+- **Detector**: the parried animation (8500) is the only c5280 animation
+  that applies SpEffect 20011471 (the vanilla wall lift, stateInfo 121)
+  through a TAE event. Ambient untouchables carry 20011471 permanently
+  (nerflantern patches the 5280 band), but the boss's permanent row is the
+  out-of-band clone 755890000, so on the boss 20011471 is only ever present
+  during a parry. `IfCharacterHasSpEffect(boss, 20011471)` is the trigger.
+- **Counter**: SpEffectParam 755890002, a clone of the cut row whose eight
+  cut rates are `1 / DAMAGE_CUT` (x2 at 0.5). Damage negations stack
+  multiplicatively, so cut x counter = 1.0. Applied with `SetSpEffect` on
+  the arena entity, so ambient untouchables are never touched. Fallback if
+  the stacking does not behave on an NPC: `ClearSpEffect(boss, 755890000)`
+  (EMEVD 2004[21]) on the resident row instead, to be verified in game.
+- **Event**: one common.emevd event per placed boss slot from
+  `SpeedFogIds.UntouchableParryEvents` (755865500+, ascending arena id),
+  written by `UntouchableBossInjector.InjectParryBreak` in the common
+  phase (`Program.ApplyCommonInjectors`, right after the boss death
+  monitor), same shape as that monitor:
+
+  ```
+  IfCharacterHasSpEffect(MAIN, <arena entity>, 20011471, true, ComparisonType.Equal, 1)
+  SetSpEffect(<arena entity>, 755890002)
+  WaitFixedTimeSeconds(1)
+  EndUnconditionally(EventEndType.Restart)
+  ```
+
+  The Restart loop re-arms the break after the boss respawns on the
+  player's death (the counter dies with the instance). Phase slots whose
+  entity never loads simply never trigger. The counter row is written in
+  the regulation phase with the other core rows; if that phase skips, the
+  event names a missing row and does nothing.
 
 ### Gating
 
@@ -319,20 +363,29 @@ than just the beam.
    Frenzied Burst visual, aimed at the player, ~110 magic per hit; no beam
    during idle or walk. Wrong origin or direction: `BEAM_DUMMY`.
 3. **Tuning**: probabilities (`SWING_*`, `MOVE_*`), `GRAB_COOLDOWN`,
-   `BEAM_COOLDOWN`, `BEAM_MAGIC`, `BEAM_EVENT_COUNT`. First session
+   `SWING_COOLDOWN`, `BEAM_COOLDOWN`, `BEAM_MAGIC`, `BEAM_EVENT_COUNT`.
+   Second session (2026-09-05): swing still too frequent, `SWING_COOLDOWN`
+   12 s added; madness rose while the boss idled, pulse clones without
+   26000; parry break added. First session
    (2026-09-04): beam approved as is; the swing at 40/50 fired every time
    (see the AI script note), lowered to 10/15 with movement fillers and
    an 8 s grab cooldown; boss too tanky at 8427 HP on a depth-12 arena
    (3000 base x 2.81 FogMod rescale, then a 65% cut), lowered to
    `BOSS_HP` 2000 and `DAMAGE_CUT` 0.5.
-4. **Ambient regression**: an ambient untouchable still only teleports and
-   grabs, no swing at range, no beam, no script error.
+4. **Parry break**: after the first parry the boss takes full damage
+   (compare a hit before and after; the parry-window riposte is already
+   full); after dying and re-entering, the cut is back until the next
+   parry. No madness buildup while the boss idles.
+5. **Ambient regression**: an ambient untouchable still only teleports and
+   grabs, no swing at range, no beam, no script error, and still builds
+   madness with its lantern.
 
 ## Expected log lines
 
 ```
-Untouchable boss: NpcParam 755890000 (clone of 52800086, hp 2000, runes 20000) + SpEffect 755890000 (cut 0.5)
-Untouchable boss: moveset rows (think 755890001 -> battle 755890, variation 75589 with 9 vanilla judges + beam judge 150, bullet 755890000 (clone of 10732000), atk 755890000 magic 110)
+Untouchable boss: parry break events 755865500..7558655NN (N boss slot(s): SpEffect 20011471 -> SetSpEffect 755890002)
+Untouchable boss: NpcParam 755890000 (clone of 52800086, hp 2000, runes 20000) + SpEffect 755890000 (cut 0.5) + parry break SpEffect 755890002 (x2)
+Untouchable boss: moveset rows (think 755890001 -> battle 755890, variation 75589 with 9 vanilla judges + beam judge 150, bullet 755890000 (clone of 10732000), atk 755890000 magic 110, pulses 755890003-755890005 without madness)
 Untouchable boss: repointing N placed boss slot(s)
   <part> (entity <id>): NPCParamID -> 755890000, ThinkParamID -> 755890001
   Fallback: repointed N part(s) in <name> (merge-dir copy shipped into the mod dir)

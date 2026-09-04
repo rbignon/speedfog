@@ -36,6 +36,7 @@ Goal.Activate = function (self, ai, goal)
     local SWING_CLOSE = 15                  -- < 3 m: Act11 (swing)
     local MOVE_CLOSE = 25                   -- < 3 m: Act42 (sidestep)
     local GRAB_COOLDOWN = 8                 -- seconds between two grabs (3002); vanilla 12
+    local SWING_COOLDOWN = 12               -- seconds between two swings (3001), any source
     local BEAM_COOLDOWN = 8                 -- seconds between two beams (3004)
     -- The grab (Act03) keeps the remainder of its bracket. Weights are
     -- relative: while 3002 sits on its cooldown its weight is 0, so without
@@ -134,6 +135,7 @@ Goal.Activate = function (self, ai, goal)
         probabilities[45] = 0
     end
     probabilities[3] = SetCoolTime(ai, goal, 3002, GRAB_COOLDOWN, probabilities[3], 1)
+    probabilities[11] = SetCoolTime(ai, goal, 3001, SWING_COOLDOWN, probabilities[11], 1)
     probabilities[4] = SetCoolTime(ai, goal, 3004, BEAM_COOLDOWN, probabilities[4], 1)
     acts[1] = REGIST_FUNC(ai, goal, Houzuki755890_Act01)
     acts[2] = REGIST_FUNC(ai, goal, Houzuki755890_Act02)

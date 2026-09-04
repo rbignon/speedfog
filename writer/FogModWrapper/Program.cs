@@ -770,6 +770,17 @@ Example:
                 ctx.CommonEmevd, ctx.Events, ctx.InjectionResult.FinishEvent, ctx.BossDefeatFlag);
         }
 
+        // Aging Untouchable boss: parry break (the first parry cancels the
+        // damage cut for the rest of the fight), one common.emevd event per
+        // placed boss slot. The counter SpEffect row itself is written in
+        // ApplyRegulation with the other boss rows; if that phase skips, the
+        // event's SetSpEffect names a missing row and does nothing.
+        if (UntouchableBossInjector.IsBossPlaced(ctx.GraphData.EnemyAssignments))
+        {
+            UntouchableBossInjector.InjectParryBreak(
+                ctx.CommonEmevd, ctx.Events, UntouchableBossInjector.ArenaIds(ctx.GraphData.EnemyAssignments));
+        }
+
         // "RUN COMPLETE" banner event
         if (ctx.GraphData.FinishEvent > 0)
         {

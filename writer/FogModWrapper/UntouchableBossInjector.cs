@@ -46,6 +46,35 @@ public static class UntouchableBossInjector
     /// patch that renumbers c5280's judges.</summary>
     public static readonly int[] VanillaJudges = { 100, 101, 102, 110, 111, 112, 113, 115, 500 };
 
+    /// <summary>Judges of the lantern's ambient pulses (vanilla bullets
+    /// 205280000-002, fired by idle, walk and most attacks): re-pointed at
+    /// madness-free clones under the boss variation.</summary>
+    public static readonly int[] PulseJudges = { 100, 101, 102 };
+
+    /// <summary>Madness buildup rider on the pulse bullets (SpEffect 26000,
+    /// stateInfo 437, madnessAttackPower 10): the reason the status rose even
+    /// while the boss stood still.</summary>
+    public const int LANTERN_MADNESS_SPEFFECT = 26000;
+
+    // --- Parry break (docs/untouchable-boss.md "Parry break") ---
+
+    /// <summary>Vanilla SpEffect the parried animation (8500) applies for the
+    /// parry window: stateInfo 121, the wall lift nerflantern uses. The boss's
+    /// permanent row is the out-of-band clone, so on the boss this id is only
+    /// ever present during a parry, which makes it the parry detector.</summary>
+    public const int PARRY_WINDOW_SPEFFECT = 20011471;
+
+    /// <summary>Seconds between two passes of the parry break event; each
+    /// pass re-applies the (idempotent) counter and re-arms after a respawn.</summary>
+    public const float PARRY_BREAK_REARM_SECONDS = 1f;
+
+    private static readonly string[] CutFields =
+    {
+        "slashDamageCutRate", "blowDamageCutRate", "thrustDamageCutRate",
+        "neutralDamageCutRate", "magicDamageCutRate", "fireDamageCutRate",
+        "thunderDamageCutRate", "darkDamageCutRate",
+    };
+
     // No boss resize: an MSB Part.Scale experiment (1.3x and higher)
     // confirmed in-game that the engine ignores the field for chr parts,
     // and no other offline size mechanism exists (docs/untouchable-boss.md,
@@ -118,15 +147,15 @@ public static class UntouchableBossInjector
     {
         var spRow = GameEditor.AddRow(
             spEffect, SpeedFogIds.UntouchableBossSpEffectRow, WALL_LIFT_TEMPLATE_SPEFFECT);
-        foreach (var field in new[]
-        {
-            "slashDamageCutRate", "blowDamageCutRate", "thrustDamageCutRate",
-            "neutralDamageCutRate", "magicDamageCutRate", "fireDamageCutRate",
-            "thunderDamageCutRate", "darkDamageCutRate",
-        })
-        {
+        foreach (var field in CutFields)
             spRow[field].Value = DAMAGE_CUT;
-        }
+
+        // Parry break counter: the inverse of the cut, applied by EMEVD once
+        // the boss has been parried (InjectParryBreak). Negations stack
+        // multiplicatively, so cut x counter = 1.0 for the rest of the fight.
+        var breakRow = GameEditor.AddRow(spEffect, SpeedFogIds.UntouchableParryBreakSpEffectRow, spRow);
+        foreach (var field in CutFields)
+            breakRow[field].Value = 1f / DAMAGE_CUT;
 
         var npcRow = GameEditor.AddRow(
             npc, SpeedFogIds.UntouchableBossNpcRow, UNTOUCHABLE_VANILLA_NPC);
@@ -137,7 +166,7 @@ public static class UntouchableBossInjector
         npcRow["spEffectID19"].Value = SpeedFogIds.UntouchableBossSpEffectRow; // s32
 
         Console.WriteLine(
-            $"Untouchable boss: NpcParam {SpeedFogIds.UntouchableBossNpcRow} (clone of {UNTOUCHABLE_VANILLA_NPC}, hp {BOSS_HP}, runes {BOSS_RUNES}) + SpEffect {SpeedFogIds.UntouchableBossSpEffectRow} (cut {DAMAGE_CUT})");
+            $"Untouchable boss: NpcParam {SpeedFogIds.UntouchableBossNpcRow} (clone of {UNTOUCHABLE_VANILLA_NPC}, hp {BOSS_HP}, runes {BOSS_RUNES}) + SpEffect {SpeedFogIds.UntouchableBossSpEffectRow} (cut {DAMAGE_CUT}) + parry break SpEffect {SpeedFogIds.UntouchableParryBreakSpEffectRow} (x{1f / DAMAGE_CUT})");
     }
 
     /// <summary>Writes the moveset rows: boss think row (own battle script),
@@ -184,6 +213,21 @@ public static class UntouchableBossInjector
                 reasons.Add($"{name} template row {id} missing");
         }
 
+        // The pulse judges must resolve to bullets (refType 1) that exist:
+        // their madness-free clones are what the boss variation points at.
+        var pulseTemplates = new Dictionary<int, PARAM.Row>();
+        foreach (var judge in PulseJudges)
+        {
+            if (!vanillaRows.TryGetValue(judge, out var row))
+                continue; // already reported above
+            var refId = (int)row["refId"].Value;
+            var template = (byte)row["refType"].Value == 1 ? bullet.Rows.Find(r => r.ID == refId) : null;
+            if (template == null)
+                reasons.Add($"pulse judge {judge} does not resolve to a Bullet row ({refId})");
+            else
+                pulseTemplates[judge] = template;
+        }
+
         if (reasons.Count > 0)
         {
             Console.WriteLine($"Untouchable boss: moveset skipped ({string.Join("; ", reasons)})");
@@ -199,6 +243,19 @@ public static class UntouchableBossInjector
         {
             var clone = GameEditor.AddRow(behavior, SpeedFogIds.BehaviorRowId(variation, judge), vanillaRows[judge]);
             clone["variationId"].Value = variation;
+            int pulseIndex = Array.IndexOf(PulseJudges, judge);
+            if (pulseIndex < 0)
+                continue;
+            // Boss-only pulse: same bullet minus the madness rider (the VFX
+            // rider in another slot stays); ambient untouchables keep vanilla.
+            int pulseId = SpeedFogIds.UntouchablePulseBulletBase + pulseIndex;
+            var pulse = GameEditor.AddRow(bullet, pulseId, pulseTemplates[judge]);
+            for (int i = 0; i <= 4; i++)
+            {
+                if ((int)pulse[$"spEffectId{i}"].Value == LANTERN_MADNESS_SPEFFECT)
+                    pulse[$"spEffectId{i}"].Value = -1;
+            }
+            clone["refId"].Value = pulseId;
         }
         var beamBehavior = GameEditor.AddRow(
             behavior, SpeedFogIds.BehaviorRowId(variation, SpeedFogIds.UntouchableBeamJudge), vanillaRows[101]);
@@ -217,8 +274,65 @@ public static class UntouchableBossInjector
         beamAtk["atkMag"].Value = BEAM_MAGIC; // u16; throw fields already 0 on 5280115
 
         Console.WriteLine(
-            $"Untouchable boss: moveset rows (think {SpeedFogIds.UntouchableBossThinkRow} -> battle {SpeedFogIds.UntouchableBossBattleGoal}, variation {variation} with {VanillaJudges.Length} vanilla judges + beam judge {SpeedFogIds.UntouchableBeamJudge}, bullet {SpeedFogIds.UntouchableBeamBulletRow} (clone of {BEAM_TEMPLATE_BULLET}), atk {SpeedFogIds.UntouchableBeamAtkRow} magic {BEAM_MAGIC})");
+            $"Untouchable boss: moveset rows (think {SpeedFogIds.UntouchableBossThinkRow} -> battle {SpeedFogIds.UntouchableBossBattleGoal}, variation {variation} with {VanillaJudges.Length} vanilla judges + beam judge {SpeedFogIds.UntouchableBeamJudge}, bullet {SpeedFogIds.UntouchableBeamBulletRow} (clone of {BEAM_TEMPLATE_BULLET}), atk {SpeedFogIds.UntouchableBeamAtkRow} magic {BEAM_MAGIC}, pulses {SpeedFogIds.UntouchablePulseBulletBase}-{SpeedFogIds.UntouchablePulseBulletBase + PulseJudges.Length - 1} without madness)");
         return true;
+    }
+
+    /// <summary>Arena entity ids whose enemy assignment is the Aging
+    /// Untouchable source, ascending (deterministic event slots).</summary>
+    public static List<uint> ArenaIds(Dictionary<string, string> enemyAssignments)
+    {
+        var source = SpeedFogIds.UntouchableSourceEntity.ToString();
+        return enemyAssignments
+            .Where(kv => kv.Value == source)
+            .Select(kv => uint.Parse(kv.Key))
+            .Distinct()
+            .OrderBy(id => id)
+            .ToList();
+    }
+
+    /// <summary>Common phase: one looping common.emevd event per placed boss
+    /// (parry break). It waits for the boss to carry the vanilla parry-window
+    /// SpEffect (<see cref="PARRY_WINDOW_SPEFFECT"/>, applied by the parried
+    /// animation), applies the counter SpEffect
+    /// (<see cref="SpeedFogIds.UntouchableParryBreakSpEffectRow"/>, written
+    /// by <see cref="Apply"/> in the regulation phase), then restarts after
+    /// <see cref="PARRY_BREAK_REARM_SECONDS"/> so a boss respawned after the
+    /// player's death is covered again. Entities that never load (phase slots)
+    /// simply never trigger.</summary>
+    public static void InjectParryBreak(EMEVD commonEmevd, Events events, IReadOnlyCollection<uint> arenaIds)
+    {
+        var initEvent = commonEmevd.Events.Find(e => e.ID == 0);
+        if (initEvent == null)
+        {
+            Console.WriteLine("Warning: Event 0 not found in common.emevd, skipping untouchable parry break");
+            return;
+        }
+
+        var range = SpeedFogIds.UntouchableParryEvents;
+        int slot = 0;
+        foreach (var boss in arenaIds.OrderBy(id => id))
+        {
+            if (slot >= range.Capacity)
+            {
+                Console.WriteLine(
+                    $"  Warning: parry break event range full ({range.Capacity}), {arenaIds.Count - slot} boss slot(s) keep the damage cut after a parry");
+                break;
+            }
+            int eventId = range.Base + slot++;
+            var evt = new EMEVD.Event(eventId);
+            evt.Instructions.Add(events.ParseAdd(
+                $"IfCharacterHasSpEffect(MAIN, {boss}, {PARRY_WINDOW_SPEFFECT}, true, ComparisonType.Equal, 1)"));
+            evt.Instructions.Add(events.ParseAdd(
+                $"SetSpEffect({boss}, {SpeedFogIds.UntouchableParryBreakSpEffectRow})"));
+            evt.Instructions.Add(events.ParseAdd($"WaitFixedTimeSeconds({PARRY_BREAK_REARM_SECONDS})"));
+            evt.Instructions.Add(events.ParseAdd("EndUnconditionally(EventEndType.Restart)"));
+            commonEmevd.Events.Add(evt);
+            initEvent.Instructions.Add(EmevdHelper.InitializeEvent(eventId));
+        }
+
+        Console.WriteLine(
+            $"Untouchable boss: parry break events {range.Base}..{range.Base + slot - 1} ({slot} boss slot(s): SpEffect {PARRY_WINDOW_SPEFFECT} -> SetSpEffect {SpeedFogIds.UntouchableParryBreakSpEffectRow})");
     }
 
     /// <summary>MSB phase (post-Write): repoint every placed untouchable
@@ -238,11 +352,7 @@ public static class UntouchableBossInjector
         string modDir, Dictionary<string, string> enemyAssignments, string? mergeDir,
         IReadOnlyList<string> fallbackArenaMaps, bool repointThink)
     {
-        var source = SpeedFogIds.UntouchableSourceEntity.ToString();
-        var arenaIds = enemyAssignments
-            .Where(kv => kv.Value == source)
-            .Select(kv => uint.Parse(kv.Key))
-            .ToHashSet();
+        var arenaIds = ArenaIds(enemyAssignments).ToHashSet();
         if (arenaIds.Count == 0)
             return;
 

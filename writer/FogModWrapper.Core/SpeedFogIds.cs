@@ -63,6 +63,12 @@ public static class SpeedFogIds
     public static readonly IdRange HalloweenDecorEvents =
         new("GateDecorInjector", 755865100, 400);
 
+    /// <summary>One looping common.emevd event per placed Aging Untouchable
+    /// boss (parry break: the first parry cancels the damage cut); slots are
+    /// handed out in ascending arena entity id order.</summary>
+    public static readonly IdRange UntouchableParryEvents =
+        new("UntouchableBossInjector", 755865500, 100);
+
     /// <summary>All event ranges, for the disjointness test.</summary>
     public static readonly IReadOnlyList<IdRange> EventRanges = new[]
     {
@@ -75,6 +81,7 @@ public static class SpeedFogIds
         ChapelGraceEvents,
         WeatherEvents,
         HalloweenDecorEvents,
+        UntouchableParryEvents,
     };
 
     // --- Auxiliary one-shot flags (FogMod band 104029xxxx, top slice) ---
@@ -118,8 +125,9 @@ public static class SpeedFogIds
     // --- Param row IDs (not entity IDs; separate namespace per PARAM) ---
 
     // Param row namespaces are per-PARAM (NpcThinkParam, NpcParam,
-    // SpEffectParam, Bullet, AtkParam_Npc never share ids), so the same two
-    // numeric values below are reused across the eight rows with no collision.
+    // SpEffectParam, Bullet, AtkParam_Npc never share ids), so the same three
+    // numeric values below are reused across the nine rows with no collision
+    // (Bullet additionally owns the pulse band 755890003-005).
     // They sit in FogMod's entity band only by convention (params and entities
     // are unrelated id spaces); no vanilla row in any of the five params
     // comes anywhere near them, and phantom skins (1450700-1450799) /
@@ -127,6 +135,7 @@ public static class SpeedFogIds
     // territory.
     private const int ParamRowBase0 = 755890000;
     private const int ParamRowBase1 = 755890001;
+    private const int ParamRowBase2 = 755890002;
 
     /// <summary>NpcThinkParam row for the passive Halloween greeters:
     /// a clone of the Aging Untouchable's think row (52800000) with all
@@ -178,6 +187,19 @@ public static class SpeedFogIds
     /// lantern swing (5280115, magic, no throw). Player spells only have
     /// AtkParam_Pc rows, so an NPC-fired Frenzied Burst needs this one.</summary>
     public const int UntouchableBeamAtkRow = ParamRowBase0;
+
+    /// <summary>SpEffectParam row cancelling the boss's damage cut once it
+    /// has been parried (parry break): a clone of
+    /// <see cref="UntouchableBossSpEffectRow"/> whose eight cut rates are the
+    /// inverse of DAMAGE_CUT, applied by EMEVD; negations stack
+    /// multiplicatively, so cut x counter restores full damage.</summary>
+    public const int UntouchableParryBreakSpEffectRow = ParamRowBase2;
+
+    /// <summary>First of three consecutive Bullet rows (755890003-005): the
+    /// lantern's ambient pulse bullets (vanilla 205280000-002, judges
+    /// 100-102) cloned without their madness SpEffect, referenced by the boss
+    /// behavior variation only.</summary>
+    public const int UntouchablePulseBulletBase = 755890003;
 
     // --- Icon ids (not entity ids, not param row ids; a third id namespace) ---
 

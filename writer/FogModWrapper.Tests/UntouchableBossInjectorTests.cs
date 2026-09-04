@@ -1,4 +1,5 @@
 using FogModWrapper.Models;
+using SoulsIds;
 using SoulsFormats;
 using Xunit;
 using static FogModWrapper.Tests.ParamTestHelper;
@@ -384,6 +385,17 @@ public class UntouchableBossInjectorTests
         bullet.Rows[0]["spEffectId0"].Value = 12345;
         bullet.Rows[0]["spEffectIDForShooter"].Value = 1732002;
 
+        // The lantern's ambient pulse bullets (judges 100-102): a VFX rider in
+        // slot 0 and the madness buildup (26000) in slot 2, as in 1.17.
+        foreach (var pulseId in new[] { 205280000, 205280001, 205280002 })
+        {
+            var pulse = AddRowFromTemplate(bullet, pulseId);
+            pulse["atkId_Bullet"].Value = 5280000;
+            pulse["spEffectId0"].Value = 20011456;
+            pulse["spEffectId1"].Value = -1;
+            pulse["spEffectId2"].Value = UntouchableBossInjector.LANTERN_MADNESS_SPEFFECT;
+        }
+
         var atk = BuildParamFromDef("AtkParam", templateId: 5280115, paramName: "AtkParam_Npc");
         atk.Rows[0]["atkMag"].Value = (ushort)100;
         atk.Rows[0]["throwTypeId"].Value = (ushort)0;
@@ -429,7 +441,8 @@ public class UntouchableBossInjectorTests
             (int)npc.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossNpcRow)["behaviorVariationId"].Value);
         foreach (var (judge, refType, refId) in new[]
         {
-            (100, 1, 205280000), (101, 1, 205280001), (102, 1, 205280002),
+            (100, 1, SpeedFogIds.UntouchablePulseBulletBase), (101, 1, SpeedFogIds.UntouchablePulseBulletBase + 1),
+            (102, 1, SpeedFogIds.UntouchablePulseBulletBase + 2),
             (110, 0, 5280110), (111, 0, 5280111), (112, 1, 205280005),
             (113, 0, 5280113), (115, 0, 5280115), (500, 0, 5280001),
         })
@@ -510,5 +523,121 @@ public class UntouchableBossInjectorTests
         Assert.DoesNotContain(think.Rows, r => r.ID == SpeedFogIds.UntouchableBossThinkRow);
         Assert.DoesNotContain(behavior.Rows, r => (int)r["variationId"].Value == SpeedFogIds.UntouchableBossBehaviorVariation);
         Assert.DoesNotContain(atk.Rows, r => r.ID == SpeedFogIds.UntouchableBeamAtkRow);
+    }
+
+    // --- Parry break + lantern madness (docs/untouchable-boss.md "Parry break") ---
+
+    private static readonly string[] CutFields =
+    {
+        "slashDamageCutRate", "blowDamageCutRate", "thrustDamageCutRate",
+        "neutralDamageCutRate", "magicDamageCutRate", "fireDamageCutRate",
+        "thunderDamageCutRate", "darkDamageCutRate",
+    };
+
+    private static string? FindDataDir()
+    {
+        var envDir = Environment.GetEnvironmentVariable("DATA_DIR");
+        if (!string.IsNullOrEmpty(envDir) && File.Exists(Path.Combine(envDir, "er-common.emedf.json")))
+            return envDir;
+        var candidate = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "../../../../..", "data"));
+        return File.Exists(Path.Combine(candidate, "er-common.emedf.json")) ? candidate : null;
+    }
+
+    private static Events? BuildEvents()
+    {
+        var dataDir = FindDataDir();
+        return dataDir == null
+            ? null
+            : new Events(Path.Combine(dataDir, "er-common.emedf.json"), darkScriptMode: true, paramAwareMode: true);
+    }
+
+    [Fact]
+    public void Apply_WritesTheParryBreakCounterAsTheInverseOfTheCut()
+    {
+        var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
+        var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
+
+        UntouchableBossInjector.Apply(npc, sp);
+
+        var cut = sp.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossSpEffectRow);
+        var counter = sp.Rows.Single(r => r.ID == SpeedFogIds.UntouchableParryBreakSpEffectRow);
+        foreach (var field in CutFields)
+        {
+            // Negations stack multiplicatively: cut x counter restores x1.0.
+            Assert.Equal(1f, (float)cut[field].Value * (float)counter[field].Value, 3);
+        }
+        Assert.Equal(cut["stateInfo"].Value, counter["stateInfo"].Value);
+        Assert.Equal(cut["effectEndurance"].Value, counter["effectEndurance"].Value);
+    }
+
+    [Fact]
+    public void ApplyMoveset_LanternPulsesLoseTheirMadnessForTheBoss()
+    {
+        var (npc, think, behavior, bullet, atk) = BuildMovesetParams();
+
+        Assert.True(UntouchableBossInjector.ApplyMoveset(npc, think, behavior, bullet, atk));
+
+        var variation = SpeedFogIds.UntouchableBossBehaviorVariation;
+        foreach (var (judge, vanillaBullet, i) in new[] { (100, 205280000, 0), (101, 205280001, 1), (102, 205280002, 2) })
+        {
+            var cloneId = SpeedFogIds.UntouchablePulseBulletBase + i;
+            var row = behavior.Rows.Single(r => r.ID == SpeedFogIds.BehaviorRowId(variation, judge));
+            Assert.Equal(cloneId, (int)row["refId"].Value);
+            var clone = bullet.Rows.Single(r => r.ID == cloneId);
+            Assert.Equal(5280000, (int)clone["atkId_Bullet"].Value);
+            Assert.Equal(20011456, (int)clone["spEffectId0"].Value); // lantern VFX kept
+            Assert.Equal(-1, (int)clone["spEffectId2"].Value);       // madness gone
+            // The vanilla bullet (ambient untouchables) keeps its madness.
+            Assert.Equal(UntouchableBossInjector.LANTERN_MADNESS_SPEFFECT,
+                (int)bullet.Rows.Single(r => r.ID == vanillaBullet)["spEffectId2"].Value);
+        }
+        Assert.Equal(5280110, (int)behavior.Rows.Single(r => r.ID == SpeedFogIds.BehaviorRowId(variation, 110))["refId"].Value);
+    }
+
+    [Fact]
+    public void ApplyMoveset_MissingPulseBulletTemplate_WritesNothing()
+    {
+        var (npc, think, behavior, bullet, atk) = BuildMovesetParams();
+        bullet.Rows.RemoveAll(r => r.ID == 205280001);
+
+        Assert.False(UntouchableBossInjector.ApplyMoveset(npc, think, behavior, bullet, atk));
+
+        Assert.DoesNotContain(think.Rows, r => r.ID == SpeedFogIds.UntouchableBossThinkRow);
+        Assert.DoesNotContain(bullet.Rows, r => r.ID >= SpeedFogIds.UntouchablePulseBulletBase && r.ID < SpeedFogIds.UntouchablePulseBulletBase + 3);
+        Assert.DoesNotContain(behavior.Rows, r => (int)r["variationId"].Value == SpeedFogIds.UntouchableBossBehaviorVariation);
+    }
+
+    [Fact]
+    public void InjectParryBreak_OneRestartingEventPerBossRegisteredInEventZero()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return; // data/er-common.emedf.json not extracted (bootstrap not run); nothing to parse against
+        var emevd = new EMEVD();
+        emevd.Events.Add(new EMEVD.Event(0));
+
+        UntouchableBossInjector.InjectParryBreak(emevd, events, new List<uint> { 31040800, 30001800 });
+
+        var ids = new[] { SpeedFogIds.UntouchableParryEvents.Base, SpeedFogIds.UntouchableParryEvents.Base + 1 };
+        var bosses = new uint[] { 30001800, 31040800 }; // ascending: deterministic slot order
+        for (int i = 0; i < 2; i++)
+        {
+            var evt = emevd.Events.Single(e => e.ID == ids[i]);
+            Assert.Equal(4, evt.Instructions.Count);
+            Assert.Equal((4, 5), (evt.Instructions[0].Bank, evt.Instructions[0].ID));     // IfCharacterHasSpEffect
+            Assert.Equal((2004, 8), (evt.Instructions[1].Bank, evt.Instructions[1].ID));  // SetSpEffect
+            Assert.Equal((1001, 0), (evt.Instructions[2].Bank, evt.Instructions[2].ID));  // WaitFixedTimeSeconds
+            Assert.Equal((1000, 4), (evt.Instructions[3].Bank, evt.Instructions[3].ID));  // EndUnconditionally
+            var cond = evt.Instructions[0].ArgData;
+            Assert.Equal(bosses[i], BitConverter.ToUInt32(cond, 4));
+            Assert.Equal(UntouchableBossInjector.PARRY_WINDOW_SPEFFECT, BitConverter.ToInt32(cond, 8));
+            var set = evt.Instructions[1].ArgData;
+            Assert.Equal(bosses[i], BitConverter.ToUInt32(set, 0));
+            Assert.Equal(SpeedFogIds.UntouchableParryBreakSpEffectRow, BitConverter.ToInt32(set, 4));
+        }
+        var init = emevd.Events.Single(e => e.ID == 0).Instructions;
+        Assert.Equal(2, init.Count(ins => ins.Bank == 2000 && ins.ID == 0));
+        Assert.All(ids, id => Assert.Contains(init,
+            ins => ins.Bank == 2000 && ins.ID == 0 && BitConverter.ToInt32(ins.ArgData, 4) == id));
     }
 }
