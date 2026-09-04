@@ -31,9 +31,15 @@ Goal.Activate = function (self, ai, goal)
     -- vanilla act of that bracket keeps the remainder.
     local BEAM_FAR_TELEPORT_READY = 40      -- >= 10 m, teleport ready: Act04 (beam) vs Act02
     local BEAM_FAR_TELEPORT_NOT_READY = 50  -- >= 10 m, teleport not ready: Act04 (beam) vs Act01
-    local SWING_MID = 40                    -- 3 to 10 m: Act11 (swing) vs Act03 (grab)
-    local SWING_CLOSE = 50                  -- < 3 m: Act11 (swing) vs Act03 (grab)
+    local SWING_MID = 10                    -- 3 to 10 m: Act11 (swing, radius-4 knockback burst)
+    local MOVE_MID = 25                     -- 3 to 10 m: Act46 (close to 4 m, then strafe)
+    local SWING_CLOSE = 15                  -- < 3 m: Act11 (swing)
+    local MOVE_CLOSE = 25                   -- < 3 m: Act42 (sidestep)
+    local GRAB_COOLDOWN = 8                 -- seconds between two grabs (3002); vanilla 12
     local BEAM_COOLDOWN = 8                 -- seconds between two beams (3004)
+    -- The grab (Act03) keeps the remainder of its bracket. Weights are
+    -- relative: while 3002 sits on its cooldown its weight is 0, so without
+    -- the movement acts the swing would fire every single time.
     local f2_local6 = 0
     local f2_local7 = TARGET_SELF
     local f2_local8 = TARGET_ENE_0
@@ -102,10 +108,11 @@ Goal.Activate = function (self, ai, goal)
     elseif distanceEnemy >= 3 then
         probabilities[1] = 0
         probabilities[2] = 0
-        probabilities[3] = 100 - SWING_MID
+        probabilities[3] = 100 - SWING_MID - MOVE_MID
         probabilities[4] = 0
         probabilities[5] = 0
         probabilities[11] = SWING_MID
+        probabilities[46] = MOVE_MID
         probabilities[40] = 0
         probabilities[41] = 0
         probabilities[42] = 0
@@ -115,18 +122,18 @@ Goal.Activate = function (self, ai, goal)
     else
         probabilities[1] = 0
         probabilities[2] = 0
-        probabilities[3] = 100 - SWING_CLOSE
+        probabilities[3] = 100 - SWING_CLOSE - MOVE_CLOSE
         probabilities[4] = 0
         probabilities[5] = 0
         probabilities[11] = SWING_CLOSE
         probabilities[40] = 0
         probabilities[41] = 0
-        probabilities[42] = 0
+        probabilities[42] = MOVE_CLOSE
         probabilities[43] = 0
         probabilities[44] = 0
         probabilities[45] = 0
     end
-    probabilities[3] = SetCoolTime(ai, goal, 3002, 12, probabilities[3], 1)
+    probabilities[3] = SetCoolTime(ai, goal, 3002, GRAB_COOLDOWN, probabilities[3], 1)
     probabilities[4] = SetCoolTime(ai, goal, 3004, BEAM_COOLDOWN, probabilities[4], 1)
     acts[1] = REGIST_FUNC(ai, goal, Houzuki755890_Act01)
     acts[2] = REGIST_FUNC(ai, goal, Houzuki755890_Act02)

@@ -20,9 +20,9 @@ public static class UntouchableBossInjector
     private const int WALL_LIFT_TEMPLATE_SPEFFECT = 20011471;
 
     // Initial values for the in-game tuning session (docs/untouchable-boss.md).
-    public const uint BOSS_HP = 3000;
+    public const uint BOSS_HP = 2000;
     public const uint BOSS_RUNES = 20000;
-    public const float DAMAGE_CUT = 0.35f; // fraction of damage taken (65% cut)
+    public const float DAMAGE_CUT = 0.5f; // fraction of damage taken (50% cut)
 
     // --- Moveset (docs/untouchable-boss.md "Moveset") ---
 

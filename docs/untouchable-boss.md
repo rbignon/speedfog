@@ -56,8 +56,9 @@ neutralDamageCutRate, magicDamageCutRate, fireDamageCutRate,
 thunderDamageCutRate, darkDamageCutRate
 ```
 
-all set to `UntouchableBossInjector.DAMAGE_CUT` (`0.35f`, i.e. the boss
-takes 35% of incoming damage: a 65% cut). The vanilla parry window is
+all set to `UntouchableBossInjector.DAMAGE_CUT` (`0.5f`, i.e. the boss
+takes 50% of incoming damage: a 50% cut; 0.35 until the 2026-09-04
+in-game session found the boss too tanky). The vanilla parry window is
 untouched: the wall-lift SpEffect only ever governs the permanent state
 outside of a successful parry, so a parry still opens the normal
 full-damage window exactly as with `nerflantern`.
@@ -65,7 +66,8 @@ full-damage window exactly as with `nerflantern`.
 The clone (`NpcParam` row `755890000`, `UntouchableBossInjector.UNTOUCHABLE_VANILLA_NPC`
 = clone of `52800086`) sets:
 
-- `hp` = `BOSS_HP` = 3000
+- `hp` = `BOSS_HP` = 2000 (3000 until the 2026-09-04 session; see the
+  scaling note below: this is the HP at the arena's vanilla tier)
 - `getSoul` = `BOSS_RUNES` = 20000
 - `spEffectID19` = `755890000` (the custom SpEffect row). Slot 19 is the
   first free slot on `52800086`: slot 17 (`20011450`) permanently gates the
@@ -157,7 +159,7 @@ FogModWrapper injector, including this one's repoint scan, only patches
 Item Randomizer's own scaled placement clone (observed on seed
 391735550: `npc=52800140`, a 5280-band row, so nerflantern makes it
 damageable, with the randomizer's generic tier scaling and runes)
-instead of SpeedFog's tuned boss profile (3000 HP, 65% damage cut,
+instead of SpeedFog's tuned boss profile (2000 HP, 50% damage cut,
 20000 runes): a functional fight, just off-design. Note this is why the
 gap was never observed before the boss feature: gameplay never depended
 on FogMod writing this supertile (swaps ship via the `mods/itemrando`
@@ -205,10 +207,12 @@ The boss gets two tools vanilla AI never uses, applied to the promoted
 instance only:
 
 - **Lantern swing** at melee range: animation 3001 (AtkParam_Npc 5280115,
-  magic 100, hit radius 4 at dummy 906, no throw), vanilla's post-teleport
-  surprise attack, promoted to a regular act (Act11) next to the grab
-  (3002/3003, AtkParam 5280110, throwTypeId 4100). Pure AI: no param, no
-  TAE change.
+  magic 100, hit radius 4 at dummy 906, dmgLevel 4 with 1.5 m knockback, no
+  throw), vanilla's post-teleport surprise attack, promoted to a regular
+  act (Act11) next to the grab (3002/3003, AtkParam 5280110, throwTypeId
+  4100). In game it reads as a burst around the lantern that pushes the
+  player back; it is kept rare so the parryable grab stays the main
+  threat. Pure AI: no param, no TAE change.
 - **Frenzy beam** at range: animation 3004 (lantern raised, thirteen
   bullet events from dummy 210), registered by vanilla AI with probability
   0 everywhere, re-enabled (Act04) and made to fire a Frenzied Burst-style
@@ -256,7 +260,8 @@ two knobs together.
 (plain text, repacked at bootstrap into
 `data/mods/speedfog/script/755890_battle.luabnd.dcx`) is the decompiled
 vanilla `528000_battle` renamed to goal 755890, plus Act11 (swing) and a
-working Act04 (beam, `successDist` 999, 8 s cooldown via `SetCoolTime`). The
+working Act04 (beam, `successDist` 999, 8 s cooldown via `SetCoolTime`),
+and the grab cooldown lowered from vanilla's 12 s to `GRAB_COOLDOWN` (8 s). The
 `GOAL_Houzuki755890_Battle` and `GOAL_Houzuki755890_AfterAttackAct` globals
 are not provided by the shared aiCommon global-name list (which only knows
 the vanilla `GOAL_Houzuki528000_*` names), so the script assigns them itself
@@ -269,11 +274,16 @@ Probability table (vanilla -> boss), knobs at the top of `Goal.Activate`:
 | player behind, >= 8 m | Act02 100 | unchanged |
 | >= 10 m, teleport ready (SpEffect 20011450) | Act02 99 / Act01 1 | Act02 60 / Act04 40 |
 | >= 10 m, teleport not ready | Act01 100 | Act01 50 / Act04 50 |
-| 3 to 10 m | Act03 100 | Act03 60 / Act11 40 |
-| < 3 m | Act03 100 | Act03 50 / Act11 50 |
+| 3 to 10 m | Act03 100 | Act03 65 / Act11 10 / Act46 25 |
+| < 3 m | Act03 100 | Act03 60 / Act11 15 / Act42 25 |
 
-During the 12 s grab cooldown vanilla had no act left at 3-10 m (the
-passivity observed in earlier sessions); the swing fills that gap.
+Act46 closes to 4 m and strafes; Act42 is a sidestep. Weights are
+relative: while 3002 sits on its cooldown its weight is 0, so whatever
+else has weight wins. Vanilla had nothing (the passivity observed in
+earlier sessions); the first boss version had only the swing, which then
+fired every single time (2026-09-04 session). The movement acts are what
+keep the swing rare during the cooldown, and the shorter cooldown brings
+the grab back sooner.
 `battleGoalID` selects the battle luabnd independently of `logicId` (255
 vanilla think rows share the generic 29999), and the logic script does not
 reference the battle goal by name, so only the battle script is cloned.
@@ -308,15 +318,20 @@ than just the beam.
 2. **Beam**: knobs at their defaults. Laser from the lantern at >= 10 m,
    Frenzied Burst visual, aimed at the player, ~110 magic per hit; no beam
    during idle or walk. Wrong origin or direction: `BEAM_DUMMY`.
-3. **Tuning**: probabilities, `BEAM_COOLDOWN`, `BEAM_MAGIC`,
-   `BEAM_EVENT_COUNT`, the 3002 cooldown.
+3. **Tuning**: probabilities (`SWING_*`, `MOVE_*`), `GRAB_COOLDOWN`,
+   `BEAM_COOLDOWN`, `BEAM_MAGIC`, `BEAM_EVENT_COUNT`. First session
+   (2026-09-04): beam approved as is; the swing at 40/50 fired every time
+   (see the AI script note), lowered to 10/15 with movement fillers and
+   an 8 s grab cooldown; boss too tanky at 8427 HP on a depth-12 arena
+   (3000 base x 2.81 FogMod rescale, then a 65% cut), lowered to
+   `BOSS_HP` 2000 and `DAMAGE_CUT` 0.5.
 4. **Ambient regression**: an ambient untouchable still only teleports and
    grabs, no swing at range, no beam, no script error.
 
 ## Expected log lines
 
 ```
-Untouchable boss: NpcParam 755890000 (clone of 52800086, hp 3000, runes 20000) + SpEffect 755890000 (cut 0.35)
+Untouchable boss: NpcParam 755890000 (clone of 52800086, hp 2000, runes 20000) + SpEffect 755890000 (cut 0.5)
 Untouchable boss: moveset rows (think 755890001 -> battle 755890, variation 75589 with 9 vanilla judges + beam judge 150, bullet 755890000 (clone of 10732000), atk 755890000 magic 110)
 Untouchable boss: repointing N placed boss slot(s)
   <part> (entity <id>): NPCParamID -> 755890000, ThinkParamID -> 755890001
@@ -341,9 +356,9 @@ lines carry only `NPCParamID`. At bootstrap, StaticModBuilder prints
 Spec: `docs/superpowers/specs/2026-08-03-halloween-theme-design.md`
 section 2.3. Not automatable; requires playing the fight. Owed checks:
 
-- `BOSS_HP` (currently 3000) and `BOSS_RUNES` (currently 20000): feel of
+- `BOSS_HP` (currently 2000) and `BOSS_RUNES` (currently 20000): feel of
   the fight length and reward relative to other minor bosses.
-- `DAMAGE_CUT` (currently 0.35, i.e. a 65% cut): whether the boss is
+- `DAMAGE_CUT` (currently 0.5, i.e. a 50% cut): whether the boss is
   appropriately tanky without becoming a DPS check; grab damage on the
   clone (unchanged from vanilla `52800086`) should be reviewed too, since
   near-one-shot grab damage is fine for an ambiance mob but not for a
@@ -358,29 +373,22 @@ section 2.3. Not automatable; requires playing the fight. Owed checks:
 Randomizer's own scaled placement clone outright; it does not layer on top
 of it (see the caelid_radahn note above for what happens when the repoint
 does not reach an arena: the randomizer's generic tier scaling is what
-survives instead). So `BOSS_HP` (3000) is an ABSOLUTE HP value in every
-repointed arena, with no tier/area scaling multiplier applied afterward.
-Tune it as a flat number for the fight you want, not as a base that some
-external multiplier will adjust later.
+survives instead). FogMod's area rescale still applies on top at runtime,
+like for every enemy in the arena (`docs/enemy-scaling.md`: the area's
+SpEffect multiplies HP by `curve[target tier] / curve[arena's vanilla
+tier]`, unique matrix), so `BOSS_HP` is the boss's HP at the arena's
+vanilla tier, not an absolute. Observed 2026-09-04: 8427 HP on a depth-12
+arena of low vanilla tier with `BOSS_HP` 3000 (x2.81). The multiplier
+also varies with the arena the boss landed in. Effective HP outside the
+parry window is `HP / DAMAGE_CUT`.
 
-If in-game testing shows the fight too passive, the fix is an AI overlay,
-not a change to this injector:
-
-1. Probe the TAE first (SoulsFormatsNEXT, same approach as
-   `StaticModBuilder/GraceAnimationPatcher.cs`) to determine whether
-   animation 3004 exists at all before spending effort re-enabling it in
-   the logic script.
-2. Copy `Game/script/528000_battle.luabnd.dcx`, unpack with WitchyBND
-   (`tools/witchybnd/WitchyBND.exe -p`), decompile with
-   `DOTNET_ROLL_FORWARD=LatestMajor dotnet <DSLuaDecompiler.dll> <lua> -o <out>`
-   (runs natively, no Wine needed for this step).
-3. Ship edits via
-   `data/mods-src/speedfog/script/528000_battle-luabnd-dcx/`, repacked by
-   WitchyBND at bootstrap, following the Rykard precedent
-   (`471000_battle`).
-4. Knobs to try: the 3002 cooldown, the per-distance attack probability
-   tables, and (only if step 1 shows it exists) re-enabling 3004, trialed
-   during the same in-game session before deciding to keep it.
+Fight feel is tuned in the boss's own battle script
+(`data/mods-src/speedfog/script/755890_battle-luabnd-dcx/755890_battle.lua`,
+knobs at the top of `Goal.Activate`: `SWING_*`, `MOVE_*`, `GRAB_COOLDOWN`,
+`BEAM_*`) and in the injector constants (`BOSS_HP`, `DAMAGE_CUT`,
+`BEAM_MAGIC`), never by editing the shared vanilla `528000_battle` (see
+"Moveset"). Regenerate the baseline script with WitchyBND and
+DSLuaDecompiler as described in `data/mods-src/README.md`.
 
 ## Size: settled (no resize possible)
 
