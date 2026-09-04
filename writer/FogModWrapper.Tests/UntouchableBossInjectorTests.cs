@@ -249,4 +249,151 @@ public class UntouchableBossInjectorTests
         Assert.Contains("not found in any map (phase slot?)", output);
     }
 
+    // --- Moveset (docs/untouchable-boss.md "Moveset") ---
+
+    private static void SetBehavior(PARAM.Row row, int variation, int judge, int refType, int refId)
+    {
+        row["variationId"].Value = variation;       // s32
+        row["behaviorJudgeId"].Value = judge;       // s32
+        row["refType"].Value = (byte)refType;       // u8
+        row["refId"].Value = refId;                 // s32
+    }
+
+    /// <summary>The five PARAMs ApplyMoveset reads, shaped like 1.17: the
+    /// boss NpcParam clone already written by Apply, vanilla c5280's think
+    /// row, its nine BehaviorParam rows (including the non-formula row 1170
+    /// for judge 500), Frenzied Burst's bullet and the lantern swing's
+    /// attack row.</summary>
+    private static (PARAM npc, PARAM think, PARAM behavior, PARAM bullet, PARAM atk) BuildMovesetParams()
+    {
+        var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
+        var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
+        UntouchableBossInjector.Apply(npc, sp);
+        npc.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossNpcRow)["behaviorVariationId"].Value = 52800;
+
+        var think = BuildParamFromDef("NpcThinkParam", templateId: 52800000);
+        think.Rows[0]["logicId"].Value = 528000;
+        think.Rows[0]["battleGoalID"].Value = 528000;
+
+        var behavior = BuildParamFromDef("BehaviorParam", templateId: 252800100);
+        SetBehavior(behavior.Rows[0], 52800, 100, 1, 205280000);
+        foreach (var (id, judge, refType, refId) in new[]
+        {
+            (252800101, 101, 1, 205280001), (252800102, 102, 1, 205280002),
+            (252800110, 110, 0, 5280110), (252800111, 111, 0, 5280111),
+            (252800112, 112, 1, 205280005), (252800113, 113, 0, 5280113),
+            (252800115, 115, 0, 5280115), (1170, 500, 0, 5280001),
+        })
+        {
+            SetBehavior(AddRowFromTemplate(behavior, id), 52800, judge, refType, refId);
+        }
+
+        var bullet = BuildParamFromDef("BulletParam", templateId: 10732000, paramName: "Bullet");
+        bullet.Rows[0]["atkId_Bullet"].Value = 73200;
+        bullet.Rows[0]["sfxId_Bullet"].Value = 527032;
+        bullet.Rows[0]["sfxId_Hit"].Value = 527033;
+        bullet.Rows[0]["life"].Value = 0.5f;
+        bullet.Rows[0]["initVellocity"].Value = 100f;
+        bullet.Rows[0]["spEffectId0"].Value = 12345;
+
+        var atk = BuildParamFromDef("AtkParam", templateId: 5280115, paramName: "AtkParam_Npc");
+        atk.Rows[0]["atkMag"].Value = (ushort)100;
+        atk.Rows[0]["throwTypeId"].Value = (ushort)0;
+        return (npc, think, behavior, bullet, atk);
+    }
+
+    [Fact]
+    public void ApplyMoveset_ThinkRowSelectsTheBossBattleScript()
+    {
+        var (npc, think, behavior, bullet, atk) = BuildMovesetParams();
+
+        Assert.True(UntouchableBossInjector.ApplyMoveset(npc, think, behavior, bullet, atk));
+
+        var row = think.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossThinkRow);
+        Assert.Equal(SpeedFogIds.UntouchableBossBattleGoal, (int)row["battleGoalID"].Value);
+        Assert.Equal(528000, (int)row["logicId"].Value); // shared logic script stays vanilla
+        Assert.Equal(528000, (int)think.Rows.Single(r => r.ID == 52800000)["battleGoalID"].Value);
+    }
+
+    [Fact]
+    public void ApplyMoveset_ReKeysVanillaBehaviorRowsUnderTheBossVariation()
+    {
+        var (npc, think, behavior, bullet, atk) = BuildMovesetParams();
+
+        UntouchableBossInjector.ApplyMoveset(npc, think, behavior, bullet, atk);
+
+        var variation = SpeedFogIds.UntouchableBossBehaviorVariation;
+        Assert.Equal(variation,
+            (int)npc.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossNpcRow)["behaviorVariationId"].Value);
+        foreach (var (judge, refType, refId) in new[]
+        {
+            (100, 1, 205280000), (101, 1, 205280001), (102, 1, 205280002),
+            (110, 0, 5280110), (111, 0, 5280111), (112, 1, 205280005),
+            (113, 0, 5280113), (115, 0, 5280115), (500, 0, 5280001),
+        })
+        {
+            var clone = behavior.Rows.Single(r => r.ID == SpeedFogIds.BehaviorRowId(variation, judge));
+            Assert.Equal(variation, (int)clone["variationId"].Value);
+            Assert.Equal(judge, (int)clone["behaviorJudgeId"].Value);
+            Assert.Equal((byte)refType, (byte)clone["refType"].Value);
+            Assert.Equal(refId, (int)clone["refId"].Value);
+        }
+        var beam = behavior.Rows.Single(r => r.ID == SpeedFogIds.BehaviorRowId(variation, SpeedFogIds.UntouchableBeamJudge));
+        Assert.Equal(SpeedFogIds.UntouchableBeamJudge, (int)beam["behaviorJudgeId"].Value);
+        Assert.Equal((byte)1, (byte)beam["refType"].Value);
+        Assert.Equal(SpeedFogIds.UntouchableBeamBulletRow, (int)beam["refId"].Value);
+        // Vanilla rows untouched: still variation 52800, still nine of them.
+        Assert.Equal(9, behavior.Rows.Count(r => (int)r["variationId"].Value == 52800));
+    }
+
+    [Fact]
+    public void ApplyMoveset_ClonesTheBeamBulletAndItsDamageRow()
+    {
+        var (npc, think, behavior, bullet, atk) = BuildMovesetParams();
+
+        UntouchableBossInjector.ApplyMoveset(npc, think, behavior, bullet, atk);
+
+        var beam = bullet.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBeamBulletRow);
+        Assert.Equal(SpeedFogIds.UntouchableBeamAtkRow, (int)beam["atkId_Bullet"].Value);
+        Assert.Equal(527032, (int)beam["sfxId_Bullet"].Value);   // visual kept
+        Assert.Equal(0.5f, (float)beam["life"].Value);           // kinematics kept
+        Assert.Equal(100f, (float)beam["initVellocity"].Value);
+        for (int i = 0; i <= 4; i++)
+            Assert.Equal(-1, (int)beam[$"spEffectId{i}"].Value);  // no madness, nothing
+        Assert.Equal(73200, (int)bullet.Rows.Single(r => r.ID == 10732000)["atkId_Bullet"].Value);
+
+        var dmg = atk.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBeamAtkRow);
+        Assert.Equal(UntouchableBossInjector.BEAM_MAGIC, (ushort)dmg["atkMag"].Value);
+        Assert.Equal((ushort)0, (ushort)dmg["throwTypeId"].Value);
+        Assert.Equal((ushort)100, (ushort)atk.Rows.Single(r => r.ID == 5280115)["atkMag"].Value);
+    }
+
+    [Fact]
+    public void ApplyMoveset_MissingVanillaJudge_WritesNothing()
+    {
+        var (npc, think, behavior, bullet, atk) = BuildMovesetParams();
+        behavior.Rows.RemoveAll(r => r.ID == 1170); // judge 500 gone (game patch drift)
+
+        Assert.False(UntouchableBossInjector.ApplyMoveset(npc, think, behavior, bullet, atk));
+
+        Assert.Equal(52800,
+            (int)npc.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossNpcRow)["behaviorVariationId"].Value);
+        Assert.DoesNotContain(think.Rows, r => r.ID == SpeedFogIds.UntouchableBossThinkRow);
+        Assert.DoesNotContain(behavior.Rows, r => (int)r["variationId"].Value == SpeedFogIds.UntouchableBossBehaviorVariation);
+        Assert.DoesNotContain(bullet.Rows, r => r.ID == SpeedFogIds.UntouchableBeamBulletRow);
+        Assert.DoesNotContain(atk.Rows, r => r.ID == SpeedFogIds.UntouchableBeamAtkRow);
+    }
+
+    [Fact]
+    public void ApplyMoveset_MissingTemplateRow_WritesNothing()
+    {
+        var (npc, think, behavior, bullet, atk) = BuildMovesetParams();
+        bullet.Rows.RemoveAll(r => r.ID == 10732000); // Frenzied Burst gone
+
+        Assert.False(UntouchableBossInjector.ApplyMoveset(npc, think, behavior, bullet, atk));
+
+        Assert.DoesNotContain(think.Rows, r => r.ID == SpeedFogIds.UntouchableBossThinkRow);
+        Assert.DoesNotContain(behavior.Rows, r => (int)r["variationId"].Value == SpeedFogIds.UntouchableBossBehaviorVariation);
+        Assert.DoesNotContain(atk.Rows, r => r.ID == SpeedFogIds.UntouchableBeamAtkRow);
+    }
 }

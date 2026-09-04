@@ -111,6 +111,18 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>eldendata/Defs/EquipParamGoods.xml</Link>
     </None>
+    <None Include="eldendata/Defs/BehaviorParam.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>eldendata/Defs/BehaviorParam.xml</Link>
+    </None>
+    <None Include="eldendata/Defs/BulletParam.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>eldendata/Defs/BulletParam.xml</Link>
+    </None>
+    <None Include="eldendata/Defs/AtkParam.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>eldendata/Defs/AtkParam.xml</Link>
+    </None>
   </ItemGroup>
 
 </Project>

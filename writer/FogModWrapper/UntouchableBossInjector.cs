@@ -23,6 +23,28 @@ public static class UntouchableBossInjector
     public const uint BOSS_RUNES = 20000;
     public const float DAMAGE_CUT = 0.35f; // fraction of damage taken (65% cut)
 
+    // --- Moveset (docs/untouchable-boss.md "Moveset") ---
+
+    public const int UNTOUCHABLE_VANILLA_THINK = 52800000;
+    public const int UNTOUCHABLE_VANILLA_VARIATION = 52800;
+
+    /// <summary>Frenzied Burst's bullet: a 100 m/s, 0.5 s hitscan laser
+    /// whose SFX (527032/527033) live in the common bundle.</summary>
+    public const int BEAM_TEMPLATE_BULLET = 10732000;
+
+    /// <summary>The lantern swing's attack row (magic, no throw): the damage
+    /// template for the beam (player spells only have AtkParam_Pc rows).</summary>
+    public const int BEAM_TEMPLATE_ATK = 5280115;
+
+    /// <summary>Beam damage (AtkParam_Npc.atkMag, u16). Tuning knob.</summary>
+    public const ushort BEAM_MAGIC = 110;
+
+    /// <summary>Vanilla c5280 BehaviorParam judge ids (variation 52800),
+    /// re-keyed under the boss variation so every attack/bullet the TAE fires
+    /// still resolves. 500 is the non-formula row 1170. Refresh after a game
+    /// patch that renumbers c5280's judges.</summary>
+    public static readonly int[] VanillaJudges = { 100, 101, 102, 110, 111, 112, 113, 115, 500 };
+
     // No boss resize: an MSB Part.Scale experiment (1.3x and higher)
     // confirmed in-game that the engine ignores the field for chr parts,
     // and no other offline size mechanism exists (docs/untouchable-boss.md,
@@ -74,6 +96,82 @@ public static class UntouchableBossInjector
 
         Console.WriteLine(
             $"Untouchable boss: NpcParam {SpeedFogIds.UntouchableBossNpcRow} (clone of {UNTOUCHABLE_VANILLA_NPC}, hp {BOSS_HP}, runes {BOSS_RUNES}) + SpEffect {SpeedFogIds.UntouchableBossSpEffectRow} (cut {DAMAGE_CUT})");
+    }
+
+    /// <summary>Writes the moveset rows: boss think row (own battle script),
+    /// boss behavior variation on the NpcParam clone with vanilla's nine
+    /// rows re-keyed plus the beam judge, the beam bullet and its damage
+    /// row. All-or-nothing: every input is resolved before the first write,
+    /// and false means nothing was written (the boss keeps vanilla AI). The
+    /// variation change in particular must never land alone: a variation
+    /// with no BehaviorParam rows is a boss with no attacks.</summary>
+    public static bool ApplyMoveset(PARAM npc, PARAM think, PARAM behavior, PARAM bullet, PARAM atk)
+    {
+        var variation = SpeedFogIds.UntouchableBossBehaviorVariation;
+        var reasons = new List<string>();
+
+        var bossNpc = npc.Rows.Find(r => r.ID == SpeedFogIds.UntouchableBossNpcRow);
+        if (bossNpc == null)
+            reasons.Add($"NpcParam {SpeedFogIds.UntouchableBossNpcRow} missing (Apply not run)");
+
+        var vanillaRows = new Dictionary<int, PARAM.Row>();
+        foreach (var row in behavior.Rows)
+        {
+            if ((int)row["variationId"].Value != UNTOUCHABLE_VANILLA_VARIATION)
+                continue;
+            var judge = (int)row["behaviorJudgeId"].Value;
+            if (Array.IndexOf(VanillaJudges, judge) >= 0)
+                vanillaRows.TryAdd(judge, row);
+        }
+        var missingJudges = VanillaJudges.Where(j => !vanillaRows.ContainsKey(j)).ToList();
+        if (missingJudges.Count > 0)
+            reasons.Add($"BehaviorParam judge(s) {string.Join("/", missingJudges)} missing for variation {UNTOUCHABLE_VANILLA_VARIATION}");
+
+        foreach (var (name, param, id) in new (string, PARAM, int)[]
+        {
+            ("NpcThinkParam", think, UNTOUCHABLE_VANILLA_THINK),
+            ("Bullet", bullet, BEAM_TEMPLATE_BULLET),
+            ("AtkParam_Npc", atk, BEAM_TEMPLATE_ATK),
+        })
+        {
+            if (param.Rows.All(r => r.ID != id))
+                reasons.Add($"{name} template row {id} missing");
+        }
+
+        if (reasons.Count > 0)
+        {
+            Console.WriteLine($"Untouchable boss: moveset skipped ({string.Join("; ", reasons)})");
+            return false;
+        }
+
+        bossNpc!["behaviorVariationId"].Value = variation; // s32
+
+        var thinkRow = GameEditor.AddRow(think, SpeedFogIds.UntouchableBossThinkRow, UNTOUCHABLE_VANILLA_THINK);
+        thinkRow["battleGoalID"].Value = SpeedFogIds.UntouchableBossBattleGoal; // s32; logicId stays 528000
+
+        foreach (var judge in VanillaJudges)
+        {
+            var clone = GameEditor.AddRow(behavior, SpeedFogIds.BehaviorRowId(variation, judge), vanillaRows[judge]);
+            clone["variationId"].Value = variation;
+        }
+        var beamBehavior = GameEditor.AddRow(
+            behavior, SpeedFogIds.BehaviorRowId(variation, SpeedFogIds.UntouchableBeamJudge), vanillaRows[101]);
+        beamBehavior["variationId"].Value = variation;
+        beamBehavior["behaviorJudgeId"].Value = SpeedFogIds.UntouchableBeamJudge;
+        beamBehavior["refType"].Value = (byte)1; // bullet
+        beamBehavior["refId"].Value = SpeedFogIds.UntouchableBeamBulletRow;
+
+        var beamBullet = GameEditor.AddRow(bullet, SpeedFogIds.UntouchableBeamBulletRow, BEAM_TEMPLATE_BULLET);
+        beamBullet["atkId_Bullet"].Value = SpeedFogIds.UntouchableBeamAtkRow;
+        for (int i = 0; i <= 4; i++)
+            beamBullet[$"spEffectId{i}"].Value = -1; // no madness buildup, no rider effects
+
+        var beamAtk = GameEditor.AddRow(atk, SpeedFogIds.UntouchableBeamAtkRow, BEAM_TEMPLATE_ATK);
+        beamAtk["atkMag"].Value = BEAM_MAGIC; // u16; throw fields already 0 on 5280115
+
+        Console.WriteLine(
+            $"Untouchable boss: moveset rows (think {SpeedFogIds.UntouchableBossThinkRow} -> battle {SpeedFogIds.UntouchableBossBattleGoal}, variation {variation} with {VanillaJudges.Length} vanilla judges + beam judge {SpeedFogIds.UntouchableBeamJudge}, bullet {SpeedFogIds.UntouchableBeamBulletRow} (clone of {BEAM_TEMPLATE_BULLET}), atk {SpeedFogIds.UntouchableBeamAtkRow} magic {BEAM_MAGIC})");
+        return true;
     }
 
     /// <summary>MSB phase (post-Write): repoint every placed untouchable
