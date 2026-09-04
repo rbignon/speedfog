@@ -74,6 +74,9 @@ class Program
         // Grace animation speedup
         total += GraceAnimationPatcher.Patch(gameDir, outputDir);
 
+        // Aging Untouchable beam carrier (animation 3004 bullet events -> judge 150)
+        total += UntouchableTaePatcher.Patch(gameDir, outputDir);
+
         // SpeedFog title screen artwork
         if (dataDir != null)
         {
@@ -112,6 +115,7 @@ Arguments:
 
 Patches applied:
   - Grace animation speedup (chr/c0000.anibnd.dcx)
+  - Untouchable beam carrier (chr/c5280.anibnd.dcx, animation 3004: 4 bullet events -> judge 150)
   - Title screen badge (menu/{hi,low}/01_common.sblytbnd.dcx + 02_title.tpf.dcx, needs --data-dir)
   - Halloween icon overlay (menu/{hi,low}/05_dummy.tpf.dcx superset, needs --data-dir and --halloween-dir)
 ");
