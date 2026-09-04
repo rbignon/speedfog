@@ -70,4 +70,22 @@ public class SpeedFogIdsTests
             $"DeathMarkerEntityBase ({SpeedFogIds.DeathMarkerEntityBase}) must be below " +
             $"HalloweenDecorEntityBase ({SpeedFogIds.HalloweenDecorEntityBase})");
     }
+
+    [Fact]
+    public void BehaviorRowId_MatchesTheGamesCompositeKey()
+    {
+        // Vanilla c5280: variation 52800, judge 100 is row 252800100.
+        Assert.Equal(252800100, SpeedFogIds.BehaviorRowId(52800, 100));
+        // The boss's beam row lands in its own 275589xxx band.
+        Assert.Equal(275589150, SpeedFogIds.BehaviorRowId(
+            SpeedFogIds.UntouchableBossBehaviorVariation, SpeedFogIds.UntouchableBeamJudge));
+    }
+
+    [Fact]
+    public void NpcThinkParamRows_DoNotCollide()
+    {
+        // Both are NpcThinkParam rows (one namespace): the greeter and the
+        // boss must not share an id.
+        Assert.NotEqual(SpeedFogIds.PassiveGreeterThinkRow, SpeedFogIds.UntouchableBossThinkRow);
+    }
 }

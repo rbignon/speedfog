@@ -162,6 +162,50 @@ public static class SpeedFogIds
     /// see docs/enemy-scaling.md).</summary>
     public const int DecorativeAmbusherSpEffectRow = ParamRowBase1;
 
+    /// <summary>NpcThinkParam row for the Aging Untouchable boss: a clone
+    /// of 52800000 whose battleGoalID selects SpeedFog's own battle script
+    /// (<see cref="UntouchableBossBattleGoal"/>), leaving the ambient
+    /// untouchables on the vanilla bytecode script. ParamRowBase0 in this
+    /// namespace is <see cref="PassiveGreeterThinkRow"/>.</summary>
+    public const int UntouchableBossThinkRow = ParamRowBase1;
+
+    /// <summary>Bullet row for the boss's frenzy beam: a clone of Frenzied
+    /// Burst (10732000, SFX in the common bundle) whose atkId points at
+    /// <see cref="UntouchableBeamAtkRow"/>.</summary>
+    public const int UntouchableBeamBulletRow = ParamRowBase0;
+
+    /// <summary>AtkParam_Npc row carrying the beam's damage: a clone of the
+    /// lantern swing (5280115, magic, no throw). Player spells only have
+    /// AtkParam_Pc rows, so an NPC-fired Frenzied Burst needs this one.</summary>
+    public const int UntouchableBeamAtkRow = ParamRowBase0;
+
+    // --- Behavior ids (a fourth id kind: the battle-script id selected by
+    //     NpcThinkParam.battleGoalID, NpcParam.behaviorVariationId, and a
+    //     TAE bullet judge id; none of them is a param row id) ---
+
+    /// <summary>NpcThinkParam.battleGoalID of the boss: the game loads
+    /// script/755890_battle.luabnd.dcx (source under
+    /// data/mods-src/speedfog/script/, repacked at bootstrap).</summary>
+    public const int UntouchableBossBattleGoal = 755890;
+
+    /// <summary>NpcParam.behaviorVariationId of the boss clone. BehaviorParam
+    /// rows are keyed by <see cref="BehaviorRowId"/>, so the boss's rows live
+    /// at 275589xxx, disjoint from vanilla c5280's 252800xxx.</summary>
+    public const int UntouchableBossBehaviorVariation = 75589;
+
+    /// <summary>TAE bullet judge id written on animation 3004's retargeted
+    /// events by StaticModBuilder's UntouchableTaePatcher (which duplicates
+    /// this value: StaticModBuilder does not reference FogModWrapper).
+    /// Vanilla c5280 uses judges 100-115 and 500; 150 resolves to nothing
+    /// under variation 52800, so the patched animation stays inert for
+    /// ambient untouchables.</summary>
+    public const int UntouchableBeamJudge = 150;
+
+    /// <summary>BehaviorParam row id for a (variation, judge) pair: the
+    /// game's own composite key (vanilla c5280 judge 100 is 252800100).</summary>
+    public static int BehaviorRowId(int variationId, int judgeId)
+        => 200000000 + variationId * 1000 + judgeId;
+
     // --- Icon ids (not entity ids, not param row ids; a third id namespace) ---
 
     /// <summary>Icon id for the Halloween Golden Seed pumpkin icon. The
