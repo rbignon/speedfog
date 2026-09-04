@@ -96,7 +96,7 @@ speedfog/
 │   │   ├── launch_speedfog.bat  # Windows launcher (optional frozen game copy via -p)
 │   │   ├── recovery.bat     # Windows save recovery
 │   │   └── backups/         # Save backup daemon + launch helpers (PowerShell)
-│   ├── mods-src/speedfog/   # Static mod sources, tracked
+│   ├── mods-src/speedfog/   # Static mod sources, tracked (script/755890_battle-luabnd-dcx/: Untouchable boss battle AI, plain-text Lua)
 │   │   └── script/<name>-luabnd-dcx/  # WitchyBND-unpacked layout, repacked at bootstrap
 │   ├── mods/speedfog/       # StaticModBuilder output + WitchyBND repacks + user overrides (gitignored)
 │   └── mods/speedfog-halloween/  # Halloween icon overlay (05_dummy.tpf.dcx superset), built at bootstrap, shipped only when [plugin.halloween] is enabled (gitignored)
@@ -157,6 +157,7 @@ speedfog/
 │   ├── StaticModBuilder/     # Static mod generator, runs at setup (uses SoulsFormatsNEXT submodule)
 │   │   ├── Program.cs       # CLI entry point
 │   │   ├── GraceAnimationPatcher.cs  # Speed up grace sit/discover animations
+│   │   ├── UntouchableTaePatcher.cs  # Retarget four bullet events of c5280 animation 3004 to judge 150 (boss beam carrier)
 │   │   ├── TitleScreenPatcher.cs  # Redirect title sprite to a standalone badge texture in 02_title.tpf.dcx
 │   │   ├── DdsAtlas.cs      # DX10 DDS header parsing + BC7 block extract + standalone DDS build
 │   │   └── LayoutFile.cs    # Menu .layout XML helpers (find/remove SubTexture entries)
@@ -188,7 +189,7 @@ speedfog/
 │   ├── esd-editing.md       # ESD talk script editing conventions
 │   ├── care-package.md      # Randomized starting build system
 │   ├── tarnished-showcase.md  # Tarnished Pack showcase mode (class loadout, Torrent skins)
-│   ├── untouchable-boss.md  # Aging Untouchable minor boss (vulnerability mechanism, two-phase injector)
+│   ├── untouchable-boss.md  # Aging Untouchable minor boss (vulnerability mechanism, two-phase injector, moveset)
 │   ├── item-randomizer.md   # ItemRandomizerWrapper integration
 │   ├── event-flags.md       # Event flag allocation and EMEVD reference
 │   ├── alternate-warp-patching.md # AlternateFlag warp patching (300/330)
@@ -233,7 +234,7 @@ speedfog/
 | `docs/boss-arena-constraints.md` | Arena-boss compatibility constraints and matching |
 | `docs/care-package.md` | Randomized starting build system |
 | `docs/tarnished-showcase.md` | Tarnished Pack showcase mode: `[tarnished]` config, class loadout + Torrent skin draws, graph.json v4.7 fields, flag-to-skin mapping confirmed in-game 2026-09-01 |
-| `docs/untouchable-boss.md` | Aging Untouchable minor boss: vulnerability mechanism (nerflantern-style wall lift + partial damage cut), two-phase injector, in-game tuning session owed |
+| `docs/untouchable-boss.md` | Aging Untouchable minor boss: vulnerability mechanism (nerflantern-style wall lift + partial damage cut), two-phase injector, moveset (own battle script 755890, lantern swing, frenzy beam via judge 150), in-game validation sequence |
 | `docs/vanilla-warp-removal.md` | FogMod vanilla warp removal workaround |
 | `docs/stake-removal.md` | Vanilla stake removal (RetryPoint softlock prevention) |
 | `docs/startup-flag-injection.md` | StartupFlagInjector mechanism + methodology to find new gate flags |
@@ -341,7 +342,7 @@ speedfog/
 | `AmbientSpawnInjector` | Places passive greeters + optional decorative ambush packs (token HP, near-zero attack via NpcParam clone) at the anchored exit gates (opt-in via `[plugin.halloween]`, see `docs/plugins/halloween-ambient.md`); runs after GateDecorInjector |
 | `GateDecorInjector` | Places catalogue-driven ambient decorations at the same exit gates from `data/plugins/halloween_decorations.toml`, on a per-gate ground estimate (vanilla assets + enemies) |
 | `HalloweenDecorLoader` | Loads and validates `data/plugins/halloween_decorations.toml` (Core) |
-| `UntouchableBossInjector` | Aging Untouchable minor boss: NpcParam clone + partial damage-cut SpEffect, repoints enemy-randomizer placements, see `docs/untouchable-boss.md` |
+| `UntouchableBossInjector` | Aging Untouchable minor boss: NpcParam clone + partial damage-cut SpEffect, boss think row + behavior variation + beam bullet when the static assets exist, repoints enemy-randomizer placements (NPCParamID, ThinkParamID), see `docs/untouchable-boss.md` |
 | `HalloweenIconInjector` | Repoints Golden Seed/Sacred Tear `EquipParamGoods.iconId` to the Halloween 05_dummy overlay textures (opt-in via `[plugin.halloween]`, see `docs/plugins/halloween-icons.md`) |
 
 **ItemRandomizerWrapper** (uses RandomizerCommon.dll directly):
@@ -373,6 +374,7 @@ speedfog/
 |-------|---------|
 | `Program.cs` | CLI entry, runs all post-processing patches |
 | `GraceAnimationPatcher` | Speeds up grace sit/discover animations via TAE event 608 |
+| `UntouchableTaePatcher` | Retargets four bullet events of c5280 animation 3004 to judge 150 (the boss's beam carrier; inert for ambient untouchables), layout-guarded |
 | `TitleScreenPatcher` | Redirects the title sprite to a standalone composited badge texture in 02_title.tpf.dcx (~1.5 MB shipped, see `docs/title-screen.md`) |
 | `HalloweenIconPatcher` | Ships the Golden Seed/Sacred Tear Halloween icons (jack-o'-lantern, burning chalice) as a 05_dummy.tpf.dcx superset (`--halloween-dir`, opt-in overlay output, see `docs/plugins/halloween-icons.md`) |
 | `DdsAtlas` | DX10 DDS header parsing + block-aligned BC7 extract + standalone DDS build |

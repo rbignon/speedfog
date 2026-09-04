@@ -115,8 +115,9 @@ placing the boss):
    `c5280`; a model mismatch is logged as a warning and the part is left
    alone (defensive: nothing else should ever share an untouchable's arena
    entity id, but the injector never repoints the wrong model). `ThinkParamID`
-   is left at its vanilla value (`52800000`); AI tuning is a separate,
-   documented follow-up (see below), not part of this injector. If
+   is repointed to the boss think row (`755890001`) only when the moveset
+   rows were written (see "Moveset" below); otherwise it stays vanilla
+   `52800000`. If
    assignment targets are still unfound after this mod-dir scan, `Inject`
    runs a merge-dir fallback over a named list of arena maps FogMod never
    writes; see "Implemented fix" below for the full mechanics.
@@ -197,11 +198,113 @@ serve hypothetical future injectors, but ships the map on every seed
 regardless of whether the boss landed there, which was not worth the
 unconditional cost for a single-arena case.
 
+## Moveset
+
+Spec: `docs/superpowers/specs/2026-09-04-untouchable-moveset-design.md`.
+The boss gets two tools vanilla AI never uses, applied to the promoted
+instance only:
+
+- **Lantern swing** at melee range: animation 3001 (AtkParam_Npc 5280115,
+  magic 100, hit radius 4 at dummy 906, no throw), vanilla's post-teleport
+  surprise attack, promoted to a regular act (Act11) next to the grab
+  (3002/3003, AtkParam 5280110, throwTypeId 4100). Pure AI: no param, no
+  TAE change.
+- **Frenzy beam** at range: animation 3004 (lantern raised, thirteen
+  bullet events from dummy 210), registered by vanilla AI with probability
+  0 everywhere, re-enabled (Act04) and made to fire a Frenzied Burst-style
+  laser (magic damage, no madness).
+
+### Why 3004 needs a TAE edit
+
+3004's bullet events carry judge ids 101/102, the same ids the idle, walk
+and teleport animations fire for the lantern's ambient pulses. Remapping
+them under the boss variation would fire the beam at rest, so
+`StaticModBuilder/UntouchableTaePatcher` rewrites the judge of four of the
+thirteen events (spread by start time: indices 0, 4, 8, 12) to 150 in the
+shipped `chr/c5280.anibnd.dcx`. The patch is inert for ambient
+untouchables twice over: vanilla AI never selects 3004, and variation
+52800 has no row for judge 150. The patcher refuses (warning, nothing
+written) any layout other than dummy 210 with judges 101/102, so a game
+patch renumbering c5280's judges disables the moveset instead of
+corrupting the TAE. Knobs: `BEAM_EVENT_COUNT` (4) and `BEAM_DUMMY` (null,
+keep 210; candidates 10 or 906 if the lantern does not aim at the player).
+
+### Per-seed rows (UntouchableBossInjector.ApplyMoveset)
+
+| Param | Row | Source | Changes |
+|-------|-----|--------|---------|
+| NpcParam | 755890000 (existing clone) | 52800086 | `behaviorVariationId` 75589 |
+| NpcThinkParam | 755890001 | 52800000 | `battleGoalID` 755890 (`logicId` stays 528000) |
+| BehaviorParam | 275589100/101/102/110/111/112/113/115/500 | the nine vanilla rows of variation 52800 (judge 500 is the non-formula row 1170) | `variationId` 75589 |
+| BehaviorParam | 275589150 | 252800101 | judge 150, refType 1, refId 755890000 |
+| Bullet | 755890000 | 10732000 (Frenzied Burst) | `atkId_Bullet` 755890000, `spEffectId0-4` -1 |
+| AtkParam_Npc | 755890000 | 5280115 | `atkMag` 110 (`BEAM_MAGIC`) |
+
+Row ids: `200000000 + variation * 1000 + judge` (`SpeedFogIds.BehaviorRowId`).
+The Frenzied Burst SFX (527032 laser, 527033 hit) live in
+`sfxbnd_commoneffects`, so no SFX bundle work.
+
+### AI script
+
+`data/mods-src/speedfog/script/755890_battle-luabnd-dcx/755890_battle.lua`
+(plain text, repacked at bootstrap into
+`data/mods/speedfog/script/755890_battle.luabnd.dcx`) is the decompiled
+vanilla `528000_battle` renamed to goal 755890, plus Act11 (swing) and a
+working Act04 (beam, `successDist` 999, 8 s cooldown via `SetCoolTime`).
+Probability table (vanilla -> boss), knobs at the top of `Goal.Activate`:
+
+| Situation | Vanilla | Boss |
+|-----------|---------|------|
+| player behind, >= 8 m | Act02 100 | unchanged |
+| >= 10 m, teleport ready (SpEffect 20011450) | Act02 99 / Act01 1 | Act02 60 / Act04 40 |
+| >= 10 m, teleport not ready | Act01 100 | Act01 50 / Act04 50 |
+| 3 to 10 m | Act03 100 | Act03 60 / Act11 40 |
+| < 3 m | Act03 100 | Act03 50 / Act11 50 |
+
+During the 12 s grab cooldown vanilla had no act left at 3-10 m (the
+passivity observed in earlier sessions); the swing fills that gap.
+`battleGoalID` selects the battle luabnd independently of `logicId` (255
+vanilla think rows share the generic 29999), and the logic script does not
+reference the battle goal by name, so only the battle script is cloned.
+
+### Gating
+
+All-or-nothing. `ApplyParams` returns `(Core, Moveset)`: the core rows as
+before, the moveset only if `<data-dir>/mods/speedfog/chr/c5280.anibnd.dcx`
+and `<data-dir>/mods/speedfog/script/755890_battle.luabnd.dcx` exist and
+NpcThinkParam, BehaviorParam, Bullet and AtkParam_Npc are available, with
+every template row present. The `behaviorVariationId` change belongs to
+the moveset group: alone, it would leave the boss with a variation that
+has no BehaviorParam rows, i.e. no attacks. A think row pointing at a
+missing luabnd would leave the boss without battle AI, which is why a
+missing static asset drops the whole moveset (one warning line) rather
+than just the beam.
+
+### In-game validation sequence
+
+1. **Goal resolution**: knobs temporarily at `SWING_MID = 100`,
+   `SWING_CLOSE = 100`, both `BEAM_*` at 0. The boss must swing the
+   lantern at melee range instead of always grabbing. If it idles or the
+   game logs a script error: (a) add `GOAL_Houzuki755890_Battle = 755890`
+   and `GOAL_Houzuki755890_AfterAttackAct = 755891` at the top of the
+   script; (b) ship the vanilla `.luagnl` in the bundle; (c) fall back to
+   the spec's approach 2 (shared decompiled 528000 script branching on
+   `ai:HasSpecialEffectId(TARGET_SELF, 755890000)`).
+2. **Beam**: knobs at their defaults. Laser from the lantern at >= 10 m,
+   Frenzied Burst visual, aimed at the player, ~110 magic per hit; no beam
+   during idle or walk. Wrong origin or direction: `BEAM_DUMMY`.
+3. **Tuning**: probabilities, `BEAM_COOLDOWN`, `BEAM_MAGIC`,
+   `BEAM_EVENT_COUNT`, the 3002 cooldown.
+4. **Ambient regression**: an ambient untouchable still only teleports and
+   grabs, no swing at range, no beam, no script error.
+
 ## Expected log lines
 
 ```
 Untouchable boss: NpcParam 755890000 (clone of 52800086, hp 3000, runes 20000) + SpEffect 755890000 (cut 0.35)
+Untouchable boss: moveset rows (think 755890001 -> battle 755890, variation 75589 with 9 vanilla judges + beam judge 150, bullet 755890000 (clone of 10732000), atk 755890000 magic 110)
 Untouchable boss: repointing N placed boss slot(s)
+  <part> (entity <id>): NPCParamID -> 755890000, ThinkParamID -> 755890001
   Fallback: repointed N part(s) in <name> (merge-dir copy shipped into the mod dir)
   Repointed M untouchable boss part(s)
 ```
@@ -211,6 +314,12 @@ compatible (`c5280`-model) arena. The `Fallback:` line only appears when
 the merge-dir fallback described above actually repointed something in
 one of `data/game_tweaks.toml`'s `[[fallback_arena_maps]]`. Phase-slot
 warnings (see above) are expected and not failures.
+
+When the moveset is skipped, the second line is replaced by one
+`Untouchable boss: moveset skipped (<reason>)` line (static asset missing,
+param unavailable, vanilla judge or template row missing) and the repoint
+lines carry only `NPCParamID`. At bootstrap, StaticModBuilder prints
+`Untouchable TAE patch: retargeted 4 bullet event(s) of animation 3004 to judge 150 in chr/c5280.anibnd.dcx`.
 
 ## In-game tuning session (owed)
 
@@ -224,13 +333,8 @@ section 2.3. Not automatable; requires playing the fight. Owed checks:
   clone (unchanged from vanilla `52800086`) should be reviewed too, since
   near-one-shot grab damage is fine for an ambiance mob but not for a
   boss encounter.
-- Fight passivity in the arenas that received the boss (`boss.size: 2`
-  arenas only): the moveset (from the decompiled `528000_battle.lua`) is
-  2100 (close-range punish when stuck to its back), 3000/3001
-  (long-range teleport initiator + post-teleport surprise attack), 3002 (a
-  mid-range signature move on a fixed 12s cooldown), 3003 (follow-up combo
-  on an SpEffect 5030 interrupt), and 3004 (registered but probability 0 in
-  every branch of the logic script: dormant).
+- Fight passivity: addressed by the moveset (see "Moveset"); run its
+  validation sequence instead.
 - Successful-parry reward and teleport behavior specifically in the arenas
   that actually received the boss (navmesh clearance for the AI's warp
   scan around the player).
