@@ -11,7 +11,8 @@ namespace FogModWrapper;
 /// custom SpEffect that lifts the parry wall (stateInfo 121, like
 /// nerflantern) but keeps the boss heavily resistant via partial damage
 /// cut rates. A successful parry still opens the vanilla full-damage
-/// window. See docs/untouchable-boss.md.
+/// window, and, when the static assets are built, its own battle AI and
+/// a frenzy beam (see docs/untouchable-boss.md "Moveset").
 /// </summary>
 public static class UntouchableBossInjector
 {
@@ -217,8 +218,9 @@ public static class UntouchableBossInjector
 
     /// <summary>MSB phase (post-Write): repoint every placed untouchable
     /// (arena entity ids whose assignment value is the source entity) to
-    /// the boss NpcParam clone. ThinkParamID stays vanilla 52800000; AI
-    /// tuning is a documented follow-up, not done here.
+    /// the boss NpcParam clone. <paramref name="repointThink"/> (the
+    /// regulation phase's Moveset flag) also repoints ThinkParamID at the
+    /// boss think row; false keeps the vanilla AI.
     ///
     /// <paramref name="mergeDir"/> is the Item Randomizer merge dir (null
     /// or empty disables the fallback, leaving behavior unchanged). When
@@ -229,7 +231,7 @@ public static class UntouchableBossInjector
     /// written into modDir (the higher-priority layer).</summary>
     public static void Inject(
         string modDir, Dictionary<string, string> enemyAssignments, string? mergeDir,
-        IReadOnlyList<string> fallbackArenaMaps)
+        IReadOnlyList<string> fallbackArenaMaps, bool repointThink)
     {
         var source = SpeedFogIds.UntouchableSourceEntity.ToString();
         var arenaIds = enemyAssignments
@@ -254,7 +256,7 @@ public static class UntouchableBossInjector
             // Always surface collected log lines (e.g. "not c5280" warnings),
             // even when nothing was repointed in this map; only the numeric
             // bookkeeping below is gated on the count.
-            var (repointed, ids) = ApplyToMsb(msb, arenaIds, log);
+            var (repointed, ids) = ApplyToMsb(msb, arenaIds, log, repointThink);
             if (repointed > 0)
             {
                 msb.Write(msbPath);
@@ -289,7 +291,7 @@ public static class UntouchableBossInjector
 
                 var msb = MSBE.Read(mergePath);
                 var lines = new List<string>();
-                var (repointed, ids) = ApplyToMsb(msb, arenaIds, lines.Add);
+                var (repointed, ids) = ApplyToMsb(msb, arenaIds, lines.Add, repointThink);
                 foreach (var line in lines)
                     Console.WriteLine(line);
                 if (repointed > 0)
@@ -317,11 +319,12 @@ public static class UntouchableBossInjector
 
     /// <summary>Repoints every enemy part whose EntityID is an arena id and
     /// whose model is c5280 (the wrong-model case is logged and skipped, not
-    /// repointed). Returns the repointed count and the repointed entity ids,
-    /// so callers can do exact found/missing bookkeeping without re-scanning
-    /// the MSB by NPCParamID.</summary>
+    /// repointed): NPCParamID always, ThinkParamID only when
+    /// <paramref name="repointThink"/> (the moveset rows exist). Returns the
+    /// repointed count and the repointed entity ids, so callers can do exact
+    /// found/missing bookkeeping without re-scanning the MSB by NPCParamID.</summary>
     internal static (int Repointed, List<uint> Ids) ApplyToMsb(
-        MSBE msb, HashSet<uint> arenaIds, Action<string> log)
+        MSBE msb, HashSet<uint> arenaIds, Action<string> log, bool repointThink)
     {
         var ids = new List<uint>();
         foreach (var enemy in msb.Parts.Enemies)
@@ -334,7 +337,15 @@ public static class UntouchableBossInjector
                 continue;
             }
             enemy.NPCParamID = SpeedFogIds.UntouchableBossNpcRow;
-            log($"  {enemy.Name} (entity {enemy.EntityID}): NPCParamID -> {SpeedFogIds.UntouchableBossNpcRow}");
+            if (repointThink)
+            {
+                enemy.ThinkParamID = SpeedFogIds.UntouchableBossThinkRow;
+                log($"  {enemy.Name} (entity {enemy.EntityID}): NPCParamID -> {SpeedFogIds.UntouchableBossNpcRow}, ThinkParamID -> {SpeedFogIds.UntouchableBossThinkRow}");
+            }
+            else
+            {
+                log($"  {enemy.Name} (entity {enemy.EntityID}): NPCParamID -> {SpeedFogIds.UntouchableBossNpcRow}");
+            }
             ids.Add(enemy.EntityID);
         }
         return (ids.Count, ids);

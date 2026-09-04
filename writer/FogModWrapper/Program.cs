@@ -929,7 +929,8 @@ Example:
         else
         {
             UntouchableBossInjector.Inject(
-                ctx.ModDir, ctx.GraphData.EnemyAssignments, ctx.Config.MergeDir, ctx.Tweaks.FallbackArenaMaps);
+                ctx.ModDir, ctx.GraphData.EnemyAssignments, ctx.Config.MergeDir, ctx.Tweaks.FallbackArenaMaps,
+                ctx.UntouchableBossMovesetApplied);
         }
 
         // Rebirth option at Sites of Grace

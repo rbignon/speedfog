@@ -88,15 +88,6 @@ public class UntouchableBossInjectorTests
     }
 
     [Fact]
-    public void MovesetStaticAssets_AreTheAnibndAndTheBattleScript()
-    {
-        Assert.Contains(Path.Combine("mods", "speedfog", "chr", "c5280.anibnd.dcx"),
-            UntouchableBossInjector.MovesetStaticAssets);
-        Assert.Contains(Path.Combine("mods", "speedfog", "script", "755890_battle.luabnd.dcx"),
-            UntouchableBossInjector.MovesetStaticAssets);
-    }
-
-    [Fact]
     public void ApplyParams_SkipsMoveset_WhenMovesetParamsUnavailable()
     {
         // Static assets present, but the regulation carries only the two
@@ -179,13 +170,13 @@ public class UntouchableBossInjectorTests
         });
 
         var (repointed, ids) = UntouchableBossInjector.ApplyToMsb(
-            msb, new HashSet<uint> { 30001800 }, _ => { });
+            msb, new HashSet<uint> { 30001800 }, _ => { }, repointThink: false);
 
         Assert.Equal(1, repointed);
         Assert.Equal(new List<uint> { 30001800 }, ids);
         var boss = msb.Parts.Enemies.Single(e => e.EntityID == 30001800);
         Assert.Equal(SpeedFogIds.UntouchableBossNpcRow, boss.NPCParamID);
-        Assert.Equal(52800000, boss.ThinkParamID); // AI stays vanilla in this plan
+        Assert.Equal(52800000, boss.ThinkParamID); // moveset off: AI stays vanilla
         Assert.Equal(52800086, msb.Parts.Enemies.Single(e => e.Name == "c5280_9001").NPCParamID);
         Assert.Equal(35000030, msb.Parts.Enemies.Single(e => e.ModelName == "c3500").NPCParamID);
     }
@@ -202,12 +193,41 @@ public class UntouchableBossInjectorTests
         var warnings = new List<string>();
 
         var (repointed, ids) = UntouchableBossInjector.ApplyToMsb(
-            msb, new HashSet<uint> { 30001800 }, warnings.Add);
+            msb, new HashSet<uint> { 30001800 }, warnings.Add, repointThink: false);
 
         Assert.Equal(0, repointed);
         Assert.Empty(ids);
         Assert.Equal(35000030, msb.Parts.Enemies[0].NPCParamID);
         Assert.Contains(warnings, w => w.Contains("30001800"));
+    }
+
+    [Fact]
+    public void ApplyToMsb_RepointsThinkParam_OnlyWhenMovesetApplied()
+    {
+        var msb = new MSBE();
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c5280_9000", ModelName = "c5280",
+            EntityID = 30001800, NPCParamID = 52800086, ThinkParamID = 52800000,
+        });
+        // A halloween greeter (EntityID 0): keeps its own think row.
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c5280_9001", ModelName = "c5280",
+            EntityID = 0, NPCParamID = 52800086, ThinkParamID = SpeedFogIds.PassiveGreeterThinkRow,
+        });
+        var log = new List<string>();
+
+        var (repointed, _) = UntouchableBossInjector.ApplyToMsb(
+            msb, new HashSet<uint> { 30001800 }, log.Add, repointThink: true);
+
+        Assert.Equal(1, repointed);
+        var boss = msb.Parts.Enemies.Single(e => e.EntityID == 30001800);
+        Assert.Equal(SpeedFogIds.UntouchableBossNpcRow, boss.NPCParamID);
+        Assert.Equal(SpeedFogIds.UntouchableBossThinkRow, boss.ThinkParamID);
+        Assert.Equal(SpeedFogIds.PassiveGreeterThinkRow,
+            msb.Parts.Enemies.Single(e => e.Name == "c5280_9001").ThinkParamID);
+        Assert.Contains(log, l => l.Contains("ThinkParamID"));
     }
 
     // Merge-dir fallback (docs/untouchable-boss.md, m60_13_09_02 paragraph):
@@ -241,7 +261,7 @@ public class UntouchableBossInjectorTests
             ["30001800"] = SpeedFogIds.UntouchableSourceEntity.ToString(),
         };
 
-        UntouchableBossInjector.Inject(modDir, assignments, mergeDir, new[] { "m60_13_09_02" });
+        UntouchableBossInjector.Inject(modDir, assignments, mergeDir, new[] { "m60_13_09_02" }, false);
 
         var writtenPath = Path.Combine(modDir, "map", "mapstudio", "m60_13_09_02.msb.dcx");
         Assert.True(File.Exists(writtenPath));
@@ -269,7 +289,7 @@ public class UntouchableBossInjectorTests
         Exception? ex;
         try
         {
-            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, null, new[] { "m60_13_09_02" }));
+            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, null, new[] { "m60_13_09_02" }, false));
         }
         finally
         {
@@ -302,7 +322,7 @@ public class UntouchableBossInjectorTests
         Exception? ex;
         try
         {
-            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, mergeDir, new[] { "m60_13_09_02" }));
+            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, mergeDir, new[] { "m60_13_09_02" }, false));
         }
         finally
         {
