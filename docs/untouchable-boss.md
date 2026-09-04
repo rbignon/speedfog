@@ -228,6 +228,8 @@ written) any layout other than dummy 210 with judges 101/102, so a game
 patch renumbering c5280's judges disables the moveset instead of
 corrupting the TAE. Knobs: `BEAM_EVENT_COUNT` (4) and `BEAM_DUMMY` (null,
 keep 210; candidates 10 or 906 if the lantern does not aim at the player).
+The patched anibnd (about 1.3 MB) ships in every seed's static mod whether
+or not the boss is placed; it is inert without the boss rows.
 
 ### Per-seed rows (UntouchableBossInjector.ApplyMoveset)
 
@@ -244,13 +246,22 @@ Row ids: `200000000 + variation * 1000 + judge` (`SpeedFogIds.BehaviorRowId`).
 The Frenzied Burst SFX (527032 laser, 527033 hit) live in
 `sfxbnd_commoneffects`, so no SFX bundle work.
 
+A single 3004 can land up to BEAM_EVENT_COUNT (4) beams, so the per-cast
+ceiling is 4 x BEAM_MAGIC (440 magic before the player's defenses); tune the
+two knobs together.
+
 ### AI script
 
 `data/mods-src/speedfog/script/755890_battle-luabnd-dcx/755890_battle.lua`
 (plain text, repacked at bootstrap into
 `data/mods/speedfog/script/755890_battle.luabnd.dcx`) is the decompiled
 vanilla `528000_battle` renamed to goal 755890, plus Act11 (swing) and a
-working Act04 (beam, `successDist` 999, 8 s cooldown via `SetCoolTime`).
+working Act04 (beam, `successDist` 999, 8 s cooldown via `SetCoolTime`). The
+`GOAL_Houzuki755890_Battle` and `GOAL_Houzuki755890_AfterAttackAct` globals
+are not provided by the shared aiCommon global-name list (which only knows
+the vanilla `GOAL_Houzuki528000_*` names), so the script assigns them itself
+at the top (755890 = the boss think row's `battleGoalID`, 755891 = any
+unused id).
 Probability table (vanilla -> boss), knobs at the top of `Goal.Activate`:
 
 | Situation | Vanilla | Boss |
@@ -284,10 +295,14 @@ than just the beam.
 
 1. **Goal resolution**: knobs temporarily at `SWING_MID = 100`,
    `SWING_CLOSE = 100`, both `BEAM_*` at 0. The boss must swing the
-   lantern at melee range instead of always grabbing. If it idles or the
-   game logs a script error: (a) add `GOAL_Houzuki755890_Battle = 755890`
-   and `GOAL_Houzuki755890_AfterAttackAct = 755891` at the top of the
-   script; (b) ship the vanilla `.luagnl` in the bundle; (c) fall back to
+   lantern at melee range instead of always grabbing. The explicit
+   `GOAL_Houzuki755890_Battle`/`GOAL_Houzuki755890_AfterAttackAct`
+   assignments are already in the script (goal tables are keyed by the
+   numeric id, the battle goal is started with the raw `battleGoalID`, and
+   the `GOAL_` globals of vanilla scripts come from the shared aiCommon
+   global-name list, decompiled from the 1.17 aicommon bundle), so this
+   step confirms the mechanism rather than introducing it. If the boss
+   still idles or the game logs a script error, the remaining fallback is
    the spec's approach 2 (shared decompiled 528000 script branching on
    `ai:HasSpecialEffectId(TARGET_SELF, 755890000)`).
 2. **Beam**: knobs at their defaults. Laser from the lantern at >= 10 m,

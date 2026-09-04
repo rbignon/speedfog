@@ -139,17 +139,22 @@ public static class UntouchableTaePatcher
         }
 
         int n = bullets.Count;
+        var indices = new HashSet<int>();
         for (int i = 0; i < BEAM_EVENT_COUNT; i++)
         {
             int index = BEAM_EVENT_COUNT == 1
                 ? 0
                 : (int)Math.Round((double)i * (n - 1) / (BEAM_EVENT_COUNT - 1), MidpointRounding.AwayFromZero);
+            indices.Add(index);
+        }
+        foreach (var index in indices)
+        {
             var bytes = (byte[])layouts[index].Clone();
             BitConverter.GetBytes(BEAM_JUDGE).CopyTo(bytes, JUDGE_OFFSET);
             if (BEAM_DUMMY is int dummyOverride)
                 BitConverter.GetBytes(dummyOverride).CopyTo(bytes, DUMMY_OFFSET);
             bullets[index].SetParameterBytes(tae.BigEndian, bytes);
         }
-        return BEAM_EVENT_COUNT;
+        return indices.Count;
     }
 }

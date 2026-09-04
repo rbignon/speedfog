@@ -4,6 +4,13 @@
 -- clone's battleGoalID). Two additions: the lantern swing (3001) as a regular
 -- melee act (Act11) and the dormant lantern ray (3004) re-enabled as a beam
 -- at range (Act04). Ambient untouchables keep the vanilla bytecode script.
+-- The engine keys goal tables by numeric id and starts the battle goal with
+-- the raw NpcThinkParam.battleGoalID; the GOAL_<name> globals of vanilla
+-- scripts come from the shared aiCommon global-name list, which does not
+-- know these names, so they are assigned here (755890 must equal the boss
+-- think row's battleGoalID; 755891 only needs to be unique).
+GOAL_Houzuki755890_Battle = 755890
+GOAL_Houzuki755890_AfterAttackAct = 755891
 RegisterTableGoal(GOAL_Houzuki755890_Battle, "Houzuki755890_Battle")
 REGISTER_GOAL_NO_SUB_GOAL(GOAL_Houzuki755890_Battle, true)
 

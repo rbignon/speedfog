@@ -169,6 +169,10 @@ public static class UntouchableBossInjector
         if (missingJudges.Count > 0)
             reasons.Add($"BehaviorParam judge(s) {string.Join("/", missingJudges)} missing for variation {UNTOUCHABLE_VANILLA_VARIATION}");
 
+        var vanillaCount = behavior.Rows.Count(r => (int)r["variationId"].Value == UNTOUCHABLE_VANILLA_VARIATION);
+        if (vanillaCount != VanillaJudges.Length)
+            reasons.Add($"BehaviorParam variation {UNTOUCHABLE_VANILLA_VARIATION} has {vanillaCount} row(s), expected {VanillaJudges.Length} (refresh VanillaJudges after a game patch)");
+
         foreach (var (name, param, id) in new (string, PARAM, int)[]
         {
             ("NpcThinkParam", think, UNTOUCHABLE_VANILLA_THINK),
@@ -207,6 +211,7 @@ public static class UntouchableBossInjector
         beamBullet["atkId_Bullet"].Value = SpeedFogIds.UntouchableBeamAtkRow;
         for (int i = 0; i <= 4; i++)
             beamBullet[$"spEffectId{i}"].Value = -1; // no madness buildup, no rider effects
+        beamBullet["spEffectIDForShooter"].Value = -1; // s32: Frenzied Burst's caster-side madness rider
 
         var beamAtk = GameEditor.AddRow(atk, SpeedFogIds.UntouchableBeamAtkRow, BEAM_TEMPLATE_ATK);
         beamAtk["atkMag"].Value = BEAM_MAGIC; // u16; throw fields already 0 on 5280115

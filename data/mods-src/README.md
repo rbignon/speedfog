@@ -17,8 +17,9 @@ Current content:
   the vanilla bytecode `528000_battle`). Regenerate the baseline with
   WitchyBND (`--passive Game/script/528000_battle.luabnd.dcx`) and
   DSLuaDecompiler, then re-apply the SpeedFog edits (header comment, the
-  tuning knobs and rewritten brackets in `Goal.Activate`, Act01's
-  `successDist`, Act04, Act11); see `docs/untouchable-boss.md` "Moveset".
+  two `GOAL_` assignments, the tuning knobs and rewritten brackets in
+  `Goal.Activate`, Act01's `successDist`, Act04, Act11); see
+  `docs/untouchable-boss.md` "Moveset".
 
 The Rykard AI script that once lived here was reverted in commit c3f921d
 ("Revert 'overlay: import Rykard AI script'"); the plain-text Lua + manifest

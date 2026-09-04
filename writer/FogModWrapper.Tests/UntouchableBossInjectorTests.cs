@@ -261,7 +261,7 @@ public class UntouchableBossInjectorTests
             ["30001800"] = SpeedFogIds.UntouchableSourceEntity.ToString(),
         };
 
-        UntouchableBossInjector.Inject(modDir, assignments, mergeDir, new[] { "m60_13_09_02" }, false);
+        UntouchableBossInjector.Inject(modDir, assignments, mergeDir, new[] { "m60_13_09_02" }, repointThink: false);
 
         var writtenPath = Path.Combine(modDir, "map", "mapstudio", "m60_13_09_02.msb.dcx");
         Assert.True(File.Exists(writtenPath));
@@ -289,7 +289,7 @@ public class UntouchableBossInjectorTests
         Exception? ex;
         try
         {
-            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, null, new[] { "m60_13_09_02" }, false));
+            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, null, new[] { "m60_13_09_02" }, repointThink: false));
         }
         finally
         {
@@ -322,7 +322,7 @@ public class UntouchableBossInjectorTests
         Exception? ex;
         try
         {
-            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, mergeDir, new[] { "m60_13_09_02" }, false));
+            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, mergeDir, new[] { "m60_13_09_02" }, repointThink: false));
         }
         finally
         {
@@ -382,11 +382,26 @@ public class UntouchableBossInjectorTests
         bullet.Rows[0]["life"].Value = 0.5f;
         bullet.Rows[0]["initVellocity"].Value = 100f;
         bullet.Rows[0]["spEffectId0"].Value = 12345;
+        bullet.Rows[0]["spEffectIDForShooter"].Value = 1732002;
 
         var atk = BuildParamFromDef("AtkParam", templateId: 5280115, paramName: "AtkParam_Npc");
         atk.Rows[0]["atkMag"].Value = (ushort)100;
         atk.Rows[0]["throwTypeId"].Value = (ushort)0;
         return (npc, think, behavior, bullet, atk);
+    }
+
+    [Fact]
+    public void ApplyMoveset_WithoutBossNpcClone_WritesNothing()
+    {
+        var (npc, think, behavior, bullet, atk) = BuildMovesetParams();
+        npc.Rows.RemoveAll(r => r.ID == SpeedFogIds.UntouchableBossNpcRow);
+
+        Assert.False(UntouchableBossInjector.ApplyMoveset(npc, think, behavior, bullet, atk));
+
+        Assert.DoesNotContain(think.Rows, r => r.ID == SpeedFogIds.UntouchableBossThinkRow);
+        Assert.DoesNotContain(behavior.Rows, r => (int)r["variationId"].Value == SpeedFogIds.UntouchableBossBehaviorVariation);
+        Assert.DoesNotContain(bullet.Rows, r => r.ID == SpeedFogIds.UntouchableBeamBulletRow);
+        Assert.DoesNotContain(atk.Rows, r => r.ID == SpeedFogIds.UntouchableBeamAtkRow);
     }
 
     [Fact]
@@ -447,6 +462,7 @@ public class UntouchableBossInjectorTests
         Assert.Equal(100f, (float)beam["initVellocity"].Value);
         for (int i = 0; i <= 4; i++)
             Assert.Equal(-1, (int)beam[$"spEffectId{i}"].Value);  // no madness, nothing
+        Assert.Equal(-1, (int)beam["spEffectIDForShooter"].Value);  // no caster-side madness rider
         Assert.Equal(73200, (int)bullet.Rows.Single(r => r.ID == 10732000)["atkId_Bullet"].Value);
 
         var dmg = atk.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBeamAtkRow);
@@ -469,6 +485,18 @@ public class UntouchableBossInjectorTests
         Assert.DoesNotContain(behavior.Rows, r => (int)r["variationId"].Value == SpeedFogIds.UntouchableBossBehaviorVariation);
         Assert.DoesNotContain(bullet.Rows, r => r.ID == SpeedFogIds.UntouchableBeamBulletRow);
         Assert.DoesNotContain(atk.Rows, r => r.ID == SpeedFogIds.UntouchableBeamAtkRow);
+    }
+
+    [Fact]
+    public void ApplyMoveset_ExtraVanillaJudge_WritesNothing()
+    {
+        var (npc, think, behavior, bullet, atk) = BuildMovesetParams();
+        SetBehavior(AddRowFromTemplate(behavior, 252800120), 52800, 120, 0, 5280120);
+
+        Assert.False(UntouchableBossInjector.ApplyMoveset(npc, think, behavior, bullet, atk));
+
+        Assert.DoesNotContain(behavior.Rows, r => (int)r["variationId"].Value == SpeedFogIds.UntouchableBossBehaviorVariation);
+        Assert.DoesNotContain(think.Rows, r => r.ID == SpeedFogIds.UntouchableBossThinkRow);
     }
 
     [Fact]
