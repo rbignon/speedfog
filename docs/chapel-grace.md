@@ -99,9 +99,11 @@ Registered in Event 0 via `InitializeEvent(slot=0, eventId=755864000)`.
 
 ### 4. Critical Game Mechanic: Initial Spawn
 
-`SetPlayerRespawnPoint` (bank 2003, id 23) only controls where the player respawns after death or loading a save. The initial new-game spawn location is engine-controlled (tied to the opening cutscene). There is no EMEVD instruction to override the engine's first-load spawn.
+`SetPlayerRespawnPoint` (bank 2003, id 23) only controls where the player respawns after death or loading a save. The initial new-game spawn location is engine-controlled. There is no EMEVD instruction to override the engine's first-load spawn.
 
 `WarpPlayer` (bank 2003, id 14) is the only way to relocate the player on first load. The one-shot event fires once after the map loads, teleports the player to the grace position, then sets flag 1040299002 so it never fires again. On subsequent loads, `SetPlayerRespawnPoint` (patched in Event 10010020) handles respawning at the grace normally.
+
+**Intro cutscene removal**: the same Event 10010020 plays the new-game intro cutscene (instruction 7, `PlayCutsceneToPlayerWithWeatherAndTime(10000040, Skippable, 10000, ...)`, bank 2002 id 10). `IntroCutscenePatcher` (called from the "Patch EMEVD" loop in `Program.cs`, always on, independent of `chapel_grace`) replaces it with a `WaitFixedTime(0)` NOP, matched on the cutscene ID so nothing else is touched, and warns when the instruction, the event, or the chapel EMEVD is missing. The engine is expected to place the new character at the vanilla spawn region as before, and with `chapel_grace` on the one-shot warp above then moves them to the grace. The instruction also set the clock to 23:45 through its change-time argument; that side effect goes with it and the new-game clock is left to the engine default (the weather plugin pins the hour when enabled). Verified in the generated EMEVD (instruction 7 is the NOP, the respawn patch still lands); the spawn position and default clock still need an in-game pass.
 
 ## Filesystem Handling
 

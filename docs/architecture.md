@@ -204,6 +204,7 @@ Post-processing (after FogMod writes, step numbers match Program.cs):
 - **7i** RebirthInjector: rebirth option at graces via ESD editing (ConsistentID 73)
 - **7j3** StartupFlagInjector: set event flags at startup to force gates open (entries in `data/game_tweaks.toml`); see `docs/startup-flag-injection.md`
 - **EMEVD scan (common_func)** HeavyDoorMessagePatcher: NOP "heavy door" popup (text 4200)
+- **EMEVD scan (m10_01_00_00)** IntroCutscenePatcher: NOP the new-game intro cutscene (10000040) in event 10010020; see `docs/chapel-grace.md`
 - **7k** VanillaWarpRemover: delete vanilla warp MSB assets that conflict with fog gates
 - **7l** StakeRemover: remove vanilla stakes outside the DAG
 

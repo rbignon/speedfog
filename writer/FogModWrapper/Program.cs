@@ -534,6 +534,7 @@ Example:
         int totalErdtreePatched = 0;
         int totalSealingTreePatched = 0;
         int totalShowSfxInjected = 0;
+        bool chapelEmevdSeen = false;
 
         foreach (var file in Directory.GetFiles(ctx.EventDir, "*.emevd.dcx"))
         {
@@ -595,6 +596,15 @@ Example:
                     modified = true;
             }
 
+            // Remove the new-game intro cutscene from the Chapel of Anticipation
+            // "Game start" event (10010020).
+            if (Path.GetFileName(file).Equals("m10_01_00_00.emevd.dcx", StringComparison.OrdinalIgnoreCase))
+            {
+                chapelEmevdSeen = true;
+                if (IntroCutscenePatcher.Patch(emevd) > 0)
+                    modified = true;
+            }
+
             if (showSfxEventId > 0)
             {
                 var mapName = Path.GetFileName(file).Replace(".emevd.dcx", "");
@@ -609,6 +619,9 @@ Example:
             if (modified)
                 emevd.Write(file);
         }
+
+        if (!chapelEmevdSeen)
+            Console.WriteLine("Warning: m10_01_00_00.emevd.dcx not written by FogMod, intro cutscene not removed");
 
         int expectedShowSfx = MapSplitsInjector.CountShowSfxGates(ctx.MapSplits);
         if (showSfxEventId > 0 && totalShowSfxInjected != expectedShowSfx)
