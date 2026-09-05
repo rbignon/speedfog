@@ -10,9 +10,7 @@ public class UntouchableBossInjectorTests
     [Fact]
     public void Apply_ClonesNpcRowOutOfBandWithBossStats()
     {
-        var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
-        var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
-        AddRowFromTemplate(sp, UntouchableBossInjector.BREAK_VFX_SPEFFECT);
+        var (npc, sp) = BuildCoreParams();
 
         UntouchableBossInjector.Apply(npc, sp);
 
@@ -28,9 +26,7 @@ public class UntouchableBossInjectorTests
     [Fact]
     public void Apply_CustomSpEffectRowHasPartialCutRates()
     {
-        var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
-        var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
-        AddRowFromTemplate(sp, UntouchableBossInjector.BREAK_VFX_SPEFFECT);
+        var (npc, sp) = BuildCoreParams();
 
         UntouchableBossInjector.Apply(npc, sp);
 
@@ -66,9 +62,7 @@ public class UntouchableBossInjectorTests
     [Fact]
     public void ApplyParams_ReturnsTrue_WhenBothParamsAvailable()
     {
-        var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
-        var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
-        AddRowFromTemplate(sp, UntouchableBossInjector.BREAK_VFX_SPEFFECT);
+        var (npc, sp) = BuildCoreParams();
         var bnd = new BND4();
         bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/NpcParam.param", npc.Write()));
         bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/SpEffectParam.param", sp.Write()));
@@ -98,9 +92,7 @@ public class UntouchableBossInjectorTests
     {
         // Static assets present, but the regulation carries only the two
         // core params: core rows written, no moveset row, no think row.
-        var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
-        var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
-        AddRowFromTemplate(sp, UntouchableBossInjector.BREAK_VFX_SPEFFECT);
+        var (npc, sp) = BuildCoreParams();
         var bnd = new BND4();
         bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/NpcParam.param", npc.Write()));
         bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/SpEffectParam.param", sp.Write()));
@@ -361,9 +353,7 @@ public class UntouchableBossInjectorTests
     /// attack row.</summary>
     private static (PARAM npc, PARAM think, PARAM behavior, PARAM bullet, PARAM atk) BuildMovesetParams()
     {
-        var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
-        var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
-        AddRowFromTemplate(sp, UntouchableBossInjector.BREAK_VFX_SPEFFECT);
+        var (npc, sp) = BuildCoreParams();
         UntouchableBossInjector.Apply(npc, sp);
         npc.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossNpcRow)["behaviorVariationId"].Value = 52800;
 
@@ -535,12 +525,20 @@ public class UntouchableBossInjectorTests
 
     // --- Partial wall, nerflantern slot, lantern madness ---
 
-    [Fact]
-    public void Apply_KeepsTheCutInTheParryWindowCategory()
+    /// <summary>The two core params as Apply reads them: the vanilla NpcParam
+    /// row, the parry-window SpEffect template and the break VFX template.</summary>
+    private static (PARAM npc, PARAM sp) BuildCoreParams()
     {
         var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
         var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
         AddRowFromTemplate(sp, UntouchableBossInjector.BREAK_VFX_SPEFFECT);
+        return (npc, sp);
+    }
+
+    [Fact]
+    public void Apply_KeepsTheCutInTheParryWindowCategory()
+    {
+        var (npc, sp) = BuildCoreParams();
         sp.Rows[0]["spCategory"].Value = (ushort)1001; // vanilla 20011471's category
 
         UntouchableBossInjector.Apply(npc, sp);
@@ -742,7 +740,7 @@ public class UntouchableBossInjectorTests
     }
 
     [Fact]
-    public void PatchWallEvents_NoWallSwap_RevertsItsOwnBarFlips()
+    public void PatchWallEvents_NoWallSwap_LeavesTheBossEventsUntouched()
     {
         // A boss whose only copied event hides the bar (no wall event): the
         // flip must not survive, since another boss of the same map may still
@@ -759,7 +757,7 @@ public class UntouchableBossInjectorTests
 
         Assert.Equal(0, UntouchableBossInjector.PatchWallEvents(emevd, 30001800, _ => { }));
         Assert.Equal(0, barOnly.Instructions[0].ArgData[4]);
-        Assert.Equal(2, barOnly.Instructions.Count); // the rider insertion was undone
+        Assert.Equal(2, barOnly.Instructions.Count); // no rider inserted
         Assert.Equal(2, barOnly.Parameters.Count);
         Assert.Equal(5, UntouchableBossInjector.PatchWallEvents(emevd, 31100800, _ => { })); // the other boss is unaffected
     }

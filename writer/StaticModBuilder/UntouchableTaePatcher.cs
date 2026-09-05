@@ -1,3 +1,4 @@
+using FogModWrapper;
 using SoulsFormats;
 
 namespace StaticModBuilder;
@@ -12,9 +13,8 @@ namespace StaticModBuilder;
 /// BehaviorParam remap of those ids would fire the beam at rest, so a
 /// subset of 3004's events is retargeted to judge 150 instead: it resolves
 /// to nothing under vanilla c5280's behavior variation (52800) and to the
-/// beam bullet under the boss's own variation (FogModWrapper's
-/// SpeedFogIds.UntouchableBeamJudge, duplicated here because this project
-/// does not reference FogModWrapper). Vanilla AI never selects 3004, so
+/// beam bullet under the boss's own variation
+/// (SpeedFogIds.UntouchableBeamJudge, shared through FogModWrapper.Core). Vanilla AI never selects 3004, so
 /// the patched anibnd is inert for ambient untouchables. See
 /// docs/untouchable-boss.md "Moveset".
 /// </summary>
@@ -25,19 +25,10 @@ public static class UntouchableTaePatcher
     public const long BEAM_ANIMATION = 3004;
     private const int EVENT_TYPE_BULLET = 2;
 
-    /// <summary>Same value as FogModWrapper SpeedFogIds.UntouchableBeamJudge.</summary>
-    public const int BEAM_JUDGE = 150;
-
     /// <summary>How many of 3004's bullet events fire the beam, spread
     /// evenly over the animation; the rest keep their harmless vanilla
     /// flash. Tuning knob (thirteen lasers at boss damage would be lethal).</summary>
     public const int BEAM_EVENT_COUNT = 4;
-
-    /// <summary>Dummy poly override for the retargeted events; null keeps
-    /// vanilla 210 (the lantern, designed for FromSoft's cut ray). Tuning
-    /// knob for the in-game session if the lantern does not aim at the
-    /// player (candidates: 10, the 3002/3003 flash origin; 906, the swing).</summary>
-    public static readonly int? BEAM_DUMMY = null;
 
     private const int VANILLA_DUMMY = 210;
     private static readonly int[] VanillaJudges = { 101, 102 };
@@ -80,13 +71,13 @@ public static class UntouchableTaePatcher
         Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
         bnd.Write(destPath);
         Console.WriteLine(
-            $"Untouchable TAE patch: retargeted {patched} bullet event(s) of animation {BEAM_ANIMATION} to judge {BEAM_JUDGE} in {ANIBND_PATH}");
+            $"Untouchable TAE patch: retargeted {patched} bullet event(s) of animation {BEAM_ANIMATION} to judge {SpeedFogIds.UntouchableBeamJudge} in {ANIBND_PATH}");
         return patched;
     }
 
     /// <summary>
     /// Retargets BEAM_EVENT_COUNT of animation 3004's bullet events to
-    /// BEAM_JUDGE, spread evenly by start time. Returns the number of events
+    /// SpeedFogIds.UntouchableBeamJudge, spread evenly by start time. Returns the number of events
     /// retargeted; 0 and no change when the animation is missing, already
     /// patched, or does not have the expected vanilla layout (never corrupt
     /// the TAE on a layout this code was not written for).
@@ -122,9 +113,9 @@ public static class UntouchableTaePatcher
             log($"Warning: animation {BEAM_ANIMATION} bullet event parameters shorter than {MIN_PARAM_BYTES} bytes; skipping untouchable TAE patch");
             return 0;
         }
-        if (layouts.Any(p => BitConverter.ToInt32(p, JUDGE_OFFSET) == BEAM_JUDGE))
+        if (layouts.Any(p => BitConverter.ToInt32(p, JUDGE_OFFSET) == SpeedFogIds.UntouchableBeamJudge))
         {
-            log($"  Animation {BEAM_ANIMATION}: already carries judge {BEAM_JUDGE}, skipping");
+            log($"  Animation {BEAM_ANIMATION}: already carries judge {SpeedFogIds.UntouchableBeamJudge}, skipping");
             return 0;
         }
         foreach (var p in layouts)
@@ -150,9 +141,7 @@ public static class UntouchableTaePatcher
         foreach (var index in indices)
         {
             var bytes = (byte[])layouts[index].Clone();
-            BitConverter.GetBytes(BEAM_JUDGE).CopyTo(bytes, JUDGE_OFFSET);
-            if (BEAM_DUMMY is int dummyOverride)
-                BitConverter.GetBytes(dummyOverride).CopyTo(bytes, DUMMY_OFFSET);
+            BitConverter.GetBytes(SpeedFogIds.UntouchableBeamJudge).CopyTo(bytes, JUDGE_OFFSET);
             bullets[index].SetParameterBytes(tae.BigEndian, bytes);
         }
         return indices.Count;

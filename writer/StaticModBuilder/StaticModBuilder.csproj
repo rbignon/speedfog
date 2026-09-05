@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../FogModWrapper.Core/FogModWrapper.Core.csproj" />
     <ProjectReference Include="../../SoulsFormats/SoulsFormats/SoulsFormats.csproj" />
   </ItemGroup>
 

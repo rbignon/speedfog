@@ -265,8 +265,9 @@ untouchables twice over: vanilla AI never selects 3004, and variation
 52800 has no row for judge 150. The patcher refuses (warning, nothing
 written) any layout other than dummy 210 with judges 101/102, so a game
 patch renumbering c5280's judges disables the moveset instead of
-corrupting the TAE. Knobs: `BEAM_EVENT_COUNT` (4) and `BEAM_DUMMY` (null,
-keep 210; candidates 10 or 906 if the lantern does not aim at the player).
+corrupting the TAE. Knob: `BEAM_EVENT_COUNT` (4). The events keep dummy
+210 (the lantern); if it ever fails to aim at the player, candidates are
+10 (the 3002/3003 flash origin) or 906 (the swing).
 The patched anibnd (about 1.3 MB) ships in every seed's static mod whether
 or not the boss is placed; it is inert without the boss rows.
 
@@ -380,7 +381,8 @@ than just the beam.
    `ai:HasSpecialEffectId(TARGET_SELF, 755890000)`).
 2. **Beam**: knobs at their defaults. Laser from the lantern at >= 10 m,
    Frenzied Burst visual, aimed at the player, ~110 magic per hit; no beam
-   during idle or walk. Wrong origin or direction: `BEAM_DUMMY`.
+   during idle or walk. Wrong origin or direction: retarget the dummy
+   (see "Why 3004 needs a TAE edit").
 3. **Tuning**: probabilities (`SWING_*`, `MOVE_*`), `GRAB_COOLDOWN`,
    `SWING_COOLDOWN`, `BEAM_COOLDOWN`, `BEAM_MAGIC`, `BEAM_EVENT_COUNT`.
    Second session (2026-09-05): swing still too frequent, `SWING_COOLDOWN`

@@ -224,10 +224,12 @@ public static class UntouchableBossInjector
             reasons.Add($"NpcParam {SpeedFogIds.UntouchableBossNpcRow} missing (Apply not run)");
 
         var vanillaRows = new Dictionary<int, PARAM.Row>();
+        int vanillaCount = 0;
         foreach (var row in behavior.Rows)
         {
             if ((int)row["variationId"].Value != UNTOUCHABLE_VANILLA_VARIATION)
                 continue;
+            vanillaCount++;
             var judge = (int)row["behaviorJudgeId"].Value;
             if (Array.IndexOf(VanillaJudges, judge) >= 0)
                 vanillaRows.TryAdd(judge, row);
@@ -236,7 +238,6 @@ public static class UntouchableBossInjector
         if (missingJudges.Count > 0)
             reasons.Add($"BehaviorParam judge(s) {string.Join("/", missingJudges)} missing for variation {UNTOUCHABLE_VANILLA_VARIATION}");
 
-        var vanillaCount = behavior.Rows.Count(r => (int)r["variationId"].Value == UNTOUCHABLE_VANILLA_VARIATION);
         if (vanillaCount != VanillaJudges.Length)
             reasons.Add($"BehaviorParam variation {UNTOUCHABLE_VANILLA_VARIATION} has {vanillaCount} row(s), expected {VanillaJudges.Length} (refresh VanillaJudges after a game patch)");
 
@@ -317,16 +318,14 @@ public static class UntouchableBossInjector
     }
 
     /// <summary>Arena entity ids whose enemy assignment is the Aging
-    /// Untouchable source, ascending (deterministic event slots).</summary>
-    public static List<uint> ArenaIds(Dictionary<string, string> enemyAssignments)
+    /// Untouchable source.</summary>
+    public static HashSet<uint> ArenaIds(Dictionary<string, string> enemyAssignments)
     {
         var source = SpeedFogIds.UntouchableSourceEntity.ToString();
         return enemyAssignments
             .Where(kv => kv.Value == source)
             .Select(kv => uint.Parse(kv.Key))
-            .Distinct()
-            .OrderBy(id => id)
-            .ToList();
+            .ToHashSet();
     }
 
     /// <summary>Rewrites the events the enemy randomizer copied for one
@@ -341,9 +340,9 @@ public static class UntouchableBossInjector
     /// right after each SetSpEffect of the break VFX
     /// (<see cref="BREAK_VFX_SPEFFECT"/>), carrying the same entity
     /// parameter. Parameterized slots are left alone. Returns the number of
-    /// instructions rewritten or inserted, or 0 (with a warning, and its own
-    /// edits reverted) when no wall swap happened: the boss then has no
-    /// damage cut at all.</summary>
+    /// instructions rewritten or inserted, or 0 (with a warning, nothing
+    /// touched) when none of the boss's events carries the wall: the boss
+    /// then has no damage cut at all.</summary>
     public static int PatchWallEvents(EMEVD emevd, uint boss, Action<string> log)
     {
         var initEvent = emevd.Events.Find(e => e.ID == 0);
@@ -370,22 +369,42 @@ public static class UntouchableBossInjector
             }
         }
 
-        int swaps = 0;
-        var barFlips = new List<EMEVD.Instruction>();
-        var inserted = new List<(EMEVD.Event Event, int Index)>();
-        foreach (var evt in emevd.Events.Where(e => eventIds.Contains(e.ID)))
+        var bossEvents = emevd.Events.Where(e => eventIds.Contains(e.ID)).ToList();
+
+        // Byte 4 holds the SpEffect id or the enable flag; a parameterized
+        // slot there is the runtime's, not ours.
+        static HashSet<int> ParameterizedAtByte4(EMEVD.Event evt) =>
+            evt.Parameters.Where(prm => prm.TargetStartByte == 4).Select(prm => (int)prm.InstructionIndex).ToHashSet();
+        static bool IsWallInstruction(EMEVD.Instruction ins) =>
+            ins.Bank == 2004 && (ins.ID == 8 || ins.ID == 21) && ins.ArgData.Length >= 8
+            && BitConverter.ToInt32(ins.ArgData, 4) == VANILLA_WALL_SPEFFECT;
+
+        // Decide before touching anything: without a wall to soften, an
+        // always-visible bar on an immune boss would mislead.
+        bool hasWall = bossEvents.Any(evt =>
         {
+            var skip = ParameterizedAtByte4(evt);
+            return evt.Instructions.Where((ins, i) => !skip.Contains(i)).Any(IsWallInstruction);
+        });
+        if (!hasWall)
+        {
+            log($"  Warning: no wall event found for entity {boss}: the boss has no damage cut (full damage from the start)");
+            return 0;
+        }
+
+        int swaps = 0;
+        int barFlips = 0;
+        int riders = 0;
+        foreach (var evt in bossEvents)
+        {
+            var skip = ParameterizedAtByte4(evt);
             bool hpBarDone = false;
             for (int i = 0; i < evt.Instructions.Count; i++)
             {
                 var ins = evt.Instructions[i];
-                if (ins.Bank != 2004 || ins.ArgData.Length < 8)
+                if (ins.Bank != 2004 || ins.ArgData.Length < 8 || skip.Contains(i))
                     continue;
-                // The SpEffect id and the enable flag both sit at byte 4; a
-                // parameterized slot there is the runtime's, not ours.
-                if (evt.Parameters.Any(prm => prm.InstructionIndex == i && prm.TargetStartByte == 4))
-                    continue;
-                if ((ins.ID == 8 || ins.ID == 21) && BitConverter.ToInt32(ins.ArgData, 4) == VANILLA_WALL_SPEFFECT)
+                if (IsWallInstruction(ins))
                 {
                     BitConverter.GetBytes(SpeedFogIds.UntouchableBossSpEffectRow).CopyTo(ins.ArgData, 4);
                     swaps++;
@@ -406,40 +425,21 @@ public static class UntouchableBossInjector
                     evt.Instructions.Insert(i + 1, new EMEVD.Instruction(2004, 8, bytes));
                     if (entityParam != null)
                         evt.Parameters.Add(new EMEVD.Parameter(i + 1, 0, entityParam.SourceStartByte, entityParam.ByteCount));
-                    inserted.Add((evt, i + 1));
+                    skip = ParameterizedAtByte4(evt);
+                    riders++;
                     i++; // skip the instruction just inserted
                 }
                 else if (ins.ID == 30 && !hpBarDone && ins.ArgData[4] == 0)
                 {
                     ins.ArgData[4] = 1; // spawn-time or teleport "disabled" -> enabled
                     hpBarDone = true;
-                    barFlips.Add(ins);
+                    barFlips++;
                 }
             }
         }
 
-        if (swaps == 0)
-        {
-            // No wall to soften: an always-visible bar on an immune boss would
-            // mislead, and another boss of the same map may still write this
-            // EMEVD, so undo the edits instead of relying on the caller.
-            foreach (var ins in barFlips)
-                ins.ArgData[4] = 0;
-            foreach (var (evt, index) in inserted.OrderByDescending(x => x.Index))
-            {
-                evt.Instructions.RemoveAt(index);
-                evt.Parameters.RemoveAll(prm => prm.InstructionIndex == index);
-                foreach (var prm in evt.Parameters)
-                {
-                    if (prm.InstructionIndex > index)
-                        prm.InstructionIndex--;
-                }
-            }
-            log($"  Warning: no wall event found for entity {boss}: the boss has no damage cut (full damage from the start)");
-            return 0;
-        }
-        log($"  wall event patched for entity {boss}: {swaps} wall swap(s) ({VANILLA_WALL_SPEFFECT} -> {SpeedFogIds.UntouchableBossSpEffectRow}) + {barFlips.Count} HP bar flip(s) + {inserted.Count} broken rider(s) ({SpeedFogIds.UntouchableBrokenSpEffectRow})");
-        return swaps + barFlips.Count + inserted.Count;
+        log($"  wall event patched for entity {boss}: {swaps} wall swap(s) ({VANILLA_WALL_SPEFFECT} -> {SpeedFogIds.UntouchableBossSpEffectRow}) + {barFlips} HP bar flip(s) + {riders} broken rider(s) ({SpeedFogIds.UntouchableBrokenSpEffectRow})");
+        return swaps + barFlips + riders;
     }
 
     /// <summary>Reads the map's EMEVD from the mod dir (or copies it there
@@ -497,7 +497,7 @@ public static class UntouchableBossInjector
         string modDir, Dictionary<string, string> enemyAssignments, string? mergeDir,
         IReadOnlyList<string> fallbackArenaMaps, bool repointThink)
     {
-        var arenaIds = ArenaIds(enemyAssignments).ToHashSet();
+        var arenaIds = ArenaIds(enemyAssignments);
         if (arenaIds.Count == 0)
             return;
 

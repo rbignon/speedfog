@@ -225,8 +225,8 @@ public static class SpeedFogIds
     public const int UntouchableBossBehaviorVariation = 75589;
 
     /// <summary>TAE bullet judge id written on animation 3004's retargeted
-    /// events by StaticModBuilder's UntouchableTaePatcher (which duplicates
-    /// this value: StaticModBuilder does not reference FogModWrapper).
+    /// events by StaticModBuilder's UntouchableTaePatcher (which references
+    /// this project for it).
     /// Vanilla c5280 uses judges 100-115 and 500; 150 resolves to nothing
     /// under variation 52800, so the patched animation stays inert for
     /// ambient untouchables.</summary>

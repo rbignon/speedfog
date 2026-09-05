@@ -1,3 +1,4 @@
+using FogModWrapper;
 using SoulsFormats;
 using Xunit;
 
@@ -51,13 +52,13 @@ public class UntouchableTaePatcherTests
         var bullets = BulletsByTime(tae);
         var retargeted = bullets
             .Select((e, i) => (e, i))
-            .Where(t => JudgeOf(t.e) == UntouchableTaePatcher.BEAM_JUDGE)
+            .Where(t => JudgeOf(t.e) == SpeedFogIds.UntouchableBeamJudge)
             .Select(t => t.i)
             .ToList();
         Assert.Equal(new List<int> { 0, 4, 8, 12 }, retargeted);
-        Assert.All(bullets.Where(e => JudgeOf(e) != UntouchableTaePatcher.BEAM_JUDGE),
+        Assert.All(bullets.Where(e => JudgeOf(e) != SpeedFogIds.UntouchableBeamJudge),
             e => Assert.Contains(JudgeOf(e), new[] { 101, 102 }));
-        // Dummy poly untouched (BEAM_DUMMY is null by default), non-bullet event untouched.
+        // Dummy poly and the non-bullet event untouched.
         Assert.All(bullets, e => Assert.Equal(210, DummyOf(e)));
         Assert.Single(tae.Animations[0].Events, e => e.Type == 16);
     }

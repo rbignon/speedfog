@@ -315,10 +315,9 @@ public static class AmbientSpawnInjector
     // (no early exit once a free slot is found): a scaling slot past the
     // free one still needs neutralizing. NpcParam carries 32 SpEffect slots
     // (spEffectID0-31); unused ones hold -1 (0 also appears as a placeholder
-    // and counts as occupied). Scanned instead of hardcoded (unlike
-    // UntouchableBossInjector's slot 19) because the skeleton template's
-    // occupancy is not pinned by any SpeedFog code and may shift with game
-    // patches.
+    // and counts as occupied). Scanned instead of hardcoded because the
+    // skeleton template's occupancy is not pinned by any SpeedFog code and
+    // may shift with game patches.
     private static int ClearScalingSlotsAndFindFree(PARAM.Row row)
     {
         int freeSlot = -1;
