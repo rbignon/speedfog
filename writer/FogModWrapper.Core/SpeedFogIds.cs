@@ -118,8 +118,8 @@ public static class SpeedFogIds
     // --- Param row IDs (not entity IDs; separate namespace per PARAM) ---
 
     // Param row namespaces are per-PARAM (NpcThinkParam, NpcParam,
-    // SpEffectParam, Bullet, AtkParam_Npc never share ids), so the same two
-    // numeric values below are reused across the eight rows with no collision
+    // SpEffectParam, Bullet, AtkParam_Npc never share ids), so the same three
+    // numeric values below are reused across the nine rows with no collision
     // (Bullet additionally owns the pulse band 755890003-005).
     // They sit in FogMod's entity band only by convention (params and entities
     // are unrelated id spaces); no vanilla row in any of the five params
@@ -128,6 +128,7 @@ public static class SpeedFogIds
     // territory.
     private const int ParamRowBase0 = 755890000;
     private const int ParamRowBase1 = 755890001;
+    private const int ParamRowBase2 = 755890002;
 
     /// <summary>NpcThinkParam row for the passive Halloween greeters:
     /// a clone of the Aging Untouchable's think row (52800000) with all
@@ -181,6 +182,13 @@ public static class SpeedFogIds
     /// lantern swing (5280115, magic, no throw). Player spells only have
     /// AtkParam_Pc rows, so an NPC-fired Frenzied Burst needs this one.</summary>
     public const int UntouchableBeamAtkRow = ParamRowBase0;
+
+    /// <summary>SpEffectParam row applied by the copied wall event right
+    /// after the break VFX, once the partial wall is cleared: a permanent
+    /// clone of the break VFX effect 20011472 (category 0, no VFX) whose
+    /// eight cut rates make the boss take twice the vanilla damage, four
+    /// times what it took behind the partial wall.</summary>
+    public const int UntouchableBrokenSpEffectRow = ParamRowBase2;
 
     /// <summary>First of three consecutive Bullet rows (755890003-005): the
     /// lantern's ambient pulse bullets (vanilla 205280000-002, judges

@@ -12,6 +12,7 @@ public class UntouchableBossInjectorTests
     {
         var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
         var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
+        AddRowFromTemplate(sp, UntouchableBossInjector.BREAK_VFX_SPEFFECT);
 
         UntouchableBossInjector.Apply(npc, sp);
 
@@ -29,6 +30,7 @@ public class UntouchableBossInjectorTests
     {
         var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
         var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
+        AddRowFromTemplate(sp, UntouchableBossInjector.BREAK_VFX_SPEFFECT);
 
         UntouchableBossInjector.Apply(npc, sp);
 
@@ -66,6 +68,7 @@ public class UntouchableBossInjectorTests
     {
         var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
         var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
+        AddRowFromTemplate(sp, UntouchableBossInjector.BREAK_VFX_SPEFFECT);
         var bnd = new BND4();
         bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/NpcParam.param", npc.Write()));
         bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/SpEffectParam.param", sp.Write()));
@@ -97,6 +100,7 @@ public class UntouchableBossInjectorTests
         // core params: core rows written, no moveset row, no think row.
         var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
         var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
+        AddRowFromTemplate(sp, UntouchableBossInjector.BREAK_VFX_SPEFFECT);
         var bnd = new BND4();
         bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/NpcParam.param", npc.Write()));
         bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/SpEffectParam.param", sp.Write()));
@@ -120,6 +124,7 @@ public class UntouchableBossInjectorTests
         // fresh NpcParam so the core clone is written by ApplyParams itself.
         var freshNpc = BuildParamFromDef("NpcParam", templateId: 52800086);
         var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
+        AddRowFromTemplate(sp, UntouchableBossInjector.BREAK_VFX_SPEFFECT);
         var bnd = new BND4();
         bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/NpcParam.param", freshNpc.Write()));
         bnd.Files.Add(new BinderFile(Binder.FileFlags.Flag1, 0, "N:/GR/data/Param/GameParam/SpEffectParam.param", sp.Write()));
@@ -358,6 +363,7 @@ public class UntouchableBossInjectorTests
     {
         var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
         var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
+        AddRowFromTemplate(sp, UntouchableBossInjector.BREAK_VFX_SPEFFECT);
         UntouchableBossInjector.Apply(npc, sp);
         npc.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossNpcRow)["behaviorVariationId"].Value = 52800;
 
@@ -534,6 +540,7 @@ public class UntouchableBossInjectorTests
     {
         var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
         var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
+        AddRowFromTemplate(sp, UntouchableBossInjector.BREAK_VFX_SPEFFECT);
         sp.Rows[0]["spCategory"].Value = (ushort)1001; // vanilla 20011471's category
 
         UntouchableBossInjector.Apply(npc, sp);
@@ -542,7 +549,31 @@ public class UntouchableBossInjectorTests
         // effect: the window overrides it during a parry, as in vanilla.
         Assert.Equal((ushort)1001,
             (ushort)sp.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossSpEffectRow)["spCategory"].Value);
-        Assert.DoesNotContain(sp.Rows, r => r.ID == 755890002); // no counter row any more
+    }
+
+    [Fact]
+    public void Apply_WritesThePermanentBrokenRowFromTheBreakVfx()
+    {
+        var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
+        var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
+        var vfx = AddRowFromTemplate(sp, UntouchableBossInjector.BREAK_VFX_SPEFFECT);
+        vfx["effectEndurance"].Value = 1f;
+        vfx["vfxId"].Value = 20050460;
+        vfx["spCategory"].Value = (ushort)0;
+
+        UntouchableBossInjector.Apply(npc, sp);
+
+        var cut = sp.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossSpEffectRow);
+        var broken = sp.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBrokenSpEffectRow);
+        foreach (var field in new[] { "slashDamageCutRate", "magicDamageCutRate", "darkDamageCutRate" })
+        {
+            // x4 between the two written rows, as requested.
+            Assert.Equal(4f, (float)broken[field].Value / (float)cut[field].Value);
+        }
+        Assert.Equal((ushort)0, (ushort)broken["spCategory"].Value); // coexists with later parry windows
+        Assert.Equal(-1f, (float)broken["effectEndurance"].Value);
+        Assert.Equal(-1, (int)broken["vfxId"].Value);
+        Assert.Equal(1f, (float)vfx["effectEndurance"].Value); // vanilla flash untouched
     }
 
     [Fact]
@@ -554,6 +585,7 @@ public class UntouchableBossInjectorTests
         npc.Rows[0]["spEffectID18"].Value = 20011473;
         npc.Rows[0]["spEffectID31"].Value = UntouchableBossInjector.PARRY_WINDOW_SPEFFECT;
         var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
+        AddRowFromTemplate(sp, UntouchableBossInjector.BREAK_VFX_SPEFFECT);
 
         UntouchableBossInjector.Apply(npc, sp);
 
@@ -667,14 +699,21 @@ public class UntouchableBossInjectorTests
 
         var rewritten = UntouchableBossInjector.PatchWallEvents(emevd, 31100800, log.Add);
 
-        Assert.Equal(4, rewritten); // 2 wall swaps + the spawn-time bar + the teleport sibling's bar
-        var boss = emevd.Events.Single(e => e.ID == 1700783).Instructions;
+        Assert.Equal(5, rewritten); // 2 wall swaps + the spawn-time bar + the teleport sibling's bar + the broken rider
+        var bossEvent = emevd.Events.Single(e => e.ID == 1700783);
+        var boss = bossEvent.Instructions;
+        Assert.Equal(8, boss.Count);
         Assert.Equal(SpeedFogIds.UntouchableBossSpEffectRow, SpEffectOf(boss[0]));
         Assert.Equal(19690, SpEffectOf(boss[1]));
         Assert.Equal(1, boss[2].ArgData[4]);
         Assert.Equal(SpeedFogIds.UntouchableBossSpEffectRow, SpEffectOf(boss[4]));
         Assert.Equal(1, boss[5].ArgData[4]);
-        Assert.Equal(20011472, SpEffectOf(boss[6]));
+        Assert.Equal(UntouchableBossInjector.BREAK_VFX_SPEFFECT, SpEffectOf(boss[6]));
+        // The broken rider follows the break VFX, entity slot parameterized like it.
+        Assert.Equal((2004, 8), (boss[7].Bank, boss[7].ID));
+        Assert.Equal(SpeedFogIds.UntouchableBrokenSpEffectRow, SpEffectOf(boss[7]));
+        Assert.Contains(bossEvent.Parameters, prm => prm.InstructionIndex == 7 && prm.TargetStartByte == 0 && prm.ByteCount == 4);
+        Assert.Equal(7, bossEvent.Parameters.Count(prm => prm.TargetStartByte == 0)); // 6 vanilla 2004 slots + the rider
         // The teleport sibling no longer hides the bar; its re-enable stays.
         var teleport = emevd.Events.Single(e => e.ID == 1700764).Instructions;
         Assert.Equal(1, teleport[0].ArgData[4]);
@@ -686,7 +725,7 @@ public class UntouchableBossInjectorTests
         var other = emevd.Events.Single(e => e.ID == 1700999).Instructions;
         Assert.Equal(UntouchableBossInjector.VANILLA_WALL_SPEFFECT, SpEffectOf(other[0]));
         Assert.Equal(0, other[2].ArgData[4]);
-        Assert.Contains(log, l => l.Contains("31100800") && l.Contains("2 wall swap") && l.Contains("2 HP bar flip"));
+        Assert.Contains(log, l => l.Contains("31100800") && l.Contains("2 wall swap") && l.Contains("2 HP bar flip") && l.Contains("1 broken rider"));
     }
 
     [Fact]
@@ -713,12 +752,16 @@ public class UntouchableBossInjectorTests
         init.Instructions.Add(EmevdHelper.InitializeEvent(1700888, 30001800));
         var barOnly = new EMEVD.Event(1700888);
         barOnly.Instructions.Add(Instr(2004, 30, 0, 0));
+        barOnly.Instructions.Add(Instr(2004, 8, 0, UntouchableBossInjector.BREAK_VFX_SPEFFECT));
         barOnly.Parameters.Add(new EMEVD.Parameter(0, 0, 0, 4));
+        barOnly.Parameters.Add(new EMEVD.Parameter(1, 0, 0, 4));
         emevd.Events.Add(barOnly);
 
         Assert.Equal(0, UntouchableBossInjector.PatchWallEvents(emevd, 30001800, _ => { }));
         Assert.Equal(0, barOnly.Instructions[0].ArgData[4]);
-        Assert.Equal(4, UntouchableBossInjector.PatchWallEvents(emevd, 31100800, _ => { })); // the other boss is unaffected
+        Assert.Equal(2, barOnly.Instructions.Count); // the rider insertion was undone
+        Assert.Equal(2, barOnly.Parameters.Count);
+        Assert.Equal(5, UntouchableBossInjector.PatchWallEvents(emevd, 31100800, _ => { })); // the other boss is unaffected
     }
 
     [Fact]
@@ -733,7 +776,7 @@ public class UntouchableBossInjectorTests
         var patched = UntouchableBossInjector.InjectWallPatch(mod.Path, "m31_10_00_00.msb.dcx", new[] { 31100800u }, log.Add);
         var skipped = UntouchableBossInjector.InjectWallPatch(mod.Path, "m60_13_09_02.msb.dcx", new[] { 30001800u }, log.Add);
 
-        Assert.Equal(4, patched);
+        Assert.Equal(5, patched);
         Assert.Equal(0, skipped);
         var written = EMEVD.Read(path);
         Assert.Equal(SpeedFogIds.UntouchableBossSpEffectRow,
@@ -753,7 +796,7 @@ public class UntouchableBossInjectorTests
         var patched = UntouchableBossInjector.InjectWallPatch(
             mod.Path, "m60_13_09_02.msb.dcx", new[] { 30001800u }, log.Add, merge.Path);
 
-        Assert.Equal(4, patched);
+        Assert.Equal(5, patched);
         var shipped = Path.Combine(mod.Path, "event", "m60_13_09_02.emevd.dcx");
         Assert.True(File.Exists(shipped));
         Assert.Equal(SpeedFogIds.UntouchableBossSpEffectRow,

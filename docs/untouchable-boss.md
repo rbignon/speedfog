@@ -60,7 +60,9 @@ ever taking hold, and the parry detector of step 2 is permanently true.
 Slot 18 (`20011473`, `stateInfo` 420, category 156) is unrelated to
 damage and stays as vanilla.
 
-SpeedFog's boss keeps the vanilla flow with a **partial wall**:
+SpeedFog's boss keeps the vanilla flow with a **partial wall** before the
+break and a **broken state** after it (x4 damage ratio between the two,
+2026-09-05 session request: 0.5 before, 2.0 after):
 
 - `UntouchableBossInjector.Apply` clones 20011471 into `SpEffectParam`
   row 755890000 (category 1001 kept) with the eight damage-cut fields
@@ -76,9 +78,18 @@ SpeedFog's boss keeps the vanilla flow with a **partial wall**:
   `SetCharacterHPBarDisplay(disabled)` of every copied event becomes
   enabled, the wall event's spawn-time one and the teleport sibling's
   mid-warp one alike (the boss takes damage from the start, so its bar
-  shows from the start and must not vanish at each teleport). Four
-  instructions per boss on 1.17. Step 2 overrides the partial wall during
-  the parry, step 3 clears it: the first parry is the break.
+  shows from the start and must not vanish at each teleport), and a
+  `SetSpEffect` of the broken row 755890002 is inserted right after the
+  wall event's `SetSpEffect(entity, 20011472)` (the break VFX), with the
+  same entity parameter. Five instructions per boss on 1.17. Step 2
+  overrides the partial wall during the parry, step 3 clears it and
+  applies the broken state: the first parry is the break.
+- The broken row (`SpeedFogIds.UntouchableBrokenSpEffectRow`, 755890002)
+  is a permanent, VFX-less clone of 20011472 (category 0, so it coexists
+  with the parry-window effect of later parries) whose eight cut rates
+  are `UntouchableBossInjector.BROKEN_DAMAGE_TAKEN` (`2f`: twice the
+  vanilla damage). Knob; the ratio against the partial wall is
+  `BROKEN_DAMAGE_TAKEN / DAMAGE_CUT`.
 - `Apply` scrubs nerflantern's 20011471 from every slot of the boss
   clone; ambient untouchables keep it (they must stay damageable).
 
@@ -324,8 +335,9 @@ event applies the cut row at spawn, the parried animation's 20011471
 overrides it during the parry (the riposte is full damage), and the event
 then clears it and shows the break VFX. Nothing of SpeedFog's runs at
 parry time; only the copied event's two SpEffect ids and its spawn-time
-HP bar flags are rewritten (`PatchWallEvents`, one warning per boss whose
-map has no such event).
+HP bar flags are rewritten and one `SetSpEffect` of the broken row is
+inserted after the break VFX (`PatchWallEvents`, one warning per boss
+whose map has no such event).
 
 History of the 2026-09-05 sessions, kept because each step is a trap for
 the next reader: (1) a SpeedFog-side detector event in common.emevd
@@ -381,8 +393,9 @@ than just the beam.
    `BOSS_HP` 2000 and `DAMAGE_CUT` 0.5.
 4. **Parry break**: the HP bar shows from the start and hits land at half
    damage; after the first parry (riposte at full damage, break VFX) every
-   hit lands at full damage; after dying and re-entering, the partial wall
-   is back until the next parry (the copied event restarts).
+   hit lands at four times the pre-parry number (x2 vanilla); after dying
+   and re-entering, the partial wall is back until the next parry (the
+   copied event restarts).
 5. **Ambient regression**: an ambient untouchable still only teleports and
    grabs, no swing at range, no beam, no script error, and still builds
    madness with its lantern.
@@ -390,11 +403,11 @@ than just the beam.
 ## Expected log lines
 
 ```
-Untouchable boss: NpcParam 755890000 (clone of 52800086, hp 2000, runes 20000, nerflantern slot scrubbed) + partial wall SpEffect 755890000 (cut 0.5, applied by the copied wall event)
+Untouchable boss: NpcParam 755890000 (clone of 52800086, hp 2000, runes 20000, nerflantern slot scrubbed) + partial wall SpEffect 755890000 (cut 0.5) + broken SpEffect 755890002 (x2), both applied by the copied wall event
 Untouchable boss: moveset rows (think 755890001 -> battle 755890, variation 75589 with 9 vanilla judges + beam judge 150, bullet 755890000 (clone of 10732000), atk 755890000 magic 110, pulses 755890003-755890005 without madness)
 Untouchable boss: repointing N placed boss slot(s)
   <part> (entity <id>): NPCParamID -> 755890000, ThinkParamID -> 755890001
-  wall event patched for entity <id>: 2 wall swap(s) (20011470 -> 755890000) + 2 HP bar flip(s)
+  wall event patched for entity <id>: 2 wall swap(s) (20011470 -> 755890000) + 2 HP bar flip(s) + 1 broken rider(s) (755890002)
   Fallback: repointed N part(s) in <name> (merge-dir copy shipped into the mod dir)
   Repointed M untouchable boss part(s)
   Wall patch: K instruction(s) in J map(s)

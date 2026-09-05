@@ -22,6 +22,16 @@ public static class UntouchableBossInjector
     public const uint BOSS_RUNES = 20000;
     public const float DAMAGE_CUT = 0.5f; // fraction of damage taken (50% cut)
 
+    /// <summary>Fraction of damage taken once the wall is broken: twice the
+    /// vanilla damage, i.e. a x4 ratio against the partial wall (2026-09-05
+    /// session request). Tuning knob.</summary>
+    public const float BROKEN_DAMAGE_TAKEN = 2f;
+
+    /// <summary>The one-second break VFX effect the copied wall event applies
+    /// once the wall is cleared; the template of the broken row and the
+    /// anchor after which that row's SetSpEffect is inserted.</summary>
+    public const int BREAK_VFX_SPEFFECT = 20011472;
+
     // --- Moveset (docs/untouchable-boss.md "Moveset") ---
 
     public const int UNTOUCHABLE_VANILLA_THINK = 52800000;
@@ -164,6 +174,16 @@ public static class UntouchableBossInjector
         foreach (var field in CutFields)
             spRow[field].Value = DAMAGE_CUT;
 
+        // Broken state: applied by the copied wall event right after the
+        // break VFX (PatchWallEvents inserts the SetSpEffect). A permanent,
+        // VFX-less clone of that effect (category 0: coexists with the
+        // parry-window effect of later parries) raising the damage taken.
+        var brokenRow = GameEditor.AddRow(spEffect, SpeedFogIds.UntouchableBrokenSpEffectRow, BREAK_VFX_SPEFFECT);
+        foreach (var field in CutFields)
+            brokenRow[field].Value = BROKEN_DAMAGE_TAKEN;
+        brokenRow["effectEndurance"].Value = -1f; // f32: permanent
+        brokenRow["vfxId"].Value = -1;            // s32: the flash stays on the vanilla row
+
         var npcRow = GameEditor.AddRow(
             npc, SpeedFogIds.UntouchableBossNpcRow, UNTOUCHABLE_VANILLA_NPC);
         npcRow["hp"].Value = BOSS_HP;          // u32
@@ -184,7 +204,7 @@ public static class UntouchableBossInjector
         }
 
         Console.WriteLine(
-            $"Untouchable boss: NpcParam {SpeedFogIds.UntouchableBossNpcRow} (clone of {UNTOUCHABLE_VANILLA_NPC}, hp {BOSS_HP}, runes {BOSS_RUNES}, nerflantern slot scrubbed) + partial wall SpEffect {SpeedFogIds.UntouchableBossSpEffectRow} (cut {DAMAGE_CUT}, applied by the copied wall event)");
+            $"Untouchable boss: NpcParam {SpeedFogIds.UntouchableBossNpcRow} (clone of {UNTOUCHABLE_VANILLA_NPC}, hp {BOSS_HP}, runes {BOSS_RUNES}, nerflantern slot scrubbed) + partial wall SpEffect {SpeedFogIds.UntouchableBossSpEffectRow} (cut {DAMAGE_CUT}) + broken SpEffect {SpeedFogIds.UntouchableBrokenSpEffectRow} (x{BROKEN_DAMAGE_TAKEN}), both applied by the copied wall event");
     }
 
     /// <summary>Writes the moveset rows: boss think row (own battle script),
@@ -313,13 +333,17 @@ public static class UntouchableBossInjector
     /// placed boss (every event whose InitializeEvent carries the boss
     /// entity): each SetSpEffect/ClearSpEffect of the full-immunity wall
     /// (<see cref="VANILLA_WALL_SPEFFECT"/>) now names the partial cut row,
-    /// and the first SetCharacterHPBarDisplay(disabled) of each of those
-    /// events becomes enabled: the boss takes damage from the start, so its
-    /// bar shows from the start, and the teleport sibling event must not
-    /// hide it again. Parameterized slots are left alone. Returns the number
-    /// of instructions rewritten, or 0 (with a warning, and the bar flips
-    /// discarded by the caller not writing) when no wall swap happened: the
-    /// boss then has no damage cut at all.</summary>
+    /// the first SetCharacterHPBarDisplay(disabled) of each of those events
+    /// becomes enabled (the boss takes damage from the start, so its bar
+    /// shows from the start, and the teleport sibling event must not hide
+    /// it again), and a SetSpEffect of the broken row
+    /// (<see cref="SpeedFogIds.UntouchableBrokenSpEffectRow"/>) is inserted
+    /// right after each SetSpEffect of the break VFX
+    /// (<see cref="BREAK_VFX_SPEFFECT"/>), carrying the same entity
+    /// parameter. Parameterized slots are left alone. Returns the number of
+    /// instructions rewritten or inserted, or 0 (with a warning, and its own
+    /// edits reverted) when no wall swap happened: the boss then has no
+    /// damage cut at all.</summary>
     public static int PatchWallEvents(EMEVD emevd, uint boss, Action<string> log)
     {
         var initEvent = emevd.Events.Find(e => e.ID == 0);
@@ -348,6 +372,7 @@ public static class UntouchableBossInjector
 
         int swaps = 0;
         var barFlips = new List<EMEVD.Instruction>();
+        var inserted = new List<(EMEVD.Event Event, int Index)>();
         foreach (var evt in emevd.Events.Where(e => eventIds.Contains(e.ID)))
         {
             bool hpBarDone = false;
@@ -365,6 +390,25 @@ public static class UntouchableBossInjector
                     BitConverter.GetBytes(SpeedFogIds.UntouchableBossSpEffectRow).CopyTo(ins.ArgData, 4);
                     swaps++;
                 }
+                else if (ins.ID == 8 && BitConverter.ToInt32(ins.ArgData, 4) == BREAK_VFX_SPEFFECT)
+                {
+                    // Broken state: same entity slot (copy of the vanilla
+                    // instruction's parameter), our row id, inserted right
+                    // after the break VFX. Later parameters shift by one.
+                    var entityParam = evt.Parameters.FirstOrDefault(prm => prm.InstructionIndex == i && prm.TargetStartByte == 0);
+                    var bytes = (byte[])ins.ArgData.Clone();
+                    BitConverter.GetBytes(SpeedFogIds.UntouchableBrokenSpEffectRow).CopyTo(bytes, 4);
+                    foreach (var prm in evt.Parameters)
+                    {
+                        if (prm.InstructionIndex > i)
+                            prm.InstructionIndex++;
+                    }
+                    evt.Instructions.Insert(i + 1, new EMEVD.Instruction(2004, 8, bytes));
+                    if (entityParam != null)
+                        evt.Parameters.Add(new EMEVD.Parameter(i + 1, 0, entityParam.SourceStartByte, entityParam.ByteCount));
+                    inserted.Add((evt, i + 1));
+                    i++; // skip the instruction just inserted
+                }
                 else if (ins.ID == 30 && !hpBarDone && ins.ArgData[4] == 0)
                 {
                     ins.ArgData[4] = 1; // spawn-time or teleport "disabled" -> enabled
@@ -378,14 +422,24 @@ public static class UntouchableBossInjector
         {
             // No wall to soften: an always-visible bar on an immune boss would
             // mislead, and another boss of the same map may still write this
-            // EMEVD, so undo the flips instead of relying on the caller.
+            // EMEVD, so undo the edits instead of relying on the caller.
             foreach (var ins in barFlips)
                 ins.ArgData[4] = 0;
+            foreach (var (evt, index) in inserted.OrderByDescending(x => x.Index))
+            {
+                evt.Instructions.RemoveAt(index);
+                evt.Parameters.RemoveAll(prm => prm.InstructionIndex == index);
+                foreach (var prm in evt.Parameters)
+                {
+                    if (prm.InstructionIndex > index)
+                        prm.InstructionIndex--;
+                }
+            }
             log($"  Warning: no wall event found for entity {boss}: the boss has no damage cut (full damage from the start)");
             return 0;
         }
-        log($"  wall event patched for entity {boss}: {swaps} wall swap(s) ({VANILLA_WALL_SPEFFECT} -> {SpeedFogIds.UntouchableBossSpEffectRow}) + {barFlips.Count} HP bar flip(s)");
-        return swaps + barFlips.Count;
+        log($"  wall event patched for entity {boss}: {swaps} wall swap(s) ({VANILLA_WALL_SPEFFECT} -> {SpeedFogIds.UntouchableBossSpEffectRow}) + {barFlips.Count} HP bar flip(s) + {inserted.Count} broken rider(s) ({SpeedFogIds.UntouchableBrokenSpEffectRow})");
+        return swaps + barFlips.Count + inserted.Count;
     }
 
     /// <summary>Reads the map's EMEVD from the mod dir (or copies it there
