@@ -16,11 +16,14 @@ from typing import Any
 from speedfog.dag import Dag
 
 _PHASE_SUFFIX_RE = re.compile(r" \d+$")
+# boss_arena_tags.json disambiguation suffix ("Fire Knight (before Messmer)").
+_PARENTHETICAL_SUFFIX_RE = re.compile(r"\s*\([^()]*\)$")
 
 _ENEMY_ID_RE = re.compile(r"^- ID:\s*(\d+)")
 _NEXT_PHASE_RE = re.compile(r"^  NextPhase:\s*(\d+)")
 _EXTRA_NAME_RE = re.compile(r"^\s+ExtraName:\s*(.+)")
 _KEY_NAME_RE = re.compile(r"^      Key:\s*(.+)")
+_IMPORTANT_NPC_NAME_RE = re.compile(r"^    NpcName:\s*(\d+)")
 
 
 def parse_boss_phases(enemy_txt_path: Path) -> dict[int, int]:
@@ -121,6 +124,56 @@ def parse_boss_key_names(enemy_txt_path: Path) -> dict[int, str]:
     return key_names
 
 
+def parse_boss_npc_names(enemy_txt_path: Path) -> dict[int, int]:
+    """Parse enemy.txt to build an entity_id -> Important.NpcName mapping.
+
+    ``NpcName`` (4-space indent under ``Important:``) is the vanilla NpcName
+    FMG id the enemy randomizer carries along when it relocates that enemy:
+    entities that have one show the right healthbar name wherever they are
+    placed. Entities without one (regular mobs promoted to boss arenas) are
+    the ones ``build_boss_names`` exports for the C# side. First per entity
+    wins (every ``Class: Boss`` entry has one).
+
+    Returns an empty dict if the file is missing.
+    """
+    if not enemy_txt_path.exists():
+        return {}
+
+    npc_names: dict[int, int] = {}
+    current_id: int | None = None
+    with open(enemy_txt_path, encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("- ID:"):
+                m = _ENEMY_ID_RE.match(line)
+                if m:
+                    current_id = int(m.group(1))
+            elif line.startswith("    NpcName:") and current_id is not None:
+                if current_id in npc_names:
+                    continue
+                m = _IMPORTANT_NPC_NAME_RE.match(line)
+                if m:
+                    npc_names[current_id] = int(m.group(1))
+    return npc_names
+
+
+def event_map_for_entity(entity_id: int) -> str | None:
+    """Map whose EMEVD runs the boss events of a vanilla entity id.
+
+    Entity ids encode their map: 8 digits ``AABBxxxx`` for legacy and minor
+    dungeons (``m{AA}_{BB}_00_00``), 10 digits ``WxCCDDxxxx`` for the
+    overworld (``m60_{CC}_{DD}_00`` when W is 1, ``m61_...`` when W is 2).
+    This is the small tile even when the enemy.txt ``Map:`` (the MSB part's
+    map) is a ``_02`` large tile (Fire Giant, Radahn): the boss events live
+    in the ``_00`` EMEVD. Returns None for ids of another shape.
+    """
+    digits = str(entity_id)
+    if len(digits) == 8:
+        return f"m{digits[0:2]}_{digits[2:4]}_00_00"
+    if len(digits) == 10 and digits[0] in "12":
+        return f"m6{int(digits[0]) - 1}_{digits[2:4]}_{digits[4:6]}_00"
+    return None
+
+
 def resolve_boss_name(
     entity_id: int,
     key_names: Mapping[int, str],
@@ -214,6 +267,20 @@ def patch_graph_boss_placements(
         json.dump(graph, f, indent=2)
 
 
+def _patch_graph_key(graph_path: Path, key: str, value: dict[str, Any]) -> None:
+    """Set one top-level graph.json key; an empty value leaves the file untouched."""
+    if not value:
+        return
+
+    with open(graph_path, encoding="utf-8") as f:
+        graph: dict[str, Any] = json.load(f)
+
+    graph[key] = dict(value)
+
+    with open(graph_path, "w", encoding="utf-8") as f:
+        json.dump(graph, f, indent=2)
+
+
 def patch_graph_enemy_assignments(
     graph_path: Path, assignments: dict[str, str]
 ) -> None:
@@ -223,16 +290,48 @@ def patch_graph_enemy_assignments(
     (arena entity id -> source entity id, both decimal strings). Empty
     or missing assignments leave the file untouched.
     """
-    if not assignments:
-        return
+    _patch_graph_key(graph_path, "enemy_assignments", assignments)
 
-    with open(graph_path, encoding="utf-8") as f:
-        graph: dict[str, Any] = json.load(f)
 
-    graph["enemy_assignments"] = dict(assignments)
+def build_boss_names(
+    enemy_assignments: Mapping[str, str],
+    placements: Mapping[str, Mapping[str, Any]],
+    npc_names: Mapping[int, int],
+) -> dict[str, dict[str, str]]:
+    """Healthbar names the C# BossNameInjector must patch (graph.json v4.8).
 
-    with open(graph_path, "w", encoding="utf-8") as f:
-        json.dump(graph, f, indent=2)
+    The enemy randomizer names a relocated boss correctly only when the
+    source has a vanilla ``Important.NpcName`` (it copies the source's
+    healthbar event); a promoted mob keeps the arena's vanilla name. This
+    returns ``{arena_id: {"name", "map"}}`` for exactly those arenas, the
+    name being the one already resolved for ``placements`` (spoiler and
+    racing overlay) minus any trailing parenthetical (the boss_arena_tags
+    disambiguation suffix, "Divine Bird Warrior (Frost)"), and the map the
+    arena's EMEVD (``event_map_for_entity``). Arenas whose id encodes no
+    map are skipped.
+    """
+    boss_names: dict[str, dict[str, str]] = {}
+    for arena_id, source_id in enemy_assignments.items():
+        if int(source_id) in npc_names:
+            continue
+        map_id = event_map_for_entity(int(arena_id))
+        placement = placements.get(arena_id)
+        if map_id is None or placement is None:
+            continue
+        full_name = str(placement["name"])
+        name = _PARENTHETICAL_SUFFIX_RE.sub("", full_name).strip() or full_name
+        boss_names[arena_id] = {"name": name, "map": map_id}
+    return boss_names
+
+
+def patch_graph_boss_names(
+    graph_path: Path, boss_names: dict[str, dict[str, str]]
+) -> None:
+    """Patch graph.json with the boss_names mapping (v4.8, see build_boss_names).
+
+    Empty or missing names leave the file untouched.
+    """
+    _patch_graph_key(graph_path, "boss_names", boss_names)
 
 
 def _match_boss_placement(

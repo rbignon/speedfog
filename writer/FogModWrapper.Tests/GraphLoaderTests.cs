@@ -279,6 +279,34 @@ public class GraphLoaderTests
     }
 
     [Fact]
+    public void GraphData_DeserializesBossNames()
+    {
+        var json = """
+        {
+          "version": "4.8",
+          "seed": 1,
+          "boss_names": {"30010800": {"name": "Aging Untouchable", "map": "m30_01_00_00"}},
+          "connections": [],
+          "area_tiers": {}
+        }
+        """;
+        var data = GraphLoader.Parse(json);
+        var entry = Assert.Single(data.BossNames);
+        Assert.Equal("30010800", entry.Key);
+        Assert.Equal("Aging Untouchable", entry.Value.Name);
+        Assert.Equal("m30_01_00_00", entry.Value.Map);
+    }
+
+    [Fact]
+    public void GraphData_BossNamesDefaultEmpty()
+    {
+        var json = """
+        {"version": "4.8", "seed": 1, "connections": [], "area_tiers": {}}
+        """;
+        Assert.Empty(GraphLoader.Parse(json).BossNames);
+    }
+
+    [Fact]
     public void GraphData_ClassLoadoutAndTorrentSkinsDefaultNull()
     {
         var json = """

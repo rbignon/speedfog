@@ -716,7 +716,7 @@ static string Decode(EMEVD.Instruction ins)
     // ── Actions (2003:xxx) ──
     if (b == 2003 && id == 4 && a.Length >= 4) return $"AwardItemLot({I32(a,0)})";
     if (b == 2003 && id == 6 && a.Length >= 5) return $"ChangeMapHitEnable({U32(a,0)}, {OnOff(a[4])})";
-    if (b == 2003 && id == 11 && a.Length >= 10) return $"DisplayBossHP(on={I32(a,0)}, entity={U32(a,4)}, nameId={I32(a,8)})";
+    if (b == 2003 && id == 11 && a.Length >= 16) return $"DisplayBossHP(on={I32(a,0)}, entity={U32(a,4)}, slot={I32(a,8)}, nameId={I32(a,12)})";
     if (b == 2003 && id == 12 && a.Length >= 5) return $"HandleBossDefeat(entity={U32(a,0)}, banner={a[4]})";
     if (b == 2003 && id == 14 && a.Length >= 8)
         return $"WarpPlayer(m{a[0]}_{a[1]:D2}_{a[2]:D2}_{a[3]:D2}, region={U32(a,4)})";

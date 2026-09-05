@@ -8,10 +8,14 @@ import pytest
 from speedfog.clusters import ClusterData, ClusterPool
 from speedfog.dag import Dag, DagNode, FogRef
 from speedfog.enemy_data import (
+    build_boss_names,
     build_boss_placements,
+    event_map_for_entity,
     parse_boss_extra_names,
     parse_boss_key_names,
+    parse_boss_npc_names,
     parse_boss_phases,
+    patch_graph_boss_names,
     patch_graph_boss_placements,
     patch_graph_enemy_assignments,
     resolve_boss_name,
@@ -412,10 +416,10 @@ def _make_result(death_markers: bool = True) -> dict:
 class TestEventMap:
     """Tests for v4 event_map, finish_event, and flag_id fields."""
 
-    def test_version_is_4_7(self):
-        """Version string is '4.7'."""
+    def test_version_is_4_8(self):
+        """Version string is '4.8'."""
         result = _make_result()
-        assert result["version"] == "4.7"
+        assert result["version"] == "4.8"
 
     def test_event_map_keys_are_string_flag_ids(self):
         """event_map keys are stringified integers."""
@@ -2176,6 +2180,113 @@ class TestPatchGraphEnemyAssignments:
         assert "enemy_assignments" not in json.loads(graph.read_text(encoding="utf-8"))
 
 
+class TestPatchGraphBossNames:
+    def test_patch_graph_boss_names_writes_key(self, tmp_path):
+        graph = tmp_path / "graph.json"
+        graph.write_text(json.dumps({"version": "4.8", "nodes": {}}), encoding="utf-8")
+        names = {"30010800": {"name": "Aging Untouchable", "map": "m30_01_00_00"}}
+        patch_graph_boss_names(graph, names)
+        data = json.loads(graph.read_text(encoding="utf-8"))
+        assert data["boss_names"] == names
+
+    def test_patch_graph_boss_names_empty_is_noop(self, tmp_path):
+        graph = tmp_path / "graph.json"
+        graph.write_text(json.dumps({"version": "4.8", "nodes": {}}), encoding="utf-8")
+        patch_graph_boss_names(graph, {})
+        assert "boss_names" not in json.loads(graph.read_text(encoding="utf-8"))
+
+
+class TestBuildBossNames:
+    # Arena 30010800 (Watchdog) gets the Untouchable (no vanilla NpcName),
+    # arena 10000800 (Godrick) gets Rellana (has one): only the first is
+    # exported, the randomizer already names the second correctly.
+    ASSIGNMENTS = {"30010800": "2049420200", "10000800": "2048440800"}
+    PLACEMENTS = {
+        "30010800": {"name": "Aging Untouchable", "entity_id": 2049420200},
+        "10000800": {"name": "Rellana, Twin Moon Knight", "entity_id": 2048440800},
+    }
+    NPC_NAMES = {2048440800: 905300000}
+
+    def test_exports_only_sources_without_vanilla_npc_name(self):
+        result = build_boss_names(self.ASSIGNMENTS, self.PLACEMENTS, self.NPC_NAMES)
+        assert result == {
+            "30010800": {"name": "Aging Untouchable", "map": "m30_01_00_00"}
+        }
+
+    def test_skips_arena_whose_id_encodes_no_map(self):
+        placements = {"4000358": {"name": "Aging Untouchable", "entity_id": 2049420200}}
+        result = build_boss_names({"4000358": "2049420200"}, placements, {})
+        assert result == {}
+
+    def test_strips_trailing_parenthetical_from_healthbar_text(self):
+        # boss_arena_tags.json disambiguates variants with a suffix
+        # ("Divine Bird Warrior (Frost)") that must not reach the healthbar.
+        placements = {
+            "31180800": {"name": "Divine Bird Warrior (Frost)", "entity_id": 20010453}
+        }
+        result = build_boss_names({"31180800": "20010453"}, placements, {})
+        assert result["31180800"]["name"] == "Divine Bird Warrior"
+
+    def test_keeps_name_that_is_only_a_parenthetical(self):
+        placements = {"31180800": {"name": "(Frost)", "entity_id": 20010453}}
+        result = build_boss_names({"31180800": "20010453"}, placements, {})
+        assert result["31180800"]["name"] == "(Frost)"
+
+
+class TestParseBossNpcNames:
+    def test_reads_important_npc_name(self, tmp_path):
+        # Important: NpcName sits at 4-space indent; the nested Names block
+        # and top-level fields must not be mistaken for it.
+        enemy_txt = tmp_path / "enemy.txt"
+        enemy_txt.write_text(
+            "- ID: 2048440800\n"
+            "  Class: Boss\n"
+            "  Important:\n"
+            "    Names:\n"
+            "      Key: Rellana, Twin Moon Knight\n"
+            "    NpcName: 905300000\n"
+            "- ID: 2049420200\n"
+            "  Class: Basic\n"
+            "  NpcName: 1\n",
+            encoding="utf-8",
+        )
+        assert parse_boss_npc_names(enemy_txt) == {2048440800: 905300000}
+
+    def test_first_npc_name_wins(self, tmp_path):
+        enemy_txt = tmp_path / "enemy.txt"
+        enemy_txt.write_text(
+            "- ID: 11000800\n"
+            "  Important:\n"
+            "    NpcName: 902130002\n"
+            "  Other:\n"
+            "    NpcName: 902130003\n",
+            encoding="utf-8",
+        )
+        assert parse_boss_npc_names(enemy_txt) == {11000800: 902130002}
+
+    def test_missing_file_returns_empty(self, tmp_path):
+        assert parse_boss_npc_names(tmp_path / "nope.txt") == {}
+
+
+class TestEventMapForEntity:
+    # Vanilla entity ids encode the map whose EMEVD runs the boss events:
+    # legacy/minor dungeons (8 digits) and overworld tiles (10 digits, the
+    # small _00 tile even when the MSB part sits in a _02 large tile).
+    @pytest.mark.parametrize(
+        ("entity_id", "expected"),
+        [
+            (30010800, "m30_01_00_00"),
+            (12020850, "m12_02_00_00"),
+            (1052380800, "m60_52_38_00"),
+            (1248550800, "m60_48_55_00"),
+            (2048440800, "m61_48_44_00"),
+            (4000358, None),
+        ],
+    )
+    def test_derives_map_from_entity_id(self, entity_id, expected):
+        assert event_map_for_entity(entity_id) == expected
+
+
 class TestParseBossPhases:
     def test_builds_reverse_next_phase_mapping(self, tmp_path):
         enemy_txt = tmp_path / "enemy.txt"
@@ -2525,7 +2636,7 @@ class TestPhantomSkins:
             zone_names={},
         )
         result = dag_to_dict(dag, clusters)
-        assert result["version"] == "4.7"
+        assert result["version"] == "4.8"
 
 
 class TestDagToDictPlugins:
@@ -2541,7 +2652,7 @@ class TestDagToDictPlugins:
             clusters,
             GraphExportOptions(plugins={"summer": {"enabled": True, "intensity": 3}}),
         )
-        assert result["version"] == "4.7"
+        assert result["version"] == "4.8"
         assert result["plugins"] == {"summer": {"enabled": True, "intensity": 3}}
 
     def test_plugins_default_empty(self):
@@ -2577,7 +2688,7 @@ class TestDagToDictTarnishedFields:
         assert result["class_loadout"]["weapons"][0]["id"] == 3560000
         assert result["class_loadout"]["shields"][0]["id"] == 31540000
         assert result["torrent_skins"] == {"unlock": True, "default_flag": 6702}
-        assert result["version"] == "4.7"
+        assert result["version"] == "4.8"
 
     def test_dag_to_dict_omits_absent_tarnished_fields(self):
         dag = make_test_dag()

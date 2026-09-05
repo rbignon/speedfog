@@ -12,7 +12,9 @@ from __future__ import annotations
 # 4.6: optional class_loadout + torrent_skins (Tarnished showcase)
 # 4.7: class_loadout reshaped to weapons/shields/armor_sets (weapon always,
 #      shields once each on occupied left hands, armor per occupied slot)
-GRAPH_JSON_VERSION = "4.7"
+# 4.8: optional boss_names (healthbar names of promoted mobs, see
+#      docs/boss-healthbar-names.md)
+GRAPH_JSON_VERSION = "4.8"
 
 # SpeedFog's dedicated flag base: 1050290000 (m60_50_29_00, unclaimed).
 # Saved flags (4xxx): zone tracking, finish event, death markers.

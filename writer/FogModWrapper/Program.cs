@@ -881,6 +881,14 @@ Example:
             ClassLoadoutTextPatcher.Patch(ctx.ModDir, ctx.Config.MergeDir, ctx.Config.GameDir, ctx.LoadoutSwaps);
         }
 
+        // Healthbar names of promoted mobs (graph.json boss_names): repoint the
+        // arena's DisplayBossHealthBar at the source's name. Before the text
+        // themes so their NpcName edits layer on the same mod copy.
+        if (ctx.GraphData.BossNames.Count > 0)
+        {
+            BossNameInjector.Inject(ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.BossNames, Console.WriteLine);
+        }
+
         // Text theme plugins: cosmetic boss/UI text reskins, one catalogue per
         // theme (opt-in via [plugin.summer] / [plugin.halloween]). Applied in
         // order; a later theme overwrites colliding entries of an earlier one.

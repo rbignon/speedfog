@@ -52,9 +52,9 @@ public static class GraphLoader
         }
 
         // Validate version
-        if (data.Version != "3.0" && data.Version != "4.0" && data.Version != "4.1" && data.Version != "4.2" && data.Version != "4.3" && data.Version != "4.4" && data.Version != "4.5" && data.Version != "4.6" && data.Version != "4.7")
+        if (data.Version != "3.0" && data.Version != "4.0" && data.Version != "4.1" && data.Version != "4.2" && data.Version != "4.3" && data.Version != "4.4" && data.Version != "4.5" && data.Version != "4.6" && data.Version != "4.7" && data.Version != "4.8")
         {
-            Console.WriteLine($"Warning: Expected graph.json version 3.0, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, or 4.7, got {data.Version}");
+            Console.WriteLine($"Warning: Expected graph.json version 3.0, 4.0, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, or 4.8, got {data.Version}");
         }
 
         return data;

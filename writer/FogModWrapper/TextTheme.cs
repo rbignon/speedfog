@@ -12,21 +12,13 @@ namespace FogModWrapper;
 /// (tolerant); UI ids absent are added as new FMG entries instead. A
 /// missing FMG file or bnd is skipped either way.
 ///
-/// Only the English (engus) and French (frafr) message archives are edited;
-/// the catalogue carries content for those two languages only, and touching
-/// all ~15 game languages tripled the per-seed cost for no benefit. Other
-/// languages keep their vanilla names.
+/// Only the English (engus) and French (frafr) message archives are edited
+/// (MsgBndEditor.TargetLanguages); the catalogue carries content for those
+/// two languages only. Other languages keep their vanilla names.
 /// </summary>
 public static class TextTheme
 {
     private static readonly string[] BossBnds = { "item.msgbnd.dcx", "item_dlc02.msgbnd.dcx" };
-
-    // Only languages we actually author for. engus -> en, frafr -> fr (else en).
-    private static readonly HashSet<string> TargetLanguages = new() { "engus", "frafr" };
-
-    /// <summary>frafr gets fr when present; every other language (incl. engus) gets en.</summary>
-    public static string LocalizedText(string langName, string en, string? fr)
-        => langName == "frafr" && !string.IsNullOrEmpty(fr) ? fr! : en;
 
     public static void Apply(string theme, string modDir, string gameDir, string dataDir)
     {
@@ -48,7 +40,7 @@ public static class TextTheme
         Parallel.ForEach(Directory.GetDirectories(gameMsgDir), langDir =>
         {
             var lang = Path.GetFileName(langDir);
-            if (!TargetLanguages.Contains(lang))
+            if (!MsgBndEditor.TargetLanguages.Contains(lang))
                 return;
             int n = ApplyBossEpithets(modDir, langDir, lang, bossById)
                   + ApplyUiStrings(modDir, langDir, lang, catalog.Ui);
@@ -65,7 +57,7 @@ public static class TextTheme
     {
         int total = 0;
         foreach (var bndName in BossBnds)
-            total += EditBnd(modDir, langDir, lang, bndName, bnd =>
+            total += MsgBndEditor.EditBnd(modDir, langDir, lang, bndName, bnd =>
             {
                 int n = 0;
                 foreach (var file in bnd.Files.Where(f => f.Name.Contains("NpcName")))
@@ -82,7 +74,7 @@ public static class TextTheme
                             continue;
                         if (bossById.TryGetValue(entry.ID, out var b))
                         {
-                            entry.Text = LocalizedText(lang, b.En, b.Fr);
+                            entry.Text = MsgBndEditor.LocalizedText(lang, b.En, b.Fr);
                             changed = true;
                             n++;
                         }
@@ -100,7 +92,7 @@ public static class TextTheme
     {
         int total = 0;
         foreach (var group in ui.GroupBy(u => u.Bnd))
-            total += EditBnd(modDir, langDir, lang, group.Key, bnd =>
+            total += MsgBndEditor.EditBnd(modDir, langDir, lang, group.Key, bnd =>
             {
                 int n = 0;
                 foreach (var u in group)
@@ -114,7 +106,7 @@ public static class TextTheme
                     { fmg = FMG.Read(file.Bytes); }
                     catch { continue; }
 
-                    var text = LocalizedText(lang, u.En, u.Fr);
+                    var text = MsgBndEditor.LocalizedText(lang, u.En, u.Fr);
                     var existing = fmg.Entries.Find(e => e.ID == u.Id);
                     if (existing != null)
                         existing.Text = text;
@@ -127,27 +119,5 @@ public static class TextTheme
                 return n;
             });
         return total;
-    }
-
-    // Reads source (mod copy if present, else vanilla), runs edit, writes back
-    // to mod dir only when edit reports changes. Returns number of edits.
-    private static int EditBnd(string modDir, string langDir, string lang, string bndName,
-        Func<BND4, int> edit)
-    {
-        var vanillaPath = Path.Combine(langDir, bndName);
-        if (!File.Exists(vanillaPath))
-            return 0;
-
-        var modPath = Path.Combine(modDir, "msg", lang, bndName);
-        var sourcePath = File.Exists(modPath) ? modPath : vanillaPath;
-
-        var bnd = BND4.Read(sourcePath);
-        int n = edit(bnd);
-        if (n == 0)
-            return 0;
-
-        Directory.CreateDirectory(Path.GetDirectoryName(modPath)!);
-        bnd.Write(modPath);
-        return n;
     }
 }

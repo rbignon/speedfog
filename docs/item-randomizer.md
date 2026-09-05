@@ -67,7 +67,7 @@ Set in `options` dictionary, applied via `opt[key] = value`:
 | `weaponreqs` | from config | Remove weapon stat requirements |
 | `sombermode` | from config | Reduce upgrade material costs |
 | `mats` | `true` | Randomize materials (smithing stones, gloveworts, crafting) |
-| `editnames` | `true` | Rewrite boss healthbar names to match randomized enemy |
+| `editnames` | unset (off) | The randomizer's own healthbar renaming; enabled then dropped in June 2026 because it composes names ("X, Twin Moon Knight"). Promoted mobs get their healthbar name from SpeedFog instead (`boss_names`, see `docs/boss-healthbar-names.md`) |
 | `nerfgargoyles` | from config | Disable Valiant Gargoyles poison tick |
 | `allcraft` | from config | Unlock all crafting recipes at start |
 | `dlcblessing` | `true` | GUI default ("Place Shadow Realm Blessings in DLC only"), pinned because v0.12 keys it on a `Switch:` in `annotations.txt` and unset booleans are false headless. Inert with the shipped presets: their explicit empty `DlcOnlyItems` section overrides the default DLC-only entries, and blessing placement is governed by the presets' `ShadowRealmBlessings` section, `Mode: Anywhere` since 2026-08-31 so the (SpEffect-neutralized, see `ScaduBlessingNeutralizer`) blessings scatter into generic slots instead of boss drops |
@@ -150,6 +150,7 @@ In `main.py`, immediately after the logs block (before the build step, so it run
    - `randomized_bosses`: list of boss names (both phases for multi-phase bosses, e.g. `["Beast Clergyman", "Maliketh"]`)
    - `boss_name`: canonical name from the phase 2 replacement (numeric suffix stripped, e.g. "Fire Giant" not "Fire Giant 2")
 5. `append_boss_placements_to_spoiler()` adds a boss placement section to spoiler.txt
+6. `build_boss_names()` keeps the arenas whose source has no vanilla `Important.NpcName` (`parse_boss_npc_names()`; the randomizer names the others correctly by copying their healthbar events) and pairs each with the map whose EMEVD runs its boss events (`event_map_for_entity()`, derived from the entity id); `patch_graph_boss_names()` writes them as `boss_names` (v4.8) for `BossNameInjector` (see `docs/boss-healthbar-names.md`)
 
 Matching logic (in `_match_boss_placement`): tries `str(defeat_flag)` first, then `str(defeat_flag - 200_000_000)` for base game bosses. `_resolve_entity_id()` extracts the entity_id from a defeat_flag for phase mapping lookups.
 

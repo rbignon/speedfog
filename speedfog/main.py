@@ -19,10 +19,13 @@ from speedfog.care_package import sample_care_package
 from speedfog.clusters import ClusterData, ClusterPool, load_clusters
 from speedfog.config import Config, load_config, prune_final_boss_candidates
 from speedfog.enemy_data import (
+    build_boss_names,
     build_boss_placements,
     parse_boss_extra_names,
     parse_boss_key_names,
+    parse_boss_npc_names,
     parse_boss_phases,
+    patch_graph_boss_names,
     patch_graph_boss_placements,
     patch_graph_enemy_assignments,
     resolve_boss_name,
@@ -486,7 +489,16 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
                 json_path, dag, placements, assignment_phase_mapping
             )
             patch_graph_enemy_assignments(json_path, enemy_assignments)
-            print(f"Boss placements: {len(placements)} bosses randomized")
+            # Healthbar names for promoted mobs (sources without a vanilla
+            # NpcName), patched in-game by FogModWrapper's BossNameInjector.
+            boss_names = build_boss_names(
+                enemy_assignments, placements, parse_boss_npc_names(enemy_txt_path)
+            )
+            patch_graph_boss_names(json_path, boss_names)
+            print(
+                f"Boss placements: {len(placements)} bosses randomized, "
+                f"{len(boss_names)} healthbar names to patch"
+            )
             if args.logs and spoiler_path is not None:
                 append_boss_placements_to_spoiler(spoiler_path, placements)
 

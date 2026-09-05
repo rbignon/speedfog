@@ -176,6 +176,14 @@ public class GraphData
     [JsonPropertyName("enemy_assignments")]
     public Dictionary<string, string> EnemyAssignments { get; set; } = new();
 
+    /// <summary>Healthbar names to patch for promoted mobs: arena entity id
+    /// (decimal string) to the display name and the map whose EMEVD shows
+    /// the arena's boss healthbar (graph.json v4.8, optional; empty when
+    /// every placed source carries its own vanilla NpcName). Consumed by
+    /// BossNameInjector.</summary>
+    [JsonPropertyName("boss_names")]
+    public Dictionary<string, BossNameEntry> BossNames { get; set; } = new();
+
     /// <summary>True when the named plugin is present and enabled.</summary>
     public bool IsPluginEnabled(string name)
         => Plugins != null && Plugins.TryGetValue(name, out var p) && p.Enabled;
@@ -262,6 +270,20 @@ public class PackItemData
     /// </summary>
     [JsonPropertyName("name")]
     public string Name { get; set; } = "";
+}
+
+/// <summary>One graph.json v4.8 boss_names entry (see GraphData.BossNames).</summary>
+public class BossNameEntry
+{
+    /// <summary>English display name (Names.Key, ExtraName or the
+    /// boss_arena_tags.json name, resolved Python-side).</summary>
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = "";
+
+    /// <summary>Map id (m30_01_00_00) whose EMEVD holds the arena's
+    /// DisplayBossHealthBar instructions.</summary>
+    [JsonPropertyName("map")]
+    public string Map { get; set; } = "";
 }
 
 /// <summary>

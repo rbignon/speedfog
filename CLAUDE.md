@@ -143,6 +143,8 @@ speedfog/
 │   │   ├── IntroCutscenePatcher.cs  # Replace the new-game intro cutscene in event 10010020 by SetCurrentTime + ChangeWeather
 │   │   ├── TorrentArenaPatcher.cs  # Re-enable Torrent inside selected boss arenas
 │   │   ├── WeatherInjector.cs  # Force weather / pin clock hour ([plugin.weather])
+│   │   ├── BossNameInjector.cs  # Healthbar names of promoted mobs (graph.json boss_names)
+│   │   ├── MsgBndEditor.cs  # Shared msgbnd edit helper (engus + frafr, mod copy over vanilla)
 │   │   ├── WeaponUpgradeInjector.cs  # Weapon upgrade initialization for starting weapons
 │   │   └── eldendata/       # FogRando game data (gitignored)
 │   ├── FogModWrapper.Tests/  # xUnit tests
@@ -200,6 +202,7 @@ speedfog/
 │   ├── death-markers.md     # Bloodstain visuals at fog gates (DrawGroups, DeepCopy bug)
 │   ├── boss-trigger-lock.md # Boss arena exit locking (TrapFlag before warp)
 │   ├── torrent-arena-patcher.md # Re-enable Torrent in selected boss arenas (DisableTorrent flag)
+│   ├── boss-healthbar-names.md  # Healthbar names of promoted mobs (DisplayBossHealthBar nameId repoint)
 │   ├── quitout-respawn.md   # Quit-out stable position (PlayRegionParam restore)
 │   ├── save-backup.md      # Save backup system (daemon, recovery, config)
 │   ├── game-patch-migration.md  # Keeping seeds playable across an Elden Ring update without a FogRando release
@@ -241,6 +244,7 @@ speedfog/
 | `docs/death-markers.md` | Bloodstain visuals at fog gates (DrawGroups, DeepCopy bug, entity IDs) |
 | `docs/boss-trigger-lock.md` | Boss arena exit locking (TrapFlag vs BossTrigger, warp patching) |
 | `docs/torrent-arena-patcher.md` | Re-enable Torrent in selected boss arenas (DisableTorrent collision flag) |
+| `docs/boss-healthbar-names.md` | Healthbar names of promoted mobs: why the randomizer keeps the arena's name, graph.json `boss_names`, NpcName resolution + EMEVD repoint |
 | `docs/quitout-respawn.md` | Quit-out stable position fix (PlayRegionParam restore) |
 | `docs/save-backup.md` | Save backup system (daemon, recovery, config) |
 | `docs/game-patch-migration.md` | Elden Ring update playbook: pipeline dependencies, scenarios, ordered tasks, save handling (1.17 instance) |
@@ -336,6 +340,8 @@ speedfog/
 | `OpenSplitInjector` | Tags entrances with `opensplit` before `Graph.Construct` (see `docs/opensplit-overrides.md`) |
 | `MapSplitsInjector` | Injects map_splits.toml synthetic zones/fogs into AnnotationData before `Graph.Construct`, splits EnemyAreas (see `docs/map-splits.md`) |
 | `TextTheme` | Cosmetic text reskins per theme, summer + halloween, opt-in via `[plugin.summer]` / `[plugin.halloween]` |
+| `MsgBndEditor` | Shared msgbnd editing for the engus + frafr text injectors (`TextTheme`, `BossNameInjector`): mod copy over vanilla, written only on change |
+| `BossNameInjector` | Healthbar names of promoted mobs (graph.json `boss_names`): resolves each name to a NpcName id (exact vanilla engus match, else a `SpeedFogIds.BossNameFmgIds` entry written to engus + frafr) and repoints the arena's `DisplayBossHealthBar` nameId in the map EMEVD; runs before `TextTheme` (see `docs/boss-healthbar-names.md`) |
 | `TextThemeCatalogLoader` | Loads and validates `data/plugins/<theme>.toml` |
 | `HalloweenPluginSettings` | Parses `[plugin.halloween]` parameters (`ambushes`) from graph.json's plugin table |
 | `HalloweenGateAnchors` | Shared exit-gate anchor collection for the two ambient injectors (source cluster resolved through GraphNode.Zones; decor set includes the start cluster, spawn set does not) |
@@ -695,11 +701,11 @@ wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.d
 
 ## Data Formats
 
-### graph.json v4.7 (Python → C# + visualization + racing)
+### graph.json v4.8 (Python → C# + visualization + racing)
 
 ```json
 {
-  "version": "4.7",
+  "version": "4.8",
   "seed": 212559448,
   "options": {"scale": true, "shuffle": true},
   "plugins": {"summer": {"enabled": true}},
@@ -713,6 +719,7 @@ wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.d
   "finish_event": 1050294002,
   "items_spawned_flag": 1050290000,
   "enemy_assignments": {"30001800": "2049420200"},
+  "boss_names": {"30001800": {"name": "Aging Untouchable", "map": "m30_00_00_00"}},
   "class_loadout": {"weapons": [{"id": 3560000, "name": "Leontiel's Greatsword"}, ...], "shields": [{"id": 31540000, "name": "Silver Grooved Shield"}, ...], "armor_sets": [[5350000, 5350100, 5350200, 5350300], ...]},
   "torrent_skins": {"unlock": true, "default_flag": 6702}
 }
@@ -727,6 +734,7 @@ wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.d
 - `enemy_assignments`: optional `{arena_entity_id: source_entity_id}` map (both decimal strings), the same enemy-randomizer placement mapping already computed in `speedfog/item_randomizer.py` and shipped to ItemRandomizerWrapper as `item_config.json`, now also patched into graph.json (`patch_graph_enemy_assignments`) so FogModWrapper can locate placed bosses; absent or empty when no assignments were made (added v4.5, `GraphData.EnemyAssignments`, consumed by `UntouchableBossInjector`, see `docs/untouchable-boss.md`)
 - `class_loadout`: optional, `[tarnished] starting_loadout`'s shuffled weapon/shield/armor-set permutations for the starting classes (weapon always in the right hand, shields once each on occupied left hands, armor per occupied slot; mechanism-named, not pack-named: `[tarnished]` is only its first producer); absent when the option is off (added v4.6, reshaped v4.7, `GraphData.ClassLoadout`, consumed by `ClassLoadoutInjector`, see `docs/tarnished-showcase.md`)
 - `torrent_skins`: optional, `[tarnished] unlock_torrent_skins`'s unlock flag plus a resolved `default_flag` (6701-6703) for the pre-selected Torrent skin; absent when the option is off (added v4.6, `GraphData.TorrentSkins`, consumed by `StartingItemInjector`, see `docs/tarnished-showcase.md`)
+- `boss_names`: optional `{arena_entity_id: {name, map}}` for the `enemy_assignments` entries whose source has no vanilla `Important.NpcName` in enemy.txt (promoted mobs): the display name already resolved for `randomized_bosses` and the map whose EMEVD shows the arena's healthbar; absent when every placed source carries its own name (added v4.8, `GraphData.BossNames`, consumed by `BossNameInjector`, see `docs/boss-healthbar-names.md`)
 - `flag_id` per connection: event flag set when fog gate is traversed
 - Event flags allocated sequentially from base 1050294000 (range 1050294000-1050294999); persistent flags (e.g. `items_spawned_flag`) come from a separate base 1050290000
 - Connections use FogMod's edge FullName format: `{map}_{gate_name}` (e.g., `m10_01_00_00_AEG099_001_9000`)

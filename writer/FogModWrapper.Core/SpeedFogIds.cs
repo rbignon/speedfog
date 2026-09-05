@@ -210,6 +210,18 @@ public static class SpeedFogIds
     /// "Profane Tear" by the text catalogue).</summary>
     public const int HalloweenSacredTearIcon = 60384;
 
+    // --- FMG text ids (NpcName.fmg entry ids: a separate namespace from
+    //     entity ids, event ids and param rows) ---
+
+    /// <summary>NpcName entries BossNameInjector adds for promoted mobs whose
+    /// display name has no vanilla NpcName entry (graph.json boss_names):
+    /// one id per distinct name, engus + frafr. Vanilla ids sit in the
+    /// 9xxxxxxxx band and the Item Randomizer's editnames allocator (off in
+    /// SpeedFog) starts at 907770000, so the 75589xxxx SpeedFog band is free
+    /// here.</summary>
+    public static readonly IdRange BossNameFmgIds =
+        new("BossNameInjector", 755890000, 100);
+
     // --- Behavior ids (a fourth id kind: the battle-script id selected by
     //     NpcThinkParam.battleGoalID, NpcParam.behaviorVariationId, and a
     //     TAE bullet judge id; none of them is a param row id) ---
