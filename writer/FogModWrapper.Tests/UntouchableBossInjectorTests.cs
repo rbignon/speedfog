@@ -262,7 +262,7 @@ public class UntouchableBossInjectorTests
             ["30001800"] = SpeedFogIds.UntouchableSourceEntity.ToString(),
         };
 
-        UntouchableBossInjector.Inject(modDir, assignments, mergeDir, new[] { "m60_13_09_02" }, repointThink: false);
+        UntouchableBossInjector.Inject(modDir, assignments, mergeDir, new[] { "m60_13_09_02" }, repointThink: false, events: null);
 
         var writtenPath = Path.Combine(modDir, "map", "mapstudio", "m60_13_09_02.msb.dcx");
         Assert.True(File.Exists(writtenPath));
@@ -290,7 +290,7 @@ public class UntouchableBossInjectorTests
         Exception? ex;
         try
         {
-            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, null, new[] { "m60_13_09_02" }, repointThink: false));
+            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, null, new[] { "m60_13_09_02" }, repointThink: false, events: null));
         }
         finally
         {
@@ -323,7 +323,7 @@ public class UntouchableBossInjectorTests
         Exception? ex;
         try
         {
-            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, mergeDir, new[] { "m60_13_09_02" }, repointThink: false));
+            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, mergeDir, new[] { "m60_13_09_02" }, repointThink: false, events: null));
         }
         finally
         {
@@ -627,7 +627,7 @@ public class UntouchableBossInjectorTests
     }
 
     [Fact]
-    public void InjectParryBreak_OneRestartingEventPerBossRegisteredInEventZero()
+    public void AddParryBreakEvents_OneRestartingEventPerBossRegisteredInEventZero()
     {
         var events = BuildEvents();
         if (events == null)
@@ -635,8 +635,11 @@ public class UntouchableBossInjectorTests
         var emevd = new EMEVD();
         emevd.Events.Add(new EMEVD.Event(0));
 
-        UntouchableBossInjector.InjectParryBreak(emevd, events, new List<uint> { 31040800, 30001800 });
+        var slots = UntouchableBossInjector.ParryBreakSlots(new List<uint> { 31040800, 30001800 });
+        var added = UntouchableBossInjector.AddParryBreakEvents(
+            emevd, events, slots.OrderBy(kv => kv.Value).Select(kv => (kv.Key, kv.Value)), _ => { });
 
+        Assert.Equal(2, added);
         var ids = new[] { SpeedFogIds.UntouchableParryEvents.Base, SpeedFogIds.UntouchableParryEvents.Base + 1 };
         var bosses = new uint[] { 30001800, 31040800 }; // ascending: deterministic slot order
         for (int i = 0; i < 2; i++)
@@ -658,5 +661,51 @@ public class UntouchableBossInjectorTests
         Assert.Equal(2, init.Count(ins => ins.Bank == 2000 && ins.ID == 0));
         Assert.All(ids, id => Assert.Contains(init,
             ins => ins.Bank == 2000 && ins.ID == 0 && BitConverter.ToInt32(ins.ArgData, 4) == id));
+    }
+
+    [Fact]
+    public void ParryBreakSlots_AscendingIdsGetConsecutiveEventsUpToCapacity()
+    {
+        var range = SpeedFogIds.UntouchableParryEvents;
+        // Descending, with duplicates and five ids past the capacity.
+        var ids = Enumerable.Range(0, range.Capacity + 5).Select(i => (uint)(40000000 - i)).ToList();
+        ids.Add(ids[0]);
+
+        var slots = UntouchableBossInjector.ParryBreakSlots(ids);
+
+        var ordered = ids.Distinct().OrderBy(i => i).ToList();
+        Assert.Equal(range.Capacity, slots.Count);
+        Assert.Equal(range.Base, slots[ordered[0]]);
+        Assert.Equal(range.Base + range.Capacity - 1, slots[ordered[range.Capacity - 1]]);
+        Assert.False(slots.ContainsKey(ordered[^1]));
+    }
+
+    [Fact]
+    public void InjectParryBreak_WritesIntoTheMapEmevdAndSkipsMapsWithoutOne()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return; // data/er-common.emedf.json not extracted (bootstrap not run)
+        using var mod = new TempDir();
+        Directory.CreateDirectory(Path.Combine(mod.Path, "event"));
+        var emevd = new EMEVD();
+        emevd.Events.Add(new EMEVD.Event(0));
+        var path = Path.Combine(mod.Path, "event", "m35_00_00_00.emevd.dcx");
+        emevd.Write(path);
+        var slots = UntouchableBossInjector.ParryBreakSlots(new[] { 35000850u, 30001800u });
+        var log = new List<string>();
+
+        var added = UntouchableBossInjector.InjectParryBreak(
+            mod.Path, "m35_00_00_00.msb.dcx", new[] { 35000850u }, slots, events, log.Add);
+        var skipped = UntouchableBossInjector.InjectParryBreak(
+            mod.Path, "m60_13_09_02.msb.dcx", new[] { 30001800u }, slots, events, log.Add);
+
+        Assert.Equal(1, added);
+        Assert.Equal(0, skipped);
+        var written = EMEVD.Read(path);
+        Assert.Contains(written.Events, e => e.ID == slots[35000850u]);
+        Assert.Contains(written.Events.Single(e => e.ID == 0).Instructions,
+            ins => ins.Bank == 2000 && ins.ID == 0 && BitConverter.ToInt32(ins.ArgData, 4) == slots[35000850u]);
+        Assert.Contains(log, l => l.Contains("m60_13_09_02.emevd.dcx not in the mod dir"));
     }
 }

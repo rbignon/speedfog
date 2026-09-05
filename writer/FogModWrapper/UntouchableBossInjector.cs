@@ -305,48 +305,90 @@ public static class UntouchableBossInjector
             .ToList();
     }
 
-    /// <summary>Common phase: one looping common.emevd event per placed boss
-    /// (parry break). It waits for the boss to carry the vanilla parry-window
-    /// SpEffect (<see cref="PARRY_WINDOW_SPEFFECT"/>, applied by the parried
+    /// <summary>Parry break event slots: ascending arena ids get consecutive
+    /// event ids from <see cref="SpeedFogIds.UntouchableParryEvents"/>
+    /// (deterministic across seeds); ids beyond the capacity get no slot.</summary>
+    public static Dictionary<uint, int> ParryBreakSlots(IEnumerable<uint> arenaIds)
+    {
+        var range = SpeedFogIds.UntouchableParryEvents;
+        var slots = new Dictionary<uint, int>();
+        foreach (var id in arenaIds.Distinct().OrderBy(id => id))
+        {
+            if (slots.Count >= range.Capacity)
+                break;
+            slots[id] = range.Base + slots.Count;
+        }
+        return slots;
+    }
+
+    /// <summary>Adds one looping parry break event per (boss, event id) pair to
+    /// an arena map's EMEVD and registers it in the map's event 0. The event
+    /// waits for the boss to carry the vanilla parry-window SpEffect
+    /// (<see cref="PARRY_WINDOW_SPEFFECT"/>, applied by the parried
     /// animation), applies the counter SpEffect
     /// (<see cref="SpeedFogIds.UntouchableParryBreakSpEffectRow"/>, written
-    /// by <see cref="Apply"/> in the regulation phase), then restarts after
+    /// by <see cref="Apply"/>), then restarts after
     /// <see cref="PARRY_BREAK_REARM_SECONDS"/> so a boss respawned after the
-    /// player's death is covered again. Entities that never load (phase slots)
-    /// simply never trigger.</summary>
-    public static void InjectParryBreak(EMEVD commonEmevd, Events events, IReadOnlyCollection<uint> arenaIds)
+    /// player's death is covered again. Lives in the map's EMEVD, like
+    /// FogMod's own scaling events, so the entity is in scope. Returns the
+    /// number of events added.</summary>
+    public static int AddParryBreakEvents(
+        EMEVD emevd, Events events, IEnumerable<(uint Entity, int EventId)> slots, Action<string> log)
     {
-        var initEvent = commonEmevd.Events.Find(e => e.ID == 0);
+        var initEvent = emevd.Events.Find(e => e.ID == 0);
         if (initEvent == null)
         {
-            Console.WriteLine("Warning: Event 0 not found in common.emevd, skipping untouchable parry break");
-            return;
+            log("  Warning: Event 0 not found, parry break skipped");
+            return 0;
         }
 
-        var range = SpeedFogIds.UntouchableParryEvents;
-        int slot = 0;
-        foreach (var boss in arenaIds.OrderBy(id => id))
+        int added = 0;
+        foreach (var (boss, eventId) in slots)
         {
-            if (slot >= range.Capacity)
-            {
-                Console.WriteLine(
-                    $"  Warning: parry break event range full ({range.Capacity}), {arenaIds.Count - slot} boss slot(s) keep the damage cut after a parry");
-                break;
-            }
-            int eventId = range.Base + slot++;
             var evt = new EMEVD.Event(eventId);
-            evt.Instructions.Add(events.ParseAdd(
-                $"IfCharacterHasSpEffect(MAIN, {boss}, {PARRY_WINDOW_SPEFFECT}, true, ComparisonType.Equal, 1)"));
-            evt.Instructions.Add(events.ParseAdd(
-                $"SetSpEffect({boss}, {SpeedFogIds.UntouchableParryBreakSpEffectRow})"));
-            evt.Instructions.Add(events.ParseAdd($"WaitFixedTimeSeconds({PARRY_BREAK_REARM_SECONDS})"));
-            evt.Instructions.Add(events.ParseAdd("EndUnconditionally(EventEndType.Restart)"));
-            commonEmevd.Events.Add(evt);
+            // events is shared across the parallel map workers and its parse
+            // caches are not known to be thread-safe (DeathMarkerInjector's
+            // precedent): serialize instruction building.
+            lock (events)
+            {
+                evt.Instructions.Add(events.ParseAdd(
+                    $"IfCharacterHasSpEffect(MAIN, {boss}, {PARRY_WINDOW_SPEFFECT}, true, ComparisonType.Equal, 1)"));
+                evt.Instructions.Add(events.ParseAdd(
+                    $"SetSpEffect({boss}, {SpeedFogIds.UntouchableParryBreakSpEffectRow})"));
+                evt.Instructions.Add(events.ParseAdd($"WaitFixedTimeSeconds({PARRY_BREAK_REARM_SECONDS})"));
+                evt.Instructions.Add(events.ParseAdd("EndUnconditionally(EventEndType.Restart)"));
+            }
+            emevd.Events.Add(evt);
             initEvent.Instructions.Add(EmevdHelper.InitializeEvent(eventId));
+            log($"  parry break event {eventId}: entity {boss} (SpEffect {PARRY_WINDOW_SPEFFECT} -> SetSpEffect {SpeedFogIds.UntouchableParryBreakSpEffectRow})");
+            added++;
         }
+        return added;
+    }
 
-        Console.WriteLine(
-            $"Untouchable boss: parry break events {range.Base}..{range.Base + slot - 1} ({slot} boss slot(s): SpEffect {PARRY_WINDOW_SPEFFECT} -> SetSpEffect {SpeedFogIds.UntouchableParryBreakSpEffectRow})");
+    /// <summary>Reads the map's EMEVD from the mod dir, adds the parry break
+    /// events of the given bosses (those with a slot) and writes it back.
+    /// A map without an EMEVD in the mod dir (the merge-dir fallback arena)
+    /// is logged and skipped: that boss keeps its cut after a parry.</summary>
+    internal static int InjectParryBreak(
+        string modDir, string msbFileName, IEnumerable<uint> bossIds,
+        IReadOnlyDictionary<uint, int> slots, Events events, Action<string> log)
+    {
+        var mapId = msbFileName.Replace(".msb.dcx", "", StringComparison.OrdinalIgnoreCase);
+        var emevdPath = Path.Combine(modDir, "event", $"{mapId}.emevd.dcx");
+        var pairs = bossIds.Where(slots.ContainsKey).OrderBy(id => id).Select(id => (id, slots[id])).ToList();
+        if (pairs.Count == 0)
+            return 0;
+        if (!File.Exists(emevdPath))
+        {
+            log($"  Warning: {mapId}.emevd.dcx not in the mod dir, parry break skipped for entity {string.Join("/", pairs.Select(p => p.Item1))}");
+            return 0;
+        }
+        var emevd = EMEVD.Read(emevdPath);
+        int added = AddParryBreakEvents(emevd, events, pairs, log);
+        if (added > 0)
+            emevd.Write(emevdPath);
+        return added;
     }
 
     /// <summary>MSB phase (post-Write): repoint every placed untouchable
@@ -361,14 +403,28 @@ public static class UntouchableBossInjector
     /// each map in <paramref name="fallbackArenaMaps"/> (data/game_tweaks.toml
     /// [[fallback_arena_maps]]) is read from the merge-dir copy, repointed
     /// the same way, and, only when something was actually repointed,
-    /// written into modDir (the higher-priority layer).</summary>
+    /// written into modDir (the higher-priority layer).
+    ///
+    /// <paramref name="events"/> (null disables it) also adds the parry break
+    /// event of every repointed boss to its map's EMEVD
+    /// (<see cref="InjectParryBreak"/>).</summary>
     public static void Inject(
         string modDir, Dictionary<string, string> enemyAssignments, string? mergeDir,
-        IReadOnlyList<string> fallbackArenaMaps, bool repointThink)
+        IReadOnlyList<string> fallbackArenaMaps, bool repointThink, Events? events)
     {
-        var arenaIds = ArenaIds(enemyAssignments).ToHashSet();
+        var orderedIds = ArenaIds(enemyAssignments);
+        var arenaIds = orderedIds.ToHashSet();
         if (arenaIds.Count == 0)
             return;
+
+        var slots = ParryBreakSlots(orderedIds);
+        if (events != null && slots.Count < arenaIds.Count)
+        {
+            Console.WriteLine(
+                $"  Warning: parry break event range full ({SpeedFogIds.UntouchableParryEvents.Capacity}), {arenaIds.Count - slots.Count} boss slot(s) keep the damage cut after a parry");
+        }
+        int parryEvents = 0;
+        int parryMaps = 0;
 
         Console.WriteLine(
             $"Untouchable boss: repointing {arenaIds.Count} placed boss slot(s)");
@@ -394,6 +450,15 @@ public static class UntouchableBossInjector
                 {
                     foreach (var id in ids)
                         found.Add(id);
+                }
+                if (events != null)
+                {
+                    int added = InjectParryBreak(modDir, Path.GetFileName(msbPath), ids, slots, events, log);
+                    if (added > 0)
+                    {
+                        Interlocked.Add(ref parryEvents, added);
+                        Interlocked.Increment(ref parryMaps);
+                    }
                 }
             }
         });
@@ -433,11 +498,24 @@ public static class UntouchableBossInjector
                         found.Add(id);
                     Console.WriteLine(
                         $"  Fallback: repointed {repointed} part(s) in {name} (merge-dir copy shipped into the mod dir)");
+                    if (events != null)
+                    {
+                        // FogMod never writes this map's EMEVD, so this
+                        // normally logs the "not in the mod dir" warning.
+                        int added = InjectParryBreak(modDir, msbFileName, ids, slots, events, Console.WriteLine);
+                        if (added > 0)
+                        {
+                            parryEvents += added;
+                            parryMaps++;
+                        }
+                    }
                 }
             }
         }
 
         Console.WriteLine($"  Repointed {total} untouchable boss part(s)");
+        if (events != null)
+            Console.WriteLine($"  Parry break: {parryEvents} event(s) in {parryMaps} map(s)");
         foreach (var missing in arenaIds.Except(found).OrderBy(id => id))
         {
             // Phase-expanded slots may have no MSB part of their own.

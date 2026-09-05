@@ -322,11 +322,16 @@ parries still faces a beatable boss.
   the arena entity, so ambient untouchables are never touched. Fallback if
   the stacking does not behave on an NPC: `ClearSpEffect(boss, 755890000)`
   (EMEVD 2004[21]) on the resident row instead, to be verified in game.
-- **Event**: one common.emevd event per placed boss slot from
-  `SpeedFogIds.UntouchableParryEvents` (755865500+, ascending arena id),
-  written by `UntouchableBossInjector.InjectParryBreak` in the common
-  phase (`Program.ApplyCommonInjectors`, right after the boss death
-  monitor), same shape as that monitor:
+- **Event**: one looping event per placed boss slot from
+  `SpeedFogIds.UntouchableParryEvents` (755865500+, slots handed out in
+  ascending arena id order by `ParryBreakSlots`), written into the arena
+  map's own EMEVD (`<modDir>/event/<map>.emevd.dcx`, registered in that
+  map's event 0) by `UntouchableBossInjector.InjectParryBreak` during the
+  MSB repoint pass (`Inject`), the map being the one whose MSB carried the
+  repointed part. Living in the map's EMEVD keeps the entity in scope, the
+  way FogMod's own scaling events (common_func 9005770/9005771 initialized
+  from the map) do; the first version lived in common.emevd and never
+  fired in game (2026-09-05). Shape:
 
   ```
   IfCharacterHasSpEffect(MAIN, <arena entity>, 20011471, true, ComparisonType.Equal, 1)
@@ -339,7 +344,9 @@ parries still faces a beatable boss.
   player's death (the counter dies with the instance). Phase slots whose
   entity never loads simply never trigger. The counter row is written in
   the regulation phase with the other core rows; if that phase skips, the
-  event names a missing row and does nothing.
+  event names a missing row and does nothing. The merge-dir fallback arena
+  (`[[fallback_arena_maps]]`, m60_13_09_02) has no EMEVD in the mod dir,
+  so its boss keeps the cut after a parry, with a warning.
 
 ### Gating
 
@@ -392,13 +399,14 @@ than just the beam.
 ## Expected log lines
 
 ```
-Untouchable boss: parry break events 755865500..7558655NN (N boss slot(s): SpEffect 20011471 -> SetSpEffect 755890002)
 Untouchable boss: NpcParam 755890000 (clone of 52800086, hp 2000, runes 20000) + SpEffect 755890000 (cut 0.5) + parry break SpEffect 755890002 (x2)
 Untouchable boss: moveset rows (think 755890001 -> battle 755890, variation 75589 with 9 vanilla judges + beam judge 150, bullet 755890000 (clone of 10732000), atk 755890000 magic 110, pulses 755890003-755890005 without madness)
 Untouchable boss: repointing N placed boss slot(s)
   <part> (entity <id>): NPCParamID -> 755890000, ThinkParamID -> 755890001
+  parry break event 7558655NN: entity <id> (SpEffect 20011471 -> SetSpEffect 755890002)
   Fallback: repointed N part(s) in <name> (merge-dir copy shipped into the mod dir)
   Repointed M untouchable boss part(s)
+  Parry break: K event(s) in J map(s)
 ```
 
 with `M >= 1` whenever the boss was actually placed in at least one

@@ -770,17 +770,6 @@ Example:
                 ctx.CommonEmevd, ctx.Events, ctx.InjectionResult.FinishEvent, ctx.BossDefeatFlag);
         }
 
-        // Aging Untouchable boss: parry break (the first parry cancels the
-        // damage cut for the rest of the fight), one common.emevd event per
-        // placed boss slot. The counter SpEffect row itself is written in
-        // ApplyRegulation with the other boss rows; if that phase skips, the
-        // event's SetSpEffect names a missing row and does nothing.
-        if (UntouchableBossInjector.IsBossPlaced(ctx.GraphData.EnemyAssignments))
-        {
-            UntouchableBossInjector.InjectParryBreak(
-                ctx.CommonEmevd, ctx.Events, UntouchableBossInjector.ArenaIds(ctx.GraphData.EnemyAssignments));
-        }
-
         // "RUN COMPLETE" banner event
         if (ctx.GraphData.FinishEvent > 0)
         {
@@ -939,9 +928,13 @@ Example:
         }
         else
         {
+            // Also writes the parry break event of every repointed boss into
+            // its arena map's EMEVD (the counter SpEffect row comes from
+            // ApplyRegulation; if that phase skipped, the event names a
+            // missing row and does nothing).
             UntouchableBossInjector.Inject(
                 ctx.ModDir, ctx.GraphData.EnemyAssignments, ctx.Config.MergeDir, ctx.Tweaks.FallbackArenaMaps,
-                ctx.UntouchableBossMovesetApplied);
+                ctx.UntouchableBossMovesetApplied, ctx.Events);
         }
 
         // Rebirth option at Sites of Grace
