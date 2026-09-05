@@ -314,11 +314,14 @@ interrupts are superseded by what follows.
 Acts: Act11 (swing 3001, vanilla's post-teleport surprise attack as a
 regular melee act), Act04 (beam 3004, `successDist` 999, at range and at
 mid range), Act02 (teleport 3000, vanilla's far-range act, also offered at
-melee range: the 20011452 interrupt warps the boss behind the player and
-swings), Act05/Act06 (the vanilla post-grab retreats to 10/8 m, followed by
-a beam when it is available). Cooldowns through `SetCoolTime`:
-`GRAB_COOLDOWN` 8 s (vanilla 12), `SWING_COOLDOWN` 10 s on 3001 whatever
-its source (act, reaction or post-teleport), `BEAM_COOLDOWN` 8 s.
+melee range and against a player in the boss's back: the 20011452
+interrupt warps the boss behind the player and swings), Act05/Act06 (the
+vanilla post-grab retreats to 10/8 m, followed by a beam when it is
+available). Cooldowns: `GRAB_COOLDOWN` 8 s (vanilla 12) and `BEAM_COOLDOWN`
+8 s through `SetCoolTime`; `SWING_COOLDOWN` 10 s on 3001 whatever its
+source (act, reaction or post-teleport) and `TELEPORT_COOLDOWN` 8 s on 3000,
+both script-side through the `Houzuki755890_*Ready` helpers, so the engine
+holds no interval on 3001 or 3000.
 
 Cooldown weight: the last argument of `SetCoolTime` is the weight kept
 while the attack cools, not 0. Vanilla passes 1 everywhere so a table never
@@ -330,13 +333,20 @@ earlier fillers at 25, about one decision in thirteen of the boss
 (2026-09-05 session). The script now passes 0, and every bracket keeps a
 movement filler with a positive weight.
 
-Teleport gate: `Houzuki755890_TeleportReady` requires SpEffect 20011450
-(NpcParam slot 17, always present on the boss) and the swing available
-(`GetAttackPassedTime(3001)` beyond `SWING_COOLDOWN`). The teleport ends in
-the interrupt's swing, so a teleport into a held swing would leave the boss
-standing behind the player; the gate also bounds teleports to one per swing
-cooldown. Vanilla 450000 gates a reaction on `GetAttackPassedTime` the same
-way without registering the attack first.
+Teleport cooldown: `Houzuki755890_TeleportReady` requires SpEffect
+20011450 (NpcParam slot 17, resident on the boss, category 0, no EMEVD of
+m31_10 touches it) and `GetAttackPassedTime(3000)` beyond
+`TELEPORT_COOLDOWN`. Vanilla 450000 gates a reaction on
+`GetAttackPassedTime` the same way without registering the attack first.
+The first version of this rework gated the teleport on the swing instead
+(the teleport ends in the interrupt's swing, and a swing held by an engine
+interval would have left the boss standing behind the player): in game
+(2026-09-05) the boss never teleported at melee range, because the hit
+reaction consumes the swing as soon as it is ready while the player keeps
+hitting, so the gate stayed closed exactly where the teleport was needed.
+Now 3001 never goes through `SetCoolTime` (no engine interval, the
+post-teleport swing always plays) and the teleport only depends on its own
+counter.
 
 Probability table (vanilla -> boss); the vanilla act of the bracket keeps
 the remainder, the teleport weight counts only while the teleport is ready:
@@ -344,6 +354,7 @@ the remainder, the teleport weight counts only while the teleport is ready:
 | Situation | Vanilla | Boss |
 |-----------|---------|------|
 | player behind, >= 8 m | Act02 100 | Act02 100 if the teleport is ready, else Act01 100 |
+| player behind, < 8 m | Act01 20 / Act43 80 | Act02 50 / Act01 10 / Act43 40 if the teleport is ready, else vanilla |
 | >= 10 m, teleport ready | Act02 99 / Act01 1 | Act02 60 / Act04 40 |
 | >= 10 m, teleport not ready | Act01 100 | Act01 50 / Act04 50 |
 | 3 to 10 m | Act03 100 | Act03 50 / Act11 10 / Act02 15 / Act04 10 / Act46 15 |
@@ -361,13 +372,17 @@ return true). A reaction spends an attack that is available anyway, so it
 moves an attack earlier without adding any: hits landed while the swing
 cools stay free, and the grab, beam and post-teleport recoveries are
 untouched. No reaction fires while a teleport or a grab sequence is in
-flight (`Houzuki755890_SequenceInFlight`: less than `REACT_HOLD`, 8 s,
-since 3000 or 3002 started; per the TAE event spans 3000 lasts 5 s and
-3002 + 3003 about 6 s): a reaction's `ClearSubGoal` would otherwise drop
-the warp + swing or the 3003 throw, and a cast during the warp would queue
-a second teleport since the swing counter has not moved yet. Accepted
-exposure, shared with vanilla 472000: a hit from a spirit ash outside those
-windows can trigger the hit reaction like a player's hit.
+flight (`Houzuki755890_SequenceInFlight`: less than `REACT_HOLD`, 10 s,
+since 3000 or 3002 started; per the TAE event spans 3000 lasts 5 s, 3001
+1.8 s and 3002 + 3003 about 6 s, so a teleport sequence runs about 8 s): a
+reaction's `ClearSubGoal` would otherwise drop the warp + swing or the 3003
+throw. `REACT_HOLD` must stay above `TELEPORT_COOLDOWN` plus the swing,
+otherwise a cast from range during the post-warp swing would chain a
+second teleport; as it covers `TELEPORT_COOLDOWN`, a cooling teleport is
+always also in flight and the Shoot reaction's beam branch is only reached
+without the gate SpEffect. Accepted exposure,
+shared with vanilla 472000: a hit from a spirit ash outside those windows
+can trigger the hit reaction like a player's hit.
 
 | Interrupt | Conditions | Response | Knob |
 |-----------|-----------|----------|------|
@@ -376,8 +391,12 @@ windows can trigger the hit reaction like a player's hit.
 | `INTERUPT_UseItem` | player at `REACT_RANGE` or more, beam ready, draw | beam | `REACT_HEAL` 80 |
 
 `tests/test_mods_src_lua_scripts.py` parses the script with luaparser and
-rejects the syntax Lua added after 5.0 (the engine's compiler), the only
-automated check on it; the in-game sequence below remains the real test.
+rejects the syntax Lua added after 5.0 (the engine's compiler);
+`tests/test_untouchable_ai_table.py` runs `Goal.Activate`, `Goal.Interrupt`
+and the retreat act in an embedded Lua (lupa) against a fake ai/goal and
+checks the weight table and the reactions per state (distance, behind,
+SpEffects, seconds since each attack, draw): it would have caught the swing
+gate. The in-game sequence below remains the real test.
 `battleGoalID` selects the battle luabnd independently of `logicId` (255
 vanilla think rows share the generic 29999), and the logic script does not
 reference the battle goal by name, so only the battle script is cloned.
@@ -427,7 +446,9 @@ and beam behave, no madness while idle, half damage behind the partial
 wall, the first parry breaks it and every later hit lands at four times
 the pre-parry number. Re-run after a game patch or a knob change. Steps
 6 to 8 (cooldown weight 0, offensive teleport, mid-range and retreat beams,
-reactions; 2026-09-05 second session) have not been run in game yet.
+reactions) were run once on 2026-09-05: improvements, but no teleport at
+melee range at all (the swing gate, see "Teleport cooldown"); the rework
+that followed awaits its own run.
 
 1. **Goal resolution**: knobs temporarily at `SWING_MID = 100`,
    `SWING_CLOSE = 100`, the three `BEAM_*` and the two `TELEPORT_*` at 0
@@ -449,8 +470,9 @@ reactions; 2026-09-05 second session) have not been run in game yet.
 3. **Tuning**: probabilities (`SWING_*`, `MOVE_*`), `GRAB_COOLDOWN`,
    `SWING_COOLDOWN`, `BEAM_COOLDOWN`, `BEAM_MAGIC`, `BEAM_EVENT_COUNT`.
    Second session (2026-09-05): swing still too frequent, `SWING_COOLDOWN`
-   12 s added (10 s since the reactions pass, where it also throttles the
-   teleport); madness rose while the boss idled, pulse clones without
+   12 s added (10 s since the reactions pass; it throttled the teleport
+   until the same day's rework, see "Teleport cooldown"); madness rose
+   while the boss idled, pulse clones without
    26000; parry break added. First session
    (2026-09-04): beam approved as is; the swing at 40/50 fired every time
    (see the AI script note), lowered to 10/15 with movement fillers and
@@ -468,14 +490,19 @@ reactions; 2026-09-05 second session) have not been run in game yet.
 6. **No freeze**: at melee range, take a grab and a swing within a few
    seconds, then stay close: the boss must keep sidestepping or strafing
    through the cooldowns, never stand still for several seconds (the
-   cooldown weight 0). Also check `GetAttackPassedTime` before first use:
-   the boss must be able to teleport at melee range before its first swing
-   of the fight; if it never does, the counter starts at 0 and the
-   teleport gate and the reaction hold need a fallback.
-7. **Offensive teleport and beams**: at 3-10 m the boss sometimes vanishes
-   and reappears behind the player with a swing (never two within
-   `SWING_COOLDOWN`), sometimes fires the beam from mid range; after a grab
-   it retreats and fires the beam from the retreat distance.
+   cooldown weight 0). `GetAttackPassedTime` before first use: the
+   2026-09-05 run showed grabs and beams from the start, which needs the
+   3002/3004 counters large before their first use (`SetCoolTime` would
+   otherwise zero them for good), and the 3000 counter is read the same
+   way; a boss that never teleports at melee range before its first ranged
+   teleport would contradict that and call for a fallback in
+   `Houzuki755890_TeleportReady` and the reaction hold.
+7. **Offensive teleport and beams**: at melee range while the grab and
+   the swing cool, at 3-10 m, and when the player stands in its back, the
+   boss vanishes and reappears behind the player with a swing (never two
+   within `TELEPORT_COOLDOWN`, the swing always plays after the warp); at
+   3-10 m it sometimes fires the beam; after a grab it retreats and fires
+   the beam from the retreat distance.
 8. **Reactions and windows**: from 5 m or more, drinking a flask draws a
    beam most of the time and casting a spell draws a teleport or a beam
    about half the time; within 5 m neither reaction fires. At melee range,

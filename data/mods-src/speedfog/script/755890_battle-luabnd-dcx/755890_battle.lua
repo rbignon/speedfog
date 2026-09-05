@@ -4,9 +4,10 @@
 -- clone's battleGoalID). SpeedFog additions: the lantern swing (3001) as a
 -- regular melee act (Act11), the dormant lantern ray (3004) re-enabled as a
 -- beam (Act04, at range and at mid range), the teleport (Act02) offered at
--- melee range as the swing's delivery, a beam after the post-grab retreats
--- (Act05/Act06) and three reactions in Goal.Interrupt (hit, ranged attack,
--- item use). Ambient untouchables keep the vanilla bytecode script.
+-- melee range and against a player in the back with its own cooldown, a
+-- beam after the post-grab retreats (Act05/Act06) and three reactions in
+-- Goal.Interrupt (hit, ranged attack, item use). Ambient untouchables keep
+-- the vanilla bytecode script.
 -- The engine keys goal tables by numeric id and starts the battle goal with
 -- the raw NpcThinkParam.battleGoalID; the GOAL_<name> globals of vanilla
 -- scripts come from the shared aiCommon global-name list, which does not
@@ -20,9 +21,9 @@ REGISTER_GOAL_NO_SUB_GOAL(GOAL_Houzuki755890_Battle, true)
 -- SpeedFog tuning knobs. Weights are percentages within a distance
 -- bracket; the vanilla act of the bracket (grab at melee range, teleport
 -- or approach at range) keeps the remainder. A cooling attack weighs 0
--- (SetCoolTime in Goal.Activate) and the teleport is only offered while its
--- swing is available, so the remainder grows while attacks cool, and every
--- bracket keeps a movement filler with a positive weight.
+-- (SetCoolTime or the *_Ready helpers in Goal.Activate), so the remainder
+-- grows while attacks cool, and every bracket keeps a movement filler with
+-- a positive weight.
 local BEAM_FAR_TELEPORT_READY = 40      -- >= 10 m, teleport ready: Act04 (beam) vs Act02
 local BEAM_FAR_TELEPORT_NOT_READY = 50  -- >= 10 m, teleport not ready: Act04 (beam) vs Act01
 local SWING_MID = 10                    -- 3 to 10 m: Act11 (swing, radius-4 knockback burst)
@@ -33,8 +34,10 @@ local SWING_CLOSE = 15                  -- < 3 m: Act11 (swing)
 local TELEPORT_CLOSE = 10               -- < 3 m: Act02
 local MOVE_CLOSE = 20                   -- < 3 m: Act42 (sidestep)
 local GRAB_COOLDOWN = 8                 -- seconds between two grabs (3002); vanilla 12
-local SWING_COOLDOWN = 10               -- seconds between two swings (3001), any source, so also between two teleports
+local SWING_COOLDOWN = 10               -- seconds between two swings (3001), any source; script-side only, no engine interval
+local TELEPORT_COOLDOWN = 8             -- seconds between two teleports (3000), from the start of 3000
 local BEAM_COOLDOWN = 8                 -- seconds between two beams (3004), any source
+local TELEPORT_BEHIND = 50              -- player behind, < 8 m: Act02 when ready (0-90; Act01 keeps 10, Act43 takes the rest)
 -- Reactions (Goal.Interrupt), percentages, 0 disables one. A reaction
 -- spends an attack that is available anyway, so it moves an attack earlier
 -- without adding any: hits landed while the swing cools stay free.
@@ -43,7 +46,7 @@ local REACT_HIT_RANGE = 2
 local REACT_SHOOT = 50                  -- player casts or shoots from >= REACT_RANGE: teleport, else beam
 local REACT_HEAL = 80                   -- player uses an item from >= REACT_RANGE: beam
 local REACT_RANGE = 5
-local REACT_HOLD = 8                    -- seconds after a teleport (3000) or a grab (3002) starts without any reaction
+local REACT_HOLD = 10                   -- seconds after a teleport (3000) or a grab (3002) starts without any reaction (>= TELEPORT_COOLDOWN + the post-warp swing, see Houzuki755890_SequenceInFlight)
 
 -- Availability of the cooled attacks, shared by the decision table and the
 -- reactions. GetAttackPassedTime is the counter SetCoolTime reads; vanilla
@@ -58,17 +61,21 @@ function Houzuki755890_BeamReady(ai)
 end
 
 -- The teleport (3000) ends with the interrupt's warp behind the player and
--- a swing, so it is offered only while the swing is available: a teleport
--- into a held swing would leave the boss standing behind the player.
+-- a swing (3001). It has its own script-side cooldown and does not depend
+-- on the swing: 3001 never goes through SetCoolTime, so the engine holds
+-- no interval on it and the post-teleport swing always plays. (A gate on
+-- SwingReady closed the teleport at melee range for good, where the hit
+-- reaction consumes the swing as soon as it is ready; 2026-09-05.)
 function Houzuki755890_TeleportReady(ai)
-    return ai:HasSpecialEffectId(TARGET_SELF, 20011450) and Houzuki755890_SwingReady(ai)
+    return ai:HasSpecialEffectId(TARGET_SELF, 20011450) and ai:GetAttackPassedTime(3000) > TELEPORT_COOLDOWN
 end
 
 -- No reaction while a teleport (3000, then the warp and its swing) or a
 -- grab (3002, then 3003) is in flight: a reaction's ClearSubGoal would drop
--- the follow-up, and a cast during the warp would queue a second teleport
--- (the swing counter has not moved yet). Per the TAE event spans 3000
--- lasts 5 s and 3002 + 3003 about 6 s.
+-- the follow-up. Per the TAE event spans 3000 lasts 5 s, 3001 1.8 s and
+-- 3002 + 3003 about 6 s, so a teleport sequence runs about 8 s: REACT_HOLD
+-- must stay above TELEPORT_COOLDOWN plus the swing, otherwise a cast from
+-- range during the post-warp swing would chain a second teleport.
 function Houzuki755890_SequenceInFlight(ai)
     return ai:GetAttackPassedTime(3000) <= REACT_HOLD or ai:GetAttackPassedTime(3002) <= REACT_HOLD
 end
@@ -127,6 +134,12 @@ Goal.Activate = function (self, ai, goal)
                 probabilities[1] = 100
             end
             probabilities[43] = 0
+        elseif teleportReady then
+            -- SpeedFog: vanilla only turns here (Act43); vanishing to
+            -- reappear behind the player answers a player in the back.
+            probabilities[1] = 10
+            probabilities[2] = TELEPORT_BEHIND
+            probabilities[43] = 90 - TELEPORT_BEHIND
         else
             probabilities[1] = 20
             probabilities[2] = 0
@@ -214,8 +227,13 @@ Goal.Activate = function (self, ai, goal)
     -- weight 1 is held by the engine until its interval expires, up to the
     -- act's goal life, which reads as the boss freezing in place.
     probabilities[3] = SetCoolTime(ai, goal, 3002, GRAB_COOLDOWN, probabilities[3], 0)
-    probabilities[11] = SetCoolTime(ai, goal, 3001, SWING_COOLDOWN, probabilities[11], 0)
     probabilities[4] = SetCoolTime(ai, goal, 3004, BEAM_COOLDOWN, probabilities[4], 0)
+    -- The swing's cooldown stays script-side (no engine interval on 3001,
+    -- see Houzuki755890_TeleportReady); the teleport's sits inside the
+    -- teleportMid/teleportClose weights above.
+    if not Houzuki755890_SwingReady(ai) then
+        probabilities[11] = 0
+    end
     acts[1] = REGIST_FUNC(ai, goal, Houzuki755890_Act01)
     acts[2] = REGIST_FUNC(ai, goal, Houzuki755890_Act02)
     acts[3] = REGIST_FUNC(ai, goal, Houzuki755890_Act03)
@@ -266,7 +284,8 @@ end
 
 function Houzuki755890_Act02(ai, goal, paramTbl)
     -- Teleport: 3000, then the 20011452 interrupt warps behind the player
-    -- and swings. SpeedFog offers it at melee range too (TELEPORT_MID/CLOSE).
+    -- and swings. SpeedFog offers it at melee range and against a player in
+    -- the back too (TELEPORT_MID/CLOSE/BEHIND).
     Houzuki755890_AddTeleport(ai, goal)
     GetWellSpace_Odds = 0
     return GetWellSpace_Odds

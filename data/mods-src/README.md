@@ -19,8 +19,9 @@ Current content:
   DSLuaDecompiler, then re-apply the SpeedFog edits listed in
   `docs/untouchable-boss.md` "AI script": the header comment, the two
   `GOAL_` assignments, the file-scope knobs and the `Houzuki755890_*Ready`,
-  `_SequenceInFlight` and `_Add*` helpers, the rewritten brackets and the
-  `SetCoolTime` weights in `Goal.Activate`, Act01's `successDist`, Act02,
+  `_SequenceInFlight` and `_Add*` helpers, the rewritten brackets, the
+  `SetCoolTime` weights and the script-side swing zeroing (3001 must not go
+  through `SetCoolTime`) in `Goal.Activate`, Act01's `successDist`, Act02,
   Act04, Act05/Act06, Act11, and the reactions at the end of
   `Goal.Interrupt`.
 
