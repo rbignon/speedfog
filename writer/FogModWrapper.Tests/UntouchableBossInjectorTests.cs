@@ -552,6 +552,25 @@ public class UntouchableBossInjectorTests
     }
 
     [Fact]
+    public void Apply_TakesTheCutAndTheCounterOutOfTheParryWindowCategory()
+    {
+        var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
+        var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
+        sp.Rows[0]["spCategory"].Value = (ushort)1001; // vanilla 20011471's category
+
+        UntouchableBossInjector.Apply(npc, sp);
+
+        // Same category + equal priority as the parry-window effect made the
+        // resident cut collide with it (2026-09-05 session: no damage change
+        // after a parry); category 0 coexists.
+        Assert.Equal(UntouchableBossInjector.NO_CATEGORY,
+            (ushort)sp.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossSpEffectRow)["spCategory"].Value);
+        Assert.Equal(UntouchableBossInjector.NO_CATEGORY,
+            (ushort)sp.Rows.Single(r => r.ID == SpeedFogIds.UntouchableParryBreakSpEffectRow)["spCategory"].Value);
+        Assert.Equal((ushort)1001, (ushort)sp.Rows.Single(r => r.ID == 20011471)["spCategory"].Value); // vanilla untouched
+    }
+
+    [Fact]
     public void Apply_WritesTheParryBreakCounterAsTheInverseOfTheCut()
     {
         var npc = BuildParamFromDef("NpcParam", templateId: 52800086);

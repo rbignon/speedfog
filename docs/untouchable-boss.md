@@ -307,6 +307,15 @@ parries still faces a beatable boss.
   (nerflantern patches the 5280 band), but the boss's permanent row is the
   out-of-band clone 755890000, so on the boss 20011471 is only ever present
   during a parry. `IfCharacterHasSpEffect(boss, 20011471)` is the trigger.
+  Category gotcha (2026-09-05 session, no damage change after a parry):
+  20011471 sits in SpEffect category 1001 with categoryPriority 0, and so
+  did the cut row cloned from it. Same category and equal priority collide
+  instead of coexisting (vanilla's resident wall 20011473 is in category
+  156, which is why the window effect coexists with it in the base game),
+  so the parry-window effect never registered on the boss and the counter,
+  also in 1001, would have collided too. Both SpeedFog rows now carry
+  `spCategory` 0 (`UntouchableBossInjector.NO_CATEGORY`), the no-category
+  value that coexists with everything.
 - **Counter**: SpEffectParam 755890002, a clone of the cut row whose eight
   cut rates are `1 / DAMAGE_CUT` (x2 at 0.5). Damage negations stack
   multiplicatively, so cut x counter = 1.0. Applied with `SetSpEffect` on

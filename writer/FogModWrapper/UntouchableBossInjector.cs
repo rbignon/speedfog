@@ -68,6 +68,10 @@ public static class UntouchableBossInjector
     /// pass re-applies the (idempotent) counter and re-arms after a respawn.</summary>
     public const float PARRY_BREAK_REARM_SECONDS = 1f;
 
+    /// <summary>SpEffectParam.spCategory 0: no category, the effect coexists
+    /// with every other effect instead of competing inside a category.</summary>
+    public const ushort NO_CATEGORY = 0;
+
     private static readonly string[] CutFields =
     {
         "slashDamageCutRate", "blowDamageCutRate", "thrustDamageCutRate",
@@ -149,13 +153,23 @@ public static class UntouchableBossInjector
             spEffect, SpeedFogIds.UntouchableBossSpEffectRow, WALL_LIFT_TEMPLATE_SPEFFECT);
         foreach (var field in CutFields)
             spRow[field].Value = DAMAGE_CUT;
+        // The template sits in SpEffect category 1001 (categoryPriority 0),
+        // the category of the parry-window effect the parried animation
+        // applies (20011471 itself). Same category + equal priority means the
+        // window effect collides with this resident row instead of coexisting
+        // (vanilla's resident wall 20011473 is in category 156), which both
+        // blinds the parry detector and blocks the counter below. Category 0
+        // coexists with everything.
+        spRow["spCategory"].Value = NO_CATEGORY; // u16
 
         // Parry break counter: the inverse of the cut, applied by EMEVD once
-        // the boss has been parried (InjectParryBreak). Negations stack
-        // multiplicatively, so cut x counter = 1.0 for the rest of the fight.
+        // the boss has been parried (InjectParryBreak). Negations of
+        // coexisting effects stack multiplicatively, so cut x counter = 1.0
+        // for the rest of the fight.
         var breakRow = GameEditor.AddRow(spEffect, SpeedFogIds.UntouchableParryBreakSpEffectRow, spRow);
         foreach (var field in CutFields)
             breakRow[field].Value = 1f / DAMAGE_CUT;
+        breakRow["spCategory"].Value = NO_CATEGORY; // u16; already copied from spRow, kept explicit
 
         var npcRow = GameEditor.AddRow(
             npc, SpeedFogIds.UntouchableBossNpcRow, UNTOUCHABLE_VANILLA_NPC);
