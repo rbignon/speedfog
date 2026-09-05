@@ -20,6 +20,13 @@ public static class UntouchableBossInjector
     // Initial values for the in-game tuning session (docs/untouchable-boss.md).
     public const uint BOSS_HP = 2000;
     public const uint BOSS_RUNES = 20000;
+    /// <summary>Boss-tier super armor (flinch resistance). Vanilla 52800086 has
+    /// 65 with no recovery, the mob median (NpcParam rows of 300-600 HP); the
+    /// median of the 351 rows at 2000 HP or more is 120 with 0.85 recovery
+    /// (1.17 survey). toughness (the stance meter for criticals, 35) stays
+    /// vanilla so heavy hits still break the stance.</summary>
+    public const float BOSS_SUPER_ARMOR = 120f;
+    public const float BOSS_SUPER_ARMOR_RECOVER = 0.85f;
     public const float DAMAGE_CUT = 0.5f; // fraction of damage taken (50% cut)
 
     /// <summary>Fraction of damage taken once the wall is broken: twice the
@@ -188,6 +195,8 @@ public static class UntouchableBossInjector
             npc, SpeedFogIds.UntouchableBossNpcRow, UNTOUCHABLE_VANILLA_NPC);
         npcRow["hp"].Value = BOSS_HP;          // u32
         npcRow["getSoul"].Value = BOSS_RUNES;  // u32
+        npcRow["superArmorDurability"].Value = BOSS_SUPER_ARMOR;               // f32
+        npcRow["superArmorRecoverCorrection"].Value = BOSS_SUPER_ARMOR_RECOVER; // f32
         // The clone is taken from the merged regulation, where the Item
         // Randomizer's always-on nerflantern option has already written the
         // parry-window effect (20011471) into a free slot of every 5280-band
@@ -205,7 +214,7 @@ public static class UntouchableBossInjector
         }
 
         Console.WriteLine(
-            $"Untouchable boss: NpcParam {SpeedFogIds.UntouchableBossNpcRow} (clone of {UNTOUCHABLE_VANILLA_NPC}, hp {BOSS_HP}, runes {BOSS_RUNES}, nerflantern slot scrubbed) + partial wall SpEffect {SpeedFogIds.UntouchableBossSpEffectRow} (cut {DAMAGE_CUT}) + broken SpEffect {SpeedFogIds.UntouchableBrokenSpEffectRow} (x{BROKEN_DAMAGE_TAKEN}), both applied by the copied wall event");
+            $"Untouchable boss: NpcParam {SpeedFogIds.UntouchableBossNpcRow} (clone of {UNTOUCHABLE_VANILLA_NPC}, hp {BOSS_HP}, runes {BOSS_RUNES}, super armor {BOSS_SUPER_ARMOR}/{BOSS_SUPER_ARMOR_RECOVER}, nerflantern slot scrubbed) + partial wall SpEffect {SpeedFogIds.UntouchableBossSpEffectRow} (cut {DAMAGE_CUT}) + broken SpEffect {SpeedFogIds.UntouchableBrokenSpEffectRow} (x{BROKEN_DAMAGE_TAKEN}), both applied by the copied wall event");
     }
 
     /// <summary>Writes the moveset rows: boss think row (own battle script),

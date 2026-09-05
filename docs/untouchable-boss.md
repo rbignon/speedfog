@@ -99,6 +99,12 @@ The clone (`NpcParam` row `755890000`, `UntouchableBossInjector.UNTOUCHABLE_VANI
 - `hp` = `BOSS_HP` = 2000 (3000 until the 2026-09-04 session; see the
   scaling note below: this is the HP at the arena's vanilla tier)
 - `getSoul` = `BOSS_RUNES` = 20000
+- `superArmorDurability` = `BOSS_SUPER_ARMOR` = 120 and
+  `superArmorRecoverCorrection` = `BOSS_SUPER_ARMOR_RECOVER` = 0.85: flinch
+  resistance at the boss median of 1.17 (351 NpcParam rows at 2000 HP or
+  more: 120 / 0.85; vanilla 52800086 has 65 / 0, the mob median), since the
+  boss with mob values was interrupted by every hit (2026-09-05, fourth
+  run). `toughness` (the stance meter for criticals, 35) stays vanilla.
 - every `spEffectIDn` equal to 20011471 = -1 (nerflantern's slot); slot
   17 (`20011450`, vanilla's one-shot teleport gate, ignored by the boss
   script, see "Teleport cooldown") and slot 18 (`20011473`) stay.
@@ -314,15 +320,27 @@ interrupts are superseded by what follows.
 
 Acts: Act11 (swing 3001, vanilla's post-teleport surprise attack as a
 regular melee act), Act04 (beam 3004, `successDist` 999, at range and at
-mid range), Act02 (teleport 3000, vanilla's far-range act, also offered at
-melee range and against a player in the boss's back: the 20011452
-interrupt warps the boss behind the player and swings), Act05/Act06 (the
-vanilla post-grab retreats to 10/8 m, followed by a beam when it is
-available). Cooldowns, all registered with the engine by
-`Houzuki755890_RegisterIntervals`: `GRAB_COOLDOWN` 8 s (vanilla 12) and
-`BEAM_COOLDOWN` 8 s through `SetCoolTime`; `SWING_COOLDOWN` 10 s on 3001
-whatever its source (act, reaction or post-teleport) and
-`TELEPORT_COOLDOWN` 8 s on 3000 through the `Houzuki755890_*Ready` helpers.
+mid range), Act02 (teleport: an instant `GOAL_COMMON_ToTargetWarp` behind
+the player straight from the act, vanilla 301010's pattern, followed by
+the surprise swing when it is ready; vanilla played its 5 s teleport-out
+animation 3000 first, whose warp marker fires at 4.77 s, the delay seen in
+game; offered at every range, melee range and a player in the boss's back
+included), Act05/Act06 (the vanilla post-grab retreats to 10/8 m, followed
+by a beam when it is available). Cooldowns: `GRAB_COOLDOWN` 6 s (vanilla
+12) and `BEAM_COOLDOWN` 6 s through `SetCoolTime`, `SWING_COOLDOWN` 8 s on
+3001 whatever its source (act, reaction or post-warp) through `SwingReady`,
+the three registered with the engine by `Houzuki755890_RegisterIntervals`;
+`TELEPORT_COOLDOWN` 6 s on an AI timer (`TIMER_TELEPORT`, slot 10,
+`ai:SetTimer` when the warp is queued, room or not, so a spot without room
+is not retried at every decision), since no attack animation counts the
+warp; the timer idiom is vanilla's (slot 10 is set by 34 vanilla battle
+scripts, `GetTimer(n) <= 0` gates are the standard pattern, 1.17 survey).
+`TELEPORT_WINDUP` (0) is an optional `GOAL_COMMON_Wait` before the warp;
+the room is scanned when the act is queued, so with a wind-up the spot is
+that many seconds stale. The room scan (`Houzuki755890_WarpBehind`: in front, then behind
+right/left at 0 or 2 m, then behind at 2 m) is vanilla's post-3000
+interrupt scan, shared with that interrupt, which the boss no longer
+triggers.
 
 Cooldown weight: the last argument of `SetCoolTime` is the weight kept
 while the attack cools, not 0. Vanilla passes 1 in about two thirds of
@@ -335,10 +353,10 @@ earlier fillers at 25, about one decision in thirteen of the boss
 (2026-09-05 session). The script now passes 0, and every bracket keeps a
 movement filler with a positive weight.
 
-Teleport cooldown: `Houzuki755890_TeleportReady` is
-`GetAttackPassedTime(3000)` beyond `TELEPORT_COOLDOWN`, nothing else. The
-script no longer reads vanilla's SpEffect 20011450 (vanilla's far bracket
-gates the teleport on it): with that check the boss teleported once per
+Teleport cooldown: `Houzuki755890_TeleportReady` is the teleport timer
+back at 0, nothing else. The script reads neither the 3000 counter (3000
+is not played any more) nor vanilla's SpEffect 20011450 (vanilla's far
+bracket gates the teleport on it): with that check the boss teleported once per
 fight (2026-09-05, third run: teleport or beam at the start, then never
 again, approach or beam from range, grab/swing/move at melee range).
 Facts about 20011450: resident in NpcParam slot 17 (category 0, endurance
@@ -352,19 +370,15 @@ at the first teleport and the one-frame events do not durably re-arm it
 (20011471, also endurance -1, is applied by a 0.33 s type-66 event on
 8500 and covers only the parry window, which suggests type-66 effects end
 with their event). Unverified: the type-66 semantics, and which arrival
-animation the AI's `ToTargetWarp` plays. The same three observations are
-also consistent with the 3000 counter stopping after the warp's
-`ClearSubGoal`, though the grab's counter survives its own interrupt's
-`ClearSubGoal` (5030, then 3003) and grabs keep coming. Either way the
-boss no longer depends on the gate; ambient untouchables keep the vanilla
-script and its behaviour. 20011453 doubles as an in-flight signal for the
-reactions. Attack counters, confirmed by the third run: `GetAttackPassedTime`
+animation the AI's `ToTargetWarp` plays. Either way the boss no longer
+depends on the gate; ambient untouchables keep the vanilla script and its
+behaviour. Attack counters, confirmed by the third run: `GetAttackPassedTime`
 reads 0 for an animation never registered with `RegistAttackTimeInterval`
 until its first use, and a registered counter reads large before the
 attack's first use (the grab fires from the start of every fight).
 `SetCoolTime` registers as a side effect, but the decisions run before it,
-so `Houzuki755890_RegisterIntervals` registers the four counters (3000,
-3001, 3002, 3004) at the top of `Goal.Activate`. Vanilla evidence (survey
+so `Houzuki755890_RegisterIntervals` registers the three counters (3001,
+3002, 3004) at the top of `Goal.Activate`. Vanilla evidence (survey
 of the 396 battle scripts of 1.17): 84 reads of an unregistered counter,
 all but six of them "long ago" checks (`>= N`) that 0 leaves silently
 false, and vanilla 468000/631000 test `GetAttackPassedTime(3009) == 0` on
@@ -406,23 +420,23 @@ follow-ups; vanilla 472000 pattern: `ClearSubGoal`, queue the attack,
 return true). A reaction spends an attack that is available anyway, so it
 moves an attack earlier without adding any: hits landed while the swing
 cools stay free, and the grab, beam and post-teleport recoveries are
-untouched. No reaction fires while a teleport or a grab sequence is in
-flight (`Houzuki755890_SequenceInFlight`: less than `REACT_HOLD`, 10 s,
-since 3000 or 3002 started; per the TAE event spans 3000 lasts 5 s, 3001
-1.8 s and 3002 + 3003 about 6 s, so a teleport sequence runs about 8 s): a
-reaction's `ClearSubGoal` would otherwise drop the warp + swing or the 3003
-throw. `REACT_HOLD` must stay above `TELEPORT_COOLDOWN` plus the swing,
-otherwise a cast from range during the post-warp swing would chain a
-second teleport; as it covers `TELEPORT_COOLDOWN`, a cooling teleport is
-always also in flight and the Shoot reaction's beam branch is only reached
-without the gate SpEffect. Accepted exposure,
+untouched. No reaction fires while a warp or a grab sequence is in flight
+(`Houzuki755890_SequenceInFlight`: the first `TELEPORT_WINDUP` +
+`TELEPORT_HOLD`, 3 s, of the teleport timer, clamped so a hold longer than
+the cooldown cannot silence the reactions for good, or less than
+`REACT_HOLD`, 7 s, since 3002 started; per
+the TAE event spans the arrival lasts about 1 s, 3001 1.8 s and 3002 +
+3003 about 6 s): a reaction's `ClearSubGoal` would otherwise drop the
+warp + swing or the 3003 throw. Past the warp hold the teleport still
+cools, and a cast from range then draws the beam instead, as it does when
+there is no room behind the player. Accepted exposure,
 shared with vanilla 472000: a hit from a spirit ash outside those windows
 can trigger the hit reaction like a player's hit.
 
 | Interrupt | Conditions | Response | Knob |
 |-----------|-----------|----------|------|
 | `INTERUPT_Damaged` (the boss took damage) | player in front within `REACT_HIT_RANGE` (2 m), swing ready, draw | swing | `REACT_HIT` 25 |
-| `INTERUPT_Shoot` (the player starts a cast or a shot) | player at `REACT_RANGE` (5 m) or more, draw | teleport (always ready there: `REACT_HOLD` covers `TELEPORT_COOLDOWN`) | `REACT_SHOOT` 50 |
+| `INTERUPT_Shoot` (the player starts a cast or a shot) | player at `REACT_RANGE` (5 m) or more, draw | teleport if ready, else beam if ready, else nothing | `REACT_SHOOT` 50 |
 | `INTERUPT_UseItem` | player at `REACT_RANGE` or more, beam ready, draw | beam | `REACT_HEAL` 80 |
 
 `tests/test_mods_src_lua_scripts.py` parses the script with luaparser and
@@ -484,8 +498,10 @@ the pre-parry number. Re-run after a game patch or a knob change. Steps
 reactions) were run twice on 2026-09-05: improvements but no teleport at
 melee range (the swing gate), then no teleport at all and turning in place
 (the unregistered counters), then teleport or beam at the start of the
-fight and never again (the 20011450 check, see "Teleport cooldown"); the
-version without that check awaits its own run.
+fight and never again (the 20011450 check, see "Teleport cooldown"), then
+teleports at melee range too (fourth run), with the 5 s delay of 3000 and
+a boss that flinched on every hit; the instant warp, the lower cooldowns
+and the boss-tier super armor await their own run (steps 7 to 9).
 
 1. **Goal resolution**: knobs temporarily at `SWING_MID = 100`,
    `SWING_CLOSE = 100`, the three `BEAM_*` and the two `TELEPORT_*` at 0
@@ -507,8 +523,9 @@ version without that check awaits its own run.
 3. **Tuning**: probabilities (`SWING_*`, `MOVE_*`), `GRAB_COOLDOWN`,
    `SWING_COOLDOWN`, `BEAM_COOLDOWN`, `BEAM_MAGIC`, `BEAM_EVENT_COUNT`.
    Second session (2026-09-05): swing still too frequent, `SWING_COOLDOWN`
-   12 s added (10 s since the reactions pass; it throttled the teleport
-   until the same day's rework, see "Teleport cooldown"); madness rose
+   12 s added (10 s since the reactions pass, 8 s since the instant-warp
+   pass that also lowered the grab and the beam to 6 s; it throttled the
+   teleport until the same day's rework, see "Teleport cooldown"); madness rose
    while the boss idled, pulse clones without
    26000; parry break added. First session
    (2026-09-04): beam approved as is; the swing at 40/50 fired every time
@@ -534,31 +551,33 @@ version without that check awaits its own run.
    cooldown weight 0). Counters: the third run (2026-09-05) confirmed
    the registered counters (teleport at the start, grabs, swings and
    beams from the start), and that a script checking 20011450 teleports
-   once per fight. What the next run must show: teleports keep coming
-   after the first one, at melee range and from range alike, never two
-   within `TELEPORT_COOLDOWN`; a boss that again teleports only once
-   means the teleport itself (not the gate) is limited by something
-   else, and the next suspect is the 3000 counter after the interrupt's
-   `ClearSubGoal`. The swing counter is a poor replacement clock (Act11
-   and the hit reaction spend it too) and 20011453 lasts 4 s, too short
-   to carry an 8 s cooldown alone; a script-side timer would be next.
-7. **Offensive teleport and beams**: at melee range while the grab and
-   the swing cool, at 3-10 m, and when the player stands in its back, the
-   boss vanishes and reappears behind the player with a swing (never two
-   within `TELEPORT_COOLDOWN`; the swing follows the warp when it is
-   ready, otherwise the boss just reappears behind the player); at
-   3-10 m it sometimes fires the beam; after a grab it retreats and fires
-   the beam from the retreat distance.
+   once per fight. The fourth run showed teleports at melee range (the
+   gate was the limit); the teleport now runs on an AI timer and no
+   longer plays 3000, so the 3000 counter is out of the picture.
+7. **Instant teleport and beams**: at melee range while the grab and the
+   swing cool, at 3-10 m, and when the player stands in its back, the boss
+   blinks behind the player with no wind-up (no 5 s lantern fade), plays
+   its arrival animation and swings (never two warps within
+   `TELEPORT_COOLDOWN`; the swing follows the warp when it is ready,
+   otherwise the boss just reappears behind the player); at 3-10 m it
+   sometimes fires the beam; after a grab it retreats and fires the beam
+   from the retreat distance. Judge the blink's look: if it reads as a
+   glitch rather than a teleport, `TELEPORT_WINDUP` adds a pause before it.
 8. **Reactions and windows**: from 5 m or more, drinking a flask draws a
-   beam most of the time and casting a spell draws a teleport about half
-   the time; within 5 m neither reaction fires. At melee range,
+   beam most of the time and casting a spell draws a teleport, or the beam
+   while the teleport cools, about half the time; within 5 m neither
+   reaction fires. At melee range,
    hitting the boss draws a swing at most once per `SWING_COOLDOWN` and
    about one hit in four, so combos after a whiffed grab still land freely.
+9. **Super armor**: light attacks no longer interrupt the boss's grab,
+   swing or beam (vanilla 65 flinched on everything); a charged heavy or a
+   jump attack still can, and stance breaks for criticals still happen
+   (`toughness` 35 unchanged).
 
 ## Expected log lines
 
 ```
-Untouchable boss: NpcParam 755890000 (clone of 52800086, hp 2000, runes 20000, nerflantern slot scrubbed) + partial wall SpEffect 755890000 (cut 0.5) + broken SpEffect 755890002 (x2), both applied by the copied wall event
+Untouchable boss: NpcParam 755890000 (clone of 52800086, hp 2000, runes 20000, super armor 120/0.85, nerflantern slot scrubbed) + partial wall SpEffect 755890000 (cut 0.5) + broken SpEffect 755890002 (x2), both applied by the copied wall event
 Untouchable boss: moveset rows (think 755890001 -> battle 755890, variation 75589 with 9 vanilla judges + beam judge 150, bullet 755890000 (clone of 10732000), atk 755890000 magic 110, pulses 755890003-755890005 without madness)
 Untouchable boss: repointing N placed boss slot(s)
   <part> (entity <id>): NPCParamID -> 755890000, ThinkParamID -> 755890001
@@ -614,7 +633,8 @@ parry window is `HP / DAMAGE_CUT`.
 Fight feel is tuned in the boss's own battle script
 (`data/mods-src/speedfog/script/755890_battle-luabnd-dcx/755890_battle.lua`,
 knobs at the top of the script: `SWING_*`, `TELEPORT_*`, `BEAM_*`,
-`MOVE_*`, the four `*_COOLDOWN` and the `REACT_*` reactions) and in the
+`MOVE_*`, the four `*_COOLDOWN`, `TELEPORT_HOLD`, `TELEPORT_WINDUP` and the
+`REACT_*` reactions) and in the
 injector constants (`BOSS_HP`, `DAMAGE_CUT`,
 `BEAM_MAGIC`), never by editing the shared vanilla `528000_battle` (see
 "Moveset"). Regenerate the baseline script with WitchyBND and
