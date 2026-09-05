@@ -37,12 +37,33 @@ public class IntroCutscenePatcherTests
         return new EMEVD.Instruction(2006, 6, new byte[] { 0xFF, 0xFF, 0xFF, 0xFF });
     }
 
-    private static void AssertIsNop(EMEVD.Instruction instr)
+    /// <summary>
+    /// SetCurrentTime(23, 45, 0, false, false, false, 0, 0, 0): bank 2001, id 4,
+    /// [hours(1), minutes(1), seconds(1), fade(1), wait(1), showClock(1), pad(2),
+    ///  startupDelay(4 float), moveTime(4 float), finishDelay(4 float)]
+    /// </summary>
+    private static void AssertIsSetCurrentTime2345(EMEVD.Instruction instr)
     {
-        // WaitFixedTime(0): bank 1001, id 0, [seconds(4 float)] = 0
-        Assert.Equal(1001, instr.Bank);
-        Assert.Equal(0, instr.ID);
-        Assert.Equal(new byte[4], instr.ArgData);
+        Assert.Equal(2001, instr.Bank);
+        Assert.Equal(4, instr.ID);
+        var expected = new byte[20];
+        expected[0] = 23;
+        expected[1] = 45;
+        Assert.Equal(expected, instr.ArgData);
+    }
+
+    /// <summary>
+    /// ChangeWeather(Weather.Default, 3600, true): bank 2003, id 68,
+    /// [weather(1), pad(3), lifespan(4 float), immediate(1), pad(3)]
+    /// </summary>
+    private static void AssertIsChangeWeatherDefault(EMEVD.Instruction instr)
+    {
+        Assert.Equal(2003, instr.Bank);
+        Assert.Equal(68, instr.ID);
+        var expected = new byte[12];
+        BitConverter.GetBytes(3600f).CopyTo(expected, 4);
+        expected[8] = 1;
+        Assert.Equal(expected, instr.ArgData);
     }
 
     private static EMEVD MakeEmevd(params EMEVD.Event[] events)
@@ -53,7 +74,7 @@ public class IntroCutscenePatcherTests
     }
 
     [Fact]
-    public void Patch_NopsIntroCutsceneInGameStartEvent()
+    public void Patch_ReplacesIntroCutsceneWithTimeAndWeather()
     {
         var evt = new EMEVD.Event(GAME_START_EVENT_ID);
         evt.Instructions.Add(MakeFiller());                              // [0]
@@ -63,9 +84,11 @@ public class IntroCutscenePatcherTests
         int count = IntroCutscenePatcher.Patch(MakeEmevd(evt));
 
         Assert.Equal(1, count);
-        AssertIsNop(evt.Instructions[1]);
+        Assert.Equal(4, evt.Instructions.Count);
         Assert.Equal(2006, evt.Instructions[0].Bank);
-        Assert.Equal(2006, evt.Instructions[2].Bank);
+        AssertIsSetCurrentTime2345(evt.Instructions[1]);
+        AssertIsChangeWeatherDefault(evt.Instructions[2]);
+        Assert.Equal(2006, evt.Instructions[3].Bank);
     }
 
     [Fact]
@@ -119,12 +142,12 @@ public class IntroCutscenePatcherTests
     }
 
     [Fact]
-    public void Patch_RemovesOrphanedParameterEntries()
+    public void Patch_RemovesOrphanedParameterEntriesAndShiftsLaterOnes()
     {
         var evt = new EMEVD.Event(GAME_START_EVENT_ID);
         evt.Instructions.Add(MakeFiller());                              // [0]
-        evt.Instructions.Add(MakeIntroCutscene(INTRO_CUTSCENE_ID));      // [1] - will be NOP'd
-        evt.Instructions.Add(MakeFiller());                              // [2]
+        evt.Instructions.Add(MakeIntroCutscene(INTRO_CUTSCENE_ID));      // [1] - replaced by two instructions
+        evt.Instructions.Add(MakeFiller());                              // [2] - becomes [3]
         evt.Parameters.Add(new EMEVD.Parameter(1, 8, 0, 4));
         evt.Parameters.Add(new EMEVD.Parameter(0, 0, 0, 4));
         evt.Parameters.Add(new EMEVD.Parameter(2, 0, 0, 4));
@@ -132,8 +155,8 @@ public class IntroCutscenePatcherTests
         IntroCutscenePatcher.Patch(MakeEmevd(evt));
 
         Assert.Equal(2, evt.Parameters.Count);
-        Assert.DoesNotContain(evt.Parameters, p => p.InstructionIndex == 1);
         Assert.Contains(evt.Parameters, p => p.InstructionIndex == 0);
-        Assert.Contains(evt.Parameters, p => p.InstructionIndex == 2);
+        Assert.Contains(evt.Parameters, p => p.InstructionIndex == 3);
+        Assert.DoesNotContain(evt.Parameters, p => p.InstructionIndex is 1 or 2);
     }
 }

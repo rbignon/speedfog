@@ -140,7 +140,7 @@ speedfog/
 │   │   ├── StakeRemover.cs  # Remove vanilla stakes outside DAG
 │   │   ├── SpiritspringRemover.cs  # Remove spiritspring jump regions bypassing map-splits chokepoints
 │   │   ├── HeavyDoorMessagePatcher.cs  # Suppress "heavy door" popup in common_func
-│   │   ├── IntroCutscenePatcher.cs  # Remove the new-game intro cutscene from event 10010020
+│   │   ├── IntroCutscenePatcher.cs  # Replace the new-game intro cutscene in event 10010020 by SetCurrentTime + ChangeWeather
 │   │   ├── TorrentArenaPatcher.cs  # Re-enable Torrent inside selected boss arenas
 │   │   ├── WeatherInjector.cs  # Force weather / pin clock hour ([plugin.weather])
 │   │   ├── WeaponUpgradeInjector.cs  # Weapon upgrade initialization for starting weapons
@@ -325,7 +325,7 @@ speedfog/
 | `StakeRemover` | Removes vanilla stakes that respawn outside the DAG, targets come from `data/game_tweaks.toml` |
 | `SpiritspringRemover` | Removes spiritspring jump regions (MountJump/MountJumpFall) that bypass map-splits chokepoints, targets come from `data/game_tweaks.toml` |
 | `HeavyDoorMessagePatcher` | Suppresses "heavy door" popup (text 4200) in common_func |
-| `IntroCutscenePatcher` | Removes the new-game intro cutscene (PlayCutsceneToPlayerWithWeatherAndTime 10000040) from event 10010020 of m10_01_00_00 (see `docs/chapel-grace.md`) |
+| `IntroCutscenePatcher` | Replaces the new-game intro cutscene (PlayCutsceneToPlayerWithWeatherAndTime 10000040) in event 10010020 of m10_01_00_00 by SetCurrentTime(23:45) + ChangeWeather(Default) (see `docs/chapel-grace.md`) |
 | `DeathMarkerInjector` | Bloodstain markers at fog gates (MSB assets + EMEVD SFX) |
 | `GateGeometry` | Shared gate FullName parsing, ASide/BSide resolution, deterministic arc offset generation (extracted from `DeathMarkerInjector`) |
 | `BossTriggerInjector` | Locks boss arena exit fog gates by setting TrapFlag before entrance warp |
