@@ -34,7 +34,7 @@ local SWING_CLOSE = 15                  -- < 3 m: Act11 (swing)
 local TELEPORT_CLOSE = 10               -- < 3 m: Act02
 local MOVE_CLOSE = 20                   -- < 3 m: Act42 (sidestep)
 local GRAB_COOLDOWN = 8                 -- seconds between two grabs (3002); vanilla 12
-local SWING_COOLDOWN = 10               -- seconds between two swings (3001), any source; script-side only, no engine interval
+local SWING_COOLDOWN = 10               -- seconds between two swings (3001), any source; a cooling 3001 is never queued
 local TELEPORT_COOLDOWN = 8             -- seconds between two teleports (3000), from the start of 3000
 local BEAM_COOLDOWN = 8                 -- seconds between two beams (3004), any source
 local TELEPORT_BEHIND = 50              -- player behind, < 8 m: Act02 when ready (0-90; Act01 keeps 10, Act43 takes the rest)
@@ -48,26 +48,45 @@ local REACT_HEAL = 80                   -- player uses an item from >= REACT_RAN
 local REACT_RANGE = 5
 local REACT_HOLD = 10                   -- seconds after a teleport (3000) or a grab (3002) starts without any reaction (>= TELEPORT_COOLDOWN + the post-warp swing, see Houzuki755890_SequenceInFlight)
 
+-- Counter model (matches the two 2026-09-05 in-game runs and vanilla
+-- 468000's "GetAttackPassedTime(3009) == 0" test, see the doc):
+-- GetAttackPassedTime reads 0 for an animation never registered with
+-- RegistAttackTimeInterval (an unregistered 3000 counter left the teleport
+-- dead everywhere), and a registered counter reads large before the
+-- attack's first use (the grab fires from the start). SetCoolTime
+-- registers as a side effect, but the decisions below run before it, so
+-- every counter the script reads is registered here. The engine returns
+-- the effective interval (SetCoolTime compares against that return), and
+-- so do the *Ready helpers.
+local teleportInterval = TELEPORT_COOLDOWN
+local swingInterval = SWING_COOLDOWN
+local beamInterval = BEAM_COOLDOWN
+function Houzuki755890_RegisterIntervals(ai)
+    teleportInterval = ai:RegistAttackTimeInterval(3000, TELEPORT_COOLDOWN)
+    swingInterval = ai:RegistAttackTimeInterval(3001, SWING_COOLDOWN)
+    ai:RegistAttackTimeInterval(3002, GRAB_COOLDOWN)
+    beamInterval = ai:RegistAttackTimeInterval(3004, BEAM_COOLDOWN)
+end
+
 -- Availability of the cooled attacks, shared by the decision table and the
--- reactions. GetAttackPassedTime is the counter SetCoolTime reads; vanilla
--- 450000 gates a reaction on it the same way without registering the
--- attack first.
+-- reactions. A cooling attack is never queued (weight 0 in the table, the
+-- reactions and the post-warp swing check these), so its registered
+-- interval can never hold the boss.
 function Houzuki755890_SwingReady(ai)
-    return ai:GetAttackPassedTime(3001) > SWING_COOLDOWN
+    return ai:GetAttackPassedTime(3001) > swingInterval
 end
 
 function Houzuki755890_BeamReady(ai)
-    return ai:GetAttackPassedTime(3004) > BEAM_COOLDOWN
+    return ai:GetAttackPassedTime(3004) > beamInterval
 end
 
 -- The teleport (3000) ends with the interrupt's warp behind the player and
--- a swing (3001). It has its own script-side cooldown and does not depend
--- on the swing: 3001 never goes through SetCoolTime, so the engine holds
--- no interval on it and the post-teleport swing always plays. (A gate on
--- SwingReady closed the teleport at melee range for good, where the hit
--- reaction consumes the swing as soon as it is ready; 2026-09-05.)
+-- a swing (3001) when the swing is ready. It has its own cooldown and does
+-- not depend on the swing: a gate on SwingReady closed it at melee range
+-- for good, where the hit reaction consumes the swing as soon as it is
+-- ready (2026-09-05).
 function Houzuki755890_TeleportReady(ai)
-    return ai:HasSpecialEffectId(TARGET_SELF, 20011450) and ai:GetAttackPassedTime(3000) > TELEPORT_COOLDOWN
+    return ai:HasSpecialEffectId(TARGET_SELF, 20011450) and ai:GetAttackPassedTime(3000) > teleportInterval
 end
 
 -- No reaction while a teleport (3000, then the warp and its swing) or a
@@ -102,6 +121,7 @@ end
 
 Goal.Activate = function (self, ai, goal)
     Init_Pseudo_Global(ai, goal)
+    Houzuki755890_RegisterIntervals(ai)
     local probabilities = {}
     local acts = {}
     local paramTbls = {}
@@ -222,15 +242,16 @@ Goal.Activate = function (self, ai, goal)
         probabilities[45] = 0
     end
     -- The last argument of SetCoolTime is the weight kept while the attack
-    -- cools. Vanilla passes 1 so a table never sums to zero; here every
+    -- cools. Vanilla mostly passes 1 so a table never sums to zero; here every
     -- bracket keeps a movement filler, so 0: a cooling attack picked with
     -- weight 1 is held by the engine until its interval expires, up to the
     -- act's goal life, which reads as the boss freezing in place.
     probabilities[3] = SetCoolTime(ai, goal, 3002, GRAB_COOLDOWN, probabilities[3], 0)
     probabilities[4] = SetCoolTime(ai, goal, 3004, BEAM_COOLDOWN, probabilities[4], 0)
-    -- The swing's cooldown stays script-side (no engine interval on 3001,
-    -- see Houzuki755890_TeleportReady); the teleport's sits inside the
-    -- teleportMid/teleportClose weights above.
+    -- The swing's and the teleport's cooldowns go through the *Ready
+    -- helpers (the swing here, the teleport inside the teleportMid and
+    -- teleportClose weights above); Houzuki755890_RegisterIntervals
+    -- registered their intervals.
     if not Houzuki755890_SwingReady(ai) then
         probabilities[11] = 0
     end
@@ -659,7 +680,11 @@ Goal.Interrupt = function (self, ai, goal)
             if f24_local5 == true then
                 goal:ClearSubGoal()
                 goal:AddSubGoal(GOAL_COMMON_ToTargetWarp, 15, TARGET_EVENT, directionFromTarget, distanceFromTarget, turnTarget)
-                goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, 8, 3001, TARGET_ENE_0, 999, 0, 0)
+                -- SpeedFog: the surprise swing only while it is ready; a
+                -- cooling 3001 would sit on its registered interval.
+                if Houzuki755890_SwingReady(ai) then
+                    goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, 8, 3001, TARGET_ENE_0, 999, 0, 0)
+                end
             else
             end
             return true

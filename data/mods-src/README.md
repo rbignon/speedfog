@@ -18,12 +18,13 @@ Current content:
   WitchyBND (`--passive Game/script/528000_battle.luabnd.dcx`) and
   DSLuaDecompiler, then re-apply the SpeedFog edits listed in
   `docs/untouchable-boss.md` "AI script": the header comment, the two
-  `GOAL_` assignments, the file-scope knobs and the `Houzuki755890_*Ready`,
-  `_SequenceInFlight` and `_Add*` helpers, the rewritten brackets, the
-  `SetCoolTime` weights and the script-side swing zeroing (3001 must not go
-  through `SetCoolTime`) in `Goal.Activate`, Act01's `successDist`, Act02,
-  Act04, Act05/Act06, Act11, and the reactions at the end of
-  `Goal.Interrupt`.
+  `GOAL_` assignments, the file-scope knobs and the
+  `Houzuki755890_RegisterIntervals`, `_*Ready`, `_SequenceInFlight` and
+  `_Add*` helpers, the rewritten brackets, the
+  `SetCoolTime` weights, the `Houzuki755890_RegisterIntervals` call and
+  the script-side swing zeroing in `Goal.Activate`, Act01's `successDist`,
+  Act02, Act04, Act05/Act06, Act11, the conditional post-warp swing in the
+  teleport interrupt and the reactions at the end of `Goal.Interrupt`.
 
 The Rykard AI script that once lived here was reverted in commit c3f921d
 ("Revert 'overlay: import Rykard AI script'"); the plain-text Lua + manifest

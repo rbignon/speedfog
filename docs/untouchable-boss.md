@@ -317,15 +317,16 @@ mid range), Act02 (teleport 3000, vanilla's far-range act, also offered at
 melee range and against a player in the boss's back: the 20011452
 interrupt warps the boss behind the player and swings), Act05/Act06 (the
 vanilla post-grab retreats to 10/8 m, followed by a beam when it is
-available). Cooldowns: `GRAB_COOLDOWN` 8 s (vanilla 12) and `BEAM_COOLDOWN`
-8 s through `SetCoolTime`; `SWING_COOLDOWN` 10 s on 3001 whatever its
-source (act, reaction or post-teleport) and `TELEPORT_COOLDOWN` 8 s on 3000,
-both script-side through the `Houzuki755890_*Ready` helpers, so the engine
-holds no interval on 3001 or 3000.
+available). Cooldowns, all registered with the engine by
+`Houzuki755890_RegisterIntervals`: `GRAB_COOLDOWN` 8 s (vanilla 12) and
+`BEAM_COOLDOWN` 8 s through `SetCoolTime`; `SWING_COOLDOWN` 10 s on 3001
+whatever its source (act, reaction or post-teleport) and
+`TELEPORT_COOLDOWN` 8 s on 3000 through the `Houzuki755890_*Ready` helpers.
 
 Cooldown weight: the last argument of `SetCoolTime` is the weight kept
-while the attack cools, not 0. Vanilla passes 1 everywhere so a table never
-sums to zero, and a cooling attack picked with weight 1 is held by the
+while the attack cools, not 0. Vanilla passes 1 in about two thirds of
+its calls and 0 in a quarter (1.17 survey), so a table never sums to zero,
+and a cooling attack picked with weight 1 is held by the
 engine until its interval expires, up to the act's goal life (8 s for the
 grab and the swing): the boss freezes in place. That was vanilla's
 passivity at 3-10 m (grab alone, weight 1 during its 12 s) and, with the
@@ -336,17 +337,31 @@ movement filler with a positive weight.
 Teleport cooldown: `Houzuki755890_TeleportReady` requires SpEffect
 20011450 (NpcParam slot 17, resident on the boss, category 0, no EMEVD of
 m31_10 touches it) and `GetAttackPassedTime(3000)` beyond
-`TELEPORT_COOLDOWN`. Vanilla 450000 gates a reaction on
-`GetAttackPassedTime` the same way without registering the attack first.
-The first version of this rework gated the teleport on the swing instead
-(the teleport ends in the interrupt's swing, and a swing held by an engine
-interval would have left the boss standing behind the player): in game
-(2026-09-05) the boss never teleported at melee range, because the hit
-reaction consumes the swing as soon as it is ready while the player keeps
-hitting, so the gate stayed closed exactly where the teleport was needed.
-Now 3001 never goes through `SetCoolTime` (no engine interval, the
-post-teleport swing always plays) and the teleport only depends on its own
-counter.
+`TELEPORT_COOLDOWN`. Attack counters, the model that matches the two
+in-game runs of 2026-09-05 (the next run confirms it): `GetAttackPassedTime`
+reads 0 for an animation never registered with `RegistAttackTimeInterval`
+until its first use, and a registered counter reads large before the
+attack's first use (the grab fires from the start of every fight).
+`SetCoolTime` registers as a side effect, but the decisions run before it,
+so `Houzuki755890_RegisterIntervals` registers the four counters (3000,
+3001, 3002, 3004) at the top of `Goal.Activate`. Vanilla evidence (survey
+of the 396 battle scripts of 1.17): 84 reads of an unregistered counter,
+all but six of them "long ago" checks (`>= N`) that 0 leaves silently
+false, and vanilla 468000/631000 test `GetAttackPassedTime(3009) == 0` on
+an unregistered 3009 to zero an act, i.e. "not used yet". History of the
+two failed versions: the first gated
+the teleport on the swing (the teleport ends in the interrupt's swing, and
+a swing held by an engine interval would have left the boss standing
+behind the player), and the hit reaction consumes the swing as soon as it
+is ready while the player keeps hitting, so the gate stayed closed at
+melee range; the second read an unregistered 3000 counter (and an
+unregistered 3001, taken out of `SetCoolTime` to avoid the hold), so the
+teleport was dead everywhere, the boss turned in place, and every reaction
+was held off since `Houzuki755890_SequenceInFlight` read the same 3000
+counter (0 is always within `REACT_HOLD`). The hold is
+now avoided by never queueing a cooling 3001: Act11 and the hit reaction
+check `SwingReady`, and the post-warp surprise swing plays only when the
+swing is ready, otherwise the warp stands alone.
 
 Probability table (vanilla -> boss); the vanilla act of the bracket keeps
 the remainder, the teleport weight counts only while the teleport is ready:
@@ -446,9 +461,10 @@ and beam behave, no madness while idle, half damage behind the partial
 wall, the first parry breaks it and every later hit lands at four times
 the pre-parry number. Re-run after a game patch or a knob change. Steps
 6 to 8 (cooldown weight 0, offensive teleport, mid-range and retreat beams,
-reactions) were run once on 2026-09-05: improvements, but no teleport at
-melee range at all (the swing gate, see "Teleport cooldown"); the rework
-that followed awaits its own run.
+reactions) were run twice on 2026-09-05: improvements but no teleport at
+melee range (the swing gate), then no teleport at all and turning in place
+(the unregistered counters), see "Teleport cooldown"; the registration
+fix awaits its own run.
 
 1. **Goal resolution**: knobs temporarily at `SWING_MID = 100`,
    `SWING_CLOSE = 100`, the three `BEAM_*` and the two `TELEPORT_*` at 0
@@ -490,17 +506,21 @@ that followed awaits its own run.
 6. **No freeze**: at melee range, take a grab and a swing within a few
    seconds, then stay close: the boss must keep sidestepping or strafing
    through the cooldowns, never stand still for several seconds (the
-   cooldown weight 0). `GetAttackPassedTime` before first use: the
-   2026-09-05 run showed grabs and beams from the start, which needs the
-   3002/3004 counters large before their first use (`SetCoolTime` would
-   otherwise zero them for good), and the 3000 counter is read the same
-   way; a boss that never teleports at melee range before its first ranged
-   teleport would contradict that and call for a fallback in
-   `Houzuki755890_TeleportReady` and the reaction hold.
+   cooldown weight 0). Counters: the boss must teleport within the first
+   minute of the fight (a registered counter reads large before first
+   use, like the grab's); a boss that still never teleports anywhere while
+   it grabs and swings means the counter model of "Teleport cooldown" is
+   wrong and the teleport needs another clock (a SpEffect marker, or the
+   swing counter with a short window). One run tells the variants apart:
+   the grab opening the fight means registered counters read large before
+   first use; a teleport or a hit reaction within the first minute means
+   the 3000/3001 counters read non-zero after registration; a boss that
+   only grabs, beams and moves means registration changed nothing.
 7. **Offensive teleport and beams**: at melee range while the grab and
    the swing cool, at 3-10 m, and when the player stands in its back, the
    boss vanishes and reappears behind the player with a swing (never two
-   within `TELEPORT_COOLDOWN`, the swing always plays after the warp); at
+   within `TELEPORT_COOLDOWN`; the swing follows the warp when it is
+   ready, otherwise the boss just reappears behind the player); at
    3-10 m it sometimes fires the beam; after a grab it retreats and fires
    the beam from the retreat distance.
 8. **Reactions and windows**: from 5 m or more, drinking a flask draws a
@@ -568,7 +588,7 @@ parry window is `HP / DAMAGE_CUT`.
 Fight feel is tuned in the boss's own battle script
 (`data/mods-src/speedfog/script/755890_battle-luabnd-dcx/755890_battle.lua`,
 knobs at the top of the script: `SWING_*`, `TELEPORT_*`, `BEAM_*`,
-`MOVE_*`, the three `*_COOLDOWN` and the `REACT_*` reactions) and in the
+`MOVE_*`, the four `*_COOLDOWN` and the `REACT_*` reactions) and in the
 injector constants (`BOSS_HP`, `DAMAGE_CUT`,
 `BEAM_MAGIC`), never by editing the shared vanilla `528000_battle` (see
 "Moveset"). Regenerate the baseline script with WitchyBND and

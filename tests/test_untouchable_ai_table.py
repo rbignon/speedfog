@@ -10,6 +10,12 @@ is replaced by a capture of the weight table. The embedded Lua is newer
 than the game's 5.0, so this checks logic, not the engine's dialect (see
 test_mods_src_lua_scripts.py for that).
 
+Engine model of the attack counters (docs/untouchable-boss.md, "Teleport
+cooldown"): GetAttackPassedTime reads 0 for an animation never registered
+with RegistAttackTimeInterval (in game, 2026-09-05, an unregistered 3000
+counter left the teleport dead), and a registered counter reads large
+before the attack's first use (the grab fires from the start).
+
 Weights are indexed by act number as in the script: Act01 approach, Act02
 teleport, Act03 grab, Act04 beam, Act11 swing, Act42 sidestep, Act43 turn,
 Act46 close-and-strafe.
@@ -87,7 +93,7 @@ function Common_Battle_Activate(ai, goal, probabilities, acts, actAfter, paramTb
 end
 
 function new_ai(state)
-    local ai = { registered = {} }
+    local ai = { registered = {}, unregistered_reads = {} }
     function ai:GetDist(target) return state.dist end
     function ai:GetRandam_Int(lo, hi) return state.random end
     function ai:GetRandam_Float(lo, hi) return lo end
@@ -107,7 +113,14 @@ function new_ai(state)
     function ai:IsLadderAct(target) return false end
     function ai:IsInterupt(kind) return state.interrupt == kind end
     function ai:GetSpecialEffectActivateInterruptId(id) return false end
-    function ai:GetAttackPassedTime(animId) return state.passed[animId] or 1000 end
+    function ai:GetAttackPassedTime(animId)
+        if self.registered[animId] == nil then
+            self.unregistered_reads[animId] = true
+            return 0
+        end
+        return state.passed[animId] or 1000
+    end
+    function ai:GetExistMeshOnLineDistEx(target, dir, dist, width, offset) return 3 end
     function ai:RegistAttackTimeInterval(animId, interval)
         self.registered[animId] = interval
         return interval
@@ -117,7 +130,7 @@ end
 function new_goal()
     local goal = { subgoals = {}, cleared = 0 }
     function goal:AddSubGoal(kind, life, third, ...)
-        table.insert(self.subgoals, { kind = kind, anim = third })
+        table.insert(self.subgoals, { kind = kind, anim = third, args = { life, third, ... } })
     end
     function goal:ClearSubGoal() self.cleared = self.cleared + 1 end
     return goal
@@ -142,20 +155,25 @@ def load(state: dict):
         ),
         passed=lua.table_from(state.get("passed", {})),
     )
-    return g, g.new_ai(lua_state), g.new_goal()
+    return g, g.new_ai(lua_state), g.new_goal(), lua_state
 
 
 def weights(**state) -> tuple[dict[int, float], Any]:
     """Positive weights of the decision table for the given state, and the fake ai."""
-    g, ai, goal = load(state)
+    g, ai, goal, _ = load(state)
     g.GOALS[BATTLE_GOAL].Activate(None, ai, goal)
     probs = g.CAPTURED
     return {i: probs[i] for i in range(1, 51) if probs[i] and probs[i] > 0}, ai
 
 
 def react(**state) -> tuple[bool, list[tuple[str, object]]]:
-    """Whether Goal.Interrupt handled the state's interrupt, and the sub-goals it queued."""
-    g, ai, goal = load(state)
+    """Whether Goal.Interrupt handled the state's interrupt, and the sub-goals it queued.
+
+    Goal.Activate runs first, as in the engine (the battle goal activates
+    before any interrupt), so the counters it registers are in place.
+    """
+    g, ai, goal, _ = load(state)
+    g.GOALS[BATTLE_GOAL].Activate(None, ai, goal)
     fired = g.GOALS[BATTLE_GOAL].Interrupt(None, ai, goal)
     return bool(fired), [(s.kind, s.anim) for s in goal.subgoals.values()]
 
@@ -187,12 +205,50 @@ def test_teleport_needs_the_gate_speffect():
     assert w.get(TELEPORT, 0) == 0
 
 
-def test_swing_cooldown_is_script_side_only():
-    w, ai = weights(dist=2, passed={SWING_ANIM: 1})
+def test_every_counter_the_script_reads_is_registered():
+    _, ai = weights(dist=2)
+    for anim in (TELEPORT_ANIM, SWING_ANIM, GRAB_ANIM, BEAM_ANIM):
+        assert ai.registered[anim] is not None, anim
+
+
+def test_no_counter_is_read_before_its_registration():
+    g, ai, goal, state = load({"dist": 8, "speffects": [GATE_SPEFFECT, 20011452]})
+    g.GOALS[BATTLE_GOAL].Activate(None, ai, goal)
+    for dist in (8, 1.5):
+        state.dist = dist
+        for interrupt in ("ActivateSpecialEffect", "Damaged", "Shoot", "UseItem"):
+            state.interrupt = interrupt
+            g.GOALS[BATTLE_GOAL].Interrupt(None, ai, goal)
+    g.Houzuki755890_Act05(ai, goal, None)
+    g.Houzuki755890_Act06(ai, goal, None)
+    assert list(ai.unregistered_reads.keys()) == []
+
+
+def test_swing_cooldown_zeroes_the_swing_act():
+    w, _ = weights(dist=2, passed={SWING_ANIM: 1})
     assert w.get(SWING, 0) == 0
-    # No engine interval on 3001: the post-teleport swing can never be held.
-    assert ai.registered[SWING_ANIM] is None
-    assert ai.registered[GRAB_ANIM] is not None and ai.registered[BEAM_ANIM] is not None
+    assert w.get(GRAB, 0) > 0
+
+
+def test_post_warp_swing_only_when_the_swing_is_ready():
+    warp_state = {
+        "interrupt": "ActivateSpecialEffect",
+        "speffects": [GATE_SPEFFECT, 20011452],
+        "dist": 1,
+    }
+    fired, queued = react(**warp_state)
+    assert fired and queued == [
+        ("ToTargetWarp", "event"),
+        ("ComboAttackTunableSpin", SWING_ANIM),
+    ]
+    fired, queued = react(**warp_state, passed={SWING_ANIM: 1})
+    assert fired and queued == [("ToTargetWarp", "event")]
+    # The vanilla surprise-swing parameters, not Act11's (successDist 4, turn 1.5/60).
+    g, ai, goal, _ = load(warp_state)
+    g.GOALS[BATTLE_GOAL].Activate(None, ai, goal)
+    g.GOALS[BATTLE_GOAL].Interrupt(None, ai, goal)
+    swing = list(goal.subgoals.values())[-1]
+    assert list(swing.args.values()) == [8, SWING_ANIM, "enemy", 999, 0, 0]
 
 
 @pytest.mark.parametrize(
@@ -229,13 +285,19 @@ def test_far_bracket_teleport_or_beam():
 
 
 def test_retreat_act_adds_the_beam_only_when_ready():
-    g, ai, goal = load({"dist": 2})
+    g, ai, goal, _ = load({"dist": 2})
+    g.GOALS[BATTLE_GOAL].Activate(
+        None, ai, goal
+    )  # registers the counters, as in the engine
     g.Houzuki755890_Act05(ai, goal, None)
     assert [s.kind for s in goal.subgoals.values()] == [
         "LeaveTarget",
         "ComboAttackTunableSpin",
     ]
-    g, ai, goal = load({"dist": 2, "passed": {BEAM_ANIM: 1}})
+    g, ai, goal, _ = load({"dist": 2, "passed": {BEAM_ANIM: 1}})
+    g.GOALS[BATTLE_GOAL].Activate(
+        None, ai, goal
+    )  # registers the counters, as in the engine
     g.Houzuki755890_Act05(ai, goal, None)
     assert [s.kind for s in goal.subgoals.values()] == ["LeaveTarget"]
 
