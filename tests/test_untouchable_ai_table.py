@@ -44,6 +44,7 @@ APPROACH, TELEPORT, GRAB, BEAM, SWING, SIDESTEP, TURN, STRAFE = (
 )
 TELEPORT_ANIM, SWING_ANIM, GRAB_ANIM, BEAM_ANIM = 3000, 3001, 3002, 3004
 GATE_SPEFFECT = 20011450
+TELEPORTING_SPEFFECT = 20011453
 
 PRELUDE = r"""
 TARGET_SELF, TARGET_ENE_0, TARGET_EVENT = "self", "enemy", "event"
@@ -150,9 +151,7 @@ def load(state: dict):
         random=state.get("random", 1),
         behind=state.get("behind", False),
         interrupt=state.get("interrupt"),
-        speffects=lua.table_from(
-            dict.fromkeys(state.get("speffects", [GATE_SPEFFECT]), True)
-        ),
+        speffects=lua.table_from(dict.fromkeys(state.get("speffects", []), True)),
         passed=lua.table_from(state.get("passed", {})),
     )
     return g, g.new_ai(lua_state), g.new_goal(), lua_state
@@ -200,9 +199,13 @@ def test_teleport_has_its_own_cooldown_and_the_grab_takes_the_difference():
     assert cooling[GRAB] == ready[GRAB] + ready[TELEPORT]
 
 
-def test_teleport_needs_the_gate_speffect():
-    w, _ = weights(dist=2, speffects=[])
-    assert w.get(TELEPORT, 0) == 0
+def test_teleport_ignores_the_vanilla_one_shot_gate_speffect():
+    # With vanilla's 20011450 check the boss teleported once per fight; the
+    # boss's teleport follows its own cooldown and the SpEffect changes nothing.
+    without, _ = weights(dist=2, speffects=[])
+    with_gate, _ = weights(dist=2, speffects=[GATE_SPEFFECT])
+    assert without.get(TELEPORT, 0) > 0
+    assert without == with_gate
 
 
 def test_every_counter_the_script_reads_is_registered():
@@ -212,7 +215,7 @@ def test_every_counter_the_script_reads_is_registered():
 
 
 def test_no_counter_is_read_before_its_registration():
-    g, ai, goal, state = load({"dist": 8, "speffects": [GATE_SPEFFECT, 20011452]})
+    g, ai, goal, state = load({"dist": 8, "speffects": [20011452]})
     g.GOALS[BATTLE_GOAL].Activate(None, ai, goal)
     for dist in (8, 1.5):
         state.dist = dist
@@ -233,7 +236,7 @@ def test_swing_cooldown_zeroes_the_swing_act():
 def test_post_warp_swing_only_when_the_swing_is_ready():
     warp_state = {
         "interrupt": "ActivateSpecialEffect",
-        "speffects": [GATE_SPEFFECT, 20011452],
+        "speffects": [20011452],
         "dist": 1,
     }
     fired, queued = react(**warp_state)
@@ -315,18 +318,18 @@ def test_no_reaction_while_a_teleport_or_a_grab_is_in_flight():
         interrupt="Damaged", dist=1.5, random=1, passed={TELEPORT_ANIM: 2}
     )[0]
     assert not react(interrupt="UseItem", dist=8, random=1, passed={GRAB_ANIM: 2})[0]
+    # 20011453 is applied for 4 s at the start of 3000 (TAE): teleporting.
+    assert not react(
+        interrupt="Shoot", dist=8, random=1, speffects=[TELEPORTING_SPEFFECT]
+    )[0]
 
 
 def test_ranged_reactions_need_range_and_prefer_the_teleport():
     fired, queued = react(interrupt="Shoot", dist=8, random=1)
     assert fired and queued[0][1] == TELEPORT_ANIM
-    # A cooling teleport is also in flight (REACT_HOLD covers TELEPORT_COOLDOWN),
-    # so the beam branch is reached through the missing gate SpEffect.
-    fired, queued = react(interrupt="Shoot", dist=8, random=1, speffects=[])
-    assert fired and queued == [("ComboAttackTunableSpin", BEAM_ANIM)]
-    assert not react(
-        interrupt="Shoot", dist=8, random=1, speffects=[], passed={BEAM_ANIM: 1}
-    )[0]
+    # 9 s after 3000: ready for the cooldown (> TELEPORT_COOLDOWN) but still in
+    # flight (<= REACT_HOLD), so the hold blocks the reaction, not the cooldown.
+    assert not react(interrupt="Shoot", dist=8, random=1, passed={TELEPORT_ANIM: 9})[0]
     assert not react(interrupt="Shoot", dist=3, random=1)[0]
     fired, queued = react(interrupt="UseItem", dist=8, random=1)
     assert fired and queued == [("ComboAttackTunableSpin", BEAM_ANIM)]

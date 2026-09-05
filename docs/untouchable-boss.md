@@ -100,7 +100,8 @@ The clone (`NpcParam` row `755890000`, `UntouchableBossInjector.UNTOUCHABLE_VANI
   scaling note below: this is the HP at the arena's vanilla tier)
 - `getSoul` = `BOSS_RUNES` = 20000
 - every `spEffectIDn` equal to 20011471 = -1 (nerflantern's slot); slot
-  17 (`20011450`, the AI's teleport gate) and slot 18 (`20011473`) stay.
+  17 (`20011450`, vanilla's one-shot teleport gate, ignored by the boss
+  script, see "Teleport cooldown") and slot 18 (`20011473`) stay.
 
 The clone deliberately lives outside the `5280xxxx` band. The Item
 Randomizer's `nerflantern` option is globally on in SpeedFog and patches
@@ -334,11 +335,30 @@ earlier fillers at 25, about one decision in thirteen of the boss
 (2026-09-05 session). The script now passes 0, and every bracket keeps a
 movement filler with a positive weight.
 
-Teleport cooldown: `Houzuki755890_TeleportReady` requires SpEffect
-20011450 (NpcParam slot 17, resident on the boss, category 0, no EMEVD of
-m31_10 touches it) and `GetAttackPassedTime(3000)` beyond
-`TELEPORT_COOLDOWN`. Attack counters, the model that matches the two
-in-game runs of 2026-09-05 (the next run confirms it): `GetAttackPassedTime`
+Teleport cooldown: `Houzuki755890_TeleportReady` is
+`GetAttackPassedTime(3000)` beyond `TELEPORT_COOLDOWN`, nothing else. The
+script no longer reads vanilla's SpEffect 20011450 (vanilla's far bracket
+gates the teleport on it): with that check the boss teleported once per
+fight (2026-09-05, third run: teleport or beam at the start, then never
+again, approach or beam from range, grab/swing/move at melee range).
+Facts about 20011450: resident in NpcParam slot 17 (category 0, endurance
+-1); no EMEVD of the checked arena (m31_10), common or common_func names
+it; no SpEffect chain replaces it; the c5280 TAE applies it through a
+one-frame type-66 event (0.00-0.03 s) at the start of the idle (0), of
+1020, 2300 and the 5010-5013 arrivals, while 3000 applies 20011453 (4 s,
+"teleporting") at its first frame, then 20011451 and the 20011452 warp
+marker at 4.73/4.77 s. Hypothesis, not established: the gate is consumed
+at the first teleport and the one-frame events do not durably re-arm it
+(20011471, also endurance -1, is applied by a 0.33 s type-66 event on
+8500 and covers only the parry window, which suggests type-66 effects end
+with their event). Unverified: the type-66 semantics, and which arrival
+animation the AI's `ToTargetWarp` plays. The same three observations are
+also consistent with the 3000 counter stopping after the warp's
+`ClearSubGoal`, though the grab's counter survives its own interrupt's
+`ClearSubGoal` (5030, then 3003) and grabs keep coming. Either way the
+boss no longer depends on the gate; ambient untouchables keep the vanilla
+script and its behaviour. 20011453 doubles as an in-flight signal for the
+reactions. Attack counters, confirmed by the third run: `GetAttackPassedTime`
 reads 0 for an animation never registered with `RegistAttackTimeInterval`
 until its first use, and a registered counter reads large before the
 attack's first use (the grab fires from the start of every fight).
@@ -402,7 +422,7 @@ can trigger the hit reaction like a player's hit.
 | Interrupt | Conditions | Response | Knob |
 |-----------|-----------|----------|------|
 | `INTERUPT_Damaged` (the boss took damage) | player in front within `REACT_HIT_RANGE` (2 m), swing ready, draw | swing | `REACT_HIT` 25 |
-| `INTERUPT_Shoot` (the player starts a cast or a shot) | player at `REACT_RANGE` (5 m) or more, draw | teleport if ready, else beam if ready, else nothing | `REACT_SHOOT` 50 |
+| `INTERUPT_Shoot` (the player starts a cast or a shot) | player at `REACT_RANGE` (5 m) or more, draw | teleport (always ready there: `REACT_HOLD` covers `TELEPORT_COOLDOWN`) | `REACT_SHOOT` 50 |
 | `INTERUPT_UseItem` | player at `REACT_RANGE` or more, beam ready, draw | beam | `REACT_HEAL` 80 |
 
 `tests/test_mods_src_lua_scripts.py` parses the script with luaparser and
@@ -463,8 +483,9 @@ the pre-parry number. Re-run after a game patch or a knob change. Steps
 6 to 8 (cooldown weight 0, offensive teleport, mid-range and retreat beams,
 reactions) were run twice on 2026-09-05: improvements but no teleport at
 melee range (the swing gate), then no teleport at all and turning in place
-(the unregistered counters), see "Teleport cooldown"; the registration
-fix awaits its own run.
+(the unregistered counters), then teleport or beam at the start of the
+fight and never again (the 20011450 check, see "Teleport cooldown"); the
+version without that check awaits its own run.
 
 1. **Goal resolution**: knobs temporarily at `SWING_MID = 100`,
    `SWING_CLOSE = 100`, the three `BEAM_*` and the two `TELEPORT_*` at 0
@@ -502,20 +523,25 @@ fix awaits its own run.
    copied event restarts).
 5. **Ambient regression**: an ambient untouchable still only teleports and
    grabs, no swing at range, no beam, no script error, and still builds
-   madness with its lantern.
+   madness with its lantern. Count its teleports: the vanilla script gates
+   them on 20011450 alone, so an ambient that teleports once and then runs
+   at the player from 10 m or more supports the "consumed gate" reading of
+   "Teleport cooldown", one that teleports again points at the 3000
+   counter instead.
 6. **No freeze**: at melee range, take a grab and a swing within a few
    seconds, then stay close: the boss must keep sidestepping or strafing
    through the cooldowns, never stand still for several seconds (the
-   cooldown weight 0). Counters: the boss must teleport within the first
-   minute of the fight (a registered counter reads large before first
-   use, like the grab's); a boss that still never teleports anywhere while
-   it grabs and swings means the counter model of "Teleport cooldown" is
-   wrong and the teleport needs another clock (a SpEffect marker, or the
-   swing counter with a short window). One run tells the variants apart:
-   the grab opening the fight means registered counters read large before
-   first use; a teleport or a hit reaction within the first minute means
-   the 3000/3001 counters read non-zero after registration; a boss that
-   only grabs, beams and moves means registration changed nothing.
+   cooldown weight 0). Counters: the third run (2026-09-05) confirmed
+   the registered counters (teleport at the start, grabs, swings and
+   beams from the start), and that a script checking 20011450 teleports
+   once per fight. What the next run must show: teleports keep coming
+   after the first one, at melee range and from range alike, never two
+   within `TELEPORT_COOLDOWN`; a boss that again teleports only once
+   means the teleport itself (not the gate) is limited by something
+   else, and the next suspect is the 3000 counter after the interrupt's
+   `ClearSubGoal`. The swing counter is a poor replacement clock (Act11
+   and the hit reaction spend it too) and 20011453 lasts 4 s, too short
+   to carry an 8 s cooldown alone; a script-side timer would be next.
 7. **Offensive teleport and beams**: at melee range while the grab and
    the swing cool, at 3-10 m, and when the player stands in its back, the
    boss vanishes and reappears behind the player with a swing (never two
@@ -524,8 +550,8 @@ fix awaits its own run.
    3-10 m it sometimes fires the beam; after a grab it retreats and fires
    the beam from the retreat distance.
 8. **Reactions and windows**: from 5 m or more, drinking a flask draws a
-   beam most of the time and casting a spell draws a teleport or a beam
-   about half the time; within 5 m neither reaction fires. At melee range,
+   beam most of the time and casting a spell draws a teleport about half
+   the time; within 5 m neither reaction fires. At melee range,
    hitting the boss draws a swing at most once per `SWING_COOLDOWN` and
    about one hit in four, so combos after a whiffed grab still land freely.
 

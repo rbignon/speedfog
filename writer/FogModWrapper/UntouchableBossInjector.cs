@@ -195,7 +195,8 @@ public static class UntouchableBossInjector
         // Resident, it would defeat the partial wall too (same category) and
         // keep the copied event's parry detector permanently true (banner
         // looping from game start, 2026-09-05 diagnostic); drop it from
-        // every slot. Slot 17 (20011450, teleport gate) and slot 18
+        // every slot. Slot 17 (20011450, vanilla's teleport gate, unread by
+        // the boss script) and slot 18
         // (20011473, stateInfo 420) stay as vanilla.
         for (int i = 0; i < NPC_SPEFFECT_SLOTS; i++)
         {

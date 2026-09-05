@@ -43,7 +43,7 @@ local TELEPORT_BEHIND = 50              -- player behind, < 8 m: Act02 when read
 -- without adding any: hits landed while the swing cools stay free.
 local REACT_HIT = 25                    -- hit by the player in front within REACT_HIT_RANGE: swing
 local REACT_HIT_RANGE = 2
-local REACT_SHOOT = 50                  -- player casts or shoots from >= REACT_RANGE: teleport, else beam
+local REACT_SHOOT = 50                  -- player casts or shoots from >= REACT_RANGE: teleport
 local REACT_HEAL = 80                   -- player uses an item from >= REACT_RANGE: beam
 local REACT_RANGE = 5
 local REACT_HOLD = 10                   -- seconds after a teleport (3000) or a grab (3002) starts without any reaction (>= TELEPORT_COOLDOWN + the post-warp swing, see Houzuki755890_SequenceInFlight)
@@ -82,11 +82,16 @@ end
 
 -- The teleport (3000) ends with the interrupt's warp behind the player and
 -- a swing (3001) when the swing is ready. It has its own cooldown and does
--- not depend on the swing: a gate on SwingReady closed it at melee range
+-- not depend on the swing (a gate on SwingReady closed it at melee range
 -- for good, where the hit reaction consumes the swing as soon as it is
--- ready (2026-09-05).
+-- ready) nor on vanilla's SpEffect 20011450, which vanilla's far bracket
+-- checks: with that check the boss teleported once per fight (2026-09-05,
+-- third run). The TAE applies 20011450 for one frame at the start of the
+-- idle (0), of 1020, 2300 and the 5010-5013 arrivals, on top of the
+-- resident NpcParam slot; what leaves it absent after the first teleport
+-- is not identified (see the doc), so the boss does not read it.
 function Houzuki755890_TeleportReady(ai)
-    return ai:HasSpecialEffectId(TARGET_SELF, 20011450) and ai:GetAttackPassedTime(3000) > teleportInterval
+    return ai:GetAttackPassedTime(3000) > teleportInterval
 end
 
 -- No reaction while a teleport (3000, then the warp and its swing) or a
@@ -94,9 +99,11 @@ end
 -- the follow-up. Per the TAE event spans 3000 lasts 5 s, 3001 1.8 s and
 -- 3002 + 3003 about 6 s, so a teleport sequence runs about 8 s: REACT_HOLD
 -- must stay above TELEPORT_COOLDOWN plus the swing, otherwise a cast from
--- range during the post-warp swing would chain a second teleport.
+-- range during the post-warp swing would chain a second teleport. SpEffect
+-- 20011453 is vanilla's own "teleporting" marker (4 s, applied by 3000's
+-- first frame), read as a second signal.
 function Houzuki755890_SequenceInFlight(ai)
-    return ai:GetAttackPassedTime(3000) <= REACT_HOLD or ai:GetAttackPassedTime(3002) <= REACT_HOLD
+    return ai:HasSpecialEffectId(TARGET_SELF, 20011453) or ai:GetAttackPassedTime(3000) <= REACT_HOLD or ai:GetAttackPassedTime(3002) <= REACT_HOLD
 end
 
 -- Sub-goal builders shared by the acts and the reactions (parameters are
@@ -713,16 +720,12 @@ Goal.Interrupt = function (self, ai, goal)
         return false
     end
     if ai:IsInterupt(INTERUPT_Shoot) then
-        if ai:GetDist(TARGET_ENE_0) >= REACT_RANGE and ai:GetRandam_Int(1, 100) <= REACT_SHOOT then
-            if Houzuki755890_TeleportReady(ai) then
-                goal:ClearSubGoal()
-                Houzuki755890_AddTeleport(ai, goal)
-                return true
-            elseif Houzuki755890_BeamReady(ai) then
-                goal:ClearSubGoal()
-                Houzuki755890_AddBeam(ai, goal)
-                return true
-            end
+        -- The teleport is always ready here: the hold above covers its
+        -- cooldown (REACT_HOLD >= TELEPORT_COOLDOWN), so no beam fallback.
+        if ai:GetDist(TARGET_ENE_0) >= REACT_RANGE and ai:GetRandam_Int(1, 100) <= REACT_SHOOT and Houzuki755890_TeleportReady(ai) then
+            goal:ClearSubGoal()
+            Houzuki755890_AddTeleport(ai, goal)
+            return true
         end
         return false
     end
