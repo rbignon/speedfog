@@ -23,8 +23,9 @@ Current content:
   `_WarpBehind` and `_Add*` helpers, the rewritten brackets, the
   `SetCoolTime` weights, the `Houzuki755890_RegisterIntervals` call and
   the script-side swing zeroing in `Goal.Activate`, Act01's `successDist`,
-  Act02, Act04, Act05/Act06, Act11, the conditional post-warp swing in the
-  teleport interrupt and the reactions at the end of `Goal.Interrupt`.
+  Act02, Act03, Act04, Act05/Act06, Act11, the conditional post-warp swing
+  in the teleport interrupt and the reactions at the end of
+  `Goal.Interrupt`.
 
 The Rykard AI script that once lived here was reverted in commit c3f921d
 ("Revert 'overlay: import Rykard AI script'"); the plain-text Lua + manifest

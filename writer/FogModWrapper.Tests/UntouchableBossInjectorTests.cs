@@ -17,6 +17,7 @@ public class UntouchableBossInjectorTests
         var row = npc.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossNpcRow);
         Assert.Equal(UntouchableBossInjector.BOSS_HP, (uint)row["hp"].Value);
         Assert.Equal(UntouchableBossInjector.BOSS_RUNES, (uint)row["getSoul"].Value);
+        Assert.Equal(UntouchableBossInjector.BOSS_TOUGHNESS, (uint)row["toughness"].Value);
         Assert.Equal(UntouchableBossInjector.BOSS_SUPER_ARMOR, (float)row["superArmorDurability"].Value);
         Assert.Equal(UntouchableBossInjector.BOSS_SUPER_ARMOR_RECOVER, (float)row["superArmorRecoverCorrection"].Value);
         // The partial wall is applied by the copied wall event, never resident

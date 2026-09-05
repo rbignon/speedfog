@@ -3,9 +3,10 @@
 -- DSLuaDecompiler and renamed to battle goal 755890 (the boss NpcThinkParam
 -- clone's battleGoalID). SpeedFog additions: the lantern swing (3001) as a
 -- regular melee act (Act11), the dormant lantern ray (3004) re-enabled as a
--- beam (Act04, at range and at mid range), the teleport (Act02, an instant
--- warp instead of vanilla's 5 s animation 3000) offered at melee range and
--- against a player in the back with its own cooldown, a
+-- beam (Act04, at range and at mid range), the teleport (Act02: lantern
+-- burst, warp behind the player, grab; instead of vanilla's 5 s animation
+-- 3000) offered at melee range and against a player in the back with its
+-- own cooldown, a
 -- beam after the post-grab retreats (Act05/Act06) and three reactions in
 -- Goal.Interrupt (hit, ranged attack, item use). Ambient untouchables keep
 -- the vanilla bytecode script.
@@ -28,85 +29,93 @@ REGISTER_GOAL_NO_SUB_GOAL(GOAL_Houzuki755890_Battle, true)
 local BEAM_FAR_TELEPORT_READY = 40      -- >= 10 m, teleport ready: Act04 (beam) vs Act02
 local BEAM_FAR_TELEPORT_NOT_READY = 50  -- >= 10 m, teleport not ready: Act04 (beam) vs Act01
 local SWING_MID = 10                    -- 3 to 10 m: Act11 (swing, radius-4 knockback burst)
-local TELEPORT_MID = 15                 -- 3 to 10 m: Act02 (teleport behind the player, then swing)
+local TELEPORT_MID = 15                 -- 3 to 10 m: Act02 (burst, warp behind the player, grab)
 local BEAM_MID = 10                     -- 3 to 10 m: Act04 (beam)
 local MOVE_MID = 15                     -- 3 to 10 m: Act46 (close to 4 m, then strafe)
 local SWING_CLOSE = 15                  -- < 3 m: Act11 (swing)
 local TELEPORT_CLOSE = 10               -- < 3 m: Act02
 local MOVE_CLOSE = 20                   -- < 3 m: Act42 (sidestep)
 local GRAB_COOLDOWN = 6                 -- seconds between two grabs (3002); vanilla 12
-local SWING_COOLDOWN = 8                -- seconds between two swings (3001), any source; a cooling 3001 is never queued
-local TELEPORT_COOLDOWN = 6             -- seconds between two warps (AI timer TIMER_TELEPORT, set when the warp is queued)
-local TELEPORT_HOLD = 3                 -- seconds after the warp without any reaction (arrival about 1 s, then the swing 1.8 s); the wind-up is added
-local TELEPORT_WINDUP = 0               -- seconds of GOAL_COMMON_Wait before the warp (0: instant blink); the room is scanned when the act is queued, so it is that many seconds stale
+local SWING_COOLDOWN = 8                -- seconds between two bursts (3001), any source (Act11, reaction, teleport wind-up); AI timer TIMER_SWING
+local TELEPORT_COOLDOWN = 6             -- seconds between two teleports (AI timer TIMER_TELEPORT, set when the act is queued)
+local TELEPORT_HOLD = 3.5               -- seconds after the teleport act starts without any reaction (burst to its cancel window 1 s, arrival 1.2 to 2.2 s); the grab follow-up has its own hold once 3002 starts
+local TELEPORT_GRAB = 1                 -- 1: the warp is followed by the grab when it is ready; 0: the boss just reappears behind the player
 local BEAM_COOLDOWN = 6                 -- seconds between two beams (3004), any source
 local TELEPORT_BEHIND = 50              -- player behind, < 8 m: Act02 when ready (0-90; Act01 keeps 10, Act43 takes the rest)
-local TIMER_TELEPORT = 10               -- AI timer slot of the teleport cooldown (vanilla 528000 uses no timer)
+local TIMER_TELEPORT = 10               -- AI timer slots (vanilla 528000 uses none; vanilla scripts use 0-11)
+local TIMER_SWING = 11
 -- Reactions (Goal.Interrupt), percentages, 0 disables one. A reaction
 -- spends an attack that is available anyway, so it moves an attack earlier
 -- without adding any: hits landed while the swing cools stay free.
-local REACT_HIT = 25                    -- hit by the player in front within REACT_HIT_RANGE: swing
+local REACT_HIT = 25                    -- hit by the player in front within REACT_HIT_RANGE: teleport if ready, else swing
 local REACT_HIT_RANGE = 2
 local REACT_SHOOT = 50                  -- player casts or shoots from >= REACT_RANGE: teleport, else beam
 local REACT_HEAL = 80                   -- player uses an item from >= REACT_RANGE: beam
 local REACT_RANGE = 5
 local REACT_HOLD = 7                    -- seconds after a grab (3002) starts without any reaction (3002 + 3003 about 6 s)
 
--- Counter model (matches the two 2026-09-05 in-game runs and vanilla
--- 468000's "GetAttackPassedTime(3009) == 0" test, see the doc):
--- GetAttackPassedTime reads 0 for an animation never registered with
--- RegistAttackTimeInterval (an unregistered counter left the teleport dead
--- everywhere while it still played 3000), and a registered counter reads
--- large before the attack's first use (the grab fires from the start).
--- SetCoolTime registers as a side effect, but the decisions below run
--- before it, so every counter the script reads is registered here. The
--- engine returns the effective interval (SetCoolTime compares against
--- that return), and so do the *Ready helpers.
-local swingInterval = SWING_COOLDOWN
+-- Counter model (matches the 2026-09-05 in-game runs and vanilla 468000's
+-- "GetAttackPassedTime(3009) == 0" test, see the doc): GetAttackPassedTime
+-- reads 0 for an animation never registered with RegistAttackTimeInterval
+-- (an unregistered counter left the teleport dead everywhere while it
+-- still played 3000), and a registered counter reads large before the
+-- attack's first use (the grab fires from the start). SetCoolTime
+-- registers as a side effect, but the decisions below run before it, so
+-- every counter the script reads is registered here. The engine returns
+-- the effective interval (SetCoolTime compares against that return), and
+-- so do the *Ready helpers. The swing and the teleport run on AI timers
+-- instead (SetTimer/GetTimer, the vanilla idiom): 3001 is never registered,
+-- so no engine interval can ever hold the boss on a burst, and the
+-- teleport's burst may fire whatever the swing timer says.
+local grabInterval = GRAB_COOLDOWN
 local beamInterval = BEAM_COOLDOWN
 function Houzuki755890_RegisterIntervals(ai)
-    swingInterval = ai:RegistAttackTimeInterval(3001, SWING_COOLDOWN)
-    ai:RegistAttackTimeInterval(3002, GRAB_COOLDOWN)
+    grabInterval = ai:RegistAttackTimeInterval(3002, GRAB_COOLDOWN)
     beamInterval = ai:RegistAttackTimeInterval(3004, BEAM_COOLDOWN)
 end
 
 -- Availability of the cooled attacks, shared by the decision table and the
--- reactions. A cooling attack is never queued (weight 0 in the table, the
--- reactions and the post-warp swing check these), so its registered
--- interval can never hold the boss.
+-- reactions. A cooling registered attack (3002, 3004) is never queued
+-- (weight 0 in the table, the acts and the reactions check these), so its
+-- registered interval can never hold the boss.
 function Houzuki755890_SwingReady(ai)
-    return ai:GetAttackPassedTime(3001) > swingInterval
+    return ai:GetTimer(TIMER_SWING) <= 0
+end
+
+function Houzuki755890_GrabReady(ai)
+    return ai:GetAttackPassedTime(3002) > grabInterval
 end
 
 function Houzuki755890_BeamReady(ai)
     return ai:GetAttackPassedTime(3004) > beamInterval
 end
 
--- The teleport is an instant warp behind the player (GOAL_COMMON_ToTargetWarp
--- straight from the act, vanilla 301010's pattern) followed by the swing
--- (3001) when the swing is ready; vanilla's 5 s teleport-out animation
--- 3000 is not played (its warp marker fires at 4.77 s: the delay seen in
--- game). With no attack animation to count, the cooldown is an AI timer
--- set when the warp is queued. It depends neither on the swing (a gate on
--- SwingReady closed it at melee range for good, where the hit reaction
--- consumes the swing as soon as it is ready) nor on vanilla's SpEffect
--- 20011450 (with that check the boss teleported once per fight; the TAE
--- applies it for one frame at the start of the idle, of 1020, 2300 and the
--- 5010-5013 arrivals, and what leaves it absent afterwards is not
--- identified, see the doc).
+-- The teleport is Jori's structure (vanilla 531020: wind-up animation,
+-- GOAL_COMMON_ToTargetWarp, arrival attack) built from the untouchable's
+-- own moves: the lantern burst 3001 as the wind-up (its hit lands from the
+-- first frame, the warp fires at its cancel window, 1.0 s), the warp
+-- behind the player, then the grab when it is ready. Vanilla's 5 s
+-- teleport-out animation 3000 (warp marker at 4.77 s) is not played. The
+-- teleport depends neither on the swing timer (a gate on the swing closed
+-- it at melee range for good, where the hit reaction consumes the swing as
+-- soon as it is ready) nor on vanilla's SpEffect 20011450 (with that check
+-- the boss teleported once per fight; the TAE applies it for one frame at
+-- the start of the idle, of 1020, 2300 and the 5010-5013 arrivals, and
+-- what leaves it absent afterwards is not identified, see the doc).
 function Houzuki755890_TeleportReady(ai)
     return ai:GetTimer(TIMER_TELEPORT) <= 0
 end
 
--- No reaction while a warp (wind-up, arrival about 1 s, then the swing
--- 1.8 s) or a grab (3002 4.2 s, then 3003 1.8 s; TAE event spans) is in
--- flight: a reaction's ClearSubGoal would drop the follow-up. The warp
--- window is the first TELEPORT_WINDUP + TELEPORT_HOLD seconds of the
--- teleport timer, the grab window the first REACT_HOLD seconds of the 3002
--- counter. The threshold is clamped at 0: a hold longer than the cooldown
--- would otherwise read an expired timer (0) as "in flight" for good and
--- silence every reaction.
-local teleportHoldEnd = TELEPORT_COOLDOWN - TELEPORT_HOLD - TELEPORT_WINDUP
+-- No reaction while a teleport (burst, warp, arrival) or a grab (3002
+-- 4.2 s, then 3003 1.8 s; TAE event spans) is in flight: a reaction's
+-- ClearSubGoal would drop the follow-up. The teleport window is the first
+-- TELEPORT_HOLD seconds of its timer (the 5012/5013 arrivals last 2.2 s,
+-- so the grab that follows a warp may start up to 3.2 s in; its own hold,
+-- the 3002 counter, only starts then), the grab window the first
+-- REACT_HOLD seconds of the 3002 counter. The threshold is clamped at 0: a
+-- hold longer than the cooldown would otherwise read an expired timer (0)
+-- as "in flight" for good and silence every reaction.
+local teleportHoldEnd = TELEPORT_COOLDOWN - TELEPORT_HOLD
 if teleportHoldEnd < 0 then
     teleportHoldEnd = 0
 end
@@ -115,63 +124,82 @@ function Houzuki755890_SequenceInFlight(ai)
 end
 
 -- Sub-goal builders shared by the acts and the reactions.
--- Scans for room around the target exactly as vanilla's post-3000
--- interrupt does (in front, then behind right/left at 0 or 2 m, then
--- behind at 2 m) and queues the warp there; false when there is no room.
-function Houzuki755890_WarpBehind(ai, goal, target)
+-- Room around the target for the warp, scanned exactly as vanilla's
+-- post-3000 interrupt does (in front, then behind right/left at 0 or 2 m,
+-- then behind at 2 m): the warp direction and distance, or nil.
+function Houzuki755890_FindRoomBehind(ai, target)
     local lineWidth = ai:GetMapHitRadius(TARGET_SELF)
-    local directionFromTarget = AI_DIR_TYPE_BR
-    local distanceFromTarget = 0
     if ai:GetExistMeshOnLineDistEx(target, AI_DIR_TYPE_F, 3 + lineWidth, lineWidth, 0) >= 2.5 then
-        directionFromTarget = AI_DIR_TYPE_BR
-        distanceFromTarget = 0
+        return AI_DIR_TYPE_BR, 0
     elseif ai:GetExistMeshOnLineDistEx(target, AI_DIR_TYPE_BR, 3 + lineWidth, lineWidth, 0) >= 2.5 then
-        directionFromTarget = AI_DIR_TYPE_BR
-        distanceFromTarget = 0
+        return AI_DIR_TYPE_BR, 0
     elseif ai:GetExistMeshOnLineDistEx(target, AI_DIR_TYPE_BL, 3 + lineWidth, lineWidth, 0) >= 2.5 then
-        directionFromTarget = AI_DIR_TYPE_BL
-        distanceFromTarget = 0
+        return AI_DIR_TYPE_BL, 0
     elseif ai:GetExistMeshOnLineDistEx(target, AI_DIR_TYPE_BL, 3 + lineWidth, lineWidth, 2) >= 2.5 then
-        directionFromTarget = AI_DIR_TYPE_BL
-        distanceFromTarget = 2
+        return AI_DIR_TYPE_BL, 2
     elseif ai:GetExistMeshOnLineDistEx(target, AI_DIR_TYPE_BR, 3 + lineWidth, lineWidth, 2) >= 2.5 then
-        directionFromTarget = AI_DIR_TYPE_BR
-        distanceFromTarget = 2
+        return AI_DIR_TYPE_BR, 2
     elseif ai:GetExistMeshOnLineDistEx(target, AI_DIR_TYPE_B, 3 + lineWidth, lineWidth, 2) >= 2.5 then
-        directionFromTarget = AI_DIR_TYPE_B
-        distanceFromTarget = 2
-    else
+        return AI_DIR_TYPE_B, 2
+    end
+    return nil
+end
+
+-- Queues the warp behind the target (vanilla's ToTargetWarp parameters);
+-- false when there is no room. Vanilla's dormant marker interrupt uses it.
+function Houzuki755890_WarpBehind(ai, goal, target)
+    local directionFromTarget, distanceFromTarget = Houzuki755890_FindRoomBehind(ai, target)
+    if directionFromTarget == nil then
         return false
     end
     goal:AddSubGoal(GOAL_COMMON_ToTargetWarp, 15, target, directionFromTarget, distanceFromTarget, TARGET_ENE_0)
     return true
 end
 
--- The teleport act and the ranged reaction: the optional wind-up, the
--- warp, then the surprise swing (vanilla's post-warp parameters) when it
--- is ready. Returns whether the warp was queued. The timer starts even
--- without room, so a spot with no room behind the player is not retried
--- at every decision.
-function Houzuki755890_AddTeleport(ai, goal)
-    ai:SetTimer(TIMER_TELEPORT, TELEPORT_COOLDOWN)
-    if TELEPORT_WINDUP > 0 then
-        goal:AddSubGoal(GOAL_COMMON_Wait, TELEPORT_WINDUP, TARGET_ENE_0)
+-- The lantern burst (3001) and its timer. Immediate: fires where the boss
+-- stands whatever the player's side, Jori's wind-up recipe (vanilla 531020:
+-- ComboTunable_SuccessAngle180, reach 999, no turn, every angle 180); the
+-- ComboAttackTunableSpin wrapper would demand the player inside 90 degrees
+-- in front. Otherwise Act11's melee parameters (reach 4 m, turn 1.5 s /
+-- 60 degrees).
+function Houzuki755890_AddSwing(ai, goal, immediate)
+    ai:SetTimer(TIMER_SWING, SWING_COOLDOWN)
+    if immediate then
+        goal:AddSubGoal(GOAL_COMMON_ComboTunable_SuccessAngle180, 8, 3001, TARGET_ENE_0, 999, 0, 180, 180, 180)
+    else
+        goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, 8, 3001, TARGET_ENE_0, 4, 1.5, 60, 0, 0)
     end
-    if not Houzuki755890_WarpBehind(ai, goal, TARGET_ENE_0) then
-        return false
-    end
-    if Houzuki755890_SwingReady(ai) then
-        goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, 8, 3001, TARGET_ENE_0, 999, 0, 0)
-    end
-    return true
 end
 
-function Houzuki755890_AddSwing(ai, goal)
-    goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, 8, 3001, TARGET_ENE_0, 4, 1.5, 60, 0, 0)
+-- The grab (3002) with vanilla Act03's parameters; the 5030 observation
+-- lets the interrupt chain 3003 when the grab connects.
+function Houzuki755890_AddGrab(ai, goal)
+    ai:AddObserveSpecialEffectAttribute(TARGET_SELF, 5030)
+    goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, 8, 3002, TARGET_ENE_0, 12, 2, 50, 0, 0)
 end
 
 function Houzuki755890_AddBeam(ai, goal)
     goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, 3, 3004, TARGET_ENE_0, 999, 1.5, 60, 0, 0)
+end
+
+-- The teleport act and the reactions that use it: the burst, the warp,
+-- then the grab when TELEPORT_GRAB is on and the grab is ready. Returns
+-- whether it was queued: without room nothing is (the burst is not spent
+-- on a warp that cannot happen), but the teleport timer starts either way
+-- so the spot is not retried at every decision. The room is scanned when
+-- the act is queued, about 1 s before the warp.
+function Houzuki755890_AddTeleport(ai, goal)
+    ai:SetTimer(TIMER_TELEPORT, TELEPORT_COOLDOWN)
+    local directionFromTarget, distanceFromTarget = Houzuki755890_FindRoomBehind(ai, TARGET_ENE_0)
+    if directionFromTarget == nil then
+        return false
+    end
+    Houzuki755890_AddSwing(ai, goal, true)
+    goal:AddSubGoal(GOAL_COMMON_ToTargetWarp, 15, TARGET_ENE_0, directionFromTarget, distanceFromTarget, TARGET_ENE_0)
+    if TELEPORT_GRAB > 0 and Houzuki755890_GrabReady(ai) then
+        Houzuki755890_AddGrab(ai, goal)
+    end
+    return true
 end
 
 Goal.Initialize = function (self, ai, goal, battleActivatedCount)
@@ -307,10 +335,9 @@ Goal.Activate = function (self, ai, goal)
     -- act's goal life, which reads as the boss freezing in place.
     probabilities[3] = SetCoolTime(ai, goal, 3002, GRAB_COOLDOWN, probabilities[3], 0)
     probabilities[4] = SetCoolTime(ai, goal, 3004, BEAM_COOLDOWN, probabilities[4], 0)
-    -- The swing's and the teleport's cooldowns go through the *Ready
-    -- helpers (the swing here, the teleport inside the teleportMid and
-    -- teleportClose weights above); Houzuki755890_RegisterIntervals
-    -- registered their intervals.
+    -- The swing's and the teleport's cooldowns are AI timers read through
+    -- the *Ready helpers (the swing here, the teleport inside the
+    -- teleportMid and teleportClose weights above).
     if not Houzuki755890_SwingReady(ai) then
         probabilities[11] = 0
     end
@@ -363,9 +390,9 @@ function Houzuki755890_Act01(ai, goal, paramTbl)
 end
 
 function Houzuki755890_Act02(ai, goal, paramTbl)
-    -- Teleport: SpeedFog's instant warp behind the player, then the swing
-    -- (vanilla played the 5 s 3000 first). Offered at every range
-    -- (TELEPORT_MID/CLOSE/BEHIND at melee range).
+    -- Teleport: SpeedFog's lantern burst, warp behind the player, grab
+    -- (vanilla played the 5 s 3000, then warped and swung). Offered at
+    -- every range (TELEPORT_MID/CLOSE/BEHIND at melee range).
     Houzuki755890_AddTeleport(ai, goal)
     GetWellSpace_Odds = 0
     return GetWellSpace_Odds
@@ -381,16 +408,7 @@ function Houzuki755890_Act03(ai, goal, paramTbl)
     local walkLife = 1
     local runLife = 8
     Approach_Act_Flex(ai, goal, stopDist, canRunDist, forceRunMinDist, runProbability, guardProbability, walkLife, runLife)
-    local goalLife = 8
-    local animationId = 3002
-    local target = TARGET_ENE_0
-    local successDist = 12
-    local turnTime = 2
-    local turnFaceAngle = 50
-    local upAngleThreshold = 0
-    local downAngleThreshold = 0
-    ai:AddObserveSpecialEffectAttribute(TARGET_SELF, 5030)
-    goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, goalLife, animationId, target, successDist, turnTime, turnFaceAngle, upAngleThreshold, downAngleThreshold)
+    Houzuki755890_AddGrab(ai, goal)
     GetWellSpace_Odds = 0
     return GetWellSpace_Odds
 end
@@ -475,7 +493,7 @@ function Houzuki755890_Act11(ai, goal, paramTbl)
     local walkLife = 1
     local runLife = 5
     Approach_Act_Flex(ai, goal, stopDist, canRunDist, forceRunMinDist, runProbability, guardProbability, walkLife, runLife)
-    Houzuki755890_AddSwing(ai, goal)
+    Houzuki755890_AddSwing(ai, goal, false)
     GetWellSpace_Odds = 0
     return GetWellSpace_Odds
 end
@@ -709,7 +727,7 @@ Goal.Interrupt = function (self, ai, goal)
             -- than only when room was found.
             goal:ClearSubGoal()
             if Houzuki755890_WarpBehind(ai, goal, TARGET_EVENT) and Houzuki755890_SwingReady(ai) then
-                goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, 8, 3001, TARGET_ENE_0, 999, 0, 0)
+                Houzuki755890_AddSwing(ai, goal, true)
             end
             return true
         end
@@ -729,10 +747,18 @@ Goal.Interrupt = function (self, ai, goal)
         return false
     end
     if ai:IsInterupt(INTERUPT_Damaged) then
-        if ai:IsInsideTargetCustom(TARGET_SELF, TARGET_ENE_0, AI_DIR_TYPE_F, 120, 180, REACT_HIT_RANGE) and Houzuki755890_SwingReady(ai) and ai:GetRandam_Int(1, 100) <= REACT_HIT then
-            goal:ClearSubGoal()
-            Houzuki755890_AddSwing(ai, goal)
-            return true
+        if ai:IsInsideTargetCustom(TARGET_SELF, TARGET_ENE_0, AI_DIR_TYPE_F, 120, 180, REACT_HIT_RANGE) and ai:GetRandam_Int(1, 100) <= REACT_HIT then
+            -- Hit at melee range: burst and blink behind the player when the
+            -- teleport is ready, a plain burst otherwise.
+            if Houzuki755890_TeleportReady(ai) then
+                goal:ClearSubGoal()
+                Houzuki755890_AddTeleport(ai, goal)
+                return true
+            elseif Houzuki755890_SwingReady(ai) then
+                goal:ClearSubGoal()
+                Houzuki755890_AddSwing(ai, goal, true)
+                return true
+            end
         end
         return false
     end
