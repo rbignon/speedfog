@@ -7,17 +7,15 @@ namespace FogModWrapper;
 /// <summary>
 /// Promotes enemy-randomizer-placed Aging Untouchables (source entity
 /// 2049420200, allowlist-only minor boss) to their boss form: a cloned
-/// NpcParam row outside the nerflantern-patched 5280 band, carrying a
-/// custom SpEffect that lifts the parry wall (stateInfo 121, like
-/// nerflantern) but keeps the boss heavily resistant via partial damage
-/// cut rates. A successful parry still opens the vanilla full-damage
-/// window, and, when the static assets are built, its own battle AI and
-/// a frenzy beam (see docs/untouchable-boss.md "Moveset").
+/// NpcParam row outside the nerflantern-patched 5280 band, a partial wall
+/// (the vanilla full-immunity wall swapped for a damage cut in the wall
+/// event the randomizer copies next to each placed boss, so the first parry
+/// clears it the vanilla way) and, when the static assets are built, its
+/// own battle AI and a frenzy beam. See docs/untouchable-boss.md.
 /// </summary>
 public static class UntouchableBossInjector
 {
     public const int UNTOUCHABLE_VANILLA_NPC = 52800086;
-    private const int WALL_LIFT_TEMPLATE_SPEFFECT = 20011471;
 
     // Initial values for the in-game tuning session (docs/untouchable-boss.md).
     public const uint BOSS_HP = 2000;
@@ -58,21 +56,20 @@ public static class UntouchableBossInjector
 
     // --- Parry break (docs/untouchable-boss.md "Parry break") ---
 
-    /// <summary>Vanilla SpEffect the parried animation (8500) applies for the
-    /// parry window: stateInfo 121, the wall lift nerflantern uses. The boss's
-    /// permanent row is the out-of-band clone, so on the boss this id is only
-    /// ever present during a parry, which makes it the parry detector (kept
-    /// true by <see cref="Apply"/>, which scrubs nerflantern's inherited copy
-    /// from the clone's slots).</summary>
+    /// <summary>The parry-window SpEffect (category 1001, stateInfo 121):
+    /// the parried animation (8500) applies it through a TAE event, it
+    /// overrides the wall (same category) during the parry, and the
+    /// untouchable's own wall event waits for it to clear the wall for good.
+    /// nerflantern makes it resident on every 5280-band row to defeat the
+    /// wall; <see cref="Apply"/> scrubs that inherited copy from the boss
+    /// clone so the partial wall and the parry detection work.</summary>
     public const int PARRY_WINDOW_SPEFFECT = 20011471;
 
-    /// <summary>Seconds between two passes of the parry break event; each
-    /// pass re-applies the (idempotent) counter and re-arms after a respawn.</summary>
-    public const float PARRY_BREAK_REARM_SECONDS = 1f;
-
-    /// <summary>SpEffectParam.spCategory 0: no category, the effect coexists
-    /// with every other effect instead of competing inside a category.</summary>
-    public const ushort NO_CATEGORY = 0;
+    /// <summary>The vanilla wall: full immunity (every damage cut rate 0,
+    /// category 1001) applied by the untouchable's wall event at spawn and
+    /// cleared by that event on the first parry. Swapped for the partial cut
+    /// row by <see cref="PatchWallEvents"/>.</summary>
+    public const int VANILLA_WALL_SPEFFECT = 20011470;
 
     /// <summary>NpcParam carries spEffectID0..31.</summary>
     private const int NPC_SPEFFECT_SLOTS = 32;
@@ -154,42 +151,32 @@ public static class UntouchableBossInjector
 
     public static void Apply(PARAM npc, PARAM spEffect)
     {
+        // The partial wall: a clone of the parry-window effect (category
+        // 1001, stateInfo 121) with the eight cut rates lowered. It is not
+        // resident on the NpcParam row: the enemy randomizer copies the
+        // untouchable's own wall event next to every placed boss, and
+        // PatchWallEvents swaps that event's full-immunity wall (20011470)
+        // for this row, so the vanilla flow applies it at spawn, lets the
+        // parry-window effect override it during a parry (same category)
+        // and clears it for good on the first parry.
         var spRow = GameEditor.AddRow(
-            spEffect, SpeedFogIds.UntouchableBossSpEffectRow, WALL_LIFT_TEMPLATE_SPEFFECT);
+            spEffect, SpeedFogIds.UntouchableBossSpEffectRow, PARRY_WINDOW_SPEFFECT);
         foreach (var field in CutFields)
             spRow[field].Value = DAMAGE_CUT;
-        // The template sits in SpEffect category 1001 (categoryPriority 0),
-        // the category of the parry-window effect the parried animation
-        // applies (20011471 itself). Same category + equal priority means the
-        // window effect collides with this resident row instead of coexisting
-        // (vanilla's resident wall 20011473 is in category 156), which both
-        // blinds the parry detector and blocks the counter below. Category 0
-        // coexists with everything.
-        spRow["spCategory"].Value = NO_CATEGORY; // u16
-
-        // Parry break counter: the inverse of the cut, applied by EMEVD once
-        // the boss has been parried (InjectParryBreak). Negations of
-        // coexisting effects stack multiplicatively, so cut x counter = 1.0
-        // for the rest of the fight.
-        var breakRow = GameEditor.AddRow(spEffect, SpeedFogIds.UntouchableParryBreakSpEffectRow, spRow);
-        foreach (var field in CutFields)
-            breakRow[field].Value = 1f / DAMAGE_CUT;
-        breakRow["spCategory"].Value = NO_CATEGORY; // u16; already copied from spRow, kept explicit
 
         var npcRow = GameEditor.AddRow(
             npc, SpeedFogIds.UntouchableBossNpcRow, UNTOUCHABLE_VANILLA_NPC);
         npcRow["hp"].Value = BOSS_HP;          // u32
         npcRow["getSoul"].Value = BOSS_RUNES;  // u32
-        // Slot 19 is the first free slot (17 = teleport gate, 18 = parry
-        // wall; the custom row's stateInfo 121 lifts the wall permanently).
-        npcRow["spEffectID19"].Value = SpeedFogIds.UntouchableBossSpEffectRow; // s32
         // The clone is taken from the merged regulation, where the Item
         // Randomizer's always-on nerflantern option has already written the
-        // wall-lift SpEffect (20011471) into a free slot of every 5280-band
-        // row (slot 31 on 1.17). Inherited, it made the boss carry the
-        // parry-window effect permanently, which blinded the parry break
-        // detector (banner looping from game start, 2026-09-05). Our own row
-        // above already lifts the wall, so drop it from every slot.
+        // parry-window effect (20011471) into a free slot of every 5280-band
+        // row (slot 31 on 1.17) to defeat the wall for ambient untouchables.
+        // Resident, it would defeat the partial wall too (same category) and
+        // keep the copied event's parry detector permanently true (banner
+        // looping from game start, 2026-09-05 diagnostic); drop it from
+        // every slot. Slot 17 (20011450, teleport gate) and slot 18
+        // (20011473, stateInfo 420) stay as vanilla.
         for (int i = 0; i < NPC_SPEFFECT_SLOTS; i++)
         {
             if ((int)npcRow[$"spEffectID{i}"].Value == PARRY_WINDOW_SPEFFECT)
@@ -197,7 +184,7 @@ public static class UntouchableBossInjector
         }
 
         Console.WriteLine(
-            $"Untouchable boss: NpcParam {SpeedFogIds.UntouchableBossNpcRow} (clone of {UNTOUCHABLE_VANILLA_NPC}, hp {BOSS_HP}, runes {BOSS_RUNES}) + SpEffect {SpeedFogIds.UntouchableBossSpEffectRow} (cut {DAMAGE_CUT}) + parry break SpEffect {SpeedFogIds.UntouchableParryBreakSpEffectRow} (x{1f / DAMAGE_CUT})");
+            $"Untouchable boss: NpcParam {SpeedFogIds.UntouchableBossNpcRow} (clone of {UNTOUCHABLE_VANILLA_NPC}, hp {BOSS_HP}, runes {BOSS_RUNES}, nerflantern slot scrubbed) + partial wall SpEffect {SpeedFogIds.UntouchableBossSpEffectRow} (cut {DAMAGE_CUT}, applied by the copied wall event)");
     }
 
     /// <summary>Writes the moveset rows: boss think row (own battle script),
@@ -322,90 +309,118 @@ public static class UntouchableBossInjector
             .ToList();
     }
 
-    /// <summary>Parry break event slots: ascending arena ids get consecutive
-    /// event ids from <see cref="SpeedFogIds.UntouchableParryEvents"/>
-    /// (deterministic across seeds); ids beyond the capacity get no slot.</summary>
-    public static Dictionary<uint, int> ParryBreakSlots(IEnumerable<uint> arenaIds)
-    {
-        var range = SpeedFogIds.UntouchableParryEvents;
-        var slots = new Dictionary<uint, int>();
-        foreach (var id in arenaIds.Distinct().OrderBy(id => id))
-        {
-            if (slots.Count >= range.Capacity)
-                break;
-            slots[id] = range.Base + slots.Count;
-        }
-        return slots;
-    }
-
-    /// <summary>Adds one looping parry break event per (boss, event id) pair to
-    /// an arena map's EMEVD and registers it in the map's event 0. The event
-    /// waits for the boss to carry the vanilla parry-window SpEffect
-    /// (<see cref="PARRY_WINDOW_SPEFFECT"/>, applied by the parried
-    /// animation), applies the counter SpEffect
-    /// (<see cref="SpeedFogIds.UntouchableParryBreakSpEffectRow"/>, written
-    /// by <see cref="Apply"/>), then restarts after
-    /// <see cref="PARRY_BREAK_REARM_SECONDS"/> so a boss respawned after the
-    /// player's death is covered again. Lives in the map's EMEVD, like
-    /// FogMod's own scaling events, so the entity is in scope. Returns the
-    /// number of events added.</summary>
-    public static int AddParryBreakEvents(
-        EMEVD emevd, Events events, IEnumerable<(uint Entity, int EventId)> slots, Action<string> log)
+    /// <summary>Rewrites the events the enemy randomizer copied for one
+    /// placed boss (every event whose InitializeEvent carries the boss
+    /// entity): each SetSpEffect/ClearSpEffect of the full-immunity wall
+    /// (<see cref="VANILLA_WALL_SPEFFECT"/>) now names the partial cut row,
+    /// and the first SetCharacterHPBarDisplay(disabled) of each of those
+    /// events becomes enabled: the boss takes damage from the start, so its
+    /// bar shows from the start, and the teleport sibling event must not
+    /// hide it again. Parameterized slots are left alone. Returns the number
+    /// of instructions rewritten, or 0 (with a warning, and the bar flips
+    /// discarded by the caller not writing) when no wall swap happened: the
+    /// boss then has no damage cut at all.</summary>
+    public static int PatchWallEvents(EMEVD emevd, uint boss, Action<string> log)
     {
         var initEvent = emevd.Events.Find(e => e.ID == 0);
         if (initEvent == null)
         {
-            log("  Warning: Event 0 not found, parry break skipped");
+            log($"  Warning: Event 0 not found, wall patch skipped for entity {boss}");
             return 0;
         }
 
-        int added = 0;
-        foreach (var (boss, eventId) in slots)
+        // Events whose InitializeEvent (slot, event id, args...) carries the
+        // boss entity among its args.
+        var eventIds = new HashSet<long>();
+        foreach (var ins in initEvent.Instructions)
         {
-            var evt = new EMEVD.Event(eventId);
-            // events is shared across the parallel map workers and its parse
-            // caches are not known to be thread-safe (DeathMarkerInjector's
-            // precedent): serialize instruction building.
-            lock (events)
+            if (ins.Bank != 2000 || ins.ID != 0 || ins.ArgData.Length < 12)
+                continue;
+            for (int off = 8; off + 4 <= ins.ArgData.Length; off += 4)
             {
-                evt.Instructions.Add(events.ParseAdd(
-                    $"IfCharacterHasSpEffect(MAIN, {boss}, {PARRY_WINDOW_SPEFFECT}, true, ComparisonType.Equal, 1)"));
-                evt.Instructions.Add(events.ParseAdd(
-                    $"SetSpEffect({boss}, {SpeedFogIds.UntouchableParryBreakSpEffectRow})"));
-                evt.Instructions.Add(events.ParseAdd($"WaitFixedTimeSeconds({PARRY_BREAK_REARM_SECONDS})"));
-                evt.Instructions.Add(events.ParseAdd("EndUnconditionally(EventEndType.Restart)"));
+                if (BitConverter.ToUInt32(ins.ArgData, off) == boss)
+                {
+                    eventIds.Add(BitConverter.ToInt32(ins.ArgData, 4));
+                    break;
+                }
             }
-            emevd.Events.Add(evt);
-            initEvent.Instructions.Add(EmevdHelper.InitializeEvent(eventId));
-            log($"  parry break event {eventId}: entity {boss} (SpEffect {PARRY_WINDOW_SPEFFECT} -> SetSpEffect {SpeedFogIds.UntouchableParryBreakSpEffectRow})");
-            added++;
         }
-        return added;
+
+        int swaps = 0;
+        var barFlips = new List<EMEVD.Instruction>();
+        foreach (var evt in emevd.Events.Where(e => eventIds.Contains(e.ID)))
+        {
+            bool hpBarDone = false;
+            for (int i = 0; i < evt.Instructions.Count; i++)
+            {
+                var ins = evt.Instructions[i];
+                if (ins.Bank != 2004 || ins.ArgData.Length < 8)
+                    continue;
+                // The SpEffect id and the enable flag both sit at byte 4; a
+                // parameterized slot there is the runtime's, not ours.
+                if (evt.Parameters.Any(prm => prm.InstructionIndex == i && prm.TargetStartByte == 4))
+                    continue;
+                if ((ins.ID == 8 || ins.ID == 21) && BitConverter.ToInt32(ins.ArgData, 4) == VANILLA_WALL_SPEFFECT)
+                {
+                    BitConverter.GetBytes(SpeedFogIds.UntouchableBossSpEffectRow).CopyTo(ins.ArgData, 4);
+                    swaps++;
+                }
+                else if (ins.ID == 30 && !hpBarDone && ins.ArgData[4] == 0)
+                {
+                    ins.ArgData[4] = 1; // spawn-time or teleport "disabled" -> enabled
+                    hpBarDone = true;
+                    barFlips.Add(ins);
+                }
+            }
+        }
+
+        if (swaps == 0)
+        {
+            // No wall to soften: an always-visible bar on an immune boss would
+            // mislead, and another boss of the same map may still write this
+            // EMEVD, so undo the flips instead of relying on the caller.
+            foreach (var ins in barFlips)
+                ins.ArgData[4] = 0;
+            log($"  Warning: no wall event found for entity {boss}: the boss has no damage cut (full damage from the start)");
+            return 0;
+        }
+        log($"  wall event patched for entity {boss}: {swaps} wall swap(s) ({VANILLA_WALL_SPEFFECT} -> {SpeedFogIds.UntouchableBossSpEffectRow}) + {barFlips.Count} HP bar flip(s)");
+        return swaps + barFlips.Count;
     }
 
-    /// <summary>Reads the map's EMEVD from the mod dir, adds the parry break
-    /// events of the given bosses (those with a slot) and writes it back.
-    /// A map without an EMEVD in the mod dir (the merge-dir fallback arena)
-    /// is logged and skipped: that boss keeps its cut after a parry.</summary>
-    internal static int InjectParryBreak(
-        string modDir, string msbFileName, IEnumerable<uint> bossIds,
-        IReadOnlyDictionary<uint, int> slots, Events events, Action<string> log)
+    /// <summary>Reads the map's EMEVD from the mod dir (or copies it there
+    /// from <paramref name="sourceDir"/>, the Item Randomizer's merge dir,
+    /// for the fallback arena FogMod never writes), patches the wall events
+    /// of the given bosses and writes it back. Missing everywhere: logged
+    /// and skipped, that boss keeps the vanilla full wall until parried.</summary>
+    internal static int InjectWallPatch(
+        string modDir, string msbFileName, IEnumerable<uint> bossIds, Action<string> log, string? sourceDir = null)
     {
-        var mapId = msbFileName.Replace(".msb.dcx", "", StringComparison.OrdinalIgnoreCase);
-        var emevdPath = Path.Combine(modDir, "event", $"{mapId}.emevd.dcx");
-        var pairs = bossIds.Where(slots.ContainsKey).OrderBy(id => id).Select(id => (id, slots[id])).ToList();
-        if (pairs.Count == 0)
+        var ids = bossIds.OrderBy(id => id).ToList();
+        if (ids.Count == 0)
             return 0;
+        var mapId = msbFileName.Replace(".msb.dcx", "", StringComparison.OrdinalIgnoreCase);
+        var emevdName = $"{mapId}.emevd.dcx";
+        var emevdPath = Path.Combine(modDir, "event", emevdName);
         if (!File.Exists(emevdPath))
         {
-            log($"  Warning: {mapId}.emevd.dcx not in the mod dir, parry break skipped for entity {string.Join("/", pairs.Select(p => p.Item1))}");
-            return 0;
+            var sourcePath = sourceDir == null ? null : Path.Combine(sourceDir, "event", emevdName);
+            if (sourcePath == null || !File.Exists(sourcePath))
+            {
+                log($"  Warning: {emevdName} not in the mod dir, wall patch skipped for entity {string.Join("/", ids)} (vanilla full wall until parried)");
+                return 0;
+            }
+            Directory.CreateDirectory(Path.GetDirectoryName(emevdPath)!);
+            File.Copy(sourcePath, emevdPath);
+            log($"  {emevdName} copied from the merge dir for the wall patch");
         }
         var emevd = EMEVD.Read(emevdPath);
-        int added = AddParryBreakEvents(emevd, events, pairs, log);
-        if (added > 0)
+        int rewritten = 0;
+        foreach (var boss in ids)
+            rewritten += PatchWallEvents(emevd, boss, log);
+        if (rewritten > 0)
             emevd.Write(emevdPath);
-        return added;
+        return rewritten;
     }
 
     /// <summary>MSB phase (post-Write): repoint every placed untouchable
@@ -422,26 +437,18 @@ public static class UntouchableBossInjector
     /// the same way, and, only when something was actually repointed,
     /// written into modDir (the higher-priority layer).
     ///
-    /// <paramref name="events"/> (null disables it) also adds the parry break
-    /// event of every repointed boss to its map's EMEVD
-    /// (<see cref="InjectParryBreak"/>).</summary>
+    /// Every repointed boss also gets its copied wall event patched in the
+    /// same map's EMEVD (<see cref="InjectWallPatch"/>).</summary>
     public static void Inject(
         string modDir, Dictionary<string, string> enemyAssignments, string? mergeDir,
-        IReadOnlyList<string> fallbackArenaMaps, bool repointThink, Events? events)
+        IReadOnlyList<string> fallbackArenaMaps, bool repointThink)
     {
-        var orderedIds = ArenaIds(enemyAssignments);
-        var arenaIds = orderedIds.ToHashSet();
+        var arenaIds = ArenaIds(enemyAssignments).ToHashSet();
         if (arenaIds.Count == 0)
             return;
 
-        var slots = ParryBreakSlots(orderedIds);
-        if (events != null && slots.Count < arenaIds.Count)
-        {
-            Console.WriteLine(
-                $"  Warning: parry break event range full ({SpeedFogIds.UntouchableParryEvents.Capacity}), {arenaIds.Count - slots.Count} boss slot(s) keep the damage cut after a parry");
-        }
-        int parryEvents = 0;
-        int parryMaps = 0;
+        int wallInstructions = 0;
+        int wallMaps = 0;
 
         Console.WriteLine(
             $"Untouchable boss: repointing {arenaIds.Count} placed boss slot(s)");
@@ -468,14 +475,11 @@ public static class UntouchableBossInjector
                     foreach (var id in ids)
                         found.Add(id);
                 }
-                if (events != null)
+                int patched = InjectWallPatch(modDir, Path.GetFileName(msbPath), ids, log);
+                if (patched > 0)
                 {
-                    int added = InjectParryBreak(modDir, Path.GetFileName(msbPath), ids, slots, events, log);
-                    if (added > 0)
-                    {
-                        Interlocked.Add(ref parryEvents, added);
-                        Interlocked.Increment(ref parryMaps);
-                    }
+                    Interlocked.Add(ref wallInstructions, patched);
+                    Interlocked.Increment(ref wallMaps);
                 }
             }
         });
@@ -515,24 +519,21 @@ public static class UntouchableBossInjector
                         found.Add(id);
                     Console.WriteLine(
                         $"  Fallback: repointed {repointed} part(s) in {name} (merge-dir copy shipped into the mod dir)");
-                    if (events != null)
+                    // FogMod never writes this map's EMEVD: the merge-dir copy
+                    // (which carries the randomizer's wall events) is shipped
+                    // into the mod dir, patched.
+                    int patched = InjectWallPatch(modDir, msbFileName, ids, Console.WriteLine, mergeDir);
+                    if (patched > 0)
                     {
-                        // FogMod never writes this map's EMEVD, so this
-                        // normally logs the "not in the mod dir" warning.
-                        int added = InjectParryBreak(modDir, msbFileName, ids, slots, events, Console.WriteLine);
-                        if (added > 0)
-                        {
-                            parryEvents += added;
-                            parryMaps++;
-                        }
+                        wallInstructions += patched;
+                        wallMaps++;
                     }
                 }
             }
         }
 
         Console.WriteLine($"  Repointed {total} untouchable boss part(s)");
-        if (events != null)
-            Console.WriteLine($"  Parry break: {parryEvents} event(s) in {parryMaps} map(s)");
+        Console.WriteLine($"  Wall patch: {wallInstructions} instruction(s) in {wallMaps} map(s)");
         foreach (var missing in arenaIds.Except(found).OrderBy(id => id))
         {
             // Phase-expanded slots may have no MSB part of their own.

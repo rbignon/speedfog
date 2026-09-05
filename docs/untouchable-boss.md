@@ -34,36 +34,53 @@ promotes the arena's enemy-randomizer-placed part into the actual boss.
 
 ## The vulnerability mechanism
 
-Vanilla `NpcParam` row `52800086` (the Aging Untouchable's base stats,
-HP 323, `getSoul` 4449) carries the parry-to-damage wall in `spEffectID18`:
-SpEffect `20011473`, `stateInfo` 420. That `stateInfo` value is the
-hardcoded "untouchable" mechanic: nothing short of a successful parry can
-damage the character while it is set, regardless of any damage-cut field on
-that row.
+The wall is not a `NpcParam` field and not `stateInfo` 420, as this
+section claimed until the 2026-09-05 sessions. Decoded from the vanilla
+per-untouchable EMEVD event (a `Restart` event initialized with the
+untouchable's entity, copied next to every placed boss by the enemy
+randomizer; on 1.17 it is `1700783` in an arena map, together with three
+sibling events):
 
-The Item Randomizer's always-on `nerflantern` option lifts this by
-permanently adding SpEffect `20011471` (`stateInfo` 121) to every c5280
-`NpcParam` row's first free slot. `stateInfo` 121 is a different permanent
-state that does not carry the untouchable flag, so damage lands normally;
-every damage-cut field on `20011471` sits at its default 1.0 (no cut).
-`UntouchableBossInjector.Apply` clones `20011471` into a new `SpEffectParam`
-row (`755890000`) that inherits `stateInfo` 121 (the wall-lifting mechanism)
-and overrides the eight damage-cut fields:
+1. At spawn: `SetSpEffect(entity, 20011470)` (category 1001, every damage
+   cut rate 0: full immunity, this is the wall), `SetSpEffect(entity,
+   19690)`, and `SetCharacterHPBarDisplay(entity, disabled)`.
+2. Wait for `IfCharacterHasSpEffect(entity, 20011471)`: the parried
+   animation (8500) applies 20011471 through a TAE event; same category
+   1001, so it overrides the wall during the parry window (the riposte
+   lands).
+3. Then, once and for all: `ClearSpEffect(entity, 20011470)`, `Create NPC
+   Part` (a part with an HP bar), `SetCharacterHPBarDisplay(entity,
+   enabled)`, `SetSpEffect(entity, 20011472)` (a one-second break VFX).
 
-```
-slashDamageCutRate, blowDamageCutRate, thrustDamageCutRate,
-neutralDamageCutRate, magicDamageCutRate, fireDamageCutRate,
-thunderDamageCutRate, darkDamageCutRate
-```
+So "one parry and the wall is gone for good" is the vanilla design. The
+Item Randomizer's always-on `nerflantern` option defeats it by writing
+20011471 into a free `NpcParam` slot of every 5280-band row (slot 31 on
+1.17): resident in the same category, it keeps the event's wall from
+ever taking hold, and the parry detector of step 2 is permanently true.
+Slot 18 (`20011473`, `stateInfo` 420, category 156) is unrelated to
+damage and stays as vanilla.
 
-all set to `UntouchableBossInjector.DAMAGE_CUT` (`0.5f`, i.e. the boss
-takes 50% of incoming damage: a 50% cut; 0.35 until the 2026-09-04
-in-game session found the boss too tanky). The vanilla parry mechanic is
-untouched (the parried animation 8500 still opens the riposte window),
-but the cut rates of the permanent row keep applying to every hit,
-riposte included, until the parry break counter lands (see "Moveset",
-"Parry break"); that counter is applied on the parry itself, before the
-riposte, so the first riposte already deals full damage.
+SpeedFog's boss keeps the vanilla flow with a **partial wall**:
+
+- `UntouchableBossInjector.Apply` clones 20011471 into `SpEffectParam`
+  row 755890000 (category 1001 kept) with the eight damage-cut fields
+  (`slashDamageCutRate` ... `darkDamageCutRate`) set to
+  `UntouchableBossInjector.DAMAGE_CUT` (`0.5f`, the boss takes 50%; 0.35
+  until the 2026-09-04 session found the boss too tanky). The row is not
+  resident on the boss `NpcParam` row: a resident copy could not be
+  cleared by step 3.
+- `PatchWallEvents` (MSB phase, per arena map) rewrites the events the
+  randomizer copied for each placed boss (all four take the entity as
+  their parameter): 20011470 becomes 755890000 in the wall event's
+  `SetSpEffect` and `ClearSpEffect`, and the first
+  `SetCharacterHPBarDisplay(disabled)` of every copied event becomes
+  enabled, the wall event's spawn-time one and the teleport sibling's
+  mid-warp one alike (the boss takes damage from the start, so its bar
+  shows from the start and must not vanish at each teleport). Four
+  instructions per boss on 1.17. Step 2 overrides the partial wall during
+  the parry, step 3 clears it: the first parry is the break.
+- `Apply` scrubs nerflantern's 20011471 from every slot of the boss
+  clone; ambient untouchables keep it (they must stay damageable).
 
 The clone (`NpcParam` row `755890000`, `UntouchableBossInjector.UNTOUCHABLE_VANILLA_NPC`
 = clone of `52800086`) sets:
@@ -71,10 +88,8 @@ The clone (`NpcParam` row `755890000`, `UntouchableBossInjector.UNTOUCHABLE_VANI
 - `hp` = `BOSS_HP` = 2000 (3000 until the 2026-09-04 session; see the
   scaling note below: this is the HP at the arena's vanilla tier)
 - `getSoul` = `BOSS_RUNES` = 20000
-- `spEffectID19` = `755890000` (the custom SpEffect row). Slot 19 is the
-  first free slot on `52800086`: slot 17 (`20011450`) permanently gates the
-  AI's long-range teleport loop and slot 18 (`20011473`) is the parry wall
-  being superseded; both stay as-is on the clone.
+- every `spEffectIDn` equal to 20011471 = -1 (nerflantern's slot); slot
+  17 (`20011450`, the AI's teleport gate) and slot 18 (`20011473`) stay.
 
 The clone deliberately lives outside the `5280xxxx` band. The Item
 Randomizer's `nerflantern` option is globally on in SpeedFog and patches
@@ -87,6 +102,13 @@ touches it. `NpcParam`, `SpEffectParam` and `NpcThinkParam` are separate row
 namespaces, so this value colliding with `SpeedFogIds.PassiveGreeterThinkRow`
 (also `755890000`, a `NpcThinkParam` row from the Halloween ambient-spawn
 feature) is not a conflict.
+
+A boss whose map carries no copied wall event (never observed; the
+randomizer copies the four events with every placement) would have no
+wall and no cut at all, with a warning and its bar flips discarded. The
+merge-dir fallback arena has no EMEVD in the mod dir: its merge-dir copy
+(which carries the randomizer's events) is shipped into the mod dir and
+patched there, like its MSB.
 
 ## Two-phase injector
 
@@ -245,7 +267,6 @@ or not the boss is placed; it is inert without the boss rows.
 | NpcThinkParam | 755890001 | 52800000 | `battleGoalID` 755890 (`logicId` stays 528000) |
 | BehaviorParam | 275589100/101/102/110/111/112/113/115/500 | the nine vanilla rows of variation 52800 (judge 500 is the non-formula row 1170) | `variationId` 75589; judges 100-102 re-pointed at the pulse clones below |
 | Bullet | 755890003-005 | 205280000-002 (the lantern's ambient pulses, judges 100-102) | madness rider (SpEffect 26000, stateInfo 437) cleared, VFX rider kept; the reason madness built up while the boss stood still |
-| SpEffectParam | 755890002 | 755890000 (the cut row) | eight cut rates = 1 / `DAMAGE_CUT`: the parry break counter, applied by EMEVD (see "Parry break") |
 | BehaviorParam | 275589150 | 252800101 | judge 150, refType 1, refId 755890000 |
 | Bullet | 755890000 | 10732000 (Frenzied Burst) | `atkId_Bullet` 755890000, `spEffectId0-4` -1 |
 | AtkParam_Npc | 755890000 | 5280115 | `atkMag` 110 (`BEAM_MAGIC`) |
@@ -297,63 +318,26 @@ reference the battle goal by name, so only the battle script is cloned.
 ### Parry break
 
 The first successful parry cancels the damage cut for the rest of the
-fight (2026-09-05 session request): the parry becomes a break, the
-riposte and everything after it deal full damage, and a player who never
-parries still faces a beatable boss.
+fight (2026-09-05 session request). This is the vanilla untouchable flow
+with a partial wall, see "The vulnerability mechanism": the copied wall
+event applies the cut row at spawn, the parried animation's 20011471
+overrides it during the parry (the riposte is full damage), and the event
+then clears it and shows the break VFX. Nothing of SpeedFog's runs at
+parry time; only the copied event's two SpEffect ids and its spawn-time
+HP bar flags are rewritten (`PatchWallEvents`, one warning per boss whose
+map has no such event).
 
-- **Detector**: the parried animation (8500) is the only c5280 animation
-  that applies SpEffect 20011471 (the vanilla wall lift, stateInfo 121)
-  through a TAE event. Ambient untouchables carry 20011471 permanently
-  (nerflantern patches the 5280 band), but the boss's permanent row is the
-  out-of-band clone 755890000, so on the boss 20011471 is only ever present
-  during a parry. `IfCharacterHasSpEffect(boss, 20011471)` is the trigger.
-  Slot gotcha (2026-09-05 diagnostic seed, banner looping from game
-  start): the NpcParam clone is taken from the merged regulation, where
-  nerflantern has already written 20011471 into a free slot of the vanilla
-  row (slot 31 on 1.17), so the boss inherited the parry-window effect
-  permanently and the detector was always true; `Apply` now drops
-  20011471 from every slot of the clone (our own row keeps the wall
-  lifted).
-  Category gotcha (2026-09-05 session, no damage change after a parry):
-  20011471 sits in SpEffect category 1001 with categoryPriority 0, and so
-  did the cut row cloned from it. Same category and equal priority collide
-  instead of coexisting (vanilla's resident wall 20011473 is in category
-  156, which is why the window effect coexists with it in the base game),
-  so the parry-window effect never registered on the boss and the counter,
-  also in 1001, would have collided too. Both SpeedFog rows now carry
-  `spCategory` 0 (`UntouchableBossInjector.NO_CATEGORY`), the no-category
-  value that coexists with everything.
-- **Counter**: SpEffectParam 755890002, a clone of the cut row whose eight
-  cut rates are `1 / DAMAGE_CUT` (x2 at 0.5). Damage negations stack
-  multiplicatively, so cut x counter = 1.0. Applied with `SetSpEffect` on
-  the arena entity, so ambient untouchables are never touched. Fallback if
-  the stacking does not behave on an NPC: `ClearSpEffect(boss, 755890000)`
-  (EMEVD 2004[21]) on the resident row instead, to be verified in game.
-- **Event**: one looping event per placed boss slot from
-  `SpeedFogIds.UntouchableParryEvents` (755865500+, slots handed out in
-  ascending arena id order by `ParryBreakSlots`), written into the arena
-  map's own EMEVD (`<modDir>/event/<map>.emevd.dcx`, registered in that
-  map's event 0) by `UntouchableBossInjector.InjectParryBreak` during the
-  MSB repoint pass (`Inject`), the map being the one whose MSB carried the
-  repointed part. Living in the map's EMEVD keeps the entity in scope, the
-  way FogMod's own scaling events (common_func 9005770/9005771 initialized
-  from the map) do; the first version lived in common.emevd and never
-  fired in game (2026-09-05). Shape:
-
-  ```
-  IfCharacterHasSpEffect(MAIN, <arena entity>, 20011471, true, ComparisonType.Equal, 1)
-  SetSpEffect(<arena entity>, 755890002)
-  WaitFixedTimeSeconds(1)
-  EndUnconditionally(EventEndType.Restart)
-  ```
-
-  The Restart loop re-arms the break after the boss respawns on the
-  player's death (the counter dies with the instance). Phase slots whose
-  entity never loads simply never trigger. The counter row is written in
-  the regulation phase with the other core rows; if that phase skips, the
-  event names a missing row and does nothing. The merge-dir fallback arena
-  (`[[fallback_arena_maps]]`, m60_13_09_02) has no EMEVD in the mod dir,
-  so its boss keeps the cut after a parry, with a warning.
+History of the 2026-09-05 sessions, kept because each step is a trap for
+the next reader: (1) a SpeedFog-side detector event in common.emevd
+never fired (entity-scoped conditions from common do not see map
+entities); (2) moved into the arena map's EMEVD it fired in a loop from
+game start, because the boss clone inherited nerflantern's resident
+20011471; (3) with that slot scrubbed the boss became fully immune: the
+"wall lift" credited to stateInfo 121 in the old documentation never
+existed, the copied vanilla event was applying the real wall 20011470
+and only nerflantern's resident 20011471 had kept it from taking hold.
+The counter SpEffect (x2 cut rates) and the detector event were removed
+once the vanilla flow was understood.
 
 ### Gating
 
@@ -395,10 +379,10 @@ than just the beam.
    an 8 s grab cooldown; boss too tanky at 8427 HP on a depth-12 arena
    (3000 base x 2.81 FogMod rescale, then a 65% cut), lowered to
    `BOSS_HP` 2000 and `DAMAGE_CUT` 0.5.
-4. **Parry break**: after the first parry the boss takes full damage
-   (compare a hit before and after; the parry-window riposte is already
-   full); after dying and re-entering, the cut is back until the next
-   parry. No madness buildup while the boss idles.
+4. **Parry break**: the HP bar shows from the start and hits land at half
+   damage; after the first parry (riposte at full damage, break VFX) every
+   hit lands at full damage; after dying and re-entering, the partial wall
+   is back until the next parry (the copied event restarts).
 5. **Ambient regression**: an ambient untouchable still only teleports and
    grabs, no swing at range, no beam, no script error, and still builds
    madness with its lantern.
@@ -406,14 +390,14 @@ than just the beam.
 ## Expected log lines
 
 ```
-Untouchable boss: NpcParam 755890000 (clone of 52800086, hp 2000, runes 20000) + SpEffect 755890000 (cut 0.5) + parry break SpEffect 755890002 (x2)
+Untouchable boss: NpcParam 755890000 (clone of 52800086, hp 2000, runes 20000, nerflantern slot scrubbed) + partial wall SpEffect 755890000 (cut 0.5, applied by the copied wall event)
 Untouchable boss: moveset rows (think 755890001 -> battle 755890, variation 75589 with 9 vanilla judges + beam judge 150, bullet 755890000 (clone of 10732000), atk 755890000 magic 110, pulses 755890003-755890005 without madness)
 Untouchable boss: repointing N placed boss slot(s)
   <part> (entity <id>): NPCParamID -> 755890000, ThinkParamID -> 755890001
-  parry break event 7558655NN: entity <id> (SpEffect 20011471 -> SetSpEffect 755890002)
+  wall event patched for entity <id>: 2 wall swap(s) (20011470 -> 755890000) + 2 HP bar flip(s)
   Fallback: repointed N part(s) in <name> (merge-dir copy shipped into the mod dir)
   Repointed M untouchable boss part(s)
-  Parry break: K event(s) in J map(s)
+  Wall patch: K instruction(s) in J map(s)
 ```
 
 with `M >= 1` whenever the boss was actually placed in at least one

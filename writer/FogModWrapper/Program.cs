@@ -928,13 +928,12 @@ Example:
         }
         else
         {
-            // Also writes the parry break event of every repointed boss into
-            // its arena map's EMEVD (the counter SpEffect row comes from
-            // ApplyRegulation; if that phase skipped, the event names a
-            // missing row and does nothing).
+            // Also patches, in each arena map's EMEVD, the wall event the
+            // enemy randomizer copied for the boss: the vanilla full wall
+            // becomes the partial cut row written by ApplyRegulation.
             UntouchableBossInjector.Inject(
                 ctx.ModDir, ctx.GraphData.EnemyAssignments, ctx.Config.MergeDir, ctx.Tweaks.FallbackArenaMaps,
-                ctx.UntouchableBossMovesetApplied, ctx.Events);
+                ctx.UntouchableBossMovesetApplied);
         }
 
         // Rebirth option at Sites of Grace

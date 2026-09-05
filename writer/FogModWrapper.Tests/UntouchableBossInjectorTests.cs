@@ -1,5 +1,4 @@
 using FogModWrapper.Models;
-using SoulsIds;
 using SoulsFormats;
 using Xunit;
 using static FogModWrapper.Tests.ParamTestHelper;
@@ -19,7 +18,10 @@ public class UntouchableBossInjectorTests
         var row = npc.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossNpcRow);
         Assert.Equal(UntouchableBossInjector.BOSS_HP, (uint)row["hp"].Value);
         Assert.Equal(UntouchableBossInjector.BOSS_RUNES, (uint)row["getSoul"].Value);
-        Assert.Equal(SpeedFogIds.UntouchableBossSpEffectRow, (int)row["spEffectID19"].Value);
+        // The partial wall is applied by the copied wall event, never resident
+        // (a resident copy could not be cleared on the first parry).
+        for (int i = 0; i < 32; i++)
+            Assert.NotEqual(SpeedFogIds.UntouchableBossSpEffectRow, (int)row[$"spEffectID{i}"].Value);
     }
 
     [Fact]
@@ -262,7 +264,7 @@ public class UntouchableBossInjectorTests
             ["30001800"] = SpeedFogIds.UntouchableSourceEntity.ToString(),
         };
 
-        UntouchableBossInjector.Inject(modDir, assignments, mergeDir, new[] { "m60_13_09_02" }, repointThink: false, events: null);
+        UntouchableBossInjector.Inject(modDir, assignments, mergeDir, new[] { "m60_13_09_02" }, repointThink: false);
 
         var writtenPath = Path.Combine(modDir, "map", "mapstudio", "m60_13_09_02.msb.dcx");
         Assert.True(File.Exists(writtenPath));
@@ -290,7 +292,7 @@ public class UntouchableBossInjectorTests
         Exception? ex;
         try
         {
-            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, null, new[] { "m60_13_09_02" }, repointThink: false, events: null));
+            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, null, new[] { "m60_13_09_02" }, repointThink: false));
         }
         finally
         {
@@ -323,7 +325,7 @@ public class UntouchableBossInjectorTests
         Exception? ex;
         try
         {
-            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, mergeDir, new[] { "m60_13_09_02" }, repointThink: false, events: null));
+            ex = Record.Exception(() => UntouchableBossInjector.Inject(modDir, assignments, mergeDir, new[] { "m60_13_09_02" }, repointThink: false));
         }
         finally
         {
@@ -525,34 +527,10 @@ public class UntouchableBossInjectorTests
         Assert.DoesNotContain(atk.Rows, r => r.ID == SpeedFogIds.UntouchableBeamAtkRow);
     }
 
-    // --- Parry break + lantern madness (docs/untouchable-boss.md "Parry break") ---
-
-    private static readonly string[] CutFields =
-    {
-        "slashDamageCutRate", "blowDamageCutRate", "thrustDamageCutRate",
-        "neutralDamageCutRate", "magicDamageCutRate", "fireDamageCutRate",
-        "thunderDamageCutRate", "darkDamageCutRate",
-    };
-
-    private static string? FindDataDir()
-    {
-        var envDir = Environment.GetEnvironmentVariable("DATA_DIR");
-        if (!string.IsNullOrEmpty(envDir) && File.Exists(Path.Combine(envDir, "er-common.emedf.json")))
-            return envDir;
-        var candidate = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "../../../../..", "data"));
-        return File.Exists(Path.Combine(candidate, "er-common.emedf.json")) ? candidate : null;
-    }
-
-    private static Events? BuildEvents()
-    {
-        var dataDir = FindDataDir();
-        return dataDir == null
-            ? null
-            : new Events(Path.Combine(dataDir, "er-common.emedf.json"), darkScriptMode: true, paramAwareMode: true);
-    }
+    // --- Partial wall, nerflantern slot, lantern madness ---
 
     [Fact]
-    public void Apply_TakesTheCutAndTheCounterOutOfTheParryWindowCategory()
+    public void Apply_KeepsTheCutInTheParryWindowCategory()
     {
         var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
         var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
@@ -560,14 +538,11 @@ public class UntouchableBossInjectorTests
 
         UntouchableBossInjector.Apply(npc, sp);
 
-        // Same category + equal priority as the parry-window effect made the
-        // resident cut collide with it (2026-09-05 session: no damage change
-        // after a parry); category 0 coexists.
-        Assert.Equal(UntouchableBossInjector.NO_CATEGORY,
+        // Same category as the wall it replaces and as the parry-window
+        // effect: the window overrides it during a parry, as in vanilla.
+        Assert.Equal((ushort)1001,
             (ushort)sp.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossSpEffectRow)["spCategory"].Value);
-        Assert.Equal(UntouchableBossInjector.NO_CATEGORY,
-            (ushort)sp.Rows.Single(r => r.ID == SpeedFogIds.UntouchableParryBreakSpEffectRow)["spCategory"].Value);
-        Assert.Equal((ushort)1001, (ushort)sp.Rows.Single(r => r.ID == 20011471)["spCategory"].Value); // vanilla untouched
+        Assert.DoesNotContain(sp.Rows, r => r.ID == 755890002); // no counter row any more
     }
 
     [Fact]
@@ -576,6 +551,7 @@ public class UntouchableBossInjectorTests
         var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
         // What the merged regulation looks like: nerflantern wrote 20011471
         // into the last free slot of the vanilla row.
+        npc.Rows[0]["spEffectID18"].Value = 20011473;
         npc.Rows[0]["spEffectID31"].Value = UntouchableBossInjector.PARRY_WINDOW_SPEFFECT;
         var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
 
@@ -585,29 +561,10 @@ public class UntouchableBossInjectorTests
         for (int i = 0; i < 32; i++)
             Assert.NotEqual(UntouchableBossInjector.PARRY_WINDOW_SPEFFECT, (int)boss[$"spEffectID{i}"].Value);
         Assert.Equal(-1, (int)boss["spEffectID31"].Value);
-        Assert.Equal(SpeedFogIds.UntouchableBossSpEffectRow, (int)boss["spEffectID19"].Value);
+        Assert.Equal(20011473, (int)boss["spEffectID18"].Value); // stateInfo 420 row stays
         // The vanilla row (ambient untouchables) keeps nerflantern's slot.
         Assert.Equal(UntouchableBossInjector.PARRY_WINDOW_SPEFFECT,
             (int)npc.Rows.Single(r => r.ID == 52800086)["spEffectID31"].Value);
-    }
-
-    [Fact]
-    public void Apply_WritesTheParryBreakCounterAsTheInverseOfTheCut()
-    {
-        var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
-        var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
-
-        UntouchableBossInjector.Apply(npc, sp);
-
-        var cut = sp.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossSpEffectRow);
-        var counter = sp.Rows.Single(r => r.ID == SpeedFogIds.UntouchableParryBreakSpEffectRow);
-        foreach (var field in CutFields)
-        {
-            // Negations stack multiplicatively: cut x counter restores x1.0.
-            Assert.Equal(1f, (float)cut[field].Value * (float)counter[field].Value, 3);
-        }
-        Assert.Equal(cut["stateInfo"].Value, counter["stateInfo"].Value);
-        Assert.Equal(cut["effectEndurance"].Value, counter["effectEndurance"].Value);
     }
 
     [Fact]
@@ -647,86 +604,160 @@ public class UntouchableBossInjectorTests
         Assert.DoesNotContain(behavior.Rows, r => (int)r["variationId"].Value == SpeedFogIds.UntouchableBossBehaviorVariation);
     }
 
-    [Fact]
-    public void AddParryBreakEvents_OneRestartingEventPerBossRegisteredInEventZero()
+    // The wall event the enemy randomizer copies next to a placed boss, as
+    // seen in 1.17 (vanilla ids 1700783 etc.): entity parameterized at
+    // offset 0 of each instruction, SpEffect/enable literals at offset 4.
+    private static EMEVD.Instruction Instr(int bank, int id, int a, int b)
     {
-        var events = BuildEvents();
-        if (events == null)
-            return; // data/er-common.emedf.json not extracted (bootstrap not run); nothing to parse against
+        var bytes = new byte[8];
+        BitConverter.GetBytes(a).CopyTo(bytes, 0);
+        BitConverter.GetBytes(b).CopyTo(bytes, 4);
+        return new EMEVD.Instruction(bank, id, bytes);
+    }
+
+    private static EMEVD MakeWallEmevd(uint boss, long wallEventId = 1700783)
+    {
         var emevd = new EMEVD();
-        emevd.Events.Add(new EMEVD.Event(0));
-
-        var slots = UntouchableBossInjector.ParryBreakSlots(new List<uint> { 31040800, 30001800 });
-        var added = UntouchableBossInjector.AddParryBreakEvents(
-            emevd, events, slots.OrderBy(kv => kv.Value).Select(kv => (kv.Key, kv.Value)), _ => { });
-
-        Assert.Equal(2, added);
-        var ids = new[] { SpeedFogIds.UntouchableParryEvents.Base, SpeedFogIds.UntouchableParryEvents.Base + 1 };
-        var bosses = new uint[] { 30001800, 31040800 }; // ascending: deterministic slot order
-        for (int i = 0; i < 2; i++)
+        var init = new EMEVD.Event(0);
+        init.Instructions.Add(EmevdHelper.InitializeEvent((int)wallEventId, (int)boss));
+        init.Instructions.Add(EmevdHelper.InitializeEvent(1700764, (int)boss, 4000396)); // teleport sibling
+        init.Instructions.Add(EmevdHelper.InitializeEvent(1700999, 99999999)); // another enemy's copy
+        init.Instructions.Add(EmevdHelper.InitializeEvent(1700555, (int)boss)); // SpEffect slot parameterized
+        emevd.Events.Add(init);
+        // Teleport sibling: hides the bar mid-warp, no wall.
+        var teleport = new EMEVD.Event(1700764);
+        teleport.Instructions.Add(Instr(2004, 30, 0, 0));
+        teleport.Instructions.Add(Instr(2004, 30, 0, 1));
+        teleport.Parameters.Add(new EMEVD.Parameter(0, 0, 0, 4));
+        teleport.Parameters.Add(new EMEVD.Parameter(1, 0, 0, 4));
+        emevd.Events.Add(teleport);
+        // A boss event whose SpEffect id itself is a parameter: not ours to rewrite.
+        var parameterized = new EMEVD.Event(1700555);
+        parameterized.Instructions.Add(Instr(2004, 8, 0, UntouchableBossInjector.VANILLA_WALL_SPEFFECT));
+        parameterized.Parameters.Add(new EMEVD.Parameter(0, 4, 0, 4));
+        emevd.Events.Add(parameterized);
+        foreach (var id in new[] { wallEventId, 1700999L })
         {
-            var evt = emevd.Events.Single(e => e.ID == ids[i]);
-            Assert.Equal(4, evt.Instructions.Count);
-            Assert.Equal((4, 5), (evt.Instructions[0].Bank, evt.Instructions[0].ID));     // IfCharacterHasSpEffect
-            Assert.Equal((2004, 8), (evt.Instructions[1].Bank, evt.Instructions[1].ID));  // SetSpEffect
-            Assert.Equal((1001, 0), (evt.Instructions[2].Bank, evt.Instructions[2].ID));  // WaitFixedTimeSeconds
-            Assert.Equal((1000, 4), (evt.Instructions[3].Bank, evt.Instructions[3].ID));  // EndUnconditionally
-            var cond = evt.Instructions[0].ArgData;
-            Assert.Equal(bosses[i], BitConverter.ToUInt32(cond, 4));
-            Assert.Equal(UntouchableBossInjector.PARRY_WINDOW_SPEFFECT, BitConverter.ToInt32(cond, 8));
-            var set = evt.Instructions[1].ArgData;
-            Assert.Equal(bosses[i], BitConverter.ToUInt32(set, 0));
-            Assert.Equal(SpeedFogIds.UntouchableParryBreakSpEffectRow, BitConverter.ToInt32(set, 4));
+            var evt = new EMEVD.Event(id);
+            evt.Instructions.Add(Instr(2004, 8, 0, UntouchableBossInjector.VANILLA_WALL_SPEFFECT));  // wall at spawn
+            evt.Instructions.Add(Instr(2004, 8, 0, 19690));
+            evt.Instructions.Add(Instr(2004, 30, 0, 0));                                           // HP bar hidden
+            evt.Instructions.Add(new EMEVD.Instruction(4, 5, new byte[20]));                       // IfCharacterHasSpEffect
+            evt.Instructions.Add(Instr(2004, 21, 0, UntouchableBossInjector.VANILLA_WALL_SPEFFECT)); // wall cleared on parry
+            evt.Instructions.Add(Instr(2004, 30, 0, 1));                                           // HP bar shown
+            evt.Instructions.Add(Instr(2004, 8, 0, 20011472));
+            // Entity slots are parameterized (offset 0), SpEffect ids are literals.
+            for (int i = 0; i < evt.Instructions.Count; i++)
+            {
+                if (evt.Instructions[i].Bank == 2004)
+                    evt.Parameters.Add(new EMEVD.Parameter(i, 0, 0, 4));
+            }
+            emevd.Events.Add(evt);
         }
-        var init = emevd.Events.Single(e => e.ID == 0).Instructions;
-        Assert.Equal(2, init.Count(ins => ins.Bank == 2000 && ins.ID == 0));
-        Assert.All(ids, id => Assert.Contains(init,
-            ins => ins.Bank == 2000 && ins.ID == 0 && BitConverter.ToInt32(ins.ArgData, 4) == id));
+        return emevd;
     }
 
-    [Fact]
-    public void ParryBreakSlots_AscendingIdsGetConsecutiveEventsUpToCapacity()
-    {
-        var range = SpeedFogIds.UntouchableParryEvents;
-        // Descending, with duplicates and five ids past the capacity.
-        var ids = Enumerable.Range(0, range.Capacity + 5).Select(i => (uint)(40000000 - i)).ToList();
-        ids.Add(ids[0]);
-
-        var slots = UntouchableBossInjector.ParryBreakSlots(ids);
-
-        var ordered = ids.Distinct().OrderBy(i => i).ToList();
-        Assert.Equal(range.Capacity, slots.Count);
-        Assert.Equal(range.Base, slots[ordered[0]]);
-        Assert.Equal(range.Base + range.Capacity - 1, slots[ordered[range.Capacity - 1]]);
-        Assert.False(slots.ContainsKey(ordered[^1]));
-    }
+    private static int SpEffectOf(EMEVD.Instruction ins) => BitConverter.ToInt32(ins.ArgData, 4);
 
     [Fact]
-    public void InjectParryBreak_WritesIntoTheMapEmevdAndSkipsMapsWithoutOne()
+    public void PatchWallEvents_SwapsTheWallForTheCutAndShowsTheBarOnlyInTheBossEvents()
     {
-        var events = BuildEvents();
-        if (events == null)
-            return; // data/er-common.emedf.json not extracted (bootstrap not run)
-        using var mod = new TempDir();
-        Directory.CreateDirectory(Path.Combine(mod.Path, "event"));
-        var emevd = new EMEVD();
-        emevd.Events.Add(new EMEVD.Event(0));
-        var path = Path.Combine(mod.Path, "event", "m35_00_00_00.emevd.dcx");
-        emevd.Write(path);
-        var slots = UntouchableBossInjector.ParryBreakSlots(new[] { 35000850u, 30001800u });
+        var emevd = MakeWallEmevd(31100800);
         var log = new List<string>();
 
-        var added = UntouchableBossInjector.InjectParryBreak(
-            mod.Path, "m35_00_00_00.msb.dcx", new[] { 35000850u }, slots, events, log.Add);
-        var skipped = UntouchableBossInjector.InjectParryBreak(
-            mod.Path, "m60_13_09_02.msb.dcx", new[] { 30001800u }, slots, events, log.Add);
+        var rewritten = UntouchableBossInjector.PatchWallEvents(emevd, 31100800, log.Add);
 
-        Assert.Equal(1, added);
+        Assert.Equal(4, rewritten); // 2 wall swaps + the spawn-time bar + the teleport sibling's bar
+        var boss = emevd.Events.Single(e => e.ID == 1700783).Instructions;
+        Assert.Equal(SpeedFogIds.UntouchableBossSpEffectRow, SpEffectOf(boss[0]));
+        Assert.Equal(19690, SpEffectOf(boss[1]));
+        Assert.Equal(1, boss[2].ArgData[4]);
+        Assert.Equal(SpeedFogIds.UntouchableBossSpEffectRow, SpEffectOf(boss[4]));
+        Assert.Equal(1, boss[5].ArgData[4]);
+        Assert.Equal(20011472, SpEffectOf(boss[6]));
+        // The teleport sibling no longer hides the bar; its re-enable stays.
+        var teleport = emevd.Events.Single(e => e.ID == 1700764).Instructions;
+        Assert.Equal(1, teleport[0].ArgData[4]);
+        Assert.Equal(1, teleport[1].ArgData[4]);
+        // A parameterized SpEffect slot is the runtime's, left alone.
+        Assert.Equal(UntouchableBossInjector.VANILLA_WALL_SPEFFECT,
+            SpEffectOf(emevd.Events.Single(e => e.ID == 1700555).Instructions[0]));
+        // Another placed enemy's copy of the same event shape stays vanilla.
+        var other = emevd.Events.Single(e => e.ID == 1700999).Instructions;
+        Assert.Equal(UntouchableBossInjector.VANILLA_WALL_SPEFFECT, SpEffectOf(other[0]));
+        Assert.Equal(0, other[2].ArgData[4]);
+        Assert.Contains(log, l => l.Contains("31100800") && l.Contains("2 wall swap") && l.Contains("2 HP bar flip"));
+    }
+
+    [Fact]
+    public void PatchWallEvents_NoEventForTheBoss_WarnsAndChangesNothing()
+    {
+        var emevd = MakeWallEmevd(31100800);
+        var log = new List<string>();
+
+        Assert.Equal(0, UntouchableBossInjector.PatchWallEvents(emevd, 30001800, log.Add));
+
+        Assert.Equal(UntouchableBossInjector.VANILLA_WALL_SPEFFECT,
+            SpEffectOf(emevd.Events.Single(e => e.ID == 1700783).Instructions[0]));
+        Assert.Contains(log, l => l.Contains("Warning") && l.Contains("30001800"));
+    }
+
+    [Fact]
+    public void PatchWallEvents_NoWallSwap_RevertsItsOwnBarFlips()
+    {
+        // A boss whose only copied event hides the bar (no wall event): the
+        // flip must not survive, since another boss of the same map may still
+        // write the EMEVD.
+        var emevd = MakeWallEmevd(31100800);
+        var init = emevd.Events.Single(e => e.ID == 0);
+        init.Instructions.Add(EmevdHelper.InitializeEvent(1700888, 30001800));
+        var barOnly = new EMEVD.Event(1700888);
+        barOnly.Instructions.Add(Instr(2004, 30, 0, 0));
+        barOnly.Parameters.Add(new EMEVD.Parameter(0, 0, 0, 4));
+        emevd.Events.Add(barOnly);
+
+        Assert.Equal(0, UntouchableBossInjector.PatchWallEvents(emevd, 30001800, _ => { }));
+        Assert.Equal(0, barOnly.Instructions[0].ArgData[4]);
+        Assert.Equal(4, UntouchableBossInjector.PatchWallEvents(emevd, 31100800, _ => { })); // the other boss is unaffected
+    }
+
+    [Fact]
+    public void InjectWallPatch_RewritesTheMapEmevdAndSkipsMapsWithoutOne()
+    {
+        using var mod = new TempDir();
+        Directory.CreateDirectory(Path.Combine(mod.Path, "event"));
+        var path = Path.Combine(mod.Path, "event", "m31_10_00_00.emevd.dcx");
+        MakeWallEmevd(31100800).Write(path);
+        var log = new List<string>();
+
+        var patched = UntouchableBossInjector.InjectWallPatch(mod.Path, "m31_10_00_00.msb.dcx", new[] { 31100800u }, log.Add);
+        var skipped = UntouchableBossInjector.InjectWallPatch(mod.Path, "m60_13_09_02.msb.dcx", new[] { 30001800u }, log.Add);
+
+        Assert.Equal(4, patched);
         Assert.Equal(0, skipped);
         var written = EMEVD.Read(path);
-        Assert.Contains(written.Events, e => e.ID == slots[35000850u]);
-        Assert.Contains(written.Events.Single(e => e.ID == 0).Instructions,
-            ins => ins.Bank == 2000 && ins.ID == 0 && BitConverter.ToInt32(ins.ArgData, 4) == slots[35000850u]);
+        Assert.Equal(SpeedFogIds.UntouchableBossSpEffectRow,
+            SpEffectOf(written.Events.Single(e => e.ID == 1700783).Instructions[0]));
         Assert.Contains(log, l => l.Contains("m60_13_09_02.emevd.dcx not in the mod dir"));
+    }
+
+    [Fact]
+    public void InjectWallPatch_CopiesTheFallbackArenaEmevdFromTheMergeDir()
+    {
+        using var mod = new TempDir();
+        using var merge = new TempDir();
+        Directory.CreateDirectory(Path.Combine(merge.Path, "event"));
+        MakeWallEmevd(30001800).Write(Path.Combine(merge.Path, "event", "m60_13_09_02.emevd.dcx"));
+        var log = new List<string>();
+
+        var patched = UntouchableBossInjector.InjectWallPatch(
+            mod.Path, "m60_13_09_02.msb.dcx", new[] { 30001800u }, log.Add, merge.Path);
+
+        Assert.Equal(4, patched);
+        var shipped = Path.Combine(mod.Path, "event", "m60_13_09_02.emevd.dcx");
+        Assert.True(File.Exists(shipped));
+        Assert.Equal(SpeedFogIds.UntouchableBossSpEffectRow,
+            SpEffectOf(EMEVD.Read(shipped).Events.Single(e => e.ID == 1700783).Instructions[0]));
+        Assert.Contains(log, l => l.Contains("copied from the merge dir"));
     }
 }

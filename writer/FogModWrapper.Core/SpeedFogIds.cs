@@ -63,12 +63,6 @@ public static class SpeedFogIds
     public static readonly IdRange HalloweenDecorEvents =
         new("GateDecorInjector", 755865100, 400);
 
-    /// <summary>One looping common.emevd event per placed Aging Untouchable
-    /// boss (parry break: the first parry cancels the damage cut); slots are
-    /// handed out in ascending arena entity id order.</summary>
-    public static readonly IdRange UntouchableParryEvents =
-        new("UntouchableBossInjector", 755865500, 100);
-
     /// <summary>All event ranges, for the disjointness test.</summary>
     public static readonly IReadOnlyList<IdRange> EventRanges = new[]
     {
@@ -81,7 +75,6 @@ public static class SpeedFogIds
         ChapelGraceEvents,
         WeatherEvents,
         HalloweenDecorEvents,
-        UntouchableParryEvents,
     };
 
     // --- Auxiliary one-shot flags (FogMod band 104029xxxx, top slice) ---
@@ -125,8 +118,8 @@ public static class SpeedFogIds
     // --- Param row IDs (not entity IDs; separate namespace per PARAM) ---
 
     // Param row namespaces are per-PARAM (NpcThinkParam, NpcParam,
-    // SpEffectParam, Bullet, AtkParam_Npc never share ids), so the same three
-    // numeric values below are reused across the nine rows with no collision
+    // SpEffectParam, Bullet, AtkParam_Npc never share ids), so the same two
+    // numeric values below are reused across the eight rows with no collision
     // (Bullet additionally owns the pulse band 755890003-005).
     // They sit in FogMod's entity band only by convention (params and entities
     // are unrelated id spaces); no vanilla row in any of the five params
@@ -135,7 +128,6 @@ public static class SpeedFogIds
     // territory.
     private const int ParamRowBase0 = 755890000;
     private const int ParamRowBase1 = 755890001;
-    private const int ParamRowBase2 = 755890002;
 
     /// <summary>NpcThinkParam row for the passive Halloween greeters:
     /// a clone of the Aging Untouchable's think row (52800000) with all
@@ -143,17 +135,19 @@ public static class SpeedFogIds
     public const int PassiveGreeterThinkRow = ParamRowBase0;
 
     /// <summary>NpcParam row for the Aging Untouchable minor boss: a clone
-    /// of vanilla 52800086 with boss-level HP/runes and the partial
-    /// damage-cut SpEffect in slot 19. Deliberately outside the 5280xxxx
+    /// of vanilla 52800086 with boss-level HP/runes and nerflantern's
+    /// resident 20011471 scrubbed from its slots. Deliberately outside the 5280xxxx
     /// band: the item randomizer's always-on nerflantern option patches
     /// every 5280-band NpcParam row, and the boss's vulnerability must
     /// stay under SpeedFog's control.</summary>
     public const int UntouchableBossNpcRow = ParamRowBase0;
 
-    /// <summary>SpEffectParam row for the boss's permanent state: a clone
-    /// of vanilla 20011471 (stateInfo 121 lifts the parry wall, the same
-    /// mechanism nerflantern uses) with the eight damage-type cut rates
-    /// lowered to a partial cut.</summary>
+    /// <summary>SpEffectParam row for the boss's partial wall: a clone of
+    /// the vanilla parry-window effect 20011471 (category 1001) with the
+    /// eight damage-type cut rates lowered. Not resident on the NpcParam
+    /// row: it replaces the vanilla full wall (20011470) inside the wall
+    /// event the enemy randomizer copies for each placed boss, so the
+    /// vanilla flow clears it on the first parry.</summary>
     public const int UntouchableBossSpEffectRow = ParamRowBase0;
 
     /// <summary>Vanilla MSB entity id of the allowlist source part
@@ -187,13 +181,6 @@ public static class SpeedFogIds
     /// lantern swing (5280115, magic, no throw). Player spells only have
     /// AtkParam_Pc rows, so an NPC-fired Frenzied Burst needs this one.</summary>
     public const int UntouchableBeamAtkRow = ParamRowBase0;
-
-    /// <summary>SpEffectParam row cancelling the boss's damage cut once it
-    /// has been parried (parry break): a clone of
-    /// <see cref="UntouchableBossSpEffectRow"/> whose eight cut rates are the
-    /// inverse of DAMAGE_CUT, applied by EMEVD; negations stack
-    /// multiplicatively, so cut x counter restores full damage.</summary>
-    public const int UntouchableParryBreakSpEffectRow = ParamRowBase2;
 
     /// <summary>First of three consecutive Bullet rows (755890003-005): the
     /// lantern's ambient pulse bullets (vanilla 205280000-002, judges

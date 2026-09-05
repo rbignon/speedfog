@@ -342,7 +342,7 @@ speedfog/
 | `AmbientSpawnInjector` | Places passive greeters + optional decorative ambush packs (token HP, near-zero attack via NpcParam clone) at the anchored exit gates (opt-in via `[plugin.halloween]`, see `docs/plugins/halloween-ambient.md`); runs after GateDecorInjector |
 | `GateDecorInjector` | Places catalogue-driven ambient decorations at the same exit gates from `data/plugins/halloween_decorations.toml`, on a per-gate ground estimate (vanilla assets + enemies) |
 | `HalloweenDecorLoader` | Loads and validates `data/plugins/halloween_decorations.toml` (Core) |
-| `UntouchableBossInjector` | Aging Untouchable minor boss: NpcParam clone + partial damage-cut SpEffect, parry break (an event in each arena map's EMEVD cancels the cut after the first parry), boss think row + behavior variation + beam bullet + madness-free lantern pulses when the static assets exist, repoints enemy-randomizer placements (NPCParamID, ThinkParamID), see `docs/untouchable-boss.md` |
+| `UntouchableBossInjector` | Aging Untouchable minor boss: NpcParam clone + partial damage-cut SpEffect, partial wall (the vanilla immunity wall swapped for the cut in the wall event the randomizer copies per placed boss, so the first parry clears it), boss think row + behavior variation + beam bullet + madness-free lantern pulses when the static assets exist, repoints enemy-randomizer placements (NPCParamID, ThinkParamID), see `docs/untouchable-boss.md` |
 | `HalloweenIconInjector` | Repoints Golden Seed/Sacred Tear `EquipParamGoods.iconId` to the Halloween 05_dummy overlay textures (opt-in via `[plugin.halloween]`, see `docs/plugins/halloween-icons.md`) |
 
 **ItemRandomizerWrapper** (uses RandomizerCommon.dll directly):
