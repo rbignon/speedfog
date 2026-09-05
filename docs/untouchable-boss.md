@@ -367,6 +367,11 @@ than just the beam.
 
 ### In-game validation sequence
 
+Run in full on 2026-09-05 (seeds 610166042, 1141387, 871254120): swing
+and beam behave, no madness while idle, half damage behind the partial
+wall, the first parry breaks it and every later hit lands at four times
+the pre-parry number. Re-run after a game patch or a knob change.
+
 1. **Goal resolution**: knobs temporarily at `SWING_MID = 100`,
    `SWING_CLOSE = 100`, both `BEAM_*` at 0. The boss must swing the
    lantern at melee range instead of always grabbing. The explicit
