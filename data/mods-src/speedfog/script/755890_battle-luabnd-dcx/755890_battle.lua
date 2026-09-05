@@ -1,9 +1,12 @@
 -- SpeedFog: Aging Untouchable boss battle script (docs/untouchable-boss.md,
 -- "Moveset"). Decompiled from the vanilla 528000_battle.lua with
 -- DSLuaDecompiler and renamed to battle goal 755890 (the boss NpcThinkParam
--- clone's battleGoalID). Two additions: the lantern swing (3001) as a regular
--- melee act (Act11) and the dormant lantern ray (3004) re-enabled as a beam
--- at range (Act04). Ambient untouchables keep the vanilla bytecode script.
+-- clone's battleGoalID). SpeedFog additions: the lantern swing (3001) as a
+-- regular melee act (Act11), the dormant lantern ray (3004) re-enabled as a
+-- beam (Act04, at range and at mid range), the teleport (Act02) offered at
+-- melee range as the swing's delivery, a beam after the post-grab retreats
+-- (Act05/Act06) and three reactions in Goal.Interrupt (hit, ranged attack,
+-- item use). Ambient untouchables keep the vanilla bytecode script.
 -- The engine keys goal tables by numeric id and starts the battle goal with
 -- the raw NpcThinkParam.battleGoalID; the GOAL_<name> globals of vanilla
 -- scripts come from the shared aiCommon global-name list, which does not
@@ -13,6 +16,78 @@ GOAL_Houzuki755890_Battle = 755890
 GOAL_Houzuki755890_AfterAttackAct = 755891
 RegisterTableGoal(GOAL_Houzuki755890_Battle, "Houzuki755890_Battle")
 REGISTER_GOAL_NO_SUB_GOAL(GOAL_Houzuki755890_Battle, true)
+
+-- SpeedFog tuning knobs. Weights are percentages within a distance
+-- bracket; the vanilla act of the bracket (grab at melee range, teleport
+-- or approach at range) keeps the remainder. A cooling attack weighs 0
+-- (SetCoolTime in Goal.Activate) and the teleport is only offered while its
+-- swing is available, so the remainder grows while attacks cool, and every
+-- bracket keeps a movement filler with a positive weight.
+local BEAM_FAR_TELEPORT_READY = 40      -- >= 10 m, teleport ready: Act04 (beam) vs Act02
+local BEAM_FAR_TELEPORT_NOT_READY = 50  -- >= 10 m, teleport not ready: Act04 (beam) vs Act01
+local SWING_MID = 10                    -- 3 to 10 m: Act11 (swing, radius-4 knockback burst)
+local TELEPORT_MID = 15                 -- 3 to 10 m: Act02 (teleport behind the player, then swing)
+local BEAM_MID = 10                     -- 3 to 10 m: Act04 (beam)
+local MOVE_MID = 15                     -- 3 to 10 m: Act46 (close to 4 m, then strafe)
+local SWING_CLOSE = 15                  -- < 3 m: Act11 (swing)
+local TELEPORT_CLOSE = 10               -- < 3 m: Act02
+local MOVE_CLOSE = 20                   -- < 3 m: Act42 (sidestep)
+local GRAB_COOLDOWN = 8                 -- seconds between two grabs (3002); vanilla 12
+local SWING_COOLDOWN = 10               -- seconds between two swings (3001), any source, so also between two teleports
+local BEAM_COOLDOWN = 8                 -- seconds between two beams (3004), any source
+-- Reactions (Goal.Interrupt), percentages, 0 disables one. A reaction
+-- spends an attack that is available anyway, so it moves an attack earlier
+-- without adding any: hits landed while the swing cools stay free.
+local REACT_HIT = 25                    -- hit by the player in front within REACT_HIT_RANGE: swing
+local REACT_HIT_RANGE = 2
+local REACT_SHOOT = 50                  -- player casts or shoots from >= REACT_RANGE: teleport, else beam
+local REACT_HEAL = 80                   -- player uses an item from >= REACT_RANGE: beam
+local REACT_RANGE = 5
+local REACT_HOLD = 8                    -- seconds after a teleport (3000) or a grab (3002) starts without any reaction
+
+-- Availability of the cooled attacks, shared by the decision table and the
+-- reactions. GetAttackPassedTime is the counter SetCoolTime reads; vanilla
+-- 450000 gates a reaction on it the same way without registering the
+-- attack first.
+function Houzuki755890_SwingReady(ai)
+    return ai:GetAttackPassedTime(3001) > SWING_COOLDOWN
+end
+
+function Houzuki755890_BeamReady(ai)
+    return ai:GetAttackPassedTime(3004) > BEAM_COOLDOWN
+end
+
+-- The teleport (3000) ends with the interrupt's warp behind the player and
+-- a swing, so it is offered only while the swing is available: a teleport
+-- into a held swing would leave the boss standing behind the player.
+function Houzuki755890_TeleportReady(ai)
+    return ai:HasSpecialEffectId(TARGET_SELF, 20011450) and Houzuki755890_SwingReady(ai)
+end
+
+-- No reaction while a teleport (3000, then the warp and its swing) or a
+-- grab (3002, then 3003) is in flight: a reaction's ClearSubGoal would drop
+-- the follow-up, and a cast during the warp would queue a second teleport
+-- (the swing counter has not moved yet). Per the TAE event spans 3000
+-- lasts 5 s and 3002 + 3003 about 6 s.
+function Houzuki755890_SequenceInFlight(ai)
+    return ai:GetAttackPassedTime(3000) <= REACT_HOLD or ai:GetAttackPassedTime(3002) <= REACT_HOLD
+end
+
+-- Sub-goal builders shared by the acts and the reactions (parameters are
+-- the vanilla ones of Act02 and of the post-teleport swing).
+function Houzuki755890_AddTeleport(ai, goal)
+    local successDist = 5 - ai:GetMapHitRadius(TARGET_SELF) + 999
+    ai:AddObserveSpecialEffectAttribute(TARGET_SELF, 20011452)
+    goal:AddSubGoal(GOAL_COMMON_ComboTunable_SuccessAngle180, 10, 3000, TARGET_ENE_0, successDist, 0, 0, 0, 0)
+end
+
+function Houzuki755890_AddSwing(ai, goal)
+    goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, 8, 3001, TARGET_ENE_0, 4, 1.5, 60, 0, 0)
+end
+
+function Houzuki755890_AddBeam(ai, goal)
+    goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, 3, 3004, TARGET_ENE_0, 999, 1.5, 60, 0, 0)
+end
 
 Goal.Initialize = function (self, ai, goal, battleActivatedCount)
     ai:EnableUnfavorableAttackCheck(0, 3002)
@@ -27,20 +102,15 @@ Goal.Activate = function (self, ai, goal)
     local distanceEnemy = ai:GetDist(TARGET_ENE_0)
     local random = ai:GetRandam_Int(1, 100)
     local paramDoAdmire = ai:GetExcelParam(AI_EXCEL_THINK_PARAM_TYPE__thinkAttr_doAdmirer)
-    -- SpeedFog tuning knobs: percentages within a distance bracket, the
-    -- vanilla act of that bracket keeps the remainder.
-    local BEAM_FAR_TELEPORT_READY = 40      -- >= 10 m, teleport ready: Act04 (beam) vs Act02
-    local BEAM_FAR_TELEPORT_NOT_READY = 50  -- >= 10 m, teleport not ready: Act04 (beam) vs Act01
-    local SWING_MID = 10                    -- 3 to 10 m: Act11 (swing, radius-4 knockback burst)
-    local MOVE_MID = 25                     -- 3 to 10 m: Act46 (close to 4 m, then strafe)
-    local SWING_CLOSE = 15                  -- < 3 m: Act11 (swing)
-    local MOVE_CLOSE = 25                   -- < 3 m: Act42 (sidestep)
-    local GRAB_COOLDOWN = 8                 -- seconds between two grabs (3002); vanilla 12
-    local SWING_COOLDOWN = 12               -- seconds between two swings (3001), any source
-    local BEAM_COOLDOWN = 8                 -- seconds between two beams (3004)
-    -- The grab (Act03) keeps the remainder of its bracket. Weights are
-    -- relative: while 3002 sits on its cooldown its weight is 0, so without
-    -- the movement acts the swing would fire every single time.
+    -- SpeedFog: the teleport weights of the melee brackets are 0 while the
+    -- teleport is not offered, the grab takes the difference.
+    local teleportReady = Houzuki755890_TeleportReady(ai)
+    local teleportMid = 0
+    local teleportClose = 0
+    if teleportReady then
+        teleportMid = TELEPORT_MID
+        teleportClose = TELEPORT_CLOSE
+    end
     local f2_local6 = 0
     local f2_local7 = TARGET_SELF
     local f2_local8 = TARGET_ENE_0
@@ -51,7 +121,11 @@ Goal.Activate = function (self, ai, goal)
     ai:AddObserveAreaCustom(f2_local6, f2_local7, f2_local8, f2_local9, f2_local10, f2_local11, f2_local12)
     if ai:IsInsideTarget(TARGET_ENE_0, AI_DIR_TYPE_B, 90) then
         if distanceEnemy >= 8 then
-            probabilities[2] = 100
+            if teleportReady then
+                probabilities[2] = 100
+            else
+                probabilities[1] = 100
+            end
             probabilities[43] = 0
         else
             probabilities[1] = 20
@@ -83,7 +157,7 @@ Goal.Activate = function (self, ai, goal)
         probabilities[44] = 0
         probabilities[45] = 0
     elseif distanceEnemy >= 10 then
-        if ai:HasSpecialEffectId(TARGET_SELF, 20011450) then
+        if teleportReady then
             probabilities[1] = 0
             probabilities[2] = 100 - BEAM_FAR_TELEPORT_READY
             probabilities[3] = 0
@@ -108,9 +182,9 @@ Goal.Activate = function (self, ai, goal)
         end
     elseif distanceEnemy >= 3 then
         probabilities[1] = 0
-        probabilities[2] = 0
-        probabilities[3] = 100 - SWING_MID - MOVE_MID
-        probabilities[4] = 0
+        probabilities[2] = teleportMid
+        probabilities[3] = 100 - SWING_MID - teleportMid - BEAM_MID - MOVE_MID
+        probabilities[4] = BEAM_MID
         probabilities[5] = 0
         probabilities[11] = SWING_MID
         probabilities[46] = MOVE_MID
@@ -122,8 +196,8 @@ Goal.Activate = function (self, ai, goal)
         probabilities[45] = 0
     else
         probabilities[1] = 0
-        probabilities[2] = 0
-        probabilities[3] = 100 - SWING_CLOSE - MOVE_CLOSE
+        probabilities[2] = teleportClose
+        probabilities[3] = 100 - SWING_CLOSE - teleportClose - MOVE_CLOSE
         probabilities[4] = 0
         probabilities[5] = 0
         probabilities[11] = SWING_CLOSE
@@ -134,9 +208,14 @@ Goal.Activate = function (self, ai, goal)
         probabilities[44] = 0
         probabilities[45] = 0
     end
-    probabilities[3] = SetCoolTime(ai, goal, 3002, GRAB_COOLDOWN, probabilities[3], 1)
-    probabilities[11] = SetCoolTime(ai, goal, 3001, SWING_COOLDOWN, probabilities[11], 1)
-    probabilities[4] = SetCoolTime(ai, goal, 3004, BEAM_COOLDOWN, probabilities[4], 1)
+    -- The last argument of SetCoolTime is the weight kept while the attack
+    -- cools. Vanilla passes 1 so a table never sums to zero; here every
+    -- bracket keeps a movement filler, so 0: a cooling attack picked with
+    -- weight 1 is held by the engine until its interval expires, up to the
+    -- act's goal life, which reads as the boss freezing in place.
+    probabilities[3] = SetCoolTime(ai, goal, 3002, GRAB_COOLDOWN, probabilities[3], 0)
+    probabilities[11] = SetCoolTime(ai, goal, 3001, SWING_COOLDOWN, probabilities[11], 0)
+    probabilities[4] = SetCoolTime(ai, goal, 3004, BEAM_COOLDOWN, probabilities[4], 0)
     acts[1] = REGIST_FUNC(ai, goal, Houzuki755890_Act01)
     acts[2] = REGIST_FUNC(ai, goal, Houzuki755890_Act02)
     acts[3] = REGIST_FUNC(ai, goal, Houzuki755890_Act03)
@@ -186,18 +265,9 @@ function Houzuki755890_Act01(ai, goal, paramTbl)
 end
 
 function Houzuki755890_Act02(ai, goal, paramTbl)
-    local distanceEnemy = ai:GetDist(TARGET_ENE_0)
-    local animationId = 3000
-    local successDist = 5 - ai:GetMapHitRadius(TARGET_SELF) + 999
-    local turnTime = 0
-    local turnFaceAngle = 0
-    local f4_local5 = 5
-    local f4_local6 = AI_DIR_TYPE_F
-    local f4_local7 = TARGET_ENE_0
-    local f4_local8 = TARGET_ENE_0
-    local hitRadius = ai:GetMapHitRadius(TARGET_SELF)
-    ai:AddObserveSpecialEffectAttribute(TARGET_SELF, 20011452)
-    goal:AddSubGoal(GOAL_COMMON_ComboTunable_SuccessAngle180, 10, animationId, TARGET_ENE_0, successDist, turnTime, turnFaceAngle, 0, 0)
+    -- Teleport: 3000, then the 20011452 interrupt warps behind the player
+    -- and swings. SpeedFog offers it at melee range too (TELEPORT_MID/CLOSE).
+    Houzuki755890_AddTeleport(ai, goal)
     GetWellSpace_Odds = 0
     return GetWellSpace_Odds
 end
@@ -231,15 +301,7 @@ function Houzuki755890_Act04(ai, goal, paramTbl)
     -- probability. Animation 3004's bullet events are retargeted to judge
     -- 150 by StaticModBuilder (UntouchableTaePatcher) and resolved to the
     -- beam bullet under the boss's behavior variation (UntouchableBossInjector).
-    local goalLife = 3
-    local animationId = 3004
-    local target = TARGET_ENE_0
-    local successDist = 999
-    local turnTime = 1.5
-    local turnFaceAngle = 60
-    local upAngleThreshold = 0
-    local downAngleThreshold = 0
-    goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, goalLife, animationId, target, successDist, turnTime, turnFaceAngle, upAngleThreshold, downAngleThreshold)
+    Houzuki755890_AddBeam(ai, goal)
     GetWellSpace_Odds = 0
     return GetWellSpace_Odds
 end
@@ -255,6 +317,10 @@ function Houzuki755890_Act05(ai, goal, paramTbl)
     local turnTarget = TARGET_ENE_0
     goal:ClearSubGoal()
     goal:AddSubGoal(GOAL_COMMON_LeaveTarget, goalLife, moveTarget, 10, turnTarget, true, 0)
+    -- SpeedFog: punish from the retreat distance when the beam is available.
+    if Houzuki755890_BeamReady(ai) then
+        Houzuki755890_AddBeam(ai, goal)
+    end
     GetWellSpace_Odds = 0
     return GetWellSpace_Odds
 end
@@ -270,6 +336,10 @@ function Houzuki755890_Act06(ai, goal, paramTbl)
     local turnTarget = TARGET_ENE_0
     goal:ClearSubGoal()
     goal:AddSubGoal(GOAL_COMMON_LeaveTarget, goalLife, moveTarget, 8, turnTarget, true, 0)
+    -- SpeedFog: punish from the retreat distance when the beam is available.
+    if Houzuki755890_BeamReady(ai) then
+        Houzuki755890_AddBeam(ai, goal)
+    end
     GetWellSpace_Odds = 0
     return GetWellSpace_Odds
 end
@@ -297,7 +367,7 @@ end
 function Houzuki755890_Act11(ai, goal, paramTbl)
     -- SpeedFog: lantern swing. 3001 is vanilla's post-teleport surprise
     -- attack (magic, no grab); as a regular melee act the boss keeps
-    -- attacking while the grab (3002) sits on its 12 s cooldown.
+    -- attacking while the grab (3002) sits on its cooldown.
     local stopDist = 3
     local canRunDist = 0
     local forceRunMinDist = 0.1
@@ -306,15 +376,7 @@ function Houzuki755890_Act11(ai, goal, paramTbl)
     local walkLife = 1
     local runLife = 5
     Approach_Act_Flex(ai, goal, stopDist, canRunDist, forceRunMinDist, runProbability, guardProbability, walkLife, runLife)
-    local goalLife = 8
-    local animationId = 3001
-    local target = TARGET_ENE_0
-    local successDist = 4
-    local turnTime = 1.5
-    local turnFaceAngle = 60
-    local upAngleThreshold = 0
-    local downAngleThreshold = 0
-    goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, goalLife, animationId, target, successDist, turnTime, turnFaceAngle, upAngleThreshold, downAngleThreshold)
+    Houzuki755890_AddSwing(ai, goal)
     GetWellSpace_Odds = 0
     return GetWellSpace_Odds
 end
@@ -586,6 +648,44 @@ Goal.Interrupt = function (self, ai, goal)
         if ai:GetSpecialEffectActivateInterruptId(5030) and ai:IsInsideTargetCustom(TARGET_SELF, TARGET_ENE_0, AI_DIR_TYPE_F, 180, 180, 4) then
             goal:ClearSubGoal()
             goal:AddSubGoal(GOAL_COMMON_ComboRepeat_SuccessAngle180, 5, 3003, TARGET_ENE_0, 999, 0, 0)
+            return true
+        end
+        return false
+    end
+    -- SpeedFog reactions, after the vanilla teleport and grab follow-ups.
+    -- Vanilla pattern (472000): clear the sub-goals, queue the attack,
+    -- return true. The availability gates keep the player's windows: at
+    -- most one swing per SWING_COOLDOWN whatever its source, and the ranged
+    -- reactions only fire from REACT_RANGE.
+    if Houzuki755890_SequenceInFlight(ai) then
+        return false
+    end
+    if ai:IsInterupt(INTERUPT_Damaged) then
+        if ai:IsInsideTargetCustom(TARGET_SELF, TARGET_ENE_0, AI_DIR_TYPE_F, 120, 180, REACT_HIT_RANGE) and Houzuki755890_SwingReady(ai) and ai:GetRandam_Int(1, 100) <= REACT_HIT then
+            goal:ClearSubGoal()
+            Houzuki755890_AddSwing(ai, goal)
+            return true
+        end
+        return false
+    end
+    if ai:IsInterupt(INTERUPT_Shoot) then
+        if ai:GetDist(TARGET_ENE_0) >= REACT_RANGE and ai:GetRandam_Int(1, 100) <= REACT_SHOOT then
+            if Houzuki755890_TeleportReady(ai) then
+                goal:ClearSubGoal()
+                Houzuki755890_AddTeleport(ai, goal)
+                return true
+            elseif Houzuki755890_BeamReady(ai) then
+                goal:ClearSubGoal()
+                Houzuki755890_AddBeam(ai, goal)
+                return true
+            end
+        end
+        return false
+    end
+    if ai:IsInterupt(INTERUPT_UseItem) then
+        if ai:GetDist(TARGET_ENE_0) >= REACT_RANGE and Houzuki755890_BeamReady(ai) and ai:GetRandam_Int(1, 100) <= REACT_HEAL then
+            goal:ClearSubGoal()
+            Houzuki755890_AddBeam(ai, goal)
             return true
         end
         return false

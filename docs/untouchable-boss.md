@@ -296,33 +296,88 @@ two knobs together.
 `data/mods-src/speedfog/script/755890_battle-luabnd-dcx/755890_battle.lua`
 (plain text, repacked at bootstrap into
 `data/mods/speedfog/script/755890_battle.luabnd.dcx`) is the decompiled
-vanilla `528000_battle` renamed to goal 755890, plus Act11 (swing) and a
-working Act04 (beam, `successDist` 999, 8 s cooldown via `SetCoolTime`),
-the grab cooldown lowered from vanilla's 12 s to `GRAB_COOLDOWN` (8 s), and
-a `SWING_COOLDOWN` (12 s) on 3001 through the same `SetCoolTime`, which
-counts the interrupt's post-teleport 3001 too. The
+vanilla `528000_battle` renamed to goal 755890, plus the SpeedFog acts,
+gates and reactions below. The
 `GOAL_Houzuki755890_Battle` and `GOAL_Houzuki755890_AfterAttackAct` globals
 are not provided by the shared aiCommon global-name list (which only knows
 the vanilla `GOAL_Houzuki528000_*` names), so the script assigns them itself
 at the top (755890 = the boss think row's `battleGoalID`, 755891 = any
-unused id).
-Probability table (vanilla -> boss), knobs at the top of `Goal.Activate`:
+unused id). Every knob is a file-scope local at the top of the script,
+captured as an upvalue by the functions below it: a first for this
+engine's scripts (the vanilla scripts only use globals), so a nil
+arithmetic error on the first activation would point there. The 2026-09-04
+spec and plan (`docs/superpowers/specs/2026-09-04-untouchable-moveset-design.md`,
+`docs/superpowers/plans/2026-09-04-untouchable-moveset.md`) predate this
+rework: their cooldown weight 1, "unchanged" behind bracket and "unchanged"
+interrupts are superseded by what follows.
+
+Acts: Act11 (swing 3001, vanilla's post-teleport surprise attack as a
+regular melee act), Act04 (beam 3004, `successDist` 999, at range and at
+mid range), Act02 (teleport 3000, vanilla's far-range act, also offered at
+melee range: the 20011452 interrupt warps the boss behind the player and
+swings), Act05/Act06 (the vanilla post-grab retreats to 10/8 m, followed by
+a beam when it is available). Cooldowns through `SetCoolTime`:
+`GRAB_COOLDOWN` 8 s (vanilla 12), `SWING_COOLDOWN` 10 s on 3001 whatever
+its source (act, reaction or post-teleport), `BEAM_COOLDOWN` 8 s.
+
+Cooldown weight: the last argument of `SetCoolTime` is the weight kept
+while the attack cools, not 0. Vanilla passes 1 everywhere so a table never
+sums to zero, and a cooling attack picked with weight 1 is held by the
+engine until its interval expires, up to the act's goal life (8 s for the
+grab and the swing): the boss freezes in place. That was vanilla's
+passivity at 3-10 m (grab alone, weight 1 during its 12 s) and, with the
+earlier fillers at 25, about one decision in thirteen of the boss
+(2026-09-05 session). The script now passes 0, and every bracket keeps a
+movement filler with a positive weight.
+
+Teleport gate: `Houzuki755890_TeleportReady` requires SpEffect 20011450
+(NpcParam slot 17, always present on the boss) and the swing available
+(`GetAttackPassedTime(3001)` beyond `SWING_COOLDOWN`). The teleport ends in
+the interrupt's swing, so a teleport into a held swing would leave the boss
+standing behind the player; the gate also bounds teleports to one per swing
+cooldown. Vanilla 450000 gates a reaction on `GetAttackPassedTime` the same
+way without registering the attack first.
+
+Probability table (vanilla -> boss); the vanilla act of the bracket keeps
+the remainder, the teleport weight counts only while the teleport is ready:
 
 | Situation | Vanilla | Boss |
 |-----------|---------|------|
-| player behind, >= 8 m | Act02 100 | unchanged |
-| >= 10 m, teleport ready (SpEffect 20011450) | Act02 99 / Act01 1 | Act02 60 / Act04 40 |
+| player behind, >= 8 m | Act02 100 | Act02 100 if the teleport is ready, else Act01 100 |
+| >= 10 m, teleport ready | Act02 99 / Act01 1 | Act02 60 / Act04 40 |
 | >= 10 m, teleport not ready | Act01 100 | Act01 50 / Act04 50 |
-| 3 to 10 m | Act03 100 | Act03 65 / Act11 10 / Act46 25 |
-| < 3 m | Act03 100 | Act03 60 / Act11 15 / Act42 25 |
+| 3 to 10 m | Act03 100 | Act03 50 / Act11 10 / Act02 15 / Act04 10 / Act46 15 |
+| < 3 m | Act03 100 | Act03 55 / Act11 15 / Act02 10 / Act42 20 |
+| post-grab retreat (SpEffect 5031/5032) | Act05/Act06 | same, then Act04 if the beam is ready |
 
-Act46 closes to 4 m and strafes; Act42 is a sidestep. Weights are
-relative: while 3002 sits on its cooldown its weight is 0, so whatever
-else has weight wins. Vanilla had nothing (the passivity observed in
-earlier sessions); the first boss version had only the swing, which then
-fired every single time (2026-09-04 session). The movement acts are what
-keep the swing rare during the cooldown, and the shorter cooldown brings
-the grab back sooner.
+Act46 closes to 4 m and strafes; Act42 is a sidestep. The movement acts are
+what keep the swing rare during the grab cooldown: the first boss version
+had only the swing, which then fired every single time (2026-09-04
+session).
+
+Reactions (`Goal.Interrupt`, after the vanilla teleport and grab
+follow-ups; vanilla 472000 pattern: `ClearSubGoal`, queue the attack,
+return true). A reaction spends an attack that is available anyway, so it
+moves an attack earlier without adding any: hits landed while the swing
+cools stay free, and the grab, beam and post-teleport recoveries are
+untouched. No reaction fires while a teleport or a grab sequence is in
+flight (`Houzuki755890_SequenceInFlight`: less than `REACT_HOLD`, 8 s,
+since 3000 or 3002 started; per the TAE event spans 3000 lasts 5 s and
+3002 + 3003 about 6 s): a reaction's `ClearSubGoal` would otherwise drop
+the warp + swing or the 3003 throw, and a cast during the warp would queue
+a second teleport since the swing counter has not moved yet. Accepted
+exposure, shared with vanilla 472000: a hit from a spirit ash outside those
+windows can trigger the hit reaction like a player's hit.
+
+| Interrupt | Conditions | Response | Knob |
+|-----------|-----------|----------|------|
+| `INTERUPT_Damaged` (the boss took damage) | player in front within `REACT_HIT_RANGE` (2 m), swing ready, draw | swing | `REACT_HIT` 25 |
+| `INTERUPT_Shoot` (the player starts a cast or a shot) | player at `REACT_RANGE` (5 m) or more, draw | teleport if ready, else beam if ready, else nothing | `REACT_SHOOT` 50 |
+| `INTERUPT_UseItem` | player at `REACT_RANGE` or more, beam ready, draw | beam | `REACT_HEAL` 80 |
+
+`tests/test_mods_src_lua_scripts.py` parses the script with luaparser and
+rejects the syntax Lua added after 5.0 (the engine's compiler), the only
+automated check on it; the in-game sequence below remains the real test.
 `battleGoalID` selects the battle luabnd independently of `logicId` (255
 vanilla think rows share the generic 29999), and the logic script does not
 reference the battle goal by name, so only the battle script is cloned.
@@ -370,10 +425,13 @@ than just the beam.
 Run in full on 2026-09-05 (seeds 610166042, 1141387, 871254120): swing
 and beam behave, no madness while idle, half damage behind the partial
 wall, the first parry breaks it and every later hit lands at four times
-the pre-parry number. Re-run after a game patch or a knob change.
+the pre-parry number. Re-run after a game patch or a knob change. Steps
+6 to 8 (cooldown weight 0, offensive teleport, mid-range and retreat beams,
+reactions; 2026-09-05 second session) have not been run in game yet.
 
 1. **Goal resolution**: knobs temporarily at `SWING_MID = 100`,
-   `SWING_CLOSE = 100`, both `BEAM_*` at 0. The boss must swing the
+   `SWING_CLOSE = 100`, the three `BEAM_*` and the two `TELEPORT_*` at 0
+   (a teleport ends in a swing too, through the interrupt). The boss must swing the
    lantern at melee range instead of always grabbing. The explicit
    `GOAL_Houzuki755890_Battle`/`GOAL_Houzuki755890_AfterAttackAct`
    assignments are already in the script (goal tables are keyed by the
@@ -391,7 +449,8 @@ the pre-parry number. Re-run after a game patch or a knob change.
 3. **Tuning**: probabilities (`SWING_*`, `MOVE_*`), `GRAB_COOLDOWN`,
    `SWING_COOLDOWN`, `BEAM_COOLDOWN`, `BEAM_MAGIC`, `BEAM_EVENT_COUNT`.
    Second session (2026-09-05): swing still too frequent, `SWING_COOLDOWN`
-   12 s added; madness rose while the boss idled, pulse clones without
+   12 s added (10 s since the reactions pass, where it also throttles the
+   teleport); madness rose while the boss idled, pulse clones without
    26000; parry break added. First session
    (2026-09-04): beam approved as is; the swing at 40/50 fired every time
    (see the AI script note), lowered to 10/15 with movement fillers and
@@ -406,6 +465,22 @@ the pre-parry number. Re-run after a game patch or a knob change.
 5. **Ambient regression**: an ambient untouchable still only teleports and
    grabs, no swing at range, no beam, no script error, and still builds
    madness with its lantern.
+6. **No freeze**: at melee range, take a grab and a swing within a few
+   seconds, then stay close: the boss must keep sidestepping or strafing
+   through the cooldowns, never stand still for several seconds (the
+   cooldown weight 0). Also check `GetAttackPassedTime` before first use:
+   the boss must be able to teleport at melee range before its first swing
+   of the fight; if it never does, the counter starts at 0 and the
+   teleport gate and the reaction hold need a fallback.
+7. **Offensive teleport and beams**: at 3-10 m the boss sometimes vanishes
+   and reappears behind the player with a swing (never two within
+   `SWING_COOLDOWN`), sometimes fires the beam from mid range; after a grab
+   it retreats and fires the beam from the retreat distance.
+8. **Reactions and windows**: from 5 m or more, drinking a flask draws a
+   beam most of the time and casting a spell draws a teleport or a beam
+   about half the time; within 5 m neither reaction fires. At melee range,
+   hitting the boss draws a swing at most once per `SWING_COOLDOWN` and
+   about one hit in four, so combos after a whiffed grab still land freely.
 
 ## Expected log lines
 
@@ -465,8 +540,9 @@ parry window is `HP / DAMAGE_CUT`.
 
 Fight feel is tuned in the boss's own battle script
 (`data/mods-src/speedfog/script/755890_battle-luabnd-dcx/755890_battle.lua`,
-knobs at the top of `Goal.Activate`: `SWING_*`, `MOVE_*`, `GRAB_COOLDOWN`,
-`BEAM_*`) and in the injector constants (`BOSS_HP`, `DAMAGE_CUT`,
+knobs at the top of the script: `SWING_*`, `TELEPORT_*`, `BEAM_*`,
+`MOVE_*`, the three `*_COOLDOWN` and the `REACT_*` reactions) and in the
+injector constants (`BOSS_HP`, `DAMAGE_CUT`,
 `BEAM_MAGIC`), never by editing the shared vanilla `528000_battle` (see
 "Moveset"). Regenerate the baseline script with WitchyBND and
 DSLuaDecompiler as described in `data/mods-src/README.md`.

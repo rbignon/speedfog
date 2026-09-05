@@ -234,7 +234,7 @@ speedfog/
 | `docs/boss-arena-constraints.md` | Arena-boss compatibility constraints and matching |
 | `docs/care-package.md` | Randomized starting build system |
 | `docs/tarnished-showcase.md` | Tarnished Pack showcase mode: `[tarnished]` config, class loadout + Torrent skin draws, graph.json v4.7 fields, flag-to-skin mapping confirmed in-game 2026-09-01 |
-| `docs/untouchable-boss.md` | Aging Untouchable minor boss: vulnerability mechanism (nerflantern-style wall lift + partial damage cut), two-phase injector, moveset (own battle script 755890, lantern swing, frenzy beam via judge 150), in-game validation sequence |
+| `docs/untouchable-boss.md` | Aging Untouchable minor boss: vulnerability mechanism (nerflantern-style wall lift + partial damage cut), two-phase injector, moveset (own battle script 755890, lantern swing, frenzy beam via judge 150, offensive teleport, reactions), in-game validation sequence |
 | `docs/vanilla-warp-removal.md` | FogMod vanilla warp removal workaround |
 | `docs/stake-removal.md` | Vanilla stake removal (RetryPoint softlock prevention) |
 | `docs/startup-flag-injection.md` | StartupFlagInjector mechanism + methodology to find new gate flags |

@@ -16,6 +16,7 @@ dev = [
     "ruff>=0.4.0",
     "mypy>=1.10",
     "pre-commit>=3.0",
+    "luaparser>=4.2.0",
 ]
 
 [project.scripts]

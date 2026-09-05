@@ -16,10 +16,13 @@ Current content:
   NpcThinkParam clone sets `battleGoalID = 755890`; ambient untouchables keep
   the vanilla bytecode `528000_battle`). Regenerate the baseline with
   WitchyBND (`--passive Game/script/528000_battle.luabnd.dcx`) and
-  DSLuaDecompiler, then re-apply the SpeedFog edits (header comment, the
-  two `GOAL_` assignments, the tuning knobs and rewritten brackets in
-  `Goal.Activate`, Act01's `successDist`, Act04, Act11); see
-  `docs/untouchable-boss.md` "Moveset".
+  DSLuaDecompiler, then re-apply the SpeedFog edits listed in
+  `docs/untouchable-boss.md` "AI script": the header comment, the two
+  `GOAL_` assignments, the file-scope knobs and the `Houzuki755890_*Ready`,
+  `_SequenceInFlight` and `_Add*` helpers, the rewritten brackets and the
+  `SetCoolTime` weights in `Goal.Activate`, Act01's `successDist`, Act02,
+  Act04, Act05/Act06, Act11, and the reactions at the end of
+  `Goal.Interrupt`.
 
 The Rykard AI script that once lived here was reverted in commit c3f921d
 ("Revert 'overlay: import Rykard AI script'"); the plain-text Lua + manifest
