@@ -61,7 +61,9 @@ public static class UntouchableBossInjector
     /// <summary>Vanilla SpEffect the parried animation (8500) applies for the
     /// parry window: stateInfo 121, the wall lift nerflantern uses. The boss's
     /// permanent row is the out-of-band clone, so on the boss this id is only
-    /// ever present during a parry, which makes it the parry detector.</summary>
+    /// ever present during a parry, which makes it the parry detector (kept
+    /// true by <see cref="Apply"/>, which scrubs nerflantern's inherited copy
+    /// from the clone's slots).</summary>
     public const int PARRY_WINDOW_SPEFFECT = 20011471;
 
     /// <summary>Seconds between two passes of the parry break event; each
@@ -71,6 +73,9 @@ public static class UntouchableBossInjector
     /// <summary>SpEffectParam.spCategory 0: no category, the effect coexists
     /// with every other effect instead of competing inside a category.</summary>
     public const ushort NO_CATEGORY = 0;
+
+    /// <summary>NpcParam carries spEffectID0..31.</summary>
+    private const int NPC_SPEFFECT_SLOTS = 32;
 
     private static readonly string[] CutFields =
     {
@@ -178,6 +183,18 @@ public static class UntouchableBossInjector
         // Slot 19 is the first free slot (17 = teleport gate, 18 = parry
         // wall; the custom row's stateInfo 121 lifts the wall permanently).
         npcRow["spEffectID19"].Value = SpeedFogIds.UntouchableBossSpEffectRow; // s32
+        // The clone is taken from the merged regulation, where the Item
+        // Randomizer's always-on nerflantern option has already written the
+        // wall-lift SpEffect (20011471) into a free slot of every 5280-band
+        // row (slot 31 on 1.17). Inherited, it made the boss carry the
+        // parry-window effect permanently, which blinded the parry break
+        // detector (banner looping from game start, 2026-09-05). Our own row
+        // above already lifts the wall, so drop it from every slot.
+        for (int i = 0; i < NPC_SPEFFECT_SLOTS; i++)
+        {
+            if ((int)npcRow[$"spEffectID{i}"].Value == PARRY_WINDOW_SPEFFECT)
+                npcRow[$"spEffectID{i}"].Value = -1;
+        }
 
         Console.WriteLine(
             $"Untouchable boss: NpcParam {SpeedFogIds.UntouchableBossNpcRow} (clone of {UNTOUCHABLE_VANILLA_NPC}, hp {BOSS_HP}, runes {BOSS_RUNES}) + SpEffect {SpeedFogIds.UntouchableBossSpEffectRow} (cut {DAMAGE_CUT}) + parry break SpEffect {SpeedFogIds.UntouchableParryBreakSpEffectRow} (x{1f / DAMAGE_CUT})");

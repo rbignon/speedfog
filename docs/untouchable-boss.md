@@ -307,6 +307,13 @@ parries still faces a beatable boss.
   (nerflantern patches the 5280 band), but the boss's permanent row is the
   out-of-band clone 755890000, so on the boss 20011471 is only ever present
   during a parry. `IfCharacterHasSpEffect(boss, 20011471)` is the trigger.
+  Slot gotcha (2026-09-05 diagnostic seed, banner looping from game
+  start): the NpcParam clone is taken from the merged regulation, where
+  nerflantern has already written 20011471 into a free slot of the vanilla
+  row (slot 31 on 1.17), so the boss inherited the parry-window effect
+  permanently and the detector was always true; `Apply` now drops
+  20011471 from every slot of the clone (our own row keeps the wall
+  lifted).
   Category gotcha (2026-09-05 session, no damage change after a parry):
   20011471 sits in SpEffect category 1001 with categoryPriority 0, and so
   did the cut row cloned from it. Same category and equal priority collide

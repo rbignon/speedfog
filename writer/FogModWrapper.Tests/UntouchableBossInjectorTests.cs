@@ -571,6 +571,27 @@ public class UntouchableBossInjectorTests
     }
 
     [Fact]
+    public void Apply_DropsNerflanternsWallLiftFromTheBossClone()
+    {
+        var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
+        // What the merged regulation looks like: nerflantern wrote 20011471
+        // into the last free slot of the vanilla row.
+        npc.Rows[0]["spEffectID31"].Value = UntouchableBossInjector.PARRY_WINDOW_SPEFFECT;
+        var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
+
+        UntouchableBossInjector.Apply(npc, sp);
+
+        var boss = npc.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossNpcRow);
+        for (int i = 0; i < 32; i++)
+            Assert.NotEqual(UntouchableBossInjector.PARRY_WINDOW_SPEFFECT, (int)boss[$"spEffectID{i}"].Value);
+        Assert.Equal(-1, (int)boss["spEffectID31"].Value);
+        Assert.Equal(SpeedFogIds.UntouchableBossSpEffectRow, (int)boss["spEffectID19"].Value);
+        // The vanilla row (ambient untouchables) keeps nerflantern's slot.
+        Assert.Equal(UntouchableBossInjector.PARRY_WINDOW_SPEFFECT,
+            (int)npc.Rows.Single(r => r.ID == 52800086)["spEffectID31"].Value);
+    }
+
+    [Fact]
     public void Apply_WritesTheParryBreakCounterAsTheInverseOfTheCut()
     {
         var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
