@@ -4,10 +4,10 @@
 -- clone's battleGoalID). SpeedFog additions: the lantern swing (3001) as a
 -- regular melee act (Act11), the dormant lantern ray (3004) re-enabled as a
 -- beam (Act04, at range and at mid range), the teleport (Act02: at melee
--- range the lantern burst, a warp to 8 m in front of the player and the
--- beam; from range vanilla's 5 s animation 3000, the warp behind the
--- player and the burst) offered at melee range and against a player in
--- the back with its own cooldown, a
+-- range the lantern burst, a warp 8 m straight back and the beam; from
+-- 4 m vanilla's 5 s animation 3000, the warp behind the player and the
+-- burst) offered at melee range and against a player in the back with
+-- its own cooldown, a
 -- beam after the post-grab retreats (Act05/Act06) and three reactions in
 -- Goal.Interrupt (hit, ranged attack, item use). Ambient untouchables keep
 -- the vanilla bytecode script.
@@ -30,7 +30,7 @@ REGISTER_GOAL_NO_SUB_GOAL(GOAL_Houzuki755890_Battle, true)
 local BEAM_FAR_TELEPORT_READY = 40      -- >= 10 m, teleport ready: Act04 (beam) vs Act02
 local BEAM_FAR_TELEPORT_NOT_READY = 50  -- >= 10 m, teleport not ready: Act04 (beam) vs Act01
 local SWING_MID = 10                    -- 3 to 10 m: Act11 (swing, radius-4 knockback burst)
-local TELEPORT_MID = 15                 -- 3 to 10 m: Act02 (burst, warp away in front of the player, beam)
+local TELEPORT_MID = 15                 -- 3 to 10 m: Act02 (under TELEPORT_FAR_RANGE the burst, a warp straight back and the beam; beyond, vanilla's)
 local BEAM_MID = 10                     -- 3 to 10 m: Act04 (beam)
 local MOVE_MID = 15                     -- 3 to 10 m: Act46 (close to 4 m, then strafe)
 local SWING_CLOSE = 15                  -- < 3 m: Act11 (swing)
@@ -40,9 +40,9 @@ local GRAB_COOLDOWN = 6                 -- seconds between two grabs (3002); van
 local SWING_COOLDOWN = 8                -- seconds between two bursts (3001), any source (Act11, reaction, teleport wind-up); AI timer TIMER_SWING
 local TELEPORT_COOLDOWN = 6             -- seconds between two teleports (AI timer TIMER_TELEPORT, set when the act is queued)
 local TELEPORT_HOLD = 3.5               -- seconds after the near teleport act starts without any reaction (burst to its cancel window 1 s, arrival 1.2 to 2.2 s); the far variant adds TELEPORT_FAR_WINDUP to its timer
-local TELEPORT_FAR_RANGE = 8            -- from this distance the teleport is vanilla's (3000, then the warp behind the player and the burst); closer, the burst, a warp away and the beam
-local TELEPORT_AWAY_DIST = 8            -- near variant: warp this far in front of the player (Jori's retreat scan: front, front-right/left, right, left, behind)
-local TELEPORT_AWAY_FALLBACK = 5        -- near variant: second scan at this distance when no direction clears TELEPORT_AWAY_DIST (small arenas; Jori's retreats fall back too)
+local TELEPORT_FAR_RANGE = 4            -- from this distance the teleport is vanilla's (3000, then the warp behind the player and the burst); closer, the burst, a warp straight back and the beam
+local TELEPORT_AWAY_DIST = 8            -- near variant: warp this far away from the player, relative to the boss itself (203100's five-argument TARGET_SELF blink at 7 m, 301010's retreats), scanned straight, then the two diagonals
+local TELEPORT_AWAY_FALLBACK = 5        -- near variant: second scan at this distance when nothing clears TELEPORT_AWAY_DIST (small arenas; Jori's retreats fall back too)
 local TELEPORT_BEAM = 1                 -- 1: the near variant's warp is followed by the beam when it is ready; 0: the boss just reappears at range
 local TELEPORT_FAR_WINDUP = 5.5         -- added to the far variant's timer so the reaction hold covers 3000 (marker at 4.77 s), the arrival (up to 2.2 s) and the burst (1.8 s)
 local BEAM_COOLDOWN = 6                 -- seconds between two beams (3004), any source
@@ -94,10 +94,15 @@ end
 -- (vanilla 531020: wind-up animation, GOAL_COMMON_ToTargetWarp, follow-up)
 -- from the untouchable's own moves, the lantern burst 3001 as the wind-up
 -- (its hit lands from the first frame, the warp fires at its cancel
--- window, 1.0 s), a warp TELEPORT_AWAY_DIST in front of the player, then
--- the beam: the boss bursts, retreats and fires. It lands in front on
--- purpose: lock-on cannot be broken from the AI, so a warp behind the
--- player only turned the camera. Far: vanilla's own act, the 5 s
+-- window, 1.0 s), a warp TELEPORT_AWAY_DIST away from the player relative
+-- to the boss itself (203100's five-argument TARGET_SELF blink at 7 m and
+-- 301010's retreats: a warp "in front of the player" with the plain
+-- directions and the enemy target landed the boss where it stood,
+-- 2026-09-06; vanilla's target-relative warps use the To* directions),
+-- then the beam: the boss bursts, retreats and fires. It
+-- stays in the player's view on purpose: lock-on cannot be broken from
+-- the AI, so a warp behind the player only turned the camera. Far:
+-- vanilla's own act, the 5 s
 -- animation 3000 whose marker (4.77 s) triggers the interrupt below, the
 -- warp behind the player and the burst; the lock behaves as in vanilla.
 -- The teleport depends neither on the swing timer (a gate on the swing
@@ -152,23 +157,24 @@ function Houzuki755890_FindRoomBehind(ai, target)
     return nil
 end
 
--- Room in front of the target at the given distance, scanned as Jori's
--- retreat acts do (vanilla 531020 Act10: front, front-right, front-left,
--- right, left, behind): the warp direction and distance, or nil.
-function Houzuki755890_FindRoomAway(ai, target, distance)
+-- Room away from the player at the given distance, relative to the boss
+-- itself (203100's scan: GetExistMeshOnLineDistEx from TARGET_SELF, then
+-- a five-argument TARGET_SELF warp): straight behind the boss, then
+-- behind-left/right; when the player stands in the boss's back the
+-- retreat goes forward instead (straight, then the two front diagonals),
+-- so it is always a retreat and never a blink through the player.
+function Houzuki755890_FindRoomAway(ai, distance)
     local lineWidth = ai:GetMapHitRadius(TARGET_SELF)
-    if ai:GetExistMeshOnLineDistEx(target, AI_DIR_TYPE_F, distance + lineWidth, lineWidth, 0) >= distance then
-        return AI_DIR_TYPE_F, distance
-    elseif ai:GetExistMeshOnLineDistEx(target, AI_DIR_TYPE_FR, distance + lineWidth, lineWidth, 0) >= distance then
-        return AI_DIR_TYPE_FR, distance
-    elseif ai:GetExistMeshOnLineDistEx(target, AI_DIR_TYPE_FL, distance + lineWidth, lineWidth, 0) >= distance then
-        return AI_DIR_TYPE_FL, distance
-    elseif ai:GetExistMeshOnLineDistEx(target, AI_DIR_TYPE_R, distance + lineWidth, lineWidth, 0) >= distance then
-        return AI_DIR_TYPE_R, distance
-    elseif ai:GetExistMeshOnLineDistEx(target, AI_DIR_TYPE_L, distance + lineWidth, lineWidth, 0) >= distance then
-        return AI_DIR_TYPE_L, distance
-    elseif ai:GetExistMeshOnLineDistEx(target, AI_DIR_TYPE_B, distance + lineWidth, lineWidth, 0) >= distance then
-        return AI_DIR_TYPE_B, distance
+    local straight, left, right = AI_DIR_TYPE_B, AI_DIR_TYPE_BL, AI_DIR_TYPE_BR
+    if ai:IsInsideTarget(TARGET_ENE_0, AI_DIR_TYPE_B, 90) then
+        straight, left, right = AI_DIR_TYPE_F, AI_DIR_TYPE_FL, AI_DIR_TYPE_FR
+    end
+    if ai:GetExistMeshOnLineDistEx(TARGET_SELF, straight, distance + lineWidth, lineWidth, 0) >= distance then
+        return straight, distance
+    elseif ai:GetExistMeshOnLineDistEx(TARGET_SELF, left, distance + lineWidth, lineWidth, 0) >= distance then
+        return left, distance
+    elseif ai:GetExistMeshOnLineDistEx(TARGET_SELF, right, distance + lineWidth, lineWidth, 0) >= distance then
+        return right, distance
     end
     return nil
 end
@@ -200,9 +206,9 @@ function Houzuki755890_AddBeam(ai, goal)
 end
 
 -- The near teleport (the act under TELEPORT_FAR_RANGE, the hit reaction):
--- the burst, the warp TELEPORT_AWAY_DIST (or TELEPORT_AWAY_FALLBACK) in
--- front of the player, then the beam when TELEPORT_BEAM is on and the
--- beam is ready. Returns whether it was queued: without room nothing is
+-- the burst, the warp TELEPORT_AWAY_DIST (or TELEPORT_AWAY_FALLBACK)
+-- straight back, then the beam when TELEPORT_BEAM is on and the beam is
+-- ready. Returns whether it was queued: without room nothing is
 -- (the burst is not spent on a warp that cannot happen, and the current
 -- sub-goals are only cleared once the retreat is certain, vanilla
 -- Act05/Act06's clear-inside-the-act idiom), but the teleport timer starts
@@ -210,16 +216,16 @@ end
 -- scanned when the act is queued, about 1 s before the warp.
 function Houzuki755890_AddTeleportAway(ai, goal)
     ai:SetTimer(TIMER_TELEPORT, TELEPORT_COOLDOWN)
-    local directionFromTarget, distanceFromTarget = Houzuki755890_FindRoomAway(ai, TARGET_ENE_0, TELEPORT_AWAY_DIST)
-    if directionFromTarget == nil then
-        directionFromTarget, distanceFromTarget = Houzuki755890_FindRoomAway(ai, TARGET_ENE_0, TELEPORT_AWAY_FALLBACK)
+    local directionFromSelf, distanceFromSelf = Houzuki755890_FindRoomAway(ai, TELEPORT_AWAY_DIST)
+    if directionFromSelf == nil then
+        directionFromSelf, distanceFromSelf = Houzuki755890_FindRoomAway(ai, TELEPORT_AWAY_FALLBACK)
     end
-    if directionFromTarget == nil then
+    if directionFromSelf == nil then
         return false
     end
     goal:ClearSubGoal()
     Houzuki755890_AddSwing(ai, goal, true)
-    goal:AddSubGoal(GOAL_COMMON_ToTargetWarp, 15, TARGET_ENE_0, directionFromTarget, distanceFromTarget, TARGET_ENE_0)
+    goal:AddSubGoal(GOAL_COMMON_ToTargetWarp, 15, TARGET_SELF, directionFromSelf, distanceFromSelf, TARGET_ENE_0)
     if TELEPORT_BEAM > 0 and Houzuki755890_BeamReady(ai) then
         Houzuki755890_AddBeam(ai, goal)
     end
@@ -289,8 +295,8 @@ Goal.Activate = function (self, ai, goal)
             probabilities[43] = 0
         elseif teleportReady then
             -- SpeedFog: vanilla only turns here (Act43); the near teleport
-            -- (burst, retreat in front of the player, beam) answers a
-            -- player in the back better than a slow turn.
+            -- (burst, retreat forward since the player is in the back,
+            -- beam) answers a player in the back better than a slow turn.
             probabilities[1] = 10
             probabilities[2] = TELEPORT_BEHIND
             probabilities[43] = 90 - TELEPORT_BEHIND
@@ -437,10 +443,9 @@ function Houzuki755890_Act01(ai, goal, paramTbl)
 end
 
 function Houzuki755890_Act02(ai, goal, paramTbl)
-    -- Teleport: near, SpeedFog's lantern burst, warp away in front of the
-    -- player and beam; far, vanilla's 3000, warp behind the player and
-    -- burst. Offered at every range (TELEPORT_MID/CLOSE/BEHIND at melee
-    -- range).
+    -- Teleport: near, SpeedFog's lantern burst, warp straight back and
+    -- beam; far, vanilla's 3000, warp behind the player and burst. Offered
+    -- at every range (TELEPORT_MID/CLOSE/BEHIND at melee range).
     Houzuki755890_AddTeleport(ai, goal)
     GetWellSpace_Odds = 0
     return GetWellSpace_Odds
@@ -817,9 +822,9 @@ Goal.Interrupt = function (self, ai, goal)
         return false
     end
     if ai:IsInterupt(INTERUPT_Shoot) then
-        -- A cast from range draws the beam: the 5 s far teleport is no
-        -- answer to a cast, and the near variant would land the boss where
-        -- it already stands.
+        -- A cast from range draws the beam: a cast comes from REACT_RANGE
+        -- or more, beyond TELEPORT_FAR_RANGE, where the teleport is the 5 s
+        -- far one, no answer to a cast; the beam is the point anyway.
         if ai:GetDist(TARGET_ENE_0) >= REACT_RANGE and ai:GetRandam_Int(1, 100) <= REACT_SHOOT and Houzuki755890_BeamReady(ai) then
             goal:ClearSubGoal()
             Houzuki755890_AddBeam(ai, goal)

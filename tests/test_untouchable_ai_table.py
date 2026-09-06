@@ -4,7 +4,7 @@ embedded Lua through lupa.
 The script's decision table (Goal.Activate), acts and reactions
 (Goal.Interrupt) are exercised against a fake ai/goal pair whose answers
 come from a small state dict (distance, behind, SpEffects, seconds since
-each attack, AI timers, room around the target, random draw). The aiCommon
+each attack, AI timers, room around the scanned character, random draw). The aiCommon
 helpers the script calls are transcribed from the decompiled 1.17 bundle
 (Common_Clear_Param, SetCoolTime); Common_Battle_Activate is replaced by a
 capture of the weight table. The embedded Lua is newer than the game's
@@ -50,14 +50,20 @@ GATE_SPEFFECT = 20011450  # vanilla's one-shot teleport gate, ignored by the bos
 WARP_MARKER_SPEFFECT = 20011452  # vanilla's post-3000 warp marker
 TELEPORTING_SPEFFECT = 20011453  # applied by 3000's first frame for 4 s
 TELEPORT_TIMER, SWING_TIMER = 10, 11  # TIMER_TELEPORT / TIMER_SWING in the script
-WARP = ("ToTargetWarp", "enemy")
+WARP = ("ToTargetWarp", "self")  # the near warp is relative to the boss itself
 BURST = ("ComboTunable_SuccessAngle180", SWING_ANIM)  # Jori's wind-up wrapper
 MELEE_SWING = ("ComboAttackTunableSpin", SWING_ANIM)  # Act11
 GRAB_ATTACK = ("ComboAttackTunableSpin", GRAB_ANIM)
 BEAM_ATTACK = ("ComboAttackTunableSpin", BEAM_ANIM)
 FAR_WINDUP = ("ComboTunable_SuccessAngle180", 3000)  # vanilla Act02's 5 s teleport-out
 BURST_ARGS = [8, SWING_ANIM, "enemy", 999, 0, 180, 180, 180]  # fires whatever the side
-RETREAT = [15, "enemy", "F", 8, "enemy"]  # the near warp: 8 m in front of the player
+RETREAT = [
+    15,
+    "self",
+    "B",
+    8,
+    "enemy",
+]  # the near warp: 8 m straight back from the boss
 
 PRELUDE = r"""
 TARGET_SELF, TARGET_ENE_0, TARGET_EVENT = "self", "enemy", "event"
@@ -107,7 +113,7 @@ function Common_Battle_Activate(ai, goal, probabilities, acts, actAfter, paramTb
 end
 
 function new_ai(state)
-    local ai = { registered = {}, unregistered_reads = {} }
+    local ai = { registered = {}, unregistered_reads = {}, scanned = {} }
     function ai:GetDist(target) return state.dist end
     function ai:GetRandam_Int(lo, hi) return state.random end
     function ai:GetRandam_Float(lo, hi) return lo end
@@ -140,10 +146,11 @@ function new_ai(state)
     end
     function ai:GetTimer(id) return state.timers[id] or 0 end
     function ai:SetTimer(id, seconds) state.timers[id] = seconds end
-    -- Room around the target for the warp scans: a number for every
-    -- direction (10 passes every branch of both scans), or a table keyed
-    -- by direction.
+    -- Room for the warp scans: a number for every direction (10 passes
+    -- every branch of both scans), or a table keyed by direction. The
+    -- scanned character is recorded per call.
     function ai:GetExistMeshOnLineDistEx(target, dir, dist, width, offset)
+        table.insert(self.scanned, target)
         if type(state.mesh) == "table" then
             return state.mesh[dir] or 0
         end
@@ -373,25 +380,36 @@ def test_far_teleport_plays_vanilla_3000_and_holds_the_timer_longer():
 
 
 def test_teleport_variant_switches_at_the_far_range():
-    goal, _ = act("Houzuki755890_Act02", dist=8)
+    goal, _ = act("Houzuki755890_Act02", dist=4)
     assert queued(goal) == [FAR_WINDUP]
-    goal, _ = act("Houzuki755890_Act02", dist=7.9)
+    goal, _ = act("Houzuki755890_Act02", dist=3.9)
     assert queued(goal)[0] == BURST
 
 
-def test_retreat_scan_follows_joris_order():
-    # Every direction free: in front of the player, 8 m.
-    goal, _ = act("Houzuki755890_Act02", dist=2)
+def test_retreat_scan_is_behind_the_boss_itself():
+    # Every direction free: straight back, 8 m, relative to the boss, and
+    # the room is scanned from the boss, never from the player.
+    g, ai, goal, _ = activate({"dist": 2})
+    g.Houzuki755890_Act02(ai, goal, None)
     assert args_of(goal, 1) == RETREAT
-    # Only front-right free, then only behind free: the branch order.
-    goal, _ = act("Houzuki755890_Act02", dist=2, mesh={"FR": 10})
-    assert args_of(goal, 1) == [15, "enemy", "FR", 8, "enemy"]
-    goal, _ = act("Houzuki755890_Act02", dist=2, mesh={"B": 10})
-    assert args_of(goal, 1) == [15, "enemy", "B", 8, "enemy"]
+    assert set(ai.scanned.values()) == {"self"}
+    # Only behind-left free, then only behind-right free: the branch order.
+    goal, _ = act("Houzuki755890_Act02", dist=2, mesh={"BL": 10})
+    assert args_of(goal, 1) == [15, "self", "BL", 8, "enemy"]
+    goal, _ = act("Houzuki755890_Act02", dist=2, mesh={"BR": 10})
+    assert args_of(goal, 1) == [15, "self", "BR", 8, "enemy"]
+    # Room only in front or to the sides is no retreat.
+    goal, _ = act("Houzuki755890_Act02", dist=2, mesh={"F": 10, "L": 10, "R": 10})
+    assert queued(goal) == []
+    # The player in the boss's back: the retreat goes forward, away from them.
+    goal, _ = act("Houzuki755890_Act02", dist=2, behind=True)
+    assert args_of(goal, 1) == [15, "self", "F", 8, "enemy"]
+    goal, _ = act("Houzuki755890_Act02", dist=2, behind=True, mesh={"FR": 10, "B": 10})
+    assert args_of(goal, 1) == [15, "self", "FR", 8, "enemy"]
     # 7 m of room is not enough for an 8 m retreat: the 5 m fallback (small arenas).
     goal, _ = act("Houzuki755890_Act02", dist=2, mesh=7)
     assert queued(goal) == [BURST, WARP, BEAM_ATTACK]
-    assert args_of(goal, 1) == [15, "enemy", "F", 5, "enemy"]
+    assert args_of(goal, 1) == [15, "self", "B", 5, "enemy"]
     goal, _ = act("Houzuki755890_Act02", dist=2, mesh=4)
     assert queued(goal) == []
 
@@ -421,6 +439,9 @@ def test_far_teleport_second_half_warps_behind_the_player_with_vanillas_scan():
     g, ai, goal, _ = activate(warp_state)
     g.GOALS[BATTLE_GOAL].Interrupt(None, ai, goal)
     assert args_of(goal, 0) == [15, "event", "BR", 0, "enemy"]
+    assert set(ai.scanned.values()) == {
+        "event"
+    }  # vanilla scans around the event target
     g, ai, goal, _ = activate({**warp_state, "mesh": {"B": 3}})
     g.GOALS[BATTLE_GOAL].Interrupt(None, ai, goal)
     assert args_of(goal, 0) == [15, "event", "B", 2, "enemy"]

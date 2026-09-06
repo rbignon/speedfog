@@ -324,21 +324,30 @@ interrupts are superseded by what follows.
 
 Acts: Act11 (swing 3001, vanilla's post-teleport surprise attack as a
 regular melee act), Act04 (beam 3004, `successDist` 999, at range and at
-mid range), Act02 (two teleports by distance, `TELEPORT_FAR_RANGE` 8 m:
+mid range), Act02 (two teleports by distance, `TELEPORT_FAR_RANGE` 4 m:
 near, Jori's structure from vanilla 531020, wind-up animation then
 `GOAL_COMMON_ToTargetWarp` then a follow-up, built from the untouchable's
 own moves, the lantern burst 3001 as the wind-up, its hit landing from the
 first frame and the warp firing at its cancel window, 1.0 s, then a warp
-`TELEPORT_AWAY_DIST` 8 m in front of the player, then the beam when it is
-ready, `TELEPORT_BEAM`: the boss bursts, retreats and fires; far,
-vanilla's own act, the 5 s teleport-out animation 3000 whose marker at
-4.77 s triggers vanilla's interrupt, the warp behind the player and the
-burst when its timer allows. The near variant lands in front of the
-player on purpose: lock-on cannot be broken from the AI (no SpEffect field
-does it, and the three marker SpEffects of 3000 carry nothing of the
-kind), so a warp behind the player only turned the camera; whatever the
-5 s vanilla teleport does to the lock is vanilla's. A bare warp with no
-animation read as a glitch, sixth run), Act05/Act06 (the
+`TELEPORT_AWAY_DIST` 8 m away from the player relative to the boss itself
+(`TARGET_SELF`, straight behind the boss or, when the player stands in its
+back, straight ahead: the five-argument `TARGET_SELF` warp of 203100,
+Rennala's 7 m blink, and 301010's retreats), then the beam
+when it is ready, `TELEPORT_BEAM`: the boss bursts, retreats and fires;
+far, vanilla's own act, the 5 s teleport-out animation 3000 whose marker
+at 4.77 s triggers vanilla's interrupt, the warp behind the player and the
+burst when its timer allows. The near variant stays in the player's view
+on purpose: lock-on cannot be broken from the AI (no SpEffect field does
+it, and the three marker SpEffects of 3000 carry nothing of the kind), so
+a warp behind the player only turned the camera; whatever the 5 s vanilla
+teleport does to the lock is vanilla's. A bare warp with no animation
+read as a glitch (sixth run), and a warp "8 m in front of the player"
+with the plain directions and the enemy target landed the boss where it
+stood (seventh run, 2026-09-06): vanilla's target-relative warps use the
+`To*` directions (301010's blinks around the player, `AI_DIR_TYPE_ToB`
+and kin), the plain ones with the enemy target read differently from one
+script to the next, and the self-relative form is the unambiguous
+retreat), Act05/Act06 (the
 vanilla post-grab retreats to 10/8 m, followed by a beam when it is
 available). Cooldowns: `GRAB_COOLDOWN` 6 s (vanilla 12) and
 `BEAM_COOLDOWN` 6 s through `SetCoolTime`, both registered with the engine
@@ -353,19 +362,20 @@ never registered, so no engine interval can hold the boss on a burst, and
 the teleport's burst fires whatever the swing timer says. The timer idiom
 is vanilla's (slot 10 is set by 34 vanilla battle scripts, `GetTimer(n) <=
 0` gates are the standard pattern, 1.17 survey). Two room scans: the
-near variant's (`Houzuki755890_FindRoomAway`, Jori's retreat scan from
-531020 Act10: front, front-right, front-left, right, left, behind, at the
-retreat distance, then again at `TELEPORT_AWAY_FALLBACK` 5 m for small
-arenas, as Jori's own retreats fall back), run when the act is queued,
+near variant's (`Houzuki755890_FindRoomAway`: from the boss itself,
+straight away from the player then the two diagonals, at the retreat
+distance, then again at
+`TELEPORT_AWAY_FALLBACK` 5 m for small arenas, as Jori's own retreats
+fall back), run when the act is queued,
 about 1 s before the warp, and without room nothing is queued or cleared
 (the burst is not spent on a warp that cannot happen; the act clears the
 sub-goals only once the retreat is certain, vanilla Act05/Act06's idiom);
 the far variant's (`Houzuki755890_FindRoomBehind`: in front, then behind
 right/left at 0 or 2 m, then behind at 2 m), vanilla's own scan in
-vanilla's own interrupt. Two deliberate departures from Jori: the line
-width is the boss's own hit radius (the body that has to fit; the
-untouchable's vanilla scan uses it too) and the warp is the untouchable's
-five-argument `ToTargetWarp` (Jori's trailing `-1, -1, 0` are unverified).
+vanilla's own interrupt. The line width is the boss's own hit radius (the
+body that has to fit; the untouchable's vanilla scan uses it too) and the
+warp is the five-argument `ToTargetWarp` (the extra arguments of Jori's
+and 301010's calls are unverified).
 The
 wind-up burst uses Jori's wrapper (`ComboTunable_SuccessAngle180`, reach
 999, no turn, every angle 180) so it fires whatever the player's side;
@@ -593,13 +603,14 @@ teleport and the toughness change await their own run (steps 7 to 9).
    once per fight. The fourth run showed teleports at melee range (the
    gate was the limit); the teleport now runs on an AI timer and no
    longer plays 3000, so the 3000 counter is out of the picture.
-7. **Teleports and beams**: under 8 m (melee range while the grab and the
-   swing cool, 3-8 m, the player in its back), the boss bursts its lantern
-   on the spot (the hit lands if the player is close), vanishes about 1 s
-   into the burst, reappears 8 m in front of the player with its arrival
-   animation and fires the beam when it is ready; from 8 m (and the player
-   in its back from 8 m), vanilla's teleport: the 5 s lantern fade, then
-   the warp behind the player and the burst. Never two teleports within
+7. **Teleports and beams**: under 4 m (melee range while the grab and the
+   swing cool, the player in its back), the boss bursts its lantern on the
+   spot (the hit lands if the player is close), vanishes about 1 s into
+   the burst, reappears 8 m away from the player (5 m in a small arena;
+   straight ahead when the player was in its back) with its
+   arrival animation and fires the beam when it is ready; from 4 m,
+   vanilla's teleport: the 5 s lantern fade, then the warp behind the
+   player and the burst. Never two teleports within
    `TELEPORT_COOLDOWN` (11 s after a far one). At 3-10 m it sometimes fires
    the beam; after a grab it retreats and fires the beam from the retreat
    distance. A cast from 5 m or more draws the beam when it is ready. If the boss finishes the whole 1.8 s burst before vanishing,
@@ -613,10 +624,14 @@ teleport and the toughness change await their own run (steps 7 to 9).
    (burst, retreat, beam) when it is ready or a burst at most once per
    `SWING_COOLDOWN`, so combos after a whiffed grab still land freely.
    In a small arena (catacomb rooms), confirm the boss still retreats at
-   least sometimes: the retreat needs 8 m of navmesh in a straight line
-   from the player, then falls back to 5 m (`TELEPORT_AWAY_FALLBACK`); a
-   boss that never retreats there means both distances fail and the
-   fallback needs lowering.
+   least sometimes: the retreat needs 8 m of navmesh straight behind the
+   boss (or behind-left/right), then falls back to 5 m
+   (`TELEPORT_AWAY_FALLBACK`); a boss that never retreats there means both
+   distances fail and the fallback needs lowering. A boss that vanishes
+   and reappears where it stood would contradict 203100's shipped blink
+   (the same call shape and scan at 7 m), so look at the timing first (the
+   burst's cancel window, the `ClearSubGoal` order) before trying
+   301010's eight-argument call.
 9. **Hit reactions**: light attacks no longer interrupt the boss's grab,
    burst, beam or teleport wind-up (`toughness` 0, the boss class); heavy
    hits and combos still break its super armor meter (80, Jori's) into a
