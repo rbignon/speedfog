@@ -4,20 +4,20 @@ embedded Lua through lupa.
 The script's decision table (Goal.Activate), acts and reactions
 (Goal.Interrupt) are exercised against a fake ai/goal pair whose answers
 come from a small state dict (distance, behind, SpEffects, seconds since
-each attack, AI timers, room around the scanned character, random draw). The aiCommon
-helpers the script calls are transcribed from the decompiled 1.17 bundle
-(Common_Clear_Param, SetCoolTime); Common_Battle_Activate is replaced by a
-capture of the weight table. The embedded Lua is newer than the game's
-5.0, so this checks logic, not the engine's dialect (see
+each attack, AI timers, room around the scanned character, random draw).
+The aiCommon helpers the script calls are transcribed from the decompiled
+1.17 bundle (Common_Clear_Param, SetCoolTime); Common_Battle_Activate is
+replaced by a capture of the weight table. The embedded Lua is newer than
+the game's 5.0, so this checks logic, not the engine's dialect (see
 test_mods_src_lua_scripts.py for that).
 
-Engine model (docs/untouchable-boss.md, "Teleport cooldown"):
-GetAttackPassedTime reads 0 for an animation never registered with
-RegistAttackTimeInterval (in game, 2026-09-05, an unregistered counter
-left the teleport dead), a registered counter reads large before the
-attack's first use (the grab fires from the start), and AI timers
-(SetTimer/GetTimer) count down to 0; the swing (3001) and the teleport run
-on such timers and 3001 is never registered.
+Engine model (docs/untouchable-boss.md, "AI script"): GetAttackPassedTime
+reads 0 for an animation never registered with RegistAttackTimeInterval
+(in game, 2026-09-05, an unregistered counter left the teleport dead), a
+registered counter reads large before the attack's first use (the grab
+fires from the start), and AI timers (SetTimer/GetTimer) count down to 0;
+the swing (3001), the teleport and the reaction hold run on such timers
+and 3001 is never registered.
 
 Weights are indexed by act number as in the script: Act01 approach, Act02
 teleport, Act03 grab, Act04 beam, Act11 swing, Act42 sidestep, Act43 turn,
@@ -34,6 +34,7 @@ SCRIPT = (
     Path(__file__).resolve().parents[1]
     / "data/mods-src/speedfog/script/755890_battle-luabnd-dcx/755890_battle.lua"
 )
+SCRIPT_SOURCE = SCRIPT.read_text(encoding="utf-8")
 BATTLE_GOAL = 755890
 APPROACH, TELEPORT, GRAB, BEAM, SWING, SIDESTEP, TURN, STRAFE = (
     1,
@@ -48,22 +49,26 @@ APPROACH, TELEPORT, GRAB, BEAM, SWING, SIDESTEP, TURN, STRAFE = (
 SWING_ANIM, GRAB_ANIM, BEAM_ANIM = 3001, 3002, 3004
 GATE_SPEFFECT = 20011450  # vanilla's one-shot teleport gate, ignored by the boss
 WARP_MARKER_SPEFFECT = 20011452  # vanilla's post-3000 warp marker
-TELEPORTING_SPEFFECT = 20011453  # applied by 3000's first frame for 4 s
-TELEPORT_TIMER, SWING_TIMER = 10, 11  # TIMER_TELEPORT / TIMER_SWING in the script
-WARP = ("ToTargetWarp", "self")  # the near warp is relative to the boss itself
+HOLD_TIMER, TELEPORT_TIMER, SWING_TIMER = 9, 10, 11  # TIMER_* slots in the script
 BURST = ("ComboTunable_SuccessAngle180", SWING_ANIM)  # Jori's wind-up wrapper
 MELEE_SWING = ("ComboAttackTunableSpin", SWING_ANIM)  # Act11
 GRAB_ATTACK = ("ComboAttackTunableSpin", GRAB_ANIM)
 BEAM_ATTACK = ("ComboAttackTunableSpin", BEAM_ANIM)
 FAR_WINDUP = ("ComboTunable_SuccessAngle180", 3000)  # vanilla Act02's 5 s teleport-out
+RETREAT = ("ToTargetWarp", "self")  # the near warp, relative to the boss itself
+WARP_BEHIND = ("ToTargetWarp", "enemy")  # the far warp, around the player
 BURST_ARGS = [8, SWING_ANIM, "enemy", 999, 0, 180, 180, 180]  # fires whatever the side
-RETREAT = [
-    15,
-    "self",
-    "B",
-    8,
-    "enemy",
-]  # the near warp: 8 m straight back from the boss
+
+
+def retreat_args(direction: str = "B", distance: float = 8) -> list:
+    """ToTargetWarp arguments of the near warp: from the boss, facing the player."""
+    return [15, "self", direction, distance, "enemy"]
+
+
+def warp_behind_args(direction: str, distance: float) -> list:
+    """ToTargetWarp arguments of the far warp: around the player, facing them."""
+    return [15, "enemy", direction, distance, "enemy"]
+
 
 PRELUDE = r"""
 TARGET_SELF, TARGET_ENE_0, TARGET_EVENT = "self", "enemy", "event"
@@ -173,18 +178,14 @@ end
 
 COOLING_PASSED = {GRAB_ANIM: 1, BEAM_ANIM: 1}  # registered counters just used
 SWING_COOLING = {SWING_TIMER: 1}
-TELEPORT_COOLING = {TELEPORT_TIMER: 2}  # timer running, but past the teleport hold
-TELEPORT_IN_FLIGHT = {TELEPORT_TIMER: 5}  # timer just started: inside the teleport hold
+TELEPORT_COOLING = {TELEPORT_TIMER: 2}  # teleport timer running, hold timer expired
+TELEPORT_HOLDING = {TELEPORT_TIMER: 5, HOLD_TIMER: 2}  # a teleport in flight
 
 
-def load(state: dict, script_override: dict[str, str] | None = None):
+def load(state: dict):
     lua = LuaRuntime(unpack_returned_tuples=True)
     lua.execute(PRELUDE)
-    source = SCRIPT.read_text(encoding="utf-8")
-    for old, new in (script_override or {}).items():
-        assert source.count(old) == 1, old
-        source = source.replace(old, new)
-    lua.execute(source)
+    lua.execute(SCRIPT_SOURCE)
     g = lua.globals()
     mesh = state.get("mesh", 10)
     lua_state = lua.table(
@@ -200,9 +201,9 @@ def load(state: dict, script_override: dict[str, str] | None = None):
     return g, g.new_ai(lua_state), g.new_goal(), lua_state
 
 
-def activate(state: dict, script_override: dict[str, str] | None = None):
+def activate(state: dict):
     """Runs Goal.Activate once, as the engine does before any act or interrupt."""
-    g, ai, goal, lua_state = load(state, script_override)
+    g, ai, goal, lua_state = load(state)
     g.GOALS[BATTLE_GOAL].Activate(None, ai, goal)
     return g, ai, goal, lua_state
 
@@ -222,18 +223,20 @@ def args_of(goal, index: int) -> list:
     return list(list(goal.subgoals.values())[index].args.values())
 
 
-def act(name: str, script_override: dict[str, str] | None = None, **state):
-    """Runs one act after Goal.Activate; returns the goal and the Lua state."""
-    g, ai, goal, lua_state = activate(state, script_override)
-    g[name](ai, goal, None)
-    return goal, lua_state
+def act(name: str, **state) -> tuple[Any, Any, Any]:
+    """Runs one act (by its short name, Act02) after Goal.Activate; returns
+    the goal, the fake ai and the Lua state."""
+    g, ai, goal, lua_state = activate(state)
+    g["Houzuki755890_" + name](ai, goal, None)
+    return goal, ai, lua_state
 
 
-def react(**state) -> tuple[bool, list[tuple[str, object]]]:
-    """Whether Goal.Interrupt handled the state's interrupt, and the sub-goals it left queued."""
+def react(**state) -> tuple[bool, Any, Any]:
+    """Runs Goal.Interrupt after Goal.Activate; returns whether it handled
+    the state's interrupt, the goal and the fake ai."""
     g, ai, goal, _ = activate(state)
     fired = g.GOALS[BATTLE_GOAL].Interrupt(None, ai, goal)
-    return bool(fired), queued(goal)
+    return bool(fired), goal, ai
 
 
 def test_melee_gap_offers_the_teleport_next_to_the_sidestep():
@@ -327,42 +330,37 @@ def test_far_bracket_teleport_or_beam():
     assert set(cooling) == {APPROACH, BEAM} and cooling[APPROACH] + cooling[BEAM] == 100
 
 
-def test_near_teleport_is_burst_retreat_beam_and_starts_both_timers():
-    goal, state = act("Houzuki755890_Act02", dist=2)
-    assert queued(goal) == [BURST, WARP, BEAM_ATTACK]
+def test_near_teleport_is_burst_retreat_beam_and_starts_the_three_timers():
+    goal, _, state = act("Act02", dist=2)
+    assert queued(goal) == [BURST, RETREAT, BEAM_ATTACK]
     assert args_of(goal, 0) == BURST_ARGS
-    assert args_of(goal, 1) == RETREAT
-    assert state.timers[TELEPORT_TIMER] > 0 and state.timers[SWING_TIMER] > 0
+    assert args_of(goal, 1) == retreat_args()
+    # The cooldown and the hold validated in game (2026-09-06); the burst's timer.
+    assert state.timers[TELEPORT_TIMER] == 6 and state.timers[HOLD_TIMER] == 3.5
+    assert state.timers[SWING_TIMER] > 0
 
 
 def test_near_teleport_skips_the_beam_while_it_cools():
-    goal, _ = act("Houzuki755890_Act02", dist=2, passed={BEAM_ANIM: 1})
-    assert queued(goal) == [BURST, WARP]
+    goal, _, _ = act("Act02", dist=2, passed={BEAM_ANIM: 1})
+    assert queued(goal) == [BURST, RETREAT]
 
 
 def test_near_teleport_bursts_even_while_the_swing_timer_runs():
-    goal, _ = act("Houzuki755890_Act02", dist=2, timers={SWING_TIMER: 3})
+    goal, _, _ = act("Act02", dist=2, timers={SWING_TIMER: 3})
     assert queued(goal)[0] == BURST
 
 
-def test_near_teleport_without_room_queues_nothing_and_only_starts_the_teleport_timer():
-    goal, state = act("Houzuki755890_Act02", dist=2, mesh=0)
+def test_near_teleport_without_room_queues_nothing_and_starts_the_timers():
+    goal, _, state = act("Act02", dist=2, mesh=0)
     assert queued(goal) == []
-    assert state.timers[TELEPORT_TIMER] > 0
-    assert state.timers[SWING_TIMER] is None  # the burst is not spent
+    # The attempt starts the cooldown and the hold (the spot is not retried
+    # and the reactions stay quiet, as validated); the burst is not spent.
+    assert state.timers[TELEPORT_TIMER] > 0 and state.timers[HOLD_TIMER] > 0
+    assert state.timers[SWING_TIMER] is None
 
 
-def test_teleport_beam_knob_off_stops_after_the_retreat():
-    goal, _ = act(
-        "Houzuki755890_Act02",
-        script_override={"local TELEPORT_BEAM = 1 ": "local TELEPORT_BEAM = 0 "},
-        dist=2,
-    )
-    assert queued(goal) == [BURST, WARP]
-
-
-def test_far_teleport_plays_vanilla_3000_and_holds_the_timer_longer():
-    goal, state = act("Houzuki755890_Act02", dist=12)
+def test_far_teleport_plays_vanilla_3000_and_holds_the_timers_longer():
+    goal, _, state = act("Act02", dist=12)
     assert queued(goal) == [FAR_WINDUP]
     assert args_of(goal, 0) == [
         10,
@@ -375,143 +373,119 @@ def test_far_teleport_plays_vanilla_3000_and_holds_the_timer_longer():
         0,
     ]  # 5 - hit radius 1 + 999
     assert state.timers[SWING_TIMER] is None  # the burst comes with the warp, later
-    _, near = act("Houzuki755890_Act02", dist=2)
-    assert state.timers[TELEPORT_TIMER] > near.timers[TELEPORT_TIMER]
+    # The cooldown and the hold validated in game (2026-09-06).
+    assert state.timers[TELEPORT_TIMER] == 11.5
+    assert state.timers[HOLD_TIMER] == pytest.approx(9)
 
 
 def test_teleport_variant_switches_at_the_far_range():
-    goal, _ = act("Houzuki755890_Act02", dist=5)
+    goal, _, _ = act("Act02", dist=5)
     assert queued(goal) == [FAR_WINDUP]
-    goal, _ = act("Houzuki755890_Act02", dist=4.9)
+    goal, _, _ = act("Act02", dist=4.9)
     assert queued(goal)[0] == BURST
 
 
 def test_retreat_scan_is_behind_the_boss_itself():
     # Every direction free: straight back, 8 m, relative to the boss, and
     # the room is scanned from the boss, never from the player.
-    g, ai, goal, _ = activate({"dist": 2})
-    g.Houzuki755890_Act02(ai, goal, None)
-    assert args_of(goal, 1) == RETREAT
+    goal, ai, _ = act("Act02", dist=2)
+    assert args_of(goal, 1) == retreat_args()
     assert set(ai.scanned.values()) == {"self"}
     # Only behind-left free, then only behind-right free: the branch order.
-    goal, _ = act("Houzuki755890_Act02", dist=2, mesh={"BL": 10})
-    assert args_of(goal, 1) == [15, "self", "BL", 8, "enemy"]
-    goal, _ = act("Houzuki755890_Act02", dist=2, mesh={"BR": 10})
-    assert args_of(goal, 1) == [15, "self", "BR", 8, "enemy"]
+    goal, _, _ = act("Act02", dist=2, mesh={"BL": 10})
+    assert args_of(goal, 1) == retreat_args("BL")
+    goal, _, _ = act("Act02", dist=2, mesh={"BR": 10})
+    assert args_of(goal, 1) == retreat_args("BR")
     # Room only in front or to the sides is no retreat.
-    goal, _ = act("Houzuki755890_Act02", dist=2, mesh={"F": 10, "L": 10, "R": 10})
+    goal, _, _ = act("Act02", dist=2, mesh={"F": 10, "L": 10, "R": 10})
     assert queued(goal) == []
     # The player in the boss's back: the retreat goes forward, away from them.
-    goal, _ = act("Houzuki755890_Act02", dist=2, behind=True)
-    assert args_of(goal, 1) == [15, "self", "F", 8, "enemy"]
-    goal, _ = act("Houzuki755890_Act02", dist=2, behind=True, mesh={"FR": 10, "B": 10})
-    assert args_of(goal, 1) == [15, "self", "FR", 8, "enemy"]
+    goal, _, _ = act("Act02", dist=2, behind=True)
+    assert args_of(goal, 1) == retreat_args("F")
+    goal, _, _ = act("Act02", dist=2, behind=True, mesh={"FR": 10, "B": 10})
+    assert args_of(goal, 1) == retreat_args("FR")
     # 7 m of room is not enough for an 8 m retreat: the 5 m fallback (small arenas).
-    goal, _ = act("Houzuki755890_Act02", dist=2, mesh=7)
-    assert queued(goal) == [BURST, WARP, BEAM_ATTACK]
-    assert args_of(goal, 1) == [15, "self", "B", 5, "enemy"]
-    goal, _ = act("Houzuki755890_Act02", dist=2, mesh=4)
+    goal, _, _ = act("Act02", dist=2, mesh=7)
+    assert queued(goal) == [BURST, RETREAT, BEAM_ATTACK]
+    assert args_of(goal, 1) == retreat_args("B", 5)
+    goal, _, _ = act("Act02", dist=2, mesh=4)
     assert queued(goal) == []
 
 
 def test_grab_act_and_swing_act_keep_their_vanilla_parameters():
-    goal, _ = act("Houzuki755890_Act03", dist=2)
+    goal, _, _ = act("Act03", dist=2)
     assert queued(goal) == [GRAB_ATTACK]
     assert args_of(goal, 0) == [8, GRAB_ANIM, "enemy", 12, 2, 50, 0, 0]
-    goal, state = act("Houzuki755890_Act11", dist=2)
+    goal, _, state = act("Act11", dist=2)
     assert queued(goal) == [MELEE_SWING]
     assert args_of(goal, 0) == [8, SWING_ANIM, "enemy", 4, 1.5, 60, 0, 0]
     assert state.timers[SWING_TIMER] > 0
 
 
 def test_far_teleport_second_half_warps_behind_the_player_with_vanillas_scan():
-    warp_state = {
+    marker = {
         "interrupt": "ActivateSpecialEffect",
         "speffects": [WARP_MARKER_SPEFFECT],
         "dist": 1,
     }
-    fired, q = react(**warp_state)
-    assert fired and q == [("ToTargetWarp", "enemy"), BURST]
-    fired, q = react(**warp_state, timers=SWING_COOLING)
-    assert fired and q == [("ToTargetWarp", "enemy")]
     # Vanilla's scan around the player (TARGET_ENE_0, not vanilla's event
     # target, which only served the fight's first teleport): every direction
-    # free gives its first branch (front check, behind-right, 0 m); only
-    # straight behind free gives 2 m behind.
-    g, ai, goal, _ = activate(warp_state)
-    g.GOALS[BATTLE_GOAL].Interrupt(None, ai, goal)
-    assert args_of(goal, 0) == [15, "enemy", "BR", 0, "enemy"]
+    # free gives its first branch (front check, behind-right, 0 m).
+    fired, goal, ai = react(**marker)
+    assert fired and queued(goal) == [WARP_BEHIND, BURST]
+    assert args_of(goal, 0) == warp_behind_args("BR", 0)
     assert set(ai.scanned.values()) == {"enemy"}
-    g, ai, goal, _ = activate({**warp_state, "mesh": {"B": 3}})
-    g.GOALS[BATTLE_GOAL].Interrupt(None, ai, goal)
-    assert args_of(goal, 0) == [15, "enemy", "B", 2, "enemy"]
+    fired, goal, _ = react(**marker, timers=SWING_COOLING)
+    assert fired and queued(goal) == [WARP_BEHIND]
+    # Only straight behind free: 2 m behind.
+    _, goal, _ = react(**marker, mesh={"B": 3})
+    assert args_of(goal, 0) == warp_behind_args("B", 2)
     # No room: as in vanilla, nothing is cleared and 3000 finishes on its own.
-    g, ai, goal, _ = activate({**warp_state, "mesh": 0})
-    assert g.GOALS[BATTLE_GOAL].Interrupt(None, ai, goal)
-    assert queued(goal) == [] and goal.cleared == 0
+    fired, goal, _ = react(**marker, mesh=0)
+    assert fired and queued(goal) == [] and goal.cleared == 0
 
 
 def test_retreat_act_adds_the_beam_only_when_ready():
-    goal, _ = act("Houzuki755890_Act05", dist=2)
+    goal, _, _ = act("Act05", dist=2)
     assert [s.kind for s in goal.subgoals.values()] == [
         "LeaveTarget",
         "ComboAttackTunableSpin",
     ]
-    goal, _ = act("Houzuki755890_Act05", dist=2, passed={BEAM_ANIM: 1})
+    goal, _, _ = act("Act05", dist=2, passed={BEAM_ANIM: 1})
     assert [s.kind for s in goal.subgoals.values()] == ["LeaveTarget"]
 
 
 def test_hit_reaction_prefers_the_retreat_then_the_burst():
-    fired, q = react(interrupt="Damaged", dist=1.5, random=1)
-    assert fired and q == [BURST, WARP, BEAM_ATTACK]
-    fired, q = react(interrupt="Damaged", dist=1.5, random=1, timers=TELEPORT_COOLING)
-    assert fired and q == [BURST]
+    hit = {"interrupt": "Damaged", "dist": 1.5, "random": 1}
+    fired, goal, _ = react(**hit)
+    assert fired and queued(goal) == [BURST, RETREAT, BEAM_ATTACK]
+    fired, goal, _ = react(**hit, timers=TELEPORT_COOLING)
+    assert fired and queued(goal) == [BURST]
     # No room to retreat: the burst alone.
-    fired, q = react(interrupt="Damaged", dist=1.5, random=1, mesh=0)
-    assert fired and q == [BURST]
+    fired, goal, _ = react(**hit, mesh=0)
+    assert fired and queued(goal) == [BURST]
     # No room and the swing cooling: nothing, and the running act is not cleared.
-    g, ai, goal, _ = activate(
-        {
-            "interrupt": "Damaged",
-            "dist": 1.5,
-            "random": 1,
-            "mesh": 0,
-            "timers": SWING_COOLING,
-        }
-    )
-    assert not g.GOALS[BATTLE_GOAL].Interrupt(None, ai, goal)
-    assert goal.cleared == 0
-    assert not react(
-        interrupt="Damaged",
-        dist=1.5,
-        random=1,
-        timers={**TELEPORT_COOLING, **SWING_COOLING},
-    )[0]
+    fired, goal, _ = react(**hit, mesh=0, timers=SWING_COOLING)
+    assert not fired and goal.cleared == 0
+    assert not react(**hit, timers={**TELEPORT_COOLING, **SWING_COOLING})[0]
     assert not react(interrupt="Damaged", dist=3, random=1)[0]
     assert not react(interrupt="Damaged", dist=1.5, random=100)[0]
 
 
 def test_no_reaction_while_a_teleport_or_a_grab_is_in_flight():
-    assert not react(
-        interrupt="Damaged", dist=1.5, random=1, timers=TELEPORT_IN_FLIGHT
-    )[0]
-    # The far variant: its longer timer, and vanilla's own 4 s teleporting marker.
-    assert not react(
-        interrupt="Damaged", dist=1.5, random=1, timers={TELEPORT_TIMER: 9}
-    )[0]
-    assert not react(
-        interrupt="Damaged", dist=1.5, random=1, speffects=[TELEPORTING_SPEFFECT]
-    )[0]
+    hit = {"interrupt": "Damaged", "dist": 1.5, "random": 1}
+    assert not react(**hit, timers=TELEPORT_HOLDING)[0]
+    assert not react(interrupt="Shoot", dist=8, random=1, timers=TELEPORT_HOLDING)[0]
     assert not react(interrupt="UseItem", dist=8, random=1, passed={GRAB_ANIM: 2})[0]
-    # Past the teleport hold the reactions are back even though the timer still runs.
-    assert react(interrupt="Damaged", dist=1.5, random=1, timers=TELEPORT_COOLING)[0]
+    # Past the hold the reactions are back even though the teleport timer still runs.
+    assert react(**hit, timers=TELEPORT_COOLING)[0]
 
 
 def test_ranged_reactions_draw_the_beam_only():
-    fired, q = react(interrupt="Shoot", dist=8, random=1)
-    assert fired and q == [BEAM_ATTACK]
+    fired, goal, _ = react(interrupt="Shoot", dist=8, random=1)
+    assert fired and queued(goal) == [BEAM_ATTACK]
     assert not react(interrupt="Shoot", dist=8, random=1, passed={BEAM_ANIM: 1})[0]
     assert not react(interrupt="Shoot", dist=3, random=1)[0]
-    fired, q = react(interrupt="UseItem", dist=8, random=1)
-    assert fired and q == [BEAM_ATTACK]
+    fired, goal, _ = react(interrupt="UseItem", dist=8, random=1)
+    assert fired and queued(goal) == [BEAM_ATTACK]
     assert not react(interrupt="UseItem", dist=3, random=1)[0]

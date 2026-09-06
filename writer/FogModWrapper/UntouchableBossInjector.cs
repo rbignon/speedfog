@@ -20,14 +20,11 @@ public static class UntouchableBossInjector
     // Initial values for the in-game tuning session (docs/untouchable-boss.md).
     public const uint BOSS_HP = 2000;
     public const uint BOSS_RUNES = 20000;
-    /// <summary>Hit reactions. NpcParam.toughness takes three values across the
-    /// 1.17 regulation (0 on 5512 rows, 20 on 41, 35 on 1492): 35 is the
-    /// humanoid class that flinches on ordinary hits (vanilla 52800086, the
-    /// regular Inquisitor c5311), 0 the boss class (Jori c5312, Godrick, every
-    /// boss checked) that does not, its stagger coming from the super armor
-    /// meter instead. With 35 the boss was interrupted by every hit even with a
-    /// 120 super armor (2026-09-05, fifth run). The meter itself follows Jori's
-    /// profile (superArmorDurability 80, recovery 0.23; vanilla 65 and 0).</summary>
+    /// <summary>Hit reactions. NpcParam.toughness is a class, not a meter (0 on
+    /// bosses, 35 on humanoids that flinch on ordinary hits; 1.17 census in
+    /// docs/untouchable-boss.md): with 35 every hit interrupted the boss
+    /// whatever its super armor. The stagger meter follows Jori's profile
+    /// (superArmorDurability 80, recovery 3/13; vanilla 65 and 0).</summary>
     public const uint BOSS_TOUGHNESS = 0;
     public const float BOSS_SUPER_ARMOR = 80f;
     public const float BOSS_SUPER_ARMOR_RECOVER = 0.23076923f; // Jori's exact value, 3/13
