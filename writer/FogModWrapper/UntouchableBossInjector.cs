@@ -20,11 +20,12 @@ public static class UntouchableBossInjector
     // Initial values for the in-game tuning session (docs/untouchable-boss.md).
     public const uint BOSS_HP = 2000;
     public const uint BOSS_RUNES = 20000;
-    /// <summary>Hit reactions. NpcParam.toughness is a class, not a meter (0 on
-    /// bosses, 35 on humanoids that flinch on ordinary hits; 1.17 census in
-    /// docs/untouchable-boss.md): with 35 every hit interrupted the boss
-    /// whatever its super armor. The stagger meter follows Jori's profile
-    /// (superArmorDurability 80, recovery 3/13; vanilla 65 and 0).</summary>
+    /// <summary>Hit reactions. The stagger meter follows Jori's profile
+    /// (superArmorDurability 80, recovery 3/13; vanilla 65 and 0) and
+    /// toughness is Jori's 0 (35 on vanilla 52800086). Neither keeps
+    /// ordinary hits from interrupting the boss (2026-09-05/06 runs): that
+    /// is the resident damage-level table, see
+    /// <see cref="NO_FLINCH_TEMPLATE_SPEFFECT"/>.</summary>
     public const uint BOSS_TOUGHNESS = 0;
     public const float BOSS_SUPER_ARMOR = 80f;
     public const float BOSS_SUPER_ARMOR_RECOVER = 0.23076923f; // Jori's exact value, 3/13
@@ -88,6 +89,15 @@ public static class UntouchableBossInjector
     /// cleared by that event on the first parry. Swapped for the partial cut
     /// row by <see cref="PatchWallEvents"/>.</summary>
     public const int VANILLA_WALL_SPEFFECT = 20011470;
+
+    /// <summary>Vanilla's boss damage-level table: a permanent SpEffect
+    /// (category 1001, priority 200) whose twelve <c>dmgLv_*</c> fields
+    /// replace every incoming damage level by None, resident in slot 1 of
+    /// Jori (53120000), Godrick, Margit and 690 NpcParam rows in all; the
+    /// vanilla immunity wall 20011470 carries the same table, which is why
+    /// an immune untouchable never flinches. Vanilla 52800086 has no such
+    /// row: whatever its super armor, every hit interrupted the boss.</summary>
+    public const int NO_FLINCH_TEMPLATE_SPEFFECT = 5300;
 
     /// <summary>NpcParam carries spEffectID0..31.</summary>
     private const int NPC_SPEFFECT_SLOTS = 32;
@@ -215,8 +225,51 @@ public static class UntouchableBossInjector
                 npcRow[$"spEffectID{i}"].Value = -1;
         }
 
+        // Hit reactions: vanilla's boss damage-level table, cloned out of
+        // the wall's category and made resident in the first free slot
+        // (slot 1 on 52800086, where 0 is the no-op row). Within a category
+        // the lower categoryPriority wins (paramdef description), so the
+        // partial wall and the parry-window effect (1001/0) outrank the
+        // table (1001/200): resident as vanilla's 5300, it would be evicted
+        // for good by the wall applied at spawn. Category 0 keeps it out of
+        // that contest; whether the engine honours a category-0 table is
+        // the in-game check (no vanilla table lives outside 1001). The
+        // super armor meter still staggers the boss (Godrick carries the
+        // same table). Skipped with a warning rather than failing the seed:
+        // the boss then flinches as before.
+        string noFlinch = "no no-flinch table";
+        int slot = FirstFreeSpEffectSlot(npcRow);
+        if (spEffect[NO_FLINCH_TEMPLATE_SPEFFECT] == null)
+            Console.WriteLine($"Untouchable boss: warning, SpEffect {NO_FLINCH_TEMPLATE_SPEFFECT} (boss damage-level table) not found, ordinary hits keep interrupting the boss");
+        else if (slot < 0)
+            Console.WriteLine("Untouchable boss: warning, no free spEffectID slot on the NpcParam clone, ordinary hits keep interrupting the boss");
+        else
+        {
+            var table = GameEditor.AddRow(
+                spEffect, SpeedFogIds.UntouchableNoFlinchSpEffectRow, NO_FLINCH_TEMPLATE_SPEFFECT);
+            table["spCategory"].Value = (ushort)0;
+            table["categoryPriority"].Value = (byte)0; // meaningless without a category; as the other category-0 rows
+            npcRow[$"spEffectID{slot}"].Value = SpeedFogIds.UntouchableNoFlinchSpEffectRow;
+            noFlinch = $"no-flinch table {SpeedFogIds.UntouchableNoFlinchSpEffectRow} in slot {slot}";
+        }
+
         Console.WriteLine(
-            $"Untouchable boss: NpcParam {SpeedFogIds.UntouchableBossNpcRow} (clone of {UNTOUCHABLE_VANILLA_NPC}, hp {BOSS_HP}, runes {BOSS_RUNES}, toughness {BOSS_TOUGHNESS}, super armor {BOSS_SUPER_ARMOR}/{BOSS_SUPER_ARMOR_RECOVER}, nerflantern slot scrubbed) + partial wall SpEffect {SpeedFogIds.UntouchableBossSpEffectRow} (cut {DAMAGE_CUT}) + broken SpEffect {SpeedFogIds.UntouchableBrokenSpEffectRow} (x{BROKEN_DAMAGE_TAKEN}), both applied by the copied wall event");
+            $"Untouchable boss: NpcParam {SpeedFogIds.UntouchableBossNpcRow} (clone of {UNTOUCHABLE_VANILLA_NPC}, hp {BOSS_HP}, runes {BOSS_RUNES}, toughness {BOSS_TOUGHNESS}, super armor {BOSS_SUPER_ARMOR}/{BOSS_SUPER_ARMOR_RECOVER}, nerflantern slot scrubbed, {noFlinch}) + partial wall SpEffect {SpeedFogIds.UntouchableBossSpEffectRow} (cut {DAMAGE_CUT}) + broken SpEffect {SpeedFogIds.UntouchableBrokenSpEffectRow} (x{BROKEN_DAMAGE_TAKEN}), both applied by the copied wall event");
+    }
+
+    /// <summary>Lowest spEffectIDn slot holding -1 or 0 (row 0 is the
+    /// engine's no-op effect, what vanilla rows carry in unused slots; the
+    /// same "&lt;= 0 is free" test as RandomizerCommon's
+    /// GameData.AddNpcSpEffect, which scans from slot 31 down, hence
+    /// nerflantern's slot 31), or -1 when all 32 are taken.</summary>
+    private static int FirstFreeSpEffectSlot(PARAM.Row npcRow)
+    {
+        for (int i = 0; i < NPC_SPEFFECT_SLOTS; i++)
+        {
+            if ((int)npcRow[$"spEffectID{i}"].Value <= 0)
+                return i;
+        }
+        return -1;
     }
 
     /// <summary>Writes the moveset rows: boss think row (own battle script),
