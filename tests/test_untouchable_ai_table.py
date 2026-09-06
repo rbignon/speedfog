@@ -380,9 +380,9 @@ def test_far_teleport_plays_vanilla_3000_and_holds_the_timer_longer():
 
 
 def test_teleport_variant_switches_at_the_far_range():
-    goal, _ = act("Houzuki755890_Act02", dist=4)
+    goal, _ = act("Houzuki755890_Act02", dist=5)
     assert queued(goal) == [FAR_WINDUP]
-    goal, _ = act("Houzuki755890_Act02", dist=3.9)
+    goal, _ = act("Houzuki755890_Act02", dist=4.9)
     assert queued(goal)[0] == BURST
 
 
@@ -431,20 +431,20 @@ def test_far_teleport_second_half_warps_behind_the_player_with_vanillas_scan():
         "dist": 1,
     }
     fired, q = react(**warp_state)
-    assert fired and q == [("ToTargetWarp", "event"), BURST]
+    assert fired and q == [("ToTargetWarp", "enemy"), BURST]
     fired, q = react(**warp_state, timers=SWING_COOLING)
-    assert fired and q == [("ToTargetWarp", "event")]
-    # Vanilla's scan: every direction free gives its first branch (front
-    # check, behind-right, 0 m); only straight behind free gives 2 m behind.
+    assert fired and q == [("ToTargetWarp", "enemy")]
+    # Vanilla's scan around the player (TARGET_ENE_0, not vanilla's event
+    # target, which only served the fight's first teleport): every direction
+    # free gives its first branch (front check, behind-right, 0 m); only
+    # straight behind free gives 2 m behind.
     g, ai, goal, _ = activate(warp_state)
     g.GOALS[BATTLE_GOAL].Interrupt(None, ai, goal)
-    assert args_of(goal, 0) == [15, "event", "BR", 0, "enemy"]
-    assert set(ai.scanned.values()) == {
-        "event"
-    }  # vanilla scans around the event target
+    assert args_of(goal, 0) == [15, "enemy", "BR", 0, "enemy"]
+    assert set(ai.scanned.values()) == {"enemy"}
     g, ai, goal, _ = activate({**warp_state, "mesh": {"B": 3}})
     g.GOALS[BATTLE_GOAL].Interrupt(None, ai, goal)
-    assert args_of(goal, 0) == [15, "event", "B", 2, "enemy"]
+    assert args_of(goal, 0) == [15, "enemy", "B", 2, "enemy"]
     # No room: as in vanilla, nothing is cleared and 3000 finishes on its own.
     g, ai, goal, _ = activate({**warp_state, "mesh": 0})
     assert g.GOALS[BATTLE_GOAL].Interrupt(None, ai, goal)

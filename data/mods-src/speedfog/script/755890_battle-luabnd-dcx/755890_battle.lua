@@ -5,7 +5,7 @@
 -- regular melee act (Act11), the dormant lantern ray (3004) re-enabled as a
 -- beam (Act04, at range and at mid range), the teleport (Act02: at melee
 -- range the lantern burst, a warp 8 m straight back and the beam; from
--- 4 m vanilla's 5 s animation 3000, the warp behind the player and the
+-- 5 m vanilla's 5 s animation 3000, the warp behind the player and the
 -- burst) offered at melee range and against a player in the back with
 -- its own cooldown, a
 -- beam after the post-grab retreats (Act05/Act06) and three reactions in
@@ -40,7 +40,7 @@ local GRAB_COOLDOWN = 6                 -- seconds between two grabs (3002); van
 local SWING_COOLDOWN = 8                -- seconds between two bursts (3001), any source (Act11, reaction, teleport wind-up); AI timer TIMER_SWING
 local TELEPORT_COOLDOWN = 6             -- seconds between two teleports (AI timer TIMER_TELEPORT, set when the act is queued)
 local TELEPORT_HOLD = 3.5               -- seconds after the near teleport act starts without any reaction (burst to its cancel window 1 s, arrival 1.2 to 2.2 s); the far variant adds TELEPORT_FAR_WINDUP to its timer
-local TELEPORT_FAR_RANGE = 4            -- from this distance the teleport is vanilla's (3000, then the warp behind the player and the burst); closer, the burst, a warp straight back and the beam
+local TELEPORT_FAR_RANGE = 5            -- from this distance (centre to centre; melee reach with a long weapon is 3-4 m) the teleport is vanilla's (3000, then the warp behind the player and the burst); closer, the burst, a warp straight back and the beam
 local TELEPORT_AWAY_DIST = 8            -- near variant: warp this far away from the player, relative to the boss itself (203100's five-argument TARGET_SELF blink at 7 m, 301010's retreats), scanned straight, then the two diagonals
 local TELEPORT_AWAY_FALLBACK = 5        -- near variant: second scan at this distance when nothing clears TELEPORT_AWAY_DIST (small arenas; Jori's retreats fall back too)
 local TELEPORT_BEAM = 1                 -- 1: the near variant's warp is followed by the beam when it is ready; 0: the boss just reappears at range
@@ -778,10 +778,20 @@ Goal.Interrupt = function (self, ai, goal)
             -- behind the player, then the burst when its timer allows
             -- (vanilla swung unconditionally). As in vanilla, nothing is
             -- cleared when there is no room and 3000 finishes on its own.
-            local directionFromTarget, distanceFromTarget = Houzuki755890_FindRoomBehind(ai, TARGET_EVENT)
+            -- SpeedFog scans and warps around TARGET_ENE_0 rather than
+            -- vanilla's TARGET_EVENT: with TARGET_EVENT only the fight's
+            -- first far teleport landed behind the player, every later one
+            -- reappeared where the boss stood (2026-09-06). TARGET_EVENT is
+            -- an event-designated target (EMEVD "Set Character Event
+            -- Target"; other vanilla scripts warp around it repeatedly and
+            -- 532000 guards it against sitting far from the player); what
+            -- designates it for this boss, and why it resolved to the
+            -- player once, is not established. TARGET_ENE_0 with the same
+            -- directions landed behind the player every time (sixth run).
+            local directionFromTarget, distanceFromTarget = Houzuki755890_FindRoomBehind(ai, TARGET_ENE_0)
             if directionFromTarget ~= nil then
                 goal:ClearSubGoal()
-                goal:AddSubGoal(GOAL_COMMON_ToTargetWarp, 15, TARGET_EVENT, directionFromTarget, distanceFromTarget, TARGET_ENE_0)
+                goal:AddSubGoal(GOAL_COMMON_ToTargetWarp, 15, TARGET_ENE_0, directionFromTarget, distanceFromTarget, TARGET_ENE_0)
                 if Houzuki755890_SwingReady(ai) then
                     Houzuki755890_AddSwing(ai, goal, true)
                 end
@@ -823,8 +833,8 @@ Goal.Interrupt = function (self, ai, goal)
     end
     if ai:IsInterupt(INTERUPT_Shoot) then
         -- A cast from range draws the beam: a cast comes from REACT_RANGE
-        -- or more, beyond TELEPORT_FAR_RANGE, where the teleport is the 5 s
-        -- far one, no answer to a cast; the beam is the point anyway.
+        -- or more, from TELEPORT_FAR_RANGE on, where the teleport is the
+        -- 5 s far one, no answer to a cast; the beam is the point anyway.
         if ai:GetDist(TARGET_ENE_0) >= REACT_RANGE and ai:GetRandam_Int(1, 100) <= REACT_SHOOT and Houzuki755890_BeamReady(ai) then
             goal:ClearSubGoal()
             Houzuki755890_AddBeam(ai, goal)

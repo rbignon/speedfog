@@ -324,7 +324,8 @@ interrupts are superseded by what follows.
 
 Acts: Act11 (swing 3001, vanilla's post-teleport surprise attack as a
 regular melee act), Act04 (beam 3004, `successDist` 999, at range and at
-mid range), Act02 (two teleports by distance, `TELEPORT_FAR_RANGE` 4 m:
+mid range), Act02 (two teleports by distance, `TELEPORT_FAR_RANGE` 5 m,
+centre to centre, melee reach with a long weapon being 3-4 m:
 near, Jori's structure from vanilla 531020, wind-up animation then
 `GOAL_COMMON_ToTargetWarp` then a follow-up, built from the untouchable's
 own moves, the lantern burst 3001 as the wind-up, its hit landing from the
@@ -336,7 +337,19 @@ Rennala's 7 m blink, and 301010's retreats), then the beam
 when it is ready, `TELEPORT_BEAM`: the boss bursts, retreats and fires;
 far, vanilla's own act, the 5 s teleport-out animation 3000 whose marker
 at 4.77 s triggers vanilla's interrupt, the warp behind the player and the
-burst when its timer allows. The near variant stays in the player's view
+burst when its timer allows; the interrupt scans and warps around
+`TARGET_ENE_0` rather than vanilla's `TARGET_EVENT`: with `TARGET_EVENT`
+only the fight's first far teleport landed behind the player and every
+later one reappeared where the boss stood (eighth run, 2026-09-06).
+`TARGET_EVENT` is an event-designated target (EMEVD "Set Character Event
+Target"; other vanilla scripts warp around it repeatedly, 462000, 536000,
+531000, and 532000 guards it against sitting far from the player), so it
+is not a once-valid slot; what designates it for this boss, and why it
+resolved to the player once, is not established. `TARGET_ENE_0` with the
+same directions landed behind the player every time (sixth run). Note
+that Act46 parks the boss at 4 m, inside the near band, so a teleport
+picked after a strafe is the near one and its burst mostly whiffs at that
+range: a retreat and a beam. The near variant stays in the player's view
 on purpose: lock-on cannot be broken from the AI (no SpEffect field does
 it, and the three marker SpEffects of 3000 carry nothing of the kind), so
 a warp behind the player only turned the camera; whatever the 5 s vanilla
@@ -549,8 +562,13 @@ animation, good pacing with the lower cooldowns, and still a boss
 interrupted by every hit with super armor 120 (the toughness class, see
 the clone), then (sixth run) the burst wind-up reads well but the warp
 behind the player is defeated by lock-on (the player turns at once) and
-the first, far teleport had lost its 5 s animation; the two-variant
-teleport and the toughness change await their own run (steps 7 to 9).
+the first, far teleport had lost its 5 s animation, then (seventh run) a
+warp "8 m in front of the player" with the plain directions left the boss
+where it stood, then (eighth run, 2026-09-06) the far variant played at
+melee reach (threshold 4 m) and every far teleport after the first
+reappeared at range (`TARGET_EVENT`); the self-relative retreat under 5 m,
+the `TARGET_ENE_0` far warp and the toughness change await their own run
+(steps 7 to 9).
 
 1. **Goal resolution**: knobs temporarily at `SWING_MID = 100`,
    `SWING_CLOSE = 100`, the three `BEAM_*` and the two `TELEPORT_*` at 0
@@ -603,14 +621,16 @@ teleport and the toughness change await their own run (steps 7 to 9).
    once per fight. The fourth run showed teleports at melee range (the
    gate was the limit); the teleport now runs on an AI timer and no
    longer plays 3000, so the 3000 counter is out of the picture.
-7. **Teleports and beams**: under 4 m (melee range while the grab and the
+7. **Teleports and beams**: under 5 m (melee range while the grab and the
    swing cool, the player in its back), the boss bursts its lantern on the
    spot (the hit lands if the player is close), vanishes about 1 s into
-   the burst, reappears 8 m away from the player (5 m in a small arena;
-   straight ahead when the player was in its back) with its
-   arrival animation and fires the beam when it is ready; from 4 m,
+   the burst with no 5 s fade, reappears 8 m away from the player (5 m in
+   a small arena; straight ahead when the player was in its back) with
+   its arrival animation and fires the beam when it is ready; from 5 m,
    vanilla's teleport: the 5 s lantern fade, then the warp behind the
-   player and the burst. Never two teleports within
+   player and the burst, every time and not only the first (eighth run:
+   the later ones reappeared at range with vanilla's `TARGET_EVENT`).
+   Never two teleports within
    `TELEPORT_COOLDOWN` (11 s after a far one). At 3-10 m it sometimes fires
    the beam; after a grab it retreats and fires the beam from the retreat
    distance. A cast from 5 m or more draws the beam when it is ready. If the boss finishes the whole 1.8 s burst before vanishing,
