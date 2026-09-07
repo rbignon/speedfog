@@ -289,17 +289,39 @@ only knows the vanilla names, so the script assigns
 `GOAL_Houzuki755890_AfterAttackAct` (755891, any unused id) itself.
 Every knob is a file-scope local at the top of the script, captured as
 an upvalue by the functions below; a nil arithmetic error on the first
-activation points there.
+activation points there. The goal model, the act table, the attack and
+movement goals and the `ai:` queries the script relies on are described
+in `docs/ai-scripts.md`.
 
 ### Acts and probabilities
 
-Act11 (burst 3001, reach 4 m), Act04 (beam 3004, `successDist` 999),
-Act02 (the teleport, two shapes below), Act05/Act06 (vanilla's post-grab
-retreats to 10/8 m, followed by a beam when it is ready), and vanilla's
-movement acts Act42 (sidestep) and Act46 (close to 4 m, then strafe),
-given a weight so no bracket sums to zero while the attacks cool. The
-vanilla act of each bracket keeps the remainder; the teleport weight
-counts only while the teleport is ready:
+Every act of the script (the vanilla ones are kept as decompiled, even
+those no bracket ever weights). Distances are `successDist` or
+`stopDist` values in metres, turns are `turnTime` / `turnFaceAngle`
+(see `docs/ai-scripts.md`):
+
+| Act | Origin | What it queues | Weighted in |
+|-----|--------|----------------|-------------|
+| Act01 | vanilla | approach (`Approach_Act_Flex`, stop 0.5 m, always running) then animation 2100 (life 0.1 s, reach 5 m) | player behind and >= 8 m while the teleport cools (100), player behind < 8 m (10 or 20), >= 10 m while the teleport cools (50) |
+| Act02 | SpeedFog (vanilla's teleport act rewritten) | under `TELEPORT_FAR_RANGE`: the burst 3001 as wind-up, `ToTargetWarp` away from the player, the beam if ready; from it: vanilla's 3000 with the 20011452 watch, whose interrupt warps behind the player and bursts | every bracket but the retreats, only while the teleport timer is at 0 |
+| Act03 | vanilla, grab through the shared builder | approach (stop 12 m, so never queued in the brackets that weight it) then the grab 3002 (reach 12 m, turn 2 s / 50 degrees, life 8 s) with the 5030 watch that chains the throw 3003 | 3-10 m and < 3 m (the remainder of the bracket) |
+| Act04 | SpeedFog | the beam 3004 (reach 999, turn 1.5 s / 60 degrees, life 3 s) | >= 10 m (40 or 50), 3-10 m (10) |
+| Act05 | vanilla, beam added | clears the queue, `LeaveTarget` to 10 m (life 5 s), then the beam if ready | post-grab retreat, SpEffect 5031 (100) |
+| Act06 | vanilla, beam added | clears the queue, `LeaveTarget` to 8 m (life 4 s), then the beam if ready | post-grab retreat, SpEffect 5032 (100) |
+| Act07 to Act10 | vanilla | nothing (empty acts) | never |
+| Act11 | SpeedFog | approach (stop 3 m, running) then the burst 3001 (reach 4 m, turn 1.5 s / 60 degrees, life 8 s) and the swing timer | 3-10 m (10), < 3 m (15), only while the swing timer is at 0 |
+| Act40 | vanilla | `ApproachTarget` to 0.1 m, walking, life 1-3 s | never |
+| Act41 | vanilla | `LeaveTarget` to 10 m, walking, life 1-3 s | never |
+| Act42 | vanilla | `SidewayMove` to the right, walking, life 0.8-1.5 s | < 3 m (20) |
+| Act43 | vanilla | `Turn` toward the player, stop width 90 degrees, life 2 s | player behind < 8 m (80, or 40 while the teleport is ready) |
+| Act44 | vanilla | `StepSafety` away from the player's side (in front: a step back or sideways; on the right: left; on the left: right), life 5 s | never |
+| Act45 | vanilla | `StepSafety` to either side or the right only (a draw), life 5 s | never |
+| Act46 | vanilla | `ApproachTarget` to 4 m (or `LeaveTarget` when closer), walking, life 10 s, then `SidewayMove` to a random side for 0.1-2 s | 3-10 m (15) |
+| Act47 | vanilla | an encircling routine keyed on `TORIMAKI_MIN_DIST` / `TORIMAKI_MAX_DIST` and `TARGET_ENE0`, none of which is defined (a nil comparison or a nil target if it ever ran; `resultTypeIfGuardSuccess` is a fourth undefined global, a harmless trailing nil) | never |
+| ActAfter_AdjustSpace | vanilla | the empty after-attack goal `GOAL_Houzuki755890_AfterAttackAct` (life 10 s); runs only when an act returns odds above 0, which none does | never |
+
+Weights per bracket; the vanilla act of each bracket keeps the
+remainder, the teleport weight counts only while the teleport is ready:
 
 | Situation | Vanilla | Boss |
 |-----------|---------|------|
@@ -342,7 +364,8 @@ on purpose: lock-on cannot be broken from the AI, so a warp behind the
 player would only turn the camera.
 
 **Far** (5 m and more), vanilla's own act: the 5 s teleport-out animation
-3000, whose marker (SpEffect 20011452 at 4.77 s) triggers vanilla's
+3000 (queued with vanilla's own `successDist` expression, `5 - hit
+radius + 999`, effectively always), whose marker (SpEffect 20011452 at 4.77 s) triggers vanilla's
 interrupt, kept but for two changes: the scan
 (`Houzuki755890_FindRoomBehind`: in front, then behind right/left at 0 or
 2 m, then behind at 2 m) and the warp go around `TARGET_ENE_0` rather
@@ -521,9 +544,11 @@ on; each is a constraint for any change.
   cooldown. Ambient untouchables keep that gate.
 - **Warp semantics.** Retreats warp relative to the boss
   (`ToTargetWarp(15, TARGET_SELF, dir, dist, TARGET_ENE_0)`); positions
-  around the player use the `To*` directions (301010's blinks). The plain directions with
-  the enemy target read differently from one vanilla script to the next
-  and leave the boss where it stands. `TARGET_EVENT` is an
+  around the player use the `To*` directions (301010's blinks) or
+  vanilla's own form, `B`/`BL`/`BR` at 0-2 m with the enemy target,
+  which lands behind the player. A plain `F` at 8 m with the enemy
+  target ("in front of the player") left the boss where it stood.
+  `TARGET_EVENT` is an
   EMEVD-designated target: it resolves to the player once per fight
   here and reappears the boss where it stood afterwards; warp around
   `TARGET_ENE_0`. Lock-on cannot be broken from the AI (no SpEffect
