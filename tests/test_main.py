@@ -170,6 +170,9 @@ def fake_build(monkeypatch):
     monkeypatch.setattr(main_module, "run_fogmodwrapper", fake_run_fogmodwrapper)
     monkeypatch.setattr(main_module, "run_item_randomizer", fake_run_item_randomizer)
     monkeypatch.setattr(main_module, "package_seed", fake_package_seed)
+    # The static mod freshness check reads the real data/ tree; keep the
+    # build tests independent of this machine's bootstrap state.
+    monkeypatch.setattr(main_module, "stale_static_mod_scripts", lambda root: [])
     return fake_run_fogmodwrapper, calls
 
 
@@ -275,3 +278,34 @@ def test_main_build_failure_returns_1(tmp_path, monkeypatch, fake_build, capsys)
     seed_dir = calls["fogmod"][0]["seed_dir"]
     assert (seed_dir / "graph.json").exists()
     assert calls["package"] == []
+
+
+def test_main_build_refuses_a_stale_static_mod_script(
+    tmp_path, monkeypatch, fake_build, capsys
+):
+    _real_clusters_or_skip()
+    _, calls = fake_build
+    monkeypatch.setattr(
+        main_module,
+        "stale_static_mod_scripts",
+        lambda root: [
+            "data/mods/speedfog/script/755890_battle.luabnd.dcx is older than its source"
+        ],
+    )
+    game_dir = tmp_path / "Game"
+    game_dir.mkdir()
+    out_dir = tmp_path / "out"
+
+    # Default config: the item randomizer is enabled and would run first.
+    rc = _run_main(
+        monkeypatch, "--seed", "0", "-o", str(out_dir), "--game-dir", str(game_dir)
+    )
+
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "755890_battle.luabnd.dcx is older than its source" in err
+    assert "bootstrap" in err
+    # Refused before any writer ran (no Wine minute on a stale script) and
+    # before the seed directory existed.
+    assert calls["itemrando"] == [] and calls["fogmod"] == [] and calls["package"] == []
+    assert not out_dir.exists()

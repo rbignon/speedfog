@@ -10,6 +10,48 @@ class PackagingError(RuntimeError):
     """Raised when bootstrap-managed packaging assets are missing."""
 
 
+STATIC_MOD_SCRIPT_SUFFIX = "-luabnd-dcx"
+
+
+def stale_static_mod_scripts(project_root: Path) -> list[str]:
+    """Built static mod scripts that are missing or older than their source.
+
+    tools/bootstrap.py repacks every WitchyBND-unpacked directory
+    data/mods-src/speedfog/script/<name>-luabnd-dcx/ (the one with a
+    _witchy-bnd4.xml manifest) into data/mods/speedfog/script/<name>.luabnd.dcx,
+    and a seed ships the built file: a script edited after the last
+    bootstrap would run stale in game with nothing to show for it. One
+    message per such script, relative to project_root. Nothing to compare
+    when data/mods/speedfog/ does not exist (bootstrap never run:
+    package_seed notes that case and builds the seed without it) or when
+    there is no source to repack.
+    """
+    static_mod = project_root / "data" / "mods" / "speedfog"
+    script_src = project_root / "data" / "mods-src" / "speedfog" / "script"
+    if not static_mod.is_dir() or not script_src.is_dir():
+        return []
+    problems: list[str] = []
+    for source in sorted(script_src.iterdir()):
+        if (
+            not source.is_dir()
+            or not source.name.endswith(STATIC_MOD_SCRIPT_SUFFIX)
+            or not (source / "_witchy-bnd4.xml").is_file()
+        ):
+            continue
+        name = source.name[: -len(STATIC_MOD_SCRIPT_SUFFIX)] + ".luabnd.dcx"
+        built = static_mod / "script" / name
+        source_mtime = max(
+            path.stat().st_mtime for path in source.rglob("*") if path.is_file()
+        )
+        rel_built = built.relative_to(project_root).as_posix()
+        rel_source = source.relative_to(project_root).as_posix()
+        if not built.is_file():
+            problems.append(f"{rel_built} not built from {rel_source}/")
+        elif built.stat().st_mtime < source_mtime:
+            problems.append(f"{rel_built} is older than its source {rel_source}/")
+    return problems
+
+
 def write_modengine_config(
     output_dir: Path,
     *,

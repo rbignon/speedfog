@@ -9,6 +9,21 @@ Layout: one WitchyBND-unpacked directory per archive under `speedfog/`, e.g.
 `_witchy-bnd4.xml` manifest. Bootstrap repacks each such directory into the
 corresponding `.dcx` under `data/mods/speedfog/`.
 
+A seed ships the built `.dcx`, so a source edited after the last bootstrap
+would run stale in game with nothing to show for it: `uv run speedfog`
+refuses to build a seed while a built script is missing or older than any
+file of its source directory (`speedfog.packaging.stale_static_mod_scripts`),
+and names the bootstrap step to rerun. The repack alone, without the rest
+of the bootstrap:
+
+```bash
+uv run python -c "import sys; sys.path.insert(0, 'tools'); import bootstrap; sys.exit(0 if bootstrap.build_static_mod_scripts() else 1)"
+```
+
+The check compares modification times, so a `git checkout` or `stash pop`
+that rewrites a source file trips it even when the content is unchanged;
+one repack clears it.
+
 Current content:
 
 - `speedfog/script/755890_battle-luabnd-dcx/`: the Aging Untouchable boss

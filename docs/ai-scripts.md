@@ -264,7 +264,10 @@ vanilla passes (`0, TARGET_SELF, TARGET_ENE_0, AI_DIR_TYPE_F, 30, 180,
   `turnTime`...). The aicommon bundle decompiles the same way.
 - Ship plain-text Lua in the WitchyBND-unpacked layout under
   `data/mods-src/speedfog/script/<id>_battle-luabnd-dcx/`;
-  `tools/bootstrap.py` repacks it (`data/mods-src/README.md`). The engine
+  `tools/bootstrap.py` repacks it (`data/mods-src/README.md`, which also
+  gives the repack alone). A seed ships the built luabnd, so `uv run
+  speedfog` refuses to build one while that file is older than its
+  source. The engine
   compiles Lua 5.0: `tests/test_mods_src_lua_scripts.py` rejects the
   syntax added since (`#`, `%`, `//`, the bitwise operators, `goto` and
   labels); library additions (`select`, newer `string` functions) are

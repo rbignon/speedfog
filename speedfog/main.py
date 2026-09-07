@@ -48,7 +48,7 @@ from speedfog.item_randomizer import (
     generate_item_config,
     run_item_randomizer,
 )
-from speedfog.packaging import PackagingError, package_seed
+from speedfog.packaging import PackagingError, package_seed, stale_static_mod_scripts
 from speedfog.spoiler import append_boss_placements_to_spoiler, export_spoiler_log
 from speedfog.tarnished import build_class_loadout, build_torrent_skins, tarnished_rng
 from speedfog.validator import validate_exclusions
@@ -209,6 +209,22 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
     # Find clusters.json in data/ relative to project root
     project_root = Path(__file__).parent.parent
     clusters_path = project_root / "data" / "clusters.json"
+
+    # A static mod script edited after the last bootstrap would ship stale
+    # (the seed copies the built luabnd, FogModWrapper only checks that it
+    # exists): refuse before any writer runs or the seed directory exists.
+    if not args.no_build:
+        stale_scripts = stale_static_mod_scripts(project_root)
+        if stale_scripts:
+            for problem in stale_scripts:
+                print(f"Error: {problem}", file=sys.stderr)
+            print(
+                "Error: the static mod scripts are stale; rerun tools/bootstrap.py,"
+                " or the repack alone (data/mods-src/README.md), before generating"
+                " seeds",
+                file=sys.stderr,
+            )
+            return 1
 
     # Load clusters
     try:

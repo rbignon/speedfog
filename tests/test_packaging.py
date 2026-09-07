@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -8,6 +9,7 @@ from speedfog.packaging import (
     PackagingError,
     copy_packaging_assets,
     package_seed,
+    stale_static_mod_scripts,
     write_modengine_config,
 )
 
@@ -283,3 +285,87 @@ def test_write_modengine_config_lists_halloween_overlay_after_speedfog(
         < content.index('name = "speedfog-halloween"')
         < content.index('name = "fogmod"')
     )
+
+
+def _make_script_source(root: Path, name: str, mtime: float) -> Path:
+    source = root / "data" / "mods-src" / "speedfog" / "script" / f"{name}-luabnd-dcx"
+    source.mkdir(parents=True)
+    for file in (f"{name}.lua", "_witchy-bnd4.xml"):
+        (source / file).write_text(file, encoding="utf-8")
+        os.utime(source / file, (mtime, mtime))
+    return source
+
+
+def _make_built_script(root: Path, name: str, mtime: float) -> Path:
+    built = root / "data" / "mods" / "speedfog" / "script" / f"{name}.luabnd.dcx"
+    built.parent.mkdir(parents=True)
+    built.write_text("bnd", encoding="utf-8")
+    os.utime(built, (mtime, mtime))
+    return built
+
+
+def test_stale_static_mod_scripts_flags_a_build_older_than_its_source(
+    tmp_path: Path,
+) -> None:
+    _make_script_source(tmp_path, "755890_battle", mtime=2_000)
+    _make_built_script(tmp_path, "755890_battle", mtime=1_000)
+
+    problems = stale_static_mod_scripts(tmp_path)
+
+    assert len(problems) == 1
+    assert "755890_battle.luabnd.dcx" in problems[0]
+    assert "older" in problems[0]
+
+
+def test_stale_static_mod_scripts_flags_a_missing_build(tmp_path: Path) -> None:
+    _make_script_source(tmp_path, "755890_battle", mtime=2_000)
+    (tmp_path / "data" / "mods" / "speedfog").mkdir(parents=True)
+
+    problems = stale_static_mod_scripts(tmp_path)
+
+    assert len(problems) == 1
+    assert "755890_battle.luabnd.dcx" in problems[0]
+    assert "not built" in problems[0]
+
+
+def test_stale_static_mod_scripts_accepts_a_fresh_build(tmp_path: Path) -> None:
+    _make_script_source(tmp_path, "755890_battle", mtime=1_000)
+    _make_built_script(tmp_path, "755890_battle", mtime=2_000)
+
+    assert stale_static_mod_scripts(tmp_path) == []
+
+
+def test_stale_static_mod_scripts_reads_the_newest_source_file(tmp_path: Path) -> None:
+    # An edited script next to an untouched manifest is a stale build.
+    source = _make_script_source(tmp_path, "755890_battle", mtime=1_000)
+    os.utime(source / "755890_battle.lua", (3_000, 3_000))
+    _make_built_script(tmp_path, "755890_battle", mtime=2_000)
+
+    assert len(stale_static_mod_scripts(tmp_path)) == 1
+
+
+def test_stale_static_mod_scripts_ignores_a_project_without_the_static_mod(
+    tmp_path: Path,
+) -> None:
+    # bootstrap not run at all: the seed is built without static patches
+    # (package_seed's note), nothing to compare.
+    _make_script_source(tmp_path, "755890_battle", mtime=2_000)
+
+    assert stale_static_mod_scripts(tmp_path) == []
+
+
+def test_stale_static_mod_scripts_needs_the_manifest_like_bootstrap(
+    tmp_path: Path,
+) -> None:
+    # A directory without _witchy-bnd4.xml is not a source for bootstrap either.
+    source = _make_script_source(tmp_path, "755890_battle", mtime=2_000)
+    (source / "_witchy-bnd4.xml").unlink()
+    (tmp_path / "data" / "mods" / "speedfog").mkdir(parents=True)
+
+    assert stale_static_mod_scripts(tmp_path) == []
+
+
+def test_stale_static_mod_scripts_with_no_source_directory(tmp_path: Path) -> None:
+    _make_built_script(tmp_path, "755890_battle", mtime=1_000)
+
+    assert stale_static_mod_scripts(tmp_path) == []
