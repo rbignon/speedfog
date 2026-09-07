@@ -65,10 +65,26 @@ local REACT_RANGE = 5
 local TELEPORT_HOLD = BURST_CANCEL + ARRIVAL_MAX + 0.3                     -- near: 3.5 s
 local TELEPORT_FAR_HOLD = MARKER_3000 + ARRIVAL_MAX + BURST_LENGTH + 0.23  -- far: 9 s
 local REACT_HOLD = GRAB_CHAIN + 1                                          -- seconds after a grab (3002) starts
--- AI timer slots (vanilla 528000 uses none; the shared logic scripts use 13-15).
+-- AI timer slots (vanilla 528000 uses none; the shared library uses 12-15).
 local TIMER_TELEPORT = 10
 local TIMER_SWING = 11
 local TIMER_HOLD = 9
+-- Vanilla ids, named for reading; the values are c5280's and the engine's.
+-- Each file-scope local read by a function is one of its upvalues, and
+-- Lua 5.0 allows 32 per function (tests/test_mods_src_lua_scripts.py
+-- counts them).
+local ANIM_TELEPORT_OUT = 3000          -- the 5 s lantern fade of the far teleport, warp marker at MARKER_3000
+local ANIM_LANTERN_BURST = 3001         -- the burst around the lantern: swing, teleport wind-up, hit reaction
+local ANIM_GRAB = 3002                  -- the grab attempt
+local ANIM_THROW = 3003                 -- the throw that follows a connected grab
+local ANIM_BEAM = 3004                  -- the raised lantern whose bullet events fire the beam
+local ANIM_APPROACH_END = 2100          -- vanilla Act01's follow-up after the approach (role inferred)
+local SPEFFECT_GRAB_CONNECT = 5030      -- applied when the grab connects; watched, chains the throw
+local SPEFFECT_RETREAT_10M = 5031       -- vanilla's post-grab marker: retreat to 10 m (Act05)
+local SPEFFECT_RETREAT_8M = 5032        -- vanilla's post-grab marker: retreat to 8 m (Act06)
+local SPEFFECT_WARP_MARKER = 20011452   -- applied at MARKER_3000 of ANIM_TELEPORT_OUT; watched, triggers the warp
+local SPEFFECT_NO_INTERRUPT = 5110      -- vanilla: no interrupt is handled while it is active (role inferred)
+local GUARD_EZSTATE = 9910              -- the guard state the vanilla acts pass with a 0 % draw
 
 -- Availability. The grab and the beam are engine counters registered by
 -- SetCoolTime (the vanilla helper; a counter never registered reads 0, so
@@ -81,7 +97,7 @@ function Houzuki755890_SwingReady(ai)
 end
 
 function Houzuki755890_BeamReady(ai, goal)
-    return SetCoolTime(ai, goal, 3004, BEAM_COOLDOWN, 100, 0) > 0
+    return SetCoolTime(ai, goal, ANIM_BEAM, BEAM_COOLDOWN, 100, 0) > 0
 end
 
 function Houzuki755890_TeleportReady(ai)
@@ -89,7 +105,7 @@ function Houzuki755890_TeleportReady(ai)
 end
 
 function Houzuki755890_SequenceInFlight(ai)
-    return ai:GetTimer(TIMER_HOLD) > 0 or ai:GetAttackPassedTime(3002) <= REACT_HOLD
+    return ai:GetTimer(TIMER_HOLD) > 0 or ai:GetAttackPassedTime(ANIM_GRAB) <= REACT_HOLD
 end
 
 -- Vanilla's post-3000 scan around the player (in front, then behind
@@ -149,21 +165,21 @@ end
 function Houzuki755890_AddSwing(ai, goal, immediate)
     ai:SetTimer(TIMER_SWING, SWING_COOLDOWN)
     if immediate then
-        goal:AddSubGoal(GOAL_COMMON_ComboTunable_SuccessAngle180, 8, 3001, TARGET_ENE_0, 999, 0, 180, 180, 180)
+        goal:AddSubGoal(GOAL_COMMON_ComboTunable_SuccessAngle180, 8, ANIM_LANTERN_BURST, TARGET_ENE_0, 999, 0, 180, 180, 180)
     else
-        goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, 8, 3001, TARGET_ENE_0, 4, 1.5, 60, 0, 0)
+        goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, 8, ANIM_LANTERN_BURST, TARGET_ENE_0, 4, 1.5, 60, 0, 0)
     end
 end
 
 -- The grab (3002) with vanilla Act03's parameters; the 5030 observation
 -- lets the interrupt chain 3003 when the grab connects.
 function Houzuki755890_AddGrab(ai, goal)
-    ai:AddObserveSpecialEffectAttribute(TARGET_SELF, 5030)
-    goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, 8, 3002, TARGET_ENE_0, 12, 2, 50, 0, 0)
+    ai:AddObserveSpecialEffectAttribute(TARGET_SELF, SPEFFECT_GRAB_CONNECT)
+    goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, 8, ANIM_GRAB, TARGET_ENE_0, 12, 2, 50, 0, 0)
 end
 
 function Houzuki755890_AddBeam(ai, goal)
-    goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, 3, 3004, TARGET_ENE_0, 999, 1.5, 60, 0, 0)
+    goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, 3, ANIM_BEAM, TARGET_ENE_0, 999, 1.5, 60, 0, 0)
 end
 
 function Houzuki755890_AddBeamIfReady(ai, goal)
@@ -208,9 +224,9 @@ end
 function Houzuki755890_AddTeleportFar(ai, goal)
     ai:SetTimer(TIMER_TELEPORT, TELEPORT_FAR_COOLDOWN)
     ai:SetTimer(TIMER_HOLD, TELEPORT_FAR_HOLD)
-    local successDist = 5 - ai:GetMapHitRadius(TARGET_SELF) + 999
-    ai:AddObserveSpecialEffectAttribute(TARGET_SELF, 20011452)
-    goal:AddSubGoal(GOAL_COMMON_ComboTunable_SuccessAngle180, 10, 3000, TARGET_ENE_0, successDist, 0, 0, 0, 0)
+    local successDist = 5 - ai:GetMapHitRadius(TARGET_SELF) + 999   -- vanilla's expression, effectively always
+    ai:AddObserveSpecialEffectAttribute(TARGET_SELF, SPEFFECT_WARP_MARKER)
+    goal:AddSubGoal(GOAL_COMMON_ComboTunable_SuccessAngle180, 10, ANIM_TELEPORT_OUT, TARGET_ENE_0, successDist, 0, 0, 0, 0)
 end
 
 -- The beam as a ranged reaction (a cast or a flask from REACT_RANGE)
@@ -225,7 +241,7 @@ function Houzuki755890_ReactBeam(ai, goal, chance)
 end
 
 Goal.Initialize = function (self, ai, goal, battleActivatedCount)
-    ai:EnableUnfavorableAttackCheck(0, 3002)
+    ai:EnableUnfavorableAttackCheck(0, ANIM_GRAB)
 end
 
 Goal.Activate = function (self, ai, goal)
@@ -242,6 +258,7 @@ Goal.Activate = function (self, ai, goal)
     local teleportReady = Houzuki755890_TeleportReady(ai)
     local teleportMid = teleportReady and TELEPORT_MID or 0
     local teleportClose = teleportReady and TELEPORT_CLOSE or 0
+    -- Vanilla's area watch, arguments as decompiled; its interrupt is not handled here.
     local f2_local6 = 0
     local f2_local7 = TARGET_SELF
     local f2_local8 = TARGET_ENE_0
@@ -270,7 +287,7 @@ Goal.Activate = function (self, ai, goal)
             probabilities[2] = 0
             probabilities[43] = 80
         end
-    elseif ai:HasSpecialEffectId(TARGET_SELF, 5031) then
+    elseif ai:HasSpecialEffectId(TARGET_SELF, SPEFFECT_RETREAT_10M) then
         probabilities[1] = 0
         probabilities[2] = 0
         probabilities[3] = 0
@@ -282,7 +299,7 @@ Goal.Activate = function (self, ai, goal)
         probabilities[43] = 0
         probabilities[44] = 0
         probabilities[45] = 0
-    elseif ai:HasSpecialEffectId(TARGET_SELF, 5032) then
+    elseif ai:HasSpecialEffectId(TARGET_SELF, SPEFFECT_RETREAT_8M) then
         probabilities[1] = 0
         probabilities[2] = 0
         probabilities[3] = 0
@@ -351,8 +368,8 @@ Goal.Activate = function (self, ai, goal)
     -- bracket keeps a movement filler, so 0: a cooling attack picked with
     -- weight 1 is held by the engine until its interval expires, up to the
     -- act's goal life, which reads as the boss freezing in place.
-    probabilities[3] = SetCoolTime(ai, goal, 3002, GRAB_COOLDOWN, probabilities[3], 0)
-    probabilities[4] = SetCoolTime(ai, goal, 3004, BEAM_COOLDOWN, probabilities[4], 0)
+    probabilities[3] = SetCoolTime(ai, goal, ANIM_GRAB, GRAB_COOLDOWN, probabilities[3], 0)
+    probabilities[4] = SetCoolTime(ai, goal, ANIM_BEAM, BEAM_COOLDOWN, probabilities[4], 0)
     -- The swing's and the teleport's cooldowns are AI timers read through
     -- the *Ready helpers (the swing here, the teleport inside the
     -- teleportMid and teleportClose weights above).
@@ -380,10 +397,14 @@ Goal.Activate = function (self, ai, goal)
     acts[47] = REGIST_FUNC(ai, goal, Houzuki755890_Act47)
     local actAfter = REGIST_FUNC(ai, goal, Houzuki755890_ActAfter_AdjustSpace)
     Common_Battle_Activate(ai, goal, probabilities, acts, actAfter, paramTbls)
-    ai:AddObserveSpecialEffectAttribute(TARGET_SELF, 5031)
-    ai:AddObserveSpecialEffectAttribute(TARGET_SELF, 5032)
+    ai:AddObserveSpecialEffectAttribute(TARGET_SELF, SPEFFECT_RETREAT_10M)
+    ai:AddObserveSpecialEffectAttribute(TARGET_SELF, SPEFFECT_RETREAT_8M)
 end
 
+-- Vanilla, untouched: run up to 0.5 m, then ANIM_APPROACH_END (life 0.1 s,
+-- reach 5 m). Offered when the player is behind: at 8 m or more while the
+-- teleport cools (100), under 8 m always (10 with the teleport ready, 20
+-- while it cools); and from 10 m while the teleport cools (50).
 function Houzuki755890_Act01(ai, goal, paramTbl)
     local distanceEnemy = ai:GetDist(TARGET_ENE_0)
     local stopDist = 0.5
@@ -395,7 +416,7 @@ function Houzuki755890_Act01(ai, goal, paramTbl)
     local runLife = 5
     Approach_Act_Flex(ai, goal, stopDist, canRunDist, forceRunMinDist, runProbability, guardProbability, walkLife, runLife)
     local goalLife = 0.1
-    local animationId = 2100
+    local animationId = ANIM_APPROACH_END
     local target = TARGET_ENE_0
     local successDist = 5
     local turnTime = 1.5
@@ -419,6 +440,9 @@ function Houzuki755890_Act02(ai, goal, paramTbl)
     return GetWellSpace_Odds
 end
 
+-- Vanilla act, grab through the shared builder: the approach is queued
+-- from 12 m only, never in the two melee brackets that offer the act;
+-- the grab, then the throw through the SPEFFECT_GRAB_CONNECT watch.
 function Houzuki755890_Act03(ai, goal, paramTbl)
     local distanceEnemy = ai:GetDist(TARGET_ENE_0)
     local stopDist = 12
@@ -444,14 +468,11 @@ function Houzuki755890_Act04(ai, goal, paramTbl)
     return GetWellSpace_Odds
 end
 
+-- Vanilla: after a grab, SPEFFECT_RETREAT_10M sends the boss back to
+-- 10 m (queue cleared first); SpeedFog adds the beam.
 function Houzuki755890_Act05(ai, goal, paramTbl)
     local goalLife = 5
     local moveTarget = TARGET_ENE_0
-    local f7_local2 = 999
-    local f7_local3 = 1.5
-    local f7_local4 = 60
-    local f7_local5 = 0
-    local f7_local6 = 0
     local turnTarget = TARGET_ENE_0
     goal:ClearSubGoal()
     goal:AddSubGoal(GOAL_COMMON_LeaveTarget, goalLife, moveTarget, 10, turnTarget, true, 0)
@@ -461,14 +482,10 @@ function Houzuki755890_Act05(ai, goal, paramTbl)
     return GetWellSpace_Odds
 end
 
+-- Vanilla: the same retreat to 8 m on SPEFFECT_RETREAT_8M.
 function Houzuki755890_Act06(ai, goal, paramTbl)
     local goalLife = 4
     local moveTarget = TARGET_ENE_0
-    local f8_local2 = 999
-    local f8_local3 = 1.5
-    local f8_local4 = 60
-    local f8_local5 = 0
-    local f8_local6 = 0
     local turnTarget = TARGET_ENE_0
     goal:ClearSubGoal()
     goal:AddSubGoal(GOAL_COMMON_LeaveTarget, goalLife, moveTarget, 8, turnTarget, true, 0)
@@ -478,6 +495,7 @@ function Houzuki755890_Act06(ai, goal, paramTbl)
     return GetWellSpace_Odds
 end
 
+-- Vanilla, untouched: Act07 to Act10 are empty and never offered.
 function Houzuki755890_Act07(ai, goal, paramTbl)
     GetWellSpace_Odds = 0
     return GetWellSpace_Odds
@@ -515,6 +533,7 @@ function Houzuki755890_Act11(ai, goal, paramTbl)
     return GetWellSpace_Odds
 end
 
+-- Vanilla, untouched, never offered: walk up to 0.1 m for 1-3 s.
 function Houzuki755890_Act40(ai, goal, paramTbl)
     local goalLife = ai:GetRandam_Int(1, 3)
     local moveTarget = TARGET_ENE_0
@@ -529,13 +548,14 @@ function Houzuki755890_Act40(ai, goal, paramTbl)
     local random = ai:GetRandam_Int(1, 100)
     local guardStateId = -1
     if random <= f13_local9 then
-        guardStateId = 9910
+        guardStateId = GUARD_EZSTATE
     end
     goal:AddSubGoal(GOAL_COMMON_ApproachTarget, goalLife, moveTarget, stopDist, turnTarget, walk, guardStateId, onGuardResult, guardSuccessOnEnd, xzDistanceOnly)
     GetWellSpace_Odds = 0
     return GetWellSpace_Odds
 end
 
+-- Vanilla, untouched, never offered: walk back to 10 m for 1-3 s.
 function Houzuki755890_Act41(ai, goal, paramTbl)
     local goalLife = ai:GetRandam_Int(1, 3)
     local moveTarget = TARGET_ENE_0
@@ -547,13 +567,15 @@ function Houzuki755890_Act41(ai, goal, paramTbl)
     local random = ai:GetRandam_Int(1, 100)
     local guardStateId = -1
     if random <= f14_local6 then
-        guardStateId = 9910
+        guardStateId = GUARD_EZSTATE
     end
     goal:AddSubGoal(GOAL_COMMON_LeaveTarget, goalLife, moveTarget, stopDist, turnTarget, walk, guardStateId)
     GetWellSpace_Odds = 0
     return GetWellSpace_Odds
 end
 
+-- Vanilla, untouched: a sidestep to the right for 0.8-1.5 s. Offered
+-- under 3 m (MOVE_CLOSE).
 function Houzuki755890_Act42(ai, goal, paramTbl)
     local goalLife = ai:GetRandam_Float(0.8, 1.5)
     local moveTarget = TARGET_ENE_0
@@ -568,13 +590,15 @@ function Houzuki755890_Act42(ai, goal, paramTbl)
     local random = ai:GetRandam_Int(1, 100)
     local guardStateId = -1
     if random <= f15_local9 then
-        guardStateId = 9910
+        guardStateId = GUARD_EZSTATE
     end
     goal:AddSubGoal(GOAL_COMMON_SidewayMove, goalLife, moveTarget, right, angleThreshold, isWalk, successOnEnd, guardStateId)
     GetWellSpace_Odds = 0
     return GetWellSpace_Odds
 end
 
+-- Vanilla, untouched: turn toward the player until within 90 degrees
+-- (life 2 s). Offered when the player is behind, under 8 m.
 function Houzuki755890_Act43(ai, goal, paramTbl)
     local goalLife = 2
     local turnTarget = TARGET_ENE_0
@@ -585,13 +609,16 @@ function Houzuki755890_Act43(ai, goal, paramTbl)
     local random = ai:GetRandam_Int(1, 100)
     local guardStateId = -1
     if random <= f16_local5 then
-        guardStateId = 9910
+        guardStateId = GUARD_EZSTATE
     end
     goal:AddSubGoal(GOAL_COMMON_Turn, goalLife, turnTarget, stopAngleWidth, guardStateId, onGuardResult, guardSuccessOnEnd)
     GetWellSpace_Odds = 0
     return GetWellSpace_Odds
 end
 
+-- Vanilla, untouched, never offered: a safe step away from the player's
+-- side (back or sideways when in front, left when on the right, right
+-- when on the left).
 function Houzuki755890_Act44(ai, goal, paramTbl)
     local goalLife = 5
     local frontPriority = -1
@@ -613,6 +640,8 @@ function Houzuki755890_Act44(ai, goal, paramTbl)
     return GetWellSpace_Odds
 end
 
+-- Vanilla, untouched, never offered: a safe step to either side, or to
+-- the right only, on a draw.
 function Houzuki755890_Act45(ai, goal, paramTbl)
     local goalLife = 5
     local frontPriority = -1
@@ -633,6 +662,8 @@ function Houzuki755890_Act45(ai, goal, paramTbl)
     return GetWellSpace_Odds
 end
 
+-- Vanilla, untouched: walk to 4 m (or back off to it), then strafe to a
+-- random side for 0.1-2 s. Offered at 3-10 m (MOVE_MID).
 function Houzuki755890_Act46(ai, goal, paramTbl)
     local goalLife = 10
     local moveTarget = TARGET_ENE_0
@@ -643,7 +674,7 @@ function Houzuki755890_Act46(ai, goal, paramTbl)
     local random = ai:GetRandam_Int(1, 100)
     local guardStateId = -1
     if random <= f19_local5 then
-        guardStateId = 9910
+        guardStateId = GUARD_EZSTATE
     end
     if stopDist <= distanceEnemy then
         local turnTarget = TARGET_SELF
@@ -665,13 +696,16 @@ function Houzuki755890_Act46(ai, goal, paramTbl)
     local random_2 = ai:GetRandam_Int(1, 100)
     local guardStateId_2 = -1
     if random_2 <= f19_local17 then
-        guardStateId_2 = 9910
+        guardStateId_2 = GUARD_EZSTATE
     end
     goal:AddSubGoal(GOAL_COMMON_SidewayMove, goalLife_2, moveTarget_2, right, angleThreshold, isWalk, successOnEnd, guardStateId_2)
     GetWellSpace_Odds = 0
     return GetWellSpace_Odds
 end
 
+-- Vanilla, untouched, never offered: an encircling routine. TORIMAKI_MIN_DIST,
+-- TORIMAKI_MAX_DIST, TARGET_ENE0 and resultTypeIfGuardSuccess are undefined
+-- globals (nil), so it would fail if it ever ran; kept as decompiled.
 function Houzuki755890_Act47(ai, goal, paramTbl)
     local min = TORIMAKI_MIN_DIST
     local max = TORIMAKI_MAX_DIST
@@ -718,10 +752,14 @@ function Houzuki755890_Act47(ai, goal, paramTbl)
     return GetWellSpace_Odds
 end
 
+-- Vanilla, untouched: the after-attack follow-up, run with the odds an act
+-- returns (GetWellSpace_Odds; every act here returns 0).
 function Houzuki755890_ActAfter_AdjustSpace(ai, goal, paramTbl)
     goal:AddSubGoal(GOAL_Houzuki755890_AfterAttackAct, 10)
 end
 
+-- Vanilla: the battle goal ends, and restarts on a new act, once its
+-- queue is empty.
 Goal.Update = function (self, ai, goal)
     return Update_Default_NoSubGoal(self, ai, goal)
 end
@@ -730,14 +768,16 @@ Goal.Terminate = function (self, ai, goal)
 end
 
 Goal.Interrupt = function (self, ai, goal)
+    -- Vanilla guards: nothing is handled on a ladder or while
+    -- SPEFFECT_NO_INTERRUPT or an illness effect is active.
     if ai:IsLadderAct(TARGET_SELF) then
         return false
     end
-    if ai:HasSpecialEffectId(TARGET_SELF, 5110) == true or ai:HasSpecialEffectAttribute(TARGET_SELF, SP_EFFECT_TYPE_ILLNESS) == true then
+    if ai:HasSpecialEffectId(TARGET_SELF, SPEFFECT_NO_INTERRUPT) == true or ai:HasSpecialEffectAttribute(TARGET_SELF, SP_EFFECT_TYPE_ILLNESS) == true then
         return false
     end
     if ai:IsInterupt(INTERUPT_ActivateSpecialEffect) then
-        if ai:HasSpecialEffectId(TARGET_SELF, 20011452) then
+        if ai:HasSpecialEffectId(TARGET_SELF, SPEFFECT_WARP_MARKER) then
             -- Vanilla's post-3000 warp, the far teleport's second half:
             -- behind the player (scanned and warped around TARGET_ENE_0
             -- rather than vanilla's TARGET_EVENT, which served the fight's
@@ -755,9 +795,9 @@ Goal.Interrupt = function (self, ai, goal)
             end
             return true
         end
-        if ai:GetSpecialEffectActivateInterruptId(5030) and ai:IsInsideTargetCustom(TARGET_SELF, TARGET_ENE_0, AI_DIR_TYPE_F, 180, 180, 4) then
+        if ai:GetSpecialEffectActivateInterruptId(SPEFFECT_GRAB_CONNECT) and ai:IsInsideTargetCustom(TARGET_SELF, TARGET_ENE_0, AI_DIR_TYPE_F, 180, 180, 4) then
             goal:ClearSubGoal()
-            goal:AddSubGoal(GOAL_COMMON_ComboRepeat_SuccessAngle180, 5, 3003, TARGET_ENE_0, 999, 0, 0)
+            goal:AddSubGoal(GOAL_COMMON_ComboRepeat_SuccessAngle180, 5, ANIM_THROW, TARGET_ENE_0, 999, 0, 0)
             return true
         end
         return false
@@ -792,6 +832,7 @@ Goal.Interrupt = function (self, ai, goal)
     return false
 end
 
+-- Vanilla: the empty after-attack goal that ActAfter_AdjustSpace queues.
 RegisterTableGoal(GOAL_Houzuki755890_AfterAttackAct, "Houzuki755890_AfterAttackAct")
 REGISTER_GOAL_NO_SUB_GOAL(GOAL_Houzuki755890_AfterAttackAct, true)
 

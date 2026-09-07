@@ -302,3 +302,9 @@ Rules the boss script follows, established in game or by survey
   turns the camera.
 - A `ClearSubGoal` in a reaction drops whatever is in flight (a warp, a
   follow-up throw): hold the reactions while a sequence runs.
+- Lua 5.0 allows 32 upvalues per function: every file-scope local a
+  function reads (knobs, named ids) is one, nested closures included,
+  and the engine's compiler then rejects the whole script (the boss
+  falls back to aiCommon's errorAct and stands still).
+  `tests/test_mods_src_lua_scripts.py` counts them; the lupa harness
+  (Lua 5.5) would not notice.

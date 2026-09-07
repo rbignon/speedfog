@@ -287,9 +287,12 @@ vanilla scripts come from the shared aiCommon global-name list, which
 only knows the vanilla names, so the script assigns
 `GOAL_Houzuki755890_Battle` (755890, the think row's `battleGoalID`) and
 `GOAL_Houzuki755890_AfterAttackAct` (755891, any unused id) itself.
-Every knob is a file-scope local at the top of the script, captured as
-an upvalue by the functions below; a nil arithmetic error on the first
-activation points there. The goal model, the act table, the attack and
+Every knob is a file-scope local at the top of the script, followed by
+the vanilla ids named for reading (`ANIM_*`, `SPEFFECT_*`,
+`GUARD_EZSTATE`), all captured as upvalues by the functions below (Lua
+5.0 allows 32 per function, counted by
+`tests/test_mods_src_lua_scripts.py`); a nil arithmetic error on the
+first activation points there. The goal model, the act table, the attack and
 movement goals and the `ai:` queries the script relies on are described
 in `docs/ai-scripts.md`.
 
