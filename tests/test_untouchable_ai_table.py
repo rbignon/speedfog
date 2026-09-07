@@ -350,12 +350,15 @@ def test_near_teleport_bursts_even_while_the_swing_timer_runs():
     assert queued(goal)[0] == BURST
 
 
-def test_near_teleport_without_room_queues_nothing_and_starts_the_timers():
+def test_near_teleport_without_room_queues_nothing_and_retries_soon():
     goal, _, state = act("Act02", dist=2, mesh=0)
+    _, _, with_room = act("Act02", dist=2)
     assert queued(goal) == []
-    # The attempt starts the cooldown and the hold (the spot is not retried
-    # and the reactions stay quiet, as validated); the burst is not spent.
-    assert state.timers[TELEPORT_TIMER] > 0 and state.timers[HOLD_TIMER] > 0
+    # No sequence in flight: the burst is not spent, no hold, and the
+    # teleport timer restarts short of the full cooldown so a cramped spot
+    # is retried soon rather than burning the whole interval.
+    assert 0 < state.timers[TELEPORT_TIMER] < with_room.timers[TELEPORT_TIMER]
+    assert state.timers[HOLD_TIMER] is None
     assert state.timers[SWING_TIMER] is None
 
 

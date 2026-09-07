@@ -29,11 +29,11 @@ REGISTER_GOAL_NO_SUB_GOAL(GOAL_Houzuki755890_Battle, true)
 local BEAM_FAR_TELEPORT_READY = 40      -- >= 10 m, teleport ready: Act04 (beam) vs Act02
 local BEAM_FAR_TELEPORT_NOT_READY = 50  -- >= 10 m, teleport not ready: Act04 (beam) vs Act01
 local SWING_MID = 10                    -- 3 to 10 m: Act11 (swing, radius-4 knockback burst)
-local TELEPORT_MID = 15                 -- 3 to 10 m: Act02
+local TELEPORT_MID = 25                 -- 3 to 10 m: Act02
 local BEAM_MID = 10                     -- 3 to 10 m: Act04 (beam)
 local MOVE_MID = 15                     -- 3 to 10 m: Act46 (close to 4 m, then strafe)
 local SWING_CLOSE = 15                  -- < 3 m: Act11 (swing)
-local TELEPORT_CLOSE = 10               -- < 3 m: Act02
+local TELEPORT_CLOSE = 25               -- < 3 m: Act02
 local MOVE_CLOSE = 20                   -- < 3 m: Act42 (sidestep)
 local TELEPORT_BEHIND = 50              -- player behind, < 8 m: Act02 when ready (0-90; Act01 keeps 10, Act43 takes the rest)
 local GRAB_COOLDOWN = 6                 -- seconds between two grabs (3002); vanilla 12
@@ -41,6 +41,7 @@ local SWING_COOLDOWN = 8                -- seconds between two bursts (3001), an
 local BEAM_COOLDOWN = 6                 -- seconds between two beams (3004), any source
 local TELEPORT_COOLDOWN = 6             -- seconds after a near teleport before any teleport
 local TELEPORT_FAR_COOLDOWN = 11.5      -- seconds after a far teleport before any teleport (its own sequence takes about 9 s)
+local TELEPORT_RETRY = 2                -- seconds before another attempt when the near teleport found no room
 local TELEPORT_FAR_RANGE = 5            -- from this distance (centre to centre; melee reach with a long weapon is 3-4 m) the teleport is vanilla's (3000, the warp behind the player, the burst); closer, the burst, a warp away and the beam
 local TELEPORT_AWAY_DIST = 8            -- near variant: warp this far away from the player, relative to the boss itself
 local TELEPORT_AWAY_FALLBACK = 5        -- near variant: second scan at this distance when nothing clears TELEPORT_AWAY_DIST (small arenas)
@@ -60,7 +61,7 @@ local REACT_HEAL = 80                   -- player uses an item from >= REACT_RAN
 local REACT_RANGE = 5
 -- No reaction while a teleport or a grab sequence is in flight (a
 -- reaction's ClearSubGoal would drop the follow-up): the hold timer, set
--- with each teleport attempt, and the 3002 counter for the grab. The
+-- with each queued teleport, and the 3002 counter for the grab. The
 -- margins round the holds to the windows validated in game (3.5 s, 9 s).
 local TELEPORT_HOLD = BURST_CANCEL + ARRIVAL_MAX + 0.3                     -- near: 3.5 s
 local TELEPORT_FAR_HOLD = MARKER_3000 + ARRIVAL_MAX + BURST_LENGTH + 0.23  -- far: 9 s
@@ -193,22 +194,23 @@ end
 -- fires at its cancel window), the warp away from the player, then the
 -- beam when ready: the boss bursts, retreats and fires, in the player's
 -- view since lock-on cannot be broken from the AI. Returns whether it was
--- queued: without room nothing is queued or cleared (the burst is not
+-- queued. Without room nothing is queued or cleared (the burst is not
 -- spent on a warp that cannot happen; the sub-goals are cleared only once
--- the retreat is certain, vanilla Act05/Act06's idiom), but both timers
--- start with the attempt: the spot is not retried at every decision, and
--- the reactions stay quiet for the hold as they did in the validated
--- runs.
+-- the retreat is certain, vanilla Act05/Act06's idiom) and only the
+-- teleport timer restarts, at TELEPORT_RETRY rather than the cooldown: a
+-- cramped spot is retried soon, not at every decision, and no hold is
+-- set since nothing is in flight.
 function Houzuki755890_AddTeleportAway(ai, goal)
-    ai:SetTimer(TIMER_TELEPORT, TELEPORT_COOLDOWN)
-    ai:SetTimer(TIMER_HOLD, TELEPORT_HOLD)
     local direction, distance = Houzuki755890_FindRoomAway(ai, TELEPORT_AWAY_DIST)
     if direction == nil then
         direction, distance = Houzuki755890_FindRoomAway(ai, TELEPORT_AWAY_FALLBACK)
     end
     if direction == nil then
+        ai:SetTimer(TIMER_TELEPORT, TELEPORT_RETRY)
         return false
     end
+    ai:SetTimer(TIMER_TELEPORT, TELEPORT_COOLDOWN)
+    ai:SetTimer(TIMER_HOLD, TELEPORT_HOLD)
     goal:ClearSubGoal()
     Houzuki755890_AddSwing(ai, goal, true)
     goal:AddSubGoal(GOAL_COMMON_ToTargetWarp, 15, TARGET_SELF, direction, distance, TARGET_ENE_0)

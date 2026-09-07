@@ -332,8 +332,8 @@ remainder, the teleport weight counts only while the teleport is ready:
 | player behind, < 8 m | Act01 20 / Act43 80 | Act02 `TELEPORT_BEHIND` 50 / Act01 10 / Act43 40 if the teleport is ready, else vanilla |
 | >= 10 m, teleport ready | Act02 99 / Act01 1 | Act02 60 / Act04 `BEAM_FAR_TELEPORT_READY` 40 |
 | >= 10 m, teleport not ready | Act01 100 | Act01 50 / Act04 `BEAM_FAR_TELEPORT_NOT_READY` 50 |
-| 3 to 10 m | Act03 100 | Act03 50 / Act11 `SWING_MID` 10 / Act02 `TELEPORT_MID` 15 / Act04 `BEAM_MID` 10 / Act46 `MOVE_MID` 15 |
-| < 3 m | Act03 100 | Act03 55 / Act11 `SWING_CLOSE` 15 / Act02 `TELEPORT_CLOSE` 10 / Act42 `MOVE_CLOSE` 20 |
+| 3 to 10 m | Act03 100 | Act03 40 / Act11 `SWING_MID` 10 / Act02 `TELEPORT_MID` 25 / Act04 `BEAM_MID` 10 / Act46 `MOVE_MID` 15 |
+| < 3 m | Act03 100 | Act03 40 / Act11 `SWING_CLOSE` 15 / Act02 `TELEPORT_CLOSE` 25 / Act42 `MOVE_CLOSE` 20 |
 | post-grab retreat (SpEffect 5031/5032) | Act05/Act06 | same, then Act04 if the beam is ready |
 
 Act46 parks the boss at 4 m, inside the near band, so a teleport picked
@@ -359,8 +359,9 @@ position with its hit radius as the line width, then again at
 `TELEPORT_AWAY_FALLBACK` (5 m) for small arenas. The beam follows when
 it is ready: the boss bursts, retreats and fires. The scan runs when the
 act is queued; without room nothing is queued (the burst is not spent on
-a warp that cannot happen) but the teleport timer starts, so a spot
-without room is not retried at every decision. The wind-up uses the
+a warp that cannot happen) and the teleport timer restarts at
+`TELEPORT_RETRY` (2 s) instead of the full cooldown, so a cramped spot
+is retried soon but not at every decision. The wind-up uses the
 `ComboTunable_SuccessAngle180` wrapper (reach 999, every angle 180) so it
 fires whatever the player's side. The retreat stays in the player's view
 on purpose: lock-on cannot be broken from the AI, so a warp behind the
@@ -388,9 +389,10 @@ act or a reaction needs the beam, so no counter is ever read
 unregistered. The burst (`SWING_COOLDOWN` 8 s on 3001 whatever its
 source: act, reaction, teleport wind-up) and the teleport
 (`TELEPORT_COOLDOWN` 6 s after a near one, `TELEPORT_FAR_COOLDOWN` 11.5 s
-after a far one, whose own sequence takes about 9 s) are AI timers
+after a far one, whose own sequence takes about 9 s, `TELEPORT_RETRY` 2 s
+after a near attempt that found no room) are AI timers
 (`TIMER_SWING` slot 11, `TIMER_TELEPORT` slot 10, set when the act is
-queued): 3001 is never registered, so no engine interval can hold the
+queued or, for the retry, attempted): 3001 is never registered, so no engine interval can hold the
 boss on a burst. `Houzuki755890_TeleportReady` is the teleport timer back
 at 0 and nothing else: the script reads neither the 3000 counter nor
 vanilla's SpEffect 20011450 (see "Engine facts and pitfalls").
@@ -408,7 +410,7 @@ reaction spends an attack that is available anyway, so it moves an
 attack earlier without adding any. No reaction fires while a teleport or
 a grab sequence is in flight (`Houzuki755890_SequenceInFlight`), since
 its `ClearSubGoal` would drop the warp, the beam or the throw: the hold
-timer (`TIMER_HOLD`, slot 9) is set with each teleport attempt to
+timer (`TIMER_HOLD`, slot 9) is set with each queued teleport to
 `TELEPORT_HOLD` (near: `BURST_CANCEL` + `ARRIVAL_MAX` + margin, 3.5 s)
 or `TELEPORT_FAR_HOLD` (far: `MARKER_3000` + `ARRIVAL_MAX` +
 `BURST_LENGTH` + margin, 9 s), and the grab is covered by its counter
@@ -454,7 +456,8 @@ Knobs, never edited in the shared vanilla `528000_battle`:
   `BROKEN_DAMAGE_TAKEN`, `BEAM_MAGIC`; `UntouchableTaePatcher`:
   `BEAM_EVENT_COUNT`.
 - The battle script: the probabilities (`SWING_*`, `TELEPORT_*`,
-  `BEAM_*`, `MOVE_*`), the five `*_COOLDOWN`, `TELEPORT_FAR_RANGE`,
+  `BEAM_*`, `MOVE_*`), the five `*_COOLDOWN` and `TELEPORT_RETRY`,
+  `TELEPORT_FAR_RANGE`,
   `TELEPORT_AWAY_DIST`, `TELEPORT_AWAY_FALLBACK`, the animation spans the
   holds derive from (`BURST_CANCEL`, `BURST_LENGTH`, `ARRIVAL_MAX`,
   `MARKER_3000`, `GRAB_CHAIN`), and the reactions (`REACT_*`).
