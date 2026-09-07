@@ -15,6 +15,7 @@ from speedfog import (
     generate_with_retry,
     load_clusters,
 )
+from speedfog.constants import GRAPH_JSON_VERSION
 from speedfog.graph_export import export_json
 
 
@@ -194,7 +195,7 @@ class TestFullPipeline:
             data = json.load(f)
 
         # Top-level keys (v4 format)
-        assert data["version"] == "4.8"
+        assert data["version"] == GRAPH_JSON_VERSION
         assert "seed" in data
         assert "options" in data
         assert "connections" in data

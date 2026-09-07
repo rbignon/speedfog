@@ -112,7 +112,7 @@ speedfog/
 │   ├── FogModWrapper/       # Fog gate writer - thin wrapper calling FogMod.dll
 │   │   ├── Program.cs       # CLI entry point
 │   │   ├── ConnectionInjector.cs  # Inject connections into FogMod Graph
-│   │   ├── HelperAreaResolver.cs  # Scaling areas for enemy-randomizer helper parts (boss adds) + vanilla misfiled arena parts
+│   │   ├── HelperAreaResolver.cs  # Scaling areas for enemy-randomizer helper clones (group pass + helper_models model pass) + vanilla misfiled arena parts
 │   │   ├── StartingItemInjector.cs  # Inject starting item events into EMEVD
 │   │   ├── StartingResourcesInjector.cs  # Inject seeds, tears, keys
 │   │   ├── StartingRuneInjector.cs  # Set starting runes via CharaInitParam
@@ -305,7 +305,7 @@ speedfog/
 | `ShopIdAllocator` | Shop ID allocation utilities |
 | `PhaseTimer` | Per-phase timing of Program.cs pipeline steps (use this, not ad-hoc Stopwatches) |
 | `ConnectionInjector` | Injects connections into FogMod's Graph, extracts warp data |
-| `HelperAreaResolver` | Resolves scaling areas for enemy-randomizer helper parts (boss adds) and re-points misfiled vanilla arena parts (Mini Midra) before FogMod's writer |
+| `HelperAreaResolver` | Resolves scaling areas for enemy-randomizer helper clones (boss adds) before FogMod's writer: a group pass (clone sharing a randomizer-allocated group with its slot) and a model pass (graph.json `helper_models`, clone-named part whose model belongs to the placed source's helpers, nearest slot); also re-points misfiled vanilla arena parts (Mini Midra) |
 | `StartingItemInjector` | Injects starting item events into common.emevd |
 | `StartingResourcesInjector` | Injects consumables (seeds, tears, keys) via EMEVD |
 | `StartingRuneInjector` | Sets starting runes on all classes via CharaInitParam.soul |
@@ -703,11 +703,11 @@ wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.d
 
 ## Data Formats
 
-### graph.json v4.8 (Python → C# + visualization + racing)
+### graph.json v4.9 (Python → C# + visualization + racing)
 
 ```json
 {
-  "version": "4.8",
+  "version": "4.9",
   "seed": 212559448,
   "options": {"scale": true, "shuffle": true},
   "plugins": {"summer": {"enabled": true}},
@@ -722,6 +722,7 @@ wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.d
   "items_spawned_flag": 1050290000,
   "enemy_assignments": {"30001800": "2049420200"},
   "boss_names": {"30001800": {"name": "Aging Untouchable", "map": "m30_00_00_00"}},
+  "helper_models": {"40010800": ["c3000", "c3020"]},
   "class_loadout": {"weapons": [{"id": 3560000, "name": "Leontiel's Greatsword"}, ...], "shields": [{"id": 31540000, "name": "Silver Grooved Shield"}, ...], "armor_sets": [[5350000, 5350100, 5350200, 5350300], ...]},
   "torrent_skins": {"unlock": true, "default_flag": 6702}
 }
@@ -737,6 +738,7 @@ wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.d
 - `class_loadout`: optional, `[tarnished] starting_loadout`'s shuffled weapon/shield/armor-set permutations for the starting classes (weapon always in the right hand, shields once each on occupied left hands, armor per occupied slot; mechanism-named, not pack-named: `[tarnished]` is only its first producer); absent when the option is off (added v4.6, reshaped v4.7, `GraphData.ClassLoadout`, consumed by `ClassLoadoutInjector`, see `docs/tarnished-showcase.md`)
 - `torrent_skins`: optional, `[tarnished] unlock_torrent_skins`'s unlock flag plus a resolved `default_flag` (6701-6703) for the pre-selected Torrent skin; absent when the option is off (added v4.6, `GraphData.TorrentSkins`, consumed by `StartingItemInjector`, see `docs/tarnished-showcase.md`)
 - `boss_names`: optional `{arena_entity_id: {name, map}}` for the `enemy_assignments` entries whose source has no vanilla `Important.NpcName` in enemy.txt (promoted mobs): the display name already resolved for `randomized_bosses` and the map whose EMEVD shows the arena's healthbar; absent when every placed source carries its own name (added v4.8, `GraphData.BossNames`, consumed by `BossNameInjector`, see `docs/boss-healthbar-names.md`)
+- `helper_models`: optional `{arena_entity_id: [model, ...]}` for the `enemy_assignments` entries whose source owns `Class: Helper` entries in enemy.txt: the models of the helper clones the randomizer places in the arena, so FogModWrapper can scale them with the boss; absent when no placed source has helpers (added v4.9, `GraphData.HelperModels`, consumed by `HelperAreaResolver`, see `docs/item-randomizer.md` "Helper enemy scaling")
 - `flag_id` per connection: event flag set when fog gate is traversed
 - Event flags allocated sequentially from base 1050294000 (range 1050294000-1050294999); persistent flags (e.g. `items_spawned_flag`) come from a separate base 1050290000
 - Connections use FogMod's edge FullName format: `{map}_{gate_name}` (e.g., `m10_01_00_00_AEG099_001_9000`)

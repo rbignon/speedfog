@@ -1,3 +1,5 @@
+using System.Numerics;
+using System.Text.RegularExpressions;
 using FogMod;
 using SoulsFormats;
 using static FogMod.AnnotationData;
@@ -19,12 +21,16 @@ namespace FogModWrapper;
 /// from the arena's (tier 4 vs 15 on a real seed).
 ///
 /// The boss slot parts themselves keep their vanilla part names, so they
-/// still resolve by name. This pass propagates that resolution: any part
-/// that is unresolvable by name or known groups but shares a non-vanilla
-/// entity group with a name-resolved boss slot gets an EnemyLoc entry
-/// pointing at the boss arena. FogMod's name lookup (highest priority) then
-/// treats it like any vanilla boss part: arena tier, unique boss scaling.
-/// See docs/item-randomizer.md, section "Helper enemy scaling".
+/// still resolve by name. Two passes propagate that resolution to the
+/// clones, giving each an EnemyLoc entry pointing at the boss arena so
+/// FogMod's name lookup (highest priority) treats it like any vanilla boss
+/// part (arena tier, unique boss scaling): the group pass links a part
+/// sharing a non-vanilla entity group with a name-resolved slot (only
+/// sources whose main part declares Groups produce that signature), and
+/// the model pass links clone-named parts whose model belongs to the
+/// placed source's helpers (graph.json helper_models) to the nearest
+/// claiming slot. See docs/item-randomizer.md, section "Helper enemy
+/// scaling".
 ///
 /// ApplyVanillaOverrides covers the converse, randomizer-independent case:
 /// vanilla parts misfiled by foglocations2 outside their boss arena.
@@ -34,7 +40,19 @@ public static class HelperAreaResolver
     // CollisionName is intentionally unused by the decision logic (see
     // ComputeAdditions); it is carried so the contract mirrors the MSB data
     // and tests can document the deliberate collision override.
-    public sealed record EnemyPart(string Name, IReadOnlyList<uint> Groups, string? CollisionName);
+    public sealed record EnemyPart(
+        string Name,
+        IReadOnlyList<uint> Groups,
+        string? CollisionName,
+        uint EntityId = 0,
+        Vector3 Position = default);
+
+    // Part names the randomizer's CloneEnemy produces: "{model}_{index:d4}",
+    // optionally prefixed by an open-world tile ("m60_52_38_00-c0000_0109"),
+    // index from helperModelBase (100) upwards. Vanilla parts use 9xxx
+    // (four use 0000-0003), so an index in 100-8999 marks a clone.
+    private static readonly Regex ClonePartName = new(
+        @"^(?:m\d\d_\d\d_\d\d_\d\d-)?(c\d{4})_(\d{4})$", RegexOptions.Compiled);
 
     /// <summary>
     /// Scans the merge directory's MSBs (the maps the item/enemy randomizer
@@ -44,7 +62,12 @@ public static class HelperAreaResolver
     /// to <paramref name="graph"/>.
     /// </summary>
     /// <returns>The number of entries added.</returns>
-    public static int Resolve(AnnotationData ann, Graph graph, string mergeDir, Action<string> log)
+    public static int Resolve(
+        AnnotationData ann,
+        Graph graph,
+        string mergeDir,
+        IReadOnlyDictionary<string, List<string>> helperModels,
+        Action<string> log)
     {
         var msbDir = Path.Combine(mergeDir, "map", "mapstudio");
         if (!Directory.Exists(msbDir) || ann.Locations == null)
@@ -55,8 +78,16 @@ public static class HelperAreaResolver
             && a.DefeatFlag > 0
             && graph.AreaTiers != null
             && graph.AreaTiers.ContainsKey(area);
+        bool isBossArea(string area) =>
+            graph.Areas.TryGetValue(area, out var a) && a.DefeatFlag > 0;
 
         var eligibleMaps = EligibleMaps(ann.Locations, isEligibleBossArea);
+        var arenaHelperModels = new Dictionary<uint, IReadOnlyList<string>>();
+        foreach (var (arena, models) in helperModels)
+        {
+            if (uint.TryParse(arena, out var id) && models is { Count: > 0 })
+                arenaHelperModels[id] = models;
+        }
         int total = 0, maps = 0;
         foreach (var msbPath in Directory.EnumerateFiles(msbDir, "*.msb.dcx").Order())
         {
@@ -73,7 +104,8 @@ public static class HelperAreaResolver
                 throw new InvalidDataException($"Failed to parse merge-dir MSB {msbPath}", e);
             }
             var parts = msb.Parts.Enemies
-                .Select(e => new EnemyPart(e.Name, e.EntityGroupIDs, e.CollisionPartName))
+                .Select(e => new EnemyPart(
+                    e.Name, e.EntityGroupIDs, e.CollisionPartName, e.EntityID, e.Position))
                 .ToList();
             maps++;
 
@@ -84,9 +116,19 @@ public static class HelperAreaResolver
                 // selection, but vanilla slots still win there (it prefers
                 // the part whose EntityID matches the area's DefeatFlag).
                 ann.Locations.Enemies.Add(loc);
-                log($"  Helper area: {map} {loc.ID} -> {loc.ActualArea}");
+                log($"  Helper area (group): {map} {loc.ID} -> {loc.ActualArea}");
             }
             total += added.Count;
+
+            // Second pass sees the first pass's entries as name-resolved.
+            var byModel = ComputeModelAdditions(
+                map, parts, ann.Locations, isEligibleBossArea, isBossArea, arenaHelperModels);
+            foreach (var loc in byModel)
+            {
+                ann.Locations.Enemies.Add(loc);
+                log($"  Helper area (model): {map} {loc.ID} -> {loc.ActualArea} ({loc.DebugText})");
+            }
+            total += byModel.Count;
         }
 
         log($"HelperAreaResolver: added {total} enemy location entries " +
@@ -109,25 +151,7 @@ public static class HelperAreaResolver
         FogLocations locations,
         Func<string, bool> isEligibleBossArea)
     {
-        // Groups already declared on some area resolve via FogMod's group
-        // lookup; parts carrying them need no help. Also collect area names:
-        // FogMod indexes EnemyAreas by name and would throw on an EnemyLoc
-        // pointing at an area with no EnemyLocArea entry.
-        var knownGroups = new HashSet<uint>();
-        var enemyAreaNames = new HashSet<string>();
-        foreach (var area in locations.EnemyAreas)
-        {
-            enemyAreaNames.Add(area.Name);
-            foreach (var group in SplitIds(area.Groups))
-                knownGroups.Add(group);
-        }
-
-        var locByName = new Dictionary<string, EnemyLoc>();
-        foreach (var loc in locations.Enemies)
-        {
-            if (loc.Map == map)
-                locByName.TryAdd(loc.ID, loc);
-        }
+        var (knownGroups, enemyAreaNames, locByName) = IndexLocations(map, locations);
 
         // Non-vanilla group -> boss area of the name-resolved part carrying
         // it. A group seen on slots of two different areas is ambiguous and
@@ -178,6 +202,135 @@ public static class HelperAreaResolver
             added.Add(new EnemyLoc { Map = map, ID = part.Name, Area = area });
         }
         return added;
+    }
+
+    /// <summary>
+    /// Pure core of the model pass: links randomizer helper clones to the
+    /// arena of the boss they were cloned for, using graph.json
+    /// <c>helper_models</c> (arena entity id -> models of the placed
+    /// source's helpers, from enemy.txt). A part qualifies when its name is
+    /// a CloneEnemy name (see <see cref="ClonePartName"/>), it is not
+    /// resolvable by name or known groups, and its model is among the
+    /// helper models of an eligible, name-resolved slot of this map. The
+    /// nearest claiming slot wins, unless a boss slot of another area (DAG
+    /// or not: the randomizer randomizes every boss slot) is nearer still,
+    /// since clones are placed inside their own arena.
+    /// </summary>
+    public static List<EnemyLoc> ComputeModelAdditions(
+        string map,
+        IReadOnlyList<EnemyPart> parts,
+        FogLocations locations,
+        Func<string, bool> isEligibleBossArea,
+        Func<string, bool> isBossArea,
+        IReadOnlyDictionary<uint, IReadOnlyList<string>> arenaHelperModels)
+    {
+        var added = new List<EnemyLoc>();
+        if (arenaHelperModels.Count == 0)
+            return added;
+
+        var (knownGroups, enemyAreaNames, locByName) = IndexLocations(map, locations);
+
+        // Every name-resolved boss slot of the map competes for clones by
+        // distance: the randomizer also randomizes slots outside the DAG,
+        // and their clones share the map. Only eligible slots that received
+        // a source with helpers can claim a clone (Models != null).
+        var slots = new List<(string Name, string Area, Vector3 Position, HashSet<string>? Models)>();
+        foreach (var part in parts)
+        {
+            if (!locByName.TryGetValue(part.Name, out var loc))
+                continue;
+            var area = loc.ActualArea;
+            if (!isBossArea(area))
+                continue;
+            HashSet<string>? models = null;
+            if (part.EntityId != 0
+                && arenaHelperModels.TryGetValue(part.EntityId, out var arenaModels)
+                && isEligibleBossArea(area)
+                && enemyAreaNames.Contains(area))
+            {
+                models = new HashSet<string>(arenaModels);
+            }
+            slots.Add((part.Name, area, part.Position, models));
+        }
+        if (slots.All(s => s.Models == null))
+            return added;
+
+        var emitted = new HashSet<string>();
+        foreach (var part in parts)
+        {
+            if (locByName.ContainsKey(part.Name) || emitted.Contains(part.Name))
+                continue;
+            if (part.Groups.Any(g => g != 0 && knownGroups.Contains(g)))
+                continue;
+            var m = ClonePartName.Match(part.Name);
+            if (!m.Success)
+                continue;
+            var index = int.Parse(m.Groups[2].Value);
+            if (index < 100 || index >= 9000)
+                continue;
+            var model = m.Groups[1].Value;
+
+            (string Name, string Area, Vector3 Position, HashSet<string>? Models)? claimant = null;
+            float claimantDistance = float.MaxValue;
+            string? nearestArea = null;
+            float nearestDistance = float.MaxValue;
+            foreach (var slot in slots)
+            {
+                var distance = Vector3.DistanceSquared(slot.Position, part.Position);
+                if (distance < nearestDistance)
+                {
+                    nearestDistance = distance;
+                    nearestArea = slot.Area;
+                }
+                if (slot.Models != null && slot.Models.Contains(model) && distance < claimantDistance)
+                {
+                    claimantDistance = distance;
+                    claimant = slot;
+                }
+            }
+            // Clones sit inside their arena: a boss slot of another area
+            // being nearer means the clone belongs to that slot's boss.
+            if (claimant == null || nearestArea != claimant.Value.Area)
+                continue;
+
+            emitted.Add(part.Name);
+            added.Add(new EnemyLoc
+            {
+                Map = map,
+                ID = part.Name,
+                Area = claimant.Value.Area,
+                DebugText = $"{model} clone {Math.Sqrt(claimantDistance):F1}m from {claimant.Value.Name}",
+            });
+        }
+        return added;
+    }
+
+    /// <summary>
+    /// Shared lookups of both passes: groups declared on some area (parts
+    /// carrying them resolve via FogMod's group lookup and need no help),
+    /// area names (FogMod indexes EnemyAreas by name and would throw on an
+    /// EnemyLoc pointing at an area with no EnemyLocArea entry), and the
+    /// map's name-resolved parts.
+    /// </summary>
+    private static (HashSet<uint> KnownGroups, HashSet<string> AreaNames, Dictionary<string, EnemyLoc> ByName)
+        IndexLocations(string map, FogLocations locations)
+    {
+        var knownGroups = new HashSet<uint>();
+        var enemyAreaNames = new HashSet<string>();
+        foreach (var area in locations.EnemyAreas)
+        {
+            enemyAreaNames.Add(area.Name);
+            foreach (var group in SplitIds(area.Groups))
+                knownGroups.Add(group);
+        }
+
+        var locByName = new Dictionary<string, EnemyLoc>();
+        foreach (var loc in locations.Enemies)
+        {
+            if (loc.Map == map)
+                locByName.TryAdd(loc.ID, loc);
+        }
+        return (knownGroups, enemyAreaNames, locByName);
     }
 
     // Vanilla foglocations2 assignments that are wrong for SpeedFog's DAG

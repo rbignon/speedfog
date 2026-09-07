@@ -1,3 +1,4 @@
+using System.Numerics;
 using FogMod;
 using Xunit;
 using static FogMod.AnnotationData;
@@ -332,5 +333,204 @@ public class HelperAreaResolverTests
         var added = HelperAreaResolver.ComputeAdditions(Map, parts, MakeLocations(), EligibleBossArea);
 
         Assert.Empty(added);
+    }
+
+    // --- Model pass (graph.json helper_models) ---------------------------
+    // Rennala's students in Rykard's arena: the source's declared Groups sit
+    // on the students only, so the slot never carries the randomizer group
+    // and the group pass cannot link them. graph.json says arena 16000801
+    // received a source whose helpers are c2040 (and a c0100 dummy).
+
+    private static readonly Dictionary<uint, IReadOnlyList<string>> RykardHelperModels = new()
+    {
+        [16000801] = new[] { "c2040", "c0100" },
+    };
+
+    private static bool TwoBossAreas(string area) => area is "volcano_rykard" or "volcano_other";
+
+    private static HelperAreaResolver.EnemyPart Slot(string name, uint entity, Vector3 pos)
+        => new(name, new uint[] { 16005802 }, null, entity, pos);
+
+    private static HelperAreaResolver.EnemyPart Clone(string name, uint entity, Vector3 pos, uint group = 19005007)
+        => new(name, new uint[] { group }, null, entity, pos);
+
+    [Fact]
+    public void ClonedPartMatchingSourceHelperModel_GetsBossArea()
+    {
+        var parts = new List<HelperAreaResolver.EnemyPart>
+        {
+            Slot("c4710_9001", 16000801, new Vector3(0, 0, 0)),
+            Clone("c2040_0138", 4000038, new Vector3(3, 0, 2)),
+            Clone("c2040_0139", 4000039, new Vector3(-2, 0, 4)),
+            // Vanilla part of the same model elsewhere in the map: never touched.
+            new("c2040_9000", Array.Empty<uint>(), "h003100", 16000450, new Vector3(120, 0, 5)),
+        };
+
+        var added = HelperAreaResolver.ComputeModelAdditions(
+            Map, parts, MakeLocations(), EligibleBossArea, EligibleBossArea, RykardHelperModels);
+
+        Assert.Equal(new[] { "c2040_0138", "c2040_0139" }, added.Select(l => l.ID).Order().ToArray());
+        Assert.All(added, loc => Assert.Equal("volcano_rykard", loc.ActualArea));
+    }
+
+    [Fact]
+    public void ClonedPartOfAnotherModel_IsNotAdded()
+    {
+        var parts = new List<HelperAreaResolver.EnemyPart>
+        {
+            Slot("c4710_9001", 16000801, new Vector3(0, 0, 0)),
+            Clone("c3560_0180", 4000180, new Vector3(3, 0, 2)),
+        };
+
+        var added = HelperAreaResolver.ComputeModelAdditions(
+            Map, parts, MakeLocations(), EligibleBossArea, EligibleBossArea, RykardHelperModels);
+
+        Assert.Empty(added);
+    }
+
+    [Fact]
+    public void PartAlreadyResolvable_IsNotAdded()
+    {
+        // Resolvable by name (already in Enemies) or by a group declared on
+        // some area: FogMod handles it, and a duplicate name entry would
+        // make FogMod's ToDictionary throw.
+        var locations = MakeLocations();
+        locations.Enemies.Add(new EnemyLoc { Map = Map, ID = "c2040_0138", AArea = "volcano_rykard" });
+        var parts = new List<HelperAreaResolver.EnemyPart>
+        {
+            Slot("c4710_9001", 16000801, new Vector3(0, 0, 0)),
+            Clone("c2040_0138", 4000038, new Vector3(3, 0, 2)),
+            Clone("c2040_0139", 4000039, new Vector3(3, 0, 2), group: 16005100),
+        };
+
+        var added = HelperAreaResolver.ComputeModelAdditions(
+            Map, parts, locations, EligibleBossArea, EligibleBossArea, RykardHelperModels);
+
+        Assert.Empty(added);
+    }
+
+    [Fact]
+    public void TwoArenasSharingHelperModel_NearestSlotWins()
+    {
+        var locations = MakeLocations();
+        locations.EnemyAreas.Add(new EnemyLocArea { Name = "volcano_other", ScalingTier = 12 });
+        locations.Enemies.Add(new EnemyLoc { Map = Map, ID = "c5000_9000", AArea = "volcano_other" });
+        var models = new Dictionary<uint, IReadOnlyList<string>>
+        {
+            [16000801] = new[] { "c2040" },
+            [16000850] = new[] { "c2040" },
+        };
+        var parts = new List<HelperAreaResolver.EnemyPart>
+        {
+            Slot("c4710_9001", 16000801, new Vector3(0, 0, 0)),
+            Slot("c5000_9000", 16000850, new Vector3(100, 0, 0)),
+            Clone("c2040_0138", 4000038, new Vector3(98, 0, 1)),
+            Clone("c2040_0139", 4000039, new Vector3(-1, 0, 3)),
+        };
+
+        var added = HelperAreaResolver.ComputeModelAdditions(
+            Map, parts, locations, TwoBossAreas, TwoBossAreas, models);
+
+        Assert.Equal(2, added.Count);
+        Assert.Equal("volcano_other", added.Single(l => l.ID == "c2040_0138").ActualArea);
+        Assert.Equal("volcano_rykard", added.Single(l => l.ID == "c2040_0139").ActualArea);
+    }
+
+    [Fact]
+    public void SlotAreaNotEligible_ClonesNotAdded()
+    {
+        var parts = new List<HelperAreaResolver.EnemyPart>
+        {
+            Slot("c4710_9001", 16000801, new Vector3(0, 0, 0)),
+            Clone("c2040_0138", 4000038, new Vector3(3, 0, 2)),
+        };
+
+        var added = HelperAreaResolver.ComputeModelAdditions(
+            Map, parts, MakeLocations(), _ => false, EligibleBossArea, RykardHelperModels);
+
+        Assert.Empty(added);
+    }
+
+    [Fact]
+    public void VanillaSuffixedPartOfHelperModel_IsNotAdded()
+    {
+        // Only randomizer clones (part index 100-8999, CloneEnemy's
+        // helperModelBase) qualify; vanilla parts use 9xxx (four use 0000-0003).
+        var parts = new List<HelperAreaResolver.EnemyPart>
+        {
+            Slot("c4710_9001", 16000801, new Vector3(0, 0, 0)),
+            new("c2040_9001", Array.Empty<uint>(), null, 16000451, new Vector3(1, 0, 1)),
+            new("c2040_0002", Array.Empty<uint>(), null, 16000452, new Vector3(1, 0, 1)),
+        };
+
+        var added = HelperAreaResolver.ComputeModelAdditions(
+            Map, parts, MakeLocations(), EligibleBossArea, EligibleBossArea, RykardHelperModels);
+
+        Assert.Empty(added);
+    }
+
+    [Fact]
+    public void PrefixedCloneName_MatchesBareModel()
+    {
+        // Open-world tiles name parts "m60_52_38_00-c0000_0109".
+        var models = new Dictionary<uint, IReadOnlyList<string>> { [16000801] = new[] { "c0000" } };
+        var parts = new List<HelperAreaResolver.EnemyPart>
+        {
+            Slot("c4710_9001", 16000801, new Vector3(0, 0, 0)),
+            Clone("m60_52_38_00-c0000_0109", 4000009, new Vector3(1, 0, 1)),
+        };
+
+        var added = HelperAreaResolver.ComputeModelAdditions(
+            Map, parts, MakeLocations(), EligibleBossArea, EligibleBossArea, models);
+
+        Assert.Equal("m60_52_38_00-c0000_0109", Assert.Single(added).ID);
+    }
+
+    [Fact]
+    public void CloneNearestToNonDagBossSlot_IsNotAdded()
+    {
+        // The randomizer also randomizes boss slots outside the DAG; their
+        // clones share the map and may share a helper model. A clone whose
+        // nearest boss slot belongs to another area is not ours to tag.
+        var locations = MakeLocations();
+        locations.EnemyAreas.Add(new EnemyLocArea { Name = "volcano_abductors", ScalingTier = 12 });
+        locations.Enemies.Add(new EnemyLoc { Map = Map, ID = "c3800_9000", AArea = "volcano_abductors" });
+        var models = new Dictionary<uint, IReadOnlyList<string>> { [16000801] = new[] { "c0000" } };
+        var parts = new List<HelperAreaResolver.EnemyPart>
+        {
+            Slot("c4710_9001", 16000801, new Vector3(0, 0, 0)),
+            Slot("c3800_9000", 16000850, new Vector3(100, 0, 0)),
+            Clone("c0000_0200", 4000200, new Vector3(98, 0, 2)),
+            Clone("c0000_0201", 4000201, new Vector3(2, 0, 1)),
+        };
+
+        var added = HelperAreaResolver.ComputeModelAdditions(
+            Map, parts, locations, EligibleBossArea,
+            area => area is "volcano_rykard" or "volcano_abductors", models);
+
+        Assert.Equal("c0000_0201", Assert.Single(added).ID);
+    }
+
+    [Fact]
+    public void CloneNearerToOtherPhaseSlotOfSameArena_IsStillAdded()
+    {
+        // Two-phase arena: each slot lists its own source's helpers; a clone
+        // sitting closer to the other phase's slot still belongs to the arena.
+        var models = new Dictionary<uint, IReadOnlyList<string>>
+        {
+            [16000800] = new[] { "c0000" },
+            [16000801] = new[] { "c2040" },
+        };
+        var parts = new List<HelperAreaResolver.EnemyPart>
+        {
+            Slot("c4710_9000", 16000800, new Vector3(0, 0, 0)),
+            Slot("c4710_9001", 16000801, new Vector3(1, 0, 0)),
+            Clone("c2040_0138", 4000038, new Vector3(-0.5f, 0, 0)),
+        };
+
+        var added = HelperAreaResolver.ComputeModelAdditions(
+            Map, parts, MakeLocations(), EligibleBossArea, EligibleBossArea, models);
+
+        Assert.Equal("volcano_rykard", Assert.Single(added).ActualArea);
     }
 }

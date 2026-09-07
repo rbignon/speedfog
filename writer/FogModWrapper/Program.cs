@@ -411,7 +411,8 @@ Example:
         // Write (mutates ann.Locations.Enemies).
         if (!string.IsNullOrEmpty(ctx.Config.MergeDir))
         {
-            HelperAreaResolver.Resolve(ctx.Ann, ctx.Graph, ctx.Config.MergeDir, Console.WriteLine);
+            HelperAreaResolver.Resolve(
+                ctx.Ann, ctx.Graph, ctx.Config.MergeDir, ctx.GraphData.HelperModels, Console.WriteLine);
         }
 
         // FogMod's writer clamps every scaling target tier 21-28 down to 21

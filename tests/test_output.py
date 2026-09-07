@@ -6,18 +6,22 @@ from pathlib import Path
 import pytest
 
 from speedfog.clusters import ClusterData, ClusterPool
+from speedfog.constants import GRAPH_JSON_VERSION
 from speedfog.dag import Dag, DagNode, FogRef
 from speedfog.enemy_data import (
     build_boss_names,
     build_boss_placements,
+    build_helper_models,
     event_map_for_entity,
     parse_boss_extra_names,
     parse_boss_key_names,
     parse_boss_npc_names,
     parse_boss_phases,
+    parse_helper_models,
     patch_graph_boss_names,
     patch_graph_boss_placements,
     patch_graph_enemy_assignments,
+    patch_graph_helper_models,
     resolve_boss_name,
 )
 from speedfog.graph_export import (
@@ -416,10 +420,10 @@ def _make_result(death_markers: bool = True) -> dict:
 class TestEventMap:
     """Tests for v4 event_map, finish_event, and flag_id fields."""
 
-    def test_version_is_4_8(self):
-        """Version string is '4.8'."""
+    def test_version_matches_contract(self):
+        """Version string is the graph.json contract version."""
         result = _make_result()
-        assert result["version"] == "4.8"
+        assert result["version"] == GRAPH_JSON_VERSION
 
     def test_event_map_keys_are_string_flag_ids(self):
         """event_map keys are stringified integers."""
@@ -2183,7 +2187,7 @@ class TestPatchGraphEnemyAssignments:
 class TestPatchGraphBossNames:
     def test_patch_graph_boss_names_writes_key(self, tmp_path):
         graph = tmp_path / "graph.json"
-        graph.write_text(json.dumps({"version": "4.8", "nodes": {}}), encoding="utf-8")
+        graph.write_text(json.dumps({"version": "4.9", "nodes": {}}), encoding="utf-8")
         names = {"30010800": {"name": "Aging Untouchable", "map": "m30_01_00_00"}}
         patch_graph_boss_names(graph, names)
         data = json.loads(graph.read_text(encoding="utf-8"))
@@ -2191,7 +2195,7 @@ class TestPatchGraphBossNames:
 
     def test_patch_graph_boss_names_empty_is_noop(self, tmp_path):
         graph = tmp_path / "graph.json"
-        graph.write_text(json.dumps({"version": "4.8", "nodes": {}}), encoding="utf-8")
+        graph.write_text(json.dumps({"version": "4.9", "nodes": {}}), encoding="utf-8")
         patch_graph_boss_names(graph, {})
         assert "boss_names" not in json.loads(graph.read_text(encoding="utf-8"))
 
@@ -2636,7 +2640,7 @@ class TestPhantomSkins:
             zone_names={},
         )
         result = dag_to_dict(dag, clusters)
-        assert result["version"] == "4.8"
+        assert result["version"] == GRAPH_JSON_VERSION
 
 
 class TestDagToDictPlugins:
@@ -2652,7 +2656,7 @@ class TestDagToDictPlugins:
             clusters,
             GraphExportOptions(plugins={"summer": {"enabled": True, "intensity": 3}}),
         )
-        assert result["version"] == "4.8"
+        assert result["version"] == GRAPH_JSON_VERSION
         assert result["plugins"] == {"summer": {"enabled": True, "intensity": 3}}
 
     def test_plugins_default_empty(self):
@@ -2688,7 +2692,7 @@ class TestDagToDictTarnishedFields:
         assert result["class_loadout"]["weapons"][0]["id"] == 3560000
         assert result["class_loadout"]["shields"][0]["id"] == 31540000
         assert result["torrent_skins"] == {"unlock": True, "default_flag": 6702}
-        assert result["version"] == "4.8"
+        assert result["version"] == GRAPH_JSON_VERSION
 
     def test_dag_to_dict_omits_absent_tarnished_fields(self):
         dag = make_test_dag()
@@ -2846,3 +2850,64 @@ class TestValidateGraphDict:
         graph["torrent_skins"] = ["not", "a", "dict"]
         with pytest.raises(ValueError, match="torrent_skins"):
             validate_graph_dict(graph)
+
+
+class TestParseHelperModels:
+    def test_groups_helper_models_by_owner(self, tmp_path):
+        # Commander O'Neil's soldiers: two c3000 entries and one c3020 all
+        # OwnedBy 1049380800. A Basic entry with OwnedBy and a Helper without
+        # one are not helpers the randomizer clones. Prefixed part names
+        # (m60_48_55_00-c3160_9000) yield the bare model.
+        enemy_txt = tmp_path / "enemy.txt"
+        enemy_txt.write_text(
+            "- ID: 2820955\n"
+            "  Map: m60_49_38_00\n"
+            "  Name: c3000_9008\n"
+            "  Class: Helper\n"
+            "  OwnedBy: 1049380800\n"
+            "- ID: 2820956\n"
+            "  Name: c3000_9009\n"
+            "  Class: Helper\n"
+            "  OwnedBy: 1049380800\n"
+            "- ID: 2820960\n"
+            "  Name: c3020_9004\n"
+            "  Class: Helper\n"
+            "  OwnedBy: 1049380800\n"
+            "- ID: 1049380810\n"
+            "  Name: c4300_9000\n"
+            "  Class: Basic\n"
+            "  OwnedBy: 1049380800\n"
+            "- ID: 12030814\n"
+            "  Name: c0000_9010\n"
+            "  Class: Helper\n"
+            "- ID: 1248550810\n"
+            "  Name: m60_48_55_00-c3160_9000\n"
+            "  Class: Helper\n"
+            "  OwnedBy: 1248550800\n",
+            encoding="utf-8",
+        )
+        assert parse_helper_models(enemy_txt) == {
+            1049380800: ["c3000", "c3020"],
+            1248550800: ["c3160"],
+        }
+
+    def test_missing_file_returns_empty(self, tmp_path):
+        assert parse_helper_models(tmp_path / "nope.txt") == {}
+
+
+class TestBuildHelperModels:
+    def test_keeps_only_arenas_whose_source_has_helpers(self):
+        assignments = {"40010800": "1049380800", "30050850": "16000860"}
+        by_owner = {1049380800: ["c3000", "c3020"]}
+        assert build_helper_models(assignments, by_owner) == {
+            "40010800": ["c3000", "c3020"]
+        }
+
+
+class TestPatchGraphHelperModels:
+    def test_writes_key(self, tmp_path):
+        graph = tmp_path / "graph.json"
+        graph.write_text(json.dumps({"version": "4.9", "nodes": {}}), encoding="utf-8")
+        patch_graph_helper_models(graph, {"40010800": ["c3000"]})
+        data = json.loads(graph.read_text(encoding="utf-8"))
+        assert data["helper_models"] == {"40010800": ["c3000"]}

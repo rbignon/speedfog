@@ -151,6 +151,7 @@ In `main.py`, immediately after the logs block (before the build step, so it run
    - `boss_name`: canonical name from the phase 2 replacement (numeric suffix stripped, e.g. "Fire Giant" not "Fire Giant 2")
 5. `append_boss_placements_to_spoiler()` adds a boss placement section to spoiler.txt
 6. `build_boss_names()` keeps the arenas whose source has no vanilla `Important.NpcName` (`parse_boss_npc_names()`; the randomizer names the others correctly by copying their healthbar events) and pairs each with the map whose EMEVD runs its boss events (`event_map_for_entity()`, derived from the entity id); `patch_graph_boss_names()` writes them as `boss_names` (v4.8) for `BossNameInjector` (see `docs/boss-healthbar-names.md`)
+7. `parse_helper_models()` collects the models of every `Class: Helper` entry `OwnedBy` a boss, `build_helper_models()` keeps the arenas whose placed source owns some, and `patch_graph_helper_models()` writes them as `helper_models` (v4.9) for `HelperAreaResolver`'s model pass (see "Helper enemy scaling" below)
 
 Matching logic (in `_match_boss_placement`): tries `str(defeat_flag)` first, then `str(defeat_flag - 200_000_000)` for base game bosses. `_resolve_entity_id()` extracts the entity_id from a defeat_flag for phase mapping lookups.
 
@@ -194,31 +195,72 @@ SpEffect argument belongs to the shared tier-transfer SpEffect space (base
 allocate them in the same deterministic order, so FogMod recognizes and
 overwrites the randomizer's values). The replacement SpEffect is computed as
 `(enemy's native tier from NpcParam spEffectID3) -> (fog DAG tier of the
-enemy's area)`.
+enemy's area)` and the init is repointed at FogMod's own scale events
+(9005770/9005771).
 
 The target area is resolved per enemy part in this order (GameDataWriterE.cs
 ~L2081): part name in foglocations2 `Enemies`, entity group in an area's
 `Groups`, collision in an area's `Cols`, then the map's default area
-(`MainMap`). Helper parts created by the enemy randomizer (e.g. the Godskin
-Duo respawning backups) defeat the three specific lookups: new part names,
-vanilla boss group cleared and replaced by a randomizer-allocated one, and
-some arenas (volcano_rykard) declare `Groups` only. They fall through to the
-map default, whose DAG tier can be wildly different from the arena's (tier 4
-vs 15 on a real seed: adds at ~1.3k HP instead of ~4.7k, damage x0.42, runes
-x0.099).
+(`MainMap`). A part whose resolved area has no DAG tier is skipped
+(AllowUnlinked) and keeps the randomizer's init, i.e. the vanilla
+progression's section pair.
 
-`HelperAreaResolver` (FogModWrapper) runs before `GameDataWriterE.Write`:
-it scans the merge-dir MSBs restricted to maps hosting an eligible boss slot
-(area with a defeat flag, present in the DAG's `AreaTiers`), and for every
-part that is unresolvable by name or known groups but shares a non-vanilla
-entity group with a name-resolved boss slot, appends an `EnemyLoc` entry
-pointing at the boss arena. FogMod's name lookup (highest priority) then
-scales the helper exactly like the boss slot (arena tier, unique boss
-scaling). Collisions are deliberately ignored: the boss-group signal
+The randomizer clones every `Class: Helper` entry `OwnedBy` a placed boss
+into the target arena (RandomizerCommon `CloneEnemy`: a deep copy of the
+transplanted slot, so the clone inherits the slot's collision, renamed
+`{model}_{index}` with index from 100, groups cleared, then only the
+source's declared `Groups` re-added through a randomizer-allocated group,
+plus the target BuddyGroup when the helper carried the source's). The
+clones therefore defeat the name lookup, and the collision/MainMap
+fallbacks land wherever the slot's collision or the map is filed: another
+cluster's tier (Rykard's arena declares Groups only, so Rennala's students
+followed volcano_town), or no tier at all (catacombs arenas used as
+standalone boss_arena clusters: Commander O'Neil's soldiers kept the
+randomizer's 9->26 pair in a tier-8 arena).
+
+`HelperAreaResolver.Resolve` (FogModWrapper) runs before
+`GameDataWriterE.Write`, scans the merge-dir MSBs restricted to maps hosting
+an eligible boss slot (area with a defeat flag, present in the DAG's
+`AreaTiers`), and appends `EnemyLoc` entries pointing clones at their arena
+so FogMod's name lookup (highest priority) scales them exactly like the
+boss slot (arena tier, unique boss scaling). Two passes per map:
+
+1. **Group pass** (`ComputeAdditions`): a part unresolvable by name or
+   known groups that shares a non-vanilla entity group with a name-resolved
+   boss slot. Only fires when the source boss's main part itself carries a
+   declared `Groups` entry (Gideon, Placidusax), the only way the slot
+   receives the randomizer-allocated group.
+2. **Model pass** (`ComputeModelAdditions`, graph.json v4.9
+   `helper_models`): Python exports, per arena of `enemy_assignments`, the
+   models of the placed source's helpers (`parse_helper_models` over
+   enemy.txt `Name` / `Class: Helper` / `OwnedBy`). A clone-named part
+   (`{model}_{0100..8999}`, optional tile prefix) whose model is among the
+   helper models of an eligible, name-resolved slot of the same map is
+   attached to the arena of the nearest claiming slot (clones are placed
+   inside their arena), unless another boss slot of the map (DAG or not,
+   any area with a defeat flag) is nearer: the randomizer also randomizes
+   boss slots outside the DAG, and their clones share the map and possibly
+   the model, so they are left to FogMod's fallbacks like their boss.
+   Vanilla parts of the same model keep their 9xxx names and are never
+   touched. Known limitation: with `[enemy] swap_boss = true` the
+   randomizer replaces `swappable` helpers by random ones, whose model is
+   not the one enemy.txt lists for the owner; those clones stay on the
+   fallback path (the option defaults to false).
+
+Collisions are deliberately ignored by both passes: the boss signal
 outranks them and name entries win anyway.
 
-Measured on a real seed: 11 entries added, 47 of 510 merge-dir maps scanned,
-~4 s under Wine (dominated by MSB parsing).
+Measured before the model pass (2026-09-07, two seeds): 205 helpers in 34
+arenas, 149 at the arena tier (mostly through the target BuddyGroup
+declared in foglocations2 or the arena's Cols), 44 at another cluster's
+tier, 12 untouched at the randomizer's vanilla-progression pair. With it,
+every helper of the audited package (24 in 7 arenas) sits at its arena
+tier. Only dummies (c0100/c1000/c0110, skipped by FogMod's scaling loop)
+stay unscaled, harmlessly. To re-audit a seed: list the merge-dir MSB parts
+(`game_inspect list-enemies`), decode the 9005771/9005891 inits of the
+fogmod EMEVD (`dump_emevd_warps dump --event all`; pair = `7800000 +
+4 * pairIndex + kind`) and compare each clone's target tier with the
+arena's `area_tiers` entry.
 
 `HelperAreaResolver.ApplyVanillaOverrides` handles the converse,
 randomizer-independent case: a vanilla part misfiled by foglocations2

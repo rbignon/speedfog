@@ -316,4 +316,31 @@ public class GraphLoaderTests
         Assert.Null(data.ClassLoadout);
         Assert.Null(data.TorrentSkins);
     }
+
+    [Fact]
+    public void GraphData_DeserializesHelperModels()
+    {
+        var json = """
+        {
+          "version": "4.9",
+          "seed": 1,
+          "helper_models": {"40010800": ["c3000", "c3020"]},
+          "connections": [],
+          "area_tiers": {}
+        }
+        """;
+        var data = GraphLoader.Parse(json);
+        var entry = Assert.Single(data.HelperModels);
+        Assert.Equal("40010800", entry.Key);
+        Assert.Equal(new[] { "c3000", "c3020" }, entry.Value);
+    }
+
+    [Fact]
+    public void GraphData_HelperModelsDefaultEmpty()
+    {
+        var json = """
+        {"version": "4.9", "seed": 1, "connections": [], "area_tiers": {}}
+        """;
+        Assert.Empty(GraphLoader.Parse(json).HelperModels);
+    }
 }

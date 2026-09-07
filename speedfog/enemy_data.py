@@ -24,6 +24,9 @@ _NEXT_PHASE_RE = re.compile(r"^  NextPhase:\s*(\d+)")
 _EXTRA_NAME_RE = re.compile(r"^\s+ExtraName:\s*(.+)")
 _KEY_NAME_RE = re.compile(r"^      Key:\s*(.+)")
 _IMPORTANT_NPC_NAME_RE = re.compile(r"^    NpcName:\s*(\d+)")
+_NAME_RE = re.compile(r"^  Name:\s*(\S+)")
+_CLASS_RE = re.compile(r"^  Class:\s*(\S+)")
+_OWNED_BY_RE = re.compile(r"^  OwnedBy:\s*(\d+)")
 
 
 def parse_boss_phases(enemy_txt_path: Path) -> dict[int, int]:
@@ -154,6 +157,84 @@ def parse_boss_npc_names(enemy_txt_path: Path) -> dict[int, int]:
                 if m:
                     npc_names[current_id] = int(m.group(1))
     return npc_names
+
+
+def parse_helper_models(enemy_txt_path: Path) -> dict[int, list[str]]:
+    """Models of each boss's helper enemies, keyed by owner entity id.
+
+    The enemy randomizer clones every ``Class: Helper`` entry ``OwnedBy`` a
+    placed boss into the target arena (RandomizerCommon EnemyRandomizer,
+    ``owners`` loop). The clone keeps the helper's model, and its part name
+    is ``{model}_{index}``, so the model is what FogModWrapper can match in
+    the merge-dir MSB to scale the clones like the boss. ``Name`` is the
+    vanilla part name (``c3000_9008``, or ``m60_48_55_00-c3160_9000`` on
+    open-world tiles); the model is its ``cXXXX`` prefix. Entries of another
+    class, or helpers without an owner, are never cloned and are ignored.
+
+    Returns ``{owner_id: sorted unique models}``, empty if the file is
+    missing.
+    """
+    if not enemy_txt_path.exists():
+        return {}
+
+    models: dict[int, set[str]] = {}
+    name: str | None = None
+    klass: str | None = None
+    owner: int | None = None
+
+    def flush() -> None:
+        if klass == "Helper" and owner is not None and name is not None:
+            model = name.rsplit("-", 1)[-1].split("_", 1)[0]
+            models.setdefault(owner, set()).add(model)
+
+    with open(enemy_txt_path, encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("- ID:"):
+                flush()
+                name = klass = owner = None
+            elif line.startswith("  Name:"):
+                m = _NAME_RE.match(line)
+                if m:
+                    name = m.group(1)
+            elif line.startswith("  Class:"):
+                m = _CLASS_RE.match(line)
+                if m:
+                    klass = m.group(1)
+            elif line.startswith("  OwnedBy:"):
+                m = _OWNED_BY_RE.match(line)
+                if m:
+                    owner = int(m.group(1))
+    flush()
+    return {owner_id: sorted(found) for owner_id, found in models.items()}
+
+
+def build_helper_models(
+    enemy_assignments: Mapping[str, str],
+    helper_models: Mapping[int, list[str]],
+) -> dict[str, list[str]]:
+    """Helper models per arena for graph.json ``helper_models`` (v4.9).
+
+    ``{arena_id: models}`` for every assignment whose source owns helpers
+    (``parse_helper_models``); arenas receiving a helper-less boss are
+    omitted. FogModWrapper's HelperAreaResolver uses it to give the
+    randomizer's helper clones the arena's scaling area.
+    """
+    result: dict[str, list[str]] = {}
+    for arena_id, source_id in enemy_assignments.items():
+        models = helper_models.get(int(source_id))
+        if models:
+            result[arena_id] = list(models)
+    return result
+
+
+def patch_graph_helper_models(
+    graph_path: Path, helper_models: dict[str, list[str]]
+) -> None:
+    """Patch graph.json with the helper_models mapping (v4.9, see build_helper_models).
+
+    Empty or missing mappings leave the file untouched.
+    """
+    _patch_graph_key(graph_path, "helper_models", helper_models)
 
 
 def event_map_for_entity(entity_id: int) -> str | None:

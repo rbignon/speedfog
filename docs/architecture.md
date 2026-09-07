@@ -310,7 +310,7 @@ types and the optional node-level fields documented below.
 
 ```json
 {
-  "version": "4.8",
+  "version": "4.9",
   "seed": 212559448,
   "total_layers": 8, "total_nodes": 12, "total_zones": 24,
   "options": {"scale": true, "shuffle": true},
@@ -364,7 +364,8 @@ types and the optional node-level fields documented below.
   "phantom_skins": {"gold-aura": {"speffects": [1450700]}},
   "plugins": {"summer": {"enabled": false}},
   "enemy_assignments": {"30001800": "2049420200"},
-  "boss_names": {"30001800": {"name": "Aging Untouchable", "map": "m30_00_00_00"}}
+  "boss_names": {"30001800": {"name": "Aging Untouchable", "map": "m30_00_00_00"}},
+  "helper_models": {"40010800": ["c3000", "c3020"]}
 }
 ```
 
@@ -383,6 +384,7 @@ Gate names use FogMod's FullName format: `{map}_{gate_name}`.
 - `plugins`: verbatim `[plugin]` config passthrough (C# reads via `GraphData.IsPluginEnabled`)
 - `enemy_assignments`: optional `{arena_entity_id: source_entity_id}` map (both decimal strings), the enemy-randomizer placement mapping; absent when the item randomizer or boss randomization is off (added v4.5, consumed by `UntouchableBossInjector`, see `docs/untouchable-boss.md`)
 - `boss_names`: optional `{arena_entity_id: {name, map}}` for the assignments whose source has no vanilla `Important.NpcName` (promoted mobs), so FogModWrapper can repoint the arena's healthbar name; absent when every placed source carries its own name (added v4.8, consumed by `BossNameInjector`, see `docs/boss-healthbar-names.md`)
+- `helper_models`: optional `{arena_entity_id: [model, ...]}` for the assignments whose source owns `Class: Helper` entries in enemy.txt (`parse_helper_models` + `build_helper_models`), the models of the clones the randomizer places in the arena; absent when no placed source has helpers (added v4.9, consumed by `HelperAreaResolver`'s model pass, see `docs/item-randomizer.md` "Helper enemy scaling")
 
 Flag allocation: connection flags (`connections[].flag_id`, mirrored as `event_map` keys),
 `finish_event`, and `death_flags` are drawn sequentially from `EVENT_FLAG_BASE` (1050294000, budget

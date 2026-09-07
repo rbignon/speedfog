@@ -184,6 +184,13 @@ public class GraphData
     [JsonPropertyName("boss_names")]
     public Dictionary<string, BossNameEntry> BossNames { get; set; } = new();
 
+    /// <summary>Models (c3000) of the helper enemies the randomizer clones
+    /// next to each placed boss: arena entity id (decimal string) to model
+    /// names (graph.json v4.9, optional; empty when no placed source owns
+    /// helpers). Consumed by HelperAreaResolver's model pass.</summary>
+    [JsonPropertyName("helper_models")]
+    public Dictionary<string, List<string>> HelperModels { get; set; } = new();
+
     /// <summary>True when the named plugin is present and enabled.</summary>
     public bool IsPluginEnabled(string name)
         => Plugins != null && Plugins.TryGetValue(name, out var p) && p.Enabled;

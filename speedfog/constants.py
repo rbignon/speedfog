@@ -14,7 +14,9 @@ from __future__ import annotations
 #      shields once each on occupied left hands, armor per occupied slot)
 # 4.8: optional boss_names (healthbar names of promoted mobs, see
 #      docs/boss-healthbar-names.md)
-GRAPH_JSON_VERSION = "4.8"
+# 4.9: optional helper_models (models of the placed bosses' helper clones per
+#      arena, see docs/item-randomizer.md "Helper enemy scaling")
+GRAPH_JSON_VERSION = "4.9"
 
 # SpeedFog's dedicated flag base: 1050290000 (m60_50_29_00, unclaimed).
 # Saved flags (4xxx): zone tracking, finish event, death markers.

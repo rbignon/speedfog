@@ -21,13 +21,16 @@ from speedfog.config import Config, load_config, prune_final_boss_candidates
 from speedfog.enemy_data import (
     build_boss_names,
     build_boss_placements,
+    build_helper_models,
     parse_boss_extra_names,
     parse_boss_key_names,
     parse_boss_npc_names,
     parse_boss_phases,
+    parse_helper_models,
     patch_graph_boss_names,
     patch_graph_boss_placements,
     patch_graph_enemy_assignments,
+    patch_graph_helper_models,
     resolve_boss_name,
     resolve_entity_id,
 )
@@ -495,9 +498,16 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
                 enemy_assignments, placements, parse_boss_npc_names(enemy_txt_path)
             )
             patch_graph_boss_names(json_path, boss_names)
+            # Models of the placed bosses' helper clones, so FogModWrapper's
+            # HelperAreaResolver can scale them with the arena.
+            helper_models = build_helper_models(
+                enemy_assignments, parse_helper_models(enemy_txt_path)
+            )
+            patch_graph_helper_models(json_path, helper_models)
             print(
                 f"Boss placements: {len(placements)} bosses randomized, "
-                f"{len(boss_names)} healthbar names to patch"
+                f"{len(boss_names)} healthbar names to patch, "
+                f"{len(helper_models)} arenas with helper clones"
             )
             if args.logs and spoiler_path is not None:
                 append_boss_placements_to_spoiler(spoiler_path, placements)
