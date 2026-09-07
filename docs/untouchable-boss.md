@@ -68,9 +68,11 @@ break and a **broken state** after it (x4 damage ratio between the two,
   row 755890000 (category 1001 kept) with the eight damage-cut fields
   (`slashDamageCutRate` ... `darkDamageCutRate`) set to
   `UntouchableBossInjector.DAMAGE_CUT` (`0.5f`, the boss takes 50%; 0.35
-  until the 2026-09-04 session found the boss too tanky). The row is not
-  resident on the boss `NpcParam` row: a resident copy could not be
-  cleared by step 3.
+  until the 2026-09-04 session found the boss too tanky) and vanilla's
+  boss damage-level table (the twelve `dmgLv_*` fields of SpEffect 5300)
+  copied in, so the row matches the vanilla wall on every field that
+  governs hit reactions (see "Hit reactions"). The row is not resident on the boss
+  `NpcParam` row: a resident copy could not be cleared by step 3.
 - `PatchWallEvents` (MSB phase, per arena map) rewrites the events the
   randomizer copied for each placed boss (all four take the entity as
   their parameter): 20011470 becomes 755890000 in the wall event's
@@ -109,32 +111,9 @@ The clone (`NpcParam` row `755890000`, `UntouchableBossInjector.UNTOUCHABLE_VANI
   Jori's exact value): the stagger meter, Jori's profile (vanilla 65 / 0).
   Depleting it staggers the boss whatever the table below says (Godrick
   carries the same table and still gets stance-broken).
-- the first free `spEffectIDn` slot (slot 1 on 52800086, where 0 is the
-  engine's no-op row) = `SpeedFogIds.UntouchableNoFlinchSpEffectRow`
-  (755890003), a clone of vanilla's boss damage-level table 5300 with
-  `spCategory` 0. 5300 is a permanent SpEffect (category 1001, priority
-  200) whose only content is the twelve `dmgLv_*` fields at 1: every
-  incoming damage level is replaced by None, so no ordinary hit plays a
-  damage animation. It sits in slot 1 of Jori (53120000), Godrick
-  (47200000), Margit (46800000) and 690 NpcParam rows in all (variants:
-  5333 on Rykard and Mohg, 5304 on 196 large mobs, Malenia's own 16583);
-  the vanilla immunity wall 20011470 carries the same table, which is why
-  an immune untouchable never flinches, whereas the cut row is a clone of
-  20011471, which has none. Vanilla 52800086 has no such row, so every
-  hit interrupted the boss whatever its super armor (fifth and ninth
-  runs). Category 0 rather than vanilla's 1001/200: within a category
-  the lower `categoryPriority` wins (the paramdef's own description of
-  the field), so the partial wall and the parry-window effect (1001/0)
-  outrank the table (1001/200) and the wall applied at spawn would evict
-  a resident 5300 for good (the category facts are under "The
-  vulnerability mechanism"). No vanilla table lives outside category
-  1001 (5300, 5304, 5333 and 16583 are all 1001/200), so whether the
-  engine honours a category-0 table is what step 9 of the validation
-  sequence checks. Skipped with a warning when
-  5300 or a free slot is missing. Checked and not it: `isSkipWeakDamageAnim`
-  (already 1 on every 5280 row), `isNoDamageMotion` and `knockbackParamId`
-  (0 on every row). Differences against Jori left alone: `npcType` 1
-  (Jori, Godrick; not Margit), `guardLevel` 4, slot 5851 (Jori) vs 5852.
+- no new resident slot: vanilla's boss damage-level table (SpEffect
+  5300) is folded into the partial wall row instead, see "Hit reactions"
+  below.
 - every `spEffectIDn` equal to 20011471 = -1 (nerflantern's slot); slot
   17 (`20011450`, vanilla's one-shot teleport gate, ignored by the boss
   script, see "AI script", "Cooldowns") and slot 18 (`20011473`) stay.
@@ -157,6 +136,59 @@ wall and no cut at all, with a warning and its bar flips discarded. The
 merge-dir fallback arena has no EMEVD in the mod dir: its merge-dir copy
 (which carries the randomizer's events) is shipped into the mod dir and
 patched there, like its MSB.
+
+### Hit reactions
+
+Why ordinary hits stop interrupting the boss (investigated 2026-09-06
+after nine runs in which every hit cancelled its attacks, whatever the
+super armor):
+
+- The lever is a **damage-level replacement table**, not the super armor
+  meter. SpEffectParam's twelve `dmgLv_*` fields (`dmgLv_None` ...
+  `dmgLv_Breath`, enum `ATKPARAM_REP_DMGTYPE`, 0 = keep the attack's
+  level) replace the damage level of an incoming attack, i.e. which
+  damage animation the target plays. Vanilla's boss table is SpEffect
+  5300: permanent, category 1001, priority 200, the twelve fields at 1
+  and, besides the `effectTarget*` flags, nothing else. It sits in slot
+  1 of Jori (53120000), Godrick
+  (47200000), Margit (46800000) and 690 NpcParam rows in all (variants:
+  5333 on Rykard and Mohg, 5304 on 196 large mobs, Malenia's own
+  16583). The regular Inquisitor c5311 shares Jori's animation set and
+  flinches on ordinary hits: its row has no 5300. Vanilla 52800086 has
+  none either.
+- The vanilla immunity wall 20011470 carries the same table (with the
+  cut rates at 0), which is why an immune untouchable never flinches.
+  The partial wall row is a clone of 20011471, the parry-window effect,
+  which has no table: the cut kept the damage, not the hit reactions.
+- `Apply` therefore copies the table from 5300 into the partial wall
+  row, which then matches the vanilla wall on every field that governs
+  hit reactions (category 1001, priority 0, `stateInfo` 121, the
+  twelve-level table); the cut rates, the seven status-buildup defence
+  rates (0 on the wall, 1 on the parry window) and the `vfxId` stay the
+  parry window's. Skipped with a warning when 5300 is missing.
+- A resident category-0 clone of 5300 in a free slot of the boss clone
+  was tried first (2026-09-06) and shipped as intended (checked in the
+  seed's regulation), but changed nothing in game (tenth run,
+  2026-09-07): 264 of the 267 vanilla tables live in category 1001 (the
+  outliers: 8200 in category 100, 10597 and 20011466 in category 0), and
+  the engine does not seem to read them elsewhere. Category 1001 with
+  vanilla's priority 200 was no option for a resident row: within a
+  category the lower `categoryPriority` wins (the paramdef's own
+  description of the field), so the partial wall and the parry-window
+  effect (both 1001/0) would evict it at spawn.
+- After the break the boss flinches again on ordinary hits: the broken
+  row must stay in category 0 (it coexists with the parry windows of
+  later parries), where the table goes unheeded, and a vanilla
+  untouchable flinches too once its wall is gone. The super armor meter
+  (`BOSS_SUPER_ARMOR`) staggers the boss in both phases; Godrick carries
+  the same table and still gets stance-broken.
+- Checked and not it: `superArmorDurability` (the stagger meter only),
+  `toughness` (Jori's 0 changed nothing), `isSkipWeakDamageAnim`
+  (already 1 on every 5280 row), `isNoDamageMotion` and
+  `knockbackParamId` (0 on every row). Differences against Jori not
+  tried: `npcType` 1 (Jori, Godrick; not Margit), `guardLevel` 4,
+  slot 0 5400 vs 5401 and slot 11 5851 vs 5852 (category 100 class
+  rows), 90100 vs 90161, 90200, 5262.
 
 ## Two-phase injector
 
@@ -572,8 +604,13 @@ names what the run showed and what changed):
 - 2026-09-06, after the ninth run: every hit still cancelled the boss's
   attacks. A field-by-field NpcParam diff against Jori and a SpEffect
   census found the mechanism, the resident damage-level table 5300 (see
-  the clone), absent from 52800086; `toughness` never was the lever. No
-  run in game yet.
+  "Hit reactions"), absent from 52800086; `toughness` never was the
+  lever.
+- 2026-09-07, tenth run: a category-0 clone of 5300 resident in slot 1
+  of the boss clone (shipped as intended, checked in the seed's
+  regulation) changed nothing, the grab still cancelled by every hit.
+  The table is now folded into the partial wall row (category 1001, the
+  vanilla wall's shape); run owed.
 
 ### Parry break
 
@@ -708,25 +745,24 @@ change.
    burst's cancel window, the `ClearSubGoal` order) before trying
    301010's eight-argument call.
 9. **Hit reactions**: ordinary hits no longer interrupt the boss's grab,
-   burst, beam or teleport wind-up (the resident damage-level table, the
-   clone of 5300); heavy hits and combos still break its super armor
+   burst, beam or teleport wind-up (the damage-level table of 5300 folded
+   into the partial wall row); heavy hits and combos still break its super armor
    meter (80, Jori's) into a stagger, and the parry still breaks the
-   wall. A boss still interrupted by every hit means a category-0 table
-   is not honoured (no vanilla precedent: every vanilla table is
-   1001/200). Fallback in two halves. Before the break: fold the twelve
-   `dmgLv_*` fields into the cut row (1001/0, exactly what the vanilla
-   wall 20011470 is, so certain to work). After the break: the broken
-   row is category 0 by necessity (it must coexist with later parry
-   windows), so either accept that a broken boss flinches again, as a
-   vanilla untouchable does once its wall is gone, or make vanilla's
-   5300 itself resident and observe which side the priority rule
-   evicts; Roger's call. A boss that never staggers means the meter is
+   wall; once the wall is broken the boss flinches again on ordinary
+   hits (by design, see "Hit reactions"). A boss still interrupted by
+   every hit before the break means the table does not do on c5280 what
+   it does on Jori: the partial wall row then matches the vanilla wall
+   on every field that governs hit reactions, so check whether a vanilla
+   immune untouchable flinches
+   at all (a save without the item randomizer, whose nerflantern option
+   lifts every wall), and move to the next untested difference against
+   Jori, `npcType` 1. A boss that never staggers means the meter is
    masked by the table: lower `BOSS_SUPER_ARMOR`.
 
 ## Expected log lines
 
 ```
-Untouchable boss: NpcParam 755890000 (clone of 52800086, hp 2000, runes 20000, toughness 0, super armor 80/0.2307692, nerflantern slot scrubbed, no-flinch table 755890003 in slot 1) + partial wall SpEffect 755890000 (cut 0.5) + broken SpEffect 755890002 (x2), both applied by the copied wall event
+Untouchable boss: NpcParam 755890000 (clone of 52800086, hp 2000, runes 20000, toughness 0, super armor 80/0.23076923, nerflantern slot scrubbed) + partial wall SpEffect 755890000 (cut 0.5, no-flinch table of 5300 folded in) + broken SpEffect 755890002 (x2), both applied by the copied wall event
 Untouchable boss: moveset rows (think 755890001 -> battle 755890, variation 75589 with 9 vanilla judges + beam judge 150, bullet 755890000 (clone of 10732000), atk 755890000 magic 110, pulses 755890003-755890005 without madness)
 Untouchable boss: repointing N placed boss slot(s)
   <part> (entity <id>): NPCParamID -> 755890000, ThinkParamID -> 755890001

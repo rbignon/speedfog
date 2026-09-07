@@ -118,10 +118,9 @@ public static class SpeedFogIds
     // --- Param row IDs (not entity IDs; separate namespace per PARAM) ---
 
     // Param row namespaces are per-PARAM (NpcThinkParam, NpcParam,
-    // SpEffectParam, Bullet, AtkParam_Npc never share ids), so the same four
-    // numeric values below are reused across the ten rows with no collision
-    // (Bullet additionally owns the pulse band 755890003-005, disjoint from
-    // SpEffectParam's 755890003).
+    // SpEffectParam, Bullet, AtkParam_Npc never share ids), so the same three
+    // numeric values below are reused across the nine rows with no collision
+    // (Bullet additionally owns the pulse band 755890003-005).
     // They sit in FogMod's entity band only by convention (params and entities
     // are unrelated id spaces); no vanilla row in any of the five params
     // comes anywhere near them, and phantom skins (1450700-1450799) /
@@ -130,7 +129,6 @@ public static class SpeedFogIds
     private const int ParamRowBase0 = 755890000;
     private const int ParamRowBase1 = 755890001;
     private const int ParamRowBase2 = 755890002;
-    private const int ParamRowBase3 = 755890003;
 
     /// <summary>NpcThinkParam row for the passive Halloween greeters:
     /// a clone of the Aging Untouchable's think row (52800000) with all
@@ -147,7 +145,9 @@ public static class SpeedFogIds
 
     /// <summary>SpEffectParam row for the boss's partial wall: a clone of
     /// the vanilla parry-window effect 20011471 (category 1001) with the
-    /// eight damage-type cut rates lowered. Not resident on the NpcParam
+    /// eight damage-type cut rates lowered and vanilla's boss damage-level
+    /// table (5300) folded in, i.e. the vanilla wall's shape with damage
+    /// let through. Not resident on the NpcParam
     /// row: it replaces the vanilla full wall (20011470) inside the wall
     /// event the enemy randomizer copies for each placed boss, so the
     /// vanilla flow clears it on the first parry.</summary>
@@ -191,14 +191,6 @@ public static class SpeedFogIds
     /// eight cut rates make the boss take twice the vanilla damage, four
     /// times what it took behind the partial wall.</summary>
     public const int UntouchableBrokenSpEffectRow = ParamRowBase2;
-
-    /// <summary>SpEffectParam row resident on the boss NpcParam clone
-    /// (first free slot, slot 1 on vanilla 52800086): a clone of vanilla's
-    /// boss damage-level table 5300 (every incoming damage level replaced
-    /// by None; Jori's, Godrick's and Margit's slot 1) moved to category 0
-    /// so it coexists with the 1001 wall rows. The reason ordinary hits no
-    /// longer interrupt the boss; the super armor meter still staggers it.</summary>
-    public const int UntouchableNoFlinchSpEffectRow = ParamRowBase3;
 
     /// <summary>First of three consecutive Bullet rows (755890003-005): the
     /// lantern's ambient pulse bullets (vanilla 205280000-002, judges

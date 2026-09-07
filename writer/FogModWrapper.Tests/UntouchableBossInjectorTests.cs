@@ -616,32 +616,42 @@ public class UntouchableBossInjectorTests
     }
 
     [Fact]
-    public void Apply_MakesTheBossFlinchProofWithVanillasBossDamageLevelTable()
+    public void Apply_FoldsVanillasBossDamageLevelTableIntoTheCutRow()
     {
         var (npc, sp) = BuildCoreParams();
-        // Vanilla 52800086: slot 0 taken, slot 1 holds row 0 (the no-op effect).
-        npc.Rows[0]["spEffectID0"].Value = 5401;
-        npc.Rows[0]["spEffectID1"].Value = 0;
+        npc.Rows[0]["spEffectID1"].Value = 0; // vanilla 52800086: row 0, the no-op effect
+        var table = sp.Rows.Single(r => r.ID == UntouchableBossInjector.NO_FLINCH_TEMPLATE_SPEFFECT);
+        table["dmgLv_Breath"].Value = (sbyte)2; // copied, not hardcoded
 
         UntouchableBossInjector.Apply(npc, sp);
 
-        var table = sp.Rows.Single(r => r.ID == SpeedFogIds.UntouchableNoFlinchSpEffectRow);
-        // Cloned from 5300: every incoming damage level replaced by None.
+        // The cut row takes the vanilla wall's hit-reaction shape (category
+        // 1001, priority 0, every incoming damage level replaced by None),
+        // with the cut rates raised: what keeps an immune untouchable from
+        // flinching keeps the boss from flinching until the wall breaks.
+        var cut = sp.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossSpEffectRow);
+        Assert.Equal((sbyte)1, (sbyte)cut["dmgLv_S"].Value);
         foreach (var field in DamageLevelFields)
-            Assert.Equal((sbyte)1, (sbyte)table[field].Value);
-        // Out of the wall's category: in 1001 the wall and the parry window
-        // (priority 0, lower wins) would evict the table (priority 200).
-        Assert.Equal((ushort)0, (ushort)table["spCategory"].Value);
-        Assert.Equal((byte)0, (byte)table["categoryPriority"].Value);
+            Assert.Equal((sbyte)table[field].Value, (sbyte)cut[field].Value);
+        // The broken boss flinches again, as a vanilla untouchable does once
+        // its wall is gone (the broken row must stay in category 0).
+        var broken = sp.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBrokenSpEffectRow);
+        foreach (var field in DamageLevelFields)
+            Assert.Equal((sbyte)0, (sbyte)broken[field].Value);
+        // No resident row: a category-0 table went unheeded in game (2026-09-07).
+        Assert.Equal(
+            new[] { 20011471, UntouchableBossInjector.BREAK_VFX_SPEFFECT, UntouchableBossInjector.NO_FLINCH_TEMPLATE_SPEFFECT,
+                    SpeedFogIds.UntouchableBossSpEffectRow, SpeedFogIds.UntouchableBrokenSpEffectRow }.OrderBy(id => id),
+            sp.Rows.Select(r => r.ID).OrderBy(id => id));
         var boss = npc.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossNpcRow);
-        Assert.Equal(5401, (int)boss["spEffectID0"].Value);
-        Assert.Equal(SpeedFogIds.UntouchableNoFlinchSpEffectRow, (int)boss["spEffectID1"].Value); // first free slot
-        // Ambient untouchables keep flinching.
-        Assert.Equal(0, (int)npc.Rows.Single(r => r.ID == 52800086)["spEffectID1"].Value);
+        Assert.Equal(0, (int)boss["spEffectID1"].Value);
+        // Vanilla's own table row is untouched (ambient untouchables and every 5300 carrier).
+        Assert.Equal((ushort)1001, (ushort)table["spCategory"].Value);
+        Assert.Equal((sbyte)2, (sbyte)table["dmgLv_Breath"].Value);
     }
 
     [Fact]
-    public void Apply_WithoutTheBossDamageLevelTable_WritesTheBossWithoutIt()
+    public void Apply_WithoutTheBossDamageLevelTable_LeavesTheCutRowWithoutIt()
     {
         var npc = BuildParamFromDef("NpcParam", templateId: 52800086);
         var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
@@ -649,26 +659,11 @@ public class UntouchableBossInjectorTests
 
         UntouchableBossInjector.Apply(npc, sp);
 
-        Assert.DoesNotContain(sp.Rows, r => r.ID == SpeedFogIds.UntouchableNoFlinchSpEffectRow);
-        var boss = npc.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossNpcRow);
-        Assert.Equal(UntouchableBossInjector.BOSS_HP, (uint)boss["hp"].Value);
-        for (int i = 0; i < 32; i++)
-            Assert.NotEqual(SpeedFogIds.UntouchableNoFlinchSpEffectRow, (int)boss[$"spEffectID{i}"].Value);
-    }
-
-    [Fact]
-    public void Apply_WithEverySlotTaken_SkipsTheTableAndKeepsTheSlots()
-    {
-        var (npc, sp) = BuildCoreParams();
-        for (int i = 0; i < 32; i++)
-            npc.Rows[0][$"spEffectID{i}"].Value = 1000 + i;
-
-        UntouchableBossInjector.Apply(npc, sp);
-
-        Assert.DoesNotContain(sp.Rows, r => r.ID == SpeedFogIds.UntouchableNoFlinchSpEffectRow);
-        var boss = npc.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossNpcRow);
-        for (int i = 0; i < 32; i++)
-            Assert.Equal(1000 + i, (int)boss[$"spEffectID{i}"].Value);
+        var cut = sp.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossSpEffectRow);
+        foreach (var field in DamageLevelFields)
+            Assert.Equal((sbyte)0, (sbyte)cut[field].Value); // 20011471's own zeros
+        Assert.Equal(UntouchableBossInjector.DAMAGE_CUT, (float)cut["slashDamageCutRate"].Value);
+        Assert.Contains(npc.Rows, r => r.ID == SpeedFogIds.UntouchableBossNpcRow);
     }
 
     [Fact]
