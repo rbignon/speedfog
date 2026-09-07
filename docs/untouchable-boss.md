@@ -296,49 +296,123 @@ first activation points there. The goal model, the act table, the attack and
 movement goals and the `ai:` queries the script relies on are described
 in `docs/ai-scripts.md`.
 
+### Decision tree
+
+The vanilla logic script (528000, kept by the boss) adds the battle goal
+with an infinite life. Each activation builds a weight table, draws one
+act, and that act queues sub-goals run in order. Once the queue is empty
+the goal ends and the logic re-adds it at once: a new draw, no idle
+time between decisions. A weight of 0 is never drawn. `Goal.Interrupt`
+can clear the queue and replace it at any time (see "Interrupts").
+
+```
+Goal.Activate, in evaluation order (weights)
+1. player in the back cone (IsInsideTarget B, 90), tested first, at any distance
+   dist >= 8 : teleport ready → Act02 100            else → Act01 100
+   dist <  8 : teleport ready → Act02 50 / Act43 40 / Act01 10   (TELEPORT_BEHIND)
+               else           → Act43 80 / Act01 20
+2. else SpEffect 5031 active → Act05 100
+3. else SpEffect 5032 active → Act06 100
+4. else dist >= 10 : teleport ready → Act02 60 / Act04 40   (BEAM_FAR_TELEPORT_READY)
+                     else           → Act01 50 / Act04 50   (BEAM_FAR_TELEPORT_NOT_READY)
+5. else dist >= 3  : Act03 40 / Act02 25* / Act46 15 / Act11 10 / Act04 10
+                     (TELEPORT_MID, MOVE_MID, SWING_MID, BEAM_MID; Act03 keeps the rest)
+6. else (< 3 m)    : Act03 40 / Act02 25* / Act42 20 / Act11 15
+                     (TELEPORT_CLOSE, MOVE_CLOSE, SWING_CLOSE; Act03 keeps the rest)
+   * 0 while the teleport cools; the grab takes that share (65)
+Then, on the table obtained:
+   Act03 → 0 while the last 3002 is <= GRAB_COOLDOWN (6 s) old   (engine counter)
+   Act04 → 0 while the last 3004 is <= BEAM_COOLDOWN (6 s) old   (engine counter)
+   Act11 → 0 while the swing timer (slot 11) runs
+   "teleport ready" = the teleport timer (slot 10) at 0, nothing else
+```
+
+Direct consequences: a player in the boss's back gets no grab and no
+swing at any distance, only a turn, an approach or a teleport, and the
+post-grab retreat (5031/5032) is skipped while they stand there. Between
+5 and 10 m, Act02 is the far teleport (the 5 s fade), not the burst and
+retreat. A near teleport that finds no room queues nothing, so the next
+draw follows at once with the teleport weight at 0 for `TELEPORT_RETRY`
+(2 s). Act46
+parks the boss at 4 m, inside the near band, so a teleport picked after
+a strafe is the near one and its burst mostly whiffs at that range: a
+retreat and a beam.
+
+```
+What each drawn act queues
+Act01  run to 0.5 m (5 s max), then animation 2100 (life 0.1 s, reach 5 m)
+Act02  dist >= TELEPORT_FAR_RANGE (5 m) → far: teleport timer 11.5, hold 9, watch 20011452,
+         3000 (life 10 s, reach 5 - hit radius + 999, effectively always); the rest
+         happens in Goal.Interrupt
+       dist < 5 m → near: room scan from the boss, B then BL then BR (F/FL/FR when the
+         player is in its back), at 8 m then at 5 m
+         no room → teleport timer 2 s, nothing queued
+         room    → teleport timer 6, hold 3.5, ClearSubGoal, swing timer 8 + immediate
+                   burst 3001 (the swing timer is not read), warp from TARGET_SELF,
+                   beam if ready
+Act03  approach to 12 m (never queued: offered under 10 m only), watch 5030,
+       grab 3002 (life 8, reach 12, turn 2 s / 50 degrees)
+Act04  beam 3004 (life 3, reach 999, turn 1.5 s / 60 degrees)
+Act05  ClearSubGoal, LeaveTarget 10 m (5 s), then the beam if ready
+Act06  ClearSubGoal, LeaveTarget 8 m (4 s), then the beam if ready
+Act11  run to 3 m (5 s max), swing timer 8, burst 3001 (life 8, reach 4, turn 1.5 s / 60 degrees)
+Act42  sidestep to the right, 0.8 to 1.5 s
+Act43  turn toward the player, 2 s, until within 90 degrees
+Act46  walk to 4 m (or back off to 4 m), life 10 s, then strafe to a random side 0.1 to 2 s
+Act07 to Act10, Act40, Act41, Act44, Act45, Act47, ActAfter: never drawn
+```
+
+```
+Vanilla 528000, same order, for comparison
+1. player in the back cone
+   dist >= 8 → Act02 100 (3000, then the warp around TARGET_EVENT and 3001)
+   dist <  8 → Act43 80 / Act01 20
+2. else 5031 → Act05 100
+3. else 5032 → Act06 100
+4. else dist >= 10 → 20011450 active: Act02 99 / Act01 1, else Act01 100
+5. else dist >= 3  → Act03 100
+6. else            → Act03 100
+Then Act03 → 1 while 3002 cools (12 s): the engine holds the boss on the cooling grab
+```
+
+Not readable from the Lua, because the goals it queues are native:
+whether an attack outside its `successDist` still plays, waits for its
+life or fails (`GOAL_COMMON_CommonAttack`); whether the warp queued
+after the burst starts at 3001's cancel window (the wrapper sets
+`moveCancel` and `attackCancel`); what `ToTargetWarp` does with a 0 m
+distance around a character; the exact cone of `IsInsideTarget(TARGET_ENE_0,
+AI_DIR_TYPE_B, 90)` (the same call in 60 vanilla scripts); whether an
+interrupt reaches the battle goal while a `REGISTER_GOAL_NO_INTERUPT`
+sub-goal runs, and whether `ClearSubGoal` cuts the running animation or
+lets it finish.
+
 ### Acts and probabilities
 
 Every act of the script (the vanilla ones are kept as decompiled, even
-those no bracket ever weights). Distances are `successDist` or
-`stopDist` values in metres, turns are `turnTime` / `turnFaceAngle`
-(see `docs/ai-scripts.md`):
+those no bracket ever weights; where each is weighted is in the
+decision tree above). Distances are `successDist` or `stopDist` values
+in metres, turns are `turnTime` / `turnFaceAngle` (see
+`docs/ai-scripts.md`):
 
-| Act | Origin | What it queues | Weighted in |
-|-----|--------|----------------|-------------|
-| Act01 | vanilla | approach (`Approach_Act_Flex`, stop 0.5 m, always running) then animation 2100 (life 0.1 s, reach 5 m) | player behind and >= 8 m while the teleport cools (100), player behind < 8 m (10 or 20), >= 10 m while the teleport cools (50) |
-| Act02 | SpeedFog (vanilla's teleport act rewritten) | under `TELEPORT_FAR_RANGE`: the burst 3001 as wind-up, `ToTargetWarp` away from the player, the beam if ready; from it: vanilla's 3000 with the 20011452 watch, whose interrupt warps behind the player and bursts | every bracket but the retreats, only while the teleport timer is at 0 |
-| Act03 | vanilla, grab through the shared builder | approach (stop 12 m, so never queued in the brackets that weight it) then the grab 3002 (reach 12 m, turn 2 s / 50 degrees, life 8 s) with the 5030 watch that chains the throw 3003 | 3-10 m and < 3 m (the remainder of the bracket) |
-| Act04 | SpeedFog | the beam 3004 (reach 999, turn 1.5 s / 60 degrees, life 3 s) | >= 10 m (40 or 50), 3-10 m (10) |
-| Act05 | vanilla, beam added | clears the queue, `LeaveTarget` to 10 m (life 5 s), then the beam if ready | post-grab retreat, SpEffect 5031 (100) |
-| Act06 | vanilla, beam added | clears the queue, `LeaveTarget` to 8 m (life 4 s), then the beam if ready | post-grab retreat, SpEffect 5032 (100) |
-| Act07 to Act10 | vanilla | nothing (empty acts) | never |
-| Act11 | SpeedFog | approach (stop 3 m, running) then the burst 3001 (reach 4 m, turn 1.5 s / 60 degrees, life 8 s) and the swing timer | 3-10 m (10), < 3 m (15), only while the swing timer is at 0 |
-| Act40 | vanilla | `ApproachTarget` to 0.1 m, walking, life 1-3 s | never |
-| Act41 | vanilla | `LeaveTarget` to 10 m, walking, life 1-3 s | never |
-| Act42 | vanilla | `SidewayMove` to the right, walking, life 0.8-1.5 s | < 3 m (20) |
-| Act43 | vanilla | `Turn` toward the player, stop width 90 degrees, life 2 s | player behind < 8 m (80, or 40 while the teleport is ready) |
-| Act44 | vanilla | `StepSafety` away from the player's side (in front: a step back or sideways; on the right: left; on the left: right), life 5 s | never |
-| Act45 | vanilla | `StepSafety` to either side or the right only (a draw), life 5 s | never |
-| Act46 | vanilla | `ApproachTarget` to 4 m (or `LeaveTarget` when closer), walking, life 10 s, then `SidewayMove` to a random side for 0.1-2 s | 3-10 m (15) |
-| Act47 | vanilla | an encircling routine keyed on `TORIMAKI_MIN_DIST` / `TORIMAKI_MAX_DIST` and `TARGET_ENE0`, none of which is defined (a nil comparison or a nil target if it ever ran; `resultTypeIfGuardSuccess` is a fourth undefined global, a harmless trailing nil) | never |
-| ActAfter_AdjustSpace | vanilla | the empty after-attack goal `GOAL_Houzuki755890_AfterAttackAct` (life 10 s); runs only when an act returns odds above 0, which none does | never |
-
-Weights per bracket; the vanilla act of each bracket keeps the
-remainder, the teleport weight counts only while the teleport is ready:
-
-| Situation | Vanilla | Boss |
-|-----------|---------|------|
-| player behind, >= 8 m | Act02 100 | Act02 100 if the teleport is ready, else Act01 100 |
-| player behind, < 8 m | Act01 20 / Act43 80 | Act02 `TELEPORT_BEHIND` 50 / Act01 10 / Act43 40 if the teleport is ready, else vanilla |
-| >= 10 m, teleport ready | Act02 99 / Act01 1 | Act02 60 / Act04 `BEAM_FAR_TELEPORT_READY` 40 |
-| >= 10 m, teleport not ready | Act01 100 | Act01 50 / Act04 `BEAM_FAR_TELEPORT_NOT_READY` 50 |
-| 3 to 10 m | Act03 100 | Act03 40 / Act11 `SWING_MID` 10 / Act02 `TELEPORT_MID` 25 / Act04 `BEAM_MID` 10 / Act46 `MOVE_MID` 15 |
-| < 3 m | Act03 100 | Act03 40 / Act11 `SWING_CLOSE` 15 / Act02 `TELEPORT_CLOSE` 25 / Act42 `MOVE_CLOSE` 20 |
-| post-grab retreat (SpEffect 5031/5032) | Act05/Act06 | same, then Act04 if the beam is ready |
-
-Act46 parks the boss at 4 m, inside the near band, so a teleport picked
-after a strafe is the near one and its burst mostly whiffs at that
-range: a retreat and a beam.
+| Act | Origin | What it queues |
+|-----|--------|----------------|
+| Act01 | vanilla | approach (`Approach_Act_Flex`, stop 0.5 m, always running) then animation 2100 (life 0.1 s, reach 5 m) |
+| Act02 | SpeedFog (vanilla's teleport act rewritten) | under `TELEPORT_FAR_RANGE`: the burst 3001 as wind-up, `ToTargetWarp` away from the player, the beam if ready; from it: vanilla's 3000 with the 20011452 watch, whose interrupt warps behind the player and bursts |
+| Act03 | vanilla, grab through the shared builder | approach (stop 12 m, so never queued in the brackets that weight it) then the grab 3002 (reach 12 m, turn 2 s / 50 degrees, life 8 s) with the 5030 watch that chains the throw 3003 |
+| Act04 | SpeedFog | the beam 3004 (reach 999, turn 1.5 s / 60 degrees, life 3 s) |
+| Act05 | vanilla, beam added | clears the queue, `LeaveTarget` to 10 m (life 5 s), then the beam if ready |
+| Act06 | vanilla, beam added | clears the queue, `LeaveTarget` to 8 m (life 4 s), then the beam if ready |
+| Act07 to Act10 | vanilla | nothing (empty acts) |
+| Act11 | SpeedFog | approach (stop 3 m, running) then the burst 3001 (reach 4 m, turn 1.5 s / 60 degrees, life 8 s) and the swing timer |
+| Act40 | vanilla | `ApproachTarget` to 0.1 m, walking, life 1-3 s |
+| Act41 | vanilla | `LeaveTarget` to 10 m, walking, life 1-3 s |
+| Act42 | vanilla | `SidewayMove` to the right, walking, life 0.8-1.5 s |
+| Act43 | vanilla | `Turn` toward the player, stop width 90 degrees, life 2 s |
+| Act44 | vanilla | `StepSafety` away from the player's side (in front: a step back or sideways; on the right: left; on the left: right), life 5 s |
+| Act45 | vanilla | `StepSafety` to either side or the right only (a draw), life 5 s |
+| Act46 | vanilla | `ApproachTarget` to 4 m (or `LeaveTarget` when closer), walking, life 10 s, then `SidewayMove` to a random side for 0.1-2 s |
+| Act47 | vanilla | an encircling routine keyed on `TORIMAKI_MIN_DIST` / `TORIMAKI_MAX_DIST` and `TARGET_ENE0`, none of which is defined (a nil comparison or a nil target if it ever ran; `resultTypeIfGuardSuccess` is a fourth undefined global, a harmless trailing nil) |
+| ActAfter_AdjustSpace | vanilla | the empty after-attack goal `GOAL_Houzuki755890_AfterAttackAct` (life 10 s); runs only when an act returns odds above 0, which none does |
 
 ### Teleports
 
@@ -346,14 +420,15 @@ Act02 has two shapes by distance, `TELEPORT_FAR_RANGE` (5 m center to
 center, melee reach with a long weapon being 3-4 m); the hit reaction
 always fires the near one.
 
-**Near** (under 5 m), Jori's structure (vanilla script 531020: wind-up,
-`GOAL_COMMON_ToTargetWarp`, follow-up) built from the untouchable's own
-moves. The burst 3001 is the wind-up: its hit lands from the first frame
-and the warp fires at its cancel window (`BURST_CANCEL`, 1.0 s). The warp
-lands `TELEPORT_AWAY_DIST` (8 m) away from the player, relative to the
-boss itself (the five-argument `TARGET_SELF` form of Rennala's 203100
-and of 301010's retreats): straight behind the boss or, when the player
-stands in its back, straight ahead, then the diagonals.
+**Near** (under 5 m): an attack, a warp and a follow-up, built from the
+untouchable's own moves. The burst 3001 is the wind-up, queued whatever
+the swing timer says (it re-arms it): its hit lands from the first frame
+and the warp is expected at its cancel window (`BURST_CANCEL`, 1.0 s;
+the handover is engine-side, see the decision tree). The warp
+lands `TELEPORT_AWAY_DIST` (8 m) from the boss's own position, away
+from the player (the five-argument `TARGET_SELF` form of Rennala's
+203100 and of 301010's retreats): straight behind the boss or, when the
+player stands in its back, straight ahead, then the diagonals.
 `Houzuki755890_FindRoomAway` scans those directions from the boss's own
 position with its hit radius as the line width, then again at
 `TELEPORT_AWAY_FALLBACK` (5 m) for small arenas. The beam follows when
@@ -362,8 +437,10 @@ act is queued; without room nothing is queued (the burst is not spent on
 a warp that cannot happen) and the teleport timer restarts at
 `TELEPORT_RETRY` (2 s) instead of the full cooldown, so a cramped spot
 is retried soon but not at every decision. The wind-up uses the
-`ComboTunable_SuccessAngle180` wrapper (reach 999, every angle 180) so it
-fires whatever the player's side. The retreat stays in the player's view
+`ComboTunable_SuccessAngle180` wrapper with reach 999, turn 0 and every
+angle 180, the argument set of 504000's post-warp attacks (its only
+vanilla user), so it fires whatever the player's side. The retreat stays
+in the player's view
 on purpose: lock-on cannot be broken from the AI, so a warp behind the
 player would only turn the camera.
 
@@ -375,7 +452,11 @@ interrupt, kept but for two changes: the scan
 2 m, then behind at 2 m) and the warp go around `TARGET_ENE_0` rather
 than `TARGET_EVENT`, and the burst that follows waits for the swing timer
 (vanilla swings unconditionally). The warp goal plays no animation
-itself; the arrival animation comes with it.
+itself; the arrival animation comes with it. The direction and
+distance pairs are vanilla's, written for the event point: the first
+three branches land 0 m from the player, a distance no vanilla script
+passes with `TARGET_ENE_0` (2.5 m and more elsewhere); in game the
+warp lands behind the player.
 
 ### Cooldowns
 
@@ -386,8 +467,11 @@ interval (`RegistAttackTimeInterval`) and reads the counter
 `Goal.Activate` run before any act or reaction, and
 `Houzuki755890_BeamReady` is the same call with weights 100/0 wherever an
 act or a reaction needs the beam, so no counter is ever read
-unregistered. The burst (`SWING_COOLDOWN` 8 s on 3001 whatever its
-source: act, reaction, teleport wind-up) and the teleport
+unregistered. The burst (`SWING_COOLDOWN` 8 s, set by every 3001 the
+script queues, read by Act11, by the far teleport's post-warp burst and
+by the plain-burst hit reaction; the near teleport's wind-up fires
+whatever the timer says, so 3001 can also play once per teleport
+cooldown) and the teleport
 (`TELEPORT_COOLDOWN` 6 s after a near one, `TELEPORT_FAR_COOLDOWN` 11.5 s
 after a far one, whose own sequence takes about 9 s, `TELEPORT_RETRY` 2 s
 after a near attempt that found no room) are AI timers
@@ -402,10 +486,16 @@ cools. The script passes 0 and every bracket keeps a movement filler
 with a positive weight, so the boss never freezes while its attacks
 cool.
 
-### Reactions
+### Interrupts
 
-`Goal.Interrupt`, after the vanilla teleport and grab follow-ups, in the
-vanilla pattern of 472000 (`ClearSubGoal`, queue the attack, return true). A
+An interrupt is an event the engine raises about the character (the
+kinds are the `INTERUPT_*` constants of `ai_define`); it calls
+`Goal.Interrupt`, which asks `ai:IsInterupt(kind)` which one fired and
+either leaves the queue alone (return false) or replaces it (the
+vanilla pattern of 472000: `ClearSubGoal`, queue the answer, return
+true). The vanilla teleport and grab follow-ups are interrupts too: the
+warp marker of 3000 and the grab's connect are watched SpEffects that
+call the script back mid-animation. The reactions come after them. A
 reaction spends an attack that is available anyway, so it moves an
 attack earlier without adding any. No reaction fires while a teleport or
 a grab sequence is in flight (`Houzuki755890_SequenceInFlight`), since
@@ -419,11 +509,29 @@ are named at the top of the script. Accepted exposure, shared with
 vanilla scripts: a spirit ash's hit outside those windows can trigger
 the hit reaction like a player's hit.
 
-| Interrupt | Conditions | Response | Knob |
-|-----------|-----------|----------|------|
-| `INTERUPT_Damaged` | player in front within `REACT_HIT_RANGE` (2 m), draw | the near teleport if ready and there is room, else the burst if ready, else nothing | `REACT_HIT` 25 |
-| `INTERUPT_Shoot` (a cast or a shot starts) | player at `REACT_RANGE` (5 m) or more, beam ready, draw | beam | `REACT_SHOOT` 50 |
-| `INTERUPT_UseItem` | player at `REACT_RANGE` or more, beam ready, draw | beam | `REACT_HEAL` 80 |
+```
+Goal.Interrupt, first matching case wins
+0. on a ladder, SpEffect 5110 active, or an illness effect → nothing (false)
+1. ActivateSpecialEffect
+   a. 20011452 active (3000's marker at 4.77 s): room scan around the PLAYER
+      front clear → BR 0 m ; BR clear → BR 0 m ; BL clear → BL 0 m ; BL 2 m ; BR 2 m ; B 2 m
+      room    → ClearSubGoal, warp, then an immediate burst only if the swing timer is at 0
+      no room → nothing, 3000 finishes on its own
+      → true either way
+   b. 5030 is the trigger AND the player in front within 4 m → ClearSubGoal + throw 3003 → true
+   c. else false
+2. Damaged: player in the front 120-degree cone within REACT_HIT_RANGE (2 m)
+   AND nothing in flight (in flight: hold timer > 0, or 3002 started <= REACT_HOLD (7 s) ago)
+   AND draw <= REACT_HIT (25)
+   a. teleport ready AND room → the whole near teleport (burst, warp, beam if ready) → true
+      (ready without room: the teleport timer is set to TELEPORT_RETRY, then fall through)
+   b. else swing timer at 0 → ClearSubGoal + immediate burst → true
+   c. else false
+   A hit from the back never triggers anything.
+3. Shoot (the player starts a cast or a shot): dist >= REACT_RANGE (5 m) AND nothing in flight
+   AND draw <= REACT_SHOOT (50) AND beam ready → ClearSubGoal + beam → true
+4. UseItem: the same with REACT_HEAL (80)
+```
 
 ### Tests
 
@@ -478,12 +586,15 @@ Generate a seed with the allowlist above, then in the arena:
    try `npcType` 1, the next untested difference against Jori. A boss
    that never staggers means the meter is masked by the table: lower
    `BOSS_SUPER_ARMOR`.
-2. **Melee**: grabs (parryable), bursts at most once per `SWING_COOLDOWN`,
-   and sidesteps or strafes through the cooldowns; the boss never stands
-   still for several seconds.
+2. **Melee**: grabs (parryable), timer-gated bursts (Act11's, the far
+   teleport's post-warp one, the hit reaction's plain one) at most once
+   per `SWING_COOLDOWN` (a near teleport's wind-up burst can come
+   sooner), and sidesteps or strafes through the cooldowns; the boss
+   never stands still for several seconds.
 3. **Near teleport** (under 5 m): a burst on the spot, a vanish about 1 s
-   into it with no fade, a reappearance 8 m away from the player (5 m in
-   a small arena; straight ahead when the player was in its back) with
+   into it with no fade, a reappearance 8 m from where the boss stood,
+   away from the player (5 m in a small arena; straight ahead when the
+   player was in its back) with
    the arrival animation, then the beam when it is ready. A burst that
    completes its 1.8 s before the vanish means the attack goal did not
    hand over at `BURST_CANCEL`. In a catacomb room, confirm it still
