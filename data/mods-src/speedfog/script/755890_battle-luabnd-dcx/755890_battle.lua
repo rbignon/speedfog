@@ -1,5 +1,5 @@
 -- SpeedFog: Aging Untouchable boss battle script (docs/untouchable-boss.md,
--- "Moveset"). Decompiled from the vanilla 528000_battle.lua with
+-- "AI script"). Decompiled from the vanilla 528000_battle.lua with
 -- DSLuaDecompiler and renamed to battle goal 755890 (the boss NpcThinkParam
 -- clone's battleGoalID). SpeedFog additions: the lantern swing (3001) as a
 -- regular melee act (Act11), the dormant lantern ray (3004) re-enabled as a
@@ -24,8 +24,8 @@ REGISTER_GOAL_NO_SUB_GOAL(GOAL_Houzuki755890_Battle, true)
 -- or approach at range) keeps the remainder. A cooling attack weighs 0
 -- (SetCoolTime or the *_Ready helpers in Goal.Activate), so the remainder
 -- grows while attacks cool, and every bracket keeps a movement filler with
--- a positive weight. Design, evidence and the history of the in-game
--- runs: docs/untouchable-boss.md, "AI script".
+-- a positive weight. Design and engine facts: docs/untouchable-boss.md,
+-- "AI script" and "Engine facts and pitfalls".
 local BEAM_FAR_TELEPORT_READY = 40      -- >= 10 m, teleport ready: Act04 (beam) vs Act02
 local BEAM_FAR_TELEPORT_NOT_READY = 50  -- >= 10 m, teleport not ready: Act04 (beam) vs Act01
 local SWING_MID = 10                    -- 3 to 10 m: Act11 (swing, radius-4 knockback burst)

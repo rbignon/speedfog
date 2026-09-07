@@ -209,8 +209,8 @@ name = "AEG099_504_9001"  # ainsel_boss: respawn c0000_9015 sits ~140 units sout
 # the private-instance supertile m60_13_09_02, which carries none of the
 # zone's fog gates (those live on the surrounding 00-tiles), so FogMod's
 # writer skips it entirely while the Item Randomizer's swap still ships it
-# via mods/itemrando (see docs/untouchable-boss.md, the m60_13_09_02
-# paragraph). Extend this list if the "assignment target not found" warning
+# via mods/itemrando (see docs/untouchable-boss.md, "Two-phase
+# injector"). Extend this list if the "assignment target not found" warning
 # ever fires for another arena whose map exists in the merge-dir.
 
 [[fallback_arena_maps]]

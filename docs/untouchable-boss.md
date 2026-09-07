@@ -1,8 +1,9 @@
 # Aging Untouchable minor boss
 
-Promotes the Aging Untouchable (chr `c5280`, source entity `2049420200`,
-vanilla part `c5280_9000` in `m61_49_42_00.msb.dcx`) to an allowlist-only
-minor boss. Reachable only through:
+SpeedFog promotes the Aging Untouchable (chr `c5280`, the lantern-bearing
+inquisitor of the DLC, source entity `2049420200`, vanilla part
+`c5280_9000` in `m61_49_42_00.msb.dcx`) to an allowlist-only minor boss.
+It is reached only through the enemy allowlist:
 
 ```toml
 [enemy]
@@ -10,754 +11,469 @@ randomize_bosses = "all"   # or "minor"
 bosses = ["Aging Untouchable"]
 ```
 
-## What it is
+Nothing of this feature runs unless the enemy randomizer actually places
+the boss in an arena. It is independent of every plugin.
 
-`data/boss_arena_tags.json` entry `"2049420200"` (name "Aging
-Untouchable") carries `pool: "minor"`, `boss.exclude_from_pool: true`,
-`boss.size: 2`, `dlc: true`, no `arena` block, following the promoted-skeleton
-pattern (see `docs/boss-arena-constraints.md`, "Promoted allowlist-only
-sources"):
+## The fight
 
-- `exclude_from_pool: true` keeps it out of the ordinary
-  `randomize_bosses = "minor"`/`"all"` pool: `_compose_pool` drops
-  `exclude_from_pool` entries at every branch. The boss is completely inert
-  on the standard path, no config change required to avoid it.
-- `resolve_boss_allowlist` never reads `exclude_from_pool` or `dlc`, so the
-  `enemy.bosses` allowlist above is authoritative and reaches it anyway.
-- `boss.size: 2` is the only "open arena" lever the tag model has (no
-  dedicated open-arena flag); it excludes only size-1 arenas from the
-  compatibility match, leaving the boss's AI-driven teleport (navmesh scan
-  around the player, then `GOAL_COMMON_ToTargetWarp`) room to work.
+The boss keeps the untouchable's vanilla identity, a walking lantern that
+grabs, and adds what a boss needs:
 
-Once placed, `UntouchableBossInjector` (`writer/FogModWrapper/UntouchableBossInjector.cs`)
-promotes the arena's enemy-randomizer-placed part into the actual boss.
+- **A partial wall until the first parry.** Hits land at half damage and
+  never interrupt the boss: it plays only the small hit twitch of an
+  immune untouchable, whatever the attack. Its posture can still be
+  broken (super armor meter 80, Jori's profile) and its HP bar shows from
+  the start.
+- **The parry breaks the wall for good.** The riposte lands at full
+  damage, the break flash plays, and from then on every hit deals twice
+  the vanilla damage (four times the pre-parry number) and flinches the
+  boss like any untouchable whose wall is gone.
+- **A moveset vanilla AI never uses:** a lantern burst at melee range, a
+  frenzy beam at range, an offensive teleport in two shapes (a burst,
+  a retreat and a beam at melee range; the vanilla fade and a warp
+  behind the player from range), and reactions to hits, casts and
+  flasks.
+- 2000 HP at the arena's vanilla tier (see "Scaling and tuning knobs")
+  and 20000 runes.
 
-## The vulnerability mechanism
+Dying and re-entering restores the partial wall until the next parry:
+the wall event restarts with the arena.
 
-The wall is not a `NpcParam` field and not `stateInfo` 420, as this
-section claimed until the 2026-09-05 sessions. Decoded from the vanilla
-per-untouchable EMEVD event (a `Restart` event initialized with the
-untouchable's entity, copied next to every placed boss by the enemy
-randomizer; on 1.17 it is `1700783` in an arena map, together with three
-sibling events):
+## Placement
 
-1. At spawn: `SetSpEffect(entity, 20011470)` (category 1001, every damage
-   cut rate 0: full immunity, this is the wall), `SetSpEffect(entity,
-   19690)`, and `SetCharacterHPBarDisplay(entity, disabled)`.
+`data/boss_arena_tags.json` entry `"2049420200"` ("Aging Untouchable")
+carries `pool: "minor"`, `boss.exclude_from_pool: true`, `boss.size: 2`,
+`dlc: true` and no `arena` block, the promoted allowlist-only pattern of
+`docs/boss-arena-constraints.md`:
+
+- `exclude_from_pool` keeps it out of the ordinary
+  `randomize_bosses = "minor"`/`"all"` pool (`_compose_pool` drops such
+  entries at every branch); the allowlist (`resolve_boss_allowlist`)
+  ignores that flag and reaches it.
+- `boss.size: 2` is the tag model's only "open arena" lever: it excludes
+  size-1 arenas, leaving the AI's teleport scans room to work.
+
+Once placed, the enemy randomizer's part in the arena carries the source
+entity in `enemy_assignments` (graph.json), and `UntouchableBossInjector`
+(`writer/FogModWrapper/UntouchableBossInjector.cs`) turns that part into
+the boss.
+
+## Vulnerability mechanism
+
+A vanilla untouchable is immune until parried. The mechanism is an EMEVD
+event per untouchable (a `Restart` event initialized with the entity,
+`1700783` on 1.17; the enemy randomizer copies it, with three sibling
+events, next to every placed boss; `tools/dump_emevd_warps` `dump
+--event` and `init` show the patched copies):
+
+1. At spawn: `SetSpEffect(entity, 20011470)`, the wall (category 1001,
+   every damage cut rate 0, and the damage-level table of "Hit
+   reactions"), `SetSpEffect(entity, 19690)`, and
+   `SetCharacterHPBarDisplay(entity, disabled)`.
 2. Wait for `IfCharacterHasSpEffect(entity, 20011471)`: the parried
-   animation (8500) applies 20011471 through a TAE event; same category
-   1001, so it overrides the wall during the parry window (the riposte
-   lands).
-3. Then, once and for all: `ClearSpEffect(entity, 20011470)`, `Create NPC
-   Part` (a part with an HP bar), `SetCharacterHPBarDisplay(entity,
-   enabled)`, `SetSpEffect(entity, 20011472)` (a one-second break VFX).
+   animation (8500) applies the parry-window effect through a TAE event.
+   Same category 1001 and priority, so it overrides the wall during the
+   window and the riposte lands.
+3. Once and for all: `ClearSpEffect(entity, 20011470)`, `Create NPC Part`
+   (a part with an HP bar), `SetCharacterHPBarDisplay(entity, enabled)`,
+   `SetSpEffect(entity, 20011472)` (a one-second break VFX).
 
-So "one parry and the wall is gone for good" is the vanilla design. The
-Item Randomizer's always-on `nerflantern` option defeats it by writing
-20011471 into a free `NpcParam` slot of every 5280-band row (slot 31 on
-1.17): resident in the same category, it keeps the event's wall from
-ever taking hold, and the parry detector of step 2 is permanently true.
-Slot 18 (`20011473`, `stateInfo` 420, category 156) is unrelated to
-damage and stays as vanilla.
+The Item Randomizer's always-on `nerflantern` option defeats this for
+ambient untouchables by writing 20011471 into a free `NpcParam` slot of
+every 5280-band row (slot 31): resident in the same category, it keeps
+the wall from taking hold and the detector of step 2 permanently true.
 
-SpeedFog's boss keeps the vanilla flow with a **partial wall** before the
-break and a **broken state** after it (x4 damage ratio between the two,
-2026-09-05 session request: 0.5 before, 2.0 after):
+SpeedFog keeps the vanilla flow and replaces the immunity by a partial
+wall, then a broken state:
 
-- `UntouchableBossInjector.Apply` clones 20011471 into `SpEffectParam`
-  row 755890000 (category 1001 kept) with the eight damage-cut fields
-  (`slashDamageCutRate` ... `darkDamageCutRate`) set to
-  `UntouchableBossInjector.DAMAGE_CUT` (`0.5f`, the boss takes 50%; 0.35
-  until the 2026-09-04 session found the boss too tanky) and vanilla's
-  boss damage-level table (the twelve `dmgLv_*` fields of SpEffect 5300)
-  copied in, so the row matches the vanilla wall on every field that
-  governs hit reactions (see "Hit reactions"). The row is not resident on the boss
-  `NpcParam` row: a resident copy could not be cleared by step 3.
-- `PatchWallEvents` (MSB phase, per arena map) rewrites the events the
-  randomizer copied for each placed boss (all four take the entity as
-  their parameter): 20011470 becomes 755890000 in the wall event's
-  `SetSpEffect` and `ClearSpEffect`, and the first
+- **The cut row** (`SpeedFogIds.UntouchableBossSpEffectRow`, 755890000)
+  is a clone of the parry-window effect 20011471 (category 1001,
+  priority 0, `stateInfo` 121) with the eight damage-cut fields
+  (`slashDamageCutRate` ... `darkDamageCutRate`) at
+  `UntouchableBossInjector.DAMAGE_CUT` (0.5) and the twelve `dmgLv_*`
+  fields copied from SpEffect 5300 (see "Hit reactions"). It thereby
+  matches the vanilla wall on every field that governs hit reactions;
+  the cut rates, the seven status-buildup defense rates and the `vfxId`
+  stay the parry window's. It is never resident on the boss row: the
+  copied event applies it at spawn and clears it at the break.
+- **The broken row** (`SpeedFogIds.UntouchableBrokenSpEffectRow`,
+  755890002) is a permanent, VFX-less clone of the break VFX effect
+  20011472 (category 0, so it coexists with the parry windows of later
+  parries) whose eight cut rates are
+  `UntouchableBossInjector.BROKEN_DAMAGE_TAKEN` (2). The ratio against
+  the partial wall is `BROKEN_DAMAGE_TAKEN / DAMAGE_CUT`.
+- **`PatchWallEvents`** (MSB phase, per arena map) rewrites the copied
+  events of each placed boss: 20011470 becomes 755890000 in the wall
+  event's `SetSpEffect` and `ClearSpEffect`; the first
   `SetCharacterHPBarDisplay(disabled)` of every copied event becomes
-  enabled, the wall event's spawn-time one and the teleport sibling's
-  mid-warp one alike (the boss takes damage from the start, so its bar
-  shows from the start and must not vanish at each teleport), and a
-  `SetSpEffect` of the broken row 755890002 is inserted right after the
-  wall event's `SetSpEffect(entity, 20011472)` (the break VFX), with the
-  same entity parameter. Five instructions per boss on 1.17. Step 2
-  overrides the partial wall during the parry, step 3 clears it and
-  applies the broken state: the first parry is the break.
-- The broken row (`SpeedFogIds.UntouchableBrokenSpEffectRow`, 755890002)
-  is a permanent, VFX-less clone of 20011472 (category 0, so it coexists
-  with the parry-window effect of later parries) whose eight cut rates
-  are `UntouchableBossInjector.BROKEN_DAMAGE_TAKEN` (`2f`: twice the
-  vanilla damage). Knob; the ratio against the partial wall is
-  `BROKEN_DAMAGE_TAKEN / DAMAGE_CUT`.
-- `Apply` scrubs nerflantern's 20011471 from every slot of the boss
-  clone; ambient untouchables keep it (they must stay damageable).
+  enabled (the wall event's spawn-time one and the teleport sibling's
+  mid-warp one, so the bar shows from the start and survives each
+  teleport); a `SetSpEffect` of the broken row is inserted right after
+  the wall event's `SetSpEffect(entity, 20011472)` with the same entity
+  parameter. Five instructions per boss. Two opposite failures, each with
+  its warning: a map whose EMEVD is in neither the mod dir nor the merge
+  dir keeps the vanilla full wall (an immune boss until parried); a map
+  with an EMEVD but no copied wall event (never observed) gets no cut at
+  all (full damage from the start).
+- **The boss `NpcParam` row** (`SpeedFogIds.UntouchableBossNpcRow`,
+  755890000) is a clone of vanilla 52800086 with `hp` = `BOSS_HP`
+  (2000), `getSoul` = `BOSS_RUNES` (20000), `toughness` =
+  `BOSS_TOUGHNESS` (0, Jori's value), `superArmorDurability` =
+  `BOSS_SUPER_ARMOR` (80) and `superArmorRecoverCorrection` =
+  `BOSS_SUPER_ARMOR_RECOVER` (3/13, Jori's profile), and nerflantern's
+  20011471 scrubbed from every slot (resident, it would defeat the partial
+  wall as it defeats the vanilla one).
+  Slots 17 (20011450, vanilla's teleport gate) and 18 (20011473) stay.
+  The row lives outside the 5280 band on purpose: nerflantern patches
+  every row of that band unconditionally, and the boss's vulnerability
+  must stay under SpeedFog's control. Ambient untouchables keep the
+  vanilla row and its nerflantern slot, so they stay damageable.
 
-The clone (`NpcParam` row `755890000`, `UntouchableBossInjector.UNTOUCHABLE_VANILLA_NPC`
-= clone of `52800086`) sets:
-
-- `hp` = `BOSS_HP` = 2000 (3000 until the 2026-09-04 session; see the
-  scaling note below: this is the HP at the arena's vanilla tier)
-- `getSoul` = `BOSS_RUNES` = 20000
-- `toughness` = `BOSS_TOUGHNESS` = 0, Jori's value (the field takes 0, 20
-  or 35 across the 1.17 regulation, 35 on vanilla 52800086). It was read
-  as a hit-reaction class on 2026-09-05; the 2026-09-06 investigation
-  showed it is not what keeps ordinary hits from interrupting a boss (0
-  changed nothing in the ninth run): see the damage-level table below.
-- `superArmorDurability` = `BOSS_SUPER_ARMOR` = 80 and
-  `superArmorRecoverCorrection` = `BOSS_SUPER_ARMOR_RECOVER` = 0.23 (3/13,
-  Jori's exact value): the stagger meter, Jori's profile (vanilla 65 / 0).
-  Depleting it staggers the boss whatever the table below says (Godrick
-  carries the same table and still gets stance-broken).
-- no new resident slot: vanilla's boss damage-level table (SpEffect
-  5300) is folded into the partial wall row instead, see "Hit reactions"
-  below.
-- every `spEffectIDn` equal to 20011471 = -1 (nerflantern's slot); slot
-  17 (`20011450`, vanilla's one-shot teleport gate, ignored by the boss
-  script, see "AI script", "Cooldowns") and slot 18 (`20011473`) stay.
-
-The clone deliberately lives outside the `5280xxxx` band. The Item
-Randomizer's `nerflantern` option is globally on in SpeedFog and patches
-every `NpcParam` row in that band unconditionally (adding `20011471` to
-whatever free slot it finds); if the boss reused a `5280`-band row id,
-nerflantern's own pass would collide with (or follow) this injector's edit
-and the boss's vulnerability would no longer be fully under SpeedFog's
-control. Row `755890000` sits far outside that band, so nerflantern never
-touches it. `NpcParam`, `SpEffectParam` and `NpcThinkParam` are separate row
-namespaces, so this value colliding with `SpeedFogIds.PassiveGreeterThinkRow`
-(also `755890000`, a `NpcThinkParam` row from the Halloween ambient-spawn
-feature) is not a conflict.
-
-A boss whose map carries no copied wall event (never observed; the
-randomizer copies the four events with every placement) would have no
-wall and no cut at all, with a warning and its bar flips discarded. The
-merge-dir fallback arena has no EMEVD in the mod dir: its merge-dir copy
-(which carries the randomizer's events) is shipped into the mod dir and
-patched there, like its MSB.
+`NpcParam`, `SpEffectParam`, `NpcThinkParam`, `Bullet` and `AtkParam_Npc`
+are separate row namespaces: the same numeric ids recur across them
+(`SpeedFogIds`) without conflict.
 
 ### Hit reactions
 
-Why ordinary hits stop interrupting the boss (investigated 2026-09-06
-after nine runs in which every hit cancelled its attacks, whatever the
-super armor):
+Which damage animation an NPC plays for a hit is decided by the attack's
+damage level (`AtkParam.dmgLevel`: small, medium, large, blow...) after
+the target's active SpEffects have had their say: SpEffectParam's twelve
+`dmgLv_*` fields (`dmgLv_None` ... `dmgLv_Breath`, enum
+`ATKPARAM_REP_DMGTYPE`, 0 = keep the attack's level) replace one incoming
+level by another. Bosses do not flinch because they carry a resident
+replacement table: SpEffect 5300 (permanent, category 1001, priority
+200, the twelve fields at 1 = every level replaced by None) sits in slot
+1 of Jori, Godrick, Margit and 690 `NpcParam` rows in all; the regular
+Inquisitor c5311 shares Jori's animations and flinches on every hit
+because its row has no 5300. The super armor meter is a separate path:
+an attack's poise damage depletes `superArmorDurability`, and the
+stagger it triggers ignores the table (Godrick carries 5300 and still
+gets stance-broken). `toughness` plays no part in either.
 
-- The lever is a **damage-level replacement table**, not the super armor
-  meter. SpEffectParam's twelve `dmgLv_*` fields (`dmgLv_None` ...
-  `dmgLv_Breath`, enum `ATKPARAM_REP_DMGTYPE`, 0 = keep the attack's
-  level) replace the damage level of an incoming attack, i.e. which
-  damage animation the target plays. Vanilla's boss table is SpEffect
-  5300: permanent, category 1001, priority 200, the twelve fields at 1
-  and, besides the `effectTarget*` flags, nothing else. It sits in slot
-  1 of Jori (53120000), Godrick
-  (47200000), Margit (46800000) and 690 NpcParam rows in all (variants:
-  5333 on Rykard and Mohg, 5304 on 196 large mobs, Malenia's own
-  16583). The regular Inquisitor c5311 shares Jori's animation set and
-  flinches on ordinary hits: its row has no 5300. Vanilla 52800086 has
-  none either.
-- The vanilla immunity wall 20011470 carries the same table (with the
-  cut rates at 0), which is why an immune untouchable never flinches.
-  The partial wall row is a clone of 20011471, the parry-window effect,
-  which has no table: the cut kept the damage, not the hit reactions.
-- `Apply` therefore copies the table from 5300 into the partial wall
-  row, which then matches the vanilla wall on every field that governs
-  hit reactions (category 1001, priority 0, `stateInfo` 121, the
-  twelve-level table); the cut rates, the seven status-buildup defence
-  rates (0 on the wall, 1 on the parry window) and the `vfxId` stay the
-  parry window's. Skipped with a warning when 5300 is missing.
-- A resident category-0 clone of 5300 in a free slot of the boss clone
-  was tried first (2026-09-06) and shipped as intended (checked in the
-  seed's regulation), but changed nothing in game (tenth run,
-  2026-09-07): 264 of the 267 vanilla tables live in category 1001 (the
-  outliers: 8200 in category 100, 10597 and 20011466 in category 0), and
-  the engine does not seem to read them elsewhere. Category 1001 with
-  vanilla's priority 200 was no option for a resident row: within a
-  category the lower `categoryPriority` wins (the paramdef's own
-  description of the field), so the partial wall and the parry-window
-  effect (both 1001/0) would evict it at spawn.
-- After the break the boss flinches again on ordinary hits: the broken
-  row must stay in category 0 (it coexists with the parry windows of
-  later parries), where the table goes unheeded, and a vanilla
-  untouchable flinches too once its wall is gone. The super armor meter
-  (`BOSS_SUPER_ARMOR`) staggers the boss in both phases; Godrick carries
-  the same table and still gets stance-broken.
-- Checked and not it: `superArmorDurability` (the stagger meter only),
-  `toughness` (Jori's 0 changed nothing), `isSkipWeakDamageAnim`
-  (already 1 on every 5280 row), `isNoDamageMotion` and
-  `knockbackParamId` (0 on every row). Differences against Jori not
-  tried: `npcType` 1 (Jori, Godrick; not Margit), `guardLevel` 4,
-  slot 0 5400 vs 5401 and slot 11 5851 vs 5852 (category 100 class
-  rows), 90100 vs 90161, 90200, 5262.
+The vanilla wall 20011470 carries the same table, which is why an immune
+untouchable never flinches; the parry-window effect the cut row is
+cloned from has none. The cut row therefore takes the table from 5300,
+and the boss does not flinch until the first parry. The engine only
+reads the table from a category-1001 effect (see "Engine facts and
+pitfalls"), and a category-1001 row cannot be resident next to the wall,
+so the broken row (category 0 by necessity) carries no table: once the
+wall is broken the boss flinches on ordinary hits, like a vanilla
+untouchable whose wall is gone. The level-None reaction is the small hit
+twitch seen before the break; it interrupts nothing.
 
 ## Two-phase injector
 
-`UntouchableBossInjector` runs in two phases from `Program.cs`, both
-unconditional on the Halloween plugin (this feature is independent of
-`[plugin.halloween]`; it only depends on the enemy allowlist actually
-placing the boss):
+`Program.cs` runs the injector in two phases, both gated on the boss
+being placed (`IsBossPlaced`: some `enemy_assignments` value equals
+`SpeedFogIds.UntouchableSourceEntity`, `2049420200`, as a decimal
+string):
 
-1. **Regulation phase** (`ApplyRegulation`, gated by
-   `UntouchableBossInjector.IsBossPlaced(ctx.GraphData.EnemyAssignments)`):
-   `ApplyParams` clones the `NpcParam` and `SpEffectParam` rows described
-   above into `regulation.bin`, returning `true` when both rows were
-   written. `IsBossPlaced` checks whether any `enemy_assignments` value
-   equals `SpeedFogIds.UntouchableSourceEntity` (`2049420200`) as a decimal
-   string; if the boss was not placed anywhere this run, the phase (and the
-   whole feature) is skipped and neither param row is added. `Program.cs`
-   stores the boolean result on `Context.UntouchableBossParamsApplied` for
-   the MSB phase to read.
-2. **MSB phase** (`ApplyModDirInjectors`, runs post-Write): `Inject` runs
-   unconditionally except for one guard: when the boss was placed
-   (`IsBossPlaced`) but the regulation phase warn-returned (`NpcParam` or
-   `SpEffectParam` unavailable, so `Context.UntouchableBossParamsApplied` is
-   `false`), the call is skipped with a one-line warning instead, because the
-   boss `NpcParam` row the repoint would point at was never written. When it
-   does run, `Inject` collects every `enemy_assignments` key (an arena entity id)
-   whose value is the source entity, then scans every `.msb.dcx` in the mod
-   directory in parallel. For each map, `ApplyToMsb` repoints the
-   `NPCParamID` of every placed enemy part whose `EntityID` is one of those
-   arena ids to the boss clone row, but only if the part's `ModelName` is
-   `c5280`; a model mismatch is logged as a warning and the part is left
-   alone (defensive: nothing else should ever share an untouchable's arena
-   entity id, but the injector never repoints the wrong model). `ThinkParamID`
-   is repointed to the boss think row (`755890001`) only when the moveset
-   rows were written (see "Moveset" below); otherwise it stays vanilla
-   `52800000`. If
-   assignment targets are still unfound after this mod-dir scan, `Inject`
-   runs a merge-dir fallback over a named list of arena maps FogMod never
-   writes; see "Implemented fix" below for the full mechanics.
+1. **Regulation phase** (`ApplyRegulation`): `ApplyParams` writes the
+   core rows (boss `NpcParam`, cut row, broken row) and, when the static
+   assets and the four moveset params are available, the moveset rows
+   (see "Moveset"). It returns `(Core, Moveset)`; `Program.cs` keeps the
+   result on the context for the MSB phase.
+2. **MSB phase** (`ApplyModDirInjectors`, after FogMod's write): `Inject`
+   collects every `enemy_assignments` key (an arena entity id) whose
+   value is the source entity and scans every `.msb.dcx` of the mod
+   directory in parallel. `ApplyToMsb` repoints the `NPCParamID` of each
+   placed part carrying one of those entity ids to the boss row, and its
+   `ThinkParamID` to the boss think row (755890001) when the moveset was
+   written; a part whose `ModelName` is not `c5280` is left alone with a
+   warning. `PatchWallEvents` then rewrites the map's EMEVD as described
+   above. When the core rows were not written (`NpcParam` or
+   `SpEffectParam` unavailable), the phase is skipped with a warning
+   instead of repointing at a missing row.
 
-`ApplyToMsb` returns `(Repointed, Ids)`: the repointed count and the exact
-set of entity ids it touched. `Inject` uses that tuple directly for its
-found/missing bookkeeping instead of re-scanning the MSB by `NPCParamID`
-after the fact. An earlier revision did that scan-by-`NPCParamID` and, in
-the same fix round, also skipped printing warnings for a map when nothing
-was repointed there; both were corrected together (commit f05a7d9). Every
-collected log line, including "not c5280" warnings, is printed for every
-map, even when that map's `repointed` count is zero; only the found-id
-bookkeeping is gated on `repointed > 0`. After the scan, any
-`enemy_assignments` arena id that never matched a placed MSB part is
-reported as:
+Assignment targets left unfound after the mod-dir scan are reported as
+`Warning: assignment target <id> not found in any map (phase slot?)`.
+Two causes are expected:
 
-```
-Warning: assignment target <id> not found in any map (phase slot?)
-```
-
-This is expected, not necessarily a bug: `enemy_assignments` expands one
-slot per phase entity for multi-phase bosses (see
-`docs/boss-arena-constraints.md`), and a phase-expanded slot may have no
-MSB part of its own if the arena's boss is single-phase.
-
-A second, verified cause also produces this warning: an assignment
-target whose arena map FogMod never writes. Observed on smoke seed
-391735550: Starscourge Radahn's arena is a private instance map
-(`m60_13_09_02`, per `enemy.txt`'s `Map:` field) with no fog gate of its
-own (the `caelid_radahn` gates live on the surrounding tiles), so it is
-absent from `mods/fogmod`. The map still ships and loads in game: the
-Item Randomizer writes the boss swap there and the seed registers
-`mods/itemrando` (lowest priority, 510 maps) in ModEngine, so the swap
-itself is live. What is lost is SpeedFog's post-processing: every
-FogModWrapper injector, including this one's repoint scan, only patches
-`mods/fogmod`. An Untouchable assigned to that arena therefore keeps the
-Item Randomizer's own scaled placement clone (observed on seed
-391735550: `npc=52800140`, a 5280-band row, so nerflantern makes it
-damageable, with the randomizer's generic tier scaling and runes)
-instead of SpeedFog's tuned boss profile (2000 HP, 50% damage cut,
-20000 runes): a functional fight, just off-design. Note this is why the
-gap was never observed before the boss feature: gameplay never depended
-on FogMod writing this supertile (swaps ship via the `mods/itemrando`
-layer, and scaling of randomized bosses travels in the randomizer's
-NpcParam clones, not in FogMod EMEVD events); the repoint is the first
-SpeedFog injector that needs to edit an arena-map MSB. Other fogless
-arenas (Stone Platform m19_00, Farum m13_00 for Placidusax) are
-unaffected because their boss parts live in maps FogMod writes anyway
-for the area's gates and portals; caelid_radahn is unique in having its
-boss on an 02-supertile that carries nothing FogMod touches (the zone's
-gates are on the 00-tiles, and the stake fix lives on the OTHER
-supertile m60_12_09_02, which FogMod does write for that reason).
-
-Implemented fix (user-approved option a, 2026-09-01): the repoint scan
-in `Inject` gained a named fallback source, data-driven from
-`data/game_tweaks.toml`'s `[[fallback_arena_maps]]` (parsed by
-`GameTweaksLoader`, mirroring `[[pin_vanilla_maps]]`, exposed as
-`GameTweaks.FallbackArenaMaps`). After the primary `mods/fogmod` scan, if
-any assignment target is still unfound and a merge dir is available
-(`Program.cs` passes `ctx.Config.MergeDir` and
-`ctx.Tweaks.FallbackArenaMaps` into `Inject`), it walks that list
-(currently just `m60_13_09_02`), skipping any name already present in
-`mods/fogmod` (already scanned by the primary loop). For each remaining
-name it reads the merge-dir copy (`<mergeDir>/map/mapstudio/<name>.msb.dcx`,
-missing being logged and skipped), runs the same `ApplyToMsb` repoint,
-and, only when something was actually repointed there, writes the result
-into `mods/fogmod` (the higher-priority ModEngine layer) and folds the
-repointed ids into the found set. The extra map therefore ships only on
-seeds that actually place the boss in it; any id still unfound after the
-fallback keeps the existing phase-slot warning. Extend
-`[[fallback_arena_maps]]` in `data/game_tweaks.toml` if the "assignment
-target not found" warning ever fires for another arena whose map exists
-in the merge-dir.
-
-The discarded generic alternative (option b) was to add the tile to
-`[[pin_vanilla_maps]]` sourced from the merge-dir copy: it would also
-serve hypothetical future injectors, but ships the map on every seed
-regardless of whether the boss landed there, which was not worth the
-unconditional cost for a single-arena case.
+- `enemy_assignments` expands one slot per phase entity of multi-phase
+  bosses (`docs/boss-arena-constraints.md`); a phase slot of a
+  single-phase arena has no MSB part.
+- The arena map is one FogMod never writes. Starscourge Radahn's arena
+  is a private instance map (`m60_13_09_02`) with no fog gate of its
+  own, so it is absent from `mods/fogmod`; the Item Randomizer's swap
+  ships through `mods/itemrando`, but SpeedFog's injectors only patch
+  `mods/fogmod`. For such maps, listed in `data/game_tweaks.toml`
+  `[[fallback_arena_maps]]` (`GameTweaks.FallbackArenaMaps`), `Inject`
+  reads the merge-dir copy (`<mergeDir>/map/mapstudio/<name>.msb.dcx`,
+  with its EMEVD), runs the same repoint and wall patch, and ships the
+  result into `mods/fogmod` only when something was repointed there.
+  Extend the list if the warning ever fires for another arena whose map
+  exists in the merge dir. The other fogless arenas (Stone Platform
+  m19_00, Farum Azula m13_00) have their boss parts in maps FogMod writes
+  anyway for the area's gates; Radahn's is the only boss on an
+  02-supertile FogMod never touches.
 
 ## Moveset
 
-Spec: `docs/superpowers/specs/2026-09-04-untouchable-moveset-design.md`.
-The boss gets two tools vanilla AI never uses, applied to the promoted
-instance only:
+Two tools vanilla AI never uses, applied to the promoted instance only:
 
-- **Lantern swing** at melee range: animation 3001 (AtkParam_Npc 5280115,
-  magic 100, hit radius 4 at dummy 906, dmgLevel 4 with 1.5 m knockback, no
-  throw), vanilla's post-teleport surprise attack, promoted to a regular
-  act (Act11) next to the grab (3002/3003, AtkParam 5280110, throwTypeId
-  4100). In game it reads as a burst around the lantern that pushes the
-  player back; it is kept rare so the parryable grab stays the main
-  threat. Pure AI: no param, no TAE change.
+- **Lantern burst** at melee range: animation 3001 (AtkParam_Npc
+  5280115, magic 100, hit radius 4 m at dummy 906, 1.5 m knockback, no
+  throw), vanilla's post-teleport surprise attack promoted to a regular
+  act next to the grab (3002/3003, AtkParam 5280110, throw 4100). It
+  reads as a burst around the lantern that pushes the player back and is
+  kept rare so the parryable grab stays the main threat. Pure AI.
 - **Frenzy beam** at range: animation 3004 (lantern raised, thirteen
-  bullet events from dummy 210), registered by vanilla AI with probability
-  0 everywhere, re-enabled (Act04) and made to fire a Frenzied Burst-style
-  laser (magic damage, no madness).
+  bullet events from dummy 210), which vanilla AI registers with
+  probability 0 everywhere, re-enabled and made to fire a Frenzied
+  Burst-style laser (magic damage, no madness).
 
-### Why 3004 needs a TAE edit
+### TAE patch
 
-3004's bullet events carry judge ids 101/102, the same ids the idle, walk
-and teleport animations fire for the lantern's ambient pulses. Remapping
-them under the boss variation would fire the beam at rest, so
-`StaticModBuilder/UntouchableTaePatcher` rewrites the judge of four of the
-thirteen events (spread by start time: indices 0, 4, 8, 12) to 150 in the
-shipped `chr/c5280.anibnd.dcx`. The patch is inert for ambient
+3004's bullet events carry judge ids 101/102, the same ids the idle,
+walk and teleport animations fire for the lantern's ambient pulses.
+Remapping them under the boss variation would fire the beam at rest, so
+`StaticModBuilder/UntouchableTaePatcher` rewrites the judge of four of
+the thirteen events (indices 0, 4, 8, 12, spread by start time) to 150 in
+the shipped `chr/c5280.anibnd.dcx`. The patch is inert for ambient
 untouchables twice over: vanilla AI never selects 3004, and variation
 52800 has no row for judge 150. The patcher refuses (warning, nothing
 written) any layout other than dummy 210 with judges 101/102, so a game
 patch renumbering c5280's judges disables the moveset instead of
-corrupting the TAE. Knob: `BEAM_EVENT_COUNT` (4). The events keep dummy
-210 (the lantern); if it ever fails to aim at the player, candidates are
-10 (the 3002/3003 flash origin) or 906 (the swing).
-The patched anibnd (about 1.3 MB) ships in every seed's static mod whether
-or not the boss is placed; it is inert without the boss rows.
+corrupting the TAE. The patched anibnd (about 1.3 MB) ships in every
+seed's static mod; it is inert without the boss rows. Knob:
+`BEAM_EVENT_COUNT` (4). If the beam ever fails to aim at the player,
+candidate dummies are 10 (the grab's flash origin) and 906 (the burst).
 
-### Per-seed rows (UntouchableBossInjector.ApplyMoveset)
+### Per-seed rows (`ApplyMoveset`)
 
 | Param | Row | Source | Changes |
 |-------|-----|--------|---------|
-| NpcParam | 755890000 (existing clone) | 52800086 | `behaviorVariationId` 75589 |
+| NpcParam | 755890000 (the boss row) | 52800086 | `behaviorVariationId` 75589 |
 | NpcThinkParam | 755890001 | 52800000 | `battleGoalID` 755890 (`logicId` stays 528000) |
-| BehaviorParam | 275589100/101/102/110/111/112/113/115/500 | the nine vanilla rows of variation 52800 (judge 500 is the non-formula row 1170) | `variationId` 75589; judges 100-102 re-pointed at the pulse clones below |
-| Bullet | 755890003-005 | 205280000-002 (the lantern's ambient pulses, judges 100-102) | madness rider (SpEffect 26000, stateInfo 437) cleared, VFX rider kept; the reason madness built up while the boss stood still |
+| BehaviorParam | 275589100/101/102/110/111/112/113/115/500 | the nine vanilla rows of variation 52800 (500 is the non-formula row 1170) | `variationId` 75589; judges 100-102 re-pointed at the pulse clones below |
+| Bullet | 755890003-005 | 205280000-002 (the lantern's ambient pulses, judges 100-102) | madness rider (SpEffect 26000) cleared, VFX rider kept |
 | BehaviorParam | 275589150 | 252800101 | judge 150, refType 1, refId 755890000 |
-| Bullet | 755890000 | 10732000 (Frenzied Burst) | `atkId_Bullet` 755890000, `spEffectId0-4` -1 |
-| AtkParam_Npc | 755890000 | 5280115 | `atkMag` 110 (`BEAM_MAGIC`) |
+| Bullet | 755890000 | 10732000 (Frenzied Burst) | `atkId_Bullet` 755890000, `spEffectId0-4` and `spEffectIDForShooter` -1 (no madness rider on the target or the caster) |
+| AtkParam_Npc | 755890000 | 5280115 | `atkMag` = `BEAM_MAGIC` (110) |
 
 Row ids: `200000000 + variation * 1000 + judge` (`SpeedFogIds.BehaviorRowId`).
 The Frenzied Burst SFX (527032 laser, 527033 hit) live in
-`sfxbnd_commoneffects`, so no SFX bundle work.
+`sfxbnd_commoneffects`. A single 3004 can land up to `BEAM_EVENT_COUNT`
+beams, so the per-cast ceiling is `BEAM_EVENT_COUNT x BEAM_MAGIC` before
+the player's defenses; tune the two knobs together.
 
-A single 3004 can land up to BEAM_EVENT_COUNT (4) beams, so the per-cast
-ceiling is 4 x BEAM_MAGIC (440 magic before the player's defenses); tune the
-two knobs together.
+### Gating
 
-### AI script
+All-or-nothing. The moveset rows are written only if
+`<data-dir>/mods/speedfog/chr/c5280.anibnd.dcx` and
+`<data-dir>/mods/speedfog/script/755890_battle.luabnd.dcx` exist
+(`MovesetStaticAssets`, built by `tools/bootstrap.py`), NpcThinkParam,
+BehaviorParam, Bullet and AtkParam_Npc are available, every template
+row is present, variation 52800 has exactly the nine rows of
+`VanillaJudges` (refresh the list after a game patch that adds or
+renumbers a c5280 behavior row) and each pulse judge resolves to a
+Bullet row; otherwise one warning line with the reasons and the boss
+keeps vanilla AI. The `behaviorVariationId` change belongs to the
+group: alone, it would leave the boss with a variation that has no
+BehaviorParam rows, i.e. no attacks, and a think row pointing at a
+missing luabnd would leave it without battle AI.
+
+## AI script
 
 `data/mods-src/speedfog/script/755890_battle-luabnd-dcx/755890_battle.lua`
 (plain text, repacked at bootstrap into
-`data/mods/speedfog/script/755890_battle.luabnd.dcx`) is the decompiled
-vanilla `528000_battle` renamed to goal 755890, plus the SpeedFog acts,
-gates and reactions below. The
-`GOAL_Houzuki755890_Battle` and `GOAL_Houzuki755890_AfterAttackAct` globals
-are not provided by the shared aiCommon global-name list (which only knows
-the vanilla `GOAL_Houzuki528000_*` names), so the script assigns them itself
-at the top (755890 = the boss think row's `battleGoalID`, 755891 = any
-unused id). Every knob is a file-scope local at the top of the script,
-captured as an upvalue by the functions below it: a first for this
-engine's scripts (the vanilla scripts only use globals), so a nil
-arithmetic error on the first activation would point there. The 2026-09-04
-spec and plan (`docs/superpowers/specs/2026-09-04-untouchable-moveset-design.md`,
-`docs/superpowers/plans/2026-09-04-untouchable-moveset.md`) predate the
-2026-09-05/06 rework: their cooldown weight 1, "unchanged" behind bracket
-and "unchanged" interrupts are superseded by what follows.
+`data/mods/speedfog/script/755890_battle.luabnd.dcx`, see
+`data/mods-src/README.md`) is the decompiled vanilla `528000_battle`
+renamed to goal 755890 plus SpeedFog's acts, gates and reactions.
+`battleGoalID` selects the battle luabnd independently of `logicId`, so
+only the battle script is cloned; ambient untouchables keep the vanilla
+script. Goal tables are keyed by numeric id and the `GOAL_` globals of
+vanilla scripts come from the shared aiCommon global-name list, which
+only knows the vanilla names, so the script assigns
+`GOAL_Houzuki755890_Battle` (755890, the think row's `battleGoalID`) and
+`GOAL_Houzuki755890_AfterAttackAct` (755891, any unused id) itself.
+Every knob is a file-scope local at the top of the script, captured as
+an upvalue by the functions below; a nil arithmetic error on the first
+activation points there.
 
-#### Acts
+### Acts and probabilities
 
-Act11 (swing 3001, vanilla's post-teleport surprise attack as a
-regular melee act, reach 4 m), Act04 (beam 3004, `successDist` 999, at
-range and at mid range), Act02 (the two teleports below), Act05/Act06
-(the vanilla post-grab retreats to 10/8 m, followed by a beam when it is
-available). The movement acts Act42 (sidestep) and Act46 (close to 4 m,
-then strafe) are vanilla's, given a weight so a bracket never sums to
-zero while the attacks cool.
-
-#### The teleport
-
-Act02 has two shapes by distance, `TELEPORT_FAR_RANGE` 5 m centre to
-centre (melee reach with a long weapon is 3-4 m); the hit reaction
-always fires the near one. Near: Jori's structure from vanilla 531020
-(wind-up animation, `GOAL_COMMON_ToTargetWarp`, follow-up) built from the
-untouchable's own moves: the lantern burst 3001 as the wind-up (its hit
-lands from the first frame, the warp fires at its cancel window, 1.0 s),
-a warp `TELEPORT_AWAY_DIST` 8 m away from the player relative to the boss
-itself (the five-argument `TARGET_SELF` warp of 203100, Rennala's 7 m
-blink, and 301010's retreats: straight behind the boss or, when the
-player stands in its back, straight ahead, then the diagonals, scanned
-by `Houzuki755890_FindRoomAway` from the boss's own position with its
-hit radius as the line width, then again at `TELEPORT_AWAY_FALLBACK` 5 m
-for small arenas, as Jori's own retreats fall back), then the beam when
-it is ready: the boss bursts, retreats and fires. The scan runs when the
-act is queued, about 1 s before the warp; without room nothing is queued
-or cleared (the burst is not spent on a warp that cannot happen; the act
-clears the sub-goals only once the retreat is certain, vanilla
-Act05/Act06's idiom) but the teleport timer starts, so a spot without
-room is not retried at every decision. The wind-up uses Jori's wrapper
-(`ComboTunable_SuccessAngle180`, reach 999, no turn, every angle 180) so
-it fires whatever the player's side; `ComboAttackTunableSpin` would
-demand the player inside 90 degrees in front, which the "player behind"
-bracket cannot promise. The retreat stays in the player's view on
-purpose: lock-on cannot be broken from the AI (no SpEffect field does it,
-and the three marker SpEffects of 3000 carry nothing of the kind), so a
-warp behind the player only turns the camera. Far: vanilla's own act, the
-5 s teleport-out animation 3000 whose marker (SpEffect 20011452 at
-4.77 s) triggers vanilla's interrupt, kept verbatim but for two changes:
-it scans (`Houzuki755890_FindRoomBehind`, vanilla's scan: in front, then
-behind right/left at 0 or 2 m, then behind at 2 m) and warps around
-`TARGET_ENE_0` rather than vanilla's `TARGET_EVENT`, and the burst that
-follows waits for the swing timer (vanilla swung unconditionally).
-`TARGET_EVENT` is an event-designated target (EMEVD "Set Character Event
-Target"; other vanilla scripts warp around it repeatedly, 462000, 536000,
-531000, and 532000 guards it against sitting far from the player), so it
-is not a once-valid slot; what designates it for this boss, and why it
-resolved to the player once per fight here, is not established (eighth
-run in the history below). Note that Act46 parks the boss at 4 m, inside
-the near band, so a teleport picked after a strafe is the near one and
-its burst mostly whiffs at that range: a retreat and a beam. The warp
-goal plays no animation itself (Rennala: own animation, SpEffect marker,
-interrupt, warp); the extra arguments of Jori's and 301010's
-eight-argument calls are unverified, hence the five-argument form.
-
-#### Cooldowns
-
-The grab (`GRAB_COOLDOWN` 6 s, vanilla 12) and the beam
-(`BEAM_COOLDOWN` 6 s) are engine counters through `SetCoolTime`, which
-registers the interval (`RegistAttackTimeInterval`) and reads the counter
-(`GetAttackPassedTime`) in one call: the table's two calls in
-`Goal.Activate` run before any act or reaction, and
-`Houzuki755890_BeamReady` is the same call with weights 100/0 wherever an
-act or a reaction needs the beam, so no counter is ever read
-unregistered. The swing (`SWING_COOLDOWN` 8 s on 3001 whatever its
-source: Act11, reaction, teleport wind-up) and the teleport
-(`TELEPORT_COOLDOWN` 6 s after a near one, `TELEPORT_FAR_COOLDOWN`
-11.5 s after a far one, whose own sequence takes about 9 s) are AI
-timers (`TIMER_SWING` slot 11, `TIMER_TELEPORT` slot 10, `ai:SetTimer`
-when the act is queued): 3001 is never registered, so no engine interval
-can hold the boss on a burst, and the teleport's burst fires whatever the
-swing timer says. The timer idiom is vanilla's (slot 10 is set by 34
-vanilla battle scripts, `GetTimer(n) <= 0` gates are the standard
-pattern, 1.17 survey). `Houzuki755890_TeleportReady` is the teleport
-timer back at 0, nothing else: the script reads neither the 3000 counter
-(the far variant plays 3000 but its clock is the timer) nor vanilla's
-SpEffect 20011450, which vanilla's far bracket gates the teleport on and
-which turned out to be a one-shot (third run). Facts about 20011450:
-resident in NpcParam slot 17 (category 0, endurance -1); no EMEVD of the
-checked arena (m31_10), common or common_func names it; no SpEffect chain
-replaces it; the c5280 TAE applies it through a one-frame type-66 event
-(0.00-0.03 s) at the start of the idle (0), of 1020, 2300 and the
-5010-5013 arrivals, while 3000 applies 20011453 (4 s, "teleporting") at
-its first frame, then 20011451 and the 20011452 warp marker at
-4.73/4.77 s. Hypothesis, not established: the gate is consumed at the
-first teleport and the one-frame events do not durably re-arm it
-(20011471, also endurance -1, is applied by a 0.33 s type-66 event on
-8500 and covers only the parry window, which suggests type-66 effects end
-with their event). Unverified: the type-66 semantics, and which arrival
-animation the AI's `ToTargetWarp` plays. Ambient untouchables keep the
-vanilla script and its gate.
-
-Attack counters (confirmed in game, third run): `GetAttackPassedTime`
-reads 0 for an animation never registered with
-`RegistAttackTimeInterval`, and a registered counter reads large before
-the attack's first use (the grab fires from the start of every fight).
-Vanilla evidence (survey of the 396 battle scripts of 1.17): 84 reads of
-an unregistered counter, all but six of them "long ago" checks (`>= N`)
-that 0 leaves silently false, and vanilla 468000/631000 test
-`GetAttackPassedTime(3009) == 0` on an unregistered 3009 to zero an act,
-i.e. "not used yet".
-
-#### Cooldown weight
-
-The last argument of `SetCoolTime` is the weight
-kept while the attack cools, not 0. Vanilla passes 1 in about two thirds
-of its calls and 0 in a quarter (1.17 survey), so a table never sums to
-zero, and a cooling attack picked with weight 1 is held by the engine
-until its interval expires, up to the act's goal life (8 s for the grab
-and the swing): the boss freezes in place. That was vanilla's passivity
-at 3-10 m (grab alone, weight 1 during its 12 s) and, with the earlier
-fillers at 25, about one decision in thirteen of the boss (2026-09-05
-session). The script passes 0, and every bracket keeps a movement filler
-with a positive weight.
-
-Probability table (vanilla -> boss); the vanilla act of the bracket keeps
-the remainder, the teleport weight counts only while the teleport is ready:
+Act11 (burst 3001, reach 4 m), Act04 (beam 3004, `successDist` 999),
+Act02 (the teleport, two shapes below), Act05/Act06 (vanilla's post-grab
+retreats to 10/8 m, followed by a beam when it is ready), and vanilla's
+movement acts Act42 (sidestep) and Act46 (close to 4 m, then strafe),
+given a weight so no bracket sums to zero while the attacks cool. The
+vanilla act of each bracket keeps the remainder; the teleport weight
+counts only while the teleport is ready:
 
 | Situation | Vanilla | Boss |
 |-----------|---------|------|
 | player behind, >= 8 m | Act02 100 | Act02 100 if the teleport is ready, else Act01 100 |
-| player behind, < 8 m | Act01 20 / Act43 80 | Act02 50 / Act01 10 / Act43 40 if the teleport is ready, else vanilla |
-| >= 10 m, teleport ready | Act02 99 / Act01 1 | Act02 60 / Act04 40 |
-| >= 10 m, teleport not ready | Act01 100 | Act01 50 / Act04 50 |
-| 3 to 10 m | Act03 100 | Act03 50 / Act11 10 / Act02 15 / Act04 10 / Act46 15 |
-| < 3 m | Act03 100 | Act03 55 / Act11 15 / Act02 10 / Act42 20 |
+| player behind, < 8 m | Act01 20 / Act43 80 | Act02 `TELEPORT_BEHIND` 50 / Act01 10 / Act43 40 if the teleport is ready, else vanilla |
+| >= 10 m, teleport ready | Act02 99 / Act01 1 | Act02 60 / Act04 `BEAM_FAR_TELEPORT_READY` 40 |
+| >= 10 m, teleport not ready | Act01 100 | Act01 50 / Act04 `BEAM_FAR_TELEPORT_NOT_READY` 50 |
+| 3 to 10 m | Act03 100 | Act03 50 / Act11 `SWING_MID` 10 / Act02 `TELEPORT_MID` 15 / Act04 `BEAM_MID` 10 / Act46 `MOVE_MID` 15 |
+| < 3 m | Act03 100 | Act03 55 / Act11 `SWING_CLOSE` 15 / Act02 `TELEPORT_CLOSE` 10 / Act42 `MOVE_CLOSE` 20 |
 | post-grab retreat (SpEffect 5031/5032) | Act05/Act06 | same, then Act04 if the beam is ready |
 
-Act46 closes to 4 m and strafes; Act42 is a sidestep. The movement acts
-are what keep the swing rare during the grab cooldown (first session in
-the history below).
+Act46 parks the boss at 4 m, inside the near band, so a teleport picked
+after a strafe is the near one and its burst mostly whiffs at that
+range: a retreat and a beam.
 
-#### Reactions
+### Teleports
 
-`Goal.Interrupt`, after the vanilla teleport and grab follow-ups; vanilla
-472000 pattern: `ClearSubGoal`, queue the attack, return true. A reaction
-spends an attack that is available anyway, so it
-moves an attack earlier without adding any: hits landed while the swing
-cools stay free, and the grab, beam and post-teleport recoveries are
-untouched. No reaction fires while a teleport or a grab sequence is in
-flight (`Houzuki755890_SequenceInFlight`), since its `ClearSubGoal` would
-drop the warp, the beam or the 3003 throw: the hold timer (`TIMER_HOLD`,
-slot 9), set with each teleport attempt (room or not, like the cooldown)
-to `TELEPORT_HOLD` (near: the burst's cancel window 1.0 s plus the
-longest arrival 2.2 s plus a margin, 3.5 s) or `TELEPORT_FAR_HOLD` (far:
-the 3000 marker at 4.77 s plus the arrival plus the 1.8 s burst plus a
-margin, 9 s), or the 3002 counter under `REACT_HOLD` 7 s (3002 4.2 s
-then 3003 1.8 s, plus a margin); the spans come from the c5280 TAE
-events and are named at the top of the script.
-Accepted exposure, shared with vanilla 472000: a hit from a spirit ash
-outside those windows can trigger the hit reaction like a player's hit.
+Act02 has two shapes by distance, `TELEPORT_FAR_RANGE` (5 m center to
+center, melee reach with a long weapon being 3-4 m); the hit reaction
+always fires the near one.
+
+**Near** (under 5 m), Jori's structure (vanilla script 531020: wind-up,
+`GOAL_COMMON_ToTargetWarp`, follow-up) built from the untouchable's own
+moves. The burst 3001 is the wind-up: its hit lands from the first frame
+and the warp fires at its cancel window (`BURST_CANCEL`, 1.0 s). The warp
+lands `TELEPORT_AWAY_DIST` (8 m) away from the player, relative to the
+boss itself (the five-argument `TARGET_SELF` form of Rennala's 203100
+and of 301010's retreats): straight behind the boss or, when the player
+stands in its back, straight ahead, then the diagonals.
+`Houzuki755890_FindRoomAway` scans those directions from the boss's own
+position with its hit radius as the line width, then again at
+`TELEPORT_AWAY_FALLBACK` (5 m) for small arenas. The beam follows when
+it is ready: the boss bursts, retreats and fires. The scan runs when the
+act is queued; without room nothing is queued (the burst is not spent on
+a warp that cannot happen) but the teleport timer starts, so a spot
+without room is not retried at every decision. The wind-up uses the
+`ComboTunable_SuccessAngle180` wrapper (reach 999, every angle 180) so it
+fires whatever the player's side. The retreat stays in the player's view
+on purpose: lock-on cannot be broken from the AI, so a warp behind the
+player would only turn the camera.
+
+**Far** (5 m and more), vanilla's own act: the 5 s teleport-out animation
+3000, whose marker (SpEffect 20011452 at 4.77 s) triggers vanilla's
+interrupt, kept but for two changes: the scan
+(`Houzuki755890_FindRoomBehind`: in front, then behind right/left at 0 or
+2 m, then behind at 2 m) and the warp go around `TARGET_ENE_0` rather
+than `TARGET_EVENT`, and the burst that follows waits for the swing timer
+(vanilla swings unconditionally). The warp goal plays no animation
+itself; the arrival animation comes with it.
+
+### Cooldowns
+
+The grab (`GRAB_COOLDOWN` 6 s, vanilla 12) and the beam (`BEAM_COOLDOWN`
+6 s) are engine counters through `SetCoolTime`, which registers the
+interval (`RegistAttackTimeInterval`) and reads the counter
+(`GetAttackPassedTime`) in one call: the table's two calls in
+`Goal.Activate` run before any act or reaction, and
+`Houzuki755890_BeamReady` is the same call with weights 100/0 wherever an
+act or a reaction needs the beam, so no counter is ever read
+unregistered. The burst (`SWING_COOLDOWN` 8 s on 3001 whatever its
+source: act, reaction, teleport wind-up) and the teleport
+(`TELEPORT_COOLDOWN` 6 s after a near one, `TELEPORT_FAR_COOLDOWN` 11.5 s
+after a far one, whose own sequence takes about 9 s) are AI timers
+(`TIMER_SWING` slot 11, `TIMER_TELEPORT` slot 10, set when the act is
+queued): 3001 is never registered, so no engine interval can hold the
+boss on a burst. `Houzuki755890_TeleportReady` is the teleport timer back
+at 0 and nothing else: the script reads neither the 3000 counter nor
+vanilla's SpEffect 20011450 (see "Engine facts and pitfalls").
+
+The last argument of `SetCoolTime` is the weight kept while the attack
+cools. The script passes 0 and every bracket keeps a movement filler
+with a positive weight, so the boss never freezes while its attacks
+cool.
+
+### Reactions
+
+`Goal.Interrupt`, after the vanilla teleport and grab follow-ups, in the
+vanilla pattern of 472000 (`ClearSubGoal`, queue the attack, return true). A
+reaction spends an attack that is available anyway, so it moves an
+attack earlier without adding any. No reaction fires while a teleport or
+a grab sequence is in flight (`Houzuki755890_SequenceInFlight`), since
+its `ClearSubGoal` would drop the warp, the beam or the throw: the hold
+timer (`TIMER_HOLD`, slot 9) is set with each teleport attempt to
+`TELEPORT_HOLD` (near: `BURST_CANCEL` + `ARRIVAL_MAX` + margin, 3.5 s)
+or `TELEPORT_FAR_HOLD` (far: `MARKER_3000` + `ARRIVAL_MAX` +
+`BURST_LENGTH` + margin, 9 s), and the grab is covered by its counter
+under `REACT_HOLD` (`GRAB_CHAIN` + 1 s, 7 s). The spans come from the c5280 TAE and
+are named at the top of the script. Accepted exposure, shared with
+vanilla scripts: a spirit ash's hit outside those windows can trigger
+the hit reaction like a player's hit.
 
 | Interrupt | Conditions | Response | Knob |
 |-----------|-----------|----------|------|
-| `INTERUPT_Damaged` (the boss took damage) | player in front within `REACT_HIT_RANGE` (2 m), draw | the near teleport (burst, retreat, beam) if ready and there is room, else the burst if ready, else nothing (the current act keeps running) | `REACT_HIT` 25 |
-| `INTERUPT_Shoot` (the player starts a cast or a shot) | player at `REACT_RANGE` (5 m) or more, beam ready, draw | beam (the 5 s far teleport is no answer to a cast, the near one would land the boss where it stands) | `REACT_SHOOT` 50 |
+| `INTERUPT_Damaged` | player in front within `REACT_HIT_RANGE` (2 m), draw | the near teleport if ready and there is room, else the burst if ready, else nothing | `REACT_HIT` 25 |
+| `INTERUPT_Shoot` (a cast or a shot starts) | player at `REACT_RANGE` (5 m) or more, beam ready, draw | beam | `REACT_SHOOT` 50 |
 | `INTERUPT_UseItem` | player at `REACT_RANGE` or more, beam ready, draw | beam | `REACT_HEAL` 80 |
 
-#### Tests
+### Tests
 
-`tests/test_mods_src_lua_scripts.py` parses the script with
-luaparser and rejects the syntax Lua added after 5.0 (the engine's
-compiler); `tests/test_untouchable_ai_table.py` runs `Goal.Activate`, the
-acts and `Goal.Interrupt` in an embedded Lua (lupa) against a fake ai/goal
-and checks the weight table, the queued sub-goals with their arguments,
-the timers and the reactions per state (distance, behind, SpEffects,
-seconds since each attack, AI timers, room per direction, draw): it would
-have caught the swing gate and the unregistered counters. The in-game
-sequence below remains the real test. `battleGoalID` selects the battle
-luabnd independently of `logicId` (255 vanilla think rows share the
-generic 29999), and the logic script does not reference the battle goal
-by name, so only the battle script is cloned.
+`tests/test_mods_src_lua_scripts.py` parses the script with luaparser
+and rejects the syntax Lua added after 5.0 (the engine's compiler).
+`tests/test_untouchable_ai_table.py` runs `Goal.Activate`, the acts and
+`Goal.Interrupt` in an embedded Lua (lupa) against a fake ai/goal and
+checks the weight table, the queued sub-goals with their arguments, the
+timers and the reactions per state (distance, behind, SpEffects, seconds
+since each attack, AI timers, room per direction, draw). Extend it with
+any table change. The in-game checklist below remains the real test.
 
-#### History
+## Scaling and tuning knobs
 
-The in-game runs (steps 6 to 9 of the validation sequence; each entry
-names what the run showed and what changed):
+`BOSS_HP` is the boss's HP at the arena's vanilla tier, not an absolute:
+the MSB repoint replaces the Item Randomizer's scaled placement clone
+outright, and FogMod's area rescale applies on top at runtime like for
+every enemy of the arena (`docs/enemy-scaling.md`: HP multiplied by
+`curve[target tier] / curve[arena's vanilla tier]`). A depth-12 arena of
+low vanilla tier multiplies it by about 2.8. Effective HP before the
+parry is `BOSS_HP / DAMAGE_CUT`. An arena outside `mods/fogmod` and the
+fallback list keeps the randomizer's own clone (a 5280-band row, so
+nerflantern makes it damageable, with generic tier scaling and runes): a
+functional fight, off-design.
 
-- 2026-09-04, first session: the swing at 40/50 fired every single time
-  (act weights are relative and the grab's cooldown zeroed the only
-  alternative); lowered to 10/15 with the movement fillers.
-- 2026-09-05, first run of the rework: improvements, but no teleport at
-  melee range. The teleport was gated on the swing's availability and the
-  hit reaction consumes the swing as soon as it is ready while the player
-  keeps hitting. Rule: never gate one attack on another that a reaction
-  can consume.
-- 2026-09-05, second run: no teleport at all, the boss turning in place
-  and every reaction held off. The teleport and the swing read
-  unregistered 3000/3001 counters (0 forever, and 0 is always within the
-  hold).
-- 2026-09-05, third run: teleport or beam at the start of the fight, then
-  never again (approach or beam from range, grab/swing/move at melee
-  range). Vanilla's 20011450 gate, ignored since; the registered counters
-  confirmed.
-- 2026-09-05, fourth run: teleports at melee range, but with the 5 s
-  delay of 3000, and a boss that flinched on every hit.
-- 2026-09-05, fifth run: the instant warp with no animation read as a
-  glitch; good pacing with the cooldowns lowered to 6/8/6/6; still
-  interrupted by every hit with super armor 120 (`toughness` is a class,
-  see the clone).
-- 2026-09-05, sixth run: the burst wind-up reads well, the warp behind
-  the player is defeated by lock-on (the player turns at once), and the
-  first, far teleport had lost its 5 s animation. `TARGET_ENE_0` with
-  vanilla's directions landed behind the player every time.
-- 2026-09-06, seventh run: a warp "8 m in front of the player" with the
-  plain directions and the enemy target left the boss where it stood
-  (arrival animation and beam played). Vanilla's target-relative warps
-  use the `To*` directions (301010's blinks around the player,
-  `AI_DIR_TYPE_ToB` and kin), the plain ones with the enemy target read
-  differently from one script to the next, and the self-relative form is
-  the unambiguous retreat.
-- 2026-09-06, eighth run: the far variant played at melee reach
-  (threshold 4 m, now 5), and every far teleport after the first
-  reappeared at range (`TARGET_EVENT`, now `TARGET_ENE_0`).
-- 2026-09-06, ninth run: the self-relative retreat under 5 m, the
-  `TARGET_ENE_0` far warp and `toughness` 0 all behave; validated. The
-  cleanup that followed (a hold timer in place of the timer arithmetic
-  and of the 20011453 signal, the beam read through `SetCoolTime`, the
-  two ranged reactions merged) kept every traced state and the lupa
-  tests identical; no run in game after it.
-- 2026-09-06, after the ninth run: every hit still cancelled the boss's
-  attacks. A field-by-field NpcParam diff against Jori and a SpEffect
-  census found the mechanism, the resident damage-level table 5300 (see
-  "Hit reactions"), absent from 52800086; `toughness` never was the
-  lever.
-- 2026-09-07, tenth run: a category-0 clone of 5300 resident in slot 1
-  of the boss clone (shipped as intended, checked in the seed's
-  regulation) changed nothing, the grab still cancelled by every hit.
-  The table is now folded into the partial wall row (category 1001, the
-  vanilla wall's shape); run owed.
+Knobs, never edited in the shared vanilla `528000_battle`:
 
-### Parry break
+- `UntouchableBossInjector`: `BOSS_HP`, `BOSS_RUNES`, `BOSS_TOUGHNESS`,
+  `BOSS_SUPER_ARMOR`, `BOSS_SUPER_ARMOR_RECOVER`, `DAMAGE_CUT`,
+  `BROKEN_DAMAGE_TAKEN`, `BEAM_MAGIC`; `UntouchableTaePatcher`:
+  `BEAM_EVENT_COUNT`.
+- The battle script: the probabilities (`SWING_*`, `TELEPORT_*`,
+  `BEAM_*`, `MOVE_*`), the five `*_COOLDOWN`, `TELEPORT_FAR_RANGE`,
+  `TELEPORT_AWAY_DIST`, `TELEPORT_AWAY_FALLBACK`, the animation spans the
+  holds derive from (`BURST_CANCEL`, `BURST_LENGTH`, `ARRIVAL_MAX`,
+  `MARKER_3000`, `GRAB_CHAIN`), and the reactions (`REACT_*`).
 
-The first successful parry cancels the damage cut for the rest of the
-fight (2026-09-05 session request). This is the vanilla untouchable flow
-with a partial wall, see "The vulnerability mechanism": the copied wall
-event applies the cut row at spawn, the parried animation's 20011471
-overrides it during the parry (the riposte is full damage), and the event
-then clears it and shows the break VFX. Nothing of SpeedFog's runs at
-parry time; only the copied event's two SpEffect ids and its spawn-time
-HP bar flags are rewritten and one `SetSpEffect` of the broken row is
-inserted after the break VFX (`PatchWallEvents`, one warning per boss
-whose map has no such event).
+## Verifying in game
 
-History of the 2026-09-05 sessions, kept because each step is a trap for
-the next reader: (1) a SpeedFog-side detector event in common.emevd
-never fired (entity-scoped conditions from common do not see map
-entities); (2) moved into the arena map's EMEVD it fired in a loop from
-game start, because the boss clone inherited nerflantern's resident
-20011471; (3) with that slot scrubbed the boss became fully immune: the
-"wall lift" credited to stateInfo 121 in the old documentation never
-existed, the copied vanilla event was applying the real wall 20011470
-and only nerflantern's resident 20011471 had kept it from taking hold.
-The counter SpEffect (x2 cut rates) and the detector event were removed
-once the vanilla flow was understood.
+Generate a seed with the allowlist above, then in the arena:
 
-### Gating
-
-All-or-nothing. `ApplyParams` returns `(Core, Moveset)`: the core rows as
-before, the moveset only if `<data-dir>/mods/speedfog/chr/c5280.anibnd.dcx`
-and `<data-dir>/mods/speedfog/script/755890_battle.luabnd.dcx` exist and
-NpcThinkParam, BehaviorParam, Bullet and AtkParam_Npc are available, with
-every template row present. The `behaviorVariationId` change belongs to
-the moveset group: alone, it would leave the boss with a variation that
-has no BehaviorParam rows, i.e. no attacks. A think row pointing at a
-missing luabnd would leave the boss without battle AI, which is why a
-missing static asset drops the whole moveset (one warning line) rather
-than just the beam.
-
-### In-game validation sequence
-
-Run in full on 2026-09-05 (seeds 610166042, 1141387, 871254120): swing
-and beam behave, no madness while idle, half damage behind the partial
-wall, the first parry breaks it and every later hit lands at four times
-the pre-parry number. Steps 6 to 9 (cooldown weight 0, the two
-teleports, mid-range and retreat beams, reactions, hit reactions) passed
-on 2026-09-06, the ninth run of the AI rework; the eight runs before it
-are listed under "AI script", "History"; the cleanup after the ninth run
-was checked by the tests only. Re-run after a game patch or a knob
-change.
-
-1. **Goal resolution**: knobs temporarily at `SWING_MID = 100`,
-   `SWING_CLOSE = 100`, the three `BEAM_*` and the two `TELEPORT_*` at 0
-   (a teleport ends in a swing too, through the interrupt). The boss must swing the
-   lantern at melee range instead of always grabbing. The explicit
-   `GOAL_Houzuki755890_Battle`/`GOAL_Houzuki755890_AfterAttackAct`
-   assignments are already in the script (goal tables are keyed by the
-   numeric id, the battle goal is started with the raw `battleGoalID`, and
-   the `GOAL_` globals of vanilla scripts come from the shared aiCommon
-   global-name list, decompiled from the 1.17 aicommon bundle), so this
-   step confirms the mechanism rather than introducing it. If the boss
-   still idles or the game logs a script error, the remaining fallback is
-   the spec's approach 2 (shared decompiled 528000 script branching on
-   `ai:HasSpecialEffectId(TARGET_SELF, 755890000)`).
-2. **Beam**: knobs at their defaults. Laser from the lantern at >= 10 m,
-   Frenzied Burst visual, aimed at the player, ~110 magic per hit; no beam
-   during idle or walk. Wrong origin or direction: retarget the dummy
-   (see "Why 3004 needs a TAE edit").
-3. **Tuning**: probabilities (`SWING_*`, `MOVE_*`), `GRAB_COOLDOWN`,
-   `SWING_COOLDOWN`, `BEAM_COOLDOWN`, `BEAM_MAGIC`, `BEAM_EVENT_COUNT`.
-   Second session (2026-09-05): swing still too frequent, `SWING_COOLDOWN`
-   12 s added (10 s since the reactions pass, 8 s since the instant-warp
-   pass that also lowered the grab and the beam to 6 s; it throttled the
-   teleport until the same day's rework, see "AI script", "Cooldowns"); madness rose
-   while the boss idled, pulse clones without
-   26000; parry break added. First session
-   (2026-09-04): beam approved as is; the swing at 40/50 fired every time
-   (see the AI script note), lowered to 10/15 with movement fillers and
-   an 8 s grab cooldown; boss too tanky at 8427 HP on a depth-12 arena
-   (3000 base x 2.81 FogMod rescale, then a 65% cut), lowered to
-   `BOSS_HP` 2000 and `DAMAGE_CUT` 0.5.
-4. **Parry break**: the HP bar shows from the start and hits land at half
-   damage; after the first parry (riposte at full damage, break VFX) every
-   hit lands at four times the pre-parry number (x2 vanilla); after dying
-   and re-entering, the partial wall is back until the next parry (the
-   copied event restarts).
-5. **Ambient regression**: an ambient untouchable still only teleports and
-   grabs, no swing at range, no beam, no script error, and still builds
-   madness with its lantern. Count its teleports: the vanilla script gates
-   them on 20011450 alone, so an ambient that teleports once and then runs
-   at the player from 10 m or more supports the "consumed gate" reading under
-   "AI script", "Cooldowns", one that teleports again points at the 3000
-   counter instead.
-6. **No freeze**: at melee range, take a grab and a swing within a few
-   seconds, then stay close: the boss must keep sidestepping or strafing
-   through the cooldowns, never stand still for several seconds (the
-   cooldown weight 0). Counters: the third run (2026-09-05) confirmed
-   the registered counters (teleport at the start, grabs, swings and
-   beams from the start), and that a script checking 20011450 teleports
-   once per fight. The fourth run showed teleports at melee range (the
-   gate was the limit); the teleport's clock is an AI timer, so the 3000
-   counter is out of the picture (the far variant plays 3000 but never
-   reads its counter).
-7. **Teleports and beams**: under 5 m (melee range while the grab and the
-   swing cool, the player in its back), the boss bursts its lantern on the
-   spot (the hit lands if the player is close), vanishes about 1 s into
-   the burst with no 5 s fade, reappears 8 m away from the player (5 m in
+1. **Wall and parry**: the HP bar shows from the start; hits land at half
+   damage and never interrupt the boss (only a small twitch, a charged
+   heavy included); heavy hits still break its posture. After the first
+   parry: riposte at full damage, break flash, every later hit at four
+   times the pre-parry number, and the boss flinches on ordinary hits.
+   After dying and re-entering, the partial wall is back. A boss still
+   interrupted before the break means the table does not act on c5280:
+   check whether a vanilla immune untouchable flinches (a save without
+   the item randomizer, whose nerflantern option lifts every wall), then
+   try `npcType` 1, the next untested difference against Jori. A boss
+   that never staggers means the meter is masked by the table: lower
+   `BOSS_SUPER_ARMOR`.
+2. **Melee**: grabs (parryable), bursts at most once per `SWING_COOLDOWN`,
+   and sidesteps or strafes through the cooldowns; the boss never stands
+   still for several seconds.
+3. **Near teleport** (under 5 m): a burst on the spot, a vanish about 1 s
+   into it with no fade, a reappearance 8 m away from the player (5 m in
    a small arena; straight ahead when the player was in its back) with
-   its arrival animation and fires the beam when it is ready; from 5 m,
-   vanilla's teleport: the 5 s lantern fade, then the warp behind the
-   player and the burst, every time and not only the first. Never two
-   teleports within `TELEPORT_COOLDOWN` (`TELEPORT_FAR_COOLDOWN` after a
-   far one). At 3-10 m it sometimes fires
-   the beam; after a grab it retreats and fires the beam from the retreat
-   distance. A cast from 5 m or more draws the beam when it is ready. If the boss finishes the whole 1.8 s burst before vanishing,
-   the attack goal did not hand over at the cancel window and the wind-up
-   needs another animation.
-8. **Reactions and windows**: from 5 m or more, drinking a flask draws a
-   beam most of the time and casting a spell draws the beam about half the
-   time when it is ready; within 5 m neither
-   reaction fires. At melee range,
-   hitting the boss draws, about one hit in four, the near teleport
-   (burst, retreat, beam) when it is ready or a burst at most once per
-   `SWING_COOLDOWN`, so combos after a whiffed grab still land freely.
-   In a small arena (catacomb rooms), confirm the boss still retreats at
-   least sometimes: the retreat needs 8 m of navmesh straight behind the
-   boss (or behind-left/right), then falls back to 5 m
-   (`TELEPORT_AWAY_FALLBACK`); a boss that never retreats there means both
-   distances fail and the fallback needs lowering. A boss that vanishes
-   and reappears where it stood would contradict 203100's shipped blink
-   (the same call shape and scan at 7 m), so look at the timing first (the
-   burst's cancel window, the `ClearSubGoal` order) before trying
-   301010's eight-argument call.
-9. **Hit reactions**: ordinary hits no longer interrupt the boss's grab,
-   burst, beam or teleport wind-up (the damage-level table of 5300 folded
-   into the partial wall row); heavy hits and combos still break its super armor
-   meter (80, Jori's) into a stagger, and the parry still breaks the
-   wall; once the wall is broken the boss flinches again on ordinary
-   hits (by design, see "Hit reactions"). A boss still interrupted by
-   every hit before the break means the table does not do on c5280 what
-   it does on Jori: the partial wall row then matches the vanilla wall
-   on every field that governs hit reactions, so check whether a vanilla
-   immune untouchable flinches
-   at all (a save without the item randomizer, whose nerflantern option
-   lifts every wall), and move to the next untested difference against
-   Jori, `npcType` 1. A boss that never staggers means the meter is
-   masked by the table: lower `BOSS_SUPER_ARMOR`.
+   the arrival animation, then the beam when it is ready. A burst that
+   completes its 1.8 s before the vanish means the attack goal did not
+   hand over at `BURST_CANCEL`. In a catacomb room, confirm it still
+   retreats at least sometimes; a boss that never retreats there means
+   both scan distances fail: lower `TELEPORT_AWAY_FALLBACK`.
+4. **Far teleport** (5 m and more): the 5 s lantern fade, then the warp
+   behind the player and the burst, every time and not only the first.
+   Never two teleports within `TELEPORT_COOLDOWN`.
+5. **Beam**: from 10 m, sometimes at 3-10 m, and after a grab from the
+   retreat distance; a Frenzied Burst laser from the lantern, aimed at
+   the player, about 110 magic per hit and up to four hits per cast; no
+   beam during idle or walk, no madness while the boss idles.
+6. **Reactions**: from 5 m or more, drinking a flask draws a beam most of
+   the time and casting draws it about half the time when it is ready;
+   within 5 m neither fires. At melee range, about one hit in four draws
+   the near teleport when it is ready, or a burst.
+7. **Ambient regression**: an ambient untouchable still only teleports
+   (once per engagement) and grabs, builds madness with its lantern, no
+   burst at range, no beam, no script error.
 
 ## Expected log lines
 
@@ -772,82 +488,70 @@ Untouchable boss: repointing N placed boss slot(s)
   Wall patch: K instruction(s) in J map(s)
 ```
 
-with `M >= 1` whenever the boss was actually placed in at least one
-compatible (`c5280`-model) arena. The `Fallback:` line only appears when
-the merge-dir fallback described above actually repointed something in
-one of `data/game_tweaks.toml`'s `[[fallback_arena_maps]]`. Phase-slot
-warnings (see above) are expected and not failures.
-
-When the moveset is skipped, the second line is replaced by one
-`Untouchable boss: moveset skipped (<reason>)` line (static asset missing,
-param unavailable, vanilla judge or template row missing) and the repoint
-lines carry only `NPCParamID`. At bootstrap, StaticModBuilder prints
+`M >= 1` whenever the boss was placed in at least one `c5280`-model
+arena. The `Fallback:` line only appears when a `[[fallback_arena_maps]]`
+map was patched. Phase-slot warnings are expected. When the moveset is
+skipped, the second line is replaced by one
+`Untouchable boss: moveset skipped (<reason>)` line and the repoint lines
+carry only `NPCParamID`. At bootstrap, StaticModBuilder prints
 `Untouchable TAE patch: retargeted 4 bullet event(s) of animation 3004 to judge 150 in chr/c5280.anibnd.dcx`.
 
-## In-game tuning session (owed)
+## Engine facts and pitfalls
 
-Spec: `docs/superpowers/specs/2026-08-03-halloween-theme-design.md`
-section 2.3. Not automatable; requires playing the fight. Owed checks:
+Facts established in game or from the 1.17 data that this feature rests
+on; each is a constraint for any change.
 
-- `BOSS_HP` (currently 2000) and `BOSS_RUNES` (currently 20000): feel of
-  the fight length and reward relative to other minor bosses.
-- `DAMAGE_CUT` (currently 0.5, i.e. a 50% cut): whether the boss is
-  appropriately tanky without becoming a DPS check; grab damage on the
-  clone (unchanged from vanilla `52800086`) should be reviewed too, since
-  near-one-shot grab damage is fine for an ambiance mob but not for a
-  boss encounter.
-- Fight passivity: addressed by the moveset (see "Moveset"); run its
-  validation sequence instead.
-- Successful-parry reward and teleport behavior specifically in the arenas
-  that actually received the boss (navmesh clearance for the AI's warp
-  scan around the player).
-
-`BOSS_HP` scaling note: the MSB repoint (`ApplyToMsb`) replaces the Item
-Randomizer's own scaled placement clone outright; it does not layer on top
-of it (see the caelid_radahn note above for what happens when the repoint
-does not reach an arena: the randomizer's generic tier scaling is what
-survives instead). FogMod's area rescale still applies on top at runtime,
-like for every enemy in the arena (`docs/enemy-scaling.md`: the area's
-SpEffect multiplies HP by `curve[target tier] / curve[arena's vanilla
-tier]`, unique matrix), so `BOSS_HP` is the boss's HP at the arena's
-vanilla tier, not an absolute. Observed 2026-09-04: 8427 HP on a depth-12
-arena of low vanilla tier with `BOSS_HP` 3000 (x2.81). The multiplier
-also varies with the arena the boss landed in. Effective HP outside the
-parry window is `HP / DAMAGE_CUT`.
-
-Fight feel is tuned in the boss's own battle script
-(`data/mods-src/speedfog/script/755890_battle-luabnd-dcx/755890_battle.lua`,
-knobs at the top of the script: `SWING_*`, `TELEPORT_*`, `BEAM_*`,
-`MOVE_*`, the five `*_COOLDOWN`, `TELEPORT_FAR_RANGE`,
-`TELEPORT_AWAY_DIST`, `TELEPORT_AWAY_FALLBACK`, the animation spans the
-reaction holds derive from, and the `REACT_*` reactions) and in the
-injector constants (`BOSS_HP`, `DAMAGE_CUT`,
-`BEAM_MAGIC`), never by editing the shared vanilla `528000_battle` (see
-"Moveset"). Regenerate the baseline script with WitchyBND and
-DSLuaDecompiler as described in `data/mods-src/README.md`.
-
-## Size: settled (no resize possible)
-
-The boss keeps its vanilla size, by engine constraint, not by choice. An
-MSB `Part.Scale` experiment (1.3x and higher on the promoted part,
-in-game test 2026-09-01) confirmed the engine ignores the field for chr
-parts, matching vanilla usage (`game_inspect scan-scale` over all 1347
-maps: zero Enemy or DummyEnemy hits; SoulsFormats documents the field as
-map-piece/object-only). No other offline mechanism exists: NpcParam and
-SpEffectParam carry no size field, EMEVD has no resize instruction, and
-the decompiled enemy randomizer never rescales. Runtime tools scale chr
-through live process memory only, which is outside SpeedFog's
-offline-patching paradigm. Any future resize would likely need a full
-chr clone with a rescaled skeleton (chrbnd + anibnd + behbnd),
-disproportionate for a cosmetic. Do not revisit without new evidence.
-
-## Fallback
-
-If the custom SpEffect misbehaves in game (parry feels broken, the
-permanent state does something unexpected), fall back to a plain
-`20011471` clone with no cut-rate override: fully touchable, like a
-nerflantern-patched vanilla untouchable, compensated with higher `BOSS_HP`
-instead of a damage cut. This only requires dropping the `DAMAGE_CUT`
-field loop in `UntouchableBossInjector.Apply` and raising `BOSS_HP`; the
-two-phase injector structure and the out-of-band row placement are
-unaffected.
+- **Attack counters must be registered.** `GetAttackPassedTime(anim)`
+  reads 0 for an animation never registered with
+  `RegistAttackTimeInterval`, and a registered counter reads large before
+  the attack's first use. `SetCoolTime` registers and reads in one call
+  and, with weights 100/0, is the idiomatic readiness read. A cooling
+  registered attack picked with a positive weight is held by the engine
+  until its interval expires (up to the act's goal life): pass 0 as
+  `SetCoolTime`'s last argument and keep a movement filler in every
+  bracket.
+- **Never gate one attack on another that a reaction can consume**: the
+  gate never opens while the player keeps hitting. One AI timer per
+  concern (cooldown, hold) beats arithmetic on a shared timer.
+- **SpEffect 20011450 is a one-shot.** Vanilla's far bracket gates the
+  teleport on it; the c5280 TAE applies it through one-frame type-66
+  events at the start of the idle, of 1020, 2300 and the arrival
+  animations, and it is gone after the first teleport. A vanilla AI
+  SpEffect gate may be a one-shot: check the TAE before reusing one as a
+  cooldown. Ambient untouchables keep that gate.
+- **Warp semantics.** Retreats warp relative to the boss
+  (`ToTargetWarp(15, TARGET_SELF, dir, dist, TARGET_ENE_0)`); positions
+  around the player use the `To*` directions (301010's blinks). The plain directions with
+  the enemy target read differently from one vanilla script to the next
+  and leave the boss where it stands. `TARGET_EVENT` is an
+  EMEVD-designated target: it resolves to the player once per fight
+  here and reappears the boss where it stood afterwards; warp around
+  `TARGET_ENE_0`. Lock-on cannot be broken from the AI (no SpEffect
+  field does it): a "surprise from behind" only turns the camera, so
+  retreat-and-punish is the lock-proof shape.
+- **SpEffect categories.** Two effects of the same `spCategory` do not
+  coexist: the lower `categoryPriority` wins, and at equal priority the
+  later one replaces the earlier. Clones inherit the template's
+  category; a clone that must coexist with its template goes to category
+  0. A row cloned from the merged regulation carries the enemy
+  randomizer's edits (nerflantern's slot): scrub what must not be
+  inherited.
+- **Damage-level tables are read from category 1001 only.** A resident
+  category-0 copy of 5300 ships fine and changes nothing; 264 of the 267
+  vanilla tables live in 1001. Since the wall rows (1001/0) outrank
+  vanilla's priority 200, the table can only live in the wall row
+  itself, and cannot survive the break.
+- **Entity-scoped conditions in common.emevd do not see map entities.**
+  A detector on a placed boss must live in the arena map's EMEVD. The
+  enemy randomizer copies enemy-specific events next to every placement,
+  with the entity as parameter: patching those copies is a clean
+  per-instance lever, and a diagnostic banner on the condition, in a
+  throwaway seed, is the fastest way to confirm what an event sees.
+- **No chr resize offline.** The engine ignores MSB `Part.Scale` for chr
+  parts (in-game test), NpcParam and SpEffectParam carry no size field,
+  EMEVD has no resize instruction. A resize would need a runtime DLL or
+  a full chr clone with a rescaled skeleton; the boss keeps its vanilla
+  size.
+- **The beam's SFX must be in a bundle c5280 loads.** Chr SFX live in
+  per-chr bundles; Frenzied Burst's live in `sfxbnd_commoneffects`;
+  Midra's beam would need its FFX copied into c5280's bundle.

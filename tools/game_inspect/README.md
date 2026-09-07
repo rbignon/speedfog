@@ -103,7 +103,7 @@ part whose `Part.Scale` differs from `(1,1,1)`, across one MSB or a whole
 mapstudio directory. Built to establish whether vanilla ever scales chr
 parts via the MSB (answer: no, zero Enemy/DummyEnemy hits over all 1347
 maps; an in-game test then confirmed the engine ignores the field on chr
-parts entirely, see "Size: settled" in `docs/untouchable-boss.md`).
+parts entirely, see "Engine facts and pitfalls" in `docs/untouchable-boss.md`).
 
 ### `check-emevd`: scan event 0 for FogMod entity references
 

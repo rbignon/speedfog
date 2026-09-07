@@ -233,7 +233,7 @@ public class UntouchableBossInjectorTests
         Assert.Contains(log, l => l.Contains("ThinkParamID"));
     }
 
-    // Merge-dir fallback (docs/untouchable-boss.md, m60_13_09_02 paragraph):
+    // Merge-dir fallback (docs/untouchable-boss.md "Two-phase injector", fallback arena maps):
     // caelid_radahn's boss part lives on an 02-supertile FogMod never
     // writes, so the primary mod-dir scan in Inject never sees it. When the
     // assignment target is still unfound after that scan and a mergeDir is

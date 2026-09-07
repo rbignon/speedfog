@@ -191,7 +191,7 @@ speedfog/
 │   ├── esd-editing.md       # ESD talk script editing conventions
 │   ├── care-package.md      # Randomized starting build system
 │   ├── tarnished-showcase.md  # Tarnished Pack showcase mode (class loadout, Torrent skins)
-│   ├── untouchable-boss.md  # Aging Untouchable minor boss (vulnerability mechanism, two-phase injector, moveset)
+│   ├── untouchable-boss.md  # Aging Untouchable minor boss (vulnerability mechanism, hit reactions, two-phase injector, moveset, AI script, engine facts)
 │   ├── item-randomizer.md   # ItemRandomizerWrapper integration
 │   ├── event-flags.md       # Event flag allocation and EMEVD reference
 │   ├── alternate-warp-patching.md # AlternateFlag warp patching (300/330)
@@ -237,7 +237,7 @@ speedfog/
 | `docs/boss-arena-constraints.md` | Arena-boss compatibility constraints and matching |
 | `docs/care-package.md` | Randomized starting build system |
 | `docs/tarnished-showcase.md` | Tarnished Pack showcase mode: `[tarnished]` config, class loadout + Torrent skin draws, graph.json v4.7 fields, flag-to-skin mapping confirmed in-game 2026-09-01 |
-| `docs/untouchable-boss.md` | Aging Untouchable minor boss: vulnerability mechanism (nerflantern-style wall lift + partial damage cut), hit reactions (damage-level table 5300 folded into the wall row), two-phase injector, moveset (own battle script 755890, lantern swing, frenzy beam via judge 150, offensive teleport, reactions), in-game validation sequence |
+| `docs/untouchable-boss.md` | Aging Untouchable minor boss: the fight (partial wall, parry break, x4 broken state, no flinch until the break), vulnerability mechanism (copied wall event, cut row carrying the 5300 damage-level table, broken row), two-phase injector (repoint, fallback arena maps), moveset (lantern burst, frenzy beam via judge 150, TAE patch), AI script (two teleports, cooldowns, reactions, lupa tests), in-game checklist, engine facts and pitfalls |
 | `docs/vanilla-warp-removal.md` | FogMod vanilla warp removal workaround |
 | `docs/stake-removal.md` | Vanilla stake removal (RetryPoint softlock prevention) |
 | `docs/startup-flag-injection.md` | StartupFlagInjector mechanism + methodology to find new gate flags |

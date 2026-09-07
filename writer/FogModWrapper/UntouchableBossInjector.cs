@@ -17,7 +17,7 @@ public static class UntouchableBossInjector
 {
     public const int UNTOUCHABLE_VANILLA_NPC = 52800086;
 
-    // Initial values for the in-game tuning session (docs/untouchable-boss.md).
+    // Tuning knobs (docs/untouchable-boss.md, "Scaling and tuning knobs").
     public const uint BOSS_HP = 2000;
     public const uint BOSS_RUNES = 20000;
     /// <summary>Hit reactions. The stagger meter follows Jori's profile
@@ -73,7 +73,7 @@ public static class UntouchableBossInjector
     /// while the boss stood still.</summary>
     public const int LANTERN_MADNESS_SPEFFECT = 26000;
 
-    // --- Parry break (docs/untouchable-boss.md "Parry break") ---
+    // --- Parry break (docs/untouchable-boss.md "Vulnerability mechanism") ---
 
     /// <summary>The parry-window SpEffect (category 1001, stateInfo 121):
     /// the parried animation (8500) applies it through a TAE event, it
@@ -125,7 +125,7 @@ public static class UntouchableBossInjector
     // No boss resize: an MSB Part.Scale experiment (1.3x and higher)
     // confirmed in-game that the engine ignores the field for chr parts,
     // and no other offline size mechanism exists (docs/untouchable-boss.md,
-    // "Size: settled").
+    // "Engine facts and pitfalls").
 
     public static bool IsBossPlaced(Dictionary<string, string> enemyAssignments)
         => enemyAssignments.ContainsValue(
