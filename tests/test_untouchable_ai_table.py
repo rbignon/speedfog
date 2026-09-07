@@ -58,9 +58,6 @@ FAR_WINDUP = ("ComboTunable_SuccessAngle180", 3000)  # vanilla Act02's 5 s telep
 RETREAT = ("ToTargetWarp", "self")  # the near warp, relative to the boss itself
 WARP_BEHIND = ("ToTargetWarp", "enemy")  # the far warp, around the player
 BURST_ARGS = [8, SWING_ANIM, "enemy", 999, 0, 180, 180, 180]  # fires whatever the side
-# The teleport wind-up ends its goal right after the hit lands (TAE: judge
-# 115 at 0.03-0.27 s) instead of waiting for the cancel window at 1.00 s.
-WINDUP_ARGS = [0.3] + BURST_ARGS[1:]
 WAIT = ("Wait", "enemy")  # the beat between the warp and the beam
 
 
@@ -339,36 +336,23 @@ def test_far_bracket_teleport_or_beam():
 def test_near_teleport_is_burst_retreat_wait_beam_and_starts_the_three_timers():
     goal, _, state = act("Act02", dist=2)
     assert queued(goal) == [BURST, RETREAT, WAIT, BEAM_ATTACK]
-    # The wind-up hands over once its hit has landed, so the warp follows the
-    # explosion at once; the beat the player reads sits after the warp instead.
-    assert args_of(goal, 0) == WINDUP_ARGS
+    # The wind-up keeps vanilla's goal life: the warp waits for the burst to
+    # release the character, and the beat the player reads sits after it.
+    assert args_of(goal, 0) == BURST_ARGS
     assert args_of(goal, 1) == retreat_args()
     assert args_of(goal, 2)[0] == 1.0
     assert state.timers[TELEPORT_TIMER] == 6
     # The hold covers wind-up, arrival, beat and beam.
-    assert state.timers[HOLD_TIMER] == pytest.approx(3.8)
+    assert state.timers[HOLD_TIMER] == pytest.approx(4.5)
     assert state.timers[SWING_TIMER] > 0
 
 
-def test_the_other_bursts_keep_the_full_goal_life():
-    # Only the teleport wind-up hands over early: elsewhere the burst is the
-    # whole answer and keeps vanilla's life.
-    fired, goal, _ = react(
-        interrupt="Damaged", dist=1.5, random=1, timers=TELEPORT_COOLING
-    )
-    assert fired and queued(goal) == [BURST]
-    assert args_of(goal, 0) == BURST_ARGS
-    _, goal, _ = react(
-        interrupt="ActivateSpecialEffect", speffects=[WARP_MARKER_SPEFFECT], dist=1
-    )
-    assert queued(goal) == [WARP_BEHIND, BURST]
-    assert args_of(goal, 1) == BURST_ARGS
-
-
 def test_near_teleport_skips_the_beam_and_its_beat_while_it_cools():
-    # No beam to telegraph, no reason to stand still after the warp.
-    goal, _, _ = act("Act02", dist=2, passed={BEAM_ANIM: 1})
+    # No beam to telegraph, no reason to stand still after the warp, and the
+    # hold covers the shorter sequence rather than a second of nothing.
+    goal, _, state = act("Act02", dist=2, passed={BEAM_ANIM: 1})
     assert queued(goal) == [BURST, RETREAT]
+    assert state.timers[HOLD_TIMER] == pytest.approx(3.5)
 
 
 def test_near_teleport_bursts_even_while_the_swing_timer_runs():
@@ -529,21 +513,54 @@ def test_no_reaction_while_a_teleport_or_a_grab_is_in_flight():
     flask = {"interrupt": "UseItem", "dist": 8, "random": 1}
     assert not react(**hit, timers=TELEPORT_HOLDING)[0]
     assert not react(**flask, timers=TELEPORT_HOLDING)[0]
-    assert not react(**flask, passed={GRAB_ANIM: 2})[0]
+    assert not react(**flask, passed={GRAB_ANIM: 2})[0]  # its own chain in flight
+    assert not react(**hit, passed={GRAB_ANIM: 2})[0]  # the hit reaction too
+    # The hold, not the grab cooldown, is what suppresses them: 6.5 s is past
+    # GRAB_COOLDOWN (6) and still inside REACT_HOLD (7).
+    assert not react(**flask, passed={GRAB_ANIM: 6.5})[0]
+    assert react(**flask, passed={GRAB_ANIM: 7.5})[0]
     # Both fire once nothing is in flight.
     assert react(**flask)[0]
     # Past the hold the reactions are back even though the teleport timer still runs.
     assert react(**hit, timers=TELEPORT_COOLING)[0]
 
 
-def test_flask_reaction_draws_the_beam():
+def test_flask_reaction_draws_the_grab_within_its_reach():
+    # Drinking is punished by the grab's dash, not by the beam: the boss
+    # closes on the player rather than chipping them.
     fired, goal, _ = react(interrupt="UseItem", dist=8, random=1)
-    assert fired and queued(goal) == [BEAM_ATTACK]
-    assert not react(interrupt="UseItem", dist=8, random=1, passed={BEAM_ANIM: 1})[0]
+    assert fired and queued(goal) == [GRAB_ATTACK]
+    assert args_of(goal, 0) == [8, GRAB_ANIM, "enemy", 12, 2, 50, 0, 0]
     assert not react(interrupt="UseItem", dist=3, random=1)[0]
     # The draw is REACT_HEAL (80), not the hit reaction's 25.
     assert react(interrupt="UseItem", dist=8, random=50)[0]
     assert not react(interrupt="UseItem", dist=8, random=100)[0]
+
+
+def test_flask_reaction_beyond_the_grabs_reach_draws_the_beam():
+    # The grab cannot launch past its successDist, and an attack the engine
+    # cannot start holds the boss: past that reach the beam punishes instead.
+    fired, goal, _ = react(interrupt="UseItem", dist=12, random=1)
+    assert fired and queued(goal) == [GRAB_ATTACK]
+    fired, goal, _ = react(interrupt="UseItem", dist=12.1, random=1)
+    assert fired and queued(goal) == [BEAM_ATTACK]
+    fired, goal, _ = react(interrupt="UseItem", dist=25, random=1)
+    assert fired and queued(goal) == [BEAM_ATTACK]
+    # Neither answer available: the running act is left alone.
+    fired, goal, _ = react(
+        interrupt="UseItem", dist=25, random=1, passed={BEAM_ANIM: 1}
+    )
+    assert not fired and goal.cleared == 0
+
+
+def test_grab_readiness_reads_the_grab_cooldown():
+    # The reaction cannot show it (REACT_HOLD 7 covers GRAB_COOLDOWN 6, so a
+    # cooling grab always reads as a chain in flight first), but the helper is
+    # what keeps a cooling grab out of the queue if either knob moves.
+    g, ai, goal, _ = activate({"dist": 8, "passed": {GRAB_ANIM: 1}})
+    assert not g["Houzuki755890_GrabReady"](ai, goal)
+    g, ai, goal, _ = activate({"dist": 8, "passed": {GRAB_ANIM: 100}})
+    assert g["Houzuki755890_GrabReady"](ai, goal)
 
 
 def test_the_boss_never_reads_an_attack_input():

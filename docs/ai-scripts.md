@@ -163,11 +163,15 @@ untouchable's burst 3001 opens at 1.00 s though the hit lands by
 0.27 s. An attack queued while its registered interval runs is held
 rather than skipped.
 
-Giving such a goal a life shorter than that window, to hand over as
-soon as the hit has landed, is the boss's near teleport's design
-intent rather than an established fact: no vanilla script does it, and
-whether the animation keeps playing through the hand-over can only be
-settled in game (see `docs/untouchable-boss.md`, "Teleports").
+Giving such a goal a life shorter than that window, to hand it over as
+soon as the hit has landed, does not work: tried on the untouchable's
+teleport wind-up, it stopped the warp that followed from happening at
+all (in game). The likely reason, inferred rather than established, is
+that the animation still owns the character when the next sub-goal
+activates, so a warp issued there is dropped. No vanilla script does it
+either. Until something distinguishes it from the other change made in
+the same pass, treat the cancel window as the earliest a queued
+follow-up can act.
 
 ## Movement goals
 

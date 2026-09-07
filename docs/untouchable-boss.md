@@ -372,10 +372,10 @@ Act02  dist >= TELEPORT_FAR_RANGE (5 m) → far: teleport timer 11.5, hold 9, wa
        dist < 5 m → near: room scan from the boss, B then BL then BR (F/FL/FR when the
          player is in its back), at 8 m then at 5 m
          no room → teleport timer 2 s, nothing queued
-         room    → teleport timer 6, hold 3.8, ClearSubGoal, swing timer 4 + immediate
-                   burst 3001 with life BURST_WINDUP_LIFE (the swing timer is not read),
-                   warp from TARGET_SELF, then, only if the beam is ready,
-                   a Wait of ARRIVAL_PAUSE and the beam
+         room    → teleport timer 6, ClearSubGoal, swing timer 4 + immediate burst 3001
+                   (the swing timer is not read), warp from TARGET_SELF, then, only if
+                   the beam is ready, a Wait of ARRIVAL_PAUSE and the beam;
+                   hold 4.5 with the beam, 3.5 without
 Act03  approach to 12 m (never queued: offered under 10 m only), watch 5030,
        grab 3002 (life 8, reach 12, turn 2 s / 50 degrees)
 Act04  beam 3004 (life 3, reach 999, turn 1.5 s / 60 degrees)
@@ -404,9 +404,7 @@ Then Act03 → 1 while 3002 cools (12 s): the engine holds the boss on the cooli
 
 Not readable from the Lua, because the goals it queues are native:
 whether an attack outside its `successDist` still plays, waits for its
-life or fails (`GOAL_COMMON_CommonAttack`); what an attack goal cut short by its
-own life does to the animation still playing (the wind-up burst relies
-on it); what `ToTargetWarp` does with a 0 m
+life or fails (`GOAL_COMMON_CommonAttack`); what `ToTargetWarp` does with a 0 m
 distance around a character; the exact cone of `IsInsideTarget(TARGET_ENE_0,
 AI_DIR_TYPE_B, 90)` (the same call in 60 vanilla scripts); whether an
 interrupt reaches the battle goal while a `REGISTER_GOAL_NO_INTERUPT`
@@ -451,10 +449,14 @@ always fires the near one.
 untouchable's own moves. The burst 3001 is the wind-up, queued whatever
 the swing timer says (it re-arms it). Its hit lands early, between 0.03
 and 0.27 s by the TAE, but the animation only opens its cancel window at
-1.00 s, and an attack goal left to hand over on its own holds the boss
-there for three quarters of a second after the damage is through. The
-wind-up therefore gets `BURST_WINDUP_LIFE` (0.3 s) as its goal life, so
-the warp follows the explosion at once. The warp
+1.00 s (`BURST_CANCEL`) and the warp waits for it, so the boss stands
+there for three quarters of a second after the damage is through.
+Cutting the wind-up's goal life short to warp on the hit instead was
+tried and stopped the teleport happening at all: the animation still
+owns the character when the warp is issued, and the warp is dropped.
+That second is therefore structural as long as the burst is the
+wind-up, and the only way to remove it is to give up the explosion
+before the warp. The warp
 lands `TELEPORT_AWAY_DIST` (8 m) from the boss's own position, away
 from the player (the five-argument `TARGET_SELF` form of Rennala's
 203100 and of 301010's retreats): straight behind the boss or, when the
@@ -497,9 +499,9 @@ The grab (`GRAB_COOLDOWN` 6 s, vanilla 12) and 3004 (`BEAM_COOLDOWN`
 interval (`RegistAttackTimeInterval`) and reads the counter
 (`GetAttackPassedTime`) in one call: the table's two calls in
 `Goal.Activate` run before any act or reaction, and
-`Houzuki755890_BeamReady` is the same call with weights 100/0 wherever an
-act or a reaction needs the beam, so no counter is ever read
-unregistered. The burst (`SWING_COOLDOWN` 4 s, set by every 3001 the
+`Houzuki755890_BeamReady` and `Houzuki755890_GrabReady` are the same call
+with weights 100/0 wherever an act or a reaction needs one of them, so no
+counter is ever read unregistered. The burst (`SWING_COOLDOWN` 4 s, set by every 3001 the
 script queues, read by Act11, by the far teleport's post-warp burst and
 by the plain-burst hit reaction; the near teleport's wind-up fires
 whatever the timer says, so 3001 can also play once per teleport
@@ -533,8 +535,9 @@ attack earlier without adding any. No reaction fires while a teleport or
 a grab sequence is in flight (`Houzuki755890_SequenceInFlight`), since
 its `ClearSubGoal` would drop the warp, the beam or the throw: the hold
 timer (`TIMER_HOLD`, slot 9) is set with each queued teleport to
-`TELEPORT_HOLD` (near: `BURST_WINDUP_LIFE` + `ARRIVAL_MAX` +
-`ARRIVAL_PAUSE` + margin, 3.8 s)
+`TELEPORT_HOLD` (near: `BURST_CANCEL` + `ARRIVAL_MAX` +
+`ARRIVAL_PAUSE` + margin, 4.5 s, or `TELEPORT_HOLD_NO_BEAM` 3.5 s when
+the beam is cooling and neither it nor the beat is queued)
 or `TELEPORT_FAR_HOLD` (far: `MARKER_3000` + `ARRIVAL_MAX` +
 `BURST_LENGTH` + margin, 9 s), and the grab is covered by its counter
 under `REACT_HOLD` (`GRAB_CHAIN` + 1 s, 7 s). The spans come from the c5280 TAE and
@@ -562,7 +565,8 @@ Goal.Interrupt, first matching case wins
    c. else false
    A hit from the back never triggers anything.
 3. UseItem: dist >= REACT_RANGE (5 m) AND nothing in flight AND draw <= REACT_HEAL (80)
-   AND beam ready → ClearSubGoal + beam → true
+   dist <= GRAB_REACH (12 m) AND grab ready → ClearSubGoal + grab → true
+   dist >  GRAB_REACH AND beam ready        → ClearSubGoal + beam → true
 Shoot (a cast or a shot starting) is deliberately not handled, and falls through to false.
 ```
 
@@ -571,8 +575,18 @@ before its consequence reads as unfair. The two handled reactions are not
 inputs in that sense. A hit is a consequence the player has already
 committed to, and a flask is a commitment of its own that costs them
 their guard, which vanilla bosses punish too. Re-adding the cast reaction
-is one branch calling `Houzuki755890_ReactBeam` with a draw knob of its
+is one branch calling `Houzuki755890_ReactGrab` with a draw knob of its
 own, but it is a design decision rather than a tuning value.
+
+The flask reaction answers with the grab rather than the beam: the grab
+dashes `GRAB_REACH` (12 m, vanilla Act03's `successDist`), so drinking is
+punished by the boss arriving rather than by chip damage, and the grab's
+own chain then covers the reaction hold through
+`Houzuki755890_SequenceInFlight`. Past that reach the grab could not
+launch and an attack the engine cannot start holds the boss, so the beam
+punishes from where it stands, which keeps the reaction to attacks the
+table could offer at that distance. A cooling grab is never queued, for
+the same engine reason the table never offers one.
 
 ### Tests
 
@@ -608,9 +622,10 @@ Knobs, never edited in the shared vanilla `528000_battle`:
   `BEAM_*`, `MOVE_*`), the five `*_COOLDOWN` and `TELEPORT_RETRY`,
   `TELEPORT_FAR_RANGE`,
   `TELEPORT_AWAY_DIST`, `TELEPORT_AWAY_FALLBACK`, the animation spans the
-  holds derive from (the chosen `BURST_WINDUP_LIFE` and `ARRIVAL_PAUSE`,
-  the measured `BURST_LENGTH`, `ARRIVAL_MAX`,
-  `MARKER_3000`, `GRAB_CHAIN`), and the two reactions (`REACT_HIT`, `REACT_HEAL` and their ranges).
+  holds derive from (the chosen `ARRIVAL_PAUSE`, the measured
+  `BURST_CANCEL`, `BURST_LENGTH`, `ARRIVAL_MAX`,
+  `MARKER_3000`, `GRAB_CHAIN`), `GRAB_REACH`, and the two reactions
+  (`REACT_HIT`, `REACT_HEAL` and their ranges).
 
 ## Verifying in game
 
@@ -635,18 +650,13 @@ Generate a seed with the allowlist above, then in the arena:
    cooldowns; the boss never stands still for several seconds, and a
    grab is followed by the burst and warp rather than the walk retreat
    whenever the teleport is off cooldown.
-3. **Near teleport** (under 5 m): a burst on the spot and, without
-   waiting for it to finish, a vanish with no fade, a reappearance 8 m
-   from where the boss stood, away from the player (5 m in a small
-   arena; straight ahead when the player was in its back) with the
-   arrival animation, a beat of about a second, then the beam when it is
-   ready. A pause before the vanish rather than after it means the goal
-   life did not cut the wind-up: try `BURST_WINDUP_LIFE` a little either
-   side of the 0.27 s where the hit lands, and if no value moves the
-   timing then the hand-over is not life-driven at all and the sequence
-   has to go back to waiting for the cancel window. A beam that goes
-   missing after a warp is the same cause: the hold expires before a
-   sequence that never got shorter. In a catacomb room, confirm it still
+3. **Near teleport** (under 5 m): a burst on the spot, a vanish about a
+   second into it with no fade, a reappearance 8 m from where the boss
+   stood, away from the player (5 m in a small arena; straight ahead
+   when the player was in its back) with the arrival animation, a beat
+   of about a second, then the beam when it is ready. The second before
+   the vanish is the burst releasing the character and cannot be tuned
+   away. In a catacomb room, confirm it still
    retreats at least sometimes; a boss that never retreats there means
    both scan distances fail: lower `TELEPORT_AWAY_FALLBACK`.
 4. **Far teleport** (5 m and more): the 5 s lantern fade, then the warp
@@ -665,10 +675,14 @@ Generate a seed with the allowlist above, then in the arena:
    anibnd, unlike the luabnd) or the DLC SFX bundle is absent. Template
    drift cannot produce it: it skips the whole moveset, and the boss then
    keeps vanilla AI and never casts 3004 at all.
-6. **Reactions**: from 5 m or more, drinking a flask draws a beam most of
-   the time when it is ready, and within 5 m it does not. Casting or
-   shooting never draws anything, at any distance. At melee range, about
-   one hit in four draws the near teleport when it is ready, or a burst.
+6. **Reactions**: between 5 and 12 m, drinking a flask draws the grab
+   most of the time when it is off cooldown, and the boss should cover
+   the distance; beyond 12 m it draws the beam instead; within 5 m it
+   draws nothing. Drink from well past 12 m and check the boss fires
+   rather than standing still: a stall there means the grab was queued
+   out of reach after all, so lower `GRAB_REACH`. Casting or shooting
+   never draws anything, at any distance. At melee range, about one hit
+   in four draws the near teleport when it is ready, or a burst.
 7. **Ambient regression**: an ambient untouchable still only teleports
    (once per engagement) and grabs, builds madness with its lantern, no
    burst at range, no beam, no script error.

@@ -39,6 +39,7 @@ local BEAM_CLOSE = 15                   -- < 3 m: Act04 (the nova lands at conta
 local MOVE_CLOSE = 15                   -- < 3 m: Act42 (sidestep)
 local TELEPORT_BEHIND = 50              -- player behind, < 8 m: Act02 when ready (0-90; Act01 keeps 10, Act43 takes the rest)
 local GRAB_COOLDOWN = 6                 -- seconds between two grabs (3002); vanilla 12
+local GRAB_REACH = 12                   -- vanilla Act03's successDist: the grab dashes this far, and cannot launch past it
 local SWING_COOLDOWN = 4                -- seconds before Act11, the far teleport's post-warp burst or the plain-burst hit reaction may play 3001 again; every queued 3001 re-arms it, the near teleport's wind-up ignores it
 local BEAM_COOLDOWN = 4                 -- seconds between two 3004 (beam + flame nova), any source
 local TELEPORT_COOLDOWN = 6             -- seconds after a near teleport before any teleport
@@ -47,17 +48,16 @@ local TELEPORT_RETRY = 2                -- seconds before another attempt when t
 local TELEPORT_FAR_RANGE = 5            -- from this distance (centre to centre; melee reach with a long weapon is 3-4 m) the teleport is vanilla's (3000, the warp behind the player, the burst); closer, the burst, a warp away and the beam
 local TELEPORT_AWAY_DIST = 8            -- near variant: warp this far from the boss's own position, away from the player
 local TELEPORT_AWAY_FALLBACK = 5        -- near variant: second scan at this distance when nothing clears TELEPORT_AWAY_DIST (small arenas)
--- Animation spans (c5280 TAE event spans) and the two timings chosen
--- against them; the holds derive from both.
+-- Animation spans (c5280 TAE event spans) and the beat chosen against
+-- them; the holds derive from both.
 local BURST_LENGTH = 1.8
 -- 3001 lands its hit (judge 115) between 0.03 s and 0.27 s but only opens
--- its cancel window at 1.00 s, so an attack goal left to hand over on its
--- own holds the boss still for three quarters of a second after the damage
--- is already through. As the teleport's wind-up the goal is given this life
--- instead: the hit lands, the goal ends, the warp follows the explosion at
--- once. The beat the player needs to read the beam moves after the warp
--- (ARRIVAL_PAUSE). Every other burst keeps the vanilla life.
-local BURST_WINDUP_LIFE = 0.3
+-- its cancel window at 1.00 s, and the warp waits for it: cutting the
+-- wind-up's goal life short to warp on the hit instead left the boss not
+-- teleporting at all (in game), the animation still owning the character
+-- when the warp was issued. The second before the vanish is therefore
+-- structural as long as the burst is the wind-up.
+local BURST_CANCEL = 1.0                -- 3001's cancel window, where the warp fires
 local ARRIVAL_PAUSE = 1.0               -- seconds between the warp and the beam that follows it
 local ARRIVAL_MAX = 2.2                 -- the longest arrival animation (5012/5013)
 local MARKER_3000 = 4.77                -- 3000's warp marker (SpEffect 20011452)
@@ -70,7 +70,7 @@ local GRAB_CHAIN = 6                    -- 3002 (4.2 s) then 3003 (1.8 s)
 -- teleport and the swing cool stay free.
 local REACT_HIT = 25                    -- hit by the player in front within REACT_HIT_RANGE: the near teleport if ready, else the burst
 local REACT_HIT_RANGE = 2
-local REACT_HEAL = 80                   -- player uses an item from >= REACT_RANGE: beam
+local REACT_HEAL = 80                   -- player uses an item from >= REACT_RANGE: grab
 local REACT_RANGE = 5
 -- INTERUPT_Shoot (a cast or a shot starting) is deliberately not handled:
 -- answering the input before its consequence reads as unfair. A flask is
@@ -79,9 +79,11 @@ local REACT_RANGE = 5
 -- No reaction while a teleport or a grab sequence is in flight (a
 -- reaction's ClearSubGoal would drop the follow-up): the hold timer, set
 -- with each queued teleport, and the 3002 counter for the grab. The
--- margins round the holds to the sequences they must cover: 3.8 s near
--- (the wind-up's new shape, unvalidated), 9 s far (validated in game).
-local TELEPORT_HOLD = BURST_WINDUP_LIFE + ARRIVAL_MAX + ARRIVAL_PAUSE + 0.3  -- near: 3.8 s
+-- margins round the holds to the sequences they must cover: 4.5 s near
+-- (wind-up, warp, beat, beam), 3.5 s when the beam is cooling and neither
+-- the beat nor the beam is queued, 9 s far (validated in game).
+local TELEPORT_HOLD = BURST_CANCEL + ARRIVAL_MAX + ARRIVAL_PAUSE + 0.3  -- near, with the beam: 4.5 s
+local TELEPORT_HOLD_NO_BEAM = BURST_CANCEL + ARRIVAL_MAX + 0.3          -- near, beam cooling: 3.5 s
 local TELEPORT_FAR_HOLD = MARKER_3000 + ARRIVAL_MAX + BURST_LENGTH + 0.23  -- far: 9 s
 local REACT_HOLD = GRAB_CHAIN + 1                                          -- seconds after a grab (3002) starts
 -- AI timer slots (vanilla 528000 uses none; the shared library uses 12-15).
@@ -119,6 +121,10 @@ end
 
 function Houzuki755890_BeamReady(ai, goal)
     return SetCoolTime(ai, goal, ANIM_BEAM, BEAM_COOLDOWN, 100, 0) > 0
+end
+
+function Houzuki755890_GrabReady(ai, goal)
+    return SetCoolTime(ai, goal, ANIM_GRAB, GRAB_COOLDOWN, 100, 0) > 0
 end
 
 function Houzuki755890_TeleportReady(ai)
@@ -187,13 +193,11 @@ end
 -- Immediate: the ComboTunable_SuccessAngle180 wrapper with 504000's
 -- argument set (its post-warp 3025 among others: reach 999, no turn, every
 -- angle 180, so it fires whatever the player's side); otherwise Act11's melee parameters
--- (reach 4 m, turn 1.5 s / 60 degrees). The optional life applies to the
--- immediate form only and defaults to vanilla's 8; the teleport's wind-up
--- is the one caller that passes it.
-function Houzuki755890_AddSwing(ai, goal, immediate, life)
+-- (reach 4 m, turn 1.5 s / 60 degrees).
+function Houzuki755890_AddSwing(ai, goal, immediate)
     ai:SetTimer(TIMER_SWING, SWING_COOLDOWN)
     if immediate then
-        goal:AddSubGoal(GOAL_COMMON_ComboTunable_SuccessAngle180, life or 8, ANIM_LANTERN_BURST, TARGET_ENE_0, 999, 0, 180, 180, 180)
+        goal:AddSubGoal(GOAL_COMMON_ComboTunable_SuccessAngle180, 8, ANIM_LANTERN_BURST, TARGET_ENE_0, 999, 0, 180, 180, 180)
     else
         goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, 8, ANIM_LANTERN_BURST, TARGET_ENE_0, 4, 1.5, 60, 0, 0)
     end
@@ -203,7 +207,7 @@ end
 -- lets the interrupt chain 3003 when the grab connects.
 function Houzuki755890_AddGrab(ai, goal)
     ai:AddObserveSpecialEffectAttribute(TARGET_SELF, SPEFFECT_GRAB_CONNECT)
-    goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, 8, ANIM_GRAB, TARGET_ENE_0, 12, 2, 50, 0, 0)
+    goal:AddSubGoal(GOAL_COMMON_ComboAttackTunableSpin, 8, ANIM_GRAB, TARGET_ENE_0, GRAB_REACH, 2, 50, 0, 0)
 end
 
 function Houzuki755890_AddBeam(ai, goal)
@@ -217,11 +221,11 @@ function Houzuki755890_AddBeamIfReady(ai, goal)
 end
 
 -- The near teleport (Act02 under TELEPORT_FAR_RANGE, the hit reaction):
--- the burst as the wind-up, queued whatever the swing timer says and
--- given BURST_WINDUP_LIFE so it hands over once its hit has landed
--- rather than at its cancel window; then the warp away from the player;
--- then, when the beam is ready, a Wait of ARRIVAL_PAUSE and the beam.
--- The boss bursts, blinks, holds a beat and fires, in the player's
+-- the burst as the wind-up, queued whatever the swing timer says (its
+-- hit lands from the first frame, the warp fires when the animation
+-- releases the character at its cancel window); then the warp away from
+-- the player; then, when the beam is ready, a Wait of ARRIVAL_PAUSE and
+-- the beam. The boss bursts, retreats, holds a beat and fires, in the player's
 -- view since lock-on cannot be broken from the AI. Returns whether it was
 -- queued. Without room nothing is queued or cleared (the burst is not
 -- spent on a warp that cannot happen; the sub-goals are cleared only once
@@ -239,13 +243,15 @@ function Houzuki755890_AddTeleportAway(ai, goal)
         return false
     end
     ai:SetTimer(TIMER_TELEPORT, TELEPORT_COOLDOWN)
-    ai:SetTimer(TIMER_HOLD, TELEPORT_HOLD)
     goal:ClearSubGoal()
-    Houzuki755890_AddSwing(ai, goal, true, BURST_WINDUP_LIFE)
+    Houzuki755890_AddSwing(ai, goal, true)
     goal:AddSubGoal(GOAL_COMMON_ToTargetWarp, 15, TARGET_SELF, direction, distance, TARGET_ENE_0)
     if Houzuki755890_BeamReady(ai, goal) then
         goal:AddSubGoal(GOAL_COMMON_Wait, ARRIVAL_PAUSE, TARGET_ENE_0)
         Houzuki755890_AddBeam(ai, goal)
+        ai:SetTimer(TIMER_HOLD, TELEPORT_HOLD)
+    else
+        ai:SetTimer(TIMER_HOLD, TELEPORT_HOLD_NO_BEAM)
     end
     return true
 end
@@ -263,10 +269,26 @@ function Houzuki755890_AddTeleportFar(ai, goal)
     goal:AddSubGoal(GOAL_COMMON_ComboTunable_SuccessAngle180, 10, ANIM_TELEPORT_OUT, TARGET_ENE_0, successDist, 0, 0, 0, 0)
 end
 
--- The beam as the answer to a flask drunk from REACT_RANGE when nothing
--- is in flight: the draw, then the beam if it is ready.
-function Houzuki755890_ReactBeam(ai, goal)
-    if ai:GetDist(TARGET_ENE_0) >= REACT_RANGE and not Houzuki755890_SequenceInFlight(ai) and ai:GetRandam_Int(1, 100) <= REACT_HEAL and Houzuki755890_BeamReady(ai, goal) then
+-- The answer to a flask drunk from REACT_RANGE when nothing is in flight.
+-- Within GRAB_REACH the grab dashes at the drinker, so the drink is
+-- punished by the boss arriving rather than by chip damage, and the grab's
+-- own chain then covers the reaction hold (SequenceInFlight reads the 3002
+-- counter). Past that reach the grab could not launch, and an attack the
+-- engine cannot start holds the boss for the act's goal life, so the beam
+-- punishes from where it stands instead. A reaction still only spends an
+-- attack the table could offer at that distance.
+function Houzuki755890_ReactGrab(ai, goal)
+    local distanceEnemy = ai:GetDist(TARGET_ENE_0)
+    if distanceEnemy < REACT_RANGE or Houzuki755890_SequenceInFlight(ai) or ai:GetRandam_Int(1, 100) > REACT_HEAL then
+        return false
+    end
+    if distanceEnemy <= GRAB_REACH then
+        if Houzuki755890_GrabReady(ai, goal) then
+            goal:ClearSubGoal()
+            Houzuki755890_AddGrab(ai, goal)
+            return true
+        end
+    elseif Houzuki755890_BeamReady(ai, goal) then
         goal:ClearSubGoal()
         Houzuki755890_AddBeam(ai, goal)
         return true
@@ -870,7 +892,7 @@ Goal.Interrupt = function (self, ai, goal)
         return false
     end
     if ai:IsInterupt(INTERUPT_UseItem) then
-        return Houzuki755890_ReactBeam(ai, goal)
+        return Houzuki755890_ReactGrab(ai, goal)
     end
     return false
 end
