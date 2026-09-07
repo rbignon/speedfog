@@ -379,7 +379,8 @@ Not readable from the Lua, because the goals it queues are native:
 whether an attack outside its `successDist` still plays, waits for its
 life or fails (`GOAL_COMMON_CommonAttack`); whether the warp queued
 after the burst starts at 3001's cancel window (the wrapper sets
-`moveCancel` and `attackCancel`); what `ToTargetWarp` does with a 0 m
+`moveCancel` and `attackCancel`; observed in game, see
+`docs/ai-scripts.md`); what `ToTargetWarp` does with a 0 m
 distance around a character; the exact cone of `IsInsideTarget(TARGET_ENE_0,
 AI_DIR_TYPE_B, 90)` (the same call in 60 vanilla scripts); whether an
 interrupt reaches the battle goal while a `REGISTER_GOAL_NO_INTERUPT`
@@ -423,8 +424,8 @@ always fires the near one.
 **Near** (under 5 m): an attack, a warp and a follow-up, built from the
 untouchable's own moves. The burst 3001 is the wind-up, queued whatever
 the swing timer says (it re-arms it): its hit lands from the first frame
-and the warp is expected at its cancel window (`BURST_CANCEL`, 1.0 s;
-the handover is engine-side, see the decision tree). The warp
+and the warp fires at its cancel window (`BURST_CANCEL`, 1.0 s,
+observed in game, see `docs/ai-scripts.md`). The warp
 lands `TELEPORT_AWAY_DIST` (8 m) from the boss's own position, away
 from the player (the five-argument `TARGET_SELF` form of Rennala's
 203100 and of 301010's retreats): straight behind the boss or, when the
@@ -454,9 +455,9 @@ than `TARGET_EVENT`, and the burst that follows waits for the swing timer
 (vanilla swings unconditionally). The warp goal plays no animation
 itself; the arrival animation comes with it. The direction and
 distance pairs are vanilla's, written for the event point: the first
-three branches land 0 m from the player, a distance no vanilla script
-passes with `TARGET_ENE_0` (2.5 m and more elsewhere); in game the
-warp lands behind the player.
+three branches land 0 m from the player (the Nox knight scripts
+300000-302000 also warp 0 m around `TARGET_ENE_0`, as their no-room
+fallback); in game the warp lands behind the player.
 
 ### Cooldowns
 
@@ -496,7 +497,7 @@ vanilla pattern of 472000: `ClearSubGoal`, queue the answer, return
 true). The vanilla teleport and grab follow-ups are interrupts too: the
 warp marker of 3000 and the grab's connect are watched SpEffects that
 call the script back mid-animation. The reactions come after them. A
-reaction spends an attack that is available anyway, so it moves an
+reaction spends an attack the table could offer anyway, so it moves an
 attack earlier without adding any. No reaction fires while a teleport or
 a grab sequence is in flight (`Houzuki755890_SequenceInFlight`), since
 its `ClearSubGoal` would drop the warp, the beam or the throw: the hold

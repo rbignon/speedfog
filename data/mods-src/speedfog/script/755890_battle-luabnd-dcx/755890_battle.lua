@@ -29,7 +29,7 @@ REGISTER_GOAL_NO_SUB_GOAL(GOAL_Houzuki755890_Battle, true)
 local BEAM_FAR_TELEPORT_READY = 40      -- >= 10 m, teleport ready: Act04 (beam) vs Act02
 local BEAM_FAR_TELEPORT_NOT_READY = 50  -- >= 10 m, teleport not ready: Act04 (beam) vs Act01
 local SWING_MID = 10                    -- 3 to 10 m: Act11 (swing, radius-4 knockback burst)
-local TELEPORT_MID = 25                 -- 3 to 10 m: Act02
+local TELEPORT_MID = 25                 -- 3 to 10 m: Act02 (the near shape under TELEPORT_FAR_RANGE, the far one from it)
 local BEAM_MID = 10                     -- 3 to 10 m: Act04 (beam)
 local MOVE_MID = 15                     -- 3 to 10 m: Act46 (close to 4 m, then strafe)
 local SWING_CLOSE = 15                  -- < 3 m: Act11 (swing)
@@ -37,13 +37,13 @@ local TELEPORT_CLOSE = 25               -- < 3 m: Act02
 local MOVE_CLOSE = 20                   -- < 3 m: Act42 (sidestep)
 local TELEPORT_BEHIND = 50              -- player behind, < 8 m: Act02 when ready (0-90; Act01 keeps 10, Act43 takes the rest)
 local GRAB_COOLDOWN = 6                 -- seconds between two grabs (3002); vanilla 12
-local SWING_COOLDOWN = 8                -- seconds between two bursts (3001), any source (Act11, reaction, teleport wind-up)
+local SWING_COOLDOWN = 8                -- seconds before Act11, the far teleport's post-warp burst or the plain-burst hit reaction may play 3001 again; every queued 3001 re-arms it, the near teleport's wind-up ignores it
 local BEAM_COOLDOWN = 6                 -- seconds between two beams (3004), any source
 local TELEPORT_COOLDOWN = 6             -- seconds after a near teleport before any teleport
 local TELEPORT_FAR_COOLDOWN = 11.5      -- seconds after a far teleport before any teleport (its own sequence takes about 9 s)
 local TELEPORT_RETRY = 2                -- seconds before another attempt when the near teleport found no room
 local TELEPORT_FAR_RANGE = 5            -- from this distance (centre to centre; melee reach with a long weapon is 3-4 m) the teleport is vanilla's (3000, the warp behind the player, the burst); closer, the burst, a warp away and the beam
-local TELEPORT_AWAY_DIST = 8            -- near variant: warp this far away from the player, relative to the boss itself
+local TELEPORT_AWAY_DIST = 8            -- near variant: warp this far from the boss's own position, away from the player
 local TELEPORT_AWAY_FALLBACK = 5        -- near variant: second scan at this distance when nothing clears TELEPORT_AWAY_DIST (small arenas)
 -- Animation spans (c5280 TAE event spans); the holds derive from them.
 local BURST_CANCEL = 1.0                -- 3001's cancel window, where the warp fires
@@ -52,8 +52,11 @@ local ARRIVAL_MAX = 2.2                 -- the longest arrival animation (5012/5
 local MARKER_3000 = 4.77                -- 3000's warp marker (SpEffect 20011452)
 local GRAB_CHAIN = 6                    -- 3002 (4.2 s) then 3003 (1.8 s)
 -- Reactions (Goal.Interrupt), percentages, 0 disables one. A reaction
--- spends an attack that is available anyway, so it moves an attack earlier
--- without adding any: hits landed while the swing cools stay free.
+-- spends an attack the table could offer anyway (the near teleport with
+-- its wind-up burst while the teleport timer allows, else the burst while
+-- the swing timer allows, the beam while its counter allows), so it moves
+-- an attack earlier without adding any: hits landed while both the
+-- teleport and the swing cool stay free.
 local REACT_HIT = 25                    -- hit by the player in front within REACT_HIT_RANGE: the near teleport if ready, else the burst
 local REACT_HIT_RANGE = 2
 local REACT_SHOOT = 50                  -- player casts or shoots from >= REACT_RANGE: beam
@@ -92,7 +95,9 @@ local GUARD_EZSTATE = 9910              -- the guard state the vanilla acts pass
 -- Goal.Activate registers both before any act or reaction runs); the
 -- swing and the teleport are AI timers (SetTimer/GetTimer, the vanilla
 -- idiom), so 3001 is never registered and no engine interval can hold the
--- boss on a burst. A cooling attack is never queued.
+-- boss on a burst. A cooling registered attack (grab, beam) is never
+-- queued; the burst is queued while its timer runs in one case only, as
+-- the near teleport's wind-up.
 function Houzuki755890_SwingReady(ai)
     return ai:GetTimer(TIMER_SWING) <= 0
 end
@@ -109,9 +114,13 @@ function Houzuki755890_SequenceInFlight(ai)
     return ai:GetTimer(TIMER_HOLD) > 0 or ai:GetAttackPassedTime(ANIM_GRAB) <= REACT_HOLD
 end
 
--- Vanilla's post-3000 scan around the player (in front, then behind
--- right/left at 0 or 2 m, then behind at 2 m), kept verbatim for the far
--- teleport's second half: the warp direction and distance, or nil.
+-- Vanilla's post-3000 scan (in front, then behind right/left at 0 or
+-- 2 m, then behind at 2 m), kept verbatim for the far teleport's second
+-- half but run around the player instead of vanilla's TARGET_EVENT point:
+-- the first three branches land 0 m from the player, the distance vanilla
+-- wrote for its event point (the Nox knight scripts 300000-302000 also
+-- warp 0 m around TARGET_ENE_0, as their no-room fallback; in game the
+-- warp lands behind the player). The warp direction and distance, or nil.
 function Houzuki755890_FindRoomBehind(ai)
     local lineWidth = ai:GetMapHitRadius(TARGET_SELF)
     if ai:GetExistMeshOnLineDistEx(TARGET_ENE_0, AI_DIR_TYPE_F, 3 + lineWidth, lineWidth, 0) >= 2.5 then
@@ -159,10 +168,11 @@ function Houzuki755890_FindRoomAway(ai, distance)
 end
 
 -- Sub-goal builders shared by the acts and the reactions.
--- The lantern burst (3001) and its timer. Immediate: Jori's wind-up
--- recipe (ComboTunable_SuccessAngle180, reach 999, no turn, every angle
--- 180, so it fires whatever the player's side); otherwise Act11's melee
--- parameters (reach 4 m, turn 1.5 s / 60 degrees).
+-- The lantern burst (3001); every call re-arms the swing timer.
+-- Immediate: the ComboTunable_SuccessAngle180 wrapper with 504000's
+-- argument set (its post-warp 3025 among others: reach 999, no turn, every
+-- angle 180, so it fires whatever the player's side); otherwise Act11's melee parameters
+-- (reach 4 m, turn 1.5 s / 60 degrees).
 function Houzuki755890_AddSwing(ai, goal, immediate)
     ai:SetTimer(TIMER_SWING, SWING_COOLDOWN)
     if immediate then
@@ -190,8 +200,9 @@ function Houzuki755890_AddBeamIfReady(ai, goal)
 end
 
 -- The near teleport (Act02 under TELEPORT_FAR_RANGE, the hit reaction):
--- the burst as the wind-up (its hit lands from the first frame, the warp
--- fires at its cancel window), the warp away from the player, then the
+-- the burst as the wind-up, queued whatever the swing timer says (its
+-- hit lands from the first frame, the warp fires at its cancel window,
+-- observed in game), the warp away from the player, then the
 -- beam when ready: the boss bursts, retreats and fires, in the player's
 -- view since lock-on cannot be broken from the AI. Returns whether it was
 -- queued. Without room nothing is queued or cleared (the burst is not
@@ -806,7 +817,7 @@ Goal.Interrupt = function (self, ai, goal)
     end
     -- SpeedFog reactions, after the vanilla teleport and grab follow-ups
     -- (vanilla 472000's pattern: clear the sub-goals, queue the attack,
-    -- return true). Each one spends an attack that is available anyway.
+    -- return true). Each one spends an attack the table could offer anyway.
     if ai:IsInterupt(INTERUPT_Damaged) then
         if ai:IsInsideTargetCustom(TARGET_SELF, TARGET_ENE_0, AI_DIR_TYPE_F, 120, 180, REACT_HIT_RANGE) and not Houzuki755890_SequenceInFlight(ai) and ai:GetRandam_Int(1, 100) <= REACT_HIT then
             -- Burst, retreat and beam when the teleport is ready (and there
