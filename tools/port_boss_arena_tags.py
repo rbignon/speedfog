@@ -71,7 +71,7 @@ EXTRA_MINOR_POOL_ENTRIES: tuple[tuple[int, str], ...] = (
     (12010715, "Blaidd"),
     (14000499, "Moongrum"),
     (2047440360, "Moonrithyll"),
-    (2048380800, "DLC's Tibia Mariner"),
+    (2048380800, "Tibia Mariner"),
     (22000460, "Golden Leonine Misbegotten"),
     (35000486, "Omen"),
     (40010301, "Large Bigmouth Imp"),
