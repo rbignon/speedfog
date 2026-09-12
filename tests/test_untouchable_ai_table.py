@@ -448,14 +448,37 @@ def test_far_teleport_second_half_warps_behind_the_player_with_vanillas_scan():
     assert fired and queued(goal) == [] and goal.cleared == 0
 
 
-def test_retreat_act_adds_the_beam_only_when_ready():
-    goal, _, _ = act("Act05", dist=2)
+@pytest.mark.parametrize("name", ["Act05", "Act06"])
+def test_retreat_acts_are_the_near_teleport_when_it_is_ready(name):
+    # After a grab the boss retreats: the burst, the warp away and the beam
+    # when the teleport timer allows, the vanilla walk otherwise.
+    goal, _, state = act(name, dist=2)
+    assert queued(goal) == [BURST, RETREAT, BEAM_ATTACK]
+    assert state.timers[TELEPORT_TIMER] > 0 and state.timers[HOLD_TIMER] > 0
+    goal, _, _ = act(name, dist=2, timers=TELEPORT_COOLING)
     assert [s.kind for s in goal.subgoals.values()] == [
         "LeaveTarget",
         "ComboAttackTunableSpin",
     ]
-    goal, _, _ = act("Act05", dist=2, passed={BEAM_ANIM: 1})
+    goal, _, _ = act(name, dist=2, timers=TELEPORT_COOLING, passed={BEAM_ANIM: 1})
     assert [s.kind for s in goal.subgoals.values()] == ["LeaveTarget"]
+    # No room to warp: the walk, and the teleport retried soon.
+    goal, _, state = act(name, dist=2, mesh=0)
+    assert [s.kind for s in goal.subgoals.values()] == [
+        "LeaveTarget",
+        "ComboAttackTunableSpin",
+    ]
+    assert 0 < state.timers[TELEPORT_TIMER] < 6
+    assert state.timers[HOLD_TIMER] is None
+
+
+def test_close_bracket_offers_the_beam_next_to_the_grab():
+    ready, _ = weights(dist=2)
+    assert ready[BEAM] > 0 and ready[GRAB] > 0
+    assert sum(ready.values()) == 100
+    cooling, _ = weights(dist=2, passed={BEAM_ANIM: 1})
+    assert cooling.get(BEAM, 0) == 0
+    assert cooling[GRAB] == ready[GRAB]  # the beam's share is not redistributed
 
 
 def test_hit_reaction_prefers_the_retreat_then_the_burst():

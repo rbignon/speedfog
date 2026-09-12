@@ -159,7 +159,7 @@ speedfog/
 │   ├── StaticModBuilder/     # Static mod generator, runs at setup (uses SoulsFormatsNEXT submodule)
 │   │   ├── Program.cs       # CLI entry point
 │   │   ├── GraceAnimationPatcher.cs  # Speed up grace sit/discover animations
-│   │   ├── UntouchableTaePatcher.cs  # Retarget four bullet events of c5280 animation 3004 to judge 150 (boss beam carrier)
+│   │   ├── UntouchableTaePatcher.cs  # Retarget bullet events of c5280 animation 3004 to judge 150 (beam) and 151 (flame nova)
 │   │   ├── TitleScreenPatcher.cs  # Redirect title sprite to a standalone badge texture in 02_title.tpf.dcx
 │   │   ├── DdsAtlas.cs      # DX10 DDS header parsing + BC7 block extract + standalone DDS build
 │   │   └── LayoutFile.cs    # Menu .layout XML helpers (find/remove SubTexture entries)
@@ -238,7 +238,7 @@ speedfog/
 | `docs/boss-arena-constraints.md` | Arena-boss compatibility constraints and matching |
 | `docs/care-package.md` | Randomized starting build system |
 | `docs/tarnished-showcase.md` | Tarnished Pack showcase mode: `[tarnished]` config, class loadout + Torrent skin draws, graph.json v4.7 fields, flag-to-skin mapping confirmed in-game 2026-09-01 |
-| `docs/untouchable-boss.md` | Aging Untouchable minor boss: the fight (partial wall, parry break, x4 broken state, no flinch until the break), vulnerability mechanism (copied wall event, cut row carrying the 5300 damage-level table, broken row), two-phase injector (repoint, fallback arena maps), moveset (lantern burst, frenzy beam via judge 150, TAE patch), AI script (decision tree, two teleports, cooldowns, interrupts, lupa tests), in-game checklist, engine facts and pitfalls |
+| `docs/untouchable-boss.md` | Aging Untouchable minor boss: the fight (partial wall, parry break, x4 broken state, no flinch until the break), vulnerability mechanism (copied wall event, cut row carrying the 5300 damage-level table, broken row), two-phase injector (repoint, fallback arena maps), moveset (lantern burst, frenzy beam via judge 150 and flame nova via judge 151, TAE patch), AI script (decision tree, two teleports, cooldowns, interrupts, lupa tests), in-game checklist, engine facts and pitfalls |
 | `docs/ai-scripts.md` | Battle AI scripts as SpeedFog uses them: where a script comes from (NpcThinkParam, luabnd, luagnl), goal life cycle, the act table (`Common_Battle_Activate`, `SetCoolTime`, `Approach_Act_Flex`), attack goals (`successDist`, turn parameters), movement goals, `ai:` queries, interrupts, constants, tooling, pitfalls |
 | `docs/vanilla-warp-removal.md` | FogMod vanilla warp removal workaround |
 | `docs/stake-removal.md` | Vanilla stake removal (RetryPoint softlock prevention) |
@@ -350,7 +350,7 @@ speedfog/
 | `AmbientSpawnInjector` | Places passive greeters + optional decorative ambush packs (token HP, near-zero attack via NpcParam clone) at the anchored exit gates (opt-in via `[plugin.halloween]`, see `docs/plugins/halloween-ambient.md`); runs after GateDecorInjector |
 | `GateDecorInjector` | Places catalogue-driven ambient decorations at the same exit gates from `data/plugins/halloween_decorations.toml`, on a per-gate ground estimate (vanilla assets + enemies) |
 | `HalloweenDecorLoader` | Loads and validates `data/plugins/halloween_decorations.toml` (Core) |
-| `UntouchableBossInjector` | Aging Untouchable minor boss: NpcParam clone + partial damage-cut SpEffect carrying vanilla's boss damage-level table (5300 folded in: no flinch until the break), partial wall (the vanilla immunity wall swapped for the cut in the wall event the randomizer copies per placed boss, so the first parry clears it and applies a x2 broken state), boss think row + behavior variation + beam bullet + madness-free lantern pulses when the static assets exist, repoints enemy-randomizer placements (NPCParamID, ThinkParamID), see `docs/untouchable-boss.md` |
+| `UntouchableBossInjector` | Aging Untouchable minor boss: NpcParam clone + partial damage-cut SpEffect carrying vanilla's boss damage-level table (5300 folded in: no flinch until the break), partial wall (the vanilla immunity wall swapped for the cut in the wall event the randomizer copies per placed boss, so the first parry clears it and applies a x2 broken state), boss think row + behavior variation + beam bullet + flame-nova bullet chain (Midra's, cloned and fanned out) + madness-free lantern pulses when the static assets exist, repoints enemy-randomizer placements (NPCParamID, ThinkParamID), see `docs/untouchable-boss.md` |
 | `HalloweenIconInjector` | Repoints Golden Seed/Sacred Tear `EquipParamGoods.iconId` to the Halloween 05_dummy overlay textures (opt-in via `[plugin.halloween]`, see `docs/plugins/halloween-icons.md`) |
 
 **ItemRandomizerWrapper** (uses RandomizerCommon.dll directly):
@@ -382,7 +382,7 @@ speedfog/
 |-------|---------|
 | `Program.cs` | CLI entry, runs all post-processing patches |
 | `GraceAnimationPatcher` | Speeds up grace sit/discover animations via TAE event 608 |
-| `UntouchableTaePatcher` | Retargets four bullet events of c5280 animation 3004 to judge 150 (the boss's beam carrier; inert for ambient untouchables), layout-guarded |
+| `UntouchableTaePatcher` | Retargets seven bullet events of c5280 animation 3004: four to judge 150 (the boss's beam carrier) and three between them to judge 151 (the flame nova); inert for ambient untouchables, layout-guarded |
 | `TitleScreenPatcher` | Redirects the title sprite to a standalone composited badge texture in 02_title.tpf.dcx (~1.5 MB shipped, see `docs/title-screen.md`) |
 | `HalloweenIconPatcher` | Ships the Golden Seed/Sacred Tear Halloween icons (jack-o'-lantern, burning chalice) as a 05_dummy.tpf.dcx superset (`--halloween-dir`, opt-in overlay output, see `docs/plugins/halloween-icons.md`) |
 | `DdsAtlas` | DX10 DDS header parsing + block-aligned BC7 extract + standalone DDS build |

@@ -41,26 +41,41 @@ public class UntouchableTaePatcherTests
     private static int JudgeOf(TAE.Event e) => BitConverter.ToInt32(e.GetParameterBytes(false), 8);
     private static int DummyOf(TAE.Event e) => BitConverter.ToInt32(e.GetParameterBytes(false), 0);
 
+    private static List<int> IndicesWithJudge(List<TAE.Event> bullets, int judge) => bullets
+        .Select((e, i) => (e, i))
+        .Where(t => JudgeOf(t.e) == judge)
+        .Select(t => t.i)
+        .ToList();
+
     [Fact]
-    public void Patch_RetargetsFourEventsSpreadOverTheAnimation()
+    public void Patch_RetargetsFourBeamEventsSpreadOverTheAnimationAndAFlameEventBetweenEachPair()
     {
         var tae = MakeTae();
 
         var count = UntouchableTaePatcher.Patch(tae, _ => { });
 
-        Assert.Equal(4, count);
+        Assert.Equal(7, count);
         var bullets = BulletsByTime(tae);
-        var retargeted = bullets
-            .Select((e, i) => (e, i))
-            .Where(t => JudgeOf(t.e) == SpeedFogIds.UntouchableBeamJudge)
-            .Select(t => t.i)
-            .ToList();
-        Assert.Equal(new List<int> { 0, 4, 8, 12 }, retargeted);
-        Assert.All(bullets.Where(e => JudgeOf(e) != SpeedFogIds.UntouchableBeamJudge),
+        Assert.Equal(new List<int> { 0, 4, 8, 12 }, IndicesWithJudge(bullets, SpeedFogIds.UntouchableBeamJudge));
+        Assert.Equal(new List<int> { 2, 6, 10 }, IndicesWithJudge(bullets, SpeedFogIds.UntouchableFlameJudge));
+        Assert.All(bullets.Where(e => JudgeOf(e) != SpeedFogIds.UntouchableBeamJudge
+                                      && JudgeOf(e) != SpeedFogIds.UntouchableFlameJudge),
             e => Assert.Contains(JudgeOf(e), new[] { 101, 102 }));
         // Dummy poly and the non-bullet event untouched.
         Assert.All(bullets, e => Assert.Equal(210, DummyOf(e)));
         Assert.Single(tae.Animations[0].Events, e => e.Type == 16);
+    }
+
+    [Fact]
+    public void Patch_LogsBothJudges()
+    {
+        var tae = MakeTae();
+        var log = new List<string>();
+
+        UntouchableTaePatcher.Patch(tae, log.Add);
+
+        Assert.Contains(log, l => l.Contains(SpeedFogIds.UntouchableBeamJudge.ToString())
+                                  && l.Contains(SpeedFogIds.UntouchableFlameJudge.ToString()));
     }
 
     [Fact]

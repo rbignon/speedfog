@@ -209,7 +209,7 @@ Two causes are expected:
 
 ## Moveset
 
-Two tools vanilla AI never uses, applied to the promoted instance only:
+Three tools vanilla AI never uses, applied to the promoted instance only:
 
 - **Lantern burst** at melee range: animation 3001 (AtkParam_Npc
   5280115, magic 100, hit radius 4 m at dummy 906, 1.5 m knockback, no
@@ -221,22 +221,31 @@ Two tools vanilla AI never uses, applied to the promoted instance only:
   bullet events from dummy 210), which vanilla AI registers with
   probability 0 everywhere, re-enabled and made to fire a Frenzied
   Burst-style laser (magic damage, no madness).
+- **Flame nova** on the same animation: three of 3004's other bullet
+  events fire Midra's Flame of Frenzy in four directions around the
+  lantern (magic damage, no madness). It is what lands when the player
+  stands at contact, where the beam mostly whiffs, so the one act
+  threatens at every range: c5280's behavior graph has no fourth attack
+  state to give the boss, and a second payload on the one dormant
+  animation is the way around that.
 
 ### TAE patch
 
 3004's bullet events carry judge ids 101/102, the same ids the idle,
 walk and teleport animations fire for the lantern's ambient pulses.
 Remapping them under the boss variation would fire the beam at rest, so
-`StaticModBuilder/UntouchableTaePatcher` rewrites the judge of four of
-the thirteen events (indices 0, 4, 8, 12, spread by start time) to 150 in
-the shipped `chr/c5280.anibnd.dcx`. The patch is inert for ambient
-untouchables twice over: vanilla AI never selects 3004, and variation
-52800 has no row for judge 150. The patcher refuses (warning, nothing
-written) any layout other than dummy 210 with judges 101/102, so a game
-patch renumbering c5280's judges disables the moveset instead of
-corrupting the TAE. The patched anibnd (about 1.3 MB) ships in every
-seed's static mod; it is inert without the boss rows. Knob:
-`BEAM_EVENT_COUNT` (4). If the beam ever fails to aim at the player,
+`StaticModBuilder/UntouchableTaePatcher` rewrites the judge of seven of
+the thirteen events in the shipped `chr/c5280.anibnd.dcx`: four to 150,
+the beam (indices 0, 4, 8, 12, spread by start time), and the event
+halfway between each consecutive pair to 151, the flame nova (indices 2,
+6, 10). The patch is inert for ambient untouchables twice over: vanilla
+AI never selects 3004, and variation 52800 has no row for either judge.
+The patcher refuses (warning, nothing written) any layout other than
+dummy 210 with judges 101/102, so a game patch renumbering c5280's
+judges disables the moveset instead of corrupting the TAE. The patched
+anibnd (about 1.3 MB) ships in every seed's static mod; it is inert
+without the boss rows. Knob: `BEAM_EVENT_COUNT` (4), which also sets the
+nova count (one less). If a payload ever fails to aim at the player,
 candidate dummies are 10 (the grab's flash origin) and 906 (the burst).
 
 ### Per-seed rows (`ApplyMoveset`)
@@ -250,12 +259,25 @@ candidate dummies are 10 (the grab's flash origin) and 906 (the burst).
 | BehaviorParam | 275589150 | 252800101 | judge 150, refType 1, refId 755890000 |
 | Bullet | 755890000 | 10732000 (Frenzied Burst) | `atkId_Bullet` 755890000, `spEffectId0-4` and `spEffectIDForShooter` -1 (no madness rider on the target or the caster) |
 | AtkParam_Npc | 755890000 | 5280115 | `atkMag` = `BEAM_MAGIC` (110) |
+| BehaviorParam | 275589151 | 252800101 | judge 151, refType 1, refId 755890006 |
+| Bullet | 755890006-008 | 210730000 -> 210730005 -> 210730006 (Midra's Flame of Frenzy, followed link by link through `HitBulletID`) | `atkId_Bullet` 755890001, chain re-pointed at the clones (the last link ends it), every `spEffectId0-4` and `spEffectIDForShooter` -1; on the root only, `numShoot` = `FLAME_DIRECTIONS` (4) and `shootAngleInterval` = 90 degrees |
+| AtkParam_Npc | 755890001 | 5280115 | `atkMag` = `FLAME_MAGIC` (50) |
 
 Row ids: `200000000 + variation * 1000 + judge` (`SpeedFogIds.BehaviorRowId`).
 The Frenzied Burst SFX (527032 laser, 527033 hit) live in
-`sfxbnd_commoneffects`. A single 3004 can land up to `BEAM_EVENT_COUNT`
-beams, so the per-cast ceiling is `BEAM_EVENT_COUNT x BEAM_MAGIC` before
-the player's defenses; tune the two knobs together.
+`sfxbnd_commoneffects`, Midra's (527062, 527063) in
+`sfxbnd_commoneffects_dlc02`: both bundles c5280 loads, unlike the
+per-chr ones (see "Engine facts and pitfalls"). Every link of the chain
+carries the damage row, not just the terminal ball, so one cast can land
+`BEAM_EVENT_COUNT` beams at `BEAM_MAGIC` each plus, per flame event, up
+to one hit per direction and per link: three events, four directions and
+three links at `FLAME_MAGIC` is the ceiling before the player's
+defenses. The damage template is the lantern swing, which carries a
+1.5 m knockback, so the nova's real risk at contact is chained stagger
+rather than the damage number; judge both in game and tune the knobs
+together. The chain is followed rather than hardcoded, and a chain
+longer than `FLAME_CHAIN_MAX` (3, vanilla's length) skips the moveset
+rather than overrun the clone band.
 
 ### Gating
 
@@ -315,21 +337,25 @@ Goal.Activate, in evaluation order (weights)
 3. else SpEffect 5032 active → Act06 100
 4. else dist >= 10 : teleport ready → Act02 60 / Act04 40   (BEAM_FAR_TELEPORT_READY)
                      else           → Act01 50 / Act04 50   (BEAM_FAR_TELEPORT_NOT_READY)
-5. else dist >= 3  : Act03 40 / Act02 25* / Act46 15 / Act11 10 / Act04 10
-                     (TELEPORT_MID, MOVE_MID, SWING_MID, BEAM_MID; Act03 keeps the rest)
-6. else (< 3 m)    : Act03 40 / Act02 25* / Act42 20 / Act11 15
-                     (TELEPORT_CLOSE, MOVE_CLOSE, SWING_CLOSE; Act03 keeps the rest)
-   * 0 while the teleport cools; the grab takes that share (65)
+5. else dist >= 3  : Act03 35 / Act02 25* / Act04 15 / Act46 15 / Act11 10
+                     (TELEPORT_MID, BEAM_MID, MOVE_MID, SWING_MID; Act03 keeps the rest)
+6. else (< 3 m)    : Act03 30 / Act02 25* / Act04 15 / Act11 15 / Act42 15
+                     (TELEPORT_CLOSE, BEAM_CLOSE, SWING_CLOSE, MOVE_CLOSE; Act03 keeps the rest)
+   * 0 while the teleport cools; the grab takes that share (55 close, 60 mid)
 Then, on the table obtained:
    Act03 → 0 while the last 3002 is <= GRAB_COOLDOWN (6 s) old   (engine counter)
-   Act04 → 0 while the last 3004 is <= BEAM_COOLDOWN (6 s) old   (engine counter)
+   Act04 → 0 while the last 3004 is <= BEAM_COOLDOWN (4 s) old   (engine counter)
    Act11 → 0 while the swing timer (slot 11) runs
    "teleport ready" = the teleport timer (slot 10) at 0, nothing else
 ```
 
 Direct consequences: a player in the boss's back gets no grab and no
 swing at any distance, only a turn, an approach or a teleport, and the
-post-grab retreat (5031/5032) is skipped while they stand there. Between
+post-grab retreat (5031/5032) is skipped while they stand there. Every
+grab ends on one of those two markers (3002's own TAE applies 5032, the
+throw 4100 applies 5031), so the act that follows a grab is the near
+teleport whenever its timer allows: that is the boss's main way of
+opening the distance, and the walk retreat is the fallback. Between
 5 and 10 m, Act02 is the far teleport (the 5 s fade), not the burst and
 retreat. A near teleport that finds no room queues nothing, so the next
 draw follows at once with the teleport weight at 0 for `TELEPORT_RETRY`
@@ -347,15 +373,16 @@ Act02  dist >= TELEPORT_FAR_RANGE (5 m) → far: teleport timer 11.5, hold 9, wa
        dist < 5 m → near: room scan from the boss, B then BL then BR (F/FL/FR when the
          player is in its back), at 8 m then at 5 m
          no room → teleport timer 2 s, nothing queued
-         room    → teleport timer 6, hold 3.5, ClearSubGoal, swing timer 8 + immediate
+         room    → teleport timer 6, hold 3.5, ClearSubGoal, swing timer 4 + immediate
                    burst 3001 (the swing timer is not read), warp from TARGET_SELF,
                    beam if ready
 Act03  approach to 12 m (never queued: offered under 10 m only), watch 5030,
        grab 3002 (life 8, reach 12, turn 2 s / 50 degrees)
 Act04  beam 3004 (life 3, reach 999, turn 1.5 s / 60 degrees)
-Act05  ClearSubGoal, LeaveTarget 10 m (5 s), then the beam if ready
-Act06  ClearSubGoal, LeaveTarget 8 m (4 s), then the beam if ready
-Act11  run to 3 m (5 s max), swing timer 8, burst 3001 (life 8, reach 4, turn 1.5 s / 60 degrees)
+Act05  teleport ready and room → the near teleport (see Act02), which is the
+       whole act; else ClearSubGoal, LeaveTarget 10 m (5 s), then the beam if ready
+Act06  the same, LeaveTarget 8 m (4 s)
+Act11  run to 3 m (5 s max), swing timer 4, burst 3001 (life 8, reach 4, turn 1.5 s / 60 degrees)
 Act42  sidestep to the right, 0.8 to 1.5 s
 Act43  turn toward the player, 2 s, until within 90 degrees
 Act46  walk to 4 m (or back off to 4 m), life 10 s, then strafe to a random side 0.1 to 2 s
@@ -400,9 +427,9 @@ in metres, turns are `turnTime` / `turnFaceAngle` (see
 | Act01 | vanilla | approach (`Approach_Act_Flex`, stop 0.5 m, always running) then animation 2100 (life 0.1 s, reach 5 m) |
 | Act02 | SpeedFog (vanilla's teleport act rewritten) | under `TELEPORT_FAR_RANGE`: the burst 3001 as wind-up, `ToTargetWarp` away from the player, the beam if ready; from it: vanilla's 3000 with the 20011452 watch, whose interrupt warps behind the player and bursts |
 | Act03 | vanilla, grab through the shared builder | approach (stop 12 m, so never queued in the brackets that weight it) then the grab 3002 (reach 12 m, turn 2 s / 50 degrees, life 8 s) with the 5030 watch that chains the throw 3003 |
-| Act04 | SpeedFog | the beam 3004 (reach 999, turn 1.5 s / 60 degrees, life 3 s) |
-| Act05 | vanilla, beam added | clears the queue, `LeaveTarget` to 10 m (life 5 s), then the beam if ready |
-| Act06 | vanilla, beam added | clears the queue, `LeaveTarget` to 8 m (life 4 s), then the beam if ready |
+| Act04 | SpeedFog | the beam and flame nova 3004 (reach 999, turn 1.5 s / 60 degrees, life 3 s) |
+| Act05 | vanilla, teleport and beam added | the near teleport when its timer allows and there is room; else clears the queue, `LeaveTarget` to 10 m (life 5 s), then the beam if ready |
+| Act06 | vanilla, teleport and beam added | the same with `LeaveTarget` to 8 m (life 4 s) |
 | Act07 to Act10 | vanilla | nothing (empty acts) |
 | Act11 | SpeedFog | approach (stop 3 m, running) then the burst 3001 (reach 4 m, turn 1.5 s / 60 degrees, life 8 s) and the swing timer |
 | Act40 | vanilla | `ApproachTarget` to 0.1 m, walking, life 1-3 s |
@@ -461,14 +488,14 @@ fallback); in game the warp lands behind the player.
 
 ### Cooldowns
 
-The grab (`GRAB_COOLDOWN` 6 s, vanilla 12) and the beam (`BEAM_COOLDOWN`
-6 s) are engine counters through `SetCoolTime`, which registers the
+The grab (`GRAB_COOLDOWN` 6 s, vanilla 12) and 3004 (`BEAM_COOLDOWN`
+4 s, beam and nova together) are engine counters through `SetCoolTime`, which registers the
 interval (`RegistAttackTimeInterval`) and reads the counter
 (`GetAttackPassedTime`) in one call: the table's two calls in
 `Goal.Activate` run before any act or reaction, and
 `Houzuki755890_BeamReady` is the same call with weights 100/0 wherever an
 act or a reaction needs the beam, so no counter is ever read
-unregistered. The burst (`SWING_COOLDOWN` 8 s, set by every 3001 the
+unregistered. The burst (`SWING_COOLDOWN` 4 s, set by every 3001 the
 script queues, read by Act11, by the far teleport's post-warp burst and
 by the plain-burst hit reaction; the near teleport's wind-up fires
 whatever the timer says, so 3001 can also play once per teleport
@@ -562,8 +589,8 @@ Knobs, never edited in the shared vanilla `528000_battle`:
 
 - `UntouchableBossInjector`: `BOSS_HP`, `BOSS_RUNES`, `BOSS_TOUGHNESS`,
   `BOSS_SUPER_ARMOR`, `BOSS_SUPER_ARMOR_RECOVER`, `DAMAGE_CUT`,
-  `BROKEN_DAMAGE_TAKEN`, `BEAM_MAGIC`; `UntouchableTaePatcher`:
-  `BEAM_EVENT_COUNT`.
+  `BROKEN_DAMAGE_TAKEN`, `BEAM_MAGIC`, `FLAME_MAGIC`, `FLAME_DIRECTIONS`;
+  `UntouchableTaePatcher`: `BEAM_EVENT_COUNT` (beams, and one less nova).
 - The battle script: the probabilities (`SWING_*`, `TELEPORT_*`,
   `BEAM_*`, `MOVE_*`), the five `*_COOLDOWN` and `TELEPORT_RETRY`,
   `TELEPORT_FAR_RANGE`,
@@ -590,8 +617,10 @@ Generate a seed with the allowlist above, then in the arena:
 2. **Melee**: grabs (parryable), timer-gated bursts (Act11's, the far
    teleport's post-warp one, the hit reaction's plain one) at most once
    per `SWING_COOLDOWN` (a near teleport's wind-up burst can come
-   sooner), and sidesteps or strafes through the cooldowns; the boss
-   never stands still for several seconds.
+   sooner), novas between them, and sidesteps or strafes through the
+   cooldowns; the boss never stands still for several seconds, and a
+   grab is followed by the burst and warp rather than the walk retreat
+   whenever the teleport is off cooldown.
 3. **Near teleport** (under 5 m): a burst on the spot, a vanish about 1 s
    into it with no fade, a reappearance 8 m from where the boss stood,
    away from the player (5 m in a small arena; straight ahead when the
@@ -604,10 +633,19 @@ Generate a seed with the allowlist above, then in the arena:
 4. **Far teleport** (5 m and more): the 5 s lantern fade, then the warp
    behind the player and the burst, every time and not only the first.
    Never two teleports within `TELEPORT_COOLDOWN`.
-5. **Beam**: from 10 m, sometimes at 3-10 m, and after a grab from the
-   retreat distance; a Frenzied Burst laser from the lantern, aimed at
-   the player, about 110 magic per hit and up to four hits per cast; no
-   beam during idle or walk, no madness while the boss idles.
+5. **Beam and flame nova**: from 10 m, at 3-10 m, at contact, and after a
+   grab from the retreat distance; a Frenzied Burst laser from the
+   lantern aimed at the player (about 110 magic per hit, up to four hits
+   per cast) interleaved with three bursts of Midra's flames in four
+   directions around the lantern (about 50 magic per hit, reaching a few
+   metres); neither during idle or walk, no madness from either. Watch
+   the knockback at contact: four directions times three chain links can
+   chain-stagger, and `FLAME_MAGIC` or `FLAME_DIRECTIONS` is the knob.
+   Beams but no flames means the shipped `chr/c5280.anibnd.dcx` predates
+   the flame judge (re-run `tools/bootstrap.py`; nothing detects a stale
+   anibnd, unlike the luabnd) or the DLC SFX bundle is absent. Template
+   drift cannot produce it: it skips the whole moveset, and the boss then
+   keeps vanilla AI and never casts 3004 at all.
 6. **Reactions**: from 5 m or more, drinking a flask draws a beam most of
    the time and casting draws it about half the time when it is ready;
    within 5 m neither fires. At melee range, about one hit in four draws
@@ -620,7 +658,7 @@ Generate a seed with the allowlist above, then in the arena:
 
 ```
 Untouchable boss: NpcParam 755890000 (clone of 52800086, hp 2000, runes 20000, toughness 0, super armor 80/0.23076923, nerflantern slot scrubbed) + partial wall SpEffect 755890000 (cut 0.5, no-flinch table of 5300 folded in) + broken SpEffect 755890002 (x2), both applied by the copied wall event
-Untouchable boss: moveset rows (think 755890001 -> battle 755890, variation 75589 with 9 vanilla judges + beam judge 150, bullet 755890000 (clone of 10732000), atk 755890000 magic 110, pulses 755890003-755890005 without madness)
+Untouchable boss: moveset rows (think 755890001 -> battle 755890, variation 75589 with 9 vanilla judges + beam judge 150, bullet 755890000 (clone of 10732000), atk 755890000 magic 110, + flame judge 151, bullets 755890006-755890008 (chain of 210730000, x4), atk 755890001 magic 50, pulses 755890003-755890005 without madness)
 Untouchable boss: repointing N placed boss slot(s)
   <part> (entity <id>): NPCParamID -> 755890000, ThinkParamID -> 755890001
   wall event patched for entity <id>: 2 wall swap(s) (20011470 -> 755890000) + 2 HP bar flip(s) + 1 broken rider(s) (755890002)
@@ -635,7 +673,8 @@ map was patched. Phase-slot warnings are expected. When the moveset is
 skipped, the second line is replaced by one
 `Untouchable boss: moveset skipped (<reason>)` line and the repoint lines
 carry only `NPCParamID`. At bootstrap, StaticModBuilder prints
-`Untouchable TAE patch: retargeted 4 bullet event(s) of animation 3004 to judge 150 in chr/c5280.anibnd.dcx`.
+two lines: `Untouchable TAE patch: retargeted 4 bullet event(s) of animation 3004 to judge 150 (beam) and 3 to judge 151 (flame nova)`
+then `Untouchable TAE patch: wrote chr/c5280.anibnd.dcx`.
 
 ## Engine facts and pitfalls
 
@@ -695,6 +734,9 @@ on; each is a constraint for any change.
   EMEVD has no resize instruction. A resize would need a runtime DLL or
   a full chr clone with a rescaled skeleton; the boss keeps its vanilla
   size.
-- **The beam's SFX must be in a bundle c5280 loads.** Chr SFX live in
-  per-chr bundles; Frenzied Burst's live in `sfxbnd_commoneffects`;
-  Midra's beam would need its FFX copied into c5280's bundle.
+- **A borrowed payload's SFX must be in a bundle c5280 loads.** Chr SFX
+  live in per-chr bundles, which is why a boss cannot simply borrow
+  another chr's attack; the common bundles are the exception. Frenzied
+  Burst's SFX live in `sfxbnd_commoneffects` and Midra's Flame of Frenzy's
+  in `sfxbnd_commoneffects_dlc02`, so both play on c5280 unmodified.
+  Midra's own beam, whose FFX sits in `sfxbnd_c5050`, would need copying.

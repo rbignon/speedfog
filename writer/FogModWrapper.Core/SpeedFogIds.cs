@@ -119,8 +119,9 @@ public static class SpeedFogIds
 
     // Param row namespaces are per-PARAM (NpcThinkParam, NpcParam,
     // SpEffectParam, Bullet, AtkParam_Npc never share ids), so the same three
-    // numeric values below are reused across the nine rows with no collision
-    // (Bullet additionally owns the pulse band 755890003-005).
+    // numeric values below are reused across the ten rows with no collision
+    // (Bullet additionally owns the pulse band 755890003-005 and the flame
+    // band 755890006-008).
     // They sit in FogMod's entity band only by convention (params and entities
     // are unrelated id spaces); no vanilla row in any of the five params
     // comes anywhere near them, and phantom skins (1450700-1450799) /
@@ -198,6 +199,19 @@ public static class SpeedFogIds
     /// behavior variation only.</summary>
     public const int UntouchablePulseBulletBase = 755890003;
 
+    /// <summary>First of three consecutive Bullet rows (755890006-008): the
+    /// boss's flame nova, Midra's Flame of Frenzy chain (210730000 ->
+    /// 210730005 -> 210730006, SFX in commoneffects_dlc02) cloned without
+    /// its madness rider and re-chained, the root fanned out to four
+    /// directions; referenced by the boss behavior variation only (judge
+    /// <see cref="UntouchableFlameJudge"/>).</summary>
+    public const int UntouchableFlameBulletBase = 755890006;
+
+    /// <summary>AtkParam_Npc row carrying the flame nova's damage: a clone
+    /// of the lantern swing (5280115), like <see cref="UntouchableBeamAtkRow"/>.
+    /// ParamRowBase0 in this namespace is the beam's row.</summary>
+    public const int UntouchableFlameAtkRow = ParamRowBase1;
+
     // --- Icon ids (not entity ids, not param row ids; a third id namespace) ---
 
     /// <summary>Icon id for the Halloween Golden Seed pumpkin icon. The
@@ -245,6 +259,11 @@ public static class SpeedFogIds
     /// under variation 52800, so the patched animation stays inert for
     /// ambient untouchables.</summary>
     public const int UntouchableBeamJudge = 150;
+
+    /// <summary>TAE bullet judge id of the flame nova, written by the same
+    /// patcher on three more of animation 3004's events, between the beam
+    /// ones. 151 resolves to nothing under variation 52800 as well.</summary>
+    public const int UntouchableFlameJudge = 151;
 
     /// <summary>BehaviorParam row id for a (variation, judge) pair: the
     /// game's own composite key (vanilla c5280 judge 100 is 252800100).</summary>

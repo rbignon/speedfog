@@ -3,11 +3,13 @@
 -- DSLuaDecompiler and renamed to battle goal 755890 (the boss NpcThinkParam
 -- clone's battleGoalID). SpeedFog additions: the lantern swing (3001) as a
 -- regular melee act (Act11), the dormant lantern ray (3004) re-enabled as a
--- beam (Act04), a two-shape teleport (Act02: near, the burst, a warp away
--- and the beam; far, vanilla's 3000, the warp behind the player and the
--- burst) offered at every range with its own cooldown, a beam after the
--- post-grab retreats (Act05/Act06) and three reactions in Goal.Interrupt
--- (hit, ranged attack, item use). Ambient untouchables keep the vanilla
+-- beam plus a flame nova (Act04, offered at every range), a two-shape
+-- teleport (Act02: near, the burst, a warp away and the beam; far,
+-- vanilla's 3000, the warp behind the player and the burst) offered at
+-- every range with its own cooldown, the near teleport in place of the
+-- post-grab walk retreats when its timer allows (Act05/Act06, the beam
+-- after the walk otherwise) and three reactions in Goal.Interrupt (hit,
+-- ranged attack, item use). Ambient untouchables keep the vanilla
 -- bytecode script.
 -- The engine keys goal tables by numeric id and starts the battle goal with
 -- the raw NpcThinkParam.battleGoalID; the GOAL_<name> globals of vanilla
@@ -30,15 +32,16 @@ local BEAM_FAR_TELEPORT_READY = 40      -- >= 10 m, teleport ready: Act04 (beam)
 local BEAM_FAR_TELEPORT_NOT_READY = 50  -- >= 10 m, teleport not ready: Act04 (beam) vs Act01
 local SWING_MID = 10                    -- 3 to 10 m: Act11 (swing, radius-4 knockback burst)
 local TELEPORT_MID = 25                 -- 3 to 10 m: Act02 (the near shape under TELEPORT_FAR_RANGE, the far one from it)
-local BEAM_MID = 10                     -- 3 to 10 m: Act04 (beam)
+local BEAM_MID = 15                     -- 3 to 10 m: Act04 (beam + flame nova)
 local MOVE_MID = 15                     -- 3 to 10 m: Act46 (close to 4 m, then strafe)
 local SWING_CLOSE = 15                  -- < 3 m: Act11 (swing)
 local TELEPORT_CLOSE = 25               -- < 3 m: Act02
-local MOVE_CLOSE = 20                   -- < 3 m: Act42 (sidestep)
+local BEAM_CLOSE = 15                   -- < 3 m: Act04 (the nova lands at contact, the beam whiffs or not)
+local MOVE_CLOSE = 15                   -- < 3 m: Act42 (sidestep)
 local TELEPORT_BEHIND = 50              -- player behind, < 8 m: Act02 when ready (0-90; Act01 keeps 10, Act43 takes the rest)
 local GRAB_COOLDOWN = 6                 -- seconds between two grabs (3002); vanilla 12
-local SWING_COOLDOWN = 8                -- seconds before Act11, the far teleport's post-warp burst or the plain-burst hit reaction may play 3001 again; every queued 3001 re-arms it, the near teleport's wind-up ignores it
-local BEAM_COOLDOWN = 6                 -- seconds between two beams (3004), any source
+local SWING_COOLDOWN = 4                -- seconds before Act11, the far teleport's post-warp burst or the plain-burst hit reaction may play 3001 again; every queued 3001 re-arms it, the near teleport's wind-up ignores it
+local BEAM_COOLDOWN = 4                 -- seconds between two 3004 (beam + flame nova), any source
 local TELEPORT_COOLDOWN = 6             -- seconds after a near teleport before any teleport
 local TELEPORT_FAR_COOLDOWN = 11.5      -- seconds after a far teleport before any teleport (its own sequence takes about 9 s)
 local TELEPORT_RETRY = 2                -- seconds before another attempt when the near teleport found no room
@@ -365,8 +368,8 @@ Goal.Activate = function (self, ai, goal)
     else
         probabilities[1] = 0
         probabilities[2] = teleportClose
-        probabilities[3] = 100 - SWING_CLOSE - teleportClose - MOVE_CLOSE
-        probabilities[4] = 0
+        probabilities[3] = 100 - SWING_CLOSE - teleportClose - BEAM_CLOSE - MOVE_CLOSE
+        probabilities[4] = BEAM_CLOSE
         probabilities[5] = 0
         probabilities[11] = SWING_CLOSE
         probabilities[40] = 0
@@ -472,18 +475,27 @@ function Houzuki755890_Act03(ai, goal, paramTbl)
 end
 
 function Houzuki755890_Act04(ai, goal, paramTbl)
-    -- SpeedFog: beam. Vanilla registers this act but never gives it any
-    -- probability. Animation 3004's bullet events are retargeted to judge
-    -- 150 by StaticModBuilder (UntouchableTaePatcher) and resolved to the
-    -- beam bullet under the boss's behavior variation (UntouchableBossInjector).
+    -- SpeedFog: beam + flame nova. Vanilla registers this act but never
+    -- gives it any probability. Animation 3004's bullet events are
+    -- retargeted by StaticModBuilder (UntouchableTaePatcher): four to judge
+    -- 150, the beam, and three between them to judge 151, the four-way
+    -- flame nova around the lantern, both resolved under the boss's
+    -- behavior variation (UntouchableBossInjector). At contact the nova
+    -- lands; from range the beam does.
     Houzuki755890_AddBeam(ai, goal)
     GetWellSpace_Odds = 0
     return GetWellSpace_Odds
 end
 
 -- Vanilla: after a grab, SPEFFECT_RETREAT_10M sends the boss back to
--- 10 m (queue cleared first); SpeedFog adds the beam.
+-- 10 m (queue cleared first). SpeedFog: the near teleport instead when
+-- its timer allows and there is room (burst, warp away, beam), the
+-- vanilla walk plus the beam otherwise.
 function Houzuki755890_Act05(ai, goal, paramTbl)
+    if Houzuki755890_TeleportReady(ai) and Houzuki755890_AddTeleportAway(ai, goal) then
+        GetWellSpace_Odds = 0
+        return GetWellSpace_Odds
+    end
     local goalLife = 5
     local moveTarget = TARGET_ENE_0
     local turnTarget = TARGET_ENE_0
@@ -495,8 +507,13 @@ function Houzuki755890_Act05(ai, goal, paramTbl)
     return GetWellSpace_Odds
 end
 
--- Vanilla: the same retreat to 8 m on SPEFFECT_RETREAT_8M.
+-- Vanilla: the same retreat to 8 m on SPEFFECT_RETREAT_8M, with the same
+-- SpeedFog teleport first.
 function Houzuki755890_Act06(ai, goal, paramTbl)
+    if Houzuki755890_TeleportReady(ai) and Houzuki755890_AddTeleportAway(ai, goal) then
+        GetWellSpace_Odds = 0
+        return GetWellSpace_Odds
+    end
     local goalLife = 4
     local moveTarget = TARGET_ENE_0
     local turnTarget = TARGET_ENE_0

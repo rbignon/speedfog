@@ -397,6 +397,26 @@ public class UntouchableBossInjectorTests
             pulse["spEffectId2"].Value = UntouchableBossInjector.LANTERN_MADNESS_SPEFFECT;
         }
 
+        // Midra's Flame of Frenzy chain (root -> segment -> terminal ball),
+        // every link carrying the madness rider 21730000, as in 1.17.
+        foreach (var (id, child, life, radius) in new[]
+        {
+            (210730000, 210730005, 0.05f, 0.1f), (210730005, 210730006, 0.5f, 0.1f), (210730006, -1, 0.1f, 1.5f),
+        })
+        {
+            var link = AddRowFromTemplate(bullet, id);
+            link["atkId_Bullet"].Value = 210730000;
+            link["sfxId_Bullet"].Value = 527062;
+            link["sfxId_Hit"].Value = 527063;
+            link["life"].Value = life;
+            link["hitRadius"].Value = radius;
+            link["HitBulletID"].Value = child;
+            link["spEffectId0"].Value = 21730000;
+            link["spEffectIDForShooter"].Value = -1;
+            link["numShoot"].Value = (ushort)1;
+            link["shootAngleInterval"].Value = (short)0;
+        }
+
         var atk = BuildParamFromDef("AtkParam", templateId: 5280115, paramName: "AtkParam_Npc");
         atk.Rows[0]["atkMag"].Value = (ushort)100;
         atk.Rows[0]["throwTypeId"].Value = (ushort)0;
@@ -483,6 +503,86 @@ public class UntouchableBossInjectorTests
         Assert.Equal(UntouchableBossInjector.BEAM_MAGIC, (ushort)dmg["atkMag"].Value);
         Assert.Equal((ushort)0, (ushort)dmg["throwTypeId"].Value);
         Assert.Equal((ushort)100, (ushort)atk.Rows.Single(r => r.ID == 5280115)["atkMag"].Value);
+    }
+
+    [Fact]
+    public void ApplyMoveset_ClonesTheFlameChainWithoutMadnessAndFansTheRootOut()
+    {
+        var (npc, think, behavior, bullet, atk) = BuildMovesetParams();
+
+        Assert.True(UntouchableBossInjector.ApplyMoveset(npc, think, behavior, bullet, atk));
+
+        var variation = SpeedFogIds.UntouchableBossBehaviorVariation;
+        var flame = behavior.Rows.Single(r => r.ID == SpeedFogIds.BehaviorRowId(variation, SpeedFogIds.UntouchableFlameJudge));
+        Assert.Equal(variation, (int)flame["variationId"].Value);
+        Assert.Equal(SpeedFogIds.UntouchableFlameJudge, (int)flame["behaviorJudgeId"].Value);
+        Assert.Equal((byte)1, (byte)flame["refType"].Value);
+        Assert.Equal(SpeedFogIds.UntouchableFlameBulletBase, (int)flame["refId"].Value);
+
+        int root = SpeedFogIds.UntouchableFlameBulletBase;
+        var links = new[] { root, root + 1, root + 2 }
+            .Select(id => bullet.Rows.Single(r => r.ID == id)).ToList();
+        // Re-chained onto the clones, the terminal ball still ends the chain.
+        Assert.Equal(root + 1, (int)links[0]["HitBulletID"].Value);
+        Assert.Equal(root + 2, (int)links[1]["HitBulletID"].Value);
+        Assert.Equal(-1, (int)links[2]["HitBulletID"].Value);
+        foreach (var link in links)
+        {
+            Assert.Equal(SpeedFogIds.UntouchableFlameAtkRow, (int)link["atkId_Bullet"].Value);
+            Assert.Equal(527062, (int)link["sfxId_Bullet"].Value);      // visual kept
+            for (int i = 0; i <= 4; i++)
+                Assert.Equal(-1, (int)link[$"spEffectId{i}"].Value);   // madness gone
+            Assert.Equal(-1, (int)link["spEffectIDForShooter"].Value);
+        }
+        Assert.Equal(1.5f, (float)links[2]["hitRadius"].Value);         // kinematics kept
+        // The root fans out around the lantern; the links it spawns do not.
+        Assert.Equal(UntouchableBossInjector.FLAME_DIRECTIONS, (ushort)links[0]["numShoot"].Value);
+        Assert.Equal((short)90, (short)links[0]["shootAngleInterval"].Value); // a full circle over four directions
+        Assert.Equal((ushort)1, (ushort)links[1]["numShoot"].Value);
+        Assert.Equal((ushort)1, (ushort)links[2]["numShoot"].Value);
+        // Midra's own rows untouched.
+        var vanillaRoot = bullet.Rows.Single(r => r.ID == 210730000);
+        Assert.Equal(21730000, (int)vanillaRoot["spEffectId0"].Value);
+        Assert.Equal(210730005, (int)vanillaRoot["HitBulletID"].Value);
+        Assert.Equal((ushort)1, (ushort)vanillaRoot["numShoot"].Value);
+
+        var dmg = atk.Rows.Single(r => r.ID == SpeedFogIds.UntouchableFlameAtkRow);
+        Assert.Equal(UntouchableBossInjector.FLAME_MAGIC, (ushort)dmg["atkMag"].Value);
+        Assert.Equal((ushort)0, (ushort)dmg["throwTypeId"].Value);
+    }
+
+    [Theory]
+    // A fourth link, and a cycle back to the root: both are chains the clone
+    // band cannot hold, and a truncated clone would be a partial moveset.
+    [InlineData(755000000)]
+    [InlineData(210730000)]
+    public void ApplyMoveset_FlameChainLongerThanTheCloneBand_WritesNothing(int fourthLink)
+    {
+        var (npc, think, behavior, bullet, atk) = BuildMovesetParams();
+        bullet.Rows.Single(r => r.ID == 210730006)["HitBulletID"].Value = fourthLink;
+        if (fourthLink != 210730000)
+            AddRowFromTemplate(bullet, fourthLink)["HitBulletID"].Value = -1;
+
+        Assert.False(UntouchableBossInjector.ApplyMoveset(npc, think, behavior, bullet, atk));
+
+        Assert.DoesNotContain(bullet.Rows, r => r.ID == SpeedFogIds.UntouchableFlameBulletBase);
+        Assert.DoesNotContain(behavior.Rows, r => (int)r["variationId"].Value == SpeedFogIds.UntouchableBossBehaviorVariation);
+        Assert.DoesNotContain(think.Rows, r => r.ID == SpeedFogIds.UntouchableBossThinkRow);
+        Assert.DoesNotContain(atk.Rows, r => r.ID == SpeedFogIds.UntouchableFlameAtkRow);
+    }
+
+    [Fact]
+    public void ApplyMoveset_MissingFlameChainLink_WritesNothing()
+    {
+        var (npc, think, behavior, bullet, atk) = BuildMovesetParams();
+        bullet.Rows.RemoveAll(r => r.ID == 210730005); // the chain's middle link gone
+
+        Assert.False(UntouchableBossInjector.ApplyMoveset(npc, think, behavior, bullet, atk));
+
+        Assert.DoesNotContain(think.Rows, r => r.ID == SpeedFogIds.UntouchableBossThinkRow);
+        Assert.DoesNotContain(behavior.Rows, r => (int)r["variationId"].Value == SpeedFogIds.UntouchableBossBehaviorVariation);
+        Assert.DoesNotContain(bullet.Rows, r => r.ID == SpeedFogIds.UntouchableFlameBulletBase);
+        Assert.DoesNotContain(atk.Rows, r => r.ID == SpeedFogIds.UntouchableFlameAtkRow);
     }
 
     [Fact]

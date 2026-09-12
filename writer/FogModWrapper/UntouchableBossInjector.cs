@@ -57,6 +57,24 @@ public static class UntouchableBossInjector
     /// <summary>Beam damage (AtkParam_Npc.atkMag, u16). Tuning knob.</summary>
     public const ushort BEAM_MAGIC = 110;
 
+    /// <summary>Midra's Flame of Frenzy, the root of a three-bullet chain
+    /// (210730000 -> 210730005 -> 210730006: a 9 m/s jet, a 0.5 s segment,
+    /// a 1.5 m terminal ball; SFX 527062/527063 in commoneffects_dlc02):
+    /// the template of the boss's flame nova on animation 3004.</summary>
+    public const int FLAME_TEMPLATE_BULLET = 210730000;
+
+    /// <summary>Flame nova damage per hit (AtkParam_Npc.atkMag, u16). Tuning knob.</summary>
+    public const ushort FLAME_MAGIC = 50;
+
+    /// <summary>The nova fans the root bullet out in this many directions,
+    /// evenly around the lantern (Bullet.numShoot / shootAngleInterval).</summary>
+    public const ushort FLAME_DIRECTIONS = 4;
+
+    /// <summary>Longest flame chain the clone band
+    /// (SpeedFogIds.UntouchableFlameBulletBase and the two rows after it)
+    /// can hold; vanilla's has exactly three links.</summary>
+    public const int FLAME_CHAIN_MAX = 3;
+
     /// <summary>Vanilla c5280 BehaviorParam judge ids (variation 52800),
     /// re-keyed under the boss variation so every attack/bullet the TAE fires
     /// still resolves. 500 is the non-formula row 1170. Refresh after a game
@@ -321,6 +339,26 @@ public static class UntouchableBossInjector
                 pulseTemplates[judge] = template;
         }
 
+        // The flame nova's chain: the root template and every HitBulletID
+        // link after it must exist and fit the clone band. The def's
+        // terminator is -1 (0 would read as a link and skip the moveset,
+        // the safe direction).
+        var flameTemplates = new List<PARAM.Row>();
+        int nextLink = FLAME_TEMPLATE_BULLET;
+        while (nextLink >= 0 && flameTemplates.Count <= FLAME_CHAIN_MAX)
+        {
+            var link = bullet.Rows.Find(r => r.ID == nextLink);
+            if (link == null)
+            {
+                reasons.Add($"Bullet flame chain link {nextLink} missing (chain of {FLAME_TEMPLATE_BULLET})");
+                break;
+            }
+            flameTemplates.Add(link);
+            nextLink = (int)link["HitBulletID"].Value;
+        }
+        if (flameTemplates.Count > FLAME_CHAIN_MAX)
+            reasons.Add($"Bullet flame chain of {FLAME_TEMPLATE_BULLET} longer than {FLAME_CHAIN_MAX} links");
+
         if (reasons.Count > 0)
         {
             Console.WriteLine($"Untouchable boss: moveset skipped ({string.Join("; ", reasons)})");
@@ -366,8 +404,37 @@ public static class UntouchableBossInjector
         var beamAtk = GameEditor.AddRow(atk, SpeedFogIds.UntouchableBeamAtkRow, BEAM_TEMPLATE_ATK);
         beamAtk["atkMag"].Value = BEAM_MAGIC; // u16; throw fields already 0 on 5280115
 
+        // The flame nova: the chain cloned link by link, re-chained onto the
+        // clones, damage on the boss's own row, madness riders gone; the
+        // root fans out around the lantern, the links it spawns do not.
+        var flameBehavior = GameEditor.AddRow(
+            behavior, SpeedFogIds.BehaviorRowId(variation, SpeedFogIds.UntouchableFlameJudge), vanillaRows[101]);
+        flameBehavior["variationId"].Value = variation;
+        flameBehavior["behaviorJudgeId"].Value = SpeedFogIds.UntouchableFlameJudge;
+        flameBehavior["refType"].Value = (byte)1; // bullet
+        flameBehavior["refId"].Value = SpeedFogIds.UntouchableFlameBulletBase;
+
+        for (int i = 0; i < flameTemplates.Count; i++)
+        {
+            int id = SpeedFogIds.UntouchableFlameBulletBase + i;
+            var link = GameEditor.AddRow(bullet, id, flameTemplates[i]);
+            link["atkId_Bullet"].Value = SpeedFogIds.UntouchableFlameAtkRow;
+            link["HitBulletID"].Value = i + 1 < flameTemplates.Count ? id + 1 : -1; // s32
+            for (int s = 0; s <= 4; s++)
+                link[$"spEffectId{s}"].Value = -1; // no madness buildup, no rider effects
+            link["spEffectIDForShooter"].Value = -1;
+            if (i == 0)
+            {
+                link["numShoot"].Value = FLAME_DIRECTIONS;                          // u16
+                link["shootAngleInterval"].Value = (short)(360 / FLAME_DIRECTIONS); // s16, degrees
+            }
+        }
+
+        var flameAtk = GameEditor.AddRow(atk, SpeedFogIds.UntouchableFlameAtkRow, BEAM_TEMPLATE_ATK);
+        flameAtk["atkMag"].Value = FLAME_MAGIC; // u16
+
         Console.WriteLine(
-            $"Untouchable boss: moveset rows (think {SpeedFogIds.UntouchableBossThinkRow} -> battle {SpeedFogIds.UntouchableBossBattleGoal}, variation {variation} with {VanillaJudges.Length} vanilla judges + beam judge {SpeedFogIds.UntouchableBeamJudge}, bullet {SpeedFogIds.UntouchableBeamBulletRow} (clone of {BEAM_TEMPLATE_BULLET}), atk {SpeedFogIds.UntouchableBeamAtkRow} magic {BEAM_MAGIC}, pulses {SpeedFogIds.UntouchablePulseBulletBase}-{SpeedFogIds.UntouchablePulseBulletBase + PulseJudges.Length - 1} without madness)");
+            $"Untouchable boss: moveset rows (think {SpeedFogIds.UntouchableBossThinkRow} -> battle {SpeedFogIds.UntouchableBossBattleGoal}, variation {variation} with {VanillaJudges.Length} vanilla judges + beam judge {SpeedFogIds.UntouchableBeamJudge}, bullet {SpeedFogIds.UntouchableBeamBulletRow} (clone of {BEAM_TEMPLATE_BULLET}), atk {SpeedFogIds.UntouchableBeamAtkRow} magic {BEAM_MAGIC}, + flame judge {SpeedFogIds.UntouchableFlameJudge}, bullets {SpeedFogIds.UntouchableFlameBulletBase}-{SpeedFogIds.UntouchableFlameBulletBase + flameTemplates.Count - 1} (chain of {FLAME_TEMPLATE_BULLET}, x{FLAME_DIRECTIONS}), atk {SpeedFogIds.UntouchableFlameAtkRow} magic {FLAME_MAGIC}, pulses {SpeedFogIds.UntouchablePulseBulletBase}-{SpeedFogIds.UntouchablePulseBulletBase + PulseJudges.Length - 1} without madness)");
         return true;
     }
 
