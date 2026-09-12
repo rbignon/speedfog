@@ -157,10 +157,17 @@ parameters, as vanilla uses them (engine-native, inferred):
 | `turnFaceAngle` | the turn is considered done when the target is within this angle |
 | `upAngleThreshold`, `downAngleThreshold` | vertical limits, 0 = none |
 
-Observed in game: the goal hands over to the next sub-goal at the
-animation's cancel window (the boss's near teleport warps 1.0 s into
-its burst), and an attack queued while its registered interval runs is
-held rather than skipped.
+Observed in game: left to itself the goal hands over to the next
+sub-goal only at the animation's cancel window, which on the
+untouchable's burst 3001 opens at 1.00 s though the hit lands by
+0.27 s. An attack queued while its registered interval runs is held
+rather than skipped.
+
+Giving such a goal a life shorter than that window, to hand over as
+soon as the hit has landed, is the boss's near teleport's design
+intent rather than an established fact: no vanilla script does it, and
+whether the animation keeps playing through the hand-over can only be
+settled in game (see `docs/untouchable-boss.md`, "Teleports").
 
 ## Movement goals
 

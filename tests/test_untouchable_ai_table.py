@@ -58,6 +58,10 @@ FAR_WINDUP = ("ComboTunable_SuccessAngle180", 3000)  # vanilla Act02's 5 s telep
 RETREAT = ("ToTargetWarp", "self")  # the near warp, relative to the boss itself
 WARP_BEHIND = ("ToTargetWarp", "enemy")  # the far warp, around the player
 BURST_ARGS = [8, SWING_ANIM, "enemy", 999, 0, 180, 180, 180]  # fires whatever the side
+# The teleport wind-up ends its goal right after the hit lands (TAE: judge
+# 115 at 0.03-0.27 s) instead of waiting for the cancel window at 1.00 s.
+WINDUP_ARGS = [0.3] + BURST_ARGS[1:]
+WAIT = ("Wait", "enemy")  # the beat between the warp and the beam
 
 
 def retreat_args(direction: str = "B", distance: float = 8) -> list:
@@ -332,17 +336,37 @@ def test_far_bracket_teleport_or_beam():
     assert set(cooling) == {APPROACH, BEAM} and cooling[APPROACH] + cooling[BEAM] == 100
 
 
-def test_near_teleport_is_burst_retreat_beam_and_starts_the_three_timers():
+def test_near_teleport_is_burst_retreat_wait_beam_and_starts_the_three_timers():
     goal, _, state = act("Act02", dist=2)
-    assert queued(goal) == [BURST, RETREAT, BEAM_ATTACK]
-    assert args_of(goal, 0) == BURST_ARGS
+    assert queued(goal) == [BURST, RETREAT, WAIT, BEAM_ATTACK]
+    # The wind-up hands over once its hit has landed, so the warp follows the
+    # explosion at once; the beat the player reads sits after the warp instead.
+    assert args_of(goal, 0) == WINDUP_ARGS
     assert args_of(goal, 1) == retreat_args()
-    # The cooldown and the hold validated in game (2026-09-06); the burst's timer.
-    assert state.timers[TELEPORT_TIMER] == 6 and state.timers[HOLD_TIMER] == 3.5
+    assert args_of(goal, 2)[0] == 1.0
+    assert state.timers[TELEPORT_TIMER] == 6
+    # The hold covers wind-up, arrival, beat and beam.
+    assert state.timers[HOLD_TIMER] == pytest.approx(3.8)
     assert state.timers[SWING_TIMER] > 0
 
 
-def test_near_teleport_skips_the_beam_while_it_cools():
+def test_the_other_bursts_keep_the_full_goal_life():
+    # Only the teleport wind-up hands over early: elsewhere the burst is the
+    # whole answer and keeps vanilla's life.
+    fired, goal, _ = react(
+        interrupt="Damaged", dist=1.5, random=1, timers=TELEPORT_COOLING
+    )
+    assert fired and queued(goal) == [BURST]
+    assert args_of(goal, 0) == BURST_ARGS
+    _, goal, _ = react(
+        interrupt="ActivateSpecialEffect", speffects=[WARP_MARKER_SPEFFECT], dist=1
+    )
+    assert queued(goal) == [WARP_BEHIND, BURST]
+    assert args_of(goal, 1) == BURST_ARGS
+
+
+def test_near_teleport_skips_the_beam_and_its_beat_while_it_cools():
+    # No beam to telegraph, no reason to stand still after the warp.
     goal, _, _ = act("Act02", dist=2, passed={BEAM_ANIM: 1})
     assert queued(goal) == [BURST, RETREAT]
 
@@ -411,7 +435,7 @@ def test_retreat_scan_is_behind_the_boss_itself():
     assert args_of(goal, 1) == retreat_args("FR")
     # 7 m of room is not enough for an 8 m retreat: the 5 m fallback (small arenas).
     goal, _, _ = act("Act02", dist=2, mesh=7)
-    assert queued(goal) == [BURST, RETREAT, BEAM_ATTACK]
+    assert queued(goal) == [BURST, RETREAT, WAIT, BEAM_ATTACK]
     assert args_of(goal, 1) == retreat_args("B", 5)
     goal, _, _ = act("Act02", dist=2, mesh=4)
     assert queued(goal) == []
@@ -455,7 +479,7 @@ def test_retreat_acts_are_the_near_teleport_when_it_is_ready(name):
     # After a grab the boss retreats: the burst, the warp away and the beam
     # when the teleport timer allows, the vanilla walk otherwise.
     goal, _, state = act(name, dist=2)
-    assert queued(goal) == [BURST, RETREAT, BEAM_ATTACK]
+    assert queued(goal) == [BURST, RETREAT, WAIT, BEAM_ATTACK]
     assert state.timers[TELEPORT_TIMER] > 0 and state.timers[HOLD_TIMER] > 0
     goal, _, _ = act(name, dist=2, timers=TELEPORT_COOLING)
     assert [s.kind for s in goal.subgoals.values()] == [
@@ -486,7 +510,7 @@ def test_close_bracket_offers_the_beam_next_to_the_grab():
 def test_hit_reaction_prefers_the_retreat_then_the_burst():
     hit = {"interrupt": "Damaged", "dist": 1.5, "random": 1}
     fired, goal, _ = react(**hit)
-    assert fired and queued(goal) == [BURST, RETREAT, BEAM_ATTACK]
+    assert fired and queued(goal) == [BURST, RETREAT, WAIT, BEAM_ATTACK]
     fired, goal, _ = react(**hit, timers=TELEPORT_COOLING)
     assert fired and queued(goal) == [BURST]
     # No room to retreat: the burst alone.

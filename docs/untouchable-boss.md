@@ -372,9 +372,10 @@ Act02  dist >= TELEPORT_FAR_RANGE (5 m) → far: teleport timer 11.5, hold 9, wa
        dist < 5 m → near: room scan from the boss, B then BL then BR (F/FL/FR when the
          player is in its back), at 8 m then at 5 m
          no room → teleport timer 2 s, nothing queued
-         room    → teleport timer 6, hold 3.5, ClearSubGoal, swing timer 4 + immediate
-                   burst 3001 (the swing timer is not read), warp from TARGET_SELF,
-                   beam if ready
+         room    → teleport timer 6, hold 3.8, ClearSubGoal, swing timer 4 + immediate
+                   burst 3001 with life BURST_WINDUP_LIFE (the swing timer is not read),
+                   warp from TARGET_SELF, then, only if the beam is ready,
+                   a Wait of ARRIVAL_PAUSE and the beam
 Act03  approach to 12 m (never queued: offered under 10 m only), watch 5030,
        grab 3002 (life 8, reach 12, turn 2 s / 50 degrees)
 Act04  beam 3004 (life 3, reach 999, turn 1.5 s / 60 degrees)
@@ -403,10 +404,9 @@ Then Act03 → 1 while 3002 cools (12 s): the engine holds the boss on the cooli
 
 Not readable from the Lua, because the goals it queues are native:
 whether an attack outside its `successDist` still plays, waits for its
-life or fails (`GOAL_COMMON_CommonAttack`); whether the warp queued
-after the burst starts at 3001's cancel window (the wrapper sets
-`moveCancel` and `attackCancel`; observed in game, see
-`docs/ai-scripts.md`); what `ToTargetWarp` does with a 0 m
+life or fails (`GOAL_COMMON_CommonAttack`); what an attack goal cut short by its
+own life does to the animation still playing (the wind-up burst relies
+on it); what `ToTargetWarp` does with a 0 m
 distance around a character; the exact cone of `IsInsideTarget(TARGET_ENE_0,
 AI_DIR_TYPE_B, 90)` (the same call in 60 vanilla scripts); whether an
 interrupt reaches the battle goal while a `REGISTER_GOAL_NO_INTERUPT`
@@ -449,17 +449,22 @@ always fires the near one.
 
 **Near** (under 5 m): an attack, a warp and a follow-up, built from the
 untouchable's own moves. The burst 3001 is the wind-up, queued whatever
-the swing timer says (it re-arms it): its hit lands from the first frame
-and the warp fires at its cancel window (`BURST_CANCEL`, 1.0 s,
-observed in game, see `docs/ai-scripts.md`). The warp
+the swing timer says (it re-arms it). Its hit lands early, between 0.03
+and 0.27 s by the TAE, but the animation only opens its cancel window at
+1.00 s, and an attack goal left to hand over on its own holds the boss
+there for three quarters of a second after the damage is through. The
+wind-up therefore gets `BURST_WINDUP_LIFE` (0.3 s) as its goal life, so
+the warp follows the explosion at once. The warp
 lands `TELEPORT_AWAY_DIST` (8 m) from the boss's own position, away
 from the player (the five-argument `TARGET_SELF` form of Rennala's
 203100 and of 301010's retreats): straight behind the boss or, when the
 player stands in its back, straight ahead, then the diagonals.
 `Houzuki755890_FindRoomAway` scans those directions from the boss's own
 position with its hit radius as the line width, then again at
-`TELEPORT_AWAY_FALLBACK` (5 m) for small arenas. The beam follows when
-it is ready: the boss bursts, retreats and fires. The scan runs when the
+`TELEPORT_AWAY_FALLBACK` (5 m) for small arenas. When the beam is ready
+a `GOAL_COMMON_Wait` of `ARRIVAL_PAUSE` (1 s) sits between the warp and
+it: the boss bursts, blinks, holds a beat the player can read, then
+fires. Without the beam there is nothing to telegraph and no beat. The scan runs when the
 act is queued; without room nothing is queued (the burst is not spent on
 a warp that cannot happen) and the teleport timer restarts at
 `TELEPORT_RETRY` (2 s) instead of the full cooldown, so a cramped spot
@@ -528,7 +533,8 @@ attack earlier without adding any. No reaction fires while a teleport or
 a grab sequence is in flight (`Houzuki755890_SequenceInFlight`), since
 its `ClearSubGoal` would drop the warp, the beam or the throw: the hold
 timer (`TIMER_HOLD`, slot 9) is set with each queued teleport to
-`TELEPORT_HOLD` (near: `BURST_CANCEL` + `ARRIVAL_MAX` + margin, 3.5 s)
+`TELEPORT_HOLD` (near: `BURST_WINDUP_LIFE` + `ARRIVAL_MAX` +
+`ARRIVAL_PAUSE` + margin, 3.8 s)
 or `TELEPORT_FAR_HOLD` (far: `MARKER_3000` + `ARRIVAL_MAX` +
 `BURST_LENGTH` + margin, 9 s), and the grab is covered by its counter
 under `REACT_HOLD` (`GRAB_CHAIN` + 1 s, 7 s). The spans come from the c5280 TAE and
@@ -550,7 +556,7 @@ Goal.Interrupt, first matching case wins
 2. Damaged: player in the front 120-degree cone within REACT_HIT_RANGE (2 m)
    AND nothing in flight (in flight: hold timer > 0, or 3002 started <= REACT_HOLD (7 s) ago)
    AND draw <= REACT_HIT (25)
-   a. teleport ready AND room → the whole near teleport (burst, warp, beam if ready) → true
+   a. teleport ready AND room → the whole near teleport (burst, warp, beat, beam if ready) → true
       (ready without room: the teleport timer is set to TELEPORT_RETRY, then fall through)
    b. else swing timer at 0 → ClearSubGoal + immediate burst → true
    c. else false
@@ -602,7 +608,8 @@ Knobs, never edited in the shared vanilla `528000_battle`:
   `BEAM_*`, `MOVE_*`), the five `*_COOLDOWN` and `TELEPORT_RETRY`,
   `TELEPORT_FAR_RANGE`,
   `TELEPORT_AWAY_DIST`, `TELEPORT_AWAY_FALLBACK`, the animation spans the
-  holds derive from (`BURST_CANCEL`, `BURST_LENGTH`, `ARRIVAL_MAX`,
+  holds derive from (the chosen `BURST_WINDUP_LIFE` and `ARRIVAL_PAUSE`,
+  the measured `BURST_LENGTH`, `ARRIVAL_MAX`,
   `MARKER_3000`, `GRAB_CHAIN`), and the two reactions (`REACT_HIT`, `REACT_HEAL` and their ranges).
 
 ## Verifying in game
@@ -628,13 +635,18 @@ Generate a seed with the allowlist above, then in the arena:
    cooldowns; the boss never stands still for several seconds, and a
    grab is followed by the burst and warp rather than the walk retreat
    whenever the teleport is off cooldown.
-3. **Near teleport** (under 5 m): a burst on the spot, a vanish about 1 s
-   into it with no fade, a reappearance 8 m from where the boss stood,
-   away from the player (5 m in a small arena; straight ahead when the
-   player was in its back) with
-   the arrival animation, then the beam when it is ready. A burst that
-   completes its 1.8 s before the vanish means the attack goal did not
-   hand over at `BURST_CANCEL`. In a catacomb room, confirm it still
+3. **Near teleport** (under 5 m): a burst on the spot and, without
+   waiting for it to finish, a vanish with no fade, a reappearance 8 m
+   from where the boss stood, away from the player (5 m in a small
+   arena; straight ahead when the player was in its back) with the
+   arrival animation, a beat of about a second, then the beam when it is
+   ready. A pause before the vanish rather than after it means the goal
+   life did not cut the wind-up: try `BURST_WINDUP_LIFE` a little either
+   side of the 0.27 s where the hit lands, and if no value moves the
+   timing then the hand-over is not life-driven at all and the sequence
+   has to go back to waiting for the cancel window. A beam that goes
+   missing after a warp is the same cause: the hold expires before a
+   sequence that never got shorter. In a catacomb room, confirm it still
    retreats at least sometimes; a boss that never retreats there means
    both scan distances fail: lower `TELEPORT_AWAY_FALLBACK`.
 4. **Far teleport** (5 m and more): the 5 s lantern fade, then the warp
