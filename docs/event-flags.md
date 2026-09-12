@@ -140,7 +140,7 @@ ids, per FMG file).
 
 | Range | FMG | Owner | Reference | Notes |
 |-------|-----|-------|-----------|-------|
-| 755890000-755890099 | NpcName (item_dlc02.msgbnd.dcx, engus + frafr) | BossNameInjector | `SpeedFogIds.BossNameFmgIds` | Healthbar names of promoted mobs without a vanilla NpcName entry, one id per distinct name (`docs/boss-healthbar-names.md`). Vanilla NpcName ids sit in the 9xxxxxxxx band; the Item Randomizer's `editnames` allocator (off) starts at 907770000 |
+| 755890000-755890099 | NpcName (item_dlc02.msgbnd.dcx, engus + frafr) | BossNameInjector | `SpeedFogIds.BossNameFmgIds` | Healthbar names of relocated enemies with no vanilla NpcName entry of that text, one id per distinct name (`docs/boss-healthbar-names.md`). Vanilla NpcName ids sit in the 9xxxxxxxx band; the Item Randomizer's `editnames` allocator (off) starts at 907770000 |
 
 ## Risks & Constraints
 

@@ -150,7 +150,7 @@ In `main.py`, immediately after the logs block (before the build step, so it run
    - `randomized_bosses`: list of boss names (both phases for multi-phase bosses, e.g. `["Beast Clergyman", "Maliketh"]`)
    - `boss_name`: canonical name from the phase 2 replacement (numeric suffix stripped, e.g. "Fire Giant" not "Fire Giant 2")
 5. `append_boss_placements_to_spoiler()` adds a boss placement section to spoiler.txt
-6. `build_boss_names()` keeps the arenas whose source has no vanilla `Important.NpcName` (`parse_boss_npc_names()`; the randomizer names the others correctly by copying their healthbar events) and pairs each with the map whose EMEVD runs its boss events (`event_map_for_entity()`, derived from the entity id); `patch_graph_boss_names()` writes them as `boss_names` (v4.8) for `BossNameInjector` (see `docs/boss-healthbar-names.md`)
+6. `build_boss_names()` pairs every assignment with the map whose EMEVD runs its boss events (`event_map_for_entity()`, derived from the entity id); `patch_graph_boss_names()` writes them as `boss_names` (added v4.8) for `BossNameInjector`, which repoints the healthbar name of the arenas the randomizer did not name itself (see `docs/boss-healthbar-names.md`)
 7. `parse_helper_models()` collects the models of every `Class: Helper` entry `OwnedBy` a boss, `build_helper_models()` keeps the arenas whose placed source owns some, and `patch_graph_helper_models()` writes them as `helper_models` (v4.9) for `HelperAreaResolver`'s model pass (see "Helper enemy scaling" below)
 
 Matching logic (in `_match_boss_placement`): tries `str(defeat_flag)` first, then `str(defeat_flag - 200_000_000)` for base game bosses. `_resolve_entity_id()` extracts the entity_id from a defeat_flag for phase mapping lookups.

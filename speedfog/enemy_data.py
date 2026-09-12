@@ -16,14 +16,11 @@ from typing import Any
 from speedfog.dag import Dag
 
 _PHASE_SUFFIX_RE = re.compile(r" \d+$")
-# boss_arena_tags.json disambiguation suffix ("Fire Knight (before Messmer)").
-_PARENTHETICAL_SUFFIX_RE = re.compile(r"\s*\([^()]*\)$")
 
 _ENEMY_ID_RE = re.compile(r"^- ID:\s*(\d+)")
 _NEXT_PHASE_RE = re.compile(r"^  NextPhase:\s*(\d+)")
 _EXTRA_NAME_RE = re.compile(r"^\s+ExtraName:\s*(.+)")
 _KEY_NAME_RE = re.compile(r"^      Key:\s*(.+)")
-_IMPORTANT_NPC_NAME_RE = re.compile(r"^    NpcName:\s*(\d+)")
 _NAME_RE = re.compile(r"^  Name:\s*(\S+)")
 _CLASS_RE = re.compile(r"^  Class:\s*(\S+)")
 _OWNED_BY_RE = re.compile(r"^  OwnedBy:\s*(\d+)")
@@ -125,38 +122,6 @@ def parse_boss_key_names(enemy_txt_path: Path) -> dict[int, str]:
                     if name:
                         key_names[current_id] = name
     return key_names
-
-
-def parse_boss_npc_names(enemy_txt_path: Path) -> dict[int, int]:
-    """Parse enemy.txt to build an entity_id -> Important.NpcName mapping.
-
-    ``NpcName`` (4-space indent under ``Important:``) is the vanilla NpcName
-    FMG id the enemy randomizer carries along when it relocates that enemy:
-    entities that have one show the right healthbar name wherever they are
-    placed. Entities without one (regular mobs promoted to boss arenas) are
-    the ones ``build_boss_names`` exports for the C# side. First per entity
-    wins (every ``Class: Boss`` entry has one).
-
-    Returns an empty dict if the file is missing.
-    """
-    if not enemy_txt_path.exists():
-        return {}
-
-    npc_names: dict[int, int] = {}
-    current_id: int | None = None
-    with open(enemy_txt_path, encoding="utf-8") as f:
-        for line in f:
-            if line.startswith("- ID:"):
-                m = _ENEMY_ID_RE.match(line)
-                if m:
-                    current_id = int(m.group(1))
-            elif line.startswith("    NpcName:") and current_id is not None:
-                if current_id in npc_names:
-                    continue
-                m = _IMPORTANT_NPC_NAME_RE.match(line)
-                if m:
-                    npc_names[current_id] = int(m.group(1))
-    return npc_names
 
 
 def parse_helper_models(enemy_txt_path: Path) -> dict[int, list[str]]:
@@ -377,31 +342,31 @@ def patch_graph_enemy_assignments(
 def build_boss_names(
     enemy_assignments: Mapping[str, str],
     placements: Mapping[str, Mapping[str, Any]],
-    npc_names: Mapping[int, int],
 ) -> dict[str, dict[str, str]]:
-    """Healthbar names the C# BossNameInjector must patch (graph.json v4.8).
+    """Healthbar names the C# BossNameInjector checks (graph.json boss_names).
 
-    The enemy randomizer names a relocated boss correctly only when the
-    source has a vanilla ``Important.NpcName`` (it copies the source's
-    healthbar event); a promoted mob keeps the arena's vanilla name. This
-    returns ``{arena_id: {"name", "map"}}`` for exactly those arenas, the
-    name being the one already resolved for ``placements`` (spoiler and
-    racing overlay) minus any trailing parenthetical (the boss_arena_tags
-    disambiguation suffix, "Divine Bird Warrior (Frost)"), and the map the
-    arena's EMEVD (``event_map_for_entity``). Arenas whose id encodes no
-    map are skipped.
+    The enemy randomizer rewrites an arena's healthbar name only for sources
+    whose own healthbar events it copies into the arena; a source without
+    such events (a regular mob, a hostile NPC like Hornsent) leaves the
+    arena's vanilla name in place. Telling the two apart from enemy.txt is
+    unreliable, so every assignment is exported and the injector leaves
+    alone the arenas that already name their enemy.
+
+    Returns ``{arena_id: {"name", "map"}}``: the name already resolved for
+    ``placements`` (spoiler and racing overlay) and the map holding the
+    arena's EMEVD (``event_map_for_entity``). Arenas whose id encodes no map,
+    or with no placement, are skipped. A trailing parenthetical is left in:
+    some are vanilla names ("Mad Pumpkin Head (Hammer)") and some are
+    boss_arena_tags disambiguation ("Hornsent (Leda Fight)"), and only the
+    injector, which holds the vanilla name index, can tell them apart.
     """
     boss_names: dict[str, dict[str, str]] = {}
-    for arena_id, source_id in enemy_assignments.items():
-        if int(source_id) in npc_names:
-            continue
+    for arena_id in enemy_assignments:
         map_id = event_map_for_entity(int(arena_id))
         placement = placements.get(arena_id)
         if map_id is None or placement is None:
             continue
-        full_name = str(placement["name"])
-        name = _PARENTHETICAL_SUFFIX_RE.sub("", full_name).strip() or full_name
-        boss_names[arena_id] = {"name": name, "map": map_id}
+        boss_names[arena_id] = {"name": str(placement["name"]), "map": map_id}
     return boss_names
 
 

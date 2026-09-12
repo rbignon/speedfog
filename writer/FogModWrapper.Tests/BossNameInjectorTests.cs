@@ -10,6 +10,11 @@ public class BossNameInjectorTests
     private const uint SHADE_ARENA = 30010850;
     private const int WATCHDOG_NAME = 904260301;
     private const int CRUCIBLE_KNIGHT_NAME = 902500301;
+    // Vanilla carries the same text at several ids, and variant names in their
+    // own right: the randomizer's copied healthbar picks any of them.
+    private const int CRUCIBLE_KNIGHT_NAME_ALT = 902500520;
+    private const int PUMPKIN_HEAD_NAME = 904340540;
+    private const int PUMPKIN_HEAD_HAMMER_NAME = 904340541;
     private const string MAP = "m30_01_00_00";
     // The bundle the game resolves text from (full base FMG copies inside).
     private const string ITEM_BND = "item_dlc02.msgbnd.dcx";
@@ -37,7 +42,7 @@ public class BossNameInjectorTests
         fight.Instructions.Add(DisplayBossHp(false, WATCHDOG_ARENA, WATCHDOG_NAME));
         emevd.Events.Add(fight);
         var shade = new EMEVD.Event(30012860);
-        shade.Instructions.Add(DisplayBossHp(true, SHADE_ARENA, 111));
+        shade.Instructions.Add(DisplayBossHp(true, SHADE_ARENA, CRUCIBLE_KNIGHT_NAME));
         emevd.Events.Add(shade);
         return emevd;
     }
@@ -70,7 +75,11 @@ public class BossNameInjectorTests
     {
         var gameDir = Path.Combine(tmp.Path, "game");
         var msgDir = Path.Combine(gameDir, "msg");
-        WriteItemBnd(msgDir, "engus", (CRUCIBLE_KNIGHT_NAME, "Crucible Knight"));
+        WriteItemBnd(msgDir, "engus",
+            (CRUCIBLE_KNIGHT_NAME, "Crucible Knight"),
+            (CRUCIBLE_KNIGHT_NAME_ALT, "Crucible Knight"),
+            (PUMPKIN_HEAD_NAME, "Mad Pumpkin Head"),
+            (PUMPKIN_HEAD_HAMMER_NAME, "Mad Pumpkin Head (Hammer)"));
         WriteItemBnd(msgDir, "frafr", (CRUCIBLE_KNIGHT_NAME, "Chevalier du Creuset"));
         WriteItemBnd(msgDir, "deude", (CRUCIBLE_KNIGHT_NAME, "Schmelztiegel-Ritter"));
         return gameDir;
@@ -129,6 +138,47 @@ public class BossNameInjectorTests
             () => BossNameInjector.ResolveNameIds(bossNames, new Dictionary<string, int>()));
     }
 
+    [Fact]
+    public void ResolveNameIds_PrefersTheVanillaEntryOfTheVariantName()
+    {
+        // "Mad Pumpkin Head (Hammer)" is a vanilla name of its own, not a
+        // boss_arena_tags disambiguation suffix: keep it.
+        var bossNames = new Dictionary<string, BossNameEntry> { ["30010800"] = Entry("Mad Pumpkin Head (Hammer)") };
+        var vanilla = new Dictionary<string, int>
+        {
+            ["Mad Pumpkin Head"] = PUMPKIN_HEAD_NAME,
+            ["Mad Pumpkin Head (Hammer)"] = PUMPKIN_HEAD_HAMMER_NAME,
+        };
+
+        var r = Assert.Single(BossNameInjector.ResolveNameIds(bossNames, vanilla));
+        Assert.Equal(PUMPKIN_HEAD_HAMMER_NAME, r.NameId);
+        Assert.Equal("Mad Pumpkin Head (Hammer)", r.Name);
+        Assert.False(r.IsNew);
+    }
+
+    [Fact]
+    public void ResolveNameIds_DropsADisambiguationSuffixVanillaDoesNotKnow()
+    {
+        // "(Leda Fight)" only exists in boss_arena_tags.json.
+        var bossNames = new Dictionary<string, BossNameEntry> { ["30010800"] = Entry("Hornsent (Leda Fight)") };
+        var vanilla = new Dictionary<string, int> { ["Hornsent"] = 141403 };
+
+        var r = Assert.Single(BossNameInjector.ResolveNameIds(bossNames, vanilla));
+        Assert.Equal(141403, r.NameId);
+        Assert.Equal("Hornsent", r.Name);
+    }
+
+    [Fact]
+    public void ResolveNameIds_AllocatesForTheStrippedNameWhenVanillaKnowsNeither()
+    {
+        var bossNames = new Dictionary<string, BossNameEntry> { ["30010800"] = Entry("Divine Bird Warrior (Frost)") };
+
+        var r = Assert.Single(BossNameInjector.ResolveNameIds(bossNames, new Dictionary<string, int>()));
+        Assert.Equal(SpeedFogIds.BossNameFmgIds.Base, r.NameId);
+        Assert.Equal("Divine Bird Warrior", r.Name);
+        Assert.True(r.IsNew);
+    }
+
     // ---- PatchEmevd ----
 
     [Fact]
@@ -136,14 +186,14 @@ public class BossNameInjectorTests
     {
         var emevd = MakeEmevd();
 
-        int n = BossNameInjector.PatchEmevd(emevd, new Dictionary<uint, int> { [WATCHDOG_ARENA] = 755890000 });
+        var (n, _) = BossNameInjector.PatchEmevd(emevd, WATCHDOG_ARENA, 755890000, "Aging Untouchable", new Dictionary<int, string>());
 
         Assert.Equal(2, n);
         var fight = emevd.Events.Single(e => e.ID == 30012810);
         Assert.Equal((WATCHDOG_ARENA, 755890000), Decode(fight.Instructions[0]));
         Assert.Equal((WATCHDOG_ARENA, 755890000), Decode(fight.Instructions[1]));
         var shade = emevd.Events.Single(e => e.ID == 30012860);
-        Assert.Equal((SHADE_ARENA, 111), Decode(shade.Instructions[0]));
+        Assert.Equal((SHADE_ARENA, CRUCIBLE_KNIGHT_NAME), Decode(shade.Instructions[0]));
     }
 
     [Fact]
@@ -156,7 +206,7 @@ public class BossNameInjectorTests
         evt.Instructions.Add(new EMEVD.Instruction(2003, 11, args));
         emevd.Events.Add(evt);
 
-        int n = BossNameInjector.PatchEmevd(emevd, new Dictionary<uint, int> { [WATCHDOG_ARENA] = 755890000 });
+        var (n, _) = BossNameInjector.PatchEmevd(emevd, WATCHDOG_ARENA, 755890000, "Aging Untouchable", new Dictionary<int, string>());
 
         Assert.Equal(0, n);
         Assert.Equal(8, evt.Instructions[0].ArgData.Length);
@@ -172,7 +222,7 @@ public class BossNameInjectorTests
         evt.Parameters.Add(new EMEVD.Parameter(0, 12, 0, 4));
         emevd.Events.Add(evt);
 
-        int n = BossNameInjector.PatchEmevd(emevd, new Dictionary<uint, int> { [WATCHDOG_ARENA] = 755890000 });
+        var (n, _) = BossNameInjector.PatchEmevd(emevd, WATCHDOG_ARENA, 755890000, "Aging Untouchable", new Dictionary<int, string>());
 
         Assert.Equal(0, n);
         Assert.Equal((WATCHDOG_ARENA, 0), Decode(evt.Instructions[0]));
@@ -245,6 +295,82 @@ public class BossNameInjectorTests
         var emevd = EMEVD.Read(Path.Combine(modDir, "event", $"{MAP}.emevd.dcx"));
         var shade = emevd.Events.Single(e => e.ID == 30012860);
         Assert.Equal((SHADE_ARENA, CRUCIBLE_KNIGHT_NAME), Decode(shade.Instructions[0]));
+    }
+
+    [Fact]
+    public void Inject_LeavesTheHealthbarAloneWhenAnotherVanillaIdShowsTheSameName()
+    {
+        using var tmp = new TempDir();
+        var gameDir = MakeGameDir(tmp);
+        // The randomizer named the Shade arena with the second vanilla id of
+        // "Crucible Knight"; both display the same text, so nothing to do.
+        var emevd = new EMEVD();
+        var evt = new EMEVD.Event(30012860);
+        evt.Instructions.Add(DisplayBossHp(true, SHADE_ARENA, CRUCIBLE_KNIGHT_NAME_ALT));
+        emevd.Events.Add(evt);
+        var modDir = MakeModDir(tmp, emevd);
+        var bossNames = new Dictionary<string, BossNameEntry> { ["30010850"] = Entry("Crucible Knight") };
+        var log = new List<string>();
+
+        BossNameInjector.Inject(modDir, gameDir, bossNames, log.Add);
+
+        var after = EMEVD.Read(Path.Combine(modDir, "event", $"{MAP}.emevd.dcx"));
+        Assert.Equal((SHADE_ARENA, CRUCIBLE_KNIGHT_NAME_ALT), Decode(after.Events.Single().Instructions[0]));
+        Assert.Contains(log, l => l.Contains("30010850") && l.Contains("already"));
+    }
+
+    [Fact]
+    public void Inject_RepointsEveryEmevdThatHoldsTheArenaHealthbar()
+    {
+        using var tmp = new TempDir();
+        var gameDir = MakeGameDir(tmp);
+        var modDir = MakeModDir(tmp);
+        // A second EMEVD (a common one) drives the same arena's healthbar.
+        var common = new EMEVD();
+        var evt = new EMEVD.Event(9005845);
+        evt.Instructions.Add(DisplayBossHp(true, WATCHDOG_ARENA, WATCHDOG_NAME));
+        common.Events.Add(evt);
+        common.Write(Path.Combine(modDir, "event", "common_func.emevd.dcx"));
+        var bossNames = new Dictionary<string, BossNameEntry> { ["30010800"] = Entry("Crucible Knight") };
+
+        BossNameInjector.Inject(modDir, gameDir, bossNames, _ => { });
+
+        var map = EMEVD.Read(Path.Combine(modDir, "event", $"{MAP}.emevd.dcx"));
+        Assert.Equal((WATCHDOG_ARENA, CRUCIBLE_KNIGHT_NAME), Decode(map.Events.Single(e => e.ID == 30012810).Instructions[0]));
+        var reread = EMEVD.Read(Path.Combine(modDir, "event", "common_func.emevd.dcx"));
+        Assert.Equal((WATCHDOG_ARENA, CRUCIBLE_KNIGHT_NAME), Decode(reread.Events.Single().Instructions[0]));
+    }
+
+    [Fact]
+    public void Inject_LeavesTheHealthbarAloneWhenItAlreadyNamesThePlacedEnemy()
+    {
+        using var tmp = new TempDir();
+        var gameDir = MakeGameDir(tmp);
+        var modDir = MakeModDir(tmp);
+        // The randomizer already repointed the Shade arena at the placed
+        // Crucible Knight's vanilla name; nothing left to do.
+        var bossNames = new Dictionary<string, BossNameEntry> { ["30010850"] = Entry("Crucible Knight") };
+        var before = File.GetLastWriteTimeUtc(Path.Combine(modDir, "event", $"{MAP}.emevd.dcx"));
+        var log = new List<string>();
+
+        BossNameInjector.Inject(modDir, gameDir, bossNames, log.Add);
+
+        Assert.Equal(before, File.GetLastWriteTimeUtc(Path.Combine(modDir, "event", $"{MAP}.emevd.dcx")));
+        Assert.DoesNotContain(log, l => l.Contains("Warning"));
+        Assert.Contains(log, l => l.Contains("30010850") && l.Contains("already"));
+    }
+
+    [Fact]
+    public void Inject_WritesNoFmgEntryForAnArenaItCouldNotPatch()
+    {
+        using var tmp = new TempDir();
+        var gameDir = MakeGameDir(tmp);
+        var modDir = MakeModDir(tmp);
+        var bossNames = new Dictionary<string, BossNameEntry> { ["30019999"] = Entry("Aging Untouchable") };
+
+        BossNameInjector.Inject(modDir, gameDir, bossNames, _ => { });
+
+        Assert.False(Directory.Exists(Path.Combine(modDir, "msg")));
     }
 
     [Fact]

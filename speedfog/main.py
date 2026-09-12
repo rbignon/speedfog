@@ -24,7 +24,6 @@ from speedfog.enemy_data import (
     build_helper_models,
     parse_boss_extra_names,
     parse_boss_key_names,
-    parse_boss_npc_names,
     parse_boss_phases,
     parse_helper_models,
     patch_graph_boss_names,
@@ -508,11 +507,10 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
                 json_path, dag, placements, assignment_phase_mapping
             )
             patch_graph_enemy_assignments(json_path, enemy_assignments)
-            # Healthbar names for promoted mobs (sources without a vanilla
-            # NpcName), patched in-game by FogModWrapper's BossNameInjector.
-            boss_names = build_boss_names(
-                enemy_assignments, placements, parse_boss_npc_names(enemy_txt_path)
-            )
+            # Healthbar names of the relocated enemies, repointed in-game by
+            # FogModWrapper's BossNameInjector wherever the randomizer left
+            # the arena's own name in place.
+            boss_names = build_boss_names(enemy_assignments, placements)
             patch_graph_boss_names(json_path, boss_names)
             # Models of the placed bosses' helper clones, so FogModWrapper's
             # HelperAreaResolver can scale them with the arena.
@@ -522,7 +520,7 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
             patch_graph_helper_models(json_path, helper_models)
             print(
                 f"Boss placements: {len(placements)} bosses randomized, "
-                f"{len(boss_names)} healthbar names to patch, "
+                f"{len(boss_names)} healthbar names to check, "
                 f"{len(helper_models)} arenas with helper clones"
             )
             if args.logs and spoiler_path is not None:

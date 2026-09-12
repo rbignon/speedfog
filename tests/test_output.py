@@ -15,7 +15,6 @@ from speedfog.enemy_data import (
     event_map_for_entity,
     parse_boss_extra_names,
     parse_boss_key_names,
-    parse_boss_npc_names,
     parse_boss_phases,
     parse_helper_models,
     patch_graph_boss_names,
@@ -2201,75 +2200,37 @@ class TestPatchGraphBossNames:
 
 
 class TestBuildBossNames:
-    # Arena 30010800 (Watchdog) gets the Untouchable (no vanilla NpcName),
-    # arena 10000800 (Godrick) gets Rellana (has one): only the first is
-    # exported, the randomizer already names the second correctly.
-    ASSIGNMENTS = {"30010800": "2049420200", "10000800": "2048440800"}
+    # Every assignment is exported: the randomizer rewrites the arena's
+    # healthbar name only for sources whose own healthbar events it copies,
+    # and the C# injector leaves an arena that already names its enemy alone.
     PLACEMENTS = {
         "30010800": {"name": "Aging Untouchable", "entity_id": 2049420200},
-        "10000800": {"name": "Rellana, Twin Moon Knight", "entity_id": 2048440800},
+        "30170800": {"name": "Hornsent", "entity_id": 20010722},
     }
-    NPC_NAMES = {2048440800: 905300000}
 
-    def test_exports_only_sources_without_vanilla_npc_name(self):
-        result = build_boss_names(self.ASSIGNMENTS, self.PLACEMENTS, self.NPC_NAMES)
-        assert result == {
-            "30010800": {"name": "Aging Untouchable", "map": "m30_01_00_00"}
+    def test_exports_every_assignment_with_its_map(self):
+        assignments = {"30010800": "2049420200", "30170800": "20010722"}
+        assert build_boss_names(assignments, self.PLACEMENTS) == {
+            "30010800": {"name": "Aging Untouchable", "map": "m30_01_00_00"},
+            "30170800": {"name": "Hornsent", "map": "m30_17_00_00"},
         }
 
     def test_skips_arena_whose_id_encodes_no_map(self):
         placements = {"4000358": {"name": "Aging Untouchable", "entity_id": 2049420200}}
-        result = build_boss_names({"4000358": "2049420200"}, placements, {})
-        assert result == {}
+        assert build_boss_names({"4000358": "2049420200"}, placements) == {}
 
-    def test_strips_trailing_parenthetical_from_healthbar_text(self):
-        # boss_arena_tags.json disambiguates variants with a suffix
-        # ("Divine Bird Warrior (Frost)") that must not reach the healthbar.
+    def test_skips_assignment_without_a_placement(self):
+        assert build_boss_names({"30010800": "2049420200"}, {}) == {}
+
+    def test_keeps_a_parenthetical_suffix_for_the_injector_to_judge(self):
+        # "Mad Pumpkin Head (Hammer)" is a vanilla name, "Divine Bird Warrior
+        # (Frost)" a boss_arena_tags disambiguation: only the injector, which
+        # holds the vanilla name index, can tell them apart.
         placements = {
             "31180800": {"name": "Divine Bird Warrior (Frost)", "entity_id": 20010453}
         }
-        result = build_boss_names({"31180800": "20010453"}, placements, {})
-        assert result["31180800"]["name"] == "Divine Bird Warrior"
-
-    def test_keeps_name_that_is_only_a_parenthetical(self):
-        placements = {"31180800": {"name": "(Frost)", "entity_id": 20010453}}
-        result = build_boss_names({"31180800": "20010453"}, placements, {})
-        assert result["31180800"]["name"] == "(Frost)"
-
-
-class TestParseBossNpcNames:
-    def test_reads_important_npc_name(self, tmp_path):
-        # Important: NpcName sits at 4-space indent; the nested Names block
-        # and top-level fields must not be mistaken for it.
-        enemy_txt = tmp_path / "enemy.txt"
-        enemy_txt.write_text(
-            "- ID: 2048440800\n"
-            "  Class: Boss\n"
-            "  Important:\n"
-            "    Names:\n"
-            "      Key: Rellana, Twin Moon Knight\n"
-            "    NpcName: 905300000\n"
-            "- ID: 2049420200\n"
-            "  Class: Basic\n"
-            "  NpcName: 1\n",
-            encoding="utf-8",
-        )
-        assert parse_boss_npc_names(enemy_txt) == {2048440800: 905300000}
-
-    def test_first_npc_name_wins(self, tmp_path):
-        enemy_txt = tmp_path / "enemy.txt"
-        enemy_txt.write_text(
-            "- ID: 11000800\n"
-            "  Important:\n"
-            "    NpcName: 902130002\n"
-            "  Other:\n"
-            "    NpcName: 902130003\n",
-            encoding="utf-8",
-        )
-        assert parse_boss_npc_names(enemy_txt) == {11000800: 902130002}
-
-    def test_missing_file_returns_empty(self, tmp_path):
-        assert parse_boss_npc_names(tmp_path / "nope.txt") == {}
+        result = build_boss_names({"31180800": "20010453"}, placements)
+        assert result["31180800"]["name"] == "Divine Bird Warrior (Frost)"
 
 
 class TestEventMapForEntity:

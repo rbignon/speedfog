@@ -215,8 +215,8 @@ public static class SpeedFogIds
     // --- FMG text ids (NpcName.fmg entry ids: a separate namespace from
     //     entity ids, event ids and param rows) ---
 
-    /// <summary>NpcName entries BossNameInjector adds for promoted mobs whose
-    /// display name has no vanilla NpcName entry (graph.json boss_names):
+    /// <summary>NpcName entries BossNameInjector adds for a relocated enemy
+    /// whose display name has no vanilla NpcName entry (graph.json boss_names):
     /// one id per distinct name, engus + frafr. Vanilla ids sit in the
     /// 9xxxxxxxx band and the Item Randomizer's editnames allocator (off in
     /// SpeedFog) starts at 907770000, so the 75589xxxx SpeedFog band is free

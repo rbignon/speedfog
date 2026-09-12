@@ -176,11 +176,12 @@ public class GraphData
     [JsonPropertyName("enemy_assignments")]
     public Dictionary<string, string> EnemyAssignments { get; set; } = new();
 
-    /// <summary>Healthbar names to patch for promoted mobs: arena entity id
-    /// (decimal string) to the display name and the map whose EMEVD shows
-    /// the arena's boss healthbar (graph.json v4.8, optional; empty when
-    /// every placed source carries its own vanilla NpcName). Consumed by
-    /// BossNameInjector.</summary>
+    /// <summary>Healthbar names of the relocated enemies, one entry per
+    /// enemy_assignments entry: arena entity id (decimal string) to the
+    /// display name and the map whose EMEVD shows the arena's boss healthbar
+    /// (graph.json v4.8, optional; empty when no boss was randomized).
+    /// BossNameInjector repoints only the arenas the enemy randomizer did
+    /// not name itself.</summary>
     [JsonPropertyName("boss_names")]
     public Dictionary<string, BossNameEntry> BossNames { get; set; } = new();
 

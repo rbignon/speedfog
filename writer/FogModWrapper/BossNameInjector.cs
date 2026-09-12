@@ -1,21 +1,30 @@
+using System.Text.RegularExpressions;
 using FogModWrapper.Models;
 using SoulsFormats;
 
 namespace FogModWrapper;
 
 /// <summary>
-/// Boss healthbar names for promoted mobs (graph.json v4.8 boss_names, see
-/// docs/boss-healthbar-names.md). The healthbar name comes from the nameId
-/// argument of DisplayBossHealthBar (2003[11]); the enemy randomizer only
-/// carries it along for sources with a vanilla NpcName (it copies their
-/// healthbar events), so a regular mob placed in a boss arena keeps the
-/// arena's vanilla name ("Rellana" over an Aging Untouchable). Per arena:
-/// the display name is resolved to a NpcName id (an exact vanilla engus
-/// match first, so "Crucible Knight" stays localized everywhere, else a
-/// SpeedFog id whose entry is written to engus + frafr, English text in
-/// both), then every 2003[11] of the arena entity in the arena map's EMEVD
-/// is repointed at it. Instructions whose nameId is an event parameter are
-/// left alone (none of the tagged arenas uses one).
+/// Boss healthbar names of the enemies the randomizer relocates (graph.json
+/// boss_names, see docs/boss-healthbar-names.md). The healthbar name comes
+/// from the nameId argument of DisplayBossHealthBar (2003[11]); the enemy
+/// randomizer rewrites it only for sources whose own healthbar events it
+/// copies into the arena, so a source without such events (a regular mob, a
+/// hostile NPC) leaves the arena's vanilla name in place ("Ancient Hero of
+/// Zamor" over a placed Hornsent). Per arena: the display name is resolved
+/// to a NpcName id (an exact vanilla engus match first, so "Crucible Knight"
+/// stays localized everywhere, else a SpeedFog id whose entry is written to
+/// engus + frafr, English text in both), then every 2003[11] of the arena
+/// entity is repointed at it, in every EMEVD of the mod dir that holds one
+/// (an arena's healthbar can be driven from a neighbouring tile or from a
+/// common event).
+///
+/// An instruction already displaying the placed enemy's name is left
+/// untouched, including when it uses another of the several vanilla ids
+/// carrying that text, so the pass is a no-op wherever the randomizer did
+/// the job and the invariant holds for the rest. Instructions whose nameId
+/// is an event parameter are left alone (none of the tagged arenas uses
+/// one).
 ///
 /// New entries go to the base NpcName.fmg of item_dlc02.msgbnd.dcx, the
 /// bundle the game resolves text from (it carries a full copy of the base
@@ -33,6 +42,12 @@ public static class BossNameInjector
     private const int EntityOffset = 4;
     private const int NameIdOffset = 12;
 
+    /// <summary>Trailing " (...)" of a boss_arena_tags disambiguation name
+    /// ("Hornsent (Leda Fight)"). Vanilla variant names of the same shape
+    /// ("Mad Pumpkin Head (Hammer)") are kept: the full text is looked up
+    /// first.</summary>
+    private static readonly Regex ParentheticalSuffix = new(@"\s*\([^()]*\)$", RegexOptions.Compiled);
+
     /// <summary>One arena's resolved healthbar name.</summary>
     public sealed record Resolution(uint ArenaId, string Name, string Map, int NameId, bool IsNew);
 
@@ -49,83 +64,70 @@ public static class BossNameInjector
             return;
         }
 
-        var resolved = ResolveNameIds(bossNames, LoadVanillaNpcNames(gameMsgDir));
+        var (idByText, textById) = LoadVanillaNpcNames(gameMsgDir);
+        var resolved = ResolveNameIds(bossNames, idByText);
 
-        var newEntries = resolved.Where(r => r.IsNew)
+        // One pass over every EMEVD of the mod dir: an arena's healthbar can
+        // be driven from its own map, from a neighbouring tile (a large-tile
+        // boss) or from a common event, and several files can hold a copy.
+        var held = new HashSet<uint>();
+        var patched = new HashSet<uint>();
+        var eventDir = Path.Combine(modDir, "event");
+        foreach (var emevdPath in Directory.GetFiles(eventDir, "*.emevd.dcx").OrderBy(f => f, StringComparer.Ordinal))
+        {
+            var mapId = Path.GetFileName(emevdPath).Replace(".emevd.dcx", "", StringComparison.OrdinalIgnoreCase);
+            var emevd = EMEVD.Read(emevdPath);
+            int total = 0;
+            foreach (var r in resolved)
+            {
+                var (rewritten, holds) = PatchEmevd(emevd, r.ArenaId, r.NameId, r.Name, textById);
+                if (!holds)
+                    continue;
+                held.Add(r.ArenaId);
+                if (rewritten == 0)
+                    continue;
+                log($"  {mapId}: arena {r.ArenaId} -> \"{r.Name}\" (NpcName {r.NameId}, {(r.IsNew ? "new" : "vanilla")}, {rewritten} instruction(s))");
+                patched.Add(r.ArenaId);
+                total += rewritten;
+            }
+            if (total > 0)
+                emevd.Write(emevdPath);
+        }
+
+        foreach (var r in resolved.Where(r => !patched.Contains(r.ArenaId)))
+        {
+            if (held.Contains(r.ArenaId))
+                log($"  arena {r.ArenaId} already names \"{r.Name}\"");
+            else
+                log($"  Warning: arena {r.ArenaId} (\"{r.Name}\") has no DisplayBossHealthBar in any EMEVD "
+                    + $"of the mod dir (declared map {r.Map}), healthbar name kept");
+        }
+
+        // FMG entries only for the names a patch actually used: an arena the
+        // randomizer already named, or one we could not reach, ships none.
+        var newEntries = resolved.Where(r => r.IsNew && patched.Contains(r.ArenaId))
             .GroupBy(r => r.NameId)
             .Select(g => (id: g.Key, text: g.First().Name))
             .OrderBy(e => e.id)
             .ToList();
         int languages = WriteNpcNameEntries(modDir, gameMsgDir, newEntries);
 
-        var eventDir = Path.Combine(modDir, "event");
-        var pending = resolved.ToDictionary(r => r.ArenaId);
-        var scanned = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var byMap in resolved.GroupBy(r => r.Map).OrderBy(g => g.Key, StringComparer.Ordinal))
-        {
-            var emevdPath = Path.Combine(eventDir, $"{byMap.Key}.emevd.dcx");
-            if (!File.Exists(emevdPath))
-            {
-                log($"  {byMap.Key}.emevd.dcx not in the mod dir, scanning the other EMEVDs for arena(s) "
-                    + string.Join("/", byMap.Select(r => r.ArenaId)));
-                continue;
-            }
-            scanned.Add(emevdPath);
-            PatchArenas(emevdPath, byMap.Key, byMap.ToList(), pending, log, viaScan: false);
-        }
-
-        // Arenas the declared map does not cover: one pass over the other
-        // EMEVDs of the mod dir (a large-tile boss whose events sit in a
-        // neighbouring tile), patching every file that holds them.
-        if (pending.Count > 0)
-        {
-            foreach (var emevdPath in Directory.GetFiles(eventDir, "*.emevd.dcx").OrderBy(f => f, StringComparer.Ordinal))
-            {
-                if (scanned.Contains(emevdPath))
-                    continue;
-                var mapId = Path.GetFileName(emevdPath).Replace(".emevd.dcx", "", StringComparison.OrdinalIgnoreCase);
-                PatchArenas(emevdPath, mapId, pending.Values.ToList(), pending, log, viaScan: true);
-            }
-            foreach (var r in pending.Values.OrderBy(r => r.ArenaId))
-            {
-                log($"  Warning: arena {r.ArenaId} (\"{r.Name}\") has no DisplayBossHealthBar in {r.Map}.emevd.dcx "
-                    + "nor in any other EMEVD of the mod dir, healthbar name kept");
-            }
-        }
-
-        log($"Boss names: {resolved.Count - pending.Count}/{resolved.Count} arena(s) patched, "
-            + $"{newEntries.Count} new NpcName entr{(newEntries.Count == 1 ? "y" : "ies")} in {languages} language(s)");
-    }
-
-    /// <summary>Patches the given arenas in one EMEVD, writing it back when
-    /// anything changed, and drops each patched arena from
-    /// <paramref name="pending"/>. In scan mode an arena stays pending only
-    /// while no file held it, so a boss whose healthbar shows from several
-    /// EMEVDs gets every copy repointed.</summary>
-    private static void PatchArenas(string emevdPath, string mapId, IReadOnlyList<Resolution> arenas,
-        Dictionary<uint, Resolution> pending, Action<string> log, bool viaScan)
-    {
-        var emevd = EMEVD.Read(emevdPath);
-        int total = 0;
-        foreach (var r in arenas)
-        {
-            int n = PatchEmevd(emevd, new Dictionary<uint, int> { [r.ArenaId] = r.NameId });
-            if (n == 0)
-                continue;
-            var how = viaScan ? $", found by scan, declared map {r.Map}" : "";
-            log($"  {mapId}: arena {r.ArenaId} -> \"{r.Name}\" (NpcName {r.NameId}, {(r.IsNew ? "new" : "vanilla")}, {n} instruction(s){how})");
-            pending.Remove(r.ArenaId);
-            total += n;
-        }
-        if (total > 0)
-            emevd.Write(emevdPath);
+        int alreadyCorrect = held.Count - patched.Count;
+        int unmatched = resolved.Count - held.Count;
+        log($"Boss names: {patched.Count} arena(s) patched, {alreadyCorrect} already correct, "
+            + $"{unmatched} unmatched, {newEntries.Count} new NpcName entr{(newEntries.Count == 1 ? "y" : "ies")} "
+            + $"in {languages} language(s)");
     }
 
     /// <summary>Resolves each arena's name to a NpcName id: the lowest vanilla
-    /// entry with exactly that English text when one exists, else a
-    /// SpeedFogIds.BossNameFmgIds id shared by every arena with the same
-    /// name, allocated in ascending arena id order (deterministic across
-    /// runs). Throws when the distinct new names exceed the range.</summary>
+    /// entry with exactly that English text when one exists, else the same
+    /// lookup without a trailing parenthetical (the boss_arena_tags
+    /// disambiguation suffix, "Hornsent (Leda Fight)"; a vanilla variant name
+    /// such as "Mad Pumpkin Head (Hammer)" matched on the first try and is
+    /// kept), else a SpeedFogIds.BossNameFmgIds id shared by every arena with
+    /// the same name, allocated in ascending arena id order (deterministic
+    /// across runs). The returned Name is the text that ends up displayed.
+    /// Throws when the distinct new names exceed the range.</summary>
     public static IReadOnlyList<Resolution> ResolveNameIds(
         IReadOnlyDictionary<string, BossNameEntry> bossNames,
         IReadOnlyDictionary<string, int> vanillaNameIds)
@@ -135,10 +137,17 @@ public static class BossNameInjector
         var result = new List<Resolution>();
         foreach (var (key, entry) in bossNames.Select(kv => (ParseArenaId(kv.Key), kv.Value)).OrderBy(kv => kv.Item1))
         {
-            var name = entry.Name.Trim();
-            if (vanillaNameIds.TryGetValue(name, out int vanillaId))
+            var full = entry.Name.Trim();
+            if (vanillaNameIds.TryGetValue(full, out int vanillaId))
             {
-                result.Add(new Resolution(key, name, entry.Map, vanillaId, IsNew: false));
+                result.Add(new Resolution(key, full, entry.Map, vanillaId, IsNew: false));
+                continue;
+            }
+            var stripped = ParentheticalSuffix.Replace(full, "").Trim();
+            var name = stripped.Length > 0 ? stripped : full;
+            if (name != full && vanillaNameIds.TryGetValue(name, out int strippedId))
+            {
+                result.Add(new Resolution(key, name, entry.Map, strippedId, IsNew: false));
                 continue;
             }
             if (!allocated.TryGetValue(name, out int id))
@@ -162,11 +171,17 @@ public static class BossNameInjector
             ? id
             : throw new InvalidOperationException($"graph.json boss_names: arena key \"{key}\" is not an entity id");
 
-    /// <summary>English NpcName text to lowest vanilla id, over every NpcName
-    /// FMG of the engus item bnds (base game + DLC).</summary>
-    public static Dictionary<string, int> LoadVanillaNpcNames(string gameMsgDir)
+    /// <summary>Both directions of the engus NpcName index, over every NpcName
+    /// FMG of the item bnds (base game + DLC): each text to its lowest id
+    /// (what a new healthbar should point at) and each id to its text (what
+    /// an existing healthbar displays). Several ids share a text in vanilla
+    /// ("Ancient Hero of Zamor" has three), so the second map cannot be
+    /// derived from the first.</summary>
+    public static (Dictionary<string, int> IdByText, Dictionary<int, string> TextById)
+        LoadVanillaNpcNames(string gameMsgDir)
     {
         var byText = new Dictionary<string, int>(StringComparer.Ordinal);
+        var byId = new Dictionary<int, string>();
         var engusDir = Path.Combine(gameMsgDir, "engus");
         foreach (var bndName in NpcNameBnds)
         {
@@ -188,20 +203,26 @@ public static class BossNameInjector
                     var text = entry.Text.Trim();
                     if (!byText.TryGetValue(text, out int existing) || entry.ID < existing)
                         byText[text] = entry.ID;
+                    byId[entry.ID] = text;
                 }
             }
         }
-        return byText;
+        return (byText, byId);
     }
 
     /// <summary>Repoints the nameId of every DisplayBossHealthBar (2003[11])
-    /// whose literal entity is a key of <paramref name="nameIdByArena"/>,
-    /// enabling and disabling calls alike. Instructions whose nameId is bound
-    /// to an event parameter are skipped (the literal bytes are dead).
-    /// Returns the number of instructions rewritten.</summary>
-    public static int PatchEmevd(EMEVD emevd, IReadOnlyDictionary<uint, int> nameIdByArena)
+    /// of <paramref name="arenaId"/>, enabling and disabling calls alike. An
+    /// instruction whose current nameId already displays
+    /// <paramref name="name"/> is left as it is, so a healthbar the
+    /// randomizer already named keeps its own (localized) id. Instructions
+    /// whose nameId is bound to an event parameter are skipped (the literal
+    /// bytes are dead). Returns the number of instructions rewritten and
+    /// whether this EMEVD holds the arena's healthbar at all.</summary>
+    public static (int Rewritten, bool Held) PatchEmevd(EMEVD emevd, uint arenaId, int nameId,
+        string name, IReadOnlyDictionary<int, string> textByNameId)
     {
         int n = 0;
+        bool held = false;
         foreach (var evt in emevd.Events)
         {
             for (int i = 0; i < evt.Instructions.Count; i++)
@@ -209,16 +230,20 @@ public static class BossNameInjector
                 var instr = evt.Instructions[i];
                 if (instr.Bank != HealthbarBank || instr.ID != HealthbarId || instr.ArgData.Length < NameIdOffset + 4)
                     continue;
-                uint entity = BitConverter.ToUInt32(instr.ArgData, EntityOffset);
-                if (!nameIdByArena.TryGetValue(entity, out int nameId))
+                if (BitConverter.ToUInt32(instr.ArgData, EntityOffset) != arenaId)
                     continue;
                 if (evt.Parameters.Any(p => p.InstructionIndex == i && p.TargetStartByte == NameIdOffset))
+                    continue;
+                held = true;
+                int current = BitConverter.ToInt32(instr.ArgData, NameIdOffset);
+                if (current == nameId
+                    || (textByNameId.TryGetValue(current, out var text) && string.Equals(text, name, StringComparison.Ordinal)))
                     continue;
                 BitConverter.GetBytes(nameId).CopyTo(instr.ArgData, NameIdOffset);
                 n++;
             }
         }
-        return n;
+        return (n, held);
     }
 
     /// <summary>Adds (or overwrites) the entries in the base NpcName.fmg of

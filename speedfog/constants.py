@@ -12,7 +12,7 @@ from __future__ import annotations
 # 4.6: optional class_loadout + torrent_skins (Tarnished showcase)
 # 4.7: class_loadout reshaped to weapons/shields/armor_sets (weapon always,
 #      shields once each on occupied left hands, armor per occupied slot)
-# 4.8: optional boss_names (healthbar names of promoted mobs, see
+# 4.8: optional boss_names (healthbar names of relocated enemies, see
 #      docs/boss-healthbar-names.md)
 # 4.9: optional helper_models (models of the placed bosses' helper clones per
 #      arena, see docs/item-randomizer.md "Helper enemy scaling")
