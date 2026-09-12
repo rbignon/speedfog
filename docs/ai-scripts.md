@@ -165,13 +165,16 @@ rather than skipped.
 
 Giving such a goal a life shorter than that window, to hand it over as
 soon as the hit has landed, does not work: tried on the untouchable's
-teleport wind-up, it stopped the warp that followed from happening at
+burst when it was still the teleport's wind-up, it stopped the warp that
+followed from happening at
 all (in game). The likely reason, inferred rather than established, is
 that the animation still owns the character when the next sub-goal
 activates, so a warp issued there is dropped. No vanilla script does it
-either. Until something distinguishes it from the other change made in
-the same pass, treat the cancel window as the earliest a queued
-follow-up can act.
+either. Treat the cancel window as the earliest a queued follow-up can
+act, and when a move must feel immediate, put the instant sub-goal
+first rather than trying to shorten the one before it: the untouchable's
+near teleport warps first and plays its burst at the arrival for exactly
+that reason.
 
 ## Movement goals
 
@@ -194,8 +197,11 @@ retreat (Rennala's 203100, 301010's retreats); relative to `TARGET_ENE_0`
 with `AI_DIR_TYPE_B`/`BL`/`BR` and 0-2 m it lands behind the player
 (vanilla's untouchable); the `To*` directions place the character around
 the player (301010's blinks); a plain `F` with the enemy target left the
-boss where it stood. The goal plays no animation: vanilla wraps it in an
-animation whose marker SpEffect triggers the warp from `Goal.Interrupt`.
+boss where it stood. The goal plays no animation. Vanilla either wraps it
+in an animation whose marker SpEffect triggers the warp from
+`Goal.Interrupt`, or queues it bare as an act's first sub-goal with the
+attack after it (496000, 523000, 531010, 531020's Act10, 532000), never
+with a wait between the two.
 Guard state 9910 is the guard EzState the helpers pass with a
 `guardProbability` draw; -1 disables it.
 

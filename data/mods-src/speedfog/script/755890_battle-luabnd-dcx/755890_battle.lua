@@ -4,12 +4,13 @@
 -- clone's battleGoalID). SpeedFog additions: the lantern swing (3001) as a
 -- regular melee act (Act11), the dormant lantern ray (3004) re-enabled as a
 -- beam plus a flame nova (Act04, offered at every range), a two-shape
--- teleport (Act02: near, the burst, a warp away and the beam; far,
--- vanilla's 3000, the warp behind the player and the burst) offered at
--- every range with its own cooldown, the near teleport in place of the
--- post-grab walk retreats when its timer allows (Act05/Act06, the beam
--- after the walk otherwise) and two reactions in Goal.Interrupt (hit,
--- item use). Ambient untouchables keep the vanilla bytecode script.
+-- teleport (Act02: near, a warp away, the burst at the arrival and the
+-- beam; far, vanilla's 3000, the warp behind the player and the burst)
+-- offered at every range with its own cooldown, the near teleport in
+-- place of the post-grab walk retreats when its timer allows
+-- (Act05/Act06, the beam after the walk otherwise) and two reactions
+-- in Goal.Interrupt (hit, item use). Ambient untouchables keep the
+-- vanilla bytecode script.
 -- The engine keys goal tables by numeric id and starts the battle goal with
 -- the raw NpcThinkParam.battleGoalID; the GOAL_<name> globals of vanilla
 -- scripts come from the shared aiCommon global-name list, which does not
@@ -40,31 +41,30 @@ local MOVE_CLOSE = 15                   -- < 3 m: Act42 (sidestep)
 local TELEPORT_BEHIND = 50              -- player behind, < 8 m: Act02 when ready (0-90; Act01 keeps 10, Act43 takes the rest)
 local GRAB_COOLDOWN = 6                 -- seconds between two grabs (3002); vanilla 12
 local GRAB_REACH = 12                   -- vanilla Act03's successDist: the grab dashes this far, and cannot launch past it
-local SWING_COOLDOWN = 4                -- seconds before Act11, the far teleport's post-warp burst or the plain-burst hit reaction may play 3001 again; every queued 3001 re-arms it, the near teleport's wind-up ignores it
+local SWING_COOLDOWN = 4                -- seconds before Act11, the far teleport's post-warp burst or the plain-burst hit reaction may play 3001 again; every queued 3001 re-arms it at queue time (the near teleport's arrival burst plays about an arrival later, shortening its own gap), and that arrival burst ignores it
 local BEAM_COOLDOWN = 4                 -- seconds between two 3004 (beam + flame nova), any source
 local TELEPORT_COOLDOWN = 6             -- seconds after a near teleport before any teleport
 local TELEPORT_FAR_COOLDOWN = 11.5      -- seconds after a far teleport before any teleport (its own sequence takes about 9 s)
 local TELEPORT_RETRY = 2                -- seconds before another attempt when the near teleport found no room
-local TELEPORT_FAR_RANGE = 5            -- from this distance (centre to centre; melee reach with a long weapon is 3-4 m) the teleport is vanilla's (3000, the warp behind the player, the burst); closer, the burst, a warp away and the beam
+local TELEPORT_FAR_RANGE = 5            -- from this distance (centre to centre; melee reach with a long weapon is 3-4 m) the teleport is vanilla's (3000, the warp behind the player, the burst); closer, a warp away, the burst at the arrival and the beam
 local TELEPORT_AWAY_DIST = 8            -- near variant: warp this far from the boss's own position, away from the player
 local TELEPORT_AWAY_FALLBACK = 5        -- near variant: second scan at this distance when nothing clears TELEPORT_AWAY_DIST (small arenas)
--- Animation spans (c5280 TAE event spans) and the beat chosen against
--- them; the holds derive from both.
+-- Animation spans (c5280 TAE event spans); the holds derive from them.
 local BURST_LENGTH = 1.8
 -- 3001 lands its hit (judge 115) between 0.03 s and 0.27 s but only opens
--- its cancel window at 1.00 s, and the warp waits for it: cutting the
--- wind-up's goal life short to warp on the hit instead left the boss not
--- teleporting at all (in game), the animation still owning the character
--- when the warp was issued. The second before the vanish is therefore
--- structural as long as the burst is the wind-up.
-local BURST_CANCEL = 1.0                -- 3001's cancel window, where the warp fires
-local ARRIVAL_PAUSE = 1.0               -- seconds between the warp and the beam that follows it
+-- its cancel window at 1.00 s, and a queued follow-up waits for that
+-- window: cutting the goal life short to hand over on the hit instead
+-- left the boss not teleporting at all (in game). That second is why the
+-- near teleport warps first and bursts at the arrival rather than using
+-- the burst as a wind-up: the vanish is immediate, and the second the
+-- burst takes to release the character is the beat before the beam.
+local BURST_CANCEL = 1.0                -- 3001's cancel window, where a queued follow-up starts
 local ARRIVAL_MAX = 2.2                 -- the longest arrival animation (5012/5013)
 local MARKER_3000 = 4.77                -- 3000's warp marker (SpEffect 20011452)
 local GRAB_CHAIN = 6                    -- 3002 (4.2 s) then 3003 (1.8 s)
 -- Reactions (Goal.Interrupt), percentages, 0 disables one. A reaction
 -- spends an attack the table could offer anyway (the near teleport with
--- its wind-up burst while the teleport timer allows, else the burst while
+-- its arrival burst while the teleport timer allows, else the burst while
 -- the swing timer allows, the beam while its counter allows), so it moves
 -- an attack earlier without adding any: hits landed while both the
 -- teleport and the swing cool stay free.
@@ -79,11 +79,9 @@ local REACT_RANGE = 5
 -- No reaction while a teleport or a grab sequence is in flight (a
 -- reaction's ClearSubGoal would drop the follow-up): the hold timer, set
 -- with each queued teleport, and the 3002 counter for the grab. The
--- margins round the holds to the sequences they must cover: 4.5 s near
--- (wind-up, warp, beat, beam), 3.5 s when the beam is cooling and neither
--- the beat nor the beam is queued, 9 s far (validated in game).
-local TELEPORT_HOLD = BURST_CANCEL + ARRIVAL_MAX + ARRIVAL_PAUSE + 0.3  -- near, with the beam: 4.5 s
-local TELEPORT_HOLD_NO_BEAM = BURST_CANCEL + ARRIVAL_MAX + 0.3          -- near, beam cooling: 3.5 s
+-- margins round the holds to the sequences they must cover: 3.5 s near
+-- (arrival, the burst's hand-over, the beam), 9 s far (validated in game).
+local TELEPORT_HOLD = ARRIVAL_MAX + BURST_CANCEL + 0.3                     -- near: 3.5 s
 local TELEPORT_FAR_HOLD = MARKER_3000 + ARRIVAL_MAX + BURST_LENGTH + 0.23  -- far: 9 s
 local REACT_HOLD = GRAB_CHAIN + 1                                          -- seconds after a grab (3002) starts
 -- AI timer slots (vanilla 528000 uses none; the shared library uses 12-15).
@@ -95,7 +93,7 @@ local TIMER_HOLD = 9
 -- Lua 5.0 allows 32 per function (tests/test_mods_src_lua_scripts.py
 -- counts them).
 local ANIM_TELEPORT_OUT = 3000          -- the 5 s lantern fade of the far teleport, warp marker at MARKER_3000
-local ANIM_LANTERN_BURST = 3001         -- the burst around the lantern: swing, teleport wind-up, hit reaction
+local ANIM_LANTERN_BURST = 3001         -- the burst around the lantern: swing, teleport arrival, hit reaction
 local ANIM_GRAB = 3002                  -- the grab attempt
 local ANIM_THROW = 3003                 -- the throw that follows a connected grab
 local ANIM_BEAM = 3004                  -- the raised lantern whose bullet events fire the beam
@@ -114,7 +112,7 @@ local GUARD_EZSTATE = 9910              -- the guard state the vanilla acts pass
 -- idiom), so 3001 is never registered and no engine interval can hold the
 -- boss on a burst. A cooling registered attack (grab, beam) is never
 -- queued; the burst is queued while its timer runs in one case only, as
--- the near teleport's wind-up.
+-- the near teleport's arrival burst.
 function Houzuki755890_SwingReady(ai)
     return ai:GetTimer(TIMER_SWING) <= 0
 end
@@ -221,12 +219,16 @@ function Houzuki755890_AddBeamIfReady(ai, goal)
 end
 
 -- The near teleport (Act02 under TELEPORT_FAR_RANGE, the hit reaction):
--- the burst as the wind-up, queued whatever the swing timer says (its
--- hit lands from the first frame, the warp fires when the animation
--- releases the character at its cancel window); then the warp away from
--- the player; then, when the beam is ready, a Wait of ARRIVAL_PAUSE and
--- the beam. The boss bursts, retreats, holds a beat and fires, in the player's
--- view since lock-on cannot be broken from the AI. Returns whether it was
+-- the warp away from the player first, so the vanish is immediate; then
+-- the burst at the arrival, queued whatever the swing timer says (it
+-- re-arms it), which both marks the landing and fills the second it takes
+-- to release the character; then the beam when ready. Warp then 3001 is
+-- vanilla 528000's own pair (the far teleport's second half, same goal
+-- life 15), re-anchored from TARGET_EVENT to the boss. The burst lands
+-- TELEPORT_AWAY_DIST from the player, past its 4 m radius, so it is a
+-- telegraph and not damage; the beam is the payload. The boss blinks,
+-- lands in an explosion and fires, in the player's view since lock-on
+-- cannot be broken from the AI. Returns whether it was
 -- queued. Without room nothing is queued or cleared (the burst is not
 -- spent on a warp that cannot happen; the sub-goals are cleared only once
 -- the retreat is certain, vanilla Act05/Act06's idiom) and only the
@@ -243,16 +245,11 @@ function Houzuki755890_AddTeleportAway(ai, goal)
         return false
     end
     ai:SetTimer(TIMER_TELEPORT, TELEPORT_COOLDOWN)
+    ai:SetTimer(TIMER_HOLD, TELEPORT_HOLD)
     goal:ClearSubGoal()
-    Houzuki755890_AddSwing(ai, goal, true)
     goal:AddSubGoal(GOAL_COMMON_ToTargetWarp, 15, TARGET_SELF, direction, distance, TARGET_ENE_0)
-    if Houzuki755890_BeamReady(ai, goal) then
-        goal:AddSubGoal(GOAL_COMMON_Wait, ARRIVAL_PAUSE, TARGET_ENE_0)
-        Houzuki755890_AddBeam(ai, goal)
-        ai:SetTimer(TIMER_HOLD, TELEPORT_HOLD)
-    else
-        ai:SetTimer(TIMER_HOLD, TELEPORT_HOLD_NO_BEAM)
-    end
+    Houzuki755890_AddSwing(ai, goal, true)
+    Houzuki755890_AddBeamIfReady(ai, goal)
     return true
 end
 
@@ -333,7 +330,7 @@ Goal.Activate = function (self, ai, goal)
             probabilities[43] = 0
         elseif teleportReady then
             -- SpeedFog: vanilla only turns here (Act43); the near teleport
-            -- (burst, retreat forward since the player is in the back,
+            -- (warp forward since the player is in the back, burst there,
             -- beam) answers a player in the back better than a slow turn.
             probabilities[1] = 10
             probabilities[2] = TELEPORT_BEHIND
@@ -485,7 +482,7 @@ function Houzuki755890_Act01(ai, goal, paramTbl)
 end
 
 function Houzuki755890_Act02(ai, goal, paramTbl)
-    -- Teleport: near, SpeedFog's lantern burst, warp away and beam; far,
+    -- Teleport: near, a warp away then SpeedFog's lantern burst and beam; far,
     -- vanilla's 3000, warp behind the player and burst.
     if ai:GetDist(TARGET_ENE_0) >= TELEPORT_FAR_RANGE then
         Houzuki755890_AddTeleportFar(ai, goal)
@@ -529,7 +526,7 @@ end
 
 -- Vanilla: after a grab, SPEFFECT_RETREAT_10M sends the boss back to
 -- 10 m (queue cleared first). SpeedFog: the near teleport instead when
--- its timer allows and there is room (burst, warp away, beam), the
+-- its timer allows and there is room (warp away, burst, beam), the
 -- vanilla walk plus the beam otherwise.
 function Houzuki755890_Act05(ai, goal, paramTbl)
     if Houzuki755890_TeleportReady(ai) and Houzuki755890_AddTeleportAway(ai, goal) then
@@ -877,7 +874,7 @@ Goal.Interrupt = function (self, ai, goal)
     -- return true). Each one spends an attack the table could offer anyway.
     if ai:IsInterupt(INTERUPT_Damaged) then
         if ai:IsInsideTargetCustom(TARGET_SELF, TARGET_ENE_0, AI_DIR_TYPE_F, 120, 180, REACT_HIT_RANGE) and not Houzuki755890_SequenceInFlight(ai) and ai:GetRandam_Int(1, 100) <= REACT_HIT then
-            -- Burst, retreat and beam when the teleport is ready (and there
+            -- Warp away, burst and beam when the teleport is ready (and there
             -- is room), a plain burst otherwise, nothing when neither is
             -- available: the running act is only cleared for a real answer.
             if Houzuki755890_TeleportReady(ai) and Houzuki755890_AddTeleportAway(ai, goal) then

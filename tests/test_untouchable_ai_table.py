@@ -50,7 +50,7 @@ SWING_ANIM, GRAB_ANIM, BEAM_ANIM = 3001, 3002, 3004
 GATE_SPEFFECT = 20011450  # vanilla's one-shot teleport gate, ignored by the boss
 WARP_MARKER_SPEFFECT = 20011452  # vanilla's post-3000 warp marker
 HOLD_TIMER, TELEPORT_TIMER, SWING_TIMER = 9, 10, 11  # TIMER_* slots in the script
-BURST = ("ComboTunable_SuccessAngle180", SWING_ANIM)  # Jori's wind-up wrapper
+BURST = ("ComboTunable_SuccessAngle180", SWING_ANIM)  # the post-warp wrapper
 MELEE_SWING = ("ComboAttackTunableSpin", SWING_ANIM)  # Act11
 GRAB_ATTACK = ("ComboAttackTunableSpin", GRAB_ANIM)
 BEAM_ATTACK = ("ComboAttackTunableSpin", BEAM_ANIM)
@@ -58,7 +58,6 @@ FAR_WINDUP = ("ComboTunable_SuccessAngle180", 3000)  # vanilla Act02's 5 s telep
 RETREAT = ("ToTargetWarp", "self")  # the near warp, relative to the boss itself
 WARP_BEHIND = ("ToTargetWarp", "enemy")  # the far warp, around the player
 BURST_ARGS = [8, SWING_ANIM, "enemy", 999, 0, 180, 180, 180]  # fires whatever the side
-WAIT = ("Wait", "enemy")  # the beat between the warp and the beam
 
 
 def retreat_args(direction: str = "B", distance: float = 8) -> list:
@@ -333,31 +332,30 @@ def test_far_bracket_teleport_or_beam():
     assert set(cooling) == {APPROACH, BEAM} and cooling[APPROACH] + cooling[BEAM] == 100
 
 
-def test_near_teleport_is_burst_retreat_wait_beam_and_starts_the_three_timers():
+def test_near_teleport_is_retreat_burst_beam_and_starts_the_three_timers():
+    # The warp goes first so the vanish is immediate; the burst then plays at
+    # the arrival, and the second it takes to release the character is the
+    # beat before the beam (no Wait needed for it).
     goal, _, state = act("Act02", dist=2)
-    assert queued(goal) == [BURST, RETREAT, WAIT, BEAM_ATTACK]
-    # The wind-up keeps vanilla's goal life: the warp waits for the burst to
-    # release the character, and the beat the player reads sits after it.
-    assert args_of(goal, 0) == BURST_ARGS
-    assert args_of(goal, 1) == retreat_args()
-    assert args_of(goal, 2)[0] == 1.0
+    assert queued(goal) == [RETREAT, BURST, BEAM_ATTACK]
+    assert args_of(goal, 0) == retreat_args()
+    assert args_of(goal, 1) == BURST_ARGS
     assert state.timers[TELEPORT_TIMER] == 6
-    # The hold covers wind-up, arrival, beat and beam.
-    assert state.timers[HOLD_TIMER] == pytest.approx(4.5)
+    # The hold covers arrival, the burst's hand-over and the beam.
+    assert state.timers[HOLD_TIMER] == pytest.approx(3.5)
     assert state.timers[SWING_TIMER] > 0
 
 
-def test_near_teleport_skips_the_beam_and_its_beat_while_it_cools():
-    # No beam to telegraph, no reason to stand still after the warp, and the
-    # hold covers the shorter sequence rather than a second of nothing.
+def test_near_teleport_skips_the_beam_while_it_cools():
     goal, _, state = act("Act02", dist=2, passed={BEAM_ANIM: 1})
-    assert queued(goal) == [BURST, RETREAT]
+    assert queued(goal) == [RETREAT, BURST]
+    # The burst still ends the sequence, so the hold is the same.
     assert state.timers[HOLD_TIMER] == pytest.approx(3.5)
 
 
 def test_near_teleport_bursts_even_while_the_swing_timer_runs():
     goal, _, _ = act("Act02", dist=2, timers={SWING_TIMER: 3})
-    assert queued(goal)[0] == BURST
+    assert BURST in queued(goal)
 
 
 def test_near_teleport_without_room_queues_nothing_and_retries_soon():
@@ -395,32 +393,32 @@ def test_teleport_variant_switches_at_the_far_range():
     goal, _, _ = act("Act02", dist=5)
     assert queued(goal) == [FAR_WINDUP]
     goal, _, _ = act("Act02", dist=4.9)
-    assert queued(goal)[0] == BURST
+    assert queued(goal)[0] == RETREAT
 
 
 def test_retreat_scan_is_behind_the_boss_itself():
     # Every direction free: straight back, 8 m, relative to the boss, and
     # the room is scanned from the boss, never from the player.
     goal, ai, _ = act("Act02", dist=2)
-    assert args_of(goal, 1) == retreat_args()
+    assert args_of(goal, 0) == retreat_args()
     assert set(ai.scanned.values()) == {"self"}
     # Only behind-left free, then only behind-right free: the branch order.
     goal, _, _ = act("Act02", dist=2, mesh={"BL": 10})
-    assert args_of(goal, 1) == retreat_args("BL")
+    assert args_of(goal, 0) == retreat_args("BL")
     goal, _, _ = act("Act02", dist=2, mesh={"BR": 10})
-    assert args_of(goal, 1) == retreat_args("BR")
+    assert args_of(goal, 0) == retreat_args("BR")
     # Room only in front or to the sides is no retreat.
     goal, _, _ = act("Act02", dist=2, mesh={"F": 10, "L": 10, "R": 10})
     assert queued(goal) == []
     # The player in the boss's back: the retreat goes forward, away from them.
     goal, _, _ = act("Act02", dist=2, behind=True)
-    assert args_of(goal, 1) == retreat_args("F")
+    assert args_of(goal, 0) == retreat_args("F")
     goal, _, _ = act("Act02", dist=2, behind=True, mesh={"FR": 10, "B": 10})
-    assert args_of(goal, 1) == retreat_args("FR")
+    assert args_of(goal, 0) == retreat_args("FR")
     # 7 m of room is not enough for an 8 m retreat: the 5 m fallback (small arenas).
     goal, _, _ = act("Act02", dist=2, mesh=7)
-    assert queued(goal) == [BURST, RETREAT, WAIT, BEAM_ATTACK]
-    assert args_of(goal, 1) == retreat_args("B", 5)
+    assert queued(goal) == [RETREAT, BURST, BEAM_ATTACK]
+    assert args_of(goal, 0) == retreat_args("B", 5)
     goal, _, _ = act("Act02", dist=2, mesh=4)
     assert queued(goal) == []
 
@@ -460,10 +458,11 @@ def test_far_teleport_second_half_warps_behind_the_player_with_vanillas_scan():
 
 @pytest.mark.parametrize("name", ["Act05", "Act06"])
 def test_retreat_acts_are_the_near_teleport_when_it_is_ready(name):
-    # After a grab the boss retreats: the burst, the warp away and the beam
-    # when the teleport timer allows, the vanilla walk otherwise.
+    # After a grab the boss retreats: the warp away, the burst at the
+    # arrival and the beam when the teleport timer allows, the vanilla
+    # walk otherwise.
     goal, _, state = act(name, dist=2)
-    assert queued(goal) == [BURST, RETREAT, WAIT, BEAM_ATTACK]
+    assert queued(goal) == [RETREAT, BURST, BEAM_ATTACK]
     assert state.timers[TELEPORT_TIMER] > 0 and state.timers[HOLD_TIMER] > 0
     goal, _, _ = act(name, dist=2, timers=TELEPORT_COOLING)
     assert [s.kind for s in goal.subgoals.values()] == [
@@ -494,7 +493,7 @@ def test_close_bracket_offers_the_beam_next_to_the_grab():
 def test_hit_reaction_prefers_the_retreat_then_the_burst():
     hit = {"interrupt": "Damaged", "dist": 1.5, "random": 1}
     fired, goal, _ = react(**hit)
-    assert fired and queued(goal) == [BURST, RETREAT, WAIT, BEAM_ATTACK]
+    assert fired and queued(goal) == [RETREAT, BURST, BEAM_ATTACK]
     fired, goal, _ = react(**hit, timers=TELEPORT_COOLING)
     assert fired and queued(goal) == [BURST]
     # No room to retreat: the burst alone.
