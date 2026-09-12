@@ -215,11 +215,14 @@ Engine-native. As used by the boss script and the aicommon helpers:
 `ai:IsInterupt(kind)` which one and answers with the vanilla pattern:
 `goal:ClearSubGoal()`, queue the answer, `return true`. Returning false
 leaves the running sub-goals alone. Kinds the boss handles:
-`INTERUPT_Damaged` (2, took damage), `INTERUPT_Shoot` (10, the target
-starts a cast or a shot), `INTERUPT_UseItem` (12),
-`INTERUPT_ActivateSpecialEffect` (43, a watched SpEffect was applied);
-`INTERUPT_FindAttack` (1, the target starts an attack) feeds the aicommon
-step and guard helpers (`FindAttack_Step`, `FindAttack_Guard`).
+`INTERUPT_Damaged` (2, took damage), `INTERUPT_UseItem` (12) and
+`INTERUPT_ActivateSpecialEffect` (43, a watched SpEffect was applied).
+Two more are raised and deliberately left unhandled: `INTERUPT_Shoot`
+(10, the target starts a cast or a shot), whose omission is a design
+decision explained in `docs/untouchable-boss.md`, "Interrupts", and
+`INTERUPT_FindAttack` (1, the target starts an attack), which feeds the
+aicommon step and guard helpers (`FindAttack_Step`, `FindAttack_Guard`)
+the boss does not use.
 
 Watches are declared in `Goal.Activate`:
 `ai:AddObserveSpecialEffectAttribute(TARGET_SELF, id)` raises

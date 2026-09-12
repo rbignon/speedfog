@@ -8,9 +8,8 @@
 -- vanilla's 3000, the warp behind the player and the burst) offered at
 -- every range with its own cooldown, the near teleport in place of the
 -- post-grab walk retreats when its timer allows (Act05/Act06, the beam
--- after the walk otherwise) and three reactions in Goal.Interrupt (hit,
--- ranged attack, item use). Ambient untouchables keep the vanilla
--- bytecode script.
+-- after the walk otherwise) and two reactions in Goal.Interrupt (hit,
+-- item use). Ambient untouchables keep the vanilla bytecode script.
 -- The engine keys goal tables by numeric id and starts the battle goal with
 -- the raw NpcThinkParam.battleGoalID; the GOAL_<name> globals of vanilla
 -- scripts come from the shared aiCommon global-name list, which does not
@@ -62,9 +61,12 @@ local GRAB_CHAIN = 6                    -- 3002 (4.2 s) then 3003 (1.8 s)
 -- teleport and the swing cool stay free.
 local REACT_HIT = 25                    -- hit by the player in front within REACT_HIT_RANGE: the near teleport if ready, else the burst
 local REACT_HIT_RANGE = 2
-local REACT_SHOOT = 50                  -- player casts or shoots from >= REACT_RANGE: beam
 local REACT_HEAL = 80                   -- player uses an item from >= REACT_RANGE: beam
 local REACT_RANGE = 5
+-- INTERUPT_Shoot (a cast or a shot starting) is deliberately not handled:
+-- answering the input before its consequence reads as unfair. A flask is
+-- the exception, being a commitment the player chose to make, and a hit
+-- is a consequence, not an input.
 -- No reaction while a teleport or a grab sequence is in flight (a
 -- reaction's ClearSubGoal would drop the follow-up): the hold timer, set
 -- with each queued teleport, and the 3002 counter for the grab. The
@@ -245,10 +247,10 @@ function Houzuki755890_AddTeleportFar(ai, goal)
     goal:AddSubGoal(GOAL_COMMON_ComboTunable_SuccessAngle180, 10, ANIM_TELEPORT_OUT, TARGET_ENE_0, successDist, 0, 0, 0, 0)
 end
 
--- The beam as a ranged reaction (a cast or a flask from REACT_RANGE)
--- when nothing is in flight: the draw, then the beam if it is ready.
-function Houzuki755890_ReactBeam(ai, goal, chance)
-    if ai:GetDist(TARGET_ENE_0) >= REACT_RANGE and not Houzuki755890_SequenceInFlight(ai) and ai:GetRandam_Int(1, 100) <= chance and Houzuki755890_BeamReady(ai, goal) then
+-- The beam as the answer to a flask drunk from REACT_RANGE when nothing
+-- is in flight: the draw, then the beam if it is ready.
+function Houzuki755890_ReactBeam(ai, goal)
+    if ai:GetDist(TARGET_ENE_0) >= REACT_RANGE and not Houzuki755890_SequenceInFlight(ai) and ai:GetRandam_Int(1, 100) <= REACT_HEAL and Houzuki755890_BeamReady(ai, goal) then
         goal:ClearSubGoal()
         Houzuki755890_AddBeam(ai, goal)
         return true
@@ -851,13 +853,8 @@ Goal.Interrupt = function (self, ai, goal)
         end
         return false
     end
-    if ai:IsInterupt(INTERUPT_Shoot) then
-        -- A cast comes from REACT_RANGE, where the teleport would be the
-        -- 5 s far one, no answer to a cast: the beam.
-        return Houzuki755890_ReactBeam(ai, goal, REACT_SHOOT)
-    end
     if ai:IsInterupt(INTERUPT_UseItem) then
-        return Houzuki755890_ReactBeam(ai, goal, REACT_HEAL)
+        return Houzuki755890_ReactBeam(ai, goal)
     end
     return false
 end

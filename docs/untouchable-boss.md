@@ -31,8 +31,7 @@ grabs, and adds what a boss needs:
 - **A moveset vanilla AI never uses:** a lantern burst at melee range, a
   frenzy beam at range, an offensive teleport in two shapes (a burst,
   a retreat and a beam at melee range; the vanilla fade and a warp
-  behind the player from range), and reactions to hits, casts and
-  flasks.
+  behind the player from range), and reactions to hits and flasks.
 - 2000 HP at the arena's vanilla tier (see "Scaling and tuning knobs")
   and 20000 runes.
 
@@ -556,10 +555,18 @@ Goal.Interrupt, first matching case wins
    b. else swing timer at 0 → ClearSubGoal + immediate burst → true
    c. else false
    A hit from the back never triggers anything.
-3. Shoot (the player starts a cast or a shot): dist >= REACT_RANGE (5 m) AND nothing in flight
-   AND draw <= REACT_SHOOT (50) AND beam ready → ClearSubGoal + beam → true
-4. UseItem: the same with REACT_HEAL (80)
+3. UseItem: dist >= REACT_RANGE (5 m) AND nothing in flight AND draw <= REACT_HEAL (80)
+   AND beam ready → ClearSubGoal + beam → true
+Shoot (a cast or a shot starting) is deliberately not handled, and falls through to false.
 ```
+
+That omission is the design's one refusal: answering the player's input
+before its consequence reads as unfair. The two handled reactions are not
+inputs in that sense. A hit is a consequence the player has already
+committed to, and a flask is a commitment of its own that costs them
+their guard, which vanilla bosses punish too. Re-adding the cast reaction
+is one branch calling `Houzuki755890_ReactBeam` with a draw knob of its
+own, but it is a design decision rather than a tuning value.
 
 ### Tests
 
@@ -596,7 +603,7 @@ Knobs, never edited in the shared vanilla `528000_battle`:
   `TELEPORT_FAR_RANGE`,
   `TELEPORT_AWAY_DIST`, `TELEPORT_AWAY_FALLBACK`, the animation spans the
   holds derive from (`BURST_CANCEL`, `BURST_LENGTH`, `ARRIVAL_MAX`,
-  `MARKER_3000`, `GRAB_CHAIN`), and the reactions (`REACT_*`).
+  `MARKER_3000`, `GRAB_CHAIN`), and the two reactions (`REACT_HIT`, `REACT_HEAL` and their ranges).
 
 ## Verifying in game
 
@@ -647,9 +654,9 @@ Generate a seed with the allowlist above, then in the arena:
    drift cannot produce it: it skips the whole moveset, and the boss then
    keeps vanilla AI and never casts 3004 at all.
 6. **Reactions**: from 5 m or more, drinking a flask draws a beam most of
-   the time and casting draws it about half the time when it is ready;
-   within 5 m neither fires. At melee range, about one hit in four draws
-   the near teleport when it is ready, or a burst.
+   the time when it is ready, and within 5 m it does not. Casting or
+   shooting never draws anything, at any distance. At melee range, about
+   one hit in four draws the near teleport when it is ready, or a burst.
 7. **Ambient regression**: an ambient untouchable still only teleports
    (once per engagement) and grabs, builds madness with its lantern, no
    burst at range, no beam, no script error.

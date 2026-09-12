@@ -281,6 +281,8 @@ def test_no_counter_is_read_before_its_registration():
     g, ai, goal, state = activate({"dist": 8, "speffects": [WARP_MARKER_SPEFFECT]})
     for dist in (8, 1.5):
         state.dist = dist
+        # "Shoot" is included precisely because it is ignored: the branch
+        # that answered it is gone, and no counter may be read on the way out.
         for interrupt in ("ActivateSpecialEffect", "Damaged", "Shoot", "UseItem"):
             state.interrupt = interrupt
             g.GOALS[BATTLE_GOAL].Interrupt(None, ai, goal)
@@ -500,18 +502,30 @@ def test_hit_reaction_prefers_the_retreat_then_the_burst():
 
 def test_no_reaction_while_a_teleport_or_a_grab_is_in_flight():
     hit = {"interrupt": "Damaged", "dist": 1.5, "random": 1}
+    flask = {"interrupt": "UseItem", "dist": 8, "random": 1}
     assert not react(**hit, timers=TELEPORT_HOLDING)[0]
-    assert not react(interrupt="Shoot", dist=8, random=1, timers=TELEPORT_HOLDING)[0]
-    assert not react(interrupt="UseItem", dist=8, random=1, passed={GRAB_ANIM: 2})[0]
+    assert not react(**flask, timers=TELEPORT_HOLDING)[0]
+    assert not react(**flask, passed={GRAB_ANIM: 2})[0]
+    # Both fire once nothing is in flight.
+    assert react(**flask)[0]
     # Past the hold the reactions are back even though the teleport timer still runs.
     assert react(**hit, timers=TELEPORT_COOLING)[0]
 
 
-def test_ranged_reactions_draw_the_beam_only():
-    fired, goal, _ = react(interrupt="Shoot", dist=8, random=1)
-    assert fired and queued(goal) == [BEAM_ATTACK]
-    assert not react(interrupt="Shoot", dist=8, random=1, passed={BEAM_ANIM: 1})[0]
-    assert not react(interrupt="Shoot", dist=3, random=1)[0]
+def test_flask_reaction_draws_the_beam():
     fired, goal, _ = react(interrupt="UseItem", dist=8, random=1)
     assert fired and queued(goal) == [BEAM_ATTACK]
+    assert not react(interrupt="UseItem", dist=8, random=1, passed={BEAM_ANIM: 1})[0]
     assert not react(interrupt="UseItem", dist=3, random=1)[0]
+    # The draw is REACT_HEAL (80), not the hit reaction's 25.
+    assert react(interrupt="UseItem", dist=8, random=50)[0]
+    assert not react(interrupt="UseItem", dist=8, random=100)[0]
+
+
+def test_the_boss_never_reads_an_attack_input():
+    # A cast or a shot starting is the player's input, not a consequence:
+    # answering it reads as unfair, so the boss ignores the interrupt at
+    # every distance, and leaves the running act alone.
+    for dist in (2, 8, 12):
+        fired, goal, _ = react(interrupt="Shoot", dist=dist, random=1)
+        assert not fired and goal.cleared == 0
