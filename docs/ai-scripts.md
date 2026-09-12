@@ -173,8 +173,10 @@ activates, so a warp issued there is dropped. No vanilla script does it
 either. Treat the cancel window as the earliest a queued follow-up can
 act, and when a move must feel immediate, put the instant sub-goal
 first rather than trying to shorten the one before it: the untouchable's
-near teleport warps first and plays its burst at the arrival for exactly
-that reason.
+near teleport warps first for exactly that reason. Note the other half of
+the lesson, learned the same way: an attack queued after a warp is just as
+detached, because the arrival animation holds the character first (0.87
+to 1.40 s on the untouchable's 5010 to 5013).
 
 ## Movement goals
 

@@ -29,9 +29,9 @@ grabs, and adds what a boss needs:
   the vanilla damage (four times the pre-parry number) and flinches the
   boss like any untouchable whose wall is gone.
 - **A moveset vanilla AI never uses:** a lantern burst at melee range, a
-  frenzy beam at range, an offensive teleport in two shapes (a retreat,
-  a burst on landing and a beam at melee range; the vanilla fade and a warp
-  behind the player from range), and reactions to hits and flasks.
+  frenzy beam at range, an offensive teleport in two shapes (a blink
+  away and a beam at melee range; the vanilla fade and a warp behind
+  the player from range), and reactions to hits and flasks.
 - 2000 HP at the arena's vanilla tier (see "Scaling and tuning knobs")
   and 20000 runes.
 
@@ -355,8 +355,7 @@ grab ends on one of those two markers (3002's own TAE applies 5032, the
 throw 4100 applies 5031), so the act that follows a grab is the near
 teleport whenever its timer allows: that is the boss's main way of
 opening the distance, and the walk retreat is the fallback. Between
-5 and 10 m, Act02 is the far teleport (the 5 s fade), not the burst and
-retreat. A near teleport that finds no room queues nothing, so the next
+5 and 10 m, Act02 is the far teleport (the 5 s fade), not the near blink. A near teleport that finds no room queues nothing, so the next
 draw follows at once with the teleport weight at 0 for `TELEPORT_RETRY`
 (2 s). Act46 parks the boss at 4 m, inside the near band, so a teleport
 picked after a strafe is the near one.
@@ -370,10 +369,9 @@ Act02  dist >= TELEPORT_FAR_RANGE (5 m) → far: teleport timer 11.5, hold 9, wa
        dist < 5 m → near: room scan from the boss, B then BL then BR (F/FL/FR when the
          player is in its back), at 8 m then at 5 m
          no room → teleport timer 2 s, nothing queued
-         room    → teleport timer 6, hold 3.5, ClearSubGoal, warp from TARGET_SELF,
-                   then swing timer 4 + burst 3001 at the arrival (the swing timer is
-                   not read), then, only if
-                   the beam is ready, the beam
+         room    → teleport timer 6, hold 2.5, ClearSubGoal, warp from TARGET_SELF,
+                   then the beam if it is ready (no burst: the swing timer is neither
+                   read nor re-armed here)
 Act03  approach to 12 m (never queued: offered under 10 m only), watch 5030,
        grab 3002 (life 8, reach 12, turn 2 s / 50 degrees)
 Act04  beam 3004 (life 3, reach 999, turn 1.5 s / 60 degrees)
@@ -420,7 +418,7 @@ in metres, turns are `turnTime` / `turnFaceAngle` (see
 | Act | Origin | What it queues |
 |-----|--------|----------------|
 | Act01 | vanilla | approach (`Approach_Act_Flex`, stop 0.5 m, always running) then animation 2100 (life 0.1 s, reach 5 m) |
-| Act02 | SpeedFog (vanilla's teleport act rewritten) | under `TELEPORT_FAR_RANGE`: `ToTargetWarp` away from the player, the burst 3001 at the arrival, the beam if ready; from it: vanilla's 3000 with the 20011452 watch, whose interrupt warps behind the player and bursts |
+| Act02 | SpeedFog (vanilla's teleport act rewritten) | under `TELEPORT_FAR_RANGE`: `ToTargetWarp` away from the player, then the beam if ready; from it: vanilla's 3000 with the 20011452 watch, whose interrupt warps behind the player and bursts |
 | Act03 | vanilla, grab through the shared builder | approach (stop 12 m, so never queued in the brackets that weight it) then the grab 3002 (reach 12 m, turn 2 s / 50 degrees, life 8 s) with the 5030 watch that chains the throw 3003 |
 | Act04 | SpeedFog | the beam and flame nova 3004 (reach 999, turn 1.5 s / 60 degrees, life 3 s) |
 | Act05 | vanilla, teleport and beam added | the near teleport when its timer allows and there is room; else clears the queue, `LeaveTarget` to 10 m (life 5 s), then the beam if ready |
@@ -443,43 +441,39 @@ Act02 has two shapes by distance, `TELEPORT_FAR_RANGE` (5 m center to
 center, melee reach with a long weapon being 3-4 m); the hit reaction
 always fires the near one.
 
-**Near** (under 5 m): a warp, then an attack at the arrival. The warp
-goes first so the vanish is immediate. It used to be the other way, the
-burst 3001 as a wind-up, and that cost a visible second: 3001 lands its
-hit between 0.03 and 0.27 s by the TAE but opens its cancel window only
-at 1.00 s (`BURST_CANCEL`), and a queued follow-up waits for that window.
-Cutting the wind-up's goal life short to hand over on the hit was tried
-and stopped the teleport happening at all in game, so that second could
-not be reclaimed in place. Jori's teleport (vanilla 531020) is no help
-either: its structure is the same attack-warp-attack and its wind-up
-3006 hands over later still, at 1.40 s. Warping first solves it outright,
-and the burst then marks the landing and fills the second it takes to
-release the character, which is the beat before the beam. That order is
-vanilla's own: 528000 answers its far teleport's marker with
-`ToTargetWarp` (life 15) immediately followed by 3001, the same pair with
-the same goal life, anchored to the event point instead of the boss.
-Five other vanilla scripts queue a bare `ToTargetWarp` as an act's first
-sub-goal with the attack after it (496000, 523000, 531010, 531020's
-Act10, 532000), and none of them puts a wait between the two. The burst
-lands `TELEPORT_AWAY_DIST` from the player, past its 4 m radius, so it is
-a landing marker and a telegraph rather than damage; the beam is the
-payload. The warp
+**Near** (under 5 m): a bare warp, then the beam. Nothing is queued
+ahead of the warp, so the vanish is immediate, and nothing between it
+and the beam. Two shapes were tried first and both failed in game, which
+is why the act is this plain. The burst 3001 as a wind-up cost a visible
+second: it lands its hit between 0.03 and 0.27 s by the TAE but opens
+its cancel window only at 1.00 s, and a queued
+follow-up waits for that window; cutting its goal life short to hand
+over on the hit stopped the teleport happening at all. Moving the burst
+after the warp then detached it from the move, since the arrival
+animation hands over only at 0.9 to 1.4 s (5010 to 5013) and itself runs
+to `ARRIVAL_MAX`, so the explosion arrived well after the reappearance,
+and it would have whiffed anyway at `TELEPORT_AWAY_DIST`, past its 4 m
+radius. Jori's teleport (vanilla 531020) is no model either: its
+structure is the same attack-warp-attack and its wind-up 3006 hands over
+later still, at 1.40 s. The teleport is therefore a clean blink, and 3001 is spent only
+where it lands on the player: Act11, the hit reaction and the far
+teleport's post-warp attack, which is vanilla 528000's own pair. The warp
 lands `TELEPORT_AWAY_DIST` (8 m) from the boss's own position, away
 from the player (the five-argument `TARGET_SELF` form of Rennala's
 203100 and of 301010's retreats): straight behind the boss or, when the
 player stands in its back, straight ahead, then the diagonals.
 `Houzuki755890_FindRoomAway` scans those directions from the boss's own
 position with its hit radius as the line width, then again at
-`TELEPORT_AWAY_FALLBACK` (5 m) for small arenas. The beam follows the
-burst when it is ready: the boss blinks, lands in an explosion and
-fires. The scan runs when the
-act is queued; without room nothing is queued (the burst is not spent on
-a warp that cannot happen) and the teleport timer restarts at
+`TELEPORT_AWAY_FALLBACK` (5 m) for small arenas. The beam follows when it
+is ready: the boss blinks and fires. The scan runs when the
+act is queued; without room nothing is queued and the teleport timer
+restarts at
 `TELEPORT_RETRY` (2 s) instead of the full cooldown, so a cramped spot
-is retried soon but not at every decision. The arrival burst uses the
+is retried soon but not at every decision. The bursts that remain (the
+hit reaction's and the far teleport's) use the
 `ComboTunable_SuccessAngle180` wrapper with reach 999, turn 0 and every
 angle 180, the argument set of 504000's post-warp attacks (its only
-vanilla user), so it fires whatever the player's side. The retreat stays
+vanilla user), so they fire whatever the player's side. The retreat stays
 in the player's view
 on purpose: lock-on cannot be broken from the AI, so a warp behind the
 player would only turn the camera.
@@ -509,9 +503,7 @@ interval (`RegistAttackTimeInterval`) and reads the counter
 with weights 100/0 wherever an act or a reaction needs one of them, so no
 counter is ever read unregistered. The burst (`SWING_COOLDOWN` 4 s, set by every 3001 the
 script queues, read by Act11, by the far teleport's post-warp burst and
-by the plain-burst hit reaction; the near teleport's arrival burst fires
-whatever the timer says, so 3001 can also play once per teleport
-cooldown) and the teleport
+by the plain-burst hit reaction; the near teleport queues none) and the teleport
 (`TELEPORT_COOLDOWN` 6 s after a near one, `TELEPORT_FAR_COOLDOWN` 11.5 s
 after a far one, whose own sequence takes about 9 s, `TELEPORT_RETRY` 2 s
 after a near attempt that found no room) are AI timers
@@ -541,7 +533,8 @@ attack earlier without adding any. No reaction fires while a teleport or
 a grab sequence is in flight (`Houzuki755890_SequenceInFlight`), since
 its `ClearSubGoal` would drop the warp, the beam or the throw: the hold
 timer (`TIMER_HOLD`, slot 9) is set with each queued teleport to
-`TELEPORT_HOLD` (near: `ARRIVAL_MAX` + `BURST_CANCEL` + margin, 3.5 s)
+`TELEPORT_HOLD` (near: `ARRIVAL_MAX` + margin, 2.5 s, up to the beam
+starting rather than finishing)
 or `TELEPORT_FAR_HOLD` (far: `MARKER_3000` + `ARRIVAL_MAX` +
 `BURST_LENGTH` + margin, 9 s), and the grab is covered by its counter
 under `REACT_HOLD` (`GRAB_CHAIN` + 1 s, 7 s). The spans come from the c5280 TAE and
@@ -563,7 +556,7 @@ Goal.Interrupt, first matching case wins
 2. Damaged: player in the front 120-degree cone within REACT_HIT_RANGE (2 m)
    AND nothing in flight (in flight: hold timer > 0, or 3002 started <= REACT_HOLD (7 s) ago)
    AND draw <= REACT_HIT (25)
-   a. teleport ready AND room → the whole near teleport (warp, burst, beam if ready) → true
+   a. teleport ready AND room → the whole near teleport (warp, beam if ready) → true
       (ready without room: the teleport timer is set to TELEPORT_RETRY, then fall through)
    b. else swing timer at 0 → ClearSubGoal + immediate burst → true
    c. else false
@@ -626,7 +619,7 @@ Knobs, never edited in the shared vanilla `528000_battle`:
   `BEAM_*`, `MOVE_*`), the five `*_COOLDOWN` and `TELEPORT_RETRY`,
   `TELEPORT_FAR_RANGE`,
   `TELEPORT_AWAY_DIST`, `TELEPORT_AWAY_FALLBACK`, the animation spans the
-  holds derive from (`BURST_CANCEL`, `BURST_LENGTH`, `ARRIVAL_MAX`,
+  holds derive from (`BURST_LENGTH`, `ARRIVAL_MAX`,
   `MARKER_3000`, `GRAB_CHAIN`), `GRAB_REACH`, and the two reactions
   (`REACT_HIT`, `REACT_HEAL` and their ranges).
 
@@ -648,19 +641,17 @@ Generate a seed with the allowlist above, then in the arena:
    `BOSS_SUPER_ARMOR`.
 2. **Melee**: grabs (parryable), timer-gated bursts (Act11's, the far
    teleport's post-warp one, the hit reaction's plain one) at most once
-   per `SWING_COOLDOWN` (a near teleport's arrival burst can come
-   sooner), novas between them, and sidesteps or strafes through the
+   per `SWING_COOLDOWN`, novas between them, and sidesteps or strafes through the
    cooldowns; the boss never stands still for several seconds, and a
-   grab is followed by the warp and its arrival burst rather than the
-   walk retreat
+   grab is followed by the blink rather than the walk retreat
    whenever the teleport is off cooldown.
 3. **Near teleport** (under 5 m): an immediate vanish with no fade and no
    wind-up, a reappearance 8 m from where the boss stood, away from the
    player (5 m in a small arena; straight ahead when the player was in
-   its back), the burst there (a telegraph, not a hit: the player is out
-   of its radius), then the beam when it is ready. Any pause before the
-   vanish means something is queued ahead of the warp again: the warp
-   must be the act's first sub-goal. Check the hit reaction separately
+   its back), then the beam when it is ready, with no burst anywhere in
+   the move. Any pause before the vanish means something is queued ahead
+   of the warp again: the warp must be the act's first sub-goal. Check
+   the hit reaction separately
    once the wall is broken, when the boss flinches again: hit it at
    melee range and confirm it still vanishes, since a burst on the spot
    with no vanish would mean the flinch animation swallowed the warp.
