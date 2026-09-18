@@ -6,7 +6,9 @@
 # (EditItems=true, EditLocs=true). Other placement types have either fixed
 # items or fixed locations enforced by the randomizer's PlacementMeta.
 # Custom items listed under types with EditItems=false are silently replaced
-# by defaults during Resolve(). See ItemPreset.cs:614-617.
+# by defaults during Resolve(). See the
+# `!meta.EditItems && defPlace != null` check in ItemPreset.Resolve()
+# (../SoulsRandomizers/RandomizerCommon/Item/ItemPreset.cs).
 #
 # Placement modes:
 #   - Important (KeyItems): inherits LocationGroups for
