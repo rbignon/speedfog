@@ -8,8 +8,9 @@
 #     included): those weapons are placed like any other item (they can still
 #     land on a boss by chance). Staves, seals and unique shields stay.
 #   - A `Type: Custom` "Boss consumables" placement sends consumables (Exalted
-#     Flesh, boluses, pickled livers, greases, throwables...) to the same key
-#     locations; they mostly stack onto the drops instead of replacing them.
+#     Flesh, Rune Arcs, boluses, pickled livers, greases, throwables...) to
+#     the same key locations; they mostly stack onto the drops instead of
+#     replacing them.
 # Everything else matches item_preset.yaml.
 #
 # IMPORTANT: Only CoreMechanics and user-defined `Type: Custom` placements
@@ -348,13 +349,20 @@ Placements:
 # Restrictions apply per item ID, so EVERY copy of a listed consumable is
 # constrained; quantity and copy count cannot be set: each copy keeps the
 # quantity of its vanilla pickup (e.g. Throwing Dagger 3x-8x). Once eligible
-# slots are full, the randomizer mostly stacks extra items on them (up to 6
-# items per lot) instead of evicting talismans/seeds; the few that fit nowhere
-# fall back to random slots (~7 of ~233 copies). Boss drops typically go from
-# 2 to 3 items (measured over 4 seeds, no loss of talismans/tears/seeds).
+# slots are full, the randomizer stacks extra items on them (up to 6 items
+# per lot) and, past that, evicts an item already there, which is re-queued
+# or falls back to a random slot. Measured over 3-4 seeds (2026-09-18): every
+# listed copy lands on an eligible slot (only shop rows stay put, see below)
+# and boss drops typically go from 2 to 4 items. Without Rune Arcs (~233
+# copies), 0 to 1 of the 55 Golden Seeds/Sacred Tears ends up off its slots;
+# with the 62 Rune Arcs (1x each, ~300 copies) it is ~2 (1 to 4). Rune Arcs
+# land on ~30% of boss drops (~3 per 10 bosses): kept as is on purpose, to
+# be judged in real races.
 # Infinite-shop copies stay in shops (separate silo), so items sold only in
 # infinite shops can never land here: Boiled Crab/Prawn. Limited-stock shop
-# rows (e.g. Moore's livers, 2x with a stock flag) are finite and do move.
+# rows (e.g. Moore's livers, 2x with a stock flag) are finite and do move,
+# except Rune Arc's 6 shop rows, pinned by the randomizer's `norandomshop`
+# group (diste/Base/annotations.txt).
 # Craft-only items (Opaline Pickled Liver, Golden/Eternal Sleep Grease) are
 # not listed. Soporific, Shield and Festive Grease are left out as weak.
 # Ambiguous names need their ID (Golden Vow item vs incantation, the two
@@ -376,6 +384,8 @@ Placements:
     ID: goods:2001203
   - Name: Blessing of Marika
     ID: goods:2000900
+  - Name: Rune Arc
+    ID: goods:190
   # Pickled livers
   - Name: Spellproof Pickled Liver
     ID: goods:2001120
