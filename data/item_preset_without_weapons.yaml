@@ -11,6 +11,8 @@
 #     Flesh, Rune Arcs, boluses, pickled livers, greases, throwables...) to
 #     the same key locations; they mostly stack onto the drops instead of
 #     replacing them.
+#   - Sacred Tears are restricted to major bosses (another `Type: Custom`
+#     placement narrows them); Golden Seeds keep all flask-upgrade slots.
 # Everything else matches item_preset.yaml.
 #
 # IMPORTANT: Only CoreMechanics and user-defined `Type: Custom` placements
@@ -24,10 +26,10 @@
 # Placement modes:
 #   - Important (KeyItems): inherits LocationGroups for
 #     location tags, and items are added to RaceModeItems (race-mode tagging).
-#   - Custom (CoreMechanics, `Type: Custom` Boss consumables,
-#     SacredFlaskUpgrades): per-item Requires/Excludes tags. Constrained items
-#     are queued and matched to compatible slots; no separate pass between
-#     Custom placements.
+#   - Custom (CoreMechanics, SacredFlaskUpgrades, the `Type: Custom` Boss
+#     consumables and Sacred Tears at major bosses): per-item Requires/Excludes
+#     tags. Constrained items are queued and matched to compatible slots; no
+#     separate pass between Custom placements.
 #   - Anywhere (QuestItems, UpgradeBellBearings, ShadowRealmBlessings):
 #     unrestricted (Excludes only).
 #
@@ -475,6 +477,7 @@ Placements:
 # and DLC scadu/revered spots to ensure ~1.5-3 seeds/tears land per run.
 # altboss and sub-dungeon boss tags are intentionally omitted to keep flask
 # upgrades on milestone encounters rather than every random catacomb boss.
+# Sacred Tears are further narrowed to major bosses by the placement below.
 - Type: SacredFlaskUpgrades
   Mode: Custom
   Items:
@@ -491,6 +494,31 @@ Placements:
   - Tag: revered
   Excludes:
   - Tag: missable
+
+# Sacred Tears on major bosses only, to make them a more likely boss drop
+# (~24% of major boss drops instead of ~16%, measured over 4 seeds; Golden
+# Seeds unchanged). SacredFlaskUpgrades cannot drop or narrow one of its
+# fixed items, but when an item is listed in several placements the
+# randomizer unions their Requires and their Excludes (AnnotationData), so
+# listing Sacred Tear again here with the other flask-upgrade tags excluded
+# leaves it only the `boss` slots. Keep these Excludes in sync with
+# SacredFlaskUpgrades' Requires (minus `boss`), or Sacred Tears silently gain
+# any tag added there.
+- Type: Custom
+  Name: Sacred Tears at major bosses
+  Mode: Custom
+  Items:
+  - Name: Sacred Tear
+    ID: goods:10020
+  Requires:
+  - Tag: boss
+  Excludes:
+  - Tag: missable
+  - Tag: seedtree
+  - Tag: church
+  - Tag: cross
+  - Tag: forgereward
+  - Tag: revered
 
 # Upgrade Bell Bearings placed freely.
 # Items: fixed by randomizer (EditItems=false). Locations: editable.
