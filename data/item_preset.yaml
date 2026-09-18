@@ -2,11 +2,16 @@
 #
 # Controls WHERE randomized items end up in the world.
 #
-# IMPORTANT: Only CoreMechanics allows customizing both items AND locations
-# (EditItems=true, EditLocs=true). Other placement types have either fixed
-# items or fixed locations enforced by the randomizer's PlacementMeta.
-# Custom items listed under types with EditItems=false are silently replaced
-# by defaults during Resolve(). See the
+# Default preset, used when [item_randomizer] item_preset is on and
+# item_preset_path is empty. Bosses and key locations hand out talismans,
+# crystal tears, curated ashes of war, spells and weapons (CoreMechanics).
+# Variants: item_preset_without_weapons.yaml, uwyg_item_preset.yaml.
+#
+# IMPORTANT: Only CoreMechanics and user-defined `Type: Custom` placements
+# allow customizing both items AND locations (EditItems=true, EditLocs=true).
+# Other placement types have either fixed items or fixed locations enforced by
+# the randomizer's PlacementMeta. Items listed under types with
+# EditItems=false are silently replaced by defaults during Resolve(). See the
 # `!meta.EditItems && defPlace != null` check in ItemPreset.Resolve()
 # (../SoulsRandomizers/RandomizerCommon/Item/ItemPreset.cs).
 #
@@ -83,8 +88,11 @@ Placements:
   - Tag: missable
 
 # Weapons, talismans, crystal tears, and ashes of war at key locations.
-# This is the ONLY placement type where both items and locations are customizable.
-# Items that overflow tagged locations fall back to the general random pool.
+# Along with `Type: Custom` placements, this is the only placement type where
+# both items and locations are customizable.
+# Items that overflow tagged locations are mostly stacked onto them (up to 6
+# items per lot); the rest fall back to the general random pool (details in
+# docs/item-randomizer.md, "Item Preset Placement").
 - Type: CoreMechanics
   Mode: Custom
   Items:

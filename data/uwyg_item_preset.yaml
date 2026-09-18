@@ -2,11 +2,28 @@
 #
 # Controls WHERE randomized items end up in the world.
 #
-# IMPORTANT: Only CoreMechanics allows customizing both items AND locations
-# (EditItems=true, EditLocs=true). Other placement types have either fixed
-# items or fixed locations enforced by the randomizer's PlacementMeta.
-# Custom items listed under types with EditItems=false are silently replaced
-# by defaults during Resolve(). See the
+# "Use What You Get" (UWYG) variant of item_preset.yaml, for modes where
+# players must play with the gear they receive (speedfog-racing UWYG modes),
+# so bosses hand out a much wider weapon selection. Differences:
+#   - CoreMechanics lists ~310 weapons (vs ~185 in item_preset.yaml, not a
+#     superset: whips, Coded Sword, Visage Shield... are left out) plus two
+#     spells, a helm and a note, and also requires the `fragment` tag
+#     (Scadutree Fragment pickups). Its six individually listed talismans are
+#     already covered by `Group: accessories`.
+#   - The Important location group (used by key items) adds `fragment` and
+#     `revered` slots and only excludes `missable`, so key items can also land
+#     on night, dragon, overworld and evergaol bosses.
+#   - Golden Seeds/Sacred Tears also reach `altboss` and `fragment` slots,
+#     except dragon and overworld minibosses.
+#   - DlcOnlyItems keeps Scadutree Fragments and Revered Spirit Ashes in DLC
+#     locations (item_preset.yaml empties that list).
+# Placements are mostly uncommented here; see item_preset.yaml.
+#
+# IMPORTANT: Only CoreMechanics and user-defined `Type: Custom` placements
+# allow customizing both items AND locations (EditItems=true, EditLocs=true).
+# Other placement types have either fixed items or fixed locations enforced by
+# the randomizer's PlacementMeta. Items listed under types with
+# EditItems=false are silently replaced by defaults during Resolve(). See the
 # `!meta.EditItems && defPlace != null` check in ItemPreset.Resolve()
 # (../SoulsRandomizers/RandomizerCommon/Item/ItemPreset.cs).
 #

@@ -2,6 +2,16 @@
 #
 # Controls WHERE randomized items end up in the world.
 #
+# Variant of item_preset.yaml where bosses no longer hand out melee weapons
+# (select it with [item_randomizer] item_preset_path). Differences:
+#   - CoreMechanics drops the curated melee weapon list (two torches
+#     included): those weapons are placed like any other item (they can still
+#     land on a boss by chance). Staves, seals and unique shields stay.
+#   - A `Type: Custom` "Boss consumables" placement sends consumables (Exalted
+#     Flesh, boluses, pickled livers, greases, throwables...) to the same key
+#     locations; they mostly stack onto the drops instead of replacing them.
+# Everything else matches item_preset.yaml.
+#
 # IMPORTANT: Only CoreMechanics and user-defined `Type: Custom` placements
 # allow customizing both items AND locations (EditItems=true, EditLocs=true).
 # Other placement types have either fixed items or fixed locations enforced by
