@@ -16,8 +16,9 @@
 # (../SoulsRandomizers/RandomizerCommon/Item/ItemPreset.cs).
 #
 # Placement modes:
-#   - Important (KeyItems): inherits LocationGroups for
-#     location tags, and items are added to RaceModeItems (race-mode tagging).
+#   - Important (KeyItems): inherits LocationGroups for location tags, and
+#     items are added to RaceModeItems (placed in a first pass, before all
+#     other items).
 #   - Custom (CoreMechanics, SacredFlaskUpgrades): per-item Requires/Excludes
 #     tags. Constrained items are queued and matched to compatible slots; no
 #     separate pass between Custom placements.
@@ -65,9 +66,10 @@ NorandomItems:
 
 Placements:
 
-# Key items at major boss/racemode locations.
-# Items: fixed by randomizer (EditItems=false). Locations: editable.
-# FixedLocs adds "boss" and "racemode" automatically.
+# Key items at the Important locations.
+# Items: fixed by randomizer (EditItems=false). Locations: editable, but
+# in Mode: Important the Requires/Excludes below are replaced by the
+# LocationGroups entry at the end of the file.
 - Type: KeyItems
   Mode: Important
   Items:
@@ -798,9 +800,11 @@ Placements:
   Excludes:
   - Tag: nodlc
 
-# LocationGroups: defines the location pool for Important mode placements.
-# Important items (key items, seeds/tears, DLC blessings) get first-pass
-# priority at these locations before CoreMechanics fills the rest.
+# LocationGroups: the "Important locations" group (only the first entry is
+# used). Resolve() copies its Requires/Excludes onto every `Mode: Important`
+# placement, here only KeyItems, whose items are then placed in a first
+# pass before all other items. Golden Seeds/Sacred Tears (Custom) and
+# Shadow Realm Blessings (Anywhere) do not use it.
 LocationGroups:
 
 - Requires:

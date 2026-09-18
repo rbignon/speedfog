@@ -28,8 +28,9 @@
 # (../SoulsRandomizers/RandomizerCommon/Item/ItemPreset.cs).
 #
 # Placement modes:
-#   - Important (KeyItems): inherits LocationGroups for
-#     location tags, and items are added to RaceModeItems (race-mode tagging).
+#   - Important (KeyItems): inherits LocationGroups for location tags, and
+#     items are added to RaceModeItems (placed in a first pass, before all
+#     other items).
 #   - Custom (CoreMechanics, SacredFlaskUpgrades): per-item Requires/Excludes
 #     tags. Constrained items are queued and matched to compatible slots; no
 #     separate pass between Custom placements.
