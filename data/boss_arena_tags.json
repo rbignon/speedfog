@@ -900,7 +900,7 @@
       "size": 3,
       "type": 4,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -925,7 +925,7 @@
       "size": 4,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -950,7 +950,7 @@
       "size": 3,
       "type": 4,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -1418,7 +1418,7 @@
       "size": 3,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -1443,7 +1443,7 @@
       "size": 3,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -1468,7 +1468,7 @@
       "size": 3,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -1518,7 +1518,7 @@
       "size": 4,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -1543,7 +1543,7 @@
       "size": 3,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -1568,7 +1568,7 @@
       "size": 3,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -1593,7 +1593,7 @@
       "size": 3,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -1618,7 +1618,7 @@
       "size": 3,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -1643,7 +1643,7 @@
       "size": 4,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -1718,7 +1718,7 @@
       "size": 3,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -1743,7 +1743,7 @@
       "size": 3,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -1768,7 +1768,7 @@
       "size": 3,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -1793,7 +1793,7 @@
       "size": 3,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -1818,7 +1818,7 @@
       "size": 3,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -1843,7 +1843,7 @@
       "size": 4,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -1893,7 +1893,7 @@
       "size": 3,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -1918,7 +1918,7 @@
       "size": 3,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -1943,7 +1943,7 @@
       "size": 3,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -1968,7 +1968,7 @@
       "size": 3,
       "type": 4,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2018,7 +2018,7 @@
       "size": 3,
       "type": 4,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2043,7 +2043,7 @@
       "size": 3,
       "type": 4,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2068,7 +2068,7 @@
       "size": 3,
       "type": 4,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2118,7 +2118,7 @@
       "size": 3,
       "type": 4,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2218,7 +2218,7 @@
       "size": 3,
       "type": 4,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2268,7 +2268,7 @@
       "size": 3,
       "type": 4,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2293,7 +2293,7 @@
       "size": 3,
       "type": 4,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2335,7 +2335,7 @@
       "size": 3,
       "type": 4,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2360,7 +2360,7 @@
       "size": 3,
       "type": 4,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2385,7 +2385,7 @@
       "size": 3,
       "type": 4,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2410,7 +2410,7 @@
       "size": 3,
       "type": 4,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2435,7 +2435,7 @@
       "size": 3,
       "type": 4,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2460,7 +2460,7 @@
       "size": 3,
       "type": 6,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2510,7 +2510,7 @@
       "size": 3,
       "type": 6,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2535,7 +2535,7 @@
       "size": 3,
       "type": 6,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2685,7 +2685,7 @@
       "size": 4,
       "type": 3,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2735,7 +2735,7 @@
       "size": 3,
       "type": 2,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2760,7 +2760,7 @@
       "size": 3,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2810,7 +2810,7 @@
       "size": 3,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2835,7 +2835,7 @@
       "size": 3,
       "type": 5,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2860,7 +2860,7 @@
       "size": 3,
       "type": 8,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2885,7 +2885,7 @@
       "size": 3,
       "type": 8,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -2910,7 +2910,7 @@
       "size": 3,
       "type": 8,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -3144,7 +3144,7 @@
       "size": 3,
       "type": 1,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -3219,7 +3219,7 @@
       "size": 4,
       "type": 3,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -3436,7 +3436,7 @@
       "size": 4,
       "type": 3,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -3661,7 +3661,7 @@
       "size": 3,
       "type": 3,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -3686,7 +3686,7 @@
       "size": 4,
       "type": 3,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -3711,7 +3711,7 @@
       "size": 3,
       "type": 1,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -3736,7 +3736,7 @@
       "size": 4,
       "type": 3,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -3986,7 +3986,7 @@
       "size": 4,
       "type": 3,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -4211,7 +4211,7 @@
       "size": 3,
       "type": 1,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -4361,7 +4361,7 @@
       "size": 3,
       "type": 1,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -4586,7 +4586,7 @@
       "size": 4,
       "type": 3,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -4736,7 +4736,7 @@
       "size": 4,
       "type": 3,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
@@ -5339,7 +5339,7 @@
       "is_npc": false,
       "can_escape": true,
       "night_boss": false,
-      "exclude_from_pool": false
+      "exclude_from_pool": true
     },
     "arena": {
       "size": 4,
@@ -5487,7 +5487,7 @@
       "size": 4,
       "type": 3,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
