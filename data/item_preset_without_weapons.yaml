@@ -2,11 +2,11 @@
 #
 # Controls WHERE randomized items end up in the world.
 #
-# Variant of item_preset.yaml where bosses no longer hand out melee weapons
-# (select it with [item_randomizer] item_preset_path). Differences:
-#   - CoreMechanics drops the curated melee weapon list (two torches
-#     included): those weapons are placed like any other item (they can still
-#     land on a boss by chance). Staves, seals and unique shields stay.
+# Variant of item_preset.yaml where key locations and boss drops hand out no
+# weapons (select it with [item_randomizer] item_preset_path). Differences:
+#   - CoreMechanics lists no weapon (no curated melee weapons, staves, seals
+#     or shields), and a `Type: Custom` placement excludes every weapon from
+#     key locations and from all boss drops.
 #   - A `Type: Custom` "Boss consumables" placement sends consumables (Exalted
 #     Flesh, Rune Arcs, boluses, pickled livers, greases, throwables...) to
 #     the same key locations; they mostly stack onto the drops instead of
@@ -27,10 +27,11 @@
 #   - Important (KeyItems): inherits LocationGroups for location tags, and
 #     items are added to RaceModeItems (placed in a first pass, before all
 #     other items).
-#   - Custom (CoreMechanics, SacredFlaskUpgrades, the `Type: Custom` Boss
-#     consumables and Sacred Tears at major bosses): per-item Requires/Excludes
-#     tags. Constrained items are queued and matched to compatible slots; no
-#     separate pass between Custom placements.
+#   - Custom (CoreMechanics, SacredFlaskUpgrades, and the `Type: Custom`
+#     No weapons at key locations, Boss consumables and Sacred Tears at
+#     major bosses): per-item Requires/Excludes tags. Constrained items are
+#     queued and matched to compatible slots; no separate pass between
+#     Custom placements.
 #   - Anywhere (QuestItems, UpgradeBellBearings, ShadowRealmBlessings):
 #     unrestricted (Excludes only).
 #
@@ -264,67 +265,6 @@ Placements:
   - Name: Pest-Thread Spears
     ID: goods:2007210
 
-  # Staves
-  - Name: Carian Regal Scepter
-    ID: weapon:33090000
-  - Name: Lusat's Glintstone Staff
-    ID: weapon:33240000
-  - Name: Azur's Glintstone Staff
-    ID: weapon:33230000
-  - Name: Meteorite Staff
-    ID: weapon:33250000
-  - Name: Prince of Death's Staff
-    ID: weapon:33180000
-  - Name: Staff of Loss
-    ID: weapon:33280000
-  - Name: Staff of the Guilty
-    ID: weapon:33260000
-  - Name: Carian Glintblade Staff
-    ID: weapon:33170000
-  - Name: Staff of the Great Beyond
-    ID: weapon:33510000
-  - Name: Maternal Staff
-    ID: weapon:33520000
-  # Seals
-  - Name: Erdtree Seal
-    ID: weapon:34070000
-  - Name: Dragon Communion Seal
-    ID: weapon:34080000
-  - Name: Godslayer's Seal
-    ID: weapon:34010000
-  - Name: Giant's Seal
-    ID: weapon:34020000
-  - Name: Gravel Stone Seal
-    ID: weapon:34030000
-  - Name: Clawmark Seal
-    ID: weapon:34040000
-  - Name: Golden Order Seal
-    ID: weapon:34060000
-  - Name: Frenzied Flame Seal
-    ID: weapon:34090000
-  - Name: Dryleaf Seal
-    ID: weapon:34500000
-  - Name: Spiraltree Seal
-    ID: weapon:34520000
-  # Unique shields
-  - Name: Jellyfish Shield
-    ID: weapon:32120000
-  - Name: One-Eyed Shield
-    ID: weapon:32150000
-  - Name: Visage Shield
-    ID: weapon:32160000
-  - Name: Erdtree Greatshield
-    ID: weapon:32080000
-  - Name: Fingerprint Stone Shield
-    ID: weapon:32130000
-  - Name: Briar Greatshield
-    ID: weapon:32050000
-  - Name: Shield of the Guilty
-    ID: weapon:31170000
-  - Name: Coil Shield
-    ID: weapon:30200000
-  - Name: Verdigris Greatshield
-    ID: weapon:32520000
   Requires:
   - Tag: boss
   - Tag: altboss
@@ -344,6 +284,45 @@ Placements:
   - Tag: revered
   Excludes:
   - Tag: missable
+  - Tag: night
+  - Tag: dragonboss
+  - Tag: overworldboss
+  - Tag: evergaol
+
+# No weapon at key locations or on any boss drop. Removing weapons from
+# CoreMechanics only stops sending them there; unconstrained items still fill
+# free key slots at random (~5 weapons per seed before the consumables, ~2
+# after), and `copydrops` adds a finite copy of every enemy-only weapon.
+# This list keeps every weapon (bows, staves, seals and shields included;
+# arrows/bolts are a separate group) off the CoreMechanics tags plus the
+# boss types CoreMechanics skips (night, dragon, overworld, evergaol). No key
+# or quest item is a weapon, so this cannot make an Important placement
+# unplaceable. Excludes are unioned across placements: do not list a weapon
+# in CoreMechanics here, all its Requires would be excluded and it would
+# silently land on a random slot.
+- Type: Custom
+  Name: No weapons at key locations
+  Mode: Custom
+  Items:
+  - Group: weapons
+  Requires: []
+  Excludes:
+  - Tag: boss
+  - Tag: altboss
+  - Tag: racemode
+  - Tag: criticalpath
+  - Tag: caveboss
+  - Tag: catacombboss
+  - Tag: tunnelboss
+  - Tag: graveboss
+  - Tag: gaolboss
+  - Tag: minidungeonboss
+  - Tag: namelessmausoleum
+  - Tag: seedtree
+  - Tag: church
+  - Tag: cross
+  - Tag: forgereward
+  - Tag: revered
   - Tag: night
   - Tag: dragonboss
   - Tag: overworldboss
