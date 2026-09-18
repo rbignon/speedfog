@@ -2,18 +2,21 @@
 #
 # Controls WHERE randomized items end up in the world.
 #
-# IMPORTANT: Only CoreMechanics allows customizing both items AND locations
-# (EditItems=true, EditLocs=true). Other placement types have either fixed
-# items or fixed locations enforced by the randomizer's PlacementMeta.
-# Custom items listed under types with EditItems=false are silently replaced
-# by defaults during Resolve(). See ItemPreset.cs:614-617.
+# IMPORTANT: Only CoreMechanics and user-defined `Type: Custom` placements
+# allow customizing both items AND locations (EditItems=true, EditLocs=true).
+# Other placement types have either fixed items or fixed locations enforced by
+# the randomizer's PlacementMeta. Items listed under types with
+# EditItems=false are silently replaced by defaults during Resolve(). See the
+# `!meta.EditItems && defPlace != null` check in ItemPreset.Resolve()
+# (../SoulsRandomizers/RandomizerCommon/Item/ItemPreset.cs).
 #
 # Placement modes:
 #   - Important (KeyItems): inherits LocationGroups for
 #     location tags, and items are added to RaceModeItems (race-mode tagging).
-#   - Custom (CoreMechanics, SacredFlaskUpgrades): per-item Requires/Excludes
-#     tags. Constrained items are queued and matched to compatible slots; no
-#     separate pass between Custom placements.
+#   - Custom (CoreMechanics, `Type: Custom` Boss consumables,
+#     SacredFlaskUpgrades): per-item Requires/Excludes tags. Constrained items
+#     are queued and matched to compatible slots; no separate pass between
+#     Custom placements.
 #   - Anywhere (QuestItems, UpgradeBellBearings, ShadowRealmBlessings):
 #     unrestricted (Excludes only).
 #
@@ -81,8 +84,10 @@ Placements:
   - Tag: missable
 
 # Talismans, crystal tears, and ashes of war at key locations.
-# This is the ONLY placement type where both items and locations are customizable.
-# Items that overflow tagged locations fall back to the general random pool.
+# Along with `Type: Custom` placements, this is the only placement type where
+# both items and locations are customizable.
+# Items that overflow tagged locations are mostly stacked onto them (up to 6
+# items per lot); the rest fall back to the general random pool.
 - Type: CoreMechanics
   Mode: Custom
   Items:
@@ -305,6 +310,120 @@ Placements:
     ID: weapon:30200000
   - Name: Verdigris Greatshield
     ID: weapon:32520000
+  Requires:
+  - Tag: boss
+  - Tag: altboss
+  - Tag: racemode
+  - Tag: criticalpath
+  - Tag: caveboss
+  - Tag: catacombboss
+  - Tag: tunnelboss
+  - Tag: graveboss
+  - Tag: gaolboss
+  - Tag: minidungeonboss
+  - Tag: namelessmausoleum
+  - Tag: seedtree
+  - Tag: church
+  - Tag: cross
+  - Tag: forgereward
+  - Tag: revered
+  Excludes:
+  - Tag: missable
+  - Tag: night
+  - Tag: dragonboss
+  - Tag: overworldboss
+  - Tag: evergaol
+
+# Consumables at the same key locations as CoreMechanics.
+# Restrictions apply per item ID, so EVERY copy of a listed consumable is
+# constrained; quantity and copy count cannot be set: each copy keeps the
+# quantity of its vanilla pickup (e.g. Throwing Dagger 3x-8x). Once eligible
+# slots are full, the randomizer mostly stacks extra items on them (up to 6
+# items per lot) instead of evicting talismans/seeds; the few that fit nowhere
+# fall back to random slots (~7 of ~233 copies). Boss drops typically go from
+# 2 to 3 items (measured over 4 seeds, no loss of talismans/tears/seeds).
+# Infinite-shop copies stay in shops (separate silo), so items sold only in
+# infinite shops can never land here: Boiled Crab/Prawn. Limited-stock shop
+# rows (e.g. Moore's livers, 2x with a stock flag) are finite and do move.
+# Craft-only items (Opaline Pickled Liver, Golden/Eternal Sleep Grease) are
+# not listed. Soporific, Shield and Festive Grease are left out as weak.
+# Ambiguous names need their ID (Golden Vow item vs incantation, the two
+# Gourmet Scorpion Stew rows). `Type: Custom` does not auto-add `missable`
+# (AllowMissable), so it is listed explicitly.
+- Type: Custom
+  Name: Boss consumables
+  Mode: Custom
+  Items:
+  - Name: Exalted Flesh
+    ID: goods:1210
+  - Name: Golden Vow (Consumable)
+    ID: goods:2003170
+  - Name: Golden Horn Tender
+    ID: goods:2001230
+  - Name: Gourmet Scorpion Stew
+    ID: goods:2001201
+  - Name: Gourmet Scorpion Stew
+    ID: goods:2001203
+  - Name: Blessing of Marika
+    ID: goods:2000900
+  # Pickled livers
+  - Name: Spellproof Pickled Liver
+    ID: goods:2001120
+  - Name: Fireproof Pickled Liver
+    ID: goods:2001130
+  - Name: Lightningproof Pickled Liver
+    ID: goods:2001140
+  - Name: Holyproof Pickled Liver
+    ID: goods:2001150
+  # Boluses
+  - Name: Neutralizing Boluses
+    ID: goods:900
+  - Name: Stanching Boluses
+    ID: goods:910
+  - Name: Thawfrost Boluses
+    ID: goods:920
+  - Name: Stimulating Boluses
+    ID: goods:930
+  - Name: Preserving Boluses
+    ID: goods:940
+  - Name: Rejuvenating Boluses
+    ID: goods:950
+  - Name: Clarifying Boluses
+    ID: goods:960
+  # Throwables
+  - Name: Throwing Dagger
+    ID: goods:1700
+  - Name: Kukri
+    ID: goods:1730
+  - Name: Crystal Dart
+    ID: goods:1740
+  # Greases
+  - Name: Fire Grease
+    ID: goods:1400
+  - Name: Lightning Grease
+    ID: goods:1410
+  - Name: Magic Grease
+    ID: goods:1420
+  - Name: Holy Grease
+    ID: goods:1430
+  - Name: Blood Grease
+    ID: goods:1440
+  - Name: Poison Grease
+    ID: goods:1460
+  - Name: Freezing Grease
+    ID: goods:1470
+  - Name: Dragonwound Grease
+    ID: goods:1480
+  - Name: Rot Grease
+    ID: goods:1490
+  - Name: Messmerfire Grease
+    ID: goods:2001400
+  - Name: Dragonbolt Grease
+    ID: goods:2001410
+  - Name: Royal Magic Grease
+    ID: goods:2001420
+  - Name: Dragon Communion Grease
+    ID: goods:2001480
   Requires:
   - Tag: boss
   - Tag: altboss
