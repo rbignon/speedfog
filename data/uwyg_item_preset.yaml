@@ -8,15 +8,15 @@
 #   - CoreMechanics lists ~310 weapons (vs ~185 in item_preset.yaml, not a
 #     superset: whips, Coded Sword, Visage Shield... are left out) plus two
 #     spells, a helm and a note, and also requires the `fragment` tag
-#     (Scadutree Fragment pickups). Its six individually listed talismans are
-#     already covered by `Group: accessories`.
+#     (Scadutree Fragment pickups).
 #   - The Important location group (used by key items) adds `fragment` and
 #     `revered` slots and only excludes `missable`, so key items can also land
 #     on night, dragon, overworld and evergaol bosses.
 #   - Golden Seeds/Sacred Tears also reach `altboss` and `fragment` slots,
 #     except dragon and overworld minibosses.
-#   - DlcOnlyItems keeps Scadutree Fragments and Revered Spirit Ashes in DLC
-#     locations (item_preset.yaml empties that list).
+#   - DlcOnlyItems always keeps Scadutree Fragments and Revered Spirit Ashes
+#     in DLC locations, whatever the `dlcblessing` option (item_preset.yaml
+#     empties that list).
 # Placements are mostly uncommented here; see item_preset.yaml.
 #
 # IMPORTANT: Only CoreMechanics and user-defined `Type: Custom` placements
@@ -545,12 +545,8 @@ Placements:
     ID: weapon:2230000
   - Name: Ornamental Straight Sword
     ID: weapon:2060000
-  - Name: Ritual Sword Talisman
-    ID: accessory:2050
   - Name: Rotten Crystal Sword
     ID: weapon:2260000
-  - Name: Rotten Winged Sword Insignia
-    ID: accessory:2081
   - Name: Serpent-God's Curved Sword
     ID: weapon:7110000
   - Name: Short Sword
@@ -563,12 +559,8 @@ Placements:
     ID: weapon:4110000
   - Name: Twinned Knight Swords
     ID: weapon:10030000
-  - Name: Two-Handed Sword Talisman
-    ID: accessory:8040
   - Name: Weathered Straight Sword
     ID: weapon:2050000
-  - Name: Winged Sword Insignia
-    ID: accessory:2080
   - Name: Zamor Curved Sword
     ID: weapon:8050000
   - Name: Black Steel Greathammer
@@ -595,8 +587,6 @@ Placements:
     ID: weapon:15000000
   - Name: Rotten Greataxe
     ID: weapon:23150000
-  - Name: Axe Talisman
-    ID: accessory:2130
   - Name: Battle Axe
     ID: weapon:14000000
   - Name: Crescent Moon Axe
@@ -715,8 +705,6 @@ Placements:
     ID: weapon:9000000
   - Name: Nagakiba
     ID: weapon:9010000
-  - Name: Blade of Mercy
-    ID: accessory:8230
   - Name: Bloodflame Blade
     ID: goods:6320
   - Name: Gargoyle's Black Blades

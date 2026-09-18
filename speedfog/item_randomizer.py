@@ -100,11 +100,12 @@ def generate_item_config(
             # the GUI defaults. spellshops is live (neither preset overrides
             # the SorceryShop/MiracleShop sections): spell shops keep selling
             # random spells. dlcblessing is inert with the shipped presets
-            # (their explicit empty DlcOnlyItems section overrides the
-            # default DLC-only blessing entries; blessing placement is
-            # governed by the presets' ShadowRealmBlessings section instead)
-            # but pinned anyway so a future preset without that override
-            # gets the GUI default, not the headless-false flip.
+            # (it only filters the default preset's DlcOnlyItems entries, and
+            # each shipped preset's own DlcOnlyItems item list replaces them:
+            # empty in item_preset/item_preset_without_weapons, both blessings
+            # in uwyg_item_preset) but pinned anyway so a future preset
+            # without that section gets the GUI default, not the
+            # headless-false flip.
             "dlcblessing": True,
             "spellshops": True,
         },
