@@ -1,0 +1,444 @@
+# SpeedFog item placement preset for Elden Ring Item Randomizer.
+#
+# Controls WHERE randomized items end up in the world.
+#
+# IMPORTANT: Only CoreMechanics allows customizing both items AND locations
+# (EditItems=true, EditLocs=true). Other placement types have either fixed
+# items or fixed locations enforced by the randomizer's PlacementMeta.
+# Custom items listed under types with EditItems=false are silently replaced
+# by defaults during Resolve(). See ItemPreset.cs:614-617.
+#
+# Placement modes:
+#   - Important (KeyItems): inherits LocationGroups for
+#     location tags, and items are added to RaceModeItems (race-mode tagging).
+#   - Custom (CoreMechanics, SacredFlaskUpgrades): per-item Requires/Excludes
+#     tags. Constrained items are queued and matched to compatible slots; no
+#     separate pass between Custom placements.
+#   - Anywhere (QuestItems, UpgradeBellBearings, ShadowRealmBlessings):
+#     unrestricted (Excludes only).
+#
+# Uses Item Randomizer's ItemPreset.ParsePreset().
+
+NorandomItems:
+
+- Name: Spectral Steed Whistle
+  ID: goods:130
+- Name: Flask of Wondrous Physick
+  ID: goods:250
+- Name: Crafting Kit
+  ID: goods:8500
+- Name: Spirit Calling Bell
+  ID: goods:8158
+- Name: Whetstone Knife
+  ID: goods:8590
+- Name: Lantern
+  ID: goods:2070
+- Name: Gaol Lower Level Key
+  ID: goods:2008006
+- Name: Gaol Upper Level Key
+  ID: goods:2008005
+- Name: O Mother
+  ID: goods:2009004
+- Name: Well Depths Key
+  ID: goods:2008004
+- Name: Rusty Key
+  ID: goods:8010
+- Name: Academy Glintstone Key
+  ID: goods:8109
+- Name: Dectus Medallion (Left)
+  ID: goods:8105
+- Name: Dectus Medallion (Right)
+  ID: goods:8106
+- Name: Haligtree Secret Medallion (Left)
+  ID: goods:8175
+- Name: Haligtree Secret Medallion (Right)
+  ID: goods:8176
+- Name: Hole-Laden Necklace
+  ID: goods:2008008
+
+Placements:
+
+# Key items at major boss/racemode locations.
+# Items: fixed by randomizer (EditItems=false). Locations: editable.
+# FixedLocs adds "boss" and "racemode" automatically.
+- Type: KeyItems
+  Mode: Important
+  Items:
+  - Group: keyitems
+  Requires:
+  - Tag: racemode
+  - Tag: boss
+  Excludes:
+  - Tag: missable
+
+# Quest items placed freely.
+# Items: fixed by randomizer (EditItems=false). Locations: editable.
+- Type: QuestItems
+  Mode: Anywhere
+  Items:
+  - Group: questitems
+  Excludes:
+  - Tag: missable
+
+# Talismans, crystal tears, and ashes of war at key locations.
+# This is the ONLY placement type where both items and locations are customizable.
+# Items that overflow tagged locations fall back to the general random pool.
+- Type: CoreMechanics
+  Mode: Custom
+  Items:
+  # Core progression items
+  - Name: Talisman Pouch
+    ID: goods:10040
+  - Name: Memory Stone
+    ID: goods:10030
+  # All talismans
+  - Group: accessories
+  # All crystal tears
+  - Group: crystaltears
+  # Curated ashes of war (build-defining skills with useful affinities)
+  # Attack skills
+  - Name: Lion's Claw
+    ID: gem:10000
+  - Name: Giant Hunt
+    ID: gem:11600
+  - Name: Sword Dance
+    ID: gem:12400
+  - Name: Double Slash
+    ID: gem:11200
+  - Name: Unsheathe
+    ID: gem:11400
+  - Name: Square Off
+    ID: gem:11500
+  - Name: Prelate's Charge
+    ID: gem:11300
+  - Name: Phantom Slash
+    ID: gem:22500
+  # Elemental / magic skills
+  - Name: Ice Spear
+    ID: gem:20200
+  - Name: Glintstone Pebble
+    ID: gem:20300
+  - Name: Sacred Blade
+    ID: gem:20100
+  - Name: Bloody Slash
+    ID: gem:20400
+  - Name: Thunderbolt
+    ID: gem:21600
+  - Name: Lightning Slash
+    ID: gem:21700
+  - Name: Flaming Strike
+    ID: gem:21400
+  - Name: Carian Grandeur
+    ID: gem:21800
+  - Name: Black Flame Tornado
+    ID: gem:22100
+  - Name: Storm Blade
+    ID: gem:21000
+  - Name: Prayerful Strike
+    ID: gem:20800
+  # Ground / stomp skills
+  - Name: Hoarfrost Stomp
+    ID: gem:50100
+  - Name: Flame of the Redmanes
+    ID: gem:50500
+  - Name: Waves of Darkness
+    ID: gem:50800
+  - Name: Hoarah Loux's Earthshaker
+    ID: gem:50900
+  # Buff skills
+  - Name: Royal Knight's Resolve
+    ID: gem:60100
+  - Name: Golden Vow
+    ID: gem:60300
+  - Name: Seppuku
+    ID: gem:60600
+  # Roar skills
+  - Name: War Cry
+    ID: gem:65100
+  - Name: Barbaric Roar
+    ID: gem:65000
+  # Movement skills
+  - Name: Bloodhound's Step
+    ID: gem:80100
+  - Name: Raptor of the Mists
+    ID: gem:80200
+  # Shield skills
+  - Name: Carian Retaliation
+    ID: gem:30500
+  - Name: Golden Parry
+    ID: gem:30700
+  # DLC ashes of war
+  - Name: Wing Stance
+    ID: gem:412000
+  - Name: Savage Lion's Claw
+    ID: gem:415000
+  - Name: Divine Beast Frost Stomp
+    ID: gem:416000
+  # Spells / Incantations
+  - Name: Glintstone Nail
+    ID: goods:2004500
+  - Name: Glintstone Nails
+    ID: goods:2004510
+  - Name: Impenetrable Thorns
+    ID: goods:2004910
+  - Name: Rings of Spectral Light
+    ID: goods:2005000
+  - Name: Blades of Stone
+    ID: goods:2004700
+  - Name: Carian Slicer
+    ID: goods:4440
+  - Name: Comet
+    ID: goods:4021
+  - Name: Glintstone Cometshard
+    ID: goods:4020
+  - Name: Glintstone Icecrag
+    ID: goods:4400
+  - Name: Glintstone Pebble
+    ID: goods:4000
+  - Name: Gravitational Missile
+    ID: goods:2004710
+  - Name: Great Glintstone Shard
+    ID: goods:4001
+  - Name: Magic Glintblade
+    ID: goods:4390
+  - Name: Night Comet
+    ID: goods:4620
+  - Name: Shard Spiral
+    ID: goods:4030
+  - Name: Zamor Ice Storm
+    ID: goods:4410
+  - Name: Beast Claw (Incantation)
+    ID: goods:6820
+  - Name: Bestial Sling
+    ID: goods:6800
+  - Name: Black Flame
+    ID: goods:6210
+  - Name: Catch Flame
+    ID: goods:6000
+  - Name: Discus of Light
+    ID: goods:6700
+  - Name: Fire Serpent
+    ID: goods:2007800
+  - Name: Flame Sling
+    ID: goods:6010
+  - Name: Flame, Grant Me Strength
+    ID: goods:6050
+  - Name: Frenzied Burst
+    ID: goods:7320
+  - Name: Golden Vow (Incantation)
+    ID: goods:6600
+  - Name: Great Heal
+    ID: goods:6422
+  - Name: Heal
+    ID: goods:6421
+  - Name: Heal from Afar
+    ID: goods:2006400
+  - Name: Honed Bolt
+    ID: goods:6930
+  - Name: Knight's Lightning Spear
+    ID: goods:2006900
+  - Name: Lightning Spear
+    ID: goods:6900
+  - Name: Order's Blade
+    ID: goods:6770
+  - Name: Pest-Thread Spears
+    ID: goods:2007210
+
+  # Staves
+  - Name: Carian Regal Scepter
+    ID: weapon:33090000
+  - Name: Lusat's Glintstone Staff
+    ID: weapon:33240000
+  - Name: Azur's Glintstone Staff
+    ID: weapon:33230000
+  - Name: Meteorite Staff
+    ID: weapon:33250000
+  - Name: Prince of Death's Staff
+    ID: weapon:33180000
+  - Name: Staff of Loss
+    ID: weapon:33280000
+  - Name: Staff of the Guilty
+    ID: weapon:33260000
+  - Name: Carian Glintblade Staff
+    ID: weapon:33170000
+  - Name: Staff of the Great Beyond
+    ID: weapon:33510000
+  - Name: Maternal Staff
+    ID: weapon:33520000
+  # Seals
+  - Name: Erdtree Seal
+    ID: weapon:34070000
+  - Name: Dragon Communion Seal
+    ID: weapon:34080000
+  - Name: Godslayer's Seal
+    ID: weapon:34010000
+  - Name: Giant's Seal
+    ID: weapon:34020000
+  - Name: Gravel Stone Seal
+    ID: weapon:34030000
+  - Name: Clawmark Seal
+    ID: weapon:34040000
+  - Name: Golden Order Seal
+    ID: weapon:34060000
+  - Name: Frenzied Flame Seal
+    ID: weapon:34090000
+  - Name: Dryleaf Seal
+    ID: weapon:34500000
+  - Name: Spiraltree Seal
+    ID: weapon:34520000
+  # Unique shields
+  - Name: Jellyfish Shield
+    ID: weapon:32120000
+  - Name: One-Eyed Shield
+    ID: weapon:32150000
+  - Name: Visage Shield
+    ID: weapon:32160000
+  - Name: Erdtree Greatshield
+    ID: weapon:32080000
+  - Name: Fingerprint Stone Shield
+    ID: weapon:32130000
+  - Name: Briar Greatshield
+    ID: weapon:32050000
+  - Name: Shield of the Guilty
+    ID: weapon:31170000
+  - Name: Coil Shield
+    ID: weapon:30200000
+  - Name: Verdigris Greatshield
+    ID: weapon:32520000
+  Requires:
+  - Tag: boss
+  - Tag: altboss
+  - Tag: racemode
+  - Tag: criticalpath
+  - Tag: caveboss
+  - Tag: catacombboss
+  - Tag: tunnelboss
+  - Tag: graveboss
+  - Tag: gaolboss
+  - Tag: minidungeonboss
+  - Tag: namelessmausoleum
+  - Tag: seedtree
+  - Tag: church
+  - Tag: cross
+  - Tag: forgereward
+  - Tag: revered
+  Excludes:
+  - Tag: missable
+  - Tag: night
+  - Tag: dragonboss
+  - Tag: overworldboss
+  - Tag: evergaol
+
+# Golden Seeds and Sacred Tears at flask upgrade locations.
+# Items: fixed by randomizer (EditItems=false). Locations: editable.
+# Requires is broader than the thematic seedtree/church/cross set: speedfog
+# runs rarely touch those slot types, so we extend to major bosses (boss)
+# and DLC scadu/revered spots to ensure ~1.5-3 seeds/tears land per run.
+# altboss and sub-dungeon boss tags are intentionally omitted to keep flask
+# upgrades on milestone encounters rather than every random catacomb boss.
+- Type: SacredFlaskUpgrades
+  Mode: Custom
+  Items:
+  - Name: Golden Seed
+    ID: goods:10010
+  - Name: Sacred Tear
+    ID: goods:10020
+  Requires:
+  - Tag: boss
+  - Tag: seedtree
+  - Tag: church
+  - Tag: cross
+  - Tag: forgereward
+  - Tag: revered
+  Excludes:
+  - Tag: missable
+
+# Upgrade Bell Bearings placed freely.
+# Items: fixed by randomizer (EditItems=false). Locations: editable.
+- Type: UpgradeBellBearings
+  Mode: Anywhere
+  Items:
+  - Group: upgradeashes
+  Excludes:
+  - Tag: missable
+
+# Shadow Realm Blessings (Scadutree Fragments, Revered Spirit Ashes).
+# Items: fixed by randomizer (EditItems=false). Locations: editable.
+# Anywhere (was Important with cross/boss/altboss tags): SpeedFog neutralizes
+# the blessing SpEffects (ScaduBlessingNeutralizer), so these are dead pickups
+# in a run; the Excludes list (same as the uwyg preset) structurally keeps
+# them off boss drops and out of minidungeon reward slots, so they only land
+# in generic overworld/legacy pickups. Note the dlcblessing option does NOT
+# constrain them here: the explicit empty DlcOnlyItems section below
+# (EditItems=true) overrides the randomizer's default DLC-only entries.
+- Type: ShadowRealmBlessings
+  Mode: Anywhere
+  Items: []
+  Requires: []
+  Excludes:
+  - Tag: missable
+  - Tag: catacomb
+  - Tag: caveboss
+  - Tag: cave
+  - Tag: catacombboss
+  - Tag: evergaol
+  - Tag: forge
+  - Tag: forgereward
+  - Tag: gaolboss
+  - Tag: gaol
+  - Tag: seedtree
+  - Tag: graveboss
+  - Tag: grave
+  - Tag: boss
+  - Tag: racemode
+  - Tag: namelessmausoleum
+  - Tag: altboss
+  - Tag: tunnelboss
+  - Tag: tunnel
+  - Tag: minidungeon
+  - Tag: minidungeonboss
+
+# Unused placement types (required by Resolve(), kept empty).
+
+- Type: BossTools
+  Mode: Custom
+  Items: []
+  Requires: []
+  Excludes:
+  - Tag: missable
+
+- Type: BaseOnlyItems
+  Mode: Custom
+  Items: []
+  Requires: []
+  Excludes:
+  - Tag: dlc
+
+- Type: DlcOnlyItems
+  Mode: Custom
+  Items: []
+  Requires: []
+  Excludes:
+  - Tag: nodlc
+
+# LocationGroups: defines the location pool for Important mode placements.
+# Important items (key items, seeds/tears, DLC blessings) get first-pass
+# priority at these locations before CoreMechanics fills the rest.
+LocationGroups:
+
+- Requires:
+  - Tag: boss
+  - Tag: altboss
+  - Tag: racemode
+  - Tag: seedtree
+  - Tag: church
+  - Tag: cross
+  Excludes:
+  - Tag: missable
+  - Tag: night
+  - Tag: dragonboss
+  - Tag: overworldboss
+  - Tag: evergaol
+
+
+Version: 1
