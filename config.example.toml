@@ -320,7 +320,9 @@ allcraft = true
 # Enable item placement preset (default: true)
 # Weapons and talismans go to boss drops, seeds/tears to important locations.
 item_preset = true
-# Custom item preset YAML (default: built-in data/item_preset.yaml)
+# Custom item preset YAML (default: built-in data/item_preset.yaml); a
+# relative path resolves against the working directory, and a missing file
+# fails the generation
 # item_preset_path = "/path/to/custom_preset.yaml"
 
 # Tarnished Pack (ER 1.17 paid DLC) showcase: pack-owner-only seeds where

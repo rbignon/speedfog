@@ -174,16 +174,15 @@ Example:
         {
             var configDir = Path.GetDirectoryName(Path.GetFullPath(config.ConfigPath)) ?? ".";
             var itemPresetFile = Path.Combine(configDir, randoConfig.ItemPresetPath);
-            if (File.Exists(itemPresetFile))
+            // A missing preset would make the randomizer silently fall back to
+            // its built-in default preset (different boss drops).
+            if (!File.Exists(itemPresetFile))
             {
-                Console.WriteLine($"Loading item preset: {itemPresetFile}");
-                var yamlText = await File.ReadAllTextAsync(itemPresetFile);
-                itemPreset = ItemPreset.ParsePreset(yamlText);
+                throw new FileNotFoundException($"Item preset file not found: {itemPresetFile}");
             }
-            else
-            {
-                Console.WriteLine($"Warning: Item preset file not found: {itemPresetFile}");
-            }
+            Console.WriteLine($"Loading item preset: {itemPresetFile}");
+            var yamlText = await File.ReadAllTextAsync(itemPresetFile);
+            itemPreset = ItemPreset.ParsePreset(yamlText);
         }
 
         // Run randomizer

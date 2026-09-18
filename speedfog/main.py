@@ -53,6 +53,19 @@ from speedfog.tarnished import build_class_loadout, build_torrent_skins, tarnish
 from speedfog.validator import validate_exclusions
 
 
+def _item_preset_source(config: Config, project_root: Path) -> Path | None:
+    """Item preset copied into the seed, or None when no preset is used.
+
+    A relative ``item_preset_path`` resolves against the current working
+    directory; an empty one selects the built-in ``data/item_preset.yaml``.
+    """
+    if not (config.item_randomizer.enabled and config.item_randomizer.item_preset):
+        return None
+    if config.item_randomizer.item_preset_path:
+        return Path(config.item_randomizer.item_preset_path)
+    return project_root / "data" / "item_preset.yaml"
+
+
 def _apply_exclusions(config: Config, clusters: ClusterPool) -> list[ClusterData]:
     """Filter excluded-zone clusters from the pool and prune them from the
     final-boss candidate set. Returns the removed clusters (for logging).
@@ -208,6 +221,14 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
     # Find clusters.json in data/ relative to project root
     project_root = Path(__file__).parent.parent
     clusters_path = project_root / "data" / "clusters.json"
+
+    # A missing item preset would make the Item Randomizer silently fall back
+    # to its built-in default preset (different boss drops): refuse before
+    # any work or the seed directory exists.
+    item_preset_src = _item_preset_source(config, project_root)
+    if item_preset_src is not None and not item_preset_src.is_file():
+        print(f"Error: Item preset not found: {item_preset_src}", file=sys.stderr)
+        return 1
 
     # A static mod script edited after the last bootstrap would ship stale
     # (the seed copies the built luabnd, FogModWrapper only checks that it
@@ -563,20 +584,10 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
 
         # Copy item preset
         item_preset_path = seed_dir / "item_preset.yaml"
-        if config.item_randomizer.item_preset:
-            if config.item_randomizer.item_preset_path:
-                item_preset_src = Path(config.item_randomizer.item_preset_path)
-            else:
-                item_preset_src = project_root / "data" / "item_preset.yaml"
-            if item_preset_src.exists():
-                shutil.copy(item_preset_src, item_preset_path)
-                if args.verbose:
-                    print(f"Copied: {item_preset_path}")
-            else:
-                print(
-                    f"Warning: Item preset not found at {item_preset_src}",
-                    file=sys.stderr,
-                )
+        if item_preset_src is not None:
+            shutil.copy(item_preset_src, item_preset_path)
+            if args.verbose:
+                print(f"Copied: {item_preset_path}")
 
         if not args.no_build:
             if not game_dir:

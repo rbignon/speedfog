@@ -90,6 +90,20 @@ def test_main_unknown_config_key_returns_1(tmp_path, monkeypatch, capsys):
     assert "unknown key run.sead" in err
 
 
+def test_main_missing_item_preset_returns_1(tmp_path, monkeypatch, capsys):
+    missing = tmp_path / "no_such_preset.yaml"
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(f"[item_randomizer]\nitem_preset_path = '{missing}'\n")
+    out_dir = tmp_path / "out"
+
+    rc = _run_main(monkeypatch, str(config_path), "--no-build", "-o", str(out_dir))
+
+    assert rc == 1
+    assert f"Item preset not found: {missing}" in capsys.readouterr().err
+    # Refused before the DAG is generated or the seed directory exists
+    assert not out_dir.exists()
+
+
 # --- main(): full pipeline against the real cluster pool ---
 
 
@@ -120,6 +134,41 @@ def test_main_logs_writes_spoiler_and_generation_log(tmp_path, monkeypatch):
     seed_dir = next(d for d in tmp_path.iterdir() if d.is_dir())
     assert (seed_dir / "logs" / "spoiler.txt").exists()
     assert (seed_dir / "logs" / "generation.log").exists()
+
+
+def test_main_copies_configured_item_preset(tmp_path, monkeypatch):
+    _real_clusters_or_skip()
+    preset = tmp_path / "my_preset.yaml"
+    preset.write_text("Version: 1\n")
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(f"[item_randomizer]\nitem_preset_path = '{preset}'\n")
+    out_dir = tmp_path / "out"
+
+    rc = _run_main(
+        monkeypatch, str(config_path), "--no-build", "--seed", "0", "-o", str(out_dir)
+    )
+
+    assert rc == 0
+    seed_dir = next(d for d in out_dir.iterdir() if d.is_dir())
+    assert (seed_dir / "item_preset.yaml").read_text() == "Version: 1\n"
+
+
+@pytest.mark.parametrize("disabling_key", ["enabled", "item_preset"])
+def test_main_ignores_missing_item_preset_when_unused(
+    tmp_path, monkeypatch, disabling_key
+):
+    _real_clusters_or_skip()
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        f"[item_randomizer]\n{disabling_key} = false\n"
+        f"item_preset_path = '{tmp_path / 'no_such_preset.yaml'}'\n"
+    )
+
+    rc = _run_main(
+        monkeypatch, str(config_path), "--no-build", "--seed", "0", "-o", str(tmp_path)
+    )
+
+    assert rc == 0
 
 
 def test_main_invalid_exclude_zones_returns_1(tmp_path, monkeypatch, capsys):
