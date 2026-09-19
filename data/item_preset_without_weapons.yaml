@@ -361,43 +361,20 @@ Placements:
     ID: goods:2003170
   - Name: Golden Horn Tender
     ID: goods:2001230
-  - Name: Gourmet Scorpion Stew
-    ID: goods:2001201
-  - Name: Gourmet Scorpion Stew
-    ID: goods:2001203
   - Name: Blessing of Marika
     ID: goods:2000900
   - Name: Rune Arc
     ID: goods:190
-  # Pickled livers
-  - Name: Spellproof Pickled Liver
-    ID: goods:2001120
-  - Name: Fireproof Pickled Liver
-    ID: goods:2001130
-  - Name: Lightningproof Pickled Liver
-    ID: goods:2001140
-  - Name: Holyproof Pickled Liver
-    ID: goods:2001150
   # Boluses
   - Name: Neutralizing Boluses
     ID: goods:900
-  - Name: Stanching Boluses
-    ID: goods:910
-  - Name: Thawfrost Boluses
-    ID: goods:920
-  - Name: Stimulating Boluses
-    ID: goods:930
   - Name: Preserving Boluses
     ID: goods:940
   - Name: Rejuvenating Boluses
     ID: goods:950
-  - Name: Clarifying Boluses
-    ID: goods:960
   # Throwables
   - Name: Throwing Dagger
     ID: goods:1700
-  - Name: Kukri
-    ID: goods:1730
   - Name: Crystal Dart
     ID: goods:1740
   # Greases
@@ -405,8 +382,6 @@ Placements:
     ID: goods:1400
   - Name: Lightning Grease
     ID: goods:1410
-  - Name: Magic Grease
-    ID: goods:1420
   - Name: Holy Grease
     ID: goods:1430
   - Name: Blood Grease
@@ -419,14 +394,6 @@ Placements:
     ID: goods:1480
   - Name: Rot Grease
     ID: goods:1490
-  - Name: Messmerfire Grease
-    ID: goods:2001400
-  - Name: Dragonbolt Grease
-    ID: goods:2001410
-  - Name: Royal Magic Grease
-    ID: goods:2001420
-  - Name: Dragon Communion Grease
-    ID: goods:2001480
   Requires:
   - Tag: boss
   - Tag: altboss
