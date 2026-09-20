@@ -378,7 +378,12 @@ A frozen copy and the Steam install share
   directory into `eldendata/Vanilla`, idempotent, prints what it replaced
   and the resulting `regulation.bin` md5. Only touches FogMod's snapshot
   since 2026-08-31 (Task 2): the Item Randomizer (v0.12+) self-extracts its
-  own `diste/Vanilla` from `--game-dir` instead. Maps are never refreshed
+  own `diste/Vanilla` from `--game-dir` instead, and `tools/bootstrap.py`
+  warms that cache as its last step. On a patch day where the game no longer
+  matches the manifest the Item Randomizer shipped, the randomizer
+  re-extracts its cache on every run and SpeedFog serializes generations to
+  keep them from colliding over it (it says so; see
+  `docs/item-randomizer.md`). Maps are never refreshed
   unless named with `--file`, or all at once with `--all` (every snapshot
   file with a known game location; for 1.17 that is the 147 changed
   MSB/EMEVD/ESD on top of regulation and msg, and is the standard

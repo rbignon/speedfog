@@ -234,7 +234,7 @@ speedfog/
 | `docs/esd-editing.md` | ESD editing conventions and ConsistentID allocation |
 | `docs/event-flags.md` | Event flag allocation and EMEVD reference |
 | `docs/alternate-warp-patching.md` | AlternateFlag warp patching (flags 300/330) |
-| `docs/item-randomizer.md` | ItemRandomizerWrapper (preset building, boss placement capture) |
+| `docs/item-randomizer.md` | ItemRandomizerWrapper (preset building, boss placement capture, shared vanilla cache) |
 | `docs/boss-arena-constraints.md` | Arena-boss compatibility constraints and matching |
 | `docs/care-package.md` | Randomized starting build system |
 | `docs/tarnished-showcase.md` | Tarnished Pack showcase mode: `[tarnished]` config, class loadout + Torrent skin draws, graph.json v4.7 fields, flag-to-skin mapping confirmed in-game 2026-09-01 |
@@ -454,11 +454,12 @@ python tools/bootstrap.py \
 
 # Item Randomizer v0.12+ ships only a two-file diste/Vanilla/ stub (manifest
 # + regulation.bin); ItemRandomizerWrapper self-extracts the rest from
-# --game-dir's BHD/BDT archives on its first run (needs the archives
-# present), then reuses the cache on later runs. See docs/item-randomizer.md.
-# The bootstrap ends by refreshing FogMod's eldendata snapshot from
-# --game-dir (the FogRando zip data is pre-1.17); pass --no-refresh to keep
-# the zip contents on a game-patch day (see docs/game-patch-migration.md).
+# --game-dir's BHD/BDT archives (needs the archives present), then reuses the
+# cache on later runs. The bootstrap fills it as its last step so parallel
+# generations never extract it at the same time. See docs/item-randomizer.md.
+# The bootstrap also refreshes FogMod's eldendata snapshot from --game-dir
+# (the FogRando zip data is pre-1.17); pass --no-refresh to keep the zip
+# contents on a game-patch day (see docs/game-patch-migration.md).
 
 # Or extract only FogRando (legacy mode)
 python tools/bootstrap.py \

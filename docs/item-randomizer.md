@@ -341,6 +341,61 @@ or on a `--force` re-run (`setup_itemrando`'s `is_itemrando_installed()`
 check skips the copy otherwise), so a plain re-bootstrap does not force a
 re-extraction.
 
+#### Parallel generations
+
+The cache is shared by every generation, and `UnpackVanillaFiles` re-extracts
+*all* the files as soon as one is missing or has an unexpected size ("do full
+extract on any issues"). Seeds generated in parallel on a cold cache therefore
+used to start one extraction each and write (and read) the same paths at once,
+failing under Wine with:
+
+```
+Error: The process cannot access the file 'Z:\...\diste\Vanilla\m61_50_43_00.msb.dcx' because it is being used by another process.
+```
+
+The extraction now runs on its own, before any randomization opens the cache:
+
+- `ItemRandomizerWrapper --game-dir <path> [--data-dir <path>] --extract-only`
+  calls `GameData.UnpackVanillaFiles` and exits, without a seed config or an
+  output directory. A complete cache is a no-op.
+- `speedfog.item_randomizer.vanilla_cache_guard` wraps every randomization:
+  under an exclusive inter-process lock on `diste/.vanilla-cache.lock`
+  (`flock`, `msvcrt` on Windows) it checks the cache against `files.txt` and
+  runs the mode above when something is missing. Parallel runs that arrive on
+  a cold cache block on the lock, then find it warm.
+- The lock is released before the randomization **when the cache came out
+  complete**, so generations run concurrently in the normal case. The check
+  is deliberately inside the lock: a full re-extraction rewrites every file,
+  so an unlocked check can see a transient "complete" state and then read the
+  cache while the extraction is still running.
+- `tools/bootstrap.py` calls `ensure_vanilla_cache` (the same guard, entered
+  and released) as its last step, so the first batch of seeds after a setup
+  already finds the cache warm. A failed warm-up only warns there.
+
+### When the cache cannot be completed
+
+`--extract-only` exiting 0 does not mean the cache matches `files.txt`: when
+the installed game no longer does (a game patch before an Item Randomizer
+release), `UnpackVanillaFiles` extracts everything, keeps its `badLengths`
+list non-empty, prints "at least N files have unexpected contents" and
+returns anyway. The cache then stays "incomplete" forever, and
+`Randomizer.Randomize` re-extracts it *itself* (`Randomizer.cs`, dist dir
+`diste` relative to the cwd), inside the randomization and out of reach of
+the lock.
+
+So the guard re-checks after extracting, and when the cache is still
+incomplete it **keeps the lock for the whole randomization** and warns.
+Generations are serialized until the Item Randomizer catches up with the game
+version, which is slow but correct; releasing the lock there would put the
+original error straight back (see `docs/game-patch-migration.md`).
+
+The Python check mirrors the C# one: entries are `<archive path> <archive>
+<size> <md5>` (only the first three are read), cached names are the archive
+path's file name except msgbnd entries (which keep their directories), and
+`DLC` entries are only required when `<game>/DLC.bdt` is installed. Keep the
+two in sync if RandomizerCommon changes its own check (e.g. moving from sizes
+to the hash column, which its comments consider).
+
 ## Managed Dependencies (`writer/lib/`)
 
 `tools/bootstrap.py` extracts the Item Randomizer DLLs from its single-file

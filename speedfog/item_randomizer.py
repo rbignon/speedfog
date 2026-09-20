@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import errno
 import random
 import shutil
 import sys
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Iterator, Mapping
+from contextlib import ExitStack, contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +23,10 @@ from speedfog.clusters import ClusterData
 from speedfog.config import Config
 from speedfog.enemy_data import resolve_entity_id
 from speedfog.proc import stream_command
+
+# Lock file serializing the extraction of the shared diste/Vanilla cache
+# between parallel generations (see ensure_vanilla_cache).
+VANILLA_CACHE_LOCK = ".vanilla-cache.lock"
 
 
 def generate_item_config(
@@ -474,6 +480,229 @@ def _build_uniform_assignments(
     )
 
 
+def _resolve_wrapper(platform: str | None) -> tuple[list[str], Path] | None:
+    """Resolve how to launch ItemRandomizerWrapper on this platform.
+
+    Returns the command prefix (Wine-wrapped on Linux) and the wrapper
+    directory to run from, or None when the wrapper is not built or Wine is
+    missing.
+    """
+    project_root = Path(__file__).parent.parent
+    wrapper_dir = project_root / "writer" / "ItemRandomizerWrapper"
+    wrapper_exe = wrapper_dir / "publish" / "win-x64" / "ItemRandomizerWrapper.exe"
+
+    if not wrapper_exe.exists():
+        print(
+            f"Error: ItemRandomizerWrapper not found at {wrapper_exe}", file=sys.stderr
+        )
+        print(
+            "Run: python tools/bootstrap.py --fogrando <path> --itemrando <path>",
+            file=sys.stderr,
+        )
+        return None
+
+    # Detect platform
+    if platform is None or platform == "auto":
+        platform = "windows" if sys.platform == "win32" else "linux"
+
+    # Check Wine availability on non-Windows
+    if platform == "linux":
+        if shutil.which("wine") is None:
+            print(
+                "Error: Wine not found. Install wine to run Item Randomizer on Linux.",
+                file=sys.stderr,
+            )
+            return None
+        return ["wine", str(wrapper_exe.resolve())], wrapper_dir
+
+    return [str(wrapper_exe.resolve())], wrapper_dir
+
+
+def vanilla_cache_is_complete(diste_dir: Path, game_dir: Path) -> bool:
+    """Whether diste/Vanilla already holds every game file the randomizer needs.
+
+    Mirrors RandomizerCommon's own check (``GameData.UnpackVanillaFiles``) so a
+    warm cache costs no subprocess: ``Vanilla/files.txt`` lists
+    ``<archive path> <archive> <size> <md5>`` per line (the randomizer only
+    reads the first three, and its comments consider moving to the hash), a
+    cached file is named after the archive path's file name (msgbnd entries
+    keep their directories), and DLC entries are only required when the game
+    has the DLC installed. A line the randomizer would reject counts as
+    incomplete, so the extraction gets a chance to fix it.
+    """
+    vanilla_dir = diste_dir / "Vanilla"
+    manifest = vanilla_dir / "files.txt"
+    if not manifest.is_file():
+        return False
+
+    dlc_archive = game_dir / "DLC.bdt"
+    has_dlc = dlc_archive.is_file() and dlc_archive.stat().st_size > 1000
+
+    for line in manifest.read_text().splitlines():
+        if not line.strip():
+            continue
+        parts = line.split()
+        if len(parts) < 3 or not parts[2].isdigit():
+            return False
+        path, archive, expected_size = parts[0], parts[1], int(parts[2])
+        name = path.lstrip("/") if "msgbnd" in path else path.rsplit("/", 1)[-1]
+        cached = vanilla_dir / name
+        if not cached.is_file():
+            if archive == "DLC" and not has_dlc:
+                continue
+            return False
+        if cached.stat().st_size != expected_size:
+            return False
+
+    return True
+
+
+def _acquire_exclusive_lock(fd: int) -> None:
+    """Block until an exclusive lock is held on *fd*."""
+    if sys.platform == "win32":
+        import msvcrt
+
+        while True:
+            try:
+                msvcrt.locking(fd, msvcrt.LK_LOCK, 1)
+                return
+            except OSError as exc:
+                # LK_LOCK gives up after about ten seconds; a cold-cache
+                # extraction takes longer than that, so keep waiting. Any
+                # other error (bad descriptor, filesystem without locking)
+                # would spin forever instead.
+                if exc.errno != errno.EDEADLOCK:
+                    raise
+
+    import fcntl
+
+    fcntl.flock(fd, fcntl.LOCK_EX)
+
+
+def _release_exclusive_lock(fd: int) -> None:
+    """Release the lock taken by _acquire_exclusive_lock."""
+    if sys.platform == "win32":
+        import msvcrt
+
+        msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
+        return
+
+    import fcntl
+
+    fcntl.flock(fd, fcntl.LOCK_UN)
+
+
+@contextmanager
+def _exclusive_lock(lock_path: Path) -> Iterator[None]:
+    """Hold an exclusive inter-process lock on *lock_path* for the block."""
+    # Append mode: the file is only a lock token, and truncating one another
+    # process holds a byte-range lock on is asking for trouble on Windows.
+    with lock_path.open("a") as handle:
+        _acquire_exclusive_lock(handle.fileno())
+        try:
+            yield
+        finally:
+            _release_exclusive_lock(handle.fileno())
+
+
+@contextmanager
+def vanilla_cache_guard(
+    game_dir: Path,
+    platform: str | None = None,
+    verbose: bool = False,
+) -> Iterator[bool]:
+    """Hold the Item Randomizer's shared vanilla cache still for the block.
+
+    RandomizerCommon extracts the game files it needs into ``diste/Vanilla``,
+    a cache shared by every generation, and re-extracts all of them as soon as
+    one is missing or has an unexpected size. Parallel generations would each
+    start that extraction and write (and read) the same paths at once, which
+    fails under Wine with "The process cannot access the file ... because it
+    is being used by another process".
+
+    The cache is therefore inspected, and extracted if needed, under an
+    exclusive inter-process lock. The lock is released before the block when
+    the cache came out complete: nothing extracts it any more, so generations
+    run concurrently. When it cannot be completed (the installed game no
+    longer matches the manifest the Item Randomizer shipped), the lock is held
+    for the whole block instead, because ``Randomizer.Randomize`` then
+    re-extracts the cache from inside the randomization itself, out of reach
+    of this lock.
+
+    Yields True when the cache is usable, False when the extraction failed.
+    """
+    wrapper = _resolve_wrapper(platform)
+    if wrapper is None:
+        yield False
+        return
+    cmd_prefix, wrapper_dir = wrapper
+
+    diste_dir = wrapper_dir / "diste"
+    if not diste_dir.is_dir():
+        print(
+            f"Error: Item Randomizer data directory not found: {diste_dir}",
+            file=sys.stderr,
+        )
+        yield False
+        return
+
+    game_dir = game_dir.resolve()
+    with ExitStack() as stack:
+        stack.enter_context(_exclusive_lock(diste_dir / VANILLA_CACHE_LOCK))
+
+        extraction_ok = True
+        complete = vanilla_cache_is_complete(diste_dir, game_dir)
+        if not complete:
+            print("Extracting Item Randomizer vanilla game files (other runs wait)...")
+            cmd = [
+                *cmd_prefix,
+                "--game-dir",
+                str(game_dir),
+                "--data-dir",
+                str(diste_dir),
+                "--extract-only",
+            ]
+            if verbose:
+                print(f"Running: {' '.join(cmd)}")
+            extraction_ok = stream_command(cmd, cwd=wrapper_dir) == 0
+            if not extraction_ok:
+                print(
+                    "Error: vanilla cache extraction failed. A wrapper published "
+                    "before --extract-only existed fails here: republish it with "
+                    "python tools/bootstrap.py --game-dir <game> --itemrando <zip>",
+                    file=sys.stderr,
+                )
+            complete = extraction_ok and vanilla_cache_is_complete(diste_dir, game_dir)
+
+        if complete:
+            # Nothing writes the cache any more: let the other generations in.
+            stack.close()
+        elif extraction_ok:
+            print(
+                "Warning: the installed game does not match the Item Randomizer's "
+                "Vanilla/files.txt, so the randomizer re-extracts the cache on every "
+                "run. Generations stay serialized until the Item Randomizer catches "
+                "up with the game version."
+            )
+
+        yield extraction_ok
+
+
+def ensure_vanilla_cache(
+    game_dir: Path,
+    platform: str | None = None,
+    verbose: bool = False,
+) -> bool:
+    """Fill the shared vanilla cache now, so later generations find it warm.
+
+    The guard a generation takes, entered and released immediately:
+    ``tools/bootstrap.py`` calls this so the first batch of seeds after a
+    setup does not have to extract anything (see vanilla_cache_guard).
+    """
+    with vanilla_cache_guard(game_dir, platform, verbose) as ok:
+        return ok
+
+
 def run_item_randomizer(
     seed_dir: Path,
     game_dir: Path,
@@ -493,31 +722,10 @@ def run_item_randomizer(
     Returns:
         True on success, False on failure.
     """
-    project_root = Path(__file__).parent.parent
-    wrapper_dir = project_root / "writer" / "ItemRandomizerWrapper"
-    wrapper_exe = wrapper_dir / "publish" / "win-x64" / "ItemRandomizerWrapper.exe"
-
-    if not wrapper_exe.exists():
-        print(
-            f"Error: ItemRandomizerWrapper not found at {wrapper_exe}", file=sys.stderr
-        )
-        print(
-            "Run: python tools/bootstrap.py --fogrando <path> --itemrando <path>",
-            file=sys.stderr,
-        )
+    wrapper = _resolve_wrapper(platform)
+    if wrapper is None:
         return False
-
-    # Detect platform
-    if platform is None or platform == "auto":
-        platform = "windows" if sys.platform == "win32" else "linux"
-
-    # Check Wine availability on non-Windows
-    if platform == "linux" and shutil.which("wine") is None:
-        print(
-            "Error: Wine not found. Install wine to run Item Randomizer on Linux.",
-            file=sys.stderr,
-        )
-        return False
+    cmd_prefix, wrapper_dir = wrapper
 
     # Build command with absolute paths
     seed_dir = seed_dir.resolve()
@@ -525,26 +733,25 @@ def run_item_randomizer(
     output_dir = output_dir.resolve()
     config_path = seed_dir / "item_config.json"
 
-    if platform == "linux":
-        cmd = ["wine", str(wrapper_exe.resolve())]
-    else:
-        cmd = [str(wrapper_exe.resolve())]
-
-    cmd.extend(
-        [
-            str(config_path),
-            "--game-dir",
-            str(game_dir),
-            "--data-dir",
-            str(wrapper_dir / "diste"),
-            "-o",
-            str(output_dir),
-        ]
-    )
+    cmd = [
+        *cmd_prefix,
+        str(config_path),
+        "--game-dir",
+        str(game_dir),
+        "--data-dir",
+        str(wrapper_dir / "diste"),
+        "-o",
+        str(output_dir),
+    ]
 
     if verbose:
         print(f"Running: {' '.join(cmd)}")
         print(f"Working directory: {wrapper_dir}")
 
-    # Run from wrapper_dir so it finds diste/
-    return stream_command(cmd, cwd=wrapper_dir) == 0
+    # The shared vanilla cache must not be extracted by another generation
+    # while this one reads it (see vanilla_cache_guard).
+    with vanilla_cache_guard(game_dir, platform, verbose) as cache_ok:
+        if not cache_ok:
+            return False
+        # Run from wrapper_dir so it finds diste/
+        return stream_command(cmd, cwd=wrapper_dir) == 0

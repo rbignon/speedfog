@@ -45,6 +45,9 @@ public static class ArgParser
                     }
                     config.DataDir = args[++i];
                     break;
+                case "--extract-only":
+                    config.ExtractOnly = true;
+                    break;
                 default:
                     if (args[i].StartsWith("-"))
                     {
@@ -59,8 +62,9 @@ public static class ArgParser
             }
         }
 
-        // Validate required arguments
-        if (string.IsNullOrEmpty(config.ConfigPath))
+        // Validate required arguments. The cache warm-up randomizes nothing,
+        // so it needs neither a seed config nor an output directory.
+        if (string.IsNullOrEmpty(config.ConfigPath) && !config.ExtractOnly)
         {
             errorWriter.WriteLine("Error: config.json path required");
             return null;
@@ -70,7 +74,7 @@ public static class ArgParser
             errorWriter.WriteLine("Error: --game-dir required");
             return null;
         }
-        if (string.IsNullOrEmpty(config.OutputDir))
+        if (string.IsNullOrEmpty(config.OutputDir) && !config.ExtractOnly)
         {
             errorWriter.WriteLine("Error: -o/--output required");
             return null;

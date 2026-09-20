@@ -31,6 +31,12 @@ class Program
                 return 1;
             }
 
+            if (config.ExtractOnly)
+            {
+                ExtractVanillaFiles(config);
+                return 0;
+            }
+
             await RunRandomizer(config);
             return 0;
         }
@@ -51,11 +57,16 @@ class Program
 
 Usage:
     ItemRandomizerWrapper <config.json> --game-dir <path> -o <output>
+    ItemRandomizerWrapper --game-dir <path> [--data-dir <path>] --extract-only
 
 Arguments:
     <config.json>       Path to item randomization config JSON
     --game-dir <path>   Path to ELDEN RING/Game folder
     -o <output>         Output directory for randomized files
+    --data-dir <path>   Path to the diste/ data directory
+    --extract-only      Only fill the diste/Vanilla cache from the game
+                        archives, then exit (no randomization, any
+                        <config.json> given is ignored)
 
 Config JSON format:
     {
@@ -71,6 +82,59 @@ Config JSON format:
 Example:
     ItemRandomizerWrapper config.json --game-dir ""C:\ELDEN RING\Game"" -o output/
 ");
+    }
+
+    /// <summary>
+    /// Determine the data directory (diste/).
+    ///
+    /// RandomizerCommon resolves its own dist directory as "diste" relative to
+    /// the current directory (Randomizer.Randomize), so callers are expected to
+    /// run from the wrapper directory and pass the matching --data-dir; a
+    /// --extract-only run that resolved a different directory would warm a
+    /// cache the randomization never reads.
+    /// </summary>
+    static string ResolveDataDir(CliConfig config)
+    {
+        string dataDir = config.DataDir ?? Path.Combine(AppContext.BaseDirectory, "diste");
+        if (!Directory.Exists(dataDir))
+        {
+            // Try relative to executable
+            dataDir = Path.Combine(Path.GetDirectoryName(typeof(Program).Assembly.Location) ?? ".", "diste");
+        }
+        if (!Directory.Exists(dataDir))
+        {
+            throw new Exception($"Data directory not found: {dataDir}");
+        }
+        return dataDir;
+    }
+
+    /// <summary>
+    /// Fill the diste/Vanilla cache from the game archives without running a
+    /// randomization.
+    ///
+    /// RandomizerCommon extracts this cache on demand and re-extracts every
+    /// file as soon as one is missing or has an unexpected size
+    /// (GameData.UnpackVanillaFiles). The cache is shared by all seeds, so
+    /// concurrent generations would write and read the same paths at once and
+    /// fail with sharing violations. SpeedFog instead warms it through this
+    /// mode, once, under an inter-process lock (speedfog/item_randomizer.py)
+    /// and at bootstrap. A cache that is already complete is a no-op.
+    /// </summary>
+    static void ExtractVanillaFiles(CliConfig config)
+    {
+        string dataDir = ResolveDataDir(config);
+        Console.WriteLine($"Data dir: {dataDir}");
+
+        var game = new GameData(dataDir, GameSpec.FromGame.ER);
+        bool extracted = false;
+        game.UnpackVanillaFiles(config.GameDir, new RandomizerOptions(GameSpec.FromGame.ER), () =>
+        {
+            extracted = true;
+            Console.WriteLine("Extracting vanilla game files...");
+        });
+        Console.WriteLine(extracted
+            ? "Vanilla cache extracted"
+            : "Vanilla cache already complete");
     }
 
     static async Task RunRandomizer(CliConfig config)
@@ -116,18 +180,7 @@ Example:
         // Create output directory
         Directory.CreateDirectory(config.OutputDir);
 
-        // Determine data directory (diste/)
-        string dataDir = config.DataDir ?? Path.Combine(AppContext.BaseDirectory, "diste");
-        if (!Directory.Exists(dataDir))
-        {
-            // Try relative to executable
-            dataDir = Path.Combine(Path.GetDirectoryName(typeof(Program).Assembly.Location) ?? ".", "diste");
-        }
-        if (!Directory.Exists(dataDir))
-        {
-            throw new Exception($"Data directory not found: {dataDir}");
-        }
-
+        string dataDir = ResolveDataDir(config);
         Console.WriteLine($"Data dir: {dataDir}");
         Console.WriteLine();
 

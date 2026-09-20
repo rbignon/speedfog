@@ -11,6 +11,12 @@ public class CliConfig
     public string GameDir { get; set; } = "";
     public string OutputDir { get; set; } = "";
     public string? DataDir { get; set; }
+
+    /// <summary>
+    /// Only fill the shared diste/Vanilla cache from the game archives, then
+    /// exit. Needs no seed config and no output directory.
+    /// </summary>
+    public bool ExtractOnly { get; set; }
 }
 
 /// <summary>

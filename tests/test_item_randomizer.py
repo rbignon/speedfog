@@ -1,6 +1,7 @@
 """Tests for Item Randomizer integration."""
 
 import json
+from contextlib import contextmanager
 from pathlib import Path
 
 import pytest
@@ -16,8 +17,11 @@ from speedfog.config import Config
 from speedfog.item_randomizer import (
     _compose_pool,
     _family_forbidden,
+    ensure_vanilla_cache,
     generate_item_config,
     run_item_randomizer,
+    vanilla_cache_guard,
+    vanilla_cache_is_complete,
 )
 
 
@@ -1145,3 +1149,351 @@ def test_generate_item_config_allowlist_self_fallback():
         phase_mapping={},
     )
     assert result["enemy_assignments"] == {"1000": "1000"}
+
+
+def _write_vanilla_manifest(
+    diste_dir: Path, entries: list[tuple[str, str, int]]
+) -> None:
+    """Write a diste/Vanilla/files.txt listing (path, archive, size) entries."""
+    vanilla_dir = diste_dir / "Vanilla"
+    vanilla_dir.mkdir(parents=True, exist_ok=True)
+    lines = [
+        f"{path} {archive} {size} 0123456789abcdef" for path, archive, size in entries
+    ]
+    (vanilla_dir / "files.txt").write_text("\n".join(lines) + "\n")
+
+
+def test_vanilla_cache_incomplete_without_manifest(tmp_path):
+    """A diste without files.txt is never considered warm."""
+    assert vanilla_cache_is_complete(tmp_path / "diste", tmp_path / "game") is False
+
+
+def test_vanilla_cache_complete_when_every_file_matches(tmp_path):
+    """Cached files of the expected size make the cache warm."""
+    diste_dir = tmp_path / "diste"
+    _write_vanilla_manifest(
+        diste_dir,
+        [
+            ("/map/mapstudio/m61_50_43_00.msb.dcx", "Data0", 4),
+            ("/regulation.bin", "Data0", 2),
+        ],
+    )
+    (diste_dir / "Vanilla" / "m61_50_43_00.msb.dcx").write_bytes(b"1234")
+    (diste_dir / "Vanilla" / "regulation.bin").write_bytes(b"12")
+
+    assert vanilla_cache_is_complete(diste_dir, tmp_path / "game") is True
+
+
+def test_vanilla_cache_incomplete_when_file_missing(tmp_path):
+    """A missing file (fresh bootstrap stub) makes the cache cold."""
+    diste_dir = tmp_path / "diste"
+    _write_vanilla_manifest(
+        diste_dir, [("/map/mapstudio/m61_50_43_00.msb.dcx", "Data0", 4)]
+    )
+
+    assert vanilla_cache_is_complete(diste_dir, tmp_path / "game") is False
+
+
+def test_vanilla_cache_incomplete_when_size_differs(tmp_path):
+    """A truncated file (interrupted extraction) makes the cache cold."""
+    diste_dir = tmp_path / "diste"
+    _write_vanilla_manifest(
+        diste_dir, [("/map/mapstudio/m61_50_43_00.msb.dcx", "Data0", 4)]
+    )
+    (diste_dir / "Vanilla" / "m61_50_43_00.msb.dcx").write_bytes(b"12")
+
+    assert vanilla_cache_is_complete(diste_dir, tmp_path / "game") is False
+
+
+def test_vanilla_cache_dlc_files_optional_without_dlc(tmp_path):
+    """DLC entries are not required when the game has no DLC installed."""
+    diste_dir = tmp_path / "diste"
+    _write_vanilla_manifest(
+        diste_dir, [("/map/mapstudio/m20_00_00_00.msb.dcx", "DLC", 4)]
+    )
+    game_dir = tmp_path / "game"
+    game_dir.mkdir()
+
+    assert vanilla_cache_is_complete(diste_dir, game_dir) is True
+
+
+def test_vanilla_cache_dlc_files_required_with_dlc(tmp_path):
+    """DLC entries are required once DLC.bdt is installed."""
+    diste_dir = tmp_path / "diste"
+    _write_vanilla_manifest(
+        diste_dir, [("/map/mapstudio/m20_00_00_00.msb.dcx", "DLC", 4)]
+    )
+    game_dir = tmp_path / "game"
+    game_dir.mkdir()
+    (game_dir / "DLC.bdt").write_bytes(b"x" * 2000)
+
+    assert vanilla_cache_is_complete(diste_dir, game_dir) is False
+
+
+def test_vanilla_cache_malformed_manifest_line_is_incomplete(tmp_path):
+    """A line the randomizer would reject counts as cold, never as warm."""
+    diste_dir = tmp_path / "diste"
+    _write_vanilla_manifest(diste_dir, [("/regulation.bin", "Data0", 2)])
+    (diste_dir / "Vanilla" / "regulation.bin").write_bytes(b"12")
+    manifest = diste_dir / "Vanilla" / "files.txt"
+    manifest.write_text(manifest.read_text() + "/event/common.emevd.dcx Data0\n")
+
+    assert vanilla_cache_is_complete(diste_dir, tmp_path / "game") is False
+
+
+def test_vanilla_cache_msgbnd_keeps_its_directories(tmp_path):
+    """msgbnd entries are cached under their archive path, not flattened."""
+    diste_dir = tmp_path / "diste"
+    _write_vanilla_manifest(diste_dir, [("/msg/engus/item.msgbnd.dcx", "Data0", 4)])
+    msg_dir = diste_dir / "Vanilla" / "msg" / "engus"
+    msg_dir.mkdir(parents=True)
+    (msg_dir / "item.msgbnd.dcx").write_bytes(b"1234")
+
+    assert vanilla_cache_is_complete(diste_dir, tmp_path / "game") is True
+
+
+def test_ensure_vanilla_cache_warm_runs_nothing(tmp_path, monkeypatch):
+    """A warm cache costs no subprocess."""
+    wrapper_dir = tmp_path / "wrapper"
+    diste_dir = wrapper_dir / "diste"
+    _write_vanilla_manifest(diste_dir, [("/regulation.bin", "Data0", 2)])
+    (diste_dir / "Vanilla" / "regulation.bin").write_bytes(b"12")
+    monkeypatch.setattr(
+        "speedfog.item_randomizer._resolve_wrapper",
+        lambda platform: (["wrapper.exe"], wrapper_dir),
+    )
+
+    def fail_stream(cmd, cwd=None):
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    monkeypatch.setattr("speedfog.item_randomizer.stream_command", fail_stream)
+
+    assert ensure_vanilla_cache(tmp_path / "game") is True
+
+
+def test_ensure_vanilla_cache_cold_runs_extract_only(tmp_path, monkeypatch):
+    """A cold cache runs the wrapper's extract-only mode under the lock."""
+    wrapper_dir = tmp_path / "wrapper"
+    diste_dir = wrapper_dir / "diste"
+    _write_vanilla_manifest(diste_dir, [("/regulation.bin", "Data0", 2)])
+    game_dir = tmp_path / "game"
+    game_dir.mkdir()
+    monkeypatch.setattr(
+        "speedfog.item_randomizer._resolve_wrapper",
+        lambda platform: (["wrapper.exe"], wrapper_dir),
+    )
+
+    captured: list[list[str]] = []
+
+    def mock_stream(cmd, cwd=None):
+        captured.append(cmd)
+        return 0
+
+    monkeypatch.setattr("speedfog.item_randomizer.stream_command", mock_stream)
+
+    assert ensure_vanilla_cache(game_dir) is True
+    assert captured == [
+        [
+            "wrapper.exe",
+            "--game-dir",
+            str(game_dir.resolve()),
+            "--data-dir",
+            str(diste_dir),
+            "--extract-only",
+        ]
+    ]
+
+
+def test_ensure_vanilla_cache_reports_extraction_failure(tmp_path, monkeypatch):
+    """A failed extraction is reported instead of running the randomization."""
+    wrapper_dir = tmp_path / "wrapper"
+    diste_dir = wrapper_dir / "diste"
+    _write_vanilla_manifest(diste_dir, [("/regulation.bin", "Data0", 2)])
+    monkeypatch.setattr(
+        "speedfog.item_randomizer._resolve_wrapper",
+        lambda platform: (["wrapper.exe"], wrapper_dir),
+    )
+    monkeypatch.setattr(
+        "speedfog.item_randomizer.stream_command", lambda cmd, cwd=None: 1
+    )
+
+    assert ensure_vanilla_cache(tmp_path / "game") is False
+
+
+def test_ensure_vanilla_cache_missing_diste(tmp_path, monkeypatch):
+    """A missing diste directory fails loudly rather than creating one."""
+    wrapper_dir = tmp_path / "wrapper"
+    wrapper_dir.mkdir()
+    monkeypatch.setattr(
+        "speedfog.item_randomizer._resolve_wrapper",
+        lambda platform: (["wrapper.exe"], wrapper_dir),
+    )
+
+    assert ensure_vanilla_cache(tmp_path / "game") is False
+    assert not (wrapper_dir / "diste").exists()
+
+
+def test_run_item_randomizer_command_and_cache_order(tmp_path, monkeypatch):
+    """The cache warm-up runs before the randomization, with both commands right."""
+    wrapper_dir = tmp_path / "wrapper"
+    diste_dir = wrapper_dir / "diste"
+    _write_vanilla_manifest(diste_dir, [("/regulation.bin", "Data0", 2)])
+    seed_dir = tmp_path / "seed"
+    seed_dir.mkdir()
+    game_dir = tmp_path / "game"
+    game_dir.mkdir()
+    output_dir = tmp_path / "out"
+    monkeypatch.setattr(
+        "speedfog.item_randomizer._resolve_wrapper",
+        lambda platform: (["wrapper.exe"], wrapper_dir),
+    )
+
+    captured: list[list[str]] = []
+
+    def mock_stream(cmd, cwd=None):
+        captured.append(cmd)
+        if "--extract-only" in cmd:
+            # The extraction fills the cache the randomization then reads.
+            (diste_dir / "Vanilla" / "regulation.bin").write_bytes(b"12")
+        return 0
+
+    monkeypatch.setattr("speedfog.item_randomizer.stream_command", mock_stream)
+
+    result = run_item_randomizer(
+        seed_dir=seed_dir,
+        game_dir=game_dir,
+        output_dir=output_dir,
+        platform="windows",
+        verbose=False,
+    )
+
+    assert result is True
+    assert captured[0][-1] == "--extract-only"
+    assert captured[1] == [
+        "wrapper.exe",
+        str(seed_dir / "item_config.json"),
+        "--game-dir",
+        str(game_dir.resolve()),
+        "--data-dir",
+        str(diste_dir),
+        "-o",
+        str(output_dir.resolve()),
+    ]
+
+
+def test_run_item_randomizer_aborts_on_cache_failure(tmp_path, monkeypatch):
+    """A failed extraction stops the run instead of randomizing on a torn cache."""
+    wrapper_dir = tmp_path / "wrapper"
+    _write_vanilla_manifest(wrapper_dir / "diste", [("/regulation.bin", "Data0", 2)])
+    seed_dir = tmp_path / "seed"
+    seed_dir.mkdir()
+    monkeypatch.setattr(
+        "speedfog.item_randomizer._resolve_wrapper",
+        lambda platform: (["wrapper.exe"], wrapper_dir),
+    )
+    monkeypatch.setattr(
+        "speedfog.item_randomizer.stream_command", lambda cmd, cwd=None: 1
+    )
+
+    result = run_item_randomizer(
+        seed_dir=seed_dir,
+        game_dir=tmp_path / "game",
+        output_dir=tmp_path / "out",
+        platform="windows",
+        verbose=False,
+    )
+
+    assert result is False
+
+
+@contextmanager
+def _recording_lock(events: list[str], lock_path):
+    """Stand-in for _exclusive_lock that records when it is held."""
+    events.append("acquired")
+    try:
+        yield
+    finally:
+        events.append("released")
+
+
+def test_vanilla_cache_guard_releases_lock_around_a_complete_cache(
+    tmp_path, monkeypatch
+):
+    """A cache that came out complete is read without holding the lock."""
+    wrapper_dir = tmp_path / "wrapper"
+    diste_dir = wrapper_dir / "diste"
+    _write_vanilla_manifest(diste_dir, [("/regulation.bin", "Data0", 2)])
+    (diste_dir / "Vanilla" / "regulation.bin").write_bytes(b"12")
+    monkeypatch.setattr(
+        "speedfog.item_randomizer._resolve_wrapper",
+        lambda platform: (["wrapper.exe"], wrapper_dir),
+    )
+    events: list[str] = []
+    monkeypatch.setattr(
+        "speedfog.item_randomizer._exclusive_lock",
+        lambda lock_path: _recording_lock(events, lock_path),
+    )
+
+    with vanilla_cache_guard(tmp_path / "game") as ok:
+        assert ok is True
+        assert events == ["acquired", "released"]
+
+
+def test_vanilla_cache_guard_holds_lock_when_cache_cannot_complete(
+    tmp_path, monkeypatch
+):
+    """A cache the extraction cannot complete keeps generations serialized.
+
+    The randomizer then re-extracts it from inside the randomization, out of
+    reach of the lock, so the lock has to cover the whole block.
+    """
+    wrapper_dir = tmp_path / "wrapper"
+    diste_dir = wrapper_dir / "diste"
+    # The game no longer matches the shipped manifest: the extraction runs and
+    # succeeds, but the sizes still differ afterwards.
+    _write_vanilla_manifest(diste_dir, [("/regulation.bin", "Data0", 2)])
+    monkeypatch.setattr(
+        "speedfog.item_randomizer._resolve_wrapper",
+        lambda platform: (["wrapper.exe"], wrapper_dir),
+    )
+    events: list[str] = []
+    monkeypatch.setattr(
+        "speedfog.item_randomizer._exclusive_lock",
+        lambda lock_path: _recording_lock(events, lock_path),
+    )
+
+    def mock_stream(cmd, cwd=None):
+        (diste_dir / "Vanilla" / "regulation.bin").write_bytes(b"mismatched")
+        return 0
+
+    monkeypatch.setattr("speedfog.item_randomizer.stream_command", mock_stream)
+
+    with vanilla_cache_guard(tmp_path / "game") as ok:
+        assert ok is True
+        assert events == ["acquired"]
+
+    assert events == ["acquired", "released"]
+
+
+def test_vanilla_cache_guard_releases_lock_on_extraction_failure(tmp_path, monkeypatch):
+    """A failed extraction releases the lock instead of blocking every run."""
+    wrapper_dir = tmp_path / "wrapper"
+    diste_dir = wrapper_dir / "diste"
+    _write_vanilla_manifest(diste_dir, [("/regulation.bin", "Data0", 2)])
+    monkeypatch.setattr(
+        "speedfog.item_randomizer._resolve_wrapper",
+        lambda platform: (["wrapper.exe"], wrapper_dir),
+    )
+    events: list[str] = []
+    monkeypatch.setattr(
+        "speedfog.item_randomizer._exclusive_lock",
+        lambda lock_path: _recording_lock(events, lock_path),
+    )
+    monkeypatch.setattr(
+        "speedfog.item_randomizer.stream_command", lambda cmd, cwd=None: 1
+    )
+
+    with vanilla_cache_guard(tmp_path / "game") as ok:
+        assert ok is False
+
+    assert events == ["acquired", "released"]

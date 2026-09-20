@@ -163,6 +163,46 @@ public class ArgParserTests
     }
 
     [Fact]
+    public void Parse_ExtractOnly_NeedsOnlyGameDir()
+    {
+        // The cache warm-up (bootstrap, parallel generations) has no seed
+        // config and no output directory.
+        var args = new[] { "--game-dir", "/game", "--data-dir", "/data", "--extract-only" };
+
+        var config = ArgParser.Parse(args, TextWriter.Null);
+
+        Assert.NotNull(config);
+        Assert.True(config.ExtractOnly);
+        Assert.Equal("/game", config.GameDir);
+        Assert.Equal("/data", config.DataDir);
+        Assert.Equal("", config.ConfigPath);
+        Assert.Equal("", config.OutputDir);
+    }
+
+    [Fact]
+    public void Parse_ExtractOnlyWithoutGameDir_ReturnsNull()
+    {
+        var args = new[] { "--extract-only" };
+        var errors = new StringWriter();
+
+        var config = ArgParser.Parse(args, errors);
+
+        Assert.Null(config);
+        Assert.Contains("--game-dir required", errors.ToString());
+    }
+
+    [Fact]
+    public void Parse_WithoutExtractOnly_LeavesItOff()
+    {
+        var args = new[] { "config.json", "--game-dir", "/game", "-o", "/out" };
+
+        var config = ArgParser.Parse(args, TextWriter.Null);
+
+        Assert.NotNull(config);
+        Assert.False(config.ExtractOnly);
+    }
+
+    [Fact]
     public void Parse_DefaultErrorWriter_UsesConsoleError()
     {
         // This test just ensures the default parameter works

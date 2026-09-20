@@ -14,6 +14,8 @@ This script extracts:
   - DLLs from EldenRingRandomizer.exe → writer/lib/
   - diste/ → writer/ItemRandomizerWrapper/diste/
   - Runtime DLLs → data/packaging/lib/
+  - vanilla cache (diste/Vanilla/) filled from the game archives, so parallel
+    generations never extract it at the same time
 - ModEngine 2:
   - launcher + runtime → data/packaging/modengine2/
 - WitchyBND (Windows build, run via Wine on Linux):
@@ -49,6 +51,10 @@ import refresh_vanilla_snapshot
 
 # Project root (parent of tools/)
 PROJECT_ROOT = Path(__file__).parent.parent
+
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from speedfog.item_randomizer import ensure_vanilla_cache  # noqa: E402
 
 # Destination paths
 WRITER_LIB = PROJECT_ROOT / "writer" / "lib"
@@ -1078,6 +1084,21 @@ def refresh_fogmod_snapshot(game_dir: Path) -> bool:
     return refresh_vanilla_snapshot.main([str(game_dir), "--all"]) == 0
 
 
+def warm_itemrando_cache(game_dir: Path) -> bool:
+    """Fill the Item Randomizer's shared vanilla cache from the game archives.
+
+    RandomizerCommon extracts the game files it needs into diste/Vanilla on
+    its first run. Doing it here means the first batch of generations finds
+    the cache warm instead of racing each other over the same files (a
+    generation that still finds it cold extracts it under a lock, see
+    speedfog.item_randomizer.ensure_vanilla_cache).
+    """
+    if not is_itemrando_installed():
+        print_info("Item Randomizer not installed; skipping")
+        return True
+    return ensure_vanilla_cache(game_dir)
+
+
 def main() -> int:
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -1118,7 +1139,7 @@ def main() -> int:
     args = parser.parse_args()
 
     # Check prerequisites
-    print_step(1, 5, "Checking prerequisites...")
+    print_step(1, 6, "Checking prerequisites...")
     sfextract = None
     if args.fogrando or args.itemrando:
         sfextract = find_sfextract()
@@ -1132,11 +1153,11 @@ def main() -> int:
         print_info("No mod archive provided; skipping sfextract check")
 
     # Copy oo2core_6_win64.dll from game directory (needed by dotnet publish)
-    print_step(2, 5, "Copying Oodle DLL from game directory...")
+    print_step(2, 6, "Copying Oodle DLL from game directory...")
     if not copy_oodle_dll(args.game_dir, args.force):
         return 1
 
-    print_step(3, 5, "Setting up mod dependencies...")
+    print_step(3, 6, "Setting up mod dependencies...")
 
     success = True
 
@@ -1152,7 +1173,7 @@ def main() -> int:
         if not setup_itemrando(sfextract, args.itemrando, args.force):
             success = False
 
-    print_step(4, 5, "Setting up packaging assets...")
+    print_step(4, 6, "Setting up packaging assets...")
 
     # Migration: drop the stale MenuInputDelayFix.dll left by older bootstraps;
     # the fix now ships inside the item randomizer's RandomizerCrashFix.dll and
@@ -1169,7 +1190,7 @@ def main() -> int:
         if success and not build_static_mod_scripts(args.force):
             success = False
 
-    print_step(5, 5, "Refreshing the FogMod snapshot from the game directory...")
+    print_step(5, 6, "Refreshing the FogMod snapshot from the game directory...")
     if args.no_refresh:
         print_info(
             "Skipped (--no-refresh): run tools/refresh_vanilla_snapshot.py "
@@ -1177,6 +1198,13 @@ def main() -> int:
         )
     elif success and not refresh_fogmod_snapshot(args.game_dir):
         success = False
+
+    print_step(6, 6, "Warming the Item Randomizer vanilla cache...")
+    if success and not warm_itemrando_cache(args.game_dir):
+        # Everything else is set up, and a cold cache only costs the first
+        # generation an extraction (which it takes under a lock anyway), so
+        # this warns instead of failing the whole setup.
+        print_warning("Vanilla cache not warmed; the first generation will extract it")
 
     if success:
         print()
