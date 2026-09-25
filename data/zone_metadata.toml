@@ -278,6 +278,12 @@ exclude = true
 [zones.farumazula_balcony]
 exclude = true
 
+[zones.peninsula_tombswardcave_boss]
+exclude = true
+
+[zones.leyndell_tower_boss]
+exclude = true
+
 [zones.ainsel_dragonkin]
 type = "major_boss"
 
