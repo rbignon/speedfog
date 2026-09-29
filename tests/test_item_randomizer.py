@@ -1154,13 +1154,13 @@ def test_generate_item_config_allowlist_self_fallback():
 
 
 def _layered_minor_setup():
-    """Three layers of two parallel minor arenas and a 28-boss weighted pool."""
+    """Three layers of two parallel minor arenas and a 28-boss pool with rare extremes."""
     arena_ids = [1001, 1002, 1003, 1004, 1005, 1006]
     boss_clusters = [
         _boss_cluster(f"c{eid}", "boss_arena", defeat_flag=eid) for eid in arena_ids
     ]
     boss_layers = {f"c{eid}": 1 + i // 2 for i, eid in enumerate(arena_ids)}
-    weights = (0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0)
+    weights = (0.5, 1.0, 1.0, 1.0, 1.5, 3.0)
     pool_ids = list(range(2001, 2029))
     tags = {eid: _entity(eid) for eid in arena_ids}
     tags.update(

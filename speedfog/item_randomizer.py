@@ -322,11 +322,6 @@ def _compose_pool(
 # consumers that share the same base seed).
 BOSS_ASSIGNMENT_SEED_SALT = 0xBA7A5A5A
 
-# Separate salt for the per-layer weight band anchors: the matcher RNG stream
-# stays untouched, so assignments do not change while no band excludes
-# anything (weights not annotated, spread 0, no layers).
-BOSS_WEIGHT_BAND_SEED_SALT = 0xBA1A4CE5
-
 # Cluster types that receive an arena-matched boss. final_boss terminals
 # (Elden Beast / Promised Consort Radahn) are treated as major arenas in "all"
 # mode (see docs/boss-arena-constraints.md); boss_arena clusters are the minors.
@@ -366,8 +361,7 @@ def _layer_groups(
 ) -> list[list[int]]:
     """Arena slots grouped by DAG layer, ordered by layer then entity ID.
 
-    The fixed order keeps the band RNG consumption independent of cluster
-    iteration order. Slots without a known layer form no group.
+    Slots without a known layer form no group.
     """
     by_layer: dict[int, list[int]] = {}
     for eid in arena_ids:
@@ -447,7 +441,6 @@ def _build_enemy_assignments(
                 slot_layer[eid] = layer
 
     rng = random.Random(seed ^ BOSS_ASSIGNMENT_SEED_SALT)
-    band_rng = random.Random(seed ^ BOSS_WEIGHT_BAND_SEED_SALT)
     out: dict[int, int] = {}
     jobs = [(minors, minor_pool, True), (majors, major_pool, randomize_majors)]
     for arenas, pool, enabled in jobs:
@@ -458,7 +451,6 @@ def _build_enemy_assignments(
                     bosses=pool,
                     groups=_layer_groups(arenas, slot_layer),
                     rng=rng,
-                    band_rng=band_rng,
                     check_size=check_size,
                     spread=max_spread,
                     forbidden=_family_forbidden(arenas, phase_mapping),

@@ -181,64 +181,28 @@ def match_arenas_to_bosses(
     return {aid: assignment[aid] for aid in arenas}
 
 
-# Slack on the band edges, same as generator.pick_cluster_weight_matched.
-_BAND_EPSILON = 1e-9
+# Slack on the spread comparison, same as generator.pick_cluster_weight_matched.
+_SPREAD_EPSILON = 1e-9
 
-# Band redraws before match_arenas_balanced gives up; the caller's
+# Matcher draws before match_arenas_balanced gives up; the caller's
 # MatchingError handling then rerolls the DAG (auto seed) or fails (fixed).
-BAND_ATTEMPTS = 10
+BALANCE_ATTEMPTS = 50
 
 
-def layer_weight_bands(
-    *,
-    groups: Sequence[Sequence[int]],
-    arenas: Mapping[int, ArenaTags],
+def _layers_within_spread(
+    assignment: Mapping[int, int],
     bosses: Mapping[int, BossTags],
-    rng: random.Random,
-    check_size: bool,
+    groups: Sequence[Sequence[int]],
     spread: float,
-    forbidden: Mapping[int, frozenset[int]] | None = None,
-) -> dict[int, frozenset[int]]:
-    """Per-layer boss weight bands, as extra exclusions for the matcher.
-
-    For each group (the arena slots of one DAG layer) holding at least two
-    slots: draw one slot, draw one of its allowed candidates (compatible and
-    not in ``forbidden``), and exclude from every slot of the group each boss
-    whose weight lies outside ``[w - spread / 2, w + spread / 2]``, ``w``
-    being the drawn candidate's weight. Any assignment drawn inside the band
-    has a per-layer spread of at most ``spread``. A group whose drawn slot
-    has no allowed candidate is skipped (the matcher reports the
-    infeasibility). Groups must be ordered deterministically by the caller.
-
-    Returns arena_id -> excluded boss IDs; arenas without exclusions are
-    absent, so an empty result means the bands constrain nothing.
-    """
-    forbidden = forbidden or {}
-    half = spread / 2
-    out: dict[int, frozenset[int]] = {}
+) -> bool:
+    """True when every group's placed boss weights fit within ``spread``."""
     for group in groups:
         if len(group) < 2:
             continue
-        slot = rng.choice(list(group))
-        blocked = forbidden.get(slot, frozenset())
-        candidates = [
-            bid
-            for bid, btags in bosses.items()
-            if bid not in blocked
-            and is_compatible(arenas[slot], btags, check_size=check_size)
-        ]
-        if not candidates:
-            continue
-        anchor = bosses[rng.choice(candidates)].weight
-        excluded = frozenset(
-            bid
-            for bid, btags in bosses.items()
-            if abs(btags.weight - anchor) > half + _BAND_EPSILON
-        )
-        if excluded:
-            for arena_id in group:
-                out[arena_id] = excluded
-    return out
+        weights = [bosses[assignment[arena_id]].weight for arena_id in group]
+        if max(weights) - min(weights) > spread + _SPREAD_EPSILON:
+            return False
+    return True
 
 
 def match_arenas_balanced(
@@ -247,70 +211,47 @@ def match_arenas_balanced(
     bosses: Mapping[int, BossTags],
     groups: Sequence[Sequence[int]],
     rng: random.Random,
-    band_rng: random.Random,
     check_size: bool,
     spread: float,
     forbidden: Mapping[int, frozenset[int]] | None = None,
-    attempts: int = BAND_ATTEMPTS,
+    attempts: int = BALANCE_ATTEMPTS,
 ) -> dict[int, int]:
-    """``match_arenas_to_bosses`` with per-layer boss weight bands.
+    """``match_arenas_to_bosses`` keeping each layer's boss weights close.
 
-    Each attempt draws the bands of every group with ``band_rng`` (see
-    ``layer_weight_bands``), merges them into ``forbidden``, and runs the
-    unchanged matcher with ``rng``. A ``MatchingError`` triggers a redraw of
-    every band; after ``attempts`` failures a ``MatchingError`` naming the
-    layer weight bands is raised.
+    Rejection sampling: run the unchanged matcher and accept its result when
+    every group (the arena slots of one DAG layer) has a ``max - min`` of the
+    placed bosses' weights within ``spread``; otherwise draw again with the
+    same ``rng``. The accepted matching is a uniform draw among the valid
+    ones, so an extreme boss only loses the combinations the rule forbids.
+    Suited to a loose rule (keep extremes apart); a tight one exhausts
+    ``attempts``.
 
-    When ``spread <= 0`` or the drawn bands exclude nothing, the matcher runs
-    once with the original ``forbidden`` and no retry: its output is then
-    identical to a plain ``match_arenas_to_bosses`` call with the same
-    ``rng``, and augmenting-path matching is exact, so retrying an identical
-    exclusion map could not succeed.
+    ``spread <= 0`` disables the rule. A job the plain matcher cannot solve
+    raises its ``MatchingError`` at once: the matching is exact, so a
+    redraw cannot help. After ``attempts`` rejected draws, a
+    ``MatchingError`` naming the layer weight spread is raised; the caller
+    turns it into a DAG reroll.
+
+    The first draw is exactly ``match_arenas_to_bosses`` with the same
+    ``rng``: a seed whose plain matching already satisfies the rule keeps
+    its assignments.
     """
-    if spread <= 0:
-        return match_arenas_to_bosses(
+    tries = max(1, attempts)
+    for _ in range(tries):
+        assignment = match_arenas_to_bosses(
             arenas=arenas,
             bosses=bosses,
             rng=rng,
             check_size=check_size,
             forbidden=forbidden,
         )
-    base = forbidden or {}
-    last_error: MatchingError | None = None
-    for _ in range(attempts):
-        bands = layer_weight_bands(
-            groups=groups,
-            arenas=arenas,
-            bosses=bosses,
-            rng=band_rng,
-            check_size=check_size,
-            spread=spread,
-            forbidden=base,
-        )
-        if not bands:
-            return match_arenas_to_bosses(
-                arenas=arenas,
-                bosses=bosses,
-                rng=rng,
-                check_size=check_size,
-                forbidden=forbidden,
-            )
-        merged = dict(base)
-        for arena_id, excluded in bands.items():
-            merged[arena_id] = merged.get(arena_id, frozenset()) | excluded
-        try:
-            return match_arenas_to_bosses(
-                arenas=arenas,
-                bosses=bosses,
-                rng=rng,
-                check_size=check_size,
-                forbidden=merged,
-            )
-        except MatchingError as e:
-            last_error = e
+        if spread <= 0 or _layers_within_spread(assignment, bosses, groups, spread):
+            return assignment
     raise MatchingError(
-        f"{last_error} (layer weight bands: spread {spread}, {attempts} attempts)"
-    ) from last_error
+        f"no arena-boss matching keeps every layer weight spread within "
+        f"{spread} after {tries} attempts (enemy.max_minor_boss_weight_spread "
+        f"/ max_major_boss_weight_spread; 0 disables)"
+    )
 
 
 def assign_bosses_uniform(
