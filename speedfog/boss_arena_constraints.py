@@ -7,6 +7,7 @@ logic. See docs/boss-arena-constraints.md for the compatibility rules.
 from __future__ import annotations
 
 import json
+import math
 import random
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
@@ -24,6 +25,10 @@ class BossTags:
     can_escape: bool
     night_boss: bool
     exclude_from_pool: bool
+    # Expected time to beat the boss in minutes, retries included. Indicative:
+    # compared across bosses rather than read in absolute terms. Absent in
+    # the JSON means "not annotated".
+    weight: float = 1.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,15 +54,33 @@ class EntityTags:
     dlc: bool
 
 
+def _parse_weight(eid: int, value: Any) -> float:
+    """Validate an optional ``boss.weight``: a positive, finite number of minutes."""
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int | float)
+        or not math.isfinite(value)
+        or value <= 0
+    ):
+        raise ValueError(
+            f"boss_arena_tags.json entity {eid}: boss.weight must be a positive "
+            f"number of minutes, got {value!r}"
+        )
+    return float(value)
+
+
 def load_tags(path: Path) -> dict[int, EntityTags]:
     raw: dict[str, dict[str, Any]] = json.loads(Path(path).read_text())
     out: dict[int, EntityTags] = {}
     for key, entry in raw.items():
         eid = int(key)
+        boss_block = dict(entry["boss"])
+        if "weight" in boss_block:
+            boss_block["weight"] = _parse_weight(eid, boss_block["weight"])
         out[eid] = EntityTags(
             entity_id=eid,
             name=entry["name"],
-            boss=BossTags(**entry["boss"]),
+            boss=BossTags(**boss_block),
             arena=ArenaTags(**entry["arena"]) if "arena" in entry else None,
             pool=entry.get("pool"),
             region=int(entry.get("region", 0)),

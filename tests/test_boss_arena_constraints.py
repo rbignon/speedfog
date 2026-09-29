@@ -114,6 +114,48 @@ def test_exclude_from_pool_flag_reachable(sample_tags: Path) -> None:
     assert tags[1000].boss.exclude_from_pool is False
 
 
+def _write_single_boss(tmp_path: Path, **boss_overrides) -> Path:
+    path = tmp_path / "single.json"
+    path.write_text(
+        json.dumps(
+            {
+                "5000": {
+                    "name": "Weighted",
+                    "boss": _boss_block(**boss_overrides),
+                    "arena": _arena_block(),
+                    "region": 1,
+                    "scaling": 1,
+                    "dlc": False,
+                }
+            }
+        )
+    )
+    return path
+
+
+def test_boss_weight_defaults_to_one_when_absent(sample_tags: Path) -> None:
+    tags = load_tags(sample_tags)
+    assert all(entry.boss.weight == 1.0 for entry in tags.values())
+
+
+def test_boss_weight_is_read(tmp_path: Path) -> None:
+    tags = load_tags(_write_single_boss(tmp_path, weight=2.5))
+    assert tags[5000].boss.weight == 2.5
+
+
+def test_boss_weight_integer_is_coerced_to_float(tmp_path: Path) -> None:
+    tags = load_tags(_write_single_boss(tmp_path, weight=3))
+    weight = tags[5000].boss.weight
+    assert weight == 3.0
+    assert isinstance(weight, float)
+
+
+@pytest.mark.parametrize("bad", [0, -1.5, True, "2", float("nan"), float("inf")])
+def test_boss_weight_rejects_invalid_values(tmp_path: Path, bad) -> None:
+    with pytest.raises(ValueError, match=r"5000.*boss\.weight"):
+        load_tags(_write_single_boss(tmp_path, weight=bad))
+
+
 def test_dragon_in_dragon_forbidden_arena_is_incompatible(sample_tags: Path) -> None:
     tags = load_tags(sample_tags)
     arena = tags[1000].arena
