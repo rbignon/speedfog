@@ -259,6 +259,21 @@ Limitation: balance is per slot, so a two-slot node (Fire Giant) next to a
 one-slot node on the same layer still means two fights against one. That
 imbalance belongs to the zone weight.
 
+### Calibration
+
+`boss.weight` values come from `speedfog-racing/tools/extract_boss_weights.py`
+run on the race database (first run 2026-09-29: about 58,200 minor and
+7,800 major single-slot clears, all 200 pool bosses measured). The tool fits
+log clear time = arena + boss + tier + player + pool per job by median
+polish, so a weight is the median node time for that boss under typical
+arena, tier (the tier factor roughly doubles node time between tiers 3 and
+24), player and pool; split-half reliability was 0.99 (minors) and 0.96
+(majors) Spearman. Bosses are attributed exactly from `enemy_assignments`,
+else from a unique `randomized_bosses` name; ambiguous names (e.g.
+"Tree Sentinel", shared with the duo) and multi-slot nodes are dropped.
+Small samples are shrunk toward the pool median. Re-run it as races
+accumulate; `--write` only touches `boss.weight`.
+
 ## Pool composition
 
 ``_compose_pool`` routes each entity into the major or minor candidate
