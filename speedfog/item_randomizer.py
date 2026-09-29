@@ -16,7 +16,7 @@ from speedfog.boss_arena_constraints import (
     BossTags,
     EntityTags,
     assign_bosses_uniform,
-    match_arenas_to_bosses,
+    match_arenas_balanced,
     resolve_boss_allowlist,
 )
 from speedfog.clusters import ClusterData
@@ -38,6 +38,7 @@ def generate_item_config(
     vanilla_major_ids: Iterable[int] = (),
     vanilla_minor_ids: Iterable[int] = (),
     phase_mapping: Mapping[int, int] | None = None,
+    boss_layers: Mapping[str, int] | None = None,
 ) -> dict[str, Any]:
     """Generate item_config.json content for ItemRandomizerWrapper.
 
@@ -74,6 +75,12 @@ def generate_item_config(
     ``phase2_entity_id -> phase1_entity_id`` for multi-phase bosses. When a
     DAG cluster's leader is in ``phase_mapping`` keys, the phase-1 slot is
     added as an additional independent arena (same pool, no phase pairing).
+
+    ``boss_layers`` (cluster ID -> DAG layer) enables the per-layer boss
+    weight balance of the standard path: the bosses placed on one layer keep
+    their ``boss.weight`` within ``config.enemy.max_boss_weight_spread``
+    (see ``match_arenas_balanced``). ``None`` disables it. The allowlist path
+    ignores it.
     """
     auto_equip = config.item_randomizer.auto_equip
     result: dict[str, Any] = {
@@ -192,6 +199,8 @@ def generate_item_config(
                 randomize_majors=(config.enemy.randomize_bosses == "all"),
                 check_size=not config.enemy.ignore_arena_size,
                 seed=seed,
+                boss_layers=boss_layers,
+                max_spread=config.enemy.max_boss_weight_spread,
             )
         if assignments:
             result["enemy_assignments"] = {
@@ -313,6 +322,11 @@ def _compose_pool(
 # consumers that share the same base seed).
 BOSS_ASSIGNMENT_SEED_SALT = 0xBA7A5A5A
 
+# Separate salt for the per-layer weight band anchors: the matcher RNG stream
+# stays untouched, so assignments do not change while no band excludes
+# anything (weights not annotated, spread 0, no layers).
+BOSS_WEIGHT_BAND_SEED_SALT = 0xBA1A4CE5
+
 # Cluster types that receive an arena-matched boss. final_boss terminals
 # (Elden Beast / Promised Consort Radahn) are treated as major arenas in "all"
 # mode (see docs/boss-arena-constraints.md); boss_arena clusters are the minors.
@@ -347,6 +361,22 @@ def _family_forbidden(
     return out
 
 
+def _layer_groups(
+    arena_ids: Iterable[int], slot_layer: Mapping[int, int]
+) -> list[list[int]]:
+    """Arena slots grouped by DAG layer, ordered by layer then entity ID.
+
+    The fixed order keeps the band RNG consumption independent of cluster
+    iteration order. Slots without a known layer form no group.
+    """
+    by_layer: dict[int, list[int]] = {}
+    for eid in arena_ids:
+        layer = slot_layer.get(eid)
+        if layer is not None:
+            by_layer.setdefault(layer, []).append(eid)
+    return [sorted(by_layer[layer]) for layer in sorted(by_layer)]
+
+
 def _build_enemy_assignments(
     *,
     boss_clusters: Iterable[ClusterData],
@@ -357,6 +387,8 @@ def _build_enemy_assignments(
     randomize_majors: bool,
     check_size: bool,
     seed: int,
+    boss_layers: Mapping[str, int] | None = None,
+    max_spread: float = 0.0,
 ) -> dict[int, int]:
     """Match DAG boss clusters to candidate bosses under compatibility rules.
 
@@ -368,12 +400,19 @@ def _build_enemy_assignments(
     A boss is never assigned to its own arena, and multi-phase families are
     excluded as a unit (strict; see _family_forbidden).
 
+    With ``boss_layers`` (cluster ID -> DAG layer) and ``max_spread > 0``,
+    the slots of one layer receive bosses whose weights stay within
+    ``max_spread`` (``match_arenas_balanced``). A phase-1 slot takes its
+    leader's layer.
+
     Raises ``KeyError`` if a DAG boss cluster's leader (or its phase-1
-    sibling) has no entry in ``tags`` or no ``arena`` block. A silent skip
-    there would leave a vanilla boss in the run without any signal.
+    sibling) has no entry in ``tags`` or no ``arena`` block, or if
+    ``boss_layers`` is given without the cluster. A silent skip there would
+    leave a vanilla boss, or an unbalanced layer, without any signal.
     """
     majors: dict[int, ArenaTags] = {}
     minors: dict[int, ArenaTags] = {}
+    slot_layer: dict[int, int] = {}
     for cluster in boss_clusters:
         if cluster.type in MAJOR_ARENA_TYPES:
             target = majors
@@ -381,6 +420,11 @@ def _build_enemy_assignments(
             target = minors
         else:
             continue
+        layer: int | None = None
+        if boss_layers is not None:
+            if cluster.id not in boss_layers:
+                raise KeyError(f"cluster {cluster.id!r} missing from boss_layers")
+            layer = boss_layers[cluster.id]
         leader = resolve_entity_id(cluster.defeat_flag)
         slots = [leader]
         phase1 = phase_mapping.get(leader)
@@ -399,18 +443,24 @@ def _build_enemy_assignments(
                     f"in boss_arena_tags.json"
                 )
             target[eid] = entry.arena
+            if layer is not None:
+                slot_layer[eid] = layer
 
     rng = random.Random(seed ^ BOSS_ASSIGNMENT_SEED_SALT)
+    band_rng = random.Random(seed ^ BOSS_WEIGHT_BAND_SEED_SALT)
     out: dict[int, int] = {}
     jobs = [(minors, minor_pool, True), (majors, major_pool, randomize_majors)]
     for arenas, pool, enabled in jobs:
         if enabled and arenas:
             out.update(
-                match_arenas_to_bosses(
+                match_arenas_balanced(
                     arenas=arenas,
                     bosses=pool,
+                    groups=_layer_groups(arenas, slot_layer),
                     rng=rng,
+                    band_rng=band_rng,
                     check_size=check_size,
+                    spread=max_spread,
                     forbidden=_family_forbidden(arenas, phase_mapping),
                 )
             )

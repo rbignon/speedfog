@@ -355,6 +355,7 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
                 for n in dag.nodes.values()
                 if n.cluster.type in ASSIGNABLE_ARENA_TYPES and n.cluster.defeat_flag
             ]
+            boss_layers = {n.cluster.id: n.layer for n in dag.nodes.values()}
             try:
                 cfg = generate_item_config(
                     config,
@@ -364,6 +365,7 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
                     vanilla_major_ids=assignment_major_ids,
                     vanilla_minor_ids=assignment_minor_ids,
                     phase_mapping=assignment_phase_mapping,
+                    boss_layers=boss_layers,
                 )
             except MatchingError as e:
                 raise GenerationError(f"boss-arena matching infeasible: {e}") from e
