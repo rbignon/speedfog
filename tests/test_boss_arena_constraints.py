@@ -16,7 +16,9 @@ from speedfog.boss_arena_constraints import (
     MatchingError,
     assign_bosses_uniform,
     is_compatible,
+    layer_weight_bands,
     load_tags,
+    match_arenas_balanced,
     match_arenas_to_bosses,
     resolve_boss_allowlist,
 )
@@ -218,6 +220,7 @@ def _entity(
     boss_size: int = 1,
     source_only: bool = False,
     exclude_from_pool: bool = False,
+    weight: float = 1.0,
 ) -> EntityTags:
     arena = (
         None
@@ -244,6 +247,7 @@ def _entity(
             can_escape=False,
             night_boss=False,
             exclude_from_pool=exclude_from_pool,
+            weight=weight,
         ),
         arena=arena,
         pool="minor" if source_only else None,
@@ -432,6 +436,220 @@ def test_match_raises_when_only_candidate_is_forbidden() -> None:
             rng=random.Random(0),
             check_size=False,
             forbidden={1: frozenset({1})},
+        )
+
+
+# --- Layer weight balance -------------------------------------------------
+
+_BAND_WEIGHTS = (0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 5.0)
+
+
+def _weighted_pool(ids: list[int]) -> dict[int, EntityTags]:
+    """Entities whose boss weights cycle through _BAND_WEIGHTS."""
+    return {
+        eid: _entity(eid, weight=_BAND_WEIGHTS[i % len(_BAND_WEIGHTS)])
+        for i, eid in enumerate(ids)
+    }
+
+
+def test_bands_skip_single_slot_groups() -> None:
+    tags = _weighted_pool([1, 10, 11, 12])
+    bands = layer_weight_bands(
+        groups=[[1]],
+        arenas=_arenas_of(tags, [1]),
+        bosses=_bosses_of(tags, [10, 11, 12]),
+        rng=random.Random(0),
+        check_size=False,
+        spread=1.0,
+    )
+    assert bands == {}
+
+
+def test_bands_exclude_nothing_when_weights_are_equal() -> None:
+    tags = {eid: _entity(eid) for eid in (1, 2, 10, 11, 12)}
+    bands = layer_weight_bands(
+        groups=[[1, 2]],
+        arenas=_arenas_of(tags, [1, 2]),
+        bosses=_bosses_of(tags, [10, 11, 12]),
+        rng=random.Random(0),
+        check_size=False,
+        spread=1.0,
+    )
+    assert bands == {}
+
+
+def test_bands_keep_a_spread_wide_window_shared_by_the_group() -> None:
+    pool_ids = list(range(10, 31))
+    tags = {**_weighted_pool(pool_ids), 1: _entity(1), 2: _entity(2), 3: _entity(3)}
+    bosses = _bosses_of(tags, pool_ids)
+    for seed in range(50):
+        bands = layer_weight_bands(
+            groups=[[1, 2, 3]],
+            arenas=_arenas_of(tags, [1, 2, 3]),
+            bosses=bosses,
+            rng=random.Random(seed),
+            check_size=False,
+            spread=1.0,
+        )
+        assert bands[1] == bands[2] == bands[3], f"seed {seed}"
+        kept = [bosses[b].weight for b in bosses if b not in bands[1]]
+        assert kept, f"seed {seed}: band kept no boss"
+        assert max(kept) - min(kept) <= 1.0 + 1e-9, f"seed {seed}"
+
+
+def test_bands_anchor_ignores_forbidden_candidates() -> None:
+    """The anchor is drawn among the drawn slot's allowed candidates only."""
+    tags = {
+        1: _entity(1),
+        2: _entity(2),
+        10: _entity(10, weight=1.0),
+        11: _entity(11, weight=5.0),
+        12: _entity(12, weight=5.0),
+    }
+    blocked = frozenset({10})
+    for seed in range(32):
+        bands = layer_weight_bands(
+            groups=[[1, 2]],
+            arenas=_arenas_of(tags, [1, 2]),
+            bosses=_bosses_of(tags, [10, 11, 12]),
+            rng=random.Random(seed),
+            check_size=False,
+            spread=1.0,
+            forbidden={1: blocked, 2: blocked},
+        )
+        assert bands == {1: frozenset({10}), 2: frozenset({10})}, f"seed {seed}"
+
+
+def test_bands_skip_group_without_candidates() -> None:
+    tags = {
+        1: _entity(1, arena_forbids_dragon=True),
+        2: _entity(2, arena_forbids_dragon=True),
+        10: _entity(10, is_dragon=True, weight=1.0),
+        11: _entity(11, is_dragon=True, weight=5.0),
+    }
+    bands = layer_weight_bands(
+        groups=[[1, 2]],
+        arenas=_arenas_of(tags, [1, 2]),
+        bosses=_bosses_of(tags, [10, 11]),
+        rng=random.Random(0),
+        check_size=False,
+        spread=1.0,
+    )
+    assert bands == {}
+
+
+def _three_layer_setup() -> (
+    tuple[dict[int, ArenaTags], dict[int, BossTags], list[list[int]]]
+):
+    """Six arenas in three layers of two, against a 28-boss weighted pool."""
+    pool_ids = list(range(10, 38))
+    tags = {**_weighted_pool(pool_ids), **{a: _entity(a) for a in range(1, 7)}}
+    groups = [[1, 2], [3, 4], [5, 6]]
+    return _arenas_of(tags, list(range(1, 7))), _bosses_of(tags, pool_ids), groups
+
+
+def test_balanced_keeps_each_layer_within_spread() -> None:
+    arenas, bosses, groups = _three_layer_setup()
+    for seed in range(50):
+        result = match_arenas_balanced(
+            arenas=arenas,
+            bosses=bosses,
+            groups=groups,
+            rng=random.Random(seed),
+            band_rng=random.Random(seed + 1000),
+            check_size=False,
+            spread=1.0,
+        )
+        assert len(set(result.values())) == len(arenas), f"seed {seed}"
+        for group in groups:
+            weights = [bosses[result[a]].weight for a in group]
+            assert max(weights) - min(weights) <= 1.0 + 1e-9, f"seed {seed}"
+
+
+def test_balanced_equals_plain_matching_when_spread_is_zero() -> None:
+    arenas, bosses, groups = _three_layer_setup()
+    for seed in range(20):
+        plain = match_arenas_to_bosses(
+            arenas=arenas, bosses=bosses, rng=random.Random(seed), check_size=False
+        )
+        balanced = match_arenas_balanced(
+            arenas=arenas,
+            bosses=bosses,
+            groups=groups,
+            rng=random.Random(seed),
+            band_rng=random.Random(seed),
+            check_size=False,
+            spread=0.0,
+        )
+        assert balanced == plain, f"seed {seed}"
+
+
+def test_balanced_equals_plain_matching_when_weights_are_equal() -> None:
+    tags = {eid: _entity(eid) for eid in range(1, 38)}
+    arenas = _arenas_of(tags, list(range(1, 7)))
+    bosses = _bosses_of(tags, list(range(10, 38)))
+    groups = [[1, 2], [3, 4], [5, 6]]
+    forbidden = {a: frozenset({a}) for a in arenas}
+    for seed in range(20):
+        plain = match_arenas_to_bosses(
+            arenas=arenas,
+            bosses=bosses,
+            rng=random.Random(seed),
+            check_size=False,
+            forbidden=forbidden,
+        )
+        balanced = match_arenas_balanced(
+            arenas=arenas,
+            bosses=bosses,
+            groups=groups,
+            rng=random.Random(seed),
+            band_rng=random.Random(seed),
+            check_size=False,
+            spread=1.0,
+            forbidden=forbidden,
+        )
+        assert balanced == plain, f"seed {seed}"
+
+
+def test_balanced_redraws_bands_until_matching_fits() -> None:
+    """An anchor on the lone heavy boss cannot fill two slots; a redraw can."""
+    tags = {
+        1: _entity(1),
+        2: _entity(2),
+        10: _entity(10, weight=1.0),
+        11: _entity(11, weight=1.0),
+        12: _entity(12, weight=5.0),
+    }
+    for seed in range(32):
+        result = match_arenas_balanced(
+            arenas=_arenas_of(tags, [1, 2]),
+            bosses=_bosses_of(tags, [10, 11, 12]),
+            groups=[[1, 2]],
+            rng=random.Random(seed),
+            band_rng=random.Random(seed),
+            check_size=False,
+            spread=1.0,
+        )
+        assert set(result.values()) == {10, 11}, f"seed {seed}"
+
+
+def test_balanced_raises_when_no_band_fits_the_layer() -> None:
+    tags = {
+        1: _entity(1),
+        2: _entity(2),
+        10: _entity(10, weight=1.0),
+        11: _entity(11, weight=5.0),
+    }
+    with pytest.raises(MatchingError, match="layer weight bands"):
+        match_arenas_balanced(
+            arenas=_arenas_of(tags, [1, 2]),
+            bosses=_bosses_of(tags, [10, 11]),
+            groups=[[1, 2]],
+            rng=random.Random(0),
+            band_rng=random.Random(0),
+            check_size=False,
+            spread=1.0,
+            attempts=3,
         )
 
 

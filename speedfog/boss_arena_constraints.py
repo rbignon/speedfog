@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import math
 import random
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -179,6 +179,138 @@ def match_arenas_to_bosses(
 
     assignment = {aid: bid for bid, aid in boss_to_arena.items()}
     return {aid: assignment[aid] for aid in arenas}
+
+
+# Slack on the band edges, same as generator.pick_cluster_weight_matched.
+_BAND_EPSILON = 1e-9
+
+# Band redraws before match_arenas_balanced gives up; the caller's
+# MatchingError handling then rerolls the DAG (auto seed) or fails (fixed).
+BAND_ATTEMPTS = 10
+
+
+def layer_weight_bands(
+    *,
+    groups: Sequence[Sequence[int]],
+    arenas: Mapping[int, ArenaTags],
+    bosses: Mapping[int, BossTags],
+    rng: random.Random,
+    check_size: bool,
+    spread: float,
+    forbidden: Mapping[int, frozenset[int]] | None = None,
+) -> dict[int, frozenset[int]]:
+    """Per-layer boss weight bands, as extra exclusions for the matcher.
+
+    For each group (the arena slots of one DAG layer) holding at least two
+    slots: draw one slot, draw one of its allowed candidates (compatible and
+    not in ``forbidden``), and exclude from every slot of the group each boss
+    whose weight lies outside ``[w - spread / 2, w + spread / 2]``, ``w``
+    being the drawn candidate's weight. Any assignment drawn inside the band
+    has a per-layer spread of at most ``spread``. A group whose drawn slot
+    has no allowed candidate is skipped (the matcher reports the
+    infeasibility). Groups must be ordered deterministically by the caller.
+
+    Returns arena_id -> excluded boss IDs; arenas without exclusions are
+    absent, so an empty result means the bands constrain nothing.
+    """
+    forbidden = forbidden or {}
+    half = spread / 2
+    out: dict[int, frozenset[int]] = {}
+    for group in groups:
+        if len(group) < 2:
+            continue
+        slot = rng.choice(list(group))
+        blocked = forbidden.get(slot, frozenset())
+        candidates = [
+            bid
+            for bid, btags in bosses.items()
+            if bid not in blocked
+            and is_compatible(arenas[slot], btags, check_size=check_size)
+        ]
+        if not candidates:
+            continue
+        anchor = bosses[rng.choice(candidates)].weight
+        excluded = frozenset(
+            bid
+            for bid, btags in bosses.items()
+            if abs(btags.weight - anchor) > half + _BAND_EPSILON
+        )
+        if excluded:
+            for arena_id in group:
+                out[arena_id] = excluded
+    return out
+
+
+def match_arenas_balanced(
+    *,
+    arenas: Mapping[int, ArenaTags],
+    bosses: Mapping[int, BossTags],
+    groups: Sequence[Sequence[int]],
+    rng: random.Random,
+    band_rng: random.Random,
+    check_size: bool,
+    spread: float,
+    forbidden: Mapping[int, frozenset[int]] | None = None,
+    attempts: int = BAND_ATTEMPTS,
+) -> dict[int, int]:
+    """``match_arenas_to_bosses`` with per-layer boss weight bands.
+
+    Each attempt draws the bands of every group with ``band_rng`` (see
+    ``layer_weight_bands``), merges them into ``forbidden``, and runs the
+    unchanged matcher with ``rng``. A ``MatchingError`` triggers a redraw of
+    every band; after ``attempts`` failures a ``MatchingError`` naming the
+    layer weight bands is raised.
+
+    When ``spread <= 0`` or the drawn bands exclude nothing, the matcher runs
+    once with the original ``forbidden`` and no retry: its output is then
+    identical to a plain ``match_arenas_to_bosses`` call with the same
+    ``rng``, and augmenting-path matching is exact, so retrying an identical
+    exclusion map could not succeed.
+    """
+    if spread <= 0:
+        return match_arenas_to_bosses(
+            arenas=arenas,
+            bosses=bosses,
+            rng=rng,
+            check_size=check_size,
+            forbidden=forbidden,
+        )
+    base = forbidden or {}
+    last_error: MatchingError | None = None
+    for _ in range(attempts):
+        bands = layer_weight_bands(
+            groups=groups,
+            arenas=arenas,
+            bosses=bosses,
+            rng=band_rng,
+            check_size=check_size,
+            spread=spread,
+            forbidden=base,
+        )
+        if not bands:
+            return match_arenas_to_bosses(
+                arenas=arenas,
+                bosses=bosses,
+                rng=rng,
+                check_size=check_size,
+                forbidden=forbidden,
+            )
+        merged = dict(base)
+        for arena_id, excluded in bands.items():
+            merged[arena_id] = merged.get(arena_id, frozenset()) | excluded
+        try:
+            return match_arenas_to_bosses(
+                arenas=arenas,
+                bosses=bosses,
+                rng=rng,
+                check_size=check_size,
+                forbidden=merged,
+            )
+        except MatchingError as e:
+            last_error = e
+    raise MatchingError(
+        f"{last_error} (layer weight bands: spread {spread}, {attempts} attempts)"
+    ) from last_error
 
 
 def assign_bosses_uniform(
