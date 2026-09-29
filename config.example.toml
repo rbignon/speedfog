@@ -266,12 +266,13 @@ ignore_arena_size = false
 # Default: true
 # dlc_bosses = true
 #
-# Balance randomized bosses across parallel branches: on each layer, the
-# weights of the bosses placed (boss.weight in data/boss_arena_tags.json,
-# minutes, 1.0 when not annotated) stay within this spread (max - min).
-# 0 disables the balance. Ignored when `bosses` is set.
-# Default: 1.0
-# max_boss_weight_spread = 1.0
+# Keep extreme bosses apart on parallel branches: on each layer, the weights
+# of the randomized bosses placed (boss.weight in data/boss_arena_tags.json,
+# minutes, calibrated from race data) stay within this spread (max - min),
+# per job. The defaults only block extremes meeting (e.g. Malenia facing
+# Leonine Misbegotten); 0 disables. Ignored when `bosses` is set.
+# max_minor_boss_weight_spread = 1.5
+# max_major_boss_weight_spread = 2.8
 #
 # Restrict boss randomization to specific bosses. Each entry is a
 # case-insensitive substring of the boss name and must match exactly one boss.

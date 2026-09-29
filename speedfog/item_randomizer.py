@@ -78,8 +78,9 @@ def generate_item_config(
 
     ``boss_layers`` (cluster ID -> DAG layer) enables the per-layer boss
     weight balance of the standard path: the bosses placed on one layer keep
-    their ``boss.weight`` within ``config.enemy.max_boss_weight_spread``
-    (see ``match_arenas_balanced``). ``None`` disables it. The allowlist path
+    their ``boss.weight`` within the job's
+    ``config.enemy.max_minor_boss_weight_spread`` /
+    ``max_major_boss_weight_spread`` (see ``match_arenas_balanced``). ``None`` disables it. The allowlist path
     ignores it.
     """
     auto_equip = config.item_randomizer.auto_equip
@@ -200,7 +201,8 @@ def generate_item_config(
                 check_size=not config.enemy.ignore_arena_size,
                 seed=seed,
                 boss_layers=boss_layers,
-                max_spread=config.enemy.max_boss_weight_spread,
+                minor_spread=config.enemy.max_minor_boss_weight_spread,
+                major_spread=config.enemy.max_major_boss_weight_spread,
             )
         if assignments:
             result["enemy_assignments"] = {
@@ -382,7 +384,8 @@ def _build_enemy_assignments(
     check_size: bool,
     seed: int,
     boss_layers: Mapping[str, int] | None = None,
-    max_spread: float = 0.0,
+    minor_spread: float = 0.0,
+    major_spread: float = 0.0,
 ) -> dict[int, int]:
     """Match DAG boss clusters to candidate bosses under compatibility rules.
 
@@ -394,10 +397,10 @@ def _build_enemy_assignments(
     A boss is never assigned to its own arena, and multi-phase families are
     excluded as a unit (strict; see _family_forbidden).
 
-    With ``boss_layers`` (cluster ID -> DAG layer) and ``max_spread > 0``,
-    the slots of one layer receive bosses whose weights stay within
-    ``max_spread`` (``match_arenas_balanced``). A phase-1 slot takes its
-    leader's layer.
+    With ``boss_layers`` (cluster ID -> DAG layer), the slots of one layer
+    receive bosses whose weights stay within the job's spread
+    (``minor_spread`` / ``major_spread``, 0 disables; see
+    ``match_arenas_balanced``). A phase-1 slot takes its leader's layer.
 
     Raises ``KeyError`` if a DAG boss cluster's leader (or its phase-1
     sibling) has no entry in ``tags`` or no ``arena`` block, or if
@@ -442,8 +445,11 @@ def _build_enemy_assignments(
 
     rng = random.Random(seed ^ BOSS_ASSIGNMENT_SEED_SALT)
     out: dict[int, int] = {}
-    jobs = [(minors, minor_pool, True), (majors, major_pool, randomize_majors)]
-    for arenas, pool, enabled in jobs:
+    jobs = [
+        (minors, minor_pool, True, minor_spread),
+        (majors, major_pool, randomize_majors, major_spread),
+    ]
+    for arenas, pool, enabled, spread in jobs:
         if enabled and arenas:
             out.update(
                 match_arenas_balanced(
@@ -452,7 +458,7 @@ def _build_enemy_assignments(
                     groups=_layer_groups(arenas, slot_layer),
                     rng=rng,
                     check_size=check_size,
-                    spread=max_spread,
+                    spread=spread,
                     forbidden=_family_forbidden(arenas, phase_mapping),
                 )
             )

@@ -11,8 +11,9 @@ from pathlib import Path
 from typing import Any
 
 from speedfog.constants import (
-    DEFAULT_MAX_BOSS_WEIGHT_SPREAD,
     DEFAULT_MAX_LAYER_SPREAD,
+    DEFAULT_MAX_MAJOR_BOSS_WEIGHT_SPREAD,
+    DEFAULT_MAX_MINOR_BOSS_WEIGHT_SPREAD,
     INTERMEDIATE_CLUSTER_TYPES,
     MAX_TIER,
     WEIGHT_TOLERANCE_STEP,
@@ -428,6 +429,19 @@ class ItemRandomizerConfig:
             raise ValueError(f"difficulty must be 0-100, got {self.difficulty}")
 
 
+def _validate_spread(key: str, value: Any) -> float:
+    """Validate an ``[enemy]`` boss weight spread: a finite number >= 0."""
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int | float)
+        or not math.isfinite(value)
+    ):
+        raise ValueError(f"enemy.{key} must be a finite number, got {value!r}")
+    if value < 0:
+        raise ValueError(f"enemy.{key} must be >= 0, got {value}")
+    return float(value)
+
+
 @dataclass
 class EnemyConfig:
     """Enemy randomization configuration."""
@@ -445,10 +459,12 @@ class EnemyConfig:
     # boss slot (minor and major) draws uniformly from this list, with reuse
     # permitted, so e.g. bosses = ["Malenia"] yields a Malenia-only run.
     bosses: list[str] = field(default_factory=list)
-    # Hard cap (minutes) on the spread (max - min) of the boss.weight values
-    # of the randomized bosses placed on one DAG layer. 0 disables the
-    # balance. Ignored in allowlist mode (bosses non-empty).
-    max_boss_weight_spread: float = DEFAULT_MAX_BOSS_WEIGHT_SPREAD
+    # Hard caps (minutes) on the spread (max - min) of the boss.weight values
+    # of the randomized bosses placed on one DAG layer, per job: minor arenas,
+    # and major arenas (final_boss included in "all" mode). 0 disables that
+    # job's rule. Ignored in allowlist mode (bosses non-empty).
+    max_minor_boss_weight_spread: float = DEFAULT_MAX_MINOR_BOSS_WEIGHT_SPREAD
+    max_major_boss_weight_spread: float = DEFAULT_MAX_MAJOR_BOSS_WEIGHT_SPREAD
 
     def __post_init__(self) -> None:
         """Validate and normalize enemy config."""
@@ -475,18 +491,12 @@ class EnemyConfig:
             raise ValueError(
                 "enemy.bosses requires randomize_bosses to be 'minor' or 'all'"
             )
-        spread = self.max_boss_weight_spread
-        if (
-            isinstance(spread, bool)
-            or not isinstance(spread, int | float)
-            or not math.isfinite(spread)
-        ):
-            raise ValueError(
-                f"enemy.max_boss_weight_spread must be a finite number, got {spread!r}"
-            )
-        if spread < 0:
-            raise ValueError(f"enemy.max_boss_weight_spread must be >= 0, got {spread}")
-        self.max_boss_weight_spread = float(spread)
+        self.max_minor_boss_weight_spread = _validate_spread(
+            "max_minor_boss_weight_spread", self.max_minor_boss_weight_spread
+        )
+        self.max_major_boss_weight_spread = _validate_spread(
+            "max_major_boss_weight_spread", self.max_major_boss_weight_spread
+        )
 
 
 @dataclass
@@ -709,7 +719,8 @@ _KNOWN_SECTION_KEYS: dict[str, frozenset[str] | None] = {
             "swap_boss",
             "dlc_bosses",
             "bosses",
-            "max_boss_weight_spread",
+            "max_minor_boss_weight_spread",
+            "max_major_boss_weight_spread",
         }
     ),
     "budget": frozenset({"tolerance"}),
@@ -977,8 +988,13 @@ class Config:
                 swap_boss=enemy_section.get("swap_boss", False),
                 dlc_bosses=enemy_section.get("dlc_bosses", True),
                 bosses=enemy_section.get("bosses", []),
-                max_boss_weight_spread=enemy_section.get(
-                    "max_boss_weight_spread", DEFAULT_MAX_BOSS_WEIGHT_SPREAD
+                max_minor_boss_weight_spread=enemy_section.get(
+                    "max_minor_boss_weight_spread",
+                    DEFAULT_MAX_MINOR_BOSS_WEIGHT_SPREAD,
+                ),
+                max_major_boss_weight_spread=enemy_section.get(
+                    "max_major_boss_weight_spread",
+                    DEFAULT_MAX_MAJOR_BOSS_WEIGHT_SPREAD,
                 ),
             ),
             tarnished=TarnishedConfig(

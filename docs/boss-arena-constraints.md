@@ -222,43 +222,42 @@ bipartite graph instead of only the arena side).
 ## Layer weight balance
 
 On the standard path, the randomized bosses placed on one DAG layer keep
-their `boss.weight` within `[enemy].max_boss_weight_spread` (minutes,
-default 1.0, 0 disables). Parallel branches of one layer thus face bosses of
-comparable length. In practice a layer holding a boss arena holds 2 or 3 of
-them in parallel about 90% of the time, and never mixes majors and minors
-(the validator rejects mixed-type layers), so each job is balanced on its
-own.
+their `boss.weight` within a per-job spread: `[enemy].max_minor_boss_weight_spread`
+(default 1.5 minutes) for minor arenas, `[enemy].max_major_boss_weight_spread`
+(default 2.8) for major arenas (`final_boss` included in "all" mode); 0
+disables a job's rule. The defaults only keep extremes apart: Malenia (3.9)
+and Placidusax (3.8) never face Leonine Misbegotten, Dancing Lion, Red Wolf
+of Radagon or Mimic Tear, Godskin Spiritcaller Snail (2.1) never faces a
+minor at 0.5 or less, and an extreme facing average bosses stays allowed.
+In practice a layer holding a boss arena holds 2 or 3 of them in parallel
+about 90% of the time and never mixes majors and minors (the validator
+rejects mixed-type layers), so each job is balanced on its own.
 
 `main.py`'s `post_validate` passes `boss_layers` (cluster ID -> layer) to
 `generate_item_config`. `_build_enemy_assignments` groups the arena slots of
 each job by layer (a phase-1 slot takes its leader's layer) and calls
-`match_arenas_balanced`:
+`match_arenas_balanced`, which samples by rejection: it runs the unchanged
+`match_arenas_to_bosses` and accepts the matching when every group has
+`max - min <= spread`, else draws again with the same RNG, up to
+`BALANCE_ATTEMPTS` (50). The accepted matching is a uniform draw among the
+valid ones, so an extreme boss only loses the combinations the rule forbids.
+A job the plain matcher cannot solve fails at once with the plain error;
+exhausted attempts raise a `MatchingError` naming the spread, which
+`post_validate` turns into a `GenerationError` (reroll in auto mode, clear
+error with a fixed seed).
 
-1. For each group of at least two slots, `layer_weight_bands` draws a slot,
-   then one of its allowed candidates; that boss's weight `w` anchors the
-   band `[w - spread / 2, w + spread / 2]`. Every boss outside the band is
-   excluded from every slot of the group.
-2. The exclusions are merged into the family `forbidden` map and the
-   unchanged `match_arenas_to_bosses` runs on the whole job, so the
-   matching stays global and exact (no boss reused across layers).
-3. On `MatchingError` every band of the job is redrawn, up to
-   `BAND_ATTEMPTS` (10). The final `MatchingError` names the layer weight
-   bands; `post_validate` turns it into a `GenerationError` (reroll in auto
-   mode, clear error with a fixed seed).
+The first draw is exactly the plain matching, so a seed whose plain matching
+already satisfies the rule keeps its assignments.
 
-The anchors use their own RNG (`seed ^ BOSS_WEIGHT_BAND_SEED_SALT`). When no
-band excludes anything (weights not annotated, spread 0), the matcher gets
-the same inputs and RNG state as without the balance, so a seed's
-assignments are unchanged.
+Measured on 150 `standard.toml` DAGs in "all" mode with the calibrated
+weights and the defaults: Malenia 78 -> 70 appearances, Placidusax 47 -> 43,
+other heavy majors unchanged, Godskin Spiritcaller Snail about -45%; at most
+3 draws per job, no DAG reroll. Rejection suits this loose rule only: 1.0
+for both jobs exhausts the attempts on most "all" mode DAGs.
 
-Limitations:
-
-- Balance is per slot: a two-slot node (Fire Giant) next to a one-slot node
-  on the same layer still means two fights against one. That imbalance
-  belongs to the zone weight.
-- The window is hard: a boss with no other boss within `spread / 2` of its
-  weight cannot share a layer with another arena, so it only appears on
-  single-arena layers.
+Limitation: balance is per slot, so a two-slot node (Fire Giant) next to a
+one-slot node on the same layer still means two fights against one. That
+imbalance belongs to the zone weight.
 
 ## Pool composition
 
@@ -304,7 +303,7 @@ gets a non-DLC replacement boss.
 | ``[enemy].randomize_bosses = "all"`` | Both majors and minors receive arena-matched bosses. ``final_boss`` terminals (Elden Beast / Promised Consort Radahn) are also treated as major arena targets: each receives an arena-compatible boss and is reported in ``randomized_bosses``/``boss_name``. (They also remain candidate sources in the major pool via the orphan-arena fallback, as before, so they may appear as mid-run replacements like any other major.) |
 | ``[enemy].ignore_arena_size`` | Skip the size gate. Other rules still apply. |
 | ``[enemy].dlc_bosses = false`` | Filter DLC entries from the candidate pool. Arena selection is untouched (DLC arenas still get a non-DLC replacement). Independent of ``[item_randomizer].dlc``, which controls item-randomizer scope. |
-| ``[enemy].max_boss_weight_spread`` | Hard cap (minutes, default 1.0) on the spread of ``boss.weight`` among the randomized bosses of one layer; ``0`` disables it. See "Layer weight balance". Ignored in allowlist mode. |
+| ``[enemy].max_minor_boss_weight_spread`` / ``max_major_boss_weight_spread`` | Hard caps (minutes, defaults 1.5 / 2.8) on the spread of ``boss.weight`` among the randomized bosses of one layer, per job; ``0`` disables. See "Layer weight balance". Ignored in allowlist mode. |
 
 ## Wire format
 
@@ -372,7 +371,7 @@ When `enemy.bosses` is non-empty, boss assignment switches to a uniform mode:
   candidate is forbidden the rule is waived for that arena instead of
   failing. A "Malenia only" run stays generable even when Malenia's own
   arena is in the DAG.
-- `max_boss_weight_spread` does not apply: the allowlist stays uniform and
+- The layer weight spreads do not apply: the allowlist stays uniform and
   authoritative.
 
 Example "Malenia only":
