@@ -266,6 +266,13 @@ ignore_arena_size = false
 # Default: true
 # dlc_bosses = true
 #
+# Balance randomized bosses across parallel branches: on each layer, the
+# weights of the bosses placed (boss.weight in data/boss_arena_tags.json,
+# minutes, 1.0 when not annotated) stay within this spread (max - min).
+# 0 disables the balance. Ignored when `bosses` is set.
+# Default: 1.0
+# max_boss_weight_spread = 1.0
+#
 # Restrict boss randomization to specific bosses. Each entry is a
 # case-insensitive substring of the boss name and must match exactly one boss.
 # Any allowed boss can fill any randomized slot (minor or major), and a boss is

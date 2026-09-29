@@ -856,6 +856,39 @@ def test_enemy_config_invalid_value():
         Config.from_dict({"enemy": {"randomize_bosses": "invalid"}})
 
 
+def test_enemy_max_boss_weight_spread_default():
+    config = Config.from_dict({})
+    assert config.enemy.max_boss_weight_spread == 1.0
+
+
+def test_enemy_max_boss_weight_spread_from_dict():
+    config = Config.from_dict({"enemy": {"max_boss_weight_spread": 2.5}})
+    assert config.enemy.max_boss_weight_spread == 2.5
+
+
+def test_enemy_max_boss_weight_spread_zero_disables():
+    config = Config.from_dict({"enemy": {"max_boss_weight_spread": 0}})
+    assert config.enemy.max_boss_weight_spread == 0.0
+
+
+def test_enemy_max_boss_weight_spread_toml_integer(tmp_path):
+    """A TOML integer is a known key and is coerced to float."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("""
+[enemy]
+max_boss_weight_spread = 2
+""")
+    config = Config.from_toml(config_file)
+    assert config.enemy.max_boss_weight_spread == 2.0
+    assert isinstance(config.enemy.max_boss_weight_spread, float)
+
+
+@pytest.mark.parametrize("bad", [-0.5, True, "1.0", float("nan"), float("inf")])
+def test_enemy_max_boss_weight_spread_rejects_invalid(bad):
+    with pytest.raises(ValueError, match="max_boss_weight_spread must be"):
+        Config.from_dict({"enemy": {"max_boss_weight_spread": bad}})
+
+
 def test_max_exits_entrances_defaults():
     """max_exits and max_entrances default to 3."""
     config = Config.from_dict({})
