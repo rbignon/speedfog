@@ -225,10 +225,16 @@ On the standard path, the randomized bosses placed on one DAG layer keep
 their `boss.weight` within a per-job spread: `[enemy].max_minor_boss_weight_spread`
 (default 1.5 minutes) for minor arenas, `[enemy].max_major_boss_weight_spread`
 (default 2.8) for major arenas (`final_boss` included in "all" mode); 0
-disables a job's rule. The defaults only keep extremes apart: Malenia (3.9)
-and Placidusax (3.8) never face Leonine Misbegotten, Dancing Lion, Red Wolf
-of Radagon or Mimic Tear, Godskin Spiritcaller Snail (2.1) never faces a
-minor at 0.5 or less, and an extreme facing average bosses stays allowed.
+disables a job's rule. The defaults only keep extremes apart. With the
+weights of the 2026-09-29 calibration, the major rule blocks 2 of 1225 pairs
+(Malenia 3.8 and Placidusax 3.7 against Leonine Misbegotten 0.7; Red Wolf of
+Radagon and Mimic Tear at 1.0 sit exactly on the boundary and stay allowed)
+and the minor rule 42 of 11175 (Godskin Spiritcaller Snail 2.1 against the
+41 minors at 0.5 or less, Full-Grown Fallingstar Beast 1.8 against Soldier
+of Godrick 0.2); an extreme facing average bosses stays allowed. Weights are
+rounded to 0.1, so pairs tie the boundary (2 major, 33 minor) and a 0.1
+drift on the next calibration flips them: re-check these examples after
+every `--write`.
 In practice a layer holding a boss arena holds 2 or 3 of them in parallel
 about 90% of the time and never mixes majors and minors (the validator
 rejects mixed-type layers), so each job is balanced on its own.
@@ -249,11 +255,12 @@ error with a fixed seed).
 The first draw is exactly the plain matching, so a seed whose plain matching
 already satisfies the rule keeps its assignments.
 
-Measured on 150 `standard.toml` DAGs in "all" mode with the calibrated
-weights and the defaults: Malenia 78 -> 70 appearances, Placidusax 47 -> 43,
-other heavy majors unchanged, Godskin Spiritcaller Snail about -45%; at most
-3 draws per job, no DAG reroll. Rejection suits this loose rule only: 1.0
-for both jobs exhausts the attempts on most "all" mode DAGs.
+Measured on 150 `standard.toml` DAGs per mode with the shipped weights and
+the defaults (rule off -> on): in "all" mode Malenia 91 -> 89 appearances,
+Placidusax 40 -> 39, other heavy majors unchanged, Godskin Spiritcaller
+Snail 17 -> 9; in "minor" mode Snail 22 -> 8. At most 3 draws per job, no
+DAG reroll. Rejection suits this loose rule only: 1.0 for both jobs
+exhausts the attempts on most "all" mode DAGs.
 
 Limitation: balance is per slot, so a two-slot node (Fire Giant) next to a
 one-slot node on the same layer still means two fights against one. That
@@ -262,8 +269,9 @@ imbalance belongs to the zone weight.
 ### Calibration
 
 `boss.weight` values come from `speedfog-racing/tools/extract_boss_weights.py`
-run on the race database (first run 2026-09-29: about 58,200 minor and
-7,800 major single-slot clears, all 200 pool bosses measured). The tool fits
+run on the race database (first run 2026-09-29: 58,229 minor and 7,813
+major single-slot clears; all 200 pool bosses measured, 197 on at least 20
+clears). The tool fits
 log clear time = arena + boss + tier + player + pool per job by median
 polish, so a weight is the median node time for that boss under typical
 arena, tier (the tier factor roughly doubles node time between tiers 3 and
@@ -271,8 +279,12 @@ arena, tier (the tier factor roughly doubles node time between tiers 3 and
 (majors) Spearman. Bosses are attributed exactly from `enemy_assignments`,
 else from a unique `randomized_bosses` name; ambiguous names (e.g.
 "Tree Sentinel", shared with the duo) and multi-slot nodes are dropped.
-Small samples are shrunk toward the pool median. Re-run it as races
-accumulate; `--write` only touches `boss.weight`.
+Small samples are shrunk toward the pool median, and a boss with fewer
+than 20 clears gets the job's median weight (Ghostflame Dragon Gravesite,
+Godfrey First Elden Lord, Divine Beast Dancing Lion in the first run: their
+names are shared with other entities, so only `enemy_assignments` seeds
+count). Re-run it as races accumulate; `--write` only touches
+`boss.weight`.
 
 ## Pool composition
 

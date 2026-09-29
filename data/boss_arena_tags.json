@@ -201,7 +201,7 @@
       "can_escape": false,
       "night_boss": false,
       "exclude_from_pool": false,
-      "weight": 1.6
+      "weight": 1.4
     },
     "arena": {
       "size": 4,
@@ -1059,7 +1059,7 @@
       "can_escape": false,
       "night_boss": false,
       "exclude_from_pool": false,
-      "weight": 0.8
+      "weight": 1.4
     },
     "arena": {
       "size": 4,
@@ -5278,7 +5278,7 @@
       "can_escape": true,
       "night_boss": false,
       "exclude_from_pool": false,
-      "weight": 1.2
+      "weight": 0.7
     },
     "arena": {
       "size": 4,
