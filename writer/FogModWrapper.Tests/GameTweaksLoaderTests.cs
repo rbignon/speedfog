@@ -393,7 +393,7 @@ public class GameTweaksLoaderTests
             new[] { new DisableEvent("m11_00_00_00", 11002930), new DisableEvent("m60_52_39_00", 1052392910) },
             tweaks.DisableEvents);
         Assert.Equal(new[] { "m60_52_39_00" }, tweaks.PinVanillaMaps);
-        Assert.Equal(3, tweaks.StakeRemovals.Count);
+        Assert.Equal(5, tweaks.StakeRemovals.Count);
         Assert.Equal(new[] { "m60_13_09_02" }, tweaks.FallbackArenaMaps);
     }
 }

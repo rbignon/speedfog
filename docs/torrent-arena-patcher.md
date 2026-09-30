@@ -69,5 +69,6 @@ up in the DAG for the current seed.
   is to look at the arena's EMEVD with `tools/dump_emevd_warps`.
 - `m12_04_00_00` is the shared MSB for Ainsel preboss + Astel arena, and
   `m12_05_00_00` is the shared MSB for the Mohgwyn approach + Mohg arena
-  (see `StakeRemover.cs:30-39`). Flipping the named collisions there only
+  (see "Current Stakes" in `docs/stake-removal.md`, which also lists the
+  shared Siofra and Nokron boss MSBs). Flipping the named collisions there only
   enables Torrent on the specific collision cells listed, not the whole map.

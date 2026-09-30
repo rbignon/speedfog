@@ -203,6 +203,14 @@ name = "AEG099_503_9001"  # mohgwyn_boss: activation region inside the arena but
 map = "m12_04_00_00"
 name = "AEG099_504_9001"  # ainsel_boss: respawn c0000_9015 sits ~140 units south of Astel's arena in ainsel_preboss, bypasses the fog gate
 
+[[stake_removals]]
+map = "m12_08_00_00"
+name = "AEG099_504_9000"  # siofra_boss: respawn c0000_9000 sits ~24 units before the arena fog gate in siofra_preboss, bypasses the fog gate
+
+[[stake_removals]]
+map = "m12_09_00_00"
+name = "AEG099_504_9000"  # siofra_nokron_boss: respawn c0000_9000 sits ~32 units before the arena fog gate in siofra_nokron_preboss, bypasses the fog gate
+
 # Arena maps whose boss part FogMod never writes, so UntouchableBossInjector's
 # primary mod-dir scan never sees them: the assignment target is only present
 # in the merge-dir (Item Randomizer) copy. caelid_radahn's boss part lives on

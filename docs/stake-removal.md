@@ -12,7 +12,7 @@ Some boss zones have a vanilla RetryPoint (Stake of Marika) whose respawn positi
 1. **Cross-map respawn (DAG-aware):** the stake's `PlayerMap` points to a different map than the stake itself, in a zone outside the SpeedFog DAG. The player is softlocked after dying at the boss.
 2. **Shared-MSB respawn (intra-map bypass):** the activation region and the respawn position live in the same MSB but in different fog.txt areas (e.g., a boss arena MSB shared with its "pre" zone). The respawn position bypasses the SpeedFog fog gate, breaking the run flow even when both zones are in the DAG.
 
-In both cases the activation is **conditional on a region trigger**: the stake only takes effect if the player crosses a specific area inside the arena, so the symptom is intermittent.
+In most cases the activation is **conditional on a region trigger**: the stake only takes effect if the player crosses a specific area inside the arena, so the symptom is intermittent. A few stakes have no activation region, only a radius around the stake (fog.txt DebugInfo `radius` line); when that radius covers the arena (siofra_nokron_boss), every death in the fight triggers the stake.
 
 **Example 1 — caelid_radahn (cross-map):**
 
@@ -33,6 +33,8 @@ In both cases the activation is **conditional on a region trigger**: the stake o
 ## Why FogMod Doesn't Handle This Automatically
 
 FogMod's `GameDataWriterE` processes RetryPoints from fog.txt (lines 4444–4547). For `caelid_radahn`, it edits/moves the RetryPoint only when `caelid_preradahn` is in the graph (because it needs the PlayerMap zone to resolve the respawn position). Since SpeedFog never includes `caelid_preradahn` in the DAG, FogMod leaves the vanilla RetryPoint untouched.
+
+For the shared-MSB cases, FogRando's stake editing would move the respawn `c0000` part to the area's main spawn point, but SpeedFog never reaches that path: `LoadLiteConfig` does not load fog.txt RetryPoints, so `ann.RetryPoints` only holds the removal list built by `StakeRemover`.
 
 ## Solution
 
@@ -71,6 +73,12 @@ Removing the **RetryPoint event** is sufficient to disable the stake. The asset 
 | caelid_radahn | m60_12_09_02 | m60_51_36_00-AEG099_502_2000 | Cross-map: respawns in caelid_preradahn (outside DAG) |
 | mohgwyn_boss | m12_05_00_00 | AEG099_503_9001 | Shared MSB: respawn position falls outside the arena, bypasses fog gate |
 | ainsel_boss | m12_04_00_00 | AEG099_504_9001 | Shared MSB: respawn ~140 units south of Astel's arena, in ainsel_preboss section |
+| siofra_boss | m12_08_00_00 | AEG099_504_9000 | Shared MSB: activation sphere labelled "ボス部屋" (boss room), respawn ~24 units before the arena fog gate, in siofra_preboss section |
+| siofra_nokron_boss | m12_09_00_00 | AEG099_504_9000 | Shared MSB: respawn ~32 units before the arena fog gate, in siofra_nokron_preboss section; fog.txt lists no activation region, only a 300-unit radius around the stake that reaches well past the boss (~125 units away) |
+
+The siofra_boss and siofra_nokron_boss entries are verified geometrically and in FogMod output (vanilla RetryPoint gone); in-game confirmation is pending.
+
+What remains in these arenas is FogMod's own boss stake, placed at the arena's front gate with a 150-unit radius and the BossTrigger flag. In deep arenas (Siofra, Nokron) that radius may not reach the far end: a death there falls back to the last Site of Grace instead of the gate, which is slower but never bypasses a fog gate.
 
 ## Investigation Methodology
 
@@ -83,7 +91,7 @@ To identify additional vanilla stakes that need removal:
      ```bash
      awk '/^- Name:/{name=$0} /Maps:.*<map>/{print name}' data/fog.txt
      ```
-3. **Geometric verification (shared-MSB case):** use `tools/game_inspect` to dump the asset and its associated `c0000` Part.Player. The player entity ID is given by the RetryPoint's DebugInfo `player` line in fog.txt (it also equals the asset entity ID minus 970, per FogMod source). Compare its `Position` to the `BossPos` of each area sharing the map. If the position is closer to a non-boss area, the stake is a candidate.
+3. **Geometric verification (shared-MSB case):** use `tools/game_inspect` to dump the asset and its associated `c0000` Part.Player. The player entity ID is given by the RetryPoint's DebugInfo `player` line in fog.txt (it also equals the asset entity ID minus 970, per FogMod source). Compare its `Position` to the `BossPos` of each area sharing the map. If the position is closer to a non-boss area, the stake is a candidate. Then check that the activation volume (region, or `radius` when there is none) reaches into the arena: a stake whose region sits near the stake itself, outside the fight, never triggers during the fight and needs no removal (`dump_emevd_warps retrypoints` shows region and radius).
 4. **In-game confirmation:** with a minimal seed including only the target boss arena, die at the boss from multiple positions inside the arena to reproduce the intermittent activation, and observe the respawn point.
 
 Once confirmed, add a `[[stake_removals]]` entry (map + name) to
