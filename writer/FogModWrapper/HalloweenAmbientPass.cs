@@ -7,7 +7,7 @@ namespace FogModWrapper;
 /// <summary>
 /// Single per-map driver for the Halloween ambient layer at cluster exit
 /// gates. GateDecorInjector (data-driven decorations) and AmbientSpawnInjector
-/// (passive greeters + optional ambush packs) each used to run their own
+/// (optional greeters + ambush packs) each used to run their own
 /// parallel MSB read/ApplyToMsb/write pass over their own map set, even
 /// though those sets mostly overlap. This driver reads each map's MSB once,
 /// applies GateDecorInjector.ApplyToMsb first (ground-evidence invariant:
@@ -64,9 +64,11 @@ public static class HalloweenAmbientPass
                 decorGatesByMap.Select(kv => (kv.Key, kv.Value.Count * perGateCount)),
                 hasSfxEntries).ToDictionary(p => p.MapId);
 
+        bool spawnsEnabled = settings.Greeters || settings.Ambushes;
         if (!catalog.IsEmpty)
             Console.WriteLine("Injecting Halloween gate decorations...");
-        Console.WriteLine("Injecting Halloween ambient spawns at cluster exit gates...");
+        if (spawnsEnabled)
+            Console.WriteLine("Injecting Halloween ambient spawns at cluster exit gates...");
 
         int totalDecor = 0, totalDecorMaps = 0;
         int totalGreeters = 0, totalAmbushers = 0, totalSpawnMaps = 0;
@@ -133,6 +135,7 @@ public static class HalloweenAmbientPass
 
         if (!catalog.IsEmpty)
             Console.WriteLine($"  Placed {totalDecor} gate decorations across {totalDecorMaps} maps");
-        Console.WriteLine($"  Placed {totalGreeters} greeters + {totalAmbushers} ambushers across {totalSpawnMaps} maps");
+        if (spawnsEnabled)
+            Console.WriteLine($"  Placed {totalGreeters} greeters + {totalAmbushers} ambushers across {totalSpawnMaps} maps");
     }
 }

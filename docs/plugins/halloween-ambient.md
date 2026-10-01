@@ -1,8 +1,8 @@
 # Halloween Ambient Spawns and Decorations
 
 Two non-text layers of the Halloween plugin, both running after FogMod's
-`Write()`: passive "greeter" enemies (plus optional hostile ambush packs)
-and data-driven prop decorations, placed at cluster exit gates. A single
+`Write()`: passive "greeter" enemies and optional hostile ambush packs,
+plus data-driven prop decorations, placed at cluster exit gates. A single
 driver, `writer/FogModWrapper/HalloweenAmbientPass.cs`, reads each map's
 MSB once and calls into both features (decorations from
 `writer/FogModWrapper/GateDecorInjector.cs` before spawns from
@@ -17,17 +17,25 @@ the text reskin layer that shares the same `[plugin.halloween]` namespace.
 ```toml
 [plugin.halloween]
 enabled = true    # gates greeters + decorations (and the text theme)
+greeters = true   # passive Aging Untouchable beside each anchored gate
 ambushes = false  # also spawn hostile skeleton packs at the anchored gates
 ```
 
 Parsed strictly by `HalloweenPluginSettings.Parse`: unknown keys or a
-non-boolean `ambushes` abort the build (same idiom as `WeatherInjector.Parse`).
+non-boolean `greeters`/`ambushes` abort the build (same idiom as
+`WeatherInjector.Parse`). The two spawn toggles are independent;
+`greeters = false` with `ambushes = false` leaves the decorations as the
+only ambient layer at the gates (the text theme and the item icons are not
+affected by either toggle). With both off, `CollectSpawnSpecsByMap` returns
+no map, so the driver reads no MSB on the spawn layer's behalf, and the
+regulation rows of a disabled flavor (passive think row, decorative
+ambusher rows) are not written.
 
 ## The two flavors
 
 - **Greeters**: one passive Aging Untouchable (`c5280`, `NPCParamID
-  52800086`) standing watch beside every anchored exit gate, always placed
-  when `enabled = true`.
+  52800086`) standing watch beside every anchored exit gate, placed when
+  `enabled = true` unless `greeters = false`.
 - **Ambushers**: when `ambushes = true`, a pack of 2-3 hostile skeletons
   (`c3500`) sharing the same gate. They aggro normally but are DECORATIVE:
   a clone of the Sage's Cave skeleton row (35000030) into

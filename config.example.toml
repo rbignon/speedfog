@@ -366,13 +366,15 @@ default_torrent_skin = ""
 [plugin.summer]
 enabled = false  # set true to reskin boss names + victory/death banners
 
-# Halloween mode: text reskin (boss names, banners, item renames), passive
-# "greeter" enemies + gate decorations at dungeon entrances, and optional
-# hostile skeleton ambush packs. If both text themes are enabled, halloween
-# overwrites colliding entries.
+# Halloween mode: text reskin (boss names, banners, item renames), gate
+# decorations + passive "greeter" enemies at dungeon exit gates, and optional
+# hostile skeleton ambush packs. greeters = false + ambushes = false leaves
+# the decorations as the only gate dressing. If both text themes are enabled,
+# halloween overwrites colliding entries.
 [plugin.halloween]
 enabled = false
-# ambushes = false   # hostile skeleton packs at dungeon entrances (Halloween mode)
+# greeters = true    # passive Aging Untouchable beside each dungeon exit gate
+# ambushes = false   # hostile skeleton packs at dungeon exit gates (Halloween mode)
 
 # Force a fixed weather and pin the in-game clock hour (racing consistency).
 [plugin.weather]

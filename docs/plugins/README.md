@@ -30,7 +30,7 @@ processes (e.g. text in FogModWrapper, lighting in StaticModBuilder), so the
 cohesive unit is the config namespace, read independently where each piece
 runs. Halloween is the current example spanning four features under one
 namespace: `TextTheme` (boss/UI text reskin), `AmbientSpawnInjector`
-(dungeon entrance greeters/ambushes), `GateDecorInjector` (catalogue
+(dungeon exit gate greeters/ambushes), `GateDecorInjector` (catalogue
 decorations), and `HalloweenIconInjector` (item icon redirect, plus its
 own bootstrap-time overlay builder and packaging conditional), each
 reading `[plugin.halloween]` independently.

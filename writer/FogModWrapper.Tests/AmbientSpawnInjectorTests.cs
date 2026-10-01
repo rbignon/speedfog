@@ -42,7 +42,7 @@ public class AmbientSpawnInjectorTests
         var specs = AmbientSpawnInjector.CollectSpawnSpecsByMap(
             connections, Nodes,
             new Dictionary<string, (string, string)>(),
-            new HalloweenPluginSettings.Settings(Ambushes: true));
+            new HalloweenPluginSettings.Settings(Ambushes: true, Greeters: true));
 
         Assert.Empty(specs);
     }
@@ -58,7 +58,7 @@ public class AmbientSpawnInjectorTests
         var specs = AmbientSpawnInjector.CollectSpawnSpecsByMap(
             connections, Nodes,
             new Dictionary<string, (string, string)>(),
-            new HalloweenPluginSettings.Settings(Ambushes: false));
+            new HalloweenPluginSettings.Settings(Ambushes: false, Greeters: true));
 
         Assert.True(specs.ContainsKey("m31_00_00_00"));   // mini_dungeon exit
         Assert.False(specs.ContainsKey("m12_00_00_00"));  // boss arena stays bare
@@ -75,13 +75,55 @@ public class AmbientSpawnInjectorTests
         var specs = AmbientSpawnInjector.CollectSpawnSpecsByMap(
             connections, Nodes,
             new Dictionary<string, (string, string)>(),
-            new HalloweenPluginSettings.Settings(Ambushes: true));
+            new HalloweenPluginSettings.Settings(Ambushes: true, Greeters: true));
 
         var kinds = specs["m31_00_00_00"].Select(s => s.Kind).ToList();
         Assert.Contains(SpawnKind.Greeter, kinds);
         Assert.Contains(SpawnKind.Ambusher, kinds);
         int ambushers = kinds.Count(k => k == SpawnKind.Ambusher);
         Assert.InRange(ambushers, 2, 3);
+    }
+
+    [Fact]
+    public void CollectSpecs_GreetersOffKeepsOnlyAmbushers()
+    {
+        var connections = new List<Connection>
+        {
+            Conn("castle_zone", "m31_00_00_00_AEG099_002_9000", 1),
+        };
+        var specs = AmbientSpawnInjector.CollectSpawnSpecsByMap(
+            connections, Nodes,
+            new Dictionary<string, (string, string)>(),
+            new HalloweenPluginSettings.Settings(Ambushes: true, Greeters: false));
+
+        var mapSpecs = specs["m31_00_00_00"];
+        Assert.InRange(mapSpecs.Count, 2, 3);
+        Assert.All(mapSpecs, s => Assert.Equal(SpawnKind.Ambusher, s.Kind));
+    }
+
+    [Fact]
+    public void CollectSpecs_AllSpawnsOffYieldsNoMaps()
+    {
+        // Decorations-only mode: no map entry at all, so the ambient pass
+        // does not read an MSB on the spawn layer's behalf.
+        var connections = new List<Connection>
+        {
+            Conn("cave_zone", "m31_00_00_00_AEG099_002_9000", 1),
+            Conn("castle_zone", "m32_00_00_00_AEG099_002_9000", 2),
+        };
+        var gateSides = new Dictionary<string, (string, string)>();
+
+        // Control: the same gates are anchored when greeters are on.
+        var withGreeters = AmbientSpawnInjector.CollectSpawnSpecsByMap(
+            connections, Nodes, gateSides,
+            new HalloweenPluginSettings.Settings(Ambushes: false, Greeters: true));
+        Assert.Equal(new[] { "m31_00_00_00", "m32_00_00_00" }, withGreeters.Keys.Order());
+
+        var specs = AmbientSpawnInjector.CollectSpawnSpecsByMap(
+            connections, Nodes, gateSides,
+            new HalloweenPluginSettings.Settings(Ambushes: false, Greeters: false));
+
+        Assert.Empty(specs);
     }
 
     [Fact]
@@ -97,7 +139,7 @@ public class AmbientSpawnInjectorTests
         var specs = AmbientSpawnInjector.CollectSpawnSpecsByMap(
             connections, Nodes,
             new Dictionary<string, (string, string)>(),
-            new HalloweenPluginSettings.Settings(Ambushes: false));
+            new HalloweenPluginSettings.Settings(Ambushes: false, Greeters: true));
 
         Assert.Single(specs["m31_00_00_00"]);
     }
@@ -113,7 +155,7 @@ public class AmbientSpawnInjectorTests
                 Conn("cave_zone", "m31_00_00_00_AEG099_002_9000", 1),
             },
             Nodes, new Dictionary<string, (string, string)>(),
-            new HalloweenPluginSettings.Settings(Ambushes: false))["m31_00_00_00"];
+            new HalloweenPluginSettings.Settings(Ambushes: false, Greeters: true))["m31_00_00_00"];
 
         var (greeters, ambushers) = AmbientSpawnInjector.ApplyToMsb(msb, specs, _ => { });
 

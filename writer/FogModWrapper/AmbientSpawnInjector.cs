@@ -7,13 +7,14 @@ namespace FogModWrapper;
 
 /// <summary>
 /// Places ambient enemy spawns at cluster exit gates for the Halloween
-/// plugin: a passive "greeter" (Aging Untouchable model, perception zeroed
-/// so it never aggros) standing watch beside every exit gate of a
-/// mini_dungeon/legacy_dungeon cluster (HalloweenGateAnchors.
-/// SpawnClusterTypes: unlike decorations, no spawns at the start cluster),
-/// plus, when ambushes are enabled, a small skeleton pack sharing the
-/// gate's arc. Ambushers aggro normally but are decorative: token HP, no
-/// runes, near-zero attack via a cloned NpcParam row (ApplyAmbusher).
+/// plugin: unless greeters are disabled, a passive "greeter" (Aging
+/// Untouchable model, perception zeroed so it never aggros) standing watch
+/// beside every exit gate of a mini_dungeon/legacy_dungeon cluster
+/// (HalloweenGateAnchors.SpawnClusterTypes: unlike decorations, no spawns
+/// at the start cluster), plus, when ambushes are enabled, a small
+/// skeleton pack sharing the gate's arc. Ambushers aggro normally but are
+/// decorative: token HP, no runes, near-zero attack via a cloned NpcParam
+/// row (ApplyAmbusher).
 /// Boss arenas never receive spawns.
 ///
 /// Two-phase injection, mirroring DeathMarkerInjector:
@@ -65,8 +66,9 @@ public static class AmbientSpawnInjector
     /// Collect spawn specs per map, keyed by the anchored gate's map id.
     /// Anchors (exit gates of mini_dungeon/legacy_dungeon clusters, deduped
     /// per (map, gate part name) pair) come from HalloweenGateAnchors.
-    /// Collect with SpawnClusterTypes; each expands to one Greeter, plus,
-    /// when settings.Ambushes, a pack of 2-3 Ambushers.
+    /// Collect with SpawnClusterTypes; each expands to one Greeter when
+    /// settings.Greeters, plus, when settings.Ambushes, a pack of 2-3
+    /// Ambushers. Maps left without any spec get no entry.
     /// </summary>
     internal static Dictionary<string, List<SpawnSpec>> CollectSpawnSpecsByMap(
         List<Connection> connections,
@@ -80,11 +82,11 @@ public static class AmbientSpawnInjector
             connections, nodes, gateSides, HalloweenGateAnchors.SpawnClusterTypes))
         {
             var specs = new List<SpawnSpec>();
-            result[mapId] = specs;
 
             foreach (var anchor in anchors)
             {
-                specs.Add(new SpawnSpec(anchor.PartName, SpawnKind.Greeter, 0, 1, anchor.IsASide));
+                if (settings.Greeters)
+                    specs.Add(new SpawnSpec(anchor.PartName, SpawnKind.Greeter, 0, 1, anchor.IsASide));
 
                 if (settings.Ambushes)
                 {
@@ -93,6 +95,9 @@ public static class AmbientSpawnInjector
                         specs.Add(new SpawnSpec(anchor.PartName, SpawnKind.Ambusher, i, packSize, anchor.IsASide));
                 }
             }
+
+            if (specs.Count > 0)
+                result[mapId] = specs;
         }
 
         return result;

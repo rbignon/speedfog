@@ -11,11 +11,12 @@ namespace FogModWrapper;
 /// </summary>
 public static class HalloweenPluginSettings
 {
-    public sealed record Settings(bool Ambushes);
+    public sealed record Settings(bool Ambushes, bool Greeters);
 
     public static Settings Parse(PluginConfig config)
     {
         bool ambushes = false;
+        bool greeters = true;
         foreach (var (key, value) in config.Extra)
         {
             switch (key)
@@ -25,10 +26,15 @@ public static class HalloweenPluginSettings
                         throw new InvalidDataException("halloween: 'ambushes' must be a boolean");
                     ambushes = value.GetBoolean();
                     break;
+                case "greeters":
+                    if (value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                        throw new InvalidDataException("halloween: 'greeters' must be a boolean");
+                    greeters = value.GetBoolean();
+                    break;
                 default:
                     throw new InvalidDataException($"halloween: unknown parameter '{key}'");
             }
         }
-        return new Settings(ambushes);
+        return new Settings(ambushes, greeters);
     }
 }

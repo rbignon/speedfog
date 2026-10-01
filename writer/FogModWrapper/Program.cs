@@ -827,12 +827,14 @@ Example:
 
         if (ctx.GraphData.IsPluginEnabled("halloween"))
         {
-            AmbientSpawnInjector.ApplyPassiveThinkRow(reg);
-            // Ambusher rows are only consumed when ambushes are actually
-            // placed (HalloweenAmbientPass gates AmbientSpawnInjector's
-            // ambush packs on the same settings.Ambushes flag); parsed once
-            // via ctx.HalloweenSettings and reused by the Phase-8 spawn
+            // The greeter think row and the ambusher rows are only consumed
+            // when their spawns are actually placed (AmbientSpawnInjector
+            // gates greeters and ambush packs on the same settings.Greeters
+            // and settings.Ambushes flags); parsed once via
+            // ctx.HalloweenSettings and reused by the Phase-8 spawn
             // injection below.
+            if (ctx.HalloweenSettings.Greeters)
+                AmbientSpawnInjector.ApplyPassiveThinkRow(reg);
             if (ctx.HalloweenSettings.Ambushes)
                 AmbientSpawnInjector.ApplyDecorativeAmbusherRows(reg);
             HalloweenIconInjector.ApplyTo(reg);
@@ -915,7 +917,7 @@ Example:
         // Halloween ambient layer at cluster exit gates (opt-in via
         // [plugin.halloween]): data-driven gate decorations
         // (data/plugins/halloween_decorations.toml, a no-op only if the
-        // catalogue is emptied) plus passive greeters and optional ambush
+        // catalogue is emptied) plus optional passive greeters and ambush
         // packs at the same gates. HalloweenAmbientPass reads/writes each
         // map's MSB once (decor placement first: the decor ground estimate
         // uses vanilla enemies as floor evidence, and AmbientSpawnInjector's
