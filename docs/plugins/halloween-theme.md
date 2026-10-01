@@ -9,6 +9,12 @@ Register: commercial kitsch Halloween (candy, costumes, jack-o'-lanterns),
 never genuine-spooky. See the design spec:
 `docs/superpowers/specs/2026-08-03-halloween-theme-design.md`.
 
+The felled/slain banners read "BURIED" / "ENTERRÉ" (graveyard theme, with
+"R.I.P." on death). They read "SPOOKED" until 2026-10-01, when a racer
+objected that "spook" is a US racial slur: avoid "spook" / "spooked" in
+themed text. The adjective in "Spooky Scary Skeleton" (Putrescent Knight) is
+kept on purpose (owner decision, 2026-10-01).
+
 Beyond the summer-style boss epithets and banners, the catalogue also
 renames Golden Seed (`Pumpkin Seed`) and Sacred Tear (`Profane Tear`)
 via `GoodsName`/`GoodsCaption` in `item_dlc02.msgbnd.dcx`

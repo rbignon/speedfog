@@ -350,34 +350,35 @@ fr = "Démonia"
 
 # ---- Universal UI banners (GR_MenuText in menu_dlc02.msgbnd.dcx) ----
 # IDs sorted ascending; 331314 is reserved (vanilla) and must not appear here.
+# Never "SPOOKED": a racer read it as the US slur "spook" (feedback 2026-10-01).
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331301
-en = "DEMIGOD SPOOKED"
-fr = "DEMI-DIEU TERRORISÉ"
+en = "DEMIGOD BURIED"
+fr = "DEMI-DIEU ENTERRÉ"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331302
-en = "LEGEND SPOOKED"
-fr = "LÉGENDE TERRORISÉE"
+en = "LEGEND BURIED"
+fr = "LÉGENDE ENTERRÉE"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331303
-en = "GREAT ENEMY SPOOKED"
-fr = "ENNEMI MAJEUR TERRORISÉ"
+en = "GREAT ENEMY BURIED"
+fr = "ENNEMI MAJEUR ENTERRÉ"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331304
-en = "ENEMY SPOOKED"
-fr = "ENNEMI TERRORISÉ"
+en = "ENEMY BURIED"
+fr = "ENNEMI ENTERRÉ"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
@@ -397,8 +398,8 @@ fr = "PLANQUE À BONBONS DÉCOUVERTE"
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331322
-en = "GOD SPOOKED"
-fr = "DIEU TERRORISÉ"
+en = "GOD BURIED"
+fr = "DIEU ENTERRÉ"
 
 # ---- Item renames (GoodsName/GoodsCaption in item_dlc02.msgbnd.dcx) ----
 # Matches the pumpkin/candy icon replacement (spec 1.2, implemented in
