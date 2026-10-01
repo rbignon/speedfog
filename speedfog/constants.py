@@ -46,11 +46,10 @@ MAX_TIER = 34
 # Default hard cap on weight spread (max - min) within a single layer.
 DEFAULT_MAX_LAYER_SPREAD = 2.0
 
-# Default hard caps (minutes) on the spread (max - min) of boss.weight among
-# the randomized bosses placed on one layer, per job (see
-# docs/boss-arena-constraints.md, calibrated on production clear times).
-DEFAULT_MAX_MINOR_BOSS_WEIGHT_SPREAD = 1.5
-DEFAULT_MAX_MAJOR_BOSS_WEIGHT_SPREAD = 2.7
+# Default share of each candidate pool counted as light, and as heavy,
+# extremes per weight band; a layer may not hold both (see
+# docs/boss-arena-constraints.md, "Layer weight balance").
+DEFAULT_BOSS_EXTREME_FRACTION = 0.10
 
 # Width of the weight matcher's anchor bands (generator.py): the first band
 # is +/- this value around the anchor and widens by the same step up to

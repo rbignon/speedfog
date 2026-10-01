@@ -18,6 +18,7 @@ from speedfog.boss_arena_constraints import (
     assign_bosses_uniform,
     match_arenas_balanced,
     resolve_boss_allowlist,
+    weight_band,
 )
 from speedfog.clusters import ClusterData
 from speedfog.config import Config
@@ -39,6 +40,7 @@ def generate_item_config(
     vanilla_minor_ids: Iterable[int] = (),
     phase_mapping: Mapping[int, int] | None = None,
     boss_layers: Mapping[str, int] | None = None,
+    boss_tiers: Mapping[str, int] | None = None,
 ) -> dict[str, Any]:
     """Generate item_config.json content for ItemRandomizerWrapper.
 
@@ -77,11 +79,12 @@ def generate_item_config(
     added as an additional independent arena (same pool, no phase pairing).
 
     ``boss_layers`` (cluster ID -> DAG layer) enables the per-layer boss
-    weight balance of the standard path: the bosses placed on one layer keep
-    their ``boss.weight`` within the job's
-    ``config.enemy.max_minor_boss_weight_spread`` /
-    ``max_major_boss_weight_spread`` (see ``match_arenas_balanced``). ``None`` disables it. The allowlist path
-    ignores it.
+    weight balance of the standard path and ``boss_tiers`` (cluster ID ->
+    scaling tier) picks each layer's weight band (mid without it): a layer
+    never holds both a light and a heavy extreme of its job's pool, with
+    ``config.enemy.boss_extreme_fraction`` of the pool on each side (see
+    ``match_arenas_balanced``). ``None`` disables the balance. The allowlist
+    path ignores both.
     """
     auto_equip = config.item_randomizer.auto_equip
     result: dict[str, Any] = {
@@ -201,8 +204,8 @@ def generate_item_config(
                 check_size=not config.enemy.ignore_arena_size,
                 seed=seed,
                 boss_layers=boss_layers,
-                minor_spread=config.enemy.max_minor_boss_weight_spread,
-                major_spread=config.enemy.max_major_boss_weight_spread,
+                boss_tiers=boss_tiers,
+                extreme_fraction=config.enemy.boss_extreme_fraction,
             )
         if assignments:
             result["enemy_assignments"] = {
@@ -359,18 +362,24 @@ def _family_forbidden(
 
 
 def _layer_groups(
-    arena_ids: Iterable[int], slot_layer: Mapping[int, int]
-) -> list[list[int]]:
-    """Arena slots grouped by DAG layer, ordered by layer then entity ID.
+    arena_ids: Iterable[int],
+    slot_layer: Mapping[int, int],
+    slot_band: Mapping[int, str],
+) -> list[tuple[str, list[int]]]:
+    """Arena slots grouped by DAG layer, each with its weight band.
 
-    Slots without a known layer form no group.
+    Ordered by layer, slots by entity ID. Slots without a known layer form
+    no group.
     """
     by_layer: dict[int, list[int]] = {}
     for eid in arena_ids:
         layer = slot_layer.get(eid)
         if layer is not None:
             by_layer.setdefault(layer, []).append(eid)
-    return [sorted(by_layer[layer]) for layer in sorted(by_layer)]
+    return [
+        (slot_band[by_layer[layer][0]], sorted(by_layer[layer]))
+        for layer in sorted(by_layer)
+    ]
 
 
 def _build_enemy_assignments(
@@ -384,8 +393,8 @@ def _build_enemy_assignments(
     check_size: bool,
     seed: int,
     boss_layers: Mapping[str, int] | None = None,
-    minor_spread: float = 0.0,
-    major_spread: float = 0.0,
+    boss_tiers: Mapping[str, int] | None = None,
+    extreme_fraction: float = 0.0,
 ) -> dict[int, int]:
     """Match DAG boss clusters to candidate bosses under compatibility rules.
 
@@ -397,19 +406,22 @@ def _build_enemy_assignments(
     A boss is never assigned to its own arena, and multi-phase families are
     excluded as a unit (strict; see _family_forbidden).
 
-    With ``boss_layers`` (cluster ID -> DAG layer), the slots of one layer
-    receive bosses whose weights stay within the job's spread
-    (``minor_spread`` / ``major_spread``, 0 disables; see
+    With ``boss_layers`` (cluster ID -> DAG layer), a layer never holds both
+    a light and a heavy extreme of its job's pool in the layer's weight band
+    (``boss_tiers``, cluster ID -> tier; mid without it),
+    ``extreme_fraction`` of the pool on each side (0 disables; see
     ``match_arenas_balanced``). A phase-1 slot takes its leader's layer.
 
     Raises ``KeyError`` if a DAG boss cluster's leader (or its phase-1
     sibling) has no entry in ``tags`` or no ``arena`` block, or if
-    ``boss_layers`` is given without the cluster. A silent skip there would
+    ``boss_layers`` / ``boss_tiers`` is given without the cluster. A silent
+    skip there would
     leave a vanilla boss, or an unbalanced layer, without any signal.
     """
     majors: dict[int, ArenaTags] = {}
     minors: dict[int, ArenaTags] = {}
     slot_layer: dict[int, int] = {}
+    slot_band: dict[int, str] = {}
     for cluster in boss_clusters:
         if cluster.type in MAJOR_ARENA_TYPES:
             target = majors
@@ -422,6 +434,11 @@ def _build_enemy_assignments(
             if cluster.id not in boss_layers:
                 raise KeyError(f"cluster {cluster.id!r} missing from boss_layers")
             layer = boss_layers[cluster.id]
+        band = "mid"
+        if boss_tiers is not None:
+            if cluster.id not in boss_tiers:
+                raise KeyError(f"cluster {cluster.id!r} missing from boss_tiers")
+            band = weight_band(boss_tiers[cluster.id])
         leader = resolve_entity_id(cluster.defeat_flag)
         slots = [leader]
         phase1 = phase_mapping.get(leader)
@@ -442,23 +459,21 @@ def _build_enemy_assignments(
             target[eid] = entry.arena
             if layer is not None:
                 slot_layer[eid] = layer
+                slot_band[eid] = band
 
     rng = random.Random(seed ^ BOSS_ASSIGNMENT_SEED_SALT)
     out: dict[int, int] = {}
-    jobs = [
-        (minors, minor_pool, True, minor_spread),
-        (majors, major_pool, randomize_majors, major_spread),
-    ]
-    for arenas, pool, enabled, spread in jobs:
+    jobs = [(minors, minor_pool, True), (majors, major_pool, randomize_majors)]
+    for arenas, pool, enabled in jobs:
         if enabled and arenas:
             out.update(
                 match_arenas_balanced(
                     arenas=arenas,
                     bosses=pool,
-                    groups=_layer_groups(arenas, slot_layer),
+                    groups=_layer_groups(arenas, slot_layer, slot_band),
                     rng=rng,
                     check_size=check_size,
-                    spread=spread,
+                    fraction=extreme_fraction,
                     forbidden=_family_forbidden(arenas, phase_mapping),
                 )
             )

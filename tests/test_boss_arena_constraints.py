@@ -16,6 +16,7 @@ from speedfog.boss_arena_constraints import (
     EntityTags,
     MatchingError,
     assign_bosses_uniform,
+    extreme_sets,
     is_compatible,
     load_tags,
     match_arenas_balanced,
@@ -478,17 +479,44 @@ def _weighted_pool(ids: list[int]) -> dict[int, EntityTags]:
 
 
 def _three_layer_setup() -> (
-    tuple[dict[int, ArenaTags], dict[int, BossTags], list[list[int]]]
+    tuple[dict[int, ArenaTags], dict[int, BossTags], list[tuple[str, list[int]]]]
 ):
-    """Six arenas in three layers of two, against a 28-boss weighted pool."""
+    """Six arenas in three mid-band layers of two, against a 28-boss pool."""
     pool_ids = list(range(10, 38))
     tags = {**_weighted_pool(pool_ids), **{a: _entity(a) for a in range(1, 7)}}
-    groups = [[1, 2], [3, 4], [5, 6]]
+    groups = [("mid", [1, 2]), ("mid", [3, 4]), ("mid", [5, 6])]
     return _arenas_of(tags, list(range(1, 7))), _bosses_of(tags, pool_ids), groups
 
 
-def test_balanced_keeps_each_layer_within_spread() -> None:
+def test_extreme_sets_include_ties_at_the_cut() -> None:
+    weights = [0.2, 0.5, 0.5, 1.0, 1.0, 1.0, 2.0, 3.0, 3.0, 4.0]
+    bosses = {10 + i: _entity(10 + i, weight=w).boss for i, w in enumerate(weights)}
+    light, heavy = extreme_sets(bosses, "mid", 0.2)
+    assert light == {10, 11, 12}  # k = 2: 0.2 and both 0.5
+    assert heavy == {17, 18, 19}  # k = 2: both 3.0 and 4.0
+
+
+def test_extreme_sets_empty_when_weights_are_equal_or_disabled() -> None:
+    bosses = {eid: _entity(eid).boss for eid in range(10, 20)}
+    assert extreme_sets(bosses, "mid", 0.1) == (frozenset(), frozenset())
+    varied = {eid: _entity(eid, weight=float(eid)).boss for eid in range(10, 20)}
+    assert extreme_sets(varied, "mid", 0.0) == (frozenset(), frozenset())
+
+
+def test_extreme_sets_follow_the_band() -> None:
+    bosses = {
+        10: _entity(10, weight=0.2).boss,
+        11: _entity(11, weights=(1.0, 1.0, 5.0)).boss,  # heavy late only
+        12: _entity(12, weights=(3.0, 1.0, 1.0)).boss,  # heavy early only
+        **{eid: _entity(eid).boss for eid in range(13, 20)},
+    }
+    assert extreme_sets(bosses, "late", 0.1)[1] == {11}
+    assert extreme_sets(bosses, "early", 0.1)[1] == {12}
+
+
+def test_balanced_keeps_opposite_extremes_apart() -> None:
     arenas, bosses, groups = _three_layer_setup()
+    light, heavy = extreme_sets(bosses, "mid", 0.2)
     for seed in range(50):
         result = match_arenas_balanced(
             arenas=arenas,
@@ -496,15 +524,63 @@ def test_balanced_keeps_each_layer_within_spread() -> None:
             groups=groups,
             rng=random.Random(seed),
             check_size=False,
-            spread=2.0,
+            fraction=0.2,
         )
         assert len(set(result.values())) == len(arenas), f"seed {seed}"
-        for group in groups:
-            weights = [bosses[result[a]].weight_at("mid") for a in group]
-            assert max(weights) - min(weights) <= 2.0 + 1e-9, f"seed {seed}"
+        for _, group in groups:
+            placed = {result[a] for a in group}
+            assert not (placed & light and placed & heavy), f"seed {seed}"
 
 
-def test_balanced_equals_plain_matching_when_spread_is_zero() -> None:
+def test_balanced_allows_extreme_against_average() -> None:
+    """Only the light/heavy pair is forbidden; heavy vs average shows up."""
+    tags = {
+        1: _entity(1),
+        2: _entity(2),
+        10: _entity(10, weight=0.5),
+        11: _entity(11, weight=1.0),
+        12: _entity(12, weight=1.0),
+        13: _entity(13, weight=5.0),
+    }
+    pairs = set()
+    for seed in range(40):
+        result = match_arenas_balanced(
+            arenas=_arenas_of(tags, [1, 2]),
+            bosses=_bosses_of(tags, [10, 11, 12, 13]),
+            groups=[("mid", [1, 2])],
+            rng=random.Random(seed),
+            check_size=False,
+            fraction=0.25,
+        )
+        pairs.add(frozenset(result.values()))
+    assert frozenset({10, 13}) not in pairs
+    assert frozenset({11, 13}) in pairs or frozenset({12, 13}) in pairs
+
+
+def test_balanced_uses_each_group_band() -> None:
+    tags = {a: _entity(a) for a in (1, 2, 3, 4)}
+    tags.update(
+        {
+            10: _entity(10, weight=0.2),
+            11: _entity(11, weights=(1.0, 1.0, 5.0)),
+            12: _entity(12, weights=(3.0, 1.0, 1.0)),
+            **{eid: _entity(eid) for eid in range(13, 20)},
+        }
+    )
+    for seed in range(40):
+        result = match_arenas_balanced(
+            arenas=_arenas_of(tags, [1, 2, 3, 4]),
+            bosses=_bosses_of(tags, list(range(10, 20))),
+            groups=[("early", [1, 2]), ("late", [3, 4])],
+            rng=random.Random(seed),
+            check_size=False,
+            fraction=0.1,
+        )
+        assert {result[1], result[2]} != {10, 12}, f"seed {seed}"
+        assert {result[3], result[4]} != {10, 11}, f"seed {seed}"
+
+
+def test_balanced_equals_plain_matching_when_fraction_is_zero() -> None:
     arenas, bosses, groups = _three_layer_setup()
     for seed in range(20):
         plain = match_arenas_to_bosses(
@@ -516,7 +592,7 @@ def test_balanced_equals_plain_matching_when_spread_is_zero() -> None:
             groups=groups,
             rng=random.Random(seed),
             check_size=False,
-            spread=0.0,
+            fraction=0.0,
         )
         assert balanced == plain, f"seed {seed}"
 
@@ -525,7 +601,7 @@ def test_balanced_equals_plain_matching_when_weights_are_equal() -> None:
     tags = {eid: _entity(eid) for eid in range(1, 38)}
     arenas = _arenas_of(tags, list(range(1, 7)))
     bosses = _bosses_of(tags, list(range(10, 38)))
-    groups = [[1, 2], [3, 4], [5, 6]]
+    groups = [("mid", [1, 2]), ("mid", [3, 4]), ("mid", [5, 6])]
     forbidden = {a: frozenset({a}) for a in arenas}
     for seed in range(20):
         plain = match_arenas_to_bosses(
@@ -541,15 +617,16 @@ def test_balanced_equals_plain_matching_when_weights_are_equal() -> None:
             groups=groups,
             rng=random.Random(seed),
             check_size=False,
-            spread=1.0,
+            fraction=0.1,
             forbidden=forbidden,
         )
         assert balanced == plain, f"seed {seed}"
 
 
-def test_balanced_keeps_first_draw_when_it_already_fits() -> None:
-    """Heterogeneous weights under a loose spread: today's matching survives."""
-    arenas, bosses, groups = _three_layer_setup()
+def test_balanced_keeps_first_draw_when_no_layer_is_shared() -> None:
+    """Heterogeneous weights, single-slot groups: today's matching survives."""
+    arenas, bosses, _ = _three_layer_setup()
+    groups = [("mid", [a]) for a in arenas]
     for seed in range(20):
         plain = match_arenas_to_bosses(
             arenas=arenas, bosses=bosses, rng=random.Random(seed), check_size=False
@@ -560,70 +637,49 @@ def test_balanced_keeps_first_draw_when_it_already_fits() -> None:
             groups=groups,
             rng=random.Random(seed),
             check_size=False,
-            spread=100.0,
+            fraction=0.2,
         )
         assert balanced == plain, f"seed {seed}"
 
 
-def test_balanced_redraws_until_matching_fits() -> None:
-    """Only the two light bosses may share the layer; redraws find them."""
+def test_balanced_raises_when_no_matching_keeps_extremes_apart() -> None:
     tags = {
         1: _entity(1),
         2: _entity(2),
-        10: _entity(10, weight=1.0),
-        11: _entity(11, weight=1.0),
-        12: _entity(12, weight=5.0),
-    }
-    for seed in range(32):
-        result = match_arenas_balanced(
-            arenas=_arenas_of(tags, [1, 2]),
-            bosses=_bosses_of(tags, [10, 11, 12]),
-            groups=[[1, 2]],
-            rng=random.Random(seed),
-            check_size=False,
-            spread=1.0,
-        )
-        assert set(result.values()) == {10, 11}, f"seed {seed}"
-
-
-def test_balanced_raises_when_no_matching_fits_the_spread() -> None:
-    tags = {
-        1: _entity(1),
-        2: _entity(2),
-        10: _entity(10, weight=1.0),
+        10: _entity(10, weight=0.5),
         11: _entity(11, weight=5.0),
     }
-    with pytest.raises(MatchingError, match="layer weight spread"):
+    with pytest.raises(MatchingError, match="extreme"):
         match_arenas_balanced(
             arenas=_arenas_of(tags, [1, 2]),
             bosses=_bosses_of(tags, [10, 11]),
-            groups=[[1, 2]],
+            groups=[("mid", [1, 2])],
             rng=random.Random(0),
             check_size=False,
-            spread=1.0,
+            fraction=0.4,
             attempts=3,
         )
 
 
 def test_balanced_infeasible_job_raises_the_plain_error() -> None:
-    """Three arenas, two bosses: no redraw can help, the spread is not blamed."""
+    """Three arenas, two bosses: no redraw can help, the rule is not blamed."""
     tags = {
         1: _entity(1),
         2: _entity(2),
         3: _entity(3),
-        10: _entity(10, weight=1.0),
+        10: _entity(10, weight=0.5),
         11: _entity(11, weight=5.0),
     }
     with pytest.raises(MatchingError) as excinfo:
         match_arenas_balanced(
             arenas=_arenas_of(tags, [1, 2, 3]),
             bosses=_bosses_of(tags, [10, 11]),
-            groups=[[1, 2, 3]],
+            groups=[("mid", [1, 2, 3])],
             rng=random.Random(0),
             check_size=False,
-            spread=1.0,
+            fraction=0.4,
         )
-    assert "spread" not in str(excinfo.value)
+    assert "extreme" not in str(excinfo.value)
 
 
 def test_resolve_allowlist_single_substring_match() -> None:

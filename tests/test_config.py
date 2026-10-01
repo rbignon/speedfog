@@ -856,42 +856,41 @@ def test_enemy_config_invalid_value():
         Config.from_dict({"enemy": {"randomize_bosses": "invalid"}})
 
 
-SPREAD_KEYS = ("max_minor_boss_weight_spread", "max_major_boss_weight_spread")
+def test_enemy_boss_extreme_fraction_from_dict():
+    config = Config.from_dict({"enemy": {"boss_extreme_fraction": 0.15}})
+    assert config.enemy.boss_extreme_fraction == 0.15
 
 
-@pytest.mark.parametrize("key", SPREAD_KEYS)
-def test_enemy_boss_weight_spread_from_dict(key):
-    config = Config.from_dict({"enemy": {key: 2.5}})
-    assert getattr(config.enemy, key) == 2.5
+def test_enemy_boss_extreme_fraction_zero_disables():
+    config = Config.from_dict({"enemy": {"boss_extreme_fraction": 0}})
+    assert config.enemy.boss_extreme_fraction == 0.0
 
 
-@pytest.mark.parametrize("key", SPREAD_KEYS)
-def test_enemy_boss_weight_spread_zero_disables(key):
-    config = Config.from_dict({"enemy": {key: 0}})
-    assert getattr(config.enemy, key) == 0.0
-
-
-@pytest.mark.parametrize("key", SPREAD_KEYS)
-def test_enemy_boss_weight_spread_toml_integer(tmp_path, key):
-    """A TOML integer is a known key and is coerced to float."""
+def test_enemy_boss_extreme_fraction_from_toml(tmp_path):
     config_file = tmp_path / "config.toml"
-    config_file.write_text(f"[enemy]\n{key} = 2\n")
+    config_file.write_text("[enemy]\nboss_extreme_fraction = 0.2\n")
     config = Config.from_toml(config_file)
-    assert getattr(config.enemy, key) == 2.0
-    assert isinstance(getattr(config.enemy, key), float)
+    assert config.enemy.boss_extreme_fraction == 0.2
 
 
-@pytest.mark.parametrize("key", SPREAD_KEYS)
-@pytest.mark.parametrize("bad", [-0.5, True, "1.0", float("nan"), float("inf")])
-def test_enemy_boss_weight_spread_rejects_invalid(key, bad):
-    with pytest.raises(ValueError, match=f"{key} must be"):
-        Config.from_dict({"enemy": {key: bad}})
+@pytest.mark.parametrize("bad", [-0.1, 0.5, 1, True, "0.1", float("nan"), float("inf")])
+def test_enemy_boss_extreme_fraction_rejects_invalid(bad):
+    with pytest.raises(ValueError, match="boss_extreme_fraction must be"):
+        Config.from_dict({"enemy": {"boss_extreme_fraction": bad}})
 
 
-def test_enemy_single_boss_weight_spread_key_is_gone():
-    """The pre-split key fails loudly instead of being ignored."""
-    with pytest.raises(ValueError, match="unknown key enemy.max_boss_weight_spread"):
-        Config.from_dict({"enemy": {"max_boss_weight_spread": 1.0}})
+@pytest.mark.parametrize(
+    "key",
+    [
+        "max_boss_weight_spread",
+        "max_minor_boss_weight_spread",
+        "max_major_boss_weight_spread",
+    ],
+)
+def test_enemy_boss_weight_spread_keys_are_gone(key):
+    """Pre-band keys fail loudly instead of being ignored."""
+    with pytest.raises(ValueError, match=f"unknown key enemy.{key}"):
+        Config.from_dict({"enemy": {key: 1.0}})
 
 
 def test_max_exits_entrances_defaults():

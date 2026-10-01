@@ -11,6 +11,7 @@ from speedfog.boss_arena_constraints import (
     BossTags,
     EntityTags,
     MatchingError,
+    extreme_sets,
 )
 from speedfog.clusters import ClusterData
 from speedfog.config import Config
@@ -1173,9 +1174,15 @@ def _layered_minor_setup():
     return boss_clusters, boss_layers, tags, pool_ids
 
 
-def test_generate_item_config_balances_parallel_minor_arenas():
+def test_generate_item_config_keeps_minor_extremes_apart():
     config = Config.from_dict({"enemy": {"randomize_bosses": "minor"}})
     boss_clusters, boss_layers, tags, pool_ids = _layered_minor_setup()
+    # The minor pool: vanilla minors plus the six arena entities (orphans).
+    pool = {
+        eid: tags[eid].boss for eid in pool_ids + [1001, 1002, 1003, 1004, 1005, 1006]
+    }
+    light, heavy = extreme_sets(pool, "mid", 0.10)
+    assert light and heavy
     for seed in range(30):
         result = generate_item_config(
             config,
@@ -1189,20 +1196,19 @@ def test_generate_item_config_balances_parallel_minor_arenas():
         )
         placed = {int(a): int(b) for a, b in result["enemy_assignments"].items()}
         for layer in (1, 2, 3):
-            arenas = [int(cid[1:]) for cid, lyr in boss_layers.items() if lyr == layer]
-            weights = [tags[placed[a]].boss.weight_at("mid") for a in arenas]
-            assert (
-                max(weights) - min(weights) <= 1.5 + 1e-9
-            ), f"seed {seed} layer {layer}: {weights}"
+            bosses = {
+                placed[int(cid[1:])] for cid, lyr in boss_layers.items() if lyr == layer
+            }
+            assert not (bosses & light and bosses & heavy), f"seed {seed} layer {layer}"
 
 
 def test_generate_item_config_balance_off_keeps_legacy_assignments():
-    """No layers, a zero spread or uniform weights leave assignments untouched."""
+    """No layers, a zero fraction or uniform weights leave assignments untouched."""
     boss_clusters, boss_layers, tags, pool_ids = _layered_minor_setup()
     uniform = {eid: _entity(eid) for eid in tags}
     legacy_cfg = Config.from_dict({"enemy": {"randomize_bosses": "minor"}})
     off_cfg = Config.from_dict(
-        {"enemy": {"randomize_bosses": "minor", "max_minor_boss_weight_spread": 0}}
+        {"enemy": {"randomize_bosses": "minor", "boss_extreme_fraction": 0}}
     )
 
     def run(config, tag_map, layers, seed):
@@ -1226,7 +1232,7 @@ def test_generate_item_config_balance_off_keeps_legacy_assignments():
 
 
 def test_generate_item_config_groups_phase1_slot_with_leader():
-    """Leader and phase-1 slots share their node's layer, hence one band."""
+    """Leader and phase-1 slots share their node's layer, hence one group."""
     config = Config.from_dict({"enemy": {"randomize_bosses": "all"}})
     boss_clusters = [_boss_cluster("fg", "major_boss", defeat_flag=1052520800)]
     tags = {eid: _entity(eid) for eid in (1052520800, 1052520801)}
@@ -1255,6 +1261,58 @@ def test_generate_item_config_groups_phase1_slot_with_leader():
         ]
         assert len(placed) == 2
         assert placed[0] == placed[1], f"seed {seed}: {placed}"
+
+
+def test_generate_item_config_raises_when_boss_cluster_missing_from_tiers():
+    config = Config.from_dict({"enemy": {"randomize_bosses": "minor"}})
+    boss_clusters, boss_layers, tags, pool_ids = _layered_minor_setup()
+    with pytest.raises(KeyError, match="boss_tiers"):
+        generate_item_config(
+            config,
+            seed=1,
+            boss_clusters=boss_clusters,
+            tags=tags,
+            vanilla_major_ids=[],
+            vanilla_minor_ids=pool_ids,
+            phase_mapping={},
+            boss_layers=boss_layers,
+            boss_tiers={},
+        )
+
+
+def test_generate_item_config_judges_a_layer_at_its_tier():
+    """A boss heavy only late never meets the light extreme on a late layer."""
+    config = Config.from_dict({"enemy": {"randomize_bosses": "minor"}})
+    arena_ids = [1001, 1002, 1003, 1004]
+    boss_clusters = [
+        _boss_cluster(f"c{eid}", "boss_arena", defeat_flag=eid) for eid in arena_ids
+    ]
+    boss_layers = {"c1001": 3, "c1002": 3, "c1003": 9, "c1004": 9}
+    boss_tiers = {"c1001": 5, "c1002": 5, "c1003": 18, "c1004": 18}
+    tags = {eid: _entity(eid) for eid in arena_ids}
+    tags.update(
+        {
+            2001: _entity(2001, weight=0.2),
+            2002: _entity(2002, weights=(1.0, 1.0, 5.0)),
+            2003: _entity(2003),
+            2009: _entity(2009, weights=(3.0, 1.0, 1.0)),
+        }
+    )
+    for seed in range(60):
+        result = generate_item_config(
+            config,
+            seed=seed,
+            boss_clusters=boss_clusters,
+            tags=tags,
+            vanilla_major_ids=[],
+            vanilla_minor_ids=[2001, 2002, 2003, 2009],
+            phase_mapping={},
+            boss_layers=boss_layers,
+            boss_tiers=boss_tiers,
+        )
+        placed = {int(a): int(b) for a, b in result["enemy_assignments"].items()}
+        assert {placed[1003], placed[1004]} != {2001, 2002}, f"seed {seed}"
+        assert {placed[1001], placed[1002]} != {2001, 2009}, f"seed {seed}"
 
 
 def test_generate_item_config_raises_when_boss_cluster_missing_from_layers():
@@ -1298,50 +1356,6 @@ def test_generate_item_config_allowlist_ignores_boss_weights():
         boss_layers={"a": 2, "b": 2},
     )
     assert sorted(result["enemy_assignments"].values()) == ["3001", "3002"]
-
-
-def test_generate_item_config_spreads_are_per_job():
-    """The minor spread leaves majors alone and vice versa."""
-    config = Config.from_dict(
-        {
-            "enemy": {
-                "randomize_bosses": "all",
-                "max_minor_boss_weight_spread": 0,
-                "max_major_boss_weight_spread": 1.0,
-            }
-        }
-    )
-    boss_clusters = [
-        _boss_cluster("m1", "boss_arena", defeat_flag=1001),
-        _boss_cluster("m2", "boss_arena", defeat_flag=1002),
-        _boss_cluster("M1", "major_boss", defeat_flag=1101),
-        _boss_cluster("M2", "major_boss", defeat_flag=1102),
-    ]
-    boss_layers = {"m1": 3, "m2": 3, "M1": 7, "M2": 7}
-    tags = {eid: _entity(eid) for eid in (1001, 1002, 1101, 1102)}
-    minor_ids = [2001, 2002, 2003, 2004]
-    major_ids = [3001, 3002, 3003, 3004]
-    for eid, w in zip(minor_ids + major_ids, (1.0, 1.0, 5.0, 5.0) * 2, strict=True):
-        tags[eid] = _entity(eid, weight=w)
-    minor_spreads = set()
-    for seed in range(40):
-        result = generate_item_config(
-            config,
-            seed=seed,
-            boss_clusters=boss_clusters,
-            tags=tags,
-            vanilla_major_ids=major_ids,
-            vanilla_minor_ids=minor_ids,
-            phase_mapping={},
-            boss_layers=boss_layers,
-        )
-        placed = {
-            int(a): tags[int(b)].boss.weight_at("mid")
-            for a, b in result["enemy_assignments"].items()
-        }
-        assert abs(placed[1101] - placed[1102]) <= 1.0 + 1e-9, f"seed {seed}"
-        minor_spreads.add(abs(placed[1001] - placed[1002]))
-    assert max(minor_spreads) == 4.0  # minors stay unconstrained
 
 
 def _write_vanilla_manifest(

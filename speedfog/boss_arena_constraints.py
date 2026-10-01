@@ -219,26 +219,55 @@ def match_arenas_to_bosses(
     return {aid: assignment[aid] for aid in arenas}
 
 
-# Slack on the spread comparison, same as generator.pick_cluster_weight_matched.
-_SPREAD_EPSILON = 1e-9
+# Slack on weight comparisons, same as generator.pick_cluster_weight_matched.
+_WEIGHT_EPSILON = 1e-9
 
 # Matcher draws before match_arenas_balanced gives up; the caller's
 # MatchingError handling then rerolls the DAG (auto seed) or fails (fixed).
 BALANCE_ATTEMPTS = 50
 
 
-def _layers_within_spread(
+def extreme_sets(
+    bosses: Mapping[int, BossTags], band: str, fraction: float
+) -> tuple[frozenset[int], frozenset[int]]:
+    """The light and heavy extremes of ``bosses`` in ``band``.
+
+    With ``k = max(1, round(fraction * len(bosses)))``, the light extremes
+    weigh at most the k-th lightest weight and the heavy ones at least the
+    k-th heaviest, ties at the cut included. There are none when
+    ``fraction <= 0`` or when the two cuts do not separate (e.g. every
+    weight equal, as before any annotation).
+    """
+    if fraction <= 0 or not bosses:
+        return frozenset(), frozenset()
+    ordered = sorted(tags.weight_at(band) for tags in bosses.values())
+    k = max(1, round(fraction * len(ordered)))
+    low, high = ordered[k - 1], ordered[-k]
+    if low >= high - _WEIGHT_EPSILON:
+        return frozenset(), frozenset()
+    light = frozenset(
+        b for b, tags in bosses.items() if tags.weight_at(band) <= low + _WEIGHT_EPSILON
+    )
+    heavy = frozenset(
+        b
+        for b, tags in bosses.items()
+        if tags.weight_at(band) >= high - _WEIGHT_EPSILON
+    )
+    return light, heavy
+
+
+def _extremes_kept_apart(
     assignment: Mapping[int, int],
-    bosses: Mapping[int, BossTags],
-    groups: Sequence[Sequence[int]],
-    spread: float,
+    groups: Sequence[tuple[str, Sequence[int]]],
+    extremes: Mapping[str, tuple[frozenset[int], frozenset[int]]],
 ) -> bool:
-    """True when every group's placed boss weights fit within ``spread``."""
-    for group in groups:
+    """True when no group holds both a light and a heavy extreme of its band."""
+    for band, group in groups:
         if len(group) < 2:
             continue
-        weights = [bosses[assignment[arena_id]].weight_at("mid") for arena_id in group]
-        if max(weights) - min(weights) > spread + _SPREAD_EPSILON:
+        light, heavy = extremes[band]
+        placed = {assignment[arena_id] for arena_id in group}
+        if placed & light and placed & heavy:
             return False
     return True
 
@@ -247,33 +276,35 @@ def match_arenas_balanced(
     *,
     arenas: Mapping[int, ArenaTags],
     bosses: Mapping[int, BossTags],
-    groups: Sequence[Sequence[int]],
+    groups: Sequence[tuple[str, Sequence[int]]],
     rng: random.Random,
     check_size: bool,
-    spread: float,
+    fraction: float,
     forbidden: Mapping[int, frozenset[int]] | None = None,
     attempts: int = BALANCE_ATTEMPTS,
 ) -> dict[int, int]:
-    """``match_arenas_to_bosses`` keeping each layer's boss weights close.
+    """``match_arenas_to_bosses`` keeping opposite extremes off a layer.
 
-    Rejection sampling: run the unchanged matcher and accept its result when
-    every group (the arena slots of one DAG layer) has a ``max - min`` of the
-    placed bosses' weights within ``spread``; otherwise draw again with the
-    same ``rng``. The accepted matching is a uniform draw among the valid
-    ones, so an extreme boss only loses the combinations the rule forbids.
-    Suited to a loose rule (keep extremes apart); a tight one exhausts
-    ``attempts``.
+    ``groups`` pairs each DAG layer's arena slots with the layer's weight
+    band. Per band, ``extreme_sets`` marks the light and heavy extremes of
+    the job's pool (``bosses``); a layer may not hold both. Rejection
+    sampling: run the unchanged matcher and accept its result when every
+    group passes, otherwise draw again with the same ``rng``. The accepted
+    matching follows the plain matcher's distribution conditioned on the
+    rule, so an extreme boss only loses the combinations the rule forbids.
 
-    ``spread <= 0`` disables the rule. A job the plain matcher cannot solve
-    raises its ``MatchingError`` at once: the matching is exact, so a
-    redraw cannot help. After ``attempts`` rejected draws, a
-    ``MatchingError`` naming the layer weight spread is raised; the caller
+    ``fraction <= 0`` or a pool without extremes disables the rule. A job the
+    plain matcher cannot solve raises its ``MatchingError`` at once: the
+    matching is exact, so a redraw cannot help. After ``attempts`` rejected
+    draws, a ``MatchingError`` naming the extremes rule is raised; the caller
     turns it into a DAG reroll.
 
     The first draw is exactly ``match_arenas_to_bosses`` with the same
     ``rng``: a seed whose plain matching already satisfies the rule keeps
     its assignments.
     """
+    extremes = {band: extreme_sets(bosses, band, fraction) for band in WEIGHT_BANDS}
+    active = any(light for light, _ in extremes.values())
     tries = max(1, attempts)
     for _ in range(tries):
         assignment = match_arenas_to_bosses(
@@ -283,12 +314,12 @@ def match_arenas_balanced(
             check_size=check_size,
             forbidden=forbidden,
         )
-        if spread <= 0 or _layers_within_spread(assignment, bosses, groups, spread):
+        if not active or _extremes_kept_apart(assignment, groups, extremes):
             return assignment
     raise MatchingError(
-        f"no arena-boss matching keeps every layer weight spread within "
-        f"{spread} after {tries} attempts (enemy.max_minor_boss_weight_spread "
-        f"/ max_major_boss_weight_spread; 0 disables)"
+        f"no arena-boss matching keeps light and heavy extreme bosses apart on "
+        f"every layer after {tries} attempts (enemy.boss_extreme_fraction; "
+        f"0 disables)"
     )
 
 
