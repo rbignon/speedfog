@@ -288,7 +288,7 @@ fr = "Ectoplasme d'Elden"
 npc_name_id = 905220000
 name = "Promised Consort Radahn"
 en = "Promised Costume Radahn"
-fr = "Radahn, costume promis"
+fr = "Radahn, futur zombie"
 
 [[bosses]]
 npc_name_id = 905220001
