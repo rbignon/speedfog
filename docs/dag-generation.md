@@ -207,7 +207,7 @@ selection must never be re-derived from the filtered pool.
 **Zone conflicts**: Some zones are mutually exclusive and cannot both appear in the same run
 (declared via `conflicts_with` in `zone_metadata.toml`). When a cluster is selected, conflicting
 zones are added to `used_zones` via `_mark_cluster_used()`. Example: `stormveil_margit` (Margit)
-and `leyndell_sanctuary` (Morgott) are mutually exclusive.
+and `leyndell_throne` (Morgott) are mutually exclusive.
 
 ### 2. Start Node (layer 0)
 
