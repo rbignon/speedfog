@@ -4,6 +4,8 @@
 # `name` is a human-readable label only, not written to game data.
 # Bosses absent here keep their vanilla names. Generate more boss skeletons
 # with tools/seed_theme_catalog.py.
+# `fr` follows vanilla frafr casing and may use its own joke: see
+# "French conventions" in docs/plugins/summer-theme.md.
 #
 # Register: commercial kitsch Halloween (candy, costumes, jack-o'-lanterns),
 # never genuine-spooky (see the design spec). Same npc_name_id roster as
@@ -16,109 +18,109 @@
 npc_name_id = 902030001
 name = "Rennala"
 en = "Rennala, Witch of the Full Moon"
-fr = "Rennala, Sorcière de la Pleine Lune"
+fr = "Rennala, sorcière de la pleine lune"
 
 [[bosses]]
 npc_name_id = 903181000
 name = "Red Wolf of Radagon"
 en = "Werewolf of Radagon"
-fr = "Loup-Garou de Radagon"
+fr = "Loup-garou de Radagon"
 
 [[bosses]]
 npc_name_id = 904620001
 name = "Astel, Naturalborn of the Void"
 en = "Astel, Naturalborn of the Cobweb"
-fr = "Astel, Rejeton de la Toile d'Araignée"
+fr = "Astel, rejeton de la toile d'araignée"
 
 [[bosses]]
 npc_name_id = 904650000
 name = "Dragonkin Soldier of Nokstella"
 en = "Dragonkin Gravedigger of Nokstella"
-fr = "Fossoyeur Draconique de Nokstella"
+fr = "Fossoyeur draconide de Nokstella"
 
 [[bosses]]
 npc_name_id = 905210000
 name = "Divine Beast Dancing Lion"
 en = "Possessed Dancing Lion"
-fr = "Lion Dansant Possédé"
+fr = "Lion dansant possédé"
 
 [[bosses]]
 npc_name_id = 904730000
 name = "Starscourge Radahn"
 en = "Tombscourge Radahn"
-fr = "Radahn, Fléau des Tombes"
+fr = "Radahn, fléau des tombes"
 
 [[bosses]]
 npc_name_id = 905300000
 name = "Rellana, Twin Moon Knight"
 en = "Rellana, Twin Bat Knight"
-fr = "Rellana, chevalière des Deux Chauves-Souris"
+fr = "Rellana, chevaleresse des deux chauves-souris"
 
 [[bosses]]
 npc_name_id = 903575000
 name = "Godskin Duo"
 en = "Trick-or-Treat Duo"
-fr = "Duo des Farces ou Friandises"
+fr = "Duo Chair de poule"
 
 [[bosses]]
 npc_name_id = 902110001
 name = "Maliketh, the Black Blade"
-en = "Maliketh, the Candy Blade"
-fr = "Maliketh, la Lame en Sucre d'Orge"
+en = "Maliketh, the Licorice Blade"
+fr = "Maliketh, la Lame en réglisse"
 
 [[bosses]]
 npc_name_id = 904520000
 name = "Dragonlord Placidusax"
-en = "Pumpkin Lord Placidusax"
-fr = "Seigneur Citrouille Placidusax"
+en = "Placidusax, the Pumpkin King"
+fr = "Placidusax, roi des citrouilles"
 
 [[bosses]]
 npc_name_id = 905200000
 name = "Metyr, Mother of Fingers"
 en = "Metyr, Mother of Witch Fingers"
-fr = "Metyr, Mère des Doigts de Sorcière"
+fr = "Metyr, mère des Doigts de sorcière"
 
 [[bosses]]
 npc_name_id = 905020000
 name = "Putrescent Knight"
 en = "Spooky Scary Skeleton"
-fr = "Squelette Épouvantable"
+fr = "Squelette épouvantable"
 
 [[bosses]]
 npc_name_id = 904760000
 name = "Fire Giant"
-en = "Jack-o'-Lantern Giant"
-fr = "Géant Citrouille-Lanterne"
+en = "Giant Imp"
+fr = "Géant diablotin"
 
 [[bosses]]
 npc_name_id = 903252000
 name = "Loretta, Knight of the Haligtree"
-en = "Loretta, Knight of the Haunted Tree"
-fr = "Loretta, chevalière de l'Arbre Hanté"
+en = "Loretta, Knight of the Hallowtree"
+fr = "Loretta, chevaleresse de l'Arbre-Sucré"
 
 [[bosses]]
 npc_name_id = 902120000
 name = "Malenia, Blade of Miquella"
 en = "Malenia, Broomstick of Miquella"
-fr = "Malenia, Balai de Miquella"
+fr = "Malenia, balai de Miquella"
 
 [[bosses]]
 npc_name_id = 905120000
 name = "Bayle the Dread"
 en = "Bayle the Candy Hoarder"
-fr = "Bayle l'Accapareur de Bonbons"
+fr = "Bayle l'Accapareur de bonbons"
 
 [[bosses]]
 npc_name_id = 132400
 name = "Sir Gideon Ofnir, the All-Knowing"
 en = "Sir Gideon Ofnir, the All-Seeing Eyeball"
-fr = "Sire Gideon Ofnir, le Globe Oculaire Omniscient"
+fr = "Sire Gideon Ofnir, le Globe oculaire omniscient"
 
 [[bosses]]
 npc_name_id = 904720001
 name = "Hoarah Loux, Warrior"
 en = "Hoarah Loux, Grave Robber"
-fr = "Hoarah Loux, Pilleur de Tombes"
+fr = "Hoarah Loux, pilleur de tombes"
 
 [[bosses]]
 npc_name_id = 904720002
@@ -130,109 +132,109 @@ fr = "Godfrey, le Premier Bourreau"
 npc_name_id = 902130003
 name = "Morgott, the Omen King"
 en = "Morgott, the Bogeyman King"
-fr = "Morgott, le Roi Croque-Mitaine"
+fr = "Morgott, le Roi croque-mitaine"
 
 [[bosses]]
 npc_name_id = 903253500
 name = "Royal Knight Loretta"
 en = "Royal Ghost Knight Loretta"
-fr = "Loretta, chevalière royale fantôme"
+fr = "Loretta, chevaleresse royale fantôme"
 
 [[bosses]]
 npc_name_id = 905051000
 name = "Midra, Lord of Frenzied Flame"
 en = "Midra, the Frenzied Scarecrow"
-fr = "Midra, l'Épouvantail Frénétique"
+fr = "Midra, l'Épouvantail frénétique"
 
 [[bosses]]
 npc_name_id = 904800000
 name = "Mohg, Lord of Blood"
 en = "Mohg, Lord of Vampires"
-fr = "Mohg, Seigneur des Vampires"
+fr = "Mohg, seigneur des vampires"
 
 [[bosses]]
 npc_name_id = 903050500
 name = "Commander Niall"
 en = "Headless Horseman Niall"
-fr = "Niall, le Cavalier sans Tête"
+fr = "Niall, le Cavalier sans tête"
 
 [[bosses]]
 npc_name_id = 903460500
 name = "Leonine Misbegotten Boss"
 en = "Black Cat Misbegotten"
-fr = "Chimère Chat Noir"
+fr = "Chimère chat noir"
 
 [[bosses]]
 npc_name_id = 904910000
 name = "Magma Wyrm Makar"
 en = "Cauldron Wyrm Makar"
-fr = "Makar, le Dragon du Chaudron"
+fr = "Makar, le Dragon du chaudron"
 
 [[bosses]]
 npc_name_id = 905030000
 name = "Romina, Saint of the Bud"
 en = "Romina, Saint of the Spiders"
-fr = "Romina, Sainte des Araignées"
+fr = "Romina, sainte des araignées"
 
 [[bosses]]
 npc_name_id = 905230000
 name = "Scadutree Avatar"
 en = "Haunted Tree Avatar"
-fr = "Avatar de l'Arbre Hanté"
+fr = "Avatar de l'Arbre-Hanté"
 
 [[bosses]]
 npc_name_id = 905230001
 name = "Scadutree Avatar (P2)"
 en = "Haunted Tree Avatar"
-fr = "Avatar de l'Arbre Hanté"
+fr = "Avatar de l'Arbre-Hanté"
 
 [[bosses]]
 npc_name_id = 905230002
 name = "Scadutree Avatar (P3)"
 en = "Haunted Tree Avatar"
-fr = "Avatar de l'Arbre Hanté"
+fr = "Avatar de l'Arbre-Hanté"
 
 [[bosses]]
 npc_name_id = 905000000
 name = "Commander Gaius"
 en = "Nightmare Rider Gaius"
-fr = "Gaius, Cavalier du Cauchemar"
+fr = "Gaïus, cavalier du cauchemar"
 
 [[bosses]]
 npc_name_id = 904800002
 name = "Mohg, the Omen"
-en = "Mohg, the Sewer Ghoul"
-fr = "Mohg, la Goule des Égouts"
+en = "Mohg, Phantom of the Sewers"
+fr = "Mohg, le Fantôme des égouts"
 
 [[bosses]]
 npc_name_id = 905010000
 name = "Golden Hippopotamus"
 en = "Swamp Monster"
-fr = "Monstre du Marais"
+fr = "Monstre du marais"
 
 [[bosses]]
 npc_name_id = 904670001
 name = "Regal Ancestor Spirit"
 en = "Regal Ancestor Ghost"
-fr = "Fantôme Ancestral Royal"
+fr = "Fantôme ancestral royal"
 
 [[bosses]]
 npc_name_id = 904770000
 name = "Valiant Gargoyles"
-en = "Weeping Angel"
-fr = "Ange Pleureur"
+en = "Infernal Gargoyle"
+fr = "Gargouille infernale"
 
 [[bosses]]
 npc_name_id = 904770001
 name = "Valiant Gargoyle (Twinblade)"
-en = "Weeping Angel"
-fr = "Ange Pleureur"
+en = "Infernal Gargoyle"
+fr = "Gargouille infernale"
 
 [[bosses]]
 npc_name_id = 903320000
 name = "Mimic Tear"
-en = "Mimic Tear, the Skinwalker"
-fr = "Larme Mimétique, le Doppelgänger"
+en = "Mimic Tear, Your Evil Twin"
+fr = "Larme imitatrice, votre double maléfique"
 
 [[bosses]]
 npc_name_id = 905130001
@@ -244,25 +246,25 @@ fr = "Messmer le Basilic"
 npc_name_id = 904750000
 name = "Godrick the Grafted"
 en = "Godrick the Limb Collector"
-fr = "Godrick le Collectionneur de Membres"
+fr = "Godrick le Collectionneur de membres"
 
 [[bosses]]
 npc_name_id = 902130000
 name = "Margit, the Fell Omen"
 en = "Margit, the Grumpy Ghost"
-fr = "Margit, le Fantôme Grognon"
+fr = "Margit, le Fantôme grognon"
 
 [[bosses]]
 npc_name_id = 904710001
 name = "Rykard, Lord of Blasphemy"
-en = "Rykard, Lord of the Candy Binge"
-fr = "Rykard, Seigneur de la Crise de Foie"
+en = "Rykard, Lord of Cavities"
+fr = "Rykard, seigneur des caries"
 
 [[bosses]]
 npc_name_id = 903570000
 name = "Godskin Noble Boss"
 en = "Bedsheet Ghost Noble"
-fr = "Noble au Drap Fantôme"
+fr = "Noble au drap fantôme"
 
 # Final boss (not a major_boss cluster, so not emitted by the seeding tool;
 # kept here so the final fight is themed too).
@@ -270,7 +272,7 @@ fr = "Noble au Drap Fantôme"
 npc_name_id = 902190000
 name = "Radagon"
 en = "Radagon of the Haunted Order"
-fr = "Radagon de l'Ordre Hanté"
+fr = "Radagon de l'Ordre hanté"
 
 # ---- Final bosses + distinct phase / alternate-instance forms ----
 # Same hand-maintained ids as summer.toml (no DefeatFlag, so the seeding
@@ -286,31 +288,31 @@ fr = "Ectoplasme d'Elden"
 npc_name_id = 905220000
 name = "Promised Consort Radahn"
 en = "Promised Costume Radahn"
-fr = "Radahn, Déguisement Promis"
+fr = "Radahn, costume promis"
 
 [[bosses]]
 npc_name_id = 905220001
 name = "Radahn, Consort of Miquella"
 en = "Radahn, Zombie of Miquella"
-fr = "Radahn, Zombie de Miquella"
+fr = "Radahn, zombie de Miquella"
 
 [[bosses]]
 npc_name_id = 904710000
 name = "God-Devouring Serpent"
 en = "Candy-Devouring Serpent"
-fr = "Serpent Dévoreur de Bonbons"
+fr = "Serpent dévoreur de bonbons"
 
 [[bosses]]
 npc_name_id = 902110000
 name = "Beast Clergyman"
 en = "Graveyard Clergyman"
-fr = "Clerc du Cimetière"
+fr = "Clerc du cimetière"
 
 [[bosses]]
 npc_name_id = 902120001
 name = "Malenia, Goddess of Rot"
 en = "Malenia, Goddess of Cobwebs"
-fr = "Malenia, Déesse des Toiles d'Araignée"
+fr = "Malenia, déesse des toiles d'araignée"
 
 [[bosses]]
 npc_name_id = 905130000
@@ -322,19 +324,19 @@ fr = "Comte Messmer"
 npc_name_id = 902030000
 name = "Rennala (alternate)"
 en = "Rennala, Witch of the Full Moon"
-fr = "Rennala, Sorcière de la Pleine Lune"
+fr = "Rennala, sorcière de la pleine lune"
 
 [[bosses]]
 npc_name_id = 902130002
 name = "Morgott (alternate)"
 en = "Morgott, the Bogeyman King"
-fr = "Morgott, le Roi Croque-Mitaine"
+fr = "Morgott, le Roi croque-mitaine"
 
 [[bosses]]
 npc_name_id = 904720000
 name = "Godfrey (golden shade)"
 en = "Godfrey, First Elden Ghost"
-fr = "Godfrey, Premier Fantôme d'Elden"
+fr = "Godfrey, premier Fantôme d'Elden"
 
 # ---- Universal UI banners (GR_MenuText in menu_dlc02.msgbnd.dcx) ----
 # IDs sorted ascending; 331314 is reserved (vanilla) and must not appear here.
@@ -371,15 +373,15 @@ fr = "ENNEMI TERRORISÉ"
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331305
-en = "YOU GOT TRICKED"
-fr = "VOUS AVEZ ÉTÉ PIÉGÉ"
+en = "R.I.P."
+fr = "R.I.P."
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
 fmg = "GR_MenuText"
 id = 331311
 en = "CANDY STASH DISCOVERED"
-fr = "RÉSERVE DE BONBONS DÉCOUVERTE"
+fr = "PLANQUE À BONBONS DÉCOUVERTE"
 
 [[ui]]
 bnd = "menu_dlc02.msgbnd.dcx"
@@ -400,7 +402,7 @@ bnd = "item_dlc02.msgbnd.dcx"
 fmg = "GoodsName"
 id = 10010
 en = "Pumpkin Seed"
-fr = "Graine de Citrouille"
+fr = "Graine de citrouille"
 
 [[ui]]
 bnd = "item_dlc02.msgbnd.dcx"

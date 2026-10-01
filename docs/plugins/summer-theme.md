@@ -29,6 +29,26 @@ back to `en`). All other game languages keep their vanilla names. Editing only
 two languages instead of all ~15 keeps the per-seed cost low. Missing file =
 silent no-op.
 
+**French conventions** (both themes): `fr` is an adaptation, not a
+translation; when an English pun does not carry over, use a French joke
+instead (halloween's Godskin Duo: "Trick-or-Treat Duo" / "Duo Chair de
+poule"), and start from the official frafr name, not from the English one
+("Larme imitatrice", "chevaleresse" for Loretta and Rellana). Official
+names: `data/i18n/fmg_names.json` (`NpcName`, base game only), and for the
+DLC `game_inspect dump-fmg <game-dir>/msg/frafr/item_dlc02.msgbnd.dcx`
+(`NpcName_dlc01`). `data/i18n/fr.toml` is SpeedFog's own translation and
+is not a source for official names.
+Casing follows vanilla frafr typography, not English title case. The
+article decides: without one, an apposition is lowercase ("Rykard,
+seigneur du blasphème" -> "Rykard, seigneur du barbecue"); with one, it is
+a nickname, comma or not, that capitalizes its head noun and any adjective
+before it, nothing after ("Godrick le Greffé", "Maliketh la Lame d'ébène",
+"Margit, le Fantôme grognon", "le Premier Bourreau"). In-world proper
+nouns keep their capitals, and so does a parody of one ("Ordre d'or" ->
+"Ordre ensoleillé", "Seigneur d'Elden" -> "Fantôme d'Elden",
+"Arbre-Sacré" -> "Arbre-Sucré", "mère des Doigts" -> "mère des Doigts de
+sorcière"). Banners are all caps and unaffected.
+
 **Reserved:** `GR_MenuText[331314]` (VICTORY) is used by `RunCompleteInjector`;
 the loader rejects it.
 

@@ -11,7 +11,7 @@ public class TextThemeCatalogLoaderTests
         npc_name_id = 902130000
         name = "Margit"
         en = "Margit, the Sun-Scorched"
-        fr = "Margit, le Brûlé par le Soleil"
+        fr = "Margit, le Brûlé par le soleil"
 
         [[ui]]
         bnd = "menu_dlc02.msgbnd.dcx"
@@ -25,7 +25,7 @@ public class TextThemeCatalogLoaderTests
         Assert.Single(c.Bosses);
         Assert.Equal(902130000, c.Bosses[0].NpcNameId);
         Assert.Equal("Margit, the Sun-Scorched", c.Bosses[0].En);
-        Assert.Equal("Margit, le Brûlé par le Soleil", c.Bosses[0].Fr);
+        Assert.Equal("Margit, le Brûlé par le soleil", c.Bosses[0].Fr);
         Assert.Single(c.Ui);
         Assert.Equal(331305, c.Ui[0].Id);
         Assert.Null(c.Ui[0].Fr);
