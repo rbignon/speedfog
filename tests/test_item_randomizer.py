@@ -1252,7 +1252,7 @@ def test_generate_item_config_groups_phase1_slot_with_leader():
             tags[int(b)].boss.weight for b in result["enemy_assignments"].values()
         ]
         assert len(placed) == 2
-        assert max(placed) - min(placed) <= 2.8 + 1e-9, f"seed {seed}: {placed}"
+        assert placed[0] == placed[1], f"seed {seed}: {placed}"
 
 
 def test_generate_item_config_raises_when_boss_cluster_missing_from_layers():

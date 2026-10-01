@@ -224,17 +224,21 @@ bipartite graph instead of only the arena side).
 On the standard path, the randomized bosses placed on one DAG layer keep
 their `boss.weight` within a per-job spread: `[enemy].max_minor_boss_weight_spread`
 (default 1.5 minutes) for minor arenas, `[enemy].max_major_boss_weight_spread`
-(default 2.8) for major arenas (`final_boss` included in "all" mode); 0
-disables a job's rule. The defaults only keep extremes apart. With the
-weights of the 2026-09-29 calibration, the major rule blocks 2 of 1225 pairs
-(Malenia 3.8 and Placidusax 3.7 against Leonine Misbegotten 0.7; Red Wolf of
-Radagon and Mimic Tear at 1.0 sit exactly on the boundary and stay allowed)
-and the minor rule 42 of 11175 (Godskin Spiritcaller Snail 2.1 against the
-41 minors at 0.5 or less, Full-Grown Fallingstar Beast 1.8 against Soldier
-of Godrick 0.2); an extreme facing average bosses stays allowed. Weights are
-rounded to 0.1, so pairs tie the boundary (2 major, 33 minor) and a 0.1
-drift on the next calibration flips them: re-check these examples after
-every `--write`.
+(default 2.7) for major arenas (`final_boss` included in "all" mode); 0
+disables a job's rule. The defaults only keep extremes apart, and the
+major default is chosen so that Malenia never faces Leonine Misbegotten,
+Red Wolf of Radagon or Mimic Tear: re-pick it if a recalibration moves
+them. With the weights of the 2026-09-29 calibration, the major rule blocks
+4 of 1225 pairs (Malenia 3.8 against Leonine Misbegotten 0.7, Red Wolf of
+Radagon 1.0 and Mimic Tear 1.0; Placidusax 3.7 against Leonine). Placidusax
+against Red Wolf and Mimic Tear, and Malenia against Margit 1.1, sit exactly
+on the boundary and stay allowed. The minor rule blocks 42 of 11175 pairs
+(Godskin Spiritcaller Snail 2.1 against the 41 minors at 0.5 or less,
+Full-Grown Fallingstar Beast 1.8 against Soldier of Godrick 0.2). An
+extreme facing average bosses stays allowed. Weights are rounded to 0.1, so
+pairs tie the boundary (3 major, 33 minor) and a 0.1 drift on the next
+calibration flips them: re-check these examples after every `--write`.
+
 In practice a layer holding a boss arena holds 2 or 3 of them in parallel
 about 90% of the time and never mixes majors and minors (the validator
 rejects mixed-type layers), so each job is balanced on its own.
@@ -256,10 +260,11 @@ The first draw is exactly the plain matching, so a seed whose plain matching
 already satisfies the rule keeps its assignments.
 
 Measured on 150 `standard.toml` DAGs per mode with the shipped weights and
-the defaults (rule off -> on): in "all" mode Malenia 91 -> 89 appearances,
-Placidusax 40 -> 39, other heavy majors unchanged, Godskin Spiritcaller
-Snail 17 -> 9; in "minor" mode Snail 22 -> 8. At most 3 draws per job, no
-DAG reroll. Rejection suits this loose rule only: 1.0 for both jobs
+the defaults (one unseeded sample, rule off and on run on the same DAGs, so
+the baselines move between runs but the deltas hold): in "all" mode
+Malenia 90 -> 86 appearances, Placidusax 56 -> 50, other heavy majors
+unchanged, Godskin Spiritcaller Snail 20 -> 8; in "minor" mode Snail
+21 -> 7. At most 3 draws per job, no DAG reroll. Rejection suits this loose rule only: 1.0 for both jobs
 exhausts the attempts on most "all" mode DAGs.
 
 Limitation: balance is per slot, so a two-slot node (Fire Giant) next to a
@@ -330,7 +335,7 @@ gets a non-DLC replacement boss.
 | ``[enemy].randomize_bosses = "all"`` | Both majors and minors receive arena-matched bosses. ``final_boss`` terminals (Elden Beast / Promised Consort Radahn) are also treated as major arena targets: each receives an arena-compatible boss and is reported in ``randomized_bosses``/``boss_name``. (They also remain candidate sources in the major pool via the orphan-arena fallback, as before, so they may appear as mid-run replacements like any other major.) |
 | ``[enemy].ignore_arena_size`` | Skip the size gate. Other rules still apply. |
 | ``[enemy].dlc_bosses = false`` | Filter DLC entries from the candidate pool. Arena selection is untouched (DLC arenas still get a non-DLC replacement). Independent of ``[item_randomizer].dlc``, which controls item-randomizer scope. |
-| ``[enemy].max_minor_boss_weight_spread`` / ``max_major_boss_weight_spread`` | Hard caps (minutes, defaults 1.5 / 2.8) on the spread of ``boss.weight`` among the randomized bosses of one layer, per job; ``0`` disables. See "Layer weight balance". Ignored in allowlist mode. |
+| ``[enemy].max_minor_boss_weight_spread`` / ``max_major_boss_weight_spread`` | Hard caps (minutes, defaults 1.5 / 2.7) on the spread of ``boss.weight`` among the randomized bosses of one layer, per job; ``0`` disables. See "Layer weight balance". Ignored in allowlist mode. |
 
 ## Wire format
 
