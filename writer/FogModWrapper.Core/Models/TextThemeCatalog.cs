@@ -1,7 +1,9 @@
 namespace FogModWrapper.Models;
 
-/// <summary>One boss healthbar-name (NpcName) override.</summary>
-public sealed record ThemeBossEntry(int NpcNameId, string Name, string En, string? Fr);
+/// <summary>One boss healthbar-name (NpcName) override, keyed by exactly one of
+/// NpcNameId (a fixed vanilla id) or BossName (a name BossNameInjector
+/// allocates a seed-dependent id for, resolved by TextTheme).</summary>
+public sealed record ThemeBossEntry(int? NpcNameId, string? BossName, string Name, string En, string? Fr);
 
 /// <summary>One UI string override (banner/label) in a specific FMG.</summary>
 public sealed record ThemeUiEntry(string Bnd, string Fmg, int Id, string En, string? Fr);

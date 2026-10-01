@@ -58,6 +58,68 @@ public class TextThemeCatalogLoaderTests
     }
 
     [Fact]
+    public void Parse_AcceptsBossKeyedByName()
+    {
+        var toml = """
+        [[bosses]]
+        boss_name = "Devonia"
+        en = "Demonia"
+        fr = "Démonia"
+        """;
+
+        var c = TextThemeCatalogLoader.Parse(toml, "halloween");
+
+        Assert.Single(c.Bosses);
+        Assert.Equal("Devonia", c.Bosses[0].BossName);
+        Assert.Null(c.Bosses[0].NpcNameId);
+        Assert.Equal("Demonia", c.Bosses[0].En);
+        Assert.Equal("Démonia", c.Bosses[0].Fr);
+    }
+
+    [Theory]
+    [InlineData("npc_name_id = 902130000\nboss_name = \"Devonia\"")]
+    [InlineData("name = \"Devonia\"")]
+    public void Parse_RejectsBossWithoutExactlyOneKey(string keys)
+    {
+        var toml = $"[[bosses]]\n{keys}\nen = \"X\"\n";
+        Assert.Throws<InvalidDataException>(() => TextThemeCatalogLoader.Parse(toml, "halloween"));
+    }
+
+    // BossNameInjector allocates trimmed, non-empty names without a trailing
+    // parenthetical ("Hornsent (Leda Fight)" becomes "Hornsent"): these keys
+    // could never match.
+    [Theory]
+    [InlineData("")]
+    [InlineData(" Devonia")]
+    [InlineData("Hornsent (Leda Fight)")]
+    public void Parse_RejectsBossNameTheInjectorNeverAllocates(string bossName)
+    {
+        var toml = $"[[bosses]]\nboss_name = \"{bossName}\"\nen = \"X\"\n";
+        Assert.Throws<InvalidDataException>(() => TextThemeCatalogLoader.Parse(toml, "halloween"));
+    }
+
+    [Fact]
+    public void Parse_RejectsNpcNameIdInTheSeedDependentRange()
+    {
+        var toml = $"[[bosses]]\nnpc_name_id = {SpeedFogIds.BossNameFmgIds.Base}\nen = \"X\"\n";
+        Assert.Throws<InvalidDataException>(() => TextThemeCatalogLoader.Parse(toml, "halloween"));
+    }
+
+    [Fact]
+    public void Parse_RejectsDuplicateBossName()
+    {
+        var toml = """
+        [[bosses]]
+        boss_name = "Devonia"
+        en = "A"
+        [[bosses]]
+        boss_name = "Devonia"
+        en = "B"
+        """;
+        Assert.Throws<InvalidDataException>(() => TextThemeCatalogLoader.Parse(toml, "halloween"));
+    }
+
+    [Fact]
     public void Parse_RejectsReservedRunCompleteId()
     {
         var toml = """

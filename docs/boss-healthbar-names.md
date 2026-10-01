@@ -97,6 +97,11 @@ C# (`writer/FogModWrapper/BossNameInjector.cs`, mod-dir phase, after
    holds logs a warning and keeps the vanilla name. FMG entries are written
    only for names a patch actually used, so an arena that needed no change or
    could not be reached ships none.
+4. `Inject` returns {name -> NpcName id} of the entries it wrote, which
+   `Program.cs` passes to `TextTheme`: a theme catalogue entry keyed by
+   `boss_name` reskins that seed-dependent id (see
+   [plugins/summer-theme.md](plugins/summer-theme.md)). Names resolved to a
+   vanilla id are not returned; the themes reach those by `npc_name_id`.
 
 ## Verification
 

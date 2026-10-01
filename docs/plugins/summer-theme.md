@@ -11,7 +11,9 @@ both FMG edits (mirror `RunCompleteInjector`), applied by
    `menu_dlc02.msgbnd.dcx` (felled/slain family, `YOU DIED`,
    `LOST GRACE DISCOVERED`).
 
-Independent of the item/enemy randomizer; applies to every run.
+Independent of the item/enemy randomizer and applied to every run, except
+`boss_name` entries (below), which only exist on seeds where the enemy
+randomizer placed that enemy.
 
 The applier and loader are theme-parameterized (TextTheme /
 TextThemeCatalogLoader); the halloween theme reuses them with its own
@@ -19,8 +21,20 @@ catalogue.
 
 ## Catalogue: data/plugins/summer.toml
 
-`[[bosses]]`: `npc_name_id` (required, unique), `name` (reference), `en`
-(required), `fr` (optional).
+`[[bosses]]`: exactly one of `npc_name_id` or `boss_name` (each unique),
+`name` (reference), `en` (required), `fr` (optional).
+`npc_name_id` targets a fixed NpcName id. `boss_name` is for an enemy with no
+vanilla healthbar name (halloween's "Devonia"): when the enemy randomizer
+places it in an arena, `BossNameInjector` writes its name under a NpcName id
+allocated per seed (see [boss-healthbar-names.md](../boss-healthbar-names.md)),
+and returns {name -> id} so the theme reskins that id. The key is the name as
+graph.json `boss_names` carries it, trimmed and minus a trailing
+parenthetical the injector drops: the quoted name of the FogModWrapper log
+line `arena N -> "Devonia" (NpcName ..., new, ...)`. The loader rejects a key
+that could never match (empty, padded, trailing parenthetical) and an
+`npc_name_id` inside the injector's per-seed range. On a seed that does not
+place the enemy, or where the name resolved to a vanilla id, the entry does
+nothing; the theme logs one line per `boss_name` entry either way.
 `[[ui]]`: `bnd`, `fmg`, `id`, `en` (required), `fr` (optional).
 
 `en` is required; `fr` is optional. Only the English (`engus`) and French

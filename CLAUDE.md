@@ -343,7 +343,7 @@ speedfog/
 | `MapSplitsInjector` | Injects map_splits.toml synthetic zones/fogs into AnnotationData before `Graph.Construct`, splits EnemyAreas (see `docs/map-splits.md`) |
 | `TextTheme` | Cosmetic text reskins per theme, summer + halloween, opt-in via `[plugin.summer]` / `[plugin.halloween]` |
 | `MsgBndEditor` | Shared msgbnd editing for the engus + frafr text injectors (`TextTheme`, `BossNameInjector`): mod copy over vanilla, written only on change |
-| `BossNameInjector` | Healthbar names of relocated enemies (graph.json `boss_names`): resolves each name to a NpcName id (exact vanilla engus match, else a `SpeedFogIds.BossNameFmgIds` entry written to engus + frafr) and repoints the arena's `DisplayBossHealthBar` nameId in the map EMEVD, leaving alone the arenas the randomizer already named; runs before `TextTheme` (see `docs/boss-healthbar-names.md`) |
+| `BossNameInjector` | Healthbar names of relocated enemies (graph.json `boss_names`): resolves each name to a NpcName id (exact vanilla engus match, else a `SpeedFogIds.BossNameFmgIds` entry written to engus + frafr) and repoints the arena's `DisplayBossHealthBar` nameId in the map EMEVD, leaving alone the arenas the randomizer already named; runs before `TextTheme` and hands it the allocated {name -> id} so a theme can reskin them by `boss_name` (see `docs/boss-healthbar-names.md`) |
 | `TextThemeCatalogLoader` | Loads and validates `data/plugins/<theme>.toml` |
 | `HalloweenPluginSettings` | Parses `[plugin.halloween]` parameters (`ambushes`) from graph.json's plugin table |
 | `HalloweenGateAnchors` | Shared exit-gate anchor collection for the two ambient injectors (source cluster resolved through GraphNode.Zones; decor set includes the start cluster, spawn set does not) |

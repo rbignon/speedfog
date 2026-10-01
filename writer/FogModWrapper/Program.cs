@@ -885,10 +885,12 @@ Example:
         // Healthbar names of the relocated enemies (graph.json boss_names):
         // repoint the arena's DisplayBossHealthBar at the placed enemy's name
         // where the randomizer left the arena's own. Before the text themes so
-        // their NpcName edits layer on the same mod copy.
+        // their NpcName edits layer on the same mod copy, and so they can
+        // reskin the ids it allocates by boss_name.
+        IReadOnlyDictionary<string, int> bossNameIds = new Dictionary<string, int>();
         if (ctx.GraphData.BossNames.Count > 0)
         {
-            BossNameInjector.Inject(ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.BossNames, Console.WriteLine);
+            bossNameIds = BossNameInjector.Inject(ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.BossNames, Console.WriteLine);
         }
 
         // Text theme plugins: cosmetic boss/UI text reskins, one catalogue per
@@ -901,7 +903,7 @@ Example:
                 $"Warning: multiple text themes enabled ({string.Join(", ", textThemes)}); later themes overwrite colliding entries");
         foreach (var theme in textThemes)
         {
-            TextTheme.Apply(theme, ctx.ModDir, ctx.Config.GameDir, ctx.Config.DataDir);
+            TextTheme.Apply(theme, ctx.ModDir, ctx.Config.GameDir, ctx.Config.DataDir, bossNameIds);
         }
 
         // Death markers at fog gates

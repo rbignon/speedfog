@@ -338,6 +338,16 @@ name = "Godfrey (golden shade)"
 en = "Godfrey, First Elden Ghost"
 fr = "Godfrey, premier Fantôme d'Elden"
 
+# ---- Enemies with no vanilla healthbar name (boss_name) ----
+# Keyed by the name BossNameInjector gives the placed enemy (graph.json
+# boss_names), since its NpcName id is allocated per seed. Applies only on
+# seeds where the enemy randomizer places it in a boss arena.
+
+[[bosses]]
+boss_name = "Devonia"
+en = "Demonia"
+fr = "Démonia"
+
 # ---- Universal UI banners (GR_MenuText in menu_dlc02.msgbnd.dcx) ----
 # IDs sorted ascending; 331314 is reserved (vanilla) and must not appear here.
 

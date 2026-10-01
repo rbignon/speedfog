@@ -27,7 +27,7 @@ public static class TextThemeCatalogLoader
                 throw new InvalidDataException($"{theme}: [[bosses]] must be an array of tables");
             foreach (var entry in bArr)
                 bosses.Add(new ThemeBossEntry(
-                    ToInt(entry, "npc_name_id", theme), ToStringOpt(entry, "name") ?? "",
+                    ToIntOpt(entry, "npc_name_id", theme), ToStringOpt(entry, "boss_name"), ToStringOpt(entry, "name") ?? "",
                     ToString(entry, "en", theme), ToStringOpt(entry, "fr")));
         }
 
@@ -62,13 +62,30 @@ public static class TextThemeCatalogLoader
 
     private static void Validate(List<ThemeBossEntry> bosses, List<ThemeUiEntry> ui, string theme)
     {
-        var seen = new HashSet<int>();
+        var seenIds = new HashSet<int>();
+        var seenNames = new HashSet<string>(StringComparer.Ordinal);
+        var allocated = SpeedFogIds.BossNameFmgIds;
         foreach (var b in bosses)
         {
+            var key = b.NpcNameId is int id ? $"npc_name_id {id}" : $"boss_name \"{b.BossName}\"";
+            if ((b.NpcNameId == null) == (b.BossName == null))
+                throw new InvalidDataException(
+                    $"{theme}: boss (en \"{b.En}\") needs exactly one of npc_name_id and boss_name");
             if (string.IsNullOrWhiteSpace(b.En))
-                throw new InvalidDataException($"{theme}: boss npc_name_id {b.NpcNameId} has empty 'en'");
-            if (!seen.Add(b.NpcNameId))
-                throw new InvalidDataException($"{theme}: duplicate boss npc_name_id {b.NpcNameId}");
+                throw new InvalidDataException($"{theme}: boss {key} has empty 'en'");
+            // Ids in BossNameInjector's range change per seed: use boss_name.
+            if (b.NpcNameId is int ranged && ranged >= allocated.Base && ranged < allocated.End)
+                throw new InvalidDataException(
+                    $"{theme}: boss {key} is a per-seed BossNameInjector id, key it by boss_name instead");
+            // BossNameInjector allocates trimmed names and drops a trailing
+            // parenthetical, so any other key would never match.
+            if (b.BossName is string name
+                && (name.Length == 0 || name != name.Trim() || name.EndsWith(')')))
+                throw new InvalidDataException(
+                    $"{theme}: boss {key} can never match: use the name as BossNameInjector logs it "
+                    + "(trimmed, without a trailing parenthetical)");
+            if (b.NpcNameId is int nid ? !seenIds.Add(nid) : !seenNames.Add(b.BossName!))
+                throw new InvalidDataException($"{theme}: duplicate boss {key}");
         }
 
         foreach (var u in ui)
@@ -82,6 +99,8 @@ public static class TextThemeCatalogLoader
     }
 
     private static int ToInt(TomlTable e, string key, string theme) => TomlHelpers.ToInt(e, key, $"{theme}:");
+
+    private static int? ToIntOpt(TomlTable e, string key, string theme) => TomlHelpers.ToIntOpt(e, key, $"{theme}:");
 
     private static string ToString(TomlTable e, string key, string theme) => TomlHelpers.ToString(e, key, $"{theme}:");
 

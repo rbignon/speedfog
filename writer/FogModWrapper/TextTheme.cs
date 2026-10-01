@@ -12,6 +12,10 @@ namespace FogModWrapper;
 /// (tolerant); UI ids absent are added as new FMG entries instead. A
 /// missing FMG file or bnd is skipped either way.
 ///
+/// A boss keyed by boss_name instead of npc_name_id targets the NpcName id
+/// BossNameInjector allocated for that name on this seed
+/// (<c>bossNameIds</c>); a boss that was not placed has nothing to reskin.
+///
 /// Only the English (engus) and French (frafr) message archives are edited
 /// (MsgBndEditor.TargetLanguages); the catalogue carries content for those
 /// two languages only. Other languages keep their vanilla names.
@@ -20,7 +24,8 @@ public static class TextTheme
 {
     private static readonly string[] BossBnds = { "item.msgbnd.dcx", "item_dlc02.msgbnd.dcx" };
 
-    public static void Apply(string theme, string modDir, string gameDir, string dataDir)
+    public static void Apply(string theme, string modDir, string gameDir, string dataDir,
+        IReadOnlyDictionary<string, int> bossNameIds)
     {
         var catalog = TextThemeCatalogLoader.Load(
             Path.Combine(dataDir, "plugins", $"{theme}.toml"), theme);
@@ -34,7 +39,23 @@ public static class TextTheme
             return;
         }
 
-        var bossById = catalog.Bosses.ToDictionary(b => b.NpcNameId);
+        var bossById = new Dictionary<int, ThemeBossEntry>();
+        foreach (var b in catalog.Bosses)
+        {
+            if (b.NpcNameId is int id)
+            {
+                bossById[id] = b;
+            }
+            else if (bossNameIds.TryGetValue(b.BossName!, out int allocated))
+            {
+                bossById[allocated] = b;
+                Console.WriteLine($"{theme} theme: boss_name \"{b.BossName}\" -> NpcName {allocated}");
+            }
+            else
+            {
+                Console.WriteLine($"{theme} theme: boss_name \"{b.BossName}\" not placed on this seed");
+            }
+        }
         int touchedLangs = 0;
         // Languages touch disjoint files; process them in parallel.
         Parallel.ForEach(Directory.GetDirectories(gameMsgDir), langDir =>

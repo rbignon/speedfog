@@ -51,17 +51,21 @@ public static class BossNameInjector
     /// <summary>One arena's resolved healthbar name.</summary>
     public sealed record Resolution(uint ArenaId, string Name, string Map, int NameId, bool IsNew);
 
-    public static void Inject(string modDir, string gameDir,
+    /// <summary>Repoints the arenas' healthbars and writes the new NpcName
+    /// entries. Returns {name -> NpcName id} of the entries it wrote (names
+    /// resolved to a vanilla id are not listed), so the text themes can
+    /// reskin a seed-dependent id by name.</summary>
+    public static IReadOnlyDictionary<string, int> Inject(string modDir, string gameDir,
         IReadOnlyDictionary<string, BossNameEntry> bossNames, Action<string> log)
     {
         if (bossNames.Count == 0)
-            return;
+            return new Dictionary<string, int>();
 
         var gameMsgDir = Path.Combine(gameDir, "msg");
         if (!Directory.Exists(gameMsgDir))
         {
             log("Boss names: game msg directory not found, skipping");
-            return;
+            return new Dictionary<string, int>();
         }
 
         var (idByText, textById) = LoadVanillaNpcNames(gameMsgDir);
@@ -117,6 +121,7 @@ public static class BossNameInjector
         log($"Boss names: {patched.Count} arena(s) patched, {alreadyCorrect} already correct, "
             + $"{unmatched} unmatched, {newEntries.Count} new NpcName entr{(newEntries.Count == 1 ? "y" : "ies")} "
             + $"in {languages} language(s)");
+        return newEntries.ToDictionary(e => e.text, e => e.id, StringComparer.Ordinal);
     }
 
     /// <summary>Resolves each arena's name to a NpcName id: the lowest vanilla

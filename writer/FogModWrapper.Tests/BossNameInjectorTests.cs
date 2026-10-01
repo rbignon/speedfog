@@ -368,9 +368,30 @@ public class BossNameInjectorTests
         var modDir = MakeModDir(tmp);
         var bossNames = new Dictionary<string, BossNameEntry> { ["30019999"] = Entry("Aging Untouchable") };
 
-        BossNameInjector.Inject(modDir, gameDir, bossNames, _ => { });
+        var written = BossNameInjector.Inject(modDir, gameDir, bossNames, _ => { });
 
         Assert.False(Directory.Exists(Path.Combine(modDir, "msg")));
+        Assert.Empty(written);
+    }
+
+    [Fact]
+    public void Inject_ReturnsTheIdOfEachNewNameItWrote()
+    {
+        using var tmp = new TempDir();
+        var gameDir = MakeGameDir(tmp);
+        var modDir = MakeModDir(tmp);
+        var bossNames = new Dictionary<string, BossNameEntry>
+        {
+            ["30010800"] = Entry("Aging Untouchable"),
+            ["30010850"] = Entry("Crucible Knight"),
+        };
+
+        var written = BossNameInjector.Inject(modDir, gameDir, bossNames, _ => { });
+
+        // The vanilla match (Crucible Knight) wrote no entry, so it is not listed.
+        var single = Assert.Single(written);
+        Assert.Equal("Aging Untouchable", single.Key);
+        Assert.Equal(SpeedFogIds.BossNameFmgIds.Base, single.Value);
     }
 
     [Fact]
