@@ -14,6 +14,22 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+# Scaling tier bands of boss.weight (docs/boss-arena-constraints.md, "Layer
+# weight balance"): bosses react differently to scaling, so weights are
+# measured per band. All boss nodes of a layer share one tier.
+WEIGHT_BANDS = ("early", "mid", "late")
+_EARLY_MAX_TIER = 8
+_MID_MAX_TIER = 14
+
+
+def weight_band(tier: int) -> str:
+    """Band of a scaling tier: early (<= 8), mid (9-14) or late (>= 15)."""
+    if tier <= _EARLY_MAX_TIER:
+        return "early"
+    if tier <= _MID_MAX_TIER:
+        return "mid"
+    return "late"
+
 
 @dataclass(frozen=True, slots=True)
 class BossTags:
@@ -25,10 +41,15 @@ class BossTags:
     can_escape: bool
     night_boss: bool
     exclude_from_pool: bool
-    # Expected time to beat the boss in minutes, retries included. Indicative:
+    # Expected time to beat the boss in minutes, retries included, per scaling
+    # band (early, mid, late), each band brought to a mid-run tier's scale:
     # compared across bosses rather than read in absolute terms. Absent in
     # the JSON means "not annotated".
-    weight: float = 1.0
+    weights: tuple[float, float, float] = (1.0, 1.0, 1.0)
+
+    def weight_at(self, band: str) -> float:
+        """Weight of this boss in ``band`` (one of ``WEIGHT_BANDS``)."""
+        return self.weights[WEIGHT_BANDS.index(band)]
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,8 +75,8 @@ class EntityTags:
     dlc: bool
 
 
-def _parse_weight(eid: int, value: Any) -> float:
-    """Validate an optional ``boss.weight``: a positive, finite number of minutes."""
+def _parse_minutes(eid: int, label: str, value: Any) -> float:
+    """Validate a positive, finite number of minutes."""
     if (
         isinstance(value, bool)
         or not isinstance(value, int | float)
@@ -63,10 +84,27 @@ def _parse_weight(eid: int, value: Any) -> float:
         or value <= 0
     ):
         raise ValueError(
-            f"boss_arena_tags.json entity {eid}: boss.weight must be a positive "
+            f"boss_arena_tags.json entity {eid}: {label} must be a positive "
             f"number of minutes, got {value!r}"
         )
     return float(value)
+
+
+def _parse_weights(eid: int, value: Any) -> tuple[float, float, float]:
+    """``boss.weight``: one number (every band) or ``{early, mid, late}``."""
+    if isinstance(value, dict):
+        if set(value) != set(WEIGHT_BANDS):
+            raise ValueError(
+                f"boss_arena_tags.json entity {eid}: boss.weight bands must be "
+                f"exactly {list(WEIGHT_BANDS)}, got {sorted(value)}"
+            )
+        early, mid, late = (
+            _parse_minutes(eid, f"boss.weight.{band}", value[band])
+            for band in WEIGHT_BANDS
+        )
+        return (early, mid, late)
+    weight = _parse_minutes(eid, "boss.weight", value)
+    return (weight, weight, weight)
 
 
 def load_tags(path: Path) -> dict[int, EntityTags]:
@@ -76,7 +114,7 @@ def load_tags(path: Path) -> dict[int, EntityTags]:
         eid = int(key)
         boss_block = dict(entry["boss"])
         if "weight" in boss_block:
-            boss_block["weight"] = _parse_weight(eid, boss_block["weight"])
+            boss_block["weights"] = _parse_weights(eid, boss_block.pop("weight"))
         out[eid] = EntityTags(
             entity_id=eid,
             name=entry["name"],
@@ -199,7 +237,7 @@ def _layers_within_spread(
     for group in groups:
         if len(group) < 2:
             continue
-        weights = [bosses[assignment[arena_id]].weight for arena_id in group]
+        weights = [bosses[assignment[arena_id]].weight_at("mid") for arena_id in group]
         if max(weights) - min(weights) > spread + _SPREAD_EPSILON:
             return False
     return True

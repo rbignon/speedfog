@@ -54,6 +54,7 @@ def _entity(
     has_arena: bool = True,
     dlc: bool = False,
     weight: float = 1.0,
+    weights: tuple[float, float, float] | None = None,
 ) -> EntityTags:
     arena = (
         ArenaTags(
@@ -84,7 +85,7 @@ def _entity(
             can_escape=False,
             night_boss=False,
             exclude_from_pool=exclude_from_pool,
-            weight=weight,
+            weights=weights if weights is not None else (weight, weight, weight),
         ),
         arena=arena,
     )
@@ -1189,7 +1190,7 @@ def test_generate_item_config_balances_parallel_minor_arenas():
         placed = {int(a): int(b) for a, b in result["enemy_assignments"].items()}
         for layer in (1, 2, 3):
             arenas = [int(cid[1:]) for cid, lyr in boss_layers.items() if lyr == layer]
-            weights = [tags[placed[a]].boss.weight for a in arenas]
+            weights = [tags[placed[a]].boss.weight_at("mid") for a in arenas]
             assert (
                 max(weights) - min(weights) <= 1.5 + 1e-9
             ), f"seed {seed} layer {layer}: {weights}"
@@ -1249,7 +1250,8 @@ def test_generate_item_config_groups_phase1_slot_with_leader():
             boss_layers={"fg": 4},
         )
         placed = [
-            tags[int(b)].boss.weight for b in result["enemy_assignments"].values()
+            tags[int(b)].boss.weight_at("mid")
+            for b in result["enemy_assignments"].values()
         ]
         assert len(placed) == 2
         assert placed[0] == placed[1], f"seed {seed}: {placed}"
@@ -1334,7 +1336,7 @@ def test_generate_item_config_spreads_are_per_job():
             boss_layers=boss_layers,
         )
         placed = {
-            int(a): tags[int(b)].boss.weight
+            int(a): tags[int(b)].boss.weight_at("mid")
             for a, b in result["enemy_assignments"].items()
         }
         assert abs(placed[1101] - placed[1102]) <= 1.0 + 1e-9, f"seed {seed}"

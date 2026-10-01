@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from speedfog.boss_arena_constraints import (
+    WEIGHT_BANDS,
     ArenaTags,
     BossTags,
     EntityTags,
@@ -20,6 +21,7 @@ from speedfog.boss_arena_constraints import (
     match_arenas_balanced,
     match_arenas_to_bosses,
     resolve_boss_allowlist,
+    weight_band,
 )
 
 
@@ -136,25 +138,48 @@ def _write_single_boss(tmp_path: Path, **boss_overrides) -> Path:
 
 def test_boss_weight_defaults_to_one_when_absent(sample_tags: Path) -> None:
     tags = load_tags(sample_tags)
-    assert all(entry.boss.weight == 1.0 for entry in tags.values())
+    assert all(entry.boss.weights == (1.0, 1.0, 1.0) for entry in tags.values())
 
 
-def test_boss_weight_is_read(tmp_path: Path) -> None:
-    tags = load_tags(_write_single_boss(tmp_path, weight=2.5))
-    assert tags[5000].boss.weight == 2.5
-
-
-def test_boss_weight_integer_is_coerced_to_float(tmp_path: Path) -> None:
+def test_boss_weight_number_applies_to_every_band(tmp_path: Path) -> None:
     tags = load_tags(_write_single_boss(tmp_path, weight=3))
-    weight = tags[5000].boss.weight
-    assert weight == 3.0
-    assert isinstance(weight, float)
+    weights = tags[5000].boss.weights
+    assert weights == (3.0, 3.0, 3.0)
+    assert all(isinstance(w, float) for w in weights)
+
+
+def test_boss_weight_bands_are_read(tmp_path: Path) -> None:
+    weight = {"early": 0.3, "mid": 0.2, "late": 1.7}
+    boss = load_tags(_write_single_boss(tmp_path, weight=weight))[5000].boss
+    assert boss.weights == (0.3, 0.2, 1.7)
+    assert boss.weight_at("late") == 1.7
 
 
 @pytest.mark.parametrize("bad", [0, -1.5, True, "2", float("nan"), float("inf")])
 def test_boss_weight_rejects_invalid_values(tmp_path: Path, bad) -> None:
     with pytest.raises(ValueError, match=r"5000.*boss\.weight"):
         load_tags(_write_single_boss(tmp_path, weight=bad))
+
+
+def test_boss_weight_bands_must_be_complete(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match=r"5000.*boss\.weight"):
+        load_tags(_write_single_boss(tmp_path, weight={"early": 1.0, "mid": 1.0}))
+
+
+def test_boss_weight_band_values_are_validated(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match=r"5000.*boss\.weight\.mid"):
+        load_tags(
+            _write_single_boss(tmp_path, weight={"early": 1.0, "mid": 0, "late": 1.0})
+        )
+
+
+@pytest.mark.parametrize(
+    ("tier", "band"),
+    [(1, "early"), (8, "early"), (9, "mid"), (14, "mid"), (15, "late"), (34, "late")],
+)
+def test_weight_band_boundaries(tier: int, band: str) -> None:
+    assert weight_band(tier) == band
+    assert band in WEIGHT_BANDS
 
 
 def test_dragon_in_dragon_forbidden_arena_is_incompatible(sample_tags: Path) -> None:
@@ -220,6 +245,7 @@ def _entity(
     source_only: bool = False,
     exclude_from_pool: bool = False,
     weight: float = 1.0,
+    weights: tuple[float, float, float] | None = None,
 ) -> EntityTags:
     arena = (
         None
@@ -246,7 +272,7 @@ def _entity(
             can_escape=False,
             night_boss=False,
             exclude_from_pool=exclude_from_pool,
-            weight=weight,
+            weights=weights if weights is not None else (weight, weight, weight),
         ),
         arena=arena,
         pool="minor" if source_only else None,
@@ -474,7 +500,7 @@ def test_balanced_keeps_each_layer_within_spread() -> None:
         )
         assert len(set(result.values())) == len(arenas), f"seed {seed}"
         for group in groups:
-            weights = [bosses[result[a]].weight for a in group]
+            weights = [bosses[result[a]].weight_at("mid") for a in group]
             assert max(weights) - min(weights) <= 2.0 + 1e-9, f"seed {seed}"
 
 

@@ -54,14 +54,17 @@ Describes what the entity **is**, for compat-filtering when it is a source.
 | `can_escape` | bool | yes | Boss has scripted flee/despawn behavior. |
 | `night_boss` | bool | no | Boss is a night-only encounter. Loaded but not consulted. |
 | `exclude_from_pool` | bool | yes (source filter) | When `true`, this entity is never chosen as a source by the matcher. Its own arena can still receive another boss. |
-| `weight` | float, optional (default `1.0`) | no (layer balance) | Expected time to beat the boss in minutes, retries included, same unit as zone weights. Absent means "not annotated". |
+| `weight` | number or `{early, mid, late}`, optional (default `1.0`) | no (layer balance) | Expected time to beat the boss in minutes, retries included, per scaling band (tier <= 8, 9-14, >= 15), each band brought to a mid-run tier's scale. A number applies to every band. Absent means "not annotated". |
 
 `weight` is indicative and meaningful in comparison rather than in absolute
 terms, like zone weights: the same boss dies faster at low scaling than at
 high scaling. Values come from median clear times in the run history,
 normalized for the scaling tier the fights were played at, so that weights
-compare bosses rather than tiers. `load_tags` rejects a non-numeric,
-non-finite or non-positive value and names the entity.
+compare bosses rather than tiers. Bosses react differently to scaling
+(Soldier of Godrick stays at about 0.2 minutes at any tier while Commander
+O'Neil goes from about 1 to 1.7), hence the bands. `load_tags` rejects a
+non-numeric, non-finite or non-positive value, or an object without exactly
+the three band keys, and names the entity.
 
 ### `arena` block
 
