@@ -1298,7 +1298,8 @@ def test_generate_item_config_judges_a_layer_at_its_tier():
             2009: _entity(2009, weights=(3.0, 1.0, 1.0)),
         }
     )
-    for seed in range(60):
+    early_pairs, late_pairs = set(), set()
+    for seed in range(150):
         result = generate_item_config(
             config,
             seed=seed,
@@ -1311,8 +1312,13 @@ def test_generate_item_config_judges_a_layer_at_its_tier():
             boss_tiers=boss_tiers,
         )
         placed = {int(a): int(b) for a, b in result["enemy_assignments"].items()}
-        assert {placed[1003], placed[1004]} != {2001, 2002}, f"seed {seed}"
-        assert {placed[1001], placed[1002]} != {2001, 2009}, f"seed {seed}"
+        early_pairs.add(frozenset({placed[1001], placed[1002]}))
+        late_pairs.add(frozenset({placed[1003], placed[1004]}))
+    assert frozenset({2001, 2009}) not in early_pairs
+    assert frozenset({2001, 2002}) not in late_pairs
+    # The pair a band forbids stays allowed in the other band.
+    assert frozenset({2001, 2002}) in early_pairs
+    assert frozenset({2001, 2009}) in late_pairs
 
 
 def test_generate_item_config_raises_when_boss_cluster_missing_from_layers():

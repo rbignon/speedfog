@@ -567,7 +567,8 @@ def test_balanced_uses_each_group_band() -> None:
             **{eid: _entity(eid) for eid in range(13, 20)},
         }
     )
-    for seed in range(40):
+    early_pairs, late_pairs = set(), set()
+    for seed in range(200):
         result = match_arenas_balanced(
             arenas=_arenas_of(tags, [1, 2, 3, 4]),
             bosses=_bosses_of(tags, list(range(10, 20))),
@@ -576,8 +577,13 @@ def test_balanced_uses_each_group_band() -> None:
             check_size=False,
             fraction=0.1,
         )
-        assert {result[1], result[2]} != {10, 12}, f"seed {seed}"
-        assert {result[3], result[4]} != {10, 11}, f"seed {seed}"
+        early_pairs.add(frozenset({result[1], result[2]}))
+        late_pairs.add(frozenset({result[3], result[4]}))
+    assert frozenset({10, 12}) not in early_pairs
+    assert frozenset({10, 11}) not in late_pairs
+    # Each heavy boss stays allowed with the light one in the other band.
+    assert frozenset({10, 11}) in early_pairs
+    assert frozenset({10, 12}) in late_pairs
 
 
 def test_balanced_equals_plain_matching_when_fraction_is_zero() -> None:
