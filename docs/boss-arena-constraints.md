@@ -61,8 +61,8 @@ terms, like zone weights: the same boss dies faster at low scaling than at
 high scaling. Values come from median clear times in the run history,
 normalized for the scaling tier the fights were played at, so that weights
 compare bosses rather than tiers. Bosses react differently to scaling
-(Soldier of Godrick stays at about 0.2 minutes at any tier while Commander
-O'Neil goes from about 1 to 1.7), hence the bands. `load_tags` rejects a
+(Soldier of Godrick stays at 0.2-0.3 minutes at any tier while Commander
+O'Neil goes from about 1.1 to 1.6), hence the bands. `load_tags` rejects a
 non-numeric, non-finite or non-positive value, or an object without exactly
 the three band keys, and names the entity.
 
@@ -260,12 +260,12 @@ seed whose plain matching already satisfies the rule keeps its assignments.
 
 Measured with the 2026-10-01 band weights (150 `standard.toml` DAGs per
 mode, one unseeded sample, rule off and on run on the same DAGs): the
-extremes are 15-17 minors and 5-7 majors per side and band; no DAG reroll,
-at most 11 draws per job; in "all" mode 3.0% of major and 6.2% of minor
-placements move, Placidusax 55 -> 39 appearances is the most affected
-major, no boss loses more than 50%; in "minor" mode 6.3% of minor
+extremes are 15-16 minors and 5-7 majors per side and band; no DAG reroll,
+at most 10 draws per job; in "all" mode 2.5% of major and 6.3% of minor
+placements move, Fire Giant 2 90 -> 71 appearances is the most affected
+major, no boss loses more than 50%; in "minor" mode 6.0% of minor
 placements move. Soldier of Godrick vs Commander O'Neil is allowed early
-(O'Neil 1.09 is below the early heavy cut of 1.13) and blocked mid and
+(O'Neil 1.13 is just below the early heavy cut of 1.15) and blocked mid and
 late; Malenia vs Leonine Misbegotten is blocked in every band.
 
 Limitation: balance is per slot, so a two-slot node (Fire Giant) next to a
@@ -285,9 +285,11 @@ as minutes at a mid-run tier and only the boss's own sensitivity to scaling
 varies across bands. Bosses are attributed exactly from
 `enemy_assignments`, else from a unique `randomized_bosses` name; ambiguous
 names (e.g. "Tree Sentinel", shared with the duo) and multi-slot nodes are
-dropped. The boss's overall effect is shrunk toward the pool median, each
-band toward that overall; a band with fewer than 20 clears takes the boss's
-overall value, and a boss with fewer than 20 clears takes each band's pool
+dropped. The boss's overall effect is shrunk toward the pool median
+(k = sigma^2 / tau^2, about 0.7-0.9), each band toward that overall with its
+own k_band = sigma^2 / tau_band^2 (about 35 for minors and 11 for majors:
+band deviations vary far less across bosses than bosses do); a band with
+fewer than 20 clears takes the boss's overall value, and a boss with fewer than 20 clears takes each band's pool
 median (Ghostflame Dragon Gravesite, Godfrey First Elden Lord, Divine Beast
 Dancing Lion: their names are shared with other entities, so only
 `enemy_assignments` seeds count). Weights are rounded to 0.01 minute: the

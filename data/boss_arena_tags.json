@@ -11,8 +11,8 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.51,
-        "mid": 1.35,
+        "early": 1.49,
+        "mid": 1.36,
         "late": 1.38
       }
     },
@@ -43,7 +43,7 @@
       "weight": {
         "early": 1.19,
         "mid": 1.15,
-        "late": 1.27
+        "late": 1.26
       }
     },
     "arena": {
@@ -73,7 +73,7 @@
       "weight": {
         "early": 0.54,
         "mid": 0.56,
-        "late": 0.53
+        "late": 0.54
       }
     },
     "arena": {
@@ -120,7 +120,7 @@
       "weight": {
         "early": 0.58,
         "mid": 0.57,
-        "late": 0.6
+        "late": 0.59
       }
     },
     "pool": "minor",
@@ -142,7 +142,7 @@
       "weight": {
         "early": 1.38,
         "mid": 1.4,
-        "late": 1.37
+        "late": 1.38
       }
     },
     "arena": {
@@ -170,8 +170,8 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.3,
-        "mid": 1.3,
+        "early": 1.31,
+        "mid": 1.31,
         "late": 1.32
       }
     },
@@ -200,9 +200,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.65,
+        "early": 1.66,
         "mid": 1.68,
-        "late": 1.89
+        "late": 1.85
       }
     },
     "arena": {
@@ -230,9 +230,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.53,
+        "early": 1.54,
         "mid": 1.61,
-        "late": 1.55
+        "late": 1.57
       }
     },
     "arena": {
@@ -260,9 +260,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.05,
-        "mid": 1.65,
-        "late": 2.45
+        "early": 1.1,
+        "mid": 1.63,
+        "late": 2.13
       }
     },
     "arena": {
@@ -290,9 +290,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.83,
-        "mid": 0.97,
-        "late": 0.97
+        "early": 0.84,
+        "mid": 0.96,
+        "late": 0.96
       }
     },
     "pool": "minor",
@@ -312,7 +312,7 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.57,
+        "early": 1.55,
         "mid": 1.4,
         "late": 1.45
       }
@@ -343,7 +343,7 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 0.69,
-        "mid": 0.67,
+        "mid": 0.68,
         "late": 0.69
       }
     },
@@ -372,9 +372,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 2.16,
-        "mid": 2.6,
-        "late": 2.44
+        "early": 2.22,
+        "mid": 2.58,
+        "late": 2.45
       }
     },
     "arena": {
@@ -432,9 +432,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.14,
-        "mid": 1.12,
-        "late": 0.88
+        "early": 1.13,
+        "mid": 1.11,
+        "late": 0.93
       }
     },
     "arena": {
@@ -517,8 +517,8 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 2.04,
-        "mid": 2.57,
+        "early": 2.09,
+        "mid": 2.53,
         "late": 2.3
       }
     },
@@ -547,7 +547,7 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.88,
+        "early": 1.86,
         "mid": 1.77,
         "late": 1.76
       }
@@ -577,9 +577,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.69,
-        "mid": 2.12,
-        "late": 2.04
+        "early": 1.73,
+        "mid": 2.1,
+        "late": 2.02
       }
     },
     "arena": {
@@ -608,8 +608,8 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 0.83,
-        "mid": 0.79,
-        "late": 0.83
+        "mid": 0.8,
+        "late": 0.82
       }
     },
     "arena": {
@@ -638,7 +638,7 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 1.34,
-        "mid": 1.17,
+        "mid": 1.19,
         "late": 1.3
       }
     },
@@ -667,9 +667,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.68,
-        "mid": 0.68,
-        "late": 0.91
+        "early": 0.69,
+        "mid": 0.7,
+        "late": 0.82
       }
     },
     "pool": "minor",
@@ -689,9 +689,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.53,
-        "mid": 1.62,
-        "late": 1.53
+        "early": 1.54,
+        "mid": 1.61,
+        "late": 1.54
       }
     },
     "arena": {
@@ -720,8 +720,8 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 1.25,
-        "mid": 1.17,
-        "late": 1.27
+        "mid": 1.18,
+        "late": 1.26
       }
     },
     "arena": {
@@ -750,7 +750,7 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 4.1,
-        "mid": 4.23,
+        "mid": 4.19,
         "late": 4.1
       }
     },
@@ -779,8 +779,8 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 2.15,
-        "mid": 2.35,
+        "early": 2.16,
+        "mid": 2.33,
         "late": 2.24
       }
     },
@@ -809,9 +809,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.56,
-        "mid": 0.56,
-        "late": 0.66
+        "early": 0.57,
+        "mid": 0.57,
+        "late": 0.65
       }
     },
     "pool": "minor",
@@ -831,9 +831,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.38,
-        "mid": 1.65,
-        "late": 1.57
+        "early": 1.4,
+        "mid": 1.62,
+        "late": 1.55
       }
     },
     "arena": {
@@ -861,8 +861,8 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.34,
-        "mid": 1.52,
+        "early": 1.36,
+        "mid": 1.51,
         "late": 1.44
       }
     },
@@ -891,7 +891,7 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.08,
+        "early": 1.07,
         "mid": 1.02,
         "late": 1.05
       }
@@ -921,9 +921,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 3.6,
-        "mid": 4.61,
-        "late": 4.74
+        "early": 3.63,
+        "mid": 4.5,
+        "late": 4.59
       }
     },
     "arena": {
@@ -951,7 +951,7 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.24,
+        "early": 1.26,
         "mid": 1.32,
         "late": 1.35
       }
@@ -981,9 +981,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 2.04,
-        "mid": 1.65,
-        "late": 1.51
+        "early": 2.01,
+        "mid": 1.68,
+        "late": 1.56
       }
     },
     "arena": {
@@ -1011,9 +1011,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.71,
-        "mid": 1.5,
-        "late": 1.5
+        "early": 1.69,
+        "mid": 1.51,
+        "late": 1.52
       }
     },
     "arena": {
@@ -1043,7 +1043,7 @@
       "weight": {
         "early": 1.27,
         "mid": 1.26,
-        "late": 1.34
+        "late": 1.32
       }
     },
     "arena": {
@@ -1071,8 +1071,8 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.13,
-        "mid": 1.38,
+        "early": 1.15,
+        "mid": 1.36,
         "late": 1.26
       }
     },
@@ -1126,7 +1126,7 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.29,
+        "early": 0.28,
         "mid": 0.24,
         "late": 0.2
       }
@@ -1156,9 +1156,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 2.35,
-        "mid": 2.68,
-        "late": 1.49
+        "early": 2.34,
+        "mid": 2.61,
+        "late": 1.66
       }
     },
     "arena": {
@@ -1216,9 +1216,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.53,
+        "early": 1.54,
         "mid": 1.61,
-        "late": 1.55
+        "late": 1.57
       }
     },
     "arena": {
@@ -1246,8 +1246,8 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.44,
-        "mid": 0.4,
+        "early": 0.43,
+        "mid": 0.41,
         "late": 0.44
       }
     },
@@ -1276,9 +1276,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.47,
+        "early": 0.48,
         "mid": 0.48,
-        "late": 0.52
+        "late": 0.51
       }
     },
     "pool": "minor",
@@ -1298,8 +1298,8 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.57,
-        "mid": 0.65,
+        "early": 0.58,
+        "mid": 0.64,
         "late": 0.59
       }
     },
@@ -1320,9 +1320,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.78,
-        "mid": 0.99,
-        "late": 1.07
+        "early": 0.81,
+        "mid": 0.98,
+        "late": 1.03
       }
     },
     "arena": {
@@ -1351,7 +1351,7 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 0.47,
-        "mid": 0.45,
+        "mid": 0.46,
         "late": 0.46
       }
     },
@@ -1380,7 +1380,7 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.51,
+        "early": 0.52,
         "mid": 0.57,
         "late": 0.56
       }
@@ -1410,9 +1410,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 2.71,
-        "mid": 2.54,
-        "late": 4.39
+        "early": 2.72,
+        "mid": 2.58,
+        "late": 3.83
       }
     },
     "arena": {
@@ -1442,7 +1442,7 @@
       "weight": {
         "early": 1.47,
         "mid": 1.42,
-        "late": 1.42
+        "late": 1.43
       }
     },
     "arena": {
@@ -1522,9 +1522,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.4,
-        "mid": 0.33,
-        "late": 0.32
+        "early": 0.39,
+        "mid": 0.34,
+        "late": 0.33
       }
     },
     "pool": "minor",
@@ -1546,7 +1546,7 @@
       "weight": {
         "early": 1.53,
         "mid": 1.53,
-        "late": 1.59
+        "late": 1.58
       }
     },
     "arena": {
@@ -1576,7 +1576,7 @@
       "weight": {
         "early": 1.23,
         "mid": 1.24,
-        "late": 1.27
+        "late": 1.26
       }
     },
     "arena": {
@@ -1604,9 +1604,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.92,
+        "early": 1.91,
         "mid": 1.82,
-        "late": 1.94
+        "late": 1.92
       }
     },
     "arena": {
@@ -1635,8 +1635,8 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 1.59,
-        "mid": 1.44,
-        "late": 1.74
+        "mid": 1.45,
+        "late": 1.68
       }
     },
     "arena": {
@@ -1664,9 +1664,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.62,
-        "mid": 1.8,
-        "late": 1.9
+        "early": 1.64,
+        "mid": 1.79,
+        "late": 1.87
       }
     },
     "arena": {
@@ -1719,9 +1719,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.17,
+        "early": 1.16,
         "mid": 1.11,
-        "late": 1.06
+        "late": 1.08
       }
     },
     "arena": {
@@ -1775,7 +1775,7 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 0.51,
-        "mid": 0.47,
+        "mid": 0.48,
         "late": 0.48
       }
     },
@@ -1805,7 +1805,7 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 0.52,
-        "mid": 0.53,
+        "mid": 0.52,
         "late": 0.51
       }
     },
@@ -1836,7 +1836,7 @@
       "weight": {
         "early": 0.46,
         "mid": 0.45,
-        "late": 0.56
+        "late": 0.54
       }
     },
     "arena": {
@@ -1864,9 +1864,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.63,
-        "mid": 0.63,
-        "late": 0.73
+        "early": 0.64,
+        "mid": 0.64,
+        "late": 0.69
       }
     },
     "arena": {
@@ -1896,7 +1896,7 @@
       "weight": {
         "early": 0.59,
         "mid": 0.59,
-        "late": 0.67
+        "late": 0.65
       }
     },
     "arena": {
@@ -1926,7 +1926,7 @@
       "weight": {
         "early": 0.64,
         "mid": 0.61,
-        "late": 0.58
+        "late": 0.59
       }
     },
     "arena": {
@@ -1954,9 +1954,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.7,
+        "early": 0.69,
         "mid": 0.65,
-        "late": 0.64
+        "late": 0.65
       }
     },
     "arena": {
@@ -2039,9 +2039,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.51,
+        "early": 0.5,
         "mid": 0.46,
-        "late": 0.41
+        "late": 0.44
       }
     },
     "arena": {
@@ -2069,9 +2069,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.81,
+        "early": 0.82,
         "mid": 0.88,
-        "late": 1.02
+        "late": 1.0
       }
     },
     "arena": {
@@ -2099,9 +2099,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.58,
-        "mid": 0.63,
-        "late": 0.63
+        "early": 0.59,
+        "mid": 0.62,
+        "late": 0.62
       }
     },
     "arena": {
@@ -2160,8 +2160,8 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 0.52,
-        "mid": 0.56,
-        "late": 0.51
+        "mid": 0.55,
+        "late": 0.52
       }
     },
     "arena": {
@@ -2219,9 +2219,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.73,
-        "mid": 0.69,
-        "late": 0.69
+        "early": 0.72,
+        "mid": 0.7,
+        "late": 0.7
       }
     },
     "arena": {
@@ -2249,8 +2249,8 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.86,
-        "mid": 0.98,
+        "early": 0.89,
+        "mid": 0.96,
         "late": 0.94
       }
     },
@@ -2309,9 +2309,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.81,
+        "early": 0.79,
         "mid": 0.7,
-        "late": 0.59
+        "late": 0.6
       }
     },
     "arena": {
@@ -2339,9 +2339,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.77,
+        "early": 0.78,
         "mid": 0.77,
-        "late": 0.84
+        "late": 0.83
       }
     },
     "arena": {
@@ -2489,7 +2489,7 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.95,
+        "early": 0.93,
         "mid": 0.77,
         "late": 0.79
       }
@@ -2580,8 +2580,8 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 0.72,
-        "mid": 0.82,
-        "late": 0.71
+        "mid": 0.81,
+        "late": 0.72
       }
     },
     "arena": {
@@ -2611,7 +2611,7 @@
       "weight": {
         "early": 1.74,
         "mid": 1.73,
-        "late": 1.68
+        "late": 1.69
       }
     },
     "arena": {
@@ -2639,9 +2639,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.62,
-        "mid": 0.7,
-        "late": 0.69
+        "early": 0.63,
+        "mid": 0.69,
+        "late": 0.68
       }
     },
     "arena": {
@@ -2669,8 +2669,8 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.8,
-        "mid": 0.95,
+        "early": 0.81,
+        "mid": 0.94,
         "late": 0.95
       }
     },
@@ -2796,9 +2796,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.51,
+        "early": 0.52,
         "mid": 0.57,
-        "late": 0.7
+        "late": 0.68
       }
     },
     "arena": {
@@ -2826,9 +2826,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.87,
-        "mid": 0.8,
-        "late": 0.81
+        "early": 0.86,
+        "mid": 0.81,
+        "late": 0.82
       }
     },
     "arena": {
@@ -2856,9 +2856,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.48,
+        "early": 0.47,
         "mid": 0.46,
-        "late": 0.45
+        "late": 0.46
       }
     },
     "arena": {
@@ -2886,9 +2886,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 2.1,
-        "mid": 2.15,
-        "late": 2.46
+        "early": 2.12,
+        "mid": 2.16,
+        "late": 2.37
       }
     },
     "arena": {
@@ -2946,9 +2946,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.51,
-        "mid": 0.44,
-        "late": 0.4
+        "early": 0.49,
+        "mid": 0.45,
+        "late": 0.42
       }
     },
     "arena": {
@@ -2976,8 +2976,8 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.54,
-        "mid": 0.45,
+        "early": 0.53,
+        "mid": 0.46,
         "late": 0.43
       }
     },
@@ -3008,7 +3008,7 @@
       "weight": {
         "early": 0.45,
         "mid": 0.44,
-        "late": 0.42
+        "late": 0.43
       }
     },
     "arena": {
@@ -3038,7 +3038,7 @@
       "weight": {
         "early": 0.85,
         "mid": 0.8,
-        "late": 0.79
+        "late": 0.8
       }
     },
     "arena": {
@@ -3066,9 +3066,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.82,
-        "mid": 0.84,
-        "late": 1.08
+        "early": 0.85,
+        "mid": 0.86,
+        "late": 0.97
       }
     },
     "arena": {
@@ -3127,7 +3127,7 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 1.25,
-        "mid": 1.32,
+        "mid": 1.31,
         "late": 1.27
       }
     },
@@ -3156,8 +3156,8 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.63,
-        "mid": 0.58,
+        "early": 0.62,
+        "mid": 0.59,
         "late": 0.6
       }
     },
@@ -3246,8 +3246,8 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.51,
-        "mid": 1.67,
+        "early": 1.52,
+        "mid": 1.66,
         "late": 1.6
       }
     },
@@ -3276,9 +3276,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.58,
+        "early": 0.6,
         "mid": 0.7,
-        "late": 0.81
+        "late": 0.79
       }
     },
     "arena": {
@@ -3306,9 +3306,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.36,
+        "early": 1.35,
         "mid": 1.29,
-        "late": 1.16
+        "late": 1.2
       }
     },
     "arena": {
@@ -3336,8 +3336,8 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.11,
-        "mid": 1.22,
+        "early": 1.12,
+        "mid": 1.21,
         "late": 1.21
       }
     },
@@ -3368,7 +3368,7 @@
       "weight": {
         "early": 1.09,
         "mid": 1.11,
-        "late": 1.3
+        "late": 1.27
       }
     },
     "arena": {
@@ -3396,9 +3396,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.83,
+        "early": 0.84,
         "mid": 0.9,
-        "late": 1.04
+        "late": 1.01
       }
     },
     "arena": {
@@ -3426,7 +3426,7 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.54,
+        "early": 0.53,
         "mid": 0.52,
         "late": 0.5
       }
@@ -3555,9 +3555,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.59,
+        "early": 0.6,
         "mid": 0.63,
-        "late": 0.7
+        "late": 0.69
       }
     },
     "arena": {
@@ -3585,9 +3585,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.25,
-        "mid": 1.44,
-        "late": 1.51
+        "early": 1.27,
+        "mid": 1.43,
+        "late": 1.5
       }
     },
     "arena": {
@@ -3616,7 +3616,7 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 0.68,
-        "mid": 0.64,
+        "mid": 0.65,
         "late": 0.67
       }
     },
@@ -3647,7 +3647,7 @@
       "weight": {
         "early": 0.56,
         "mid": 0.53,
-        "late": 0.54
+        "late": 0.55
       }
     },
     "arena": {
@@ -3675,7 +3675,7 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.11,
+        "early": 1.1,
         "mid": 1.05,
         "late": 1.07
       }
@@ -3705,8 +3705,8 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.85,
-        "mid": 0.89,
+        "early": 0.86,
+        "mid": 0.88,
         "late": 0.9
       }
     },
@@ -3736,7 +3736,7 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 0.64,
-        "mid": 0.66,
+        "mid": 0.65,
         "late": 0.66
       }
     },
@@ -3795,9 +3795,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.14,
-        "mid": 1.29,
-        "late": 1.36
+        "early": 1.15,
+        "mid": 1.28,
+        "late": 1.34
       }
     },
     "arena": {
@@ -3825,9 +3825,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.03,
-        "mid": 0.92,
-        "late": 0.91
+        "early": 1.01,
+        "mid": 0.94,
+        "late": 0.94
       }
     },
     "arena": {
@@ -3927,8 +3927,8 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.5,
-        "mid": 0.6,
+        "early": 0.51,
+        "mid": 0.55,
         "late": 0.51
       }
     },
@@ -3958,8 +3958,8 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 1.89,
-        "mid": 1.77,
-        "late": 2.01
+        "mid": 1.79,
+        "late": 1.98
       }
     },
     "arena": {
@@ -4044,7 +4044,7 @@
       "weight": {
         "early": 0.61,
         "mid": 0.61,
-        "late": 0.7
+        "late": 0.69
       }
     },
     "arena": {
@@ -4072,9 +4072,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.85,
-        "mid": 0.96,
-        "late": 0.86
+        "early": 0.86,
+        "mid": 0.91,
+        "late": 0.87
       }
     },
     "arena": {
@@ -4132,7 +4132,7 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.75,
+        "early": 0.74,
         "mid": 0.69,
         "late": 0.73
       }
@@ -4192,9 +4192,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.71,
-        "mid": 0.61,
-        "late": 0.72
+        "early": 0.69,
+        "mid": 0.63,
+        "late": 0.69
       }
     },
     "arena": {
@@ -4272,8 +4272,8 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.05,
-        "mid": 1.13,
+        "early": 1.06,
+        "mid": 1.12,
         "late": 1.13
       }
     },
@@ -4357,9 +4357,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.66,
-        "mid": 0.78,
-        "late": 0.69
+        "early": 0.7,
+        "mid": 0.77,
+        "late": 0.7
       }
     },
     "arena": {
@@ -4389,7 +4389,7 @@
       "weight": {
         "early": 0.5,
         "mid": 0.48,
-        "late": 0.47
+        "late": 0.48
       }
     },
     "arena": {
@@ -4417,9 +4417,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.01,
+        "early": 0.99,
         "mid": 0.94,
-        "late": 1.01
+        "late": 0.99
       }
     },
     "arena": {
@@ -4448,8 +4448,8 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 0.57,
-        "mid": 0.56,
-        "late": 0.6
+        "mid": 0.57,
+        "late": 0.59
       }
     },
     "arena": {
@@ -4477,9 +4477,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.77,
-        "mid": 0.67,
-        "late": 0.74
+        "early": 0.75,
+        "mid": 0.69,
+        "late": 0.73
       }
     },
     "arena": {
@@ -4508,8 +4508,8 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 1.27,
-        "mid": 1.28,
-        "late": 1.39
+        "mid": 1.29,
+        "late": 1.36
       }
     },
     "arena": {
@@ -4537,7 +4537,7 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.59,
+        "early": 0.58,
         "mid": 0.58,
         "late": 0.59
       }
@@ -4567,8 +4567,8 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.69,
-        "mid": 0.59,
+        "early": 0.66,
+        "mid": 0.61,
         "late": 0.63
       }
     },
@@ -4597,9 +4597,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.62,
-        "mid": 0.68,
-        "late": 0.71
+        "early": 0.64,
+        "mid": 0.67,
+        "late": 0.69
       }
     },
     "arena": {
@@ -4627,9 +4627,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.05,
-        "mid": 1.1,
-        "late": 1.2
+        "early": 1.06,
+        "mid": 1.11,
+        "late": 1.18
       }
     },
     "arena": {
@@ -4683,8 +4683,8 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 0.72,
-        "mid": 0.76,
-        "late": 0.67
+        "mid": 0.74,
+        "late": 0.69
       }
     },
     "arena": {
@@ -4712,9 +4712,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.71,
-        "mid": 0.7,
-        "late": 0.77
+        "early": 0.72,
+        "mid": 0.71,
+        "late": 0.74
       }
     },
     "arena": {
@@ -4742,9 +4742,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.86,
-        "mid": 0.83,
-        "late": 0.7
+        "early": 0.84,
+        "mid": 0.82,
+        "late": 0.72
       }
     },
     "arena": {
@@ -4797,9 +4797,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.88,
+        "early": 0.86,
         "mid": 0.77,
-        "late": 0.75
+        "late": 0.76
       }
     },
     "arena": {
@@ -4852,9 +4852,9 @@
       "night_boss": true,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.79,
-        "mid": 0.85,
-        "late": 0.8
+        "early": 0.8,
+        "mid": 0.84,
+        "late": 0.81
       }
     },
     "arena": {
@@ -4994,7 +4994,7 @@
       "weight": {
         "early": 0.74,
         "mid": 0.74,
-        "late": 0.71
+        "late": 0.72
       }
     },
     "arena": {
@@ -5047,9 +5047,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.72,
+        "early": 0.74,
         "mid": 0.85,
-        "late": 0.99
+        "late": 0.96
       }
     },
     "arena": {
@@ -5077,9 +5077,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.75,
+        "early": 0.74,
         "mid": 0.71,
-        "late": 0.71
+        "late": 0.72
       }
     },
     "arena": {
@@ -5107,9 +5107,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.33,
-        "mid": 1.4,
-        "late": 1.4
+        "early": 1.34,
+        "mid": 1.39,
+        "late": 1.39
       }
     },
     "arena": {
@@ -5139,7 +5139,7 @@
       "weight": {
         "early": 0.93,
         "mid": 0.96,
-        "late": 1.04
+        "late": 1.03
       }
     },
     "arena": {
@@ -5167,9 +5167,9 @@
       "night_boss": true,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.85,
+        "early": 0.86,
         "mid": 0.87,
-        "late": 0.91
+        "late": 0.9
       }
     },
     "arena": {
@@ -5297,9 +5297,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.09,
+        "early": 1.13,
         "mid": 1.23,
-        "late": 1.66
+        "late": 1.56
       }
     },
     "arena": {
@@ -5327,9 +5327,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.76,
+        "early": 0.77,
         "mid": 0.8,
-        "late": 0.82
+        "late": 0.81
       }
     },
     "arena": {
@@ -5357,7 +5357,7 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.52,
+        "early": 0.51,
         "mid": 0.47,
         "late": 0.48
       }
@@ -5387,9 +5387,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.0,
+        "early": 1.01,
         "mid": 1.04,
-        "late": 1.11
+        "late": 1.07
       }
     },
     "arena": {
@@ -5418,8 +5418,8 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 1.34,
-        "mid": 1.49,
-        "late": 1.42
+        "mid": 1.46,
+        "late": 1.41
       }
     },
     "arena": {
@@ -5472,9 +5472,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.86,
-        "mid": 0.78,
-        "late": 0.79
+        "early": 0.84,
+        "mid": 0.79,
+        "late": 0.8
       }
     },
     "arena": {
@@ -5502,9 +5502,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.54,
-        "mid": 2.1,
-        "late": 1.91
+        "early": 1.59,
+        "mid": 2.0,
+        "late": 1.87
       }
     },
     "arena": {
@@ -5532,9 +5532,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.81,
-        "mid": 0.76,
-        "late": 0.76
+        "early": 0.8,
+        "mid": 0.77,
+        "late": 0.77
       }
     },
     "arena": {
@@ -5562,9 +5562,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.0,
-        "mid": 1.05,
-        "late": 1.61
+        "early": 1.06,
+        "mid": 1.11,
+        "late": 1.41
       }
     },
     "arena": {
@@ -5594,7 +5594,7 @@
       "weight": {
         "early": 0.67,
         "mid": 0.68,
-        "late": 0.7
+        "late": 0.69
       }
     },
     "pool": "minor",
@@ -5614,9 +5614,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 2.27,
-        "mid": 2.68,
-        "late": 2.07
+        "early": 2.28,
+        "mid": 2.58,
+        "late": 2.12
       }
     },
     "arena": {
@@ -5644,8 +5644,8 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.32,
-        "mid": 1.6,
+        "early": 1.34,
+        "mid": 1.59,
         "late": 1.47
       }
     },
@@ -5674,9 +5674,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.97,
+        "early": 0.96,
         "mid": 0.91,
-        "late": 0.86
+        "late": 0.87
       }
     },
     "arena": {
@@ -5729,9 +5729,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 2.39,
-        "mid": 2.82,
-        "late": 2.63
+        "early": 2.41,
+        "mid": 2.76,
+        "late": 2.61
       }
     },
     "arena": {
@@ -5759,7 +5759,7 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.54,
+        "early": 1.55,
         "mid": 1.63,
         "late": 1.61
       }
@@ -5790,8 +5790,8 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 0.64,
-        "mid": 0.62,
-        "late": 0.68
+        "mid": 0.63,
+        "late": 0.67
       }
     },
     "arena": {
@@ -5819,9 +5819,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.73,
+        "early": 0.74,
         "mid": 0.85,
-        "late": 0.89
+        "late": 0.88
       }
     },
     "arena": {
@@ -5849,9 +5849,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.3,
-        "mid": 1.11,
-        "late": 1.26
+        "early": 1.29,
+        "mid": 1.14,
+        "late": 1.25
       }
     },
     "arena": {
@@ -5879,9 +5879,9 @@
       "night_boss": true,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.7,
-        "mid": 0.76,
-        "late": 0.75
+        "early": 0.71,
+        "mid": 0.75,
+        "late": 0.74
       }
     },
     "arena": {
@@ -5909,8 +5909,8 @@
       "night_boss": true,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.73,
-        "mid": 0.84,
+        "early": 0.75,
+        "mid": 0.81,
         "late": 0.78
       }
     },
@@ -5939,9 +5939,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.6,
-        "mid": 1.78,
-        "late": 1.58
+        "early": 1.61,
+        "mid": 1.77,
+        "late": 1.6
       }
     },
     "arena": {
@@ -5971,7 +5971,7 @@
       "weight": {
         "early": 0.84,
         "mid": 0.85,
-        "late": 0.94
+        "late": 0.92
       }
     },
     "arena": {
@@ -6000,7 +6000,7 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 0.71,
-        "mid": 0.7,
+        "mid": 0.71,
         "late": 0.72
       }
     },
@@ -6029,9 +6029,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.69,
+        "early": 0.7,
         "mid": 0.72,
-        "late": 0.8
+        "late": 0.77
       }
     },
     "arena": {
@@ -6084,7 +6084,7 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.41,
+        "early": 0.4,
         "mid": 0.34,
         "late": 0.36
       }
@@ -6191,7 +6191,7 @@
       "weight": {
         "early": 0.73,
         "mid": 0.73,
-        "late": 0.78
+        "late": 0.76
       }
     },
     "arena": {
@@ -6219,7 +6219,7 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.5,
+        "early": 0.51,
         "mid": 0.54,
         "late": 0.53
       }
@@ -6242,7 +6242,7 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 0.71,
-        "mid": 0.75,
+        "mid": 0.74,
         "late": 0.72
       }
     },
@@ -6327,8 +6327,8 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 0.9,
-        "mid": 0.91,
-        "late": 0.88
+        "mid": 0.9,
+        "late": 0.89
       }
     },
     "arena": {
@@ -6433,9 +6433,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.85,
+        "early": 0.86,
         "mid": 0.92,
-        "late": 0.95
+        "late": 0.94
       }
     },
     "arena": {
@@ -6463,9 +6463,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.62,
+        "early": 1.63,
         "mid": 1.66,
-        "late": 1.76
+        "late": 1.75
       }
     },
     "arena": {
@@ -6495,7 +6495,7 @@
       "weight": {
         "early": 0.55,
         "mid": 0.55,
-        "late": 0.53
+        "late": 0.54
       }
     },
     "arena": {
@@ -6523,9 +6523,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 2.85,
-        "mid": 3.3,
-        "late": 2.45
+        "early": 2.87,
+        "mid": 3.26,
+        "late": 2.57
       }
     },
     "arena": {
@@ -6553,9 +6553,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.59,
-        "mid": 0.68,
-        "late": 0.7
+        "early": 0.61,
+        "mid": 0.67,
+        "late": 0.68
       }
     },
     "arena": {
@@ -6609,8 +6609,8 @@
       "exclude_from_pool": false,
       "weight": {
         "early": 0.92,
-        "mid": 0.99,
-        "late": 0.84
+        "mid": 0.94,
+        "late": 0.88
       }
     },
     "arena": {
@@ -6638,9 +6638,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.82,
-        "mid": 0.91,
-        "late": 0.97
+        "early": 0.83,
+        "mid": 0.9,
+        "late": 0.96
       }
     },
     "arena": {
@@ -6668,9 +6668,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 0.9,
-        "mid": 0.89,
-        "late": 0.84
+        "early": 0.89,
+        "mid": 0.88,
+        "late": 0.85
       }
     },
     "arena": {
@@ -6698,8 +6698,8 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 2.5,
-        "mid": 2.65,
+        "early": 2.52,
+        "mid": 2.63,
         "late": 2.57
       }
     },
@@ -6728,9 +6728,9 @@
       "night_boss": false,
       "exclude_from_pool": false,
       "weight": {
-        "early": 1.75,
-        "mid": 1.81,
-        "late": 2.17
+        "early": 1.78,
+        "mid": 1.82,
+        "late": 2.02
       }
     },
     "arena": {
