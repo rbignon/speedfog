@@ -258,6 +258,16 @@ error; exhausted attempts raise a `MatchingError` naming the rule, which
 error with a fixed seed). The first draw is exactly the plain matching, so a
 seed whose plain matching already satisfies the rule keeps its assignments.
 
+Measured with the 2026-10-01 band weights (150 `standard.toml` DAGs per
+mode, one unseeded sample, rule off and on run on the same DAGs): the
+extremes are 15-17 minors and 5-7 majors per side and band; no DAG reroll,
+at most 11 draws per job; in "all" mode 3.0% of major and 6.2% of minor
+placements move, Placidusax 55 -> 39 appearances is the most affected
+major, no boss loses more than 50%; in "minor" mode 6.3% of minor
+placements move. Soldier of Godrick vs Commander O'Neil is allowed early
+(O'Neil 1.09 is below the early heavy cut of 1.13) and blocked mid and
+late; Malenia vs Leonine Misbegotten is blocked in every band.
+
 Limitation: balance is per slot, so a two-slot node (Fire Giant) next to a
 one-slot node on the same layer still means two fights against one. That
 imbalance belongs to the zone weight.
@@ -265,22 +275,25 @@ imbalance belongs to the zone weight.
 ### Calibration
 
 `boss.weight` values come from `speedfog-racing/tools/extract_boss_weights.py`
-run on the race database (first run 2026-09-29: 58,229 minor and 7,813
-major single-slot clears; all 200 pool bosses measured, 197 on at least 20
-clears). The tool fits
-log clear time = arena + boss + tier + player + pool per job by median
-polish, so a weight is the median node time for that boss under typical
-arena, tier (the tier factor roughly doubles node time between tiers 3 and
-24), player and pool; split-half reliability was 0.99 (minors) and 0.96
-(majors) Spearman. Bosses are attributed exactly from `enemy_assignments`,
-else from a unique `randomized_bosses` name; ambiguous names (e.g.
-"Tree Sentinel", shared with the duo) and multi-slot nodes are dropped.
-Small samples are shrunk toward the pool median, and a boss with fewer
-than 20 clears gets the job's median weight (Ghostflame Dragon Gravesite,
-Godfrey First Elden Lord, Divine Beast Dancing Lion in the first run: their
-names are shared with other entities, so only `enemy_assignments` seeds
-count). Re-run it as races accumulate; `--write` only touches
-`boss.weight`.
+run on the race database (band run 2026-10-01: 65,476 minor and 7,847 major
+single-slot clears; all 200 pool bosses measured, 197 on at least 20
+clears). The tool fits log clear time = arena + boss per band + tier +
+player + pool per job by median polish. Per band, the observation-weighted
+median boss-band effect is the band's common shift (the scaling everyone
+feels); it is removed and the mid band's added back, so a band weight reads
+as minutes at a mid-run tier and only the boss's own sensitivity to scaling
+varies across bands. Bosses are attributed exactly from
+`enemy_assignments`, else from a unique `randomized_bosses` name; ambiguous
+names (e.g. "Tree Sentinel", shared with the duo) and multi-slot nodes are
+dropped. The boss's overall effect is shrunk toward the pool median, each
+band toward that overall; a band with fewer than 20 clears takes the boss's
+overall value, and a boss with fewer than 20 clears takes each band's pool
+median (Ghostflame Dragon Gravesite, Godfrey First Elden Lord, Divine Beast
+Dancing Lion: their names are shared with other entities, so only
+`enemy_assignments` seeds count). Weights are rounded to 0.01 minute: the
+extremes rule counts every boss tied at its cut, and a 0.1 grid inflated the
+minor extremes to 37 light instead of 15. Re-run the tool as races
+accumulate; `--write` only touches `boss.weight`.
 
 ## Pool composition
 
