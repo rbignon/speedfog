@@ -41,7 +41,7 @@ weight = 1.5
 weight = 3
 
 [zones.academy_courtyard]
-weight = 3
+weight = 1
 
 [zones.haligtree]
 type = "mini_dungeon"
