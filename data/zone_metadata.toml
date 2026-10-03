@@ -603,6 +603,7 @@ allowed_entries = [
 
 # Leyndell2: Hoarah Loux exit + all Gideon entrances are adjacent (throne -> sanctuary)
 [clusters.leyndell2_sanctuary_94fb]
+weight = 2
 proximity_groups = [
     ["AEG099_001_9001", # Hoarah Loux front
      "AEG099_001_9003", # Gideon front
