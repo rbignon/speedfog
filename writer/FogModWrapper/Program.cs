@@ -979,6 +979,14 @@ Example:
         // (Tarnished Pack NPC invasion at Leyndell, see docs/game-patch-migration.md).
         EventDisabler.Inject(ctx.ModDir, ctx.Tweaks.DisableEvents);
 
+        // Halloween darkness: repoint vanilla fast-loop gparam overrides to the
+        // evergaol so they stop racing the darkness loop (see
+        // docs/plugins/halloween-darkness.md).
+        if (ctx.GraphData.IsPluginEnabled("halloween") && ctx.HalloweenSettings.Darkness)
+        {
+            HalloweenDarknessInjector.RepointFastLoopOverrides(ctx.ModDir);
+        }
+
         // Remove vanilla assets that conflict with fog gates: graph.json entities
         // plus the [[remove_entities]] entries of data/game_tweaks.toml.
         var removeEntities = ctx.GraphData.RemoveEntities

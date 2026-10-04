@@ -340,7 +340,7 @@ speedfog/
 | `BossTriggerInjector` | Locks boss arena exit fog gates by setting TrapFlag before entrance warp |
 | `TorrentArenaPatcher` | Re-enables Torrent in selected boss arenas by flipping `Collision.DisableTorrent`, targets come from `data/game_tweaks.toml` |
 | `WeatherInjector` | Forces a fixed weather and optionally pins the clock hour via a looping common.emevd event (opt-in via `[plugin.weather]`) |
-| `HalloweenDarknessInjector` | Keeps the vanilla evergaol gparam override (sub ID 0) active via a looping common.emevd event (opt-in via `[plugin.halloween]` `darkness`, see `docs/plugins/halloween-darkness.md`) |
+| `HalloweenDarknessInjector` | Keeps the vanilla evergaol gparam override (sub ID 0) active via a looping common.emevd event, and repoints vanilla fast-loop overrides (Academy event 14002689) to it in the mod output (opt-in via `[plugin.halloween]` `darkness`, see `docs/plugins/halloween-darkness.md`) |
 | `WeaponUpgradeInjector` | Weapon upgrade initialization for starting weapons with ashes of war |
 | `PhantomCatalogInjector` | Bakes phantom skin catalog (cosmetic auras) into PhantomParam/SpEffectVfxParam/SpEffectParam |
 | `OpenSplitInjector` | Tags entrances with `opensplit` before `Graph.Construct` (see `docs/opensplit-overrides.md`) |

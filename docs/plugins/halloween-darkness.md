@@ -43,6 +43,13 @@ EndUnconditionally(EventEndType.Restart)
   gate warp short.
 - Common events keep running across map loads, so one event covers the
   whole run.
+- Vanilla events that re-apply their own override in a fast loop would race
+  the 2 second loop and make the image flash. `RepointFastLoopOverrides`
+  (mod-dir phase, after `EventDisabler`) rewrites the sub ID of their
+  `Activate Gparam Override` instructions to 0 in the mod output's map
+  EMEVD, keeping the transition time; a map missing from the output is
+  reported and skipped. The list (`FastLoopOverrideEvents`) holds the one
+  such loop found so far, the Academy's (see Interactions).
 
 ## Interactions
 
@@ -56,11 +63,12 @@ EndUnconditionally(EventEndType.Restart)
     evergaol look.
   - Academy (`m14_00` event 14002689, sub ID 500): a 0.1 second loop
     re-applies it while the player is inside region 14002689, until flag
-    14000801 (Rennala's TrapFlag in `data/fog.txt`). The two loops race
-    there: depending on whether an activation replaces the current
-    override, the evergaol look flashes for a moment every 2 seconds, or
-    sub ID 500 holds. If the flash shows, the targeted fix is to patch that
-    event's sub ID to 0 when darkness is on.
+    14000801 (Rennala's TrapFlag in `data/fog.txt`). Against the darkness
+    loop the image flashed in Rennala's arena (seen in game, 2026-10-04),
+    so this event is repointed to sub ID 0 (see Mechanism) and both loops
+    apply the same override. Once the flag is on, the same event runs
+    `Deactivate Gparam Override` on each Academy load: a bright window of
+    up to 2 seconds, like any other deactivation.
   - Evergaols use sub ID 0 themselves, so nothing changes there.
 - Common event 840 deactivates any override (3 second blend) and resets the
   weather to default whenever the player carries SpEffect 8998, then
@@ -99,9 +107,9 @@ first before retrying.
 
 - Done (spike, 2026-10-04, one location): the override activated from
   `common.emevd` darkens the image, and the render was approved.
+- Done (2026-10-04): entering the Specimen Storehouse and Enir-Ilim looks
+  fine (partial blend toward their look, then back to the evergaol).
 - Owed: no flicker when the override is re-applied every 2 seconds; the
   look indoors (a catacomb, a legacy dungeon); darkness back within 2
   seconds after leaving an evergaol, after a fog gate warp, and after a
-  quit-out; the Academy around Rennala's Grand Library before her defeat
-  (flash or not, see Interactions); entering the Specimen Storehouse and
-  Enir-Ilim.
+  quit-out; no flash left in Rennala's arena once her event is repointed.
