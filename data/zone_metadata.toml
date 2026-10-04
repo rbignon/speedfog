@@ -678,7 +678,7 @@ proximity_groups = [
 
 # Academy Post Redwolf (large), same spatial groups
 [clusters.academy_redwolf_b9d9]
-weight = 1
+weight = 0.5
 proximity_groups = [
     ["AEG099_001_9000",             # Rennala front
      "1037462650",                  # Sending gate to Church of Vows
