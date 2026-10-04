@@ -45,6 +45,42 @@ default_torrent_skin = "" # "", "tree-sentinel", "carian-silver", "funereal-nigh
   flag 6953) for players without the pack, so `[tarnished] enabled = true`
   alone is safe to ship; it is the sub-options that make the seed
   pack-owner-only in practice.
+- `enabled` is also exported as graph.json `tarnished_pack` (v4.10). When it
+  is `false`, the seed is pack-neutral and FogModWrapper removes the shop
+  rows only pack owners see (next section).
+
+## Pack-gated shop rows
+
+1.17 adds 11 `ShopLineupParam` rows whose `eventFlag_forRelease` is 6953,
+the flag the executable keeps ON only for pack owners: the rows are the
+same for everyone, but a shop only lists a row once its release flag is
+ON. The one every run reaches is the Twin Maiden Husks' Reverse-Bladed Sword
+(101896, 1x for 1000 runes; `RoundtableUnlockInjector` opens the Roundtable
+Hold at start); the ten others belong to overworld merchants (Hefty
+Scimitar 100568, Steel set 100666-100669, Silver Grooved Shield and set
+100709-100713).
+
+With `opt["tarnished"]` off, the Item Randomizer leaves these rows vanilla:
+their slots carry the `tarnished` tag, which `AnnotationData` turns into
+`norandom` (`RandomizerCommon/Item/AnnotationData.cs`, "tarnished" check).
+A race seed would therefore offer pack owners a strong weapon for 1000
+runes, and armor, that other players never see. When `tarnished_pack` is
+`false`, `ShopInjector.RemovePackGatedRows` (Phase 7, right after
+`ShopInjector.ApplyTo`) removes every row released by flag 6953, so a row a
+future patch adds is covered too. When it is `true`, the rows stay: the
+seed targets pack owners (with the item randomizer on, it fills those slots
+and keeps `eventFlag_forRelease` when it rewrites a shop row,
+`ItemLocEditor.SetShop`, and non-owners get its startup dialog; with it off
+the rows stay vanilla).
+
+Unlike the mechanism-named `class_loadout`/`torrent_skins`, `tarnished_pack`
+names a seed property on purpose: any later pack-neutral treatment (world
+pickups, invaders) should key off the same bool rather than a new field.
+
+Verified 2026-10-04 on generated seed 654049350 (item randomizer on): the
+FogModWrapper log lists the 11 removed rows, the `mods/fogmod` regulation
+(the one ModEngine loads, ahead of `mods/itemrando`) has no row on flag
+6953 left, and the Twin Maiden Husks rows around 101896 are intact.
 
 ## graph.json v4.7 contract
 
@@ -254,17 +290,20 @@ shuffled sequences and the resolved skin are also logged to the spoiler
 | `speedfog/tarnished.py` | Constants (`WEAPONS`, `SHIELDS`, `ARMOR_SETS`, `SKIN_FLAGS`), `tarnished_rng`, `build_class_loadout`, `build_torrent_skins` |
 | `speedfog/config.py` | `TarnishedConfig` dataclass, validation rules, the `[item_randomizer] tarnished` migration error |
 | `speedfog/main.py` | Draws the showcase and feeds `GraphExportOptions` |
-| `speedfog/graph_export.py` | Serializes `class_loadout`/`torrent_skins` into graph.json v4.7 |
+| `speedfog/graph_export.py` | Serializes `class_loadout`/`torrent_skins` (v4.7) and `tarnished_pack` (v4.10) into graph.json |
 | `speedfog/spoiler.py` | `TARNISHED SHOWCASE` spoiler section |
 | `speedfog/item_randomizer.py` | Reads `config.tarnished.enabled` for `opt["tarnished"]` |
 | `tests/test_tarnished.py` | Python tests: config validation, draws, graph export |
+| `tests/test_output.py` | `tarnished_pack` export (default and passthrough) |
 | `writer/FogModWrapper.Core/Models/GraphData.cs` | `ClassLoadoutData`, `PackItemData`, `TorrentSkinsData` |
 | `writer/FogModWrapper.Core/GraphLoader.cs` | Parses the two v4.7 fields |
 | `writer/FogModWrapper/StartingClassRows.cs` | `ResolveGroups`: per-class CharaInitParam row groups from `BaseChrSelectMenuParam` |
 | `writer/FogModWrapper/ClassLoadoutInjector.cs` | Writes weapons/shields + armor onto CharaInitParam per class group |
 | `writer/FogModWrapper/StartingItemInjector.cs` | Regalia delivery + attire-announced flag 69560 + one-shot default-skin flag |
 | `writer/FogModWrapper/ClassLoadoutTextPatcher.cs` | Class-selection equipment text (GR_LineHelp) updated to the forced gear, per language |
-| `writer/FogModWrapper/Program.cs` | Phase 7 ordering: `ClassLoadoutInjector` before `WeaponUpgradeInjector` |
+| `writer/FogModWrapper/Program.cs` | Phase 7 ordering: `ClassLoadoutInjector` before `WeaponUpgradeInjector`; `RemovePackGatedRows` unless `tarnished_pack` |
+| `writer/FogModWrapper/ShopInjector.cs` | `RemovePackGatedRows`: drops the shop rows released by flag 6953 |
+| `writer/FogModWrapper.Tests/ShopInjectorTests.cs` | Pack-gated row removal |
 | `writer/FogModWrapper.Tests/ClassLoadoutInjectorTests.cs` | Slot writes, modulo wrap, armor fields, untouched other fields |
 | `writer/FogModWrapper.Tests/StartingClassRowsTests.cs` | Group resolution from `BaseChrSelectMenuParam` |
 

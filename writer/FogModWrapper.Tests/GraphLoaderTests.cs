@@ -343,4 +343,24 @@ public class GraphLoaderTests
         """;
         Assert.Empty(GraphLoader.Parse(json).HelperModels);
     }
+
+    [Fact]
+    public void GraphData_DeserializesTarnishedPack()
+    {
+        var json = """
+        {"version": "4.10", "seed": 1, "tarnished_pack": true, "connections": [], "area_tiers": {}}
+        """;
+        Assert.True(GraphLoader.Parse(json).TarnishedPack);
+    }
+
+    [Fact]
+    public void GraphData_TarnishedPackDefaultsFalse()
+    {
+        // Older graph.json: the seed is pack-neutral, so pack-gated shop rows
+        // must go (ShopInjector.RemovePackGatedRows).
+        var json = """
+        {"version": "4.9", "seed": 1, "connections": [], "area_tiers": {}}
+        """;
+        Assert.False(GraphLoader.Parse(json).TarnishedPack);
+    }
 }

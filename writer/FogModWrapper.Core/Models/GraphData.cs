@@ -135,6 +135,14 @@ public class GraphData
     public TorrentSkinsData? TorrentSkins { get; set; }
 
     /// <summary>
+    /// Whether the seed targets Tarnished Pack owners (<c>[tarnished] enabled</c>,
+    /// graph.json v4.10). False (also when absent) means pack-neutral: the
+    /// shop rows only pack owners see are removed (ShopInjector.RemovePackGatedRows).
+    /// </summary>
+    [JsonPropertyName("tarnished_pack")]
+    public bool TarnishedPack { get; set; }
+
+    /// <summary>
     /// Vanilla warp entities to remove from MSBs.
     /// These are one-way teleporters (coffins, DLC warps) that FogMod marks for removal
     /// but can't actually delete due to a name mismatch in its removal logic.

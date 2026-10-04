@@ -805,6 +805,10 @@ Example:
         }
 
         ShopInjector.ApplyTo(reg, ctx.GraphData.SentryTorchShop);
+        if (!ctx.GraphData.TarnishedPack)
+            ShopInjector.RemovePackGatedRows(reg);
+        else
+            Console.WriteLine("Tarnished Pack seed: keeping pack-gated shop rows");
         ctx.LoadoutSwaps = ClassLoadoutInjector.ApplyTo(reg, ctx.GraphData.ClassLoadout);
         WeaponUpgradeInjector.ApplyTo(reg, ctx.GraphData.WeaponUpgrade);
         StartingRuneInjector.ApplyTo(reg, ctx.GraphData.StartingRunes);

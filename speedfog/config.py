@@ -554,8 +554,9 @@ class TarnishedConfig:
 
     ``enabled`` feeds the randomizer's ``tarnished`` option: pack items and
     invaders enter the pools and non-owners get the v0.12 startup error
-    dialog. The sub-options shape the showcase itself; they all require
-    ``enabled``.
+    dialog. It is also exported as graph.json ``tarnished_pack``: when false,
+    FogModWrapper removes the shop rows only pack owners see. The sub-options
+    shape the showcase itself; they all require ``enabled``.
     """
 
     enabled: bool = False

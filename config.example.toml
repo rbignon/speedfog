@@ -340,7 +340,10 @@ item_preset = true
 # players without the pack get an in-game error dialog at startup. NOT
 # seed-neutral: the whole item layout diverges between on and off for the
 # same seed, so never mix packages of one seed generated with different
-# values. All sub-options below require this to be true. (default: false)
+# values. false also removes the shop rows only pack owners see
+# (Reverse-Bladed Sword at the Twin Maiden Husks, merchant gear), with or
+# without the item randomizer. All sub-options below require this to be
+# true. (default: false)
 enabled = false
 
 # Force the Tarnished Pack starting loadout: every class gets one of the 6

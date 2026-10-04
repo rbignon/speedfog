@@ -120,7 +120,7 @@ speedfog/
 │   │   ├── ClassLoadoutInjector.cs  # Apply Tarnished Pack showcase hand items/armor per starting class
 │   │   ├── ClassLoadoutTextPatcher.cs  # Class-selection equipment text updated to the forced loadout (GR_LineHelp, per language)
 │   │   ├── RoundtableUnlockInjector.cs  # Unlock Roundtable Hold at start
-│   │   ├── ShopInjector.cs           # Add smithing stones + Sentry's Torch to shop
+│   │   ├── ShopInjector.cs           # Add smithing stones + Sentry's Torch to shop, remove Tarnished Pack-gated rows
 │   │   ├── ZoneTrackingInjector.cs  # Zone tracking flags for racing
 │   │   ├── ErdtreeWarpPatcher.cs  # Patch Erdtree fogwarp to target m11_05 directly
 │   │   ├── RunCompleteInjector.cs  # Inject "RUN COMPLETE" message on final boss defeat
@@ -313,7 +313,7 @@ speedfog/
 | `ClassLoadoutInjector` | Writes the Tarnished Pack showcase hand item + armor set onto CharaInitParam per starting class group (see `docs/tarnished-showcase.md`); runs before `WeaponUpgradeInjector` |
 | `ClassLoadoutTextPatcher` | Replaces CharacterWriter's weapon names in the class-selection text (GR_LineHelp 297130+, every language) with the forced loadout's names |
 | `RoundtableUnlockInjector` | Unlocks Roundtable Hold at game start |
-| `ShopInjector` | Adds smithing stones + Sentry's Torch to Twin Maiden Husks shop |
+| `ShopInjector` | Adds smithing stones + Sentry's Torch to Twin Maiden Husks shop; in pack-neutral seeds (`tarnished_pack` false) removes every shop row released by Tarnished Pack flag 6953 (see `docs/tarnished-showcase.md`) |
 | `ZoneTrackingInjector` | Injects SetEventFlag before fog gate warps for racing |
 | `ErdtreeWarpPatcher` | Patches fogwarps targeting leyndell_erdtree to m11_05, NOPs SkipIfEventFlag(300) in patched events |
 | `RunCompleteInjector` | Injects "RUN COMPLETE" golden banner on final boss defeat |
@@ -704,11 +704,11 @@ wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.d
 
 ## Data Formats
 
-### graph.json v4.9 (Python → C# + visualization + racing)
+### graph.json v4.10 (Python → C# + visualization + racing)
 
 ```json
 {
-  "version": "4.9",
+  "version": "4.10",
   "seed": 212559448,
   "options": {"scale": true, "shuffle": true},
   "plugins": {"summer": {"enabled": true}},
@@ -725,7 +725,8 @@ wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.d
   "boss_names": {"30001800": {"name": "Aging Untouchable", "map": "m30_00_00_00"}},
   "helper_models": {"40010800": ["c3000", "c3020"]},
   "class_loadout": {"weapons": [{"id": 3560000, "name": "Leontiel's Greatsword"}, ...], "shields": [{"id": 31540000, "name": "Silver Grooved Shield"}, ...], "armor_sets": [[5350000, 5350100, 5350200, 5350300], ...]},
-  "torrent_skins": {"unlock": true, "default_flag": 6702}
+  "torrent_skins": {"unlock": true, "default_flag": 6702},
+  "tarnished_pack": false
 }
 ```
 
@@ -740,6 +741,7 @@ wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.d
 - `torrent_skins`: optional, `[tarnished] unlock_torrent_skins`'s unlock flag plus a resolved `default_flag` (6701-6703) for the pre-selected Torrent skin; absent when the option is off (added v4.6, `GraphData.TorrentSkins`, consumed by `StartingItemInjector`, see `docs/tarnished-showcase.md`)
 - `boss_names`: optional `{arena_entity_id: {name, map}}`, one entry per `enemy_assignments` entry: the display name already resolved for `randomized_bosses` and the map whose EMEVD shows the arena's healthbar. The injector repoints only the arenas the randomizer did not name itself (added v4.8, `GraphData.BossNames`, consumed by `BossNameInjector`, see `docs/boss-healthbar-names.md`)
 - `helper_models`: optional `{arena_entity_id: [model, ...]}` for the `enemy_assignments` entries whose source owns `Class: Helper` entries in enemy.txt: the models of the helper clones the randomizer places in the arena, so FogModWrapper can scale them with the boss; absent when no placed source has helpers (added v4.9, `GraphData.HelperModels`, consumed by `HelperAreaResolver`, see `docs/item-randomizer.md` "Helper enemy scaling")
+- `tarnished_pack`: `[tarnished] enabled`, always present; `false` (also when absent) marks a pack-neutral seed, where `ShopInjector.RemovePackGatedRows` drops the 11 shop rows released by pack flag 6953 (Reverse-Bladed Sword at the Twin Maiden Husks, merchant armor and weapons) that the randomizer leaves vanilla (added v4.10, `GraphData.TarnishedPack`, see `docs/tarnished-showcase.md` "Pack-gated shop rows")
 - `flag_id` per connection: event flag set when fog gate is traversed
 - Event flags allocated sequentially from base 1050294000 (range 1050294000-1050294999); persistent flags (e.g. `items_spawned_flag`) come from a separate base 1050290000
 - Connections use FogMod's edge FullName format: `{map}_{gate_name}` (e.g., `m10_01_00_00_AEG099_001_9000`)

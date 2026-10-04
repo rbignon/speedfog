@@ -302,7 +302,7 @@ Pre-computed zone clusters with entry/exit fogs.
 }
 ```
 
-### graph.json v4.5
+### graph.json v4.10
 
 DAG serialized for C# consumption, visualization tools, and racing. Shows every
 top-level field; see `writer/FogModWrapper.Core/Models/GraphData.cs` for exact
@@ -310,7 +310,7 @@ types and the optional node-level fields documented below.
 
 ```json
 {
-  "version": "4.9",
+  "version": "4.10",
   "seed": 212559448,
   "total_layers": 8, "total_nodes": 12, "total_zones": 24,
   "options": {"scale": true, "shuffle": true},
@@ -363,6 +363,7 @@ types and the optional node-level fields documented below.
   "remove_entities": [{"map": "m12_05_00_00", "entity_id": 12051500}],
   "phantom_skins": {"gold-aura": {"speffects": [1450700]}},
   "plugins": {"summer": {"enabled": false}},
+  "tarnished_pack": false,
   "enemy_assignments": {"30001800": "2049420200"},
   "boss_names": {"30001800": {"name": "Aging Untouchable", "map": "m30_00_00_00"}},
   "helper_models": {"40010800": ["c3000", "c3020"]}
@@ -382,6 +383,7 @@ Gate names use FogMod's FullName format: `{map}_{gate_name}`.
 - `remove_entities`: vanilla warp MSB assets to delete
 - `phantom_skins`: cosmetic aura catalog (skin name -> SpEffect), baked for the racing platform
 - `plugins`: verbatim `[plugin]` config passthrough (C# reads via `GraphData.IsPluginEnabled`)
+- `tarnished_pack`: `[tarnished] enabled`; `false` (also when absent) makes `ShopInjector` remove the shop rows only Tarnished Pack owners see (added v4.10, see `docs/tarnished-showcase.md` "Pack-gated shop rows")
 - `enemy_assignments`: optional `{arena_entity_id: source_entity_id}` map (both decimal strings), the enemy-randomizer placement mapping; absent when the item randomizer or boss randomization is off (added v4.5, consumed by `UntouchableBossInjector`, see `docs/untouchable-boss.md`)
 - `boss_names`: optional `{arena_entity_id: {name, map}}`, one per assignment, so FogModWrapper can repoint the healthbar name of the arenas the enemy randomizer did not name itself (added v4.8, consumed by `BossNameInjector`, see `docs/boss-healthbar-names.md`)
 - `helper_models`: optional `{arena_entity_id: [model, ...]}` for the assignments whose source owns `Class: Helper` entries in enemy.txt (`parse_helper_models` + `build_helper_models`), the models of the clones the randomizer places in the arena; absent when no placed source has helpers (added v4.9, consumed by `HelperAreaResolver`'s model pass, see `docs/item-randomizer.md` "Helper enemy scaling")

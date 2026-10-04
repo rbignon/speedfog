@@ -194,10 +194,16 @@ update.
 - [ ] Regenerate a known seed and diff it against the pre-patch output
       (exclude `regulation.bin` from byte diffs, it is never reproducible).
       Then play it on the patched executable.
-- [ ] `ShopInjector` clears ShopLineupParam 101800 to 101800+n before
+- [x] `ShopInjector` clears ShopLineupParam 101800 to 101800+n before
       adding its rows. The log prints the vanilla IDs in 101800-101999: if
       1.17 placed new purchasable weapons there, move `BASE_SHOP_ID` or
       skip occupied IDs before shipping.
+
+      2026-10-04: the only 1.17 row in 101800-101999 is 101896 (Reverse-Bladed
+      Sword, released by pack flag 6953), outside the cleared 101800-101817.
+      Pack-neutral seeds now drop it with the ten other 6953 rows
+      (`ShopInjector.RemovePackGatedRows`, see `docs/tarnished-showcase.md`
+      "Pack-gated shop rows").
 - [x] Decide per map whether to refresh MSB/EMEVD from 1.17: superseded
       2026-08-31 by refreshing everything instead of picking per map
       (`--all`, Task 8); the sub-bullets below record the per-map analysis
@@ -237,9 +243,10 @@ update.
     snapshots, FogMod dupe-writes it from `_00`; `m60_52_39_00` is not
     overridden by the mod). The run re-copies `regulation.bin` and msg too,
     reported "up to date". The shop row (`ShopLineupParam` 101896) needs
-    only the regulation refresh (this whole preview procedure predates the
-    2026-08-31 full refresh, when grace ESD and `common.emevd` moved to
-    1.17 too).
+    only the regulation refresh and `[tarnished] enabled = true`, since
+    `ShopInjector.RemovePackGatedRows` drops it from pack-neutral seeds
+    (this whole preview procedure predates the 2026-08-31 full refresh,
+    when grace ESD and `common.emevd` moved to 1.17 too).
     A preview host must still avoid committing the flag entry (check
     `git status` before every commit). The "put the nine files back on
     1.16" revert this used to require is moot: 1.16 support was dropped on

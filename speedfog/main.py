@@ -469,6 +469,7 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
         plugins=config.plugins,
         class_loadout=class_loadout,
         torrent_skins=torrent_skins,
+        tarnished_pack=config.tarnished.enabled,
     )
     export_json(dag, clusters, json_path, export_options)
     print(f"Written: {json_path}")

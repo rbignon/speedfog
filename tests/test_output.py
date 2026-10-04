@@ -579,6 +579,22 @@ class TestEventMap:
         result = dag_to_dict(dag, clusters, GraphExportOptions(sentry_torch_shop=False))
         assert result["sentry_torch_shop"] is False
 
+    def test_tarnished_pack_default(self):
+        """Default tarnished_pack is False (pack-neutral seed)."""
+        result = _make_result()
+        assert result["tarnished_pack"] is False
+
+    def test_tarnished_pack_true(self):
+        """tarnished_pack=True is passed through."""
+        dag = make_test_dag()
+        clusters = ClusterPool(
+            clusters=[node.cluster for node in dag.nodes.values()],
+            zone_maps={},
+            zone_names={},
+        )
+        result = dag_to_dict(dag, clusters, GraphExportOptions(tarnished_pack=True))
+        assert result["tarnished_pack"] is True
+
     def test_finish_boss_defeat_flag_present(self):
         """finish_boss_defeat_flag is included in the output."""
         result = _make_result()
@@ -2186,7 +2202,7 @@ class TestPatchGraphEnemyAssignments:
 class TestPatchGraphBossNames:
     def test_patch_graph_boss_names_writes_key(self, tmp_path):
         graph = tmp_path / "graph.json"
-        graph.write_text(json.dumps({"version": "4.9", "nodes": {}}), encoding="utf-8")
+        graph.write_text(json.dumps({"version": "4.10", "nodes": {}}), encoding="utf-8")
         names = {"30010800": {"name": "Aging Untouchable", "map": "m30_01_00_00"}}
         patch_graph_boss_names(graph, names)
         data = json.loads(graph.read_text(encoding="utf-8"))
@@ -2194,7 +2210,7 @@ class TestPatchGraphBossNames:
 
     def test_patch_graph_boss_names_empty_is_noop(self, tmp_path):
         graph = tmp_path / "graph.json"
-        graph.write_text(json.dumps({"version": "4.9", "nodes": {}}), encoding="utf-8")
+        graph.write_text(json.dumps({"version": "4.10", "nodes": {}}), encoding="utf-8")
         patch_graph_boss_names(graph, {})
         assert "boss_names" not in json.loads(graph.read_text(encoding="utf-8"))
 
@@ -2868,7 +2884,7 @@ class TestBuildHelperModels:
 class TestPatchGraphHelperModels:
     def test_writes_key(self, tmp_path):
         graph = tmp_path / "graph.json"
-        graph.write_text(json.dumps({"version": "4.9", "nodes": {}}), encoding="utf-8")
+        graph.write_text(json.dumps({"version": "4.10", "nodes": {}}), encoding="utf-8")
         patch_graph_helper_models(graph, {"40010800": ["c3000"]})
         data = json.loads(graph.read_text(encoding="utf-8"))
         assert data["helper_models"] == {"40010800": ["c3000"]}

@@ -55,6 +55,7 @@ class GraphExportOptions:
     plugins: dict[str, Any] = field(default_factory=dict)
     class_loadout: dict[str, Any] | None = None
     torrent_skins: dict[str, Any] | None = None
+    tarnished_pack: bool = False
 
 
 def load_phantom_skins_catalog(path: Path) -> dict[str, int]:
@@ -628,6 +629,7 @@ def dag_to_dict(
             for name, skin_id in export.phantom_skins.items()
         },
         "plugins": export.plugins,
+        "tarnished_pack": export.tarnished_pack,
     }
 
     # Tarnished Pack showcase fields: only present when the corresponding
@@ -676,6 +678,7 @@ _GRAPH_SCHEMA: dict[str, type] = {
     "remove_entities": list,
     "phantom_skins": dict,
     "plugins": dict,
+    "tarnished_pack": bool,
 }
 
 # Optional top-level graph.json keys: present only when the corresponding

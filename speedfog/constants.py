@@ -16,7 +16,9 @@ from __future__ import annotations
 #      docs/boss-healthbar-names.md)
 # 4.9: optional helper_models (models of the placed bosses' helper clones per
 #      arena, see docs/item-randomizer.md "Helper enemy scaling")
-GRAPH_JSON_VERSION = "4.9"
+# 4.10: tarnished_pack ([tarnished] enabled; false removes the shop rows only
+#       Tarnished Pack owners see, see docs/tarnished-showcase.md)
+GRAPH_JSON_VERSION = "4.10"
 
 # SpeedFog's dedicated flag base: 1050290000 (m60_50_29_00, unclaimed).
 # Saved flags (4xxx): zone tracking, finish event, death markers.

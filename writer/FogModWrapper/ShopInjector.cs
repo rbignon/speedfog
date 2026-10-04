@@ -3,7 +3,8 @@ using SoulsFormats;
 namespace FogModWrapper;
 
 /// <summary>
-/// Injects smithing stones and extra items into the Twin Maiden Husks shop.
+/// Injects smithing stones and extra items into the Twin Maiden Husks shop,
+/// and removes the shop rows only Tarnished Pack owners see.
 /// Modifies regulation.bin after FogMod writes it.
 /// </summary>
 public static class ShopInjector
@@ -45,6 +46,11 @@ public static class ShopInjector
 
     // Base shop ID for our entries in Twin Maiden Husks shop range
     private const int BASE_SHOP_ID = 101800;
+
+    // Event flag the executable keeps ON only for Tarnished Pack owners
+    // (Elden Ring 1.17 paid DLC): shop rows released by it are invisible to
+    // every other player.
+    private const uint TARNISHED_PACK_FLAG = 6953;
 
     /// <summary>
     /// Inject smithing stones (and optionally the Sentry's Torch) into the shop.
@@ -108,6 +114,39 @@ public static class ShopInjector
         // centrally by RegulationEditor.Save().
 
         Console.WriteLine($"Shop items injected successfully ({itemCount} items)");
+    }
+
+    /// <summary>
+    /// Remove every shop row released by the Tarnished Pack flag, so a
+    /// pack-neutral seed sells the same items to every player (1.17: the
+    /// Twin Maiden Husks' Reverse-Bladed Sword plus ten merchant rows). With
+    /// its tarnished option off the Item Randomizer never fills these rows
+    /// (slot tag tarnished becomes norandom), so they still hold their
+    /// vanilla pack item here. See docs/tarnished-showcase.md.
+    /// </summary>
+    public static void RemovePackGatedRows(RegulationEditor reg)
+    {
+        var shopParam = reg.GetParam("ShopLineupParam");
+        if (shopParam == null)
+            return;
+
+        Console.WriteLine("Removing Tarnished Pack shop rows...");
+        int removed = RemovePackGatedRows(shopParam);
+        Console.WriteLine($"  Removed {removed} shop rows");
+    }
+
+    /// <returns>Number of rows removed</returns>
+    public static int RemovePackGatedRows(PARAM shopParam)
+    {
+        var gated = shopParam.Rows
+            .Where(r => (uint)r["eventFlag_forRelease"].Value == TARNISHED_PACK_FLAG)
+            .ToList();
+        foreach (var row in gated)
+        {
+            Console.WriteLine($"  Removed shop row {row.ID} (equipId {row["equipId"].Value})");
+            shopParam.Rows.Remove(row);
+        }
+        return gated.Count;
     }
 
     // FindContiguousFreeRange is now in ShopIdAllocator (FogModWrapper.Core)
