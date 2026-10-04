@@ -10,10 +10,11 @@ namespace FogModWrapper;
 public static class StartingResourcesInjector
 {
     // Good IDs for consumables (from practice tool / game data)
-    private const int GOLDEN_SEED_GOOD_ID = 10010;
-    private const int SACRED_TEAR_GOOD_ID = 10020;
-    private const int LARVAL_TEAR_GOOD_ID = 8185;  // Larval Tear - used for rebirth
-    private const int STONESWORD_KEY_GOOD_ID = 8000;  // Stonesword Key - unlocks imp seals
+    // Public: UniqueItemNeutralizer counts these grants against possession caps.
+    public const int GOLDEN_SEED_GOOD_ID = 10010;
+    public const int SACRED_TEAR_GOOD_ID = 10020;
+    public const int LARVAL_TEAR_GOOD_ID = 8185;  // Larval Tear - used for rebirth
+    public const int STONESWORD_KEY_GOOD_ID = 8000;  // Stonesword Key - unlocks imp seals
 
     // Base event ID for resource events
     private static readonly int BASE_EVENT_ID = SpeedFogIds.StartingResourceEvents.Base;

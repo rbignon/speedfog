@@ -145,6 +145,7 @@ See `speedfog/config.py` `StartingItemsConfig` for full field list including DLC
 
 ## References
 
+- World copies of granted possession-capped goods (crystal tears, whetblades, Talisman Pouches) are replaced with Rune Arcs: `docs/unique-item-neutralization.md`
 - Starting item injection: `writer/FogModWrapper/StartingItemInjector.cs`
 - Starting rune injection: `writer/FogModWrapper/StartingRuneInjector.cs`
 - Starting resource injection: `writer/FogModWrapper/StartingResourcesInjector.cs`

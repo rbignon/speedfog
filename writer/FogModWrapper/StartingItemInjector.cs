@@ -79,7 +79,8 @@ public static class StartingItemInjector
 
     // Torrent cosmetic skin regalia Good IDs (Tarnished Pack showcase), given
     // at start when TorrentSkinsData.Unlock is true.
-    private static readonly int[] RegaliaGoods =
+    // Public: UniqueItemNeutralizer counts these grants against possession caps.
+    public static readonly int[] RegaliaGoods =
     {
         2009600,  // Tree Sentinel Torrent skin
         2009610,  // Carian Silver Torrent skin

@@ -820,6 +820,18 @@ Example:
         WeaponUpgradeInjector.ApplyTo(reg, ctx.GraphData.WeaponUpgrade);
         StartingRuneInjector.ApplyTo(reg, ctx.GraphData.StartingRunes);
 
+        // Replace world copies of start-granted goods already at their
+        // possession cap (care package crystal tears, whetblades, Talisman
+        // Pouches...) with Rune Arcs, so the key slots the item preset routes
+        // them to stay real rewards (see docs/unique-item-neutralization.md).
+        // Shares ShopLineupParam with ShopInjector: disjoint by data, not by
+        // construction. The rows ShopInjector adds sell smithing stones
+        // (never granted at start) and the Sentry's Torch (a weapon row), so
+        // they can never match a saturated good; revisit if ShopInjector
+        // ever sells a granted good. Reads EquipParamGoods (maxNum) only,
+        // disjoint from HalloweenIconInjector's iconId writes.
+        UniqueItemNeutralizer.ApplyTo(reg, ctx.GraphData);
+
         if (ctx.GraphData.ChapelGrace)
             ChapelGraceInjector.Inject(ctx.ModDir, ctx.Config.GameDir, ctx.Events, reg);
 

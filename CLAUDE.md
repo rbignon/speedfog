@@ -121,6 +121,7 @@ speedfog/
 │   │   ├── ClassLoadoutTextPatcher.cs  # Class-selection equipment text updated to the forced loadout (GR_LineHelp, per language)
 │   │   ├── RoundtableUnlockInjector.cs  # Unlock Roundtable Hold at start
 │   │   ├── ShopInjector.cs           # Add smithing stones + Sentry's Torch to shop, remove Tarnished Pack-gated rows
+│   │   ├── UniqueItemNeutralizer.cs  # Replace world copies of start-granted goods at possession cap with Rune Arcs
 │   │   ├── ZoneTrackingInjector.cs  # Zone tracking flags for racing
 │   │   ├── ErdtreeWarpPatcher.cs  # Patch Erdtree fogwarp to target m11_05 directly
 │   │   ├── RunCompleteInjector.cs  # Inject "RUN COMPLETE" message on final boss defeat
@@ -189,6 +190,7 @@ speedfog/
 │   ├── zone-tracking.md     # Zone tracking for racing (region-based lookup)
 │   ├── chapel-grace.md      # Chapel of Anticipation Site of Grace
 │   ├── starting-items.md    # Starting items and auxiliary flags
+│   ├── unique-item-neutralization.md  # Replace dead world copies of start-granted capped goods with Rune Arcs
 │   ├── esd-editing.md       # ESD talk script editing conventions
 │   ├── care-package.md      # Randomized starting build system
 │   ├── tarnished-showcase.md  # Tarnished Pack showcase mode (class loadout, Torrent skins)
@@ -232,6 +234,7 @@ speedfog/
 | `docs/enemy-scaling.md` | FogMod scaling model, tier 21 clamp bypass, blessing neutralization |
 | `docs/zone-tracking.md` | Zone tracking for racing (region-based lookup) |
 | `docs/starting-items.md` | Starting items + auxiliary flags (whetblades, Great Runes) |
+| `docs/unique-item-neutralization.md` | UniqueItemNeutralizer: world copies of start-granted goods at possession cap (care package tears, whetblades, pouches) swapped for Rune Arcs in item lots + finite shop rows |
 | `docs/chapel-grace.md` | Chapel of Anticipation Site of Grace (4 subsystems) |
 | `docs/esd-editing.md` | ESD editing conventions and ConsistentID allocation |
 | `docs/event-flags.md` | Event flag allocation and EMEVD reference |
@@ -317,6 +320,7 @@ speedfog/
 | `ClassLoadoutTextPatcher` | Replaces CharacterWriter's weapon names in the class-selection text (GR_LineHelp 297130+, every language) with the forced loadout's names |
 | `RoundtableUnlockInjector` | Unlocks Roundtable Hold at game start |
 | `ShopInjector` | Adds smithing stones + Sentry's Torch to Twin Maiden Husks shop; in pack-neutral seeds (`tarnished_pack` false) removes every shop row released by Tarnished Pack flag 6953 (see `docs/tarnished-showcase.md`) |
+| `UniqueItemNeutralizer` | Replaces world copies of start-granted goods already at their `EquipParamGoods.maxNum` cap (care package crystal tears, whetblades, Talisman Pouches, Torrent regalia) with Rune Arcs in one-shot ItemLotParam_map/_enemy lots and finite ShopLineupParam rows, so key slots stay real rewards (see `docs/unique-item-neutralization.md`) |
 | `ZoneTrackingInjector` | Injects SetEventFlag before fog gate warps for racing |
 | `ErdtreeWarpPatcher` | Patches fogwarps targeting leyndell_erdtree to m11_05, NOPs SkipIfEventFlag(300) in patched events |
 | `RunCompleteInjector` | Injects "RUN COMPLETE" golden banner on final boss defeat |

@@ -111,6 +111,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>eldendata/Defs/EquipParamGoods.xml</Link>
     </None>
+    <None Include="eldendata/Defs/ItemLotParam.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>eldendata/Defs/ItemLotParam.xml</Link>
+    </None>
     <None Include="eldendata/Defs/BehaviorParam.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>eldendata/Defs/BehaviorParam.xml</Link>
