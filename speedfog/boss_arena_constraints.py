@@ -386,7 +386,10 @@ def assign_bosses_uniform(
 
 
 def resolve_boss_allowlist(
-    tags: Mapping[int, EntityTags], names: Iterable[str]
+    tags: Mapping[int, EntityTags],
+    names: Iterable[str],
+    *,
+    label: str = "enemy.bosses",
 ) -> dict[int, BossTags]:
     """Resolve allowlist names to a boss pool.
 
@@ -397,7 +400,8 @@ def resolve_boss_allowlist(
     applied here, because the user named the boss explicitly.
 
     Returns ``{entity_id: BossTags}`` for the matched entities, key-sorted so
-    the result is independent of ``tags`` iteration order.
+    the result is independent of ``tags`` iteration order. ``label`` names
+    the config key in error messages.
     """
     pool: dict[int, BossTags] = {}
     for name in names:
@@ -406,10 +410,10 @@ def resolve_boss_allowlist(
             (eid, entry) for eid, entry in tags.items() if needle in entry.name.lower()
         ]
         if not matches:
-            raise ValueError(f"enemy.bosses: no boss matches {name!r}")
+            raise ValueError(f"{label}: no boss matches {name!r}")
         if len(matches) > 1:
             found = ", ".join(sorted(entry.name for _, entry in matches))
-            raise ValueError(f"enemy.bosses: {name!r} is ambiguous: matches [{found}]")
+            raise ValueError(f"{label}: {name!r} is ambiguous: matches [{found}]")
         eid, entry = matches[0]
         pool[eid] = entry.boss
     return dict(sorted(pool.items()))

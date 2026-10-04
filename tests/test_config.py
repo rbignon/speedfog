@@ -1243,6 +1243,41 @@ def test_enemy_bosses_rejects_bare_string():
         Config.from_dict({"enemy": {"randomize_bosses": "all", "bosses": "Malenia"}})
 
 
+def test_enemy_final_boss_parsed_and_stripped():
+    """enemy.final_boss is parsed and stripped."""
+    config = Config.from_dict(
+        {"enemy": {"randomize_bosses": "all", "final_boss": "  Aging Untouchable "}}
+    )
+    assert config.enemy.final_boss == "Aging Untouchable"
+
+
+@pytest.mark.parametrize("mode", ["none", "minor"])
+def test_enemy_final_boss_requires_all(mode):
+    """The randomizer skips locked boss classes, forced placements included:
+    final_boss only works when majors are randomized."""
+    with pytest.raises(ValueError, match="enemy.final_boss requires randomize_bosses"):
+        Config.from_dict(
+            {"enemy": {"randomize_bosses": mode, "final_boss": "Aging Untouchable"}}
+        )
+
+
+def test_enemy_final_boss_rejects_non_string():
+    """A non-string final_boss is rejected with a clear error."""
+    with pytest.raises(TypeError, match="enemy.final_boss must be a string"):
+        Config.from_dict(
+            {"enemy": {"randomize_bosses": "all", "final_boss": ["Aging Untouchable"]}}
+        )
+
+
+def test_enemy_final_boss_from_toml(tmp_path):
+    """enemy.final_boss is read from a TOML file."""
+    path = tmp_path / "config.toml"
+    path.write_text(
+        '[enemy]\nrandomize_bosses = "all"\nfinal_boss = "Aging Untouchable"\n'
+    )
+    assert load_config(path).enemy.final_boss == "Aging Untouchable"
+
+
 def test_care_package_pool_file_default():
     """care_package.pool_file defaults to the standard item pool file name."""
     config = Config.from_dict({})

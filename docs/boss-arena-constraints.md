@@ -341,6 +341,7 @@ gets a non-DLC replacement boss.
 | ``[enemy].randomize_bosses = "all"`` | Both majors and minors receive arena-matched bosses. ``final_boss`` terminals (Elden Beast / Promised Consort Radahn) are also treated as major arena targets: each receives an arena-compatible boss and is reported in ``randomized_bosses``/``boss_name``. (They also remain candidate sources in the major pool via the orphan-arena fallback, as before, so they may appear as mid-run replacements like any other major.) |
 | ``[enemy].ignore_arena_size`` | Skip the size gate. Other rules still apply. |
 | ``[enemy].dlc_bosses = false`` | Filter DLC entries from the candidate pool. Arena selection is untouched (DLC arenas still get a non-DLC replacement). Independent of ``[item_randomizer].dlc``, which controls item-randomizer scope. |
+| ``[enemy].final_boss`` | Pin one boss into the final arena's last phase (see "Final boss pinning"). Requires ``randomize_bosses = "all"``. |
 | ``[enemy].boss_extreme_fraction`` | Share of each candidate pool counted as light, and as heavy, extremes per weight band (default 0.10); a layer never holds both. ``0`` disables. See "Layer weight balance". Ignored in allowlist mode. |
 
 ## Wire format
@@ -419,6 +420,46 @@ Example "Malenia only":
     ignore_arena_size = true
     bosses = ["Malenia"]
 
+## Final boss pinning (`enemy.final_boss`)
+
+`enemy.final_boss` forces one boss into the final arena only, on top of
+either path above (standard matcher or allowlist). Which arena ends the run
+is still `[structure] final_boss_candidates` (zones); this key picks who
+fights in it.
+
+- The name is resolved like an allowlist entry (case-insensitive substring,
+  exactly one match, `exclude_from_pool` and DLC flags ignored), and
+  validated once before the reroll loop.
+- `generate_item_config` pins the leader slot of the DAG's end cluster
+  (`final_cluster_id`, the entity of its defeat flag, i.e. the arena's last
+  phase). A phase-1 slot keeps a matched boss, so a two-phase final arena
+  reads "matched boss, then the pinned one".
+- On the standard path the pinned boss and its phase family leave both
+  candidate pools and the matcher skips the pinned slot, so the run never
+  meets that boss before the end. The allowlist path keeps its reuse.
+- Every arena rule of `is_compatible` applies, not only size:
+  `ignore_arena_size` lifts the size rule alone. Both default final arenas
+  (Radagon / Elden Beast, Promised Consort Radahn) are
+  `two_phase_not_allowed`, so a two-phase boss such as Malenia never fits
+  them. A misfit raises `MatchingError`, so an auto seed rerolls the DAG
+  like any matcher miss and gives up after the attempt limit.
+- A boss split into two phase entities in the tags ("Rennala 1/2",
+  "Rykard 1/2", "Fire Giant 1/2") needs the phase in its name: "Rennala"
+  alone is ambiguous, "Rennala 2" pins her last phase only.
+- It requires `randomize_bosses = "all"`, enforced at config load. In
+  `"none"` and `"minor"` the `Boss` class is `NoRandom`, and the randomizer
+  skips every enemy of a non-randomized class before reading the preset's
+  forced placements (`Enemies`): the pin would be dropped silently while
+  graph.json still announced it (checked on a generated seed, 2026-10-04).
+  Supporting those modes would mean replacing the class lock by a
+  `norandom` pool, which routes the class through the randomized path.
+
+Example, Aging Untouchable as the final boss of an otherwise randomized run:
+
+    [enemy]
+    randomize_bosses = "all"
+    final_boss = "Aging Untouchable"
+
 ## Promoted allowlist-only sources
 
 Three skeleton entities are hand-promoted into the minor pool as
@@ -455,7 +496,8 @@ addition to `exclude_from_pool`:
 | `2049420200` | Aging Untouchable | `2` | `true` |
 
 `boss.size: 2` excludes only size-1 arenas from the compatibility match (the
-tag model has no dedicated "open arena" flag). Reachable the same way:
+tag model has no dedicated "open arena" flag). Reachable the same way, or
+as the final boss only through `final_boss = "Aging Untouchable"`:
 
     [enemy]
     randomize_bosses = "all"

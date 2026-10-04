@@ -11,6 +11,15 @@ randomize_bosses = "all"   # or "minor"
 bosses = ["Aging Untouchable"]
 ```
 
+or, to keep it for the end of the run, as the final boss only (the other
+bosses keep their normal assignment):
+
+```toml
+[enemy]
+randomize_bosses = "all"
+final_boss = "Aging Untouchable"
+```
+
 Nothing of this feature runs unless the enemy randomizer actually places
 the boss in an arena. It is independent of every plugin.
 

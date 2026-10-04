@@ -458,6 +458,11 @@ class EnemyConfig:
     # boss slot (minor and major) draws uniformly from this list, with reuse
     # permitted, so e.g. bosses = ["Malenia"] yields a Malenia-only run.
     bosses: list[str] = field(default_factory=list)
+    # Boss forced into the last phase of the final arena (case-insensitive
+    # substring of the boss display name, resolved like ``bosses``). Empty =
+    # the mode's normal assignment. Requires randomize_bosses = "all": the
+    # randomizer skips locked boss classes, forced placements included.
+    final_boss: str = ""
     # Share of each candidate pool counted as light, and as heavy, extremes
     # per weight band (boss.weight at the layer's scaling tier); a layer may
     # not hold both. 0 disables. Ignored in allowlist mode (bosses non-empty).
@@ -484,6 +489,13 @@ class EnemyConfig:
                 raise ValueError("enemy.bosses entries must be non-empty")
             cleaned.append(stripped)
         self.bosses = cleaned
+        if not isinstance(self.final_boss, str):
+            raise TypeError(
+                f"enemy.final_boss must be a string, got {self.final_boss!r}"
+            )
+        self.final_boss = self.final_boss.strip()
+        if self.final_boss and self.randomize_bosses != "all":
+            raise ValueError("enemy.final_boss requires randomize_bosses = 'all'")
         if self.bosses and self.randomize_bosses == "none":
             raise ValueError(
                 "enemy.bosses requires randomize_bosses to be 'minor' or 'all'"
@@ -715,6 +727,7 @@ _KNOWN_SECTION_KEYS: dict[str, frozenset[str] | None] = {
             "dlc_bosses",
             "bosses",
             "boss_extreme_fraction",
+            "final_boss",
         }
     ),
     "budget": frozenset({"tolerance"}),
@@ -982,6 +995,7 @@ class Config:
                 swap_boss=enemy_section.get("swap_boss", False),
                 dlc_bosses=enemy_section.get("dlc_bosses", True),
                 bosses=enemy_section.get("bosses", []),
+                final_boss=enemy_section.get("final_boss", ""),
                 boss_extreme_fraction=enemy_section.get(
                     "boss_extreme_fraction", DEFAULT_BOSS_EXTREME_FRACTION
                 ),

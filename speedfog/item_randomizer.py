@@ -15,7 +15,9 @@ from speedfog.boss_arena_constraints import (
     ArenaTags,
     BossTags,
     EntityTags,
+    MatchingError,
     assign_bosses_uniform,
+    is_compatible,
     match_arenas_balanced,
     resolve_boss_allowlist,
     weight_band,
@@ -41,6 +43,7 @@ def generate_item_config(
     phase_mapping: Mapping[int, int] | None = None,
     boss_layers: Mapping[str, int] | None = None,
     boss_tiers: Mapping[str, int] | None = None,
+    final_cluster_id: str | None = None,
 ) -> dict[str, Any]:
     """Generate item_config.json content for ItemRandomizerWrapper.
 
@@ -85,7 +88,15 @@ def generate_item_config(
     ``config.enemy.boss_extreme_fraction`` of the pool on each side (see
     ``match_arenas_balanced``). ``None`` disables the balance. The allowlist
     path ignores both.
+
+    **Final boss** (``config.enemy.final_boss`` is non-empty, which config
+    validation limits to ``randomize_bosses = "all"``): after either path,
+    the leader slot of ``final_cluster_id``, i.e. the arena's last phase, is
+    pinned to that boss; a phase-1 slot keeps its matched boss. A boss that
+    does not fit the arena raises ``MatchingError`` like a matcher miss,
+    unless ``ignore_arena_size``.
     """
+    boss_clusters = list(boss_clusters)
     auto_equip = config.item_randomizer.auto_equip
     result: dict[str, Any] = {
         "seed": seed,
@@ -161,9 +172,20 @@ def generate_item_config(
     if config.item_randomizer.item_preset:
         result["item_preset_path"] = "item_preset.yaml"
 
+    assignments: dict[int, int] = {}
     if config.enemy.randomize_bosses != "none":
         if tags is None:
             raise ValueError("tags required when randomize_bosses != 'none'")
+
+        final_pin: tuple[int, int] | None = None
+        if config.enemy.final_boss:
+            final_pin = _final_boss_assignment(
+                boss_clusters=boss_clusters,
+                final_cluster_id=final_cluster_id,
+                tags=tags,
+                name=config.enemy.final_boss,
+                check_size=not config.enemy.ignore_arena_size,
+            )
 
         if config.enemy.bosses:
             pool = resolve_boss_allowlist(tags, config.enemy.bosses)
@@ -194,6 +216,16 @@ def generate_item_config(
                 phase_mapping=phase_mapping,
                 exclude_dlc=exclude_dlc,
             )
+            skip_slots: frozenset[int] = frozenset()
+            if final_pin is not None:
+                # The pinned boss shows up once, at the end: its phase family
+                # leaves both pools, and the matcher skips the final leader
+                # slot it would only fill for the pin to overwrite.
+                leader, boss_id = final_pin
+                family = _family_forbidden([boss_id], phase_mapping or {})[boss_id]
+                major_pool = {k: v for k, v in major_pool.items() if k not in family}
+                minor_pool = {k: v for k, v in minor_pool.items() if k not in family}
+                skip_slots = frozenset({leader})
             assignments = _build_enemy_assignments(
                 boss_clusters=boss_clusters,
                 tags=tags,
@@ -206,13 +238,57 @@ def generate_item_config(
                 boss_layers=boss_layers,
                 boss_tiers=boss_tiers,
                 extreme_fraction=config.enemy.boss_extreme_fraction,
+                skip_slots=skip_slots,
             )
-        if assignments:
-            result["enemy_assignments"] = {
-                str(aid): str(bid) for aid, bid in assignments.items()
-            }
+
+        if final_pin is not None:
+            leader, boss_id = final_pin
+            assignments[leader] = boss_id
+
+    if assignments:
+        result["enemy_assignments"] = {
+            str(aid): str(bid) for aid, bid in assignments.items()
+        }
 
     return result
+
+
+def _final_boss_assignment(
+    *,
+    boss_clusters: Iterable[ClusterData],
+    final_cluster_id: str | None,
+    tags: Mapping[int, EntityTags],
+    name: str,
+    check_size: bool,
+) -> tuple[int, int]:
+    """Return ``(final leader slot, forced boss)`` for ``enemy.final_boss``.
+
+    Raises ``ValueError`` on an unknown or ambiguous name, ``KeyError`` when
+    the final cluster or its leader's arena tags are missing (as the
+    builders do), and ``MatchingError`` when the boss does not fit.
+    """
+    if final_cluster_id is None:
+        raise ValueError("enemy.final_boss is set but no final cluster was given")
+    final = next((c for c in boss_clusters if c.id == final_cluster_id), None)
+    if final is None:
+        raise KeyError(f"final cluster {final_cluster_id!r} missing from boss_clusters")
+    leader = resolve_entity_id(final.defeat_flag)
+    entry = tags.get(leader)
+    if entry is None or entry.arena is None:
+        raise KeyError(
+            f"final cluster {final_cluster_id!r} entity {leader} has no arena "
+            f"block in boss_arena_tags.json"
+        )
+    ((boss_id, boss),) = resolve_boss_allowlist(
+        tags, [name], label="enemy.final_boss"
+    ).items()
+    if not is_compatible(entry.arena, boss, check_size=check_size):
+        raise MatchingError(
+            f"enemy.final_boss {name!r} does not fit the final arena {leader} "
+            f"(arena rules: size, two-phase, dragon, NPC, escape; "
+            f"ignore_arena_size only lifts the size rule)"
+        )
+    return leader, boss_id
 
 
 def _compose_pool(
@@ -395,6 +471,7 @@ def _build_enemy_assignments(
     boss_layers: Mapping[str, int] | None = None,
     boss_tiers: Mapping[str, int] | None = None,
     extreme_fraction: float = 0.0,
+    skip_slots: frozenset[int] = frozenset(),
 ) -> dict[int, int]:
     """Match DAG boss clusters to candidate bosses under compatibility rules.
 
@@ -411,6 +488,7 @@ def _build_enemy_assignments(
     (``boss_tiers``, cluster ID -> tier; mid without it),
     ``extreme_fraction`` of the pool on each side (0 disables; see
     ``match_arenas_balanced``). A phase-1 slot takes its leader's layer.
+    ``skip_slots`` are left out of the match (slots pinned by the caller).
 
     Raises ``KeyError`` if a DAG boss cluster's leader (or its phase-1
     sibling) has no entry in ``tags`` or no ``arena`` block, or if
@@ -445,6 +523,8 @@ def _build_enemy_assignments(
         if phase1 is not None:
             slots.append(phase1)
         for eid in slots:
+            if eid in skip_slots:
+                continue
             entry = tags.get(eid)
             if entry is None:
                 raise KeyError(

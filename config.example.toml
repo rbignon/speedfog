@@ -280,6 +280,14 @@ ignore_arena_size = false
 # Requires randomize_bosses = "minor" or "all". Large bosses (e.g. Malenia)
 # usually need ignore_arena_size = true to fit small arenas.
 # bosses = ["Malenia"]
+#
+# Force one boss into the last phase of the final arena, same name matching as
+# `bosses`. The arena itself still comes from [structure]
+# final_boss_candidates; this picks who fights in it. Every other slot, the
+# final arena's phase 1 included, keeps its normal assignment, and the pinned
+# boss never appears earlier in the run. Requires randomize_bosses = "all":
+# the randomizer skips locked boss classes, forced placements included.
+# final_boss = "Aging Untouchable"
 
 [item_randomizer]
 # Enable Item/Enemy Randomizer integration (default: true)

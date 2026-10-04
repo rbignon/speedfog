@@ -334,14 +334,18 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
         assignment_phase_mapping = parse_boss_phases(enemy_txt_path)
     if config.item_randomizer.enabled and config.enemy.randomize_bosses != "none":
         assignment_tags = load_tags(project_root / "data" / "boss_arena_tags.json")
-        if config.enemy.bosses:
-            # Validate the allowlist once, before the reroll loop.
-            # generate_item_config re-resolves it inside post_validate.
-            try:
+        # Validate the allowlist and the final boss once, before the reroll
+        # loop. generate_item_config re-resolves them inside post_validate.
+        try:
+            if config.enemy.bosses:
                 resolve_boss_allowlist(assignment_tags, config.enemy.bosses)
-            except ValueError as e:
-                print(f"Error: {e}", file=sys.stderr)
-                return 1
+            if config.enemy.final_boss:
+                resolve_boss_allowlist(
+                    assignment_tags, [config.enemy.final_boss], label="enemy.final_boss"
+                )
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
         assignment_major_ids = _vanilla_ids_of_type("major_boss")
         assignment_minor_ids = _vanilla_ids_of_type("boss_arena")
 
@@ -368,6 +372,7 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
                     phase_mapping=assignment_phase_mapping,
                     boss_layers=boss_layers,
                     boss_tiers=boss_tiers,
+                    final_cluster_id=dag.nodes[dag.end_id].cluster.id,
                 )
             except MatchingError as e:
                 raise GenerationError(f"boss-arena matching infeasible: {e}") from e
@@ -580,6 +585,7 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
                 vanilla_major_ids=assignment_major_ids,
                 vanilla_minor_ids=assignment_minor_ids,
                 phase_mapping=assignment_phase_mapping,
+                final_cluster_id=dag.nodes[dag.end_id].cluster.id,
             )
         item_config_path = seed_dir / "item_config.json"
         with item_config_path.open("w") as f:

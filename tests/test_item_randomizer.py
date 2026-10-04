@@ -1061,6 +1061,129 @@ def test_generate_item_config_force_maps_final_boss_uniform_allowlist():
     assert result["enemy_assignments"] == {"1000": "5000"}
 
 
+def _final_boss_setup() -> tuple[list[ClusterData], dict[int, EntityTags]]:
+    """A two-phase final arena (leader 500, phase 1 501), a minor arena 2000,
+    spare bosses 2001/3000/3001 and the forced "Target Boss" 5000."""
+    boss_clusters = [
+        _boss_cluster("final", "major_boss", defeat_flag=500),
+        _boss_cluster("minor1", "boss_arena", defeat_flag=2000),
+    ]
+    tags = {eid: _entity(eid) for eid in (500, 501, 2000, 2001, 3000, 3001)}
+    # Like the Aging Untouchable: no arena of its own, kept out of the pools.
+    tags[5000] = _entity(
+        5000, name="Target Boss", has_arena=False, exclude_from_pool=True
+    )
+    return boss_clusters, tags
+
+
+def _final_boss_config(**enemy) -> Config:
+    return Config.from_dict({"enemy": {"randomize_bosses": "all", **enemy}})
+
+
+def _final_boss_item_config(config: Config, tags: dict[int, EntityTags]) -> dict:
+    """Run generate_item_config on the _final_boss_setup arenas, with vanilla
+    pools large enough for the matcher to succeed on its own."""
+    boss_clusters, _ = _final_boss_setup()
+    return generate_item_config(
+        config,
+        seed=1,
+        boss_clusters=boss_clusters,
+        tags=tags,
+        vanilla_major_ids=[500, 3000, 3001],
+        vanilla_minor_ids=[2000, 2001],
+        phase_mapping={500: 501},
+        final_cluster_id="final",
+    )
+
+
+def test_generate_item_config_final_boss_overrides_the_matcher():
+    """final_boss takes the final leader (last phase) only: the final arena's
+    phase 1 and every other slot still get matched bosses."""
+    _, tags = _final_boss_setup()
+    forced = _final_boss_item_config(_final_boss_config(final_boss="Target"), tags)[
+        "enemy_assignments"
+    ]
+    assert forced["500"] == "5000"
+    assert forced["501"] in {"3000", "3001"}
+    assert "2000" in forced
+
+
+def test_generate_item_config_final_boss_from_the_pool_is_not_reused():
+    """A pinned boss that the matcher could also draw appears once: it leaves
+    the pools, so the run never meets it before the end."""
+    _, tags = _final_boss_setup()
+    config = _final_boss_config(final_boss="e3000")
+    for seed in range(32):
+        boss_clusters, _ = _final_boss_setup()
+        assignments = generate_item_config(
+            config,
+            seed=seed,
+            boss_clusters=boss_clusters,
+            tags=tags,
+            vanilla_major_ids=[500, 3000, 3001],
+            vanilla_minor_ids=[2000, 2001],
+            phase_mapping={500: 501},
+            final_cluster_id="final",
+        )["enemy_assignments"]
+        assert assignments["500"] == "3000", f"seed {seed}"
+        assert list(assignments.values()).count("3000") == 1, f"seed {seed}"
+
+
+def test_generate_item_config_final_boss_overrides_the_allowlist():
+    """final_boss wins over the allowlist on the final leader only."""
+    config = Config.from_dict(
+        {
+            "enemy": {
+                "randomize_bosses": "all",
+                "bosses": ["e3000"],
+                "final_boss": "Target",
+            }
+        }
+    )
+    boss_clusters, tags = _final_boss_setup()
+    result = generate_item_config(
+        config,
+        seed=1,
+        boss_clusters=boss_clusters,
+        tags=tags,
+        phase_mapping={500: 501},
+        final_cluster_id="final",
+    )
+    assert result["enemy_assignments"] == {
+        "500": "5000",
+        "501": "3000",
+        "2000": "3000",
+    }
+
+
+def test_generate_item_config_final_boss_too_large_raises_matching_error():
+    """A forced boss too large for the final arena fails like a matcher miss,
+    so the generation loop rerolls the DAG."""
+    _, tags = _final_boss_setup()
+    tags[500] = _entity(500, arena_size=1)
+    tags[5000] = _entity(
+        5000, name="Target Boss", boss_size=5, has_arena=False, exclude_from_pool=True
+    )
+    with pytest.raises(MatchingError, match="enemy.final_boss"):
+        _final_boss_item_config(_final_boss_config(final_boss="Target"), tags)
+
+
+def test_generate_item_config_final_boss_ignores_size_when_asked():
+    _, tags = _final_boss_setup()
+    tags[500] = _entity(500, arena_size=1)
+    tags[5000] = _entity(
+        5000, name="Target Boss", boss_size=5, has_arena=False, exclude_from_pool=True
+    )
+    config = _final_boss_config(final_boss="Target", ignore_arena_size=True)
+    assert _final_boss_item_config(config, tags)["enemy_assignments"]["500"] == "5000"
+
+
+def test_generate_item_config_final_boss_unknown_name_names_the_key():
+    _, tags = _final_boss_setup()
+    with pytest.raises(ValueError, match="enemy.final_boss"):
+        _final_boss_item_config(_final_boss_config(final_boss="Nobody"), tags)
+
+
 def test_family_forbidden_single_phase_is_self_only():
     assert _family_forbidden([1000], {}) == {1000: frozenset({1000})}
 
