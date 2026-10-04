@@ -44,6 +44,22 @@ public class SpeedFogIdsTests
     }
 
     [Fact]
+    public void EventRanges_ListEveryDeclaredRange()
+    {
+        // A range missing from EventRanges escapes the disjointness checks
+        // above. Every IdRange is an event range unless listed here as
+        // living in another id namespace, so a forgotten one fails.
+        var otherNamespaces = new[] { nameof(SpeedFogIds.BossNameFmgIds) };
+        var declared = typeof(SpeedFogIds)
+            .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
+            .Where(f => f.FieldType == typeof(SpeedFogIds.IdRange) && !otherNamespaces.Contains(f.Name))
+            .Select(f => (SpeedFogIds.IdRange)f.GetValue(null)!)
+            .ToList();
+        Assert.NotEmpty(declared);
+        Assert.All(declared, r => Assert.Contains(r, SpeedFogIds.EventRanges));
+    }
+
+    [Fact]
     public void AuxiliaryFlags_AreUniqueAndOutsideFogModAllocations()
     {
         Assert.Equal(

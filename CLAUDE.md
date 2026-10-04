@@ -143,6 +143,7 @@ speedfog/
 │   │   ├── IntroCutscenePatcher.cs  # Replace the new-game intro cutscene in event 10010020 by SetCurrentTime + ChangeWeather
 │   │   ├── TorrentArenaPatcher.cs  # Re-enable Torrent inside selected boss arenas
 │   │   ├── WeatherInjector.cs  # Force weather / pin clock hour ([plugin.weather])
+│   │   ├── HalloweenDarknessInjector.cs  # Evergaol gparam override over the whole run ([plugin.halloween] darkness)
 │   │   ├── BossNameInjector.cs  # Healthbar names of relocated enemies (graph.json boss_names)
 │   │   ├── MsgBndEditor.cs  # Shared msgbnd edit helper (engus + frafr, mod copy over vanilla)
 │   │   ├── WeaponUpgradeInjector.cs  # Weapon upgrade initialization for starting weapons
@@ -214,6 +215,7 @@ speedfog/
 │       ├── halloween-theme.md  # Halloween theme specifics
 │       ├── halloween-ambient.md  # Halloween ambient dungeon spawns + gate decorations
 │       ├── halloween-icons.md  # Halloween item icon redirect (Golden Seed, Sacred Tear)
+│       ├── halloween-darkness.md  # Halloween evergaol lighting over the whole run
 │       └── weather.md       # Weather plugin: force weather + pin clock hour
 ├── SoulsFormats/            # SoulsFormatsNEXT git submodule (used by StaticModBuilder)
 └── output/                  # Generated mod (gitignored, self-contained)
@@ -261,6 +263,7 @@ speedfog/
 | `docs/plugins/halloween-theme.md` | Halloween theme: kitsch text reskin, item renames |
 | `docs/plugins/halloween-ambient.md` | Halloween ambient dungeon spawns (greeters, ambush packs) + gate decoration catalogue |
 | `docs/plugins/halloween-icons.md` | Halloween item icon redirect (Golden Seed, Sacred Tear): 05_dummy overlay + iconId redirect, EXPERIMENT status, revert path, fallbacks |
+| `docs/plugins/halloween-darkness.md` | Halloween darkness: vanilla evergaol gparam override re-applied from common.emevd, area interactions, rejected custom-gparam approach, owed in-game checks |
 | `docs/plugins/weather.md` | Weather plugin: force weather + pin clock hour, accepted names, event mechanism |
 | `reference/fogrando-src/GameDataWriterE.cs` | Main FogRando writer (5639 lines) |
 | `reference/fogrando-src/EldenScaling.cs` | Enemy scaling logic |
@@ -337,6 +340,7 @@ speedfog/
 | `BossTriggerInjector` | Locks boss arena exit fog gates by setting TrapFlag before entrance warp |
 | `TorrentArenaPatcher` | Re-enables Torrent in selected boss arenas by flipping `Collision.DisableTorrent`, targets come from `data/game_tweaks.toml` |
 | `WeatherInjector` | Forces a fixed weather and optionally pins the clock hour via a looping common.emevd event (opt-in via `[plugin.weather]`) |
+| `HalloweenDarknessInjector` | Keeps the vanilla evergaol gparam override (sub ID 0) active via a looping common.emevd event (opt-in via `[plugin.halloween]` `darkness`, see `docs/plugins/halloween-darkness.md`) |
 | `WeaponUpgradeInjector` | Weapon upgrade initialization for starting weapons with ashes of war |
 | `PhantomCatalogInjector` | Bakes phantom skin catalog (cosmetic auras) into PhantomParam/SpEffectVfxParam/SpEffectParam |
 | `OpenSplitInjector` | Tags entrances with `opensplit` before `Graph.Construct` (see `docs/opensplit-overrides.md`) |
@@ -345,7 +349,7 @@ speedfog/
 | `MsgBndEditor` | Shared msgbnd editing for the engus + frafr text injectors (`TextTheme`, `BossNameInjector`): mod copy over vanilla, written only on change |
 | `BossNameInjector` | Healthbar names of relocated enemies (graph.json `boss_names`): resolves each name to a NpcName id (exact vanilla engus match, else a `SpeedFogIds.BossNameFmgIds` entry written to engus + frafr) and repoints the arena's `DisplayBossHealthBar` nameId in the map EMEVD, leaving alone the arenas the randomizer already named; runs before `TextTheme` and hands it the allocated {name -> id} so a theme can reskin them by `boss_name` (see `docs/boss-healthbar-names.md`) |
 | `TextThemeCatalogLoader` | Loads and validates `data/plugins/<theme>.toml` |
-| `HalloweenPluginSettings` | Parses `[plugin.halloween]` parameters (`greeters`, `ambushes`) from graph.json's plugin table |
+| `HalloweenPluginSettings` | Parses `[plugin.halloween]` parameters (`greeters`, `ambushes`, `darkness`) from graph.json's plugin table |
 | `HalloweenGateAnchors` | Shared exit-gate anchor collection for the two ambient injectors (source cluster resolved through GraphNode.Zones; decor set includes the start cluster, spawn set does not) |
 | `AmbientSpawnInjector` | Places optional passive greeters + optional decorative ambush packs (token HP, near-zero attack via NpcParam clone) at the anchored exit gates (opt-in via `[plugin.halloween]`, see `docs/plugins/halloween-ambient.md`); runs after GateDecorInjector |
 | `GateDecorInjector` | Places catalogue-driven ambient decorations at the same exit gates from `data/plugins/halloween_decorations.toml`, on a per-gate ground estimate (vanilla assets + enemies) |

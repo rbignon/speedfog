@@ -28,12 +28,13 @@ seed of a future framework; extract a shared interface only once two or more
 opt-in plugins exist (rule of three). Note that a single theme can span
 processes (e.g. text in FogModWrapper, lighting in StaticModBuilder), so the
 cohesive unit is the config namespace, read independently where each piece
-runs. Halloween is the current example spanning four features under one
+runs. Halloween is the current example spanning five features under one
 namespace: `TextTheme` (boss/UI text reskin), `AmbientSpawnInjector`
 (dungeon exit gate greeters/ambushes), `GateDecorInjector` (catalogue
-decorations), and `HalloweenIconInjector` (item icon redirect, plus its
-own bootstrap-time overlay builder and packaging conditional), each
-reading `[plugin.halloween]` independently.
+decorations), `HalloweenIconInjector` (item icon redirect, plus its
+own bootstrap-time overlay builder and packaging conditional), and
+`HalloweenDarknessInjector` (evergaol lighting everywhere), each reading
+`[plugin.halloween]` independently.
 
 ## Plugins
 
@@ -41,4 +42,5 @@ reading `[plugin.halloween]` independently.
 - [halloween-theme.md](halloween-theme.md) - cosmetic halloween text reskin.
 - [halloween-ambient.md](halloween-ambient.md) - Halloween ambient dungeon spawns and gate decorations.
 - [halloween-icons.md](halloween-icons.md) - Halloween item icon redirect (Golden Seed, Sacred Tear).
+- [halloween-darkness.md](halloween-darkness.md) - Halloween evergaol lighting over the whole run.
 - [weather.md](weather.md) - force a fixed weather, pin the clock hour.

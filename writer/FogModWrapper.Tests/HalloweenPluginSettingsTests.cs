@@ -29,6 +29,22 @@ public class HalloweenPluginSettingsTests
         => Assert.False(HalloweenPluginSettings.Parse(Config("""{"greeters": false}""")).Greeters);
 
     [Fact]
+    public void Parse_DefaultsDarknessOff()
+        => Assert.False(HalloweenPluginSettings.Parse(Config()).Darkness);
+
+    [Fact]
+    public void Parse_ReadsDarknessTrue()
+        => Assert.True(HalloweenPluginSettings.Parse(Config("""{"darkness": true}""")).Darkness);
+
+    [Fact]
+    public void Parse_RejectsWrongDarknessType()
+    {
+        var ex = Assert.Throws<InvalidDataException>(
+            () => HalloweenPluginSettings.Parse(Config("""{"darkness": "on"}""")));
+        Assert.Contains("'darkness' must be a boolean", ex.Message);
+    }
+
+    [Fact]
     public void Parse_RejectsUnknownKey()
         => Assert.Throws<InvalidDataException>(
             () => HalloweenPluginSettings.Parse(Config("""{"embushes": true}""")));

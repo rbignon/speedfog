@@ -116,6 +116,7 @@ Event ID ranges and auxiliary flags are declared centrally in
 | 755864000 | ChapelGraceInjector | m10_01_00_00.emevd | One-shot warp to chapel grace (initial spawn) |
 | 755865000 | WeatherInjector | common.emevd | Force fixed weather + pin clock hour (opt-in) |
 | 755865100 | GateDecorInjector | map emevds | Halloween decoration SFX (sequential, capacity 400) |
+| 755865500 | HalloweenDarknessInjector | common.emevd | Re-apply the evergaol gparam override (opt-in) |
 
 All events are registered in Event 0 via `InitializeEvent` (bank 2000, id 0),
 built by `EmevdHelper.InitializeEvent`.

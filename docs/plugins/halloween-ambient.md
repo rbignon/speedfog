@@ -29,7 +29,8 @@ only ambient layer at the gates (the text theme and the item icons are not
 affected by either toggle). With both off, `CollectSpawnSpecsByMap` returns
 no map, so the driver reads no MSB on the spawn layer's behalf, and the
 regulation rows of a disabled flavor (passive think row, decorative
-ambusher rows) are not written.
+ambusher rows) are not written. The same table's `darkness` key drives a
+separate layer, see [halloween-darkness.md](halloween-darkness.md).
 
 ## The two flavors
 

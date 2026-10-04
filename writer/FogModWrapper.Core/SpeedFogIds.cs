@@ -7,7 +7,7 @@ namespace FogModWrapper;
 /// SpeedFogIdsTests asserts they never overlap.
 ///
 /// Bands:
-/// - Event IDs live in the 7558600xx-7558650xx band, safely below FogMod's
+/// - Event IDs live in the 7558600xx-7558655xx band, safely below FogMod's
 ///   entity/region base (see FogModEntityMin).
 /// - Auxiliary flags live at the top of FogMod's 104029xxxx flag band
 ///   (9000+), which FogMod's own allocator does not reach.
@@ -63,6 +63,11 @@ public static class SpeedFogIds
     public static readonly IdRange HalloweenDecorEvents =
         new("GateDecorInjector", 755865100, 400);
 
+    /// <summary>One looping event in common.emevd re-applying the vanilla
+    /// evergaol gparam override ([plugin.halloween] darkness).</summary>
+    public static readonly IdRange HalloweenDarknessEvents =
+        new("HalloweenDarknessInjector", 755865500, 100);
+
     /// <summary>All event ranges, for the disjointness test.</summary>
     public static readonly IReadOnlyList<IdRange> EventRanges = new[]
     {
@@ -75,6 +80,7 @@ public static class SpeedFogIds
         ChapelGraceEvents,
         WeatherEvents,
         HalloweenDecorEvents,
+        HalloweenDarknessEvents,
     };
 
     // --- Auxiliary one-shot flags (FogMod band 104029xxxx, top slice) ---

@@ -7,16 +7,18 @@ namespace FogModWrapper;
 /// Parses [plugin.halloween] parameters from graph.json's verbatim plugin
 /// table. Strict like WeatherInjector.Parse: unknown keys or wrong types
 /// abort the build. The text theme (TextTheme) only reads `enabled`; the
-/// ambient injectors read the parameters here.
+/// ambient injectors and the darkness gate in Program.cs read the parameters
+/// here.
 /// </summary>
 public static class HalloweenPluginSettings
 {
-    public sealed record Settings(bool Ambushes, bool Greeters);
+    public sealed record Settings(bool Ambushes, bool Greeters, bool Darkness = false);
 
     public static Settings Parse(PluginConfig config)
     {
         bool ambushes = false;
         bool greeters = true;
+        bool darkness = false;
         foreach (var (key, value) in config.Extra)
         {
             switch (key)
@@ -31,10 +33,15 @@ public static class HalloweenPluginSettings
                         throw new InvalidDataException("halloween: 'greeters' must be a boolean");
                     greeters = value.GetBoolean();
                     break;
+                case "darkness":
+                    if (value.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                        throw new InvalidDataException("halloween: 'darkness' must be a boolean");
+                    darkness = value.GetBoolean();
+                    break;
                 default:
                     throw new InvalidDataException($"halloween: unknown parameter '{key}'");
             }
         }
-        return new Settings(ambushes, greeters);
+        return new Settings(ambushes, greeters, darkness);
     }
 }

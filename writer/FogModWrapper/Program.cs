@@ -784,6 +784,13 @@ Example:
                 ctx.CommonEmevd, ctx.Events, WeatherInjector.Parse(ctx.GraphData.Plugins["weather"]));
         }
 
+        // Halloween darkness: keep the vanilla evergaol gparam override active
+        // (opt-in via [plugin.halloween] darkness = true).
+        if (ctx.GraphData.IsPluginEnabled("halloween") && ctx.HalloweenSettings.Darkness)
+        {
+            HalloweenDarknessInjector.InjectEmevdEvent(ctx.CommonEmevd, ctx.Events);
+        }
+
         // Neutralize vanilla events that set AlternateFlag values (flags 300, 330).
         AlternateFlagPatcher.Patch(ctx.CommonEmevd);
 
@@ -926,7 +933,7 @@ Example:
         // map's MSB once (decor placement first: the decor ground estimate
         // uses vanilla enemies as floor evidence, and AmbientSpawnInjector's
         // greeters/ambushers carry EntityID 0, which would pass its vanilla
-        // filter). ctx.HalloweenSettings is parsed once in ApplyRegulation.
+        // filter). ctx.HalloweenSettings is parsed once, on first access.
         if (ctx.GraphData.IsPluginEnabled("halloween"))
         {
             HalloweenAmbientPass.Inject(
@@ -1082,11 +1089,12 @@ Example:
         // repoint ThinkParamID at it. False keeps the vanilla AI.
         public bool UntouchableBossMovesetApplied;
 
-        // Parsed lazily on first access: both ApplyRegulation (ambusher row
-        // gating) and ApplyModDirInjectors (HalloweenAmbientPass) need the
-        // [plugin.halloween] settings, but HalloweenPluginSettings.Parse
-        // should only run once per build. Only valid when the halloween
-        // plugin is enabled (both call sites already guard on that).
+        // Parsed lazily on first access: ApplyCommonInjectors (darkness),
+        // ApplyRegulation (ambusher row gating) and ApplyModDirInjectors
+        // (HalloweenAmbientPass) need the [plugin.halloween] settings, but
+        // HalloweenPluginSettings.Parse should only run once per build. Only
+        // valid when the halloween plugin is enabled (every call site
+        // guards on that).
         private HalloweenPluginSettings.Settings? _halloweenSettings;
         public HalloweenPluginSettings.Settings HalloweenSettings =>
             _halloweenSettings ??= HalloweenPluginSettings.Parse(GraphData.Plugins["halloween"]);
