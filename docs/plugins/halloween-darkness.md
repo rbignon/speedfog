@@ -74,9 +74,15 @@ EndUnconditionally(EventEndType.Restart)
   weather to default whenever the player carries SpEffect 8998, then
   clears it. Both loops (darkness, weather) restore their state within
   their interval.
-- `[plugin.weather]` is independent: it picks the weather gparams and the
-  hour, the override layers on top of whatever they produce. Night plus
-  heavy fog combines with darkness.
+- `[plugin.weather]` is configured independently: it picks the weather
+  gparams and the hour, the override layers on top of whatever they
+  produce. At night, fog weathers lose most of their effect under it
+  (2026-10-04): `heavy_fog` showed clearly with the override off and only
+  faintly with it on, and `fog`, `rainy_heavy_fog` and `snowy_heavy_fog`
+  did no better (`windy_fog` and daytime untested). The override's own
+  VolumetricFog group is the likely cause; its darker LightSet and ToneMap
+  may add to it. Darkness wins over fog visibility: of the fog weathers
+  tested, `heavy_fog` keeps the most fog under the override.
 
 ## Background and rejected approaches
 
@@ -109,6 +115,8 @@ first before retrying.
   `common.emevd` darkens the image, and the render was approved.
 - Done (2026-10-04): entering the Specimen Storehouse and Enir-Ilim looks
   fine (partial blend toward their look, then back to the evergaol).
+- Done (2026-10-04, midnight): fog weathers under the override (see
+  Interactions).
 - Owed: no flicker when the override is re-applied every 2 seconds; the
   look indoors (a catacomb, a legacy dungeon); darkness back within 2
   seconds after leaving an evergaol, after a fog gate warp, and after a
