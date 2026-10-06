@@ -5,6 +5,13 @@
 #
 # weight = relative traversal difficulty (data-driven for dungeons, phase-based for bosses)
 #
+# Dungeon weights (mini_dungeon, legacy_dungeon) follow the median clear time
+# in minutes, rounded to 0.5, reported by speedfog-racing's
+# tools/extract_zone_times.py. Last run on the 2026-10-05 production dump:
+#   --since 2026-06-01 --types mini_dungeon legacy_dungeon --deviation 0
+#   --min-samples 30
+# Dungeons with fewer clears kept their previous weight.
+#
 # Multi-zone cluster weights use logarithmic aggregation by default:
 #   cluster_weight = round(avg_zone_weight * (1 + 0.5 * ln(n_zones)), 1)
 # This reflects that players traverse a path through zones, not all of them.
@@ -35,7 +42,7 @@ other = 2
 # --- Base game ---
 
 [zones.academy]
-weight = 1.5
+weight = 1
 
 [zones.academy_entrance]
 weight = 3
@@ -45,7 +52,7 @@ weight = 1
 
 [zones.haligtree]
 type = "mini_dungeon"
-weight = 3
+weight = 2.5
 
 [zones.haligtree_elphael]
 type = "mini_dungeon"
@@ -55,14 +62,26 @@ weight = 4
 weight = 2.5
 
 [zones.sewer]
-weight = 3
+weight = 2.5
 
 [zones.peninsula_morne]
 weight = 3  # Castle Morne, detected as legacy_dungeon via fortressonly+legacy fog
 
 [zones.mohgwyn]
 type = "mini_dungeon"
-weight = 3
+weight = 2
+
+[zones.altus_shaded]
+weight = 2
+
+[zones.liurnia_manor]
+weight = 2.5
+
+[clusters.peninsula_morne_9e1d]
+weight = 2.5
+
+[clusters.volcano_town_b4e2]
+weight = 1.5
 
 # --- DLC ---
 
@@ -84,9 +103,13 @@ type = "legacy_dungeon"
 
 [zones.midramanse]
 type = "legacy_dungeon"
+weight = 2.5
 
 [clusters.belurat_d88b]
 weight = 2
+
+[clusters.shadowkeep_church_7877]
+weight = 2.5
 
 # =============================================================================
 # Mini Dungeons
@@ -107,7 +130,7 @@ weight = 6
 weight = 2
 
 [zones.dragonbarrow_selliahideaway]
-weight = 2
+weight = 1.5
 
 [zones.dragonbarrow_cave]
 weight = 0.5
@@ -116,7 +139,7 @@ weight = 0.5
 weight = 2.5
 
 [zones.gelmir_grave]
-weight = 2.5
+weight = 2
 
 [zones.gelmir_wyndhamcatacombs]
 weight = 2
@@ -125,16 +148,16 @@ weight = 2
 weight = 0.5
 
 [zones.limgrave_tunnels]
-weight = 2
+weight = 1.5
 
 [zones.liurnia_tunnel]
 weight = 2
 
 [zones.mountaintops_catacombs]
-weight = 4
+weight = 3
 
 [zones.mountaintops_sol]
-weight = 1
+weight = 1.5
 
 [zones.outskirts_grave]
 weight = 2
@@ -143,10 +166,10 @@ weight = 2
 weight = 3
 
 [zones.sewer_catacombs]
-weight = 2.5
+weight = 2
 
 [zones.snowfield_catacombs]
-weight = 2.5
+weight = 2
 
 [zones.siofrabank_prenokron]
 type = "mini_dungeon"
@@ -160,7 +183,7 @@ type = "mini_dungeon"
 weight = 2
 
 [zones.deeproot]
-weight = 1
+weight = 1.5
 type = "mini_dungeon"
 
 [zones.siofra_nokron]
@@ -196,6 +219,45 @@ weight = 2
 [clusters.sewer_46d2]
 weight = 1
 
+[zones.caelid_erdtreecatacombs]
+weight = 1.5
+
+[zones.caelid_wardead]
+weight = 1.5
+
+[zones.ellac_cave]
+weight = 1.5
+
+[zones.limgrave_highroadcave]
+weight = 1.5
+
+[zones.liurnia_cliffbottomcatacombs]
+weight = 1.5
+
+[zones.liurnia_lakesidecave]
+weight = 0.5
+
+[zones.mountaintops_cave]
+weight = 1.5
+
+[zones.peninsula_impalerscatacombs]
+weight = 1.5
+
+[zones.peninsula_tombswardcatacombs]
+weight = 1.5
+
+[zones.snowfield_cave]
+weight = 1.5
+
+[zones.snowfield_tunnel]
+weight = 1.5
+
+[clusters.caelid_abandonedcave_aa21]
+weight = 1
+
+[clusters.outskirts_sealedtunnel_07eb]
+weight = 1.5
+
 # --- DLC ---
 
 [clusters.gravesite_dragonpit_1f37]
@@ -209,7 +271,7 @@ type = "mini_dungeon"
 weight = 4
 
 [zones.gravesite_catacombs]
-weight = 3.5
+weight = 2.5
 
 [zones.gravesite_forge]
 weight = 1.5
@@ -218,10 +280,10 @@ weight = 1.5
 weight = 2.5
 
 [zones.rauhbase_catacombs]
-weight = 3.5
+weight = 3
 
 [zones.rauhbase_forge]
-weight = 3
+weight = 2
 
 # Ancient Ruins of Rauh: overworld with `crawlclosed` tag, integrated as a closed
 # dungeon (req_rauhruins). Primary cluster is anchored on rauhruins_east; the
@@ -242,10 +304,10 @@ type = "mini_dungeon"
 
 [zones.westrampart]
 type = "mini_dungeon"  # Shadow Keep West Rampart, dungeon section
-weight = 2
+weight = 2.5
 
 [zones.scadualtus_gaol]
-weight = 3
+weight = 2.5
 
 # =============================================================================
 # Boss Arenas & Major Bosses
@@ -399,6 +461,7 @@ no_drop_to = ["enirilim"]
 # Merged Enir-Ilim cluster ({enirilim_upper, enirilim} via the drops_to edge).
 # Distinguish it from the lower-only cluster (both would otherwise display "Enir-Ilim").
 display_name = "Enir-Ilim Spiral Rise"
+weight = 2
 # Each synthetic gate's two sides share one doorway: entering through a gate
 # must not allow exiting through the same gate (zero-length placement).
 proximity_groups = [
@@ -532,7 +595,7 @@ proximity_groups = [
 ]
 
 [clusters.stormveil_db4a]
-weight = 2
+weight = 1.5
 proximity_groups = [
     ["AEG099_230_9001", # Limgrave Divine Tower boundary
      "AEG099_002_9002", # Margit back
@@ -540,6 +603,7 @@ proximity_groups = [
 ]
 
 [clusters.storehouse_cc6f]
+weight = 3.5
 proximity_groups = [
     ["AEG099_230_9000", # West Rampart entrance
      "AEG099_230_9500", # Elevator to Storehouse
@@ -554,6 +618,7 @@ proximity_groups = [
 ]
 
 [clusters.academy_2a8a]
+weight = 2.5
 proximity_groups = [
     ["1035452610",  # Raya Lucaria Main to South
      "1035462611",  # Raya Lucaria East to Main
@@ -561,6 +626,7 @@ proximity_groups = [
 ]
 
 [clusters.storehouse_6660]
+weight = 2.5
 proximity_groups = [
     ["storehouse_back:AEG099_001_9000", # Gaius front
      "storehouse_back:AEG099_230_9000", # Hinterland entrance
@@ -603,7 +669,7 @@ allowed_entries = [
 
 # Leyndell2: Hoarah Loux exit + all Gideon entrances are adjacent (throne -> sanctuary)
 [clusters.leyndell2_sanctuary_94fb]
-weight = 2
+weight = 2.5
 proximity_groups = [
     ["AEG099_001_9001", # Hoarah Loux front
      "AEG099_001_9003", # Gideon front
@@ -627,7 +693,7 @@ proximity_groups = [
 
 # Leyndell: Morgott exit + all Godfrey entrances are adjacent (throne -> sanctuary)
 [clusters.leyndell_sanctuary_25d4]
-weight = 2
+weight = 2.5
 proximity_groups = [
     ["AEG099_001_9000", # Morgott front
      "AEG099_001_9003", # Godfrey side
@@ -642,7 +708,7 @@ proximity_groups = [
 
 # Leyndell (from Marika exit): Godfrey front + Godfrey side are adjacent
 [clusters.leyndell_1259]
-weight = 3
+weight = 1.5
 proximity_groups = [
     ["AEG099_001_9004", # Godfrey Marika exit
      "AEG099_001_9003", # Godfrey front
@@ -667,6 +733,7 @@ allowed_entries = [
 
 # Academy Post Redwolf
 [clusters.academy_redwolf_8733]
+weight = 1
 proximity_groups = [
     ["AEG099_001_9000", # Rennala front
      "1037462650",      # Sending gate to Church of Vows
@@ -678,7 +745,7 @@ proximity_groups = [
 
 # Academy Post Redwolf (large), same spatial groups
 [clusters.academy_redwolf_b9d9]
-weight = 0.5
+weight = 1
 proximity_groups = [
     ["AEG099_001_9000",             # Rennala front
      "1037462650",                  # Sending gate to Church of Vows
@@ -691,7 +758,7 @@ proximity_groups = [
 
 # Farum Azula before Godskin Duo
 [clusters.farumazula_lift_979a]
-weight = 2
+weight = 1.5
 proximity_groups = [
     ["AEG099_001_9004", # Godskin Duo balcony (top)
      "AEG099_001_9000", # Godskin Duo back right (down stairs)
@@ -699,6 +766,7 @@ proximity_groups = [
 ]
 
 [clusters.farumazula_start_f5a0]
+weight = 3
 proximity_groups = [
     ["AEG099_001_9004", # Godskin Duo balcony (top)
      "AEG099_001_9000", # Godskin Duo back right (down stairs)
@@ -717,17 +785,17 @@ proximity_groups = [
 allowed_exits = [
   "AEG099_002_9000",    # Before Dragonkin
 ]
-weight = 2
+weight = 1.5
 
 [clusters.rauhruins_east_aa23]
 display_name = "Ruins of Rauh"
-weight = 4
-
-[clusters.fissure_e510]
 weight = 3.5
 
+[clusters.fissure_e510]
+weight = 3
+
 [clusters.siofra_nokron_8a39]
-weight = 2.5
+weight = 2
 allowed_exits = [
     "12022670",          # Waygate
     "AEG099_002_9002",   # Before Gargoyles
@@ -746,7 +814,7 @@ allowed_exits = [
 ]
 
 [clusters.volcano_town_d40f]
-weight = 2
+weight = 1.5
 
 [clusters.gravesite_catacombs_1e77]
 allowed_entries = [

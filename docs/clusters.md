@@ -176,6 +176,12 @@ Weight = approximate traversal time in minutes.
 Per-zone overrides `[zones.<name>] weight` for notably smaller/larger areas (e.g.
 `dragonbarrow_cave`: 0.5, `gelmir_hero_grave`: 6). Zone weights are raw measurements
 (observed traversal times from production race data, plus manual adjustments).
+Dungeon weights (`mini_dungeon`, `legacy_dungeon`) follow the median clear time,
+rounded to 0.5, reported by speedfog-racing's `tools/extract_zone_times.py` (the
+header of `zone_metadata.toml` records the last run and its thresholds). The zone
+and cluster weights of boss arenas stay hand-tuned, since boss clear times depend
+on the scaling tier and on which players dare the fight; the per-boss `boss.weight`
+is a separate calibration (`docs/boss-arena-constraints.md`, Calibration).
 
 Cluster weight = logarithmic aggregation of the zone weights, rounded to one decimal:
 `round(avg_zone_weight * (1 + 0.5 * ln(n_zones)), 1)` (players traverse a path through
