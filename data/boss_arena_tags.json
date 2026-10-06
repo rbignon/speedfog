@@ -1870,7 +1870,7 @@
       }
     },
     "arena": {
-      "size": 3,
+      "size": 1,
       "type": 5,
       "two_phase_not_allowed": false,
       "dragon_not_allowed": true,
