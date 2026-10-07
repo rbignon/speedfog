@@ -256,6 +256,19 @@ without the boss rows. Knob: `BEAM_EVENT_COUNT` (4), which also sets the
 nova count (one less). If a payload ever fails to aim at the player,
 candidate dummies are 10 (the grab's flash origin) and 906 (the burst).
 
+The same patcher gives the burst 3001 the near teleport's warp marker
+(`PatchNearWarpMarker`): one copy of 3000's own marker event (type 66,
+`AddSpEffect_Multiplayer`, vanilla 20011452, one frame) applying
+`SpeedFogIds.UntouchableNearWarpMarkerSpEffect` (755890003) instead,
+starting when 3001's hit ends (0.2667 s) and lasting the same frame,
+in an event group of its own type. The marker row is a copy of
+20011452 (fieldless) that FogModWrapper writes into every seed's
+regulation (`UntouchableBossInjector.ApplyNearWarpMarker`), boss placed
+or not, since every untouchable plays 3001 with the shipped anibnd; only
+the boss's battle script watches it. The patcher refuses (warning,
+nothing written) a 3001 without exactly one hit of judge 115, or a 3000
+without the 20011452 event.
+
 ### Per-seed rows (`ApplyMoveset`)
 
 | Param | Row | Source | Changes |
@@ -378,9 +391,9 @@ Act02  dist >= TELEPORT_FAR_RANGE (5 m) → far: teleport timer 11.5, hold 9, wa
        dist < 5 m → near: room scan from the boss, B then BL then BR (F/FL/FR when the
          player is in its back), at 8 m then at 5 m
          no room → teleport timer 2 s, nothing queued
-         room    → teleport timer 6, hold 2.5, ClearSubGoal, warp from TARGET_SELF,
-                   then the beam if it is ready (no burst: the swing timer is neither
-                   read nor re-armed here)
+         room    → teleport timer 6, hold 1.8, near timer (slot 8) 1.8, watch 755890003,
+                   ClearSubGoal, immediate burst 3001 (swing timer re-armed, not read);
+                   the warp happens in Goal.Interrupt, on the burst's marker
 Act03  approach to 12 m (never queued: offered under 10 m only), watch 5030,
        grab 3002 (life 8, reach 12, turn 2 s / 50 degrees)
 Act04  beam 3004 (life 3, reach 999, turn 1.5 s / 60 degrees)
@@ -427,7 +440,7 @@ in metres, turns are `turnTime` / `turnFaceAngle` (see
 | Act | Origin | What it queues |
 |-----|--------|----------------|
 | Act01 | vanilla | approach (`Approach_Act_Flex`, stop 0.5 m, always running) then animation 2100 (life 0.1 s, reach 5 m) |
-| Act02 | SpeedFog (vanilla's teleport act rewritten) | under `TELEPORT_FAR_RANGE`: `ToTargetWarp` away from the player, then the beam if ready; from it: vanilla's 3000 with the 20011452 watch, whose interrupt warps behind the player and bursts |
+| Act02 | SpeedFog (vanilla's teleport act rewritten) | under `TELEPORT_FAR_RANGE`: the burst 3001 with the 755890003 watch, whose interrupt warps away from the player and queues the beam if ready; from it: vanilla's 3000 with the 20011452 watch, whose interrupt warps behind the player and bursts |
 | Act03 | vanilla, grab through the shared builder | approach (stop 12 m, so never queued in the brackets that weight it) then the grab 3002 (reach 12 m, turn 2 s / 50 degrees, life 8 s) with the 5030 watch that chains the throw 3003 |
 | Act04 | SpeedFog | the beam and flame nova 3004 (reach 999, turn 1.5 s / 60 degrees, life 3 s) |
 | Act05 | vanilla, teleport and beam added | the near teleport when its timer allows and there is room; else clears the queue, `LeaveTarget` to 10 m (life 5 s), then the beam if ready |
@@ -451,42 +464,68 @@ center, melee reach with a long weapon being 3-4 m); the post-grab
 retreats (Act05/Act06) use the near one. No reaction warps (see
 "Interrupts").
 
-**Near** (under 5 m): a bare warp, then the beam. Nothing is queued
-ahead of the warp, so the vanish is immediate, and nothing between it
-and the beam. Two shapes were tried first and both failed in game, which
-is why the act is this plain. The burst 3001 as a wind-up cost a visible
-second: it lands its hit between 0.03 and 0.27 s by the TAE but opens
-its cancel window only at 1.00 s, and a queued
-follow-up waits for that window; cutting its goal life short to hand
-over on the hit stopped the teleport happening at all. Moving the burst
-after the warp then detached it from the move, since the arrival
-animation hands over only at 0.9 to 1.4 s (5010 to 5013) and itself runs
-to `ARRIVAL_MAX`, so the explosion arrived well after the reappearance,
-and it would have whiffed anyway at `TELEPORT_AWAY_DIST`, past its 4 m
-radius. Jori's teleport (vanilla 531020) is no model either: its
-structure is the same attack-warp-attack and its wind-up 3006 hands over
-later still, at 1.40 s. The teleport is therefore a clean blink, and 3001 is spent only
-where it lands on the player: Act11, the hit reaction and the far
-teleport's post-warp attack, which is vanilla 528000's own pair. The warp
-lands `TELEPORT_AWAY_DIST` (8 m) from the boss's own position, away
-from the player (the five-argument `TARGET_SELF` form of Rennala's
+**Near** (under 5 m): the burst, then on its marker the warp away and
+the beam. This is Jori's shape and the far teleport's: an animation of
+the boss's own first, and the warp only when that animation applies a
+marker SpEffect. Jori's teleports (vanilla 531020, Act07 and Act11 to
+Act13) play his vanish 3006, whose TAE applies 20011801 at 1.37 s, and
+his `Goal.Interrupt` warps on it; every vanilla warp queued from an
+interrupt answers such a marker (396 battle scripts surveyed). The act
+queues the burst 3001 alone, with the immediate wrapper, and watches
+755890003, the marker the TAE patch adds to 3001 right after its hit
+(0.27 s, see "TAE patch"); `Goal.Interrupt` answers it with the warp and
+the beam when the near timer (slot 8, `BURST_LENGTH` from the queue)
+says a near teleport is pending, and lets every other burst through.
+Nothing is queued after the burst, so a burst that never plays never
+leads to a warp: a critical or a stagger takes the animation, the
+marker never comes, and the pending teleport lapses (the next burst
+queued, from any source, clears it, so only the near teleport's own
+burst can warp). The warp also goes through `Goal.Interrupt`'s vanilla
+guard: while SpEffect 5110 or an effect with the illness attribute is
+active (which ailments carry it is not established), the marker is
+ignored and the near teleport is a lone burst, its cooldown spent; the
+far teleport's marker has the same guard, in vanilla too. A bare warp has no
+such protection: `ToTargetWarp` runs even while a critical victim
+animation owns the boss (in game, the boss vanished in the middle of a
+frontstab), so a warp queued first, or as a follow-up, can cut any
+animation short.
+
+Two other wind-up shapes are ruled out by the engine. A warp queued
+after the burst waits for 3001's first AI cancel window (1.00 s, while
+the hit lands between 0.03 and 0.27 s): a visible second of standing
+still after the explosion; cutting the burst's goal life short to hand
+over on the hit stopped the teleport happening at all. A burst queued
+after the warp detaches from the move: the arrival animation hands over
+only at 0.9 to 1.4 s (5010 to 5013) and itself runs to `ARRIVAL_MAX`,
+so the explosion arrives well after the reappearance, and it would whiff
+at `TELEPORT_AWAY_DIST`, past its 4 m radius. The marker interrupt
+answers mid-animation instead, the way 528000's far teleport answers
+3000's marker at 4.77 s. The near teleport spends a burst, so it
+re-arms the swing timer, without waiting for it (it has its own
+cooldown).
+
+The warp lands `TELEPORT_AWAY_DIST` (8 m) from the boss's own position,
+away from the player (the five-argument `TARGET_SELF` form of Rennala's
 203100 and of 301010's retreats): straight behind the boss or, when the
 player stands in its back, straight ahead, then the diagonals.
 `Houzuki755890_FindRoomAway` scans those directions from the boss's own
 position with its hit radius as the line width, then again at
-`TELEPORT_AWAY_FALLBACK` (5 m) for small arenas. The beam follows when it
-is ready: the boss blinks and fires. The scan runs when the
-act is queued; without room nothing is queued and the teleport timer
-restarts at
-`TELEPORT_RETRY` (2 s) instead of the full cooldown, so a cramped spot
-is retried soon but not at every decision. The bursts that remain (the
-hit reaction's and the far teleport's) use the
-`ComboTunable_SuccessAngle180` wrapper with reach 999, turn 0 and every
-angle 180, the argument set of 504000's post-warp attacks (its only
-vanilla user), so they fire whatever the player's side. The retreat stays
-in the player's view
-on purpose: lock-on cannot be broken from the AI, so a warp behind the
-player would only turn the camera.
+`TELEPORT_AWAY_FALLBACK` (5 m) for small arenas
+(`Houzuki755890_FindRetreat`). The beam follows when it is ready: the
+boss bursts, blinks and fires. The scan runs when the act is queued, to
+decide; without room nothing is queued and the teleport timer restarts
+at `TELEPORT_RETRY` (2 s) instead of the full cooldown, so a cramped
+spot is retried soon but not at every decision. It runs again on the
+marker, which warps only if there is still room (otherwise the burst
+finishes on its own, as the far teleport does without room). Every
+immediate burst (the near teleport's, the hit reaction's and the far
+teleport's) uses the `ComboTunable_SuccessAngle180` wrapper with reach
+999, turn 0 and every angle 180, the argument set of 504000's post-warp
+attacks (its only vanilla user), so it fires whatever the player's side.
+The retreat stays in the player's view on purpose: the lock is kept. An
+animation can drop it (TAE flag 49, "Disable Lock-On": 3000 sets it at
+4.80 s, Jori's 3006 at 1.30 s), but the AI cannot, and without that
+flag a warp behind the player would only turn the camera.
 
 **Far** (5 m and more), vanilla's own act: the 5 s teleport-out animation
 3000 (queued with vanilla's own `successDist` expression, `5 - hit
@@ -512,8 +551,9 @@ interval (`RegistAttackTimeInterval`) and reads the counter
 `Houzuki755890_BeamReady` and `Houzuki755890_GrabReady` are the same call
 with weights 100/0 wherever an act or a reaction needs one of them, so no
 counter is ever read unregistered. The burst (`SWING_COOLDOWN` 4 s, set by every 3001 the
-script queues, read by Act11, by the far teleport's post-warp burst and
-by the hit reaction; the near teleport queues none) and the teleport
+script queues, the near teleport's included, read by Act11, by the far
+teleport's post-warp burst and by the hit reaction; the near teleport
+does not read it) and the teleport
 (`TELEPORT_COOLDOWN` 6 s after a near one, `TELEPORT_FAR_COOLDOWN` 11.5 s
 after a far one, whose own sequence takes about 9 s, `TELEPORT_RETRY` 2 s
 after a near attempt that found no room) are AI timers
@@ -542,10 +582,10 @@ reaction spends an attack the table could offer anyway, so it moves an
 attack earlier without adding any. No reaction fires while a teleport or
 a grab sequence is in flight (`Houzuki755890_SequenceInFlight`), since
 its `ClearSubGoal` would drop the warp, the beam or the throw: the hold
-timer (`TIMER_HOLD`, slot 9) is set with each queued teleport to
-`TELEPORT_HOLD` (near: `ARRIVAL_MAX` + margin, 2.5 s, up to the beam
-starting rather than finishing)
-or `TELEPORT_FAR_HOLD` (far: `MARKER_3000` + `ARRIVAL_MAX` +
+timer (`TIMER_HOLD`, slot 9) is set with each queued teleport, near:
+`BURST_LENGTH` (1.8 s) with the burst, then `TELEPORT_HOLD` from the warp
+(`ARRIVAL_MAX` + margin, 2.5 s, up to the beam starting rather than
+finishing); far: `TELEPORT_FAR_HOLD` (`MARKER_3000` + `ARRIVAL_MAX` +
 `BURST_LENGTH` + margin, 9 s), and the grab is covered by its counter
 under `REACT_HOLD` (`GRAB_CHAIN` + 1 s, 7 s). The spans come from the c5280 TAE and
 are named at the top of the script. Accepted exposure, shared with
@@ -561,8 +601,14 @@ Goal.Interrupt, first matching case wins
       room    → ClearSubGoal, warp, then an immediate burst only if the swing timer is at 0
       no room → nothing, 3000 finishes on its own
       → true either way
-   b. 5030 is the trigger AND the player in front within 4 m → ClearSubGoal + throw 3003 → true
-   c. else false
+   b. 755890003 active (3001's near-warp marker at 0.27 s) AND near timer (slot 8) > 0:
+      near timer → 0, room scan from the boss as at the act (8 m, then 5 m)
+      room    → hold 2.5, ClearSubGoal, warp from TARGET_SELF, then the beam if it is ready
+      no room → nothing, 3001 finishes on its own
+      → true either way
+      (any other 3001, Act11's, the hit reaction's or the far post-warp one, falls through)
+   c. 5030 is the trigger AND the player in front within 4 m → ClearSubGoal + throw 3003 → true
+   d. else false
 2. Damaged: player in the front 120-degree cone within REACT_HIT_RANGE (2 m)
    AND nothing in flight (in flight: hold timer > 0, or 3002 started <= REACT_HOLD (7 s) ago)
    AND draw <= REACT_HIT (25)
@@ -586,12 +632,10 @@ own, but it is a design decision rather than a tuning value.
 The hit reaction never warps. A warp here would cut a critical short: a
 critical hit (a frontstab after a posture break) raises the same damage
 interrupt from right in front, and a near-teleport answer at this point
-is the likely path of the animation-less blink seen around a critical
-in game. How the engine treats a warp issued while a critical
-victim animation (11010/11060 in the c5280 TAE, about 7 s, cancelable
-from 6.13 s) owns the boss is not established: it may run at once, wait
-for that window, or be dropped as `docs/ai-scripts.md` suspects for a
-warp issued under the burst. The rule that settles the design is
+is the likely path of the animation-less blink seen in the middle of a
+frontstab in game: the warp runs at once even though a critical victim
+animation (11010/11060 in the c5280 TAE, about 7 s, cancelable from
+6.13 s) owns the boss. The rule that settles the design is
 vanilla's: every vanilla warp queued from `Goal.Interrupt` (396 battle
 scripts surveyed) answers a marker SpEffect that the character's own
 animation applies, which a critical never does, and Jori's 531020 damage
@@ -618,8 +662,11 @@ and rejects the syntax Lua added after 5.0 (the engine's compiler).
 `Goal.Interrupt` in an embedded Lua (lupa) against a fake ai/goal and
 checks the weight table, the queued sub-goals with their arguments, the
 timers and the reactions per state (distance, behind, SpEffects, seconds
-since each attack, AI timers, room per direction, draw). Extend it with
-any table change. The in-game checklist below remains the real test.
+since each attack, AI timers, room per direction, draw), and that the
+script names the same near-warp marker id as
+`SpeedFogIds.UntouchableNearWarpMarkerSpEffect` (the TAE patch and the
+regulation row read that one). Extend it with any table change. The
+in-game checklist below remains the real test.
 
 ## Scaling and tuning knobs
 
@@ -668,22 +715,31 @@ Generate a seed with the allowlist above, then in the arena:
    teleport's post-warp one, the hit reaction's) at most once
    per `SWING_COOLDOWN`, novas between them, and sidesteps or strafes through the
    cooldowns; the boss never stands still for several seconds, and a
-   grab is followed by the blink rather than the walk retreat
-   whenever the teleport is off cooldown.
-3. **Near teleport** (under 5 m): an immediate vanish with no fade and no
-   wind-up, a reappearance 8 m from where the boss stood, away from the
-   player (5 m in a small arena; straight ahead when the player was in
-   its back), then the beam when it is ready, with no burst anywhere in
-   the move. Any pause before the vanish means something is queued ahead
-   of the warp again: the warp must be the act's first sub-goal. Break
-   its posture and land a frontstab: the boss must play the whole
-   critical animation and get up where it fell. A vanish before it is
-   back on its feet means a warp still reaches the critical; a near
-   teleport drawn once it stands is the table's Act02 (about one get-up
-   in four with the player in front), by design.
-   In a catacomb room, confirm it still
-   retreats at least sometimes; a boss that never retreats there means
-   both scan distances fail: lower `TELEPORT_AWAY_FALLBACK`.
+   grab is followed by the near teleport (burst, then blink) rather
+   than the walk retreat whenever the teleport is off cooldown. The near
+   teleport's burst does not wait for the swing timer, so two bursts
+   within `SWING_COOLDOWN` are normal when the second one vanishes.
+3. **Near teleport** (under 5 m): the burst, then the vanish right
+   after its explosion (about 0.3 s in, no second of standing still), a
+   reappearance 8 m from where the boss stood, away from the player (5 m
+   in a small arena; straight ahead when the player was in its back),
+   then the beam when it is ready. A burst followed by a pause of about
+   a second before the vanish means the marker interrupt waits for
+   3001's cancel window after all: the TAE patch would then also need to
+   open 3001's AI cancel flags (23, 78, 86) at the marker. A burst with
+   no vanish at all has three causes: no room left when the marker
+   fires, the interrupt guard (SpEffect 5110 or an illness-attribute
+   effect on the boss), or the marker never reaching the script (check
+   the StaticModBuilder and FogModWrapper log lines below); only the
+   last one is a bug if it happens every time. Act11's swing
+   and the hit reaction's burst must never vanish. Break its posture and
+   land a frontstab: the boss must play the whole critical animation and
+   get up where it fell, never vanish during it; a near teleport drawn
+   once it stands (the table's Act02, about one get-up in four with the
+   player in front) plays its burst first, by design. In a catacomb
+   room, confirm it still retreats at least sometimes; a boss that never
+   retreats there means both scan distances fail: lower
+   `TELEPORT_AWAY_FALLBACK`.
 4. **Far teleport** (5 m and more): the 5 s lantern fade, then the warp
    behind the player and the burst, every time and not only the first.
    Never two teleports within `TELEPORT_COOLDOWN`.
@@ -723,6 +779,7 @@ Untouchable boss: repointing N placed boss slot(s)
   Fallback: repointed N part(s) in <name> (merge-dir copy shipped into the mod dir)
   Repointed M untouchable boss part(s)
   Wall patch: K instruction(s) in J map(s)
+Untouchable near-warp marker: SpEffect 755890003 (copy of 20011452)
 ```
 
 `M >= 1` whenever the boss was placed in at least one `c5280`-model
@@ -730,8 +787,10 @@ arena. The `Fallback:` line only appears when a `[[fallback_arena_maps]]`
 map was patched. Phase-slot warnings are expected. When the moveset is
 skipped, the second line is replaced by one
 `Untouchable boss: moveset skipped (<reason>)` line and the repoint lines
-carry only `NPCParamID`. At bootstrap, StaticModBuilder prints
-two lines: `Untouchable TAE patch: retargeted 4 bullet event(s) of animation 3004 to judge 150 (beam) and 3 to judge 151 (flame nova)`
+carry only `NPCParamID`. The near-warp marker line appears in every
+seed, boss placed or not. At bootstrap, StaticModBuilder prints three
+lines: `Untouchable TAE patch: retargeted 4 bullet event(s) of animation 3004 to judge 150 (beam) and 3 to judge 151 (flame nova)`,
+`Untouchable TAE patch: near-warp marker 755890003 on animation 3001 at 0.2667 s (after its hit)`
 then `Untouchable TAE patch: wrote chr/c5280.anibnd.dcx`.
 
 ## Engine facts and pitfalls
@@ -768,7 +827,16 @@ on; each is a constraint for any change.
   here and reappears the boss where it stood afterwards; warp around
   `TARGET_ENE_0`. Lock-on cannot be broken from the AI (no SpEffect
   field does it): a "surprise from behind" only turns the camera, so
-  retreat-and-punish is the lock-proof shape.
+  retreat-and-punish is the lock-proof shape. An animation can drop it
+  (TAE `ChrActionFlag` 49, "Disable Lock-On", set by 3000 at 4.80 s and
+  by Jori's 3006 at 1.30 s), which would mean a TAE patch.
+- **A warp is not held by the animation that owns the character.**
+  `ToTargetWarp` ran in the middle of a frontstab's victim animation (in
+  game): a warp queued as a reaction or a first sub-goal can cut any
+  animation, a critical included. Anchor every warp on a marker
+  SpEffect of the boss's own animation, answered in `Goal.Interrupt`
+  (vanilla's only interrupt warp shape); a critical or a stagger takes
+  that animation, and the marker never comes.
 - **SpEffect categories.** Two effects of the same `spCategory` do not
   coexist: the lower `categoryPriority` wins, and at equal priority the
   later one replaces the earlier. Clones inherit the template's

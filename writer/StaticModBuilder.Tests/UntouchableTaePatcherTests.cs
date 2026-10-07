@@ -118,4 +118,136 @@ public class UntouchableTaePatcherTests
         Assert.Equal(0, UntouchableTaePatcher.Patch(tae, log.Add));
         Assert.Contains(log, l => l.Contains("3004"));
     }
+
+    // --- Near-warp marker on the burst (animation 3001) ---
+
+    private static byte[] IntParams(params int[] values)
+    {
+        var p = new byte[16];
+        for (int i = 0; i < values.Length; i++)
+            BitConverter.GetBytes(values[i]).CopyTo(p, 4 * i);
+        return p;
+    }
+
+    private static TAE.Event Grouped(TAE.Animation anim, TAE.Event ev, int groupType)
+    {
+        var group = anim.EventGroups.Find(g => g.GroupType == groupType);
+        if (group == null)
+        {
+            group = new TAE.EventGroup(groupType);
+            anim.EventGroups.Add(group);
+        }
+        ev.Group = group;
+        anim.Events.Add(ev);
+        return ev;
+    }
+
+    /// <summary>Animations 3000 and 3001 as in vanilla c5280: 3000 carries
+    /// the warp marker 20011452 (type 66, one frame at 4.7667 s) next to
+    /// other type-66 markers; 3001 lands its hit (type 1, judge 115) from
+    /// 0.0333 s to 0.2667 s and carries no type-66 event.</summary>
+    private static TAE MakeTeleportTae(bool withTeleportOut = true, int hitEvents = 1, int hitJudge = 115)
+    {
+        var tae = new TAE { BigEndian = false, Animations = new List<TAE.Animation>() };
+        if (withTeleportOut)
+        {
+            var fade = new TAE.Animation(3000, new TAE.Animation.AnimMiniHeader.Standard(), "a000_003000.hkt");
+            Grouped(fade, new TAE.Event(0f, 0.0333f, 66, 0, IntParams(20011453), false), 66);
+            Grouped(fade, new TAE.Event(4.7667f, 4.8f, 66, 0, IntParams(UntouchableTaePatcher.VANILLA_WARP_MARKER), false), 66);
+            tae.Animations.Add(fade);
+        }
+        var burst = new TAE.Animation(UntouchableTaePatcher.BURST_ANIMATION, new TAE.Animation.AnimMiniHeader.Standard(), "a000_003001.hkt");
+        Grouped(burst, new TAE.Event(1f, 1.1667f, 0, 0, IntParams(23, 0, -1, 6), false), 0);
+        for (int i = 0; i < hitEvents; i++)
+            Grouped(burst, new TAE.Event(0.0333f, 0.2667f, 1, 0, IntParams(0, 0, hitJudge, 255), false), 1);
+        tae.Animations.Add(burst);
+        return tae;
+    }
+
+    private static TAE.Animation Anim(TAE tae, long id) => tae.Animations.Single(a => a.ID == id);
+
+    private static List<TAE.Event> MarkersOf(TAE.Animation anim, int spEffect) => anim.Events
+        .Where(e => e.Type == 66 && BitConverter.ToInt32(e.GetParameterBytes(false), 0) == spEffect)
+        .ToList();
+
+    [Fact]
+    public void PatchNearWarpMarker_AddsTheMarkerOnTheFrameAfterTheBurstsHit()
+    {
+        var tae = MakeTeleportTae();
+        var burstEventsBefore = Anim(tae, 3001).Events.Count;
+
+        var count = UntouchableTaePatcher.PatchNearWarpMarker(tae, _ => { });
+
+        Assert.Equal(1, count);
+        var burst = Anim(tae, 3001);
+        var marker = Assert.Single(MarkersOf(burst, SpeedFogIds.UntouchableNearWarpMarkerSpEffect));
+        Assert.Equal(burstEventsBefore + 1, burst.Events.Count);
+        // Right where the hit ends, one frame long like vanilla's own marker.
+        Assert.Equal(0.2667f, marker.StartTime, 4);
+        Assert.Equal(0.2667f + (4.8f - 4.7667f), marker.EndTime, 4);
+        // Grouped like vanilla's type-66 events, the group in the animation.
+        Assert.NotNull(marker.Group);
+        Assert.Equal(66, marker.Group.GroupType);
+        Assert.Contains(marker.Group, burst.EventGroups);
+        // The rest of the parameter block is vanilla's marker's.
+        Assert.Equal(IntParams(SpeedFogIds.UntouchableNearWarpMarkerSpEffect), marker.GetParameterBytes(false));
+        // The far teleport keeps its own marker, and no near one.
+        Assert.Single(MarkersOf(Anim(tae, 3000), UntouchableTaePatcher.VANILLA_WARP_MARKER));
+        Assert.Empty(MarkersOf(Anim(tae, 3000), SpeedFogIds.UntouchableNearWarpMarkerSpEffect));
+    }
+
+    [Fact]
+    public void PatchNearWarpMarker_JoinsAnExistingGroupOfItsType()
+    {
+        var tae = MakeTeleportTae();
+        var burst = Anim(tae, 3001);
+        var existing = Grouped(burst, new TAE.Event(0f, 0.0333f, 66, 0, IntParams(20011450), false), 66);
+        var groupsBefore = burst.EventGroups.Count;
+
+        Assert.Equal(1, UntouchableTaePatcher.PatchNearWarpMarker(tae, _ => { }));
+
+        var marker = Assert.Single(MarkersOf(burst, SpeedFogIds.UntouchableNearWarpMarkerSpEffect));
+        Assert.Same(existing.Group, marker.Group);
+        Assert.Equal(groupsBefore, burst.EventGroups.Count);
+    }
+
+    [Fact]
+    public void PatchNearWarpMarker_SecondRunIsANoOp()
+    {
+        var tae = MakeTeleportTae();
+        UntouchableTaePatcher.PatchNearWarpMarker(tae, _ => { });
+        var log = new List<string>();
+
+        Assert.Equal(0, UntouchableTaePatcher.PatchNearWarpMarker(tae, log.Add));
+
+        Assert.Single(MarkersOf(Anim(tae, 3001), SpeedFogIds.UntouchableNearWarpMarkerSpEffect));
+        Assert.Contains(log, l => l.Contains("already"));
+    }
+
+    [Theory]
+    [InlineData(false, 1, 115)] // no vanilla marker to clone
+    [InlineData(true, 0, 115)]  // no hit to anchor on
+    [InlineData(true, 2, 115)]  // two hits: not the layout this was written for
+    [InlineData(true, 1, 116)]  // another judge: same
+    public void PatchNearWarpMarker_UnexpectedLayoutLeavesTaeUntouched(bool withTeleportOut, int hitEvents, int hitJudge)
+    {
+        var tae = MakeTeleportTae(withTeleportOut, hitEvents, hitJudge);
+        var before = Anim(tae, 3001).Events.Count;
+        var log = new List<string>();
+
+        Assert.Equal(0, UntouchableTaePatcher.PatchNearWarpMarker(tae, log.Add));
+
+        Assert.Equal(before, Anim(tae, 3001).Events.Count);
+        Assert.Contains(log, l => l.Contains("Warning"));
+    }
+
+    [Fact]
+    public void PatchNearWarpMarker_MissingBurstReturnsZero()
+    {
+        var tae = MakeTae(); // 3004 only
+        var log = new List<string>();
+
+        Assert.Equal(0, UntouchableTaePatcher.PatchNearWarpMarker(tae, log.Add));
+        Assert.Contains(log, l => l.Contains("3001"));
+    }
 }

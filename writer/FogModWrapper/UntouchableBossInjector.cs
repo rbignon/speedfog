@@ -108,6 +108,12 @@ public static class UntouchableBossInjector
     /// row by <see cref="PatchWallEvents"/>.</summary>
     public const int VANILLA_WALL_SPEFFECT = 20011470;
 
+    /// <summary>Vanilla's warp marker: a fieldless SpEffect animation 3000
+    /// applies at 4.77 s, which vanilla's battle script and the boss's far
+    /// teleport answer with the warp. The template of the near-warp marker
+    /// row (<see cref="ApplyNearWarpMarker"/>).</summary>
+    public const int VANILLA_WARP_MARKER_SPEFFECT = 20011452;
+
     /// <summary>Vanilla's boss damage-level table: a permanent SpEffect
     /// (category 1001, priority 200) whose twelve <c>dmgLv_*</c> fields
     /// replace every incoming damage level by None, resident in slot 1 of
@@ -206,6 +212,36 @@ public static class UntouchableBossInjector
         }
 
         return new ParamResult(true, ApplyMoveset(npc, think, behavior, bullet, atk));
+    }
+
+    /// <summary>Regulation phase, every seed: the near-warp marker row
+    /// (<see cref="SpeedFogIds.UntouchableNearWarpMarkerSpEffect"/>), a copy
+    /// of vanilla's fieldless warp marker. The static anibnd applies it on
+    /// every untouchable's burst (StaticModBuilder's UntouchableTaePatcher),
+    /// boss placed or not, so the row exists whenever an untouchable can
+    /// play 3001; only the boss's battle script reads it. Returns whether
+    /// the row was written.</summary>
+    public static bool ApplyNearWarpMarker(RegulationEditor reg)
+    {
+        var sp = reg.GetParam("SpEffectParam", "SpEffect");
+        if (sp == null)
+        {
+            Console.WriteLine("Untouchable near-warp marker: warning, SpEffectParam unavailable, marker row not written");
+            return false;
+        }
+        return ApplyNearWarpMarker(sp, Console.WriteLine);
+    }
+
+    public static bool ApplyNearWarpMarker(PARAM spEffect, Action<string> log)
+    {
+        if (spEffect[VANILLA_WARP_MARKER_SPEFFECT] == null)
+        {
+            log($"Untouchable near-warp marker: warning, SpEffect {VANILLA_WARP_MARKER_SPEFFECT} (vanilla warp marker) not found, marker row not written");
+            return false;
+        }
+        GameEditor.AddRow(spEffect, SpeedFogIds.UntouchableNearWarpMarkerSpEffect, VANILLA_WARP_MARKER_SPEFFECT);
+        log($"Untouchable near-warp marker: SpEffect {SpeedFogIds.UntouchableNearWarpMarkerSpEffect} (copy of {VANILLA_WARP_MARKER_SPEFFECT})");
+        return true;
     }
 
     public static void Apply(PARAM npc, PARAM spEffect)

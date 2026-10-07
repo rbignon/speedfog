@@ -123,4 +123,19 @@ public class SpeedFogIdsTests
         // boss must not share an id.
         Assert.NotEqual(SpeedFogIds.PassiveGreeterThinkRow, SpeedFogIds.UntouchableBossThinkRow);
     }
+
+    [Fact]
+    public void SpEffectParamRows_DoNotCollide()
+    {
+        // All SpEffectParam rows (one namespace), written into the same
+        // regulation when the boss and the Halloween ambushers coexist.
+        var rows = new[]
+        {
+            SpeedFogIds.UntouchableBossSpEffectRow,
+            SpeedFogIds.DecorativeAmbusherSpEffectRow,
+            SpeedFogIds.UntouchableBrokenSpEffectRow,
+            SpeedFogIds.UntouchableNearWarpMarkerSpEffect,
+        };
+        Assert.Equal(rows.Length, rows.Distinct().Count());
+    }
 }

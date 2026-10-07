@@ -4,8 +4,8 @@
 -- clone's battleGoalID). SpeedFog additions: the lantern swing (3001) as a
 -- regular melee act (Act11), the dormant lantern ray (3004) re-enabled as a
 -- beam plus a flame nova (Act04, offered at every range), a two-shape
--- teleport (Act02: near, a warp away and the beam; far, vanilla's 3000,
--- the warp behind the player and the burst)
+-- teleport (Act02: near, the burst then, on its marker, a warp away and
+-- the beam; far, vanilla's 3000, the warp behind the player and the burst)
 -- offered at every range with its own cooldown, the near teleport in
 -- place of the post-grab walk retreats when its timer allows
 -- (Act05/Act06, the beam after the walk otherwise) and two reactions
@@ -41,21 +41,21 @@ local MOVE_CLOSE = 15                   -- < 3 m: Act42 (sidestep)
 local TELEPORT_BEHIND = 50              -- player behind, < 8 m: Act02 when ready (0-90; Act01 keeps 10, Act43 takes the rest)
 local GRAB_COOLDOWN = 6                 -- seconds between two grabs (3002); vanilla 12
 local GRAB_REACH = 12                   -- vanilla Act03's successDist: the grab dashes this far, and cannot launch past it
-local SWING_COOLDOWN = 4                -- seconds before Act11, the far teleport's post-warp burst or the hit reaction may play 3001 again; every queued 3001 re-arms it at queue time. The near teleport queues none
+local SWING_COOLDOWN = 4                -- seconds before Act11, the far teleport's post-warp burst or the hit reaction may play 3001 again; every queued 3001 re-arms it at queue time, the near teleport's included (which does not wait for it)
 local BEAM_COOLDOWN = 4                 -- seconds between two 3004 (beam + flame nova), any source
 local TELEPORT_COOLDOWN = 6             -- seconds after a near teleport before any teleport
 local TELEPORT_FAR_COOLDOWN = 11.5      -- seconds after a far teleport before any teleport (its own sequence takes about 9 s)
 local TELEPORT_RETRY = 2                -- seconds before another attempt when the near teleport found no room
-local TELEPORT_FAR_RANGE = 5            -- from this distance (centre to centre; melee reach with a long weapon is 3-4 m) the teleport is vanilla's (3000, the warp behind the player, the burst); closer, a warp away and the beam
+local TELEPORT_FAR_RANGE = 5            -- from this distance (centre to centre; melee reach with a long weapon is 3-4 m) the teleport is vanilla's (3000, the warp behind the player, the burst); closer, the burst, a warp away and the beam
 local TELEPORT_AWAY_DIST = 8            -- near variant: warp this far from the boss's own position, away from the player
 local TELEPORT_AWAY_FALLBACK = 5        -- near variant: second scan at this distance when nothing clears TELEPORT_AWAY_DIST (small arenas)
 -- Animation spans (c5280 TAE event spans); the holds derive from them.
 local BURST_LENGTH = 1.8
 -- 3001 lands its hit (judge 115) between 0.03 s and 0.27 s but only opens
 -- its cancel window at 1.00 s, and a queued follow-up waits for that
--- window: cutting the goal life short to hand over on the hit instead
--- left the boss not teleporting at all (in game). That second is why the
--- near teleport warps first and queues no burst at all.
+-- window (in game). The near teleport therefore does not queue its warp
+-- after the burst: it answers the marker StaticModBuilder patches onto
+-- 3001 at 0.27 s, the way the far teleport answers 3000's own marker.
 local ARRIVAL_MAX = 2.2                 -- the longest arrival animation (5012/5013)
 local MARKER_3000 = 4.77                -- 3000's warp marker (SpEffect 20011452)
 local GRAB_CHAIN = 6                    -- 3002 (4.2 s) then 3003 (1.8 s)
@@ -75,22 +75,24 @@ local REACT_RANGE = 5
 -- No reaction while a teleport or a grab sequence is in flight (a
 -- reaction's ClearSubGoal would drop the follow-up): the hold timer, set
 -- with each queued teleport, and the 3002 counter for the grab. The
--- margins round the holds to the sequences they must cover: 2.5 s near
--- (the arrival animation, up to the beam starting), 9 s far (validated
--- in game, and covering its last attack in full).
-local TELEPORT_HOLD = ARRIVAL_MAX + 0.3                                    -- near: 2.5 s
+-- margins round the holds to the sequences they must cover: near, the
+-- burst up to its marker (BURST_LENGTH, set with the burst) then 2.5 s
+-- from the warp (the arrival animation, up to the beam starting); far,
+-- 9 s (validated in game, and covering its last attack in full).
+local TELEPORT_HOLD = ARRIVAL_MAX + 0.3                                    -- near, from the warp: 2.5 s
 local TELEPORT_FAR_HOLD = MARKER_3000 + ARRIVAL_MAX + BURST_LENGTH + 0.23  -- far: 9 s
 local REACT_HOLD = GRAB_CHAIN + 1                                          -- seconds after a grab (3002) starts
 -- AI timer slots (vanilla 528000 uses none; the shared library uses 12-15).
 local TIMER_TELEPORT = 10
 local TIMER_SWING = 11
 local TIMER_HOLD = 9
+local TIMER_NEAR = 8                    -- a near teleport's burst is playing: its marker warps (BURST_LENGTH from the queue)
 -- Vanilla ids, named for reading; the values are c5280's and the engine's.
 -- Each file-scope local read by a function is one of its upvalues, and
 -- Lua 5.0 allows 32 per function (tests/test_mods_src_lua_scripts.py
 -- counts them).
 local ANIM_TELEPORT_OUT = 3000          -- the 5 s lantern fade of the far teleport, warp marker at MARKER_3000
-local ANIM_LANTERN_BURST = 3001         -- the burst around the lantern: swing (Act11), far teleport's post-warp attack, hit reaction
+local ANIM_LANTERN_BURST = 3001         -- the burst around the lantern: swing (Act11), near teleport, far teleport's post-warp attack, hit reaction
 local ANIM_GRAB = 3002                  -- the grab attempt
 local ANIM_THROW = 3003                 -- the throw that follows a connected grab
 local ANIM_BEAM = 3004                  -- the raised lantern whose bullet events fire the beam
@@ -99,6 +101,10 @@ local SPEFFECT_GRAB_CONNECT = 5030      -- applied when the grab connects; watch
 local SPEFFECT_RETREAT_10M = 5031       -- vanilla's post-grab marker: retreat to 10 m (Act05)
 local SPEFFECT_RETREAT_8M = 5032        -- vanilla's post-grab marker: retreat to 8 m (Act06)
 local SPEFFECT_WARP_MARKER = 20011452   -- applied at MARKER_3000 of ANIM_TELEPORT_OUT; watched, triggers the warp
+-- SpeedFog's id (SpeedFogIds.UntouchableNearWarpMarkerSpEffect): a copy of
+-- 20011452 that every 3001 applies right after its hit (StaticModBuilder's
+-- UntouchableTaePatcher); watched, warps only when TIMER_NEAR runs.
+local SPEFFECT_NEAR_MARKER = 755890003
 local SPEFFECT_NO_INTERRUPT = 5110      -- vanilla: no interrupt is handled while it is active (role inferred)
 local GUARD_EZSTATE = 9910              -- the guard state the vanilla acts pass with a 0 % draw
 
@@ -183,13 +189,16 @@ function Houzuki755890_FindRoomAway(ai, distance)
 end
 
 -- Sub-goal builders shared by the acts and the reactions.
--- The lantern burst (3001); every call re-arms the swing timer.
+-- The lantern burst (3001); every call re-arms the swing timer and clears
+-- a pending near teleport (one whose burst a stagger or a critical took
+-- before its marker), so only the burst AddTeleportAway queues can warp.
 -- Immediate: the ComboTunable_SuccessAngle180 wrapper with 504000's
 -- argument set (its post-warp 3025 among others: reach 999, no turn, every
 -- angle 180, so it fires whatever the player's side); otherwise Act11's melee parameters
 -- (reach 4 m, turn 1.5 s / 60 degrees).
 function Houzuki755890_AddSwing(ai, goal, immediate)
     ai:SetTimer(TIMER_SWING, SWING_COOLDOWN)
+    ai:SetTimer(TIMER_NEAR, 0)
     if immediate then
         goal:AddSubGoal(GOAL_COMMON_ComboTunable_SuccessAngle180, 8, ANIM_LANTERN_BURST, TARGET_ENE_0, 999, 0, 180, 180, 180)
     else
@@ -214,37 +223,58 @@ function Houzuki755890_AddBeamIfReady(ai, goal)
     end
 end
 
--- The near teleport (Act02 under TELEPORT_FAR_RANGE, Act05/Act06):
--- the warp away from the player, then the beam when ready. A clean blink
--- in the player's view, since lock-on cannot be broken from the AI.
--- A burst queued after the warp was tried and did not read as part of
--- the move (in game): the arrival animation holds the character 0.9 to
--- 1.4 s, so the explosion landed well after the reappearance instead of
--- with it, and it would have whiffed anyway at TELEPORT_AWAY_DIST, past
--- its 4 m radius. None is spent here, which also leaves the swing timer
--- to the three sites that do land on the player: Act11, the hit
--- reaction and the far teleport's post-warp burst. Returns whether it was
--- queued. Without room nothing is queued or cleared (the sub-goals are
--- cleared only once
+-- The retreat for the near teleport: TELEPORT_AWAY_DIST, else
+-- TELEPORT_AWAY_FALLBACK (small arenas). The warp direction and distance,
+-- or nil.
+function Houzuki755890_FindRetreat(ai)
+    local direction, distance = Houzuki755890_FindRoomAway(ai, TELEPORT_AWAY_DIST)
+    if direction == nil then
+        direction, distance = Houzuki755890_FindRoomAway(ai, TELEPORT_AWAY_FALLBACK)
+    end
+    return direction, distance
+end
+
+-- The near teleport (Act02 under TELEPORT_FAR_RANGE, Act05/Act06), Jori's
+-- shape and the far teleport's: an animation of the boss's own first,
+-- the burst (immediate wrapper, so it fires whatever the player's side),
+-- and the warp only when that burst applies its marker, right after its
+-- hit (Goal.Interrupt): the warp away from the player, then the beam when
+-- ready. Nothing is queued after the burst, so a burst that never plays
+-- (a critical, a stagger) never leads to a warp. The retreat stays in the
+-- player's view, the lock kept. Returns whether it was queued. Without
+-- room nothing is queued or cleared (the sub-goals are cleared only once
 -- the retreat is certain, vanilla Act05/Act06's idiom) and only the
 -- teleport timer restarts, at TELEPORT_RETRY rather than the cooldown: a
 -- cramped spot is retried soon, not at every decision, and no hold is
 -- set since nothing is in flight.
 function Houzuki755890_AddTeleportAway(ai, goal)
-    local direction, distance = Houzuki755890_FindRoomAway(ai, TELEPORT_AWAY_DIST)
-    if direction == nil then
-        direction, distance = Houzuki755890_FindRoomAway(ai, TELEPORT_AWAY_FALLBACK)
-    end
-    if direction == nil then
+    if Houzuki755890_FindRetreat(ai) == nil then
         ai:SetTimer(TIMER_TELEPORT, TELEPORT_RETRY)
         return false
     end
     ai:SetTimer(TIMER_TELEPORT, TELEPORT_COOLDOWN)
-    ai:SetTimer(TIMER_HOLD, TELEPORT_HOLD)
+    ai:SetTimer(TIMER_HOLD, BURST_LENGTH)
+    ai:AddObserveSpecialEffectAttribute(TARGET_SELF, SPEFFECT_NEAR_MARKER)
     goal:ClearSubGoal()
-    goal:AddSubGoal(GOAL_COMMON_ToTargetWarp, 15, TARGET_SELF, direction, distance, TARGET_ENE_0)
-    Houzuki755890_AddBeamIfReady(ai, goal)
+    Houzuki755890_AddSwing(ai, goal, true)
+    ai:SetTimer(TIMER_NEAR, BURST_LENGTH)   -- after AddSwing, which clears it
     return true
+end
+
+-- The near teleport's second half, on the burst's marker: the room is
+-- scanned again (the act's scan only decided), then the warp and the beam
+-- when ready, the hold moved to cover the arrival up to the beam. As for
+-- the far teleport, nothing is cleared without room and the burst
+-- finishes on its own.
+function Houzuki755890_WarpAway(ai, goal)
+    ai:SetTimer(TIMER_NEAR, 0)
+    local direction, distance = Houzuki755890_FindRetreat(ai)
+    if direction ~= nil then
+        ai:SetTimer(TIMER_HOLD, TELEPORT_HOLD)
+        goal:ClearSubGoal()
+        goal:AddSubGoal(GOAL_COMMON_ToTargetWarp, 15, TARGET_SELF, direction, distance, TARGET_ENE_0)
+        Houzuki755890_AddBeamIfReady(ai, goal)
+    end
 end
 
 -- The far teleport (Act02 from TELEPORT_FAR_RANGE): vanilla Act02 as
@@ -854,6 +884,14 @@ Goal.Interrupt = function (self, ai, goal)
                     Houzuki755890_AddSwing(ai, goal, true)
                 end
             end
+            return true
+        end
+        if ai:HasSpecialEffectId(TARGET_SELF, SPEFFECT_NEAR_MARKER) and ai:GetTimer(TIMER_NEAR) > 0 then
+            -- The near teleport's burst has landed its hit. Every 3001
+            -- applies the marker; only the one a near teleport queued
+            -- warps (Act11's swing, the hit reaction's and the far
+            -- teleport's post-warp bursts fall through).
+            Houzuki755890_WarpAway(ai, goal)
             return true
         end
         if ai:GetSpecialEffectActivateInterruptId(SPEFFECT_GRAB_CONNECT) and ai:IsInsideTargetCustom(TARGET_SELF, TARGET_ENE_0, AI_DIR_TYPE_F, 180, 180, 4) then

@@ -49,7 +49,9 @@ APPROACH, TELEPORT, GRAB, BEAM, SWING, SIDESTEP, TURN, STRAFE = (
 SWING_ANIM, GRAB_ANIM, BEAM_ANIM = 3001, 3002, 3004
 GATE_SPEFFECT = 20011450  # vanilla's one-shot teleport gate, ignored by the boss
 WARP_MARKER_SPEFFECT = 20011452  # vanilla's post-3000 warp marker
-HOLD_TIMER, TELEPORT_TIMER, SWING_TIMER = 9, 10, 11  # TIMER_* slots in the script
+NEAR_MARKER_SPEFFECT = 755890003  # the near-warp marker patched onto 3001 after its hit
+NEAR_TIMER, HOLD_TIMER, TELEPORT_TIMER, SWING_TIMER = 8, 9, 10, 11  # TIMER_* slots
+BURST_LENGTH = 1.8  # 3001's span: how long a near teleport waits for the marker
 BURST = ("ComboTunable_SuccessAngle180", SWING_ANIM)  # the post-warp wrapper
 MELEE_SWING = ("ComboAttackTunableSpin", SWING_ANIM)  # Act11
 GRAB_ATTACK = ("ComboAttackTunableSpin", GRAB_ANIM)
@@ -118,14 +120,14 @@ function Common_Battle_Activate(ai, goal, probabilities, acts, actAfter, paramTb
 end
 
 function new_ai(state)
-    local ai = { registered = {}, unregistered_reads = {}, scanned = {} }
+    local ai = { registered = {}, unregistered_reads = {}, scanned = {}, observed = {} }
     function ai:GetDist(target) return state.dist end
     function ai:GetRandam_Int(lo, hi) return state.random end
     function ai:GetRandam_Float(lo, hi) return lo end
     function ai:GetExcelParam(kind) return 0 end
     function ai:GetMapHitRadius(target) return 1 end
     function ai:AddObserveAreaCustom(...) end
-    function ai:AddObserveSpecialEffectAttribute(target, id) end
+    function ai:AddObserveSpecialEffectAttribute(target, id) self.observed[id] = true end
     function ai:EnableUnfavorableAttackCheck(...) end
     function ai:IsInsideTarget(target, dir, angle)
         return dir == AI_DIR_TYPE_B and state.behind == true
@@ -239,6 +241,29 @@ def react(**state) -> tuple[bool, Any, Any]:
     return bool(fired), goal, ai
 
 
+def near_teleport(name: str = "Act02", **state) -> tuple[bool, Any, Any, Any]:
+    """Runs an act queuing the near teleport (melee range by default), then
+    the burst's marker on the same boss: the whole move. Returns whether the
+    marker was handled, the goal, the fake ai and the Lua state."""
+    state.setdefault("dist", 2)
+    g, ai, goal, lua_state = activate(state)
+    g["Houzuki755890_" + name](ai, goal, None)
+    lua_state.speffects[NEAR_MARKER_SPEFFECT] = True
+    lua_state.interrupt = "ActivateSpecialEffect"
+    fired = g.GOALS[BATTLE_GOAL].Interrupt(None, ai, goal)
+    return bool(fired), goal, ai, lua_state
+
+
+def test_near_marker_id_matches_speedfog_ids():
+    # The TAE patch and the regulation row use SpeedFogIds; the script names
+    # the same id on its own (Lua cannot read C#).
+    ids = (
+        Path(__file__).resolve().parents[1] / "writer/FogModWrapper.Core/SpeedFogIds.cs"
+    ).read_text(encoding="utf-8")
+    assert f"UntouchableNearWarpMarkerSpEffect = {NEAR_MARKER_SPEFFECT};" in ids
+    assert f"local SPEFFECT_NEAR_MARKER = {NEAR_MARKER_SPEFFECT}" in SCRIPT_SOURCE
+
+
 def test_melee_gap_offers_the_teleport_next_to_the_sidestep():
     w, _ = weights(dist=2, passed=COOLING_PASSED, timers=SWING_COOLING)
     assert w.get(GRAB, 0) == 0 and w.get(SWING, 0) == 0
@@ -286,6 +311,12 @@ def test_no_counter_is_read_before_its_registration():
         for interrupt in ("ActivateSpecialEffect", "Damaged", "Shoot", "UseItem"):
             state.interrupt = interrupt
             g.GOALS[BATTLE_GOAL].Interrupt(None, ai, goal)
+        # The near-warp marker with a near teleport pending (it queues the beam).
+        state.speffects[NEAR_MARKER_SPEFFECT] = True
+        state.timers[NEAR_TIMER] = 1
+        state.interrupt = "ActivateSpecialEffect"
+        g.GOALS[BATTLE_GOAL].Interrupt(None, ai, goal)
+        state.speffects[NEAR_MARKER_SPEFFECT] = None
         for name in ("Act02", "Act03", "Act05", "Act06", "Act11"):
             g["Houzuki755890_" + name](ai, goal, None)
     assert list(ai.unregistered_reads.keys()) == []
@@ -332,34 +363,89 @@ def test_far_bracket_teleport_or_beam():
     assert set(cooling) == {APPROACH, BEAM} and cooling[APPROACH] + cooling[BEAM] == 100
 
 
-def test_near_teleport_is_retreat_then_beam_and_spends_no_burst():
-    # The teleport is a clean blink: the warp, then the beam. A burst queued
-    # after the warp did not read as part of the move in game, so none is
-    # spent on it and the swing timer is left for Act11 and the hit reaction.
-    goal, _, state = act("Act02", dist=2)
-    assert queued(goal) == [RETREAT, BEAM_ATTACK]
-    assert args_of(goal, 0) == retreat_args()
+def test_near_teleport_queues_the_burst_and_waits_for_its_marker():
+    # Jori's shape and the far teleport's: an animation of the boss's own
+    # first, the warp only when that animation applies its marker. Nothing
+    # else is queued, so a burst that never plays (a critical, a stagger)
+    # never leads to a warp.
+    goal, ai, state = act("Act02", dist=2)
+    assert queued(goal) == [BURST]
+    assert args_of(goal, 0) == BURST_ARGS  # fires whatever the player's side
+    assert ai.observed[NEAR_MARKER_SPEFFECT]
     assert state.timers[TELEPORT_TIMER] == 6
-    # The hold covers the arrival animation and the beam starting.
-    assert state.timers[HOLD_TIMER] == pytest.approx(2.5)
-    assert state.timers[SWING_TIMER] is None
+    # Pending and held for the burst; the burst spends the swing timer.
+    assert state.timers[NEAR_TIMER] == pytest.approx(BURST_LENGTH)
+    assert state.timers[HOLD_TIMER] == pytest.approx(BURST_LENGTH)
+    assert state.timers[SWING_TIMER] == 4
 
 
-def test_near_teleport_skips_the_beam_while_it_cools():
-    goal, _, state = act("Act02", dist=2, passed={BEAM_ANIM: 1})
-    assert queued(goal) == [RETREAT]
+def test_near_marker_warps_away_then_beams():
+    fired, goal, _, state = near_teleport()
+    assert fired and queued(goal) == [RETREAT, BEAM_ATTACK]
+    assert args_of(goal, 0) == retreat_args()
+    # Consumed, and the hold now covers the arrival up to the beam starting.
+    assert state.timers[NEAR_TIMER] == 0
     assert state.timers[HOLD_TIMER] == pytest.approx(2.5)
+
+
+def test_near_marker_skips_the_beam_while_it_cools():
+    fired, goal, _, _ = near_teleport(passed={BEAM_ANIM: 1})
+    assert fired and queued(goal) == [RETREAT]
+
+
+def test_burst_marker_without_a_pending_near_teleport_is_ignored():
+    # Every 3001 applies the marker: Act11's swing, the hit reaction's burst
+    # and the far teleport's post-warp burst must not warp.
+    for timers in ({}, {HOLD_TIMER: 5}):
+        fired, goal, _ = react(
+            interrupt="ActivateSpecialEffect",
+            speffects=[NEAR_MARKER_SPEFFECT],
+            timers=timers,
+        )
+        assert not fired and goal.cleared == 0
+
+
+def test_any_other_burst_cancels_a_pending_near_teleport():
+    # A stagger or a critical takes the near teleport's burst before its
+    # marker: the pending timer would outlive it. The next burst queued
+    # (Act11 here) clears it, so its marker never warps.
+    g, ai, goal, state = activate({"dist": 2})
+    g["Houzuki755890_Act02"](ai, goal, None)
+    assert state.timers[NEAR_TIMER] > 0
+    state.timers[SWING_TIMER] = 0
+    g["Houzuki755890_Act11"](ai, goal, None)
+    assert state.timers[NEAR_TIMER] == 0
+    state.speffects[NEAR_MARKER_SPEFFECT] = True
+    state.interrupt = "ActivateSpecialEffect"
+    goal = g.new_goal()
+    assert not g.GOALS[BATTLE_GOAL].Interrupt(None, ai, goal)
+    assert goal.cleared == 0
+
+
+def test_near_marker_without_room_lets_the_burst_finish():
+    # Room was found when the act was queued; if it is gone by the marker,
+    # nothing is cleared (the far teleport's no-room idiom) and the pending
+    # teleport is consumed.
+    g, ai, goal, state = activate({"dist": 2})
+    g["Houzuki755890_Act02"](ai, goal, None)
+    state.mesh = 0
+    state.speffects[NEAR_MARKER_SPEFFECT] = True
+    state.interrupt = "ActivateSpecialEffect"
+    assert g.GOALS[BATTLE_GOAL].Interrupt(None, ai, goal)
+    assert queued(goal) == [BURST] and goal.cleared == 1  # the act's own clear only
+    assert state.timers[NEAR_TIMER] == 0
 
 
 def test_near_teleport_without_room_queues_nothing_and_retries_soon():
     goal, _, state = act("Act02", dist=2, mesh=0)
     _, _, with_room = act("Act02", dist=2)
     assert queued(goal) == []
-    # No sequence in flight: no hold, and the teleport timer restarts
-    # short of the full cooldown so a cramped spot is retried soon rather
-    # than burning the whole interval.
+    # No sequence in flight: no hold, nothing pending, no burst spent, and
+    # the teleport timer restarts short of the full cooldown so a cramped
+    # spot is retried soon rather than burning the whole interval.
     assert 0 < state.timers[TELEPORT_TIMER] < with_room.timers[TELEPORT_TIMER]
     assert state.timers[HOLD_TIMER] is None
+    assert state.timers[NEAR_TIMER] is None
     assert state.timers[SWING_TIMER] is None
 
 
@@ -386,30 +472,30 @@ def test_teleport_variant_switches_at_the_far_range():
     goal, _, _ = act("Act02", dist=5)
     assert queued(goal) == [FAR_WINDUP]
     goal, _, _ = act("Act02", dist=4.9)
-    assert queued(goal)[0] == RETREAT
+    assert queued(goal) == [BURST]
 
 
 def test_retreat_scan_is_behind_the_boss_itself():
     # Every direction free: straight back, 8 m, relative to the boss, and
     # the room is scanned from the boss, never from the player.
-    goal, ai, _ = act("Act02", dist=2)
+    _, goal, ai, _ = near_teleport()
     assert args_of(goal, 0) == retreat_args()
     assert set(ai.scanned.values()) == {"self"}
     # Only behind-left free, then only behind-right free: the branch order.
-    goal, _, _ = act("Act02", dist=2, mesh={"BL": 10})
+    _, goal, _, _ = near_teleport(mesh={"BL": 10})
     assert args_of(goal, 0) == retreat_args("BL")
-    goal, _, _ = act("Act02", dist=2, mesh={"BR": 10})
+    _, goal, _, _ = near_teleport(mesh={"BR": 10})
     assert args_of(goal, 0) == retreat_args("BR")
-    # Room only in front or to the sides is no retreat.
+    # Room only in front or to the sides is no retreat: not even the burst.
     goal, _, _ = act("Act02", dist=2, mesh={"F": 10, "L": 10, "R": 10})
     assert queued(goal) == []
     # The player in the boss's back: the retreat goes forward, away from them.
-    goal, _, _ = act("Act02", dist=2, behind=True)
+    _, goal, _, _ = near_teleport(behind=True)
     assert args_of(goal, 0) == retreat_args("F")
-    goal, _, _ = act("Act02", dist=2, behind=True, mesh={"FR": 10, "B": 10})
+    _, goal, _, _ = near_teleport(behind=True, mesh={"FR": 10, "B": 10})
     assert args_of(goal, 0) == retreat_args("FR")
     # 7 m of room is not enough for an 8 m retreat: the 5 m fallback (small arenas).
-    goal, _, _ = act("Act02", dist=2, mesh=7)
+    _, goal, _, _ = near_teleport(mesh=7)
     assert queued(goal) == [RETREAT, BEAM_ATTACK]
     assert args_of(goal, 0) == retreat_args("B", 5)
     goal, _, _ = act("Act02", dist=2, mesh=4)
@@ -452,11 +538,15 @@ def test_far_teleport_second_half_warps_behind_the_player_with_vanillas_scan():
 
 @pytest.mark.parametrize("name", ["Act05", "Act06"])
 def test_retreat_acts_are_the_near_teleport_when_it_is_ready(name):
-    # After a grab the boss retreats: the warp away and the beam when the
-    # teleport timer allows, the vanilla walk otherwise.
+    # After a grab the boss retreats: the near teleport (the burst, then on
+    # its marker the warp away and the beam) when the teleport timer allows,
+    # the vanilla walk otherwise.
     goal, _, state = act(name, dist=2)
-    assert queued(goal) == [RETREAT, BEAM_ATTACK]
+    assert queued(goal) == [BURST]
     assert state.timers[TELEPORT_TIMER] > 0 and state.timers[HOLD_TIMER] > 0
+    assert state.timers[NEAR_TIMER] > 0
+    fired, goal, _, _ = near_teleport(name)
+    assert fired and queued(goal) == [RETREAT, BEAM_ATTACK]
     goal, _, _ = act(name, dist=2, timers=TELEPORT_COOLING)
     assert [s.kind for s in goal.subgoals.values()] == [
         "LeaveTarget",
@@ -486,7 +576,7 @@ def test_close_bracket_offers_the_beam_next_to_the_grab():
 def test_hit_reaction_is_the_burst_and_never_a_warp():
     # A critical hit raises the same damage interrupt from right in front,
     # and a warp there would cut the critical short (the likely path of the
-    # blink seen around a critical in game). Vanilla interrupt warps only
+    # blink seen mid-frontstab in game). Vanilla interrupt warps only
     # answer a marker of the character's own animation; Jori's damage
     # branch queues nothing. The answer is the burst, whatever the teleport
     # timer says.

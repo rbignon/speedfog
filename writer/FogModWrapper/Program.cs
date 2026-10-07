@@ -847,6 +847,9 @@ Example:
             ctx.UntouchableBossParamsApplied = bossParams.Core;
             ctx.UntouchableBossMovesetApplied = bossParams.Moveset;
         }
+        // Every seed: the static anibnd applies this marker on every
+        // untouchable's burst (3001), boss placed or not.
+        UntouchableBossInjector.ApplyNearWarpMarker(reg);
 
         if (ctx.GraphData.IsPluginEnabled("halloween"))
         {

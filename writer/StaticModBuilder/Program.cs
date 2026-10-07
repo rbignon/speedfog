@@ -75,6 +75,7 @@ class Program
         total += GraceAnimationPatcher.Patch(gameDir, outputDir);
 
         // Aging Untouchable payload carriers (animation 3004 bullet events -> judges 150 and 151)
+        // and the near-warp marker on the burst (animation 3001)
         total += UntouchableTaePatcher.Patch(gameDir, outputDir);
 
         // SpeedFog title screen artwork
@@ -115,7 +116,8 @@ Arguments:
 
 Patches applied:
   - Grace animation speedup (chr/c0000.anibnd.dcx)
-  - Untouchable payload carriers (chr/c5280.anibnd.dcx, animation 3004: 4 bullet events -> judge 150, 3 -> judge 151)
+  - Untouchable payload carriers (chr/c5280.anibnd.dcx, animation 3004: 4 bullet events -> judge 150, 3 -> judge 151;
+    animation 3001: near-warp marker SpEffect after the hit)
   - Title screen badge (menu/{hi,low}/01_common.sblytbnd.dcx + 02_title.tpf.dcx, needs --data-dir)
   - Halloween icon overlay (menu/{hi,low}/05_dummy.tpf.dcx superset, needs --data-dir and --halloween-dir)
 ");

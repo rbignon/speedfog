@@ -148,7 +148,7 @@ public static class SpeedFogIds
     // SpEffectParam, Bullet, AtkParam_Npc never share ids), so the same three
     // numeric values below are reused across the ten rows with no collision
     // (Bullet additionally owns the pulse band 755890003-005 and the flame
-    // band 755890006-008).
+    // band 755890006-008, SpEffectParam the near-warp marker 755890003).
     // They sit in FogMod's entity band only by convention (params and entities
     // are unrelated id spaces); no vanilla row in any of the five params
     // comes anywhere near them, and phantom skins (1450700-1450799) /
@@ -219,6 +219,17 @@ public static class SpeedFogIds
     /// eight cut rates make the boss take twice the vanilla damage, four
     /// times what it took behind the partial wall.</summary>
     public const int UntouchableBrokenSpEffectRow = ParamRowBase2;
+
+    /// <summary>SpEffectParam row of the Aging Untouchable's near-warp
+    /// marker: a copy of vanilla's fieldless warp marker 20011452 (which
+    /// animation 3000 applies for the far teleport). StaticModBuilder's
+    /// UntouchableTaePatcher adds a type-66 event applying it to the burst
+    /// (animation 3001) right after its hit, and the boss battle script
+    /// answers it with the near teleport's warp when one is pending.
+    /// FogModWrapper writes the row in every seed, boss placed or not: the
+    /// patched anibnd ships with every seed and every untouchable plays
+    /// 3001.</summary>
+    public const int UntouchableNearWarpMarkerSpEffect = 755890003;
 
     /// <summary>First of three consecutive Bullet rows (755890003-005): the
     /// lantern's ambient pulse bullets (vanilla 205280000-002, judges

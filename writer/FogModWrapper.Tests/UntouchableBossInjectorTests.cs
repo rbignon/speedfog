@@ -654,6 +654,39 @@ public class UntouchableBossInjectorTests
     }
 
     [Fact]
+    public void ApplyNearWarpMarker_ClonesVanillasWarpMarker()
+    {
+        // The static anibnd applies the marker on every untouchable's burst,
+        // boss placed or not: the row is a copy of vanilla's own fieldless
+        // warp marker (applied by 3000), so applying it changes nothing.
+        var sp = BuildParamFromDef("SpEffect", templateId: UntouchableBossInjector.VANILLA_WARP_MARKER_SPEFFECT, paramName: "SpEffectParam");
+        var vanilla = sp.Rows[0];
+        vanilla["effectEndurance"].Value = 0f;
+        vanilla["iconId"].Value = -1;
+        vanilla["maxHpRate"].Value = 1f;
+        var log = new List<string>();
+
+        Assert.True(UntouchableBossInjector.ApplyNearWarpMarker(sp, log.Add));
+
+        var marker = sp.Rows.Single(r => r.ID == SpeedFogIds.UntouchableNearWarpMarkerSpEffect);
+        for (int i = 0; i < vanilla.Cells.Count; i++)
+            Assert.Equal(vanilla.Cells[i].Value, marker.Cells[i].Value);
+        Assert.Contains(log, l => l.Contains(SpeedFogIds.UntouchableNearWarpMarkerSpEffect.ToString()));
+    }
+
+    [Fact]
+    public void ApplyNearWarpMarker_WithoutVanillasMarker_WarnsAndWritesNothing()
+    {
+        var sp = BuildParamFromDef("SpEffect", templateId: 20011471, paramName: "SpEffectParam");
+        var log = new List<string>();
+
+        Assert.False(UntouchableBossInjector.ApplyNearWarpMarker(sp, log.Add));
+
+        Assert.Null(sp[SpeedFogIds.UntouchableNearWarpMarkerSpEffect]);
+        Assert.Contains(log, l => l.Contains("warning") && l.Contains(UntouchableBossInjector.VANILLA_WARP_MARKER_SPEFFECT.ToString()));
+    }
+
+    [Fact]
     public void Apply_KeepsTheCutInTheParryWindowCategory()
     {
         var (npc, sp) = BuildCoreParams();

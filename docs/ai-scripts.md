@@ -166,17 +166,18 @@ rather than skipped.
 Giving such a goal a life shorter than that window, to hand it over as
 soon as the hit has landed, does not work: tried on the untouchable's
 burst when it was still the teleport's wind-up, it stopped the warp that
-followed from happening at
-all (in game). The likely reason, inferred rather than established, is
-that the animation still owns the character when the next sub-goal
-activates, so a warp issued there is dropped. No vanilla script does it
-either. Treat the cancel window as the earliest a queued follow-up can
-act, and when a move must feel immediate, put the instant sub-goal
-first rather than trying to shorten the one before it: the untouchable's
-near teleport warps first for exactly that reason. Note the other half of
-the lesson, learned the same way: an attack queued after a warp is just as
-detached, because the arrival animation holds the character first (0.87
-to 1.40 s on the untouchable's 5010 to 5013).
+followed from happening at all (in game). Why is not established, and
+it is not that the animation owning the character drops a warp: a warp
+ran in the middle of a critical's victim animation (in game). No
+vanilla script does it either. Treat the cancel window as the earliest a
+queued follow-up can act, and when a move must follow a point inside an
+animation, answer a marker SpEffect that the animation's TAE applies
+there, from `Goal.Interrupt` (see "Interrupts"): the untouchable's near
+teleport warps on a marker patched onto its burst right after the hit.
+Note the other half of the lesson, learned the same way: an attack
+queued after a warp is just as detached, because the arrival animation
+holds the character first (0.87 to 1.40 s on the untouchable's 5010 to
+5013).
 
 ## Movement goals
 
@@ -199,11 +200,22 @@ retreat (Rennala's 203100, 301010's retreats); relative to `TARGET_ENE_0`
 with `AI_DIR_TYPE_B`/`BL`/`BR` and 0-2 m it lands behind the player
 (vanilla's untouchable); the `To*` directions place the character around
 the player (301010's blinks); a plain `F` with the enemy target left the
-boss where it stood. The goal plays no animation. Vanilla either wraps it
-in an animation whose marker SpEffect triggers the warp from
-`Goal.Interrupt`, or queues it bare as an act's first sub-goal with the
-attack after it (496000, 523000, 531010, 531020's Act10, 532000), never
-with a wait between the two.
+boss where it stood. The goal plays no animation, and no animation
+holds it: it ran in the middle of a critical's victim animation (in
+game), so a warp queued bare, as a reaction or as an act's first
+sub-goal, can cut any animation short. Vanilla answers a marker
+SpEffect of the character's own animation from `Goal.Interrupt` (every
+interrupt warp in the 396 battle scripts, Jori's 20011801 in his vanish
+3006, the Nox knights' 5029 in their steps, the untouchable's 20011452
+in 3000), so a critical or a stagger, which takes the animation, never
+leads to a warp. The few acts queuing it bare as their first sub-goal,
+the attack after it and never a wait between, are never weighted
+(496000's Act01 and Act42, 531010's Act11, 531020's Act10) or drawn only
+while such a marker is active (523000's Act28, 532000's Act30). One
+vanilla shape queues the warp after an animation without a marker
+(496000's Act05 to Act08: 3020, the warp, 3021); the warp then waits for
+that animation's AI cancel window, which on the untouchable's burst is
+the visible second described under "Attack goals".
 Guard state 9910 is the guard EzState the helpers pass with a
 `guardProbability` draw; -1 disables it.
 
@@ -303,6 +315,17 @@ vanilla passes (`0, TARGET_SELF, TARGET_ENE_0, AI_DIR_TYPE_F, 30, 180,
 - Survey vanilla behaviour by unpacking and decompiling all 396 battle
   scripts and grepping the idiom in question (this is how the
   `SetCoolTime` weight and the unregistered-counter reads were settled).
+  WitchyBND under Wine unpacks many luabnd per run (pass relative paths
+  from the script directory in batches: one command line holding all of
+  them is too long for Wine).
+- Read a character's TAE (`chr/<id>.anibnd.dcx`, KRAK-compressed, so
+  SoulsFormats under Wine with Oodle) to find the markers its animations
+  apply: type 66/67 events are `AddSpEffect_Multiplayer`/`AddSpEffect`
+  (the SpEffect id first), type 0 is `ChrActionFlag`. WitchyBND's
+  `Assets/Templates/TAE.Template.ER.xml` (under `tools/witchybnd/`) names
+  the event types and flags: 23 "Cancel - AI ComboAttack", 78 "Cancel -
+  AI Move", 79 "Cancel - AI Step", 86 "Cancel - AI Attack Queued" (the
+  windows a queued follow-up waits for), 49 "Disable Lock-On".
 
 ## Pitfalls
 
@@ -324,7 +347,10 @@ Rules the boss script follows, established in game or by survey
   assume a plain direction with the enemy target. `TARGET_EVENT` is not
   a stable player reference.
 - Lock-on cannot be broken from the AI: a "surprise from behind" only
-  turns the camera.
+  turns the camera (an animation can, through TAE flag 49).
+- Never queue a warp bare: answer a marker of the character's own
+  animation in `Goal.Interrupt`, never a damage interrupt. A bare warp
+  runs whatever animation owns the character, a critical included.
 - A `ClearSubGoal` in a reaction drops whatever is in flight (a warp, a
   follow-up throw): hold the reactions while a sequence runs.
 - Lua 5.0 allows 32 upvalues per function: every file-scope local a

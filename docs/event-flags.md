@@ -133,6 +133,8 @@ Allocations in regulation.bin params (not event flags). Listed here so future co
 | 755890000 | SpEffectParam | UntouchableBossInjector | `SpeedFogIds.UntouchableBossSpEffectRow` | Partial damage-cut state for boss |
 | 755890001 | NpcParam | AmbientSpawnInjector | `SpeedFogIds.DecorativeAmbusherNpcRow` | Decorative ambusher clone (Sage's Cave skeleton basis, token HP, no runes) |
 | 755890001 | SpEffectParam | AmbientSpawnInjector | `SpeedFogIds.DecorativeAmbusherSpEffectRow` | Near-zero attack rates for ambushers (tier-1 scaling row basis) |
+| 755890002 | SpEffectParam | UntouchableBossInjector | `SpeedFogIds.UntouchableBrokenSpEffectRow` | Boss's broken state after the first parry (x2 damage taken) |
+| 755890003 | SpEffectParam | UntouchableBossInjector | `SpeedFogIds.UntouchableNearWarpMarkerSpEffect` | Near-warp marker, copy of vanilla 20011452, written in every seed (the static anibnd applies it on every untouchable's burst 3001) |
 
 ## Reserved FMG Entry IDs
 
