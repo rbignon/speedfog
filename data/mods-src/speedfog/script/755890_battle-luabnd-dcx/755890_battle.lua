@@ -41,7 +41,7 @@ local MOVE_CLOSE = 15                   -- < 3 m: Act42 (sidestep)
 local TELEPORT_BEHIND = 50              -- player behind, < 8 m: Act02 when ready (0-90; Act01 keeps 10, Act43 takes the rest)
 local GRAB_COOLDOWN = 6                 -- seconds between two grabs (3002); vanilla 12
 local GRAB_REACH = 12                   -- vanilla Act03's successDist: the grab dashes this far, and cannot launch past it
-local SWING_COOLDOWN = 4                -- seconds before Act11, the far teleport's post-warp burst or the plain-burst hit reaction may play 3001 again; every queued 3001 re-arms it at queue time. The near teleport queues none
+local SWING_COOLDOWN = 4                -- seconds before Act11, the far teleport's post-warp burst or the hit reaction may play 3001 again; every queued 3001 re-arms it at queue time. The near teleport queues none
 local BEAM_COOLDOWN = 4                 -- seconds between two 3004 (beam + flame nova), any source
 local TELEPORT_COOLDOWN = 6             -- seconds after a near teleport before any teleport
 local TELEPORT_FAR_COOLDOWN = 11.5      -- seconds after a far teleport before any teleport (its own sequence takes about 9 s)
@@ -60,12 +60,11 @@ local ARRIVAL_MAX = 2.2                 -- the longest arrival animation (5012/5
 local MARKER_3000 = 4.77                -- 3000's warp marker (SpEffect 20011452)
 local GRAB_CHAIN = 6                    -- 3002 (4.2 s) then 3003 (1.8 s)
 -- Reactions (Goal.Interrupt), percentages, 0 disables one. A reaction
--- spends an attack the table could offer anyway (the near teleport with
--- the beam while the teleport timer allows, else the burst while
--- the swing timer allows, the beam while its counter allows), so it moves
--- an attack earlier without adding any: hits landed while both the
--- teleport and the swing cool stay free.
-local REACT_HIT = 25                    -- hit by the player in front within REACT_HIT_RANGE: the near teleport if ready, else the burst
+-- spends an attack the table could offer anyway (the burst while the
+-- swing timer allows, the grab or the beam while its counter allows), so
+-- it moves an attack earlier without adding any: hits landed while the
+-- swing cools stay free. No reaction warps (see Goal.Interrupt).
+local REACT_HIT = 25                    -- hit by the player in front within REACT_HIT_RANGE: the burst
 local REACT_HIT_RANGE = 2
 local REACT_HEAL = 80                   -- player uses an item from >= REACT_RANGE: grab
 local REACT_RANGE = 5
@@ -215,7 +214,7 @@ function Houzuki755890_AddBeamIfReady(ai, goal)
     end
 end
 
--- The near teleport (Act02 under TELEPORT_FAR_RANGE, the hit reaction):
+-- The near teleport (Act02 under TELEPORT_FAR_RANGE, Act05/Act06):
 -- the warp away from the player, then the beam when ready. A clean blink
 -- in the player's view, since lock-on cannot be broken from the AI.
 -- A burst queued after the warp was tried and did not read as part of
@@ -868,18 +867,17 @@ Goal.Interrupt = function (self, ai, goal)
     -- (vanilla 472000's pattern: clear the sub-goals, queue the attack,
     -- return true). Each one spends an attack the table could offer anyway.
     if ai:IsInterupt(INTERUPT_Damaged) then
-        if ai:IsInsideTargetCustom(TARGET_SELF, TARGET_ENE_0, AI_DIR_TYPE_F, 120, 180, REACT_HIT_RANGE) and not Houzuki755890_SequenceInFlight(ai) and ai:GetRandam_Int(1, 100) <= REACT_HIT then
-            -- Warp away and beam when the teleport is ready (and there
-            -- is room), a plain burst otherwise, nothing when neither is
-            -- available: the running act is only cleared for a real answer.
-            if Houzuki755890_TeleportReady(ai) and Houzuki755890_AddTeleportAway(ai, goal) then
-                return true
-            end
-            if Houzuki755890_SwingReady(ai) then
-                goal:ClearSubGoal()
-                Houzuki755890_AddSwing(ai, goal, true)
-                return true
-            end
+        -- The burst when its timer allows, nothing otherwise: the running
+        -- act is only cleared for a real answer. Never a warp: a critical
+        -- hit raises this interrupt from right in front, and the boss was
+        -- seen blinking away around a critical (in game; this reaction is
+        -- the likely path). Every vanilla interrupt warp waits for a
+        -- marker SpEffect of the character's own animation, which a
+        -- critical never applies (Jori's damage branch queues nothing).
+        if ai:IsInsideTargetCustom(TARGET_SELF, TARGET_ENE_0, AI_DIR_TYPE_F, 120, 180, REACT_HIT_RANGE) and not Houzuki755890_SequenceInFlight(ai) and ai:GetRandam_Int(1, 100) <= REACT_HIT and Houzuki755890_SwingReady(ai) then
+            goal:ClearSubGoal()
+            Houzuki755890_AddSwing(ai, goal, true)
+            return true
         end
         return false
     end

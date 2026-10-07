@@ -447,8 +447,9 @@ in metres, turns are `turnTime` / `turnFaceAngle` (see
 ### Teleports
 
 Act02 has two shapes by distance, `TELEPORT_FAR_RANGE` (5 m center to
-center, melee reach with a long weapon being 3-4 m); the hit reaction
-always fires the near one.
+center, melee reach with a long weapon being 3-4 m); the post-grab
+retreats (Act05/Act06) use the near one. No reaction warps (see
+"Interrupts").
 
 **Near** (under 5 m): a bare warp, then the beam. Nothing is queued
 ahead of the warp, so the vanish is immediate, and nothing between it
@@ -512,7 +513,7 @@ interval (`RegistAttackTimeInterval`) and reads the counter
 with weights 100/0 wherever an act or a reaction needs one of them, so no
 counter is ever read unregistered. The burst (`SWING_COOLDOWN` 4 s, set by every 3001 the
 script queues, read by Act11, by the far teleport's post-warp burst and
-by the plain-burst hit reaction; the near teleport queues none) and the teleport
+by the hit reaction; the near teleport queues none) and the teleport
 (`TELEPORT_COOLDOWN` 6 s after a near one, `TELEPORT_FAR_COOLDOWN` 11.5 s
 after a far one, whose own sequence takes about 9 s, `TELEPORT_RETRY` 2 s
 after a near attempt that found no room) are AI timers
@@ -565,11 +566,9 @@ Goal.Interrupt, first matching case wins
 2. Damaged: player in the front 120-degree cone within REACT_HIT_RANGE (2 m)
    AND nothing in flight (in flight: hold timer > 0, or 3002 started <= REACT_HOLD (7 s) ago)
    AND draw <= REACT_HIT (25)
-   a. teleport ready AND room → the whole near teleport (warp, beam if ready) → true
-      (ready without room: the teleport timer is set to TELEPORT_RETRY, then fall through)
-   b. else swing timer at 0 → ClearSubGoal + immediate burst → true
-   c. else false
-   A hit from the back never triggers anything.
+   AND swing timer at 0 → ClearSubGoal + immediate burst → true
+   else false
+   Never a warp, whatever the teleport timer. A hit from the back never triggers anything.
 3. UseItem: dist >= REACT_RANGE (5 m) AND nothing in flight AND draw <= REACT_HEAL (80)
    dist <= GRAB_REACH (12 m) AND grab ready → ClearSubGoal + grab → true
    dist >  GRAB_REACH AND beam ready        → ClearSubGoal + beam → true
@@ -583,6 +582,23 @@ committed to, and a flask is a commitment of its own that costs them
 their guard, which vanilla bosses punish too. Re-adding the cast reaction
 is one branch calling `Houzuki755890_ReactGrab` with a draw knob of its
 own, but it is a design decision rather than a tuning value.
+
+The hit reaction never warps. A warp here would cut a critical short: a
+critical hit (a frontstab after a posture break) raises the same damage
+interrupt from right in front, and a near-teleport answer at this point
+is the likely path of the animation-less blink seen around a critical
+in game. How the engine treats a warp issued while a critical
+victim animation (11010/11060 in the c5280 TAE, about 7 s, cancelable
+from 6.13 s) owns the boss is not established: it may run at once, wait
+for that window, or be dropped as `docs/ai-scripts.md` suspects for a
+warp issued under the burst. The rule that settles the design is
+vanilla's: every vanilla warp queued from `Goal.Interrupt` (396 battle
+scripts surveyed) answers a marker SpEffect that the character's own
+animation applies, which a critical never does, and Jori's 531020 damage
+branch only updates a counter. A vanilla guard on damage reactions,
+`HasSpecialEffectId(TARGET_SELF, 5039) == false` (15 of the 164 scripts
+that handle `INTERUPT_Damaged`), would be inert here: the c5280 TAE never
+applies 5039.
 
 The flask reaction answers with the grab rather than the beam: the grab
 dashes `GRAB_REACH` (12 m, vanilla Act03's `successDist`), so drinking is
@@ -649,7 +665,7 @@ Generate a seed with the allowlist above, then in the arena:
    that never staggers means the meter is masked by the table: lower
    `BOSS_SUPER_ARMOR`.
 2. **Melee**: grabs (parryable), timer-gated bursts (Act11's, the far
-   teleport's post-warp one, the hit reaction's plain one) at most once
+   teleport's post-warp one, the hit reaction's) at most once
    per `SWING_COOLDOWN`, novas between them, and sidesteps or strafes through the
    cooldowns; the boss never stands still for several seconds, and a
    grab is followed by the blink rather than the walk retreat
@@ -659,11 +675,12 @@ Generate a seed with the allowlist above, then in the arena:
    player (5 m in a small arena; straight ahead when the player was in
    its back), then the beam when it is ready, with no burst anywhere in
    the move. Any pause before the vanish means something is queued ahead
-   of the warp again: the warp must be the act's first sub-goal. Check
-   the hit reaction separately
-   once the wall is broken, when the boss flinches again: hit it at
-   melee range and confirm it still vanishes, since a burst on the spot
-   with no vanish would mean the flinch animation swallowed the warp.
+   of the warp again: the warp must be the act's first sub-goal. Break
+   its posture and land a frontstab: the boss must play the whole
+   critical animation and get up where it fell. A vanish before it is
+   back on its feet means a warp still reaches the critical; a near
+   teleport drawn once it stands is the table's Act02 (about one get-up
+   in four with the player in front), by design.
    In a catacomb room, confirm it still
    retreats at least sometimes; a boss that never retreats there means
    both scan distances fail: lower `TELEPORT_AWAY_FALLBACK`.
@@ -690,7 +707,7 @@ Generate a seed with the allowlist above, then in the arena:
    rather than standing still: a stall there means the grab was queued
    out of reach after all, so lower `GRAB_REACH`. Casting or shooting
    never draws anything, at any distance. At melee range, about one hit
-   in four draws the near teleport when it is ready, or a burst.
+   in four draws a burst while the swing timer allows, never a teleport.
 7. **Ambient regression**: an ambient untouchable still only teleports
    (once per engagement) and grabs, builds madness with its lantern, no
    burst at range, no beam, no script error.

@@ -483,19 +483,29 @@ def test_close_bracket_offers_the_beam_next_to_the_grab():
     assert cooling[GRAB] == ready[GRAB]  # the beam's share is not redistributed
 
 
-def test_hit_reaction_prefers_the_retreat_then_the_burst():
+def test_hit_reaction_is_the_burst_and_never_a_warp():
+    # A critical hit raises the same damage interrupt from right in front,
+    # and a warp there would cut the critical short (the likely path of the
+    # blink seen around a critical in game). Vanilla interrupt warps only
+    # answer a marker of the character's own animation; Jori's damage
+    # branch queues nothing. The answer is the burst, whatever the teleport
+    # timer says.
     hit = {"interrupt": "Damaged", "dist": 1.5, "random": 1}
-    fired, goal, _ = react(**hit)
-    assert fired and queued(goal) == [RETREAT, BEAM_ATTACK]
-    fired, goal, _ = react(**hit, timers=TELEPORT_COOLING)
-    assert fired and queued(goal) == [BURST]
-    # No room to retreat: the burst alone.
-    fired, goal, _ = react(**hit, mesh=0)
-    assert fired and queued(goal) == [BURST]
-    # No room and the swing cooling: nothing, and the running act is not cleared.
-    fired, goal, _ = react(**hit, mesh=0, timers=SWING_COOLING)
+    for timers in ({}, TELEPORT_COOLING):
+        fired, goal, _ = react(**hit, timers=timers)
+        assert fired and queued(goal) == [BURST]
+    # No warp is even attempted: no room scan, and the teleport timer is
+    # neither spent nor restarted (the old answer restarted it at
+    # TELEPORT_RETRY when it found no room).
+    for mesh in (10, 0):
+        g, ai, goal, state = activate({**hit, "mesh": mesh})
+        assert g.GOALS[BATTLE_GOAL].Interrupt(None, ai, goal)
+        assert queued(goal) == [BURST]
+        assert len(ai.scanned) == 0
+        assert state.timers[TELEPORT_TIMER] is None and state.timers[HOLD_TIMER] is None
+    # The swing cooling: nothing, and the running act is not cleared.
+    fired, goal, _ = react(**hit, timers=SWING_COOLING)
     assert not fired and goal.cleared == 0
-    assert not react(**hit, timers={**TELEPORT_COOLING, **SWING_COOLING})[0]
     assert not react(interrupt="Damaged", dist=3, random=1)[0]
     assert not react(interrupt="Damaged", dist=1.5, random=100)[0]
 
