@@ -51,6 +51,11 @@ public static class AmbientSpawnInjector
     /// own collapse/assembly mechanics finished them off before the player
     /// ever saw them).</summary>
     public const uint AMBUSH_HP = 100u;
+    // Clone sources farther than this from their gate are logged: the
+    // inherited collision may belong to another part of the map (Tombsward
+    // Cave's nearest collision-bearing candidate stands 96m away, 29m lower),
+    // so those gates are the ones to check in-game first.
+    private const float FAR_CLONE_SOURCE_DISTANCE = 40f;
     internal const float GREETER_MIN_RADIUS = 4.0f;
     internal const float GREETER_MAX_RADIUS = 6.0f;
     // Spawn arcs are much narrower than the decor's 120-degree default:
@@ -125,8 +130,9 @@ public static class AmbientSpawnInjector
     /// Apply spawn specs to an already-loaded MSB. Groups by gate part name;
     /// finds the gate asset by name (falling back to an EntityID parse, same
     /// as DeathMarkerInjector.InjectMap), then the nearest vanilla enemy to
-    /// clone (skipping FogMod-allocated entities). Maps with no vanilla enemy
-    /// to clone from are logged and skipped. Returns the number of greeters
+    /// clone (see CloneSources), logging sources farther than
+    /// FAR_CLONE_SOURCE_DISTANCE. Maps with no vanilla enemy to clone from
+    /// are logged and skipped. Returns the number of greeters
     /// and ambushers actually placed by this call (not a count of matching
     /// models in the MSB: vanilla catacomb maps often already contain
     /// skeleton enemies sharing the ambusher's chr model).
@@ -138,12 +144,11 @@ public static class AmbientSpawnInjector
         var modelsEnsured = new HashSet<string>();
         // Snapshot before placing anything: a spawn added for an earlier gate
         // carries EntityID 0 (see below), which passes the "vanilla" filter
-        // in FindNearestVanillaEnemy just like a real vanilla enemy would. A
-        // later gate in the same map must never pick an already-placed spawn
-        // as its clone source, or the "nearest enemy stands on a valid
-        // collision in the same play space" rationale for the inherited
-        // CollisionPartName no longer holds.
-        var vanillaEnemies = msb.Parts.Enemies.ToList();
+        // just like a real vanilla enemy would. A later gate in the same map
+        // must never pick an already-placed spawn as its clone source, or the
+        // "nearest enemy stands on a valid collision in the same play space"
+        // rationale for the inherited CollisionPartName no longer holds.
+        var cloneSources = CloneSources(msb.Parts.Enemies);
 
         foreach (var group in specs.GroupBy(s => s.GatePartName))
         {
@@ -159,11 +164,18 @@ public static class AmbientSpawnInjector
                 continue;
             }
 
-            var baseEnemy = FindNearestVanillaEnemy(vanillaEnemies, gateAsset.Position);
+            var baseEnemy = cloneSources.MinBy(e => Vector3.DistanceSquared(e.Position, gateAsset.Position));
             if (baseEnemy == null)
             {
                 log($"  Warning: No vanilla enemy to clone from, skipping ambient spawns for gate '{partName}'");
                 continue;
+            }
+            float sourceDistance = Vector3.Distance(baseEnemy.Position, gateAsset.Position);
+            if (sourceDistance > FAR_CLONE_SOURCE_DISTANCE)
+            {
+                log($"  Gate '{partName}': clone source {baseEnemy.Name} is {sourceDistance:F0}m away " +
+                    $"(dy {baseEnemy.Position.Y - gateAsset.Position.Y:F1}m, " +
+                    $"collision {baseEnemy.CollisionPartName ?? "none"})");
             }
 
             foreach (var spec in partSpecs)
@@ -210,8 +222,8 @@ public static class AmbientSpawnInjector
                 // The nearest-neighbor clone source may patrol a walk route; greeters
                 // and ambushers must stand their ground, not inherit it.
                 spawn.WalkRouteName = null;
-                // CollisionPartName inherited from the cloned neighbor on purpose: the
-                // nearest enemy stands on a valid collision in the same play space.
+                // CollisionPartName inherited from the cloned neighbor on purpose
+                // (see CloneSources for when a collision is required).
                 msb.Parts.Enemies.Add(spawn);
 
                 if (spec.Kind == SpawnKind.Greeter)
@@ -347,8 +359,24 @@ public static class AmbientSpawnInjector
 
     // --- Helper methods ---
 
-    private static MSBE.Part.Enemy? FindNearestVanillaEnemy(IReadOnlyList<MSBE.Part.Enemy> enemies, Vector3 targetPos) =>
-        MsbHelper.FindNearestVanilla(enemies, e => e.EntityID, e => e.Position, targetPos, SpeedFogIds.FogModEntityMin);
+    /// <summary>
+    /// The map's vanilla enemies (outside FogMod/SpeedFog's managed entity
+    /// band) eligible as clone sources; each gate clones the nearest one. A
+    /// spawn keeps its source's CollisionPartName, so the pool follows the
+    /// map's own convention: when at least half of the vanilla enemies stand
+    /// on a named collision (dungeon maps, 67-100%), collisionless ones are
+    /// dropped, since c1000 dummies near catacomb boss fogs often have none
+    /// and a greeter cloned from one never showed up in-game. Open-world
+    /// tiles leave nearly every enemy collisionless (at most ~13% name one),
+    /// so all their enemies stay eligible and a rare cellar or interior enemy
+    /// does not become every spawn's source.
+    /// </summary>
+    private static List<MSBE.Part.Enemy> CloneSources(IEnumerable<MSBE.Part.Enemy> enemies)
+    {
+        var vanilla = enemies.Where(e => !SpeedFogIds.IsModManagedEntity(e.EntityID)).ToList();
+        var withCollision = vanilla.Where(e => !string.IsNullOrEmpty(e.CollisionPartName)).ToList();
+        return withCollision.Count * 2 >= vanilla.Count ? withCollision : vanilla;
+    }
 }
 
 public enum SpawnKind { Greeter, Ambusher }

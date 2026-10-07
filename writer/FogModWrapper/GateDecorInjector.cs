@@ -40,14 +40,15 @@ namespace FogModWrapper;
 /// </summary>
 public static class GateDecorInjector
 {
-    // SpeedFogIds.FogModEntityMin is FogMod's own entity/region allocation
-    // floor: vanilla parts used as clone sources or ground evidence, plus
-    // almost every SpeedFog-managed entity range (death markers, this
-    // injector's own decorations), sit on opposite sides of it. Known
-    // exception below the floor: ChapelGraceInjector's c1000 grace NPC
-    // (bonfire entity range, ~10011952), placed at floor level at the
-    // Chapel grace, so it is harmless as ground evidence for the Chapel's
-    // anchored exit gate.
+    // SpeedFogIds.IsModManagedEntity tells vanilla parts (clone sources,
+    // ground evidence) from FogMod's and SpeedFog's own (death markers,
+    // this injector's earlier decorations). Vanilla ids sit on both sides
+    // of that band (8-digit dungeon ids, 10-digit open-world ids), so a
+    // plain "below FogModEntityMin" test would drop every id-bearing
+    // open-world part. Known vanilla-range exception: ChapelGraceInjector's
+    // c1000 grace NPC (bonfire entity range, ~10011952), placed at floor
+    // level at the Chapel grace, so it is harmless as ground evidence for
+    // the Chapel's anchored exit gate.
 
     // Arbitrary fixed tag XORed into the gate EntityID to seed each catalogue
     // entry's arc PRNG (see ApplyToMsb). Any stable constant works; this one
@@ -63,7 +64,9 @@ public static class GateDecorInjector
     /// pair, and, when the catalogue has at least one SfxId &gt; 0 entry,
     /// exactly one event slot (used or not, the same upper-bound tolerance
     /// as DeathMarkerInjector.PlanAllocations). Throws upfront when the
-    /// summed event slots exceed the range budget.
+    /// summed event slots exceed the range budget, or when the entity ids
+    /// would leave the managed band (past SpeedFogIds.ModEntityMaxExclusive,
+    /// decorations would read as vanilla parts to later gates' filters).
     /// </summary>
     internal static List<MapAllocation> PlanAllocations(
         IEnumerable<(string MapId, int SpecCount)> maps, bool hasSfxEntries)
@@ -84,6 +87,12 @@ public static class GateDecorInjector
                 $"Halloween decor event budget exceeded: {eventBase} events " +
                 $"(max {SpeedFogIds.HalloweenDecorEvents.Capacity}, " +
                 $"next range starts at {SpeedFogIds.HalloweenDecorEvents.End})");
+        }
+        if (entityBase > SpeedFogIds.ModEntityMaxExclusive)
+        {
+            throw new InvalidOperationException(
+                $"Halloween decor entity ids exceed the managed band: next id {entityBase} " +
+                $"(max {SpeedFogIds.ModEntityMaxExclusive - 1})");
         }
         return plans;
     }
@@ -140,16 +149,16 @@ public static class GateDecorInjector
             // run before AmbientSpawnInjector adds its EntityID-0 spawns.
             // AEG099_* assets are excluded (fog gates, warp doors, glow
             // anchors: gameplay helpers, not floor evidence); earlier
-            // decorations sit at or above SpeedFogIds.FogModEntityMin and
-            // drop out with the entity filter.
+            // decorations sit in SpeedFog's managed entity band and drop out
+            // with the entity filter.
             float groundY = GateGeometry.EstimateGroundY(
                 gateAsset.Position,
                 msb.Parts.Assets
-                    .Where(a => a.EntityID < SpeedFogIds.FogModEntityMin
+                    .Where(a => !SpeedFogIds.IsModManagedEntity(a.EntityID)
                         && a.ModelName?.StartsWith("AEG099", StringComparison.Ordinal) != true)
                     .Select(a => a.Position)
                     .Concat(msb.Parts.Enemies
-                        .Where(e => e.EntityID < SpeedFogIds.FogModEntityMin)
+                        .Where(e => !SpeedFogIds.IsModManagedEntity(e.EntityID))
                         .Select(e => e.Position)));
             if (MathF.Abs(groundY - gateAsset.Position.Y) > 0.3f)
             {
@@ -277,5 +286,6 @@ public static class GateDecorInjector
 
     private static MSBE.Part.Asset? FindNearestVanillaAsset(MSBE msb, Vector3 targetPos) =>
         MsbHelper.FindNearestVanilla(
-            msb.Parts.Assets, a => a.EntityID, a => a.Position, targetPos, SpeedFogIds.FogModEntityMin);
+            msb.Parts.Assets, a => a.EntityID, a => a.Position, targetPos,
+            SpeedFogIds.FogModEntityMin, SpeedFogIds.ModEntityMaxExclusive);
 }

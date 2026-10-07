@@ -173,10 +173,27 @@ their harmlessness comes from the decorative `NpcParam` clone instead
 
 Each spawn/decoration starts as a `DeepCopy()` of the nearest vanilla part
 of the same kind (nearest `Enemy` for spawns, nearest `Asset` for
-decorations, both excluding parts already at or above FogMod's own entity
-floor 755890000), then retargeted: new model, generated name (`MsbHelper.
+decorations), then retargeted: new model, generated name (`MsbHelper.
 GeneratePartName`), position/rotation, `EntityID`, and identity fields
 cleared as appropriate for the part kind.
+
+"Vanilla" means outside the managed entity band
+`[SpeedFogIds.FogModEntityMin, SpeedFogIds.ModEntityMaxExclusive)`
+(`SpeedFogIds.IsModManagedEntity`: FogMod's own parts, death markers,
+earlier decorations). Vanilla ids sit on both sides of that band: dungeon
+maps use 8-digit ids (`30040800`), open-world tiles 10-digit ones (m60
+`10xxxxxxxx`, m61 `20xxxxxxxx`). Until 2026-10 the filter was "below
+755890000", which dropped every id-bearing open-world part: on the
+Halloween race seed `f7280403ab5d` the Darklight Catacombs exit gate
+(m61_52_43, three enemies, all with 10-digit ids) got no spawn at all, and
+the other open-world greeters were cloned from entity-0 enemies up to
+390m away. With the band, open-world decorations now usually clone the
+vanilla fog gate asset itself (10-digit id, distance 0), as dungeon
+decorations already did (8-digit gate ids); the model is retargeted, so
+only the clone's inherited fields change. The band has one known gap:
+FogMod's replacement stakes (986021940+) and their player points
+(986020970+) sit outside it and read as vanilla, harmless today (see the
+`IsModManagedEntity` doc comment).
 
 The one place spawns and decorations diverge is visibility-group handling,
 because an enemy chr renders through its own model while a bloodstain-style
@@ -200,7 +217,29 @@ otherwise alias the clone source).
 
 `CollisionPartName` is deliberately left inherited from the cloned
 neighbor on spawns: the nearest enemy already stands on a valid collision
-in the same play space.
+in the same play space. That only holds when the source HAS a collision:
+in dungeon maps the c1000 dummies near catacomb boss fogs often name none,
+and a greeter cloned from one never shows up in-game (confirmed on the
+four catacomb/cave exit gates of seed `f7280403ab5d` cloned from a
+collisionless c1000). The Item Randomizer treats an
+enemy's collision as mandatory too (`EnemyRandomizer` throws on a
+cross-map transplant with no collision). So spawns follow the map's own
+convention (`AmbientSpawnInjector.CloneSources`, computed once per map):
+when at least half of the map's vanilla enemies name a collision, only
+enemies with one are clone sources. The families separate cleanly (survey
+of every map of seed `f7280403ab5d`): dungeon maps sit at 67-100%
+collision-bearing enemies, open-world tiles leave nearly every enemy
+collisionless (157 of 185 tiles name none, the rest at most ~13%, cellars
+and interiors), so an open-world spawn keeps the nearest enemy as its
+source instead of a rare collision-bearing one far away.
+
+A collision-bearing source can still stand in another part of the map,
+and its collision is then not the one under the spawn. Sources farther
+than 40m from their gate (`FAR_CLONE_SOURCE_DISTANCE`) are logged per gate
+(`Gate '...': clone source ... is NNm away (dy ...m, collision
+...)`). On seed `f7280403ab5d` the outlier is Tombsward Cave (m31_02): no
+vanilla enemy stands on the entrance-area collisions, the nearest
+collision-bearing one is 96m away and 29m lower.
 
 ## Gate decoration catalogue
 
@@ -250,7 +289,8 @@ candidates count and whether the correction applies:
   ledges) fall back to the gate Y instead of trusting a median between
   levels.
 
-Candidates are vanilla assets (excluding `AEG099_*`: fog gates, warp
+Candidates are vanilla assets (outside the managed entity band, see "MSB
+clone recipe" above, and excluding `AEG099_*`: fog gates, warp
 doors, glow anchors are gameplay helpers, not floor evidence) plus
 vanilla enemies, which are hand-placed on walkable floor and never
 wall-mounted. Using enemies is why `GateDecorInjector.ApplyToMsb` MUST run
@@ -321,7 +361,10 @@ disjoint from FogMod's own range and from death markers (755900000+).
   as death markers (see death-markers.md), not found by name or entity ID in
   the MSB. Both injectors log a warning and skip these gates; a smoke run
   of a full 46-connection DAG left 3-4 anchored gates undressed for this
-  reason.
+  reason. Cluster exits can be backportals too: Taylew's Ruined Forge
+  (`rauhbase_forge`) leaves through `42032840` in m42_03 (tagged
+  `backportal` in fog.txt), so that exit gets neither spawns nor
+  decorations.
 
 ## In-game checks still owed
 
@@ -333,6 +376,13 @@ pack size range):
   madness (or other status) buildup when walking past; greeters face the
   approaching player, not the gate; the Chapel of Anticipation exit shows
   decorations but NO greeter or ambushers (decor-only start cluster).
+- Greeters at catacomb/cave exits now cloned from a collision-bearing
+  enemy instead of a collisionless c1000 dummy (Murkwater, Spiritcaller
+  Cave, Fog Rift, Wyndham were empty on seed `f7280403ab5d`), and at
+  open-world exits (Darklight Catacombs was empty): the replacement source
+  can stand farther away, on another collision of the same map. Check the
+  gates the generation log flags as far clone sources first, starting with
+  Tombsward Cave (m31_02, collision source 96m away, 29m lower).
 - Per-map performance with 1-4 extra chr loads per gate: no visible
   hitch on map load.
 - Ambush pack feel when `ambushes = true`: packs aggro and swing but die

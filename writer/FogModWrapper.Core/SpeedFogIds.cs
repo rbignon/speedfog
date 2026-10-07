@@ -24,10 +24,31 @@ public static class SpeedFogIds
     }
 
     /// <summary>FogMod's entity/region allocation floor: FogMod-managed MSB
-    /// parts and regions sit at or above this value. Injectors use it to
-    /// tell vanilla parts (below) from FogMod-managed ones (at or above)
-    /// when picking clone sources or ground evidence.</summary>
+    /// parts and regions sit at or above this value, followed by SpeedFog's
+    /// own MSB entity bases (death markers, Halloween decorations). The
+    /// whole managed band ends at <see cref="ModEntityMaxExclusive"/>.</summary>
     public const uint FogModEntityMin = 755890000;
+
+    /// <summary>Exclusive upper bound of the managed MSB entity band
+    /// [<see cref="FogModEntityMin"/>, this). Vanilla entity ids never fall
+    /// inside it, but they sit on BOTH sides: dungeon maps use 8-digit ids
+    /// (30040800), open-world tiles 10-digit ones (m60: 10xxxxxxxx, m61:
+    /// 20xxxxxxxx). Telling vanilla parts from managed ones therefore needs
+    /// the band (<see cref="IsModManagedEntity"/>), never "below
+    /// FogModEntityMin" alone, which drops every id-bearing open-world
+    /// part.</summary>
+    public const uint ModEntityMaxExclusive = 756000000;
+
+    /// <summary>True for an id in the managed band (FogMod's gates, warp
+    /// regions and parts, SpeedFog's death markers and decorations), false
+    /// for vanilla ids (including 0, unset). Known exception outside the
+    /// band: FogMod's replacement stake assets (986021940+) and their
+    /// player points (986020970+, GameDataWriterE.cs:4550/4598), harmless
+    /// to the current callers: ground evidence drops AEG099_* models,
+    /// decorations already clone AEG099 gate assets routinely (model
+    /// retargeted), and player parts are never clone sources.</summary>
+    public static bool IsModManagedEntity(uint entityId) =>
+        entityId >= FogModEntityMin && entityId < ModEntityMaxExclusive;
 
     // --- EMEVD event ID ranges ---
 

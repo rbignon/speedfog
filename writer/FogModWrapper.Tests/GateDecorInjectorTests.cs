@@ -248,6 +248,93 @@ public class GateDecorInjectorTests
     }
 
     [Fact]
+    public void ApplyToMsb_OverworldEntityIdsCountAsGroundEvidence()
+    {
+        // Open-world tiles number their parts with 10-digit entity ids
+        // (m60: 10xxxxxxxx, m61: 20xxxxxxxx), ABOVE FogMod's band: they are
+        // vanilla floor evidence, not FogMod-managed parts.
+        var msb = MakeMsbWithGateAndVanillaAsset();
+        msb.Parts.Assets.Add(new MSBE.Part.Asset
+        {
+            Name = "AEG020_100_1000", ModelName = "AEG020_100",
+            Position = new Vector3(8f, -1.4f, 10f), EntityID = 1043301500,
+        });
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c3000_1000", ModelName = "c3000",
+            Position = new Vector3(12f, -1.2f, 11f), EntityID = 2052430200,
+        });
+        var gates = new List<HalloweenGateAnchors.GateAnchor> { new("AEG099_002_9000", IsASide: false) };
+        var catalog = new DecorCatalog(new List<DecorEntry>
+        {
+            new("AEG023_920", 1, 2.0f, 4.0f, 0f, 100, 0),
+        });
+
+        GateDecorInjector.ApplyToMsb(msb, gates, catalog, entityIdBase: 755910000, log: _ => { });
+
+        var decor = msb.Parts.Assets.Single(a => a.ModelName == "AEG023_920");
+        Assert.Equal(-1.3f, decor.Position.Y, 3);
+    }
+
+    [Fact]
+    public void ApplyToMsb_ClonesOverworldAssetsWithTenDigitEntityIds()
+    {
+        // The only clone source is an open-world asset with a 10-digit id
+        // (the gate itself sits in FogMod's band): decorations must still be
+        // placed, not skipped for want of a "vanilla" asset.
+        var msb = new MSBE();
+        msb.Parts.Assets.Add(new MSBE.Part.Asset
+        {
+            Name = "AEG099_002_9000", ModelName = "AEG099_002",
+            Position = new Vector3(10f, 0f, 10f), EntityID = 755890001,
+        });
+        msb.Parts.Assets.Add(new MSBE.Part.Asset
+        {
+            Name = "AEG020_100_1000", ModelName = "AEG020_100",
+            Position = new Vector3(0f, 0f, 0f), EntityID = 1043301500,
+        });
+        var gates = new List<HalloweenGateAnchors.GateAnchor> { new("AEG099_002_9000", IsASide: false) };
+        var catalog = new DecorCatalog(new List<DecorEntry>
+        {
+            new("AEG023_920", 1, 2.0f, 4.0f, 0f, 100, 0),
+        });
+
+        var (placed, _) = GateDecorInjector.ApplyToMsb(
+            msb, gates, catalog, entityIdBase: 755910000, log: _ => { });
+
+        Assert.Equal(1, placed);
+    }
+
+    [Fact]
+    public void ApplyToMsb_EarlierDecorationsAreNotGroundEvidence()
+    {
+        // Decorations already placed at a previous gate of the same map sit
+        // in SpeedFog's own entity band (755910000+) and must not feed the
+        // ground estimate of the next gate.
+        var msb = MakeMsbWithGateAndVanillaAsset();
+        msb.Parts.Assets.Add(new MSBE.Part.Asset
+        {
+            Name = "AEG023_920_9000", ModelName = "AEG023_920",
+            Position = new Vector3(8f, -1.4f, 10f), EntityID = 755910000,
+        });
+        msb.Parts.Assets.Add(new MSBE.Part.Asset
+        {
+            Name = "AEG023_920_9001", ModelName = "AEG023_920",
+            Position = new Vector3(12f, -1.2f, 11f), EntityID = 755910001,
+        });
+        var gates = new List<HalloweenGateAnchors.GateAnchor> { new("AEG099_002_9000", IsASide: false) };
+        var catalog = new DecorCatalog(new List<DecorEntry>
+        {
+            new("AEG023_862", 1, 2.0f, 4.0f, 0f, 100, 0),
+        });
+
+        GateDecorInjector.ApplyToMsb(msb, gates, catalog, entityIdBase: 755910002, log: _ => { });
+
+        var decor = msb.Parts.Assets.Single(a => a.ModelName == "AEG023_862");
+        Assert.Equal(0f, decor.Position.Y, 3);
+    }
+
+    [Fact]
     public void ApplyToMsb_DecorGetsDeterministicNonZeroYaw()
     {
         var msb1 = MakeMsbWithGateAndVanillaAsset();
@@ -322,5 +409,18 @@ public class GateDecorInjectorTests
         var ex = Assert.Throws<InvalidOperationException>(
             () => GateDecorInjector.PlanAllocations(maps, hasSfxEntries: true));
         Assert.Contains("budget", ex.Message);
+    }
+
+    [Fact]
+    public void PlanAllocations_ThrowsWhenEntityIdsLeaveTheManagedBand()
+    {
+        // Decorations past ModEntityMaxExclusive would read as vanilla parts
+        // to the clone-source and ground-evidence filters of later gates.
+        int fits = (int)(SpeedFogIds.ModEntityMaxExclusive - SpeedFogIds.HalloweenDecorEntityBase);
+        var maps = new[] { ("m10_00_00_00", fits), ("m11_00_00_00", 1) };
+
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => GateDecorInjector.PlanAllocations(maps, hasSfxEntries: false));
+        Assert.Contains("entity", ex.Message);
     }
 }

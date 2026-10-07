@@ -85,6 +85,25 @@ public class SpeedFogIdsTests
             SpeedFogIds.DeathMarkerEntityBase < SpeedFogIds.HalloweenDecorEntityBase,
             $"DeathMarkerEntityBase ({SpeedFogIds.DeathMarkerEntityBase}) must be below " +
             $"HalloweenDecorEntityBase ({SpeedFogIds.HalloweenDecorEntityBase})");
+        // The vanilla-part filters (SpeedFogIds.IsModManagedEntity) only
+        // exclude the managed band: a base outside it would let SpeedFog's
+        // own parts pass as vanilla clone sources or ground evidence.
+        Assert.True(SpeedFogIds.IsModManagedEntity(SpeedFogIds.DeathMarkerEntityBase));
+        Assert.True(SpeedFogIds.IsModManagedEntity(SpeedFogIds.HalloweenDecorEntityBase));
+    }
+
+    [Theory]
+    [InlineData(0u, false)]          // unset
+    [InlineData(30040800u, false)]   // dungeon map (8 digits)
+    [InlineData(755889999u, false)]  // just below the band
+    [InlineData(755890000u, true)]   // FogModEntityMin, inclusive
+    [InlineData(755999999u, true)]   // last managed id
+    [InlineData(756000000u, false)]  // ModEntityMaxExclusive, exclusive
+    [InlineData(1043300200u, false)] // m60 open-world tile (10 digits)
+    [InlineData(2052430800u, false)] // m61 open-world tile (10 digits)
+    public void IsModManagedEntity_CoversOnlyTheManagedBand(uint entityId, bool managed)
+    {
+        Assert.Equal(managed, SpeedFogIds.IsModManagedEntity(entityId));
     }
 
     [Fact]

@@ -191,15 +191,16 @@ internal static class MsbHelper
     /// <summary>
     /// Finds the nearest item to <paramref name="target"/> among
     /// <paramref name="parts"/>, skipping any whose entity id falls in the
-    /// excluded band: <c>[min, maxExclusive)</c> when <paramref name="maxExclusive"/>
-    /// is given (DeathMarkerInjector: FogMod's own id range only), or
-    /// <c>[min, +inf)</c> otherwise (every other caller: "at or above
-    /// FogMod's floor", no upper bound). Ties keep the first candidate seen
-    /// (squared distance, no sqrt needed for comparison).
+    /// excluded band <c>[min, maxExclusive)</c> (DeathMarkerInjector: FogMod's
+    /// own id range only; the Halloween injectors: the whole managed band,
+    /// see SpeedFogIds.IsModManagedEntity). The upper bound is mandatory:
+    /// vanilla open-world ids (10-digit) sit above the managed band, so an
+    /// open-ended exclusion would drop them all. Ties keep the first
+    /// candidate seen (squared distance, no sqrt needed for comparison).
     /// </summary>
     public static T? FindNearestVanilla<T>(
         IEnumerable<T> parts, Func<T, uint> entityId, Func<T, Vector3> position,
-        Vector3 target, uint min, uint? maxExclusive = null)
+        Vector3 target, uint min, uint maxExclusive)
     {
         T? best = default;
         float bestDist = float.MaxValue;
@@ -207,8 +208,7 @@ internal static class MsbHelper
         foreach (var part in parts)
         {
             var id = entityId(part);
-            bool excluded = maxExclusive.HasValue ? (id >= min && id < maxExclusive.Value) : id >= min;
-            if (excluded)
+            if (id >= min && id < maxExclusive)
                 continue;
 
             var diff = position(part) - target;

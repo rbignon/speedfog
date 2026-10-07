@@ -266,7 +266,171 @@ public class AmbientSpawnInjectorTests
         Assert.Equal("h_zone_b", greeterForGateB.CollisionPartName);
     }
 
-    private static MSBE MakeMsbWithGateAndEnemy()
+    [Fact]
+    public void ApplyToMsb_ClonesOverworldEnemiesWithTenDigitEntityIds()
+    {
+        // Open-world tiles number their enemies with 10-digit entity ids
+        // (m61: 20xxxxxxxx), numerically ABOVE FogMod's band. Treating
+        // "at or above FogModEntityMin" as FogMod-managed left the Darklight
+        // Catacombs exit gate (m61_52_43, every enemy id-bearing) without
+        // any clone source, hence without greeter or ambushers.
+        var msb = MakeMsbWithGate();
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c1000_9001", ModelName = "c1000",
+            Position = new Vector3(0f, 0f, 0f), EntityID = 2052430100,
+        });
+
+        var (greeters, _) = AmbientSpawnInjector.ApplyToMsb(msb, GreeterAtGate(), _ => { });
+
+        Assert.Equal(1, greeters);
+    }
+
+    [Fact]
+    public void ApplyToMsb_SkipsFogModManagedCloneSources()
+    {
+        // FogMod's own parts (755890000+) are not hand-placed vanilla
+        // enemies: a nearer one must lose to a farther vanilla neighbor.
+        var msb = MakeMsbWithGate();
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c1000_9100", ModelName = "c1000",
+            Position = new Vector3(10f, 0f, 11f), EntityID = 755890500,
+            CollisionPartName = "h_fogmod",
+        });
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c3000_9000", ModelName = "c3000",
+            Position = new Vector3(0f, 0f, 0f), EntityID = 30040200,
+            CollisionPartName = "h000300",
+        });
+
+        AmbientSpawnInjector.ApplyToMsb(msb, GreeterAtGate(), _ => { });
+
+        var greeter = msb.Parts.Enemies.Single(e => e.ModelName == "c5280");
+        Assert.Equal("h000300", greeter.CollisionPartName);
+    }
+
+    [Fact]
+    public void ApplyToMsb_PrefersCloneSourcesWithACollisionWhereMostEnemiesHaveOne()
+    {
+        // Dungeon enemies stand on a named collision; c1000 dummies near
+        // catacomb boss fogs often have none. A greeter cloned from such a
+        // dummy inherits an empty CollisionPartName and never shows up
+        // in-game (four catacomb/cave exit gates of seed f7280403ab5d).
+        var msb = MakeMsbWithGate();
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c1000_9001", ModelName = "c1000",
+            Position = new Vector3(10f, 0f, 12f), EntityID = 30040100,
+        });
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c3400_9000", ModelName = "c3970",
+            Position = new Vector3(-10f, 0f, 10f), EntityID = 30040200,
+            CollisionPartName = "h000300",
+        });
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c3080_9011", ModelName = "c5240",
+            Position = new Vector3(-40f, 5f, 10f), EntityID = 30040201,
+            CollisionPartName = "h000200",
+        });
+
+        var (greeters, _) = AmbientSpawnInjector.ApplyToMsb(msb, GreeterAtGate(), _ => { });
+
+        Assert.Equal(1, greeters);
+        var greeter = msb.Parts.Enemies.Single(e => e.ModelName == "c5280");
+        Assert.Equal("h000300", greeter.CollisionPartName);
+    }
+
+    [Fact]
+    public void ApplyToMsb_KeepsCollisionlessSourcesWhereMostEnemiesHaveNone()
+    {
+        // Open-world tiles leave nearly every enemy collisionless (157 of
+        // 185 tiles name none at all, the rest at most ~13%). A rare
+        // collision-bearing enemy (cellar, interior) must not become the
+        // source of every spawn in the tile: the nearest enemy stays the
+        // source, collisionless like its neighbors.
+        var msb = MakeMsbWithGate();
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c4180_9003", ModelName = "c4313",
+            Position = new Vector3(10f, 0f, 14f), EntityID = 1043300200,
+        });
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c4180_9004", ModelName = "c5380",
+            Position = new Vector3(30f, 0f, 10f), EntityID = 1043300201,
+        });
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c5020_0401", ModelName = "c5020",
+            Position = new Vector3(-30f, -8f, 10f), EntityID = 1043300202,
+            CollisionPartName = "h433000",
+        });
+
+        AmbientSpawnInjector.ApplyToMsb(msb, GreeterAtGate(), _ => { });
+
+        var greeter = msb.Parts.Enemies.Single(e => e.ModelName == "c5280");
+        Assert.Null(greeter.CollisionPartName);
+    }
+
+    [Fact]
+    public void ApplyToMsb_HalfCollisionBearingCountsAsACollisionMap()
+    {
+        // "At least half": a 1-of-2 map still requires a collision.
+        var msb = MakeMsbWithGate();
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c1000_9001", ModelName = "c1000",
+            Position = new Vector3(10f, 0f, 12f), EntityID = 30040100,
+        });
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c3400_9000", ModelName = "c3970",
+            Position = new Vector3(-10f, 0f, 10f), EntityID = 30040200,
+            CollisionPartName = "h000300",
+        });
+
+        AmbientSpawnInjector.ApplyToMsb(msb, GreeterAtGate(), _ => { });
+
+        var greeter = msb.Parts.Enemies.Single(e => e.ModelName == "c5280");
+        Assert.Equal("h000300", greeter.CollisionPartName);
+    }
+
+    [Fact]
+    public void ApplyToMsb_LogsAFarCloneSource()
+    {
+        // A source far from the gate (Tombsward Cave: 96m, another part of
+        // the cave) may carry a collision the spawn does not stand on; the
+        // generation log names it so in-game checks know where to look.
+        var msb = MakeMsbWithGate();
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c4385_9000", ModelName = "c3450",
+            Position = new Vector3(100f, -29f, 10f), EntityID = 31020200,
+            CollisionPartName = "h000300",
+        });
+        var logs = new List<string>();
+
+        AmbientSpawnInjector.ApplyToMsb(msb, GreeterAtGate(), logs.Add);
+
+        Assert.Contains(logs, l => l.Contains("c4385_9000") && l.Contains("h000300"));
+    }
+
+    [Fact]
+    public void ApplyToMsb_NearCloneSourceIsNotLogged()
+    {
+        var msb = MakeMsbWithGateAndEnemy();
+        var logs = new List<string>();
+
+        AmbientSpawnInjector.ApplyToMsb(msb, GreeterAtGate(), logs.Add);
+
+        Assert.Empty(logs);
+    }
+
+    private static MSBE MakeMsbWithGate()
     {
         var msb = new MSBE();
         msb.Parts.Assets.Add(new MSBE.Part.Asset
@@ -274,6 +438,17 @@ public class AmbientSpawnInjectorTests
             Name = "AEG099_002_9000", ModelName = "AEG099_002",
             Position = new Vector3(10f, 0f, 10f), EntityID = 755890001,
         });
+        return msb;
+    }
+
+    private static List<SpawnSpec> GreeterAtGate() => new()
+    {
+        new("AEG099_002_9000", SpawnKind.Greeter, 0, 1, GateSideIsASide: false),
+    };
+
+    private static MSBE MakeMsbWithGateAndEnemy()
+    {
+        var msb = MakeMsbWithGate();
         var enemy = new MSBE.Part.Enemy
         {
             Name = "c9990_9000", ModelName = "c9990",
