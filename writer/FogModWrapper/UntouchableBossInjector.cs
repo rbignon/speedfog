@@ -36,6 +36,22 @@ public static class UntouchableBossInjector
     /// session request). Tuning knob.</summary>
     public const float BROKEN_DAMAGE_TAKEN = 2f;
 
+    /// <summary>Vanilla's immune status resistance: across the 7045 1.17
+    /// NpcParam rows every <c>resist_*</c> field holds either a buildup
+    /// threshold or exactly 999 (none in 900-998), the value of every
+    /// enemy immune to that status. The boss clone takes it on all of
+    /// <see cref="StatusResistFields"/>; vanilla 52800086 already has it
+    /// for madness and death blight.</summary>
+    public const ushort STATUS_IMMUNE = 999;
+
+    /// <summary>NpcParam's status resistances (u16): poison, scarlet rot,
+    /// bleed, frost, sleep, madness, death blight.</summary>
+    public static readonly string[] StatusResistFields =
+    {
+        "resist_poison", "resist_desease", "resist_blood", "resist_freeze",
+        "resist_sleep", "resist_madness", "resist_curse",
+    };
+
     /// <summary>The one-second break VFX effect the copied wall event applies
     /// once the wall is cleared; the template of the broken row and the
     /// anchor after which that row's SetSpEffect is inserted.</summary>
@@ -295,6 +311,10 @@ public static class UntouchableBossInjector
         npcRow["toughness"].Value = BOSS_TOUGHNESS;                            // u32
         npcRow["superArmorDurability"].Value = BOSS_SUPER_ARMOR;               // f32
         npcRow["superArmorRecoverCorrection"].Value = BOSS_SUPER_ARMOR_RECOVER; // f32
+        // Immune to every status for the whole fight: the row does not
+        // change at the break.
+        foreach (var field in StatusResistFields)
+            npcRow[field].Value = STATUS_IMMUNE;
         // The clone is taken from the merged regulation, where the Item
         // Randomizer's always-on nerflantern option has already written the
         // parry-window effect (20011471) into a free slot of every 5280-band
@@ -312,7 +332,7 @@ public static class UntouchableBossInjector
         }
 
         Console.WriteLine(
-            $"Untouchable boss: NpcParam {SpeedFogIds.UntouchableBossNpcRow} (clone of {UNTOUCHABLE_VANILLA_NPC}, hp {BOSS_HP}, runes {BOSS_RUNES}, toughness {BOSS_TOUGHNESS}, super armor {BOSS_SUPER_ARMOR}/{BOSS_SUPER_ARMOR_RECOVER}, nerflantern slot scrubbed) + partial wall SpEffect {SpeedFogIds.UntouchableBossSpEffectRow} (cut {DAMAGE_CUT}, {noFlinch}) + broken SpEffect {SpeedFogIds.UntouchableBrokenSpEffectRow} (x{BROKEN_DAMAGE_TAKEN}), both applied by the copied wall event");
+            $"Untouchable boss: NpcParam {SpeedFogIds.UntouchableBossNpcRow} (clone of {UNTOUCHABLE_VANILLA_NPC}, hp {BOSS_HP}, runes {BOSS_RUNES}, toughness {BOSS_TOUGHNESS}, super armor {BOSS_SUPER_ARMOR}/{BOSS_SUPER_ARMOR_RECOVER}, status immune, nerflantern slot scrubbed) + partial wall SpEffect {SpeedFogIds.UntouchableBossSpEffectRow} (cut {DAMAGE_CUT}, {noFlinch}) + broken SpEffect {SpeedFogIds.UntouchableBrokenSpEffectRow} (x{BROKEN_DAMAGE_TAKEN}), both applied by the copied wall event");
     }
 
     /// <summary>Writes the moveset rows: boss think row (own battle script),

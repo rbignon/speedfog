@@ -38,9 +38,12 @@ grabs, and adds what a boss needs:
   the vanilla damage (four times the pre-parry number) and flinches the
   boss like any untouchable whose wall is gone.
 - **A moveset vanilla AI never uses:** a lantern burst at melee range, a
-  frenzy beam at range, an offensive teleport in two shapes (a blink
-  away and a beam at melee range; the vanilla fade and a warp behind
-  the player from range), and reactions to hits and flasks.
+  frenzy beam at range, an offensive teleport in two shapes (a burst,
+  a blink away and a beam at melee range; the vanilla fade and a warp
+  behind the player from range), and reactions to hits and flasks.
+- **Immune to every status** (poison, scarlet rot, bleed, frost, sleep,
+  madness, death blight) for the whole fight, before and after the
+  parry.
 - 2000 HP at the arena's vanilla tier (see "Scaling and tuning knobs")
   and 20000 runes.
 
@@ -128,9 +131,14 @@ wall, then a broken state:
   (2000), `getSoul` = `BOSS_RUNES` (20000), `toughness` =
   `BOSS_TOUGHNESS` (0, Jori's value), `superArmorDurability` =
   `BOSS_SUPER_ARMOR` (80) and `superArmorRecoverCorrection` =
-  `BOSS_SUPER_ARMOR_RECOVER` (3/13, Jori's profile), and nerflantern's
-  20011471 scrubbed from every slot (resident, it would defeat the partial
-  wall as it defeats the vanilla one).
+  `BOSS_SUPER_ARMOR_RECOVER` (3/13, Jori's profile), the seven status
+  resistances (`StatusResistFields`: `resist_poison`, `resist_desease`,
+  `resist_blood`, `resist_freeze`, `resist_sleep`, `resist_madness`,
+  `resist_curse`) at `STATUS_IMMUNE` (999, vanilla's immune value: every
+  1.17 `NpcParam` resistance is either a buildup threshold or exactly
+  999; 52800086 already has it for madness and death blight), and
+  nerflantern's 20011471 scrubbed from every slot (resident, it would
+  defeat the partial wall as it defeats the vanilla one).
   Slots 17 (20011450, vanilla's teleport gate) and 18 (20011473) stay.
   The row lives outside the 5280 band on purpose: nerflantern patches
   every row of that band unconditionally, and the boss's vulnerability
@@ -482,7 +490,8 @@ marker never comes, and the pending teleport lapses (the next burst
 queued, from any source, clears it, so only the near teleport's own
 burst can warp). The warp also goes through `Goal.Interrupt`'s vanilla
 guard: while SpEffect 5110 or an effect with the illness attribute is
-active (which ailments carry it is not established), the marker is
+active (which effects carry it is not established; whatever a status
+proc would apply, the boss's status immunity rules out), the marker is
 ignored and the near teleport is a lone burst, its cooldown spent; the
 far teleport's marker has the same guard, in vanilla too. A bare warp has no
 such protection: `ToTargetWarp` runs even while a critical victim
@@ -710,7 +719,14 @@ Generate a seed with the allowlist above, then in the arena:
    the item randomizer, whose nerflantern option lifts every wall), then
    try `npcType` 1, the next untested difference against Jori. A boss
    that never staggers means the meter is masked by the table: lower
-   `BOSS_SUPER_ARMOR`.
+   `BOSS_SUPER_ARMOR`. Statuses (the game shows no buildup on enemies,
+   so judge by procs): a bleed or frost weapon that procs on an ambient
+   untouchable within about ten hits never procs on the boss over thirty
+   or more, before and after the parry; a sleep pot never puts it to
+   sleep. A proc means 999 acts as a plain threshold on this row rather
+   than an immunity: compare with a vanilla immune row (they also carry
+   `resistCorrectId_*` -1 for poison, rot, bleed, frost and madness,
+   which the clone does not).
 2. **Melee**: grabs (parryable), timer-gated bursts (Act11's, the far
    teleport's post-warp one, the hit reaction's) at most once
    per `SWING_COOLDOWN`, novas between them, and sidesteps or strafes through the
@@ -771,7 +787,7 @@ Generate a seed with the allowlist above, then in the arena:
 ## Expected log lines
 
 ```
-Untouchable boss: NpcParam 755890000 (clone of 52800086, hp 2000, runes 20000, toughness 0, super armor 80/0.23076923, nerflantern slot scrubbed) + partial wall SpEffect 755890000 (cut 0.5, no-flinch table of 5300 folded in) + broken SpEffect 755890002 (x2), both applied by the copied wall event
+Untouchable boss: NpcParam 755890000 (clone of 52800086, hp 2000, runes 20000, toughness 0, super armor 80/0.23076923, status immune, nerflantern slot scrubbed) + partial wall SpEffect 755890000 (cut 0.5, no-flinch table of 5300 folded in) + broken SpEffect 755890002 (x2), both applied by the copied wall event
 Untouchable boss: moveset rows (think 755890001 -> battle 755890, variation 75589 with 9 vanilla judges + beam judge 150, bullet 755890000 (clone of 10732000), atk 755890000 magic 110, + flame judge 151, bullets 755890006-755890008 (chain of 210730000, x4), atk 755890001 magic 50, pulses 755890003-755890005 without madness)
 Untouchable boss: repointing N placed boss slot(s)
   <part> (entity <id>): NPCParamID -> 755890000, ThinkParamID -> 755890001

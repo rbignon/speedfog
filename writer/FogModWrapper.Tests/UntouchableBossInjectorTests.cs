@@ -27,6 +27,33 @@ public class UntouchableBossInjectorTests
     }
 
     [Fact]
+    public void Apply_MakesTheBossCloneImmuneToEveryStatus()
+    {
+        var (npc, sp) = BuildCoreParams();
+        var vanilla = npc.Rows.Single(r => r.ID == UntouchableBossInjector.UNTOUCHABLE_VANILLA_NPC);
+        vanilla["resist_blood"].Value = (ushort)154; // vanilla 52800086's thresholds
+        vanilla["resist_freeze"].Value = (ushort)154;
+        vanilla["resist_poison"].Value = (ushort)112;
+
+        UntouchableBossInjector.Apply(npc, sp);
+
+        // 999 is vanilla's immune value: every NpcParam resist is either a
+        // threshold or exactly 999.
+        var row = npc.Rows.Single(r => r.ID == SpeedFogIds.UntouchableBossNpcRow);
+        // Every status resistance the paramdef has, not the injector's list:
+        // a status missing from StatusResistFields fails here.
+        var paramdefResists = row.Cells
+            .Select(c => c.Def.InternalName)
+            .Where(name => name.StartsWith("resist_"))
+            .ToList();
+        Assert.Equal(paramdefResists.OrderBy(n => n), UntouchableBossInjector.StatusResistFields.OrderBy(n => n));
+        foreach (var field in paramdefResists)
+            Assert.Equal(UntouchableBossInjector.STATUS_IMMUNE, (ushort)row[field].Value);
+        // Ambient untouchables keep their vanilla row.
+        Assert.Equal((ushort)154, (ushort)vanilla["resist_blood"].Value);
+    }
+
+    [Fact]
     public void Apply_CustomSpEffectRowHasPartialCutRates()
     {
         var (npc, sp) = BuildCoreParams();
