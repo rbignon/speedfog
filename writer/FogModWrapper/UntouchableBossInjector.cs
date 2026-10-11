@@ -18,16 +18,19 @@ public static class UntouchableBossInjector
     public const int UNTOUCHABLE_VANILLA_NPC = 52800086;
 
     // Tuning knobs (docs/untouchable-boss.md, "Scaling and tuning knobs").
-    public const uint BOSS_HP = 2000;
+    public const uint BOSS_HP = 3000;
     public const uint BOSS_RUNES = 20000;
-    /// <summary>Hit reactions. The stagger meter follows Jori's profile
-    /// (superArmorDurability 80, recovery 3/13; vanilla 65 and 0) and
-    /// toughness is Jori's 0 (35 on vanilla 52800086). Neither keeps
-    /// ordinary hits from interrupting the boss (2026-09-05/06 runs): that
-    /// is the damage-level table of 5300 folded into the partial wall row,
-    /// see <see cref="NO_FLINCH_TEMPLATE_SPEFFECT"/>.</summary>
+    /// <summary>Hit reactions. The stagger meter is Godrick's size
+    /// (superArmorDurability 120; Margit 100, Jori 80, vanilla 65) with
+    /// Jori's recovery-time correction (3/13; Godrick 11/13, vanilla 0;
+    /// whether a lower value recovers faster or slower is not
+    /// established), and toughness is Jori's 0 (35 on vanilla 52800086).
+    /// Neither keeps ordinary hits from interrupting the boss
+    /// (2026-09-05/06 runs): that is the damage-level table of 5300 folded
+    /// into the partial wall row, see
+    /// <see cref="NO_FLINCH_TEMPLATE_SPEFFECT"/>.</summary>
     public const uint BOSS_TOUGHNESS = 0;
-    public const float BOSS_SUPER_ARMOR = 80f;
+    public const float BOSS_SUPER_ARMOR = 120f;
     public const float BOSS_SUPER_ARMOR_RECOVER = 0.23076923f; // Jori's exact value, 3/13
     public const float DAMAGE_CUT = 0.5f; // fraction of damage taken (50% cut)
 

@@ -31,8 +31,8 @@ grabs, and adds what a boss needs:
 - **A partial wall until the first parry.** Hits land at half damage and
   never interrupt the boss: it plays only the small hit twitch of an
   immune untouchable, whatever the attack. Its posture can still be
-  broken (super armor meter 80, Jori's profile) and its HP bar shows from
-  the start.
+  broken (super armor meter 120, Godrick's size, with Jori's recovery
+  correction) and its HP bar shows from the start.
 - **The parry breaks the wall for good.** The riposte lands at full
   damage, the break flash plays, and from then on every hit deals twice
   the vanilla damage (four times the pre-parry number) and flinches the
@@ -44,7 +44,7 @@ grabs, and adds what a boss needs:
 - **Immune to every status** (poison, scarlet rot, bleed, frost, sleep,
   madness, death blight) for the whole fight, before and after the
   parry.
-- 2000 HP at the arena's vanilla tier (see "Scaling and tuning knobs")
+- 3000 HP at the arena's vanilla tier (see "Scaling and tuning knobs")
   and 20000 runes.
 
 Dying and re-entering restores the partial wall until the next parry:
@@ -128,17 +128,20 @@ wall, then a broken state:
   all (full damage from the start).
 - **The boss `NpcParam` row** (`SpeedFogIds.UntouchableBossNpcRow`,
   755890000) is a clone of vanilla 52800086 with `hp` = `BOSS_HP`
-  (2000), `getSoul` = `BOSS_RUNES` (20000), `toughness` =
+  (3000), `getSoul` = `BOSS_RUNES` (20000), `toughness` =
   `BOSS_TOUGHNESS` (0, Jori's value), `superArmorDurability` =
-  `BOSS_SUPER_ARMOR` (80) and `superArmorRecoverCorrection` =
-  `BOSS_SUPER_ARMOR_RECOVER` (3/13, Jori's profile), the seven status
-  resistances (`StatusResistFields`: `resist_poison`, `resist_desease`,
-  `resist_blood`, `resist_freeze`, `resist_sleep`, `resist_madness`,
-  `resist_curse`) at `STATUS_IMMUNE` (999, vanilla's immune value: every
-  1.17 `NpcParam` resistance is either a buildup threshold or exactly
-  999; 52800086 already has it for madness and death blight), and
-  nerflantern's 20011471 scrubbed from every slot (resident, it would
-  defeat the partial wall as it defeats the vanilla one).
+  `BOSS_SUPER_ARMOR` (120, Godrick's value; Margit 100, Jori 80) and
+  `superArmorRecoverCorrection` = `BOSS_SUPER_ARMOR_RECOVER` (3/13,
+  Jori's; the paramdef calls it a correction of the recovery time, and
+  whether a lower value recovers faster or slower is not established),
+  the seven status resistances (`StatusResistFields`: `resist_poison`,
+  `resist_desease`, `resist_blood`, `resist_freeze`, `resist_sleep`,
+  `resist_madness`, `resist_curse`) at `STATUS_IMMUNE` (999, vanilla's
+  immune value: every 1.17 `NpcParam` resistance is either a buildup
+  threshold or exactly 999; 52800086 already has it for madness and
+  death blight), and nerflantern's 20011471 scrubbed from every slot
+  (resident, it would defeat the partial wall as it defeats the vanilla
+  one).
   Slots 17 (20011450, vanilla's teleport gate) and 18 (20011473) stay.
   The row lives outside the 5280 band on purpose: nerflantern patches
   every row of that band unconditionally, and the boss's vulnerability
@@ -787,7 +790,7 @@ Generate a seed with the allowlist above, then in the arena:
 ## Expected log lines
 
 ```
-Untouchable boss: NpcParam 755890000 (clone of 52800086, hp 2000, runes 20000, toughness 0, super armor 80/0.23076923, status immune, nerflantern slot scrubbed) + partial wall SpEffect 755890000 (cut 0.5, no-flinch table of 5300 folded in) + broken SpEffect 755890002 (x2), both applied by the copied wall event
+Untouchable boss: NpcParam 755890000 (clone of 52800086, hp 3000, runes 20000, toughness 0, super armor 120/0.23076923, status immune, nerflantern slot scrubbed) + partial wall SpEffect 755890000 (cut 0.5, no-flinch table of 5300 folded in) + broken SpEffect 755890002 (x2), both applied by the copied wall event
 Untouchable boss: moveset rows (think 755890001 -> battle 755890, variation 75589 with 9 vanilla judges + beam judge 150, bullet 755890000 (clone of 10732000), atk 755890000 magic 110, + flame judge 151, bullets 755890006-755890008 (chain of 210730000, x4), atk 755890001 magic 50, pulses 755890003-755890005 without madness)
 Untouchable boss: repointing N placed boss slot(s)
   <part> (entity <id>): NPCParamID -> 755890000, ThinkParamID -> 755890001
