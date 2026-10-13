@@ -7,6 +7,7 @@ param(
 )
 
 $backupsDir = $PSScriptRoot
+. "$PSScriptRoot/backup_store.ps1"
 
 # --- Logging ---
 function Log {
@@ -49,23 +50,21 @@ if (-not $game) {
 }
 Log "Game detected."
 
-# --- Pre-run backup ---
-if (Test-Path $SavePath) {
-    $ts = Get-Date -Format "yyyy-MM-dd_HH.mm.ss"
-    $preRunZip = "$backupsDir/pre-run_$ts.zip"
-    $tempCopy = "$backupsDir/ER0000.sl2"
+# --- Start-of-launch backup ---
+# Each daemon run is one launch; its backups are grouped under this number in
+# the recovery menu and purged independently of the other launches.
+$launch = Get-NextLaunchNumber $backupsDir
+if (Test-Path -LiteralPath $SavePath) {
     try {
-        Copy-Item -Path $SavePath -Destination $tempCopy -Force
-        Compress-Archive -Path $tempCopy -DestinationPath $preRunZip -Force
-        Log "Pre-run backup: $(Split-Path $preRunZip -Leaf)"
+        $zip = New-SaveBackup -BackupsDir $backupsDir -SavePath $SavePath -Kind start -Launch $launch
+        Log "Launch $launch start backup: $($zip.Name)"
     } catch {
-        Log "WARNING: Failed to create pre-run backup: $_"
-    } finally {
-        Remove-Item $tempCopy -Force -ErrorAction SilentlyContinue
+        Log "WARNING: Failed to create start-of-launch backup: $_"
     }
 }
+Remove-OldBackups -BackupsDir $backupsDir -Launch $launch -MaxBackups $maxBackups
 
-Log "Backup daemon started (interval: $interval min, keep: $maxBackups)"
+Log "Backup daemon started (launch: $launch, interval: $interval min, keep: $maxBackups)"
 
 # --- Backup loop ---
 $backupCount = 0
@@ -84,31 +83,22 @@ while ($true) {
         continue
     }
 
-    $ts = Get-Date -Format "yyyy-MM-dd_HH.mm.ss"
-    $zipName = "ER0000_$ts.zip"
-    $zipPath = "$backupsDir/$zipName"
-
-    $tempCopy = "$backupsDir/ER0000.sl2"
     try {
-        Copy-Item -Path $SavePath -Destination $tempCopy -Force
-        Compress-Archive -Path $tempCopy -DestinationPath $zipPath -Force
+        $zip = New-SaveBackup -BackupsDir $backupsDir -SavePath $SavePath -Kind periodic -Launch $launch
     } catch {
         Log "WARNING: Failed to create backup: $_"
         continue
-    } finally {
-        Remove-Item $tempCopy -Force -ErrorAction SilentlyContinue
     }
 
     $backupCount++
 
-    $zipSizeKB = [math]::Round((Get-Item $zipPath).Length / 1KB, 1)
-    $zipSizeMB = [math]::Round((Get-Item $zipPath).Length / 1MB, 1)
+    $zipSizeKB = [math]::Round($zip.Length / 1KB, 1)
+    $zipSizeMB = [math]::Round($zip.Length / 1MB, 1)
     if ($zipSizeKB -lt 100) {
-        Log "WARNING: $zipName is only $zipSizeKB KB (expected ~3 MB)"
+        Log "WARNING: $($zip.Name) is only $zipSizeKB KB (expected ~3 MB)"
     } else {
-        Log "Backup: $zipName ($zipSizeMB MB)"
+        Log "Backup: $($zip.Name) ($zipSizeMB MB)"
     }
 
-    # Purge old backups beyond maxBackups
-    Get-ChildItem "$backupsDir/ER0000_*.zip" | Sort-Object Name | Select-Object -SkipLast $maxBackups | Remove-Item -Force
+    Remove-OldBackups -BackupsDir $backupsDir -Launch $launch -MaxBackups $maxBackups
 }

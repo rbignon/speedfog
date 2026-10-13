@@ -536,6 +536,9 @@ pytest -v
 # Python - with coverage
 pytest --cov=speedfog
 
+# Backup/recovery script tests (tests/test_backup_store.py) need PowerShell 7,
+# skipped otherwise: dotnet tool install -g PowerShell
+
 # Tools tests (generate_clusters.py)
 cd tools && pytest test_generate_clusters.py -v
 

@@ -1,6 +1,7 @@
 # SpeedFog Save Recovery
 
 $backupsDir = $PSScriptRoot
+. "$PSScriptRoot/backup_store.ps1"
 $configPath = "$PSScriptRoot/config.ini"
 
 # --- Parse config.ini for save_path ---
@@ -72,40 +73,39 @@ if (Get-Process -Name eldenring -ErrorAction SilentlyContinue) {
 }
 
 # --- List available backups ---
-$zips = @(Get-ChildItem "$backupsDir\*.zip" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime)
-if ($zips.Count -eq 0) {
+$backups = @(Get-SaveBackups $backupsDir)
+if ($backups.Count -eq 0) {
     Write-Host "No backups found."
     Read-Host "Press Enter to exit"
     exit 0
 }
 
+Write-Host "Backups keep being taken until the game closes: if you stayed stuck for a"
+Write-Host "while before quitting, the most recent ones already contain the problem."
+Write-Host "Pick one from BEFORE it."
+Write-Host ""
 Write-Host "Available backups (newest last):"
 Write-Host ""
-for ($i = 0; $i -lt $zips.Count; $i++) {
-    $num = $i + 1
-    $name = $zips[$i].Name
-    $annotation = ""
-    if ($name -match '^pre-run_') { $annotation = "  (Pre-run backup)" }
-    if ($i -eq $zips.Count - 1) {
-        if ($annotation -ne "") { $annotation = "$annotation (most recent)" }
-        else { $annotation = "  (most recent)" }
-    }
-    Write-Host "  [$num] $name$annotation"
+foreach ($line in Format-BackupList -Backups $backups -Restores @(Read-RestoreLog $backupsDir)) {
+    Write-Host $line
 }
 Write-Host ""
+Write-Host "Reminder: pick a backup from BEFORE the problem, the most recent ones may already contain it."
 
-# --- Prompt for selection ---
-$default = $zips.Count
-$selRaw = Read-Host "Select backup to restore [$default]"
-if ($selRaw -eq '') { $selRaw = "$default" }
-try { $selNum = [int]$selRaw } catch { Write-Host "Invalid selection."; Read-Host "Press Enter to exit"; exit 1 }
-if ($selNum -lt 1 -or $selNum -gt $zips.Count) { Write-Host "Invalid selection."; Read-Host "Press Enter to exit"; exit 1 }
-$selIdx = $selNum - 1
-$zipPath = $zips[$selIdx].FullName
-$zipName = $zips[$selIdx].Name
+# --- Prompt for selection (by permanent backup number) ---
+$default = Get-DefaultBackup $backups
+if (-not $default) { $default = $backups[-1] }
+$selRaw = (Read-Host "Number of the backup to restore [$($default.Seq)]").Trim().TrimStart('#')
+$selected = $null
+if ($selRaw -eq '') {
+    $selected = $default
+} elseif ($selRaw -match '^\d+$') {
+    $selected = $backups | Where-Object { $_.Seq -eq [int]$selRaw } | Select-Object -First 1
+}
+if (-not $selected) { Write-Host "Invalid selection."; Read-Host "Press Enter to exit"; exit 1 }
 
 # --- Confirm ---
-$confirmRestore = Read-Host "Restore $zipName? (y/n) [y]"
+$confirmRestore = Read-Host "Restore #$($selected.Seq) ($(Format-BackupClock $selected.Time))? (y/n) [y]"
 if ($confirmRestore -eq '') { $confirmRestore = 'y' }
 if ($confirmRestore -ne 'y') {
     Write-Host "Cancelled."
@@ -114,13 +114,37 @@ if ($confirmRestore -ne 'y') {
 }
 Write-Host ""
 
+# --- Keep the current save, so a wrong pick can be undone ---
+$undoName = ''
+if (Test-Path -LiteralPath $savePath) {
+    try {
+        $undo = New-SaveBackup -BackupsDir $backupsDir -SavePath $savePath -Kind before-restore
+        $undoName = $undo.Name
+    } catch {
+        Write-Host "WARNING: Could not back up your current save: $_"
+        $confirmAnyway = Read-Host "Restore anyway? Your current save will be lost. (y/n) [n]"
+        if ($confirmAnyway -ne 'y') {
+            Write-Host "Cancelled."
+            Read-Host "Press Enter to exit"
+            exit 0
+        }
+    }
+}
+
 # --- Restore ---
 try {
-    Expand-Archive -Path $zipPath -DestinationPath (Split-Path $savePath -Parent) -Force
-    Write-Host "Restored successfully."
+    Expand-Archive -LiteralPath $selected.Path -DestinationPath (Split-Path $savePath -Parent) -Force -ErrorAction Stop
+    Add-RestoreLog -BackupsDir $backupsDir -Restored $selected.Name -Undo $undoName
+    Write-Host "Restored backup #$($selected.Seq) successfully."
+    if ($undoName) {
+        Write-Host "Your previous save was kept as backup #$((ConvertFrom-BackupName $undoName).Seq): restore it to undo."
+    }
     Write-Host "You can relaunch the game with launch_speedfog.bat."
 } catch {
     Write-Host "ERROR: Failed to restore backup: $_"
+    if ($undoName) {
+        Write-Host "Your previous save is in backup #$((ConvertFrom-BackupName $undoName).Seq): restore it if the game no longer loads."
+    }
 }
 
 Write-Host ""

@@ -236,6 +236,7 @@ def _validate_packaging_assets(
         packaging_dir / "backups" / "launch_helper.ps1",
         packaging_dir / "backups" / "resolve_game_path.ps1",
         packaging_dir / "backups" / "backup_daemon.ps1",
+        packaging_dir / "backups" / "backup_store.ps1",
         packaging_dir / "backups" / "recovery.ps1",
         packaging_dir / "modengine2" / "modengine2_launcher.exe",
     ]

@@ -111,7 +111,9 @@ output/
 ├── backups/
 │   ├── config.ini          # Backup system configuration
 │   ├── backup_daemon.ps1   # Windows backup daemon
+│   ├── backup_store.ps1    # Backup naming, listing, purge (shared)
 │   ├── launch_helper.ps1   # Windows launcher helper
+│   ├── resolve_game_path.ps1  # Optional eldenring.exe override
 │   └── recovery.ps1        # Windows recovery launcher
 ```
 

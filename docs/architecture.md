@@ -521,6 +521,7 @@ launchers, and runtime packaging are created.
 └── backups/                  # Backup system files
     ├── config.ini            # Backup configuration
     ├── backup_daemon.ps1     # Windows backup daemon
+    ├── backup_store.ps1      # Backup naming, listing, purge (shared by daemon and recovery)
     ├── launch_helper.ps1     # Windows launcher helper
     └── recovery.ps1          # Windows recovery launcher
 ```

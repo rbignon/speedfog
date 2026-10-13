@@ -23,6 +23,7 @@ def _make_packaging_tree(root: Path) -> None:
         "backups/launch_helper.ps1",
         "backups/resolve_game_path.ps1",
         "backups/backup_daemon.ps1",
+        "backups/backup_store.ps1",
         "backups/recovery.ps1",
         "lib/RandomizerCrashFix.dll",
         "lib/RandomizerHelper.dll",
