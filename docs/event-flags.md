@@ -130,8 +130,10 @@ Allocations in regulation.bin params (not event flags). Listed here so future co
 | 1450700-1450799 | PhantomParam, SpEffectVfxParam, SpEffectParam | Phantom skins catalog | `docs/phantom-skins.md` | |
 | 755890000 | NpcParam | UntouchableBossInjector | `SpeedFogIds.UntouchableBossNpcRow` | Boss clone; outside 5280-band to avoid nerflantern patching |
 | 755890000 | SpEffectParam | UntouchableBossInjector | `SpeedFogIds.UntouchableBossSpEffectRow` | Partial damage-cut state for boss |
+| 755890000 | NpcThinkParam | AmbientSpawnInjector | `SpeedFogIds.HostileGreeterThinkRow` | Greeter think row (52800000 basis, perception capped at `GREETER_AGGRO_DIST`) |
 | 755890001 | NpcParam | AmbientSpawnInjector | `SpeedFogIds.DecorativeAmbusherNpcRow` | Decorative ambusher clone (Sage's Cave skeleton basis, token HP, no runes) |
 | 755890001 | SpEffectParam | AmbientSpawnInjector | `SpeedFogIds.DecorativeAmbusherSpEffectRow` | Near-zero attack rates for ambushers (tier-1 scaling row basis) |
+| 755890001 | NpcThinkParam | UntouchableBossInjector | `SpeedFogIds.UntouchableBossThinkRow` | Boss think row (52800000 basis, `battleGoalID` 755890) |
 | 755890002 | NpcParam | AmbientSpawnInjector | `SpeedFogIds.HostileGreeterNpcRow` | Hostile greeter clone (Aging Untouchable basis, flat `GREETER_TIER` scaling, no runes, no drop) |
 | 755890002 | SpEffectParam | UntouchableBossInjector | `SpeedFogIds.UntouchableBrokenSpEffectRow` | Boss's broken state after the first parry (x2 damage taken) |
 | 755890003 | SpEffectParam | UntouchableBossInjector | `SpeedFogIds.UntouchableNearWarpMarkerSpEffect` | Near-warp marker, copy of vanilla 20011452, written in every seed (the static anibnd applies it on every untouchable's burst 3001) |

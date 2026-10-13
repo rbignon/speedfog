@@ -150,9 +150,10 @@ wall, then a broken state:
   Halloween greeters run on their own clone of 52800086
   (`HostileGreeterNpcRow`, see
   [halloween-ambient.md](plugins/halloween-ambient.md) "Greeter stats"):
-  stats retiered, AI and behavior variation vanilla, but none of the
-  per-entity events (no wall, and no event target for the far
-  teleport's warp).
+  stats retiered, aggro radius capped at 10 m on a think row clone
+  (`HostileGreeterThinkRow`), AI scripts and behavior variation vanilla,
+  but none of the per-entity events (no wall, and no event target for
+  the far teleport's warp).
 
 `NpcParam`, `SpEffectParam`, `NpcThinkParam`, `Bullet` and `AtkParam_Npc`
 are separate row namespaces: the same numeric ids recur across them

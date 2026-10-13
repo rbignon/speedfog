@@ -146,7 +146,7 @@ public static class SpeedFogIds
 
     // Param row namespaces are per-PARAM (NpcThinkParam, NpcParam,
     // SpEffectParam, Bullet, AtkParam_Npc never share ids), so the same three
-    // numeric values below are reused across the ten rows with no collision
+    // numeric values below are reused across the eleven rows with no collision
     // (Bullet additionally owns the pulse band 755890003-005 and the flame
     // band 755890006-008, SpEffectParam the near-warp marker 755890003).
     // They sit in FogMod's entity band only by convention (params and entities
@@ -196,10 +196,16 @@ public static class SpeedFogIds
     /// base-game tier, with no runes and no item drop.</summary>
     public const int HostileGreeterNpcRow = ParamRowBase2;
 
+    /// <summary>NpcThinkParam row for the hostile Halloween greeters: a
+    /// clone of the Aging Untouchable's think row (52800000), vanilla AI with
+    /// every perception radius capped at a short aggro distance.</summary>
+    public const int HostileGreeterThinkRow = ParamRowBase0;
+
     /// <summary>NpcThinkParam row for the Aging Untouchable boss: a clone
     /// of 52800000 whose battleGoalID selects SpeedFog's own battle script
     /// (<see cref="UntouchableBossBattleGoal"/>), leaving the ambient
-    /// untouchables on the vanilla bytecode script.</summary>
+    /// untouchables on the vanilla bytecode script. ParamRowBase0 in this
+    /// namespace is <see cref="HostileGreeterThinkRow"/>.</summary>
     public const int UntouchableBossThinkRow = ParamRowBase1;
 
     /// <summary>Bullet row for the boss's frenzy beam: a clone of Frenzied

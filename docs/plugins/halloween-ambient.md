@@ -40,9 +40,9 @@ separate layer, see [halloween-darkness.md](halloween-darkness.md).
 
 - **Greeters**: one hostile Aging Untouchable (`c5280`) standing watch
   beside every anchored exit gate, placed when `enabled = true` unless
-  `greeters = false`. Vanilla AI and moveset, madness lantern included, on
-  a flat-tier clone of the vanilla row with no runes and no drop (see
-  "Greeter stats").
+  `greeters = false`. Vanilla AI and moveset, madness lantern included,
+  with a 10 m aggro radius, on a flat-tier clone of the vanilla row with
+  no runes and no drop (see "Greeter stats").
 - **Ambushers**: when `ambushes = true`, a pack of 2-3 hostile skeletons
   (`c3500`) sharing the same gate. They aggro normally but are DECORATIVE:
   a clone of the Sage's Cave skeleton row (35000030) into
@@ -155,12 +155,35 @@ after FogMod's own `Write()` phase. This means:
 ## Greeter stats
 
 Greeters were passive until 2026-10 (a cloned `NpcThinkParam` row with
-every perception radius zeroed); they now fight. Their AI is vanilla: the
-MSB part points at the Aging Untouchable's own think row (`52800000`), so
-they aggro, grab, and keep the lantern's madness pulses (bullets
-205280000-002, SpEffect 26000 rider, see
+every perception radius zeroed); they now fight. Their AI is vanilla (same
+logic and battle scripts, 528000), so they aggro, grab, and keep the
+lantern's madness pulses (bullets 205280000-002, SpEffect 26000 rider, see
 [untouchable-boss.md](../untouchable-boss.md)), which build madness even
 while the untouchable stands still.
+
+Only their perception is shorter. The MSB part points at
+`SpeedFogIds.HostileGreeterThinkRow` (755890000), a clone of the Aging
+Untouchable's think row 52800000 written by
+`AmbientSpawnInjector.ApplyGreeterThink`, with every perception radius
+capped at `GREETER_AGGRO_DIST` (10 m). A cap, not a set: a radius already
+shorter keeps its vanilla value.
+
+| Field | Vanilla 52800000 | Greeter think row |
+|-------|------------------|-------------------|
+| `eye_dist` (sight cone) | 30 | 10 |
+| `ear_dist` (hearing, all around) | 30 | 10 |
+| `searchEye_dist` (sight while searching) | 10 | 10 |
+| `BattleStartDist` | 10 | 10 |
+| `nose_dist` (smell, all around) | 2 | 2 |
+
+With vanilla's 30 m, a greeter noticed the player from far down the
+corridor and came to meet them. Greeters stand 4-6 m from their gate, so
+10 m still has them react when the player walks up to the exit fog, which
+is the point of a greeter. No vanilla untouchable row is shorter
+(52800001-004 share 52800000's radii; 52809000 sees from 50 m), hence
+the clone. Whether `eye_dist` also bounds the chase once the fight has
+started (a greeter dropping a player who backs off past 10 m) is
+unverified, see "In-game checks still owed".
 
 Their far teleport is the open question. Vanilla's script picks it (the
 5 s teleport-out 3000, then a warp around `TARGET_EVENT`) at 10 m and
@@ -208,9 +231,9 @@ moveset's patched `c5280` TAE stays inert for greeters (untouchable-boss.md
 every vanilla untouchable does; harmless without the wall event.
 They are damageable from the first hit: the vanilla immunity wall is
 applied by a per-entity EMEVD event (untouchable-boss.md "Vulnerability
-mechanism"), and greeters carry `EntityID` 0 with no event. Greeters and
-a placed Untouchable boss share think row 52800000 in the MSB;
-`UntouchableBossInjector.ApplyToMsb` tells them apart by entity id only.
+mechanism"), and greeters carry `EntityID` 0 with no event.
+`UntouchableBossInjector.ApplyToMsb` picks the boss part by entity id only,
+so greeters keep their own npc and think rows.
 
 ## MSB clone recipe and visibility groups
 
@@ -420,6 +443,15 @@ pack size range):
   ambient moveset (grab, lantern madness, no beam, no flame nova), and die
   without dropping runes or items; the Chapel of Anticipation exit shows
   decorations but NO greeter or ambushers (decor-only start cluster).
+- Greeter aggro radius (`GREETER_AGGRO_DIST`, 10 m): a greeter should stay
+  put while the player is still down the corridor and react when they
+  walk up to the exit fog. Then back off past 10 m mid-fight: does it keep
+  chasing, or lose the player after a few seconds and walk back to its
+  spot? Tune `GREETER_AGGRO_DIST` if the reaction comes too late to matter
+  or still from too far. This is the same experiment as the far teleport
+  below: both start when the player backs off past 10 m, so the greeter
+  may lose the player (vanilla `SightTargetForgetTime` 3 s) before or
+  after it picks the 3000 fade-out. Record which happens.
 - Greeter far teleport (see "Greeter stats", no event target): back off
   past 10 m and watch the 3000 fade-out. Does the greeter reappear in
   place, near the player, or somewhere else, and does it fade out again

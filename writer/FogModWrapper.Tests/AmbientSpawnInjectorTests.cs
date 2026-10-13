@@ -163,9 +163,9 @@ public class AmbientSpawnInjectorTests
         Assert.Equal(1, greeters);
         Assert.Equal(0, ambushers);
         var greeter = msb.Parts.Enemies.Single(e => e.ModelName == "c5280");
-        // Flat-tier clone, vanilla aggro AI.
+        // Flat-tier clone, vanilla AI with a shorter aggro radius.
         Assert.Equal(SpeedFogIds.HostileGreeterNpcRow, greeter.NPCParamID);
-        Assert.Equal(52800000, greeter.ThinkParamID);
+        Assert.Equal(SpeedFogIds.HostileGreeterThinkRow, greeter.ThinkParamID);
         Assert.Equal(0u, greeter.EntityID);
         // The clone source patrols (WalkRouteName set above); the greeter
         // must not inherit that route.
@@ -636,5 +636,36 @@ public class AmbientSpawnInjectorTests
         var row = npc[SpeedFogIds.HostileGreeterNpcRow]!;
         Assert.Equal(0u, (uint)row["getSoul"].Value);
         Assert.Equal(-1, (int)row["itemLotId_enemy"].Value);
+    }
+
+    [Fact]
+    public void ApplyGreeterThink_CapsEveryPerceptionRadius()
+    {
+        // Vanilla 52800000 sees and hears the player from 30m, so a greeter
+        // came down whole corridors to its gate. The clone caps every
+        // perception radius at GREETER_AGGRO_DIST and never raises one
+        // (smell stays at its vanilla 2m). Built from the real paramdef, like
+        // the NpcParam tests above. searchEye_dist and BattleStartDist are
+        // 10 in vanilla, the cap itself: raised here so each field proves
+        // it is capped.
+        var think = BuildParamFromDef("NpcThinkParam", 52800000);
+        var template = think[52800000]!;
+        template["eye_dist"].Value = (ushort)30;
+        template["ear_dist"].Value = 30f;
+        template["searchEye_dist"].Value = (ushort)25;
+        template["BattleStartDist"].Value = (ushort)25;
+        template["nose_dist"].Value = (ushort)2;
+        template["battleGoalID"].Value = 528000;
+
+        AmbientSpawnInjector.ApplyGreeterThink(think);
+
+        var row = think[SpeedFogIds.HostileGreeterThinkRow]!;
+        Assert.Equal((ushort)AmbientSpawnInjector.GREETER_AGGRO_DIST, (ushort)row["eye_dist"].Value);
+        Assert.Equal((float)AmbientSpawnInjector.GREETER_AGGRO_DIST, (float)row["ear_dist"].Value);
+        Assert.Equal((ushort)AmbientSpawnInjector.GREETER_AGGRO_DIST, (ushort)row["searchEye_dist"].Value);
+        Assert.Equal((ushort)AmbientSpawnInjector.GREETER_AGGRO_DIST, (ushort)row["BattleStartDist"].Value);
+        Assert.Equal((ushort)2, (ushort)row["nose_dist"].Value);
+        // Vanilla AI: same battle script, only the perception changes.
+        Assert.Equal(528000, (int)row["battleGoalID"].Value);
     }
 }

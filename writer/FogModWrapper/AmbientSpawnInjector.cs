@@ -9,7 +9,8 @@ namespace FogModWrapper;
 /// Places ambient enemy spawns at cluster exit gates for the Halloween
 /// plugin: unless greeters are disabled, a hostile "greeter" (Aging
 /// Untouchable with vanilla AI, flat GREETER_TIER stats, no runes or drop
-/// via a cloned NpcParam row, ApplyHostileGreeter) standing watch beside
+/// via a cloned NpcParam row, ApplyHostileGreeter, and a GREETER_AGGRO_DIST
+/// aggro radius via a cloned think row, ApplyGreeterThink) standing watch beside
 /// every exit gate of a mini_dungeon/legacy_dungeon cluster
 /// (HalloweenGateAnchors.SpawnClusterTypes: unlike decorations, no spawns
 /// at the start cluster), plus, when ambushes are enabled, a small
@@ -24,7 +25,8 @@ namespace FogModWrapper;
 ///    HalloweenAmbientPass, which reads/writes the MSB once alongside
 ///    GateDecorInjector's own MSB phase.
 /// 2. Regulation phase (ApplyHostileGreeterRow, ApplyDecorativeAmbusherRows):
-///    clone the greeter's and the ambushers' NpcParam rows.
+///    clone the greeter's NpcParam and NpcThinkParam rows and the
+///    ambushers' NpcParam row.
 ///
 /// Must run AFTER GateDecorInjector's placement: the spawns carry EntityID 0
 /// and would otherwise pollute the decor injector's vanilla-enemy ground
@@ -36,7 +38,15 @@ public static class AmbientSpawnInjector
     // Vanilla Aging Untouchable: the clone TEMPLATE for the hostile greeter
     // row; placed greeters use SpeedFogIds.HostileGreeterNpcRow.
     private const int GREETER_TEMPLATE_NPC_PARAM = 52800086;
-    private const int GREETER_THINK_PARAM = 52800000;
+    // Vanilla Aging Untouchable think row: the clone TEMPLATE for the
+    // greeter think row; placed greeters use SpeedFogIds.HostileGreeterThinkRow.
+    private const int GREETER_TEMPLATE_THINK_PARAM = 52800000;
+    /// <summary>Aggro distance of the greeters, in meters: the cap on every
+    /// perception radius of their think row (vanilla sees and hears from
+    /// 30m). Greeters stand 4-6m from their gate, so they still react to a
+    /// player walking up to the exit fog. An integer: four of the five
+    /// radii are u16 fields.</summary>
+    public const int GREETER_AGGRO_DIST = 10;
     /// <summary>Base-game scaling tier the greeters fight at, everywhere in
     /// the run (they are placed after FogMod's scaling pass): the greeter
     /// row carries scaling SpEffect 7000 + 10 * tier instead of vanilla's
@@ -228,7 +238,9 @@ public static class AmbientSpawnInjector
                 spawn.NPCParamID = spec.Kind == SpawnKind.Greeter
                     ? SpeedFogIds.HostileGreeterNpcRow
                     : SpeedFogIds.DecorativeAmbusherNpcRow;
-                spawn.ThinkParamID = spec.Kind == SpawnKind.Greeter ? GREETER_THINK_PARAM : AMBUSH_THINK_PARAM;
+                spawn.ThinkParamID = spec.Kind == SpawnKind.Greeter
+                    ? SpeedFogIds.HostileGreeterThinkRow
+                    : AMBUSH_THINK_PARAM;
                 spawn.TalkID = 0;
                 spawn.CharaInitID = -1;
                 // The nearest-neighbor clone source may patrol a walk route; greeters
@@ -253,18 +265,21 @@ public static class AmbientSpawnInjector
     /// greeter row: vanilla AI and moveset (madness lantern included), but a
     /// flat GREETER_TIER scaling instead of vanilla's DLC tier, no runes and
     /// no item drop. Same clone mechanism as ApplyDecorativeAmbusherRows.
-    /// Returns false when the row could not be written: the MSB phase must
-    /// then place no greeter, or the parts would point at a missing row.
+    /// Also writes the greeter think row (ApplyGreeterThink, shorter aggro).
+    /// Returns false when the rows could not be written: the MSB phase must
+    /// then place no greeter, or the parts would point at missing rows.
     /// </summary>
     public static bool ApplyHostileGreeterRow(RegulationEditor reg)
     {
         var npc = reg.GetParam("NpcParam");
-        if (npc == null)
+        var think = reg.GetParam("NpcThinkParam");
+        if (npc == null || think == null)
         {
-            Console.WriteLine("Halloween spawns: NpcParam unavailable, greeter row not written");
+            Console.WriteLine("Halloween spawns: NpcParam/NpcThinkParam unavailable, greeter rows not written");
             return false;
         }
         ApplyHostileGreeter(npc);
+        ApplyGreeterThink(think);
         return true;
     }
 
@@ -284,6 +299,25 @@ public static class AmbientSpawnInjector
         Console.WriteLine(
             $"Halloween spawns: hostile greeter NpcParam {SpeedFogIds.HostileGreeterNpcRow} " +
             $"(clone of {GREETER_TEMPLATE_NPC_PARAM}, tier {GREETER_TIER} scaling {tierSpEffect} in slot {slot}, runes 0, no drop)");
+    }
+
+    /// <summary>PARAM-level entry point used by tests: clone the Aging
+    /// Untouchable's think row (52800000) into the greeter think row, same
+    /// AI, every perception radius capped at GREETER_AGGRO_DIST. A cap, not
+    /// a set: a radius already shorter (smell, 2m) stays as it is.</summary>
+    public static void ApplyGreeterThink(PARAM think)
+    {
+        var row = GameEditor.AddRow(think, SpeedFogIds.HostileGreeterThinkRow, GREETER_TEMPLATE_THINK_PARAM);
+        // Storage types from Defs/NpcThinkParam.xml: ear_dist is f32, the rest u16.
+        row["ear_dist"].Value = Math.Min((float)row["ear_dist"].Value, (float)GREETER_AGGRO_DIST);
+        foreach (var field in new[] { "eye_dist", "searchEye_dist", "BattleStartDist", "nose_dist" })
+        {
+            row[field].Value = (ushort)Math.Min((int)(ushort)row[field].Value, GREETER_AGGRO_DIST);
+        }
+
+        Console.WriteLine(
+            $"Halloween spawns: greeter think row {SpeedFogIds.HostileGreeterThinkRow} " +
+            $"(clone of {GREETER_TEMPLATE_THINK_PARAM}, perception capped at {GREETER_AGGRO_DIST}m)");
     }
 
     /// <summary>

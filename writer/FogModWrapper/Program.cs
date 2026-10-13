@@ -958,7 +958,7 @@ Example:
             // missing row.
             var settings = ctx.HalloweenSettings;
             if (settings.Greeters && !ctx.GreeterRowApplied)
-                Console.WriteLine("Halloween spawns: regulation phase did not write the greeter row, skipping greeters");
+                Console.WriteLine("Halloween spawns: regulation phase did not write the greeter rows, skipping greeters");
             if (settings.Ambushes && !ctx.AmbusherRowsApplied)
                 Console.WriteLine("Halloween spawns: regulation phase did not write the ambusher rows, skipping ambushers");
             HalloweenAmbientPass.Inject(

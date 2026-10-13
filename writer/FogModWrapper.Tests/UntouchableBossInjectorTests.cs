@@ -241,12 +241,20 @@ public class UntouchableBossInjectorTests
             Name = "c5280_9000", ModelName = "c5280",
             EntityID = 30001800, NPCParamID = 52800086, ThinkParamID = 52800000,
         });
-        // A halloween greeter (EntityID 0) on the same vanilla think row as
-        // the boss's source: only the entity id tells them apart.
+        // A halloween greeter (EntityID 0, its own npc and think rows): the
+        // boss repoint must leave it on them.
         msb.Parts.Enemies.Add(new MSBE.Part.Enemy
         {
             Name = "c5280_9001", ModelName = "c5280",
-            EntityID = 0, NPCParamID = SpeedFogIds.HostileGreeterNpcRow, ThinkParamID = 52800000,
+            EntityID = 0, NPCParamID = SpeedFogIds.HostileGreeterNpcRow,
+            ThinkParamID = SpeedFogIds.HostileGreeterThinkRow,
+        });
+        // A vanilla ambient untouchable on the boss source's own npc and
+        // think rows: only the entity id sets the boss apart.
+        msb.Parts.Enemies.Add(new MSBE.Part.Enemy
+        {
+            Name = "c5280_9002", ModelName = "c5280",
+            EntityID = 0, NPCParamID = 52800086, ThinkParamID = 52800000,
         });
         var log = new List<string>();
 
@@ -259,7 +267,10 @@ public class UntouchableBossInjectorTests
         Assert.Equal(SpeedFogIds.UntouchableBossThinkRow, boss.ThinkParamID);
         var greeter = msb.Parts.Enemies.Single(e => e.Name == "c5280_9001");
         Assert.Equal(SpeedFogIds.HostileGreeterNpcRow, greeter.NPCParamID);
-        Assert.Equal(52800000, greeter.ThinkParamID);
+        Assert.Equal(SpeedFogIds.HostileGreeterThinkRow, greeter.ThinkParamID);
+        var ambient = msb.Parts.Enemies.Single(e => e.Name == "c5280_9002");
+        Assert.Equal(52800086, ambient.NPCParamID);
+        Assert.Equal(52800000, ambient.ThinkParamID);
         Assert.Contains(log, l => l.Contains("ThinkParamID"));
     }
 

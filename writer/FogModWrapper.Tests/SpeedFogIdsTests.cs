@@ -131,6 +131,14 @@ public class SpeedFogIdsTests
     }
 
     [Fact]
+    public void NpcThinkParamRows_DoNotCollide()
+    {
+        // Both are NpcThinkParam rows (one namespace): the greeters and the
+        // boss must not share an id.
+        Assert.NotEqual(SpeedFogIds.HostileGreeterThinkRow, SpeedFogIds.UntouchableBossThinkRow);
+    }
+
+    [Fact]
     public void SpEffectParamRows_DoNotCollide()
     {
         // All SpEffectParam rows (one namespace), written into the same
