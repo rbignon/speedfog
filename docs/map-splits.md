@@ -625,8 +625,10 @@ Reprimand cluster is actually in this run's DAG), leaving other seeds'
 **Spring re-enabled (2026-10-13)**: the `[[spiritspring_removals]]` entry is
 now commented out in `data/game_tweaks.toml`, so in seeds that include
 `reprimand` the spring is no longer removed and the bypass described above is
-no longer blocked. `SpiritspringRemover` and
-the loader are unchanged; uncommenting the entry restores the removal.
+no longer blocked. This is deliberate: reaching the spring and jumping past the
+gates save only a little time, and keeping the shortcut rewards players who
+know the trick. `SpiritspringRemover` and the loader are unchanged;
+uncommenting the entry restores the removal.
 
 **Capture-frame caution on overworld tiles**: this is the first map-splits
 instance on an overworld tile, and it surfaced a capture quirk that

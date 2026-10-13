@@ -388,7 +388,7 @@ public class GameTweaksLoaderTests
             new[] { "m12_03_00_00", "m12_04_00_00", "m12_08_00_00", "m12_09_00_00" },
             tweaks.TorrentArenas.Select(a => a.Map).OrderBy(m => m, StringComparer.Ordinal));
         // The Fort of Reprimand spring entry is commented out (spring kept in
-        // play since 2026-10-13, see docs/map-splits.md).
+        // play on purpose since 2026-10-13, see docs/map-splits.md).
         Assert.Empty(tweaks.SpiritspringRemovals);
         Assert.Single(tweaks.RemoveEntities);
         Assert.Equal(

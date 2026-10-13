@@ -147,6 +147,8 @@ collisions = ["h020300", "h020500", "h901000", "h905000"]  # siofra_nokron_boss 
 # when `required_zone` is in the seed's DAG (graph.json area_tiers). See
 # docs/map-splits.md, Fort of Reprimand instance.
 
+# Disabled on purpose since 2026-10-13: the shortcut saves little time and
+# rewards players who know it (docs/map-splits.md, "Spring re-enabled").
 #[[spiritspring_removals]]
 #map = "m61_49_42_00"
 #position = [76.7, 303.2, 127.2]
