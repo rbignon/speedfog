@@ -89,7 +89,7 @@ touched; a seed with the plugin disabled ships nothing extra at all.
    `SpeedFogIds.HalloweenGoldenSeedIcon` (60383) /
    `HalloweenSacredTearIcon` (60384). Called from `Program.cs`'s
    `ApplyRegulation`, inside the same `IsPluginEnabled("halloween")`
-   block as `AmbientSpawnInjector.ApplyPassiveThinkRow`. Prints
+   block as `AmbientSpawnInjector.ApplyHostileGreeterRow`. Prints
    `Halloween icons: repointed N item icon id(s)`; a missing row logs a
    warning and is skipped rather than failing the build.
 3. **Packaging conditional overlay** (`speedfog/packaging.py`,

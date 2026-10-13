@@ -186,11 +186,12 @@ public class UntouchableBossInjectorTests
             Name = "c5280_9000", ModelName = "c5280",
             EntityID = 30001800, NPCParamID = 52800086, ThinkParamID = 52800000,
         });
-        // A halloween greeter (same model/npc, EntityID 0): must stay vanilla.
+        // An EntityID-0 untouchable sharing the boss source's npc and think
+        // rows: only the entity id sets the boss apart, so it stays vanilla.
         msb.Parts.Enemies.Add(new MSBE.Part.Enemy
         {
             Name = "c5280_9001", ModelName = "c5280",
-            EntityID = 0, NPCParamID = 52800086, ThinkParamID = 755890000,
+            EntityID = 0, NPCParamID = 52800086, ThinkParamID = 52800000,
         });
         // An unrelated boss in the same map: must stay untouched.
         msb.Parts.Enemies.Add(new MSBE.Part.Enemy
@@ -240,11 +241,12 @@ public class UntouchableBossInjectorTests
             Name = "c5280_9000", ModelName = "c5280",
             EntityID = 30001800, NPCParamID = 52800086, ThinkParamID = 52800000,
         });
-        // A halloween greeter (EntityID 0): keeps its own think row.
+        // A halloween greeter (EntityID 0) on the same vanilla think row as
+        // the boss's source: only the entity id tells them apart.
         msb.Parts.Enemies.Add(new MSBE.Part.Enemy
         {
             Name = "c5280_9001", ModelName = "c5280",
-            EntityID = 0, NPCParamID = 52800086, ThinkParamID = SpeedFogIds.PassiveGreeterThinkRow,
+            EntityID = 0, NPCParamID = SpeedFogIds.HostileGreeterNpcRow, ThinkParamID = 52800000,
         });
         var log = new List<string>();
 
@@ -255,8 +257,9 @@ public class UntouchableBossInjectorTests
         var boss = msb.Parts.Enemies.Single(e => e.EntityID == 30001800);
         Assert.Equal(SpeedFogIds.UntouchableBossNpcRow, boss.NPCParamID);
         Assert.Equal(SpeedFogIds.UntouchableBossThinkRow, boss.ThinkParamID);
-        Assert.Equal(SpeedFogIds.PassiveGreeterThinkRow,
-            msb.Parts.Enemies.Single(e => e.Name == "c5280_9001").ThinkParamID);
+        var greeter = msb.Parts.Enemies.Single(e => e.Name == "c5280_9001");
+        Assert.Equal(SpeedFogIds.HostileGreeterNpcRow, greeter.NPCParamID);
+        Assert.Equal(52800000, greeter.ThinkParamID);
         Assert.Contains(log, l => l.Contains("ThinkParamID"));
     }
 

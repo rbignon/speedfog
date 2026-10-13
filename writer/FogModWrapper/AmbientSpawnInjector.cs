@@ -7,9 +7,10 @@ namespace FogModWrapper;
 
 /// <summary>
 /// Places ambient enemy spawns at cluster exit gates for the Halloween
-/// plugin: unless greeters are disabled, a passive "greeter" (Aging
-/// Untouchable model, perception zeroed so it never aggros) standing watch
-/// beside every exit gate of a mini_dungeon/legacy_dungeon cluster
+/// plugin: unless greeters are disabled, a hostile "greeter" (Aging
+/// Untouchable with vanilla AI, flat GREETER_TIER stats, no runes or drop
+/// via a cloned NpcParam row, ApplyHostileGreeter) standing watch beside
+/// every exit gate of a mini_dungeon/legacy_dungeon cluster
 /// (HalloweenGateAnchors.SpawnClusterTypes: unlike decorations, no spawns
 /// at the start cluster), plus, when ambushes are enabled, a small
 /// skeleton pack sharing the gate's arc. Ambushers aggro normally but are
@@ -22,8 +23,8 @@ namespace FogModWrapper;
 ///    gate, retarget it to the greeter/ambusher model. Driven per map by
 ///    HalloweenAmbientPass, which reads/writes the MSB once alongside
 ///    GateDecorInjector's own MSB phase.
-/// 2. Regulation phase (ApplyPassiveThinkRow): clone the greeter's
-///    NpcThinkParam row with all perception fields zeroed.
+/// 2. Regulation phase (ApplyHostileGreeterRow, ApplyDecorativeAmbusherRows):
+///    clone the greeter's and the ambushers' NpcParam rows.
 ///
 /// Must run AFTER GateDecorInjector's placement: the spawns carry EntityID 0
 /// and would otherwise pollute the decor injector's vanilla-enemy ground
@@ -32,7 +33,18 @@ namespace FogModWrapper;
 public static class AmbientSpawnInjector
 {
     private const string GREETER_MODEL = "c5280";
-    private const int GREETER_NPC_PARAM = 52800086;
+    // Vanilla Aging Untouchable: the clone TEMPLATE for the hostile greeter
+    // row; placed greeters use SpeedFogIds.HostileGreeterNpcRow.
+    private const int GREETER_TEMPLATE_NPC_PARAM = 52800086;
+    private const int GREETER_THINK_PARAM = 52800000;
+    /// <summary>Base-game scaling tier the greeters fight at, everywhere in
+    /// the run (they are placed after FogMod's scaling pass): the greeter
+    /// row carries scaling SpEffect 7000 + 10 * tier instead of vanilla's
+    /// DLC tier-31 row, the stats FogMod would give an untouchable moved to
+    /// an area of that tier (tier 6: ~730 HP, attack x1.76 on DLC base
+    /// attack values, vs x3.8 in vanilla). The in-game tuning knob, 1-20
+    /// only: DLC tiers use another row band (docs/enemy-scaling.md).</summary>
+    public const int GREETER_TIER = 6;
     private const string AMBUSH_MODEL = "c3500";
     // Vanilla Sage's Cave skeleton: the clone TEMPLATE for the decorative
     // ambusher row; placed ambushers use SpeedFogIds.DecorativeAmbusherNpcRow.
@@ -214,9 +226,9 @@ public static class AmbientSpawnInjector
                 spawn.EntityID = 0;
                 Array.Clear(spawn.EntityGroupIDs);
                 spawn.NPCParamID = spec.Kind == SpawnKind.Greeter
-                    ? GREETER_NPC_PARAM
+                    ? SpeedFogIds.HostileGreeterNpcRow
                     : SpeedFogIds.DecorativeAmbusherNpcRow;
-                spawn.ThinkParamID = spec.Kind == SpawnKind.Greeter ? SpeedFogIds.PassiveGreeterThinkRow : AMBUSH_THINK_PARAM;
+                spawn.ThinkParamID = spec.Kind == SpawnKind.Greeter ? GREETER_THINK_PARAM : AMBUSH_THINK_PARAM;
                 spawn.TalkID = 0;
                 spawn.CharaInitID = -1;
                 // The nearest-neighbor clone source may patrol a walk route; greeters
@@ -237,38 +249,41 @@ public static class AmbientSpawnInjector
     }
 
     /// <summary>
-    /// Clone the Aging Untouchable's NpcThinkParam row (52800000) with every
-    /// perception field zeroed, so the greeter never aggros on the player.
+    /// Clone the Aging Untouchable's NpcParam row (52800086) into the hostile
+    /// greeter row: vanilla AI and moveset (madness lantern included), but a
+    /// flat GREETER_TIER scaling instead of vanilla's DLC tier, no runes and
+    /// no item drop. Same clone mechanism as ApplyDecorativeAmbusherRows.
+    /// Returns false when the row could not be written: the MSB phase must
+    /// then place no greeter, or the parts would point at a missing row.
     /// </summary>
-    public static void ApplyPassiveThinkRow(RegulationEditor reg)
+    public static bool ApplyHostileGreeterRow(RegulationEditor reg)
     {
-        var think = reg.GetParam("NpcThinkParam");
-        if (think == null)
+        var npc = reg.GetParam("NpcParam");
+        if (npc == null)
         {
-            Console.WriteLine("Halloween spawns: NpcThinkParam unavailable, greeters stay vanilla-aggro");
-            return;
+            Console.WriteLine("Halloween spawns: NpcParam unavailable, greeter row not written");
+            return false;
         }
-        Apply(think);
+        ApplyHostileGreeter(npc);
+        return true;
     }
 
-    /// <summary>
-    /// Lower-level entry point used by tests. Operates on an already-loaded
-    /// PARAM (same split as PhantomCatalogInjector.ApplyTo/Apply), so the
-    /// row-writing logic can be exercised against a real NpcThinkParam.xml
-    /// paramdef without needing a RegulationEditor/regulation.bin. This is
-    /// the codepath that shipped without its paramdef in a real publish
-    /// (see e5a3212); PARAM-level coverage regression-guards that.
-    /// </summary>
-    public static void Apply(PARAM think)
+    /// <summary>PARAM-level entry point used by tests (same split as ApplyAmbusher).</summary>
+    public static void ApplyHostileGreeter(PARAM npc)
     {
-        var row = GameEditor.AddRow(think, SpeedFogIds.PassiveGreeterThinkRow, 52800000);
-        // Storage types from Defs/NpcThinkParam.xml: ear_dist is f32, the rest u16.
-        row["ear_dist"].Value = 0f;
-        row["eye_dist"].Value = (ushort)0;
-        row["nose_dist"].Value = (ushort)0;
-        row["searchEye_dist"].Value = (ushort)0;
-        row["BattleStartDist"].Value = (ushort)0;
-        Console.WriteLine($"Halloween spawns: passive think row {SpeedFogIds.PassiveGreeterThinkRow} (clone of 52800000, perception zeroed)");
+        var row = GameEditor.AddRow(npc, SpeedFogIds.HostileGreeterNpcRow, GREETER_TEMPLATE_NPC_PARAM);
+        // Vanilla 52800086 carries DLC tier-31 area scaling (20007100: hp
+        // x13.6, attack x3.8); FogMod never rescales the greeters, so the
+        // vanilla tier row of GREETER_TIER takes its place.
+        int slot = ClearScalingSlotsAndFindFree(row);
+        int tierSpEffect = 7000 + 10 * GREETER_TIER;
+        row[$"spEffectID{slot}"].Value = tierSpEffect; // s32
+        row["getSoul"].Value = 0u;  // u32: one greeter per exit gate, no rune farm
+        row["itemLotId_enemy"].Value = -1;  // s32: no drop
+
+        Console.WriteLine(
+            $"Halloween spawns: hostile greeter NpcParam {SpeedFogIds.HostileGreeterNpcRow} " +
+            $"(clone of {GREETER_TEMPLATE_NPC_PARAM}, tier {GREETER_TIER} scaling {tierSpEffect} in slot {slot}, runes 0, no drop)");
     }
 
     /// <summary>
@@ -276,17 +291,20 @@ public static class AmbientSpawnInjector
     /// ambusher row (token HP, no runes, near-zero attack via a custom
     /// SpEffect): ambushers are scenery that swings, not a threat. Same
     /// clone-plus-SpEffect mechanism as UntouchableBossInjector.Apply.
+    /// Returns false when the rows could not be written (see
+    /// ApplyHostileGreeterRow).
     /// </summary>
-    public static void ApplyDecorativeAmbusherRows(RegulationEditor reg)
+    public static bool ApplyDecorativeAmbusherRows(RegulationEditor reg)
     {
         var npc = reg.GetParam("NpcParam");
         var sp = reg.GetParam("SpEffectParam", "SpEffect");
         if (npc == null || sp == null)
         {
-            Console.WriteLine("Halloween spawns: NpcParam/SpEffectParam unavailable, ambushers keep vanilla stats");
-            return;
+            Console.WriteLine("Halloween spawns: NpcParam/SpEffectParam unavailable, ambusher rows not written");
+            return false;
         }
         ApplyAmbusher(npc, sp);
+        return true;
     }
 
     /// <summary>PARAM-level entry point used by tests (same split as Apply).</summary>
@@ -322,19 +340,21 @@ public static class AmbientSpawnInjector
             $"{SpeedFogIds.DecorativeAmbusherSpEffectRow} (attack x{AMBUSH_ATTACK_RATE}, slot {slot})");
     }
 
-    // Vanilla 35000030 carries the game's own area-scaling SpEffect in one
-    // of its slots (7080, tier 8: ~2.7x hp, 2x attack), which the clone
-    // would inherit and stack onto the nerf, roughly doubling the
-    // AMBUSH_HP / 0.01x numbers. One 0..31 pass clears every slot pointing
-    // into the scaling bands (docs/enemy-scaling.md: 7000+10*tier and the
-    // DLC 20007xxx band) so the decorative stats are exact, while tracking
-    // the first free (-1) slot seen so far. Clearing always runs to slot 31
-    // (no early exit once a free slot is found): a scaling slot past the
-    // free one still needs neutralizing. NpcParam carries 32 SpEffect slots
-    // (spEffectID0-31); unused ones hold -1 (0 also appears as a placeholder
-    // and counts as occupied). Scanned instead of hardcoded because the
-    // skeleton template's occupancy is not pinned by any SpeedFog code and
-    // may shift with game patches.
+    // Both clone templates carry the game's own area-scaling SpEffect in one
+    // of their slots: vanilla 35000030 has 7080 (tier 8: ~2.7x hp, 2x
+    // attack), which would stack onto the ambusher nerf and roughly double
+    // the AMBUSH_HP / 0.01x numbers; vanilla 52800086 has 20007100 (DLC tier
+    // 31), which the greeter's GREETER_TIER row replaces. One 0..31 pass
+    // clears every slot pointing into the scaling bands
+    // (docs/enemy-scaling.md: 7000+10*tier and the DLC 20007xxx band) so the
+    // cloned stats are exact, while tracking the first free (-1) slot seen
+    // so far. Clearing always runs to slot 31 (no early exit once a free
+    // slot is found): a scaling slot past the free one still needs
+    // neutralizing. NpcParam carries 32 SpEffect slots (spEffectID0-31);
+    // unused ones hold -1 (0 also appears as a placeholder and counts as
+    // occupied). Scanned instead of hardcoded because the
+    // templates' occupancy is not pinned by any SpeedFog code and may shift
+    // with game patches.
     private static int ClearScalingSlotsAndFindFree(PARAM.Row row)
     {
         int freeSlot = -1;
@@ -352,7 +372,7 @@ public static class AmbientSpawnInjector
         if (freeSlot == -1)
         {
             throw new InvalidOperationException(
-                "No free spEffectID slot on the decorative ambusher NpcParam clone");
+                $"No free spEffectID slot on the NpcParam clone {row.ID}");
         }
         return freeSlot;
     }

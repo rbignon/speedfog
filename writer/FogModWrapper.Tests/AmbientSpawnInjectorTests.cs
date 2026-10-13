@@ -8,8 +8,9 @@ namespace FogModWrapper.Tests;
 
 /// <summary>
 /// Tests for AmbientSpawnInjector: spec expansion from the shared exit-gate
-/// anchors (ambush pack sizing) and the in-memory MSB placement (passive
-/// greeter clone, radius band and facing around the anchored gate). Anchor
+/// anchors (ambush pack sizing), the in-memory MSB placement (hostile
+/// greeter clone, radius band and facing around the anchored gate) and the
+/// greeter/ambusher regulation rows. Anchor
 /// collection itself is covered by HalloweenGateAnchorsTests.
 /// </summary>
 public class AmbientSpawnInjectorTests
@@ -145,7 +146,7 @@ public class AmbientSpawnInjectorTests
     }
 
     [Fact]
-    public void ApplyToMsb_PlacesGreeterWithPassiveThink()
+    public void ApplyToMsb_PlacesHostileGreeter()
     {
         var msb = MakeMsbWithGateAndEnemy();
         var sourceEnemy = msb.Parts.Enemies.Single(e => e.ModelName == "c9990");
@@ -162,8 +163,9 @@ public class AmbientSpawnInjectorTests
         Assert.Equal(1, greeters);
         Assert.Equal(0, ambushers);
         var greeter = msb.Parts.Enemies.Single(e => e.ModelName == "c5280");
-        Assert.Equal(52800086, greeter.NPCParamID);
-        Assert.Equal(SpeedFogIds.PassiveGreeterThinkRow, greeter.ThinkParamID);
+        // Flat-tier clone, vanilla aggro AI.
+        Assert.Equal(SpeedFogIds.HostileGreeterNpcRow, greeter.NPCParamID);
+        Assert.Equal(52800000, greeter.ThinkParamID);
         Assert.Equal(0u, greeter.EntityID);
         // The clone source patrols (WalkRouteName set above); the greeter
         // must not inherit that route.
@@ -462,16 +464,6 @@ public class AmbientSpawnInjectorTests
         return msb;
     }
 
-    // --- ApplyPassiveThinkRow: PARAM-level coverage ---
-    //
-    // This is the codepath that shipped without its paramdef in a real
-    // publish (see e5a3212): ApplyPassiveThinkRow.GetParam("NpcThinkParam")
-    // fails silently by design (Console.WriteLine + return) when the
-    // .csproj does not ship eldendata/Defs/NpcThinkParam.xml. Loading the
-    // real paramdef here regression-guards the .csproj entry: if it goes
-    // missing again, PARAMDEF.XmlDeserialize below throws (file not found)
-    // rather than the row-writing assertions silently not running.
-
     [Fact]
     public void ApplyToMsb_AmbushersUseTheDecorativeNpcClone()
     {
@@ -591,19 +583,58 @@ public class AmbientSpawnInjectorTests
     private static PARAM BuildSpEffectParam()
         => BuildParamFromDef("SpEffect", 7010, "SpEffectParam");
 
+    // --- ApplyHostileGreeter: PARAM-level coverage ---
+    //
+    // Built from the real NpcParam paramdef: a .csproj that stops shipping
+    // eldendata/Defs/NpcParam.xml makes PARAMDEF.XmlDeserialize throw here
+    // (file not found), whereas ApplyHostileGreeterRow itself only logs and
+    // returns when the param is unavailable (see e5a3212 for the think-row
+    // instance of that silent failure).
+
     [Fact]
-    public void ApplyPassiveThinkRow_ClonesAgingUntouchableRowWithPerceptionZeroed()
+    public void ApplyHostileGreeter_ReplacesDlcScalingWithTheFlatTierRow()
     {
-        var think = BuildParamFromDef("NpcThinkParam", 52800000);
+        // Vanilla 52800086 carries the DLC area scaling of its own tier
+        // (20007100, tier 31: hp x13.6, attack x3.8). Greeters are placed
+        // after FogMod's scaling pass, so the clone swaps that slot for the
+        // base-game row of GREETER_TIER while every unrelated slot survives.
+        var npc = BuildParamFromDef("NpcParam", 52800086);
+        var template = npc[52800086]!;
+        template["spEffectID0"].Value = 5401;
+        template["spEffectID1"].Value = 0;          // placeholders: occupied
+        template["spEffectID2"].Value = 0;
+        template["spEffectID3"].Value = 20007100;   // DLC scaling band
+        template["spEffectID17"].Value = 20011450;  // vanilla teleport gate
 
-        AmbientSpawnInjector.Apply(think);
+        AmbientSpawnInjector.ApplyHostileGreeter(npc);
 
-        var row = think[SpeedFogIds.PassiveGreeterThinkRow]!;
-        Assert.Equal(0f, row["ear_dist"].Value);
-        Assert.Equal((ushort)0, row["eye_dist"].Value);
-        Assert.Equal((ushort)0, row["nose_dist"].Value);
-        Assert.Equal((ushort)0, row["searchEye_dist"].Value);
-        Assert.Equal((ushort)0, row["BattleStartDist"].Value);
+        var row = npc[SpeedFogIds.HostileGreeterNpcRow]!;
+        var slots = Enumerable.Range(0, 32).Select(i => (int)row[$"spEffectID{i}"].Value).ToList();
+        Assert.Equal(5401, slots[0]);
+        Assert.Equal(0, slots[1]);
+        Assert.Equal(0, slots[2]);
+        Assert.Equal(20011450, slots[17]);
+        Assert.DoesNotContain(20007100, slots);
+        // Vanilla's layout (slots 1-2 hold 0): the tier row takes the slot
+        // the DLC row was cleared from, the first free one.
+        Assert.Equal(7000 + 10 * AmbientSpawnInjector.GREETER_TIER, slots[3]);
+        Assert.Single(slots, s => s == 7000 + 10 * AmbientSpawnInjector.GREETER_TIER);
     }
 
+    [Fact]
+    public void ApplyHostileGreeter_DropsNoRunesAndNoItem()
+    {
+        // One greeter per dungeon exit: vanilla's runes and enemy item lot
+        // would turn every exit gate into a farm during a race.
+        var npc = BuildParamFromDef("NpcParam", 52800086);
+        var template = npc[52800086]!;
+        template["getSoul"].Value = 4449u;
+        template["itemLotId_enemy"].Value = 528000000;
+
+        AmbientSpawnInjector.ApplyHostileGreeter(npc);
+
+        var row = npc[SpeedFogIds.HostileGreeterNpcRow]!;
+        Assert.Equal(0u, (uint)row["getSoul"].Value);
+        Assert.Equal(-1, (int)row["itemLotId_enemy"].Value);
+    }
 }

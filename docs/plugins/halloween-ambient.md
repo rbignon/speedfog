@@ -1,7 +1,7 @@
 # Halloween Ambient Spawns and Decorations
 
 Two non-text layers of the Halloween plugin, both running after FogMod's
-`Write()`: passive "greeter" enemies and optional hostile ambush packs,
+`Write()`: hostile "greeter" enemies and optional decorative ambush packs,
 plus data-driven prop decorations, placed at cluster exit gates. A single
 driver, `writer/FogModWrapper/HalloweenAmbientPass.cs`, reads each map's
 MSB once and calls into both features (decorations from
@@ -17,7 +17,7 @@ the text reskin layer that shares the same `[plugin.halloween]` namespace.
 ```toml
 [plugin.halloween]
 enabled = true    # gates greeters + decorations (and the text theme)
-greeters = true   # passive Aging Untouchable beside each anchored gate
+greeters = true   # hostile Aging Untouchable beside each anchored gate
 ambushes = false  # also spawn hostile skeleton packs at the anchored gates
 ```
 
@@ -28,15 +28,21 @@ non-boolean `greeters`/`ambushes` abort the build (same idiom as
 only ambient layer at the gates (the text theme and the item icons are not
 affected by either toggle). With both off, `CollectSpawnSpecsByMap` returns
 no map, so the driver reads no MSB on the spawn layer's behalf, and the
-regulation rows of a disabled flavor (passive think row, decorative
-ambusher rows) are not written. The same table's `darkness` key drives a
+regulation rows of a disabled flavor (greeter row, decorative ambusher
+rows) are not written. Conversely, a flavor whose `NpcParam` row the
+regulation phase could not write (regulation.bin or a paramdef missing) is
+not placed: `Program.cs` hands `HalloweenAmbientPass` the settings with
+that flavor turned off and logs the skip, the same two-phase guard as the
+Untouchable boss (the parts would otherwise point at a missing row). The same table's `darkness` key drives a
 separate layer, see [halloween-darkness.md](halloween-darkness.md).
 
 ## The two flavors
 
-- **Greeters**: one passive Aging Untouchable (`c5280`, `NPCParamID
-  52800086`) standing watch beside every anchored exit gate, placed when
-  `enabled = true` unless `greeters = false`.
+- **Greeters**: one hostile Aging Untouchable (`c5280`) standing watch
+  beside every anchored exit gate, placed when `enabled = true` unless
+  `greeters = false`. Vanilla AI and moveset, madness lantern included, on
+  a flat-tier clone of the vanilla row with no runes and no drop (see
+  "Greeter stats").
 - **Ambushers**: when `ambushes = true`, a pack of 2-3 hostile skeletons
   (`c3500`) sharing the same gate. They aggro normally but are DECORATIVE:
   a clone of the Sage's Cave skeleton row (35000030) into
@@ -50,8 +56,7 @@ separate layer, see [halloween-darkness.md](halloween-darkness.md).
   (vanilla 35000030 carries area-scaling row 7080, ~2x) are cleared on the
   clone so the numbers are exact. Scenery that swings, not a threat
   (`AmbientSpawnInjector.ApplyAmbusher`, applied in `ApplyRegulation`
-  alongside the passive think row; the untouchable-boss rows are appended
-  first to keep NpcParam/SpEffectParam row ids ascending).
+  alongside the greeter row).
 
 Both are placed by `AmbientSpawnInjector`; the gate decoration catalogue
 (candelabras, cobwebs, glow anchors) is a separate, independently-gated
@@ -134,40 +139,78 @@ resolution, and arc math:
 after FogMod's own `Write()` phase. This means:
 
 - **No scaling**: FogMod's `EldenScaling` tier pass has already completed
-  when these spawns are added, so they are never touched by it. The
-  greeter uses the Aging Untouchable's vanilla `NpcParam` row as-is;
-  ambushers use SpeedFog's decorative clone (token HP, near-zero attack, see
-  "The two flavors"). Either way, difficulty is deliberately flat and
-  negligible regardless of DAG tier or dungeon depth.
+  when these spawns are added, so they are never touched by it. Each
+  flavor carries fixed stats on its own cloned `NpcParam` row instead: the
+  greeter fights at `GREETER_TIER` (see "Greeter stats"), ambushers at
+  token HP and near-zero attack (see "The two flavors"). Either way,
+  difficulty is deliberately flat regardless of DAG tier or dungeon depth.
 - **No EMEVD needed**: spawns are ordinary always-on MSB `Enemy` parts,
   `EntityID = 0` (no flag, no scripted behavior), so nothing needs to
-  initialize or gate them at runtime. Gate decorations with `sfx_id > 0`
+  initialize or gate them at runtime (the greeter's vanilla far teleport
+  does rely on one, see "Greeter stats"). Gate decorations with `sfx_id > 0`
   are the only piece that touches EMEVD, and only for one unconditional
   `CreateAssetfollowingSFX` per map (see below); geometry-only decorations
   need none either.
 
-## Passivity mechanism
+## Greeter stats
 
-The greeter's passivity comes from a cloned `NpcThinkParam` row, not from
-disabling AI: `AmbientSpawnInjector.ApplyPassiveThinkRow` clones the Aging
-Untouchable's vanilla think row (`52800000`) into
-`SpeedFogIds.PassiveGreeterThinkRow` (755890000, `GameEditor.AddRow`) with
-every perception field zeroed:
+Greeters were passive until 2026-10 (a cloned `NpcThinkParam` row with
+every perception radius zeroed); they now fight. Their AI is vanilla: the
+MSB part points at the Aging Untouchable's own think row (`52800000`), so
+they aggro, grab, and keep the lantern's madness pulses (bullets
+205280000-002, SpEffect 26000 rider, see
+[untouchable-boss.md](../untouchable-boss.md)), which build madness even
+while the untouchable stands still.
 
-| Field | Storage type | Value |
-|-------|--------------|-------|
-| `ear_dist` | f32 | 0 |
-| `eye_dist` | u16 | 0 |
-| `nose_dist` | u16 | 0 |
-| `searchEye_dist` | u16 | 0 |
-| `BattleStartDist` | u16 | 0 |
+Their far teleport is the open question. Vanilla's script picks it (the
+5 s teleport-out 3000, then a warp around `TARGET_EVENT`) at 10 m and
+more while the gate SpEffect 20011450 is active, and in the back cone at
+8 m and more without checking the gate. Both halves of the mechanism live
+in a per-entity EMEVD event (2049422200 for the untouchable of
+m61_49_42): once the untouchable carries 20011451 and 20011450, it warps
+a helper character onto the player, makes that helper the untouchable's
+event target, and clears 20011450. Greeters have `EntityID` 0 and no such
+event: `TARGET_EVENT` is never designated and nothing clears the gate
+(which the c5280 TAE re-applies anyway, see untouchable-boss.md "Engine
+facts and pitfalls"). Where the warp lands, and whether a greeter keeps
+fading out whenever the player stands 10 m away, is unverified (see "In-game
+checks still owed").
 
-With every detection radius at zero, the greeter can never perceive the
-player and never enters battle state; every other AI/combat parameter
-(including the madness aura, if the vanilla NPC carries one) is untouched.
-Ambushers keep the vanilla `ThinkParamID 35000000` and aggro normally;
-their harmlessness comes from the decorative `NpcParam` clone instead
-(see "The two flavors").
+Their `NpcParam` is
+`SpeedFogIds.HostileGreeterNpcRow` (755890002), a clone of vanilla
+52800086 written by `AmbientSpawnInjector.ApplyHostileGreeter`:
+
+| Field | Vanilla 52800086 | Greeter row |
+|-------|------------------|-------------|
+| Area scaling (`spEffectID*`) | 20007100 (DLC tier 31: hp x13.6, attack x3.8, defense x1.245, status resistance x2.85) | 7000 + 10 * `GREETER_TIER` (tier 6, 7060: hp x2.27, attack x1.76, defense x1.079, status resistance x2.105) |
+| `getSoul` | 4449 | 0 |
+| `itemLotId_enemy` | 528000000 | -1 |
+
+The swap reuses the ambushers' scaling-slot scan (every slot in the
+7000-7200 and 20007000-20007130 bands cleared, the tier row written to the
+first free slot). It gives the greeter exactly the stats FogMod would give
+an untouchable moved into a tier-`GREETER_TIER` area: FogMod multiplies by
+`curve[target] / curve[source]` on top of the native row (see
+[enemy-scaling.md](../enemy-scaling.md)). At tier 6 that is ~730 HP (base
+`hp` 323). DLC enemies keep their difficulty in their base `AtkParam`
+values, so the greeter still hits harder than a base-game enemy of the
+same tier. `GREETER_TIER` is the single tuning knob, flat over the whole
+run (the Halloween preset runs tiers 3 to 18), valid from 1 to 20: DLC
+tiers live in another row band (`20007000 + 10 * (tier - 21)`, see
+enemy-scaling.md). No runes and no drop: every anchored exit gate has a
+greeter, so a kill must not pay.
+
+Everything else stays vanilla: the base status resistances (`resist_*`),
+the teleport gate SpEffects, `behaviorVariationId` 52800, so the boss
+moveset's patched `c5280` TAE stays inert for greeters (untouchable-boss.md
+"TAE patch"). When the item randomizer runs, the clone also inherits its
+`nerflantern` slot (20011471 in slot 31, the resident parry window), as
+every vanilla untouchable does; harmless without the wall event.
+They are damageable from the first hit: the vanilla immunity wall is
+applied by a per-entity EMEVD event (untouchable-boss.md "Vulnerability
+mechanism"), and greeters carry `EntityID` 0 with no event. Greeters and
+a placed Untouchable boss share think row 52800000 in the MSB;
+`UntouchableBossInjector.ApplyToMsb` tells them apart by entity id only.
 
 ## MSB clone recipe and visibility groups
 
@@ -372,10 +415,24 @@ Deferred to manual verification (see the task brief); tuning knobs are the
 constants at the top of `AmbientSpawnInjector.cs` (radii, arc spreads,
 pack size range):
 
-- Greeter presence and passivity at anchored exit gates: no aggro, and no
-  madness (or other status) buildup when walking past; greeters face the
-  approaching player, not the gate; the Chapel of Anticipation exit shows
+- Greeter presence and behavior at anchored exit gates: greeters face the
+  approaching player, not the gate, then aggro and fight with the vanilla
+  ambient moveset (grab, lantern madness, no beam, no flame nova), and die
+  without dropping runes or items; the Chapel of Anticipation exit shows
   decorations but NO greeter or ambushers (decor-only start cluster).
+- Greeter far teleport (see "Greeter stats", no event target): back off
+  past 10 m and watch the 3000 fade-out. Does the greeter reappear in
+  place, near the player, or somewhere else, and does it fade out again
+  every time the player stands that far? A repeated 5 s fade-out makes it
+  harmless at range; a warp into a wall or out of the play space is the
+  bad case.
+- Boss retries: most exit gates are boss fogs, so after a death the player
+  often respawns next to a re-spawned greeter 4-6 m from the fog. Check
+  whether its grab or madness gets in the way of re-entering the fog.
+- Greeter difficulty at `GREETER_TIER` 6: fair at the first dungeon exits
+  of the Halloween preset (tier 3) without being trivial at the last ones
+  (tier 18), and madness buildup survivable for an early low-Focus
+  character. Tune `GREETER_TIER` first.
 - Greeters at catacomb/cave exits now cloned from a collision-bearing
   enemy instead of a collisionless c1000 dummy (Murkwater, Spiritcaller
   Cave, Fog Rift, Wyndham were empty on seed `f7280403ab5d`), and at

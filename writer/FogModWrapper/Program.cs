@@ -853,16 +853,17 @@ Example:
 
         if (ctx.GraphData.IsPluginEnabled("halloween"))
         {
-            // The greeter think row and the ambusher rows are only consumed
+            // The greeter and ambusher rows are only consumed
             // when their spawns are actually placed (AmbientSpawnInjector
             // gates greeters and ambush packs on the same settings.Greeters
             // and settings.Ambushes flags); parsed once via
             // ctx.HalloweenSettings and reused by the Phase-8 spawn
-            // injection below.
+            // injection below, which places a flavor only if its rows were
+            // written here.
             if (ctx.HalloweenSettings.Greeters)
-                AmbientSpawnInjector.ApplyPassiveThinkRow(reg);
+                ctx.GreeterRowApplied = AmbientSpawnInjector.ApplyHostileGreeterRow(reg);
             if (ctx.HalloweenSettings.Ambushes)
-                AmbientSpawnInjector.ApplyDecorativeAmbusherRows(reg);
+                ctx.AmbusherRowsApplied = AmbientSpawnInjector.ApplyDecorativeAmbusherRows(reg);
             HalloweenIconInjector.ApplyTo(reg);
         }
 
@@ -943,7 +944,7 @@ Example:
         // Halloween ambient layer at cluster exit gates (opt-in via
         // [plugin.halloween]): data-driven gate decorations
         // (data/plugins/halloween_decorations.toml, a no-op only if the
-        // catalogue is emptied) plus optional passive greeters and ambush
+        // catalogue is emptied) plus optional hostile greeters and ambush
         // packs at the same gates. HalloweenAmbientPass reads/writes each
         // map's MSB once (decor placement first: the decor ground estimate
         // uses vanilla enemies as floor evidence, and AmbientSpawnInjector's
@@ -951,10 +952,23 @@ Example:
         // filter). ctx.HalloweenSettings is parsed once, on first access.
         if (ctx.GraphData.IsPluginEnabled("halloween"))
         {
+            // Same two-phase guard as the Untouchable boss below: a flavor
+            // whose NpcParam row was never written (regulation phase
+            // warn-returned) is not placed, its parts would point at a
+            // missing row.
+            var settings = ctx.HalloweenSettings;
+            if (settings.Greeters && !ctx.GreeterRowApplied)
+                Console.WriteLine("Halloween spawns: regulation phase did not write the greeter row, skipping greeters");
+            if (settings.Ambushes && !ctx.AmbusherRowsApplied)
+                Console.WriteLine("Halloween spawns: regulation phase did not write the ambusher rows, skipping ambushers");
             HalloweenAmbientPass.Inject(
                 ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.Connections,
                 ctx.GraphData.Nodes, gateSides, ctx.Events, ctx.Config.DataDir,
-                ctx.HalloweenSettings);
+                settings with
+                {
+                    Greeters = settings.Greeters && ctx.GreeterRowApplied,
+                    Ambushes = settings.Ambushes && ctx.AmbusherRowsApplied,
+                });
         }
 
         // Aging Untouchable minor boss: repoint enemy-randomizer-placed
@@ -1111,6 +1125,13 @@ Example:
         // Moveset flag): the boss think row exists, so the MSB phase may
         // repoint ThinkParamID at it. False keeps the vanilla AI.
         public bool UntouchableBossMovesetApplied;
+
+        // Set by ApplyRegulation (AmbientSpawnInjector's row writers),
+        // consumed by ApplyModDirInjectors: a Halloween spawn flavor is only
+        // placed when its NpcParam row exists. Stay false when the flavor is
+        // disabled or the regulation phase warn-returned.
+        public bool GreeterRowApplied;
+        public bool AmbusherRowsApplied;
 
         // Parsed lazily on first access: ApplyCommonInjectors (darkness),
         // ApplyRegulation (ambusher row gating) and ApplyModDirInjectors

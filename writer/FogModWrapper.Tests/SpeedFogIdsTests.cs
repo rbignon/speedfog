@@ -117,11 +117,17 @@ public class SpeedFogIdsTests
     }
 
     [Fact]
-    public void NpcThinkParamRows_DoNotCollide()
+    public void NpcParamRows_DoNotCollide()
     {
-        // Both are NpcThinkParam rows (one namespace): the greeter and the
-        // boss must not share an id.
-        Assert.NotEqual(SpeedFogIds.PassiveGreeterThinkRow, SpeedFogIds.UntouchableBossThinkRow);
+        // All NpcParam rows (one namespace), written into the same
+        // regulation when the boss, the greeters and the ambushers coexist.
+        var rows = new[]
+        {
+            SpeedFogIds.UntouchableBossNpcRow,
+            SpeedFogIds.DecorativeAmbusherNpcRow,
+            SpeedFogIds.HostileGreeterNpcRow,
+        };
+        Assert.Equal(rows.Length, rows.Distinct().Count());
     }
 
     [Fact]

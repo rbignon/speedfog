@@ -158,11 +158,6 @@ public static class SpeedFogIds
     private const int ParamRowBase1 = 755890001;
     private const int ParamRowBase2 = 755890002;
 
-    /// <summary>NpcThinkParam row for the passive Halloween greeters:
-    /// a clone of the Aging Untouchable's think row (52800000) with all
-    /// perception zeroed.</summary>
-    public const int PassiveGreeterThinkRow = ParamRowBase0;
-
     /// <summary>NpcParam row for the Aging Untouchable minor boss: a clone
     /// of vanilla 52800086 with boss-level HP/runes and nerflantern's
     /// resident 20011471 scrubbed from its slots. Deliberately outside the 5280xxxx
@@ -196,11 +191,15 @@ public static class SpeedFogIds
     /// see docs/enemy-scaling.md).</summary>
     public const int DecorativeAmbusherSpEffectRow = ParamRowBase1;
 
+    /// <summary>NpcParam row for the hostile Halloween greeters: a clone of
+    /// vanilla 52800086 whose DLC area scaling is swapped for a fixed
+    /// base-game tier, with no runes and no item drop.</summary>
+    public const int HostileGreeterNpcRow = ParamRowBase2;
+
     /// <summary>NpcThinkParam row for the Aging Untouchable boss: a clone
     /// of 52800000 whose battleGoalID selects SpeedFog's own battle script
     /// (<see cref="UntouchableBossBattleGoal"/>), leaving the ambient
-    /// untouchables on the vanilla bytecode script. ParamRowBase0 in this
-    /// namespace is <see cref="PassiveGreeterThinkRow"/>.</summary>
+    /// untouchables on the vanilla bytecode script.</summary>
     public const int UntouchableBossThinkRow = ParamRowBase1;
 
     /// <summary>Bullet row for the boss's frenzy beam: a clone of Frenzied
