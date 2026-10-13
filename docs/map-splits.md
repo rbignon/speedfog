@@ -608,7 +608,7 @@ soldiers to the overlapping Scaduview Cross area (their foglocations2
 crypt behind FOG 2 (Edredd's chapel mobs stay in `scadualtus`, a deliberate
 boss-arena scaling decision, not an oversight).
 
-**Spiritspring removal**: a spiritspring on the neighbouring tile
+**Spiritspring removal** (disabled since 2026-10-13, see below): a spiritspring on the neighbouring tile
 `m61_49_42_00` (the ravine behind the chapel, roughly 80m below the fort)
 lets the player jump straight up past both synthetic gates, bypassing the
 fort's containment entirely. The jump behaviour lives in two MSB regions,
@@ -621,6 +621,12 @@ the MSB by proximity match (5m radius) post-`Write`, declared as a
 `reprimand` is present in the seed's `graph.json` `area_tiers` (the Fort of
 Reprimand cluster is actually in this run's DAG), leaving other seeds'
 `m61_49_42_00` untouched.
+
+**Spring re-enabled (2026-10-13)**: the `[[spiritspring_removals]]` entry is
+now commented out in `data/game_tweaks.toml`, so in seeds that include
+`reprimand` the spring is no longer removed and the bypass described above is
+no longer blocked. `SpiritspringRemover` and
+the loader are unchanged; uncommenting the entry restores the removal.
 
 **Capture-frame caution on overworld tiles**: this is the first map-splits
 instance on an overworld tile, and it surfaced a capture quirk that
@@ -647,7 +653,8 @@ Format" above flips: yaw `θ` becomes `180-θ`.
   caveat as Enir-Ilim's.
 
 **In-game validation status** (first playtest 2026-07-22): spiritspring
-removal confirmed working, FOG 2 position confirmed, FOG 1 repositioned and
+removal confirmed working (the removal has been disabled since 2026-10-13,
+see above), FOG 2 position confirmed, FOG 1 repositioned and
 FOG 2's sides swapped in-game (both folded back into `map_splits.toml`), and
 the ungated chapel side fixed via the `BossDefeatName` mechanism above.
 The boss arena was rolled back after the third playtest (see the
@@ -683,8 +690,8 @@ for the full list.
   zone's presence in `area_tiers`.
 - `writer/FogModWrapper/VanillaWarpRemover.cs`: `MatchGroup` removal path.
 - `data/game_tweaks.toml`: `[[remove_entities]]` (Enir-Ilim thorns) and
-  `[[spiritspring_removals]]` (Fort of Reprimand) sections used by the
-  map-splits instances above.
+  `[[spiritspring_removals]]` (Fort of Reprimand, entry commented out since
+  2026-10-13) sections used by the map-splits instances above.
 - `data/zone_metadata.toml`: `[zones.enirilim]`, `[zones.enirilim_upper]`,
   `[zones.enirilim_stairs]`, `[clusters.enirilim_9820]`; `[zones.reprimand]`,
   `[clusters.reprimand_77e7]`.

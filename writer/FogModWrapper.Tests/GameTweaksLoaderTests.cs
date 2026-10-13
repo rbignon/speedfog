@@ -387,7 +387,9 @@ public class GameTweaksLoaderTests
         Assert.Equal(
             new[] { "m12_03_00_00", "m12_04_00_00", "m12_08_00_00", "m12_09_00_00" },
             tweaks.TorrentArenas.Select(a => a.Map).OrderBy(m => m, StringComparer.Ordinal));
-        Assert.Single(tweaks.SpiritspringRemovals);
+        // The Fort of Reprimand spring entry is commented out (spring kept in
+        // play since 2026-10-13, see docs/map-splits.md).
+        Assert.Empty(tweaks.SpiritspringRemovals);
         Assert.Single(tweaks.RemoveEntities);
         Assert.Equal(
             new[] { new DisableEvent("m11_00_00_00", 11002930), new DisableEvent("m60_52_39_00", 1052392910) },
