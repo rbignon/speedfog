@@ -95,6 +95,10 @@ Launched by the launcher in a minimized window. Lifecycle:
      daemon never latches onto the next seed's session).
    - On timeout (game still running):
      - If save file missing: skip.
+     - If the save still has the SHA256 of the last backup of this launch:
+       skip (logged once per unchanged streak). A game stuck on a loading
+       screen does not write its save; without this, every stuck launch
+       filled the menu with copies of the broken state.
      - Zip it as a periodic backup of the current launch.
      - If zip < 100 KB: log warning (possible partial copy from locked file).
      - Purge (see below).
@@ -142,17 +146,33 @@ interference with Elden Ring's autosave. PowerShell uses `Copy-Item` +
 
 ### Logging
 
-The daemon logs to both console and `backups/backup.log` (append mode).
+`backups/backup.log` (append mode) tells the daemon's and the recovery's runs
+as one chronological story: it is the file to ask a player for. Every line
+starts with the local time and its UTC offset (`Write-BackupLog` in
+`backup_store.ps1`), so it lines up with the racing mod log, which is in UTC.
+The daemon also prints its lines to its console.
 
 ```
-[SpeedFog Backup] Save file: C:\Users\...\ER0000.sl2
-[SpeedFog Backup] Waiting for Elden Ring to start...
-[SpeedFog Backup] Game detected.
-[SpeedFog Backup] Launch 1 start backup: 0001_launch1-start_2026-03-19_14.30.00.zip
-[SpeedFog Backup] Backup daemon started (launch: 1, interval: 1 min, keep: 10)
-[SpeedFog Backup] Backup: 0002_launch1_2026-03-19_14.31.00.zip (3.1 MB)
-[SpeedFog Backup] Game exited. Daemon stopping. (12 backups created)
+2026-10-13 08:05:12 -05:00 [SpeedFog Backup] Save file: C:\Users\...\ER0000.sl2
+2026-10-13 08:05:12 -05:00 [SpeedFog Backup] Waiting for Elden Ring to start...
+2026-10-13 08:05:12 -05:00 [SpeedFog Backup] Game detected.
+2026-10-13 08:05:13 -05:00 [SpeedFog Backup] Launch 1 start backup: 0001_launch1-start_2026-10-13_08.05.12.zip
+2026-10-13 08:05:13 -05:00 [SpeedFog Backup] Backup daemon started (launch: 1, interval: 1 min, keep: 10)
+2026-10-13 08:06:14 -05:00 [SpeedFog Backup] Backup: 0002_launch1_2026-10-13_08.06.14.zip (2.8 MB)
+2026-10-13 08:29:25 -05:00 [SpeedFog Backup] Game exited. Daemon stopping. (24 backups created)
+2026-10-13 08:30:24 -05:00 [SpeedFog Backup] Launch 2 start backup: 0026_launch2-start_2026-10-13_08.30.24.zip
+2026-10-13 08:31:27 -05:00 [SpeedFog Backup] Save unchanged since the last backup, skipping until it changes.
+2026-10-13 08:35:40 -05:00 [SpeedFog Backup] Game exited. Daemon stopping. (0 backups created, 4 skipped: save unchanged)
+2026-10-13 08:36:02 -05:00 [SpeedFog Recovery] Recovery started (save: C:\Users\...\ER0000.sl2, 12 backups)
+2026-10-13 08:36:10 -05:00 [SpeedFog Recovery] Restoring #25 (0025_launch1_2026-10-13_08.29.24.zip)
+2026-10-13 08:36:11 -05:00 [SpeedFog Recovery] Current save kept as #27 (0027_before-restore_2026-10-13_08.36.10.zip)
+2026-10-13 08:36:11 -05:00 [SpeedFog Recovery] Restored #25
 ```
+
+Recovery also logs whether the backup was typed or the default pick,
+cancellations, invalid selections, a missing save file, the "game is running"
+override and failures. A daemon killed together with
+the game (no "Game exited" line) is visible as a gap before the next launch.
 
 ## Recovery
 
@@ -165,24 +185,24 @@ SpeedFog Save Recovery
 
 Save file: C:\Users\...\ER0000.sl2
 
-Backups keep being taken until the game closes: if you stayed stuck for a
-while before quitting, the most recent ones already contain the problem.
-Pick one from BEFORE it.
+A backup is taken every minute while the save changes, until the game closes.
+If you stayed stuck for a while before quitting, the most recent ones may
+already contain the problem: pick one from BEFORE it.
 
 Available backups (newest last):
 
 Launch 1 (2026-10-13, 14:30 to 14:40)
   #1   14:30  start of launch
   ...
-  #8   14:37  3 min before the end
-  #9   14:38  2 min before the end   <- restored at 14:41
-  #10  14:39  1 min before the end
+  #8   14:37  3 min before last backup
+  #9   14:38  2 min before last backup   <- restored at 14:41
+  #10  14:39  1 min before last backup
   #11  14:40  last backup
 Restore at 14:41
   #12  14:41  your save before restoring #9
 Launch 2 (2026-10-13, 14:42 to 14:44), started from #9
   #13  14:42  start of launch
-  #14  14:43  1 min before the end
+  #14  14:43  1 min before last backup
   #15  14:44  last backup
 
 Reminder: pick a backup from BEFORE the problem, the most recent ones may already contain it.
@@ -202,6 +222,9 @@ You can relaunch the game with launch_speedfog.bat.
 - **Grouped by launch**, oldest first. Each periodic backup shows how long
   before the last backup of its launch it was taken: players reason in
   "I was stuck for about two minutes before quitting", not in clock times.
+  The reference is the last backup, not the game's exit: the daemon skips
+  unchanged saves, so a game frozen on a loading screen adds no backup after
+  the save stopped changing (its last backup already holds the problem).
 - **Restore history.** `recovery.ps1` appends
   `<time>\t<restored zip>\t<undo zip>` to `restores.log` after each restore.
   The menu marks restored backups, labels undo backups and shows which
@@ -214,6 +237,7 @@ You can relaunch the game with launch_speedfog.bat.
   backup is never the default), confirmation defaults to y. Enter twice
   restores the most recent backup, as before. `#8` and `8` are both accepted.
 - The script warns if Elden Ring is currently running.
+- Every run is traced in `backup.log` (see Logging above).
 
 ## Scripts and Packaging
 

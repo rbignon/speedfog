@@ -7,6 +7,8 @@ cover the logic only.
 
 from __future__ import annotations
 
+import os
+import re
 import shutil
 import subprocess
 import zipfile
@@ -21,25 +23,29 @@ PWSH = shutil.which("pwsh")
 pytestmark = pytest.mark.skipif(PWSH is None, reason="pwsh not installed")
 
 
-def _pwsh(script: Path, stdin: str = "") -> list[str]:
+def _pwsh(script: Path, stdin: str = "", tz: str | None = None) -> list[str]:
+    env = dict(os.environ)
+    if tz is not None:
+        env["TZ"] = tz
     result = subprocess.run(
         [PWSH, "-NoProfile", "-File", str(script)],
         input=stdin,
         capture_output=True,
         text=True,
         check=True,
+        env=env,
     )
     return result.stdout.splitlines()
 
 
-def _run(tmp_path: Path, body: str) -> list[str]:
+def _run(tmp_path: Path, body: str, tz: str | None = None) -> list[str]:
     """Run `body` with backup_store.ps1 loaded and $Dir set to tmp_path."""
     script = tmp_path / "test.ps1"
     script.write_text(
         f"$ErrorActionPreference = 'Stop'\n. '{STORE}'\n$Dir = '{tmp_path}'\n{body}",
         encoding="utf-8",
     )
-    return _pwsh(script)
+    return _pwsh(script, tz=tz)
 
 
 def _touch(directory: Path, *names: str) -> None:
@@ -82,15 +88,15 @@ def test_menu_after_a_restore_keeps_permanent_numbers(tmp_path: Path) -> None:
 
     assert lines[0] == "Launch 1 (2026-10-13, 14:30 to 14:40)"
     assert lines[1] == "  #1   14:30  start of launch"
-    assert lines[8] == "  #8   14:37  3 min before the end"
-    assert lines[9] == "  #9   14:38  2 min before the end   <- restored at 14:41"
+    assert lines[8] == "  #8   14:37  3 min before last backup"
+    assert lines[9] == "  #9   14:38  2 min before last backup   <- restored at 14:41"
     assert lines[11] == "  #11  14:40  last backup"
     assert lines[12] == "Restore at 14:41"
     assert lines[13] == "  #12  14:41  your save before restoring #9"
     assert lines[14] == "Launch 2 (2026-10-13, 14:42 to 14:44), started from #9"
     assert lines[15:18] == [
         "  #13  14:42  start of launch",
-        "  #14  14:43  1 min before the end",
+        "  #14  14:43  1 min before last backup",
         "  #15  14:44  last backup",
     ]
     # The undo backup is never the default pick.
@@ -184,12 +190,51 @@ def test_purge_is_per_launch_and_survives_a_crash_loop(tmp_path: Path) -> None:
     ]
 
 
+def test_unchanged_save_is_not_backed_up_again(tmp_path: Path) -> None:
+    lines = _run(
+        tmp_path,
+        "$save = Join-Path $Dir 'ER0000.src'\n"
+        "Set-Content -LiteralPath $save -Value 'one'\n"
+        "$first = New-SaveBackup -BackupsDir $Dir -SavePath $save -Kind start"
+        " -Launch 1\n"
+        "$same = New-SaveBackup -BackupsDir $Dir -SavePath $save -Kind periodic"
+        " -Launch 1 -UnlessHash $first.SaveHash\n"
+        "Set-Content -LiteralPath $save -Value 'two'\n"
+        "$changed = New-SaveBackup -BackupsDir $Dir -SavePath $save -Kind periodic"
+        " -Launch 1 -UnlessHash $first.SaveHash\n"
+        '"same=$($null -eq $same)"\n'
+        '"changed=$($changed.Name.Substring(0, 13)) $($changed.SaveHash -ne $first.SaveHash)"\n'
+        "(Get-SaveBackups $Dir | ForEach-Object { $_.Seq }) -join ' '\n"
+        "@(Get-ChildItem -LiteralPath $Dir -Filter 'ER0000.sl2').Count\n",
+    )
+
+    assert lines == ["same=True", "changed=0002_launch1_ True", "1 2", "0"]
+
+
+def test_log_lines_carry_local_time_with_utc_offset(tmp_path: Path) -> None:
+    lines = _run(
+        tmp_path,
+        "Write-BackupLog -BackupsDir $Dir -Source Recovery -Message 'hello'\n"
+        "Get-Content -LiteralPath (Join-Path $Dir 'backup.log')\n",
+        tz="Asia/Kolkata",  # +05:30 all year: pins the offset, not just its shape
+    )
+
+    pattern = (
+        r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} \+05:30 " r"\[SpeedFog Recovery\] hello$"
+    )
+    assert len(lines) == 2
+    assert lines[0] == lines[1]
+    assert re.match(pattern, lines[1])
+
+
 def _zip_save(path: Path, content: str) -> None:
     with zipfile.ZipFile(path, "w") as zf:
         zf.writestr("ER0000.sl2", content)
 
 
-def test_recovery_restores_by_number_and_keeps_an_undo(tmp_path: Path) -> None:
+def _recovery_setup(tmp_path: Path) -> tuple[Path, Path]:
+    """Backups dir with the scripts, two backups ("one", "two") and a
+    config.ini pointing at a save path that does not exist yet."""
     backups = tmp_path / "backups"
     save_dir = tmp_path / "save"
     backups.mkdir()
@@ -197,10 +242,20 @@ def test_recovery_restores_by_number_and_keeps_an_undo(tmp_path: Path) -> None:
     for name in ("recovery.ps1", "backup_store.ps1"):
         shutil.copy(BACKUPS_SRC / name, backups / name)
     save = save_dir / "ER0000.sl2"
-    save.write_text("current", encoding="utf-8")
     (backups / "config.ini").write_text(f"save_path={save}\n", encoding="utf-8")
     _zip_save(backups / "0001_launch1-start_2026-10-13_14.30.00.zip", "one")
     _zip_save(backups / "0002_launch1_2026-10-13_14.31.00.zip", "two")
+    return backups, save
+
+
+def _log_messages(backups: Path) -> list[str]:
+    log = (backups / "backup.log").read_text(encoding="utf-8").splitlines()
+    return [line.split("] ", 1)[1] for line in log]
+
+
+def test_recovery_restores_by_number_and_keeps_an_undo(tmp_path: Path) -> None:
+    backups, save = _recovery_setup(tmp_path)
+    save.write_text("current", encoding="utf-8")
 
     # Pick #1, confirm with the default, then "Press Enter to exit".
     output = _pwsh(backups / "recovery.ps1", stdin="#1\n\n\n")
@@ -218,3 +273,25 @@ def test_recovery_restores_by_number_and_keeps_an_undo(tmp_path: Path) -> None:
     ]
     assert "Restored backup #1 successfully." in output
     assert "Your previous save was kept as backup #3: restore it to undo." in output
+    assert _log_messages(backups) == [
+        f"Recovery started (save: {save}, 2 backups)",
+        "Restoring #1 (0001_launch1-start_2026-10-13_14.30.00.zip)",
+        f"Current save kept as #3 ({undo[0].name})",
+        "Restored #1",
+    ]
+
+
+def test_recovery_default_pick_without_a_current_save(tmp_path: Path) -> None:
+    backups, save = _recovery_setup(tmp_path)
+
+    # Enter at every prompt: default backup, default confirmation, exit.
+    _pwsh(backups / "recovery.ps1", stdin="\n\n\n")
+
+    assert save.read_text(encoding="utf-8") == "two"
+    assert not list(backups.glob("*before-restore*"))
+    assert _log_messages(backups) == [
+        f"Recovery started (save: {save}, 2 backups)",
+        "Restoring #2 (0002_launch1_2026-10-13_14.31.00.zip, default pick)",
+        "No current save file to keep",
+        "Restored #2",
+    ]

@@ -2,6 +2,12 @@
 
 $backupsDir = $PSScriptRoot
 . "$PSScriptRoot/backup_store.ps1"
+
+# Every recovery run is traced in backup.log next to the daemon's lines.
+function RecoveryLog {
+    param([string]$Message)
+    Write-BackupLog -BackupsDir $backupsDir -Source Recovery -Message $Message | Out-Null
+}
 $configPath = "$PSScriptRoot/config.ini"
 
 # --- Parse config.ini for save_path ---
@@ -36,6 +42,7 @@ if (-not $savePath) {
         $savePath = $candidates[0].FullName
     } elseif ($candidates.Count -eq 0) {
         Write-Host "ERROR: Could not find ER0000.sl2. Please set save_path in backups\config.ini."
+        RecoveryLog "ERROR: Could not find ER0000.sl2"
         Read-Host "Press Enter to exit"
         exit 1
     } else {
@@ -49,8 +56,9 @@ if (-not $savePath) {
         $default = $candidates.Count
         $selRaw = Read-Host "Select save file [$default]"
         if ($selRaw -eq '') { $selRaw = "$default" }
-        try { $idx = [int]$selRaw - 1 } catch { Write-Host "Invalid selection."; Read-Host "Press Enter to exit"; exit 1 }
+        try { $idx = [int]$selRaw - 1 } catch { $idx = -1 }
         if ($idx -lt 0 -or $idx -ge $candidates.Count) {
+            RecoveryLog "Invalid save file selection: '$selRaw'"
             Write-Host "Invalid selection."
             Read-Host "Press Enter to exit"
             exit 1
@@ -66,23 +74,26 @@ Write-Host ""
 Write-Host "Save file: $savePath"
 Write-Host ""
 
+$backups = @(Get-SaveBackups $backupsDir)
+RecoveryLog "Recovery started (save: $savePath, $($backups.Count) backups)"
+
 # --- Warn if game is running ---
 if (Get-Process -Name eldenring -ErrorAction SilentlyContinue) {
     $confirm = Read-Host "Warning: Elden Ring appears to be running. Restoring while the game is running may not work. Continue? (y/n)"
-    if ($confirm -ne 'y') { exit 0 }
+    if ($confirm -ne 'y') { RecoveryLog "Cancelled: Elden Ring is running"; exit 0 }
+    RecoveryLog "Elden Ring is running, continuing anyway"
 }
 
 # --- List available backups ---
-$backups = @(Get-SaveBackups $backupsDir)
 if ($backups.Count -eq 0) {
     Write-Host "No backups found."
     Read-Host "Press Enter to exit"
     exit 0
 }
 
-Write-Host "Backups keep being taken until the game closes: if you stayed stuck for a"
-Write-Host "while before quitting, the most recent ones already contain the problem."
-Write-Host "Pick one from BEFORE it."
+Write-Host "A backup is taken every minute while the save changes, until the game closes."
+Write-Host "If you stayed stuck for a while before quitting, the most recent ones may"
+Write-Host "already contain the problem: pick one from BEFORE it."
 Write-Host ""
 Write-Host "Available backups (newest last):"
 Write-Host ""
@@ -102,17 +113,26 @@ if ($selRaw -eq '') {
 } elseif ($selRaw -match '^\d+$') {
     $selected = $backups | Where-Object { $_.Seq -eq [int]$selRaw } | Select-Object -First 1
 }
-if (-not $selected) { Write-Host "Invalid selection."; Read-Host "Press Enter to exit"; exit 1 }
+if (-not $selected) {
+    RecoveryLog "Invalid selection: '$selRaw'"
+    Write-Host "Invalid selection."
+    Read-Host "Press Enter to exit"
+    exit 1
+}
 
 # --- Confirm ---
 $confirmRestore = Read-Host "Restore #$($selected.Seq) ($(Format-BackupClock $selected.Time))? (y/n) [y]"
 if ($confirmRestore -eq '') { $confirmRestore = 'y' }
 if ($confirmRestore -ne 'y') {
+    RecoveryLog "Cancelled at confirmation of #$($selected.Seq)"
     Write-Host "Cancelled."
     Read-Host "Press Enter to exit"
     exit 0
 }
 Write-Host ""
+$how = ''
+if ($selRaw -eq '') { $how = ', default pick' }
+RecoveryLog "Restoring #$($selected.Seq) ($($selected.Name)$how)"
 
 # --- Keep the current save, so a wrong pick can be undone ---
 $undoName = ''
@@ -121,26 +141,34 @@ if (Test-Path -LiteralPath $savePath) {
         $undo = New-SaveBackup -BackupsDir $backupsDir -SavePath $savePath -Kind before-restore
         $undoName = $undo.Name
     } catch {
+        RecoveryLog "WARNING: Could not back up the current save: $_"
         Write-Host "WARNING: Could not back up your current save: $_"
         $confirmAnyway = Read-Host "Restore anyway? Your current save will be lost. (y/n) [n]"
         if ($confirmAnyway -ne 'y') {
+            RecoveryLog "Cancelled: no undo backup"
             Write-Host "Cancelled."
             Read-Host "Press Enter to exit"
             exit 0
         }
+        RecoveryLog "Restoring without an undo backup (confirmed)"
     }
+    if ($undoName) { RecoveryLog "Current save kept as #$((ConvertFrom-BackupName $undoName).Seq) ($undoName)" }
+} else {
+    RecoveryLog "No current save file to keep"
 }
 
 # --- Restore ---
 try {
     Expand-Archive -LiteralPath $selected.Path -DestinationPath (Split-Path $savePath -Parent) -Force -ErrorAction Stop
     Add-RestoreLog -BackupsDir $backupsDir -Restored $selected.Name -Undo $undoName
+    RecoveryLog "Restored #$($selected.Seq)"
     Write-Host "Restored backup #$($selected.Seq) successfully."
     if ($undoName) {
         Write-Host "Your previous save was kept as backup #$((ConvertFrom-BackupName $undoName).Seq): restore it to undo."
     }
     Write-Host "You can relaunch the game with launch_speedfog.bat."
 } catch {
+    RecoveryLog "ERROR: Failed to restore #$($selected.Seq): $_"
     Write-Host "ERROR: Failed to restore backup: $_"
     if ($undoName) {
         Write-Host "Your previous save is in backup #$((ConvertFrom-BackupName $undoName).Seq): restore it if the game no longer loads."

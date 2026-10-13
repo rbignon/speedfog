@@ -12,9 +12,7 @@ $backupsDir = $PSScriptRoot
 # --- Logging ---
 function Log {
     param([string]$Message)
-    $line = "[SpeedFog Backup] $Message"
-    Write-Host $line
-    Add-Content -Path "$backupsDir/backup.log" -Value $line
+    Write-Host (Write-BackupLog -BackupsDir $backupsDir -Source Backup -Message $Message)
 }
 
 # --- Parse config.ini ---
@@ -54,9 +52,11 @@ Log "Game detected."
 # Each daemon run is one launch; its backups are grouped under this number in
 # the recovery menu and purged independently of the other launches.
 $launch = Get-NextLaunchNumber $backupsDir
+$lastHash = ''
 if (Test-Path -LiteralPath $SavePath) {
     try {
         $zip = New-SaveBackup -BackupsDir $backupsDir -SavePath $SavePath -Kind start -Launch $launch
+        $lastHash = $zip.SaveHash
         Log "Launch $launch start backup: $($zip.Name)"
     } catch {
         Log "WARNING: Failed to create start-of-launch backup: $_"
@@ -68,28 +68,44 @@ Log "Backup daemon started (launch: $launch, interval: $interval min, keep: $max
 
 # --- Backup loop ---
 $backupCount = 0
+$skipCount = 0
+$skipLogged = $false
 while ($true) {
     # Wait one interval; returns as soon as the game exits. Suppressed errors:
     # timeout elapsed, or the PID was already gone when the wait started.
     Wait-Process -Id $game.Id -Timeout ($interval * 60) -ErrorAction SilentlyContinue
 
     if ($game.HasExited) {
-        Log "Game exited. Daemon stopping. ($backupCount backups created)"
+        Log "Game exited. Daemon stopping. ($backupCount backups created, $skipCount skipped: save unchanged)"
         exit 0
     }
 
-    if (-not (Test-Path $SavePath)) {
+    if (-not (Test-Path -LiteralPath $SavePath)) {
         Log "WARNING: Save file not found, skipping backup."
+        $skipLogged = $false
         continue
     }
 
     try {
-        $zip = New-SaveBackup -BackupsDir $backupsDir -SavePath $SavePath -Kind periodic -Launch $launch
+        $zip = New-SaveBackup -BackupsDir $backupsDir -SavePath $SavePath -Kind periodic -Launch $launch -UnlessHash $lastHash
     } catch {
         Log "WARNING: Failed to create backup: $_"
+        $skipLogged = $false
         continue
     }
 
+    # Unchanged save (e.g. game stuck on a loading screen): no new backup,
+    # logged once per unchanged streak.
+    if (-not $zip) {
+        $skipCount++
+        if (-not $skipLogged) {
+            Log "Save unchanged since the last backup, skipping until it changes."
+            $skipLogged = $true
+        }
+        continue
+    }
+    $skipLogged = $false
+    $lastHash = $zip.SaveHash
     $backupCount++
 
     $zipSizeKB = [math]::Round($zip.Length / 1KB, 1)

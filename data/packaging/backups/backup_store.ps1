@@ -69,13 +69,17 @@ function Get-NextLaunchNumber {
 
 # Zip the save file under the next permanent number. Kind: start, periodic or
 # before-restore (Launch is ignored for before-restore). Returns the zip
-# FileInfo; throws when the copy or the compression fails.
+# FileInfo with a SaveHash property (SHA256 of the save), or $null without
+# creating anything when the save still hashes to UnlessHash (a game stuck on
+# a loading screen does not write its save: no point in piling up copies).
+# Throws when the copy, the hash or the compression fails.
 function New-SaveBackup {
     param(
         [string]$BackupsDir,
         [string]$SavePath,
         [string]$Kind,
-        [int]$Launch
+        [int]$Launch,
+        [string]$UnlessHash = ''
     )
     $seq = 1
     foreach ($b in @(Get-SaveBackups $BackupsDir)) {
@@ -98,11 +102,15 @@ function New-SaveBackup {
     $tempCopy = Join-Path $BackupsDir 'ER0000.sl2'
     try {
         Copy-Item -LiteralPath $SavePath -Destination $tempCopy -Force -ErrorAction Stop
+        $hash = (Get-FileHash -LiteralPath $tempCopy -Algorithm SHA256 -ErrorAction Stop).Hash
+        if ($UnlessHash -and $hash -eq $UnlessHash) { return $null }
         Compress-Archive -LiteralPath $tempCopy -DestinationPath $zipPath -Force -ErrorAction Stop
     } finally {
         Remove-Item -LiteralPath $tempCopy -Force -ErrorAction SilentlyContinue
     }
-    Get-Item -LiteralPath $zipPath -ErrorAction Stop
+    $zip = Get-Item -LiteralPath $zipPath -ErrorAction Stop
+    $zip | Add-Member -NotePropertyName SaveHash -NotePropertyValue $hash
+    $zip
 }
 
 # Keep the last $MaxBackups periodic backups of the current launch. Other
@@ -118,6 +126,24 @@ function Remove-OldBackups {
     foreach ($b in @($current | Select-Object -SkipLast $MaxBackups)) {
         Remove-Item -LiteralPath $b.Path -Force -ErrorAction SilentlyContinue
     }
+}
+
+# --- backup.log: the daemon's and recovery's runs as one chronological story ---
+
+# Append "<local time> <UTC offset> [SpeedFog <Source>] <Message>" to
+# backup.log and return the line. The offset lines the file up with the racing
+# mod log, which is in UTC. A log write failure never breaks a backup or a
+# restore.
+function Write-BackupLog {
+    param(
+        [string]$BackupsDir,
+        [string]$Source,
+        [string]$Message
+    )
+    $ts = (Get-Date).ToString('yyyy-MM-dd HH:mm:ss zzz', $script:Invariant)
+    $line = "$ts [SpeedFog $Source] $Message"
+    Add-Content -LiteralPath (Join-Path $BackupsDir 'backup.log') -Value $line -ErrorAction SilentlyContinue
+    $line
 }
 
 # --- Restore log: one line per restore, "<time>`t<restored zip>`t<undo zip>" ---
@@ -164,8 +190,9 @@ function Get-DefaultBackup {
 }
 
 # Menu lines, grouped by launch, oldest first. Each entry shows its permanent
-# number, its clock time and how long before the end of its launch it was
-# taken; restored backups and before-restore backups are annotated.
+# number, its clock time and how long before the last backup of its launch it
+# was taken (not the game's exit: an unchanged save adds no backup); restored
+# backups and before-restore backups are annotated.
 function Format-BackupList {
     param(
         [object[]]$Backups,
@@ -220,8 +247,8 @@ function Format-BackupList {
                 $note = 'last backup'
             } else {
                 $minutes = [int][math]::Round(($span.Last - $b.Time).TotalMinutes)
-                if ($minutes -lt 1) { $note = 'less than 1 min before the end' }
-                else { $note = "$minutes min before the end" }
+                if ($minutes -lt 1) { $note = 'less than 1 min before last backup' }
+                else { $note = "$minutes min before last backup" }
             }
         }
         $restoredAt = $Restores | Where-Object { $_.Restored -eq $b.Name } | Select-Object -Last 1
