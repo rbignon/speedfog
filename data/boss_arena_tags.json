@@ -3517,7 +3517,7 @@
       "size": 3,
       "type": 4,
       "two_phase_not_allowed": false,
-      "dragon_not_allowed": false,
+      "dragon_not_allowed": true,
       "npc_not_allowed": false,
       "is_escapable": false,
       "night_boss": false
