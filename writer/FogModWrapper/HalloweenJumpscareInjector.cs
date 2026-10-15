@@ -139,6 +139,9 @@ public static class HalloweenJumpscareInjector
         lines.AddRange(actor.EntryFlags.Select(f => $"IfEventFlag(OR_01, ON, TargetEventFlagType.EventFlag, {f})"));
         lines.Add("IfConditionGroup(MAIN, PASS, OR_01)");
         lines.Add(Invariant($"WaitRandomTimeSeconds({settings.JumpscareDelayMin}, {settings.JumpscareDelayMax})"));
+        // Another actor of the layer (second map of the cluster) may have
+        // played during the delay.
+        lines.Add(EndIfFlag(actor.LayerFlag));
         lines.AddRange(actor.ExitFlags.Select(EndIfFlag));  // left during the delay: lost
         // Multi-map cluster or open-world part of it: wait for this map.
         lines.Add($"EndIfPlayerInoutMap(EventEndType.Restart, false, {map[0]}, {map[1]}, {map[2]}, {map[3]})");

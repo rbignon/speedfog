@@ -45,4 +45,5 @@ independently.
 - [halloween-ambient.md](halloween-ambient.md) - Halloween ambient dungeon spawns and gate decorations.
 - [halloween-icons.md](halloween-icons.md) - Halloween item icon redirect (Golden Seed, Sacred Tear).
 - [halloween-darkness.md](halloween-darkness.md) - Halloween evergaol lighting over the whole run.
+- [halloween-jumpscares.md](halloween-jumpscares.md) - Halloween jumpscares: an Aging Untouchable appearing on the player in a few dungeon layers.
 - [weather.md](weather.md) - force a fixed weather, pin the clock hour.

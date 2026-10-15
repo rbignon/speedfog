@@ -201,6 +201,24 @@ public class HalloweenJumpscareInjectorTests
     }
 
     [Fact]
+    public void BuildEvent_RechecksTheLayerFlagAfterTheWait()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        var list = HalloweenJumpscareInjector.BuildEvent(events, Actor(755920000), Scare).Instructions;
+
+        // A cluster spanning two maps has one actor per map, both waiting at
+        // once: the one whose delay expires second must see that the layer
+        // already played in the other map.
+        int wait = IndexOf(list, 1001, 2);
+        int layerGuard = list.FindIndex(wait, i => i.Bank == 1003 && i.ID == 2 && U32(i, 4) == 1050290010);
+        Assert.True(layerGuard > wait, "no layer-flag guard after the wait");
+        Assert.True(layerGuard < IndexOf(list, 2003, 66));
+    }
+
+    [Fact]
     public void BuildEvent_RestartsWhileThePlayerIsOutsideTheActorsMap()
     {
         var events = BuildEvents();

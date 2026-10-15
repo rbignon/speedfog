@@ -138,6 +138,7 @@ Allocations in regulation.bin params (not event flags). Listed here so future co
 | 755890001 | NpcThinkParam | UntouchableBossInjector | `SpeedFogIds.UntouchableBossThinkRow` | Boss think row (52800000 basis, `battleGoalID` 755890) |
 | 755890002 | NpcParam | AmbientSpawnInjector | `SpeedFogIds.HostileGreeterNpcRow` | Hostile greeter clone (Aging Untouchable basis, flat `GREETER_TIER` scaling, no runes, no drop) |
 | 755890002 | SpEffectParam | UntouchableBossInjector | `SpeedFogIds.UntouchableBrokenSpEffectRow` | Boss's broken state after the first parry (x2 damage taken) |
+| 755890003 | NpcParam | HalloweenJumpscareInjector | `SpeedFogIds.HalloweenJumpscareNpcRow` | Jumpscare actor clone (greeter recipe: flat `GREETER_TIER` scaling, no runes, no drop) |
 | 755890003 | SpEffectParam | UntouchableBossInjector | `SpeedFogIds.UntouchableNearWarpMarkerSpEffect` | Near-warp marker, copy of vanilla 20011452, written in every seed (the static anibnd applies it on every untouchable's burst 3001) |
 
 ## Reserved FMG Entry IDs

@@ -61,8 +61,9 @@ One event per actor in its map's EMEVD:
 2. End if the layer already played, or if the player already left the
    cluster (a flag of an outgoing connection is set).
 3. Wait for an entry flag of the cluster, then `jumpscare_delay`.
-4. End if the player left meanwhile (lost, no carry-over); restart if the
-   player is not in this map.
+4. End if the layer played meanwhile (another actor of the cluster, in
+   its other map) or the player left (lost, no carry-over); restart if
+   the player is not in this map.
 5. Set the layer flag (before the visual: a death or quit-out never
    replays it).
 6. Enable; in `scare` mode switch to team type 26 (Friendly NPC); warp
