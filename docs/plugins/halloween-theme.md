@@ -12,8 +12,9 @@ never genuine-spooky. See the design spec:
 The felled/slain banners read "BURIED" / "ENTERRÉ" (graveyard theme, with
 "R.I.P." on death). They read "SPOOKED" until 2026-10-01, when a racer
 objected that "spook" is a US racial slur: avoid "spook" / "spooked" in
-themed text. The adjective in "Spooky Scary Skeleton" (Putrescent Knight) is
-kept on purpose (owner decision, 2026-10-01).
+themed text. "Spooky Scary Skeleton" (Putrescent Knight) kept the adjective
+by owner decision (2026-10-01) until 2026-10-15, when the boss became the
+"Headless Horseman".
 
 Beyond the summer-style boss epithets and banners, the catalogue also
 renames Golden Seed (`Pumpkin Seed`) and Sacred Tear (`Profane Tear`)

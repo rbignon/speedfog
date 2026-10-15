@@ -83,8 +83,8 @@ fr = "Metyr, mère des Doigts de sorcière"
 [[bosses]]
 npc_name_id = 905020000
 name = "Putrescent Knight"
-en = "Spooky Scary Skeleton"
-fr = "Squelette épouvantable"
+en = "Headless Horseman"
+fr = "Cavalier sans tête"
 
 [[bosses]]
 npc_name_id = 904760000
@@ -107,8 +107,8 @@ fr = "Malenia, balai de Miquella"
 [[bosses]]
 npc_name_id = 905120000
 name = "Bayle the Dread"
-en = "Bayle the Candy Hoarder"
-fr = "Bayle l'Accapareur de bonbons"
+en = "Bayle the Dragon-o'-Lantern"
+fr = "Bayle le Dragon-lanterne"
 
 [[bosses]]
 npc_name_id = 132400
@@ -155,8 +155,8 @@ fr = "Mohg, seigneur des vampires"
 [[bosses]]
 npc_name_id = 903050500
 name = "Commander Niall"
-en = "Headless Horseman Niall"
-fr = "Niall, le Cavalier sans tête"
+en = "Niall and His Little Monsters"
+fr = "Niall et ses petits monstres"
 
 [[bosses]]
 npc_name_id = 903460500
@@ -221,14 +221,14 @@ fr = "Fantôme ancestral royal"
 [[bosses]]
 npc_name_id = 904770000
 name = "Valiant Gargoyles"
-en = "Infernal Gargoyle"
-fr = "Gargouille infernale"
+en = "Weeping Angel"
+fr = "Ange pleureur"
 
 [[bosses]]
 npc_name_id = 904770001
 name = "Valiant Gargoyle (Twinblade)"
-en = "Infernal Gargoyle"
-fr = "Gargouille infernale"
+en = "Weeping Angel"
+fr = "Ange pleureur"
 
 [[bosses]]
 npc_name_id = 903320000
