@@ -145,6 +145,8 @@ speedfog/
 │   │   ├── TorrentArenaPatcher.cs  # Re-enable Torrent inside selected boss arenas
 │   │   ├── WeatherInjector.cs  # Force weather / pin clock hour ([plugin.weather])
 │   │   ├── HalloweenDarknessInjector.cs  # Evergaol gparam override over the whole run ([plugin.halloween] darkness)
+│   │   ├── JumpscarePlanner.cs  # Draw the Halloween jumpscare layers and their actors (flags, maps, ids)
+│   │   ├── HalloweenJumpscareInjector.cs  # Jumpscare actor row, hidden c5280 placement and warp events ([plugin.halloween] jumpscares)
 │   │   ├── BossNameInjector.cs  # Healthbar names of relocated enemies (graph.json boss_names)
 │   │   ├── MsgBndEditor.cs  # Shared msgbnd edit helper (engus + frafr, mod copy over vanilla)
 │   │   ├── WeaponUpgradeInjector.cs  # Weapon upgrade initialization for starting weapons
@@ -218,6 +220,7 @@ speedfog/
 │       ├── halloween-ambient.md  # Halloween ambient dungeon spawns + gate decorations
 │       ├── halloween-icons.md  # Halloween item icon redirect (Golden Seed, Sacred Tear)
 │       ├── halloween-darkness.md  # Halloween evergaol lighting over the whole run
+│       ├── halloween-jumpscares.md  # Halloween jumpscares: Aging Untouchable warping onto the player in drawn dungeon layers
 │       └── weather.md       # Weather plugin: force weather + pin clock hour
 ├── SoulsFormats/            # SoulsFormatsNEXT git submodule (used by StaticModBuilder)
 └── output/                  # Generated mod (gitignored, self-contained)

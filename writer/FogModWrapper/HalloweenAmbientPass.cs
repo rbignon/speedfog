@@ -21,6 +21,10 @@ namespace FogModWrapper;
 /// (HalloweenGateAnchors.DecorClusterTypes includes "start",
 /// SpawnClusterTypes does not), so this driver unions the two maps of
 /// per-map anchors/specs and hands each feature only its own.
+///
+/// HalloweenJumpscareInjector's hidden actors (maps from the JumpscarePlan)
+/// are placed between the decorations and the spawns, and their events
+/// written after the shared MSB write.
 /// </summary>
 public static class HalloweenAmbientPass
 {
@@ -31,7 +35,8 @@ public static class HalloweenAmbientPass
         Dictionary<string, (string ASideArea, string BSideArea)> gateSides,
         Events events,
         string dataDir,
-        HalloweenPluginSettings.Settings settings)
+        HalloweenPluginSettings.Settings settings,
+        JumpscarePlan jumpscarePlan)
     {
         var catalog = HalloweenDecorLoader.Load(
             Path.Combine(dataDir, "plugins", "halloween_decorations.toml"));
@@ -49,6 +54,8 @@ public static class HalloweenAmbientPass
 
         var mapIds = new HashSet<string>(decorGatesByMap.Keys);
         mapIds.UnionWith(spawnSpecsByMap.Keys);
+        var jumpscareActorsByMap = jumpscarePlan.ActorsByMap();
+        mapIds.UnionWith(jumpscareActorsByMap.Keys);
 
         // Decor entity/event id allocation is planned over exactly the maps
         // decorGatesByMap produced, in that dictionary's own enumeration
@@ -69,9 +76,12 @@ public static class HalloweenAmbientPass
             Console.WriteLine("Injecting Halloween gate decorations...");
         if (spawnsEnabled)
             Console.WriteLine("Injecting Halloween ambient spawns at cluster exit gates...");
+        if (jumpscarePlan.Actors.Count > 0)
+            Console.WriteLine("Injecting Halloween jumpscare actors...");
 
         int totalDecor = 0, totalDecorMaps = 0;
         int totalGreeters = 0, totalAmbushers = 0, totalSpawnMaps = 0;
+        int totalJumpscares = 0, totalJumpscareMaps = 0;
 
         MsbHelper.ForEachWithBufferedLogs(mapIds, (mapId, log) =>
         {
@@ -79,6 +89,8 @@ public static class HalloweenAmbientPass
                 ? dg : new List<HalloweenGateAnchors.GateAnchor>();
             var spawnSpecs = spawnSpecsByMap.TryGetValue(mapId, out var ss)
                 ? ss : new List<SpawnSpec>();
+            var jumpscareActors = jumpscareActorsByMap.TryGetValue(mapId, out var ja)
+                ? ja : new List<JumpscareActor>();
 
             var msbFileName = $"{mapId}.msb.dcx";
             var msbPath = MsbHelper.FindMsbPath(modDir, msbFileName) ?? MsbHelper.FindMsbPath(gameDir, msbFileName);
@@ -88,6 +100,8 @@ public static class HalloweenAmbientPass
                     log($"  Warning: {msbFileName} not found, skipping gate decorations for {mapId}");
                 if (spawnSpecs.Count > 0)
                     log($"  Warning: {msbFileName} not found, skipping ambient spawns for {mapId}");
+                if (jumpscareActors.Count > 0)
+                    log($"  Warning: {msbFileName} not found, skipping jumpscare actors for {mapId}");
                 return;
             }
 
@@ -101,13 +115,21 @@ public static class HalloweenAmbientPass
                 (decorPlaced, sfxWork) = GateDecorInjector.ApplyToMsb(msb, decorGates, catalog, plan.EntityIdBase, log);
             }
 
+            // Jumpscare actors before the spawns: greeters and ambushers
+            // carry EntityID 0 and would pass the jumpscare clone-source
+            // filter, while the actors carry managed ids every other phase
+            // already ignores.
+            var placedActors = jumpscareActors.Count > 0
+                ? HalloweenJumpscareInjector.ApplyToMsb(msb, jumpscareActors, log)
+                : new List<JumpscareActor>();
+
             // Decor placement runs first: see class doc comment
             // (ground-evidence invariant).
             var (greeters, ambushers) = spawnSpecs.Count > 0
                 ? AmbientSpawnInjector.ApplyToMsb(msb, spawnSpecs, log)
                 : (0, 0);
 
-            if (decorPlaced + greeters + ambushers > 0)
+            if (decorPlaced + greeters + ambushers + placedActors.Count > 0)
             {
                 var writePath = MsbHelper.FindMsbPath(modDir, msbFileName) ?? MsbHelper.FindOrCreateMsbDir(modDir, msbFileName);
                 Directory.CreateDirectory(Path.GetDirectoryName(writePath)!);
@@ -131,11 +153,21 @@ public static class HalloweenAmbientPass
                 var plan = decorPlans[mapId];
                 GateDecorInjector.WriteSfxEvents(modDir, gameDir, events, mapId, sfxWork, plan.EventOffsetBase, log);
             }
+
+            if (placedActors.Count > 0)
+            {
+                Interlocked.Add(ref totalJumpscares, placedActors.Count);
+                Interlocked.Increment(ref totalJumpscareMaps);
+                HalloweenJumpscareInjector.WriteEvents(
+                    modDir, gameDir, events, mapId, placedActors, settings, log);
+            }
         });
 
         if (!catalog.IsEmpty)
             Console.WriteLine($"  Placed {totalDecor} gate decorations across {totalDecorMaps} maps");
         if (spawnsEnabled)
             Console.WriteLine($"  Placed {totalGreeters} greeters + {totalAmbushers} ambushers across {totalSpawnMaps} maps");
+        if (jumpscarePlan.Actors.Count > 0)
+            Console.WriteLine($"  Placed {totalJumpscares} jumpscare actors across {totalJumpscareMaps} maps");
     }
 }

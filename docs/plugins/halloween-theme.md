@@ -33,8 +33,10 @@ Both text themes can be enabled at once; they apply in order (summer then
 halloween) and the later one overwrites colliding entries, with a warning
 logged by `Program.cs`.
 
-The Halloween namespace also covers two non-text layers, ambient dungeon
-spawns and gate decorations: see
-[halloween-ambient.md](halloween-ambient.md); and a fourth, custom
-inventory icons for Golden Seed and Sacred Tear matching the renames
-above: see [halloween-icons.md](halloween-icons.md).
+The Halloween namespace also covers non-text layers: ambient dungeon
+spawns and gate decorations (see
+[halloween-ambient.md](halloween-ambient.md)); custom inventory icons for
+Golden Seed and Sacred Tear matching the renames above (see
+[halloween-icons.md](halloween-icons.md)); and jumpscares, an Aging
+Untouchable appearing on the player in a few dungeon layers (see
+[halloween-jumpscares.md](halloween-jumpscares.md)).

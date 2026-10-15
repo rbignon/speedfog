@@ -864,6 +864,8 @@ Example:
                 ctx.GreeterRowApplied = AmbientSpawnInjector.ApplyHostileGreeterRow(reg);
             if (ctx.HalloweenSettings.Ambushes)
                 ctx.AmbusherRowsApplied = AmbientSpawnInjector.ApplyDecorativeAmbusherRows(reg);
+            if (ctx.HalloweenSettings.Jumpscares > 0)
+                ctx.JumpscareRowApplied = HalloweenJumpscareInjector.ApplyJumpscareRow(reg);
             HalloweenIconInjector.ApplyTo(reg);
         }
 
@@ -949,7 +951,9 @@ Example:
         // map's MSB once (decor placement first: the decor ground estimate
         // uses vanilla enemies as floor evidence, and AmbientSpawnInjector's
         // greeters/ambushers carry EntityID 0, which would pass its vanilla
-        // filter). ctx.HalloweenSettings is parsed once, on first access.
+        // filter). Plus the jumpscare actors in the dungeon layers
+        // JumpscarePlanner draws. ctx.HalloweenSettings is parsed once, on
+        // first access.
         if (ctx.GraphData.IsPluginEnabled("halloween"))
         {
             // Same two-phase guard as the Untouchable boss below: a flavor
@@ -961,6 +965,12 @@ Example:
                 Console.WriteLine("Halloween spawns: regulation phase did not write the greeter rows, skipping greeters");
             if (settings.Ambushes && !ctx.AmbusherRowsApplied)
                 Console.WriteLine("Halloween spawns: regulation phase did not write the ambusher rows, skipping ambushers");
+            var jumpscarePlan = JumpscarePlan.Empty;
+            if (settings.Jumpscares > 0 && !ctx.JumpscareRowApplied)
+                Console.WriteLine("Halloween jumpscares: regulation phase did not write the jumpscare row, skipping jumpscares");
+            else if (settings.Jumpscares > 0)
+                jumpscarePlan = JumpscarePlanner.Plan(
+                    ctx.GraphData, BuildZoneMaps(ctx.Ann), settings.Jumpscares, Console.WriteLine);
             HalloweenAmbientPass.Inject(
                 ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.Connections,
                 ctx.GraphData.Nodes, gateSides, ctx.Events, ctx.Config.DataDir,
@@ -968,7 +978,8 @@ Example:
                 {
                     Greeters = settings.Greeters && ctx.GreeterRowApplied,
                     Ambushes = settings.Ambushes && ctx.AmbusherRowsApplied,
-                });
+                },
+                jumpscarePlan);
         }
 
         // Aging Untouchable minor boss: repoint enemy-randomizer-placed
@@ -1035,6 +1046,19 @@ Example:
         SpiritspringRemover.Patch(
             ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.AreaTiers,
             ctx.Tweaks.SpiritspringRemovals);
+    }
+
+    /// <summary>Zone name to its fog.txt maps (Area.Maps, space separated),
+    /// for the jumpscare planner's dungeon-map test.</summary>
+    static Dictionary<string, string[]> BuildZoneMaps(AnnotationData ann)
+    {
+        var zoneMaps = new Dictionary<string, string[]>();
+        foreach (var area in ann.Areas)
+        {
+            if (!string.IsNullOrWhiteSpace(area.Maps))
+                zoneMaps[area.Name] = area.Maps.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        }
+        return zoneMaps;
     }
 
     /// <summary>
@@ -1132,6 +1156,10 @@ Example:
         // disabled or the regulation phase warn-returned.
         public bool GreeterRowApplied;
         public bool AmbusherRowsApplied;
+
+        // Set by ApplyRegulation when [plugin.halloween] jumpscares > 0;
+        // ApplyModDirInjectors places no actor without the row.
+        public bool JumpscareRowApplied;
 
         // Parsed lazily on first access: ApplyCommonInjectors (darkness),
         // ApplyRegulation (ambusher row gating) and ApplyModDirInjectors

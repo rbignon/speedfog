@@ -28,13 +28,15 @@ seed of a future framework; extract a shared interface only once two or more
 opt-in plugins exist (rule of three). Note that a single theme can span
 processes (e.g. text in FogModWrapper, lighting in StaticModBuilder), so the
 cohesive unit is the config namespace, read independently where each piece
-runs. Halloween is the current example spanning five features under one
+runs. Halloween is the current example spanning six features under one
 namespace: `TextTheme` (boss/UI text reskin), `AmbientSpawnInjector`
 (dungeon exit gate greeters/ambushes), `GateDecorInjector` (catalogue
 decorations), `HalloweenIconInjector` (item icon redirect, plus its
-own bootstrap-time overlay builder and packaging conditional), and
-`HalloweenDarknessInjector` (evergaol lighting everywhere), each reading
-`[plugin.halloween]` independently.
+own bootstrap-time overlay builder and packaging conditional),
+`HalloweenJumpscareInjector` (an Aging Untouchable appearing on the
+player in a few dungeon layers), and `HalloweenDarknessInjector`
+(evergaol lighting everywhere), each reading `[plugin.halloween]`
+independently.
 
 ## Plugins
 

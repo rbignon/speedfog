@@ -8,7 +8,9 @@ MSB once and calls into both features (decorations from
 `writer/FogModWrapper/GateDecorInjector.cs` before spawns from
 `writer/FogModWrapper/AmbientSpawnInjector.cs`) rather than each running
 its own independent per-map pass, with the shared anchor collection in
-`writer/FogModWrapper/HalloweenGateAnchors.cs`. See "Driver architecture"
+`writer/FogModWrapper/HalloweenGateAnchors.cs`. The same driver also
+places the jumpscare actors (see
+[halloween-jumpscares.md](halloween-jumpscares.md)). See "Driver architecture"
 below for the call graph. See [halloween-theme.md](halloween-theme.md) for
 the text reskin layer that shares the same `[plugin.halloween]` namespace.
 
@@ -65,8 +67,9 @@ feature handled by `GateDecorInjector`.
 ## Driver architecture
 
 `HalloweenAmbientPass.Inject` is the single call site (from
-`ApplyModDirInjectors` in `Program.cs`) for both features; neither
-`GateDecorInjector` nor `AmbientSpawnInjector` has its own top-level
+`ApplyModDirInjectors` in `Program.cs`) for all three features; none of
+`GateDecorInjector`, `AmbientSpawnInjector` and
+`HalloweenJumpscareInjector` has its own top-level
 `Inject` entry point or reads/writes an MSB on its own. Per map, the
 driver:
 
@@ -77,10 +80,16 @@ driver:
    enemies still be in the MSB when decor placement runs, and the spawns
    carry `EntityID = 0` until placed, which would otherwise pass decor's
    own vanilla-enemy filter.
-3. Writes the MSB once, only if either phase placed something.
-4. Separately calls `GateDecorInjector.WriteSfxEvents` for the decor
-   layer's own EMEVD tail (`sfx_id > 0` entries only); spawns need no
-   EMEVD at all (see "Why no EMEVD and no scaling").
+3. Calls `HalloweenJumpscareInjector.ApplyToMsb` (jumpscare actors, see
+   [halloween-jumpscares.md](halloween-jumpscares.md)) between the two:
+   greeters and ambushers carry `EntityID = 0` and would pass the actors'
+   vanilla clone-source filter, while the actors carry managed ids that
+   the spawn phase already ignores.
+4. Writes the MSB once, only if any phase placed something.
+5. Separately calls `GateDecorInjector.WriteSfxEvents` for the decor
+   layer's own EMEVD tail (`sfx_id > 0` entries only) and
+   `HalloweenJumpscareInjector.WriteEvents` for the actors it placed;
+   spawns need no EMEVD at all (see "Why no EMEVD and no scaling").
 
 Because the two features anchor on different cluster-type sets
 (`DecorClusterTypes` includes `start`, `SpawnClusterTypes` does not), the
