@@ -224,17 +224,32 @@ bipartite graph instead of only the arena side).
 
 ## Layer weight balance
 
-On the standard path, a DAG layer never holds both a light and a heavy
-extreme boss of its job (minor arenas; major arenas, `final_boss` included in
-"all" mode). Per job and weight band, with
+On the standard path, two rules keep the bosses of a DAG layer comparable,
+both on the layer's band weights (below).
+
+**Extremes rule (every job).** A DAG layer never holds both a light and a
+heavy extreme boss of its job (minor arenas; major arenas, `final_boss`
+included in "all" mode). Per job and weight band, with
 `k = max(1, round(boss_extreme_fraction * len(pool)))`, the light extremes
 weigh at most the k-th lightest `boss.weight` of the job's candidate pool and
 the heavy ones at least the k-th heaviest, ties at the cut included
-(`extreme_sets`). Two heavy bosses may share a layer, and an extreme facing
-average bosses stays allowed: only opposite extremes are kept apart, which
-is the owner's rule ("two extremes must not meet"). `[enemy]
-boss_extreme_fraction` defaults to 0.10; 0 disables. A pool whose weights
-are all equal (no annotation) has no extremes.
+(`extreme_sets`). Two heavy bosses may share a layer, and on its own the rule
+lets an extreme face average bosses: only opposite extremes are kept apart
+("two extremes must not meet"). `[enemy] boss_extreme_fraction` defaults to
+0.10; 0 disables. A pool whose weights are all equal (no annotation) has no
+extremes.
+
+**Ratio cap (minor arenas only).** A layer's heaviest minor boss weighs at
+most `[enemy] minor_boss_max_ratio` times its lightest (default 2.0; 0
+disables). It closes the gap the extremes rule leaves open: a boss_rush seed
+put Crucible Misbegotten Duo (1.87 late, the fourth heaviest minor) next to
+two median minors (about 0.7, ratio 2.6), a "clearly slower" lane that the
+extremes rule allowed. With the 2026-10 weights and the default fraction
+(0.10), the light and heavy cuts of the minor pool are at least 2.4x apart in
+every band, so at 2.0 the cap also enforces the extremes rule for minors (a
+larger fraction narrows the cuts). Major arenas keep the extremes rule
+only: under the cap, swaps (below) would push Malenia and Placidusax into the
+only single-slot major layer, the final boss.
 
 The band is the layer's: all boss nodes of a layer share one scaling tier
 (checked on 27,214 race layers), and `weight_band` maps it to early
@@ -247,19 +262,56 @@ Soldier of Godrick (a light extreme in every band) past tier 8.
 ID -> layer, -> tier) to `generate_item_config`. `_build_enemy_assignments`
 groups the arena slots of each job by layer (a phase-1 slot takes its
 leader's layer), tags each group with its band, and calls
-`match_arenas_balanced`, which samples by rejection: it runs the unchanged
-`match_arenas_to_bosses` and accepts the matching when no group holds both
-extremes, else draws again with the same RNG, up to `BALANCE_ATTEMPTS` (50).
-The accepted matching follows the plain matcher's distribution conditioned
-on the rule, so an extreme boss only loses the combinations the rule
-forbids. A job the plain matcher cannot solve fails at once with the plain
-error; exhausted attempts raise a `MatchingError` naming the rule, which
-`post_validate` turns into a `GenerationError` (reroll in auto mode, clear
-error with a fixed seed). The first draw is exactly the plain matching, so a
-seed whose plain matching already satisfies the rule keeps its assignments.
+`match_arenas_balanced` with the job's cap (`minor_boss_max_ratio` for
+minors, none for majors). Both mechanisms start from the unchanged
+`match_arenas_to_bosses` and keep its first draw when every group passes:
 
-Measured with the 2026-10-01 band weights (150 `standard.toml` DAGs per
-mode, one unseeded sample, rule off and on run on the same DAGs): the
+- Without a cap (majors, or minors with the cap at 0), rejection sampling:
+  a failing draw is discarded and the matcher draws again with the same
+  RNG. The accepted matching follows the plain matcher's distribution
+  conditioned on the rule, so an extreme boss only loses the combinations
+  the rule forbids.
+- With a cap (minors by default), repair by swaps (`_repair_by_swaps`):
+  each step picks a failing layer at random and applies, at random, one of
+  the swaps between one of its slots and any other slot of the job that
+  keeps both arenas valid (`is_compatible`, own-family exclusion) and
+  strictly lowers the summed excess (`_layer_excess`: one unit for a light
+  and heavy extreme pair, plus the log of the weight ratio beyond the cap).
+  The drawn bosses stay, only their arenas change; the search is greedy
+  (it gives up when the failing layer it picked has no improving swap), and
+  a draw it cannot fix is replaced by the next one. Rejection cannot reach a tight cap: in the
+  2026-10-15 simulation it rerolled 60-75% of boss_rush and
+  hardcore_boss_rush DAGs at 2.5, and at 3.0 already cut Godskin
+  Spiritcaller Snail to 21-38% of its rate without any rule in most pools.
+
+Up to `BALANCE_ATTEMPTS` (50) draws per job. A job the plain matcher cannot
+solve fails at once with the plain error; exhausted attempts raise a
+`MatchingError` naming the rules, which `post_validate` turns into a
+`GenerationError` (reroll in auto mode, clear error with a fixed seed). The
+minor and major jobs share one RNG, minors first: the swaps consume random
+draws, so a seed's major placements differ from those of the uncapped
+matcher even though the major rule and its distribution are unchanged.
+
+Ratio cap measured on 2026-10-15 (1000 production-valid DAGs per racing
+pool: boss_rush, hardcore_boss_rush, standard, sprint, chill, hardcore,
+expedition, boss_shuffle; every variant on the same DAGs and seeds; scripts
+`tools/analysis/boss_cap_*.py`, gitignored): multi-slot minor layers above
+2x drop from 26-34% to none, above 2.5x from 10-15% to none, and the mean
+heaviest-minus-lightest gap from 0.42 to 0.33 (standard). Against a matching
+without any rule, Godskin Spiritcaller Snail (2.37, the heaviest minor) keeps
+all its appearances in boss_rush and expedition, 84% in hardcore, 77% in
+standard, chill and boss_shuffle, about 62% in sprint (few slots, noisy);
+the other heavy minors stay within 94-108%, Soldier of Godrick at 81% in
+hardcore is the lightest boss most affected. No DAG reroll, about 1.1 draws
+and at most 16 ms per seed. Heavy minors land more often on single-slot
+layers (Snail 0-2% -> 13-16% of its placements in standard and chill), and
+Commander O'Neil, heavy only late, drifts to earlier layers. Under the same
+cap, Malenia's single-slot placements would rise from 3% to 21% in
+boss_shuffle, hence majors stay uncapped.
+
+Extremes rule measured with the 2026-10-01 band weights (150
+`standard.toml` DAGs per mode, one unseeded sample, rule off and on run on
+the same DAGs): the
 extremes are 15-16 minors and 5-7 majors per side and band; no DAG reroll,
 at most 10 draws per job; in "all" mode 2.5% of major and 6.3% of minor
 placements move, Fire Giant 2 90 -> 71 appearances is the most affected
@@ -343,6 +395,7 @@ gets a non-DLC replacement boss.
 | ``[enemy].dlc_bosses = false`` | Filter DLC entries from the candidate pool. Arena selection is untouched (DLC arenas still get a non-DLC replacement). Independent of ``[item_randomizer].dlc``, which controls item-randomizer scope. |
 | ``[enemy].final_boss`` | Pin one boss into the final arena's last phase (see "Final boss pinning"). Requires ``randomize_bosses = "all"``. |
 | ``[enemy].boss_extreme_fraction`` | Share of each candidate pool counted as light, and as heavy, extremes per weight band (default 0.10); a layer never holds both. ``0`` disables. See "Layer weight balance". Ignored in allowlist mode. |
+| ``[enemy].minor_boss_max_ratio`` | Largest allowed ratio between the heaviest and the lightest minor boss of a layer, on band weights (default 2.0); a failing draw is repaired by swapping its bosses between arenas. Major arenas are not capped. ``0`` disables. See "Layer weight balance". Ignored in allowlist mode. |
 
 ## Wire format
 

@@ -13,6 +13,7 @@ from typing import Any
 from speedfog.constants import (
     DEFAULT_BOSS_EXTREME_FRACTION,
     DEFAULT_MAX_LAYER_SPREAD,
+    DEFAULT_MINOR_BOSS_MAX_RATIO,
     INTERMEDIATE_CLUSTER_TYPES,
     MAX_TIER,
     WEIGHT_TOLERANCE_STEP,
@@ -441,6 +442,19 @@ def _validate_fraction(key: str, value: Any) -> float:
     return float(value)
 
 
+def _validate_ratio(key: str, value: Any) -> float:
+    """Validate an ``[enemy]`` weight ratio cap: 0 (disabled) or a finite >= 1."""
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int | float)
+        or not math.isfinite(value)
+    ):
+        raise ValueError(f"enemy.{key} must be a finite number, got {value!r}")
+    if value != 0 and value < 1:
+        raise ValueError(f"enemy.{key} must be 0 or >= 1, got {value}")
+    return float(value)
+
+
 @dataclass
 class EnemyConfig:
     """Enemy randomization configuration."""
@@ -467,6 +481,11 @@ class EnemyConfig:
     # per weight band (boss.weight at the layer's scaling tier); a layer may
     # not hold both. 0 disables. Ignored in allowlist mode (bosses non-empty).
     boss_extreme_fraction: float = DEFAULT_BOSS_EXTREME_FRACTION
+    # Largest allowed ratio between the heaviest and the lightest minor boss
+    # of a layer (boss.weight at the layer's scaling tier); a failing draw is
+    # repaired by swapping its bosses between arenas. Major arenas keep the
+    # extremes rule only. 0 disables. Ignored in allowlist mode.
+    minor_boss_max_ratio: float = DEFAULT_MINOR_BOSS_MAX_RATIO
 
     def __post_init__(self) -> None:
         """Validate and normalize enemy config."""
@@ -502,6 +521,9 @@ class EnemyConfig:
             )
         self.boss_extreme_fraction = _validate_fraction(
             "boss_extreme_fraction", self.boss_extreme_fraction
+        )
+        self.minor_boss_max_ratio = _validate_ratio(
+            "minor_boss_max_ratio", self.minor_boss_max_ratio
         )
 
 
@@ -727,6 +749,7 @@ _KNOWN_SECTION_KEYS: dict[str, frozenset[str] | None] = {
             "dlc_bosses",
             "bosses",
             "boss_extreme_fraction",
+            "minor_boss_max_ratio",
             "final_boss",
         }
     ),
@@ -998,6 +1021,9 @@ class Config:
                 final_boss=enemy_section.get("final_boss", ""),
                 boss_extreme_fraction=enemy_section.get(
                     "boss_extreme_fraction", DEFAULT_BOSS_EXTREME_FRACTION
+                ),
+                minor_boss_max_ratio=enemy_section.get(
+                    "minor_boss_max_ratio", DEFAULT_MINOR_BOSS_MAX_RATIO
                 ),
             ),
             tarnished=TarnishedConfig(

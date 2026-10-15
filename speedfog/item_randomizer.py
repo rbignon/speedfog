@@ -85,7 +85,9 @@ def generate_item_config(
     weight balance of the standard path and ``boss_tiers`` (cluster ID ->
     scaling tier) picks each layer's weight band (mid without it): a layer
     never holds both a light and a heavy extreme of its job's pool, with
-    ``config.enemy.boss_extreme_fraction`` of the pool on each side (see
+    ``config.enemy.boss_extreme_fraction`` of the pool on each side, and a
+    minor layer's heaviest boss weighs at most
+    ``config.enemy.minor_boss_max_ratio`` times its lightest (see
     ``match_arenas_balanced``). ``None`` disables the balance. The allowlist
     path ignores both.
 
@@ -238,6 +240,7 @@ def generate_item_config(
                 boss_layers=boss_layers,
                 boss_tiers=boss_tiers,
                 extreme_fraction=config.enemy.boss_extreme_fraction,
+                minor_max_ratio=config.enemy.minor_boss_max_ratio,
                 skip_slots=skip_slots,
             )
 
@@ -471,6 +474,7 @@ def _build_enemy_assignments(
     boss_layers: Mapping[str, int] | None = None,
     boss_tiers: Mapping[str, int] | None = None,
     extreme_fraction: float = 0.0,
+    minor_max_ratio: float = 0.0,
     skip_slots: frozenset[int] = frozenset(),
 ) -> dict[int, int]:
     """Match DAG boss clusters to candidate bosses under compatibility rules.
@@ -487,7 +491,10 @@ def _build_enemy_assignments(
     a light and a heavy extreme of its job's pool in the layer's weight band
     (``boss_tiers``, cluster ID -> tier; mid without it),
     ``extreme_fraction`` of the pool on each side (0 disables; see
-    ``match_arenas_balanced``). A phase-1 slot takes its leader's layer.
+    ``match_arenas_balanced``). Minor layers also keep their heaviest boss
+    within ``minor_max_ratio`` times their lightest (0 disables); major
+    layers only follow the extremes rule. A phase-1 slot takes its leader's
+    layer.
     ``skip_slots`` are left out of the match (slots pinned by the caller).
 
     Raises ``KeyError`` if a DAG boss cluster's leader (or its phase-1
@@ -543,8 +550,11 @@ def _build_enemy_assignments(
 
     rng = random.Random(seed ^ BOSS_ASSIGNMENT_SEED_SALT)
     out: dict[int, int] = {}
-    jobs = [(minors, minor_pool, True), (majors, major_pool, randomize_majors)]
-    for arenas, pool, enabled in jobs:
+    jobs = [
+        (minors, minor_pool, True, minor_max_ratio),
+        (majors, major_pool, randomize_majors, 0.0),
+    ]
+    for arenas, pool, enabled, max_ratio in jobs:
         if enabled and arenas:
             out.update(
                 match_arenas_balanced(
@@ -555,6 +565,7 @@ def _build_enemy_assignments(
                     check_size=check_size,
                     fraction=extreme_fraction,
                     forbidden=_family_forbidden(arenas, phase_mapping),
+                    max_ratio=max_ratio,
                 )
             )
     return out

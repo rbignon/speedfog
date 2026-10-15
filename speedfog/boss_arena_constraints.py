@@ -256,20 +256,108 @@ def extreme_sets(
     return light, heavy
 
 
-def _extremes_kept_apart(
+def _layer_excess(
+    band: str,
+    placed: Sequence[int],
+    bosses: Mapping[int, BossTags],
+    extremes: Mapping[str, tuple[frozenset[int], frozenset[int]]],
+    log_cap: float,
+) -> float:
+    """How far one layer's bosses are from the balance rules; 0 when they pass.
+
+    One unit when the layer holds both a light and a heavy extreme of its
+    band, plus how far the log of its heaviest-to-lightest weight ratio
+    exceeds ``log_cap`` (``math.inf`` without a cap). A single slot passes.
+    """
+    if len(placed) < 2:
+        return 0.0
+    light, heavy = extremes[band]
+    held = set(placed)
+    excess = 1.0 if held & light and held & heavy else 0.0
+    weights = [bosses[boss].weight_at(band) for boss in placed]
+    over = math.log(max(weights) / min(weights)) - log_cap
+    if over > _WEIGHT_EPSILON:
+        excess += over
+    return excess
+
+
+def _layers_pass(
     assignment: Mapping[int, int],
     groups: Sequence[tuple[str, Sequence[int]]],
+    bosses: Mapping[int, BossTags],
     extremes: Mapping[str, tuple[frozenset[int], frozenset[int]]],
+    log_cap: float,
 ) -> bool:
-    """True when no group holds both a light and a heavy extreme of its band."""
-    for band, group in groups:
-        if len(group) < 2:
-            continue
-        light, heavy = extremes[band]
-        placed = {assignment[arena_id] for arena_id in group}
-        if placed & light and placed & heavy:
+    """True when no group of ``assignment`` breaks a balance rule."""
+    return all(
+        _layer_excess(band, [assignment[a] for a in group], bosses, extremes, log_cap)
+        <= _WEIGHT_EPSILON
+        for band, group in groups
+    )
+
+
+def _repair_by_swaps(
+    assignment: dict[int, int],
+    *,
+    arenas: Mapping[int, ArenaTags],
+    bosses: Mapping[int, BossTags],
+    groups: Sequence[tuple[str, Sequence[int]]],
+    extremes: Mapping[str, tuple[frozenset[int], frozenset[int]]],
+    log_cap: float,
+    rng: random.Random,
+    check_size: bool,
+    forbidden: Mapping[int, frozenset[int]],
+) -> bool:
+    """Swap placed bosses between arenas until every group passes, in place.
+
+    Each step takes a failing group at random and applies, at random, one of
+    the swaps between one of its slots and any slot outside it that keeps
+    both arenas compatible (``is_compatible`` and ``forbidden``) and strictly
+    lowers the summed ``_layer_excess``. A slot in no group (no known layer)
+    is a free swap partner. The placed bosses never change, only their
+    arenas. The sum strictly decreases, so the loop ends; this greedy search
+    returns False as soon as the failing group it picked has no such swap.
+    """
+    slot_group = {slot: gi for gi, (_, group) in enumerate(groups) for slot in group}
+
+    def excess_of(group_index: int, change: tuple[int, int] | None = None) -> float:
+        """Excess of a group, with ``change = (slot, boss)`` applied if given."""
+        band, group = groups[group_index]
+        changed = dict([change]) if change is not None else {}
+        placed = [changed.get(s, assignment[s]) for s in group]
+        return _layer_excess(band, placed, bosses, extremes, log_cap)
+
+    def fits(slot: int, boss: int) -> bool:
+        return boss not in forbidden.get(slot, frozenset()) and is_compatible(
+            arenas[slot], bosses[boss], check_size=check_size
+        )
+
+    excess = [excess_of(gi) for gi in range(len(groups))]
+    while True:
+        failing = [gi for gi, e in enumerate(excess) if e > _WEIGHT_EPSILON]
+        if not failing:
+            return True
+        gi = rng.choice(failing)
+        moves: list[tuple[int, int, float, float]] = []
+        for slot in groups[gi][1]:
+            boss = assignment[slot]
+            for other, other_boss in assignment.items():
+                gj = slot_group.get(other)
+                if gj == gi or not fits(slot, other_boss) or not fits(other, boss):
+                    continue
+                new_i = excess_of(gi, (slot, other_boss))
+                new_j = 0.0 if gj is None else excess_of(gj, (other, boss))
+                old_j = 0.0 if gj is None else excess[gj]
+                if new_i + new_j < excess[gi] + old_j - _WEIGHT_EPSILON:
+                    moves.append((slot, other, new_i, new_j))
+        if not moves:
             return False
-    return True
+        slot, other, new_i, new_j = rng.choice(moves)
+        assignment[slot], assignment[other] = assignment[other], assignment[slot]
+        excess[gi] = new_i
+        gj = slot_group.get(other)
+        if gj is not None:
+            excess[gj] = new_j
 
 
 def match_arenas_balanced(
@@ -282,29 +370,40 @@ def match_arenas_balanced(
     fraction: float,
     forbidden: Mapping[int, frozenset[int]] | None = None,
     attempts: int = BALANCE_ATTEMPTS,
+    max_ratio: float = 0.0,
 ) -> dict[int, int]:
-    """``match_arenas_to_bosses`` keeping opposite extremes off a layer.
+    """``match_arenas_to_bosses`` keeping each layer's bosses balanced.
 
     ``groups`` pairs each DAG layer's arena slots with the layer's weight
     band. Per band, ``extreme_sets`` marks the light and heavy extremes of
-    the job's pool (``bosses``); a layer may not hold both. Rejection
-    sampling: run the unchanged matcher and accept its result when every
-    group passes, otherwise draw again with the same ``rng``. The accepted
-    matching follows the plain matcher's distribution conditioned on the
-    rule, so an extreme boss only loses the combinations the rule forbids.
+    the job's pool (``bosses``); a layer may not hold both. With
+    ``max_ratio > 0``, a layer's heaviest boss may also weigh at most
+    ``max_ratio`` times its lightest (band weights).
 
-    ``fraction <= 0`` or a pool without extremes disables the rule. A job the
-    plain matcher cannot solve raises its ``MatchingError`` at once: the
-    matching is exact, so a redraw cannot help. After ``attempts`` rejected
-    draws, a ``MatchingError`` naming the extremes rule is raised; the caller
-    turns it into a DAG reroll.
+    Without a ratio cap, rejection sampling: run the unchanged matcher and
+    accept its result when every group passes, otherwise draw again with
+    the same ``rng``. The accepted matching follows the plain matcher's
+    distribution conditioned on the rule, so an extreme boss only loses the
+    combinations the rule forbids. With a cap, a failing draw is repaired
+    instead (``_repair_by_swaps``): its bosses trade arenas until every layer
+    passes, so the drawn bosses stay and only their placement changes; a
+    draw the swap search cannot fix is replaced by the next one. Rejection
+    alone would almost never draw a passing matching under a tight cap.
+
+    ``fraction <= 0`` or a pool without extremes disables the extremes
+    rule, ``max_ratio <= 0`` the cap. A job the plain matcher cannot solve
+    raises its ``MatchingError`` at once: the matching is exact, so a redraw
+    cannot help. After ``attempts`` failed draws, a ``MatchingError`` naming
+    the rules is raised; the caller turns it into a DAG reroll.
 
     The first draw is exactly ``match_arenas_to_bosses`` with the same
-    ``rng``: a seed whose plain matching already satisfies the rule keeps
+    ``rng``: a seed whose plain matching already satisfies the rules keeps
     its assignments.
     """
     extremes = {band: extreme_sets(bosses, band, fraction) for band in WEIGHT_BANDS}
-    active = any(light for light, _ in extremes.values())
+    capped = max_ratio > 0
+    active = capped or any(light for light, _ in extremes.values())
+    log_cap = math.log(max_ratio) if capped else math.inf
     tries = max(1, attempts)
     for _ in range(tries):
         assignment = match_arenas_to_bosses(
@@ -314,8 +413,27 @@ def match_arenas_balanced(
             check_size=check_size,
             forbidden=forbidden,
         )
-        if not active or _extremes_kept_apart(assignment, groups, extremes):
+        if not active or _layers_pass(assignment, groups, bosses, extremes, log_cap):
             return assignment
+        if capped and _repair_by_swaps(
+            assignment,
+            arenas=arenas,
+            bosses=bosses,
+            groups=groups,
+            extremes=extremes,
+            log_cap=log_cap,
+            rng=rng,
+            check_size=check_size,
+            forbidden=forbidden or {},
+        ):
+            return assignment
+    if capped:
+        raise MatchingError(
+            f"no arena-boss matching keeps every layer within a {max_ratio:g}x "
+            f"weight ratio and light/heavy extreme bosses apart after {tries} "
+            f"attempts (enemy.minor_boss_max_ratio, enemy.boss_extreme_fraction; "
+            f"0 disables)"
+        )
     raise MatchingError(
         f"no arena-boss matching keeps light and heavy extreme bosses apart on "
         f"every layer after {tries} attempts (enemy.boss_extreme_fraction; "

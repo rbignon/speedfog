@@ -879,6 +879,29 @@ def test_enemy_boss_extreme_fraction_rejects_invalid(bad):
         Config.from_dict({"enemy": {"boss_extreme_fraction": bad}})
 
 
+def test_enemy_minor_boss_max_ratio_from_dict():
+    config = Config.from_dict({"enemy": {"minor_boss_max_ratio": 2.5}})
+    assert config.enemy.minor_boss_max_ratio == 2.5
+
+
+def test_enemy_minor_boss_max_ratio_zero_disables():
+    config = Config.from_dict({"enemy": {"minor_boss_max_ratio": 0}})
+    assert config.enemy.minor_boss_max_ratio == 0.0
+
+
+def test_enemy_minor_boss_max_ratio_from_toml(tmp_path):
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("[enemy]\nminor_boss_max_ratio = 3\n")
+    config = Config.from_toml(config_file)
+    assert config.enemy.minor_boss_max_ratio == 3.0
+
+
+@pytest.mark.parametrize("bad", [-1, 0.5, 0.99, True, "2", float("nan"), float("inf")])
+def test_enemy_minor_boss_max_ratio_rejects_invalid(bad):
+    with pytest.raises(ValueError, match="minor_boss_max_ratio must be"):
+        Config.from_dict({"enemy": {"minor_boss_max_ratio": bad}})
+
+
 @pytest.mark.parametrize(
     "key",
     [

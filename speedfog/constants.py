@@ -53,6 +53,11 @@ DEFAULT_MAX_LAYER_SPREAD = 2.0
 # docs/boss-arena-constraints.md, "Layer weight balance").
 DEFAULT_BOSS_EXTREME_FRACTION = 0.10
 
+# Default cap on the heaviest-to-lightest weight ratio of a layer's minor
+# bosses (band weights); 0 disables (see docs/boss-arena-constraints.md,
+# "Layer weight balance").
+DEFAULT_MINOR_BOSS_MAX_RATIO = 2.0
+
 # Width of the weight matcher's anchor bands (generator.py): the first band
 # is +/- this value around the anchor and widens by the same step up to
 # max_weight_tolerance, which config.py requires to be a multiple of it.

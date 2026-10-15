@@ -688,6 +688,210 @@ def test_balanced_infeasible_job_raises_the_plain_error() -> None:
     assert "extreme" not in str(excinfo.value)
 
 
+def _layer_ratios(
+    result: dict[int, int],
+    bosses: dict[int, BossTags],
+    groups: list[tuple[str, list[int]]],
+) -> list[float]:
+    """Heaviest over lightest placed weight of each multi-slot group."""
+    ratios = []
+    for band, group in groups:
+        if len(group) < 2:
+            continue
+        weights = [bosses[result[a]].weight_at(band) for a in group]
+        ratios.append(max(weights) / min(weights))
+    return ratios
+
+
+def test_capped_keeps_every_layer_within_the_ratio() -> None:
+    arenas, bosses, groups = _three_layer_setup()
+    for seed in range(50):
+        result = match_arenas_balanced(
+            arenas=arenas,
+            bosses=bosses,
+            groups=groups,
+            rng=random.Random(seed),
+            check_size=False,
+            fraction=0.0,
+            max_ratio=2.0,
+        )
+        assert len(set(result.values())) == len(arenas), f"seed {seed}"
+        assert max(_layer_ratios(result, bosses, groups)) <= 2.0, f"seed {seed}"
+
+
+def test_capped_swaps_the_drawn_bosses_instead_of_redrawing() -> None:
+    """Two light and two heavy bosses drawn: the fix keeps the same four."""
+    tags = {a: _entity(a) for a in (1, 2, 3, 4)}
+    weights = (1.0, 1.0, 1.0, 4.0, 4.0, 4.0)
+    tags.update({10 + i: _entity(10 + i, weight=w) for i, w in enumerate(weights)})
+    arenas = _arenas_of(tags, [1, 2, 3, 4])
+    bosses = _bosses_of(tags, list(range(10, 16)))
+    groups = [("mid", [1, 2]), ("mid", [3, 4])]
+    repaired = 0
+    for seed in range(100):
+        plain = match_arenas_to_bosses(
+            arenas=arenas, bosses=bosses, rng=random.Random(seed), check_size=False
+        )
+        drawn = sorted(bosses[b].weight_at("mid") for b in plain.values())
+        if drawn != [1.0, 1.0, 4.0, 4.0]:
+            continue  # 3+1 draws cannot be fixed by swaps alone
+        result = match_arenas_balanced(
+            arenas=arenas,
+            bosses=bosses,
+            groups=groups,
+            rng=random.Random(seed),
+            check_size=False,
+            fraction=0.0,
+            max_ratio=2.0,
+        )
+        assert set(result.values()) == set(plain.values()), f"seed {seed}"
+        assert _layer_ratios(result, bosses, groups) == [1.0, 1.0], f"seed {seed}"
+        repaired += result != plain
+    assert repaired > 0  # some draws mixed light and heavy on a layer
+
+
+def test_capped_swaps_respect_arena_compatibility() -> None:
+    """The dragon may only fix its layer by staying in a dragon-friendly arena."""
+    tags = {
+        1: _entity(1, arena_forbids_dragon=True),
+        2: _entity(2, arena_forbids_dragon=True),
+        3: _entity(3),
+        4: _entity(4),
+        10: _entity(10, weight=4.0, is_dragon=True),
+        11: _entity(11, weight=4.0),
+        12: _entity(12, weight=1.0),
+        13: _entity(13, weight=1.0),
+    }
+    for seed in range(50):
+        result = match_arenas_balanced(
+            arenas=_arenas_of(tags, [1, 2, 3, 4]),
+            bosses=_bosses_of(tags, [10, 11, 12, 13]),
+            groups=[("mid", [1, 2]), ("mid", [3, 4])],
+            rng=random.Random(seed),
+            check_size=False,
+            fraction=0.0,
+            max_ratio=2.0,
+        )
+        assert {result[1], result[2]} == {12, 13}, f"seed {seed}: {result}"
+
+
+def test_capped_swaps_never_place_a_forbidden_boss() -> None:
+    """Swaps honor ``forbidden`` (own-arena rule) like the plain matcher."""
+    tags = {a: _entity(a) for a in (1, 2, 3, 4)}
+    weights = {10: 4.0, 11: 4.0, 12: 1.0, 13: 1.0}
+    tags.update({eid: _entity(eid, weight=w) for eid, w in weights.items()})
+    for seed in range(50):
+        result = match_arenas_balanced(
+            arenas=_arenas_of(tags, [1, 2, 3, 4]),
+            bosses=_bosses_of(tags, [10, 11, 12, 13]),
+            groups=[("mid", [1, 2]), ("mid", [3, 4])],
+            rng=random.Random(seed),
+            check_size=False,
+            fraction=0.0,
+            max_ratio=2.0,
+            forbidden={1: frozenset({10})},
+        )
+        assert result[1] != 10, f"seed {seed}: {result}"
+
+
+def test_capped_judges_each_layer_at_its_band() -> None:
+    """Boss 11 weighs 3x the others late only: it must land on the early layer."""
+    tags = {a: _entity(a) for a in (1, 2, 3, 4)}
+    tags.update(
+        {
+            10: _entity(10),
+            11: _entity(11, weights=(1.0, 1.0, 3.0)),
+            12: _entity(12),
+            13: _entity(13),
+        }
+    )
+    for seed in range(50):
+        result = match_arenas_balanced(
+            arenas=_arenas_of(tags, [1, 2, 3, 4]),
+            bosses=_bosses_of(tags, [10, 11, 12, 13]),
+            groups=[("early", [1, 2]), ("late", [3, 4])],
+            rng=random.Random(seed),
+            check_size=False,
+            fraction=0.0,
+            max_ratio=2.0,
+        )
+        assert 11 in (result[1], result[2]), f"seed {seed}: {result}"
+
+
+def test_capped_is_deterministic_for_same_seed() -> None:
+    arenas, bosses, groups = _three_layer_setup()
+    for seed in range(20):
+        runs = [
+            match_arenas_balanced(
+                arenas=arenas,
+                bosses=bosses,
+                groups=groups,
+                rng=random.Random(seed),
+                check_size=False,
+                fraction=0.0,
+                max_ratio=2.0,
+            )
+            for _ in range(2)
+        ]
+        assert runs[0] == runs[1], f"seed {seed}"
+
+
+def test_capped_keeps_first_draw_when_it_passes() -> None:
+    arenas, bosses, groups = _three_layer_setup()
+    for seed in range(20):
+        plain = match_arenas_to_bosses(
+            arenas=arenas, bosses=bosses, rng=random.Random(seed), check_size=False
+        )
+        capped = match_arenas_balanced(
+            arenas=arenas,
+            bosses=bosses,
+            groups=groups,
+            rng=random.Random(seed),
+            check_size=False,
+            fraction=0.0,
+            max_ratio=10.0,  # every pair of _CYCLED_WEIGHTS fits
+        )
+        assert capped == plain, f"seed {seed}"
+
+
+def test_capped_still_keeps_opposite_extremes_apart() -> None:
+    arenas, bosses, groups = _three_layer_setup()
+    light, heavy = extreme_sets(bosses, "mid", 0.2)
+    for seed in range(50):
+        result = match_arenas_balanced(
+            arenas=arenas,
+            bosses=bosses,
+            groups=groups,
+            rng=random.Random(seed),
+            check_size=False,
+            fraction=0.2,
+            max_ratio=100.0,
+        )
+        for _, group in groups:
+            placed = {result[a] for a in group}
+            assert not (placed & light and placed & heavy), f"seed {seed}"
+
+
+def test_capped_raises_when_no_matching_fits_the_ratio() -> None:
+    tags = {
+        1: _entity(1),
+        2: _entity(2),
+        10: _entity(10, weight=0.5),
+        11: _entity(11, weight=5.0),
+    }
+    with pytest.raises(MatchingError, match="ratio"):
+        match_arenas_balanced(
+            arenas=_arenas_of(tags, [1, 2]),
+            bosses=_bosses_of(tags, [10, 11]),
+            groups=[("mid", [1, 2])],
+            rng=random.Random(0),
+            check_size=False,
+            fraction=0.0,
+            max_ratio=2.0,
+            attempts=3,
+        )
+
+
 def test_resolve_allowlist_single_substring_match() -> None:
     tags = {
         15000800: _entity(15000800, name="Malenia Blade of Miquella"),

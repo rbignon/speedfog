@@ -1325,13 +1325,77 @@ def test_generate_item_config_keeps_minor_extremes_apart():
             assert not (bosses & light and bosses & heavy), f"seed {seed} layer {layer}"
 
 
+def test_generate_item_config_caps_the_minor_layer_ratio():
+    """By default no layer's minor bosses differ by more than 2x."""
+    config = Config.from_dict({"enemy": {"randomize_bosses": "minor"}})
+    boss_clusters, boss_layers, tags, pool_ids = _layered_minor_setup()
+    for seed in range(30):
+        result = generate_item_config(
+            config,
+            seed=seed,
+            boss_clusters=boss_clusters,
+            tags=tags,
+            vanilla_major_ids=[],
+            vanilla_minor_ids=pool_ids,
+            phase_mapping={},
+            boss_layers=boss_layers,
+        )
+        placed = {int(a): int(b) for a, b in result["enemy_assignments"].items()}
+        for layer in (1, 2, 3):
+            weights = [
+                tags[placed[int(cid[1:])]].boss.weight_at("mid")
+                for cid, lyr in boss_layers.items()
+                if lyr == layer
+            ]
+            assert max(weights) <= 2 * min(weights), f"seed {seed} layer {layer}"
+
+
+def test_generate_item_config_majors_ignore_the_minor_ratio_cap():
+    """Two major arenas on one layer still meet bosses 5x apart."""
+    config = Config.from_dict(
+        {"enemy": {"randomize_bosses": "all", "boss_extreme_fraction": 0}}
+    )
+    boss_clusters = [
+        _boss_cluster("m1", "major_boss", defeat_flag=1001),
+        _boss_cluster("m2", "major_boss", defeat_flag=1002),
+    ]
+    tags = {eid: _entity(eid) for eid in (1001, 1002)}
+    tags.update(
+        {
+            2001: _entity(2001, weight=1.0),
+            2002: _entity(2002, weight=1.0),
+            2003: _entity(2003, weight=5.0),
+        }
+    )
+    pairs = set()
+    for seed in range(40):
+        result = generate_item_config(
+            config,
+            seed=seed,
+            boss_clusters=boss_clusters,
+            tags=tags,
+            vanilla_major_ids=[2001, 2002, 2003],
+            vanilla_minor_ids=[],
+            phase_mapping={},
+            boss_layers={"m1": 4, "m2": 4},
+        )
+        pairs.add(frozenset(int(b) for b in result["enemy_assignments"].values()))
+    assert any(2003 in pair for pair in pairs)
+
+
 def test_generate_item_config_balance_off_keeps_legacy_assignments():
-    """No layers, a zero fraction or uniform weights leave assignments untouched."""
+    """No layers, both rules at 0 or uniform weights leave assignments untouched."""
     boss_clusters, boss_layers, tags, pool_ids = _layered_minor_setup()
     uniform = {eid: _entity(eid) for eid in tags}
     legacy_cfg = Config.from_dict({"enemy": {"randomize_bosses": "minor"}})
     off_cfg = Config.from_dict(
-        {"enemy": {"randomize_bosses": "minor", "boss_extreme_fraction": 0}}
+        {
+            "enemy": {
+                "randomize_bosses": "minor",
+                "boss_extreme_fraction": 0,
+                "minor_boss_max_ratio": 0,
+            }
+        }
     )
 
     def run(config, tag_map, layers, seed):
@@ -1405,7 +1469,9 @@ def test_generate_item_config_raises_when_boss_cluster_missing_from_tiers():
 
 def test_generate_item_config_judges_a_layer_at_its_tier():
     """A boss heavy only late never meets the light extreme on a late layer."""
-    config = Config.from_dict({"enemy": {"randomize_bosses": "minor"}})
+    config = Config.from_dict(
+        {"enemy": {"randomize_bosses": "minor", "minor_boss_max_ratio": 0}}
+    )
     arena_ids = [1001, 1002, 1003, 1004]
     boss_clusters = [
         _boss_cluster(f"c{eid}", "boss_arena", defeat_flag=eid) for eid in arena_ids

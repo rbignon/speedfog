@@ -273,6 +273,14 @@ ignore_arena_size = false
 # when `bosses` is set.
 # boss_extreme_fraction = 0.10
 #
+# Cap the gap between minor bosses on parallel branches: on each layer, the
+# heaviest minor boss weighs at most this many times the lightest one
+# (boss.weight at the layer's scaling tier). A draw over the cap is fixed by
+# swapping its bosses between arenas, so the drawn bosses stay. Major bosses
+# only follow boss_extreme_fraction. 0 disables. Ignored when `bosses` is
+# set.
+# minor_boss_max_ratio = 2.0
+#
 # Restrict boss randomization to specific bosses. Each entry is a
 # case-insensitive substring of the boss name and must match exactly one boss.
 # Any allowed boss can fill any randomized slot (minor or major), and a boss is
