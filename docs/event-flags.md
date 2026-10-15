@@ -64,6 +64,7 @@ Both ranges use saved flags (persist across area reloads):
 |------|--------|---------|--------|
 | 1050290000 | 0 | `items_spawned_flag`: one-shot guard for starting item/resource delivery | StartingItemInjector, StartingResourcesInjector |
 | 1050290001 | 1 | `banner_shown_flag`: one-shot guard for run complete banner | RunCompleteInjector |
+| 1050290010-1050290019 | 10-19 | Halloween jumpscare layer played (one per chosen layer, ascending) | HalloweenJumpscareInjector |
 
 ### Zone Tracking Flags (1050294xxx)
 
@@ -117,6 +118,7 @@ Event ID ranges and auxiliary flags are declared centrally in
 | 755865000 | WeatherInjector | common.emevd | Force fixed weather + pin clock hour (opt-in) |
 | 755865100 | GateDecorInjector | map emevds | Halloween decoration SFX (sequential, capacity 400) |
 | 755865500 | HalloweenDarknessInjector | common.emevd | Re-apply the evergaol gparam override (opt-in) |
+| 755865600 | HalloweenJumpscareInjector | map emevds | Halloween jumpscare actors (one event per actor, capacity 100) |
 
 All events are registered in Event 0 via `InitializeEvent` (bank 2000, id 0),
 built by `EmevdHelper.InitializeEvent`.

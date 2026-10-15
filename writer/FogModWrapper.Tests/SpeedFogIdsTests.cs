@@ -70,6 +70,21 @@ public class SpeedFogIdsTests
     }
 
     [Fact]
+    public void JumpscareLayerFlags_AreSavedModStateFlagsClearOfTheOthers()
+    {
+        var flags = Enumerable.Range(
+            SpeedFogIds.HalloweenJumpscareLayerFlagBase,
+            SpeedFogIds.HalloweenJumpscareLayerFlagCount).ToList();
+        // Saved category 1050290, offsets 0-99 (docs/event-flags.md): a
+        // played layer must survive deaths and quit-outs.
+        Assert.All(flags, f => Assert.InRange(f, 1050290000, 1050290099));
+        // Offset 0 is items_spawned_flag (allocated Python-side), offset 1
+        // the RUN COMPLETE banner guard.
+        Assert.DoesNotContain(1050290000, flags);
+        Assert.DoesNotContain(SpeedFogIds.BannerShownFlag, flags);
+    }
+
+    [Fact]
     public void MsbEntityBands_AreDisjointAndOrdered()
     {
         // Three consecutive MSB entity id bands, each owned by a different
@@ -90,6 +105,14 @@ public class SpeedFogIdsTests
         // own parts pass as vanilla clone sources or ground evidence.
         Assert.True(SpeedFogIds.IsModManagedEntity(SpeedFogIds.DeathMarkerEntityBase));
         Assert.True(SpeedFogIds.IsModManagedEntity(SpeedFogIds.HalloweenDecorEntityBase));
+        Assert.True(
+            SpeedFogIds.HalloweenDecorEntityBase < SpeedFogIds.HalloweenJumpscareEntityBase,
+            $"HalloweenDecorEntityBase ({SpeedFogIds.HalloweenDecorEntityBase}) must be below " +
+            $"HalloweenJumpscareEntityBase ({SpeedFogIds.HalloweenJumpscareEntityBase})");
+        // The whole jumpscare block (one id per event slot) stays managed.
+        Assert.True(SpeedFogIds.IsModManagedEntity(SpeedFogIds.HalloweenJumpscareEntityBase));
+        Assert.True(SpeedFogIds.IsModManagedEntity(
+            SpeedFogIds.HalloweenJumpscareEntityBase + (uint)SpeedFogIds.HalloweenJumpscareEvents.Capacity - 1));
     }
 
     [Theory]
@@ -126,6 +149,7 @@ public class SpeedFogIdsTests
             SpeedFogIds.UntouchableBossNpcRow,
             SpeedFogIds.DecorativeAmbusherNpcRow,
             SpeedFogIds.HostileGreeterNpcRow,
+            SpeedFogIds.HalloweenJumpscareNpcRow,
         };
         Assert.Equal(rows.Length, rows.Distinct().Count());
     }

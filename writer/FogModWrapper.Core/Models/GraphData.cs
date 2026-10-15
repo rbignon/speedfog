@@ -407,4 +407,9 @@ public class GraphNode
 
     [JsonPropertyName("zones")]
     public List<string> Zones { get; set; } = new();
+
+    /// <summary>DAG layer (0 = start). Edges only link consecutive
+    /// layers, so every path crosses each layer exactly once.</summary>
+    [JsonPropertyName("layer")]
+    public int Layer { get; set; }
 }

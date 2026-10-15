@@ -89,6 +89,11 @@ public static class SpeedFogIds
     public static readonly IdRange HalloweenDarknessEvents =
         new("HalloweenDarknessInjector", 755865500, 100);
 
+    /// <summary>One event per Halloween jumpscare actor (armed cluster x
+    /// dungeon map), slot = the actor's index in JumpscarePlanner's plan.</summary>
+    public static readonly IdRange HalloweenJumpscareEvents =
+        new("HalloweenJumpscareInjector", 755865600, 100);
+
     /// <summary>All event ranges, for the disjointness test.</summary>
     public static readonly IReadOnlyList<IdRange> EventRanges = new[]
     {
@@ -102,6 +107,7 @@ public static class SpeedFogIds
         WeatherEvents,
         HalloweenDecorEvents,
         HalloweenDarknessEvents,
+        HalloweenJumpscareEvents,
     };
 
     // --- Auxiliary one-shot flags (FogMod band 104029xxxx, top slice) ---
@@ -129,6 +135,14 @@ public static class SpeedFogIds
     /// allocated Python-side and arrives via graph.json.</summary>
     public const int BannerShownFlag = 1050290001;
 
+    /// <summary>Saved flags (PERSISTENT_FLAG_BASE + 10..19) marking a
+    /// Halloween jumpscare layer as played, one per chosen layer in
+    /// ascending layer order; shared by every armed cluster of the layer,
+    /// so a run sees at most one jumpscare per layer. The count caps
+    /// [plugin.halloween] jumpscares.</summary>
+    public const int HalloweenJumpscareLayerFlagBase = 1050290010;
+    public const int HalloweenJumpscareLayerFlagCount = 10;
+
     // --- MSB entity ID bases (not EMEVD event ids; a separate id space) ---
 
     /// <summary>DeathMarkerInjector's per-map entity ID allocation floor:
@@ -141,6 +155,13 @@ public static class SpeedFogIds
     /// FogMod (<see cref="FogModEntityMin"/>, 755890000+) and the death
     /// markers (<see cref="DeathMarkerEntityBase"/>, 755900000+).</summary>
     public const uint HalloweenDecorEntityBase = 755910000;
+
+    /// <summary>MSB entity IDs for the Halloween jumpscare actors, one per
+    /// event slot of <see cref="HalloweenJumpscareEvents"/>. Above the
+    /// decorations (<see cref="HalloweenDecorEntityBase"/>, 755910000+),
+    /// inside the managed band so no injector takes an actor for a
+    /// vanilla clone source.</summary>
+    public const uint HalloweenJumpscareEntityBase = 755920000;
 
     // --- Param row IDs (not entity IDs; separate namespace per PARAM) ---
 
@@ -200,6 +221,13 @@ public static class SpeedFogIds
     /// clone of the Aging Untouchable's think row (52800000), vanilla AI with
     /// every perception radius capped at a short aggro distance.</summary>
     public const int HostileGreeterThinkRow = ParamRowBase0;
+
+    /// <summary>NpcParam row of the Halloween jumpscare actors: the greeter
+    /// recipe (flat GREETER_TIER clone of 52800086, no runes, no drop) under
+    /// its own id, written whenever jumpscares are on, greeters or not.
+    /// NpcParam uses 755890000-002 otherwise (the Bullet and SpEffect
+    /// 755890003 rows live in other params).</summary>
+    public const int HalloweenJumpscareNpcRow = 755890003;
 
     /// <summary>NpcThinkParam row for the Aging Untouchable boss: a clone
     /// of 52800000 whose battleGoalID selects SpeedFog's own battle script
