@@ -389,13 +389,17 @@ enabled = false  # set true to reskin boss names + victory/death banners
 # decorations + hostile "greeter" enemies at dungeon exit gates, and optional
 # hostile skeleton ambush packs. greeters = false + ambushes = false leaves
 # the decorations as the only gate dressing. darkness = true keeps the vanilla
-# evergaol lighting over the whole run. If both text themes are enabled,
-# halloween overwrites colliding entries.
+# evergaol lighting over the whole run. jumpscares makes an Aging Untouchable
+# appear on the player in that many randomly drawn dungeon layers. If both
+# text themes are enabled, halloween overwrites colliding entries.
 [plugin.halloween]
 enabled = false
 # greeters = true    # hostile Aging Untouchable beside each dungeon exit gate
 # ambushes = false   # hostile skeleton packs at dungeon exit gates (Halloween mode)
 # darkness = false   # vanilla evergaol lighting over the whole run
+# jumpscares = 3            # dungeon layers with a jumpscare (0 disables, max 10)
+# jumpscare_mode = "scare"  # "scare": appears then fades, harmless; "strike": one lantern burst, then fades
+# jumpscare_delay = [5, 25] # seconds after entering an armed cluster, drawn in game
 
 # Force a fixed weather and pin the in-game clock hour (racing consistency).
 [plugin.weather]
