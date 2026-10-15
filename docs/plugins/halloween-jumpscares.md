@@ -28,8 +28,8 @@ arms the same layers. A layer is eligible when every one of its clusters:
 
 - is a `mini_dungeon` or `legacy_dungeon`;
 - is entered through at least one zone-tracking flag (`event_map`);
-- contains no boss zone (fog.txt `DefeatFlag`): no fog separates a fight
-  inside the cluster from the rest of it, so the delay could land
+- contains no boss zone (fog.txt `DefeatFlag`): no zone-tracked fog
+  separates a fight inside the cluster from the rest of it, so the delay could land
   mid-fight (both Academy clusters with the Red Wolf, the Leyndell and
   Ashen Leyndell sanctuaries);
 - has at least one map that is not an open-world tile (`m60_*`, `m61_*`).
@@ -42,8 +42,9 @@ With fewer eligible layers, all are armed and a warning is logged.
 Open-world clusters are left out because a tile streams in and out as the
 player moves: Castle Morne, Redmane Castle, Castle Sol, Caria Manor,
 Shaded Castle, Castle Ensis and Ruins of Rauh never qualify, so a layer
-holding one is never drawn. The Leyndell clusters (m11_00 plus one m60
-tile) qualify through m11_00.
+holding one is never drawn. The Leyndell clusters spanning m11_00 plus
+one m60 tile qualify through m11_00, except the sanctuary one (boss
+zone).
 
 ## Why mirror flags
 
@@ -60,7 +61,7 @@ category the mod never polls: one "entered" flag per armed cluster, set on
 every connection into it, and one "left" flag per drawn layer, set on
 every connection into the next layer (the DAG only links consecutive
 layers, so entering layer L+1 is leaving layer L). `Program.WriteFogMod`
-appends them to `ConnectionInjector.RegionToFlags` right after
+appends them to `InjectionResult.RegionToFlags` right after
 `BuildRegionToFlags`, next to the zone flag of each matching connection
 (`JumpscarePlanner.AddMirrorFlags`), and `ZoneTrackingInjector` sets them
 before the fog warp like any zone flag. Without jumpscares the table is
@@ -69,9 +70,10 @@ left untouched, so other seeds are unaffected.
 A boss arena of the same dungeon (usually its own `boss_arena` cluster in
 the same map) is only reached through a fog: before the armed cluster, the
 event still waits for its entered flag; after it, the left flag or the
-layer flag ends it. Leaving the cluster without a fog (grace warp) sets no
-left flag, so the actor may then appear elsewhere in the same map: an
-accepted residual.
+layer flag ends it. Only a forward fog sets the left flag: a backward fog
+(back through the entrance), a grace warp, or a death respawn outside the
+cluster but in the same map does not, so the actor may then appear
+elsewhere in that map, once: an accepted residual.
 
 ## Placement
 
