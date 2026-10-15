@@ -47,11 +47,14 @@ Python (`speedfog/enemy_data.py`, wired in `main.py` next to
 `patch_graph_enemy_assignments`):
 
 1. `build_boss_names()` exports every entry of `enemy_assignments`, pairing
-   each arena with the name already resolved for `randomized_bosses`
-   (`Names.Key`, then `ExtraName`, then the `boss_arena_tags.json` name,
-   minus a trailing parenthetical such as "Divine Bird Warrior (Frost)") and
-   the map whose EMEVD runs its boss events,
-   `event_map_for_entity()`: vanilla entity ids encode it
+   each arena with the placed entity's own name, the placement's
+   `healthbar_name` (`Names.Key`, then `ExtraName`, then the
+   `boss_arena_tags.json` name, minus a trailing parenthetical such as
+   "Divine Bird Warrior (Frost)"). It differs from `randomized_bosses` for a
+   group fight, named after the fight there ("Crucible Misbegotten Duo")
+   while the Crucible Knight's healthbar keeps "Crucible Knight", and its
+   vanilla `NpcName` id with it. Each arena also gets the map whose EMEVD
+   runs its boss events, `event_map_for_entity()`: vanilla entity ids encode it
    (`30010800` is `m30_01_00_00`, `1052380800` is `m60_52_38_00`,
    `2048440800` is `m61_48_44_00`). The enemy.txt `Map:` is the MSB part's
    map instead, a `_02` large tile for Fire Giant and Radahn whose events

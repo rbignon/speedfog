@@ -26,6 +26,7 @@ from speedfog.enemy_data import (
     parse_boss_key_names,
     parse_boss_phases,
     parse_helper_models,
+    parse_named_helper_owners,
     patch_graph_boss_names,
     patch_graph_boss_placements,
     patch_graph_enemy_assignments,
@@ -530,9 +531,17 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
             key_names = parse_boss_key_names(enemy_txt_path)
             extra_names = parse_boss_extra_names(enemy_txt_path)
             tag_names = {eid: t.name for eid, t in (assignment_tags or {}).items()}
+            # A boss fought alongside a named helper (a duo, a trio) is named
+            # after the fight, which only the tags name covers.
+            group_names = {
+                eid: tag_names[eid]
+                for eid in parse_named_helper_owners(enemy_txt_path)
+                if eid in tag_names
+            }
             placements = build_boss_placements(
                 enemy_assignments,
                 lambda eid: resolve_boss_name(eid, key_names, extra_names, tag_names),
+                group_names,
             )
             patch_graph_boss_placements(
                 json_path, dag, placements, assignment_phase_mapping

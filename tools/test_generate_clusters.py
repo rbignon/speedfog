@@ -4405,6 +4405,60 @@ class TestParseBossNames:
 
         assert result[11000850] == "Godfrey, First Elden Lord"
 
+    def test_group_fight_takes_its_tag_name(self, tmp_path):
+        # A boss fought alongside a named helper is named after the fight
+        # (boss_arena_tags.json), not after its first entity. A helper with
+        # no name (summoned spirits) or a source missing from the tags keeps
+        # the boss's own name.
+        enemy_txt = tmp_path / "enemy.txt"
+        enemy_txt.write_text(
+            "Enemies:\n"
+            "- ID: 1049390800\n"
+            "  Class: MinorBoss\n"
+            "  DefeatFlag: 1049390800\n"
+            "  Important:\n"
+            "    Names:\n"
+            "      Key: Nox Monk\n"
+            "- ID: 1049390801\n"
+            "  Class: Helper\n"
+            "  OwnedBy: 1049390800\n"
+            "  Important:\n"
+            "    Names:\n"
+            "      Key: Nox Swordstress\n"
+            "- ID: 30030800\n"
+            "  Class: MinorBoss\n"
+            "  DefeatFlag: 30030800\n"
+            "  Important:\n"
+            "    Names:\n"
+            "      Key: Spiritcaller Snail\n"
+            "- ID: 30030801\n"
+            "  Class: Helper\n"
+            "  OwnedBy: 30030800\n"
+            "- ID: 31070800\n"
+            "  Class: MinorBoss\n"
+            "  DefeatFlag: 31070800\n"
+            "  Important:\n"
+            "    Names:\n"
+            "      Key: Kindred of Rot\n"
+            "- ID: 31070801\n"
+            "  Class: Helper\n"
+            "  OwnedBy: 31070800\n"
+            "  Important:\n"
+            "    Names:\n"
+            "      Key: Kindred of Rot\n"
+        )
+        tag_names = {
+            1049390800: "Nox Duo",
+            30030800: "Crucible Spiritcaller Snail",
+        }
+        from generate_clusters import parse_boss_names
+
+        result = parse_boss_names(enemy_txt, tag_names)
+
+        assert result[1049390800] == "Nox Duo"
+        assert result[30030800] == "Spiritcaller Snail"
+        assert result[31070800] == "Kindred of Rot"
+
     def test_strips_phase_suffix(self, tmp_path):
         enemy_txt = tmp_path / "enemy.txt"
         enemy_txt.write_text(

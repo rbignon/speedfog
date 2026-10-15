@@ -150,7 +150,7 @@ In both `"minor"` and `"all"` modes, the preset sets `bosshp = false`.
 
 ## Boss Name Population
 
-Boss names for randomized runs are populated entirely in Python, with no stdout capture or file round-trip through C#. The `enemy_assignments` mapping (arena entity ID to boss source entity ID) is computed in-memory by `post_validate` during DAG generation and carried in `item_config.json`. Python resolves display names from `enemy.txt` `Important.Names.Key` entries (the canonical name, preferred over the legacy `ExtraName`, with `boss_arena_tags.json` name as final fallback), then writes `randomized_bosses` and `boss_name` directly onto the graph nodes. `ItemRandomizerWrapper` consumes `enemy_assignments` only for `forceMap` wiring and emits no placement data back.
+Boss names for randomized runs are populated entirely in Python, with no stdout capture or file round-trip through C#. The `enemy_assignments` mapping (arena entity ID to boss source entity ID) is computed in-memory by `post_validate` during DAG generation and carried in `item_config.json`. Python resolves display names from `enemy.txt` `Important.Names.Key` entries (the canonical name, preferred over the legacy `ExtraName`, with `boss_arena_tags.json` name as final fallback; a group fight takes its tags name, see below), then writes `randomized_bosses` and `boss_name` directly onto the graph nodes. `ItemRandomizerWrapper` consumes `enemy_assignments` only for `forceMap` wiring and emits no placement data back.
 
 ### Graph Patching
 
@@ -158,12 +158,12 @@ In `main.py`, immediately after the logs block (before the build step, so it run
 
 1. `accepted_item_config["enemy_assignments"]` provides the arena-to-boss mapping computed in-memory by `post_validate` during DAG generation (no file I/O needed).
 2. `parse_boss_key_names()` and `parse_boss_extra_names()` read `enemy.txt` to build `entity_id -> name` mappings (`Important.Names.Key` and the legacy `ExtraName` respectively).
-3. `build_boss_placements()` reshapes the assignments into `{arena_entity_id: {name, entity_id}}`, resolving each boss name via `resolve_boss_name`: `Names.Key` (preferred), then `ExtraName`, then the boss_arena_tags name (fallback).
+3. `build_boss_placements()` reshapes the assignments into `{arena_entity_id: {name, healthbar_name, entity_id}}`. `healthbar_name` is the entity's own name, resolved via `resolve_boss_name`: `Names.Key` (preferred), then `ExtraName`, then the boss_arena_tags name (fallback). `name` is the fight's name, the same except for a source fought alongside a named helper (`parse_named_helper_owners()`: an enemy.txt `Class: Helper` entry `OwnedBy` it with a `Names.Key`), which takes its boss_arena_tags name (its entity name when the tags lack it): "Crucible Misbegotten Duo" rather than "Crucible Knight", whose Misbegotten Warrior the `Key` leaves out. Unnamed helpers (Night's Cavalry's horse, summoned spirits, adds) do not count.
 4. `patch_graph_boss_placements()` matches each DAG node's `defeat_flag` to a placement entry and sets:
    - `randomized_bosses`: list of boss names (both phases for multi-phase bosses, e.g. `["Beast Clergyman", "Maliketh"]`)
    - `boss_name`: canonical name from the phase 2 replacement (numeric suffix stripped, e.g. "Fire Giant" not "Fire Giant 2")
 5. `append_boss_placements_to_spoiler()` adds a boss placement section to spoiler.txt
-6. `build_boss_names()` pairs every assignment with the map whose EMEVD runs its boss events (`event_map_for_entity()`, derived from the entity id); `patch_graph_boss_names()` writes them as `boss_names` (added v4.8) for `BossNameInjector`, which repoints the healthbar name of the arenas the randomizer did not name itself (see `docs/boss-healthbar-names.md`)
+6. `build_boss_names()` pairs every assignment's `healthbar_name` with the map whose EMEVD runs its boss events (`event_map_for_entity()`, derived from the entity id); `patch_graph_boss_names()` writes them as `boss_names` (added v4.8) for `BossNameInjector`, which repoints the healthbar name of the arenas the randomizer did not name itself (see `docs/boss-healthbar-names.md`)
 7. `parse_helper_models()` collects the models of every `Class: Helper` entry `OwnedBy` a boss, `build_helper_models()` keeps the arenas whose placed source owns some, and `patch_graph_helper_models()` writes them as `helper_models` (v4.9) for `HelperAreaResolver`'s model pass (see "Helper enemy scaling" below)
 
 Matching logic (in `_match_boss_placement`): tries `str(defeat_flag)` first, then `str(defeat_flag - 200_000_000)` for base game bosses. `_resolve_entity_id()` extracts the entity_id from a defeat_flag for phase mapping lookups.

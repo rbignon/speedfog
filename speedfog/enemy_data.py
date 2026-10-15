@@ -173,6 +173,53 @@ def parse_helper_models(enemy_txt_path: Path) -> dict[int, list[str]]:
     return {owner_id: sorted(found) for owner_id, found in models.items()}
 
 
+def parse_named_helper_owners(enemy_txt_path: Path) -> set[int]:
+    """Bosses fought alongside another named enemy (duos, trios).
+
+    Owners of at least one ``Class: Helper`` entry carrying an
+    ``Important: Names: Key``: the Crucible Knight with its Misbegotten
+    Warrior, the Nox Monk with the Nox Swordstress. Their own ``Key`` names
+    one entity of the fight only, so ``build_boss_placements`` names them
+    after the fight instead. Helpers without a name (Night's Cavalry's
+    horse, summoned spirits, adds) do not make a group fight.
+    tools/generate_clusters.py::parse_boss_names applies the same rule to
+    the vanilla arenas' clusters.json ``boss_name``.
+
+    Returns an empty set if the file is missing.
+    """
+    if not enemy_txt_path.exists():
+        return set()
+
+    owners: set[int] = set()
+    klass: str | None = None
+    owner: int | None = None
+    named = False
+
+    def flush() -> None:
+        if klass == "Helper" and owner is not None and named:
+            owners.add(owner)
+
+    with open(enemy_txt_path, encoding="utf-8") as f:
+        for line in f:
+            if line.startswith("- ID:"):
+                flush()
+                klass = owner = None
+                named = False
+            elif line.startswith("  Class:"):
+                m = _CLASS_RE.match(line)
+                if m:
+                    klass = m.group(1)
+            elif line.startswith("  OwnedBy:"):
+                m = _OWNED_BY_RE.match(line)
+                if m:
+                    owner = int(m.group(1))
+            elif line.startswith("      Key:"):
+                m = _KEY_NAME_RE.match(line)
+                named = named or bool(m and m.group(1).strip())
+    flush()
+    return owners
+
+
 def build_helper_models(
     enemy_assignments: Mapping[str, str],
     helper_models: Mapping[int, list[str]],
@@ -245,19 +292,31 @@ def resolve_boss_name(
 def build_boss_placements(
     enemy_assignments: Mapping[str, str],
     resolve_name: Callable[[int], str],
+    group_names: Mapping[int, str] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Reshape {arena_id: boss_id} into the placements dict format.
 
     The result is keyed by arena entity ID string, consumed unchanged by
-    patch_graph_boss_placements and
-    spoiler.append_boss_placements_to_spoiler. Both keys and the boss IDs
-    arrive as strings from enemy_assignments; the boss ID is resolved to a
-    name and stored as an int entity_id.
+    patch_graph_boss_placements, spoiler.append_boss_placements_to_spoiler
+    and build_boss_names. Both keys and the boss IDs arrive as strings from
+    enemy_assignments; the boss ID is stored as an int entity_id.
+
+    Each placement carries two names. ``healthbar_name`` is the entity's own
+    (``resolve_name``), what its healthbar shows. ``name`` is the fight's:
+    the ``group_names`` entry of a source fought alongside a named helper
+    ("Crucible Misbegotten Duo" rather than "Crucible Knight", see
+    parse_named_helper_owners), the entity's own name otherwise.
     """
+    fight_names = group_names or {}
     placements: dict[str, dict[str, Any]] = {}
     for arena_id, boss_id in enemy_assignments.items():
         bid = int(boss_id)
-        placements[arena_id] = {"name": resolve_name(bid), "entity_id": bid}
+        healthbar_name = resolve_name(bid)
+        placements[arena_id] = {
+            "name": fight_names.get(bid, healthbar_name),
+            "healthbar_name": healthbar_name,
+            "entity_id": bid,
+        }
     return placements
 
 
@@ -352,10 +411,11 @@ def build_boss_names(
     unreliable, so every assignment is exported and the injector leaves
     alone the arenas that already name their enemy.
 
-    Returns ``{arena_id: {"name", "map"}}``: the name already resolved for
-    ``placements`` (spoiler and racing overlay) and the map holding the
-    arena's EMEVD (``event_map_for_entity``). Arenas whose id encodes no map,
-    or with no placement, are skipped. A trailing parenthetical is left in:
+    Returns ``{arena_id: {"name", "map"}}``: the placement's
+    ``healthbar_name`` (the placed entity's own name, which a group fight's
+    graph name does not match) and the map holding the arena's EMEVD
+    (``event_map_for_entity``). Arenas whose id encodes no map, or with no
+    placement, are skipped. A trailing parenthetical is left in:
     some are vanilla names ("Mad Pumpkin Head (Hammer)") and some are
     boss_arena_tags disambiguation ("Hornsent (Leda Fight)"), and only the
     injector, which holds the vanilla name index, can tell them apart.
@@ -366,7 +426,10 @@ def build_boss_names(
         placement = placements.get(arena_id)
         if map_id is None or placement is None:
             continue
-        boss_names[arena_id] = {"name": str(placement["name"]), "map": map_id}
+        boss_names[arena_id] = {
+            "name": str(placement["healthbar_name"]),
+            "map": map_id,
+        }
     return boss_names
 
 

@@ -17,6 +17,7 @@ from speedfog.enemy_data import (
     parse_boss_key_names,
     parse_boss_phases,
     parse_helper_models,
+    parse_named_helper_owners,
     patch_graph_boss_names,
     patch_graph_boss_placements,
     patch_graph_enemy_assignments,
@@ -2220,8 +2221,16 @@ class TestBuildBossNames:
     # healthbar name only for sources whose own healthbar events it copies,
     # and the C# injector leaves an arena that already names its enemy alone.
     PLACEMENTS = {
-        "30010800": {"name": "Aging Untouchable", "entity_id": 2049420200},
-        "30170800": {"name": "Hornsent", "entity_id": 20010722},
+        "30010800": {
+            "name": "Aging Untouchable",
+            "healthbar_name": "Aging Untouchable",
+            "entity_id": 2049420200,
+        },
+        "30170800": {
+            "name": "Hornsent",
+            "healthbar_name": "Hornsent",
+            "entity_id": 20010722,
+        },
     }
 
     def test_exports_every_assignment_with_its_map(self):
@@ -2231,8 +2240,21 @@ class TestBuildBossNames:
             "30170800": {"name": "Hornsent", "map": "m30_17_00_00"},
         }
 
+    def test_exports_the_healthbar_name_of_a_group_fight(self):
+        # The healthbar shows the placed entity, not the duo it leads: the
+        # injector must not repoint the Crucible Knight's bar to the fight name.
+        placements = {
+            "30010800": {
+                "name": "Crucible Misbegotten Duo",
+                "healthbar_name": "Crucible Knight",
+                "entity_id": 1051360800,
+            }
+        }
+        result = build_boss_names({"30010800": "1051360800"}, placements)
+        assert result["30010800"]["name"] == "Crucible Knight"
+
     def test_skips_arena_whose_id_encodes_no_map(self):
-        placements = {"4000358": {"name": "Aging Untouchable", "entity_id": 2049420200}}
+        placements = {"4000358": self.PLACEMENTS["30010800"]}
         assert build_boss_names({"4000358": "2049420200"}, placements) == {}
 
     def test_skips_assignment_without_a_placement(self):
@@ -2243,7 +2265,11 @@ class TestBuildBossNames:
         # (Frost)" a boss_arena_tags disambiguation: only the injector, which
         # holds the vanilla name index, can tell them apart.
         placements = {
-            "31180800": {"name": "Divine Bird Warrior (Frost)", "entity_id": 20010453}
+            "31180800": {
+                "name": "Divine Bird Warrior (Frost)",
+                "healthbar_name": "Divine Bird Warrior (Frost)",
+                "entity_id": 20010453,
+            }
         }
         result = build_boss_names({"31180800": "20010453"}, placements)
         assert result["31180800"]["name"] == "Divine Bird Warrior (Frost)"
@@ -2713,9 +2739,32 @@ def test_build_boss_placements_maps_assignment_to_names():
     result = build_boss_placements(enemy_assignments, lambda eid: names[eid])
 
     assert result == {
-        "10000800": {"name": "Rennala", "entity_id": 14000800},
-        "10000850": {"name": "Guardian Golem", "entity_id": 999},
+        "10000800": {
+            "name": "Rennala",
+            "healthbar_name": "Rennala",
+            "entity_id": 14000800,
+        },
+        "10000850": {
+            "name": "Guardian Golem",
+            "healthbar_name": "Guardian Golem",
+            "entity_id": 999,
+        },
     }
+
+
+def test_build_boss_placements_names_a_group_fight_after_the_fight():
+    # A source fought alongside a named helper takes its fight name; its
+    # healthbar keeps the entity's own name.
+    enemy_assignments = {"30010800": "1051360800", "30020800": "999"}
+    names = {1051360800: "Crucible Knight", 999: "Guardian Golem"}
+    group_names = {1051360800: "Crucible Misbegotten Duo"}
+    result = build_boss_placements(
+        enemy_assignments, lambda eid: names[eid], group_names
+    )
+
+    assert result["30010800"]["name"] == "Crucible Misbegotten Duo"
+    assert result["30010800"]["healthbar_name"] == "Crucible Knight"
+    assert result["30020800"]["name"] == "Guardian Golem"
 
 
 def test_python_population_end_to_end(tmp_path):
@@ -2870,6 +2919,45 @@ class TestParseHelperModels:
 
     def test_missing_file_returns_empty(self, tmp_path):
         assert parse_helper_models(tmp_path / "nope.txt") == {}
+
+
+class TestParseNamedHelperOwners:
+    def test_keeps_owners_of_a_named_helper_only(self, tmp_path):
+        # The Crucible Knight fights alongside a named Misbegotten Warrior
+        # (a duo); Night's Cavalry's horse has no name, nor do the spirits a
+        # snail summons. A named Basic entry with OwnedBy is no helper.
+        enemy_txt = tmp_path / "enemy.txt"
+        enemy_txt.write_text(
+            "- ID: 1051360800\n"
+            "  Class: MinorBoss\n"
+            "  Important:\n"
+            "    Names:\n"
+            "      Key: Crucible Knight\n"
+            "- ID: 1051360801\n"
+            "  Class: Helper\n"
+            "  OwnedBy: 1051360800\n"
+            "  Important:\n"
+            "    Names:\n"
+            "      Key: Misbegotten Warrior\n"
+            "- ID: 1043370341\n"
+            "  Class: Helper\n"
+            "  OwnedBy: 1043370340\n"
+            "- ID: 30030801\n"
+            "  Class: Helper\n"
+            "  OwnedBy: 30030800\n"
+            "  Tags: multi\n"
+            "- ID: 1049380810\n"
+            "  Class: Basic\n"
+            "  OwnedBy: 1049380800\n"
+            "  Important:\n"
+            "    Names:\n"
+            "      Key: Soldier\n",
+            encoding="utf-8",
+        )
+        assert parse_named_helper_owners(enemy_txt) == {1051360800}
+
+    def test_missing_file_returns_empty(self, tmp_path):
+        assert parse_named_helper_owners(tmp_path / "nope.txt") == set()
 
 
 class TestBuildHelperModels:

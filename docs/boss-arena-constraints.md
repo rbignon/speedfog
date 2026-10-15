@@ -370,10 +370,13 @@ and exclusions (entities that cannot be sources) live entirely in
 emission. The C# side no longer carries hardcoded promoted-pool data.
 
 The ``randomized_bosses`` and ``boss_name`` fields on graph nodes are populated
-in Python from the same ``enemy_assignments`` map (via ``output.build_boss_placements``
+in Python from the same ``enemy_assignments`` map (via ``enemy_data.build_boss_placements``
 and ``patch_graph_boss_placements`` in ``main.py``). Boss display names resolve
 through ``enemy.txt`` ``Important.Names.Key`` (the canonical name), then the
-legacy ``ExtraName``, then a ``boss_arena_tags.json`` name as final fallback.
+legacy ``ExtraName``, then a ``boss_arena_tags.json`` name as final fallback. A
+source fought alongside a named helper (a duo, a trio) takes its
+``boss_arena_tags.json`` name instead, the fight's name; its healthbar keeps
+the entity's own name (``healthbar_name``).
 The C# ``ItemRandomizerWrapper`` consumes ``enemy_assignments`` only for ``forceMap``
 wiring and emits no placement data back to Python.
 

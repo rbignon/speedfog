@@ -2283,15 +2283,30 @@ def _pick_display_name(
     return cluster.cluster_id
 
 
-def parse_boss_names(enemy_txt_path: Path) -> dict[int, str]:
+def load_tag_names(tags_path: Path) -> dict[int, str]:
+    """Entity id -> name from boss_arena_tags.json, empty if the file is missing."""
+    if not tags_path.exists():
+        return {}
+    with open(tags_path, encoding="utf-8") as f:
+        tags = json.load(f)
+    return {int(eid): entry["name"] for eid, entry in tags.items() if entry.get("name")}
+
+
+def parse_boss_names(
+    enemy_txt_path: Path, tag_names: dict[int, str] | None = None
+) -> dict[int, str]:
     """Parse enemy.txt to build a DefeatFlag -> boss display name mapping.
 
-    Reads ItemRandomizer's enemy.txt (YAML) and extracts ExtraName for each
-    boss entity that has a DefeatFlag. Strips numeric phase suffixes
-    ("Fire Giant 2" -> "Fire Giant") so multi-phase bosses get clean names.
+    Reads ItemRandomizer's enemy.txt (YAML) and extracts Names.Key (else
+    ExtraName) for each boss entity that has a DefeatFlag. A boss fought
+    alongside a named helper (a duo, a trio) takes its ``tag_names`` entry
+    instead, the fight's name, as speedfog.enemy_data names randomized
+    placements. Strips numeric phase suffixes ("Fire Giant 2" -> "Fire
+    Giant") so multi-phase bosses get clean names.
 
     Args:
         enemy_txt_path: Path to enemy.txt (from ItemRandomizer's diste/Base/)
+        tag_names: Entity id -> boss_arena_tags.json name (load_tag_names)
 
     Returns:
         Mapping of DefeatFlag (int) -> canonical boss name (str).
@@ -2303,16 +2318,28 @@ def parse_boss_names(enemy_txt_path: Path) -> dict[int, str]:
     with open(enemy_txt_path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
+    def key_name(entry: dict[str, Any]) -> str | None:
+        important = entry.get("Important") or {}
+        return (important.get("Names") or {}).get("Key")
+
+    entries = data.get("Enemies", [])
+    # Helpers without a name (a horse, summoned spirits, adds) are no group.
+    group_owners = {
+        int(entry["OwnedBy"])
+        for entry in entries
+        if entry.get("Class") == "Helper" and entry.get("OwnedBy") and key_name(entry)
+    }
+
     boss_names: dict[int, str] = {}
-    for entry in data.get("Enemies", []):
+    for entry in entries:
         defeat_flag = entry.get("DefeatFlag")
         entry_class = entry.get("Class", "")
         # Prefer the canonical Important.Names.Key (cleaner than the legacy
         # ExtraName: no Boss/Duo suffixes, proper full names, typo fixes);
         # fall back to ExtraName when no Key is present.
-        important = entry.get("Important") or {}
-        key_name = (important.get("Names") or {}).get("Key")
-        name = key_name or entry.get("ExtraName")
+        name = key_name(entry) or entry.get("ExtraName")
+        if entry.get("ID") in group_owners and tag_names:
+            name = tag_names.get(int(entry["ID"]), name)
         if not defeat_flag or not name or entry_class not in _BOSS_CLASSES:
             continue
         clean_name = _PHASE_SUFFIX_RE.sub("", name)
@@ -2472,7 +2499,14 @@ def main() -> int:
 
     # Parse boss names from enemy.txt (if available)
     enemy_txt_path = args.fog_txt.parent / "enemy.txt"
-    boss_names = parse_boss_names(enemy_txt_path)
+    tags_path = args.fog_txt.parent / "boss_arena_tags.json"
+    tag_names = load_tag_names(tags_path)
+    if not tag_names:
+        print(
+            f"Warning: {tags_path} not found, group fights keep their first boss's name",
+            file=sys.stderr,
+        )
+    boss_names = parse_boss_names(enemy_txt_path, tag_names)
     if boss_names:
         print(f"Boss names: {len(boss_names)} entries from enemy.txt")
 
