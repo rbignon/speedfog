@@ -348,6 +348,11 @@ boss_name = "Devonia"
 en = "Demonia"
 fr = "Démonia"
 
+[[bosses]]
+boss_name = "Aging Untouchable"
+en = "Winter Reaper"
+fr = "Faucheur givré"
+
 # ---- Universal UI banners (GR_MenuText in menu_dlc02.msgbnd.dcx) ----
 # IDs sorted ascending; 331314 is reserved (vanilla) and must not appear here.
 # Never "SPOOKED": a racer read it as the US slur "spook" (feedback 2026-10-01).
