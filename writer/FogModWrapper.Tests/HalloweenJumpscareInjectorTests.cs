@@ -15,8 +15,8 @@ namespace FogModWrapper.Tests;
 public class HalloweenJumpscareInjectorTests
 {
     private static JumpscareActor Actor(uint entityId, string? anchor = "AEG099_001_9000", int eventId = 755865600)
-        => new("mini_a", 1, "m31_02_00_00", 1050290010,
-            new[] { 1050294100 }, new[] { 1050294102 }, anchor, entityId, eventId);
+        => new("mini_a", 1, "m31_02_00_00", 1050290010, 1050290030, 1050290020,
+            anchor, entityId, eventId);
 
     private static MSBE MakeMsb()
     {
@@ -180,12 +180,13 @@ public class HalloweenJumpscareInjectorTests
 
         var list = HalloweenJumpscareInjector.BuildEvent(events, Actor(755920000), Scare).Instructions;
 
-        int entry = IndexOf(list, 3, 0, i => U32(i, 4) == 1050294100);
+        // Mirror flags, not the zone-tracking flags the racing mod clears.
+        int entry = IndexOf(list, 3, 0, i => U32(i, 4) == 1050290030);
         int wait = IndexOf(list, 1001, 2);
         int setFlag = IndexOf(list, 2003, 66, i => U32(i, 4) == 1050290010);
         int warp = IndexOf(list, 2004, 42);
         var exitGuards = list.Select((ins, idx) => (ins, idx))
-            .Where(t => t.ins.Bank == 1003 && t.ins.ID == 2 && U32(t.ins, 4) == 1050294102)
+            .Where(t => t.ins.Bank == 1003 && t.ins.ID == 2 && U32(t.ins, 4) == 1050290020)
             .Select(t => t.idx).ToList();
 
         Assert.True(entry >= 0 && wait > entry);

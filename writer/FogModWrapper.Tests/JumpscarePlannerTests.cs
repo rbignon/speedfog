@@ -77,8 +77,10 @@ public class JumpscarePlannerTests
     };
 
     private static JumpscarePlan Plan(int count, GraphData? graph = null,
-        Dictionary<string, string[]>? zoneMaps = null, List<string>? logs = null)
-        => JumpscarePlanner.Plan(graph ?? Fixture(), zoneMaps ?? ZoneMaps(), count, (logs ?? new()).Add);
+        Dictionary<string, string[]>? zoneMaps = null, List<string>? logs = null,
+        HashSet<string>? bossZones = null)
+        => JumpscarePlanner.Plan(graph ?? Fixture(), zoneMaps ?? ZoneMaps(),
+            bossZones ?? new HashSet<string>(), count, (logs ?? new()).Add);
 
     [Fact]
     public void Plan_DrawsOnlyEligibleLayersAndWarnsWhenShort()
@@ -100,7 +102,7 @@ public class JumpscarePlannerTests
     public void Plan_SameSeedSamePlan()
     {
         static string Describe(JumpscarePlan p) => string.Join(";", p.Actors.Select(a =>
-            $"{a.ClusterId}@{a.MapId}:{a.LayerFlag}:{a.EntityId}:{a.EventId}"));
+            $"{a.ClusterId}@{a.MapId}:{a.LayerFlag}:{a.EnteredFlag}:{a.LeftFlag}:{a.EntityId}:{a.EventId}"));
 
         Assert.Equal(Describe(Plan(2, Fixture(seed: 42))), Describe(Plan(2, Fixture(seed: 42))));
     }
@@ -130,17 +132,97 @@ public class JumpscarePlannerTests
     }
 
     [Fact]
-    public void Plan_CollectsEntryAndExitFlagsAcrossCrossLinks()
+    public void Plan_MirrorsTheConnectionsIntoAnArmedClusterAndIntoTheNextLayer()
     {
         var plan = Plan(3);
 
+        // One entered flag per armed cluster, one left flag per chosen
+        // layer, both in ascending order.
+        int entered = SpeedFogIds.HalloweenJumpscareEnteredFlagBase;
+        int left = SpeedFogIds.HalloweenJumpscareLeftFlagBase;
         var miniA = plan.Actors.Single(a => a.ClusterId == "mini_a");
-        Assert.Equal(new[] { 100 }, miniA.EntryFlags);
-        Assert.Equal(new[] { 102 }, miniA.ExitFlags);
-        var legacyL = plan.Actors.Single(a => a.ClusterId == "legacy_l");
-        Assert.Equal(new[] { 105, 106 }, legacyL.ExitFlags);
+        Assert.Equal((entered, left), (miniA.EnteredFlag, miniA.LeftFlag));
+        var miniB = plan.Actors.Single(a => a.ClusterId == "mini_b");
+        Assert.Equal((entered + 1, left), (miniB.EnteredFlag, miniB.LeftFlag));
         Assert.All(plan.Actors.Where(a => a.ClusterId == "mini_c"),
-            a => Assert.Equal(new[] { 107, 108 }, a.EntryFlags));
+            a => Assert.Equal((entered + 3, left + 2), (a.EnteredFlag, a.LeftFlag)));
+
+        // Every connection into an armed cluster sets its entered flag
+        // (cross-links included: 107 and 108 both enter mini_c), every
+        // connection into the layer after a chosen one sets that layer's
+        // left flag: L1 is left through 102/103, L3 through 105/106, L5
+        // through 109.
+        var expected = new Dictionary<int, int[]>
+        {
+            [100] = new[] { entered }, [101] = new[] { entered + 1 },
+            [102] = new[] { left }, [103] = new[] { left },
+            [104] = new[] { entered + 2 },
+            [105] = new[] { left + 1 }, [106] = new[] { left + 1 },
+            [107] = new[] { entered + 3 }, [108] = new[] { entered + 3 },
+            [109] = new[] { left + 2 },
+        };
+        Assert.Equal(expected.Keys.Order(), plan.MirrorFlags.Keys.Order());
+        Assert.All(expected, kv => Assert.Equal(kv.Value, plan.MirrorFlags[kv.Key]));
+    }
+
+    [Fact]
+    public void Plan_ClusterContainingABossZoneMakesItsLayerIneligible()
+    {
+        // No fog separates a boss fought inside the cluster from the rest
+        // of it (Red Wolf in the Academy): the delay could land mid-fight.
+        var plan = Plan(10, bossZones: new HashSet<string> { "castle" });
+
+        Assert.Equal(new[] { 1, 5 }, plan.Layers);
+    }
+
+    [Fact]
+    public void Plan_ThrowsWhenTheArmedClustersOutgrowTheEnteredFlags()
+    {
+        var graph = Fixture();
+        var zoneMaps = ZoneMaps();
+        for (int i = 0; i < SpeedFogIds.HalloweenJumpscareEnteredFlagCount; i++)
+        {
+            graph.Nodes[$"extra{i}"] = new GraphNode { Type = "mini_dungeon", Layer = 1, Zones = new() { $"extra_z{i}" } };
+            graph.EventMap[(5000 + i).ToString()] = $"extra{i}";
+            zoneMaps[$"extra_z{i}"] = new[] { "m31_09_00_00" };
+        }
+
+        // Arm every eligible layer, so the oversized L1 is drawn whatever the seed.
+        var ex = Assert.Throws<InvalidOperationException>(() => Plan(10, graph, zoneMaps));
+        Assert.Contains("entered flag", ex.Message);
+    }
+
+    [Fact]
+    public void AddMirrorFlags_EmptyPlanLeavesTheTableUntouched()
+    {
+        // No Halloween or jumpscares = 0: ZoneTrackingInjector must inject
+        // exactly what it injected before the feature existed.
+        var table = new Dictionary<int, List<int>> { [500] = new() { 100 }, [501] = new() { 101, 102 } };
+
+        JumpscarePlanner.AddMirrorFlags(table, JumpscarePlan.Empty);
+
+        Assert.Equal(new[] { 500, 501 }, table.Keys.Order());
+        Assert.Equal(new[] { 100 }, table[500]);
+        Assert.Equal(new[] { 101, 102 }, table[501]);
+    }
+
+    [Fact]
+    public void AddMirrorFlags_AppendsEachMirrorOnceAfterTheZoneFlags()
+    {
+        var plan = Plan(3);
+        int entered = SpeedFogIds.HalloweenJumpscareEnteredFlagBase;
+        var table = new Dictionary<int, List<int>>
+        {
+            [500] = new() { 100 },
+            [600] = new() { 107, 108 },  // shared entrance: both mirror to mini_c's entered flag
+            [700] = new() { 4242 },       // no mirror
+        };
+
+        JumpscarePlanner.AddMirrorFlags(table, plan);
+
+        Assert.Equal(new[] { 100, entered }, table[500]);
+        Assert.Equal(new[] { 107, 108, entered + 3 }, table[600]);
+        Assert.Equal(new[] { 4242 }, table[700]);
     }
 
     [Fact]
@@ -202,6 +284,7 @@ public class JumpscarePlannerTests
         Assert.Equal(2, shared.Select(a => a.EntityId).Distinct().Count());
         Assert.Equal(2, shared.Select(a => a.EventId).Distinct().Count());
         Assert.Equal(2, shared.Select(a => a.LayerFlag).Distinct().Count());
+        Assert.Equal(2, shared.Select(a => a.EnteredFlag).Distinct().Count());
         Assert.Equal(new[] { "mini_a", "mini_c" }, plan.ActorsByMap()["m31_00_00_00"].Select(a => a.ClusterId));
     }
 

@@ -433,6 +433,19 @@ Example:
         // Side.Warp is now populated by Write() (reads from MSB data).
         ctx.InjectionResult.BuildRegionToFlags(ctx.GraphData.EventMap);
 
+        // Halloween jumpscares wait on private mirror flags set next to the
+        // zone-tracking flags (the racing mod clears those right after
+        // capture), so the plan must exist before PatchEmevd injects
+        // RegionToFlags. Without jumpscares the table is left untouched.
+        if (ctx.GraphData.IsPluginEnabled("halloween") && ctx.HalloweenSettings.Jumpscares > 0)
+        {
+            ctx.JumpscarePlan = JumpscarePlanner.Plan(
+                ctx.GraphData, BuildZoneMaps(ctx.Ann),
+                ctx.Ann.Areas.Where(a => a.DefeatFlag > 0).Select(a => a.Name).ToHashSet(),
+                ctx.HalloweenSettings.Jumpscares, Console.WriteLine);
+            JumpscarePlanner.AddMirrorFlags(ctx.InjectionResult.RegionToFlags, ctx.JumpscarePlan);
+        }
+
         // Copy non-English FMG files from Item Randomizer output.
         // FogMod only loads and writes msg/engus/ FMGs. When Item Randomizer
         // generates localized content (e.g., class descriptions in French),
@@ -965,12 +978,14 @@ Example:
                 Console.WriteLine("Halloween spawns: regulation phase did not write the greeter rows, skipping greeters");
             if (settings.Ambushes && !ctx.AmbusherRowsApplied)
                 Console.WriteLine("Halloween spawns: regulation phase did not write the ambusher rows, skipping ambushers");
-            var jumpscarePlan = JumpscarePlan.Empty;
-            if (settings.Jumpscares > 0 && !ctx.JumpscareRowApplied)
+            // Planned in WriteFogMod (its mirror flags are already in the
+            // fog warps); without the actor row, place nothing.
+            var jumpscarePlan = ctx.JumpscarePlan;
+            if (jumpscarePlan.Actors.Count > 0 && !ctx.JumpscareRowApplied)
+            {
                 Console.WriteLine("Halloween jumpscares: regulation phase did not write the jumpscare row, skipping jumpscares");
-            else if (settings.Jumpscares > 0)
-                jumpscarePlan = JumpscarePlanner.Plan(
-                    ctx.GraphData, BuildZoneMaps(ctx.Ann), settings.Jumpscares, Console.WriteLine);
+                jumpscarePlan = JumpscarePlan.Empty;
+            }
             HalloweenAmbientPass.Inject(
                 ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.Connections,
                 ctx.GraphData.Nodes, gateSides, ctx.Events, ctx.Config.DataDir,
@@ -1160,6 +1175,10 @@ Example:
         // Set by ApplyRegulation when [plugin.halloween] jumpscares > 0;
         // ApplyModDirInjectors places no actor without the row.
         public bool JumpscareRowApplied;
+
+        // Drawn in WriteFogMod, right after BuildRegionToFlags, so its
+        // mirror flags reach PatchEmevd; placed by ApplyModDirInjectors.
+        public JumpscarePlan JumpscarePlan = JumpscarePlan.Empty;
 
         // Parsed lazily on first access: ApplyCommonInjectors (darkness),
         // ApplyRegulation (ambusher row gating) and ApplyModDirInjectors

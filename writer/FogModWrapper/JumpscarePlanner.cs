@@ -6,21 +6,27 @@ namespace FogModWrapper;
 /// One hidden Aging Untouchable of the Halloween jumpscare layer, placed in
 /// MapId for the armed cluster ClusterId. It plays at most once per chosen
 /// layer: LayerFlag is shared by every armed cluster of the layer.
-/// EntryFlags are the zone-tracking flags of the connections into the
-/// cluster, ExitFlags those of the connections out of it.
+/// EnteredFlag (set on every connection into the cluster) and LeftFlag (set
+/// on every connection into the next layer) are private mirror flags of the
+/// zone-tracking flags, which the racing mod clears right after capture.
 /// AnchorGatePartName is an entrance gate of the cluster in this map, or
 /// null when none parses to it; the placement clones the vanilla enemy
 /// nearest to it.
 /// </summary>
 public sealed record JumpscareActor(
     string ClusterId, int Layer, string MapId, int LayerFlag,
-    IReadOnlyList<int> EntryFlags, IReadOnlyList<int> ExitFlags,
+    int EnteredFlag, int LeftFlag,
     string? AnchorGatePartName, uint EntityId, int EventId);
 
-/// <summary>The layers drawn for a seed and their actors, in id order.</summary>
-public sealed record JumpscarePlan(IReadOnlyList<int> Layers, IReadOnlyList<JumpscareActor> Actors)
+/// <summary>The layers drawn for a seed, their actors in id order, and the
+/// mirror flags to set next to each zone-tracking flag (connection
+/// flag_id) before its fog warp.</summary>
+public sealed record JumpscarePlan(
+    IReadOnlyList<int> Layers, IReadOnlyList<JumpscareActor> Actors,
+    IReadOnlyDictionary<int, IReadOnlyList<int>> MirrorFlags)
 {
-    public static readonly JumpscarePlan Empty = new(Array.Empty<int>(), Array.Empty<JumpscareActor>());
+    public static readonly JumpscarePlan Empty = new(
+        Array.Empty<int>(), Array.Empty<JumpscareActor>(), new Dictionary<int, IReadOnlyList<int>>());
 
     public Dictionary<string, List<JumpscareActor>> ActorsByMap() =>
         Actors.GroupBy(a => a.MapId).ToDictionary(g => g.Key, g => g.ToList());
@@ -32,14 +38,15 @@ public sealed record JumpscarePlan(IReadOnlyList<int> Layers, IReadOnlyList<Jump
 /// eligible ones with a PRNG seeded from the graph seed, and arms every
 /// cluster of each drawn layer. The DAG only links consecutive layers, so
 /// every path crosses each drawn layer exactly once and meets exactly
-/// `count` armed clusters.
+/// `count` armed clusters, and entering layer L+1 is leaving layer L.
 ///
 /// A layer is eligible when every one of its clusters is a mini or legacy
 /// dungeon (HalloweenGateAnchors.SpawnClusterTypes), is entered through at
-/// least one zone-tracking flag (graph.json event_map), and has at least
-/// one dungeon map: an open-world tile (m60/m61) streams in and out as the
-/// player moves, so an actor placed on one may not be loaded when its
-/// delay expires.
+/// least one zone-tracking flag (graph.json event_map), contains no boss
+/// zone (no fog separates a fight inside the cluster from the rest of it,
+/// so the delay could land mid-fight), and has at least one dungeon map: an
+/// open-world tile (m60/m61) streams in and out as the player moves, so an
+/// actor placed on one may not be loaded when its delay expires.
 /// </summary>
 internal static class JumpscarePlanner
 {
@@ -48,7 +55,8 @@ internal static class JumpscarePlanner
     private const int SeedTag = 0x4A4D5053;
 
     internal static JumpscarePlan Plan(
-        GraphData graph, IReadOnlyDictionary<string, string[]> zoneMaps, int count, Action<string> log)
+        GraphData graph, IReadOnlyDictionary<string, string[]> zoneMaps,
+        IReadOnlySet<string> bossZones, int count, Action<string> log)
     {
         if (count <= 0)
             return JumpscarePlan.Empty;
@@ -62,6 +70,7 @@ internal static class JumpscarePlanner
             .Where(layer => layer.All(kv =>
                 HalloweenGateAnchors.SpawnClusterTypes.Contains(kv.Value.Type)
                 && entryFlags.ContainsKey(kv.Key)
+                && !kv.Value.Zones.Any(bossZones.Contains)
                 && DungeonMaps(kv.Value, zoneMaps).Count > 0))
             .Select(layer => layer.Key)
             .OrderBy(l => l)
@@ -80,32 +89,54 @@ internal static class JumpscarePlanner
             log($"Halloween jumpscares: warning: only {chosen.Count} eligible dungeon layers for {count} jumpscares");
 
         var actors = new List<JumpscareActor>();
+        var mirrors = new Dictionary<int, List<int>>();
+        void Mirror(int zoneFlag, int mirrorFlag)
+        {
+            if (!mirrors.TryGetValue(zoneFlag, out var list))
+                mirrors[zoneFlag] = list = new List<int>();
+            if (!list.Contains(mirrorFlag))
+                list.Add(mirrorFlag);
+        }
+
+        int armedClusters = 0;
         for (int k = 0; k < chosen.Count; k++)
         {
             int layerFlag = SpeedFogIds.HalloweenJumpscareLayerFlagBase + k;
+            int leftFlag = SpeedFogIds.HalloweenJumpscareLeftFlagBase + k;
+            foreach (var (flag, cluster) in graph.EventMap)
+            {
+                if (graph.Nodes.TryGetValue(cluster, out var target) && target.Layer == chosen[k] + 1)
+                    Mirror(int.Parse(flag), leftFlag);
+            }
+
             var clusters = graph.Nodes
                 .Where(kv => kv.Value.Layer == chosen[k])
                 .OrderBy(kv => kv.Key, StringComparer.Ordinal)
                 .ToList();
             foreach (var (clusterId, node) in clusters)
             {
+                if (armedClusters == SpeedFogIds.HalloweenJumpscareEnteredFlagCount)
+                {
+                    throw new InvalidOperationException(
+                        $"Halloween jumpscare entered flag budget exceeded: more than " +
+                        $"{SpeedFogIds.HalloweenJumpscareEnteredFlagCount} armed clusters");
+                }
+                int enteredFlag = SpeedFogIds.HalloweenJumpscareEnteredFlagBase + armedClusters++;
+                foreach (var flag in entryFlags[clusterId])
+                    Mirror(flag, enteredFlag);
+
                 var zones = node.Zones.ToHashSet();
-                var exitFlags = graph.Connections
-                    .Where(c => zones.Contains(c.ExitArea))
-                    .Select(c => c.FlagId)
-                    .OrderBy(f => f)
-                    .ToList();
                 foreach (var mapId in DungeonMaps(node, zoneMaps))
                 {
                     int index = actors.Count;
                     actors.Add(new JumpscareActor(
-                        clusterId, chosen[k], mapId, layerFlag, entryFlags[clusterId], exitFlags,
+                        clusterId, chosen[k], mapId, layerFlag, enteredFlag, leftFlag,
                         AnchorGate(graph.Connections, zones, mapId),
                         SpeedFogIds.HalloweenJumpscareEntityBase + (uint)index,
                         SpeedFogIds.HalloweenJumpscareEvents.Base + index));
                 }
             }
-            log($"Halloween jumpscares: layer {chosen[k]} (flag {layerFlag}): " +
+            log($"Halloween jumpscares: layer {chosen[k]} (flag {layerFlag}, left flag {leftFlag}): " +
                 string.Join(", ", clusters.Select(kv => kv.Key)));
         }
 
@@ -115,7 +146,29 @@ internal static class JumpscarePlanner
                 $"Halloween jumpscare event budget exceeded: {actors.Count} actors " +
                 $"(max {SpeedFogIds.HalloweenJumpscareEvents.Capacity})");
         }
-        return new JumpscarePlan(chosen, actors);
+        return new JumpscarePlan(
+            chosen, actors, mirrors.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<int>)kv.Value));
+    }
+
+    /// <summary>
+    /// Append the plan's mirror flags to ZoneTrackingInjector's region table
+    /// (region entity to flags set before a warp to it), after the zone
+    /// flags they mirror and once per region, so the fog warp sets them
+    /// along with the zone flags. Called between BuildRegionToFlags and
+    /// PatchEmevd. An empty plan leaves the table untouched.
+    /// </summary>
+    internal static void AddMirrorFlags(Dictionary<int, List<int>> regionToFlags, JumpscarePlan plan)
+    {
+        foreach (var flags in regionToFlags.Values)
+        {
+            var extra = flags
+                .Where(plan.MirrorFlags.ContainsKey)
+                .SelectMany(f => plan.MirrorFlags[f])
+                .Distinct()
+                .Where(m => !flags.Contains(m))
+                .ToList();
+            flags.AddRange(extra);
+        }
     }
 
     /// <summary>The cluster's maps that are not open-world tiles, sorted.</summary>
@@ -130,8 +183,7 @@ internal static class JumpscarePlanner
 
     /// <summary>The part name of the first entrance gate of the cluster
     /// that lives in mapId, in connection order; null when there is none.
-    /// Gates named by entity id alone (backportals) carry no map and are
-    /// skipped.</summary>
+    /// Gate names ParseGateFullName rejects are skipped.</summary>
     private static string? AnchorGate(List<Connection> connections, HashSet<string> zones, string mapId)
     {
         foreach (var conn in connections)

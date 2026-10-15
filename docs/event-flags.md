@@ -57,6 +57,8 @@ SpeedFog uses a **dedicated base `1050290000`**, in map coordinates m60_50_29_00
 Both ranges use saved flags (persist across area reloads):
 - Category 1050290 (offset 0-099): persistent mod state (items given, etc.)
 - Category 1050294 (offset 0-999): zone tracking, cleared by racing mod after capture
+  (so generator EMEVD must never wait on these: features needing "player entered
+  cluster X" set their own 1050290xxx mirror flags, see the Halloween jumpscares)
 
 ### Saved Flags (1050290xxx)
 
@@ -65,6 +67,8 @@ Both ranges use saved flags (persist across area reloads):
 | 1050290000 | 0 | `items_spawned_flag`: one-shot guard for starting item/resource delivery | StartingItemInjector, StartingResourcesInjector |
 | 1050290001 | 1 | `banner_shown_flag`: one-shot guard for run complete banner | RunCompleteInjector |
 | 1050290010-1050290019 | 10-19 | Halloween jumpscare layer played (one per chosen layer, ascending) | HalloweenJumpscareInjector |
+| 1050290020-1050290029 | 20-29 | Halloween jumpscare "left layer" mirror flags, set before warps into the next layer | ZoneTrackingInjector (via RegionToFlags) |
+| 1050290030-1050290099 | 30-99 | Halloween jumpscare "entered cluster" mirror flags, set before warps into an armed cluster | ZoneTrackingInjector (via RegionToFlags) |
 
 ### Zone Tracking Flags (1050294xxx)
 

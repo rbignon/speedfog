@@ -102,6 +102,7 @@ Zone tracking runs after `GameDataWriterE.Write()` and post-processes every EMEV
    - Add `region -> flag_id` (appending to the list if the region already exists for shared entrances)
    - If `entranceEdge.Side.AlternateSide?.Warp?.Region` exists (AlternateFlag warps like flag 300/330), register the alternate region with the same `flag_id`
    - Validate that all `flag_id`s for the same region map to the same cluster in `event_map` (structural safety net)
+3. **Halloween jumpscares only** (`JumpscarePlanner.AddMirrorFlags`, right after step 2): append private saved mirror flags (1050290020-099) after the zone flags of the matching regions. The racing mod clears the zone flags right after capture, so the jumpscare events wait on these instead (see `docs/plugins/halloween-jumpscares.md`). They are not in `event_map`, so the mod never sees them and the Phase 3 validation ignores them. Without jumpscares the table is left untouched.
 
 ### Phase 2: Scan and Inject
 

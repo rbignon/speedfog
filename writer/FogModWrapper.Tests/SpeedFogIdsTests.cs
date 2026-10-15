@@ -85,6 +85,27 @@ public class SpeedFogIdsTests
     }
 
     [Fact]
+    public void JumpscareMirrorFlags_AreSavedModStateFlagsDisjointFromTheLayerFlags()
+    {
+        // The mirror flags replace the zone-tracking flags the racing mod
+        // clears: they must sit in the saved mod-state category the mod
+        // never polls (1050290xxx, offsets 0-99), clear of every other
+        // flag of that category.
+        var left = Enumerable.Range(
+            SpeedFogIds.HalloweenJumpscareLeftFlagBase, SpeedFogIds.HalloweenJumpscareLeftFlagCount);
+        var entered = Enumerable.Range(
+            SpeedFogIds.HalloweenJumpscareEnteredFlagBase, SpeedFogIds.HalloweenJumpscareEnteredFlagCount);
+        var layer = Enumerable.Range(
+            SpeedFogIds.HalloweenJumpscareLayerFlagBase, SpeedFogIds.HalloweenJumpscareLayerFlagCount);
+        var all = left.Concat(entered).Concat(layer).Append(1050290000).Append(SpeedFogIds.BannerShownFlag).ToList();
+
+        Assert.Equal(all.Count, all.Distinct().Count());
+        Assert.All(all, f => Assert.InRange(f, 1050290000, 1050290099));
+        // One left flag per possible chosen layer.
+        Assert.Equal(SpeedFogIds.HalloweenJumpscareLayerFlagCount, SpeedFogIds.HalloweenJumpscareLeftFlagCount);
+    }
+
+    [Fact]
     public void MsbEntityBands_AreDisjointAndOrdered()
     {
         // Three consecutive MSB entity id bands, each owned by a different

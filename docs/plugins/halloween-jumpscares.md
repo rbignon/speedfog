@@ -4,7 +4,8 @@ Part of the Halloween plugin (`[plugin.halloween]`, see
 [halloween-theme.md](halloween-theme.md)). In a few dungeon layers of the
 run, an Aging Untouchable (`c5280`) appears right on the player a random
 delay after they enter the cluster, then fades away. Generation-side only
-(regulation + MSB + EMEVD): the racing mod knows nothing about it.
+(regulation + MSB + EMEVD): the racing mod needs no change, but its flag
+handling shapes the trigger (see "Why mirror flags").
 
 ## Configuration
 
@@ -27,6 +28,10 @@ arms the same layers. A layer is eligible when every one of its clusters:
 
 - is a `mini_dungeon` or `legacy_dungeon`;
 - is entered through at least one zone-tracking flag (`event_map`);
+- contains no boss zone (fog.txt `DefeatFlag`): no fog separates a fight
+  inside the cluster from the rest of it, so the delay could land
+  mid-fight (both Academy clusters with the Red Wolf, the Leyndell and
+  Ashen Leyndell sanctuaries);
 - has at least one map that is not an open-world tile (`m60_*`, `m61_*`).
 
 Every cluster of a drawn layer is armed. The DAG only links consecutive
@@ -39,6 +44,34 @@ player moves: Castle Morne, Redmane Castle, Castle Sol, Caria Manor,
 Shaded Castle, Castle Ensis and Ruins of Rauh never qualify, so a layer
 holding one is never drawn. The Leyndell clusters (m11_00 plus one m60
 tile) qualify through m11_00.
+
+## Why mirror flags
+
+The obvious trigger, the zone-tracking flag of each connection into the
+cluster (`event_map`, 1050294xxx), does not work through the platform: the
+racing mod polls those flags at 10 Hz, even during loading screens, and
+resets each captured fog-gate flag to false to detect re-traversals
+(`speedfog-racing` `mod/src/core/race_machine.rs`, "Regular fog gate:
+clear after capture"). The destination map's event starts after the load,
+when the flag is already gone. Offline play without the mod hides this.
+
+The planner therefore allocates private saved flags in the mod-state
+category the mod never polls: one "entered" flag per armed cluster, set on
+every connection into it, and one "left" flag per drawn layer, set on
+every connection into the next layer (the DAG only links consecutive
+layers, so entering layer L+1 is leaving layer L). `Program.WriteFogMod`
+appends them to `ConnectionInjector.RegionToFlags` right after
+`BuildRegionToFlags`, next to the zone flag of each matching connection
+(`JumpscarePlanner.AddMirrorFlags`), and `ZoneTrackingInjector` sets them
+before the fog warp like any zone flag. Without jumpscares the table is
+left untouched, so other seeds are unaffected.
+
+A boss arena of the same dungeon (usually its own `boss_arena` cluster in
+the same map) is only reached through a fog: before the armed cluster, the
+event still waits for its entered flag; after it, the left flag or the
+layer flag ends it. Leaving the cluster without a fog (grace warp) sets no
+left flag, so the actor may then appear elsewhere in the same map: an
+accepted residual.
 
 ## Placement
 
@@ -59,8 +92,8 @@ One event per actor in its map's EMEVD:
 
 1. Disable the actor and its AI (always first: MSB parts load enabled).
 2. End if the layer already played, or if the player already left the
-   cluster (a flag of an outgoing connection is set).
-3. Wait for an entry flag of the cluster, then `jumpscare_delay`.
+   cluster (the layer's left flag is set).
+3. Wait for the cluster's entered flag, then `jumpscare_delay`.
 4. End if the layer played meanwhile (another actor of the cluster, in
    its other map) or the player left (lost, no carry-over); restart if
    the player is not in this map.
@@ -81,6 +114,8 @@ Timings are fixed waits (`ARRIVAL_SECONDS`, `BURST_SECONDS`,
 | Kind | Value |
 |------|-------|
 | Layer flags (saved) | 1050290010-1050290019, ascending layer order |
+| Left flags (saved, mirror) | 1050290020-1050290029, one per drawn layer, ascending |
+| Entered flags (saved, mirror) | 1050290030-1050290099, one per armed cluster |
 | Events | 755865600+, capacity 100 (one per actor) |
 | Entities | 755920000+ (managed band) |
 | NpcParam | 755890003 |
@@ -89,6 +124,9 @@ Timings are fixed waits (`ARRIVAL_SECONDS`, `BURST_SECONDS`,
 
 1. Generation log: one `Halloween jumpscares: layer ...` line per drawn
    layer; each path meets one jumpscare per drawn layer, none elsewhere.
+   Play it through a racing-platform session with the mod connected
+   (training is enough): offline play would hide a trigger that depends
+   on flags the mod touches.
 2. The warp lands the untouchable on the player without pushing them into
    a wall or off a ledge; no actor visible at its MSB spot before or after
    (die and reload in an armed cluster after it played). If the overlap

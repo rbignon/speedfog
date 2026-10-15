@@ -143,6 +143,18 @@ public static class SpeedFogIds
     public const int HalloweenJumpscareLayerFlagBase = 1050290010;
     public const int HalloweenJumpscareLayerFlagCount = 10;
 
+    /// <summary>Saved mirror flags of the Halloween jumpscares, set next to
+    /// the zone-tracking flags before fog warps (appended to
+    /// RegionToFlags). The racing mod clears the zone-tracking flags right
+    /// after capture, so the jumpscare events wait on these instead: one
+    /// "left" flag per chosen layer (set on every connection into the next
+    /// layer, in ascending layer order like the layer flags) and one
+    /// "entered" flag per armed cluster (set on every connection into it).</summary>
+    public const int HalloweenJumpscareLeftFlagBase = 1050290020;
+    public const int HalloweenJumpscareLeftFlagCount = 10;
+    public const int HalloweenJumpscareEnteredFlagBase = 1050290030;
+    public const int HalloweenJumpscareEnteredFlagCount = 70;
+
     // --- MSB entity ID bases (not EMEVD event ids; a separate id space) ---
 
     /// <summary>DeathMarkerInjector's per-map entity ID allocation floor:
