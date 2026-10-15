@@ -1,5 +1,7 @@
+using System.Globalization;
 using System.Numerics;
 using SoulsFormats;
+using SoulsIds;
 using Xunit;
 using static FogModWrapper.Tests.ParamTestHelper;
 
@@ -120,5 +122,155 @@ public class HalloweenJumpscareInjectorTests
         Assert.Empty(placed);
         Assert.Empty(msb.Parts.Enemies);
         Assert.Contains(logs, l => l.Contains("No vanilla enemy"));
+    }
+
+    // BuildEvent goes through FogMod's Events.ParseAdd, backed by the
+    // gitignored data/er-common.emedf.json; tests return early without it,
+    // like HalloweenDarknessInjectorTests.
+    private static Events? BuildEvents()
+    {
+        var envDir = Environment.GetEnvironmentVariable("DATA_DIR");
+        string? dataDir = null;
+        if (!string.IsNullOrEmpty(envDir) && File.Exists(Path.Combine(envDir, "er-common.emedf.json")))
+            dataDir = envDir;
+        else
+        {
+            var candidate = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "../../../../..", "data"));
+            if (File.Exists(Path.Combine(candidate, "er-common.emedf.json")))
+                dataDir = candidate;
+        }
+        return dataDir == null
+            ? null
+            : new Events(Path.Combine(dataDir, "er-common.emedf.json"), darkScriptMode: true, paramAwareMode: true);
+    }
+
+    private static readonly HalloweenPluginSettings.Settings Scare =
+        new(Ambushes: false, Greeters: true, JumpscareMode: HalloweenPluginSettings.JumpscareMode.Scare);
+    private static readonly HalloweenPluginSettings.Settings Strike =
+        new(Ambushes: false, Greeters: true, JumpscareMode: HalloweenPluginSettings.JumpscareMode.Strike);
+
+    private static int IndexOf(List<EMEVD.Instruction> list, int bank, int id, Func<EMEVD.Instruction, bool>? match = null)
+        => list.FindIndex(i => i.Bank == bank && i.ID == id && (match == null || match(i)));
+
+    private static int U32(EMEVD.Instruction i, int offset) => (int)BitConverter.ToUInt32(i.ArgData, offset);
+
+    [Fact]
+    public void BuildEvent_DisablesTheActorBeforeAnyEarlyExit()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        var list = HalloweenJumpscareInjector.BuildEvent(events, Actor(755920000), Scare).Instructions;
+
+        // MSB parts load enabled: an event that ended before disabling would
+        // leave the actor standing at its spot after every reload.
+        Assert.Equal((2004, 5), (list[0].Bank, list[0].ID));
+        Assert.Equal(755920000, U32(list[0], 0));
+        Assert.Equal(0, list[0].ArgData[4]);  // Disabled
+        Assert.All(list.Where(i => i.Bank is 1000 or 1003), end => Assert.True(list.IndexOf(end) > 0));
+    }
+
+    [Fact]
+    public void BuildEvent_GuardsTheExitBeforeAndAfterTheWaitThenSetsTheLayerFlagBeforeTheWarp()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        var list = HalloweenJumpscareInjector.BuildEvent(events, Actor(755920000), Scare).Instructions;
+
+        int entry = IndexOf(list, 3, 0, i => U32(i, 4) == 1050294100);
+        int wait = IndexOf(list, 1001, 2);
+        int setFlag = IndexOf(list, 2003, 66, i => U32(i, 4) == 1050290010);
+        int warp = IndexOf(list, 2004, 42);
+        var exitGuards = list.Select((ins, idx) => (ins, idx))
+            .Where(t => t.ins.Bank == 1003 && t.ins.ID == 2 && U32(t.ins, 4) == 1050294102)
+            .Select(t => t.idx).ToList();
+
+        Assert.True(entry >= 0 && wait > entry);
+        Assert.Contains(exitGuards, i => i < entry);  // already left: never arm
+        Assert.Contains(exitGuards, i => i > wait);   // left during the delay: lost
+        Assert.True(setFlag > wait && setFlag < warp, "the layer flag must be set before the warp");
+        // Warp onto the player (Character 10000, dummy 12, floor from 10000),
+        // as vanilla event 2049422200 does with its helper.
+        Assert.Equal(2, list[warp].ArgData[4]);
+        Assert.Equal(10000, U32(list[warp], 8));
+        Assert.Equal(12, BitConverter.ToInt32(list[warp].ArgData, 12));
+        Assert.Equal(10000, U32(list[warp], 16));
+    }
+
+    [Fact]
+    public void BuildEvent_RestartsWhileThePlayerIsOutsideTheActorsMap()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        var list = HalloweenJumpscareInjector.BuildEvent(events, Actor(755920000), Scare).Instructions;
+
+        var mapGuard = list[IndexOf(list, 1003, 8)];
+        // Restart, player outside, m31_02_00_00.
+        Assert.Equal(new byte[] { 1, 0, 31, 2, 0, 0 }, mapGuard.ArgData.Take(6).ToArray());
+        Assert.True(IndexOf(list, 1003, 8) < IndexOf(list, 2003, 66));
+    }
+
+    [Fact]
+    public void BuildEvent_ScareTurnsFriendlyAndNeverBursts()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        var list = HalloweenJumpscareInjector.BuildEvent(events, Actor(755920000), Scare).Instructions;
+
+        int team = IndexOf(list, 2004, 2);
+        Assert.Equal(26, list[team].ArgData[4]);  // TeamType.FriendlyNPC
+        Assert.True(team < IndexOf(list, 2004, 42), "the team must change before the warp");
+        Assert.Equal(-1, IndexOf(list, 2003, 18, i => BitConverter.ToInt32(i.ArgData, 4) == HalloweenJumpscareInjector.BURST_ANIM));
+        Assert.True(IndexOf(list, 2003, 18, i => BitConverter.ToInt32(i.ArgData, 4) == HalloweenJumpscareInjector.FADE_ANIM) >= 0);
+    }
+
+    [Fact]
+    public void BuildEvent_StrikeBurstsAndStaysHostile()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        var list = HalloweenJumpscareInjector.BuildEvent(events, Actor(755920000), Strike).Instructions;
+
+        Assert.Equal(-1, IndexOf(list, 2004, 2));
+        int burst = IndexOf(list, 2003, 18, i => BitConverter.ToInt32(i.ArgData, 4) == HalloweenJumpscareInjector.BURST_ANIM);
+        int fade = IndexOf(list, 2003, 18, i => BitConverter.ToInt32(i.ArgData, 4) == HalloweenJumpscareInjector.FADE_ANIM);
+        Assert.True(burst >= 0 && fade > burst);
+        // The actor is disabled again at the very end.
+        Assert.Equal((2004, 5), (list[^1].Bank, list[^1].ID));
+        Assert.Equal(0, list[^1].ArgData[4]);
+    }
+
+    [Fact]
+    public void BuildEvent_FormatsFractionalDelaysInAnyCulture()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+        var previous = CultureInfo.CurrentCulture;
+        try
+        {
+            // fr-FR writes 2,5: a culture-sensitive format would break the parse.
+            CultureInfo.CurrentCulture = new CultureInfo("fr-FR");
+            var settings = Scare with { JumpscareDelayMin = 2.5f, JumpscareDelayMax = 10f };
+
+            var list = HalloweenJumpscareInjector.BuildEvent(events, Actor(755920000), settings).Instructions;
+
+            var wait = list[IndexOf(list, 1001, 2)];
+            Assert.Equal(2.5f, BitConverter.ToSingle(wait.ArgData, 0));
+            Assert.Equal(10f, BitConverter.ToSingle(wait.ArgData, 4));
+        }
+        finally
+        {
+            CultureInfo.CurrentCulture = previous;
+        }
     }
 }

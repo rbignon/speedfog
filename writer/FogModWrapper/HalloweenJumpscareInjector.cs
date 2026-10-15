@@ -1,6 +1,7 @@
 using System.Numerics;
 using SoulsFormats;
 using SoulsIds;
+using static System.FormattableString;
 
 namespace FogModWrapper;
 
@@ -24,6 +25,21 @@ public static class HalloweenJumpscareInjector
     // Vanilla untouchable think row: the part needs a valid one, but the
     // event disables the AI for the whole jumpscare.
     internal const int ACTOR_THINK_PARAM = 52800000;
+    private const int PLAYER_ENTITY = 10000;
+    // Vanilla event 2049422200 warps its helper onto the player this way.
+    internal const int WARP_DUMMY_POLY = 12;
+
+    // c5280 animations and the fixed waits that sequence them (whether
+    // ForceAnimationPlayback's "wait for completion" argument blocks the
+    // event is not established, so the waits do not rely on it). Tuned in
+    // game, see docs/plugins/halloween-jumpscares.md.
+    internal const int ARRIVAL_ANIM = 5010;     // teleport arrival (5010-5013)
+    internal const float ARRIVAL_SECONDS = 1.5f;
+    internal const int BURST_ANIM = 3001;       // lantern burst, hit 0.03-0.27 s
+    internal const float BURST_SECONDS = 1.5f;
+    internal const float LINGER_SECONDS = 2f;   // scare: stands there after arriving
+    internal const int FADE_ANIM = 3000;        // vanilla teleport-out, ~5 s
+    internal const float FADE_SECONDS = 5f;
 
     /// <summary>Write the actor NpcParam row. Returns false when NpcParam is
     /// unavailable: the MSB phase must then place no actor, or the parts
@@ -94,5 +110,109 @@ public static class HalloweenJumpscareInjector
             placed.Add(actor);
         }
         return placed;
+    }
+
+    /// <summary>
+    /// The actor's event, literal values (the number of entry and exit
+    /// flags varies per cluster). The disable comes first, before any early
+    /// exit (MSB parts load enabled); the layer flag is set before the
+    /// warp, so a death or quit-out mid-jumpscare never replays it.
+    /// </summary>
+    internal static EMEVD.Event BuildEvent(
+        Events events, JumpscareActor actor, HalloweenPluginSettings.Settings settings)
+    {
+        uint e = actor.EntityId;
+        var map = ErdtreeWarpPatcher.ParseMapBytes(actor.MapId);
+        static string EndIfFlag(int flag) =>
+            $"EndIfEventFlag(EventEndType.End, ON, TargetEventFlagType.EventFlag, {flag})";
+        static string Animation(uint entity, int anim) =>
+            $"ForceAnimationPlayback({entity}, {anim}, false, false, false, ComparisonType.Equal, 1)";
+        static string Wait(float seconds) => Invariant($"WaitFixedTimeSeconds({seconds})");
+
+        var lines = new List<string>
+        {
+            $"ChangeCharacterEnableState({e}, Disabled)",
+            $"SetCharacterAIState({e}, Disabled)",
+            EndIfFlag(actor.LayerFlag),  // this layer already played
+        };
+        lines.AddRange(actor.ExitFlags.Select(EndIfFlag));  // player already left the cluster
+        lines.AddRange(actor.EntryFlags.Select(f => $"IfEventFlag(OR_01, ON, TargetEventFlagType.EventFlag, {f})"));
+        lines.Add("IfConditionGroup(MAIN, PASS, OR_01)");
+        lines.Add(Invariant($"WaitRandomTimeSeconds({settings.JumpscareDelayMin}, {settings.JumpscareDelayMax})"));
+        lines.AddRange(actor.ExitFlags.Select(EndIfFlag));  // left during the delay: lost
+        // Multi-map cluster or open-world part of it: wait for this map.
+        lines.Add($"EndIfPlayerInoutMap(EventEndType.Restart, false, {map[0]}, {map[1]}, {map[2]}, {map[3]})");
+        lines.Add($"SetEventFlag(TargetEventFlagType.EventFlag, {actor.LayerFlag}, ON)");
+        lines.Add($"ChangeCharacterEnableState({e}, Enabled)");
+        if (settings.JumpscareMode == HalloweenPluginSettings.JumpscareMode.Scare)
+            lines.Add($"SetCharacterTeamType({e}, TeamType.FriendlyNPC)");  // keeps the lantern pulses off the player
+        lines.Add($"WarpCharacterAndCopyFloor({e}, TargetEntityType.Character, {PLAYER_ENTITY}, {WARP_DUMMY_POLY}, {PLAYER_ENTITY})");
+        lines.Add(Animation(e, ARRIVAL_ANIM));
+        lines.Add(Wait(ARRIVAL_SECONDS));
+        if (settings.JumpscareMode == HalloweenPluginSettings.JumpscareMode.Strike)
+        {
+            lines.Add(Animation(e, BURST_ANIM));
+            lines.Add(Wait(BURST_SECONDS));
+        }
+        else
+        {
+            lines.Add(Wait(LINGER_SECONDS));
+        }
+        lines.Add(Animation(e, FADE_ANIM));
+        lines.Add(Wait(FADE_SECONDS));
+        lines.Add($"ChangeCharacterEnableState({e}, Disabled)");
+
+        var evt = new EMEVD.Event(actor.EventId);
+        // events is shared across the parallel map workers; serialize
+        // instruction building like GateDecorInjector does.
+        lock (events)
+        {
+            foreach (var line in lines)
+                evt.Instructions.Add(events.ParseAdd(line));
+        }
+        return evt;
+    }
+
+    /// <summary>
+    /// EMEVD phase: one event per placed actor in the map's EMEVD (mod copy,
+    /// else copied from the game), registered in event 0. Called by
+    /// HalloweenAmbientPass after the shared MSB write, with the actors
+    /// ApplyToMsb actually placed.
+    /// </summary>
+    internal static void WriteEvents(
+        string modDir, string gameDir, Events events, string mapId,
+        List<JumpscareActor> actors, HalloweenPluginSettings.Settings settings, Action<string> log)
+    {
+        if (actors.Count == 0)
+            return;
+
+        var emevdFileName = $"{mapId}.emevd.dcx";
+        var emevdPath = Path.Combine(modDir, "event", emevdFileName);
+        if (!File.Exists(emevdPath))
+        {
+            var gameEmevdPath = Path.Combine(gameDir, "event", emevdFileName);
+            if (!File.Exists(gameEmevdPath))
+            {
+                log($"  Warning: {emevdFileName} not found, skipping jumpscare events for {mapId}");
+                return;
+            }
+            Directory.CreateDirectory(Path.GetDirectoryName(emevdPath)!);
+            File.Copy(gameEmevdPath, emevdPath);
+        }
+
+        var emevd = EMEVD.Read(emevdPath);
+        var initEvent = emevd.Events.Find(e => e.ID == 0);
+        if (initEvent == null)
+        {
+            log($"  Warning: Event 0 not found in {emevdFileName}, skipping jumpscare events");
+            return;
+        }
+
+        foreach (var actor in actors)
+        {
+            emevd.Events.Add(BuildEvent(events, actor, settings));
+            initEvent.Instructions.Add(EmevdHelper.InitializeEvent(actor.EventId));
+        }
+        emevd.Write(emevdPath);
     }
 }
