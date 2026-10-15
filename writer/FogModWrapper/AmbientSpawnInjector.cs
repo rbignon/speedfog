@@ -286,19 +286,30 @@ public static class AmbientSpawnInjector
     /// <summary>PARAM-level entry point used by tests (same split as ApplyAmbusher).</summary>
     public static void ApplyHostileGreeter(PARAM npc)
     {
-        var row = GameEditor.AddRow(npc, SpeedFogIds.HostileGreeterNpcRow, GREETER_TEMPLATE_NPC_PARAM);
-        // Vanilla 52800086 carries DLC tier-31 area scaling (20007100: hp
-        // x13.6, attack x3.8); FogMod never rescales the greeters, so the
-        // vanilla tier row of GREETER_TIER takes its place.
-        int slot = ClearScalingSlotsAndFindFree(row);
-        int tierSpEffect = 7000 + 10 * GREETER_TIER;
-        row[$"spEffectID{slot}"].Value = tierSpEffect; // s32
-        row["getSoul"].Value = 0u;  // u32: one greeter per exit gate, no rune farm
-        row["itemLotId_enemy"].Value = -1;  // s32: no drop
+        int slot = CloneFlatTierUntouchable(npc, SpeedFogIds.HostileGreeterNpcRow);
 
         Console.WriteLine(
             $"Halloween spawns: hostile greeter NpcParam {SpeedFogIds.HostileGreeterNpcRow} " +
-            $"(clone of {GREETER_TEMPLATE_NPC_PARAM}, tier {GREETER_TIER} scaling {tierSpEffect} in slot {slot}, runes 0, no drop)");
+            $"(clone of {GREETER_TEMPLATE_NPC_PARAM}, tier {GREETER_TIER} scaling {7000 + 10 * GREETER_TIER} in slot {slot}, runes 0, no drop)");
+    }
+
+    /// <summary>
+    /// Clone the Aging Untouchable's NpcParam row (52800086) into rowId at
+    /// the flat GREETER_TIER scaling, with no runes and no item drop.
+    /// Shared by the greeter row and HalloweenJumpscareInjector's actor row.
+    /// Returns the SpEffect slot holding the tier row.
+    /// </summary>
+    internal static int CloneFlatTierUntouchable(PARAM npc, int rowId)
+    {
+        var row = GameEditor.AddRow(npc, rowId, GREETER_TEMPLATE_NPC_PARAM);
+        // Vanilla 52800086 carries DLC tier-31 area scaling (20007100: hp
+        // x13.6, attack x3.8); FogMod never rescales these clones, so the
+        // vanilla tier row of GREETER_TIER takes its place.
+        int slot = ClearScalingSlotsAndFindFree(row);
+        row[$"spEffectID{slot}"].Value = 7000 + 10 * GREETER_TIER; // s32
+        row["getSoul"].Value = 0u;  // u32: no rune farm
+        row["itemLotId_enemy"].Value = -1;  // s32: no drop
+        return slot;
     }
 
     /// <summary>PARAM-level entry point used by tests: clone the Aging
@@ -423,9 +434,10 @@ public static class AmbientSpawnInjector
     /// and a greeter cloned from one never showed up in-game. Open-world
     /// tiles leave nearly every enemy collisionless (at most ~13% name one),
     /// so all their enemies stay eligible and a rare cellar or interior enemy
-    /// does not become every spawn's source.
+    /// does not become every spawn's source. Also the clone pool of
+    /// HalloweenJumpscareInjector.
     /// </summary>
-    private static List<MSBE.Part.Enemy> CloneSources(IEnumerable<MSBE.Part.Enemy> enemies)
+    internal static List<MSBE.Part.Enemy> CloneSources(IEnumerable<MSBE.Part.Enemy> enemies)
     {
         var vanilla = enemies.Where(e => !SpeedFogIds.IsModManagedEntity(e.EntityID)).ToList();
         var withCollision = vanilla.Where(e => !string.IsNullOrEmpty(e.CollisionPartName)).ToList();
