@@ -235,8 +235,18 @@ public class HalloweenJumpscareInjectorTests
         Assert.True(IndexOf(list, 1003, 8) < IndexOf(list, 2003, 66));
     }
 
+    // The animation forced by the instruction right after the warp: in game,
+    // an arrival animation (5010) there showed the actor dropping in, left
+    // behind by the running player.
+    private static int AnimationRightAfterWarp(List<EMEVD.Instruction> list)
+    {
+        var next = list[IndexOf(list, 2004, 42) + 1];
+        Assert.Equal((2003, 18), (next.Bank, next.ID));
+        return BitConverter.ToInt32(next.ArgData, 4);
+    }
+
     [Fact]
-    public void BuildEvent_ScareTurnsFriendlyAndNeverBursts()
+    public void BuildEvent_ScareBurstsRightAfterTheWarpAsAFriend()
     {
         var events = BuildEvents();
         if (events == null)
@@ -247,12 +257,11 @@ public class HalloweenJumpscareInjectorTests
         int team = IndexOf(list, 2004, 2);
         Assert.Equal(26, list[team].ArgData[4]);  // TeamType.FriendlyNPC
         Assert.True(team < IndexOf(list, 2004, 42), "the team must change before the warp");
-        Assert.Equal(-1, IndexOf(list, 2003, 18, i => BitConverter.ToInt32(i.ArgData, 4) == HalloweenJumpscareInjector.BURST_ANIM));
-        Assert.True(IndexOf(list, 2003, 18, i => BitConverter.ToInt32(i.ArgData, 4) == HalloweenJumpscareInjector.FADE_ANIM) >= 0);
+        Assert.Equal(HalloweenJumpscareInjector.BURST_ANIM, AnimationRightAfterWarp(list));
     }
 
     [Fact]
-    public void BuildEvent_StrikeBurstsAndStaysHostile()
+    public void BuildEvent_StrikeBurstsRightAfterTheWarpAndStaysHostile()
     {
         var events = BuildEvents();
         if (events == null)
@@ -261,12 +270,47 @@ public class HalloweenJumpscareInjectorTests
         var list = HalloweenJumpscareInjector.BuildEvent(events, Actor(755920000), Strike).Instructions;
 
         Assert.Equal(-1, IndexOf(list, 2004, 2));
-        int burst = IndexOf(list, 2003, 18, i => BitConverter.ToInt32(i.ArgData, 4) == HalloweenJumpscareInjector.BURST_ANIM);
-        int fade = IndexOf(list, 2003, 18, i => BitConverter.ToInt32(i.ArgData, 4) == HalloweenJumpscareInjector.FADE_ANIM);
-        Assert.True(burst >= 0 && fade > burst);
+        Assert.Equal(HalloweenJumpscareInjector.BURST_ANIM, AnimationRightAfterWarp(list));
         // The actor is disabled again at the very end.
         Assert.Equal((2004, 5), (list[^1].Bank, list[^1].ID));
         Assert.Equal(0, list[^1].ArgData[4]);
+    }
+
+    [Fact]
+    public void BuildEvent_VanishesInAPuffRightBeforeTheDisableInEveryModeAndLayer()
+    {
+        var events = BuildEvents();
+        if (events == null)
+            return;
+
+        // The exit depends neither on the mode nor on the drawn layer.
+        foreach (var settings in new[] { Scare, Strike })
+        foreach (var (layer, layerFlag) in new[] { (3, 1050290010), (8, 1050290011), (15, 1050290012) })
+        {
+            var actor = new JumpscareActor("mini_a", layer, "m31_02_00_00", layerFlag, 1050290030, 1050290020,
+                "AEG099_001_9000", 755920000, 755865600);
+            var list = HalloweenJumpscareInjector.BuildEvent(events, actor, settings).Instructions;
+
+            // Burst, its wait, the puff, a short wait, the disable: nothing
+            // else plays out after the burst (no death, no dissolve).
+            int burst = IndexOf(list, 2003, 18);
+            var tail = list.Skip(burst + 1).ToList();
+            Assert.Equal(
+                new[] { (1001, 0), (2006, 3), (2006, 3), (1001, 0), (2004, 5) },
+                tail.Select(i => (i.Bank, i.ID)).ToArray());
+            var puffs = tail.Where(i => i.Bank == 2006).ToList();
+            // Spawned on the actor itself (Target Entity Type 2: Character).
+            Assert.All(puffs, p => Assert.Equal((2, 755920000), (U32(p, 0), U32(p, 4))));
+            Assert.Equal(
+                new[]
+                {
+                    (HalloweenJumpscareInjector.PUFF_HEAD_DUMMY, HalloweenJumpscareInjector.PUFF_HEAD_SFX),
+                    (HalloweenJumpscareInjector.PUFF_BODY_DUMMY, HalloweenJumpscareInjector.PUFF_BODY_SFX),
+                },
+                puffs.Select(p => (BitConverter.ToInt32(p.ArgData, 8), BitConverter.ToInt32(p.ArgData, 12))).ToArray());
+            Assert.Equal(755920000, U32(tail[^1], 0));
+            Assert.Equal(0, tail[^1].ArgData[4]);  // Disabled
+        }
     }
 
     [Fact]

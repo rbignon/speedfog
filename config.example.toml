@@ -398,7 +398,7 @@ enabled = false
 # ambushes = false   # hostile skeleton packs at dungeon exit gates (Halloween mode)
 # darkness = false   # vanilla evergaol lighting over the whole run
 # jumpscares = 3            # dungeon layers with a jumpscare (0 disables, max 10)
-# jumpscare_mode = "scare"  # "scare": appears then fades, harmless; "strike": one lantern burst, then fades
+# jumpscare_mode = "scare"  # lantern burst then a puff; "scare": friendly actor, the burst should spare the player; "strike": it hits
 # jumpscare_delay = [5, 25] # seconds after entering an armed cluster, drawn in game
 
 # Force a fixed weather and pin the in-game clock hour (racing consistency).

@@ -8,9 +8,9 @@ namespace FogModWrapper;
 /// <summary>
 /// Halloween jumpscares ([plugin.halloween] jumpscares): in the layers
 /// JumpscarePlanner draws, a hidden Aging Untouchable warps onto the player
-/// a random delay after they enter an armed cluster, then fades away
-/// (scare) or fires one lantern burst first (strike). See
-/// docs/plugins/halloween-jumpscares.md.
+/// a random delay after they enter an armed cluster, fires its lantern
+/// burst (kept off the player in scare, landing in strike), then vanishes
+/// in a puff. See docs/plugins/halloween-jumpscares.md.
 ///
 /// Three phases:
 /// 1. Regulation (ApplyJumpscareRow): the actor's NpcParam row, the greeter
@@ -29,17 +29,30 @@ public static class HalloweenJumpscareInjector
     // Vanilla event 2049422200 warps its helper onto the player this way.
     internal const int WARP_DUMMY_POLY = 12;
 
-    // c5280 animations and the fixed waits that sequence them (whether
-    // ForceAnimationPlayback's "wait for completion" argument blocks the
-    // event is not established, so the waits do not rely on it). Tuned in
-    // game, see docs/plugins/halloween-jumpscares.md.
-    internal const int ARRIVAL_ANIM = 5010;     // teleport arrival (5010-5013)
-    internal const float ARRIVAL_SECONDS = 1.5f;
-    internal const int BURST_ANIM = 3001;       // lantern burst, hit 0.03-0.27 s
+    // The c5280 animation and the fixed waits that sequence the event
+    // (whether ForceAnimationPlayback's "wait for completion" argument
+    // blocks the event is not established, so the waits do not rely on it).
+    // Tuned in game, see docs/plugins/halloween-jumpscares.md.
+    //
+    // The lantern burst vanilla plays right after its far teleport: the
+    // explosion, hit 0.03-0.27 s at radius 4. Played straight after the
+    // warp: in game, an arrival animation (5010) there showed the actor
+    // dropping in, left behind by the running player.
+    internal const int BURST_ANIM = 3001;
     internal const float BURST_SECONDS = 1.5f;
-    internal const float LINGER_SECONDS = 2f;   // scare: stands there after arriving
-    internal const int FADE_ANIM = 3000;        // vanilla teleport-out, ~5 s
-    internal const float FADE_SECONDS = 5f;
+
+    // The exit: the puff vanilla common event 90005636 spawns on an NPC
+    // before disabling it 0.2 s later, masking the disable. The body itself
+    // cannot fade from EMEVD: Set Character Fade On Enable only fades in,
+    // the opacity-fading 7600 has no W_Event in the shared c9997 behavior
+    // (forced from EMEVD, it showed nothing in game), and c5280's materials
+    // have no fade parameter for a SpEffect to drive. On c5280, dummy 905
+    // sits at head height and dummy 960 is spread over the whole body.
+    internal const int PUFF_HEAD_DUMMY = 905;
+    internal const int PUFF_HEAD_SFX = 643041;
+    internal const int PUFF_BODY_DUMMY = 960;
+    internal const int PUFF_BODY_SFX = 643040;
+    internal const float PUFF_SECONDS = 0.2f;
 
     /// <summary>Write the actor NpcParam row. Returns false when NpcParam is
     /// unavailable: the MSB phase must then place no actor, or the parts
@@ -128,6 +141,8 @@ public static class HalloweenJumpscareInjector
         static string Animation(uint entity, int anim) =>
             $"ForceAnimationPlayback({entity}, {anim}, false, false, false, ComparisonType.Equal, 1)";
         static string Wait(float seconds) => Invariant($"WaitFixedTimeSeconds({seconds})");
+        static string Puff(uint entity, int dummy, int sfx) =>
+            $"SpawnOneshotSFX(TargetEntityType.Character, {entity}, {dummy}, {sfx})";
 
         var lines = new List<string>
         {
@@ -149,21 +164,13 @@ public static class HalloweenJumpscareInjector
         lines.Add($"SetEventFlag(TargetEventFlagType.EventFlag, {actor.LayerFlag}, ON)");
         lines.Add($"ChangeCharacterEnableState({e}, Enabled)");
         if (settings.JumpscareMode == HalloweenPluginSettings.JumpscareMode.Scare)
-            lines.Add($"SetCharacterTeamType({e}, TeamType.FriendlyNPC)");  // keeps the lantern pulses off the player
+            lines.Add($"SetCharacterTeamType({e}, TeamType.FriendlyNPC)");  // keeps the burst and the lantern pulses off the player
         lines.Add($"WarpCharacterAndCopyFloor({e}, TargetEntityType.Character, {PLAYER_ENTITY}, {WARP_DUMMY_POLY}, {PLAYER_ENTITY})");
-        lines.Add(Animation(e, ARRIVAL_ANIM));
-        lines.Add(Wait(ARRIVAL_SECONDS));
-        if (settings.JumpscareMode == HalloweenPluginSettings.JumpscareMode.Strike)
-        {
-            lines.Add(Animation(e, BURST_ANIM));
-            lines.Add(Wait(BURST_SECONDS));
-        }
-        else
-        {
-            lines.Add(Wait(LINGER_SECONDS));
-        }
-        lines.Add(Animation(e, FADE_ANIM));
-        lines.Add(Wait(FADE_SECONDS));
+        lines.Add(Animation(e, BURST_ANIM));
+        lines.Add(Wait(BURST_SECONDS));
+        lines.Add(Puff(e, PUFF_HEAD_DUMMY, PUFF_HEAD_SFX));
+        lines.Add(Puff(e, PUFF_BODY_DUMMY, PUFF_BODY_SFX));
+        lines.Add(Wait(PUFF_SECONDS));
         lines.Add($"ChangeCharacterEnableState({e}, Disabled)");
 
         var evt = new EMEVD.Event(actor.EventId);

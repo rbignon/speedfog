@@ -3,9 +3,10 @@
 Part of the Halloween plugin (`[plugin.halloween]`, see
 [halloween-theme.md](halloween-theme.md)). In a few dungeon layers of the
 run, an Aging Untouchable (`c5280`) appears right on the player a random
-delay after they enter the cluster, then fades away. Generation-side only
-(regulation + MSB + EMEVD): the racing mod needs no change, but its flag
-handling shapes the trigger (see "Why mirror flags").
+delay after they enter the cluster, fires its lantern burst, then vanishes
+in a puff. Generation-side only (regulation + MSB + EMEVD): the racing mod
+needs no change, but its flag handling shapes the trigger (see "Why mirror
+flags").
 
 ## Configuration
 
@@ -101,15 +102,37 @@ One event per actor in its map's EMEVD:
    the player is not in this map.
 5. Set the layer flag (before the visual: a death or quit-out never
    replays it).
-6. Enable; in `scare` mode switch to team type 26 (Friendly NPC); warp
-   onto the player (`Warp Character and Copy Floor`, dummy 12, as vanilla
-   event 2049422200 does with its helper); arrival animation 5010.
-7. `strike`: lantern burst 3001. `scare`: stand for 2 s.
-8. Fade-out 3000, then disable.
+6. Enable; in `scare` mode switch to team type 26 (Friendly NPC), expected
+   to keep the burst and the lantern pulses off the player (see the
+   in-game checks); warp onto the
+   player (`Warp Character and Copy Floor`, dummy 12, as vanilla event
+   2049422200 does with its helper).
+7. Lantern burst 3001 straight away, the AOE vanilla plays right after its
+   far teleport (in game, an arrival animation first showed the actor
+   dropping in, left behind by the running player). In `strike` it lands
+   on the player: AtkParam_Npc 5280115, radius 4 m, 100 magic at the
+   actor's tier-6 scaling (x1.76), reaction level EXLARGE (thrown back)
+   only when its poise damage of 11 breaks the player's poise; the three
+   lantern pulses it fires (bullets 205280000-002) add 10 madness each.
+8. After `BURST_SECONDS`, the puff vanilla common event 90005636 spawns on
+   an NPC before disabling it (SFX 643041 at dummy 905, 643040 at dummy
+   960), then disable `PUFF_SECONDS` later: the puff masks the disable.
 
-Timings are fixed waits (`ARRIVAL_SECONDS`, `BURST_SECONDS`,
-`LINGER_SECONDS`, `FADE_SECONDS`), constants at the top of
-`HalloweenJumpscareInjector.cs` with the animation ids.
+Timings are fixed waits (`BURST_SECONDS`, `PUFF_SECONDS`), constants at
+the top of `HalloweenJumpscareInjector.cs` with the animation and SFX ids.
+
+### Why a puff, not a fade
+
+The body cannot fade from EMEVD. `Set Character Fade On Enable` fades in
+only: the disable stays instant. c5280's opacity keyframes (TAE event 193)
+live in 3000 (vanilla teleport: snaps to 0 at 4.73 s, fades back in), 3001,
+7600-7620 and the death animations, but `Force Animation Playback` only
+reaches an animation the behavior exposes as `W_Event<id>`, and the shared
+c9997 behavior has none for 7600-7620 (7600 forced anyway showed nothing in
+game). c5280's materials expose no fade parameter for a SpEffectVfx
+`materialParamId` to drive. Three vanilla exits were then compared in game
+(2026-10-16): this puff, a forced death (its animation fades the body) and
+the 601110 dissolve of common event 90005390. The puff was kept.
 
 ## IDs
 
@@ -122,7 +145,12 @@ Timings are fixed waits (`ARRIVAL_SECONDS`, `BURST_SECONDS`,
 | Entities | 755920000+ (managed band) |
 | NpcParam | 755890003 |
 
-## In-game checks still owed
+## In-game checks
+
+Validated in game (2026-10-16, scare and strike test seeds): the actor
+appears on the player and bursts at once; the puff masks the disable.
+
+Still owed:
 
 1. Generation log: one `Halloween jumpscares: layer ...` line per drawn
    layer, followed by one line per armed cluster (display name, cluster
@@ -136,16 +164,16 @@ Timings are fixed waits (`ARRIVAL_SECONDS`, `BURST_SECONDS`,
    a wall or off a ledge; no actor visible at its MSB spot before or after
    (die and reload in an armed cluster after it played). If the overlap
    looks bad, scout a c0000 dummy poly behind the player.
-3. Pick the best arrival animation among 5010-5013; tune
-   `ARRIVAL_SECONDS`.
-4. `scare`: no damage and no madness buildup over the whole sequence. The
-   lantern pulses are bullets of TAE judges 100-102 and fire without AI;
-   team type 26 is expected to keep them off the player. If not, give the
-   actor a behavior variation whose judges 100-102 point at madness-free
-   pulse clones (the recipe of the Untouchable boss's `ApplyMoveset`).
-5. `strike`: the burst lands at point-blank range at tier-6 damage, then
-   the actor fades and disappears.
-6. Fade length: whether the full 3000 (5 s) drags; cut `FADE_SECONDS`.
-7. Leaving a cluster before the delay expires loses its jumpscare.
-8. Leyndell (m11_00 + m60 tile) and Nokron Ancestral Woods (two dungeon
+3. `scare`: no damage, no reaction and no madness buildup over the whole
+   sequence. Both the burst hit (TAE judge 115, AtkParam_Npc 5280115) and
+   the lantern pulses (bullets of judges 100-102, fired without AI) rely
+   on team type 26 to spare the player. If not, give the actor a behavior
+   variation whose judge 115 points at a zero-damage clone of 5280115 and
+   whose judges 100-102 point at madness-free pulse clones (the recipe of
+   the Untouchable boss's `ApplyMoveset`). Also check that the friendly
+   burst does not hit or aggro dungeon enemies within its 4 m.
+4. `strike`: the burst damages the player, throws them back only when it
+   breaks their poise, and adds madness (up to 30); then the puff.
+5. Leaving a cluster before the delay expires loses its jumpscare.
+6. Leyndell (m11_00 + m60 tile) and Nokron Ancestral Woods (two dungeon
    maps): fires only while the player is in a map hosting an actor, once.
