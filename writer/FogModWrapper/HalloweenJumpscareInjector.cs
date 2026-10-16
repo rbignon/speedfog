@@ -9,8 +9,8 @@ namespace FogModWrapper;
 /// Halloween jumpscares ([plugin.halloween] jumpscares): in the layers
 /// JumpscarePlanner draws, a hidden Aging Untouchable warps onto the player
 /// a random delay after they enter an armed cluster, fires its lantern
-/// burst (kept off the player in scare, landing in strike), then vanishes
-/// in a puff. See docs/plugins/halloween-jumpscares.md.
+/// burst on them, fights with its AI for a few seconds (strike only), then
+/// vanishes in a puff. See docs/plugins/halloween-jumpscares.md.
 ///
 /// Three phases:
 /// 1. Regulation (ApplyJumpscareRow): the actor's NpcParam row, the greeter
@@ -22,8 +22,8 @@ namespace FogModWrapper;
 public static class HalloweenJumpscareInjector
 {
     internal const string ACTOR_MODEL = "c5280";
-    // Vanilla untouchable think row: the part needs a valid one, but the
-    // event disables the AI for the whole jumpscare.
+    // Vanilla untouchable think row: the part needs a valid one, and the
+    // event switches this AI on after the burst in strike mode only.
     internal const int ACTOR_THINK_PARAM = 52800000;
     private const int PLAYER_ENTITY = 10000;
     // Vanilla event 2049422200 warps its helper onto the player this way.
@@ -40,6 +40,8 @@ public static class HalloweenJumpscareInjector
     // dropping in, left behind by the running player.
     internal const int BURST_ANIM = 3001;
     internal const float BURST_SECONDS = 1.5f;
+    // Strike: how long the actor fights with its AI after the burst.
+    internal const float FIGHT_SECONDS = 10f;
 
     // The exit: the puff vanilla common event 90005636 spawns on an NPC
     // before disabling it 0.2 s later, masking the disable. The body itself
@@ -163,11 +165,14 @@ public static class HalloweenJumpscareInjector
         lines.Add($"EndIfPlayerInoutMap(EventEndType.Restart, false, {map[0]}, {map[1]}, {map[2]}, {map[3]})");
         lines.Add($"SetEventFlag(TargetEventFlagType.EventFlag, {actor.LayerFlag}, ON)");
         lines.Add($"ChangeCharacterEnableState({e}, Enabled)");
-        if (settings.JumpscareMode == HalloweenPluginSettings.JumpscareMode.Scare)
-            lines.Add($"SetCharacterTeamType({e}, TeamType.FriendlyNPC)");  // keeps the burst and the lantern pulses off the player
         lines.Add($"WarpCharacterAndCopyFloor({e}, TargetEntityType.Character, {PLAYER_ENTITY}, {WARP_DUMMY_POLY}, {PLAYER_ENTITY})");
         lines.Add(Animation(e, BURST_ANIM));
         lines.Add(Wait(BURST_SECONDS));
+        if (settings.JumpscareMode == HalloweenPluginSettings.JumpscareMode.Strike)
+        {
+            lines.Add($"SetCharacterAIState({e}, Enabled)");
+            lines.Add(Wait(FIGHT_SECONDS));
+        }
         lines.Add(Puff(e, PUFF_HEAD_DUMMY, PUFF_HEAD_SFX));
         lines.Add(Puff(e, PUFF_BODY_DUMMY, PUFF_BODY_SFX));
         lines.Add(Wait(PUFF_SECONDS));

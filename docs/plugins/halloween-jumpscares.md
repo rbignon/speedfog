@@ -3,10 +3,10 @@
 Part of the Halloween plugin (`[plugin.halloween]`, see
 [halloween-theme.md](halloween-theme.md)). In a few dungeon layers of the
 run, an Aging Untouchable (`c5280`) appears right on the player a random
-delay after they enter the cluster, fires its lantern burst, then vanishes
-in a puff. Generation-side only (regulation + MSB + EMEVD): the racing mod
-needs no change, but its flag handling shapes the trigger (see "Why mirror
-flags").
+delay after they enter the cluster, fires its lantern burst (in `strike`,
+then fights for a few seconds), then vanishes in a puff. Generation-side
+only (regulation + MSB + EMEVD): the racing mod needs no change, but its
+flag handling shapes the trigger (see "Why mirror flags").
 
 ## Configuration
 
@@ -86,8 +86,8 @@ vanilla enemy nearest to an entrance gate of the cluster in that map (the
 map's first clone source without one, see
 `AmbientSpawnInjector.CloneSources`) and stands on that enemy's spot. It
 uses NpcParam `755890003` (the greeter recipe: flat `GREETER_TIER`
-scaling, no runes, no drop) and the vanilla think row 52800000 (its AI is
-off for the whole jumpscare).
+scaling, no runes, no drop) and the vanilla think row 52800000 (its AI
+stays off, except for the fight of `strike` mode).
 
 ## Event
 
@@ -102,24 +102,33 @@ One event per actor in its map's EMEVD:
    the player is not in this map.
 5. Set the layer flag (before the visual: a death or quit-out never
    replays it).
-6. Enable; in `scare` mode switch to team type 26 (Friendly NPC), expected
-   to keep the burst and the lantern pulses off the player (see the
-   in-game checks); warp onto the
-   player (`Warp Character and Copy Floor`, dummy 12, as vanilla event
-   2049422200 does with its helper).
+6. Enable and warp onto the player (`Warp Character and Copy Floor`,
+   dummy 12, as vanilla event 2049422200 does with its helper). The actor
+   stays hostile in both modes: a friendly team (type 26) would spare the
+   player, but the hit of the burst is wanted.
 7. Lantern burst 3001 straight away, the AOE vanilla plays right after its
    far teleport (in game, an arrival animation first showed the actor
-   dropping in, left behind by the running player). In `strike` it lands
-   on the player: AtkParam_Npc 5280115, radius 4 m, 100 magic at the
-   actor's tier-6 scaling (x1.76), reaction level EXLARGE (thrown back)
-   only when its poise damage of 11 breaks the player's poise; the three
-   lantern pulses it fires (bullets 205280000-002) add 10 madness each.
-8. After `BURST_SECONDS`, the puff vanilla common event 90005636 spawns on
-   an NPC before disabling it (SFX 643041 at dummy 905, 643040 at dummy
-   960), then disable `PUFF_SECONDS` later: the puff masks the disable.
+   dropping in, left behind by the running player). It lands on the
+   player: AtkParam_Npc 5280115, radius 4 m, 100 magic at the actor's
+   tier-6 scaling (x1.76), reaction level EXLARGE (thrown back) only when
+   its poise damage of 11 breaks the player's poise; the three lantern
+   pulses it fires (bullets 205280000-002) add 10 madness each.
+8. `strike` only: after `BURST_SECONDS`, switch the AI on and let the
+   actor fight for `FIGHT_SECONDS` with the vanilla ambient untouchable's
+   moveset (grab, far teleport, lantern pulses), not the boss's. `scare`
+   keeps the AI off: the burst is the whole encounter.
+9. The puff vanilla common event 90005636 spawns on an NPC before
+   disabling it (SFX 643041 at dummy 905, 643040 at dummy 960), then
+   disable `PUFF_SECONDS` later: the puff masks the disable.
 
-Timings are fixed waits (`BURST_SECONDS`, `PUFF_SECONDS`), constants at
-the top of `HalloweenJumpscareInjector.cs` with the animation and SFX ids.
+| Mode | Burst | AI |
+|------|-------|----|
+| `scare` (default) | hits the player | off |
+| `strike` | hits the player | on for `FIGHT_SECONDS` after the burst |
+
+Timings are fixed waits (`BURST_SECONDS`, `FIGHT_SECONDS`, `PUFF_SECONDS`),
+constants at the top of `HalloweenJumpscareInjector.cs` with the animation
+and SFX ids.
 
 ### Why a puff, not a fade
 
@@ -147,8 +156,9 @@ the 601110 dissolve of common event 90005390. The puff was kept.
 
 ## In-game checks
 
-Validated in game (2026-10-16, scare and strike test seeds): the actor
-appears on the player and bursts at once; the puff masks the disable.
+Validated in game (2026-10-16, two test seeds, AI off): the actor appears
+on the player and bursts at once, the hostile burst hits, and the puff
+masks the disable.
 
 Still owed:
 
@@ -164,16 +174,19 @@ Still owed:
    a wall or off a ledge; no actor visible at its MSB spot before or after
    (die and reload in an armed cluster after it played). If the overlap
    looks bad, scout a c0000 dummy poly behind the player.
-3. `scare`: no damage, no reaction and no madness buildup over the whole
-   sequence. Both the burst hit (TAE judge 115, AtkParam_Npc 5280115) and
-   the lantern pulses (bullets of judges 100-102, fired without AI) rely
-   on team type 26 to spare the player. If not, give the actor a behavior
-   variation whose judge 115 points at a zero-damage clone of 5280115 and
-   whose judges 100-102 point at madness-free pulse clones (the recipe of
-   the Untouchable boss's `ApplyMoveset`). Also check that the friendly
-   burst does not hit or aggro dungeon enemies within its 4 m.
-4. `strike`: the burst damages the player, throws them back only when it
-   breaks their poise, and adds madness (up to 30); then the puff.
+3. The burst (both modes): damage, thrown back only when it breaks the
+   player's poise, madness up to 30.
+4. `strike`: the fight. Tune `FIGHT_SECONDS`. Its far teleport (3000) may
+   carry it away before the puff, which then plays wherever it stands
+   (same mechanism as the greeters' open far-teleport question, see
+   [halloween-ambient.md](halloween-ambient.md) "Greeter stats"). The
+   puff disables it on a timer whatever it is doing: a puff landing
+   during its grab (3002/3003, throw 4100) must release the player
+   cleanly; if not, wait for the grab to end before the puff.
+   The vanilla immunity wall is an EMEVD event per untouchable (see
+   [untouchable-boss.md](../untouchable-boss.md)) the actor does not get,
+   so it can be killed: check that the puff then plays on the body. Its
+   lantern pulses keep adding madness during the fight.
 5. Leaving a cluster before the delay expires loses its jumpscare.
 6. Leyndell (m11_00 + m60 tile) and Nokron Ancestral Woods (two dungeon
    maps): fires only while the player is in a map hosting an actor, once.
