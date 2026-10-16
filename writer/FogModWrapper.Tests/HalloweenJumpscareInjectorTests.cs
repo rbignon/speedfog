@@ -121,7 +121,8 @@ public class HalloweenJumpscareInjectorTests
         // returned actors only).
         Assert.Empty(placed);
         Assert.Empty(msb.Parts.Enemies);
-        Assert.Contains(logs, l => l.Contains("No vanilla enemy"));
+        // The map is named, so the skip maps back to the planner's per-cluster line.
+        Assert.Contains(logs, l => l.Contains("No vanilla enemy") && l.Contains("m31_02_00_00"));
     }
 
     // BuildEvent goes through FogMod's Events.ParseAdd, backed by the

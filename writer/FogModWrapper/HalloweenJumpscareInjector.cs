@@ -79,7 +79,8 @@ public static class HalloweenJumpscareInjector
         var cloneSources = AmbientSpawnInjector.CloneSources(msb.Parts.Enemies);
         if (cloneSources.Count == 0)
         {
-            log($"  Warning: No vanilla enemy to clone from, skipping {actors.Count} jumpscare actor(s)");
+            log($"  Warning: No vanilla enemy to clone from, skipping {actors.Count} jumpscare actor(s) in " +
+                string.Join(", ", actors.Select(a => a.MapId).Distinct()));
             return placed;
         }
         MsbHelper.EnsureEnemyModel(msb, ACTOR_MODEL);

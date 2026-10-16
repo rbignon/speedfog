@@ -227,8 +227,10 @@ public class GraphLoaderTests
         var data = GraphLoader.Parse(json)!;
         Assert.Equal("legacy_dungeon", data.Nodes["stormveil"].Type);
         Assert.Equal("boss_arena", data.Nodes["arena_x"].Type);
-        // The jumpscare planner groups nodes by the exported layer.
+        // The jumpscare planner groups nodes by the exported layer and logs
+        // the armed clusters by name.
         Assert.Equal(1, data.Nodes["stormveil"].Layer);
+        Assert.Equal("Stormveil", data.Nodes["stormveil"].DisplayName);
     }
 
     [Fact]

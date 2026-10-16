@@ -125,7 +125,10 @@ Timings are fixed waits (`ARRIVAL_SECONDS`, `BURST_SECONDS`,
 ## In-game checks still owed
 
 1. Generation log: one `Halloween jumpscares: layer ...` line per drawn
-   layer; each path meets one jumpscare per drawn layer, none elsewhere.
+   layer, followed by one line per armed cluster (display name, cluster
+   id, the dungeon maps planned to hold its actors; a map skipped at
+   placement logs its own warning); each path meets one jumpscare per
+   drawn layer, none elsewhere.
    Play it through a racing-platform session with the mod connected
    (training is enough): offline play would hide a trigger that depends
    on flags the mod touches.

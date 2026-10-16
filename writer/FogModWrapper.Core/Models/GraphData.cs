@@ -398,12 +398,16 @@ public class RemoveEntity
 }
 
 /// <summary>
-/// One DAG node (cluster); only the fields injectors need.
+/// One DAG node (cluster); only the fields the writer needs.
 /// </summary>
 public class GraphNode
 {
     [JsonPropertyName("type")]
     public string Type { get; set; } = "";
+
+    /// <summary>Human-readable cluster name (e.g. "Redmane Castle"), for logs.</summary>
+    [JsonPropertyName("display_name")]
+    public string DisplayName { get; set; } = "";
 
     [JsonPropertyName("zones")]
     public List<string> Zones { get; set; } = new();

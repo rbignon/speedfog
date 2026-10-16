@@ -109,6 +109,7 @@ internal static class JumpscarePlanner
                     Mirror(int.Parse(flag), leftFlag);
             }
 
+            log($"Halloween jumpscares: layer {chosen[k]} (flag {layerFlag}, left flag {leftFlag}):");
             var clusters = graph.Nodes
                 .Where(kv => kv.Value.Layer == chosen[k])
                 .OrderBy(kv => kv.Key, StringComparer.Ordinal)
@@ -126,7 +127,8 @@ internal static class JumpscarePlanner
                     Mirror(flag, enteredFlag);
 
                 var zones = node.Zones.ToHashSet();
-                foreach (var mapId in DungeonMaps(node, zoneMaps))
+                var maps = DungeonMaps(node, zoneMaps);
+                foreach (var mapId in maps)
                 {
                     int index = actors.Count;
                     actors.Add(new JumpscareActor(
@@ -135,9 +137,9 @@ internal static class JumpscarePlanner
                         SpeedFogIds.HalloweenJumpscareEntityBase + (uint)index,
                         SpeedFogIds.HalloweenJumpscareEvents.Base + index));
                 }
+                var name = node.DisplayName.Length > 0 ? $"{node.DisplayName} ({clusterId})" : clusterId;
+                log($"  {name}: {string.Join(", ", maps)}");
             }
-            log($"Halloween jumpscares: layer {chosen[k]} (flag {layerFlag}, left flag {leftFlag}): " +
-                string.Join(", ", clusters.Select(kv => kv.Key)));
         }
 
         if (actors.Count > SpeedFogIds.HalloweenJumpscareEvents.Capacity)

@@ -95,6 +95,21 @@ public class JumpscarePlannerTests
     }
 
     [Fact]
+    public void Plan_LogsEachArmedClusterByNameWithItsActorMaps()
+    {
+        var graph = Fixture();
+        graph.Nodes["mini_c"].DisplayName = "Cave C";
+        var logs = new List<string>();
+
+        Plan(10, graph: graph, logs: logs);
+
+        // Dungeon maps only (cave_c2's m12 tile included), id as fallback
+        // for a node exported without a name.
+        Assert.Contains("  Cave C (mini_c): m12_07_00_00, m31_02_00_00", logs);
+        Assert.Contains("  legacy_l: m10_00_00_00", logs);
+    }
+
+    [Fact]
     public void Plan_ZeroJumpscaresIsEmpty()
         => Assert.Empty(Plan(0).Actors);
 
