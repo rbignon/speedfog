@@ -397,7 +397,7 @@ enabled = false
 # greeters = true    # hostile Aging Untouchable beside each dungeon exit gate
 # ambushes = false   # hostile skeleton packs at dungeon exit gates (Halloween mode)
 # darkness = false   # vanilla evergaol lighting over the whole run
-# jumpscares = 3            # dungeon layers with a jumpscare (0 disables, max 10)
+# jumpscares = 0            # dungeon layers with a jumpscare (opt-in: 0 disables, max 10)
 # jumpscare_mode = "scare"  # hostile lantern burst then a puff; "strike": it also fights with its AI for a few seconds
 # jumpscare_delay = [5, 25] # seconds after entering an armed cluster, drawn in game
 

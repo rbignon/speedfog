@@ -63,6 +63,12 @@ public class HalloweenPluginSettingsTests
     }
 
     [Fact]
+    public void Parse_DefaultsJumpscaresOff()
+        // Pools enable the plugin for its theme alone: an unconfigured
+        // [plugin.halloween] must not arm jumpscares.
+        => Assert.Equal(0, HalloweenPluginSettings.Parse(Config()).Jumpscares);
+
+    [Fact]
     public void Parse_UnconfiguredMatchesTheRecordDefaults()
         // Code that builds Settings directly (tests, the darkness gate) must
         // see the same jumpscare defaults as an unconfigured seed.

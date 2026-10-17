@@ -13,13 +13,15 @@ flag handling shapes the trigger (see "Why mirror flags").
 ```toml
 [plugin.halloween]
 enabled = true
-jumpscares = 3              # dungeon layers armed per run; 0 disables (max 10)
+jumpscares = 3              # dungeon layers armed per run; default 0 (off), max 10
 jumpscare_mode = "scare"    # "scare" | "strike"
 jumpscare_delay = [5, 25]   # seconds after entering an armed cluster
 ```
 
-Parsed strictly by `HalloweenPluginSettings.Parse` (wrong type or value
-aborts the build). Independent of `greeters`, `ambushes` and `darkness`.
+Opt-in: without `jumpscares`, no layer is armed, so a config that enables
+the plugin for its text theme alone gets no jumpscare. Parsed strictly by
+`HalloweenPluginSettings.Parse` (wrong type or value aborts the build).
+Independent of `greeters`, `ambushes` and `darkness`.
 
 ## Selection
 

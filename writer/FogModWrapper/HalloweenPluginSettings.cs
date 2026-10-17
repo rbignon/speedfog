@@ -15,8 +15,9 @@ public static class HalloweenPluginSettings
     public enum JumpscareMode { Scare, Strike }
 
     // Shared by Parse and the Settings record, so a Settings built in code
-    // matches an unconfigured [plugin.halloween].
-    public const int DefaultJumpscares = 3;
+    // matches an unconfigured [plugin.halloween]. Jumpscares are opt-in:
+    // configs enable the plugin for its theme alone.
+    public const int DefaultJumpscares = 0;
     public const float DefaultJumpscareDelayMin = 5f;
     public const float DefaultJumpscareDelayMax = 25f;
 
