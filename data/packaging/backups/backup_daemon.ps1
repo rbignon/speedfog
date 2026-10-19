@@ -29,6 +29,10 @@ if (Test-Path $configPath) {
 }
 # Wait-Process -Timeout rejects values above 32767 seconds; clamp to sane bounds.
 if ($interval -lt 1) { $interval = 1 } elseif ($interval -gt 540) { $interval = 540 }
+# A save written at the start of a fog-gate warp cannot be loaded (see
+# Test-SaveMidWarp in backup_store.ps1): give the loading screen this long
+# to end before zipping such a save, tagged -warp, as the game may be stuck.
+$midWarpWait = 45
 
 Log "Save file: $SavePath"
 
@@ -57,7 +61,9 @@ if (Test-Path -LiteralPath $SavePath) {
     try {
         $zip = New-SaveBackup -BackupsDir $backupsDir -SavePath $SavePath -Kind start -Launch $launch
         $lastHash = $zip.SaveHash
-        Log "Launch $launch start backup: $($zip.Name)"
+        $note = ''
+        if ($zip.Warp) { $note = ' (warp in progress: the game cannot load it)' }
+        Log "Launch $launch start backup: $($zip.Name)$note"
     } catch {
         Log "WARNING: Failed to create start-of-launch backup: $_"
     }
@@ -87,12 +93,17 @@ while ($true) {
     }
 
     try {
-        $zip = New-SaveBackup -BackupsDir $backupsDir -SavePath $SavePath -Kind periodic -Launch $launch -UnlessHash $lastHash
+        $zip = New-SettledBackup -BackupsDir $backupsDir -SavePath $SavePath -Kind periodic -Launch $launch `
+            -UnlessHash $lastHash -WaitSeconds $midWarpWait -PollSeconds 5 -ShouldStop { $game.HasExited }
     } catch {
         Log "WARNING: Failed to create backup: $_"
         $skipLogged = $false
         continue
     }
+
+    # The game exited while waiting for a mid-warp save to settle: the next
+    # loop turn reports the exit. A zip created in the meantime is logged.
+    if ($null -eq $zip -and $game.HasExited) { continue }
 
     # Unchanged save (e.g. game stuck on a loading screen): no new backup,
     # logged once per unchanged streak.
@@ -110,10 +121,13 @@ while ($true) {
 
     $zipSizeKB = [math]::Round($zip.Length / 1KB, 1)
     $zipSizeMB = [math]::Round($zip.Length / 1MB, 1)
+    $note = ''
+    if ($zip.WaitedSeconds -gt 0) { $note = ", loading screen: waited $($zip.WaitedSeconds) s" }
+    if ($zip.Warp) { $note += ', warp in progress: the game cannot load it' }
     if ($zipSizeKB -lt 100) {
-        Log "WARNING: $($zip.Name) is only $zipSizeKB KB (expected ~3 MB)"
+        Log "WARNING: $($zip.Name) is only $zipSizeKB KB (expected ~3 MB$note)"
     } else {
-        Log "Backup: $($zip.Name) ($zipSizeMB MB)"
+        Log "Backup: $($zip.Name) ($zipSizeMB MB$note)"
     }
 
     Remove-OldBackups -BackupsDir $backupsDir -Launch $launch -MaxBackups $maxBackups

@@ -256,7 +256,7 @@ speedfog/
 | `docs/torrent-arena-patcher.md` | Re-enable Torrent in selected boss arenas (DisableTorrent collision flag) |
 | `docs/boss-healthbar-names.md` | Healthbar names of relocated enemies: when the randomizer keeps the arena's name, graph.json `boss_names`, NpcName resolution + idempotent EMEVD repoint |
 | `docs/quitout-respawn.md` | Quit-out stable position fix (PlayRegionParam restore) |
-| `docs/save-backup.md` | Save backup system (daemon, recovery, config) |
+| `docs/save-backup.md` | Save backup system (daemon, recovery, config, mid-warp saves that the game cannot load) |
 | `docs/game-patch-migration.md` | Elden Ring update playbook: pipeline dependencies, scenarios, ordered tasks, save handling (1.17 instance) |
 | `docs/item-giving-limitations.md` | EMEVD item type constraints and workarounds |
 | `docs/clusters.md` | Cluster generation from fog.txt |

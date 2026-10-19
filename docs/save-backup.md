@@ -1,6 +1,6 @@
 # Save Backup System
 
-**Date:** 2026-03-19
+**Date:** 2026-03-19, updated 2026-10-19 (mid-warp saves)
 **Status:** Active
 
 Automatic save file backup during gameplay with interactive recovery.
@@ -99,6 +99,10 @@ Launched by the launcher in a minimized window. Lifecycle:
        skip (logged once per unchanged streak). A game stuck on a loading
        screen does not write its save; without this, every stuck launch
        filled the menu with copies of the broken state.
+     - If the save is mid-warp (see "Mid-warp saves" below): re-read it
+       every 5 s for up to 45 s, until it settles or the game exits. Still
+       mid-warp after that (game stuck on the loading screen): zip it
+       anyway, tagged `-warp`.
      - Zip it as a periodic backup of the current launch.
      - If zip < 100 KB: log warning (possible partial copy from locked file).
      - Purge (see below).
@@ -115,6 +119,7 @@ All backup logic lives in `backup_store.ps1`. Names follow
 | `0001_launch1-start_2026-10-13_14.30.00.zip` | daemon | Save when launch 1 began |
 | `0002_launch1_2026-10-13_14.31.00.zip` | daemon | Periodic backup of launch 1 |
 | `0012_before-restore_2026-10-13_14.41.03.zip` | recovery | Save replaced by a restore (undo) |
+| `0013_launch2-warp_2026-10-13_14.43.00.zip` | daemon | Mid-warp save, the game cannot load it (`-warp` follows any kind: `launch2-start-warp`, `before-restore-warp`) |
 
 `<seq>` is a permanent number: one more than the highest existing number,
 never shifted by a purge (only the number of a deleted newest backup can come
@@ -173,6 +178,66 @@ Recovery also logs whether the backup was typed or the default pick,
 cancellations, invalid selections, a missing save file, the "game is running"
 override and failures. A daemon killed together with
 the game (no "Game exited" line) is visible as a gap before the next launch.
+
+## Mid-warp saves
+
+Elden Ring writes its save at the start of every fog-gate warp, with the
+character slot's map set to a transition placeholder (m55_89_00_00, not a
+map of the game) and the warp still pending, then again about half a second
+after the player lands. The game cannot load the in-between state: it stays
+on the loading screen forever. On disk, the save is mid-warp for the whole
+loading screen, and forever when the game hangs on it, which is exactly the
+case the backups exist for.
+
+Case of 2026-10-19 (boss rush seed, 15 warps in 12 minutes): 5 of the 12
+periodic backups and the quit save were mid-warp, while every per-entry MD5
+of all 23 backups was valid (nothing is corrupted in the file sense). The
+player restored two mid-warp backups whose warps had completed fine in the
+live game, and both froze at load; a clean backup taken 40 s before the hang
+was never tried. Before this, the recovery menu's default pick was the quit
+save, always mid-warp after a hang.
+
+Detection (`Test-SaveMidWarp` in `backup_store.ps1`): `ER0000.sl2` is a
+BND4 with the 10 character slots at `0x300 + k * 0x280010`; a slot whose
+version (uint32 at +0x10) is nonzero and whose map bytes at +0x14 are
+`00 00 59 37` is mid-warp (clean saves store the map the player stands in).
+Any non-empty slot counts: a character left mid-warp on another slot would
+tag every backup, a documented limitation. The check reads the daemon's
+temporary copy, never the live save. Slot layout from the
+[elden-ring-save-manager](https://elden-ring-save-manager.readthedocs.io/en/main/technical/save-file-structure/)
+documentation and ClayAmore's ER-Save-Editor, verified on the 23 backups.
+
+What the scripts do with it:
+
+- Periodic backups wait for the save to settle (`New-SettledBackup`: every
+  5 s for up to 45 s, copying the save again only once the game has written
+  it, stopping if the game exits), then zip whatever is there. A backup still mid-warp after the wait gets the
+  `-warp` suffix; the unchanged-hash rule then keeps a stuck game from
+  piling up copies.
+- Start-of-launch and before-restore backups zip the file as is and get the
+  suffix when it is mid-warp (after a hang, both are).
+- The recovery menu annotates them, explains the label in its intro when
+  one is listed, never picks one by default, and defaults the confirmation
+  to n when the player types one anyway.
+
+```
+2026-10-19 17:59:53 +02:00 [SpeedFog Backup] Backup: 0011_launch1_2026-10-19_17.59.53.zip (3.1 MB, loading screen: waited 10 s)
+2026-10-19 18:04:21 +02:00 [SpeedFog Backup] Backup: 0015_launch2-warp_2026-10-19_18.04.21.zip (2.9 MB, loading screen: waited 45 s, warp in progress: the game cannot load it)
+```
+
+Menu excerpt for a session with two mid-warp periodic backups, a restore of
+one of them, and a launch stuck on the loading screen (default pick: #13):
+
+```
+Launch 1 (2026-10-19, 17:58 to 18:01)
+  #10  17:58  3 min before last backup
+  #11  17:59  2 min before last backup   (warp in progress: the game cannot load it)
+  #12  18:00  1 min before last backup   (warp in progress: the game cannot load it)   <- restored at 18:06
+  #13  18:01  last backup
+Launch 2 (2026-10-19, 18:02 to 18:03)
+  #14  18:02  start of launch   (warp in progress: the game cannot load it)
+  #15  18:03  last backup   (warp in progress: the game cannot load it)
+```
 
 ## Recovery
 
@@ -234,8 +299,9 @@ You can relaunch the game with launch_speedfog.bat.
   (default no). If the restore itself fails (`Expand-Archive -Force` deletes
   the save before extracting), the error message points to the undo backup.
 - **Default selection**: the most recent backup taken while playing (an undo
-  backup is never the default), confirmation defaults to y. Enter twice
-  restores the most recent backup, as before. `#8` and `8` are both accepted.
+  backup or a mid-warp backup is never the default), confirmation defaults
+  to y (n for a mid-warp backup). Enter twice restores the most recent
+  loadable backup. `#8` and `8` are both accepted.
 - The script warns if Elden Ring is currently running.
 - Every run is traced in `backup.log` (see Logging above).
 

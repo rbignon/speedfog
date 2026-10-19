@@ -11,6 +11,8 @@ import os
 import re
 import shutil
 import subprocess
+import threading
+import time
 import zipfile
 from pathlib import Path
 
@@ -294,4 +296,231 @@ def test_recovery_default_pick_without_a_current_save(tmp_path: Path) -> None:
         "Restoring #2 (0002_launch1_2026-10-13_14.31.00.zip, default pick)",
         "No current save file to keep",
         "Restored #2",
+    ]
+
+
+# --- Mid-warp saves -----------------------------------------------------------
+#
+# Elden Ring writes its save at the start of every fog-gate warp with the
+# slot's map set to the transition placeholder m55_89_00_00 and the warp still
+# pending; the game cannot load that state (infinite loading screen). The
+# fake saves below only carry the bytes the detection reads: the BND4 magic,
+# and per slot the version (slot+0x10) and the map (slot+0x14).
+
+SAVE_SIZE = 28_967_888
+SLOT_BASE = 0x300
+SLOT_STRIDE = 0x280010
+WARP_MAP = bytes.fromhex("00005937")  # m55_89_00_00
+GIDEON_MAP = bytes.fromhex("0000050b")  # m11_05_00_00
+
+
+def _fake_save(path: Path, slots: dict[int, tuple[int, bytes]]) -> None:
+    """Sparse ER0000.sl2 lookalike; `slots` maps a slot index to its
+    (version, map bytes). Written atomically so a concurrent copy never sees
+    a half-written file."""
+    tmp = path.with_suffix(".tmp")
+    with open(tmp, "wb") as f:
+        f.write(b"BND4")
+        for k, (version, map_bytes) in slots.items():
+            base = SLOT_BASE + k * SLOT_STRIDE
+            f.seek(base + 0x10)
+            f.write(version.to_bytes(4, "little") + map_bytes)
+        f.seek(SAVE_SIZE - 1)
+        f.write(b"\0")
+    os.replace(tmp, path)
+
+
+def test_warp_suffix_marks_mid_warp_backups_of_every_kind(tmp_path: Path) -> None:
+    _touch(
+        tmp_path,
+        "0010_launch1_2026-10-19_17.58.41.zip",
+        "0011_launch1-warp_2026-10-19_17.59.42.zip",
+        "0014_launch2-start-warp_2026-10-19_18.02.34.zip",
+        "0016_before-restore-warp_2026-10-19_18.06.49.zip",
+    )
+
+    lines = _run(
+        tmp_path,
+        "Get-SaveBackups $Dir | ForEach-Object {"
+        ' "$($_.Seq):$($_.Kind):$($_.Launch):$($_.Warp)" }\n',
+    )
+
+    assert lines == [
+        "10:periodic:1:False",
+        "11:periodic:1:True",
+        "14:start:2:True",
+        "16:before-restore:0:True",
+    ]
+
+
+def test_menu_flags_mid_warp_backups_and_never_defaults_to_them(tmp_path: Path) -> None:
+    """The 2026-10-19 case: two mid-warp periodic backups, the quit save of a
+    game stuck on a loading screen (launch 2), a restore of a mid-warp
+    backup. The default pick is the last clean backup, #13."""
+    _touch(
+        tmp_path,
+        "0010_launch1_2026-10-19_17.58.41.zip",
+        "0011_launch1-warp_2026-10-19_17.59.42.zip",
+        "0012_launch1-warp_2026-10-19_18.00.43.zip",
+        "0013_launch1_2026-10-19_18.01.43.zip",
+        "0014_launch2-start-warp_2026-10-19_18.02.34.zip",
+        "0015_launch2-warp_2026-10-19_18.03.36.zip",
+        "0016_before-restore-warp_2026-10-19_18.06.49.zip",
+    )
+    (tmp_path / "restores.log").write_text(
+        "2026-10-19_18.06.50\t0012_launch1-warp_2026-10-19_18.00.43.zip"
+        "\t0016_before-restore-warp_2026-10-19_18.06.49.zip\n",
+        encoding="utf-8",
+    )
+    warp = "   (warp in progress: the game cannot load it)"
+
+    assert _menu(tmp_path) == [
+        "Launch 1 (2026-10-19, 17:58 to 18:01)",
+        "  #10  17:58  3 min before last backup",
+        f"  #11  17:59  2 min before last backup{warp}",
+        f"  #12  18:00  1 min before last backup{warp}   <- restored at 18:06",
+        "  #13  18:01  last backup",
+        "Launch 2 (2026-10-19, 18:02 to 18:03)",
+        f"  #14  18:02  start of launch{warp}",
+        f"  #15  18:03  last backup{warp}",
+        "Restore at 18:06",
+        f"  #16  18:06  your save before restoring #12{warp}",
+        "default=13",
+    ]
+
+
+def test_mid_warp_detection_reads_every_non_empty_slot(tmp_path: Path) -> None:
+    _fake_save(tmp_path / "clean.sl2", {0: (261, GIDEON_MAP)})
+    _fake_save(tmp_path / "warp0.sl2", {0: (261, WARP_MAP)})
+    _fake_save(tmp_path / "warp3.sl2", {0: (261, GIDEON_MAP), 3: (261, WARP_MAP)})
+    # The placeholder in an empty slot (version 0) is leftover bytes, not a warp.
+    _fake_save(tmp_path / "empty.sl2", {0: (261, GIDEON_MAP), 5: (0, WARP_MAP)})
+    (tmp_path / "tiny.sl2").write_bytes(b"x")
+
+    lines = _run(
+        tmp_path,
+        'foreach ($n in "clean", "warp0", "warp3", "empty", "tiny") {'
+        ' "$n=$(Test-SaveMidWarp -Path (Join-Path $Dir "$n.sl2"))" }\n',
+    )
+
+    assert lines == [
+        "clean=False",
+        "warp0=True",
+        "warp3=True",
+        "empty=False",
+        "tiny=False",
+    ]
+
+
+def test_mid_warp_save_is_held_back_or_tagged(tmp_path: Path) -> None:
+    save = tmp_path / "ER0000.src"
+    _fake_save(save, {0: (261, WARP_MAP)})
+
+    lines = _run(
+        tmp_path,
+        "$save = Join-Path $Dir 'ER0000.src'\n"
+        "$held = New-SaveBackup -BackupsDir $Dir -SavePath $save -Kind periodic"
+        " -Launch 1 -UnlessMidWarp\n"
+        '"held=$($held.MidWarp) zips=$(@(Get-ChildItem -LiteralPath $Dir -Filter *.zip).Count)'
+        ' temp=$(@(Get-ChildItem -LiteralPath $Dir -Filter ER0000.sl2).Count)"\n'
+        "$tagged = New-SaveBackup -BackupsDir $Dir -SavePath $save -Kind periodic -Launch 1\n"
+        '"tagged=$($tagged.Name.Substring(0, 17)) warp=$($tagged.Warp)"\n'
+        "$same = New-SaveBackup -BackupsDir $Dir -SavePath $save -Kind periodic -Launch 1"
+        " -UnlessHash $tagged.SaveHash -UnlessMidWarp\n"
+        '"same=$($null -eq $same)"\n'
+        "$start = New-SaveBackup -BackupsDir $Dir -SavePath $save -Kind start -Launch 2\n"
+        "$undo = New-SaveBackup -BackupsDir $Dir -SavePath $save -Kind before-restore\n"
+        '"start=$($start.Name.Substring(0, 23)) undo=$($undo.Name.Substring(0, 24))"\n',
+    )
+    assert lines == [
+        "held=True zips=0 temp=0",
+        "tagged=0001_launch1-warp warp=True",
+        "same=True",
+        "start=0002_launch2-start-warp undo=0003_before-restore-warp",
+    ]
+
+    _fake_save(save, {0: (261, GIDEON_MAP)})
+    lines = _run(
+        tmp_path,
+        "$save = Join-Path $Dir 'ER0000.src'\n"
+        "$clean = New-SaveBackup -BackupsDir $Dir -SavePath $save -Kind periodic"
+        " -Launch 2 -UnlessMidWarp\n"
+        '"clean=$($clean.Name.Substring(0, 13)) warp=$($clean.Warp)"\n',
+    )
+    assert lines == ["clean=0004_launch2_ warp=False"]
+
+
+def test_settled_backup_waits_for_the_loading_screen_to_end(tmp_path: Path) -> None:
+    save = tmp_path / "ER0000.src"
+    ready = tmp_path / "ready"
+    _fake_save(save, {0: (261, WARP_MAP)})
+
+    def land() -> None:
+        # The game lands 2.5 s after the wait starts and rewrites a clean save.
+        deadline = time.monotonic() + 60
+        while not ready.exists() and time.monotonic() < deadline:
+            time.sleep(0.05)
+        time.sleep(2.5)
+        _fake_save(save, {0: (261, GIDEON_MAP)})
+
+    threading.Thread(target=land).start()
+
+    lines = _run(
+        tmp_path,
+        "$save = Join-Path $Dir 'ER0000.src'\n"
+        "$t0 = Get-Date\n"
+        "Set-Content -LiteralPath (Join-Path $Dir 'ready') -Value 1\n"
+        "$z = New-SettledBackup -BackupsDir $Dir -SavePath $save -Kind periodic -Launch 1"
+        " -WaitSeconds 20 -PollSeconds 1\n"
+        '"name=$($z.Name.Substring(0, 13)) warp=$($z.Warp) waited=$($z.WaitedSeconds -ge 2)'
+        ' fast=$(((Get-Date) - $t0).TotalSeconds -lt 15)"\n',
+    )
+
+    assert lines == ["name=0001_launch1_ warp=False waited=True fast=True"]
+
+
+def test_settled_backup_gives_up_after_the_wait_and_tags_the_backup(
+    tmp_path: Path,
+) -> None:
+    save = tmp_path / "ER0000.src"
+    _fake_save(save, {0: (261, WARP_MAP)})
+
+    lines = _run(
+        tmp_path,
+        "$save = Join-Path $Dir 'ER0000.src'\n"
+        "$z = New-SettledBackup -BackupsDir $Dir -SavePath $save -Kind periodic -Launch 1"
+        " -WaitSeconds 3 -PollSeconds 1\n"
+        '"name=$($z.Name.Substring(0, 17)) warp=$($z.Warp) waited=$($z.WaitedSeconds -ge 3)"\n'
+        "$stopped = New-SettledBackup -BackupsDir $Dir -SavePath $save -Kind periodic -Launch 1"
+        " -UnlessHash $z.SaveHash -WaitSeconds 10 -PollSeconds 1\n"
+        "$exited = New-SettledBackup -BackupsDir $Dir -SavePath $save -Kind periodic -Launch 1"
+        " -WaitSeconds 10 -PollSeconds 1 -ShouldStop { $true }\n"
+        '"unchanged=$($null -eq $stopped) exited=$($null -eq $exited)'
+        ' zips=$(@(Get-ChildItem -LiteralPath $Dir -Filter *.zip).Count)"\n',
+    )
+
+    assert lines == [
+        "name=0001_launch1-warp warp=True waited=True",
+        "unchanged=True exited=True zips=1",
+    ]
+
+
+def test_recovery_never_restores_a_mid_warp_backup_by_default(tmp_path: Path) -> None:
+    backups, save = _recovery_setup(tmp_path)
+    _zip_save(backups / "0003_launch1-warp_2026-10-13_14.32.00.zip", "warp")
+    save.write_text("current", encoding="utf-8")
+
+    # Enter at every prompt: the default pick skips the mid-warp #3.
+    _pwsh(backups / "recovery.ps1", stdin="\n\n\n")
+    assert save.read_text(encoding="utf-8") == "two"
+
+    # #3 can still be typed, but its confirmation defaults to no.
+    output = _pwsh(backups / "recovery.ps1", stdin="#3\n\n\n")
+    assert save.read_text(encoding="utf-8") == "two"
+    assert "Cancelled." in output
+    assert len(list(backups.glob("*before-restore*"))) == 1
+    assert _log_messages(backups)[-3:] == [
+        "Restored #2",
+        f"Recovery started (save: {save}, 4 backups)",
+        "Cancelled at confirmation of #3",
     ]

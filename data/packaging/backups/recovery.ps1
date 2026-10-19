@@ -94,6 +94,10 @@ if ($backups.Count -eq 0) {
 Write-Host "A backup is taken every minute while the save changes, until the game closes."
 Write-Host "If you stayed stuck for a while before quitting, the most recent ones may"
 Write-Host "already contain the problem: pick one from BEFORE it."
+if (@($backups | Where-Object { $_.Warp }).Count -gt 0) {
+    Write-Host "Backups marked 'warp in progress' were taken during a loading screen:"
+    Write-Host "the game cannot load them, pick another one."
+}
 Write-Host ""
 Write-Host "Available backups (newest last):"
 Write-Host ""
@@ -120,9 +124,15 @@ if (-not $selected) {
     exit 1
 }
 
-# --- Confirm ---
-$confirmRestore = Read-Host "Restore #$($selected.Seq) ($(Format-BackupClock $selected.Time))? (y/n) [y]"
-if ($confirmRestore -eq '') { $confirmRestore = 'y' }
+# --- Confirm (a mid-warp backup cannot be loaded: default to no) ---
+$confirmDefault = 'y'
+$pickNote = ''
+if ($selected.Warp) {
+    $confirmDefault = 'n'
+    $pickNote = ', warp in progress: the game cannot load it'
+}
+$confirmRestore = Read-Host "Restore #$($selected.Seq) ($(Format-BackupClock $selected.Time)$pickNote)? (y/n) [$confirmDefault]"
+if ($confirmRestore -eq '') { $confirmRestore = $confirmDefault }
 if ($confirmRestore -ne 'y') {
     RecoveryLog "Cancelled at confirmation of #$($selected.Seq)"
     Write-Host "Cancelled."
