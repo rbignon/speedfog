@@ -314,20 +314,29 @@ WARP_MAP = bytes.fromhex("00005937")  # m55_89_00_00
 GIDEON_MAP = bytes.fromhex("0000050b")  # m11_05_00_00
 
 
-def _fake_save(path: Path, slots: dict[int, tuple[int, bytes]]) -> None:
+def _fake_save(path: Path, slots: dict[int, tuple]) -> None:
     """Sparse ER0000.sl2 lookalike; `slots` maps a slot index to its
-    (version, map bytes). Written atomically so a concurrent copy never sees
-    a half-written file."""
+    (version, map bytes) or (version, map bytes, 16-byte checksum). Written
+    atomically so a concurrent copy never sees a half-written file."""
     tmp = path.with_suffix(".tmp")
     with open(tmp, "wb") as f:
         f.write(b"BND4")
-        for k, (version, map_bytes) in slots.items():
+        for k, spec in slots.items():
+            version, map_bytes = spec[0], spec[1]
             base = SLOT_BASE + k * SLOT_STRIDE
+            if len(spec) > 2:
+                f.seek(base)
+                f.write(spec[2])
             f.seek(base + 0x10)
             f.write(version.to_bytes(4, "little") + map_bytes)
         f.seek(SAVE_SIZE - 1)
         f.write(b"\0")
     os.replace(tmp, path)
+
+
+def _sum(byte: int) -> bytes:
+    """A distinguishable 16-byte slot checksum."""
+    return bytes([byte]) * 16
 
 
 def test_warp_suffix_marks_mid_warp_backups_of_every_kind(tmp_path: Path) -> None:
@@ -400,16 +409,11 @@ def test_mid_warp_detection_reads_every_non_empty_slot(tmp_path: Path) -> None:
     lines = _run(
         tmp_path,
         'foreach ($n in "clean", "warp0", "warp3", "empty", "tiny") {'
-        ' "$n=$(Test-SaveMidWarp -Path (Join-Path $Dir "$n.sl2"))" }\n',
+        ' $warp = @(Get-SaveSlots -Path (Join-Path $Dir "$n.sl2") | Where-Object { $_.MidWarp })\n'
+        " \"$n=$(($warp | ForEach-Object { $_.Index }) -join ',')\" }\n",
     )
 
-    assert lines == [
-        "clean=False",
-        "warp0=True",
-        "warp3=True",
-        "empty=False",
-        "tiny=False",
-    ]
+    assert lines == ["clean=", "warp0=0", "warp3=3", "empty=", "tiny="]
 
 
 def test_mid_warp_save_is_held_back_or_tagged(tmp_path: Path) -> None:
@@ -524,3 +528,117 @@ def test_recovery_never_restores_a_mid_warp_backup_by_default(tmp_path: Path) ->
         f"Recovery started (save: {save}, 4 backups)",
         "Cancelled at confirmation of #3",
     ]
+
+
+def test_save_slots_expose_checksum_emptiness_and_mid_warp_state(
+    tmp_path: Path,
+) -> None:
+    _fake_save(
+        tmp_path / "save.sl2",
+        {
+            0: (261, GIDEON_MAP, _sum(0xAA)),
+            3: (261, WARP_MAP, _sum(0xBB)),
+            5: (0, WARP_MAP, _sum(0xCC)),
+        },
+    )
+    (tmp_path / "tiny.sl2").write_bytes(b"x")
+
+    lines = _run(
+        tmp_path,
+        "Get-SaveSlots -Path (Join-Path $Dir 'save.sl2') | ForEach-Object {"
+        ' "$($_.Index):$($_.Empty):$($_.Checksum):$($_.MidWarp)" }\n'
+        "\"tiny=$(@(Get-SaveSlots -Path (Join-Path $Dir 'tiny.sl2')).Count)\"\n",
+    )
+
+    assert lines[0] == "0:False:" + "AA" * 16 + ":False"
+    assert lines[3] == "3:False:" + "BB" * 16 + ":True"
+    assert lines[5] == "5:True:" + "CC" * 16 + ":False"
+    assert len(lines) == 11 and lines[10] == "tiny=0"
+
+
+def test_stale_mid_warp_slot_is_ignored_once_the_played_slot_was_written(
+    tmp_path: Path,
+) -> None:
+    """A character left mid-warp in slot 2 by an abandoned seed, while the
+    player plays slot 0: the stale slot never tags a periodic backup once
+    slot 0 has been written this launch, and never makes the daemon wait."""
+    save = tmp_path / "ER0000.src"
+    _fake_save(save, {0: (261, GIDEON_MAP, _sum(0xA0)), 2: (261, WARP_MAP, _sum(0xC2))})
+
+    lines = _run(
+        tmp_path,
+        "$save = Join-Path $Dir 'ER0000.src'\n"
+        "$start = New-SaveBackup -BackupsDir $Dir -SavePath $save -Kind start -Launch 1\n"
+        '"start=$($start.Name.Substring(0, 18)) slots=$(@($start.Slots).Count)"\n'
+        # Nothing written yet this launch: the stale slot still counts, but it
+        # did not change since the last backup, so no hold even with -UnlessMidWarp.
+        "$early = New-SaveBackup -BackupsDir $Dir -SavePath $save -Kind periodic -Launch 1"
+        " -StartSlots $start.Slots -LastSlots $start.Slots -UnlessMidWarp\n"
+        '"early=$($early.Name.Substring(0, 17)) warp=$($early.Warp)"\n',
+    )
+    assert lines == [
+        "start=0001_launch1-start slots=10",
+        "early=0002_launch1-warp warp=True",
+    ]
+
+    # The game wrote slot 0 (new checksum): only slot 0 is watched from now on.
+    # The start-of-launch slot states are what the daemon keeps in memory:
+    # rebuild them from a copy of the launch-start save.
+    _fake_save(save, {0: (261, GIDEON_MAP, _sum(0xA1)), 2: (261, WARP_MAP, _sum(0xC2))})
+    _fake_save(
+        tmp_path / "start.sl2",
+        {0: (261, GIDEON_MAP, _sum(0xA0)), 2: (261, WARP_MAP, _sum(0xC2))},
+    )
+    lines = _run(
+        tmp_path,
+        "$save = Join-Path $Dir 'ER0000.src'\n"
+        "$startSlots = Get-SaveSlots -Path (Join-Path $Dir 'start.sl2')\n"
+        "$t0 = Get-Date\n"
+        "$z = New-SettledBackup -BackupsDir $Dir -SavePath $save -Kind periodic -Launch 1"
+        " -StartSlots $startSlots -LastSlots $startSlots -WaitSeconds 10 -PollSeconds 1\n"
+        '"name=$($z.Name.Substring(0, 13)) warp=$($z.Warp) waited=$($z.WaitedSeconds)"\n',
+    )
+    assert lines == ["name=0003_launch1_ warp=False waited=0"]
+
+    # A new character created in a previously empty slot is the played slot too.
+    _fake_save(
+        save,
+        {
+            0: (261, GIDEON_MAP, _sum(0xA0)),
+            2: (261, WARP_MAP, _sum(0xC2)),
+            4: (261, GIDEON_MAP, _sum(0xD4)),
+        },
+    )
+    lines = _run(
+        tmp_path,
+        "$save = Join-Path $Dir 'ER0000.src'\n"
+        "$startSlots = Get-SaveSlots -Path (Join-Path $Dir 'start.sl2')\n"
+        "$z = New-SaveBackup -BackupsDir $Dir -SavePath $save -Kind periodic -Launch 1"
+        " -StartSlots $startSlots -LastSlots $startSlots -UnlessMidWarp\n"
+        '"name=$($z.Name.Substring(0, 13)) warp=$($z.Warp)"\n',
+    )
+    assert lines == ["name=0004_launch1_ warp=False"]
+
+
+def test_in_flight_warp_is_held_back_only_while_its_slot_keeps_changing(
+    tmp_path: Path,
+) -> None:
+    save = tmp_path / "ER0000.src"
+    _fake_save(tmp_path / "last.sl2", {0: (261, GIDEON_MAP, _sum(0xA0))})
+    _fake_save(save, {0: (261, WARP_MAP, _sum(0xA1))})
+
+    lines = _run(
+        tmp_path,
+        "$save = Join-Path $Dir 'ER0000.src'\n"
+        "$last = Get-SaveSlots -Path (Join-Path $Dir 'last.sl2')\n"
+        # Slot 0 changed since the last backup and is mid-warp: a warp in flight, held back.
+        "$held = New-SaveBackup -BackupsDir $Dir -SavePath $save -Kind periodic -Launch 1"
+        " -LastSlots $last -UnlessMidWarp\n"
+        '"held=$($held.MidWarp) slots=$(@($held.Slots).Count)"\n'
+        # The last backup already saw this very mid-warp state: not in flight, zip it tagged.
+        "$seen = New-SaveBackup -BackupsDir $Dir -SavePath $save -Kind periodic -Launch 1"
+        " -LastSlots $held.Slots -UnlessMidWarp\n"
+        '"seen=$($seen.Name.Substring(0, 17)) warp=$($seen.Warp)"\n',
+    )
+
+    assert lines == ["held=True slots=10", "seen=0001_launch1-warp warp=True"]

@@ -30,8 +30,8 @@ if (Test-Path $configPath) {
 # Wait-Process -Timeout rejects values above 32767 seconds; clamp to sane bounds.
 if ($interval -lt 1) { $interval = 1 } elseif ($interval -gt 540) { $interval = 540 }
 # A save written at the start of a fog-gate warp cannot be loaded (see
-# Test-SaveMidWarp in backup_store.ps1): give the loading screen this long
-# to end before zipping such a save, tagged -warp, as the game may be stuck.
+# Get-SaveSlots in backup_store.ps1): give the loading screen this long to
+# end before zipping such a save, tagged -warp, as the game may be stuck.
 $midWarpWait = 45
 
 Log "Save file: $SavePath"
@@ -57,10 +57,17 @@ Log "Game detected."
 # the recovery menu and purged independently of the other launches.
 $launch = Get-NextLaunchNumber $backupsDir
 $lastHash = ''
+# Character slots of the launch-start save and of the last backup: they tell
+# the played slot (written since the start) from a stale mid-warp one, and a
+# warp in flight from a mid-warp state already backed up.
+$startSlots = $null
+$lastSlots = $null
 if (Test-Path -LiteralPath $SavePath) {
     try {
         $zip = New-SaveBackup -BackupsDir $backupsDir -SavePath $SavePath -Kind start -Launch $launch
         $lastHash = $zip.SaveHash
+        $startSlots = $zip.Slots
+        $lastSlots = $zip.Slots
         $note = ''
         if ($zip.Warp) { $note = ' (warp in progress: the game cannot load it)' }
         Log "Launch $launch start backup: $($zip.Name)$note"
@@ -94,7 +101,8 @@ while ($true) {
 
     try {
         $zip = New-SettledBackup -BackupsDir $backupsDir -SavePath $SavePath -Kind periodic -Launch $launch `
-            -UnlessHash $lastHash -WaitSeconds $midWarpWait -PollSeconds 5 -ShouldStop { $game.HasExited }
+            -UnlessHash $lastHash -WaitSeconds $midWarpWait -PollSeconds 5 -ShouldStop { $game.HasExited } `
+            -StartSlots $startSlots -LastSlots $lastSlots
     } catch {
         Log "WARNING: Failed to create backup: $_"
         $skipLogged = $false
@@ -117,6 +125,10 @@ while ($true) {
     }
     $skipLogged = $false
     $lastHash = $zip.SaveHash
+    $lastSlots = $zip.Slots
+    # Start backup failed: any later copy serves as the baseline (the played
+    # slot's checksum changes at every save, a stale one's never does).
+    if ($null -eq $startSlots) { $startSlots = $zip.Slots }
     $backupCount++
 
     $zipSizeKB = [math]::Round($zip.Length / 1KB, 1)

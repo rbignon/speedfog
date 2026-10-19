@@ -197,23 +197,39 @@ live game, and both froze at load; a clean backup taken 40 s before the hang
 was never tried. Before this, the recovery menu's default pick was the quit
 save, always mid-warp after a hang.
 
-Detection (`Test-SaveMidWarp` in `backup_store.ps1`): `ER0000.sl2` is a
-BND4 with the 10 character slots at `0x300 + k * 0x280010`; a slot whose
-version (uint32 at +0x10) is nonzero and whose map bytes at +0x14 are
-`00 00 59 37` is mid-warp (clean saves store the map the player stands in).
-Any non-empty slot counts: a character left mid-warp on another slot would
-tag every backup, a documented limitation. The check reads the daemon's
-temporary copy, never the live save. Slot layout from the
+Detection (`Get-SaveSlots` in `backup_store.ps1`): `ER0000.sl2` is a BND4
+with the 10 character slots at `0x300 + k * 0x280010`. A slot starts with
+the MD5 of its content (16 bytes, rewritten by every save of that
+character), then its version (uint32 at +0x10, 0 = empty slot) and its map
+at +0x14; the bytes `00 00 59 37` there mean mid-warp (clean saves store
+the map the player stands in). The check reads the daemon's temporary copy,
+never the live save. Slot layout from the
 [elden-ring-save-manager](https://elden-ring-save-manager.readthedocs.io/en/main/technical/save-file-structure/)
 documentation and ClayAmore's ER-Save-Editor, verified on the 23 backups.
 
+Which slot counts: racers fill all 10 slots (one character per seed), so a
+seed abandoned on a loading screen leaves a mid-warp slot behind for good.
+The daemon therefore keeps the slot checksums of the launch-start copy and
+of the last backup (`StartSlots` / `LastSlots` of `New-SaveBackup`):
+
+- once any slot has been written since the start of the launch, only those
+  slots count (the character being played); until then every non-empty
+  slot does, which covers a launch stuck on the loading screen from the
+  start;
+- a mid-warp slot whose checksum the last backup already saw is not a warp
+  in flight: no wait, the backup is zipped at once, tagged.
+
+Start-of-launch and before-restore backups have no history and count every
+non-empty slot: with a stale mid-warp character in another slot they are
+tagged, and periodic backups are not once the played slot has been written.
+
 What the scripts do with it:
 
-- Periodic backups wait for the save to settle (`New-SettledBackup`: every
-  5 s for up to 45 s, copying the save again only once the game has written
-  it, stopping if the game exits), then zip whatever is there. A backup still mid-warp after the wait gets the
-  `-warp` suffix; the unchanged-hash rule then keeps a stuck game from
-  piling up copies.
+- Periodic backups wait for a warp in flight to settle (`New-SettledBackup`:
+  every 5 s for up to 45 s, copying the save again only once the game has
+  written it, stopping if the game exits), then zip whatever is there. A
+  backup still mid-warp after the wait gets the `-warp` suffix; the
+  unchanged-hash rule then keeps a stuck game from piling up copies.
 - Start-of-launch and before-restore backups zip the file as is and get the
   suffix when it is mid-warp (after a hang, both are).
 - The recovery menu annotates them, explains the label in its intro when
