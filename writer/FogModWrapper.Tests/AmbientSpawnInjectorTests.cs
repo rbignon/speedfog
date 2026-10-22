@@ -15,6 +15,11 @@ namespace FogModWrapper.Tests;
 /// </summary>
 public class AmbientSpawnInjectorTests
 {
+    private static readonly SpawnProfile Untouchable =
+        AmbientSpawnInjector.GreeterProfile(HalloweenPluginSettings.GreeterSpecies.Untouchable);
+    private static readonly SpawnProfile Skeleton =
+        AmbientSpawnInjector.AmbusherProfile(HalloweenPluginSettings.AmbusherSpecies.Skeleton);
+
     private static Connection Conn(string exitArea, string exitGate, int flag)
         => new()
         {
@@ -125,6 +130,73 @@ public class AmbientSpawnInjectorTests
             new HalloweenPluginSettings.Settings(Ambushes: false, Greeters: false));
 
         Assert.Empty(specs);
+    }
+
+    [Fact]
+    public void CollectSpecs_CarryTheConfiguredSpecies()
+    {
+        var connections = new List<Connection>
+        {
+            Conn("castle_zone", "m31_00_00_00_AEG099_002_9000", 1),
+        };
+        var specs = AmbientSpawnInjector.CollectSpawnSpecsByMap(
+            connections, Nodes,
+            new Dictionary<string, (string, string)>(),
+            new HalloweenPluginSettings.Settings(
+                Ambushes: true, Greeters: true,
+                GreeterSpecies: HalloweenPluginSettings.GreeterSpecies.Wormface,
+                AmbusherSpecies: HalloweenPluginSettings.AmbusherSpecies.Basilisk))["m31_00_00_00"];
+
+        Assert.Single(specs, s => s.Kind == SpawnKind.Greeter);
+        Assert.InRange(specs.Count(s => s.Kind == SpawnKind.Ambusher), 2, 3);
+        Assert.All(specs.Where(s => s.Kind == SpawnKind.Greeter), s => Assert.Equal(
+            AmbientSpawnInjector.GreeterProfile(HalloweenPluginSettings.GreeterSpecies.Wormface), s.Profile));
+        Assert.All(specs.Where(s => s.Kind == SpawnKind.Ambusher), s => Assert.Equal(
+            AmbientSpawnInjector.AmbusherProfile(HalloweenPluginSettings.AmbusherSpecies.Basilisk), s.Profile));
+    }
+
+    [Fact]
+    public void ApplyToMsb_PlacesTheGreeterProfilesModelOnTheGreeterRows()
+    {
+        // A wormface greeter keeps the greeter's own rows (the clone of the
+        // wormface template), only the chr model follows the species.
+        var msb = MakeMsbWithGateAndEnemy();
+        var wormface = AmbientSpawnInjector.GreeterProfile(HalloweenPluginSettings.GreeterSpecies.Wormface);
+        var specs = new List<SpawnSpec>
+        {
+            new("AEG099_002_9000", SpawnKind.Greeter, 0, 1, GateSideIsASide: false, wormface),
+        };
+
+        var (greeters, _) = AmbientSpawnInjector.ApplyToMsb(msb, specs, _ => { });
+
+        Assert.Equal(1, greeters);
+        var greeter = msb.Parts.Enemies.Single(e => e.ModelName == wormface.Model);
+        Assert.Equal(SpeedFogIds.HostileGreeterNpcRow, greeter.NPCParamID);
+        Assert.Equal(SpeedFogIds.HostileGreeterThinkRow, greeter.ThinkParamID);
+        Assert.Contains(msb.Models.Enemies, m => m.Name == wormface.Model);
+        Assert.DoesNotContain(msb.Parts.Enemies, e => e.ModelName == Untouchable.Model);
+    }
+
+    [Fact]
+    public void ApplyToMsb_AmbushersUseTheirSpeciesVanillaThinkRow()
+    {
+        // Ambushers keep vanilla perception: the part points at the species'
+        // own think row, not the skeleton's.
+        var msb = MakeMsbWithGateAndEnemy();
+        var basilisk = AmbientSpawnInjector.AmbusherProfile(HalloweenPluginSettings.AmbusherSpecies.Basilisk);
+        var specs = new List<SpawnSpec>
+        {
+            new("AEG099_002_9000", SpawnKind.Ambusher, 0, 2, GateSideIsASide: false, basilisk),
+            new("AEG099_002_9000", SpawnKind.Ambusher, 1, 2, GateSideIsASide: false, basilisk),
+        };
+
+        AmbientSpawnInjector.ApplyToMsb(msb, specs, _ => { });
+
+        var placed = msb.Parts.Enemies.Where(e => e.ModelName == basilisk.Model).ToList();
+        Assert.Equal(2, placed.Count);
+        Assert.All(placed, e => Assert.Equal(SpeedFogIds.DecorativeAmbusherNpcRow, e.NPCParamID));
+        Assert.All(placed, e => Assert.Equal(basilisk.ThinkTemplate, e.ThinkParamID));
+        Assert.NotEqual(Skeleton.ThinkTemplate, basilisk.ThinkTemplate);
     }
 
     [Fact]
@@ -253,8 +325,8 @@ public class AmbientSpawnInjectorTests
 
         var specs = new List<SpawnSpec>
         {
-            new("AEG099_002_9000", SpawnKind.Greeter, 0, 1, GateSideIsASide: false),
-            new("AEG099_003_9000", SpawnKind.Greeter, 0, 1, GateSideIsASide: false),
+            new("AEG099_002_9000", SpawnKind.Greeter, 0, 1, GateSideIsASide: false, Untouchable),
+            new("AEG099_003_9000", SpawnKind.Greeter, 0, 1, GateSideIsASide: false, Untouchable),
         };
 
         var (greeters, _) = AmbientSpawnInjector.ApplyToMsb(msb, specs, _ => { });
@@ -445,7 +517,7 @@ public class AmbientSpawnInjectorTests
 
     private static List<SpawnSpec> GreeterAtGate() => new()
     {
-        new("AEG099_002_9000", SpawnKind.Greeter, 0, 1, GateSideIsASide: false),
+        new("AEG099_002_9000", SpawnKind.Greeter, 0, 1, GateSideIsASide: false, Untouchable),
     };
 
     private static MSBE MakeMsbWithGateAndEnemy()
@@ -470,8 +542,8 @@ public class AmbientSpawnInjectorTests
         var msb = MakeMsbWithGateAndEnemy();
         var specs = new List<SpawnSpec>
         {
-            new("AEG099_002_9000", SpawnKind.Ambusher, 0, 2, GateSideIsASide: false),
-            new("AEG099_002_9000", SpawnKind.Ambusher, 1, 2, GateSideIsASide: false),
+            new("AEG099_002_9000", SpawnKind.Ambusher, 0, 2, GateSideIsASide: false, Skeleton),
+            new("AEG099_002_9000", SpawnKind.Ambusher, 1, 2, GateSideIsASide: false, Skeleton),
         };
 
         var (_, ambushers) = AmbientSpawnInjector.ApplyToMsb(msb, specs, _ => { });
@@ -501,7 +573,7 @@ public class AmbientSpawnInjectorTests
         var npc = BuildParamFromDef("NpcParam", 35000030);
         var sp = BuildSpEffectParam();
 
-        AmbientSpawnInjector.ApplyAmbusher(npc, sp);
+        AmbientSpawnInjector.ApplyAmbusher(npc, sp, HalloweenPluginSettings.AmbusherSpecies.Skeleton);
 
         var row = npc[SpeedFogIds.DecorativeAmbusherNpcRow]!;
         Assert.Equal(AmbientSpawnInjector.AMBUSH_HP, (uint)row["hp"].Value);
@@ -521,7 +593,7 @@ public class AmbientSpawnInjectorTests
         template["spEffectID1"].Value = 350002;
         var sp = BuildSpEffectParam();
 
-        AmbientSpawnInjector.ApplyAmbusher(npc, sp);
+        AmbientSpawnInjector.ApplyAmbusher(npc, sp, HalloweenPluginSettings.AmbusherSpecies.Skeleton);
 
         var row = npc[SpeedFogIds.DecorativeAmbusherNpcRow]!;
         Assert.Equal(350001, (int)row["spEffectID0"].Value);
@@ -539,7 +611,7 @@ public class AmbientSpawnInjectorTests
         sp[7010]!["maxHpRate"].Value = 1.141f;
         sp[7010]!["staminaAttackRate"].Value = 1.021f;
 
-        AmbientSpawnInjector.ApplyAmbusher(npc, sp);
+        AmbientSpawnInjector.ApplyAmbusher(npc, sp, HalloweenPluginSettings.AmbusherSpecies.Skeleton);
 
         var row = sp[SpeedFogIds.DecorativeAmbusherSpEffectRow]!;
         foreach (var field in new[]
@@ -568,7 +640,7 @@ public class AmbientSpawnInjectorTests
         template["spEffectID4"].Value = 20007000;  // DLC scaling band
         var sp = BuildSpEffectParam();
 
-        AmbientSpawnInjector.ApplyAmbusher(npc, sp);
+        AmbientSpawnInjector.ApplyAmbusher(npc, sp, HalloweenPluginSettings.AmbusherSpecies.Skeleton);
 
         var row = npc[SpeedFogIds.DecorativeAmbusherNpcRow]!;
         Assert.Equal(350001, (int)row["spEffectID0"].Value);
@@ -576,6 +648,32 @@ public class AmbientSpawnInjectorTests
         Assert.Equal(-1, (int)row["spEffectID4"].Value);
         // The nerf lands in the first slot freed after clearing.
         Assert.Equal(SpeedFogIds.DecorativeAmbusherSpEffectRow, (int)row["spEffectID1"].Value);
+    }
+
+    [Fact]
+    public void ApplyAmbusher_BasiliskClonesTheBasiliskRow()
+    {
+        // Same decorative treatment, basilisk template: its own behavior
+        // (the Deathblight cloud lives there, untouched by the attack-rate
+        // nerf) and its own area scaling cleared.
+        var basilisk = AmbientSpawnInjector.AmbusherProfile(HalloweenPluginSettings.AmbusherSpecies.Basilisk);
+        var npc = BuildParamFromDef("NpcParam", basilisk.NpcTemplate);
+        var template = npc[basilisk.NpcTemplate]!;
+        template["behaviorVariationId"].Value = 41500;
+        template["hp"].Value = 338u;
+        template["getSoul"].Value = 130u;
+        template["spEffectID3"].Value = 7050;  // vanilla Ainsel tier 5
+        var sp = BuildSpEffectParam();
+
+        AmbientSpawnInjector.ApplyAmbusher(npc, sp, HalloweenPluginSettings.AmbusherSpecies.Basilisk);
+
+        var row = npc[SpeedFogIds.DecorativeAmbusherNpcRow]!;
+        Assert.Equal(41500, (int)row["behaviorVariationId"].Value);
+        Assert.Equal(AmbientSpawnInjector.AMBUSH_HP, (uint)row["hp"].Value);
+        Assert.Equal(0u, (uint)row["getSoul"].Value);
+        var slots = Enumerable.Range(0, 32).Select(i => (int)row[$"spEffectID{i}"].Value).ToList();
+        Assert.DoesNotContain(7050, slots);
+        Assert.Contains(SpeedFogIds.DecorativeAmbusherSpEffectRow, slots);
     }
 
     // The scaling tier-1 row (7010) is the clone template in production;
@@ -606,7 +704,7 @@ public class AmbientSpawnInjectorTests
         template["spEffectID3"].Value = 20007100;   // DLC scaling band
         template["spEffectID17"].Value = 20011450;  // vanilla teleport gate
 
-        AmbientSpawnInjector.ApplyHostileGreeter(npc);
+        AmbientSpawnInjector.ApplyHostileGreeter(npc, HalloweenPluginSettings.GreeterSpecies.Untouchable);
 
         var row = npc[SpeedFogIds.HostileGreeterNpcRow]!;
         var slots = Enumerable.Range(0, 32).Select(i => (int)row[$"spEffectID{i}"].Value).ToList();
@@ -631,11 +729,54 @@ public class AmbientSpawnInjectorTests
         template["getSoul"].Value = 4449u;
         template["itemLotId_enemy"].Value = 528000000;
 
-        AmbientSpawnInjector.ApplyHostileGreeter(npc);
+        AmbientSpawnInjector.ApplyHostileGreeter(npc, HalloweenPluginSettings.GreeterSpecies.Untouchable);
 
         var row = npc[SpeedFogIds.HostileGreeterNpcRow]!;
         Assert.Equal(0u, (uint)row["getSoul"].Value);
         Assert.Equal(-1, (int)row["itemLotId_enemy"].Value);
+    }
+
+    [Fact]
+    public void ApplyHostileGreeter_WormfaceClonesTheWormfaceRowAtTheFlatTier()
+    {
+        // Same greeter treatment on the wormface template: its behavior and
+        // its own SpEffects (Deathblight included) survive, its area scaling
+        // (tier 8 in Altus) gives way to GREETER_TIER, no runes, no drop.
+        var wormface = AmbientSpawnInjector.GreeterProfile(HalloweenPluginSettings.GreeterSpecies.Wormface);
+        var npc = BuildParamFromDef("NpcParam", wormface.NpcTemplate);
+        var template = npc[wormface.NpcTemplate]!;
+        template["behaviorVariationId"].Value = 45700;
+        template["spEffectID1"].Value = 16583;
+        template["spEffectID3"].Value = 7080;
+        template["getSoul"].Value = 541u;
+        template["itemLotId_enemy"].Value = 457000000;
+
+        AmbientSpawnInjector.ApplyHostileGreeter(npc, HalloweenPluginSettings.GreeterSpecies.Wormface);
+
+        var row = npc[SpeedFogIds.HostileGreeterNpcRow]!;
+        Assert.Equal(45700, (int)row["behaviorVariationId"].Value);
+        var slots = Enumerable.Range(0, 32).Select(i => (int)row[$"spEffectID{i}"].Value).ToList();
+        Assert.Equal(16583, slots[1]);
+        Assert.DoesNotContain(7080, slots);
+        Assert.Contains(7000 + 10 * AmbientSpawnInjector.GREETER_TIER, slots);
+        Assert.Equal(0u, (uint)row["getSoul"].Value);
+        Assert.Equal(-1, (int)row["itemLotId_enemy"].Value);
+    }
+
+    [Fact]
+    public void ApplyGreeterThink_WormfaceClonesTheWormfaceThinkRow()
+    {
+        var wormface = AmbientSpawnInjector.GreeterProfile(HalloweenPluginSettings.GreeterSpecies.Wormface);
+        var think = BuildParamFromDef("NpcThinkParam", wormface.ThinkTemplate);
+        var template = think[wormface.ThinkTemplate]!;
+        template["battleGoalID"].Value = 457000;
+        template["eye_dist"].Value = (ushort)25;
+
+        AmbientSpawnInjector.ApplyGreeterThink(think, HalloweenPluginSettings.GreeterSpecies.Wormface);
+
+        var row = think[SpeedFogIds.HostileGreeterThinkRow]!;
+        Assert.Equal(457000, (int)row["battleGoalID"].Value);
+        Assert.Equal((ushort)AmbientSpawnInjector.GREETER_AGGRO_DIST, (ushort)row["eye_dist"].Value);
     }
 
     [Fact]
@@ -657,7 +798,7 @@ public class AmbientSpawnInjectorTests
         template["nose_dist"].Value = (ushort)2;
         template["battleGoalID"].Value = 528000;
 
-        AmbientSpawnInjector.ApplyGreeterThink(think);
+        AmbientSpawnInjector.ApplyGreeterThink(think, HalloweenPluginSettings.GreeterSpecies.Untouchable);
 
         var row = think[SpeedFogIds.HostileGreeterThinkRow]!;
         Assert.Equal((ushort)AmbientSpawnInjector.GREETER_AGGRO_DIST, (ushort)row["eye_dist"].Value);

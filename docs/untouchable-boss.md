@@ -147,7 +147,8 @@ wall, then a broken state:
   every row of that band unconditionally, and the boss's vulnerability
   must stay under SpeedFog's control. Ambient untouchables keep the
   vanilla row and its nerflantern slot, so they stay damageable. The
-  Halloween greeters run on their own clone of 52800086
+  untouchable Halloween greeters (`greeters = true`, the default
+  species) run on their own clone of 52800086
   (`HostileGreeterNpcRow`, see
   [halloween-ambient.md](plugins/halloween-ambient.md) "Greeter stats"):
   stats retiered, aggro radius capped at 10 m on a think row clone

@@ -29,6 +29,58 @@ public class HalloweenPluginSettingsTests
         => Assert.False(HalloweenPluginSettings.Parse(Config("""{"greeters": false}""")).Greeters);
 
     [Fact]
+    public void Parse_BooleanSpawnKeysKeepTheDefaultSpecies()
+    {
+        // Pools written before species existed say `greeters = true`,
+        // `ambushes = true`: they must keep the untouchable/skeleton pair.
+        var s = HalloweenPluginSettings.Parse(Config("""{"greeters": true, "ambushes": true}"""));
+        Assert.Equal(HalloweenPluginSettings.GreeterSpecies.Untouchable, s.GreeterSpecies);
+        Assert.Equal(HalloweenPluginSettings.AmbusherSpecies.Skeleton, s.AmbusherSpecies);
+    }
+
+    [Fact]
+    public void Parse_GreeterSpeciesNameEnablesGreeters()
+    {
+        var s = HalloweenPluginSettings.Parse(Config("""{"greeters": "wormface"}"""));
+        Assert.True(s.Greeters);
+        Assert.Equal(HalloweenPluginSettings.GreeterSpecies.Wormface, s.GreeterSpecies);
+    }
+
+    [Fact]
+    public void Parse_AmbusherSpeciesNameEnablesAmbushes()
+    {
+        // Ambushes default off: naming a species is enough to turn them on.
+        var s = HalloweenPluginSettings.Parse(Config("""{"ambushes": "basilisk"}"""));
+        Assert.True(s.Ambushes);
+        Assert.Equal(HalloweenPluginSettings.AmbusherSpecies.Basilisk, s.AmbusherSpecies);
+    }
+
+    [Fact]
+    public void Parse_ReadsTheDefaultSpeciesNames()
+    {
+        var s = HalloweenPluginSettings.Parse(Config(
+            """{"greeters": "untouchable", "ambushes": "skeleton"}"""));
+        Assert.Equal(
+            new HalloweenPluginSettings.Settings(Ambushes: true, Greeters: true),
+            s);
+    }
+
+    [Theory]
+    [InlineData("""{"greeters": "basilisk"}""", "'greeters'")]
+    [InlineData("""{"greeters": "Wormface"}""", "'greeters'")]
+    [InlineData("""{"ambushes": "wormface"}""", "'ambushes'")]
+    [InlineData("""{"ambushes": 1}""", "'ambushes'")]
+    public void Parse_RejectsUnknownSpecies(string json, string key)
+    {
+        // Species names are per flavor and case-sensitive, like
+        // jumpscare_mode; the error lists the accepted names.
+        var ex = Assert.Throws<InvalidDataException>(
+            () => HalloweenPluginSettings.Parse(Config(json)));
+        Assert.Contains(key, ex.Message);
+        Assert.Contains("a boolean", ex.Message);
+    }
+
+    [Fact]
     public void Parse_DefaultsDarknessOff()
         => Assert.False(HalloweenPluginSettings.Parse(Config()).Darkness);
 

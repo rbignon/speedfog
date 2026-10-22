@@ -7,16 +7,17 @@ namespace FogModWrapper;
 
 /// <summary>
 /// Places ambient enemy spawns at cluster exit gates for the Halloween
-/// plugin: unless greeters are disabled, a hostile "greeter" (Aging
-/// Untouchable with vanilla AI, flat GREETER_TIER stats, no runes or drop
-/// via a cloned NpcParam row, ApplyHostileGreeter, and a GREETER_AGGRO_DIST
-/// aggro radius via a cloned think row, ApplyGreeterThink) standing watch beside
-/// every exit gate of a mini_dungeon/legacy_dungeon cluster
+/// plugin: unless greeters are disabled, a hostile "greeter" (an Aging
+/// Untouchable or a Wormface, GreeterProfile, with vanilla AI, flat
+/// GREETER_TIER stats, no runes or drop via a cloned NpcParam row,
+/// ApplyHostileGreeter, and a GREETER_AGGRO_DIST aggro radius via a cloned
+/// think row, ApplyGreeterThink) standing watch beside every exit gate of a
+/// mini_dungeon/legacy_dungeon cluster
 /// (HalloweenGateAnchors.SpawnClusterTypes: unlike decorations, no spawns
 /// at the start cluster), plus, when ambushes are enabled, a small
-/// skeleton pack sharing the gate's arc. Ambushers aggro normally but are
-/// decorative: token HP, no runes, near-zero attack via a cloned NpcParam
-/// row (ApplyAmbusher).
+/// skeleton or basilisk pack (AmbusherProfile) sharing the gate's arc.
+/// Ambushers aggro normally but are decorative: token HP, no runes,
+/// near-zero attack via a cloned NpcParam row (ApplyAmbusher).
 /// Boss arenas never receive spawns.
 ///
 /// Two-phase injection, mirroring DeathMarkerInjector:
@@ -34,32 +35,57 @@ namespace FogModWrapper;
 /// </summary>
 public static class AmbientSpawnInjector
 {
-    private const string GREETER_MODEL = "c5280";
-    // Vanilla Aging Untouchable: the clone TEMPLATE for the hostile greeter
-    // row; placed greeters use SpeedFogIds.HostileGreeterNpcRow.
-    private const int GREETER_TEMPLATE_NPC_PARAM = 52800086;
-    // Vanilla Aging Untouchable think row: the clone TEMPLATE for the
-    // greeter think row; placed greeters use SpeedFogIds.HostileGreeterThinkRow.
-    private const int GREETER_TEMPLATE_THINK_PARAM = 52800000;
+    /// <summary>
+    /// What a greeter of each species is cloned from. Placed greeters always
+    /// use SpeedFogIds.HostileGreeterNpcRow / HostileGreeterThinkRow, the
+    /// clones of these vanilla templates (one greeter species per seed):
+    /// - Untouchable: Aging Untouchable c5280, NpcParam 52800086 (DLC tier
+    ///   31), think 52800000 (sees and hears from 30m).
+    /// - Wormface: c4570 of Altus Plateau (m60_40_53), NpcParam 45700030
+    ///   (tier 8), think 45700100 (already at the 10m greeter cap). Its
+    ///   Deathblight (mist, grab) is vanilla and untouched.
+    /// </summary>
+    internal static SpawnProfile GreeterProfile(HalloweenPluginSettings.GreeterSpecies species) => species switch
+    {
+        HalloweenPluginSettings.GreeterSpecies.Untouchable => new("c5280", 52800086, 52800000),
+        HalloweenPluginSettings.GreeterSpecies.Wormface => new("c4570", 45700030, 45700100),
+        _ => throw new ArgumentOutOfRangeException(nameof(species), species, null),
+    };
+
+    /// <summary>
+    /// What an ambusher of each species is cloned from. Placed ambushers use
+    /// SpeedFogIds.DecorativeAmbusherNpcRow (the clone of NpcTemplate) and
+    /// the species' vanilla think row (ThinkTemplate, vanilla perception):
+    /// - Skeleton: c3500 of Sage's Cave, NpcParam 35000030, think 35000000.
+    /// - Basilisk: c4150 of Ainsel River (m12_01), NpcParam 41500060 (tier
+    ///   5, no drop in vanilla), think 41500000 (sees from 16m). Its
+    ///   Deathblight cloud survives the attack nerf: status buildup is not
+    ///   an attack power rate.
+    /// </summary>
+    internal static SpawnProfile AmbusherProfile(HalloweenPluginSettings.AmbusherSpecies species) => species switch
+    {
+        HalloweenPluginSettings.AmbusherSpecies.Skeleton => new("c3500", 35000030, 35000000),
+        HalloweenPluginSettings.AmbusherSpecies.Basilisk => new("c4150", 41500060, 41500000),
+        _ => throw new ArgumentOutOfRangeException(nameof(species), species, null),
+    };
+
     /// <summary>Aggro distance of the greeters, in meters: the cap on every
-    /// perception radius of their think row (vanilla sees and hears from
-    /// 30m). Greeters stand 4-6m from their gate, so they still react to a
+    /// perception radius of their think row (the vanilla untouchable sees
+    /// and hears from 30m; the wormface's row is already within it).
+    /// Greeters stand 4-6m from their gate, so they still react to a
     /// player walking up to the exit fog. An integer: four of the five
     /// radii are u16 fields.</summary>
     public const int GREETER_AGGRO_DIST = 10;
     /// <summary>Base-game scaling tier the greeters fight at, everywhere in
     /// the run (they are placed after FogMod's scaling pass): the greeter
-    /// row carries scaling SpEffect 7000 + 10 * tier instead of vanilla's
-    /// DLC tier-31 row, the stats FogMod would give an untouchable moved to
-    /// an area of that tier (tier 6: ~730 HP, attack x1.76 on DLC base
-    /// attack values, vs x3.8 in vanilla). The in-game tuning knob, 1-20
-    /// only: DLC tiers use another row band (docs/enemy-scaling.md).</summary>
+    /// row carries scaling SpEffect 7000 + 10 * tier instead of the
+    /// template's own area tier, the stats FogMod would give the enemy
+    /// moved to an area of that tier (tier 6: untouchable ~730 HP, attack
+    /// x1.76 on DLC base attack values vs x3.8 in vanilla's DLC tier 31;
+    /// wormface ~1410 HP, from tier 8). Shared by every greeter species and
+    /// the jumpscare actors. The in-game tuning knob, 1-20 only: DLC tiers
+    /// use another row band (docs/enemy-scaling.md).</summary>
     public const int GREETER_TIER = 6;
-    private const string AMBUSH_MODEL = "c3500";
-    // Vanilla Sage's Cave skeleton: the clone TEMPLATE for the decorative
-    // ambusher row; placed ambushers use SpeedFogIds.DecorativeAmbusherNpcRow.
-    private const int AMBUSH_NPC_PARAM = 35000030;
-    private const int AMBUSH_THINK_PARAM = 35000000;
     // Tier-1 enemy-scaling row (7000 + 10 * tier, docs/enemy-scaling.md):
     // the SpEffect clone template for the ambushers' attack nerf. A pure
     // rate-multiplier row with no stateInfo side effects.
@@ -95,7 +121,8 @@ public static class AmbientSpawnInjector
     /// per (map, gate part name) pair) come from HalloweenGateAnchors.
     /// Collect with SpawnClusterTypes; each expands to one Greeter when
     /// settings.Greeters, plus, when settings.Ambushes, a pack of 2-3
-    /// Ambushers. Maps left without any spec get no entry.
+    /// Ambushers, each spec carrying its configured species' profile. Maps
+    /// left without any spec get no entry.
     /// </summary>
     internal static Dictionary<string, List<SpawnSpec>> CollectSpawnSpecsByMap(
         List<Connection> connections,
@@ -104,6 +131,8 @@ public static class AmbientSpawnInjector
         HalloweenPluginSettings.Settings settings)
     {
         var result = new Dictionary<string, List<SpawnSpec>>();
+        var greeter = GreeterProfile(settings.GreeterSpecies);
+        var ambusher = AmbusherProfile(settings.AmbusherSpecies);
 
         foreach (var (mapId, anchors) in HalloweenGateAnchors.Collect(
             connections, nodes, gateSides, HalloweenGateAnchors.SpawnClusterTypes))
@@ -113,13 +142,13 @@ public static class AmbientSpawnInjector
             foreach (var anchor in anchors)
             {
                 if (settings.Greeters)
-                    specs.Add(new SpawnSpec(anchor.PartName, SpawnKind.Greeter, 0, 1, anchor.IsASide));
+                    specs.Add(new SpawnSpec(anchor.PartName, SpawnKind.Greeter, 0, 1, anchor.IsASide, greeter));
 
                 if (settings.Ambushes)
                 {
                     int packSize = 2 + new Random(StablePartNameHash(anchor.PartName)).Next(2);
                     for (int i = 0; i < packSize; i++)
-                        specs.Add(new SpawnSpec(anchor.PartName, SpawnKind.Ambusher, i, packSize, anchor.IsASide));
+                        specs.Add(new SpawnSpec(anchor.PartName, SpawnKind.Ambusher, i, packSize, anchor.IsASide, ambusher));
                 }
             }
 
@@ -202,7 +231,7 @@ public static class AmbientSpawnInjector
 
             foreach (var spec in partSpecs)
             {
-                var model = spec.Kind == SpawnKind.Greeter ? GREETER_MODEL : AMBUSH_MODEL;
+                var model = spec.Profile.Model;
                 if (modelsEnsured.Add(model))
                     MsbHelper.EnsureEnemyModel(msb, model);
 
@@ -240,7 +269,7 @@ public static class AmbientSpawnInjector
                     : SpeedFogIds.DecorativeAmbusherNpcRow;
                 spawn.ThinkParamID = spec.Kind == SpawnKind.Greeter
                     ? SpeedFogIds.HostileGreeterThinkRow
-                    : AMBUSH_THINK_PARAM;
+                    : spec.Profile.ThinkTemplate;
                 spawn.TalkID = 0;
                 spawn.CharaInitID = -1;
                 // The nearest-neighbor clone source may patrol a walk route; greeters
@@ -261,15 +290,16 @@ public static class AmbientSpawnInjector
     }
 
     /// <summary>
-    /// Clone the Aging Untouchable's NpcParam row (52800086) into the hostile
-    /// greeter row: vanilla AI and moveset (madness lantern included), but a
-    /// flat GREETER_TIER scaling instead of vanilla's DLC tier, no runes and
-    /// no item drop. Same clone mechanism as ApplyDecorativeAmbusherRows.
-    /// Also writes the greeter think row (ApplyGreeterThink, shorter aggro).
-    /// Returns false when the rows could not be written: the MSB phase must
-    /// then place no greeter, or the parts would point at missing rows.
+    /// Clone the species' NpcParam row (GreeterProfile) into the hostile
+    /// greeter row: vanilla AI and moveset (the untouchable's madness
+    /// lantern, the wormface's Deathblight), but a flat GREETER_TIER scaling
+    /// instead of the template's own area tier, no runes and no item drop.
+    /// Same clone mechanism as ApplyDecorativeAmbusherRows. Also writes the
+    /// greeter think row (ApplyGreeterThink, shorter aggro). Returns false
+    /// when the rows could not be written: the MSB phase must then place no
+    /// greeter, or the parts would point at missing rows.
     /// </summary>
-    public static bool ApplyHostileGreeterRow(RegulationEditor reg)
+    public static bool ApplyHostileGreeterRow(RegulationEditor reg, HalloweenPluginSettings.GreeterSpecies species)
     {
         var npc = reg.GetParam("NpcParam");
         var think = reg.GetParam("NpcThinkParam");
@@ -278,33 +308,43 @@ public static class AmbientSpawnInjector
             Console.WriteLine("Halloween spawns: NpcParam/NpcThinkParam unavailable, greeter rows not written");
             return false;
         }
-        ApplyHostileGreeter(npc);
-        ApplyGreeterThink(think);
+        ApplyHostileGreeter(npc, species);
+        ApplyGreeterThink(think, species);
         return true;
     }
 
     /// <summary>PARAM-level entry point used by tests (same split as ApplyAmbusher).</summary>
-    public static void ApplyHostileGreeter(PARAM npc)
+    public static void ApplyHostileGreeter(PARAM npc, HalloweenPluginSettings.GreeterSpecies species)
     {
-        int slot = CloneFlatTierUntouchable(npc, SpeedFogIds.HostileGreeterNpcRow);
+        int template = GreeterProfile(species).NpcTemplate;
+        int slot = CloneFlatTier(npc, SpeedFogIds.HostileGreeterNpcRow, template);
 
         Console.WriteLine(
-            $"Halloween spawns: hostile greeter NpcParam {SpeedFogIds.HostileGreeterNpcRow} " +
-            $"(clone of {GREETER_TEMPLATE_NPC_PARAM}, tier {GREETER_TIER} scaling {7000 + 10 * GREETER_TIER} in slot {slot}, runes 0, no drop)");
+            $"Halloween spawns: hostile {species} greeter NpcParam {SpeedFogIds.HostileGreeterNpcRow} " +
+            $"(clone of {template}, tier {GREETER_TIER} scaling {7000 + 10 * GREETER_TIER} in slot {slot}, runes 0, no drop)");
     }
 
     /// <summary>
     /// Clone the Aging Untouchable's NpcParam row (52800086) into rowId at
-    /// the flat GREETER_TIER scaling, with no runes and no item drop.
-    /// Shared by the greeter row and HalloweenJumpscareInjector's actor row.
-    /// Returns the SpEffect slot holding the tier row.
+    /// the flat GREETER_TIER scaling, with no runes and no item drop:
+    /// HalloweenJumpscareInjector's actor row, an untouchable whatever the
+    /// greeter species. Returns the SpEffect slot holding the tier row.
     /// </summary>
     internal static int CloneFlatTierUntouchable(PARAM npc, int rowId)
+        => CloneFlatTier(npc, rowId, GreeterProfile(HalloweenPluginSettings.GreeterSpecies.Untouchable).NpcTemplate);
+
+    /// <summary>
+    /// Clone a vanilla NpcParam row into rowId at the flat GREETER_TIER
+    /// scaling, with no runes and no item drop. Returns the SpEffect slot
+    /// holding the tier row.
+    /// </summary>
+    private static int CloneFlatTier(PARAM npc, int rowId, int templateRow)
     {
-        var row = GameEditor.AddRow(npc, rowId, GREETER_TEMPLATE_NPC_PARAM);
-        // Vanilla 52800086 carries DLC tier-31 area scaling (20007100: hp
-        // x13.6, attack x3.8); FogMod never rescales these clones, so the
-        // vanilla tier row of GREETER_TIER takes its place.
+        var row = GameEditor.AddRow(npc, rowId, templateRow);
+        // The template carries its own area scaling (untouchable 52800086:
+        // DLC tier 31, 20007100, hp x13.6, attack x3.8; wormface 45700030:
+        // tier 8); FogMod never rescales these clones, so the vanilla tier
+        // row of GREETER_TIER takes its place.
         int slot = ClearScalingSlotsAndFindFree(row);
         row[$"spEffectID{slot}"].Value = 7000 + 10 * GREETER_TIER; // s32
         row["getSoul"].Value = 0u;  // u32: no rune farm
@@ -312,13 +352,15 @@ public static class AmbientSpawnInjector
         return slot;
     }
 
-    /// <summary>PARAM-level entry point used by tests: clone the Aging
-    /// Untouchable's think row (52800000) into the greeter think row, same
-    /// AI, every perception radius capped at GREETER_AGGRO_DIST. A cap, not
-    /// a set: a radius already shorter (smell, 2m) stays as it is.</summary>
-    public static void ApplyGreeterThink(PARAM think)
+    /// <summary>PARAM-level entry point used by tests: clone the species'
+    /// think row (GreeterProfile) into the greeter think row, same AI, every
+    /// perception radius capped at GREETER_AGGRO_DIST. A cap, not a set: a
+    /// radius already shorter (the untouchable's 2m smell, every radius of
+    /// the wormface's row) stays as it is.</summary>
+    public static void ApplyGreeterThink(PARAM think, HalloweenPluginSettings.GreeterSpecies species)
     {
-        var row = GameEditor.AddRow(think, SpeedFogIds.HostileGreeterThinkRow, GREETER_TEMPLATE_THINK_PARAM);
+        int template = GreeterProfile(species).ThinkTemplate;
+        var row = GameEditor.AddRow(think, SpeedFogIds.HostileGreeterThinkRow, template);
         // Storage types from Defs/NpcThinkParam.xml: ear_dist is f32, the rest u16.
         row["ear_dist"].Value = Math.Min((float)row["ear_dist"].Value, (float)GREETER_AGGRO_DIST);
         foreach (var field in new[] { "eye_dist", "searchEye_dist", "BattleStartDist", "nose_dist" })
@@ -328,18 +370,20 @@ public static class AmbientSpawnInjector
 
         Console.WriteLine(
             $"Halloween spawns: greeter think row {SpeedFogIds.HostileGreeterThinkRow} " +
-            $"(clone of {GREETER_TEMPLATE_THINK_PARAM}, perception capped at {GREETER_AGGRO_DIST}m)");
+            $"(clone of {template}, perception capped at {GREETER_AGGRO_DIST}m)");
     }
 
     /// <summary>
-    /// Clone the Sage's Cave skeleton NpcParam row into the decorative
+    /// Clone the species' NpcParam row (AmbusherProfile) into the decorative
     /// ambusher row (token HP, no runes, near-zero attack via a custom
-    /// SpEffect): ambushers are scenery that swings, not a threat. Same
+    /// SpEffect): ambushers are scenery that swings, not a threat. Status
+    /// buildup is not an attack power rate, so a species' own status attack
+    /// (the basilisk's Deathblight cloud) keeps its vanilla strength. Same
     /// clone-plus-SpEffect mechanism as UntouchableBossInjector.Apply.
     /// Returns false when the rows could not be written (see
     /// ApplyHostileGreeterRow).
     /// </summary>
-    public static bool ApplyDecorativeAmbusherRows(RegulationEditor reg)
+    public static bool ApplyDecorativeAmbusherRows(RegulationEditor reg, HalloweenPluginSettings.AmbusherSpecies species)
     {
         var npc = reg.GetParam("NpcParam");
         var sp = reg.GetParam("SpEffectParam", "SpEffect");
@@ -348,13 +392,14 @@ public static class AmbientSpawnInjector
             Console.WriteLine("Halloween spawns: NpcParam/SpEffectParam unavailable, ambusher rows not written");
             return false;
         }
-        ApplyAmbusher(npc, sp);
+        ApplyAmbusher(npc, sp, species);
         return true;
     }
 
     /// <summary>PARAM-level entry point used by tests (same split as Apply).</summary>
-    public static void ApplyAmbusher(PARAM npc, PARAM spEffect)
+    public static void ApplyAmbusher(PARAM npc, PARAM spEffect, HalloweenPluginSettings.AmbusherSpecies species)
     {
+        int template = AmbusherProfile(species).NpcTemplate;
         var spRow = GameEditor.AddRow(
             spEffect, SpeedFogIds.DecorativeAmbusherSpEffectRow, SCALING_TIER1_TEMPLATE_SPEFFECT);
         // Neutralize the template's own tier-1 multipliers (vanilla 7010:
@@ -373,23 +418,24 @@ public static class AmbientSpawnInjector
         }
 
         var npcRow = GameEditor.AddRow(
-            npc, SpeedFogIds.DecorativeAmbusherNpcRow, AMBUSH_NPC_PARAM);
+            npc, SpeedFogIds.DecorativeAmbusherNpcRow, template);
         npcRow["hp"].Value = AMBUSH_HP;  // u32: token HP, dies to any real hit
         npcRow["getSoul"].Value = 0u;  // u32: no rune pinata
         int slot = ClearScalingSlotsAndFindFree(npcRow);
         npcRow[$"spEffectID{slot}"].Value = SpeedFogIds.DecorativeAmbusherSpEffectRow; // s32
 
         Console.WriteLine(
-            $"Halloween spawns: decorative ambusher NpcParam {SpeedFogIds.DecorativeAmbusherNpcRow} " +
-            $"(clone of {AMBUSH_NPC_PARAM}, hp {AMBUSH_HP}, runes 0) + SpEffect " +
+            $"Halloween spawns: decorative {species} ambusher NpcParam {SpeedFogIds.DecorativeAmbusherNpcRow} " +
+            $"(clone of {template}, hp {AMBUSH_HP}, runes 0) + SpEffect " +
             $"{SpeedFogIds.DecorativeAmbusherSpEffectRow} (attack x{AMBUSH_ATTACK_RATE}, slot {slot})");
     }
 
-    // Both clone templates carry the game's own area-scaling SpEffect in one
-    // of their slots: vanilla 35000030 has 7080 (tier 8: ~2.7x hp, 2x
-    // attack), which would stack onto the ambusher nerf and roughly double
-    // the AMBUSH_HP / 0.01x numbers; vanilla 52800086 has 20007100 (DLC tier
-    // 31), which the greeter's GREETER_TIER row replaces. One 0..31 pass
+    // Every clone template carries the game's own area-scaling SpEffect in
+    // one of its slots: vanilla skeleton 35000030 has 7080 (tier 8: ~2.7x hp,
+    // 2x attack) and basilisk 41500060 has 7050, which would stack onto the
+    // ambusher nerf and multiply the AMBUSH_HP / 0.01x numbers; vanilla
+    // untouchable 52800086 has 20007100 (DLC tier 31) and wormface 45700030
+    // has 7080, which the greeter's GREETER_TIER row replaces. One 0..31 pass
     // clears every slot pointing into the scaling bands
     // (docs/enemy-scaling.md: 7000+10*tier and the DLC 20007xxx band) so the
     // cloned stats are exact, while tracking the first free (-1) slot seen
@@ -448,4 +494,10 @@ public static class AmbientSpawnInjector
 public enum SpawnKind { Greeter, Ambusher }
 
 public readonly record struct SpawnSpec(
-    string GatePartName, SpawnKind Kind, int IndexInPack, int PackSize, bool GateSideIsASide);
+    string GatePartName, SpawnKind Kind, int IndexInPack, int PackSize, bool GateSideIsASide,
+    SpawnProfile Profile);
+
+/// <summary>The species a spawn is made of: its chr model and the vanilla
+/// NpcParam/NpcThinkParam rows its regulation rows are cloned from
+/// (AmbientSpawnInjector.GreeterProfile/AmbusherProfile).</summary>
+public readonly record struct SpawnProfile(string Model, int NpcTemplate, int ThinkTemplate);

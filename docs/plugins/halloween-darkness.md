@@ -11,7 +11,7 @@ darkness = true   # default false
 ```
 
 Parsed strictly by `HalloweenPluginSettings.Parse` (a non-boolean value
-aborts the build, like `greeters` and `ambushes`). Off by default so that
+aborts the build). Off by default so that
 enabling the Halloween plugin never darkens a seed by surprise; a pool
 opts in explicitly.
 

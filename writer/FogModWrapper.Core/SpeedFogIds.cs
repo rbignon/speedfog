@@ -215,8 +215,9 @@ public static class SpeedFogIds
     public const uint UntouchableSourceEntity = 2049420200;
 
     /// <summary>NpcParam row for the decorative Halloween ambushers: a
-    /// clone of the Sage's Cave skeleton (35000030) with token HP, no runes,
-    /// and the near-zero attack SpEffect attached.</summary>
+    /// clone of the species template (AmbientSpawnInjector.AmbusherProfile:
+    /// Sage's Cave skeleton 35000030 by default, or basilisk 41500060) with
+    /// token HP, no runes, and the near-zero attack SpEffect attached.</summary>
     public const int DecorativeAmbusherNpcRow = ParamRowBase1;
 
     /// <summary>SpEffectParam row multiplying the ambushers' attack power
@@ -225,13 +226,16 @@ public static class SpeedFogIds
     public const int DecorativeAmbusherSpEffectRow = ParamRowBase1;
 
     /// <summary>NpcParam row for the hostile Halloween greeters: a clone of
-    /// vanilla 52800086 whose DLC area scaling is swapped for a fixed
-    /// base-game tier, with no runes and no item drop.</summary>
+    /// the species template (AmbientSpawnInjector.GreeterProfile: Aging
+    /// Untouchable 52800086 by default, or wormface 45700030) whose area
+    /// scaling is swapped for a fixed base-game tier, with no runes and no
+    /// item drop.</summary>
     public const int HostileGreeterNpcRow = ParamRowBase2;
 
     /// <summary>NpcThinkParam row for the hostile Halloween greeters: a
-    /// clone of the Aging Untouchable's think row (52800000), vanilla AI with
-    /// every perception radius capped at a short aggro distance.</summary>
+    /// clone of the species' think row (AmbientSpawnInjector.GreeterProfile:
+    /// Aging Untouchable 52800000 by default, or wormface 45700100), vanilla
+    /// AI with every perception radius capped at a short aggro distance.</summary>
     public const int HostileGreeterThinkRow = ParamRowBase0;
 
     /// <summary>NpcParam row of the Halloween jumpscare actors: the greeter

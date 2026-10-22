@@ -19,12 +19,17 @@ the text reskin layer that shares the same `[plugin.halloween]` namespace.
 ```toml
 [plugin.halloween]
 enabled = true    # gates greeters + decorations (and the text theme)
-greeters = true   # hostile Aging Untouchable beside each anchored gate
-ambushes = false  # also spawn hostile skeleton packs at the anchored gates
+greeters = true   # hostile greeter beside each anchored gate: "untouchable" (= true) or "wormface"
+ambushes = false  # also spawn decorative packs at the anchored gates: "skeleton" (= true) or "basilisk"
 ```
 
-Parsed strictly by `HalloweenPluginSettings.Parse`: unknown keys or a
-non-boolean `greeters`/`ambushes` abort the build (same idiom as
+`greeters` and `ambushes` take a boolean or a species name: `true` means
+the first (default) species, `false` turns the flavor off, a name turns it
+on with that species (`ambushes = "basilisk"` alone is enough). The
+booleans predate the species and keep every existing config on the
+untouchable/skeleton pair. Parsed strictly by
+`HalloweenPluginSettings.Parse`: unknown keys, another type, or an unknown
+or miscased species name abort the build (same idiom as
 `WeatherInjector.Parse`). The two spawn toggles are independent;
 `greeters = false` with `ambushes = false` leaves the decorations as the
 only ambient layer at the gates (the text theme and the item icons are not
@@ -40,14 +45,18 @@ separate layer, see [halloween-darkness.md](halloween-darkness.md).
 
 ## The two flavors
 
-- **Greeters**: one hostile Aging Untouchable (`c5280`) standing watch
-  beside every anchored exit gate, placed when `enabled = true` unless
-  `greeters = false`. Vanilla AI and moveset, madness lantern included,
-  with a 10 m aggro radius, on a flat-tier clone of the vanilla row with
-  no runes and no drop (see "Greeter stats").
-- **Ambushers**: when `ambushes = true`, a pack of 2-3 hostile skeletons
-  (`c3500`) sharing the same gate. They aggro normally but are DECORATIVE:
-  a clone of the Sage's Cave skeleton row (35000030) into
+- **Greeters**: one hostile enemy standing watch beside every anchored
+  exit gate, placed when `enabled = true` unless `greeters = false`: an
+  Aging Untouchable (`c5280`, default) or a Wormface (`c4570`, see
+  "Deathblight species"). Vanilla AI and moveset (the untouchable's
+  madness lantern, the wormface's Deathblight), with a 10 m aggro radius,
+  on a flat-tier clone of the vanilla row with no runes and no drop (see
+  "Greeter stats").
+- **Ambushers**: when `ambushes` is on, a pack of 2-3 hostile skeletons
+  (`c3500`, default) or basilisks (`c4150`, see "Deathblight species")
+  sharing the same gate. They aggro normally but are DECORATIVE:
+  a clone of the species' vanilla row (Sage's Cave skeleton 35000030 or
+  Ainsel basilisk 41500060) into
   `SpeedFogIds.DecorativeAmbusherNpcRow` with token HP (`AMBUSH_HP`, 100:
   1 HP self-destructed in-game, the skeletons' own collapse/assembly
   mechanics finished them off), no runes, and a custom
@@ -58,7 +67,15 @@ separate layer, see [halloween-darkness.md](halloween-darkness.md).
   (vanilla 35000030 carries area-scaling row 7080, ~2x) are cleared on the
   clone so the numbers are exact. Scenery that swings, not a threat
   (`AmbientSpawnInjector.ApplyAmbusher`, applied in `ApplyRegulation`
-  alongside the greeter row).
+  alongside the greeter row). The parts keep the species' vanilla think
+  row (skeleton 35000000, basilisk 41500000): vanilla perception.
+
+One species per flavor and per seed: the cloned rows keep their ids
+(`HostileGreeterNpcRow`, `HostileGreeterThinkRow`,
+`DecorativeAmbusherNpcRow`), only the clone template and the chr model
+follow the species (`AmbientSpawnInjector.GreeterProfile` /
+`AmbusherProfile`). The jumpscare actors and the Aging Untouchable boss do
+not follow `greeters`: they stay untouchables whatever the species.
 
 Both are placed by `AmbientSpawnInjector`; the gate decoration catalogue
 (candelabras, cobwebs, glow anchors) is a separate, independently-gated
@@ -163,6 +180,10 @@ after FogMod's own `Write()` phase. This means:
 
 ## Greeter stats
 
+This section describes the default untouchable greeter; the wormface
+shares the mechanism (flat tier, no runes, no drop, capped think clone),
+see "Deathblight species" for its rows.
+
 Greeters were passive until 2026-10 (a cloned `NpcThinkParam` row with
 every perception radius zeroed); they now fight. Their AI is vanilla (same
 logic and battle scripts, 528000), so they aggro, grab, and keep the
@@ -243,6 +264,36 @@ applied by a per-entity EMEVD event (untouchable-boss.md "Vulnerability
 mechanism"), and greeters carry `EntityID` 0 with no event.
 `UntouchableBossInjector.ApplyToMsb` picks the boss part by entity id only,
 so greeters keep their own npc and think rows.
+
+## Deathblight species
+
+The alternative species (2026-10, for the final Halloween race seed) are
+the two Deathblight enemies of the base game. Deathblight is a status
+bar that kills outright when it fills; both keep it at full vanilla
+strength on purpose.
+
+| | Wormface greeter | Basilisk ambusher |
+|---|---|---|
+| Model | `c4570` | `c4150` |
+| NpcParam template | 45700030 (Altus Plateau, m60_40_53, tier 8: 7080) | 41500060 (Ainsel River, m12_01, tier 5: 7050) |
+| Think row | 45700100, cloned and capped (every radius already at or under 10 m: eye 10, battle start 10, search 5, ear 0.1, smell 1) | 41500000, vanilla (eye 16 m, battle start 20 m) |
+| Deathblight | mist and grab | black cloud |
+| Base `hp` | 621: ~1410 HP at `GREETER_TIER` 6 (the untouchable: 323, ~730) | 338, forced to `AMBUSH_HP` 100 |
+| Vanilla drop | lot 457000000 (cleared like every greeter) | lot 415000000, empty (and `getSoul` 0 like every ambusher) |
+
+The ambusher nerf leaves the cloud alone: the clone's SpEffect scales
+the five attack power rates and `staminaAttackRate`, while a status
+buildup is its own value on the attack's SpEffect (`curseAttackPower`
+for Deathblight), which no scaling row multiplies (vanilla tier row 7060
+carries attack rates and the `regist*ChangeRate` resistances, nothing on
+status attack). Every basilisk bullet (4150100-4150102,
+4150110-4150111) applies SpEffect 23001: `curseAttackPower` 20 with
+`isUseStatusAilmentAtkPowerCorrect` off, like the whole enemy Deathblight
+band (23000-23100; the rows with it on, 6800-6805 and 1794, are
+player-side). So a basilisk dies to one hit and its blows barely
+register, but standing in its cloud still fills the bar. The wormface
+keeps its whole vanilla `spEffectID` set (16582, 16583, 16595, 5851
+among others); only the area-scaling slot changes.
 
 ## MSB clone recipe and visibility groups
 
@@ -483,7 +534,15 @@ pack size range):
   Tombsward Cave (m31_02, collision source 96m away, 29m lower).
 - Per-map performance with 1-4 extra chr loads per gate: no visible
   hitch on map load.
-- Ambush pack feel when `ambushes = true`: packs aggro and swing but die
+- Deathblight species (`greeters = "wormface"`, `ambushes = "basilisk"`):
+  the basilisk cloud reaches the player and fills the Deathblight bar
+  (offline, its bullets keep their full 23001 buildup), and a basilisk pack is beatable (it dies to one hit) before the
+  bar fills; the wormface fits beside a narrow corridor gate (taller than
+  an untouchable) and its ~1410 HP at tier 6 is not a wall for an early
+  character (tune `GREETER_TIER` first, it moves both species); the
+  boss-retry case above is worse here, a Deathblight kill on the way back
+  to the boss fog. Tune or nerf from this run.
+- Ambush pack feel when `ambushes` is on: packs aggro and swing but die
   to any real hit and deal negligible damage (decorative clone); confirm
   a hit from them barely registers, and that at 100 HP they no longer
   self-destruct (they did at 1 HP) while still folding to one player hit.

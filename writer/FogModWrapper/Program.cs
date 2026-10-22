@@ -874,9 +874,9 @@ Example:
             // injection below, which places a flavor only if its rows were
             // written here.
             if (ctx.HalloweenSettings.Greeters)
-                ctx.GreeterRowApplied = AmbientSpawnInjector.ApplyHostileGreeterRow(reg);
+                ctx.GreeterRowApplied = AmbientSpawnInjector.ApplyHostileGreeterRow(reg, ctx.HalloweenSettings.GreeterSpecies);
             if (ctx.HalloweenSettings.Ambushes)
-                ctx.AmbusherRowsApplied = AmbientSpawnInjector.ApplyDecorativeAmbusherRows(reg);
+                ctx.AmbusherRowsApplied = AmbientSpawnInjector.ApplyDecorativeAmbusherRows(reg, ctx.HalloweenSettings.AmbusherSpecies);
             if (ctx.HalloweenSettings.Jumpscares > 0)
                 ctx.JumpscareRowApplied = HalloweenJumpscareInjector.ApplyJumpscareRow(reg);
             HalloweenIconInjector.ApplyTo(reg);
