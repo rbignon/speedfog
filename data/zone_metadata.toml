@@ -144,6 +144,12 @@ weight = 2
 [zones.gelmir_wyndhamcatacombs]
 weight = 2
 
+[zones.caelid_gaolcave_preboss]
+exclude = true
+
+[zones.dragonbarrow_cave_preboss]
+exclude = true
+
 [zones.peninsula_earthborecave]
 weight = 0.5
 
