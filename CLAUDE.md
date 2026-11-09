@@ -213,6 +213,7 @@ speedfog/
 │   ├── save-backup.md      # Save backup system (daemon, recovery, config)
 │   ├── game-patch-migration.md  # Keeping seeds playable across an Elden Ring update without a FogRando release
 │   ├── title-screen.md     # Title screen artwork replacement (BC7 splice at setup)
+│   ├── winter-rendering.md  # Winter rendering research: material data model, snow levers, pitfalls, coverage numbers
 │   └── plugins/             # Plugin documentation
 │       ├── README.md        # Plugin config convention
 │       ├── summer-theme.md  # Summer theme specifics
@@ -264,6 +265,7 @@ speedfog/
 | `docs/map-splits.md` | Splitting oversized maps with synthetic zones/fogs (map_splits.toml, Enir-Ilim instance) |
 | `docs/phantom-skins.md` | Phantom skins catalog (cosmetic player auras for racing rewards) |
 | `docs/title-screen.md` | Title screen artwork replacement (BC7 splice at setup) |
+| `docs/winter-rendering.md` | Winter rendering research: material data model, vegetation render paths, validated levers (snow shader twin conversions, grass atlas retargets, terrain albedo retargets, frosted textures, MSB vegetation model swaps), inert levers (GrassTypeParam), pitfalls (skinned meshes vanish, SPX_DLC02 paths, isolation testing), coverage and size numbers |
 | `docs/plugins/README.md` | Plugin config convention (Python passthrough + C# IsPluginEnabled) |
 | `docs/plugins/summer-theme.md` | Summer theme: boss epithets + UI banners, catalogue format, discovery |
 | `docs/plugins/halloween-theme.md` | Halloween theme: kitsch text reskin, item renames |
