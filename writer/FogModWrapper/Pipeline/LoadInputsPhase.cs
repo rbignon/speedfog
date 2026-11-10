@@ -65,6 +65,9 @@ internal static class LoadInputsPhase
         // One object per enabled [plugin.*] table; each parses its settings
         // here, so an invalid table aborts before FogMod runs.
         ctx.Plugins = PluginRegistry.CreateEnabled(ctx.GraphData);
+        Console.WriteLine(ctx.Plugins.Count > 0
+            ? $"Plugins: {string.Join(", ", ctx.Plugins.Select(p => p.Name))}"
+            : "Plugins: none");
     }
 
     static void LoadCustomBonfires(AnnotationData ann, string fogPath)

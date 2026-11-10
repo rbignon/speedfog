@@ -14,7 +14,7 @@ enabled = true
 
 1. Python (`config.py`) loads the whole `[plugin]` table into `Config.plugins`
    (generic, no per-plugin schema).
-2. `output.py` serialises it verbatim into `graph.json` under `plugins`
+2. `graph_export.py` serialises it verbatim into `graph.json` under `plugins`
    (graph.json v4.4+).
 3. C# `PluginRegistry.CreateEnabled` (end of `LoadInputsPhase`) creates one
    `SpeedFogPlugin` object per enabled table it knows, in execution order;
@@ -36,8 +36,8 @@ MSB only if present") lives in the plugin object, not in the pipeline's
 | `AfterFogModWrite` | `WriteFogModPhase` | Right after `BuildRegionToFlags`: last point where flags can join `RegionToFlags` before `PatchEmevdPhase` injects them | halloween (jumpscare plan + mirror flags) |
 | `OnCommonEmevd` | `CommonEmevdPhase` | After the core injectors, before `AlternateFlagPatcher` and the single common.emevd write | weather (event), halloween (darkness event) |
 | `OnRegulation` | `RegulationPhase` | Inside the single regulation.bin batch; not called when regulation.bin is unavailable | halloween (greeter, ambusher, jumpscare rows; icons) |
-| `TextTheme` (data, not a method) | `ModDirPhase` | After `BossNameInjector` (themes reskin the ids it allocates by `boss_name`), before `DeathMarkerInjector`; the phase applies the themes in plugin order and warns when several are enabled | summer, halloween |
-| `OnModDirMsb` | `ModDirPhase` | After `DeathMarkerInjector`, before the Untouchable boss MSB repoint and `VanillaWarpRemover` (the decor ground estimate reads vanilla assets the remover deletes) | halloween (ambient pass: decorations, greeters, ambushes, jumpscare actors) |
+| `TextThemeName` (data, not a method) | `ModDirPhase` | After `BossNameInjector` (themes reskin the ids it allocates by `boss_name`), before `DeathMarkerInjector`; the phase applies the themes in plugin order and warns when several are enabled | summer, halloween |
+| `OnModDirMsb` | `ModDirPhase` | `Context.GateSides` (fog.txt gate sides) is available. After `DeathMarkerInjector`, before the Untouchable boss MSB repoint and `VanillaWarpRemover` (the decor ground estimate reads vanilla assets the remover deletes) | halloween (ambient pass: decorations, greeters, ambushes, jumpscare actors) |
 | `OnModDirLate` | `ModDirPhase` | After `EventDisabler`, before `VanillaWarpRemover`: historical position, kept so per-map EMEVD rewrites stay in the same order | halloween (darkness fast-loop repoint) |
 
 **Order.** `PluginRegistry` lists `summer`, `weather`, `halloween`, and that
@@ -48,7 +48,10 @@ the halloween text theme overwrite colliding summer entries.
 **Adding a plugin.** Create `writer/FogModWrapper/Plugins/<Name>/` with a
 `<Name>Plugin : SpeedFogPlugin` that parses its table in its constructor and
 overrides the hooks it needs, put its injectors in the same folder, then add
-one line to `PluginRegistry` at the position that fits the order rule. A
+one line to `PluginRegistry` at the position that fits the order rule. That
+line is where the C# side declares the plugin's config key: the registry
+assigns `SpeedFogPlugin.Name` from it (after construction, so constructors
+cannot read it), and `LoadInputsPhase` logs the enabled ones. A
 plugin that needs a point no hook covers gets a new hook in
 `SpeedFogPlugin`, called from the phase, with its ordering reason documented
 in the table above.
@@ -75,7 +78,7 @@ overlay builder and packaging conditional), `HalloweenJumpscareInjector` (an
 Aging Untouchable appearing on the player in a few dungeon layers), and
 `HalloweenDarknessInjector` (evergaol lighting everywhere); their
 FogModWrapper side is driven by `HalloweenPlugin` (the text theme through its
-`TextTheme`).
+`TextThemeName`).
 
 ## Plugins
 

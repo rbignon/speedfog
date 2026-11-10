@@ -66,6 +66,12 @@ internal sealed class Context
     // Plugin state (settings, guards) lives in the plugin objects.
     public List<SpeedFogPlugin> Plugins = new();
 
+    // Gate FullName to (ASideArea, BSideArea) from fog.txt (map-splits gates
+    // included), built by ModDirPhase before DeathMarkerInjector and read by
+    // it and the plugins' OnModDirMsb hook (Halloween anchors its decorations
+    // and spawns on it). Null before that point, so a misordered read fails.
+    public Dictionary<string, (string ASideArea, string BSideArea)> GateSides = null!;
+
     public Context(Config config)
     {
         Config = config;

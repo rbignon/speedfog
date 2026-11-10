@@ -54,9 +54,9 @@ internal static class ModDirPhase
         }
 
         // Text theme plugins: cosmetic boss/UI text reskins, one catalogue per
-        // theme (SpeedFogPlugin.TextTheme). Applied in plugin order; a later
+        // theme (SpeedFogPlugin.TextThemeName). Applied in plugin order; a later
         // theme overwrites colliding entries of an earlier one.
-        var textThemes = ctx.Plugins.Select(p => p.TextTheme).OfType<string>().ToList();
+        var textThemes = ctx.Plugins.Select(p => p.TextThemeName).OfType<string>().ToList();
         if (textThemes.Count > 1)
             Console.WriteLine(
                 $"Warning: multiple text themes enabled ({string.Join(", ", textThemes)}); later themes overwrite colliding entries");
@@ -66,17 +66,17 @@ internal static class ModDirPhase
         }
 
         // Death markers at fog gates
-        var gateSides = GateGeometry.BuildGateSideLookup(ctx.Ann);
+        ctx.GateSides = GateGeometry.BuildGateSideLookup(ctx.Ann);
         DeathMarkerInjector.Inject(
             ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.Connections, ctx.Events,
-            ctx.GraphData.EventMap, ctx.GraphData.DeathFlags, gateSides);
+            ctx.GraphData.EventMap, ctx.GraphData.DeathFlags, ctx.GateSides);
 
         // Plugin hook (Halloween ambient pass: gate decorations, greeters,
         // ambushes, jumpscare actors): MSB edits after the death markers and
         // before the Untouchable repoint and VanillaWarpRemover (the decor
         // ground estimate reads vanilla assets that the remover deletes).
         foreach (var plugin in ctx.Plugins)
-            plugin.OnModDirMsb(ctx, gateSides);
+            plugin.OnModDirMsb(ctx);
 
         // Aging Untouchable minor boss: repoint enemy-randomizer-placed
         // untouchables to the boss NpcParam clone (see RegulationPhase).

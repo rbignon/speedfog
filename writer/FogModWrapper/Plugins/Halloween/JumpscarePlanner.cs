@@ -171,8 +171,9 @@ internal static class JumpscarePlanner
     /// Append the plan's mirror flags to ZoneTrackingInjector's region table
     /// (region entity to flags set before a warp to it), after the zone
     /// flags they mirror and once per region, so the fog warp sets them
-    /// along with the zone flags. Called from WriteFogModPhase, between
-    /// BuildRegionToFlags and PatchEmevdPhase. An empty plan leaves the table untouched.
+    /// along with the zone flags. Called from HalloweenPlugin.AfterFogModWrite
+    /// (the WriteFogModPhase hook right after BuildRegionToFlags, before
+    /// PatchEmevdPhase). An empty plan leaves the table untouched.
     /// </summary>
     internal static void AddMirrorFlags(Dictionary<int, List<int>> regionToFlags, JumpscarePlan plan)
     {

@@ -12,12 +12,14 @@ namespace FogModWrapper.Plugins;
 /// </summary>
 internal abstract class SpeedFogPlugin
 {
-    /// <summary>Config namespace name: [plugin.&lt;Name&gt;].</summary>
-    public abstract string Name { get; }
+    /// <summary>Config namespace name: [plugin.&lt;Name&gt;]. Assigned by
+    /// <see cref="PluginRegistry"/> from its entry, so plugin classes do not
+    /// repeat their config key (not set yet inside a constructor).</summary>
+    public string Name { get; internal set; } = "";
 
-    /// <summary>Text theme catalogue (data/plugins/&lt;theme&gt;.toml) that
-    /// ModDirPhase applies after BossNameInjector, or null for none.</summary>
-    public virtual string? TextTheme => null;
+    /// <summary>Name of the text theme catalogue (data/plugins/&lt;theme&gt;.toml)
+    /// that ModDirPhase applies after BossNameInjector, or null for none.</summary>
+    public virtual string? TextThemeName => null;
 
     /// <summary>WriteFogModPhase, right after BuildRegionToFlags: last
     /// chance to add flags to RegionToFlags before PatchEmevdPhase injects
@@ -33,10 +35,9 @@ internal abstract class SpeedFogPlugin
     public virtual void OnRegulation(Context ctx, RegulationEditor reg) { }
 
     /// <summary>ModDirPhase, after DeathMarkerInjector and before the
-    /// Untouchable boss MSB repoint and VanillaWarpRemover (MSB edits).</summary>
-    public virtual void OnModDirMsb(
-        Context ctx, Dictionary<string, (string ASideArea, string BSideArea)> gateSides)
-    { }
+    /// Untouchable boss MSB repoint and VanillaWarpRemover (MSB edits).
+    /// <see cref="Context.GateSides"/> is available.</summary>
+    public virtual void OnModDirMsb(Context ctx) { }
 
     /// <summary>ModDirPhase, after EventDisabler and before
     /// VanillaWarpRemover.</summary>

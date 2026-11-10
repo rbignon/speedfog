@@ -90,7 +90,7 @@ public static class AmbientSpawnInjector
     // Tier-1 enemy-scaling row (7000 + 10 * tier, docs/enemy-scaling.md):
     // the SpEffect clone template for the ambushers' attack nerf. A pure
     // rate-multiplier row with no stateInfo side effects.
-    private const int SCALING_TIER1_TEMPLATE_SPEFFECT = 7010;
+    internal const int SCALING_TIER1_TEMPLATE_SPEFFECT = 7010;
     /// <summary>Attack power multiplier for decorative ambushers: they are
     /// scenery that swings, not a threat, so damage floors out at ~nothing.</summary>
     public const float AMBUSH_ATTACK_RATE = 0.01f;

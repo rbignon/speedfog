@@ -27,9 +27,7 @@ internal sealed class HalloweenPlugin : SpeedFogPlugin
 
     public HalloweenPlugin(PluginConfig config) => Settings = HalloweenPluginSettings.Parse(config);
 
-    public override string Name => "halloween";
-
-    public override string? TextTheme => "halloween";
+    public override string? TextThemeName => "halloween";
 
     public override void AfterFogModWrite(Context ctx)
     {
@@ -69,8 +67,7 @@ internal sealed class HalloweenPlugin : SpeedFogPlugin
         HalloweenIconInjector.ApplyTo(reg);
     }
 
-    public override void OnModDirMsb(
-        Context ctx, Dictionary<string, (string ASideArea, string BSideArea)> gateSides)
+    public override void OnModDirMsb(Context ctx)
     {
         // Ambient layer at cluster exit gates: data-driven gate decorations
         // (data/plugins/halloween_decorations.toml, a no-op only if the
@@ -95,7 +92,7 @@ internal sealed class HalloweenPlugin : SpeedFogPlugin
         }
         HalloweenAmbientPass.Inject(
             ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.Connections,
-            ctx.GraphData.Nodes, gateSides, ctx.Events, ctx.Config.DataDir,
+            ctx.GraphData.Nodes, ctx.GateSides, ctx.Events, ctx.Config.DataDir,
             PlaceableSettings(), jumpscarePlan);
     }
 

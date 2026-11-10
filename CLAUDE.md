@@ -388,10 +388,10 @@ speedfog/
 | `PhantomCatalogInjector` | Bakes phantom skin catalog (cosmetic auras) into PhantomParam/SpEffectVfxParam/SpEffectParam |
 | `OpenSplitInjector` | Tags entrances with `opensplit` before `Graph.Construct` (see `docs/opensplit-overrides.md`) |
 | `MapSplitsInjector` | Injects map_splits.toml synthetic zones/fogs into AnnotationData before `Graph.Construct`, splits EnemyAreas (see `docs/map-splits.md`) |
-| `SpeedFogPlugin` | Base class of the C# side of a `[plugin.<name>]` table: no-op hooks the phases call (`AfterFogModWrite`, `OnCommonEmevd`, `OnRegulation`, `TextTheme`, `OnModDirMsb`, `OnModDirLate`); plugin state lives in the object (see `docs/plugins/README.md`) |
-| `PluginRegistry` | Creates the enabled, known plugins in execution order (summer, weather, halloween) at the end of `LoadInputsPhase`; each parses its table on creation |
+| `SpeedFogPlugin` | Base class of the C# side of a `[plugin.<name>]` table: no-op hooks the phases call (`AfterFogModWrite`, `OnCommonEmevd`, `OnRegulation`, `TextThemeName`, `OnModDirMsb`, `OnModDirLate`); plugin state lives in the object (see `docs/plugins/README.md`) |
+| `PluginRegistry` | Creates the enabled, known plugins in execution order (summer, weather, halloween) at the end of `LoadInputsPhase` and names them from its entries (plugin classes do not repeat their config key); each parses its table on creation |
 | `SummerPlugin` / `WeatherPlugin` / `HalloweenPlugin` | The three plugins; `HalloweenPlugin` owns the parsed settings, the jumpscare plan and the regulation-to-MSB row guards |
-| `TextTheme` | Cosmetic text reskins per theme, summer + halloween, applied by `ModDirPhase` for each plugin's `TextTheme` |
+| `TextTheme` | Cosmetic text reskins per theme, summer + halloween, applied by `ModDirPhase` for each plugin's `TextThemeName` |
 | `MsgBndEditor` | Shared msgbnd editing for the engus + frafr text injectors (`TextTheme`, `BossNameInjector`): mod copy over vanilla, written only on change |
 | `BossNameInjector` | Healthbar names of relocated enemies (graph.json `boss_names`): resolves each name to a NpcName id (exact vanilla engus match, else a `SpeedFogIds.BossNameFmgIds` entry written to engus + frafr) and repoints the arena's `DisplayBossHealthBar` nameId in the map EMEVD, leaving alone the arenas the randomizer already named; runs before `TextTheme` and hands it the allocated {name -> id} so a theme can reskin them by `boss_name` (see `docs/boss-healthbar-names.md`) |
 | `TextThemeCatalogLoader` | Loads and validates `data/plugins/<theme>.toml` |

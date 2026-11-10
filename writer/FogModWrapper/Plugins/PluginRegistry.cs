@@ -21,12 +21,18 @@ internal static class PluginRegistry
 
     /// <summary>
     /// One plugin object per enabled, known [plugin.*] table of graph.json,
-    /// in execution order. Unknown names are ignored. Plugins parse their
-    /// settings on creation, so an invalid table fails here.
+    /// in execution order, each named after its table. Unknown names are
+    /// ignored. Plugins parse their settings on creation, so an invalid table
+    /// fails here.
     /// </summary>
     public static List<SpeedFogPlugin> CreateEnabled(GraphData graph) =>
         Known
             .Where(k => graph.IsPluginEnabled(k.Name))
-            .Select(k => k.Create(graph.Plugins[k.Name]))
+            .Select(k =>
+            {
+                var plugin = k.Create(graph.Plugins[k.Name]);
+                plugin.Name = k.Name;
+                return plugin;
+            })
             .ToList();
 }

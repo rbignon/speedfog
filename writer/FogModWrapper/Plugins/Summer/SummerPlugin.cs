@@ -4,7 +4,5 @@ namespace FogModWrapper.Plugins.Summer;
 /// see docs/plugins/summer-theme.md).</summary>
 internal sealed class SummerPlugin : SpeedFogPlugin
 {
-    public override string Name => "summer";
-
-    public override string? TextTheme => "summer";
+    public override string? TextThemeName => "summer";
 }

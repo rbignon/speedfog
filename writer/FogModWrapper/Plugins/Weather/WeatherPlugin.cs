@@ -11,8 +11,6 @@ internal sealed class WeatherPlugin : SpeedFogPlugin
 
     public WeatherPlugin(PluginConfig config) => _settings = WeatherInjector.Parse(config);
 
-    public override string Name => "weather";
-
     public override void OnCommonEmevd(Context ctx) =>
         WeatherInjector.InjectEmevdEvent(ctx.CommonEmevd, ctx.Events, _settings);
 }
