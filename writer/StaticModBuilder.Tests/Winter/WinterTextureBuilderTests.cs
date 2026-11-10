@@ -83,6 +83,33 @@ public class WinterTextureBuilderTests : IDisposable
     }
 
     [Fact]
+    public void ProcessTpf_FrostsSingleMipAlbedoAtNativeSize()
+    {
+        var tpf = MakeTpf(("S_a", 1, DdsFixtures.MakeRealBc1Dds(256, singleMip: true)));
+        var report = new WinterReport();
+
+        var result = WinterTextureBuilder.ProcessTpf(tpf, "s", report);
+
+        Assert.Equal(new TpfResult(1, 0, 0, 1), result);
+        var info = DdsImage.Parse(tpf.Textures[0].Bytes);
+        Assert.Equal(256, info.Width);
+        Assert.Equal(DdsBlockFormat.Bc1, info.Format);
+        Assert.Equal(72, info.DxgiFormat);
+        Assert.Equal(WinterTextureBuilder.TpfFormatBc1, tpf.Textures[0].Format);
+        Assert.Contains(report.Lines, l => l.Contains("s/S_a") && l.Contains("single mip level"));
+    }
+
+    [Fact]
+    public void ProcessTpf_NamesTheTextureWhenFrostingFails()
+    {
+        var truncated = DdsFixtures.MakeBc1Dds(256, 256, 9);
+        var tpf = MakeTpf(("F_a", 1, truncated[..^1]));
+        var ex = Assert.Throws<WinterBuildException>(() =>
+            WinterTextureBuilder.ProcessTpf(tpf, "f", new WinterReport()));
+        Assert.StartsWith("f/F_a: ", ex.Message);
+    }
+
+    [Fact]
     public void ProcessTpf_ThrowsOnUnsupportedTexture()
     {
         var tpf = MakeTpf(("Z_n", 108, DdsFixtures.MakeDds(256, 256, 3, "DXT3")));

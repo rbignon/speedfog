@@ -64,7 +64,7 @@ internal static class DdsFixtures
         MakeDds(width, height, mips, "DX10", 98);
 
     /// <summary>Really encoded BC1 chain (green opaque left half, transparent right half), DX10 dxgi 72.</summary>
-    internal static byte[] MakeRealBc1Dds(int size)
+    internal static byte[] MakeRealBc1Dds(int size, bool singleMip = false)
     {
         using var image = new Image<Rgba32>(size, size);
         for (int y = 0; y < size; y++)
@@ -74,6 +74,8 @@ internal static class DdsFixtures
         encoder.OutputOptions.GenerateMipMaps = true;
         encoder.OutputOptions.Quality = CompressionQuality.Balanced;
         encoder.Options.IsParallel = false;
-        return DdsImage.BuildBc1Dds(new byte[0], encoder.EncodeToRawBytes(image), size, size);
+        var mips = encoder.EncodeToRawBytes(image);
+        if (singleMip) mips = new[] { mips[0] };
+        return DdsImage.BuildBc1Dds(new byte[0], mips, size, size);
     }
 }

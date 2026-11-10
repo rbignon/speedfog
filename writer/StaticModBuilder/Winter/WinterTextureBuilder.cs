@@ -36,7 +36,22 @@ public static class WinterTextureBuilder
             int drop = DdsImage.LevelsToDrop(native);
             if (IsAlbedo(texture.Name))
             {
-                texture.Bytes = FrostEncoder.FrostAlbedo(texture.Bytes, DdsImage.TargetLongSide(native));
+                int target = DdsImage.TargetLongSide(native);
+                if (target != native && info.MipCount < 2)
+                {
+                    // No level at the target size and no resampler: frost at native size.
+                    target = native;
+                    report.Line($"warning: {tpfName}/{texture.Name}: kept at native size: single mip level");
+                    warnings++;
+                }
+                try
+                {
+                    texture.Bytes = FrostEncoder.FrostAlbedo(texture.Bytes, target);
+                }
+                catch (Exception e)
+                {
+                    throw new WinterBuildException($"{tpfName}/{texture.Name}: {e.Message}");
+                }
                 texture.Format = TpfFormatBc1;
                 frosted++;
             }
