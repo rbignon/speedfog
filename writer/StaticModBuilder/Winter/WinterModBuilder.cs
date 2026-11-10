@@ -123,9 +123,17 @@ public static class WinterModBuilder
         var tpfs = WinterTextureBuilder.Build(gameDir, outputDir, stems, report);
         Console.WriteLine($"Winter: textures done, {tpfs} TPFs");
 
+        // Authored files (the Torrent skin) ride along verbatim; the folder is not tracked yet.
+        string overlayDir = WinterOverlay.Locate(dataDir);
+        var overlay = WinterOverlay.Copy(overlayDir, outputDir, report);
+        Console.WriteLine(overlay.Count > 0
+            ? $"Winter: overlay done, {overlay.Count} files"
+            : $"Note: no winter overlay at {overlayDir}, its authored files (Torrent skin) are not shipped");
+
         return $"Winter mod: {materials.Converted} conversions, "
             + $"{materials.RetargetedTextures + materials.RetargetedTerrain} retargets, "
-            + $"{tpfs} TPFs, {materials.SkippedSkinned} skinned exclusions, {clock.Elapsed.TotalSeconds:F0} s";
+            + $"{tpfs} TPFs, {materials.SkippedSkinned} skinned exclusions, "
+            + $"{overlay.Count} overlay files, {clock.Elapsed.TotalSeconds:F0} s";
     }
 
     /// <summary>Best-effort removal of everything a failed build may have left.</summary>

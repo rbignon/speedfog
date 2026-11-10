@@ -337,6 +337,9 @@ def _setup_static_mod_builder(
     monkeypatch.setattr(
         bootstrap, "WINTER_MOD_DEST", tmp_path / "data/mods/speedfog-winter"
     )
+    monkeypatch.setattr(
+        bootstrap, "WINTER_OVERLAY_SRC", tmp_path / "data/mods-src/speedfog-winter"
+    )
     exe = tmp_path / "writer/StaticModBuilder/publish/win-x64/StaticModBuilder.exe"
     exe.parent.mkdir(parents=True)
     exe.write_bytes(b"x")
@@ -440,6 +443,26 @@ def test_run_static_mod_builder_announces_the_winter_scan_only_when_on(
 
     bootstrap.run_static_mod_builder(tmp_path / "Game", winter=True)
     assert "FLVER scan" in capsys.readouterr().out
+
+
+def test_run_static_mod_builder_warns_when_the_winter_overlay_is_absent(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _setup_static_mod_builder(tmp_path, monkeypatch)
+
+    bootstrap.run_static_mod_builder(tmp_path / "Game", winter=False)
+    assert bootstrap.WINTER_OVERLAY_ABSENT not in capsys.readouterr().out
+
+    bootstrap.run_static_mod_builder(tmp_path / "Game", winter=True)
+    assert bootstrap.WINTER_OVERLAY_ABSENT in capsys.readouterr().out
+
+    skin = bootstrap.WINTER_OVERLAY_SRC / "chr" / "c8002.chrbnd.dcx"
+    skin.parent.mkdir(parents=True)
+    skin.write_bytes(b"x")
+    bootstrap.run_static_mod_builder(tmp_path / "Game", winter=True)
+    assert bootstrap.WINTER_OVERLAY_ABSENT not in capsys.readouterr().out
 
 
 @pytest.mark.parametrize("scripts_ok", [True, False])

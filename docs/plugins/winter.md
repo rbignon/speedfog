@@ -25,6 +25,18 @@ base (levers, pitfalls, coverage numbers): [winter-rendering.md](../winter-rende
 - Ships 258 frosted foliage texture packs (129 atlases, each with its `_l`
   twin): leaf clumps, ivy, vines, leaf litter, grass atlases of the DLC and
   the SpeedTree shrubs turn white while keeping their cut-out shape.
+- Replaces Torrent with the Frozen Reindeer mount: three authored binders
+  (`chr/c8002.chrbnd.dcx`, `chr/c8002_h.texbnd.dcx`, `chr/c8000.anibnd.dcx`)
+  shipped verbatim from the overlay folder `data/mods-src/speedfog-winter/`
+  (see "How it is built"). Since game 1.17 the default Torrent body is
+  `c8002` (RideParam 80020; `c8000` only holds the skeleton and the
+  animations), so the skin shows for everyone, without an event flag or the
+  Tarnished Pack. A pack owner who picks a regalia at a grace gets that
+  regalia instead. The skin is a 1.17.2 port, made for SpeedFog, of the
+  Frozen Reindeer Mount (Nexus mod 2691, the Dark Souls II reindeer): the
+  reindeer meshes are added to the vanilla `c8002` FLVER, and the `c8000`
+  animation set is re-exported with frost particle events (InvokeFFX) on 51
+  animations and a replaced double-jump burst.
 - Does not make it snow. Snowfall comes from the weather plugin (below).
 
 Not covered: trees (SpeedTree trunks and canopies outside the shrub atlases),
@@ -136,14 +148,25 @@ directory. The classes are in `writer/StaticModBuilder/Winter/`.
    alpha by BCnEncoder (single-threaded: parallel BC encodes crash randomly
    under Wine). Normals, masks and emissive maps are never re-encoded: the
    top mip is dropped and the header rewritten.
-5. **Report.** `WinterReport` writes `data/mods/speedfog-winter.report.txt`
+5. **Overlay.** `WinterOverlay` copies every file under the data directory's
+   `mods-src/speedfog-winter/` into the build at the same relative path,
+   verbatim, dot-prefixed files and folders skipped: today the three Torrent
+   binders under `chr/`. The folder is optional and not tracked yet: a
+   generating host gets it by hand (copy `data/mods-src/speedfog-winter/`
+   next to the catalogues before the bootstrap). Without it the bootstrap
+   prints a warning before the step and the build prints `Note: no winter
+   overlay at ...` and ships no skin, which packaging cannot tell apart from
+   a build with it. An overlay path the build already wrote (a file, or a
+   folder such as `material/` or `asset/`) fails the build.
+6. **Report.** `WinterReport` writes `data/mods/speedfog-winter.report.txt`
    (not shipped; packaging copies only the folder): the scan summary
    (binders, FLVERs, skinned matbins, reader used), the skinned exclusions
    by matbin name and shader, per binder the counts of converted,
    texture-retargeted, terrain-retargeted and left-vanilla matbins with the
    conversions per rule, per TPF stem the counts of frosted, reduced and
-   untouched textures plus a total, and any warning. It does not list the
-   converted or retargeted matbins by name, nor texture sizes.
+   untouched textures plus a total, the overlay files with their sizes, and
+   any warning. It does not list the converted or retargeted matbins by
+   name, nor texture sizes.
 
 Skinned exclusions: the scan finds 283 skinned materials in the whole game;
 38 of them would otherwise have been converted and stay vanilla (no snow).
@@ -154,9 +177,10 @@ their vanilla look.
 
 Failures: on a hard error (a binder or template matbin missing or not
 matching its declared layout, a listed TPF or retarget target missing, an
-unsupported DDS format, a failed post-condition, an unreadable FLVER binder)
-`WinterModBuilder` prints `WINTER FAILED: <reason>` and leaves no winter
-folder, staging folder or report. The rest of StaticModBuilder and of the
+unsupported DDS format, a failed post-condition, an unreadable FLVER binder,
+an overlay file colliding with a built path) `WinterModBuilder` prints
+`WINTER FAILED: <reason>` and leaves no winter folder, staging folder or
+report. The rest of StaticModBuilder and of the
 bootstrap still run (the snapshot refresh must never be skipped because of a
 texture); the bootstrap echoes the `WINTER FAILED` line (and no other stderr
 line of the Wine run), reports "Winter mod not built" after the
@@ -178,7 +202,8 @@ Measured on the real game (1.17, a local game copy, Wine):
 | Material binders | 2.58 MB (base) and 0.53 MB (DLC); vanilla 2.75 MB and 0.61 MB |
 | Matbins | 7052 conversions, 886 retargets, 38 skinned exclusions, 0 layout skips |
 | Textures | 258 TPFs, 18.56 MB |
-| Folder shipped per seed | 22 MB (21.67 MB) |
+| Overlay (Torrent skin) | 3 binders, 6.63 MB |
+| Folder shipped per seed | 28 MB (28.30 MB); 22 MB (21.67 MB) without the overlay |
 | Scan | 217 s over 24 987 binders, 283 skinned materials |
 | Winter step | 281 s standalone; 302 s inside the bootstrap (scan 236 s) |
 | Whole bootstrap | 472 s |
@@ -218,6 +243,9 @@ read at map load):
 - Stormveil Castle, Farum Azula roofs, one DLC field, Romina's arena.
 - The ten far-terrain pieces listed above, whose far layer is flat white
   rather than tiled snow.
+- Torrent: whistle, idle, gallop, double jump; the reindeer model with its
+  frost particles. In the Tarnished pool a regalia picked at a grace must
+  still show the vanilla skin.
 - Snowfall, on a seed generated with `[plugin.weather] weather = "snow"`,
   `freeze_time = false`. Whether `snow` renders precipitation in Limgrave has
   never been observed; it is independent of this plugin's code.
@@ -252,3 +280,6 @@ Measured in design Appendix E; none built.
 - Weather: [weather.md](weather.md). Patch-day handling:
   [../game-patch-migration.md](../game-patch-migration.md).
 - Data: `data/plugins/winter_materials.toml`, `data/plugins/winter_textures.toml`.
+- Overlay: `data/mods-src/speedfog-winter/` (not tracked yet; `chr/` holds
+  the three Torrent skin binders, 6.63 MB). Patch-day note on its frozen
+  `c8000.anibnd.dcx`: [../game-patch-migration.md](../game-patch-migration.md).

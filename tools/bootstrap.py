@@ -78,7 +78,12 @@ STATIC_MOD_SRC_DEST = DATA_DEST / "mods-src" / "speedfog"
 STATIC_MOD_DEST = DATA_DEST / "mods" / "speedfog"
 HALLOWEEN_MOD_DEST = DATA_DEST / "mods" / "speedfog-halloween"
 WINTER_MOD_DEST = DATA_DEST / "mods" / "speedfog-winter"
+WINTER_OVERLAY_SRC = DATA_DEST / "mods-src" / "speedfog-winter"
 WINTER_FAILURE_PREFIX = "WINTER FAILED"
+WINTER_OVERLAY_ABSENT = (
+    "Winter overlay absent (data/mods-src/speedfog-winter/, not tracked): "
+    "the winter mod ships without the Torrent skin"
+)
 WINTER_NOT_BUILT = (
     "Winter mod not built (see WINTER FAILED above); seeds enabling "
     "[plugin.winter] will refuse to package"
@@ -839,7 +844,8 @@ def run_static_mod_builder(game_dir: Path, winter: bool = True) -> tuple[bool, b
 
     Outputs to data/mods/speedfog/, copied verbatim into each seed as its own
     ModEngine 2 mod. With winter, also builds data/mods/speedfog-winter/
-    (StaticModBuilder removes it and still exits 0 when the winter build fails).
+    (StaticModBuilder removes it and still exits 0 when the winter build fails),
+    warning first when the untracked overlay folder (the Torrent skin) is absent.
 
     Returns (ok, winter_not_built): ok is False when StaticModBuilder failed;
     winter_not_built is True when the winter step was requested, StaticModBuilder
@@ -887,6 +893,8 @@ def run_static_mod_builder(game_dir: Path, winter: bool = True) -> tuple[bool, b
             "Winter static mod: the FLVER scan takes about 5 minutes "
             "on a local game copy"
         )
+        if not any(p.is_file() for p in WINTER_OVERLAY_SRC.rglob("*")):
+            print_warning(WINTER_OVERLAY_ABSENT)
 
     try:
         result = subprocess.run(

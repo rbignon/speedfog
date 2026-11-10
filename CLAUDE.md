@@ -100,9 +100,10 @@ speedfog/
 │   │   └── backups/         # Save backup daemon + launch helpers (PowerShell)
 │   ├── mods-src/speedfog/   # Static mod sources, tracked (script/755890_battle-luabnd-dcx/: Untouchable boss battle AI, plain-text Lua)
 │   │   └── script/<name>-luabnd-dcx/  # WitchyBND-unpacked layout, repacked at bootstrap
+│   ├── mods-src/speedfog-winter/  # Winter overlay: authored binders copied verbatim into data/mods/speedfog-winter/ at bootstrap (chr/: Frozen Reindeer Torrent skin, three binders, 6.6 MB; not tracked yet, copy the folder onto a generating host by hand; without it the bootstrap warns and the build ships no skin)
 │   ├── mods/speedfog/       # StaticModBuilder output + WitchyBND repacks + user overrides (gitignored)
 │   ├── mods/speedfog-halloween/  # Halloween icon overlay (05_dummy.tpf.dcx superset), built at bootstrap, shipped only when [plugin.halloween] is enabled (gitignored)
-│   └── mods/speedfog-winter/  # Winter static mod (two converted material binders + 258 frosted TPFs, ~22 MB), built at bootstrap, shipped only when [plugin.winter] is enabled (gitignored; built in a sibling speedfog-winter.building/ and moved into place, so it is complete or absent; the sibling speedfog-winter.report.txt lists the skinned exclusions, per-binder and per-rule counts, per-stem texture counts)
+│   └── mods/speedfog-winter/  # Winter static mod (two converted material binders + 258 frosted TPFs + the overlay's chr/ Torrent skin, ~28 MB), built at bootstrap, shipped only when [plugin.winter] is enabled (gitignored; built in a sibling speedfog-winter.building/ and moved into place, so it is complete or absent; the sibling speedfog-winter.report.txt lists the skinned exclusions, per-binder and per-rule counts, per-stem texture counts)
 ├── writer/                  # C# - Mod file generation
 │   ├── lib/                 # DLLs (FogMod, RandomizerCommon, SoulsFormats, etc.)
 │   ├── FogModWrapper.Core/  # Shared library (models, graph loading)
@@ -202,7 +203,7 @@ speedfog/
 │   │   ├── TitleScreenPatcher.cs  # Redirect title sprite to a standalone badge texture in 02_title.tpf.dcx
 │   │   ├── DdsAtlas.cs      # DX10 DDS header parsing + BC7 block extract + standalone DDS build
 │   │   ├── LayoutFile.cs    # Menu .layout XML helpers (find/remove SubTexture entries)
-│   │   └── Winter/          # Winter plugin build: WinterModBuilder (entry, WINTER FAILED), WinterCatalog/Loader, SkinnedMaterialScanner + FlverMaterialTable + MatbinNames, MatbinConverter, MatbinRetargeter, WinterMaterialBuilder, DdsImage, FrostEncoder, WinterTextureBuilder, WinterReport
+│   │   └── Winter/          # Winter plugin build: WinterModBuilder (entry, WINTER FAILED), WinterCatalog/Loader, SkinnedMaterialScanner + FlverMaterialTable + MatbinNames, MatbinConverter, MatbinRetargeter, WinterMaterialBuilder, DdsImage, FrostEncoder, WinterTextureBuilder, WinterOverlay, WinterReport
 │   └── StaticModBuilder.Tests/  # xUnit tests for StaticModBuilder
 ├── tools/                   # Standalone scripts
 │   ├── bootstrap.py             # Project bootstrap (extract deps, build, generate data)
@@ -442,11 +443,12 @@ speedfog/
 | `GraceAnimationPatcher` | Speeds up grace sit/discover animations via TAE event 608 |
 | `UntouchableTaePatcher` | Retargets seven bullet events of c5280 animation 3004: four to judge 150 (the boss's beam carrier) and three between them to judge 151 (the flame nova); adds to the burst 3001, right after its hit, a copy of 3000's warp-marker event applying the near-warp marker (the boss's near teleport warps on it, Jori's shape); inert for ambient untouchables, layout-guarded |
 | `TitleScreenPatcher` | Redirects the title sprite to a standalone composited badge texture in 02_title.tpf.dcx (~1.5 MB shipped, see `docs/title-screen.md`) |
-| `WinterModBuilder` | Builds `data/mods/speedfog-winter/` (`--winter-dir`, opt-in output): runs the catalogue load, retarget check, skinned-material scan, material binders and texture packs in order into `<dir>.building`, writes the report, then moves the folder into place; on an input failure prints `WINTER FAILED: <reason>`, leaves no folder and lets the rest of the bootstrap continue, any other exception is cleaned up and rethrown (see `docs/plugins/winter.md`) |
+| `WinterModBuilder` | Builds `data/mods/speedfog-winter/` (`--winter-dir`, opt-in output): runs the catalogue load, retarget check, skinned-material scan, material binders, texture packs and the overlay copy in order into `<dir>.building`, writes the report, then moves the folder into place; on an input failure prints `WINTER FAILED: <reason>`, leaves no folder and lets the rest of the bootstrap continue, any other exception is cleaned up and rethrown (see `docs/plugins/winter.md`) |
 | `WinterCatalogLoader` / `WinterCatalog` | Load and validate `data/plugins/winter_materials.toml` and `winter_textures.toml` |
 | `SkinnedMaterialScanner` / `FlverMaterialTable` / `MatbinNames` | Scan every mapbnd and geombnd FLVER for matbins used by skinned meshes (excluded from conversion: the snow shaders have no skinned permutation) |
 | `WinterMaterialBuilder` / `MatbinConverter` / `MatbinRetargeter` | Rewrite the two material binders: texture retargets, conversion to the vanilla snow twins, terrain albedo retarget |
 | `WinterTextureBuilder` / `FrostEncoder` / `DdsImage` | Frost 258 foliage TPFs at half resolution (albedos re-encoded BC1 1-bit alpha, other textures lose their top mip) |
+| `WinterOverlay` | Copies every file under `data/mods-src/speedfog-winter/` (the Torrent skin binders) verbatim into the winter build; optional folder, a collision with a built file fails the build |
 | `WinterReport` | Writes `data/mods/speedfog-winter.report.txt` (not shipped) |
 | `HalloweenIconPatcher` | Ships the Golden Seed/Sacred Tear Halloween icons (jack-o'-lantern, burning chalice) as a 05_dummy.tpf.dcx superset (`--halloween-dir`, opt-in overlay output, see `docs/plugins/halloween-icons.md`) |
 | `DdsAtlas` | DX10 DDS header parsing + block-aligned BC7 extract + standalone DDS build |
@@ -530,7 +532,8 @@ python tools/bootstrap.py \
 # longest step. Pass --no-winter on a machine that never generates
 # [plugin.winter] seeds. A failure prints WINTER FAILED and does not abort the
 # bootstrap, which ends with a "Winter mod not built" line; packaging a winter
-# seed then refuses (see docs/plugins/winter.md).
+# seed then refuses (see docs/plugins/winter.md). The Torrent skin binders under
+# data/mods-src/speedfog-winter/ (not tracked) ride along when the folder is there.
 
 # Or extract only FogRando (legacy mode)
 python tools/bootstrap.py \

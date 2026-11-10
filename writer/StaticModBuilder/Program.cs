@@ -161,7 +161,8 @@ Patches applied:
     animation 3001: near-warp marker SpEffect after the hit)
   - Title screen badge (menu/{hi,low}/01_common.sblytbnd.dcx + 02_title.tpf.dcx, needs --data-dir)
   - Halloween icon overlay (menu/{hi,low}/05_dummy.tpf.dcx superset, needs --data-dir and --halloween-dir)
-  - Winter static mod (material/ binders + asset/aet/ TPFs, report next to the folder, needs --data-dir and --winter-dir)
+  - Winter static mod (material/ binders + asset/aet/ TPFs + the authored files under <data-dir>/mods-src/speedfog-winter/,
+    report next to the folder, needs --data-dir and --winter-dir)
 ");
     }
 }

@@ -285,6 +285,17 @@ update.
       `data/plugins/winter_textures.toml` or `winter_materials.toml`); the
       bootstrap continues and winter seeds refuse to package until it is
       rebuilt.
+- [ ] The winter overlay (`data/mods-src/speedfog-winter/chr/`, not tracked,
+      see [plugins/winter.md](plugins/winter.md)) is frozen authored data
+      the bootstrap copies as is: `c8000.anibnd.dcx` is a re-export of
+      Torrent's whole animation set carrying the skin's frost effects, and
+      `c8002.chrbnd.dcx` / `c8002_h.texbnd.dcx` replace the default Torrent
+      body (Tarnished Pack content, unnamed by the unpacker: `game_inspect
+      bnd-list <game>/_unknown/*` lists it). After a patch that changes the
+      game's `chr/c8000.anibnd.dcx` (md5 against the previous game copy) or
+      the `c8002` binders, the skin masks the change in winter seeds: have
+      it rebuilt on the new files, or remove the overlay folder and
+      bootstrap again until then.
 - [x] Bump the Item Randomizer to its 1.17 release when it ships. The Defs
       concern is moot for 1.17 (no layout change), but its output is not
       only params: with `--merge-dir` it also overrides about 510 MSB, 485
