@@ -7,9 +7,9 @@ namespace FogModWrapper;
 /// Parses [plugin.halloween] parameters from graph.json's verbatim plugin
 /// table. Strict like WeatherInjector.Parse: unknown keys or wrong types
 /// abort the build. `greeters` and `ambushes` take a boolean or a species
-/// name (true = the default species). The text theme (TextTheme) only reads `enabled`; the
-/// ambient injectors, the jumpscare layer and the darkness gate in
-/// the pipeline phases read the parameters here.
+/// name (true = the default species). Parsed once, when HalloweenPlugin is
+/// created; the text theme only needs `enabled`; the ambient injectors, the
+/// jumpscare layer and the darkness hooks read the parameters here.
 /// </summary>
 public static class HalloweenPluginSettings
 {

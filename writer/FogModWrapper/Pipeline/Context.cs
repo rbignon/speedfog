@@ -1,5 +1,6 @@
 using FogMod;
 using FogModWrapper.Models;
+using FogModWrapper.Plugins;
 using SoulsFormats;
 using SoulsIds;
 
@@ -58,30 +59,10 @@ internal sealed class Context
     // repoint ThinkParamID at it. False keeps the vanilla AI.
     public bool UntouchableBossMovesetApplied;
 
-    // Set by RegulationPhase (AmbientSpawnInjector's row writers),
-    // consumed by ModDirPhase: a Halloween spawn flavor is only placed
-    // when its NpcParam row exists. Stay false when the flavor is disabled
-    // or the regulation phase warn-returned.
-    public bool GreeterRowApplied;
-    public bool AmbusherRowsApplied;
-
-    // Set by RegulationPhase when [plugin.halloween] jumpscares > 0;
-    // ModDirPhase places no actor without the row.
-    public bool JumpscareRowApplied;
-
-    // Drawn in WriteFogModPhase, right after BuildRegionToFlags, so its
-    // mirror flags reach PatchEmevdPhase; placed by ModDirPhase.
-    public JumpscarePlan JumpscarePlan = JumpscarePlan.Empty;
-
-    // Parsed lazily on first access: CommonEmevdPhase (darkness),
-    // RegulationPhase (ambusher row gating) and ModDirPhase
-    // (HalloweenAmbientPass) need the [plugin.halloween] settings, but
-    // HalloweenPluginSettings.Parse should only run once per build. Only
-    // valid when the halloween plugin is enabled (every call site guards on
-    // that).
-    private HalloweenPluginSettings.Settings? _halloweenSettings;
-    public HalloweenPluginSettings.Settings HalloweenSettings =>
-        _halloweenSettings ??= HalloweenPluginSettings.Parse(GraphData.Plugins["halloween"]);
+    // Enabled plugins in execution order, created at the end of
+    // LoadInputsPhase (PluginRegistry); each phase calls their hooks.
+    // Plugin state (settings, guards) lives in the plugin objects.
+    public List<SpeedFogPlugin> Plugins = new();
 
     public Context(Config config)
     {

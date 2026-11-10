@@ -1,4 +1,5 @@
 using FogMod;
+using FogModWrapper.Plugins;
 using SoulsIds;
 using YamlDotNet.Serialization;
 
@@ -59,6 +60,10 @@ internal static class LoadInputsPhase
         var mapSplitsPath = Path.Combine(ctx.Config.DataDir, "map_splits.toml");
         ctx.MapSplits = MapSplitsLoader.Load(mapSplitsPath);
         MapSplitsInjector.Apply(ctx.Ann, ctx.MapSplits);
+
+        // One object per enabled [plugin.*] table; each parses its settings
+        // here, so an invalid table aborts before FogMod runs.
+        ctx.Plugins = PluginRegistry.CreateEnabled(ctx.GraphData);
     }
 
     static void LoadCustomBonfires(AnnotationData ann, string fogPath)

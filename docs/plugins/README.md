@@ -16,27 +16,55 @@ enabled = true
    (generic, no per-plugin schema).
 2. `output.py` serialises it verbatim into `graph.json` under `plugins`
    (graph.json v4.4+).
-3. C# `GraphData.Plugins` + `IsPluginEnabled(name)` gate each feature in
-   the pipeline phases (`writer/FogModWrapper/Pipeline/`).
+3. C# `PluginRegistry.CreateEnabled` (end of `LoadInputsPhase`) creates one
+   `SpeedFogPlugin` object per enabled table it knows, in execution order;
+   each parses its own parameters then, so an invalid table aborts the build
+   before FogMod runs. Tables with no C# plugin (yet) are ignored.
+4. The pipeline phases call every plugin's hooks at fixed points (below).
 
-## Deliberately NOT built (yet)
+## C# contract (FogModWrapper)
 
-No plugin runtime, registry, or `IPlugin` interface, and no migration of
-existing injectors. A "plugin" here is a config convention plus a
-self-contained feature class. The `plugins` map + `IsPluginEnabled` are the
-seed of a future framework; extract a shared interface only once two or more
-opt-in plugins exist (rule of three). Note that a single theme can span
-processes (e.g. text in FogModWrapper, lighting in StaticModBuilder), so the
-cohesive unit is the config namespace, read independently where each piece
-runs. Halloween is the current example spanning six features under one
-namespace: `TextTheme` (boss/UI text reskin), `AmbientSpawnInjector`
-(dungeon exit gate greeters/ambushes), `GateDecorInjector` (catalogue
-decorations), `HalloweenIconInjector` (item icon redirect, plus its
-own bootstrap-time overlay builder and packaging conditional),
-`HalloweenJumpscareInjector` (an Aging Untouchable appearing on the
-player in a few dungeon layers), and `HalloweenDarknessInjector`
-(evergaol lighting everywhere), each reading `[plugin.halloween]`
-independently.
+A plugin is the C# side of one `[plugin.<name>]` namespace: a subclass of
+`SpeedFogPlugin` (`writer/FogModWrapper/Plugins/`) whose hooks are no-ops
+unless overridden, registered once in `PluginRegistry`. Its state (parsed
+settings, two-phase guards such as "row written in regulation, placed in
+MSB only if present") lives in the plugin object, not in the pipeline's
+`Context`.
+
+| Hook | Called from | Position and why | Used by |
+|---|---|---|---|
+| `AfterFogModWrite` | `WriteFogModPhase` | Right after `BuildRegionToFlags`: last point where flags can join `RegionToFlags` before `PatchEmevdPhase` injects them | halloween (jumpscare plan + mirror flags) |
+| `OnCommonEmevd` | `CommonEmevdPhase` | After the core injectors, before `AlternateFlagPatcher` and the single common.emevd write | weather (event), halloween (darkness event) |
+| `OnRegulation` | `RegulationPhase` | Inside the single regulation.bin batch; not called when regulation.bin is unavailable | halloween (greeter, ambusher, jumpscare rows; icons) |
+| `TextTheme` (data, not a method) | `ModDirPhase` | After `BossNameInjector` (themes reskin the ids it allocates by `boss_name`), before `DeathMarkerInjector`; the phase applies the themes in plugin order and warns when several are enabled | summer, halloween |
+| `OnModDirMsb` | `ModDirPhase` | After `DeathMarkerInjector`, before the Untouchable boss MSB repoint and `VanillaWarpRemover` (the decor ground estimate reads vanilla assets the remover deletes) | halloween (ambient pass: decorations, greeters, ambushes, jumpscare actors) |
+| `OnModDirLate` | `ModDirPhase` | After `EventDisabler`, before `VanillaWarpRemover`: historical position, kept so per-map EMEVD rewrites stay in the same order | halloween (darkness fast-loop repoint) |
+
+**Order.** `PluginRegistry` lists `summer`, `weather`, `halloween`, and that
+is the execution order at every hook: weather before halloween keeps their
+common.emevd events in their historical order, summer before halloween lets
+the halloween text theme overwrite colliding summer entries.
+
+**Adding a plugin.** Create `writer/FogModWrapper/Plugins/<Name>/` with a
+`<Name>Plugin : SpeedFogPlugin` that parses its table in its constructor and
+overrides the hooks it needs, put its injectors in the same folder, then add
+one line to `PluginRegistry` at the position that fits the order rule. A
+plugin that needs a point no hook covers gets a new hook in
+`SpeedFogPlugin`, called from the phase, with its ordering reason documented
+in the table above.
+
+**Across processes.** A theme can span processes (e.g. text in
+FogModWrapper, an icon overlay built by StaticModBuilder at bootstrap), so
+the cohesive unit stays the config namespace, read independently where each
+piece runs. Halloween spans six features under one namespace: `TextTheme`
+(boss/UI text reskin), `AmbientSpawnInjector` (dungeon exit gate
+greeters/ambushes), `GateDecorInjector` (catalogue decorations),
+`HalloweenIconInjector` (item icon redirect, plus its own bootstrap-time
+overlay builder and packaging conditional), `HalloweenJumpscareInjector` (an
+Aging Untouchable appearing on the player in a few dungeon layers), and
+`HalloweenDarknessInjector` (evergaol lighting everywhere); their
+FogModWrapper side is driven by `HalloweenPlugin` (the text theme through its
+`TextTheme`).
 
 ## Plugins
 

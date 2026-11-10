@@ -112,6 +112,7 @@ speedfog/
 │   ├── FogModWrapper/       # Fog gate writer - thin wrapper calling FogMod.dll
 │   │   ├── Program.cs       # CLI entry point + ordered list of pipeline phases
 │   │   ├── Pipeline/        # Context (shared phase state) + one class per phase (LoadInputs ... ModDir)
+│   │   ├── Plugins/         # SpeedFogPlugin base + PluginRegistry; one folder per [plugin.<name>] (Summer/, Weather/, Halloween/)
 │   │   ├── ConnectionInjector.cs  # Inject connections into FogMod Graph
 │   │   ├── HelperAreaResolver.cs  # Scaling areas for enemy-randomizer helper clones (group pass + helper_models model pass) + vanilla misfiled arena parts
 │   │   ├── StartingItemInjector.cs  # Inject starting item events into EMEVD
@@ -216,7 +217,7 @@ speedfog/
 │   ├── title-screen.md     # Title screen artwork replacement (BC7 splice at setup)
 │   ├── winter-rendering.md  # Winter rendering research: material data model, snow levers, pitfalls, coverage numbers
 │   └── plugins/             # Plugin documentation
-│       ├── README.md        # Plugin config convention
+│       ├── README.md        # Plugin config convention + C# plugin contract (hooks, order)
 │       ├── summer-theme.md  # Summer theme specifics
 │       ├── halloween-theme.md  # Halloween theme specifics
 │       ├── halloween-ambient.md  # Halloween ambient dungeon spawns + gate decorations
@@ -267,7 +268,7 @@ speedfog/
 | `docs/phantom-skins.md` | Phantom skins catalog (cosmetic player auras for racing rewards) |
 | `docs/title-screen.md` | Title screen artwork replacement (BC7 splice at setup) |
 | `docs/winter-rendering.md` | Winter rendering research: material data model, vegetation render paths, validated levers (snow shader twin conversions, grass atlas retargets, terrain albedo retargets, frosted textures, MSB vegetation model swaps), inert levers (GrassTypeParam), pitfalls (skinned meshes vanish, SPX_DLC02 paths, isolation testing), coverage and size numbers |
-| `docs/plugins/README.md` | Plugin config convention (Python passthrough + C# IsPluginEnabled) |
+| `docs/plugins/README.md` | Plugin config convention (Python passthrough) + C# contract: `SpeedFogPlugin` hooks table, `PluginRegistry` order, how to add a plugin |
 | `docs/plugins/summer-theme.md` | Summer theme: boss epithets + UI banners, catalogue format, discovery |
 | `docs/plugins/halloween-theme.md` | Halloween theme: kitsch text reskin, item renames |
 | `docs/plugins/halloween-ambient.md` | Halloween ambient dungeon spawns (greeters, ambush packs) + gate decoration catalogue |
@@ -357,7 +358,10 @@ speedfog/
 | `PhantomCatalogInjector` | Bakes phantom skin catalog (cosmetic auras) into PhantomParam/SpEffectVfxParam/SpEffectParam |
 | `OpenSplitInjector` | Tags entrances with `opensplit` before `Graph.Construct` (see `docs/opensplit-overrides.md`) |
 | `MapSplitsInjector` | Injects map_splits.toml synthetic zones/fogs into AnnotationData before `Graph.Construct`, splits EnemyAreas (see `docs/map-splits.md`) |
-| `TextTheme` | Cosmetic text reskins per theme, summer + halloween, opt-in via `[plugin.summer]` / `[plugin.halloween]` |
+| `SpeedFogPlugin` | Base class of the C# side of a `[plugin.<name>]` table: no-op hooks the phases call (`AfterFogModWrite`, `OnCommonEmevd`, `OnRegulation`, `TextTheme`, `OnModDirMsb`, `OnModDirLate`); plugin state lives in the object (see `docs/plugins/README.md`) |
+| `PluginRegistry` | Creates the enabled, known plugins in execution order (summer, weather, halloween) at the end of `LoadInputsPhase`; each parses its table on creation |
+| `SummerPlugin` / `WeatherPlugin` / `HalloweenPlugin` | The three plugins; `HalloweenPlugin` owns the parsed settings, the jumpscare plan and the regulation-to-MSB row guards |
+| `TextTheme` | Cosmetic text reskins per theme, summer + halloween, applied by `ModDirPhase` for each plugin's `TextTheme` |
 | `MsgBndEditor` | Shared msgbnd editing for the engus + frafr text injectors (`TextTheme`, `BossNameInjector`): mod copy over vanilla, written only on change |
 | `BossNameInjector` | Healthbar names of relocated enemies (graph.json `boss_names`): resolves each name to a NpcName id (exact vanilla engus match, else a `SpeedFogIds.BossNameFmgIds` entry written to engus + frafr) and repoints the arena's `DisplayBossHealthBar` nameId in the map EMEVD, leaving alone the arenas the randomizer already named; runs before `TextTheme` and hands it the allocated {name -> id} so a theme can reskin them by `boss_name` (see `docs/boss-healthbar-names.md`) |
 | `TextThemeCatalogLoader` | Loads and validates `data/plugins/<theme>.toml` |
@@ -756,7 +760,7 @@ wine publish/win-x64/game_inspect.exe find-int <game>/event/m11_00_00_00.emevd.d
 - `event_map`: flag_id (str) → cluster_id mapping for racing zone tracking
 - `finish_event`: flag_id set on final boss defeat
 - `items_spawned_flag`: saved flag (1050290000) used as one-shot guard for item delivery
-- `plugins`: verbatim copy of `[plugin]` config table; C# reads via `GraphData.IsPluginEnabled(name)` (added v4.4)
+- `plugins`: verbatim copy of `[plugin]` config table; C# `PluginRegistry` creates the enabled plugins (via `GraphData.IsPluginEnabled(name)`) (added v4.4)
 - `enemy_assignments`: optional `{arena_entity_id: source_entity_id}` map (both decimal strings), the same enemy-randomizer placement mapping already computed in `speedfog/item_randomizer.py` and shipped to ItemRandomizerWrapper as `item_config.json`, now also patched into graph.json (`patch_graph_enemy_assignments`) so FogModWrapper can locate placed bosses; absent or empty when no assignments were made (added v4.5, `GraphData.EnemyAssignments`, consumed by `UntouchableBossInjector`, see `docs/untouchable-boss.md`)
 - `class_loadout`: optional, `[tarnished] starting_loadout`'s shuffled weapon/shield/armor-set permutations for the starting classes (weapon always in the right hand, shields once each on occupied left hands, armor per occupied slot; mechanism-named, not pack-named: `[tarnished]` is only its first producer); absent when the option is off (added v4.6, reshaped v4.7, `GraphData.ClassLoadout`, consumed by `ClassLoadoutInjector`, see `docs/tarnished-showcase.md`)
 - `torrent_skins`: optional, `[tarnished] unlock_torrent_skins`'s unlock flag plus a resolved `default_flag` (6701-6703) for the pre-selected Torrent skin; absent when the option is off (added v4.6, `GraphData.TorrentSkins`, consumed by `StartingItemInjector`, see `docs/tarnished-showcase.md`)

@@ -40,19 +40,10 @@ internal static class CommonEmevdPhase
             RunCompleteInjector.InjectEmevdEvent(ctx.CommonEmevd, ctx.Events, ctx.GraphData.FinishEvent);
         }
 
-        // "weather" plugin: force weather / freeze clock (opt-in via [plugin.weather]).
-        if (ctx.GraphData.IsPluginEnabled("weather"))
-        {
-            WeatherInjector.InjectEmevdEvent(
-                ctx.CommonEmevd, ctx.Events, WeatherInjector.Parse(ctx.GraphData.Plugins["weather"]));
-        }
-
-        // Halloween darkness: keep the vanilla evergaol gparam override active
-        // (opt-in via [plugin.halloween] darkness = true).
-        if (ctx.GraphData.IsPluginEnabled("halloween") && ctx.HalloweenSettings.Darkness)
-        {
-            HalloweenDarknessInjector.InjectEmevdEvent(ctx.CommonEmevd, ctx.Events);
-        }
+        // Plugin hook (weather event, Halloween darkness event): after the
+        // core injectors, before AlternateFlagPatcher and the single write.
+        foreach (var plugin in ctx.Plugins)
+            plugin.OnCommonEmevd(ctx);
 
         // Neutralize vanilla events that set AlternateFlag values (flags 300, 330).
         AlternateFlagPatcher.Patch(ctx.CommonEmevd);

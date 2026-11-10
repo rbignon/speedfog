@@ -55,23 +55,11 @@ internal static class RegulationPhase
         // untouchable's burst (3001), boss placed or not.
         UntouchableBossInjector.ApplyNearWarpMarker(reg);
 
-        if (ctx.GraphData.IsPluginEnabled("halloween"))
-        {
-            // The greeter and ambusher rows are only consumed
-            // when their spawns are actually placed (AmbientSpawnInjector
-            // gates greeters and ambush packs on the same settings.Greeters
-            // and settings.Ambushes flags); parsed once via
-            // ctx.HalloweenSettings and reused by the spawn injection in
-            // ModDirPhase, which places a flavor only if its rows were
-            // written here.
-            if (ctx.HalloweenSettings.Greeters)
-                ctx.GreeterRowApplied = AmbientSpawnInjector.ApplyHostileGreeterRow(reg, ctx.HalloweenSettings.GreeterSpecies);
-            if (ctx.HalloweenSettings.Ambushes)
-                ctx.AmbusherRowsApplied = AmbientSpawnInjector.ApplyDecorativeAmbusherRows(reg, ctx.HalloweenSettings.AmbusherSpecies);
-            if (ctx.HalloweenSettings.Jumpscares > 0)
-                ctx.JumpscareRowApplied = HalloweenJumpscareInjector.ApplyJumpscareRow(reg);
-            HalloweenIconInjector.ApplyTo(reg);
-        }
+        // Plugin hook (Halloween NpcParam rows and icons): inside the single
+        // regulation.bin batch; skipped with it when regulation.bin is
+        // unavailable, which the MSB hook's two-phase guards rely on.
+        foreach (var plugin in ctx.Plugins)
+            plugin.OnRegulation(ctx, reg);
 
         // Undo FogMod's makestable remap on the constant-flag play regions
         // (row 0 = all default ground); see docs/quitout-respawn.md.

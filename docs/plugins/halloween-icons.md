@@ -88,8 +88,8 @@ touched; a seed with the plugin disabled ships nothing extra at all.
    `EquipParamGoods`, and for rows 10010 and 10020 sets `iconId` to
    `SpeedFogIds.HalloweenGoldenSeedIcon` (60383) /
    `HalloweenSacredTearIcon` (60384). Called from
-   `RegulationPhase`, inside the same `IsPluginEnabled("halloween")`
-   block as `AmbientSpawnInjector.ApplyHostileGreeterRow`. Prints
+   `HalloweenPlugin.OnRegulation` (inside `RegulationPhase`'s batch),
+   next to `AmbientSpawnInjector.ApplyHostileGreeterRow`. Prints
    `Halloween icons: repointed N item icon id(s)`; a missing row logs a
    warning and is skipped rather than failing the build.
 3. **Packaging conditional overlay** (`speedfog/packaging.py`,
@@ -181,7 +181,7 @@ fallbacks below applies.
 ### Revert path
 
 If the in-game check fails, remove the `HalloweenIconInjector.ApplyTo(reg)`
-call from `RegulationPhase` (or simply disable the plugin
+call from `HalloweenPlugin.OnRegulation` (or simply disable the plugin
 in config, `[plugin.halloween] enabled = false`): `iconId` stays vanilla,
 and with the plugin off packaging never ships the overlay either. No
 other part of the Halloween theme depends on this feature.

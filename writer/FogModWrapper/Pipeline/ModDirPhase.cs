@@ -46,10 +46,9 @@ internal static class ModDirPhase
         }
 
         // Text theme plugins: cosmetic boss/UI text reskins, one catalogue per
-        // theme (opt-in via [plugin.summer] / [plugin.halloween]). Applied in
-        // order; a later theme overwrites colliding entries of an earlier one.
-        var textThemes = new[] { "summer", "halloween" }
-            .Where(t => ctx.GraphData.IsPluginEnabled(t)).ToList();
+        // theme (SpeedFogPlugin.TextTheme). Applied in plugin order; a later
+        // theme overwrites colliding entries of an earlier one.
+        var textThemes = ctx.Plugins.Select(p => p.TextTheme).OfType<string>().ToList();
         if (textThemes.Count > 1)
             Console.WriteLine(
                 $"Warning: multiple text themes enabled ({string.Join(", ", textThemes)}); later themes overwrite colliding entries");
@@ -64,46 +63,12 @@ internal static class ModDirPhase
             ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.Connections, ctx.Events,
             ctx.GraphData.EventMap, ctx.GraphData.DeathFlags, gateSides);
 
-        // Halloween ambient layer at cluster exit gates (opt-in via
-        // [plugin.halloween]): data-driven gate decorations
-        // (data/plugins/halloween_decorations.toml, a no-op only if the
-        // catalogue is emptied) plus optional hostile greeters and ambush
-        // packs at the same gates. HalloweenAmbientPass reads/writes each
-        // map's MSB once (decor placement first: the decor ground estimate
-        // uses vanilla enemies as floor evidence, and AmbientSpawnInjector's
-        // greeters/ambushers carry EntityID 0, which would pass its vanilla
-        // filter). Plus the jumpscare actors in the dungeon layers
-        // JumpscarePlanner draws. ctx.HalloweenSettings is parsed once, on
-        // first access.
-        if (ctx.GraphData.IsPluginEnabled("halloween"))
-        {
-            // Same two-phase guard as the Untouchable boss below: a flavor
-            // whose NpcParam row was never written (regulation phase
-            // warn-returned) is not placed, its parts would point at a
-            // missing row.
-            var settings = ctx.HalloweenSettings;
-            if (settings.Greeters && !ctx.GreeterRowApplied)
-                Console.WriteLine("Halloween spawns: regulation phase did not write the greeter rows, skipping greeters");
-            if (settings.Ambushes && !ctx.AmbusherRowsApplied)
-                Console.WriteLine("Halloween spawns: regulation phase did not write the ambusher rows, skipping ambushers");
-            // Planned in WriteFogModPhase (its mirror flags are already in the
-            // fog warps); without the actor row, place nothing.
-            var jumpscarePlan = ctx.JumpscarePlan;
-            if (jumpscarePlan.Actors.Count > 0 && !ctx.JumpscareRowApplied)
-            {
-                Console.WriteLine("Halloween jumpscares: regulation phase did not write the jumpscare row, skipping jumpscares");
-                jumpscarePlan = JumpscarePlan.Empty;
-            }
-            HalloweenAmbientPass.Inject(
-                ctx.ModDir, ctx.Config.GameDir, ctx.GraphData.Connections,
-                ctx.GraphData.Nodes, gateSides, ctx.Events, ctx.Config.DataDir,
-                settings with
-                {
-                    Greeters = settings.Greeters && ctx.GreeterRowApplied,
-                    Ambushes = settings.Ambushes && ctx.AmbusherRowsApplied,
-                },
-                jumpscarePlan);
-        }
+        // Plugin hook (Halloween ambient pass: gate decorations, greeters,
+        // ambushes, jumpscare actors): MSB edits after the death markers and
+        // before the Untouchable repoint and VanillaWarpRemover (the decor
+        // ground estimate reads vanilla assets that the remover deletes).
+        foreach (var plugin in ctx.Plugins)
+            plugin.OnModDirMsb(ctx, gateSides);
 
         // Aging Untouchable minor boss: repoint enemy-randomizer-placed
         // untouchables to the boss NpcParam clone (see RegulationPhase).
@@ -142,13 +107,10 @@ internal static class ModDirPhase
         // (Tarnished Pack NPC invasion at Leyndell, see docs/game-patch-migration.md).
         EventDisabler.Inject(ctx.ModDir, ctx.Tweaks.DisableEvents);
 
-        // Halloween darkness: repoint vanilla fast-loop gparam overrides to the
-        // evergaol so they stop racing the darkness loop (see
-        // docs/plugins/halloween-darkness.md).
-        if (ctx.GraphData.IsPluginEnabled("halloween") && ctx.HalloweenSettings.Darkness)
-        {
-            HalloweenDarknessInjector.RepointFastLoopOverrides(ctx.ModDir);
-        }
+        // Plugin hook (Halloween darkness fast-loop repoint): per-map EMEVD
+        // edits after EventDisabler, before VanillaWarpRemover.
+        foreach (var plugin in ctx.Plugins)
+            plugin.OnModDirLate(ctx);
 
         // Remove vanilla assets that conflict with fog gates: graph.json entities
         // plus the [[remove_entities]] entries of data/game_tweaks.toml.

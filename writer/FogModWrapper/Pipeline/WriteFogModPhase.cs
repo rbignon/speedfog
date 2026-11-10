@@ -66,18 +66,10 @@ internal static class WriteFogModPhase
         // Side.Warp is now populated by Write() (reads from MSB data).
         ctx.InjectionResult.BuildRegionToFlags(ctx.GraphData.EventMap);
 
-        // Halloween jumpscares wait on private mirror flags set next to the
-        // zone-tracking flags (the racing mod clears those right after
-        // capture), so the plan must exist before PatchEmevdPhase injects
-        // RegionToFlags. Without jumpscares the table is left untouched.
-        if (ctx.GraphData.IsPluginEnabled("halloween") && ctx.HalloweenSettings.Jumpscares > 0)
-        {
-            ctx.JumpscarePlan = JumpscarePlanner.Plan(
-                ctx.GraphData, JumpscarePlanner.BuildZoneMaps(ctx.Ann),
-                ctx.Ann.Areas.Where(a => a.DefeatFlag > 0).Select(a => a.Name).ToHashSet(),
-                ctx.HalloweenSettings.Jumpscares, Console.WriteLine);
-            JumpscarePlanner.AddMirrorFlags(ctx.InjectionResult.RegionToFlags, ctx.JumpscarePlan);
-        }
+        // Plugin hook: last point where flags can join RegionToFlags before
+        // PatchEmevdPhase injects them (Halloween jumpscare mirror flags).
+        foreach (var plugin in ctx.Plugins)
+            plugin.AfterFogModWrite(ctx);
 
         // Copy non-English FMG files from Item Randomizer output.
         // FogMod only loads and writes msg/engus/ FMGs. When Item Randomizer

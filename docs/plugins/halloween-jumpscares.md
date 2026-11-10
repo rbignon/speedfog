@@ -63,7 +63,7 @@ The planner therefore allocates private saved flags in the mod-state
 category the mod never polls: one "entered" flag per armed cluster, set on
 every connection into it, and one "left" flag per drawn layer, set on
 every connection into the next layer (the DAG only links consecutive
-layers, so entering layer L+1 is leaving layer L). `WriteFogModPhase`
+layers, so entering layer L+1 is leaving layer L). `HalloweenPlugin.AfterFogModWrite` (hook called by `WriteFogModPhase`)
 appends them to `InjectionResult.RegionToFlags` right after
 `BuildRegionToFlags`, next to the zone flag of each matching connection
 (`JumpscarePlanner.AddMirrorFlags`), and `ZoneTrackingInjector` sets them
