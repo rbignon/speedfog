@@ -84,7 +84,7 @@ speedfog/
 │   │   ├── FogGraph/            # ConnectionInjector (inject connections into FogMod), map splits
 │   │   ├── Common/ Warps/ Start/ Graces/ Enemies/ World/ Racing/  # Injectors by role
 │   │   └── eldendata/           # Game data (gitignored, from FogRando)
-│   ├── FogModWrapper.Tests/     # xUnit tests
+│   ├── FogModWrapper.Tests/     # xUnit tests (same folders as FogModWrapper)
 │   ├── ItemRandomizerWrapper/   # Item randomizer (calls RandomizerCommon.dll)
 │   │   ├── Program.cs           # CLI entry point
 │   │   └── diste/               # Item Randomizer data (gitignored)

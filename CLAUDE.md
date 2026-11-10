@@ -183,7 +183,7 @@ speedfog/
 │   │   │       ├── JumpscarePlanner.cs  # Draw the Halloween jumpscare layers and their actors (flags, maps, ids)
 │   │   │       └── HalloweenJumpscareInjector.cs  # Jumpscare actor row, hidden c5280 placement and warp events ([plugin.halloween] jumpscares)
 │   │   └── eldendata/       # FogRando game data (gitignored)
-│   ├── FogModWrapper.Tests/  # xUnit tests
+│   ├── FogModWrapper.Tests/  # xUnit tests mirroring FogModWrapper's folders (namespace FogModWrapper.Tests.<Folder>; Core/ for FogModWrapper.Core's root classes)
 │   ├── ItemRandomizerWrapper/  # Item randomizer - thin wrapper calling RandomizerCommon.dll
 │   │   ├── Program.cs       # CLI entry point
 │   │   └── diste/           # Item Randomizer game data (gitignored)

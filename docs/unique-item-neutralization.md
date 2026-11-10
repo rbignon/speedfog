@@ -108,7 +108,7 @@ randomizer.
 ## References
 
 - Injector: `writer/FogModWrapper/Start/UniqueItemNeutralizer.cs`
-- Tests: `writer/FogModWrapper.Tests/UniqueItemNeutralizerTests.cs`
+- Tests: `writer/FogModWrapper.Tests/Start/UniqueItemNeutralizerTests.cs`
 - Granted goods source: `speedfog/config.py` `get_starting_goods()`,
   `speedfog/care_package.py`
 - Starting item delivery (no ItemLotParam involvement, so the swap can never

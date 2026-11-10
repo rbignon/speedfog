@@ -150,7 +150,7 @@ This translates the boss's vanilla defeat flag into SpeedFog's `finish_event` fl
 |------|------|
 | `writer/FogModWrapper/Racing/ZoneTrackingInjector.cs` | Per-file patching (PatchEmevdFile), validation (ValidateInjectedFlags), boss death event (InjectBossDeathEvent) |
 | `writer/FogModWrapper/FogGraph/ConnectionInjector.cs` | Region-to-flags mapping construction (Phase 1) |
-| `writer/FogModWrapper.Tests/ZoneTrackingTests.cs` | Unit tests |
+| `writer/FogModWrapper.Tests/Racing/ZoneTrackingTests.cs` | Unit tests |
 | `speedfog/graph_export.py` | Flag allocation (EVENT_FLAG_BASE from `constants.py`), event_map construction |
 | `docs/event-flags.md` | Flag ranges and EMEVD event ID allocation |
 

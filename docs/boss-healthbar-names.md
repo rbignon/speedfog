@@ -134,4 +134,4 @@ naming stopped covering a case, which is worth a look before it ships.
 | `writer/FogModWrapper.Core/SpeedFogIds.cs` | `BossNameFmgIds` (NpcName FMG namespace) |
 | `writer/FogModWrapper/Enemies/BossNameInjector.cs` | Resolution, FMG entries, EMEVD repoint |
 | `writer/FogModWrapper/Common/MsgBndEditor.cs` | Shared msgbnd edit helper (extracted from `TextTheme`) |
-| `writer/FogModWrapper.Tests/BossNameInjectorTests.cs` | Synthetic msg tree + EMEVD coverage |
+| `writer/FogModWrapper.Tests/Enemies/BossNameInjectorTests.cs` | Synthetic msg tree + EMEVD coverage |

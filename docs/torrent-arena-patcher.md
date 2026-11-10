@@ -46,7 +46,7 @@ The per-map lists live as `[[torrent_arenas]]` entries in
 `TorrentArenaPatcher.cs`). Adding an arena is a data edit: append an entry
 with `map` and `collisions`, then bump the expected count in the
 `RealDataFile_ParsesAllTargetSections` drift guard
-(`writer/FogModWrapper.Tests/GameTweaksLoaderTests.cs`); no recompile needed.
+(`writer/FogModWrapper.Tests/Core/GameTweaksLoaderTests.cs`); no recompile needed.
 
 ## Pipeline
 

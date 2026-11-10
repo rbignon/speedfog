@@ -303,9 +303,9 @@ shuffled sequences and the resolved skin are also logged to the spoiler
 | `writer/FogModWrapper/Start/ClassLoadoutTextPatcher.cs` | Class-selection equipment text (GR_LineHelp) updated to the forced gear, per language |
 | `writer/FogModWrapper/Pipeline/RegulationPhase.cs` | Ordering: `ClassLoadoutInjector` before `WeaponUpgradeInjector`; `RemovePackGatedRows` unless `tarnished_pack` |
 | `writer/FogModWrapper/Start/ShopInjector.cs` | `RemovePackGatedRows`: drops the shop rows released by flag 6953 |
-| `writer/FogModWrapper.Tests/ShopInjectorTests.cs` | Pack-gated row removal |
-| `writer/FogModWrapper.Tests/ClassLoadoutInjectorTests.cs` | Slot writes, modulo wrap, armor fields, untouched other fields |
-| `writer/FogModWrapper.Tests/StartingClassRowsTests.cs` | Group resolution from `BaseChrSelectMenuParam` |
+| `writer/FogModWrapper.Tests/Start/ShopInjectorTests.cs` | Pack-gated row removal |
+| `writer/FogModWrapper.Tests/Start/ClassLoadoutInjectorTests.cs` | Slot writes, modulo wrap, armor fields, untouched other fields |
+| `writer/FogModWrapper.Tests/Start/StartingClassRowsTests.cs` | Group resolution from `BaseChrSelectMenuParam` |
 
 See also `docs/care-package.md` for the starting-build pipeline this feature
 sits alongside, and `docs/item-randomizer.md` for the `opt["tarnished"]`

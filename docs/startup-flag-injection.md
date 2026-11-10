@@ -154,6 +154,6 @@ Add the entry to `[[startup_flags]]` in `data/game_tweaks.toml`, run `speedfog` 
 - Injector: `writer/FogModWrapper/World/StartupFlagInjector.cs`
 - Flag entries: `data/game_tweaks.toml` (`[[startup_flags]]`, loaded by `GameTweaksLoader`)
 - Call site: `writer/FogModWrapper/Pipeline/ModDirPhase.cs`
-- Tests: `writer/FogModWrapper.Tests/StartupFlagInjectorTests.cs`
+- Tests: `writer/FogModWrapper.Tests/World/StartupFlagInjectorTests.cs`
 - Tool: `tools/dump_emevd_warps/`
 - Related: `docs/alternate-warp-patching.md`, `docs/vanilla-warp-removal.md`

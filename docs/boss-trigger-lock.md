@@ -78,7 +78,7 @@ Both patchers scan EMEVD files for WarpPlayer and insert SetEventFlag before it.
 | File | Role |
 |------|------|
 | `writer/FogModWrapper/Warps/BossTriggerInjector.cs` | Region-to-TrapFlag mapping + EMEVD patching |
-| `writer/FogModWrapper.Tests/BossTriggerInjectorTests.cs` | Unit tests for BuildRegionToTrapFlag |
+| `writer/FogModWrapper.Tests/Warps/BossTriggerInjectorTests.cs` | Unit tests for BuildRegionToTrapFlag |
 | `writer/FogModWrapper/Pipeline/PatchEmevdPhase.cs` | Wiring (EMEVD scan loop + common.emevd) |
 | `data/fog.txt` | Area definitions with DefeatFlag, BossTrigger, TrapFlag |
 | `data/fogevents.txt` | fogwarp template (event 9005777) showing TrapFlag check |
