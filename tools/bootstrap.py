@@ -78,6 +78,11 @@ STATIC_MOD_SRC_DEST = DATA_DEST / "mods-src" / "speedfog"
 STATIC_MOD_DEST = DATA_DEST / "mods" / "speedfog"
 HALLOWEEN_MOD_DEST = DATA_DEST / "mods" / "speedfog-halloween"
 WINTER_MOD_DEST = DATA_DEST / "mods" / "speedfog-winter"
+WINTER_FAILURE_PREFIX = "WINTER FAILED"
+WINTER_NOT_BUILT = (
+    "Winter mod not built (see WINTER FAILED above); seeds enabling "
+    "[plugin.winter] will refuse to package"
+)
 
 # Files to extract from eldendata/Base/ to data/
 FOGRANDO_DATA_FILES = [
@@ -829,12 +834,17 @@ def copy_oodle_dll(game_dir: Path, force: bool = False) -> bool:
     return True
 
 
-def run_static_mod_builder(game_dir: Path, winter: bool = True) -> bool:
+def run_static_mod_builder(game_dir: Path, winter: bool = True) -> tuple[bool, bool]:
     """Run StaticModBuilder to generate the static mod (e.g., patched animations).
 
     Outputs to data/mods/speedfog/, copied verbatim into each seed as its own
     ModEngine 2 mod. With winter, also builds data/mods/speedfog-winter/
     (StaticModBuilder removes it and still exits 0 when the winter build fails).
+
+    Returns (ok, winter_not_built): ok is False when StaticModBuilder failed;
+    winter_not_built is True when the winter step was requested, StaticModBuilder
+    exited 0 and the winter folder holds no file, so main() can repeat
+    WINTER_NOT_BUILT as the last line of the bootstrap.
     """
     print("\n" + "=" * 50)
     print("Static mod generation")
@@ -845,7 +855,7 @@ def run_static_mod_builder(game_dir: Path, winter: bool = True) -> bool:
 
     if not patcher_exe.exists():
         print_error("StaticModBuilder not published, skipping static mod generation")
-        return True
+        return True, False
 
     # Detect platform
     if sys.platform == "win32":
@@ -853,7 +863,7 @@ def run_static_mod_builder(game_dir: Path, winter: bool = True) -> bool:
     else:
         if not shutil.which("wine"):
             print_error("Wine not found, skipping StaticModBuilder")
-            return True
+            return True, False
         cmd = ["wine", str(patcher_exe)]
 
     STATIC_MOD_DEST.mkdir(parents=True, exist_ok=True)
@@ -873,6 +883,10 @@ def run_static_mod_builder(game_dir: Path, winter: bool = True) -> bool:
     )
     if winter:
         cmd.extend(["--winter-dir", str(WINTER_MOD_DEST.resolve())])
+        print_info(
+            "Winter static mod: the FLVER scan takes about 5 minutes "
+            "on a local game copy"
+        )
 
     try:
         result = subprocess.run(
@@ -885,20 +899,22 @@ def run_static_mod_builder(game_dir: Path, winter: bool = True) -> bool:
             print(f"      {line}")
         if result.returncode != 0:
             print_error(f"StaticModBuilder failed: {result.stderr}")
-            return False
-        for line in result.stderr.strip().splitlines():
-            print(f"      {line}")
+            return False, False
+        # Only the winter failure lines: the rest of stderr is Wine chatter.
+        for line in result.stderr.splitlines():
+            if line.startswith(WINTER_FAILURE_PREFIX):
+                print(f"      {line}")
     except FileNotFoundError:
         print_error("Failed to run StaticModBuilder")
-        return False
+        return False, False
 
     print_ok("Static mod files generated in data/mods/speedfog/")
-    if winter and not any(p.is_file() for p in WINTER_MOD_DEST.rglob("*")):
-        print_error(
-            "Winter mod not built (see WINTER FAILED above); seeds enabling "
-            "[plugin.winter] will refuse to package"
-        )
-    return True
+    winter_not_built = winter and not any(
+        p.is_file() for p in WINTER_MOD_DEST.rglob("*")
+    )
+    if winter_not_built:
+        print_error(WINTER_NOT_BUILT)
+    return True, winter_not_built
 
 
 def is_witchybnd_installed() -> bool:
@@ -1202,8 +1218,12 @@ def main() -> int:
         success = False
 
     # Run StaticModBuilder and WitchyBND to generate the static mod
+    winter_not_built = False
     if success and not args.skip_static_mod:
-        if not run_static_mod_builder(args.game_dir, winter=not args.no_winter):
+        static_ok, winter_not_built = run_static_mod_builder(
+            args.game_dir, winter=not args.no_winter
+        )
+        if not static_ok:
             success = False
         if success and not build_static_mod_scripts(args.force):
             success = False
@@ -1232,10 +1252,15 @@ def main() -> int:
         print()
         print("You can now generate runs with:")
         print("  uv run speedfog config.toml --logs")
+        if winter_not_built:
+            print()
+            print_error(WINTER_NOT_BUILT)
         return 0
     else:
         print()
         print_error("Setup failed")
+        if winter_not_built:
+            print_error(WINTER_NOT_BUILT)
         return 1
 
 

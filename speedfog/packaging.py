@@ -170,6 +170,30 @@ def _copy_optional_mod(
     return enabled
 
 
+WINTER_MOD_BINDERS = (
+    "material/allmaterial.matbinbnd.dcx",
+    "material/allmaterial_dlc02.matbinbnd.dcx",
+)
+
+
+def missing_winter_mod_files(project_root: Path) -> list[str]:
+    """What data/mods/speedfog-winter/ lacks to be a complete winter build.
+
+    StaticModBuilder moves a finished build into place, so a complete folder
+    holds both material binders and the texture packs under asset/aet/. One
+    entry per missing binder, plus "asset/aet/ texture packs" when no file is
+    under asset/aet/, all relative to the winter folder; empty when complete.
+    """
+    winter = project_root / "data" / "mods" / "speedfog-winter"
+    missing = [
+        binder for binder in WINTER_MOD_BINDERS if not (winter / binder).is_file()
+    ]
+    textures = winter / "asset" / "aet"
+    if not any(path.is_file() for path in textures.rglob("*")):
+        missing.append("asset/aet/ texture packs")
+    return missing
+
+
 def package_seed(
     project_root: Path,
     seed_dir: Path,
@@ -208,15 +232,19 @@ def package_seed(
     )
 
     # Unlike the halloween overlay (silently omitted), a winter seed without
-    # its static mod would play as a plain seed, so it is an error.
+    # its static mod, or with part of it, would play as a plain or half-white
+    # seed, so it is an error, checked before anything is copied.
+    if winter_enabled:
+        missing = missing_winter_mod_files(project_root)
+        if missing:
+            raise PackagingError(
+                "[plugin.winter] is enabled but data/mods/speedfog-winter/ is "
+                f"missing or incomplete (no {', '.join(missing)}): run "
+                "tools/bootstrap.py (without --no-winter)"
+            )
     winter_mod_enabled = winter_enabled and _copy_optional_mod(
         project_root, seed_dir, "speedfog-winter", "winter mod"
     )
-    if winter_enabled and not winter_mod_enabled:
-        raise PackagingError(
-            "[plugin.winter] is enabled but data/mods/speedfog-winter/ is "
-            "missing or empty: run tools/bootstrap.py (without --no-winter)"
-        )
 
     if item_randomizer_enabled and item_randomizer_dir is not None:
         helper_config = item_randomizer_dir / "RandomizerHelper_config.ini"

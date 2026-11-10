@@ -8,6 +8,7 @@ import pytest
 from speedfog.packaging import (
     PackagingError,
     copy_packaging_assets,
+    missing_winter_mod_files,
     package_seed,
     stale_static_mod_scripts,
     write_modengine_config,
@@ -392,10 +393,18 @@ def test_write_modengine_config_lists_winter_after_halloween(tmp_path: Path) -> 
     )
 
 
-def _populate_winter(project_root: Path) -> None:
-    winter = project_root / "data" / "mods" / "speedfog-winter" / "material"
-    winter.mkdir(parents=True)
-    (winter / "allmaterial.matbinbnd.dcx").write_bytes(b"x")
+def _populate_winter(
+    project_root: Path,
+    files: tuple[str, ...] = (
+        "material/allmaterial.matbinbnd.dcx",
+        "material/allmaterial_dlc02.matbinbnd.dcx",
+        "asset/aet/aet007/aet007_045.tpf.dcx",
+    ),
+) -> None:
+    winter = project_root / "data" / "mods" / "speedfog-winter"
+    for name in files:
+        (winter / name).parent.mkdir(parents=True, exist_ok=True)
+        (winter / name).write_bytes(b"x")
 
 
 def test_package_seed_copies_winter_mod_when_plugin_enabled(tmp_path: Path) -> None:
@@ -406,9 +415,10 @@ def test_package_seed_copies_winter_mod_when_plugin_enabled(tmp_path: Path) -> N
 
     package_seed(project_root, seed_dir, winter_enabled=True)
 
-    assert (
-        seed_dir / "mods" / "speedfog-winter" / "material" / "allmaterial.matbinbnd.dcx"
-    ).exists()
+    winter = seed_dir / "mods" / "speedfog-winter"
+    assert (winter / "material" / "allmaterial.matbinbnd.dcx").exists()
+    assert (winter / "material" / "allmaterial_dlc02.matbinbnd.dcx").exists()
+    assert (winter / "asset" / "aet" / "aet007" / "aet007_045.tpf.dcx").exists()
     content = (seed_dir / "modengine2" / "config_speedfog.toml").read_text(
         encoding="utf-8"
     )
@@ -449,3 +459,55 @@ def test_package_seed_raises_when_winter_enabled_but_mod_empty(tmp_path: Path) -
 
     with pytest.raises(PackagingError, match=r"\[plugin.winter\].*bootstrap"):
         package_seed(project_root, seed_dir, winter_enabled=True)
+
+
+@pytest.mark.parametrize(
+    ("present", "named"),
+    [
+        (
+            (
+                "material/allmaterial.matbinbnd.dcx",
+                "asset/aet/aet007/aet007_045.tpf.dcx",
+            ),
+            "material/allmaterial_dlc02.matbinbnd.dcx",
+        ),
+        (
+            (
+                "material/allmaterial.matbinbnd.dcx",
+                "material/allmaterial_dlc02.matbinbnd.dcx",
+            ),
+            "asset/aet/ texture packs",
+        ),
+    ],
+)
+def test_package_seed_raises_when_winter_mod_is_incomplete(
+    tmp_path: Path, present: tuple[str, ...], named: str
+) -> None:
+    project_root = tmp_path / "project"
+    seed_dir = tmp_path / "seed"
+    _make_packaging_tree(project_root)
+    _populate_winter(project_root, present)
+
+    with pytest.raises(PackagingError) as excinfo:
+        package_seed(project_root, seed_dir, winter_enabled=True)
+
+    message = str(excinfo.value)
+    assert message.startswith("[plugin.winter] is enabled but ")
+    assert named in message
+    assert "run tools/bootstrap.py (without --no-winter)" in message
+    for name in present:
+        assert name not in message
+    # Checked before copying: nothing of the partial folder reaches the seed.
+    assert not (seed_dir / "mods" / "speedfog-winter").exists()
+
+
+def test_missing_winter_mod_files_lists_everything_for_an_absent_folder(
+    tmp_path: Path,
+) -> None:
+    assert missing_winter_mod_files(tmp_path) == [
+        "material/allmaterial.matbinbnd.dcx",
+        "material/allmaterial_dlc02.matbinbnd.dcx",
+        "asset/aet/ texture packs",
+    ]
+    _populate_winter(tmp_path)
+    assert missing_winter_mod_files(tmp_path) == []

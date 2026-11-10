@@ -202,13 +202,13 @@ public static class WinterMaterialBuilder
     }
 
     /// <summary>
-    /// Verifies the retarget targets, reads both binders, resolves the templates from the base
-    /// binder (used for the DLC binder too), processes both and only then writes them under
-    /// &lt;winterDir&gt;/material with the compression they were read with.
+    /// Reads both binders, resolves the templates from the base binder (used for the DLC binder
+    /// too), processes both and only then writes them under &lt;winterDir&gt;/material with the
+    /// compression they were read with. The caller verifies the retarget targets first
+    /// (<see cref="VerifyRetargetTargets"/>, run by WinterModBuilder before the scan).
     /// </summary>
     public static MaterialResult Build(string gameDir, string winterDir, WinterCatalog catalog, IReadOnlySet<string> skinned, WinterReport report)
     {
-        VerifyRetargetTargets(gameDir, catalog.Retargets);
         var binders = BinderSubPaths.Select(sub => ReadBinder(Path.Combine(gameDir, sub))).ToList();
         var templates = ResolveTemplates(binders[0], catalog);
 

@@ -353,8 +353,7 @@ public class WinterMaterialBuilderTests : IDisposable
     {
         string gameDir = Path.Combine(_temp, "game");
         string winterDir = Path.Combine(_temp, "winter");
-        WriteTpf(gameDir, "aet000_081", "AET000_081_a", "AET000_081_n");
-        WriteTpf(gameDir, "aet099_986", "AET099_986_a");
+        // No retarget target TPF: Build leaves VerifyRetargetTargets to WinterModBuilder.
         var baseBinder = MakeBinder(
             ("Map_m13_00", "m13_00_503", TemplateMatbin()),
             ("Map_m60_00", "AEG001_001", OvNShaped(OvN)));
@@ -383,20 +382,5 @@ public class WinterMaterialBuilderTests : IDisposable
         Assert.Equal(new KeyValuePair<string, int>(OvN, 2), Assert.Single(result.ConvertedPerRule));
         Assert.Contains(report.Lines, l => l.Contains("allmaterial.matbinbnd.dcx"));
         Assert.Contains(report.Lines, l => l.Contains("allmaterial_dlc02.matbinbnd.dcx"));
-    }
-
-    [Fact]
-    public void Build_ThrowsBeforeWritingWhenARetargetTargetIsMissing()
-    {
-        string gameDir = Path.Combine(_temp, "game");
-        string winterDir = Path.Combine(_temp, "winter");
-        Directory.CreateDirectory(Path.Combine(gameDir, "material"));
-        MakeBinder(("Map_m13_00", "m13_00_503", TemplateMatbin())).Write(Path.Combine(gameDir, WinterMaterialBuilder.BinderSubPaths[0]));
-        MakeBinder().Write(Path.Combine(gameDir, WinterMaterialBuilder.BinderSubPaths[1]));
-
-        Assert.Throws<WinterBuildException>(() =>
-            WinterMaterialBuilder.Build(gameDir, winterDir, Catalog, NoSkinned(), new WinterReport()));
-
-        Assert.False(Directory.Exists(Path.Combine(winterDir, "material")));
     }
 }

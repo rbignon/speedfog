@@ -415,7 +415,7 @@ enabled = false
 
 # Winter: snow on grounds, walls and roofs (vanilla snow shaders), frosted grass,
 # bushes, ivy and leaves (half-resolution atlases), base game and DLC. Static mod
-# built at bootstrap into data/mods/speedfog-winter/ (about 24 MB per seed). For
+# built at bootstrap into data/mods/speedfog-winter/ (about 22 MB per seed). For
 # snowfall, enable [plugin.weather] with weather = "snow" and freeze_time = false.
 [plugin.winter]
 enabled = false

@@ -19,6 +19,9 @@ public static class DdsImage
     public const int Dx10DataOffset = 148;
     public const int LegacyDataOffset = 128;
 
+    /// <summary>Highest mip count accepted (a 4096 px chain has 13 levels, 65536 px has 17).</summary>
+    public const int MaxMipCount = 16;
+
     private const int OffHeight = 12;
     private const int OffWidth = 16;
     private const int OffPitch = 20;
@@ -46,6 +49,8 @@ public static class DdsImage
         int height = BitConverter.ToInt32(dds, OffHeight);
         int width = BitConverter.ToInt32(dds, OffWidth);
         int mipCount = Math.Max(1, BitConverter.ToInt32(dds, OffMipCount));
+        if (mipCount > MaxMipCount)
+            throw new InvalidDataException($"DDS mip count {mipCount} above {MaxMipCount}");
         int caps2 = BitConverter.ToInt32(dds, OffCaps2);
         if ((caps2 & (Caps2Cubemap | Caps2Volume)) != 0)
             throw new InvalidDataException("cube and volume DDS are not supported");

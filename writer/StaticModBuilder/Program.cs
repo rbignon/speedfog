@@ -81,6 +81,16 @@ class Program
             return 1;
         }
 
+        // The winter build deletes --winter-dir: refuse one that would take another folder with it.
+        string? winterConflict = winterDir == null ? null : Winter.WinterModBuilder.CheckWinterDir(
+            winterDir, ("game directory", gameDir), ("mod directory", outputDir),
+            ("Halloween directory", halloweenDir), ("data directory", dataDir));
+        if (winterConflict != null)
+        {
+            Console.Error.WriteLine($"Error: {winterConflict}");
+            return 1;
+        }
+
         Console.WriteLine("=== StaticModBuilder ===");
         Console.WriteLine($"Game dir: {gameDir}");
         Console.WriteLine($"Mod dir:  {outputDir}");
@@ -114,7 +124,7 @@ class Program
             Console.WriteLine("Note: --halloween-dir or --data-dir not provided, skipping Halloween icon overlay");
         }
 
-        // Winter static mod (a failure is reported on stderr and removes the folder; exit code stays 0)
+        // Winter static mod (an input failure is reported on stderr and leaves no folder; exit code stays 0)
         if (winterDir != null && dataDir != null)
         {
             if (Winter.WinterModBuilder.Build(gameDir, winterDir, dataDir))
@@ -142,7 +152,8 @@ Arguments:
   <output-dir>     Output directory for patched files (e.g. data/mods/speedfog/)
   --data-dir       SpeedFog data directory (for title_screen_overlay.png and Halloween icon PNGs)
   --halloween-dir  Output directory for the Halloween icon overlay (e.g. data/mods/speedfog-halloween/), needs --data-dir
-  --winter-dir     Output directory for the winter static mod (e.g. data/mods/speedfog-winter/), needs --data-dir; rebuilt from scratch, removed on failure
+  --winter-dir     Output directory for the winter static mod (e.g. data/mods/speedfog-winter/), needs --data-dir; built in a sibling <dir>.building
+                   folder and moved into place, removed on failure; must not be or contain another directory argument
 
 Patches applied:
   - Grace animation speedup (chr/c0000.anibnd.dcx)

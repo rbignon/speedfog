@@ -58,9 +58,11 @@ cloudless sky (the Sunbathing pools do exactly that) or snow without the
 white ground.
 
 If `[plugin.winter]` is enabled and `data/mods/speedfog-winter/` is missing
-or empty, `package_seed` raises `PackagingError`: "run tools/bootstrap.py
-(without --no-winter)". This differs from the Halloween overlay, which is
-silently omitted: a winter seed without its files is a broken seed.
+or incomplete (either material binder absent, or no file under
+`asset/aet/`), `package_seed` raises `PackagingError` naming what is missing
+and "run tools/bootstrap.py (without --no-winter)", before copying anything.
+This differs from the Halloween overlay, which is silently omitted: a winter
+seed without its files, or with part of them, is a broken seed.
 
 ## Racing activation
 
@@ -85,9 +87,15 @@ every `training_*` pool inherits from its race pool.
 ## How it is built
 
 `tools/bootstrap.py` runs `StaticModBuilder --winter-dir
-data/mods/speedfog-winter/` (under Wine on Linux). The folder is deleted and
-recreated first, so stale files never survive. `WinterModBuilder` runs the
-steps in order; the classes are in `writer/StaticModBuilder/Winter/`.
+data/mods/speedfog-winter/` (under Wine on Linux) and prints one line before
+it, since the step runs silently for about 5 minutes. `WinterModBuilder`
+first deletes the folder, its report and any `speedfog-winter.building/`
+left by an interrupted run, then runs the steps in order into
+`speedfog-winter.building/`, writes the report and only then moves the
+staging folder into place: `data/mods/speedfog-winter/` is either a complete
+build or absent, never a partial one. StaticModBuilder refuses a
+`--winter-dir` that is, or contains, its game, mod, Halloween or data
+directory. The classes are in `writer/StaticModBuilder/Winter/`.
 
 1. **Catalogues.** `WinterCatalogLoader` reads
    `data/plugins/winter_materials.toml` (snow texture paths, the three
@@ -102,7 +110,11 @@ steps in order; the classes are in `writer/StaticModBuilder/Winter/`.
    weights). The snow shaders have no skinned permutation, so a skinned mesh
    using a converted matbin is not drawn at all (this is how the Chapel's
    wooden bridge disappeared in the spike). The scan must be complete: a
-   binder that cannot be read fails the build. The slowest step.
+   binder that cannot be read fails the build. The fast table reader is
+   checked against `FLVER2.Read` on about 200 binders spread over the whole
+   list (geombnds and mapbnds alike); a disagreement starts the scan over
+   with `FLVER2.Read` for every binder, since the binders already read relied
+   on the table reader. The slowest step.
 3. **Material binders.** `WinterMaterialBuilder` rewrites
    `material/allmaterial.matbinbnd.dcx` and
    `material/allmaterial_dlc02.matbinbnd.dcx`, only in `Map_*` folders,
@@ -125,8 +137,13 @@ steps in order; the classes are in `writer/StaticModBuilder/Winter/`.
    under Wine). Normals, masks and emissive maps are never re-encoded: the
    top mip is dropped and the header rewritten.
 5. **Report.** `WinterReport` writes `data/mods/speedfog-winter.report.txt`
-   (not shipped; packaging copies only the folder): converted, retargeted
-   and excluded matbins and per-texture sizes.
+   (not shipped; packaging copies only the folder): the scan summary
+   (binders, FLVERs, skinned matbins, reader used), the skinned exclusions
+   by matbin name and shader, per binder the counts of converted,
+   texture-retargeted, terrain-retargeted and left-vanilla matbins with the
+   conversions per rule, per TPF stem the counts of frosted, reduced and
+   untouched textures plus a total, and any warning. It does not list the
+   converted or retargeted matbins by name, nor texture sizes.
 
 Skinned exclusions: the scan finds 283 skinned materials in the whole game;
 38 of them would otherwise have been converted and stay vanilla (no snow).
@@ -138,11 +155,16 @@ their vanilla look.
 Failures: on a hard error (a binder or template matbin missing or not
 matching its declared layout, a listed TPF or retarget target missing, an
 unsupported DDS format, a failed post-condition, an unreadable FLVER binder)
-`WinterModBuilder` prints `WINTER FAILED: <reason>` and removes the folder.
-The rest of StaticModBuilder and of the bootstrap still run (the snapshot
-refresh must never be skipped because of a texture), and the bootstrap
-reports "Winter mod not built". Packaging a winter seed then raises with the
-message pointing at the bootstrap.
+`WinterModBuilder` prints `WINTER FAILED: <reason>` and leaves no winter
+folder, staging folder or report. The rest of StaticModBuilder and of the
+bootstrap still run (the snapshot refresh must never be skipped because of a
+texture); the bootstrap echoes the `WINTER FAILED` line (and no other stderr
+line of the Wine run), reports "Winter mod not built" after the
+StaticModBuilder step and repeats it as its last line. Packaging a winter
+seed then raises with the message pointing at the bootstrap. Any other
+exception is a bug, not an input problem: the same cleanup runs, then the
+exception propagates, StaticModBuilder exits non-zero and the bootstrap
+fails with its stderr.
 
 `python tools/bootstrap.py ... --no-winter` skips the step on a machine that
 will never generate winter seeds; it is the longest step of the bootstrap.

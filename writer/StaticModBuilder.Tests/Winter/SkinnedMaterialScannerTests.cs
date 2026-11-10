@@ -101,6 +101,30 @@ public class SkinnedMaterialScannerTests : IDisposable
     }
 
     [Fact]
+    public void InSelfCheckSample_SpreadsOverGeombndsAndMapbnds()
+    {
+        // The real game's list size; EnumerateBinders puts the geombnds first.
+        const int count = 24987;
+        const int geombnds = 4000;
+        var sample = Enumerable.Range(0, count).Where(i => SkinnedMaterialScanner.InSelfCheckSample(i, count)).ToList();
+
+        Assert.InRange(sample.Count, SkinnedMaterialScanner.SelfCheckBinders, SkinnedMaterialScanner.SelfCheckBinders + 10);
+        Assert.Equal(0, sample[0]);
+        Assert.Contains(sample, i => i < geombnds);
+        Assert.Contains(sample, i => i >= geombnds);
+        Assert.True(sample[^1] >= count - count / SkinnedMaterialScanner.SelfCheckBinders);
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(399)]
+    public void InSelfCheckSample_ChecksEveryBinderOfAShortList(int count)
+    {
+        Assert.All(Enumerable.Range(0, count), i => Assert.True(SkinnedMaterialScanner.InSelfCheckSample(i, count)));
+    }
+
+    [Fact]
     public void Scan_CollectsSkinnedStemsOfEveryBinder()
     {
         WriteBinder("asset/aeg/aeg001/aeg001_001.geombnd.dcx",
@@ -116,6 +140,38 @@ public class SkinnedMaterialScannerTests : IDisposable
         Assert.Equal(new[] { "m10_00_519", "m21_00_020" }, skinned.OrderBy(s => s, StringComparer.Ordinal));
         Assert.Equal(new[] { (2, 2) }, calls);
         Assert.Contains(report.Lines, l => l.Contains("2 binders") && l.Contains("2 skinned matbins"));
+    }
+
+    [Fact]
+    public void Scan_StartsOverWithFlver2ReadWhenALateSelfCheckFails()
+    {
+        // 400 binders: every other one is sampled. The fake table reader loses the skinned
+        // stems of "m10_00_bad" FLVERs: binder 1 (not sampled) is misread silently, binder 398
+        // (sampled) reveals the mismatch. Only a rescan from the first binder recovers binder 1.
+        const int count = 400;
+        for (int i = 0; i < count - 1; i++)
+        {
+            var binder = i is 1 or 398
+                ? MakeBinder(($@"N:\x\AEG001_{i:000}.flver", FlverMaterialTableTests.MakeSyntheticFlver($@"N:\y\m10_00_bad{i}.matbin")))
+                : new BND4();
+            WriteBinder($"asset/aeg/aeg001/aeg001_{i:000}.geombnd.dcx", binder);
+        }
+        WriteBinder("map/m10/m10_00_00_00/m10_00_00_00_000100.mapbnd.dcx", new BND4());
+        Assert.False(SkinnedMaterialScanner.InSelfCheckSample(1, count));
+        Assert.True(SkinnedMaterialScanner.InSelfCheckSample(398, count));
+        var report = new WinterReport();
+
+        var skinned = SkinnedMaterialScanner.Scan(_temp, report, null, bytes =>
+        {
+            var entries = FlverMaterialTable.Read(bytes);
+            return entries.Any(e => e.MatbinStem.StartsWith("m10_00_bad", StringComparison.Ordinal))
+                ? entries.Select(e => e with { Skinned = false }).ToList()
+                : entries;
+        });
+
+        Assert.Equal(new[] { "m10_00_bad1", "m10_00_bad398" }, skinned.OrderBy(s => s, StringComparer.Ordinal));
+        Assert.Contains(report.Lines, l => l.Contains("disagrees") && l.Contains("aeg001_398"));
+        Assert.Contains(report.Lines, l => l.Contains($"{count} binders, 2 FLVERs") && l.Contains("FLVER2.Read for every binder"));
     }
 
     [Fact]

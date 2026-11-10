@@ -317,10 +317,15 @@ def test_refresh_fogmod_snapshot_propagates_refresh_failure(
 
 
 def _setup_static_mod_builder(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    stderr: str = "",
+    winter_files: tuple[str, ...] = (),
 ) -> list[list[str]]:
     """Point bootstrap at a fake tree with a fake StaticModBuilder exe and
-    record the commands handed to subprocess.run."""
+    record the commands handed to subprocess.run. The fake run exits 0 with
+    the given stderr and leaves winter_files (relative to the winter folder)
+    behind, as a winter build would."""
     import subprocess
 
     monkeypatch.setattr(bootstrap, "PROJECT_ROOT", tmp_path)
@@ -340,7 +345,11 @@ def _setup_static_mod_builder(
 
     def fake_run(cmd, **kwargs):
         cmds.append(list(cmd))
-        return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+        for name in winter_files:
+            path = bootstrap.WINTER_MOD_DEST / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"x")
+        return subprocess.CompletedProcess(cmd, 0, stdout="", stderr=stderr)
 
     monkeypatch.setattr(bootstrap.subprocess, "run", fake_run)
     return cmds
@@ -349,15 +358,23 @@ def _setup_static_mod_builder(
 def test_run_static_mod_builder_passes_winter_dir(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    cmds = _setup_static_mod_builder(tmp_path, monkeypatch)
+    cmds = _setup_static_mod_builder(
+        tmp_path, monkeypatch, winter_files=("material/allmaterial.matbinbnd.dcx",)
+    )
 
-    assert bootstrap.run_static_mod_builder(tmp_path / "Game", winter=True) is True
+    assert bootstrap.run_static_mod_builder(tmp_path / "Game", winter=True) == (
+        True,
+        False,
+    )
     cmd = cmds[-1]
     i = cmd.index("--winter-dir")
     assert cmd[i + 1] == str(bootstrap.WINTER_MOD_DEST.resolve())
     assert bootstrap.WINTER_MOD_DEST.is_dir()
 
-    assert bootstrap.run_static_mod_builder(tmp_path / "Game", winter=False) is True
+    assert bootstrap.run_static_mod_builder(tmp_path / "Game", winter=False) == (
+        True,
+        False,
+    )
     assert "--winter-dir" not in cmds[-1]
 
 
@@ -368,5 +385,82 @@ def test_run_static_mod_builder_reports_unbuilt_winter_but_succeeds(
 ) -> None:
     _setup_static_mod_builder(tmp_path, monkeypatch)
 
-    assert bootstrap.run_static_mod_builder(tmp_path / "Game", winter=True) is True
-    assert "Winter mod not built" in capsys.readouterr().out
+    assert bootstrap.run_static_mod_builder(tmp_path / "Game", winter=True) == (
+        True,
+        True,
+    )
+    assert bootstrap.WINTER_NOT_BUILT in capsys.readouterr().out
+
+
+def test_run_static_mod_builder_does_not_report_a_built_winter_mod(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _setup_static_mod_builder(
+        tmp_path, monkeypatch, winter_files=("asset/aet/aet007/aet007_045.tpf.dcx",)
+    )
+
+    assert bootstrap.run_static_mod_builder(tmp_path / "Game", winter=True) == (
+        True,
+        False,
+    )
+    assert "Winter mod not built" not in capsys.readouterr().out
+
+
+def test_run_static_mod_builder_echoes_only_winter_failures_from_stderr(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _setup_static_mod_builder(
+        tmp_path,
+        monkeypatch,
+        stderr="0024:fixme:ntdll:NtQuerySystemInformation chatter\n"
+        "WINTER FAILED: missing material binder x\n"
+        "002c:err:ole:CoGetClassObject chatter\n",
+    )
+
+    bootstrap.run_static_mod_builder(tmp_path / "Game", winter=True)
+
+    out = capsys.readouterr().out
+    assert "WINTER FAILED: missing material binder x" in out
+    assert "chatter" not in out
+
+
+def test_run_static_mod_builder_announces_the_winter_scan_only_when_on(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _setup_static_mod_builder(tmp_path, monkeypatch)
+
+    bootstrap.run_static_mod_builder(tmp_path / "Game", winter=False)
+    assert "FLVER scan" not in capsys.readouterr().out
+
+    bootstrap.run_static_mod_builder(tmp_path / "Game", winter=True)
+    assert "FLVER scan" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("scripts_ok", [True, False])
+def test_main_ends_with_the_winter_line_when_the_winter_mod_is_not_built(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    scripts_ok: bool,
+) -> None:
+    monkeypatch.setattr(
+        "sys.argv", ["bootstrap.py", "--game-dir", "Game", "--no-refresh"]
+    )
+    monkeypatch.setattr(bootstrap, "copy_oodle_dll", lambda game_dir, force: True)
+    monkeypatch.setattr(bootstrap, "ensure_modengine", lambda force: True)
+    monkeypatch.setattr(
+        bootstrap, "run_static_mod_builder", lambda game_dir, winter: (True, True)
+    )
+    monkeypatch.setattr(bootstrap, "build_static_mod_scripts", lambda force: scripts_ok)
+    monkeypatch.setattr(bootstrap, "warm_itemrando_cache", lambda game_dir: True)
+
+    assert bootstrap.main() == (0 if scripts_ok else 1)
+
+    lines = [line for line in capsys.readouterr().out.splitlines() if line.strip()]
+    assert bootstrap.WINTER_NOT_BUILT in lines[-1]
+    assert ("Setup complete!" in "\n".join(lines)) is scripts_ok

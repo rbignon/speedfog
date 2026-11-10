@@ -45,6 +45,21 @@ public class DdsImageTests
     }
 
     [Fact]
+    public void Parse_RejectsAMipCountAboveSixteen()
+    {
+        // Sixteen levels (the last ones 1x1) are accepted.
+        Assert.Equal(16, DdsImage.Parse(MakeDds(64, 64, 16, "DXT1")).MipCount);
+
+        foreach (int corrupt in new[] { 17, int.MaxValue })
+        {
+            var dds = MakeDds(64, 64, 16, "DXT1");
+            BitConverter.GetBytes(corrupt).CopyTo(dds, 28);
+            var e = Assert.Throws<InvalidDataException>(() => DdsImage.Parse(dds));
+            Assert.Contains($"mip count {corrupt}", e.Message);
+        }
+    }
+
+    [Fact]
     public void Parse_RejectsTruncatedPayload()
     {
         var dds = MakeDds(64, 64, 4, "DXT1");
