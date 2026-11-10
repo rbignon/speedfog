@@ -277,6 +277,14 @@ update.
       `bootstrap.py --game-dir <patched game>` does the same, then needs the
       snapshot refresh). Every bootstrap must use the patched game from now
       on.
+- [x] The winter static mod (`data/mods/speedfog-winter/`, see
+      [plugins/winter.md](plugins/winter.md)) is rebuilt by every bootstrap
+      from the game's material binders, FLVERs and TPFs, so it follows the
+      patched game by itself. A `WINTER FAILED` after a patch means a listed
+      TPF or template matbin moved (read the reason, then fix
+      `data/plugins/winter_textures.toml` or `winter_materials.toml`); the
+      bootstrap continues and winter seeds refuse to package until it is
+      rebuilt.
 - [x] Bump the Item Randomizer to its 1.17 release when it ships. The Defs
       concern is moot for 1.17 (no layout change), but its output is not
       only params: with `--merge-dir` it also overrides about 510 MSB, 485

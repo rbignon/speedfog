@@ -1,0 +1,232 @@
+# Winter Plugin
+
+Turns the ground, walls, roofs, grass, bushes, ivy and leaves of the whole
+game (base game and Shadow of the Erdtree) white, for a seasonal window.
+Opt-in via config:
+
+```toml
+[plugin.winter]
+enabled = true
+```
+
+The plugin has no parameter and no FogModWrapper side: everything it ships
+is a static mod built once at bootstrap (`data/mods/speedfog-winter/`) and
+copied into the seed by `speedfog/packaging.py`. Design: [the winter plugin
+spec](../superpowers/specs/2026-11-10-winter-plugin-design.md). Research
+base (levers, pitfalls, coverage numbers): [winter-rendering.md](../winter-rendering.md).
+
+## What it does
+
+- Rewrites the game's two material binders so that about 7000 materials use
+  the vanilla snow shaders: upward-facing surfaces (floors, roofs, stair
+  treads, pebbles) turn white, walls stay bare. Terrain materials without a
+  snow shader have their albedo layers pointed at the vanilla snow ground.
+  No new texture is needed for this part.
+- Ships 258 frosted foliage texture packs (129 atlases, each with its `_l`
+  twin): leaf clumps, ivy, vines, leaf litter, grass atlases of the DLC and
+  the SpeedTree shrubs turn white while keeping their cut-out shape.
+- Does not make it snow. Snowfall comes from the weather plugin (below).
+
+Not covered: trees (SpeedTree trunks and canopies outside the shrub atlases),
+decorative shaders (flags, wax, crystals, magma, water, skins, decals) and
+the remaining foliage families listed under "Deferred". Skinned meshes keep
+their vanilla look (see "How it is built").
+
+## Config
+
+`[plugin.winter] enabled = true` is the whole plugin. Python passes the table
+through to `graph.json` like any plugin (see [README.md](README.md)); the
+only consumer is `packaging.py`, which copies the winter folder into the seed
+and registers it in the ModEngine 2 config. Mod order, first wins:
+`speedfog`, `speedfog-halloween`, `speedfog-winter`, `fogmod`, `itemrando`.
+No other mod ships `material/` or `asset/aet/`, so the position does not
+change what renders; it is fixed for determinism.
+
+**Weather companion.** For snowfall, enable the weather plugin next to it:
+
+```toml
+[plugin.weather]
+enabled = true
+weather = "snow"
+freeze_time = false
+```
+
+`freeze_time = false` keeps the run's 23:45 start and a running clock (see
+[weather.md](weather.md)). The winter plugin never reads or sets the weather;
+the two are independent, so a seed may have the white ground under a
+cloudless sky (the Sunbathing pools do exactly that) or snow without the
+white ground.
+
+If `[plugin.winter]` is enabled and `data/mods/speedfog-winter/` is missing
+or empty, `package_seed` raises `PackagingError`: "run tools/bootstrap.py
+(without --no-winter)". This differs from the Halloween overlay, which is
+silently omitted: a winter seed without its files is a broken seed.
+
+## Racing activation
+
+On the racing side (`../speedfog-racing/tools/pools/_base.toml`) the season
+is four lines, added on December 1 and removed on February 1 by hand:
+
+```toml
+[plugin.winter]
+enabled = true
+
+[plugin.weather]
+enabled = true
+weather = "snow"
+freeze_time = false
+```
+
+Pools inherit by deep merge (`generate_pool.py`), table by table and key by
+key, so a pool with its own `[plugin.weather]` keeps it: Sunbathing keeps
+`cloudless` at noon on white ground, Halloween keeps its midnight fog, and
+every `training_*` pool inherits from its race pool.
+
+## How it is built
+
+`tools/bootstrap.py` runs `StaticModBuilder --winter-dir
+data/mods/speedfog-winter/` (under Wine on Linux). The folder is deleted and
+recreated first, so stale files never survive. `WinterModBuilder` runs the
+steps in order; the classes are in `writer/StaticModBuilder/Winter/`.
+
+1. **Catalogues.** `WinterCatalogLoader` reads
+   `data/plugins/winter_materials.toml` (snow texture paths, the three
+   template matbins and their modal snow parameters, 33 conversion rules,
+   the retarget table, the terrain selectors and keep list) into a
+   `WinterCatalog`, and `data/plugins/winter_textures.toml` (the 129 TPF
+   stems). Retarget targets are verified to exist before anything is built.
+2. **Skinned-material scan.** `SkinnedMaterialScanner` reads every mapbnd and
+   geombnd of the game (`FlverMaterialTable` reads the FLVER material table
+   and the vertex layout, `MatbinNames` resolves material paths to matbin
+   names) and collects the matbins used by a skinned mesh (bone indices and
+   weights). The snow shaders have no skinned permutation, so a skinned mesh
+   using a converted matbin is not drawn at all (this is how the Chapel's
+   wooden bridge disappeared in the spike). The scan must be complete: a
+   binder that cannot be read fails the build. The slowest step.
+3. **Material binders.** `WinterMaterialBuilder` rewrites
+   `material/allmaterial.matbinbnd.dcx` and
+   `material/allmaterial_dlc02.matbinbnd.dcx`, only in `Map_*` folders,
+   in four passes: (1) load the three template matbins; (2) texture
+   retargets, binder-wide (Limgrave ground textures to the snow ground,
+   grey LOD macro to the flat white `AET099_986`, grass atlases to their
+   snow twins; `MatbinRetargeter`); (3) conversion to the snow twins by
+   exact shader name, only when the sampler layout matches the rule and the
+   matbin is not skinned (`MatbinConverter`); (4) terrain albedo retarget on
+   the matbins pass 3 did not convert. Untouched matbins stay byte-identical.
+4. **Textures.** `WinterTextureBuilder` rewrites each listed TPF and its `_l`
+   twin under `asset/aet/<family>/`, same names and compression.
+   `DdsImage` parses and builds the DDS headers, `FrostEncoder` applies the
+   frost. Resolution policy, uniform for every texture of every TPF:
+   half of the vanilla resolution when the vanilla long side is at least
+   128 px, otherwise unchanged. Albedos (`_a`) are decoded, frosted
+   (`lum = 0.3 R + 0.59 G + 0.11 B`, `v = 0.62 + 0.38 lum`, colour
+   `(v - 0.02, v, v + 0.03)`, alpha kept) and re-encoded as BC1 with 1-bit
+   alpha by BCnEncoder (single-threaded: parallel BC encodes crash randomly
+   under Wine). Normals, masks and emissive maps are never re-encoded: the
+   top mip is dropped and the header rewritten.
+5. **Report.** `WinterReport` writes `data/mods/speedfog-winter.report.txt`
+   (not shipped; packaging copies only the folder): converted, retargeted
+   and excluded matbins and per-texture sizes.
+
+Skinned exclusions: the scan finds 283 skinned materials in the whole game;
+38 of them would otherwise have been converted and stay vanilla (no snow).
+Among them are the Chapel of Anticipation's plank materials (`m10_00_200`,
+used by `AEG210_336/376`) that the research spike had converted: those
+objects were invisible during the spike's validation and now come back, in
+their vanilla look.
+
+Failures: on a hard error (a binder or template matbin missing or not
+matching its declared layout, a listed TPF or retarget target missing, an
+unsupported DDS format, a failed post-condition, an unreadable FLVER binder)
+`WinterModBuilder` prints `WINTER FAILED: <reason>` and removes the folder.
+The rest of StaticModBuilder and of the bootstrap still run (the snapshot
+refresh must never be skipped because of a texture), and the bootstrap
+reports "Winter mod not built". Packaging a winter seed then raises with the
+message pointing at the bootstrap.
+
+`python tools/bootstrap.py ... --no-winter` skips the step on a machine that
+will never generate winter seeds; it is the longest step of the bootstrap.
+
+## Size and time
+
+Measured on the real game (1.17, a local game copy, Wine):
+
+| Item | Figure |
+|---|---|
+| Material binders | 2.58 MB (base) and 0.53 MB (DLC); vanilla 2.75 MB and 0.61 MB |
+| Matbins | 7052 conversions, 886 retargets, 38 skinned exclusions, 0 layout skips |
+| Textures | 258 TPFs, 18.56 MB |
+| Folder shipped per seed | 22 MB (21.67 MB) |
+| Scan | 217 s over 24 987 binders, 283 skinned materials |
+| Winter step | 281 s standalone; 302 s inside the bootstrap (scan 236 s) |
+| Whole bootstrap | 472 s |
+
+Per-seed generation time is unchanged. The seed zip grows by about the
+folder size.
+
+## Validation status
+
+Offline verification against the research spike's validated artifacts is
+done. Binder differences, all classified: the 34 matbins newly excluded by
+the full scan (vanilla in production, converted in the spike), 95 flat-white
+macro directory spellings, 2 beach grass atlases left vanilla, 21 binder-wide
+retargets outside the spike's six folders, 120 parameter-order differences
+and 57 extra `group_N` parameters the spike kept, and 222 serialization-only
+differences (same content re-serialized). One bucket was not expected: 10
+far-terrain matbins (`m10_00_694`, `m10_00_695`, `Field_01_LOD_13`,
+`Field_01_LOD_14`, `Field_01_test`, `m60_fort_076`, `m61_00_902`,
+`m61_09_087`, `m61_09_088`, `m61_09_137`) whose macro layer is the flat white
+`AET099_986_a` where the spike had the tiled snow ground `AET000_081_a`
+(pass order: the binder-wide retarget runs before the terrain pass).
+Textures: normals, masks and emissive maps byte-identical to the reference
+(with the `_l` reduction); every albedo is BC1; the frosted albedos decoded
+against the frost formula applied to the decoded vanilla level of the same
+size have a minimum PSNR of 32.5 dB (median 40.1 dB); alpha coverage at level
+0 equals vanilla. Known caveat: the generated lower mips are thinner in alpha
+than vanilla (mean 2.75 coverage points, worst 11.7; the spike's pack showed
+1.72 on average), so distant foliage may look slightly thinner than vanilla.
+A coverage-preserving mip generation is the follow-up if it shows.
+
+**In-game pass owed to Roger** (one pass, full restart, since matbins are
+read at map load):
+
+- Chapel of Anticipation: floors, grass, vines, leaf litter, the wooden
+  bridge and the plank objects (now present, without snow).
+- Limgrave: ground, engine grass, bushes.
+- Stormveil Castle, Farum Azula roofs, one DLC field, Romina's arena.
+- The ten far-terrain pieces listed above, whose far layer is flat white
+  rather than tiled snow.
+- Snowfall, on a seed generated with `[plugin.weather] weather = "snow"`,
+  `freeze_time = false`. Whether `snow` renders precipitation in Limgrave has
+  never been observed; it is independent of this plugin's code.
+
+## Revert path
+
+Disable the plugin (seed-level: no folder copied, no ModEngine entry), or
+delete `data/mods/speedfog-winter/` and its report and bootstrap again with
+`--no-winter`. Nothing else in the pipeline depends on it.
+
+## Deferred
+
+Measured in design Appendix E; none built.
+
+- Remaining foliage families (`_Grass`/`_Grass2` with their own atlases,
+  `[Translucency]`, `_Vesitation`, `_Vesitation_Emissive_Glow`, `[Flower_*]`):
+  about 123 MB at half resolution for all of them (308 MB of vanilla TPFs).
+- Trees (about 100 SpeedTree models, 42 546 placements): about 30 MB at half
+  resolution, kept out because fog-randomizer runs barely cross the
+  overworld. The shrubs and the trees sharing their atlases are already
+  frosted; the most placed trees (`AEG801_250/253/255`) are not.
+- MSB vegetation model swaps (research lever 5): dropped. FogMod ships only
+  285 MSBs per seed, and a static set of swapped MSBs would collide with the
+  mod order.
+
+## Pointers
+
+- Design: `docs/superpowers/specs/2026-11-10-winter-plugin-design.md`
+  (decisions, appendices A to E: conversion rules, templates, textures,
+  retarget table, measurements).
+- Research: [winter-rendering.md](../winter-rendering.md).
+- Weather: [weather.md](weather.md). Patch-day handling:
+  [../game-patch-migration.md](../game-patch-migration.md).
+- Data: `data/plugins/winter_materials.toml`, `data/plugins/winter_textures.toml`.

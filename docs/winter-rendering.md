@@ -1,9 +1,19 @@
 # Winter Rendering Research
 
 **Date:** 2026-11-09
-**Status:** Research complete, validated in game; the winter plugin design is the next step (not written yet)
+**Status:** Research complete, validated in game; the winter plugin is built from it (see below)
 
 How Elden Ring decides the color of ground, walls, grass and foliage, and which levers turn the whole game white (base game and DLC) without shipping hundreds of megabytes of textures. Everything below was established by throwaway spikes dropped into a seed's `mods/` folders and checked in game, most of it twice (once in a cumulative install, once in isolation after the cumulative installs led us astray). The spike artifacts (scripts, census files, built binders, texture packs) lived in a session scratchpad and are not part of the repository; this document is what survives. Where the text says "assumed" or "candidate", the design still has to decide.
+
+## Design decisions (winter plugin, 2026-11-10)
+
+The plugin built from this research ([plugins/winter.md](plugins/winter.md); design in `docs/superpowers/specs/2026-11-10-winter-plugin-design.md`) departs from the "shape assumed by the spikes" at the end of this document as follows:
+
+- Textures ship at half of the vanilla resolution (long side at least 128 px), not at the spike's mix; quarter resolution was not needed.
+- The MSB vegetation model swaps (lever 5) are not built: FogMod writes only 285 MSBs per seed, and a static set would collide with the mod order. There is no per-seed part: the plugin is a static mod only.
+- Snowfall is the weather plugin (`weather = "snow"`, `freeze_time = false`), not part of the plugin.
+- Trees and the remaining foliage families are kept out (measured costs in the design's Appendix E).
+- The full FLVER scan excludes 38 skinned materials the spike had converted (they stay vanilla).
 
 ## Measured inventory
 
@@ -98,7 +108,9 @@ For foliage with no snow twin: decode the albedo, apply `v = 0.62 + 0.38 * lumin
 
 About 49 MB in total as built (the first pack at full resolution would drop to about 1.7 MB at half); everything at quarter resolution would be about 12 MB. Texture replacement is the only lever for SpeedTree models.
 
-### 5. Asset model swaps in the MSB (no new textures)
+### 5. Asset model swaps in the MSB (no new textures) - not built
+
+Validated in game by the spike, but dropped by the winter plugin (see "Design decisions" above).
 
 Replace the `ModelName` of vegetation `Asset` parts with vanilla snow models and add the model entries to the MSB model list; written with SoulsFormatsNEXT `MSBE` (byte-identical round trip on FogMod's MSBs; WitchyBND cannot repack those, it writes no manifest for them). Validated visually at the Chapel (385 swaps) and Stormveil (1227 swaps). Rules of the last spike's table (432 source models):
 

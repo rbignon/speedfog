@@ -67,6 +67,12 @@ halloween). Plugin IDs (events, flags, rows, entities) stay in the central
 `SpeedFogIds` registry, whose tests catch collisions across features and
 plugins.
 
+**No FogModWrapper side.** A plugin may live entirely in another process.
+`winter` has no `SpeedFogPlugin` and no `PluginRegistry` line: its static mod
+is built by StaticModBuilder at bootstrap (`--winter-dir`) and copied into the
+seed by `packaging.py` when `[plugin.winter]` is enabled; the table still
+reaches `graph.json` through the generic passthrough.
+
 **Across processes.** A theme can span processes (e.g. text in
 FogModWrapper, an icon overlay built by StaticModBuilder at bootstrap), so
 the cohesive unit stays the config namespace, read independently where each
@@ -89,3 +95,4 @@ FogModWrapper side is driven by `HalloweenPlugin` (the text theme through its
 - [halloween-darkness.md](halloween-darkness.md) - Halloween evergaol lighting over the whole run.
 - [halloween-jumpscares.md](halloween-jumpscares.md) - Halloween jumpscares: an Aging Untouchable appearing on the player in a few dungeon layers.
 - [weather.md](weather.md) - force a fixed weather, pin the clock hour.
+- [winter.md](winter.md) - white ground and frosted foliage (static mod built at bootstrap); snowfall comes from the weather plugin.
