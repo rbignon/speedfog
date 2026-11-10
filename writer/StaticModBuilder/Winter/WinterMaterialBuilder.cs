@@ -133,7 +133,8 @@ public static class WinterMaterialBuilder
 
     /// <summary>
     /// Runs passes 2 to 4 over every matbin of the Map_* folders and rewrites the entries that
-    /// changed. Skinned stems (compared case-insensitively) are never converted.
+    /// changed. Skinned stems (compared case-insensitively) are never converted; they are logged
+    /// and counted only when their shader has a rule.
     /// </summary>
     public static MaterialResult ProcessBinder(
         BND4 binder,
@@ -163,7 +164,8 @@ public static class WinterMaterialBuilder
             if (IsConversionCandidate(folder, stem))
             {
                 string shader = MatbinNames.ShaderName(m);
-                if (skinnedStems.Contains(stem))
+                // Only a matbin that has a rule counts as a skinned exclusion.
+                if (converter.HasRule(shader) && skinnedStems.Contains(stem))
                 {
                     report.Line($"{file.Name}: left vanilla: skinned ({shader})");
                     skippedSkinned++;

@@ -244,12 +244,15 @@ public class WinterMaterialBuilderTests : IDisposable
             ("Chr", "c1000", OvNShaped(OvN)),
             ("Map_m60_00", "m60_00_900", MakeMatbin("M[AMSN_V][Mb3][3Mask][Ov_N]",
                 ("Texture2D_0_GSBlendMap_AlbedoMap_0", Tex("AET000_052_a")),
-                ("Texture2D_1_GSBlendMap_NormalMap_0", Tex("AET000_052_n")))));
+                ("Texture2D_1_GSBlendMap_NormalMap_0", Tex("AET000_052_n")))),
+            ("Map_m60_00", "m60_00_777", MakeMatbin("M[A]", ("Texture2D_0_AlbedoMap_0", Tex("AET005_099_a")))));
         byte[] skinnedBytes = Entry(binder, "m10_00_519").Bytes;
+        byte[] skinnedNoRuleBytes = Entry(binder, "m60_00_777").Bytes;
         byte[] chrBytes = Entry(binder, "c1000").Bytes;
         byte[] templateBytes = Entry(binder, "m13_00_503").Bytes;
         // An ordinal set in another case: the builder compares stems case-insensitively itself.
-        var skinned = new HashSet<string> { "M10_00_519" };
+        // m60_00_777 has no rule: it is not a skinned exclusion.
+        var skinned = new HashSet<string> { "M10_00_519", "m60_00_777" };
         var report = new WinterReport();
 
         var result = WinterMaterialBuilder.ProcessBinder(binder, Catalog, Templates(), skinned, report);
@@ -260,6 +263,8 @@ public class WinterMaterialBuilderTests : IDisposable
 
         Assert.Same(skinnedBytes, Entry(binder, "m10_00_519").Bytes);
         Assert.Contains(report.Lines, l => l.Contains(EntryName("Map_m10_00", "m10_00_519")));
+        Assert.Same(skinnedNoRuleBytes, Entry(binder, "m60_00_777").Bytes);
+        Assert.DoesNotContain(report.Lines, l => l.Contains(EntryName("Map_m60_00", "m60_00_777")));
 
         // Pass 2 before pass 4: the LOD macro goes to the flat white, not to the snow ground.
         var field = ReadEntry(binder, "Field_01_grass");

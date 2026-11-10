@@ -100,6 +100,9 @@ public sealed class MatbinConverter
             parameters);
     }
 
+    /// <summary>Whether a conversion rule exists for the shader name (exact match).</summary>
+    public bool HasRule(string shader) => _rules.ContainsKey(shader);
+
     /// <summary>
     /// Rewrites the matbin to the twin of its shader. Returns false, the matbin untouched, with
     /// "no rule" when its shader has no rule and "layout" when its sampler suffix set is not the
