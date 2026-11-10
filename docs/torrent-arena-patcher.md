@@ -1,6 +1,6 @@
 # Torrent Arena Patcher
 
-`TorrentArenaPatcher` (in `writer/FogModWrapper/`) re-enables Torrent inside
+`TorrentArenaPatcher` (in `writer/FogModWrapper/World/`) re-enables Torrent inside
 boss arenas that vanilla blocks.
 
 ## Mechanism

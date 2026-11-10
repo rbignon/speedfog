@@ -1,6 +1,8 @@
 using FogMod;
+using FogModWrapper.FogGraph;
 using FogModWrapper.Models;
 using FogModWrapper.Plugins;
+using FogModWrapper.Start;
 using SoulsFormats;
 using SoulsIds;
 

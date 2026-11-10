@@ -1,4 +1,4 @@
-using FogModWrapper;
+using FogModWrapper.Common;
 using Xunit;
 
 public class MsgBndEditorTests

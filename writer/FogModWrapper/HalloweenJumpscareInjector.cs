@@ -1,4 +1,6 @@
 using System.Numerics;
+using FogModWrapper.Common;
+using FogModWrapper.Warps;
 using SoulsFormats;
 using SoulsIds;
 using static System.FormattableString;

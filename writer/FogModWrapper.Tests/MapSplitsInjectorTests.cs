@@ -1,5 +1,6 @@
 using FogMod;
 using FogModWrapper;
+using FogModWrapper.FogGraph;
 using SoulsFormats;
 using Xunit;
 

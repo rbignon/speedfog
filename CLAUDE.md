@@ -113,45 +113,62 @@ speedfog/
 │   │   ├── Program.cs       # CLI entry point + ordered list of pipeline phases
 │   │   ├── Pipeline/        # Context (shared phase state) + one class per phase (LoadInputs ... ModDir)
 │   │   ├── Plugins/         # SpeedFogPlugin base + PluginRegistry; one folder per [plugin.<name>] (Summer/, Weather/, Halloween/)
-│   │   ├── ConnectionInjector.cs  # Inject connections into FogMod Graph
-│   │   ├── HelperAreaResolver.cs  # Scaling areas for enemy-randomizer helper clones (group pass + helper_models model pass) + vanilla misfiled arena parts
-│   │   ├── StartingItemInjector.cs  # Inject starting item events into EMEVD
-│   │   ├── StartingResourcesInjector.cs  # Inject seeds, tears, keys
-│   │   ├── StartingRuneInjector.cs  # Set starting runes via CharaInitParam
-│   │   ├── StartingClassRows.cs  # CharaInitParam rows of the selectable classes (from BaseChrSelectMenuParam)
-│   │   ├── ClassLoadoutInjector.cs  # Apply Tarnished Pack showcase hand items/armor per starting class
-│   │   ├── ClassLoadoutTextPatcher.cs  # Class-selection equipment text updated to the forced loadout (GR_LineHelp, per language)
-│   │   ├── RoundtableUnlockInjector.cs  # Unlock Roundtable Hold at start
-│   │   ├── ShopInjector.cs           # Add smithing stones + Sentry's Torch to shop, remove Tarnished Pack-gated rows
-│   │   ├── UniqueItemNeutralizer.cs  # Replace world copies of start-granted goods at possession cap with Rune Arcs
-│   │   ├── ZoneTrackingInjector.cs  # Zone tracking flags for racing
-│   │   ├── ErdtreeWarpPatcher.cs  # Patch Erdtree fogwarp to target m11_05 directly
-│   │   ├── RunCompleteInjector.cs  # Inject "RUN COMPLETE" message on final boss defeat
-│   │   ├── ChapelGraceInjector.cs  # Site of Grace at Chapel of Anticipation
-│   │   ├── DeathMarkerInjector.cs  # Bloodstain visuals at fog gates
-│   │   ├── BossTriggerInjector.cs  # Lock boss arena exits by setting TrapFlag before warp
-│   │   ├── RebirthInjector.cs  # Rebirth (stat reallocation) at Sites of Grace
-│   │   ├── ShadowRealmBlessingRemover.cs  # Remove DLC "Shadow Realm Blessing" grace menu entry
-│   │   ├── ScaduBlessingNeutralizer.cs  # Neutralize Scadutree/Revered Spirit Ash blessing SpEffects
-│   │   ├── AlternateFlagPatcher.cs  # Neutralize Event 915, clear flags 300/330 at startup
-│   │   ├── PlayRegionPatcher.cs  # Restore vanilla 6000/6001 play region save-limit flags
-│   │   ├── SealingTreeWarpPatcher.cs  # Patch Sealing Tree fogwarps (flag 330)
-│   │   ├── VanillaWarpRemover.cs  # Remove vanilla assets (warps, blocking gates) and enemy parts listed in game_tweaks.toml
-│   │   ├── StartupFlagInjector.cs  # Set event flags at startup (open gates, etc.)
-│   │   ├── EventDisabler.cs  # Neutralize vanilla EMEVD events listed in game_tweaks.toml (1.17 NPC invasions)
-│   │   ├── VanillaMapPinner.cs  # Ship pinned maps in the seed from FogMod's copy, the Item Randomizer's merge-dir copy, or the snapshot, so later injectors can patch them (game_tweaks.toml pin_vanilla_maps)
-│   │   ├── StakeRemover.cs  # Remove vanilla stakes outside DAG
-│   │   ├── SpiritspringRemover.cs  # Remove spiritspring jump regions bypassing map-splits chokepoints
-│   │   ├── HeavyDoorMessagePatcher.cs  # Suppress "heavy door" popup in common_func
-│   │   ├── IntroCutscenePatcher.cs  # Replace the new-game intro cutscene in event 10010020 by SetCurrentTime + ChangeWeather
-│   │   ├── TorrentArenaPatcher.cs  # Re-enable Torrent inside selected boss arenas
+│   │   ├── Common/          # Shared editing helpers (EMEVD, MSB, regulation.bin, msgbnd, gate geometry)
+│   │   │   ├── MsgBndEditor.cs  # Shared msgbnd edit helper (engus + frafr, mod copy over vanilla)
+│   │   │   ├── EmevdHelper.cs  # Shared EMEVD instruction-building helpers
+│   │   │   ├── MsbHelper.cs  # Shared MSB helpers (find/create MSB, part names, models, groups)
+│   │   │   ├── RegulationEditor.cs  # regulation.bin editor: one decrypt, cached params, one encrypt on Save
+│   │   │   └── GateGeometry.cs  # Gate FullName parsing, gate-side resolution and lookup, arc offsets
+│   │   ├── FogGraph/        # FogMod graph setup (connections, opensplit tags, map splits, stake removal)
+│   │   │   ├── ConnectionInjector.cs  # Inject connections into FogMod Graph
+│   │   │   ├── StakeRemover.cs  # Remove vanilla stakes outside DAG
+│   │   │   ├── OpenSplitInjector.cs  # Tag opensplit entrances before Graph.Construct
+│   │   │   └── MapSplitsInjector.cs  # Synthetic zones/fogs from map_splits.toml (+ EnemyAreas split, showsfx inits)
+│   │   ├── Warps/           # Fog warp EMEVD patches (boss arena lock, Erdtree/Sealing Tree alternates, flags 300/330)
+│   │   │   ├── ErdtreeWarpPatcher.cs  # Patch Erdtree fogwarp to target m11_05 directly
+│   │   │   ├── BossTriggerInjector.cs  # Lock boss arena exits by setting TrapFlag before warp
+│   │   │   ├── AlternateFlagPatcher.cs  # Neutralize Event 915, clear flags 300/330 at startup
+│   │   │   └── SealingTreeWarpPatcher.cs  # Patch Sealing Tree fogwarps (flag 330)
+│   │   ├── Start/           # Starting build (items, resources, runes, class loadout, shop, Roundtable)
+│   │   │   ├── StartingItemInjector.cs  # Inject starting item events into EMEVD
+│   │   │   ├── StartingResourcesInjector.cs  # Inject seeds, tears, keys
+│   │   │   ├── StartingRuneInjector.cs  # Set starting runes via CharaInitParam
+│   │   │   ├── StartingClassRows.cs  # CharaInitParam rows of the selectable classes (from BaseChrSelectMenuParam)
+│   │   │   ├── ClassLoadoutInjector.cs  # Apply Tarnished Pack showcase hand items/armor per starting class
+│   │   │   ├── ClassLoadoutTextPatcher.cs  # Class-selection equipment text updated to the forced loadout (GR_LineHelp, per language)
+│   │   │   ├── RoundtableUnlockInjector.cs  # Unlock Roundtable Hold at start
+│   │   │   ├── ShopInjector.cs           # Add smithing stones + Sentry's Torch to shop, remove Tarnished Pack-gated rows
+│   │   │   ├── UniqueItemNeutralizer.cs  # Replace world copies of start-granted goods at possession cap with Rune Arcs
+│   │   │   └── WeaponUpgradeInjector.cs  # Weapon upgrade initialization for starting weapons
+│   │   ├── Graces/          # Sites of Grace and the Chapel start (grace menu ESD, intro cutscene)
+│   │   │   ├── ChapelGraceInjector.cs  # Site of Grace at Chapel of Anticipation
+│   │   │   ├── RebirthInjector.cs  # Rebirth (stat reallocation) at Sites of Grace
+│   │   │   ├── ShadowRealmBlessingRemover.cs  # Remove DLC "Shadow Realm Blessing" grace menu entry
+│   │   │   ├── IntroCutscenePatcher.cs  # Replace the new-game intro cutscene in event 10010020 by SetCurrentTime + ChangeWeather
+│   │   │   └── GraceTalkEsd.cs  # Shared Site of Grace talk script (ESD) loader/writer
+│   │   ├── Enemies/         # Enemy tweaks (Untouchable boss, healthbar names, helper scaling, blessing neutralization)
+│   │   │   ├── HelperAreaResolver.cs  # Scaling areas for enemy-randomizer helper clones (group pass + helper_models model pass) + vanilla misfiled arena parts
+│   │   │   ├── ScaduBlessingNeutralizer.cs  # Neutralize Scadutree/Revered Spirit Ash blessing SpEffects
+│   │   │   ├── BossNameInjector.cs  # Healthbar names of relocated enemies (graph.json boss_names)
+│   │   │   └── UntouchableBossInjector.cs  # Aging Untouchable minor boss (params, partial wall, MSB repoint)
+│   │   ├── World/           # Vanilla world tweaks (entity removal, pinned maps, events, startup flags, Torrent, spiritspring, popups, play regions)
+│   │   │   ├── PlayRegionPatcher.cs  # Restore vanilla 6000/6001 play region save-limit flags
+│   │   │   ├── VanillaWarpRemover.cs  # Remove vanilla assets (warps, blocking gates) and enemy parts listed in game_tweaks.toml
+│   │   │   ├── StartupFlagInjector.cs  # Set event flags at startup (open gates, etc.)
+│   │   │   ├── EventDisabler.cs  # Neutralize vanilla EMEVD events listed in game_tweaks.toml (1.17 NPC invasions)
+│   │   │   ├── VanillaMapPinner.cs  # Ship pinned maps in the seed from FogMod's copy, the Item Randomizer's merge-dir copy, or the snapshot, so later injectors can patch them (game_tweaks.toml pin_vanilla_maps)
+│   │   │   ├── SpiritspringRemover.cs  # Remove spiritspring jump regions bypassing map-splits chokepoints
+│   │   │   ├── HeavyDoorMessagePatcher.cs  # Suppress "heavy door" popup in common_func
+│   │   │   └── TorrentArenaPatcher.cs  # Re-enable Torrent inside selected boss arenas
+│   │   ├── Racing/          # Racing support (zone tracking, run complete banner, death markers, phantom skins)
+│   │   │   ├── ZoneTrackingInjector.cs  # Zone tracking flags for racing
+│   │   │   ├── RunCompleteInjector.cs  # Inject "RUN COMPLETE" message on final boss defeat
+│   │   │   ├── DeathMarkerInjector.cs  # Bloodstain visuals at fog gates
+│   │   │   └── PhantomCatalogInjector.cs  # Phantom skins catalog baked into params
 │   │   ├── WeatherInjector.cs  # Force weather / pin clock hour ([plugin.weather])
 │   │   ├── HalloweenDarknessInjector.cs  # Evergaol gparam override over the whole run ([plugin.halloween] darkness)
 │   │   ├── JumpscarePlanner.cs  # Draw the Halloween jumpscare layers and their actors (flags, maps, ids)
 │   │   ├── HalloweenJumpscareInjector.cs  # Jumpscare actor row, hidden c5280 placement and warp events ([plugin.halloween] jumpscares)
-│   │   ├── BossNameInjector.cs  # Healthbar names of relocated enemies (graph.json boss_names)
-│   │   ├── MsgBndEditor.cs  # Shared msgbnd edit helper (engus + frafr, mod copy over vanilla)
-│   │   ├── WeaponUpgradeInjector.cs  # Weapon upgrade initialization for starting weapons
 │   │   └── eldendata/       # FogRando game data (gitignored)
 │   ├── FogModWrapper.Tests/  # xUnit tests
 │   ├── ItemRandomizerWrapper/  # Item randomizer - thin wrapper calling RandomizerCommon.dll

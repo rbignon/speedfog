@@ -1,7 +1,7 @@
 # Death Markers at Fog Gates
 
 Bloodstain visual markers placed near fog gates throughout the DAG.
-Implemented in `writer/FogModWrapper/DeathMarkerInjector.cs`.
+Implemented in `writer/FogModWrapper/Racing/DeathMarkerInjector.cs`.
 
 ## Configuration
 

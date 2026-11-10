@@ -1,5 +1,6 @@
 using System.Numerics;
 using FogMod;
+using FogModWrapper.Enemies;
 using Xunit;
 using static FogMod.AnnotationData;
 

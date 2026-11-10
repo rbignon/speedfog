@@ -1,3 +1,8 @@
+using FogModWrapper.FogGraph;
+using FogModWrapper.Graces;
+using FogModWrapper.Racing;
+using FogModWrapper.Warps;
+using FogModWrapper.World;
 using SoulsFormats;
 
 namespace FogModWrapper.Pipeline;

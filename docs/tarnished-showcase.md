@@ -154,7 +154,7 @@ shuffled sequences and the resolved skin are also logged to the spoiler
 - `GraphLoader`/`GraphData` parse the two optional v4.7 fields into
   `ClassLoadoutData?` and `TorrentSkinsData?`; absent in the JSON means
   `null`, all existing behavior unchanged.
-- `ClassLoadoutInjector` (`writer/FogModWrapper/ClassLoadoutInjector.cs`),
+- `ClassLoadoutInjector` (`writer/FogModWrapper/Start/ClassLoadoutInjector.cs`),
   pack-agnostic: for each class group from `StartingClassRows.ResolveGroups`
   (menu order), it ALWAYS overwrites `equip_Wep_Right` with the wrapped
   weapon; hands each shield once to the next class whose `equip_Wep_Left`
@@ -171,7 +171,7 @@ shuffled sequences and the resolved skin are also logged to the spoiler
   ID. Every other field is left untouched, so CharacterWriter's own
   randomization still applies everywhere else. This is disjoint-fields
   co-residency on CharaInitParam alongside `StartingRuneInjector` (writes
-  only `soul`); see `writer/FogModWrapper/RegulationEditor.cs`'s documented
+  only `soul`); see `writer/FogModWrapper/Common/RegulationEditor.cs`'s documented
   invariant.
 - `ClassLoadoutTextPatcher` fixes the class-selection TEXT: the creation
   screen lists each class's gear as text that CharacterWriter wrote to
@@ -297,12 +297,12 @@ shuffled sequences and the resolved skin are also logged to the spoiler
 | `tests/test_output.py` | `tarnished_pack` export (default and passthrough) |
 | `writer/FogModWrapper.Core/Models/GraphData.cs` | `ClassLoadoutData`, `PackItemData`, `TorrentSkinsData` |
 | `writer/FogModWrapper.Core/GraphLoader.cs` | Parses the two v4.7 fields |
-| `writer/FogModWrapper/StartingClassRows.cs` | `ResolveGroups`: per-class CharaInitParam row groups from `BaseChrSelectMenuParam` |
-| `writer/FogModWrapper/ClassLoadoutInjector.cs` | Writes weapons/shields + armor onto CharaInitParam per class group |
-| `writer/FogModWrapper/StartingItemInjector.cs` | Regalia delivery + attire-announced flag 69560 + one-shot default-skin flag |
-| `writer/FogModWrapper/ClassLoadoutTextPatcher.cs` | Class-selection equipment text (GR_LineHelp) updated to the forced gear, per language |
+| `writer/FogModWrapper/Start/StartingClassRows.cs` | `ResolveGroups`: per-class CharaInitParam row groups from `BaseChrSelectMenuParam` |
+| `writer/FogModWrapper/Start/ClassLoadoutInjector.cs` | Writes weapons/shields + armor onto CharaInitParam per class group |
+| `writer/FogModWrapper/Start/StartingItemInjector.cs` | Regalia delivery + attire-announced flag 69560 + one-shot default-skin flag |
+| `writer/FogModWrapper/Start/ClassLoadoutTextPatcher.cs` | Class-selection equipment text (GR_LineHelp) updated to the forced gear, per language |
 | `writer/FogModWrapper/Pipeline/RegulationPhase.cs` | Ordering: `ClassLoadoutInjector` before `WeaponUpgradeInjector`; `RemovePackGatedRows` unless `tarnished_pack` |
-| `writer/FogModWrapper/ShopInjector.cs` | `RemovePackGatedRows`: drops the shop rows released by flag 6953 |
+| `writer/FogModWrapper/Start/ShopInjector.cs` | `RemovePackGatedRows`: drops the shop rows released by flag 6953 |
 | `writer/FogModWrapper.Tests/ShopInjectorTests.cs` | Pack-gated row removal |
 | `writer/FogModWrapper.Tests/ClassLoadoutInjectorTests.cs` | Slot writes, modulo wrap, armor fields, untouched other fields |
 | `writer/FogModWrapper.Tests/StartingClassRowsTests.cs` | Group resolution from `BaseChrSelectMenuParam` |

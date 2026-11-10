@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Numerics;
 using FogModWrapper;
+using FogModWrapper.Common;
 using Xunit;
 
 namespace FogModWrapper.Tests;

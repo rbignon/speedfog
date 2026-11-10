@@ -1,3 +1,4 @@
+using FogModWrapper.Warps;
 using SoulsFormats;
 using Xunit;
 

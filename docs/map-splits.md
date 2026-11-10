@@ -177,7 +177,7 @@ different mechanisms:
 | Consumer | Code | What it does |
 |----------|------|---------------|
 | Python cluster-gen | `tools/generate_clusters.py` (`load_map_splits`, `inject_map_splits`) | Adds an `AreaData` per `[[zones]]` entry and a `FogData` per `[[fogs]]` entry, tagged `["unique"]`, to the parsed fog.txt structures before cluster flood-fill. |
-| C# FogModWrapper | `MapSplitsLoader` (`writer/FogModWrapper.Core/`) + `MapSplitsInjector` (`writer/FogModWrapper/`) | Adds an `AnnotationData.Area` and an **untagged**, ordinary two-sided `AnnotationData.Entrance` (both `ASide` and `BSide` populated, `Tags = null`) directly into FogMod's `AnnotationData`, before `Graph.Construct` runs (`LoadInputsPhase`, right after `OpenSplitInjector.Apply`). |
+| C# FogModWrapper | `MapSplitsLoader` (`writer/FogModWrapper.Core/`) + `MapSplitsInjector` (`writer/FogModWrapper/FogGraph/`) | Adds an `AnnotationData.Area` and an **untagged**, ordinary two-sided `AnnotationData.Entrance` (both `ASide` and `BSide` populated, `Tags = null`) directly into FogMod's `AnnotationData`, before `Graph.Construct` runs (`LoadInputsPhase`, right after `OpenSplitInjector.Apply`). |
 
 The asymmetry is deliberate and matters:
 
@@ -615,7 +615,7 @@ fort's containment entirely. The jump behaviour lives in two MSB regions,
 `MountJump` and `MountJumpFall`, at `(76.7, 303.2, 127.2)`, with `EntityID
 0`: no flag or EMEVD can gate them (only springs built as `LockedMountJump`
 support that), so `SpiritspringRemover`
-(`writer/FogModWrapper/SpiritspringRemover.cs`) deletes both regions from
+(`writer/FogModWrapper/World/SpiritspringRemover.cs`) deletes both regions from
 the MSB by proximity match (5m radius) post-`Write`, declared as a
 `[[spiritspring_removals]]` entry in `data/game_tweaks.toml`. It only runs when
 `reprimand` is present in the seed's `graph.json` `area_tiers` (the Fort of
@@ -684,13 +684,13 @@ for the full list.
   `bside` instances.
 - `writer/FogModWrapper.Core/MapSplitsLoader.cs`: TOML reader (`SplitZone`,
   `SplitFog` records).
-- `writer/FogModWrapper/MapSplitsInjector.cs`: `Apply` (Areas/Entrances,
+- `writer/FogModWrapper/FogGraph/MapSplitsInjector.cs`: `Apply` (Areas/Entrances,
   `BossDefeatName` mirroring for boss-area sides), `SplitEnemyAreas`
   (EnemyArea split), `InjectShowSfx` (fog-wall mist).
-- `writer/FogModWrapper/SpiritspringRemover.cs`: spiritspring region removal
+- `writer/FogModWrapper/World/SpiritspringRemover.cs`: spiritspring region removal
   driven by game_tweaks `[[spiritspring_removals]]`, gated on the required
   zone's presence in `area_tiers`.
-- `writer/FogModWrapper/VanillaWarpRemover.cs`: `MatchGroup` removal path.
+- `writer/FogModWrapper/World/VanillaWarpRemover.cs`: `MatchGroup` removal path.
 - `data/game_tweaks.toml`: `[[remove_entities]]` (Enir-Ilim thorns) and
   `[[spiritspring_removals]]` (Fort of Reprimand, entry commented out since
   2026-10-13) sections used by the map-splits instances above.

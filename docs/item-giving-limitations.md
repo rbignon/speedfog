@@ -103,7 +103,7 @@ Examples:
 ## References
 
 - EMEVD instruction definitions: `data/er-common.emedf.json`
-- StartingItemInjector: `writer/FogModWrapper/StartingItemInjector.cs`
-- ShopInjector: `writer/FogModWrapper/ShopInjector.cs`
+- StartingItemInjector: `writer/FogModWrapper/Start/StartingItemInjector.cs`
+- ShopInjector: `writer/FogModWrapper/Start/ShopInjector.cs`
 - Care package sampling: `speedfog/care_package.py`
 - Item pool definitions: `data/care_package_items.toml`

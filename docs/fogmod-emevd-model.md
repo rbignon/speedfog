@@ -210,10 +210,10 @@ All warp-scanning post-processors run after `GameDataWriterE.Write()` (`WriteFog
 | AlternateSide compilation | `reference/fogrando-src/GameDataWriterE.cs` L3333-3348 |
 | AlternateOf parsing | `reference/fogrando-src/GameDataWriterE.cs` L595-605 |
 | getEventMap logic | `reference/fogrando-src/GameDataWriterE.cs` L4939-4976 |
-| ZoneTrackingInjector | `writer/FogModWrapper/ZoneTrackingInjector.cs` |
-| ErdtreeWarpPatcher | `writer/FogModWrapper/ErdtreeWarpPatcher.cs` |
-| SealingTreeWarpPatcher | `writer/FogModWrapper/SealingTreeWarpPatcher.cs` |
-| AlternateFlagPatcher | `writer/FogModWrapper/AlternateFlagPatcher.cs` |
+| ZoneTrackingInjector | `writer/FogModWrapper/Racing/ZoneTrackingInjector.cs` |
+| ErdtreeWarpPatcher | `writer/FogModWrapper/Warps/ErdtreeWarpPatcher.cs` |
+| SealingTreeWarpPatcher | `writer/FogModWrapper/Warps/SealingTreeWarpPatcher.cs` |
+| AlternateFlagPatcher | `writer/FogModWrapper/Warps/AlternateFlagPatcher.cs` |
 | Alternate warp patching doc | `docs/alternate-warp-patching.md` |
 | Zone tracking doc | `docs/zone-tracking.md` |
 | Event flags doc | `docs/event-flags.md` |

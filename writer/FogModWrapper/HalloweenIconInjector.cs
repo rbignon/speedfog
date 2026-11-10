@@ -1,3 +1,4 @@
+using FogModWrapper.Common;
 using SoulsFormats;
 
 namespace FogModWrapper;

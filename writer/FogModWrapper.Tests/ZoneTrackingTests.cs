@@ -1,3 +1,4 @@
+using FogModWrapper.Racing;
 using SoulsFormats;
 using Xunit;
 

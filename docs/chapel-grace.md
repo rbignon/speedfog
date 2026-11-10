@@ -125,7 +125,7 @@ The same pattern applies to EMEVD files in `event/` and talk scripts (handled by
 
 | File | Role |
 |------|------|
-| `writer/FogModWrapper/ChapelGraceInjector.cs` | All injection logic |
+| `writer/FogModWrapper/Graces/ChapelGraceInjector.cs` | All injection logic |
 | `writer/FogModWrapper/Pipeline/RegulationPhase.cs` | Call site |
 | `writer/FogModWrapper.Core/Models/GraphData.cs` | `ChapelGrace` bool field |
 | `reference/fogrando-src/GameDataWriterE.cs` | FogRando custom bonfire logic (L4693-4818) |

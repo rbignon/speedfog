@@ -1,3 +1,4 @@
+using FogModWrapper.Common;
 using FogModWrapper.Pipeline;
 
 namespace FogModWrapper.Plugins;

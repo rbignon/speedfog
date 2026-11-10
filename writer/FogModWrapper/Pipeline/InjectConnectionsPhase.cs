@@ -1,3 +1,5 @@
+using FogModWrapper.FogGraph;
+
 namespace FogModWrapper.Pipeline;
 
 /// <summary>Inject our connections and area tiers into FogMod's Graph.</summary>

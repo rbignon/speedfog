@@ -208,8 +208,8 @@ When writing, use lowercase `talk` (FogMod convention).
 
 ## References
 
-- Rebirth injection: `writer/FogModWrapper/RebirthInjector.cs`
-- Shadow Realm Blessing removal: `writer/FogModWrapper/ShadowRealmBlessingRemover.cs`
+- Rebirth injection: `writer/FogModWrapper/Graces/RebirthInjector.cs`
+- Shadow Realm Blessing removal: `writer/FogModWrapper/Graces/ShadowRealmBlessingRemover.cs`
 - FogRando grace menu edits: `reference/fogrando-src/GameDataWriterE.cs:3900-3954`
 - FogRando shadow mart: `reference/fogrando-src/GameDataWriterE.cs:4098-4147`
 - Item Randomizer rebirth logic: `RandomizerCommon/CharacterWriter.cs:2595-2623`

@@ -1,4 +1,5 @@
 using System.Numerics;
+using FogModWrapper.World;
 using SoulsFormats;
 using Xunit;
 

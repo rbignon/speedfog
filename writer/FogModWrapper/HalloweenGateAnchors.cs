@@ -1,3 +1,4 @@
+using FogModWrapper.Common;
 using FogModWrapper.Models;
 
 namespace FogModWrapper;

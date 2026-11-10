@@ -1,4 +1,5 @@
 using FogMod;
+using FogModWrapper.FogGraph;
 using Xunit;
 
 namespace FogModWrapper.Tests;

@@ -1,4 +1,6 @@
 using FogMod;
+using FogModWrapper.FogGraph;
+using FogModWrapper.Warps;
 using Xunit;
 
 namespace FogModWrapper.Tests;

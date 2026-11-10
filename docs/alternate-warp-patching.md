@@ -67,7 +67,7 @@ var erdtreeEntrance = ann.Entrances.Concat(ann.Warps).FirstOrDefault(e =>
     e.BSide.AlternateFlag > 0);
 ```
 
-**Source**: `writer/FogModWrapper/ErdtreeWarpPatcher.cs`
+**Source**: `writer/FogModWrapper/Warps/ErdtreeWarpPatcher.cs`
 
 ### SealingTreeWarpPatcher (flag 330)
 
@@ -91,7 +91,7 @@ var sealingTreeEntrances = ann.Entrances.Concat(ann.Warps)
     .ToList();
 ```
 
-**Source**: `writer/FogModWrapper/SealingTreeWarpPatcher.cs`
+**Source**: `writer/FogModWrapper/Warps/SealingTreeWarpPatcher.cs`
 
 ### AlternateFlagPatcher (defense-in-depth)
 
@@ -109,7 +109,7 @@ Flag 300 is intentionally **not** neutralized in Event 900 and **not** cleared i
 
 The zone tracking skip caused by flag 300 is handled by ErdtreeWarpPatcher, which NOPs the `SkipIfEventFlag(flag=300)` in compiled fogwarp events (see below).
 
-**Source**: `writer/FogModWrapper/AlternateFlagPatcher.cs`
+**Source**: `writer/FogModWrapper/Warps/AlternateFlagPatcher.cs`
 
 ## Comparison
 

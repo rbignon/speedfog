@@ -180,6 +180,6 @@ CARE PACKAGE (starting build)
 | `speedfog/graph_export.py` | Serialization to `graph.json` |
 | `speedfog/spoiler.py` | Spoiler log |
 | `writer/FogModWrapper.Core/Models/GraphData.cs` | C# `CarePackageItem` model |
-| `writer/FogModWrapper/StartingItemInjector.cs` | EMEVD injection (gives items in-game) |
+| `writer/FogModWrapper/Start/StartingItemInjector.cs` | EMEVD injection (gives items in-game) |
 
 See also `docs/starting-items.md` for the full EMEVD injection pipeline and auxiliary flag requirements.

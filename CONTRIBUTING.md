@@ -78,8 +78,11 @@ speedfog/
 │   ├── lib/                     # DLLs (gitignored, from FogRando)
 │   ├── FogModWrapper.Core/      # Shared library (GraphLoader, models)
 │   ├── FogModWrapper/           # Fog gate writer (calls FogMod.dll)
-│   │   ├── Program.cs           # CLI entry point
-│   │   ├── ConnectionInjector.cs # Inject connections into FogMod
+│   │   ├── Program.cs           # CLI entry point + ordered pipeline phases
+│   │   ├── Pipeline/            # One class per pipeline phase + shared Context
+│   │   ├── Plugins/             # C# side of [plugin.<name>] tables (SpeedFogPlugin hooks)
+│   │   ├── FogGraph/            # ConnectionInjector (inject connections into FogMod), map splits
+│   │   ├── Common/ Warps/ Start/ Graces/ Enemies/ World/ Racing/  # Injectors by role
 │   │   └── eldendata/           # Game data (gitignored, from FogRando)
 │   ├── FogModWrapper.Tests/     # xUnit tests
 │   ├── ItemRandomizerWrapper/   # Item randomizer (calls RandomizerCommon.dll)

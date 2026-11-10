@@ -63,7 +63,7 @@ Python (`speedfog/enemy_data.py`, wired in `main.py` next to
    (added v4.8):
    `{"30010800": {"name": "Aging Untouchable", "map": "m30_01_00_00"}}`.
 
-C# (`writer/FogModWrapper/BossNameInjector.cs`, mod-dir phase, after
+C# (`writer/FogModWrapper/Enemies/BossNameInjector.cs`, mod-dir phase, after
 `CopyLocalizedFmgs` and before `TextTheme`):
 
 1. `ResolveNameIds`: each name becomes a NpcName id. An exact match of the
@@ -132,6 +132,6 @@ naming stopped covering a case, which is worth a look before it ships.
 | `speedfog/main.py` | Wiring after `patch_graph_enemy_assignments` |
 | `writer/FogModWrapper.Core/Models/GraphData.cs` | `BossNames` / `BossNameEntry` (v4.8) |
 | `writer/FogModWrapper.Core/SpeedFogIds.cs` | `BossNameFmgIds` (NpcName FMG namespace) |
-| `writer/FogModWrapper/BossNameInjector.cs` | Resolution, FMG entries, EMEVD repoint |
-| `writer/FogModWrapper/MsgBndEditor.cs` | Shared msgbnd edit helper (extracted from `TextTheme`) |
+| `writer/FogModWrapper/Enemies/BossNameInjector.cs` | Resolution, FMG entries, EMEVD repoint |
+| `writer/FogModWrapper/Common/MsgBndEditor.cs` | Shared msgbnd edit helper (extracted from `TextTheme`) |
 | `writer/FogModWrapper.Tests/BossNameInjectorTests.cs` | Synthetic msg tree + EMEVD coverage |

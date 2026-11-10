@@ -1,5 +1,7 @@
 using System.Numerics;
 using FogModWrapper;
+using FogModWrapper.Common;
+using FogModWrapper.Racing;
 using SoulsFormats;
 using Xunit;
 

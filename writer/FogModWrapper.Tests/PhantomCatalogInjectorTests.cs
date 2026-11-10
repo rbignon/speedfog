@@ -1,5 +1,6 @@
 using FogModWrapper;
 using FogModWrapper.Models;
+using FogModWrapper.Racing;
 using Xunit;
 using static FogModWrapper.Tests.ParamTestHelper;
 

@@ -1,4 +1,6 @@
 using FogMod;
+using FogModWrapper.Enemies;
+using FogModWrapper.FogGraph;
 using SoulsIds;
 
 namespace FogModWrapper.Pipeline;

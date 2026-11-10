@@ -1,3 +1,4 @@
+using FogModWrapper.Common;
 using SoulsFormats;
 using SoulsIds;
 

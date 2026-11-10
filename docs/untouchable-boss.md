@@ -66,7 +66,7 @@ carries `pool: "minor"`, `boss.exclude_from_pool: true`, `boss.size: 2`,
 
 Once placed, the enemy randomizer's part in the arena carries the source
 entity in `enemy_assignments` (graph.json), and `UntouchableBossInjector`
-(`writer/FogModWrapper/UntouchableBossInjector.cs`) turns that part into
+(`writer/FogModWrapper/Enemies/UntouchableBossInjector.cs`) turns that part into
 the boss.
 
 ## Vulnerability mechanism

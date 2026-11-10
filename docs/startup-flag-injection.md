@@ -151,7 +151,7 @@ Add the entry to `[[startup_flags]]` in `data/game_tweaks.toml`, run `speedfog` 
 
 ## References
 
-- Injector: `writer/FogModWrapper/StartupFlagInjector.cs`
+- Injector: `writer/FogModWrapper/World/StartupFlagInjector.cs`
 - Flag entries: `data/game_tweaks.toml` (`[[startup_flags]]`, loaded by `GameTweaksLoader`)
 - Call site: `writer/FogModWrapper/Pipeline/ModDirPhase.cs`
 - Tests: `writer/FogModWrapper.Tests/StartupFlagInjectorTests.cs`

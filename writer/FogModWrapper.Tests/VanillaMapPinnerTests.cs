@@ -1,3 +1,4 @@
+using FogModWrapper.World;
 using Xunit;
 
 namespace FogModWrapper.Tests;

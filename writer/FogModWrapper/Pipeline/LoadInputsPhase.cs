@@ -1,4 +1,5 @@
 using FogMod;
+using FogModWrapper.FogGraph;
 using FogModWrapper.Plugins;
 using SoulsIds;
 using YamlDotNet.Serialization;

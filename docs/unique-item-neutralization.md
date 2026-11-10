@@ -107,7 +107,7 @@ randomizer.
 
 ## References
 
-- Injector: `writer/FogModWrapper/UniqueItemNeutralizer.cs`
+- Injector: `writer/FogModWrapper/Start/UniqueItemNeutralizer.cs`
 - Tests: `writer/FogModWrapper.Tests/UniqueItemNeutralizerTests.cs`
 - Granted goods source: `speedfog/config.py` `get_starting_goods()`,
   `speedfog/care_package.py`

@@ -1,4 +1,5 @@
 using FogModWrapper;
+using FogModWrapper.Enemies;
 using SoulsFormats;
 using Xunit;
 

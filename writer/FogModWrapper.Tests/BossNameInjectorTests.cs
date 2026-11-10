@@ -1,3 +1,4 @@
+using FogModWrapper.Enemies;
 using FogModWrapper.Models;
 using SoulsFormats;
 using Xunit;

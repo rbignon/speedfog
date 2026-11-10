@@ -1,4 +1,5 @@
 using System.Linq;
+using FogModWrapper.Common;
 using FogModWrapper.Models;
 using SoulsFormats;
 

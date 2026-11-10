@@ -1,3 +1,4 @@
+using FogModWrapper.Start;
 using Xunit;
 
 namespace FogModWrapper.Tests;

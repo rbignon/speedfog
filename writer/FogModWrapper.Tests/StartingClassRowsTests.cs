@@ -1,3 +1,5 @@
+using FogModWrapper.Common;
+using FogModWrapper.Start;
 using SoulsFormats;
 using Xunit;
 

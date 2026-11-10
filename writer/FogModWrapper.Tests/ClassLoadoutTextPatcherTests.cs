@@ -1,6 +1,7 @@
+using FogModWrapper.Start;
 using SoulsFormats;
 using Xunit;
-using Swap = FogModWrapper.ClassLoadoutInjector.LoadoutSwap;
+using Swap = FogModWrapper.Start.ClassLoadoutInjector.LoadoutSwap;
 
 namespace FogModWrapper.Tests;
 

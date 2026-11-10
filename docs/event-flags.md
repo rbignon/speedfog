@@ -163,6 +163,6 @@ ids, per FMG file).
 ## References
 
 - Flag allocation in Python: `speedfog/graph_export.py` (`EVENT_FLAG_BASE` from `speedfog/constants.py`)
-- Zone tracking injection: `writer/FogModWrapper/ZoneTrackingInjector.cs`
+- Zone tracking injection: `writer/FogModWrapper/Racing/ZoneTrackingInjector.cs`
 - FogRando flag allocation: `reference/fogrando-src/GameDataWriterE.cs` L124-135
 - VirtualMemoryFlag reader (racing mod): `speedfog-racing/mod/src/eldenring/event_flags.rs`

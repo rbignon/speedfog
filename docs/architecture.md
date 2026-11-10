@@ -82,21 +82,22 @@ Thin wrapper around FogMod.dll that injects our connections and post-processes g
 |-------|---------|
 | `Program.cs` | CLI entry, runs the pipeline phases in order |
 | `Pipeline/` | `Context` (state shared by the phases) and one class per phase |
-| `ConnectionInjector.cs` | Inject connections into FogMod's Graph, extract boss defeat flag |
-| `StartingItemInjector.cs` | Give starting items + care package via EMEVD |
-| `StartingResourcesInjector.cs` | Give runes, golden seeds, sacred tears, larval tears |
-| `RoundtableUnlockInjector.cs` | Unlock Roundtable Hold at game start |
-| `ShopInjector.cs` | Add smithing stones and Sentry's Torch to Twin Maiden Husks shop |
-| `ZoneTrackingInjector.cs` | Inject zone tracking flags before fog gate warps |
-| `RunCompleteInjector.cs` | Display victory banner on final boss defeat |
-| `ChapelGraceInjector.cs` | Add Site of Grace + player spawn at Chapel of Anticipation |
-| `ErdtreeWarpPatcher.cs` | Patch Erdtree fogwarps to target m11_05 directly (flag 300) |
-| `SealingTreeWarpPatcher.cs` | Patch Sealing Tree fogwarps to eliminate flag 330 dependency |
-| `AlternateFlagPatcher.cs` | Neutralize Events 900/915, clear AlternateFlags 300/330 |
-| `RebirthInjector.cs` | Rebirth (stat reallocation) at Sites of Grace via ESD |
-| `VanillaWarpRemover.cs` | Remove vanilla assets: warp entities + blocking gates ([doc](vanilla-warp-removal.md)) |
-| `StartupFlagInjector.cs` | Set event flags at startup in any EMEVD (open gates, etc.) |
-| `StakeRemover.cs` | Remove vanilla stakes that respawn in zones outside the DAG ([doc](stake-removal.md)) |
+| `Plugins/` | C# side of the `[plugin.<name>]` tables: `SpeedFogPlugin` hooks, `PluginRegistry`, one folder per plugin ([doc](plugins/README.md)) |
+| `FogGraph/ConnectionInjector.cs` | Inject connections into FogMod's Graph, extract boss defeat flag |
+| `Start/StartingItemInjector.cs` | Give starting items + care package via EMEVD |
+| `Start/StartingResourcesInjector.cs` | Give runes, golden seeds, sacred tears, larval tears |
+| `Start/RoundtableUnlockInjector.cs` | Unlock Roundtable Hold at game start |
+| `Start/ShopInjector.cs` | Add smithing stones and Sentry's Torch to Twin Maiden Husks shop |
+| `Racing/ZoneTrackingInjector.cs` | Inject zone tracking flags before fog gate warps |
+| `Racing/RunCompleteInjector.cs` | Display victory banner on final boss defeat |
+| `Graces/ChapelGraceInjector.cs` | Add Site of Grace + player spawn at Chapel of Anticipation |
+| `Warps/ErdtreeWarpPatcher.cs` | Patch Erdtree fogwarps to target m11_05 directly (flag 300) |
+| `Warps/SealingTreeWarpPatcher.cs` | Patch Sealing Tree fogwarps to eliminate flag 330 dependency |
+| `Warps/AlternateFlagPatcher.cs` | Neutralize Events 900/915, clear AlternateFlags 300/330 |
+| `Graces/RebirthInjector.cs` | Rebirth (stat reallocation) at Sites of Grace via ESD |
+| `World/VanillaWarpRemover.cs` | Remove vanilla assets: warp entities + blocking gates ([doc](vanilla-warp-removal.md)) |
+| `World/StartupFlagInjector.cs` | Set event flags at startup in any EMEVD (open gates, etc.) |
+| `FogGraph/StakeRemover.cs` | Remove vanilla stakes that respawn in zones outside the DAG ([doc](stake-removal.md)) |
 
 ### C# Item Writer (`writer/ItemRandomizerWrapper/`)
 

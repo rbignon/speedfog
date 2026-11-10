@@ -1,4 +1,6 @@
+using FogModWrapper.Common;
 using FogModWrapper.Models;
+using FogModWrapper.Start;
 using SoulsFormats;
 using Xunit;
 using static FogModWrapper.Tests.ParamTestHelper;
