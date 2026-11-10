@@ -6,50 +6,8 @@ namespace StaticModBuilder.Tests.Winter;
 
 public class DdsImageTests
 {
-    /// <summary>
-    /// Synthetic DDS: header plus one payload run per level of LevelSize bytes, every byte of
-    /// level i equal to (byte)(0x10 * (i + 1)). A DX10 fourCC writes the 148-byte header.
-    /// </summary>
-    private static byte[] MakeDds(int width, int height, int mips, string fourCC, int dxgi = 0, int arraySize = 1, int caps2 = 0)
-    {
-        bool dx10 = fourCC == "DX10";
-        int bpb = dx10 ? (dxgi is 71 or 72 or 80 ? 8 : 16) : (fourCC is "DXT1" or "ATI1" or "BC4U" ? 8 : 16);
-        int offset = dx10 ? 148 : 128;
-        var levels = new List<int>();
-        int w = width, h = height;
-        for (int i = 0; i < mips; i++)
-        {
-            levels.Add(DdsImage.LevelSize(w, h, bpb));
-            w = Math.Max(1, w / 2);
-            h = Math.Max(1, h / 2);
-        }
-        var dds = new byte[offset + levels.Sum()];
-        Encoding.ASCII.GetBytes("DDS ").CopyTo(dds, 0);
-        BitConverter.GetBytes(124).CopyTo(dds, 4);
-        BitConverter.GetBytes(0x000A1007).CopyTo(dds, 8);
-        BitConverter.GetBytes(height).CopyTo(dds, 12);
-        BitConverter.GetBytes(width).CopyTo(dds, 16);
-        BitConverter.GetBytes(levels[0]).CopyTo(dds, 20);
-        BitConverter.GetBytes(mips).CopyTo(dds, 28);
-        BitConverter.GetBytes(32).CopyTo(dds, 76);
-        BitConverter.GetBytes(4).CopyTo(dds, 80);
-        Encoding.ASCII.GetBytes(fourCC).CopyTo(dds, 84);
-        BitConverter.GetBytes(0x401008).CopyTo(dds, 108);
-        BitConverter.GetBytes(caps2).CopyTo(dds, 112);
-        if (dx10)
-        {
-            BitConverter.GetBytes(dxgi).CopyTo(dds, 128);
-            BitConverter.GetBytes(3).CopyTo(dds, 132);
-            BitConverter.GetBytes(arraySize).CopyTo(dds, 140);
-        }
-        int pos = offset;
-        for (int i = 0; i < levels.Count; i++)
-        {
-            Array.Fill(dds, (byte)(0x10 * (i + 1)), pos, levels[i]);
-            pos += levels[i];
-        }
-        return dds;
-    }
+    private static byte[] MakeDds(int width, int height, int mips, string fourCC, int dxgi = 0, int arraySize = 1, int caps2 = 0) =>
+        DdsFixtures.MakeDds(width, height, mips, fourCC, dxgi, arraySize, caps2);
 
     [Fact]
     public void Parse_ReadsDx10Bc7()
