@@ -50,7 +50,7 @@ public static class WinterModBuilder
             report.Write(ReportPath(winterDir));
             Console.WriteLine($"Winter mod: {materials.Converted} conversions, "
                 + $"{materials.RetargetedTextures + materials.RetargetedTerrain} retargets, "
-                + $"{tpfs} TPFs, {skinned.Count} skinned exclusions, {clock.Elapsed.TotalSeconds:F0} s");
+                + $"{tpfs} TPFs, {materials.SkippedSkinned} skinned exclusions, {clock.Elapsed.TotalSeconds:F0} s");
             return true;
         }
         catch (Exception e) when (e is WinterBuildException or InvalidDataException or IOException or UnauthorizedAccessException)
