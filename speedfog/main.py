@@ -687,6 +687,9 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
                 halloween_enabled=bool(
                     config.plugins.get("halloween", {}).get("enabled", False)
                 ),
+                winter_enabled=bool(
+                    config.plugins.get("winter", {}).get("enabled", False)
+                ),
             )
         except PackagingError as e:
             print(f"Error: {e}", file=sys.stderr)

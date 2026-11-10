@@ -314,3 +314,59 @@ def test_refresh_fogmod_snapshot_propagates_refresh_failure(
     monkeypatch.setitem(refresh_vanilla_snapshot.SNAPSHOTS, "fogmod", snapshot)
     monkeypatch.setattr(refresh_vanilla_snapshot, "main", lambda argv: 1)
     assert bootstrap.refresh_fogmod_snapshot(tmp_path / "Game") is False
+
+
+def _setup_static_mod_builder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> list[list[str]]:
+    """Point bootstrap at a fake tree with a fake StaticModBuilder exe and
+    record the commands handed to subprocess.run."""
+    import subprocess
+
+    monkeypatch.setattr(bootstrap, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(bootstrap, "DATA_DEST", tmp_path / "data")
+    monkeypatch.setattr(bootstrap, "STATIC_MOD_DEST", tmp_path / "data/mods/speedfog")
+    monkeypatch.setattr(
+        bootstrap, "HALLOWEEN_MOD_DEST", tmp_path / "data/mods/speedfog-halloween"
+    )
+    monkeypatch.setattr(
+        bootstrap, "WINTER_MOD_DEST", tmp_path / "data/mods/speedfog-winter"
+    )
+    exe = tmp_path / "writer/StaticModBuilder/publish/win-x64/StaticModBuilder.exe"
+    exe.parent.mkdir(parents=True)
+    exe.write_bytes(b"x")
+    monkeypatch.setattr(bootstrap.shutil, "which", lambda name: "/usr/bin/wine")
+    cmds: list[list[str]] = []
+
+    def fake_run(cmd, **kwargs):
+        cmds.append(list(cmd))
+        return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(bootstrap.subprocess, "run", fake_run)
+    return cmds
+
+
+def test_run_static_mod_builder_passes_winter_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cmds = _setup_static_mod_builder(tmp_path, monkeypatch)
+
+    assert bootstrap.run_static_mod_builder(tmp_path / "Game", winter=True) is True
+    cmd = cmds[-1]
+    i = cmd.index("--winter-dir")
+    assert cmd[i + 1] == str(bootstrap.WINTER_MOD_DEST.resolve())
+    assert bootstrap.WINTER_MOD_DEST.is_dir()
+
+    assert bootstrap.run_static_mod_builder(tmp_path / "Game", winter=False) is True
+    assert "--winter-dir" not in cmds[-1]
+
+
+def test_run_static_mod_builder_reports_unbuilt_winter_but_succeeds(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    _setup_static_mod_builder(tmp_path, monkeypatch)
+
+    assert bootstrap.run_static_mod_builder(tmp_path / "Game", winter=True) is True
+    assert "Winter mod not built" in capsys.readouterr().out

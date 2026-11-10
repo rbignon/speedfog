@@ -412,3 +412,10 @@ enabled = false
 #   snowy_heavy_fog, scattered_rain
 # hour = 12              # 0-23, clock pinned to this hour (default 12)
 # freeze_time = true     # false = leave the clock untouched (default true)
+
+# Winter: snow on grounds, walls and roofs (vanilla snow shaders), frosted grass,
+# bushes, ivy and leaves (half-resolution atlases), base game and DLC. Static mod
+# built at bootstrap into data/mods/speedfog-winter/ (about 24 MB per seed). For
+# snowfall, enable [plugin.weather] with weather = "snow" and freeze_time = false.
+[plugin.winter]
+enabled = false

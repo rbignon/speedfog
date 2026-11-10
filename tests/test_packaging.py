@@ -370,3 +370,82 @@ def test_stale_static_mod_scripts_with_no_source_directory(tmp_path: Path) -> No
     _make_built_script(tmp_path, "755890_battle", mtime=1_000)
 
     assert stale_static_mod_scripts(tmp_path) == []
+
+
+def test_write_modengine_config_lists_winter_after_halloween(tmp_path: Path) -> None:
+    write_modengine_config(
+        tmp_path,
+        static_mod_enabled=True,
+        halloween_mod_enabled=True,
+        winter_mod_enabled=True,
+    )
+
+    content = (tmp_path / "modengine2" / "config_speedfog.toml").read_text(
+        encoding="utf-8"
+    )
+    assert 'path = "../mods/speedfog-winter"' in content
+    assert (
+        content.index('name = "speedfog"')
+        < content.index('name = "speedfog-halloween"')
+        < content.index('name = "speedfog-winter"')
+        < content.index('name = "fogmod"')
+    )
+
+
+def _populate_winter(project_root: Path) -> None:
+    winter = project_root / "data" / "mods" / "speedfog-winter" / "material"
+    winter.mkdir(parents=True)
+    (winter / "allmaterial.matbinbnd.dcx").write_bytes(b"x")
+
+
+def test_package_seed_copies_winter_mod_when_plugin_enabled(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    seed_dir = tmp_path / "seed"
+    _make_packaging_tree(project_root)
+    _populate_winter(project_root)
+
+    package_seed(project_root, seed_dir, winter_enabled=True)
+
+    assert (
+        seed_dir / "mods" / "speedfog-winter" / "material" / "allmaterial.matbinbnd.dcx"
+    ).exists()
+    content = (seed_dir / "modengine2" / "config_speedfog.toml").read_text(
+        encoding="utf-8"
+    )
+    assert content.index('name = "speedfog-winter"') < content.index('name = "fogmod"')
+
+
+def test_package_seed_omits_winter_mod_when_plugin_disabled(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    seed_dir = tmp_path / "seed"
+    _make_packaging_tree(project_root)
+    _populate_winter(project_root)
+
+    package_seed(project_root, seed_dir, winter_enabled=False)
+
+    assert not (seed_dir / "mods" / "speedfog-winter").exists()
+    content = (seed_dir / "modengine2" / "config_speedfog.toml").read_text(
+        encoding="utf-8"
+    )
+    assert "speedfog-winter" not in content
+
+
+def test_package_seed_raises_when_winter_enabled_but_mod_missing(
+    tmp_path: Path,
+) -> None:
+    project_root = tmp_path / "project"
+    seed_dir = tmp_path / "seed"
+    _make_packaging_tree(project_root)
+
+    with pytest.raises(PackagingError, match=r"\[plugin.winter\].*bootstrap"):
+        package_seed(project_root, seed_dir, winter_enabled=True)
+
+
+def test_package_seed_raises_when_winter_enabled_but_mod_empty(tmp_path: Path) -> None:
+    project_root = tmp_path / "project"
+    seed_dir = tmp_path / "seed"
+    _make_packaging_tree(project_root)
+    (project_root / "data" / "mods" / "speedfog-winter").mkdir(parents=True)
+
+    with pytest.raises(PackagingError, match=r"\[plugin.winter\].*bootstrap"):
+        package_seed(project_root, seed_dir, winter_enabled=True)

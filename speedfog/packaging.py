@@ -59,6 +59,7 @@ def write_modengine_config(
     include_crash_fix: bool = False,
     static_mod_enabled: bool = False,
     halloween_mod_enabled: bool = False,
+    winter_mod_enabled: bool = False,
 ) -> Path:
     """Write the ModEngine 2 TOML config consumed by the launcher.
 
@@ -97,6 +98,11 @@ def write_modengine_config(
         mods_lines.append(
             '    { enabled = true, name = "speedfog-halloween",'
             ' path = "../mods/speedfog-halloween" }'
+        )
+    if winter_mod_enabled:
+        mods_lines.append(
+            '    { enabled = true, name = "speedfog-winter",'
+            ' path = "../mods/speedfog-winter" }'
         )
     mods_lines.append(
         '    { enabled = true, name = "fogmod", path = "../mods/fogmod" }'
@@ -171,6 +177,7 @@ def package_seed(
     item_randomizer_enabled: bool = False,
     item_randomizer_dir: Path | None = None,
     halloween_enabled: bool = False,
+    winter_enabled: bool = False,
 ) -> None:
     """Assemble the static mod, ModEngine 2, launcher, DLLs, and config."""
     print()
@@ -200,6 +207,17 @@ def package_seed(
         project_root, seed_dir, "speedfog-halloween", "halloween overlay"
     )
 
+    # Unlike the halloween overlay (silently omitted), a winter seed without
+    # its static mod would play as a plain seed, so it is an error.
+    winter_mod_enabled = winter_enabled and _copy_optional_mod(
+        project_root, seed_dir, "speedfog-winter", "winter mod"
+    )
+    if winter_enabled and not winter_mod_enabled:
+        raise PackagingError(
+            "[plugin.winter] is enabled but data/mods/speedfog-winter/ is "
+            "missing or empty: run tools/bootstrap.py (without --no-winter)"
+        )
+
     if item_randomizer_enabled and item_randomizer_dir is not None:
         helper_config = item_randomizer_dir / "RandomizerHelper_config.ini"
         if helper_config.exists():
@@ -217,6 +235,7 @@ def package_seed(
         ),
         static_mod_enabled=static_mod_enabled,
         halloween_mod_enabled=halloween_mod_enabled,
+        winter_mod_enabled=winter_mod_enabled,
     )
     print("Generated modengine2/config_speedfog.toml")
 

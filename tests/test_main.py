@@ -267,6 +267,32 @@ def test_main_build_invokes_fogmodwrapper(tmp_path, monkeypatch, fake_build):
     assert calls["package"][0]["item_randomizer_enabled"] is False
 
 
+def test_main_build_passes_winter_flag_to_packaging(tmp_path, monkeypatch, fake_build):
+    _real_clusters_or_skip()
+    _, calls = fake_build
+    game_dir = tmp_path / "Game"
+    game_dir.mkdir()
+
+    for name, extra, expected in (
+        ("on", "[plugin.winter]\nenabled = true\n", True),
+        ("off", "", False),
+    ):
+        config_path = tmp_path / f"config_{name}.toml"
+        config_path.write_text("[item_randomizer]\nenabled = false\n" + extra)
+        rc = _run_main(
+            monkeypatch,
+            str(config_path),
+            "--seed",
+            "0",
+            "-o",
+            str(tmp_path / f"out_{name}"),
+            "--game-dir",
+            str(game_dir),
+        )
+        assert rc == 0
+        assert calls["package"][-1]["winter_enabled"] is expected
+
+
 def test_main_itemrando_enabled_passes_merge_dir(tmp_path, monkeypatch, fake_build):
     _real_clusters_or_skip()
     _, calls = fake_build

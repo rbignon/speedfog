@@ -21,6 +21,7 @@ This script extracts:
 - WitchyBND (Windows build, run via Wine on Linux):
   - extracted to tools/witchybnd/ (downloaded lazily when scripts need repacking)
   - repacks data/mods-src/speedfog/script/*-luabnd-dcx/ into data/mods/speedfog/script/
+- Winter mod (StaticModBuilder --winter-dir): data/mods/speedfog-winter/, skip with --no-winter
 
 Prerequisites:
 - sfextract (dotnet tool): dotnet tool install -g sfextract
@@ -76,6 +77,7 @@ WITCHYBND_DEST = PROJECT_ROOT / "tools" / "witchybnd"
 STATIC_MOD_SRC_DEST = DATA_DEST / "mods-src" / "speedfog"
 STATIC_MOD_DEST = DATA_DEST / "mods" / "speedfog"
 HALLOWEEN_MOD_DEST = DATA_DEST / "mods" / "speedfog-halloween"
+WINTER_MOD_DEST = DATA_DEST / "mods" / "speedfog-winter"
 
 # Files to extract from eldendata/Base/ to data/
 FOGRANDO_DATA_FILES = [
@@ -827,11 +829,12 @@ def copy_oodle_dll(game_dir: Path, force: bool = False) -> bool:
     return True
 
 
-def run_static_mod_builder(game_dir: Path) -> bool:
+def run_static_mod_builder(game_dir: Path, winter: bool = True) -> bool:
     """Run StaticModBuilder to generate the static mod (e.g., patched animations).
 
     Outputs to data/mods/speedfog/, copied verbatim into each seed as its own
-    ModEngine 2 mod.
+    ModEngine 2 mod. With winter, also builds data/mods/speedfog-winter/
+    (StaticModBuilder removes it and still exits 0 when the winter build fails).
     """
     print("\n" + "=" * 50)
     print("Static mod generation")
@@ -855,6 +858,8 @@ def run_static_mod_builder(game_dir: Path) -> bool:
 
     STATIC_MOD_DEST.mkdir(parents=True, exist_ok=True)
     HALLOWEEN_MOD_DEST.mkdir(parents=True, exist_ok=True)
+    if winter:
+        WINTER_MOD_DEST.mkdir(parents=True, exist_ok=True)
 
     cmd.extend(
         [
@@ -866,6 +871,8 @@ def run_static_mod_builder(game_dir: Path) -> bool:
             str(HALLOWEEN_MOD_DEST.resolve()),
         ]
     )
+    if winter:
+        cmd.extend(["--winter-dir", str(WINTER_MOD_DEST.resolve())])
 
     try:
         result = subprocess.run(
@@ -879,11 +886,18 @@ def run_static_mod_builder(game_dir: Path) -> bool:
         if result.returncode != 0:
             print_error(f"StaticModBuilder failed: {result.stderr}")
             return False
+        for line in result.stderr.strip().splitlines():
+            print(f"      {line}")
     except FileNotFoundError:
         print_error("Failed to run StaticModBuilder")
         return False
 
     print_ok("Static mod files generated in data/mods/speedfog/")
+    if winter and not any(p.is_file() for p in WINTER_MOD_DEST.rglob("*")):
+        print_error(
+            "Winter mod not built (see WINTER FAILED above); seeds enabling "
+            "[plugin.winter] will refuse to package"
+        )
     return True
 
 
@@ -925,8 +939,7 @@ def ensure_witchybnd(force: bool = False) -> bool:
 
     if is_witchybnd_installed() and not force:
         print_ok(
-            "WitchyBND already installed in tools/witchybnd/"
-            " (use --force to reinstall)"
+            "WitchyBND already installed in tools/witchybnd/ (use --force to reinstall)"
         )
         return True
 
@@ -982,8 +995,7 @@ def ensure_witchybnd(force: bool = False) -> bool:
         return False
 
     print_ok(
-        f"WitchyBND {release.get('tag_name', 'unknown')}"
-        " installed in tools/witchybnd/"
+        f"WitchyBND {release.get('tag_name', 'unknown')} installed in tools/witchybnd/"
     )
     return True
 
@@ -1057,7 +1069,7 @@ def build_static_mod_scripts(force: bool = False) -> bool:
 
         if result.returncode != 0 or not produced.exists():
             print_error(
-                f"WitchyBND failed for {src.name}" f" (exit code {result.returncode})"
+                f"WitchyBND failed for {src.name} (exit code {result.returncode})"
             )
             return False
 
@@ -1131,6 +1143,12 @@ def main() -> int:
         help="Skip static mod generation (StaticModBuilder and WitchyBND script repack)",
     )
     parser.add_argument(
+        "--no-winter",
+        action="store_true",
+        help="Skip the winter static mod (FLVER scan, binders, textures: "
+        "the longest bootstrap step)",
+    )
+    parser.add_argument(
         "--no-refresh",
         action="store_true",
         help="Skip the final FogMod snapshot refresh (game-patch triage: "
@@ -1185,7 +1203,7 @@ def main() -> int:
 
     # Run StaticModBuilder and WitchyBND to generate the static mod
     if success and not args.skip_static_mod:
-        if not run_static_mod_builder(args.game_dir):
+        if not run_static_mod_builder(args.game_dir, winter=not args.no_winter):
             success = False
         if success and not build_static_mod_scripts(args.force):
             success = False
