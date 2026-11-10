@@ -1,0 +1,589 @@
+# Winter plugin: material conversion catalogue (see docs/plugins/winter.md and
+# docs/superpowers/specs/2026-11-10-winter-plugin-design.md, Appendices A, B and D).
+# Shader names are the file stems of ShaderPath; sampler names are the suffixes after
+# the last "_snp_" of Sampler.Type; texture stems are file names without "_a.tif"/"_n.tif".
+
+[snow_textures]
+albedo = 'N:\GR\data\Asset\Environment\texture\AET000\AET000_080_a.tif'
+normal = 'N:\GR\data\Asset\Environment\texture\AET001\AET001_078_n.tif'
+ground_albedo = 'N:\GR\data\Asset\Environment\texture\AET000\AET000_081_a.tif'
+
+[[templates]]
+shader = "M[AMSN_V][Snow]"
+matbin = "m13_00_503"
+samplers = ["Texture2D_0_AlbedoMap_0", "Texture2D_2_AlbedoMap_0", "Texture2D_1_NormalMap_0", "Texture2D_3_NormalMap_0"]
+[templates.params]
+float_0 = 0.0
+float3_0 = [0.0, 2.0, 0.0]
+"group_1_CommonUV-UVParam" = [1.0, 1.0]
+"group_2_CommonUV-UVParam" = [1.0, 1.0]
+
+[[templates]]
+shader = "M[AMSN_V][Ov_N][Snow]_Edge"
+matbin = "AEG001_422_Branch_Edge"
+samplers = ["Texture2D_0_AlbedoMap_0", "Texture2D_2_AlbedoMap_0", "Texture2D_1_NormalMap_0", "Texture2D_3_NormalMap_0", "Texture2D_4_NormalMap_0"]
+[templates.params]
+float_0 = -1.2
+float3_0 = [0.0, 2.0, 0.95]
+float_1 = 2.0
+"group_1_CommonUV-UVParam" = [1.0, 1.0]
+"group_2_CommonUV-UVParam" = [10.0, 10.0]
+"group_3_CommonUV-UVParam" = [12.0, 12.0]
+
+[[templates]]
+shader = "M[AMSN_V][Mb2][Ov_N][Snow]"
+matbin = "m39_10_045"
+samplers = ["Texture2D_2_GSBlendMap_AlbedoMap_1", "Texture2D_6_GSBlendMap_AlbedoMap_0", "Texture2D_3_GSBlendMap_AlbedoMap_2", "Texture2D_7_GSBlendMap_NormalMap_0", "Texture2D_0_GSBlendMap_NormalMap_1", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_5_GSBlendMap_NormalMap_0", "Texture2D_4_GSBlendMap_Mask1Map_4"]
+[templates.params]
+float_9 = 0.0
+float3_0 = [0.0, 2.0, 0.0]
+float_1 = 2.0
+float_4 = 0.6
+"group_1_CommonUV-UVParam" = [1.0, 1.0]
+"group_2_CommonUV-UVParam" = [1.0, 1.0]
+"group_3_CommonUV-UVParam" = [1.0, 1.0]
+"group_5_CommonUV-UVParam" = [1.0, 1.0]
+
+[[rules]]
+source = "M[AMSN_V][Ov_A_Ch2]"
+twin = "M[AMSN_V][Snow]"
+source_samplers = ["Texture2D_5_AlbedoMap_0", "Texture2D_7_NormalMap_0", "Texture2D_8_AlbedoMap_0"]
+[rules.plan]
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
+Texture2D_2_AlbedoMap_0 = "Texture2D_8_AlbedoMap_0"
+Texture2D_1_NormalMap_0 = "Texture2D_7_NormalMap_0"
+Texture2D_3_NormalMap_0 = "snow_normal"
+
+[[rules]]
+source = "M[AMSN_V][Mb4]"
+twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+source_samplers = ["Texture2D_0_GSBlendMap_AlbedoMap_3", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_NormalMap_1", "Texture2D_3_GSBlendMap_Mask1Map_4", "Texture2D_4_GSBlendMap_AlbedoMap_2", "Texture2D_5_GSBlendMap_NormalMap_3", "Texture2D_6_GSBlendMap_NormalMap_3", "Texture2D_7_GSBlendMap_AlbedoMap_3", "Texture2D_8_GSBlendMap_AlbedoMap_1"]
+[rules.plan]
+Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_8_GSBlendMap_AlbedoMap_1"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
+Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_4_GSBlendMap_AlbedoMap_2"
+Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
+Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_2_GSBlendMap_NormalMap_1"
+Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
+Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_2_GSBlendMap_NormalMap_1"
+Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_3_GSBlendMap_Mask1Map_4"
+
+[[rules]]
+source = "M[AMSN_V][Snow_VtxMask]"
+twin = "M[AMSN_V][Snow]"
+source_samplers = ["Texture2D_0_AlbedoMap_0", "Texture2D_1_NormalMap_0", "Texture2D_2_AlbedoMap_0", "Texture2D_3_NormalMap_0", "Texture2D_4_Mask1Map_4"]
+[rules.plan]
+Texture2D_0_AlbedoMap_0 = "Texture2D_0_AlbedoMap_0"
+Texture2D_2_AlbedoMap_0 = "Texture2D_2_AlbedoMap_0"
+Texture2D_1_NormalMap_0 = "Texture2D_1_NormalMap_0"
+Texture2D_3_NormalMap_0 = "Texture2D_3_NormalMap_0"
+
+[[rules]]
+source = "M[AMSN_V][Ov_N][Snow_VtxMask]"
+twin = "M[AMSN_V][Snow]"
+source_samplers = ["Texture2D_0_AlbedoMap_0", "Texture2D_1_NormalMap_0", "Texture2D_2_AlbedoMap_0", "Texture2D_3_NormalMap_0", "Texture2D_4_Mask1Map_4", "Texture2D_5_NormalMap"]
+[rules.plan]
+Texture2D_0_AlbedoMap_0 = "Texture2D_0_AlbedoMap_0"
+Texture2D_2_AlbedoMap_0 = "Texture2D_2_AlbedoMap_0"
+Texture2D_1_NormalMap_0 = "Texture2D_1_NormalMap_0"
+Texture2D_3_NormalMap_0 = "Texture2D_3_NormalMap_0"
+
+[[rules]]
+source = "M[AMSN_V][Mb2][Ov_N][Snow_VtxMask]"
+twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+source_samplers = ["Texture2D_0_GSBlendMap_NormalMap_1", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_AlbedoMap_1", "Texture2D_3_GSBlendMap_AlbedoMap_2", "Texture2D_4_GSBlendMap_Mask1Map_4", "Texture2D_5_GSBlendMap_NormalMap_0", "Texture2D_6_GSBlendMap_AlbedoMap_0", "Texture2D_7_GSBlendMap_NormalMap_0"]
+[rules.plan]
+Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_2_GSBlendMap_AlbedoMap_1"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "Texture2D_6_GSBlendMap_AlbedoMap_0"
+Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_3_GSBlendMap_AlbedoMap_2"
+Texture2D_7_GSBlendMap_NormalMap_0 = "Texture2D_7_GSBlendMap_NormalMap_0"
+Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_0_GSBlendMap_NormalMap_1"
+Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
+Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_5_GSBlendMap_NormalMap_0"
+Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_4_GSBlendMap_Mask1Map_4"
+
+[[rules]]
+source = "M[AMSN_V][Mb2][Snow_VtxMask]"
+twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+source_samplers = ["Texture2D_0_GSBlendMap_NormalMap_1", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_AlbedoMap_1", "Texture2D_3_GSBlendMap_AlbedoMap_2", "Texture2D_4_GSBlendMap_Mask1Map_4", "Texture2D_5_GSBlendMap_AlbedoMap_0", "Texture2D_7_GSBlendMap_NormalMap_0"]
+[rules.plan]
+Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_2_GSBlendMap_AlbedoMap_1"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "Texture2D_5_GSBlendMap_AlbedoMap_0"
+Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_3_GSBlendMap_AlbedoMap_2"
+Texture2D_7_GSBlendMap_NormalMap_0 = "Texture2D_7_GSBlendMap_NormalMap_0"
+Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_0_GSBlendMap_NormalMap_1"
+Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
+Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_0_GSBlendMap_NormalMap_1"
+Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_4_GSBlendMap_Mask1Map_4"
+
+[[rules]]
+source = "M[AMSN_V][Mb3][3Mask][Ov_AN][Snow_VtxMask]"
+twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+source_samplers = ["Texture2D_0_GSBlendMap_NormalMap_1", "Texture2D_10_GSBlendMap_AlbedoMap_0", "Texture2D_11_GSBlendMap_NormalMap_0", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_AlbedoMap_1", "Texture2D_3_GSBlendMap_AlbedoMap_2", "Texture2D_4_GSBlendMap_Mask1Map_4", "Texture2D_5_GSBlendMap_AlbedoMap_0", "Texture2D_6_GSBlendMap_NormalMap_2", "Texture2D_7_GSBlendMap_NormalMap_0", "Texture2D_8_GSBlendMap_AlbedoMap_2", "Texture2D_9_GSBlendMap_Mask3Map_2"]
+[rules.plan]
+Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_2_GSBlendMap_AlbedoMap_1"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "Texture2D_5_GSBlendMap_AlbedoMap_0"
+Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_3_GSBlendMap_AlbedoMap_2"
+Texture2D_7_GSBlendMap_NormalMap_0 = "Texture2D_7_GSBlendMap_NormalMap_0"
+Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_0_GSBlendMap_NormalMap_1"
+Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
+Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_11_GSBlendMap_NormalMap_0"
+Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_4_GSBlendMap_Mask1Map_4"
+
+[[rules]]
+source = "M[AMSN_V][Snow_VtxMask]_Edge"
+twin = "M[AMSN_V][Ov_N][Snow]_Edge"
+source_samplers = ["Texture2D_0_AlbedoMap_0", "Texture2D_1_NormalMap_0", "Texture2D_2_AlbedoMap_0", "Texture2D_3_NormalMap_0", "Texture2D_4_Mask1Map_4"]
+[rules.plan]
+Texture2D_0_AlbedoMap_0 = "Texture2D_0_AlbedoMap_0"
+Texture2D_2_AlbedoMap_0 = "Texture2D_2_AlbedoMap_0"
+Texture2D_1_NormalMap_0 = "Texture2D_1_NormalMap_0"
+Texture2D_3_NormalMap_0 = "Texture2D_3_NormalMap_0"
+Texture2D_4_NormalMap_0 = "template"
+
+[[rules]]
+source = "M[AMSN_V][Ov_N][Snow_VtxMask]_Edge"
+twin = "M[AMSN_V][Ov_N][Snow]_Edge"
+source_samplers = ["Texture2D_0_AlbedoMap_0", "Texture2D_1_NormalMap_0", "Texture2D_2_AlbedoMap_0", "Texture2D_3_NormalMap_0", "Texture2D_4_Mask1Map_4", "Texture2D_5_NormalMap"]
+[rules.plan]
+Texture2D_0_AlbedoMap_0 = "Texture2D_0_AlbedoMap_0"
+Texture2D_2_AlbedoMap_0 = "Texture2D_2_AlbedoMap_0"
+Texture2D_1_NormalMap_0 = "Texture2D_1_NormalMap_0"
+Texture2D_3_NormalMap_0 = "Texture2D_3_NormalMap_0"
+Texture2D_4_NormalMap_0 = "template"
+
+[[rules]]
+source = "M[AMSN_V][Ov_AN]"
+twin = "M[AMSN_V][Snow]"
+source_samplers = ["Texture2D_2_NormalMap_0", "Texture2D_5_AlbedoMap_0", "Texture2D_7_NormalMap_0", "Texture2D_8_AlbedoMap_0"]
+[rules.plan]
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
+Texture2D_2_AlbedoMap_0 = "Texture2D_8_AlbedoMap_0"
+Texture2D_1_NormalMap_0 = "Texture2D_7_NormalMap_0"
+Texture2D_3_NormalMap_0 = "snow_normal"
+
+[[rules]]
+source = "M[AMSN][Ov_AN]"
+twin = "M[AMSN_V][Snow]"
+source_samplers = ["Texture2D_0_AlbedoMap_0", "Texture2D_1_NormalMap_0", "Texture2D_2_MetallicMap_0", "Texture2D_3_AlbedoMap_0", "Texture2D_4_NormalMap_0"]
+[rules.plan]
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
+Texture2D_2_AlbedoMap_0 = "Texture2D_0_AlbedoMap_0"
+Texture2D_1_NormalMap_0 = "Texture2D_1_NormalMap_0"
+Texture2D_3_NormalMap_0 = "snow_normal"
+
+[[rules]]
+source = "M[AMSN_V][Mb2][Ov_AN]"
+twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+source_samplers = ["Texture2D_0_GSBlendMap_NormalMap_1", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_AlbedoMap_1", "Texture2D_3_GSBlendMap_AlbedoMap_2", "Texture2D_4_GSBlendMap_Mask1Map_4", "Texture2D_5_GSBlendMap_NormalMap_0", "Texture2D_6_GSBlendMap_AlbedoMap_0"]
+[rules.plan]
+Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_2_GSBlendMap_AlbedoMap_1"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
+Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_3_GSBlendMap_AlbedoMap_2"
+Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
+Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_0_GSBlendMap_NormalMap_1"
+Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
+Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_5_GSBlendMap_NormalMap_0"
+Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_4_GSBlendMap_Mask1Map_4"
+
+[[rules]]
+source = "M[AMSN][Mb2][Ov_AN]"
+twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+source_samplers = ["Texture2D_0_GSBlendMap_NormalMap_1", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_AlbedoMap_1", "Texture2D_3_GSBlendMap_AlbedoMap_2", "Texture2D_4_GSBlendMap_Mask1Map_4", "Texture2D_5_GSBlendMap_NormalMap_0", "Texture2D_6_GSBlendMap_AlbedoMap_0", "Texture2D_7_GSBlendMap_MetallicMap_0", "Texture2D_8_GSBlendMap_MetallicMap_0"]
+[rules.plan]
+Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_2_GSBlendMap_AlbedoMap_1"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
+Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_3_GSBlendMap_AlbedoMap_2"
+Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
+Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_0_GSBlendMap_NormalMap_1"
+Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
+Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_5_GSBlendMap_NormalMap_0"
+Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_4_GSBlendMap_Mask1Map_4"
+
+[[rules]]
+source = "M[AMSN_V][Ov_N][Mb2_ColorAdjust][1Mask_ch18]"
+twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+source_samplers = ["Texture2D_10_GSBlendMap_NormalMap_0", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_NormalMap_1", "Texture2D_3_GSBlendMap_Mask1Map_4", "Texture2D_4_GSBlendMap_AlbedoMap_2", "Texture2D_8_GSBlendMap_AlbedoMap_1", "Texture2D_9_GSBlendMap_Mask1Map_2"]
+[rules.plan]
+Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_8_GSBlendMap_AlbedoMap_1"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
+Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_4_GSBlendMap_AlbedoMap_2"
+Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
+Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_2_GSBlendMap_NormalMap_1"
+Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
+Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_10_GSBlendMap_NormalMap_0"
+Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_3_GSBlendMap_Mask1Map_4"
+
+[[rules]]
+source = "M[AMSN_V][Mb2][1mask][Ov_N]"
+twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+source_samplers = ["Texture2D_0_GSBlendMap_NormalMap_1", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_AlbedoMap_1", "Texture2D_3_GSBlendMap_AlbedoMap_2", "Texture2D_4_GSBlendMap_Mask1Map_4", "Texture2D_5_GSBlendMap_NormalMap_0", "Texture2D_6_GSBlendMap_Mask1Map"]
+[rules.plan]
+Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_2_GSBlendMap_AlbedoMap_1"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
+Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_3_GSBlendMap_AlbedoMap_2"
+Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
+Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_0_GSBlendMap_NormalMap_1"
+Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
+Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_5_GSBlendMap_NormalMap_0"
+Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_4_GSBlendMap_Mask1Map_4"
+
+[[rules]]
+source = "M[AMSN_V]_Edge"
+twin = "M[AMSN_V][Ov_N][Snow]_Edge"
+source_samplers = ["Texture2D_1_NormalMap_0", "Texture2D_2_AlbedoMap_0"]
+[rules.plan]
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
+Texture2D_2_AlbedoMap_0 = "Texture2D_2_AlbedoMap_0"
+Texture2D_1_NormalMap_0 = "Texture2D_1_NormalMap_0"
+Texture2D_3_NormalMap_0 = "snow_normal"
+Texture2D_4_NormalMap_0 = "template"
+
+[[rules]]
+source = "M[AMSN_V][Ov_N]_Edge"
+twin = "M[AMSN_V][Ov_N][Snow]_Edge"
+source_samplers = ["Texture2D_2_NormalMap_0", "Texture2D_7_NormalMap_0", "Texture2D_8_AlbedoMap_0"]
+[rules.plan]
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
+Texture2D_2_AlbedoMap_0 = "Texture2D_8_AlbedoMap_0"
+Texture2D_1_NormalMap_0 = "Texture2D_7_NormalMap_0"
+Texture2D_3_NormalMap_0 = "snow_normal"
+Texture2D_4_NormalMap_0 = "Texture2D_2_NormalMap_0"
+
+[[rules]]
+source = "M[AMSN]_Edge"
+twin = "M[AMSN_V][Ov_N][Snow]_Edge"
+source_samplers = ["Texture2D_1_NormalMap_0", "Texture2D_2_MetallicMap_0", "Texture2D_3_AlbedoMap_0"]
+[rules.plan]
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
+Texture2D_2_AlbedoMap_0 = "Texture2D_3_AlbedoMap_0"
+Texture2D_1_NormalMap_0 = "Texture2D_1_NormalMap_0"
+Texture2D_3_NormalMap_0 = "snow_normal"
+Texture2D_4_NormalMap_0 = "template"
+
+[[rules]]
+source = "M[AMSN][Ov_N]_Edge"
+twin = "M[AMSN_V][Ov_N][Snow]_Edge"
+source_samplers = ["Texture2D_0_NormalMap_0", "Texture2D_1_NormalMap_0", "Texture2D_2_MetallicMap_0", "Texture2D_3_AlbedoMap_0"]
+[rules.plan]
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
+Texture2D_2_AlbedoMap_0 = "Texture2D_3_AlbedoMap_0"
+Texture2D_1_NormalMap_0 = "Texture2D_1_NormalMap_0"
+Texture2D_3_NormalMap_0 = "snow_normal"
+Texture2D_4_NormalMap_0 = "Texture2D_0_NormalMap_0"
+
+[[rules]]
+source = "M[AMSN][Ov_N][Mb3_ColorAdjust][3Mask_ch18]"
+twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+source_samplers = ["Texture2D_0_GSBlendMap_AlbedoMap_3", "Texture2D_10_GSBlendMap_NormalMap_0", "Texture2D_11_GSBlendMap_MetallicMap", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_NormalMap_1", "Texture2D_3_GSBlendMap_Mask1Map_4", "Texture2D_4_GSBlendMap_AlbedoMap_2", "Texture2D_5_GSBlendMap_MetallicMap", "Texture2D_6_GSBlendMap_NormalMap_3", "Texture2D_7_GSBlendMap_MetallicMap", "Texture2D_8_GSBlendMap_AlbedoMap_1", "Texture2D_9_GSBlendMap_Mask3Map_2"]
+[rules.plan]
+Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_8_GSBlendMap_AlbedoMap_1"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
+Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_4_GSBlendMap_AlbedoMap_2"
+Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
+Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_2_GSBlendMap_NormalMap_1"
+Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
+Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_10_GSBlendMap_NormalMap_0"
+Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_3_GSBlendMap_Mask1Map_4"
+
+[[rules]]
+source = "M[AMSN_V][Mb3][Ov_N2_T]"
+twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+source_samplers = ["Texture2D_0_GSBlendMap_NormalMap_1", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_AlbedoMap_1", "Texture2D_3_GSBlendMap_AlbedoMap_2", "Texture2D_4_GSBlendMap_Mask1Map_4", "Texture2D_5_GSBlendMap_NormalMap_2", "Texture2D_6_GSBlendMap_NormalMap_0", "Texture2D_7_GSBlendMap_NormalMap_0", "Texture2D_8_GSBlendMap_AlbedoMap_2"]
+[rules.plan]
+Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_2_GSBlendMap_AlbedoMap_1"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
+Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_3_GSBlendMap_AlbedoMap_2"
+Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
+Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_0_GSBlendMap_NormalMap_1"
+Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
+Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_6_GSBlendMap_NormalMap_0"
+Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_4_GSBlendMap_Mask1Map_4"
+
+[[rules]]
+source = "M[AMSN_V][Mb3][3Mask_T][Ov_N2_T]"
+twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+source_samplers = ["Texture2D_0_Mask3Map_2", "Texture2D_15_NormalMap_3", "Texture2D_1_AlbedoMap_1", "Texture2D_2_AlbedoMap_2", "Texture2D_3_Mask1Map_4", "Texture2D_4_NormalMap_0", "Texture2D_5_NormalMap_1", "Texture2D_6_NormalMap_2", "Texture2D_7_NormalMap_0", "Texture2D_8_AlbedoMap_3"]
+[rules.plan]
+Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_1_AlbedoMap_1"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
+Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_2_AlbedoMap_2"
+Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
+Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_5_NormalMap_1"
+Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_6_NormalMap_2"
+Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_4_NormalMap_0"
+Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_3_Mask1Map_4"
+
+[[rules]]
+source = "M[AMSN_V][Ov_N][Mb4_ColorAdjust][3Mask_ch18]"
+twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+source_samplers = ["Texture2D_0_GSBlendMap_AlbedoMap_3", "Texture2D_10_GSBlendMap_NormalMap_0", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_NormalMap_1", "Texture2D_3_GSBlendMap_Mask1Map_4", "Texture2D_4_GSBlendMap_AlbedoMap_2", "Texture2D_5_GSBlendMap_NormalMap_3", "Texture2D_6_GSBlendMap_NormalMap_3", "Texture2D_7_GSBlendMap_AlbedoMap_3", "Texture2D_8_GSBlendMap_AlbedoMap_1", "Texture2D_9_GSBlendMap_Mask3Map_2"]
+[rules.plan]
+Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_8_GSBlendMap_AlbedoMap_1"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
+Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_4_GSBlendMap_AlbedoMap_2"
+Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
+Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_2_GSBlendMap_NormalMap_1"
+Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
+Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_10_GSBlendMap_NormalMap_0"
+Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_3_GSBlendMap_Mask1Map_4"
+
+[[rules]]
+source = "M[AMSN_V][Mb4_ColorAdjust][3Mask_ch18]"
+twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+source_samplers = ["Texture2D_0_GSBlendMap_AlbedoMap_3", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_NormalMap_1", "Texture2D_3_GSBlendMap_Mask1Map_4", "Texture2D_4_GSBlendMap_AlbedoMap_2", "Texture2D_5_GSBlendMap_NormalMap_3", "Texture2D_6_GSBlendMap_NormalMap_3", "Texture2D_7_GSBlendMap_AlbedoMap_3", "Texture2D_8_GSBlendMap_AlbedoMap_1", "Texture2D_9_GSBlendMap_Mask3Map_2"]
+[rules.plan]
+Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_8_GSBlendMap_AlbedoMap_1"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
+Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_4_GSBlendMap_AlbedoMap_2"
+Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
+Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_2_GSBlendMap_NormalMap_1"
+Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
+Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_2_GSBlendMap_NormalMap_1"
+Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_3_GSBlendMap_Mask1Map_4"
+
+[[rules]]
+source = "M[AMSN_V][Ov_N]"
+twin = "M[AMSN_V][Snow]"
+source_samplers = ["Texture2D_2_NormalMap_0", "Texture2D_7_NormalMap_0", "Texture2D_8_AlbedoMap_0"]
+[rules.plan]
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
+Texture2D_2_AlbedoMap_0 = "Texture2D_8_AlbedoMap_0"
+Texture2D_1_NormalMap_0 = "Texture2D_7_NormalMap_0"
+Texture2D_3_NormalMap_0 = "snow_normal"
+
+[[rules]]
+source = "M[AMSN_V]"
+twin = "M[AMSN_V][Snow]"
+source_samplers = ["Texture2D_1_NormalMap_0", "Texture2D_2_AlbedoMap_0"]
+[rules.plan]
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
+Texture2D_2_AlbedoMap_0 = "Texture2D_2_AlbedoMap_0"
+Texture2D_1_NormalMap_0 = "Texture2D_1_NormalMap_0"
+Texture2D_3_NormalMap_0 = "snow_normal"
+
+[[rules]]
+source = "M[AMSN]"
+twin = "M[AMSN_V][Snow]"
+source_samplers = ["Texture2D_0_AlbedoMap_0", "Texture2D_1_NormalMap_0", "Texture2D_2_MetallicMap_0"]
+[rules.plan]
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
+Texture2D_2_AlbedoMap_0 = "Texture2D_0_AlbedoMap_0"
+Texture2D_1_NormalMap_0 = "Texture2D_1_NormalMap_0"
+Texture2D_3_NormalMap_0 = "snow_normal"
+
+[[rules]]
+source = "M[AMSN][Ov_N]"
+twin = "M[AMSN_V][Snow]"
+source_samplers = ["Texture2D_0_AlbedoMap_0", "Texture2D_1_NormalMap_0", "Texture2D_2_MetallicMap_0", "Texture2D_4_NormalMap_0"]
+[rules.plan]
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
+Texture2D_2_AlbedoMap_0 = "Texture2D_0_AlbedoMap_0"
+Texture2D_1_NormalMap_0 = "Texture2D_1_NormalMap_0"
+Texture2D_3_NormalMap_0 = "snow_normal"
+
+[[rules]]
+source = "M[AMSN_V][Mb2][Ov_N]"
+twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+source_samplers = ["Texture2D_0_GSBlendMap_NormalMap_1", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_AlbedoMap_1", "Texture2D_3_GSBlendMap_AlbedoMap_2", "Texture2D_4_GSBlendMap_Mask1Map_4", "Texture2D_5_GSBlendMap_NormalMap_0"]
+[rules.plan]
+Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_2_GSBlendMap_AlbedoMap_1"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
+Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_3_GSBlendMap_AlbedoMap_2"
+Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
+Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_0_GSBlendMap_NormalMap_1"
+Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
+Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_5_GSBlendMap_NormalMap_0"
+Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_4_GSBlendMap_Mask1Map_4"
+
+[[rules]]
+source = "M[AMSN_V][Mb3]"
+twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+source_samplers = ["Texture2D_0_GSBlendMap_AlbedoMap_3", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_NormalMap_1", "Texture2D_3_GSBlendMap_Mask1Map_4", "Texture2D_4_GSBlendMap_AlbedoMap_2", "Texture2D_6_GSBlendMap_NormalMap_3", "Texture2D_8_GSBlendMap_AlbedoMap_1"]
+[rules.plan]
+Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_8_GSBlendMap_AlbedoMap_1"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
+Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_4_GSBlendMap_AlbedoMap_2"
+Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
+Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_2_GSBlendMap_NormalMap_1"
+Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
+Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_2_GSBlendMap_NormalMap_1"
+Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_3_GSBlendMap_Mask1Map_4"
+
+[[rules]]
+source = "M[AMSN_V][Mb3][Ov_N]"
+twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+source_samplers = ["Texture2D_0_GSBlendMap_NormalMap_1", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_AlbedoMap_1", "Texture2D_3_GSBlendMap_AlbedoMap_2", "Texture2D_4_GSBlendMap_Mask1Map_4", "Texture2D_5_GSBlendMap_NormalMap_0", "Texture2D_6_GSBlendMap_AlbedoMap_2", "Texture2D_7_GSBlendMap_NormalMap_2"]
+[rules.plan]
+Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_2_GSBlendMap_AlbedoMap_1"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
+Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_3_GSBlendMap_AlbedoMap_2"
+Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
+Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_0_GSBlendMap_NormalMap_1"
+Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
+Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_5_GSBlendMap_NormalMap_0"
+Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_4_GSBlendMap_Mask1Map_4"
+
+[[rules]]
+source = "M[AMSN_V][Ov_N][Mb3_ColorAdjust][3Mask_ch18]"
+twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+source_samplers = ["Texture2D_0_GSBlendMap_AlbedoMap_3", "Texture2D_10_GSBlendMap_NormalMap_0", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_NormalMap_1", "Texture2D_3_GSBlendMap_Mask1Map_4", "Texture2D_4_GSBlendMap_AlbedoMap_2", "Texture2D_6_GSBlendMap_NormalMap_3", "Texture2D_8_GSBlendMap_AlbedoMap_1", "Texture2D_9_GSBlendMap_Mask3Map_2"]
+[rules.plan]
+Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_8_GSBlendMap_AlbedoMap_1"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
+Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_4_GSBlendMap_AlbedoMap_2"
+Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
+Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_2_GSBlendMap_NormalMap_1"
+Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
+Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_10_GSBlendMap_NormalMap_0"
+Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_3_GSBlendMap_Mask1Map_4"
+
+[[rules]]
+source = "M[AMSN_V][Mb2]"
+twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+source_samplers = ["Texture2D_0_GSBlendMap__BlendEdge", "Texture2D_13_GSBlendMap_NormalMap_0", "Texture2D_14_GSBlendMap_NormalMap_1", "Texture2D_1_GSBlendMap_AlbedoMap_0", "Texture2D_2_GSBlendMap_AlbedoMap_1"]
+[rules.plan]
+Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_1_GSBlendMap_AlbedoMap_0"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
+Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_2_GSBlendMap_AlbedoMap_1"
+Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
+Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_13_GSBlendMap_NormalMap_0"
+Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_14_GSBlendMap_NormalMap_1"
+Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_13_GSBlendMap_NormalMap_0"
+Texture2D_4_GSBlendMap_Mask1Map_4 = "unbound"
+
+[[texture_retargets]]
+source = "AET000_003"
+target = "AET000_081"
+suffixes = ["a", "n"]  # Limgrave grass ground
+
+[[texture_retargets]]
+source = "AET000_052"
+target = "AET000_081"
+suffixes = ["a", "n"]  # soil
+
+[[texture_retargets]]
+source = "AET000_069"
+target = "AET000_081"
+suffixes = ["a", "n"]  # soil
+
+[[texture_retargets]]
+source = "AET000_078"
+target = "AET000_081"
+suffixes = ["a", "n"]  # lake mud
+
+[[texture_retargets]]
+source = "AET000_065"
+target = "AET000_081"
+suffixes = ["a", "n"]  # dirt
+
+[[texture_retargets]]
+source = "AET000_066"
+target = "AET000_081"
+suffixes = ["a", "n"]  # dirt
+
+[[texture_retargets]]
+source = "AET000_601"
+target = "AET099_986"
+suffixes = ["a"]  # grey LOD macro of the Field_* presets, to flat white
+
+[[texture_retargets]]
+source = "AET009_601"
+target = "AET099_986"
+suffixes = ["a"]  # grey LOD macro of the Field_* presets, to flat white
+
+[[texture_retargets]]
+source = "AET005_070"
+target = "AET005_076"
+suffixes = ["a"]  # short grass
+
+[[texture_retargets]]
+source = "AET005_073"
+target = "AET005_076"
+suffixes = ["a"]  # short grass
+
+[[texture_retargets]]
+source = "AET005_075"
+target = "AET005_076"
+suffixes = ["a"]  # short grass
+
+[[texture_retargets]]
+source = "AET005_095"
+target = "AET005_076"
+suffixes = ["a"]  # short grass
+
+[[texture_retargets]]
+source = "AET210_561"
+target = "AET005_076"
+suffixes = ["a"]  # Chapel and Stormveil baked grass
+
+[[texture_retargets]]
+source = "AET402_070"
+target = "AET005_076"
+suffixes = ["a"]  # colosseum grass
+
+[[texture_retargets]]
+source = "AET005_044"
+target = "AET005_068"
+suffixes = ["a", "n"]  # tall grass
+
+[[texture_retargets]]
+source = "AET005_045"
+target = "AET005_068"
+suffixes = ["a", "n"]  # tall grass
+
+[[texture_retargets]]
+source = "AET005_046"
+target = "AET005_068"
+suffixes = ["a", "n"]  # tall grass
+
+[[texture_retargets]]
+source = "AET005_065"
+target = "AET005_068"
+suffixes = ["a", "n"]  # tall grass
+
+[[texture_retargets]]
+source = "AET005_066"
+target = "AET005_068"
+suffixes = ["a", "n"]  # tall grass
+
+[[texture_retargets]]
+source = "AET210_560"
+target = "AET005_068"
+suffixes = ["a"]  # Chapel and Stormveil tall baked grass
+
+[[texture_retargets]]
+source = "AET402_066"
+target = "AET005_068"
+suffixes = ["a"]  # colosseum tall grass
+
+[[texture_retargets]]
+source = "AET406_077"
+target = "AET005_068"
+suffixes = ["a"]  # arena tall grass
+
+[[texture_retargets]]
+source = "AET005_082"
+target = "AET005_117"
+suffixes = ["a"]  # wilderness
+
+[[texture_retargets]]
+source = "AET005_093"
+target = "AET005_117"
+suffixes = ["a"]  # wilderness
+
+[[texture_retargets]]
+source = "AET005_080"
+target = "AET005_047"
+suffixes = ["a"]  # forest ferns; AET005_047 ships no normal
+
+[[texture_retargets]]
+source = "AET005_087"
+target = "AET005_094"
+suffixes = ["a"]  # forest2; AET005_094 ships no normal
+
+[terrain_retarget]
+shader_include = 'Road_Ground|Cliff_001|Far_AN2|cheap_C|\[Mb[345](?:_Ch2|_N)?\](?:\[[^\]]+\])*\[(3Mask|Far_AN|Far|Ov_N2|Ov_AN|Cover)\]|\[Mb[345](?:_Ch2|_N)?\]\[Far_AN\]'
+shader_exclude = 'Grass|Vesitation|Flower|Edge|Translucen|Snow|Crystal|Emissive|Glow|Skin|magma|Water|Lake|Decal|Sway'
+name_exclude = 'magma|lava|lake|underwater|swamp|river|wet|water|grow|snow|Glow|Emissive|VolcanoGrass|AEGgrass|\.bak|\.mat$'
+keep_textures = ["AET000_081_a", "AET099_986_a", "AET000_080_a", "AET005_076_a", "AET005_068_a"]
