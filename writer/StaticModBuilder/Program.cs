@@ -14,6 +14,7 @@ class Program
         var outputDir = args[1];
         string? dataDir = null;
         string? halloweenDir = null;
+        string? winterDir = null;
         for (int i = 2; i < args.Length; i++)
         {
             if (args[i] == "--data-dir")
@@ -33,6 +34,15 @@ class Program
                     return 1;
                 }
                 halloweenDir = args[++i];
+            }
+            else if (args[i] == "--winter-dir")
+            {
+                if (i + 1 >= args.Length)
+                {
+                    Console.Error.WriteLine("Error: --winter-dir requires a value");
+                    return 1;
+                }
+                winterDir = args[++i];
             }
             else
             {
@@ -62,6 +72,12 @@ class Program
         if (halloweenDir != null && !Directory.Exists(halloweenDir))
         {
             Console.Error.WriteLine($"Error: Halloween directory not found: {halloweenDir}");
+            return 1;
+        }
+
+        if (winterDir != null && !Directory.Exists(winterDir))
+        {
+            Console.Error.WriteLine($"Error: winter directory not found: {winterDir}");
             return 1;
         }
 
@@ -98,6 +114,19 @@ class Program
             Console.WriteLine("Note: --halloween-dir or --data-dir not provided, skipping Halloween icon overlay");
         }
 
+        // Winter static mod (a failure is reported on stderr and removes the folder; exit code stays 0)
+        if (winterDir != null && dataDir != null)
+        {
+            if (Winter.WinterModBuilder.Build(gameDir, winterDir, dataDir))
+            {
+                total += 1;
+            }
+        }
+        else
+        {
+            Console.WriteLine("Note: --winter-dir or --data-dir not provided, skipping winter static mod");
+        }
+
         Console.WriteLine($"StaticModBuilder: {total} patch(es) applied");
         return 0;
     }
@@ -106,13 +135,14 @@ class Program
     {
         Console.WriteLine(@"StaticModBuilder - Build SpeedFog's static mod files from vanilla game data
 
-Usage: StaticModBuilder <game-dir> <output-dir> [--data-dir <dir>] [--halloween-dir <dir>]
+Usage: StaticModBuilder <game-dir> <output-dir> [--data-dir <dir>] [--halloween-dir <dir>] [--winter-dir <dir>]
 
 Arguments:
   <game-dir>       Path to Elden Ring Game directory
   <output-dir>     Output directory for patched files (e.g. data/mods/speedfog/)
   --data-dir       SpeedFog data directory (for title_screen_overlay.png and Halloween icon PNGs)
   --halloween-dir  Output directory for the Halloween icon overlay (e.g. data/mods/speedfog-halloween/), needs --data-dir
+  --winter-dir     Output directory for the winter static mod (e.g. data/mods/speedfog-winter/), needs --data-dir; rebuilt from scratch, removed on failure
 
 Patches applied:
   - Grace animation speedup (chr/c0000.anibnd.dcx)
@@ -120,6 +150,7 @@ Patches applied:
     animation 3001: near-warp marker SpEffect after the hit)
   - Title screen badge (menu/{hi,low}/01_common.sblytbnd.dcx + 02_title.tpf.dcx, needs --data-dir)
   - Halloween icon overlay (menu/{hi,low}/05_dummy.tpf.dcx superset, needs --data-dir and --halloween-dir)
+  - Winter static mod (material/ binders + asset/aet/ TPFs, report next to the folder, needs --data-dir and --winter-dir)
 ");
     }
 }
