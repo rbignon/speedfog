@@ -43,7 +43,7 @@ C# FogMod runtime in sync:
 | Python cluster gen | `tools/generate_clusters.py` (`extract_opensplit_warp_ids`, `classify_fogs`) | When `is_warp_edge_active` would skip a unique warp because of the open side, re-classify it: keep the core side as an entry/exit, drop the non-core side. |
 | C# FogModWrapper | `OpenSplitOverrideLoader` + `OpenSplitInjector` (`writer/FogModWrapper.Core/`, `writer/FogModWrapper/`) | After `AnnotationData.LoadLiteConfig`, before `Graph.Construct`, add the `opensplit` tag to every entrance whose `Name` is in the override list. |
 
-Tag injection happens in `Program.cs` directly after the phantom catalog
+Tag injection happens in `LoadInputsPhase` directly after the phantom catalog
 load, so FogMod's `IsCore`/opensplit handling sees the tag during graph
 construction.
 

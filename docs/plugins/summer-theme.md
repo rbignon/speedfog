@@ -2,7 +2,7 @@
 
 Cosmetic, opt-in text reskin (`[plugin.summer] enabled = true`). Two layers,
 both FMG edits (mirror `RunCompleteInjector`), applied by
-`writer/FogModWrapper/TextTheme.cs` during `ApplyModDirInjectors`:
+`writer/FogModWrapper/TextTheme.cs` during `ModDirPhase`:
 
 1. **Boss epithets** - rewrite boss `NpcName` entries (in `item.msgbnd.dcx` /
    `item_dlc02.msgbnd.dcx`). Tolerant: bosses absent from the catalogue keep

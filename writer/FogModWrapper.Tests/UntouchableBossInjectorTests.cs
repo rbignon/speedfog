@@ -77,7 +77,7 @@ public class UntouchableBossInjectorTests
     {
         // Empty BND4: GetParam("NpcParam") warn-returns null before ever
         // touching the defs dir (RegulationEditorTests' fixture pattern).
-        // Program.cs must see Core == false to skip the MSB repoint phase
+        // ModDirPhase must see Core == false to skip the MSB repoint phase
         // instead of pointing placed parts at a row that was never written
         // (see docs/untouchable-boss.md "Two-phase injector").
         using var data = new TempDir();

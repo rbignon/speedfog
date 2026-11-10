@@ -38,7 +38,7 @@ no map, so the driver reads no MSB on the spawn layer's behalf, and the
 regulation rows of a disabled flavor (greeter row, decorative ambusher
 rows) are not written. Conversely, a flavor whose `NpcParam` row the
 regulation phase could not write (regulation.bin or a paramdef missing) is
-not placed: `Program.cs` hands `HalloweenAmbientPass` the settings with
+not placed: `ModDirPhase` hands `HalloweenAmbientPass` the settings with
 that flavor turned off and logs the skip, the same two-phase guard as the
 Untouchable boss (the parts would otherwise point at a missing row). The same table's `darkness` key drives a
 separate layer, see [halloween-darkness.md](halloween-darkness.md).
@@ -66,7 +66,7 @@ separate layer, see [halloween-darkness.md](halloween-darkness.md).
   (0.01). Inherited slots pointing into the game's own scaling bands
   (vanilla 35000030 carries area-scaling row 7080, ~2x) are cleared on the
   clone so the numbers are exact. Scenery that swings, not a threat
-  (`AmbientSpawnInjector.ApplyAmbusher`, applied in `ApplyRegulation`
+  (`AmbientSpawnInjector.ApplyAmbusher`, applied in `RegulationPhase`
   alongside the greeter row). The parts keep the species' vanilla think
   row (skeleton 35000000, basilisk 41500000): vanilla perception.
 
@@ -84,7 +84,7 @@ feature handled by `GateDecorInjector`.
 ## Driver architecture
 
 `HalloweenAmbientPass.Inject` is the single call site (from
-`ApplyModDirInjectors` in `Program.cs`) for all three features; none of
+`ModDirPhase`) for all three features; none of
 `GateDecorInjector`, `AmbientSpawnInjector` and
 `HalloweenJumpscareInjector` has its own top-level
 `Inject` entry point or reads/writes an MSB on its own. Per map, the
@@ -161,7 +161,7 @@ resolution, and arc math:
 
 ## Why no EMEVD and no scaling
 
-`HalloweenAmbientPass.Inject` runs in `ApplyModDirInjectors`, strictly
+`HalloweenAmbientPass.Inject` runs in `ModDirPhase`, strictly
 after FogMod's own `Write()` phase. This means:
 
 - **No scaling**: FogMod's `EldenScaling` tier pass has already completed

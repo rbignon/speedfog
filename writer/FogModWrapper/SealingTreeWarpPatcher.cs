@@ -1,3 +1,4 @@
+using FogMod;
 using SoulsFormats;
 
 namespace FogModWrapper;
@@ -90,5 +91,30 @@ public static class SealingTreeWarpPatcher
         BitConverter.GetBytes(primaryRegion).CopyTo(instr.ArgData, 8);
         BitConverter.GetBytes(primaryMapPacked).CopyTo(instr.ArgData, 12);
         return true;
+    }
+
+    /// <summary>
+    /// Sealing Tree warp targets from fog.txt: replace alt destinations
+    /// (flag 330) with primary destinations.
+    /// </summary>
+    internal static List<(int altRegion, int primaryRegion, byte[] primaryMapBytes, int primaryMapPacked)>
+        BuildTargets(AnnotationData ann)
+    {
+        return ann.Entrances.Concat(ann.Warps)
+            .SelectMany(e => e.Sides())
+            .Where(s => s.AlternateFlag == 330 && s.AlternateSide?.Warp != null && s.Warp != null)
+            .Select(s => (
+                altRegion: s.AlternateSide.Warp.Region,
+                primaryRegion: s.Warp.Region,
+                primaryMap: s.Warp.Map
+            ))
+            .Where(e => e.altRegion != 0 && e.primaryRegion != 0)
+            .Select(e => (
+                e.altRegion,
+                e.primaryRegion,
+                primaryMapBytes: ErdtreeWarpPatcher.ParseMapBytes(e.primaryMap),
+                primaryMapPacked: ErdtreeWarpPatcher.PackMapId(e.primaryMap)
+            ))
+            .ToList();
     }
 }

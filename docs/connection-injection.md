@@ -9,7 +9,7 @@ How SpeedFog's graph connections are injected into FogMod's Graph to produce a c
 
 FogMod builds a `Graph` object from `fog.txt` with all Areas, Nodes, and Edges but leaves them **unconnected** (option `unconnected=true`). SpeedFog's Python DAG generator decides which exits connect to which entrances, and `ConnectionInjector` wires them into FogMod's Graph before the writer runs.
 
-The pipeline in `Program.cs`:
+The pipeline (phase classes under `writer/FogModWrapper/Pipeline/`):
 
 ```
 graph.json (Python)
@@ -115,7 +115,7 @@ The injector extracts the final boss's `DefeatFlag` from FogMod's Graph for down
 
 **Matching**: When a connection's `flag_id` equals `finalNodeFlag` (from `graph.json`), the injector looks up the destination area's `DefeatFlag` in `graph.Areas`.
 
-**Fallback chain** (in `Program.cs`):
+**Fallback chain** (in `PatchEmevdPhase`):
 1. `graph.json` field `finish_boss_defeat_flag` (from fog.txt via clusters.json) -- preferred
 2. FogMod Graph's `Area.DefeatFlag` extracted during injection
 3. If both exist and differ, `finish_boss_defeat_flag` takes priority (handles cases like `leyndell_erdtree` where the boss is in a linked zone not directly in the cluster)
@@ -154,4 +154,4 @@ Before connecting edges, the injector disconnects any pre-existing links:
 - **Entrance edge** (primary only): Destination exit edge and entrance edge are disconnected if pre-linked
 - **Duplicated entrances**: Skip disconnect since `DuplicateEntrance()` returns fresh unlinked edges
 
-This is necessary because `Graph.Construct()` in crawl mode pre-connects edges tagged as "trivial". `Program.cs` also performs a bulk disconnect of trivial edges before injection (step 4b).
+This is necessary because `Graph.Construct()` in crawl mode pre-connects edges tagged as "trivial". `ConstructGraphPhase` also performs a bulk disconnect of trivial edges before injection (`DisconnectTrivialEdges`).

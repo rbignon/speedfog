@@ -49,7 +49,7 @@ Rather than managing the flags at runtime, SpeedFog rewrites the compiled warp i
 
 **Strategy**: Replace primary destination (m11_00) with alternate destination (m11_05), and eliminate the compiled alt-warp branch.
 
-1. For each EMEVD file (via consolidated scan in Program.cs), find WarpPlayer/CutsceneWarp targeting the primary region
+1. For each EMEVD file (via the consolidated scan in `PatchEmevdPhase`), find WarpPlayer/CutsceneWarp targeting the primary region
 2. Replace map bytes and region with the alternate (m11_05) values
 3. Insert `SetEventFlag(300, ON)` before each patched warp, the engine needs flag 300 ON to load m11_05 tile assets
 4. NOP `SkipIfEventFlag(flag=300, ON)` in patched events, since both branches now target m11_05 and the skip is vestigial
@@ -58,7 +58,7 @@ The SetEventFlag insertion is critical: unlike flag 330, flag 300 controls which
 
 The SkipIfEventFlag NOP is equally critical: without it, flag 300 (set by Event 900 during the Maliketh WarpBonfire transition) causes the compiled fogwarp's skip to jump past zone tracking SetEventFlag instructions injected by ZoneTrackingInjector. Event 900's SetEventFlag(300, ON) is intentionally preserved by AlternateFlagPatcher because FogMod's "Repeat warp" grace menu checks `WarpBonfireFlag(300)` as a display condition.
 
-**Wired in Program.cs** at step 7f2. Entrance discovery:
+**Wired in `PatchEmevdPhase`**. Entrance discovery (`ErdtreeWarpPatcher.BuildWarpData`):
 ```csharp
 // Find the entrance where BSide targets leyndell_erdtree with an AlternateSide
 var erdtreeEntrance = ann.Entrances.Concat(ann.Warps).FirstOrDefault(e =>
@@ -75,13 +75,13 @@ var erdtreeEntrance = ann.Entrances.Concat(ann.Warps).FirstOrDefault(e =>
 
 **Strategy**: Replace alternate destination (m61_44_45_10) with primary destination (m61_44_45_00). This is the reverse of ErdtreeWarpPatcher.
 
-1. For each EMEVD file (via consolidated scan in Program.cs), find WarpPlayer/CutsceneWarp targeting the alternate region
+1. For each EMEVD file (via the consolidated scan in `PatchEmevdPhase`), find WarpPlayer/CutsceneWarp targeting the alternate region
 2. Replace map bytes and region with the primary (m61_44_45_00) values
 3. No SetEventFlag insertion -- flag 330 only controls the fogwarp destination, not map tile loading. We want it OFF (or irrelevant).
 
 There are 2 entrance pairs with flag 330 (front + back of Romina's arena). Both are patched if connected.
 
-**Wired in Program.cs** at step 7f3. Entrance discovery:
+**Wired in `PatchEmevdPhase`**. Entrance discovery (`SealingTreeWarpPatcher.BuildTargets`):
 ```csharp
 // Find all sides with AlternateFlag 330 (Sealing Tree burned)
 var sealingTreeEntrances = ann.Entrances.Concat(ann.Warps)
@@ -126,12 +126,12 @@ The zone tracking skip caused by flag 300 is handled by ErdtreeWarpPatcher, whic
 
 ## Pipeline Order
 
-All three patchers run after FogMod writes its EMEVD files. Program.cs performs a single consolidated scan over all EMEVD files, applying ErdtreeWarpPatcher.PatchEmevd(), SealingTreeWarpPatcher.PatchEmevd(), and ZoneTrackingInjector.PatchEmevdFile() to each file in one pass (one Read + one Write per file). AlternateFlagPatcher operates on common.emevd in memory.
+All three patchers run after FogMod writes its EMEVD files. `PatchEmevdPhase` performs a single consolidated scan over all EMEVD files, applying ErdtreeWarpPatcher.PatchEmevd(), SealingTreeWarpPatcher.PatchEmevd(), and ZoneTrackingInjector.PatchEmevdFile() to each file in one pass (one Read + one Write per file). AlternateFlagPatcher operates on common.emevd in memory.
 
 ```
-7.   FogMod GameDataWriterE.Write()    — generates EMEVD with compiled fogwarps
-     Consolidated EMEVD scan           — single pass applies all three patchers per file
-     common.emevd injectors            — includes AlternateFlagPatcher (neutralize Event 915, clear flags 300/330)
+WriteFogModPhase    FogMod GameDataWriterE.Write(): generates EMEVD with compiled fogwarps
+PatchEmevdPhase     consolidated EMEVD scan: single pass applies all three patchers per file
+CommonEmevdPhase    common.emevd injectors, including AlternateFlagPatcher (neutralize Event 915, clear flags 300/330)
 ```
 
 ## Adding New AlternateFlag Patchers
@@ -142,7 +142,7 @@ If another `AlternateOf` flag causes issues in the future:
 2. Determine the direction: does SpeedFog need the primary or alternate variant?
 3. Determine if SetEventFlag is needed: does the flag control map tile loading (like 300) or only fogwarp branching (like 330)?
 4. Create a patcher following the ErdtreeWarpPatcher/SealingTreeWarpPatcher pattern
-5. Wire it in Program.cs between steps 7f2 and 7g
+5. Wire it in `PatchEmevdPhase`, next to the Erdtree and Sealing Tree patchers (per-map loop and common.emevd block)
 
 ## References
 

@@ -177,7 +177,7 @@ different mechanisms:
 | Consumer | Code | What it does |
 |----------|------|---------------|
 | Python cluster-gen | `tools/generate_clusters.py` (`load_map_splits`, `inject_map_splits`) | Adds an `AreaData` per `[[zones]]` entry and a `FogData` per `[[fogs]]` entry, tagged `["unique"]`, to the parsed fog.txt structures before cluster flood-fill. |
-| C# FogModWrapper | `MapSplitsLoader` (`writer/FogModWrapper.Core/`) + `MapSplitsInjector` (`writer/FogModWrapper/`) | Adds an `AnnotationData.Area` and an **untagged**, ordinary two-sided `AnnotationData.Entrance` (both `ASide` and `BSide` populated, `Tags = null`) directly into FogMod's `AnnotationData`, before `Graph.Construct` runs (`Program.cs`, right after `OpenSplitInjector.Apply`). |
+| C# FogModWrapper | `MapSplitsLoader` (`writer/FogModWrapper.Core/`) + `MapSplitsInjector` (`writer/FogModWrapper/`) | Adds an `AnnotationData.Area` and an **untagged**, ordinary two-sided `AnnotationData.Entrance` (both `ASide` and `BSide` populated, `Tags = null`) directly into FogMod's `AnnotationData`, before `Graph.Construct` runs (`LoadInputsPhase`, right after `OpenSplitInjector.Apply`). |
 
 The asymmetry is deliberate and matters:
 
@@ -217,7 +217,7 @@ vanilla events carrying `Fog:`/`Sfx:` template annotations in `fogevents.txt`
 (`GameDataWriterE.cs` ~L3211-3234). A synthetic `MakeFrom` gate has no vanilla
 event, so FogMod leaves it interactable but invisible.
 
-`MapSplitsInjector.InjectShowSfx` (called from `Program.cs`'s `PatchEmevd`
+`MapSplitsInjector.InjectShowSfx` (called from `PatchEmevdPhase`'s
 per-map loop) closes the gap: for each map-splits fog it appends
 `InitializeCommonEvent(0, showsfx, <gate entity>, 5)` to the owning map's
 Event 0, mirroring FogRando's own hardcoded pattern. Sfx 5 is the standard
@@ -291,7 +291,7 @@ single tier and no EnemyArea partition is needed.
   not the DAG-assigned target tier. The tier that actually differentiates the
   two halves in play comes from `graph.json`'s `area_tiers` (computed
   per-zone by the Python DAG placement), applied afterwards via
-  `ConnectionInjector.ApplyAreaTiers(ctx.Graph, ...)` (`Program.cs`, after
+  `ConnectionInjector.ApplyAreaTiers(ctx.Graph, ...)` (`InjectConnectionsPhase`, after
   `Graph.Construct`) — this overwrites `Graph.AreaTiers[zone]` for any zone
   name present in `graph.json`, including the new split zone once it exists
   as its own cluster.
@@ -315,7 +315,7 @@ single tier and no EnemyArea partition is needed.
   `Feature.AllowUnlinked` is false (`GameDataWriterE.cs` ~L2126-2140); when
   true it just skips scaling for that entity instead. `AllowUnlinked` is set
   from `opt["crawl"] || opt["bossrush"] || opt["endless"]` (`Randomizer.cs:19`),
-  and SpeedFog always sets `crawl = true` (`Program.cs`,
+  and SpeedFog always sets `crawl = true` (`ConstructGraphPhase`,
   `BuildRandomizerOptions`), so this path is always the tolerant one for
   SpeedFog.
 

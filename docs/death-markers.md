@@ -136,7 +136,7 @@ the connection direction:
   facing (the ASide player stands opposite the ASide warp region). If BSide.Area,
   at 0 degrees (facing direction).
 
-`BuildGateSideLookup()` in Program.cs builds a mapping from gate FullName to
+`GateGeometry.BuildGateSideLookup()` builds a mapping from gate FullName to
 (ASideArea, BSideArea) using `ann.Entrances` and `ann.Warps` from fog.txt. This
 is passed to DeathMarkerInjector, which calls `GateGeometry.ResolveIsASide()`
 per gate (the gate-parsing/side/arc helpers were extracted from
@@ -186,6 +186,6 @@ On player death:            broadcast to all mods     Apply thresholds (1/3/5)
 
 ## Pipeline Position
 
-Called from `Program.cs` step 7h2, after `ChapelGraceInjector` (7h) and before
-`RebirthInjector` (7i). Must run after FogMod's `Write()` since it reads
+Called from `ModDirPhase`, after the text themes and before the Halloween
+ambient pass and `RebirthInjector`. Must run after FogMod's `Write()` since it reads
 FogMod-generated MSBs and EMEVDs.

@@ -65,7 +65,7 @@ their slots carry the `tarnished` tag, which `AnnotationData` turns into
 `norandom` (`RandomizerCommon/Item/AnnotationData.cs`, "tarnished" check).
 A race seed would therefore offer pack owners a strong weapon for 1000
 runes, and armor, that other players never see. When `tarnished_pack` is
-`false`, `ShopInjector.RemovePackGatedRows` (Phase 7, right after
+`false`, `ShopInjector.RemovePackGatedRows` (`RegulationPhase`, right after
 `ShopInjector.ApplyTo`) removes every row released by flag 6953, so a row a
 future patch adds is covered too. When it is `true`, the rows stay: the
 seed targets pack owners (with the item randomizer on, it fills those slots
@@ -185,8 +185,8 @@ shuffled sequences and the resolved skin are also logged to the spoiler
   appending the new one, and the entry is re-wrapped to its original width.
   When `menu_dlc02.msgbnd.dcx` exists only in the merge dir (the Item Randomizer
   wrote it), it is copied into the FogMod output first (mods/fogmod wins
-  the load order). Runs in Phase 8, after `CopyLocalizedFmgs`.
-- Ordering constraint in `Program.cs` (Phase 7, batched regulation.bin
+  the load order). Runs in `ModDirPhase`, after `WriteFogModPhase`'s `CopyLocalizedFmgs`.
+- Ordering constraint in `RegulationPhase` (batched regulation.bin
   edits): `ClassLoadoutInjector.ApplyTo` runs BEFORE
   `WeaponUpgradeInjector.ApplyTo`. This is a deliberate OVERLAP, not
   disjoint-fields co-residency: ClassLoadoutInjector writes the raw weapon
@@ -301,7 +301,7 @@ shuffled sequences and the resolved skin are also logged to the spoiler
 | `writer/FogModWrapper/ClassLoadoutInjector.cs` | Writes weapons/shields + armor onto CharaInitParam per class group |
 | `writer/FogModWrapper/StartingItemInjector.cs` | Regalia delivery + attire-announced flag 69560 + one-shot default-skin flag |
 | `writer/FogModWrapper/ClassLoadoutTextPatcher.cs` | Class-selection equipment text (GR_LineHelp) updated to the forced gear, per language |
-| `writer/FogModWrapper/Program.cs` | Phase 7 ordering: `ClassLoadoutInjector` before `WeaponUpgradeInjector`; `RemovePackGatedRows` unless `tarnished_pack` |
+| `writer/FogModWrapper/Pipeline/RegulationPhase.cs` | Ordering: `ClassLoadoutInjector` before `WeaponUpgradeInjector`; `RemovePackGatedRows` unless `tarnished_pack` |
 | `writer/FogModWrapper/ShopInjector.cs` | `RemovePackGatedRows`: drops the shop rows released by flag 6953 |
 | `writer/FogModWrapper.Tests/ShopInjectorTests.cs` | Pack-gated row removal |
 | `writer/FogModWrapper.Tests/ClassLoadoutInjectorTests.cs` | Slot writes, modulo wrap, armor fields, untouched other fields |

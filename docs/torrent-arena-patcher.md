@@ -50,7 +50,7 @@ with `map` and `collisions`, then bump the expected count in the
 
 ## Pipeline
 
-The patcher runs in Phase 8 (`ApplyModDirInjectors` in `Program.cs`), after
+The patcher runs in `ModDirPhase`, after
 `VanillaWarpRemover`, so it sees the MSBs that FogMod has already modified for
 fog gates. For each target map:
 

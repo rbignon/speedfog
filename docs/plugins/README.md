@@ -17,7 +17,7 @@ enabled = true
 2. `output.py` serialises it verbatim into `graph.json` under `plugins`
    (graph.json v4.4+).
 3. C# `GraphData.Plugins` + `IsPluginEnabled(name)` gate each feature in
-   `FogModWrapper/Program.cs`.
+   the pipeline phases (`writer/FogModWrapper/Pipeline/`).
 
 ## Deliberately NOT built (yet)
 

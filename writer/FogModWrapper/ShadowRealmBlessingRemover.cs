@@ -8,7 +8,7 @@ namespace FogModWrapper;
 ///
 /// "Shadow Realm Blessing" (FMG EventTextForTalk_dlc01, message 20010001) is the
 /// top-level grace menu option that opens the Scadutree Blessing / Revered Spirit
-/// Ash Blessing submenu. SpeedFog enables DLC areas (Program.cs: opt["dlc"]=true)
+/// Ash Blessing submenu. SpeedFog enables DLC areas (ConstructGraphPhase: opt["dlc"]=true)
 /// so the entry shows up, but SpeedFog scales enemies via FogMod tiers and never
 /// uses Scadutree blessing, making the option useless and confusing.
 ///

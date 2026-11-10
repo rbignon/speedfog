@@ -63,7 +63,7 @@ re-asserted by EMEVD timing (plus a 1-2 frame flicker at load). Worse, the
 single 6000 row gets inverted: vanilla never saves there, but the pulse
 makes it saveable for 10 frames per load.
 
-`PlayRegionPatcher.ApplyTo` (Phase 7, `ApplyRegulation`) opens the vanilla
+`PlayRegionPatcher.ApplyTo` (`RegulationPhase`) opens the vanilla
 regulation from `--game-dir`, collects the rows whose vanilla value is 6000
 or 6001, and writes those values back into the modded regulation. Rows gated
 by boss defeat flags keep FogMod's stock makestable behavior. The makestable

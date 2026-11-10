@@ -396,7 +396,7 @@ public class MapSplitsInjectorTests
         Assert.Equal(1, n);
         var ins = Assert.Single(emevd.Events[0].Instructions);
         Assert.Equal(990002, BitConverter.ToInt32(ins.ArgData, 8));
-        // The Program.cs sanity counter must agree with the skip predicate.
+        // The PatchEmevdPhase sanity counter must agree with the skip predicate.
         Assert.Equal(1, MapSplitsInjector.CountShowSfxGates(splits));
     }
 

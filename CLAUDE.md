@@ -110,7 +110,8 @@ speedfog/
 │   │   ├── MapSplitsLoader.cs  # Load data/map_splits.toml (synthetic zones/fogs)
 │   │   └── PhaseTimer.cs    # Per-phase timing (standard timer, no ad-hoc Stopwatches)
 │   ├── FogModWrapper/       # Fog gate writer - thin wrapper calling FogMod.dll
-│   │   ├── Program.cs       # CLI entry point
+│   │   ├── Program.cs       # CLI entry point + ordered list of pipeline phases
+│   │   ├── Pipeline/        # Context (shared phase state) + one class per phase (LoadInputs ... ModDir)
 │   │   ├── ConnectionInjector.cs  # Inject connections into FogMod Graph
 │   │   ├── HelperAreaResolver.cs  # Scaling areas for enemy-randomizer helper clones (group pass + helper_models model pass) + vanilla misfiled arena parts
 │   │   ├── StartingItemInjector.cs  # Inject starting item events into EMEVD
@@ -308,7 +309,8 @@ speedfog/
 **FogModWrapper** (uses FogMod.dll directly):
 | Class | Purpose |
 |-------|---------|
-| `Program.cs` | CLI entry, loads options, calls FogMod's GameDataWriterE |
+| `Program.cs` | CLI entry + ordered phase list (`timer.Phase` labels) |
+| `Pipeline/` | `Context` (state shared by the phases, each field filled by one phase) and one class per phase: `LoadInputsPhase`, `ConstructGraphPhase` (FogMod options), `InjectConnectionsPhase`, `WriteFogModPhase` (FogMod's GameDataWriterE), `PatchEmevdPhase`, `CommonEmevdPhase`, `RegulationPhase`, `ModDirPhase` |
 | `GraphLoader` | Parses graph.json v4 format from Python |
 | `PhantomCatalogLoader` | Loads and validates `data/phantom_skins.toml` |
 | `OpenSplitOverrideLoader` | Reads `[warps."<id>"] opensplit = true` from `data/zone_metadata.toml` |
@@ -431,7 +433,7 @@ Key options set by FogModWrapper for SpeedFog:
 | `req_backportal` | true | Enable return warps from boss rooms |
 | `scale` | true | Apply enemy scaling per tier |
 
-ConfigVars in `Program.cs` set all key items to TRUE (given at start).
+ConfigVars in `data/game_tweaks.toml` (loaded by `LoadInputsPhase`) set all key items to TRUE (given at start).
 
 ## FogRando Reference Points
 

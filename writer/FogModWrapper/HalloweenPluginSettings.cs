@@ -9,7 +9,7 @@ namespace FogModWrapper;
 /// abort the build. `greeters` and `ambushes` take a boolean or a species
 /// name (true = the default species). The text theme (TextTheme) only reads `enabled`; the
 /// ambient injectors, the jumpscare layer and the darkness gate in
-/// Program.cs read the parameters here.
+/// the pipeline phases read the parameters here.
 /// </summary>
 public static class HalloweenPluginSettings
 {

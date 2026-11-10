@@ -32,7 +32,7 @@ design spec's Rejected section before retrying.
 
 Both text themes can be enabled at once; they apply in order (summer then
 halloween) and the later one overwrites colliding entries, with a warning
-logged by `Program.cs`.
+logged by `ModDirPhase`.
 
 The Halloween namespace also covers non-text layers: ambient dungeon
 spawns and gate decorations (see

@@ -17,13 +17,11 @@ FogRando has a `CustomBonfires` system for this (fog.txt chapel entry, GameDataW
 
 ## Call Site
 
-In `Program.cs`, the injector runs at step 7h, gated by `graphData.ChapelGrace`:
+In `RegulationPhase` (it shares the regulation.bin batch), the injector runs gated by `GraphData.ChapelGrace`:
 
 ```csharp
-if (graphData.ChapelGrace)
-{
-    ChapelGraceInjector.Inject(modDir, config.GameDir, events);
-}
+if (ctx.GraphData.ChapelGrace)
+    ChapelGraceInjector.Inject(ctx.ModDir, ctx.Config.GameDir, ctx.Events, reg);
 ```
 
 ## Four Subsystems
@@ -103,7 +101,7 @@ Registered in Event 0 via `InitializeEvent(slot=0, eventId=755864000)`.
 
 `WarpPlayer` (bank 2003, id 14) is the only way to relocate the player on first load. The one-shot event fires once after the map loads, teleports the player to the grace position, then sets flag 1040299002 so it never fires again. On subsequent loads, `SetPlayerRespawnPoint` (patched in Event 10010020) handles respawning at the grace normally.
 
-**Intro cutscene removal**: the same Event 10010020 plays the new-game intro cutscene (instruction 7, `PlayCutsceneToPlayerWithWeatherAndTime(10000040, Skippable, 10000, ...)`, bank 2002 id 10). `IntroCutscenePatcher` (called from the "Patch EMEVD" loop in `Program.cs`, always on, independent of `chapel_grace`) replaces it with `SetCurrentTime(23, 45, 0)` followed by `ChangeWeather(Default, 3600, true)`, matched on the cutscene ID so nothing else is touched (later Parameter entries are shifted past the inserted instruction), and warns when the instruction, the event, or the chapel EMEVD is missing. The engine still places the new character at the vanilla spawn region, and with `chapel_grace` on the one-shot warp above then moves them to the grace. The `SetCurrentTime` keeps the clock the cutscene call set through its change-time argument (23:45). The call's change-weather argument was off, so `ChangeWeather(Default)` is a chosen explicit start state, not a vanilla value; its lifespan follows the Stranded Graveyard exit (m18 event 18000021). A plain NOP was tried first (2026-09-04) and left the new-game clock to the engine default, judged unsatisfying in-game. Verified in the generated EMEVD (seed dump: both instructions in place, the respawn patch still lands); the 23:45 clock and Default weather at spawn still need an in-game pass. The weather plugin's loop overrides both within 10 s when enabled. Vanilla note: the map's Event 50 also resets the clock to 23:45 on every later chapel load (flag 100 ON, flag 102 OFF); that behaviour is left untouched.
+**Intro cutscene removal**: the same Event 10010020 plays the new-game intro cutscene (instruction 7, `PlayCutsceneToPlayerWithWeatherAndTime(10000040, Skippable, 10000, ...)`, bank 2002 id 10). `IntroCutscenePatcher` (called from the per-map loop of `PatchEmevdPhase`, always on, independent of `chapel_grace`) replaces it with `SetCurrentTime(23, 45, 0)` followed by `ChangeWeather(Default, 3600, true)`, matched on the cutscene ID so nothing else is touched (later Parameter entries are shifted past the inserted instruction), and warns when the instruction, the event, or the chapel EMEVD is missing. The engine still places the new character at the vanilla spawn region, and with `chapel_grace` on the one-shot warp above then moves them to the grace. The `SetCurrentTime` keeps the clock the cutscene call set through its change-time argument (23:45). The call's change-weather argument was off, so `ChangeWeather(Default)` is a chosen explicit start state, not a vanilla value; its lifespan follows the Stranded Graveyard exit (m18 event 18000021). A plain NOP was tried first (2026-09-04) and left the new-game clock to the engine default, judged unsatisfying in-game. Verified in the generated EMEVD (seed dump: both instructions in place, the respawn patch still lands); the 23:45 clock and Default weather at spawn still need an in-game pass. The weather plugin's loop overrides both within 10 s when enabled. Vanilla note: the map's Event 50 also resets the clock to 23:45 on every later chapel load (flag 100 ON, flag 102 OFF); that behaviour is left untouched.
 
 ## Filesystem Handling
 
@@ -128,7 +126,7 @@ The same pattern applies to EMEVD files in `event/` and talk scripts (handled by
 | File | Role |
 |------|------|
 | `writer/FogModWrapper/ChapelGraceInjector.cs` | All injection logic |
-| `writer/FogModWrapper/Program.cs` | Call site (step 7h) |
+| `writer/FogModWrapper/Pipeline/RegulationPhase.cs` | Call site |
 | `writer/FogModWrapper.Core/Models/GraphData.cs` | `ChapelGrace` bool field |
 | `reference/fogrando-src/GameDataWriterE.cs` | FogRando custom bonfire logic (L4693-4818) |
 | `docs/event-flags.md` | Flag ranges (1040299002 one-shot, 755864000 event ID) |

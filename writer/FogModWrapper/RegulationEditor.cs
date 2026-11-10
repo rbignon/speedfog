@@ -28,7 +28,7 @@ namespace FogModWrapper;
 /// injector in the same Open/Save block must either keep its field writes
 /// disjoint from the existing consumers, or, if it deliberately overlaps
 /// like ClassLoadoutInjector and WeaponUpgradeInjector do, document and
-/// enforce the required ordering the same way (see Program.cs Phase 7).
+/// enforce the required ordering the same way (see RegulationPhase).
 /// Silent disjointness is not a rule to lean on when overlap is the point.
 /// </remarks>
 public sealed class RegulationEditor

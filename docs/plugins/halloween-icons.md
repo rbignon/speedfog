@@ -87,8 +87,8 @@ touched; a seed with the plugin disabled ships nothing extra at all.
    runs per seed): `ApplyTo(RegulationEditor reg)` reads
    `EquipParamGoods`, and for rows 10010 and 10020 sets `iconId` to
    `SpeedFogIds.HalloweenGoldenSeedIcon` (60383) /
-   `HalloweenSacredTearIcon` (60384). Called from `Program.cs`'s
-   `ApplyRegulation`, inside the same `IsPluginEnabled("halloween")`
+   `HalloweenSacredTearIcon` (60384). Called from
+   `RegulationPhase`, inside the same `IsPluginEnabled("halloween")`
    block as `AmbientSpawnInjector.ApplyHostileGreeterRow`. Prints
    `Halloween icons: repointed N item icon id(s)`; a missing row logs a
    warning and is skipped rather than failing the build.
@@ -181,7 +181,7 @@ fallbacks below applies.
 ### Revert path
 
 If the in-game check fails, remove the `HalloweenIconInjector.ApplyTo(reg)`
-call from `Program.cs`'s `ApplyRegulation` (or simply disable the plugin
+call from `RegulationPhase` (or simply disable the plugin
 in config, `[plugin.halloween] enabled = false`): `iconId` stays vanilla,
 and with the plugin off packaging never ships the overlay either. No
 other part of the Halloween theme depends on this feature.

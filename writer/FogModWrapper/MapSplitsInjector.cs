@@ -117,7 +117,7 @@ public static class MapSplitsInjector
         !GreyFogModels.Contains(fog.MakeFrom.Split(' ')[0]);
 
     /// <summary>
-    /// Number of map-splits gates that need a showsfx init. Program.cs checks
+    /// Number of map-splits gates that need a showsfx init. PatchEmevdPhase checks
     /// the injected total against this.
     /// </summary>
     public static int CountShowSfxGates(MapSplits splits) =>

@@ -1,4 +1,5 @@
 using System.Numerics;
+using FogMod;
 
 namespace FogModWrapper;
 
@@ -150,5 +151,32 @@ internal static class GateGeometry
         for (int i = 0; i < count; i++)
             yaws[i] = (float)(rng.NextDouble() * 360.0);
         return yaws;
+    }
+
+    /// <summary>
+    /// Build a lookup mapping gate FullName to (ASideArea, BSideArea) from fog.txt entrances.
+    /// FullName = "{entrance.Area}_{entrance.Name}" (e.g., "m10_00_00_00_AEG099_002_9000").
+    /// ASide = the zone in the gate's facing direction; BSide = the opposite zone.
+    /// Used by DeathMarkerInjector to place bloodstains on the correct side of fog gates,
+    /// and by the Halloween ambient pass to anchor its decorations and spawns.
+    /// </summary>
+    internal static Dictionary<string, (string ASideArea, string BSideArea)> BuildGateSideLookup(
+        AnnotationData ann)
+    {
+        var lookup = new Dictionary<string, (string, string)>();
+
+        foreach (var e in ann.Entrances.Concat(ann.Warps))
+        {
+            if (e.ASide?.Area == null || e.BSide?.Area == null)
+                continue;
+
+            // LoadLiteConfig does not set FullName (it's [YamlIgnore]),
+            // so we construct it: "{map_area}_{gate_name}"
+            var fullName = $"{e.Area}_{e.Name}";
+            lookup[fullName] = (e.ASide.Area, e.BSide.Area);
+        }
+
+        Console.WriteLine($"Gate side lookup: {lookup.Count} entries from fog.txt");
+        return lookup;
     }
 }

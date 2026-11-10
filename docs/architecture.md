@@ -80,7 +80,8 @@ Thin wrapper around FogMod.dll that injects our connections and post-processes g
 
 | Class | Purpose |
 |-------|---------|
-| `Program.cs` | CLI entry, configure FogMod options, orchestrate pipeline |
+| `Program.cs` | CLI entry, runs the pipeline phases in order |
+| `Pipeline/` | `Context` (state shared by the phases) and one class per phase |
 | `ConnectionInjector.cs` | Inject connections into FogMod's Graph, extract boss defeat flag |
 | `StartingItemInjector.cs` | Give starting items + care package via EMEVD |
 | `StartingResourcesInjector.cs` | Give runes, golden seeds, sacred tears, larval tears |
@@ -172,41 +173,19 @@ graph.json ──► FogModWrapper ──► FogMod.dll ──► mods/fogmod/
               (--merge-dir mods/itemrando/)
 ```
 
-FogModWrapper pipeline:
-1. Load graph.json via GraphLoader
-2. Configure FogMod options (crawl mode, scaling, DLC, dungeon types)
-3. Load FogRando data files (fog.txt, fogevents.txt, foglocations2.txt)
-4. Build FogMod's Graph structure (unconnected nodes/edges)
-5. Disconnect trivial edges pre-connected by Graph.Construct() (SpeedFog needs these)
-6. Exclude evergaol zones from stake processing (no StakeAsset in fog.txt)
-7. Inject our connections via ConnectionInjector, extract boss defeat flag
-8. Apply area tiers for enemy scaling
-9. Call `GameDataWriterE.Write()` with MergedMods (game dir + item rando output)
+FogModWrapper pipeline: `Program.cs` runs the phase classes of
+`writer/FogModWrapper/Pipeline/` in order, sharing state through `Context`
+(each field filled by one phase, read by later ones). Each phase file keeps
+the ordering constraints as comments next to its calls.
 
-Post-processing (after FogMod writes, step numbers match Program.cs):
-- **7a2** Build region-to-flags mapping for zone tracking
-- **7a3** Copy non-English FMG files from Item Randomizer output
-- **EMEVD scan** Single pass over all map EMEVD files applies three patchers per file:
-  - ZoneTrackingInjector: insert SetEventFlag before each fog gate WarpPlayer
-  - ErdtreeWarpPatcher: patch Erdtree fogwarps to target m11_05 (flag 300)
-  - SealingTreeWarpPatcher: patch Sealing Tree fogwarps (flag 330)
-- **common.emevd** Loaded once, modified in-memory by 6 injectors, written once:
-  - **7b** StartingItemInjector: give goods + care package items
-  - **7c** StartingResourcesInjector: runes, seeds, tears, larval tears
-  - **7d** RoundtableUnlockInjector: set flag 1040292051 to bypass finger pickup
-  - **7f** ZoneTrackingInjector: boss death monitor event
-  - **7g** RunCompleteInjector: golden banner + jingle on final boss defeat
-  - **7j2** AlternateFlagPatcher: neutralize Events 900/915, clear flags 300/330
-- **7e** ShopInjector: add smithing stones + Sentry's Torch to Twin Maiden Husks
-- **7g-fmg** RunCompleteInjector: "RUN COMPLETE" text in FMG files (all languages)
-- **7h** ChapelGraceInjector: Site of Grace + WarpPlayer for initial spawn
-- **7h2** DeathMarkerInjector: bloodstain visuals at fog gates
-- **7i** RebirthInjector: rebirth option at graces via ESD editing (ConsistentID 73)
-- **7j3** StartupFlagInjector: set event flags at startup to force gates open (entries in `data/game_tweaks.toml`); see `docs/startup-flag-injection.md`
-- **EMEVD scan (common_func)** HeavyDoorMessagePatcher: NOP "heavy door" popup (text 4200)
-- **EMEVD scan (m10_01_00_00)** IntroCutscenePatcher: replace the new-game intro cutscene (10000040) in event 10010020 by SetCurrentTime(23:45) + ChangeWeather(Default); see `docs/chapel-grace.md`
-- **7k** VanillaWarpRemover: delete vanilla warp MSB assets that conflict with fog gates
-- **7l** StakeRemover: remove vanilla stakes outside the DAG
+1. **LoadInputsPhase**: graph.json (GraphLoader), fog.txt (plus its CustomBonfires), `data/game_tweaks.toml` (FogMod ConfigVars and target lists), foglocations2.txt, EMEVD definitions, fogevents.txt, phantom skins catalog; opensplit tags (OpenSplitInjector) and map-splits zones/fogs (MapSplitsInjector) injected into the annotation data before the graph exists
+2. **ConstructGraphPhase**: configure FogMod options (crawl mode, scaling, DLC, dungeon types), build FogMod's Graph, disconnect trivial edges pre-connected by Graph.Construct() (SpeedFog needs these), exclude evergaol zones from stake processing (no StakeAsset in fog.txt)
+3. **InjectConnectionsPhase**: inject our connections via ConnectionInjector (extracts the boss defeat flag), apply area tiers for enemy scaling
+4. **WriteFogModPhase**: tag vanilla stakes for removal (StakeRemover), resolve helper scaling areas (HelperAreaResolver), bypass the tier 21 clamp (ExcludeMode), call `GameDataWriterE.Write()` with MergedMods (game dir + item rando output), build the region-to-flags mapping for zone tracking, plan the Halloween jumpscares, copy non-English FMG files from the Item Randomizer output
+5. **PatchEmevdPhase**: single pass over all map EMEVD files: ZoneTrackingInjector (SetEventFlag before each fog gate WarpPlayer), BossTriggerInjector (TrapFlag before boss arena warps), ErdtreeWarpPatcher (flag 300), SealingTreeWarpPatcher (flag 330), HeavyDoorMessagePatcher (common_func, NOP the "heavy door" popup), IntroCutscenePatcher (m10_01_00_00, see `docs/chapel-grace.md`), map-splits showsfx inits. common.emevd is read once and gets the same warp patches in memory
+6. **CommonEmevdPhase**: common.emevd injectors, then a single write: StartingItemInjector (goods + care package), StartingResourcesInjector (seeds, tears, larval tears, keys), RoundtableUnlockInjector (flag 1040292051), ZoneTrackingInjector boss death monitor, RunCompleteInjector banner event, weather plugin event, Halloween darkness event, AlternateFlagPatcher (neutralize Events 900/915, clear flags 300/330)
+7. **RegulationPhase**: every regulation.bin edit behind one decrypt/encrypt cycle: ShopInjector, ClassLoadoutInjector, WeaponUpgradeInjector, StartingRuneInjector, UniqueItemNeutralizer, ChapelGraceInjector, PhantomCatalogInjector, UntouchableBossInjector params, Halloween NpcParam rows and icons, PlayRegionPatcher, ScaduBlessingNeutralizer
+8. **ModDirPhase**: remaining mod-directory injectors (FMG, MSB, ESD, per-map EMEVD): VanillaMapPinner, RunCompleteInjector FMG entries (all languages), ClassLoadoutTextPatcher, BossNameInjector, text themes, DeathMarkerInjector, Halloween ambient pass, UntouchableBossInjector MSB repoint, RebirthInjector (ESD, ConsistentID 73), ShadowRealmBlessingRemover, StartupFlagInjector (see `docs/startup-flag-injection.md`), EventDisabler, Halloween darkness repoint, VanillaWarpRemover, TorrentArenaPatcher, SpiritspringRemover
 
 ### 5. Static Mod Generation (StaticModBuilder, at setup time)
 
@@ -433,7 +412,7 @@ SpeedFog gives players a randomized starting build so they can be combat-ready f
 
 FogModWrapper configures FogMod for SpeedFog:
 
-**Hard-coded in Program.cs:**
+**Hard-coded in `Pipeline/ConstructGraphPhase.cs`:**
 
 | Option | Value | Purpose |
 |--------|-------|---------|

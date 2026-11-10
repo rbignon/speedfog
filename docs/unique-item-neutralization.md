@@ -34,7 +34,7 @@ Items verified NOT to collide (2026-10-04, vanilla 1.17 regulation):
 
 ## Mechanism
 
-`UniqueItemNeutralizer` (FogModWrapper, Program.cs Phase 7, inside the shared
+`UniqueItemNeutralizer` (FogModWrapper, `RegulationPhase`, inside the shared
 `RegulationEditor` batch):
 
 1. `CollectGrantedGoods` counts every good granted at start for this seed:

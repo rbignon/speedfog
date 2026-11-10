@@ -63,7 +63,7 @@ Removing the **RetryPoint event** is sufficient to disable the stake. The asset 
 ## Data Flow
 
 1. `StakeRemover.GetRetryPointsToRemove()` returns `AnnotationData.RetryPoint` entries tagged `"remove"`
-2. `Program.cs` sets `ann.RetryPoints` before calling `writer.Write()`
+2. `WriteFogModPhase` sets `ann.RetryPoints` before calling `writer.Write()`
 3. `GameDataWriterE.Write()` reads the MSB from BHD archives, finds the RetryPoint by `Name` (= `RetryPartName`), removes it, and writes the MSB to mod dir
 
 ## Current Stakes

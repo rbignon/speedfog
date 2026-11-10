@@ -192,7 +192,7 @@ public class GateDecorInjectorTests
         // Vanilla enemies are hand-placed on walkable floor and never
         // wall-mounted, so they are prime ground evidence. This relies on
         // GateDecorInjector running BEFORE AmbientSpawnInjector adds its own
-        // EntityID-0 spawns (call order in Program.cs).
+        // EntityID-0 spawns (call order in HalloweenAmbientPass).
         var msb = MakeMsbWithGateAndVanillaAsset();
         msb.Parts.Enemies.Add(new MSBE.Part.Enemy
         {

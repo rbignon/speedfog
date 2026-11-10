@@ -65,7 +65,7 @@ Revered Spirit Ash player buffs (SpEffectParam rows 20000101-20000120 and
 enemy curves assume the player does not have them.
 
 SpeedFog wants `final_tier` above 21 to mean what it says, so
-`WriteFogMod` (in `FogModWrapper/Program.cs`) sets
+`WriteFogModPhase` (`writer/FogModWrapper/Pipeline/`) sets
 `ctx.Graph.ExcludeMode = AreaMode.Base` (the value a `dlconly` run would
 have) after `Graph.Construct` and before `Write()`. `ExcludeMode` is read
 in exactly four places during `Write()`:
@@ -78,7 +78,7 @@ in exactly four places during `Write()`:
 | L3990 `scadushop` branch     | dead: SpeedFog never sets `scadushop` |
 
 The skipped blessing neutralization is re-applied by
-`ScaduBlessingNeutralizer` in the regulation phase (`ApplyRegulation`),
+`ScaduBlessingNeutralizer` in the regulation phase (`RegulationPhase`),
 replicating FogMod's row copies. Without it, Scadutree fragments placed by
 the item randomizer would buff the player inside DLC-map zones only.
 
@@ -94,7 +94,7 @@ the entrance stairway `leyndell_erdtree` (m11_00).
 At write time each enemy's area is looked up in `Graph.AreaTiers`
 (`GameDataWriterE.cs:2126`). A missing area normally throws
 `No tier for <area>`, but `AllowUnlinked` (forced on by crawl mode,
-`FogModWrapper/Program.cs`) downgrades that to a silent skip: Radagon
+`ConstructGraphPhase`) downgrades that to a silent skip: Radagon
 (`c2190_9000`, source SpEffect 7170 = tier 17) and Elden Beast
 (`c2200_9000`) kept vanilla stats, and the `GameAreaParam.bonusSoul` rune
 reward stayed vanilla too. FogRando papers over the same hole by hardcoding
@@ -123,7 +123,7 @@ Midra's arena), which foglocations2 misfiles under the surrounding
   target 25 = x3.19 / x2.33, target 28 = x3.75 / x2.54.
 - The damage step at target 22 (+59% over 21) is FogMod's hardcoded x1.5
   re-inflation. Smoothing it would require rewriting the generated
-  7800000+ rows in `ApplyRegulation` (a possible future
+  7800000+ rows in `RegulationPhase` (a possible future
   ScalingMatrixPatcher).
 - At equal target tier, a base-game-origin boss keeps a residual x1.18-1.38
   HP advantage over a DLC-origin boss (the dampening only divides source

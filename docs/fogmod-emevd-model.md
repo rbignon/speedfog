@@ -199,7 +199,7 @@ Because FogMod compiles templates into literal per-instance events:
 | `SealingTreeWarpPatcher` | Replaces alternate (m61_44_45_10) destination with primary (m61_44_45_00) | Both warp families matching alternate region |
 | `AlternateFlagPatcher` | Neutralizes `SetEventFlag(300/330, ON)` in Events 900/915 | Specific events in common.emevd (not a warp scanner) |
 
-All warp-scanning post-processors run after `GameDataWriterE.Write()` (step 7 in Program.cs).
+All warp-scanning post-processors run after `GameDataWriterE.Write()` (`WriteFogModPhase`), in `PatchEmevdPhase`.
 
 ## References
 

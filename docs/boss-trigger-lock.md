@@ -53,7 +53,7 @@ BossTriggerInjector.BuildRegionToTrapFlag()
         |  builds region -> TrapFlag dictionary
         |  skips areas with TrapFlag <= 0
         v
-Program.cs EMEVD scan loop
+PatchEmevdPhase EMEVD scan loop
         |  for each EMEVD file, calls BossTriggerInjector.PatchEmevdFile()
         |  extracts region from warp instructions via TryExtractWarpInfo()
         |  if region matches, inserts SetEventFlag(TrapFlag, ON) before warp
@@ -79,6 +79,6 @@ Both patchers scan EMEVD files for WarpPlayer and insert SetEventFlag before it.
 |------|------|
 | `writer/FogModWrapper/BossTriggerInjector.cs` | Region-to-TrapFlag mapping + EMEVD patching |
 | `writer/FogModWrapper.Tests/BossTriggerInjectorTests.cs` | Unit tests for BuildRegionToTrapFlag |
-| `writer/FogModWrapper/Program.cs` | Wiring (EMEVD scan loop + common.emevd) |
+| `writer/FogModWrapper/Pipeline/PatchEmevdPhase.cs` | Wiring (EMEVD scan loop + common.emevd) |
 | `data/fog.txt` | Area definitions with DefeatFlag, BossTrigger, TrapFlag |
 | `data/fogevents.txt` | fogwarp template (event 9005777) showing TrapFlag check |

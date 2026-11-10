@@ -32,7 +32,7 @@ FogMod tags unique warps with `"remove"` in its graph data, but its removal logi
 Besides the data-driven `remove_entities` from `graph.json`, `data/game_tweaks.toml`
 carries a small `[[remove_entities]]` list (map + entity_id + optional
 `match_group`) that is concatenated onto `graph.json`'s list before the
-`VanillaWarpRemover.Remove` call in `Program.cs`:
+`VanillaWarpRemover.Remove` call in `ModDirPhase`:
 
 - `m20_01_00_00 / 20006662` (by EntityGroup, `match_group = true`): the Outer Wall
   thorns barrier in Enir-Ilim (part of the map-splits climb, see
@@ -49,7 +49,7 @@ entries with `MatchGroup = false` (the `graph.json`-sourced default) are matched
 by `EntityID`; entries with `MatchGroup = true` are matched against the asset's
 `EntityGroupIDs` array instead. Both matching strategies run in the same
 `Remove()` pass, since `ctx.Tweaks.RemoveEntities` (from `GameTweaksLoader`) is
-concatenated onto `graph.json`'s `RemoveEntities` before the call (`Program.cs`).
+concatenated onto `graph.json`'s `RemoveEntities` before the call (`ModDirPhase`).
 
 This runs post-`Write`, i.e. after FogMod's `GameDataWriterE.Write()` has
 already created the thorns assets: `VanillaWarpRemover` operates on the MSBs

@@ -202,7 +202,7 @@ public static class UniqueItemNeutralizer
     }
 
     /// <summary>
-    /// Entry point for Program.cs: computes the saturated goods for this seed
+    /// Entry point for RegulationPhase: computes the saturated goods for this seed
     /// and rewrites their item lots (map + enemy) and shop rows.
     /// </summary>
     public static void ApplyTo(RegulationEditor reg, GraphData graph)

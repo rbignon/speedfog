@@ -190,17 +190,17 @@ twitch seen before the break; it interrupts nothing.
 
 ## Two-phase injector
 
-`Program.cs` runs the injector in two phases, both gated on the boss
+The pipeline runs the injector in two phases, both gated on the boss
 being placed (`IsBossPlaced`: some `enemy_assignments` value equals
 `SpeedFogIds.UntouchableSourceEntity`, `2049420200`, as a decimal
 string):
 
-1. **Regulation phase** (`ApplyRegulation`): `ApplyParams` writes the
+1. **Regulation phase** (`RegulationPhase`): `ApplyParams` writes the
    core rows (boss `NpcParam`, cut row, broken row) and, when the static
    assets and the four moveset params are available, the moveset rows
-   (see "Moveset"). It returns `(Core, Moveset)`; `Program.cs` keeps the
+   (see "Moveset"). It returns `(Core, Moveset)`; `RegulationPhase` keeps the
    result on the context for the MSB phase.
-2. **MSB phase** (`ApplyModDirInjectors`, after FogMod's write): `Inject`
+2. **MSB phase** (`ModDirPhase`, after FogMod's write): `Inject`
    collects every `enemy_assignments` key (an arena entity id) whose
    value is the source entity and scans every `.msb.dcx` of the mod
    directory in parallel. `ApplyToMsb` repoints the `NPCParamID` of each

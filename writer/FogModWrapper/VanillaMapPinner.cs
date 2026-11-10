@@ -12,7 +12,7 @@ namespace FogModWrapper;
 /// FogMod's own copy if it wrote one, else the Item Randomizer's merge-dir
 /// copy, else the snapshot copy. The merge-dir case copies the file into the
 /// FogMod output (rather than leaving it merge-dir-only) so EventDisabler and
-/// VanillaWarpRemover, which run after Pin in Program.cs and only read the
+/// VanillaWarpRemover, which run after Pin in ModDirPhase and only read the
 /// FogMod output dir, can still patch it. mods/fogmod wins the ModEngine
 /// order, so the copy shadows nothing observable.
 /// </summary>

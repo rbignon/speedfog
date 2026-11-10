@@ -1,3 +1,4 @@
+using FogMod;
 using SoulsFormats;
 
 namespace FogModWrapper;
@@ -176,4 +177,42 @@ public static class ErdtreeWarpPatcher
              + int.Parse(parts[2]) * 100
              + int.Parse(parts[3]);
     }
+
+    /// <summary>
+    /// Locate the fogwarp targeting leyndell_erdtree (m11_00) and its
+    /// alternate side (m11_05), to warp directly to leyndell2_erdtree.
+    /// Null when fog.txt has no such entrance or a side lacks a region.
+    /// </summary>
+    internal static ErdtreeWarpData? BuildWarpData(AnnotationData ann)
+    {
+        var entrance = ann.Entrances.Concat(ann.Warps).FirstOrDefault(e =>
+            e.BSide?.Area == "leyndell_erdtree" &&
+            e.BSide?.AlternateSide?.Warp != null &&
+            e.BSide.AlternateFlag > 0);
+
+        if (entrance == null ||
+            entrance.BSide.Warp.Region == 0 ||
+            entrance.BSide.AlternateSide.Warp.Region == 0)
+        {
+            return null;
+        }
+
+        var altMap = entrance.BSide.AlternateSide.Warp.Map;
+        return new ErdtreeWarpData
+        {
+            PrimaryRegion = entrance.BSide.Warp.Region,
+            AltRegion = entrance.BSide.AlternateSide.Warp.Region,
+            AltMapBytes = ParseMapBytes(altMap),
+            AltMapPacked = PackMapId(altMap),
+        };
+    }
+}
+
+/// <summary>Primary and alternate warp targets of the Erdtree fogwarp.</summary>
+internal sealed class ErdtreeWarpData
+{
+    public int PrimaryRegion;
+    public int AltRegion;
+    public byte[] AltMapBytes = null!;
+    public int AltMapPacked;
 }

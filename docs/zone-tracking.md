@@ -81,7 +81,7 @@ InjectionResult.BuildRegionToFlags(eventMap)
         |  builds region -> List<flag_id> dictionary
         |  validates same-cluster invariant
         v
-Program.cs consolidated EMEVD scan
+PatchEmevdPhase consolidated EMEVD scan
         |  for each EMEVD file, calls ZoneTrackingInjector.PatchEmevdFile()
         |  extract region from warp instructions, lookup in dictionary
         |  inject SetEventFlag for each flag_id in list
@@ -91,7 +91,7 @@ SetEventFlag injected before each matched warp
 
 ## ZoneTrackingInjector Pipeline
 
-Zone tracking runs after `GameDataWriterE.Write()` and post-processes every EMEVD file. Program.cs calls `ZoneTrackingInjector.PatchEmevdFile()` for each file during a consolidated scan loop (shared with ErdtreeWarpPatcher and SealingTreeWarpPatcher), then `InjectBossDeathEvent()` on the in-memory common.emevd. It takes `regionToFlags` and `expectedFlags` instead of raw connections.
+Zone tracking runs after `GameDataWriterE.Write()` and post-processes every EMEVD file. `PatchEmevdPhase` calls `ZoneTrackingInjector.PatchEmevdFile()` for each file during a consolidated scan loop (shared with ErdtreeWarpPatcher and SealingTreeWarpPatcher), and `CommonEmevdPhase` later calls `InjectBossDeathEvent()` on the in-memory common.emevd. It takes `regionToFlags` and `expectedFlags` instead of raw connections.
 
 ### Phase 1: Mapping (deferred)
 

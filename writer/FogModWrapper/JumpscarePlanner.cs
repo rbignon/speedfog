@@ -1,3 +1,4 @@
+using FogMod;
 using FogModWrapper.Models;
 
 namespace FogModWrapper;
@@ -53,6 +54,19 @@ internal static class JumpscarePlanner
     // Arbitrary fixed tag XORed into the graph seed, so the layer draw does
     // not replay another seed-derived sequence. Must never be 0.
     private const int SeedTag = 0x4A4D5053;
+
+    /// <summary>Zone name to its fog.txt maps (Area.Maps, space separated),
+    /// for the planner's dungeon-map test.</summary>
+    internal static Dictionary<string, string[]> BuildZoneMaps(AnnotationData ann)
+    {
+        var zoneMaps = new Dictionary<string, string[]>();
+        foreach (var area in ann.Areas)
+        {
+            if (!string.IsNullOrWhiteSpace(area.Maps))
+                zoneMaps[area.Name] = area.Maps.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        }
+        return zoneMaps;
+    }
 
     internal static JumpscarePlan Plan(
         GraphData graph, IReadOnlyDictionary<string, string[]> zoneMaps,
@@ -156,8 +170,8 @@ internal static class JumpscarePlanner
     /// Append the plan's mirror flags to ZoneTrackingInjector's region table
     /// (region entity to flags set before a warp to it), after the zone
     /// flags they mirror and once per region, so the fog warp sets them
-    /// along with the zone flags. Called between BuildRegionToFlags and
-    /// PatchEmevd. An empty plan leaves the table untouched.
+    /// along with the zone flags. Called from WriteFogModPhase, between
+    /// BuildRegionToFlags and PatchEmevdPhase. An empty plan leaves the table untouched.
     /// </summary>
     internal static void AddMirrorFlags(Dictionary<int, List<int>> regionToFlags, JumpscarePlan plan)
     {

@@ -40,8 +40,8 @@ namespace FogModWrapper;
 /// remarks for the one deliberate, ordered exception with
 /// <see cref="WeaponUpgradeInjector"/>).
 ///
-/// MUST run before <see cref="WeaponUpgradeInjector"/> in Phase 7 of
-/// Program.cs: forced weapons need to go through the same weapon-upgrade
+/// MUST run before <see cref="WeaponUpgradeInjector"/> in
+/// RegulationPhase: forced weapons need to go through the same weapon-upgrade
 /// initialization pass as any other starting weapon.
 /// </summary>
 public static class ClassLoadoutInjector

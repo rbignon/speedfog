@@ -44,7 +44,7 @@ public class RegionStabilityTests
     }
 
     /// <summary>
-    /// Build a real FogMod Graph from fog.txt with the same options as Program.cs.
+    /// Build a real FogMod Graph from fog.txt with the same options as ConstructGraphPhase.
     /// Returns null if data files are missing.
     /// </summary>
     private Graph? BuildGraph()
@@ -116,7 +116,7 @@ public class RegionStabilityTests
         var graph = new Graph();
         graph.Construct(opt, ann);
 
-        // Disconnect trivial edges (same as Program.cs step 4b)
+        // Disconnect trivial edges (same as ConstructGraphPhase.DisconnectTrivialEdges)
         foreach (var node in graph.Nodes.Values)
         {
             var edgesToDisconnect = node.To
