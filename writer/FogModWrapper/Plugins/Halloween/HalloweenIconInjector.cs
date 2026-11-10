@@ -1,7 +1,7 @@
 using FogModWrapper.Common;
 using SoulsFormats;
 
-namespace FogModWrapper;
+namespace FogModWrapper.Plugins.Halloween;
 
 /// <summary>
 /// Repoints Golden Seed / Sacred Tear inventory icons to

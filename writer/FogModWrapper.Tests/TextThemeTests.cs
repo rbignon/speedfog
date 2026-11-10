@@ -1,3 +1,4 @@
+using FogModWrapper.Plugins.Themes;
 using SoulsFormats;
 using Xunit;
 

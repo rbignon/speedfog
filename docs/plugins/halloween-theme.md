@@ -1,7 +1,7 @@
 # Halloween Theme
 
 Cosmetic, opt-in text reskin (`[plugin.halloween] enabled = true`), applied
-by `writer/FogModWrapper/TextTheme.cs` (shared with the summer theme; see
+by `writer/FogModWrapper/Plugins/Themes/TextTheme.cs` (shared with the summer theme; see
 [summer-theme.md](summer-theme.md) for the mechanism, schema, and id
 discovery workflow). Catalogue: `data/plugins/halloween.toml`.
 

@@ -1,7 +1,7 @@
 using FogModWrapper.Common;
 using FogModWrapper.Models;
 
-namespace FogModWrapper;
+namespace FogModWrapper.Plugins.Halloween;
 
 /// <summary>
 /// Shared anchor collection for the Halloween ambient injectors

@@ -1,4 +1,5 @@
 using FogModWrapper;
+using FogModWrapper.Plugins.Themes;
 using Xunit;
 
 public class TextThemeCatalogLoaderTests

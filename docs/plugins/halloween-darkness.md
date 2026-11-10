@@ -17,7 +17,7 @@ opts in explicitly.
 
 ## Mechanism
 
-`writer/FogModWrapper/HalloweenDarknessInjector.cs` adds one looping event
+`writer/FogModWrapper/Plugins/Halloween/HalloweenDarknessInjector.cs` adds one looping event
 to `common.emevd` (ID from `SpeedFogIds.HalloweenDarknessEvents`, base
 755865500), registered in event 0:
 

@@ -1,4 +1,5 @@
 using FogModWrapper.Models;
+using FogModWrapper.Plugins.Weather;
 using Xunit;
 
 namespace FogModWrapper.Tests;

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using FogModWrapper.Models;
+using FogModWrapper.Plugins.Halloween;
 using Xunit;
 
 namespace FogModWrapper.Tests;

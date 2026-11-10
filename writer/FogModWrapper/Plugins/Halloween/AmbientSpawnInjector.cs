@@ -4,7 +4,7 @@ using FogModWrapper.Models;
 using SoulsFormats;
 using SoulsIds;
 
-namespace FogModWrapper;
+namespace FogModWrapper.Plugins.Halloween;
 
 /// <summary>
 /// Places ambient enemy spawns at cluster exit gates for the Halloween

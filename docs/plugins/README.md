@@ -53,6 +53,17 @@ plugin that needs a point no hook covers gets a new hook in
 `SpeedFogPlugin`, called from the phase, with its ordering reason documented
 in the table above.
 
+**Where plugin code lives.** Namespaces follow folders. A plugin's
+FogModWrapper code goes in `writer/FogModWrapper/Plugins/<Name>/` (namespace
+`FogModWrapper.Plugins.<Name>`); its pure data side (catalogue loaders and
+their records, unit-testable without FogMod) goes in
+`writer/FogModWrapper.Core/Plugins/<Name>/` under the same namespace, which
+deliberately spans the two assemblies. Code shared by several plugins gets
+its own folder, like `Plugins/Themes/` (the text theme used by summer and
+halloween). Plugin IDs (events, flags, rows, entities) stay in the central
+`SpeedFogIds` registry, whose tests catch collisions across features and
+plugins.
+
 **Across processes.** A theme can span processes (e.g. text in
 FogModWrapper, an icon overlay built by StaticModBuilder at bootstrap), so
 the cohesive unit stays the config namespace, read independently where each

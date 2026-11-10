@@ -3,7 +3,7 @@ using FogModWrapper.Models;
 using SoulsFormats;
 using SoulsIds;
 
-namespace FogModWrapper;
+namespace FogModWrapper.Plugins.Halloween;
 
 /// <summary>
 /// Single per-map driver for the Halloween ambient layer at cluster exit

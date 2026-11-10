@@ -108,11 +108,11 @@ speedfog/
 │   │   ├── ResourceCalculations.cs  # Pure calculation functions for starting resources
 │   │   ├── ShopIdAllocator.cs  # Shop ID allocation utilities
 │   │   ├── MapSplitsLoader.cs  # Load data/map_splits.toml (synthetic zones/fogs)
-│   │   └── PhaseTimer.cs    # Per-phase timing (standard timer, no ad-hoc Stopwatches)
+│   │   ├── PhaseTimer.cs    # Per-phase timing (standard timer, no ad-hoc Stopwatches)
+│   │   └── Plugins/         # Plugin catalogue loaders and records: Themes/ (TextThemeCatalogLoader, TextThemeCatalog), Halloween/ (HalloweenDecorLoader)
 │   ├── FogModWrapper/       # Fog gate writer - thin wrapper calling FogMod.dll
 │   │   ├── Program.cs       # CLI entry point + ordered list of pipeline phases
 │   │   ├── Pipeline/        # Context (shared phase state) + one class per phase (LoadInputs ... ModDir)
-│   │   ├── Plugins/         # SpeedFogPlugin base + PluginRegistry; one folder per [plugin.<name>] (Summer/, Weather/, Halloween/)
 │   │   ├── Common/          # Shared editing helpers (EMEVD, MSB, regulation.bin, msgbnd, gate geometry)
 │   │   │   ├── MsgBndEditor.cs  # Shared msgbnd edit helper (engus + frafr, mod copy over vanilla)
 │   │   │   ├── EmevdHelper.cs  # Shared EMEVD instruction-building helpers
@@ -165,10 +165,23 @@ speedfog/
 │   │   │   ├── RunCompleteInjector.cs  # Inject "RUN COMPLETE" message on final boss defeat
 │   │   │   ├── DeathMarkerInjector.cs  # Bloodstain visuals at fog gates
 │   │   │   └── PhantomCatalogInjector.cs  # Phantom skins catalog baked into params
-│   │   ├── WeatherInjector.cs  # Force weather / pin clock hour ([plugin.weather])
-│   │   ├── HalloweenDarknessInjector.cs  # Evergaol gparam override over the whole run ([plugin.halloween] darkness)
-│   │   ├── JumpscarePlanner.cs  # Draw the Halloween jumpscare layers and their actors (flags, maps, ids)
-│   │   ├── HalloweenJumpscareInjector.cs  # Jumpscare actor row, hidden c5280 placement and warp events ([plugin.halloween] jumpscares)
+│   │   ├── Plugins/         # C# side of the [plugin.<name>] tables (contract: docs/plugins/README.md)
+│   │   │   ├── SpeedFogPlugin.cs  # Plugin base class: no-op hooks the pipeline phases call
+│   │   │   ├── PluginRegistry.cs  # Enabled plugins in execution order (summer, weather, halloween)
+│   │   │   ├── Themes/      # TextTheme: cosmetic text reskins shared by summer and halloween
+│   │   │   ├── Summer/      # SummerPlugin (text theme only)
+│   │   │   ├── Weather/     # WeatherPlugin + WeatherInjector (force weather / pin clock hour)
+│   │   │   └── Halloween/   # HalloweenPlugin and its injectors
+│   │   │       ├── HalloweenPlugin.cs  # Hooks, parsed settings, jumpscare plan, regulation-to-MSB row guards
+│   │   │       ├── HalloweenPluginSettings.cs  # Parse [plugin.halloween] parameters
+│   │   │       ├── HalloweenAmbientPass.cs  # One MSB pass per map: gate decorations, greeters, ambushes, jumpscare actors
+│   │   │       ├── HalloweenGateAnchors.cs  # Exit-gate anchors shared by the ambient injectors
+│   │   │       ├── GateDecorInjector.cs  # Catalogue-driven gate decorations
+│   │   │       ├── AmbientSpawnInjector.cs  # Hostile greeters + decorative ambush packs at exit gates
+│   │   │       ├── HalloweenIconInjector.cs  # Golden Seed / Sacred Tear iconId redirect
+│   │   │       ├── HalloweenDarknessInjector.cs  # Evergaol gparam override over the whole run ([plugin.halloween] darkness)
+│   │   │       ├── JumpscarePlanner.cs  # Draw the Halloween jumpscare layers and their actors (flags, maps, ids)
+│   │   │       └── HalloweenJumpscareInjector.cs  # Jumpscare actor row, hidden c5280 placement and warp events ([plugin.halloween] jumpscares)
 │   │   └── eldendata/       # FogRando game data (gitignored)
 │   ├── FogModWrapper.Tests/  # xUnit tests
 │   ├── ItemRandomizerWrapper/  # Item randomizer - thin wrapper calling RandomizerCommon.dll

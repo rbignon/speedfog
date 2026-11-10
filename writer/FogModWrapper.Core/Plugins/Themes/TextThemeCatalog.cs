@@ -1,4 +1,4 @@
-namespace FogModWrapper.Models;
+namespace FogModWrapper.Plugins.Themes;
 
 /// <summary>One boss healthbar-name (NpcName) override, keyed by exactly one of
 /// NpcNameId (a fixed vanilla id) or BossName (a name BossNameInjector

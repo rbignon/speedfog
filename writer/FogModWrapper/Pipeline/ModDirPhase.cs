@@ -1,6 +1,7 @@
 using FogModWrapper.Common;
 using FogModWrapper.Enemies;
 using FogModWrapper.Graces;
+using FogModWrapper.Plugins.Themes;
 using FogModWrapper.Racing;
 using FogModWrapper.Start;
 using FogModWrapper.World;

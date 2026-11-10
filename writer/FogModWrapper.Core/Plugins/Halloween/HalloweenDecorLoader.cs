@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 using Tomlyn;
 using Tomlyn.Model;
 
-namespace FogModWrapper;
+namespace FogModWrapper.Plugins.Halloween;
 
 /// <summary>
 /// Loads and validates the Halloween gate decoration catalogue

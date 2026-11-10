@@ -1,8 +1,7 @@
-using FogModWrapper.Models;
 using Tomlyn;
 using Tomlyn.Model;
 
-namespace FogModWrapper;
+namespace FogModWrapper.Plugins.Themes;
 
 /// <summary>
 /// Loads and validates a theme text catalogue (data/plugins/&lt;theme&gt;.toml).

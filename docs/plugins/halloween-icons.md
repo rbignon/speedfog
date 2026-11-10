@@ -83,7 +83,7 @@ touched; a seed with the plugin disabled ships nothing extra at all.
    by `tools/bootstrap.py` via `--halloween-dir`, unconditionally
    (`HALLOWEEN_MOD_DEST`), independent of whether any seed enables the
    plugin.
-2. **`HalloweenIconInjector`** (`writer/FogModWrapper/HalloweenIconInjector.cs`,
+2. **`HalloweenIconInjector`** (`writer/FogModWrapper/Plugins/Halloween/HalloweenIconInjector.cs`,
    runs per seed): `ApplyTo(RegulationEditor reg)` reads
    `EquipParamGoods`, and for rows 10010 and 10020 sets `iconId` to
    `SpeedFogIds.HalloweenGoldenSeedIcon` (60383) /

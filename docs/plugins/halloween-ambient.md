@@ -3,12 +3,12 @@
 Two non-text layers of the Halloween plugin, both running after FogMod's
 `Write()`: hostile "greeter" enemies and optional decorative ambush packs,
 plus data-driven prop decorations, placed at cluster exit gates. A single
-driver, `writer/FogModWrapper/HalloweenAmbientPass.cs`, reads each map's
+driver, `writer/FogModWrapper/Plugins/Halloween/HalloweenAmbientPass.cs`, reads each map's
 MSB once and calls into both features (decorations from
-`writer/FogModWrapper/GateDecorInjector.cs` before spawns from
-`writer/FogModWrapper/AmbientSpawnInjector.cs`) rather than each running
+`writer/FogModWrapper/Plugins/Halloween/GateDecorInjector.cs` before spawns from
+`writer/FogModWrapper/Plugins/Halloween/AmbientSpawnInjector.cs`) rather than each running
 its own independent per-map pass, with the shared anchor collection in
-`writer/FogModWrapper/HalloweenGateAnchors.cs`. The same driver also
+`writer/FogModWrapper/Plugins/Halloween/HalloweenGateAnchors.cs`. The same driver also
 places the jumpscare actors (see
 [halloween-jumpscares.md](halloween-jumpscares.md)). See "Driver architecture"
 below for the call graph. See [halloween-theme.md](halloween-theme.md) for

@@ -2,7 +2,7 @@ using FogMod;
 using FogModWrapper.Common;
 using FogModWrapper.Models;
 
-namespace FogModWrapper;
+namespace FogModWrapper.Plugins.Halloween;
 
 /// <summary>
 /// One hidden Aging Untouchable of the Halloween jumpscare layer, placed in

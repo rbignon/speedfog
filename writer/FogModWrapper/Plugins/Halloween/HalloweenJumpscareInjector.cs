@@ -5,7 +5,7 @@ using SoulsFormats;
 using SoulsIds;
 using static System.FormattableString;
 
-namespace FogModWrapper;
+namespace FogModWrapper.Plugins.Halloween;
 
 /// <summary>
 /// Halloween jumpscares ([plugin.halloween] jumpscares): in the layers

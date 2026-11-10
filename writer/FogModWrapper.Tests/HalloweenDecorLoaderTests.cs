@@ -1,4 +1,4 @@
-using FogModWrapper;
+using FogModWrapper.Plugins.Halloween;
 using Xunit;
 
 public class HalloweenDecorLoaderTests

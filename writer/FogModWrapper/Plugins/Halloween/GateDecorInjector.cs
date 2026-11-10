@@ -3,7 +3,7 @@ using FogModWrapper.Common;
 using SoulsFormats;
 using SoulsIds;
 
-namespace FogModWrapper;
+namespace FogModWrapper.Plugins.Halloween;
 
 /// <summary>
 /// Places data-driven ambient decorations (candelabras, bone piles, glow

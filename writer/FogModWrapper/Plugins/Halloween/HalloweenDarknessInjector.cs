@@ -2,7 +2,7 @@ using FogModWrapper.Common;
 using SoulsFormats;
 using SoulsIds;
 
-namespace FogModWrapper;
+namespace FogModWrapper.Plugins.Halloween;
 
 /// <summary>
 /// [plugin.halloween] darkness: keeps the vanilla evergaol gparam override

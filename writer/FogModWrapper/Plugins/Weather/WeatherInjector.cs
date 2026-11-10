@@ -4,7 +4,7 @@ using FogModWrapper.Models;
 using SoulsFormats;
 using SoulsIds;
 
-namespace FogModWrapper;
+namespace FogModWrapper.Plugins.Weather;
 
 /// <summary>
 /// "weather" plugin: forces a fixed weather and optionally pins the

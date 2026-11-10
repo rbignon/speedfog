@@ -1,9 +1,8 @@
 using System.Linq;
 using FogModWrapper.Common;
-using FogModWrapper.Models;
 using SoulsFormats;
 
-namespace FogModWrapper;
+namespace FogModWrapper.Plugins.Themes;
 
 /// <summary>
 /// A theme text plugin (summer, halloween, ...): reskins boss healthbar names

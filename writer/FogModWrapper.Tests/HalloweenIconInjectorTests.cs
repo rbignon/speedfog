@@ -1,3 +1,4 @@
+using FogModWrapper.Plugins.Halloween;
 using SoulsFormats;
 using Xunit;
 using static FogModWrapper.Tests.ParamTestHelper;

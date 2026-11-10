@@ -1,7 +1,7 @@
 using System.Text.Json;
 using FogModWrapper.Models;
 
-namespace FogModWrapper;
+namespace FogModWrapper.Plugins.Halloween;
 
 /// <summary>
 /// Parses [plugin.halloween] parameters from graph.json's verbatim plugin
