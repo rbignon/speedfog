@@ -214,19 +214,19 @@ Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
 Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_10_GSBlendMap_NormalMap_0"
 Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_3_GSBlendMap_Mask1Map_4"
 
+# [1mask] blends its two layers by a texture mask read in UV0: its vertex shaders take one UV
+# set, and so do most of its meshes (AEG004_276 under the Shaded Castle rocks). The two-layer
+# twin reads TEXCOORD1 too, which left those meshes undrawn, so this rule keeps the first layer
+# under the plain twin.
 [[rules]]
 source = "M[AMSN_V][Mb2][1mask][Ov_N]"
-twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+twin = "M[AMSN_V][Snow]"
 source_samplers = ["Texture2D_0_GSBlendMap_NormalMap_1", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_AlbedoMap_1", "Texture2D_3_GSBlendMap_AlbedoMap_2", "Texture2D_4_GSBlendMap_Mask1Map_4", "Texture2D_5_GSBlendMap_NormalMap_0", "Texture2D_6_GSBlendMap_Mask1Map"]
 [rules.plan]
-Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_2_GSBlendMap_AlbedoMap_1"
-Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
-Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_3_GSBlendMap_AlbedoMap_2"
-Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
-Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_0_GSBlendMap_NormalMap_1"
-Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
-Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_5_GSBlendMap_NormalMap_0"
-Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_4_GSBlendMap_Mask1Map_4"
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
+Texture2D_2_AlbedoMap_0 = "Texture2D_2_GSBlendMap_AlbedoMap_1"
+Texture2D_1_NormalMap_0 = "Texture2D_0_GSBlendMap_NormalMap_1"
+Texture2D_3_NormalMap_0 = "snow_normal"
 
 [[rules]]
 source = "M[AMSN_V]_Edge"
@@ -300,19 +300,17 @@ Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
 Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_6_GSBlendMap_NormalMap_0"
 Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_4_GSBlendMap_Mask1Map_4"
 
+# Same one-UV-set vertex shaders as [1mask] above (texture masks, no TEXCOORD1): first layer
+# under the plain twin.
 [[rules]]
 source = "M[AMSN_V][Mb3][3Mask_T][Ov_N2_T]"
-twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+twin = "M[AMSN_V][Snow]"
 source_samplers = ["Texture2D_0_Mask3Map_2", "Texture2D_15_NormalMap_3", "Texture2D_1_AlbedoMap_1", "Texture2D_2_AlbedoMap_2", "Texture2D_3_Mask1Map_4", "Texture2D_4_NormalMap_0", "Texture2D_5_NormalMap_1", "Texture2D_6_NormalMap_2", "Texture2D_7_NormalMap_0", "Texture2D_8_AlbedoMap_3"]
 [rules.plan]
-Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_1_AlbedoMap_1"
-Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
-Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_2_AlbedoMap_2"
-Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
-Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_5_NormalMap_1"
-Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_6_NormalMap_2"
-Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_4_NormalMap_0"
-Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_3_Mask1Map_4"
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
+Texture2D_2_AlbedoMap_0 = "Texture2D_1_AlbedoMap_1"
+Texture2D_1_NormalMap_0 = "Texture2D_5_NormalMap_1"
+Texture2D_3_NormalMap_0 = "snow_normal"
 
 [[rules]]
 source = "M[AMSN_V][Ov_N][Mb4_ColorAdjust][3Mask_ch18]"
