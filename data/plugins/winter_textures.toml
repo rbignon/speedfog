@@ -1,5 +1,5 @@
 # Winter plugin: frosted texture packs. TPF stems under asset/aet/<family>/; the _l twin of
-# each stem is built too (see docs/plugins/winter.md, design Appendix C). 129 stems.
+# each stem is built too (see docs/plugins/winter.md, design Appendix C). 134 stems.
 
 tpfs = [
   # Chapel and Stormveil leaf clumps, gate ivy, statue vines, leaf litter
@@ -135,4 +135,12 @@ tpfs = [
   "aet490_560",
   "aet490_570",
   "aet490_999",
+  # Elevators and levers of the catacombs (AEG027_016, AEG027_002) and of Shadow Keep
+  # (AEG427_002, AEG427_023): their _Skin_PaintDecal shaders have no snow twin, so their
+  # textures are frosted instead. Each texture is used by those matbins only.
+  "aet002_514",
+  "aet003_502",
+  "aet420_389",
+  "aet420_430",
+  "aet420_432",
 ]
