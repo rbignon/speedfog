@@ -63,9 +63,9 @@ Rewrite a matbin so it uses the snow twin shader: shader path swapped, samplers 
 | Source family | Twin | Note |
 |---|---|---|
 | `M[AMSN_V]`, `[Ov_N]`, `[Ov_AN]`, `[Ov_A_Ch2]`, metallic `M[AMSN]`, `M[AMSN][Ov_N]`, `M[AMSN][Ov_AN]`, and the one-UV-set blends `[Mb2][1mask][Ov_N]`, `[Mb3][3Mask_T][Ov_N2_T]` (first layer kept, see the third exclusion) | `M[AMSN_V][Snow]` | the plain twin is the validated one; `M[AMSN_V][Ov_N][Snow]` (overlay kept) was tried once in an early cumulative round, judged ineffective and never re-tested in isolation; the metallic twin `M[AMSN][Snow]` was never validated, so the metallic map is dropped |
-| `[Mb2]`, `[Mb2][Ov_N]`, `[Mb2][Ov_AN]`, `[Ov_N][Mb2_ColorAdjust][1Mask_ch18]`, `[Mb3]`, `[Mb3][Ov_N]`, `[Mb3][Ov_N2_T]`, `[Ov_N][Mb3_ColorAdjust][3Mask_ch18]` (both `M[AMSN_V]` and `M[AMSN]`), `[Mb4]`, `[Mb4_ColorAdjust][3Mask_ch18]` (with and without `[Ov_N]`) | `M[AMSN_V][Mb2][Ov_N][Snow]` | layers beyond the second dropped, color adjustment lost (fine under snow) |
+| `[Mb2]`, `[Mb2][Ov_N]`, `[Mb2][Ov_AN]`, `[Ov_N][Mb2_ColorAdjust][1Mask_ch18]`, `[Mb3]`, `[Mb3][Ov_N]`, `[Mb3][Ov_N2_T]`, `[Mb3][Snow_VtxMask]`, `[Ov_N][Mb3_ColorAdjust][3Mask_ch18]` (both `M[AMSN_V]` and `M[AMSN]`), `[Ov_N][Mb3_ColorAdjust][3Mask_ch18][Snow_VtxMask_ch19]`, `[Mb4]`, `[Mb4_ColorAdjust][3Mask_ch18]` (with and without `[Ov_N]`) | `M[AMSN_V][Mb2][Ov_N][Snow]` | layers beyond the second dropped, color adjustment lost (fine under snow) |
 | `_Edge`, `[Ov_N]_Edge`, `M[AMSN]_Edge`, `M[AMSN][Ov_N]_Edge` | `M[AMSN_V][Ov_N][Snow]_Edge` | overlay normal taken from the template (dummy normal) when the source has none |
-| every `[Snow_VtxMask]` variant | the plain twin of the same shape | forces full snow where vanilla gates it by vertex mask (Mountaintops, DLC) |
+| every `[Snow_VtxMask]` variant | the plain twin of the same shape | forces full snow where vanilla gates it by vertex mask (Mountaintops, DLC); the twin's snow slot takes the catalogue textures, not the source's: the base game binds the same snow there (`AET000_080`, mean luminance 230 of 255) but the DLC binds soot and dirt (`AET073_140` at 14, `AET051_105` at 24, `AET430_031` at 46), which the first catalogue forced to full coverage on about a hundred DLC matbins (the Midra arena walls and platform ledges, `m61_00_446` and `m61_00_444`, 2026-11-11) |
 
 Three hard exclusions:
 

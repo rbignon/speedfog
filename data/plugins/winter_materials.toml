@@ -74,25 +74,28 @@ Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
 Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_2_GSBlendMap_NormalMap_1"
 Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_3_GSBlendMap_Mask1Map_4"
 
+# The [Snow_VtxMask] sources gate their snow layer by a vertex mask; the twin forces it on and
+# takes the catalogue's snow textures instead of the source's snow slot: the base game binds the
+# same snow there (AET000_080), the DLC binds soot and dirt (AET073_140, AET051_105, AET430_031).
 [[rules]]
 source = "M[AMSN_V][Snow_VtxMask]"
 twin = "M[AMSN_V][Snow]"
 source_samplers = ["Texture2D_0_AlbedoMap_0", "Texture2D_1_NormalMap_0", "Texture2D_2_AlbedoMap_0", "Texture2D_3_NormalMap_0", "Texture2D_4_Mask1Map_4"]
 [rules.plan]
-Texture2D_0_AlbedoMap_0 = "Texture2D_0_AlbedoMap_0"
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
 Texture2D_2_AlbedoMap_0 = "Texture2D_2_AlbedoMap_0"
 Texture2D_1_NormalMap_0 = "Texture2D_1_NormalMap_0"
-Texture2D_3_NormalMap_0 = "Texture2D_3_NormalMap_0"
+Texture2D_3_NormalMap_0 = "snow_normal"
 
 [[rules]]
 source = "M[AMSN_V][Ov_N][Snow_VtxMask]"
 twin = "M[AMSN_V][Snow]"
 source_samplers = ["Texture2D_0_AlbedoMap_0", "Texture2D_1_NormalMap_0", "Texture2D_2_AlbedoMap_0", "Texture2D_3_NormalMap_0", "Texture2D_4_Mask1Map_4", "Texture2D_5_NormalMap"]
 [rules.plan]
-Texture2D_0_AlbedoMap_0 = "Texture2D_0_AlbedoMap_0"
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
 Texture2D_2_AlbedoMap_0 = "Texture2D_2_AlbedoMap_0"
 Texture2D_1_NormalMap_0 = "Texture2D_1_NormalMap_0"
-Texture2D_3_NormalMap_0 = "Texture2D_3_NormalMap_0"
+Texture2D_3_NormalMap_0 = "snow_normal"
 
 [[rules]]
 source = "M[AMSN_V][Mb2][Ov_N][Snow_VtxMask]"
@@ -100,9 +103,9 @@ twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
 source_samplers = ["Texture2D_0_GSBlendMap_NormalMap_1", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_AlbedoMap_1", "Texture2D_3_GSBlendMap_AlbedoMap_2", "Texture2D_4_GSBlendMap_Mask1Map_4", "Texture2D_5_GSBlendMap_NormalMap_0", "Texture2D_6_GSBlendMap_AlbedoMap_0", "Texture2D_7_GSBlendMap_NormalMap_0"]
 [rules.plan]
 Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_2_GSBlendMap_AlbedoMap_1"
-Texture2D_6_GSBlendMap_AlbedoMap_0 = "Texture2D_6_GSBlendMap_AlbedoMap_0"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
 Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_3_GSBlendMap_AlbedoMap_2"
-Texture2D_7_GSBlendMap_NormalMap_0 = "Texture2D_7_GSBlendMap_NormalMap_0"
+Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
 Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_0_GSBlendMap_NormalMap_1"
 Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
 Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_5_GSBlendMap_NormalMap_0"
@@ -114,9 +117,9 @@ twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
 source_samplers = ["Texture2D_0_GSBlendMap_NormalMap_1", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_AlbedoMap_1", "Texture2D_3_GSBlendMap_AlbedoMap_2", "Texture2D_4_GSBlendMap_Mask1Map_4", "Texture2D_5_GSBlendMap_AlbedoMap_0", "Texture2D_7_GSBlendMap_NormalMap_0"]
 [rules.plan]
 Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_2_GSBlendMap_AlbedoMap_1"
-Texture2D_6_GSBlendMap_AlbedoMap_0 = "Texture2D_5_GSBlendMap_AlbedoMap_0"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
 Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_3_GSBlendMap_AlbedoMap_2"
-Texture2D_7_GSBlendMap_NormalMap_0 = "Texture2D_7_GSBlendMap_NormalMap_0"
+Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
 Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_0_GSBlendMap_NormalMap_1"
 Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
 Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_0_GSBlendMap_NormalMap_1"
@@ -128,23 +131,56 @@ twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
 source_samplers = ["Texture2D_0_GSBlendMap_NormalMap_1", "Texture2D_10_GSBlendMap_AlbedoMap_0", "Texture2D_11_GSBlendMap_NormalMap_0", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_AlbedoMap_1", "Texture2D_3_GSBlendMap_AlbedoMap_2", "Texture2D_4_GSBlendMap_Mask1Map_4", "Texture2D_5_GSBlendMap_AlbedoMap_0", "Texture2D_6_GSBlendMap_NormalMap_2", "Texture2D_7_GSBlendMap_NormalMap_0", "Texture2D_8_GSBlendMap_AlbedoMap_2", "Texture2D_9_GSBlendMap_Mask3Map_2"]
 [rules.plan]
 Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_2_GSBlendMap_AlbedoMap_1"
-Texture2D_6_GSBlendMap_AlbedoMap_0 = "Texture2D_5_GSBlendMap_AlbedoMap_0"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
 Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_3_GSBlendMap_AlbedoMap_2"
-Texture2D_7_GSBlendMap_NormalMap_0 = "Texture2D_7_GSBlendMap_NormalMap_0"
+Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
 Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_0_GSBlendMap_NormalMap_1"
 Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
 Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_11_GSBlendMap_NormalMap_0"
 Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_4_GSBlendMap_Mask1Map_4"
+
+# Three blend layers without overlay (the Midra arena floor, m61_00_287): the second layer's
+# duplicate samplers (8_AlbedoMap_2, 6_NormalMap_2) are dropped, the first layer's normal
+# stands in for the overlay normal, as in the [Mb3] rule.
+[[rules]]
+source = "M[AMSN_V][Mb3][Snow_VtxMask]"
+twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+source_samplers = ["Texture2D_0_GSBlendMap_NormalMap_1", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_AlbedoMap_1", "Texture2D_3_GSBlendMap_AlbedoMap_2", "Texture2D_4_GSBlendMap_Mask1Map_4", "Texture2D_5_GSBlendMap_AlbedoMap_0", "Texture2D_6_GSBlendMap_NormalMap_2", "Texture2D_7_GSBlendMap_NormalMap_0", "Texture2D_8_GSBlendMap_AlbedoMap_2"]
+[rules.plan]
+Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_2_GSBlendMap_AlbedoMap_1"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
+Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_3_GSBlendMap_AlbedoMap_2"
+Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
+Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_0_GSBlendMap_NormalMap_1"
+Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
+Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_0_GSBlendMap_NormalMap_1"
+Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_4_GSBlendMap_Mask1Map_4"
+
+# The vertex-masked variant of the [Ov_N][Mb3_ColorAdjust][3Mask_ch18] rule below: its own
+# snow pair (5_AlbedoMap, 7_NormalMap, unindexed) is dropped for the catalogue's.
+[[rules]]
+source = "M[AMSN_V][Ov_N][Mb3_ColorAdjust][3Mask_ch18][Snow_VtxMask_ch19]"
+twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
+source_samplers = ["Texture2D_0_GSBlendMap_AlbedoMap_3", "Texture2D_10_GSBlendMap_NormalMap_0", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_NormalMap_1", "Texture2D_3_GSBlendMap_Mask1Map_4", "Texture2D_4_GSBlendMap_AlbedoMap_2", "Texture2D_5_GSBlendMap_AlbedoMap", "Texture2D_6_GSBlendMap_NormalMap_3", "Texture2D_7_GSBlendMap_NormalMap", "Texture2D_8_GSBlendMap_AlbedoMap_1", "Texture2D_9_GSBlendMap_Mask3Map_2"]
+[rules.plan]
+Texture2D_2_GSBlendMap_AlbedoMap_1 = "Texture2D_8_GSBlendMap_AlbedoMap_1"
+Texture2D_6_GSBlendMap_AlbedoMap_0 = "snow_albedo"
+Texture2D_3_GSBlendMap_AlbedoMap_2 = "Texture2D_4_GSBlendMap_AlbedoMap_2"
+Texture2D_7_GSBlendMap_NormalMap_0 = "snow_normal"
+Texture2D_0_GSBlendMap_NormalMap_1 = "Texture2D_2_GSBlendMap_NormalMap_1"
+Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
+Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_10_GSBlendMap_NormalMap_0"
+Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_3_GSBlendMap_Mask1Map_4"
 
 [[rules]]
 source = "M[AMSN_V][Snow_VtxMask]_Edge"
 twin = "M[AMSN_V][Ov_N][Snow]_Edge"
 source_samplers = ["Texture2D_0_AlbedoMap_0", "Texture2D_1_NormalMap_0", "Texture2D_2_AlbedoMap_0", "Texture2D_3_NormalMap_0", "Texture2D_4_Mask1Map_4"]
 [rules.plan]
-Texture2D_0_AlbedoMap_0 = "Texture2D_0_AlbedoMap_0"
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
 Texture2D_2_AlbedoMap_0 = "Texture2D_2_AlbedoMap_0"
 Texture2D_1_NormalMap_0 = "Texture2D_1_NormalMap_0"
-Texture2D_3_NormalMap_0 = "Texture2D_3_NormalMap_0"
+Texture2D_3_NormalMap_0 = "snow_normal"
 Texture2D_4_NormalMap_0 = "template"
 
 [[rules]]
@@ -152,10 +188,10 @@ source = "M[AMSN_V][Ov_N][Snow_VtxMask]_Edge"
 twin = "M[AMSN_V][Ov_N][Snow]_Edge"
 source_samplers = ["Texture2D_0_AlbedoMap_0", "Texture2D_1_NormalMap_0", "Texture2D_2_AlbedoMap_0", "Texture2D_3_NormalMap_0", "Texture2D_4_Mask1Map_4", "Texture2D_5_NormalMap"]
 [rules.plan]
-Texture2D_0_AlbedoMap_0 = "Texture2D_0_AlbedoMap_0"
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
 Texture2D_2_AlbedoMap_0 = "Texture2D_2_AlbedoMap_0"
 Texture2D_1_NormalMap_0 = "Texture2D_1_NormalMap_0"
-Texture2D_3_NormalMap_0 = "Texture2D_3_NormalMap_0"
+Texture2D_3_NormalMap_0 = "snow_normal"
 Texture2D_4_NormalMap_0 = "template"
 
 [[rules]]

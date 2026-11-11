@@ -111,7 +111,7 @@ directory. The classes are in `writer/StaticModBuilder/Winter/`.
 
 1. **Catalogues.** `WinterCatalogLoader` reads
    `data/plugins/winter_materials.toml` (snow texture paths, the three
-   template matbins and their modal snow parameters, 33 conversion rules,
+   template matbins and their modal snow parameters, 35 conversion rules,
    the retarget table, the terrain selectors and keep list) into a
    `WinterCatalog`, and `data/plugins/winter_textures.toml` (the 129 TPF
    stems). Retarget targets are verified to exist before anything is built.
@@ -223,12 +223,12 @@ Measured on the real game (1.17, a local game copy, Wine):
 | Item | Figure |
 |---|---|
 | Material binders | 2.58 MB (base) and 0.53 MB (DLC); vanilla 2.75 MB and 0.61 MB |
-| Matbins | 7041 conversions, 886 retargets, 38 skinned exclusions, 11 UV-set exclusions, 0 layout skips |
+| Matbins | 7053 conversions, 886 retargets, 38 skinned exclusions, 11 UV-set exclusions, 0 layout skips |
 | Textures | 258 TPFs, 18.56 MB |
 | Overlay (Torrent skin) | 3 binders, 6.63 MB |
 | Folder shipped per seed | 28 MB (28.30 MB); 22 MB (21.67 MB) without the overlay |
 | Scan | 226 s over 24 987 binders, 283 skinned materials, 4841 matbins with fewer than 2 UV sets |
-| Winter step | 292 s inside the bootstrap step (scan 226 s) |
+| Winter step | 240 to 339 s inside the bootstrap step over three runs (scan about 226 s) |
 | Whole bootstrap | 472 s |
 
 Per-seed generation time is unchanged. The seed zip grows by about the
