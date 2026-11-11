@@ -4,19 +4,21 @@ using SoulsFormats;
 namespace StaticModBuilder.Winter;
 
 /// <summary>
-/// A twin shader's template matbin, checked against the catalogue: its shader path, its
-/// samplers in layout order and the twin params the catalogue lists, in the matbin's order,
-/// with the catalogue values. The objects are never put in a matbin; conversions copy them.
+/// A twin shader's template matbin, checked against the catalogue: its shader path, the UV sets
+/// its vertex shaders read (from the catalogue), its samplers in layout order and the twin params
+/// the catalogue lists, in the matbin's order, with the catalogue values. The objects are never
+/// put in a matbin; conversions copy them.
 /// </summary>
 public sealed record ResolvedTemplate(
     string Shader,
     string ShaderPath,
+    int UvSets,
     IReadOnlyList<MATBIN.Sampler> Samplers,
     IReadOnlyList<MATBIN.Param> Params);
 
 /// <summary>
-/// Converts one matbin to the snow twin of its shader (pure: no file I/O). The skinned-matbin
-/// exclusion belongs to the caller.
+/// Converts one matbin to the snow twin of its shader (pure: no file I/O). The skinned and
+/// UV-set exclusions belong to the caller.
 /// </summary>
 public sealed class MatbinConverter
 {
@@ -96,12 +98,19 @@ public sealed class MatbinConverter
         return new ResolvedTemplate(
             shader,
             templateMatbin.ShaderPath,
+            template.UvSets,
             templateMatbin.Samplers.Select(CopySampler).ToList(),
             parameters);
     }
 
     /// <summary>Whether a conversion rule exists for the shader name (exact match).</summary>
     public bool HasRule(string shader) => _rules.ContainsKey(shader);
+
+    /// <summary>The twin of the rule for the shader, which must have one (<see cref="HasRule"/>).</summary>
+    public string TwinOf(string shader) => _rules[shader].Twin;
+
+    /// <summary>The UV sets the vertex shaders of the shader's twin read, per the catalogue.</summary>
+    public int RequiredUvSets(string shader) => _templates[TwinOf(shader)].UvSets;
 
     /// <summary>
     /// Rewrites the matbin to the twin of its shader. Returns false, the matbin untouched, with

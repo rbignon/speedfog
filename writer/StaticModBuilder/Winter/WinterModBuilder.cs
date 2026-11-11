@@ -106,19 +106,23 @@ public static class WinterModBuilder
         WinterMaterialBuilder.VerifyRetargetTargets(gameDir, catalog.Retargets);
         Console.WriteLine("Winter: retarget targets verified");
 
-        var skinned = SkinnedMaterialScanner.Scan(gameDir, report, (done, total) =>
+        int mostUvSets = catalog.Templates.Max(t => t.UvSets);
+        var layouts = MaterialLayoutScanner.Scan(gameDir, report, (done, total) =>
         {
             if (done % 1000 == 0)
             {
                 Console.WriteLine($"Winter: scanned {done}/{total} binders");
             }
-        });
-        Console.WriteLine($"Winter: scan done, {skinned.Count} skinned materials, {clock.Elapsed.TotalSeconds:F0} s");
+        }, mostUvSets);
+        Console.WriteLine($"Winter: scan done, {layouts.Skinned.Count} skinned materials, "
+            + $"{layouts.CountWithFewerUvSetsThan(mostUvSets)} with fewer than {mostUvSets} UV sets, "
+            + $"{clock.Elapsed.TotalSeconds:F0} s");
 
-        var materials = WinterMaterialBuilder.Build(gameDir, outputDir, catalog, skinned, report);
+        var materials = WinterMaterialBuilder.Build(gameDir, outputDir, catalog, layouts, report);
         Console.WriteLine($"Winter: binders done, {materials.Converted} conversions, "
             + $"{materials.RetargetedTextures + materials.RetargetedTerrain} retargets, "
-            + $"{materials.SkippedSkinned} skipped skinned, {materials.SkippedLayout} skipped layout");
+            + $"{materials.SkippedSkinned} skipped skinned, {materials.SkippedUvSets} skipped for UV sets, "
+            + $"{materials.SkippedLayout} skipped layout");
 
         var tpfs = WinterTextureBuilder.Build(gameDir, outputDir, stems, report);
         Console.WriteLine($"Winter: textures done, {tpfs} TPFs");
@@ -132,7 +136,7 @@ public static class WinterModBuilder
 
         return $"Winter mod: {materials.Converted} conversions, "
             + $"{materials.RetargetedTextures + materials.RetargetedTerrain} retargets, "
-            + $"{tpfs} TPFs, {materials.SkippedSkinned} skinned exclusions, "
+            + $"{tpfs} TPFs, {materials.SkippedSkinned} skinned exclusions, {materials.SkippedUvSets} UV-set exclusions, "
             + $"{overlay.Count} overlay files, {clock.Elapsed.TotalSeconds:F0} s";
     }
 

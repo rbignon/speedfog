@@ -8,10 +8,14 @@ albedo = 'N:\GR\data\Asset\Environment\texture\AET000\AET000_080_a.tif'
 normal = 'N:\GR\data\Asset\Environment\texture\AET001\AET001_078_n.tif'
 ground_albedo = 'N:\GR\data\Asset\Environment\texture\AET000\AET000_081_a.tif'
 
+# uv_sets: the UV sets the twin's vertex shaders read (TEXCOORD0 upwards, from the input
+# signature of its .vpo entries in shader/shaderbdle.shaderbdlebnd.dcx). A matbin drawn by a
+# mesh with fewer stays vanilla: the mesh would not be drawn.
 [[templates]]
 shader = "M[AMSN_V][Snow]"
 matbin = "m13_00_503"
 samplers = ["Texture2D_0_AlbedoMap_0", "Texture2D_2_AlbedoMap_0", "Texture2D_1_NormalMap_0", "Texture2D_3_NormalMap_0"]
+uv_sets = 1
 [templates.params]
 float_0 = 0.0
 float3_0 = [0.0, 2.0, 0.0]
@@ -22,6 +26,7 @@ float3_0 = [0.0, 2.0, 0.0]
 shader = "M[AMSN_V][Ov_N][Snow]_Edge"
 matbin = "AEG001_422_Branch_Edge"
 samplers = ["Texture2D_0_AlbedoMap_0", "Texture2D_2_AlbedoMap_0", "Texture2D_1_NormalMap_0", "Texture2D_3_NormalMap_0", "Texture2D_4_NormalMap_0"]
+uv_sets = 1
 [templates.params]
 float_0 = -1.2
 float3_0 = [0.0, 2.0, 0.95]
@@ -34,6 +39,7 @@ float_1 = 2.0
 shader = "M[AMSN_V][Mb2][Ov_N][Snow]"
 matbin = "m39_10_045"
 samplers = ["Texture2D_2_GSBlendMap_AlbedoMap_1", "Texture2D_6_GSBlendMap_AlbedoMap_0", "Texture2D_3_GSBlendMap_AlbedoMap_2", "Texture2D_7_GSBlendMap_NormalMap_0", "Texture2D_0_GSBlendMap_NormalMap_1", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_5_GSBlendMap_NormalMap_0", "Texture2D_4_GSBlendMap_Mask1Map_4"]
+uv_sets = 2
 [templates.params]
 float_9 = 0.0
 float3_0 = [0.0, 2.0, 0.0]

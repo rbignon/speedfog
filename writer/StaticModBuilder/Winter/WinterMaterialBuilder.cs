@@ -12,6 +12,7 @@ public sealed record MaterialResult(
     int RetargetedTerrain,
     int SkippedLayout,
     int SkippedSkinned,
+    int SkippedUvSets,
     IReadOnlyDictionary<string, int> ConvertedPerRule);
 
 /// <summary>
@@ -133,19 +134,19 @@ public static class WinterMaterialBuilder
 
     /// <summary>
     /// Runs passes 2 to 4 over every matbin of the Map_* folders and rewrites the entries that
-    /// changed. Skinned stems (compared case-insensitively) are never converted; they are logged
-    /// and counted only when their shader has a rule.
+    /// changed. A skinned stem, or one whose meshes provide fewer UV sets than its twin reads
+    /// (stems compared case-insensitively), is never converted; it is logged and counted only
+    /// when its shader has a rule.
     /// </summary>
     public static MaterialResult ProcessBinder(
         BND4 binder,
         WinterCatalog catalog,
         IReadOnlyDictionary<string, ResolvedTemplate> templates,
-        IReadOnlySet<string> skinned,
+        MaterialLayouts layouts,
         WinterReport report)
     {
         var converter = new MatbinConverter(catalog, templates);
-        var skinnedStems = new HashSet<string>(skinned, StringComparer.OrdinalIgnoreCase);
-        int converted = 0, retargetedTextures = 0, retargetedTerrain = 0, skippedLayout = 0, skippedSkinned = 0;
+        int converted = 0, retargetedTextures = 0, retargetedTerrain = 0, skippedLayout = 0, skippedSkinned = 0, skippedUvSets = 0;
         var perRule = new SortedDictionary<string, int>(StringComparer.Ordinal);
 
         foreach (var file in MapMatbins(binder))
@@ -164,11 +165,19 @@ public static class WinterMaterialBuilder
             if (IsConversionCandidate(folder, stem))
             {
                 string shader = MatbinNames.ShaderName(m);
-                // Only a matbin that has a rule counts as a skinned exclusion.
-                if (converter.HasRule(shader) && skinnedStems.Contains(stem))
+                // Only a matbin that has a rule counts as an exclusion.
+                bool hasRule = converter.HasRule(shader);
+                int required = hasRule ? converter.RequiredUvSets(shader) : 0;
+                if (hasRule && layouts.Skinned.Contains(stem))
                 {
                     report.Line($"{file.Name}: left vanilla: skinned ({shader})");
                     skippedSkinned++;
+                }
+                else if (hasRule && layouts.LacksUvSets(stem, required, out int sets))
+                {
+                    report.Line($"{file.Name}: left vanilla: {sets} UV set{(sets == 1 ? "" : "s")}, "
+                        + $"{converter.TwinOf(shader)} reads {required} ({shader})");
+                    skippedUvSets++;
                 }
                 else if (TryConvert(converter, m, file, out string? reason))
                 {
@@ -198,7 +207,7 @@ public static class WinterMaterialBuilder
             }
         }
 
-        return new MaterialResult(converted, retargetedTextures, retargetedTerrain, skippedLayout, skippedSkinned, perRule);
+        return new MaterialResult(converted, retargetedTextures, retargetedTerrain, skippedLayout, skippedSkinned, skippedUvSets, perRule);
     }
 
     /// <summary>
@@ -207,7 +216,7 @@ public static class WinterMaterialBuilder
     /// compression they were read with. The caller verifies the retarget targets first
     /// (<see cref="VerifyRetargetTargets"/>, run by WinterModBuilder before the scan).
     /// </summary>
-    public static MaterialResult Build(string gameDir, string winterDir, WinterCatalog catalog, IReadOnlySet<string> skinned, WinterReport report)
+    public static MaterialResult Build(string gameDir, string winterDir, WinterCatalog catalog, MaterialLayouts layouts, WinterReport report)
     {
         var binders = BinderSubPaths.Select(sub => ReadBinder(Path.Combine(gameDir, sub))).ToList();
         var templates = ResolveTemplates(binders[0], catalog);
@@ -215,7 +224,7 @@ public static class WinterMaterialBuilder
         var results = new List<MaterialResult>();
         for (int i = 0; i < binders.Count; i++)
         {
-            var result = ProcessBinder(binders[i], catalog, templates, skinned, report);
+            var result = ProcessBinder(binders[i], catalog, templates, layouts, report);
             Summarize(Path.GetFileName(BinderSubPaths[i]), result, report);
             results.Add(result);
         }
@@ -276,7 +285,8 @@ public static class WinterMaterialBuilder
     {
         report.Line(
             $"{binderName}: {r.Converted} converted, {r.RetargetedTextures} texture-retargeted, "
-            + $"{r.RetargetedTerrain} terrain-retargeted, {r.SkippedLayout} left for layout, {r.SkippedSkinned} left as skinned");
+            + $"{r.RetargetedTerrain} terrain-retargeted, {r.SkippedLayout} left for layout, {r.SkippedSkinned} left as skinned, "
+            + $"{r.SkippedUvSets} left for UV sets");
         foreach (var (rule, count) in r.ConvertedPerRule)
         {
             report.Line($"{binderName}:   {rule}: {count} converted");
@@ -296,6 +306,7 @@ public static class WinterMaterialBuilder
             results.Sum(r => r.RetargetedTerrain),
             results.Sum(r => r.SkippedLayout),
             results.Sum(r => r.SkippedSkinned),
+            results.Sum(r => r.SkippedUvSets),
             perRule);
     }
 }

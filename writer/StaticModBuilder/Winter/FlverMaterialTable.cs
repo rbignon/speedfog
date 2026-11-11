@@ -2,14 +2,20 @@ using SoulsFormats;
 
 namespace StaticModBuilder.Winter;
 
-/// <summary>One FLVER material: the stem of its MTD path and whether a skinned mesh draws it.</summary>
-public sealed record FlverMaterialEntry(string MatbinStem, bool Skinned);
+/// <summary>
+/// One FLVER material: the stem of its MTD path, whether a skinned mesh draws it, and how many
+/// UV sets (TEXCOORD0 upwards, without a gap) every mesh drawing it provides: the smallest count
+/// over those meshes, null when no mesh draws the material.
+/// </summary>
+public sealed record FlverMaterialEntry(string MatbinStem, bool Skinned, int? UvSets);
 
 /// <summary>
-/// Lists a FLVER2's materials and flags those drawn by a skinned mesh (a vertex buffer whose
-/// layout carries BoneIndices or BoneWeights). <see cref="Read"/> parses only the tables it
-/// needs and skips the vertex data; <see cref="ReadWithSoulsFormats"/> is the full-parse
-/// reference it is checked against.
+/// Lists a FLVER2's materials with what the vertex layouts of their meshes provide: bone indices
+/// or weights (a skinned mesh) and UV sets. A layout member binds the vertex shader input of its
+/// semantic and index (UV 1 is TEXCOORD1), and a mesh whose layout lacks an input the bound
+/// shader reads is not drawn. <see cref="Read"/> parses only the tables it needs and skips the
+/// vertex data; <see cref="ReadWithSoulsFormats"/> is the full-parse reference it is checked
+/// against.
 /// </summary>
 public static class FlverMaterialTable
 {
@@ -22,6 +28,9 @@ public static class FlverMaterialTable
     private const int VertexBufferSize = 0x20;
     private const int BufferLayoutSize = 0x10;
     private const int LayoutMemberSize = 0x14;
+
+    /// <summary>What one buffer layout provides.</summary>
+    private readonly record struct LayoutInputs(bool Skinned, IReadOnlySet<int> UvIndices);
 
     public static IReadOnlyList<FlverMaterialEntry> Read(byte[] flverBytes)
     {
@@ -67,36 +76,44 @@ public static class FlverMaterialTable
             throw new InvalidDataException("FLVER2 tables run past the end of the file");
         }
 
-        var layoutSkinned = new bool[layoutCount];
+        var layoutInputs = new LayoutInputs[layoutCount];
         for (int i = 0; i < layoutCount; i++)
         {
             long layout = layouts + (long)i * BufferLayoutSize;
             int memberCount = br.GetInt32(layout);
             int memberOffset = br.GetInt32(layout + 0xC);
-            for (int m = 0; m < memberCount && !layoutSkinned[i]; m++)
+            bool skinned = false;
+            var uvIndices = new HashSet<int>();
+            for (int m = 0; m < memberCount; m++)
             {
-                // Semantic at +0xC in both the regular and the SpeedTree member layout.
-                uint semantic = br.GetUInt32(memberOffset + (long)m * LayoutMemberSize + 0xC);
-                layoutSkinned[i] = IsBoneSemantic((FLVER.LayoutSemantic)semantic);
+                // Semantic at +0xC and index at +0x10 in both the regular and the SpeedTree member layout.
+                long member = memberOffset + (long)m * LayoutMemberSize;
+                var semantic = (FLVER.LayoutSemantic)br.GetUInt32(member + 0xC);
+                skinned |= IsBoneSemantic(semantic);
+                if (semantic == FLVER.LayoutSemantic.UV)
+                {
+                    uvIndices.Add(br.GetInt32(member + 0x10));
+                }
             }
+            layoutInputs[i] = new LayoutInputs(skinned, uvIndices);
         }
 
-        var skinned = new bool[materialCount];
+        var skinnedMaterials = new bool[materialCount];
+        var uvSets = new int?[materialCount];
         for (int i = 0; i < meshCount; i++)
         {
             long mesh = meshes + (long)i * MeshSize;
             int materialIndex = CheckIndex(br.GetInt32(mesh + 0x04), materialCount, "material");
             int bufferCount = br.GetInt32(mesh + 0x28);
             int bufferIndicesOffset = br.GetInt32(mesh + 0x2C);
+            var inputs = new List<LayoutInputs>(bufferCount);
             for (int j = 0; j < bufferCount; j++)
             {
                 int bufferIndex = CheckIndex(br.GetInt32(bufferIndicesOffset + 4L * j), vertexBufferCount, "vertex buffer");
                 int layoutIndex = CheckIndex(br.GetInt32(vertexBuffers + (long)bufferIndex * VertexBufferSize + 0x04), layoutCount, "buffer layout");
-                if (layoutSkinned[layoutIndex])
-                {
-                    skinned[materialIndex] = true;
-                }
+                inputs.Add(layoutInputs[layoutIndex]);
             }
+            Accumulate(skinnedMaterials, uvSets, materialIndex, inputs);
         }
 
         var entries = new List<FlverMaterialEntry>(materialCount);
@@ -104,7 +121,7 @@ public static class FlverMaterialTable
         {
             int mtdOffset = br.GetInt32(materials + (long)i * MaterialSize + 0x04);
             string mtd = unicode ? br.GetUTF16(mtdOffset) : br.GetShiftJIS(mtdOffset);
-            entries.Add(new FlverMaterialEntry(MatbinStem(mtd), skinned[i]));
+            entries.Add(new FlverMaterialEntry(MatbinStem(mtd), skinnedMaterials[i], uvSets[i]));
         }
         return entries;
     }
@@ -113,18 +130,19 @@ public static class FlverMaterialTable
     {
         var flver = FLVER2.Read(flverBytes);
         var skinned = new bool[flver.Materials.Count];
+        var uvSets = new int?[flver.Materials.Count];
         foreach (var mesh in flver.Meshes)
         {
             int materialIndex = CheckIndex(mesh.MaterialIndex, flver.Materials.Count, "material");
-            foreach (var buffer in mesh.VertexBuffers)
-            {
-                if (flver.BufferLayouts[buffer.LayoutIndex].Any(member => IsBoneSemantic(member.Semantic)))
-                {
-                    skinned[materialIndex] = true;
-                }
-            }
+            var inputs = mesh.VertexBuffers
+                .Select(buffer => flver.BufferLayouts[buffer.LayoutIndex])
+                .Select(layout => new LayoutInputs(
+                    layout.Any(member => IsBoneSemantic(member.Semantic)),
+                    layout.Where(member => member.Semantic == FLVER.LayoutSemantic.UV).Select(member => member.Index).ToHashSet()))
+                .ToList();
+            Accumulate(skinned, uvSets, materialIndex, inputs);
         }
-        return flver.Materials.Select((m, i) => new FlverMaterialEntry(MatbinStem(m.MTD), skinned[i])).ToList();
+        return flver.Materials.Select((m, i) => new FlverMaterialEntry(MatbinStem(m.MTD), skinned[i], uvSets[i])).ToList();
     }
 
     /// <summary>File name of the path without its extension; both separators are accepted.</summary>
@@ -133,6 +151,33 @@ public static class FlverMaterialTable
         string name = mtdPath[(mtdPath.LastIndexOfAny(new[] { '\\', '/' }) + 1)..];
         int dot = name.LastIndexOf('.');
         return dot < 0 ? name : name[..dot];
+    }
+
+    /// <summary>
+    /// Folds one mesh into its material: skinned when any buffer is, UV sets as the smallest count
+    /// over the meshes seen so far (the UV indices of a mesh's buffers are pooled).
+    /// </summary>
+    private static void Accumulate(bool[] skinned, int?[] uvSets, int materialIndex, IReadOnlyList<LayoutInputs> inputs)
+    {
+        var uvIndices = new HashSet<int>();
+        foreach (var input in inputs)
+        {
+            skinned[materialIndex] |= input.Skinned;
+            uvIndices.UnionWith(input.UvIndices);
+        }
+        int sets = UvSetsFromZero(uvIndices);
+        uvSets[materialIndex] = uvSets[materialIndex] is int known ? Math.Min(known, sets) : sets;
+    }
+
+    /// <summary>How many UV indices are present from 0 up without a gap ({0, 2} gives 1).</summary>
+    private static int UvSetsFromZero(ISet<int> uvIndices)
+    {
+        int sets = 0;
+        while (uvIndices.Contains(sets))
+        {
+            sets++;
+        }
+        return sets;
     }
 
     private static bool IsBoneSemantic(FLVER.LayoutSemantic semantic) =>

@@ -6,14 +6,16 @@ namespace StaticModBuilder.Winter;
 public sealed record SnowTextures(string Albedo, string Normal, string GroundAlbedo);
 
 /// <summary>
-/// Template of a snow twin shader: the matbin it is cloned from, its sampler layout
-/// and the params inserted on conversion. Params keys keep the catalogue spelling
+/// Template of a snow twin shader: the matbin it is cloned from, its sampler layout, the UV
+/// sets its vertex shaders read (TEXCOORD0 upwards; a matbin drawn by a mesh with fewer stays
+/// vanilla) and the params inserted on conversion. Params keys keep the catalogue spelling
 /// (twin-prefixed params without the prefix, group_* params in full).
 /// </summary>
 public sealed record TwinTemplate(
     string Shader,
     string Matbin,
     IReadOnlyList<string> Samplers,
+    int UvSets,
     IReadOnlyDictionary<string, float[]> Params);
 
 /// <summary>

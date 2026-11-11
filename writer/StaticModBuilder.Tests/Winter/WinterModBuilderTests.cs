@@ -42,7 +42,7 @@ public class WinterModBuilderTests : IDisposable
     public void Build_VerifiesRetargetTargetsBeforeTheScanAndAnyWrite()
     {
         // The empty game folder has no TPF and no binder: the first failure names the step that
-        // runs first. The scan would report "skinned scan: no *.geombnd.dcx", the material
+        // runs first. The scan would report "layout scan: no *.geombnd.dcx", the material
         // binders "missing material binder".
         var (gameDir, dataDir, winterDir) = MakeInputs();
 

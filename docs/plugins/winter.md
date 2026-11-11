@@ -115,13 +115,19 @@ directory. The classes are in `writer/StaticModBuilder/Winter/`.
    the retarget table, the terrain selectors and keep list) into a
    `WinterCatalog`, and `data/plugins/winter_textures.toml` (the 129 TPF
    stems). Retarget targets are verified to exist before anything is built.
-2. **Skinned-material scan.** `SkinnedMaterialScanner` reads every mapbnd and
-   geombnd of the game (`FlverMaterialTable` reads the FLVER material table
-   and the vertex layout, `MatbinNames` resolves material paths to matbin
-   names) and collects the matbins used by a skinned mesh (bone indices and
-   weights). The snow shaders have no skinned permutation, so a skinned mesh
-   using a converted matbin is not drawn at all (this is how the Chapel's
-   wooden bridge disappeared in the spike). The scan must be complete: a
+2. **Layout scan.** `MaterialLayoutScanner` reads every mapbnd and geombnd
+   of the game (`FlverMaterialTable` reads the FLVER material table and the
+   vertex layouts, `MatbinNames` resolves material paths to matbin names)
+   and collects into `MaterialLayouts`, per matbin, what the vertex layouts
+   of its meshes provide: whether a skinned mesh (bone indices and weights)
+   draws it, and the UV sets every mesh drawing it provides (TEXCOORD0
+   upwards, the smallest count over those meshes). A layout member binds the
+   vertex shader input of its semantic and index, and a mesh whose layout
+   lacks an input the bound shader reads is not drawn; the snow shaders have
+   no skinned permutation, so a skinned mesh using a converted matbin is not
+   drawn either (this is how the Chapel's wooden bridge disappeared in the
+   spike, and how the Shaded Castle rocks disappeared under the two-UV twin,
+   see `docs/winter-rendering.md`). The scan must be complete: a
    binder that cannot be read fails the build. The fast table reader is
    checked against `FLVER2.Read` on about 200 binders spread over the whole
    list (geombnds and mapbnds alike); a disagreement starts the scan over
@@ -134,8 +140,9 @@ directory. The classes are in `writer/StaticModBuilder/Winter/`.
    retargets, binder-wide (Limgrave ground textures to the snow ground,
    grey LOD macro to the flat white `AET099_986`, grass atlases to their
    snow twins; `MatbinRetargeter`); (3) conversion to the snow twins by
-   exact shader name, only when the sampler layout matches the rule and the
-   matbin is not skinned (`MatbinConverter`); (4) terrain albedo retarget on
+   exact shader name, only when the sampler layout matches the rule, the
+   matbin is not skinned and its meshes provide the UV sets the twin reads
+   (`uv_sets` of the template; `MatbinConverter`); (4) terrain albedo retarget on
    the matbins pass 3 did not convert. Untouched matbins stay byte-identical.
 4. **Textures.** `WinterTextureBuilder` rewrites each listed TPF and its `_l`
    twin under `asset/aet/<family>/`, same names and compression.
@@ -160,8 +167,9 @@ directory. The classes are in `writer/StaticModBuilder/Winter/`.
    folder such as `material/` or `asset/`) fails the build.
 6. **Report.** `WinterReport` writes `data/mods/speedfog-winter.report.txt`
    (not shipped; packaging copies only the folder): the scan summary
-   (binders, FLVERs, skinned matbins, reader used), the skinned exclusions
-   by matbin name and shader, per binder the counts of converted,
+   (binders, FLVERs, skinned matbins, matbins with fewer UV sets than the
+   most demanding twin reads, reader used), the skinned and UV-set exclusions by matbin name and
+   shader, per binder the counts of converted,
    texture-retargeted, terrain-retargeted and left-vanilla matbins with the
    conversions per rule, per TPF stem the counts of frosted, reduced and
    untouched textures plus a total, the overlay files with their sizes, and
@@ -174,6 +182,21 @@ Among them are the Chapel of Anticipation's plank materials (`m10_00_200`,
 used by `AEG210_336/376`) that the research spike had converted: those
 objects were invisible during the spike's validation and now come back, in
 their vanilla look.
+
+UV-set exclusions: the two-layer twin `M[AMSN_V][Mb2][Ov_N][Snow]` reads
+TEXCOORD1 (`uv_sets = 2` in the catalogue), so a matbin that some mesh draws
+with one UV set is never sent to it. The catalogue routes the two source
+shaders whose own vertex shaders read one UV set (`[Mb2][1mask][Ov_N]`,
+`[Mb3][3Mask_T][Ov_N2_T]`, the Shaded Castle rocks among them) to the plain
+twin, so this exclusion only catches matbins whose meshes provide fewer UV
+sets than their vanilla shader reads: 11 in the real game (7 in the base
+binder, 4 in the DLC one), each drawn somewhere by a mesh with a single
+`Short2` UV member: the Mountaintops rocks `AEG004_086/087` (snow-gated by
+vertex mask in vanilla, drawn with one UV set by the far-LOD overworld
+tiles `m60_xx_yy_01/02`), `AEG100_036_ID001`, and map pieces of Leyndell,
+Ainsel, Stormveil and the DLC (`m11_00_209/315`, `m12_00_204`,
+`m18_00_216`, `m61_00_289/356`, `m61_05_017/115`). Background in
+`docs/winter-rendering.md`, third exclusion.
 
 Failures: on a hard error (a binder or template matbin missing or not
 matching its declared layout, a listed TPF or retarget target missing, an
@@ -200,12 +223,12 @@ Measured on the real game (1.17, a local game copy, Wine):
 | Item | Figure |
 |---|---|
 | Material binders | 2.58 MB (base) and 0.53 MB (DLC); vanilla 2.75 MB and 0.61 MB |
-| Matbins | 7052 conversions, 886 retargets, 38 skinned exclusions, 0 layout skips |
+| Matbins | 7041 conversions, 886 retargets, 38 skinned exclusions, 11 UV-set exclusions, 0 layout skips |
 | Textures | 258 TPFs, 18.56 MB |
 | Overlay (Torrent skin) | 3 binders, 6.63 MB |
 | Folder shipped per seed | 28 MB (28.30 MB); 22 MB (21.67 MB) without the overlay |
-| Scan | 217 s over 24 987 binders, 283 skinned materials |
-| Winter step | 281 s standalone; 302 s inside the bootstrap (scan 236 s) |
+| Scan | 226 s over 24 987 binders, 283 skinned materials, 4841 matbins with fewer than 2 UV sets |
+| Winter step | 292 s inside the bootstrap step (scan 226 s) |
 | Whole bootstrap | 472 s |
 
 Per-seed generation time is unchanged. The seed zip grows by about the

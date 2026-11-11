@@ -4,11 +4,11 @@ using Xunit;
 
 namespace StaticModBuilder.Tests.Winter;
 
-public class SkinnedMaterialScannerTests : IDisposable
+public class MaterialLayoutScannerTests : IDisposable
 {
     private readonly string _temp = Path.Combine(Path.GetTempPath(), "winter-scan-" + Guid.NewGuid().ToString("N"));
 
-    public SkinnedMaterialScannerTests() => Directory.CreateDirectory(_temp);
+    public MaterialLayoutScannerTests() => Directory.CreateDirectory(_temp);
 
     public void Dispose() => Directory.Delete(_temp, true);
 
@@ -35,14 +35,17 @@ public class SkinnedMaterialScannerTests : IDisposable
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void Collect_AddsOnlySkinnedStems(bool useFastReader)
+    public void Collect_RecordsTheSkinnedStemsAndTheUvSets(bool useFastReader)
     {
         var binder = MakeBinder((@"N:\x\AEG001_001.flver", FlverMaterialTableTests.MakeSyntheticFlver()));
-        var skinned = new HashSet<string>();
+        var layouts = new MaterialLayouts();
 
-        SkinnedMaterialScanner.Collect(binder, skinned, useFastReader, new WinterReport());
+        MaterialLayoutScanner.Collect(binder, layouts, useFastReader, new WinterReport());
 
-        Assert.Equal(new[] { "m10_00_519" }, skinned);
+        Assert.Equal(new[] { "m10_00_519" }, layouts.Skinned);
+        Assert.Equal(1, layouts.UvSets["m10_00_519"]);
+        Assert.Equal(2, layouts.UvSets["AEG001_001"]);
+        Assert.Equal(2, layouts.UvSets.Count);
     }
 
     [Fact]
@@ -51,11 +54,11 @@ public class SkinnedMaterialScannerTests : IDisposable
         var binder = MakeBinder(
             (@"N:\x\AEG001_001.hkx", new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 }),
             (@"N:\x\AEG001_001.flver", FlverMaterialTableTests.MakeSyntheticFlver()));
-        var skinned = new HashSet<string>();
+        var layouts = new MaterialLayouts();
 
-        SkinnedMaterialScanner.Collect(binder, skinned, useFastReader: true, new WinterReport());
+        MaterialLayoutScanner.Collect(binder, layouts, useFastReader: true, new WinterReport());
 
-        Assert.Equal(new[] { "m10_00_519" }, skinned);
+        Assert.Equal(new[] { "m10_00_519" }, layouts.Skinned);
     }
 
     [Fact]
@@ -64,7 +67,7 @@ public class SkinnedMaterialScannerTests : IDisposable
         var binder = MakeBinder((@"N:\x\AEG001_002.flver", new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 }));
 
         var e = Assert.Throws<WinterBuildException>(() =>
-            SkinnedMaterialScanner.Collect(binder, new HashSet<string>(), useFastReader: true, new WinterReport()));
+            MaterialLayoutScanner.Collect(binder, new MaterialLayouts(), useFastReader: true, new WinterReport()));
 
         Assert.Contains("AEG001_002.flver", e.Message);
     }
@@ -78,7 +81,7 @@ public class SkinnedMaterialScannerTests : IDisposable
         WriteBinder("asset/aeg/aeg001/aeg001_001.geombnd.dcx", empty);
         WriteBinder("asset/aeg/aeg001/aeg001_001.geomhkxbnd.dcx", empty);
 
-        var binders = SkinnedMaterialScanner.EnumerateBinders(_temp)
+        var binders = MaterialLayoutScanner.EnumerateBinders(_temp)
             .Select(p => Path.GetRelativePath(_temp, p).Replace('\\', '/'))
             .ToList();
 
@@ -95,7 +98,7 @@ public class SkinnedMaterialScannerTests : IDisposable
     {
         WriteBinder("asset/aeg/aeg001/aeg001_001.geombnd.dcx", new BND4());
 
-        var e = Assert.Throws<WinterBuildException>(() => SkinnedMaterialScanner.EnumerateBinders(_temp).ToList());
+        var e = Assert.Throws<WinterBuildException>(() => MaterialLayoutScanner.EnumerateBinders(_temp).ToList());
 
         Assert.Contains("mapbnd", e.Message);
     }
@@ -106,13 +109,13 @@ public class SkinnedMaterialScannerTests : IDisposable
         // The real game's list size; EnumerateBinders puts the geombnds first.
         const int count = 24987;
         const int geombnds = 4000;
-        var sample = Enumerable.Range(0, count).Where(i => SkinnedMaterialScanner.InSelfCheckSample(i, count)).ToList();
+        var sample = Enumerable.Range(0, count).Where(i => MaterialLayoutScanner.InSelfCheckSample(i, count)).ToList();
 
-        Assert.InRange(sample.Count, SkinnedMaterialScanner.SelfCheckBinders, SkinnedMaterialScanner.SelfCheckBinders + 10);
+        Assert.InRange(sample.Count, MaterialLayoutScanner.SelfCheckBinders, MaterialLayoutScanner.SelfCheckBinders + 10);
         Assert.Equal(0, sample[0]);
         Assert.Contains(sample, i => i < geombnds);
         Assert.Contains(sample, i => i >= geombnds);
-        Assert.True(sample[^1] >= count - count / SkinnedMaterialScanner.SelfCheckBinders);
+        Assert.True(sample[^1] >= count - count / MaterialLayoutScanner.SelfCheckBinders);
     }
 
     [Theory]
@@ -121,11 +124,11 @@ public class SkinnedMaterialScannerTests : IDisposable
     [InlineData(399)]
     public void InSelfCheckSample_ChecksEveryBinderOfAShortList(int count)
     {
-        Assert.All(Enumerable.Range(0, count), i => Assert.True(SkinnedMaterialScanner.InSelfCheckSample(i, count)));
+        Assert.All(Enumerable.Range(0, count), i => Assert.True(MaterialLayoutScanner.InSelfCheckSample(i, count)));
     }
 
     [Fact]
-    public void Scan_CollectsSkinnedStemsOfEveryBinder()
+    public void Scan_CollectsTheLayoutsOfEveryBinder()
     {
         WriteBinder("asset/aeg/aeg001/aeg001_001.geombnd.dcx",
             MakeBinder((@"N:\x\AEG001_001.flver", FlverMaterialTableTests.MakeSyntheticFlver())));
@@ -135,19 +138,24 @@ public class SkinnedMaterialScannerTests : IDisposable
         var report = new WinterReport();
         var calls = new List<(int Done, int Total)>();
 
-        var skinned = SkinnedMaterialScanner.Scan(_temp, report, (done, total) => calls.Add((done, total)));
+        var layouts = MaterialLayoutScanner.Scan(_temp, report, (done, total) => calls.Add((done, total)), reportedUvSets: 2);
 
-        Assert.Equal(new[] { "m10_00_519", "m21_00_020" }, skinned.OrderBy(s => s, StringComparer.Ordinal));
+        Assert.Equal(new[] { "m10_00_519", "m21_00_020" }, layouts.Skinned.OrderBy(s => s, StringComparer.Ordinal));
+        Assert.Equal(1, layouts.UvSets["m21_00_020"]);
+        Assert.Equal(2, layouts.UvSets["m21_00_021"]);
         Assert.Equal(new[] { (2, 2) }, calls);
-        Assert.Contains(report.Lines, l => l.Contains("2 binders") && l.Contains("2 skinned matbins"));
+        Assert.Contains(report.Lines, l => l.Contains("2 binders") && l.Contains("2 skinned matbins") && l.Contains("2 matbins with fewer than 2 UV sets"));
     }
 
-    [Fact]
-    public void Scan_StartsOverWithFlver2ReadWhenALateSelfCheckFails()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Scan_StartsOverWithFlver2ReadWhenALateSelfCheckFails(bool uvSetsOnly)
     {
-        // 400 binders: every other one is sampled. The fake table reader loses the skinned
-        // stems of "m10_00_bad" FLVERs: binder 1 (not sampled) is misread silently, binder 398
-        // (sampled) reveals the mismatch. Only a rescan from the first binder recovers binder 1.
+        // 400 binders: every other one is sampled. The fake table reader misreads the "m10_00_bad"
+        // FLVERs (their skinned stems lost, or only their UV sets wrong): binder 1 (not sampled)
+        // is misread silently, binder 398 (sampled) reveals the mismatch. Only a rescan from the
+        // first binder recovers binder 1.
         const int count = 400;
         for (int i = 0; i < count - 1; i++)
         {
@@ -157,19 +165,20 @@ public class SkinnedMaterialScannerTests : IDisposable
             WriteBinder($"asset/aeg/aeg001/aeg001_{i:000}.geombnd.dcx", binder);
         }
         WriteBinder("map/m10/m10_00_00_00/m10_00_00_00_000100.mapbnd.dcx", new BND4());
-        Assert.False(SkinnedMaterialScanner.InSelfCheckSample(1, count));
-        Assert.True(SkinnedMaterialScanner.InSelfCheckSample(398, count));
+        Assert.False(MaterialLayoutScanner.InSelfCheckSample(1, count));
+        Assert.True(MaterialLayoutScanner.InSelfCheckSample(398, count));
         var report = new WinterReport();
 
-        var skinned = SkinnedMaterialScanner.Scan(_temp, report, null, bytes =>
+        var layouts = MaterialLayoutScanner.Scan(_temp, report, null, reportedUvSets: 2, bytes =>
         {
             var entries = FlverMaterialTable.Read(bytes);
             return entries.Any(e => e.MatbinStem.StartsWith("m10_00_bad", StringComparison.Ordinal))
-                ? entries.Select(e => e with { Skinned = false }).ToList()
+                ? entries.Select(e => uvSetsOnly ? e with { UvSets = 9 } : e with { Skinned = false }).ToList()
                 : entries;
         });
 
-        Assert.Equal(new[] { "m10_00_bad1", "m10_00_bad398" }, skinned.OrderBy(s => s, StringComparer.Ordinal));
+        Assert.Equal(new[] { "m10_00_bad1", "m10_00_bad398" }, layouts.Skinned.OrderBy(s => s, StringComparer.Ordinal));
+        Assert.Equal(1, layouts.UvSets["m10_00_bad1"]);
         Assert.Contains(report.Lines, l => l.Contains("disagrees") && l.Contains("aeg001_398"));
         Assert.Contains(report.Lines, l => l.Contains($"{count} binders, 2 FLVERs") && l.Contains("FLVER2.Read for every binder"));
     }
@@ -180,7 +189,7 @@ public class SkinnedMaterialScannerTests : IDisposable
         WriteBinder("asset/aeg/aeg001/aeg001_001.geombnd.dcx", new BND4());
         WriteFile("map/m10/m10_00_00_00/m10_00_00_00_000100.mapbnd.dcx", new byte[] { 1, 2, 3, 4 });
 
-        var e = Assert.Throws<WinterBuildException>(() => SkinnedMaterialScanner.Scan(_temp, new WinterReport()));
+        var e = Assert.Throws<WinterBuildException>(() => MaterialLayoutScanner.Scan(_temp, new WinterReport(), null, reportedUvSets: 2));
 
         Assert.Contains("m10_00_00_00_000100.mapbnd.dcx", e.Message);
     }

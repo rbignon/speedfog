@@ -14,6 +14,7 @@ public class WinterCatalogLoaderTests
         shader = "M[AMSN_V][Snow]"
         matbin = "m13_00_503"
         samplers = ["Texture2D_0_AlbedoMap_0", "Texture2D_2_AlbedoMap_0"]
+        uv_sets = 1
         [templates.params]
         float_0 = 0.0
         float3_0 = [0.0, 2.0, 0.0]
@@ -48,12 +49,24 @@ public class WinterCatalogLoaderTests
         var c = WinterCatalogLoader.ParseMaterials(Minimal);
         Assert.Equal(@"N:\a\AET000_080_a.tif", c.Snow.Albedo);
         Assert.Equal(new[] { 0f, 2f, 0f }, c.Template("M[AMSN_V][Snow]").Params["float3_0"]);
+        Assert.Equal(1, c.Template("M[AMSN_V][Snow]").UvSets);
         Assert.Equal("snow_albedo", c.Rules[0].Plan["Texture2D_0_AlbedoMap_0"]);
         Assert.Contains("Texture2D_1_NormalMap_0", c.Rules[0].SourceSamplers);
         Assert.Equal(new[] { "a" }, c.Retargets[0].Suffixes);
         Assert.Matches(c.Terrain.ShaderInclude, "M[Road_Ground]");
         Assert.Matches(c.Terrain.NameExclude, "AEG_MAGMA_01");
     }
+
+    [Fact]
+    public void ParseMaterials_RejectsTemplateWithoutUvSets() =>
+        AssertRejected(Minimal.Replace("uv_sets = 1\n", ""), "uv_sets");
+
+    [Theory]
+    [InlineData("0")]
+    [InlineData("1.5")]
+    [InlineData("\"2\"")]
+    public void ParseMaterials_RejectsUvSetsThatAreNotAPositiveInteger(string value) =>
+        AssertRejected(Minimal.Replace("uv_sets = 1", "uv_sets = " + value), "uv_sets");
 
     [Fact]
     public void ParseMaterials_RejectsPlanKeysOutsideTheTwinLayout() =>
@@ -105,6 +118,7 @@ public class WinterCatalogLoaderTests
         Assert.Equal(33, c.Rules.Count);
         Assert.Equal(26, c.Retargets.Count);
         Assert.All(c.Rules, r => c.Template(r.Twin));
+        Assert.Equal(2, c.Template("M[AMSN_V][Mb2][Ov_N][Snow]").UvSets);
         Assert.Equal(129, WinterCatalogLoader.LoadTextures(Path.Combine(plugins, "winter_textures.toml")).Count);
     }
 }

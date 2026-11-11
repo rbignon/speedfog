@@ -28,6 +28,7 @@ public class MatbinConverterTests
         shader = "M[AMSN_V][Snow]"
         matbin = "m13_00_503"
         samplers = ["Texture2D_0_AlbedoMap_0", "Texture2D_2_AlbedoMap_0", "Texture2D_1_NormalMap_0", "Texture2D_3_NormalMap_0"]
+        uv_sets = 1
         [templates.params]
         "group_2_CommonUV-UVParam" = [1.0, 1.0]
         float3_0 = [0.0, 2.0, 0.0]

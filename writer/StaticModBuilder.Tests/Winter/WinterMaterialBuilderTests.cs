@@ -27,6 +27,7 @@ public class WinterMaterialBuilderTests : IDisposable
         shader = "M[AMSN_V][Snow]"
         matbin = "m13_00_503"
         samplers = ["Texture2D_0_AlbedoMap_0", "Texture2D_2_AlbedoMap_0", "Texture2D_1_NormalMap_0", "Texture2D_3_NormalMap_0"]
+        uv_sets = 1
         [templates.params]
         float_0 = 0.0
         float3_0 = [0.0, 2.0, 0.0]
@@ -146,7 +147,7 @@ public class WinterMaterialBuilderTests : IDisposable
     private static IReadOnlyDictionary<string, ResolvedTemplate> Templates() =>
         WinterMaterialBuilder.ResolveTemplates(MakeBinder(("Map_m13_00", "m13_00_503", TemplateMatbin())), Catalog);
 
-    private static IReadOnlySet<string> NoSkinned() => new HashSet<string>();
+    private static MaterialLayouts NoLayouts() => new();
 
     /// <summary>Writes an uncompressed TPF holding the named (dummy BC1) textures under the fake game folder.</summary>
     private void WriteTpf(string gameDir, string stem, params string[] textureNames)
@@ -250,12 +251,14 @@ public class WinterMaterialBuilderTests : IDisposable
         byte[] skinnedNoRuleBytes = Entry(binder, "m60_00_777").Bytes;
         byte[] chrBytes = Entry(binder, "c1000").Bytes;
         byte[] templateBytes = Entry(binder, "m13_00_503").Bytes;
-        // An ordinal set in another case: the builder compares stems case-insensitively itself.
-        // m60_00_777 has no rule: it is not a skinned exclusion.
-        var skinned = new HashSet<string> { "M10_00_519", "m60_00_777" };
+        // Another case: stems are compared case-insensitively. m60_00_777 has no rule: it is not
+        // a skinned exclusion.
+        var layouts = new MaterialLayouts();
+        layouts.Add(new FlverMaterialEntry("M10_00_519", Skinned: true, UvSets: 1));
+        layouts.Add(new FlverMaterialEntry("m60_00_777", Skinned: true, UvSets: 1));
         var report = new WinterReport();
 
-        var result = WinterMaterialBuilder.ProcessBinder(binder, Catalog, Templates(), skinned, report);
+        var result = WinterMaterialBuilder.ProcessBinder(binder, Catalog, Templates(), layouts, report);
 
         var converted = ReadEntry(binder, "AEG001_001");
         Assert.Contains("[Snow]", converted.ShaderPath);
@@ -281,7 +284,41 @@ public class WinterMaterialBuilderTests : IDisposable
         Assert.Equal(0, result.RetargetedTerrain);
         Assert.Equal(0, result.SkippedLayout);
         Assert.Equal(1, result.SkippedSkinned);
+        Assert.Equal(0, result.SkippedUvSets);
         Assert.Equal(new KeyValuePair<string, int>(OvN, 1), Assert.Single(result.ConvertedPerRule));
+    }
+
+    [Fact]
+    public void ProcessBinder_LeavesVanillaAMatbinWhoseMeshesLackTheUvSetsTheTwinReads()
+    {
+        // The twin reads two UV sets here. m60_00_001's meshes provide one, m60_00_002's two,
+        // m60_00_003 is drawn by no scanned mesh (nothing against it), m60_00_777 has no rule.
+        var catalog = WinterCatalogLoader.ParseMaterials(Catalogue.Replace("uv_sets = 1", "uv_sets = 2"));
+        var templates = WinterMaterialBuilder.ResolveTemplates(MakeBinder(("Map_m13_00", "m13_00_503", TemplateMatbin())), catalog);
+        var binder = MakeBinder(
+            ("Map_m60_00", "m60_00_001", OvNShaped(OvN)),
+            ("Map_m60_00", "m60_00_002", OvNShaped(OvN)),
+            ("Map_m60_00", "m60_00_003", OvNShaped(OvN)),
+            ("Map_m60_00", "m60_00_777", MakeMatbin("M[A]", ("Texture2D_0_AlbedoMap_0", Tex("AET005_099_a")))));
+        byte[] oneUvBytes = Entry(binder, "m60_00_001").Bytes;
+        var layouts = new MaterialLayouts();
+        layouts.Add(new FlverMaterialEntry("M60_00_001", Skinned: false, UvSets: 1));
+        layouts.Add(new FlverMaterialEntry("m60_00_002", Skinned: false, UvSets: 2));
+        layouts.Add(new FlverMaterialEntry("m60_00_777", Skinned: false, UvSets: 1));
+        var report = new WinterReport();
+
+        var result = WinterMaterialBuilder.ProcessBinder(binder, catalog, templates, layouts, report);
+
+        Assert.Same(oneUvBytes, Entry(binder, "m60_00_001").Bytes);
+        Assert.Contains("[Snow]", ReadEntry(binder, "m60_00_002").ShaderPath);
+        Assert.Contains("[Snow]", ReadEntry(binder, "m60_00_003").ShaderPath);
+        Assert.Equal(2, result.Converted);
+        Assert.Equal(1, result.SkippedUvSets);
+        Assert.Equal(0, result.SkippedSkinned);
+        string line = Assert.Single(report.Lines, l => l.Contains(EntryName("Map_m60_00", "m60_00_001")));
+        Assert.Contains("1 UV set,", line);
+        Assert.Contains("M[AMSN_V][Snow] reads 2", line);
+        Assert.DoesNotContain(report.Lines, l => l.Contains("m60_00_777"));
     }
 
     [Fact]
@@ -292,7 +329,7 @@ public class WinterMaterialBuilderTests : IDisposable
             ("Map_m60_00", "m60_00_902", OvNShaped(TerrainRule, withDetailNormal: false)));
         var report = new WinterReport();
 
-        var result = WinterMaterialBuilder.ProcessBinder(binder, Catalog, Templates(), NoSkinned(), report);
+        var result = WinterMaterialBuilder.ProcessBinder(binder, Catalog, Templates(), NoLayouts(), report);
 
         var converted = ReadEntry(binder, "m60_00_901");
         Assert.Contains("[Snow]", converted.ShaderPath);
@@ -318,7 +355,7 @@ public class WinterMaterialBuilderTests : IDisposable
         var unreadable = MakeBinder(("Map_m60_00", "AEG001_001", OvNShaped(OvN)));
         unreadable.Files[0].Bytes = new byte[] { 1, 2, 3, 4 };
         var e = Assert.Throws<WinterBuildException>(() =>
-            WinterMaterialBuilder.ProcessBinder(unreadable, Catalog, Templates(), NoSkinned(), new WinterReport()));
+            WinterMaterialBuilder.ProcessBinder(unreadable, Catalog, Templates(), NoLayouts(), new WinterReport()));
         Assert.Contains(EntryName("Map_m60_00", "AEG001_001"), e.Message);
 
         // A template without float3_0 breaks the conversion's post-condition.
@@ -326,7 +363,7 @@ public class WinterMaterialBuilderTests : IDisposable
         var templates = WinterMaterialBuilder.ResolveTemplates(MakeBinder(("Map_m13_00", "m13_00_503", TemplateMatbin())), noFloat3);
         var binder = MakeBinder(("Map_m60_00", "AEG001_001", OvNShaped(OvN)));
         e = Assert.Throws<WinterBuildException>(() =>
-            WinterMaterialBuilder.ProcessBinder(binder, noFloat3, templates, NoSkinned(), new WinterReport()));
+            WinterMaterialBuilder.ProcessBinder(binder, noFloat3, templates, NoLayouts(), new WinterReport()));
         Assert.Contains(EntryName("Map_m60_00", "AEG001_001"), e.Message);
     }
 
@@ -365,7 +402,7 @@ public class WinterMaterialBuilderTests : IDisposable
         dlcBinder.Write(Path.Combine(gameDir, WinterMaterialBuilder.BinderSubPaths[1]));
         var report = new WinterReport();
 
-        var result = WinterMaterialBuilder.Build(gameDir, winterDir, Catalog, NoSkinned(), report);
+        var result = WinterMaterialBuilder.Build(gameDir, winterDir, Catalog, NoLayouts(), report);
 
         string baseOut = Path.Combine(winterDir, "material", "allmaterial.matbinbnd.dcx");
         string dlcOut = Path.Combine(winterDir, "material", "allmaterial_dlc02.matbinbnd.dcx");

@@ -98,11 +98,12 @@ public static class WinterCatalogLoader
         var samplers = StrArray(t, "samplers", shader);
         if (samplers.Count == 0)
             throw Fail($"template '{shader}': samplers must not be empty");
+        var uvSets = PositiveInt(t, "uv_sets", $"template '{shader}'");
 
         var ps = new Dictionary<string, float[]>();
         foreach (var (key, value) in Table(t, "params", shader))
             ps[key] = Floats(value, $"template '{shader}' param '{key}'");
-        return new TwinTemplate(shader, matbin, samplers, ps);
+        return new TwinTemplate(shader, matbin, samplers, uvSets, ps);
     }
 
     private static ConversionRule ParseRule(TomlTable r, Dictionary<string, TwinTemplate> templates)
@@ -164,6 +165,11 @@ public static class WinterCatalogLoader
         t.TryGetValue(key, out var o) && o is string s && s.Length > 0
             ? s
             : throw Fail($"{where}: missing string '{key}'");
+
+    private static int PositiveInt(TomlTable t, string key, string where) =>
+        t.TryGetValue(key, out var o) && o is long l && l >= 1 && l <= int.MaxValue
+            ? (int)l
+            : throw Fail($"{where}: '{key}' must be a positive integer");
 
     private static string Tif(TomlTable t, string key)
     {

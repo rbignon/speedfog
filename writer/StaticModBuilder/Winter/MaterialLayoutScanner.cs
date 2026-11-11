@@ -4,10 +4,12 @@ using TableReader = System.Func<byte[], System.Collections.Generic.IReadOnlyList
 namespace StaticModBuilder.Winter;
 
 /// <summary>
-/// Collects the matbin stems used by skinned meshes over every model binder of the game. The
-/// snow shaders have no skinned permutation, so those matbins must stay vanilla.
+/// Collects, over every model binder of the game, what the vertex layouts provide per matbin
+/// stem: the matbins used by skinned meshes (the snow shaders have no skinned permutation, so
+/// those must stay vanilla) and the UV sets every mesh provides (a twin whose vertex shaders
+/// read more leaves the mesh undrawn).
 /// </summary>
-public static class SkinnedMaterialScanner
+public static class MaterialLayoutScanner
 {
     /// <summary>
     /// About how many binders are read with both FLVER readers to check the fast one, spread over
@@ -43,15 +45,15 @@ public static class SkinnedMaterialScanner
                 : new List<string>();
             if (found.Count == 0)
             {
-                throw new WinterBuildException($"skinned scan: no *{suffix} under {dir}");
+                throw new WinterBuildException($"layout scan: no *{suffix} under {dir}");
             }
             binders.AddRange(found);
         }
         return binders;
     }
 
-    public static void Collect(BND4 binder, ISet<string> skinned, bool useFastReader, WinterReport report) =>
-        Collect(binder, skinned, useFastReader ? FlverMaterialTable.Read : null, report);
+    public static void Collect(BND4 binder, MaterialLayouts layouts, bool useFastReader, WinterReport report) =>
+        Collect(binder, layouts, useFastReader ? FlverMaterialTable.Read : null, report);
 
     /// <summary>
     /// Whether binder <paramref name="index"/> of <paramref name="count"/> is self-checked: every
@@ -60,19 +62,23 @@ public static class SkinnedMaterialScanner
     public static bool InSelfCheckSample(int index, int count) =>
         index % Math.Max(1, count / SelfCheckBinders) == 0;
 
-    public static HashSet<string> Scan(string gameDir, WinterReport report, Action<int, int>? progress = null) =>
-        Scan(gameDir, report, progress, FlverMaterialTable.Read);
+    /// <summary>
+    /// Scans every binder; the report line counts the matbins with fewer than
+    /// <paramref name="reportedUvSets"/> UV sets (the most a twin reads).
+    /// </summary>
+    public static MaterialLayouts Scan(string gameDir, WinterReport report, Action<int, int>? progress, int reportedUvSets) =>
+        Scan(gameDir, report, progress, reportedUvSets, FlverMaterialTable.Read);
 
     /// <summary>
     /// Scans with <paramref name="tableReader"/> (the fast reader, a seam for tests), self-checking
     /// it against FLVER2.Read on the sample. On a mismatch the binders already read relied on a
     /// reader now known to be wrong somewhere, so the scan starts over with FLVER2.Read only.
     /// </summary>
-    internal static HashSet<string> Scan(
-        string gameDir, WinterReport report, Action<int, int>? progress, TableReader tableReader)
+    internal static MaterialLayouts Scan(
+        string gameDir, WinterReport report, Action<int, int>? progress, int reportedUvSets, TableReader tableReader)
     {
         var binders = EnumerateBinders(gameDir).ToList();
-        var skinned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var layouts = new MaterialLayouts();
         TableReader? fastReader = tableReader;
         int flvers = 0;
         int selfChecked = 0;
@@ -86,7 +92,7 @@ public static class SkinnedMaterialScanner
             }
             catch (Exception e)
             {
-                throw new WinterBuildException($"skinned scan: {path}: {e.Message}");
+                throw new WinterBuildException($"layout scan: {path}: {e.Message}");
             }
 
             try
@@ -97,18 +103,18 @@ public static class SkinnedMaterialScanner
                     if (!ReadersAgree(binder, path, fastReader, report))
                     {
                         fastReader = null;
-                        skinned.Clear();
+                        layouts.Clear();
                         flvers = 0;
                         i = -1;
                         continue;
                     }
                 }
-                Collect(binder, skinned, fastReader, report);
+                Collect(binder, layouts, fastReader, report);
                 flvers += binder.Files.Count(IsFlver);
             }
             catch (WinterBuildException e)
             {
-                throw new WinterBuildException($"skinned scan: {path}: {e.Message}");
+                throw new WinterBuildException($"layout scan: {path}: {e.Message}");
             }
 
             int done = i + 1;
@@ -121,20 +127,18 @@ public static class SkinnedMaterialScanner
         string reader = fastReader != null
             ? $"table reader, self-check passed on {selfChecked} binders"
             : "FLVER2.Read for every binder after a self-check mismatch";
-        report.Line($"skinned scan: {binders.Count} binders, {flvers} FLVERs, {skinned.Count} skinned matbins ({reader})");
-        return skinned;
+        report.Line($"layout scan: {binders.Count} binders, {flvers} FLVERs, {layouts.Skinned.Count} skinned matbins, "
+            + $"{layouts.CountWithFewerUvSetsThan(reportedUvSets)} matbins with fewer than {reportedUvSets} UV sets ({reader})");
+        return layouts;
     }
 
-    private static void Collect(BND4 binder, ISet<string> skinned, TableReader? fastReader, WinterReport report)
+    private static void Collect(BND4 binder, MaterialLayouts layouts, TableReader? fastReader, WinterReport report)
     {
         foreach (var file in binder.Files.Where(IsFlver))
         {
             foreach (var entry in ReadEntries(file, fastReader, report))
             {
-                if (entry.Skinned)
-                {
-                    skinned.Add(entry.MatbinStem);
-                }
+                layouts.Add(entry);
             }
         }
     }
@@ -156,7 +160,7 @@ public static class SkinnedMaterialScanner
             }
             catch (Exception e)
             {
-                report.Line($"warning: skinned scan: {file.Name}: table reader failed ({e.Message}), read with FLVER2.Read");
+                report.Line($"warning: layout scan: {file.Name}: table reader failed ({e.Message}), read with FLVER2.Read");
             }
         }
         try
@@ -189,7 +193,7 @@ public static class SkinnedMaterialScanner
             }
             if (difference != null)
             {
-                report.Line($"warning: skinned scan: table reader disagrees with FLVER2.Read on {path} ({file.Name}: {difference}), every binder read again with FLVER2.Read");
+                report.Line($"warning: layout scan: table reader disagrees with FLVER2.Read on {path} ({file.Name}: {difference}), every binder read again with FLVER2.Read");
                 return false;
             }
         }

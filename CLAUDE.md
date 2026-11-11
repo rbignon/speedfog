@@ -203,7 +203,7 @@ speedfog/
 │   │   ├── TitleScreenPatcher.cs  # Redirect title sprite to a standalone badge texture in 02_title.tpf.dcx
 │   │   ├── DdsAtlas.cs      # DX10 DDS header parsing + BC7 block extract + standalone DDS build
 │   │   ├── LayoutFile.cs    # Menu .layout XML helpers (find/remove SubTexture entries)
-│   │   └── Winter/          # Winter plugin build: WinterModBuilder (entry, WINTER FAILED), WinterCatalog/Loader, SkinnedMaterialScanner + FlverMaterialTable + MatbinNames, MatbinConverter, MatbinRetargeter, WinterMaterialBuilder, DdsImage, FrostEncoder, WinterTextureBuilder, WinterOverlay, WinterReport
+│   │   └── Winter/          # Winter plugin build: WinterModBuilder (entry, WINTER FAILED), WinterCatalog/Loader, MaterialLayoutScanner + MaterialLayouts + FlverMaterialTable + MatbinNames, MatbinConverter, MatbinRetargeter, WinterMaterialBuilder, DdsImage, FrostEncoder, WinterTextureBuilder, WinterOverlay, WinterReport
 │   └── StaticModBuilder.Tests/  # xUnit tests for StaticModBuilder
 ├── tools/                   # Standalone scripts
 │   ├── bootstrap.py             # Project bootstrap (extract deps, build, generate data)
@@ -311,7 +311,7 @@ speedfog/
 | `docs/plugins/halloween-icons.md` | Halloween item icon redirect (Golden Seed, Sacred Tear): 05_dummy overlay + iconId redirect, EXPERIMENT status, revert path, fallbacks |
 | `docs/plugins/halloween-jumpscares.md` | Halloween jumpscares: layer draw (JumpscarePlanner), hidden c5280 actors, warp-onto-player event, ids, owed in-game checks |
 | `docs/plugins/halloween-darkness.md` | Halloween darkness: vanilla evergaol gparam override re-applied from common.emevd, area interactions, rejected custom-gparam approach, owed in-game checks |
-| `docs/plugins/winter.md` | Winter plugin: static mod built at bootstrap (scan of skinned meshes, two matbin binders, 258 frosted half-resolution TPFs), `[plugin.winter]` + weather companion, racing activation lines, `WINTER FAILED` and `--no-winter`, measured sizes and times, validation status (in-game pass owed), deferred families and trees |
+| `docs/plugins/winter.md` | Winter plugin: static mod built at bootstrap (scan of the vertex layouts, two matbin binders, 258 frosted half-resolution TPFs), `[plugin.winter]` + weather companion, racing activation lines, `WINTER FAILED` and `--no-winter`, measured sizes and times, validation status (in-game pass owed), deferred families and trees |
 | `docs/plugins/weather.md` | Weather plugin: force weather + pin clock hour, accepted names, event mechanism |
 | `reference/fogrando-src/GameDataWriterE.cs` | Main FogRando writer (5639 lines) |
 | `reference/fogrando-src/EldenScaling.cs` | Enemy scaling logic |
@@ -443,9 +443,9 @@ speedfog/
 | `GraceAnimationPatcher` | Speeds up grace sit/discover animations via TAE event 608 |
 | `UntouchableTaePatcher` | Retargets seven bullet events of c5280 animation 3004: four to judge 150 (the boss's beam carrier) and three between them to judge 151 (the flame nova); adds to the burst 3001, right after its hit, a copy of 3000's warp-marker event applying the near-warp marker (the boss's near teleport warps on it, Jori's shape); inert for ambient untouchables, layout-guarded |
 | `TitleScreenPatcher` | Redirects the title sprite to a standalone composited badge texture in 02_title.tpf.dcx (~1.5 MB shipped, see `docs/title-screen.md`) |
-| `WinterModBuilder` | Builds `data/mods/speedfog-winter/` (`--winter-dir`, opt-in output): runs the catalogue load, retarget check, skinned-material scan, material binders, texture packs and the overlay copy in order into `<dir>.building`, writes the report, then moves the folder into place; on an input failure prints `WINTER FAILED: <reason>`, leaves no folder and lets the rest of the bootstrap continue, any other exception is cleaned up and rethrown (see `docs/plugins/winter.md`) |
+| `WinterModBuilder` | Builds `data/mods/speedfog-winter/` (`--winter-dir`, opt-in output): runs the catalogue load, retarget check, layout scan, material binders, texture packs and the overlay copy in order into `<dir>.building`, writes the report, then moves the folder into place; on an input failure prints `WINTER FAILED: <reason>`, leaves no folder and lets the rest of the bootstrap continue, any other exception is cleaned up and rethrown (see `docs/plugins/winter.md`) |
 | `WinterCatalogLoader` / `WinterCatalog` | Load and validate `data/plugins/winter_materials.toml` and `winter_textures.toml` |
-| `SkinnedMaterialScanner` / `FlverMaterialTable` / `MatbinNames` | Scan every mapbnd and geombnd FLVER for matbins used by skinned meshes (excluded from conversion: the snow shaders have no skinned permutation) |
+| `MaterialLayoutScanner` / `MaterialLayouts` / `FlverMaterialTable` / `MatbinNames` | Scan every mapbnd and geombnd FLVER for what the vertex layouts provide per matbin: skinned meshes (excluded from conversion: the snow shaders have no skinned permutation) and UV sets (a matbin drawn with fewer UV sets than its twin's vertex shaders read, `uv_sets` in the catalogue, stays vanilla: the mesh would not be drawn) |
 | `WinterMaterialBuilder` / `MatbinConverter` / `MatbinRetargeter` | Rewrite the two material binders: texture retargets, conversion to the vanilla snow twins, terrain albedo retarget |
 | `WinterTextureBuilder` / `FrostEncoder` / `DdsImage` | Frost 258 foliage TPFs at half resolution (albedos re-encoded BC1 1-bit alpha, other textures lose their top mip) |
 | `WinterOverlay` | Copies every file under `data/mods-src/speedfog-winter/` (the Torrent skin binders) verbatim into the winter build; optional folder, a collision with a built file fails the build |
