@@ -162,10 +162,11 @@ public static class SpeedFogIds
     public const int HalloweenJumpscareEnteredFlagCount = 70;
 
     /// <summary>Saved flags of the race items (category 1050290, never polled
-    /// by anything else): the racing mod sets use flag base + n when the
-    /// player uses the item with goods id 1450800 + n, and the plugin's
-    /// removal event waits on the removal flag base + n to take the goods
-    /// back. Each range holds 100 flags.</summary>
+    /// by anything else): the plugin's use event sets use flag base + n when
+    /// the player uses the item with goods id 1450800 + n, and the racing mod
+    /// reads and clears it; the racing mod raises removal flag base + n, on
+    /// which the plugin's removal event takes the goods back and clears it.
+    /// Each range holds 100 flags.</summary>
     public const int RaceItemUseFlagBase = 1050290100;
     public const int RaceItemRemoveFlagBase = 1050290200;
 
