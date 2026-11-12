@@ -17,7 +17,7 @@ public static class WinterTextureBuilder
         textureName.EndsWith("_a", StringComparison.OrdinalIgnoreCase)
         || textureName.EndsWith("_a_l", StringComparison.OrdinalIgnoreCase);
 
-    public static TpfResult ProcessTpf(TPF tpf, string tpfName, WinterReport report)
+    public static TpfResult ProcessTpf(TPF tpf, string tpfName, FrostStrength frost, WinterReport report)
     {
         int frosted = 0, reduced = 0, untouched = 0, warnings = 0;
         foreach (var texture in tpf.Textures)
@@ -46,7 +46,7 @@ public static class WinterTextureBuilder
                 }
                 try
                 {
-                    texture.Bytes = FrostEncoder.FrostAlbedo(texture.Bytes, target);
+                    texture.Bytes = FrostEncoder.FrostAlbedo(texture.Bytes, target, frost);
                 }
                 catch (Exception e)
                 {
@@ -74,12 +74,13 @@ public static class WinterTextureBuilder
         return new TpfResult(frosted, reduced, untouched, warnings);
     }
 
-    public static int Build(string gameDir, string winterDir, IReadOnlyList<string> tpfStems, WinterReport report)
+    public static int Build(string gameDir, string winterDir, IReadOnlyList<TextureEntry> textures, WinterReport report)
     {
         int written = 0;
         int totalFrosted = 0, totalReduced = 0, totalUntouched = 0;
-        foreach (var stem in tpfStems)
+        foreach (var entry in textures)
         {
+            string stem = entry.Stem;
             string family = stem[..6];
             string sourceDir = Path.Combine(gameDir, "asset", "aet", family);
             string mainName = $"{stem}.tpf.dcx";
@@ -99,7 +100,7 @@ public static class WinterTextureBuilder
                 }
 
                 var tpf = TPF.Read(source);
-                var result = ProcessTpf(tpf, fileName, report);
+                var result = ProcessTpf(tpf, fileName, entry.Frost, report);
                 string destDir = Path.Combine(winterDir, "asset", "aet", family);
                 Directory.CreateDirectory(destDir);
                 tpf.Write(Path.Combine(destDir, fileName));
@@ -109,7 +110,7 @@ public static class WinterTextureBuilder
                 untouched += result.Untouched;
             }
 
-            report.Line($"{stem}: {frosted} frosted, {reduced} reduced, {untouched} untouched");
+            report.Line($"{stem}: {frosted} frosted ({entry.Frost.Name}), {reduced} reduced, {untouched} untouched");
             totalFrosted += frosted;
             totalReduced += reduced;
             totalUntouched += untouched;

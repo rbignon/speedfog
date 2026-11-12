@@ -8,17 +8,28 @@ using SixLabors.ImageSharp.PixelFormats;
 namespace StaticModBuilder.Winter;
 
 /// <summary>
+/// Coefficients of the frost formula: v = Base + Slope * luminance (luminance in 0..1), output
+/// (v + TintRed, v, v + TintBlue) clamped to 0..1, alpha kept. Normal keeps the texture's grain
+/// (a black pixel reaches a mid grey, 158/255). Heavy is meant for dark textures under warm, dim
+/// light, where Normal reads as pale wood rather than snow (the Shadow Keep elevator cabin).
+/// </summary>
+public sealed record FrostStrength(string Name, double Base, double Slope, double TintRed, double TintBlue)
+{
+    public static readonly FrostStrength Normal = new("normal", 0.62, 0.38, -0.02, 0.03);
+    public static readonly FrostStrength Heavy = new("heavy", 0.78, 0.22, -0.03, 0.05);
+}
+
+/// <summary>
 /// Frost formula and BC1 re-encoding of vanilla albedo textures: decode a level, whiten every
 /// pixel, encode BC1 with 1-bit alpha and a full mip chain.
 /// </summary>
 public static class FrostEncoder
 {
-    // v = 0.62 + 0.38 * luminance; output is (v - 0.02, v, v + 0.03), clamped, alpha kept.
-    public static Rgba32 Frost(Rgba32 p)
+    public static Rgba32 Frost(Rgba32 p, FrostStrength strength)
     {
         double lum = (0.30 * p.R + 0.59 * p.G + 0.11 * p.B) / 255.0;
-        double v = 0.62 + 0.38 * lum;
-        return new Rgba32(ToByte(v - 0.02), ToByte(v), ToByte(v + 0.03), p.A);
+        double v = strength.Base + strength.Slope * lum;
+        return new Rgba32(ToByte(v + strength.TintRed), ToByte(v), ToByte(v + strength.TintBlue), p.A);
     }
 
     private static byte ToByte(double v) => (byte)Math.Round(Math.Clamp(v, 0.0, 1.0) * 255.0);
@@ -55,7 +66,7 @@ public static class FrostEncoder
         return decoder.DecodeRawToImageRgba32(blocks, w, h, DecodeFormat(info.Format));
     }
 
-    public static byte[] FrostAlbedo(byte[] vanillaDds, int targetLongSide)
+    public static byte[] FrostAlbedo(byte[] vanillaDds, int targetLongSide, FrostStrength strength)
     {
         var info = DdsImage.Parse(vanillaDds);
         int longSide = Math.Max(info.Width, info.Height);
@@ -71,7 +82,7 @@ public static class FrostEncoder
             for (int y = 0; y < accessor.Height; y++)
             {
                 var row = accessor.GetRowSpan(y);
-                for (int x = 0; x < row.Length; x++) row[x] = Frost(row[x]);
+                for (int x = 0; x < row.Length; x++) row[x] = Frost(row[x], strength);
             }
         });
 

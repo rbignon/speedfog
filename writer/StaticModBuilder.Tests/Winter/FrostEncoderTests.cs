@@ -14,13 +14,23 @@ public class FrostEncoderTests
     [InlineData(0, 0, 0, 255, 153, 158, 165)]
     [InlineData(255, 255, 255, 128, 250, 255, 255)]
     [InlineData(0, 128, 0, 255, 182, 187, 195)]
-    public void Frost_MatchesTheFormula(byte r, byte g, byte b, byte a, byte er, byte eg, byte eb)
+    public void Frost_MatchesTheNormalFormula(byte r, byte g, byte b, byte a, byte er, byte eg, byte eb) =>
+        AssertFrost(FrostStrength.Normal, new Rgba32(r, g, b, a), er, eg, eb);
+
+    [Theory]
+    [InlineData(0, 0, 0, 255, 191, 199, 212)]
+    [InlineData(255, 255, 255, 128, 247, 255, 255)]
+    [InlineData(0, 128, 0, 255, 208, 216, 228)]
+    public void Frost_MatchesTheHeavyFormula(byte r, byte g, byte b, byte a, byte er, byte eg, byte eb) =>
+        AssertFrost(FrostStrength.Heavy, new Rgba32(r, g, b, a), er, eg, eb);
+
+    private static void AssertFrost(FrostStrength strength, Rgba32 source, byte er, byte eg, byte eb)
     {
-        var p = FrostEncoder.Frost(new Rgba32(r, g, b, a));
+        var p = FrostEncoder.Frost(source, strength);
         Assert.InRange(p.R, er - 1, er + 1);
         Assert.InRange(p.G, eg - 1, eg + 1);
         Assert.InRange(p.B, eb - 1, eb + 1);
-        Assert.Equal(a, p.A);
+        Assert.Equal(source.A, p.A);
     }
 
     private static byte[] Fixture()
@@ -40,7 +50,7 @@ public class FrostEncoderTests
     [Fact]
     public void FrostAlbedo_HalvesAndWhitensABc1Chain()
     {
-        var result = FrostEncoder.FrostAlbedo(Fixture(), 8);
+        var result = FrostEncoder.FrostAlbedo(Fixture(), 8, FrostStrength.Normal);
         var info = DdsImage.Parse(result);
         Assert.Equal(8, info.Width);
         Assert.Equal(8, info.Height);
@@ -63,14 +73,26 @@ public class FrostEncoderTests
     }
 
     [Fact]
+    public void FrostAlbedo_HeavyFrostWhitensMoreThanNormal()
+    {
+        using var normal = FrostEncoder.DecodeLevel(FrostEncoder.FrostAlbedo(Fixture(), 16, FrostStrength.Normal), 0);
+        using var heavy = FrostEncoder.DecodeLevel(FrostEncoder.FrostAlbedo(Fixture(), 16, FrostStrength.Heavy), 0);
+        // The green half: normal frost reaches a light grey, heavy frost a lighter one.
+        Assert.InRange(normal[2, 2].G, 180, 195);
+        Assert.InRange(heavy[2, 2].G, 210, 222);
+        Assert.True(heavy[2, 2].B > heavy[2, 2].R, $"heavy frost is cool: {heavy[2, 2]}");
+        Assert.Equal(0, heavy[12, 12].A);
+    }
+
+    [Fact]
     public void FrostAlbedo_KeepsFullSizeWhenTargetIsNative()
     {
-        var info = DdsImage.Parse(FrostEncoder.FrostAlbedo(Fixture(), 16));
+        var info = DdsImage.Parse(FrostEncoder.FrostAlbedo(Fixture(), 16, FrostStrength.Normal));
         Assert.Equal(16, info.Width);
         Assert.Equal(5, info.MipCount);
     }
 
     [Fact]
     public void FrostAlbedo_RejectsAnUnreachableTarget() =>
-        Assert.Throws<WinterBuildException>(() => FrostEncoder.FrostAlbedo(Fixture(), 4));
+        Assert.Throws<WinterBuildException>(() => FrostEncoder.FrostAlbedo(Fixture(), 4, FrostStrength.Normal));
 }

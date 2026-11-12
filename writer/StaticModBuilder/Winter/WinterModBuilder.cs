@@ -99,7 +99,7 @@ public static class WinterModBuilder
     {
         var clock = Stopwatch.StartNew();
         var catalog = WinterCatalogLoader.LoadMaterials(Path.Combine(dataDir, "plugins", "winter_materials.toml"));
-        var stems = WinterCatalogLoader.LoadTextures(Path.Combine(dataDir, "plugins", "winter_textures.toml"));
+        var textures = WinterCatalogLoader.LoadTextures(Path.Combine(dataDir, "plugins", "winter_textures.toml"));
         Console.WriteLine("Winter: catalogues loaded");
 
         // Before the scan and any write: no matbin may point at a texture the game does not ship.
@@ -124,7 +124,7 @@ public static class WinterModBuilder
             + $"{materials.SkippedSkinned} skipped skinned, {materials.SkippedUvSets} skipped for UV sets, "
             + $"{materials.SkippedLayout} skipped layout");
 
-        var tpfs = WinterTextureBuilder.Build(gameDir, outputDir, stems, report);
+        var tpfs = WinterTextureBuilder.Build(gameDir, outputDir, textures, report);
         Console.WriteLine($"Winter: textures done, {tpfs} TPFs");
 
         // Authored files (the Torrent skin) ride along verbatim; the folder is not tracked yet.

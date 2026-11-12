@@ -96,9 +96,38 @@ public class WinterCatalogLoaderTests
         AssertRejected(Minimal.Replace("shader_include = 'Road_Ground'", "shader_include = '[unclosed'"), "regex");
 
     [Fact]
-    public void ParseTextures_ReturnsLowerCaseStems() =>
-        Assert.Equal(new[] { "aet210_414", "aet066_003" },
+    public void ParseTextures_ReturnsLowerCaseStemsWithTheNormalFrost() =>
+        Assert.Equal(
+            new[] { new TextureEntry("aet210_414", FrostStrength.Normal), new TextureEntry("aet066_003", FrostStrength.Normal) },
             WinterCatalogLoader.ParseTextures("""tpfs = ["AET210_414", "aet066_003"]"""));
+
+    [Fact]
+    public void ParseTextures_AppendsTheHeavyListWithTheHeavyFrost() =>
+        Assert.Equal(
+            new[] { new TextureEntry("aet210_414", FrostStrength.Normal), new TextureEntry("aet420_389", FrostStrength.Heavy) },
+            WinterCatalogLoader.ParseTextures("""
+                heavy_tpfs = ["AET420_389"]
+                tpfs = ["aet210_414"]
+                """));
+
+    [Theory]
+    [InlineData("""tpfs = ["aet210_414", "AET210_414"]""", "tpfs: texture stem 'aet210_414' listed twice")]
+    [InlineData("""
+        tpfs = ["aet210_414"]
+        heavy_tpfs = ["aet210_414"]
+        """, "heavy_tpfs: texture stem 'aet210_414' listed twice")]
+    [InlineData("""
+        tpfs = ["aet210_414"]
+        heavy_tpfs = ["aet420_389.tpf"]
+        """, "heavy_tpfs: bad texture stem")]
+    [InlineData("""heavy_tpfs = ["aet420_389"]""", "missing array 'tpfs'")]
+    [InlineData("""tpfs = []""", "both empty")]
+    public void ParseTextures_RejectsRepeatedBadOrListlessStemsAndAnEmptyCatalogue(string toml, string message)
+    {
+        var ex = Assert.Throws<InvalidDataException>(() => WinterCatalogLoader.ParseTextures(toml));
+        Assert.StartsWith(WinterCatalogLoader.Prefix, ex.Message);
+        Assert.Contains(message, ex.Message);
+    }
 
     [Fact]
     public void LoadMaterials_MissingFileIsInvalidData() =>
@@ -119,6 +148,9 @@ public class WinterCatalogLoaderTests
         Assert.Equal(26, c.Retargets.Count);
         Assert.All(c.Rules, r => c.Template(r.Twin));
         Assert.Equal(2, c.Template("M[AMSN_V][Mb2][Ov_N][Snow]").UvSets);
-        Assert.Equal(134, WinterCatalogLoader.LoadTextures(Path.Combine(plugins, "winter_textures.toml")).Count);
+        var textures = WinterCatalogLoader.LoadTextures(Path.Combine(plugins, "winter_textures.toml"));
+        Assert.Equal(134, textures.Count);
+        // The shipped catalogue exercises both lists.
+        Assert.Contains(textures, t => t.Frost == FrostStrength.Heavy);
     }
 }

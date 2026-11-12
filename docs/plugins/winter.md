@@ -27,7 +27,11 @@ base (levers, pitfalls, coverage numbers): [winter-rendering.md](../winter-rende
   SpeedTree shrubs turn white while keeping their cut-out shape, and the
   catacomb and Shadow Keep elevators and levers (`AEG027_016/002`,
   `AEG427_002/023`) get a frosted look, since their `_Skin_PaintDecal`
-  shaders have no snow twin to convert to.
+  shaders have no snow twin to convert to. The Shadow Keep textures get the
+  heavy frost (`heavy_tpfs`): with the normal one, their dark planks read as
+  pale wood under the shaft's warm, dim light (checked in game 2026-11-12,
+  after a flat magenta albedo proved the pack is loaded for that DLC asset);
+  the catacomb ones read fine with the normal frost and keep it.
 - Replaces Torrent with the Frozen Reindeer mount: three authored binders
   (`chr/c8002.chrbnd.dcx`, `chr/c8002_h.texbnd.dcx`, `chr/c8000.anibnd.dcx`)
   shipped verbatim from the overlay folder `data/mods-src/speedfog-winter/`
@@ -117,7 +121,8 @@ directory. The classes are in `writer/StaticModBuilder/Winter/`.
    template matbins and their modal snow parameters, 35 conversion rules,
    the retarget table, the terrain selectors and keep list) into a
    `WinterCatalog`, and `data/plugins/winter_textures.toml` (the 134 TPF
-   stems). Retarget targets are verified to exist before anything is built.
+   stems in two lists, `tpfs` and `heavy_tpfs`, one frost strength each).
+   Retarget targets are verified to exist before anything is built.
 2. **Layout scan.** `MaterialLayoutScanner` reads every mapbnd and geombnd
    of the game (`FlverMaterialTable` reads the FLVER material table and the
    vertex layouts, `MatbinNames` resolves material paths to matbin names)
@@ -153,11 +158,18 @@ directory. The classes are in `writer/StaticModBuilder/Winter/`.
    frost. Resolution policy, uniform for every texture of every TPF:
    half of the vanilla resolution when the vanilla long side is at least
    128 px, otherwise unchanged. Albedos (`_a`) are decoded, frosted
-   (`lum = 0.3 R + 0.59 G + 0.11 B`, `v = 0.62 + 0.38 lum`, colour
-   `(v - 0.02, v, v + 0.03)`, alpha kept) and re-encoded as BC1 with 1-bit
-   alpha by BCnEncoder (single-threaded: parallel BC encodes crash randomly
-   under Wine). Normals, masks and emissive maps are never re-encoded: the
-   top mip is dropped and the header rewritten.
+   (`lum = 0.3 R + 0.59 G + 0.11 B`; normal frost, the `tpfs` list:
+   `v = 0.62 + 0.38 lum`, colour `(v - 0.02, v, v + 0.03)`; heavy frost, the
+   `heavy_tpfs` list: `v = 0.78 + 0.22 lum`, colour `(v - 0.03, v, v + 0.05)`;
+   alpha kept; `FrostStrength`) and re-encoded as BC1 with 1-bit alpha by
+   BCnEncoder (single-threaded: parallel BC encodes crash randomly under
+   Wine). The normal frost keeps the texture's grain (a black pixel lands on a
+   mid grey, 158); the heavy one is meant for textures whose vanilla is dark
+   and whose room light is warm, where the normal frost reads as pale wood
+   rather than snow (its look is still owed an in-game check, see below). A
+   stem listed twice, in one list or across both, fails the catalogue load.
+   Normals, masks and emissive maps are never re-encoded: the top mip is
+   dropped and the header rewritten.
 5. **Overlay.** `WinterOverlay` copies every file under the data directory's
    `mods-src/speedfog-winter/` into the build at the same relative path,
    verbatim, dot-prefixed files and folders skipped: today the three Torrent
@@ -171,13 +183,13 @@ directory. The classes are in `writer/StaticModBuilder/Winter/`.
 6. **Report.** `WinterReport` writes `data/mods/speedfog-winter.report.txt`
    (not shipped; packaging copies only the folder): the scan summary
    (binders, FLVERs, skinned matbins, matbins with fewer UV sets than the
-   most demanding twin reads, reader used), the skinned and UV-set exclusions by matbin name and
-   shader, per binder the counts of converted,
+   most demanding twin reads, reader used), the skinned and UV-set exclusions
+   by matbin name and shader, per binder the counts of converted,
    texture-retargeted, terrain-retargeted and left-vanilla matbins with the
-   conversions per rule, per TPF stem the counts of frosted, reduced and
-   untouched textures plus a total, the overlay files with their sizes, and
-   any warning. It does not list the converted or retargeted matbins by
-   name, nor texture sizes.
+   conversions per rule, per TPF stem the counts of frosted (with the frost
+   strength), reduced and untouched textures plus a total, the overlay files
+   with their sizes, and any warning. It does not list the converted or
+   retargeted matbins by name, nor texture sizes.
 
 Skinned exclusions: the scan finds 283 skinned materials in the whole game;
 38 of them would otherwise have been converted and stay vanilla (no snow).
@@ -227,9 +239,9 @@ Measured on the real game (1.17, a local game copy, Wine):
 |---|---|
 | Material binders | 2.58 MB (base) and 0.53 MB (DLC); vanilla 2.75 MB and 0.61 MB |
 | Matbins | 7053 conversions, 886 retargets, 38 skinned exclusions, 11 UV-set exclusions, 0 layout skips |
-| Textures | 268 TPFs, 19.83 MB |
+| Textures | 268 TPFs, 19.79 MB |
 | Overlay (Torrent skin) | 3 binders, 6.63 MB |
-| Folder shipped per seed | 30 MB (29.57 MB); 23 MB (22.94 MB) without the overlay |
+| Folder shipped per seed | 30 MB (29.52 MB); 23 MB (22.90 MB) without the overlay |
 | Scan | 226 s over 24 987 binders, 283 skinned materials, 4841 matbins with fewer than 2 UV sets |
 | Winter step | 240 to 339 s inside the bootstrap step over three runs (scan about 226 s) |
 | Whole bootstrap | 472 s |
@@ -267,6 +279,9 @@ read at map load):
   bridge and the plank objects (now present, without snow).
 - Limgrave: ground, engine grass, bushes.
 - Stormveil Castle, Farum Azula roofs, one DLC field, Romina's arena.
+- Shadow Keep elevator cabin and levers under the heavy frost (`heavy_tpfs`):
+  snow rather than pale wood, grain still readable; the catacomb elevator and
+  lever, on the normal frost, unchanged.
 - The ten far-terrain pieces listed above, whose far layer is flat white
   rather than tiled snow.
 - Torrent: whistle, idle, gallop, double jump; the reindeer model with its

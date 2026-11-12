@@ -68,21 +68,42 @@ public static class WinterCatalogLoader
         return new WinterCatalog(snow, templates, rules, retargets, terrain);
     }
 
-    public static IReadOnlyList<string> ParseTextures(string toml)
+    /// <summary>
+    /// The tpfs list (required, Normal frost) followed by the heavy_tpfs list (optional, Heavy
+    /// frost), stems lower-cased. A stem listed twice, in one list or across both, is an error,
+    /// and so is an empty catalogue (both lists empty).
+    /// </summary>
+    public static IReadOnlyList<TextureEntry> ParseTextures(string toml)
     {
         var root = ParseRoot(toml);
-        var stems = StrArray(root, "tpfs", "root").Select(s => s.ToLowerInvariant()).ToList();
-        if (stems.Count == 0)
-            throw Fail("tpfs must not be empty");
-        foreach (var s in stems)
-            if (!StemPattern.IsMatch(s))
-                throw Fail($"tpfs: bad texture stem '{s}'");
-        return stems;
+        var entries = new List<TextureEntry>();
+        var seen = new HashSet<string>();
+        foreach (var (key, strength, required) in new[]
+        {
+            ("tpfs", FrostStrength.Normal, true),
+            ("heavy_tpfs", FrostStrength.Heavy, false),
+        })
+        {
+            if (!required && !root.ContainsKey(key))
+                continue;
+            foreach (var raw in StrArray(root, key, "root"))
+            {
+                string stem = raw.ToLowerInvariant();
+                if (!StemPattern.IsMatch(stem))
+                    throw Fail($"{key}: bad texture stem '{stem}'");
+                if (!seen.Add(stem))
+                    throw Fail($"{key}: texture stem '{stem}' listed twice");
+                entries.Add(new TextureEntry(stem, strength));
+            }
+        }
+        if (entries.Count == 0)
+            throw Fail("tpfs and heavy_tpfs are both empty");
+        return entries;
     }
 
     public static WinterCatalog LoadMaterials(string path) => ParseMaterials(ReadFile(path));
 
-    public static IReadOnlyList<string> LoadTextures(string path) => ParseTextures(ReadFile(path));
+    public static IReadOnlyList<TextureEntry> LoadTextures(string path) => ParseTextures(ReadFile(path));
 
     private static string ReadFile(string path)
     {

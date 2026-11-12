@@ -30,6 +30,12 @@ public sealed record ConversionRule(
 
 public sealed record TextureRetarget(string Source, string Target, IReadOnlyList<string> Suffixes);
 
+/// <summary>
+/// One TPF stem of winter_textures.toml (its _l twin is built too) with the frost strength its
+/// albedos get: Normal for the tpfs list, Heavy for the heavy_tpfs list.
+/// </summary>
+public sealed record TextureEntry(string Stem, FrostStrength Frost);
+
 public sealed record TerrainSelector(
     Regex ShaderInclude,
     Regex ShaderExclude,

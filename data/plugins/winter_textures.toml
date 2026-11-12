@@ -1,5 +1,6 @@
 # Winter plugin: frosted texture packs. TPF stems under asset/aet/<family>/; the _l twin of
-# each stem is built too (see docs/plugins/winter.md, design Appendix C). 134 stems.
+# each stem is built too (see docs/plugins/winter.md, design Appendix C). 134 stems: 131 in
+# tpfs (normal frost, which keeps the texture's grain) and 3 in heavy_tpfs (heavy frost).
 
 tpfs = [
   # Chapel and Stormveil leaf clumps, gate ivy, statue vines, leaf litter
@@ -137,9 +138,16 @@ tpfs = [
   "aet490_999",
   # Elevators and levers of the catacombs (AEG027_016, AEG027_002) and of Shadow Keep
   # (AEG427_002, AEG427_023): their _Skin_PaintDecal shaders have no snow twin, so their
-  # textures are frosted instead. Each texture is used by those matbins only.
+  # textures are frosted instead. Each texture is used by those matbins only. The Shadow
+  # Keep ones are in heavy_tpfs below.
   "aet002_514",
   "aet003_502",
+]
+
+# Heavy frost (v = 0.78 + 0.22 lum): the Shadow Keep elevator and lever textures. Their dark
+# planks under the shaft's warm, dim light read as pale wood with the normal frost (checked in
+# game 2026-11-12); the catacomb ones read fine with it and stay above.
+heavy_tpfs = [
   "aet420_389",
   "aet420_430",
   "aet420_432",

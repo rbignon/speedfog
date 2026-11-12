@@ -98,7 +98,7 @@ Precedence between levers 1 and 3 is therefore by order: a shader with an exact 
 
 ### 4. Frosted textures (bytes)
 
-For foliage with no snow twin: decode the albedo, apply `v = 0.62 + 0.38 * luminance` with luminance in 0..1, `rgb = (v - 0.02, v, v + 0.03)` clamped to 0..1, keep alpha, rebuild the mip chain, re-encode BC1, republish the TPF under the vanilla name together with its `_l` twin and `_Billboards` textures. Half resolution looks fine for white foliage and divides the cost by four. Spike packs (sizes as built):
+For foliage with no snow twin: decode the albedo, apply `v = 0.62 + 0.38 * luminance` with luminance in 0..1, `rgb = (v - 0.02, v, v + 0.03)` clamped to 0..1, keep alpha, rebuild the mip chain, re-encode BC1, republish the TPF under the vanilla name together with its `_l` twin and `_Billboards` textures. The plugin added a heavy variant (`v = 0.78 + 0.22 * luminance`, `rgb = (v - 0.03, v, v + 0.05)`) for the Shadow Keep elevator and lever textures: the formula above keeps 38% of the source luminance so that grain survives, which on dark planks lit by a warm, dim room (the Shadow Keep shaft) reads as pale wood rather than frost; a flat magenta albedo in the same pack rendered magenta, so the pack is loaded and the texture content alone decides the look. Half resolution looks fine for white foliage and divides the cost by four. Spike packs (sizes as built):
 
 | Pack | Textures | Size |
 |---|---|---|
