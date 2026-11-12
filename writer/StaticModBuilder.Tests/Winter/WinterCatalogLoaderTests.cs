@@ -144,12 +144,12 @@ public class WinterCatalogLoaderTests
 
         var c = WinterCatalogLoader.LoadMaterials(Path.Combine(plugins, "winter_materials.toml"));
         Assert.Equal(3, c.Templates.Count);
-        Assert.Equal(37, c.Rules.Count);
+        Assert.Equal(40, c.Rules.Count);
         Assert.Equal(26, c.Retargets.Count);
         Assert.All(c.Rules, r => c.Template(r.Twin));
         Assert.Equal(2, c.Template("M[AMSN_V][Mb2][Ov_N][Snow]").UvSets);
         var textures = WinterCatalogLoader.LoadTextures(Path.Combine(plugins, "winter_textures.toml"));
-        Assert.Equal(135, textures.Count);
+        Assert.Equal(138, textures.Count);
         // The shipped catalogue exercises both lists.
         Assert.Contains(textures, t => t.Frost == FrostStrength.Heavy);
     }

@@ -1,6 +1,6 @@
 # Winter plugin: frosted texture packs. TPF stems under asset/aet/<family>/; the _l twin of
-# each stem is built too (see docs/plugins/winter.md, design Appendix C). 135 stems: 132 in
-# tpfs (normal frost, which keeps the texture's grain) and 3 in heavy_tpfs (heavy frost).
+# each stem is built too (see docs/plugins/winter.md, design Appendix C). 138 stems: 132 in
+# tpfs (normal frost, which keeps the texture's grain) and 6 in heavy_tpfs (heavy frost).
 
 tpfs = [
   # Chapel and Stormveil leaf clumps, gate ivy, statue vines, leaf litter
@@ -151,11 +151,21 @@ tpfs = [
   "aet003_501",
 ]
 
-# Heavy frost (v = 0.78 + 0.22 lum): the Shadow Keep elevator and lever textures. Their dark
+# Heavy frost (v = 0.78 + 0.22 lum): the Shadow Keep elevator, lever and storehouse textures. Their dark
 # planks under the shaft's warm, dim light read as pale wood with the normal frost (checked in
 # game 2026-11-12); the catacomb ones read fine with it and stay above.
 heavy_tpfs = [
   "aet420_389",
   "aet420_430",
   "aet420_432",
+  # The Shadow Keep storehouse's wood (m21_00_034/035/317, M[AMSN_V][Ov_N]_Skin): the
+  # staircase AEG420_117 and about 80 other static assets and map pieces of m21_01 draw these
+  # matbins, and so does one skinned mechanism, AEG427_003, which keeps the conversion off
+  # them (full FLVER scan, 2026-11-12). Frosted instead; the heavy strength is carried over
+  # from the elevator and owed an in-game check (the storehouse has its own light). The
+  # albedos are also bound by the skinned siblings m21_00_080/081 and by the converted
+  # m21_00_031, which gets the frosted base under its snow layer, as intended.
+  "aet420_026",
+  "aet420_028",
+  "aet420_319",
 ]

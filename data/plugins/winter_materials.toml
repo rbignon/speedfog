@@ -520,6 +520,50 @@ Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_14_GSBlendMap_NormalMap_1"
 Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_13_GSBlendMap_NormalMap_0"
 Texture2D_4_GSBlendMap_Mask1Map_4 = "unbound"
 
+# _Skin variants of ruled shaders. A _Skin shader bundle holds the plain shader's vertex
+# shaders plus skinned versions of them (*_Gbuf_Skin and so on, reading BLENDINDICES0 and
+# BLENDWEIGHT0); the static versions read exactly the plain shader's inputs, so a _Skin matbin
+# drawn only by static meshes converts like its base shader, while the snow twins have no
+# skinned version and the layout scan keeps vanilla every matbin a skinned mesh draws. Only the
+# three variants below convert anything (16 matbins, not yet checked in game); every matbin of
+# M[AMSN_V][Ov_AN]_Skin, M[AMSN][Ov_AN]_Skin and M[AMSN][Mb2][Ov_AN]_Skin is drawn by at least
+# one skinned mesh. The Shadow
+# Keep storehouse's wood (m21_00_034/035/317: the staircase AEG420_117 and about 80 other
+# static assets and map pieces) is also drawn by one skinned mechanism, AEG427_003, and stays
+# vanilla here: its textures are frosted instead (winter_textures.toml, heavy_tpfs).
+[[rules]]
+source = "M[AMSN_V][Ov_N]_Skin"
+twin = "M[AMSN_V][Snow]"
+source_samplers = ["Texture2D_2_NormalMap_0", "Texture2D_7_NormalMap_0", "Texture2D_8_AlbedoMap_0"]
+[rules.plan]
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
+Texture2D_2_AlbedoMap_0 = "Texture2D_8_AlbedoMap_0"
+Texture2D_1_NormalMap_0 = "Texture2D_7_NormalMap_0"
+Texture2D_3_NormalMap_0 = "snow_normal"
+
+[[rules]]
+source = "M[AMSN_V]_Edge_Skin"
+twin = "M[AMSN_V][Ov_N][Snow]_Edge"
+source_samplers = ["Texture2D_1_NormalMap_0", "Texture2D_2_AlbedoMap_0"]
+[rules.plan]
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
+Texture2D_2_AlbedoMap_0 = "Texture2D_2_AlbedoMap_0"
+Texture2D_1_NormalMap_0 = "Texture2D_1_NormalMap_0"
+Texture2D_3_NormalMap_0 = "snow_normal"
+Texture2D_4_NormalMap_0 = "template"
+
+# The DLC's _Edge_Skin names its metallic sampler without the _0 suffix.
+[[rules]]
+source = "M[AMSN][Ov_N]_Edge_Skin"
+twin = "M[AMSN_V][Ov_N][Snow]_Edge"
+source_samplers = ["Texture2D_0_NormalMap_0", "Texture2D_1_NormalMap_0", "Texture2D_2_MetallicMap", "Texture2D_3_AlbedoMap_0"]
+[rules.plan]
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
+Texture2D_2_AlbedoMap_0 = "Texture2D_3_AlbedoMap_0"
+Texture2D_1_NormalMap_0 = "Texture2D_1_NormalMap_0"
+Texture2D_3_NormalMap_0 = "snow_normal"
+Texture2D_4_NormalMap_0 = "Texture2D_0_NormalMap_0"
+
 [[texture_retargets]]
 source = "AET000_003"
 target = "AET000_081"

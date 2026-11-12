@@ -22,7 +22,7 @@ base (levers, pitfalls, coverage numbers): [winter-rendering.md](../winter-rende
   treads, pebbles) turn white, walls stay bare. Terrain materials without a
   snow shader have their albedo layers pointed at the vanilla snow ground.
   No new texture is needed for this part.
-- Ships 270 frosted texture packs (135 stems, each with its `_l` twin):
+- Ships 276 frosted texture packs (138 stems, each with its `_l` twin):
   leaf clumps, ivy, vines, leaf litter, grass atlases of the DLC and the
   SpeedTree shrubs turn white while keeping their cut-out shape, and the
   catacomb and Shadow Keep elevators and levers (`AEG027_016/002`,
@@ -37,7 +37,11 @@ base (levers, pitfalls, coverage numbers): [winter-rendering.md](../winter-rende
   one, their dark planks read as pale wood under the shaft's warm, dim light
   (checked in game 2026-11-12, after a flat magenta albedo proved the pack
   is loaded for that DLC asset); the catacomb ones read fine with the normal
-  frost and keep it.
+  frost and keep it. The storehouse's wood joins them (the staircase
+  `AEG420_117` and about 80 other static assets and map pieces of `m21_01`
+  draw three `M[AMSN_V][Ov_N]_Skin` matbins, `m21_00_034/035/317`): one
+  skinned mechanism, `AEG427_003`, draws them too, so the conversion leaves
+  them vanilla and their textures are frosted.
 - Replaces Torrent with the Frozen Reindeer mount: three authored binders
   (`chr/c8002.chrbnd.dcx`, `chr/c8002_h.texbnd.dcx`, `chr/c8000.anibnd.dcx`)
   shipped verbatim from the overlay folder `data/mods-src/speedfog-winter/`
@@ -53,9 +57,11 @@ base (levers, pitfalls, coverage numbers): [winter-rendering.md](../winter-rende
 - Does not make it snow. Snowfall comes from the weather plugin (below).
 
 Not covered: trees (SpeedTree trunks and canopies outside the shrub atlases),
-decorative shaders (flags, wax, crystals, magma, water, skins, decals) and
-the remaining foliage families listed under "Deferred". Skinned meshes keep
-their vanilla look (see "How it is built").
+decorative shaders (flags, wax, crystals, magma, water, decals) and the
+remaining foliage families listed under "Deferred". Skinned meshes keep their
+vanilla look (see "How it is built"); the three ruled `_Skin` shader variants
+convert only where static meshes alone draw them, the other `_Skin` variants
+have no rule.
 
 ## Config
 
@@ -124,9 +130,9 @@ directory. The classes are in `writer/StaticModBuilder/Winter/`.
 
 1. **Catalogues.** `WinterCatalogLoader` reads
    `data/plugins/winter_materials.toml` (snow texture paths, the three
-   template matbins and their modal snow parameters, 37 conversion rules,
+   template matbins and their modal snow parameters, 40 conversion rules,
    the retarget table, the terrain selectors and keep list) into a
-   `WinterCatalog`, and `data/plugins/winter_textures.toml` (the 135 TPF
+   `WinterCatalog`, and `data/plugins/winter_textures.toml` (the 138 TPF
    stems in two lists, `tpfs` and `heavy_tpfs`, one frost strength each).
    Retarget targets are verified to exist before anything is built.
 2. **Layout scan.** `MaterialLayoutScanner` reads every mapbnd and geombnd
@@ -244,10 +250,10 @@ Measured on the real game (1.17, a local game copy, Wine):
 | Item | Figure |
 |---|---|
 | Material binders | 2.58 MB (base) and 0.52 MB (DLC); vanilla 2.75 MB and 0.61 MB |
-| Matbins | 7077 conversions, 886 retargets, 38 skinned exclusions, 11 UV-set exclusions, 0 layout skips |
-| Textures | 270 TPFs, 20.25 MB |
+| Matbins | 7093 conversions, 886 retargets, 71 skinned exclusions (38 plus 33 `_Skin` matbins drawn by skinned meshes), 11 UV-set exclusions, 0 layout skips |
+| Textures | 276 TPFs, 20.74 MB |
 | Overlay (Torrent skin) | 3 binders, 6.63 MB |
-| Folder shipped per seed | 30 MB (29.99 MB); 23 MB (23.36 MB) without the overlay |
+| Folder shipped per seed | 30 MB (30.47 MB); 24 MB (23.84 MB) without the overlay |
 | Scan | 226 s over 24 987 binders, 283 skinned materials, 4841 matbins with fewer than 2 UV sets |
 | Winter step | 240 to 339 s inside the bootstrap step over three runs (scan about 226 s) |
 | Whole bootstrap | 472 s |
@@ -296,6 +302,19 @@ read at map load):
   on top; the straw layers and the magma glow of the floor are gone by
   design. The earlier pass had converted `m61_00_287`, which is a quad and a
   plane in that arena, not the floor.
+- The Shadow Keep storehouse (`m21_01`): heavy-frosted wood on the staircase
+  `AEG420_117`, on the other assets and map pieces sharing its matbins, on
+  the skinned mechanism `AEG427_003` and under the snow of the converted
+  `m21_00_031` surfaces (`aet420_026/028/319` in `heavy_tpfs`). The heavy
+  strength is a guess carried over from the elevator shaft; the storehouse
+  has its own light, and if the room reads too white the three stems can
+  move to `tpfs` for the normal frost.
+- The 16 matbins the three `_Skin` rules convert (static meshes drawn with
+  `M[AMSN_V][Ov_N]_Skin`, `M[AMSN_V]_Edge_Skin`, `M[AMSN][Ov_N]_Edge_Skin`),
+  by map: Leyndell `m11_00` (matbins 004 to 007), `m12_05` (061), Farum
+  Azula `m13_00` (520, 521, 603), `m39_12` (612), the common assets
+  `AEG099_645/646/648`, and in the DLC `m61_06` (938), `m61_09` (184, 185),
+  `m41_00` (503). None has been seen in game.
 - The ten far-terrain pieces listed above, whose far layer is flat white
   rather than tiled snow.
 - Torrent: whistle, idle, gallop, double jump; the reindeer model with its
