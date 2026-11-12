@@ -144,7 +144,7 @@ public class WinterCatalogLoaderTests
 
         var c = WinterCatalogLoader.LoadMaterials(Path.Combine(plugins, "winter_materials.toml"));
         Assert.Equal(3, c.Templates.Count);
-        Assert.Equal(35, c.Rules.Count);
+        Assert.Equal(37, c.Rules.Count);
         Assert.Equal(26, c.Retargets.Count);
         Assert.All(c.Rules, r => c.Template(r.Twin));
         Assert.Equal(2, c.Template("M[AMSN_V][Mb2][Ov_N][Snow]").UvSets);

@@ -124,7 +124,7 @@ directory. The classes are in `writer/StaticModBuilder/Winter/`.
 
 1. **Catalogues.** `WinterCatalogLoader` reads
    `data/plugins/winter_materials.toml` (snow texture paths, the three
-   template matbins and their modal snow parameters, 35 conversion rules,
+   template matbins and their modal snow parameters, 37 conversion rules,
    the retarget table, the terrain selectors and keep list) into a
    `WinterCatalog`, and `data/plugins/winter_textures.toml` (the 135 TPF
    stems in two lists, `tpfs` and `heavy_tpfs`, one frost strength each).
@@ -243,8 +243,8 @@ Measured on the real game (1.17, a local game copy, Wine):
 
 | Item | Figure |
 |---|---|
-| Material binders | 2.58 MB (base) and 0.53 MB (DLC); vanilla 2.75 MB and 0.61 MB |
-| Matbins | 7053 conversions, 886 retargets, 38 skinned exclusions, 11 UV-set exclusions, 0 layout skips |
+| Material binders | 2.58 MB (base) and 0.52 MB (DLC); vanilla 2.75 MB and 0.61 MB |
+| Matbins | 7077 conversions, 886 retargets, 38 skinned exclusions, 11 UV-set exclusions, 0 layout skips |
 | Textures | 270 TPFs, 20.25 MB |
 | Overlay (Torrent skin) | 3 binders, 6.63 MB |
 | Folder shipped per seed | 30 MB (29.99 MB); 23 MB (23.36 MB) without the overlay |
@@ -290,6 +290,12 @@ read at map load):
   lever, on the normal frost, unchanged.
 - A base-game wooden elevator cabin (`AEG027_001`, Limgrave Tunnels
   `m32_01`): frosted like the lever beside it (`AET003_501`, normal frost).
+- Midra's arena (`m28_00`): the plank floor (`AEG074_095`, matbin
+  `m61_00_252`, a four-layer magma shader with its own rule now) under snow,
+  the straw piles (`AEG074_549/550/596/328`, `[Mb2][Ov_AN]_Edge` rule) snowed
+  on top; the straw layers and the magma glow of the floor are gone by
+  design. The earlier pass had converted `m61_00_287`, which is a quad and a
+  plane in that arena, not the floor.
 - The ten far-terrain pieces listed above, whose far layer is flat white
   rather than tiled snow.
 - Torrent: whistle, idle, gallop, double jump; the reindeer model with its

@@ -139,9 +139,9 @@ Texture2D_1_GSBlendMap_NormalMap_2 = "Texture2D_1_GSBlendMap_NormalMap_2"
 Texture2D_5_GSBlendMap_NormalMap_0 = "Texture2D_11_GSBlendMap_NormalMap_0"
 Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_4_GSBlendMap_Mask1Map_4"
 
-# Three blend layers without overlay (the Midra arena floor, m61_00_287): the second layer's
-# duplicate samplers (8_AlbedoMap_2, 6_NormalMap_2) are dropped, the first layer's normal
-# stands in for the overlay normal, as in the [Mb3] rule.
+# Three blend layers without overlay (m61_00_287, a quad and a 54-vertex plane in the Midra
+# arena, not its floor): the second layer's duplicate samplers (8_AlbedoMap_2, 6_NormalMap_2)
+# are dropped, the first layer's normal stands in for the overlay normal, as in the [Mb3] rule.
 [[rules]]
 source = "M[AMSN_V][Mb3][Snow_VtxMask]"
 twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
@@ -314,6 +314,20 @@ Texture2D_1_NormalMap_0 = "Texture2D_1_NormalMap_0"
 Texture2D_3_NormalMap_0 = "snow_normal"
 Texture2D_4_NormalMap_0 = "Texture2D_0_NormalMap_0"
 
+# Two-layer cut-out blend with an albedo and normal overlay (23 matbins: the Midra arena straw
+# piles m61_00_472/474, 17 base-game and 4 other DLC matbins): first layer under the Edge twin's
+# snow, the overlay normal kept; the overlay albedo, the second layer and its mask dropped.
+[[rules]]
+source = "M[AMSN_V][Mb2][Ov_AN]_Edge"
+twin = "M[AMSN_V][Ov_N][Snow]_Edge"
+source_samplers = ["Texture2D_0_GSBlendMap_NormalMap_1", "Texture2D_1_GSBlendMap_NormalMap_2", "Texture2D_2_GSBlendMap_AlbedoMap_1", "Texture2D_3_GSBlendMap_AlbedoMap_2", "Texture2D_4_GSBlendMap_Mask1Map_4", "Texture2D_5_GSBlendMap_NormalMap_0", "Texture2D_6_GSBlendMap_AlbedoMap_0"]
+[rules.plan]
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
+Texture2D_2_AlbedoMap_0 = "Texture2D_2_GSBlendMap_AlbedoMap_1"
+Texture2D_1_NormalMap_0 = "Texture2D_0_GSBlendMap_NormalMap_1"
+Texture2D_3_NormalMap_0 = "snow_normal"
+Texture2D_4_NormalMap_0 = "Texture2D_5_GSBlendMap_NormalMap_0"
+
 [[rules]]
 source = "M[AMSN][Ov_N][Mb3_ColorAdjust][3Mask_ch18]"
 twin = "M[AMSN_V][Mb2][Ov_N][Snow]"
@@ -348,6 +362,20 @@ Texture2D_4_GSBlendMap_Mask1Map_4 = "Texture2D_4_GSBlendMap_Mask1Map_4"
 source = "M[AMSN_V][Mb3][3Mask_T][Ov_N2_T]"
 twin = "M[AMSN_V][Snow]"
 source_samplers = ["Texture2D_0_Mask3Map_2", "Texture2D_15_NormalMap_3", "Texture2D_1_AlbedoMap_1", "Texture2D_2_AlbedoMap_2", "Texture2D_3_Mask1Map_4", "Texture2D_4_NormalMap_0", "Texture2D_5_NormalMap_1", "Texture2D_6_NormalMap_2", "Texture2D_7_NormalMap_0", "Texture2D_8_AlbedoMap_3"]
+[rules.plan]
+Texture2D_0_AlbedoMap_0 = "snow_albedo"
+Texture2D_2_AlbedoMap_0 = "Texture2D_1_AlbedoMap_1"
+Texture2D_1_NormalMap_0 = "Texture2D_5_NormalMap_1"
+Texture2D_3_NormalMap_0 = "snow_normal"
+
+# The Midra arena floor (m61_00_252 of AEG074_095, the only matbin of this shader in the game):
+# four blend layers (planks AET073_043, two straws, burnt straw), a detail mask and a magma glow
+# layer, one UV set. The planks go under the plain twin's snow; the straw layers and the glow
+# are lost (the straw piles are separate assets, see the [Mb2][Ov_AN]_Edge rule).
+[[rules]]
+source = "M[AMSN_V][Mb4][3Mask][Ov_AN][magma][DetailMask]"
+twin = "M[AMSN_V][Snow]"
+source_samplers = ["Texture2D_0_Mask3Map_2", "Texture2D_10_Mask1Map_4", "Texture2D_11_AlbedoMap_4", "Texture2D_12_Mask1Map_4", "Texture2D_15_NormalMap_3", "Texture2D_16_NormalMap_4", "Texture2D_1_AlbedoMap_1", "Texture2D_2_AlbedoMap_2", "Texture2D_3_Mask1Map_4", "Texture2D_4_Mask1Map_4", "Texture2D_5_NormalMap_1", "Texture2D_6_NormalMap_2", "Texture2D_8_AlbedoMap_3", "Texture2D_9_Mask1Map_4"]
 [rules.plan]
 Texture2D_0_AlbedoMap_0 = "snow_albedo"
 Texture2D_2_AlbedoMap_0 = "Texture2D_1_AlbedoMap_1"
