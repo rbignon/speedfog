@@ -77,4 +77,49 @@ public class PluginRegistryTests
 
         Assert.Throws<InvalidDataException>(() => PluginRegistry.CreateEnabled(graph));
     }
+
+    [Fact]
+    public void Creates_race_items_when_enabled()
+    {
+        var graph = new GraphData { Plugins = new() { ["race_items"] = Enabled() } };
+
+        var plugins = PluginRegistry.CreateEnabled(graph);
+
+        Assert.Equal(new[] { "race_items" }, plugins.Select(p => p.Name));
+        Assert.Null(plugins[0].TextThemeName);
+    }
+
+    [Fact]
+    public void Ignores_race_items_when_disabled()
+    {
+        var graph = new GraphData
+        {
+            Plugins = new() { ["race_items"] = new PluginConfig { Enabled = false } },
+        };
+
+        Assert.Empty(PluginRegistry.CreateEnabled(graph));
+    }
+
+    [Fact]
+    public void RaceItemsPlugin_rejects_unknown_setting()
+    {
+        var graph = new GraphData
+        {
+            Plugins = new() { ["race_items"] = Enabled("""{"hammer": 1}""") },
+        };
+
+        Assert.Throws<InvalidDataException>(() => PluginRegistry.CreateEnabled(graph));
+    }
+
+    [Fact]
+    public void CreateEnabled_RaceItemsRunsAfterHalloween()
+    {
+        var graph = new GraphData
+        {
+            Plugins = new() { ["race_items"] = Enabled(), ["halloween"] = Enabled() },
+        };
+
+        Assert.Equal(new[] { "halloween", "race_items" },
+            PluginRegistry.CreateEnabled(graph).Select(p => p.Name));
+    }
 }

@@ -34,16 +34,17 @@ MSB only if present") lives in the plugin object, not in the pipeline's
 | Hook | Called from | Position and why | Used by |
 |---|---|---|---|
 | `AfterFogModWrite` | `WriteFogModPhase` | Right after `BuildRegionToFlags`: last point where flags can join `RegionToFlags` before `PatchEmevdPhase` injects them | halloween (jumpscare plan + mirror flags) |
-| `OnCommonEmevd` | `CommonEmevdPhase` | After the core injectors, before `AlternateFlagPatcher` and the single common.emevd write | weather (event), halloween (darkness event) |
-| `OnRegulation` | `RegulationPhase` | Inside the single regulation.bin batch; not called when regulation.bin is unavailable | halloween (greeter, ambusher, jumpscare rows; icons) |
+| `OnCommonEmevd` | `CommonEmevdPhase` | After the core injectors, before `AlternateFlagPatcher` and the single common.emevd write | weather (event), halloween (darkness event), race_items (use and removal events) |
+| `OnRegulation` | `RegulationPhase` | Inside the single regulation.bin batch; not called when regulation.bin is unavailable | halloween (greeter, ambusher, jumpscare rows; icons), race_items (goods and SpEffect rows) |
 | `TextThemeName` (data, not a method) | `ModDirPhase` | After `BossNameInjector` (themes reskin the ids it allocates by `boss_name`), before `DeathMarkerInjector`; the phase applies the themes in plugin order and warns when several are enabled | summer, halloween |
 | `OnModDirMsb` | `ModDirPhase` | `Context.GateSides` (fog.txt gate sides) is available. After `DeathMarkerInjector`, before the Untouchable boss MSB repoint and `VanillaWarpRemover` (the decor ground estimate reads vanilla assets the remover deletes) | halloween (ambient pass: decorations, greeters, ambushes, jumpscare actors) |
-| `OnModDirLate` | `ModDirPhase` | After `EventDisabler`, before `VanillaWarpRemover`: historical position, kept so per-map EMEVD rewrites stay in the same order | halloween (darkness fast-loop repoint) |
+| `OnModDirLate` | `ModDirPhase` | After `EventDisabler`, before `VanillaWarpRemover`: historical position, kept so per-map EMEVD rewrites stay in the same order | halloween (darkness fast-loop repoint), race_items (item texts) |
 
-**Order.** `PluginRegistry` lists `summer`, `weather`, `halloween`, and that
+**Order.** `PluginRegistry` lists `summer`, `weather`, `halloween`, `race_items`, and that
 is the execution order at every hook: weather before halloween keeps their
 common.emevd events in their historical order, summer before halloween lets
-the halloween text theme overwrite colliding summer entries.
+the halloween text theme overwrite colliding summer entries. `race_items`
+touches disjoint ids and common.emevd events, so it simply runs last.
 
 **Adding a plugin.** Create `writer/FogModWrapper/Plugins/<Name>/` with a
 `<Name>Plugin : SpeedFogPlugin` that parses its table in its constructor and
@@ -94,5 +95,6 @@ FogModWrapper side is driven by `HalloweenPlugin` (the text theme through its
 - [halloween-icons.md](halloween-icons.md) - Halloween item icon redirect (Golden Seed, Sacred Tear).
 - [halloween-darkness.md](halloween-darkness.md) - Halloween evergaol lighting over the whole run.
 - [halloween-jumpscares.md](halloween-jumpscares.md) - Halloween jumpscares: an Aging Untouchable appearing on the player in a few dungeon layers.
+- [race-items.md](race-items.md) - Mario Kart style race items (goods, SpEffects, EMEVD events, texts) for speedfog-racing.
 - [weather.md](weather.md) - force a fixed weather, pin the clock hour.
 - [winter.md](winter.md) - white ground and frosted foliage (static mod built at bootstrap); snowfall comes from the weather plugin.

@@ -1,5 +1,6 @@
 using FogModWrapper.Models;
 using FogModWrapper.Plugins.Halloween;
+using FogModWrapper.Plugins.RaceItems;
 using FogModWrapper.Plugins.Summer;
 using FogModWrapper.Plugins.Weather;
 
@@ -11,12 +12,13 @@ internal static class PluginRegistry
     // Execution order at every hook. Weather before halloween keeps their
     // common.emevd events in their historical order (event order is part of
     // the file bytes); summer before halloween lets the halloween text theme
-    // overwrite colliding summer entries.
+    // overwrite colliding summer entries; race_items is independent and last.
     private static readonly (string Name, Func<PluginConfig, SpeedFogPlugin> Create)[] Known =
     {
         ("summer", _ => new SummerPlugin()),
         ("weather", config => new WeatherPlugin(config)),
         ("halloween", config => new HalloweenPlugin(config)),
+        ("race_items", config => new RaceItemsPlugin(config)),
     };
 
     /// <summary>
