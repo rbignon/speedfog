@@ -63,11 +63,24 @@ that item's icon, and the fallback lookup resolves them from the shipped
 `05_dummy.tpf.dcx` superset. `01_common` and its layouts are never
 touched; a seed with the plugin disabled ships nothing extra at all.
 
+## The shared icon overlay
+
+The overlay is shared with the race items plugin ([race-items.md](race-items.md)),
+which ships 11 more icons (ids 60385-60395). ModEngine 2 keeps the first copy
+of a given file, so a second overlay shipping its own `05_dummy.tpf.dcx` would
+hide the other's icons: both icon sets live in ONE file, in ONE overlay,
+`data/mods/speedfog-icons/`, shipped when Halloween OR race items is enabled
+(every Halloween pool enables race items too). Everything below about the
+patcher and the packaging applies to both sets; the rest of this page is about
+the two Halloween icons.
+
 ## The three moving parts
 
-1. **`HalloweenIconPatcher`** (`writer/StaticModBuilder/HalloweenIconPatcher.cs`,
+1. **`ItemIconPatcher`** (`writer/StaticModBuilder/ItemIconPatcher.cs`,
    runs at bootstrap, not per-seed): reads the icon PNGs from
-   `data/plugins/`, encodes each once to raw BC7 blocks (BcEncoder, `Balanced`
+   `data/plugins/` (the two Halloween PNGs, then
+   `race_items_icon_<icon>.png` for every distinct icon of the race items
+   catalog's `[icons]`, read through `RaceItemsCatalog.Load`), encodes each once to raw BC7 blocks (BcEncoder, `Balanced`
    quality, `IsParallel = false`, same Wine-crash workaround as
    `TitleScreenPatcher`), then for each of `menu/{hi,low}`: reads the
    vanilla `05_dummy.tpf.dcx`, validates its `MENU_DummyTransparent`
@@ -79,10 +92,9 @@ touched; a seed with the plugin disabled ships nothing extra at all.
    icon-sized vanilla DDS to splice a header from, unlike the title
    patch's own sprite), adds or replaces the `MENU_ItemIcon_*`
    textures by name (idempotent reruns), and writes the superset TPF to
-   `data/mods/speedfog-halloween/menu/{hi,low}/05_dummy.tpf.dcx`. Invoked
-   by `tools/bootstrap.py` via `--halloween-dir`, unconditionally
-   (`HALLOWEEN_MOD_DEST`), independent of whether any seed enables the
-   plugin.
+   `data/mods/speedfog-icons/menu/{hi,low}/05_dummy.tpf.dcx`. Invoked
+   by `tools/bootstrap.py` via `--icons-dir`, unconditionally
+   (`ICONS_MOD_DEST`), independent of whether any seed enables a plugin.
 2. **`HalloweenIconInjector`** (`writer/FogModWrapper/Plugins/Halloween/HalloweenIconInjector.cs`,
    runs per seed): `ApplyTo(RegulationEditor reg)` reads
    `EquipParamGoods`, and for rows 10010 and 10020 sets `iconId` to
@@ -94,22 +106,20 @@ touched; a seed with the plugin disabled ships nothing extra at all.
    warning and is skipped rather than failing the build.
 3. **Packaging conditional overlay** (`speedfog/packaging.py`,
    `package_seed` / `write_modengine_config`): copies
-   `data/mods/speedfog-halloween/` into `seed_dir/mods/speedfog-halloween`
+   `data/mods/speedfog-icons/` into `seed_dir/mods/speedfog-icons`
    and registers it as a ModEngine 2 mod, right after the always-on
    `speedfog` static mod entry and before `fogmod`.
 
 ### Gating: the double condition
 
-Both the regulation redirect and the packaging copy are gated on
-`[plugin.halloween] enabled = true`, but packaging additionally requires
-the overlay directory to actually exist and hold files:
+The regulation redirect is gated on `[plugin.halloween] enabled = true`.
+The packaging copy is gated on Halloween or race items being enabled, and
+additionally requires the overlay directory to actually exist and hold files:
 
 ```python
-halloween_mod_enabled = (
-    halloween_enabled
-    and halloween_dir.is_dir()
-    and any(f.is_file() for f in halloween_dir.rglob("*"))
-)
+icons_mod_enabled = (
+    halloween_enabled or race_items_enabled
+) and _copy_optional_mod(project_root, seed_dir, "speedfog-icons", "icons overlay")
 ```
 
 This mirrors the existing `static_mod_enabled` check for `data/mods/speedfog/`.
@@ -118,13 +128,13 @@ flag is a per-seed config choice, while the overlay directory is built once
 at bootstrap and only if `tools/bootstrap.py`'s `run_static_mod_builder`
 actually ran with a game dir that has `05_dummy.tpf.dcx`. A seed can
 therefore have the plugin enabled with no overlay to ship (bootstrap not
-run, or `HalloweenIconPatcher` warn-skipped for a missing PNG or
+run, or `ItemIconPatcher` warn-skipped for a missing PNG or
 malformed template); in that case the iconId redirect still fires in
 FogModWrapper (it only touches `regulation.bin`, no dependency on the
 overlay), but nothing is copied or registered, so the game falls back to
 its own dummy/blank icon instead of a broken reference to a mod file that
-was never shipped. The reverse (overlay built, plugin disabled) never
-ships the overlay either, since `halloween_enabled` is the first term.
+was never shipped. The reverse (overlay built, neither plugin enabled) never
+ships the overlay either.
 
 ## The art and how to replace it
 
@@ -132,7 +142,7 @@ ships the overlay either, since `halloween_enabled` is the first term.
 `data/plugins/halloween_icon_profane_tear.png` (a chalice of burning
 liquid) are the user's AUTHORED 160x160 RGBA icons (landed 2026-09-01,
 replacing the original Pillow placeholders). 160x160 matches every
-vanilla item icon's size; `HalloweenIconPatcher` warns and skips the
+vanilla item icon's size; `ItemIconPatcher` warns and skips the
 whole overlay if a PNG is missing or not exactly that size.
 
 `tools/generate_halloween_icons.py` regenerates the ORIGINAL flat
@@ -146,7 +156,7 @@ To replace the art again:
 1. Overwrite the PNGs under `data/plugins/` with authored art (same
    filenames, 160x160 RGBA).
 2. Re-run `tools/bootstrap.py`, or invoke `StaticModBuilder` directly
-   with `--halloween-dir data/mods/speedfog-halloween --data-dir data`
+   with `--icons-dir data/mods/speedfog-icons --data-dir data`
    (same shape as the title screen re-run in title-screen.md).
 3. Rebuild or re-copy a seed to pick up the new overlay.
 

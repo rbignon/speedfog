@@ -6,7 +6,7 @@ shapes (a pumpkin, a gumdrop) on transparent 160x160 canvases; the real
 art is authored by the user (Smithbox export + editing) and simply
 overwrites these files. Outputs are committed; re-run this script only to
 change the placeholder design, then re-run tools/bootstrap.py (or
-StaticModBuilder directly) to rebuild data/mods/speedfog-halloween/.
+StaticModBuilder directly) to rebuild data/mods/speedfog-icons/.
 Outputs live in data/plugins/ next to the halloween catalogues.
 See docs/plugins/halloween-icons.md.
 """

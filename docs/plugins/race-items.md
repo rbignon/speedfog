@@ -98,6 +98,27 @@ where the table above says none.
 }
 ```
 
+## Replacing the icons
+
+The 11 icons ship as placeholder flat shapes. The art is replaced by dropping
+PNG files in, nothing else changes. For the graphic artist and for Roger:
+
+- **Format**: PNG, 160x160, RGBA with a transparent background.
+- **Files**: `data/plugins/race_items_icon_<icon>.png`, `<icon>` being a name of
+  the catalog's `[icons]` table: `shield`, `rune_pouch`, `banana`, `red_shell`,
+  `mushroom`, `hammer`, `ink`, `blue_shell`, `lightning`, `flask_stopper`,
+  `toxic_blossom` (ids 60385-60395; the three Rune Pouches share one icon).
+- **After the drop**: overwrite the files (never re-run
+  `tools/generate_race_item_icons.py` afterwards, it would overwrite the art),
+  run `tools/bootstrap.py` on the generation host (a missing or non-160x160 file
+  makes `ItemIconPatcher` skip the whole overlay with a warning), regenerate the
+  pools, then in speedfog-racing run `tools/sync_race_item_icons.py` and release
+  the mod.
+
+The icons ship in the shared `data/mods/speedfog-icons/` overlay, together with
+the Halloween icons (see [halloween-icons.md](halloween-icons.md)): one
+`05_dummy.tpf.dcx`, shipped when Halloween or race items is enabled.
+
 ## Calibration values
 
 Starting values Roger tunes in game, then bakes into the pools (effect values

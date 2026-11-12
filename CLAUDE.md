@@ -102,7 +102,7 @@ speedfog/
 │   │   └── script/<name>-luabnd-dcx/  # WitchyBND-unpacked layout, repacked at bootstrap
 │   ├── mods-src/speedfog-winter/  # Winter overlay: authored binders copied verbatim into data/mods/speedfog-winter/ at bootstrap (chr/: Frozen Reindeer Torrent skin, three binders, 6.6 MB; not tracked yet, copy the folder onto a generating host by hand; without it the bootstrap warns and the build ships no skin)
 │   ├── mods/speedfog/       # StaticModBuilder output + WitchyBND repacks + user overrides (gitignored)
-│   ├── mods/speedfog-halloween/  # Halloween icon overlay (05_dummy.tpf.dcx superset), built at bootstrap, shipped only when [plugin.halloween] is enabled (gitignored)
+│   ├── mods/speedfog-icons/  # Item icon overlay (05_dummy.tpf.dcx superset: Halloween + race item icons), built at bootstrap, shipped only when [plugin.halloween] or [plugin.race_items] is enabled (gitignored)
 │   └── mods/speedfog-winter/  # Winter static mod (two converted material binders + 276 frosted TPFs + the overlay's chr/ Torrent skin, ~30 MB), built at bootstrap, shipped only when [plugin.winter] is enabled (gitignored; built in a sibling speedfog-winter.building/ and moved into place, so it is complete or absent; the sibling speedfog-winter.report.txt lists the skinned exclusions, per-binder and per-rule counts, per-stem texture counts)
 ├── writer/                  # C# - Mod file generation
 │   ├── lib/                 # DLLs (FogMod, RandomizerCommon, SoulsFormats, etc.)
@@ -450,7 +450,7 @@ speedfog/
 | `WinterTextureBuilder` / `FrostEncoder` / `DdsImage` | Frost 276 TPFs (foliage, elevator, lever and staircase textures) at half resolution (albedos re-encoded BC1 1-bit alpha at the catalogue's `FrostStrength`, normal or heavy; other textures lose their top mip) |
 | `WinterOverlay` | Copies every file under `data/mods-src/speedfog-winter/` (the Torrent skin binders) verbatim into the winter build; optional folder, a collision with a built file fails the build |
 | `WinterReport` | Writes `data/mods/speedfog-winter.report.txt` (not shipped) |
-| `HalloweenIconPatcher` | Ships the Golden Seed/Sacred Tear Halloween icons (jack-o'-lantern, burning chalice) as a 05_dummy.tpf.dcx superset (`--halloween-dir`, opt-in overlay output, see `docs/plugins/halloween-icons.md`) |
+| `ItemIconPatcher` | Ships the Halloween icons (Golden Seed/Sacred Tear) and the 11 race item icons as one 05_dummy.tpf.dcx superset (`--icons-dir`, opt-in overlay output, see `docs/plugins/halloween-icons.md` and `docs/plugins/race-items.md`) |
 | `DdsAtlas` | DX10 DDS header parsing + block-aligned BC7 extract + standalone DDS build |
 | `LayoutFile` | Menu .layout XML helpers (find/remove SubTexture entries) |
 

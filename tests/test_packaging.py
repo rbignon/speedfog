@@ -205,86 +205,115 @@ def test_package_seed_with_empty_static_mod_omits_the_entry(tmp_path: Path) -> N
     assert 'name = "speedfog"' not in content
 
 
-def test_package_seed_copies_halloween_overlay_when_plugin_enabled(
+def test_package_seed_copies_icons_overlay_when_halloween_enabled(
     tmp_path: Path,
 ) -> None:
     project_root = tmp_path / "project"
     seed_dir = tmp_path / "seed"
     _make_packaging_tree(project_root)
-    overlay = project_root / "data" / "mods" / "speedfog-halloween"
+    overlay = project_root / "data" / "mods" / "speedfog-icons"
     (overlay / "menu" / "hi").mkdir(parents=True)
     (overlay / "menu" / "hi" / "05_dummy.tpf.dcx").write_bytes(b"x")
 
     package_seed(project_root, seed_dir, halloween_enabled=True)
 
     assert (
-        seed_dir / "mods" / "speedfog-halloween" / "menu" / "hi" / "05_dummy.tpf.dcx"
+        seed_dir / "mods" / "speedfog-icons" / "menu" / "hi" / "05_dummy.tpf.dcx"
     ).exists()
     content = (seed_dir / "modengine2" / "config_speedfog.toml").read_text(
         encoding="utf-8"
     )
-    assert 'name = "speedfog-halloween"' in content
-    # ModEngine 2: first mod wins. The static mod and the halloween overlay
+    assert 'name = "speedfog-icons"' in content
+    # ModEngine 2: first mod wins. The static mod and the icons overlay
     # must both beat fogmod, in that order (static mod fixture absent here,
     # so assert against fogmod directly).
-    assert content.index('name = "speedfog-halloween"') < content.index(
-        'name = "fogmod"'
+    assert content.index('name = "speedfog-icons"') < content.index('name = "fogmod"')
+
+
+@pytest.mark.parametrize(
+    ("halloween", "race_items"), [(True, False), (False, True), (True, True)]
+)
+def test_icons_overlay_shipped_for_either_plugin(
+    tmp_path: Path, halloween: bool, race_items: bool
+) -> None:
+    project_root = tmp_path / "project"
+    seed_dir = tmp_path / "seed"
+    _make_packaging_tree(project_root)
+    overlay = project_root / "data" / "mods" / "speedfog-icons"
+    (overlay / "menu" / "hi").mkdir(parents=True)
+    (overlay / "menu" / "hi" / "05_dummy.tpf.dcx").write_bytes(b"x")
+
+    package_seed(
+        project_root,
+        seed_dir,
+        halloween_enabled=halloween,
+        race_items_enabled=race_items,
     )
 
+    assert (
+        seed_dir / "mods" / "speedfog-icons" / "menu" / "hi" / "05_dummy.tpf.dcx"
+    ).exists()
+    content = (seed_dir / "modengine2" / "config_speedfog.toml").read_text(
+        encoding="utf-8"
+    )
+    assert content.count('name = "speedfog-icons"') == 1
 
-def test_package_seed_omits_halloween_overlay_when_plugin_disabled(
+
+def test_package_seed_omits_icons_overlay_when_no_plugin_needs_it(
     tmp_path: Path,
 ) -> None:
     project_root = tmp_path / "project"
     seed_dir = tmp_path / "seed"
     _make_packaging_tree(project_root)
-    overlay = project_root / "data" / "mods" / "speedfog-halloween"
+    overlay = project_root / "data" / "mods" / "speedfog-icons"
     (overlay / "menu").mkdir(parents=True)
     (overlay / "menu" / "x.bin").write_bytes(b"x")
 
-    package_seed(project_root, seed_dir, halloween_enabled=False)
+    package_seed(
+        project_root, seed_dir, halloween_enabled=False, race_items_enabled=False
+    )
 
-    assert not (seed_dir / "mods" / "speedfog-halloween").exists()
+    assert not (seed_dir / "mods" / "speedfog-icons").exists()
     content = (seed_dir / "modengine2" / "config_speedfog.toml").read_text(
         encoding="utf-8"
     )
-    assert "speedfog-halloween" not in content
+    assert "speedfog-icons" not in content
 
 
-def test_package_seed_omits_halloween_overlay_when_dir_empty(tmp_path: Path) -> None:
+def test_package_seed_omits_icons_overlay_when_dir_empty(tmp_path: Path) -> None:
     project_root = tmp_path / "project"
     seed_dir = tmp_path / "seed"
     _make_packaging_tree(project_root)
-    (project_root / "data" / "mods" / "speedfog-halloween").mkdir(parents=True)
+    (project_root / "data" / "mods" / "speedfog-icons").mkdir(parents=True)
 
     package_seed(project_root, seed_dir, halloween_enabled=True)
 
-    assert not (seed_dir / "mods" / "speedfog-halloween").exists()
+    assert not (seed_dir / "mods" / "speedfog-icons").exists()
     content = (seed_dir / "modengine2" / "config_speedfog.toml").read_text(
         encoding="utf-8"
     )
-    assert "speedfog-halloween" not in content
+    assert "speedfog-icons" not in content
 
 
-def test_write_modengine_config_lists_halloween_overlay_after_speedfog(
+def test_write_modengine_config_lists_icons_overlay_after_speedfog(
     tmp_path: Path,
 ) -> None:
     write_modengine_config(
         tmp_path,
         static_mod_enabled=True,
-        halloween_mod_enabled=True,
+        icons_mod_enabled=True,
     )
 
     content = (tmp_path / "modengine2" / "config_speedfog.toml").read_text(
         encoding="utf-8"
     )
-    assert 'name = "speedfog-halloween"' in content
-    assert 'path = "../mods/speedfog-halloween"' in content
+    assert 'name = "speedfog-icons"' in content
+    assert 'path = "../mods/speedfog-icons"' in content
     # ModEngine 2: first mod wins. Order must be speedfog, then the
-    # halloween overlay, then fogmod.
+    # icons overlay, then fogmod.
     assert (
         content.index('name = "speedfog"')
-        < content.index('name = "speedfog-halloween"')
+        < content.index('name = "speedfog-icons"')
         < content.index('name = "fogmod"')
     )
 
@@ -373,11 +402,11 @@ def test_stale_static_mod_scripts_with_no_source_directory(tmp_path: Path) -> No
     assert stale_static_mod_scripts(tmp_path) == []
 
 
-def test_write_modengine_config_lists_winter_after_halloween(tmp_path: Path) -> None:
+def test_write_modengine_config_lists_winter_after_icons(tmp_path: Path) -> None:
     write_modengine_config(
         tmp_path,
         static_mod_enabled=True,
-        halloween_mod_enabled=True,
+        icons_mod_enabled=True,
         winter_mod_enabled=True,
     )
 
@@ -387,7 +416,7 @@ def test_write_modengine_config_lists_winter_after_halloween(tmp_path: Path) -> 
     assert 'path = "../mods/speedfog-winter"' in content
     assert (
         content.index('name = "speedfog"')
-        < content.index('name = "speedfog-halloween"')
+        < content.index('name = "speedfog-icons"')
         < content.index('name = "speedfog-winter"')
         < content.index('name = "fogmod"')
     )

@@ -76,7 +76,7 @@ MODENGINE_DEST = PACKAGING_DEST / "modengine2"
 WITCHYBND_DEST = PROJECT_ROOT / "tools" / "witchybnd"
 STATIC_MOD_SRC_DEST = DATA_DEST / "mods-src" / "speedfog"
 STATIC_MOD_DEST = DATA_DEST / "mods" / "speedfog"
-HALLOWEEN_MOD_DEST = DATA_DEST / "mods" / "speedfog-halloween"
+ICONS_MOD_DEST = DATA_DEST / "mods" / "speedfog-icons"
 WINTER_MOD_DEST = DATA_DEST / "mods" / "speedfog-winter"
 WINTER_OVERLAY_SRC = DATA_DEST / "mods-src" / "speedfog-winter"
 WINTER_FAILURE_PREFIX = "WINTER FAILED"
@@ -873,7 +873,7 @@ def run_static_mod_builder(game_dir: Path, winter: bool = True) -> tuple[bool, b
         cmd = ["wine", str(patcher_exe)]
 
     STATIC_MOD_DEST.mkdir(parents=True, exist_ok=True)
-    HALLOWEEN_MOD_DEST.mkdir(parents=True, exist_ok=True)
+    ICONS_MOD_DEST.mkdir(parents=True, exist_ok=True)
     if winter:
         WINTER_MOD_DEST.mkdir(parents=True, exist_ok=True)
 
@@ -883,8 +883,8 @@ def run_static_mod_builder(game_dir: Path, winter: bool = True) -> tuple[bool, b
             str(STATIC_MOD_DEST.resolve()),
             "--data-dir",
             str(DATA_DEST.resolve()),
-            "--halloween-dir",
-            str(HALLOWEEN_MOD_DEST.resolve()),
+            "--icons-dir",
+            str(ICONS_MOD_DEST.resolve()),
         ]
     )
     if winter:

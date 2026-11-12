@@ -58,7 +58,7 @@ def write_modengine_config(
     item_randomizer_enabled: bool = False,
     include_crash_fix: bool = False,
     static_mod_enabled: bool = False,
-    halloween_mod_enabled: bool = False,
+    icons_mod_enabled: bool = False,
     winter_mod_enabled: bool = False,
 ) -> Path:
     """Write the ModEngine 2 TOML config consumed by the launcher.
@@ -94,10 +94,10 @@ def write_modengine_config(
         mods_lines.append(
             '    { enabled = true, name = "speedfog", path = "../mods/speedfog" }'
         )
-    if halloween_mod_enabled:
+    if icons_mod_enabled:
         mods_lines.append(
-            '    { enabled = true, name = "speedfog-halloween",'
-            ' path = "../mods/speedfog-halloween" }'
+            '    { enabled = true, name = "speedfog-icons",'
+            ' path = "../mods/speedfog-icons" }'
         )
     if winter_mod_enabled:
         mods_lines.append(
@@ -157,7 +157,7 @@ def _copy_optional_mod(
 ) -> bool:
     """Copy data/mods/<name>/ into the seed if it exists and is non-empty.
 
-    Shared by the speedfog static mod and speedfog-halloween overlay blocks
+    Shared by the speedfog static mod and speedfog-icons overlay blocks
     in package_seed: both must skip registering an empty/missing mod
     directory with ModEngine 2. Returns whether the mod was found and
     copied.
@@ -201,6 +201,7 @@ def package_seed(
     item_randomizer_enabled: bool = False,
     item_randomizer_dir: Path | None = None,
     halloween_enabled: bool = False,
+    race_items_enabled: bool = False,
     winter_enabled: bool = False,
 ) -> None:
     """Assemble the static mod, ModEngine 2, launcher, DLLs, and config."""
@@ -223,15 +224,18 @@ def package_seed(
             " building seed without static patches"
         )
 
-    # The halloween overlay is only shipped when the plugin is enabled AND
-    # the overlay was actually built at bootstrap (mirrors static_mod_enabled
-    # above: a disabled plugin, or a bootstrap run without it, must not
-    # register an empty/missing mod directory with ModEngine 2).
-    halloween_mod_enabled = halloween_enabled and _copy_optional_mod(
-        project_root, seed_dir, "speedfog-halloween", "halloween overlay"
-    )
+    # The icons overlay holds the Halloween and the race item icons in ONE
+    # 05_dummy.tpf.dcx (ModEngine 2 keeps the first copy of a file, so two
+    # overlays would hide each other's icons). It is only shipped when a plugin
+    # that needs it is enabled AND the overlay was actually built at bootstrap
+    # (mirrors static_mod_enabled above: a disabled plugin, or a bootstrap run
+    # without it, must not register an empty/missing mod directory with
+    # ModEngine 2).
+    icons_mod_enabled = (
+        halloween_enabled or race_items_enabled
+    ) and _copy_optional_mod(project_root, seed_dir, "speedfog-icons", "icons overlay")
 
-    # Unlike the halloween overlay (silently omitted), a winter seed without
+    # Unlike the icons overlay (silently omitted), a winter seed without
     # its static mod, or with part of it, would play as a plain or half-white
     # seed, so it is an error, checked before anything is copied.
     if winter_enabled:
@@ -262,7 +266,7 @@ def package_seed(
             and (seed_dir / "lib" / "RandomizerCrashFix.dll").exists()
         ),
         static_mod_enabled=static_mod_enabled,
-        halloween_mod_enabled=halloween_mod_enabled,
+        icons_mod_enabled=icons_mod_enabled,
         winter_mod_enabled=winter_mod_enabled,
     )
     print("Generated modengine2/config_speedfog.toml")

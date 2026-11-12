@@ -1,6 +1,7 @@
 using BCnEncoder.Encoder;
 using BCnEncoder.ImageSharp;
 using BCnEncoder.Shared;
+using FogModWrapper.Plugins.RaceItems;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SoulsFormats;
@@ -8,10 +9,14 @@ using SoulsFormats;
 namespace StaticModBuilder;
 
 /// <summary>
-/// Ships new item icon textures (Halloween item icons) as a
-/// superset of the vanilla menu/{hi,low}/05_dummy.tpf.dcx, so the per-seed
-/// injector (HalloweenIconInjector, see docs/plugins/halloween-icons.md) can repoint
+/// Ships new item icon textures (the Halloween icons and the race item icons)
+/// as a superset of the vanilla menu/{hi,low}/05_dummy.tpf.dcx, so the per-seed
+/// injectors (HalloweenIconInjector, see docs/plugins/halloween-icons.md, and
+/// the race items plugin, see docs/plugins/race-items.md) can repoint
 /// EquipParamGoods.iconId at them without shipping a bloated shared UI atlas.
+/// Both icon sets live in this ONE overlay: ModEngine 2 keeps the first copy of
+/// a file, so a second overlay shipping its own 05_dummy.tpf.dcx would hide the
+/// other's icons.
 ///
 /// Unlike TitleScreenPatcher, these are standalone icons with no vanilla
 /// pixels to composite onto. There is still no icon-sized vanilla DDS to
@@ -20,51 +25,76 @@ namespace StaticModBuilder;
 /// purely as the 148-byte DX10 header template for
 /// DdsAtlas.BuildStandaloneDds; only the header shape is borrowed; width,
 /// height and pixel data are fully replaced. Written to its own
-/// --halloween-dir output rather than data/mods/speedfog/, so the Halloween
-/// plugin's assets stay opt-in and separate from the base mod.
+/// --icons-dir output rather than data/mods/speedfog/, so the icons stay
+/// opt-in (shipped when Halloween or race items is enabled) and separate from
+/// the base mod.
 /// </summary>
-public static class HalloweenIconPatcher
+public static class ItemIconPatcher
 {
     private const int ICON_SIZE = 160;
     private const byte TPF_FORMAT_BC7 = 102; // format byte used by the SB_* menu textures
     private const string TEMPLATE_TEXTURE_NAME = "MENU_DummyTransparent";
     private static readonly string[] Variants = { "hi", "low" };
 
-    // (icon name, source PNG under dataDir/plugins). The per-seed injector repoints
+    // The two Halloween icons. The per-seed injector repoints
     // EquipParamGoods.iconId to these numbers (see HalloweenIconInjector).
-    private static readonly (string Name, string Png)[] Icons =
+    private static readonly (string Name, string Png)[] HalloweenIcons =
     {
         ("MENU_ItemIcon_60383", "halloween_icon_pumpkin_seed.png"),
         ("MENU_ItemIcon_60384", "halloween_icon_profane_tear.png"),
     };
 
     /// <summary>
-    /// For menu/{hi,low}: read 05_dummy.tpf.dcx from gameDir, add (or
-    /// replace) the Halloween icon textures, and write the superset into
-    /// halloweenDir. Returns the number of textures written across variants.
+    /// The Halloween icons followed by the race item icons, one entry per
+    /// distinct (icon, icon id) of the race items catalog
+    /// (dataDir/plugins/race_items.toml, [icons]): texture name and source PNG
+    /// (race_items_icon_&lt;icon&gt;.png) under dataDir/plugins.
     /// </summary>
-    public static int Patch(string gameDir, string halloweenDir, string dataDir)
+    private static (string Name, string Png)[] LoadIcons(string dataDir)
     {
-        var pngPaths = Icons.Select(icon => Path.Combine(dataDir, "plugins", icon.Png)).ToArray();
+        var catalog = RaceItemsCatalog.Load(Path.Combine(dataDir, "plugins", "race_items.toml"));
+        var raceIcons = catalog
+            .Select(item => (item.Icon, item.IconId))
+            .Distinct()
+            .OrderBy(icon => icon.IconId)
+            .Select(icon => ($"MENU_ItemIcon_{icon.IconId}", $"race_items_icon_{icon.Icon}.png"));
+        return HalloweenIcons.Concat(raceIcons).ToArray();
+    }
+
+    /// <summary>
+    /// For menu/{hi,low}: read 05_dummy.tpf.dcx from gameDir, add (or
+    /// replace) the Halloween and race item icon textures, and write the
+    /// superset into iconsDir. Returns the number of textures written across variants.
+    /// </summary>
+    public static int Patch(string gameDir, string iconsDir, string dataDir)
+    {
+        var catalogPath = Path.Combine(dataDir, "plugins", "race_items.toml");
+        if (!File.Exists(catalogPath))
+        {
+            Console.WriteLine($"Warning: {catalogPath} not found in data dir, skipping item icon overlay");
+            return 0;
+        }
+        var icons = LoadIcons(dataDir);
+        var pngPaths = icons.Select(icon => Path.Combine(dataDir, "plugins", icon.Png)).ToArray();
         var missing = pngPaths.FirstOrDefault(p => !File.Exists(p));
         if (missing != null)
         {
-            Console.WriteLine($"Warning: {missing} not found in data dir, skipping Halloween icon overlay");
+            Console.WriteLine($"Warning: {missing} not found in data dir, skipping item icon overlay");
             return 0;
         }
 
         // Encode each icon once to raw BC7 blocks; wrapping into a full DDS
         // (cheap header copy) happens per variant below, since each variant's
         // 05_dummy.tpf.dcx supplies its own header template.
-        var blocksByIcon = new byte[Icons.Length][];
-        for (int i = 0; i < Icons.Length; i++)
+        var blocksByIcon = new byte[icons.Length][];
+        for (int i = 0; i < icons.Length; i++)
         {
             using var image = Image.Load<Rgba32>(pngPaths[i]);
             if (image.Width != ICON_SIZE || image.Height != ICON_SIZE)
             {
                 Console.WriteLine(
                     $"Warning: {pngPaths[i]} is {image.Width}x{image.Height}, expected {ICON_SIZE}x{ICON_SIZE};"
-                    + " skipping Halloween icon overlay");
+                    + " skipping item icon overlay");
                 return 0;
             }
             blocksByIcon[i] = EncodeToBc7Blocks(image);
@@ -109,14 +139,14 @@ public static class HalloweenIconPatcher
                 continue;
             }
 
-            var textures = new (string Name, byte[] Dds)[Icons.Length];
-            for (int i = 0; i < Icons.Length; i++)
+            var textures = new (string Name, byte[] Dds)[icons.Length];
+            for (int i = 0; i < icons.Length; i++)
             {
-                textures[i] = (Icons[i].Name, iconDds[i]);
+                textures[i] = (icons[i].Name, iconDds[i]);
             }
             int added = AddTexturesToTpf(tpf, textures);
 
-            var dest = Path.Combine(halloweenDir, dummySubPath);
+            var dest = Path.Combine(iconsDir, dummySubPath);
             Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
             tpf.Write(dest);
             written += added;
@@ -125,7 +155,7 @@ public static class HalloweenIconPatcher
         if (written > 0)
         {
             Console.WriteLine(
-                $"Halloween icon overlay: added {Icons.Length} icon texture(s) across {Variants.Length} variant(s)");
+                $"Item icon overlay: added {icons.Length} icon texture(s) across {Variants.Length} variant(s)");
         }
         return written;
     }

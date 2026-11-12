@@ -332,7 +332,7 @@ def _setup_static_mod_builder(
     monkeypatch.setattr(bootstrap, "DATA_DEST", tmp_path / "data")
     monkeypatch.setattr(bootstrap, "STATIC_MOD_DEST", tmp_path / "data/mods/speedfog")
     monkeypatch.setattr(
-        bootstrap, "HALLOWEEN_MOD_DEST", tmp_path / "data/mods/speedfog-halloween"
+        bootstrap, "ICONS_MOD_DEST", tmp_path / "data/mods/speedfog-icons"
     )
     monkeypatch.setattr(
         bootstrap, "WINTER_MOD_DEST", tmp_path / "data/mods/speedfog-winter"

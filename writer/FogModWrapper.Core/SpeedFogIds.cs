@@ -321,7 +321,7 @@ public static class SpeedFogIds
     // --- Icon ids (not entity ids, not param row ids; a third id namespace) ---
 
     /// <summary>Icon id for the Halloween Golden Seed pumpkin icon. The
-    /// texture MENU_ItemIcon_60383 ships in the speedfog-halloween
+    /// texture MENU_ItemIcon_60383 ships in the speedfog-icons
     /// overlay's 05_dummy.tpf.dcx superset; the id is u16-safe and far
     /// above every vanilla icon id (max ~8490). Vanilla iconId: 383.</summary>
     public const int HalloweenGoldenSeedIcon = 60383;

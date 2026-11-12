@@ -5,7 +5,7 @@ namespace FogModWrapper.Plugins.Halloween;
 
 /// <summary>
 /// Repoints Golden Seed / Sacred Tear inventory icons to
-/// the Halloween icons shipped by the speedfog-halloween overlay
+/// the Halloween icons shipped by the speedfog-icons overlay
 /// (05_dummy.tpf.dcx superset built by StaticModBuilder). The engine
 /// resolves the new MENU_ItemIcon_{60383,60384} names via its
 /// loaded-TPF fallback lookup;

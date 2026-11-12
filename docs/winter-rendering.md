@@ -130,7 +130,7 @@ The weather plugin already forces `snow` or `heavy_snow` (see [plugins/weather.m
 ## Facts that cost rounds
 
 - A matbin edit is read at map load; `regulation.bin` is read at game start only. Always restart the executable.
-- ModEngine 2 gives priority to the first folder in the `mods` list (`speedfog`, then `speedfog-halloween`, `fogmod`, `itemrando`).
+- ModEngine 2 gives priority to the first folder in the `mods` list (`speedfog`, then `speedfog-icons`, `fogmod`, `itemrando`).
 - Cumulative drops cannot attribute an effect to a cause. The isolation protocol that settled everything: T0 pristine seed, T1 one lever, T2 another lever, full restart each time, same screenshot spot. The game reads the tester's local Windows copy of the seed; a network mirror of the game folder is not what renders.
 - A canary must sit on the material you can prove is the carrier. The Chapel's visible grass is asset `AEG210_554` through `Field_01_AEGgrass`, not the 67 000 baked vertices of `m10_00_879`; the "brown patch" in its courtyard was `m10_00_878` (930 vertices, metallic `Mb3_ColorAdjust`), not the leaf-litter grass rows. Smithbox names at the spot plus a per-material vertex census of the MapPieces resolve these fast.
 - MATBIN strings are UTF-16 and 5888 of 15 089 files have them at odd byte offsets: a byte-regex scanner must not decode the whole file from offset 0 (moot with the SoulsFormatsNEXT reader).
@@ -145,7 +145,7 @@ The weather plugin already forces `snow` or `heavy_snow` (see [plugins/weather.m
 
 ## Shape assumed by the spikes (for the design to confirm)
 
-- Static part, built once at setup and shipped as an opt-in mod folder like `mods/speedfog-halloween`: the converted `allmaterial.matbinbnd.dcx` and `allmaterial_dlc02.matbinbnd.dcx` (2.5 MB and 0.5 MB as built), the frosted TPFs, and a FLVER scan of every mapbnd and geombnd to build the skinned-material exclusion list.
+- Static part, built once at setup and shipped as an opt-in mod folder like `mods/speedfog-icons`: the converted `allmaterial.matbinbnd.dcx` and `allmaterial_dlc02.matbinbnd.dcx` (2.5 MB and 0.5 MB as built), the frosted TPFs, and a FLVER scan of every mapbnd and geombnd to build the skinned-material exclusion list.
 - Per-seed part (FogModWrapper, after FogMod writes the MSBs): vegetation model swaps from a curated table, within the MSBs the seed ships.
 - Libraries: SoulsFormatsNEXT (submodule) reads and writes MATBIN, TPF, FLVER2 and MSBE natively, including KRAK-compressed DCX through `oo2core_6_win64.dll` when the tool runs under Wine, as StaticModBuilder already does for `TitleScreenPatcher`; StaticModBuilder already depends on BCnEncoder (BC7 today, BC1 available; keep encoding single-threaded under Wine, see [title-screen.md](title-screen.md)). WitchyBND is not needed for any of this.
 - Open for the design: texture resolution (half or quarter), weather value, whether per-seed swaps are worth their MSB coverage limit, which remaining foliage families to frost, whether the `M[AMSN_V][Ov_N][Snow]` twin should be re-tested in isolation.

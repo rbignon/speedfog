@@ -13,7 +13,7 @@ class Program
         var gameDir = args[0];
         var outputDir = args[1];
         string? dataDir = null;
-        string? halloweenDir = null;
+        string? iconsDir = null;
         string? winterDir = null;
         for (int i = 2; i < args.Length; i++)
         {
@@ -26,14 +26,14 @@ class Program
                 }
                 dataDir = args[++i];
             }
-            else if (args[i] == "--halloween-dir")
+            else if (args[i] == "--icons-dir")
             {
                 if (i + 1 >= args.Length)
                 {
-                    Console.Error.WriteLine("Error: --halloween-dir requires a value");
+                    Console.Error.WriteLine("Error: --icons-dir requires a value");
                     return 1;
                 }
-                halloweenDir = args[++i];
+                iconsDir = args[++i];
             }
             else if (args[i] == "--winter-dir")
             {
@@ -69,9 +69,9 @@ class Program
             return 1;
         }
 
-        if (halloweenDir != null && !Directory.Exists(halloweenDir))
+        if (iconsDir != null && !Directory.Exists(iconsDir))
         {
-            Console.Error.WriteLine($"Error: Halloween directory not found: {halloweenDir}");
+            Console.Error.WriteLine($"Error: icons directory not found: {iconsDir}");
             return 1;
         }
 
@@ -84,7 +84,7 @@ class Program
         // The winter build deletes --winter-dir: refuse one that would take another folder with it.
         string? winterConflict = winterDir == null ? null : Winter.WinterModBuilder.CheckWinterDir(
             winterDir, ("game directory", gameDir), ("mod directory", outputDir),
-            ("Halloween directory", halloweenDir), ("data directory", dataDir));
+            ("icons directory", iconsDir), ("data directory", dataDir));
         if (winterConflict != null)
         {
             Console.Error.WriteLine($"Error: {winterConflict}");
@@ -114,14 +114,14 @@ class Program
             Console.WriteLine("Note: --data-dir not provided, skipping title screen patch");
         }
 
-        // Halloween item icons overlay
-        if (halloweenDir != null && dataDir != null)
+        // Item icons overlay (Halloween + race items)
+        if (iconsDir != null && dataDir != null)
         {
-            total += HalloweenIconPatcher.Patch(gameDir, halloweenDir, dataDir);
+            total += ItemIconPatcher.Patch(gameDir, iconsDir, dataDir);
         }
         else
         {
-            Console.WriteLine("Note: --halloween-dir or --data-dir not provided, skipping Halloween icon overlay");
+            Console.WriteLine("Note: --icons-dir or --data-dir not provided, skipping item icon overlay");
         }
 
         // Winter static mod (an input failure is reported on stderr and leaves no folder; exit code stays 0)
@@ -145,13 +145,13 @@ class Program
     {
         Console.WriteLine(@"StaticModBuilder - Build SpeedFog's static mod files from vanilla game data
 
-Usage: StaticModBuilder <game-dir> <output-dir> [--data-dir <dir>] [--halloween-dir <dir>] [--winter-dir <dir>]
+Usage: StaticModBuilder <game-dir> <output-dir> [--data-dir <dir>] [--icons-dir <dir>] [--winter-dir <dir>]
 
 Arguments:
   <game-dir>       Path to Elden Ring Game directory
   <output-dir>     Output directory for patched files (e.g. data/mods/speedfog/)
-  --data-dir       SpeedFog data directory (for title_screen_overlay.png and Halloween icon PNGs)
-  --halloween-dir  Output directory for the Halloween icon overlay (e.g. data/mods/speedfog-halloween/), needs --data-dir
+  --data-dir       SpeedFog data directory (for title_screen_overlay.png and Halloween and race item icon PNGs)
+  --icons-dir      Output directory for the item icon overlay (e.g. data/mods/speedfog-icons/), needs --data-dir
   --winter-dir     Output directory for the winter static mod (e.g. data/mods/speedfog-winter/), needs --data-dir; built in a sibling <dir>.building
                    folder and moved into place, removed on failure; must not be or contain another directory argument
 
@@ -160,7 +160,7 @@ Patches applied:
   - Untouchable payload carriers (chr/c5280.anibnd.dcx, animation 3004: 4 bullet events -> judge 150, 3 -> judge 151;
     animation 3001: near-warp marker SpEffect after the hit)
   - Title screen badge (menu/{hi,low}/01_common.sblytbnd.dcx + 02_title.tpf.dcx, needs --data-dir)
-  - Halloween icon overlay (menu/{hi,low}/05_dummy.tpf.dcx superset, needs --data-dir and --halloween-dir)
+  - Item icon overlay (menu/{hi,low}/05_dummy.tpf.dcx superset, needs --data-dir and --icons-dir)
   - Winter static mod (material/ binders + asset/aet/ TPFs + the authored files under <data-dir>/mods-src/speedfog-winter/,
     report next to the folder, needs --data-dir and --winter-dir)
 ");

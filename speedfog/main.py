@@ -696,6 +696,9 @@ def run_pipeline(config: Config, args: argparse.Namespace) -> int:
                 halloween_enabled=bool(
                     config.plugins.get("halloween", {}).get("enabled", False)
                 ),
+                race_items_enabled=bool(
+                    config.plugins.get("race_items", {}).get("enabled", False)
+                ),
                 winter_enabled=bool(
                     config.plugins.get("winter", {}).get("enabled", False)
                 ),

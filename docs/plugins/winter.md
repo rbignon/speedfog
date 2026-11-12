@@ -69,7 +69,7 @@ have no rule.
 through to `graph.json` like any plugin (see [README.md](README.md)); the
 only consumer is `packaging.py`, which copies the winter folder into the seed
 and registers it in the ModEngine 2 config. Mod order, first wins:
-`speedfog`, `speedfog-halloween`, `speedfog-winter`, `fogmod`, `itemrando`.
+`speedfog`, `speedfog-icons`, `speedfog-winter`, `fogmod`, `itemrando`.
 No other mod ships `material/` or `asset/aet/`, so the position does not
 change what renders; it is fixed for determinism.
 
